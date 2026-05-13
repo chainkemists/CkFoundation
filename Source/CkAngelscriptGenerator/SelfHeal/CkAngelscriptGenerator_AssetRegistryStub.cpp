@@ -82,12 +82,6 @@ namespace ck::angelscriptgenerator::self_heal
 
         // ---- Output-file / discovery-root discovery via file-scan ------------------
 
-        struct FConfigSiteInfo
-        {
-            FString OutputPath;      // absolute path to the matched <Plugin>_Assets.as file
-            FString DiscoveryRoot;   // package-style discovery root, e.g. "/Game/Raw/"
-        };
-
         // Returns the candidate directories to search for generated `*Assets.as`
         // files: project's Script/Generated, plus each enabled plugin's
         // Script/Generated. Mirrors the directories the real generator writes to
@@ -102,92 +96,6 @@ namespace ck::angelscriptgenerator::self_heal
                 Dirs.Add(Plugin->GetBaseDir() / TEXT("Script") / TEXT("Generated"));
             }
             return Dirs;
-        }
-
-        // Parses a generated `*Assets.as` file's header line in the shape:
-        //   // Source config: RawAssets (/Game/Raw/RawAssets.as [assets])
-        // Extracts (DiscoveryRoot, Namespace). Returns false if the header
-        // isn't found within the first few lines.
-        //
-        // The header isn't load-bearing in normal operation, but is the only
-        // ground-truth mapping we can read at modal-tick without AR. The real
-        // generator emits it consistently — if a future change breaks the
-        // format, the snapshot tests under Test_AssetRegistryStub.cpp will
-        // catch it.
-        auto Try_ParseAssetsFileHeader(
-            const FString& InFilePath,
-            FString&       OutDiscoveryRoot,
-            FString&       OutNamespace) -> bool
-        {
-            auto Contents = FString{};
-            if (NOT FFileHelper::LoadFileToString(Contents, *InFilePath))
-            { return false; }
-
-            // Only look at the prologue — the header is in the first ~5 lines.
-            // Pattern: "// Source config: <Name> (<DiscoveryRoot>... [<Namespace>])"
-            static const auto Pattern = FRegexPattern{TEXT(
-                R"(^//\s*Source config:\s*[^(]*\(([^\s]+)[^\[]*\[([^\]]+)\])")};
-
-            auto Lines = TArray<FString>{};
-            Contents.ParseIntoArrayLines(Lines, /*InCullEmpty=*/false);
-
-            for (auto i = 0; i < FMath::Min(Lines.Num(), 10); ++i)
-            {
-                auto Matcher = FRegexMatcher{Pattern, Lines[i]};
-                if (Matcher.FindNext())
-                {
-                    OutDiscoveryRoot = Matcher.GetCaptureGroup(1);
-                    OutNamespace     = Matcher.GetCaptureGroup(2);
-
-                    // Strip a stray ".as" appended to the path token (the
-                    // generator writes "(/Game/Raw/RawAssets.as [assets])");
-                    // we want "/Game/Raw/" as the discovery root, not the
-                    // .as filename. Truncate at the last '/' if there is one.
-                    if (OutDiscoveryRoot.EndsWith(TEXT(".as")))
-                    {
-                        auto LastSlash = int32{INDEX_NONE};
-                        OutDiscoveryRoot.FindLastChar(TEXT('/'), LastSlash);
-                        if (LastSlash != INDEX_NONE)
-                        { OutDiscoveryRoot = OutDiscoveryRoot.Left(LastSlash + 1); }
-                    }
-                    if (NOT OutDiscoveryRoot.EndsWith(TEXT("/")))
-                    { OutDiscoveryRoot += TEXT("/"); }
-
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        // Walks the candidate Script/Generated directories, parses each .as
-        // file's header, and returns the one whose namespace matches.
-        // Returns IsValid=false when no match found.
-        auto Find_OutputSite_ByNamespace(
-            const FString& InNamespace) -> FConfigSiteInfo
-        {
-            for (const auto& Dir : Collect_GeneratedScriptDirs())
-            {
-                if (NOT IFileManager::Get().DirectoryExists(*Dir))
-                { continue; }
-
-                auto Files = TArray<FString>{};
-                IFileManager::Get().FindFilesRecursive(Files, *Dir, TEXT("*Assets.as"), /*Files=*/true, /*Directories=*/false);
-
-                for (const auto& File : Files)
-                {
-                    auto Root      = FString{};
-                    auto Namespace = FString{};
-                    if (Try_ParseAssetsFileHeader(File, Root, Namespace)
-                        && Namespace == InNamespace)
-                    {
-                        auto Site          = FConfigSiteInfo{};
-                        Site.OutputPath    = File;
-                        Site.DiscoveryRoot = Root;
-                        return Site;
-                    }
-                }
-            }
-            return FConfigSiteInfo{};
         }
 
         // ---- Disk walk for the asset's .uasset file --------------------------------
@@ -330,6 +238,150 @@ namespace ck::angelscriptgenerator::self_heal
 
     auto
         FCkAsAssetRegistryStubSynthesizer::
+        Try_ParseConfigSiteHeader(
+            const FString&            InFilePath,
+            FCk_AssetConfigSiteInfo&  OutSite,
+            FString&                  OutNamespace)
+        -> bool
+    {
+        auto Contents = FString{};
+        if (NOT FFileHelper::LoadFileToString(Contents, *InFilePath))
+        { return false; }
+
+        // The real generator emits two header lines we care about:
+        //
+        //   // Source config: <Name> (<...path...>.as [<Namespace>])
+        //   // Discovery root: <DiscoveryRoot>
+        //
+        // The "Source config:" line carries the namespace cleanly inside the
+        // brackets, but its path token is malformed in practice — the BB
+        // generator emits "(/Game/BusterBlockBusterBlockAssets.as [assets])"
+        // (missing slash between root and filename), so trying to recover the
+        // root by truncating at the last '/' collapses to "/Game/" and
+        // spuriously prefix-matches every other config's assets. The
+        // "Discovery root:" line is canonical — use it.
+        static const auto NamespacePattern = FRegexPattern{TEXT(
+            R"(^//\s*Source config:\s*[^\[]*\[([^\]]+)\])")};
+        static const auto DiscoveryRootPattern = FRegexPattern{TEXT(
+            R"(^//\s*Discovery root:\s*(\S+))")};
+
+        auto Lines = TArray<FString>{};
+        Contents.ParseIntoArrayLines(Lines, /*InCullEmpty=*/false);
+
+        auto Namespace = FString{};
+        auto Root      = FString{};
+
+        for (auto i = 0; i < FMath::Min(Lines.Num(), 10); ++i)
+        {
+            if (Namespace.IsEmpty())
+            {
+                auto M = FRegexMatcher{NamespacePattern, Lines[i]};
+                if (M.FindNext())
+                { Namespace = M.GetCaptureGroup(1); }
+            }
+            if (Root.IsEmpty())
+            {
+                auto M = FRegexMatcher{DiscoveryRootPattern, Lines[i]};
+                if (M.FindNext())
+                { Root = M.GetCaptureGroup(1); }
+            }
+            if (NOT Namespace.IsEmpty() && NOT Root.IsEmpty())
+            { break; }
+        }
+
+        if (Namespace.IsEmpty() || Root.IsEmpty())
+        { return false; }
+
+        if (NOT Root.EndsWith(TEXT("/")))
+        { Root += TEXT("/"); }
+
+        OutSite.OutputPath    = InFilePath;
+        OutSite.DiscoveryRoot = Root;
+        OutNamespace          = Namespace;
+        return true;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FCkAsAssetRegistryStubSynthesizer::
+        Collect_MatchingSites(
+            const TArray<FString>& InDirs,
+            const FString&         InNamespace)
+        -> TArray<FCk_AssetConfigSiteInfo>
+    {
+        auto Out = TArray<FCk_AssetConfigSiteInfo>{};
+        for (const auto& Dir : InDirs)
+        {
+            if (NOT IFileManager::Get().DirectoryExists(*Dir))
+            { continue; }
+
+            auto Files = TArray<FString>{};
+            IFileManager::Get().FindFilesRecursive(Files, *Dir, TEXT("*Assets.as"),
+                /*Files=*/true, /*Directories=*/false);
+
+            // FindFilesRecursive ordering is platform-dependent — sort for
+            // deterministic candidate order (matters when no asset prefix
+            // wins and we fall back to first match).
+            Files.Sort();
+
+            for (const auto& File : Files)
+            {
+                auto Site = FCk_AssetConfigSiteInfo{};
+                auto Ns   = FString{};
+                if (NOT Try_ParseConfigSiteHeader(File, Site, Ns))
+                { continue; }
+
+                if (Ns != InNamespace)
+                { continue; }
+
+                Out.Add(Site);
+            }
+        }
+        return Out;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FCkAsAssetRegistryStubSynthesizer::
+        Pick_BestSite_ByAssetPath(
+            const TArray<FCk_AssetConfigSiteInfo>& InCandidates,
+            const FString&                         InAssetPackagePath)
+        -> int32
+    {
+        if (InAssetPackagePath.IsEmpty())
+        { return INDEX_NONE; }
+
+        auto BestIndex     = int32{INDEX_NONE};
+        auto BestRootLen   = int32{0};
+
+        for (auto i = 0; i < InCandidates.Num(); ++i)
+        {
+            const auto& Root = InCandidates[i].DiscoveryRoot;
+            if (Root.IsEmpty())
+            { continue; }
+
+            // Discovery root is "/Game/Raw/" (or "/PluginName/..."). The
+            // package path is "/Game/Raw/SKM/MALE_SKEL_NEW.MALE_SKEL_NEW".
+            // Match the root with the trailing '/' included so "/Game/" does
+            // NOT spuriously match a path under "/GameOther/".
+            if (NOT InAssetPackagePath.StartsWith(Root, ESearchCase::IgnoreCase))
+            { continue; }
+
+            if (Root.Len() > BestRootLen)
+            {
+                BestRootLen = Root.Len();
+                BestIndex   = i;
+            }
+        }
+        return BestIndex;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FCkAsAssetRegistryStubSynthesizer::
         Classify_AccessorFlavor(
             const FCk_AsParsedError& InError)
         -> ECk_AssetAccessorFlavor
@@ -464,10 +516,10 @@ namespace ck::angelscriptgenerator::self_heal
         const auto Flavor        = Classify_AccessorFlavor(InError);
         const auto SoftNamespace = Strip_LoadSuffix(InError.TargetNamespace);
 
-        // ---- Step 1: locate the output file + discovery root via file-scan ----
+        // ---- Step 1: locate candidate output files matching the namespace ----
 
-        const auto Site = Find_OutputSite_ByNamespace(SoftNamespace);
-        if (Site.OutputPath.IsEmpty())
+        const auto Candidates = Collect_MatchingSites(Collect_GeneratedScriptDirs(), SoftNamespace);
+        if (Candidates.Num() == 0)
         {
             Result.ErrorMessage = FString::Printf(
                 TEXT("No generated *Assets.as file matched namespace '%s' (stripped from '%s'). ")
@@ -477,13 +529,44 @@ namespace ck::angelscriptgenerator::self_heal
             return Result;
         }
 
-        // ---- Step 2: locate the asset .uasset on disk ----
-
+        // ---- Step 2: locate the asset .uasset on disk, picking the candidate
+        //              whose DiscoveryRoot owns it ----
+        //
+        // Multiple files can legitimately share `namespace assets` while
+        // covering disjoint discovery roots (e.g. BusterBlockAssets.as on
+        // "/Game/BusterBlock/" + RawAssets.as on "/Game/Raw/"). AS merges the
+        // namespace at compile time, so any of the files would *unwedge* the
+        // editor — but the stub must land in the file the asset actually
+        // belongs to, otherwise the deferred regen has to rewrite both files
+        // to clean up. Try each candidate's root; the one that finds the asset
+        // on disk is the owner. Fall back to the first candidate if no root
+        // owns it (asset can't be located on disk — Tier 3 territory below).
         const auto BaseFunctionName = (Flavor == ECk_AssetAccessorFlavor::SoftClass)
             ? Strip_ClassSuffix(InError.FunctionName)
             : InError.FunctionName;
 
-        const auto AssetPackagePath = Find_AssetPackagePath_OnDisk(Site.DiscoveryRoot, BaseFunctionName);
+        auto AssetPackagePath = FString{};
+        auto Site             = FCk_AssetConfigSiteInfo{};
+        for (const auto& Candidate : Candidates)
+        {
+            const auto Found = Find_AssetPackagePath_OnDisk(Candidate.DiscoveryRoot, BaseFunctionName);
+            if (Found.IsEmpty())
+            { continue; }
+
+            AssetPackagePath = Found;
+            Site             = Candidate;
+            break;
+        }
+
+        if (Site.OutputPath.IsEmpty())
+        {
+            // No candidate's root contained the asset on disk. Fall back to
+            // the first candidate so the stub still lands somewhere — AS
+            // namespace-merge means compile will succeed regardless, and the
+            // deferred regen will fix the location. Tier 3 fallback below
+            // decides whether to emit a UObject stub or refuse.
+            Site = Candidates[0];
+        }
         if (AssetPackagePath.IsEmpty())
         {
             // We can still attempt Tier 3 fallback with an empty FSoftObjectPath
