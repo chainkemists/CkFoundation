@@ -53,8 +53,9 @@ namespace ck::angelscriptgenerator::self_heal
         // Set when the AssetRegistry strategy writes a stub entry into a
         // *Assets.as file this session. Module's OnPostEngineInit callback
         // consumes this to fire a GenerateAllAssetRegistries pass, which
-        // restores correct stub placement (right file per discovery root) and
-        // resolves any Tier 3 UObject fallbacks with the real class.
+        // restores correct stub placement (right file per discovery root).
+        // (Pre-2026-05-13 this also "resolved Tier 3 UObject fallbacks", but
+        // Tier 3 is now refused outright — see CkAngelscriptGenerator_AssetRegistryStub.h.)
         bool sDidSynthesizeAssetRegistryStub = false;
 
         // ---- Deferred-apply state --------------------------------------------------
@@ -351,16 +352,16 @@ namespace ck::angelscriptgenerator::self_heal
                     //   - Tier 1: AssetData.GetClass() for already-loaded native classes
                     //   - Tier 2: sync-load the asset and walk Get_NonBlueprintParentClass
                     //
-                    // Tier 3 fallback (when sync load fails) is policy-gated:
-                    //   - SoftRef / SoftClass accessors get a UObject stub (the
-                    //     caller's typed assignment will fail with a follow-up AS
-                    //     error pointing at the right line — better than wedging).
-                    //   - BlockingLoad accessors REFUSE the fallback — returning a
-                    //     default-constructed asset would crash worse than the wedge.
-                    //
-                    // On Tier 3 refusal or any other failure, log the actionable
-                    // banner and return false (dispatcher cycles will run out and
-                    // the user gets the manual-intervention message).
+                    // Tier 3 fallback (when sync load fails) is REFUSED for all
+                    // flavors as of 2026-05-13 — see
+                    // CkAngelscriptGenerator_AssetRegistryStub.h docstring for
+                    // the probe_a2.log rationale. Synthesizer returns
+                    // Success=false with a manual-recovery banner in
+                    // ErrorMessage; we log it and return false so Hazelight's
+                    // modal continues displaying the original
+                    // `No matching signatures` error (actionable) instead of
+                    // being replaced by a parser-blind
+                    // typed-conversion derivative (wedging).
                     const auto Synth = FCkAsAssetRegistryStubSynthesizer::Inject_AssetRegistryStub(InError);
 
                     if (Synth.Success)
@@ -373,22 +374,9 @@ namespace ck::angelscriptgenerator::self_heal
                         // to correct placement and overwrites the marker comment.
                         FCkAsRecoveryDispatcher::Mark_AssetRegistryStubSynthesized();
 
-                        if (Synth.UsedTier3Fallback)
-                        {
-                            Warning(TEXT("[SelfHeal] AssetRegistry stub synthesized with Tier 3 fallback ({}=UObject) for ")
-                                    TEXT("{}::{}({}) -> {} (asset {}). ")
-                                    TEXT("The caller's typed assignment is likely to fail with a follow-up AS error — ")
-                                    TEXT("the underlying asset class could not be resolved at modal-tick time."),
-                                Synth.ResolvedAssetClass,
-                                InError.TargetNamespace, InError.FunctionName, InError.ArgsList,
-                                Synth.TargetFilePath, Synth.ResolvedAssetPath);
-                        }
-                        else
-                        {
-                            Log(TEXT("[SelfHeal] Synthesized AssetRegistry stub for {}::{}({}) (return type {}, asset {}) -> {}"),
-                                InError.TargetNamespace, InError.FunctionName, InError.ArgsList,
-                                Synth.ResolvedAssetClass, Synth.ResolvedAssetPath, Synth.TargetFilePath);
-                        }
+                        Log(TEXT("[SelfHeal] Synthesized AssetRegistry stub for {}::{}({}) (return type {}, asset {}) -> {}"),
+                            InError.TargetNamespace, InError.FunctionName, InError.ArgsList,
+                            Synth.ResolvedAssetClass, Synth.ResolvedAssetPath, Synth.TargetFilePath);
                         return true;
                     }
 
