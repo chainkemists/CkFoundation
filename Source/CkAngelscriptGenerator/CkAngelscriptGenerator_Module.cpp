@@ -595,7 +595,14 @@ void FCkAngelscriptGeneratorModule::StartupModule()
     // Track engine-loop-init completion so the PostCompile AssetRegistry
     // cleanup knows it's safe to fire (no longer in cold-start contention).
     _EngineLoopInitCompleteHandle = FCoreDelegates::OnFEngineLoopInitComplete.AddLambda(
-        []() { sg_EngineLoopInitComplete = true; });
+        []()
+        {
+            sg_EngineLoopInitComplete = true;
+            // Flip the dispatcher's bootstrap flag so subsequent
+            // OnReloadHadErrors invocations route through the core ticker
+            // (mid-session) instead of the modal-tick pump (bootstrap).
+            ck::angelscriptgenerator::self_heal::FCkAsRecoveryDispatcher::Mark_BootstrapComplete();
+        });
 
 #if WITH_ANGELSCRIPT_CK
     _PostAngelscriptCompileHandle = FAngelscriptCodeModule::GetPostCompile().AddLambda(

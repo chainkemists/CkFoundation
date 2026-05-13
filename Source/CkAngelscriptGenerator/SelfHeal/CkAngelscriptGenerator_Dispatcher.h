@@ -63,6 +63,12 @@ namespace ck::angelscriptgenerator::self_heal
     {
     public:
         // Hard cap on recovery cycles per editor session (CTO Rev 10 #2).
+        //
+        // Semantics: cap applies to BOOTSTRAP-MODE recoveries only. Cold-start
+        // runaway wedges the editor behind the AS-failure modal indefinitely,
+        // so we hard-stop after MaxCycles. Mid-session recoveries are
+        // interactive — the user can intervene at any time — so the cap is
+        // bypassed and the cycle counter is reset at Mark_BootstrapComplete.
         static constexpr int32 MaxCycles = 3;
 
         // ---- Pure-logic surface ----------------------------------------------------
@@ -105,6 +111,21 @@ namespace ck::angelscriptgenerator::self_heal
 
         static auto Get_CyclesRun() -> int32;
         static auto Reset_CyclesRun() -> void;
+
+        // ---- Bootstrap-vs-mid-session mode -----------------------------------------
+
+        // Returns true if the editor has not yet finished FEngineLoop init.
+        // Used by OnAngelscriptReloadHadErrors to decide between modal-tick
+        // deferral (bootstrap — Hazelight modal will be open, no other pump
+        // is alive) and core-ticker deferral (mid-session hot-reload — no
+        // modal opens, so the modal-tick pump never fires).
+        //
+        // The Module's OnFEngineLoopInitComplete lambda calls
+        // Mark_BootstrapComplete to flip this flag — same source of truth
+        // as the module-local sg_EngineLoopInitComplete, just surfaced here
+        // for the dispatcher's routing decision.
+        static auto Is_BootstrapMode()      -> bool;
+        static auto Mark_BootstrapComplete() -> void;
 
         // ---- Deferred JSON regen on PostEngineInit ---------------------------------
 
