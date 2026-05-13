@@ -308,6 +308,12 @@ private:
         if (NOT ck::angelscript::IsTypeValidForAngelScript(PropertyTypeStr))\
         { return; }\
         \
+        /* Strip leading "const " — signature templates below pre-pend "const" for the ref form. */\
+        /* Property fields of type `const T*` come back here as `"const T"`; without the strip, the */\
+        /* template `"const {}& Get_X() const"` would emit invalid `"const const T&"` (asINVALID_DECLARATION). */\
+        if (PropertyTypeStr.StartsWith(TEXT("const ")))\
+        { PropertyTypeStr = PropertyTypeStr.RightChop(6); }\
+        \
         /* Remove leading underscore from variable name for method signatures */\
         auto FullVarName = FString(TEXT(#_InVar_));\
         auto CleanPropertyName = FullVarName.StartsWith(TEXT("_")) ? FullVarName.RightChop(1) : FullVarName;\
@@ -373,6 +379,10 @@ private:
         if (NOT ck::angelscript::IsTypeValidForAngelScript(PropertyTypeStr))\
         { return; }\
         \
+        /* Strip leading "const " — see GETTER_SETTER variant above for rationale. */\
+        if (PropertyTypeStr.StartsWith(TEXT("const ")))\
+        { PropertyTypeStr = PropertyTypeStr.RightChop(6); }\
+        \
         /* Remove leading underscore from variable name for method signatures */\
         auto FullVarName = FString(TEXT(#_InVar_));\
         auto CleanPropertyName = FullVarName.StartsWith(TEXT("_")) ? FullVarName.RightChop(1) : FullVarName;\
@@ -424,6 +434,10 @@ private:
         /* Skip if property type contains unsupported patterns */\
         if (NOT ck::angelscript::IsTypeValidForAngelScript(PropertyTypeStr))\
         { return; }\
+        \
+        /* Strip leading "const " — see GETTER_SETTER variant above for rationale. */\
+        if (PropertyTypeStr.StartsWith(TEXT("const ")))\
+        { PropertyTypeStr = PropertyTypeStr.RightChop(6); }\
         \
         /* Remove leading underscore from variable name for method signatures */\
         auto FullVarName = FString(TEXT(#_InVar_));\
