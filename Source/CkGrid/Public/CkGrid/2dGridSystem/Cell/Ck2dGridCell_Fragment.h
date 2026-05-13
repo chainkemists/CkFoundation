@@ -10,7 +10,7 @@ class UCk_Utils_2dGridCell_UE;
 
 namespace ck
 {
-    CK_DEFINE_ECS_TAG(FTag_2dGridCell_Disabled);
+    CK_DEFINE_ECS_TAG_COUNTED(FTag_2dGridCell_Disabled);
 
     // --------------------------------------------------------------------------------------------------------------------
 
