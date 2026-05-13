@@ -305,8 +305,7 @@ namespace
             TEXT("earlier this session, or a stub marker is present on disk). Will hook ")
             TEXT("FCoreDelegates::OnFEngineLoopInitComplete and then poll for shader-compile idle ")
             TEXT("before firing GenerateAllAssetRegistries — this rewrites all *Assets.as files ")
-            TEXT("from the AR-scanned state, restoring correct file placement and overwriting ")
-            TEXT("Tier 3 UObject fallbacks with the proper resolved classes."));
+            TEXT("from the AR-scanned state, restoring correct file placement."));
 
         // Reserve the regen slot now so any PostCompile firing during the 2-second
         // idle-wait window (after OnFEngineLoopInitComplete sets sg_EngineLoopInitComplete

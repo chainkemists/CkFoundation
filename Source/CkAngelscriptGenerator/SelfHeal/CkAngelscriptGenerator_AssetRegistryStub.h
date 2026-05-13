@@ -46,18 +46,26 @@
 //     asset due to the sync load).
 //
 //   * **Tier 3 — BP load fails** (native parent not yet loaded into UObject
-//     space at modal-tick time, or AR scan missed the asset): policy per
-//     CTO 2026-05-12 conversation:
-//       - `assets::FOO()` (soft-ref namespace): emit
-//         `TSoftObjectPtr<UObject>` stub + Warning log. The caller's typed
-//         assignment (`TSoftObjectPtr<USkeletalMesh> X = assets::FOO();`)
-//         will fail with a follow-up AS error, but the path to a real
-//         diagnosis is now visible — recovery has done its best and surfaced
-//         the underlying limitation.
-//       - `assets::load::FOO()` (blocking-load namespace): refuse to
-//         synthesize. Returning a default-constructed `UObject` would be
-//         worse than the current wedge — callers expect a real loaded asset.
-//         Log a manual-recovery banner with the specific reason.
+//     space at modal-tick time, or AR scan missed the asset): REFUSED for
+//     all flavors as of 2026-05-13 (revised from the original 2026-05-12
+//     policy).
+//
+//     The original policy emitted a `TSoftObjectPtr<UObject>` stub for
+//     SoftRef/SoftClass on the assumption that the caller's typed
+//     assignment would produce a "follow-up AS error pointing at the right
+//     line — better diagnostic than a wedge". Probe a2 (probe_a2.log,
+//     2026-05-13) disproved that: the typed-conversion error
+//     (`Cannot convert from TSoftObjectPtr<UObject> to TSoftObjectPtr<UWorld>`)
+//     does NOT match either of FCkAsErrorParser's two recognized patterns.
+//     Cycle 2 of the dispatcher parses zero actionable roots and the editor
+//     wedges on the terminal banner instead of surfacing the original
+//     `No matching signatures` error.
+//
+//     Refusing across the board (SoftRef + SoftClass + BlockingLoad) means
+//     `Inject_AssetRegistryStub` returns `Success = false` with an
+//     actionable manual-recovery banner in `ErrorMessage`, the dispatcher
+//     logs that banner, and Hazelight's modal continues displaying the
+//     original `No matching signatures` error which the user can act on.
 //
 // Determinism: same rules as the EntitySpawnParams synthesizer. Stub blocks
 // carry a marker comment line (`Get_MarkerComment()`) so a forensic reader
@@ -75,7 +83,7 @@ namespace ck::angelscriptgenerator::self_heal
         FString ResolvedAssetClass;   // e.g. "USkeletalMesh"; "UObject" for Tier 3 fallback
         FString ResolvedAssetPath;    // e.g. "/Game/Raw/SKM/MALE_SKEL_NEW.MALE_SKEL_NEW"
         FString ErrorMessage;         // populated on failure
-        bool    UsedTier3Fallback = false; // true when Tier 3 (UObject) was used
+        bool    UsedTier3Fallback = false; // dead as of 2026-05-13 (Tier 3 always refused); field retained for ABI stability of the result struct.
     };
 
     // Which accessor flavor an `assets[::*]::FOO()` error targets. The parser

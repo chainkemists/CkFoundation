@@ -44,9 +44,13 @@
 //      most game-runtime modules). For BPs, walk LoadedAsset->ParentClass via
 //      UCkAssetRegistrySubsystem::Get_NonBlueprintParentClass.
 //
-// Tier 3 fallback (UObject for soft accessors, refusal for blocking-loads) is
-// preserved as the policy-gated escape hatch when LoadObject can't resolve a
-// class — typically a BP whose native parent module loads later than modal-tick.
+// Tier 3 fallback (UObject stub when LoadObject can't resolve a class) is
+// REFUSED for all flavors as of 2026-05-13 (see Tier3_IsAllowed for full
+// rationale — probe_a2.log demonstrated the typed-conversion follow-up
+// error is parser-blind and wedges the editor worse than the original).
+// Refusal surfaces the original `No matching signatures` error to the user
+// via Hazelight's modal; manual recovery is documented in the refusal
+// banner.
 
 namespace ck::angelscriptgenerator::self_heal
 {
@@ -214,24 +218,29 @@ namespace ck::angelscriptgenerator::self_heal
             return Result;
         }
 
-        // ---- Tier 3 fallback policy (option C from CTO conversation) ---------------
-
-        // Returns true if the given flavor permits the UObject fallback.
-        // Per CTO 2026-05-12: soft refs degrade gracefully (typed assignment
-        // produces a follow-up AS error pointing at the right line — better
-        // diagnostic than a wedge), blocking loads do not (default-constructing
-        // the asset would crash worse than the wedge).
+        // ---- Tier 3 fallback policy --------------------------------------------------
+        //
+        // 2026-05-13 revision (probe_a2.log): Tier 3 fallback is now REFUSED
+        // for ALL accessor flavors.
+        //
+        // The original 2026-05-12 policy permitted Tier 3 UObject stubs for
+        // SoftRef/SoftClass on the assumption that the caller's typed
+        // assignment would produce a "follow-up AS error pointing at the
+        // right line — better diagnostic than a wedge". Probe a2 disproved
+        // that: the typed-conversion error (`Cannot convert from
+        // TSoftObjectPtr<UObject> to TSoftObjectPtr<UWorld>`) does NOT match
+        // either of FCkAsErrorParser's two recognized patterns. Cycle 2 of
+        // the dispatcher parses zero actionable roots and the editor wedges
+        // indefinitely on the terminal banner instead of surfacing the
+        // original `No matching signatures` error to the user.
+        //
+        // Refusing across the board means Hazelight's modal shows the
+        // original `No matching signatures` error to the user — actionable,
+        // points at the real call site, parser-blind derivatives never
+        // appear.
         auto Tier3_IsAllowed(
-            ECk_AssetAccessorFlavor InFlavor) -> bool
+            ECk_AssetAccessorFlavor /*InFlavor*/) -> bool
         {
-            switch (InFlavor)
-            {
-                case ECk_AssetAccessorFlavor::SoftRef:
-                case ECk_AssetAccessorFlavor::SoftClass:
-                    return true;
-                case ECk_AssetAccessorFlavor::BlockingLoad:
-                    return false;
-            }
             return false;
         }
     }
@@ -619,24 +628,25 @@ namespace ck::angelscriptgenerator::self_heal
         }
         if (AssetPackagePath.IsEmpty())
         {
-            // We can still attempt Tier 3 fallback with an empty FSoftObjectPath
-            // for soft accessors — the stub satisfies AS compile (caller's typed
-            // assignment still fails). For blocking loads we refuse.
+            // Tier 3 fallback refused for all flavors (see Tier3_IsAllowed
+            // policy comment for rationale). Surface the actionable banner so
+            // the user can run a manual AR regen; Hazelight's modal will keep
+            // displaying the original `No matching signatures` error which is
+            // exactly what they need to see.
             if (NOT Tier3_IsAllowed(Flavor))
             {
                 Result.ErrorMessage = FString::Printf(
                     TEXT("Asset '%s.uasset' not found under disk-converted root for '%s'. ")
-                    TEXT("Tier 3 fallback not permitted for blocking-load accessors. ")
+                    TEXT("Tier 3 UObject fallback is disabled (would produce a parser-blind ")
+                    TEXT("typed-conversion error and wedge the editor). ")
                     TEXT("Manual recovery: force-quit, comment out the failing %s::%s() call site, ")
                     TEXT("relaunch, click 'Generate All Asset Registries', uncomment, save."),
                     *BaseFunctionName, *Site.DiscoveryRoot,
                     *InError.TargetNamespace, *InError.FunctionName);
                 return Result;
             }
-
-            Result.UsedTier3Fallback = true;
         }
-        Result.ResolvedAssetPath = AssetPackagePath; // empty when Tier 3 with no on-disk hit
+        Result.ResolvedAssetPath = AssetPackagePath;
 
         // ---- Step 3: resolve UClass via LoadObject ----
 
@@ -649,22 +659,25 @@ namespace ck::angelscriptgenerator::self_heal
 
         if (ClassName.IsEmpty())
         {
-            // LoadObject couldn't resolve (asset not loaded, BP parent module not
-            // up yet, etc.) — fall through to Tier 3 policy.
+            // LoadObject couldn't resolve (asset not loaded, BP parent module
+            // not up yet, etc.). Tier 3 fallback is refused for all flavors
+            // (see Tier3_IsAllowed) — surface the actionable banner so the
+            // original `No matching signatures` error remains visible to the
+            // user instead of being replaced by a parser-blind
+            // typed-conversion error.
             if (NOT Tier3_IsAllowed(Flavor))
             {
+                Result.ResolvedAssetClass = TEXT("UObject");
                 Result.ErrorMessage = FString::Printf(
                     TEXT("Could not resolve UClass via LoadObject for '%s' (package path '%s'). ")
-                    TEXT("Tier 3 fallback not permitted for blocking-load accessors. ")
+                    TEXT("Tier 3 UObject fallback is disabled (would produce a parser-blind ")
+                    TEXT("typed-conversion error and wedge the editor). ")
                     TEXT("Manual recovery: force-quit, comment out the failing %s::%s() call site, ")
                     TEXT("relaunch, click 'Generate All Asset Registries', uncomment, save."),
                     *InError.FunctionName, *AssetPackagePath,
                     *InError.TargetNamespace, *InError.FunctionName);
                 return Result;
             }
-
-            ClassName = TEXT("UObject");
-            Result.UsedTier3Fallback = true;
         }
         Result.ResolvedAssetClass = ClassName;
 
