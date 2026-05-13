@@ -84,6 +84,20 @@ namespace ck::angelscriptgenerator::self_heal
         int32                      sModalTicksWaited  = 0;
         constexpr int32            sModalTicksToWait  = 2;
 
+        // Mid-session deferral path (Issue #7, 2026-05-13). Mid-session hot-
+        // reload failures do NOT open a Hazelight modal — errors land in the
+        // AS error log panel only — so the modal-tick pump above never fires
+        // and pending actions stall. For that path we hook FTSTicker with a
+        // short delay (the AS hot-reload thread is already running and
+        // quiescent between scans, so no settle margin is needed).
+        FTSTicker::FDelegateHandle sTickerHandle;
+        constexpr float            sTickerDelaySeconds = 0.15f;
+
+        // Bootstrap mode flag. Mirrors the module-local sg_EngineLoopInitComplete
+        // but surfaced through FCkAsRecoveryDispatcher::Is_BootstrapMode for the
+        // routing decision in OnAngelscriptReloadHadErrors.
+        bool sBootstrapComplete = false;
+
         // ---- Candidate-file discovery ------------------------------------------
 
         auto Collect_EntitySpawnParamsCandidates() -> TArray<FString>
@@ -500,51 +514,25 @@ namespace ck::angelscriptgenerator::self_heal
             }
         }
 
-        // Spawned the instant OnReloadHadErrors fires, so the bottom-right
-        // notification appears alongside Hazelight's modal and tells the user
-        // we're working on it before they panic and close the editor.
+        // Spawned the instant OnReloadHadErrors fires during cold-start, so
+        // the bottom-right notification appears alongside Hazelight's modal
+        // and tells the user we're working on it before they panic and close
+        // the editor.
         //
-        // Only fires for cycle 1 (initial-compile failure with Hazelight modal).
-        // Cycle 2+ are hot-reload retries that don't open a modal — the user
-        // has already passed the panic moment (modal closed, success notification
-        // shown). Showing "self-heal in progress, please wait" again during a
-        // silent hot-reload retry is noise that lingers on the main screen if
-        // the orphan-cleanup ticker hasn't fired before the editor renders.
+        // Caller is responsible for the bootstrap-vs-mid-session gate:
+        // OnAngelscriptReloadHadErrors only invokes this from the bootstrap
+        // branch. Mid-session recoveries are sub-second and have no modal to
+        // mediate panic about — a persistent throbber there would just be
+        // noise during normal editing.
         //
-        // Idempotent — if a prior cycle's notification is still live, leaves
+        // Idempotent — if a prior fire's notification is still live, leaves
         // it alone. Auto-expires after 30s as a safety net.
-        //
-        // FUTURE — mid-session self-heal (Issue #7):
-        //   The cycle-count guard below is BOOTSTRAP-SPECIFIC. When self-heal is
-        //   extended to recover from drifts during normal editing (user saves an
-        //   .as file → hot-reload fails → self-heal fixes it), cycle counts will
-        //   accumulate across the session and this guard will incorrectly
-        //   suppress in-progress toasts for legitimate fresh-incident recoveries.
-        //
-        //   Recommended rework when that lands:
-        //     1. Replace `sCyclesRun > 0` with a bootstrap-vs-mid-session signal
-        //        (track an sIsBootstrap flag that flips to false when
-        //        OnFEngineLoopInitComplete fires — Module.cpp's
-        //        sg_EngineLoopInitComplete is the same concept).
-        //     2. Skip the in-progress toast entirely on the mid-session path.
-        //        The success toast + MessageLog entry give the user enough
-        //        signal of what self-heal did. Mid-session recoveries are
-        //        sub-second and have no modal to mediate panic about — a
-        //        persistent throbber would just be noise during normal editing.
-        //   Bootstrap behavior (this function as-is) stays the same.
         auto Show_InProgressToast() -> void
         {
             if (NOT FSlateApplication::IsInitialized())
             { return; }
 
             if (sInProgressNotification.IsValid())
-            { return; }
-
-            // Suppress for cycle 2+. sCyclesRun increments after a successful
-            // modal-tick apply — so a non-zero value here means cycle 1 already
-            // ran and we're now in retry territory (hot-reload, no modal).
-            // See the FUTURE block above before changing this for mid-session.
-            if (FCkAsRecoveryDispatcher::Get_CyclesRun() > 0)
             { return; }
 
             auto Info = FNotificationInfo{LOCTEXT("RecoveryInProgressToast",
@@ -789,6 +777,73 @@ namespace ck::angelscriptgenerator::self_heal
             sModalTicksWaited = 0;
             sModalTickHandle  = FSlateApplication::Get().GetOnModalLoopTickEvent().AddStatic(&OnModalLoopTick);
         }
+
+        // ---- Mid-session ticker handler (deferred apply, no modal) ----------------
+        //
+        // Drains sPendingActions and applies recovery strategies from the core
+        // ticker (FTSTicker::GetCoreTicker). Used when AS hot-reload fails
+        // MID-SESSION — Hazelight does not open its AS-failure modal in that
+        // case, so OnModalLoopTick never fires and the modal-tick path stalls.
+        //
+        // Unlike OnModalLoopTick this fires only once (one-shot, returns false
+        // to unregister) and skips the settle-tick wait — the AS hot-reload
+        // thread is already running and quiescent between scans, so no
+        // baseline-establishment delay is required.
+        auto OnTicker_DrainActions(
+            float /*InDeltaTime*/) -> bool
+        {
+            if (sPendingActions.Num() == 0)
+            {
+                sTickerHandle.Reset();
+                return false;
+            }
+
+            Log(TEXT("[SelfHeal] Mid-session ticker firing — draining {} pending action(s)."),
+                sPendingActions.Num());
+
+            auto AppliedActions = TArray<FCk_RecoveryAction>{};
+            for (const auto& Action : sPendingActions)
+            {
+                if (Apply_Strategy(Action.Strategy, Action.Error))
+                { AppliedActions.Add(Action); }
+            }
+            const auto QueuedCount = sPendingActions.Num();
+            sPendingActions.Reset();
+
+            if (AppliedActions.Num() > 0)
+            {
+                ++sCyclesRun;
+                Log(TEXT("[SelfHeal] Cycle {} applied {} strategy/strategies (mid-session). ")
+                    TEXT("Hot-reload thread's next scan should pick up the file mtime change."),
+                    sCyclesRun, AppliedActions.Num());
+
+                Log_AppliedActions_ToMessageLog(AppliedActions);
+                Show_RecoveryToast(AppliedActions);
+            }
+            else
+            {
+                Log_TerminalBanner_AllUnactionable(QueuedCount);
+                Show_TerminalToast(LOCTEXT("RecoveryFailedToast_MidSession",
+                    "AngelScript self-heal could not act on the current compile errors. "
+                    "Manual intervention required — see the Message Log for details."));
+            }
+
+            sTickerHandle.Reset();
+            return false; // one-shot
+        }
+
+        // Idempotent — a second OnReloadHadErrors invocation while the ticker
+        // is still queued is a no-op (new actions appended to sPendingActions
+        // get drained in the same tick).
+        auto Ensure_TickerSubscribed() -> void
+        {
+            if (sTickerHandle.IsValid())
+            { return; }
+
+            sTickerHandle = FTSTicker::GetCoreTicker().AddTicker(
+                FTickerDelegate::CreateStatic(&OnTicker_DrainActions),
+                sTickerDelaySeconds);
+        }
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -875,6 +930,19 @@ namespace ck::angelscriptgenerator::self_heal
     auto FCkAsRecoveryDispatcher::Mark_AssetRegistryStubSynthesized() -> void
     { sDidSynthesizeAssetRegistryStub = true; }
 
+    auto FCkAsRecoveryDispatcher::Is_BootstrapMode() -> bool
+    { return NOT sBootstrapComplete; }
+
+    auto FCkAsRecoveryDispatcher::Mark_BootstrapComplete() -> void
+    {
+        sBootstrapComplete = true;
+        // Reset cycle counter at the bootstrap→mid-session transition so any
+        // bootstrap-mode cycles consumed do not count against the mid-session
+        // budget. (The cap is bootstrap-mode-only anyway, but keeping the
+        // counter accurate makes the logs easier to read.)
+        sCyclesRun = 0;
+    }
+
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
@@ -883,7 +951,11 @@ namespace ck::angelscriptgenerator::self_heal
         -> void
     {
 #if WITH_ANGELSCRIPT_CK
-        if (sCyclesRun >= MaxCycles)
+        const auto BootstrapMode = Is_BootstrapMode();
+
+        // Cycle cap is bootstrap-mode-only — see MaxCycles docstring in
+        // Dispatcher.h. Mid-session is interactive, user can intervene.
+        if (BootstrapMode && sCyclesRun >= MaxCycles)
         {
             Log_TerminalBanner_MaxCyclesExceeded();
             Show_TerminalToast(FText::Format(
@@ -898,8 +970,9 @@ namespace ck::angelscriptgenerator::self_heal
         const auto Errors      = FCkAsErrorParser::ParseErrors(Diagnostics);
         const auto Roots       = FCkAsErrorParser::DeduplicateRoots(Errors);
 
-        Log(TEXT("[SelfHeal] OnReloadHadErrors fired (cycle {} of {}). ")
+        Log(TEXT("[SelfHeal] OnReloadHadErrors fired ({} mode, cycle {} of {}). ")
             TEXT("Parsed {} actionable roots from {} raw error records."),
+            BootstrapMode ? TEXT("bootstrap") : TEXT("mid-session"),
             sCyclesRun + 1, MaxCycles, Roots.Num(), Errors.Num());
 
         if (Roots.Num() == 0)
@@ -908,23 +981,35 @@ namespace ck::angelscriptgenerator::self_heal
             return;
         }
 
-        // Build the action plan and queue it for deferred application. The
-        // actual file mutations happen from inside OnModalLoopTick — see the
-        // comment on sPendingActions for the timing rationale.
+        // Build the action plan and queue it for deferred application.
         const auto Plan = BuildActionPlan(Roots);
         sPendingActions.Append(Plan);
 
-        Log(TEXT("[SelfHeal] Queued {} recovery action(s) for modal-tick apply (queue depth now {})."),
-            Plan.Num(), sPendingActions.Num());
+        if (BootstrapMode)
+        {
+            Log(TEXT("[SelfHeal] Queued {} recovery action(s) for bootstrap modal-tick apply ")
+                TEXT("(queue depth now {})."), Plan.Num(), sPendingActions.Num());
 
-        // Surface the "in progress" toast immediately. OnReloadHadErrors fires
-        // SYNCHRONOUSLY inside CompileModules — i.e. before Hazelight's modal
-        // opens. The notification manager queues the toast and renders it on
-        // the modal's tick, so the user sees the modal AND the "self-heal
-        // attempting recovery, please wait" notification at the same time.
-        Show_InProgressToast();
+            // Surface the "in progress" toast immediately. OnReloadHadErrors fires
+            // SYNCHRONOUSLY inside CompileModules — i.e. before Hazelight's modal
+            // opens. The notification manager queues the toast and renders it on
+            // the modal's tick, so the user sees the modal AND the "self-heal
+            // attempting recovery, please wait" notification at the same time.
+            Show_InProgressToast();
 
-        Ensure_ModalTickSubscribed();
+            Ensure_ModalTickSubscribed();
+        }
+        else
+        {
+            Log(TEXT("[SelfHeal] Queued {} recovery action(s) for mid-session ticker apply ")
+                TEXT("(queue depth now {})."), Plan.Num(), sPendingActions.Num());
+
+            // No in-progress toast: mid-session recovery completes in <200ms,
+            // there's no modal to wait behind, so a "please wait" throbber for
+            // sub-second work would be more annoying than informative. Success
+            // toast still fires from OnTicker_DrainActions.
+            Ensure_TickerSubscribed();
+        }
 #else
         Warning(TEXT("[SelfHeal] OnAngelscriptReloadHadErrors invoked without WITH_ANGELSCRIPT_CK — no-op."));
 #endif
