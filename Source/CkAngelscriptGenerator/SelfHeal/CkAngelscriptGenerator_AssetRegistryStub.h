@@ -95,6 +95,15 @@ namespace ck::angelscriptgenerator::self_heal
         SoftClass,
     };
 
+    // Generated `*Assets.as` file site descriptor — pair of (file path, the
+    // UCkAssetRegistryConfig discovery root used to populate it). Parsed from
+    // the header comment line each generated file emits.
+    struct CKANGELSCRIPTGENERATOR_API FCk_AssetConfigSiteInfo
+    {
+        FString OutputPath;      // absolute path to the matched <Plugin>_Assets.as file
+        FString DiscoveryRoot;   // package-style discovery root, e.g. "/Game/Raw/"
+    };
+
     class CKANGELSCRIPTGENERATOR_API FCkAsAssetRegistryStubSynthesizer
     {
     public:
@@ -167,6 +176,41 @@ namespace ck::angelscriptgenerator::self_heal
         // so forensic readers can tell the two synthesizers apart.
         static auto
         Get_MarkerComment() -> FString;
+
+        // Parses a single generated `*Assets.as` file's `// Source config: ...`
+        // header line. Returns false (and leaves outputs unspecified) when the
+        // header isn't present in the first ~10 lines of the file or the file
+        // can't be read. OutSite.OutputPath is set to InFilePath on success;
+        // OutNamespace receives the bracketed namespace token (e.g. "assets").
+        static auto
+        Try_ParseConfigSiteHeader(
+            const FString&            InFilePath,
+            FCk_AssetConfigSiteInfo&  OutSite,
+            FString&                  OutNamespace) -> bool;
+
+        // Scans the given directories non-recursively-by-pattern for files
+        // matching `*Assets.as`, parses each one's header via
+        // Try_ParseConfigSiteHeader, and returns those whose parsed namespace
+        // equals InNamespace. Order follows IFileManager::FindFilesRecursive
+        // (alphabetical) for determinism.
+        static auto
+        Collect_MatchingSites(
+            const TArray<FString>& InDirs,
+            const FString&         InNamespace) -> TArray<FCk_AssetConfigSiteInfo>;
+
+        // Among candidates with the same matching namespace, picks the one
+        // whose DiscoveryRoot is a prefix of the asset's package path. Returns
+        // the index into InCandidates, or INDEX_NONE if no candidate's root
+        // prefixes the asset path. Comparison is case-insensitive on the
+        // package-path side; trailing '/' on DiscoveryRoot is normalized.
+        //
+        // When multiple candidates' roots all prefix the path (e.g. one is
+        // "/Game/" and another is "/Game/Raw/"), the LONGEST match wins —
+        // disambiguating nested discovery roots.
+        static auto
+        Pick_BestSite_ByAssetPath(
+            const TArray<FCk_AssetConfigSiteInfo>& InCandidates,
+            const FString&                         InAssetPackagePath) -> int32;
 
         // ---- Live entry point (requires engine state) -----------------------------
 
