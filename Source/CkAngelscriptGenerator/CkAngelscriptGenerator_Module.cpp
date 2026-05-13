@@ -14,6 +14,8 @@
 #include "CkDynamic/CkDynamic_AngelScript.h"
 
 #include "Editor.h"
+#include <AssetRegistry/AssetRegistryModule.h>
+#include <AssetRegistry/IAssetRegistry.h>
 #include <Containers/Ticker.h>
 #include <HAL/FileManager.h>
 #include <Interfaces/IPluginManager.h>
@@ -265,28 +267,40 @@ namespace
 
                             const auto ShadersIdle = (GShaderCompilingManager == nullptr)
                                 || (GShaderCompilingManager->GetNumRemainingJobs() == 0);
+                            // Also gate on AssetRegistry cataloging being complete. If AR is
+                            // still scanning its discovery roots when GenerateAllAssetRegistries
+                            // fires, AR's GetAssetsByPath returns a partial list — the regen
+                            // then emits an incomplete *Assets.as file with accessors silently
+                            // missing (causes a recovery loop on next compile, or worst-case a
+                            // permanently dropped accessor if AR cataloging consistently
+                            // out-races the hard cap).
+                            auto& ArModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
+                            const auto ArIdle = NOT ArModule.Get().IsLoadingAssets();
+                            const auto Settled = ShadersIdle && ArIdle;
                             const auto Hit_HardCap = (*WaitTicks) >= MaxWaitTicks;
 
-                            if (NOT ShadersIdle && NOT Hit_HardCap)
+                            if (NOT Settled && NOT Hit_HardCap)
                             {
                                 // Stay subscribed for next poll tick.
                                 return true;
                             }
 
-                            if (Hit_HardCap && NOT ShadersIdle)
+                            if (Hit_HardCap && NOT Settled)
                             {
                                 ck::angelscriptgenerator::Warning(
-                                    TEXT("[Module] Idle-wait hit hard cap at {} polls "
-                                         "while shader compiler still busy ({} jobs remaining). "
-                                         "Firing AssetRegistry regen anyway — the slow-task "
-                                         "modal may stick for a while."),
+                                    TEXT("[Module] Idle-wait hit hard cap at {} polls — "
+                                         "shaders idle [{}] (jobs remaining [{}]), AR idle [{}]. "
+                                         "Firing AssetRegistry regen anyway — partial *Assets.as "
+                                         "output is possible if AR is still cataloging."),
                                     *WaitTicks,
-                                    GShaderCompilingManager ? GShaderCompilingManager->GetNumRemainingJobs() : 0);
+                                    ShadersIdle,
+                                    GShaderCompilingManager ? GShaderCompilingManager->GetNumRemainingJobs() : 0,
+                                    ArIdle);
                             }
                             else
                             {
                                 ck::angelscriptgenerator::Log(
-                                    TEXT("[Module] Editor settled (shader compiler idle) after "
+                                    TEXT("[Module] Editor settled (shader compiler idle AND AR idle) after "
                                          "{} polls. Firing AssetRegistry regen now."),
                                     *WaitTicks);
                             }
@@ -365,14 +379,55 @@ namespace
 
         ck::angelscriptgenerator::Log(
             TEXT("[Module] PostCompile detected pending AssetRegistry stub marker(s) on disk. ")
-            TEXT("Queueing deferred GenerateAllAssetRegistries (via FTSTicker, 1s delay) to escape ")
-            TEXT("CompileModules's slow-task scope before AR opens its own."));
+            TEXT("Queueing deferred GenerateAllAssetRegistries (via FTSTicker, ~1s polling) to escape ")
+            TEXT("CompileModules's slow-task scope before AR opens its own, and to gate on shader-")
+            TEXT("compiler idle + AssetRegistry cataloging completion before firing."));
+
+        // Mirror the cold-start path's gating: poll until shaders are idle AND AR is done
+        // cataloging. Without the AR-idle gate, GenerateAllAssetRegistries can fire while AR
+        // is still scanning its discovery roots, producing partial *Assets.as output with
+        // accessors silently missing.
+        auto WaitTicks = MakeShared<int32>(0);
+        constexpr int32 MaxWaitTicks = 30; // ~60s at ~2s polling — match cold-start path.
 
         FTSTicker::GetCoreTicker().AddTicker(
             FTickerDelegate::CreateLambda(
-                [](float /*InDeltaTime*/) -> bool
+                [WaitTicks](float /*InDeltaTime*/) -> bool
                 {
+                    ++(*WaitTicks);
+
+                    const auto ShadersIdle = (GShaderCompilingManager == nullptr)
+                        || (GShaderCompilingManager->GetNumRemainingJobs() == 0);
+                    auto& ArModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
+                    const auto ArIdle = NOT ArModule.Get().IsLoadingAssets();
+                    const auto Settled = ShadersIdle && ArIdle;
+                    const auto Hit_HardCap = (*WaitTicks) >= MaxWaitTicks;
+
+                    if (NOT Settled && NOT Hit_HardCap)
+                    { return true; }
+
                     ON_SCOPE_EXIT { sg_PostCompileRegenInFlight = false; };
+
+                    if (Hit_HardCap && NOT Settled)
+                    {
+                        ck::angelscriptgenerator::Warning(
+                            TEXT("[Module] PostCompile idle-wait hit hard cap at {} polls — "
+                                 "shaders idle [{}] (jobs remaining [{}]), AR idle [{}]. "
+                                 "Firing AssetRegistry regen anyway — partial *Assets.as "
+                                 "output is possible if AR is still cataloging."),
+                            *WaitTicks,
+                            ShadersIdle,
+                            GShaderCompilingManager ? GShaderCompilingManager->GetNumRemainingJobs() : 0,
+                            ArIdle);
+                    }
+                    else
+                    {
+                        ck::angelscriptgenerator::Log(
+                            TEXT("[Module] PostCompile settled (shader compiler idle AND AR idle) after "
+                                 "{} polls. Firing AssetRegistry regen now — rewriting *Assets.as "
+                                 "files from AR state."),
+                            *WaitTicks);
+                    }
 
                     if (NOT GEditor)
                     { return false; }
@@ -381,14 +436,10 @@ namespace
                     if (Subsystem == nullptr)
                     { return false; }
 
-                    ck::angelscriptgenerator::Log(
-                        TEXT("[Module] Deferred PostCompile AssetRegistry regen firing — ")
-                        TEXT("rewriting *Assets.as files from AR state."));
-
                     Subsystem->GenerateAllAssetRegistries();
                     return false; // one-shot
                 }),
-            /*InDelay=*/1.0f);
+            /*InDelay=*/2.0f);
     }
 
 #if WITH_ANGELSCRIPT_CK
