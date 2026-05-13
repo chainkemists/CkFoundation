@@ -28,15 +28,15 @@ Three loosely-coupled responsibilities under one module:
 The dispatcher lives under `SelfHeal/`. Three pieces:
 
 - `CkAngelscriptGenerator_AsErrorParser.{h,cpp}` — parses Hazelight's AS compile-error output (sourced via `FAngelscriptManager::Get().FormatDiagnostics()`) into typed root-cause records. Recognizes two error classes: `No matching signatures to '<NS>::<func>(<args>)'` and `Identifier '<X>' is not a data type`. Cascade noise (`Unknown`, `_Iterator`, etc.) is dropped.
-- `CkAngelscriptGenerator_StubSynthesizer.{h,cpp}` — given a parsed `NoMatchingSignatures` error on an entity-script `Params(...)` overload, builds a minimum-viable `namespace U<X> { F<X>_SpawnParams Params(<args>) { ... } }` (plus a stub struct if absent) and atomically appends it to the right `<Plugin>_EntitySpawnParams.as`.
+- `CkAngelscriptGenerator_StubSynthesizer.{h,cpp}` — given a parsed `NoMatchingSignatures` error on an entity-script `Params(...)` overload, builds a minimum-viable `namespace U<X> { F<X>_SpawnParams Params(<args>) { ... } }` (plus a stub struct if absent) and atomically writes it to a SIBLING file `_StubRecovery_<Plugin>_EntitySpawnParams.as` next to the canonical. AS merges the multi-file namespace at compile time, so the canonical never has to be touched. See *Sibling-file stub model* below.
 - `CkAngelscriptGenerator_Dispatcher.{h,cpp}` — classifies parsed roots into one of three recovery strategies and applies them.
 
 ### Recovery strategies
 
 | Error pattern | Strategy | Wired? |
 |---|---|---|
-| `<EntityScriptClass>::Params(<args>)` not found | **Synthesize stub** into the affected `<Plugin>_EntitySpawnParams.as` — caller sees AS merge the existing namespace block with our stub block, finds the missing overload, compile succeeds. Real generator overwrites the stub on `OnPostCompile` regen. | ✓ |
-| `Identifier 'FCk_Handle_<X>' is not a data type` | **Synthesize JSON entry** in `DynamicHandleTypes.json`, register a (temporarily permissive) validator in-memory, touch caller mtime to nudge a recompile. `OnPostEngineInit` then runs `GenerateHandleTypeRegistry` + `DiscoverAndRegisterAllDefinitions` — the now-discoverable data asset's strict `RequiredFragments` is written into the JSON AND the in-memory validator is replaced via `FCkAngelScript_HandleRegistry::UpdateExistingDynamicHandle`. No restart needed. | ✓ |
+| `<EntityScriptClass>::Params(<args>)` not found | **Synthesize stub** into a sibling `_StubRecovery_<Plugin>_EntitySpawnParams.as` — AS merges the sibling's namespace block with the canonical's, finds the missing overload, compile succeeds. `OnPostCompile` deletes the sibling file after a successful regen. | ✓ |
+| `Identifier 'FCk_Handle_<X>' is not a data type` | **Synthesize JSON entry** in a sibling `_StubRecovery_DynamicHandleTypes.json`. `FCkDynamic_HandleTypeRegistry::LoadFromJsonRegistry` merges the sibling's `HandleTypes` into the canonical load (dedup by `TypeName`, stub entries win). Register a temporarily permissive validator in-memory. `OnPostEngineInit` then runs `GenerateHandleTypeRegistry` + `DiscoverAndRegisterAllDefinitions` — the now-discoverable data asset's strict `RequiredFragments` is written into the canonical JSON AND the in-memory validator is replaced via `FCkAngelScript_HandleRegistry::UpdateExistingDynamicHandle`. No restart needed. | ✓ |
 | `assets[::*]::<func>(<args>)` not found | **Manual intervention required** — the accessor's return type encodes the asset's UClass which the dispatcher can't reliably infer at modal-tick time. See `Apply_Strategy::KickGenerator_AssetRegistry` block for the rationale + remediation steps. | Classified, log-only |
 | Anything else | **Terminal banner** (log only) — dispatcher cannot act | ✓ |
 
@@ -135,27 +135,23 @@ Determinism guarantees:
 
 The synthesizer follows the same rules — its stub blocks have no timestamps and use `LINE_TERMINATOR` for platform-native EOL.
 
-### Stub-mutation safety on force-quit (CTO Rev 10 pushback #6)
+### Sibling-file stub model + force-quit safety
 
-If the user kills the editor while a synthesized stub is on disk but the real generator hasn't yet overwritten it, the stub persists to the next launch. The recovery is automatic in both stub flavors:
+The self-heal dispatcher writes synthesized stubs to SIBLING files in the same directory as the canonical, prefixed `_StubRecovery_`:
 
-**EntitySpawnParams stub (in `<Plugin>_EntitySpawnParams.as`):**
-- **Marker comments** wrap every synthesized block (`// CkAngelscriptGenerator: synthesized stub for emergency recovery; ...`). Forensic readers can immediately tell injected blocks apart from real generator output. Public accessor: `FCkAsStubSynthesizer::Get_MarkerComment()`.
-- **Stubs are non-conflicting by construction** — the synthesizer only emits an overload that the existing namespace lacks. AS merges multiple `namespace X { ... }` blocks into a single namespace; the caller resolves to our stub and compile succeeds on next launch. After that success, `OnPostCompile` fires `Run_AllGenerators` which rewrites the file fresh and the stub naturally vanishes.
+- `Script/Generated/_StubRecovery_<Plugin>_EntitySpawnParams.as`
+- `Script/Generated/_StubRecovery_<MatchedAssetsFile>.as`
+- `Script/Generated/_StubRecovery_DynamicHandleTypes.json`
 
-**AssetRegistry stub (in `<Plugin>_*Assets.as`):**
-- Synthesized by `FCkAsAssetRegistryStubSynthesizer` with the same marker-comment convention. Public accessor: `FCkAsAssetRegistryStubSynthesizer::Get_MarkerComment()`.
-- Two cleanup paths:
-  1. **Startup path** (`Maybe_RegenAssetRegistry_OnPostInit` → `OnFEngineLoopInitComplete` + shader-idle poll → `GenerateAllAssetRegistries`). Handles cold-start, including force-quit-from-prior-session leftover stubs. Gated by either the session flag or the on-disk marker scan.
-  2. **PostCompile path** (`Maybe_RegenAssetRegistry_OnPostCompile`). Handles mid-session: a stub synthesized AFTER `OnFEngineLoopInitComplete` has already fired would otherwise persist until next launch. The PostCompile hook detects the marker on disk and runs `GenerateAllAssetRegistries` synchronously. Gated by `sg_EngineLoopInitComplete` so it can't race the startup path during cold-start contention. Cost in the steady-state (no marker) is one cheap fs walk per AS recompile.
+The canonical files are never touched. Both the BB root `.gitignore` and CkFoundation's `.gitignore` cover `Script/Generated/_StubRecovery_*` patterns, so stub files physically cannot be staged. `OnPostCompile` walks all enabled `Script/Generated/` directories and deletes any matching files — self-cleaning, no marker scan inside canonical files needed.
 
-**DynamicHandle stub (in `DynamicHandleTypes.json`):**
-- The synthesized JSON entry has correct `TypeName` + `ShortName` and a placeholder `Description` (marker text). Next launch reads the JSON, registers the type with a *permissive* validator (empty `RequiredFragments`).
-- AS compile succeeds — the type is at least registered — but `As_<X>()` casts succeed unchecked until the deferred regen fires.
-- `OnPostEngineInit::Maybe_RegenDynamicHandleJson_OnPostInit` then regenerates the JSON from the data asset (proper `RequiredFragments`) AND calls `DiscoverAndRegisterAllDefinitions` to update the in-memory validator to strict via `FCkAngelScript_HandleRegistry::UpdateExistingDynamicHandle`. From that point the session is fully safe.
-- Window of permissive-validator state: typically <1 second between editor reaching main screen and OnPostEngineInit firing. A plain `Log` line announces both states.
+**EntitySpawnParams stub:** AS merges multiple `namespace X { ... }` blocks across files, so the sibling's namespace block contributes the missing accessor to the merged scope and compile succeeds. The sibling carries a recovery-header banner (`FCkAsStubSynthesizer::Get_StubFileHeader()`) plus per-stub marker comments (`Get_MarkerComment()`). Multiple drifts in the same session accumulate into the same sibling file.
 
-The intended source-hash header that would have made the file "self-detect dirty" at next launch was reverted with Rev 9. The above mitigations cover the same failure mode without it.
+**AssetRegistry stub:** Same shape — sibling `_StubRecovery_<MatchedAssetsFile>.as` containing the same `namespace assets { ... }` block. AS namespace-merge handles the rest. The choice of which `*Assets.as` to alongside is made by the same prefix-match logic the prior in-place implementation used.
+
+**DynamicHandle stub:** JSON has no comment syntax, so the sibling uses a top-level `"_WARNING"` field instead. `FCkDynamic_HandleTypeRegistry::LoadFromJsonRegistry` reads the canonical, then reads the sibling stub (if present) and merges its `HandleTypes` entries — deduped by `TypeName`, sibling entries win. The synthesized stub has correct `TypeName` + `ShortName` and a placeholder `Description`; `RequiredFragments` is empty, which produces a *permissive* validator. `OnPostEngineInit::Maybe_RegenDynamicHandleJson_OnPostInit` regenerates the canonical JSON from the now-discoverable data asset, then `DiscoverAndRegisterAllDefinitions` upgrades the in-memory validator to strict via `FCkAngelScript_HandleRegistry::UpdateExistingDynamicHandle`. Window of permissive-validator state: typically <1 second between editor reaching main screen and OnPostEngineInit firing.
+
+**Force-quit between recovery and PostCompile:** Sibling files survive to next launch. AS compile succeeds again on next launch (the sibling is still on disk, merge-via-namespace still works, the JSON merge still works). `OnPostCompile` then deletes the sibling. The `_StubRecovery_*` files double as the unambiguous on-disk signal for the deferred-regen paths (`Maybe_RegenAssetRegistry_OnPostInit`, `Maybe_RegenDynamicHandleJson_OnPostInit`) to know they should fire a proper regen — replacing the marker-scan-inside-canonical approach from the prior in-place model.
 
 ---
 
@@ -164,6 +160,7 @@ The intended source-hash header that would have made the file "self-detect dirty
 1. **Don't commit `Script/Generated/*.as` files manually.** Either let the generators land them on next editor launch, or trigger a deliberate regen from `UCkDynamicHandleSubsystem::GenerateHandleTypeRegistry()` / `UCk_Utils_AssetRegistry_UE::Generate_All_Asset_Registries()` inside the editor.
 2. **Don't apply file mutations synchronously inside `OnReloadHadErrors`.** Use the modal-tick deferral — see the timing-constraint paragraph above.
 3. **Don't introduce non-determinism into generator output** (timestamps, GUIDs, machine-specific paths). The drift commandlet + atomic-write diff-skip both rely on determinism.
+4. **Don't mutate canonical generated files from the self-heal dispatcher.** Recovery stubs go to sibling `_StubRecovery_*` files only — anything else breaks the "canonical files are byte-clean from HEAD" invariant the new model depends on.
 
 ---
 

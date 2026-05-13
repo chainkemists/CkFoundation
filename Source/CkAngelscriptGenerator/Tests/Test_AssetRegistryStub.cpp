@@ -424,6 +424,49 @@ bool FCkTest_AssetRegistryStub_PickSite_ByAssetPath::RunTest(const FString&)
     return true;
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+// Derive_StubSiblingPath: AssetRegistry variant — same convention.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_AssetRegistryStub_DeriveStubSiblingPath,
+    "CkAngelscriptGenerator.UnitTests.AssetRegistryStub.DeriveStubSiblingPath",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_AssetRegistryStub_DeriveStubSiblingPath::RunTest(const FString&)
+{
+    TestEqual(TEXT("BusterBlockAssets.as -> _StubRecovery_BusterBlockAssets.as"),
+        FCkAsAssetRegistryStubSynthesizer::Derive_StubSiblingPath(
+            TEXT("D:/Repos/BB/Script/Generated/BusterBlockAssets.as")),
+        FString{TEXT("D:/Repos/BB/Script/Generated/_StubRecovery_BusterBlockAssets.as")});
+
+    TestEqual(TEXT("empty -> empty"),
+        FCkAsAssetRegistryStubSynthesizer::Derive_StubSiblingPath(FString{}),
+        FString{});
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Stub-file recovery header banner is present + identifies the file.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_AssetRegistryStub_StubFileHeader,
+    "CkAngelscriptGenerator.UnitTests.AssetRegistryStub.StubFileHeader",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_AssetRegistryStub_StubFileHeader::RunTest(const FString&)
+{
+    const auto Header = FCkAsAssetRegistryStubSynthesizer::Get_StubFileHeader();
+    TestFalse(TEXT("not empty"), Header.IsEmpty());
+    TestTrue(TEXT("contains AUTO-GENERATED RECOVERY STUBS"),
+        Header.Contains(TEXT("AUTO-GENERATED RECOVERY STUBS")));
+    TestTrue(TEXT("notes GITIGNORED status"), Header.Contains(TEXT("GITIGNORED")));
+    TestTrue(TEXT("notes self-cleans"),       Header.Contains(TEXT("self-cleans")));
+    return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS
 
 // --------------------------------------------------------------------------------------------------------------------
