@@ -110,6 +110,14 @@ public:
     Get_IsDisabled(
         const FCk_Handle_2dGridCell& InCell);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|2dGridCell",
+              DisplayName="[Ck][2dGridCell] Request Enable Disable")
+    static void
+    Request_EnableDisable(
+        UPARAM(ref) FCk_Handle_2dGridCell& InCell,
+        ECk_EnableDisable InEnableDisable);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|2dGridCell",
               DisplayName="[Ck][2dGridCell] Get Local Bounds")
