@@ -339,6 +339,77 @@ void Foo(FSomeParams InParams)
 void Foo(FSomeParams& InParams) { InParams.Probe = SomeValue; }
 
 //============================================================================
+// 9.2 CONST PROPAGATION IN AS — RULES THAT DIFFER FROM C++
+//============================================================================
+//
+// AS const-correctness is stricter than C++'s. Knowing the rules saves you
+// from chasing "I can't assign X to Y" / "no matching ctor signature" errors
+// down rabbit holes.
+//
+// (1) `Cast<T>()` PRESERVES const. Contrary to typical UE C++ where Cast<>
+//     returns a non-const pointer, AS's Cast<T> mirrors the input's const-ness.
+//     Use it for type narrowing, not for stripping const.
+//
+//     auto NonConstObj  = Cast<UMyThing>(SomeNonConstValue);  // non-const
+//     const auto Frozen = Cast<UMyThing>(SomeConstValue);     // STILL const
+//
+// (2) `auto X = constSource` PRESERVES const. Declaring with `auto` does
+//     not strip const; you get a const local. There is no in-AS way to
+//     launder const away — no const_cast, no routing through a base type.
+//
+//     const auto Def1 = Item.Get_Definition();    // const (Get_Definition is const)
+//     auto       Def2 = Item.Get_Definition();    // STILL const
+//     auto       Def3 = Cast<UCk_InventoryItem_Definition>(Item.Get_Definition()); // STILL const
+//
+// (3) AS REJECTS const → non-const VALUE-PARAM conversion. C++ silently
+//     copies; AS treats it as a type mismatch. You cannot pass a const
+//     value into a non-const param even though it's a by-value copy.
+//
+//     void TakesNonConst(UMyThing X);
+//     const auto Frozen = Item.Get_Definition();
+//     TakesNonConst(Frozen);  // ❌ compile error
+//
+//     The fix is at the receiving function — declare the param `const`:
+//     void TakesConst(const UMyThing X);
+//
+// (4) USTRUCT FIELDS can be declared `const UObject` to receive const values.
+//     This is the load-bearing pattern when you need to thread a const
+//     pointer (e.g. `Item.Get_Definition()` result) through a struct.
+//
+//     USTRUCT()
+//     struct FMyEntry
+//     {
+//         UPROPERTY() const UCk_InventoryItem_Definition Def;  // accepts const
+//         UPROPERTY() int32 Count = 1;
+//     }
+//
+// (5) `CK_DEFINE_CONSTRUCTORS` C++ macro: post the CkCore reflection fix,
+//     when a USTRUCT field is `const UObject*` on the C++ side, the
+//     AS-exposed ctor signature now also takes `const UObject` for that
+//     param. So building a request from a const Definition just works:
+//
+//         const auto Def = Item.Get_Definition();
+//         auto Req = FCk_Request_Inventory_AddItemByDefinition(Def, 1); // ✓
+//
+//     (Before the fix, the AS-exposed ctor took non-const, creating a
+//     one-way street that blocked const-correct chains. If you spot
+//     similar asymmetry elsewhere — AS ctor takes non-const but the C++
+//     field is const — that's a `Get_RuntimeTypeToString_AngelScript`
+//     bug, not a workaround for the caller.)
+//
+// (6) TArray::Add of const elements is rejected — TArray<T>::Add takes a
+//     non-const ref. Workarounds for dedup are to store a projected key
+//     (e.g. `.GetName()` for FName, `.GetFullName()` for FString) rather
+//     than the value itself.
+//
+//     TArray<UCk_InventoryItem_Definition> Defs;
+//     const auto Def = Item.Get_Definition();
+//     Defs.Add(Def);              // ❌ const → non-const ref
+//     Defs.AddUnique(Def);        // ❌ same
+//     TArray<FName> SeenNames;
+//     SeenNames.AddUnique(Def.GetName());   // ✓
+//
+//============================================================================
 // 10. SPAWN PARAMS PATTERN
 //============================================================================
 //

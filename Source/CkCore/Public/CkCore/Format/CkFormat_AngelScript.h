@@ -63,11 +63,23 @@ namespace ck
             const auto CleanNameStr = FString{static_cast<int32>(CleanName.length()), CleanName.data()};
             return CleanNameStr.Replace(TEXT("enum "), TEXT(""), ESearchCase::CaseSensitive);
         }
-        // Check for pointer types — strip pointer and const, then resolve recursively
+        // Check for pointer types — strip the pointer, but preserve const on the pointee so AS
+        // sees `const X` for C++ `const X*`. UObject pointers are AS reference types, so the
+        // pointer itself has no AS-side syntax; const must propagate to the AS type string so
+        // const→non-const conversion is rejected on the script side.
         else if constexpr (std::is_pointer_v<T>)
         {
-            using PointedToType = std::remove_const_t<std::remove_pointer_t<T>>;
-            return Get_RuntimeTypeToString_AngelScript<PointedToType>();
+            using PointeeType     = std::remove_pointer_t<T>;
+            using BarePointeeType = std::remove_const_t<PointeeType>;
+            if constexpr (std::is_const_v<PointeeType>)
+            {
+                return FString::Printf(TEXT("const %s"),
+                    *Get_RuntimeTypeToString_AngelScript<BarePointeeType>());
+            }
+            else
+            {
+                return Get_RuntimeTypeToString_AngelScript<BarePointeeType>();
+            }
         }
         // Default case: just use cleantype output
         else
