@@ -16,6 +16,7 @@ public:
 private:
 #if WITH_EDITOR
 	FDelegateHandle _PostEngineInitHandle;
+	FDelegateHandle _EngineLoopInitCompleteHandle;
 	FDelegateHandle _PostAngelscriptCompileHandle;
 
 	// Rev 10 AS bootstrap self-heal — armed only when neither the
