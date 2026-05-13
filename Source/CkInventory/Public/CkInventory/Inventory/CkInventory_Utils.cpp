@@ -676,16 +676,14 @@ auto
     { return {}; }
 
     const auto StackingPreference = InRequest.Get_StackingPreference();
+    const auto AddPolicy = InRequest.Get_AddPolicy();
 
     auto Survivors = TArray<ck_item_resolution::FCandidateScore>{};
     Survivors.Reserve(InRequest.Get_Candidates().Num());
 
     for (const auto& Candidate : ck::algo::Filter(InRequest.Get_Candidates(), ck::algo::IsValidEntityHandle{}))
     {
-        // PreferStacking accepts candidates whose only failure mode is "no room for new entry"
-        // when an existing stack can absorb the item. Centralized in Get_CanAcceptItem so this
-        // utility and Request_AddItemByDefinition / Request_TransferItem share one validator.
-        if (UCk_Utils_Inventory_UE::Get_CanAcceptItem(Candidate, InItem, ECk_Inventory_AddPolicy::PreferStacking)
+        if (UCk_Utils_Inventory_UE::Get_CanAcceptItem(Candidate, InItem, AddPolicy)
             != ECk_Inventory_OperationResult_Add::Success)
         { continue; }
 
