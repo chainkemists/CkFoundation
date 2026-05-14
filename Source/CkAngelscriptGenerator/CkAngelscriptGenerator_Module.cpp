@@ -627,6 +627,23 @@ namespace
 void FCkAngelscriptGeneratorModule::StartupModule()
 {
 #if WITH_EDITOR
+    // Defensive: PostCompile is the only path that deletes self-heal sibling
+    // stubs, so a force-quit or crash between stub synthesis and the next
+    // clean compile leaves `_StubRecovery_*` files on disk. Carrying them
+    // across sessions is unsafe — a stale sibling can collide with canonical
+    // regen output and produce duplicate-function errors at the next AS
+    // compile. Wipe them before AS hooks are wired; the dispatcher will
+    // re-synthesize from scratch if drift is still present.
+    {
+        const auto DeletedCount = Delete_AllStubRecoveryFiles();
+        if (DeletedCount > 0)
+        {
+            ck::angelscriptgenerator::Log(
+                TEXT("[Module] Startup self-heal cleanup: deleted {} stale stub recovery file(s) from prior session."),
+                DeletedCount);
+        }
+    }
+
     {
         auto& MessageLogModule = FModuleManager::LoadModuleChecked<FMessageLogModule>(TEXT("MessageLog"));
         auto InitOptions = FMessageLogInitializationOptions{};
