@@ -38,29 +38,21 @@
 namespace
 {
 #if WITH_EDITOR
-    // Shared with the dispatcher's UI-surfacing helpers. Keep in sync.
     constexpr auto* sSelfHealLogChannel = TEXT("CkAngelscriptGenerator");
-    // Flips true once FCoreDelegates::OnFEngineLoopInitComplete fires. Gates the
-    // PostCompile-driven AssetRegistry cleanup so it can't run during cold-start
-    // shader-compile + BP-discovery contention (where GenerateAllAssetRegistries
-    // empirically blocks for 6.5min instead of its normal 3.7s). The existing
-    // deferred OnFEngineLoopInitComplete + shader-idle poll already covers
-    // startup; this flag just prevents the PostCompile path from racing it.
+
+    // Gates the PostCompile-driven AssetRegistry cleanup so it can't run during
+    // cold-start contention (where GenerateAllAssetRegistries empirically
+    // blocks for 6.5min vs its normal 3.7s).
     static bool sg_EngineLoopInitComplete = false;
 
-    // Shared in-flight guard so the cold-start (OnFEngineLoopInitComplete) path
-    // and the PostCompile path don't double-fire GenerateAllAssetRegistries
-    // within the same cold-start window. Either path bails on its precheck if
-    // a regen is already queued/firing; the flag is cleared by a marker-
-    // disappearance poll once the regen has actually rewritten the *Assets.as
-    // files from AR state (or by a hard-cap timeout as a safety net).
+    // Shared in-flight guard so the cold-start and PostCompile regen paths
+    // don't double-fire GenerateAllAssetRegistries within the same window.
     //
-    // The async-completion delegate on UCkAssetRegistrySubsystem
-    // (OnAssetRegistryComplete) is a UFUNCTION-shaped DYNAMIC multicast — wiring
-    // it from a module-local handler would require a UCLASS sink plus a
-    // .generated.h, which is heavyweight for one callback. The marker-poll
-    // mirrors what the rest of this file already does (file-scan as the source
-    // of truth for stub state) and avoids introducing a sink UObject.
+    // We don't subscribe to UCkAssetRegistrySubsystem::OnAssetRegistryComplete
+    // for clearing because it's a UFUNCTION-shaped DYNAMIC multicast — wiring
+    // a module-local handler would require a UCLASS sink + .generated.h for
+    // one callback. The file-scan-based marker check the rest of this file
+    // uses is the cheaper source of truth.
     static bool sg_AnyAssetRegistryRegenInFlight = false;
 
     auto Run_AllGenerators() -> void
@@ -69,18 +61,15 @@ namespace
         FCkAutoTestWrapperGenerator::GenerateAll();
     }
 
-    // ---- Self-heal stub-recovery file cleanup --------------------------------------
+    // ----------------------------------------------------------------------------------------------------------------
+    // Self-heal sibling-stub-file cleanup
     //
-    // The self-heal dispatcher writes synthesized stubs to SIBLING files
-    // (`Script/Generated/_StubRecovery_*.{as,json}`) rather than mutating the
-    // canonical generated files. Canonical files therefore stay byte-clean
-    // from HEAD and accidental staging is impossible (the `_StubRecovery_*`
-    // paths are gitignored).
-    //
-    // Cleanup runs from the PostCompile hook — i.e. only after a successful
-    // AS compile. If next launch still has the same drift, the dispatcher
-    // re-creates the stubs fresh. We walk the project + every enabled
-    // plugin's `Script/Generated/` directory and delete any matching files.
+    // The dispatcher writes synthesized stubs to `_StubRecovery_*.{as,json}`
+    // siblings, not in-place to the canonical generated files. Canonical files
+    // stay byte-clean and the sibling pattern is gitignored. Cleanup runs from
+    // PostCompile (i.e. only after a successful AS compile); if next launch
+    // still has drift, the dispatcher re-creates them fresh.
+    // ----------------------------------------------------------------------------------------------------------------
 
     auto Delete_AllStubRecoveryFiles() -> int32
     {
@@ -125,21 +114,17 @@ namespace
 
         if (DeletedCount > 0)
         {
+            // Context-agnostic message — caller (StartupModule or PostCompile)
+            // logs its own disambiguating line.
             FMessageLog{FName{sSelfHealLogChannel}}.Info(FText::Format(
                 LOCTEXT("CleanupEntry",
-                    "PostCompile cleanup: deleted {0} self-heal stub file(s)."),
+                    "Self-heal cleanup: deleted {0} stub recovery file(s)."),
                 FText::AsNumber(DeletedCount)));
         }
 
         return DeletedCount;
     }
 
-
-    // Detects whether the DynamicHandle stub sibling file exists on disk —
-    // `Script/Generated/_StubRecovery_DynamicHandleTypes.json`. The canonical
-    // file is never touched by the self-heal dispatcher; presence of the
-    // sibling is the unambiguous signal that a stub was synthesized and the
-    // canonical may be missing entries.
     auto Has_DynamicHandleStubRecoveryFile_OnDisk() -> bool
     {
         const auto JsonPath = FCkDynamic_HandleTypeRegistry::GetRegistryFilePath();
@@ -151,23 +136,12 @@ namespace
         return IFileManager::Get().FileExists(*StubPath);
     }
 
-    // Deferred JSON regen for the DynamicHandle recovery path. Fires from
-    // OnPostEngineInit — by which time GEditor is available (unlike at the
-    // modal-tick recovery time where the dispatcher writes the initial JSON
-    // stub). Replaces stub entries with properly-sourced JSON sourced from
-    // the discovered UCkDynamic_HandleDefinition data assets AND refreshes
-    // the in-memory FCkAngelScript_HandleRegistry validators (the
-    // register-or-update path landed in b9fb7b162).
-    //
-    // Two triggers:
-    //   1. The dispatcher set the session flag — a stub was written this
-    //      session and we know to clean it up.
-    //   2. The on-disk JSON has stub-marker entries — covers the force-quit
-    //      case where a stub from a prior session survived to disk. Without
-    //      this trigger, a force-quit between modal-tick recovery and
-    //      OnPostEngineInit would leave the user with a permissive validator
-    //      indefinitely (until they manually click Force Refresh or edit
-    //      an AS file that triggers a recompile and the PreCompile hook).
+    // Deferred DynamicHandle JSON regen for the cold-start path. Fires from
+    // OnPostEngineInit (GEditor available, unlike at modal-tick where the
+    // dispatcher writes the stub). Triggers:
+    //   1. Session flag — a stub was synthesized this session.
+    //   2. On-disk sibling — covers force-quit between modal-tick recovery
+    //      and OnPostEngineInit cleanup.
     auto Maybe_RegenDynamicHandleJson_OnPostInit() -> void
     {
         const auto SessionFlagSet = ck::angelscriptgenerator::self_heal::FCkAsRecoveryDispatcher::Did_SynthesizeJsonStub_ThisSession();
@@ -186,9 +160,8 @@ namespace
         if (NOT GEditor)
         {
             ck::angelscriptgenerator::Warning(
-                TEXT("[Module] Deferred DynamicHandle JSON regen wanted, but GEditor is null at ")
-                TEXT("OnPostEngineInit — skipping. JSON stays in synthesized-stub state until ")
-                TEXT("user clicks 'Generate Handle Type Registry' manually."));
+                TEXT("[Module] Deferred DynamicHandle JSON regen wanted, but GEditor is null — skipping. ")
+                TEXT("JSON stays in synthesized-stub state until user clicks 'Generate Handle Type Registry' manually."));
             return;
         }
 
@@ -196,39 +169,27 @@ namespace
         if (Subsystem == nullptr)
         {
             ck::angelscriptgenerator::Warning(
-                TEXT("[Module] Deferred DynamicHandle JSON regen wanted, but ")
-                TEXT("UCkDynamicHandleSubsystem isn't loaded — skipping. JSON stays in ")
-                TEXT("synthesized-stub state until user clicks 'Generate Handle Type Registry' manually."));
+                TEXT("[Module] Deferred DynamicHandle JSON regen wanted, but UCkDynamicHandleSubsystem ")
+                TEXT("isn't loaded — skipping."));
             return;
         }
 
         ck::angelscriptgenerator::Log(
-            TEXT("[Module] Deferred DynamicHandle JSON regen firing (dispatcher synthesized a stub ")
-            TEXT("earlier this session). Replacing stub entries with properly-sourced data."));
+            TEXT("[Module] Deferred DynamicHandle JSON regen firing. Replacing stub entries with properly-sourced data."));
 
         Subsystem->GenerateHandleTypeRegistry();
 
-        // ALSO refresh the in-memory registry so the current session uses the
-        // strict validator (sourced from the data asset's RequiredFragments)
-        // rather than the permissive validator from our JSON stub. With the
-        // CkDynamic register-or-update path now in place, calling
-        // DiscoverAndRegisterAllDefinitions iterates the AR-discovered
-        // UCkDynamic_HandleDefinition data assets (which materialized once AS
-        // compile succeeded post-recovery) and updates each in-memory entry
-        // via FCkAngelScript_HandleRegistry::UpdateExistingDynamicHandle. No
-        // restart required.
+        // Refresh the in-memory registry so this session uses the strict
+        // validator from each data asset's RequiredFragments instead of the
+        // permissive one our JSON stub registered. DiscoverAndRegisterAll-
+        // Definitions routes through the register-or-update path; no restart
+        // needed.
         FCkDynamic_HandleTypeRegistry::DiscoverAndRegisterAllDefinitions();
 
         ck::angelscriptgenerator::Log(
-            TEXT("[Module] DynamicHandle JSON regenerated and in-memory bindings refreshed ")
-            TEXT("from data assets. Current session now uses strict validators — no restart needed."));
+            TEXT("[Module] DynamicHandle JSON regenerated and in-memory bindings refreshed — strict validators active."));
     }
 
-    // Returns true if any `_StubRecovery_*Assets.as` sibling exists across
-    // the project + enabled-plugin `Script/Generated/` directories. The
-    // canonical *Assets.as files are never touched by the self-heal
-    // dispatcher; sibling-file presence is the unambiguous signal that
-    // recovery wrote a stub.
     auto Has_AssetRegistryStubRecoveryFiles_OnDisk() -> bool
     {
         auto Dirs = TArray<FString>{};
@@ -250,14 +211,8 @@ namespace
         return false;
     }
 
-    // Deferred AssetRegistry regen, parallels Maybe_RegenDynamicHandleJson_OnPostInit.
-    // Two triggers:
-    //   1. The dispatcher set the session flag — a stub was written this session.
-    //   2. The on-disk marker scan — covers force-quit between modal-tick recovery
-    //      and OnPostEngineInit. Without this, a force-quit session leaves the stub
-    //      in a *Assets.as file indefinitely; next clean editor launch would still
-    //      see the stub (harmless but cosmetically ugly + counts toward the wrong-
-    //      file-targeting edge case where it accumulates over time).
+    // Deferred AssetRegistry regen for the cold-start path. Same trigger shape
+    // as the DynamicHandle counterpart above (session flag OR sibling-on-disk).
     auto Maybe_RegenAssetRegistry_OnPostInit() -> void
     {
         const auto SessionFlagSet = ck::angelscriptgenerator::self_heal::
@@ -284,9 +239,7 @@ namespace
         if (NOT GEditor)
         {
             ck::angelscriptgenerator::Warning(
-                TEXT("[Module] Deferred AssetRegistry regen wanted, but GEditor is null at ")
-                TEXT("OnPostEngineInit — skipping. Stubs stay in place until user clicks ")
-                TEXT("'Generate All Asset Registries' manually."));
+                TEXT("[Module] Deferred AssetRegistry regen wanted, but GEditor is null — skipping."));
             return;
         }
 
@@ -294,50 +247,39 @@ namespace
         if (Subsystem == nullptr)
         {
             ck::angelscriptgenerator::Warning(
-                TEXT("[Module] Deferred AssetRegistry regen wanted, but UCkAssetRegistrySubsystem ")
-                TEXT("isn't loaded — skipping. Stubs stay in place until user clicks ")
-                TEXT("'Generate All Asset Registries' manually."));
+                TEXT("[Module] Deferred AssetRegistry regen wanted, but UCkAssetRegistrySubsystem isn't loaded — skipping."));
             return;
         }
 
         ck::angelscriptgenerator::Log(
-            TEXT("[Module] Deferred AssetRegistry regen scheduled (dispatcher synthesized a stub ")
-            TEXT("earlier this session, or a stub marker is present on disk). Will hook ")
-            TEXT("FCoreDelegates::OnFEngineLoopInitComplete and then poll for shader-compile idle ")
-            TEXT("before firing GenerateAllAssetRegistries — this rewrites all *Assets.as files ")
-            TEXT("from the AR-scanned state, restoring correct file placement."));
+            TEXT("[Module] Deferred AssetRegistry regen scheduled. Waiting for shader-compile + AR-cataloging idle ")
+            TEXT("before firing GenerateAllAssetRegistries."));
 
-        // Reserve the regen slot now so any PostCompile firing during the 2-second
-        // idle-wait window (after OnFEngineLoopInitComplete sets sg_EngineLoopInitComplete
-        // but before our ticker fires) will see the in-flight flag and bail.
+        // Reserve the slot now so PostCompile firing during the idle-wait
+        // window bails on its precheck.
         sg_AnyAssetRegistryRegenInFlight = true;
 
-        // Hook the regen to OnFEngineLoopInitComplete, which broadcasts AFTER
-        // FEngineLoop::Init fully returns (slow-task stack unwound — fixes the
-        // out-of-order FSlowTask destruction crash empirically caught 2026-05-12
-        // when we wired regen to OnPostEngineInit inline). OnPostEngineInit fires
-        // BEFORE init's slow task pops; OnFEngineLoopInitComplete fires AFTER.
+        // Hook the regen to OnFEngineLoopInitComplete (broadcasts AFTER
+        // FEngineLoop::Init returns and pops its slow task). OnPostEngineInit
+        // fires INSIDE init's slow task — wiring regen there triggers an
+        // out-of-order FSlowTask destruction ensure when AR opens its own
+        // slow task. Empirically caught 2026-05-12.
         //
-        // Then within that callback, poll via FTSTicker until the shader
-        // compiler is idle and async-load queue is drained, so we don't pile
-        // our 400+ texture async loads on top of cold-start shader compiles
-        // and BP discovery (empirically caused a multi-minute slow-task modal
-        // block, 2026-05-12). Hard cap at 60 seconds — if conditions never
-        // satisfy, fire anyway with a warning.
+        // Inside the callback, FTSTicker polls until shader compiler is idle
+        // AND AR is done cataloging. Without the AR-idle gate, GenerateAll-
+        // AssetRegistries can fire while AR is still scanning, producing
+        // partial *Assets.as output with accessors silently missing. Without
+        // the shader gate, our 400+ texture async loads pile on top of cold-
+        // start contention (the 6.5min wedge, empirically caught 2026-05-12).
+        // Hard cap at 60s — fire anyway with a warning rather than hang.
         FCoreDelegates::OnFEngineLoopInitComplete.AddLambda(
             []()
             {
                 ck::angelscriptgenerator::Log(
-                    TEXT("[Module] OnFEngineLoopInitComplete fired. ")
-                    TEXT("Starting idle-wait poll before AssetRegistry regen."));
+                    TEXT("[Module] OnFEngineLoopInitComplete fired. Starting idle-wait poll before AssetRegistry regen."));
 
-                // Capture by-value into the ticker — the lambda needs its own
-                // mutable wait-counter and shared subsystem ptr resolution at
-                // each tick (UCkAssetRegistrySubsystem is GEditor-owned and
-                // may not survive PIE shutdown, though that's unlikely between
-                // boot and our first poll).
                 auto WaitTicks = MakeShared<int32>(0);
-                constexpr int32 MaxWaitTicks = 30; // ~60 seconds at 0.5Hz polling.
+                constexpr int32 MaxWaitTicks = 30; // ~60s at 0.5Hz polling.
 
                 FTSTicker::GetCoreTicker().AddTicker(
                     FTickerDelegate::CreateLambda(
@@ -347,31 +289,20 @@ namespace
 
                             const auto ShadersIdle = (GShaderCompilingManager == nullptr)
                                 || (GShaderCompilingManager->GetNumRemainingJobs() == 0);
-                            // Also gate on AssetRegistry cataloging being complete. If AR is
-                            // still scanning its discovery roots when GenerateAllAssetRegistries
-                            // fires, AR's GetAssetsByPath returns a partial list — the regen
-                            // then emits an incomplete *Assets.as file with accessors silently
-                            // missing (causes a recovery loop on next compile, or worst-case a
-                            // permanently dropped accessor if AR cataloging consistently
-                            // out-races the hard cap).
                             auto& ArModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
                             const auto ArIdle = NOT ArModule.Get().IsLoadingAssets();
                             const auto Settled = ShadersIdle && ArIdle;
                             const auto Hit_HardCap = (*WaitTicks) >= MaxWaitTicks;
 
                             if (NOT Settled && NOT Hit_HardCap)
-                            {
-                                // Stay subscribed for next poll tick.
-                                return true;
-                            }
+                            { return true; }
 
                             if (Hit_HardCap && NOT Settled)
                             {
                                 ck::angelscriptgenerator::Warning(
-                                    TEXT("[Module] Idle-wait hit hard cap at {} polls — "
-                                         "shaders idle [{}] (jobs remaining [{}]), AR idle [{}]. "
-                                         "Firing AssetRegistry regen anyway — partial *Assets.as "
-                                         "output is possible if AR is still cataloging."),
+                                    TEXT("[Module] Idle-wait hit hard cap at {} polls — shaders idle [{}] "
+                                         "(jobs remaining [{}]), AR idle [{}]. Firing AssetRegistry regen "
+                                         "anyway — partial *Assets.as output is possible if AR is still cataloging."),
                                     *WaitTicks,
                                     ShadersIdle,
                                     GShaderCompilingManager ? GShaderCompilingManager->GetNumRemainingJobs() : 0,
@@ -402,39 +333,25 @@ namespace
                             }
 
                             Subsystem->GenerateAllAssetRegistries();
-                            // Sibling-file model: stub files are independent of the canonical
-                            // *Assets.as files. The regen call's synchronous return is enough
-                            // signal that next-launch will be clean — no need to poll for any
-                            // marker disappearance. Clear the in-flight guard immediately so
-                            // back-to-back PostCompiles can re-attempt if needed.
                             sg_AnyAssetRegistryRegenInFlight = false;
                             return false; // one-shot
                         }),
-                    /*InDelay=*/2.0f); // polls every ~2 seconds
+                    /*InDelay=*/2.0f);
             });
     }
 
-    // PostCompile-driven DynamicHandle canonical regen. Counterpart to
-    // Maybe_RegenAssetRegistry_OnPostCompile, but lighter: GenerateHandleTypeRegistry
-    // reads already-loaded UCkDynamic_HandleDefinition data assets via AR
-    // (not a full AR scan) and writes a small JSON file. No shader-contention
-    // hazard, no FSlowTask scope to escape — sync call is fine.
+    // PostCompile-driven DynamicHandle canonical regen — counterpart to
+    // Maybe_RegenAssetRegistry_OnPostCompile but lighter: GenerateHandleType-
+    // Registry reads already-loaded data assets and writes a small JSON, no
+    // shader-contention hazard and no FSlowTask scope conflict (sync call OK).
     //
-    // Gate on the on-disk sibling stub marker (NOT the session flag). After
-    // Delete_AllStubRecoveryFiles runs at the end of this same PostCompile pass,
-    // the marker is gone and subsequent PostCompile invocations are no-ops.
-    //
-    // What this fixes that the existing OnPostEngineInit-only path doesn't:
-    //   Mid-session a user adds a new `FCk_Handle_X` reference + data asset.
-    //   AS fails to compile. Dispatcher synthesizes a sibling JSON stub with
-    //   empty RequiredFragments (permissive validator). AS recompiles. Without
-    //   this hook, the canonical JSON stays stale until next editor launch, and
-    //   the in-memory validator stays permissive for the rest of the session.
-    //   With this hook, the very next PostCompile rewrites the canonical from
-    //   AR-discovered data assets AND upgrades the in-memory validator to strict
-    //   via FCkAngelScript_HandleRegistry::UpdateExistingDynamicHandle (the
-    //   register-or-update path that DiscoverAndRegisterAllDefinitions routes
-    //   through).
+    // Mid-session value: user adds a new `FCk_Handle_X` reference + data
+    // asset, AS fails, dispatcher synthesizes a permissive-validator sibling
+    // stub, AS recompiles. Without this hook the canonical JSON stays stale
+    // until next launch and the in-memory validator stays permissive. With
+    // it, the very next PostCompile rewrites the canonical and upgrades the
+    // in-memory validator to strict via DiscoverAndRegisterAllDefinitions
+    // (register-or-update path).
     auto Maybe_RegenDynamicHandleJson_OnPostCompile() -> void
     {
         if (NOT Has_DynamicHandleStubRecoveryFile_OnDisk())
@@ -443,8 +360,7 @@ namespace
         if (NOT GEditor)
         {
             ck::angelscriptgenerator::Warning(
-                TEXT("[Module] PostCompile DynamicHandle regen wanted, but GEditor is null — skipping. ")
-                TEXT("JSON stays in synthesized-stub state until next launch's deferred regen."));
+                TEXT("[Module] PostCompile DynamicHandle regen wanted, but GEditor is null — skipping."));
             return;
         }
 
@@ -452,56 +368,46 @@ namespace
         if (Subsystem == nullptr)
         {
             ck::angelscriptgenerator::Warning(
-                TEXT("[Module] PostCompile DynamicHandle regen wanted, but ")
-                TEXT("UCkDynamicHandleSubsystem isn't loaded — skipping."));
+                TEXT("[Module] PostCompile DynamicHandle regen wanted, but UCkDynamicHandleSubsystem isn't loaded — skipping."));
             return;
         }
 
         ck::angelscriptgenerator::Log(
             TEXT("[Module] PostCompile detected pending _StubRecovery_DynamicHandleTypes.json sibling. ")
-            TEXT("Firing GenerateHandleTypeRegistry + DiscoverAndRegisterAllDefinitions to rewrite ")
-            TEXT("canonical JSON from data assets and upgrade in-memory validators to strict."));
+            TEXT("Firing GenerateHandleTypeRegistry + DiscoverAndRegisterAllDefinitions."));
 
         Subsystem->GenerateHandleTypeRegistry();
         FCkDynamic_HandleTypeRegistry::DiscoverAndRegisterAllDefinitions();
 
         ck::angelscriptgenerator::Log(
-            TEXT("[Module] PostCompile DynamicHandle regen complete — current session now uses strict validators."));
+            TEXT("[Module] PostCompile DynamicHandle regen complete — strict validators active."));
     }
 
-    // PostCompile-driven AssetRegistry cleanup. Gated narrowly so it doesn't
-    // tax every successful AS recompile with a full GenerateAllAssetRegistries
-    // pass (3.7s optimal, 6.5min under cold-start contention).
+    // PostCompile-driven AssetRegistry cleanup. Gated narrowly to avoid taxing
+    // every successful AS recompile with a full GenerateAllAssetRegistries
+    // pass (3.7s optimal, much worse under contention).
     //
-    // Fires only when ALL of the following hold:
-    //   1. OnFEngineLoopInitComplete has fired — prevents racing the existing
-    //      deferred-startup regen during cold-start shader/BP contention.
-    //   2. An *Assets.as file on disk contains the synthesizer's marker comment —
-    //      i.e. the dispatcher synthesized a stub mid-session (or a prior-session
-    //      stub survived past the deferred startup pass for whatever reason).
+    // All gates must hold:
+    //   1. OnFEngineLoopInitComplete has fired — keeps this off the cold-start
+    //      path so it doesn't race the existing startup-deferred regen.
+    //   2. A sibling *Assets.as stub exists on disk — i.e. the dispatcher
+    //      synthesized mid-session (or a prior-session stub survived past
+    //      startup cleanup). Self-terminates: after the regen rewrites the
+    //      canonical files, the sibling is deleted by Delete_AllStubRecovery-
+    //      Files in the same PostCompile pass.
     //   3. No regen ticker is already queued from a prior PostCompile.
     //
-    // Condition (2) is also our self-termination: once GenerateAllAssetRegistries
-    // rewrites the files from AR state, the marker is gone and subsequent
-    // PostCompile invocations are no-ops (cost: one cheap fs walk).
+    // FTSTicker rather than sync call: PostCompile broadcasts from inside
+    // FAngelscriptManager::CompileModules (FSlowTask scope "Script Module
+    // Compilation"). GenerateAllAssetRegistries opens its own FSlowTask. Sync
+    // call leaves the AR slow task on the stack when CompileModules's
+    // destructs, tripping the Task==this ensure at SlowTask.cpp:149.
+    // Empirically caught 2026-05-13.
     //
-    // Why FTSTicker instead of a synchronous call: PostCompile broadcasts from
-    // inside FAngelscriptManager::CompileModules, which is inside an FSlowTask
-    // scope ("Script Module Compilation"). GenerateAllAssetRegistries opens its
-    // own FSlowTask ("Generating Asset Registry: <File>.as"). Running it
-    // synchronously means the AR slow task is still on the stack when
-    // CompileModules's slow task destructs, tripping the "Task == this"
-    // out-of-order ensure in SlowTask.cpp:149. Empirically caught 2026-05-13.
-    // Deferring via FTSTicker lets CompileModules return and pop its slow task
-    // before the regen begins.
-    //
-    // What this fixes that the existing startup-only path doesn't:
-    //   Mid-session, a user adds a new asset + a new AS file referencing it.
-    //   AS fails to compile (accessor missing). Dispatcher synthesizes a stub.
-    //   AS recompile succeeds with the stub. Without this hook, the stub sits
-    //   in *Assets.as until next editor launch (cosmetic accumulation, plus
-    //   the "wrong file" + Tier 3 UObject fallback edge cases). With this hook,
-    //   the very next PostCompile rewrites the file fresh.
+    // Mid-session value: user adds a new asset + AS file referencing it. AS
+    // fails, dispatcher synthesizes a stub, AS recompiles with the stub.
+    // Without this hook the stub sits until next launch; with it, the very
+    // next PostCompile rewrites the canonical fresh.
     auto Maybe_RegenAssetRegistry_OnPostCompile() -> void
     {
         if (NOT sg_EngineLoopInitComplete)
@@ -518,22 +424,15 @@ namespace
         { return; }
 
         ck::angelscriptgenerator::Log(
-            TEXT("[Module] PostCompile detected pending _StubRecovery_*Assets.as sibling file(s) on disk. ")
-            TEXT("Queueing deferred GenerateAllAssetRegistries (via FTSTicker, ~1s polling) to escape ")
-            TEXT("CompileModules's slow-task scope before AR opens its own, and to gate on shader-")
-            TEXT("compiler idle + AssetRegistry cataloging completion before firing."));
+            TEXT("[Module] PostCompile detected pending _StubRecovery_*Assets.as sibling file(s). ")
+            TEXT("Queueing deferred GenerateAllAssetRegistries."));
 
-        // Reserve the regen slot now so back-to-back PostCompiles don't queue
-        // overlapping tickers, and so a cold-start path firing concurrently
-        // bails on its precheck.
         sg_AnyAssetRegistryRegenInFlight = true;
 
-        // Mirror the cold-start path's gating: poll until shaders are idle AND AR is done
-        // cataloging. Without the AR-idle gate, GenerateAllAssetRegistries can fire while AR
-        // is still scanning its discovery roots, producing partial *Assets.as output with
-        // accessors silently missing.
+        // Same idle-wait gate as the cold-start path — without AR-idle the
+        // regen can fire mid-cataloging and emit partial *Assets.as output.
         auto WaitTicks = MakeShared<int32>(0);
-        constexpr int32 MaxWaitTicks = 30; // ~60s at ~2s polling — match cold-start path.
+        constexpr int32 MaxWaitTicks = 30; // ~60s at ~2s polling.
 
         FTSTicker::GetCoreTicker().AddTicker(
             FTickerDelegate::CreateLambda(
@@ -554,10 +453,8 @@ namespace
                     if (Hit_HardCap && NOT Settled)
                     {
                         ck::angelscriptgenerator::Warning(
-                            TEXT("[Module] PostCompile idle-wait hit hard cap at {} polls — "
-                                 "shaders idle [{}] (jobs remaining [{}]), AR idle [{}]. "
-                                 "Firing AssetRegistry regen anyway — partial *Assets.as "
-                                 "output is possible if AR is still cataloging."),
+                            TEXT("[Module] PostCompile idle-wait hit hard cap at {} polls — shaders idle [{}] "
+                                 "(jobs remaining [{}]), AR idle [{}]. Firing regen anyway — partial output possible."),
                             *WaitTicks,
                             ShadersIdle,
                             GShaderCompilingManager ? GShaderCompilingManager->GetNumRemainingJobs() : 0,
@@ -566,9 +463,7 @@ namespace
                     else
                     {
                         ck::angelscriptgenerator::Log(
-                            TEXT("[Module] PostCompile settled (shader compiler idle AND AR idle) after "
-                                 "{} polls. Firing AssetRegistry regen now — rewriting *Assets.as "
-                                 "files from AR state."),
+                            TEXT("[Module] PostCompile settled (shader compiler idle AND AR idle) after {} polls. Firing regen."),
                             *WaitTicks);
                     }
 
@@ -593,14 +488,10 @@ namespace
     }
 
 #if WITH_ANGELSCRIPT_CK
-    // Two opt-outs gate the Rev 10 self-heal dispatcher:
-    //   * `-NoCkAsRegen` CLI flag — per-launch escape for the case where the
-    //     user wants the editor to show raw Hazelight errors against the
-    //     committed accessor files without our recovery intervening (e.g. when
-    //     debugging a genuine authoring bug whose error happens to match one
-    //     of our recovery patterns).
-    //   * `_EnableAsBootstrapSelfHeal` project setting — same semantics,
-    //     project-wide and persistent across launches.
+    // Self-heal opt-outs:
+    //   * `-NoCkAsRegen` CLI flag — per-launch (e.g. debugging an authoring
+    //     bug whose error matches one of our recovery patterns).
+    //   * `_EnableAsBootstrapSelfHeal` project setting — persistent project-wide.
     auto Is_SelfHealEnabled() -> bool
     {
         if (FParse::Param(FCommandLine::Get(), TEXT("NoCkAsRegen")))
@@ -663,15 +554,12 @@ void FCkAngelscriptGeneratorModule::StartupModule()
         Maybe_RegenAssetRegistry_OnPostInit();
     });
 
-    // Track engine-loop-init completion so the PostCompile AssetRegistry
-    // cleanup knows it's safe to fire (no longer in cold-start contention).
+    // Engine-loop-init completion: PostCompile AssetRegistry cleanup gates on
+    // this; dispatcher's bootstrap-vs-mid-session routing also flips here.
     _EngineLoopInitCompleteHandle = FCoreDelegates::OnFEngineLoopInitComplete.AddLambda(
         []()
         {
             sg_EngineLoopInitComplete = true;
-            // Flip the dispatcher's bootstrap flag so subsequent
-            // OnReloadHadErrors invocations route through the core ticker
-            // (mid-session) instead of the modal-tick pump (bootstrap).
             ck::angelscriptgenerator::self_heal::FCkAsRecoveryDispatcher::Mark_BootstrapComplete();
         });
 
@@ -683,10 +571,8 @@ void FCkAngelscriptGeneratorModule::StartupModule()
             Maybe_RegenDynamicHandleJson_OnPostCompile();
             Maybe_RegenAssetRegistry_OnPostCompile();
 
-            // PostCompile fires only on a successful AS compile — i.e. the
-            // sibling stub files (if any) served their purpose. Delete them
-            // so the working tree returns to clean canonical state. If next
-            // launch still has drift, the dispatcher re-creates them fresh.
+            // PostCompile only fires on a successful compile — sibling stubs
+            // served their purpose.
             const auto DeletedCount = Delete_AllStubRecoveryFiles();
             if (DeletedCount > 0)
             {
