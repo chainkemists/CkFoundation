@@ -107,6 +107,11 @@ private:
         Request_GenerateCollisionConstants(
             const FString& GeneratedDir)
         -> void;
+
+    static auto
+        Request_GeneratePhysicalSurfaceConstants(
+            const FString& GeneratedDir)
+        -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
