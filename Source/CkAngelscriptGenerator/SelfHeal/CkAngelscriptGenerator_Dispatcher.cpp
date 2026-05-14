@@ -38,68 +38,45 @@ namespace ck::angelscriptgenerator::self_heal
 {
     namespace
     {
-        // Session-wide cycle counter. Reset via Reset_CyclesRun at arming time.
-        // Editor-only, single-threaded for OnReloadHadErrors invocations
-        // (broadcast happens synchronously from CompileModules on the main thread).
+        // OnReloadHadErrors broadcasts synchronously from CompileModules on the
+        // main thread; all session state below is single-threaded.
         int32 sCyclesRun = 0;
+        bool  sDidSynthesizeJsonStub = false;
+        bool  sDidSynthesizeAssetRegistryStub = false;
+        bool  sBootstrapComplete = false;
 
-        // Set when the DynamicHandle strategy writes a stub entry into
-        // DynamicHandleTypes.json this session. See header docstring for the
-        // permissive-validator hazard this exposes. The Module's
-        // OnPostEngineInit callback consumes this to fire a deferred JSON
-        // regen so next launch is clean.
-        bool sDidSynthesizeJsonStub = false;
-
-        // Set when the AssetRegistry strategy writes a stub entry into a
-        // *Assets.as file this session. Module's OnPostEngineInit callback
-        // consumes this to fire a GenerateAllAssetRegistries pass, which
-        // restores correct stub placement (right file per discovery root).
-        // (Pre-2026-05-13 this also "resolved Tier 3 UObject fallbacks", but
-        // Tier 3 is now refused outright — see CkAngelscriptGenerator_AssetRegistryStub.h.)
-        bool sDidSynthesizeAssetRegistryStub = false;
-
-        // ---- Deferred-apply state --------------------------------------------------
+        // Cold-start deferral: file mutations applied inside OnReloadHadErrors
+        // are invisible to Hazelight's AS hot-reload checker thread because that
+        // thread hasn't started yet — its first scan establishes mtime baselines
+        // for every .as file, including any we've already written, so no
+        // subsequent scan detects a change. We defer to the modal-tick pump
+        // which fires AFTER the modal opens and the thread is running.
+        // Empirically caught 2026-05-12.
         //
-        // Strategies cannot be applied synchronously inside OnReloadHadErrors —
-        // empirical finding 2026-05-12: the AS hot-reload checker thread has not
-        // yet started at the time of the initial-compile failure broadcast. The
-        // thread starts when Hazelight's modal opens, AFTER our hook returns. Its
-        // first scan establishes mtime baselines for every .as file, including any
-        // we've already written to. With the baseline matching disk, no subsequent
-        // scan detects a change — so even though our stub IS on disk, the modal
-        // never triggers a retry compile.
-        //
-        // The fix: defer all file mutations to a callback hooked into
-        // FSlateApplication::Get().GetOnModalLoopTickEvent(). The same seam
-        // Hazelight uses for its own modal auto-close logic. By the time our
-        // tick handler fires, the modal is open, the hot-reload thread is
-        // running, and any subsequent file mtime change will be detected on
-        // the thread's next scan.
-        //
-        // sModalTicksToWait gives the thread a few frames to settle its first
-        // scan baseline before we modify files. Pure safety margin —
-        // empirically the first scan completes within ~20ms (one frame at
-        // 60Hz), so even 1 tick should suffice, but a small margin is cheap.
+        // sModalTicksToWait is a safety margin for the thread's first-scan
+        // baseline. Empirically one tick (~16ms at 60Hz) suffices.
         TArray<FCk_RecoveryAction> sPendingActions;
         FDelegateHandle            sModalTickHandle;
         int32                      sModalTicksWaited  = 0;
         constexpr int32            sModalTicksToWait  = 2;
 
-        // Mid-session deferral path (Issue #7, 2026-05-13). Mid-session hot-
-        // reload failures do NOT open a Hazelight modal — errors land in the
-        // AS error log panel only — so the modal-tick pump above never fires
-        // and pending actions stall. For that path we hook FTSTicker with a
-        // short delay (the AS hot-reload thread is already running and
-        // quiescent between scans, so no settle margin is needed).
+        // Mid-session deferral (Issue #7, 2026-05-13): mid-session hot-reload
+        // failures do NOT open a Hazelight modal, so modal-tick never fires.
+        // FTSTicker covers that case. No settle margin needed — the AS hot-
+        // reload thread is already running and quiescent between scans.
         FTSTicker::FDelegateHandle sTickerHandle;
         constexpr float            sTickerDelaySeconds = 0.15f;
 
-        // Bootstrap mode flag. Mirrors the module-local sg_EngineLoopInitComplete
-        // but surfaced through FCkAsRecoveryDispatcher::Is_BootstrapMode for the
-        // routing decision in OnAngelscriptReloadHadErrors.
-        bool sBootstrapComplete = false;
+        // Channel name shared with the Module's RegisterLogListing call.
+        constexpr auto* sSelfHealLogChannel = TEXT("CkAngelscriptGenerator");
 
-        // ---- Candidate-file discovery ------------------------------------------
+        // Held across the OnReloadHadErrors → modal-tick-apply lifetime so the
+        // apply path can transition the in-progress toast in place rather than
+        // spawning a new one. Weak pointer; the notification's 30s ExpireDuration
+        // is the safety net if anything orphans it.
+        TWeakPtr<SNotificationItem> sInProgressNotification;
+
+        // ---- Candidate-file discovery ----------------------------------------------
 
         auto Collect_EntitySpawnParamsCandidates() -> TArray<FString>
         {
@@ -108,7 +85,6 @@ namespace ck::angelscriptgenerator::self_heal
             Candidates.Add(FPaths::ProjectDir() / TEXT("Script/Generated") /
                 (FApp::GetProjectName() + FString{TEXT("_EntitySpawnParams.as")}));
 
-            // TSharedRef from GetEnabledPlugins is always valid by construction.
             for (const auto& Plugin : IPluginManager::Get().GetEnabledPlugins())
             {
                 const auto& PluginName = Plugin->GetName();
@@ -122,11 +98,14 @@ namespace ck::angelscriptgenerator::self_heal
             return Candidates;
         }
 
-        // ---- DynamicHandle strategy helpers ----------------------------------------
+        // ---- DynamicHandle strategy ------------------------------------------------
 
-        // Strip the "FCk_Handle_" prefix to produce a short name suitable for
-        // the JSON entry's ShortName field — matches the convention used by
-        // the generator and the AS-side `As_<ShortName>()` accessor.
+        // Chicken-and-egg: a missing handle's data asset can't materialize until
+        // AS compiles, but AS won't compile because the JSON lacks the entry. We
+        // break it by synthesizing a minimal JSON entry from the error text alone
+        // (TypeName + ShortName are sufficient for AS bindings; the rest are
+        // placeholders that the next clean regen sources from the data asset).
+
         auto Derive_HandleShortName(
             const FString& InMissingIdentifier) -> FString
         {
@@ -136,27 +115,8 @@ namespace ck::angelscriptgenerator::self_heal
             return InMissingIdentifier;
         }
 
-        // DynamicHandle drift recovery via JSON synthesis.
-        //
-        // The runtime path Discover+RegisterNewTypesIncremental (called by
-        // ForceRefreshDynamicHandleBindings) needs the data asset that
-        // corresponds to the missing handle type to be present in the
-        // Asset Registry. Those data assets are AS-defined via
-        // `asset X of UCkDynamic_HandleDefinition { ... }` declarations in
-        // AS source files. When AS fails to compile (because the JSON is
-        // missing the entry), those declarations don't materialize and the
-        // asset never reaches AR — chicken-and-egg deadlock.
-        //
-        // We break the deadlock by synthesizing a minimal JSON entry from
-        // the error text alone. AS bindings need only TypeName + ShortName;
-        // the other fields (Description, SourceAsset, RequiredFragments)
-        // can be empty placeholders. The next clean editor regen — via
-        // OnPostEngineInit, the "Generate Handle Type Registry" button, or
-        // a teammate's editor run — overwrites our placeholder with a
-        // proper entry sourced from the data asset.
-        // Derive the sibling stub path for the canonical DynamicHandleTypes.json.
-        // Same directory, filename prefixed with `_StubRecovery_`. Mirrors the
-        // EntitySpawnParams + AssetRegistry sibling-file convention.
+        // Sibling stub path: same dir as canonical, filename prefixed with
+        // `_StubRecovery_`. Mirrors EntitySpawnParams + AssetRegistry conventions.
         auto Derive_DynamicHandleStubPath(
             const FString& InCanonicalJsonPath) -> FString
         {
@@ -185,8 +145,6 @@ namespace ck::angelscriptgenerator::self_heal
                 return false;
             }
 
-            // Read existing stub-sibling JSON. If missing, start with a fresh
-            // shell containing the recovery-warning field at the root.
             auto ExistingContent = FString{};
             const auto StubExisted = FFileHelper::LoadFileToString(ExistingContent, *StubJsonPath);
             if (NOT StubExisted)
@@ -203,7 +161,7 @@ namespace ck::angelscriptgenerator::self_heal
                 return false;
             }
 
-            // Ensure the warning field is present even if a prior write missed it.
+            // Ensure warning field present even if a prior write missed it.
             RootObj->SetStringField(TEXT("_WARNING"),
                 TEXT("AUTO-GENERATED RECOVERY STUBS. This file is gitignored and self-cleans after successful AS compile. Do not edit by hand."));
 
@@ -211,8 +169,7 @@ namespace ck::angelscriptgenerator::self_heal
             if (RootObj->HasField(TEXT("HandleTypes")))
             { HandleTypes = RootObj->GetArrayField(TEXT("HandleTypes")); }
 
-            // Bail early if the entry already exists in the stub file — recovery
-            // is already done; just refresh the in-memory registry.
+            // Already-recovered: refresh in-memory registry and bail.
             for (const auto& Entry : HandleTypes)
             {
                 const auto Obj = Entry->AsObject();
@@ -229,7 +186,6 @@ namespace ck::angelscriptgenerator::self_heal
                 }
             }
 
-            // Synthesize the missing entry. Minimum fields only.
             const auto ShortName = Derive_HandleShortName(InError.MissingIdentifier);
             auto NewEntry = MakeShared<FJsonObject>();
             NewEntry->SetStringField(TEXT("TypeName"),     InError.MissingIdentifier);
@@ -243,8 +199,7 @@ namespace ck::angelscriptgenerator::self_heal
             HandleTypes.Add(MakeShared<FJsonValueObject>(NewEntry));
             RootObj->SetArrayField(TEXT("HandleTypes"), HandleTypes);
 
-            // Re-serialize and write atomically to the SIBLING stub file. The
-            // canonical DynamicHandleTypes.json is never touched.
+            // Atomic write to SIBLING stub file. Canonical JSON never touched.
             auto NewContent = FString{};
             auto Writer     = TJsonWriterFactory<>::Create(&NewContent);
             if (NOT FJsonSerializer::Serialize(RootObj.ToSharedRef(), Writer))
@@ -270,34 +225,22 @@ namespace ck::angelscriptgenerator::self_heal
             Log(TEXT("[SelfHeal] DynamicHandle: synthesized JSON stub entry for '{}' (ShortName='{}') -> {}"),
                 InError.MissingIdentifier, ShortName, StubJsonPath);
 
-            // Mark so OnPostEngineInit (where GEditor IS available) can call
-            // GenerateHandleTypeRegistry and write a proper JSON entry — fixing
-            // next launch and making this stub a one-time event.
             FCkAsRecoveryDispatcher::Mark_JsonStubSynthesized();
 
-            // Re-load JSON + register AS bindings for the newly added type.
             FCkDynamic_HandleTypeRegistry::ResetJsonRegistryLoadedFlag();
             FCkAngelScript_HandleRegistry::ResetBindingsCompleteFlag();
             FCkDynamic_HandleTypeRegistry::LoadFromJsonRegistry();
             const auto NewBindingCount = FCkAngelScript_HandleRegistry::RegisterNewTypesIncremental();
             Log(TEXT("[SelfHeal] DynamicHandle: registered {} new AS binding(s) after JSON reload."), NewBindingCount);
 
-            // Note: until the deferred OnPostEngineInit JSON regen runs, the
-            // in-memory validator for this type is PERMISSIVE (the synthesized
-            // JSON stub has empty RequiredFragments). The
-            // FCkAngelScript_HandleRegistry::UpdateExistingDynamicHandle path
-            // (called from OnPostEngineInit's DiscoverAndRegisterAllDefinitions
-            // refresh once the data asset has materialized) replaces the
-            // permissive validator with the strict one sourced from the data
-            // asset. Until that fires, any handle.As_<ShortName>() cast
-            // succeeds unchecked — but the window is short (sub-second after
-            // editor reaches main screen) and the only code expected to run in
-            // it is editor init itself.
-            Log(TEXT("[SelfHeal] Permissive validator in effect for '{}' until OnPostEngineInit ")
-                TEXT("deferred regen fires (typically <1 sec after editor reaches main screen)."),
+            // Stub's empty RequiredFragments registers a PERMISSIVE validator —
+            // handle.As_<ShortName>() casts succeed unchecked until OnPostEngineInit's
+            // DiscoverAndRegisterAllDefinitions upgrades it to strict via
+            // UpdateExistingDynamicHandle. Window is sub-second after main screen.
+            Log(TEXT("[SelfHeal] Permissive validator in effect for '{}' until OnPostEngineInit deferred regen fires."),
                 InError.MissingIdentifier);
 
-            // Nudge the hot-reload thread to trigger a fresh AS compile pass.
+            // Nudge hot-reload thread to trigger a fresh AS compile.
             if (NOT InError.FilePath.IsEmpty()
                 && IFileManager::Get().FileExists(*InError.FilePath))
             {
@@ -310,8 +253,6 @@ namespace ck::angelscriptgenerator::self_heal
 
         // ---- Strategy application --------------------------------------------------
 
-        // Returns true if the strategy was successfully applied. False means
-        // the action did not (or could not) progress recovery.
         auto Apply_Strategy(
             ECk_RecoveryStrategy     InStrategy,
             const FCk_AsParsedError& InError) -> bool
@@ -342,36 +283,19 @@ namespace ck::angelscriptgenerator::self_heal
 
                 case ECk_RecoveryStrategy::KickGenerator_AssetRegistry:
                 {
-                    // AssetRegistry stub synthesis — Rev 10 second pass (2026-05-12).
-                    //
-                    // The accessor's return type encodes the asset's UClass. We can't
-                    // infer it from the error text alone — but we CAN do a sync AR
-                    // scan at modal-tick, look up the UCkAssetRegistryConfig matching
-                    // the failing namespace, find the asset by name in its discovery
-                    // root, and resolve the UClass via two tiers:
-                    //   - Tier 1: AssetData.GetClass() for already-loaded native classes
-                    //   - Tier 2: sync-load the asset and walk Get_NonBlueprintParentClass
-                    //
-                    // Tier 3 fallback (when sync load fails) is REFUSED for all
-                    // flavors as of 2026-05-13 — see
-                    // CkAngelscriptGenerator_AssetRegistryStub.h docstring for
-                    // the probe_a2.log rationale. Synthesizer returns
-                    // Success=false with a manual-recovery banner in
-                    // ErrorMessage; we log it and return false so Hazelight's
-                    // modal continues displaying the original
-                    // `No matching signatures` error (actionable) instead of
-                    // being replaced by a parser-blind
-                    // typed-conversion derivative (wedging).
+                    // Tier 1: AssetData.GetClass() for loaded native classes.
+                    // Tier 2: sync-load asset + Get_NonBlueprintParentClass walk.
+                    // Tier 3 (sync load fails): REFUSED for all flavors as of
+                    // 2026-05-13 — see AssetRegistryStub.h docstring for the
+                    // probe_a2.log rationale. The synthesizer returns Success=false
+                    // with an actionable manual-recovery banner; we log it and
+                    // bail so Hazelight's modal continues displaying the original
+                    // `No matching signatures` error (actionable) instead of a
+                    // parser-blind typed-conversion derivative (wedging).
                     const auto Synth = FCkAsAssetRegistryStubSynthesizer::Inject_AssetRegistryStub(InError);
 
                     if (Synth.Success)
                     {
-                        // Mark for OnPostEngineInit deferred regen — even Tier 1/2
-                        // success may have landed the stub in the wrong file (file-scan
-                        // picks the first namespace match, not necessarily the file
-                        // whose discovery root matches the asset's package path). A
-                        // GenerateAllAssetRegistries pass at PostEngineInit reshuffles
-                        // to correct placement and overwrites the marker comment.
                         FCkAsRecoveryDispatcher::Mark_AssetRegistryStubSynthesized();
 
                         Log(TEXT("[SelfHeal] Synthesized AssetRegistry stub for {}::{}({}) (return type {}, asset {}) -> {}"),
@@ -396,7 +320,7 @@ namespace ck::angelscriptgenerator::self_heal
             }
         }
 
-        // ---- Terminal-banner logging ----------------------------------------------
+        // ---- Terminal-banner logging -----------------------------------------------
 
         auto Log_TerminalBanner_NoRoots(const FString& InDiagnostics) -> void
         {
@@ -409,8 +333,7 @@ namespace ck::angelscriptgenerator::self_heal
         auto Log_TerminalBanner_AllUnactionable(int32 InRootCount) -> void
         {
             Error(TEXT("[SelfHeal] Recognized {} root cause(s), but none mapped to an actionable ")
-                  TEXT("strategy in this v1 dispatcher. Per-root diagnostics are in the warnings ")
-                  TEXT("logged above. Manual intervention required."),
+                  TEXT("strategy. Per-root diagnostics are in the warnings logged above. Manual intervention required."),
                 InRootCount);
         }
 
@@ -422,36 +345,16 @@ namespace ck::angelscriptgenerator::self_heal
                 FCkAsRecoveryDispatcher::MaxCycles);
         }
 
-        // ---- UI surfacing helpers --------------------------------------------------
+        // ---- UI surfacing (Slate toast + MessageLog) -------------------------------
         //
-        // Two complementary channels: a Slate notification toast for immediate
-        // attention, and a Message Log entry per applied action for review later.
-        // Channel name is shared with the Module's RegisterLogListing call.
+        // Single notification lifecycle, transitioning in place:
+        //   1. In-progress — spawned at OnReloadHadErrors (cold-start only).
+        //      User sees "self-heal attempting recovery" alongside Hazelight's modal.
+        //   2. Recovered — transitioned at successful apply (CS_Success, fade out).
+        //   3. Failed — transitioned at terminal-banner paths (CS_Fail, longer hold).
         //
-        // The toast appears as a single notification that progresses through three
-        // possible states across the recovery lifetime:
-        //
-        //   1. "In progress" — spawned the instant OnReloadHadErrors fires (BEFORE
-        //      the Hazelight modal opens), so when the user sees the scary modal
-        //      they also see "self-heal is attempting to recover, please wait" in
-        //      the bottom-right. Throbber, persistent (up to 30s safety expiry).
-        //   2. "Recovered" — transitioned at successful apply: text replaced with
-        //      the per-drift summary, state set to CS_Success, fades out after a
-        //      short hold.
-        //   3. "Failed" — transitioned at terminal-banner paths (all-unactionable,
-        //      cycle-cap exceeded): text replaced with manual-intervention message,
-        //      state CS_Fail, fades out after a longer hold.
-        //
-        // The weak pointer below holds the in-progress notification so the modal-
-        // tick handler can find and transition it. If something orphans the
-        // notification (e.g. cycle 2's OnReloadHadErrors fires but no modal opens
-        // so modal-tick never drains), the 30s ExpireDuration cleans it up
-        // automatically — the weak pointer becomes invalid and the next path
-        // falls through to spawning a fresh toast.
-
-        constexpr auto* sSelfHealLogChannel = TEXT("CkAngelscriptGenerator");
-
-        TWeakPtr<SNotificationItem> sInProgressNotification;
+        // Skipped mid-session: recovery completes in <200ms with no modal to
+        // mediate panic, so a throbber would just be noise.
 
         auto Describe_Action(
             const FCk_RecoveryAction& InAction) -> FString
@@ -459,6 +362,7 @@ namespace ck::angelscriptgenerator::self_heal
             switch (InAction.Strategy)
             {
                 case ECk_RecoveryStrategy::SynthesizeStub_EntitySpawnParams:
+                case ECk_RecoveryStrategy::KickGenerator_AssetRegistry:
                 {
                     return FString::Printf(TEXT("%s::%s(%s)"),
                         *InAction.Error.TargetNamespace,
@@ -468,13 +372,6 @@ namespace ck::angelscriptgenerator::self_heal
                 case ECk_RecoveryStrategy::KickGenerator_DynamicHandle:
                 {
                     return InAction.Error.MissingIdentifier;
-                }
-                case ECk_RecoveryStrategy::KickGenerator_AssetRegistry:
-                {
-                    return FString::Printf(TEXT("%s::%s(%s)"),
-                        *InAction.Error.TargetNamespace,
-                        *InAction.Error.FunctionName,
-                        *InAction.Error.ArgsList);
                 }
                 case ECk_RecoveryStrategy::Unrecognized:
                 default:
@@ -502,19 +399,6 @@ namespace ck::angelscriptgenerator::self_heal
             }
         }
 
-        // Spawned the instant OnReloadHadErrors fires during cold-start, so
-        // the bottom-right notification appears alongside Hazelight's modal
-        // and tells the user we're working on it before they panic and close
-        // the editor.
-        //
-        // Caller is responsible for the bootstrap-vs-mid-session gate:
-        // OnAngelscriptReloadHadErrors only invokes this from the bootstrap
-        // branch. Mid-session recoveries are sub-second and have no modal to
-        // mediate panic about — a persistent throbber there would just be
-        // noise during normal editing.
-        //
-        // Idempotent — if a prior fire's notification is still live, leaves
-        // it alone. Auto-expires after 30s as a safety net.
         auto Show_InProgressToast() -> void
         {
             if (NOT FSlateApplication::IsInitialized())
@@ -549,17 +433,11 @@ namespace ck::angelscriptgenerator::self_heal
             }
 
             // Orphan guard. If modal-tick doesn't transition this notification
-            // within 5 seconds, the failure path that fired OnReloadHadErrors
-            // did NOT open a Hazelight modal (typical hot-reload retry after
-            // a successful initial-compile recovery — see the "Cycle 2 with
-            // no modal" finding 2026-05-13). Without this guard, the toast
-            // would sit visible with its "attempting to recover" text until
-            // its 30s ExpireDuration fires — confusing the user because by
-            // then either recovery already ran via another path, or the
-            // deferred regen will fix the canonical asynchronously.
-            //
-            // Cycle 1 (initial-compile modal) transitions in ~1.2s empirically,
-            // so this 5s timeout is comfortably outside the normal path.
+            // within 5s, the failure path that fired OnReloadHadErrors did NOT
+            // open a Hazelight modal (typical "Cycle 2 with no modal" hot-reload
+            // retry after a successful initial-compile recovery — finding
+            // 2026-05-13). Cycle 1 transitions in ~1.2s empirically, so 5s is
+            // comfortably outside the normal path.
             FTSTicker::GetCoreTicker().AddTicker(
                 FTickerDelegate::CreateLambda([](float) -> bool
                 {
@@ -594,9 +472,8 @@ namespace ck::angelscriptgenerator::self_heal
                 LOCTEXT("RecoveryToast", "AngelScript self-heal recovered {0} drift(s)"),
                 FText::AsNumber(NumApplied));
 
-            // Preferred path: transition the in-progress notification in place,
-            // so the user sees one continuous notification go from "trying" to
-            // "fixed" without a flash of nothing on screen.
+            // Transition the in-progress toast in place so the user sees one
+            // continuous notification rather than a flash of nothing.
             if (auto Item = sInProgressNotification.Pin(); Item.IsValid())
             {
                 Item->SetText(SummaryText);
@@ -608,8 +485,8 @@ namespace ck::angelscriptgenerator::self_heal
                 return;
             }
 
-            // Fallback: no in-progress notification (e.g. FSlateApplication wasn't
-            // initialized at OnReloadHadErrors time) — spawn a fresh success toast.
+            // Fallback: no in-progress toast (e.g. mid-session, or Slate wasn't
+            // up at OnReloadHadErrors time).
             auto Info = FNotificationInfo{SummaryText};
             Info.ExpireDuration       = 12.0f;
             Info.bUseLargeFont        = false;
@@ -639,8 +516,6 @@ namespace ck::angelscriptgenerator::self_heal
             if (NOT FSlateApplication::IsInitialized())
             { return; }
 
-            // Same in-progress transition path as Show_RecoveryToast — keep the
-            // single-notification UX consistent on the failure path too.
             if (auto Item = sInProgressNotification.Pin(); Item.IsValid())
             {
                 Item->SetText(InMessage);
@@ -673,22 +548,11 @@ namespace ck::angelscriptgenerator::self_heal
             }
         }
 
-        // ---- Modal-tick handler (deferred apply) ----------------------------------
+        // ---- Modal-tick handler (cold-start deferred apply) ------------------------
 
-        // Drains sPendingActions and applies the recovery strategies. Runs from
-        // the FSlateApplication modal-tick pump during the Hazelight AS-failure
-        // modal. By the time we run, the hot-reload thread is established and
-        // any file writes we do will be detected on its next scan.
-        //
-        // Self-cleans on the apply tick: after one drain, removes itself from
-        // the modal-tick multicast so subsequent ticks don't re-enter.
         auto OnModalLoopTick(
             float /*InDeltaTime*/) -> void
         {
-            // Settle a few ticks before applying — gives Hazelight's hot-reload
-            // thread a chance to do its first scan + baseline before we mutate
-            // any files. Empirically a single tick (~16ms) is enough but a
-            // small margin costs nothing.
             if (sModalTicksWaited < sModalTicksToWait)
             {
                 ++sModalTicksWaited;
@@ -697,7 +561,6 @@ namespace ck::angelscriptgenerator::self_heal
 
             if (sPendingActions.Num() == 0)
             {
-                // Queue drained on a prior tick; nothing left to do — unsubscribe.
                 if (sModalTickHandle.IsValid() && FSlateApplication::IsInitialized())
                 {
                     FSlateApplication::Get().GetOnModalLoopTickEvent().Remove(sModalTickHandle);
@@ -737,8 +600,7 @@ namespace ck::angelscriptgenerator::self_heal
                     "Manual intervention required — see the Message Log for details."));
             }
 
-            // Unsubscribe — if more cycles are needed, OnAngelscriptReloadHadErrors
-            // will resubscribe when the next failure fires.
+            // Unsubscribe — next OnReloadHadErrors invocation will resubscribe.
             if (sModalTickHandle.IsValid() && FSlateApplication::IsInitialized())
             {
                 FSlateApplication::Get().GetOnModalLoopTickEvent().Remove(sModalTickHandle);
@@ -747,9 +609,6 @@ namespace ck::angelscriptgenerator::self_heal
             sModalTicksWaited = 0;
         }
 
-        // Ensure we are subscribed to the modal-tick pump. Idempotent — re-entry
-        // from a second OnReloadHadErrors invocation while still subscribed is
-        // a no-op.
         auto Ensure_ModalTickSubscribed() -> void
         {
             if (sModalTickHandle.IsValid())
@@ -766,17 +625,8 @@ namespace ck::angelscriptgenerator::self_heal
             sModalTickHandle  = FSlateApplication::Get().GetOnModalLoopTickEvent().AddStatic(&OnModalLoopTick);
         }
 
-        // ---- Mid-session ticker handler (deferred apply, no modal) ----------------
-        //
-        // Drains sPendingActions and applies recovery strategies from the core
-        // ticker (FTSTicker::GetCoreTicker). Used when AS hot-reload fails
-        // MID-SESSION — Hazelight does not open its AS-failure modal in that
-        // case, so OnModalLoopTick never fires and the modal-tick path stalls.
-        //
-        // Unlike OnModalLoopTick this fires only once (one-shot, returns false
-        // to unregister) and skips the settle-tick wait — the AS hot-reload
-        // thread is already running and quiescent between scans, so no
-        // baseline-establishment delay is required.
+        // ---- Mid-session ticker handler (deferred apply, no modal) -----------------
+
         auto OnTicker_DrainActions(
             float /*InDeltaTime*/) -> bool
         {
@@ -801,8 +651,7 @@ namespace ck::angelscriptgenerator::self_heal
             if (AppliedActions.Num() > 0)
             {
                 ++sCyclesRun;
-                Log(TEXT("[SelfHeal] Cycle {} applied {} strategy/strategies (mid-session). ")
-                    TEXT("Hot-reload thread's next scan should pick up the file mtime change."),
+                Log(TEXT("[SelfHeal] Cycle {} applied {} strategy/strategies (mid-session)."),
                     sCyclesRun, AppliedActions.Num());
 
                 Log_AppliedActions_ToMessageLog(AppliedActions);
@@ -820,9 +669,6 @@ namespace ck::angelscriptgenerator::self_heal
             return false; // one-shot
         }
 
-        // Idempotent — a second OnReloadHadErrors invocation while the ticker
-        // is still queued is a no-op (new actions appended to sPendingActions
-        // get drained in the same tick).
         auto Ensure_TickerSubscribed() -> void
         {
             if (sTickerHandle.IsValid())
@@ -901,9 +747,7 @@ namespace ck::angelscriptgenerator::self_heal
         sDidSynthesizeJsonStub = false;
         sDidSynthesizeAssetRegistryStub = false;
         sInProgressNotification.Reset();
-        // sModalTickHandle is left as-is; if a leftover subscription exists from
-        // a prior session, the modal-tick handler will detect an empty queue
-        // and clean itself up on next fire.
+        // sModalTickHandle left as-is; OnModalLoopTick self-cleans on empty queue.
     }
 
     auto FCkAsRecoveryDispatcher::Did_SynthesizeJsonStub_ThisSession() -> bool
@@ -924,10 +768,9 @@ namespace ck::angelscriptgenerator::self_heal
     auto FCkAsRecoveryDispatcher::Mark_BootstrapComplete() -> void
     {
         sBootstrapComplete = true;
-        // Reset cycle counter at the bootstrap→mid-session transition so any
-        // bootstrap-mode cycles consumed do not count against the mid-session
-        // budget. (The cap is bootstrap-mode-only anyway, but keeping the
-        // counter accurate makes the logs easier to read.)
+        // Reset cycle counter so bootstrap-consumed cycles don't count against
+        // mid-session. (Cap is bootstrap-only anyway, but accurate counter
+        // makes logs easier to read.)
         sCyclesRun = 0;
     }
 
@@ -941,8 +784,8 @@ namespace ck::angelscriptgenerator::self_heal
 #if WITH_ANGELSCRIPT_CK
         const auto BootstrapMode = Is_BootstrapMode();
 
-        // Cycle cap is bootstrap-mode-only — see MaxCycles docstring in
-        // Dispatcher.h. Mid-session is interactive, user can intervene.
+        // Cycle cap is bootstrap-only (see MaxCycles docstring). Mid-session
+        // is interactive — user can intervene.
         if (BootstrapMode && sCyclesRun >= MaxCycles)
         {
             Log_TerminalBanner_MaxCyclesExceeded();
@@ -969,7 +812,6 @@ namespace ck::angelscriptgenerator::self_heal
             return;
         }
 
-        // Build the action plan and queue it for deferred application.
         const auto Plan = BuildActionPlan(Roots);
         sPendingActions.Append(Plan);
 
@@ -978,13 +820,11 @@ namespace ck::angelscriptgenerator::self_heal
             Log(TEXT("[SelfHeal] Queued {} recovery action(s) for bootstrap modal-tick apply ")
                 TEXT("(queue depth now {})."), Plan.Num(), sPendingActions.Num());
 
-            // Surface the "in progress" toast immediately. OnReloadHadErrors fires
-            // SYNCHRONOUSLY inside CompileModules — i.e. before Hazelight's modal
-            // opens. The notification manager queues the toast and renders it on
-            // the modal's tick, so the user sees the modal AND the "self-heal
-            // attempting recovery, please wait" notification at the same time.
+            // OnReloadHadErrors fires synchronously inside CompileModules —
+            // i.e. before Hazelight's modal opens. The notification manager
+            // queues the toast and renders it on the modal's tick, so the
+            // user sees both at the same time.
             Show_InProgressToast();
-
             Ensure_ModalTickSubscribed();
         }
         else
@@ -992,10 +832,7 @@ namespace ck::angelscriptgenerator::self_heal
             Log(TEXT("[SelfHeal] Queued {} recovery action(s) for mid-session ticker apply ")
                 TEXT("(queue depth now {})."), Plan.Num(), sPendingActions.Num());
 
-            // No in-progress toast: mid-session recovery completes in <200ms,
-            // there's no modal to wait behind, so a "please wait" throbber for
-            // sub-second work would be more annoying than informative. Success
-            // toast still fires from OnTicker_DrainActions.
+            // Skip in-progress toast — see UI surfacing section header.
             Ensure_TickerSubscribed();
         }
 #else

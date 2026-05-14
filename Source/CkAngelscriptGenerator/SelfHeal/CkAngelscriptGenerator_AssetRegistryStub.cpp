@@ -19,62 +19,39 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// AR is deliberately NOT used in this file. At modal-tick during initial-compile-failure
-// the engine is mid-startup-module-loading and AR's SearchAllAssets/GetAssetsByClass paths
-// exit early on IsEngineStartupModuleLoadingComplete() == FALSE. Empirically reproduced
-// 2026-05-12: the dispatcher's first wired AR call returned 0 UCkAssetRegistryConfig
-// assets even after Force_FullArScan, leaving the modal wedged.
+// AR is deliberately NOT used in this file. At modal-tick during initial-
+// compile-failure the engine is mid-startup-module-loading and AR's
+// SearchAllAssets/GetAssetsByClass paths exit early on
+// IsEngineStartupModuleLoadingComplete() == FALSE. Empirically caught
+// 2026-05-12: the dispatcher's first wired AR call returned 0
+// UCkAssetRegistryConfig assets even after Force_FullArScan.
 //
 // AR-free strategy:
-//   1. Output-file + discovery-root discovery — scan Script/Generated/*.as files
-//      across project + every enabled plugin, parse each file's header line
-//      `// Source config: <name> (<discovery_root> [<namespace>])`. Match the
-//      error's TargetNamespace (load-suffix stripped) to one file's bracketed
-//      namespace. The file path IS the output path; the parenthesized root is
-//      the discovery root used to convert package path → local disk path.
+//   1. Output file + discovery root: file-scan Script/Generated/*Assets.as
+//      across project + plugins, parse `// Discovery root:` header line.
+//      `// Source config:` line is malformed in BB's generator (no slash
+//      between root and filename) — Discovery root is the canonical source.
+//   2. Asset location on disk: convert package root to disk path via
+//      FPackageName::TryConvertLongPackageNameToFilename, then
+//      IFileManager::FindFilesRecursive for `<FunctionName>.uasset`.
+//   3. Class resolution: LoadObject<UObject>(nullptr, *PackagePath). Uses
+//      the UObject linker directly, so it works at modal-tick for any
+//      asset whose native class module is loaded. For BPs, walk parent
+//      via Get_NonBlueprintParentClass.
 //
-//   2. Asset location on disk — convert discovery_root (e.g. "/Game/Raw/")
-//      to a disk path (FPackageName::TryConvertGameRelativePackagePathToLocalPath
-//      and friends), then IFileManager::FindFilesRecursive for <FunctionName>.uasset.
-//
-//   3. Class resolution via LoadObject — convert the on-disk path back to a
-//      package path, call LoadObject<UObject>(nullptr, *PackagePath). LoadObject
-//      uses the UObject linker directly, not AR, so it works at modal-tick for
-//      any asset whose native class module has loaded by that point (Engine +
-//      most game-runtime modules). For BPs, walk LoadedAsset->ParentClass via
-//      UCkAssetRegistrySubsystem::Get_NonBlueprintParentClass.
-//
-// Tier 3 fallback (UObject stub when LoadObject can't resolve a class) is
-// REFUSED for all flavors as of 2026-05-13 (see Tier3_IsAllowed for full
-// rationale — probe_a2.log demonstrated the typed-conversion follow-up
-// error is parser-blind and wedges the editor worse than the original).
-// Refusal surfaces the original `No matching signatures` error to the user
-// via Hazelight's modal; manual recovery is documented in the refusal
-// banner.
+// Tier 3 fallback (UObject stub when LoadObject can't resolve) is REFUSED
+// for all flavors as of 2026-05-13 — see Tier3_IsAllowed for the
+// probe_a2.log rationale.
 
 namespace ck::angelscriptgenerator::self_heal
 {
     namespace
     {
-        // ---- Encoding-preserving UTF-16 LE atomic append ---------------------------
-
-        // The real AssetRegistry generator writes its output via FFileHelper::SaveStringToFile
-        // without an explicit encoding flag, which (for our content shape — pure ASCII with
-        // UE auto-detect) lands as UTF-16 LE with BOM. To preserve byte-compatibility with
-        // the existing generated files (and not confuse mtime-based hot-reload detection
-        // with a mid-file encoding switch), we read the existing file as text and
-        // re-write the concatenated content with ForceUnicode (= UTF-16 LE + BOM).
-        // UTF-16 LE atomic write for the sibling stub file. Writes the
-        // StubFileHeader-prefixed content fresh when the target does not
-        // exist yet, and otherwise appends to existing stub contents. Used
-        // by the sibling-file write path so that the first stub for a given
-        // canonical begins with the recovery banner and subsequent stubs
-        // accumulate beneath it.
-        //
-        // UTF-16 LE matches the real generator's `*Assets.as` encoding
-        // (`FFileHelper::EEncodingOptions::ForceUnicode` produces UTF-16 LE
-        // with BOM) so the sibling and canonical look encoding-identical to
-        // hot-reload mtime detection and external tooling.
+        // UTF-16 LE atomic write for the sibling stub file. Matches the real
+        // generator's encoding (`ForceUnicode` = UTF-16 LE + BOM) so the
+        // sibling looks encoding-identical to hot-reload mtime detection and
+        // external tooling. First write to a previously-missing path prepends
+        // the StubFileHeader banner; subsequent writes accumulate.
         auto Try_AtomicWriteOrAppend_StubFile_Utf16(
             const FString& InStubPath,
             const FString& InAppendedBlock) -> bool
@@ -119,12 +96,6 @@ namespace ck::angelscriptgenerator::self_heal
             return IFileManager::Get().Move(*InStubPath, *TempPath, /*Replace=*/true);
         }
 
-        // ---- Output-file / discovery-root discovery via file-scan ------------------
-
-        // Returns the candidate directories to search for generated `*Assets.as`
-        // files: project's Script/Generated, plus each enabled plugin's
-        // Script/Generated. Mirrors the directories the real generator writes to
-        // (see UCkAssetRegistrySubsystem::Get_OutputDirectoryForRootPath).
         auto Collect_GeneratedScriptDirs() -> TArray<FString>
         {
             auto Dirs = TArray<FString>{};
@@ -137,17 +108,12 @@ namespace ck::angelscriptgenerator::self_heal
             return Dirs;
         }
 
-        // ---- Disk walk for the asset's .uasset file --------------------------------
-
-        // Converts a package-style discovery root ("/Game/Raw/", "/Engine/...", or
-        // "/<PluginName>/...") to a local disk path that we can hand to
-        // IFileManager::FindFilesRecursive.
+        // Package-style root ("/Game/Raw/", "/Engine/...", "/<Plugin>/...") →
+        // local disk path. FPackageName needs the package name without trailing
+        // slash; we strip and re-add it on the converted side.
         auto Convert_PackageRootToDisk(
             const FString& InPackageRoot) -> FString
         {
-            // FPackageName operates on package names ending with the asset stem;
-            // for root paths we strip the trailing '/' and append a dummy stem,
-            // then take the dirname. Or — simpler — use TryConvertGameRelativePackagePathToLocalPath.
             auto LocalPath = FString{};
             if (FPackageName::TryConvertLongPackageNameToFilename(
                 InPackageRoot.LeftChop(InPackageRoot.EndsWith(TEXT("/")) ? 1 : 0),
@@ -160,10 +126,9 @@ namespace ck::angelscriptgenerator::self_heal
             return FString{};
         }
 
-        // Returns the package path (e.g. "/Game/Raw/SKM/MALE_SKEL_NEW.MALE_SKEL_NEW")
-        // of a .uasset whose basename equals InFunctionName, located somewhere under
-        // InDiscoveryRoot. Returns empty string on no match or ambiguous (multiple
-        // files with same basename) result.
+        // Returns the FSoftObjectPath-formatted package path of a `.uasset`
+        // whose basename equals InFunctionName, located under InDiscoveryRoot.
+        // Empty string on no match or ambiguity.
         auto Find_AssetPackagePath_OnDisk(
             const FString& InDiscoveryRoot,
             const FString& InFunctionName) -> FString
@@ -181,16 +146,12 @@ namespace ck::angelscriptgenerator::self_heal
             if (Found.Num() != 1)
             { return FString{}; }
 
-            // Convert disk path back to package path.
             auto PackageName = FString{};
             if (NOT FPackageName::TryConvertFilenameToLongPackageName(Found[0], PackageName))
             { return FString{}; }
 
-            // FSoftObjectPath format: "<PackageName>.<AssetName>"
             return PackageName + TEXT(".") + InFunctionName;
         }
-
-        // ---- Class resolution via LoadObject (Tier 1/2 unified) --------------------
 
         struct FResolvedAssetClass
         {
@@ -199,14 +160,9 @@ namespace ck::angelscriptgenerator::self_heal
         };
 
         // LoadObject<UObject>(InPackagePath) + class walk. AR-free.
-        //
-        // Returns ClassName empty when:
-        //   - LoadObject returns nullptr (package or class can't load at this point)
-        //   - The loaded asset is a UBlueprint whose ParentClass / native parent
-        //     can't be resolved (parent module not yet loaded)
-        //
-        // Caller falls through to Tier 3 (UObject) for soft accessors, refuses
-        // for blocking-loads.
+        // ClassName empty when LoadObject returns nullptr or the loaded
+        // UBlueprint's native parent can't be resolved (parent module not
+        // up yet). Caller falls through to Tier3_IsAllowed (currently REFUSE).
         auto Resolve_AssetClass_ViaLoadObject(
             const FString& InPackagePath) -> FResolvedAssetClass
         {
@@ -241,26 +197,22 @@ namespace ck::angelscriptgenerator::self_heal
             return Result;
         }
 
-        // ---- Tier 3 fallback policy --------------------------------------------------
+        // Tier 3 (UObject stub when LoadObject fails) is REFUSED for all
+        // flavors as of 2026-05-13 (probe_a2.log).
         //
-        // 2026-05-13 revision (probe_a2.log): Tier 3 fallback is now REFUSED
-        // for ALL accessor flavors.
+        // The original policy permitted Tier 3 for SoftRef/SoftClass on the
+        // assumption that the caller's typed-conversion error would be "a
+        // follow-up AS error pointing at the right line — better diagnostic
+        // than a wedge." Probe a2 disproved that: the typed-conversion error
+        // (`Cannot convert from TSoftObjectPtr<UObject> to
+        // TSoftObjectPtr<UWorld>`) does NOT match either of
+        // FCkAsErrorParser's two recognized patterns. Cycle 2 parses zero
+        // actionable roots and the editor wedges on the terminal banner
+        // instead of surfacing the original `No matching signatures` error.
         //
-        // The original 2026-05-12 policy permitted Tier 3 UObject stubs for
-        // SoftRef/SoftClass on the assumption that the caller's typed
-        // assignment would produce a "follow-up AS error pointing at the
-        // right line — better diagnostic than a wedge". Probe a2 disproved
-        // that: the typed-conversion error (`Cannot convert from
-        // TSoftObjectPtr<UObject> to TSoftObjectPtr<UWorld>`) does NOT match
-        // either of FCkAsErrorParser's two recognized patterns. Cycle 2 of
-        // the dispatcher parses zero actionable roots and the editor wedges
-        // indefinitely on the terminal banner instead of surfacing the
-        // original `No matching signatures` error to the user.
-        //
-        // Refusing across the board means Hazelight's modal shows the
-        // original `No matching signatures` error to the user — actionable,
-        // points at the real call site, parser-blind derivatives never
-        // appear.
+        // Refusing across the board means Hazelight's modal keeps showing
+        // the original `No matching signatures` error — actionable, points
+        // at the real call site, parser-blind derivatives never appear.
         auto Tier3_IsAllowed(
             ECk_AssetAccessorFlavor /*InFlavor*/) -> bool
         {
@@ -277,8 +229,6 @@ namespace ck::angelscriptgenerator::self_heal
     {
         return FString{TEXT("// CkAngelscriptGenerator: synthesized AssetRegistry stub for emergency recovery; will be replaced on next clean compile.")};
     }
-
-    // ----------------------------------------------------------------------------------------------------------------
 
     auto
         FCkAsAssetRegistryStubSynthesizer::
@@ -299,8 +249,6 @@ namespace ck::angelscriptgenerator::self_heal
         Out += TEXT("// ============================================================================");                                                Out += LINE_TERMINATOR;
         return Out;
     }
-
-    // ----------------------------------------------------------------------------------------------------------------
 
     auto
         FCkAsAssetRegistryStubSynthesizer::
@@ -331,17 +279,13 @@ namespace ck::angelscriptgenerator::self_heal
         { return false; }
 
         // The real generator emits two header lines we care about:
-        //
         //   // Source config: <Name> (<...path...>.as [<Namespace>])
         //   // Discovery root: <DiscoveryRoot>
         //
-        // The "Source config:" line carries the namespace cleanly inside the
-        // brackets, but its path token is malformed in practice — the BB
-        // generator emits "(/Game/BusterBlockBusterBlockAssets.as [assets])"
-        // (missing slash between root and filename), so trying to recover the
-        // root by truncating at the last '/' collapses to "/Game/" and
-        // spuriously prefix-matches every other config's assets. The
-        // "Discovery root:" line is canonical — use it.
+        // We parse the namespace from `Source config:`'s bracketed token. The
+        // path token in that same line is malformed in BB's generator (missing
+        // slash between root and filename), so we read the canonical root from
+        // the `Discovery root:` line instead.
         static const auto NamespacePattern = FRegexPattern{TEXT(
             R"(^//\s*Source config:\s*[^\[]*\[([^\]]+)\])")};
         static const auto DiscoveryRootPattern = FRegexPattern{TEXT(
@@ -383,8 +327,6 @@ namespace ck::angelscriptgenerator::self_heal
         return true;
     }
 
-    // ----------------------------------------------------------------------------------------------------------------
-
     auto
         FCkAsAssetRegistryStubSynthesizer::
         Collect_MatchingSites(
@@ -402,9 +344,8 @@ namespace ck::angelscriptgenerator::self_heal
             IFileManager::Get().FindFilesRecursive(Files, *Dir, TEXT("*Assets.as"),
                 /*Files=*/true, /*Directories=*/false);
 
-            // FindFilesRecursive ordering is platform-dependent — sort for
-            // deterministic candidate order (matters when no asset prefix
-            // wins and we fall back to first match).
+            // Sort for deterministic candidate order (matters when no asset
+            // prefix wins and we fall back to first match).
             Files.Sort();
 
             for (const auto& File : Files)
@@ -422,8 +363,6 @@ namespace ck::angelscriptgenerator::self_heal
         }
         return Out;
     }
-
-    // ----------------------------------------------------------------------------------------------------------------
 
     auto
         FCkAsAssetRegistryStubSynthesizer::
@@ -444,10 +383,8 @@ namespace ck::angelscriptgenerator::self_heal
             if (Root.IsEmpty())
             { continue; }
 
-            // Discovery root is "/Game/Raw/" (or "/PluginName/..."). The
-            // package path is "/Game/Raw/SKM/MALE_SKEL_NEW.MALE_SKEL_NEW".
-            // Match the root with the trailing '/' included so "/Game/" does
-            // NOT spuriously match a path under "/GameOther/".
+            // Match with trailing '/' included so "/Game/" doesn't spuriously
+            // match a path under "/GameOther/".
             if (NOT InAssetPackagePath.StartsWith(Root, ESearchCase::IgnoreCase))
             { continue; }
 
@@ -476,8 +413,6 @@ namespace ck::angelscriptgenerator::self_heal
 
         return ECk_AssetAccessorFlavor::SoftRef;
     }
-
-    // ----------------------------------------------------------------------------------------------------------------
 
     auto
         FCkAsAssetRegistryStubSynthesizer::
@@ -553,8 +488,6 @@ namespace ck::angelscriptgenerator::self_heal
         return Out;
     }
 
-    // ----------------------------------------------------------------------------------------------------------------
-
     auto
         FCkAsAssetRegistryStubSynthesizer::
         Build_NamespaceBlock(
@@ -598,31 +531,26 @@ namespace ck::angelscriptgenerator::self_heal
         const auto Flavor        = Classify_AccessorFlavor(InError);
         const auto SoftNamespace = Strip_LoadSuffix(InError.TargetNamespace);
 
-        // ---- Step 1: locate candidate output files matching the namespace ----
+        // ---- Step 1: candidates matching the namespace ----
 
         const auto Candidates = Collect_MatchingSites(Collect_GeneratedScriptDirs(), SoftNamespace);
         if (Candidates.Num() == 0)
         {
             Result.ErrorMessage = FString::Printf(
                 TEXT("No generated *Assets.as file matched namespace '%s' (stripped from '%s'). ")
-                TEXT("Searched project + plugin Script/Generated directories. ")
                 TEXT("Either the namespace is unknown or the output file was never generated."),
                 *SoftNamespace, *InError.TargetNamespace);
             return Result;
         }
 
-        // ---- Step 2: locate the asset .uasset on disk, picking the candidate
-        //              whose DiscoveryRoot owns it ----
+        // ---- Step 2: locate asset on disk, picking the candidate whose
+        //              DiscoveryRoot owns it ----
         //
         // Multiple files can legitimately share `namespace assets` while
-        // covering disjoint discovery roots (e.g. BusterBlockAssets.as on
-        // "/Game/BusterBlock/" + RawAssets.as on "/Game/Raw/"). AS merges the
-        // namespace at compile time, so any of the files would *unwedge* the
-        // editor — but the stub must land in the file the asset actually
-        // belongs to, otherwise the deferred regen has to rewrite both files
-        // to clean up. Try each candidate's root; the one that finds the asset
-        // on disk is the owner. Fall back to the first candidate if no root
-        // owns it (asset can't be located on disk — Tier 3 territory below).
+        // covering disjoint roots (e.g. BusterBlockAssets on "/Game/BusterBlock/"
+        // + RawAssets on "/Game/Raw/"). AS merges the namespace at compile time,
+        // so any file would unwedge — but the stub must land in the owning file
+        // or the deferred regen has to rewrite both.
         const auto BaseFunctionName = (Flavor == ECk_AssetAccessorFlavor::SoftClass)
             ? Strip_ClassSuffix(InError.FunctionName)
             : InError.FunctionName;
@@ -641,27 +569,18 @@ namespace ck::angelscriptgenerator::self_heal
         }
 
         if (Site.OutputPath.IsEmpty())
-        {
-            // No candidate's root contained the asset on disk. Fall back to
-            // the first candidate so the stub still lands somewhere — AS
-            // namespace-merge means compile will succeed regardless, and the
-            // deferred regen will fix the location. Tier 3 fallback below
-            // decides whether to emit a UObject stub or refuse.
-            Site = Candidates[0];
-        }
+        { Site = Candidates[0]; }
+
         if (AssetPackagePath.IsEmpty())
         {
-            // Tier 3 fallback refused for all flavors (see Tier3_IsAllowed
-            // policy comment for rationale). Surface the actionable banner so
-            // the user can run a manual AR regen; Hazelight's modal will keep
-            // displaying the original `No matching signatures` error which is
-            // exactly what they need to see.
+            // Tier 3 refused — surface actionable banner. Hazelight's modal
+            // keeps the original `No matching signatures` error visible to
+            // the user, which is exactly what they need to see.
             if (NOT Tier3_IsAllowed(Flavor))
             {
                 Result.ErrorMessage = FString::Printf(
                     TEXT("Asset '%s.uasset' not found under disk-converted root for '%s'. ")
-                    TEXT("Tier 3 UObject fallback is disabled (would produce a parser-blind ")
-                    TEXT("typed-conversion error and wedge the editor). ")
+                    TEXT("Tier 3 UObject fallback is disabled (produces parser-blind typed-conversion error). ")
                     TEXT("Manual recovery: force-quit, comment out the failing %s::%s() call site, ")
                     TEXT("relaunch, click 'Generate All Asset Registries', uncomment, save."),
                     *BaseFunctionName, *Site.DiscoveryRoot,
@@ -682,19 +601,12 @@ namespace ck::angelscriptgenerator::self_heal
 
         if (ClassName.IsEmpty())
         {
-            // LoadObject couldn't resolve (asset not loaded, BP parent module
-            // not up yet, etc.). Tier 3 fallback is refused for all flavors
-            // (see Tier3_IsAllowed) — surface the actionable banner so the
-            // original `No matching signatures` error remains visible to the
-            // user instead of being replaced by a parser-blind
-            // typed-conversion error.
             if (NOT Tier3_IsAllowed(Flavor))
             {
                 Result.ResolvedAssetClass = TEXT("UObject");
                 Result.ErrorMessage = FString::Printf(
                     TEXT("Could not resolve UClass via LoadObject for '%s' (package path '%s'). ")
-                    TEXT("Tier 3 UObject fallback is disabled (would produce a parser-blind ")
-                    TEXT("typed-conversion error and wedge the editor). ")
+                    TEXT("Tier 3 UObject fallback is disabled (produces parser-blind typed-conversion error). ")
                     TEXT("Manual recovery: force-quit, comment out the failing %s::%s() call site, ")
                     TEXT("relaunch, click 'Generate All Asset Registries', uncomment, save."),
                     *InError.FunctionName, *AssetPackagePath,
@@ -704,7 +616,7 @@ namespace ck::angelscriptgenerator::self_heal
         }
         Result.ResolvedAssetClass = ClassName;
 
-        // ---- Step 4: build the function body for the matched flavor ----
+        // ---- Step 4: build function body ----
 
         auto FunctionBody = FString{};
         switch (Flavor)
@@ -730,7 +642,7 @@ namespace ck::angelscriptgenerator::self_heal
 
         const auto StubBlock = Build_NamespaceBlock(InError.TargetNamespace, FunctionBody, InError);
 
-        // ---- Step 5: write the stub to a sibling file (not the canonical) ----
+        // ---- Step 5: write to sibling file (canonical untouched) ----
 
         const auto StubPath = FCkAsAssetRegistryStubSynthesizer::Derive_StubSiblingPath(Site.OutputPath);
         if (StubPath.IsEmpty())
