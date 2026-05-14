@@ -1,10 +1,9 @@
 // Snapshot tests for the AS error parser (Rev 10 dispatcher input layer).
 //
-// Inputs are verbatim from the 2026-05-11 corruption probes (see
-// CkAngelscriptGenerator/Claude.md "AS bootstrap self-heal" section once
-// Rev 10 lands). If these tests fail after a Hazelight engine upgrade, the
-// AS compile-error format has changed and the parser must be updated before
-// the dispatcher is re-enabled.
+// Inputs are verbatim from the 2026-05-11 corruption probes. These tests
+// are the engine-upgrade canary — if they go red after a Hazelight upgrade,
+// the AS compile-error format has changed and the parser must be updated
+// before the dispatcher can resume working.
 
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_AsErrorParser.h"
 
