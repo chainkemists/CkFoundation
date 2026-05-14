@@ -8,35 +8,27 @@
 
 // Emergency stub synthesizer for the Rev 10 self-heal dispatcher.
 //
-// Given a parsed "No matching signatures to '<NS>::Params(<args>)'" error from
-// the EntitySpawnParams shape, synthesizes the minimum AS source that satisfies
-// the missing accessor — a (possibly empty) USTRUCT plus a namespace block with
-// the failing Params(...) overload — and writes it to a SIBLING file alongside
-// the canonical `Script/Generated/<Plugin>_EntitySpawnParams.as`. The sibling
-// is named `_StubRecovery_<Plugin>_EntitySpawnParams.as`.
+// Given a parsed `No matching signatures to '<NS>::Params(<args>)'` error,
+// synthesizes the minimum AS source that satisfies the missing accessor — a
+// (possibly empty) USTRUCT plus a namespace block with the failing
+// Params(...) overload — into a sibling `_StubRecovery_<Plugin>_
+// EntitySpawnParams.as` file alongside the canonical. AS namespace-merge
+// across files lets the merged scope satisfy compile without touching the
+// canonical. Sibling files are gitignored + deleted by the PostCompile hook
+// after a successful compile.
 //
-// Why a sibling file (not in-place append):
-//   * Canonical generated files stay byte-clean from HEAD — no marker-scan
-//     defense layer required, and `git add -A && commit` cannot accidentally
-//     stage a stub-mutated canonical.
-//   * AS merges multiple `namespace X { ... }` blocks across files — the
-//     sibling contributes its accessor to the merged scope and compile
-//     succeeds without touching the canonical.
-//   * `.gitignore` covers `_StubRecovery_*` patterns so stub files physically
-//     cannot be staged.
-//   * The PostCompile hook deletes stub files after a successful AS compile;
-//     no marker scan needed and force-quit recoveries are trivial (next
-//     launch's AS compile succeeds because the stub file is still there, then
-//     PostCompile cleans it up).
+// Synthesized stub is intentionally minimum-viable:
+//   * Struct has no fields. Required only so the namespace's Params() body
+//     has a default-constructible return type.
+//   * Params(<args>) body returns a default-constructed struct. Arg names
+//     are auto-generated (Arg0, Arg1, ...) since the AS error gives us
+//     types but not parameter names.
+//   * Multiple drifts in the same session accumulate into the same stub
+//     file (per-accessor dedup prevents duplicate function declarations —
+//     same accessor injected twice is a no-op).
 //
-// The synthesized stub is intentionally minimum-viable:
-//   * Struct has no fields. Required only so the namespace's Params() body has
-//     a default-constructible return type.
-//   * Params(<args>) body returns a default-constructed struct. Argument names
-//     are auto-generated (Arg0, Arg1, ...) since the AS error gives us types
-//     but not parameter names.
-//   * Multiple drifts in the same session accumulate into the same stub file
-//     (the synthesizer appends to it if it already exists).
+// See `CkAngelscriptGenerator/Claude.md` for the full sibling-file model
+// rationale + force-quit recovery story.
 
 namespace ck::angelscriptgenerator::self_heal
 {
