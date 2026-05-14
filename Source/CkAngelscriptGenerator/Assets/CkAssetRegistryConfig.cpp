@@ -8,7 +8,8 @@ auto
     -> FString
 {
     auto AssetName = GetName();
-    return ck::Format_UE(TEXT("{} ({}/{} [{}])"), AssetName, AssetDiscoveryRoot, OutputFileName, Namespace);
+    const auto Separator = AssetDiscoveryRoot.EndsWith(TEXT("/")) ? TEXT("") : TEXT("/");
+    return ck::Format_UE(TEXT("{} ({}{}{} [{}])"), AssetName, AssetDiscoveryRoot, Separator, OutputFileName, Namespace);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
