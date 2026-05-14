@@ -14,6 +14,8 @@
 #include <Engine/BlueprintGeneratedClass.h>
 #include <Engine/CollisionProfile.h>
 
+#include <PhysicsEngine/PhysicsSettings.h>
+
 #include <HAL/FileManager.h>
 
 #include <Interfaces/IPluginManager.h>
@@ -108,6 +110,10 @@ auto
     // Generate collision constants
     Request_GenerateCollisionConstants(GeneratedDir);
     GeneratedFiles.Add(TEXT("collision.as"));
+
+    // Generate physical surface constants
+    Request_GeneratePhysicalSurfaceConstants(GeneratedDir);
+    GeneratedFiles.Add(TEXT("physicalsurface.as"));
 
     // Generate master index
     if (GeneratedFiles.Num() > 0)
@@ -1463,6 +1469,107 @@ auto
 
     ck::angelscriptgenerator::Log(TEXT("Generated collision constants in collision.as ({} channels, {} profiles)"),
         Channels.Num(), SortedProfiles.Num());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkAngelscriptWrapperGenerator::
+    Request_GeneratePhysicalSurfaceConstants(
+        const FString& GeneratedDir)
+    -> void
+{
+    auto* PhysicsSettings = UPhysicsSettings::Get();
+    if (ck::Is_NOT_Valid(PhysicsSettings, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        ck::angelscriptgenerator::Warning(TEXT("Cannot generate physical surface constants — UPhysicsSettings not available"));
+        return;
+    }
+
+    // ---- Helpers ----
+
+    constexpr auto SanitizeIdentifier = [](const FString& InName) -> FString
+    {
+        auto Identifier = InName;
+        for (auto& Char : Identifier)
+        {
+            if (NOT FChar::IsAlnum(Char))
+            {
+                Char = TEXT('_');
+            }
+        }
+        return Identifier;
+    };
+
+    constexpr auto IsValidIdentifier = [](const FString& InIdentifier) -> bool
+    {
+        return InIdentifier.Len() > 0 && NOT FChar::IsDigit(InIdentifier[0]);
+    };
+
+    constexpr auto SurfaceTypeEnumName = [](int32 InIndex) -> FString
+    {
+        if (InIndex == 0)
+        { return TEXT("SurfaceType_Default"); }
+        return ck::Format_UE(TEXT("SurfaceType{}"), InIndex);
+    };
+
+    // ---- Collect all configured surfaces ----
+
+    struct FSurfaceEntry
+    {
+        FString Name;
+        int32 Index;
+    };
+
+    auto Surfaces = TArray<FSurfaceEntry>{};
+
+    // Engine default: SurfaceType_Default (index 0) is always available
+    Surfaces.Add(FSurfaceEntry{TEXT("Default"), 0});
+
+    for (const auto& ConfiguredSurface : PhysicsSettings->PhysicalSurfaces)
+    {
+        const auto SurfaceName = ConfiguredSurface.Name.ToString();
+        if (SurfaceName.IsEmpty())
+        { continue; }
+
+        Surfaces.Add(FSurfaceEntry{
+            SurfaceName,
+            static_cast<int32>(ConfiguredSurface.Type.GetValue())
+        });
+    }
+
+    // ---- Generate file ----
+
+    auto Content = FString{TEXT("// Auto-generated physical surface constants\n")};
+    Content += TEXT("// DO NOT EDIT - This file is automatically regenerated during editor startup\n");
+    Content += TEXT("// Source: UPhysicsSettings::PhysicalSurfaces\n\n");
+
+    // ---- physical_surface namespace (FName + EPhysicalSurface) ----
+
+    Content += TEXT("namespace physical_surface\n{\n");
+    for (const auto& Surface : Surfaces)
+    {
+        const auto Identifier = SanitizeIdentifier(Surface.Name);
+        if (NOT IsValidIdentifier(Identifier))
+        { continue; }
+
+        Content += ck::Format_UE(
+            TEXT("    const FName {} = FName(\"{}\");\n"),
+            Identifier, Surface.Name);
+
+        Content += ck::Format_UE(
+            TEXT("    const EPhysicalSurface {}_Type = EPhysicalSurface::{};\n"),
+            Identifier, SurfaceTypeEnumName(Surface.Index));
+    }
+    Content += TEXT("}\n");
+
+    // ---- Write file ----
+
+    const auto FilePath = GeneratedDir / TEXT("physicalsurface.as");
+    FFileHelper::SaveStringToFile(Content, *FilePath);
+
+    ck::angelscriptgenerator::Log(TEXT("Generated physical surface constants in physicalsurface.as ({} surfaces)"),
+        Surfaces.Num());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
