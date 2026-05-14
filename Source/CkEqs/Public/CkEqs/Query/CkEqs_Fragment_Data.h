@@ -495,6 +495,11 @@ struct CKEQS_API FCk_Eqs_QueryParams
     CK_GENERATED_BODY(FCk_Eqs_QueryParams);
 
 private:
+    // Declaration order matches CK_DEFINE_CONSTRUCTORS arg order below so initializer order
+    // and the public constructor signature agree (otherwise: C5038).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FCk_Handle _Querier;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FCk_Eqs_GeneratorParams _GeneratorParams;
 
@@ -505,16 +510,13 @@ private:
     ECk_Eqs_RunMode _RunMode = ECk_Eqs_RunMode::SingleBest;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FCk_Handle _Querier;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FCk_Handle _Context;  // Optional - may be invalid
 
 public:
+    CK_PROPERTY(_Querier);
     CK_PROPERTY(_GeneratorParams);
     CK_PROPERTY(_Tests);
     CK_PROPERTY(_RunMode);
-    CK_PROPERTY(_Querier);
     CK_PROPERTY(_Context);
 
 public:
