@@ -1,14 +1,14 @@
 // Tests for the AS stub synthesizer (Rev 10 dispatcher recovery strategy #1).
 //
-// Coverage:
-//   * Derive_SpawnParamsStructName — name-shape conversion
-//   * Build_EntityScriptParamsStub — pure-string output for the three argument
-//     shapes seen in practice (no-arg, single-typed-arg, multi-arg) and the
-//     struct-emission toggle
-//   * Has_SpawnParamsStruct       — file-contents heuristic
-//   * Find_TargetFile_ByContent   — candidate-file resolution + ambiguity guard
-//   * Inject_EntityScriptParamsStub — end-to-end with a temp-file fixture,
-//     verifying the original content is preserved and the stub is appended
+// Coverage spans:
+//   * Pure-string builders (Build_*, Derive_*, Get_*) — input/output shape.
+//   * Candidate-file discovery (Find_TargetFile_ByContent, Anchor_ByCallerAsPath).
+//   * Sibling-stub IO (Inject_EntityScriptParamsStub end-to-end via
+//     temp-file fixtures: writes the sibling, preserves canonical, accumulates
+//     distinct accessors, dedups same-accessor re-injects).
+//
+// Individual test names are self-documenting; the canonical list is whatever
+// `IMPLEMENT_SIMPLE_AUTOMATION_TEST` instances live in this file.
 
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_StubSynthesizer.h"
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_AsErrorParser.h"

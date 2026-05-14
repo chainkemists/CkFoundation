@@ -22,8 +22,9 @@
 //
 // Error format is NOT a stable Hazelight public API contract. The unit tests
 // under Tests/Test_AsErrorParser.cpp snapshot the three known-good formats
-// (captured 2026-05-11 via the corruption probes). If those tests fail after an
-// engine upgrade, update the parser before re-enabling the dispatcher.
+// (captured 2026-05-11 via the corruption probes) — they are the engine-
+// upgrade canary. If they go red after a Hazelight upgrade, fix the parser
+// regex against the new format before the dispatcher can resume working.
 
 namespace ck::angelscriptgenerator::self_heal
 {
