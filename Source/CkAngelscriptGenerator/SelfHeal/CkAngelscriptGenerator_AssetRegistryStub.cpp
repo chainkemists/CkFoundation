@@ -82,6 +82,29 @@ namespace ck::angelscriptgenerator::self_heal
             auto Existing = FString{};
             const auto FileExists = FFileHelper::LoadFileToString(Existing, *InStubPath);
 
+            // Per-accessor dedup. Each appended block ends with a unique
+            // "// End synthesized stub for <NS>::<FUNC>" line. If the existing
+            // sibling already carries that exact marker, the accessor is covered
+            // — a second append would produce a duplicate-function collision
+            // when AS merges the namespace blocks at compile time.
+            if (FileExists)
+            {
+                static const auto EndMarkerPrefix = FString{TEXT("// End synthesized stub for ")};
+                const auto MarkerPos = InAppendedBlock.Find(EndMarkerPrefix);
+                if (MarkerPos != INDEX_NONE)
+                {
+                    const auto LineEndPos = InAppendedBlock.Find(
+                        FString{LINE_TERMINATOR}, ESearchCase::CaseSensitive,
+                        ESearchDir::FromStart, MarkerPos);
+                    const auto MarkerLine = LineEndPos != INDEX_NONE
+                        ? InAppendedBlock.Mid(MarkerPos, LineEndPos - MarkerPos)
+                        : InAppendedBlock.Mid(MarkerPos);
+
+                    if (Existing.Contains(MarkerLine))
+                    { return true; }
+                }
+            }
+
             const auto NewContents = FileExists
                 ? (Existing + InAppendedBlock)
                 : (FCkAsAssetRegistryStubSynthesizer::Get_StubFileHeader() + InAppendedBlock);
