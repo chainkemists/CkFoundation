@@ -252,7 +252,6 @@ auto
         ECk_2dGridSystem_CellFilter InCellFilter)
     -> TArray<FCk_Handle_2dGridCell>
 {
-    auto CellRegistry = InGrid.Get<ck::FFragment_2dGridSystem_Current>().Get_CellRegistry();
     auto AllCells = TArray<FCk_Handle_2dGridCell>{};
 
     ForEach_Cell(InGrid, InCellFilter, [&](const FCk_Handle_2dGridCell& InGridCell)
@@ -270,7 +269,6 @@ auto
         ECk_2dGridSystem_CellFilter InCellFilter)
     -> TArray<FIntPoint>
 {
-    auto CellRegistry = InGrid.Get<ck::FFragment_2dGridSystem_Current>().Get_CellRegistry();
     auto AllCellCoordinates = TArray<FIntPoint>{};
 
     if (InCellFilter == ECk_2dGridSystem_CellFilter::NoFilter)
