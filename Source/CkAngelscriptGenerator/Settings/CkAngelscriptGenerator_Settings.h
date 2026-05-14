@@ -22,10 +22,10 @@ private:
     //
     // When true (default): the OnReloadHadErrors hook is armed; failed AS
     // compiles caused by stale generated accessor files self-recover by
-    // synthesizing minimum-viable stubs into the affected
-    // <Plugin>_EntitySpawnParams.as / re-kicking dynamic-handle JSON
-    // regeneration (and, when wired, kicking the asset-registry generator)
-    // before bouncing the next CheckForHotReload.
+    // synthesizing minimum-viable stubs into sibling `_StubRecovery_*` files
+    // alongside the affected canonicals (EntitySpawnParams + AssetRegistry
+    // .as + DynamicHandleTypes.json). AS namespace-merge resolves the missing
+    // accessor on the next compile pass.
     //
     // When false (or when the `-NoCkAsRegen` CLI flag is set): the hook is
     // not registered and the editor falls back to the unmodified Hazelight
