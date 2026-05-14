@@ -13,6 +13,9 @@
 #include "CkIsmRenderer/Renderer/CkIsmRenderer_Utils.h"
 
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
+#include "Engine/Level.h"
+#include "Engine/World.h"
+#include "EngineUtils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -61,12 +64,56 @@ auto
 
 auto
     UCk_IsmRenderer_Subsystem_UE::
+    Initialize(
+        FSubsystemCollectionBase& Collection)
+    -> void
+{
+    Super::Initialize(Collection);
+    DoSweepLeakedRenderers();
+}
+
+auto
+    UCk_IsmRenderer_Subsystem_UE::
     Deinitialize()
     -> void
 {
     UCk_Utils_IsmRenderer_TransientFactory_UE::ClearCache();
 
     Super::Deinitialize();
+}
+
+auto
+    UCk_IsmRenderer_Subsystem_UE::
+    DoSweepLeakedRenderers()
+    -> void
+{
+    auto* World = GetWorld();
+    if (ck::Is_NOT_Valid(World, ck::IsValid_Policy_NullptrOnly{}))
+    { return; }
+
+    auto Leaked = TArray<ACk_IsmRenderer_Actor_UE*>{};
+    for (TActorIterator<ACk_IsmRenderer_Actor_UE> It(World); It; ++It)
+    {
+        Leaked.Add(*It);
+    }
+
+    for (auto* Actor : Leaked)
+    {
+        if (ck::IsValid(Actor))
+        {
+            Actor->Destroy();
+        }
+    }
+
+    if (Leaked.Num() > 0 && World->WorldType == EWorldType::Editor)
+    {
+        // Bake the cleanup into the level package on next save. The entity-spawner rebuild
+        // path will repopulate fresh transient renderers on demand.
+        if (auto* Level = World->PersistentLevel.Get())
+        {
+            Level->MarkPackageDirty();
+        }
+    }
 }
 
 auto
@@ -109,6 +156,11 @@ auto
         {
             const auto& NewIsmRendererActor = Cast<ACk_IsmRenderer_Actor_UE>(InActor);
             NewIsmRendererActor->_RenderData = InDataAsset;
+
+            // ISM renderer actors are a runtime cache derived from UCk_IsmRenderer_Data; they
+            // must never be saved into the level package. Without RF_Transient, every editor
+            // open re-spawns one and dirties the level, then a save bakes the duplicate in.
+            NewIsmRendererActor->SetFlags(RF_Transient);
 
             // Editor worlds never fire BeginPlay; explicit init also covers runtime without
             // double-spawning (DoInitialize is idempotent).
