@@ -55,10 +55,19 @@ public:
     CK_GENERATED_BODY(UCk_IsmRenderer_Subsystem_UE);
 
 public:
+    auto Initialize(FSubsystemCollectionBase& Collection) -> void override;
     auto Deinitialize() -> void override;
 
 protected:
     auto DoesSupportWorldType(const EWorldType::Type WorldType) const -> bool override;
+
+private:
+    // Destroys any ACk_IsmRenderer_Actor_UE instances that were previously baked into the level
+    // package by a prior version that didn't mark them transient. Runs once on subsystem init in
+    // both editor and runtime worlds. In the editor, marks the level dirty so the user can save
+    // out a clean copy. The cache is empty at this point, so subsequent GetOrCreate calls from
+    // the entity-spawner rebuild path will spawn fresh (now-transient) replacements.
+    auto DoSweepLeakedRenderers() -> void;
 
 public:
     UFUNCTION(BlueprintCallable, Category = "Ck|IsmRenderer")
