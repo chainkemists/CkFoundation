@@ -16,6 +16,19 @@ namespace ck::registry_table
 {
     using EnttRegistryType = entt::basic_registry<FCk_Entity::IdType, std::allocator<FCk_Entity::IdType>>;
 
+    // Hard upper bound on simultaneously-live registries. Slots TArray is
+    // pre-reserved to this count; growth past it would relocate the array
+    // and break concurrent worker-thread reads. Sized to accommodate
+    // content-driven sub-registries (e.g. one per CkGrid, one per spatial
+    // inventory) on top of the handful of engine-level worlds. The configurable
+    // soft-warning in UCk_Ecs_ProjectSettings_UE (_RegistrySlot_WarnThreshold)
+    // is the canary for "you crossed a number you didn't expect"; this hard
+    // cap is the structural backstop for TArray relocation safety.
+    //
+    // Exposed via inline constexpr so the settings UPROPERTY and downstream
+    // consumers (e.g. CkWatermark) can reference it without indirection.
+    inline constexpr int32 kRegistryTable_MaxSlots = 16384;
+
     // Allocate a slot pointing at InRegistry. Slot is reusable after Free.
     // GAME-THREAD ONLY — enforced via CK_ENSURE_IF_NOT(IsInGameThread()).
     // Asserts if InRegistry is null. Returns Unset if the slot table has

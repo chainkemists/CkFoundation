@@ -66,6 +66,45 @@ auto
 
 auto
     UCk_Utils_Ecs_Settings_UE::
+    Get_RegistrySlot_WarnThreshold()
+    -> int32
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_ProjectSettings_UE>();
+
+    // Fall back to 0 (disabled) if the CDO isn't reachable yet — the slot table can be touched
+    // very early during module init, before the UClass system is up.
+    if (ck::Is_NOT_Valid(Settings))
+    { return 0; }
+
+    return Settings->Get_RegistrySlot_WarnThreshold();
+}
+
+auto
+    UCk_Utils_Ecs_Settings_UE::
+    Get_RegistrySlot_WarnReporting()
+    -> ECk_Ecs_RegistrySlot_Reporting
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return ECk_Ecs_RegistrySlot_Reporting::Ensure; }
+
+    return Settings->Get_RegistrySlot_WarnReporting();
+}
+
+auto
+    UCk_Utils_Ecs_Settings_UE::
+    Get_RegistrySlot_HardCap()
+    -> int32
+{
+    // Returns the compile-time constant directly. The _RegistrySlot_HardCap UPROPERTY on
+    // UCk_Ecs_ProjectSettings_UE is a display mirror only — anyone hacking the CDO at
+    // runtime would otherwise read a wrong value. The constant in the header is the truth.
+    return ck::registry_table::kRegistryTable_MaxSlots;
+}
+
+auto
+    UCk_Utils_Ecs_Settings_UE::
     Get_HandleDebuggerBehavior()
     -> ECk_Ecs_HandleDebuggerBehavior
 {
