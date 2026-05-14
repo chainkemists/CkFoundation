@@ -208,4 +208,42 @@ bool FCkTest_Dispatcher_CycleCounter_Reset::RunTest(const FString&)
     return true;
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+// Bootstrap-mode flag: Is_BootstrapMode starts true, Mark_BootstrapComplete
+// flips it to false. Drives the OnReloadHadErrors routing decision (modal-tick
+// pump for cold-start vs FTSTicker for mid-session hot-reload).
+//
+// NOTE: This test mutates global session state (sBootstrapComplete +
+// sCyclesRun) and does not restore it. The dispatcher's bootstrap flag has
+// editor-session lifetime by design — once flipped, it stays flipped until
+// editor restart. The CycleCounter_Reset test above happens to leave the
+// counter at 0, and Reset_CyclesRun is called from StartupModule, so the
+// stale-state risk is low. Run order shouldn't matter for the other tests
+// since they don't read this flag.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_Dispatcher_BootstrapMode_FlipFlop,
+    "CkAngelscriptGenerator.UnitTests.Dispatcher.BootstrapMode_FlipFlop",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_Dispatcher_BootstrapMode_FlipFlop::RunTest(const FString&)
+{
+    // Test order: if this test runs after another that already called
+    // Mark_BootstrapComplete, the initial state will be `bootstrap done`. We
+    // only assert the transition, not the initial value, to stay robust to
+    // test ordering.
+    const auto WasBootstrap = FCkAsRecoveryDispatcher::Is_BootstrapMode();
+
+    FCkAsRecoveryDispatcher::Mark_BootstrapComplete();
+    TestFalse(TEXT("after Mark_BootstrapComplete, Is_BootstrapMode returns false"),
+        FCkAsRecoveryDispatcher::Is_BootstrapMode());
+
+    TestEqual(TEXT("cycle counter reset to 0 at bootstrap→mid-session transition"),
+        FCkAsRecoveryDispatcher::Get_CyclesRun(), 0);
+
+    (void)WasBootstrap;
+    return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS
