@@ -4,27 +4,23 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Parses Hazelight's AngelScript compile-error output into typed root-cause records
-// for the AS bootstrap self-heal dispatcher (Rev 10).
+// Parses Hazelight's AS compile-error output into typed root-cause records.
+// Two patterns recognized — both correspond to drift classes the dispatcher
+// can act on:
+//   * `No matching signatures to '<NS>::<func>(<args>)'`  — stale EntitySpawn-
+//     Params stub OR missing asset registry accessor.
+//   * `Identifier '<X>' is not a data type`               — missing
+//     dynamic-handle JSON entry.
 //
-// Two error patterns are recognized — both correspond to deadlock classes that
-// the dispatcher can act on:
-//
-//   * "No matching signatures to '<NS>::<func>(<args>)'"  — stale EntitySpawnParams
-//                                                            stub OR missing asset
-//                                                            registry accessor.
-//   * "Identifier '<X>' is not a data type"               — missing dynamic-handle
-//                                                            JSON entry.
-//
-// Anything else (cascade noise: "Unknown", "<X> is not declared", etc.) is dropped
-// from the result. The dispatcher treats "compile failed but parser returned 0
-// roots" as an unrecognized-failure case and surfaces a terminal banner.
+// Cascade noise ("Unknown", "<X> is not declared", etc.) is dropped. The
+// dispatcher treats "compile failed but parser returned 0 roots" as an
+// unrecognized-failure case and surfaces a terminal banner.
 //
 // Error format is NOT a stable Hazelight public API contract. The unit tests
 // under Tests/Test_AsErrorParser.cpp snapshot the three known-good formats
-// (captured 2026-05-11 via the corruption probes) — they are the engine-
-// upgrade canary. If they go red after a Hazelight upgrade, fix the parser
-// regex against the new format before the dispatcher can resume working.
+// (captured 2026-05-11 via the corruption probes) — engine-upgrade canary.
+// If they go red, fix the parser regex against the new format before the
+// dispatcher can resume working.
 
 namespace ck::angelscriptgenerator::self_heal
 {
@@ -41,16 +37,14 @@ namespace ck::angelscriptgenerator::self_heal
         int32                  Line   = -1;
         int32                  Column = -1;
 
-        // Populated when Kind == NoMatchingSignatures.
-        FString TargetNamespace;   // e.g. "UBb_DeliveryTruck_EntityScript", "assets"
-        FString FunctionName;      // e.g. "Params", "MALE_SKEL_NEW"
+        // Populated for Kind == NoMatchingSignatures.
+        FString TargetNamespace;
+        FString FunctionName;
         FString ArgsList;          // e.g. "const FTransform"; empty for no-arg
 
-        // Populated when Kind == IdentifierNotADataType.
-        FString MissingIdentifier; // e.g. "FCk_Handle_CheckoutCounter"
-        FString LookupScope;       // namespace name from "in namespace 'X' or parent";
-                                   // empty when the error said "in global namespace"
-                                   // or had no in-clause.
+        // Populated for Kind == IdentifierNotADataType.
+        FString MissingIdentifier;
+        FString LookupScope;       // empty when "in global namespace" or absent
 
         auto operator==(const FCk_AsParsedError& Other) const -> bool;
         auto operator!=(const FCk_AsParsedError& Other) const -> bool { return NOT (*this == Other); }
@@ -61,28 +55,15 @@ namespace ck::angelscriptgenerator::self_heal
     class CKANGELSCRIPTGENERATOR_API FCkAsErrorParser
     {
     public:
-        // Parses a raw Hazelight AS compile-error block (typically the contents of
-        // the InErrors array passed to the OnReloadHadErrors delegate, joined by
-        // newlines, OR the equivalent log capture) into a flat list of recognized
-        // root-cause errors. Preserves the order of appearance in the input.
-        //
-        // Lines that don't match a recognized pattern are silently dropped — the
-        // dispatcher uses the result count to decide between "I can act" and
-        // "show terminal banner".
-        static auto
-        ParseErrors(
-            const FString& InRawErrorOutput) -> TArray<FCk_AsParsedError>;
+        // Lines that don't match a recognized pattern are silently dropped —
+        // dispatcher uses the count to decide "I can act" vs "terminal banner".
+        static auto ParseErrors      (const FString& InRawErrorOutput)      -> TArray<FCk_AsParsedError>;
 
-        // Returns the unique set of root causes from InErrors, keyed by the
-        // actionable content (qualified identifier + args, or missing identifier
-        // name). Source file / line / column are NOT part of the dedup key — the
-        // same root cause appears across many files in cascade, and the
-        // dispatcher only needs one strategy invocation per unique root.
-        //
-        // Preserves order of first appearance.
-        static auto
-        DeduplicateRoots(
-            const TArray<FCk_AsParsedError>& InErrors) -> TArray<FCk_AsParsedError>;
+        // Dedup key: actionable content (qualified identifier + args, or
+        // missing identifier). Source file/line/column NOT in the key — the
+        // same root appears across many cascade sites and the dispatcher
+        // only needs one strategy invocation per unique root.
+        static auto DeduplicateRoots(const TArray<FCk_AsParsedError>& InErrors) -> TArray<FCk_AsParsedError>;
     };
 }
 
