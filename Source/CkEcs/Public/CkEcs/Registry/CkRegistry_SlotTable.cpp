@@ -2,6 +2,9 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include "CkEcs/CkEcsLog.h"
+#include "CkEcs/Settings/CkEcs_Settings.h"
+
 #include "Containers/Array.h"
 #include "HAL/IConsoleManager.h"
 #include "HAL/PlatformProcess.h"
@@ -104,17 +107,18 @@ namespace ck::registry_table
         TMap<uint32, uint64>  DirtyMarkerVersions;
     };
 
-    // Hard upper bound on simultaneously-live registries. Slots TArray is
-    // pre-reserved to this count; growth past it would relocate the array
-    // and break concurrent worker-thread reads. Realistic max is ~3-4
-    // (editor world subsystem + PIE host + PIE client + a few FEcsWorld
-    // instances); 64 is comfortably above that.
-    static constexpr int32 kRegistryTable_MaxSlots = 64;
+    // kRegistryTable_MaxSlots is defined in CkRegistry_SlotTable.h as inline constexpr
+    // so it's visible to downstream consumers (settings, CkWatermark, etc.).
 
     struct FRegistryTable_State
     {
         TArray<FRegistryTable_Slot> Slots;
         TArray<int32>               FreeList;
+        // Highest threshold-multiple already reported via the soft-warning
+        // path. Monotonic-high-water-mark: never re-fires for a multiple
+        // we've already crossed in this process lifetime, even if the
+        // active count drops back and climbs again.
+        int32                       SoftWarn_HighestMultipleReported = 0;
 
         FRegistryTable_State()
         {
@@ -160,6 +164,52 @@ namespace ck::registry_table
             }
         }
         return GRegistryTable_StatePtr.load(std::memory_order_acquire);
+    }
+
+    // ----
+
+    // Fires the soft-warning per the project's configured reporting mode.
+    // Called only on ascending-multiple crossings (see Allocate).
+    static auto DoFire_RegistrySlotSoftWarning(int32 InActiveCount, int32 InThresholdReached) -> void
+    {
+        const auto Reporting = UCk_Utils_Ecs_Settings_UE::Get_RegistrySlot_WarnReporting();
+
+        switch (Reporting)
+        {
+            case ECk_Ecs_RegistrySlot_Reporting::Silent:
+            {
+                return;
+            }
+            case ECk_Ecs_RegistrySlot_Reporting::Log:
+            {
+                ck::ecs::Verbose(
+                    TEXT("registry slot table: {} active registries; crossed soft-warning threshold ({}). "
+                         "Hard cap is {}. Tune via Project Settings -> ECS -> Registry Slot Table."),
+                    InActiveCount, InThresholdReached, kRegistryTable_MaxSlots);
+                return;
+            }
+            case ECk_Ecs_RegistrySlot_Reporting::Warning:
+            {
+                ck::ecs::Warning(
+                    TEXT("registry slot table: {} active registries; crossed soft-warning threshold ({}). "
+                         "Hard cap is {}. If this isn't expected for your content scale you may have a leak "
+                         "(subsystem failing to free a slot in Deinitialize). Tune via Project Settings -> "
+                         "ECS -> Registry Slot Table."),
+                    InActiveCount, InThresholdReached, kRegistryTable_MaxSlots);
+                return;
+            }
+            case ECk_Ecs_RegistrySlot_Reporting::Ensure:
+            {
+                CK_ENSURE_IF_NOT(false,
+                    TEXT("registry slot table: {} active registries; crossed soft-warning threshold ({}). "
+                         "Hard cap is {}. If this is expected for your content scale, raise "
+                         "_RegistrySlot_WarnThreshold or set _RegistrySlot_WarnReporting to Warning/Log/Silent "
+                         "in Project Settings -> ECS -> Registry Slot Table."),
+                    InActiveCount, InThresholdReached, kRegistryTable_MaxSlots)
+                { return; }
+                return;
+            }
+        }
     }
 
     // ----
@@ -259,15 +309,33 @@ namespace ck::registry_table
             // invariants comment at top of file.
             CK_ENSURE_IF_NOT(State->Slots.Num() < kRegistryTable_MaxSlots,
                 TEXT("registry_table::Allocate: slot table at hard cap of {} simultaneous registries. "
-                     "Either there's a leak (subsystems not freeing their slot in Deinitialize) or the "
-                     "cap needs raising — see kRegistryTable_MaxSlots in CkRegistry_SlotTable.cpp."),
+                     "The soft-warning (Project Settings -> ECS -> Registry Slot Table) should have "
+                     "surfaced this earlier — either there's a leak (subsystem failing to free a slot "
+                     "in Deinitialize), or the cap genuinely needs raising in kRegistryTable_MaxSlots "
+                     "in CkRegistry_SlotTable.cpp."),
                 kRegistryTable_MaxSlots)
             { return FCk_RegistryHandle::Unset(); }
             // Emplace (not Add) because FRegistryTable_Slot holds a non-movable
             // std::atomic and TArray::Add(T&&) would require move-construction.
-            // Reserve(64) at init guarantees we never relocate, so no
-            // movability is required.
+            // Reserve(kRegistryTable_MaxSlots) at init guarantees we never relocate,
+            // so no movability is required.
             Index = State->Slots.Emplace();
+
+            // Soft-warning check: only on the grow path, because that's the only path
+            // that can advance the monotonic high-water mark. Recycled-from-FreeList
+            // allocations don't change Slots.Num(). Fires once per ascending multiple
+            // of the project-configured threshold.
+            const auto Threshold = UCk_Utils_Ecs_Settings_UE::Get_RegistrySlot_WarnThreshold();
+            if (Threshold > 0)
+            {
+                const auto NewCount = State->Slots.Num();
+                const auto NewMultiple = NewCount / Threshold;
+                if (NewMultiple > State->SoftWarn_HighestMultipleReported)
+                {
+                    State->SoftWarn_HighestMultipleReported = NewMultiple;
+                    DoFire_RegistrySlotSoftWarning(NewCount, NewMultiple * Threshold);
+                }
+            }
         }
 
         auto& Slot = State->Slots[Index];
