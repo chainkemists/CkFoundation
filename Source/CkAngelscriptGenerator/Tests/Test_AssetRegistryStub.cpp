@@ -1,19 +1,9 @@
-// Tests for the AssetRegistry stub synthesizer (Rev 10 dispatcher recovery strategy #3).
+// Tests for the AssetRegistry stub synthesizer (Rev 10 strategy #3).
 //
-// Coverage focuses on the pure-string and pure-logic surfaces:
-//   * Classify_AccessorFlavor       — namespace + function-name shape disambiguation
-//   * Strip_LoadSuffix              — base-namespace derivation
-//   * Strip_ClassSuffix             — base-function-name derivation
-//   * Build_SoftRefAccessor         — soft-ref accessor body shape
-//   * Build_SoftClassAccessor       — soft-class accessor body shape + "_C" suffix
-//   * Build_BlockingLoadAccessor    — blocking-load accessor body shape + ensure guard
-//   * Build_NamespaceBlock          — namespace wrapper + marker comments
-//
-// Inject_AssetRegistryStub is the live entry point and exercises engine state
-// (AR scan, sync asset load, file IO). Coverage of that path comes from the
-// end-to-end smoke test via _probe_assets_corrupt.bat — same precedent as the
-// EntitySpawnParams synthesizer (Test_StubSynthesizer.cpp has no live-engine
-// tests either).
+// Pure-logic surfaces (Classify_*, Strip_*, Build_*, header parsing, site
+// picking). The live Inject_AssetRegistryStub entry point isn't unit-tested
+// — it exercises engine state (LoadObject, file IO); coverage there comes
+// from the `_probe_assets_corrupt.bat` end-to-end smoke runs.
 
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_AssetRegistryStub.h"
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_AsErrorParser.h"
