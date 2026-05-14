@@ -389,6 +389,34 @@ namespace ck::angelscriptgenerator::self_heal
             return Result;
         }
 
+        // Per-accessor dedup. Each appended block ends with a unique
+        // "// End synthesized stub for <NS>::<FUNC>" line. If the existing
+        // sibling already carries that marker, the accessor is covered — a
+        // second append would produce a duplicate-function collision when AS
+        // merges the namespace blocks at compile time.
+        if (StubFileExists)
+        {
+            static const auto EndMarkerPrefix = FString{TEXT("// End synthesized stub for ")};
+            const auto MarkerPos = StubBlock.Find(EndMarkerPrefix);
+            if (MarkerPos != INDEX_NONE)
+            {
+                const auto LineEndPos = StubBlock.Find(
+                    FString{LINE_TERMINATOR}, ESearchCase::CaseSensitive,
+                    ESearchDir::FromStart, MarkerPos);
+                const auto MarkerLine = LineEndPos != INDEX_NONE
+                    ? StubBlock.Mid(MarkerPos, LineEndPos - MarkerPos)
+                    : StubBlock.Mid(MarkerPos);
+
+                if (ExistingStub.Contains(MarkerLine))
+                {
+                    Result.Success        = true;
+                    Result.TargetFilePath = StubPath;
+                    Result.InjectedBlock  = StubBlock;
+                    return Result;
+                }
+            }
+        }
+
         auto NewContents = FString{};
         if (StubFileExists)
         {
