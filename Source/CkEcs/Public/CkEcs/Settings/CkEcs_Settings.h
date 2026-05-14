@@ -3,6 +3,8 @@
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Registry/CkRegistry_SlotTable.h"
+
 #include "CkSettings/ProjectSettings/CkProjectSettings.h"
 #include "CkSettings/UserSettings/CkUserSettings.h"
 
@@ -37,6 +39,22 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ecs_EntityMap_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// How the slot-table soft-warning surfaces when the active-registry count crosses a configured threshold.
+// The hard cap (kRegistryTable_MaxSlots) is a compile-time invariant and always uses CK_ENSURE_IF_NOT;
+// this only controls the soft-warning layer.
+UENUM(BlueprintType)
+enum class ECk_Ecs_RegistrySlot_Reporting : uint8
+{
+    Silent,
+    Log,
+    Warning,
+    Ensure
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ecs_RegistrySlot_Reporting);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(meta = (DisplayName = "ECS"))
 class CKECS_API UCk_Ecs_ProjectSettings_UE : public UCk_Plugin_ProjectSettings_UE
 {
@@ -67,10 +85,35 @@ private:
     UPROPERTY(Config, EditDefaultsOnly, Category = "Scheduler")
     bool _EnableDirtyMarkerPumpShortCircuit = true;
 
+    // Active-registry count at which the slot table fires a soft-warning. Fires once at this threshold,
+    // then again at each new ascending multiple (2x, 3x, ...). Never re-fires for a multiple already
+    // reported in this process lifetime. 0 disables the soft-warning entirely (hard cap still applies).
+    //
+    // If you have tests or gyms that intentionally exceed this number, either raise the threshold or
+    // set Reporting to Log/Silent so the AutoTest harness doesn't escalate the signal to a test failure.
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Registry Slot Table",
+              meta = (ClampMin = "0"))
+    int32 _RegistrySlot_WarnThreshold = 1024;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Registry Slot Table",
+              meta = (EditCondition = "_RegistrySlot_WarnThreshold > 0"))
+    ECk_Ecs_RegistrySlot_Reporting _RegistrySlot_WarnReporting = ECk_Ecs_RegistrySlot_Reporting::Ensure;
+
+    // Read-only display of the compile-time hard cap. Editing this in the .ini does nothing —
+    // the canonical value is ck::registry_table::kRegistryTable_MaxSlots in
+    // CkRegistry_SlotTable.h. Exposed here so it's discoverable from Project Settings and
+    // queryable at runtime (e.g. by CkWatermark) via Get_RegistrySlot_HardCap().
+    UPROPERTY(VisibleAnywhere, Category = "Registry Slot Table",
+              meta = (DisplayName = "Hard Cap (read-only)"))
+    int32 _RegistrySlot_HardCap = ck::registry_table::kRegistryTable_MaxSlots;
+
 public:
     CK_PROPERTY_GET(_EntityScriptSpawnParamsFolderName);
     CK_PROPERTY_GET(_IgnoredSpawnParamsPropertyNames);
     CK_PROPERTY_GET(_EnableDirtyMarkerPumpShortCircuit);
+    CK_PROPERTY_GET(_RegistrySlot_WarnThreshold);
+    CK_PROPERTY_GET(_RegistrySlot_WarnReporting);
+    CK_PROPERTY_GET(_RegistrySlot_HardCap);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -171,6 +214,21 @@ public:
               Category = "Ck|Utils|Ecs|Settings")
     static bool
     Get_EnableDirtyMarkerPumpShortCircuit();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ecs|Settings")
+    static int32
+    Get_RegistrySlot_WarnThreshold();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ecs|Settings")
+    static ECk_Ecs_RegistrySlot_Reporting
+    Get_RegistrySlot_WarnReporting();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ecs|Settings")
+    static int32
+    Get_RegistrySlot_HardCap();
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ecs|Settings")
