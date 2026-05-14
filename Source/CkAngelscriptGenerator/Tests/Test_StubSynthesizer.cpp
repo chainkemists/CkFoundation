@@ -669,4 +669,69 @@ bool FCkTest_StubSynthesizer_Inject_Accumulating::RunTest(const FString&)
     return true;
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+// Dedup on same accessor: regression for the duplicate-function collision
+// (user-reported 2026-05-14). Two Inject calls for the same (namespace,
+// function) must NOT produce a duplicate `Params(...)` declaration in the
+// sibling — AS namespace-merge would reject it with "A function with the
+// same name and parameters already exists" at next compile. The per-accessor
+// dedup gate in Try_AtomicWriteOrAppend_StubFile_Utf16 scans existing
+// sibling content for the unique `// End synthesized stub for <NS>::<FUNC>`
+// marker line and short-circuits the append when present.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StubSynthesizer_Inject_DedupOnSameAccessor,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.Inject_DedupOnSameAccessor",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StubSynthesizer_Inject_DedupOnSameAccessor::RunTest(const FString&)
+{
+    const auto TempRoot         = FPaths::ProjectIntermediateDir() / TEXT("CkStubSynthTest_Dedup");
+    const auto FixtureFile      = TempRoot / TEXT("BusterBlock_EntitySpawnParams.as");
+    const auto ExpectedStubFile = TempRoot / TEXT("_StubRecovery_BusterBlock_EntitySpawnParams.as");
+    IFileManager::Get().MakeDirectory(*TempRoot, /*Tree=*/true);
+
+    const auto Original = FString{TEXT("// References UBb_Gamma_EntityScript as a string.\n")};
+    FFileHelper::SaveStringToFile(Original, *FixtureFile,
+        FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+
+    const auto Error = Make_ParsedError(TEXT("UBb_Gamma_EntityScript"), TEXT("Params"), TEXT(""));
+
+    const auto ResultA = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(Error, {FixtureFile});
+    TestTrue(TEXT("first inject succeeded"), ResultA.Success);
+
+    const auto ResultB = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(Error, {FixtureFile});
+    TestTrue(TEXT("second inject (same accessor) reports success (no-op)"), ResultB.Success);
+
+    auto Stub = FString{};
+    TestTrue(TEXT("sibling readable"), FFileHelper::LoadFileToString(Stub, *ExpectedStubFile));
+
+    // End-marker line for this accessor must appear exactly once.
+    auto Cursor   = 0;
+    auto HitCount = 0;
+    const auto Needle = FString{TEXT("// End synthesized stub for UBb_Gamma_EntityScript::Params")};
+    while ((Cursor = Stub.Find(Needle, ESearchCase::CaseSensitive, ESearchDir::FromStart, Cursor)) != INDEX_NONE)
+    {
+        ++HitCount;
+        Cursor += Needle.Len();
+    }
+    TestEqual(TEXT("end-marker for the accessor appears exactly once"), HitCount, 1);
+
+    // The Params(...) overload declaration must appear exactly once — this is
+    // the AS-side identifier that would collide on namespace-merge.
+    auto ParamsCursor = 0;
+    auto ParamsHits   = 0;
+    const auto ParamsNeedle = FString{TEXT(" Params(")};
+    while ((ParamsCursor = Stub.Find(ParamsNeedle, ESearchCase::CaseSensitive, ESearchDir::FromStart, ParamsCursor)) != INDEX_NONE)
+    {
+        ++ParamsHits;
+        ParamsCursor += ParamsNeedle.Len();
+    }
+    TestEqual(TEXT("Params(...) declaration appears exactly once"), ParamsHits, 1);
+
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+    return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS
