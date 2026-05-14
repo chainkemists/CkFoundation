@@ -1,9 +1,6 @@
 // Tests for the AS recovery dispatcher's classification / action-plan logic.
-//
-// The live OnAngelscriptReloadHadErrors path is not covered here — it pulls
-// diagnostics from FAngelscriptManager and applies side-effecting strategies
-// to disk. Coverage of that path comes from the end-to-end §8.16 / §8.17
-// verifications run from the editor against the corruption probes.
+// The live OnAngelscriptReloadHadErrors path isn't covered here (engine-state
+// side effects); coverage there comes from `_probe_*.bat` smoke runs.
 
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_Dispatcher.h"
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_AsErrorParser.h"

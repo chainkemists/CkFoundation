@@ -61,16 +61,10 @@ namespace
         FCkAutoTestWrapperGenerator::GenerateAll();
     }
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // Self-heal sibling-stub-file cleanup
-    //
-    // The dispatcher writes synthesized stubs to `_StubRecovery_*.{as,json}`
-    // siblings, not in-place to the canonical generated files. Canonical files
-    // stay byte-clean and the sibling pattern is gitignored. Cleanup runs from
-    // PostCompile (i.e. only after a successful AS compile); if next launch
-    // still has drift, the dispatcher re-creates them fresh.
-    // ----------------------------------------------------------------------------------------------------------------
-
+    // Walks project + plugin Script/Generated/ dirs and deletes `_StubRecovery_*`
+    // siblings. Caller runs this from PostCompile (sibling served its purpose)
+    // OR StartupModule (force-quit survivor cleanup — see StartupModule for the
+    // defensive rationale).
     auto Delete_AllStubRecoveryFiles() -> int32
     {
         auto Dirs = TArray<FString>{};
