@@ -1,0 +1,131 @@
+// Regression test for Fix #2 — codegen-bug-positional-ctor-null-uobject.
+//
+// Bug: when the EntityScript spawn-params generator emits a struct-typed Params field whose
+// CDO differs from struct default, it produces a positional-ctor expression as the field
+// initializer (`<Type> Params = <Type>(arg1, ..., nullptr);`). For any struct containing a
+// `UObject*` field, AS overload resolution rejects the bare nullptr arg with `<null handle>`
+// and the canonical becomes unparseable.
+//
+// Fix #2 reshapes the emission for the trigger case: the field is declared without an inline
+// initializer and per-field overrides go into the SpawnParams default ctor body, where the
+// assignment is in *statement* context — the LHS slot types the RHS, so bare `nullptr` works
+// for UObject* fields like the in-struct field default does today.
+//
+// This test pins the two helpers that drive the emission switch:
+//   - Has_UObjectPointerField (the gate)
+//   - Get_StructFieldOverrides (the override list)
+
+#include "CkAngelscriptGenerator/Tests/Test_EntityScriptParamsGenerator_Fixtures.h"
+
+#include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Reflection/CkReflection_Utils.h"
+
+#include "Misc/AutomationTest.h"
+#include "UObject/Class.h"
+#include "UObject/UnrealType.h"
+
+#if WITH_DEV_AUTOMATION_TESTS
+
+namespace
+{
+    auto FindStructProp(
+        const UClass* InOwner,
+        const TCHAR*  InPropName) -> const FStructProperty*
+    {
+        return CastField<FStructProperty>(InOwner->FindPropertyByName(FName{InPropName}));
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Has_UObjectPointerField: returns true for structs containing a UObject*/interface field
+// (recursively), false for pure POD structs.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_ParamsGen_Has_UObjectPointerField,
+    "CkAngelscriptGenerator.UnitTests.ParamsGenerator.Has_UObjectPointerField",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_ParamsGen_Has_UObjectPointerField::RunTest(const FString&)
+{
+    TestTrue(TEXT("struct with TObjectPtr<USoundBase> -> true"),
+        UCk_Utils_Reflection_UE::Has_UObjectPointerField(
+            FCkTest_ParamsGenerator_MixedFields::StaticStruct()));
+
+    TestFalse(TEXT("POD-only struct -> false"),
+        UCk_Utils_Reflection_UE::Has_UObjectPointerField(
+            FCkTest_ParamsGenerator_PodOnly::StaticStruct()));
+
+    TestFalse(TEXT("null UScriptStruct -> false (no crash)"),
+        UCk_Utils_Reflection_UE::Has_UObjectPointerField(nullptr));
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Get_StructFieldOverrides: returns empty when struct is fully at default; returns a
+// dotted-path entry per leaf field that differs from InitializeStruct default.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_ParamsGen_Get_StructFieldOverrides_AtDefault,
+    "CkAngelscriptGenerator.UnitTests.ParamsGenerator.Get_StructFieldOverrides_AtDefault",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_ParamsGen_Get_StructFieldOverrides_AtDefault::RunTest(const FString&)
+{
+    const auto* HostClass = UCkTest_ParamsGenerator_Host::StaticClass();
+    const auto* ParamsProp = FindStructProp(HostClass, TEXT("Params"));
+    if (NOT TestNotNull(TEXT("Params property reflected"), ParamsProp))
+    { return false; }
+
+    const auto* CDO = HostClass->GetDefaultObject();
+    if (NOT TestNotNull(TEXT("CDO available"), CDO))
+    { return false; }
+
+    const auto Overrides = UCk_Utils_Reflection_UE::Get_StructFieldOverrides(ParamsProp, CDO);
+
+    TestEqual(TEXT("no overrides on a CDO matching struct default"), Overrides.Num(), 0);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_ParamsGen_Get_StructFieldOverrides_PodDiff,
+    "CkAngelscriptGenerator.UnitTests.ParamsGenerator.Get_StructFieldOverrides_PodDiff",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_ParamsGen_Get_StructFieldOverrides_PodDiff::RunTest(const FString&)
+{
+    const auto* HostClass = UCkTest_ParamsGenerator_Host::StaticClass();
+    const auto* ParamsProp = FindStructProp(HostClass, TEXT("Params"));
+    if (NOT TestNotNull(TEXT("Params property reflected"), ParamsProp))
+    { return false; }
+
+    // NewObject (not CDO) so we can mutate without affecting other tests.
+    auto* Host = NewObject<UCkTest_ParamsGenerator_Host>();
+    if (NOT TestNotNull(TEXT("host instance allocated"), Host))
+    { return false; }
+
+    Host->Params.Offset = FVector{10.0, 0.0, 0.0};
+    // Sound stays at default nullptr; Flag/Rotation stay at struct default.
+
+    const auto Overrides = UCk_Utils_Reflection_UE::Get_StructFieldOverrides(ParamsProp, Host);
+
+    if (NOT TestEqual(TEXT("exactly one override (Offset)"), Overrides.Num(), 1))
+    { return false; }
+
+    TestEqual(TEXT("dotted path is 'Offset'"),
+        Overrides[0]._DottedFieldPath, FString{TEXT("Offset")});
+
+    const auto Expr = UCk_Utils_Reflection_UE::Get_AngelscriptDefaultExpression(Overrides[0]._Literal);
+    TestFalse(TEXT("override literal is non-empty AS expression"), Expr.IsEmpty());
+    // Sanity: the literal should reference the FVector form. We don't pin the exact format
+    // (FVector(10.0, 0.0, 0.0) or similar) because Get_PropertyDefaultValueLiteral controls
+    // it — but it should mention FVector and 10.
+    TestTrue(TEXT("literal references FVector"), Expr.Contains(TEXT("FVector")));
+    TestTrue(TEXT("literal contains the X coord value"),  Expr.Contains(TEXT("10")));
+
+    return true;
+}
+
+#endif // WITH_DEV_AUTOMATION_TESTS
