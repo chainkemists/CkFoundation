@@ -32,6 +32,17 @@ struct CKCORE_API FCk_PropertyDefaultValueLiteral
     FString _Value;
 };
 
+// Single leaf-level override on a struct's CDO. DottedFieldPath is the path from the
+// outer struct to the differing field, e.g. "LocalRotationOffset" for a top-level
+// field, or "Audio.Submix" for a field on a nested struct. Used by Get_StructFieldOverrides
+// to drive field-assignment-style emission (sidesteps the AS positional-ctor `<null handle>`
+// trap on structs with UObject* fields).
+struct CKCORE_API FCk_StructFieldOverride
+{
+    FString                         _DottedFieldPath;
+    FCk_PropertyDefaultValueLiteral _Literal;
+};
+
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(BlueprintType)
@@ -113,6 +124,28 @@ public:
     Get_PropertyDefaultValueLiteral(
         const FProperty* InProperty,
         const void* InContainer) -> TOptional<FCk_PropertyDefaultValueLiteral>;
+
+    // Returns the leaf-level field overrides for a struct property whose CDO differs from
+    // its InitializeStruct default. Used by the EntityScript spawn-params generator to emit
+    // field-assignment-style ctor bodies (`<Field>.<Path> = <Value>;`) instead of the
+    // positional-ctor expression (`<Type>(arg1, ..., nullptr)`) that AS rejects when the
+    // struct contains any UObject* field. Empty when the struct is fully at default.
+    //
+    // Recursion: when a nested struct also contains a UObject* field AND has its own diffs,
+    // the recursion descends into it to build longer dotted paths. When a nested struct has
+    // diffs but contains NO UObject* field, the recursion stops and emits the nested struct's
+    // positional-ctor expression at that path — safe because the nested ctor takes no nullptr.
+    static auto
+    Get_StructFieldOverrides(
+        const FStructProperty* InStructProperty,
+        const void*            InContainer) -> TArray<FCk_StructFieldOverride>;
+
+    // True when the struct contains at least one FObjectPropertyBase / FInterfaceProperty
+    // field anywhere in its recursive decomposition. Drives the emission switch in the
+    // EntityScript spawn-params generator.
+    static auto
+    Has_UObjectPointerField(
+        const UScriptStruct* InStruct) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
