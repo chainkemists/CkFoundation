@@ -254,8 +254,13 @@ namespace ck::angelscriptgenerator::self_heal
         Out += FString::Printf(TEXT("        return %s();"), *StructName);                        Out += LINE_TERMINATOR;
         Out += TEXT("    }");                                                                     Out += LINE_TERMINATOR;
         Out += TEXT("}");                                                                         Out += LINE_TERMINATOR;
-        Out += FString::Printf(TEXT("// End synthesized stub for %s::%s"),
-            *InError.TargetNamespace, *InError.FunctionName);                                     Out += LINE_TERMINATOR;
+        // Include the full args list in the marker so distinct overloads of
+        // the same NS::FUNC name dedup independently. Otherwise the first
+        // synthesized overload of e.g. `UBb_X::Params(...)` blocks every
+        // subsequent overload, even when the calling AS source genuinely
+        // needs multiple Params() variants with different signatures.
+        Out += FString::Printf(TEXT("// End synthesized stub for %s::%s(%s)"),
+            *InError.TargetNamespace, *InError.FunctionName, *InError.ArgsList);                  Out += LINE_TERMINATOR;
 
         return Out;
     }
