@@ -85,7 +85,19 @@ namespace ck_entity_script_params_generator
         return InProperty->HasAnyPropertyFlags(CPF_ConstParm | CPF_BlueprintReadOnly);
     }
 
-    auto Format_PropertyLine(FProperty* InProperty, const UClass* InClass) -> FString
+    // A property's emission can produce two outputs:
+    //   - DeclLine: the `UPROPERTY()\n    <Type> <Name>[ = <expr>];` field declaration.
+    //   - OverrideStatements: `<Name>.<Path> = <Value>;` lines emitted into the SpawnParams
+    //     default ctor body. Non-empty only for struct-typed properties whose CDO differs
+    //     from struct default AND whose struct contains a UObject* field (which would
+    //     otherwise trigger the positional-ctor `<null handle>` deadlock).
+    struct FPropertyEmission
+    {
+        FString         DeclLine;
+        TArray<FString> OverrideStatements;
+    };
+
+    auto Format_PropertyLine(FProperty* InProperty, const UClass* InClass) -> FPropertyEmission
     {
         auto AsType = FCkAngelscriptGenerator_SharedUtils::Get_DetailedPropertyType(InProperty);
         if (Is_ConstProperty(InProperty) && NOT AsType.StartsWith(TEXT("const ")))
@@ -94,24 +106,60 @@ namespace ck_entity_script_params_generator
         }
         const auto& PropName = InProperty->GetName();
 
-        auto Line = ck::Format_UE(TEXT("    UPROPERTY()\n    {} {}"), AsType, PropName);
+        auto Emission = FPropertyEmission{};
+        Emission.DeclLine = ck::Format_UE(TEXT("    UPROPERTY()\n    {} {}"), AsType, PropName);
 
         const auto* CDO = InClass->GetDefaultObject();
-        if (ck::IsValid(CDO, ck::IsValid_Policy_NullptrOnly{}))
+        if (NOT ck::IsValid(CDO, ck::IsValid_Policy_NullptrOnly{}))
         {
-            const auto Literal = UCk_Utils_Reflection_UE::Get_PropertyDefaultValueLiteral(InProperty, CDO);
-            if (Literal.IsSet())
+            Emission.DeclLine += TEXT(";");
+            return Emission;
+        }
+
+        // Field-assignment-style emission gate: struct-typed property whose struct contains
+        // any UObject* (recursively) AND whose CDO differs from struct default. Without this
+        // branch, the property would land as `<Type> <Name> = <Type>(arg1, ..., nullptr);`
+        // which AS rejects with `No matching signatures to '<Type>(... <null handle>)'`.
+        if (const auto* StructProp = CastField<FStructProperty>(InProperty))
+        {
+            if (auto* Struct = StructProp->Struct.Get();
+                Struct != nullptr && UCk_Utils_Reflection_UE::Has_UObjectPointerField(Struct))
             {
-                const auto DefaultExpr = UCk_Utils_Reflection_UE::Get_AngelscriptDefaultExpression(*Literal);
-                if (NOT DefaultExpr.IsEmpty())
+                const auto Overrides = UCk_Utils_Reflection_UE::Get_StructFieldOverrides(StructProp, CDO);
+                if (Overrides.Num() > 0)
                 {
-                    Line += ck::Format_UE(TEXT(" = {}"), DefaultExpr);
+                    // Declare the field with no `= <expr>`; UScriptStruct::InitializeStruct
+                    // zero-inits it (UObject* fields fall to their internal `= nullptr`
+                    // declared defaults), and the SpawnParams default ctor body applies the
+                    // diffs via dotted-path assignments below.
+                    Emission.DeclLine += TEXT(";");
+                    for (const auto& Override : Overrides)
+                    {
+                        const auto Expr = UCk_Utils_Reflection_UE::Get_AngelscriptDefaultExpression(Override._Literal);
+                        if (Expr.IsEmpty())
+                        { continue; }
+                        Emission.OverrideStatements.Add(
+                            ck::Format_UE(TEXT("        {}.{} = {};"), PropName, Override._DottedFieldPath, Expr));
+                    }
+                    return Emission;
                 }
+                // No diffs: fall through to the existing single-expression default emission,
+                // which will produce `= <Type>()` (zero-arg ctor — safe).
             }
         }
 
-        Line += TEXT(";");
-        return Line;
+        const auto Literal = UCk_Utils_Reflection_UE::Get_PropertyDefaultValueLiteral(InProperty, CDO);
+        if (Literal.IsSet())
+        {
+            const auto DefaultExpr = UCk_Utils_Reflection_UE::Get_AngelscriptDefaultExpression(*Literal);
+            if (NOT DefaultExpr.IsEmpty())
+            {
+                Emission.DeclLine += ck::Format_UE(TEXT(" = {}"), DefaultExpr);
+            }
+        }
+
+        Emission.DeclLine += TEXT(";");
+        return Emission;
     }
 
     // Builds a comma-separated `<Type> In<Name>` list of every valid exposed property,
@@ -167,12 +215,33 @@ namespace ck_entity_script_params_generator
         Block += ck::Format_UE(TEXT("struct {}\n"), StructName);
         Block += TEXT("{\n");
 
+        auto AllOverrideStatements = TArray<FString>{};
+
         for (auto Index = int32{0}; Index < ValidProps.Num(); ++Index)
         {
-            Block += Format_PropertyLine(ValidProps[Index], InClass);
+            auto Emission = Format_PropertyLine(ValidProps[Index], InClass);
+            Block += Emission.DeclLine;
             Block += TEXT("\n");
             if (Index + 1 < ValidProps.Num())
             { Block += TEXT("\n"); }
+            AllOverrideStatements.Append(MoveTemp(Emission.OverrideStatements));
+        }
+
+        // Default constructor — only emit a body when at least one ExposeOnSpawn property
+        // requires field-assignment-style override (struct field containing UObject* with CDO
+        // diffs). For the common case (zero overrides) we keep emission byte-stable by
+        // relying on the implicit zero-arg ctor.
+        if (AllOverrideStatements.Num() > 0)
+        {
+            Block += TEXT("\n");
+            Block += ck::Format_UE(TEXT("    {}()\n"), StructName);
+            Block += TEXT("    {\n");
+            for (const auto& Statement : AllOverrideStatements)
+            {
+                Block += Statement;
+                Block += TEXT("\n");
+            }
+            Block += TEXT("    }\n");
         }
 
         // Parameterized constructor — only when there is at least one field to set.
