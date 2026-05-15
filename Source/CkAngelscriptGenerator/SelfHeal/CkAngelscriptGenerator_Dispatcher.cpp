@@ -76,6 +76,27 @@ namespace ck::angelscriptgenerator::self_heal
         // is the safety net if anything orphans it.
         TWeakPtr<SNotificationItem> sInProgressNotification;
 
+        // Fallback-path coalescing. The in-progress→final transition above is
+        // already singleton'd via sInProgressNotification, so spam can only
+        // arise from the fallback branches in Show_RecoveryToast /
+        // Show_TerminalToast — mid-session ticker drains and any path where
+        // no in-progress toast was spawned. Identical-content bursts within
+        // kCoalesceWindowSeconds collapse into one toast with a (xN) counter.
+        enum class ECk_BannerKind : uint8 { None, Recovery, Terminal };
+
+        struct FLastBannerState
+        {
+            uint32                       ContentHash    = 0;
+            ECk_BannerKind               Kind           = ECk_BannerKind::None;
+            double                       FirstShownTime = 0.0;
+            double                       LastShownTime  = 0.0;
+            int32                        RepeatCount    = 1;
+            FText                        BaseSummary;
+            TWeakPtr<SNotificationItem>  Item;
+        };
+        static FLastBannerState sLastBanner;
+        constexpr double        kCoalesceWindowSeconds = 10.0;
+
         // ---- Candidate-file discovery ----------------------------------------------
 
         auto Collect_EntitySpawnParamsCandidates() -> TArray<FString>
@@ -452,6 +473,96 @@ namespace ck::angelscriptgenerator::self_heal
                 5.0f);
         }
 
+        auto Compute_BannerHash(
+            ECk_BannerKind InKind,
+            const FText&   InSummary,
+            const FText&   InSubText) -> uint32
+        {
+            const auto KindHash    = GetTypeHash(static_cast<uint8>(InKind));
+            const auto SummaryHash = GetTypeHash(InSummary.ToString());
+            const auto SubHash     = GetTypeHash(InSubText.ToString());
+            return HashCombine(HashCombine(KindHash, SummaryHash), SubHash);
+        }
+
+        auto Describe_BannerKind(
+            ECk_BannerKind InKind) -> const TCHAR*
+        {
+            switch (InKind)
+            {
+                case ECk_BannerKind::Recovery: return TEXT("recovery");
+                case ECk_BannerKind::Terminal: return TEXT("terminal");
+                default:                       return TEXT("none");
+            }
+        }
+
+        // Returns true when the incoming banner matched the last one and was
+        // folded into it in place. Callers must skip their AddNotification path
+        // in that case.
+        auto TryCoalesce_LastBanner(
+            ECk_BannerKind InKind,
+            const FText&   InSummary,
+            const FText&   InSubText,
+            float          InRefreshedExpireDuration) -> bool
+        {
+            const auto Item = sLastBanner.Item.Pin();
+            if (NOT Item.IsValid())
+            { return false; }
+
+            const auto Now = FPlatformTime::Seconds();
+            if (Now - sLastBanner.LastShownTime >= kCoalesceWindowSeconds)
+            { return false; }
+
+            const auto IncomingHash = Compute_BannerHash(InKind, InSummary, InSubText);
+            if (IncomingHash != sLastBanner.ContentHash
+                || InKind != sLastBanner.Kind)
+            { return false; }
+
+            ++sLastBanner.RepeatCount;
+            sLastBanner.LastShownTime = Now;
+
+            const auto CountedSummary = FText::Format(
+                LOCTEXT("BannerCoalescedFmt", "{0} (\x00D7{1})"),
+                sLastBanner.BaseSummary,
+                FText::AsNumber(sLastBanner.RepeatCount));
+
+            Item->SetText(CountedSummary);
+            Item->SetExpireDuration(InRefreshedExpireDuration);
+            return true;
+        }
+
+        // Record_NewBanner is called after a fresh fallback toast was spawned.
+        // If the previous tracked banner accumulated more than one event in its
+        // window, emit a postmortem MessageLog entry before overwriting state.
+        auto Record_NewBanner(
+            ECk_BannerKind                     InKind,
+            const FText&                       InBaseSummary,
+            const FText&                       InSubText,
+            const TWeakPtr<SNotificationItem>& InItem) -> void
+        {
+            if (sLastBanner.RepeatCount > 1)
+            {
+                auto MessageLog = FMessageLog{FName{sSelfHealLogChannel}};
+                const auto BurstDuration = sLastBanner.LastShownTime - sLastBanner.FirstShownTime;
+                MessageLog.Info(FText::Format(
+                    LOCTEXT("BurstSummary",
+                        "Self-heal {0} burst suppressed: {1} identical events in {2}s "
+                        "(prior banner: \"{3}\")"),
+                    FText::FromString(Describe_BannerKind(sLastBanner.Kind)),
+                    FText::AsNumber(sLastBanner.RepeatCount),
+                    FText::AsNumber(BurstDuration),
+                    sLastBanner.BaseSummary));
+            }
+
+            const auto Now = FPlatformTime::Seconds();
+            sLastBanner.ContentHash    = Compute_BannerHash(InKind, InBaseSummary, InSubText);
+            sLastBanner.Kind           = InKind;
+            sLastBanner.FirstShownTime = Now;
+            sLastBanner.LastShownTime  = Now;
+            sLastBanner.RepeatCount    = 1;
+            sLastBanner.BaseSummary    = InBaseSummary;
+            sLastBanner.Item           = InItem;
+        }
+
         auto Show_RecoveryToast(
             const TArray<FCk_RecoveryAction>& InApplied) -> void
         {
@@ -486,13 +597,19 @@ namespace ck::angelscriptgenerator::self_heal
             }
 
             // Fallback: no in-progress toast (e.g. mid-session, or Slate wasn't
-            // up at OnReloadHadErrors time).
+            // up at OnReloadHadErrors time). Coalesce identical bursts so a
+            // save-storm doesn't stack N copies on screen.
+            const auto SubtextAsText = FText::FromString(Subtext);
+            constexpr auto kRecoveryExpire = 12.0f;
+            if (TryCoalesce_LastBanner(ECk_BannerKind::Recovery, SummaryText, SubtextAsText, kRecoveryExpire))
+            { return; }
+
             auto Info = FNotificationInfo{SummaryText};
-            Info.ExpireDuration       = 12.0f;
+            Info.ExpireDuration       = kRecoveryExpire;
             Info.bUseLargeFont        = false;
             Info.bUseThrobber         = false;
             Info.bUseSuccessFailIcons = true;
-            Info.SubText              = FText::FromString(Subtext);
+            Info.SubText              = SubtextAsText;
             Info.Hyperlink            = FSimpleDelegate::CreateLambda([]()
             {
                 if (FModuleManager::Get().IsModuleLoaded(TEXT("MessageLog")))
@@ -508,6 +625,7 @@ namespace ck::angelscriptgenerator::self_heal
             {
                 NotificationPtr->SetCompletionState(SNotificationItem::CS_Success);
             }
+            Record_NewBanner(ECk_BannerKind::Recovery, SummaryText, SubtextAsText, NotificationPtr);
         }
 
         auto Show_TerminalToast(
@@ -526,8 +644,12 @@ namespace ck::angelscriptgenerator::self_heal
                 return;
             }
 
+            constexpr auto kTerminalExpire = 20.0f;
+            if (TryCoalesce_LastBanner(ECk_BannerKind::Terminal, InMessage, FText::GetEmpty(), kTerminalExpire))
+            { return; }
+
             auto Info = FNotificationInfo{InMessage};
-            Info.ExpireDuration       = 20.0f;
+            Info.ExpireDuration       = kTerminalExpire;
             Info.bUseLargeFont        = false;
             Info.bUseThrobber         = false;
             Info.bUseSuccessFailIcons = true;
@@ -546,6 +668,7 @@ namespace ck::angelscriptgenerator::self_heal
             {
                 NotificationPtr->SetCompletionState(SNotificationItem::CS_Fail);
             }
+            Record_NewBanner(ECk_BannerKind::Terminal, InMessage, FText::GetEmpty(), NotificationPtr);
         }
 
         // ---- Modal-tick handler (cold-start deferred apply) ------------------------
@@ -654,8 +777,12 @@ namespace ck::angelscriptgenerator::self_heal
                 Log(TEXT("[SelfHeal] Cycle {} applied {} strategy/strategies (mid-session)."),
                     sCyclesRun, AppliedActions.Num());
 
+                // Mid-session success is intentionally silent on screen — no
+                // Hazelight modal was up, recovery is invisible-and-fast, and
+                // a green toast for a problem the user never saw is noise.
+                // Cold-start still transitions the in-progress throbber to
+                // success in place (separate code path).
                 Log_AppliedActions_ToMessageLog(AppliedActions);
-                Show_RecoveryToast(AppliedActions);
             }
             else
             {
@@ -747,6 +874,7 @@ namespace ck::angelscriptgenerator::self_heal
         sDidSynthesizeJsonStub = false;
         sDidSynthesizeAssetRegistryStub = false;
         sInProgressNotification.Reset();
+        sLastBanner = FLastBannerState{};
         // sModalTickHandle left as-is; OnModalLoopTick self-cleans on empty queue.
     }
 
