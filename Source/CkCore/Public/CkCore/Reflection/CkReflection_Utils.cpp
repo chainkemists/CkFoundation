@@ -629,6 +629,23 @@ auto
         || CastField<FClassProperty>(InProperty) != nullptr
         || CastField<FInterfaceProperty>(InProperty) != nullptr)
     {
+        // Earlier attempts emitted a typed-null cast (`<Class>(nullptr)`) here to
+        // disambiguate positional-ctor overload resolution for plain UObject*
+        // fields (the OpenSign-class deadlock — bare `nullptr` reports as
+        // `<null handle>` and AS can't bind it). That fix has been reverted:
+        // AngelScript rejects `<UClass>(nullptr)` in struct field-default
+        // declarations with "Data type can't be '<Class>'" — UObject types
+        // cannot be constructed via type-constructor syntax at all, not just
+        // AActor/UActorComponent. The same emit path serves both field-default
+        // and positional-ctor-arg contexts, so there's no way to apply the
+        // typed cast only in the safe context without splitting the literal
+        // representation. A proper fix lives in Fix #2 from
+        // `codegen-bug-positional-ctor-null-uobject.md` (field-assignment-
+        // style emit instead of positional ctor for structs with UObject*
+        // fields); until that lands we accept the latent risk that adding
+        // a `default Params.X = Y` override on an entity-script subclass
+        // whose Params struct contains a UObject* field will bring the
+        // OpenSign deadlock back.
         return ck_reflection_detail::MakeRaw(TEXT("nullptr"));
     }
 
@@ -640,6 +657,122 @@ auto
     // Containers (FArrayProperty / FMapProperty / FSetProperty / FOptionalProperty) and anything
     // else we don't explicitly handle -> no literal. Caller will omit the initializer.
     return {};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_reflection_detail
+{
+    auto Has_UObjectPointerField_Recursive(const UScriptStruct* InStruct) -> bool
+    {
+        if (ck::Is_NOT_Valid(InStruct, ck::IsValid_Policy_NullptrOnly{}))
+        { return false; }
+
+        for (TFieldIterator<FProperty> FieldIt(InStruct, EFieldIteratorFlags::IncludeSuper); FieldIt; ++FieldIt)
+        {
+            const auto* Field = *FieldIt;
+            if (Field->HasAnyPropertyFlags(CPF_Parm))
+            { continue; }
+
+            if (CastField<FObjectPropertyBase>(Field) != nullptr
+                || CastField<FInterfaceProperty>(Field) != nullptr)
+            { return true; }
+
+            if (const auto* NestedStructProp = CastField<FStructProperty>(Field))
+            {
+                if (Has_UObjectPointerField_Recursive(NestedStructProp->Struct.Get()))
+                { return true; }
+            }
+        }
+        return false;
+    }
+
+    auto Collect_StructFieldOverrides(
+        const UScriptStruct* InStruct,
+        const void*          InValuePtr,
+        const FString&       InPathPrefix,
+        TArray<FCk_StructFieldOverride>& OutOverrides) -> void
+    {
+        if (ck::Is_NOT_Valid(InStruct, ck::IsValid_Policy_NullptrOnly{}) || InValuePtr == nullptr)
+        { return; }
+
+        auto DefaultBuffer = TArray<uint8>{};
+        DefaultBuffer.SetNumZeroed(InStruct->GetStructureSize());
+        InStruct->InitializeStruct(DefaultBuffer.GetData());
+        ON_SCOPE_EXIT { InStruct->DestroyStruct(DefaultBuffer.GetData()); };
+
+        for (TFieldIterator<FProperty> FieldIt(InStruct, EFieldIteratorFlags::IncludeSuper); FieldIt; ++FieldIt)
+        {
+            const auto* Field = *FieldIt;
+            if (Field->HasAnyPropertyFlags(CPF_Parm))
+            { continue; }
+
+            const auto* FieldValuePtr   = Field->ContainerPtrToValuePtr<void>(InValuePtr);
+            const auto* DefaultValuePtr = Field->ContainerPtrToValuePtr<void>(DefaultBuffer.GetData());
+
+            if (Field->Identical(FieldValuePtr, DefaultValuePtr))
+            { continue; }
+
+            const auto FieldName = Field->GetName();
+            const auto NextPath  = InPathPrefix.IsEmpty()
+                ? FieldName
+                : (InPathPrefix + TEXT(".") + FieldName);
+
+            // Recurse into nested structs that themselves contain UObject* fields — their
+            // positional ctor would carry the same `<null handle>` hazard, so we keep
+            // emitting dotted-path assignments instead.
+            if (const auto* NestedStructProp = CastField<FStructProperty>(Field))
+            {
+                if (auto* NestedStruct = NestedStructProp->Struct.Get();
+                    Has_UObjectPointerField_Recursive(NestedStruct))
+                {
+                    Collect_StructFieldOverrides(NestedStruct, FieldValuePtr, NextPath, OutOverrides);
+                    continue;
+                }
+                // Falls through: nested struct has diffs but no UObject* — emit its
+                // positional ctor expression at this path; safe in statement context.
+            }
+
+            const auto MaybeLiteral = UCk_Utils_Reflection_UE::Get_PropertyDefaultValueLiteral(Field, InValuePtr);
+            if (NOT MaybeLiteral.IsSet())
+            { continue; }
+
+            auto Entry = FCk_StructFieldOverride{};
+            Entry._DottedFieldPath = NextPath;
+            Entry._Literal         = *MaybeLiteral;
+            OutOverrides.Add(MoveTemp(Entry));
+        }
+    }
+}
+
+auto
+    UCk_Utils_Reflection_UE::
+    Has_UObjectPointerField(
+        const UScriptStruct* InStruct)
+    -> bool
+{
+    return ck_reflection_detail::Has_UObjectPointerField_Recursive(InStruct);
+}
+
+auto
+    UCk_Utils_Reflection_UE::
+    Get_StructFieldOverrides(
+        const FStructProperty* InStructProperty,
+        const void*            InContainer)
+    -> TArray<FCk_StructFieldOverride>
+{
+    auto Out = TArray<FCk_StructFieldOverride>{};
+
+    if (ck::Is_NOT_Valid(InStructProperty, ck::IsValid_Policy_NullptrOnly{}) || InContainer == nullptr)
+    { return Out; }
+
+    auto* Struct = InStructProperty->Struct.Get();
+    if (ck::Is_NOT_Valid(Struct, ck::IsValid_Policy_NullptrOnly{}))
+    { return Out; }
+
+    const auto* StructValuePtr = InStructProperty->ContainerPtrToValuePtr<void>(InContainer);
+    ck_reflection_detail::Collect_StructFieldOverrides(Struct, StructValuePtr, FString{}, Out);
+    return Out;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
