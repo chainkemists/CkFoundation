@@ -155,7 +155,7 @@ auto CKPERCEPTION_API GetTypeHash(const FCk_HearingPerception_Listener& InObj) -
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct FCk_HearingPerception_NoiseInfo : public FTableRowBase
+struct CKPERCEPTION_API FCk_HearingPerception_NoiseInfo : public FTableRowBase
 {
     GENERATED_BODY()
 
@@ -201,7 +201,7 @@ auto CKPERCEPTION_API GetTypeHash(const FCk_HearingPerception_NoiseInfo& InObj) 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct FCk_HearingPerception_NoiseEvent : public FTableRowBase
+struct CKPERCEPTION_API FCk_HearingPerception_NoiseEvent : public FTableRowBase
 {
     GENERATED_BODY()
 
