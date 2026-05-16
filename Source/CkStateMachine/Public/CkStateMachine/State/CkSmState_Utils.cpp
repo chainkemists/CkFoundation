@@ -224,6 +224,43 @@ auto
     return InState;
 }
 
+auto
+    UCk_Utils_SmState_UE::
+    Request_RecomputeFullyEventDrivenStatus(
+        FCk_Handle_SmState& InState)
+    -> FCk_Handle_SmState
+{
+    // A state qualifies as FullyEventDriven iff it has at least one transition and
+    // every transition is FullyEventDriven. Zero transitions = terminal state with
+    // no outgoing edges = nothing to evaluate, safe to mark FullyEventDriven (the
+    // state will be left alone by State_Update, which is what we want).
+    auto TransitionCount = int32{0};
+    auto HasNonFullyEventDriven = false;
+
+    UCk_Utils_StateMachine_UE::RecordOfSmTransitions_Utils::ForEach_ValidEntry(InState,
+    [&](FCk_Handle_SmTransition InTransition) -> ECk_Record_ForEachIterationResult
+    {
+        ++TransitionCount;
+        if (NOT UCk_Utils_SmTransition_UE::Get_IsFullyEventDriven(InTransition))
+        {
+            HasNonFullyEventDriven = true;
+            return ECk_Record_ForEachIterationResult::Break;
+        }
+        return ECk_Record_ForEachIterationResult::Continue;
+    });
+
+    // TransitionCount == 0 (terminal state) → mark FullyEventDriven so the tick
+    // processor skips it. There's no work to do for a terminal state regardless.
+    const auto ShouldBeFullyEventDriven = (NOT HasNonFullyEventDriven);
+
+    if (ShouldBeFullyEventDriven)
+    { InState.AddOrGet<ck::FTag_SmState_FullyEventDriven>(); }
+    else
+    { InState.Try_Remove<ck::FTag_SmState_FullyEventDriven>(); }
+
+    return InState;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
