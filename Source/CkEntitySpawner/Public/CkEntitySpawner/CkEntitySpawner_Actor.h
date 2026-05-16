@@ -78,6 +78,9 @@ protected:
         bool InIsFinished) -> void override;
 
     auto
+    PreEditUndo() -> void override;
+
+    auto
     PostEditUndo() -> void override;
 
     auto
