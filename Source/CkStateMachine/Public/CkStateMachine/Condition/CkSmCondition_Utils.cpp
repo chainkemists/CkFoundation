@@ -50,6 +50,9 @@ auto
     else if (InConditionClass->IsChildOf(UCk_SmCondition_EventDriven::StaticClass()))
     {
         ConditionEntity.Add<ck::FTag_SmCondition_EventDriven>();
+        // Tag-level recompute is deferred to after the Connect call below so the
+        // newly-added condition is visible to the walk in
+        // Request_RecomputeFullyEventDrivenStatus.
     }
     else
     {
@@ -67,6 +70,14 @@ auto
     UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::AddIfMissing(InOwnerTransition);
     UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::Request_Connect(
         InOwnerTransition, ConditionEntityTyped, ECk_Record_LabelRequirementPolicy::Optional);
+
+    // Recompute FullyEventDriven status after the new condition is in the record.
+    // Required because transitions default to NOT FullyEventDriven at Create (to
+    // handle the vacuous-transition case correctly); adding an EventDriven condition
+    // when no Polled conditions exist restores the FullyEventDriven optimization.
+    // The Polled branch above also benefits — the recompute is idempotent with
+    // Request_MarkTransition_AsNotFullyEventDriven and confirms the cascade.
+    UCk_Utils_SmTransition_UE::Request_RecomputeFullyEventDrivenStatus(InOwnerTransition);
 
     ck::TUtils_Sm_ParentTransition::AddOrReplace(ConditionEntity, InOwnerTransition);
 
