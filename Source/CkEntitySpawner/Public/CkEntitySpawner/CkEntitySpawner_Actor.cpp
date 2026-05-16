@@ -156,6 +156,25 @@ auto
     -> void
 {
     Super::PostEditUndo();
+
+    // PostEditUndo fires twice per Ctrl+Z/Ctrl+Y round trip:
+    //   (a) on the now-pending-kill actor right after a placement-undo, and
+    //   (b) on the restored actor after a placement-redo.
+    //
+    // Case (a) queues an OnEndFrame weak lambda that becomes a no-op when it fires
+    // (because the actor is pending-kill). The lambda expires itself, but our
+    // _EditorRebuildPending flag stays true with no one to clear it. Then on Ctrl+Y
+    // case (b) fires, but RebuildEntity's "is rebuild already pending?" early-out
+    // sees the stale true and bails — the redo never spawns a fresh entity.
+    //
+    // Reset the pending state here so case (b) starts clean.
+    if (_EditorRebuildEndFrameHandle.IsValid())
+    {
+        FCoreDelegates::OnEndFrame.Remove(_EditorRebuildEndFrameHandle);
+        _EditorRebuildEndFrameHandle.Reset();
+    }
+    _EditorRebuildPending = false;
+
     EditorOnly_RebuildEntity();
 }
 
