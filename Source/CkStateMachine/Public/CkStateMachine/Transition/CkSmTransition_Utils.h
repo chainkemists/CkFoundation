@@ -76,6 +76,16 @@ public:
     Request_MarkTransition_AsNotFullyEventDriven(
         FCk_Handle_SmTransition& InTransition) -> FCk_Handle_SmTransition;
 
+    // Internal — called by UCk_Utils_SmCondition_UE::Create after a condition is connected
+    // to the transition's record. Walks the transition's conditions; if all are EventDriven
+    // AND at least one exists, marks the transition FullyEventDriven and asks the parent
+    // state to recompute its own tag. Necessary because transitions default to NOT
+    // FullyEventDriven at Create (to handle vacuous transitions correctly) — this restores
+    // the optimization for transitions whose final composition is all-event-driven.
+    static auto
+    Request_RecomputeFullyEventDrivenStatus(
+        FCk_Handle_SmTransition& InTransition) -> FCk_Handle_SmTransition;
+
     // ================================================================================================================
     // QUERIES
     // ================================================================================================================

@@ -1,5 +1,6 @@
 #include "CkSmTransition_Utils.h"
 
+#include "CkStateMachine/Condition/CkSmCondition_Fragment.h"
 #include "CkStateMachine/Condition/CkSmCondition_Utils.h"
 #include "CkStateMachine/Debug/CkStateMachine_Debug_GraphWalk_Fragment.h"
 #include "CkStateMachine/State/CkSmState_Fragment.h"
@@ -44,7 +45,6 @@ auto
         ck::FFragment_SmTransition_Params{InTargetStateClass});
 
     auto TransitionEntityTyped = CastChecked(TransitionEntity);
-    TransitionEntityTyped.Add<ck::FTag_SmTransition_FullyEventDriven>();
 
     if (InOwnerState.Has<ck::FTag_Sm_Debug_GraphWalkEntity>())
     { TransitionEntity.Add<ck::FTag_Sm_Debug_GraphWalkEntity>(); }
@@ -60,6 +60,28 @@ auto
         const auto OwningSm = ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(InOwnerState);
         ck::TUtils_Sm_OwningStateMachine::AddOrReplace(TransitionEntity, OwningSm);
     }
+
+    // A freshly-created transition has zero conditions — it's a vacuous
+    // transition that will Pass on first evaluation. That requires the parent
+    // state to be ticked (so State_Update adds FTag_SmState_NeedsEvaluation),
+    // which means the state must NOT be FullyEventDriven.
+    //
+    // Run AFTER the parent-state link is established above so the cascade to
+    // Request_MarkState_AsNotFullyEventDriven fires correctly.
+    //
+    // If a Polled condition is added later: state stays not-FullyEventDriven
+    // (Request_MarkTransition_AsNotFullyEventDriven runs again — idempotent).
+    // If an EventDriven condition is added later (and no Polled condition
+    // exists), CkSmCondition_Utils::Create re-marks the transition + state
+    // back to FullyEventDriven to preserve the perf optimization.
+    //
+    // The previous default of "Add FTag_SmTransition_FullyEventDriven at
+    // Create" assumed every transition would eventually get an event-driven
+    // condition. Vacuous transitions broke that assumption and starved the
+    // state of evaluation. See FProcessor_SmTransition_Evaluate's vacuous-
+    // Pass branch (CkSmTransition_Processor.cpp:49-59) — it handles the case
+    // correctly once it gets a chance to run.
+    Request_MarkTransition_AsNotFullyEventDriven(TransitionEntityTyped);
 
     return TransitionEntityTyped;
 }
@@ -95,6 +117,48 @@ auto
         auto ParentState = UCk_Utils_SmState_UE::CastChecked(
             ck::TUtils_Sm_ParentState::Get_StoredEntity(InTransition));
         UCk_Utils_SmState_UE::Request_MarkState_AsNotFullyEventDriven(ParentState);
+    }
+
+    return InTransition;
+}
+
+auto
+    UCk_Utils_SmTransition_UE::
+    Request_RecomputeFullyEventDrivenStatus(
+        FCk_Handle_SmTransition& InTransition)
+    -> FCk_Handle_SmTransition
+{
+    // A transition qualifies as FullyEventDriven iff it has at least one condition
+    // and every condition is EventDriven (zero Polled). Zero conditions = vacuous =
+    // NOT FullyEventDriven (the parent state must tick to evaluate the vacuous Pass).
+    auto ConditionCount = int32{0};
+    auto HasPolled = false;
+
+    UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::ForEach_ValidEntry(InTransition,
+    [&](FCk_Handle_SmCondition InCondition) -> ECk_Record_ForEachIterationResult
+    {
+        ++ConditionCount;
+        FCk_Handle Generic = InCondition;
+        if (Generic.Has<ck::FTag_SmCondition_Polled>())
+        {
+            HasPolled = true;
+            return ECk_Record_ForEachIterationResult::Break;
+        }
+        return ECk_Record_ForEachIterationResult::Continue;
+    });
+
+    const auto ShouldBeFullyEventDriven = (ConditionCount > 0) && (NOT HasPolled);
+
+    if (ShouldBeFullyEventDriven)
+    { InTransition.AddOrGet<ck::FTag_SmTransition_FullyEventDriven>(); }
+    else
+    { InTransition.Try_Remove<ck::FTag_SmTransition_FullyEventDriven>(); }
+
+    if (ck::TUtils_Sm_ParentState::Has(InTransition))
+    {
+        auto ParentState = UCk_Utils_SmState_UE::CastChecked(
+            ck::TUtils_Sm_ParentState::Get_StoredEntity(InTransition));
+        UCk_Utils_SmState_UE::Request_RecomputeFullyEventDrivenStatus(ParentState);
     }
 
     return InTransition;

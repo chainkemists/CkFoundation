@@ -72,6 +72,14 @@ public:
     Request_MarkState_AsNotFullyEventDriven(
         FCk_Handle_SmState& InState) -> FCk_Handle_SmState;
 
+    // Internal — called by UCk_Utils_SmTransition_UE::Request_RecomputeFullyEventDrivenStatus
+    // after a transition's tag changes. Walks the state's transitions; if all are
+    // FullyEventDriven AND at least one exists, marks the state FullyEventDriven (so
+    // FProcessor_SmState_Update skips it for perf). Otherwise leaves the tag absent.
+    static auto
+    Request_RecomputeFullyEventDrivenStatus(
+        FCk_Handle_SmState& InState) -> FCk_Handle_SmState;
+
     // ================================================================================================================
     // DEBUG
     // ================================================================================================================
