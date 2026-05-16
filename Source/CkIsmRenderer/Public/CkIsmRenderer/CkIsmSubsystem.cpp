@@ -145,12 +145,25 @@ auto
         Found != nullptr && ck::IsValid(*Found))
     { return *Found; }
 
+    // Identify the renderer via SpawnInfo.Name (passed through .Set_NonUniqueName) rather than
+    // .Set_Label(). SetActorLabel calls AActor::Modify() → MarkPackageDirty() on the actor's
+    // package; in editor worlds the only package is the persistent level, so every spawn would
+    // dirty the level. RF_Transient (applied in the post-spawn callback) prevents serialization
+    // on save but does NOT undo the dirty flag — by the time it's set, the dirty has already
+    // fired. SpawnInfo.Name is the construction-time identifier, doesn't call Modify(), and
+    // surfaces as the actor's FName (visible in outliner when bListedInSceneOutliner is true,
+    // and in `obj list class=Ck_IsmRenderer_Actor_UE` regardless).
+    const auto& DescriptiveName = FName{*ck::Format_UE(TEXT("IsmRenderer [{}][{}][Shadows:{}][{}][Collision:{}]"),
+        InDataAsset->Get_Mesh(),
+        InDataAsset->Get_Mobility(),
+        InDataAsset->Get_LightingInfo().Get_CastShadows(),
+        InDataAsset->Get_RenderPolicy(),
+        InDataAsset->Get_PhysicsInfo().Get_Collision())};
+
     const auto& SpawnedIsmRendererActor = Cast<ACk_IsmRenderer_Actor_UE>(UCk_Utils_Actor_UE::Request_SpawnActor
     (
         FCk_Utils_Actor_SpawnActor_Params{GetWorld(), ACk_IsmRenderer_Actor_UE::StaticClass()}
-        .Set_Label(ck::Format_UE(TEXT("IsmRenderer [{}][{}][Shadows:{}][{}][Collision:{}]"), InDataAsset->Get_Mesh(),
-            InDataAsset->Get_Mobility(), InDataAsset->Get_LightingInfo().Get_CastShadows(),
-            InDataAsset->Get_RenderPolicy(), InDataAsset->Get_PhysicsInfo().Get_Collision()))
+        .Set_NonUniqueName(DescriptiveName)
         .Set_SpawnPolicy(ECk_Utils_Actor_SpawnActorPolicy::CannotSpawnInPersistentLevel),
         [&](AActor* InActor)
         {
