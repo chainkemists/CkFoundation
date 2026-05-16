@@ -326,9 +326,16 @@ namespace ck::inventory_handlers
                 break;
             }
 
-            if (UCk_Utils_Inventory_UE::Get_CanAcceptItem(Base, NewItem) != ECk_Inventory_OperationResult_Add::Success)
+            if (const auto AcceptResult = UCk_Utils_Inventory_UE::Get_CanAcceptItem(Base, NewItem);
+                AcceptResult != ECk_Inventory_OperationResult_Add::Success)
             {
-                R = Result::Failed_RejectedByCustomAcceptanceLogic;
+                // Map the specific Get_CanAcceptItem failure to the closest AddByDefinition
+                // result. Without this mapping, every can-accept failure (including the
+                // bounds-full / no-fit cases) collapses to Failed_RejectedByCustomAcceptanceLogic,
+                // hiding the real reason from the caller.
+                R = (AcceptResult == ECk_Inventory_OperationResult_Add::Failed_RejectedByCustomAcceptanceLogic)
+                    ? Result::Failed_RejectedByCustomAcceptanceLogic
+                    : Result::Failed_NoSpaceAvailable;
                 UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(NewItem);
                 break;
             }
