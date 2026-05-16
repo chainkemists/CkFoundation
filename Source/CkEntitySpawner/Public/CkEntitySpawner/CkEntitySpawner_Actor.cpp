@@ -132,6 +132,26 @@ auto
 
 auto
     ACk_EntitySpawner_UE::
+    PreEditUndo()
+    -> void
+{
+    // Ctrl+Z of a placement runs here BEFORE the transaction system invalidates the actor's
+    // subobject chain (the EntityScript and any UStaticMeshComponents created with the
+    // EntityScript as Outer). If we wait until Destroyed() or PostEditUndo() to enqueue the
+    // editor-entity destroy, the components are already marked-pending-kill — the cascade's
+    // UnrealComponent_EndPlay processor finds an INVALID UObject and UnregisterComponent()
+    // never runs, leaving a dead render proxy in the world (the visual remnant).
+    //
+    // Enqueuing the destroy here gives the EndPlay processors a window where components are
+    // still valid. The Delete path doesn't need this hook because Delete fires Destroyed()
+    // while components are still valid.
+    EditorOnly_DestroyEntity();
+
+    Super::PreEditUndo();
+}
+
+auto
+    ACk_EntitySpawner_UE::
     PostEditUndo()
     -> void
 {
@@ -144,6 +164,11 @@ auto
     Destroyed()
     -> void
 {
+    // Delete / level-unload path. At this point the EntityScript and its created components
+    // are still valid, so enqueuing the destroy lets the EndPlay processors clean them up on
+    // subsequent scheduler ticks. The Ctrl+Z path goes through PreEditUndo() instead because
+    // by the time Destroyed() fires on a placement-undo the transaction has already
+    // invalidated the actor's subobjects.
     EditorOnly_DestroyEntity();
     Super::Destroyed();
 }
