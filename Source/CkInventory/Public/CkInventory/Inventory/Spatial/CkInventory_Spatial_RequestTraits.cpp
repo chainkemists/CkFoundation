@@ -356,7 +356,10 @@ namespace ck::inventory_handlers
                 UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(InHandle, ItemHandle, OldCoord, OldRot);
             }
             R = Result::Failed_PlacementBlocked;
-            ck::inventory::Warning(TEXT("RelocateItem: Cannot place item [{}] at [{}] in inventory [{}]"),
+            // Caller-attributable rejection (user-supplied coordinate is blocked) — surface
+            // through the Result enum, log at Display so the AutoTest framework doesn't
+            // escalate the diagnostic to a test failure.
+            ck::inventory::Display(TEXT("RelocateItem: Cannot place item [{}] at [{}] in inventory [{}]"),
                 ItemHandle, NewCoord, InHandle);
             return R;
         }
