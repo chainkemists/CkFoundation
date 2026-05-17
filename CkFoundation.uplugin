@@ -956,10 +956,6 @@
       "Enabled": true
     },
     {
-      "Name": "StateTree",
-      "Enabled": true
-    },
-    {
       "Name": "Paper2D",
       "Enabled": true
     },
