@@ -118,6 +118,44 @@ namespace ck::angelscriptgenerator::self_heal
             OutError.LookupScope       = Matcher.GetCaptureGroup(4);  // empty when "global namespace" or absent
             return true;
         }
+
+        // "(L:C) Instead found '<string constant>'"
+        //
+        // Hazelight emits adjacent-string-literal errors as a TWO-line pair:
+        //   (L:C) Expected ')' or ','
+        //   (L:C) Instead found '<string constant>'
+        // The first line's "Expected ')' or ','" is generic — it fires for many
+        // parse errors (missing comma in arg list, unclosed paren, etc.). The
+        // SECOND line's "Instead found '<string constant>'" is the unique
+        // signature for the adjacent-literal splice case: AS expected a
+        // separator and got the opening quote of a second literal.
+        //
+        // Matching only the second line keeps the regex unambiguous. Caller
+        // source is left untouched (no auto-fix — that's user code, not
+        // generated). The dispatcher classifies this as Author_FixupRequired_
+        // AdjacentStringLiteral and logs an actionable "join the literals into
+        // one string" banner instead of the generic "no recognized roots"
+        // terminal that leaves headless test runs hanging without an
+        // actionable diagnostic.
+        auto Try_MatchAdjacentStringLiteral(
+            const FString&    InLine,
+            const FString&    InCurrentFile,
+            FCk_AsParsedError& OutError) -> bool
+        {
+            static const auto Pattern = FRegexPattern{TEXT(
+                R"(^\((\d+):(\d+)\) Instead found '<string constant>'$)")};
+
+            auto Matcher = FRegexMatcher{Pattern, InLine.TrimStartAndEnd()};
+            if (NOT Matcher.FindNext())
+            { return false; }
+
+            OutError          = FCk_AsParsedError{};
+            OutError.Kind     = ECk_AsParsedError_Kind::AdjacentStringLiteral;
+            OutError.FilePath = InCurrentFile;
+            OutError.Line     = FCString::Atoi(*Matcher.GetCaptureGroup(1));
+            OutError.Column   = FCString::Atoi(*Matcher.GetCaptureGroup(2));
+            return true;
+        }
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -146,7 +184,8 @@ namespace ck::angelscriptgenerator::self_heal
 
             auto Error = FCk_AsParsedError{};
             if (Try_MatchNoMatchingSignatures(Line, CurrentFile, Error)
-                || Try_MatchIdentifierNotADataType(Line, CurrentFile, Error))
+                || Try_MatchIdentifierNotADataType(Line, CurrentFile, Error)
+                || Try_MatchAdjacentStringLiteral(Line, CurrentFile, Error))
             {
                 Results.Add(MoveTemp(Error));
             }
@@ -180,6 +219,13 @@ namespace ck::angelscriptgenerator::self_heal
                     break;
                 case ECk_AsParsedError_Kind::IdentifierNotADataType:
                     Key = FString::Printf(TEXT("id|%s"), *Err.MissingIdentifier);
+                    break;
+                case ECk_AsParsedError_Kind::AdjacentStringLiteral:
+                    // No qualified identifier — dedup by location instead. Two
+                    // separate splices on different lines are distinct
+                    // diagnostics; a re-emit of the same line is one.
+                    Key = FString::Printf(TEXT("adj|%s:%d:%d"),
+                        *Err.FilePath, Err.Line, Err.Column);
                     break;
             }
 

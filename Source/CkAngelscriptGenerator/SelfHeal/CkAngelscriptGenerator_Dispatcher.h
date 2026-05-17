@@ -30,6 +30,12 @@ namespace ck::angelscriptgenerator::self_heal
         SynthesizeStub_EntitySpawnParams,
         KickGenerator_DynamicHandle,
         KickGenerator_AssetRegistry,
+        // Author-side authoring bug — dispatcher recognizes the pattern and
+        // emits an actionable banner, but does NOT mutate user source. Counted
+        // as an "actionable" strategy so the dispatcher doesn't fall through
+        // to the generic "no recognized roots" terminal (which leaves
+        // headless test runs without an actionable diagnostic).
+        Author_FixupRequired_AdjacentStringLiteral,
         Unrecognized,
     };
 
