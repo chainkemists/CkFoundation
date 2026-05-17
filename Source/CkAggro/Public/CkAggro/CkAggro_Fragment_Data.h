@@ -70,9 +70,17 @@ public:
     Get_MaxValue() const -> float;
 
 public:
-    CK_PROPERTY_GET(_ConstructionScript);
-    CK_PROPERTY_GET(_ScoreStartingValue);
-    CK_PROPERTY_GET(_MinMax);
+    CK_PROPERTY(_ConstructionScript);
+    CK_PROPERTY(_ScoreStartingValue);
+    CK_PROPERTY(_MinMax);
+
+    // _MinValue / _MaxValue intentionally use only the setter macro — the
+    // matching getters (Get_MinValue / Get_MaxValue) are hand-authored above
+    // because they emit a diagnostic when _MinMax doesn't include the bound
+    // being queried. CK_PROPERTY would duplicate the getter and lose that
+    // diagnostic, so we expose only the Set side.
+    CK_PROPERTY_SET(_MinValue);
+    CK_PROPERTY_SET(_MaxValue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
