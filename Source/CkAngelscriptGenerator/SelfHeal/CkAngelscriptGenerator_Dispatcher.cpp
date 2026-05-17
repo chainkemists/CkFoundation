@@ -331,6 +331,22 @@ namespace ck::angelscriptgenerator::self_heal
                     return false;
                 }
 
+                case ECk_RecoveryStrategy::Author_FixupRequired_AdjacentStringLiteral:
+                {
+                    // No auto-fix — modifying user source is out of contract for
+                    // the dispatcher. Emit an actionable diagnostic; return true
+                    // so the dispatcher's outer flow doesn't fall through to the
+                    // "all-actions-failed" terminal banner (this IS the
+                    // recognized action — diagnose and surface).
+                    Error(TEXT("[SelfHeal] AS compile error at {}:{}:{} — adjacent string literals not supported. ")
+                          TEXT("AngelScript does not splice `\"foo \" \"bar\"` C-style across lines. ")
+                          TEXT("Fix: join the literals into one string, or chain via f\"{{Base}}continuation\" / a local variable. ")
+                          TEXT("(In headless test runs the editor stalls after AS post-compile without this diagnostic — ")
+                          TEXT("the matching error in toolbox stdout is your tip-off.)"),
+                        InError.FilePath, InError.Line, InError.Column);
+                    return true;
+                }
+
                 case ECk_RecoveryStrategy::Unrecognized:
                 default:
                 {
@@ -393,6 +409,11 @@ namespace ck::angelscriptgenerator::self_heal
                 case ECk_RecoveryStrategy::KickGenerator_DynamicHandle:
                 {
                     return InAction.Error.MissingIdentifier;
+                }
+                case ECk_RecoveryStrategy::Author_FixupRequired_AdjacentStringLiteral:
+                {
+                    return FString::Printf(TEXT("adjacent string literals @ %s:%d:%d"),
+                        *InAction.Error.FilePath, InAction.Error.Line, InAction.Error.Column);
                 }
                 case ECk_RecoveryStrategy::Unrecognized:
                 default:
@@ -836,6 +857,11 @@ namespace ck::angelscriptgenerator::self_heal
                 { return ECk_RecoveryStrategy::KickGenerator_DynamicHandle; }
 
                 return ECk_RecoveryStrategy::Unrecognized;
+            }
+
+            case ECk_AsParsedError_Kind::AdjacentStringLiteral:
+            {
+                return ECk_RecoveryStrategy::Author_FixupRequired_AdjacentStringLiteral;
             }
         }
         return ECk_RecoveryStrategy::Unrecognized;
