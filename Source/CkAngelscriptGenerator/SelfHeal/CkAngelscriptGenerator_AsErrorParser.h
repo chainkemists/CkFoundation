@@ -5,12 +5,18 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 // Parses Hazelight's AS compile-error output into typed root-cause records.
-// Two patterns recognized — both correspond to drift classes the dispatcher
-// can act on:
+// Three patterns recognized. The first two correspond to drift classes the
+// dispatcher can auto-fix; the third is an author-side authoring bug the
+// dispatcher only diagnoses (no auto-fix — modifying user source code is
+// out of contract):
 //   * `No matching signatures to '<NS>::<func>(<args>)'`  — stale EntitySpawn-
-//     Params stub OR missing asset registry accessor.
+//     Params stub OR missing asset registry accessor (auto-fix).
 //   * `Identifier '<X>' is not a data type`               — missing
-//     dynamic-handle JSON entry.
+//     dynamic-handle JSON entry (auto-fix).
+//   * `Instead found '<string constant>'`                 — adjacent string
+//     literals in author source (`"foo " "bar"` C-style splice). AS rejects;
+//     the dispatcher recognizes the pattern but only surfaces a clear
+//     "join into one literal" banner.
 //
 // Cascade noise ("Unknown", "<X> is not declared", etc.) is dropped. The
 // dispatcher treats "compile failed but parser returned 0 roots" as an
@@ -28,6 +34,7 @@ namespace ck::angelscriptgenerator::self_heal
     {
         NoMatchingSignatures,
         IdentifierNotADataType,
+        AdjacentStringLiteral,  // Hazelight emits "Expected ')' or ','" + "Instead found '<string constant>'" — `"foo " "bar"` C-style splice.
     };
 
     struct CKANGELSCRIPTGENERATOR_API FCk_AsParsedError

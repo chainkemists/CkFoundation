@@ -44,6 +44,16 @@ namespace
         E.Column            = 5;
         return E;
     }
+
+    auto Make_AdjacentStringLiteral() -> FCk_AsParsedError
+    {
+        auto E      = FCk_AsParsedError{};
+        E.Kind      = ECk_AsParsedError_Kind::AdjacentStringLiteral;
+        E.FilePath  = TEXT("D:/Test/Caller.as");
+        E.Line      = 44;
+        E.Column    = 13;
+        return E;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -120,7 +130,28 @@ bool FCkTest_Dispatcher_Classify_DynamicHandle::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Classify: anything that doesn't fit the three above routes to Unrecognized.
+// Classify: AdjacentStringLiteral -> Author_FixupRequired_AdjacentStringLiteral.
+// This is a diagnose-only path (no auto-fix), but the strategy is "actionable"
+// in the dispatcher sense — it short-circuits the "no recognized roots"
+// terminal that wedges headless test runs without a usable diagnostic.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_Dispatcher_Classify_AdjacentStringLiteral,
+    "CkAngelscriptGenerator.UnitTests.Dispatcher.Classify_AdjacentStringLiteral",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_Dispatcher_Classify_AdjacentStringLiteral::RunTest(const FString&)
+{
+    TestEqual(TEXT("AdjacentStringLiteral -> Author_FixupRequired_AdjacentStringLiteral"),
+        static_cast<int32>(FCkAsRecoveryDispatcher::Classify(Make_AdjacentStringLiteral())),
+        static_cast<int32>(ECk_RecoveryStrategy::Author_FixupRequired_AdjacentStringLiteral));
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Classify: anything that doesn't fit the four above routes to Unrecognized.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(

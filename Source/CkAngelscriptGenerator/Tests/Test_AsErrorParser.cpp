@@ -199,6 +199,48 @@ bool FCkTest_AsErrorParser_DeduplicateRoots::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+// Adjacent string-literal splice — Hazelight emits as a TWO-line pair:
+//   (L:C) Expected ')' or ','
+//   (L:C) Instead found '<string constant>'
+// The "Expected ')' or ','" line is generic (any parse error of that shape
+// fires it), so the parser keys on the unique second line.
+//
+// Captured 2026-05-17 from a CkAggro AS test that broke a string across lines
+// C-style; recognized so the dispatcher's actionable banner replaces the
+// generic "no recognized roots" terminal that wedges headless test runs.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_AsErrorParser_AdjacentStringLiteralProbe,
+    "CkAngelscriptGenerator.UnitTests.AsErrorParser.AdjacentStringLiteralProbe",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_AsErrorParser_AdjacentStringLiteralProbe::RunTest(const FString&)
+{
+    const auto Input = FString{TEXT(
+        "D:/Repos/CkPlugins/Plugins/CkTests/Script/CkAggro/CkAutoTest_Aggro_GetBestAggroSingle.as:\n"
+        "(37:5) Compiling void UCk_AutoTest_Aggro_GetBestAggroSingle::OnSettled(FCk_Handle_Timer, FCk_Chrono, FCk_Time)\n"
+        "(44:13) Expected ')' or ','\n"
+        "(44:13) Instead found '<string constant>'\n")};
+
+    const auto Errors = FCkAsErrorParser::ParseErrors(Input);
+
+    // Exactly one parsed root: the "Instead found '<string constant>'" line.
+    // The generic "Expected ')' or ','" companion is intentionally dropped —
+    // it isn't a unique enough signature to act on.
+    TestEqual(TEXT("error count"), Errors.Num(), 1);
+    if (Errors.Num() < 1) { return false; }
+
+    const auto& E = Errors[0];
+    TestEqual(TEXT("Kind"),     static_cast<int32>(E.Kind), static_cast<int32>(ECk_AsParsedError_Kind::AdjacentStringLiteral));
+    TestEqual(TEXT("FilePath"), E.FilePath,                  FString{TEXT("D:/Repos/CkPlugins/Plugins/CkTests/Script/CkAggro/CkAutoTest_Aggro_GetBestAggroSingle.as")});
+    TestEqual(TEXT("Line"),     E.Line,                      44);
+    TestEqual(TEXT("Column"),   E.Column,                    13);
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 // Cascade-only input (no recognized roots) yields an empty result. This is the
 // signal the dispatcher uses to show a terminal banner instead of looping.
 // --------------------------------------------------------------------------------------------------------------------
