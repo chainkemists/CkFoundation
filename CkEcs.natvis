@@ -219,23 +219,6 @@
     <DisplayString>Unknown({(int)*this})</DisplayString>
   </Type>
 
-  <!-- State Tree -->
-
-  <Type Name="ECk_StateTree_RunStatus">
-    <DisplayString Condition="*this == 0">Stopped</DisplayString>
-    <DisplayString Condition="*this == 1">Running</DisplayString>
-    <DisplayString Condition="*this == 2">Paused</DisplayString>
-    <DisplayString>Unknown({(int)*this})</DisplayString>
-  </Type>
-
-  <Type Name="ck::FFragment_StateTree_Current">
-    <DisplayString>{_RunStatus}</DisplayString>
-    <Expand>
-      <Item Name="[Status]">_RunStatus</Item>
-      <Item Name="[Owner]">_Owner</Item>
-    </Expand>
-  </Type>
-
   <!-- Montage Player -->
 
   <Type Name="ECk_MontagePlayer_StateKind">
