@@ -240,8 +240,34 @@ auto
         FCk_Handle_EntityCollection& InEntityCollectionHandle)
     -> void
 {
-    InEntityCollectionHandle.Try_Remove<ck::FFragment_EntityCollections_RecordOfEntities_Previous>();
+    // Refresh the Previous snapshot of the collection's entries.
+    //
+    // We deliberately do NOT Try_Remove<Previous> + AddIfMissing here.
+    // TUtils_RecordOfEntities::Request_Connect stores a per-record
+    // disconnect lambda on each connected entry's FFragment_RecordEntry.
+    // That lambda fires from FProcessor_RecordEntry_Destructor when the
+    // entry is destroyed, and it does Get<Previous>() on this collection
+    // handle. If we had Try_Remove'd Previous (or had FireSignals::DoTick
+    // clear it) while the prior entries still held those lambdas, those
+    // lambdas would ensure-fail on the missing fragment during the entry's
+    // destruction cascade.
+    //
+    // Instead, properly Disconnect every previously-snapshot'd entry
+    // (which removes both the back-reference and the disconnect lambda
+    // from the entry), then re-connect the current set. The Previous
+    // fragment's lifetime is now bounded by the collection entity itself,
+    // not by the FireSignals tick.
     EntityCollections_RecordOfEntities_Previous_Utils::AddIfMissing(InEntityCollectionHandle);
+
+    // Valid only — Request_Disconnect Get<>s the entry's FFragment_RecordEntry
+    // with the default validity policy and would ensure-fail on pending-kill
+    // entries. Pending-kill entries clean themselves up via their own
+    // FProcessor_RecordEntry_Destructor pass; they're not our problem here.
+    auto PreviousEntries = EntityCollections_RecordOfEntities_Previous_Utils::Get_ValidEntries(InEntityCollectionHandle);
+    for (auto PreviousEntry : PreviousEntries)
+    {
+        EntityCollections_RecordOfEntities_Previous_Utils::Request_Disconnect(InEntityCollectionHandle, PreviousEntry);
+    }
 
     EntityCollections_RecordOfEntities_Utils::ForEach_ValidEntry(InEntityCollectionHandle, [&](FCk_Handle InEntry)
     {
