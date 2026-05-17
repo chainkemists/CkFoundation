@@ -48,7 +48,11 @@ namespace ck::inventory_handlers
         R = UCk_Utils_Inventory_UE::Get_CanAcceptItem(Base, ItemHandle);
         if (R != Result::Success)
         {
-            ck::inventory::Warning(TEXT("AddItem_Spatial: Failed [{}] for item [{}] in inventory [{}]"),
+            // Caller-attributable rejection (e.g. Failed_ItemAlreadyInInventory,
+            // Failed_RejectedByCustomAcceptanceLogic) — surface through the Result
+            // enum, log at Display so the AutoTest framework doesn't escalate the
+            // diagnostic to a test failure.
+            ck::inventory::Display(TEXT("AddItem_Spatial: Failed [{}] for item [{}] in inventory [{}]"),
                 R, ItemHandle, InHandle);
             return R;
         }
