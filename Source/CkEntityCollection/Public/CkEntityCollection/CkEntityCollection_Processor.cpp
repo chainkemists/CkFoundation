@@ -208,7 +208,15 @@ namespace ck
         TProcessor::DoTick(InDeltaT);
 
         _TransientEntity.Clear<MarkedDirtyBy>();
-        _TransientEntity.Clear<FFragment_EntityCollections_RecordOfEntities_Previous>();
+        // Intentionally NOT clearing FFragment_EntityCollections_RecordOfEntities_Previous
+        // here. The Previous fragment is a TUtils_RecordOfEntities — its
+        // connected entries store per-record disconnect lambdas on their
+        // FFragment_RecordEntry, fired from FProcessor_RecordEntry_Destructor
+        // during their teardown, that call Get<Previous>() on this collection.
+        // Bulk-clearing Previous would leave those lambdas referencing a
+        // missing fragment and ensure-fail later. The fragment's lifetime now
+        // follows its entries: Request_StorePreviousCollection cleanly
+        // Disconnects the prior snapshot before re-Connecting the current one.
     }
 
     auto
