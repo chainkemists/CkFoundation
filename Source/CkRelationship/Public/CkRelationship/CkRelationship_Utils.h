@@ -34,7 +34,7 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Relationship",
               DisplayName="[Ck][Relationship] Get Attitude Towards")
-    ECk_RelationshipAttitude
+    static ECk_RelationshipAttitude
     Get_AttitudeTowards(
         const FCk_Handle& InFrom,
         const FCk_Handle& InTo);
@@ -42,7 +42,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Relationship",
               DisplayName="[Ck][Relationship] Get Attitude Towards")
-    ECk_RelationshipAttitude
+    static ECk_RelationshipAttitude
     Get_AttitudeTowards_Exec(
         const FCk_Handle& InFrom,
         const FCk_Handle& InTo);
