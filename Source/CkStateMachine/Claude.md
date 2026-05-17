@@ -44,5 +44,4 @@ Don't encode state transition logic in raw if-else chains in a Processor — def
 ## See also
 
 - `CkDynamic/Claude.md` — state behaviors.
-- `CkStateTree/Claude.md` — UE5 StateTree alternative.
 - `CkTimer/Claude.md` — timeouts within states.

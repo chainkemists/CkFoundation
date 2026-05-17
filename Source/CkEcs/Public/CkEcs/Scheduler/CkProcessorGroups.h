@@ -11,7 +11,7 @@
 //   FGroup_DestructionPipeline  (OwningActor_Destroy, DestructionPhase_Finalize, DestructionPhase_Await — start-of-tick destruction completion for entities already past EndPlay)
 //     → FGroup_Gameplay_TimeDelta  (Timer, Tween, Substep)
 //       → FGroup_Gameplay  (core gameplay: Interaction, Inventory, Objectives, etc.)
-//         → FGroup_Gameplay_AI  (StateMachine, StateTree)
+//         → FGroup_Gameplay_AI  (StateMachine)
 //           → FGroup_Gameplay_Audio  (AudioDirector, AudioTrack, Sfx, Vfx, VfxCue)
 //             → FGroup_Gameplay_Rendering  (ISM, PMG, Shapes, RenderStatus, Camera)
 //               → FGroup_Gameplay_Script  (EntityScript construction + BeginPlay)

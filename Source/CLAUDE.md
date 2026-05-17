@@ -95,7 +95,7 @@
 //   ...ECS Niagara VFX                        → CkVfx
 //   ...ECS camera shake                       → CkCamera
 //   ...ECS animation assets                   → CkAnimation
-//   ...ECS state machine                      → CkStateMachine | CkStateTree
+//   ...ECS state machine                      → CkStateMachine
 //   ...ECS inventory + grid                   → CkInventory + CkGrid
 //   ...ECS physics acceleration               → CkPhysics
 //   ...ECS projectiles                        → CkProjectile
@@ -187,7 +187,6 @@
 //   CkShapes           | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkShapes/Claude.md
 //   CkSpatialQuery     | T4 | Core,Ecs,EcsExt,Label,Log,Physics,Provider,Record,Settings,Shapes,ThirdParty | CkSpatialQuery/Claude.md
 //   CkStateMachine     | T4 | Core,Dynamic,Ecs,Label,Log,Provider,Record,Settings,Timer | CkStateMachine/Claude.md
-//   CkStateTree        | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkStateTree/Claude.md
 //   CkSubstep          | T4 | Core,Ecs,EcsExt,Label,Log,Record,Settings | CkSubstep/Claude.md
 //   CkTargeting        | T4 | Actor,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkTargeting/Claude.md
 //   CkTemplate         | T4 | Core,Ecs,EcsExt,Label,Log,Record,Settings | CkTemplate/Claude.md

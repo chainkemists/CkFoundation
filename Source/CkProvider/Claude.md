@@ -3,7 +3,7 @@
 **Purpose:** Data-asset-driven value providers. A Provider is a `UDataAsset`-derived object that computes or returns a value (bool, float, int, tag, struct) given an optional entity handle context. Providers let designers configure "how much does X contribute to Y" in content rather than code.
 
 **Depends on:** `CkCore`, `CkEcs`, `CkLog`.
-**Used by:** `CkAttribute`, `CkAnimation`, `CkCamera`, `CkChaos`, `CkCue`, `CkDynamic`, `CkEntityExtension`, `CkEntityTag`, `CkInteraction`, `CkIsmRenderer`, `CkMessaging`, `CkObjective`, `CkPmg`, `CkRaySense`, `CkRelationship`, `CkResolver`, `CkShapes`, `CkStateTree`, `CkTargeting`, `CkTween`, `CkVfx`, and more.
+**Used by:** `CkAttribute`, `CkAnimation`, `CkCamera`, `CkChaos`, `CkCue`, `CkDynamic`, `CkEntityExtension`, `CkEntityTag`, `CkInteraction`, `CkIsmRenderer`, `CkMessaging`, `CkObjective`, `CkPmg`, `CkRaySense`, `CkRelationship`, `CkResolver`, `CkShapes`, `CkTargeting`, `CkTween`, `CkVfx`, and more.
 
 ---
 
