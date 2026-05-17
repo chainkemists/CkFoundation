@@ -155,16 +155,6 @@ Record system - no request fragments found
   - [✓] Request_LoadObject
   - [✓] Request_LoadObjectBatch
 
-### CkStateTree [✓]
-- [✓] Fragment definition (CkStateTree_Fragment.h) - `FFragment_StateTree_Requests`
-- [✓] Angelscript bindings (CkStateTree_Fragment.cpp)
-- [✓] Utils request functions (CkStateTree_Utils.cpp)
-  - [✓] Request_StartLogic
-  - [✓] Request_RestartLogic
-  - [✓] Request_StopLogic
-  - [✓] Request_PauseLogic
-  - [✓] Request_ResumeLogic
-
 ### CkSubstep [SKIP]
 - No request fragment exists - uses immediate operation pattern
 - Request_ functions (Pause, Resume, Reset) directly manipulate tags
