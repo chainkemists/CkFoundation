@@ -24,12 +24,25 @@ auto
         ck::UAggroedEntity_Utils::AddOrReplace(InNewEntity, InTarget);
         InNewEntity.Add<ck::FFragment_Aggro_Current>();
 
-        UCk_Entity_ConstructionScript_PDA::Request_Construct(InNewEntity, InParams.Get_ConstructionScript());
+        // ConstructionScript is optional. Most callers want the default
+        // Aggro entity shape (Tag + Aggroed source ref + Current score
+        // fragment, all added above) and skip the script entirely.
+        // Request_Construct ensure-fails on a null class — guard explicitly.
+        if (const auto& ConstructionScript = InParams.Get_ConstructionScript();
+            ck::IsValid(ConstructionScript))
+        {
+            UCk_Entity_ConstructionScript_PDA::Request_Construct(InNewEntity, ConstructionScript);
+        }
     });
 
     auto AggroHandle = Cast(NewEntity);
 
-    RecordOfAggro_Utils::Request_Connect(InHandle, AggroHandle);
+    // The Aggro entity is identified by its target (Get_AggroTarget), not by
+    // a GameplayLabel — labels are only added if the user-supplied
+    // ConstructionScript chooses to add them. Tell the record-connect path
+    // explicitly that labels are optional here so a script-less Aggro doesn't
+    // ensure-fail the connect.
+    RecordOfAggro_Utils::Request_Connect(InHandle, AggroHandle, ECk_Record_LabelRequirementPolicy::Optional);
 
     // TODO: move this to a processor
     ck::UUtils_Signal_OnNewAggroAdded::Broadcast(InHandle, ck::MakePayload(InHandle, AggroHandle));
