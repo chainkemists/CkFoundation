@@ -33,7 +33,7 @@ private:
     float _AggroRange = 100.0f;
 
 public:
-    CK_PROPERTY_GET(_AggroRange);
+    CK_PROPERTY(_AggroRange);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -75,11 +75,11 @@ private:
     FCk_Aggro_Filter_LoS _AggroFilter_LoS;
 
 public:
-    CK_PROPERTY_GET(_FilterByDistance);
-    CK_PROPERTY_GET(_AggroFilter_Distance);
+    CK_PROPERTY(_FilterByDistance);
+    CK_PROPERTY(_AggroFilter_Distance);
 
-    CK_PROPERTY_GET(_FilterByLoS);
-    CK_PROPERTY_GET(_AggroFilter_LoS);
+    CK_PROPERTY(_FilterByLoS);
+    CK_PROPERTY(_AggroFilter_LoS);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
