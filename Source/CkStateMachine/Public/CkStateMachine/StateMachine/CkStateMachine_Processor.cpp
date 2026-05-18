@@ -99,6 +99,18 @@ namespace ck
         UUtils_Signal_OnSmStarted::Broadcast(InHandle,
             MakePayload(InHandle, FCk_Sm_Payload_OnStarted{}));
 
+        // Broadcast OnSmStateChanged for the initial state entry too —
+        // PreviousStateClass=null signals "no prior state; this is the SM's
+        // first state." Without this fire, a sink-state (zero-transition)
+        // SM never produces OnSmStateChanged at all, and consumers binding
+        // to react per-state-entry miss the initial entry forever.
+        UUtils_Signal_OnSmStateChanged::Broadcast(InHandle,
+            MakePayload(InHandle, FCk_Sm_Payload_OnStateChanged{
+                TSubclassOf<UCk_SmState_EntityScript>{},
+                InCurrent._CurrentStateClass,
+                InCurrent._CurrentStateHandle
+            }));
+
         UCk_Utils_StateMachine_UE::TryCheckEntryBreakpoint(InHandle, InParams.Get_InitialStateClass());
 
 #if !UE_BUILD_SHIPPING
