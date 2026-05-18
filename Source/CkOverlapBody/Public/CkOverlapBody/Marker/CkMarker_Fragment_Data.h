@@ -312,14 +312,14 @@ private:
     FCk_Marker_DebugInfo _DebugParams;
 
 public:
-    CK_PROPERTY_GET(_MarkerName);
-    CK_PROPERTY_GET(_ShapeParams);
-    CK_PROPERTY_GET(_PhysicsParams);
-    CK_PROPERTY_GET(_AttachmentParams);
-    CK_PROPERTY_GET(_RelativeTransform);
-    CK_PROPERTY_GET(_ShowDebug);
-    CK_PROPERTY_GET(_DebugParams);
-    CK_PROPERTY_GET(_StartingState);
+    CK_PROPERTY(_MarkerName);
+    CK_PROPERTY(_ShapeParams);
+    CK_PROPERTY(_PhysicsParams);
+    CK_PROPERTY(_AttachmentParams);
+    CK_PROPERTY(_RelativeTransform);
+    CK_PROPERTY(_ShowDebug);
+    CK_PROPERTY(_DebugParams);
+    CK_PROPERTY(_StartingState);
     CK_PROPERTY(_ReplicationType);
 };
 
