@@ -11,10 +11,14 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Not yet useful for this feature
-//USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
-//struct CKENTITYTAG_API FCk_Handle_EntityTag : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_EntityTag); };
-//CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_EntityTag);
+UENUM(BlueprintType)
+enum class ECk_EntityTagUpdate : uint8
+{
+    Added,
+    Removed,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EntityTagUpdate);
 
 //--------------------------------------------------------------------------------------------------------------------
 
@@ -36,5 +40,19 @@ public:
 
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_EntityTag_ParamsData, _Tag);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+    FCk_Delegate_EntityTag_OnTagUpdated,
+    FCk_Handle, InOwner,
+    FName, InTagName,
+    ECk_EntityTagUpdate, InUpdateType);
+
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+    FCk_Delegate_EntityTag_OnGameplayTagUpdated,
+    FCk_Handle, InOwner,
+    FGameplayTag, InTag,
+    ECk_EntityTagUpdate, InUpdateType);
 
 // --------------------------------------------------------------------------------------------------------------------

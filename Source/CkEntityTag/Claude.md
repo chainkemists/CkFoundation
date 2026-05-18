@@ -10,10 +10,12 @@
 ## Key API
 
 - `UCk_Utils_EntityTag_UE::Add(InHandle, FName)` — add a named tag. `NAME_None` is rejected at the boundary (Display log, no-op) to prevent default-initialised names from polluting `ForEach_Entity(NAME_None)` queries.
-- `Add_UsingGameplayTag(InHandle, FGameplayTag)` — same as Add via `Tag.GetTagName()`; an empty `FGameplayTag` reduces to NAME_None and is rejected by the same boundary.
-- Standard Has, Remove, query operations.
+- `Add_UsingGameplayTag(InHandle, FGameplayTag)` — adds the gameplay tag plus its full parent chain as FName entries (e.g., `A.B.C` registers `A.B.C`, `A.B`, `A`), so `ForEach_Entity("A.B")` finds entities tagged with any `A.B.*` descendant.
+- `Has` / `Has_UsingGameplayTag`, `Get_AllTags`, `Get_AllTagsAsContainer` (explicit gameplay tags only — does not include parent-flattened ancestors).
+- `Request_TryRemove` / `Request_TryRemove_UsingGameplayTag` (rejects partial matches via `HasTagExact` guard).
+- `BindTo_OnTagUpdated` / `BindTo_OnGameplayTagUpdated` signals — fire on the 0↔1 presence flip only (not on intermediate count changes). The gameplay-tag binding supports a `RelevantTags` filter container.
 
-> **Single-slot per entity.** `Add` and `Add_UsingGameplayTag` share one storage slot. A second Add (either flavor) on an entity that already has an EntityTag will hit entt's per-fragment uniqueness assertion (surfaces as a CK_ENSURE). Either gate calls on `Has(...)` or design entities so the tag is set once at construction.
+> **Counted Add/Remove.** A tag added N times needs N removes to disappear. `Has` reports presence (count ≥ 1); signals fire only on the 0→1 (Added) and 1→0 (Removed) transitions. Parent FNames added via a gameplay-tag Add are reference-counted across all gameplay-tag children that share the ancestor, so removing one child does not strip parent FNames still held by siblings.
 
 ---
 
