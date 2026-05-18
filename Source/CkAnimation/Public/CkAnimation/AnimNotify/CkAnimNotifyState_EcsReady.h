@@ -16,7 +16,7 @@ public:
     UFUNCTION(BlueprintNativeEvent,
         Category = "Ck|Animation",
         DisplayName="[Ck] Received Notify Begin (Override)")
-	bool
+	void
     Do_ReceivedNotifyBegin(
         AActor* InActorOwner,
         UPARAM(ref) FCk_Handle& InOwnerEntity,
@@ -28,7 +28,7 @@ public:
     UFUNCTION(BlueprintNativeEvent,
         Category = "Ck|Animation",
         DisplayName="[Ck] Received Notify Tick (Override)")
-	bool
+	void
     Do_ReceivedNotifyTick(
         AActor* InActorOwner,
         UPARAM(ref) FCk_Handle& InOwnerEntity,
@@ -40,7 +40,7 @@ public:
     UFUNCTION(BlueprintNativeEvent,
         Category = "Ck|Animation",
         DisplayName="[Ck] Received Notify End (Override)")
-	bool
+	void
     Do_ReceivedNotifyEnd(
         AActor* InActorOwner,
         UPARAM(ref) FCk_Handle& InOwnerEntity,

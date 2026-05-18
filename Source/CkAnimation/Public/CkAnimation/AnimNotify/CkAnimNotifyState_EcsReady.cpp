@@ -11,9 +11,8 @@ auto
         UAnimSequenceBase* InAnimation,
         const FAnimNotifyEventReference& InEventReference,
         FCk_Time InTotalDuration) const
-    -> bool
+    -> void
 {
-    return false;
 }
 
 auto
@@ -25,10 +24,8 @@ auto
         UAnimSequenceBase* InAnimation,
         const FAnimNotifyEventReference& InEventReference,
         FCk_Time InFrameDeltaT) const
-    -> bool
-
+    -> void
 {
-    return false;
 }
 
 auto
@@ -39,10 +36,8 @@ auto
         USkeletalMeshComponent* InMeshComp,
         UAnimSequenceBase* InAnimation,
         const FAnimNotifyEventReference& InEventReference) const
-    -> bool
-
+    -> void
 {
-    return false;
 }
 
 auto
