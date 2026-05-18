@@ -3,6 +3,40 @@
 #include "CkEntityTag/CkEntityTag_Fragment.h"
 #include "CkEntityTag/CkEntityTag_Log.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_EntityTag_UE::
+    Set_StoragePresence(
+        FCk_Handle& InHandle,
+        FName InTag,
+        bool InPresent)
+    -> void
+{
+    auto&& Storage = InHandle.Get_RegistryView().Storage<ck::FFragment_EntityTag_StorageParams>(
+        entt::id_type{GetTypeHash(InTag)});
+    const auto Entity = InHandle.Get_Entity().Get_ID();
+
+    if (InPresent)
+    {
+        if (NOT Storage.contains(Entity))
+        {
+            Storage.emplace<ck::FFragment_EntityTag_StorageParams>(
+                Entity,
+                ck::FFragment_EntityTag_StorageParams{InTag});
+        }
+    }
+    else
+    {
+        if (Storage.contains(Entity))
+        {
+            Storage.remove(Entity);
+        }
+    }
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -23,11 +57,31 @@ auto
         return InHandle;
     }
 
-    auto Params = ck::FFragment_EntityTag_Params{InTag};
-    InHandle.Add<ck::FFragment_EntityTag_Params>(Params);
+    auto& Current = InHandle.AddOrGet<ck::FFragment_EntityTag_Current>();
 
-    auto&& Storage = InHandle.Get_RegistryView().Storage<ck::FFragment_EntityTag_Params>(entt::id_type{GetTypeHash(InTag)});
-    Storage.emplace<ck::FFragment_EntityTag_Params>(InHandle.Get_Entity().Get_ID(), std::move(Params));
+    const auto TagIndex = ck::algo::FindIndex(Current._Tags, [InTag](const ck::FEntityTagCount& InPair)
+    {
+        return InPair._Name == InTag;
+    });
+
+    const auto AddNew = TagIndex == INDEX_NONE;
+    if (AddNew)
+    {
+        Current._Tags.Emplace(InTag, 1);
+    }
+    else
+    {
+        Current._Tags[TagIndex]._Count++;
+    }
+
+    Set_StoragePresence(InHandle, InTag, true);
+
+    if (AddNew)
+    {
+        ck::UUtils_Signal_EntityTag_OnTagUpdated::Broadcast(
+            InHandle,
+            ck::MakePayload(InHandle, InTag, ECk_EntityTagUpdate::Added));
+    }
 
     return InHandle;
 }
@@ -39,57 +93,49 @@ auto
         FGameplayTag InTag)
     -> FCk_Handle
 {
-    const auto Name = InTag.GetTagName();
-    return Add(InHandle, Name);
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+        TEXT("Unable to add EntityTag [{}] to Handle [{}] that is INVALID"), InTag, InHandle)
+    { return {}; }
+
+    if (NOT InTag.IsValid())
+    { return InHandle; }
+
+    auto& Current = InHandle.AddOrGet<ck::FFragment_EntityTag_Current>();
+
+    const auto GameplayTagIndex = ck::algo::FindIndex(Current._GameplayTagCounts,
+        [InTag](const ck::FEntityGameplayTagCount& InPair)
+    {
+        return InPair._Tag == InTag;
+    });
+
+    const auto AddNewGameplayTag = GameplayTagIndex == INDEX_NONE;
+    if (AddNewGameplayTag)
+    {
+        Current._GameplayTagCounts.Emplace(InTag, 1);
+    }
+    else
+    {
+        Current._GameplayTagCounts[GameplayTagIndex]._Count++;
+    }
+
+    // GetGameplayTagParents() returns self + every ancestor (A.B.C -> {A.B.C, A.B, A}).
+    // Adding each as an FName entry lets ForEach_Entity("A.B") find entities tagged "A.B.C".
+    for (const auto& TagInChain : InTag.GetGameplayTagParents())
+    {
+        Add(InHandle, TagInChain.GetTagName());
+    }
+
+    if (AddNewGameplayTag)
+    {
+        ck::UUtils_Signal_EntityTag_OnGameplayTagUpdated::Broadcast(
+            InHandle,
+            ck::MakePayload(InHandle, InTag, ECk_EntityTagUpdate::Added));
+    }
+
+    return InHandle;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_EntityTag_UE::
-    Request_TryRemove(
-        FCk_Handle& InHandle,
-        FName InTag)
-    -> ECk_SucceededFailed
-{
-    CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Handle passed. Unable to remove Tag [{}] from Entity"), InTag)
-    { return ECk_SucceededFailed::Failed; }
-
-    auto&& Storage = InHandle.Get_RegistryView().Storage<ck::FFragment_EntityTag_Params>(entt::id_type{GetTypeHash(InTag)});
-    InHandle.Try_Remove<ck::FFragment_EntityTag_Params>();
-
-    const auto Entity = InHandle.Get_Entity().Get_ID();
-
-    if(NOT Storage.contains(Entity))
-    { return ECk_SucceededFailed::Failed; }
-
-    Storage.remove(Entity);
-    return ECk_SucceededFailed::Succeeded;
-}
-
-auto
-    UCk_Utils_EntityTag_UE::
-    Request_TryRemove_UsingGameplayTag(
-        FCk_Handle& InHandle,
-        FGameplayTag InTag)
-    -> ECk_SucceededFailed
-{
-    return Request_TryRemove(InHandle, InTag.GetTagName());
-}
-
-auto
-    UCk_Utils_EntityTag_UE::
-    TryGet_Tag(
-        const FCk_Handle& InHandle)
-    -> FName
-{
-    if (InHandle.Has<ck::FFragment_EntityTag_Params>())
-    {
-        return *InHandle.Get<ck::FFragment_EntityTag_Params>().Get_Tag().ToString();
-    }
-
-    return {};
-}
 
 auto
     UCk_Utils_EntityTag_UE::
@@ -101,9 +147,15 @@ auto
     if (ck::Is_NOT_Valid(InHandle))
     { return false; }
 
-    auto Handle = InHandle;
-    auto& Storage = Handle.Get_RegistryView().Storage<ck::FFragment_EntityTag_Params>(entt::id_type{GetTypeHash(InTag)});
-    return Storage.contains(Handle.Get_Entity().Get_ID());
+    if (NOT InHandle.Has<ck::FFragment_EntityTag_Current>())
+    { return false; }
+
+    const auto& Current = InHandle.Get<ck::FFragment_EntityTag_Current>();
+
+    return ck::algo::AnyOf(Current._Tags, [InTag](const ck::FEntityTagCount& InPair)
+    {
+        return InPair._Name == InTag;
+    });
 }
 
 auto
@@ -118,28 +170,170 @@ auto
 
 auto
     UCk_Utils_EntityTag_UE::
-    ForEach_Entity_UsingGameplayTag(
-        const FCk_Handle& InAnyHandle,
-        FGameplayTag InTag)
-    -> TArray<FCk_Handle>
+    Get_AllTagsAsContainer(
+        const FCk_Handle& InHandle)
+    -> FGameplayTagContainer
 {
-    return ForEach_Entity(InAnyHandle, InTag.GetTagName());
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+        TEXT("Unable to get entity tags on Handle [{}] that is INVALID"), InHandle)
+    { return {}; }
+
+    if (NOT InHandle.Has<ck::FFragment_EntityTag_Current>())
+    { return {}; }
+
+    const auto& Current = InHandle.Get<ck::FFragment_EntityTag_Current>();
+
+    auto Container = FGameplayTagContainer{};
+    for (const auto& GameplayTagCount : Current._GameplayTagCounts)
+    {
+        Container.AddTag(GameplayTagCount._Tag);
+    }
+    return Container;
 }
+
+auto
+    UCk_Utils_EntityTag_UE::
+    Get_AllTags(
+        const FCk_Handle& InHandle)
+    -> TArray<FName>
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+        TEXT("Unable to get entity tags on Handle [{}] that is INVALID"), InHandle)
+    { return {}; }
+
+    if (NOT InHandle.Has<ck::FFragment_EntityTag_Current>())
+    { return {}; }
+
+    const auto& Current = InHandle.Get<ck::FFragment_EntityTag_Current>();
+    return ck::algo::Transform<TArray<FName>>(Current._Tags, [](const ck::FEntityTagCount& InPair)
+    {
+        return InPair._Name;
+    });
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_EntityTag_UE::
+    Request_TryRemove(
+        FCk_Handle& InHandle,
+        FName InTag)
+    -> ECk_SucceededFailed
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Handle passed. Unable to remove Tag [{}] from Entity"), InTag)
+    { return ECk_SucceededFailed::Failed; }
+
+    if (NOT InHandle.Has<ck::FFragment_EntityTag_Current>())
+    { return ECk_SucceededFailed::Failed; }
+
+    auto& Current = InHandle.Get<ck::FFragment_EntityTag_Current>();
+
+    const auto TagIndex = ck::algo::FindIndex(Current._Tags, [InTag](const ck::FEntityTagCount& InPair)
+    {
+        return InPair._Name == InTag;
+    });
+
+    if (TagIndex == INDEX_NONE)
+    { return ECk_SucceededFailed::Failed; }
+
+    Current._Tags[TagIndex]._Count--;
+
+    const auto WasRemoved = Current._Tags[TagIndex]._Count <= 0;
+
+    if (WasRemoved)
+    {
+        Current._Tags.RemoveAtSwap(TagIndex);
+        Set_StoragePresence(InHandle, InTag, false);
+    }
+
+    const auto NowEmpty =
+        Current._Tags.IsEmpty() &&
+        Current._GameplayTagCounts.IsEmpty();
+
+    if (NowEmpty)
+    {
+        InHandle.Try_Remove<ck::FFragment_EntityTag_Current>();
+    }
+
+    if (WasRemoved)
+    {
+        ck::UUtils_Signal_EntityTag_OnTagUpdated::Broadcast(
+            InHandle,
+            ck::MakePayload(InHandle, InTag, ECk_EntityTagUpdate::Removed));
+    }
+
+    return ECk_SucceededFailed::Succeeded;
+}
+
+auto
+    UCk_Utils_EntityTag_UE::
+    Request_TryRemove_UsingGameplayTag(
+        FCk_Handle& InHandle,
+        FGameplayTag InTag)
+    -> ECk_SucceededFailed
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+        TEXT("Invalid Handle passed. Unable to remove Tag [{}] from Entity"), InTag)
+    { return ECk_SucceededFailed::Failed; }
+
+    if (NOT InHandle.Has<ck::FFragment_EntityTag_Current>())
+    { return ECk_SucceededFailed::Failed; }
+
+    auto& Current = InHandle.Get<ck::FFragment_EntityTag_Current>();
+
+    // Reject partial matches: removing `A.B` from an entity that only has `A.B.C` is not allowed.
+    // Only tags added explicitly via Add_UsingGameplayTag appear in _GameplayTagCounts (parents do
+    // not), so an absent entry is exactly the partial-match case we want to reject.
+    const auto GameplayTagIndex = ck::algo::FindIndex(Current._GameplayTagCounts,
+        [InTag](const ck::FEntityGameplayTagCount& InPair)
+    {
+        return InPair._Tag == InTag;
+    });
+
+    if (GameplayTagIndex == INDEX_NONE)
+    { return ECk_SucceededFailed::Failed; }
+
+    Current._GameplayTagCounts[GameplayTagIndex]._Count--;
+    const auto WasRemoved = Current._GameplayTagCounts[GameplayTagIndex]._Count <= 0;
+
+    if (WasRemoved)
+    {
+        Current._GameplayTagCounts.RemoveAtSwap(GameplayTagIndex);
+    }
+
+    // Mirror-remove the self + parent FName chain we added on Add_UsingGameplayTag.
+    for (const auto& TagInChain : InTag.GetGameplayTagParents())
+    {
+        const auto RemoveResult = Request_TryRemove(InHandle, TagInChain.GetTagName());
+        CK_ENSURE_IF_NOT(RemoveResult == ECk_SucceededFailed::Succeeded,
+            TEXT("Failed to remove FName mirror Tag [{}] (in chain for [{}]) on Entity [{}]. EntityTag state is corrupted."), TagInChain, InTag, InHandle)
+        { return ECk_SucceededFailed::Failed; }
+    }
+
+    if (WasRemoved)
+    {
+        ck::UUtils_Signal_EntityTag_OnGameplayTagUpdated::Broadcast(
+            InHandle,
+            ck::MakePayload(InHandle, InTag, ECk_EntityTagUpdate::Removed));
+    }
+
+    return ECk_SucceededFailed::Succeeded;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_EntityTag_UE::
     ForEach_Entity(
         const FCk_Handle& InAnyHandle,
         FName InTag)
-        -> TArray<FCk_Handle>
+    -> TArray<FCk_Handle>
 {
     auto EntityTags = TArray<FCk_Handle>{};
-
     ForEach_Entity(InAnyHandle, InTag, [&](FCk_Handle InEntity)
     {
         EntityTags.Emplace(InEntity);
     });
-
     return EntityTags;
 }
 
@@ -155,17 +349,101 @@ auto
     { return; }
 
     auto Handle = InAnyHandle;
-    auto& Storage = Handle.Get_RegistryView().Storage<ck::FFragment_EntityTag_Params>(entt::id_type{GetTypeHash(InTag)});
+    auto& Storage = Handle.Get_RegistryView().Storage<ck::FFragment_EntityTag_StorageParams>(
+        entt::id_type{GetTypeHash(InTag)});
 
     const auto View = entt::basic_view{Storage};
-    View.each([&](const auto InEntity, const ck::FFragment_EntityTag_Params& InParams)
+    View.each([&](const auto InEntity, const ck::FFragment_EntityTag_StorageParams& /*InParams*/)
     {
         if (NOT InAnyHandle.Get_RegistryView().IsValid(InEntity))
         { return; }
 
-        auto Handle = InAnyHandle.Get_ValidHandle(InEntity);
-        InFunc(Handle);
+        auto HandleFromEntity = InAnyHandle.Get_ValidHandle(InEntity);
+        InFunc(HandleFromEntity);
     });
+}
+
+auto
+    UCk_Utils_EntityTag_UE::
+    ForEach_Entity_UsingGameplayTag(
+        const FCk_Handle& InAnyHandle,
+        FGameplayTag InTag)
+    -> TArray<FCk_Handle>
+{
+    return ForEach_Entity(InAnyHandle, InTag.GetTagName());
+}
+
+auto
+    UCk_Utils_EntityTag_UE::
+    ForEach_Entity_UsingGameplayTag(
+        const FCk_Handle& InAnyHandle,
+        FGameplayTag InTag,
+        const TFunction<void(FCk_Handle)>& InFunc)
+    -> void
+{
+    ForEach_Entity(InAnyHandle, InTag.GetTagName(), InFunc);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_EntityTag_UE::
+    BindTo_OnTagUpdated(
+        FCk_Handle& InHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_EntityTag_OnTagUpdated& InDelegate)
+    -> FCk_Handle
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_EntityTag_OnTagUpdated, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_EntityTag_UE::
+    UnbindFrom_OnTagUpdated(
+        FCk_Handle& InHandle,
+        const FCk_Delegate_EntityTag_OnTagUpdated& InDelegate)
+    -> FCk_Handle
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_EntityTag_OnTagUpdated, InHandle, InDelegate);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_EntityTag_UE::
+    BindTo_OnGameplayTagUpdated(
+        FCk_Handle& InHandle,
+        FGameplayTagContainer InRelevantTags,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_EntityTag_OnGameplayTagUpdated& InDelegate)
+    -> FCk_Handle
+{
+    if (InRelevantTags.IsEmpty())
+    {
+        CK_SIGNAL_BIND(ck::UUtils_Signal_EntityTag_OnGameplayTagUpdated, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    }
+    else
+    {
+        CK_SIGNAL_BIND_WITH_CONDITION(ck::UUtils_Signal_EntityTag_OnGameplayTagUpdated, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior,
+            [InRelevantTags](FCk_Handle /*InOwner*/, FGameplayTag InTag, ECk_EntityTagUpdate /*InUpdateType*/)
+            {
+                return InRelevantTags.HasTag(InTag);
+            });
+    }
+    return InHandle;
+}
+
+auto
+    UCk_Utils_EntityTag_UE::
+    UnbindFrom_OnGameplayTagUpdated(
+        FCk_Handle& InHandle,
+        const FCk_Delegate_EntityTag_OnGameplayTagUpdated& InDelegate)
+    -> FCk_Handle
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_EntityTag_OnGameplayTagUpdated, InHandle, InDelegate);
+    return InHandle;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
