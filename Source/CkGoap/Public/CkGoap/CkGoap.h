@@ -13,3 +13,5 @@
 // WorldState sub-feature — owns the shared boolean world state planners read/write.
 #include "CkGoap/WorldState/CkGoap_WorldState_Fragment_Data.h"
 #include "CkGoap/WorldState/CkGoap_WorldState_Fragment.h"
+#include "CkGoap/WorldState/CkGoap_WorldState_Utils.h"
+#include "CkGoap/WorldState/CkGoap_WorldState_Processor.h"
