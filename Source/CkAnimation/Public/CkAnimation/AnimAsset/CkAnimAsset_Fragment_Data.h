@@ -53,8 +53,8 @@ private:
     FName _SectionName = NAME_None;
 
 public:
-    CK_PROPERTY_GET(_Animation);
-    CK_PROPERTY_GET(_ID);
+    CK_PROPERTY(_Animation);
+    CK_PROPERTY(_ID);
     CK_PROPERTY(_BlendSpace);
     CK_PROPERTY(_SectionName);
 };
