@@ -170,10 +170,10 @@ private:
     FCk_CapsuleSize _CapsuleSize;
 
 public:
-    CK_PROPERTY_GET(_ShapeType);
-    CK_PROPERTY_GET(_BoxExtents);
-    CK_PROPERTY_GET(_SphereRadius);
-    CK_PROPERTY_GET(_CapsuleSize);
+    CK_PROPERTY(_ShapeType);
+    CK_PROPERTY(_BoxExtents);
+    CK_PROPERTY(_SphereRadius);
+    CK_PROPERTY(_CapsuleSize);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
