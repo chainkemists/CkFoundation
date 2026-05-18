@@ -20,6 +20,16 @@ State machine entity has a Record of state entities; each state has a Record of 
 
 ---
 
+## Signals
+
+- **`OnSmStarted`** — fires once when the SM enters Running state (auto-start or explicit `Request_Start`). Payload is empty.
+- **`OnSmStateChanged`** — fires once on initial state entry with `PreviousStateClass == nullptr`, and again on every subsequent transition with the OLD class in `PreviousStateClass` and the NEW class in `NewStateClass`. Order: `OnSmStarted` fires *before* the initial `OnSmStateChanged`. A sink state (zero outgoing transitions) gets its initial entry fire and then no further fires — pinned by `CkAutoTest_StateMachine_NoTransitionAvailable_StaysInState`.
+- **`OnSmStopped`** — fires once when the SM transitions to Stopped (via `Request_Stop` or `EndPlay`).
+
+Consumers that need to react per-state-entry (e.g., apply per-state visuals, swap input modes) should bind `OnSmStateChanged` and treat the initial entry the same as any other transition — they get a clean per-entry pulse regardless of whether the SM ever transitions onward.
+
+---
+
 ## Anti-patterns
 
 Don't encode state transition logic in raw if-else chains in a Processor — define states and conditions as data assets consumed by the state machine processor.
