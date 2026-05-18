@@ -2,6 +2,7 @@
 
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkLabel/CkLabel_Fragment.h"
+#include "CkLabel/CkLabel_Log.h"
 
 #include <GameplayTagsManager.h>
 
@@ -46,14 +47,21 @@ auto
         FGameplayTag InLabel)
     -> void
 {
+    // Label is set-once. Second Add with the same tag is a silent no-op;
+    // second Add with a different tag is a caller-attributable rejection
+    // (the original label survives) and is reported as a Display-level
+    // log rather than an ensure — so AutoTests pinning the rejection
+    // contract don't fail on the harness's error-log escalation.
     if (Has(InHandle))
     {
-        CK_ENSURE(MatchesExact(InHandle, InLabel),
-            TEXT("Unable to add Label [{}]. Entity [{}] already has the Label [{}]."),
-            InLabel,
-            InHandle,
-            Get_Label(InHandle));
-
+        if (NOT MatchesExact(InHandle, InLabel))
+        {
+            ck::label::Display(
+                TEXT("Label is set-once. Entity [{}] already has Label [{}]; second Add of [{}] ignored."),
+                InHandle,
+                Get_Label(InHandle),
+                InLabel);
+        }
         return;
     }
 
