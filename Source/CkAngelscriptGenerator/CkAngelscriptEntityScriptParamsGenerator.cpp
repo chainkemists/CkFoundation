@@ -10,6 +10,7 @@
 
 #include "CkEcs/EntityScript/CkEntityScript.h"
 
+#include <Engine/BlueprintGeneratedClass.h>
 #include <HAL/FileManager.h>
 #include <Interfaces/IPluginManager.h>
 #include <Misc/App.h>
@@ -40,6 +41,16 @@ namespace ck_entity_script_params_generator
         { return false; }
 
         if (InClass == UCk_EntityScript_UE::StaticClass())
+        { return false; }
+
+        // Only generate Params accessors for entity-script classes authored in code —
+        // native C++ or AngelScript. Blueprint-asset entity scripts are excluded: their
+        // spawn params are authored in the BP editor and are never referenced by a
+        // static AS identifier, so a generated namespace block for them is dead weight.
+        // NOTE: CLASS_CompiledFromBlueprint cannot be used here — the AS engine fork
+        // sets that flag on AngelScript classes too. UASClass derives directly from
+        // UClass, so only true BP assets are UBlueprintGeneratedClass.
+        if (InClass->IsChildOf(UBlueprintGeneratedClass::StaticClass()))
         { return false; }
 
         constexpr auto DisqualifyingFlags =
