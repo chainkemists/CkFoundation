@@ -115,7 +115,7 @@ private:
     FName _AttachmentSocket;
 
 public:
-    CK_PROPERTY_GET(_Parent);
+    CK_PROPERTY(_Parent);
     CK_PROPERTY(_Tags);
     CK_PROPERTY(_IsTickEnabled);
     CK_PROPERTY(_TickInterval);
