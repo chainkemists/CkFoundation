@@ -49,66 +49,10 @@ CK_DEFINE_ECS_TAG(FTag_Goap_Dirty_Cost);
 CK_DEFINE_ECS_TAG(FTag_Goap_RequiresInitialPlan);
 
 // ====================================================================================================================
-// PARAMS — user-configurable options (policy, budgets, startup behavior)
+// PARAMS — user-configurable options (policy, budgets, startup behavior, WS source)
 // ====================================================================================================================
 
 using FFragment_Goap_Params = FCk_Fragment_Goap_ParamsData;
-
-// ====================================================================================================================
-// KEY REGISTRY FRAGMENT — Maps FGameplayTag ↔ FCk_GoapKey
-// ====================================================================================================================
-//
-// Populated once at setup time by scanning every action's preconditions +
-// effects and every goal's conditions. All world-state mutation after setup
-// goes through a Find() on this registry — writing a tag that wasn't
-// referenced by any action/goal is a silent no-op (registry is sealed).
-struct CKGOAP_API FFragment_Goap_KeyRegistry
-{
-public:
-	CK_GENERATED_BODY(FFragment_Goap_KeyRegistry);
-
-	friend class UCk_Utils_Goap_UE;
-	friend class FProcessor_Goap_Setup;
-	friend class FProcessor_Goap_HandleRequests;
-
-private:
-	goap::FKeyRegistry _Registry;
-
-public:
-	CK_PROPERTY_GET(_Registry);
-
-	// Mutable accessor — public so runtime Set_WorldStateValue_* helpers can
-	// register tags on-demand when the gym seeds world state BEFORE the Setup
-	// processor has run (same reason Get_MutableWorldState exists on
-	// FFragment_Goap_WorldState). Setup later scans actions/goals with
-	// FindOrRegister, which collapses onto these already-registered keys.
-	auto Get_MutableRegistry() -> goap::FKeyRegistry& { return _Registry; }
-};
-
-// ====================================================================================================================
-// WORLD STATE FRAGMENT
-// ====================================================================================================================
-
-struct CKGOAP_API FFragment_Goap_WorldState
-{
-public:
-	CK_GENERATED_BODY(FFragment_Goap_WorldState);
-
-	friend class UCk_Utils_Goap_UE;
-	friend class FProcessor_Goap_HandleRequests;
-
-private:
-	goap::FWorldState _WorldState;
-
-public:
-	CK_PROPERTY_GET(_WorldState);
-
-	// Mutable accessor — public so the typed Set_WorldStateValue_* utility
-	// helpers (which live in an anonymous namespace, not inside the friend
-	// Utils class) can mutate values in place via FWorldState's own public
-	// typed setters. Read-only callers continue to use the const Get_WorldState.
-	auto Get_MutableWorldState() -> goap::FWorldState& { return _WorldState; }
-};
 
 // ====================================================================================================================
 // ACTION CLASSES FRAGMENT — Registered action EntityScript classes (set during Add)
@@ -234,7 +178,6 @@ public:
 
 	using RequestType = std::variant<
 		FCk_Request_Goap_Plan,
-		FCk_Request_Goap_SetWorldState,
 		FCk_Request_Goap_CancelPlan,
 		FCk_Request_Goap_SetReplanInterval,
 		FCk_Request_Goap_SetReplanPolicy,

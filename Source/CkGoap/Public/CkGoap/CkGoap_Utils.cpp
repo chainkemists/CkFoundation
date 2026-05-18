@@ -49,8 +49,6 @@ namespace
 		-> void
 	{
 		InTargetEntity.Add<ck::FTag_Goap_RequiresSetup>();
-		InTargetEntity.Add<ck::FFragment_Goap_KeyRegistry>();
-		InTargetEntity.Add<ck::FFragment_Goap_WorldState>();
 		InTargetEntity.Add<ck::FFragment_Goap_Current>();
 		InTargetEntity.Add<ck::FFragment_Goap_ActionClasses>();
 		InTargetEntity.Add<ck::FFragment_Goap_Actions>();
@@ -101,6 +99,11 @@ auto
 		InOwner)
 	{ return Cast(InOwner); }
 
+	CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_WorldStateSource()),
+		TEXT("GOAP planner under owner [{}] requires a valid _WorldStateSource — create one via utils_goap_worldstate::Create and pass its handle in params."),
+		InOwner)
+	{ return {}; }
+
 	DoStampGoapFragments(InOwner, InParams);
 
 	return Cast(InOwner);
@@ -121,6 +124,11 @@ auto
 	CK_ENSURE_IF_NOT(InName.IsValid(),
 		TEXT("Invalid name passed to Create for GOAP planner under owner [{}]"),
 		InOwner)
+	{ return {}; }
+
+	CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_WorldStateSource()),
+		TEXT("GOAP planner [{}] under owner [{}] requires a valid _WorldStateSource — create one via utils_goap_worldstate::Create and pass its handle in params."),
+		InName, InOwner)
 	{ return {}; }
 
 	auto GoapEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_Goap>(InOwner);
@@ -181,42 +189,17 @@ auto
 }
 
 // ====================================================================================================================
-// WORLD STATE
+// WORLD STATE SOURCE ACCESS
 // ====================================================================================================================
 
 auto
 	UCk_Utils_Goap_UE::
-	Set_WorldStateValue(FCk_Handle_Goap& InGoap, FGameplayTag InKey, bool InValue)
-	-> FCk_Handle_Goap
+	Get_WorldStateSource(const FCk_Handle_Goap& InGoap)
+	-> FCk_Handle_Goap_WorldState
 {
-	return DoAddRequest(InGoap, FCk_Request_Goap_SetWorldState{InKey, InValue});
-}
-
-auto
-	UCk_Utils_Goap_UE::
-	Get_WorldStateValue(const FCk_Handle_Goap& InGoap, FGameplayTag InKey)
-	-> bool
-{
-	if (NOT ck::IsValid(InGoap)) { return false; }
-	if (NOT InGoap.Has<ck::FFragment_Goap_KeyRegistry>()) { return false; }
-
-	const auto& Registry = InGoap.Get<ck::FFragment_Goap_KeyRegistry>().Get_Registry();
-	const auto Key = Registry.Find(InKey);
-	if (Key == ck::goap::InvalidGoapKey) { return false; }
-
-	const auto& WS = InGoap.Get<ck::FFragment_Goap_WorldState>().Get_WorldState();
-	return WS.Get(Key);
-}
-
-auto
-	UCk_Utils_Goap_UE::
-	Has_WorldStateKey(const FCk_Handle_Goap& InGoap, FGameplayTag InKey)
-	-> bool
-{
-	if (NOT ck::IsValid(InGoap)) { return false; }
-	if (NOT InGoap.Has<ck::FFragment_Goap_KeyRegistry>()) { return false; }
-	const auto& Registry = InGoap.Get<ck::FFragment_Goap_KeyRegistry>().Get_Registry();
-	return Registry.Find(InKey) != ck::goap::InvalidGoapKey;
+	CK_ENSURE_IF_NOT(ck::IsValid(InGoap), TEXT("Invalid GOAP handle in Get_WorldStateSource"))
+	{ return {}; }
+	return InGoap.Get<ck::FFragment_Goap_Params>().Get_WorldStateSource();
 }
 
 // ====================================================================================================================

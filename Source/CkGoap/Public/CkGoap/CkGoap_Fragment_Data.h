@@ -4,6 +4,8 @@
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkGoap/WorldState/CkGoap_WorldState_Fragment_Data.h"
+
 #include "CkGoap_Fragment_Data.generated.h"
 
 // ====================================================================================================================
@@ -112,12 +114,22 @@ private:
 		meta = (AllowPrivateAccess = true))
 	bool _PlanOnStart = true;
 
+	// The WorldState entity this planner reads, writes, and replan-subscribes
+	// to. Required: Add / Create ensures the handle is valid and bails when
+	// not. Multiple planners pointing at the same WorldState observe each
+	// other's writes through the WS's OnValueChanged signal — hierarchical
+	// GOAP topologies are expressed by sharing this handle across planners.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (AllowPrivateAccess = true))
+	FCk_Handle_Goap_WorldState _WorldStateSource;
+
 public:
 	CK_PROPERTY(_SearchBudgetMicroseconds);
 	CK_PROPERTY(_CostThreshold);
 	CK_PROPERTY(_ReplanPolicy);
 	CK_PROPERTY(_MinReplanIntervalSeconds);
 	CK_PROPERTY(_PlanOnStart);
+	CK_PROPERTY(_WorldStateSource);
 };
 
 // ====================================================================================================================
@@ -254,33 +266,6 @@ private:
 
 public:
 	CK_PROPERTY(_SpecificGoalClass);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Request_Goap_SetWorldState
-{
-	GENERATED_BODY()
-
-public:
-	CK_GENERATED_BODY(FCk_Request_Goap_SetWorldState);
-
-private:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,
-		meta = (AllowPrivateAccess = true))
-	FGameplayTag _Key;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,
-		meta = (AllowPrivateAccess = true))
-	bool _Value = false;
-
-public:
-	CK_PROPERTY_GET(_Key);
-	CK_PROPERTY_GET(_Value);
-
-public:
-	CK_DEFINE_CONSTRUCTORS(FCk_Request_Goap_SetWorldState, _Key, _Value);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

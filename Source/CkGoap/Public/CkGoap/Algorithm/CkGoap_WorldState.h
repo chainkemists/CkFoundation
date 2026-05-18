@@ -18,9 +18,10 @@
 //
 // Values are bools only. Gameplay code can compute whatever it wants in the
 // wider world (numeric economies, distances, enum machines) and write the
-// derived boolean truth into WorldState via utility calls — e.g.
-// `Set_WorldStateValue(Tag_HasEnoughFood, ActualFood >= Threshold)`. The
-// planner only ever sees and regresses over bools, which is what makes
+// derived boolean truth into a shared GOAP WorldState entity via utility
+// calls — e.g.
+// `utils_goap_worldstate::Set_Value(WS, Tag_HasEnoughFood, ActualFood >= Threshold)`.
+// The planner only ever sees and regresses over bools, which is what makes
 // GOAP tractable.
 //
 // WorldState encoding:  uint8{0 = false, 1 = true} — initial all-zero.
