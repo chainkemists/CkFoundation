@@ -9,8 +9,11 @@
 
 ## Key API
 
-- `UCk_Utils_EntityTag_UE::Add(InHandle, FName)` — add a named tag.
+- `UCk_Utils_EntityTag_UE::Add(InHandle, FName)` — add a named tag. `NAME_None` is rejected at the boundary (Display log, no-op) to prevent default-initialised names from polluting `ForEach_Entity(NAME_None)` queries.
+- `Add_UsingGameplayTag(InHandle, FGameplayTag)` — same as Add via `Tag.GetTagName()`; an empty `FGameplayTag` reduces to NAME_None and is rejected by the same boundary.
 - Standard Has, Remove, query operations.
+
+> **Single-slot per entity.** `Add` and `Add_UsingGameplayTag` share one storage slot. A second Add (either flavor) on an entity that already has an EntityTag will hit entt's per-fragment uniqueness assertion (surfaces as a CK_ENSURE). Either gate calls on `Has(...)` or design entities so the tag is set once at construction.
 
 ---
 
