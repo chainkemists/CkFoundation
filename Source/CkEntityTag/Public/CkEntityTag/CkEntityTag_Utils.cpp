@@ -1,6 +1,7 @@
 #include "CkEntityTag_Utils.h"
 
 #include "CkEntityTag/CkEntityTag_Fragment.h"
+#include "CkEntityTag/CkEntityTag_Log.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -14,6 +15,13 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
         TEXT("Unable to add EntityTag [{}] to Handle [{}] that is INVALID"), InTag, InHandle)
     { return {}; }
+
+    if (InTag.IsNone())
+    {
+        ck::entity_tag::Display(
+            TEXT("EntityTag Add ignored: NAME_None is not a valid tag. Entity [{}]"), InHandle);
+        return InHandle;
+    }
 
     auto Params = ck::FFragment_EntityTag_Params{InTag};
     InHandle.Add<ck::FFragment_EntityTag_Params>(Params);
