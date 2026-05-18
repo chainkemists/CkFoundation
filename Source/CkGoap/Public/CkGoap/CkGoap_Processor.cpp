@@ -70,15 +70,23 @@ auto
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
+		const FFragment_Goap_Params& InParams,
 		const FFragment_Goap_ActionClasses& InActionClasses,
 		const FFragment_Goap_GoalClasses& InGoalClasses,
-		FFragment_Goap_KeyRegistry& InKeyRegistry,
 		FFragment_Goap_Actions& InActions,
 		FFragment_Goap_Goals& InGoals,
 		FFragment_Goap_Diagnostics& InDiagnostics)
 	-> void
 {
 	InHandle.Remove<FTag_Goap_RequiresSetup>();
+
+	auto Source = InParams.Get_WorldStateSource();
+	CK_ENSURE_IF_NOT(ck::IsValid(Source),
+		TEXT("GOAP planner [{}] Setup failed — _WorldStateSource is invalid (was the source destroyed before Setup ran?)."),
+		InHandle)
+	{ return; }
+
+	auto& SourceRegistry = Source.Get<FFragment_Goap_WorldState_KeyRegistry>().Get_MutableRegistry();
 
 	// Local scratch structs — avoid the nested-TPair nightmare.
 	struct FRawActionEntry
@@ -133,28 +141,24 @@ auto
 		RawGoals.Add(MoveTemp(Entry));
 	}
 
-	// -- Phase 2: build the key registry by scanning every referenced tag ---
-	// Do NOT reset the registry here. Gyms seed world state in DoConstruct
-	// (a frame before Setup runs), which grows the registry on-demand via
-	// FindOrRegister in CkGoap_Utils::DoSetTyped. Resetting would orphan
-	// those WorldState slots (values sit at stale indices while the registry
-	// renumbers tags in CDO-iteration order). Additive registration preserves
-	// the gym's pre-seeded indices and lets Setup add any tags that only
-	// appear in CDOs but weren't seeded.
+	// -- Phase 2: register every referenced tag in the shared source registry.
+	// Multiple planners pointing at the same source contribute their keys
+	// additively — FindOrRegister is idempotent so the same tag from two
+	// planners resolves to the same slot.
 	for (const auto& Entry : RawActions)
 	{
-		for (const auto& Pre : Entry.Preconditions) { InKeyRegistry._Registry.FindOrRegister(Pre.Key); }
-		for (const auto& Eff : Entry.Effects)       { InKeyRegistry._Registry.FindOrRegister(Eff.Key); }
+		for (const auto& Pre : Entry.Preconditions) { SourceRegistry.FindOrRegister(Pre.Key); }
+		for (const auto& Eff : Entry.Effects)       { SourceRegistry.FindOrRegister(Eff.Key); }
 	}
 	for (const auto& Entry : RawGoals)
 	{
-		for (const auto& C : Entry.Conditions) { InKeyRegistry._Registry.FindOrRegister(C.Key); }
+		for (const auto& C : Entry.Conditions) { SourceRegistry.FindOrRegister(C.Key); }
 	}
 
-	if (InKeyRegistry._Registry.Num() > goap::WorldState_MaxKeys)
+	if (SourceRegistry.Num() > goap::WorldState_MaxKeys)
 	{
-		ck::goap::Warning(TEXT("GOAP [{}] has more distinct world-state keys ({}) than MAX_KEYS ({}). Excess keys will be rejected."),
-			InHandle, InKeyRegistry._Registry.Num(), goap::WorldState_MaxKeys);
+		ck::goap::Warning(TEXT("GOAP WorldState [{}] (source of planner [{}]) has more distinct keys ({}) than MAX_KEYS ({}). Excess keys will be rejected."),
+			Source, InHandle, SourceRegistry.Num(), goap::WorldState_MaxKeys);
 	}
 
 	// -- Phase 3: resolve raw → typed ActionDef / GoalDef -------------------
@@ -171,12 +175,12 @@ auto
 
 		for (const auto& Pre : Raw.Preconditions)
 		{
-			const auto Resolved = ResolveCondition(InKeyRegistry._Registry, Pre);
+			const auto Resolved = ResolveCondition(SourceRegistry, Pre);
 			if (Resolved.IsValid()) { Def.Preconditions.Add(Resolved); }
 		}
 		for (const auto& Eff : Raw.Effects)
 		{
-			const auto Resolved = ResolveEffect(InKeyRegistry._Registry, Eff);
+			const auto Resolved = ResolveEffect(SourceRegistry, Eff);
 			if (Resolved.IsValid()) { Def.Effects.Add(Resolved); }
 		}
 
@@ -196,7 +200,7 @@ auto
 
 		for (const auto& C : Raw.Conditions)
 		{
-			const auto Resolved = ResolveCondition(InKeyRegistry._Registry, C);
+			const auto Resolved = ResolveCondition(SourceRegistry, C);
 			if (Resolved.IsValid()) { Def.Conditions.Add(Resolved); }
 		}
 
@@ -223,12 +227,10 @@ auto
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
-		FFragment_Goap_KeyRegistry& InKeyRegistry,
 		FFragment_Goap_Actions& InActions,
 		const FFragment_Goap_Goals& InGoals,
 		FFragment_Goap_Params& InParams,
 		FFragment_AStar_Params& InAStarParams,
-		FFragment_Goap_WorldState& InWorldState,
 		FFragment_Goap_Current& InCurrent,
 		const FFragment_Goap_Requests& InRequests,
 		FFragment_Goap_SearchState& InSearchState,
@@ -245,12 +247,8 @@ auto
 
 			if constexpr (std::is_same_v<T, FCk_Request_Goap_Plan>)
 			{
-				DoHandleRequest(InHandle, InKeyRegistry, InActions, InGoals, InWorldState, InCurrent,
+				DoHandleRequest(InHandle, InParams, InActions, InGoals, InCurrent,
 					InSearchState, InResult, InPlanContext, InDiagnostics, InTypedRequest);
-			}
-			else if constexpr (std::is_same_v<T, FCk_Request_Goap_SetWorldState>)
-			{
-				DoHandleRequest(InHandle, InKeyRegistry, InWorldState, InTypedRequest);
 			}
 			else if constexpr (std::is_same_v<T, FCk_Request_Goap_CancelPlan>)
 			{
@@ -288,10 +286,9 @@ auto
 	FProcessor_Goap_HandleRequests::
 	DoHandleRequest(
 		HandleType InHandle,
-		const FFragment_Goap_KeyRegistry& InKeyRegistry,
+		const FFragment_Goap_Params& InParams,
 		const FFragment_Goap_Actions& InActions,
 		const FFragment_Goap_Goals& InGoals,
-		FFragment_Goap_WorldState& InWorldState,
 		FFragment_Goap_Current& InCurrent,
 		FFragment_Goap_SearchState& InSearchState,
 		FFragment_Goap_Result& InResult,
@@ -308,12 +305,26 @@ auto
 
 	++InCurrent._PlanAttemptCount;
 
+	auto Source = InParams.Get_WorldStateSource();
+	if (NOT ck::IsValid(Source))
+	{
+		InCurrent._PlanStatus = ECk_GoapPlanStatus::PlanFailed;
+		InCurrent._Plan.Reset();
+		InCurrent._PlanCost = 0.0f;
+		InCurrent._ActiveGoalClass = nullptr;
+		UUtils_Signal_OnGoapPlanFailed::Broadcast(InHandle,
+			MakePayload(InHandle, FCk_Goap_Payload_OnPlanFailed{}));
+		return;
+	}
+
+	const auto& SourceWorldState = Source.Get<FFragment_Goap_WorldState_Values>().Get_Values();
+
 	// -- Goal selection ------------------------------------------------------
 	const auto IsGoalSatisfied = [&](const goap::FGoalDef& InGoal) -> bool
 	{
 		for (const auto& C : InGoal.Conditions)
 		{
-			if (NOT InWorldState._WorldState.Satisfies(C)) { return false; }
+			if (NOT SourceWorldState.Satisfies(C)) { return false; }
 		}
 		return true;
 	};
@@ -393,10 +404,11 @@ auto
 	InCurrent._PlanCost = 0.0f;
 
 	// -- Build graph and launch search --------------------------------------
-	const auto GoalConditions = BuildConstraintSet(InKeyRegistry._Registry, SelectedGoal->Conditions);
+	const auto& SourceRegistry = Source.Get<FFragment_Goap_WorldState_KeyRegistry>().Get_Registry();
+	const auto GoalConditions = BuildConstraintSet(SourceRegistry, SelectedGoal->Conditions);
 
 	auto Graph = goap::FGoapGraph{
-		InWorldState._WorldState,
+		SourceWorldState,
 		InActions._ActionDefs,
 		GoalConditions};
 
@@ -415,35 +427,6 @@ auto
 	InResult._TotalTimeMicroseconds = 0;
 
 	InHandle.Add<FTag_AStar_SearchActive>();
-}
-
-// ====================================================================================================================
-// SET WORLD STATE REQUEST
-// ====================================================================================================================
-
-auto
-	FProcessor_Goap_HandleRequests::
-	DoHandleRequest(
-		HandleType InHandle,
-		FFragment_Goap_KeyRegistry& InKeyRegistry,
-		FFragment_Goap_WorldState& InWorldState,
-		const FCk_Request_Goap_SetWorldState& InRequest)
-	-> void
-{
-	// FindOrRegister covers the case where a gym seeds world-state for a tag
-	// that Setup hasn't encountered yet (same-frame ordering). Keys added here
-	// are picked up by Setup's later FindOrRegister calls when scanning
-	// action/goal CDOs, so nothing is orphaned.
-	const auto Key = InKeyRegistry._Registry.FindOrRegister(InRequest.Get_Key());
-	if (Key == goap::InvalidGoapKey) { return; }
-
-	const auto PreviousValue = InWorldState._WorldState.Get(Key);
-	InWorldState._WorldState.Set(Key, InRequest.Get_Value());
-
-	if (PreviousValue != InRequest.Get_Value())
-	{
-		InHandle.template AddOrGet<FTag_Goap_Dirty_WorldState>();
-	}
 }
 
 // ====================================================================================================================

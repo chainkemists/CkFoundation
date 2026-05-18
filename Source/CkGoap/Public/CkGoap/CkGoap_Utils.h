@@ -81,30 +81,19 @@ public:
 		TSubclassOf<UCk_GoapGoal_EntityScript> InGoalClass);
 
 	// ================================================================================================================
-	// WORLD STATE — TYPED
+	// WORLD STATE
 	// ================================================================================================================
 	//
-	// Keys must be registered before use. A key is registered when it appears
-	// in any action's precondition/effect or any goal's condition — the Setup
-	// processor scans all CDOs and populates the key registry once. Setting
-	// a value on a tag that wasn't registered is a silent no-op (warned in
-	// Verbose logs).
-
-	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP",
-		DisplayName = "[Ck][GOAP] Set World State Value")
-	static FCk_Handle_Goap
-	Set_WorldStateValue(
-		UPARAM(ref) FCk_Handle_Goap& InGoap, FGameplayTag InKey, bool InValue);
+	// World state lives on the FCk_Handle_Goap_WorldState entity referenced by
+	// FCk_Fragment_Goap_ParamsData::_WorldStateSource. Read and write that
+	// entity directly via utils_goap_worldstate::Set_Value / Get_Value /
+	// Has_Key. Use Get_WorldStateSource below to retrieve the WS handle
+	// associated with a given planner.
 
 	UFUNCTION(BlueprintPure, Category = "Ck|GOAP",
-		DisplayName = "[Ck][GOAP] Get World State Value")
-	static bool
-	Get_WorldStateValue(const FCk_Handle_Goap& InGoap, FGameplayTag InKey);
-
-	UFUNCTION(BlueprintPure, Category = "Ck|GOAP",
-		DisplayName = "[Ck][GOAP] Has World State Key")
-	static bool
-	Has_WorldStateKey(const FCk_Handle_Goap& InGoap, FGameplayTag InKey);
+		DisplayName = "[Ck][GOAP] Get WorldState Source")
+	static FCk_Handle_Goap_WorldState
+	Get_WorldStateSource(const FCk_Handle_Goap& InGoap);
 
 	// ================================================================================================================
 	// DYNAMIC COST UPDATE
