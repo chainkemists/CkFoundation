@@ -6,7 +6,6 @@
 // ====================================================================================================================
 
 class UCk_GoapAction_EntityScript;
-class UCk_GoapGoal_EntityScript;
 
 // ====================================================================================================================
 
@@ -29,18 +28,6 @@ struct FActionDef
 	// Tier's _TierTag in the same bundle, that tier auto-activates as a
 	// sub-tier. Leave invalid (default) for "leaf" actions.
 	FGameplayTag ActionTag;
-};
-
-// ====================================================================================================================
-// GOAL DEF — Lightweight goal metadata extracted from EntityScript CDO
-// ====================================================================================================================
-
-struct FGoalDef
-{
-	int32 GoalIndex = INDEX_NONE;
-	TArray<FWorldStateCondition> Conditions;
-	int32 Priority = 0;
-	TSubclassOf<UCk_GoapGoal_EntityScript> GoalClass;
 };
 
 // ====================================================================================================================
