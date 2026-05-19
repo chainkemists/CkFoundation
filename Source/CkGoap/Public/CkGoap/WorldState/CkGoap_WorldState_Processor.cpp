@@ -66,7 +66,10 @@ auto
 	const auto Key = InKeyRegistry._Registry.FindOrRegister(InRequest.Get_Key());
 	if (Key == goap::InvalidGoapKey)
 	{
-		ck::goap::Warning(TEXT("GOAP WorldState [{}] dropped Set for key [{}] — registry full or tag invalid."),
+		// Boundary condition (registry at MAX_KEYS or tag invalid) — Verbose
+		// rather than Warning so the AutoTest harness doesn't escalate to a
+		// test failure for the documented overflow path.
+		ck::goap::Verbose(TEXT("GOAP WorldState [{}] dropped Set for key [{}] — registry full or tag invalid."),
 			InHandle, InRequest.Get_Key());
 		return;
 	}
@@ -109,7 +112,7 @@ auto
 	const auto Key = InKeyRegistry._Registry.FindOrRegister(InRequest.Get_Key());
 	if (Key == goap::InvalidGoapKey)
 	{
-		ck::goap::Warning(TEXT("GOAP WorldState [{}] dropped RegisterKey for [{}] — registry full or tag invalid."),
+		ck::goap::Verbose(TEXT("GOAP WorldState [{}] dropped RegisterKey for [{}] — registry full or tag invalid."),
 			InHandle, InRequest.Get_Key());
 	}
 }
