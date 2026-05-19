@@ -2,6 +2,8 @@
 
 #include "CkGoap_WorldState_Fragment_Data.h"
 
+#include "CkGoap/CkGoap_Fragment_Data.h"
+
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
@@ -75,6 +77,27 @@ public:
 	Request_RegisterKey(
 		UPARAM(ref) FCk_Handle_Goap_WorldState& InWorldState,
 		FGameplayTag InKey);
+
+	// ================================================================================================================
+	// SUBSCRIBERS
+	// ================================================================================================================
+	//
+	// Registering a planner as a subscriber on a WorldState causes that planner
+	// to be tagged with FTag_Goap_Dirty_WorldState whenever a Set request on
+	// this WorldState actually changes a key's value — which feeds the planner's
+	// AutoReplan throttle for OnWorldStateDirty / OnEitherDirty policies.
+	//
+	// utils_goap::Add / Create call this automatically with the planner that
+	// was just created. Manual callers don't typically need to invoke it —
+	// it's exposed mainly for completeness and for callers that point an
+	// already-existing planner at a different WorldState mid-life.
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|WorldState",
+		DisplayName = "[Ck][GOAP|WS] Request Add Planner Subscriber")
+	static FCk_Handle_Goap_WorldState
+	Request_AddPlannerSubscriber(
+		UPARAM(ref) FCk_Handle_Goap_WorldState& InWorldState,
+		UPARAM(ref) FCk_Handle_Goap& InPlanner);
 
 	// ================================================================================================================
 	// SIGNAL BINDING

@@ -51,6 +51,7 @@ namespace
 		// stamping here.
 		InTargetEntity.Add<ck::FFragment_Goap_WorldState_KeyRegistry>();
 		InTargetEntity.Add<ck::FFragment_Goap_WorldState_Values>();
+		InTargetEntity.Add<ck::FFragment_Goap_WorldState_Subscribers>();
 	}
 }
 
@@ -136,6 +137,30 @@ auto
 	-> FCk_Handle_Goap_WorldState
 {
 	return DoAddRequest(InWorldState, FCk_Request_Goap_WorldState_RegisterKey{InKey});
+}
+
+// ====================================================================================================================
+// SUBSCRIBERS
+// ====================================================================================================================
+
+auto
+	UCk_Utils_Goap_WorldState_UE::
+	Request_AddPlannerSubscriber(
+		FCk_Handle_Goap_WorldState& InWorldState,
+		FCk_Handle_Goap& InPlanner)
+	-> FCk_Handle_Goap_WorldState
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InWorldState),
+		TEXT("Invalid WorldState handle when adding planner subscriber"))
+	{ return InWorldState; }
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid planner handle when adding as subscriber to WorldState [{}]"),
+		InWorldState)
+	{ return InWorldState; }
+
+	auto& Subscribers = InWorldState.Get<ck::FFragment_Goap_WorldState_Subscribers>();
+	Subscribers._Subscribers.AddUnique(InPlanner);
+	return InWorldState;
 }
 
 // ====================================================================================================================
