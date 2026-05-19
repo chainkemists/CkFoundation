@@ -85,11 +85,14 @@ private:
     FCk_Sfx_AudioSettings _DefaultAudioSettings;
 
 public:
-    CK_PROPERTY(_Name);
-    CK_PROPERTY(_SoundCue);
-    CK_PROPERTY(_AttenuationSettings);
-    CK_PROPERTY(_ConcurrencySettings);
-    CK_PROPERTY(_DefaultAudioSettings);
+    CK_PROPERTY_GET(_Name);
+    CK_PROPERTY_GET(_SoundCue);
+    CK_PROPERTY_GET(_AttenuationSettings);
+    CK_PROPERTY_GET(_ConcurrencySettings);
+    CK_PROPERTY_GET(_DefaultAudioSettings);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Sfx_ParamsData, _Name, _SoundCue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

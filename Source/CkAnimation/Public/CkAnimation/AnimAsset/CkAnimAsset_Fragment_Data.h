@@ -29,12 +29,6 @@ struct CKANIMATION_API FCk_AnimAsset_Animation
 public:
     CK_GENERATED_BODY(FCk_AnimAsset_Animation);
 
-public:
-    FCk_AnimAsset_Animation() = default;
-    FCk_AnimAsset_Animation(
-        const FGameplayTag& InID,
-        UAnimationAsset* InAnimation);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, Categories = "AnimAsset"))
@@ -53,10 +47,13 @@ private:
     FName _SectionName = NAME_None;
 
 public:
-    CK_PROPERTY(_Animation);
-    CK_PROPERTY(_ID);
-    CK_PROPERTY(_BlendSpace);
+    CK_PROPERTY_GET(_Animation);
+    CK_PROPERTY_GET(_ID);
+    CK_PROPERTY_GET(_BlendSpace);
     CK_PROPERTY(_SectionName);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_AnimAsset_Animation, _ID, _Animation);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

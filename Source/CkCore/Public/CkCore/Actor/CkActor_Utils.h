@@ -35,12 +35,6 @@ struct CKCORE_API FCk_Utils_Actor_SpawnActor_Params
 public:
     CK_GENERATED_BODY(FCk_Utils_Actor_SpawnActor_Params);
 
-public:
-    FCk_Utils_Actor_SpawnActor_Params() = default;
-    FCk_Utils_Actor_SpawnActor_Params(
-        UObject* InOwnerOrWorld,
-        TSubclassOf<AActor> InActorClass);
-
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     TWeakObjectPtr<UObject> _OwnerOrWorld;
@@ -70,8 +64,8 @@ protected:
     ECk_Utils_Actor_SpawnActorPolicy _SpawnPolicy = ECk_Utils_Actor_SpawnActorPolicy::Default;
 
 public:
-    CK_PROPERTY(_OwnerOrWorld);
-    CK_PROPERTY(_ActorClass);
+    CK_PROPERTY_GET(_OwnerOrWorld);
+    CK_PROPERTY_GET(_ActorClass);
 
     CK_PROPERTY(_Archetype);
     CK_PROPERTY(_NonUniqueName);
@@ -80,6 +74,9 @@ public:
     CK_PROPERTY(_CollisionHandlingOverride);
     CK_PROPERTY(_NetworkingType);
     CK_PROPERTY(_SpawnPolicy);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Utils_Actor_SpawnActor_Params, _OwnerOrWorld, _ActorClass);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
