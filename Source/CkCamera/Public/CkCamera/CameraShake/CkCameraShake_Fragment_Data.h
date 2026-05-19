@@ -104,11 +104,11 @@ private:
 public:
     CK_PROPERTY_GET(_Name);
     CK_PROPERTY_GET(_CameraShake);
-    CK_PROPERTY(_Scale);
-    CK_PROPERTY(_OrientTowardsEpicenter);
-    CK_PROPERTY(_InnerRadius);
-    CK_PROPERTY(_OuterRadius);
-    CK_PROPERTY(_Falloff);
+    CK_PROPERTY_GET(_Scale);
+    CK_PROPERTY_GET(_OrientTowardsEpicenter);
+    CK_PROPERTY_GET(_InnerRadius);
+    CK_PROPERTY_GET(_OuterRadius);
+    CK_PROPERTY_GET(_Falloff);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_CameraShake_ParamsData, _Name, _CameraShake);
