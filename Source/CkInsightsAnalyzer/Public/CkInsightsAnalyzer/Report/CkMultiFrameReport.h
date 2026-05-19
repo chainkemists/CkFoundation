@@ -29,7 +29,7 @@ struct CKINSIGHTSANALYZER_API FCk_MultiFrameReportConfig
     double MinCategoryMs = 0.3;
 
     /** Whether to include category averages section. */
-    bool bShowCategoryAverages = true;
+    bool ShowCategoryAverages = true;
 
     /** Set all individual fields from Depth. */
     auto ApplyDepth() -> void
@@ -39,22 +39,22 @@ struct CKINSIGHTSANALYZER_API FCk_MultiFrameReportConfig
         case ECkReportDepth::Full:
             WorstFrameCount = 10;
             MinCategoryMs = 0.2;
-            bShowCategoryAverages = true;
+            ShowCategoryAverages = true;
             break;
         case ECkReportDepth::Standard:
             WorstFrameCount = 5;
             MinCategoryMs = 0.3;
-            bShowCategoryAverages = true;
+            ShowCategoryAverages = true;
             break;
         case ECkReportDepth::Concise:
             WorstFrameCount = 3;
             MinCategoryMs = 0.5;
-            bShowCategoryAverages = true;
+            ShowCategoryAverages = true;
             break;
         case ECkReportDepth::HotPathsOnly:
             WorstFrameCount = 5;
             MinCategoryMs = 0.5;
-            bShowCategoryAverages = false;
+            ShowCategoryAverages = false;
             break;
         }
     }

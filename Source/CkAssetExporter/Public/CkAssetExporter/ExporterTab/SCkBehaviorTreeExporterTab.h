@@ -17,7 +17,7 @@ struct FCk_BehaviorTreeExporterTab_ResultEntry
     FString AssetName;
     FString JsonPath;
     FString TextPath;
-    bool bSuccess = false;
+    bool Succeeded = false;
     FString ErrorMessage;
 };
 

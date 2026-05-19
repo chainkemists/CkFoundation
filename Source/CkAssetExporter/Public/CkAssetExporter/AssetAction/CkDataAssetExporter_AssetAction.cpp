@@ -47,7 +47,7 @@ static auto
 
     for (const auto& Result : InResults)
     {
-        if (Result.bSuccess)
+        if (Result.Succeeded)
         {
             ++SuccessCount;
             UE_LOG(CkAssetExporter, Log, TEXT("Exported DataAsset '%s': %s, %s"),

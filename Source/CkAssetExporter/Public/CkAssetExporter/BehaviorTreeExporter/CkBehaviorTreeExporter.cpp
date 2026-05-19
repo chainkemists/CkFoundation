@@ -80,7 +80,7 @@ auto
         return Result;
     }
 
-    Result.bSuccess = true;
+    Result.Succeeded = true;
     Result.JsonFilePath = JsonPath;
     Result.TextFilePath = TextPath;
     return Result;

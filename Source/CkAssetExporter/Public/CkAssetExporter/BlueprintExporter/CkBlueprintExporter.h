@@ -22,7 +22,7 @@ struct FEdGraphPinType;
 
 struct CKASSETEXPORTER_API FCk_BlueprintExportResult
 {
-    bool bSuccess = false;
+    bool Succeeded = false;
     FString JsonFilePath;
     FString TextFilePath;
     FString ErrorMessage;

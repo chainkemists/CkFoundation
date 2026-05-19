@@ -133,7 +133,7 @@ int32
 
         FCk_FrameReportConfig ReportConfig;
         ReportConfig.TargetFrameMs = Budget;
-        ReportConfig.bShowRawTimerList = bRaw;
+        ReportConfig.ShowRawTimerList = bRaw;
         ReportConfig.RawTimerCount = RawTop;
 
         FCk_FrameReport FrameReport(ReportConfig);

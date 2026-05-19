@@ -37,14 +37,14 @@ auto SCkWatermarkInfoBar::Construct(const FArguments& InArgs) -> void
 
     TSharedRef<SHorizontalBox> Box = SNew(SHorizontalBox);
 
-    bool bFirst = true;
+    bool IsFirst = true;
     for (const FCkWatermarkInfoBarEntry& Entry : InArgs._Entries)
     {
         const TAttribute<EVisibility> EntryVis = Entry.Visibility;
 
         // Inter-item separator — shares the visibility of the entry it precedes.
         // Omitted before the first entry.
-        if (!bFirst)
+        if (!IsFirst)
         {
             Box->AddSlot()
                 .AutoWidth()
@@ -59,7 +59,7 @@ auto SCkWatermarkInfoBar::Construct(const FArguments& InArgs) -> void
                     .Visibility(EntryVis)
                 ];
         }
-        bFirst = false;
+        IsFirst = false;
 
         // Key:Value pair — collapses as a unit.
         Box->AddSlot()

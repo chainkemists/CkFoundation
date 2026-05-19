@@ -113,9 +113,9 @@ auto
     TSet<FName> Seen;
     Candidates.RemoveAll([&Seen](const FAssetData& AD)
     {
-        bool bAlready = false;
-        Seen.Add(AD.PackageName, &bAlready);
-        return bAlready;
+        bool IsAlreadySeen = false;
+        Seen.Add(AD.PackageName, &IsAlreadySeen);
+        return IsAlreadySeen;
     });
 
     Candidates.Sort([](const FAssetData& A, const FAssetData& B) { return A.PackageName.LexicalLess(B.PackageName); });
@@ -480,7 +480,7 @@ auto
     for (int32 f = 0; f < NumKeys; ++f)
     { AllFrames.Add(FFrameNumber(f)); }
 
-    bool bAnyTrackMutated = false;
+    bool AnyTrackMutated = false;
     for (const FName& BoneName : TrackNames)
     {
         TArray<FTransform> Transforms;
@@ -517,11 +517,11 @@ auto
         }
 
         Controller.SetBoneTrackKeys(BoneName, Positions, Rotations, Scales);
-        bAnyTrackMutated = true;
+        AnyTrackMutated = true;
     }
 
     // For the trim strategy, shrink the overall frame count by one.
-    if (Strategy == ECk_AnimationToolbox_RewriteStrategy::TrimFirstFrame && bAnyTrackMutated)
+    if (Strategy == ECk_AnimationToolbox_RewriteStrategy::TrimFirstFrame && AnyTrackMutated)
     {
         Controller.SetNumberOfFrames(FFrameNumber(NumKeys - 1));
     }
@@ -539,7 +539,7 @@ auto
 
     Info->Status = ECk_AnimationToolbox_Status::Fixed;
     Info->StatusMessage = TEXT("Fixed — save asset to persist (Ctrl+S)");
-    return bAnyTrackMutated;
+    return AnyTrackMutated;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
