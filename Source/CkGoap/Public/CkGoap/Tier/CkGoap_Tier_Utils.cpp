@@ -77,6 +77,9 @@ auto
 	auto& Index = InBundle.Get<ck::FFragment_Goap_Bundle_TierCatalogIndex>();
 	Index._TagToTier.Add(InParams.Get_TierTag(), TierEntity);
 
+	// Catalog mutated → re-run bundle setup (cycle detection).
+	InBundle.AddOrGet<ck::FTag_Goap_Bundle_RequiresSetup>();
+
 	// First AddTier on a bundle = the root tier. Seed the active chain.
 	auto& ActiveTiers = InBundle.Get<ck::FFragment_Goap_Bundle_ActiveTiers>();
 	if (ActiveTiers._Tiers.IsEmpty())

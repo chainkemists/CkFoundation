@@ -12,12 +12,123 @@
 
 // ====================================================================================================================
 
+CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Bundle_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Bundle_ChainUpdate);
 
 // ====================================================================================================================
 
 namespace ck
 {
+
+// ====================================================================================================================
+// SETUP — Dependency-cycle detection on the bundle's tier catalog.
+//
+// Builds a directed graph: edge T → T' if some action in T has ActionTag
+// matching T'._TierTag. DFS with three-color marking finds cycles.
+// Defers if any catalog tier hasn't completed its own Setup (i.e. has empty
+// _Actions) — keeps the tag set so we retry next frame.
+// ====================================================================================================================
+
+namespace
+{
+	struct FCycleDfs
+	{
+		const TMap<FGameplayTag, FCk_Handle_Goap_Tier>& Catalog;
+		TSet<FGameplayTag>      Visited;
+		TArray<FGameplayTag>    Path;
+		TArray<TArray<FGameplayTag>>& Cycles;
+
+		auto Visit(FGameplayTag InNode) -> void
+		{
+			if (Path.Contains(InNode))
+			{
+				// Cycle found. Capture from first occurrence onward.
+				const auto Start = Path.IndexOfByKey(InNode);
+				auto Cycle = TArray<FGameplayTag>{};
+				for (auto i = Start; i < Path.Num(); ++i) { Cycle.Add(Path[i]); }
+				Cycles.Add(MoveTemp(Cycle));
+				return;
+			}
+			if (Visited.Contains(InNode)) { return; }
+
+			Path.Push(InNode);
+
+			const auto* TierPtr = Catalog.Find(InNode);
+			if (TierPtr != nullptr)
+			{
+				const auto& Actions = TierPtr->Get<FFragment_Goap_Tier_Actions>().Get_ActionDefs();
+				for (const auto& Def : Actions)
+				{
+					if (Def.ActionTag.IsValid() && Catalog.Contains(Def.ActionTag))
+					{
+						Visit(Def.ActionTag);
+					}
+				}
+			}
+
+			Path.Pop();
+			Visited.Add(InNode);
+		}
+	};
+}
+
+auto
+	FProcessor_Goap_Bundle_Setup::
+	ForEachEntity(
+		TimeType InDeltaT,
+		HandleType InHandle,
+		FFragment_Goap_Bundle_Current& InCurrent,
+		const FFragment_Goap_Bundle_TierCatalogIndex& InCatalogIndex) -> void
+{
+	const auto& Catalog = InCatalogIndex.Get_TagToTier();
+	if (Catalog.IsEmpty())
+	{
+		// Bundle has no tiers yet — clear tag and return.
+		InHandle.Remove<FTag_Goap_Bundle_RequiresSetup>();
+		return;
+	}
+
+	// Defer if any catalog tier hasn't completed Setup yet (no _Actions
+	// extracted means we can't read ActionTags reliably).
+	for (const auto& Entry : Catalog)
+	{
+		const auto& Tier = Entry.Value;
+		if (Tier.Has<FTag_Goap_Tier_RequiresSetup>())
+		{
+			return;  // Defer; keep the bundle's RequiresSetup tag for retry.
+		}
+	}
+
+	InHandle.Remove<FTag_Goap_Bundle_RequiresSetup>();
+
+	// DFS each catalog node.
+	auto Cycles = TArray<TArray<FGameplayTag>>{};
+	auto Dfs = FCycleDfs{Catalog, {}, {}, Cycles};
+	for (const auto& Entry : Catalog)
+	{
+		Dfs.Visit(Entry.Key);
+	}
+
+	// Record cycles into the bundle's _DependencyCycles diagnostic field.
+	// (Reusing the planner-era struct; for tier cycles we put the tier-tag
+	// chain into _CycleConditions and leave _ActionsInCycle empty.)
+	InCurrent._DependencyCycles.Reset();
+	for (const auto& Cycle : Cycles)
+	{
+		InCurrent._DependencyCycles.Add(
+			FCk_GoapDiagnostic_DependencyCycle{{}, Cycle});
+
+		auto CycleStr = FString{};
+		for (const auto& Tag : Cycle)
+		{
+			if (NOT CycleStr.IsEmpty()) { CycleStr += TEXT(" -> "); }
+			CycleStr += Tag.ToString();
+		}
+		ck::goap::Verbose(
+			TEXT("Bundle [{}] dependency cycle in tier catalog: [{}]"),
+			InHandle, CycleStr);
+	}
+}
 
 // ====================================================================================================================
 // HELPERS — static members of FProcessor_Goap_Bundle_ChainUpdate so they

@@ -46,6 +46,7 @@ auto
 
 	BundleEntity.Add<ck::FFragment_Goap_Bundle_ActiveTiers>();
 	BundleEntity.Add<ck::FFragment_Goap_Bundle_TierCatalogIndex>();
+	BundleEntity.AddOrGet<ck::FTag_Goap_Bundle_RequiresSetup>();
 
 	// Register the bundle in the root's record.
 	ck::goap::internal_root::FRecordOfGoapBundles_Utils::Request_Connect(InGoap, BundleEntity);
