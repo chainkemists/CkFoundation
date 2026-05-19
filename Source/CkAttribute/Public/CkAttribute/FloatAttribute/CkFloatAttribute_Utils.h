@@ -213,6 +213,13 @@ public:
     Get_ClampOverflow(
         const FCk_Handle_FloatAttribute& InAttribute);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Float",
+              DisplayName="[Ck][FloatAttribute] Get May Require Replication This Frame")
+    static bool
+    Get_MayRequireReplicationThisFrame(
+        const FCk_Handle_FloatAttribute& InAttribute);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
