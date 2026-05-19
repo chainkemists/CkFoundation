@@ -100,7 +100,7 @@ auto
 	{ return Cast(InOwner); }
 
 	CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_WorldStateSource()),
-		TEXT("GOAP planner under owner [{}] requires a valid _WorldStateSource — create one via utils_goap_worldstate::Create and pass its handle in params."),
+		TEXT("GOAP planner under owner [{}] requires a valid _WorldStateSource — create one via utils_goap_world_state::Create and pass its handle in params."),
 		InOwner)
 	{ return {}; }
 
@@ -127,7 +127,7 @@ auto
 	{ return {}; }
 
 	CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_WorldStateSource()),
-		TEXT("GOAP planner [{}] under owner [{}] requires a valid _WorldStateSource — create one via utils_goap_worldstate::Create and pass its handle in params."),
+		TEXT("GOAP planner [{}] under owner [{}] requires a valid _WorldStateSource — create one via utils_goap_world_state::Create and pass its handle in params."),
 		InName, InOwner)
 	{ return {}; }
 
