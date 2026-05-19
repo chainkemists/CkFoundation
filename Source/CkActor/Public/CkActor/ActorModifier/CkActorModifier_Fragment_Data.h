@@ -85,10 +85,6 @@ struct CKACTOR_API FCk_AddActorComponent_Params
 public:
     CK_GENERATED_BODY(FCk_AddActorComponent_Params);
 
-    FCk_AddActorComponent_Params() = default;
-    explicit FCk_AddActorComponent_Params(
-        USceneComponent* InParent);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta=(AllowPrivateAccess = true, EditCondition = "_AttachmentType == ECk_ActorComponent_AttachmentPolicy::Attach"))
@@ -115,12 +111,15 @@ private:
     FName _AttachmentSocket;
 
 public:
-    CK_PROPERTY(_Parent);
+    CK_PROPERTY_GET(_Parent);
     CK_PROPERTY(_Tags);
     CK_PROPERTY(_IsTickEnabled);
     CK_PROPERTY(_TickInterval);
     CK_PROPERTY(_AttachmentType);
     CK_PROPERTY(_AttachmentSocket);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_AddActorComponent_Params, _Parent);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

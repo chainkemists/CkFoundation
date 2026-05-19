@@ -184,16 +184,6 @@ namespace ck::actor_utils_net_dump
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Utils_Actor_SpawnActor_Params::
-    FCk_Utils_Actor_SpawnActor_Params(
-        UObject* InOwnerOrWorld,
-        // ReSharper disable once CppPassValueParameterByConstReference
-        TSubclassOf<AActor> InActorClass)
-    :_OwnerOrWorld(InOwnerOrWorld)
-    , _ActorClass(InActorClass)
-{
-}
-
 // --------------------------------------------------------------------------------------------------------------------
 
 UCk_Utils_Actor_UE::DeferredSpawnActor_Params::
