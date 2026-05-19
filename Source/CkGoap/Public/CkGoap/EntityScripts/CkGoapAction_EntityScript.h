@@ -69,6 +69,15 @@ protected:
 	void
 	SetCost(float InCost);
 
+	// Identifies this action for the Bundle/Tier chain-update rule. When
+	// Plan[0]._ActionTag matches some Tier._TierTag in the same bundle, that
+	// tier auto-activates as the planning tier's child. Leave unset for "leaf"
+	// actions that never trigger a sub-tier.
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|Action",
+		DisplayName = "[Ck][GOAP] Set Action Tag")
+	void
+	SetActionTag(FGameplayTag InTag);
+
 	// ----------------------------------------------------------------------------------------------------------------
 	// DATA — populated by the builder API, read by FProcessor_Goap_Setup
 	// ----------------------------------------------------------------------------------------------------------------
@@ -77,6 +86,10 @@ private:
 	TArray<ck::goap::FWorldStateCondition_Raw> _Preconditions;
 	TArray<ck::goap::FWorldStateEffect_Raw>    _Effects;
 	float _Cost = 1.0f;
+	FGameplayTag _ActionTag;
+
+public:
+	auto Get_ActionTag() const -> FGameplayTag { return _ActionTag; }
 
 	friend class ck::FProcessor_Goap_Setup;
 };

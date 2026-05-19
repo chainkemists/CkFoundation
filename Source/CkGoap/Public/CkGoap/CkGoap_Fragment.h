@@ -54,6 +54,11 @@ CK_DEFINE_ECS_TAG(FTag_Goap_RequiresInitialPlan);
 
 using FFragment_Goap_Params = FCk_Fragment_Goap_ParamsData;
 
+// Bundle/Tier era: alias for the (currently-empty) root-container params.
+// Lives on the FCk_Handle_Goap entity, alongside FFragment_RecordOfGoapBundles
+// (defined in CkGoap_Utils.cpp once Phase 3 introduces the new Add verb).
+using FFragment_Goap_Root_Params = FCk_Fragment_Goap_RootParamsData;
+
 // ====================================================================================================================
 // ACTION CLASSES FRAGMENT — Registered action EntityScript classes (set during Add)
 // ====================================================================================================================
