@@ -4,6 +4,7 @@
 #include "CkGoap/EntityScripts/CkGoapGoal_EntityScript.h"
 
 #include "CkGoap/CkGoap_Fragment.h"
+#include "CkGoap/WorldState/CkGoap_WorldState_Utils.h"
 #include "CkAStar/CkAStar_Fragment.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -106,7 +107,11 @@ auto
 
 	DoStampGoapFragments(InOwner, InParams);
 
-	return Cast(InOwner);
+	auto PlannerHandle = Cast(InOwner);
+	auto SourceHandle = InParams.Get_WorldStateSource();
+	UCk_Utils_Goap_WorldState_UE::Request_AddPlannerSubscriber(SourceHandle, PlannerHandle);
+
+	return PlannerHandle;
 }
 
 auto
@@ -146,6 +151,9 @@ auto
 	FRecordOfGoapPlanners_Utils::AddIfMissing(InOwner,
 		ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 	FRecordOfGoapPlanners_Utils::Request_Connect(InOwner, GoapEntity);
+
+	auto SourceHandle = InParams.Get_WorldStateSource();
+	UCk_Utils_Goap_WorldState_UE::Request_AddPlannerSubscriber(SourceHandle, GoapEntity);
 
 	return GoapEntity;
 }
