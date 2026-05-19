@@ -69,6 +69,53 @@ enum class ECk_Goap_ReplanPolicy : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Goap_ReplanPolicy);
 
 // ====================================================================================================================
+// AUTHORED CONDITION — BlueprintType-friendly (tag, bool) pair for declaring
+// goal / initial-state entries from editor or AngelScript. The Setup processor
+// resolves these into the internal FCk_GoapKey-indexed form against the
+// WorldState registry.
+// ====================================================================================================================
+
+USTRUCT(BlueprintType)
+struct CKGOAP_API FCk_GoapWS_Condition_Authored
+{
+	GENERATED_BODY()
+
+public:
+	CK_GENERATED_BODY(FCk_GoapWS_Condition_Authored);
+
+private:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (AllowPrivateAccess = true, Categories = "Goap"))
+	FGameplayTag _Key;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (AllowPrivateAccess = true))
+	bool _Value = false;
+
+public:
+	CK_PROPERTY_GET(_Key);
+	CK_PROPERTY_GET(_Value);
+
+public:
+	CK_DEFINE_CONSTRUCTORS(FCk_GoapWS_Condition_Authored, _Key, _Value);
+};
+
+// ====================================================================================================================
+// ROOT PARAMS — the (currently-empty) param struct for the Goap root entity
+// (the per-NPC container that owns one or more bundles in the Bundle/Tier
+// model). Reserved for future global tuning; no required fields in v1.
+// ====================================================================================================================
+
+USTRUCT(BlueprintType)
+struct CKGOAP_API FCk_Fragment_Goap_RootParamsData
+{
+	GENERATED_BODY()
+
+public:
+	CK_GENERATED_BODY(FCk_Fragment_Goap_RootParamsData);
+};
+
+// ====================================================================================================================
 // PARAMS
 // ====================================================================================================================
 

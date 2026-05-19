@@ -1,0 +1,247 @@
+#pragma once
+
+#include "CkGoap/Tier/CkGoap_Tier_Fragment_Data.h"
+
+#include "CkGoap/Algorithm/CkGoap_WorldState.h"
+#include "CkGoap/Algorithm/CkGoap_Types.h"
+#include "CkGoap/Algorithm/CkGoap_Graph.h"
+
+#include "CkAStar/CkAStar_Fragment.h"
+#include "CkEcs/Signal/CkSignal_Macros.h"
+
+#include <variant>
+
+// ====================================================================================================================
+
+// Forward decls in global scope so friend lookups bind correctly.
+class UCk_Utils_Goap_Tier_UE;
+class UCk_Utils_Goap_Bundle_UE;
+
+// ====================================================================================================================
+
+namespace ck
+{
+	class FProcessor_Goap_Tier_Setup;
+	class FProcessor_Goap_Tier_HandleRequests;
+	class FProcessor_Goap_Tier_HandleResult;
+	class FProcessor_Goap_Tier_AutoReplan;
+	class FProcessor_Goap_Bundle_ChainUpdate;
+
+// ====================================================================================================================
+// TAGS — tier-scoped lifecycle
+// ====================================================================================================================
+
+	CK_DEFINE_ECS_TAG(FTag_Goap_Tier_RequiresSetup);
+	CK_DEFINE_ECS_TAG(FTag_Goap_Tier_PlanRequested);
+
+	// Set on tier activation; AutoReplan picks it up next frame to fire the
+	// first plan request. Removed by AutoReplan once consumed.
+	CK_DEFINE_ECS_TAG(FTag_Goap_Tier_RequiresInitialPlan);
+
+// ====================================================================================================================
+// PARAMS — alias to BlueprintType data
+// ====================================================================================================================
+
+	using FFragment_Goap_Tier_Params = FCk_Fragment_Goap_TierParamsData;
+
+// ====================================================================================================================
+// CURRENT — live tier state (WS resolution, goal, plan, status)
+// ====================================================================================================================
+
+	struct CKGOAP_API FFragment_Goap_Tier_Current
+	{
+	public:
+		CK_GENERATED_BODY(FFragment_Goap_Tier_Current);
+
+		friend class ::UCk_Utils_Goap_Tier_UE;
+		friend class ::UCk_Utils_Goap_Bundle_UE;
+		friend class FProcessor_Goap_Tier_Setup;
+		friend class FProcessor_Goap_Tier_HandleRequests;
+		friend class FProcessor_Goap_Tier_HandleResult;
+		friend class FProcessor_Goap_Tier_AutoReplan;
+		friend class FProcessor_Goap_Bundle_ChainUpdate;
+
+	private:
+		// Resolved at activation: override-if-set, else parent's resolved.
+		FCk_Handle_Goap_WorldState                       _WorldStateSource_Resolved;
+
+		// Live goal world state (keyed against the resolved WS's registry).
+		// Root tier: populated from _InitialGoal_RootOnly at Setup.
+		// Non-root: injected from parent action's Effects at activation.
+		TArray<goap::FWorldStateCondition>               _Goal;
+
+		// Diagnostic: parent-action Outcome keys that the child tier's
+		// resolved WS doesn't know about. Verbose-logged at injection time;
+		// surfaced via Get_InvalidGoal for the debugger.
+		TArray<FCk_GoapWS_Condition_Authored>            _InvalidGoal;
+
+		// The action class on the PARENT tier that injected this tier's
+		// current goal. nullptr for the root.
+		TSubclassOf<UCk_GoapAction_EntityScript>         _ActiveParentAction;
+
+		ECk_GoapPlanStatus                               _PlanStatus = ECk_GoapPlanStatus::Idle;
+		TArray<TSubclassOf<UCk_GoapAction_EntityScript>> _Plan;
+		float                                            _PlanCost = 0.0f;
+		int32                                            _PlanAttemptCount = 0;
+
+	public:
+		CK_PROPERTY_GET(_WorldStateSource_Resolved);
+		CK_PROPERTY_GET(_Goal);
+		CK_PROPERTY_GET(_InvalidGoal);
+		CK_PROPERTY_GET(_ActiveParentAction);
+		CK_PROPERTY_GET(_PlanStatus);
+		CK_PROPERTY_GET(_Plan);
+		CK_PROPERTY_GET(_PlanCost);
+		CK_PROPERTY_GET(_PlanAttemptCount);
+	};
+
+// ====================================================================================================================
+// ACTION CLASSES — Registered action EntityScript classes for this tier
+// ====================================================================================================================
+
+	struct CKGOAP_API FFragment_Goap_Tier_ActionClasses
+	{
+	public:
+		CK_GENERATED_BODY(FFragment_Goap_Tier_ActionClasses);
+
+		friend class ::UCk_Utils_Goap_Tier_UE;
+		friend class FProcessor_Goap_Tier_Setup;
+
+	private:
+		TArray<TSubclassOf<UCk_GoapAction_EntityScript>> _Classes;
+
+	public:
+		CK_PROPERTY_GET(_Classes);
+	};
+
+// ====================================================================================================================
+// ACTIONS — CDO-extracted action defs (same shape as the planner-era frag)
+// ====================================================================================================================
+
+	struct CKGOAP_API FFragment_Goap_Tier_Actions
+	{
+	public:
+		CK_GENERATED_BODY(FFragment_Goap_Tier_Actions);
+
+		friend class ::UCk_Utils_Goap_Tier_UE;
+		friend class FProcessor_Goap_Tier_Setup;
+		friend class FProcessor_Goap_Tier_HandleRequests;
+		friend class FProcessor_Goap_Bundle_ChainUpdate;
+
+	private:
+		TArray<goap::FActionDef> _ActionDefs;
+
+	public:
+		CK_PROPERTY_GET(_ActionDefs);
+	};
+
+// ====================================================================================================================
+// REQUESTS — per-tier request queue
+// ====================================================================================================================
+
+	struct CKGOAP_API FFragment_Goap_Tier_Requests
+	{
+	public:
+		CK_GENERATED_BODY(FFragment_Goap_Tier_Requests);
+
+		friend class ::UCk_Utils_Goap_Tier_UE;
+		friend class FProcessor_Goap_Tier_HandleRequests;
+		friend class FProcessor_Goap_Tier_AutoReplan;
+
+		using RequestType = std::variant<
+			FCk_Request_Goap_Tier_Plan,
+			FCk_Request_Goap_Tier_CancelPlan,
+			FCk_Request_Goap_Tier_SetGoal,
+			FCk_Request_Goap_Tier_SetActionCost,
+			FCk_Request_Goap_Tier_SetReplanInterval,
+			FCk_Request_Goap_Tier_SetReplanPolicy,
+			FCk_Request_Goap_Tier_SetSearchBudget,
+			FCk_Request_Goap_Tier_SetCostThreshold>;
+
+	private:
+		TArray<RequestType> _Requests;
+
+	public:
+		CK_PROPERTY_GET(_Requests);
+	};
+
+// ====================================================================================================================
+// REPLAN THROTTLE — same shape as today's, per-tier
+// ====================================================================================================================
+
+	struct CKGOAP_API FFragment_Goap_Tier_ReplanThrottle
+	{
+	public:
+		CK_GENERATED_BODY(FFragment_Goap_Tier_ReplanThrottle);
+
+		friend class FProcessor_Goap_Tier_AutoReplan;
+		friend class FProcessor_Goap_Tier_HandleRequests;
+
+	private:
+		float _SecondsSinceLastReplan = 0.0f;
+
+	public:
+		CK_PROPERTY_GET(_SecondsSinceLastReplan);
+	};
+
+// ====================================================================================================================
+// PLAN CONTEXT — Graph reference kept alive between search + result phases
+// ====================================================================================================================
+
+	struct CKGOAP_API FFragment_Goap_Tier_PlanContext
+	{
+	public:
+		CK_GENERATED_BODY(FFragment_Goap_Tier_PlanContext);
+
+		friend class FProcessor_Goap_Tier_HandleRequests;
+		friend class FProcessor_Goap_Tier_HandleResult;
+
+	private:
+		goap::FGoapGraph _Graph;
+
+	public:
+		CK_PROPERTY_GET(_Graph);
+	};
+
+// ====================================================================================================================
+// A* FRAGMENT ALIASES — concrete types per tier
+// ====================================================================================================================
+
+	using FFragment_Goap_Tier_SearchState = TFragment_AStar_SearchState<int32, goap::FGoapGraph>;
+	using FFragment_Goap_Tier_Result      = TFragment_AStar_Result<int32>;
+
+// ====================================================================================================================
+// SIGNALS — Tier-scoped
+// ====================================================================================================================
+
+	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+		CKGOAP_API,
+		OnGoap_Tier_PlanComplete,
+		FCk_Delegate_Goap_OnTierPlanComplete,
+		FCk_Handle_Goap_Tier,
+		FCk_Goap_Payload_OnPlanComplete);
+
+	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+		CKGOAP_API,
+		OnGoap_Tier_PlanFailed,
+		FCk_Delegate_Goap_OnTierPlanFailed,
+		FCk_Handle_Goap_Tier,
+		FCk_Goap_Payload_OnPlanFailed);
+
+	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+		CKGOAP_API,
+		OnGoap_Tier_Activated,
+		FCk_Delegate_Goap_OnTierActivated,
+		FCk_Handle_Goap_Tier,
+		FCk_Goap_Payload_OnTierActivated);
+
+	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+		CKGOAP_API,
+		OnGoap_Tier_Deactivated,
+		FCk_Delegate_Goap_OnTierDeactivated,
+		FCk_Handle_Goap_Tier,
+		FCk_Goap_Payload_OnTierDeactivated);
+
+// ====================================================================================================================
+
+} // namespace ck

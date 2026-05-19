@@ -24,6 +24,11 @@ struct FActionDef
 	TArray<FWorldStateEffect>    Effects;
 	float Cost = 1.0f;
 	TSubclassOf<UCk_GoapAction_EntityScript> ActionClass;
+
+	// Bundle/Tier chain-update identity. If Plan[0]'s ActionTag matches a
+	// Tier's _TierTag in the same bundle, that tier auto-activates as a
+	// sub-tier. Leave invalid (default) for "leaf" actions.
+	FGameplayTag ActionTag;
 };
 
 // ====================================================================================================================
