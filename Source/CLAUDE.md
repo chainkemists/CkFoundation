@@ -318,28 +318,45 @@ auto Get_TrackName() const -> FGameplayTag;   // Get_ prefix for getters
 auto Request_StartTrack() -> void;            // Request_ prefix for mutating functions
 
 // Function signatures
-// UFUNCTION declarations: NO trailing return type
-UFUNCTION(BlueprintCallable)
-static FCk_Handle_AudioTrack SomeFunction();
+// UFUNCTION declarations: NO trailing return type (UHT rejects them).
+// The return type goes on its own line, the function name + params on the next:
+UFUNCTION(BlueprintCallable,
+          Category = "Ck|Utils|AudioTrack",
+          DisplayName = "[Ck][AudioTrack] Some Function")
+static FCk_Handle_AudioTrack
+SomeFunction(
+    UPARAM(ref) FCk_Handle_AudioTrack& InTrack);
 
-// UFUNCTION definitions: USE trailing return type
-auto UCk_Utils_AudioTrack_UE::SomeFunction() -> FCk_Handle_AudioTrack { /* ... */ }
+// UFUNCTION definitions: USE trailing return type, broken across lines
+auto
+    UCk_Utils_AudioTrack_UE::
+    SomeFunction(
+        FCk_Handle_AudioTrack& InTrack)
+    -> FCk_Handle_AudioTrack
+{
+    /* ... */
+}
 
-// All other functions: USE trailing return type
-auto DoSomething() -> void;
+// All other (non-UFUNCTION) C++ functions: USE trailing return type even in headers
+static auto
+DoSomething(
+    const FCk_Handle& InHandle) -> void;
 
 // Construction syntax
 auto MyStruct = MyStructType{};              // Use {} for construction
 UFUNCTION(BlueprintCallable)
-static void Func(float Value = 1.0f);       // Use () for UFUNCTION defaults (UHT limitation)
+static void
+Func(float Value = 1.0f);                    // Use () for UFUNCTION defaults (UHT limitation)
 
 // Default initialization in UFUNCTIONs is DISALLOWED - remove = {}
 
 // Unreal UFUNCTION overloading: Add suffix (cannot overload)
 UFUNCTION(BlueprintCallable)
-static void DoAction();
+static void
+DoAction();
 UFUNCTION(BlueprintCallable)
-static void DoAction_Advanced();
+static void
+DoAction_Advanced();
 
 // ============================================================================
 // CRITICAL: COMMENTS AND CODE CLARITY
@@ -647,9 +664,11 @@ auto NiagaraComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
 
 // UObjects cannot use CK_DEFINE_CONSTRUCTORS - Unreal generates its own
 
-// UFUNCTION patterns:
-UFUNCTION(BlueprintCallable, Category = "Ck|Utils|AudioTrack")
-static FCk_Handle_AudioTrack // UFUNCTIONs CANNOT have trailing return types in headers
+// UFUNCTION patterns (UFUNCTIONs CANNOT have trailing return types in headers — UHT rejects them):
+UFUNCTION(BlueprintCallable,
+          Category = "Ck|Utils|AudioTrack",
+          DisplayName = "[Ck][AudioTrack] Request Play")
+static FCk_Handle_AudioTrack
 Request_Play(
     UPARAM(ref) FCk_Handle_AudioTrack& InTrack,
     const FCk_Request_AudioTrack_Play& InRequest);
