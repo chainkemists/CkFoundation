@@ -10,6 +10,7 @@ auto
 	_Preconditions.Reset();
 	_Effects.Reset();
 	_Cost = 1.0f;
+	_ActionTag = FGameplayTag{};
 
 	DoDefineAction();
 }
@@ -35,6 +36,13 @@ void
 	SetCost(float InCost)
 {
 	_Cost = InCost;
+}
+
+void
+	UCk_GoapAction_EntityScript::
+	SetActionTag(FGameplayTag InTag)
+{
+	_ActionTag = InTag;
 }
 
 // ====================================================================================================================
