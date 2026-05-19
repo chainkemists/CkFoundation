@@ -221,15 +221,20 @@ namespace ck
         using ScaleRequestType    = FCk_Request_Transform_SetScale;
         using ScaleRequestList    = TOptional<ScaleRequestType>;
 
+        using ForceRefreshRequestType = FCk_Request_Transform_ForceRefresh;
+        using ForceRefreshRequestList = TArray<ForceRefreshRequestType>;
+
     private:
         RotationRequestList _RotationRequests;
         LocationRequestList _LocationRequests;
         ScaleRequestList _ScaleRequests;
+        ForceRefreshRequestList _ForceRefreshRequests;
 
     public:
         CK_PROPERTY_GET(_RotationRequests);
         CK_PROPERTY_GET(_LocationRequests);
         CK_PROPERTY_GET(_ScaleRequests);
+        CK_PROPERTY_GET(_ForceRefreshRequests);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

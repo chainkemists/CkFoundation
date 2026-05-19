@@ -259,7 +259,7 @@ auto
         FCk_Handle_Transform& InHandle)
     -> void
 {
-    InHandle.AddOrGet<ck::FTag_Transform_Updated>();
+    InHandle.AddOrGet<ck::FFragment_Transform_Requests>()._ForceRefreshRequests.Emplace(FCk_Request_Transform_ForceRefresh{});
 }
 
 auto
@@ -457,6 +457,11 @@ auto
         FCk_Handle_Transform& InHandle)
     -> void
 {
+    // Called from inside FProcessor_Transform_HandleRequests after applying
+    // a value-changing request; the tag-add needs to land THIS frame so
+    // FireSignals (later in the frame, in Transform_Finalize) sees it.
+    // Routing through the request queue (as Request_ForceRefresh does for
+    // gameplay-side callers) would add a 1-frame delay we don't want here.
     InHandle.AddOrGet<ck::FTag_Transform_Updated>();
 }
 
