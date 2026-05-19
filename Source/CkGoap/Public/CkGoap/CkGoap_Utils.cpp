@@ -39,13 +39,6 @@ auto
 
 auto
 	UCk_Utils_Goap_UE::
-	Cast(const FCk_Handle& InHandle) -> FCk_Handle_Goap
-{
-	return UCk_Utils_Goap_UE::CastChecked(InHandle);
-}
-
-auto
-	UCk_Utils_Goap_UE::
 	Find_Bundle(
 		const FCk_Handle_Goap& InGoap,
 		FGameplayTag InBundleTag) -> FCk_Handle_Goap_Bundle

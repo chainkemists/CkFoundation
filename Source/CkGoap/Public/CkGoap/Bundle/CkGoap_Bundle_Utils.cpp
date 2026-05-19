@@ -9,6 +9,8 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Signal/CkSignal_Utils.inl.h"
 
+#include "CkLabel/CkLabel_Utils.h"
+
 // ====================================================================================================================
 
 auto
@@ -37,6 +39,10 @@ auto
 	}
 
 	auto BundleEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_Goap_Bundle>(InGoap);
+
+	// Records of bundles require GameplayLabels — label the bundle with its
+	// declared tag. Same for tiers in AddTier.
+	UCk_Utils_GameplayLabel_UE::Add(BundleEntity, InParams.Get_BundleTag());
 
 	BundleEntity.Add<ck::FFragment_Goap_Bundle_Params>(InParams);
 	BundleEntity.Add<ck::FFragment_Goap_Bundle_Current>();
