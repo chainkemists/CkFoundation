@@ -86,7 +86,7 @@ public:
 	//
 	// World state lives on the FCk_Handle_Goap_WorldState entity referenced by
 	// FCk_Fragment_Goap_ParamsData::_WorldStateSource. Read and write that
-	// entity directly via utils_goap_worldstate::Set_Value / Get_Value /
+	// entity directly via utils_goap_world_state::Set_Value / Get_Value /
 	// Has_Key. Use Get_WorldStateSource below to retrieve the WS handle
 	// associated with a given planner.
 
