@@ -1,5 +1,6 @@
 #include "CkGoap_WorldState_Processor.h"
 
+#include "CkGoap/CkGoap_Fragment.h"
 #include "CkGoap/CkGoap_Log.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
@@ -26,6 +27,7 @@ auto
 		HandleType InHandle,
 		FFragment_Goap_WorldState_KeyRegistry& InKeyRegistry,
 		FFragment_Goap_WorldState_Values& InValues,
+		FFragment_Goap_WorldState_Subscribers& InSubscribers,
 		const FFragment_Goap_WorldState_Requests& InRequests) const
 	-> void
 {
@@ -37,7 +39,7 @@ auto
 
 			if constexpr (std::is_same_v<T, FCk_Request_Goap_WorldState_SetValue>)
 			{
-				DoHandleRequest(InHandle, InKeyRegistry, InValues, InTypedRequest);
+				DoHandleRequest(InHandle, InKeyRegistry, InValues, InSubscribers, InTypedRequest);
 			}
 			else if constexpr (std::is_same_v<T, FCk_Request_Goap_WorldState_RegisterKey>)
 			{
@@ -57,6 +59,7 @@ auto
 		HandleType InHandle,
 		FFragment_Goap_WorldState_KeyRegistry& InKeyRegistry,
 		FFragment_Goap_WorldState_Values& InValues,
+		FFragment_Goap_WorldState_Subscribers& InSubscribers,
 		const FCk_Request_Goap_WorldState_SetValue& InRequest)
 	-> void
 {
@@ -76,6 +79,19 @@ auto
 	UUtils_Signal_OnGoapWorldStateValueChanged::Broadcast(InHandle,
 		MakePayload(InHandle, FCk_Goap_WorldState_Payload_OnValueChanged{
 			InRequest.Get_Key(), PreviousValue, InRequest.Get_Value()}));
+
+	// Walk subscribers; tag each planner dirty so its AutoReplan picks the
+	// change up on next tick. Lazy-prune dead handles in place.
+	for (auto Index = InSubscribers._Subscribers.Num() - 1; Index >= 0; --Index)
+	{
+		auto& Subscriber = InSubscribers._Subscribers[Index];
+		if (NOT ck::IsValid(Subscriber))
+		{
+			InSubscribers._Subscribers.RemoveAtSwap(Index);
+			continue;
+		}
+		Subscriber.template AddOrGet<FTag_Goap_Dirty_WorldState>();
+	}
 }
 
 // ====================================================================================================================

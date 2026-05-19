@@ -2,6 +2,7 @@
 
 #include "CkGoap_WorldState_Fragment_Data.h"
 
+#include "CkGoap/CkGoap_Fragment_Data.h"
 #include "CkGoap/Algorithm/CkGoap_WorldState.h"
 
 #include "CkEcs/Signal/CkSignal_Macros.h"
@@ -107,6 +108,33 @@ private:
 
 public:
 	CK_PROPERTY_GET(_Requests);
+};
+
+// ====================================================================================================================
+// SUBSCRIBERS FRAGMENT — Planner handles that should be tagged dirty on WS value change
+// ====================================================================================================================
+//
+// Populated by UCk_Utils_Goap_UE::Add / Create when the planner's params
+// reference this WorldState as their source. The HandleRequests processor
+// walks this list whenever a Set request actually changes a value, adding
+// FTag_Goap_Dirty_WorldState to each subscriber so the planner-side
+// AutoReplan picks the change up. Lazy-pruned on each walk — invalid
+// entries (destroyed planners) drop out as they're encountered, so no
+// explicit unsubscribe path is required.
+
+struct CKGOAP_API FFragment_Goap_WorldState_Subscribers
+{
+public:
+	CK_GENERATED_BODY(FFragment_Goap_WorldState_Subscribers);
+
+	friend class UCk_Utils_Goap_WorldState_UE;
+	friend class FProcessor_Goap_WorldState_HandleRequests;
+
+private:
+	TArray<FCk_Handle_Goap> _Subscribers;
+
+public:
+	CK_PROPERTY_GET(_Subscribers);
 };
 
 // ====================================================================================================================
