@@ -256,6 +256,17 @@ namespace ck
                     InRequest.GetAndDestroyRequestHandle();
                 }
             });
+
+            // Force-refresh: any pending FCk_Request_Transform_ForceRefresh
+            // means "rebroadcast OnUpdate next frame regardless of whether
+            // the transform value changed." Setting the tag here (inside
+            // HandleRequests' tick) lands in time for FireSignals to pick
+            // it up later in the same frame's Transform_Finalize group.
+            if (NOT InRequests._ForceRefreshRequests.IsEmpty())
+            {
+                InHandle.AddOrGet<FTag_Transform_Updated>();
+                InRequests._ForceRefreshRequests.Reset();
+            }
         });
 
         const auto& NewTransform = InComp.Get_Transform();
@@ -573,37 +584,35 @@ namespace ck
             return;
         }
 
-        // TODO: pre-calculate when creating FFragment_Transform_NewGoal_Location to avoid this expensive operation
-        const auto GoalDistance = InGoal.Get_InterpolationOffset().Length();
-        InGoal.Set_DeltaT(InGoal.Get_DeltaT() + InDeltaT);
-
         const auto& InterpSettings = InParams.Get_Data().Get_InterpolationSettings();
+        const auto& SmoothTime = InterpSettings.Get_SmoothLocationTime();
 
-        if (GoalDistance > InterpSettings.Get_MaxSmoothUpdateDistance())
+        const auto PrevDeltaT = InGoal.Get_DeltaT();
+        InGoal.Set_DeltaT(PrevDeltaT + InDeltaT);
+
+        if (InGoal.Get_DeltaT() > SmoothTime)
         {
-            UCk_Utils_Transform_UE::Request_AddLocationOffset
-            (
-                InHandle,
-                FCk_Request_Transform_AddLocationOffset{InGoal.Get_InterpolationOffset()}
-            );
-
+            // Terminate-and-snap: previous frames accumulated Offset * (PrevDeltaT / SmoothTime).
+            // The remaining (1 - PrevDeltaT/SmoothTime) is what we owe to land exactly on
+            // start+offset, regardless of float-accumulation drift in the per-frame sum.
+            const auto PrevFraction = FMath::Clamp(PrevDeltaT / SmoothTime, 0.0f, 1.0f);
+            const auto RemainingFraction = 1.0f - PrevFraction;
+            if (RemainingFraction > 0.0f)
+            {
+                const auto FinalOffset = InGoal.Get_InterpolationOffset() * RemainingFraction;
+                UCk_Utils_Transform_UE::Request_SetLocation
+                (
+                    InHandle,
+                    FCk_Request_Transform_SetLocation{InCurrent.Get_Transform().GetLocation() + FinalOffset}
+                );
+            }
             InHandle.Remove<MarkedDirtyBy>();
-
             return;
         }
 
         // algorithm:
         // - calculate the fraction of the goal we need to interpolate this frame
         // - add the fraction of the goal to the current location
-
-        const auto& SmoothTime = InterpSettings.Get_SmoothLocationTime();
-
-        if (InGoal.Get_DeltaT() > SmoothTime)
-        {
-            InHandle.Remove<MarkedDirtyBy>();
-            return;
-        }
-
         const auto Fraction =  FMath::Clamp(InDeltaT / SmoothTime, 0.0f, 1.0f);
         const auto GoalFraction = InGoal.Get_InterpolationOffset() * Fraction;
 
@@ -637,13 +646,26 @@ namespace ck
             return;
         }
 
-        InGoal.Set_DeltaT(InGoal.Get_DeltaT() + InDeltaT);
-
         const auto& Interpolation_Settings = InParams.Get_Data().Get_InterpolationSettings();
         const auto& SmoothTime = Interpolation_Settings.Get_SmoothRotationTime();
 
+        const auto PrevDeltaT = InGoal.Get_DeltaT();
+        InGoal.Set_DeltaT(PrevDeltaT + InDeltaT);
+
         if (InGoal.Get_DeltaT() > SmoothTime)
         {
+            // Terminate-and-snap: see location processor's matching branch.
+            const auto PrevFraction = FMath::Clamp(PrevDeltaT / SmoothTime, 0.0f, 1.0f);
+            const auto RemainingFraction = 1.0f - PrevFraction;
+            if (RemainingFraction > 0.0f)
+            {
+                const auto FinalOffset = InGoal.Get_InterpolationOffset() * RemainingFraction;
+                UCk_Utils_Transform_UE::Request_SetRotation
+                (
+                    InHandle,
+                    FCk_Request_Transform_SetRotation{InCurrent.Get_Transform().GetRotation().Rotator() + FinalOffset}
+                );
+            }
             InHandle.Remove<MarkedDirtyBy>();
             return;
         }

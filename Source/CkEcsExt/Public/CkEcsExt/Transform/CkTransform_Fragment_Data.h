@@ -40,12 +40,6 @@ private:
     ECk_Interpolation_Strategy _Strategy = ECk_Interpolation_Strategy::Linear;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
-    float _MaxSmoothUpdateDistance = 256.0f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
-    float _NoSmoothUpdateDistance = 384.0f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
     FCk_Time _SmoothLocationTime = FCk_Time{0.1f};
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
@@ -53,8 +47,6 @@ private:
 
 public:
     CK_PROPERTY(_Strategy);
-    CK_PROPERTY(_MaxSmoothUpdateDistance);
-    CK_PROPERTY(_NoSmoothUpdateDistance);
     CK_PROPERTY(_SmoothLocationTime);
     CK_PROPERTY(_SmoothRotationTime);
 };
@@ -296,6 +288,25 @@ public:
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Transform_SetTransform, _NewTransform);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Empty-payload request. Causes FProcessor_Transform_HandleRequests to add
+// FTag_Transform_Updated via the framework's dirty-tracking deferred-mutation
+// path, which then triggers FProcessor_Transform_FireSignals to rebroadcast
+// UUtils_Signal_TransformUpdate next frame even though the transform value
+// is unchanged. Routing through the request queue (instead of directly calling
+// AddOrGet<FTag_Transform_Updated> from gameplay code) is the only way to
+// correctly enroll the entity in the FireSignals MarkedDirtyBy set.
+USTRUCT(BlueprintType)
+struct CKECSEXT_API FCk_Request_Transform_ForceRefresh : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Transform_ForceRefresh);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Transform_ForceRefresh);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
