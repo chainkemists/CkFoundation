@@ -7,7 +7,7 @@
 
 // ====================================================================================================================
 
-namespace ck { class FProcessor_Goap_Setup; }
+namespace ck { class FProcessor_Goap_Setup; class FProcessor_Goap_Tier_Setup; }
 
 // ====================================================================================================================
 //
@@ -92,6 +92,7 @@ public:
 	auto Get_ActionTag() const -> FGameplayTag { return _ActionTag; }
 
 	friend class ck::FProcessor_Goap_Setup;
+	friend class ck::FProcessor_Goap_Tier_Setup;
 };
 
 // ====================================================================================================================
