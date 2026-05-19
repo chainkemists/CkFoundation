@@ -103,17 +103,17 @@ auto
     GenerateHeader(Result, Lines);
     GenerateHotPaths(Result, TimerNames, Lines);
 
-    if (_Config.bShowCategorySummary)
+    if (_Config.ShowCategorySummary)
     {
         GenerateCategorySummary(Result, TimerNames, Lines);
     }
 
-    if (_Config.bShowWorkerThreads)
+    if (_Config.ShowWorkerThreads)
     {
         GenerateWorkerThreads(Session, Result, Lines);
     }
 
-    if (_Config.bShowRawTimerList)
+    if (_Config.ShowRawTimerList)
     {
         GenerateRawTimerList(Result, TimerNames, Lines);
     }

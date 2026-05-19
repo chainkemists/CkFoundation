@@ -543,7 +543,7 @@ auto
         const TArray<FString>& EnabledBranches =
             UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BuildId_EnabledBranches();
 
-        bool bHeadMatchesAny = false;
+        bool HeadMatchesAny = false;
         for (int32 i = 0; i < CkWatermarkBuildId::BranchCount; ++i)
         {
             const FString BranchName(UTF8_TO_TCHAR(CkWatermarkBuildId::BranchNames[i]));
@@ -552,18 +552,18 @@ auto
                 continue;
             }
 
-            const bool bActive =
+            const bool IsActive =
                 BakedHead == FString(UTF8_TO_TCHAR(CkWatermarkBuildId::MergeBaseHashes[i]));
-            if (bActive) { bHeadMatchesAny = true; }
+            if (IsActive) { HeadMatchesAny = true; }
 
             FCkWatermarkInfoBarEntry BranchEntry;
             BranchEntry.Key        = FText::FromString(BranchName);
             BranchEntry.Value      = TAttribute<FText>(FText::FromString(
                                          FString(UTF8_TO_TCHAR(CkWatermarkBuildId::MergeBaseHashes[i]))));
             BranchEntry.Visibility = BuildIdVis;
-            BranchEntry.ValueColorOverride = TAttribute<FSlateColor>::CreateLambda([bActive]() -> FSlateColor
+            BranchEntry.ValueColorOverride = TAttribute<FSlateColor>::CreateLambda([IsActive]() -> FSlateColor
             {
-                return FSlateColor(bActive
+                return FSlateColor(IsActive
                     ? UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BuildId_Active_Color()
                     : UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BuildId_Inactive_Color());
             });
@@ -572,7 +572,7 @@ auto
 
         // On a feature branch, HEAD is ahead of all reference merge-bases —
         // show it explicitly so the current commit is always visible.
-        if (!bHeadMatchesAny)
+        if (!HeadMatchesAny)
         {
             FCkWatermarkInfoBarEntry HeadEntry;
             HeadEntry.Key        = FText::FromString(TEXT("HEAD"));

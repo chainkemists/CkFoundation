@@ -328,7 +328,7 @@ auto
     }
 
     // Category Averages
-    if (_Config.bShowCategoryAverages && _Stats.CategoryAverages.Num() > 0)
+    if (_Config.ShowCategoryAverages && _Stats.CategoryAverages.Num() > 0)
     {
         Lines.Add(TEXT(""));
         Lines.Add(FString::Printf(

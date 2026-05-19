@@ -60,16 +60,16 @@ struct CKINSIGHTSANALYZER_API FCk_FrameReportConfig
     int32 MaxWorkerThreads = 8;
 
     /** Whether to include the raw ranked timer list. */
-    bool bShowRawTimerList = false;
+    bool ShowRawTimerList = false;
 
     /** Number of raw timers to show (if enabled). */
     int32 RawTimerCount = 50;
 
     /** Whether to include worker thread analysis. */
-    bool bShowWorkerThreads = true;
+    bool ShowWorkerThreads = true;
 
     /** Whether to include category summary. */
-    bool bShowCategorySummary = true;
+    bool ShowCategorySummary = true;
 
     /** Set all individual fields from Depth. */
     auto ApplyDepth() -> void
@@ -83,10 +83,10 @@ struct CKINSIGHTSANALYZER_API FCk_FrameReportConfig
             MinCategoryMs = 0.2;
             MaxWorkerThreads = 12;
             MinWorkerThreadMs = 2.0;
-            bShowRawTimerList = true;
+            ShowRawTimerList = true;
             RawTimerCount = 50;
-            bShowWorkerThreads = true;
-            bShowCategorySummary = true;
+            ShowWorkerThreads = true;
+            ShowCategorySummary = true;
             break;
         case ECkReportDepth::Standard:
             MaxTreeDepth = 5;
@@ -95,26 +95,26 @@ struct CKINSIGHTSANALYZER_API FCk_FrameReportConfig
             MinCategoryMs = 0.3;
             MaxWorkerThreads = 8;
             MinWorkerThreadMs = 5.0;
-            bShowRawTimerList = false;
-            bShowWorkerThreads = true;
-            bShowCategorySummary = true;
+            ShowRawTimerList = false;
+            ShowWorkerThreads = true;
+            ShowCategorySummary = true;
             break;
         case ECkReportDepth::Concise:
             MaxTreeDepth = 3;
             MaxRootTimers = 8;
             MinInclusiveMs = 2.0;
             MinCategoryMs = 0.5;
-            bShowRawTimerList = false;
-            bShowWorkerThreads = false;
-            bShowCategorySummary = true;
+            ShowRawTimerList = false;
+            ShowWorkerThreads = false;
+            ShowCategorySummary = true;
             break;
         case ECkReportDepth::HotPathsOnly:
             MaxTreeDepth = 4;
             MaxRootTimers = 10;
             MinInclusiveMs = 1.0;
-            bShowRawTimerList = false;
-            bShowWorkerThreads = false;
-            bShowCategorySummary = false;
+            ShowRawTimerList = false;
+            ShowWorkerThreads = false;
+            ShowCategorySummary = false;
             break;
         }
     }
