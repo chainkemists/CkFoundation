@@ -145,21 +145,33 @@ auto
 
 auto
 	UCk_Utils_Goap_WorldState_UE::
-	Request_AddPlannerSubscriber(
+	Request_AddSubscriber(
 		FCk_Handle_Goap_WorldState& InWorldState,
-		FCk_Handle_Goap& InPlanner)
+		FCk_Handle& InSubscriber)
 	-> FCk_Handle_Goap_WorldState
 {
 	CK_ENSURE_IF_NOT(ck::IsValid(InWorldState),
-		TEXT("Invalid WorldState handle when adding planner subscriber"))
+		TEXT("Invalid WorldState handle when adding subscriber"))
 	{ return InWorldState; }
-	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
-		TEXT("Invalid planner handle when adding as subscriber to WorldState [{}]"),
-		InWorldState)
+	CK_ENSURE_IF_NOT(ck::IsValid(InSubscriber),
+		TEXT("Invalid subscriber handle for WorldState [{}]"), InWorldState)
 	{ return InWorldState; }
 
 	auto& Subscribers = InWorldState.Get<ck::FFragment_Goap_WorldState_Subscribers>();
-	Subscribers._Subscribers.AddUnique(InPlanner);
+	Subscribers._Subscribers.AddUnique(InSubscriber);
+	return InWorldState;
+}
+
+auto
+	UCk_Utils_Goap_WorldState_UE::
+	Request_RemoveSubscriber(
+		FCk_Handle_Goap_WorldState& InWorldState,
+		FCk_Handle& InSubscriber)
+	-> FCk_Handle_Goap_WorldState
+{
+	if (NOT ck::IsValid(InWorldState)) { return InWorldState; }
+	auto& Subscribers = InWorldState.Get<ck::FFragment_Goap_WorldState_Subscribers>();
+	Subscribers._Subscribers.RemoveSwap(InSubscriber);
 	return InWorldState;
 }
 

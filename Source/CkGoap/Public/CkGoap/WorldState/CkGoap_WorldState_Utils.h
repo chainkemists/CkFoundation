@@ -82,22 +82,28 @@ public:
 	// SUBSCRIBERS
 	// ================================================================================================================
 	//
-	// Registering a planner as a subscriber on a WorldState causes that planner
+	// Registering an entity as a subscriber on a WorldState causes that entity
 	// to be tagged with FTag_Goap_Dirty_WorldState whenever a Set request on
-	// this WorldState actually changes a key's value — which feeds the planner's
+	// this WorldState actually changes a key's value — which feeds per-tier
 	// AutoReplan throttle for OnWorldStateDirty / OnEitherDirty policies.
 	//
-	// utils_goap::Add / Create call this automatically with the planner that
-	// was just created. Manual callers don't typically need to invoke it —
-	// it's exposed mainly for completeness and for callers that point an
-	// already-existing planner at a different WorldState mid-life.
+	// In the Bundle/Tier model, tiers subscribe themselves at activation time
+	// (Bundle ChainUpdate processor) and unsubscribe at deactivation. The
+	// root tier subscribes at AddTier time. External consumers may also
+	// subscribe (e.g. for non-tier reactive systems).
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|WorldState",
+		DisplayName = "[Ck][GOAP|WS] Request Add Subscriber")
+	static FCk_Handle_Goap_WorldState
+	Request_AddSubscriber(
+		UPARAM(ref) FCk_Handle_Goap_WorldState& InWorldState,
+		UPARAM(ref) FCk_Handle& InSubscriber);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|WorldState",
-		DisplayName = "[Ck][GOAP|WS] Request Add Planner Subscriber")
+		DisplayName = "[Ck][GOAP|WS] Request Remove Subscriber")
 	static FCk_Handle_Goap_WorldState
-	Request_AddPlannerSubscriber(
+	Request_RemoveSubscriber(
 		UPARAM(ref) FCk_Handle_Goap_WorldState& InWorldState,
-		UPARAM(ref) FCk_Handle_Goap& InPlanner);
+		UPARAM(ref) FCk_Handle& InSubscriber);
 
 	// ================================================================================================================
 	// SIGNAL BINDING

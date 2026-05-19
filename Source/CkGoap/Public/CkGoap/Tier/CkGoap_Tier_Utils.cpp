@@ -5,6 +5,7 @@
 #include "CkGoap/Tier/CkGoap_Tier_Fragment.h"
 #include "CkGoap/Tier/CkGoap_Tier_Record_Internal.h"  // FFragment_RecordOfGoapTiers + utils struct
 #include "CkGoap/Bundle/CkGoap_Bundle_Utils.h"  // Find_Tier (uniqueness check)
+#include "CkGoap/WorldState/CkGoap_WorldState_Utils.h"  // Request_AddSubscriber
 #include "CkAStar/CkAStar_Fragment.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -92,11 +93,15 @@ auto
 			// Resolve WS source synchronously for the root.
 			auto& Current = TierEntity.Get<ck::FFragment_Goap_Tier_Current>();
 			Current._WorldStateSource_Resolved = InParams.Get_WorldStateSource_Override();
+
+			// Subscribe root tier to its WS so value-changes flip the dirty
+			// tag and AutoReplan fires. Non-root tiers get this hook-up in
+			// the bundle ChainUpdate processor at activation time.
+			auto WS = Current._WorldStateSource_Resolved;
+			UCk_Utils_Goap_WorldState_UE::Request_AddSubscriber(WS, TierEntity);
 		}
 
 		ActiveTiers._Tiers.Add(TierEntity);
-		// Subscriber wiring + initial-goal injection happens in the Setup
-		// processor (Phase 4) — for now we just seed the structure.
 	}
 
 	return TierEntity;

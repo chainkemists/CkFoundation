@@ -5,6 +5,7 @@
 #include "CkGoap/Algorithm/CkGoap_WorldState.h"
 #include "CkGoap/EntityScripts/CkGoapAction_EntityScript.h"
 #include "CkGoap/WorldState/CkGoap_WorldState_Fragment.h"
+#include "CkGoap/WorldState/CkGoap_WorldState_Utils.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkEcs/Signal/CkSignal_Utils.h"
@@ -80,6 +81,14 @@ auto
 	{
 		auto& Tier = InActiveTiers[i];
 		auto& Current = Tier.Get<FFragment_Goap_Tier_Current>();
+
+		// Unsubscribe the tier from its resolved WS before tearing down state.
+		if (ck::IsValid(Current._WorldStateSource_Resolved))
+		{
+			auto WS = Current._WorldStateSource_Resolved;
+			::UCk_Utils_Goap_WorldState_UE::Request_RemoveSubscriber(WS, Tier);
+		}
+
 		Current._Goal.Reset();
 		Current._InvalidGoal.Reset();
 		Current._ActiveParentAction = nullptr;
@@ -185,6 +194,13 @@ auto
 		DoInjectGoalSynchronous(CurrTier, NextActionClass, MatchingTierMutable, MatchingCurrent);
 
 		MatchingCurrent._ActiveParentAction = NextActionClass;
+
+		// Subscribe the child tier to its resolved WS for dirty propagation.
+		if (ck::IsValid(MatchingCurrent._WorldStateSource_Resolved))
+		{
+			auto WS = MatchingCurrent._WorldStateSource_Resolved;
+			::UCk_Utils_Goap_WorldState_UE::Request_AddSubscriber(WS, MatchingTierMutable);
+		}
 
 		// Append to chain and mark for re-setup + first plan.
 		Tiers.Add(MatchingTierMutable);

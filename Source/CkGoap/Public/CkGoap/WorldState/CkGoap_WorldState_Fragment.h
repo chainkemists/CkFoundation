@@ -111,16 +111,19 @@ public:
 };
 
 // ====================================================================================================================
-// SUBSCRIBERS FRAGMENT — Planner handles that should be tagged dirty on WS value change
+// SUBSCRIBERS FRAGMENT — Entity handles that should be tagged dirty on WS value change
 // ====================================================================================================================
 //
-// Populated by UCk_Utils_Goap_UE::Add / Create when the planner's params
-// reference this WorldState as their source. The HandleRequests processor
-// walks this list whenever a Set request actually changes a value, adding
-// FTag_Goap_Dirty_WorldState to each subscriber so the planner-side
-// AutoReplan picks the change up. Lazy-pruned on each walk — invalid
-// entries (destroyed planners) drop out as they're encountered, so no
-// explicit unsubscribe path is required.
+// In the Bundle/Tier model, subscribers are TIER entities (FCk_Handle_Goap_Tier).
+// The list is typed as generic FCk_Handle for two reasons:
+//   1. The WS processor needs to stamp FTag_Goap_Dirty_WorldState on the
+//      subscriber, which is a generic-handle operation.
+//   2. Future flexibility (e.g. external systems that want to react to WS
+//      changes without being a tier).
+//
+// Subscription happens at tier activation (Bundle ChainUpdate appends the
+// tier to ActiveTiers); unsubscription at deactivation. Lazy-pruned on each
+// walk — invalid entries (destroyed tiers) drop out as they're encountered.
 
 struct CKGOAP_API FFragment_Goap_WorldState_Subscribers
 {
@@ -129,9 +132,10 @@ public:
 
 	friend class UCk_Utils_Goap_WorldState_UE;
 	friend class FProcessor_Goap_WorldState_HandleRequests;
+	friend class FProcessor_Goap_Bundle_ChainUpdate;
 
 private:
-	TArray<FCk_Handle_Goap> _Subscribers;
+	TArray<FCk_Handle> _Subscribers;
 
 public:
 	CK_PROPERTY_GET(_Subscribers);
