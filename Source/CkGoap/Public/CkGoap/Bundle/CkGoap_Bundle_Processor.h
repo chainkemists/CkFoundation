@@ -13,6 +13,35 @@ namespace ck
 {
 
 // ====================================================================================================================
+// SETUP — Bundle-scoped: detect tier dependency cycles in the catalog.
+// Runs once whenever the bundle's RequiresSetup tag is set. Defers if any
+// catalog tier hasn't completed its own Setup yet.
+// ====================================================================================================================
+
+class CKGOAP_API FProcessor_Goap_Bundle_Setup : public ck_exp::TProcessor<
+	FProcessor_Goap_Bundle_Setup,
+	FCk_Handle_Goap_Bundle,
+	ck::TReadWrite<FFragment_Goap_Bundle_Current>,
+	ck::TReadOnly<FFragment_Goap_Bundle_TierCatalogIndex>,
+	FTag_Goap_Bundle_RequiresSetup,
+	CK_IGNORE_PENDING_KILL>
+{
+public:
+	using Group = FGroup_Gameplay_AI;
+
+public:
+	using TProcessor::TProcessor;
+
+public:
+	static auto
+	ForEachEntity(
+		TimeType InDeltaT,
+		HandleType InHandle,
+		FFragment_Goap_Bundle_Current& InCurrent,
+		const FFragment_Goap_Bundle_TierCatalogIndex& InCatalogIndex) -> void;
+};
+
+// ====================================================================================================================
 // CHAIN UPDATE — Walk each bundle's ActiveTiers; apply truncate / extend rule
 //                based on each tier's Plan[0]. Runs LAST in the AI group so
 //                all tiers have planned for the frame before chain mutation.
