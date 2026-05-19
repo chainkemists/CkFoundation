@@ -2,35 +2,10 @@
 
 #include "CkGoap/CkGoap_Fragment.h"
 #include "CkGoap/Bundle/CkGoap_Bundle_Fragment.h"
+#include "CkGoap/Bundle/CkGoap_Bundle_Record_Internal.h"  // FFragment_RecordOfGoapBundles + utils struct
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
-
-#include "CkRecord/Record/CkRecord_Fragment.h"
-#include "CkRecord/Record/CkRecord_Utils.h"
-
-// ====================================================================================================================
-// RECORD — root's record of bundle child entities.
-//
-// Defined in this .cpp (not the public Fragment.h) on purpose: declaring the
-// record in a public header would drag CkRecord_Fragment.h into every CkGoap
-// consumer, which forces a transitive reference to FCk_Handle_EntityExtension
-// and breaks link in dependents that don't list CkEntityExtension.
-//
-// The presence of this fragment on an entity is also the "is a GOAP root"
-// marker — Has(InHandle) checks for it.
-// ====================================================================================================================
-
-namespace ck
-{
-	CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfGoapBundles, FCk_Handle_Goap_Bundle);
-}
-
-namespace ck::goap::internal_root
-{
-	struct FRecordOfGoapBundles_Utils
-		: public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfGoapBundles> {};
-}
 
 // ====================================================================================================================
 
