@@ -305,7 +305,7 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
         return;
     }
 
-    bool bCachedStructWasNull = false;
+    bool CachedStructWasNull = false;
     auto* CueSpawnParamsStruct = _CachedSpawnParamsStruct.Get();
     if (ck::Is_NOT_Valid(CueSpawnParamsStruct))
     {
@@ -317,7 +317,7 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
         CueSpawnParamsStruct = DoGet_CueSpawnParamsStruct(CueClass, InCompilerContext);
         if (ck::IsValid(CueSpawnParamsStruct))
         {
-            bCachedStructWasNull = true;
+            CachedStructWasNull = true;
             _CachedSpawnParamsStruct = CueSpawnParamsStruct;
             _bCacheFixedThisSession = true;
         }
@@ -362,7 +362,7 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
     // was last saved — warn but allow expansion to proceed since the fallback found a
     // valid struct. Returning early here would abort node expansion, causing the compiler
     // to emit "Unexpected node type" errors that break the cook.
-    if (bCachedStructWasNull && IsRunningCommandlet())
+    if (CachedStructWasNull && IsRunningCommandlet())
     {
         InCompilerContext.MessageLog.Warning(
             *FText::Format(

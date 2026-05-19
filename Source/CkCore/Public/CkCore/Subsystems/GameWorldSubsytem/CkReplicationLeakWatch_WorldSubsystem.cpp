@@ -593,7 +593,7 @@ auto
     Tracked.Type = InType;
     Tracked.LastSeenAtSeconds = InNowSeconds;
     Tracked.SeenSamples += 1;
-    Tracked.bOwnerReplicated = IsReplicatedOwner(InOwner);
+    Tracked.OwnerIsReplicated = IsReplicatedOwner(InOwner);
 
     if (Tracked.FirstSeenAtSeconds <= 0.0)
     {
@@ -787,7 +787,7 @@ auto
 
         const auto AgeSeconds = InNowSeconds - Tracked.FirstSeenAtSeconds;
         const auto bOwnerInvalid = NOT ck::IsValid(Tracked.Owner.Get(), ck::IsValid_Policy_IncludePendingKill{});
-        const auto bOwnerNotReplicated = NOT Tracked.bOwnerReplicated;
+        const auto bOwnerNotReplicated = NOT Tracked.OwnerIsReplicated;
 
         const auto bSuspectByAge = AgeSeconds >= LeakAgeThresholdSeconds;
         const auto bSuspect = bSuspectByAge || bOwnerInvalid || bOwnerNotReplicated;
@@ -804,7 +804,7 @@ auto
                 GetObjectTypeLabel(Tracked.Type),
                 AgeSeconds,
                 Tracked.SeenSamples,
-                Tracked.bOwnerReplicated ? 1 : 0,
+                Tracked.OwnerIsReplicated ? 1 : 0,
                 Object,
                 Tracked.Owner.Get());
         }

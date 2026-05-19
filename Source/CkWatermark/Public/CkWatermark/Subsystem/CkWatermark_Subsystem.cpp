@@ -599,7 +599,7 @@ void
     // show the held underline accent (GFrameCounter > ActivatedFrame).
     for (const FCkWatermarkActivityState& Existing : _ActivityStates)
     {
-        if (Existing.Id == InActivityId && Existing.bActive)
+        if (Existing.Id == InActivityId && Existing.IsActive)
         { return; }
     }
 
@@ -618,7 +618,7 @@ void
     NewState.Id              = InActivityId;
     NewState.Label           = InDisplayLabel;
     NewState.SequenceNumber  = SeqCounter;
-    NewState.bActive         = true;
+    NewState.IsActive         = true;
     NewState.ActivatedFrame  = GFrameCounter;
     _ActivityStates.Add(MoveTemp(NewState));
 
@@ -635,9 +635,9 @@ void
     // Find the most recent ACTIVE entry with this Id (search from the end).
     for (int32 i = _ActivityStates.Num() - 1; i >= 0; --i)
     {
-        if (_ActivityStates[i].Id == InActivityId && _ActivityStates[i].bActive)
+        if (_ActivityStates[i].Id == InActivityId && _ActivityStates[i].IsActive)
         {
-            _ActivityStates[i].bActive          = false;
+            _ActivityStates[i].IsActive          = false;
             _ActivityStates[i].DeactivatedFrame = GFrameCounter;
             break;
         }
@@ -673,11 +673,11 @@ auto
     // (oldest activation on the left, newest on the right).
     _ActivityStates.Sort([](const FCkWatermarkActivityState& A, const FCkWatermarkActivityState& B) -> bool
     {
-        if (A.bActive != B.bActive)
+        if (A.IsActive != B.IsActive)
         {
-            return !A.bActive; // Inactive before active.
+            return !A.IsActive; // Inactive before active.
         }
-        if (!A.bActive)
+        if (!A.IsActive)
         {
             return A.DeactivatedFrame < B.DeactivatedFrame;
         }
@@ -705,7 +705,7 @@ auto
 
         for (int32 i = 0; i < _ActivityStates.Num(); ++i)
         {
-            if (!_ActivityStates[i].bActive && _ActivityStates[i].DeactivatedFrame < OldestFrame)
+            if (!_ActivityStates[i].IsActive && _ActivityStates[i].DeactivatedFrame < OldestFrame)
             {
                 OldestFrame       = _ActivityStates[i].DeactivatedFrame;
                 OldestInactiveIdx = i;

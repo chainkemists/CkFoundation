@@ -21,7 +21,7 @@ struct FBTCompositeChild;
 
 struct CKASSETEXPORTER_API FCk_BehaviorTreeExportResult
 {
-    bool bSuccess = false;
+    bool Succeeded = false;
     FString JsonFilePath;
     FString TextFilePath;
     FString ErrorMessage;

@@ -175,7 +175,7 @@ auto
         }
 
         const FCkWatermarkActivityState& State = InStates[i];
-        const bool   bActive          = State.bActive;
+        const bool   IsActive          = State.IsActive;
         const uint64 ActivatedFrame   = State.ActivatedFrame;
         const uint64 DeactivatedFrame = State.DeactivatedFrame;
 
@@ -194,9 +194,9 @@ auto
 
         // ── Color: inactive = dim + age fade, active = white, held = accent ──
         TAttribute<FSlateColor> ChipColor = TAttribute<FSlateColor>::CreateLambda(
-            [bActive, ActivatedFrame, DeactivatedFrame, ActiveColor, AccentColor, InactiveColor]() -> FSlateColor
+            [IsActive, ActivatedFrame, DeactivatedFrame, ActiveColor, AccentColor, InactiveColor]() -> FSlateColor
             {
-                if (!bActive)
+                if (!IsActive)
                 {
                     // Age-based fade: newer inactive entries are brighter, older ones fade out.
                     // Fade over ~600 frames (~10 seconds at 60fps) from full to 15% alpha.
@@ -220,10 +220,10 @@ auto
 
         // ── Frame count: live when held, final when inactive ─────────────────
         TAttribute<FText> FrameCountText = TAttribute<FText>::CreateLambda(
-            [bActive, ActivatedFrame, DeactivatedFrame]() -> FText
+            [IsActive, ActivatedFrame, DeactivatedFrame]() -> FText
             {
                 uint64 Held = 0;
-                if (bActive)
+                if (IsActive)
                 {
                     if (GFrameCounter <= ActivatedFrame)
                     { return FText::GetEmpty(); }
@@ -240,9 +240,9 @@ auto
 
         // ── Counter visible when held or inactive with duration > 0 ──────────
         TAttribute<EVisibility> CounterVis = TAttribute<EVisibility>::CreateLambda(
-            [bActive, ActivatedFrame, DeactivatedFrame]() -> EVisibility
+            [IsActive, ActivatedFrame, DeactivatedFrame]() -> EVisibility
             {
-                if (bActive)
+                if (IsActive)
                 {
                     return (GFrameCounter > ActivatedFrame)
                         ? EVisibility::SelfHitTestInvisible
@@ -255,9 +255,9 @@ auto
 
         // ── Accent underline visible only when held ──────────────────────────
         TAttribute<EVisibility> AccentVis = TAttribute<EVisibility>::CreateLambda(
-            [bActive, ActivatedFrame]() -> EVisibility
+            [IsActive, ActivatedFrame]() -> EVisibility
             {
-                return (bActive && GFrameCounter > ActivatedFrame)
+                return (IsActive && GFrameCounter > ActivatedFrame)
                     ? EVisibility::SelfHitTestInvisible
                     : EVisibility::Collapsed;
             });

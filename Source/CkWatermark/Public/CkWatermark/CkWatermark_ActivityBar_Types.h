@@ -18,8 +18,7 @@ struct CKWATERMARK_API FCkWatermarkActivityState
     // Assigned once when the entry is created — never changes.
     int32 SequenceNumber = 0;
 
-    // Whether the signal is currently active.
-    bool bActive = false;
+    bool IsActive = false;
 
     // GFrameCounter when the signal was last activated.
     uint64 ActivatedFrame = 0;

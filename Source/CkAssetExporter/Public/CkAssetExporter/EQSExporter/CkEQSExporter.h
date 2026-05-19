@@ -16,7 +16,7 @@ class UEnvQueryTest;
 
 struct CKASSETEXPORTER_API FCk_EQSExportResult
 {
-    bool bSuccess = false;
+    bool Succeeded = false;
     FString JsonFilePath;
     FString TextFilePath;
     FString ErrorMessage;

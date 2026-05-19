@@ -53,7 +53,7 @@ private:
         double FirstSeenAtSeconds = 0.0;
         double LastSeenAtSeconds = 0.0;
         int32 SeenSamples = 0;
-        bool bOwnerReplicated = false;
+        bool OwnerIsReplicated = false;
     };
 
     struct FReplicationSnapshot
