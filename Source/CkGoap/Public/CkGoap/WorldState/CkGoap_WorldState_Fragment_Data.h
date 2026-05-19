@@ -17,7 +17,7 @@
 // referenced WorldState. Multiple planners pointing at the same WorldState
 // observe each other's writes through the OnValueChanged signal.
 //
-// Lifetime: caller-owned. Create explicitly with utils_goap_worldstate::Create
+// Lifetime: caller-owned. Create explicitly with utils_goap_world_state::Create
 // under any owner entity. Destruction cascades from the owner via CkRecord.
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))

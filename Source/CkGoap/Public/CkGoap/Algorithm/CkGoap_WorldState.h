@@ -20,7 +20,7 @@
 // wider world (numeric economies, distances, enum machines) and write the
 // derived boolean truth into a shared GOAP WorldState entity via utility
 // calls — e.g.
-// `utils_goap_worldstate::Set_Value(WS, Tag_HasEnoughFood, ActualFood >= Threshold)`.
+// `utils_goap_world_state::Set_Value(WS, Tag_HasEnoughFood, ActualFood >= Threshold)`.
 // The planner only ever sees and regresses over bools, which is what makes
 // GOAP tractable.
 //
