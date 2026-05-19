@@ -11,6 +11,8 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Signal/CkSignal_Utils.inl.h"
 
+#include "CkLabel/CkLabel_Utils.h"
+
 // ====================================================================================================================
 // CONSTRUCTION
 // ====================================================================================================================
@@ -41,6 +43,10 @@ auto
 	}
 
 	auto TierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_Goap_Tier>(InBundle);
+
+	// Records of tiers require GameplayLabels — label the tier with its
+	// declared tag.
+	UCk_Utils_GameplayLabel_UE::Add(TierEntity, InParams.Get_TierTag());
 
 	TierEntity.Add<ck::FFragment_Goap_Tier_Params>(InParams);
 	TierEntity.Add<ck::FFragment_Goap_Tier_Current>();
