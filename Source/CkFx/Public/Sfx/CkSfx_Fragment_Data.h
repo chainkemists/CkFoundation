@@ -49,8 +49,8 @@ private:
     float _PitchMultipler = 1.0f;
 
 public:
-    CK_PROPERTY(_VolumeMultipler);
-    CK_PROPERTY(_PitchMultipler);
+    CK_PROPERTY_GET(_VolumeMultipler);
+    CK_PROPERTY_GET(_PitchMultipler);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
