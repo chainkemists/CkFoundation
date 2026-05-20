@@ -1,6 +1,9 @@
 #pragma once
 
 #include "CkGoap/ActionSet/CkGoap_ActionSet_Fragment_Data.h"
+#include "CkGoap/Action/CkGoap_Action_Fragment_Data.h"   // FCk_Fragment_Goap_ActionParamsData, FCk_Handle_Goap_Action
+#include "CkGoap/WorldState/CkGoap_WorldState_Fragment_Data.h"  // FCk_Handle_Goap_WorldState
+#include "CkGoap/EntityScripts/CkGoapAction_EntityScript.h"     // UCk_GoapAction_EntityScript
 #include "CkGoap/CkGoap_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
@@ -31,6 +34,21 @@ public:
 		UPARAM(ref) FCk_Handle_Goap& InGoap,
 		const FCk_Fragment_Goap_ActionSetParamsData& InParams);
 
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|ActionSet",
+		DisplayName = "[Ck][Goap|ActionSet] Set Root Action")
+	static FCk_Handle_Goap_Action
+	SetRootAction(
+		UPARAM(ref) FCk_Handle_Goap_ActionSet& InActionSet,
+		const FCk_Fragment_Goap_ActionParamsData& InRootParams,
+		UPARAM(ref) FCk_Handle_Goap_WorldState& InInitialWorldState);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|ActionSet",
+		DisplayName = "[Ck][Goap|ActionSet] Add Action To ActionSet")
+	static FCk_Handle_Goap_Action
+	AddAction_ToActionSet(
+		UPARAM(ref) FCk_Handle_Goap_ActionSet& InActionSet,
+		const FCk_Fragment_Goap_ActionParamsData& InParams);
+
 	// ================================================================================================================
 	// QUERY
 	// ================================================================================================================
@@ -48,6 +66,13 @@ public:
 		FGameplayTag InActionTag);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|ActionSet",
+		DisplayName = "[Ck][Goap|ActionSet] Find Action By Class")
+	static FCk_Handle_Goap_Action
+	Find_ActionByClass(
+		const FCk_Handle_Goap_ActionSet& InActionSet,
+		TSubclassOf<UCk_GoapAction_EntityScript> InActionClass);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|ActionSet",
 		DisplayName = "[Ck][Goap|ActionSet] Get Active Chain")
 	static TArray<FCk_Handle_Goap_Action>
 	Get_ActiveChain(const FCk_Handle_Goap_ActionSet& InActionSet);
@@ -62,6 +87,11 @@ public:
 	static TArray<FCk_GoapDiagnostic_DependencyCycle>
 	Get_DependencyCycles(const FCk_Handle_Goap_ActionSet& InActionSet);
 
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|ActionSet",
+		DisplayName = "[Ck][Goap|ActionSet] Get Root Action")
+	static FCk_Handle_Goap_Action
+	Get_RootAction(const FCk_Handle_Goap_ActionSet& InActionSet);
+
 	// ================================================================================================================
 	// REQUESTS
 	// ================================================================================================================
@@ -72,6 +102,14 @@ public:
 	Request_SetEnableToggle(
 		UPARAM(ref) FCk_Handle_Goap_ActionSet& InActionSet,
 		ECk_EnableDisable InToggle);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|ActionSet",
+		DisplayName = "[Ck][Goap|ActionSet] Request Set Root Action")
+	static FCk_Handle_Goap_ActionSet
+	Request_SetRootAction(
+		UPARAM(ref) FCk_Handle_Goap_ActionSet& InActionSet,
+		const FCk_Fragment_Goap_ActionParamsData& InRootParams,
+		UPARAM(ref) FCk_Handle_Goap_WorldState& InInitialWorldState);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|ActionSet",
 		DisplayName = "[Ck][Goap|ActionSet] Request Reset Active Chain")

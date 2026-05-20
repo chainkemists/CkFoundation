@@ -26,10 +26,10 @@ public:
 	// ================================================================================================================
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Action",
-		DisplayName = "[Ck][Goap|Action] Add Action To ActionSet")
+		DisplayName = "[Ck][Goap|Action] Add Action (To Action)")
 	static FCk_Handle_Goap_Action
-	AddAction_ToActionSet(
-		UPARAM(ref) FCk_Handle_Goap_ActionSet& InActionSet,
+	AddAction_ToAction(
+		UPARAM(ref) FCk_Handle_Goap_Action& InParentAction,
 		const FCk_Fragment_Goap_ActionParamsData& InParams);
 
 	// ================================================================================================================
