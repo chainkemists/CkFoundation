@@ -8,6 +8,8 @@
 
 #include "CkCueSubsystem_Base.h"
 
+#include "CkActorRelay/CkActorRelay_Utils.h"
+
 #include "CkCore/Debug/CkDebug_Utils.h"
 
 #include "CkCue/CkCue_Fragment.h"
@@ -72,15 +74,16 @@ auto
 
 auto
     UCk_CueExecutor_Subsystem_Base_UE::
-    DoAcquireCueRelay_ForClient()
-    -> ACk_CueRelay_UE*
+    DoAcquireCueRelay_ForClient_Async(
+        TFunction<void(ACk_CueRelay_UE*)> InCallback)
+    -> void
 {
     auto LocalPC = GetWorld()->GetFirstPlayerController();
 
     if (ck::Is_NOT_Valid(LocalPC))
     {
         ck::cue::Warning(TEXT("Failed to acquire CueRelay: Local PlayerController is invalid"));
-        return {};
+        return;
     }
 
     auto LocalPlayerState = LocalPC->PlayerState;
@@ -88,18 +91,17 @@ auto
     if (ck::Is_NOT_Valid(LocalPlayerState))
     {
         ck::cue::Warning(TEXT("Failed to acquire CueRelay: Local PlayerState is invalid"));
-        return {};
+        return;
     }
 
-    auto ChannelResult = Request_AcquireChannel_ForPlayer(LocalPlayerState);
-
-    if (NOT ChannelResult.Get_ChannelActor().IsValid())
-    {
-        ck::cue::Warning(TEXT("Failed to acquire CueRelay: Channel result is invalid"));
-        return {};
-    }
-
-    return Cast<ACk_CueRelay_UE>(ChannelResult.Get_ChannelActor().Get());
+    auto Pending = Request_AcquireChannel_ForPlayer(LocalPlayerState);
+    UCk_Utils_PendingActorRelay_UE::Promise_OnAcquired(Pending,
+        [Callback = MoveTemp(InCallback)](FCk_ActorRelay_ChannelResult InResult)
+        {
+            auto CueRelay = Cast<ACk_CueRelay_UE>(InResult.Get_ChannelActor().Get());
+            if (ck::IsValid(CueRelay))
+            { Callback(CueRelay); }
+        });
 }
 
 /*─────────────────────────────────────────────────────────────────────────────┐
@@ -158,16 +160,22 @@ auto
         return {};
     }
 
-    auto ChannelResult = Request_AcquireAnyChannel();
+    auto Pending = Request_AcquireAnyChannel();
+    UCk_Utils_PendingActorRelay_UE::Promise_OnAcquired(Pending,
+        [this, InCueName, InSpawnParams, InReliability, InMulticastPolicy]
+        (FCk_ActorRelay_ChannelResult InResult)
+        {
+            if (ck::Is_NOT_Valid(InResult))
+            {
+                ck::cue::Warning(TEXT("Channel acquired but result is invalid for transient cue [{}]"), InCueName);
+                return;
+            }
 
-    if (NOT ChannelResult.Get_ChannelActor().IsValid())
-    {
-        ck::cue::Warning(TEXT("Failed to acquire channel for transient cue [{}]"), InCueName);
-        return {};
-    }
+            Request_ExecuteCue(InResult.Get_ChannelEntity(),
+                InCueName, InSpawnParams, InReliability, InMulticastPolicy);
+        });
 
-    auto CueRelayEntity = ChannelResult.Get_ChannelEntity();
-    return Request_ExecuteCue(CueRelayEntity, InCueName, InSpawnParams, InReliability, InMulticastPolicy);
+    return {};
 }
 
 auto
@@ -221,48 +229,49 @@ auto
 
     if (GetWorld()->IsNetMode(NM_Client))
     {
-        auto CueRelay = DoAcquireCueRelay_ForClient();
+        // On client: optionally execute locally on Self path, then defer the
+        // RPC until a CueRelay channel is ready. The lambda captures the
+        // dispatch payload so the relay can come up after the cue is queued.
+        if (InMulticastPolicy == ECk_Cue_MulticastPolicy::ServerAndSelf)
+        { ck_cue_subsystem_base::DoExecuteLocal(this, InOwnerEntity, InCueName, InSpawnParams); }
 
-        if (ck::Is_NOT_Valid(CueRelay))
-        { return {}; }
+        DoAcquireCueRelay_ForClient_Async(
+            [OwnerEntity = InOwnerEntity, CueName = InCueName, SpawnParams = InSpawnParams, IsReliable, InMulticastPolicy]
+            (ACk_CueRelay_UE* CueRelay)
+            {
+                switch (InMulticastPolicy)
+                {
+                    case ECk_Cue_MulticastPolicy::ServerOnly:
+                    case ECk_Cue_MulticastPolicy::ServerAndSelf:
+                    {
+                        if (IsReliable) { CueRelay->Server_RequestExecuteCue_ServerOnly_Reliable(OwnerEntity, CueName, SpawnParams); }
+                        else            { CueRelay->Server_RequestExecuteCue_ServerOnly(OwnerEntity, CueName, SpawnParams); }
+                        break;
+                    }
+                    case ECk_Cue_MulticastPolicy::ServerAndOtherClients:
+                    {
+                        constexpr auto SkipServer = false;
+                        if (IsReliable) { CueRelay->Server_RequestExecuteCue_ExcludingSender_Reliable(OwnerEntity, CueName, SpawnParams, SkipServer); }
+                        else            { CueRelay->Server_RequestExecuteCue_ExcludingSender(OwnerEntity, CueName, SpawnParams, SkipServer); }
+                        break;
+                    }
+                    case ECk_Cue_MulticastPolicy::OtherClientsOnly:
+                    {
+                        constexpr auto SkipServer = true;
+                        if (IsReliable) { CueRelay->Server_RequestExecuteCue_ExcludingSender_Reliable(OwnerEntity, CueName, SpawnParams, SkipServer); }
+                        else            { CueRelay->Server_RequestExecuteCue_ExcludingSender(OwnerEntity, CueName, SpawnParams, SkipServer); }
+                        break;
+                    }
+                    case ECk_Cue_MulticastPolicy::ServerAndAllClients:
+                    default:
+                    {
+                        if (IsReliable) { CueRelay->Server_RequestExecuteCue_Reliable(OwnerEntity, CueName, SpawnParams); }
+                        else            { CueRelay->Server_RequestExecuteCue(OwnerEntity, CueName, SpawnParams); }
+                        break;
+                    }
+                }
+            });
 
-        switch (InMulticastPolicy)
-        {
-            case ECk_Cue_MulticastPolicy::ServerOnly:
-            {
-                if (IsReliable) { CueRelay->Server_RequestExecuteCue_ServerOnly_Reliable(InOwnerEntity, InCueName, InSpawnParams); }
-                else            { CueRelay->Server_RequestExecuteCue_ServerOnly(InOwnerEntity, InCueName, InSpawnParams); }
-                break;
-            }
-            case ECk_Cue_MulticastPolicy::ServerAndSelf:
-            {
-                ck_cue_subsystem_base::DoExecuteLocal(this, InOwnerEntity, InCueName, InSpawnParams);
-                if (IsReliable) { CueRelay->Server_RequestExecuteCue_ServerOnly_Reliable(InOwnerEntity, InCueName, InSpawnParams); }
-                else            { CueRelay->Server_RequestExecuteCue_ServerOnly(InOwnerEntity, InCueName, InSpawnParams); }
-                break;
-            }
-            case ECk_Cue_MulticastPolicy::ServerAndOtherClients:
-            {
-                constexpr auto SkipServer = false;
-                if (IsReliable) { CueRelay->Server_RequestExecuteCue_ExcludingSender_Reliable(InOwnerEntity, InCueName, InSpawnParams, SkipServer); }
-                else            { CueRelay->Server_RequestExecuteCue_ExcludingSender(InOwnerEntity, InCueName, InSpawnParams, SkipServer); }
-                break;
-            }
-            case ECk_Cue_MulticastPolicy::OtherClientsOnly:
-            {
-                constexpr auto SkipServer = true;
-                if (IsReliable) { CueRelay->Server_RequestExecuteCue_ExcludingSender_Reliable(InOwnerEntity, InCueName, InSpawnParams, SkipServer); }
-                else            { CueRelay->Server_RequestExecuteCue_ExcludingSender(InOwnerEntity, InCueName, InSpawnParams, SkipServer); }
-                break;
-            }
-            case ECk_Cue_MulticastPolicy::ServerAndAllClients:
-            default:
-            {
-                if (IsReliable) { CueRelay->Server_RequestExecuteCue_Reliable(InOwnerEntity, InCueName, InSpawnParams); }
-                else            { CueRelay->Server_RequestExecuteCue(InOwnerEntity, InCueName, InSpawnParams); }
-                break;
-            }
-        }
         return {};
     }
 
@@ -275,39 +284,42 @@ auto
             return ck_cue_subsystem_base::DoExecuteLocal(this, InOwnerEntity, InCueName, InSpawnParams);
         }
 
-        auto ChannelResult = Request_AcquireAnyChannel();
-        auto CueRelay = Cast<ACk_CueRelay_UE>(ChannelResult.Get_ChannelActor().Get());
-
-        CK_ENSURE_IF_NOT(ck::IsValid(CueRelay),
-            TEXT("Failed to acquire CueRelay on server for cue [{}]"), InCueName)
-        { return {}; }
-
-        auto OriginatingPlayerState = static_cast<APlayerState*>(nullptr);
-
-        switch (InMulticastPolicy)
-        {
-            case ECk_Cue_MulticastPolicy::ServerAndOtherClients:
+        auto Pending = Request_AcquireAnyChannel();
+        UCk_Utils_PendingActorRelay_UE::Promise_OnAcquired(Pending,
+            [OwnerEntity = InOwnerEntity, CueName = InCueName, SpawnParams = InSpawnParams, IsReliable, InMulticastPolicy]
+            (FCk_ActorRelay_ChannelResult InResult)
             {
-                constexpr auto SkipServer = false;
-                if (IsReliable) { CueRelay->Multicast_ExecuteCue_ExcludingSender_Reliable(InOwnerEntity, InCueName, InSpawnParams, OriginatingPlayerState, SkipServer); }
-                else            { CueRelay->Multicast_ExecuteCue_ExcludingSender(InOwnerEntity, InCueName, InSpawnParams, OriginatingPlayerState, SkipServer); }
-                break;
-            }
-            case ECk_Cue_MulticastPolicy::OtherClientsOnly:
-            {
-                constexpr auto SkipServer = true;
-                if (IsReliable) { CueRelay->Multicast_ExecuteCue_ExcludingSender_Reliable(InOwnerEntity, InCueName, InSpawnParams, OriginatingPlayerState, SkipServer); }
-                else            { CueRelay->Multicast_ExecuteCue_ExcludingSender(InOwnerEntity, InCueName, InSpawnParams, OriginatingPlayerState, SkipServer); }
-                break;
-            }
-            case ECk_Cue_MulticastPolicy::ServerAndAllClients:
-            default:
-            {
-                if (IsReliable) { CueRelay->Multicast_ExecuteCue_Reliable(InOwnerEntity, InCueName, InSpawnParams); }
-                else            { CueRelay->Multicast_ExecuteCue(InOwnerEntity, InCueName, InSpawnParams); }
-                break;
-            }
-        }
+                auto CueRelay = Cast<ACk_CueRelay_UE>(InResult.Get_ChannelActor().Get());
+                if (ck::Is_NOT_Valid(CueRelay))
+                { return; }
+
+                auto OriginatingPlayerState = static_cast<APlayerState*>(nullptr);
+
+                switch (InMulticastPolicy)
+                {
+                    case ECk_Cue_MulticastPolicy::ServerAndOtherClients:
+                    {
+                        constexpr auto SkipServer = false;
+                        if (IsReliable) { CueRelay->Multicast_ExecuteCue_ExcludingSender_Reliable(OwnerEntity, CueName, SpawnParams, OriginatingPlayerState, SkipServer); }
+                        else            { CueRelay->Multicast_ExecuteCue_ExcludingSender(OwnerEntity, CueName, SpawnParams, OriginatingPlayerState, SkipServer); }
+                        break;
+                    }
+                    case ECk_Cue_MulticastPolicy::OtherClientsOnly:
+                    {
+                        constexpr auto SkipServer = true;
+                        if (IsReliable) { CueRelay->Multicast_ExecuteCue_ExcludingSender_Reliable(OwnerEntity, CueName, SpawnParams, OriginatingPlayerState, SkipServer); }
+                        else            { CueRelay->Multicast_ExecuteCue_ExcludingSender(OwnerEntity, CueName, SpawnParams, OriginatingPlayerState, SkipServer); }
+                        break;
+                    }
+                    case ECk_Cue_MulticastPolicy::ServerAndAllClients:
+                    default:
+                    {
+                        if (IsReliable) { CueRelay->Multicast_ExecuteCue_Reliable(OwnerEntity, CueName, SpawnParams); }
+                        else            { CueRelay->Multicast_ExecuteCue(OwnerEntity, CueName, SpawnParams); }
+                        break;
+                    }
+                }
+            });
     }
 
     return {};
