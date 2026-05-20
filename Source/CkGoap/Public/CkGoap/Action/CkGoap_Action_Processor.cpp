@@ -167,9 +167,31 @@ auto
 		InActionDef._GoalFromEffects.Add(FCk_GoapWS_Condition_Authored{Eff.Key, Eff.Value});
 	}
 
-	// TODO(U5): populate Action_Definition._InvalidGoal for diagnostic
-	// surfacing — record any Effect whose Key is missing from the resolved WS
-	// registry.
+	// Validate effect keys against this Action's resolved WS. Any effect whose
+	// raw tag isn't in the registry goes into _InvalidGoal for diagnostic
+	// surfacing via Get_InvalidGoal. Effects are static (CDO-extracted) so
+	// this validation is one-shot at Setup time.
+	//
+	// Note: the loops above also call FindOrRegister on every effect key, so
+	// in normal flow _InvalidGoal will be empty here. It only fills when the
+	// registry has overflowed past WorldState_MaxKeys (warned about above) —
+	// FindOrRegister silently rejects further registrations in that case and
+	// Find returns InvalidGoapKey. This is the diagnostic the debugger surfaces.
+	InActionDef._InvalidGoal.Reset();
+	for (const auto& Eff : InActionDef._Effects)
+	{
+		if (SourceRegistry.Find(Eff.Key) == goap::InvalidGoapKey)
+		{
+			InActionDef._InvalidGoal.Add(FCk_GoapWS_Condition_Authored{Eff.Key, Eff.Value});
+		}
+	}
+
+	if (InActionDef._InvalidGoal.Num() > 0)
+	{
+		ck::goap::Verbose(
+			TEXT("Action [{}] has [{}] effect key(s) not in resolved WS registry."),
+			InHandle, InActionDef._InvalidGoal.Num());
+	}
 
 	// _ActionClasses retained as a legacy collection (read by no live code in
 	// the unified model). Candidate sets are built dynamically from
