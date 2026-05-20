@@ -34,10 +34,14 @@ auto
 		TEXT("Invalid _ActionClass in AddAction_ToAction (parent [{}])"), InParentAction)
 	{ return {}; }
 
-	// Walk up the owner chain to find the containing ActionSet. Actions are
-	// created with the ActionSet as their context owner (see
-	// DoCreateOrFindActionEntity); recover that here.
-	auto OwnerEntity = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InParentAction);
+	// Walk up the lifetime-owner chain to find the containing ActionSet. Actions
+	// are created with the ActionSet as their lifetime owner (see
+	// DoCreateOrFindActionEntity, which calls Request_CreateEntity_AsTypeSafe
+	// with InActionSet as the owner handle). Lifetime owner is not the same as
+	// context owner: context owner is inherited from the owner's context owner
+	// (which may be the test entity or NPC entity), while lifetime owner is the
+	// direct parent entity that created this action — the ActionSet.
+	auto OwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InParentAction);
 	auto ActionSetHandle = UCk_Utils_Goap_ActionSet_UE::CastChecked(OwnerEntity);
 
 	CK_ENSURE_IF_NOT(ck::IsValid(ActionSetHandle),
@@ -62,6 +66,50 @@ auto
 
 	auto& ParentTree = InParentAction.Get<ck::FFragment_Goap_Action_Tree>();
 	ParentTree._ChildActions.AddUnique(ChildHandle);
+
+	// Eagerly resolve the child's WS source so its Setup processor can run
+	// (and populate _CachedActionDef) BEFORE any parent plan is requested.
+	// Without this, child Actions that haven't been activated via ChainUpdate
+	// still have no resolved WS — their Setup defers indefinitely, leaving
+	// _CachedActionDef empty, so the parent's planner sees no usable
+	// candidate operators and the search fails immediately.
+	//
+	// Resolution order mirrors ChainUpdate's DoResolveAndAssignWorldStateSource:
+	//   1. Child's own override (if set).
+	//   2. Inherit from parent's already-resolved WS.
+	//   3. Fall back to the ActionSet-level default WS source.
+	//
+	// We DO NOT subscribe the child to the WS here — subscription is only for
+	// active (in-chain) Actions and is managed by ChainUpdate at activation.
+	{
+		auto& ChildCurrent = ChildHandle.Get<ck::FFragment_Goap_Action_Current>();
+		if (NOT ck::IsValid(ChildCurrent.Get_WorldStateSource_Resolved()))
+		{
+			const auto& ChildParams = ChildHandle.Get<ck::FFragment_Goap_Action_Params>();
+			const auto Override = ChildParams.Get_WorldStateSource_Override();
+			if (ck::IsValid(Override))
+			{
+				ChildCurrent._WorldStateSource_Resolved = Override;
+			}
+			else
+			{
+				const auto& ParentCurrent = InParentAction.Get<ck::FFragment_Goap_Action_Current>();
+				const auto ParentWS = ParentCurrent.Get_WorldStateSource_Resolved();
+				if (ck::IsValid(ParentWS))
+				{
+					ChildCurrent._WorldStateSource_Resolved = ParentWS;
+				}
+				else if (ActionSetHandle.Has<ck::FFragment_Goap_ActionSet_WorldStateSource>())
+				{
+					const auto& SetWS = ActionSetHandle.Get<ck::FFragment_Goap_ActionSet_WorldStateSource>();
+					if (ck::IsValid(SetWS.Get_WorldStateSource()))
+					{
+						ChildCurrent._WorldStateSource_Resolved = SetWS.Get_WorldStateSource();
+					}
+				}
+			}
+		}
+	}
 
 	return ChildHandle;
 }
