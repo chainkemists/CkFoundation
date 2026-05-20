@@ -45,6 +45,9 @@ private:
     auto
     DoTryRegisterWithGroupSubsystem() -> bool;
 
+    auto
+    DoStartBroadcastWhenReadyPolling() -> void;
+
 private:
     UPROPERTY(ReplicatedUsing = OnRep_GroupSubsystemClass)
     TSubclassOf<UCk_ActorRelay_Group_Subsystem_Base_UE> _GroupSubsystemClass;
@@ -53,6 +56,7 @@ private:
     TWeakObjectPtr<UCk_ActorRelay_Group_Subsystem_Base_UE> _GroupSubsystem;
 
     FTimerHandle _RegistrationRetryTimerHandle;
+    FTimerHandle _BroadcastReadyTimerHandle;
 
 public:
     CK_PROPERTY_GET(_GroupSubsystem);

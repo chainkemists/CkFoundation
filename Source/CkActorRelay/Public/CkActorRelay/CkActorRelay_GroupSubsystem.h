@@ -9,6 +9,8 @@
 
 #include "CkActorRelay_GroupSubsystem.generated.h"
 
+DECLARE_MULTICAST_DELEGATE(FCk_Delegate_ActorRelay_ChannelReadyChanged_MC);
+
 /*-----------------------------------------------------------------------------
                      ACTOR RELAY GROUP SUBSYSTEM BASE
 ------------------------------------------------------------------------------*/
@@ -22,6 +24,7 @@ public:
     CK_GENERATED_BODY(UCk_ActorRelay_Group_Subsystem_Base_UE);
 
     friend class ACk_ActorRelay_UE;
+    friend class UCk_Utils_PendingActorRelay_UE;
 
 public:
     auto Initialize(FSubsystemCollectionBase& InCollection) -> void override;
@@ -60,18 +63,18 @@ public:
 public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|ActorRelay",
               DisplayName = "[Ck][ActorRelay] Acquire Channel")
-    FCk_ActorRelay_ChannelResult
+    FCk_Handle_PendingActorRelay
     Request_AcquireChannel();
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|ActorRelay",
               DisplayName = "[Ck][ActorRelay] Acquire Channel For Player")
-    FCk_ActorRelay_ChannelResult
+    FCk_Handle_PendingActorRelay
     Request_AcquireChannel_ForPlayer(
         APlayerState* InPlayerState);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|ActorRelay",
               DisplayName = "[Ck][ActorRelay] Acquire Any Channel")
-    FCk_ActorRelay_ChannelResult
+    FCk_Handle_PendingActorRelay
     Request_AcquireAnyChannel();
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|ActorRelay",
@@ -79,11 +82,16 @@ public:
     int32
     Get_ChannelCount_Active() const;
 
+public:
+    auto DoBroadcastChannelReadyChanged() -> void;
+
     /*-------------------------------------------------------------------------
                               INTERNALS
     --------------------------------------------------------------------------*/
 
 private:
+    auto DoTryResolve(FCk_Handle_PendingActorRelay& InPending) -> FCk_ActorRelay_ChannelResult;
+
     auto DoRegisterChannelActor(ACk_ActorRelay_UE* InChannelActor) -> void;
 
     auto DoSpawnAndRegister_Channel(
@@ -95,9 +103,9 @@ private:
 
     auto DoSelectChannel_FromPool(
         TArray<TObjectPtr<ACk_ActorRelay_UE>>& InPool,
-        int32& InOutRoundRobinIndex) -> FCk_ActorRelay_ChannelResult;
+        int32& InOutRoundRobinIndex) const -> FCk_ActorRelay_ChannelResult;
 
-    auto DoGetEntityCountOnChannel(
+    auto DoGet_EntityCountOnChannel(
         ACk_ActorRelay_UE* InChannelActor) const -> int32;
 
 private:
@@ -120,6 +128,9 @@ private:
     FDelegateHandle _PostLoadMapWithWorldDelegateHandle;
     FDelegateHandle _PostLoginEventDelegateHandle;
     FDelegateHandle _LogoutEventDelegateHandle;
+
+public:
+    FCk_Delegate_ActorRelay_ChannelReadyChanged_MC _OnChannelReadyChanged;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
