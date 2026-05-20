@@ -336,6 +336,14 @@ auto
 				// Build the planner's candidate operator set from this Action's
 				// children. Each child Action carries its own pre-built
 				// _CachedActionDef (resolved against this Action's WS at Setup).
+				//
+				// IMPORTANT: each candidate's ActionIndex MUST be set to its
+				// position in the Candidates array. The FGoapGraph stores this
+				// index in EdgeActions; HandleResult uses it to map A* path
+				// edges back to the candidate set. Leaving ActionIndex at its
+				// default INDEX_NONE causes Cost() to return float::Max() and
+				// Get_ActionForEdge to return INDEX_NONE, which silently drops
+				// every edge from the produced plan (PlanFound + empty plan).
 				const auto& Tree = InHandle.template Get<FFragment_Goap_Action_Tree>();
 				auto Candidates = TArray<goap::FActionDef>{};
 				Candidates.Reserve(Tree.Get_ChildActions().Num());
@@ -343,7 +351,9 @@ auto
 				{
 					if (NOT ck::IsValid(ChildHandle)) { continue; }
 					const auto& ChildDef = ChildHandle.template Get<FFragment_Goap_Action_Definition>();
-					Candidates.Add(ChildDef.AsActionDef());
+					auto Candidate = ChildDef.AsActionDef();
+					Candidate.ActionIndex = Candidates.Num();
+					Candidates.Add(MoveTemp(Candidate));
 				}
 				(void)InActionDef;
 
