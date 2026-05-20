@@ -114,9 +114,8 @@ auto
     FGameModeEvents::GameModePostLoginEvent.Remove(_PostLoginEventDelegateHandle);
     FGameModeEvents::GameModeLogoutEvent.Remove(_LogoutEventDelegateHandle);
 
-    auto RelaySubsystem = GetWorld()->GetSubsystem<UCk_ActorRelay_Subsystem_UE>();
-
-    if (ck::IsValid(RelaySubsystem))
+    if (auto RelaySubsystem = GetWorld()->GetSubsystem<UCk_ActorRelay_Subsystem_UE>();
+        ck::IsValid(RelaySubsystem))
     {
         RelaySubsystem->DoUnregisterGroup(this);
     }
@@ -129,73 +128,112 @@ auto
 auto
     UCk_ActorRelay_Group_Subsystem_Base_UE::
     Request_AcquireChannel()
-    -> FCk_ActorRelay_ChannelResult
+    -> FCk_Handle_PendingActorRelay
 {
     CK_ENSURE_IF_NOT(Get_OwnershipPolicy() == ECk_ActorRelay_OwnershipPolicy::ServerOwned,
         TEXT("Request_AcquireChannel() called on a PlayerOwned group [{}]. Use Request_AcquireChannel_ForPlayer() instead."),
         Get_GroupTag())
     { return {}; }
 
-    CK_ENSURE_IF_NOT(_ServerChannels.Num() > 0,
-        TEXT("No server channels available for group [{}]"), Get_GroupTag())
-    { return {}; }
-
-    return DoSelectChannel_FromPool(_ServerChannels, _ServerRoundRobinIndex);
+    auto Pending = FCk_Handle_PendingActorRelay{};
+    Pending._GroupSubsystem = this;
+    Pending._Kind = ECk_ActorRelay_AcquireKind::Server;
+    return Pending;
 }
 
 auto
     UCk_ActorRelay_Group_Subsystem_Base_UE::
     Request_AcquireChannel_ForPlayer(
         APlayerState* InPlayerState)
-    -> FCk_ActorRelay_ChannelResult
+    -> FCk_Handle_PendingActorRelay
 {
+    auto Pending = FCk_Handle_PendingActorRelay{};
+    Pending._GroupSubsystem = this;
+
     if (Get_OwnershipPolicy() == ECk_ActorRelay_OwnershipPolicy::ServerOwned)
     {
-        return DoSelectChannel_FromPool(_ServerChannels, _ServerRoundRobinIndex);
+        Pending._Kind = ECk_ActorRelay_AcquireKind::Server;
+        return Pending;
     }
 
     CK_ENSURE_IF_NOT(ck::IsValid(InPlayerState),
         TEXT("InPlayerState is invalid when acquiring channel for group [{}]"), Get_GroupTag())
     { return {}; }
 
-    auto FoundPool = _PlayerChannels.Find(InPlayerState);
-
-    CK_ENSURE_IF_NOT(FoundPool != nullptr,
-        TEXT("No channels found for PlayerState [{}] in group [{}]"),
-        InPlayerState->GetName(), Get_GroupTag())
-    { return {}; }
-
-    CK_ENSURE_IF_NOT(FoundPool->Num() > 0,
-        TEXT("Channel pool is empty for PlayerState [{}] in group [{}]"),
-        InPlayerState->GetName(), Get_GroupTag())
-    { return {}; }
-
-    auto& RoundRobinIndex = _PlayerRoundRobinIndices.FindOrAdd(InPlayerState, 0);
-    return DoSelectChannel_FromPool(*FoundPool, RoundRobinIndex);
+    Pending._Kind = ECk_ActorRelay_AcquireKind::ForPlayer;
+    Pending._PlayerState = InPlayerState;
+    return Pending;
 }
 
 auto
     UCk_ActorRelay_Group_Subsystem_Base_UE::
     Request_AcquireAnyChannel()
-    -> FCk_ActorRelay_ChannelResult
+    -> FCk_Handle_PendingActorRelay
 {
+    auto Pending = FCk_Handle_PendingActorRelay{};
+    Pending._GroupSubsystem = this;
+
     if (Get_OwnershipPolicy() == ECk_ActorRelay_OwnershipPolicy::ServerOwned)
     {
-        return DoSelectChannel_FromPool(_ServerChannels, _ServerRoundRobinIndex);
+        Pending._Kind = ECk_ActorRelay_AcquireKind::Server;
+        return Pending;
     }
 
-    for (auto& [PlayerState, Pool] : _PlayerChannels)
+    Pending._Kind = ECk_ActorRelay_AcquireKind::Any;
+    return Pending;
+}
+
+auto
+    UCk_ActorRelay_Group_Subsystem_Base_UE::
+    DoBroadcastChannelReadyChanged()
+    -> void
+{
+    _OnChannelReadyChanged.Broadcast();
+}
+
+auto
+    UCk_ActorRelay_Group_Subsystem_Base_UE::
+    DoTryResolve(
+        FCk_Handle_PendingActorRelay& InPending)
+    -> FCk_ActorRelay_ChannelResult
+{
+    switch (InPending._Kind)
     {
-        if (Pool.Num() > 0)
+        case ECk_ActorRelay_AcquireKind::Server:
         {
+            if (_ServerChannels.Num() == 0)
+            { return {}; }
+
+            return DoSelectChannel_FromPool(_ServerChannels, _ServerRoundRobinIndex);
+        }
+        case ECk_ActorRelay_AcquireKind::ForPlayer:
+        {
+            auto PlayerState = InPending._PlayerState.Get();
+            if (ck::Is_NOT_Valid(PlayerState))
+            { return {}; }
+
+            auto FoundPool = _PlayerChannels.Find(PlayerState);
+            if (NOT FoundPool || FoundPool->Num() == 0)
+            { return {}; }
+
             auto& RoundRobinIndex = _PlayerRoundRobinIndices.FindOrAdd(PlayerState, 0);
-            return DoSelectChannel_FromPool(Pool, RoundRobinIndex);
+            return DoSelectChannel_FromPool(*FoundPool, RoundRobinIndex);
+        }
+        case ECk_ActorRelay_AcquireKind::Any:
+        {
+            for (auto& [PlayerState, Pool] : _PlayerChannels)
+            {
+                if (Pool.Num() > 0)
+                {
+                    auto& RoundRobinIndex = _PlayerRoundRobinIndices.FindOrAdd(PlayerState, 0);
+                    if (auto Result = DoSelectChannel_FromPool(Pool, RoundRobinIndex);
+                        ck::IsValid(Result))
+                    { return Result; }
+                }
+            }
+            return {};
         }
     }
-
-    CK_ENSURE_IF_NOT(false,
-        TEXT("No channels available in any player pool for group [{}]"), Get_GroupTag())
-    { return {}; }
 
     return {};
 }
@@ -226,7 +264,7 @@ auto
     UCk_ActorRelay_Group_Subsystem_Base_UE::
     DoSelectChannel_FromPool(
         TArray<TObjectPtr<ACk_ActorRelay_UE>>& InPool,
-        int32& InOutRoundRobinIndex)
+        int32& InOutRoundRobinIndex) const
     -> FCk_ActorRelay_ChannelResult
 {
     const auto MaxEntities = Get_MaxEntitiesPerChannel();
@@ -245,7 +283,7 @@ auto
             if (NOT UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(Channel))
             { continue; }
 
-            const auto EntityCount = DoGetEntityCountOnChannel(Channel);
+            const auto EntityCount = DoGet_EntityCountOnChannel(Channel);
 
             if (MaxEntities > 0 && EntityCount >= MaxEntities)
             { continue; }
@@ -260,7 +298,7 @@ auto
         if (ck::Is_NOT_Valid(BestChannel))
         { return {}; }
 
-        auto ChannelEntity = UCk_Utils_OwningActor_UE::TryGet_ActorEntityHandle(BestChannel);
+        const auto ChannelEntity = UCk_Utils_OwningActor_UE::TryGet_ActorEntityHandle(BestChannel);
         return FCk_ActorRelay_ChannelResult{TWeakObjectPtr<ACk_ActorRelay_UE>(BestChannel), ChannelEntity};
     }
 
@@ -277,9 +315,9 @@ auto
 
             if (ck::IsValid(Channel) &&
                 UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(Channel) &&
-                DoGetEntityCountOnChannel(Channel) < MaxEntities)
+                DoGet_EntityCountOnChannel(Channel) < MaxEntities)
             {
-                auto ChannelEntity = UCk_Utils_OwningActor_UE::TryGet_ActorEntityHandle(Channel);
+                const auto ChannelEntity = UCk_Utils_OwningActor_UE::TryGet_ActorEntityHandle(Channel);
                 return FCk_ActorRelay_ChannelResult{TWeakObjectPtr<ACk_ActorRelay_UE>(Channel), ChannelEntity};
             }
 
@@ -296,11 +334,10 @@ auto
         InOutRoundRobinIndex = UCk_Utils_Arithmetic_UE::Get_Increment_WithWrap(
             InOutRoundRobinIndex, FCk_IntRange{0, InPool.Num()}, ECk_Inclusiveness::Exclusive);
 
-        auto Channel = InPool[InOutRoundRobinIndex];
-
-        if (ck::IsValid(Channel) && UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(Channel))
+        if (auto Channel = InPool[InOutRoundRobinIndex];
+            ck::IsValid(Channel) && UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(Channel))
         {
-            auto ChannelEntity = UCk_Utils_OwningActor_UE::TryGet_ActorEntityHandle(Channel);
+            const auto ChannelEntity = UCk_Utils_OwningActor_UE::TryGet_ActorEntityHandle(Channel);
             return FCk_ActorRelay_ChannelResult{TWeakObjectPtr<ACk_ActorRelay_UE>(Channel), ChannelEntity};
         }
 
@@ -312,7 +349,7 @@ auto
 
 auto
     UCk_ActorRelay_Group_Subsystem_Base_UE::
-    DoGetEntityCountOnChannel(
+    DoGet_EntityCountOnChannel(
         ACk_ActorRelay_UE* InChannelActor) const
     -> int32
 {
@@ -446,9 +483,9 @@ auto
         APlayerState* InPlayerState)
     -> void
 {
-    auto FoundPool = _PlayerChannels.Find(InPlayerState);
+    const auto FoundPool = _PlayerChannels.Find(InPlayerState);
 
-    if (FoundPool == nullptr)
+    if (ck::Is_NOT_Valid(FoundPool, ck::IsValid_Policy_NullptrOnly{}))
     { return; }
 
     ck::actorrelay::Log(TEXT("Destroying [{}] channels for PlayerState [{}] in group [{}]"),
