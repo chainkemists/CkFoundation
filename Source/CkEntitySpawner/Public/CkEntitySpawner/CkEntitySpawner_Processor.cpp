@@ -1,6 +1,8 @@
 #include "CkEntitySpawner_Processor.h"
 
 #include "CkActorRelay/CkActorRelay_Fragment_Data.h"
+#include "CkActorRelay/CkActorRelay_Subsystem.h"
+#include "CkActorRelay/CkActorRelay_GroupSubsystem.h"
 #include "CkActorRelay/CkActorRelay_Utils.h"
 
 #include "CkCore/Validation/CkIsValid.h"
@@ -35,16 +37,27 @@ namespace ck
         }
 
         auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-        auto ChannelResult = UCk_Utils_ActorRelay_UE::Request_AcquireChannel(World, InPending.Get_ReplicatedChannelGroup());
 
-        // If no channel is ready yet (pool still populating, or companion entity not yet set up),
-        // leave the fragment in place so MarkedDirtyBy re-fires us next tick.
-        if (ck::Is_NOT_Valid(ChannelResult))
+        auto RelaySubsystem = World->GetSubsystem<UCk_ActorRelay_Subsystem_UE>();
+        if (ck::Is_NOT_Valid(RelaySubsystem))
         { return; }
 
-        auto LifetimeOwner = ChannelResult.Get_ChannelEntity();
-        UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(LifetimeOwner, EntityScript, FInstancedStruct{});
+        auto GroupSubsystem = RelaySubsystem->Get_GroupSubsystem(InPending.Get_ReplicatedChannelGroup());
+        if (ck::Is_NOT_Valid(GroupSubsystem))
+        { return; }
 
+        auto Pending = GroupSubsystem->Request_AcquireChannel();
+        UCk_Utils_PendingActorRelay_UE::Promise_OnAcquired(Pending,
+            [EntityScript](FCk_ActorRelay_ChannelResult InResult)
+            {
+                auto LifetimeOwner = InResult.Get_ChannelEntity();
+                UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(
+                    LifetimeOwner, EntityScript, FInstancedStruct{});
+            });
+
+        // The lambda above carries the entity-script class forward. The
+        // fragment-bearing entity has served its purpose — destroy it so we
+        // don't re-enter this processor next tick.
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
     }
 }
