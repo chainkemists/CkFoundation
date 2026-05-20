@@ -52,9 +52,14 @@ namespace ck
 		ECk_EnableDisable _EnableToggle = ECk_EnableDisable::Enable;
 		TArray<FCk_GoapDiagnostic_DependencyCycle> _DependencyCycles;
 
+		// The root Action entity for this ActionSet. Established by SetRootAction
+		// (Phase U2) or implicitly by the first AddAction_ToActionSet call.
+		FCk_Handle_Goap_Action _RootAction;
+
 	public:
 		CK_PROPERTY_GET(_EnableToggle);
 		CK_PROPERTY_GET(_DependencyCycles);
+		CK_PROPERTY_GET(_RootAction);
 	};
 
 // ====================================================================================================================
@@ -96,6 +101,15 @@ namespace ck
 
 	public:
 		CK_PROPERTY_GET(_TagToAction);
+
+		// Public mutator used by the shared entity-creation helper
+		// ck::goap::internal_actionset::DoCreateOrFindActionEntity. Private-
+		// field-access via friendship is class-scoped and doesn't reach
+		// namespace-level free functions, so the helper goes through this.
+		auto AddEntry(FGameplayTag InTag, FCk_Handle_Goap_Action InAction) -> void
+		{
+			_TagToAction.Add(InTag, InAction);
+		}
 	};
 
 // ====================================================================================================================
