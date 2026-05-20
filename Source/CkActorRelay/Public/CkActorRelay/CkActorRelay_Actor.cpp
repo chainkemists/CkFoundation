@@ -5,6 +5,7 @@
 #include "CkActorRelay/CkActorRelay_Log.h"
 
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
+#include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 #include "CkEcsExt/EntityScript/CkEntityScript_WithActor.h"
 #include "CkEcsExt/EntityScript/CkEntityScript_WithActor_Data.h"
@@ -107,7 +108,44 @@ auto
     _GroupSubsystem = GroupSubsystem;
     GroupSubsystem->DoRegisterChannelActor(this);
 
+    DoStartBroadcastWhenReadyPolling();
+
     return true;
+}
+
+auto
+    ACk_ActorRelay_UE::
+    DoStartBroadcastWhenReadyPolling()
+    -> void
+{
+    auto WeakThis = TWeakObjectPtr(this);
+    auto TryBroadcast = [WeakThis]() -> bool
+    {
+        if (ck::Is_NOT_Valid(WeakThis))
+        { return true; }
+
+        auto Subsystem = WeakThis->_GroupSubsystem.Get();
+        if (ck::Is_NOT_Valid(Subsystem))
+        { return false; }
+
+        if (NOT UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(WeakThis.Get()))
+        { return false; }
+
+        Subsystem->DoBroadcastChannelReadyChanged();
+        return true;
+    };
+
+    if (TryBroadcast())
+    { return; }
+
+    GetWorld()->GetTimerManager().SetTimer(_BroadcastReadyTimerHandle, [WeakThis, TryBroadcast]()
+    {
+        if (ck::Is_NOT_Valid(WeakThis))
+        { return; }
+
+        if (TryBroadcast())
+        { WeakThis->GetWorld()->GetTimerManager().ClearTimer(WeakThis->_BroadcastReadyTimerHandle); }
+    }, 0.1f, true);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

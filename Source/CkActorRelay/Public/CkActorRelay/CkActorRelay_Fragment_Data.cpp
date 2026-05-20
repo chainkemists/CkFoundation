@@ -9,4 +9,9 @@ CK_DEFINE_CUSTOM_IS_VALID(FCk_ActorRelay_ChannelResult, IsValid_Policy_Default, 
     return InResult.Get_ChannelActor().IsValid() && ck::IsValid(InResult.Get_ChannelEntity());
 });
 
+CK_DEFINE_CUSTOM_IS_VALID(FCk_Handle_PendingActorRelay, IsValid_Policy_Default, [=](const FCk_Handle_PendingActorRelay& InHandle)
+{
+    return InHandle.Get_GroupSubsystem().IsValid();
+});
+
 // --------------------------------------------------------------------------------------------------------------------

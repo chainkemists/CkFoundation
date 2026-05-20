@@ -31,7 +31,7 @@ auto
     UCk_ActorRelay_Subsystem_UE::
     Request_AcquireChannel(
         const FGameplayTag& InGroupTag)
-    -> FCk_ActorRelay_ChannelResult
+    -> FCk_Handle_PendingActorRelay
 {
     auto GroupSubsystem = Get_GroupSubsystem(InGroupTag);
 
@@ -47,7 +47,7 @@ auto
     Request_AcquireChannel_ForPlayer(
         const FGameplayTag& InGroupTag,
         APlayerState* InPlayerState)
-    -> FCk_ActorRelay_ChannelResult
+    -> FCk_Handle_PendingActorRelay
 {
     auto GroupSubsystem = Get_GroupSubsystem(InGroupTag);
 

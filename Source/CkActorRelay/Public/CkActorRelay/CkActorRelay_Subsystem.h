@@ -31,13 +31,13 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|ActorRelay",
               DisplayName = "[Ck][ActorRelay] Acquire Channel")
-    FCk_ActorRelay_ChannelResult
+    FCk_Handle_PendingActorRelay
     Request_AcquireChannel(
         UPARAM(meta = (Categories = "ActorRelay")) const FGameplayTag& InGroupTag);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|ActorRelay",
               DisplayName = "[Ck][ActorRelay] Acquire Channel For Player")
-    FCk_ActorRelay_ChannelResult
+    FCk_Handle_PendingActorRelay
     Request_AcquireChannel_ForPlayer(
         UPARAM(meta = (Categories = "ActorRelay")) const FGameplayTag& InGroupTag,
         APlayerState* InPlayerState);

@@ -7,6 +7,42 @@
 #include "CkActorRelay_Utils.generated.h"
 
 /*-----------------------------------------------------------------------------
+                       PENDING ACTOR RELAY UTILS (MIXIN)
+------------------------------------------------------------------------------*/
+
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_PendingActorRelay"))
+class CKACTORRELAY_API UCk_Utils_PendingActorRelay_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_PendingActorRelay_UE);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|ActorRelay",
+              DisplayName = "[Ck][ActorRelay] Promise/Future OnAcquired",
+              meta = (Keywords = "bind, wait, when, finish"))
+    static void
+    Promise_OnAcquired(
+        UPARAM(ref) FCk_Handle_PendingActorRelay& InPending,
+        const FCk_Delegate_ActorRelay_Acquired& InDelegate);
+
+    static void
+    Promise_OnAcquired(
+        FCk_Handle_PendingActorRelay& InPending,
+        TFunction<void(FCk_ActorRelay_ChannelResult)> InCallback);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|ActorRelay",
+              DisplayName = "[Ck][ActorRelay] Get Is Valid (Pending Actor Relay)",
+              meta = (CompactNodeTitle = "IsValid"))
+    static bool
+    Get_IsValid(
+        const FCk_Handle_PendingActorRelay& InHandle);
+};
+
+/*-----------------------------------------------------------------------------
                           ACTOR RELAY UTILS
 ------------------------------------------------------------------------------*/
 
@@ -23,7 +59,7 @@ public:
               Category = "Ck|Utils|ActorRelay",
               DisplayName = "[Ck][ActorRelay] Acquire Channel",
               meta = (WorldContext = "InWorldContextObject"))
-    static FCk_ActorRelay_ChannelResult
+    static FCk_Handle_PendingActorRelay
     Request_AcquireChannel(
         const UObject* InWorldContextObject,
         UPARAM(meta = (Categories = "ActorRelay")) FGameplayTag InGroupTag);
@@ -32,7 +68,7 @@ public:
               Category = "Ck|Utils|ActorRelay",
               DisplayName = "[Ck][ActorRelay] Acquire Channel For Player",
               meta = (WorldContext = "InWorldContextObject"))
-    static FCk_ActorRelay_ChannelResult
+    static FCk_Handle_PendingActorRelay
     Request_AcquireChannel_ForPlayer(
         const UObject* InWorldContextObject,
         UPARAM(meta = (Categories = "ActorRelay")) FGameplayTag InGroupTag,

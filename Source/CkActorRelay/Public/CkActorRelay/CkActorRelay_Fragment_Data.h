@@ -10,6 +10,8 @@
 #include "CkActorRelay_Fragment_Data.generated.h"
 
 class ACk_ActorRelay_UE;
+class APlayerState;
+class UCk_ActorRelay_Group_Subsystem_Base_UE;
 
 /*-----------------------------------------------------------------------------
                                HANDLE
@@ -83,6 +85,74 @@ public:
 };
 
 CK_DECLARE_CUSTOM_IS_VALID(CKACTORRELAY_API, FCk_ActorRelay_ChannelResult, IsValid_Policy_Default);
+
+/*-----------------------------------------------------------------------------
+                       ACQUIRE KIND
+------------------------------------------------------------------------------*/
+
+UENUM(BlueprintType)
+enum class ECk_ActorRelay_AcquireKind : uint8
+{
+    Server,
+    ForPlayer,
+    Any
+};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ActorRelay_AcquireKind);
+
+/*-----------------------------------------------------------------------------
+                       ACQUIRE DELEGATE
+------------------------------------------------------------------------------*/
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(
+    FCk_Delegate_ActorRelay_Acquired,
+    FCk_ActorRelay_ChannelResult, InResult);
+
+DECLARE_MULTICAST_DELEGATE_OneParam(
+    FCk_Delegate_ActorRelay_Acquired_MC,
+    FCk_ActorRelay_ChannelResult);
+
+/*-----------------------------------------------------------------------------
+                       PENDING ACTOR RELAY HANDLE
+------------------------------------------------------------------------------*/
+
+USTRUCT(BlueprintType, meta = (HasNativeMake, HasNativeBreak))
+struct CKACTORRELAY_API FCk_Handle_PendingActorRelay
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Handle_PendingActorRelay);
+
+    friend class UCk_ActorRelay_Group_Subsystem_Base_UE;
+    friend class UCk_Utils_PendingActorRelay_UE;
+
+private:
+    UPROPERTY(Transient, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    TWeakObjectPtr<UCk_ActorRelay_Group_Subsystem_Base_UE> _GroupSubsystem;
+
+    UPROPERTY(Transient, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    TWeakObjectPtr<APlayerState> _PlayerState;
+
+    UPROPERTY(Transient, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    ECk_ActorRelay_AcquireKind _Kind = ECk_ActorRelay_AcquireKind::Server;
+
+    UPROPERTY(Transient, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    bool _Resolved = false;
+
+    // Tracks the pending subscription on the subsystem's _OnChannelReadyChanged.
+    // Kept for diagnostics / future cancellation; the lambda itself owns its
+    // unbind via a shared FDelegateHandle, so this field can be dropped on the
+    // floor without leaking.
+    FDelegateHandle _SubscriptionHandle;
+
+public:
+    CK_PROPERTY_GET(_GroupSubsystem);
+    CK_PROPERTY_GET(_PlayerState);
+    CK_PROPERTY_GET(_Kind);
+    CK_PROPERTY_GET(_Resolved);
+};
+
+CK_DECLARE_CUSTOM_IS_VALID(CKACTORRELAY_API, FCk_Handle_PendingActorRelay, IsValid_Policy_Default);
 
 /*-----------------------------------------------------------------------------
                        ACQUIRE CHANNEL REQUEST
