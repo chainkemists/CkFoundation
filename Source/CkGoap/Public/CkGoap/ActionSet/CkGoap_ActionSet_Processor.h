@@ -74,8 +74,9 @@ public:
 		const FFragment_Goap_ActionSet_ActionCatalogIndex& InCatalogIndex) const -> void;
 
 private:
-	// These helpers mutate private members of FFragment_Goap_Action_Current.
-	// Declared as static members so they inherit the processor's friend access.
+	// These helpers mutate private members of FFragment_Goap_Action_Current and
+	// FFragment_Goap_WorldState_Subscribers. Declared as static members so they
+	// inherit the processor's friend access to both fragments.
 	static auto
 	DoInjectGoalSynchronous(
 		FCk_Handle_Goap_Action& InParentAction,
@@ -87,6 +88,22 @@ private:
 	DoTruncateChainFrom(
 		TArray<FCk_Handle_Goap_Action>& InActiveChain,
 		int32 InStartIndex) -> void;
+
+	// Walks the WS-source override chain: child's _WorldStateSource_Override →
+	// parent's _WorldStateSource_Resolved → ActionSet's _WorldStateSource.
+	// Writes the resolved source into the child's _WorldStateSource_Resolved.
+	static auto
+	DoResolveAndAssignWorldStateSource(
+		FCk_Handle_Goap_Action& InChild,
+		const FCk_Handle_Goap_Action& InParent,
+		const FCk_Handle_Goap_ActionSet& InActionSet) -> void;
+
+	// Add/remove an Action's handle to/from its resolved WS's subscriber list.
+	static auto
+	DoSubscribeActionToWorldState(FCk_Handle_Goap_Action& InAction) -> void;
+
+	static auto
+	DoUnsubscribeActionFromWorldState(FCk_Handle_Goap_Action& InAction) -> void;
 };
 
 // ====================================================================================================================
