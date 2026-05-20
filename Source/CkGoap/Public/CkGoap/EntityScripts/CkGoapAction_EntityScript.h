@@ -7,7 +7,7 @@
 
 // ====================================================================================================================
 
-namespace ck { class FProcessor_Goap_Setup; class FProcessor_Goap_Tier_Setup; }
+namespace ck { class FProcessor_Goap_Setup; class FProcessor_Goap_Action_Setup; }
 
 // ====================================================================================================================
 //
@@ -69,14 +69,28 @@ protected:
 	void
 	SetCost(float InCost);
 
-	// Identifies this action for the Bundle/Tier chain-update rule. When
-	// Plan[0]._ActionTag matches some Tier._TierTag in the same bundle, that
-	// tier auto-activates as the planning tier's child. Leave unset for "leaf"
-	// actions that never trigger a sub-tier.
-	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|Action",
-		DisplayName = "[Ck][GOAP] Set Action Tag")
-	void
-	SetActionTag(FGameplayTag InTag);
+	// ----------------------------------------------------------------------------------------------------------------
+	// IDENTITY
+	// ----------------------------------------------------------------------------------------------------------------
+
+public:
+	// The action's identity tag, derived from its class name via
+	// UCk_Utils_Object_UE::Get_TagFromClassName. Mirrors SM's pattern
+	// (UCk_SmState_EntityScript::Get_StateTagForClass). Used for debug
+	// identification and not for chain matching — chain extension in the
+	// unified model reads Plan[0] handles directly.
+	UFUNCTION(BlueprintPure,
+		Category = "Ck|GOAP|Action",
+		DisplayName = "[Ck][GOAP] Get Action Tag For Class")
+	static FGameplayTag
+	Get_ActionTagForClass(
+		TSubclassOf<UCk_GoapAction_EntityScript> InClass);
+
+	UFUNCTION(BlueprintPure,
+		Category = "Ck|GOAP|Action",
+		DisplayName = "[Ck][GOAP] Get Action Tag")
+	FGameplayTag
+	Get_ActionTag() const;
 
 	// ----------------------------------------------------------------------------------------------------------------
 	// DATA — populated by the builder API, read by FProcessor_Goap_Setup
@@ -86,13 +100,10 @@ private:
 	TArray<ck::goap::FWorldStateCondition_Raw> _Preconditions;
 	TArray<ck::goap::FWorldStateEffect_Raw>    _Effects;
 	float _Cost = 1.0f;
-	FGameplayTag _ActionTag;
 
 public:
-	auto Get_ActionTag() const -> FGameplayTag { return _ActionTag; }
-
 	friend class ck::FProcessor_Goap_Setup;
-	friend class ck::FProcessor_Goap_Tier_Setup;
+	friend class ck::FProcessor_Goap_Action_Setup;
 };
 
 // ====================================================================================================================

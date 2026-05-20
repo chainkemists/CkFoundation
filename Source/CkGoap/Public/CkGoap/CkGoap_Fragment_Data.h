@@ -110,7 +110,7 @@ public:
 };
 
 // ====================================================================================================================
-// SIGNAL PAYLOADS — reused by tier-scoped signals declared in Tier/CkGoap_Tier_Fragment_Data.h
+// SIGNAL PAYLOADS — reused by Action-scoped signals declared in Action/CkGoap_Action_Fragment_Data.h
 // ====================================================================================================================
 
 USTRUCT(BlueprintType)

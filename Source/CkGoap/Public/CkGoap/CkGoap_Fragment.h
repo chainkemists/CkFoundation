@@ -6,9 +6,10 @@
 
 // ====================================================================================================================
 //
-// Bundle/Tier era CkGoap module-level fragments.
+// Bundle/Tier era CkGoap module-level fragments (historical context — Tier
+// has been unified into Action under the ActionSet/Action model).
 //
-// Per-tier ECS fragments + per-tier signals → see Tier/CkGoap_Tier_Fragment.h
+// Per-Action ECS fragments + per-Action signals → see Action/CkGoap_Action_Fragment.h
 // Per-ActionSet ECS fragments + ActionSet signals → see ActionSet/CkGoap_ActionSet_Fragment.h
 //
 // This header carries only what lives on the GOAP ROOT entity (the
@@ -33,8 +34,8 @@ namespace ck
 // ====================================================================================================================
 
 	// Added by WS subscriber plumbing when a registered WS key changes value
-	// (not on every Set call). Consumed + removed by per-tier AutoReplan once
-	// the tier's replan policy + throttle permit firing a Plan request.
+	// (not on every Set call). Consumed + removed by per-Action AutoReplan
+	// once the Action's replan policy + throttle permit firing a Plan request.
 	CK_DEFINE_ECS_TAG(FTag_Goap_Dirty_WorldState);
 	CK_DEFINE_ECS_TAG(FTag_Goap_Dirty_Cost);
 
