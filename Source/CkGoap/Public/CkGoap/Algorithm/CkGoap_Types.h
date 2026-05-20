@@ -24,9 +24,10 @@ struct FActionDef
 	float Cost = 1.0f;
 	TSubclassOf<UCk_GoapAction_EntityScript> ActionClass;
 
-	// Bundle/Tier chain-update identity. If Plan[0]'s ActionTag matches a
-	// Tier's _TierTag in the same ActionSet, that tier auto-activates as a
-	// sub-tier. Leave invalid (default) for "leaf" actions.
+	// Bundle/Tier era chain-update identity (legacy). In the unified
+	// ActionSet/Action model, chain extension reads Plan[0] handles directly
+	// rather than tag matching. Field retained for U1 compile-clean; U3 will
+	// remove it when the legacy resolver is fully replaced.
 	FGameplayTag ActionTag;
 };
 
