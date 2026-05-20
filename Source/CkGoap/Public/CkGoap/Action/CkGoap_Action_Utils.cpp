@@ -2,12 +2,14 @@
 
 #include "CkGoap/CkGoap_Log.h"
 #include "CkGoap/ActionSet/CkGoap_ActionSet_Fragment.h"
+#include "CkGoap/ActionSet/CkGoap_ActionSet_Utils.h"            // Find_ActionByClass + CastChecked
+#include "CkGoap/ActionSet/CkGoap_ActionSet_Internal.h"         // DoCreateOrFindActionEntity
 #include "CkGoap/Action/CkGoap_Action_Fragment.h"
-#include "CkGoap/Action/CkGoap_Action_Record_Internal.h"  // FFragment_RecordOfGoapActions + utils struct
-#include "CkGoap/ActionSet/CkGoap_ActionSet_Utils.h"  // Find_Action (uniqueness check)
-#include "CkGoap/WorldState/CkGoap_WorldState_Utils.h"  // Request_AddSubscriber
+#include "CkGoap/Action/CkGoap_Action_Record_Internal.h"        // FFragment_RecordOfGoapActions + utils struct
+#include "CkGoap/WorldState/CkGoap_WorldState_Utils.h"          // Request_AddSubscriber
 #include "CkAStar/CkAStar_Fragment.h"
 
+#include "CkEcs/ContextOwner/CkContextOwner_Utils.h"            // owner-chain walk
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Signal/CkSignal_Utils.inl.h"
 
@@ -19,108 +21,49 @@
 
 auto
 	UCk_Utils_Goap_Action_UE::
-	AddAction_ToActionSet(
-		FCk_Handle_Goap_ActionSet& InActionSet,
+	AddAction_ToAction(
+		FCk_Handle_Goap_Action& InParentAction,
 		const FCk_Fragment_Goap_ActionParamsData& InParams)
 	-> FCk_Handle_Goap_Action
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InActionSet),
-		TEXT("Invalid ActionSet handle when adding action"))
+	CK_ENSURE_IF_NOT(ck::IsValid(InParentAction),
+		TEXT("Invalid parent Action handle [{}] in AddAction_ToAction"), InParentAction)
 	{ return {}; }
 
 	CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_ActionClass()),
-		TEXT("Action params has invalid _ActionClass (ActionSet [{}])"), InActionSet)
+		TEXT("Invalid _ActionClass in AddAction_ToAction (parent [{}])"), InParentAction)
 	{ return {}; }
 
-	// Identity tag derived from the Action's class.
-	const auto ActionTag = UCk_GoapAction_EntityScript::Get_ActionTagForClass(InParams.Get_ActionClass());
-	CK_ENSURE_IF_NOT(ActionTag.IsValid(),
-		TEXT("Could not derive a valid action tag for class [{}]"), InParams.Get_ActionClass())
+	// Walk up the owner chain to find the containing ActionSet. Actions are
+	// created with the ActionSet as their context owner (see
+	// DoCreateOrFindActionEntity); recover that here.
+	auto OwnerEntity = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InParentAction);
+	auto ActionSetHandle = UCk_Utils_Goap_ActionSet_UE::CastChecked(OwnerEntity);
+
+	CK_ENSURE_IF_NOT(ck::IsValid(ActionSetHandle),
+		TEXT("Parent Action [{}] has no owning ActionSet"), InParentAction)
 	{ return {}; }
 
-	// Diagnostic: action-tag uniqueness within ActionSet.
-	if (auto Existing = UCk_Utils_Goap_ActionSet_UE::Find_Action(InActionSet, ActionTag);
-		ck::IsValid(Existing))
-	{
-		ck::goap::Warning(
-			TEXT("Action with tag [{}] already exists in ActionSet [{}]; AddAction_ToActionSet rejected."),
-			ActionTag, InActionSet);
-		return {};
-	}
+	// Create / find the child entity in the ActionSet's catalog.
+	auto ChildHandle = ck::goap::internal_actionset::DoCreateOrFindActionEntity(ActionSetHandle, InParams);
 
-	auto ActionEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_Goap_Action>(InActionSet);
+	if (NOT ck::IsValid(ChildHandle))
+	{ return {}; }
 
-	// Records of actions require GameplayLabels — label the action with its
-	// derived tag.
-	UCk_Utils_GameplayLabel_UE::Add(ActionEntity, ActionTag);
+	// Wire up tree edges. v1 enforces a strict tree: a given Action entity
+	// cannot be re-parented once it has a parent.
+	auto& ChildTree = ChildHandle.Get<ck::FFragment_Goap_Action_Tree>();
+	CK_ENSURE_IF_NOT(NOT ck::IsValid(ChildTree.Get_ParentAction()),
+		TEXT("Action [{}] already has parent [{}]; cannot reparent (v1 enforces tree)."),
+		ChildHandle, ChildTree.Get_ParentAction())
+	{ return ChildHandle; }
 
-	ActionEntity.Add<ck::FFragment_Goap_Action_Params>(InParams);
-	ActionEntity.Add<ck::FFragment_Goap_Action_Current>();
-	ActionEntity.Add<ck::FFragment_Goap_Action_ActionClasses>();
-	ActionEntity.Add<ck::FFragment_Goap_Action_Definition>();
-	ActionEntity.Add<ck::FFragment_Goap_Action_Tree>();
-	ActionEntity.Add<ck::FFragment_Goap_Action_Requests>();
+	ChildTree._ParentAction = InParentAction;
 
-	auto& Throttle = ActionEntity.AddOrGet<ck::FFragment_Goap_Action_ReplanThrottle>();
-	(void)Throttle;  // throttle's interval is read from params at Setup time
+	auto& ParentTree = InParentAction.Get<ck::FFragment_Goap_Action_Tree>();
+	ParentTree._ChildActions.AddUnique(ChildHandle);
 
-	ActionEntity.Add<ck::FFragment_Goap_Action_SearchState>();
-	ActionEntity.Add<ck::FFragment_Goap_Action_Result>();
-	ActionEntity.Add<ck::FFragment_Goap_Action_PlanContext>();
-
-	// A* params mirror the action's planning knobs.
-	auto AStarParams = ck::FFragment_AStar_Params{};
-	AStarParams.Set_BudgetMicroseconds(InParams.Get_SearchBudgetMicroseconds());
-	AStarParams.Set_CostThreshold(InParams.Get_CostThreshold());
-	ActionEntity.Add<ck::FFragment_AStar_Params>(AStarParams);
-	ActionEntity.Add<ck::FFragment_AStar_Debug>();
-
-	// Mark for one-shot setup.
-	ActionEntity.AddOrGet<ck::FTag_Goap_Action_RequiresSetup>();
-
-	if (InParams.Get_PlanOnStart())
-	{
-		ActionEntity.AddOrGet<ck::FTag_Goap_Action_RequiresInitialPlan>();
-	}
-
-	// Register in the ActionSet's catalog record + tag→action index.
-	ck::goap::internal_action::FRecordOfGoapActions_Utils::AddIfMissing(InActionSet);
-	ck::goap::internal_action::FRecordOfGoapActions_Utils::Request_Connect(InActionSet, ActionEntity);
-
-	auto& Index = InActionSet.Get<ck::FFragment_Goap_ActionSet_ActionCatalogIndex>();
-	Index._TagToAction.Add(ActionTag, ActionEntity);
-
-	// Catalog mutated → re-run ActionSet setup (cycle detection).
-	InActionSet.AddOrGet<ck::FTag_Goap_ActionSet_RequiresSetup>();
-
-	// First AddAction on an ActionSet = the root action. Seed the active chain.
-	auto& ActiveChain = InActionSet.Get<ck::FFragment_Goap_ActionSet_ActiveChain>();
-	if (ActiveChain._Chain.IsEmpty())
-	{
-		// Validate root has a WS override (no parent to inherit from).
-		if (NOT ck::IsValid(InParams.Get_WorldStateSource_Override()))
-		{
-			ck::goap::Warning(
-				TEXT("Root action [{}] in ActionSet [{}] has no _WorldStateSource_Override; planning will not run until one is set."),
-				ActionTag, InActionSet);
-		}
-		else
-		{
-			// Resolve WS source synchronously for the root.
-			auto& Current = ActionEntity.Get<ck::FFragment_Goap_Action_Current>();
-			Current._WorldStateSource_Resolved = InParams.Get_WorldStateSource_Override();
-
-			// Subscribe root action to its WS so value-changes flip the dirty
-			// tag and AutoReplan fires. Non-root actions get this hook-up in
-			// the ActionSet ChainUpdate processor at activation time.
-			auto WS = Current._WorldStateSource_Resolved;
-			UCk_Utils_Goap_WorldState_UE::Request_AddSubscriber(WS, ActionEntity);
-		}
-
-		ActiveChain._Chain.Add(ActionEntity);
-	}
-
-	return ActionEntity;
+	return ChildHandle;
 }
 
 // ====================================================================================================================
