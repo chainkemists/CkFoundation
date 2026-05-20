@@ -8,7 +8,7 @@
 // Bundle/Tier era CkGoap module-level processors.
 //
 // Per-tier processors → see Tier/CkGoap_Tier_Processor.h
-// Per-bundle processors → see Bundle/CkGoap_Bundle_Processor.h
+// Per-ActionSet processors → see ActionSet/CkGoap_ActionSet_Processor.h
 //
 // There are no root-level processors in v1 of the refactor. This file is
 // retained as the conventional module-processor header in case a future

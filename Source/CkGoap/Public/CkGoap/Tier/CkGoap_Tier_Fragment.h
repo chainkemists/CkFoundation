@@ -15,7 +15,7 @@
 
 // Forward decls in global scope so friend lookups bind correctly.
 class UCk_Utils_Goap_Tier_UE;
-class UCk_Utils_Goap_Bundle_UE;
+class UCk_Utils_Goap_ActionSet_UE;
 
 // ====================================================================================================================
 
@@ -25,7 +25,7 @@ namespace ck
 	class FProcessor_Goap_Tier_HandleRequests;
 	class FProcessor_Goap_Tier_HandleResult;
 	class FProcessor_Goap_Tier_AutoReplan;
-	class FProcessor_Goap_Bundle_ChainUpdate;
+	class FProcessor_Goap_ActionSet_ChainUpdate;
 
 // ====================================================================================================================
 // TAGS — tier-scoped lifecycle
@@ -54,12 +54,12 @@ namespace ck
 		CK_GENERATED_BODY(FFragment_Goap_Tier_Current);
 
 		friend class ::UCk_Utils_Goap_Tier_UE;
-		friend class ::UCk_Utils_Goap_Bundle_UE;
+		friend class ::UCk_Utils_Goap_ActionSet_UE;
 		friend class FProcessor_Goap_Tier_Setup;
 		friend class FProcessor_Goap_Tier_HandleRequests;
 		friend class FProcessor_Goap_Tier_HandleResult;
 		friend class FProcessor_Goap_Tier_AutoReplan;
-		friend class FProcessor_Goap_Bundle_ChainUpdate;
+		friend class FProcessor_Goap_ActionSet_ChainUpdate;
 
 	private:
 		// Resolved at activation: override-if-set, else parent's resolved.
@@ -126,7 +126,7 @@ namespace ck
 		friend class ::UCk_Utils_Goap_Tier_UE;
 		friend class FProcessor_Goap_Tier_Setup;
 		friend class FProcessor_Goap_Tier_HandleRequests;
-		friend class FProcessor_Goap_Bundle_ChainUpdate;
+		friend class FProcessor_Goap_ActionSet_ChainUpdate;
 
 	private:
 		TArray<goap::FActionDef> _ActionDefs;

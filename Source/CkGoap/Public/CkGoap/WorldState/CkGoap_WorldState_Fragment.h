@@ -132,7 +132,7 @@ public:
 
 	friend class UCk_Utils_Goap_WorldState_UE;
 	friend class FProcessor_Goap_WorldState_HandleRequests;
-	friend class FProcessor_Goap_Bundle_ChainUpdate;
+	friend class FProcessor_Goap_ActionSet_ChainUpdate;
 
 private:
 	TArray<FCk_Handle> _Subscribers;
