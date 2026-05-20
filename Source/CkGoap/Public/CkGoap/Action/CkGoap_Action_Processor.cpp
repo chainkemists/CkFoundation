@@ -8,6 +8,8 @@
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkEcs/Signal/CkSignal_Utils.h"
 
+#include "Algo/Reverse.h"
+
 // ====================================================================================================================
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Action_Setup);
@@ -125,14 +127,53 @@ auto
 			Source, InHandle, SourceRegistry.Num(), goap::WorldState_MaxKeys);
 	}
 
-	// TODO(U3): Build _CachedActionDef from this Action's own (preconditions,
-	// effects, cost) and populate _GoalFromEffects. Until U3 wires the
-	// parent-as-planner flow, _CachedActionDef remains default.
+	// Build this Action's _CachedActionDef from its own preconditions / effects /
+	// cost. The parent Action's planner consumes this as a candidate operator.
+	{
+		auto& Def = InActionDef._CachedActionDef;
+		Def = goap::FActionDef{};
+		Def.ActionClass = ActionClass;
+		Def.Cost = InActionDef._Cost;
 
-	// TODO(U3): Build the planner candidate set from this Action's child
-	// Actions' _CachedActionDef instead of a per-Action _ActionClasses list.
-	// _ActionClasses is preserved as a legacy collection for now but is not
-	// consumed below.
+		// Action_Tag identity (debug only — chain matching uses entity handles).
+		if (ck::IsValid(ActionClass))
+		{
+			Def.ActionTag = UCk_GoapAction_EntityScript::Get_ActionTagForClass(ActionClass);
+		}
+
+		Def.Preconditions.Reserve(InActionDef._Preconditions.Num());
+		for (const auto& Pre : InActionDef._Preconditions)
+		{
+			const auto Resolved = ResolveCondition(SourceRegistry, Pre);
+			if (Resolved.IsValid()) { Def.Preconditions.Add(Resolved); }
+		}
+
+		Def.Effects.Reserve(InActionDef._Effects.Num());
+		for (const auto& Eff : InActionDef._Effects)
+		{
+			const auto Resolved = ResolveEffect(SourceRegistry, Eff);
+			if (Resolved.IsValid()) { Def.Effects.Add(Resolved); }
+		}
+	}
+
+	// Pre-compute _GoalFromEffects (authored form). Child Actions copy this into
+	// their _Current._Goal at activation. We store the authored shape here and
+	// the consuming ChainUpdate resolves into runtime FWorldStateCondition via
+	// the resolved WS registry of the activating Action.
+	InActionDef._GoalFromEffects.Reset();
+	InActionDef._GoalFromEffects.Reserve(InActionDef._Effects.Num());
+	for (const auto& Eff : InActionDef._Effects)
+	{
+		InActionDef._GoalFromEffects.Add(FCk_GoapWS_Condition_Authored{Eff.Key, Eff.Value});
+	}
+
+	// TODO(U5): populate Action_Definition._InvalidGoal for diagnostic
+	// surfacing — record any Effect whose Key is missing from the resolved WS
+	// registry.
+
+	// _ActionClasses retained as a legacy collection (read by no live code in
+	// the unified model). Candidate sets are built dynamically from
+	// Action_Tree._ChildActions at plan-request time.
 	(void)InClasses;
 
 	// Resolve root-Action's _InitialGoal_RootOnly into typed _Current._Goal.
@@ -270,12 +311,18 @@ auto
 				InCurrent._Plan.Reset();
 				InCurrent._PlanCost = 0.0f;
 
-				// TODO(U3): Build the planner candidate set from this
-				// Action's CHILDREN's _CachedActionDef (Action_Tree->Get_ChildActions).
-				// Until then, planning with an empty candidate set produces a
-				// degenerate Plan (effectively goal-already-satisfied behavior),
-				// which is fine for U1 compile-clean.
+				// Build the planner's candidate operator set from this Action's
+				// children. Each child Action carries its own pre-built
+				// _CachedActionDef (resolved against this Action's WS at Setup).
+				const auto& Tree = InHandle.template Get<FFragment_Goap_Action_Tree>();
 				auto Candidates = TArray<goap::FActionDef>{};
+				Candidates.Reserve(Tree.Get_ChildActions().Num());
+				for (const auto& ChildHandle : Tree.Get_ChildActions())
+				{
+					if (NOT ck::IsValid(ChildHandle)) { continue; }
+					const auto& ChildDef = ChildHandle.template Get<FFragment_Goap_Action_Definition>();
+					Candidates.Add(ChildDef.AsActionDef());
+				}
 				(void)InActionDef;
 
 				const auto GoalConditions = BuildConstraintSet(InCurrent._Goal);
@@ -337,11 +384,27 @@ auto
 			}
 			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Action_SetActionCost>)
 			{
-				// TODO(U3): in the unified model, cost lives on a child
-				// Action's Action_Definition._Cost. The right implementation
-				// looks up the child Action by class via Action_Tree and
-				// mutates its def directly. For now, no-op + dirty flag.
-				(void)InTypedRequest;
+				// In the unified model, cost lives on a child Action's
+				// Action_Definition._Cost (and its mirrored _CachedActionDef.Cost
+				// consumed by the parent's planner). Look up the child by class
+				// via Action_Tree and mutate its def directly.
+				const auto& Tree = InHandle.template Get<FFragment_Goap_Action_Tree>();
+				const auto TargetClass = InTypedRequest.Get_ActionClass();
+				const auto NewCost = InTypedRequest.Get_Cost();
+
+				for (auto ChildHandle : Tree.Get_ChildActions())
+				{
+					if (NOT ck::IsValid(ChildHandle)) { continue; }
+
+					const auto& ChildParams = ChildHandle.template Get<FFragment_Goap_Action_Params>();
+					if (ChildParams.Get_ActionClass() != TargetClass) { continue; }
+
+					auto& ChildDef = ChildHandle.template Get<FFragment_Goap_Action_Definition>();
+					ChildDef._Cost = NewCost;
+					ChildDef._CachedActionDef.Cost = NewCost;
+					break;
+				}
+
 				(void)InActionDef;
 				InHandle.AddOrGet<FTag_Goap_Dirty_Cost>();
 			}
@@ -370,11 +433,11 @@ auto
 // ====================================================================================================================
 // HANDLE RESULT — A* completion → plan / fire signals
 //
-// TODO(U3): Plan now stores TArray<FCk_Handle_Goap_Action>. The A* graph
-// returns ActionIndex offsets which need to be mapped back to child Action
-// entities via Action_Tree, not classes. For U1 compile-clean, the
-// PlanComplete signal still uses the class array via Get_PlanClasses() but
-// _Plan is emptied (no chain extension will actually happen until U3).
+// In the unified model, _Plan is TArray<FCk_Handle_Goap_Action> — each entry is
+// a child Action entity, found by mapping the A* path's edge ActionDef classes
+// back to this Action's _ChildActions. The PlanComplete payload still carries
+// the class array per the existing struct shape — we derive it via
+// Get_PlanClasses().
 // ====================================================================================================================
 
 auto
@@ -388,22 +451,65 @@ auto
 {
 	InHandle.Remove<FTag_AStar_SearchComplete>();
 
-	(void)InPlanContext;
-
 	switch (InResult._SearchStatus)
 	{
 		case ECk_AStarSearchStatus::Complete:
 		{
-			// TODO(U3): map Path edges → child Action entities via Action_Tree
-			// and write them into _Plan. For now, plan is empty and the signal
-			// payload reports an empty class array.
-			InCurrent._PlanStatus = ECk_GoapPlanStatus::PlanFound;
+			// Map A* path edges → child Action handles.
+			//
+			// The A* path is a sequence of state-pool node indices. For each
+			// consecutive pair (Path[i], Path[i+1]), the FGoapGraph knows the
+			// action index that bridged them; that ActionDef's ActionClass is
+			// our match key into this Action's _ChildActions.
+			//
+			// The search is regressive, so the A* path runs goal -> current.
+			// To produce a forward execution plan we walk edges in order and
+			// reverse at the end.
+			const auto& Tree = InHandle.template Get<FFragment_Goap_Action_Tree>();
+			const auto& ChildHandles = Tree.Get_ChildActions();
+			const auto& Graph = InPlanContext.Get_Graph();
+			const auto& Actions = Graph.Get_Actions();
+			const auto& Path = InResult._Path;
+
 			InCurrent._Plan.Reset();
+			if (Path.Num() >= 2)
+			{
+				InCurrent._Plan.Reserve(Path.Num() - 1);
+			}
+
+			for (auto i = 0; i + 1 < Path.Num(); ++i)
+			{
+				const auto ActionIdx = Graph.Get_ActionForEdge(Path[i], Path[i + 1]);
+				if (NOT Actions.IsValidIndex(ActionIdx)) { continue; }
+
+				const auto& ActionDefOnEdge = Actions[ActionIdx];
+				const auto TargetClass = ActionDefOnEdge.ActionClass;
+
+				const auto* MatchingChild = ChildHandles.FindByPredicate(
+					[&](const FCk_Handle_Goap_Action& InCandidate)
+					{
+						if (NOT ck::IsValid(InCandidate)) { return false; }
+						const auto& CandidateParams = InCandidate.template Get<FFragment_Goap_Action_Params>();
+						return CandidateParams.Get_ActionClass() == TargetClass;
+					});
+
+				CK_ENSURE_IF_NOT(MatchingChild != nullptr,
+					TEXT("A* path contains ActionDef class [{}] not in parent Action [{}]'s child set."),
+					TargetClass, InHandle)
+				{ continue; }
+
+				InCurrent._Plan.Add(*MatchingChild);
+			}
+
+			// Regressive search emits goal-to-current. Reverse for execution order.
+			Algo::Reverse(InCurrent._Plan);
+
+			InCurrent._PlanStatus = ECk_GoapPlanStatus::PlanFound;
 			InCurrent._PlanCost = InResult._TotalCost;
 
 			UUtils_Signal_OnGoap_Action_PlanComplete::Broadcast(
 				InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanComplete{
-					TArray<TSubclassOf<UCk_GoapAction_EntityScript>>{}, InResult._TotalCost}));
+					InCurrent.Get_PlanClasses(), InResult._TotalCost}));
 			break;
 		}
 
