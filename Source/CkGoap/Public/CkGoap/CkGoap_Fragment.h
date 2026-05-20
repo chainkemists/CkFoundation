@@ -9,13 +9,13 @@
 // Bundle/Tier era CkGoap module-level fragments.
 //
 // Per-tier ECS fragments + per-tier signals → see Tier/CkGoap_Tier_Fragment.h
-// Per-bundle ECS fragments + bundle signals → see Bundle/CkGoap_Bundle_Fragment.h
+// Per-ActionSet ECS fragments + ActionSet signals → see ActionSet/CkGoap_ActionSet_Fragment.h
 //
 // This header carries only what lives on the GOAP ROOT entity (the
 // FCk_Handle_Goap container) plus the dirty-tracking tags that are shared
 // across tier subscribers.
 //
-// FFragment_RecordOfGoapBundles (the root's record of bundle entities) is
+// FFragment_RecordOfGoapActionSets (the root's record of ActionSet entities) is
 // intentionally NOT declared here. Defining it would force this public header
 // to include CkRecord_Fragment.h, which transitively pulls
 // FCk_Handle_EntityExtension into every consumer of CkGoap. That trips link

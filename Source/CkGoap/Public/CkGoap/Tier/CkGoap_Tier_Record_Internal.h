@@ -1,7 +1,7 @@
 #pragma once
 
 // ====================================================================================================================
-// PRIVATE: bundle's record-of-tiers fragment + utils struct.
+// PRIVATE: ActionSet's record-of-tiers fragment + utils struct.
 //
 // Included by CkGoap_Tier_Utils.cpp (AddTier creates record entries).
 // Future processors that need to enumerate the tier catalog directly will
