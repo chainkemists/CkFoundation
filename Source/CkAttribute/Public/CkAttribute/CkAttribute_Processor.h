@@ -238,6 +238,15 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // The TExclude<FFragment_RefillAccumulator> term is what keeps the regular
+    // Float-on-Float refill path from accidentally double-ticking entities that
+    // belong to the accumulated path (Integer/Byte refills, where a Float
+    // accumulator backs an integer target). Without this exclusion, both
+    // processors match the same entity and TProcessor_Attribute_Refill_Impl
+    // would try to look up TFragment_RefillAttributeTarget<FCk_Handle_FloatAttribute>
+    // on an entity that only registered the Integer/Byte target — ensuring at
+    // runtime. AccumulatedRefill_Impl already requires the accumulator
+    // fragment, so excluding it here keeps the two queries disjoint.
     template <typename T_DerivedProcessor, concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier,
               ECk_Attribute_Refill_Policy T_RefillMode>
     class TProcessor_Attribute_Refill_Impl : public ck_exp::TProcessor<
@@ -245,6 +254,7 @@ namespace ck::detail
             typename T_DerivedAttributeModifier::AttributeFragmentType::HandleType,
             ck::TReadWrite<typename T_DerivedAttributeModifier::AttributeFragmentType>,
             FTag_IsRefillAttribute,
+            TExclude<FFragment_RefillAccumulator>,
             std::conditional_t<T_RefillMode == ECk_Attribute_Refill_Policy::Variable,
                 TExclude<FTag_RefillBehaviorAlwaysToZero>,
                 FTag_RefillBehaviorAlwaysToZero>,
@@ -268,7 +278,7 @@ namespace ck::detail
             FTag_RefillBehaviorAlwaysToZero>;
 
     public:
-        using Super = ck_exp::TProcessor<ThisType, HandleType, ck::TReadWrite<AttributeFragmentType>, FTag_IsRefillAttribute, RefillModeFilter, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using Super = ck_exp::TProcessor<ThisType, HandleType, ck::TReadWrite<AttributeFragmentType>, FTag_IsRefillAttribute, TExclude<FFragment_RefillAccumulator>, RefillModeFilter, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
         using TimeType = typename Super::TimeType;
 
     public:
