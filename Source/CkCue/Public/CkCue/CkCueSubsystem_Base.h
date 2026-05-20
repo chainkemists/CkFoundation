@@ -108,7 +108,7 @@ public:
 private:
     auto DoProcessPendingCues() -> void;
     auto DoCheckPendingCueTimeout(float InDeltaTime) -> bool;
-    auto DoAcquireCueRelay_ForClient() -> ACk_CueRelay_UE*;
+    auto DoAcquireCueRelay_ForClient_Async(TFunction<void(ACk_CueRelay_UE*)> InCallback) -> void;
 
 private:
     struct FCk_PendingCueRequest
