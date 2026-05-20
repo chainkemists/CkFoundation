@@ -68,6 +68,8 @@ auto
 {
     Super::Initialize(InCollection);
 
+    InCollection.InitializeDependency<UCk_ActorRelay_Subsystem_UE>();
+
     if (GetWorld()->IsNetMode(NM_Client))
     { return; }
 
