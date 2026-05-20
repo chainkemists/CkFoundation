@@ -84,13 +84,14 @@ public:
 	//
 	// Registering an entity as a subscriber on a WorldState causes that entity
 	// to be tagged with FTag_Goap_Dirty_WorldState whenever a Set request on
-	// this WorldState actually changes a key's value — which feeds per-tier
+	// this WorldState actually changes a key's value — which feeds per-Action
 	// AutoReplan throttle for OnWorldStateDirty / OnEitherDirty policies.
 	//
-	// In the Bundle/Tier model, tiers subscribe themselves at activation time
-	// (Bundle ChainUpdate processor) and unsubscribe at deactivation. The
-	// root tier subscribes at AddTier time. External consumers may also
-	// subscribe (e.g. for non-tier reactive systems).
+	// In the unified ActionSet/Action model, Actions subscribe themselves at
+	// activation time (ActionSet ChainUpdate processor) and unsubscribe at
+	// deactivation. The root Action subscribes at AddAction_ToActionSet time.
+	// External consumers may also subscribe (e.g. for non-Action reactive
+	// systems).
 	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|WorldState",
 		DisplayName = "[Ck][GOAP|WS] Request Add Subscriber")
 	static FCk_Handle_Goap_WorldState

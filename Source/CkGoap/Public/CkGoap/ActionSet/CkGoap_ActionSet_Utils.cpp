@@ -3,7 +3,7 @@
 #include "CkGoap/CkGoap_Log.h"
 #include "CkGoap/ActionSet/CkGoap_ActionSet_Fragment.h"
 #include "CkGoap/ActionSet/CkGoap_ActionSet_Record_Internal.h"  // FFragment_RecordOfGoapActionSets + utils struct
-#include "CkGoap/Tier/CkGoap_Tier_Fragment.h"
+#include "CkGoap/Action/CkGoap_Action_Fragment.h"
 #include "CkGoap/CkGoap_Utils.h"  // UCk_Utils_Goap_UE::Find_ActionSet (uniqueness check)
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -41,7 +41,7 @@ auto
 	auto ActionSetEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_Goap_ActionSet>(InGoap);
 
 	// Records of ActionSets require GameplayLabels — label the ActionSet with its
-	// declared tag. Same for tiers in AddTier.
+	// declared tag. Same for actions in AddAction_ToActionSet.
 	UCk_Utils_GameplayLabel_UE::Add(ActionSetEntity, InParams.Get_ActionSetTag());
 
 	ActionSetEntity.Add<ck::FFragment_Goap_ActionSet_Params>(InParams);
@@ -50,8 +50,9 @@ auto
 	auto& Current = ActionSetEntity.Get<ck::FFragment_Goap_ActionSet_Current>();
 	Current._EnableToggle = InParams.Get_InitialToggle();
 
-	ActionSetEntity.Add<ck::FFragment_Goap_ActionSet_ActiveTiers>();
-	ActionSetEntity.Add<ck::FFragment_Goap_ActionSet_TierCatalogIndex>();
+	ActionSetEntity.Add<ck::FFragment_Goap_ActionSet_ActiveChain>();
+	ActionSetEntity.Add<ck::FFragment_Goap_ActionSet_ActionCatalogIndex>();
+	ActionSetEntity.Add<ck::FFragment_Goap_ActionSet_WorldStateSource>();
 	ActionSetEntity.AddOrGet<ck::FTag_Goap_ActionSet_RequiresSetup>();
 
 	// Register the ActionSet in the root's record.
@@ -69,24 +70,24 @@ auto
 
 auto
 	UCk_Utils_Goap_ActionSet_UE::
-	Find_Tier(
+	Find_Action(
 		const FCk_Handle_Goap_ActionSet& InActionSet,
-		FGameplayTag InTierTag) -> FCk_Handle_Goap_Tier
+		FGameplayTag InActionTag) -> FCk_Handle_Goap_Action
 {
 	if (NOT ck::IsValid(InActionSet)) { return {}; }
-	if (NOT InTierTag.IsValid()) { return {}; }
+	if (NOT InActionTag.IsValid()) { return {}; }
 
-	const auto& Index = InActionSet.Get<ck::FFragment_Goap_ActionSet_TierCatalogIndex>();
-	const auto* Found = Index.Get_TagToTier().Find(InTierTag);
-	return Found ? *Found : FCk_Handle_Goap_Tier{};
+	const auto& Index = InActionSet.Get<ck::FFragment_Goap_ActionSet_ActionCatalogIndex>();
+	const auto* Found = Index.Get_TagToAction().Find(InActionTag);
+	return Found ? *Found : FCk_Handle_Goap_Action{};
 }
 
 auto
 	UCk_Utils_Goap_ActionSet_UE::
-	Get_ActiveTiers(const FCk_Handle_Goap_ActionSet& InActionSet) -> TArray<FCk_Handle_Goap_Tier>
+	Get_ActiveChain(const FCk_Handle_Goap_ActionSet& InActionSet) -> TArray<FCk_Handle_Goap_Action>
 {
 	if (NOT ck::IsValid(InActionSet)) { return {}; }
-	return InActionSet.Get<ck::FFragment_Goap_ActionSet_ActiveTiers>().Get_Tiers();
+	return InActionSet.Get<ck::FFragment_Goap_ActionSet_ActiveChain>().Get_Chain();
 }
 
 auto
@@ -122,20 +123,20 @@ auto
 
 auto
 	UCk_Utils_Goap_ActionSet_UE::
-	Request_ResetActiveTiers(FCk_Handle_Goap_ActionSet& InActionSet) -> FCk_Handle_Goap_ActionSet
+	Request_ResetActiveChain(FCk_Handle_Goap_ActionSet& InActionSet) -> FCk_Handle_Goap_ActionSet
 {
 	CK_ENSURE_IF_NOT(ck::IsValid(InActionSet),
-		TEXT("Invalid ActionSet handle in Request_ResetActiveTiers"))
+		TEXT("Invalid ActionSet handle in Request_ResetActiveChain"))
 	{ return InActionSet; }
 
 	// Truncate everything past the root (index 0). The ChainUpdate processor's
-	// truncate path normally handles per-tier teardown (signal firing,
+	// truncate path normally handles per-action teardown (signal firing,
 	// unsubscribe, etc.); for a direct reset we set a "needs setup" tag and
 	// let the chain-update processor pick it up next tick.
-	auto& ActiveTiers = InActionSet.Get<ck::FFragment_Goap_ActionSet_ActiveTiers>();
-	if (ActiveTiers._Tiers.Num() > 1)
+	auto& ActiveChain = InActionSet.Get<ck::FFragment_Goap_ActionSet_ActiveChain>();
+	if (ActiveChain._Chain.Num() > 1)
 	{
-		ActiveTiers._Tiers.SetNum(1);
+		ActiveChain._Chain.SetNum(1);
 		InActionSet.AddOrGet<ck::FTag_Goap_ActionSet_RequiresChainUpdate>();
 	}
 	return InActionSet;
@@ -143,24 +144,24 @@ auto
 
 auto
 	UCk_Utils_Goap_ActionSet_UE::
-	BindTo_OnActiveTiersChanged(
+	BindTo_OnActiveChainChanged(
 		FCk_Handle_Goap_ActionSet& InActionSet,
-		const FCk_Delegate_Goap_OnActiveTiersChanged& InDelegate,
+		const FCk_Delegate_Goap_OnActiveChainChanged& InDelegate,
 		ECk_Signal_BindingPolicy InBindingPolicy,
 		ECk_Signal_PostFireBehavior InPostFireBehavior) -> FCk_Handle_Goap_ActionSet
 {
-	CK_SIGNAL_BIND(ck::UUtils_Signal_OnGoap_ActionSet_ActiveTiersChanged,
+	CK_SIGNAL_BIND(ck::UUtils_Signal_OnGoap_ActionSet_ActiveChainChanged,
 		InActionSet, InDelegate, InBindingPolicy, InPostFireBehavior);
 	return InActionSet;
 }
 
 auto
 	UCk_Utils_Goap_ActionSet_UE::
-	UnbindFrom_OnActiveTiersChanged(
+	UnbindFrom_OnActiveChainChanged(
 		FCk_Handle_Goap_ActionSet& InActionSet,
-		const FCk_Delegate_Goap_OnActiveTiersChanged& InDelegate) -> FCk_Handle_Goap_ActionSet
+		const FCk_Delegate_Goap_OnActiveChainChanged& InDelegate) -> FCk_Handle_Goap_ActionSet
 {
-	CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnGoap_ActionSet_ActiveTiersChanged,
+	CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnGoap_ActionSet_ActiveChainChanged,
 		InActionSet, InDelegate);
 	return InActionSet;
 }

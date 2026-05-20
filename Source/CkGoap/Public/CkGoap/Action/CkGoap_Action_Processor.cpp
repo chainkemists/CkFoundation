@@ -1,4 +1,4 @@
-#include "CkGoap/Tier/CkGoap_Tier_Processor.h"
+#include "CkGoap/Action/CkGoap_Action_Processor.h"
 
 #include "CkGoap/CkGoap_Log.h"
 #include "CkGoap/CkGoap_Fragment.h"  // dirty tags FTag_Goap_Dirty_WorldState / _Cost
@@ -10,12 +10,12 @@
 
 // ====================================================================================================================
 
-CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Tier_Setup);
-CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Tier_AutoReplan);
-CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Tier_HandleRequests);
-CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Tier_Execute);
-CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Tier_HandleResult);
-CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Tier_EndPlay);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Action_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Action_AutoReplan);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Action_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Action_Execute);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Action_HandleResult);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Action_EndPlay);
 
 // ====================================================================================================================
 
@@ -57,73 +57,61 @@ namespace
 }
 
 // ====================================================================================================================
-// SETUP — per-tier CDO extraction
+// SETUP — per-Action CDO extraction
+//
+// In the unified model, each Action entity holds ONE def (its own). The
+// Action's _ActionClass is the CDO source. Phase U1 keeps the old
+// _ActionClasses fragment populated by legacy paths so AddAction_ToAction
+// (U2) can fan in here; the per-Action def is the FIRST element of the
+// resolved list. Effects' resolved form is staged into Action_Definition's
+// fields so the planner can consume them as the Action's goal at activation.
 // ====================================================================================================================
 
 auto
-	FProcessor_Goap_Tier_Setup::
+	FProcessor_Goap_Action_Setup::
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
-		const FFragment_Goap_Tier_Params& InParams,
-		const FFragment_Goap_Tier_ActionClasses& InClasses,
-		FFragment_Goap_Tier_Actions& InActions,
-		FFragment_Goap_Tier_Current& InCurrent) -> void
+		const FFragment_Goap_Action_Params& InParams,
+		const FFragment_Goap_Action_ActionClasses& InClasses,
+		FFragment_Goap_Action_Definition& InActionDef,
+		FFragment_Goap_Action_Current& InCurrent) -> void
 {
-	// Setup must wait for the WS source to be resolved. Root tiers get this
-	// at AddTier time (if override is valid); non-root tiers get it at
-	// activation time via ChainUpdate. If the resolved source is invalid,
-	// defer to next frame WITHOUT removing the setup tag.
+	// Setup must wait for the WS source to be resolved. Top-level Actions
+	// resolve it at AddAction_ToActionSet time (if override is valid);
+	// non-root Actions get it at activation time via ChainUpdate. If the
+	// resolved source is invalid, defer to next frame WITHOUT removing the
+	// setup tag.
 	const auto Source = InCurrent.Get_WorldStateSource_Resolved();
 	if (NOT ck::IsValid(Source))
 	{
-		// Root with no override + no override-yet, or non-root waiting for
-		// activation. Don't complain — this is the normal pre-activation
-		// state for catalog-resident tiers.
 		return;
 	}
 
-	InHandle.Remove<FTag_Goap_Tier_RequiresSetup>();
+	InHandle.Remove<FTag_Goap_Action_RequiresSetup>();
 
 	auto& SourceRegistry = const_cast<FCk_Handle_Goap_WorldState&>(Source)
 		.template Get<FFragment_Goap_WorldState_KeyRegistry>().Get_MutableRegistry();
 
-	struct FRawActionEntry
+	// Extract THIS Action's CDO into the Action_Definition shape.
+	const auto ActionClass = InParams.Get_ActionClass();
+	if (ck::IsValid(ActionClass))
 	{
-		TSubclassOf<UCk_GoapAction_EntityScript> Class;
-		TArray<goap::FWorldStateCondition_Raw>   Preconditions;
-		TArray<goap::FWorldStateEffect_Raw>      Effects;
-		float                                    Cost = 1.0f;
-		FGameplayTag                             ActionTag;
-	};
+		if (auto* CDO = ActionClass.GetDefaultObject(); ck::IsValid(CDO))
+		{
+			CDO->DefineAction();
 
-	auto RawActions = TArray<FRawActionEntry>{};
-	RawActions.Reserve(InClasses.Get_Classes().Num());
+			InActionDef._Preconditions = CDO->_Preconditions;
+			InActionDef._Effects       = CDO->_Effects;
+			InActionDef._Cost          = CDO->_Cost;
 
-	for (const auto& ActionClass : InClasses.Get_Classes())
-	{
-		if (NOT ck::IsValid(ActionClass)) { continue; }
-		auto* CDO = ActionClass.GetDefaultObject();
-		if (NOT ck::IsValid(CDO)) { continue; }
-		CDO->DefineAction();
-
-		auto Entry = FRawActionEntry{};
-		Entry.Class         = ActionClass;
-		Entry.Preconditions = CDO->_Preconditions;
-		Entry.Effects       = CDO->_Effects;
-		Entry.Cost          = CDO->_Cost;
-		Entry.ActionTag     = CDO->Get_ActionTag();
-		RawActions.Add(MoveTemp(Entry));
+			// Register Action's tags in the resolved WS registry.
+			for (const auto& Pre : InActionDef._Preconditions) { SourceRegistry.FindOrRegister(Pre.Key); }
+			for (const auto& Eff : InActionDef._Effects)       { SourceRegistry.FindOrRegister(Eff.Key); }
+		}
 	}
 
-	// Register every referenced tag in the shared source registry.
-	for (const auto& Entry : RawActions)
-	{
-		for (const auto& Pre : Entry.Preconditions) { SourceRegistry.FindOrRegister(Pre.Key); }
-		for (const auto& Eff : Entry.Effects)       { SourceRegistry.FindOrRegister(Eff.Key); }
-	}
-
-	// Register root-tier's initial-goal keys too (so the resolved goal hits
+	// Register root-Action's initial-goal keys too (so the resolved goal hits
 	// valid slots).
 	for (const auto& Cond : InParams.Get_InitialGoal_RootOnly())
 	{
@@ -133,39 +121,22 @@ auto
 	if (SourceRegistry.Num() > goap::WorldState_MaxKeys)
 	{
 		ck::goap::Warning(
-			TEXT("GOAP WorldState [{}] (resolved source of tier [{}]) has more distinct keys ({}) than MAX_KEYS ({}). Excess keys will be rejected."),
+			TEXT("GOAP WorldState [{}] (resolved source of Action [{}]) has more distinct keys ({}) than MAX_KEYS ({}). Excess keys will be rejected."),
 			Source, InHandle, SourceRegistry.Num(), goap::WorldState_MaxKeys);
 	}
 
-	// Resolve raw → typed ActionDef.
-	InActions._ActionDefs.Reset();
-	InActions._ActionDefs.Reserve(RawActions.Num());
+	// TODO(U3): Build _CachedActionDef from this Action's own (preconditions,
+	// effects, cost) and populate _GoalFromEffects. Until U3 wires the
+	// parent-as-planner flow, _CachedActionDef remains default.
 
-	for (auto Index = int32{0}; Index < RawActions.Num(); ++Index)
-	{
-		const auto& Raw = RawActions[Index];
-		auto Def = goap::FActionDef{};
-		Def.ActionIndex = Index;
-		Def.ActionClass = Raw.Class;
-		Def.Cost        = Raw.Cost;
-		Def.ActionTag   = Raw.ActionTag;
+	// TODO(U3): Build the planner candidate set from this Action's child
+	// Actions' _CachedActionDef instead of a per-Action _ActionClasses list.
+	// _ActionClasses is preserved as a legacy collection for now but is not
+	// consumed below.
+	(void)InClasses;
 
-		for (const auto& Pre : Raw.Preconditions)
-		{
-			const auto Resolved = ResolveCondition(SourceRegistry, Pre);
-			if (Resolved.IsValid()) { Def.Preconditions.Add(Resolved); }
-		}
-		for (const auto& Eff : Raw.Effects)
-		{
-			const auto Resolved = ResolveEffect(SourceRegistry, Eff);
-			if (Resolved.IsValid()) { Def.Effects.Add(Resolved); }
-		}
-
-		InActions._ActionDefs.Add(MoveTemp(Def));
-	}
-
-	// Resolve root-tier's _InitialGoal_RootOnly into typed _Current._Goal.
-	// (Non-root tiers get their goal injected from parent action's Effects in
+	// Resolve root-Action's _InitialGoal_RootOnly into typed _Current._Goal.
+	// (Non-root Actions get their goal injected from parent action's Effects in
 	// ChainUpdate.)
 	if (NOT InParams.Get_InitialGoal_RootOnly().IsEmpty() && InCurrent._Goal.IsEmpty())
 	{
@@ -185,19 +156,19 @@ auto
 // ====================================================================================================================
 
 auto
-	FProcessor_Goap_Tier_AutoReplan::
+	FProcessor_Goap_Action_AutoReplan::
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
-		const FFragment_Goap_Tier_Params& InParams,
-		FFragment_Goap_Tier_ReplanThrottle& InThrottle) -> void
+		const FFragment_Goap_Action_Params& InParams,
+		FFragment_Goap_Action_ReplanThrottle& InThrottle) -> void
 {
 	// Don't replan until Setup completes.
-	if (InHandle.Has<FTag_Goap_Tier_RequiresSetup>()) { return; }
+	if (InHandle.Has<FTag_Goap_Action_RequiresSetup>()) { return; }
 
 	InThrottle._SecondsSinceLastReplan += InDeltaT.Get_Seconds();
 
-	const auto IsInitialPlanPending = InHandle.Has<FTag_Goap_Tier_RequiresInitialPlan>();
+	const auto IsInitialPlanPending = InHandle.Has<FTag_Goap_Action_RequiresInitialPlan>();
 	const auto WSDirty   = InHandle.Has<FTag_Goap_Dirty_WorldState>();
 	const auto CostDirty = InHandle.Has<FTag_Goap_Dirty_Cost>();
 
@@ -219,13 +190,13 @@ auto
 	const auto ShouldFire = IsInitialPlanPending || (PolicyAllowsReplan && ThrottleElapsed);
 	if (NOT ShouldFire) { return; }
 
-	auto& Requests = InHandle.AddOrGet<FFragment_Goap_Tier_Requests>();
-	Requests._Requests.Add(FCk_Request_Goap_Tier_Plan{});
+	auto& Requests = InHandle.AddOrGet<FFragment_Goap_Action_Requests>();
+	Requests._Requests.Add(FCk_Request_Goap_Action_Plan{});
 
 	InThrottle._SecondsSinceLastReplan = 0.0f;
 	InHandle.Try_Remove<FTag_Goap_Dirty_WorldState>();
 	InHandle.Try_Remove<FTag_Goap_Dirty_Cost>();
-	InHandle.Try_Remove<FTag_Goap_Tier_RequiresInitialPlan>();
+	InHandle.Try_Remove<FTag_Goap_Action_RequiresInitialPlan>();
 }
 
 // ====================================================================================================================
@@ -233,26 +204,26 @@ auto
 // ====================================================================================================================
 
 auto
-	FProcessor_Goap_Tier_HandleRequests::
+	FProcessor_Goap_Action_HandleRequests::
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
-		const FFragment_Goap_Tier_Params& InParams,
+		const FFragment_Goap_Action_Params& InParams,
 		FFragment_AStar_Params& InAStarParams,
-		FFragment_Goap_Tier_Current& InCurrent,
-		FFragment_Goap_Tier_Actions& InActions,
-		const FFragment_Goap_Tier_Requests& InRequests,
-		FFragment_Goap_Tier_SearchState& InSearchState,
-		FFragment_Goap_Tier_Result& InResult,
-		FFragment_Goap_Tier_PlanContext& InPlanContext) const -> void
+		FFragment_Goap_Action_Current& InCurrent,
+		FFragment_Goap_Action_Definition& InActionDef,
+		const FFragment_Goap_Action_Requests& InRequests,
+		FFragment_Goap_Action_SearchState& InSearchState,
+		FFragment_Goap_Action_Result& InResult,
+		FFragment_Goap_Action_PlanContext& InPlanContext) const -> void
 {
-	InHandle.CopyAndRemove(InRequests, [&](FFragment_Goap_Tier_Requests& InRequestsCopy)
+	InHandle.CopyAndRemove(InRequests, [&](FFragment_Goap_Action_Requests& InRequestsCopy)
 	{
 		algo::ForEachRequest(InRequestsCopy._Requests, ck::Visitor([&](const auto& InTypedRequest)
 		{
 			using T = std::decay_t<decltype(InTypedRequest)>;
 
-			if constexpr (std::is_same_v<T, FCk_Request_Goap_Tier_Plan>)
+			if constexpr (std::is_same_v<T, FCk_Request_Goap_Action_Plan>)
 			{
 				// -- Plan request ---------------------------------------------
 				InHandle.Try_Remove<FTag_AStar_SearchActive>();
@@ -266,7 +237,7 @@ auto
 					InCurrent._PlanStatus = ECk_GoapPlanStatus::PlanFailed;
 					InCurrent._Plan.Reset();
 					InCurrent._PlanCost = 0.0f;
-					UUtils_Signal_OnGoap_Tier_PlanFailed::Broadcast(
+					UUtils_Signal_OnGoap_Action_PlanFailed::Broadcast(
 						InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanFailed{}));
 					return;
 				}
@@ -289,7 +260,7 @@ auto
 					InCurrent._PlanStatus = ECk_GoapPlanStatus::PlanFound;
 					InCurrent._Plan.Reset();
 					InCurrent._PlanCost = 0.0f;
-					UUtils_Signal_OnGoap_Tier_PlanComplete::Broadcast(
+					UUtils_Signal_OnGoap_Action_PlanComplete::Broadcast(
 						InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanComplete{
 							TArray<TSubclassOf<UCk_GoapAction_EntityScript>>{}, 0.0f}));
 					return;
@@ -299,9 +270,16 @@ auto
 				InCurrent._Plan.Reset();
 				InCurrent._PlanCost = 0.0f;
 
-				// Build A* graph + seed search.
+				// TODO(U3): Build the planner candidate set from this
+				// Action's CHILDREN's _CachedActionDef (Action_Tree->Get_ChildActions).
+				// Until then, planning with an empty candidate set produces a
+				// degenerate Plan (effectively goal-already-satisfied behavior),
+				// which is fine for U1 compile-clean.
+				auto Candidates = TArray<goap::FActionDef>{};
+				(void)InActionDef;
+
 				const auto GoalConditions = BuildConstraintSet(InCurrent._Goal);
-				auto Graph = goap::FGoapGraph{SourceWorldState, InActions._ActionDefs, GoalConditions};
+				auto Graph = goap::FGoapGraph{SourceWorldState, Candidates, GoalConditions};
 				InPlanContext._Graph = Graph;
 
 				constexpr auto GoalSentinel = TNumericLimits<int32>::Max();
@@ -316,7 +294,7 @@ auto
 
 				InHandle.Add<FTag_AStar_SearchActive>();
 			}
-			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Tier_CancelPlan>)
+			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Action_CancelPlan>)
 			{
 				InHandle.Try_Remove<FTag_AStar_SearchActive>();
 				InHandle.Try_Remove<FTag_AStar_SearchComplete>();
@@ -325,9 +303,9 @@ auto
 				InCurrent._Plan.Reset();
 				InCurrent._PlanCost = 0.0f;
 			}
-			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Tier_SetGoal>)
+			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Action_SetGoal>)
 			{
-				// Resolve authored conditions via the tier's WS registry.
+				// Resolve authored conditions via the action's WS registry.
 				InCurrent._Goal.Reset();
 				InCurrent._InvalidGoal.Reset();
 
@@ -357,44 +335,31 @@ auto
 					}
 				}
 			}
-			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Tier_SetActionCost>)
+			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Action_SetActionCost>)
 			{
-				auto Changed = false;
-				for (auto& Def : InActions._ActionDefs)
-				{
-					if (Def.ActionClass == InTypedRequest.Get_ActionClass())
-					{
-						if (Def.Cost != InTypedRequest.Get_Cost())
-						{
-							Def.Cost = InTypedRequest.Get_Cost();
-							Changed = true;
-						}
-						break;
-					}
-				}
-				if (Changed) { InHandle.AddOrGet<FTag_Goap_Dirty_Cost>(); }
+				// TODO(U3): in the unified model, cost lives on a child
+				// Action's Action_Definition._Cost. The right implementation
+				// looks up the child Action by class via Action_Tree and
+				// mutates its def directly. For now, no-op + dirty flag.
+				(void)InTypedRequest;
+				(void)InActionDef;
+				InHandle.AddOrGet<FTag_Goap_Dirty_Cost>();
 			}
-			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Tier_SetReplanInterval>)
-			{
-				// _MinReplanIntervalSeconds lives in InParams (const here);
-				// but the throttle reads from params each frame, so writing
-				// here would be ignored. Surface mutation via the throttle
-				// fragment instead — TODO: extend FFragment_Goap_Tier_ReplanThrottle
-				// with a mutable interval if runtime tuning is needed.
-				// For now: warn.
-				ck::goap::Warning(
-					TEXT("Request_SetReplanInterval not yet wired for per-tier runtime tuning — set in TierParams at AddTier."));
-			}
-			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Tier_SetReplanPolicy>)
+			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Action_SetReplanInterval>)
 			{
 				ck::goap::Warning(
-					TEXT("Request_SetReplanPolicy not yet wired for per-tier runtime tuning — set in TierParams at AddTier."));
+					TEXT("Request_SetReplanInterval not yet wired for per-action runtime tuning — set in ActionParams at AddAction time."));
 			}
-			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Tier_SetSearchBudget>)
+			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Action_SetReplanPolicy>)
+			{
+				ck::goap::Warning(
+					TEXT("Request_SetReplanPolicy not yet wired for per-action runtime tuning — set in ActionParams at AddAction time."));
+			}
+			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Action_SetSearchBudget>)
 			{
 				InAStarParams.Set_BudgetMicroseconds(InTypedRequest.Get_SearchBudgetMicroseconds());
 			}
-			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Tier_SetCostThreshold>)
+			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Action_SetCostThreshold>)
 			{
 				InAStarParams.Set_CostThreshold(InTypedRequest.Get_CostThreshold());
 			}
@@ -404,53 +369,41 @@ auto
 
 // ====================================================================================================================
 // HANDLE RESULT — A* completion → plan / fire signals
+//
+// TODO(U3): Plan now stores TArray<FCk_Handle_Goap_Action>. The A* graph
+// returns ActionIndex offsets which need to be mapped back to child Action
+// entities via Action_Tree, not classes. For U1 compile-clean, the
+// PlanComplete signal still uses the class array via Get_PlanClasses() but
+// _Plan is emptied (no chain extension will actually happen until U3).
 // ====================================================================================================================
 
 auto
-	FProcessor_Goap_Tier_HandleResult::
+	FProcessor_Goap_Action_HandleResult::
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
-		const FFragment_Goap_Tier_Result& InResult,
-		const FFragment_Goap_Tier_PlanContext& InPlanContext,
-		FFragment_Goap_Tier_Current& InCurrent) -> void
+		const FFragment_Goap_Action_Result& InResult,
+		const FFragment_Goap_Action_PlanContext& InPlanContext,
+		FFragment_Goap_Action_Current& InCurrent) -> void
 {
 	InHandle.Remove<FTag_AStar_SearchComplete>();
 
-	const auto& Graph = InPlanContext.Get_Graph();
+	(void)InPlanContext;
 
 	switch (InResult._SearchStatus)
 	{
 		case ECk_AStarSearchStatus::Complete:
 		{
-			const auto& Path = InResult._Path;
-			auto ActionClasses = TArray<TSubclassOf<UCk_GoapAction_EntityScript>>{};
-
-			if (Path.Num() > 1)
-			{
-				ActionClasses.Reserve(Path.Num() - 1);
-				for (auto Index = int32{0}; Index < Path.Num() - 1; ++Index)
-				{
-					const auto ActionIndex = Graph.Get_ActionForEdge(Path[Index], Path[Index + 1]);
-					if (ActionIndex != INDEX_NONE)
-					{
-						const auto& Actions = Graph.Get_Actions();
-						if (Actions.IsValidIndex(ActionIndex))
-						{
-							ActionClasses.Add(Actions[ActionIndex].ActionClass);
-						}
-					}
-				}
-				Algo::Reverse(ActionClasses);
-			}
-
+			// TODO(U3): map Path edges → child Action entities via Action_Tree
+			// and write them into _Plan. For now, plan is empty and the signal
+			// payload reports an empty class array.
 			InCurrent._PlanStatus = ECk_GoapPlanStatus::PlanFound;
-			InCurrent._Plan = ActionClasses;
+			InCurrent._Plan.Reset();
 			InCurrent._PlanCost = InResult._TotalCost;
 
-			UUtils_Signal_OnGoap_Tier_PlanComplete::Broadcast(
+			UUtils_Signal_OnGoap_Action_PlanComplete::Broadcast(
 				InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanComplete{
-					MoveTemp(ActionClasses), InResult._TotalCost}));
+					TArray<TSubclassOf<UCk_GoapAction_EntityScript>>{}, InResult._TotalCost}));
 			break;
 		}
 
@@ -459,7 +412,7 @@ auto
 			InCurrent._PlanStatus = ECk_GoapPlanStatus::PlanFailed;
 			InCurrent._Plan.Reset();
 			InCurrent._PlanCost = 0.0f;
-			UUtils_Signal_OnGoap_Tier_PlanFailed::Broadcast(
+			UUtils_Signal_OnGoap_Action_PlanFailed::Broadcast(
 				InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanFailed{}));
 			break;
 		}
@@ -469,7 +422,7 @@ auto
 			InCurrent._PlanStatus = ECk_GoapPlanStatus::CostThresholdReached;
 			InCurrent._Plan.Reset();
 			InCurrent._PlanCost = 0.0f;
-			UUtils_Signal_OnGoap_Tier_PlanFailed::Broadcast(
+			UUtils_Signal_OnGoap_Action_PlanFailed::Broadcast(
 				InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanFailed{}));
 			break;
 		}

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CkGoap/ActionSet/CkGoap_ActionSet_Fragment_Data.h"
-#include "CkGoap/Tier/CkGoap_Tier_Fragment_Data.h"
 #include "CkGoap/CkGoap_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
@@ -42,16 +41,16 @@ public:
 	Has(const FCk_Handle& InHandle);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|ActionSet",
-		DisplayName = "[Ck][Goap|ActionSet] Find Tier")
-	static FCk_Handle_Goap_Tier
-	Find_Tier(
+		DisplayName = "[Ck][Goap|ActionSet] Find Action")
+	static FCk_Handle_Goap_Action
+	Find_Action(
 		const FCk_Handle_Goap_ActionSet& InActionSet,
-		FGameplayTag InTierTag);
+		FGameplayTag InActionTag);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|ActionSet",
-		DisplayName = "[Ck][Goap|ActionSet] Get Active Tiers")
-	static TArray<FCk_Handle_Goap_Tier>
-	Get_ActiveTiers(const FCk_Handle_Goap_ActionSet& InActionSet);
+		DisplayName = "[Ck][Goap|ActionSet] Get Active Chain")
+	static TArray<FCk_Handle_Goap_Action>
+	Get_ActiveChain(const FCk_Handle_Goap_ActionSet& InActionSet);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|ActionSet",
 		DisplayName = "[Ck][Goap|ActionSet] Get Enable Toggle")
@@ -75,9 +74,9 @@ public:
 		ECk_EnableDisable InToggle);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|ActionSet",
-		DisplayName = "[Ck][Goap|ActionSet] Request Reset Active Tiers")
+		DisplayName = "[Ck][Goap|ActionSet] Request Reset Active Chain")
 	static FCk_Handle_Goap_ActionSet
-	Request_ResetActiveTiers(
+	Request_ResetActiveChain(
 		UPARAM(ref) FCk_Handle_Goap_ActionSet& InActionSet);
 
 	// ================================================================================================================
@@ -85,18 +84,18 @@ public:
 	// ================================================================================================================
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|ActionSet",
-		DisplayName = "[Ck][Goap|ActionSet] Bind To OnActiveTiersChanged")
+		DisplayName = "[Ck][Goap|ActionSet] Bind To OnActiveChainChanged")
 	static FCk_Handle_Goap_ActionSet
-	BindTo_OnActiveTiersChanged(
+	BindTo_OnActiveChainChanged(
 		UPARAM(ref) FCk_Handle_Goap_ActionSet& InActionSet,
-		const FCk_Delegate_Goap_OnActiveTiersChanged& InDelegate,
+		const FCk_Delegate_Goap_OnActiveChainChanged& InDelegate,
 		ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
 		ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|ActionSet",
-		DisplayName = "[Ck][Goap|ActionSet] Unbind From OnActiveTiersChanged")
+		DisplayName = "[Ck][Goap|ActionSet] Unbind From OnActiveChainChanged")
 	static FCk_Handle_Goap_ActionSet
-	UnbindFrom_OnActiveTiersChanged(
+	UnbindFrom_OnActiveChainChanged(
 		UPARAM(ref) FCk_Handle_Goap_ActionSet& InActionSet,
-		const FCk_Delegate_Goap_OnActiveTiersChanged& InDelegate);
+		const FCk_Delegate_Goap_OnActiveChainChanged& InDelegate);
 };

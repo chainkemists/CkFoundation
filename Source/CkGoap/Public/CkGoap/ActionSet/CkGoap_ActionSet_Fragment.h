@@ -1,8 +1,8 @@
 #pragma once
 
 #include "CkGoap/ActionSet/CkGoap_ActionSet_Fragment_Data.h"
-#include "CkGoap/Tier/CkGoap_Tier_Fragment_Data.h"
 #include "CkGoap/CkGoap_Fragment_Data.h"  // FCk_GoapDiagnostic_DependencyCycle
+#include "CkGoap/WorldState/CkGoap_WorldState_Fragment_Data.h"  // FCk_Handle_Goap_WorldState
 
 #include "CkEcs/Signal/CkSignal_Macros.h"
 
@@ -10,7 +10,7 @@
 
 // Forward decls in global scope so friend lookups bind correctly.
 class UCk_Utils_Goap_ActionSet_UE;
-class UCk_Utils_Goap_Tier_UE;
+class UCk_Utils_Goap_Action_UE;
 
 // ====================================================================================================================
 
@@ -25,7 +25,7 @@ namespace ck
 
 	CK_DEFINE_ECS_TAG(FTag_Goap_ActionSet_RequiresSetup);
 
-	// Set whenever any tier in the ActionSet completes a plan. Consumed +
+	// Set whenever any action in the ActionSet completes a plan. Consumed +
 	// removed by ChainUpdate. Optimization to skip walking inert ActionSets.
 	CK_DEFINE_ECS_TAG(FTag_Goap_ActionSet_RequiresChainUpdate);
 
@@ -58,44 +58,65 @@ namespace ck
 	};
 
 // ====================================================================================================================
-// ACTIVE TIERS — Ordered chain of currently-active tiers. [0] is the root.
+// ACTIVE CHAIN — Ordered chain of currently-active actions. [0] is the root.
 // ====================================================================================================================
 
-	struct CKGOAP_API FFragment_Goap_ActionSet_ActiveTiers
+	struct CKGOAP_API FFragment_Goap_ActionSet_ActiveChain
 	{
 	public:
-		CK_GENERATED_BODY(FFragment_Goap_ActionSet_ActiveTiers);
+		CK_GENERATED_BODY(FFragment_Goap_ActionSet_ActiveChain);
 
 		friend class ::UCk_Utils_Goap_ActionSet_UE;
-		friend class ::UCk_Utils_Goap_Tier_UE;
+		friend class ::UCk_Utils_Goap_Action_UE;
 		friend class FProcessor_Goap_ActionSet_ChainUpdate;
 
 	private:
-		TArray<FCk_Handle_Goap_Tier> _Tiers;
+		TArray<FCk_Handle_Goap_Action> _Chain;
 
 	public:
-		CK_PROPERTY_GET(_Tiers);
+		CK_PROPERTY_GET(_Chain);
 	};
 
 // ====================================================================================================================
-// TIER CATALOG INDEX — O(1) tag-to-tier lookup. Populated at AddTier time;
-// read by ChainUpdate when resolving Plan[0]'s _ActionTag.
+// ACTION CATALOG INDEX — O(1) tag-to-action lookup. Populated at AddAction
+// time; read by ChainUpdate when resolving Plan[0]'s action tag.
 // ====================================================================================================================
 
-	struct CKGOAP_API FFragment_Goap_ActionSet_TierCatalogIndex
+	struct CKGOAP_API FFragment_Goap_ActionSet_ActionCatalogIndex
 	{
 	public:
-		CK_GENERATED_BODY(FFragment_Goap_ActionSet_TierCatalogIndex);
+		CK_GENERATED_BODY(FFragment_Goap_ActionSet_ActionCatalogIndex);
 
 		friend class ::UCk_Utils_Goap_ActionSet_UE;
-		friend class ::UCk_Utils_Goap_Tier_UE;
+		friend class ::UCk_Utils_Goap_Action_UE;
 		friend class FProcessor_Goap_ActionSet_ChainUpdate;
 
 	private:
-		TMap<FGameplayTag, FCk_Handle_Goap_Tier> _TagToTier;
+		TMap<FGameplayTag, FCk_Handle_Goap_Action> _TagToAction;
 
 	public:
-		CK_PROPERTY_GET(_TagToTier);
+		CK_PROPERTY_GET(_TagToAction);
+	};
+
+// ====================================================================================================================
+// WORLD STATE SOURCE — ActionSet-level default WS source. Used by the unified
+// ChainUpdate logic when an Action does not provide its own override.
+// ====================================================================================================================
+
+	struct CKGOAP_API FFragment_Goap_ActionSet_WorldStateSource
+	{
+	public:
+		CK_GENERATED_BODY(FFragment_Goap_ActionSet_WorldStateSource);
+
+		friend class ::UCk_Utils_Goap_ActionSet_UE;
+		friend class FProcessor_Goap_ActionSet_ChainUpdate;
+
+	private:
+		FCk_Handle_Goap_WorldState _WorldStateSource;
+
+	public:
+		CK_PROPERTY_GET(_WorldStateSource);
+		CK_PROPERTY_SET(_WorldStateSource);
 	};
 
 // ====================================================================================================================
@@ -104,10 +125,10 @@ namespace ck
 
 	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
 		CKGOAP_API,
-		OnGoap_ActionSet_ActiveTiersChanged,
-		FCk_Delegate_Goap_OnActiveTiersChanged,
+		OnGoap_ActionSet_ActiveChainChanged,
+		FCk_Delegate_Goap_OnActiveChainChanged,
 		FCk_Handle_Goap_ActionSet,
-		FCk_Goap_Payload_OnActiveTiersChanged);
+		FCk_Goap_Payload_OnActiveChainChanged);
 
 // ====================================================================================================================
 
