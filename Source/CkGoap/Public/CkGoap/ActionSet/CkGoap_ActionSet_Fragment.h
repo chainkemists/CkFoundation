@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkGoap/Bundle/CkGoap_Bundle_Fragment_Data.h"
+#include "CkGoap/ActionSet/CkGoap_ActionSet_Fragment_Data.h"
 #include "CkGoap/Tier/CkGoap_Tier_Fragment_Data.h"
 #include "CkGoap/CkGoap_Fragment_Data.h"  // FCk_GoapDiagnostic_DependencyCycle
 
@@ -9,44 +9,44 @@
 // ====================================================================================================================
 
 // Forward decls in global scope so friend lookups bind correctly.
-class UCk_Utils_Goap_Bundle_UE;
+class UCk_Utils_Goap_ActionSet_UE;
 class UCk_Utils_Goap_Tier_UE;
 
 // ====================================================================================================================
 
 namespace ck
 {
-	class FProcessor_Goap_Bundle_Setup;
-	class FProcessor_Goap_Bundle_ChainUpdate;
+	class FProcessor_Goap_ActionSet_Setup;
+	class FProcessor_Goap_ActionSet_ChainUpdate;
 
 // ====================================================================================================================
 // TAGS
 // ====================================================================================================================
 
-	CK_DEFINE_ECS_TAG(FTag_Goap_Bundle_RequiresSetup);
+	CK_DEFINE_ECS_TAG(FTag_Goap_ActionSet_RequiresSetup);
 
-	// Set whenever any tier in the bundle completes a plan. Consumed +
-	// removed by ChainUpdate. Optimization to skip walking inert bundles.
-	CK_DEFINE_ECS_TAG(FTag_Goap_Bundle_RequiresChainUpdate);
+	// Set whenever any tier in the ActionSet completes a plan. Consumed +
+	// removed by ChainUpdate. Optimization to skip walking inert ActionSets.
+	CK_DEFINE_ECS_TAG(FTag_Goap_ActionSet_RequiresChainUpdate);
 
 // ====================================================================================================================
 // PARAMS — alias to the BlueprintType data shape
 // ====================================================================================================================
 
-	using FFragment_Goap_Bundle_Params = FCk_Fragment_Goap_BundleParamsData;
+	using FFragment_Goap_ActionSet_Params = FCk_Fragment_Goap_ActionSetParamsData;
 
 // ====================================================================================================================
-// CURRENT FRAGMENT — Runtime bundle state (enable toggle, diagnostics)
+// CURRENT FRAGMENT — Runtime ActionSet state (enable toggle, diagnostics)
 // ====================================================================================================================
 
-	struct CKGOAP_API FFragment_Goap_Bundle_Current
+	struct CKGOAP_API FFragment_Goap_ActionSet_Current
 	{
 	public:
-		CK_GENERATED_BODY(FFragment_Goap_Bundle_Current);
+		CK_GENERATED_BODY(FFragment_Goap_ActionSet_Current);
 
-		friend class ::UCk_Utils_Goap_Bundle_UE;
-		friend class FProcessor_Goap_Bundle_Setup;
-		friend class FProcessor_Goap_Bundle_ChainUpdate;
+		friend class ::UCk_Utils_Goap_ActionSet_UE;
+		friend class FProcessor_Goap_ActionSet_Setup;
+		friend class FProcessor_Goap_ActionSet_ChainUpdate;
 
 	private:
 		ECk_EnableDisable _EnableToggle = ECk_EnableDisable::Enable;
@@ -61,14 +61,14 @@ namespace ck
 // ACTIVE TIERS — Ordered chain of currently-active tiers. [0] is the root.
 // ====================================================================================================================
 
-	struct CKGOAP_API FFragment_Goap_Bundle_ActiveTiers
+	struct CKGOAP_API FFragment_Goap_ActionSet_ActiveTiers
 	{
 	public:
-		CK_GENERATED_BODY(FFragment_Goap_Bundle_ActiveTiers);
+		CK_GENERATED_BODY(FFragment_Goap_ActionSet_ActiveTiers);
 
-		friend class ::UCk_Utils_Goap_Bundle_UE;
+		friend class ::UCk_Utils_Goap_ActionSet_UE;
 		friend class ::UCk_Utils_Goap_Tier_UE;
-		friend class FProcessor_Goap_Bundle_ChainUpdate;
+		friend class FProcessor_Goap_ActionSet_ChainUpdate;
 
 	private:
 		TArray<FCk_Handle_Goap_Tier> _Tiers;
@@ -82,14 +82,14 @@ namespace ck
 // read by ChainUpdate when resolving Plan[0]'s _ActionTag.
 // ====================================================================================================================
 
-	struct CKGOAP_API FFragment_Goap_Bundle_TierCatalogIndex
+	struct CKGOAP_API FFragment_Goap_ActionSet_TierCatalogIndex
 	{
 	public:
-		CK_GENERATED_BODY(FFragment_Goap_Bundle_TierCatalogIndex);
+		CK_GENERATED_BODY(FFragment_Goap_ActionSet_TierCatalogIndex);
 
-		friend class ::UCk_Utils_Goap_Bundle_UE;
+		friend class ::UCk_Utils_Goap_ActionSet_UE;
 		friend class ::UCk_Utils_Goap_Tier_UE;
-		friend class FProcessor_Goap_Bundle_ChainUpdate;
+		friend class FProcessor_Goap_ActionSet_ChainUpdate;
 
 	private:
 		TMap<FGameplayTag, FCk_Handle_Goap_Tier> _TagToTier;
@@ -99,14 +99,14 @@ namespace ck
 	};
 
 // ====================================================================================================================
-// SIGNALS — Bundle-scoped
+// SIGNALS — ActionSet-scoped
 // ====================================================================================================================
 
 	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
 		CKGOAP_API,
-		OnGoap_Bundle_ActiveTiersChanged,
+		OnGoap_ActionSet_ActiveTiersChanged,
 		FCk_Delegate_Goap_OnActiveTiersChanged,
-		FCk_Handle_Goap_Bundle,
+		FCk_Handle_Goap_ActionSet,
 		FCk_Goap_Payload_OnActiveTiersChanged);
 
 // ====================================================================================================================

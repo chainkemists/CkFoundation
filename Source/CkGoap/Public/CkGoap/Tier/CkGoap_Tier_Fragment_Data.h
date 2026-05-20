@@ -35,7 +35,7 @@ public:
 	CK_GENERATED_BODY(FCk_Fragment_Goap_TierParamsData);
 
 private:
-	// Tier identity within a bundle. Strict equality with an Action's
+	// Tier identity within an ActionSet. Strict equality with an Action's
 	// _ActionTag drives the chain-update rule — when Plan[0]._ActionTag ==
 	// SomeTier._TierTag, that tier becomes the current tier's sub-tier.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,

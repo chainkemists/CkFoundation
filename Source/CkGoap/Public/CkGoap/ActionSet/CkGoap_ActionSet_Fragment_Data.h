@@ -8,55 +8,55 @@
 // Need FCk_Handle_Goap_Tier for the OnActiveTiersChanged payload's TArray<>.
 #include "CkGoap/Tier/CkGoap_Tier_Fragment_Data.h"
 
-#include "CkGoap_Bundle_Fragment_Data.generated.h"
+#include "CkGoap_ActionSet_Fragment_Data.generated.h"
 
 // ====================================================================================================================
 // HANDLE
 // ====================================================================================================================
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
-struct CKGOAP_API FCk_Handle_Goap_Bundle : public FCk_Handle_TypeSafe
+struct CKGOAP_API FCk_Handle_Goap_ActionSet : public FCk_Handle_TypeSafe
 {
 	GENERATED_BODY()
-	CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Goap_Bundle);
+	CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Goap_ActionSet);
 };
 
-CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Goap_Bundle);
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Goap_ActionSet);
 
 // ====================================================================================================================
-// BUNDLE PARAMS
+// ACTIONSET PARAMS
 // ====================================================================================================================
 
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Fragment_Goap_BundleParamsData
+struct CKGOAP_API FCk_Fragment_Goap_ActionSetParamsData
 {
 	GENERATED_BODY()
 
 public:
-	CK_GENERATED_BODY(FCk_Fragment_Goap_BundleParamsData);
+	CK_GENERATED_BODY(FCk_Fragment_Goap_ActionSetParamsData);
 
 private:
-	// Bundle identity within a Goap root. Unique per root entity.
+	// ActionSet identity within a Goap root. Unique per root entity.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,
-		meta = (AllowPrivateAccess = true, Categories = "Goap.Bundle"))
-	FGameplayTag _BundleTag;
+		meta = (AllowPrivateAccess = true, Categories = "Goap.ActionSet"))
+	FGameplayTag _ActionSetTag;
 
-	// Initial enable/disable state. Disabled bundles skip per-tier planning
+	// Initial enable/disable state. Disabled ActionSets skip per-tier planning
 	// and chain-update. Toggle at runtime via Request_SetEnableToggle.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,
 		meta = (AllowPrivateAccess = true))
 	ECk_EnableDisable _InitialToggle = ECk_EnableDisable::Enable;
 
 public:
-	CK_PROPERTY_GET(_BundleTag);
+	CK_PROPERTY_GET(_ActionSetTag);
 	CK_PROPERTY(_InitialToggle);
 
 public:
-	CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Goap_BundleParamsData, _BundleTag);
+	CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Goap_ActionSetParamsData, _ActionSetTag);
 };
 
 // ====================================================================================================================
-// SIGNAL PAYLOADS — Bundle-scoped
+// SIGNAL PAYLOADS — ActionSet-scoped
 // ====================================================================================================================
 
 USTRUCT(BlueprintType)
@@ -69,7 +69,7 @@ public:
 
 private:
 	// Snapshot of the chain BEFORE this frame's mutation. Current chain is
-	// readable via UCk_Utils_Goap_Bundle_UE::Get_ActiveTiers in the handler.
+	// readable via UCk_Utils_Goap_ActionSet_UE::Get_ActiveTiers in the handler.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,
 		meta = (AllowPrivateAccess = true))
 	TArray<FCk_Handle_Goap_Tier> _OldChain;
@@ -82,11 +82,11 @@ public:
 };
 
 // ====================================================================================================================
-// DELEGATES — Bundle-scoped
+// DELEGATES — ActionSet-scoped
 // ====================================================================================================================
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
 	FCk_Delegate_Goap_OnActiveTiersChanged,
-	FCk_Handle_Goap_Bundle, InBundle,
+	FCk_Handle_Goap_ActionSet, InActionSet,
 	FCk_Goap_Payload_OnActiveTiersChanged, InPayload);
 

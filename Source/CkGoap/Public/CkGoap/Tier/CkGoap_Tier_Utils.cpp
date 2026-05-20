@@ -1,10 +1,10 @@
 #include "CkGoap/Tier/CkGoap_Tier_Utils.h"
 
 #include "CkGoap/CkGoap_Log.h"
-#include "CkGoap/Bundle/CkGoap_Bundle_Fragment.h"
+#include "CkGoap/ActionSet/CkGoap_ActionSet_Fragment.h"
 #include "CkGoap/Tier/CkGoap_Tier_Fragment.h"
 #include "CkGoap/Tier/CkGoap_Tier_Record_Internal.h"  // FFragment_RecordOfGoapTiers + utils struct
-#include "CkGoap/Bundle/CkGoap_Bundle_Utils.h"  // Find_Tier (uniqueness check)
+#include "CkGoap/ActionSet/CkGoap_ActionSet_Utils.h"  // Find_Tier (uniqueness check)
 #include "CkGoap/WorldState/CkGoap_WorldState_Utils.h"  // Request_AddSubscriber
 #include "CkAStar/CkAStar_Fragment.h"
 
@@ -20,29 +20,29 @@
 auto
 	UCk_Utils_Goap_Tier_UE::
 	AddTier(
-		FCk_Handle_Goap_Bundle& InBundle,
+		FCk_Handle_Goap_ActionSet& InActionSet,
 		const FCk_Fragment_Goap_TierParamsData& InParams)
 	-> FCk_Handle_Goap_Tier
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InBundle),
-		TEXT("Invalid bundle handle when adding tier"))
+	CK_ENSURE_IF_NOT(ck::IsValid(InActionSet),
+		TEXT("Invalid ActionSet handle when adding tier"))
 	{ return {}; }
 
 	CK_ENSURE_IF_NOT(InParams.Get_TierTag().IsValid(),
-		TEXT("Tier params has invalid _TierTag (bundle [{}])"), InBundle)
+		TEXT("Tier params has invalid _TierTag (ActionSet [{}])"), InActionSet)
 	{ return {}; }
 
-	// Diagnostic: tier-tag uniqueness within bundle.
-	if (auto Existing = UCk_Utils_Goap_Bundle_UE::Find_Tier(InBundle, InParams.Get_TierTag());
+	// Diagnostic: tier-tag uniqueness within ActionSet.
+	if (auto Existing = UCk_Utils_Goap_ActionSet_UE::Find_Tier(InActionSet, InParams.Get_TierTag());
 		ck::IsValid(Existing))
 	{
 		ck::goap::Warning(
-			TEXT("Tier with tag [{}] already exists in bundle [{}]; AddTier rejected."),
-			InParams.Get_TierTag(), InBundle);
+			TEXT("Tier with tag [{}] already exists in ActionSet [{}]; AddTier rejected."),
+			InParams.Get_TierTag(), InActionSet);
 		return {};
 	}
 
-	auto TierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_Goap_Tier>(InBundle);
+	auto TierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_Goap_Tier>(InActionSet);
 
 	// Records of tiers require GameplayLabels — label the tier with its
 	// declared tag.
@@ -76,26 +76,26 @@ auto
 		TierEntity.AddOrGet<ck::FTag_Goap_Tier_RequiresInitialPlan>();
 	}
 
-	// Register in the bundle's catalog record + tag→tier index.
-	ck::goap::internal_tier::FRecordOfGoapTiers_Utils::AddIfMissing(InBundle);
-	ck::goap::internal_tier::FRecordOfGoapTiers_Utils::Request_Connect(InBundle, TierEntity);
+	// Register in the ActionSet's catalog record + tag→tier index.
+	ck::goap::internal_tier::FRecordOfGoapTiers_Utils::AddIfMissing(InActionSet);
+	ck::goap::internal_tier::FRecordOfGoapTiers_Utils::Request_Connect(InActionSet, TierEntity);
 
-	auto& Index = InBundle.Get<ck::FFragment_Goap_Bundle_TierCatalogIndex>();
+	auto& Index = InActionSet.Get<ck::FFragment_Goap_ActionSet_TierCatalogIndex>();
 	Index._TagToTier.Add(InParams.Get_TierTag(), TierEntity);
 
-	// Catalog mutated → re-run bundle setup (cycle detection).
-	InBundle.AddOrGet<ck::FTag_Goap_Bundle_RequiresSetup>();
+	// Catalog mutated → re-run ActionSet setup (cycle detection).
+	InActionSet.AddOrGet<ck::FTag_Goap_ActionSet_RequiresSetup>();
 
-	// First AddTier on a bundle = the root tier. Seed the active chain.
-	auto& ActiveTiers = InBundle.Get<ck::FFragment_Goap_Bundle_ActiveTiers>();
+	// First AddTier on an ActionSet = the root tier. Seed the active chain.
+	auto& ActiveTiers = InActionSet.Get<ck::FFragment_Goap_ActionSet_ActiveTiers>();
 	if (ActiveTiers._Tiers.IsEmpty())
 	{
 		// Validate root has a WS override (no parent to inherit from).
 		if (NOT ck::IsValid(InParams.Get_WorldStateSource_Override()))
 		{
 			ck::goap::Warning(
-				TEXT("Root tier [{}] in bundle [{}] has no _WorldStateSource_Override; planning will not run until one is set."),
-				InParams.Get_TierTag(), InBundle);
+				TEXT("Root tier [{}] in ActionSet [{}] has no _WorldStateSource_Override; planning will not run until one is set."),
+				InParams.Get_TierTag(), InActionSet);
 		}
 		else
 		{
@@ -105,7 +105,7 @@ auto
 
 			// Subscribe root tier to its WS so value-changes flip the dirty
 			// tag and AutoReplan fires. Non-root tiers get this hook-up in
-			// the bundle ChainUpdate processor at activation time.
+			// the ActionSet ChainUpdate processor at activation time.
 			auto WS = Current._WorldStateSource_Resolved;
 			UCk_Utils_Goap_WorldState_UE::Request_AddSubscriber(WS, TierEntity);
 		}

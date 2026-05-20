@@ -1,4 +1,4 @@
-#include "CkGoap/Bundle/CkGoap_Bundle_Processor.h"
+#include "CkGoap/ActionSet/CkGoap_ActionSet_Processor.h"
 
 #include "CkGoap/CkGoap_Log.h"
 #include "CkGoap/Tier/CkGoap_Tier_Fragment.h"
@@ -12,8 +12,8 @@
 
 // ====================================================================================================================
 
-CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Bundle_Setup);
-CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Bundle_ChainUpdate);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_ActionSet_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_ActionSet_ChainUpdate);
 
 // ====================================================================================================================
 
@@ -21,7 +21,7 @@ namespace ck
 {
 
 // ====================================================================================================================
-// SETUP — Dependency-cycle detection on the bundle's tier catalog.
+// SETUP — Dependency-cycle detection on the ActionSet's tier catalog.
 //
 // Builds a directed graph: edge T → T' if some action in T has ActionTag
 // matching T'._TierTag. DFS with three-color marking finds cycles.
@@ -73,18 +73,18 @@ namespace
 }
 
 auto
-	FProcessor_Goap_Bundle_Setup::
+	FProcessor_Goap_ActionSet_Setup::
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
-		FFragment_Goap_Bundle_Current& InCurrent,
-		const FFragment_Goap_Bundle_TierCatalogIndex& InCatalogIndex) -> void
+		FFragment_Goap_ActionSet_Current& InCurrent,
+		const FFragment_Goap_ActionSet_TierCatalogIndex& InCatalogIndex) -> void
 {
 	const auto& Catalog = InCatalogIndex.Get_TagToTier();
 	if (Catalog.IsEmpty())
 	{
-		// Bundle has no tiers yet — clear tag and return.
-		InHandle.Remove<FTag_Goap_Bundle_RequiresSetup>();
+		// ActionSet has no tiers yet — clear tag and return.
+		InHandle.Remove<FTag_Goap_ActionSet_RequiresSetup>();
 		return;
 	}
 
@@ -95,11 +95,11 @@ auto
 		const auto& Tier = Entry.Value;
 		if (Tier.Has<FTag_Goap_Tier_RequiresSetup>())
 		{
-			return;  // Defer; keep the bundle's RequiresSetup tag for retry.
+			return;  // Defer; keep the ActionSet's RequiresSetup tag for retry.
 		}
 	}
 
-	InHandle.Remove<FTag_Goap_Bundle_RequiresSetup>();
+	InHandle.Remove<FTag_Goap_ActionSet_RequiresSetup>();
 
 	// DFS each catalog node.
 	auto Cycles = TArray<TArray<FGameplayTag>>{};
@@ -109,7 +109,7 @@ auto
 		Dfs.Visit(Entry.Key);
 	}
 
-	// Record cycles into the bundle's _DependencyCycles diagnostic field.
+	// Record cycles into the ActionSet's _DependencyCycles diagnostic field.
 	// (Reusing the planner-era struct; for tier cycles we put the tier-tag
 	// chain into _CycleConditions and leave _ActionsInCycle empty.)
 	InCurrent._DependencyCycles.Reset();
@@ -125,18 +125,18 @@ auto
 			CycleStr += Tag.ToString();
 		}
 		ck::goap::Verbose(
-			TEXT("Bundle [{}] dependency cycle in tier catalog: [{}]"),
+			TEXT("ActionSet [{}] dependency cycle in tier catalog: [{}]"),
 			InHandle, CycleStr);
 	}
 }
 
 // ====================================================================================================================
-// HELPERS — static members of FProcessor_Goap_Bundle_ChainUpdate so they
+// HELPERS — static members of FProcessor_Goap_ActionSet_ChainUpdate so they
 // inherit the processor's friend access to FFragment_Goap_Tier_Current.
 // ====================================================================================================================
 
 auto
-	FProcessor_Goap_Bundle_ChainUpdate::
+	FProcessor_Goap_ActionSet_ChainUpdate::
 	DoInjectGoalSynchronous(
 		FCk_Handle_Goap_Tier& InParentTier,
 		TSubclassOf<UCk_GoapAction_EntityScript> InParentActionClass,
@@ -183,7 +183,7 @@ auto
 }
 
 auto
-	FProcessor_Goap_Bundle_ChainUpdate::
+	FProcessor_Goap_ActionSet_ChainUpdate::
 	DoTruncateChainFrom(
 		TArray<FCk_Handle_Goap_Tier>& InActiveTiers,
 		int32 InStartIndex) -> void
@@ -217,14 +217,14 @@ auto
 // ====================================================================================================================
 
 auto
-	FProcessor_Goap_Bundle_ChainUpdate::
+	FProcessor_Goap_ActionSet_ChainUpdate::
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
-		const FFragment_Goap_Bundle_Params& InParams,
-		const FFragment_Goap_Bundle_Current& InCurrent,
-		FFragment_Goap_Bundle_ActiveTiers& InActiveTiers,
-		const FFragment_Goap_Bundle_TierCatalogIndex& InCatalogIndex) const -> void
+		const FFragment_Goap_ActionSet_Params& InParams,
+		const FFragment_Goap_ActionSet_Current& InCurrent,
+		FFragment_Goap_ActionSet_ActiveTiers& InActiveTiers,
+		const FFragment_Goap_ActionSet_TierCatalogIndex& InCatalogIndex) const -> void
 {
 	if (InCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable) { return; }
 
@@ -329,7 +329,7 @@ auto
 
 	if (bChainChanged)
 	{
-		UUtils_Signal_OnGoap_Bundle_ActiveTiersChanged::Broadcast(
+		UUtils_Signal_OnGoap_ActionSet_ActiveTiersChanged::Broadcast(
 			InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnActiveTiersChanged{OldChainSnapshot}));
 	}
 }

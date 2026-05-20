@@ -14,7 +14,7 @@ class UCk_GoapAction_EntityScript;
 
 // ====================================================================================================================
 // HANDLE — the Bundle/Tier root container. One per gameplay entity; holds
-// FFragment_RecordOfGoapBundles in its fragment set.
+// FFragment_RecordOfGoapActionSets in its fragment set.
 // ====================================================================================================================
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))

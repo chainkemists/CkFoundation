@@ -1,10 +1,10 @@
 #pragma once
 
 // ====================================================================================================================
-// PRIVATE: record-of-bundles fragment + utils struct.
+// PRIVATE: record-of-actionsets fragment + utils struct.
 //
 // Included by CkGoap_Utils.cpp (the Goap-root creation entry) and by
-// CkGoap_Bundle_Utils.cpp (which adds entries to the record at AddBundle time).
+// CkGoap_ActionSet_Utils.cpp (which adds entries to the record at AddActionSet time).
 //
 // Lives in a header — not declared inline in either .cpp — so the two
 // translation units see the SAME fragment type (one ODR), but it's NOT in
@@ -13,18 +13,18 @@
 // Do not include from anywhere except those two .cpp files.
 // ====================================================================================================================
 
-#include "CkGoap/Bundle/CkGoap_Bundle_Fragment_Data.h"
+#include "CkGoap/ActionSet/CkGoap_ActionSet_Fragment_Data.h"
 
 #include "CkRecord/Record/CkRecord_Fragment.h"
 #include "CkRecord/Record/CkRecord_Utils.h"
 
 namespace ck
 {
-	CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfGoapBundles, FCk_Handle_Goap_Bundle);
+	CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfGoapActionSets, FCk_Handle_Goap_ActionSet);
 }
 
 namespace ck::goap::internal_root
 {
-	struct FRecordOfGoapBundles_Utils
-		: public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfGoapBundles> {};
+	struct FRecordOfGoapActionSets_Utils
+		: public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfGoapActionSets> {};
 }

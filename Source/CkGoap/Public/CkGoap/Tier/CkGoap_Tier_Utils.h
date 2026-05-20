@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CkGoap/Tier/CkGoap_Tier_Fragment_Data.h"
-#include "CkGoap/Bundle/CkGoap_Bundle_Fragment_Data.h"
+#include "CkGoap/ActionSet/CkGoap_ActionSet_Fragment_Data.h"
 #include "CkGoap/CkGoap_Fragment_Data.h"
 #include "CkGoap/EntityScripts/CkGoapAction_EntityScript.h"
 
@@ -30,7 +30,7 @@ public:
 		DisplayName = "[Ck][Goap|Tier] Add Tier")
 	static FCk_Handle_Goap_Tier
 	AddTier(
-		UPARAM(ref) FCk_Handle_Goap_Bundle& InBundle,
+		UPARAM(ref) FCk_Handle_Goap_ActionSet& InActionSet,
 		const FCk_Fragment_Goap_TierParamsData& InParams);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Tier",
