@@ -46,29 +46,15 @@ namespace
     static bool sg_EngineLoopInitComplete = false;
 
     // Shared in-flight guard so the cold-start and PostCompile regen paths
-    // don't double-fire GenerateAllAssetRegistries within the same window.
-    //
-    // We don't subscribe to UCkAssetRegistrySubsystem::OnAssetRegistryComplete
-    // for clearing because it's a UFUNCTION-shaped DYNAMIC multicast — wiring
-    // a module-local handler would require a UCLASS sink + .generated.h for
-    // one callback. The file-scan-based marker check the rest of this file
-    // uses is the cheaper source of truth.
-    //
-    // The flag's `false` write also marks the boundary at which the AR
-    // sibling-file cleanup is safe to run — that cleanup is owned by the
-    // ticker callback inside the regen functions, not by the outer
-    // PostCompile lambda. See "Force-quit between recovery and PostCompile"
-    // in CkAngelscriptGenerator/CLAUDE.md and the bug pinned by the
-    // _probe_assetregistry_loop probe.
+    // don't double-fire GenerateAllAssetRegistries. We don't subscribe to
+    // OnAssetRegistryComplete (UFUNCTION dynamic multicast = UCLASS sink
+    // overhead for one callback); the file-scan marker is cheaper.
     static bool sg_AnyAssetRegistryRegenInFlight = false;
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // Pattern constants: one per stub-synthesizer's output. Each generator
-    // that emits a sibling owns the deletion of its own pattern AFTER it
-    // successfully rewrites the canonical. Broad-sweep cleanup is reserved
-    // for StartupModule's force-quit-survivor walk only.
-    // ----------------------------------------------------------------------------------------------------------------
-
+    // Per-generator sibling-file patterns. AR is async (FTSTicker); its
+    // sibling can only be deleted *after* the ticker's GenerateAllAssetRegistries
+    // returns. Deleting the AR pattern from the outer PostCompile lambda is
+    // the bug pinned by `_probe_assetregistry_loop`.
     constexpr auto* sStubPattern_EntitySpawnParams = TEXT("_StubRecovery_*_EntitySpawnParams.as");
     constexpr auto* sStubPattern_AssetRegistry     = TEXT("_StubRecovery_*Assets.as");
     constexpr auto* sStubPattern_DynamicHandle     = TEXT("_StubRecovery_*.json");
@@ -79,18 +65,6 @@ namespace
         FCkAutoTestWrapperGenerator::GenerateAll();
     }
 
-    // Walks project + plugin Script/Generated/ dirs and deletes
-    // `_StubRecovery_*` siblings whose filename matches ANY of `Patterns`.
-    // Returns the count deleted.
-    //
-    // Per-pattern scoping is load-bearing: the AssetRegistry regen path is
-    // async (FTSTicker with idle-wait), so its sibling MUST NOT be deleted
-    // until the ticker has actually rewritten the canonical. Calling this
-    // from the outer PostCompile lambda with the AR pattern reintroduces
-    // the loop pinned by _probe_assetregistry_loop. The synchronous
-    // EntitySpawnParams + DynamicHandle generators are safe to clean from
-    // PostCompile immediately because they complete before PostCompile
-    // returns.
     auto Delete_StubRecoveryFiles_ForPatterns(
         TArrayView<const TCHAR* const> Patterns) -> int32
     {
@@ -131,9 +105,6 @@ namespace
 
         if (DeletedCount > 0)
         {
-            // Context-agnostic message — caller (StartupModule, PostCompile,
-            // or the AssetRegistry ticker callback) logs its own
-            // disambiguating line.
             FMessageLog{FName{sSelfHealLogChannel}}.Info(FText::Format(
                 LOCTEXT("CleanupEntry",
                     "Self-heal cleanup: deleted {0} stub recovery file(s)."),
@@ -143,9 +114,8 @@ namespace
         return DeletedCount;
     }
 
-    // Broad-sweep convenience for StartupModule's force-quit-survivor walk.
-    // Do NOT call this from PostCompile — the AssetRegistry path is async
-    // and its sibling must survive until the deferred regen actually runs.
+    // StartupModule force-quit-survivor sweep only. PostCompile must use the
+    // pattern-scoped variant — see sStubPattern_* contract above.
     auto Delete_AllStubRecoveryFiles() -> int32
     {
         const auto AllPatterns = TArray<const TCHAR*>{
@@ -347,11 +317,9 @@ namespace
                                     *WaitTicks);
                             }
 
-                            // Bail paths below intentionally do NOT clean the
-                            // AR sibling — leaving the stub on disk is correct
-                            // when the canonical wasn't actually regenerated.
-                            // StartupModule's broad sweep on the next launch
-                            // (or a subsequent successful PostCompile) handles it.
+                            // Bails below leave the AR sibling on disk on purpose:
+                            // canonical wasn't regenerated, StartupModule (next
+                            // launch) or a later PostCompile cleans it.
                             if (NOT GEditor)
                             {
                                 ck::angelscriptgenerator::Warning(
@@ -370,11 +338,9 @@ namespace
 
                             Subsystem->GenerateAllAssetRegistries();
 
-                            // Canonical was just rewritten — NOW the AR sibling
-                            // can be cleaned. Doing this in the synchronous
-                            // PostCompile lambda would race the regen and
-                            // produce the loop pinned by
-                            // _probe_assetregistry_loop.
+                            // Canonical written; AR sibling can be cleaned now.
+                            // Moving this earlier (e.g. into PostCompile) reintroduces
+                            // the loop pinned by _probe_assetregistry_loop.
                             const auto ArPatterns = TArray<const TCHAR*>{ sStubPattern_AssetRegistry };
                             Delete_StubRecoveryFiles_ForPatterns(ArPatterns);
 
@@ -512,8 +478,7 @@ namespace
                             *WaitTicks);
                     }
 
-                    // Bail paths below intentionally do NOT clean the AR
-                    // sibling (see OnPostInit twin for full rationale).
+                    // Bails leave the AR sibling on disk (see OnPostInit twin).
                     if (NOT GEditor)
                     {
                         sg_AnyAssetRegistryRegenInFlight = false;
@@ -529,8 +494,9 @@ namespace
 
                     Subsystem->GenerateAllAssetRegistries();
 
-                    // Canonical was just rewritten — NOW the AR sibling can be
-                    // cleaned. Pinned by _probe_assetregistry_loop.
+                    // Canonical written; AR sibling clean must happen here, not
+                    // in the outer PostCompile lambda. Pinned by
+                    // _probe_assetregistry_loop.
                     const auto ArPatterns = TArray<const TCHAR*>{ sStubPattern_AssetRegistry };
                     Delete_StubRecoveryFiles_ForPatterns(ArPatterns);
 
@@ -624,18 +590,9 @@ void FCkAngelscriptGeneratorModule::StartupModule()
             Maybe_RegenDynamicHandleJson_OnPostCompile();
             Maybe_RegenAssetRegistry_OnPostCompile();
 
-            // PostCompile fires on a successful compile, so the EntitySpawnParams
-            // and DynamicHandle siblings have served their purpose (both
-            // generators above are synchronous and have already completed).
-            //
-            // The AssetRegistry sibling pattern is INTENTIONALLY EXCLUDED here:
-            // Maybe_RegenAssetRegistry_OnPostCompile queues an async FTSTicker
-            // that hasn't actually rewritten the canonical yet. Deleting the
-            // AR sibling synchronously here is the bug pinned by
-            // _probe_assetregistry_loop — hot-reload sees the deletion's mtime
-            // change, recompiles against the still-stale canonical, fails the
-            // same root, and the dispatcher loops. The ticker's post-regen
-            // callback owns AR-sibling cleanup.
+            // ESP + DH generators are sync above — safe to clean their siblings.
+            // AR is INTENTIONALLY EXCLUDED: its ticker hasn't run yet. Deleting
+            // the AR sibling here = the loop pinned by _probe_assetregistry_loop.
             const auto PostCompilePatterns = TArray<const TCHAR*>{
                 sStubPattern_EntitySpawnParams,
                 sStubPattern_DynamicHandle,
@@ -644,7 +601,7 @@ void FCkAngelscriptGeneratorModule::StartupModule()
             if (DeletedCount > 0)
             {
                 ck::angelscriptgenerator::Log(
-                    TEXT("[Module] PostCompile self-heal cleanup: deleted {} stub recovery file(s) (EntitySpawnParams + DynamicHandle; AssetRegistry sibling cleanup owned by the ticker)."),
+                    TEXT("[Module] PostCompile self-heal cleanup: deleted {} stub recovery file(s) (ESP + DH; AR owned by ticker)."),
                     DeletedCount);
             }
         });
