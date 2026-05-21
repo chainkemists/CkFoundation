@@ -53,7 +53,25 @@ namespace
     // a module-local handler would require a UCLASS sink + .generated.h for
     // one callback. The file-scan-based marker check the rest of this file
     // uses is the cheaper source of truth.
+    //
+    // The flag's `false` write also marks the boundary at which the AR
+    // sibling-file cleanup is safe to run — that cleanup is owned by the
+    // ticker callback inside the regen functions, not by the outer
+    // PostCompile lambda. See "Force-quit between recovery and PostCompile"
+    // in CkAngelscriptGenerator/CLAUDE.md and the bug pinned by the
+    // _probe_assetregistry_loop probe.
     static bool sg_AnyAssetRegistryRegenInFlight = false;
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Pattern constants: one per stub-synthesizer's output. Each generator
+    // that emits a sibling owns the deletion of its own pattern AFTER it
+    // successfully rewrites the canonical. Broad-sweep cleanup is reserved
+    // for StartupModule's force-quit-survivor walk only.
+    // ----------------------------------------------------------------------------------------------------------------
+
+    constexpr auto* sStubPattern_EntitySpawnParams = TEXT("_StubRecovery_*_EntitySpawnParams.as");
+    constexpr auto* sStubPattern_AssetRegistry     = TEXT("_StubRecovery_*Assets.as");
+    constexpr auto* sStubPattern_DynamicHandle     = TEXT("_StubRecovery_*.json");
 
     auto Run_AllGenerators() -> void
     {
@@ -61,11 +79,20 @@ namespace
         FCkAutoTestWrapperGenerator::GenerateAll();
     }
 
-    // Walks project + plugin Script/Generated/ dirs and deletes `_StubRecovery_*`
-    // siblings. Caller runs this from PostCompile (sibling served its purpose)
-    // OR StartupModule (force-quit survivor cleanup — see StartupModule for the
-    // defensive rationale).
-    auto Delete_AllStubRecoveryFiles() -> int32
+    // Walks project + plugin Script/Generated/ dirs and deletes
+    // `_StubRecovery_*` siblings whose filename matches ANY of `Patterns`.
+    // Returns the count deleted.
+    //
+    // Per-pattern scoping is load-bearing: the AssetRegistry regen path is
+    // async (FTSTicker with idle-wait), so its sibling MUST NOT be deleted
+    // until the ticker has actually rewritten the canonical. Calling this
+    // from the outer PostCompile lambda with the AR pattern reintroduces
+    // the loop pinned by _probe_assetregistry_loop. The synchronous
+    // EntitySpawnParams + DynamicHandle generators are safe to clean from
+    // PostCompile immediately because they complete before PostCompile
+    // returns.
+    auto Delete_StubRecoveryFiles_ForPatterns(
+        TArrayView<const TCHAR* const> Patterns) -> int32
     {
         auto Dirs = TArray<FString>{};
         Dirs.Add(FPaths::ProjectDir() / TEXT("Script") / TEXT("Generated"));
@@ -73,10 +100,6 @@ namespace
         { Dirs.Add(Plugin->GetBaseDir() / TEXT("Script") / TEXT("Generated")); }
 
         auto DeletedCount = 0;
-        const auto Patterns = TArray<const TCHAR*>{
-            TEXT("_StubRecovery_*.as"),
-            TEXT("_StubRecovery_*.json"),
-        };
 
         for (const auto& Dir : Dirs)
         {
@@ -108,8 +131,9 @@ namespace
 
         if (DeletedCount > 0)
         {
-            // Context-agnostic message — caller (StartupModule or PostCompile)
-            // logs its own disambiguating line.
+            // Context-agnostic message — caller (StartupModule, PostCompile,
+            // or the AssetRegistry ticker callback) logs its own
+            // disambiguating line.
             FMessageLog{FName{sSelfHealLogChannel}}.Info(FText::Format(
                 LOCTEXT("CleanupEntry",
                     "Self-heal cleanup: deleted {0} stub recovery file(s)."),
@@ -117,6 +141,19 @@ namespace
         }
 
         return DeletedCount;
+    }
+
+    // Broad-sweep convenience for StartupModule's force-quit-survivor walk.
+    // Do NOT call this from PostCompile — the AssetRegistry path is async
+    // and its sibling must survive until the deferred regen actually runs.
+    auto Delete_AllStubRecoveryFiles() -> int32
+    {
+        const auto AllPatterns = TArray<const TCHAR*>{
+            sStubPattern_EntitySpawnParams,
+            sStubPattern_AssetRegistry,
+            sStubPattern_DynamicHandle,
+        };
+        return Delete_StubRecoveryFiles_ForPatterns(AllPatterns);
     }
 
     auto Has_DynamicHandleStubRecoveryFile_OnDisk() -> bool
@@ -310,6 +347,11 @@ namespace
                                     *WaitTicks);
                             }
 
+                            // Bail paths below intentionally do NOT clean the
+                            // AR sibling — leaving the stub on disk is correct
+                            // when the canonical wasn't actually regenerated.
+                            // StartupModule's broad sweep on the next launch
+                            // (or a subsequent successful PostCompile) handles it.
                             if (NOT GEditor)
                             {
                                 ck::angelscriptgenerator::Warning(
@@ -327,6 +369,15 @@ namespace
                             }
 
                             Subsystem->GenerateAllAssetRegistries();
+
+                            // Canonical was just rewritten — NOW the AR sibling
+                            // can be cleaned. Doing this in the synchronous
+                            // PostCompile lambda would race the regen and
+                            // produce the loop pinned by
+                            // _probe_assetregistry_loop.
+                            const auto ArPatterns = TArray<const TCHAR*>{ sStubPattern_AssetRegistry };
+                            Delete_StubRecoveryFiles_ForPatterns(ArPatterns);
+
                             sg_AnyAssetRegistryRegenInFlight = false;
                             return false; // one-shot
                         }),
@@ -461,6 +512,8 @@ namespace
                             *WaitTicks);
                     }
 
+                    // Bail paths below intentionally do NOT clean the AR
+                    // sibling (see OnPostInit twin for full rationale).
                     if (NOT GEditor)
                     {
                         sg_AnyAssetRegistryRegenInFlight = false;
@@ -475,6 +528,12 @@ namespace
                     }
 
                     Subsystem->GenerateAllAssetRegistries();
+
+                    // Canonical was just rewritten — NOW the AR sibling can be
+                    // cleaned. Pinned by _probe_assetregistry_loop.
+                    const auto ArPatterns = TArray<const TCHAR*>{ sStubPattern_AssetRegistry };
+                    Delete_StubRecoveryFiles_ForPatterns(ArPatterns);
+
                     sg_AnyAssetRegistryRegenInFlight = false;
                     return false; // one-shot
                 }),
@@ -565,13 +624,27 @@ void FCkAngelscriptGeneratorModule::StartupModule()
             Maybe_RegenDynamicHandleJson_OnPostCompile();
             Maybe_RegenAssetRegistry_OnPostCompile();
 
-            // PostCompile only fires on a successful compile — sibling stubs
-            // served their purpose.
-            const auto DeletedCount = Delete_AllStubRecoveryFiles();
+            // PostCompile fires on a successful compile, so the EntitySpawnParams
+            // and DynamicHandle siblings have served their purpose (both
+            // generators above are synchronous and have already completed).
+            //
+            // The AssetRegistry sibling pattern is INTENTIONALLY EXCLUDED here:
+            // Maybe_RegenAssetRegistry_OnPostCompile queues an async FTSTicker
+            // that hasn't actually rewritten the canonical yet. Deleting the
+            // AR sibling synchronously here is the bug pinned by
+            // _probe_assetregistry_loop — hot-reload sees the deletion's mtime
+            // change, recompiles against the still-stale canonical, fails the
+            // same root, and the dispatcher loops. The ticker's post-regen
+            // callback owns AR-sibling cleanup.
+            const auto PostCompilePatterns = TArray<const TCHAR*>{
+                sStubPattern_EntitySpawnParams,
+                sStubPattern_DynamicHandle,
+            };
+            const auto DeletedCount = Delete_StubRecoveryFiles_ForPatterns(PostCompilePatterns);
             if (DeletedCount > 0)
             {
                 ck::angelscriptgenerator::Log(
-                    TEXT("[Module] PostCompile self-heal cleanup: deleted {} stub recovery file(s)."),
+                    TEXT("[Module] PostCompile self-heal cleanup: deleted {} stub recovery file(s) (EntitySpawnParams + DynamicHandle; AssetRegistry sibling cleanup owned by the ticker)."),
                     DeletedCount);
             }
         });
