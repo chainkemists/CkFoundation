@@ -16,7 +16,36 @@ auto
     { return; }
 
     DoRefresh();
+    DoApplyDragDropPolicyToSlots();
     OnPanelRefreshed();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_InventoryUI_InventoryPanel::
+    Set_DragDropPolicy(
+        const FCk_InventoryUI_DragDropPolicy& InPolicy)
+    -> void
+{
+    _DragDropPolicy = InPolicy;
+    DoApplyDragDropPolicyToSlots();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_InventoryUI_InventoryPanel::
+    DoApplyDragDropPolicyToSlots()
+    -> void
+{
+    for (const auto& ItemSlot : _Slots)
+    {
+        if (ck::Is_NOT_Valid(ItemSlot))
+        { continue; }
+
+        ItemSlot->Set_DragDropPolicy(_DragDropPolicy);
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -74,7 +103,17 @@ auto
     -> bool
 {
     auto* const InventoryOp = Cast<UCk_InventoryUI_DragDropOperation>(InOperation);
-    return IsValid(InventoryOp);
+
+    if (ck::Is_NOT_Valid(InventoryOp))
+    { return false; }
+
+    // Reject cross-inventory drag-over when drop-in is disallowed, so the cursor
+    // reflects rejection. Same-inventory drag-over stays valid (intra-panel rearrange).
+    if (NOT _DragDropPolicy.Get_AllowDropIn() &&
+        InventoryOp->Get_SourceInventory() != _InventoryHandle)
+    { return false; }
+
+    return true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -110,6 +149,11 @@ auto
 
     // Only handle cross-inventory transfers in the default implementation.
     if (SourceInventory == _InventoryHandle)
+    { return false; }
+
+    // Drop-in gated by the panel's drag-drop policy. This is a safety net for drops on
+    // non-slot panel area — slot drops are gated earlier by UCk_InventoryUI_ItemSlotEntry.
+    if (NOT _DragDropPolicy.Get_AllowDropIn())
     { return false; }
 
     // Source / target are base-typed in the UI layer. Source dispatch is handled by the base Utils
