@@ -296,6 +296,10 @@ auto
 		Current._Plan.Reset();
 		Current._PlanStatus = ECk_GoapPlanStatus::Idle;
 
+		// Release any in-flight gating tag — Action is leaving the chain and
+		// won't broadcast a terminal status to drop the tag itself.
+		Action.template Try_Remove<FTag_Goap_Action_PlanInFlight>();
+
 		UUtils_Signal_OnGoap_Action_Deactivated::Broadcast(
 			Action, ck::MakePayload(Action, FCk_Goap_Payload_OnActionDeactivated{}));
 

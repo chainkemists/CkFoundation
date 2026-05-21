@@ -39,6 +39,17 @@ namespace ck
 	// first plan request. Removed by AutoReplan once consumed.
 	CK_DEFINE_ECS_TAG(FTag_Goap_Action_RequiresInitialPlan);
 
+	// Set on an Action while it is actively planning — added by HandleRequests
+	// when a Plan request begins processing (AStar seeded), removed by
+	// HandleResult on terminal status (PlanFound / PlanFailed /
+	// CostThresholdReached) or by Request_CancelPlan. Used to gate child
+	// Actions from draining their own Plan requests while the parent's plan
+	// is in flight: a child whose parent has this tag (or whose parent has
+	// never produced a plan — status still Idle) defers its Plan request,
+	// keeping it queued for retry on the next frame. Root Actions (no parent)
+	// are never gated.
+	CK_DEFINE_ECS_TAG(FTag_Goap_Action_PlanInFlight);
+
 // ====================================================================================================================
 // PARAMS — alias to BlueprintType data
 // ====================================================================================================================

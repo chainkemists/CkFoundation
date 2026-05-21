@@ -280,6 +280,36 @@ auto
 		FFragment_Goap_Action_Result& InResult,
 		FFragment_Goap_Action_PlanContext& InPlanContext) const -> void
 {
+	// Parent-plan gating: if THIS Action has a parent whose plan is still in
+	// flight (or has never produced a terminal result yet), defer Plan requests
+	// from this Action by re-enqueuing them. Other request types (SetGoal,
+	// SetActionCost, cancel, etc.) drain normally — they are configuration
+	// writes that don't depend on parent plan ordering.
+	//
+	// "In flight" = parent has FTag_Goap_Action_PlanInFlight, or parent's
+	// PlanStatus is Idle/Planning (i.e. has never reached a terminal state).
+	// Once parent reaches PlanFound / PlanFailed / CostThresholdReached, the
+	// gate releases. Grandchildren defer naturally: while Root gates Mid,
+	// Mid stays Idle, so Mid gates the grandchild via the same status check.
+	const auto IsParentPlanInFlight = [&]() -> bool
+	{
+		const auto& Tree = InHandle.template Get<FFragment_Goap_Action_Tree>();
+		const auto& Parent = Tree.Get_ParentAction();
+		if (NOT ck::IsValid(Parent)) { return false; }
+
+		if (Parent.template Has<FTag_Goap_Action_PlanInFlight>()) { return true; }
+
+		const auto& ParentCurrent = Parent.template Get<FFragment_Goap_Action_Current>();
+		switch (ParentCurrent.Get_PlanStatus())
+		{
+			case ECk_GoapPlanStatus::Idle:
+			case ECk_GoapPlanStatus::Planning:
+				return true;
+			default:
+				return false;
+		}
+	}();
+
 	InHandle.CopyAndRemove(InRequests, [&](FFragment_Goap_Action_Requests& InRequestsCopy)
 	{
 		algo::ForEachRequest(InRequestsCopy._Requests, ck::Visitor([&](const auto& InTypedRequest)
@@ -288,6 +318,22 @@ auto
 
 			if constexpr (std::is_same_v<T, FCk_Request_Goap_Action_Plan>)
 			{
+				if (IsParentPlanInFlight)
+				{
+					// Parent is still planning (or has never planned yet) —
+					// drop this Plan request and re-arm the initial-plan tag so
+					// AutoReplan re-enqueues a Plan request on the NEXT frame.
+					// We can't simply re-add the request to FFragment_Goap_Action_Requests:
+					// MarkedDirtyBy = FFragment_Goap_Action_Requests means
+					// rewriting the fragment marks it dirty again, and the pump
+					// will re-run HandleRequests this same frame, looping until
+					// the pump limit fires. The tag-driven path takes effect
+					// next frame, by which time the parent's plan may have
+					// settled and released the gate.
+					InHandle.AddOrGet<FTag_Goap_Action_RequiresInitialPlan>();
+					return;
+				}
+
 				// -- Plan request ---------------------------------------------
 				InHandle.Try_Remove<FTag_AStar_SearchActive>();
 				InHandle.Try_Remove<FTag_AStar_SearchComplete>();
@@ -300,6 +346,7 @@ auto
 					InCurrent._PlanStatus = ECk_GoapPlanStatus::PlanFailed;
 					InCurrent._Plan.Reset();
 					InCurrent._PlanCost = 0.0f;
+					InHandle.Try_Remove<FTag_Goap_Action_PlanInFlight>();
 					UUtils_Signal_OnGoap_Action_PlanFailed::Broadcast(
 						InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanFailed{}));
 					return;
@@ -323,6 +370,7 @@ auto
 					InCurrent._PlanStatus = ECk_GoapPlanStatus::PlanFound;
 					InCurrent._Plan.Reset();
 					InCurrent._PlanCost = 0.0f;
+					InHandle.Try_Remove<FTag_Goap_Action_PlanInFlight>();
 					UUtils_Signal_OnGoap_Action_PlanComplete::Broadcast(
 						InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanComplete{
 							TArray<TSubclassOf<UCk_GoapAction_EntityScript>>{}, 0.0f}));
@@ -332,6 +380,11 @@ auto
 				InCurrent._PlanStatus = ECk_GoapPlanStatus::Planning;
 				InCurrent._Plan.Reset();
 				InCurrent._PlanCost = 0.0f;
+
+				// Plan now in flight — gate any child Actions from starting their
+				// own plans until our terminal status is reached. Removed in
+				// HandleResult / CancelPlan / early-out paths above.
+				InHandle.AddOrGet<FTag_Goap_Action_PlanInFlight>();
 
 				// Build the planner's candidate operator set from this Action's
 				// children. Each child Action carries its own pre-built
@@ -377,6 +430,7 @@ auto
 			{
 				InHandle.Try_Remove<FTag_AStar_SearchActive>();
 				InHandle.Try_Remove<FTag_AStar_SearchComplete>();
+				InHandle.Try_Remove<FTag_Goap_Action_PlanInFlight>();
 				InSearchState._State = {};
 				InCurrent._PlanStatus = ECk_GoapPlanStatus::Idle;
 				InCurrent._Plan.Reset();
@@ -482,6 +536,11 @@ auto
 		FFragment_Goap_Action_Current& InCurrent) -> void
 {
 	InHandle.Remove<FTag_AStar_SearchComplete>();
+
+	// Any terminal status releases the parent-plan gate for our children.
+	// (No-op if the tag isn't present, e.g. an early-out path that already
+	// removed it before broadcasting.)
+	InHandle.Try_Remove<FTag_Goap_Action_PlanInFlight>();
 
 	switch (InResult._SearchStatus)
 	{
