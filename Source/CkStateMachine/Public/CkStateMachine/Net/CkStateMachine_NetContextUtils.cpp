@@ -1,6 +1,9 @@
 #include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+
+#include "Engine/World.h"
 
 namespace ck::statemachine
 {
@@ -9,15 +12,12 @@ namespace ck::statemachine
             const FCk_Handle_StateMachine& InSm)
         -> ECk_Sm_NetContext
     {
-        const auto NetMode = UCk_Utils_Net_UE::Get_EntityNetMode(InSm);
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InSm);
 
-        // Unknown means the entity has no net fragment — no active net session.
-        if (NetMode == ECk_Net_NetModeType::Unknown)
+        if (ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}) && World->IsNetMode(NM_Standalone))
         { return ECk_Sm_NetContext::Standalone; }
 
-        const auto bHasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InSm);
-
-        if (bHasAuthority)
+        if (UCk_Utils_Net_UE::Get_HasAuthority(InSm))
         { return ECk_Sm_NetContext::Server; }
 
         const auto LocallyControlled = UCk_Utils_Net_UE::Get_IsEntityLocallyControlled_ByPlayer(InSm);
