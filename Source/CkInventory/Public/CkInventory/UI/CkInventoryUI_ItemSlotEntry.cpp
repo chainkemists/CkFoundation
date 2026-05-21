@@ -214,10 +214,8 @@ auto
     if (ck::Is_NOT_Valid(InventoryOp))
     { return; }
 
-    if (NOT CanAcceptDrop(InventoryOp))
-    { return; }
-
-    OnDragHoverStarted(InventoryOp);
+    // Fire regardless of acceptance — the hover highlight is coloured from InCanAccept.
+    OnDragHoverStarted(InventoryOp, CanAcceptDrop(InventoryOp));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
