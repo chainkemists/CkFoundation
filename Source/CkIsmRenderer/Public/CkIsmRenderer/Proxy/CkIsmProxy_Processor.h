@@ -4,6 +4,7 @@
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
+#include "CkEcsExt/SceneNode/CkSceneNode_Fragment.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
@@ -52,6 +53,7 @@ namespace ck
         TExclude<FTag_IsmProxy_NeedsSetup>,
         TExclude<FTag_IsmProxy_Disabled>,
         FTag_IsmProxy_NeedsInstanceAdded,
+        TExclude<FTag_SceneNode_RelativeTransformUpdated>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
