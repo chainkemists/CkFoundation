@@ -158,6 +158,35 @@ namespace ck
             const FFragment_Tween_Current& InCurrent) -> void;
 
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKTWEEN_API FProcessor_Tween_ApplySplineFollow : public ck_exp::TProcessor<
+        FProcessor_Tween_ApplySplineFollow,
+        FCk_Handle_Tween,
+        ck::TReadOnly<FFragment_Tween_Current>,
+        ck::TReadOnly<FFragment_Tween_SplineFollow>,
+        FTag_Tween_Playing,
+        TExclude<FTag_Tween_Paused>,
+        TExclude<FTag_Tween_Completed>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Transform;
+        // Same ordering rationale as FProcessor_Tween_ApplyToTransform: must run before
+        // Transform_HandleRequests so the SetLocation/SetRotation requests are applied
+        // the same frame and scene-node descendants observe the parent update.
+        using RunBefore = TDepList<FProcessor_Transform_HandleRequests>;
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+    	ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Tween_Current& InCurrent,
+            const FFragment_Tween_SplineFollow& InSplineFollow) -> void;
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
