@@ -102,6 +102,7 @@
 //   ...ECS interaction system                 → CkInteraction
 //   ...ECS spatial overlap/collision          → CkOverlapBody + CkShapes
 //   ...ECS spatial volume query               → CkSpatialQuery
+//   ...spline path data / follow a spline     → CkSpline (+ CkTween for follow)
 //   ...ECS raycast sensing                    → CkRaySense
 //   ...ECS targeting / scoring                → CkTargeting
 //   ...ECS aggro / threat table               → CkAggro
@@ -186,6 +187,7 @@
 //   CkScripts          | T4 | (varies)                                | CkScripts/Claude.md
 //   CkShapes           | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkShapes/Claude.md
 //   CkSpatialQuery     | T4 | Core,Ecs,EcsExt,Label,Log,Physics,Provider,Record,Settings,Shapes,ThirdParty | CkSpatialQuery/Claude.md
+//   CkSpline           | T4 | Core,Ecs,EcsExt,Log                     | CkSpline/Claude.md
 //   CkStateMachine     | T4 | Core,Dynamic,Ecs,Label,Log,Provider,Record,Settings,Timer | CkStateMachine/Claude.md
 //   CkSubstep          | T4 | Core,Ecs,EcsExt,Label,Log,Record,Settings | CkSubstep/Claude.md
 //   CkTargeting        | T4 | Actor,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkTargeting/Claude.md
