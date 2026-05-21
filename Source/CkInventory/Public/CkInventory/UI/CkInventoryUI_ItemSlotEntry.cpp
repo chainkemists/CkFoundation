@@ -44,7 +44,7 @@ auto
     CanDrag_Implementation() const
     -> bool
 {
-    return true;
+    return _DragDropPolicy.Get_AllowTakeOut();
 }
 
 auto
@@ -262,7 +262,15 @@ auto
     if (ck::Is_NOT_Valid(InOperation))
     { return false; }
 
-    return ck::IsValid(InOperation->Get_SourceItem());
+    if (ck::Is_NOT_Valid(InOperation->Get_SourceItem()))
+    { return false; }
+
+    // Same-inventory drops (rearrange / stack within this container) are always allowed.
+    if (InOperation->Get_SourceInventory() == _InventoryHandle)
+    { return true; }
+
+    // Cross-inventory drop == "drop in" — gated by the panel-propagated policy.
+    return _DragDropPolicy.Get_AllowDropIn();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

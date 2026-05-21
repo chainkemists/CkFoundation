@@ -2,6 +2,7 @@
 
 #include "CkInventory/Inventory/CkInventory_Fragment_Data.h"
 #include "CkInventory/Item/CkItem_Fragment_Data.h"
+#include "CkInventory/UI/CkInventoryUI_DragDropPolicy.h"
 
 #include "CkCore/Macros/CkMacros.h"
 
@@ -45,6 +46,12 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|UI|Inventory|Panel")
     void ClearPanel();
+
+    /** Sets the drag-and-drop access policy and propagates it to every item slot. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|UI|Inventory|Panel")
+    void Set_DragDropPolicy(
+        const FCk_InventoryUI_DragDropPolicy& InPolicy);
 
 protected:
     /** Called after the panel layout has been constructed for the new inventory. */
@@ -105,6 +112,8 @@ private:
     auto DoBindSignal() -> void;
     auto DoUnbindSignal() -> void;
 
+    auto DoApplyDragDropPolicyToSlots() -> void;
+
 protected:
     /** The slot widget class to instantiate for each grid cell or list entry. */
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -115,6 +124,11 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               Category = "Ck|UI|Inventory|Panel")
     TSubclassOf<UCk_InventoryUI_DragWidget> _DragWidgetClass;
+
+    /** Drag-and-drop access policy, propagated to every item slot. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              Category = "Ck|UI|Inventory|Panel")
+    FCk_InventoryUI_DragDropPolicy _DragDropPolicy;
 
 protected:
     UPROPERTY(BlueprintReadOnly,
@@ -129,6 +143,7 @@ protected:
 
 public:
     CK_PROPERTY_GET(_InventoryHandle);
+    CK_PROPERTY_GET(_DragDropPolicy);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

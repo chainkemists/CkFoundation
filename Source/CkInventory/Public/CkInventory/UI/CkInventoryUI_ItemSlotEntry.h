@@ -2,6 +2,7 @@
 
 #include "CkInventory/Inventory/CkInventory_Fragment_Data.h"
 #include "CkInventory/Item/CkItem_Fragment_Data.h"
+#include "CkInventory/UI/CkInventoryUI_DragDropPolicy.h"
 
 #include "CkCore/Macros/CkMacros.h"
 
@@ -154,11 +155,18 @@ protected:
               Category = "Ck|UI|Inventory|Drag")
     TSubclassOf<UCk_InventoryUI_DragWidget> _DragWidgetClass;
 
+    /** Drag-and-drop access policy. Normally propagated from the owning panel;
+     *  drives the default CanDrag / CanAcceptDrop implementations. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              Category = "Ck|UI|Inventory|Drag")
+    FCk_InventoryUI_DragDropPolicy _DragDropPolicy;
+
 public:
     CK_PROPERTY_SET(_DragWidgetClass);
+    CK_PROPERTY(_DragDropPolicy);
 
     /** Override to control whether this slot can be dragged.
-     *  Default returns true. */
+     *  Default returns _DragDropPolicy._AllowTakeOut. */
     UFUNCTION(BlueprintNativeEvent,
               Category = "Ck|UI|Inventory|Drag")
     bool CanDrag() const;
