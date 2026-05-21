@@ -64,11 +64,14 @@ protected:
               Category = "Ck|UI|Inventory|Slot")
     void OnSlotDragCancelled();
 
-    /** Called when a valid drag enters this slot's bounds. Use for highlight visuals. */
+    /** Called when a drag enters this slot's bounds. Use for highlight visuals.
+     *  Fires regardless of acceptance — InCanAccept carries the CanAcceptDrop result
+     *  so the highlight can be coloured (e.g. green = droppable, red = rejected). */
     UFUNCTION(BlueprintImplementableEvent,
               Category = "Ck|UI|Inventory|Slot")
     void OnDragHoverStarted(
-        UCk_InventoryUI_DragDropOperation* InOperation);
+        UCk_InventoryUI_DragDropOperation* InOperation,
+        bool InCanAccept);
 
     /** Called when a drag leaves this slot's bounds. Use to clear highlight visuals. */
     UFUNCTION(BlueprintImplementableEvent,
