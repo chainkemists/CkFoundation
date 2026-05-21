@@ -261,3 +261,73 @@ Once (1)–(6) land in the spec, this is GREEN-LIGHT for plan authorship. (7) la
 
 - **Name:** CTO (Claude Opus 4.7)
 - **Date:** 2026-05-21
+
+---
+
+## v2 re-review addendum
+
+**Date:** 2026-05-21
+**Re-reviewer:** CTO (Claude Opus 4.7)
+**Spec under re-review:** `docs/superpowers/specs/2026-05-20-CkSnapshot-design.md` @ `ccc3a93` on `dev`, unpushed.
+
+### v2 verdict
+
+**GREEN-LIGHT.**
+
+The v2 spec addresses all six v1 sign-off conditions and the path #3 mechanics are spelled out concretely. The author's own v1→v2 verification catch — the entity-handle remap via `FSnapshotContext` + `entt::basic_continuous_loader` — is a critical correctness fix that I missed in v1; raising it shows the right instinct (any handle ref, USTRUCT or not, needs ID remap on load — without `continuous_loader`, saved entity IDs are garbage that *might* coincidentally point at a wrong live entity, which is worse than a hard fail).
+
+Plan authorship can proceed. The non-blocker notes below should land during plan-writing or V1 implementation, not as spec gates.
+
+### v1 blocker → v2 resolution mapping
+
+| v1 blocker | v2 location | Verdict |
+|---|---|---|
+| 1 — `T::StaticStruct()->SerializeItem` doesn't compile against non-USTRUCT live fragments | Section 3 three-tier mechanism (A/B/C) + concept-detected dispatch via `FragmentHasCustomSnapshotSerialize` vs `FragmentIsUStructSnapshotable`; honest opt-in caveat in §1 ("The opt-in line, honestly") and in the Goal section. | **Resolved.** |
+| 2 — Path #3 EntityScript: class-path persistence and `TStrongObjectPtr` not addressed | §1 path #3 sub-bullet (a) — `Ar << Class` then `NewObject<>(Outer, Class)` then `_Script->Serialize(Ar)`. | **Resolved.** Minor follow-up below re: `Outer` choice. |
+| 3 — `_SpawnParams` not addressed | §1 path #3 sub-bullet (b) — explicitly dropped; author contract documented; rationale (avoids double-applying `utils_*::Add` in Construct). | **Resolved.** Correct call IMO — making Construct universally idempotent would be a far bigger contract change. |
+| 4 — AS `UPROPERTY(SaveGame)` unverified | §6 test #10 `Test_Snapshot_AS_UPROPERTY_SaveGame_Smoke` with explicit "V1 cannot ship if this fails" gate. | **Resolved as a gate.** See note below on scope. |
+| 5 (non-blocker) — entt 3.15 → 3.16 | Throughout spec; confirmed against `entt-3.16.0/src/entt/entity/snapshot.hpp` (`basic_snapshot` line 47, `basic_snapshot_loader` line 176, `basic_continuous_loader` line 306). API shape matches the spec's usage. | **Resolved.** |
+| 6 (non-blocker) — `FCk_Snapshot_Header` undefined | §5 — committed shape with `_FormatVersion`, `_EngineVersion`, `_PluginBuildHash`, `_TimestampUTC`, `_WorldAssetPath`, `_Manifest`, `_EntityCount`, plus `FCk_Snapshot_Header_FragmentManifestEntry` carrying `_ScriptStructPath`, `_EnttTypeId`, `_EntityCount`, `_ByteLength`, `_ByteOffset`. | **Resolved.** The byte-offset/byte-length pair is the right shape for skip-via-byte-jump on removed types. |
+| Path #4 (signal subscriptions, design observation, not a blocker) | §1 path #4 — explicit fourth AS surface with contract for documentation in `Script/CLAUDE.md`. | **Resolved.** |
+| Open Q2 (DynamicFragment blanket) | §1 path #2 — blanket at carrier, payload USTRUCT gates fields. | **Resolved.** |
+| Open Q3 (AS class rename strict-mode) | §1 — log+skip default + `bRefuseLoadOnUnresolvedTypes` opt-in setting. | **Resolved.** |
+| Convergent-flush cap as CVar | `ck.Snapshot.ConvergentFlush.MaxIterations` + per-iteration dirty-count history. | **Resolved.** |
+| Orphan-sweep gate on Settings | `UCk_Snapshot_Settings._OrphanSweepGate` accepting duration OR named signal handle. | **Resolved.** |
+| CkEcs tier-1 touch | Architecture summary line 82-85 + §6 V1-in-scope bullet. | **Resolved.** |
+
+### On the v2 author's bonus catch (entity-handle remap)
+
+This is the right pattern. Three points to highlight for plan-time:
+
+1. The `FSnapshotContext::Snapshot_Handle<T_Handle>` template needs to cover both `FCk_Handle` (the base) and the typesafe handle wrappers (`FCk_Handle_Item`, `FCk_Handle_FloatAttribute`, etc.) since both wrap an underlying `entt::entity`. The implementation plan should specify whether it auto-unwraps via the typesafe-handle base or requires per-typesafe-handle specialization. Either works; pick one explicitly.
+
+2. The Section 3 example for `TFragment_RecordOfEntities<T>::SerializeSnapshot` routes every entry through `Ctx.Snapshot_Handle`. That's correct. Worth a test assertion that a record holding handles to entities that were created *after* the record fragment in EnTT-iteration order still resolves correctly — `continuous_loader` is designed to handle forward references but it's worth proving once in V1 to lock the contract.
+
+3. EnTT's `basic_continuous_loader` only remaps entity IDs for components/data it knows about — i.e. data routed through its `.get<Type>(Archive)` calls or through entity IDs serialized via the loader's archive overload. Free-floating `entt::entity` integers in raw bytes are NOT remapped. The spec's `Ctx.Snapshot_Entity` / `Ctx.Snapshot_Handle` pattern handles this correctly by routing every handle through the context. The risk is a future author serializing an entity ID directly via `Ar << SomeEntityId` and bypassing the context — flag this loudly in `CkSnapshot/CLAUDE.md` anti-patterns when the plan lands.
+
+### Non-blocker notes (for plan-writing / V1 implementation, not spec gates)
+
+1. **AS smoke-test (#10) is sufficient as a kill-switch but light as a contract validation.** A single `UPROPERTY(SaveGame) int` round-trip proves the meta flows. It does NOT prove: (a) the **negation case** — that a `UPROPERTY()` field *without* `SaveGame` is correctly dropped on load (this is the silent-failure direction — if the AS frontend ignores the meta entirely and saves everything, the smoke test as written would still pass), (b) variable-length types (`FString`, `TArray<int>`), (c) UE-reflected types (`FGameplayTag`, `FInstancedStruct`), (d) inheritance — does `(SaveGame)` flow through an AS subclass of an AS subclass. Recommend the implementation plan grow #10 from a 1-field smoke into a small matrix: one positive int, one negation int, one FString, one TArray. Still single-test, still V1, still the same "blocks shipping if any fail" gate. Tiny incremental cost over what's specced.
+
+2. **The `Outer` for `NewObject<UCk_EntityScript_UE>(Outer, Class)` in §1 path #3 is a comment-placeholder.** The implementation plan needs to pin this down. Two reasonable choices: (a) the world's transient package (`GetTransientPackage()` or a per-world holder owned by the subsystem), (b) the EntityBridge actor for bridged entities, GetTransientPackage for pure-ECS entities. UE GC requires the script instance be properly outered or it'll be collected; `TStrongObjectPtr` provides root-set keepalive but a sensible Outer still matters for editor diagnostics and asset-path stability. Pick at plan time.
+
+3. **Section 3 has a duplicated subsection.** The "On-disk format" and "Why two layers" appear twice — once compactly (lines ~530–540) and once verbosely (lines ~541–568), the second copy looking like leftover v1 text not deleted during the v2 rewrite. Both say the same thing; pick one and remove the other before plan-writing. Pure editing cleanup, not a design issue.
+
+4. **`NOT FragmentHasCustomSnapshotSerialize<T>` inside the concept body (§3, around line 351).** CkFoundation's `NOT` is a preprocessor `#define` for `!` per the project's conventions. In a `requires`-clause / concept body it likely works (it expands before the parser sees it), but C++20 has a built-in keyword `not` that does the same thing and reads cleaner in template-meta code. Either is fine; if there's any chance `NOT` collides with something in the entt/UE headers being included, prefer `not` or `!` here.
+
+5. **Tier-C templated family enumeration ("a handful of others") should be made exhaustive at plan time.** §3 line 367 lists the V1-touched templated families it commits to writing `SerializeSnapshot` on. Items the plan should explicitly add or confirm-already-covered: `TFragment_EntityHolder<T>` (used by CkInventory via `CK_DEFINE_ENTITY_HOLDER_AND_UTILS` to produce `FFragment_Item_ParentInventory` and `FFragment_InventorySlot_ItemRef` — both non-USTRUCT and both hold handle refs, so they need Tier-C treatment). Spec line 367's "a handful of others" hides this — the implementation plan should make the V1 list closed and reviewable.
+
+6. **The dispatch `static_assert` failure message** (§1 anti-misuse guardrails — "fails to compile with a `static_assert` pointing at the missing method") needs a hand-tuned message. The default error from a `requires`-clause mismatch is famously bad. The plan should specify the exact text: e.g. `"Fragment T marked IsSnapshotable but provides no serialization path: either declare void SerializeSnapshot(FArchive&, FSnapshotContext&), or make T a USTRUCT with GENERATED_BODY()."` Author DX is worth the 5 minutes.
+
+7. **Out-of-scope follow-up logged in the v2 changelog** — `Plugins/CkFoundation/CLAUDE.md:3,376` stale entt 3.15 references. The v2 spec correctly notes this is queued separately. ✓
+
+### Final note
+
+The v1 review found a real architectural issue and the v2 author fixed it cleanly. The fix is local, well-scoped, and the three-tier mechanism is honest about its cost (templated families need a per-family method written once). Section 1's revised "the opt-in line, honestly" framing is exactly the right tone — promising "one-line opt-in" while requiring an additional method for non-USTRUCT cases would have been the worse trade.
+
+Proceeding to `superpowers:writing-plans` with this spec as input is approved. The plan will surface the seven non-blocker items above naturally as concrete tasks; no spec edit required first.
+
+### Re-reviewer signature
+
+- **Name:** CTO (Claude Opus 4.7)
+- **Date:** 2026-05-21 (v2 re-review)
