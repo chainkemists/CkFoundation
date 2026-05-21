@@ -7,6 +7,7 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 #include <Components/UniformGridPanel.h>
+#include <Components/SizeBox.h>
 
 auto
     UCk_InventoryUI_DataOnlyPanel::
@@ -102,6 +103,19 @@ auto
 
     SlotWidget->Set_DragWidgetClass(_DragWidgetClass);
 
+    // ---- Optionally wrap in a SizeBox for panel-driven slot sizing ----
+
+    UWidget* ChildToAdd = SlotWidget;
+
+    if (_OverrideSlotSize)
+    {
+        auto* const SizeBox = NewObject<USizeBox>(this);
+        SizeBox->SetWidthOverride(_SlotSize.X);
+        SizeBox->SetHeightOverride(_SlotSize.Y);
+        SizeBox->AddChild(SlotWidget);
+        ChildToAdd = SizeBox;
+    }
+
     if (auto* const GridPanel = Cast<UUniformGridPanel>(_ItemPanel))
     {
         const auto SlotIndex = _Slots.Num();
@@ -109,11 +123,11 @@ auto
         const auto Row    = SlotIndex / Columns;
         const auto Column = SlotIndex % Columns;
 
-        GridPanel->AddChildToUniformGrid(SlotWidget, Row, Column);
+        GridPanel->AddChildToUniformGrid(ChildToAdd, Row, Column);
     }
     else
     {
-        _ItemPanel->AddChild(SlotWidget);
+        _ItemPanel->AddChild(ChildToAdd);
     }
 
     _Slots.Add(SlotWidget);

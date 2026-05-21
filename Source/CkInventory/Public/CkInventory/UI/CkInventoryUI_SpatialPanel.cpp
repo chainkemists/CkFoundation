@@ -60,18 +60,24 @@ auto
 
             SlotWidget->Set_DragWidgetClass(_DragWidgetClass);
 
-            // ---- Wrap in SizeBox for consistent sizing ----
+            // ---- Optionally wrap in a SizeBox for panel-driven slot sizing ----
 
-            auto* const SizeBox = NewObject<USizeBox>(this);
-            SizeBox->SetWidthOverride(_SlotSize.X);
-            SizeBox->SetHeightOverride(_SlotSize.Y);
-            SizeBox->AddChild(SlotWidget);
+            UWidget* ChildToAdd = SlotWidget;
+
+            if (_OverrideSlotSize)
+            {
+                auto* const SizeBox = NewObject<USizeBox>(this);
+                SizeBox->SetWidthOverride(_SlotSize.X);
+                SizeBox->SetHeightOverride(_SlotSize.Y);
+                SizeBox->AddChild(SlotWidget);
+                ChildToAdd = SizeBox;
+            }
 
             // ---- Add to grid ----
             // UUniformGridPanel fills top-to-bottom, then left-to-right.
             // We use (Row, Col) so the grid fills left-to-right per row.
 
-            _GridPanel->AddChildToUniformGrid(SizeBox, Row, Col);
+            _GridPanel->AddChildToUniformGrid(ChildToAdd, Row, Col);
 
             _Slots.Add(SlotWidget);
         }
