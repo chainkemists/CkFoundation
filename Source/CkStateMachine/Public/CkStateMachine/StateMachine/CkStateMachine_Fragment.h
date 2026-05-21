@@ -34,6 +34,12 @@ namespace ck
 {
     class FProcessor_SmState_Evaluate;
 
+    // Forward decls for replication-related processors (defined in later phases).
+    class FProcessor_Sm_PushOwningClientBatch;
+    class FProcessor_Sm_FlushPendingReplication_Drain;
+    class FProcessor_Sm_FlushPendingReplication_InitialCheck;
+    class FProcessor_Sm_ApplyReplicatedHistory;
+
     // ================================================================================================================
     // TAGS
     // ================================================================================================================
@@ -47,6 +53,27 @@ namespace ck
     // see the entity. Strip this tag + FFragment_SmScript_PendingAttach to cancel the
     // attach (e.g. when the child is removed before commit runs).
     CK_DEFINE_ECS_TAG(FTag_SmScript_PendingAttach);
+
+    // ================================================================================================================
+    // REPLICATION TAGS
+    // ================================================================================================================
+
+    // Sticky fault tag set by FProcessor_Sm_FlushPendingReplication_InitialCheck when the
+    // initial-state fingerprint check (spec §9.5) detects local vs replicated divergence.
+    // Excluded by both Flush_InitialCheck and ApplyReplicatedHistory via TExclude, so the
+    // SM is permanently quiesced after the fault fires.
+    CK_DEFINE_ECS_TAG(FTag_Sm_DeterminismFault);
+
+    // One-shot trigger tag added by the RegisterLazy OnAdd handler when the RepData fragment
+    // first arrives on the entity. Consumed (removed) by FProcessor_Sm_FlushPendingReplication_InitialCheck
+    // before the fingerprint check evaluates.
+    CK_DEFINE_ECS_TAG(FTag_Sm_NeedsInitialFingerprintCheck);
+
+    // Sticky idempotence-guard tag added by FProcessor_Sm_FlushPendingReplication_InitialCheck
+    // after the initial-state fingerprint check runs (whether it passed or failed). Prevents
+    // FTag_Sm_NeedsInitialFingerprintCheck from re-arming on a subsequent OnAdd delivery
+    // (e.g., net-relevance flip).
+    CK_DEFINE_ECS_TAG(FTag_Sm_InitialFingerprintCheckCompleted);
 
     // ================================================================================================================
     // FRAGMENTS
@@ -203,6 +230,104 @@ namespace ck
 
     public:
         CK_PROPERTY_GET(_Requests);
+    };
+
+    // ================================================================================================================
+    // REPLICATION FRAGMENTS
+    // ================================================================================================================
+
+    // Owning-client outbound buffer. Filled by FProcessor_Sm_CommitPendingTransition on the
+    // owning client when it lands a transition on an OwningClientAuthoritative SM. Flushed
+    // end-of-frame via FProcessor_Sm_PushOwningClientBatch → Server_PushTransitionBatch RPC.
+    struct CKSTATEMACHINE_API FFragment_Sm_PendingClientBatch
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Sm_PendingClientBatch);
+
+        friend class FProcessor_Sm_PushOwningClientBatch;
+        friend class FProcessor_Sm_CommitPendingTransition;
+
+    private:
+        TArray<FCk_Sm_TransitionEvent> _PendingEvents;
+
+    public:
+        CK_PROPERTY_GET(_PendingEvents);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Non-replicated client-side state for tracking which seq we've applied locally.
+    // Lives on every client (including owning client, though owning client suppresses OnChange).
+    struct CKSTATEMACHINE_API FFragment_Sm_ClientReplayState
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Sm_ClientReplayState);
+
+        friend class FProcessor_Sm_ApplyReplicatedHistory;
+        friend class FProcessor_Sm_FlushPendingReplication_Drain;
+        friend class FProcessor_Sm_FlushPendingReplication_InitialCheck;
+
+    private:
+        int32 _ClientLastAppliedSeq = 0;
+
+    public:
+        CK_PROPERTY(_ClientLastAppliedSeq);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Monotonic seq counter. Lives on server for ServerAuth SMs, on owning-client for
+    // OwningClientAuth SMs. Bumped each time a transition is published.
+    struct CKSTATEMACHINE_API FFragment_Sm_NextSeq
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Sm_NextSeq);
+
+        friend class FProcessor_Sm_CommitPendingTransition;
+
+    private:
+        int32 _Next = 1;  // First seq is 1; 0 is reserved as "never applied"
+
+    public:
+        CK_PROPERTY(_Next);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Stash for rep payloads that arrive before local Setup completes OR while a prior stash
+    // is still draining (stash-precedence invariant, spec §5.4). Drained in arrival order by
+    // FProcessor_Sm_FlushPendingReplication_Drain.
+    struct CKSTATEMACHINE_API FFragment_Sm_PendingReplicationEntries
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Sm_PendingReplicationEntries);
+
+        friend class FProcessor_Sm_FlushPendingReplication_Drain;
+
+    private:
+        TArray<FCk_Sm_TransitionEvent> _StashedEntries;
+
+    public:
+        CK_PROPERTY(_StashedEntries);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // FIFO of replicated transition events drained one-per-pump by
+    // FProcessor_Sm_ApplyReplicatedHistory.
+    struct CKSTATEMACHINE_API FFragment_Sm_ReplayQueue
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Sm_ReplayQueue);
+
+        friend class FProcessor_Sm_ApplyReplicatedHistory;
+        friend class FProcessor_Sm_FlushPendingReplication_Drain;
+
+    private:
+        TArray<FCk_Sm_TransitionEvent> _Queue;
+
+    public:
+        CK_PROPERTY(_Queue);
     };
 
     // ================================================================================================================
