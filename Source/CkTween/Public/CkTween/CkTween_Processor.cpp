@@ -10,10 +10,13 @@
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkSpline/CkSpline_Utils.h"
+
 CK_REGISTER_PROCESSOR(ck::FProcessor_Tween_Update);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Tween_HandleYoyoDelays);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Tween_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Tween_ApplyToTransform);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Tween_ApplySplineFollow);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -68,6 +71,41 @@ namespace ck_tween
                 break;
             }
         }
+    }
+
+    // Resolves a normalized 0..1 progress onto the spline and enqueues transform
+    // requests on the tween's lifetime owner. Single source of truth shared by
+    // FProcessor_Tween_ApplySplineFollow (per-tick) and the completion path.
+    // CkSpline distance queries are arc-length-parameterized, so a linear progress
+    // yields constant travel speed.
+    auto ApplyProgressToSplineFollow(
+        const FCk_Handle& InTweenHandle,
+        const ck::FFragment_Tween_SplineFollow& InSplineFollow,
+        float InProgress)
+        -> void
+    {
+        const auto& SplineHandle = InSplineFollow.Get_Spline();
+        if (ck::Is_NOT_Valid(SplineHandle))
+        { return; }
+
+        const auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InTweenHandle);
+        if (ck::Is_NOT_Valid(TargetEntity))
+        { return; }
+
+        auto MaybeTransformHandle = UCk_Utils_Transform_UE::Cast(TargetEntity);
+        if (ck::Is_NOT_Valid(MaybeTransformHandle))
+        { return; }
+
+        const auto Distance = FMath::Clamp(InProgress, 0.0f, 1.0f) * UCk_Utils_Spline_UE::Get_Length(SplineHandle);
+
+        const auto Location = UCk_Utils_Spline_UE::Get_LocationAtDistance(SplineHandle, Distance);
+        UCk_Utils_Transform_UE::Request_SetLocation(MaybeTransformHandle, FCk_Request_Transform_SetLocation{Location});
+
+        if (InSplineFollow.Get_Orientation() != ECk_Tween_SplineOrientation::OrientToSpline)
+        { return; }
+
+        const auto Rotation = UCk_Utils_Spline_UE::Get_RotationAtDistance(SplineHandle, Distance);
+        UCk_Utils_Transform_UE::Request_SetRotation(MaybeTransformHandle, FCk_Request_Transform_SetRotation{Rotation});
     }
 }
 
@@ -185,6 +223,14 @@ namespace ck
             // Apply final transform before tags change — ApplyToTransform processor
             // will skip this entity once it is tagged as Completed.
             ck_tween::ApplyValueToTransform(InHandle, FinalValue, InParams.Get_Target());
+
+            // Spline-follow tweens resolve their own transform — snap to the final
+            // spline position so the follower lands exactly on the path end.
+            if (InHandle.Has<FFragment_Tween_SplineFollow>())
+            {
+                ck_tween::ApplyProgressToSplineFollow(
+                    InHandle, InHandle.Get<FFragment_Tween_SplineFollow>(), FinalValue.GetAsFloat());
+            }
 
             UUtils_Signal_OnTweenComplete::Broadcast(InHandle,
                 MakePayload(InHandle, FCk_Tween_Payload_OnComplete{FinalValue}));
@@ -401,6 +447,21 @@ namespace ck
             -> void
     {
         ck_tween::ApplyValueToTransform(InHandle, InCurrent.Get_CurrentValue(), InParams.Get_Target());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Tween_ApplySplineFollow::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Tween_Current& InCurrent,
+            const FFragment_Tween_SplineFollow& InSplineFollow)
+            -> void
+    {
+        const auto Progress = InCurrent.Get_CurrentValue().GetAsFloat();
+        ck_tween::ApplyProgressToSplineFollow(InHandle, InSplineFollow, Progress);
     }
 }
 

@@ -158,6 +158,19 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_TweenTarget);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_Tween_SplineOrientation : uint8
+{
+    // Move along the spline, keep the entity's own rotation
+    PositionOnly,
+    // Move along the spline and rotate to face the spline tangent
+    OrientToSpline
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Tween_SplineOrientation);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_TweenStopBehavior : uint8
 {
     DoNothing,

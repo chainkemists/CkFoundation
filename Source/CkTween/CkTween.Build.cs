@@ -25,6 +25,7 @@ public class CkTween : CkModuleRules
             "CkProvider",
             "CkRecord",
             "CkSettings",
+            "CkSpline",
             "CkTimer",
         });
     }

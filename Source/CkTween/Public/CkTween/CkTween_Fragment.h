@@ -5,6 +5,12 @@
 #include "CkEcs/Signal/CkSignal_Macros.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
+#include "CkSpline/CkSpline_Fragment_Data.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class UCk_Utils_Tween_UE;
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -58,6 +64,29 @@ namespace ck
 
     public:
         CK_PROPERTY(_NextTween);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Spline path a tween follows. Holds an FCk_Handle_Spline (a CkSpline feature);
+    // the processor resolves progress -> transform each tick via UCk_Utils_Spline_UE.
+    // A destroyed spline entity cleanly stops the follower (invalid handle -> processor
+    // early-outs).
+    struct CKTWEEN_API FFragment_Tween_SplineFollow
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Tween_SplineFollow);
+
+        friend class FProcessor_Tween_ApplySplineFollow;
+        friend class UCk_Utils_Tween_UE;
+
+    private:
+        FCk_Handle_Spline _Spline;
+        ECk_Tween_SplineOrientation _Orientation = ECk_Tween_SplineOrientation::PositionOnly;
+
+    public:
+        CK_PROPERTY_GET(_Spline);
+        CK_PROPERTY_GET(_Orientation);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -9,6 +9,8 @@
 
 #include "CkTimer/CkTimer_Fragment_Data.h"
 
+#include "CkSpline/CkSpline_Fragment_Data.h"
+
 #include "CkTween_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -206,6 +208,21 @@ public:
         UPARAM(ref) FCk_Handle_Transform& InTargetEntity,
         float InDuration,
         ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
+        ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
+        int32 InLoopCount = 0,
+        float InYoyoDelay = 0.0f,
+        ECk_TweenCompletionBehavior InCompletionBehavior = ECk_TweenCompletionBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Tween",
+        DisplayName = "[Ck][Tween] Create Tween Entity Transform (Follow Spline)")
+    static FCk_Handle_Tween
+    Create_TweenEntityTransform_FollowSpline(
+        UPARAM(ref) FCk_Handle_Transform& InEntity,
+        const FCk_Handle_Spline& InSpline,
+        float InDuration,
+        ECk_Tween_SplineOrientation InOrientation = ECk_Tween_SplineOrientation::OrientToSpline,
+        ECk_TweenEasing InEasing = ECk_TweenEasing::Linear,
         ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
         int32 InLoopCount = 0,
         float InYoyoDelay = 0.0f,
