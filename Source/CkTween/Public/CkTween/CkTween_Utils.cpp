@@ -1,11 +1,14 @@
 #include "CkTween_Utils.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Math/ValueRange/CkValueRange_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 #include "CkTimer/CkTimer_Utils.h"
 #include "CkTween/CkTween_Fragment.h"
+
+#include "CkSpline/CkSpline_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -234,6 +237,40 @@ auto
         InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, InCompletionBehavior);
 
     return FCk_TweenTransformResult{LocationTween, RotationTween, ScaleTween};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Tween_UE::
+    Create_TweenEntityTransform_FollowSpline(
+        FCk_Handle_Transform& InEntity,
+        const FCk_Handle_Spline& InSpline,
+        float InDuration,
+        ECk_Tween_SplineOrientation InOrientation,
+        ECk_TweenEasing InEasing,
+        ECk_TweenLoopType InLoopType,
+        int32 InLoopCount,
+        float InYoyoDelay,
+        ECk_TweenCompletionBehavior InCompletionBehavior)
+    -> FCk_Handle_Tween
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InSpline),
+        TEXT("Cannot create a spline-follow tween with an invalid Spline handle."))
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(UCk_Utils_Spline_UE::Get_Length(InSpline) > 0.0f,
+        TEXT("Cannot create a spline-follow tween: spline [{}] has zero length."), InSpline)
+    { return {}; }
+
+    auto NewTween = DoCreateTween(InEntity, FCk_TweenValue{0.0f}, FCk_TweenValue{1.0f},
+        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Custom, InCompletionBehavior);
+
+    auto& SplineFollow = NewTween.AddOrGet<ck::FFragment_Tween_SplineFollow>();
+    SplineFollow._Spline = InSpline;
+    SplineFollow._Orientation = InOrientation;
+
+    return NewTween;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
