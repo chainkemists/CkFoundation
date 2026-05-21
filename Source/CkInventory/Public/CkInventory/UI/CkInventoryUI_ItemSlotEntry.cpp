@@ -123,8 +123,12 @@ auto
 
     if (ck::IsValid(_DragWidgetClass))
     {
+        // The dragged slot's geometry gives the drag visual its size — so a
+        // rectangular slot produces a rectangular drag visual, not a square.
+        const auto SlotSize = InGeometry.GetLocalSize();
+
         auto* const DragVisual = UCk_InventoryUI_DragWidget::CreateDragWidget(
-            this, _DragWidgetClass, _ItemHandle, _InventoryHandle);
+            this, _DragWidgetClass, _ItemHandle, _InventoryHandle, SlotSize);
 
         if (ck::IsValid(DragVisual))
         {
