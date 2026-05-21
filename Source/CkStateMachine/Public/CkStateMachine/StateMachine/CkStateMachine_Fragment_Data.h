@@ -2,8 +2,11 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Enums/CkEnums.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/Request/CkRequest_Data.h"
+
+#include "CkStateMachine/Net/CkStateMachine_NetContext.h"
 
 #include "GameplayTagContainer.h"
 
@@ -210,9 +213,26 @@ private:
         meta = (AllowPrivateAccess = true))
     ECk_SmAutoStart _AutoStart = ECk_SmAutoStart::OnSetup;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    ECk_Replication _Replication = ECk_Replication::DoesNotReplicate;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true,
+                EditCondition = "_Replication == Replicates"))
+    ECk_Sm_AuthorityModel _AuthorityModel = ECk_Sm_AuthorityModel::ServerAuthoritative;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true,
+                EditCondition = "_Replication == Replicates"))
+    ECk_Sm_ReplicationModel _ReplicationModel = ECk_Sm_ReplicationModel::WithHistory;
+
 public:
     CK_PROPERTY_GET(_InitialStateClass);
     CK_PROPERTY(_AutoStart);
+    CK_PROPERTY(_Replication);
+    CK_PROPERTY(_AuthorityModel);
+    CK_PROPERTY(_ReplicationModel);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_StateMachine_ParamsData, _InitialStateClass);

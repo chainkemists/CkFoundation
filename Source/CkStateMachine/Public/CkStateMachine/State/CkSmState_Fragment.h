@@ -86,6 +86,35 @@ namespace ck
     };
 
     // ================================================================================================================
+    // FINGERPRINT
+    // ================================================================================================================
+
+    // Forward decls — defined in later phases of the replication implementation.
+    class FProcessor_Sm_FlushPendingReplication_InitialCheck;
+    class FProcessor_Sm_CommitPendingTransition;
+
+    // Structural fingerprint of the state's DefineState output (declaration-order for tasks,
+    // transitions, and conditions; see spec §9). Computed locally on every machine after
+    // DefineState completes. Compared to the replicated fingerprint at construction time on
+    // non-authority machines (transition-time path) and at flush time on first replication
+    // (Setup-time / OnAdd path, deferred to flush per spec §9.5).
+    struct CKSTATEMACHINE_API FFragment_SmState_Fingerprint
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_SmState_Fingerprint);
+
+        friend class FProcessor_Sm_FlushPendingReplication_InitialCheck;
+        friend class FProcessor_Sm_CommitPendingTransition;
+        friend class ::UCk_Utils_SmState_UE;
+
+    private:
+        int32 _Hash = 0;
+
+    public:
+        CK_PROPERTY(_Hash);
+    };
+
+    // ================================================================================================================
     // RECORDS
     // ================================================================================================================
 
