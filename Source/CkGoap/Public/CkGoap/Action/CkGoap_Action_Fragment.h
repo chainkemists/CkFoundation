@@ -191,7 +191,6 @@ namespace ck
 		using RequestType = std::variant<
 			FCk_Request_Goap_Action_Plan,
 			FCk_Request_Goap_Action_CancelPlan,
-			FCk_Request_Goap_Action_SetGoal,
 			FCk_Request_Goap_Planner_SetGoal,
 			FCk_Request_Goap_Action_SetActionCost,
 			FCk_Request_Goap_Action_SetReplanInterval,

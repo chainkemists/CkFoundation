@@ -167,7 +167,6 @@ Owner entity (NPC)
 | | `Get_InvalidGoal(Action)` | Effects referencing unregistered WS keys (populated at Setup time). |
 | **Requests** | `Request_Plan(Action)` | Force an immediate replan. |
 | | `Request_CancelPlan(Action)` | Abort in-flight A* search. |
-| | `Request_SetGoalWorldState(Action, Goal)` | Override this Action's (Planner-role) goal conditions at runtime. |
 | | `Request_SetActionCost(Action, ChildClass, Cost)` | Adjust a child Action's cost. |
 | | `Request_SetReplanInterval(Action, Seconds)` | Throttle replans. |
 | | `Request_SetReplanPolicy(Action, Policy)` | Change the replan trigger. |

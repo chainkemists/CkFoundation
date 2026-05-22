@@ -445,23 +445,10 @@ auto
 				InPlanState._Plan.Reset();
 				InPlanState._PlanCost = 0.0f;
 			}
-			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Action_SetGoal> ||
-				std::is_same_v<T, FCk_Request_Goap_Planner_SetGoal>)
+			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Planner_SetGoal>)
 			{
-				// U11.1: store authored goal AND re-resolve via the action's WS
-				// registry. Both Action-level and Planner-level SetGoal converge
-				// here — they share semantics now that goal is purely a Planner-
-				// role concept. The Action API remains for backward compatibility;
-				// the Planner API is the spec-blessed form.
-				TArray<FCk_GoapWS_Condition_Authored> NewAuthored;
-				if constexpr (std::is_same_v<T, FCk_Request_Goap_Planner_SetGoal>)
-				{
-					NewAuthored = InTypedRequest.Get_NewGoal();
-				}
-				else
-				{
-					NewAuthored = InTypedRequest.Get_Goal();
-				}
+				// Store authored goal and re-resolve via the action's WS registry.
+				const auto NewAuthored = InTypedRequest.Get_NewGoal();
 
 				InGoal._GoalAuthored = NewAuthored;
 				InGoal._Goal.Reset();
@@ -480,7 +467,6 @@ auto
 
 				// Use Find (read-only) — goal keys that aren't in the WS registry
 				// are diagnostics (Get_InvalidGoal) rather than silent additions.
-				// Matches the U10 semantics relied on by Goap_ActionSet_InvalidGoal.
 				const auto& Registry = const_cast<FCk_Handle_Goap_WorldState&>(Source)
 					.template Get<FFragment_Goap_WorldState_KeyRegistry>().Get_Registry();
 				for (const auto& Cond : NewAuthored)
@@ -496,15 +482,7 @@ auto
 					}
 				}
 
-				// U11.1: the Planner-API SetGoal triggers a replan per spec §3.3.
-				// The Action-API SetGoal preserves U10 semantics (no implicit
-				// replan; caller follows with Request_Plan) so existing tests
-				// (e.g. Goap_ActionSet_InvalidGoal) that only expect the initial
-				// plan to fire OnPlanComplete keep working.
-				if constexpr (std::is_same_v<T, FCk_Request_Goap_Planner_SetGoal>)
-				{
-					InHandle.AddOrGet<FTag_Goap_Action_RequiresInitialPlan>();
-				}
+				InHandle.AddOrGet<FTag_Goap_Action_RequiresInitialPlan>();
 			}
 			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Action_SetActionCost>)
 			{
