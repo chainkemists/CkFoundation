@@ -70,6 +70,29 @@ public:
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
 		const FCk_Fragment_Goap_ActionParamsData& InParams);
 
+	// U11.3: Promote an existing Action entity to be ALSO a Planner.
+	//
+	// Path A (transitional): every Action entity already carries the planner-role
+	// fragment cluster (PlanState, Goal, WorldStateSource, Activation) — the
+	// only fragments missing from an Action to act as a Planner are the Planner
+	// *identity / discriminator* fragments (Params + Current + ActionCatalogIndex).
+	// Promotion stamps those, copies InParams values onto the entity, and
+	// returns the Planner-cast handle.
+	//
+	// After promotion, both casts succeed on the same entity:
+	//   * UCk_Utils_Goap_Action_UE::Cast(handle) → action handle (preserved)
+	//   * UCk_Utils_Goap_Planner_UE::Cast(handle) → planner handle (new role)
+	//
+	// The promoted Planner has its own goal (independent of the Action role's
+	// effects) and can have children added under it via subsequent AddAction
+	// calls passing the Planner-cast handle.
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Promote Action To Planner")
+	static FCk_Handle_Goap_Planner
+	PromoteActionToPlanner(
+		UPARAM(ref) FCk_Handle_Goap_Action& InAction,
+		const FCk_Fragment_Goap_PlannerParamsData& InParams);
+
 	// ================================================================================================================
 	// QUERY
 	// ================================================================================================================
