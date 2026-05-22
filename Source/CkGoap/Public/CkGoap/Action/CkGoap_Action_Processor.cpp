@@ -63,8 +63,8 @@ namespace
 //
 // In the unified model, each Action entity holds ONE def (its own). The
 // Action's _ActionClass is the CDO source. Phase U1 keeps the old
-// _ActionClasses fragment populated by legacy paths so AddAction_ToAction
-// (U2) can fan in here; the per-Action def is the FIRST element of the
+// _ActionClasses fragment populated by legacy paths so the unified AddAction
+// path can fan in here; the per-Action def is the FIRST element of the
 // resolved list. Effects' resolved form is staged into Action_Definition's
 // fields so the planner can consume them as the Action's goal at activation.
 // ====================================================================================================================

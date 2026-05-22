@@ -2,117 +2,11 @@
 
 #include "CkGoap/CkGoap_Log.h"
 #include "CkGoap/Planner/CkGoap_Planner_Fragment.h"
-#include "CkGoap/Planner/CkGoap_Planner_Utils.h"            // Find_ActionByClass + CastChecked
-#include "CkGoap/Planner/CkGoap_Planner_Internal.h"         // DoCreateOrFindActionEntity
 #include "CkGoap/Action/CkGoap_Action_Fragment.h"
-#include "CkGoap/Action/CkGoap_Action_Record_Internal.h"        // FFragment_RecordOfGoapActions + utils struct
-#include "CkGoap/WorldState/CkGoap_WorldState_Utils.h"          // Request_AddSubscriber
 #include "CkAStar/CkAStar_Fragment.h"
 
-#include "CkEcs/ContextOwner/CkContextOwner_Utils.h"            // owner-chain walk
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Signal/CkSignal_Utils.inl.h"
-
-#include "CkLabel/CkLabel_Utils.h"
-
-// ====================================================================================================================
-// CONSTRUCTION
-// ====================================================================================================================
-
-auto
-	UCk_Utils_Goap_Action_UE::
-	AddAction_ToAction(
-		FCk_Handle_Goap_Action& InParentAction,
-		const FCk_Fragment_Goap_ActionParamsData& InParams)
-	-> FCk_Handle_Goap_Action
-{
-	CK_ENSURE_IF_NOT(ck::IsValid(InParentAction),
-		TEXT("Invalid parent Action handle [{}] in AddAction_ToAction"), InParentAction)
-	{ return {}; }
-
-	CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_ActionClass()),
-		TEXT("Invalid _ActionClass in AddAction_ToAction (parent [{}])"), InParentAction)
-	{ return {}; }
-
-	// Walk up the lifetime-owner chain to find the containing ActionSet. Actions
-	// are created with the ActionSet as their lifetime owner (see
-	// DoCreateOrFindActionEntity, which calls Request_CreateEntity_AsTypeSafe
-	// with InPlanner as the owner handle). Lifetime owner is not the same as
-	// context owner: context owner is inherited from the owner's context owner
-	// (which may be the test entity or NPC entity), while lifetime owner is the
-	// direct parent entity that created this action — the ActionSet.
-	auto OwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InParentAction);
-	auto ActionSetHandle = UCk_Utils_Goap_Planner_UE::CastChecked(OwnerEntity);
-
-	CK_ENSURE_IF_NOT(ck::IsValid(ActionSetHandle),
-		TEXT("Parent Action [{}] has no owning ActionSet"), InParentAction)
-	{ return {}; }
-
-	// Create / find the child entity in the ActionSet's catalog.
-	auto ChildHandle = ck::goap::internal_planner::DoCreateOrFindActionEntity(ActionSetHandle, InParams);
-
-	if (NOT ck::IsValid(ChildHandle))
-	{ return {}; }
-
-	// Wire up tree edges. v1 enforces a strict tree: a given Action entity
-	// cannot be re-parented once it has a parent.
-	auto& ChildTree = ChildHandle.Get<ck::FFragment_Goap_Action_Tree>();
-	CK_ENSURE_IF_NOT(NOT ck::IsValid(ChildTree.Get_ParentAction()),
-		TEXT("Action [{}] already has parent [{}]; cannot reparent (v1 enforces tree)."),
-		ChildHandle, ChildTree.Get_ParentAction())
-	{ return ChildHandle; }
-
-	ChildTree._ParentAction = InParentAction;
-
-	auto& ParentTree = InParentAction.Get<ck::FFragment_Goap_Action_Tree>();
-	ParentTree._ChildActions.AddUnique(ChildHandle);
-
-	// Eagerly resolve the child's WS source so its Setup processor can run
-	// (and populate _CachedActionDef) BEFORE any parent plan is requested.
-	// Without this, child Actions that haven't been activated via ChainUpdate
-	// still have no resolved WS — their Setup defers indefinitely, leaving
-	// _CachedActionDef empty, so the parent's planner sees no usable
-	// candidate operators and the search fails immediately.
-	//
-	// Resolution order mirrors ChainUpdate's DoResolveAndAssignWorldStateSource:
-	//   1. Child's own override (if set).
-	//   2. Inherit from parent's already-resolved WS.
-	//   3. Fall back to the ActionSet-level default WS source.
-	//
-	// We DO NOT subscribe the child to the WS here — subscription is only for
-	// active (in-chain) Actions and is managed by ChainUpdate at activation.
-	{
-		auto& ChildWSSource = ChildHandle.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
-		if (NOT ck::IsValid(ChildWSSource.Get_Resolved()))
-		{
-			const auto& ChildParams = ChildHandle.Get<ck::FFragment_Goap_Action_Params>();
-			const auto Override = ChildParams.Get_WorldStateSource_Override();
-			if (ck::IsValid(Override))
-			{
-				ChildWSSource._Resolved = Override;
-			}
-			else
-			{
-				const auto& ParentWSSource = InParentAction.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
-				const auto ParentWS = ParentWSSource.Get_Resolved();
-				if (ck::IsValid(ParentWS))
-				{
-					ChildWSSource._Resolved = ParentWS;
-				}
-				else if (ActionSetHandle.Has<ck::FFragment_Goap_Planner_WorldStateSource>())
-				{
-					const auto& SetWS = ActionSetHandle.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
-					if (ck::IsValid(SetWS.Get_WorldStateSource()))
-					{
-						ChildWSSource._Resolved = SetWS.Get_WorldStateSource();
-					}
-				}
-			}
-		}
-	}
-
-	return ChildHandle;
-}
 
 // ====================================================================================================================
 // QUERY
