@@ -290,7 +290,7 @@ namespace
 
 // U11.2: re-resolve a sub-Planner's goal from its OWN _GoalAuthored (the
 // authored, tag-keyed source-of-truth set at construction via PlannerParams /
-// SetRootAction or at runtime via Request_SetGoal).
+// AddAction's first-call goal propagation or at runtime via Request_SetGoal).
 //
 // Why we re-resolve here even though Setup already resolved once: the sub-
 // Planner may carry a parent-inherited WS source whose registry differs from
@@ -382,8 +382,8 @@ auto
 	}
 
 	// 3. Fall back to the top-level Planner's default WS source (lifetime owner
-	// of every Action is the top-level Planner entity — see AddAction_ToAction
-	// in CkGoap_Action_Utils.cpp).
+	// of every Action is the top-level Planner entity — see AddAction's tree-
+	// wiring branches in CkGoap_Planner_Utils.cpp).
 	auto OwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InChild);
 	if (OwnerEntity.template Has<FFragment_Goap_Planner_WorldStateSource>())
 	{
@@ -544,7 +544,7 @@ auto
 	(void)InTree;
 
 	// Gate on this Planner being active. Top-level Planner's root Action is
-	// activated at SetRootAction time; mid-tier sub-Planners are activated by
+	// activated at AddAction time (implicit root); mid-tier sub-Planners are activated by
 	// their parent's UpdateActivation pass.
 	if (NOT InActivation._IsActive) { return; }
 

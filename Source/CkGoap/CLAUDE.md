@@ -133,12 +133,11 @@ Owner entity (NPC)
 
 | Group | Function | Notes |
 |---|---|---|
-| **Construction** | `Add(Owner, Params)` | Stamps Planner role onto Owner. |
+| **Construction** | `Add(Owner, Params)` | Stamps Planner role onto Owner. `Params._WorldStateSource` is required for top-level Planners. |
 | | `Create(Owner, Tag, Params)` | Spawns named child Planner entity. |
 | | `Find_Planner(Owner, Tag)` | Lookup by tag for Create-spawned Planners. |
-| | `SetRootAction(Planner, ActionParams, WS)` | Designates the entry-point Action; `WS` is the Planner's default WS source. Returns the new `FCk_Handle_Goap_Action`. |
-| | `AddAction(Planner, ActionParams)` | Registers an Action entity as a child of this Planner. Returns `FCk_Handle_Goap_Action`. |
-| | `PromoteActionToPlanner(Action, PlannerParams)` | Stamps Planner fragments onto an existing Action entity. Returns `FCk_Handle_Goap_Planner`. |
+| | `AddAction(Planner, ActionParams)` | Canonical construction verb for Actions. On a top-level Planner: first call = implicit-root Action (runs A*); subsequent calls become tree children of the implicit root. On a promoted mid-tier Planner: every call adds a direct tree child of the host (which itself runs A*). Returns `FCk_Handle_Goap_Action`. |
+| | `PromoteActionToPlanner(Action, PlannerParams)` | Stamps Planner fragments onto an existing Action entity. After promotion, `AddAction` on the promoted handle adds direct tree children. Returns `FCk_Handle_Goap_Planner`. |
 | **Query** | `Has(Handle)` | True if the entity has the Planner role. |
 | | `Find_Action(Planner, Tag)` | Catalog lookup by class-derived tag. |
 | | `Find_ActionByClass(Planner, Class)` | Catalog lookup by EntityScript class. |
@@ -147,7 +146,6 @@ Owner entity (NPC)
 | | `Get_DependencyCycles(Planner)` | Setup-time cycle diagnostics (Tarjan SCC). |
 | | `Get_RootAction(Planner)` | The `_RootAction` from `FFragment_Goap_Planner_Current`. |
 | **Requests** | `Request_SetEnableToggle(Planner, Toggle)` | Enable or disable; disabled Planners skip planning and activation. |
-| | `Request_SetRootAction(Planner, ActionParams, WS)` | Swap root at runtime. |
 | | `Request_ResetActiveChain(Planner)` | Collapses active chain; fires `OnPlannerDeactivated` per removed node. |
 | | `Request_SetGoal(Planner, Goal)` | Set this Planner's goal. Triggers a replan. |
 | **Signals** | `BindTo_OnActiveChainChanged(Planner, Delegate, ...)` | Fires whenever the chain mutates. |
@@ -157,7 +155,6 @@ Owner entity (NPC)
 
 | Group | Function | Notes |
 |---|---|---|
-| **Construction** | `AddAction_ToAction(ParentAction, ActionParams)` | Registers a child Action under the parent (alternative to `AddAction` on the Planner handle). |
 | **Query** | `Has(Handle)` | True if the entity has the Action role. |
 | | `Get_PlanStatus(Action)` | `ECk_GoapPlanStatus`: Idle / Planning / PlanFound / PlanFailed / CostThresholdReached. |
 | | `Get_Plan(Action)` | Ordered child Action **classes** from the last plan (convenience mapping of `PlanState._Plan` entity handles to their EntityScript classes). |
@@ -247,7 +244,7 @@ For each Action at activation time:
 _Resolved =
     _WorldStateSource_Override (on this Action's FFragment_Goap_Planner_WorldStateSource)
     ELSE parent Action's _Resolved
-    ELSE Planner's _WorldStateSource (supplied to SetRootAction or Add/Create)
+    ELSE Planner's _WorldStateSource (supplied via PlannerParams._WorldStateSource on Add/Create)
 ```
 
 Top-level Planners must supply a WS source; sub-Planners may inherit.
@@ -330,7 +327,7 @@ Note: `FFragment_Goap_Planner_PlanState`, `FFragment_Goap_Planner_Goal`, and `FF
 
 - **Calling `Add` on an owner that already has standalone `CkAStar`.** GOAP stamps `FFragment_AStar_Params` per Action; the two collide. Use `Create` (child entity) or remove the standalone AStar feature.
 - **Setting world state with a tag no Action references.** The key registry is sealed after Setup; writes to unregistered tags are silent no-ops. Reference the key in at least one precondition or effect to register it.
-- **Trying to make a leaf Action also plan.** Leaf Actions have no children registered, so there is nothing to plan over. If you want a leaf to plan, add at least one child Action via `AddAction_ToAction`, then `PromoteActionToPlanner`.
+- **Trying to make a leaf Action also plan.** Leaf Actions have no children registered, so there is nothing to plan over. If you want a leaf to plan, `PromoteActionToPlanner` it first, then `AddAction(PromotedPlanner, ...)` to register children under the promoted host.
 - **Expecting goal = effects on a composite.** This rule no longer exists. Set `_Goal` on `FCk_Fragment_Goap_PlannerParamsData` independently of the effects the Action-role declares.
 - **Setting `_PlanOnStart = true` on a sub-Planner that should only plan when activated.** Eager planning fires before the first activation. Set `_PlanOnStart = false` to get "plan only when activated" semantics.
 - **Calling `Request_ResetActiveChain` and expecting the chain to stay collapsed.** `UpdateActivation` re-extends the chain on the next frame if the Planner's plan still has a composite Plan[0]. Disable the Planner first via `Request_SetEnableToggle(Planner, Disable)`.

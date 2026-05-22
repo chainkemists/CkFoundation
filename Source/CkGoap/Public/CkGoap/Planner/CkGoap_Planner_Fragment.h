@@ -15,6 +15,16 @@ class UCk_Utils_Goap_Planner_UE;
 class UCk_Utils_Goap_Action_UE;
 class UCk_GoapAction_EntityScript;
 
+// Forward decl for the PR-A internal_planner helper befriended on
+// FFragment_Goap_Planner_WorldStateSource below. Defined in
+// CkGoap_Planner_Internal.h / CkGoap_Planner_Utils.cpp.
+namespace ck::goap::internal_planner
+{
+	CKGOAP_API auto DoResolveChildWorldStateFromParent(
+		FCk_Handle_Goap_Action& InChild,
+		const FCk_Handle_Goap_Action& InParentAction) -> void;
+}
+
 // ====================================================================================================================
 
 namespace ck
@@ -58,8 +68,13 @@ namespace ck
 		ECk_EnableDisable _EnableToggle = ECk_EnableDisable::Enable;
 		TArray<FCk_GoapDiagnostic_DependencyCycle> _DependencyCycles;
 
-		// The root Action entity for this ActionSet. Established by SetRootAction
-		// (Phase U2) or implicitly by the first AddAction call.
+		// The implicit-root Action entity for this top-level Planner — the
+		// entity that actually runs A* in the transitional Path A model. Set by
+		// the first AddAction call on a top-level Planner; subsequent AddActions
+		// become tree children of this root. Unused for promoted mid-tier
+		// Planners (the host entity itself runs A* and reads its own Tree).
+		// PR-B is expected to rehost A* onto the Planner entity directly, at
+		// which point this field can be removed.
 		FCk_Handle_Goap_Action _RootAction;
 
 	public:
@@ -145,12 +160,19 @@ namespace ck
 		friend class FProcessor_Goap_Action_Setup;
 		friend class FProcessor_Goap_Action_HandleRequests;
 
+		// PR-A: shared internal helper for AddAction's child-WS resolution.
+		friend auto goap::internal_planner::DoResolveChildWorldStateFromParent(
+			FCk_Handle_Goap_Action& InChild,
+			const FCk_Handle_Goap_Action& InParentAction) -> void;
+
 	private:
-		// ActionSet-level default WS (set by SetRootAction). Also used on Action
-		// entities to store the original override (if any). For the unified split
-		// model, Action entities carry this fragment alongside their PlanState /
-		// Goal. _Resolved is the per-Action eager-resolved source; _WorldStateSource
-		// is unused on Action entities (Override lives on Params).
+		// Planner-level default WS source. On top-level Planners, set by Add
+		// from FCk_Fragment_Goap_PlannerParamsData._WorldStateSource. Falls
+		// through to children when their own _WorldStateSource_Override is
+		// unset. For the unified split model, Action entities carry this
+		// fragment alongside their PlanState / Goal; on Actions _Resolved is
+		// the per-Action eager-resolved source and _WorldStateSource is unused
+		// (the override lives on Params).
 		FCk_Handle_Goap_WorldState _WorldStateSource;
 
 		// Resolved at activation: override-if-set, else parent's resolved, else
@@ -231,9 +253,11 @@ namespace ck
 
 	private:
 		// Authored (tag-keyed) goal — source of truth, settable at construction
-		// (PlannerParams._Goal) and at runtime (Request_SetGoal). Persists across
-		// chain (de)activations of the owning Action — DoInjectGoalSynchronous
-		// re-resolves from this field, not from any Action's effects.
+		// (PlannerParams._Goal — propagated to the implicit-root Action on the
+		// first AddAction call for a top-level Planner) and at runtime
+		// (Request_SetGoal). Persists across chain (de)activations of the
+		// owning Action — DoInjectGoalSynchronous re-resolves from this field,
+		// not from any Action's effects.
 		TArray<FCk_GoapWS_Condition_Authored>            _GoalAuthored;
 
 		TArray<goap::FWorldStateCondition>               _Goal;

@@ -150,8 +150,8 @@ namespace ck
 	};
 
 // ====================================================================================================================
-// TREE — Parent/child relationships between Action entities. Populated at
-// AddAction_ToAction (Phase U2 helper) and ChainUpdate time.
+// TREE — Parent/child relationships between Action entities. Populated by
+// AddAction (PR-A unified construction verb) and ChainUpdate time.
 // ====================================================================================================================
 
 	struct CKGOAP_API FFragment_Goap_Action_Tree

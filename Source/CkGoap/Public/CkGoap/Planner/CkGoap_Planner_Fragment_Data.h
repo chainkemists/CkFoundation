@@ -9,6 +9,7 @@
 // Also pulls FCk_GoapWS_Condition_Authored for the Planner's _Goal field.
 #include "CkGoap/Action/CkGoap_Action_Fragment_Data.h"
 #include "CkGoap/CkGoap_Fragment_Data.h"  // FCk_GoapWS_Condition_Authored
+#include "CkGoap/WorldState/CkGoap_WorldState_Fragment_Data.h"  // FCk_Handle_Goap_WorldState
 
 #include "CkGoap_Planner_Fragment_Data.generated.h"
 
@@ -52,16 +53,26 @@ private:
 	// U11.1: the goal this Planner plans toward. Independent of any Action role
 	// effects this entity may carry. May be empty at construction and set later
 	// via Request_SetGoal. Stamped onto the Planner's FFragment_Goap_Planner_Goal
-	// at construction (and propagated to the root Action's planner-role goal via
-	// SetRootAction).
+	// at construction (and propagated to the implicit-root Action's planner-role
+	// goal by the first AddAction call on a top-level Planner).
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,
 		meta = (AllowPrivateAccess = true))
 	TArray<FCk_GoapWS_Condition_Authored> _Goal;
+
+	// PR-A: the WorldState this Planner reads. Required for top-level Planners
+	// (where the Planner entity itself doesn't carry an Action role to inherit
+	// from). Optional for promoted mid-tier Planners — if unset, the promoted
+	// Planner inherits its parent's resolved WS at activation time. Replaces
+	// the WS argument the old SetRootAction verb took.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (AllowPrivateAccess = true))
+	FCk_Handle_Goap_WorldState _WorldStateSource;
 
 public:
 	CK_PROPERTY(_PlannerTag);
 	CK_PROPERTY(_InitialToggle);
 	CK_PROPERTY(_Goal);
+	CK_PROPERTY(_WorldStateSource);
 
 public:
 	CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Goap_PlannerParamsData, _PlannerTag);

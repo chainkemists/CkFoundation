@@ -55,16 +55,25 @@ public:
 		const FCk_Handle& InOwner,
 		FGameplayTag InPlannerTag);
 
+	// AddAction — register a child Action under this Planner.
+	//
+	// Semantics depend on whether the Planner is top-level or a promoted mid-tier:
+	//
+	// * Top-level Planner (no Action role on the host entity): the first
+	//   AddAction call creates the implicit-root Action — the entity that
+	//   actually runs A* for this Planner. Subsequent AddAction calls become
+	//   tree children of that implicit root (they are the planner's candidate
+	//   operators). WS source for the implicit root falls back to the
+	//   Planner's _WorldStateSource (set on PlannerParams) when the Action's
+	//   own _WorldStateSource_Override is unset.
+	//
+	// * Promoted mid-tier Planner (host entity carries the Action role): every
+	//   AddAction call registers a direct tree child of the host. The host
+	//   itself is the Action that runs A*; its children are the candidate
+	//   operators consumed by the planner. New children inherit the host's
+	//   resolved WS at activation time (no implicit-root indirection).
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
-		DisplayName = "[Ck][Goap|Planner] Set Root Action")
-	static FCk_Handle_Goap_Action
-	SetRootAction(
-		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
-		const FCk_Fragment_Goap_ActionParamsData& InRootParams,
-		UPARAM(ref) FCk_Handle_Goap_WorldState& InInitialWorldState);
-
-	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
-		DisplayName = "[Ck][Goap|Planner] Add Action To ActionSet")
+		DisplayName = "[Ck][Goap|Planner] Add Action")
 	static FCk_Handle_Goap_Action
 	AddAction(
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
@@ -146,14 +155,6 @@ public:
 	Request_SetEnableToggle(
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
 		ECk_EnableDisable InToggle);
-
-	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
-		DisplayName = "[Ck][Goap|Planner] Request Set Root Action")
-	static FCk_Handle_Goap_Planner
-	Request_SetRootAction(
-		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
-		const FCk_Fragment_Goap_ActionParamsData& InRootParams,
-		UPARAM(ref) FCk_Handle_Goap_WorldState& InInitialWorldState);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
 		DisplayName = "[Ck][Goap|Planner] Request Reset Active Chain")
