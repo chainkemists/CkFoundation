@@ -262,6 +262,34 @@ public:
 		TSubclassOf<UCk_GoapAction_EntityScript> InChildClass,
 		float InCost);
 
+	// Request_RemoveAction — runtime catalog mutation: remove a previously-
+	// registered child Action from this Planner. Inverse of AddAction.
+	//
+	// Steps performed:
+	//   1. Resolve the child Action handle via the class-derived tag (catalog
+	//      lookup — same path AddAction uses).
+	//   2. Remove the catalog entry from _TagToAction.
+	//   3. Remove the handle from the parent's _ChildActions tree (parent =
+	//      the Action's recorded _ParentAction — implicit root for top-level
+	//      Planners, the promoted host for mid-tier Planners).
+	//   4. Destroy the Action entity via the standard entity-lifetime path.
+	//      The record-of-actions entry is removed by the entity's EndPlay
+	//      cleanup (owner-cascade-destroy).
+	//   5. Mark the Planner for re-setup (cycle detection / catalog rebuild)
+	//      and enqueue a Request_Plan so the next plan reflects the updated
+	//      operator set.
+	//
+	// Refuses to remove the implicit-root Action (the Planner's _RootAction)
+	// — removing the root breaks the A* host. Emits a warning + no-op return.
+	// If the class is not registered on this Planner, emits a warning and
+	// returns the Planner unchanged.
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Request Remove Action")
+	static FCk_Handle_Goap_Planner
+	Request_RemoveAction(
+		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
+		TSubclassOf<UCk_GoapAction_EntityScript> InChildActionClass);
+
 	// ================================================================================================================
 	// SIGNAL BINDING
 	// ================================================================================================================
