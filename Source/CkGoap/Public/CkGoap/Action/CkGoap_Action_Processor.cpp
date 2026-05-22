@@ -80,7 +80,7 @@ auto
 		FFragment_Goap_Action_Current& InCurrent) -> void
 {
 	// Setup must wait for the WS source to be resolved. Top-level Actions
-	// resolve it at AddAction_ToActionSet time (if override is valid);
+	// resolve it at AddAction time (if override is valid);
 	// non-root Actions get it at activation time via ChainUpdate. If the
 	// resolved source is invalid, defer to next frame WITHOUT removing the
 	// setup tag.

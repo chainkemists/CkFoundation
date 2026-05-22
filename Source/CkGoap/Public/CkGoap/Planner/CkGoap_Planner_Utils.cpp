@@ -1,13 +1,12 @@
-#include "CkGoap/ActionSet/CkGoap_ActionSet_Utils.h"
+#include "CkGoap/Planner/CkGoap_Planner_Utils.h"
 
 #include "CkGoap/CkGoap_Log.h"
-#include "CkGoap/ActionSet/CkGoap_ActionSet_Fragment.h"
-#include "CkGoap/ActionSet/CkGoap_ActionSet_Record_Internal.h"  // FFragment_RecordOfGoapActionSets + utils struct
-#include "CkGoap/ActionSet/CkGoap_ActionSet_Internal.h"         // DoCreateOrFindActionEntity
+#include "CkGoap/Planner/CkGoap_Planner_Fragment.h"
+#include "CkGoap/Planner/CkGoap_Planner_Record_Internal.h"  // FFragment_RecordOfGoapPlanners + utils struct
+#include "CkGoap/Planner/CkGoap_Planner_Internal.h"         // DoCreateOrFindActionEntity
 #include "CkGoap/Action/CkGoap_Action_Fragment.h"
 #include "CkGoap/Action/CkGoap_Action_Record_Internal.h"        // FFragment_RecordOfGoapActions + utils struct
 #include "CkGoap/WorldState/CkGoap_WorldState_Utils.h"          // Request_AddSubscriber
-#include "CkGoap/CkGoap_Utils.h"  // UCk_Utils_Goap_UE::Find_ActionSet (uniqueness check)
 #include "CkAStar/CkAStar_Fragment.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -18,22 +17,22 @@
 // ====================================================================================================================
 // SHARED INTERNAL HELPER — DoCreateOrFindActionEntity
 //
-// One entity-creation path shared by AddAction_ToActionSet and AddAction_ToAction.
+// One entity-creation path shared by AddAction and AddAction_ToAction.
 // Does NOT manage active-chain seeding or tree edges; callers layer that on.
 // ====================================================================================================================
 
 auto
-    ck::goap::internal_actionset::
+    ck::goap::internal_planner::
     DoCreateOrFindActionEntity(
-        FCk_Handle_Goap_ActionSet& InActionSet,
+        FCk_Handle_Goap_Planner& InPlanner,
         const FCk_Fragment_Goap_ActionParamsData& InParams) -> FCk_Handle_Goap_Action
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InActionSet),
+    CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
         TEXT("Invalid ActionSet handle in DoCreateOrFindActionEntity"))
     { return {}; }
 
     CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_ActionClass()),
-        TEXT("Invalid _ActionClass in DoCreateOrFindActionEntity (ActionSet [{}])"), InActionSet)
+        TEXT("Invalid _ActionClass in DoCreateOrFindActionEntity (ActionSet [{}])"), InPlanner)
     { return {}; }
 
     // Identity tag derived from the Action's class.
@@ -44,16 +43,16 @@ auto
 
     // Warn-and-return-existing: a given class can only be registered once per
     // ActionSet catalog. Callers wanting reuse get the existing handle back.
-    if (auto Existing = UCk_Utils_Goap_ActionSet_UE::Find_Action(InActionSet, ActionTag);
+    if (auto Existing = UCk_Utils_Goap_Planner_UE::Find_Action(InPlanner, ActionTag);
         ck::IsValid(Existing))
     {
         ck::goap::Warning(
             TEXT("Action with tag [{}] (class [{}]) already exists in ActionSet [{}]; returning existing handle."),
-            ActionTag, InParams.Get_ActionClass(), InActionSet);
+            ActionTag, InParams.Get_ActionClass(), InPlanner);
         return Existing;
     }
 
-    auto ActionEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_Goap_Action>(InActionSet);
+    auto ActionEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_Goap_Action>(InPlanner);
 
     // Records of actions require GameplayLabels — label the action with its
     // derived tag.
@@ -89,14 +88,14 @@ auto
     }
 
     // Register in the ActionSet's catalog record + tag→action index.
-    ck::goap::internal_action::FRecordOfGoapActions_Utils::AddIfMissing(InActionSet);
-    ck::goap::internal_action::FRecordOfGoapActions_Utils::Request_Connect(InActionSet, ActionEntity);
+    ck::goap::internal_action::FRecordOfGoapActions_Utils::AddIfMissing(InPlanner);
+    ck::goap::internal_action::FRecordOfGoapActions_Utils::Request_Connect(InPlanner, ActionEntity);
 
-    auto& Index = InActionSet.Get<ck::FFragment_Goap_ActionSet_ActionCatalogIndex>();
+    auto& Index = InPlanner.Get<ck::FFragment_Goap_Planner_ActionCatalogIndex>();
     Index.AddEntry(ActionTag, ActionEntity);
 
     // Catalog mutated → re-run ActionSet setup (cycle detection).
-    InActionSet.AddOrGet<ck::FTag_Goap_ActionSet_RequiresSetup>();
+    InPlanner.AddOrGet<ck::FTag_Goap_Planner_RequiresSetup>();
 
     return ActionEntity;
 }
@@ -104,119 +103,161 @@ auto
 // ====================================================================================================================
 
 auto
-	UCk_Utils_Goap_ActionSet_UE::
-	AddActionSet(
-		FCk_Handle_Goap& InGoap,
-		const FCk_Fragment_Goap_ActionSetParamsData& InParams)
-	-> FCk_Handle_Goap_ActionSet
+	UCk_Utils_Goap_Planner_UE::
+	Add(
+		FCk_Handle& InOwner,
+		const FCk_Fragment_Goap_PlannerParamsData& InParams)
+	-> FCk_Handle_Goap_Planner
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InGoap),
-		TEXT("Invalid Goap root handle when adding ActionSet"))
+	CK_ENSURE_IF_NOT(ck::IsValid(InOwner),
+		TEXT("Invalid owner handle when adding Planner"))
 	{ return {}; }
 
-	CK_ENSURE_IF_NOT(InParams.Get_ActionSetTag().IsValid(),
-		TEXT("ActionSet params has invalid _ActionSetTag (Goap root [{}])"), InGoap)
+	CK_ENSURE_IF_NOT(InParams.Get_PlannerTag().IsValid(),
+		TEXT("Planner params has invalid _PlannerTag (owner [{}])"), InOwner)
 	{ return {}; }
 
-	// Diagnostic: ActionSet-tag uniqueness within root.
-	if (auto Existing = UCk_Utils_Goap_UE::Find_ActionSet(InGoap, InParams.Get_ActionSetTag());
+	// Diagnostic: Planner-tag uniqueness within owner.
+	if (auto Existing = Find_Planner(InOwner, InParams.Get_PlannerTag());
 		ck::IsValid(Existing))
 	{
 		ck::goap::Warning(
-			TEXT("ActionSet with tag [{}] already exists on Goap root [{}]; AddActionSet rejected."),
-			InParams.Get_ActionSetTag(), InGoap);
+			TEXT("Planner with tag [{}] already exists on owner [{}]; Add rejected."),
+			InParams.Get_PlannerTag(), InOwner);
 		return {};
 	}
 
-	auto ActionSetEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_Goap_ActionSet>(InGoap);
+	auto PlannerEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_Goap_Planner>(InOwner);
 
-	// Records of ActionSets require GameplayLabels — label the ActionSet with its
-	// declared tag. Same for actions in AddAction_ToActionSet.
-	UCk_Utils_GameplayLabel_UE::Add(ActionSetEntity, InParams.Get_ActionSetTag());
+	// Records of Planners require GameplayLabels — label the Planner with its
+	// declared tag. Same for actions in AddAction.
+	UCk_Utils_GameplayLabel_UE::Add(PlannerEntity, InParams.Get_PlannerTag());
 
-	ActionSetEntity.Add<ck::FFragment_Goap_ActionSet_Params>(InParams);
-	ActionSetEntity.Add<ck::FFragment_Goap_ActionSet_Current>();
+	PlannerEntity.Add<ck::FFragment_Goap_Planner_Params>(InParams);
+	PlannerEntity.Add<ck::FFragment_Goap_Planner_Current>();
 
-	auto& Current = ActionSetEntity.Get<ck::FFragment_Goap_ActionSet_Current>();
+	auto& Current = PlannerEntity.Get<ck::FFragment_Goap_Planner_Current>();
 	Current._EnableToggle = InParams.Get_InitialToggle();
 
-	ActionSetEntity.Add<ck::FFragment_Goap_ActionSet_ActiveChain>();
-	ActionSetEntity.Add<ck::FFragment_Goap_ActionSet_ActionCatalogIndex>();
-	ActionSetEntity.Add<ck::FFragment_Goap_ActionSet_WorldStateSource>();
-	ActionSetEntity.AddOrGet<ck::FTag_Goap_ActionSet_RequiresSetup>();
+	PlannerEntity.Add<ck::FFragment_Goap_Planner_ActiveChain>();
+	PlannerEntity.Add<ck::FFragment_Goap_Planner_ActionCatalogIndex>();
+	PlannerEntity.Add<ck::FFragment_Goap_Planner_WorldStateSource>();
+	PlannerEntity.AddOrGet<ck::FTag_Goap_Planner_RequiresSetup>();
 
-	// Register the ActionSet in the root's record.
-	ck::goap::internal_root::FRecordOfGoapActionSets_Utils::Request_Connect(InGoap, ActionSetEntity);
+	// Register the Planner in the owner's record.
+	ck::goap::internal_planner_record::FRecordOfGoapPlanners_Utils::AddIfMissing(InOwner);
+	ck::goap::internal_planner_record::FRecordOfGoapPlanners_Utils::Request_Connect(InOwner, PlannerEntity);
 
-	return ActionSetEntity;
+	return PlannerEntity;
 }
 
 auto
-	UCk_Utils_Goap_ActionSet_UE::
+	UCk_Utils_Goap_Planner_UE::
+	Create(
+		FCk_Handle& InOwner,
+		FGameplayTag InPlannerTag,
+		const FCk_Fragment_Goap_PlannerParamsData& InParams)
+	-> FCk_Handle_Goap_Planner
+{
+	auto ParamsCopy = InParams;
+	ParamsCopy.Set_PlannerTag(InPlannerTag);
+	return Add(InOwner, ParamsCopy);
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Find_Planner(
+		const FCk_Handle& InOwner,
+		FGameplayTag InPlannerTag) -> FCk_Handle_Goap_Planner
+{
+	auto Result = FCk_Handle_Goap_Planner{};
+	if (NOT ck::IsValid(InOwner)) { return Result; }
+	if (NOT InPlannerTag.IsValid()) { return Result; }
+
+	auto MutableOwner = InOwner;
+	if (NOT MutableOwner.Has<ck::FFragment_RecordOfGoapPlanners>()) { return Result; }
+
+	ck::goap::internal_planner_record::FRecordOfGoapPlanners_Utils::ForEach_ValidEntry(
+		MutableOwner,
+		[&](FCk_Handle_Goap_Planner InPlanner)
+		{
+			if (NOT ck::IsValid(InPlanner)) { return; }
+			const auto& Params = InPlanner.Get<ck::FFragment_Goap_Planner_Params>();
+			if (Params.Get_PlannerTag() == InPlannerTag)
+			{
+				Result = InPlanner;
+			}
+		});
+
+	return Result;
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
 	Has(const FCk_Handle& InHandle) -> bool
 {
-	return ck::IsValid(InHandle) && InHandle.Has<ck::FFragment_Goap_ActionSet_Params>();
+	return ck::IsValid(InHandle) && InHandle.Has<ck::FFragment_Goap_Planner_Params>();
 }
 
 auto
-	UCk_Utils_Goap_ActionSet_UE::
+	UCk_Utils_Goap_Planner_UE::
 	Find_Action(
-		const FCk_Handle_Goap_ActionSet& InActionSet,
+		const FCk_Handle_Goap_Planner& InPlanner,
 		FGameplayTag InActionTag) -> FCk_Handle_Goap_Action
 {
-	if (NOT ck::IsValid(InActionSet)) { return {}; }
+	if (NOT ck::IsValid(InPlanner)) { return {}; }
 	if (NOT InActionTag.IsValid()) { return {}; }
 
-	const auto& Index = InActionSet.Get<ck::FFragment_Goap_ActionSet_ActionCatalogIndex>();
+	const auto& Index = InPlanner.Get<ck::FFragment_Goap_Planner_ActionCatalogIndex>();
 	const auto* Found = Index.Get_TagToAction().Find(InActionTag);
 	return Found ? *Found : FCk_Handle_Goap_Action{};
 }
 
 auto
-	UCk_Utils_Goap_ActionSet_UE::
+	UCk_Utils_Goap_Planner_UE::
 	Find_ActionByClass(
-		const FCk_Handle_Goap_ActionSet& InActionSet,
+		const FCk_Handle_Goap_Planner& InPlanner,
 		TSubclassOf<UCk_GoapAction_EntityScript> InActionClass) -> FCk_Handle_Goap_Action
 {
-	if (NOT ck::IsValid(InActionSet)) { return {}; }
+	if (NOT ck::IsValid(InPlanner)) { return {}; }
 	if (NOT ck::IsValid(InActionClass)) { return {}; }
 
 	const auto ActionTag = UCk_GoapAction_EntityScript::Get_ActionTagForClass(InActionClass);
 	if (NOT ActionTag.IsValid()) { return {}; }
 
-	return Find_Action(InActionSet, ActionTag);
+	return Find_Action(InPlanner, ActionTag);
 }
 
 auto
-	UCk_Utils_Goap_ActionSet_UE::
-	Get_ActiveChain(const FCk_Handle_Goap_ActionSet& InActionSet) -> TArray<FCk_Handle_Goap_Action>
+	UCk_Utils_Goap_Planner_UE::
+	Get_ActiveChain(const FCk_Handle_Goap_Planner& InPlanner) -> TArray<FCk_Handle_Goap_Action>
 {
-	if (NOT ck::IsValid(InActionSet)) { return {}; }
-	return InActionSet.Get<ck::FFragment_Goap_ActionSet_ActiveChain>().Get_Chain();
+	if (NOT ck::IsValid(InPlanner)) { return {}; }
+	return InPlanner.Get<ck::FFragment_Goap_Planner_ActiveChain>().Get_Chain();
 }
 
 auto
-	UCk_Utils_Goap_ActionSet_UE::
-	Get_EnableToggle(const FCk_Handle_Goap_ActionSet& InActionSet) -> ECk_EnableDisable
+	UCk_Utils_Goap_Planner_UE::
+	Get_EnableToggle(const FCk_Handle_Goap_Planner& InPlanner) -> ECk_EnableDisable
 {
-	if (NOT ck::IsValid(InActionSet)) { return ECk_EnableDisable::Disable; }
-	return InActionSet.Get<ck::FFragment_Goap_ActionSet_Current>().Get_EnableToggle();
+	if (NOT ck::IsValid(InPlanner)) { return ECk_EnableDisable::Disable; }
+	return InPlanner.Get<ck::FFragment_Goap_Planner_Current>().Get_EnableToggle();
 }
 
 auto
-	UCk_Utils_Goap_ActionSet_UE::
-	Get_DependencyCycles(const FCk_Handle_Goap_ActionSet& InActionSet) -> TArray<FCk_GoapDiagnostic_DependencyCycle>
+	UCk_Utils_Goap_Planner_UE::
+	Get_DependencyCycles(const FCk_Handle_Goap_Planner& InPlanner) -> TArray<FCk_GoapDiagnostic_DependencyCycle>
 {
-	if (NOT ck::IsValid(InActionSet)) { return {}; }
-	return InActionSet.Get<ck::FFragment_Goap_ActionSet_Current>().Get_DependencyCycles();
+	if (NOT ck::IsValid(InPlanner)) { return {}; }
+	return InPlanner.Get<ck::FFragment_Goap_Planner_Current>().Get_DependencyCycles();
 }
 
 auto
-	UCk_Utils_Goap_ActionSet_UE::
-	Get_RootAction(const FCk_Handle_Goap_ActionSet& InActionSet) -> FCk_Handle_Goap_Action
+	UCk_Utils_Goap_Planner_UE::
+	Get_RootAction(const FCk_Handle_Goap_Planner& InPlanner) -> FCk_Handle_Goap_Action
 {
-	if (NOT ck::IsValid(InActionSet)) { return {}; }
-	return InActionSet.Get<ck::FFragment_Goap_ActionSet_Current>().Get_RootAction();
+	if (NOT ck::IsValid(InPlanner)) { return {}; }
+	return InPlanner.Get<ck::FFragment_Goap_Planner_Current>().Get_RootAction();
 }
 
 // ====================================================================================================================
@@ -224,36 +265,36 @@ auto
 // ====================================================================================================================
 
 auto
-	UCk_Utils_Goap_ActionSet_UE::
+	UCk_Utils_Goap_Planner_UE::
 	SetRootAction(
-		FCk_Handle_Goap_ActionSet& InActionSet,
+		FCk_Handle_Goap_Planner& InPlanner,
 		const FCk_Fragment_Goap_ActionParamsData& InRootParams,
 		FCk_Handle_Goap_WorldState& InInitialWorldState) -> FCk_Handle_Goap_Action
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InActionSet),
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
 		TEXT("Invalid ActionSet handle in SetRootAction"))
 	{ return {}; }
 
 	CK_ENSURE_IF_NOT(ck::IsValid(InRootParams.Get_ActionClass()),
-		TEXT("Invalid root action class in SetRootAction (ActionSet [{}])"), InActionSet)
+		TEXT("Invalid root action class in SetRootAction (ActionSet [{}])"), InPlanner)
 	{ return {}; }
 
 	CK_ENSURE_IF_NOT(ck::IsValid(InInitialWorldState),
-		TEXT("Invalid initial WorldState handle in SetRootAction (ActionSet [{}])"), InActionSet)
+		TEXT("Invalid initial WorldState handle in SetRootAction (ActionSet [{}])"), InPlanner)
 	{ return {}; }
 
 	// Store the WS source on the ActionSet.
-	auto& WSFragment = InActionSet.Get<ck::FFragment_Goap_ActionSet_WorldStateSource>();
+	auto& WSFragment = InPlanner.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
 	WSFragment.Set_WorldStateSource(InInitialWorldState);
 
 	// Create the root Action entity (or reuse if already in the catalog).
-	auto RootHandle = ck::goap::internal_actionset::DoCreateOrFindActionEntity(InActionSet, InRootParams);
+	auto RootHandle = ck::goap::internal_planner::DoCreateOrFindActionEntity(InPlanner, InRootParams);
 
 	if (NOT ck::IsValid(RootHandle))
 	{ return {}; }
 
 	// Mark as the ActionSet's root.
-	auto& Current = InActionSet.Get<ck::FFragment_Goap_ActionSet_Current>();
+	auto& Current = InPlanner.Get<ck::FFragment_Goap_Planner_Current>();
 	Current._RootAction = RootHandle;
 
 	// Resolve WS source synchronously for the root (no parent to inherit from).
@@ -266,7 +307,7 @@ auto
 	UCk_Utils_Goap_WorldState_UE::Request_AddSubscriber(InInitialWorldState, RootHandle);
 
 	// Seed the active chain with the root.
-	auto& ActiveChain = InActionSet.Get<ck::FFragment_Goap_ActionSet_ActiveChain>();
+	auto& ActiveChain = InPlanner.Get<ck::FFragment_Goap_Planner_ActiveChain>();
 	ActiveChain._Chain.Reset();
 	ActiveChain._Chain.Add(RootHandle);
 
@@ -274,12 +315,12 @@ auto
 }
 
 auto
-	UCk_Utils_Goap_ActionSet_UE::
-	AddAction_ToActionSet(
-		FCk_Handle_Goap_ActionSet& InActionSet,
+	UCk_Utils_Goap_Planner_UE::
+	AddAction(
+		FCk_Handle_Goap_Planner& InPlanner,
 		const FCk_Fragment_Goap_ActionParamsData& InParams) -> FCk_Handle_Goap_Action
 {
-	auto ActionEntity = ck::goap::internal_actionset::DoCreateOrFindActionEntity(InActionSet, InParams);
+	auto ActionEntity = ck::goap::internal_planner::DoCreateOrFindActionEntity(InPlanner, InParams);
 
 	if (NOT ck::IsValid(ActionEntity))
 	{ return {}; }
@@ -287,10 +328,10 @@ auto
 	// First AddAction on an ActionSet = the implicit root action. Seed the
 	// active chain. Callers preferring explicit root semantics should use
 	// SetRootAction; this path preserves the pre-U2 implicit-root behaviour.
-	auto& ActiveChain = InActionSet.Get<ck::FFragment_Goap_ActionSet_ActiveChain>();
+	auto& ActiveChain = InPlanner.Get<ck::FFragment_Goap_Planner_ActiveChain>();
 	if (ActiveChain._Chain.IsEmpty())
 	{
-		auto& Current = InActionSet.Get<ck::FFragment_Goap_ActionSet_Current>();
+		auto& Current = InPlanner.Get<ck::FFragment_Goap_Planner_Current>();
 		Current._RootAction = ActionEntity;
 
 		// Validate root has a WS override (no parent to inherit from).
@@ -299,7 +340,7 @@ auto
 		{
 			ck::goap::Warning(
 				TEXT("Root action [{}] in ActionSet [{}] has no _WorldStateSource_Override; planning will not run until one is set."),
-				ActionTag, InActionSet);
+				ActionTag, InPlanner);
 		}
 		else
 		{
@@ -323,47 +364,47 @@ auto
 // ====================================================================================================================
 
 auto
-	UCk_Utils_Goap_ActionSet_UE::
+	UCk_Utils_Goap_Planner_UE::
 	Request_SetEnableToggle(
-		FCk_Handle_Goap_ActionSet& InActionSet,
-		ECk_EnableDisable InToggle) -> FCk_Handle_Goap_ActionSet
+		FCk_Handle_Goap_Planner& InPlanner,
+		ECk_EnableDisable InToggle) -> FCk_Handle_Goap_Planner
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InActionSet),
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
 		TEXT("Invalid ActionSet handle in Request_SetEnableToggle"))
-	{ return InActionSet; }
+	{ return InPlanner; }
 
-	auto& Current = InActionSet.Get<ck::FFragment_Goap_ActionSet_Current>();
+	auto& Current = InPlanner.Get<ck::FFragment_Goap_Planner_Current>();
 	Current._EnableToggle = InToggle;
-	return InActionSet;
+	return InPlanner;
 }
 
 auto
-	UCk_Utils_Goap_ActionSet_UE::
+	UCk_Utils_Goap_Planner_UE::
 	Request_SetRootAction(
-		FCk_Handle_Goap_ActionSet& InActionSet,
+		FCk_Handle_Goap_Planner& InPlanner,
 		const FCk_Fragment_Goap_ActionParamsData& InRootParams,
-		FCk_Handle_Goap_WorldState& InInitialWorldState) -> FCk_Handle_Goap_ActionSet
+		FCk_Handle_Goap_WorldState& InInitialWorldState) -> FCk_Handle_Goap_Planner
 {
 	// TODO(U3): U3 will move this to an enqueued FFragment_Goap_ActionSet_Requests
 	// variant + a dedicated handler processor. For Phase U2 we mirror the existing
 	// Request_SetEnableToggle / Request_ResetActiveChain direct-mutation pattern.
-	(void)SetRootAction(InActionSet, InRootParams, InInitialWorldState);
-	return InActionSet;
+	(void)SetRootAction(InPlanner, InRootParams, InInitialWorldState);
+	return InPlanner;
 }
 
 auto
-	UCk_Utils_Goap_ActionSet_UE::
-	Request_ResetActiveChain(FCk_Handle_Goap_ActionSet& InActionSet) -> FCk_Handle_Goap_ActionSet
+	UCk_Utils_Goap_Planner_UE::
+	Request_ResetActiveChain(FCk_Handle_Goap_Planner& InPlanner) -> FCk_Handle_Goap_Planner
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InActionSet),
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
 		TEXT("Invalid ActionSet handle in Request_ResetActiveChain"))
-	{ return InActionSet; }
+	{ return InPlanner; }
 
-	auto& ActiveChain = InActionSet.Get<ck::FFragment_Goap_ActionSet_ActiveChain>();
-	if (ActiveChain._Chain.Num() <= 1) { return InActionSet; }
+	auto& ActiveChain = InPlanner.Get<ck::FFragment_Goap_Planner_ActiveChain>();
+	if (ActiveChain._Chain.Num() <= 1) { return InPlanner; }
 
 	// Tear down every Action past the root (index 0) in reverse order, mirroring
-	// the per-action cleanup that FProcessor_Goap_ActionSet_ChainUpdate::
+	// the per-action cleanup that FProcessor_Goap_Planner_ChainUpdate::
 	// DoTruncateChainFrom performs during normal chain divergence:
 	//   1. Unsubscribe the Action from its resolved WorldState.
 	//   2. Reset live state (goal, plan, parent reference, WS source, status).
@@ -396,29 +437,29 @@ auto
 	}
 
 	ActiveChain._Chain.SetNum(1);
-	return InActionSet;
+	return InPlanner;
 }
 
 auto
-	UCk_Utils_Goap_ActionSet_UE::
+	UCk_Utils_Goap_Planner_UE::
 	BindTo_OnActiveChainChanged(
-		FCk_Handle_Goap_ActionSet& InActionSet,
+		FCk_Handle_Goap_Planner& InPlanner,
 		const FCk_Delegate_Goap_OnActiveChainChanged& InDelegate,
 		ECk_Signal_BindingPolicy InBindingPolicy,
-		ECk_Signal_PostFireBehavior InPostFireBehavior) -> FCk_Handle_Goap_ActionSet
+		ECk_Signal_PostFireBehavior InPostFireBehavior) -> FCk_Handle_Goap_Planner
 {
-	CK_SIGNAL_BIND(ck::UUtils_Signal_OnGoap_ActionSet_ActiveChainChanged,
-		InActionSet, InDelegate, InBindingPolicy, InPostFireBehavior);
-	return InActionSet;
+	CK_SIGNAL_BIND(ck::UUtils_Signal_OnGoap_Planner_ActiveChainChanged,
+		InPlanner, InDelegate, InBindingPolicy, InPostFireBehavior);
+	return InPlanner;
 }
 
 auto
-	UCk_Utils_Goap_ActionSet_UE::
+	UCk_Utils_Goap_Planner_UE::
 	UnbindFrom_OnActiveChainChanged(
-		FCk_Handle_Goap_ActionSet& InActionSet,
-		const FCk_Delegate_Goap_OnActiveChainChanged& InDelegate) -> FCk_Handle_Goap_ActionSet
+		FCk_Handle_Goap_Planner& InPlanner,
+		const FCk_Delegate_Goap_OnActiveChainChanged& InDelegate) -> FCk_Handle_Goap_Planner
 {
-	CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnGoap_ActionSet_ActiveChainChanged,
-		InActionSet, InDelegate);
-	return InActionSet;
+	CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnGoap_Planner_ActiveChainChanged,
+		InPlanner, InDelegate);
+	return InPlanner;
 }

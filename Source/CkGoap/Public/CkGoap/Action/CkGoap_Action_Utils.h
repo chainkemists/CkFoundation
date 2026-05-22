@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkGoap/ActionSet/CkGoap_ActionSet_Fragment_Data.h"
+#include "CkGoap/Planner/CkGoap_Planner_Fragment_Data.h"
 #include "CkGoap/CkGoap_Fragment_Data.h"
 #include "CkGoap/EntityScripts/CkGoapAction_EntityScript.h"
 

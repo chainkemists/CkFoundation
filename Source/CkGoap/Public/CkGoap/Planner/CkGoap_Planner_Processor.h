@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkGoap/ActionSet/CkGoap_ActionSet_Fragment.h"
+#include "CkGoap/Planner/CkGoap_Planner_Fragment.h"
 #include "CkGoap/Action/CkGoap_Action_Processor.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
@@ -18,12 +18,12 @@ namespace ck
 // catalog Action hasn't completed its own Setup yet.
 // ====================================================================================================================
 
-class CKGOAP_API FProcessor_Goap_ActionSet_Setup : public ck_exp::TProcessor<
-	FProcessor_Goap_ActionSet_Setup,
-	FCk_Handle_Goap_ActionSet,
-	ck::TReadWrite<FFragment_Goap_ActionSet_Current>,
-	ck::TReadOnly<FFragment_Goap_ActionSet_ActionCatalogIndex>,
-	FTag_Goap_ActionSet_RequiresSetup,
+class CKGOAP_API FProcessor_Goap_Planner_Setup : public ck_exp::TProcessor<
+	FProcessor_Goap_Planner_Setup,
+	FCk_Handle_Goap_Planner,
+	ck::TReadWrite<FFragment_Goap_Planner_Current>,
+	ck::TReadOnly<FFragment_Goap_Planner_ActionCatalogIndex>,
+	FTag_Goap_Planner_RequiresSetup,
 	CK_IGNORE_PENDING_KILL>
 {
 public:
@@ -37,8 +37,8 @@ public:
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
-		FFragment_Goap_ActionSet_Current& InCurrent,
-		const FFragment_Goap_ActionSet_ActionCatalogIndex& InCatalogIndex) -> void;
+		FFragment_Goap_Planner_Current& InCurrent,
+		const FFragment_Goap_Planner_ActionCatalogIndex& InCatalogIndex) -> void;
 };
 
 // ====================================================================================================================
@@ -47,13 +47,13 @@ public:
 // Actions have planned for the frame before chain mutation.
 // ====================================================================================================================
 
-class CKGOAP_API FProcessor_Goap_ActionSet_ChainUpdate : public ck_exp::TProcessor<
-	FProcessor_Goap_ActionSet_ChainUpdate,
-	FCk_Handle_Goap_ActionSet,
-	ck::TReadOnly<FFragment_Goap_ActionSet_Params>,
-	ck::TReadOnly<FFragment_Goap_ActionSet_Current>,
-	ck::TReadWrite<FFragment_Goap_ActionSet_ActiveChain>,
-	ck::TReadOnly<FFragment_Goap_ActionSet_ActionCatalogIndex>,
+class CKGOAP_API FProcessor_Goap_Planner_ChainUpdate : public ck_exp::TProcessor<
+	FProcessor_Goap_Planner_ChainUpdate,
+	FCk_Handle_Goap_Planner,
+	ck::TReadOnly<FFragment_Goap_Planner_Params>,
+	ck::TReadOnly<FFragment_Goap_Planner_Current>,
+	ck::TReadWrite<FFragment_Goap_Planner_ActiveChain>,
+	ck::TReadOnly<FFragment_Goap_Planner_ActionCatalogIndex>,
 	CK_IGNORE_PENDING_KILL>
 {
 public:
@@ -68,10 +68,10 @@ public:
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
-		const FFragment_Goap_ActionSet_Params& InParams,
-		const FFragment_Goap_ActionSet_Current& InCurrent,
-		FFragment_Goap_ActionSet_ActiveChain& InActiveChain,
-		const FFragment_Goap_ActionSet_ActionCatalogIndex& InCatalogIndex) const -> void;
+		const FFragment_Goap_Planner_Params& InParams,
+		const FFragment_Goap_Planner_Current& InCurrent,
+		FFragment_Goap_Planner_ActiveChain& InActiveChain,
+		const FFragment_Goap_Planner_ActionCatalogIndex& InCatalogIndex) const -> void;
 
 private:
 	// These helpers mutate private members of FFragment_Goap_Action_Current and
@@ -96,7 +96,7 @@ private:
 	DoResolveAndAssignWorldStateSource(
 		FCk_Handle_Goap_Action& InChild,
 		const FCk_Handle_Goap_Action& InParent,
-		const FCk_Handle_Goap_ActionSet& InActionSet) -> void;
+		const FCk_Handle_Goap_Planner& InPlanner) -> void;
 
 	// Add/remove an Action's handle to/from its resolved WS's subscriber list.
 	static auto
