@@ -19,8 +19,8 @@
 // ====================================================================================================================
 // SHARED INTERNAL HELPER — DoCreateOrFindActionEntity
 //
-// One entity-creation path shared by AddAction and AddAction_ToAction.
-// Does NOT manage active-chain seeding or tree edges; callers layer that on.
+// Single entity-creation primitive used by AddAction. Does NOT manage
+// implicit-root seeding or tree edges; callers layer that on.
 // ====================================================================================================================
 
 auto
@@ -75,8 +75,9 @@ auto
     ActionEntity.Add<ck::FFragment_Goap_Planner_WorldStateSource>();
 
     // U11.2: Action-as-Planner-role gets per-Planner activation state. Starts
-    // _IsActive=false; SetRootAction flips the root Action's _IsActive=true,
-    // and mid-tier Actions get flipped on by their parent's UpdateActivation.
+    // _IsActive=false; AddAction's implicit-root branch flips the implicit-
+    // root Action's _IsActive=true, and mid-tier Actions get flipped on by
+    // their parent's UpdateActivation.
     ActionEntity.Add<ck::FFragment_Goap_Planner_Activation>();
 
     auto& Throttle = ActionEntity.AddOrGet<ck::FFragment_Goap_Action_ReplanThrottle>();
@@ -154,16 +155,28 @@ auto
 	Current._EnableToggle = InParams.Get_InitialToggle();
 
 	PlannerEntity.Add<ck::FFragment_Goap_Planner_ActionCatalogIndex>();
-	PlannerEntity.Add<ck::FFragment_Goap_Planner_WorldStateSource>();
+
+	// PR-A: stamp the Planner's WorldStateSource at construction. Was previously
+	// supplied via SetRootAction's separate WS argument; now read off the
+	// PlannerParams' _WorldStateSource field. Top-level Planners must set this;
+	// promoted mid-tier Planners may leave it unset (inherits parent's resolved
+	// WS at activation time).
+	{
+		auto WSFrag = ck::FFragment_Goap_Planner_WorldStateSource{};
+		WSFrag._WorldStateSource = InParams.Get_WorldStateSource();
+		PlannerEntity.Add<ck::FFragment_Goap_Planner_WorldStateSource>(WSFrag);
+	}
+
 	// U11.0 split: top-level Planner is also dual-role; stamp PlanState + Goal
 	// alongside the existing Planner-role fragments.
 	PlannerEntity.Add<ck::FFragment_Goap_Planner_PlanState>();
 	{
 		auto GoalFrag = ck::FFragment_Goap_Planner_Goal{};
 		// U11.1: PlannerParams._Goal is the source-of-truth at construction.
-		// Setup resolves _GoalAuthored → _Goal at the Planner's tier; for the
-		// root Action that actually runs A* in the current model, SetRootAction
-		// propagates this same authored goal down (see SetRootAction below).
+		// Setup resolves _GoalAuthored → _Goal at the Planner's tier; the first
+		// AddAction call on a top-level Planner propagates this same authored
+		// goal down to the implicit-root Action (the entity that actually runs
+		// A* in the transitional Path A model).
 		GoalFrag._GoalAuthored = InParams.Get_Goal();
 		PlannerEntity.Add<ck::FFragment_Goap_Planner_Goal>(GoalFrag);
 	}
@@ -343,72 +356,67 @@ auto
 }
 
 // ====================================================================================================================
-// CONSTRUCTION — Root + child actions
+// CONSTRUCTION — AddAction (the only construction verb for children)
+//
+// PR-A: canonical U11 construction. Two shapes depending on the Planner's host:
+//
+// * Top-level Planner (no Action role on the host entity): first AddAction
+//   creates the implicit-root Action (the entity that actually runs A* in the
+//   transitional Path A model). Subsequent AddAction calls add tree children
+//   under that implicit root — those are the planner's candidate operators.
+//
+// * Promoted mid-tier Planner (host entity carries the Action role): every
+//   AddAction adds a direct tree child of the host entity. The host itself is
+//   the Action that runs A*; its children are the candidate operators.
 // ====================================================================================================================
 
+// PR-A shared helper. Declared in CkGoap_Planner_Internal.h; befriended on
+// FFragment_Goap_Planner_WorldStateSource so it can write _Resolved directly.
 auto
-	UCk_Utils_Goap_Planner_UE::
-	SetRootAction(
-		FCk_Handle_Goap_Planner& InPlanner,
-		const FCk_Fragment_Goap_ActionParamsData& InRootParams,
-		FCk_Handle_Goap_WorldState& InInitialWorldState) -> FCk_Handle_Goap_Action
+	ck::goap::internal_planner::
+	DoResolveChildWorldStateFromParent(
+		FCk_Handle_Goap_Action& InChild,
+		const FCk_Handle_Goap_Action& InParentAction) -> void
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
-		TEXT("Invalid ActionSet handle in SetRootAction"))
-	{ return {}; }
+	// Eagerly resolve the child's WS so its Setup processor can run
+	// (and populate _CachedActionDef) BEFORE any parent plan is requested.
+	// Resolution order mirrors UpdateActivation's
+	// DoResolveAndAssignWorldStateSource:
+	//   1. Child's own override.
+	//   2. Inherit from parent's already-resolved WS.
+	//   3. Fall back to the Planner-level default WS source on the lifetime
+	//      owner (the top-level Planner entity, in the implicit-root case).
+	auto& ChildWSSource = InChild.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
+	if (ck::IsValid(ChildWSSource.Get_Resolved())) { return; }
 
-	CK_ENSURE_IF_NOT(ck::IsValid(InRootParams.Get_ActionClass()),
-		TEXT("Invalid root action class in SetRootAction (ActionSet [{}])"), InPlanner)
-	{ return {}; }
-
-	CK_ENSURE_IF_NOT(ck::IsValid(InInitialWorldState),
-		TEXT("Invalid initial WorldState handle in SetRootAction (ActionSet [{}])"), InPlanner)
-	{ return {}; }
-
-	// Store the WS source on the ActionSet.
-	auto& WSFragment = InPlanner.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
-	WSFragment.Set_WorldStateSource(InInitialWorldState);
-
-	// Create the root Action entity (or reuse if already in the catalog).
-	auto RootHandle = ck::goap::internal_planner::DoCreateOrFindActionEntity(InPlanner, InRootParams);
-
-	if (NOT ck::IsValid(RootHandle))
-	{ return {}; }
-
-	// Mark as the ActionSet's root.
-	auto& Current = InPlanner.Get<ck::FFragment_Goap_Planner_Current>();
-	Current._RootAction = RootHandle;
-
-	// Resolve WS source synchronously for the root (no parent to inherit from).
-	auto& RootWSSource = RootHandle.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
-	RootWSSource._Resolved = InInitialWorldState;
-
-	// U11.1: propagate the Planner's authored goal onto the root Action's
-	// planner-role goal fragment. In the current (pre-U11.2) model, the root
-	// Action is the entity that actually runs A* on behalf of this Planner —
-	// it needs the same authored goal so its own Setup resolves it correctly.
+	const auto& ChildParams = InChild.Get<ck::FFragment_Goap_Action_Params>();
+	const auto Override = ChildParams.Get_WorldStateSource_Override();
+	if (ck::IsValid(Override))
 	{
-		const auto& PlannerGoal = InPlanner.Get<ck::FFragment_Goap_Planner_Goal>();
-		auto& RootGoal = RootHandle.Get<ck::FFragment_Goap_Planner_Goal>();
-		RootGoal._GoalAuthored = PlannerGoal.Get_GoalAuthored();
+		ChildWSSource._Resolved = Override;
+		return;
 	}
 
-	// Subscribe root action to its WS so value-changes flip the dirty tag and
-	// AutoReplan fires. Non-root actions get this hook-up in UpdateActivation
-	// at activation time.
-	UCk_Utils_Goap_WorldState_UE::Request_AddSubscriber(InInitialWorldState, RootHandle);
-
-	// U11.2: the root Action is the entry-point for the activation walk. Flip
-	// its _IsActive=true so the UpdateActivation processor picks it up. (Its
-	// own parent-Planner activation pass would have done this, but the top-
-	// level Planner doesn't run A* in the transitional model so there's no
-	// upstream Plan[0] to activate the root via.)
+	if (ck::IsValid(InParentAction))
 	{
-		auto& RootActivation = RootHandle.Get<ck::FFragment_Goap_Planner_Activation>();
-		RootActivation._IsActive = true;
+		const auto& ParentWSSource = InParentAction.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
+		const auto ParentWS = ParentWSSource.Get_Resolved();
+		if (ck::IsValid(ParentWS))
+		{
+			ChildWSSource._Resolved = ParentWS;
+			return;
+		}
 	}
 
-	return RootHandle;
+	auto OwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InChild);
+	if (OwnerEntity.Has<ck::FFragment_Goap_Planner_WorldStateSource>())
+	{
+		const auto& OwnerWS = OwnerEntity.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
+		if (ck::IsValid(OwnerWS.Get_WorldStateSource()))
+		{
+			ChildWSSource._Resolved = OwnerWS.Get_WorldStateSource();
+		}
+	}
 }
 
 auto
@@ -417,42 +425,124 @@ auto
 		FCk_Handle_Goap_Planner& InPlanner,
 		const FCk_Fragment_Goap_ActionParamsData& InParams) -> FCk_Handle_Goap_Action
 {
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in AddAction"))
+	{ return {}; }
+
+	CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_ActionClass()),
+		TEXT("Invalid _ActionClass in AddAction (Planner [{}])"), InPlanner)
+	{ return {}; }
+
 	auto ActionEntity = ck::goap::internal_planner::DoCreateOrFindActionEntity(InPlanner, InParams);
 
 	if (NOT ck::IsValid(ActionEntity))
 	{ return {}; }
 
-	// First AddAction on an ActionSet = the implicit root action. Callers
-	// preferring explicit root semantics should use SetRootAction; this path
-	// preserves the pre-U2 implicit-root behaviour.
+	// Discriminate Planner host shape: promoted mid-tier Planners carry the
+	// Action role (and therefore a Tree fragment); top-level Planners don't.
+	const auto IsPromotedMidTier = InPlanner.Has<ck::FFragment_Goap_Action_Tree>();
+
+	if (IsPromotedMidTier)
+	{
+		// PR-A: promoted Planner host — wire the new child as a direct tree child
+		// of the host entity. The host runs A* directly; this child is one of
+		// its candidate operators. The host's _RootAction field is NOT used in
+		// this branch (PR-B's "no root concept" §2.5 — promoted Planners
+		// resolve candidates from their own Tree).
+		auto& ChildTree = ActionEntity.Get<ck::FFragment_Goap_Action_Tree>();
+		if (ck::IsValid(ChildTree.Get_ParentAction()))
+		{
+			// Already parented — DoCreateOrFindActionEntity returned an existing
+			// entry. Keep the existing edges intact.
+			return ActionEntity;
+		}
+
+		auto HostAsAction = UCk_Utils_Goap_Action_UE::CastChecked(InPlanner);
+		ChildTree._ParentAction = HostAsAction;
+
+		auto& HostTree = InPlanner.Get<ck::FFragment_Goap_Action_Tree>();
+		HostTree._ChildActions.AddUnique(ActionEntity);
+
+		ck::goap::internal_planner::DoResolveChildWorldStateFromParent(ActionEntity, HostAsAction);
+
+		// Do NOT flip _IsActive — UpdateActivation does this when the parent
+		// picks this child as its Plan[0].
+		return ActionEntity;
+	}
+
+	// Top-level Planner: implicit-root semantics.
 	auto& Current = InPlanner.Get<ck::FFragment_Goap_Planner_Current>();
+
 	if (NOT ck::IsValid(Current._RootAction))
 	{
+		// FIRST AddAction — this Action becomes the implicit root (the entity
+		// that actually runs A*).
 		Current._RootAction = ActionEntity;
 
-		// Validate root has a WS override (no parent to inherit from).
-		const auto ActionTag = UCk_GoapAction_EntityScript::Get_ActionTagForClass(InParams.Get_ActionClass());
-		if (NOT ck::IsValid(InParams.Get_WorldStateSource_Override()))
+		// Resolve WS: child's own override wins, else fall back to the
+		// Planner's WorldStateSource (PR-A — replaces SetRootAction's WS arg).
+		auto& ActionWSSource = ActionEntity.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
+		auto WS = FCk_Handle_Goap_WorldState{};
+
+		const auto Override = InParams.Get_WorldStateSource_Override();
+		if (ck::IsValid(Override))
 		{
+			WS = Override;
+		}
+		else
+		{
+			const auto& PlannerWS = InPlanner.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
+			WS = PlannerWS.Get_WorldStateSource();
+		}
+
+		if (NOT ck::IsValid(WS))
+		{
+			const auto ActionTag = UCk_GoapAction_EntityScript::Get_ActionTagForClass(InParams.Get_ActionClass());
 			ck::goap::Warning(
-				TEXT("Root action [{}] in ActionSet [{}] has no _WorldStateSource_Override; planning will not run until one is set."),
+				TEXT("Implicit-root action [{}] in Planner [{}] has no WorldStateSource (neither ActionParams._WorldStateSource_Override nor PlannerParams._WorldStateSource set); planning will not run until one is supplied."),
 				ActionTag, InPlanner);
 		}
 		else
 		{
-			// Resolve WS source synchronously for the root.
-			auto& ActionWSSource = ActionEntity.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
-			ActionWSSource._Resolved = InParams.Get_WorldStateSource_Override();
-
-			// Subscribe root action to its WS.
-			auto WS = ActionWSSource._Resolved;
+			ActionWSSource._Resolved = WS;
 			UCk_Utils_Goap_WorldState_UE::Request_AddSubscriber(WS, ActionEntity);
+		}
+
+		// Propagate the Planner's authored goal to the implicit-root Action's
+		// planner-role goal fragment. The implicit-root is the entity that
+		// actually runs A* on behalf of the top-level Planner — it needs the
+		// same authored goal so its own Setup resolves it correctly.
+		{
+			const auto& PlannerGoal = InPlanner.Get<ck::FFragment_Goap_Planner_Goal>();
+			auto& RootGoal = ActionEntity.Get<ck::FFragment_Goap_Planner_Goal>();
+			RootGoal._GoalAuthored = PlannerGoal.Get_GoalAuthored();
 		}
 
 		// U11.2: implicit-root entry-point for the activation walk.
 		auto& RootActivation = ActionEntity.Get<ck::FFragment_Goap_Planner_Activation>();
 		RootActivation._IsActive = true;
+
+		return ActionEntity;
 	}
+
+	// SUBSEQUENT AddAction on a top-level Planner — wire as a tree child of
+	// the existing implicit root. These are the candidate operators consumed
+	// by the implicit root's A* search.
+	auto& ChildTree = ActionEntity.Get<ck::FFragment_Goap_Action_Tree>();
+	if (ck::IsValid(ChildTree.Get_ParentAction()))
+	{
+		// Already parented — DoCreateOrFindActionEntity returned an existing
+		// entry. Keep edges intact.
+		return ActionEntity;
+	}
+
+	auto RootAction = Current.Get_RootAction();
+	ChildTree._ParentAction = RootAction;
+
+	auto& RootTree = RootAction.Get<ck::FFragment_Goap_Action_Tree>();
+	RootTree._ChildActions.AddUnique(ActionEntity);
+
+	ck::goap::internal_planner::DoResolveChildWorldStateFromParent(ActionEntity, RootAction);
 
 	return ActionEntity;
 }
@@ -511,6 +601,15 @@ auto
 		GoalFrag._InvalidGoal = {};
 	}
 
+	// PR-A: if the promoted Planner explicitly supplies a WS source, stamp it
+	// onto the WorldStateSource fragment. (Optional — promoted Planners may
+	// leave it unset and inherit the parent's resolved WS at activation time.)
+	if (ck::IsValid(InParams.Get_WorldStateSource()))
+	{
+		auto& WSFragment = InAction.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
+		WSFragment._WorldStateSource = InParams.Get_WorldStateSource();
+	}
+
 	// Re-run setup so cycle detection and goal resolution pick up the new
 	// Planner-role config.
 	InAction.AddOrGet<ck::FTag_Goap_Planner_RequiresSetup>();
@@ -534,20 +633,6 @@ auto
 
 	auto& Current = InPlanner.Get<ck::FFragment_Goap_Planner_Current>();
 	Current._EnableToggle = InToggle;
-	return InPlanner;
-}
-
-auto
-	UCk_Utils_Goap_Planner_UE::
-	Request_SetRootAction(
-		FCk_Handle_Goap_Planner& InPlanner,
-		const FCk_Fragment_Goap_ActionParamsData& InRootParams,
-		FCk_Handle_Goap_WorldState& InInitialWorldState) -> FCk_Handle_Goap_Planner
-{
-	// TODO(U3): U3 will move this to an enqueued FFragment_Goap_ActionSet_Requests
-	// variant + a dedicated handler processor. For Phase U2 we mirror the existing
-	// Request_SetEnableToggle / Request_ResetActiveChain direct-mutation pattern.
-	(void)SetRootAction(InPlanner, InRootParams, InInitialWorldState);
 	return InPlanner;
 }
 
@@ -612,7 +697,7 @@ auto
 	auto RootAction = Current.Get_RootAction();
 
 	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
-		TEXT("Planner [{}] has no root Action; Request_SetGoal requires a root to dispatch through. Call SetRootAction first."),
+		TEXT("Planner [{}] has no implicit-root Action; Request_SetGoal requires one to dispatch through. Call AddAction first to create the implicit root."),
 		InPlanner)
 	{ return InPlanner; }
 
