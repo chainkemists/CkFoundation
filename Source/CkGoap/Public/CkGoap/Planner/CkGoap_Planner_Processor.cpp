@@ -218,10 +218,19 @@ auto
 // inherit the processor's friend access to FFragment_Goap_Action_Current.
 // ====================================================================================================================
 
-// Inject the child Action's goal from the CHILD's own pre-resolved
-// _GoalFromEffects (built once at Setup from the Action's own Effects). The
-// authored tag-keyed entries are resolved against the child's already-assigned
-// resolved WS source.
+// U11.1: re-resolve the child Planner's goal from its OWN _GoalAuthored (the
+// authored, tag-keyed source-of-truth set at construction via PlannerParams /
+// SetRootAction or at runtime via Request_SetGoal). The goal=effects coupling
+// is GONE — a composite Action's effects are what its parent's planner
+// consumes as a candidate-operator effect; they do NOT become this child's
+// own planning goal. If _GoalAuthored is empty, _Goal stays empty (planner
+// short-circuits to PlanFound + empty plan at HandleRequests time).
+//
+// Why we re-resolve here even though Setup already resolved once: the child
+// may carry a parent-inherited WS source whose registry differs from whatever
+// was current at Setup time. Re-resolving against the activation-time WS
+// registry guarantees keys resolve correctly under any WS-source override
+// chain.
 //
 // Precondition: child's FFragment_Goap_Planner_WorldStateSource._Resolved is valid.
 auto
@@ -239,40 +248,43 @@ auto
 	InChildGoal._Goal.Reset();
 	InChildGoal._InvalidGoal.Reset();
 
+	// Action's effect-key validation (populated at Setup) is still surfaced as
+	// a diagnostic — those reflect this Action's role as a *candidate operator*
+	// for the parent's planner, independent of its own goal.
 	const auto& ChildDef = InChildAction.template Get<FFragment_Goap_Action_Definition>();
-	const auto& GoalFromEffects = ChildDef.Get_GoalFromEffects();
-
-	// U5.1: Action_Definition._InvalidGoal is populated at Setup time with any
-	// effect tag missing from the Action's resolved WS registry. Seed the
-	// Goal fragment's _InvalidGoal from that — chain-activation may add more
-	// entries below if the parent's effects (used as our goal) aren't
-	// registered here.
 	InChildGoal._InvalidGoal = ChildDef.Get_InvalidGoal();
+
+	const auto& Authored = InChildGoal.Get_GoalAuthored();
+	if (Authored.IsEmpty())
+	{
+		// No goal authored — planner emits empty plan / PlanFound immediately.
+		return;
+	}
 
 	const auto& WS = InChildWSSource.Get_Resolved();
 	if (NOT ck::IsValid(WS))
 	{
 		// Can't resolve keys without a WS — record everything as invalid.
-		for (const auto& Authored : GoalFromEffects)
+		for (const auto& Cond : Authored)
 		{
-			InChildGoal._InvalidGoal.Add(Authored);
+			InChildGoal._InvalidGoal.Add(Cond);
 		}
 		return;
 	}
 
-	const auto& Registry = const_cast<FCk_Handle_Goap_WorldState&>(WS)
-		.template Get<FFragment_Goap_WorldState_KeyRegistry>().Get_Registry();
+	auto& Registry = const_cast<FCk_Handle_Goap_WorldState&>(WS)
+		.template Get<FFragment_Goap_WorldState_KeyRegistry>().Get_MutableRegistry();
 
-	InChildGoal._Goal.Reserve(GoalFromEffects.Num());
-	for (const auto& Authored : GoalFromEffects)
+	InChildGoal._Goal.Reserve(Authored.Num());
+	for (const auto& Cond : Authored)
 	{
-		const auto Key = Registry.Find(Authored.Get_Key());
+		const auto Key = Registry.FindOrRegister(Cond.Get_Key());
 		if (Key == goap::InvalidGoapKey)
 		{
-			InChildGoal._InvalidGoal.Add(Authored);
+			InChildGoal._InvalidGoal.Add(Cond);
 			continue;
 		}
-		InChildGoal._Goal.Add(goap::FWorldStateCondition{Key, Authored.Get_Value()});
+		InChildGoal._Goal.Add(goap::FWorldStateCondition{Key, Cond.Get_Value()});
 	}
 }
 

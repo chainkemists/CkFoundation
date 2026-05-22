@@ -184,6 +184,7 @@ namespace ck
 		CK_GENERATED_BODY(FFragment_Goap_Action_Requests);
 
 		friend class ::UCk_Utils_Goap_Action_UE;
+		friend class ::UCk_Utils_Goap_Planner_UE;
 		friend class FProcessor_Goap_Action_HandleRequests;
 		friend class FProcessor_Goap_Action_AutoReplan;
 
@@ -191,6 +192,7 @@ namespace ck
 			FCk_Request_Goap_Action_Plan,
 			FCk_Request_Goap_Action_CancelPlan,
 			FCk_Request_Goap_Action_SetGoal,
+			FCk_Request_Goap_Planner_SetGoal,
 			FCk_Request_Goap_Action_SetActionCost,
 			FCk_Request_Goap_Action_SetReplanInterval,
 			FCk_Request_Goap_Action_SetReplanPolicy,
