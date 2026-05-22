@@ -57,6 +57,27 @@ namespace
 
 auto
 	UCk_Utils_Goap_WorldState_UE::
+	Add(
+		FCk_Handle& InOwner,
+		const FCk_Fragment_Goap_WorldState_ParamsData& InParams)
+	-> FCk_Handle_Goap_WorldState
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InOwner),
+		TEXT("Invalid owner handle when adding GOAP WorldState"))
+	{ return {}; }
+
+	CK_ENSURE_IF_NOT(NOT InOwner.Has<ck::FFragment_Goap_WorldState_Values>(),
+		TEXT("Owner [{}] already has a GOAP WorldState — call Find or use Create for a named child instead"),
+		InOwner)
+	{ return CastChecked(InOwner); }
+
+	DoStampWorldStateFragments(InOwner, InParams);
+
+	return CastChecked(InOwner);
+}
+
+auto
+	UCk_Utils_Goap_WorldState_UE::
 	Create(
 		FCk_Handle& InOwner,
 		FGameplayTag InName,

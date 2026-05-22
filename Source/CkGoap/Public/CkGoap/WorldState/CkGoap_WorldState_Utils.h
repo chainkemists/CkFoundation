@@ -22,17 +22,31 @@ public:
 
 public:
 	// ================================================================================================================
-	// CREATION
+	// CONSTRUCTION
 	// ================================================================================================================
 	//
-	// Create — spawns a new child entity under InOwner that hosts a shared
+	// Add — stamps the GOAP WorldState fragments directly on InOwner. The owner
+	//       IS the WorldState; cast it with the typesafe accessor when handing
+	//       it to a planner via FCk_Fragment_Goap_PlannerParamsData::_WorldStateSource.
+	//       Use this when only one WorldState is needed on the owner and you'd
+	//       rather not pay for a child entity.
+	//
+	// Create — spawns a new named child entity under InOwner that hosts a shared
 	//          GOAP WorldState. The caller hands this handle to one or more
 	//          GOAP planners via FCk_Fragment_Goap_ParamsData::_WorldStateSource.
 	//          Reads, writes, and replan-trigger subscriptions on the planners
 	//          all route through the resulting WorldState entity.
 	//
 	// Lifetime is cascade-bound to InOwner — destroying the owner destroys the
-	// WorldState via the owner's RecordOfGoapWorldStates.
+	// WorldState (via the owner's RecordOfGoapWorldStates for Create, or via
+	// the owner's own destroy for Add).
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|WorldState",
+		DisplayName = "[Ck][GOAP|WS] Add")
+	static FCk_Handle_Goap_WorldState
+	Add(
+		UPARAM(ref) FCk_Handle& InOwner,
+		const FCk_Fragment_Goap_WorldState_ParamsData& InParams);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|WorldState",
 		DisplayName = "[Ck][GOAP|WS] Create WorldState (named child)")
