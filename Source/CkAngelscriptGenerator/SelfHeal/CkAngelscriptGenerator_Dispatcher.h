@@ -54,6 +54,17 @@ namespace ck::angelscriptgenerator::self_heal
         // Mark_BootstrapComplete.
         static constexpr int32 MaxCycles = 3;
 
+        // Per-signature mid-session convergence cap. Each time a stub-synthesis
+        // strategy is dispatched for the same <NS>::<func>(<args>) (or
+        // DynamicHandle::<TypeName>) key, a counter increments. On the Nth
+        // attempt the dispatcher refuses synthesis, blacklists the key for the
+        // rest of the session, and emits Log_TerminalBanner_ConvergenceFailed.
+        // Catches "dueling-overloads" loops where the upstream cause (caller
+        // arg order mismatch, literal-vs-lvalue mutability conflict, type
+        // drift) is outside what self-heal can repair. Symmetric with
+        // MaxCycles to keep the boot-time and mid-session caps predictable.
+        static constexpr int32 MaxPerSignatureRepeats = 3;
+
         static auto Classify       (const FCk_AsParsedError& InError) -> ECk_RecoveryStrategy;
         static auto BuildActionPlan(const TArray<FCk_AsParsedError>& InDedupedRoots) -> TArray<FCk_RecoveryAction>;
 
