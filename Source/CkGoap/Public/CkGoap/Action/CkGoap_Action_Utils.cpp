@@ -82,29 +82,29 @@ auto
 	// We DO NOT subscribe the child to the WS here — subscription is only for
 	// active (in-chain) Actions and is managed by ChainUpdate at activation.
 	{
-		auto& ChildCurrent = ChildHandle.Get<ck::FFragment_Goap_Action_Current>();
-		if (NOT ck::IsValid(ChildCurrent.Get_WorldStateSource_Resolved()))
+		auto& ChildWSSource = ChildHandle.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
+		if (NOT ck::IsValid(ChildWSSource.Get_Resolved()))
 		{
 			const auto& ChildParams = ChildHandle.Get<ck::FFragment_Goap_Action_Params>();
 			const auto Override = ChildParams.Get_WorldStateSource_Override();
 			if (ck::IsValid(Override))
 			{
-				ChildCurrent._WorldStateSource_Resolved = Override;
+				ChildWSSource._Resolved = Override;
 			}
 			else
 			{
-				const auto& ParentCurrent = InParentAction.Get<ck::FFragment_Goap_Action_Current>();
-				const auto ParentWS = ParentCurrent.Get_WorldStateSource_Resolved();
+				const auto& ParentWSSource = InParentAction.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
+				const auto ParentWS = ParentWSSource.Get_Resolved();
 				if (ck::IsValid(ParentWS))
 				{
-					ChildCurrent._WorldStateSource_Resolved = ParentWS;
+					ChildWSSource._Resolved = ParentWS;
 				}
 				else if (ActionSetHandle.Has<ck::FFragment_Goap_Planner_WorldStateSource>())
 				{
 					const auto& SetWS = ActionSetHandle.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
 					if (ck::IsValid(SetWS.Get_WorldStateSource()))
 					{
-						ChildCurrent._WorldStateSource_Resolved = SetWS.Get_WorldStateSource();
+						ChildWSSource._Resolved = SetWS.Get_WorldStateSource();
 					}
 				}
 			}
@@ -130,7 +130,7 @@ auto
 	Get_PlanStatus(const FCk_Handle_Goap_Action& InAction) -> ECk_GoapPlanStatus
 {
 	if (NOT ck::IsValid(InAction)) { return ECk_GoapPlanStatus::Idle; }
-	return InAction.Get<ck::FFragment_Goap_Action_Current>().Get_PlanStatus();
+	return InAction.Get<ck::FFragment_Goap_Planner_PlanState>().Get_PlanStatus();
 }
 
 auto
@@ -138,7 +138,7 @@ auto
 	Get_Plan(const FCk_Handle_Goap_Action& InAction) -> TArray<TSubclassOf<UCk_GoapAction_EntityScript>>
 {
 	if (NOT ck::IsValid(InAction)) { return {}; }
-	return InAction.Get<ck::FFragment_Goap_Action_Current>().Get_PlanClasses();
+	return InAction.Get<ck::FFragment_Goap_Planner_PlanState>().Get_PlanClasses();
 }
 
 auto
@@ -146,7 +146,7 @@ auto
 	Get_PlanCost(const FCk_Handle_Goap_Action& InAction) -> float
 {
 	if (NOT ck::IsValid(InAction)) { return 0.0f; }
-	return InAction.Get<ck::FFragment_Goap_Action_Current>().Get_PlanCost();
+	return InAction.Get<ck::FFragment_Goap_Planner_PlanState>().Get_PlanCost();
 }
 
 auto
@@ -154,7 +154,7 @@ auto
 	Get_WorldStateSource(const FCk_Handle_Goap_Action& InAction) -> FCk_Handle_Goap_WorldState
 {
 	if (NOT ck::IsValid(InAction)) { return {}; }
-	return InAction.Get<ck::FFragment_Goap_Action_Current>().Get_WorldStateSource_Resolved();
+	return InAction.Get<ck::FFragment_Goap_Planner_WorldStateSource>().Get_Resolved();
 }
 
 auto
@@ -170,7 +170,7 @@ auto
 	Get_InvalidGoal(const FCk_Handle_Goap_Action& InAction) -> TArray<FCk_GoapWS_Condition_Authored>
 {
 	if (NOT ck::IsValid(InAction)) { return {}; }
-	return InAction.Get<ck::FFragment_Goap_Action_Current>().Get_InvalidGoal();
+	return InAction.Get<ck::FFragment_Goap_Planner_Goal>().Get_InvalidGoal();
 }
 
 // ====================================================================================================================

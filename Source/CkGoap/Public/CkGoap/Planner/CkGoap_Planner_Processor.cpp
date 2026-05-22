@@ -221,39 +221,41 @@ auto
 // Inject the child Action's goal from the CHILD's own pre-resolved
 // _GoalFromEffects (built once at Setup from the Action's own Effects). The
 // authored tag-keyed entries are resolved against the child's already-assigned
-// _WorldStateSource_Resolved.
+// resolved WS source.
 //
-// Precondition: InChildCurrent._WorldStateSource_Resolved is valid.
+// Precondition: child's FFragment_Goap_Planner_WorldStateSource._Resolved is valid.
 auto
 	FProcessor_Goap_Planner_ChainUpdate::
 	DoInjectGoalSynchronous(
 		FCk_Handle_Goap_Action& InParentAction,
 		TSubclassOf<UCk_GoapAction_EntityScript> InParentActionClass,
 		FCk_Handle_Goap_Action& InChildAction,
-		FFragment_Goap_Action_Current& InChildCurrent) -> void
+		FFragment_Goap_Planner_Goal& InChildGoal,
+		const FFragment_Goap_Planner_WorldStateSource& InChildWSSource) -> void
 {
 	(void)InParentAction;
 	(void)InParentActionClass;
 
-	InChildCurrent._Goal.Reset();
-	InChildCurrent._InvalidGoal.Reset();
+	InChildGoal._Goal.Reset();
+	InChildGoal._InvalidGoal.Reset();
 
 	const auto& ChildDef = InChildAction.template Get<FFragment_Goap_Action_Definition>();
 	const auto& GoalFromEffects = ChildDef.Get_GoalFromEffects();
 
 	// U5.1: Action_Definition._InvalidGoal is populated at Setup time with any
 	// effect tag missing from the Action's resolved WS registry. Seed the
-	// Current's _InvalidGoal from that — chain-activation may add more entries
-	// below if the parent's effects (used as our goal) aren't registered here.
-	InChildCurrent._InvalidGoal = ChildDef.Get_InvalidGoal();
+	// Goal fragment's _InvalidGoal from that — chain-activation may add more
+	// entries below if the parent's effects (used as our goal) aren't
+	// registered here.
+	InChildGoal._InvalidGoal = ChildDef.Get_InvalidGoal();
 
-	const auto& WS = InChildCurrent._WorldStateSource_Resolved;
+	const auto& WS = InChildWSSource.Get_Resolved();
 	if (NOT ck::IsValid(WS))
 	{
 		// Can't resolve keys without a WS — record everything as invalid.
 		for (const auto& Authored : GoalFromEffects)
 		{
-			InChildCurrent._InvalidGoal.Add(Authored);
+			InChildGoal._InvalidGoal.Add(Authored);
 		}
 		return;
 	}
@@ -261,16 +263,16 @@ auto
 	const auto& Registry = const_cast<FCk_Handle_Goap_WorldState&>(WS)
 		.template Get<FFragment_Goap_WorldState_KeyRegistry>().Get_Registry();
 
-	InChildCurrent._Goal.Reserve(GoalFromEffects.Num());
+	InChildGoal._Goal.Reserve(GoalFromEffects.Num());
 	for (const auto& Authored : GoalFromEffects)
 	{
 		const auto Key = Registry.Find(Authored.Get_Key());
 		if (Key == goap::InvalidGoapKey)
 		{
-			InChildCurrent._InvalidGoal.Add(Authored);
+			InChildGoal._InvalidGoal.Add(Authored);
 			continue;
 		}
-		InChildCurrent._Goal.Add(goap::FWorldStateCondition{Key, Authored.Get_Value()});
+		InChildGoal._Goal.Add(goap::FWorldStateCondition{Key, Authored.Get_Value()});
 	}
 }
 
@@ -288,13 +290,17 @@ auto
 		// after the next chain update on this same Action).
 		DoUnsubscribeActionFromWorldState(Action);
 
-		auto& Current = Action.Get<FFragment_Goap_Action_Current>();
-		Current._Goal.Reset();
-		Current._InvalidGoal.Reset();
+		auto& Current   = Action.Get<FFragment_Goap_Action_Current>();
+		auto& Goal      = Action.Get<FFragment_Goap_Planner_Goal>();
+		auto& PlanState = Action.Get<FFragment_Goap_Planner_PlanState>();
+		auto& WSSource  = Action.Get<FFragment_Goap_Planner_WorldStateSource>();
+
+		Goal._Goal.Reset();
+		Goal._InvalidGoal.Reset();
 		Current._ActiveParentAction = nullptr;
-		Current._WorldStateSource_Resolved = {};
-		Current._Plan.Reset();
-		Current._PlanStatus = ECk_GoapPlanStatus::Idle;
+		WSSource._Resolved = {};
+		PlanState._Plan.Reset();
+		PlanState._PlanStatus = ECk_GoapPlanStatus::Idle;
 
 		// Release any in-flight gating tag — Action is leaving the chain and
 		// won't broadcast a terminal status to drop the tag itself.
@@ -316,24 +322,24 @@ auto
 		const FCk_Handle_Goap_Action& InParent,
 		const FCk_Handle_Goap_Planner& InPlanner) -> void
 {
-	auto& ChildCurrent = InChild.template Get<FFragment_Goap_Action_Current>();
+	auto& ChildWSSource = InChild.template Get<FFragment_Goap_Planner_WorldStateSource>();
 	const auto& ChildParams = InChild.template Get<FFragment_Goap_Action_Params>();
 
 	// 1. Child's own override (if set) wins.
 	const auto Override = ChildParams.Get_WorldStateSource_Override();
 	if (ck::IsValid(Override))
 	{
-		ChildCurrent._WorldStateSource_Resolved = Override;
+		ChildWSSource._Resolved = Override;
 		return;
 	}
 
 	// 2. Inherit from the parent's resolved WS.
 	if (ck::IsValid(InParent))
 	{
-		const auto& ParentCurrent = InParent.template Get<FFragment_Goap_Action_Current>();
-		if (ck::IsValid(ParentCurrent.Get_WorldStateSource_Resolved()))
+		const auto& ParentWSSource = InParent.template Get<FFragment_Goap_Planner_WorldStateSource>();
+		if (ck::IsValid(ParentWSSource.Get_Resolved()))
 		{
-			ChildCurrent._WorldStateSource_Resolved = ParentCurrent.Get_WorldStateSource_Resolved();
+			ChildWSSource._Resolved = ParentWSSource.Get_Resolved();
 			return;
 		}
 	}
@@ -342,7 +348,7 @@ auto
 	if (InPlanner.template Has<FFragment_Goap_Planner_WorldStateSource>())
 	{
 		const auto& SetWS = InPlanner.template Get<FFragment_Goap_Planner_WorldStateSource>();
-		ChildCurrent._WorldStateSource_Resolved = SetWS.Get_WorldStateSource();
+		ChildWSSource._Resolved = SetWS.Get_WorldStateSource();
 	}
 }
 
@@ -352,8 +358,8 @@ auto
 	FProcessor_Goap_Planner_ChainUpdate::
 	DoSubscribeActionToWorldState(FCk_Handle_Goap_Action& InAction) -> void
 {
-	auto& Current = InAction.template Get<FFragment_Goap_Action_Current>();
-	auto WS = Current._WorldStateSource_Resolved;
+	auto& WSSource = InAction.template Get<FFragment_Goap_Planner_WorldStateSource>();
+	auto WS = WSSource._Resolved;
 	if (NOT ck::IsValid(WS)) { return; }
 
 	auto& Subscribers = WS.template Get<FFragment_Goap_WorldState_Subscribers>();
@@ -366,8 +372,8 @@ auto
 	FProcessor_Goap_Planner_ChainUpdate::
 	DoUnsubscribeActionFromWorldState(FCk_Handle_Goap_Action& InAction) -> void
 {
-	auto& Current = InAction.template Get<FFragment_Goap_Action_Current>();
-	auto WS = Current._WorldStateSource_Resolved;
+	auto& WSSource = InAction.template Get<FFragment_Goap_Planner_WorldStateSource>();
+	auto WS = WSSource._Resolved;
 	if (NOT ck::IsValid(WS)) { return; }
 
 	auto& Subscribers = WS.template Get<FFragment_Goap_WorldState_Subscribers>();
@@ -409,16 +415,16 @@ auto
 			break;
 		}
 
-		const auto& CurrCurrent = CurrAction.template Get<FFragment_Goap_Action_Current>();
+		const auto& CurrPlanState = CurrAction.template Get<FFragment_Goap_Planner_PlanState>();
 
-		if (CurrCurrent.Get_PlanStatus() != ECk_GoapPlanStatus::PlanFound)
+		if (CurrPlanState.Get_PlanStatus() != ECk_GoapPlanStatus::PlanFound)
 		{
 			// Mid-decision (Idle / Planning / PlanFailed / CostThresholdReached).
 			// Don't mutate the chain — wait for this Action to settle.
 			break;
 		}
 
-		const auto& Plan = CurrCurrent.Get_Plan();
+		const auto& Plan = CurrPlanState.Get_Plan();
 
 		if (Plan.IsEmpty())
 		{
@@ -473,7 +479,9 @@ auto
 
 		// Resolve WS first so DoInjectGoalSynchronous can use the registry.
 		DoResolveAndAssignWorldStateSource(NextChild, CurrAction, InHandle);
-		DoInjectGoalSynchronous(CurrAction, CurrParams.Get_ActionClass(), NextChild, ChildCurrent);
+		auto& ChildGoal     = NextChild.template Get<FFragment_Goap_Planner_Goal>();
+		const auto& ChildWS = NextChild.template Get<FFragment_Goap_Planner_WorldStateSource>();
+		DoInjectGoalSynchronous(CurrAction, CurrParams.Get_ActionClass(), NextChild, ChildGoal, ChildWS);
 		DoSubscribeActionToWorldState(NextChild);
 
 		NextChild.template AddOrGet<FTag_Goap_Action_RequiresInitialPlan>();

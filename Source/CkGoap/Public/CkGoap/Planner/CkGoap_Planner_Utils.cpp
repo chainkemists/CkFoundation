@@ -65,6 +65,13 @@ auto
     ActionEntity.Add<ck::FFragment_Goap_Action_Tree>();
     ActionEntity.Add<ck::FFragment_Goap_Action_Requests>();
 
+    // Planner-role fragments — every Action entity is dual-role (carries its own
+    // Action-role _Definition + its own per-Action planner state). See
+    // CkGoap_Planner_Fragment.h for the split rationale (U11.0).
+    ActionEntity.Add<ck::FFragment_Goap_Planner_PlanState>();
+    ActionEntity.Add<ck::FFragment_Goap_Planner_Goal>();
+    ActionEntity.Add<ck::FFragment_Goap_Planner_WorldStateSource>();
+
     auto& Throttle = ActionEntity.AddOrGet<ck::FFragment_Goap_Action_ReplanThrottle>();
     (void)Throttle;  // throttle's interval is read from params at Setup time
 
@@ -142,6 +149,10 @@ auto
 	PlannerEntity.Add<ck::FFragment_Goap_Planner_ActiveChain>();
 	PlannerEntity.Add<ck::FFragment_Goap_Planner_ActionCatalogIndex>();
 	PlannerEntity.Add<ck::FFragment_Goap_Planner_WorldStateSource>();
+	// U11.0 split: top-level Planner is also dual-role; stamp PlanState + Goal
+	// alongside the existing Planner-role fragments.
+	PlannerEntity.Add<ck::FFragment_Goap_Planner_PlanState>();
+	PlannerEntity.Add<ck::FFragment_Goap_Planner_Goal>();
 	PlannerEntity.AddOrGet<ck::FTag_Goap_Planner_RequiresSetup>();
 
 	// Register the Planner in the owner's record.
@@ -298,8 +309,8 @@ auto
 	Current._RootAction = RootHandle;
 
 	// Resolve WS source synchronously for the root (no parent to inherit from).
-	auto& RootCurrent = RootHandle.Get<ck::FFragment_Goap_Action_Current>();
-	RootCurrent._WorldStateSource_Resolved = InInitialWorldState;
+	auto& RootWSSource = RootHandle.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
+	RootWSSource._Resolved = InInitialWorldState;
 
 	// Subscribe root action to its WS so value-changes flip the dirty tag and
 	// AutoReplan fires. Non-root actions get this hook-up in the ActionSet
@@ -345,11 +356,11 @@ auto
 		else
 		{
 			// Resolve WS source synchronously for the root.
-			auto& ActionCurrent = ActionEntity.Get<ck::FFragment_Goap_Action_Current>();
-			ActionCurrent._WorldStateSource_Resolved = InParams.Get_WorldStateSource_Override();
+			auto& ActionWSSource = ActionEntity.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
+			ActionWSSource._Resolved = InParams.Get_WorldStateSource_Override();
 
 			// Subscribe root action to its WS.
-			auto WS = ActionCurrent._WorldStateSource_Resolved;
+			auto WS = ActionWSSource._Resolved;
 			UCk_Utils_Goap_WorldState_UE::Request_AddSubscriber(WS, ActionEntity);
 		}
 
@@ -415,21 +426,24 @@ auto
 		if (NOT ck::IsValid(Action)) { continue; }
 
 		// 1. WS unsubscribe via the public WorldState util.
-		auto& Current = Action.Get<ck::FFragment_Goap_Action_Current>();
-		if (ck::IsValid(Current._WorldStateSource_Resolved))
+		auto& Current   = Action.Get<ck::FFragment_Goap_Action_Current>();
+		auto& WSSource  = Action.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
+		auto& Goal      = Action.Get<ck::FFragment_Goap_Planner_Goal>();
+		auto& PlanState = Action.Get<ck::FFragment_Goap_Planner_PlanState>();
+		if (ck::IsValid(WSSource._Resolved))
 		{
 			auto ActionHandle = FCk_Handle{Action};
 			UCk_Utils_Goap_WorldState_UE::Request_RemoveSubscriber(
-				Current._WorldStateSource_Resolved, ActionHandle);
+				WSSource._Resolved, ActionHandle);
 		}
 
 		// 2. Reset live Action state.
-		Current._Goal.Reset();
-		Current._InvalidGoal.Reset();
+		Goal._Goal.Reset();
+		Goal._InvalidGoal.Reset();
 		Current._ActiveParentAction = nullptr;
-		Current._WorldStateSource_Resolved = {};
-		Current._Plan.Reset();
-		Current._PlanStatus = ECk_GoapPlanStatus::Idle;
+		WSSource._Resolved = {};
+		PlanState._Plan.Reset();
+		PlanState._PlanStatus = ECk_GoapPlanStatus::Idle;
 
 		// 3. Fire deactivation signal.
 		ck::UUtils_Signal_OnGoap_Action_Deactivated::Broadcast(
