@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkGoap/Planner/CkGoap_Planner_Fragment.h"
+#include "CkGoap/Action/CkGoap_Action_Fragment.h"
 #include "CkGoap/Action/CkGoap_Action_Processor.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
@@ -42,18 +43,24 @@ public:
 };
 
 // ====================================================================================================================
-// CHAIN UPDATE — Walk each ActionSet's ActiveChain; apply truncate / extend
-// rule based on each Action's Plan[0]. Runs LAST in the AI group so all
-// Actions have planned for the frame before chain mutation.
+// UPDATE ACTIVATION — Per-Planner activation transition. Each Planner (Action
+// entity in the transitional U11.2 model) caches its Plan[0] frame-over-frame.
+// When Plan[0] changes, deactivate the old sub-Planner (if it was a composite
+// child) and activate the new one. The "active chain" is no longer stored —
+// it is derived on demand by walking Plan[0]s from the top via
+// UCk_Utils_Goap_Planner_UE::Get_ActiveChain.
+//
+// Runs LAST in the AI group so HandleResult has populated this frame's plan
+// before activation decisions are made.
 // ====================================================================================================================
 
-class CKGOAP_API FProcessor_Goap_Planner_ChainUpdate : public ck_exp::TProcessor<
-	FProcessor_Goap_Planner_ChainUpdate,
-	FCk_Handle_Goap_Planner,
-	ck::TReadOnly<FFragment_Goap_Planner_Params>,
-	ck::TReadOnly<FFragment_Goap_Planner_Current>,
-	ck::TReadWrite<FFragment_Goap_Planner_ActiveChain>,
-	ck::TReadOnly<FFragment_Goap_Planner_ActionCatalogIndex>,
+class CKGOAP_API FProcessor_Goap_Planner_UpdateActivation : public ck_exp::TProcessor<
+	FProcessor_Goap_Planner_UpdateActivation,
+	FCk_Handle_Goap_Action,
+	ck::TReadOnly<FFragment_Goap_Action_Params>,
+	ck::TReadOnly<FFragment_Goap_Action_Tree>,
+	ck::TReadOnly<FFragment_Goap_Planner_PlanState>,
+	ck::TReadWrite<FFragment_Goap_Planner_Activation>,
 	CK_IGNORE_PENDING_KILL>
 {
 public:
@@ -68,36 +75,41 @@ public:
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
-		const FFragment_Goap_Planner_Params& InParams,
-		const FFragment_Goap_Planner_Current& InCurrent,
-		FFragment_Goap_Planner_ActiveChain& InActiveChain,
-		const FFragment_Goap_Planner_ActionCatalogIndex& InCatalogIndex) const -> void;
+		const FFragment_Goap_Action_Params& InParams,
+		const FFragment_Goap_Action_Tree& InTree,
+		const FFragment_Goap_Planner_PlanState& InPlanState,
+		FFragment_Goap_Planner_Activation& InActivation) const -> void;
+
+public:
+	// Resolve a child sub-Planner's WS source (override → parent's resolved →
+	// ActionSet WS), inject its resolved goal, subscribe to its WS, add
+	// RequiresInitialPlan, broadcast OnPlannerActivated, and flip _IsActive.
+	static auto
+	DoActivatePlanner(
+		FCk_Handle_Goap_Action InPlanner,
+		FCk_Handle_Goap_Action InParent) -> void;
+
+	// Tear down the sub-Planner's planning state (clears Plan, PlanStatus →
+	// Idle, _ActiveParent, _Resolved WS, unsubscribes from WS), removes
+	// RequiresInitialPlan + PlanInFlight, broadcasts OnPlannerDeactivated,
+	// and flips _IsActive to false. Recursively deactivates active descendants
+	// (whose own _IsActive was set by previous activation walks).
+	static auto
+	DoDeactivatePlanner(FCk_Handle_Goap_Action InPlanner) -> void;
 
 private:
-	// These helpers mutate private members of FFragment_Goap_Action_Current and
-	// FFragment_Goap_WorldState_Subscribers. Declared as static members so they
-	// inherit the processor's friend access to both fragments.
+	// Re-resolve InPlanner's goal from its _GoalAuthored using its resolved
+	// WS registry. Same semantics as the old DoInjectGoalSynchronous.
 	static auto
 	DoInjectGoalSynchronous(
-		FCk_Handle_Goap_Action& InParentAction,
-		TSubclassOf<class UCk_GoapAction_EntityScript> InParentActionClass,
-		FCk_Handle_Goap_Action& InChildAction,
-		FFragment_Goap_Planner_Goal& InChildGoal,
-		const FFragment_Goap_Planner_WorldStateSource& InChildWSSource) -> void;
+		FCk_Handle_Goap_Action& InPlanner) -> void;
 
-	static auto
-	DoTruncateChainFrom(
-		TArray<FCk_Handle_Goap_Action>& InActiveChain,
-		int32 InStartIndex) -> void;
-
-	// Walks the WS-source override chain: child's _WorldStateSource_Override →
-	// parent's _WorldStateSource_Resolved → ActionSet's _WorldStateSource.
-	// Writes the resolved source into the child's _WorldStateSource_Resolved.
+	// Walks the WS-source override chain (override → parent's resolved →
+	// top-level Planner's WS). Writes into InChild._Resolved.
 	static auto
 	DoResolveAndAssignWorldStateSource(
 		FCk_Handle_Goap_Action& InChild,
-		const FCk_Handle_Goap_Action& InParent,
-		const FCk_Handle_Goap_Planner& InPlanner) -> void;
+		const FCk_Handle_Goap_Action& InParent) -> void;
 
 	// Add/remove an Action's handle to/from its resolved WS's subscriber list.
 	static auto

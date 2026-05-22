@@ -26,7 +26,7 @@ namespace ck
 	class FProcessor_Goap_Action_HandleRequests;
 	class FProcessor_Goap_Action_HandleResult;
 	class FProcessor_Goap_Action_AutoReplan;
-	class FProcessor_Goap_Planner_ChainUpdate;
+	class FProcessor_Goap_Planner_UpdateActivation;
 
 // ====================================================================================================================
 // TAGS — action-scoped lifecycle
@@ -72,7 +72,7 @@ namespace ck
 
 		friend class ::UCk_Utils_Goap_Action_UE;
 		friend class ::UCk_Utils_Goap_Planner_UE;
-		friend class FProcessor_Goap_Planner_ChainUpdate;
+		friend class FProcessor_Goap_Planner_UpdateActivation;
 
 	private:
 		// The action class on the PARENT action that injected this action's
@@ -119,7 +119,7 @@ namespace ck
 		friend class FProcessor_Goap_Action_Setup;
 		friend class FProcessor_Goap_Action_HandleRequests;
 		friend class FProcessor_Goap_Action_HandleResult;
-		friend class FProcessor_Goap_Planner_ChainUpdate;
+		friend class FProcessor_Goap_Planner_UpdateActivation;
 
 	private:
 		// This Action's own def — extracted once from the CDO at Setup time.
@@ -163,7 +163,7 @@ namespace ck
 		friend class ::UCk_Utils_Goap_Planner_UE;
 		friend class FProcessor_Goap_Action_Setup;
 		friend class FProcessor_Goap_Action_HandleResult;
-		friend class FProcessor_Goap_Planner_ChainUpdate;
+		friend class FProcessor_Goap_Planner_UpdateActivation;
 
 	private:
 		FCk_Handle_Goap_Action _ParentAction;   // invalid for top-level Actions
@@ -269,19 +269,23 @@ namespace ck
 		FCk_Handle_Goap_Action,
 		FCk_Goap_Payload_OnPlanFailed);
 
+	// U11.2: per-sub-Planner activation. Broadcast source is the activated
+	// (or deactivated) sub-Planner. In the transitional model, sub-Planners are
+	// Action entities (composite Actions are dual-role Action+Planner), hence
+	// the source type remains FCk_Handle_Goap_Action.
 	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
 		CKGOAP_API,
-		OnGoap_Action_Activated,
-		FCk_Delegate_Goap_OnActionActivated,
+		OnGoap_Planner_Activated,
+		FCk_Delegate_Goap_OnPlannerActivated,
 		FCk_Handle_Goap_Action,
-		FCk_Goap_Payload_OnActionActivated);
+		FCk_Goap_Payload_OnPlannerActivated);
 
 	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
 		CKGOAP_API,
-		OnGoap_Action_Deactivated,
-		FCk_Delegate_Goap_OnActionDeactivated,
+		OnGoap_Planner_Deactivated,
+		FCk_Delegate_Goap_OnPlannerDeactivated,
 		FCk_Handle_Goap_Action,
-		FCk_Goap_Payload_OnActionDeactivated);
+		FCk_Goap_Payload_OnPlannerDeactivated);
 
 // ====================================================================================================================
 

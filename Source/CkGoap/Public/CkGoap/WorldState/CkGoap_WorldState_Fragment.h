@@ -134,7 +134,7 @@ public:
 
 	friend class UCk_Utils_Goap_WorldState_UE;
 	friend class FProcessor_Goap_WorldState_HandleRequests;
-	friend class FProcessor_Goap_Planner_ChainUpdate;
+	friend class FProcessor_Goap_Planner_UpdateActivation;
 
 private:
 	TArray<FCk_Handle> _Subscribers;
