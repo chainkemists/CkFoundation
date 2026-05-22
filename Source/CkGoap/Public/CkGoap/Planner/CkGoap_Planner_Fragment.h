@@ -196,9 +196,15 @@ namespace ck
 
 // ====================================================================================================================
 // GOAL — Planner-role fragment: effective goal world state for this planner.
-// Root action: populated from _InitialGoal_RootOnly at Setup. Non-root: injected
-// from parent action's Effects at activation. _InvalidGoal carries validation
-// fallout (effect / goal tags not in the resolved WS registry).
+//
+// U11.1: every Planner has its own _Goal, set at construction via
+// FCk_Fragment_Goap_PlannerParamsData._Goal and mutable via Request_SetGoal.
+// _GoalAuthored is the source-of-truth (authored, tag-keyed). _Goal is the
+// resolved form (registry-keyed) used by the A* planner. Setup resolves
+// _GoalAuthored → _Goal; ChainUpdate re-resolves on activation when the WS
+// source may differ. There is no longer any implicit "goal = effects" rule —
+// a Planner with an empty _GoalAuthored has an empty _Goal (planner emits an
+// empty plan / PlanFound immediately).
 // ====================================================================================================================
 
 	struct CKGOAP_API FFragment_Goap_Planner_Goal
@@ -213,10 +219,17 @@ namespace ck
 		friend class FProcessor_Goap_Action_HandleRequests;
 
 	private:
+		// Authored (tag-keyed) goal — source of truth, settable at construction
+		// (PlannerParams._Goal) and at runtime (Request_SetGoal). Persists across
+		// chain (de)activations of the owning Action — DoInjectGoalSynchronous
+		// re-resolves from this field, not from any Action's effects.
+		TArray<FCk_GoapWS_Condition_Authored>            _GoalAuthored;
+
 		TArray<goap::FWorldStateCondition>               _Goal;
 		TArray<FCk_GoapWS_Condition_Authored>            _InvalidGoal;
 
 	public:
+		CK_PROPERTY_GET(_GoalAuthored);
 		CK_PROPERTY_GET(_Goal);
 		CK_PROPERTY_GET(_InvalidGoal);
 	};

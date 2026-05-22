@@ -114,12 +114,12 @@ auto
 		}
 	}
 
-	// Register root-Action's initial-goal keys too (so the resolved goal hits
-	// valid slots).
-	for (const auto& Cond : InParams.Get_InitialGoal_RootOnly())
-	{
-		SourceRegistry.FindOrRegister(Cond.Get_Key());
-	}
+	// U11.1: deliberately do NOT auto-register keys from _GoalAuthored. Goal
+	// keys that don't appear in any Action's preconditions or effects are a
+	// diagnostic condition (Get_InvalidGoal surfaces them) — registering them
+	// here would mask the diagnostic and let the planner search toward a key
+	// it can never affect. Setup just resolves the authored goal via Find,
+	// dropping any keys that aren't already registered.
 
 	if (SourceRegistry.Num() > goap::WorldState_MaxKeys)
 	{
@@ -199,12 +199,18 @@ auto
 	// Action_Tree._ChildActions at plan-request time.
 	(void)InClasses;
 
-	// Resolve root-Action's _InitialGoal_RootOnly into typed _Goal.
-	// (Non-root Actions get their goal injected from parent action's Effects in
-	// ChainUpdate.)
-	if (NOT InParams.Get_InitialGoal_RootOnly().IsEmpty() && InGoal._Goal.IsEmpty())
+	// U11.1: resolve the Planner's authored goal into the typed _Goal slot.
+	// Every Planner has its own _GoalAuthored (independent from any Action role
+	// effects this entity may also carry). If empty, _Goal stays empty —
+	// HandleRequests will short-circuit Plan requests to PlanFound + empty plan.
+	// Setup only resolves keys already registered (CDO pre/effects) — keys
+	// that don't resolve are silently dropped. _InvalidGoal is populated by
+	// the Request_SetGoal handler (the canonical diagnostic surface), not by
+	// Setup, to avoid double-counting when both construct-time goal and
+	// runtime SetGoal touch the same entry.
+	if (NOT InGoal._GoalAuthored.IsEmpty() && InGoal._Goal.IsEmpty())
 	{
-		for (const auto& Cond : InParams.Get_InitialGoal_RootOnly())
+		for (const auto& Cond : InGoal._GoalAuthored)
 		{
 			const auto Key = SourceRegistry.Find(Cond.Get_Key());
 			if (Key != goap::InvalidGoapKey)
@@ -439,9 +445,25 @@ auto
 				InPlanState._Plan.Reset();
 				InPlanState._PlanCost = 0.0f;
 			}
-			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Action_SetGoal>)
+			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Action_SetGoal> ||
+				std::is_same_v<T, FCk_Request_Goap_Planner_SetGoal>)
 			{
-				// Resolve authored conditions via the action's WS registry.
+				// U11.1: store authored goal AND re-resolve via the action's WS
+				// registry. Both Action-level and Planner-level SetGoal converge
+				// here — they share semantics now that goal is purely a Planner-
+				// role concept. The Action API remains for backward compatibility;
+				// the Planner API is the spec-blessed form.
+				TArray<FCk_GoapWS_Condition_Authored> NewAuthored;
+				if constexpr (std::is_same_v<T, FCk_Request_Goap_Planner_SetGoal>)
+				{
+					NewAuthored = InTypedRequest.Get_NewGoal();
+				}
+				else
+				{
+					NewAuthored = InTypedRequest.Get_Goal();
+				}
+
+				InGoal._GoalAuthored = NewAuthored;
 				InGoal._Goal.Reset();
 				InGoal._InvalidGoal.Reset();
 
@@ -449,16 +471,19 @@ auto
 				if (NOT ck::IsValid(Source))
 				{
 					// Can't resolve — store as invalid for diagnostics.
-					for (const auto& Cond : InTypedRequest.Get_Goal())
+					for (const auto& Cond : NewAuthored)
 					{
 						InGoal._InvalidGoal.Add(Cond);
 					}
 					return;
 				}
 
+				// Use Find (read-only) — goal keys that aren't in the WS registry
+				// are diagnostics (Get_InvalidGoal) rather than silent additions.
+				// Matches the U10 semantics relied on by Goap_ActionSet_InvalidGoal.
 				const auto& Registry = const_cast<FCk_Handle_Goap_WorldState&>(Source)
 					.template Get<FFragment_Goap_WorldState_KeyRegistry>().Get_Registry();
-				for (const auto& Cond : InTypedRequest.Get_Goal())
+				for (const auto& Cond : NewAuthored)
 				{
 					const auto Key = Registry.Find(Cond.Get_Key());
 					if (Key == goap::InvalidGoapKey)
@@ -469,6 +494,16 @@ auto
 					{
 						InGoal._Goal.Add(goap::FWorldStateCondition{Key, Cond.Get_Value()});
 					}
+				}
+
+				// U11.1: the Planner-API SetGoal triggers a replan per spec §3.3.
+				// The Action-API SetGoal preserves U10 semantics (no implicit
+				// replan; caller follows with Request_Plan) so existing tests
+				// (e.g. Goap_ActionSet_InvalidGoal) that only expect the initial
+				// plan to fire OnPlanComplete keep working.
+				if constexpr (std::is_same_v<T, FCk_Request_Goap_Planner_SetGoal>)
+				{
+					InHandle.AddOrGet<FTag_Goap_Action_RequiresInitialPlan>();
 				}
 			}
 			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Action_SetActionCost>)

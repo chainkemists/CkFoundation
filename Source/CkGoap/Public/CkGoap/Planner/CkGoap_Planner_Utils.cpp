@@ -152,7 +152,15 @@ auto
 	// U11.0 split: top-level Planner is also dual-role; stamp PlanState + Goal
 	// alongside the existing Planner-role fragments.
 	PlannerEntity.Add<ck::FFragment_Goap_Planner_PlanState>();
-	PlannerEntity.Add<ck::FFragment_Goap_Planner_Goal>();
+	{
+		auto GoalFrag = ck::FFragment_Goap_Planner_Goal{};
+		// U11.1: PlannerParams._Goal is the source-of-truth at construction.
+		// Setup resolves _GoalAuthored → _Goal at the Planner's tier; for the
+		// root Action that actually runs A* in the current model, SetRootAction
+		// propagates this same authored goal down (see SetRootAction below).
+		GoalFrag._GoalAuthored = InParams.Get_Goal();
+		PlannerEntity.Add<ck::FFragment_Goap_Planner_Goal>(GoalFrag);
+	}
 	PlannerEntity.AddOrGet<ck::FTag_Goap_Planner_RequiresSetup>();
 
 	// Register the Planner in the owner's record.
@@ -312,6 +320,16 @@ auto
 	auto& RootWSSource = RootHandle.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
 	RootWSSource._Resolved = InInitialWorldState;
 
+	// U11.1: propagate the Planner's authored goal onto the root Action's
+	// planner-role goal fragment. In the current (pre-U11.2) model, the root
+	// Action is the entity that actually runs A* on behalf of this Planner —
+	// it needs the same authored goal so its own Setup resolves it correctly.
+	{
+		const auto& PlannerGoal = InPlanner.Get<ck::FFragment_Goap_Planner_Goal>();
+		auto& RootGoal = RootHandle.Get<ck::FFragment_Goap_Planner_Goal>();
+		RootGoal._GoalAuthored = PlannerGoal.Get_GoalAuthored();
+	}
+
 	// Subscribe root action to its WS so value-changes flip the dirty tag and
 	// AutoReplan fires. Non-root actions get this hook-up in the ActionSet
 	// ChainUpdate processor at activation time.
@@ -451,6 +469,37 @@ auto
 	}
 
 	ActiveChain._Chain.SetNum(1);
+	return InPlanner;
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Request_SetGoal(
+		FCk_Handle_Goap_Planner& InPlanner,
+		const TArray<FCk_GoapWS_Condition_Authored>& InGoal) -> FCk_Handle_Goap_Planner
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Request_SetGoal"))
+	{ return InPlanner; }
+
+	// Also stamp the Planner's own _GoalAuthored so any future query of the
+	// Planner's authored goal reads the current source-of-truth. The actual
+	// resolution + replan happens on the root Action (which runs the A*).
+	{
+		auto& PlannerGoal = InPlanner.Get<ck::FFragment_Goap_Planner_Goal>();
+		PlannerGoal._GoalAuthored = InGoal;
+	}
+
+	const auto& Current = InPlanner.Get<ck::FFragment_Goap_Planner_Current>();
+	auto RootAction = Current.Get_RootAction();
+
+	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
+		TEXT("Planner [{}] has no root Action; Request_SetGoal requires a root to dispatch through. Call SetRootAction first."),
+		InPlanner)
+	{ return InPlanner; }
+
+	auto& Requests = RootAction.AddOrGet<ck::FFragment_Goap_Action_Requests>();
+	Requests._Requests.Add(FCk_Request_Goap_Planner_SetGoal{InGoal});
 	return InPlanner;
 }
 
