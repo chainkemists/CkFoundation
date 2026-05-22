@@ -82,7 +82,8 @@ private:
 		FCk_Handle_Goap_Action& InParentAction,
 		TSubclassOf<class UCk_GoapAction_EntityScript> InParentActionClass,
 		FCk_Handle_Goap_Action& InChildAction,
-		FFragment_Goap_Action_Current& InChildCurrent) -> void;
+		FFragment_Goap_Planner_Goal& InChildGoal,
+		const FFragment_Goap_Planner_WorldStateSource& InChildWSSource) -> void;
 
 	static auto
 	DoTruncateChainFrom(

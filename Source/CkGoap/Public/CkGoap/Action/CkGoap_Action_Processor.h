@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkGoap/Action/CkGoap_Action_Fragment.h"
+#include "CkGoap/Planner/CkGoap_Planner_Fragment.h"
 #include "CkGoap/WorldState/CkGoap_WorldState_Fragment.h"
 
 #include "CkAStar/CkAStar_Processor.h"
@@ -24,7 +25,8 @@ class CKGOAP_API FProcessor_Goap_Action_Setup : public ck_exp::TProcessor<
 	ck::TReadOnly<FFragment_Goap_Action_Params>,
 	ck::TReadOnly<FFragment_Goap_Action_ActionClasses>,
 	ck::TReadWrite<FFragment_Goap_Action_Definition>,
-	ck::TReadWrite<FFragment_Goap_Action_Current>,
+	ck::TReadWrite<FFragment_Goap_Planner_WorldStateSource>,
+	ck::TReadWrite<FFragment_Goap_Planner_Goal>,
 	FTag_Goap_Action_RequiresSetup,
 	CK_IGNORE_PENDING_KILL>
 {
@@ -42,7 +44,8 @@ public:
 		const FFragment_Goap_Action_Params& InParams,
 		const FFragment_Goap_Action_ActionClasses& InClasses,
 		FFragment_Goap_Action_Definition& InActionDef,
-		FFragment_Goap_Action_Current& InCurrent) -> void;
+		FFragment_Goap_Planner_WorldStateSource& InWSSource,
+		FFragment_Goap_Planner_Goal& InGoal) -> void;
 };
 
 // ====================================================================================================================
@@ -81,7 +84,9 @@ class CKGOAP_API FProcessor_Goap_Action_HandleRequests : public ck_exp::TProcess
 	FCk_Handle_Goap_Action,
 	ck::TReadOnly<FFragment_Goap_Action_Params>,
 	ck::TReadWrite<FFragment_AStar_Params>,
-	ck::TReadWrite<FFragment_Goap_Action_Current>,
+	ck::TReadWrite<FFragment_Goap_Planner_PlanState>,
+	ck::TReadWrite<FFragment_Goap_Planner_Goal>,
+	ck::TReadWrite<FFragment_Goap_Planner_WorldStateSource>,
 	ck::TReadWrite<FFragment_Goap_Action_Definition>,
 	ck::TReadOnly<FFragment_Goap_Action_Requests>,
 	ck::TReadWrite<FFragment_Goap_Action_SearchState>,
@@ -107,7 +112,9 @@ public:
 		HandleType InHandle,
 		const FFragment_Goap_Action_Params& InParams,
 		FFragment_AStar_Params& InAStarParams,
-		FFragment_Goap_Action_Current& InCurrent,
+		FFragment_Goap_Planner_PlanState& InPlanState,
+		FFragment_Goap_Planner_Goal& InGoal,
+		FFragment_Goap_Planner_WorldStateSource& InWSSource,
 		FFragment_Goap_Action_Definition& InActionDef,
 		const FFragment_Goap_Action_Requests& InRequests,
 		FFragment_Goap_Action_SearchState& InSearchState,
@@ -137,7 +144,7 @@ class CKGOAP_API FProcessor_Goap_Action_HandleResult : public ck_exp::TProcessor
 	FCk_Handle_Goap_Action,
 	ck::TReadOnly<FFragment_Goap_Action_Result>,
 	ck::TReadOnly<FFragment_Goap_Action_PlanContext>,
-	ck::TReadWrite<FFragment_Goap_Action_Current>,
+	ck::TReadWrite<FFragment_Goap_Planner_PlanState>,
 	FTag_AStar_SearchComplete,
 	CK_IGNORE_PENDING_KILL>
 {
@@ -155,7 +162,7 @@ public:
 		HandleType InHandle,
 		const FFragment_Goap_Action_Result& InResult,
 		const FFragment_Goap_Action_PlanContext& InPlanContext,
-		FFragment_Goap_Action_Current& InCurrent) -> void;
+		FFragment_Goap_Planner_PlanState& InPlanState) -> void;
 };
 
 // ====================================================================================================================

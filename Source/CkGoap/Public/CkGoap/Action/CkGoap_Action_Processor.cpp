@@ -77,14 +77,15 @@ auto
 		const FFragment_Goap_Action_Params& InParams,
 		const FFragment_Goap_Action_ActionClasses& InClasses,
 		FFragment_Goap_Action_Definition& InActionDef,
-		FFragment_Goap_Action_Current& InCurrent) -> void
+		FFragment_Goap_Planner_WorldStateSource& InWSSource,
+		FFragment_Goap_Planner_Goal& InGoal) -> void
 {
 	// Setup must wait for the WS source to be resolved. Top-level Actions
 	// resolve it at AddAction time (if override is valid);
 	// non-root Actions get it at activation time via ChainUpdate. If the
 	// resolved source is invalid, defer to next frame WITHOUT removing the
 	// setup tag.
-	const auto Source = InCurrent.Get_WorldStateSource_Resolved();
+	const auto Source = InWSSource.Get_Resolved();
 	if (NOT ck::IsValid(Source))
 	{
 		return;
@@ -198,17 +199,17 @@ auto
 	// Action_Tree._ChildActions at plan-request time.
 	(void)InClasses;
 
-	// Resolve root-Action's _InitialGoal_RootOnly into typed _Current._Goal.
+	// Resolve root-Action's _InitialGoal_RootOnly into typed _Goal.
 	// (Non-root Actions get their goal injected from parent action's Effects in
 	// ChainUpdate.)
-	if (NOT InParams.Get_InitialGoal_RootOnly().IsEmpty() && InCurrent._Goal.IsEmpty())
+	if (NOT InParams.Get_InitialGoal_RootOnly().IsEmpty() && InGoal._Goal.IsEmpty())
 	{
 		for (const auto& Cond : InParams.Get_InitialGoal_RootOnly())
 		{
 			const auto Key = SourceRegistry.Find(Cond.Get_Key());
 			if (Key != goap::InvalidGoapKey)
 			{
-				InCurrent._Goal.Add(goap::FWorldStateCondition{Key, Cond.Get_Value()});
+				InGoal._Goal.Add(goap::FWorldStateCondition{Key, Cond.Get_Value()});
 			}
 		}
 	}
@@ -273,7 +274,9 @@ auto
 		HandleType InHandle,
 		const FFragment_Goap_Action_Params& InParams,
 		FFragment_AStar_Params& InAStarParams,
-		FFragment_Goap_Action_Current& InCurrent,
+		FFragment_Goap_Planner_PlanState& InPlanState,
+		FFragment_Goap_Planner_Goal& InGoal,
+		FFragment_Goap_Planner_WorldStateSource& InWSSource,
 		FFragment_Goap_Action_Definition& InActionDef,
 		const FFragment_Goap_Action_Requests& InRequests,
 		FFragment_Goap_Action_SearchState& InSearchState,
@@ -299,8 +302,8 @@ auto
 
 		if (Parent.template Has<FTag_Goap_Action_PlanInFlight>()) { return true; }
 
-		const auto& ParentCurrent = Parent.template Get<FFragment_Goap_Action_Current>();
-		switch (ParentCurrent.Get_PlanStatus())
+		const auto& ParentPlanState = Parent.template Get<FFragment_Goap_Planner_PlanState>();
+		switch (ParentPlanState.Get_PlanStatus())
 		{
 			case ECk_GoapPlanStatus::Idle:
 			case ECk_GoapPlanStatus::Planning:
@@ -338,14 +341,14 @@ auto
 				InHandle.Try_Remove<FTag_AStar_SearchActive>();
 				InHandle.Try_Remove<FTag_AStar_SearchComplete>();
 
-				++InCurrent._PlanAttemptCount;
+				++InPlanState._PlanAttemptCount;
 
-				const auto Source = InCurrent.Get_WorldStateSource_Resolved();
+				const auto Source = InWSSource.Get_Resolved();
 				if (NOT ck::IsValid(Source))
 				{
-					InCurrent._PlanStatus = ECk_GoapPlanStatus::PlanFailed;
-					InCurrent._Plan.Reset();
-					InCurrent._PlanCost = 0.0f;
+					InPlanState._PlanStatus = ECk_GoapPlanStatus::PlanFailed;
+					InPlanState._Plan.Reset();
+					InPlanState._PlanCost = 0.0f;
 					InHandle.Try_Remove<FTag_Goap_Action_PlanInFlight>();
 					UUtils_Signal_OnGoap_Action_PlanFailed::Broadcast(
 						InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanFailed{}));
@@ -358,18 +361,18 @@ auto
 				// Check if goal already satisfied — emit empty plan.
 				const auto IsGoalSatisfied = [&]() -> bool
 				{
-					for (const auto& C : InCurrent._Goal)
+					for (const auto& C : InGoal._Goal)
 					{
 						if (NOT SourceWorldState.Satisfies(C)) { return false; }
 					}
 					return true;
 				}();
 
-				if (InCurrent._Goal.IsEmpty() || IsGoalSatisfied)
+				if (InGoal._Goal.IsEmpty() || IsGoalSatisfied)
 				{
-					InCurrent._PlanStatus = ECk_GoapPlanStatus::PlanFound;
-					InCurrent._Plan.Reset();
-					InCurrent._PlanCost = 0.0f;
+					InPlanState._PlanStatus = ECk_GoapPlanStatus::PlanFound;
+					InPlanState._Plan.Reset();
+					InPlanState._PlanCost = 0.0f;
 					InHandle.Try_Remove<FTag_Goap_Action_PlanInFlight>();
 					UUtils_Signal_OnGoap_Action_PlanComplete::Broadcast(
 						InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanComplete{
@@ -377,9 +380,9 @@ auto
 					return;
 				}
 
-				InCurrent._PlanStatus = ECk_GoapPlanStatus::Planning;
-				InCurrent._Plan.Reset();
-				InCurrent._PlanCost = 0.0f;
+				InPlanState._PlanStatus = ECk_GoapPlanStatus::Planning;
+				InPlanState._Plan.Reset();
+				InPlanState._PlanCost = 0.0f;
 
 				// Plan now in flight — gate any child Actions from starting their
 				// own plans until our terminal status is reached. Removed in
@@ -410,7 +413,7 @@ auto
 				}
 				(void)InActionDef;
 
-				const auto GoalConditions = BuildConstraintSet(InCurrent._Goal);
+				const auto GoalConditions = BuildConstraintSet(InGoal._Goal);
 				auto Graph = goap::FGoapGraph{SourceWorldState, Candidates, GoalConditions};
 				InPlanContext._Graph = Graph;
 
@@ -432,23 +435,23 @@ auto
 				InHandle.Try_Remove<FTag_AStar_SearchComplete>();
 				InHandle.Try_Remove<FTag_Goap_Action_PlanInFlight>();
 				InSearchState._State = {};
-				InCurrent._PlanStatus = ECk_GoapPlanStatus::Idle;
-				InCurrent._Plan.Reset();
-				InCurrent._PlanCost = 0.0f;
+				InPlanState._PlanStatus = ECk_GoapPlanStatus::Idle;
+				InPlanState._Plan.Reset();
+				InPlanState._PlanCost = 0.0f;
 			}
 			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Action_SetGoal>)
 			{
 				// Resolve authored conditions via the action's WS registry.
-				InCurrent._Goal.Reset();
-				InCurrent._InvalidGoal.Reset();
+				InGoal._Goal.Reset();
+				InGoal._InvalidGoal.Reset();
 
-				const auto Source = InCurrent.Get_WorldStateSource_Resolved();
+				const auto Source = InWSSource.Get_Resolved();
 				if (NOT ck::IsValid(Source))
 				{
 					// Can't resolve — store as invalid for diagnostics.
 					for (const auto& Cond : InTypedRequest.Get_Goal())
 					{
-						InCurrent._InvalidGoal.Add(Cond);
+						InGoal._InvalidGoal.Add(Cond);
 					}
 					return;
 				}
@@ -460,11 +463,11 @@ auto
 					const auto Key = Registry.Find(Cond.Get_Key());
 					if (Key == goap::InvalidGoapKey)
 					{
-						InCurrent._InvalidGoal.Add(Cond);
+						InGoal._InvalidGoal.Add(Cond);
 					}
 					else
 					{
-						InCurrent._Goal.Add(goap::FWorldStateCondition{Key, Cond.Get_Value()});
+						InGoal._Goal.Add(goap::FWorldStateCondition{Key, Cond.Get_Value()});
 					}
 				}
 			}
@@ -533,7 +536,7 @@ auto
 		HandleType InHandle,
 		const FFragment_Goap_Action_Result& InResult,
 		const FFragment_Goap_Action_PlanContext& InPlanContext,
-		FFragment_Goap_Action_Current& InCurrent) -> void
+		FFragment_Goap_Planner_PlanState& InPlanState) -> void
 {
 	InHandle.Remove<FTag_AStar_SearchComplete>();
 
@@ -562,10 +565,10 @@ auto
 			const auto& Actions = Graph.Get_Actions();
 			const auto& Path = InResult._Path;
 
-			InCurrent._Plan.Reset();
+			InPlanState._Plan.Reset();
 			if (Path.Num() >= 2)
 			{
-				InCurrent._Plan.Reserve(Path.Num() - 1);
+				InPlanState._Plan.Reserve(Path.Num() - 1);
 			}
 
 			for (auto i = 0; i + 1 < Path.Num(); ++i)
@@ -589,26 +592,26 @@ auto
 					TargetClass, InHandle)
 				{ continue; }
 
-				InCurrent._Plan.Add(*MatchingChild);
+				InPlanState._Plan.Add(*MatchingChild);
 			}
 
 			// Regressive search emits goal-to-current. Reverse for execution order.
-			Algo::Reverse(InCurrent._Plan);
+			Algo::Reverse(InPlanState._Plan);
 
-			InCurrent._PlanStatus = ECk_GoapPlanStatus::PlanFound;
-			InCurrent._PlanCost = InResult._TotalCost;
+			InPlanState._PlanStatus = ECk_GoapPlanStatus::PlanFound;
+			InPlanState._PlanCost = InResult._TotalCost;
 
 			UUtils_Signal_OnGoap_Action_PlanComplete::Broadcast(
 				InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanComplete{
-					InCurrent.Get_PlanClasses(), InResult._TotalCost}));
+					InPlanState.Get_PlanClasses(), InResult._TotalCost}));
 			break;
 		}
 
 		case ECk_AStarSearchStatus::Failed:
 		{
-			InCurrent._PlanStatus = ECk_GoapPlanStatus::PlanFailed;
-			InCurrent._Plan.Reset();
-			InCurrent._PlanCost = 0.0f;
+			InPlanState._PlanStatus = ECk_GoapPlanStatus::PlanFailed;
+			InPlanState._Plan.Reset();
+			InPlanState._PlanCost = 0.0f;
 			UUtils_Signal_OnGoap_Action_PlanFailed::Broadcast(
 				InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanFailed{}));
 			break;
@@ -616,9 +619,9 @@ auto
 
 		case ECk_AStarSearchStatus::CostThresholdReached:
 		{
-			InCurrent._PlanStatus = ECk_GoapPlanStatus::CostThresholdReached;
-			InCurrent._Plan.Reset();
-			InCurrent._PlanCost = 0.0f;
+			InPlanState._PlanStatus = ECk_GoapPlanStatus::CostThresholdReached;
+			InPlanState._Plan.Reset();
+			InPlanState._PlanCost = 0.0f;
 			UUtils_Signal_OnGoap_Action_PlanFailed::Broadcast(
 				InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanFailed{}));
 			break;

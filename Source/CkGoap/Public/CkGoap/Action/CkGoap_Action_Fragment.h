@@ -57,7 +57,12 @@ namespace ck
 	using FFragment_Goap_Action_Params = FCk_Fragment_Goap_ActionParamsData;
 
 // ====================================================================================================================
-// CURRENT — live action state (WS resolution, goal, plan, status)
+// CURRENT — residual Action-role state. Post-U11.0 split, _Plan / _PlanCost /
+// _PlanStatus / _PlanAttemptCount moved to FFragment_Goap_Planner_PlanState;
+// _Goal / _InvalidGoal moved to FFragment_Goap_Planner_Goal;
+// _WorldStateSource_Resolved moved to FFragment_Goap_Planner_WorldStateSource
+// (as its new _Resolved field). What remains: the "active parent" record —
+// the class of the parent Action that injected this Action's current goal.
 // ====================================================================================================================
 
 	struct CKGOAP_API FFragment_Goap_Action_Current
@@ -67,64 +72,15 @@ namespace ck
 
 		friend class ::UCk_Utils_Goap_Action_UE;
 		friend class ::UCk_Utils_Goap_Planner_UE;
-		friend class FProcessor_Goap_Action_Setup;
-		friend class FProcessor_Goap_Action_HandleRequests;
-		friend class FProcessor_Goap_Action_HandleResult;
-		friend class FProcessor_Goap_Action_AutoReplan;
 		friend class FProcessor_Goap_Planner_ChainUpdate;
 
 	private:
-		// Resolved at activation: override-if-set, else parent's resolved.
-		FCk_Handle_Goap_WorldState                       _WorldStateSource_Resolved;
-
-		// Live goal world state (keyed against the resolved WS's registry).
-		// Root action: populated from _InitialGoal_RootOnly at Setup.
-		// Non-root: injected from parent action's Effects at activation.
-		TArray<goap::FWorldStateCondition>               _Goal;
-
-		// Diagnostic: parent-action Outcome keys that the child action's
-		// resolved WS doesn't know about. Verbose-logged at injection time;
-		// surfaced via Get_InvalidGoal for the debugger.
-		TArray<FCk_GoapWS_Condition_Authored>            _InvalidGoal;
-
 		// The action class on the PARENT action that injected this action's
 		// current goal. nullptr for the root.
 		TSubclassOf<UCk_GoapAction_EntityScript>         _ActiveParentAction;
 
-		ECk_GoapPlanStatus                               _PlanStatus = ECk_GoapPlanStatus::Idle;
-
-		// In the unified model, the planner emits a sequence of Action *entities*.
-		// Get_PlanClasses() is a convenience that maps each entity back to its
-		// EntityScript class for consumers that still want the class list.
-		TArray<FCk_Handle_Goap_Action>                   _Plan;
-
-		float                                            _PlanCost = 0.0f;
-		int32                                            _PlanAttemptCount = 0;
-
 	public:
-		CK_PROPERTY_GET(_WorldStateSource_Resolved);
-		CK_PROPERTY_GET(_Goal);
-		CK_PROPERTY_GET(_InvalidGoal);
 		CK_PROPERTY_GET(_ActiveParentAction);
-		CK_PROPERTY_GET(_PlanStatus);
-		CK_PROPERTY_GET(_Plan);
-		CK_PROPERTY_GET(_PlanCost);
-		CK_PROPERTY_GET(_PlanAttemptCount);
-
-		// Convenience: map each Action entity in the plan back to its
-		// EntityScript class.
-		auto Get_PlanClasses() const -> TArray<TSubclassOf<UCk_GoapAction_EntityScript>>
-		{
-			auto Result = TArray<TSubclassOf<UCk_GoapAction_EntityScript>>{};
-			Result.Reserve(_Plan.Num());
-			for (const auto& ActionHandle : _Plan)
-			{
-				if (NOT ck::IsValid(ActionHandle)) { continue; }
-				const auto& Params = ActionHandle.template Get<FFragment_Goap_Action_Params>();
-				Result.Add(Params.Get_ActionClass());
-			}
-			return Result;
-		}
 	};
 
 // ====================================================================================================================
