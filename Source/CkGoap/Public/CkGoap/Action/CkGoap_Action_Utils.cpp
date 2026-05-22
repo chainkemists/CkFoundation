@@ -316,46 +316,46 @@ auto
 
 auto
 	UCk_Utils_Goap_Action_UE::
-	BindTo_OnActionActivated(
+	BindTo_OnPlannerActivated(
 		FCk_Handle_Goap_Action& InAction,
-		const FCk_Delegate_Goap_OnActionActivated& InDelegate,
+		const FCk_Delegate_Goap_OnPlannerActivated& InDelegate,
 		ECk_Signal_BindingPolicy InBindingPolicy,
 		ECk_Signal_PostFireBehavior InPostFireBehavior) -> FCk_Handle_Goap_Action
 {
-	CK_SIGNAL_BIND(ck::UUtils_Signal_OnGoap_Action_Activated,
+	CK_SIGNAL_BIND(ck::UUtils_Signal_OnGoap_Planner_Activated,
 		InAction, InDelegate, InBindingPolicy, InPostFireBehavior);
 	return InAction;
 }
 
 auto
 	UCk_Utils_Goap_Action_UE::
-	UnbindFrom_OnActionActivated(
+	UnbindFrom_OnPlannerActivated(
 		FCk_Handle_Goap_Action& InAction,
-		const FCk_Delegate_Goap_OnActionActivated& InDelegate) -> FCk_Handle_Goap_Action
+		const FCk_Delegate_Goap_OnPlannerActivated& InDelegate) -> FCk_Handle_Goap_Action
 {
-	CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnGoap_Action_Activated, InAction, InDelegate);
+	CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnGoap_Planner_Activated, InAction, InDelegate);
 	return InAction;
 }
 
 auto
 	UCk_Utils_Goap_Action_UE::
-	BindTo_OnActionDeactivated(
+	BindTo_OnPlannerDeactivated(
 		FCk_Handle_Goap_Action& InAction,
-		const FCk_Delegate_Goap_OnActionDeactivated& InDelegate,
+		const FCk_Delegate_Goap_OnPlannerDeactivated& InDelegate,
 		ECk_Signal_BindingPolicy InBindingPolicy,
 		ECk_Signal_PostFireBehavior InPostFireBehavior) -> FCk_Handle_Goap_Action
 {
-	CK_SIGNAL_BIND(ck::UUtils_Signal_OnGoap_Action_Deactivated,
+	CK_SIGNAL_BIND(ck::UUtils_Signal_OnGoap_Planner_Deactivated,
 		InAction, InDelegate, InBindingPolicy, InPostFireBehavior);
 	return InAction;
 }
 
 auto
 	UCk_Utils_Goap_Action_UE::
-	UnbindFrom_OnActionDeactivated(
+	UnbindFrom_OnPlannerDeactivated(
 		FCk_Handle_Goap_Action& InAction,
-		const FCk_Delegate_Goap_OnActionDeactivated& InDelegate) -> FCk_Handle_Goap_Action
+		const FCk_Delegate_Goap_OnPlannerDeactivated& InDelegate) -> FCk_Handle_Goap_Action
 {
-	CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnGoap_Action_Deactivated, InAction, InDelegate);
+	CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnGoap_Planner_Deactivated, InAction, InDelegate);
 	return InAction;
 }

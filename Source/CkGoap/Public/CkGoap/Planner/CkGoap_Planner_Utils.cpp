@@ -2,6 +2,7 @@
 
 #include "CkGoap/CkGoap_Log.h"
 #include "CkGoap/Planner/CkGoap_Planner_Fragment.h"
+#include "CkGoap/Planner/CkGoap_Planner_Processor.h"        // FProcessor_Goap_Planner_UpdateActivation::DoDeactivatePlanner
 #include "CkGoap/Planner/CkGoap_Planner_Record_Internal.h"  // FFragment_RecordOfGoapPlanners + utils struct
 #include "CkGoap/Planner/CkGoap_Planner_Internal.h"         // DoCreateOrFindActionEntity
 #include "CkGoap/Action/CkGoap_Action_Fragment.h"
@@ -71,6 +72,11 @@ auto
     ActionEntity.Add<ck::FFragment_Goap_Planner_PlanState>();
     ActionEntity.Add<ck::FFragment_Goap_Planner_Goal>();
     ActionEntity.Add<ck::FFragment_Goap_Planner_WorldStateSource>();
+
+    // U11.2: Action-as-Planner-role gets per-Planner activation state. Starts
+    // _IsActive=false; SetRootAction flips the root Action's _IsActive=true,
+    // and mid-tier Actions get flipped on by their parent's UpdateActivation.
+    ActionEntity.Add<ck::FFragment_Goap_Planner_Activation>();
 
     auto& Throttle = ActionEntity.AddOrGet<ck::FFragment_Goap_Action_ReplanThrottle>();
     (void)Throttle;  // throttle's interval is read from params at Setup time
@@ -146,7 +152,6 @@ auto
 	auto& Current = PlannerEntity.Get<ck::FFragment_Goap_Planner_Current>();
 	Current._EnableToggle = InParams.Get_InitialToggle();
 
-	PlannerEntity.Add<ck::FFragment_Goap_Planner_ActiveChain>();
 	PlannerEntity.Add<ck::FFragment_Goap_Planner_ActionCatalogIndex>();
 	PlannerEntity.Add<ck::FFragment_Goap_Planner_WorldStateSource>();
 	// U11.0 split: top-level Planner is also dual-role; stamp PlanState + Goal
@@ -161,6 +166,16 @@ auto
 		GoalFrag._GoalAuthored = InParams.Get_Goal();
 		PlannerEntity.Add<ck::FFragment_Goap_Planner_Goal>(GoalFrag);
 	}
+
+	// U11.2: top-level Planners are always active by construction (no parent
+	// to activate them). Mid-tier sub-Planners are activated by their parent's
+	// UpdateActivation pass.
+	{
+		auto ActivationFrag = ck::FFragment_Goap_Planner_Activation{};
+		ActivationFrag._IsActive = true;
+		PlannerEntity.Add<ck::FFragment_Goap_Planner_Activation>(ActivationFrag);
+	}
+
 	PlannerEntity.AddOrGet<ck::FTag_Goap_Planner_RequiresSetup>();
 
 	// Register the Planner in the owner's record.
@@ -252,7 +267,54 @@ auto
 	Get_ActiveChain(const FCk_Handle_Goap_Planner& InPlanner) -> TArray<FCk_Handle_Goap_Action>
 {
 	if (NOT ck::IsValid(InPlanner)) { return {}; }
-	return InPlanner.Get<ck::FFragment_Goap_Planner_ActiveChain>().Get_Chain();
+
+	// U11.2: the active chain is no longer stored in a fragment — it's derived
+	// on demand by walking Plan[0]s from the root Action down. Each composite
+	// step is appended; the walk terminates at an atomic Action or when a
+	// child sub-Planner is not yet marked _IsActive (next frame's
+	// UpdateActivation will fix that).
+	auto Result = TArray<FCk_Handle_Goap_Action>{};
+
+	const auto& Current = InPlanner.Get<ck::FFragment_Goap_Planner_Current>();
+	auto Curr = Current.Get_RootAction();
+	if (NOT ck::IsValid(Curr)) { return Result; }
+
+	// Cap depth defensively (matches the planner's dependency-cycle
+	// diagnostics — a cyclic catalog can theoretically loop the walk).
+	constexpr auto MaxDepth = 64;
+	auto Seen = TSet<FCk_Handle_Goap_Action>{};
+
+	Result.Add(Curr);
+	Seen.Add(Curr);
+
+	for (auto Depth = 0; Depth < MaxDepth; ++Depth)
+	{
+		const auto& PlanState = Curr.Get<ck::FFragment_Goap_Planner_PlanState>();
+		const auto& Plan = PlanState.Get_Plan();
+		if (Plan.IsEmpty()) { break; }
+
+		const auto Next = Plan[0];
+		if (NOT ck::IsValid(Next)) { break; }
+
+		// Only composite sub-Planners participate in the active-chain walk —
+		// atomic Plan[0] entries are terminal (consumer drives the leaf).
+		const auto& NextTree = Next.Get<ck::FFragment_Goap_Action_Tree>();
+		if (NextTree.Get_ChildActions().IsEmpty()) { break; }
+
+		// Only include in the chain if the sub-Planner is actually active.
+		// (UpdateActivation may not have flipped _IsActive yet on the same
+		// frame the plan resolved — caller polls Get_ActiveChain across
+		// frames in that case, mirroring U10/U11.0 chain-extension timing.)
+		const auto& NextActivation = Next.Get<ck::FFragment_Goap_Planner_Activation>();
+		if (NOT NextActivation.Get_IsActive()) { break; }
+
+		if (Seen.Contains(Next)) { break; }
+		Seen.Add(Next);
+		Result.Add(Next);
+		Curr = Next;
+	}
+
+	return Result;
 }
 
 auto
@@ -331,14 +393,19 @@ auto
 	}
 
 	// Subscribe root action to its WS so value-changes flip the dirty tag and
-	// AutoReplan fires. Non-root actions get this hook-up in the ActionSet
-	// ChainUpdate processor at activation time.
+	// AutoReplan fires. Non-root actions get this hook-up in UpdateActivation
+	// at activation time.
 	UCk_Utils_Goap_WorldState_UE::Request_AddSubscriber(InInitialWorldState, RootHandle);
 
-	// Seed the active chain with the root.
-	auto& ActiveChain = InPlanner.Get<ck::FFragment_Goap_Planner_ActiveChain>();
-	ActiveChain._Chain.Reset();
-	ActiveChain._Chain.Add(RootHandle);
+	// U11.2: the root Action is the entry-point for the activation walk. Flip
+	// its _IsActive=true so the UpdateActivation processor picks it up. (Its
+	// own parent-Planner activation pass would have done this, but the top-
+	// level Planner doesn't run A* in the transitional model so there's no
+	// upstream Plan[0] to activate the root via.)
+	{
+		auto& RootActivation = RootHandle.Get<ck::FFragment_Goap_Planner_Activation>();
+		RootActivation._IsActive = true;
+	}
 
 	return RootHandle;
 }
@@ -354,13 +421,12 @@ auto
 	if (NOT ck::IsValid(ActionEntity))
 	{ return {}; }
 
-	// First AddAction on an ActionSet = the implicit root action. Seed the
-	// active chain. Callers preferring explicit root semantics should use
-	// SetRootAction; this path preserves the pre-U2 implicit-root behaviour.
-	auto& ActiveChain = InPlanner.Get<ck::FFragment_Goap_Planner_ActiveChain>();
-	if (ActiveChain._Chain.IsEmpty())
+	// First AddAction on an ActionSet = the implicit root action. Callers
+	// preferring explicit root semantics should use SetRootAction; this path
+	// preserves the pre-U2 implicit-root behaviour.
+	auto& Current = InPlanner.Get<ck::FFragment_Goap_Planner_Current>();
+	if (NOT ck::IsValid(Current._RootAction))
 	{
-		auto& Current = InPlanner.Get<ck::FFragment_Goap_Planner_Current>();
 		Current._RootAction = ActionEntity;
 
 		// Validate root has a WS override (no parent to inherit from).
@@ -382,7 +448,9 @@ auto
 			UCk_Utils_Goap_WorldState_UE::Request_AddSubscriber(WS, ActionEntity);
 		}
 
-		ActiveChain._Chain.Add(ActionEntity);
+		// U11.2: implicit-root entry-point for the activation walk.
+		auto& RootActivation = ActionEntity.Get<ck::FFragment_Goap_Planner_Activation>();
+		RootActivation._IsActive = true;
 	}
 
 	return ActionEntity;
@@ -429,46 +497,34 @@ auto
 		TEXT("Invalid ActionSet handle in Request_ResetActiveChain"))
 	{ return InPlanner; }
 
-	auto& ActiveChain = InPlanner.Get<ck::FFragment_Goap_Planner_ActiveChain>();
-	if (ActiveChain._Chain.Num() <= 1) { return InPlanner; }
+	// U11.2: walk the current active chain (root → leaf) and deactivate every
+	// sub-Planner past the root. DoDeactivatePlanner handles WS unsubscribe,
+	// live-state reset, _IsActive flip, OnPlannerDeactivated broadcast, and
+	// recursive descendant teardown.
+	const auto Chain = Get_ActiveChain(InPlanner);
+	if (Chain.Num() <= 1) { return InPlanner; }
 
-	// Tear down every Action past the root (index 0) in reverse order, mirroring
-	// the per-action cleanup that FProcessor_Goap_Planner_ChainUpdate::
-	// DoTruncateChainFrom performs during normal chain divergence:
-	//   1. Unsubscribe the Action from its resolved WorldState.
-	//   2. Reset live state (goal, plan, parent reference, WS source, status).
-	//   3. Broadcast OnActionDeactivated.
-	for (auto i = ActiveChain._Chain.Num() - 1; i >= 1; --i)
+	// Deactivate in reverse order (leaf → child-of-root). The root itself
+	// stays active.
+	for (auto i = Chain.Num() - 1; i >= 1; --i)
 	{
-		auto Action = ActiveChain._Chain[i];
+		auto Action = Chain[i];
 		if (NOT ck::IsValid(Action)) { continue; }
-
-		// 1. WS unsubscribe via the public WorldState util.
-		auto& Current   = Action.Get<ck::FFragment_Goap_Action_Current>();
-		auto& WSSource  = Action.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
-		auto& Goal      = Action.Get<ck::FFragment_Goap_Planner_Goal>();
-		auto& PlanState = Action.Get<ck::FFragment_Goap_Planner_PlanState>();
-		if (ck::IsValid(WSSource._Resolved))
-		{
-			auto ActionHandle = FCk_Handle{Action};
-			UCk_Utils_Goap_WorldState_UE::Request_RemoveSubscriber(
-				WSSource._Resolved, ActionHandle);
-		}
-
-		// 2. Reset live Action state.
-		Goal._Goal.Reset();
-		Goal._InvalidGoal.Reset();
-		Current._ActiveParentAction = nullptr;
-		WSSource._Resolved = {};
-		PlanState._Plan.Reset();
-		PlanState._PlanStatus = ECk_GoapPlanStatus::Idle;
-
-		// 3. Fire deactivation signal.
-		ck::UUtils_Signal_OnGoap_Action_Deactivated::Broadcast(
-			Action, ck::MakePayload(Action, FCk_Goap_Payload_OnActionDeactivated{}));
+		ck::FProcessor_Goap_Planner_UpdateActivation::DoDeactivatePlanner(Action);
 	}
 
-	ActiveChain._Chain.SetNum(1);
+	// The root Action's cached _LastActivatedPlan0 still points at the old
+	// child; clear it so the next UpdateActivation tick sees this as a fresh
+	// state transition (rather than no-op'ing because OldStep0 == NewStep0).
+	{
+		auto RootAction = Chain[0];
+		if (ck::IsValid(RootAction))
+		{
+			auto& RootActivation = RootAction.Get<ck::FFragment_Goap_Planner_Activation>();
+			RootActivation._LastActivatedPlan0 = {};
+		}
+	}
+
 	return InPlanner;
 }
 

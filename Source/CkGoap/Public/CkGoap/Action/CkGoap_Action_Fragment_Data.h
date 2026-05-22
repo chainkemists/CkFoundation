@@ -233,18 +233,22 @@ public:
 // SIGNAL PAYLOADS — Action-scoped
 // ====================================================================================================================
 
+// U11.2: Action(De)Activated renamed to Planner(De)Activated. The broadcast
+// source is the sub-Planner (Action entity in transitional model) whose
+// _IsActive flips. Per-sub-Planner-activation, fired from the parent's
+// UpdateActivation when it flips its Plan[0].
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Goap_Payload_OnActionActivated
+struct CKGOAP_API FCk_Goap_Payload_OnPlannerActivated
 {
     GENERATED_BODY()
-    CK_GENERATED_BODY(FCk_Goap_Payload_OnActionActivated);
+    CK_GENERATED_BODY(FCk_Goap_Payload_OnPlannerActivated);
 };
 
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Goap_Payload_OnActionDeactivated
+struct CKGOAP_API FCk_Goap_Payload_OnPlannerDeactivated
 {
     GENERATED_BODY()
-    CK_GENERATED_BODY(FCk_Goap_Payload_OnActionDeactivated);
+    CK_GENERATED_BODY(FCk_Goap_Payload_OnPlannerDeactivated);
 };
 
 // ====================================================================================================================
@@ -266,13 +270,13 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Goap_Payload_OnPlanFailed, InPayload);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
-    FCk_Delegate_Goap_OnActionActivated,
-    FCk_Handle_Goap_Action, InAction,
-    FCk_Goap_Payload_OnActionActivated, InPayload);
+    FCk_Delegate_Goap_OnPlannerActivated,
+    FCk_Handle_Goap_Action, InPlanner,
+    FCk_Goap_Payload_OnPlannerActivated, InPayload);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
-    FCk_Delegate_Goap_OnActionDeactivated,
-    FCk_Handle_Goap_Action, InAction,
-    FCk_Goap_Payload_OnActionDeactivated, InPayload);
+    FCk_Delegate_Goap_OnPlannerDeactivated,
+    FCk_Handle_Goap_Action, InPlanner,
+    FCk_Goap_Payload_OnPlannerDeactivated, InPayload);
 
 // ====================================================================================================================
