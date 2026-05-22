@@ -143,6 +143,14 @@ namespace ck
 		{
 			_TagToAction.Add(InTag, InAction);
 		}
+
+		// Public mutator counterpart for runtime catalog removal — used by
+		// UCk_Utils_Goap_Planner_UE::Request_RemoveAction. Returns the number
+		// of removed entries (0 if the tag was not registered).
+		auto RemoveEntry(FGameplayTag InTag) -> int32
+		{
+			return _TagToAction.Remove(InTag);
+		}
 	};
 
 // ====================================================================================================================

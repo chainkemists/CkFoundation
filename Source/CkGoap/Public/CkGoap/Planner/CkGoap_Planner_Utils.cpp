@@ -964,6 +964,113 @@ auto
 
 auto
 	UCk_Utils_Goap_Planner_UE::
+	Request_RemoveAction(
+		FCk_Handle_Goap_Planner& InPlanner,
+		TSubclassOf<UCk_GoapAction_EntityScript> InChildActionClass) -> FCk_Handle_Goap_Planner
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Request_RemoveAction"))
+	{ return InPlanner; }
+
+	CK_ENSURE_IF_NOT(ck::IsValid(InChildActionClass),
+		TEXT("Invalid ChildActionClass in Request_RemoveAction (Planner [{}])"), InPlanner)
+	{ return InPlanner; }
+
+	// Catalog lookup (class → tag → action).
+	const auto ActionTag = UCk_GoapAction_EntityScript::Get_ActionTagForClass(InChildActionClass);
+	CK_ENSURE_IF_NOT(ActionTag.IsValid(),
+		TEXT("Could not derive a valid action tag for class [{}] in Request_RemoveAction (Planner [{}])"),
+		InChildActionClass, InPlanner)
+	{ return InPlanner; }
+
+	auto ChildAction = Find_Action(InPlanner, ActionTag);
+	if (NOT ck::IsValid(ChildAction))
+	{
+		ck::goap::Warning(
+			TEXT("Request_RemoveAction: no Action with tag [{}] (class [{}]) registered on Planner [{}]; nothing to remove."),
+			ActionTag, InChildActionClass, InPlanner);
+		return InPlanner;
+	}
+
+	// Refuse to remove the implicit-root Action — it hosts A* for the
+	// top-level Planner. Removing it would leave the Planner with no entity
+	// to plan on.
+	const auto& Current = InPlanner.Get<ck::FFragment_Goap_Planner_Current>();
+	if (ChildAction == Current.Get_RootAction())
+	{
+		ck::goap::Warning(
+			TEXT("Request_RemoveAction: refusing to remove implicit-root Action [{}] on Planner [{}]; remove the Planner instead."),
+			ChildAction, InPlanner);
+		return InPlanner;
+	}
+
+	// Resolve the parent Action whose _ChildActions list contains this child.
+	// In the top-level case this is the implicit root; in the promoted-mid-tier
+	// case this is the Planner host (cast to Action). Read it from the child's
+	// own Tree fragment — single source of truth populated by AddAction.
+	auto ParentAction = FCk_Handle_Goap_Action{};
+	{
+		const auto& ChildTree = ChildAction.Get<ck::FFragment_Goap_Action_Tree>();
+		ParentAction = ChildTree.Get_ParentAction();
+	}
+
+	// Remove the catalog entry. RemoveEntry is the public mutator counterpart
+	// to AddEntry — friendship on the fragment is class-scoped and doesn't
+	// reach namespace-level free functions, but Utils is a friend so we could
+	// touch _TagToAction directly. The mutator is preferred for symmetry +
+	// future-proofing (e.g. if removal grows side effects).
+	{
+		auto& Index = InPlanner.Get<ck::FFragment_Goap_Planner_ActionCatalogIndex>();
+		Index.RemoveEntry(ActionTag);
+	}
+
+	// Detach the child from its parent's _ChildActions list. Utils is a
+	// friend of FFragment_Goap_Action_Tree so direct access is allowed.
+	if (ck::IsValid(ParentAction))
+	{
+		auto& ParentTree = ParentAction.Get<ck::FFragment_Goap_Action_Tree>();
+		ParentTree._ChildActions.RemoveSingle(ChildAction);
+
+		// If the removed child is currently the parent's Plan[0], the
+		// activation cache (_LastActivatedPlan0) still points at it. Clear
+		// the cache so the next UpdateActivation tick sees a fresh state
+		// transition (mirrors Request_ResetActiveChain's root-clear).
+		auto& ParentActivation = ParentAction.Get<ck::FFragment_Goap_Planner_Activation>();
+		if (ParentActivation.Get_LastActivatedPlan0() == ChildAction)
+		{
+			ParentActivation._LastActivatedPlan0 = {};
+		}
+	}
+
+	// Catalog mutated → re-run setup (cycle detection / dependency rebuild),
+	// then enqueue a replan so the next plan reflects the updated operator
+	// set. Mirrors AddAction's setup marker.
+	InPlanner.AddOrGet<ck::FTag_Goap_Planner_RequiresSetup>();
+
+	// Destroy the Action entity. Standard entity-lifetime path handles record
+	// cleanup (owner-cascade-destroy removes the FRecordOfGoapActions entry)
+	// and any descendant cascade (a dual-role child with its own _ChildActions
+	// gets its sub-tree cascade-destroyed via the standard owner chain — child
+	// Actions were created with InPlanner as their lifetime owner, but
+	// recursive Actions of a removed mid-tier composite are owned through the
+	// Action entity itself in the tree-edge sense; the standard cascade walks
+	// owning-entity relationships rather than tree edges, so isolated dual-role
+	// catalog entries are addressed by their own catalog-removal calls).
+	{
+		auto ChildAsGeneric = static_cast<FCk_Handle>(ChildAction);
+		UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(ChildAsGeneric);
+	}
+
+	// Trigger the replan after destruction is queued. Routes through the
+	// existing Request_Plan shim, which enqueues on the implicit-root
+	// Action's request queue (the entity running A*).
+	Request_Plan(InPlanner);
+
+	return InPlanner;
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
 	BindTo_OnActiveChainChanged(
 		FCk_Handle_Goap_Planner& InPlanner,
 		const FCk_Delegate_Goap_OnActiveChainChanged& InDelegate,
