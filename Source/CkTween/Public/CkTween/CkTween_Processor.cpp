@@ -384,7 +384,15 @@ namespace ck
             const FCk_Request_Tween_Stop& InRequest)
         -> void
     {
-        if (InCurrent.Get_State() == ECk_TweenState::Cancelled)
+        // Stop only acts on a running tween. A tween that has already reached a
+        // terminal state — Completed (natural finish) or Cancelled (a prior
+        // Stop) — must be left untouched: re-running this body would bare-Add
+        // FTag_Tween_Completed (it is already present → ensure) and re-broadcast
+        // OnTweenComplete to every listener. This is reachable without misuse:
+        // requests are deferred, so a tween can complete naturally between the
+        // Stop call and this handler running.
+        if (InCurrent.Get_State() != ECk_TweenState::Playing &&
+            InCurrent.Get_State() != ECk_TweenState::Paused)
         { return; }
 
         InHandle.Try_Remove<FTag_Tween_Playing>();
@@ -417,6 +425,10 @@ namespace ck
         InCurrent.Set_CurrentLoop(0);
         InCurrent.Set_IsReversed(false);
 
+        // Restart returns the tween to Playing from ANY prior state, so clear
+        // every state tag first — including Playing itself (Restart-while-
+        // -playing is valid), otherwise the bare Add below ensures.
+        InHandle.Try_Remove<FTag_Tween_Playing>();
         InHandle.Try_Remove<FTag_Tween_Paused>();
         InHandle.Try_Remove<FTag_Tween_Completed>();
         InHandle.Try_Remove<FTag_Tween_InYoyoDelay>();
