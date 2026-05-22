@@ -45,6 +45,25 @@ namespace ck::angelscriptgenerator::self_heal
         bool  sDidSynthesizeAssetRegistryStub = false;
         bool  sBootstrapComplete = false;
 
+        // Per-signature convergence tracking. Mid-session synthesis was
+        // unbounded before May 2026 — a "dueling-overloads" loop (e.g. caller
+        // arg order doesn't match the entity script's declared field order, or
+        // two callers force mutually-exclusive overload shapes) re-synthesized
+        // the same stubs every cleanup boundary and the editor never settled.
+        // Each key tracks count + observed callsites; on hitting
+        // MaxPerSignatureRepeats the key is blacklisted, the breaker fires
+        // Log_TerminalBanner_ConvergenceFailed, and no further synthesis is
+        // attempted this session for that signature. Cleared at cold-launch
+        // (Reset_CyclesRun) and at the bootstrap→mid-session transition
+        // (Mark_BootstrapComplete) — same semantics as sCyclesRun.
+        struct FConvergenceTracker
+        {
+            int32          RecoveryCount = 0;
+            TSet<FString>  Callsites;  // "file:line:col" each
+        };
+        TMap<FString, FConvergenceTracker> sPerSignatureRecoveryCount;
+        TSet<FString>                      sBlacklistedSignatures;
+
         // Cold-start deferral: file mutations applied inside OnReloadHadErrors
         // are invisible to Hazelight's AS hot-reload checker thread because that
         // thread hasn't started yet — its first scan establishes mtime baselines
@@ -382,6 +401,57 @@ namespace ck::angelscriptgenerator::self_heal
                 FCkAsRecoveryDispatcher::MaxCycles);
         }
 
+        auto Log_TerminalBanner_ConvergenceFailed(
+            const FString&       InKey,
+            const TSet<FString>& InCallsites) -> void
+        {
+            auto Sites = FString{};
+            for (const auto& Site : InCallsites)
+            {
+                Sites.Append(LINE_TERMINATOR);
+                Sites.Append(TEXT("  - "));
+                Sites.Append(Site);
+            }
+
+            Error(TEXT("[SelfHeal] Convergence failed for {} after {} synthesis attempts. ")
+                  TEXT("Root cause is upstream of self-heal — likely a caller/entity-script ")
+                  TEXT("signature mismatch (arg order, mutability, or type drift).{}")
+                  TEXT("Callers seen:{}{}")
+                  TEXT("Self-heal will NOT retry this signature for the rest of this session. ")
+                  TEXT("Fix the call site or the entity script, then restart the editor."),
+                InKey,
+                FCkAsRecoveryDispatcher::MaxPerSignatureRepeats,
+                LINE_TERMINATOR,
+                Sites,
+                LINE_TERMINATOR);
+
+            // Also surface in MessageLog — the "View details" hyperlink on the
+            // toast opens MessageLog, so the diagnostic needs to live here too.
+            // (The regular log goes to Saved/Logs/<Project>.log only, which the
+            // user can't reach from the toast.)
+            auto MessageLog = FMessageLog{FName{sSelfHealLogChannel}};
+            auto SitesAsBullets = FString{};
+            for (const auto& Site : InCallsites)
+            {
+                if (NOT SitesAsBullets.IsEmpty())
+                { SitesAsBullets.Append(LINE_TERMINATOR); }
+                SitesAsBullets.Append(TEXT("    \x2022 "));
+                SitesAsBullets.Append(Site);
+            }
+
+            MessageLog.Error(FText::Format(
+                LOCTEXT("ConvergenceFailedMessageLog",
+                    "Self-heal CONVERGENCE FAILED for {0} after {1} synthesis attempts.\n"
+                    "Root cause is upstream of self-heal — caller or entity-script signature "
+                    "mismatch (arg order, mutability, or type drift).\n"
+                    "Callers seen:\n{2}\n"
+                    "Self-heal will not retry this signature for the rest of this session. "
+                    "Fix the call site(s) or the entity script, then restart the editor."),
+                FText::FromString(InKey),
+                FText::AsNumber(FCkAsRecoveryDispatcher::MaxPerSignatureRepeats),
+                FText::FromString(SitesAsBullets)));
+        }
+
         // ---- UI surfacing (Slate toast + MessageLog) -------------------------------
         //
         // Single notification lifecycle, transitioning in place:
@@ -692,6 +762,84 @@ namespace ck::angelscriptgenerator::self_heal
             Record_NewBanner(ECk_BannerKind::Terminal, InMessage, FText::GetEmpty(), NotificationPtr);
         }
 
+        // ---- Per-signature convergence gate ----------------------------------------
+        //
+        // Built from the same content the existing Describe_Action helper uses
+        // for log/MessageLog entries — keeps the banner output and the cap key
+        // textually aligned.
+        auto Build_SignatureKey(
+            const FCk_RecoveryAction& InAction) -> FString
+        {
+            switch (InAction.Strategy)
+            {
+                case ECk_RecoveryStrategy::SynthesizeStub_EntitySpawnParams:
+                case ECk_RecoveryStrategy::KickGenerator_AssetRegistry:
+                {
+                    return FString::Printf(TEXT("%s::%s(%s)"),
+                        *InAction.Error.TargetNamespace,
+                        *InAction.Error.FunctionName,
+                        *InAction.Error.ArgsList);
+                }
+                case ECk_RecoveryStrategy::KickGenerator_DynamicHandle:
+                {
+                    return FString::Printf(TEXT("DynamicHandle::%s"),
+                        *InAction.Error.MissingIdentifier);
+                }
+                case ECk_RecoveryStrategy::Author_FixupRequired_AdjacentStringLiteral:
+                case ECk_RecoveryStrategy::Unrecognized:
+                default:
+                {
+                    // Author-fixup and Unrecognized don't synthesize files —
+                    // they can't form a synthesis loop, so we don't track them.
+                    return FString{};
+                }
+            }
+        }
+
+        // Returns true when the action is cleared to proceed to Apply_Strategy.
+        // Returns false when the key is blacklisted (already tripped) or trips
+        // the breaker on this call — caller should skip Apply_Strategy and
+        // move to the next queued action. The breaker emits the terminal
+        // banner + toast exactly once per signature; subsequent skips are
+        // silent (one log line for observability, no UI spam).
+        auto Try_ReserveSynthesis(
+            const FCk_RecoveryAction& InAction) -> bool
+        {
+            const auto Key = Build_SignatureKey(InAction);
+            if (Key.IsEmpty())
+            { return true; }
+
+            if (sBlacklistedSignatures.Contains(Key))
+            {
+                Log(TEXT("[SelfHeal] Skipping convergence-blacklisted signature: {}"), Key);
+                return false;
+            }
+
+            auto& Tracker = sPerSignatureRecoveryCount.FindOrAdd(Key);
+            ++Tracker.RecoveryCount;
+
+            const auto Callsite = InAction.Error.FilePath.IsEmpty()
+                ? FString{TEXT("<unknown caller>")}
+                : FString::Printf(TEXT("%s:%d:%d"),
+                    *InAction.Error.FilePath, InAction.Error.Line, InAction.Error.Column);
+            Tracker.Callsites.Add(Callsite);
+
+            if (Tracker.RecoveryCount < FCkAsRecoveryDispatcher::MaxPerSignatureRepeats)
+            { return true; }
+
+            // Trip the breaker — refuse synthesis on this attempt, blacklist
+            // the key for the rest of the session, emit banner + toast.
+            sBlacklistedSignatures.Add(Key);
+            Log_TerminalBanner_ConvergenceFailed(Key, Tracker.Callsites);
+            Show_TerminalToast(FText::Format(
+                LOCTEXT("ConvergenceFailedToast",
+                    "AngelScript self-heal: convergence failed for {0} after {1} attempts. "
+                    "Manual intervention required — see the Message Log."),
+                FText::FromString(Key),
+                FText::AsNumber(FCkAsRecoveryDispatcher::MaxPerSignatureRepeats)));
+            return false;
+        }
+
         // ---- Modal-tick handler (cold-start deferred apply) ------------------------
 
         auto OnModalLoopTick(
@@ -720,6 +868,8 @@ namespace ck::angelscriptgenerator::self_heal
             auto AppliedActions = TArray<FCk_RecoveryAction>{};
             for (const auto& Action : sPendingActions)
             {
+                if (NOT Try_ReserveSynthesis(Action))
+                { continue; }
                 if (Apply_Strategy(Action.Strategy, Action.Error))
                 { AppliedActions.Add(Action); }
             }
@@ -786,6 +936,8 @@ namespace ck::angelscriptgenerator::self_heal
             auto AppliedActions = TArray<FCk_RecoveryAction>{};
             for (const auto& Action : sPendingActions)
             {
+                if (NOT Try_ReserveSynthesis(Action))
+                { continue; }
                 if (Apply_Strategy(Action.Strategy, Action.Error))
                 { AppliedActions.Add(Action); }
             }
@@ -901,6 +1053,8 @@ namespace ck::angelscriptgenerator::self_heal
         sDidSynthesizeAssetRegistryStub = false;
         sInProgressNotification.Reset();
         sLastBanner = FLastBannerState{};
+        sPerSignatureRecoveryCount.Reset();
+        sBlacklistedSignatures.Reset();
         // sModalTickHandle left as-is; OnModalLoopTick self-cleans on empty queue.
     }
 
@@ -924,8 +1078,12 @@ namespace ck::angelscriptgenerator::self_heal
         sBootstrapComplete = true;
         // Reset cycle counter so bootstrap-consumed cycles don't count against
         // mid-session. (Cap is bootstrap-only anyway, but accurate counter
-        // makes logs easier to read.)
+        // makes logs easier to read.) Same for the per-signature tracker —
+        // bootstrap-mode counts shouldn't penalize mid-session attempts on
+        // brand-new entity scripts authored after the editor reached main.
         sCyclesRun = 0;
+        sPerSignatureRecoveryCount.Reset();
+        sBlacklistedSignatures.Reset();
     }
 
     // ----------------------------------------------------------------------------------------------------------------
