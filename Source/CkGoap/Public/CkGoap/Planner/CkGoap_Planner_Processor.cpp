@@ -114,9 +114,9 @@ namespace ck
 // SETUP — Per-Planner cycle detection over this Planner's direct children.
 //
 // U11.4 — Spec §7.2: each Planner runs Tarjan SCC over its own direct children's
-// dependency graph. "Direct children" of a Planner are its candidate operators —
-// the Actions it considers when planning. In the unified Action-as-Planner
-// model:
+// PRECONDITION/EFFECT dependency graph. "Direct children" of a Planner are its
+// candidate operators — the Actions it considers when planning. In the unified
+// Action-as-Planner model:
 //   - A Planner that is itself an Action (promoted via PromoteActionToPlanner)
 //     has `FFragment_Goap_Action_Tree`; its direct children are its own
 //     `_ChildActions`.
@@ -125,10 +125,18 @@ namespace ck
 //     subdivides the plan on behalf of the top-level Planner in the current
 //     transitional model).
 //
-// Edges are the existing `_ChildActions` tree edges, but restricted to the
-// direct-children node set so the cycle scan only looks at this Planner's
-// tier rather than the whole catalog. Non-trivial SCCs (size > 1, or size == 1
-// with a self-loop) are recorded in `FFragment_Goap_Planner_Current.
+// The edge model is the precondition/effect dependency graph: for sibling
+// Actions A and B, if any effect (Key,Value) in A's `_Effects` matches any
+// precondition (Key,Value) in B's `_Preconditions`, add edge A -> B (read:
+// "B depends on A"). This is the real planner-relevant dependency graph —
+// the tree-edge model used previously was a no-op since a tree has no cycles
+// by construction.
+//
+// A cycle (SCC of size > 1, or a self-loop) means the candidate operators at
+// this tier mutually require each other's effects to satisfy each other's
+// preconditions — the planner cannot satisfy any one of them without first
+// running another that itself transitively depends on the first.
+// Non-trivial SCCs are recorded in `FFragment_Goap_Planner_Current.
 // _DependencyCycles` as a diagnostic. The planner doesn't refuse cyclic
 // catalogs — designers fix them via the debugger surface.
 //
@@ -184,23 +192,51 @@ auto
 		}
 	}
 
-	// Build the adjacency map keyed by direct child. Edges retain the existing
-	// `_ChildActions` tree-edge model (Parent -> Child), but the node set is
-	// constrained to direct children of this Planner so the cycle scan is
-	// scoped to a single tier (per spec §7.2).
-	const auto DirectChildSet = TSet<ActionHandle>{DirectChildren};
+	// Build the adjacency map over the precondition/effect dependency graph.
+	// Edge A -> B exists iff some effect (Key,Value) in A satisfies some
+	// precondition (Key,Value) in B — i.e. B depends on A having run.
+	//
+	// Tracks the (Key) tags that closed each edge so non-trivial SCCs can
+	// surface the participating WS keys as a diagnostic.
 	auto Adj = TMap<ActionHandle, TArray<ActionHandle>>{};
-	for (const auto& Child : DirectChildren)
-	{
-		if (NOT ck::IsValid(Child)) { continue; }
 
-		const auto& Tree = Child.template Get<FFragment_Goap_Action_Tree>();
-		auto& Edges = Adj.Add(Child);
-		for (const auto& GrandChild : Tree.Get_ChildActions())
+	// Per-edge condition tags: edge(A,B) -> set of tags via which the edge was
+	// established. Used to compute the cycle's participating keys after SCC.
+	auto EdgeConditions = TMap<TPair<ActionHandle, ActionHandle>, TSet<FGameplayTag>>{};
+
+	for (const auto& A : DirectChildren)
+	{
+		if (NOT ck::IsValid(A)) { continue; }
+		auto& Edges = Adj.Add(A);
+
+		const auto& DefA = A.template Get<FFragment_Goap_Action_Definition>();
+		const auto& EffectsA = DefA.Get_Effects();
+		if (EffectsA.IsEmpty()) { continue; }
+
+		for (const auto& B : DirectChildren)
 		{
-			if (DirectChildSet.Contains(GrandChild))
+			if (NOT ck::IsValid(B)) { continue; }
+
+			const auto& DefB = B.template Get<FFragment_Goap_Action_Definition>();
+			const auto& PreconditionsB = DefB.Get_Preconditions();
+			if (PreconditionsB.IsEmpty()) { continue; }
+
+			auto MatchedKeys = TSet<FGameplayTag>{};
+			for (const auto& Eff : EffectsA)
 			{
-				Edges.Add(GrandChild);
+				for (const auto& Pre : PreconditionsB)
+				{
+					if (Eff.Key == Pre.Key && Eff.Value == Pre.Value)
+					{
+						MatchedKeys.Add(Eff.Key);
+					}
+				}
+			}
+
+			if (MatchedKeys.Num() > 0)
+			{
+				Edges.AddUnique(B);
+				EdgeConditions.Add(TPair<ActionHandle, ActionHandle>{A, B}, MoveTemp(MatchedKeys));
 			}
 		}
 	}
@@ -221,11 +257,7 @@ auto
 		auto ActionsInCycle = TArray<TSubclassOf<UCk_GoapAction_EntityScript>>{};
 		ActionsInCycle.Reserve(Scc.Num());
 
-		// Compute precondition∩effect overlap across cycle Actions — these are
-		// the WS keys that close the loop (something's effect satisfies the
-		// next Action's precondition, all the way back round).
-		auto PreconditionTags = TSet<FGameplayTag>{};
-		auto EffectTags = TSet<FGameplayTag>{};
+		const auto SccNodeSet = TSet<ActionHandle>{Scc};
 
 		for (const auto& ActionHandleInScc : Scc)
 		{
@@ -233,17 +265,29 @@ auto
 
 			const auto& Params = ActionHandleInScc.template Get<FFragment_Goap_Action_Params>();
 			ActionsInCycle.Add(Params.Get_ActionClass());
-
-			const auto& Def = ActionHandleInScc.template Get<FFragment_Goap_Action_Definition>();
-			for (const auto& Pre : Def.Get_Preconditions()) { PreconditionTags.Add(Pre.Key); }
-			for (const auto& Eff : Def.Get_Effects())       { EffectTags.Add(Eff.Key); }
 		}
 
-		auto CycleConditions = TArray<FGameplayTag>{};
-		for (const auto& Tag : PreconditionTags)
+		// Collect the (Key) tags participating in the cycle: the union of every
+		// intra-SCC edge's matched keys. These are the WS keys that close the
+		// loop (A's effect on Key satisfies B's precondition on Key, etc.).
+		auto CycleConditionsSet = TSet<FGameplayTag>{};
+		for (const auto& Src : Scc)
 		{
-			if (EffectTags.Contains(Tag)) { CycleConditions.Add(Tag); }
+			const auto* Edges = Adj.Find(Src);
+			if (Edges == nullptr) { continue; }
+
+			for (const auto& Dst : *Edges)
+			{
+				if (NOT SccNodeSet.Contains(Dst)) { continue; }
+
+				if (const auto* Tags = EdgeConditions.Find(TPair<ActionHandle, ActionHandle>{Src, Dst}))
+				{
+					for (const auto& Tag : *Tags) { CycleConditionsSet.Add(Tag); }
+				}
+			}
 		}
+
+		auto CycleConditions = CycleConditionsSet.Array();
 
 		InCurrent._DependencyCycles.Add(
 			FCk_GoapDiagnostic_DependencyCycle{MoveTemp(ActionsInCycle), MoveTemp(CycleConditions)});
