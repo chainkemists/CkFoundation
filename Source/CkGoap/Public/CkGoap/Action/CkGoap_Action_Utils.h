@@ -165,34 +165,34 @@ public:
 		const FCk_Delegate_Goap_OnActionPlanFailed& InDelegate);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Action",
-		DisplayName = "[Ck][Goap|Action] Bind To OnActionActivated")
+		DisplayName = "[Ck][Goap|Action] Bind To OnPlannerActivated")
 	static FCk_Handle_Goap_Action
-	BindTo_OnActionActivated(
+	BindTo_OnPlannerActivated(
 		UPARAM(ref) FCk_Handle_Goap_Action& InAction,
-		const FCk_Delegate_Goap_OnActionActivated& InDelegate,
+		const FCk_Delegate_Goap_OnPlannerActivated& InDelegate,
 		ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
 		ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Action",
-		DisplayName = "[Ck][Goap|Action] Unbind From OnActionActivated")
+		DisplayName = "[Ck][Goap|Action] Unbind From OnPlannerActivated")
 	static FCk_Handle_Goap_Action
-	UnbindFrom_OnActionActivated(
+	UnbindFrom_OnPlannerActivated(
 		UPARAM(ref) FCk_Handle_Goap_Action& InAction,
-		const FCk_Delegate_Goap_OnActionActivated& InDelegate);
+		const FCk_Delegate_Goap_OnPlannerActivated& InDelegate);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Action",
-		DisplayName = "[Ck][Goap|Action] Bind To OnActionDeactivated")
+		DisplayName = "[Ck][Goap|Action] Bind To OnPlannerDeactivated")
 	static FCk_Handle_Goap_Action
-	BindTo_OnActionDeactivated(
+	BindTo_OnPlannerDeactivated(
 		UPARAM(ref) FCk_Handle_Goap_Action& InAction,
-		const FCk_Delegate_Goap_OnActionDeactivated& InDelegate,
+		const FCk_Delegate_Goap_OnPlannerDeactivated& InDelegate,
 		ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
 		ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Action",
-		DisplayName = "[Ck][Goap|Action] Unbind From OnActionDeactivated")
+		DisplayName = "[Ck][Goap|Action] Unbind From OnPlannerDeactivated")
 	static FCk_Handle_Goap_Action
-	UnbindFrom_OnActionDeactivated(
+	UnbindFrom_OnPlannerDeactivated(
 		UPARAM(ref) FCk_Handle_Goap_Action& InAction,
-		const FCk_Delegate_Goap_OnActionDeactivated& InDelegate);
+		const FCk_Delegate_Goap_OnPlannerDeactivated& InDelegate);
 };

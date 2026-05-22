@@ -20,7 +20,7 @@ class UCk_GoapAction_EntityScript;
 namespace ck
 {
 	class FProcessor_Goap_Planner_Setup;
-	class FProcessor_Goap_Planner_ChainUpdate;
+	class FProcessor_Goap_Planner_UpdateActivation;
 	class FProcessor_Goap_Action_Setup;
 	class FProcessor_Goap_Action_HandleRequests;
 	class FProcessor_Goap_Action_HandleResult;
@@ -32,7 +32,7 @@ namespace ck
 	CK_DEFINE_ECS_TAG(FTag_Goap_Planner_RequiresSetup);
 
 	// Set whenever any action in the ActionSet completes a plan. Consumed +
-	// removed by ChainUpdate. Optimization to skip walking inert ActionSets.
+	// removed by UpdateActivation. Optimization to skip walking inert ActionSets.
 	CK_DEFINE_ECS_TAG(FTag_Goap_Planner_RequiresChainUpdate);
 
 // ====================================================================================================================
@@ -52,7 +52,7 @@ namespace ck
 
 		friend class ::UCk_Utils_Goap_Planner_UE;
 		friend class FProcessor_Goap_Planner_Setup;
-		friend class FProcessor_Goap_Planner_ChainUpdate;
+		friend class FProcessor_Goap_Planner_UpdateActivation;
 
 	private:
 		ECk_EnableDisable _EnableToggle = ECk_EnableDisable::Enable;
@@ -69,28 +69,40 @@ namespace ck
 	};
 
 // ====================================================================================================================
-// ACTIVE CHAIN — Ordered chain of currently-active actions. [0] is the root.
+// ACTIVATION — Per-Planner activation state. Used by UpdateActivation to
+// detect Plan[0] changes frame-over-frame and drive sub-Planner
+// activate/deactivate transitions.
+//
+// _LastActivatedPlan0 — the Plan[0] handle this Planner saw on its previous
+// tick. Compared against the current Plan[0] to detect changes.
+//
+// _IsActive — whether this Planner has been activated by a parent (or, for
+// top-level Planners, by virtue of being top-level). Inactive Planners do not
+// participate in the activation walk; they are mid-tier Planners awaiting
+// their parent to select them as Plan[0].
 // ====================================================================================================================
 
-	struct CKGOAP_API FFragment_Goap_Planner_ActiveChain
+	struct CKGOAP_API FFragment_Goap_Planner_Activation
 	{
 	public:
-		CK_GENERATED_BODY(FFragment_Goap_Planner_ActiveChain);
+		CK_GENERATED_BODY(FFragment_Goap_Planner_Activation);
 
 		friend class ::UCk_Utils_Goap_Planner_UE;
 		friend class ::UCk_Utils_Goap_Action_UE;
-		friend class FProcessor_Goap_Planner_ChainUpdate;
+		friend class FProcessor_Goap_Planner_UpdateActivation;
 
 	private:
-		TArray<FCk_Handle_Goap_Action> _Chain;
+		FCk_Handle_Goap_Action _LastActivatedPlan0;
+		bool _IsActive = false;
 
 	public:
-		CK_PROPERTY_GET(_Chain);
+		CK_PROPERTY_GET(_LastActivatedPlan0);
+		CK_PROPERTY_GET(_IsActive);
 	};
 
 // ====================================================================================================================
 // ACTION CATALOG INDEX — O(1) tag-to-action lookup. Populated at AddAction
-// time; read by ChainUpdate when resolving Plan[0]'s action tag.
+// time; read by lookup helpers (Find_Action, etc.).
 // ====================================================================================================================
 
 	struct CKGOAP_API FFragment_Goap_Planner_ActionCatalogIndex
@@ -100,7 +112,6 @@ namespace ck
 
 		friend class ::UCk_Utils_Goap_Planner_UE;
 		friend class ::UCk_Utils_Goap_Action_UE;
-		friend class FProcessor_Goap_Planner_ChainUpdate;
 
 	private:
 		TMap<FGameplayTag, FCk_Handle_Goap_Action> _TagToAction;
@@ -130,7 +141,7 @@ namespace ck
 
 		friend class ::UCk_Utils_Goap_Planner_UE;
 		friend class ::UCk_Utils_Goap_Action_UE;
-		friend class FProcessor_Goap_Planner_ChainUpdate;
+		friend class FProcessor_Goap_Planner_UpdateActivation;
 		friend class FProcessor_Goap_Action_Setup;
 		friend class FProcessor_Goap_Action_HandleRequests;
 
@@ -166,7 +177,7 @@ namespace ck
 
 		friend class ::UCk_Utils_Goap_Planner_UE;
 		friend class ::UCk_Utils_Goap_Action_UE;
-		friend class FProcessor_Goap_Planner_ChainUpdate;
+		friend class FProcessor_Goap_Planner_UpdateActivation;
 		friend class FProcessor_Goap_Action_Setup;
 		friend class FProcessor_Goap_Action_HandleRequests;
 		friend class FProcessor_Goap_Action_HandleResult;
@@ -214,7 +225,7 @@ namespace ck
 
 		friend class ::UCk_Utils_Goap_Planner_UE;
 		friend class ::UCk_Utils_Goap_Action_UE;
-		friend class FProcessor_Goap_Planner_ChainUpdate;
+		friend class FProcessor_Goap_Planner_UpdateActivation;
 		friend class FProcessor_Goap_Action_Setup;
 		friend class FProcessor_Goap_Action_HandleRequests;
 
