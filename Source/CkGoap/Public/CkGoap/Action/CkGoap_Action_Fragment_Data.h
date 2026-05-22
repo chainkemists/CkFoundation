@@ -113,26 +113,6 @@ struct CKGOAP_API FCk_Request_Goap_Action_CancelPlan
 };
 
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Request_Goap_Action_SetGoal
-{
-    GENERATED_BODY()
-    CK_GENERATED_BODY(FCk_Request_Goap_Action_SetGoal);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    TArray<FCk_GoapWS_Condition_Authored> _Goal;
-
-public:
-    CK_PROPERTY_GET(_Goal);
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Goap_Action_SetGoal, _Goal);
-};
-
-// U11.1: per-Planner SetGoal request — updates the Planner's authored goal
-// (FFragment_Goap_Planner_Goal._GoalAuthored), re-resolves _Goal against the
-// current WS, and queues a replan. Lives in the Action's request queue today
-// because every Action entity carries its own planner-role fragments; the
-// fragment rename to FFragment_Goap_Planner_Requests is U11.5.
-USTRUCT(BlueprintType)
 struct CKGOAP_API FCk_Request_Goap_Planner_SetGoal
 {
     GENERATED_BODY()
