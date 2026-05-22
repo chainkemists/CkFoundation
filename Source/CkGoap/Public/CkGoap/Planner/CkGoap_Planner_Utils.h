@@ -145,6 +145,45 @@ public:
 	static FCk_Handle_Goap_Action
 	Get_RootAction(const FCk_Handle_Goap_Planner& InPlanner);
 
+	// PR-B.1a: Planner-API verb overloads. In this phase these are thin shims
+	// that look up the Planner's _RootAction and delegate to the Action-side
+	// implementation. B.1b will rewire them to read directly from Planner-side
+	// fragments and drop _RootAction.
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Get Plan Status")
+	static ECk_GoapPlanStatus
+	Get_PlanStatus(const FCk_Handle_Goap_Planner& InPlanner);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Get Plan")
+	static TArray<FCk_Handle_Goap_Action>
+	Get_Plan(const FCk_Handle_Goap_Planner& InPlanner);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Get Plan Classes")
+	static TArray<TSubclassOf<UCk_GoapAction_EntityScript>>
+	Get_PlanClasses(const FCk_Handle_Goap_Planner& InPlanner);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Get Plan Cost")
+	static float
+	Get_PlanCost(const FCk_Handle_Goap_Planner& InPlanner);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Get Plan Attempt Count")
+	static int32
+	Get_PlanAttemptCount(const FCk_Handle_Goap_Planner& InPlanner);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Get World State Source (Resolved)")
+	static FCk_Handle_Goap_WorldState
+	Get_WorldStateSource(const FCk_Handle_Goap_Planner& InPlanner);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Get Invalid Goal")
+	static TArray<FCk_GoapWS_Condition_Authored>
+	Get_InvalidGoal(const FCk_Handle_Goap_Planner& InPlanner);
+
 	// ================================================================================================================
 	// REQUESTS
 	// ================================================================================================================
@@ -173,6 +212,55 @@ public:
 	Request_SetGoal(
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
 		const TArray<FCk_GoapWS_Condition_Authored>& InGoal);
+
+	// PR-B.1a: Planner-API request verb overloads. Shims through _RootAction
+	// today; B.1b will route these directly through Planner-side fragments.
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Request Plan")
+	static FCk_Handle_Goap_Planner
+	Request_Plan(UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Request Cancel Plan")
+	static FCk_Handle_Goap_Planner
+	Request_CancelPlan(UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Request Set Replan Interval")
+	static FCk_Handle_Goap_Planner
+	Request_SetReplanInterval(
+		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
+		float InSeconds);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Request Set Replan Policy")
+	static FCk_Handle_Goap_Planner
+	Request_SetReplanPolicy(
+		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
+		ECk_Goap_ReplanPolicy InPolicy);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Request Set Search Budget")
+	static FCk_Handle_Goap_Planner
+	Request_SetSearchBudget(
+		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
+		int64 InMicroseconds);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Request Set Cost Threshold")
+	static FCk_Handle_Goap_Planner
+	Request_SetCostThreshold(
+		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
+		float InThreshold);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Request Set Child Action Cost")
+	static FCk_Handle_Goap_Planner
+	Request_SetChildActionCost(
+		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
+		TSubclassOf<UCk_GoapAction_EntityScript> InChildClass,
+		float InCost);
 
 	// ================================================================================================================
 	// SIGNAL BINDING

@@ -355,6 +355,126 @@ auto
 	return InPlanner.Get<ck::FFragment_Goap_Planner_Current>().Get_RootAction();
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+// PR-B.1a: Planner-API verb shims. Each looks up _RootAction and delegates to
+// the Action-side implementation. The data path is unchanged in this phase —
+// Planner-role fragments still live on the _RootAction Action entity. B.1b
+// will rewire the shims to read Planner-side fragments directly and drop
+// _RootAction entirely.
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Get_PlanStatus(const FCk_Handle_Goap_Planner& InPlanner) -> ECk_GoapPlanStatus
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Get_PlanStatus"))
+	{ return ECk_GoapPlanStatus::Idle; }
+
+	const auto RootAction = Get_RootAction(InPlanner);
+	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
+		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Get_PlanStatus shim cannot dispatch."), InPlanner)
+	{ return ECk_GoapPlanStatus::Idle; }
+
+	return UCk_Utils_Goap_Action_UE::Get_PlanStatus(RootAction);
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Get_Plan(const FCk_Handle_Goap_Planner& InPlanner) -> TArray<FCk_Handle_Goap_Action>
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Get_Plan"))
+	{ return {}; }
+
+	const auto RootAction = Get_RootAction(InPlanner);
+	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
+		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Get_Plan shim cannot dispatch."), InPlanner)
+	{ return {}; }
+
+	return RootAction.Get<ck::FFragment_Goap_Planner_PlanState>().Get_Plan();
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Get_PlanClasses(const FCk_Handle_Goap_Planner& InPlanner) -> TArray<TSubclassOf<UCk_GoapAction_EntityScript>>
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Get_PlanClasses"))
+	{ return {}; }
+
+	const auto RootAction = Get_RootAction(InPlanner);
+	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
+		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Get_PlanClasses shim cannot dispatch."), InPlanner)
+	{ return {}; }
+
+	return UCk_Utils_Goap_Action_UE::Get_Plan(RootAction);
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Get_PlanCost(const FCk_Handle_Goap_Planner& InPlanner) -> float
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Get_PlanCost"))
+	{ return 0.0f; }
+
+	const auto RootAction = Get_RootAction(InPlanner);
+	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
+		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Get_PlanCost shim cannot dispatch."), InPlanner)
+	{ return 0.0f; }
+
+	return UCk_Utils_Goap_Action_UE::Get_PlanCost(RootAction);
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Get_PlanAttemptCount(const FCk_Handle_Goap_Planner& InPlanner) -> int32
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Get_PlanAttemptCount"))
+	{ return 0; }
+
+	const auto RootAction = Get_RootAction(InPlanner);
+	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
+		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Get_PlanAttemptCount shim cannot dispatch."), InPlanner)
+	{ return 0; }
+
+	return RootAction.Get<ck::FFragment_Goap_Planner_PlanState>().Get_PlanAttemptCount();
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Get_WorldStateSource(const FCk_Handle_Goap_Planner& InPlanner) -> FCk_Handle_Goap_WorldState
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Get_WorldStateSource"))
+	{ return {}; }
+
+	const auto RootAction = Get_RootAction(InPlanner);
+	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
+		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Get_WorldStateSource shim cannot dispatch."), InPlanner)
+	{ return {}; }
+
+	return UCk_Utils_Goap_Action_UE::Get_WorldStateSource(RootAction);
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Get_InvalidGoal(const FCk_Handle_Goap_Planner& InPlanner) -> TArray<FCk_GoapWS_Condition_Authored>
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Get_InvalidGoal"))
+	{ return {}; }
+
+	const auto RootAction = Get_RootAction(InPlanner);
+	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
+		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Get_InvalidGoal shim cannot dispatch."), InPlanner)
+	{ return {}; }
+
+	return UCk_Utils_Goap_Action_UE::Get_InvalidGoal(RootAction);
+}
+
 // ====================================================================================================================
 // CONSTRUCTION — AddAction (the only construction verb for children)
 //
@@ -703,6 +823,142 @@ auto
 
 	auto& Requests = RootAction.AddOrGet<ck::FFragment_Goap_Action_Requests>();
 	Requests._Requests.Add(FCk_Request_Goap_Planner_SetGoal{InGoal});
+	return InPlanner;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// PR-B.1a: Planner-API request shims. Look up _RootAction and delegate to the
+// Action-side request implementation. B.1b will route these through Planner-
+// side fragments instead.
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Request_Plan(FCk_Handle_Goap_Planner& InPlanner) -> FCk_Handle_Goap_Planner
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Request_Plan"))
+	{ return InPlanner; }
+
+	auto RootAction = Get_RootAction(InPlanner);
+	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
+		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Request_Plan shim cannot dispatch."), InPlanner)
+	{ return InPlanner; }
+
+	UCk_Utils_Goap_Action_UE::Request_Plan(RootAction);
+	return InPlanner;
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Request_CancelPlan(FCk_Handle_Goap_Planner& InPlanner) -> FCk_Handle_Goap_Planner
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Request_CancelPlan"))
+	{ return InPlanner; }
+
+	auto RootAction = Get_RootAction(InPlanner);
+	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
+		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Request_CancelPlan shim cannot dispatch."), InPlanner)
+	{ return InPlanner; }
+
+	UCk_Utils_Goap_Action_UE::Request_CancelPlan(RootAction);
+	return InPlanner;
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Request_SetReplanInterval(
+		FCk_Handle_Goap_Planner& InPlanner,
+		float InSeconds) -> FCk_Handle_Goap_Planner
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Request_SetReplanInterval"))
+	{ return InPlanner; }
+
+	auto RootAction = Get_RootAction(InPlanner);
+	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
+		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Request_SetReplanInterval shim cannot dispatch."), InPlanner)
+	{ return InPlanner; }
+
+	UCk_Utils_Goap_Action_UE::Request_SetReplanInterval(RootAction, InSeconds);
+	return InPlanner;
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Request_SetReplanPolicy(
+		FCk_Handle_Goap_Planner& InPlanner,
+		ECk_Goap_ReplanPolicy InPolicy) -> FCk_Handle_Goap_Planner
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Request_SetReplanPolicy"))
+	{ return InPlanner; }
+
+	auto RootAction = Get_RootAction(InPlanner);
+	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
+		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Request_SetReplanPolicy shim cannot dispatch."), InPlanner)
+	{ return InPlanner; }
+
+	UCk_Utils_Goap_Action_UE::Request_SetReplanPolicy(RootAction, InPolicy);
+	return InPlanner;
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Request_SetSearchBudget(
+		FCk_Handle_Goap_Planner& InPlanner,
+		int64 InMicroseconds) -> FCk_Handle_Goap_Planner
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Request_SetSearchBudget"))
+	{ return InPlanner; }
+
+	auto RootAction = Get_RootAction(InPlanner);
+	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
+		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Request_SetSearchBudget shim cannot dispatch."), InPlanner)
+	{ return InPlanner; }
+
+	UCk_Utils_Goap_Action_UE::Request_SetSearchBudget(RootAction, InMicroseconds);
+	return InPlanner;
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Request_SetCostThreshold(
+		FCk_Handle_Goap_Planner& InPlanner,
+		float InThreshold) -> FCk_Handle_Goap_Planner
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Request_SetCostThreshold"))
+	{ return InPlanner; }
+
+	auto RootAction = Get_RootAction(InPlanner);
+	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
+		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Request_SetCostThreshold shim cannot dispatch."), InPlanner)
+	{ return InPlanner; }
+
+	UCk_Utils_Goap_Action_UE::Request_SetCostThreshold(RootAction, InThreshold);
+	return InPlanner;
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Request_SetChildActionCost(
+		FCk_Handle_Goap_Planner& InPlanner,
+		TSubclassOf<UCk_GoapAction_EntityScript> InChildClass,
+		float InCost) -> FCk_Handle_Goap_Planner
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Request_SetChildActionCost"))
+	{ return InPlanner; }
+
+	auto RootAction = Get_RootAction(InPlanner);
+	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
+		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Request_SetChildActionCost shim cannot dispatch."), InPlanner)
+	{ return InPlanner; }
+
+	UCk_Utils_Goap_Action_UE::Request_SetActionCost(RootAction, InChildClass, InCost);
 	return InPlanner;
 }
 
