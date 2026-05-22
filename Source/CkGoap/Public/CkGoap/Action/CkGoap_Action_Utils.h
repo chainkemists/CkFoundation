@@ -76,13 +76,6 @@ public:
 	// ================================================================================================================
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Action",
-		DisplayName = "[Ck][Goap|Action] Request Set Goal World State")
-	static FCk_Handle_Goap_Action
-	Request_SetGoalWorldState(
-		UPARAM(ref) FCk_Handle_Goap_Action& InAction,
-		const TArray<FCk_GoapWS_Condition_Authored>& InGoal);
-
-	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Action",
 		DisplayName = "[Ck][Goap|Action] Request Plan")
 	static FCk_Handle_Goap_Action
 	Request_Plan(UPARAM(ref) FCk_Handle_Goap_Action& InAction);

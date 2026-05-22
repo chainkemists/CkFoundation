@@ -181,18 +181,6 @@ auto
 
 auto
 	UCk_Utils_Goap_Action_UE::
-	Request_SetGoalWorldState(
-		FCk_Handle_Goap_Action& InAction,
-		const TArray<FCk_GoapWS_Condition_Authored>& InGoal) -> FCk_Handle_Goap_Action
-{
-	if (NOT ck::IsValid(InAction)) { return InAction; }
-	auto& Reqs = InAction.AddOrGet<ck::FFragment_Goap_Action_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Action_SetGoal{InGoal});
-	return InAction;
-}
-
-auto
-	UCk_Utils_Goap_Action_UE::
 	Request_Plan(FCk_Handle_Goap_Action& InAction) -> FCk_Handle_Goap_Action
 {
 	if (NOT ck::IsValid(InAction)) { return InAction; }
