@@ -111,14 +111,30 @@ namespace ck
 {
 
 // ====================================================================================================================
-// SETUP — Cycle detection on the ActionSet's Action catalog.
+// SETUP — Per-Planner cycle detection over this Planner's direct children.
 //
-// U5.2: iterative Tarjan SCC over the Action-tree _ChildActions edges. Any
-// non-trivial SCC (size > 1, or size == 1 with a self-loop) is recorded in
-// FFragment_Goap_Planner_Current._DependencyCycles as a diagnostic. The
-// planner doesn't refuse to run on a cyclic catalog — diagnostics surface in
-// the debugger, designer fixes it. Runs once after every catalog Action has
-// completed its own Setup.
+// U11.4 — Spec §7.2: each Planner runs Tarjan SCC over its own direct children's
+// dependency graph. "Direct children" of a Planner are its candidate operators —
+// the Actions it considers when planning. In the unified Action-as-Planner
+// model:
+//   - A Planner that is itself an Action (promoted via PromoteActionToPlanner)
+//     has `FFragment_Goap_Action_Tree`; its direct children are its own
+//     `_ChildActions`.
+//   - A top-level Planner (created via Add) is not an Action; its direct
+//     children are the root Action's `_ChildActions` (the root Action is what
+//     subdivides the plan on behalf of the top-level Planner in the current
+//     transitional model).
+//
+// Edges are the existing `_ChildActions` tree edges, but restricted to the
+// direct-children node set so the cycle scan only looks at this Planner's
+// tier rather than the whole catalog. Non-trivial SCCs (size > 1, or size == 1
+// with a self-loop) are recorded in `FFragment_Goap_Planner_Current.
+// _DependencyCycles` as a diagnostic. The planner doesn't refuse cyclic
+// catalogs — designers fix them via the debugger surface.
+//
+// Defers if any direct child still has `FTag_Goap_Action_RequiresSetup` so the
+// per-Action `_Definition` (used to compute precondition/effect overlap below)
+// has been populated.
 // ====================================================================================================================
 
 auto
@@ -129,36 +145,64 @@ auto
 		FFragment_Goap_Planner_Current& InCurrent,
 		const FFragment_Goap_Planner_ActionCatalogIndex& InCatalogIndex) -> void
 {
-	const auto& Catalog = InCatalogIndex.Get_TagToAction();
-	if (Catalog.IsEmpty())
+	(void)InCatalogIndex;  // U11.4: cycle scan no longer walks the full catalog.
+
+	// Resolve this Planner's direct children — the candidate operators it would
+	// pass to A* if it ran a search at its own tier.
+	using ActionHandle = FCk_Handle_Goap_Action;
+	auto DirectChildren = TArray<ActionHandle>{};
+
+	if (InHandle.template Has<FFragment_Goap_Action_Tree>())
 	{
+		// Promoted Action-Planner: direct children are this Action's children.
+		const auto& Tree = InHandle.template Get<FFragment_Goap_Action_Tree>();
+		DirectChildren = Tree.Get_ChildActions();
+	}
+	else if (auto RootAction = InCurrent.Get_RootAction(); ck::IsValid(RootAction))
+	{
+		// Top-level Planner: direct children are its root Action's children.
+		const auto& RootTree = RootAction.template Get<FFragment_Goap_Action_Tree>();
+		DirectChildren = RootTree.Get_ChildActions();
+	}
+
+	if (DirectChildren.IsEmpty())
+	{
+		InCurrent._DependencyCycles.Reset();
 		InHandle.Remove<FTag_Goap_Planner_RequiresSetup>();
 		return;
 	}
 
-	// Defer if any catalog Action hasn't completed Setup yet.
-	for (const auto& Entry : Catalog)
+	// Defer if any direct child hasn't completed Setup yet — we need its
+	// `_Definition` (preconditions / effects) populated for the cycle-condition
+	// overlap pass below.
+	for (const auto& Child : DirectChildren)
 	{
-		const auto& Action = Entry.Value;
-		if (Action.Has<FTag_Goap_Action_RequiresSetup>())
+		if (NOT ck::IsValid(Child)) { continue; }
+		if (Child.template Has<FTag_Goap_Action_RequiresSetup>())
 		{
-			return;  // Defer; keep the ActionSet's RequiresSetup tag for retry.
+			return;  // Defer; keep the Planner's RequiresSetup tag for retry.
 		}
 	}
 
-	// Build the adjacency map keyed by Action handle. The directed edge goes
-	// Parent -> Child (the planner walks down the chain), so a cycle means
-	// a child's child... eventually contains the original parent.
-	using ActionHandle = FCk_Handle_Goap_Action;
+	// Build the adjacency map keyed by direct child. Edges retain the existing
+	// `_ChildActions` tree-edge model (Parent -> Child), but the node set is
+	// constrained to direct children of this Planner so the cycle scan is
+	// scoped to a single tier (per spec §7.2).
+	const auto DirectChildSet = TSet<ActionHandle>{DirectChildren};
 	auto Adj = TMap<ActionHandle, TArray<ActionHandle>>{};
-	for (const auto& Entry : Catalog)
+	for (const auto& Child : DirectChildren)
 	{
-		const auto& Action = Entry.Value;
-		if (NOT ck::IsValid(Action)) { continue; }
+		if (NOT ck::IsValid(Child)) { continue; }
 
-		const auto& Tree = Action.template Get<FFragment_Goap_Action_Tree>();
-		auto& Edges = Adj.Add(Action);
-		Edges = Tree.Get_ChildActions();
+		const auto& Tree = Child.template Get<FFragment_Goap_Action_Tree>();
+		auto& Edges = Adj.Add(Child);
+		for (const auto& GrandChild : Tree.Get_ChildActions())
+		{
+			if (DirectChildSet.Contains(GrandChild))
+			{
+				Edges.Add(GrandChild);
+			}
+		}
 	}
 
 	const auto Sccs = ck_CkGoap_Planner_setup_internal::TarjanScc(Adj);
@@ -208,7 +252,7 @@ auto
 	if (InCurrent._DependencyCycles.Num() > 0)
 	{
 		ck::goap::Warning(
-			TEXT("ActionSet [{}] has [{}] dependency cycle(s) in its Action catalog."),
+			TEXT("Planner [{}] has [{}] dependency cycle(s) among its direct children."),
 			InHandle, InCurrent._DependencyCycles.Num());
 	}
 
