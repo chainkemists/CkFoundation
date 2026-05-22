@@ -3,6 +3,7 @@
 #include "CkGoap/Planner/CkGoap_Planner_Fragment_Data.h"
 #include "CkGoap/CkGoap_Fragment_Data.h"  // FCk_GoapDiagnostic_DependencyCycle
 #include "CkGoap/Action/CkGoap_Action_Fragment_Data.h"  // FCk_Handle_Goap_Action, FCk_GoapWS_Condition_Authored, ECk_GoapPlanStatus
+#include "CkGoap/Action/CkGoap_Action_Fragment.h"        // PR-B.1b prep: Planner-side aliases reuse Action-side fragment types
 #include "CkGoap/Algorithm/CkGoap_WorldState.h"  // goap::FWorldStateCondition
 #include "CkGoap/WorldState/CkGoap_WorldState_Fragment_Data.h"  // FCk_Handle_Goap_WorldState
 
@@ -279,6 +280,38 @@ namespace ck
 		FCk_Delegate_Goap_OnActiveChainChanged,
 		FCk_Handle_Goap_Planner,
 		FCk_Goap_Payload_OnActiveChainChanged);
+
+// ====================================================================================================================
+// PR-B.1b prep — Planner-side fragment / tag aliases.
+//
+// These aliases name the A* pipeline fragments + lifecycle tags by their
+// Planner-scoped names. In the transitional B.1b model the underlying types
+// are still the Action-side ones (stamped on the implicit-root Action entity
+// today); the aliases give us the future names to reference now. Subsequent
+// PR-B.1b sub-commits will:
+//   1. Stamp these fragments on the Planner entity (in addition / instead of
+//      the Action entity) and retarget the A*-pipeline processors to read
+//      them from the Planner entity.
+//   2. Retire the Action-side stamps + `_RootAction` indirection.
+//
+// Adding the aliases now is a no-op behaviourally — the names refer to the
+// same underlying types — but lets call-sites in subsequent commits be written
+// against the destination names without churning the type definitions in the
+// same patch.
+// ====================================================================================================================
+
+	using FFragment_Goap_Planner_Requests       = FFragment_Goap_Action_Requests;
+	using FFragment_Goap_Planner_ReplanThrottle = FFragment_Goap_Action_ReplanThrottle;
+	using FFragment_Goap_Planner_PlanContext    = FFragment_Goap_Action_PlanContext;
+	using FFragment_Goap_Planner_SearchState    = FFragment_Goap_Action_SearchState;
+	using FFragment_Goap_Planner_Result         = FFragment_Goap_Action_Result;
+
+	// Lifecycle tags — Planner-scoped names for the A*-pipeline gating tags.
+	// In the transitional model these are stamped on the implicit-root Action;
+	// B.1b commits 2-3 move the stamps to the Planner entity.
+	using FTag_Goap_Planner_PlanRequested       = FTag_Goap_Action_PlanRequested;
+	using FTag_Goap_Planner_RequiresInitialPlan = FTag_Goap_Action_RequiresInitialPlan;
+	using FTag_Goap_Planner_PlanInFlight        = FTag_Goap_Action_PlanInFlight;
 
 // ====================================================================================================================
 
