@@ -57,13 +57,6 @@ private:
         meta = (AllowPrivateAccess = true))
     FCk_Handle_Goap_WorldState _WorldStateSource_Override;
 
-    // Top-level only: initial goal world state. Ignored on non-top-level
-    // Actions (their goal is injected from the parent Action's Effects at
-    // activation).
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess = true))
-    TArray<FCk_GoapWS_Condition_Authored> _InitialGoal_RootOnly;
-
     // Per-tick A* time slice (microseconds). 0 = unbounded (finish in one tick).
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
@@ -91,7 +84,6 @@ public:
     CK_PROPERTY_GET(_ActionClass);
     CK_PROPERTY_SET(_ActionClass);
     CK_PROPERTY(_WorldStateSource_Override);
-    CK_PROPERTY(_InitialGoal_RootOnly);
     CK_PROPERTY(_SearchBudgetMicroseconds);
     CK_PROPERTY(_CostThreshold);
     CK_PROPERTY(_ReplanPolicy);
@@ -133,6 +125,26 @@ private:
 public:
     CK_PROPERTY_GET(_Goal);
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Goap_Action_SetGoal, _Goal);
+};
+
+// U11.1: per-Planner SetGoal request — updates the Planner's authored goal
+// (FFragment_Goap_Planner_Goal._GoalAuthored), re-resolves _Goal against the
+// current WS, and queues a replan. Lives in the Action's request queue today
+// because every Action entity carries its own planner-role fragments; the
+// fragment rename to FFragment_Goap_Planner_Requests is U11.5.
+USTRUCT(BlueprintType)
+struct CKGOAP_API FCk_Request_Goap_Planner_SetGoal
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_Request_Goap_Planner_SetGoal);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    TArray<FCk_GoapWS_Condition_Authored> _NewGoal;
+
+public:
+    CK_PROPERTY_GET(_NewGoal);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Goap_Planner_SetGoal, _NewGoal);
 };
 
 USTRUCT(BlueprintType)

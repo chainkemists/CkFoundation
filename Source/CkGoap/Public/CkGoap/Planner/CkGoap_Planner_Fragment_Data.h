@@ -6,7 +6,9 @@
 #include "CkCore/Macros/CkMacros.h"
 
 // Need FCk_Handle_Goap_Action for the OnActiveChainChanged payload's TArray<>.
+// Also pulls FCk_GoapWS_Condition_Authored for the Planner's _Goal field.
 #include "CkGoap/Action/CkGoap_Action_Fragment_Data.h"
+#include "CkGoap/CkGoap_Fragment_Data.h"  // FCk_GoapWS_Condition_Authored
 
 #include "CkGoap_Planner_Fragment_Data.generated.h"
 
@@ -47,9 +49,19 @@ private:
 		meta = (AllowPrivateAccess = true))
 	ECk_EnableDisable _InitialToggle = ECk_EnableDisable::Enable;
 
+	// U11.1: the goal this Planner plans toward. Independent of any Action role
+	// effects this entity may carry. May be empty at construction and set later
+	// via Request_SetGoal. Stamped onto the Planner's FFragment_Goap_Planner_Goal
+	// at construction (and propagated to the root Action's planner-role goal via
+	// SetRootAction).
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (AllowPrivateAccess = true))
+	TArray<FCk_GoapWS_Condition_Authored> _Goal;
+
 public:
 	CK_PROPERTY(_PlannerTag);
 	CK_PROPERTY(_InitialToggle);
+	CK_PROPERTY(_Goal);
 
 public:
 	CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Goap_PlannerParamsData, _PlannerTag);

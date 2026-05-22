@@ -138,6 +138,18 @@ public:
 	Request_ResetActiveChain(
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner);
 
+	// U11.1: set the Planner's goal at runtime. Triggers a replan. Per spec
+	// §3.3 — every Planner has its own goal, completely independent from any
+	// Action-role effects this entity may carry. The request is routed onto
+	// the Planner's root Action's request queue (the entity that runs A*
+	// today); the fragment rename to FFragment_Goap_Planner_Requests is U11.5.
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Request Set Goal")
+	static FCk_Handle_Goap_Planner
+	Request_SetGoal(
+		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
+		const TArray<FCk_GoapWS_Condition_Authored>& InGoal);
+
 	// ================================================================================================================
 	// SIGNAL BINDING
 	// ================================================================================================================
