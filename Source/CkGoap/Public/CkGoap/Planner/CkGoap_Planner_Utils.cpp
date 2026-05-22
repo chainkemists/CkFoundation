@@ -6,6 +6,7 @@
 #include "CkGoap/Planner/CkGoap_Planner_Record_Internal.h"  // FFragment_RecordOfGoapPlanners + utils struct
 #include "CkGoap/Planner/CkGoap_Planner_Internal.h"         // DoCreateOrFindActionEntity
 #include "CkGoap/Action/CkGoap_Action_Fragment.h"
+#include "CkGoap/Action/CkGoap_Action_Utils.h"             // U11.3: Action Has() for promotion validation
 #include "CkGoap/Action/CkGoap_Action_Record_Internal.h"        // FFragment_RecordOfGoapActions + utils struct
 #include "CkGoap/WorldState/CkGoap_WorldState_Utils.h"          // Request_AddSubscriber
 #include "CkAStar/CkAStar_Fragment.h"
@@ -454,6 +455,67 @@ auto
 	}
 
 	return ActionEntity;
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	PromoteActionToPlanner(
+		FCk_Handle_Goap_Action& InAction,
+		const FCk_Fragment_Goap_PlannerParamsData& InParams) -> FCk_Handle_Goap_Planner
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InAction),
+		TEXT("Invalid Action handle in PromoteActionToPlanner"))
+	{ return {}; }
+
+	// Must be an Action — Promotion takes an existing Action role and adds the
+	// Planner role on top.
+	CK_ENSURE_IF_NOT(UCk_Utils_Goap_Action_UE::Has(InAction),
+		TEXT("Handle [{}] does not have the Action role; PromoteActionToPlanner requires an Action entity."), InAction)
+	{ return {}; }
+
+	CK_ENSURE_IF_NOT(InParams.Get_PlannerTag().IsValid(),
+		TEXT("Promote params has invalid _PlannerTag (Action [{}])"), InAction)
+	{ return {}; }
+
+	// If already a Planner, treat as a no-op promotion: return the existing
+	// Planner-cast and warn. Re-stamping Params/Current would clobber catalog
+	// state.
+	if (UCk_Utils_Goap_Planner_UE::Has(InAction))
+	{
+		ck::goap::Warning(
+			TEXT("Handle [{}] is already a Planner; PromoteActionToPlanner is a no-op (returning existing Planner-cast)."), InAction);
+		return UCk_Utils_Goap_Planner_UE::Cast(InAction);
+	}
+
+	// Stamp the Planner-role discriminator fragments. The remaining planner-role
+	// fragment cluster (PlanState, Goal, WorldStateSource, Activation) was
+	// already added by DoCreateOrFindActionEntity when this entity was created
+	// as an Action (Path A — transitional dual-role default).
+	InAction.Add<ck::FFragment_Goap_Planner_Params>(InParams);
+	InAction.Add<ck::FFragment_Goap_Planner_Current>();
+	InAction.Add<ck::FFragment_Goap_Planner_ActionCatalogIndex>();
+
+	auto& Current = InAction.Get<ck::FFragment_Goap_Planner_Current>();
+	Current._EnableToggle = InParams.Get_InitialToggle();
+
+	// U11.1: the Planner's authored goal is independent of the Action role's
+	// effects. Overwrite the existing _GoalAuthored (which may have been set
+	// when this entity was the root of a higher-level planner) so the promoted
+	// Planner plans toward what its own InParams says.
+	{
+		auto& GoalFrag = InAction.Get<ck::FFragment_Goap_Planner_Goal>();
+		GoalFrag._GoalAuthored = InParams.Get_Goal();
+		// Clear _Goal — Setup will re-resolve _GoalAuthored → _Goal using this
+		// entity's WS source.
+		GoalFrag._Goal = {};
+		GoalFrag._InvalidGoal = {};
+	}
+
+	// Re-run setup so cycle detection and goal resolution pick up the new
+	// Planner-role config.
+	InAction.AddOrGet<ck::FTag_Goap_Planner_RequiresSetup>();
+
+	return UCk_Utils_Goap_Planner_UE::Cast(InAction);
 }
 
 // ====================================================================================================================
