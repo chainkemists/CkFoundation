@@ -334,6 +334,7 @@ Note: `FFragment_Goap_Planner_PlanState`, `FFragment_Goap_Planner_Goal`, and `FF
 - **Reading `Get_Plan()` while `Get_PlanStatus() == Planning`.** The plan is only populated after `HandleResult` runs. Wait for `OnPlanComplete` or poll status.
 - **Skipping `CK_REGISTER_PROCESSOR` when adding a new GOAP processor.** An unregistered processor compiles silently and is never scheduled.
 - **Numeric world state.** Classical boolean GOAP only. Project to booleans (`HasEnoughX`, `IsAtY`, `IsLowZ`).
+- **Calling `Request_Plan` immediately after a runtime `AddAction`.** The new child Action's `_CachedActionDef` (Preconditions/Effects/Cost extracted from the CDO) is populated by `FProcessor_Goap_Planner_Setup` on the next group tick. A `Request_Plan` issued in the same frame sees a default-constructed candidate (zero cost, empty effects) and the planner silently sticks with the pre-existing operator set. Symptom: tests that mutate the operator catalog at runtime appear to ignore the new Action. Fix: wait 1-3 frames between `AddAction` and `Request_Plan`, or until `OnGoapAction_SetupComplete` fires on the new child.
 
 ---
 
