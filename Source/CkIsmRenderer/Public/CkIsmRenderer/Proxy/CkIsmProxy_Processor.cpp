@@ -200,7 +200,11 @@ namespace ck
         const auto& Get_TransformWithLocalOffset = [&](const FTransform& InTransform) -> FTransform
         {
             const auto& CombinedLocation = InTransform.GetLocation() + InParams.Get_LocalLocationOffset();
-            const auto& CombinedRotation = InParams.Get_LocalRotationOffset().Quaternion() * InTransform.GetRotation();
+            // Post-multiply: the offset composes in the entity's LOCAL frame, like an Unreal relative
+            // transform (childWorldRot = parentRot * relativeRot). Pre-multiplying instead conjugates
+            // any pitch/roll the entity picks up by the offset — a 180-degree yaw offset would mirror
+            // the entity's rock relative to true child entities (e.g. SceneNode-parented doors).
+            const auto& CombinedRotation = InTransform.GetRotation() * InParams.Get_LocalRotationOffset().Quaternion();
 
             CK_ENSURE_IF_NOT(NOT UCk_Utils_Vector3_UE::Get_IsAnyAxisNearlyZero(InParams.Get_ScaleMultiplier()),
                 TEXT("IsmProxy Scale Multiplier has one or more axis nearly equal to 0. Setting it to 1 in non-shipping build"), InParams.Get_ScaleMultiplier())
@@ -284,7 +288,8 @@ namespace ck
         const auto& Get_TransformWithLocalOffset = [&](const FTransform& Transform) -> FTransform
         {
             const auto& CombinedLocation = Transform.GetLocation() + InParams.Get_LocalLocationOffset();
-            const auto& CombinedRotation = InParams.Get_LocalRotationOffset().Quaternion() * Transform.GetRotation();
+            // Post-multiply — see the matching note in FProcessor_IsmProxy_AddInstance.
+            const auto& CombinedRotation = Transform.GetRotation() * InParams.Get_LocalRotationOffset().Quaternion();
             const auto& CombinedScale = Transform.GetScale3D() * InParams.Get_ScaleMultiplier();
 
             return FTransform{ CombinedRotation.Rotator(), CombinedLocation, CombinedScale };
