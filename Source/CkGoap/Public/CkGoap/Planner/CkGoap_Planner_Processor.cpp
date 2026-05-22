@@ -1,4 +1,4 @@
-#include "CkGoap/ActionSet/CkGoap_ActionSet_Processor.h"
+#include "CkGoap/Planner/CkGoap_Planner_Processor.h"
 
 #include "CkGoap/CkGoap_Log.h"
 #include "CkGoap/Action/CkGoap_Action_Fragment.h"
@@ -12,12 +12,12 @@
 
 // ====================================================================================================================
 
-CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_ActionSet_Setup);
-CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_ActionSet_ChainUpdate);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Planner_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Planner_ChainUpdate);
 
 // ====================================================================================================================
 
-namespace ck_ckgoap_actionset_setup_internal
+namespace ck_CkGoap_Planner_setup_internal
 {
 	// Iterative Tarjan SCC over a handle-keyed adjacency map. Returns SCCs as
 	// TArray<TArray<HandleT>>. We deliberately avoid the textbook recursive
@@ -113,24 +113,24 @@ namespace ck
 //
 // U5.2: iterative Tarjan SCC over the Action-tree _ChildActions edges. Any
 // non-trivial SCC (size > 1, or size == 1 with a self-loop) is recorded in
-// FFragment_Goap_ActionSet_Current._DependencyCycles as a diagnostic. The
+// FFragment_Goap_Planner_Current._DependencyCycles as a diagnostic. The
 // planner doesn't refuse to run on a cyclic catalog — diagnostics surface in
 // the debugger, designer fixes it. Runs once after every catalog Action has
 // completed its own Setup.
 // ====================================================================================================================
 
 auto
-	FProcessor_Goap_ActionSet_Setup::
+	FProcessor_Goap_Planner_Setup::
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
-		FFragment_Goap_ActionSet_Current& InCurrent,
-		const FFragment_Goap_ActionSet_ActionCatalogIndex& InCatalogIndex) -> void
+		FFragment_Goap_Planner_Current& InCurrent,
+		const FFragment_Goap_Planner_ActionCatalogIndex& InCatalogIndex) -> void
 {
 	const auto& Catalog = InCatalogIndex.Get_TagToAction();
 	if (Catalog.IsEmpty())
 	{
-		InHandle.Remove<FTag_Goap_ActionSet_RequiresSetup>();
+		InHandle.Remove<FTag_Goap_Planner_RequiresSetup>();
 		return;
 	}
 
@@ -159,7 +159,7 @@ auto
 		Edges = Tree.Get_ChildActions();
 	}
 
-	const auto Sccs = ck_ckgoap_actionset_setup_internal::TarjanScc(Adj);
+	const auto Sccs = ck_CkGoap_Planner_setup_internal::TarjanScc(Adj);
 
 	InCurrent._DependencyCycles.Reset();
 	for (const auto& Scc : Sccs)
@@ -210,11 +210,11 @@ auto
 			InHandle, InCurrent._DependencyCycles.Num());
 	}
 
-	InHandle.Remove<FTag_Goap_ActionSet_RequiresSetup>();
+	InHandle.Remove<FTag_Goap_Planner_RequiresSetup>();
 }
 
 // ====================================================================================================================
-// HELPERS — static members of FProcessor_Goap_ActionSet_ChainUpdate so they
+// HELPERS — static members of FProcessor_Goap_Planner_ChainUpdate so they
 // inherit the processor's friend access to FFragment_Goap_Action_Current.
 // ====================================================================================================================
 
@@ -225,7 +225,7 @@ auto
 //
 // Precondition: InChildCurrent._WorldStateSource_Resolved is valid.
 auto
-	FProcessor_Goap_ActionSet_ChainUpdate::
+	FProcessor_Goap_Planner_ChainUpdate::
 	DoInjectGoalSynchronous(
 		FCk_Handle_Goap_Action& InParentAction,
 		TSubclassOf<UCk_GoapAction_EntityScript> InParentActionClass,
@@ -275,7 +275,7 @@ auto
 }
 
 auto
-	FProcessor_Goap_ActionSet_ChainUpdate::
+	FProcessor_Goap_Planner_ChainUpdate::
 	DoTruncateChainFrom(
 		TArray<FCk_Handle_Goap_Action>& InActiveChain,
 		int32 InStartIndex) -> void
@@ -310,11 +310,11 @@ auto
 // ====================================================================================================================
 
 auto
-	FProcessor_Goap_ActionSet_ChainUpdate::
+	FProcessor_Goap_Planner_ChainUpdate::
 	DoResolveAndAssignWorldStateSource(
 		FCk_Handle_Goap_Action& InChild,
 		const FCk_Handle_Goap_Action& InParent,
-		const FCk_Handle_Goap_ActionSet& InActionSet) -> void
+		const FCk_Handle_Goap_Planner& InPlanner) -> void
 {
 	auto& ChildCurrent = InChild.template Get<FFragment_Goap_Action_Current>();
 	const auto& ChildParams = InChild.template Get<FFragment_Goap_Action_Params>();
@@ -339,9 +339,9 @@ auto
 	}
 
 	// 3. Fall back to the ActionSet-level default WS source.
-	if (InActionSet.template Has<FFragment_Goap_ActionSet_WorldStateSource>())
+	if (InPlanner.template Has<FFragment_Goap_Planner_WorldStateSource>())
 	{
-		const auto& SetWS = InActionSet.template Get<FFragment_Goap_ActionSet_WorldStateSource>();
+		const auto& SetWS = InPlanner.template Get<FFragment_Goap_Planner_WorldStateSource>();
 		ChildCurrent._WorldStateSource_Resolved = SetWS.Get_WorldStateSource();
 	}
 }
@@ -349,7 +349,7 @@ auto
 // ====================================================================================================================
 
 auto
-	FProcessor_Goap_ActionSet_ChainUpdate::
+	FProcessor_Goap_Planner_ChainUpdate::
 	DoSubscribeActionToWorldState(FCk_Handle_Goap_Action& InAction) -> void
 {
 	auto& Current = InAction.template Get<FFragment_Goap_Action_Current>();
@@ -363,7 +363,7 @@ auto
 // ====================================================================================================================
 
 auto
-	FProcessor_Goap_ActionSet_ChainUpdate::
+	FProcessor_Goap_Planner_ChainUpdate::
 	DoUnsubscribeActionFromWorldState(FCk_Handle_Goap_Action& InAction) -> void
 {
 	auto& Current = InAction.template Get<FFragment_Goap_Action_Current>();
@@ -377,14 +377,14 @@ auto
 // ====================================================================================================================
 
 auto
-	FProcessor_Goap_ActionSet_ChainUpdate::
+	FProcessor_Goap_Planner_ChainUpdate::
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
-		const FFragment_Goap_ActionSet_Params& InParams,
-		const FFragment_Goap_ActionSet_Current& InCurrent,
-		FFragment_Goap_ActionSet_ActiveChain& InActiveChain,
-		const FFragment_Goap_ActionSet_ActionCatalogIndex& InCatalogIndex) const -> void
+		const FFragment_Goap_Planner_Params& InParams,
+		const FFragment_Goap_Planner_Current& InCurrent,
+		FFragment_Goap_Planner_ActiveChain& InActiveChain,
+		const FFragment_Goap_Planner_ActionCatalogIndex& InCatalogIndex) const -> void
 {
 	(void)InParams;
 	(void)InCatalogIndex;
@@ -487,7 +487,7 @@ auto
 
 	if (bChainChanged)
 	{
-		UUtils_Signal_OnGoap_ActionSet_ActiveChainChanged::Broadcast(
+		UUtils_Signal_OnGoap_Planner_ActiveChainChanged::Broadcast(
 			InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnActiveChainChanged{OldChainSnapshot}));
 	}
 }

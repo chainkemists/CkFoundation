@@ -10,13 +10,13 @@
 // has been unified into Action under the ActionSet/Action model).
 //
 // Per-Action ECS fragments + per-Action signals → see Action/CkGoap_Action_Fragment.h
-// Per-ActionSet ECS fragments + ActionSet signals → see ActionSet/CkGoap_ActionSet_Fragment.h
+// Per-ActionSet ECS fragments + ActionSet signals → see ActionSet/CkGoap_Planner_Fragment.h
 //
 // This header carries only what lives on the GOAP ROOT entity (the
-// FCk_Handle_Goap container) plus the dirty-tracking tags that are shared
+// FCk_Handle_Goap_Planner container) plus the dirty-tracking tags that are shared
 // across tier subscribers.
 //
-// FFragment_RecordOfGoapActionSets (the root's record of ActionSet entities) is
+// FFragment_RecordOfGoapPlanners (the root's record of ActionSet entities) is
 // intentionally NOT declared here. Defining it would force this public header
 // to include CkRecord_Fragment.h, which transitively pulls
 // FCk_Handle_EntityExtension into every consumer of CkGoap. That trips link

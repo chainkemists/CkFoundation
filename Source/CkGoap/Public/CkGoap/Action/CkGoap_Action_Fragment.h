@@ -15,7 +15,7 @@
 
 // Forward decls in global scope so friend lookups bind correctly.
 class UCk_Utils_Goap_Action_UE;
-class UCk_Utils_Goap_ActionSet_UE;
+class UCk_Utils_Goap_Planner_UE;
 class UCk_GoapAction_EntityScript;
 
 // ====================================================================================================================
@@ -26,7 +26,7 @@ namespace ck
 	class FProcessor_Goap_Action_HandleRequests;
 	class FProcessor_Goap_Action_HandleResult;
 	class FProcessor_Goap_Action_AutoReplan;
-	class FProcessor_Goap_ActionSet_ChainUpdate;
+	class FProcessor_Goap_Planner_ChainUpdate;
 
 // ====================================================================================================================
 // TAGS — action-scoped lifecycle
@@ -66,12 +66,12 @@ namespace ck
 		CK_GENERATED_BODY(FFragment_Goap_Action_Current);
 
 		friend class ::UCk_Utils_Goap_Action_UE;
-		friend class ::UCk_Utils_Goap_ActionSet_UE;
+		friend class ::UCk_Utils_Goap_Planner_UE;
 		friend class FProcessor_Goap_Action_Setup;
 		friend class FProcessor_Goap_Action_HandleRequests;
 		friend class FProcessor_Goap_Action_HandleResult;
 		friend class FProcessor_Goap_Action_AutoReplan;
-		friend class FProcessor_Goap_ActionSet_ChainUpdate;
+		friend class FProcessor_Goap_Planner_ChainUpdate;
 
 	private:
 		// Resolved at activation: override-if-set, else parent's resolved.
@@ -163,7 +163,7 @@ namespace ck
 		friend class FProcessor_Goap_Action_Setup;
 		friend class FProcessor_Goap_Action_HandleRequests;
 		friend class FProcessor_Goap_Action_HandleResult;
-		friend class FProcessor_Goap_ActionSet_ChainUpdate;
+		friend class FProcessor_Goap_Planner_ChainUpdate;
 
 	private:
 		// This Action's own def — extracted once from the CDO at Setup time.
@@ -204,10 +204,10 @@ namespace ck
 		CK_GENERATED_BODY(FFragment_Goap_Action_Tree);
 
 		friend class ::UCk_Utils_Goap_Action_UE;
-		friend class ::UCk_Utils_Goap_ActionSet_UE;
+		friend class ::UCk_Utils_Goap_Planner_UE;
 		friend class FProcessor_Goap_Action_Setup;
 		friend class FProcessor_Goap_Action_HandleResult;
-		friend class FProcessor_Goap_ActionSet_ChainUpdate;
+		friend class FProcessor_Goap_Planner_ChainUpdate;
 
 	private:
 		FCk_Handle_Goap_Action _ParentAction;   // invalid for top-level Actions

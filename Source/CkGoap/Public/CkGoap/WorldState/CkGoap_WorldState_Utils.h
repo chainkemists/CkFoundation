@@ -89,7 +89,7 @@ public:
 	//
 	// In the unified ActionSet/Action model, Actions subscribe themselves at
 	// activation time (ActionSet ChainUpdate processor) and unsubscribe at
-	// deactivation. The root Action subscribes at AddAction_ToActionSet time.
+	// deactivation. The root Action subscribes at AddAction time.
 	// External consumers may also subscribe (e.g. for non-Action reactive
 	// systems).
 	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|WorldState",

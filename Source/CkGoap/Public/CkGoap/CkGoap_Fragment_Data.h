@@ -13,20 +13,6 @@
 class UCk_GoapAction_EntityScript;
 
 // ====================================================================================================================
-// HANDLE — the Bundle/Tier root container. One per gameplay entity; holds
-// FFragment_RecordOfGoapActionSets in its fragment set.
-// ====================================================================================================================
-
-USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
-struct CKGOAP_API FCk_Handle_Goap : public FCk_Handle_TypeSafe
-{
-	GENERATED_BODY()
-	CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Goap);
-};
-
-CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Goap);
-
-// ====================================================================================================================
 // PLAN STATUS
 // ====================================================================================================================
 
@@ -94,19 +80,6 @@ public:
 
 public:
 	CK_DEFINE_CONSTRUCTORS(FCk_GoapWS_Condition_Authored, _Key, _Value);
-};
-
-// ====================================================================================================================
-// ROOT PARAMS — placeholder for future global tuning. Empty in v1.
-// ====================================================================================================================
-
-USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Fragment_Goap_RootParamsData
-{
-	GENERATED_BODY()
-
-public:
-	CK_GENERATED_BODY(FCk_Fragment_Goap_RootParamsData);
 };
 
 // ====================================================================================================================
