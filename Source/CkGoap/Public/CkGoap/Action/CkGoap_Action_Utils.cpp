@@ -1,9 +1,9 @@
 #include "CkGoap/Action/CkGoap_Action_Utils.h"
 
 #include "CkGoap/CkGoap_Log.h"
-#include "CkGoap/ActionSet/CkGoap_ActionSet_Fragment.h"
-#include "CkGoap/ActionSet/CkGoap_ActionSet_Utils.h"            // Find_ActionByClass + CastChecked
-#include "CkGoap/ActionSet/CkGoap_ActionSet_Internal.h"         // DoCreateOrFindActionEntity
+#include "CkGoap/Planner/CkGoap_Planner_Fragment.h"
+#include "CkGoap/Planner/CkGoap_Planner_Utils.h"            // Find_ActionByClass + CastChecked
+#include "CkGoap/Planner/CkGoap_Planner_Internal.h"         // DoCreateOrFindActionEntity
 #include "CkGoap/Action/CkGoap_Action_Fragment.h"
 #include "CkGoap/Action/CkGoap_Action_Record_Internal.h"        // FFragment_RecordOfGoapActions + utils struct
 #include "CkGoap/WorldState/CkGoap_WorldState_Utils.h"          // Request_AddSubscriber
@@ -37,19 +37,19 @@ auto
 	// Walk up the lifetime-owner chain to find the containing ActionSet. Actions
 	// are created with the ActionSet as their lifetime owner (see
 	// DoCreateOrFindActionEntity, which calls Request_CreateEntity_AsTypeSafe
-	// with InActionSet as the owner handle). Lifetime owner is not the same as
+	// with InPlanner as the owner handle). Lifetime owner is not the same as
 	// context owner: context owner is inherited from the owner's context owner
 	// (which may be the test entity or NPC entity), while lifetime owner is the
 	// direct parent entity that created this action — the ActionSet.
 	auto OwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InParentAction);
-	auto ActionSetHandle = UCk_Utils_Goap_ActionSet_UE::CastChecked(OwnerEntity);
+	auto ActionSetHandle = UCk_Utils_Goap_Planner_UE::CastChecked(OwnerEntity);
 
 	CK_ENSURE_IF_NOT(ck::IsValid(ActionSetHandle),
 		TEXT("Parent Action [{}] has no owning ActionSet"), InParentAction)
 	{ return {}; }
 
 	// Create / find the child entity in the ActionSet's catalog.
-	auto ChildHandle = ck::goap::internal_actionset::DoCreateOrFindActionEntity(ActionSetHandle, InParams);
+	auto ChildHandle = ck::goap::internal_planner::DoCreateOrFindActionEntity(ActionSetHandle, InParams);
 
 	if (NOT ck::IsValid(ChildHandle))
 	{ return {}; }
@@ -99,9 +99,9 @@ auto
 				{
 					ChildCurrent._WorldStateSource_Resolved = ParentWS;
 				}
-				else if (ActionSetHandle.Has<ck::FFragment_Goap_ActionSet_WorldStateSource>())
+				else if (ActionSetHandle.Has<ck::FFragment_Goap_Planner_WorldStateSource>())
 				{
-					const auto& SetWS = ActionSetHandle.Get<ck::FFragment_Goap_ActionSet_WorldStateSource>();
+					const auto& SetWS = ActionSetHandle.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
 					if (ck::IsValid(SetWS.Get_WorldStateSource()))
 					{
 						ChildCurrent._WorldStateSource_Resolved = SetWS.Get_WorldStateSource();
