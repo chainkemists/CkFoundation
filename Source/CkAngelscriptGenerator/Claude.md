@@ -67,6 +67,41 @@ The next person to look for "how do I run code while the AS startup modal is up"
 
 Hard cap at `FCkAsRecoveryDispatcher::MaxCycles = 3` per editor session (CTO Rev 10 pushback #2). The session-static counter increments on each modal-tick apply that ran at least one strategy successfully. On exceeding the cap, the dispatcher logs a terminal banner and stops attempting recovery — no further retry loop, no death spiral. `Reset_CyclesRun` is called once from `StartupModule` when the hook is armed.
 
+**The cap is bootstrap-only.** Once `OnFEngineLoopInitComplete` flips `sBootstrapComplete = true` (and resets `sCyclesRun`), mid-session synthesis runs without the cycle cap — the interactive editor can mediate a hung loop, where bootstrap can't. See *Per-signature convergence cap* below for the mid-session backstop.
+
+### Per-signature convergence cap
+
+Hard cap at `FCkAsRecoveryDispatcher::MaxPerSignatureRepeats = 3` for each distinct `<NS>::<func>(<args>)` (or `DynamicHandle::<TypeName>`) the dispatcher synthesizes within a session. Catches "dueling-overloads" loops where the upstream cause is something self-heal can't repair — caller arg order doesn't match the entity script's declared `ExposeOnSpawn` field order, two callers force mutually-exclusive overload shapes (literals vs lvalues), or a typed handle slot has drifted vs base. Symptom before this cap: 724+ `Self-heal recovered: <NS>::<func>(...)` lines per session, every cleanup-boundary wipe undone on the next compile, editor never settles. The bug class is pinned by the 2026-05-21 `UBb_StoreDriver_EntityScript::Params` incident; commit `01a39b58f` on BB `dev-57` is the canonical repro fixture.
+
+Mechanics, mirroring `MaxCycles`:
+
+- Per-key state in the anonymous namespace alongside `sCyclesRun`: `TMap<FString, FConvergenceTracker> sPerSignatureRecoveryCount` (tracks count + observed callsites) plus `TSet<FString> sBlacklistedSignatures` (tripped keys).
+- Gate sits between the drain handlers (`OnModalLoopTick` / `OnTicker_DrainActions`) and `Apply_Strategy`. `Try_ReserveSynthesis(InAction)` builds the key, increments the counter, records the callsite, and returns `true` while `count < MaxPerSignatureRepeats`. On the Nth attempt it blacklists the key, fires `Log_TerminalBanner_ConvergenceFailed(Key, Callsites)`, surfaces a `Show_TerminalToast` (coalesced with the existing fallback path), and returns `false`. Subsequent attempts for that key short-circuit with a single `Skipping convergence-blacklisted signature` log line and no UI repaint.
+- Banner shape (one line, wraps in the log channel):
+  ```
+  [SELF-HEAL] Convergence failed for <NS>::<func>(<args>) after 3 synthesis attempts.
+  Root cause is upstream of self-heal — likely a caller/entity-script signature
+  mismatch (arg order, mutability, or type drift).
+  Callers seen:
+    - <file>:<line>:<col>
+    - ...
+  Self-heal will NOT retry this signature for the rest of this session.
+  Fix the call site or the entity script, then restart the editor.
+  ```
+- Only file-mutating strategies (`SynthesizeStub_EntitySpawnParams`, `KickGenerator_AssetRegistry`, `KickGenerator_DynamicHandle`) are tracked. `Author_FixupRequired_AdjacentStringLiteral` doesn't write files and can't loop. `Unrecognized` already terminates earlier.
+- Reset semantics match `sCyclesRun`: both maps clear at `Reset_CyclesRun()` (cold-launch) and at `Mark_BootstrapComplete()` (bootstrap → mid-session transition). A signature that *was* on the boot-mode blacklist gets a fresh chance to converge mid-session — appropriate because brand-new authoring inside a running editor is a different problem class from a stale-canonical cold-start.
+- "Restart the editor to retry." No auto-rearm. If the user fixes the source, the synthesis requests stop arriving and the blacklist is harmless; if they don't, the blacklist suppresses the loop and the toast coalescer prevents banner spam (`sLastBanner.RepeatCount` collapses identical bursts).
+
+### Cleanup boundaries vs in-memory state
+
+The per-signature tracker and blacklist live in the anonymous namespace alongside `sCyclesRun` — pure session-static memory. They **survive every existing cleanup boundary** because all three of those boundaries touch *files* only:
+
+- `StartupModule`'s `Delete_AllStubRecoveryFiles()` sweep (cold-launch only)
+- `OnPostCompile` synchronous ESP+DH stub deletion
+- `Maybe_RegenAssetRegistry_OnPostCompile`'s FTSTicker post-regen AR stub deletion
+
+A signature that flips to blacklisted stays blacklisted regardless of how many stub files self-heal cleans up between attempts. This is exactly the case the cap is designed for — the dueling-overloads symptom hides itself between cleanup boundaries.
+
 ### Opt-out surfaces
 
 Two paths (either short-circuits hook registration in `StartupModule`):
