@@ -168,6 +168,35 @@ auto
 
 auto
     UCk_Utils_SceneNode_UE::
+    Request_Detach(
+        FCk_Handle_SceneNode& InSceneNode)
+    -> FCk_Handle_SceneNode
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InSceneNode),
+        TEXT("InSceneNode [{}] is INVALID. Unable to detach"), InSceneNode)
+    { return InSceneNode; }
+
+    // The Transform fragment already holds the composed world pose from the last
+    // SceneNode_Update tick. Removing parent / current / layer below stops further
+    // composition; the world transform stays put without an explicit write.
+
+    auto NodeAsTransform = UCk_Utils_Transform_UE::Cast(InSceneNode);
+
+    auto Parent = ck::USceneNodeParent_Utils::Get_StoredEntity_AsTypeSafe<FCk_Handle_Transform>(InSceneNode);
+    if (ck::IsValid(Parent))
+    { ck::FUtils_RecordOfSceneNodes::Request_Disconnect(Parent, InSceneNode); }
+
+    InSceneNode.Try_Remove<ck::SceneNodeParent>();
+    InSceneNode.Try_Remove<ck::FFragment_SceneNode_Current>();
+
+    RemoveExistingLayerTag(NodeAsTransform);
+    NodeAsTransform.Try_Remove<ck::FTag_Transform_ExternallyDriven>();
+
+    return InSceneNode;
+}
+
+auto
+    UCk_Utils_SceneNode_UE::
     ForEach_SceneNode(
         FCk_Handle_Transform& InHandle,
         const FInstancedStruct& InOptionalPayload,
