@@ -279,7 +279,15 @@ namespace ck
 	};
 
 // ====================================================================================================================
-// SIGNALS — ActionSet-scoped
+// SIGNALS — Planner-scoped
+//
+// PR-B.1b Stage 0 (spec §3.5): per-Planner signals have source type
+// FCk_Handle_Goap_Planner. Under Path A the broadcast still happens on the
+// underlying Action entity that runs A* (the implicit-root Action for top-
+// level Planners, or the promoted host for mid-tier Planners) — the Bind/
+// Unbind utilities resolve Planner → underlying entity so storage stays on
+// the broadcasting entity. The payload's source handle is the Planner.
+// Stage 3 will move broadcast onto the Planner entity itself.
 // ====================================================================================================================
 
 	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
@@ -288,6 +296,34 @@ namespace ck
 		FCk_Delegate_Goap_OnActiveChainChanged,
 		FCk_Handle_Goap_Planner,
 		FCk_Goap_Payload_OnActiveChainChanged);
+
+	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+		CKGOAP_API,
+		OnGoap_Planner_PlanComplete,
+		FCk_Delegate_Goap_OnPlanComplete,
+		FCk_Handle_Goap_Planner,
+		FCk_Goap_Payload_OnPlanComplete);
+
+	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+		CKGOAP_API,
+		OnGoap_Planner_PlanFailed,
+		FCk_Delegate_Goap_OnPlanFailed,
+		FCk_Handle_Goap_Planner,
+		FCk_Goap_Payload_OnPlanFailed);
+
+	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+		CKGOAP_API,
+		OnGoap_Planner_Activated,
+		FCk_Delegate_Goap_OnPlannerActivated,
+		FCk_Handle_Goap_Planner,
+		FCk_Goap_Payload_OnPlannerActivated);
+
+	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+		CKGOAP_API,
+		OnGoap_Planner_Deactivated,
+		FCk_Delegate_Goap_OnPlannerDeactivated,
+		FCk_Handle_Goap_Planner,
+		FCk_Goap_Payload_OnPlannerDeactivated);
 
 // ====================================================================================================================
 // PR-B.1b prep — Planner-side fragment / tag aliases.

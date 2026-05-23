@@ -3,8 +3,10 @@
 #include "CkGoap/CkGoap_Log.h"
 #include "CkGoap/CkGoap_Fragment.h"  // dirty tags FTag_Goap_Dirty_WorldState / _Cost
 #include "CkGoap/EntityScripts/CkGoapAction_EntityScript.h"
+#include "CkGoap/Planner/CkGoap_Planner_Utils.h"  // PR-B.1b Stage 0: resolve owning Planner for signal payload
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkEcs/Signal/CkSignal_Utils.h"
 
@@ -55,6 +57,35 @@ namespace
 			if (C.IsValid()) { Set.Add(C); }
 		}
 		return Set;
+	}
+
+	// PR-B.1b Stage 0 — given the Action entity that broadcasts a per-Planner
+	// signal, resolve the owning Planner handle to put in the payload.
+	//
+	// Under Path A:
+	//   * If the broadcasting Action carries the Planner role (promoted mid-tier
+	//     composite), the entity IS the Planner — cast it.
+	//   * Otherwise the broadcaster is the implicit-root Action of a top-level
+	//     Planner — the Planner entity is the Action's lifetime owner.
+	//
+	// Returns an invalid Planner handle if neither resolution succeeds (e.g. the
+	// Action is not under a Planner — should not happen in well-formed graphs).
+	auto Goap_PRB1b_ResolveOwningPlanner(const FCk_Handle_Goap_Action& InAction) -> FCk_Handle_Goap_Planner
+	{
+		if (NOT ck::IsValid(InAction)) { return {}; }
+
+		if (UCk_Utils_Goap_Planner_UE::Has(InAction))
+		{
+			return UCk_Utils_Goap_Planner_UE::CastChecked(InAction);
+		}
+
+		auto Owner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAction);
+		if (UCk_Utils_Goap_Planner_UE::Has(Owner))
+		{
+			return UCk_Utils_Goap_Planner_UE::CastChecked(Owner);
+		}
+
+		return {};
 	}
 }
 
@@ -356,8 +387,11 @@ auto
 					InPlanState._Plan.Reset();
 					InPlanState._PlanCost = 0.0f;
 					InHandle.Try_Remove<FTag_Goap_Action_PlanInFlight>();
-					UUtils_Signal_OnGoap_Action_PlanFailed::Broadcast(
-						InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanFailed{}));
+					{
+						const auto OwningPlanner = Goap_PRB1b_ResolveOwningPlanner(InHandle);
+						UUtils_Signal_OnGoap_Planner_PlanFailed::Broadcast(
+							InHandle, ck::MakePayload(OwningPlanner, FCk_Goap_Payload_OnPlanFailed{}));
+					}
 					return;
 				}
 
@@ -404,9 +438,12 @@ auto
 					InPlanState._Plan.Reset();
 					InPlanState._PlanCost = 0.0f;
 					InHandle.Try_Remove<FTag_Goap_Action_PlanInFlight>();
-					UUtils_Signal_OnGoap_Action_PlanComplete::Broadcast(
-						InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanComplete{
-							TArray<TSubclassOf<UCk_GoapAction_EntityScript>>{}, 0.0f}));
+					{
+						const auto OwningPlanner = Goap_PRB1b_ResolveOwningPlanner(InHandle);
+						UUtils_Signal_OnGoap_Planner_PlanComplete::Broadcast(
+							InHandle, ck::MakePayload(OwningPlanner, FCk_Goap_Payload_OnPlanComplete{
+								TArray<TSubclassOf<UCk_GoapAction_EntityScript>>{}, 0.0f}));
+					}
 					return;
 				}
 
@@ -638,9 +675,12 @@ auto
 			InPlanState._PlanStatus = ECk_GoapPlanStatus::PlanFound;
 			InPlanState._PlanCost = InResult._TotalCost;
 
-			UUtils_Signal_OnGoap_Action_PlanComplete::Broadcast(
-				InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanComplete{
-					InPlanState.Get_PlanClasses(), InResult._TotalCost}));
+			{
+				const auto OwningPlanner = Goap_PRB1b_ResolveOwningPlanner(InHandle);
+				UUtils_Signal_OnGoap_Planner_PlanComplete::Broadcast(
+					InHandle, ck::MakePayload(OwningPlanner, FCk_Goap_Payload_OnPlanComplete{
+						InPlanState.Get_PlanClasses(), InResult._TotalCost}));
+			}
 			break;
 		}
 
@@ -649,8 +689,11 @@ auto
 			InPlanState._PlanStatus = ECk_GoapPlanStatus::PlanFailed;
 			InPlanState._Plan.Reset();
 			InPlanState._PlanCost = 0.0f;
-			UUtils_Signal_OnGoap_Action_PlanFailed::Broadcast(
-				InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanFailed{}));
+			{
+				const auto OwningPlanner = Goap_PRB1b_ResolveOwningPlanner(InHandle);
+				UUtils_Signal_OnGoap_Planner_PlanFailed::Broadcast(
+					InHandle, ck::MakePayload(OwningPlanner, FCk_Goap_Payload_OnPlanFailed{}));
+			}
 			break;
 		}
 
@@ -659,8 +702,11 @@ auto
 			InPlanState._PlanStatus = ECk_GoapPlanStatus::CostThresholdReached;
 			InPlanState._Plan.Reset();
 			InPlanState._PlanCost = 0.0f;
-			UUtils_Signal_OnGoap_Action_PlanFailed::Broadcast(
-				InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanFailed{}));
+			{
+				const auto OwningPlanner = Goap_PRB1b_ResolveOwningPlanner(InHandle);
+				UUtils_Signal_OnGoap_Planner_PlanFailed::Broadcast(
+					InHandle, ck::MakePayload(OwningPlanner, FCk_Goap_Payload_OnPlanFailed{}));
+			}
 			break;
 		}
 
