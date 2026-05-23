@@ -190,6 +190,34 @@ auto
 		PlannerEntity.Add<ck::FFragment_Goap_Planner_Activation>(ActivationFrag);
 	}
 
+	// PR-B.1b Stage 2 — dual-stamp the full Planner-role A*-pipeline cluster on
+	// the Planner entity. The fragments are default-constructed; no processor
+	// reads them yet (the A* pipeline still iterates Action entities under
+	// Path A). Stage 3 retargets the processors to read these Planner-side
+	// fragments authoritatively. Until then this is defensive scaffolding —
+	// memory footprint ticks up slightly (~few hundred bytes per Planner) but
+	// behaviour is unchanged.
+	//
+	// A* params/debug are default-constructed. The PlannerParams struct does not
+	// (today) carry per-Planner budget/cost-threshold knobs — those live on
+	// FCk_Fragment_Goap_ActionParamsData and are stamped per-Action by
+	// DoCreateOrFindActionEntity. Stage 3 will decide whether to lift those
+	// knobs onto PlannerParams or read the per-child Action params at search
+	// seed time; for now defaults are sufficient because nothing reads this
+	// fragment on the Planner entity.
+	PlannerEntity.Add<ck::FFragment_AStar_Params>();
+	PlannerEntity.Add<ck::FFragment_AStar_Debug>();
+
+	// Planner-side A* pipeline fragments. The aliases (see CkGoap_Planner_Fragment.h)
+	// resolve to the Action-side types under the hood; Stage 5 promotes them to
+	// first-class types. EnTT treats Planner vs Action as distinct entities, so
+	// each carries its own copy of these fragments.
+	PlannerEntity.Add<ck::FFragment_Goap_Planner_SearchState>();
+	PlannerEntity.Add<ck::FFragment_Goap_Planner_Result>();
+	PlannerEntity.Add<ck::FFragment_Goap_Planner_PlanContext>();
+	PlannerEntity.Add<ck::FFragment_Goap_Planner_Requests>();
+	PlannerEntity.AddOrGet<ck::FFragment_Goap_Planner_ReplanThrottle>();
+
 	PlannerEntity.AddOrGet<ck::FTag_Goap_Planner_RequiresSetup>();
 
 	// Register the Planner in the owner's record.
@@ -729,6 +757,24 @@ auto
 		auto& WSFragment = InAction.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
 		WSFragment._WorldStateSource = InParams.Get_WorldStateSource();
 	}
+
+	// PR-B.1b Stage 2 — dual-stamp the Planner-role A*-pipeline cluster on the
+	// promoted host. The host is already an Action and therefore already carries
+	// the Action-side copies of these fragments (stamped by
+	// DoCreateOrFindActionEntity). Because the Planner-side aliases resolve to
+	// the same underlying types in this transitional model, we use AddOrGet to
+	// keep the existing fragment instance — calling Add would duplicate-assert.
+	// Stage 5 splits the aliases into first-class types; until then this is a
+	// defensive guarantee that the host carries the cluster, regardless of
+	// which entry point created it.
+	InAction.AddOrGet<ck::FFragment_AStar_Params>();
+	InAction.AddOrGet<ck::FFragment_AStar_Debug>();
+
+	InAction.AddOrGet<ck::FFragment_Goap_Planner_SearchState>();
+	InAction.AddOrGet<ck::FFragment_Goap_Planner_Result>();
+	InAction.AddOrGet<ck::FFragment_Goap_Planner_PlanContext>();
+	InAction.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
+	InAction.AddOrGet<ck::FFragment_Goap_Planner_ReplanThrottle>();
 
 	// Re-run setup so cycle detection and goal resolution pick up the new
 	// Planner-role config.
