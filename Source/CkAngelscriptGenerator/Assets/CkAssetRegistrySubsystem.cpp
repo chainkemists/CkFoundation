@@ -660,7 +660,7 @@ auto
 
         Get_AssetTypeFromAssetData(AssetData, FOnAssetTypeResolved::CreateLambda(
             [this, AssetData, PendingAssets, CollectedFunctions, CollectedLoadFunctions, GeneratedFunctionCount,
-             SkippedAssetCount, ProcessedAssetCount, Content, InConfig, TotalAssets, DispatchComplete, WriteCanonicalAndAdvance]
+             SkippedAssetCount, ProcessedAssetCount, InConfig, TotalAssets, DispatchComplete, WriteCanonicalAndAdvance]
             (const FString& AssetType, bool IsBlueprint, bool IsEditorOnly)
             {
                 auto AssetFunction = FString{};
