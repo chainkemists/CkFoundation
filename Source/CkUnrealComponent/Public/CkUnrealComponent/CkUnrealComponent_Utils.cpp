@@ -114,6 +114,20 @@ auto
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(Handle);
 }
 
+auto
+    UCk_Utils_UnrealComponent_UE::
+    Request_DisableTransformPush(
+        FCk_Handle_UnrealComponent& InUnrealComponent)
+    -> FCk_Handle_UnrealComponent
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InUnrealComponent),
+        TEXT("Cannot disable transform-push on invalid UnrealComponent"))
+    { return InUnrealComponent; }
+
+    InUnrealComponent.AddOrGet<ck::FTag_UnrealComponent_TransformPushDisabled>();
+    return InUnrealComponent;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
