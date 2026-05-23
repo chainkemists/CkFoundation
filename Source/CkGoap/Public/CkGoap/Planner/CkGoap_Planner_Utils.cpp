@@ -1092,3 +1092,201 @@ auto
 		InPlanner, InDelegate);
 	return InPlanner;
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+// PR-B.1b Stage 0 — per-Planner signals.
+//
+// Under Path A the broadcast for these signals happens on the Action entity
+// that actually runs A* (the implicit-root Action for top-level Planners; the
+// promoted host Action for mid-tier Planners). The Bind/Unbind utilities take
+// a Planner handle, resolve it to that broadcasting entity, and store the
+// delegate there so Broadcast → delegate dispatch stays consistent.
+//
+// Resolution rule:
+//   * Promoted mid-tier Planner (carries FFragment_Goap_Action_Tree): the host
+//     entity IS the broadcasting Action — bind on it directly via the
+//     Planner-cast-as-Action handle.
+//   * Top-level Planner (no Tree fragment): bind on _RootAction (set by the
+//     first AddAction call).
+//
+// Stage 3 will collapse this resolution: A* will run on the Planner entity
+// itself and the broadcast will happen there too, so Bind passes through
+// unmodified.
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck::goap::internal_planner
+{
+	// Resolve a Planner handle to the entity that actually broadcasts the
+	// per-Planner signals under Path A. Returns an invalid handle if the
+	// Planner has no _RootAction yet (top-level Planner before its first
+	// AddAction) — callers should bail to avoid a no-op bind on an invalid
+	// entity.
+	static auto DoResolveBroadcastEntity(const FCk_Handle_Goap_Planner& InPlanner) -> FCk_Handle_Goap_Action
+	{
+		if (NOT ck::IsValid(InPlanner)) { return {}; }
+
+		// Promoted mid-tier — host entity carries the Action role + Tree, and is
+		// itself the broadcaster. Reuse UCk_Utils_Goap_Action_UE::CastChecked
+		// pattern by constructing the Action-cast directly: a promoted Planner
+		// is by definition an Action entity, so its handle conversion is safe.
+		if (InPlanner.Has<ck::FFragment_Goap_Action_Tree>())
+		{
+			return UCk_Utils_Goap_Action_UE::CastChecked(InPlanner);
+		}
+
+		// Top-level — broadcast happens on _RootAction.
+		return InPlanner.Get<ck::FFragment_Goap_Planner_Current>().Get_RootAction();
+	}
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	BindTo_OnPlanComplete(
+		FCk_Handle_Goap_Planner& InPlanner,
+		const FCk_Delegate_Goap_OnPlanComplete& InDelegate,
+		ECk_Signal_BindingPolicy InBindingPolicy,
+		ECk_Signal_PostFireBehavior InPostFireBehavior) -> FCk_Handle_Goap_Planner
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in BindTo_OnPlanComplete"))
+	{ return InPlanner; }
+
+	auto BroadcastEntity = ck::goap::internal_planner::DoResolveBroadcastEntity(InPlanner);
+	CK_ENSURE_IF_NOT(ck::IsValid(BroadcastEntity),
+		TEXT("Planner [{}] has no broadcast entity (no _RootAction yet — call AddAction first). Bind ignored."),
+		InPlanner)
+	{ return InPlanner; }
+
+	CK_SIGNAL_BIND(ck::UUtils_Signal_OnGoap_Planner_PlanComplete,
+		BroadcastEntity, InDelegate, InBindingPolicy, InPostFireBehavior);
+	return InPlanner;
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	UnbindFrom_OnPlanComplete(
+		FCk_Handle_Goap_Planner& InPlanner,
+		const FCk_Delegate_Goap_OnPlanComplete& InDelegate) -> FCk_Handle_Goap_Planner
+{
+	if (NOT ck::IsValid(InPlanner)) { return InPlanner; }
+
+	auto BroadcastEntity = ck::goap::internal_planner::DoResolveBroadcastEntity(InPlanner);
+	if (NOT ck::IsValid(BroadcastEntity)) { return InPlanner; }
+
+	CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnGoap_Planner_PlanComplete, BroadcastEntity, InDelegate);
+	return InPlanner;
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	BindTo_OnPlanFailed(
+		FCk_Handle_Goap_Planner& InPlanner,
+		const FCk_Delegate_Goap_OnPlanFailed& InDelegate,
+		ECk_Signal_BindingPolicy InBindingPolicy,
+		ECk_Signal_PostFireBehavior InPostFireBehavior) -> FCk_Handle_Goap_Planner
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in BindTo_OnPlanFailed"))
+	{ return InPlanner; }
+
+	auto BroadcastEntity = ck::goap::internal_planner::DoResolveBroadcastEntity(InPlanner);
+	CK_ENSURE_IF_NOT(ck::IsValid(BroadcastEntity),
+		TEXT("Planner [{}] has no broadcast entity (no _RootAction yet — call AddAction first). Bind ignored."),
+		InPlanner)
+	{ return InPlanner; }
+
+	CK_SIGNAL_BIND(ck::UUtils_Signal_OnGoap_Planner_PlanFailed,
+		BroadcastEntity, InDelegate, InBindingPolicy, InPostFireBehavior);
+	return InPlanner;
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	UnbindFrom_OnPlanFailed(
+		FCk_Handle_Goap_Planner& InPlanner,
+		const FCk_Delegate_Goap_OnPlanFailed& InDelegate) -> FCk_Handle_Goap_Planner
+{
+	if (NOT ck::IsValid(InPlanner)) { return InPlanner; }
+
+	auto BroadcastEntity = ck::goap::internal_planner::DoResolveBroadcastEntity(InPlanner);
+	if (NOT ck::IsValid(BroadcastEntity)) { return InPlanner; }
+
+	CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnGoap_Planner_PlanFailed, BroadcastEntity, InDelegate);
+	return InPlanner;
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	BindTo_OnPlannerActivated(
+		FCk_Handle_Goap_Planner& InPlanner,
+		const FCk_Delegate_Goap_OnPlannerActivated& InDelegate,
+		ECk_Signal_BindingPolicy InBindingPolicy,
+		ECk_Signal_PostFireBehavior InPostFireBehavior) -> FCk_Handle_Goap_Planner
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in BindTo_OnPlannerActivated"))
+	{ return InPlanner; }
+
+	auto BroadcastEntity = ck::goap::internal_planner::DoResolveBroadcastEntity(InPlanner);
+	CK_ENSURE_IF_NOT(ck::IsValid(BroadcastEntity),
+		TEXT("Planner [{}] has no broadcast entity (no _RootAction yet — call AddAction first). Bind ignored."),
+		InPlanner)
+	{ return InPlanner; }
+
+	CK_SIGNAL_BIND(ck::UUtils_Signal_OnGoap_Planner_Activated,
+		BroadcastEntity, InDelegate, InBindingPolicy, InPostFireBehavior);
+	return InPlanner;
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	UnbindFrom_OnPlannerActivated(
+		FCk_Handle_Goap_Planner& InPlanner,
+		const FCk_Delegate_Goap_OnPlannerActivated& InDelegate) -> FCk_Handle_Goap_Planner
+{
+	if (NOT ck::IsValid(InPlanner)) { return InPlanner; }
+
+	auto BroadcastEntity = ck::goap::internal_planner::DoResolveBroadcastEntity(InPlanner);
+	if (NOT ck::IsValid(BroadcastEntity)) { return InPlanner; }
+
+	CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnGoap_Planner_Activated, BroadcastEntity, InDelegate);
+	return InPlanner;
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	BindTo_OnPlannerDeactivated(
+		FCk_Handle_Goap_Planner& InPlanner,
+		const FCk_Delegate_Goap_OnPlannerDeactivated& InDelegate,
+		ECk_Signal_BindingPolicy InBindingPolicy,
+		ECk_Signal_PostFireBehavior InPostFireBehavior) -> FCk_Handle_Goap_Planner
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in BindTo_OnPlannerDeactivated"))
+	{ return InPlanner; }
+
+	auto BroadcastEntity = ck::goap::internal_planner::DoResolveBroadcastEntity(InPlanner);
+	CK_ENSURE_IF_NOT(ck::IsValid(BroadcastEntity),
+		TEXT("Planner [{}] has no broadcast entity (no _RootAction yet — call AddAction first). Bind ignored."),
+		InPlanner)
+	{ return InPlanner; }
+
+	CK_SIGNAL_BIND(ck::UUtils_Signal_OnGoap_Planner_Deactivated,
+		BroadcastEntity, InDelegate, InBindingPolicy, InPostFireBehavior);
+	return InPlanner;
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	UnbindFrom_OnPlannerDeactivated(
+		FCk_Handle_Goap_Planner& InPlanner,
+		const FCk_Delegate_Goap_OnPlannerDeactivated& InDelegate) -> FCk_Handle_Goap_Planner
+{
+	if (NOT ck::IsValid(InPlanner)) { return InPlanner; }
+
+	auto BroadcastEntity = ck::goap::internal_planner::DoResolveBroadcastEntity(InPlanner);
+	if (NOT ck::IsValid(BroadcastEntity)) { return InPlanner; }
+
+	CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnGoap_Planner_Deactivated, BroadcastEntity, InDelegate);
+	return InPlanner;
+}

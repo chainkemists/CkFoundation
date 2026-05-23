@@ -505,8 +505,16 @@ auto
 
 	Activation._IsActive = true;
 
-	UUtils_Signal_OnGoap_Planner_Activated::Broadcast(
-		InPlanner, ck::MakePayload(InPlanner, FCk_Goap_Payload_OnPlannerActivated{}));
+	// PR-B.1b Stage 0 — broadcast still happens on the Action entity (Path A);
+	// payload source-handle is the Planner-cast of the activated entity (sub-
+	// Planners are always promoted, so this cast is safe).
+	{
+		auto PlannerCast = UCk_Utils_Goap_Planner_UE::Has(InPlanner)
+			? UCk_Utils_Goap_Planner_UE::CastChecked(InPlanner)
+			: FCk_Handle_Goap_Planner{};
+		UUtils_Signal_OnGoap_Planner_Activated::Broadcast(
+			InPlanner, ck::MakePayload(PlannerCast, FCk_Goap_Payload_OnPlannerActivated{}));
+	}
 }
 
 // ====================================================================================================================
@@ -566,8 +574,15 @@ auto
 	Activation._IsActive = false;
 	Activation._LastActivatedPlan0 = {};
 
-	UUtils_Signal_OnGoap_Planner_Deactivated::Broadcast(
-		InPlanner, ck::MakePayload(InPlanner, FCk_Goap_Payload_OnPlannerDeactivated{}));
+	// PR-B.1b Stage 0 — broadcast still happens on the Action entity (Path A);
+	// payload source-handle is the Planner-cast of the deactivated entity.
+	{
+		auto PlannerCast = UCk_Utils_Goap_Planner_UE::Has(InPlanner)
+			? UCk_Utils_Goap_Planner_UE::CastChecked(InPlanner)
+			: FCk_Handle_Goap_Planner{};
+		UUtils_Signal_OnGoap_Planner_Deactivated::Broadcast(
+			InPlanner, ck::MakePayload(PlannerCast, FCk_Goap_Payload_OnPlannerDeactivated{}));
+	}
 }
 
 // ====================================================================================================================

@@ -113,3 +113,27 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
 	FCk_Handle_Goap_Planner, InPlanner,
 	FCk_Goap_Payload_OnActiveChainChanged, InPayload);
 
+// PR-B.1b Stage 0 — per-Planner signal delegates (spec §3.5). Source type is
+// FCk_Handle_Goap_Planner. Moved from CkGoap_Action_Fragment_Data.h and
+// renamed (OnActionPlan* → OnPlan*) to align with the new signal class names.
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+	FCk_Delegate_Goap_OnPlanComplete,
+	FCk_Handle_Goap_Planner, InPlanner,
+	FCk_Goap_Payload_OnPlanComplete, InPayload);
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+	FCk_Delegate_Goap_OnPlanFailed,
+	FCk_Handle_Goap_Planner, InPlanner,
+	FCk_Goap_Payload_OnPlanFailed, InPayload);
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+	FCk_Delegate_Goap_OnPlannerActivated,
+	FCk_Handle_Goap_Planner, InPlanner,
+	FCk_Goap_Payload_OnPlannerActivated, InPayload);
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+	FCk_Delegate_Goap_OnPlannerDeactivated,
+	FCk_Handle_Goap_Planner, InPlanner,
+	FCk_Goap_Payload_OnPlannerDeactivated, InPayload);
+

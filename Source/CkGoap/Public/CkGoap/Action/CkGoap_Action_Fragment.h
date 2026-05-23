@@ -251,41 +251,5 @@ namespace ck
 	using FFragment_Goap_Action_Result      = TFragment_AStar_Result<int32>;
 
 // ====================================================================================================================
-// SIGNALS — Action-scoped
-// ====================================================================================================================
-
-	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
-		CKGOAP_API,
-		OnGoap_Action_PlanComplete,
-		FCk_Delegate_Goap_OnActionPlanComplete,
-		FCk_Handle_Goap_Action,
-		FCk_Goap_Payload_OnPlanComplete);
-
-	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
-		CKGOAP_API,
-		OnGoap_Action_PlanFailed,
-		FCk_Delegate_Goap_OnActionPlanFailed,
-		FCk_Handle_Goap_Action,
-		FCk_Goap_Payload_OnPlanFailed);
-
-	// U11.2: per-sub-Planner activation. Broadcast source is the activated
-	// (or deactivated) sub-Planner. In the transitional model, sub-Planners are
-	// Action entities (composite Actions are dual-role Action+Planner), hence
-	// the source type remains FCk_Handle_Goap_Action.
-	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
-		CKGOAP_API,
-		OnGoap_Planner_Activated,
-		FCk_Delegate_Goap_OnPlannerActivated,
-		FCk_Handle_Goap_Action,
-		FCk_Goap_Payload_OnPlannerActivated);
-
-	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
-		CKGOAP_API,
-		OnGoap_Planner_Deactivated,
-		FCk_Delegate_Goap_OnPlannerDeactivated,
-		FCk_Handle_Goap_Action,
-		FCk_Goap_Payload_OnPlannerDeactivated);
-
-// ====================================================================================================================
 
 } // namespace ck
