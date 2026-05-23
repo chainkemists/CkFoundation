@@ -117,6 +117,75 @@ auto
     auto AssetPath = InAssetData.GetSoftObjectPath();
     auto AssetName = InAssetData.AssetName.ToString();
 
+    // Sync resolve — runs BEFORE the async-load so the result is in hand before
+    // the regen-completion event fires. Closes the canonical race where slow
+    // async callbacks landed AFTER the batch was declared complete, dropping
+    // the accessor from the output and triggering the self-heal synth/cleanup
+    // loop. Two-path split, gated on AssetData class:
+    //   - Blueprint-derived assets: FPackageReader linker walk for the
+    //     generated class's native parent (BPs don't carry the parent class
+    //     name directly in AssetData; we have to walk the _C export chain).
+    //   - Non-Blueprint assets: AssetData::GetClass() is authoritative and
+    //     synchronous.
+    // The gate matters because BP linker-walk on a non-BP asset (e.g. an
+    // AnimMontage containing embedded AnimNotifyState `_C` exports) can grab
+    // the wrong class — the embedded BP's class, not the asset's class.
+    if (const auto AssetClass = InAssetData.GetClass(); ck::IsValid(AssetClass))
+    {
+        const auto IsBlueprintAsset = AssetClass->IsChildOf<UBlueprint>();
+
+        if (IsBlueprintAsset)
+        {
+            const auto SyncResolvedClassName = ck::angelscriptgenerator::self_heal::FCkAsAssetRegistryStubSynthesizer
+                ::Resolve_ClassName_FromPackageReader_OnDisk(AssetPath.ToString());
+
+            if (NOT SyncResolvedClassName.IsEmpty())
+            {
+                // Recover IsEditorOnly opportunistically. TryFindTypeSlow
+                // returns null for AS-defined classes during the AS reload
+                // window, but those classes are runtime by definition (UCk_*
+                // AS classes aren't editor-only), so the false-default is the
+                // correct answer in that failure mode. Native editor-utility
+                // classes (UEditorUtilityWidget, etc.) are always findable
+                // since they're loaded at engine startup.
+                auto IsEditorOnly = false;
+                if (const auto ResolvedClass = UClass::TryFindTypeSlow<UClass>(SyncResolvedClassName);
+                    ck::IsValid(ResolvedClass))
+                {
+                    if (IsEditorOnlyClass(ResolvedClass))
+                    { IsEditorOnly = true; }
+                }
+
+                ck::angelscriptgenerator::Log(TEXT("Sync-resolved BP class via FPackageReader linker: {} for {} (IsEditorOnly: {})"),
+                    SyncResolvedClassName, AssetName, IsEditorOnly);
+
+                constexpr auto IsBlueprintLike = true;
+                OnResolved.ExecuteIfBound(SyncResolvedClassName, IsBlueprintLike, IsEditorOnly);
+                return;
+            }
+        }
+        else
+        {
+            // Non-BP path. Loses LoadedAsset->IsEditorOnly() (instance-level
+            // UObject flag) vs the async path; preserves the class-level
+            // IsEditorOnlyClass check, which is the load-bearing branch on
+            // game assets.
+            if (const auto NativeParentClass = Get_NonBlueprintParentClass(AssetClass);
+                ck::IsValid(NativeParentClass))
+            {
+                const auto IsEditorOnly = IsEditorOnlyClass(NativeParentClass);
+                const auto Result = Get_CorrectClassNameWithPrefix(NativeParentClass);
+
+                ck::angelscriptgenerator::Log(TEXT("Sync-resolved non-BP class via AssetData: {} for {} (IsEditorOnly: {})"),
+                    Result, AssetName, IsEditorOnly);
+
+                constexpr auto IsBlueprintLike = false;
+                OnResolved.ExecuteIfBound(Result, IsBlueprintLike, IsEditorOnly);
+                return;
+            }
+        }
+    }
+
     ck::angelscriptgenerator::Log(TEXT("Loading asset asynchronously: {}"), AssetName);
 
     const auto LoadHandle = StreamableManager.RequestAsyncLoad(
