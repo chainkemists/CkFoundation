@@ -550,9 +550,109 @@ auto
     auto PendingAssets = MakeShared<int32>(0);
     auto CollectedFunctions = MakeShared<TArray<FString>>();
     auto CollectedLoadFunctions = MakeShared<TArray<FString>>();
+    auto DispatchComplete = MakeShared<bool>(false);
 
     CollectedFunctions->Reserve(TotalAssets);
     CollectedLoadFunctions->Reserve(TotalAssets);
+
+    // Shared write+broadcast+queue-advance block. Fires exactly once per config:
+    // either from the last per-asset callback to drain (async path) or directly
+    // after the for-loop when every asset resolved synchronously (Race A sync path).
+    auto WriteCanonicalAndAdvance = [this, Content, CollectedFunctions, CollectedLoadFunctions,
+                                     GeneratedFunctionCount, SkippedAssetCount, InConfig, TotalAssets]()
+    {
+        auto FinalContent = Content;
+
+        CollectedFunctions->Sort();
+        for (const auto& Function : *CollectedFunctions)
+        {
+            if (NOT Function.IsEmpty())
+            {
+                FinalContent += Function;
+            }
+        }
+
+        FinalContent += TEXT("}\n\n");
+
+        FinalContent += TEXT("// Blocking loads - loads asset immediately\n");
+        FinalContent += ck::Format_UE(TEXT("namespace {}::load\n{{\n"), InConfig->Namespace);
+
+        CollectedLoadFunctions->Sort();
+        for (const auto& LoadFunction : *CollectedLoadFunctions)
+        {
+            if (NOT LoadFunction.IsEmpty())
+            {
+                FinalContent += LoadFunction;
+            }
+        }
+
+        FinalContent += TEXT("}\n");
+
+        auto OutputDir = Get_OutputDirectoryForRootPath(InConfig->AssetDiscoveryRoot);
+        auto OutputPath = OutputDir / InConfig->OutputFileName;
+
+        // Non-regression guard: refuse to overwrite a populated file with a 0-accessor regen.
+        // Likely cause is the AssetRegistry not having finished cataloging this plugin mount yet
+        // when the PostCompile sweep ran. The next regen pass will retry once the catalog is ready.
+        if (*GeneratedFunctionCount == 0 && IFileManager::Get().FileExists(*OutputPath))
+        {
+            auto ExistingContent = FString{};
+            if (FFileHelper::LoadFileToString(ExistingContent, *OutputPath))
+            {
+                const auto AccessorToken = FString{TEXT("TSoftObjectPtr<")};
+                auto PriorAccessorCount = int32{0};
+                auto SearchStart = int32{0};
+                while (true)
+                {
+                    const auto Found = ExistingContent.Find(AccessorToken, ESearchCase::CaseSensitive, ESearchDir::FromStart, SearchStart);
+                    if (Found == INDEX_NONE)
+                    { break; }
+                    PriorAccessorCount++;
+                    SearchStart = Found + AccessorToken.Len();
+                }
+
+                if (PriorAccessorCount > 0)
+                {
+                    ck::angelscriptgenerator::Warning(
+                        TEXT("Refusing to overwrite [{}] - regen produced 0 accessors but existing file has {} accessor(s). ")
+                        TEXT("Likely cause: AssetRegistry has not finished cataloging this mount yet. ")
+                        TEXT("Skipping write; next regen pass will retry once catalog is ready."),
+                        InConfig->OutputFileName, PriorAccessorCount);
+
+                    ActiveSlowTask.Reset();
+                    IsGenerationInProgress = false;
+                    ScanScriptFilesForUsage();
+                    OnAssetRegistryComplete.Broadcast(*GeneratedFunctionCount, *SkippedAssetCount, TotalAssets);
+                    Request_ProcessNextInQueue();
+                    return;
+                }
+            }
+        }
+
+        IFileManager::Get().MakeDirectory(*OutputDir, true);
+
+        if (FFileHelper::SaveStringToFile(FinalContent, *OutputPath))
+        {
+            ck::angelscriptgenerator::Log(TEXT("Generated: {} with {} functions ({} assets skipped)"),
+                                         InConfig->OutputFileName, *GeneratedFunctionCount, *SkippedAssetCount);
+        }
+        else
+        {
+            ck::angelscriptgenerator::Warning(TEXT("Failed to write file: {}"), OutputPath);
+        }
+
+        // Clean up slow task and reset flag
+        ActiveSlowTask.Reset();
+        IsGenerationInProgress = false;
+
+        // Rebuild script usage map now that Map 1 is populated
+        ScanScriptFilesForUsage();
+
+        OnAssetRegistryComplete.Broadcast(*GeneratedFunctionCount, *SkippedAssetCount, TotalAssets);
+
+        // Process next item in queue
+        Request_ProcessNextInQueue();
+    };
 
     for (const auto& AssetData : DiscoveredAssets)
     {
@@ -560,7 +660,7 @@ auto
 
         Get_AssetTypeFromAssetData(AssetData, FOnAssetTypeResolved::CreateLambda(
             [this, AssetData, PendingAssets, CollectedFunctions, CollectedLoadFunctions, GeneratedFunctionCount,
-             SkippedAssetCount, ProcessedAssetCount, Content, InConfig, TotalAssets]
+             SkippedAssetCount, ProcessedAssetCount, Content, InConfig, TotalAssets, DispatchComplete, WriteCanonicalAndAdvance]
             (const FString& AssetType, bool IsBlueprint, bool IsEditorOnly)
             {
                 auto AssetFunction = FString{};
@@ -675,101 +775,23 @@ auto
 
                 OnAssetRegistryProgress.Broadcast(*ProcessedAssetCount, TotalAssets);
 
-                if (*PendingAssets <= 0)
+                // Gated on DispatchComplete to suppress per-asset writes during the synchronous
+                // drain of the for-loop (Race A made resolution sync, which previously caused
+                // ~1400 writes per regen). Only fires once: from the last async callback to drain.
+                if (*DispatchComplete && *PendingAssets <= 0)
                 {
-                    auto FinalContent = Content;
-
-                    CollectedFunctions->Sort();
-                    for (const auto& Function : *CollectedFunctions)
-                    {
-                        if (NOT Function.IsEmpty())
-                        {
-                            FinalContent += Function;
-                        }
-                    }
-
-                    FinalContent += TEXT("}\n\n");
-
-                    FinalContent += TEXT("// Blocking loads - loads asset immediately\n");
-                    FinalContent += ck::Format_UE(TEXT("namespace {}::load\n{{\n"), InConfig->Namespace);
-
-                    CollectedLoadFunctions->Sort();
-                    for (const auto& LoadFunction : *CollectedLoadFunctions)
-                    {
-                        if (NOT LoadFunction.IsEmpty())
-                        {
-                            FinalContent += LoadFunction;
-                        }
-                    }
-
-                    FinalContent += TEXT("}\n");
-
-                    auto OutputDir = Get_OutputDirectoryForRootPath(InConfig->AssetDiscoveryRoot);
-                    auto OutputPath = OutputDir / InConfig->OutputFileName;
-
-                    // Non-regression guard: refuse to overwrite a populated file with a 0-accessor regen.
-                    // Likely cause is the AssetRegistry not having finished cataloging this plugin mount yet
-                    // when the PostCompile sweep ran. The next regen pass will retry once the catalog is ready.
-                    if (*GeneratedFunctionCount == 0 && IFileManager::Get().FileExists(*OutputPath))
-                    {
-                        auto ExistingContent = FString{};
-                        if (FFileHelper::LoadFileToString(ExistingContent, *OutputPath))
-                        {
-                            const auto AccessorToken = FString{TEXT("TSoftObjectPtr<")};
-                            auto PriorAccessorCount = int32{0};
-                            auto SearchStart = int32{0};
-                            while (true)
-                            {
-                                const auto Found = ExistingContent.Find(AccessorToken, ESearchCase::CaseSensitive, ESearchDir::FromStart, SearchStart);
-                                if (Found == INDEX_NONE)
-                                { break; }
-                                PriorAccessorCount++;
-                                SearchStart = Found + AccessorToken.Len();
-                            }
-
-                            if (PriorAccessorCount > 0)
-                            {
-                                ck::angelscriptgenerator::Warning(
-                                    TEXT("Refusing to overwrite [{}] - regen produced 0 accessors but existing file has {} accessor(s). ")
-                                    TEXT("Likely cause: AssetRegistry has not finished cataloging this mount yet. ")
-                                    TEXT("Skipping write; next regen pass will retry once catalog is ready."),
-                                    InConfig->OutputFileName, PriorAccessorCount);
-
-                                ActiveSlowTask.Reset();
-                                IsGenerationInProgress = false;
-                                ScanScriptFilesForUsage();
-                                OnAssetRegistryComplete.Broadcast(*GeneratedFunctionCount, *SkippedAssetCount, TotalAssets);
-                                Request_ProcessNextInQueue();
-                                return;
-                            }
-                        }
-                    }
-
-                    IFileManager::Get().MakeDirectory(*OutputDir, true);
-
-                    if (FFileHelper::SaveStringToFile(FinalContent, *OutputPath))
-                    {
-                        ck::angelscriptgenerator::Log(TEXT("Generated: {} with {} functions ({} assets skipped)"),
-                                                     InConfig->OutputFileName, *GeneratedFunctionCount, *SkippedAssetCount);
-                    }
-                    else
-                    {
-                        ck::angelscriptgenerator::Warning(TEXT("Failed to write file: {}"), OutputPath);
-                    }
-
-                    // Clean up slow task and reset flag
-                    ActiveSlowTask.Reset();
-                    IsGenerationInProgress = false;
-
-                    // Rebuild script usage map now that Map 1 is populated
-                    ScanScriptFilesForUsage();
-
-                    OnAssetRegistryComplete.Broadcast(*GeneratedFunctionCount, *SkippedAssetCount, TotalAssets);
-
-                    // Process next item in queue
-                    Request_ProcessNextInQueue();
+                    WriteCanonicalAndAdvance();
                 }
             }));
+    }
+
+    // Mark dispatch complete. If every asset resolved synchronously above, PendingAssets is
+    // already 0 and no callback has fired the write yet (gated). Fire it here. If any callback
+    // is still in flight, the last one to drain will see DispatchComplete=true and fire.
+    *DispatchComplete = true;
+    if (*PendingAssets <= 0)
+    {
+        WriteCanonicalAndAdvance();
     }
 }
 
