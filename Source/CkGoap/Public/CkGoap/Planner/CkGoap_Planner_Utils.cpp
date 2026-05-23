@@ -190,22 +190,19 @@ auto
 		PlannerEntity.Add<ck::FFragment_Goap_Planner_Activation>(ActivationFrag);
 	}
 
-	// PR-B.1b Stage 2 — dual-stamp the full Planner-role A*-pipeline cluster on
-	// the Planner entity. The fragments are default-constructed; no processor
-	// reads them yet (the A* pipeline still iterates Action entities under
-	// Path A). Stage 3 retargets the processors to read these Planner-side
-	// fragments authoritatively. Until then this is defensive scaffolding —
-	// memory footprint ticks up slightly (~few hundred bytes per Planner) but
-	// behaviour is unchanged.
-	//
-	// A* params/debug are default-constructed. The PlannerParams struct does not
-	// (today) carry per-Planner budget/cost-threshold knobs — those live on
-	// FCk_Fragment_Goap_ActionParamsData and are stamped per-Action by
-	// DoCreateOrFindActionEntity. Stage 3 will decide whether to lift those
-	// knobs onto PlannerParams or read the per-child Action params at search
-	// seed time; for now defaults are sufficient because nothing reads this
-	// fragment on the Planner entity.
-	PlannerEntity.Add<ck::FFragment_AStar_Params>();
+	// PR-B.1b Stage 2/3a — dual-stamp the full Planner-role A*-pipeline cluster
+	// on the Planner entity. Stage 3 retargets the processors to read these
+	// Planner-side fragments authoritatively. Stage 3a (this commit) seeds
+	// FFragment_AStar_Params with the Planner's own budget/cost-threshold knobs
+	// (lifted from per-Action params per spec §3.2). Without this, Stage 3b's
+	// processor flip would regress the A* budget 100x (default 500us vs
+	// PlannerParams' 50000us).
+	{
+		auto AStarParams = ck::FFragment_AStar_Params{};
+		AStarParams.Set_BudgetMicroseconds(InParams.Get_SearchBudgetMicroseconds());
+		AStarParams.Set_CostThreshold(InParams.Get_CostThreshold());
+		PlannerEntity.Add<ck::FFragment_AStar_Params>(AStarParams);
+	}
 	PlannerEntity.Add<ck::FFragment_AStar_Debug>();
 
 	// Planner-side A* pipeline fragments. The aliases (see CkGoap_Planner_Fragment.h)
@@ -767,7 +764,16 @@ auto
 	// Stage 5 splits the aliases into first-class types; until then this is a
 	// defensive guarantee that the host carries the cluster, regardless of
 	// which entry point created it.
-	InAction.AddOrGet<ck::FFragment_AStar_Params>();
+	//
+	// Stage 3a — overwrite the existing AStarParams (seeded from this entity's
+	// ActionParams when it was first created) with values from the new
+	// PlannerParams. The two structs share defaults (50000us / 0.0f) so most
+	// callers won't notice; explicit overrides at promotion time win.
+	{
+		auto& AStarParams = InAction.AddOrGet<ck::FFragment_AStar_Params>();
+		AStarParams.Set_BudgetMicroseconds(InParams.Get_SearchBudgetMicroseconds());
+		AStarParams.Set_CostThreshold(InParams.Get_CostThreshold());
+	}
 	InAction.AddOrGet<ck::FFragment_AStar_Debug>();
 
 	InAction.AddOrGet<ck::FFragment_Goap_Planner_SearchState>();
