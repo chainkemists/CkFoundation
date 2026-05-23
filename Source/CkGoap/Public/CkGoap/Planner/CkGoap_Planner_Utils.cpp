@@ -161,9 +161,16 @@ auto
 	// PlannerParams' _WorldStateSource field. Top-level Planners must set this;
 	// promoted mid-tier Planners may leave it unset (inherits parent's resolved
 	// WS at activation time).
+	//
+	// PR-B.1b Stage 3: also seed _Resolved with the same value for top-level
+	// Planners so the Planner-tier Setup processor (goal resolution) and
+	// HandleRequests (A* seeding) can read it without going through the
+	// implicit-root Action. Promoted mid-tier Planners go through activation
+	// (UpdateActivation::DoResolveAndAssignWorldStateSource) — same as before.
 	{
 		auto WSFrag = ck::FFragment_Goap_Planner_WorldStateSource{};
 		WSFrag._WorldStateSource = InParams.Get_WorldStateSource();
+		WSFrag._Resolved          = InParams.Get_WorldStateSource();
 		PlannerEntity.Add<ck::FFragment_Goap_Planner_WorldStateSource>(WSFrag);
 	}
 
@@ -307,24 +314,45 @@ auto
 {
 	if (NOT ck::IsValid(InPlanner)) { return {}; }
 
-	// U11.2: the active chain is no longer stored in a fragment — it's derived
-	// on demand by walking Plan[0]s from the root Action down. Each composite
-	// step is appended; the walk terminates at an atomic Action or when a
-	// child sub-Planner is not yet marked _IsActive (next frame's
-	// UpdateActivation will fix that).
+	// PR-B.1b Stage 3: A* now runs on the Planner entity directly, so the
+	// authoritative Plan[0] lives in InPlanner's own PlanState. The chain
+	// still prepends the implicit-root Action for backward-compat with
+	// existing tests / consumers expecting the root in slot 0. PR-B.1b Stage
+	// 5 will simplify: remove the implicit-root prefix and start the chain
+	// with the Planner directly.
 	auto Result = TArray<FCk_Handle_Goap_Action>{};
 
 	const auto& Current = InPlanner.Get<ck::FFragment_Goap_Planner_Current>();
-	auto Curr = Current.Get_RootAction();
-	if (NOT ck::IsValid(Curr)) { return Result; }
+	const auto Root = Current.Get_RootAction();
+	if (NOT ck::IsValid(Root)) { return Result; }
 
-	// Cap depth defensively (matches the planner's dependency-cycle
-	// diagnostics — a cyclic catalog can theoretically loop the walk).
+	Result.Add(Root);
+
 	constexpr auto MaxDepth = 64;
 	auto Seen = TSet<FCk_Handle_Goap_Action>{};
+	Seen.Add(Root);
 
-	Result.Add(Curr);
-	Seen.Add(Curr);
+	// The Planner's own PlanState drives the first walk step (was previously
+	// read off the implicit-root Action — same Plan[0] semantically, since
+	// the Planner's candidate set IS the implicit-root's children).
+	const auto& PlannerPlanState = InPlanner.Get<ck::FFragment_Goap_Planner_PlanState>();
+	const auto& InitialPlan = PlannerPlanState.Get_Plan();
+	if (InitialPlan.IsEmpty()) { return Result; }
+
+	auto Curr = InitialPlan[0];
+	if (NOT ck::IsValid(Curr)) { return Result; }
+
+	// First-step inclusion gate: composite + active (same rules as the loop).
+	{
+		const auto& CurrTree = Curr.Get<ck::FFragment_Goap_Action_Tree>();
+		if (CurrTree.Get_ChildActions().IsEmpty()) { return Result; }
+
+		const auto& CurrActivation = Curr.Get<ck::FFragment_Goap_Planner_Activation>();
+		if (NOT CurrActivation.Get_IsActive()) { return Result; }
+
+		Seen.Add(Curr);
+		Result.Add(Curr);
+	}
 
 	for (auto Depth = 0; Depth < MaxDepth; ++Depth)
 	{
@@ -335,15 +363,9 @@ auto
 		const auto Next = Plan[0];
 		if (NOT ck::IsValid(Next)) { break; }
 
-		// Only composite sub-Planners participate in the active-chain walk —
-		// atomic Plan[0] entries are terminal (consumer drives the leaf).
 		const auto& NextTree = Next.Get<ck::FFragment_Goap_Action_Tree>();
 		if (NextTree.Get_ChildActions().IsEmpty()) { break; }
 
-		// Only include in the chain if the sub-Planner is actually active.
-		// (UpdateActivation may not have flipped _IsActive yet on the same
-		// frame the plan resolved — caller polls Get_ActiveChain across
-		// frames in that case, mirroring U10/U11.0 chain-extension timing.)
 		const auto& NextActivation = Next.Get<ck::FFragment_Goap_Planner_Activation>();
 		if (NOT NextActivation.Get_IsActive()) { break; }
 
@@ -381,11 +403,9 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// PR-B.1a: Planner-API verb shims. Each looks up _RootAction and delegates to
-// the Action-side implementation. The data path is unchanged in this phase —
-// Planner-role fragments still live on the _RootAction Action entity. B.1b
-// will rewire the shims to read Planner-side fragments directly and drop
-// _RootAction entirely.
+// PR-B.1b Stage 3: Planner-API getters read Planner-side fragments directly.
+// The A* pipeline now writes to the Planner entity's own PlanState/Goal/
+// WorldStateSource — no _RootAction indirection needed.
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -396,12 +416,7 @@ auto
 		TEXT("Invalid Planner handle in Get_PlanStatus"))
 	{ return ECk_GoapPlanStatus::Idle; }
 
-	const auto RootAction = Get_RootAction(InPlanner);
-	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
-		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Get_PlanStatus shim cannot dispatch."), InPlanner)
-	{ return ECk_GoapPlanStatus::Idle; }
-
-	return UCk_Utils_Goap_Action_UE::Get_PlanStatus(RootAction);
+	return InPlanner.Get<ck::FFragment_Goap_Planner_PlanState>().Get_PlanStatus();
 }
 
 auto
@@ -412,12 +427,7 @@ auto
 		TEXT("Invalid Planner handle in Get_Plan"))
 	{ return {}; }
 
-	const auto RootAction = Get_RootAction(InPlanner);
-	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
-		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Get_Plan shim cannot dispatch."), InPlanner)
-	{ return {}; }
-
-	return RootAction.Get<ck::FFragment_Goap_Planner_PlanState>().Get_Plan();
+	return InPlanner.Get<ck::FFragment_Goap_Planner_PlanState>().Get_Plan();
 }
 
 auto
@@ -428,12 +438,7 @@ auto
 		TEXT("Invalid Planner handle in Get_PlanClasses"))
 	{ return {}; }
 
-	const auto RootAction = Get_RootAction(InPlanner);
-	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
-		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Get_PlanClasses shim cannot dispatch."), InPlanner)
-	{ return {}; }
-
-	return UCk_Utils_Goap_Action_UE::Get_Plan(RootAction);
+	return InPlanner.Get<ck::FFragment_Goap_Planner_PlanState>().Get_PlanClasses();
 }
 
 auto
@@ -444,12 +449,7 @@ auto
 		TEXT("Invalid Planner handle in Get_PlanCost"))
 	{ return 0.0f; }
 
-	const auto RootAction = Get_RootAction(InPlanner);
-	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
-		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Get_PlanCost shim cannot dispatch."), InPlanner)
-	{ return 0.0f; }
-
-	return UCk_Utils_Goap_Action_UE::Get_PlanCost(RootAction);
+	return InPlanner.Get<ck::FFragment_Goap_Planner_PlanState>().Get_PlanCost();
 }
 
 auto
@@ -460,12 +460,7 @@ auto
 		TEXT("Invalid Planner handle in Get_PlanAttemptCount"))
 	{ return 0; }
 
-	const auto RootAction = Get_RootAction(InPlanner);
-	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
-		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Get_PlanAttemptCount shim cannot dispatch."), InPlanner)
-	{ return 0; }
-
-	return RootAction.Get<ck::FFragment_Goap_Planner_PlanState>().Get_PlanAttemptCount();
+	return InPlanner.Get<ck::FFragment_Goap_Planner_PlanState>().Get_PlanAttemptCount();
 }
 
 auto
@@ -476,12 +471,10 @@ auto
 		TEXT("Invalid Planner handle in Get_WorldStateSource"))
 	{ return {}; }
 
-	const auto RootAction = Get_RootAction(InPlanner);
-	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
-		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Get_WorldStateSource shim cannot dispatch."), InPlanner)
-	{ return {}; }
-
-	return UCk_Utils_Goap_Action_UE::Get_WorldStateSource(RootAction);
+	const auto& WSSource = InPlanner.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
+	const auto Resolved = WSSource.Get_Resolved();
+	if (ck::IsValid(Resolved)) { return Resolved; }
+	return WSSource.Get_WorldStateSource();
 }
 
 auto
@@ -492,12 +485,7 @@ auto
 		TEXT("Invalid Planner handle in Get_InvalidGoal"))
 	{ return {}; }
 
-	const auto RootAction = Get_RootAction(InPlanner);
-	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
-		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Get_InvalidGoal shim cannot dispatch."), InPlanner)
-	{ return {}; }
-
-	return UCk_Utils_Goap_Action_UE::Get_InvalidGoal(RootAction);
+	return InPlanner.Get<ck::FFragment_Goap_Planner_Goal>().Get_InvalidGoal();
 }
 
 // ====================================================================================================================
@@ -650,7 +638,24 @@ auto
 		else
 		{
 			ActionWSSource._Resolved = WS;
-			UCk_Utils_Goap_WorldState_UE::Request_AddSubscriber(WS, ActionEntity);
+			// Also ensure Planner-side _Resolved reflects WS (Add() already
+			// stamps PlannerParams' WSSource, but the implicit-root's WS may
+			// differ via ActionParams._WorldStateSource_Override).
+			{
+				auto& PlannerWSSource = InPlanner.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
+				if (NOT ck::IsValid(PlannerWSSource._Resolved))
+				{
+					PlannerWSSource._Resolved = WS;
+				}
+			}
+
+			// PR-B.1b Stage 3: subscribe the Planner (not the implicit-root
+			// Action) to the WS — WS-dirty tags now need to land on the Planner
+			// so the Planner-on-Planner AutoReplan picks them up.
+			{
+				auto PlannerAsGeneric = static_cast<FCk_Handle>(InPlanner);
+				UCk_Utils_Goap_WorldState_UE::Request_AddSubscriber(WS, PlannerAsGeneric);
+			}
 		}
 
 		// Propagate the Planner's authored goal to the implicit-root Action's
@@ -666,6 +671,17 @@ auto
 		// U11.2: implicit-root entry-point for the activation walk.
 		auto& RootActivation = ActionEntity.Get<ck::FFragment_Goap_Planner_Activation>();
 		RootActivation._IsActive = true;
+
+		// PR-B.1b Stage 3: stamp the initial-plan trigger on the Planner
+		// itself so the Planner-on-Planner AutoReplan picks it up. Reads
+		// PlanOnStart from the implicit-root's ActionParams — keeps existing
+		// semantics where the first AddAction's _PlanOnStart drives initial
+		// planning. PR-B.1b Stage 5 simplifies this when _PlanOnStart lifts
+		// to PlannerParams.
+		if (InParams.Get_PlanOnStart())
+		{
+			InPlanner.AddOrGet<ck::FTag_Goap_Action_RequiresInitialPlan>();
+		}
 
 		return ActionEntity;
 	}
@@ -857,31 +873,17 @@ auto
 		TEXT("Invalid Planner handle in Request_SetGoal"))
 	{ return InPlanner; }
 
-	// Also stamp the Planner's own _GoalAuthored so any future query of the
-	// Planner's authored goal reads the current source-of-truth. The actual
-	// resolution + replan happens on the root Action (which runs the A*).
-	{
-		auto& PlannerGoal = InPlanner.Get<ck::FFragment_Goap_Planner_Goal>();
-		PlannerGoal._GoalAuthored = InGoal;
-	}
-
-	const auto& Current = InPlanner.Get<ck::FFragment_Goap_Planner_Current>();
-	auto RootAction = Current.Get_RootAction();
-
-	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
-		TEXT("Planner [{}] has no implicit-root Action; Request_SetGoal requires one to dispatch through. Call AddAction first to create the implicit root."),
-		InPlanner)
-	{ return InPlanner; }
-
-	auto& Requests = RootAction.AddOrGet<ck::FFragment_Goap_Action_Requests>();
+	// PR-B.1b Stage 3: Request_SetGoal enqueues on the Planner's own request
+	// queue. The Planner-on-Planner HandleRequests resolves the goal against
+	// the Planner's own WS source.
+	auto& Requests = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
 	Requests._Requests.Add(FCk_Request_Goap_Planner_SetGoal{InGoal});
 	return InPlanner;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// PR-B.1a: Planner-API request shims. Look up _RootAction and delegate to the
-// Action-side request implementation. B.1b will route these through Planner-
-// side fragments instead.
+// PR-B.1b Stage 3: Planner-API request verbs enqueue on the Planner's own
+// request queue. The Planner-on-Planner HandleRequests drains them.
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -892,12 +894,8 @@ auto
 		TEXT("Invalid Planner handle in Request_Plan"))
 	{ return InPlanner; }
 
-	auto RootAction = Get_RootAction(InPlanner);
-	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
-		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Request_Plan shim cannot dispatch."), InPlanner)
-	{ return InPlanner; }
-
-	UCk_Utils_Goap_Action_UE::Request_Plan(RootAction);
+	auto& Reqs = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
+	Reqs._Requests.Add(FCk_Request_Goap_Action_Plan{});
 	return InPlanner;
 }
 
@@ -909,12 +907,8 @@ auto
 		TEXT("Invalid Planner handle in Request_CancelPlan"))
 	{ return InPlanner; }
 
-	auto RootAction = Get_RootAction(InPlanner);
-	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
-		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Request_CancelPlan shim cannot dispatch."), InPlanner)
-	{ return InPlanner; }
-
-	UCk_Utils_Goap_Action_UE::Request_CancelPlan(RootAction);
+	auto& Reqs = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
+	Reqs._Requests.Add(FCk_Request_Goap_Action_CancelPlan{});
 	return InPlanner;
 }
 
@@ -928,12 +922,8 @@ auto
 		TEXT("Invalid Planner handle in Request_SetReplanInterval"))
 	{ return InPlanner; }
 
-	auto RootAction = Get_RootAction(InPlanner);
-	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
-		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Request_SetReplanInterval shim cannot dispatch."), InPlanner)
-	{ return InPlanner; }
-
-	UCk_Utils_Goap_Action_UE::Request_SetReplanInterval(RootAction, InSeconds);
+	auto& Reqs = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
+	Reqs._Requests.Add(FCk_Request_Goap_Action_SetReplanInterval{InSeconds});
 	return InPlanner;
 }
 
@@ -947,12 +937,8 @@ auto
 		TEXT("Invalid Planner handle in Request_SetReplanPolicy"))
 	{ return InPlanner; }
 
-	auto RootAction = Get_RootAction(InPlanner);
-	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
-		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Request_SetReplanPolicy shim cannot dispatch."), InPlanner)
-	{ return InPlanner; }
-
-	UCk_Utils_Goap_Action_UE::Request_SetReplanPolicy(RootAction, InPolicy);
+	auto& Reqs = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
+	Reqs._Requests.Add(FCk_Request_Goap_Action_SetReplanPolicy{InPolicy});
 	return InPlanner;
 }
 
@@ -966,12 +952,8 @@ auto
 		TEXT("Invalid Planner handle in Request_SetSearchBudget"))
 	{ return InPlanner; }
 
-	auto RootAction = Get_RootAction(InPlanner);
-	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
-		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Request_SetSearchBudget shim cannot dispatch."), InPlanner)
-	{ return InPlanner; }
-
-	UCk_Utils_Goap_Action_UE::Request_SetSearchBudget(RootAction, InMicroseconds);
+	auto& Reqs = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
+	Reqs._Requests.Add(FCk_Request_Goap_Action_SetSearchBudget{InMicroseconds});
 	return InPlanner;
 }
 
@@ -985,12 +967,8 @@ auto
 		TEXT("Invalid Planner handle in Request_SetCostThreshold"))
 	{ return InPlanner; }
 
-	auto RootAction = Get_RootAction(InPlanner);
-	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
-		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Request_SetCostThreshold shim cannot dispatch."), InPlanner)
-	{ return InPlanner; }
-
-	UCk_Utils_Goap_Action_UE::Request_SetCostThreshold(RootAction, InThreshold);
+	auto& Reqs = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
+	Reqs._Requests.Add(FCk_Request_Goap_Action_SetCostThreshold{InThreshold});
 	return InPlanner;
 }
 
@@ -1005,12 +983,8 @@ auto
 		TEXT("Invalid Planner handle in Request_SetChildActionCost"))
 	{ return InPlanner; }
 
-	auto RootAction = Get_RootAction(InPlanner);
-	CK_ENSURE_IF_NOT(ck::IsValid(RootAction),
-		TEXT("Planner [{}] has no _RootAction (promoted mid-tier?). Request_SetChildActionCost shim cannot dispatch."), InPlanner)
-	{ return InPlanner; }
-
-	UCk_Utils_Goap_Action_UE::Request_SetActionCost(RootAction, InChildClass, InCost);
+	auto& Reqs = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
+	Reqs._Requests.Add(FCk_Request_Goap_Action_SetActionCost{InChildClass, InCost});
 	return InPlanner;
 }
 
@@ -1146,47 +1120,32 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// PR-B.1b Stage 0 — per-Planner signals.
+// PR-B.1b Stage 3: per-Planner signals.
 //
-// Under Path A the broadcast for these signals happens on the Action entity
-// that actually runs A* (the implicit-root Action for top-level Planners; the
-// promoted host Action for mid-tier Planners). The Bind/Unbind utilities take
-// a Planner handle, resolve it to that broadcasting entity, and store the
-// delegate there so Broadcast → delegate dispatch stays consistent.
+// PlanComplete / PlanFailed broadcast happens on the Planner entity directly
+// (FProcessor_Goap_Planner_HandleRequests and _HandleResult). Bind passes
+// through unmodified — the storage entity matches the broadcast entity.
 //
-// Resolution rule:
-//   * Promoted mid-tier Planner (carries FFragment_Goap_Action_Tree): the host
-//     entity IS the broadcasting Action — bind on it directly via the
-//     Planner-cast-as-Action handle.
-//   * Top-level Planner (no Tree fragment): bind on _RootAction (set by the
-//     first AddAction call).
-//
-// Stage 3 will collapse this resolution: A* will run on the Planner entity
-// itself and the broadcast will happen there too, so Bind passes through
-// unmodified.
+// PlannerActivated / Deactivated broadcast still happens on the Action entity
+// (UpdateActivation::DoActivatePlanner / DoDeactivatePlanner) because sub-
+// Planners ARE Actions in Path A. The Bind utilities resolve Planner-cast-
+// to-Action via DoResolveBroadcastEntity_ForActivation. Stage 5 will collapse.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::goap::internal_planner
 {
-	// Resolve a Planner handle to the entity that actually broadcasts the
-	// per-Planner signals under Path A. Returns an invalid handle if the
-	// Planner has no _RootAction yet (top-level Planner before its first
-	// AddAction) — callers should bail to avoid a no-op bind on an invalid
-	// entity.
-	static auto DoResolveBroadcastEntity(const FCk_Handle_Goap_Planner& InPlanner) -> FCk_Handle_Goap_Action
+	// Resolve a Planner handle to the entity that broadcasts activation
+	// signals. Promoted mid-tier Planner-Actions broadcast on themselves;
+	// top-level Planners' implicit-root broadcasts on the root Action.
+	static auto DoResolveBroadcastEntity_ForActivation(const FCk_Handle_Goap_Planner& InPlanner) -> FCk_Handle_Goap_Action
 	{
 		if (NOT ck::IsValid(InPlanner)) { return {}; }
 
-		// Promoted mid-tier — host entity carries the Action role + Tree, and is
-		// itself the broadcaster. Reuse UCk_Utils_Goap_Action_UE::CastChecked
-		// pattern by constructing the Action-cast directly: a promoted Planner
-		// is by definition an Action entity, so its handle conversion is safe.
 		if (InPlanner.Has<ck::FFragment_Goap_Action_Tree>())
 		{
 			return UCk_Utils_Goap_Action_UE::CastChecked(InPlanner);
 		}
 
-		// Top-level — broadcast happens on _RootAction.
 		return InPlanner.Get<ck::FFragment_Goap_Planner_Current>().Get_RootAction();
 	}
 }
@@ -1199,18 +1158,8 @@ auto
 		ECk_Signal_BindingPolicy InBindingPolicy,
 		ECk_Signal_PostFireBehavior InPostFireBehavior) -> FCk_Handle_Goap_Planner
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
-		TEXT("Invalid Planner handle in BindTo_OnPlanComplete"))
-	{ return InPlanner; }
-
-	auto BroadcastEntity = ck::goap::internal_planner::DoResolveBroadcastEntity(InPlanner);
-	CK_ENSURE_IF_NOT(ck::IsValid(BroadcastEntity),
-		TEXT("Planner [{}] has no broadcast entity (no _RootAction yet — call AddAction first). Bind ignored."),
-		InPlanner)
-	{ return InPlanner; }
-
 	CK_SIGNAL_BIND(ck::UUtils_Signal_OnGoap_Planner_PlanComplete,
-		BroadcastEntity, InDelegate, InBindingPolicy, InPostFireBehavior);
+		InPlanner, InDelegate, InBindingPolicy, InPostFireBehavior);
 	return InPlanner;
 }
 
@@ -1220,12 +1169,7 @@ auto
 		FCk_Handle_Goap_Planner& InPlanner,
 		const FCk_Delegate_Goap_OnPlanComplete& InDelegate) -> FCk_Handle_Goap_Planner
 {
-	if (NOT ck::IsValid(InPlanner)) { return InPlanner; }
-
-	auto BroadcastEntity = ck::goap::internal_planner::DoResolveBroadcastEntity(InPlanner);
-	if (NOT ck::IsValid(BroadcastEntity)) { return InPlanner; }
-
-	CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnGoap_Planner_PlanComplete, BroadcastEntity, InDelegate);
+	CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnGoap_Planner_PlanComplete, InPlanner, InDelegate);
 	return InPlanner;
 }
 
@@ -1237,18 +1181,8 @@ auto
 		ECk_Signal_BindingPolicy InBindingPolicy,
 		ECk_Signal_PostFireBehavior InPostFireBehavior) -> FCk_Handle_Goap_Planner
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
-		TEXT("Invalid Planner handle in BindTo_OnPlanFailed"))
-	{ return InPlanner; }
-
-	auto BroadcastEntity = ck::goap::internal_planner::DoResolveBroadcastEntity(InPlanner);
-	CK_ENSURE_IF_NOT(ck::IsValid(BroadcastEntity),
-		TEXT("Planner [{}] has no broadcast entity (no _RootAction yet — call AddAction first). Bind ignored."),
-		InPlanner)
-	{ return InPlanner; }
-
 	CK_SIGNAL_BIND(ck::UUtils_Signal_OnGoap_Planner_PlanFailed,
-		BroadcastEntity, InDelegate, InBindingPolicy, InPostFireBehavior);
+		InPlanner, InDelegate, InBindingPolicy, InPostFireBehavior);
 	return InPlanner;
 }
 
@@ -1258,12 +1192,7 @@ auto
 		FCk_Handle_Goap_Planner& InPlanner,
 		const FCk_Delegate_Goap_OnPlanFailed& InDelegate) -> FCk_Handle_Goap_Planner
 {
-	if (NOT ck::IsValid(InPlanner)) { return InPlanner; }
-
-	auto BroadcastEntity = ck::goap::internal_planner::DoResolveBroadcastEntity(InPlanner);
-	if (NOT ck::IsValid(BroadcastEntity)) { return InPlanner; }
-
-	CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnGoap_Planner_PlanFailed, BroadcastEntity, InDelegate);
+	CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnGoap_Planner_PlanFailed, InPlanner, InDelegate);
 	return InPlanner;
 }
 
@@ -1279,9 +1208,9 @@ auto
 		TEXT("Invalid Planner handle in BindTo_OnPlannerActivated"))
 	{ return InPlanner; }
 
-	auto BroadcastEntity = ck::goap::internal_planner::DoResolveBroadcastEntity(InPlanner);
+	auto BroadcastEntity = ck::goap::internal_planner::DoResolveBroadcastEntity_ForActivation(InPlanner);
 	CK_ENSURE_IF_NOT(ck::IsValid(BroadcastEntity),
-		TEXT("Planner [{}] has no broadcast entity (no _RootAction yet — call AddAction first). Bind ignored."),
+		TEXT("Planner [{}] has no activation-broadcast entity (no _RootAction yet — call AddAction first). Bind ignored."),
 		InPlanner)
 	{ return InPlanner; }
 
@@ -1298,7 +1227,7 @@ auto
 {
 	if (NOT ck::IsValid(InPlanner)) { return InPlanner; }
 
-	auto BroadcastEntity = ck::goap::internal_planner::DoResolveBroadcastEntity(InPlanner);
+	auto BroadcastEntity = ck::goap::internal_planner::DoResolveBroadcastEntity_ForActivation(InPlanner);
 	if (NOT ck::IsValid(BroadcastEntity)) { return InPlanner; }
 
 	CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnGoap_Planner_Activated, BroadcastEntity, InDelegate);
@@ -1317,9 +1246,9 @@ auto
 		TEXT("Invalid Planner handle in BindTo_OnPlannerDeactivated"))
 	{ return InPlanner; }
 
-	auto BroadcastEntity = ck::goap::internal_planner::DoResolveBroadcastEntity(InPlanner);
+	auto BroadcastEntity = ck::goap::internal_planner::DoResolveBroadcastEntity_ForActivation(InPlanner);
 	CK_ENSURE_IF_NOT(ck::IsValid(BroadcastEntity),
-		TEXT("Planner [{}] has no broadcast entity (no _RootAction yet — call AddAction first). Bind ignored."),
+		TEXT("Planner [{}] has no activation-broadcast entity (no _RootAction yet — call AddAction first). Bind ignored."),
 		InPlanner)
 	{ return InPlanner; }
 
@@ -1336,7 +1265,7 @@ auto
 {
 	if (NOT ck::IsValid(InPlanner)) { return InPlanner; }
 
-	auto BroadcastEntity = ck::goap::internal_planner::DoResolveBroadcastEntity(InPlanner);
+	auto BroadcastEntity = ck::goap::internal_planner::DoResolveBroadcastEntity_ForActivation(InPlanner);
 	if (NOT ck::IsValid(BroadcastEntity)) { return InPlanner; }
 
 	CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnGoap_Planner_Deactivated, BroadcastEntity, InDelegate);

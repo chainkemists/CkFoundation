@@ -32,6 +32,10 @@ namespace ck
 {
 	class FProcessor_Goap_Planner_Setup;
 	class FProcessor_Goap_Planner_UpdateActivation;
+	// PR-B.1b Stage 3: new Planner-side A*-pipeline processors.
+	class FProcessor_Goap_Planner_AutoReplan;
+	class FProcessor_Goap_Planner_HandleRequests;
+	class FProcessor_Goap_Planner_HandleResult;
 	class FProcessor_Goap_Action_Setup;
 	class FProcessor_Goap_Action_HandleRequests;
 	class FProcessor_Goap_Action_HandleResult;
@@ -166,6 +170,8 @@ namespace ck
 		friend class ::UCk_Utils_Goap_Planner_UE;
 		friend class ::UCk_Utils_Goap_Action_UE;
 		friend class FProcessor_Goap_Planner_UpdateActivation;
+		friend class FProcessor_Goap_Planner_Setup;       // PR-B.1b Stage 3
+		friend class FProcessor_Goap_Planner_HandleRequests;  // PR-B.1b Stage 3
 		friend class FProcessor_Goap_Action_Setup;
 		friend class FProcessor_Goap_Action_HandleRequests;
 
@@ -209,6 +215,8 @@ namespace ck
 		friend class ::UCk_Utils_Goap_Planner_UE;
 		friend class ::UCk_Utils_Goap_Action_UE;
 		friend class FProcessor_Goap_Planner_UpdateActivation;
+		friend class FProcessor_Goap_Planner_HandleRequests;  // PR-B.1b Stage 3
+		friend class FProcessor_Goap_Planner_HandleResult;    // PR-B.1b Stage 3
 		friend class FProcessor_Goap_Action_Setup;
 		friend class FProcessor_Goap_Action_HandleRequests;
 		friend class FProcessor_Goap_Action_HandleResult;
@@ -257,6 +265,8 @@ namespace ck
 		friend class ::UCk_Utils_Goap_Planner_UE;
 		friend class ::UCk_Utils_Goap_Action_UE;
 		friend class FProcessor_Goap_Planner_UpdateActivation;
+		friend class FProcessor_Goap_Planner_Setup;           // PR-B.1b Stage 3
+		friend class FProcessor_Goap_Planner_HandleRequests;  // PR-B.1b Stage 3
 		friend class FProcessor_Goap_Action_Setup;
 		friend class FProcessor_Goap_Action_HandleRequests;
 
