@@ -495,6 +495,40 @@ namespace ck_blueprint_exporter_internal
     };
 
     static auto
+        DoVisitScsNode(
+            const USCS_Node* InNode,
+            const FName& InAttachParent,
+            const FString& InOrigin,
+            TArray<FCollectedComponent>& OutCollected,
+            TSet<const UActorComponent*>& InOutSeen)
+        -> void
+    {
+        if (ck::Is_NOT_Valid(InNode))
+        { return; }
+
+        const auto* Template = InNode->ComponentTemplate.Get();
+        if (ck::IsValid(Template) && NOT InOutSeen.Contains(Template))
+        {
+            InOutSeen.Add(Template);
+
+            OutCollected.Add(FCollectedComponent
+            {
+                Template,
+                InNode->GetVariableName(),
+                InAttachParent,
+                InNode->AttachToName,
+                InOrigin
+            });
+        }
+
+        const auto SelfName = InNode->GetVariableName();
+        for (const auto* Child : InNode->GetChildNodes())
+        {
+            DoVisitScsNode(Child, SelfName, InOrigin, OutCollected, InOutSeen);
+        }
+    }
+
+    static auto
         DoCollectScsNodes(
             const USimpleConstructionScript* InScs,
             const FString& InOrigin,
@@ -505,25 +539,12 @@ namespace ck_blueprint_exporter_internal
         if (ck::Is_NOT_Valid(InScs))
         { return; }
 
-        for (const auto* Node : InScs->GetAllNodes())
+        for (const auto* Root : InScs->GetRootNodes())
         {
-            if (ck::Is_NOT_Valid(Node))
+            if (ck::Is_NOT_Valid(Root))
             { continue; }
 
-            const auto* Template = Node->ComponentTemplate.Get();
-            if (ck::Is_NOT_Valid(Template) || InOutSeen.Contains(Template))
-            { continue; }
-
-            InOutSeen.Add(Template);
-
-            OutCollected.Add(FCollectedComponent
-            {
-                Template,
-                Node->GetVariableName(),
-                Node->ParentComponentOrVariableName,
-                Node->AttachToName,
-                InOrigin
-            });
+            DoVisitScsNode(Root, Root->ParentComponentOrVariableName, InOrigin, OutCollected, InOutSeen);
         }
     }
 
