@@ -69,11 +69,9 @@ bool FCkTest_AssetRegistryStub_Classify_Flavor::RunTest(const FString&)
             Make_AssetParsedError(TEXT("assets"), TEXT("MyActor_BP_Class")))),
         static_cast<int32>(ECk_AssetAccessorFlavor::SoftClass));
 
-    // `assets::load::FOO_Class` is the blocking variant of the soft-class accessor
-    // (TSubclassOf returning). It is its own flavor — neither plain BlockingLoad
-    // (which would skip the `_Class` strip and look for `FOO_Class.uasset`
-    // literally on disk) nor plain SoftClass (which would emit a TSoftClassPtr
-    // instead of the blocking-load body).
+    // Blocking variant of the soft-class accessor — its own flavor. Plain
+    // BlockingLoad would skip `_Class` strip; plain SoftClass would emit
+    // TSoftClassPtr instead of the blocking body.
     TestEqual(TEXT("assets::load::FOO_Class() -> BlockingLoadClass (load + class both)"),
         static_cast<int32>(FCkAsAssetRegistryStubSynthesizer::Classify_AccessorFlavor(
             Make_AssetParsedError(TEXT("assets::load"), TEXT("MyActor_BP_Class")))),

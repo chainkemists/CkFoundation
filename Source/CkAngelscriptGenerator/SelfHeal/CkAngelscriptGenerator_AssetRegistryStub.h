@@ -95,9 +95,8 @@ namespace ck::angelscriptgenerator::self_heal
             const FString& InResolvedClassName,
             const FString& InSoftNamespace) -> FString;
 
-        // BP _Class blocking variant. Ensure-guarded LoadClassAsset_Blocking
-        // that delegates to the soft-class accessor. InFunctionName carries
-        // the `_Class` suffix; the emitted body returns TSubclassOf<Class>.
+        // BP _Class blocking variant. InFunctionName carries the `_Class`
+        // suffix; the emitted body returns TSubclassOf<Class>.
         static auto Build_BlockingLoadClassAccessor(
             const FString& InFunctionName,
             const FString& InResolvedClassName,
