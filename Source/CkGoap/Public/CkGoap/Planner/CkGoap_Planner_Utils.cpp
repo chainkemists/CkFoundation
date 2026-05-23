@@ -65,42 +65,28 @@ auto
     ActionEntity.Add<ck::FFragment_Goap_Action_ActionClasses>();
     ActionEntity.Add<ck::FFragment_Goap_Action_Definition>();
     ActionEntity.Add<ck::FFragment_Goap_Action_Tree>();
-    ActionEntity.Add<ck::FFragment_Goap_Action_Requests>();
 
-    // Planner-role fragments — every Action entity is dual-role (carries its own
-    // Action-role _Definition + its own per-Action planner state). See
-    // CkGoap_Planner_Fragment.h for the split rationale (U11.0).
-    ActionEntity.Add<ck::FFragment_Goap_Planner_PlanState>();
-    ActionEntity.Add<ck::FFragment_Goap_Planner_Goal>();
+    // PR-B.1b Stage 4: atomic leaf Actions are lean — they carry only Action-
+    // role fragments (_Definition, _Params, _Tree, _Current, _ActionClasses)
+    // plus _WorldStateSource (read by FProcessor_Goap_Action_Setup to resolve
+    // candidate-operator preconditions/effects against the active WS registry,
+    // and by UCk_Utils_Goap_Action_UE::Get_WorldStateSource(InAction)).
+    //
+    // Sub-Planners (composite Actions promoted via PromoteActionToPlanner)
+    // pick up the rest of the Planner-role cluster (PlanState, Goal, Activation,
+    // Requests, ReplanThrottle, SearchState, Result, PlanContext, AStar_Params,
+    // AStar_Debug) through that promotion's AddOrGet pass.
     ActionEntity.Add<ck::FFragment_Goap_Planner_WorldStateSource>();
-
-    // U11.2: Action-as-Planner-role gets per-Planner activation state. Starts
-    // _IsActive=false; AddAction's implicit-root branch flips the implicit-
-    // root Action's _IsActive=true, and mid-tier Actions get flipped on by
-    // their parent's UpdateActivation.
-    ActionEntity.Add<ck::FFragment_Goap_Planner_Activation>();
-
-    auto& Throttle = ActionEntity.AddOrGet<ck::FFragment_Goap_Action_ReplanThrottle>();
-    (void)Throttle;  // throttle's interval is read from params at Setup time
-
-    ActionEntity.Add<ck::FFragment_Goap_Action_SearchState>();
-    ActionEntity.Add<ck::FFragment_Goap_Action_Result>();
-    ActionEntity.Add<ck::FFragment_Goap_Action_PlanContext>();
-
-    // A* params mirror the action's planning knobs.
-    auto AStarParams = ck::FFragment_AStar_Params{};
-    AStarParams.Set_BudgetMicroseconds(InParams.Get_SearchBudgetMicroseconds());
-    AStarParams.Set_CostThreshold(InParams.Get_CostThreshold());
-    ActionEntity.Add<ck::FFragment_AStar_Params>(AStarParams);
-    ActionEntity.Add<ck::FFragment_AStar_Debug>();
 
     // Mark for one-shot setup.
     ActionEntity.AddOrGet<ck::FTag_Goap_Action_RequiresSetup>();
 
-    if (InParams.Get_PlanOnStart())
-    {
-        ActionEntity.AddOrGet<ck::FTag_Goap_Action_RequiresInitialPlan>();
-    }
+    // PR-B.1b Stage 4: the per-Action FTag_Goap_Action_RequiresInitialPlan
+    // stamp here is dead — FProcessor_Goap_Planner_AutoReplan matches Planner
+    // and reads the tag from the Planner entity, not Action. The Planner-side
+    // stamp lives in AddAction's implicit-root branch (line ~683) for top-
+    // level Planners; PromoteActionToPlanner / DoActivatePlanner cover sub-
+    // Planner activation.
 
     // Register in the ActionSet's catalog record + tag→action index.
     ck::goap::internal_action::FRecordOfGoapActions_Utils::AddIfMissing(InPlanner);
@@ -658,19 +644,15 @@ auto
 			}
 		}
 
-		// Propagate the Planner's authored goal to the implicit-root Action's
-		// planner-role goal fragment. The implicit-root is the entity that
-		// actually runs A* on behalf of the top-level Planner — it needs the
-		// same authored goal so its own Setup resolves it correctly.
-		{
-			const auto& PlannerGoal = InPlanner.Get<ck::FFragment_Goap_Planner_Goal>();
-			auto& RootGoal = ActionEntity.Get<ck::FFragment_Goap_Planner_Goal>();
-			RootGoal._GoalAuthored = PlannerGoal.Get_GoalAuthored();
-		}
-
-		// U11.2: implicit-root entry-point for the activation walk.
-		auto& RootActivation = ActionEntity.Get<ck::FFragment_Goap_Planner_Activation>();
-		RootActivation._IsActive = true;
+		// PR-B.1b Stage 4: the implicit-root Action no longer carries a Planner-
+		// role _Goal fragment (the Planner entity owns the authoritative
+		// _GoalAuthored), so the previous "propagate Planner goal to implicit-
+		// root" hand-off is gone. Same for setting _IsActive=true on the
+		// implicit-root's _Activation — A* runs on the Planner entity itself
+		// (Stage 3), and Get_ActiveChain doesn't read the implicit-root's
+		// _Activation (it starts from the Planner's PlanState and only walks
+		// _Activation on composite sub-Planners, which are promoted and carry
+		// the fragment via PromoteActionToPlanner).
 
 		// PR-B.1b Stage 3: stamp the initial-plan trigger on the Planner
 		// itself so the Planner-on-Planner AutoReplan picks it up. Reads
@@ -738,10 +720,13 @@ auto
 		return UCk_Utils_Goap_Planner_UE::Cast(InAction);
 	}
 
-	// Stamp the Planner-role discriminator fragments. The remaining planner-role
-	// fragment cluster (PlanState, Goal, WorldStateSource, Activation) was
-	// already added by DoCreateOrFindActionEntity when this entity was created
-	// as an Action (Path A — transitional dual-role default).
+	// PR-B.1b Stage 4: stamp the Planner-role discriminator fragments + the
+	// rest of the Planner-role cluster the host now needs. After Stage 4,
+	// DoCreateOrFindActionEntity stamps only the lean Action-role set
+	// (_Definition, _Params, _Tree, _Current, _ActionClasses, _WorldStateSource);
+	// every additional Planner-side fragment is added here via AddOrGet so the
+	// host carries the full cluster regardless of whether DoCreateOrFindActionEntity
+	// previously seeded any of them.
 	InAction.Add<ck::FFragment_Goap_Planner_Params>(InParams);
 	InAction.Add<ck::FFragment_Goap_Planner_Current>();
 	InAction.Add<ck::FFragment_Goap_Planner_ActionCatalogIndex>();
@@ -749,15 +734,17 @@ auto
 	auto& Current = InAction.Get<ck::FFragment_Goap_Planner_Current>();
 	Current._EnableToggle = InParams.Get_InitialToggle();
 
-	// U11.1: the Planner's authored goal is independent of the Action role's
-	// effects. Overwrite the existing _GoalAuthored (which may have been set
-	// when this entity was the root of a higher-level planner) so the promoted
-	// Planner plans toward what its own InParams says.
+	// PR-B.1b Stage 4: PlanState / Goal / Activation no longer get stamped by
+	// DoCreateOrFindActionEntity, so the promotion path must add them. _Goal
+	// is initialized from InParams.Get_Goal() to honour the U11.1 invariant
+	// that the Planner's authored goal is independent of the Action role's
+	// effects.
+	InAction.AddOrGet<ck::FFragment_Goap_Planner_PlanState>();
+	InAction.AddOrGet<ck::FFragment_Goap_Planner_Activation>();
+
 	{
-		auto& GoalFrag = InAction.Get<ck::FFragment_Goap_Planner_Goal>();
+		auto& GoalFrag = InAction.AddOrGet<ck::FFragment_Goap_Planner_Goal>();
 		GoalFrag._GoalAuthored = InParams.Get_Goal();
-		// Clear _Goal — Setup will re-resolve _GoalAuthored → _Goal using this
-		// entity's WS source.
 		GoalFrag._Goal = {};
 		GoalFrag._InvalidGoal = {};
 	}
@@ -848,16 +835,15 @@ auto
 		ck::FProcessor_Goap_Planner_UpdateActivation::DoDeactivatePlanner(Action);
 	}
 
-	// The root Action's cached _LastActivatedPlan0 still points at the old
-	// child; clear it so the next UpdateActivation tick sees this as a fresh
-	// state transition (rather than no-op'ing because OldStep0 == NewStep0).
+	// PR-B.1b Stage 4: the Planner's cached _LastActivatedPlan0 still points
+	// at the old Chain[1]; clear it so the next UpdateActivation tick sees
+	// this as a fresh state transition (rather than no-op'ing because
+	// OldStep0 == NewStep0). Stage 3's FProcessor_Goap_Planner_UpdateActivation
+	// writes _LastActivatedPlan0 to the Planner entity (InHandle), not to the
+	// implicit-root Action.
 	{
-		auto RootAction = Chain[0];
-		if (ck::IsValid(RootAction))
-		{
-			auto& RootActivation = RootAction.Get<ck::FFragment_Goap_Planner_Activation>();
-			RootActivation._LastActivatedPlan0 = {};
-		}
+		auto& PlannerActivation = InPlanner.Get<ck::FFragment_Goap_Planner_Activation>();
+		PlannerActivation._LastActivatedPlan0 = {};
 	}
 
 	return InPlanner;
@@ -1061,10 +1047,20 @@ auto
 		// activation cache (_LastActivatedPlan0) still points at it. Clear
 		// the cache so the next UpdateActivation tick sees a fresh state
 		// transition (mirrors Request_ResetActiveChain's root-clear).
-		auto& ParentActivation = ParentAction.Get<ck::FFragment_Goap_Planner_Activation>();
-		if (ParentActivation.Get_LastActivatedPlan0() == ChildAction)
+		//
+		// PR-B.1b Stage 4: gate with Has<>. The parent may be the implicit-
+		// root Action of a top-level Planner — those are no longer stamped
+		// with FFragment_Goap_Planner_Activation. Only promoted sub-Planner
+		// hosts carry it (via PromoteActionToPlanner). The implicit-root
+		// branch never set _LastActivatedPlan0 anyway, so skipping the read
+		// preserves behaviour.
+		if (ParentAction.Has<ck::FFragment_Goap_Planner_Activation>())
 		{
-			ParentActivation._LastActivatedPlan0 = {};
+			auto& ParentActivation = ParentAction.Get<ck::FFragment_Goap_Planner_Activation>();
+			if (ParentActivation.Get_LastActivatedPlan0() == ChildAction)
+			{
+				ParentActivation._LastActivatedPlan0 = {};
+			}
 		}
 	}
 
