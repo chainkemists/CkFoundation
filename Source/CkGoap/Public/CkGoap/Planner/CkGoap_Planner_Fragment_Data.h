@@ -68,11 +68,27 @@ private:
 		meta = (AllowPrivateAccess = true))
 	FCk_Handle_Goap_WorldState _WorldStateSource;
 
+	// Per-tick A* time slice (microseconds). 0 = unbounded (finish in one tick).
+	// PR-B.1b: lifted from FCk_Fragment_Goap_ActionParamsData (spec §3.2 has always
+	// shown this as a Planner-level knob).
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (AllowPrivateAccess = true))
+	int64 _SearchBudgetMicroseconds = 50000;
+
+	// Early-out threshold on best A* frontier FScore. If > 0, planner returns
+	// CostThresholdReached rather than committing to a plan exceeding it.
+	// PR-B.1b: lifted from FCk_Fragment_Goap_ActionParamsData.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (AllowPrivateAccess = true))
+	float _CostThreshold = 0.0f;
+
 public:
 	CK_PROPERTY(_PlannerTag);
 	CK_PROPERTY(_InitialToggle);
 	CK_PROPERTY(_Goal);
 	CK_PROPERTY(_WorldStateSource);
+	CK_PROPERTY(_SearchBudgetMicroseconds);
+	CK_PROPERTY(_CostThreshold);
 
 public:
 	CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Goap_PlannerParamsData, _PlannerTag);
