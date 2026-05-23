@@ -405,12 +405,16 @@ namespace ck::angelscriptgenerator::self_heal
             const FCk_AsParsedError& InError)
         -> ECk_AssetAccessorFlavor
     {
-        if (InError.TargetNamespace.EndsWith(TEXT("::load")))
-        { return ECk_AssetAccessorFlavor::BlockingLoad; }
+        // Conjunction is checked first so `assets::load::FOO_Class()` resolves
+        // to BlockingLoadClass instead of plain BlockingLoad. Without this the
+        // downstream `_Class` strip never fires and the disk walk searches for
+        // `FOO_Class.uasset` literally (no such file).
+        const auto IsLoad  = InError.TargetNamespace.EndsWith(TEXT("::load"));
+        const auto IsClass = InError.FunctionName.EndsWith(TEXT("_Class"));
 
-        if (InError.FunctionName.EndsWith(TEXT("_Class")))
-        { return ECk_AssetAccessorFlavor::SoftClass; }
-
+        if (IsLoad && IsClass) { return ECk_AssetAccessorFlavor::BlockingLoadClass; }
+        if (IsLoad)            { return ECk_AssetAccessorFlavor::BlockingLoad; }
+        if (IsClass)           { return ECk_AssetAccessorFlavor::SoftClass; }
         return ECk_AssetAccessorFlavor::SoftRef;
     }
 
@@ -490,6 +494,31 @@ namespace ck::angelscriptgenerator::self_heal
 
     auto
         FCkAsAssetRegistryStubSynthesizer::
+        Build_BlockingLoadClassAccessor(
+            const FString& InFunctionName,
+            const FString& InResolvedClassName,
+            const FString& InSoftNamespace)
+        -> FString
+    {
+        // Mirrors the canonical generator's BP blocking-class shape
+        // (CkAssetRegistrySubsystem.cpp:530-540): returns TSubclassOf<Class>,
+        // delegates to LoadClassAsset_Blocking via the soft-class accessor.
+        // InFunctionName carries the `_Class` suffix already.
+        auto Out = FString{};
+        Out += FString::Printf(TEXT("    TSubclassOf<%s> %s()"), *InResolvedClassName, *InFunctionName);            Out += LINE_TERMINATOR;
+        Out += TEXT("    {");                                                                                       Out += LINE_TERMINATOR;
+        Out += FString::Printf(
+            TEXT("        if (ck::EnsureIfNot(UCk_Utils_IO_UE::IsEngineSafeForBlockingLoads(), \"%s::load::%s() called before engine init. Use %s::%s() (soft ref) with UCk_DeferredConfig_UE instead.\"))"),
+            *InSoftNamespace, *InFunctionName, *InSoftNamespace, *InFunctionName);                                  Out += LINE_TERMINATOR;
+        Out += TEXT("        { return nullptr; }");                                                                 Out += LINE_TERMINATOR;
+        Out += FString::Printf(TEXT("        return System::LoadClassAsset_Blocking(%s::%s());"),
+            *InSoftNamespace, *InFunctionName);                                                                     Out += LINE_TERMINATOR;
+        Out += TEXT("    }");
+        return Out;
+    }
+
+    auto
+        FCkAsAssetRegistryStubSynthesizer::
         Build_NamespaceBlock(
             const FString&           InNamespace,
             const FString&           InFunctionBody,
@@ -551,7 +580,9 @@ namespace ck::angelscriptgenerator::self_heal
         // + RawAssets on "/Game/Raw/"). AS merges the namespace at compile time,
         // so any file would unwedge — but the stub must land in the owning file
         // or the deferred regen has to rewrite both.
-        const auto BaseFunctionName = (Flavor == ECk_AssetAccessorFlavor::SoftClass)
+        const auto NeedsClassStrip = (Flavor == ECk_AssetAccessorFlavor::SoftClass)
+                                  || (Flavor == ECk_AssetAccessorFlavor::BlockingLoadClass);
+        const auto BaseFunctionName = NeedsClassStrip
             ? Strip_ClassSuffix(InError.FunctionName)
             : InError.FunctionName;
 
@@ -631,6 +662,10 @@ namespace ck::angelscriptgenerator::self_heal
 
             case ECk_AssetAccessorFlavor::BlockingLoad:
                 FunctionBody = Build_BlockingLoadAccessor(InError.FunctionName, ClassName, SoftNamespace);
+                break;
+
+            case ECk_AssetAccessorFlavor::BlockingLoadClass:
+                FunctionBody = Build_BlockingLoadClassAccessor(InError.FunctionName, ClassName, SoftNamespace);
                 break;
         }
 

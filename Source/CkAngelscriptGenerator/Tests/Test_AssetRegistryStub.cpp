@@ -69,12 +69,15 @@ bool FCkTest_AssetRegistryStub_Classify_Flavor::RunTest(const FString&)
             Make_AssetParsedError(TEXT("assets"), TEXT("MyActor_BP_Class")))),
         static_cast<int32>(ECk_AssetAccessorFlavor::SoftClass));
 
-    // BlockingLoad wins over SoftClass when both could apply (assets::load::FOO_Class
-    // is the blocking variant of the soft-class accessor — TSubclassOf returning).
-    TestEqual(TEXT("assets::load::FOO_Class() -> BlockingLoad (load wins)"),
+    // `assets::load::FOO_Class` is the blocking variant of the soft-class accessor
+    // (TSubclassOf returning). It is its own flavor — neither plain BlockingLoad
+    // (which would skip the `_Class` strip and look for `FOO_Class.uasset`
+    // literally on disk) nor plain SoftClass (which would emit a TSoftClassPtr
+    // instead of the blocking-load body).
+    TestEqual(TEXT("assets::load::FOO_Class() -> BlockingLoadClass (load + class both)"),
         static_cast<int32>(FCkAsAssetRegistryStubSynthesizer::Classify_AccessorFlavor(
             Make_AssetParsedError(TEXT("assets::load"), TEXT("MyActor_BP_Class")))),
-        static_cast<int32>(ECk_AssetAccessorFlavor::BlockingLoad));
+        static_cast<int32>(ECk_AssetAccessorFlavor::BlockingLoadClass));
 
     // Plugin-scoped namespace ("game_assets" etc.) follows the same rules.
     TestEqual(TEXT("game_assets::load::FOO() -> BlockingLoad"),
@@ -212,6 +215,36 @@ bool FCkTest_AssetRegistryStub_Build_BlockingLoad::RunTest(const FString&)
     // Error message correctly references both namespaces.
     TestTrue(TEXT("ensure message references assets::load::FOO"), Body.Contains(TEXT("assets::load::MALE_SKEL_NEW()")));
     TestTrue(TEXT("ensure message references assets::FOO (soft)"), Body.Contains(TEXT("Use assets::MALE_SKEL_NEW() (soft ref)")));
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Build_BlockingLoadClassAccessor: engine-init guard + LoadClassAsset_Blocking
+// delegation, TSubclassOf<Class> return shape.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_AssetRegistryStub_Build_BlockingLoadClass,
+    "CkAngelscriptGenerator.UnitTests.AssetRegistryStub.Build_BlockingLoadClass",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_AssetRegistryStub_Build_BlockingLoadClass::RunTest(const FString&)
+{
+    const auto Body = FCkAsAssetRegistryStubSynthesizer::Build_BlockingLoadClassAccessor(
+        TEXT("MyActor_BP_Class"),
+        TEXT("AActor"),
+        TEXT("assets"));
+
+    TestTrue(TEXT("contains TSubclassOf return shape"), Body.Contains(TEXT("TSubclassOf<AActor> MyActor_BP_Class()")));
+    TestTrue(TEXT("contains engine-init ensure"), Body.Contains(TEXT("UCk_Utils_IO_UE::IsEngineSafeForBlockingLoads")));
+    TestTrue(TEXT("contains nullptr early return"), Body.Contains(TEXT("return nullptr;")));
+    TestTrue(TEXT("delegates to LoadClassAsset_Blocking with soft-class accessor"),
+        Body.Contains(TEXT("System::LoadClassAsset_Blocking(assets::MyActor_BP_Class())")));
+    TestTrue(TEXT("ensure message references assets::load::FOO_Class"),
+        Body.Contains(TEXT("assets::load::MyActor_BP_Class()")));
+    TestTrue(TEXT("ensure message references assets::FOO_Class (soft)"),
+        Body.Contains(TEXT("Use assets::MyActor_BP_Class() (soft ref)")));
 
     return true;
 }
