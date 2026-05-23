@@ -2,11 +2,40 @@
 
 #include "CkGoap/CkGoap_Log.h"
 #include "CkGoap/Planner/CkGoap_Planner_Fragment.h"
+#include "CkGoap/Planner/CkGoap_Planner_Utils.h"  // PR-B.1b Stage 3: resolve owning Planner
 #include "CkGoap/Action/CkGoap_Action_Fragment.h"
 #include "CkAStar/CkAStar_Fragment.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Signal/CkSignal_Utils.inl.h"
+
+// ====================================================================================================================
+// LOCAL HELPERS — PR-B.1b Stage 3 owning-Planner resolution.
+// ====================================================================================================================
+
+namespace
+{
+	// Resolve the owning Planner for an Action handle. Returns an invalid
+	// handle if the Action is orphaned (should not happen in well-formed
+	// graphs).
+	auto ResolveOwningPlanner(const FCk_Handle_Goap_Action& InAction) -> FCk_Handle_Goap_Planner
+	{
+		if (NOT ck::IsValid(InAction)) { return {}; }
+
+		if (UCk_Utils_Goap_Planner_UE::Has(InAction))
+		{
+			return UCk_Utils_Goap_Planner_UE::CastChecked(InAction);
+		}
+
+		auto Owner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAction);
+		if (UCk_Utils_Goap_Planner_UE::Has(Owner))
+		{
+			return UCk_Utils_Goap_Planner_UE::CastChecked(Owner);
+		}
+
+		return {};
+	}
+}
 
 // ====================================================================================================================
 // QUERY
@@ -24,7 +53,13 @@ auto
 	Get_PlanStatus(const FCk_Handle_Goap_Action& InAction) -> ECk_GoapPlanStatus
 {
 	if (NOT ck::IsValid(InAction)) { return ECk_GoapPlanStatus::Idle; }
-	return InAction.Get<ck::FFragment_Goap_Planner_PlanState>().Get_PlanStatus();
+
+	// PR-B.1b Stage 3: PlanState lives on the owning Planner now. Resolve and
+	// read from there. The Action-side stamp (still present from dual-stamp)
+	// is no longer authoritative.
+	auto Owning = ResolveOwningPlanner(InAction);
+	if (NOT ck::IsValid(Owning)) { return ECk_GoapPlanStatus::Idle; }
+	return Owning.Get<ck::FFragment_Goap_Planner_PlanState>().Get_PlanStatus();
 }
 
 auto
@@ -32,7 +67,9 @@ auto
 	Get_Plan(const FCk_Handle_Goap_Action& InAction) -> TArray<TSubclassOf<UCk_GoapAction_EntityScript>>
 {
 	if (NOT ck::IsValid(InAction)) { return {}; }
-	return InAction.Get<ck::FFragment_Goap_Planner_PlanState>().Get_PlanClasses();
+	auto Owning = ResolveOwningPlanner(InAction);
+	if (NOT ck::IsValid(Owning)) { return {}; }
+	return Owning.Get<ck::FFragment_Goap_Planner_PlanState>().Get_PlanClasses();
 }
 
 auto
@@ -40,7 +77,9 @@ auto
 	Get_PlanCost(const FCk_Handle_Goap_Action& InAction) -> float
 {
 	if (NOT ck::IsValid(InAction)) { return 0.0f; }
-	return InAction.Get<ck::FFragment_Goap_Planner_PlanState>().Get_PlanCost();
+	auto Owning = ResolveOwningPlanner(InAction);
+	if (NOT ck::IsValid(Owning)) { return 0.0f; }
+	return Owning.Get<ck::FFragment_Goap_Planner_PlanState>().Get_PlanCost();
 }
 
 auto
@@ -48,6 +87,8 @@ auto
 	Get_WorldStateSource(const FCk_Handle_Goap_Action& InAction) -> FCk_Handle_Goap_WorldState
 {
 	if (NOT ck::IsValid(InAction)) { return {}; }
+	// Action-side _Resolved is still populated by activation walk + AddAction
+	// for the implicit-root; safe to read here.
 	return InAction.Get<ck::FFragment_Goap_Planner_WorldStateSource>().Get_Resolved();
 }
 
@@ -64,13 +105,15 @@ auto
 	Get_InvalidGoal(const FCk_Handle_Goap_Action& InAction) -> TArray<FCk_GoapWS_Condition_Authored>
 {
 	if (NOT ck::IsValid(InAction)) { return {}; }
-	return InAction.Get<ck::FFragment_Goap_Planner_Goal>().Get_InvalidGoal();
+	auto Owning = ResolveOwningPlanner(InAction);
+	if (NOT ck::IsValid(Owning)) { return {}; }
+	return Owning.Get<ck::FFragment_Goap_Planner_Goal>().Get_InvalidGoal();
 }
 
 // ====================================================================================================================
-// REQUESTS — append to per-action request queue, processors drain.
-// Inlined per-verb (UCk_Utils_Goap_Action_UE is friended to access _Requests,
-// but a free helper in another namespace isn't).
+// REQUESTS — PR-B.1b Stage 3: resolve the owning Planner and enqueue on its
+// request queue (FFragment_Goap_Planner_Requests, alias to the same underlying
+// type). The Planner-on-Planner HandleRequests drains the queue.
 // ====================================================================================================================
 
 auto
@@ -78,7 +121,11 @@ auto
 	Request_Plan(FCk_Handle_Goap_Action& InAction) -> FCk_Handle_Goap_Action
 {
 	if (NOT ck::IsValid(InAction)) { return InAction; }
-	auto& Reqs = InAction.AddOrGet<ck::FFragment_Goap_Action_Requests>();
+	auto Owning = ResolveOwningPlanner(InAction);
+	CK_ENSURE_IF_NOT(ck::IsValid(Owning),
+		TEXT("Action [{}] has no owning Planner; Request_Plan dropped."), InAction)
+	{ return InAction; }
+	auto& Reqs = Owning.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
 	Reqs._Requests.Add(FCk_Request_Goap_Action_Plan{});
 	return InAction;
 }
@@ -88,7 +135,11 @@ auto
 	Request_CancelPlan(FCk_Handle_Goap_Action& InAction) -> FCk_Handle_Goap_Action
 {
 	if (NOT ck::IsValid(InAction)) { return InAction; }
-	auto& Reqs = InAction.AddOrGet<ck::FFragment_Goap_Action_Requests>();
+	auto Owning = ResolveOwningPlanner(InAction);
+	CK_ENSURE_IF_NOT(ck::IsValid(Owning),
+		TEXT("Action [{}] has no owning Planner; Request_CancelPlan dropped."), InAction)
+	{ return InAction; }
+	auto& Reqs = Owning.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
 	Reqs._Requests.Add(FCk_Request_Goap_Action_CancelPlan{});
 	return InAction;
 }
@@ -101,7 +152,11 @@ auto
 		float InCost) -> FCk_Handle_Goap_Action
 {
 	if (NOT ck::IsValid(InAction)) { return InAction; }
-	auto& Reqs = InAction.AddOrGet<ck::FFragment_Goap_Action_Requests>();
+	auto Owning = ResolveOwningPlanner(InAction);
+	CK_ENSURE_IF_NOT(ck::IsValid(Owning),
+		TEXT("Action [{}] has no owning Planner; Request_SetActionCost dropped."), InAction)
+	{ return InAction; }
+	auto& Reqs = Owning.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
 	Reqs._Requests.Add(FCk_Request_Goap_Action_SetActionCost{InActionClass, InCost});
 	return InAction;
 }
@@ -111,7 +166,11 @@ auto
 	Request_SetReplanInterval(FCk_Handle_Goap_Action& InAction, float InSeconds) -> FCk_Handle_Goap_Action
 {
 	if (NOT ck::IsValid(InAction)) { return InAction; }
-	auto& Reqs = InAction.AddOrGet<ck::FFragment_Goap_Action_Requests>();
+	auto Owning = ResolveOwningPlanner(InAction);
+	CK_ENSURE_IF_NOT(ck::IsValid(Owning),
+		TEXT("Action [{}] has no owning Planner; Request_SetReplanInterval dropped."), InAction)
+	{ return InAction; }
+	auto& Reqs = Owning.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
 	Reqs._Requests.Add(FCk_Request_Goap_Action_SetReplanInterval{InSeconds});
 	return InAction;
 }
@@ -121,7 +180,11 @@ auto
 	Request_SetReplanPolicy(FCk_Handle_Goap_Action& InAction, ECk_Goap_ReplanPolicy InPolicy) -> FCk_Handle_Goap_Action
 {
 	if (NOT ck::IsValid(InAction)) { return InAction; }
-	auto& Reqs = InAction.AddOrGet<ck::FFragment_Goap_Action_Requests>();
+	auto Owning = ResolveOwningPlanner(InAction);
+	CK_ENSURE_IF_NOT(ck::IsValid(Owning),
+		TEXT("Action [{}] has no owning Planner; Request_SetReplanPolicy dropped."), InAction)
+	{ return InAction; }
+	auto& Reqs = Owning.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
 	Reqs._Requests.Add(FCk_Request_Goap_Action_SetReplanPolicy{InPolicy});
 	return InAction;
 }
@@ -131,7 +194,11 @@ auto
 	Request_SetSearchBudget(FCk_Handle_Goap_Action& InAction, int64 InMicroseconds) -> FCk_Handle_Goap_Action
 {
 	if (NOT ck::IsValid(InAction)) { return InAction; }
-	auto& Reqs = InAction.AddOrGet<ck::FFragment_Goap_Action_Requests>();
+	auto Owning = ResolveOwningPlanner(InAction);
+	CK_ENSURE_IF_NOT(ck::IsValid(Owning),
+		TEXT("Action [{}] has no owning Planner; Request_SetSearchBudget dropped."), InAction)
+	{ return InAction; }
+	auto& Reqs = Owning.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
 	Reqs._Requests.Add(FCk_Request_Goap_Action_SetSearchBudget{InMicroseconds});
 	return InAction;
 }
@@ -141,7 +208,11 @@ auto
 	Request_SetCostThreshold(FCk_Handle_Goap_Action& InAction, float InThreshold) -> FCk_Handle_Goap_Action
 {
 	if (NOT ck::IsValid(InAction)) { return InAction; }
-	auto& Reqs = InAction.AddOrGet<ck::FFragment_Goap_Action_Requests>();
+	auto Owning = ResolveOwningPlanner(InAction);
+	CK_ENSURE_IF_NOT(ck::IsValid(Owning),
+		TEXT("Action [{}] has no owning Planner; Request_SetCostThreshold dropped."), InAction)
+	{ return InAction; }
+	auto& Reqs = Owning.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
 	Reqs._Requests.Add(FCk_Request_Goap_Action_SetCostThreshold{InThreshold});
 	return InAction;
 }

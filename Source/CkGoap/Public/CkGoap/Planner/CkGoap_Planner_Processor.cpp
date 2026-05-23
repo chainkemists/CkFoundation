@@ -2,6 +2,7 @@
 
 #include "CkGoap/CkGoap_Log.h"
 #include "CkGoap/Action/CkGoap_Action_Fragment.h"
+#include "CkGoap/Action/CkGoap_Action_Utils.h"  // PR-B.1b Stage 3: CastChecked for Planner-as-Action
 #include "CkGoap/Algorithm/CkGoap_WorldState.h"
 #include "CkGoap/EntityScripts/CkGoapAction_EntityScript.h"
 #include "CkGoap/Planner/CkGoap_Planner_Utils.h"  // U11.2: snapshot active chain for OnActiveChainChanged payload
@@ -151,7 +152,9 @@ auto
 		TimeType InDeltaT,
 		HandleType InHandle,
 		FFragment_Goap_Planner_Current& InCurrent,
-		const FFragment_Goap_Planner_ActionCatalogIndex& InCatalogIndex) -> void
+		const FFragment_Goap_Planner_ActionCatalogIndex& InCatalogIndex,
+		FFragment_Goap_Planner_WorldStateSource& InWSSource,
+		FFragment_Goap_Planner_Goal& InGoal) -> void
 {
 	(void)InCatalogIndex;  // U11.4: cycle scan no longer walks the full catalog.
 
@@ -298,6 +301,38 @@ auto
 		ck::goap::Warning(
 			TEXT("Planner [{}] has [{}] dependency cycle(s) among its direct children."),
 			InHandle, InCurrent._DependencyCycles.Num());
+	}
+
+	// PR-B.1b Stage 3: Planner-side goal resolution. The Planner's _GoalAuthored
+	// resolves into _Goal via the Planner's own resolved WS source. Used by
+	// FProcessor_Goap_Planner_HandleRequests when seeding A*.
+	//
+	// We do NOT defer on missing _Resolved WS — promoted mid-tier Planners get
+	// their WS resolved via the activation walk (DoActivatePlanner →
+	// DoInjectGoalSynchronous), which re-resolves the goal. For top-level
+	// Planners, Add() seeds _Resolved at construction so this path runs the
+	// first time around.
+	//
+	// Note: keys not in the registry are silently dropped here — same semantics
+	// as the per-Action Setup did prior to Stage 3. _InvalidGoal is populated
+	// by Request_SetGoal (the canonical diagnostic surface).
+	if (NOT InGoal._GoalAuthored.IsEmpty() && InGoal._Goal.IsEmpty())
+	{
+		const auto Source = InWSSource.Get_Resolved();
+		if (ck::IsValid(Source))
+		{
+			auto& Registry = const_cast<FCk_Handle_Goap_WorldState&>(Source)
+				.template Get<FFragment_Goap_WorldState_KeyRegistry>().Get_MutableRegistry();
+
+			for (const auto& Cond : InGoal._GoalAuthored)
+			{
+				const auto Key = Registry.Find(Cond.Get_Key());
+				if (Key != goap::InvalidGoapKey)
+				{
+					InGoal._Goal.Add(goap::FWorldStateCondition{Key, Cond.Get_Value()});
+				}
+			}
+		}
 	}
 
 	InHandle.Remove<FTag_Goap_Planner_RequiresSetup>();
@@ -594,29 +629,17 @@ auto
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
-		const FFragment_Goap_Action_Params& InParams,
-		const FFragment_Goap_Action_Tree& InTree,
+		const FFragment_Goap_Planner_Current& InCurrent,
 		const FFragment_Goap_Planner_PlanState& InPlanState,
 		FFragment_Goap_Planner_Activation& InActivation) const -> void
 {
-	(void)InParams;
-	(void)InTree;
-
-	// Gate on this Planner being active. Top-level Planner's root Action is
-	// activated at AddAction time (implicit root); mid-tier sub-Planners are activated by
-	// their parent's UpdateActivation pass.
+	// PR-B.1b Stage 3: matches Planner directly. Top-level Planners (created
+	// via Add) have _IsActive=true at construction; promoted mid-tier
+	// Planners flip via parent's UpdateActivation pass.
 	if (NOT InActivation._IsActive) { return; }
 
-	// Also gate on the owning top-level Planner's enable toggle. The toggle
-	// lives on FFragment_Goap_Planner_Current of the lifetime owner.
-	{
-		auto Owner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
-		if (Owner.template Has<FFragment_Goap_Planner_Current>())
-		{
-			const auto& OwnerCurrent = Owner.template Get<FFragment_Goap_Planner_Current>();
-			if (OwnerCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable) { return; }
-		}
-	}
+	// Disable-toggle gate reads InCurrent directly (no lifetime-owner walk).
+	if (InCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable) { return; }
 
 	if (InPlanState.Get_PlanStatus() != ECk_GoapPlanStatus::PlanFound &&
 		InPlanState.Get_PlanStatus() != ECk_GoapPlanStatus::PlanFailed)
@@ -636,18 +659,58 @@ auto
 		return;
 	}
 
-	// Snapshot the active chain (from the top-level Planner) BEFORE mutating
-	// activation state, so OnGoap_Planner_ActiveChainChanged can carry a
-	// pre-mutation _OldChain payload.
+	// Snapshot the active chain BEFORE mutating activation state, so
+	// OnGoap_Planner_ActiveChainChanged can carry a pre-mutation _OldChain
+	// payload. The chain is rooted at the top-level Planner.
+	//
+	// Path-A bridge: for a top-level Planner, InHandle IS the top-level.
+	// For a promoted mid-tier Planner-Action, walk lifetime-owner up to
+	// reach the top-level Planner entity. PR-B.1b Stage 5 will simplify this.
 	auto TopLevelPlanner = FCk_Handle_Goap_Planner{};
 	auto OldChainSnapshot = TArray<FCk_Handle_Goap_Action>{};
 	{
-		auto Owner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
-		if (UCk_Utils_Goap_Planner_UE::Has(Owner))
+		if (NOT InHandle.template Has<FFragment_Goap_Action_Tree>())
 		{
-			TopLevelPlanner = UCk_Utils_Goap_Planner_UE::CastChecked(Owner);
+			// Top-level Planner — InHandle itself.
+			TopLevelPlanner = InHandle;
+		}
+		else
+		{
+			// Promoted mid-tier — walk owner up to top-level.
+			auto Walker = static_cast<FCk_Handle>(InHandle);
+			constexpr auto MaxDepth = 64;
+			for (auto Depth = 0; Depth < MaxDepth; ++Depth)
+			{
+				auto Owner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Walker);
+				if (NOT ck::IsValid(Owner)) { break; }
+				if (UCk_Utils_Goap_Planner_UE::Has(Owner) &&
+					NOT Owner.template Has<FFragment_Goap_Action_Tree>())
+				{
+					TopLevelPlanner = UCk_Utils_Goap_Planner_UE::CastChecked(Owner);
+					break;
+				}
+				Walker = Owner;
+			}
+		}
+
+		if (ck::IsValid(TopLevelPlanner))
+		{
 			OldChainSnapshot = UCk_Utils_Goap_Planner_UE::Get_ActiveChain(TopLevelPlanner);
 		}
+	}
+
+	// The "parent Action" arg for DoActivatePlanner needs to be an Action
+	// handle. For a top-level Planner, the implicit-root is the conceptual
+	// parent of NewStep0 — but Plan[0] entries are children of the
+	// implicit-root (top-level case) or of InHandle-as-Action (promoted case).
+	auto ParentAsAction = FCk_Handle_Goap_Action{};
+	if (InHandle.template Has<FFragment_Goap_Action_Tree>())
+	{
+		ParentAsAction = UCk_Utils_Goap_Action_UE::CastChecked(InHandle);
+	}
+	else
+	{
+		ParentAsAction = InCurrent.Get_RootAction();
 	}
 
 	// Deactivate the old Step0 if it changed AND it was a composite sub-Planner.
@@ -662,17 +725,12 @@ auto
 		auto& ChildActivation = NewStep0.template Get<FFragment_Goap_Planner_Activation>();
 		if (NOT ChildActivation._IsActive)
 		{
-			DoActivatePlanner(NewStep0, InHandle);
+			DoActivatePlanner(NewStep0, ParentAsAction);
 		}
 	}
 
 	InActivation._LastActivatedPlan0 = NewStep0;
 
-	// Broadcast OnGoap_Planner_ActiveChainChanged from the top-level Planner.
-	// U11.2: the signal still fires per-frame any tier's activation changes —
-	// the active chain (derived top-down) has mutated. Payload carries the
-	// pre-mutation chain snapshot; consumers query the new chain via
-	// Get_ActiveChain in the handler.
 	if (ck::IsValid(TopLevelPlanner))
 	{
 		UUtils_Signal_OnGoap_Planner_ActiveChainChanged::Broadcast(

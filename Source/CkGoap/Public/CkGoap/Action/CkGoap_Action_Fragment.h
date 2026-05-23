@@ -27,6 +27,10 @@ namespace ck
 	class FProcessor_Goap_Action_HandleResult;
 	class FProcessor_Goap_Action_AutoReplan;
 	class FProcessor_Goap_Planner_UpdateActivation;
+	// PR-B.1b Stage 3: new Planner-side A*-pipeline processors.
+	class FProcessor_Goap_Planner_AutoReplan;
+	class FProcessor_Goap_Planner_HandleRequests;
+	class FProcessor_Goap_Planner_HandleResult;
 
 // ====================================================================================================================
 // TAGS — action-scoped lifecycle
@@ -120,6 +124,9 @@ namespace ck
 		friend class FProcessor_Goap_Action_HandleRequests;
 		friend class FProcessor_Goap_Action_HandleResult;
 		friend class FProcessor_Goap_Planner_UpdateActivation;
+		// PR-B.1b Stage 3: SetActionCost mutates child Action's _CachedActionDef
+		// from the Planner-on-Planner HandleRequests processor.
+		friend class FProcessor_Goap_Planner_HandleRequests;
 
 	private:
 		// This Action's own def — extracted once from the CDO at Setup time.
@@ -187,6 +194,10 @@ namespace ck
 		friend class ::UCk_Utils_Goap_Planner_UE;
 		friend class FProcessor_Goap_Action_HandleRequests;
 		friend class FProcessor_Goap_Action_AutoReplan;
+		// PR-B.1b Stage 3: Planner-side processors drain/feed the same queue
+		// type via the FFragment_Goap_Planner_Requests alias.
+		friend class FProcessor_Goap_Planner_HandleRequests;
+		friend class FProcessor_Goap_Planner_AutoReplan;
 
 		using RequestType = std::variant<
 			FCk_Request_Goap_Action_Plan,
@@ -216,6 +227,9 @@ namespace ck
 
 		friend class FProcessor_Goap_Action_AutoReplan;
 		friend class FProcessor_Goap_Action_HandleRequests;
+		// PR-B.1b Stage 3: same struct, Planner-side via alias.
+		friend class FProcessor_Goap_Planner_AutoReplan;
+		friend class FProcessor_Goap_Planner_HandleRequests;
 
 	private:
 		float _SecondsSinceLastReplan = 0.0f;
@@ -235,6 +249,9 @@ namespace ck
 
 		friend class FProcessor_Goap_Action_HandleRequests;
 		friend class FProcessor_Goap_Action_HandleResult;
+		// PR-B.1b Stage 3: same struct, Planner-side via alias.
+		friend class FProcessor_Goap_Planner_HandleRequests;
+		friend class FProcessor_Goap_Planner_HandleResult;
 
 	private:
 		goap::FGoapGraph _Graph;
