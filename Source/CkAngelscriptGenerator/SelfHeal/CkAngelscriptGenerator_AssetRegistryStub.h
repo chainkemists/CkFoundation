@@ -49,13 +49,16 @@ namespace ck::angelscriptgenerator::self_heal
         bool    UsedTier3Fallback = false; // dead since 2026-05-13; field retained for source compat
     };
 
-    // `assets::FOO()` -> SoftRef; `assets::load::FOO()` -> BlockingLoad;
-    // `assets::FOO_Class()` -> SoftClass (BP-only).
+    // `assets::FOO()`              -> SoftRef
+    // `assets::load::FOO()`        -> BlockingLoad
+    // `assets::FOO_Class()`        -> SoftClass        (BP-only)
+    // `assets::load::FOO_Class()`  -> BlockingLoadClass (BP-only — blocking variant of SoftClass)
     enum class ECk_AssetAccessorFlavor : uint8
     {
         SoftRef,
         BlockingLoad,
         SoftClass,
+        BlockingLoadClass,
     };
 
     // (file path, discovery root) pair parsed from a *Assets.as header.
@@ -88,6 +91,14 @@ namespace ck::angelscriptgenerator::self_heal
 
         // Ensure-guarded LoadAsset_Blocking that delegates to the soft-ref.
         static auto Build_BlockingLoadAccessor(
+            const FString& InFunctionName,
+            const FString& InResolvedClassName,
+            const FString& InSoftNamespace) -> FString;
+
+        // BP _Class blocking variant. Ensure-guarded LoadClassAsset_Blocking
+        // that delegates to the soft-class accessor. InFunctionName carries
+        // the `_Class` suffix; the emitted body returns TSubclassOf<Class>.
+        static auto Build_BlockingLoadClassAccessor(
             const FString& InFunctionName,
             const FString& InResolvedClassName,
             const FString& InSoftNamespace) -> FString;
