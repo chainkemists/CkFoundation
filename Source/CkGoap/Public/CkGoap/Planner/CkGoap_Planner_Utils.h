@@ -309,4 +309,75 @@ public:
 	UnbindFrom_OnActiveChainChanged(
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
 		const FCk_Delegate_Goap_OnActiveChainChanged& InDelegate);
+
+	// PR-B.1b Stage 0 — per-Planner signals (spec §3.5). Bind/Unbind resolve
+	// the Planner to the entity that actually broadcasts under Path A (the
+	// implicit-root Action for top-level Planners; the host entity itself for
+	// promoted mid-tier Planners) and bind delegates there. Stage 3 will move
+	// the broadcast onto the Planner entity itself and drop the resolution
+	// step.
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Bind To OnPlanComplete")
+	static FCk_Handle_Goap_Planner
+	BindTo_OnPlanComplete(
+		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
+		const FCk_Delegate_Goap_OnPlanComplete& InDelegate,
+		ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+		ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Unbind From OnPlanComplete")
+	static FCk_Handle_Goap_Planner
+	UnbindFrom_OnPlanComplete(
+		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
+		const FCk_Delegate_Goap_OnPlanComplete& InDelegate);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Bind To OnPlanFailed")
+	static FCk_Handle_Goap_Planner
+	BindTo_OnPlanFailed(
+		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
+		const FCk_Delegate_Goap_OnPlanFailed& InDelegate,
+		ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+		ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Unbind From OnPlanFailed")
+	static FCk_Handle_Goap_Planner
+	UnbindFrom_OnPlanFailed(
+		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
+		const FCk_Delegate_Goap_OnPlanFailed& InDelegate);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Bind To OnPlannerActivated")
+	static FCk_Handle_Goap_Planner
+	BindTo_OnPlannerActivated(
+		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
+		const FCk_Delegate_Goap_OnPlannerActivated& InDelegate,
+		ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+		ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Unbind From OnPlannerActivated")
+	static FCk_Handle_Goap_Planner
+	UnbindFrom_OnPlannerActivated(
+		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
+		const FCk_Delegate_Goap_OnPlannerActivated& InDelegate);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Bind To OnPlannerDeactivated")
+	static FCk_Handle_Goap_Planner
+	BindTo_OnPlannerDeactivated(
+		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
+		const FCk_Delegate_Goap_OnPlannerDeactivated& InDelegate,
+		ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+		ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Unbind From OnPlannerDeactivated")
+	static FCk_Handle_Goap_Planner
+	UnbindFrom_OnPlannerDeactivated(
+		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
+		const FCk_Delegate_Goap_OnPlannerDeactivated& InDelegate);
 };

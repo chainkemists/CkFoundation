@@ -232,31 +232,6 @@ struct CKGOAP_API FCk_Goap_Payload_OnPlannerDeactivated
 };
 
 // ====================================================================================================================
-// DELEGATES — Action-scoped
-//
-// FCk_Goap_Payload_OnPlanComplete / _OnPlanFailed already exist in
-// CkGoap_Fragment_Data.h and are reused here — only the SOURCE handle type
-// differs from the planner-era delegates.
-// ====================================================================================================================
-
-DECLARE_DYNAMIC_DELEGATE_TwoParams(
-    FCk_Delegate_Goap_OnActionPlanComplete,
-    FCk_Handle_Goap_Action, InAction,
-    FCk_Goap_Payload_OnPlanComplete, InPayload);
-
-DECLARE_DYNAMIC_DELEGATE_TwoParams(
-    FCk_Delegate_Goap_OnActionPlanFailed,
-    FCk_Handle_Goap_Action, InAction,
-    FCk_Goap_Payload_OnPlanFailed, InPayload);
-
-DECLARE_DYNAMIC_DELEGATE_TwoParams(
-    FCk_Delegate_Goap_OnPlannerActivated,
-    FCk_Handle_Goap_Action, InPlanner,
-    FCk_Goap_Payload_OnPlannerActivated, InPayload);
-
-DECLARE_DYNAMIC_DELEGATE_TwoParams(
-    FCk_Delegate_Goap_OnPlannerDeactivated,
-    FCk_Handle_Goap_Action, InPlanner,
-    FCk_Goap_Payload_OnPlannerDeactivated, InPayload);
-
+// DELEGATES — moved to CkGoap_Planner_Fragment_Data.h in PR-B.1b Stage 0
+// (spec §3.5: per-Planner signals have FCk_Handle_Goap_Planner source).
 // ====================================================================================================================
