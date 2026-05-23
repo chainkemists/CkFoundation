@@ -140,6 +140,26 @@ namespace ck::angelscriptgenerator::self_heal
         // logs the message and Hazelight's modal keeps showing the original
         // actionable AS error.
         static auto Inject_AssetRegistryStub(const FCk_AsParsedError& InError) -> FCk_AssetStubInjectionResult;
+
+        // ---- Tier 2.6 helper (also called by the canonical generator) -----------
+        //
+        // Reads `.uasset` linker tables via FPackageReader to derive the
+        // parent-class name when LoadObject can't construct the asset (e.g.
+        // AS-parented WBPs whose AS parent class isn't in the UObject
+        // registry — Hazelight's reload window). Returns the emit-ready
+        // class name (e.g. "UBb_LootableInventory_PanelWidget" or
+        // "UUserWidget"); empty on resolution failure.
+        //
+        // Used by:
+        //   * `Inject_AssetRegistryStub` self-heal Tier 2.6
+        //   * `UCkAssetRegistrySubsystem::Get_AssetTypeFromAssetData` —
+        //     same fallback so the canonical regen produces the same
+        //     accessor self-heal would. Without this, canonical drops the
+        //     accessor → next AS compile re-fires self-heal → loop.
+        //
+        // InPackagePath shape: "/Game/X/Y/Asset.Asset" (FSoftObjectPath
+        // canonical form).
+        static auto Resolve_ClassName_FromPackageReader_OnDisk(const FString& InPackagePath) -> FString;
     };
 }
 
