@@ -17,6 +17,8 @@
 // pattern in CkGoap_Fragment.h. Keep this above the `namespace ck` block.
 class UCk_Utils_Goap_WorldState_UE;
 
+namespace ck { class FProcessor_Goap_Action_HandleRequests; }
+
 // ====================================================================================================================
 
 namespace ck
@@ -108,6 +110,47 @@ private:
 
 public:
 	CK_PROPERTY_GET(_Requests);
+};
+
+// ====================================================================================================================
+// OVERRIDE STACK FRAGMENT — Named layers shadowing base WorldState values
+// ====================================================================================================================
+//
+// Reads (Get_Value) walk this stack TOP-DOWN before falling through to the
+// base FFragment_Goap_WorldState_Values. Writes (Set_Value) always mutate the
+// base — override layers are read-overlay only. The non-negotiable invariant.
+//
+// Layers are NAMED so a debug-UI layer ("DebugUI") and AI-deliberation scopes
+// can coexist independently. Re-pushing a layer with the same name REPLACES
+// its contents idempotently.
+//
+// Push / pop / clear fire FTag_Goap_Dirty_WorldState on every subscriber for
+// keys whose EFFECTIVE value changes. Re-push with the same values does NOT
+// fire dirty (regression-test invariant).
+//
+// At A* seed time the planner flattens this stack onto a snapshot FWorldState
+// (base + each layer bottom-to-top) so the inner search loop reads only a
+// flat array — stack walks stay out of the hot path.
+
+struct CKGOAP_API FFragment_Goap_WorldState_OverrideStack
+{
+public:
+	CK_GENERATED_BODY(FFragment_Goap_WorldState_OverrideStack);
+
+	friend class ::UCk_Utils_Goap_WorldState_UE;
+	friend class FProcessor_Goap_Action_HandleRequests;
+
+	struct FLayer
+	{
+		FName Name;
+		TMap<FGameplayTag, bool> Values;
+	};
+
+private:
+	TArray<FLayer> _Layers;
+
+public:
+	auto Get_Layers() const -> const TArray<FLayer>& { return _Layers; }
 };
 
 // ====================================================================================================================

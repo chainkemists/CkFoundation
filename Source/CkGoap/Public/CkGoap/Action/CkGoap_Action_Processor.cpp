@@ -361,8 +361,32 @@ auto
 					return;
 				}
 
-				const auto& SourceWorldState = const_cast<FCk_Handle_Goap_WorldState&>(Source)
+				// Flatten the override stack onto a local snapshot WS: base
+				// values first, then each layer bottom-to-top (top wins). The
+				// A* inner loop reads this snapshot exclusively — stack walks
+				// stay out of the hot path. No-op cost when no overrides are
+				// active (the common case).
+				auto SourceWorldState = const_cast<FCk_Handle_Goap_WorldState&>(Source)
 					.template Get<FFragment_Goap_WorldState_Values>().Get_Values();
+
+				if (const_cast<FCk_Handle_Goap_WorldState&>(Source)
+					.template Has<FFragment_Goap_WorldState_OverrideStack>())
+				{
+					const auto& Registry = const_cast<FCk_Handle_Goap_WorldState&>(Source)
+						.template Get<FFragment_Goap_WorldState_KeyRegistry>().Get_Registry();
+					const auto& Stack = const_cast<FCk_Handle_Goap_WorldState&>(Source)
+						.template Get<FFragment_Goap_WorldState_OverrideStack>();
+
+					for (const auto& Layer : Stack.Get_Layers())
+					{
+						for (const auto& Kv : Layer.Values)
+						{
+							const auto FlatKey = Registry.Find(Kv.Key);
+							if (FlatKey == goap::InvalidGoapKey) { continue; }
+							SourceWorldState.Set(FlatKey, Kv.Value);
+						}
+					}
+				}
 
 				// Check if goal already satisfied — emit empty plan.
 				const auto IsGoalSatisfied = [&]() -> bool

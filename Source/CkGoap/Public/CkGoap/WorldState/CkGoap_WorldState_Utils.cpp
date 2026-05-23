@@ -2,6 +2,8 @@
 
 #include "CkGoap_WorldState_Fragment.h"
 
+#include "CkGoap/CkGoap_Fragment.h"      // FTag_Goap_Dirty_WorldState
+
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Signal/CkSignal_Utils.inl.h"
@@ -51,6 +53,7 @@ namespace
 		// stamping here.
 		InTargetEntity.Add<ck::FFragment_Goap_WorldState_KeyRegistry>();
 		InTargetEntity.Add<ck::FFragment_Goap_WorldState_Values>();
+		InTargetEntity.Add<ck::FFragment_Goap_WorldState_OverrideStack>();
 		InTargetEntity.Add<ck::FFragment_Goap_WorldState_Subscribers>();
 	}
 }
@@ -131,6 +134,22 @@ auto
 	if (NOT ck::IsValid(InWorldState)) { return false; }
 	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_KeyRegistry>()) { return false; }
 
+	// Override-stack read path: walk top-down, return first match. Layers
+	// store raw FGameplayTag keys and resolve lazily at read time so the
+	// override-push API doesn't need to be ordered against key registration.
+	if (InWorldState.Has<ck::FFragment_Goap_WorldState_OverrideStack>())
+	{
+		const auto& Stack = InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>();
+		const auto& Layers = Stack.Get_Layers();
+		for (auto i = Layers.Num() - 1; i >= 0; --i)
+		{
+			if (const auto* V = Layers[i].Values.Find(InKey))
+			{
+				return *V;
+			}
+		}
+	}
+
 	const auto& Registry = InWorldState.Get<ck::FFragment_Goap_WorldState_KeyRegistry>().Get_Registry();
 	const auto Key = Registry.Find(InKey);
 	if (Key == ck::goap::InvalidGoapKey) { return false; }
@@ -158,6 +177,285 @@ auto
 	-> FCk_Handle_Goap_WorldState
 {
 	return DoAddRequest(InWorldState, FCk_Request_Goap_WorldState_RegisterKey{InKey});
+}
+
+// ====================================================================================================================
+// OVERRIDE STACK
+// ====================================================================================================================
+
+namespace
+{
+	// Compute the effective Get_Value(WS, Tag) without going through the public
+	// API — walks the override stack top-down, falls through to the base store.
+	// Returns the effective bool for the supplied tag.
+	auto
+		DoGetEffectiveValue(
+			const FCk_Handle_Goap_WorldState& InWS,
+			FGameplayTag InTag)
+		-> bool
+	{
+		const auto& Stack = InWS.Get<ck::FFragment_Goap_WorldState_OverrideStack>();
+		const auto& Layers = Stack.Get_Layers();
+		for (auto i = Layers.Num() - 1; i >= 0; --i)
+		{
+			if (const auto* V = Layers[i].Values.Find(InTag)) { return *V; }
+		}
+
+		const auto& Registry = InWS.Get<ck::FFragment_Goap_WorldState_KeyRegistry>().Get_Registry();
+		const auto Key = Registry.Find(InTag);
+		if (Key == ck::goap::InvalidGoapKey) { return false; }
+		const auto& Values = InWS.Get<ck::FFragment_Goap_WorldState_Values>().Get_Values();
+		return Values.Get(Key);
+	}
+
+	// Snapshot the effective value for every tag in `InTags` (typically the
+	// keyset of the layer being pushed / popped). Returned in a tag-keyed map.
+	auto
+		DoSnapshotEffective(
+			const FCk_Handle_Goap_WorldState& InWS,
+			const TArray<FGameplayTag>& InTags)
+		-> TMap<FGameplayTag, bool>
+	{
+		auto Out = TMap<FGameplayTag, bool>{};
+		Out.Reserve(InTags.Num());
+		for (const auto& Tag : InTags)
+		{
+			Out.Add(Tag, DoGetEffectiveValue(InWS, Tag));
+		}
+		return Out;
+	}
+
+}
+
+auto
+	UCk_Utils_Goap_WorldState_UE::
+	Push_Override(
+		FCk_Handle_Goap_WorldState& InWorldState,
+		FName InLayerName,
+		const TMap<FGameplayTag, bool>& InOverrideValues)
+	-> FCk_Handle_Goap_WorldState
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InWorldState),
+		TEXT("Invalid WorldState handle when pushing override layer [{}]"), InLayerName)
+	{ return InWorldState; }
+
+	CK_ENSURE_IF_NOT(NOT InLayerName.IsNone(),
+		TEXT("Invalid (None) layer name when pushing override on WorldState [{}]"), InWorldState)
+	{ return InWorldState; }
+
+	auto& Stack = InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>();
+
+	// Build the union of keys we may touch: keys in the new layer plus keys
+	// in the layer being REPLACED (if any) — the latter matters because keys
+	// dropped during replacement may flip their effective view back to base.
+	auto AffectedTags = TArray<FGameplayTag>{};
+	AffectedTags.Reserve(InOverrideValues.Num());
+	for (const auto& Kv : InOverrideValues) { AffectedTags.AddUnique(Kv.Key); }
+
+	const auto ExistingIdx = Stack._Layers.IndexOfByPredicate(
+		[&](const ck::FFragment_Goap_WorldState_OverrideStack::FLayer& InLayer)
+		{ return InLayer.Name == InLayerName; });
+
+	if (ExistingIdx != INDEX_NONE)
+	{
+		for (const auto& Kv : Stack._Layers[ExistingIdx].Values) { AffectedTags.AddUnique(Kv.Key); }
+	}
+
+	const auto Before = DoSnapshotEffective(InWorldState, AffectedTags);
+
+	if (ExistingIdx != INDEX_NONE)
+	{
+		// Replace contents idempotently.
+		Stack._Layers[ExistingIdx].Values = InOverrideValues;
+	}
+	else
+	{
+		Stack._Layers.Add({InLayerName, InOverrideValues});
+	}
+
+	const auto After = DoSnapshotEffective(InWorldState, AffectedTags);
+
+	auto AnyEffectiveChange = false;
+	for (const auto& Tag : AffectedTags)
+	{
+		if (Before.FindRef(Tag) != After.FindRef(Tag)) { AnyEffectiveChange = true; break; }
+	}
+
+	if (AnyEffectiveChange)
+	{
+		DoTagSubscribersDirty(InWorldState);
+	}
+
+	return InWorldState;
+}
+
+auto
+	UCk_Utils_Goap_WorldState_UE::
+	Push_Override_SingleKey(
+		FCk_Handle_Goap_WorldState& InWorldState,
+		FName InLayerName,
+		FGameplayTag InKey,
+		bool InValue)
+	-> FCk_Handle_Goap_WorldState
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InWorldState),
+		TEXT("Invalid WorldState handle when pushing single-key override [{}]={}"), InKey, InValue)
+	{ return InWorldState; }
+
+	CK_ENSURE_IF_NOT(NOT InLayerName.IsNone(),
+		TEXT("Invalid (None) layer name when pushing single-key override on WorldState [{}]"), InWorldState)
+	{ return InWorldState; }
+
+	CK_ENSURE_IF_NOT(InKey.IsValid(),
+		TEXT("Invalid key when pushing single-key override on WorldState [{}]"), InWorldState)
+	{ return InWorldState; }
+
+	auto& Stack = InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>();
+
+	const auto BeforeEff = DoGetEffectiveValue(InWorldState, InKey);
+
+	const auto ExistingIdx = Stack._Layers.IndexOfByPredicate(
+		[&](const ck::FFragment_Goap_WorldState_OverrideStack::FLayer& InLayer)
+		{ return InLayer.Name == InLayerName; });
+
+	if (ExistingIdx != INDEX_NONE)
+	{
+		Stack._Layers[ExistingIdx].Values.FindOrAdd(InKey) = InValue;
+	}
+	else
+	{
+		auto NewLayer = ck::FFragment_Goap_WorldState_OverrideStack::FLayer{};
+		NewLayer.Name = InLayerName;
+		NewLayer.Values.Add(InKey, InValue);
+		Stack._Layers.Add(MoveTemp(NewLayer));
+	}
+
+	const auto AfterEff = DoGetEffectiveValue(InWorldState, InKey);
+	if (BeforeEff != AfterEff)
+	{
+		DoTagSubscribersDirty(InWorldState);
+	}
+
+	return InWorldState;
+}
+
+auto
+	UCk_Utils_Goap_WorldState_UE::
+	Pop_Override_ByName(
+		FCk_Handle_Goap_WorldState& InWorldState,
+		FName InLayerName)
+	-> FCk_Handle_Goap_WorldState
+{
+	if (NOT ck::IsValid(InWorldState)) { return InWorldState; }
+
+	auto& Stack = InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>();
+	const auto ExistingIdx = Stack._Layers.IndexOfByPredicate(
+		[&](const ck::FFragment_Goap_WorldState_OverrideStack::FLayer& InLayer)
+		{ return InLayer.Name == InLayerName; });
+
+	if (ExistingIdx == INDEX_NONE) { return InWorldState; }
+
+	auto AffectedTags = TArray<FGameplayTag>{};
+	AffectedTags.Reserve(Stack._Layers[ExistingIdx].Values.Num());
+	for (const auto& Kv : Stack._Layers[ExistingIdx].Values) { AffectedTags.AddUnique(Kv.Key); }
+
+	const auto Before = DoSnapshotEffective(InWorldState, AffectedTags);
+
+	Stack._Layers.RemoveAt(ExistingIdx);
+
+	const auto After = DoSnapshotEffective(InWorldState, AffectedTags);
+
+	auto AnyEffectiveChange = false;
+	for (const auto& Tag : AffectedTags)
+	{
+		if (Before.FindRef(Tag) != After.FindRef(Tag)) { AnyEffectiveChange = true; break; }
+	}
+
+	if (AnyEffectiveChange)
+	{
+		DoTagSubscribersDirty(InWorldState);
+	}
+
+	return InWorldState;
+}
+
+auto
+	UCk_Utils_Goap_WorldState_UE::
+	Clear_Overrides(
+		FCk_Handle_Goap_WorldState& InWorldState)
+	-> FCk_Handle_Goap_WorldState
+{
+	if (NOT ck::IsValid(InWorldState)) { return InWorldState; }
+
+	auto& Stack = InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>();
+	if (Stack._Layers.IsEmpty()) { return InWorldState; }
+
+	// Union of every key across every layer.
+	auto AffectedTags = TArray<FGameplayTag>{};
+	for (const auto& Layer : Stack._Layers)
+	{
+		for (const auto& Kv : Layer.Values) { AffectedTags.AddUnique(Kv.Key); }
+	}
+
+	const auto Before = DoSnapshotEffective(InWorldState, AffectedTags);
+
+	Stack._Layers.Reset();
+
+	const auto After = DoSnapshotEffective(InWorldState, AffectedTags);
+
+	auto AnyEffectiveChange = false;
+	for (const auto& Tag : AffectedTags)
+	{
+		if (Before.FindRef(Tag) != After.FindRef(Tag)) { AnyEffectiveChange = true; break; }
+	}
+
+	if (AnyEffectiveChange)
+	{
+		DoTagSubscribersDirty(InWorldState);
+	}
+
+	return InWorldState;
+}
+
+auto
+	UCk_Utils_Goap_WorldState_UE::
+	Get_OverrideDepth(const FCk_Handle_Goap_WorldState& InWorldState)
+	-> int32
+{
+	if (NOT ck::IsValid(InWorldState)) { return 0; }
+	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_OverrideStack>()) { return 0; }
+	return InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>().Get_Layers().Num();
+}
+
+auto
+	UCk_Utils_Goap_WorldState_UE::
+	Get_OverrideLayerNames(const FCk_Handle_Goap_WorldState& InWorldState)
+	-> TArray<FName>
+{
+	auto Out = TArray<FName>{};
+	if (NOT ck::IsValid(InWorldState)) { return Out; }
+	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_OverrideStack>()) { return Out; }
+
+	const auto& Layers = InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>().Get_Layers();
+	Out.Reserve(Layers.Num());
+	for (const auto& Layer : Layers) { Out.Add(Layer.Name); }
+	return Out;
+}
+
+auto
+	UCk_Utils_Goap_WorldState_UE::
+	Has_KeyOverride(const FCk_Handle_Goap_WorldState& InWorldState, FGameplayTag InKey)
+	-> bool
+{
+	if (NOT ck::IsValid(InWorldState)) { return false; }
+	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_OverrideStack>()) { return false; }
+
+	const auto& Layers = InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>().Get_Layers();
+	for (const auto& Layer : Layers)
+	{
+		if (Layer.Values.Contains(InKey)) { return true; }
+	}
+	return false;
 }
 
 // ====================================================================================================================
@@ -312,6 +610,24 @@ auto
 	auto& Requests = InWorldState.AddOrGet<ck::FFragment_Goap_WorldState_Requests>();
 	Requests._Requests.Add(InRequest);
 	return InWorldState;
+}
+
+auto
+	UCk_Utils_Goap_WorldState_UE::
+	DoTagSubscribersDirty(FCk_Handle_Goap_WorldState& InWorldState)
+	-> void
+{
+	auto& Subscribers = InWorldState.Get<ck::FFragment_Goap_WorldState_Subscribers>();
+	for (auto Index = Subscribers._Subscribers.Num() - 1; Index >= 0; --Index)
+	{
+		auto& Subscriber = Subscribers._Subscribers[Index];
+		if (NOT ck::IsValid(Subscriber))
+		{
+			Subscribers._Subscribers.RemoveAtSwap(Index);
+			continue;
+		}
+		Subscriber.AddOrGet<ck::FTag_Goap_Dirty_WorldState>();
+	}
 }
 
 // ====================================================================================================================
