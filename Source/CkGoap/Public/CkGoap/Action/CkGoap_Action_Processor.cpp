@@ -87,6 +87,44 @@ namespace
 
 		return {};
 	}
+
+	// PR-B.1b Stage 1 (CTO finding A4 / spec §3.3) — disable-toggle pipeline gate.
+	//
+	// Returns true if the Action's owning Planner is disabled. Used by every
+	// A*-pipeline processor on the Action side to early-out before doing any
+	// per-entity work. Under Path A the Planner's EnableToggle lives on
+	// FFragment_Goap_Planner_Current of either:
+	//   * the Action itself (if it's a promoted mid-tier composite), or
+	//   * the Action's lifetime owner (if it's the implicit-root Action of a
+	//     top-level Planner).
+	//
+	// Mirrors the gate logic in FProcessor_Goap_Planner_UpdateActivation
+	// (CkGoap_Planner_Processor.cpp lines ~610-619).
+	//
+	// Returns false on any resolution failure — a missing Planner-role fragment
+	// is itself a misconfiguration, but we'd rather keep the pipeline running
+	// than silently halt it. The existing tests cover the well-formed case;
+	// failing open here matches the philosophy of the upstream UpdateActivation
+	// gate (which only gates when the toggle is explicitly Disable).
+	auto Goap_PRB1b_IsOwnerDisabled(const FCk_Handle_Goap_Action& InAction) -> bool
+	{
+		if (NOT ck::IsValid(InAction)) { return false; }
+
+		if (InAction.template Has<FFragment_Goap_Planner_Current>())
+		{
+			const auto& Current = InAction.template Get<FFragment_Goap_Planner_Current>();
+			if (Current.Get_EnableToggle() == ECk_EnableDisable::Disable) { return true; }
+		}
+
+		auto Owner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAction);
+		if (Owner.template Has<FFragment_Goap_Planner_Current>())
+		{
+			const auto& OwnerCurrent = Owner.template Get<FFragment_Goap_Planner_Current>();
+			if (OwnerCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable) { return true; }
+		}
+
+		return false;
+	}
 }
 
 // ====================================================================================================================
@@ -264,6 +302,11 @@ auto
 		const FFragment_Goap_Action_Params& InParams,
 		FFragment_Goap_Action_ReplanThrottle& InThrottle) -> void
 {
+	// PR-B.1b Stage 1 — disable-toggle pipeline gate. Disabled Planners don't
+	// replan (spec §3.3). Initial-plan / dirty tags remain set so re-enable
+	// resumes from the deferred state.
+	if (Goap_PRB1b_IsOwnerDisabled(InHandle)) { return; }
+
 	// Don't replan until Setup completes.
 	if (InHandle.Has<FTag_Goap_Action_RequiresSetup>()) { return; }
 
@@ -320,6 +363,11 @@ auto
 		FFragment_Goap_Action_Result& InResult,
 		FFragment_Goap_Action_PlanContext& InPlanContext) const -> void
 {
+	// PR-B.1b Stage 1 — disable-toggle pipeline gate. Disabled Planners don't
+	// drain their request queues (spec §3.3). Requests stay enqueued; re-enable
+	// resumes from the deferred state.
+	if (Goap_PRB1b_IsOwnerDisabled(InHandle)) { return; }
+
 	// Parent-plan gating: if THIS Action has a parent whose plan is still in
 	// flight (or has never produced a terminal result yet), defer Plan requests
 	// from this Action by re-enqueuing them. Other request types (SetGoal,
@@ -612,6 +660,11 @@ auto
 		const FFragment_Goap_Action_PlanContext& InPlanContext,
 		FFragment_Goap_Planner_PlanState& InPlanState) -> void
 {
+	// PR-B.1b Stage 1 — disable-toggle pipeline gate. Disabled Planners don't
+	// publish plan results / broadcast signals (spec §3.3). The search-complete
+	// tag stays set so re-enable picks the result up next frame.
+	if (Goap_PRB1b_IsOwnerDisabled(InHandle)) { return; }
+
 	InHandle.Remove<FTag_AStar_SearchComplete>();
 
 	// Any terminal status releases the parent-plan gate for our children.
