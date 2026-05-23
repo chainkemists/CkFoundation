@@ -5,12 +5,9 @@ public class CkAngelscriptGenerator : CkModuleRules
 {
     public CkAngelscriptGenerator(ReadOnlyTargetRules Target) : base(Target)
     {
-        // The self-heal Tier 2.6 fallback uses FPackageReader (declared in
-        // Engine/Source/Runtime/AssetRegistry/Internal/) to read parent-class
-        // info directly from a .uasset when AR's tag cache is poisoned (see
-        // CkAngelscriptGenerator_AssetRegistryStub.cpp Resolve_AssetClass_ViaPackageReader).
-        // UnrealEd accesses it via its `Engine/Source/`-inside location; plugin
-        // modules outside Engine/Source need an explicit path.
+        // FPackageReader (used by self-heal Tier 2.6) lives in AssetRegistry's
+        // Internal/ folder. Engine modules access it implicitly via their
+        // location under Engine/Source/; plugins need the explicit path.
         PrivateIncludePaths.AddRange(new string[] {
             Path.Combine(EngineDirectory, "Source", "Runtime", "AssetRegistry", "Internal"),
         });
@@ -78,11 +75,5 @@ public class CkAngelscriptGenerator : CkModuleRules
             "EditorSubsystem",
             "AssetRegistry"
         });
-
-        // FPackageReader lives under AssetRegistry's Internal/ folder.
-        // The self-heal Tier 2.6 fallback uses it to read parent-class
-        // info directly from a .uasset when AR's tag cache is poisoned
-        // (see CkAngelscriptGenerator_AssetRegistryStub.cpp).
-        PrivateIncludePathModuleNames.Add("AssetRegistry");
     }
 }
