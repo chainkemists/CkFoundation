@@ -249,6 +249,26 @@ _Resolved =
 
 Top-level Planners must supply a WS source; sub-Planners may inherit.
 
+### World State override stack
+
+Every WS entity carries a stack of named override layers (`FFragment_Goap_WorldState_OverrideStack`). Reads walk the stack top-down — `Get_Value(WS, Key)` returns the value from the topmost layer that contains the key, falling through to the base store (`FFragment_Goap_WorldState_Values`) if no layer covers it. Writes via `Set_Value` always mutate the base; override layers are read-overlay only.
+
+Push and pop fire `FTag_Goap_Planner_Dirty_WorldState` only for keys whose effective view (the topmost winning value) actually changes. A re-push of an existing layer name with identical contents is a no-op — no dirty fire, no replan. A* snapshots the flattened view at seed time in `FProcessor_Goap_Planner_HandleRequests`; the inner search loop never walks the stack.
+
+API on `UCk_Utils_Goap_WorldState_UE`:
+
+| Function | Purpose |
+|---|---|
+| `Push_Override(WS, Name, Map)` | Push (or replace) a named override layer. |
+| `Pop_Override_ByName(WS, Name)` | Pop a named layer. No-op if the name is absent. |
+| `Clear_Overrides(WS)` | Remove all override layers; restores base-only reads. |
+| `Push_Override_SingleKey(WS, Name, Key, Value)` | Push or update a single key into the named layer; creates the layer on first call. |
+| `Get_OverrideDepth(WS)` | Number of layers currently on the stack. |
+| `Get_OverrideLayerNames(WS)` | Layer names bottom-to-top. Useful for debugger tooltips. |
+| `Has_KeyOverride(WS, Key)` | True if any override layer is currently shadowing this key. |
+
+**Multi-Planner reuse:** layers pushed on a shared WS entity affect all Planners subscribed to it — both replan when the effective view changes. This is intentional; document it as a feature when sharing a WS across Planners.
+
 ---
 
 ## Parent-plan gating
@@ -333,6 +353,7 @@ Note: `FFragment_Goap_Planner_PlanState`, `FFragment_Goap_Planner_Goal`, and `FF
 - **Calling `Request_ResetActiveChain` and expecting the chain to stay collapsed.** `UpdateActivation` re-extends the chain on the next frame if the Planner's plan still has a composite Plan[0]. Disable the Planner first via `Request_SetEnableToggle(Planner, Disable)`.
 - **Reading `Get_Plan()` while `Get_PlanStatus() == Planning`.** The plan is only populated after `HandleResult` runs. Wait for `OnPlanComplete` or poll status.
 - **Skipping `CK_REGISTER_PROCESSOR` when adding a new GOAP processor.** An unregistered processor compiles silently and is never scheduled.
+- **Writing to override layers.** `Set_Value(WS, Key, NewValue)` always mutates the base store, never an override layer. There is no API to write into a layer directly. To express a transient "what if" mutation push an override layer; for a permanent change write to the base. Trying to use override layers as a write target produces the wrong semantics — the base store will be stale relative to the layer until the layer is popped.
 - **Numeric world state.** Classical boolean GOAP only. Project to booleans (`HasEnoughX`, `IsAtY`, `IsLowZ`).
 - **Calling `Request_Plan` immediately after a runtime `AddAction`.** The new child Action's `_CachedActionDef` (Preconditions/Effects/Cost extracted from the CDO) is populated by `FProcessor_Goap_Planner_Setup` on the next group tick. A `Request_Plan` issued in the same frame sees a default-constructed candidate (zero cost, empty effects) and the planner silently sticks with the pre-existing operator set. Symptom: tests that mutate the operator catalog at runtime appear to ignore the new Action. Fix: wait 1-3 frames between `AddAction` and `Request_Plan`, or until `OnGoapAction_SetupComplete` fires on the new child.
 
