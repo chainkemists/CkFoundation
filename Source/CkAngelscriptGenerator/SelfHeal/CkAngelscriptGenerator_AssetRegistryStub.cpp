@@ -678,10 +678,9 @@ namespace ck::angelscriptgenerator::self_heal
             const FCk_AsParsedError& InError)
         -> ECk_AssetAccessorFlavor
     {
-        // Conjunction is checked first so `assets::load::FOO_Class()` resolves
-        // to BlockingLoadClass instead of plain BlockingLoad. Without this the
-        // downstream `_Class` strip never fires and the disk walk searches for
-        // `FOO_Class.uasset` literally (no such file).
+        // Conjunction first: `::load + _Class` is its own flavor. Without
+        // this the `_Class` strip never fires and disk walk looks for
+        // `<X>_Class.uasset` literally.
         const auto IsLoad  = InError.TargetNamespace.EndsWith(TEXT("::load"));
         const auto IsClass = InError.FunctionName.EndsWith(TEXT("_Class"));
 
@@ -773,10 +772,8 @@ namespace ck::angelscriptgenerator::self_heal
             const FString& InSoftNamespace)
         -> FString
     {
-        // Mirrors the canonical generator's BP blocking-class shape
-        // (CkAssetRegistrySubsystem.cpp:530-540): returns TSubclassOf<Class>,
-        // delegates to LoadClassAsset_Blocking via the soft-class accessor.
-        // InFunctionName carries the `_Class` suffix already.
+        // Mirrors the canonical generator's BP blocking-class shape.
+        // InFunctionName carries `_Class` already.
         auto Out = FString{};
         Out += FString::Printf(TEXT("    TSubclassOf<%s> %s()"), *InResolvedClassName, *InFunctionName);            Out += LINE_TERMINATOR;
         Out += TEXT("    {");                                                                                       Out += LINE_TERMINATOR;
