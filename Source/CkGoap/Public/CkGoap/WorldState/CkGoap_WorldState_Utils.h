@@ -93,6 +93,65 @@ public:
 		FGameplayTag InKey);
 
 	// ================================================================================================================
+	// OVERRIDE STACK
+	// ================================================================================================================
+	//
+	// Named override layers shadow the base store on read; writes via Set_Value
+	// always go to the base. Push / pop / clear fire FTag_Goap_Dirty_WorldState
+	// on subscribers ONLY for keys whose effective value changes — re-pushing
+	// the same values is a quiet no-op. A* seeds a flattened snapshot at plan
+	// time so the search inner loop never walks the stack.
+	//
+	// Layers are NAMED. Re-pushing a layer with the same name REPLACES its
+	// contents idempotently. The debugger uses a fixed "DebugUI" layer;
+	// AI deliberation scopes typically pick ad-hoc names.
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|WorldState",
+		DisplayName = "[Ck][GOAP|WS] Push Override")
+	static FCk_Handle_Goap_WorldState
+	Push_Override(
+		UPARAM(ref) FCk_Handle_Goap_WorldState& InWorldState,
+		FName InLayerName,
+		const TMap<FGameplayTag, bool>& InOverrideValues);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|WorldState",
+		DisplayName = "[Ck][GOAP|WS] Push Override Single Key")
+	static FCk_Handle_Goap_WorldState
+	Push_Override_SingleKey(
+		UPARAM(ref) FCk_Handle_Goap_WorldState& InWorldState,
+		FName InLayerName,
+		FGameplayTag InKey,
+		bool InValue);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|WorldState",
+		DisplayName = "[Ck][GOAP|WS] Pop Override By Name")
+	static FCk_Handle_Goap_WorldState
+	Pop_Override_ByName(
+		UPARAM(ref) FCk_Handle_Goap_WorldState& InWorldState,
+		FName InLayerName);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|WorldState",
+		DisplayName = "[Ck][GOAP|WS] Clear Overrides")
+	static FCk_Handle_Goap_WorldState
+	Clear_Overrides(
+		UPARAM(ref) FCk_Handle_Goap_WorldState& InWorldState);
+
+	UFUNCTION(BlueprintPure, Category = "Ck|GOAP|WorldState",
+		DisplayName = "[Ck][GOAP|WS] Get Override Depth")
+	static int32
+	Get_OverrideDepth(const FCk_Handle_Goap_WorldState& InWorldState);
+
+	UFUNCTION(BlueprintPure, Category = "Ck|GOAP|WorldState",
+		DisplayName = "[Ck][GOAP|WS] Get Override Layer Names")
+	static TArray<FName>
+	Get_OverrideLayerNames(const FCk_Handle_Goap_WorldState& InWorldState);
+
+	UFUNCTION(BlueprintPure, Category = "Ck|GOAP|WorldState",
+		DisplayName = "[Ck][GOAP|WS] Has Key Override")
+	static bool
+	Has_KeyOverride(const FCk_Handle_Goap_WorldState& InWorldState, FGameplayTag InKey);
+
+	// ================================================================================================================
 	// SUBSCRIBERS
 	// ================================================================================================================
 	//
@@ -190,6 +249,14 @@ private:
 private:
 	static auto
 	DoAddRequest(FCk_Handle_Goap_WorldState& InWorldState, const auto& InRequest) -> FCk_Handle_Goap_WorldState;
+
+	// Tag every valid subscriber with FTag_Goap_Dirty_WorldState. Lazy-prune
+	// invalid entries on the way. Lives on this Utils class (rather than as
+	// a free function) so it has friend access to the Subscribers fragment's
+	// private _Subscribers field. Used by the override-stack mutators when an
+	// effective view change is detected.
+	static auto
+	DoTagSubscribersDirty(FCk_Handle_Goap_WorldState& InWorldState) -> void;
 };
 
 // ====================================================================================================================
