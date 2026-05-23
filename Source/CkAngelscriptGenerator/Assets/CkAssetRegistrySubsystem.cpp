@@ -117,19 +117,15 @@ auto
     auto AssetPath = InAssetData.GetSoftObjectPath();
     auto AssetName = InAssetData.AssetName.ToString();
 
-    // Sync resolve — runs BEFORE the async-load so the result is in hand before
-    // the regen-completion event fires. Closes the canonical race where slow
-    // async callbacks landed AFTER the batch was declared complete, dropping
-    // the accessor from the output and triggering the self-heal synth/cleanup
-    // loop. Two-path split, gated on AssetData class:
-    //   - Blueprint-derived assets: FPackageReader linker walk for the
-    //     generated class's native parent (BPs don't carry the parent class
-    //     name directly in AssetData; we have to walk the _C export chain).
-    //   - Non-Blueprint assets: AssetData::GetClass() is authoritative and
-    //     synchronous.
-    // The gate matters because BP linker-walk on a non-BP asset (e.g. an
-    // AnimMontage containing embedded AnimNotifyState `_C` exports) can grab
-    // the wrong class — the embedded BP's class, not the asset's class.
+    // Sync resolve — runs BEFORE the async-load so the result lands before the
+    // regen-completion event fires. Without this, slow async callbacks return
+    // AFTER the batch is declared complete, dropping the accessor from the
+    // output and triggering the self-heal synth/cleanup loop.
+    //
+    // BP-gating is load-bearing: an AnimMontage containing embedded
+    // AnimNotifyState `_C` exports would fool the linker walk into returning
+    // the embedded BP's class instead of the asset's. AssetData::GetClass() is
+    // authoritative for non-BPs and doesn't need the walk.
     if (const auto AssetClass = InAssetData.GetClass(); ck::IsValid(AssetClass))
     {
         const auto IsBlueprintAsset = AssetClass->IsChildOf<UBlueprint>();
@@ -555,9 +551,8 @@ auto
     CollectedFunctions->Reserve(TotalAssets);
     CollectedLoadFunctions->Reserve(TotalAssets);
 
-    // Shared write+broadcast+queue-advance block. Fires exactly once per config:
-    // either from the last per-asset callback to drain (async path) or directly
-    // after the for-loop when every asset resolved synchronously (Race A sync path).
+    // Single write per config. Fires from the last async callback to drain, OR
+    // directly post-loop when every asset resolved sync (Race A path).
     auto WriteCanonicalAndAdvance = [this, Content, CollectedFunctions, CollectedLoadFunctions,
                                      GeneratedFunctionCount, SkippedAssetCount, InConfig, TotalAssets]()
     {
@@ -591,9 +586,8 @@ auto
         auto OutputDir = Get_OutputDirectoryForRootPath(InConfig->AssetDiscoveryRoot);
         auto OutputPath = OutputDir / InConfig->OutputFileName;
 
-        // Non-regression guard: refuse to overwrite a populated file with a 0-accessor regen.
-        // Likely cause is the AssetRegistry not having finished cataloging this plugin mount yet
-        // when the PostCompile sweep ran. The next regen pass will retry once the catalog is ready.
+        // Refuse to clobber a populated canonical with a 0-accessor regen --
+        // AR hasn't finished cataloging this mount yet; next pass will retry.
         if (*GeneratedFunctionCount == 0 && IFileManager::Get().FileExists(*OutputPath))
         {
             auto ExistingContent = FString{};
@@ -641,16 +635,10 @@ auto
             ck::angelscriptgenerator::Warning(TEXT("Failed to write file: {}"), OutputPath);
         }
 
-        // Clean up slow task and reset flag
         ActiveSlowTask.Reset();
         IsGenerationInProgress = false;
-
-        // Rebuild script usage map now that Map 1 is populated
         ScanScriptFilesForUsage();
-
         OnAssetRegistryComplete.Broadcast(*GeneratedFunctionCount, *SkippedAssetCount, TotalAssets);
-
-        // Process next item in queue
         Request_ProcessNextInQueue();
     };
 
@@ -767,7 +755,6 @@ auto
                 (*PendingAssets)--;
                 (*ProcessedAssetCount)++;
 
-                // Update progress bar
                 if (ActiveSlowTask.IsValid())
                 {
                     ActiveSlowTask->EnterProgressFrame(1.0f);
@@ -775,9 +762,8 @@ auto
 
                 OnAssetRegistryProgress.Broadcast(*ProcessedAssetCount, TotalAssets);
 
-                // Gated on DispatchComplete to suppress per-asset writes during the synchronous
-                // drain of the for-loop (Race A made resolution sync, which previously caused
-                // ~1400 writes per regen). Only fires once: from the last async callback to drain.
+                // Gate on DispatchComplete to suppress writes during the sync drain
+                // (Race A causes ~1400 callbacks to fire inside this for-loop).
                 if (*DispatchComplete && *PendingAssets <= 0)
                 {
                     WriteCanonicalAndAdvance();
@@ -785,9 +771,8 @@ auto
             }));
     }
 
-    // Mark dispatch complete. If every asset resolved synchronously above, PendingAssets is
-    // already 0 and no callback has fired the write yet (gated). Fire it here. If any callback
-    // is still in flight, the last one to drain will see DispatchComplete=true and fire.
+    // All-sync path: callbacks already drained gated; fire write here.
+    // All-async path: PendingAssets > 0, last async callback owns the write.
     *DispatchComplete = true;
     if (*PendingAssets <= 0)
     {
