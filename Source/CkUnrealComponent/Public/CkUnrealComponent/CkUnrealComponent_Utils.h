@@ -90,6 +90,18 @@ public:
     Request_Remove(
         UPARAM(ref) FCk_Handle_UnrealComponent& InUnrealComponent);
 
+    // Stops FProcessor_UnrealComponent_PushTransform from writing the owning entity's
+    // world transform onto this component every tick. Use when the component is about
+    // to be Unreal-physics-driven (e.g. SetSimulatePhysics + K2_DetachFromComponent) and
+    // should no longer be slaved to its ECS owning entity. One-way operation — there is
+    // no re-enable; the component is expected to be short-lived after opt-out.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|UnrealComponent",
+              DisplayName = "[Ck][UnrealComponent] Request Disable Transform Push")
+    static FCk_Handle_UnrealComponent
+    Request_DisableTransformPush(
+        UPARAM(ref) FCk_Handle_UnrealComponent& InUnrealComponent);
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|UnrealComponent",

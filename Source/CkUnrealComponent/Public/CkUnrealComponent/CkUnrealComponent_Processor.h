@@ -41,6 +41,7 @@ namespace ck
             ck::TReadOnly<FFragment_UnrealComponent_Current>,
             FTag_UnrealComponent_IsScene,
             TExclude<FTag_UnrealComponent_NeedsSetup>,
+            TExclude<FTag_UnrealComponent_TransformPushDisabled>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
