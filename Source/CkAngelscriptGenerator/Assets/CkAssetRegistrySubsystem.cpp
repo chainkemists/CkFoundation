@@ -188,31 +188,10 @@ auto
         AssetPath,
         FStreamableDelegate::CreateLambda([this, AssetName, OnResolved, AssetPath]()
         {
-            // Fallback: when StreamableManager async-load can't construct the
-            // asset OR Get_NonBlueprintParentClass can't walk it (e.g.
-            // AS-parented WBPs whose AS class isn't currently registered, or
-            // assets with corrupt serialized parent refs), read parent-class
-            // info directly from the .uasset linker via the self-heal
-            // synthesizer's FPackageReader path. Without this, the canonical
-            // regen drops the accessor → next AS compile fails → self-heal
-            // re-synthesizes → stub cleanup deletes synth → loop, eventually
-            // tripping the per-signature convergence cap.
-            const auto Try_FpackageReaderFallback = [&AssetName, &AssetPath, &OnResolved](bool InIsEditorOnly) -> bool
-            {
-                const auto FromLinker = ck::angelscriptgenerator::self_heal::FCkAsAssetRegistryStubSynthesizer
-                    ::Resolve_ClassName_FromPackageReader_OnDisk(AssetPath.ToString());
-                if (FromLinker.IsEmpty()) { return false; }
-                ck::angelscriptgenerator::Log(TEXT("Resolved class via FPackageReader linker fallback: {} for {}"), FromLinker, AssetName);
-                OnResolved.ExecuteIfBound(FromLinker, true, InIsEditorOnly); // true = Blueprint-like (BPs are the case linker fallback handles)
-                return true;
-            };
-
             auto LoadedAsset = AssetPath.ResolveObject();
 
             if (ck::Is_NOT_Valid(LoadedAsset))
             {
-                if (Try_FpackageReaderFallback(/*InIsEditorOnly=*/false)) { return; }
-
                 ck::angelscriptgenerator::Warning(TEXT("Failed to load asset: {}"), AssetName);
 
                 auto MessageSegments = FCk_MessageSegments{
@@ -235,7 +214,6 @@ auto
                 auto ParentClass = LoadedBlueprint->ParentClass;
                 if (ck::Is_NOT_Valid(ParentClass))
                 {
-                    if (Try_FpackageReaderFallback(IsEditorOnly)) { return; }
                     ck::angelscriptgenerator::Warning(TEXT("Blueprint has no parent class: {}"), AssetName);
                     OnResolved.ExecuteIfBound(FString{}, false, IsEditorOnly);
                     return;
@@ -254,7 +232,6 @@ auto
                 }
                 else
                 {
-                    if (Try_FpackageReaderFallback(IsEditorOnly)) { return; }
                     ck::angelscriptgenerator::Warning(TEXT("Could not find native parent class for: {}"), AssetName);
                     OnResolved.ExecuteIfBound(FString{}, false, IsEditorOnly);
                 }

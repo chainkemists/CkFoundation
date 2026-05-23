@@ -202,32 +202,16 @@ namespace ck::angelscriptgenerator::self_heal
             return Result;
         }
 
-        // Tier 2.5 — AssetData NativeParentClass tag fallback for the
-        // chicken-and-egg case where LoadObject can't construct the asset.
+        // Tier 2.5 — AssetData tag fallback when LoadObject can't construct
+        // the asset (most often: WBPs whose ParentClass is an AS-defined
+        // UClass that isn't registered during AS-compile failure).
         //
-        // The canonical case this fixes: a WidgetBlueprint whose ParentClass
-        // is itself an AS-defined UClass. During AS-compile failure (which is
-        // when self-heal runs), the AS parent isn't registered, so the engine
-        // refuses to construct the WBP's WidgetBlueprintGeneratedClass and
-        // LoadObject<UObject>(PackagePath) returns nullptr. Same chain breaks
-        // for any BP-derived asset whose parent BP is itself unloadable —
-        // not unique to widgets.
-        //
-        // The asset header carries `FBlueprintTags::NativeParentClass` as a
-        // STRING — no class-load required to read it. AR's
-        // GetAssetByObjectPath is a point-query that tries FindObject first
-        // and falls back to a state read under a lock; both paths bypass the
-        // IsEngineStartupModuleLoadingComplete gate that gates SearchAllAssets
-        // / GetAssetsByClass (engine: AssetRegistry.cpp ~3179). Safe at
-        // modal-tick. The resolved string points at a native (C++) UClass,
-        // always in-memory at modal-tick because it's linked at startup, so
-        // UClass::TryFindTypeSlow returns a usable pointer for handoff to
-        // Get_CorrectClassNameWithPrefix.
-        //
-        // Result.IsBlueprint = true is set unconditionally — this path only
-        // produces a meaningful answer for assets that carry the BP tag, and
-        // the downstream caller treats the flag the same way it does for the
-        // existing LoadObject BP branch.
+        // AR's GetAssetByObjectPath is safe at modal-tick — point-query that
+        // bypasses the IsEngineStartupModuleLoadingComplete gate (engine:
+        // AssetRegistry.cpp ~3179). The tag value is a STRING; no class-load
+        // needed to read it. For AS-parented WBPs the tag often caches as
+        // "None" because the AR-scan-time walk couldn't reach a native parent
+        // — that's the case Tier 2.6 below picks up.
         auto Resolve_AssetClass_ViaAssetDataTag(
             const FString& InPackagePath) -> FResolvedAssetClass
         {
@@ -247,14 +231,9 @@ namespace ck::angelscriptgenerator::self_heal
                 return Result;
             }
 
-            // Try NativeParentClassPath first (first found native parent). For
-            // AS-parented WBPs whose AR scan happened while AS was wedged,
-            // this often returns "None" because the walk couldn't reach a
-            // native class. Fall back to ParentClassPath (immediate parent)
-            // — that's typically the AS class path string verbatim, which we
-            // can resolve via TryFindTypeSlow as long as the AS class itself
-            // was successfully parsed (Hazelight registers the UClass at
-            // parse-time even when other parts of the compile fail at link).
+            // NativeParentClassPath first; fall back to ParentClassPath
+            // (immediate parent — may be the AS class itself, which resolves
+            // when Hazelight has its UClass registered).
             auto Try_ResolveTag = [&](const FName& InTagName) -> UClass*
             {
                 auto TagValue = FString{};
@@ -276,65 +255,22 @@ namespace ck::angelscriptgenerator::self_heal
             if (NOT TaggedParent)
             { TaggedParent = Try_ResolveTag(FBlueprintTags::ParentClassPath); }
 
-            if (NOT TaggedParent)
-            {
-                // Diagnostic: dump available tag keys + a few values so we can
-                // see what AR actually has on this asset. Triggers when both
-                // tag-walk attempts fail.
-                auto TagSummary = FString{};
-                AssetData.EnumerateTags([&TagSummary](const TPair<FName, FAssetTagValueRef>& InPair)
-                {
-                    if (NOT TagSummary.IsEmpty()) { TagSummary += TEXT(","); }
-                    TagSummary += InPair.Key.ToString();
-                    // Inline a few load-bearing tag values for quick triage.
-                    const auto Key = InPair.Key;
-                    if (Key == FBlueprintTags::NativeParentClassPath
-                        || Key == FBlueprintTags::ParentClassPath
-                        || Key == FBlueprintTags::GeneratedClassPath)
-                    {
-                        TagSummary += FString::Printf(TEXT("=%s"), *InPair.Value.AsString());
-                    }
-                });
-                ck::angelscriptgenerator::Verbose(TEXT("[SelfHeal][Tier2.5] Both NativeParentClassPath and ParentClassPath unresolvable for '{}'. AR tags: [{}]"),
-                    InPackagePath, TagSummary);
-                return Result;
-            }
+            if (NOT TaggedParent) { return Result; }
 
-            // Don't walk Get_NonBlueprintParentClass. NativeParentClassPath is
-            // already native by definition; ParentClassPath gives us the
-            // *immediate* parent which is what the caller's typed slot
-            // expects (caller writes `TSoftClassPtr<UBb_LootableInventory_PanelWidget>`,
-            // not `TSoftClassPtr<UUserWidget>`). Walking past an AS class
-            // would defeat the whole point of the ParentClassPath fallback.
+            // Don't walk Get_NonBlueprintParentClass — ParentClassPath's
+            // immediate-parent (often an AS class) is what the caller's typed
+            // slot expects. Walking past would defeat the fallback.
             Result.ClassName   = UCkAssetRegistrySubsystem::Get_CorrectClassNameWithPrefix(TaggedParent);
             Result.IsBlueprint = true;
             return Result;
         }
 
-        // Tier 2.6 — read the .uasset linker tables directly via FPackageReader.
-        //
-        // Triggered when both LoadObject (Tier 2) and AR tag lookup (Tier 2.5)
-        // fail. The canonical case: AS-parented WBPs where AR was scanned
-        // while the AS class was unloadable, so all three class-path tags
-        // (NativeParentClass/ParentClass/GeneratedClass) were cached as
-        // "None". The .uasset file itself is the on-disk truth — its
-        // export's SuperIndex points at the parent-class import regardless
-        // of any class-walk state.
-        //
-        // Algorithm:
-        //   1. Convert package path to disk filename via FPackageName.
-        //   2. FPackageReader::OpenPackageFile + GetExports/GetImports.
-        //   3. Find the generated-class export (name ends "_C" for BPs); its
-        //      SuperIndex points at the parent class import.
-        //   4. Walk the import's OuterIndex chain to construct
-        //      `/Script/Module.ClassName`.
-        //   5. UClass::TryFindTypeSlow → use Get_CorrectClassNameWithPrefix.
-        //
-        // For AS-parented WBPs the resolved path is e.g.
-        // `/Script/Angelscript.Bb_LootableInventory_PanelWidget`. The AS
-        // class IS in the UObject registry at modal-tick (Hazelight
-        // registers UClass at parse-time, even when other parts of the
-        // compile fail at link), so TryFindTypeSlow succeeds.
+        // Tier 2.6 — last-resort linker walk on the .uasset directly. Bypasses
+        // AR entirely, which is necessary when AR's class-path tags were
+        // cached as "None" (the AR scan happened while the class chain was
+        // unresolvable). Two paths inside: Path A reads the generated-class
+        // export's SuperIndex; Path B scans the import table for any Class-
+        // typed import under /Script/Angelscript.
         auto Resolve_AssetClass_ViaPackageReader(
             const FString& InPackagePath) -> FResolvedAssetClass
         {
@@ -365,8 +301,9 @@ namespace ck::angelscriptgenerator::self_heal
             if (NOT Reader.GetImports(Imports) || NOT Reader.GetExports(Exports))
             { return Result; }
 
-            // Helper: resolve an FPackageIndex to a flat path string by
-            // walking its OuterIndex chain through ImportMap.
+            // Walk an FPackageIndex up the OuterIndex chain to a flat path
+            // like `/Script/Module.ClassName`. NOTE: `ToImport()` already
+            // returns the 0-based array index — DO NOT apply `-X - 1` again.
             auto Resolve_ImportPath = [&Imports](FPackageIndex InIndex) -> FString
             {
                 if (NOT InIndex.IsImport()) { return FString{}; }
@@ -381,12 +318,10 @@ namespace ck::angelscriptgenerator::self_heal
                     Names.Insert(Import.ObjectName, 0);
                     Cursor = Import.OuterIndex;
                 }
-                // Names is now [/Script/Module, ClassName] (or longer for nested).
                 if (Names.Num() < 2) { return FString{}; }
 
-                // Top-level FName is the package, e.g. /Script/Angelscript or
-                // /Script/UMG. Stored variants: with leading slash, without,
-                // or as bare module name. Normalize to leading slash.
+                // Package name may be stored with or without leading slash;
+                // normalize to `/Script/<Module>`.
                 auto PackageStr = Names[0].ToString();
                 if (NOT PackageStr.StartsWith(TEXT("/"))) { PackageStr = FString{TEXT("/Script/")} + PackageStr; }
 
@@ -398,20 +333,12 @@ namespace ck::angelscriptgenerator::self_heal
                 return PackageStr + TEXT(".") + ClassStr;
             };
 
-            // Path A — Generated-class export's SuperIndex (canonical).
-            // For a healthy WBP: `<X>_WBP_C` export's SuperIndex points at
-            // the parent class import. Fails when the .uasset was saved
-            // while the parent was unloadable — serializer wrote
-            // SuperIndex=0 because it couldn't reference what wasn't there.
-            // Helper: when TryFindTypeSlow fails on an AS-class path (Hazelight
-            // unregisters AS UClasses during the reload window — modal-tick is
-            // mid-unload), derive the AS-side type name directly from the
-            // path string. AS-defined classes that parent a WBP are always
-            // UUserWidget-derived (that's what WBP _IS_), so the `U` prefix
-            // is correct. The path `/Script/Angelscript.Bb_X` -> `UBb_X`.
-            // Non-AS class paths (e.g. /Script/UMG.UserWidget) MUST resolve
-            // via TryFindTypeSlow — non-AS classes don't follow the `U`+name
-            // rule (Actor classes use `A`, etc.) and we'd guess wrong.
+            // AS-class fallback when TryFindTypeSlow fails: derive the AS
+            // type name from the path. Hazelight unregisters AS UClasses
+            // during the reload window, so even validly-parsed AS classes
+            // can be unfindable at modal-tick. Restricted to AS paths only
+            // because the `U` prefix rule only holds for UObject-derived AS
+            // classes — native Actor classes use `A`, and we'd guess wrong.
             auto Derive_AsClassNameFromPath = [](const FString& InPath) -> FString
             {
                 static const auto AsPrefix = FString{TEXT("/Script/Angelscript.")};
@@ -421,6 +348,10 @@ namespace ck::angelscriptgenerator::self_heal
                 return FString{TEXT("U")} + BaseName;
             };
 
+            // Path A — generated-class export's SuperIndex. Fails when the
+            // .uasset was saved while the parent was unloadable (serializer
+            // wrote SuperIndex=0 because it couldn't reference what wasn't
+            // there); Path B below picks up that case.
             for (const auto& Export : Exports)
             {
                 const auto NameStr = Export.ObjectName.ToString();
@@ -439,7 +370,6 @@ namespace ck::angelscriptgenerator::self_heal
                     return Result;
                 }
 
-                // AS-class chicken-and-egg fallback: derive `UBb_X` from path.
                 const auto Derived = Derive_AsClassNameFromPath(ParentPath);
                 if (NOT Derived.IsEmpty())
                 {
@@ -449,26 +379,15 @@ namespace ck::angelscriptgenerator::self_heal
                         InPackagePath, ParentPath, Result.ClassName);
                     return Result;
                 }
-
-                ck::angelscriptgenerator::Verbose(TEXT("[SelfHeal][Tier2.6][PathA] Export '{}' SuperIndex resolved to '{}' but neither TryFindTypeSlow nor AS-derivation produced a class name"),
-                    NameStr, ParentPath);
             }
 
-            // Path B — scan imports for a Class-typed AS import. When the
-            // _C export's SuperIndex is 0 (parent was unloadable at save),
-            // the parent name often STILL survives as a Class import in
-            // the import table because the BP's serialized graph references
-            // the type by name. Filter to imports whose outer chain ends in
-            // `/Script/Angelscript` and whose ClassName is `Class`.
-            //
-            // Heuristic: if exactly one AS class import exists, use it.
-            // If multiple, prefer the one whose ObjectName has the longest
-            // shared prefix with the asset's basename (WBP naming convention
-            // ties the parent AS class name to the WBP filename).
+            // Path B — scan the import table directly for Class-typed AS
+            // imports. The parent's name survives there even when Path A's
+            // SuperIndex was zero'd at save time. AS classes use ClassName
+            // "ASClass" specifically (not "Class") — accept any *Class
+            // suffix to be robust to engine changes.
             const auto AssetBaseName = FPaths::GetBaseFilename(InPackagePath);
 
-            // Get the outer package name of a class import (one hop, no
-            // path concatenation — package imports have a single FName).
             auto Get_OuterPackageName = [&Imports](const FObjectImport& InImport) -> FString
             {
                 if (NOT InImport.OuterIndex.IsImport()) { return FString{}; }
@@ -480,18 +399,13 @@ namespace ck::angelscriptgenerator::self_heal
             auto AsCandidates = TArray<TPair<FString /*path*/, FString /*name*/>>{};
             for (const auto& Import : Imports)
             {
-                // The import's CLASS metaclass — for a UClass import, this is
-                // typically "Class" (UClass itself). AS-generated classes may
-                // use ScriptClass or similar — accept multiple shapes.
                 const auto ClassNameStr = Import.ClassName.ToString();
                 const auto IsClassImport = ClassNameStr == TEXT("Class")
                                         || ClassNameStr.EndsWith(TEXT("Class"));
                 if (NOT IsClassImport) { continue; }
 
+                // Package name normalisation: with or without leading slash.
                 const auto OuterPkg = Get_OuterPackageName(Import);
-                // AS classes live under /Script/Angelscript. The package
-                // import's ObjectName is typically "/Script/Angelscript"
-                // (with leading slash) but can also be just "Angelscript".
                 const auto IsAsPkg = OuterPkg == TEXT("/Script/Angelscript")
                                   || OuterPkg == TEXT("Angelscript");
                 if (NOT IsAsPkg) { continue; }
@@ -517,8 +431,8 @@ namespace ck::angelscriptgenerator::self_heal
             }
             else if (AsCandidates.Num() > 1)
             {
-                // Multiple AS imports: rank by longest shared prefix with the
-                // asset basename.
+                // Tie-break by longest shared prefix with asset basename
+                // (WBP naming convention ties parent AS class name to file).
                 auto BestIdx       = int32{INDEX_NONE};
                 auto BestPrefixLen = int32{-1};
                 for (auto i = 0; i < AsCandidates.Num(); ++i)
@@ -541,29 +455,8 @@ namespace ck::angelscriptgenerator::self_heal
                 }
             }
 
-            // Diagnostic dump — full export list (just _C-suffixed ones) +
-            // all imports' class+name+outer shape so we can see what AR sees.
-            auto ExportSummary = FString{};
-            for (const auto& E : Exports)
-            {
-                const auto N = E.ObjectName.ToString();
-                if (NOT N.EndsWith(TEXT("_C")) && NOT N.Contains(TEXT("WBP"))) { continue; }
-                if (NOT ExportSummary.IsEmpty()) { ExportSummary += TEXT(","); }
-                ExportSummary += FString::Printf(TEXT("%s[super=%d,class=%d]"),
-                    *N, E.SuperIndex.ForDebugging(), E.ClassIndex.ForDebugging());
-            }
-            auto ImportSummary = FString{};
-            for (auto i = 0; i < FMath::Min(Imports.Num(), 50); ++i)
-            {
-                const auto& Imp = Imports[i];
-                if (NOT ImportSummary.IsEmpty()) { ImportSummary += TEXT(","); }
-                ImportSummary += FString::Printf(TEXT("%s:%s[outer=%d]"),
-                    *Imp.ClassName.ToString(), *Imp.ObjectName.ToString(),
-                    Imp.OuterIndex.ForDebugging());
-            }
-            ck::angelscriptgenerator::Warning(TEXT("[SelfHeal][Tier2.6] No usable parent found in '{}'. _C/WBP exports: [{}]"),
-                DiskFilename, ExportSummary);
-            ck::angelscriptgenerator::Warning(TEXT("[SelfHeal][Tier2.6] All imports: [{}]"), ImportSummary);
+            ck::angelscriptgenerator::Warning(TEXT("[SelfHeal][Tier2.6] No usable parent found in '{}' ({} exports, {} imports, {} AS-class candidates)"),
+                DiskFilename, Exports.Num(), Imports.Num(), AsCandidates.Num());
             return Result;
         }
 
@@ -598,8 +491,6 @@ namespace ck::angelscriptgenerator::self_heal
             const FString& InPackagePath)
         -> FString
     {
-        // Wraps the anon-namespace helper for callers outside this TU.
-        // Lookup finds the anon function via the enclosing namespace.
         const auto Resolved = Resolve_AssetClass_ViaPackageReader(InPackagePath);
         return Resolved.ClassName;
     }
