@@ -24,22 +24,36 @@ class CKGOAP_API FProcessor_Goap_Planner_Setup : public ck_exp::TProcessor<
 	FCk_Handle_Goap_Planner,
 	ck::TReadWrite<FFragment_Goap_Planner_Current>,
 	ck::TReadOnly<FFragment_Goap_Planner_ActionCatalogIndex>,
+	ck::TReadWrite<FFragment_Goap_Planner_WorldStateSource>,
+	ck::TReadWrite<FFragment_Goap_Planner_Goal>,
 	FTag_Goap_Planner_RequiresSetup,
 	CK_IGNORE_PENDING_KILL>
 {
 public:
 	using Group = FGroup_Gameplay_AI;
+	// PR-B.1b Stage 3: must run after per-Action Setup so the WS registry has
+	// keys registered (Planner-tier goal resolution looks them up). Without
+	// this, top-level Planner goal _Goal stays empty when keys aren't yet in
+	// the registry, leading to empty plans / no OnPlanComplete fires.
+	using RunAfter = TDepList<FProcessor_Goap_Action_Setup>;
 
 public:
 	using TProcessor::TProcessor;
 
 public:
+	// PR-B.1b Stage 3: also resolves the Planner-side _GoalAuthored → _Goal
+	// using the Planner's own resolved WS source. Resolution lives here (not
+	// the per-Action Setup) because the goal is conceptually a Planner-level
+	// concern. Defers if the Planner has no resolved WS source yet or if any
+	// candidate child still has FTag_Goap_Action_RequiresSetup.
 	static auto
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
 		FFragment_Goap_Planner_Current& InCurrent,
-		const FFragment_Goap_Planner_ActionCatalogIndex& InCatalogIndex) -> void;
+		const FFragment_Goap_Planner_ActionCatalogIndex& InCatalogIndex,
+		FFragment_Goap_Planner_WorldStateSource& InWSSource,
+		FFragment_Goap_Planner_Goal& InGoal) -> void;
 };
 
 // ====================================================================================================================
@@ -56,27 +70,28 @@ public:
 
 class CKGOAP_API FProcessor_Goap_Planner_UpdateActivation : public ck_exp::TProcessor<
 	FProcessor_Goap_Planner_UpdateActivation,
-	FCk_Handle_Goap_Action,
-	ck::TReadOnly<FFragment_Goap_Action_Params>,
-	ck::TReadOnly<FFragment_Goap_Action_Tree>,
+	FCk_Handle_Goap_Planner,
+	ck::TReadOnly<FFragment_Goap_Planner_Current>,
 	ck::TReadOnly<FFragment_Goap_Planner_PlanState>,
 	ck::TReadWrite<FFragment_Goap_Planner_Activation>,
 	CK_IGNORE_PENDING_KILL>
 {
 public:
 	using Group = FGroup_Gameplay_AI;
-	using RunAfter = TDepList<FProcessor_Goap_Action_HandleResult>;
+	using RunAfter = TDepList<FProcessor_Goap_Planner_HandleResult>;
 
 public:
 	using TProcessor::TProcessor;
 
 public:
+	// PR-B.1b Stage 3: matches Planner directly. Reads Planner-side PlanState.
+	// Activation/deactivation of sub-Planners (children entities) still uses
+	// FCk_Handle_Goap_Action handles — sub-Planners ARE Actions in Path A.
 	auto
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
-		const FFragment_Goap_Action_Params& InParams,
-		const FFragment_Goap_Action_Tree& InTree,
+		const FFragment_Goap_Planner_Current& InCurrent,
 		const FFragment_Goap_Planner_PlanState& InPlanState,
 		FFragment_Goap_Planner_Activation& InActivation) const -> void;
 
