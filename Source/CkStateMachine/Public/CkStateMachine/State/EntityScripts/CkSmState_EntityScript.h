@@ -202,6 +202,19 @@ public:
     Get_StateMachineContext() const;
 
     // ================================================================================================================
+    // INTERNALS
+    // ================================================================================================================
+
+private:
+    // Walks the state's records (tasks, transitions, conditions) plus the transient
+    // ComposedFromInProgress fragment, computes the structural fingerprint, stores it on
+    // FFragment_SmState_Fingerprint, and clears the transient scratch. Called by Construct
+    // immediately after DefineState returns.
+    auto
+    DoComputeFingerprint(
+        FCk_Handle_SmState_UnderConstruction& InStateHandle) -> void;
+
+    // ================================================================================================================
     // MEMBERS
     // ================================================================================================================
 

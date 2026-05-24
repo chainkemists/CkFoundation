@@ -3,6 +3,7 @@
 #include "CkStateMachine/CkStateMachine_Log.h"
 #include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
 #include "CkStateMachine/Debug/CkStateMachine_Debug_GraphWalk_Fragment.h"
+#include "CkStateMachine/State/CkSmState_Fingerprint.h"
 #include "CkStateMachine/State/CkSmState_Fragment.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 
@@ -10,6 +11,7 @@
 #include "CkStateMachine/Task/EntityScripts/CkSmTask_EntityScript.h"
 #include "CkStateMachine/Transition/CkSmTransition_Utils.h"
 #include "CkStateMachine/Condition/CkSmCondition_Utils.h"
+#include "CkStateMachine/Condition/EntityScripts/CkSmCondition_EntityScript.h"
 #include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
@@ -35,7 +37,17 @@ auto
     }
 
     auto StateHandle = ck::StaticCast<FCk_Handle_SmState_UnderConstruction>(InHandle);
+
+    // Transient scratch used by ComposeFromState to record composed-from classes during
+    // DefineState. Removed below once the fingerprint is built. Pre-seeded here so that
+    // nested ComposeFromState calls (which call back into DefineState on a different CDO
+    // but with this same handle) append into the host state's list rather than try to
+    // create the fragment from a possibly-iterating context.
+    StateHandle.AddOrGet<ck::FFragment_SmState_ComposedFromInProgress>();
+
     DefineState(StateHandle);
+
+    DoComputeFingerprint(StateHandle);
 
     return ParentFlow;
 }
@@ -185,8 +197,61 @@ auto
     VisitedClasses.Add(InOtherStateClass.Get());
     ON_SCOPE_EXIT { VisitedClasses.Remove(InOtherStateClass.Get()); };
 
+    // Record this compose call against the host state's in-progress fingerprint inputs.
+    // The scratch fragment was added by Construct just before invoking DefineState; nested
+    // composes append in call order.
+    if (InStateHandle.Has<ck::FFragment_SmState_ComposedFromInProgress>())
+    {
+        auto& InProgress = InStateHandle.Get<ck::FFragment_SmState_ComposedFromInProgress>();
+        InProgress._ComposedFromClasses.Add(InOtherStateClass);
+    }
+
     auto* CDO = InOtherStateClass->GetDefaultObject<UCk_SmState_EntityScript>();
     CDO->DefineState(InStateHandle);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_SmState_EntityScript::
+    DoComputeFingerprint(
+        FCk_Handle_SmState_UnderConstruction& InStateHandle)
+    -> void
+{
+    auto Inputs = ck::statemachine::FFingerprintInputs{};
+
+    UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::ForEach_ValidEntry(InStateHandle,
+    [&](FCk_Handle_SmTask InTask) -> ECk_Record_ForEachIterationResult
+    {
+        Inputs._TaskClasses.Add(UCk_Utils_SmTask_UE::Get_ScriptClass(InTask));
+        return ECk_Record_ForEachIterationResult::Continue;
+    });
+
+    UCk_Utils_StateMachine_UE::RecordOfSmTransitions_Utils::ForEach_ValidEntry(InStateHandle,
+    [&](FCk_Handle_SmTransition InTransition) -> ECk_Record_ForEachIterationResult
+    {
+        Inputs._TransitionTargetClasses.Add(UCk_Utils_SmTransition_UE::Get_TargetStateClass(InTransition));
+
+        auto& ConditionList = Inputs._TransitionConditionLists.AddDefaulted_GetRef();
+        UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::ForEach_ValidEntry(InTransition,
+        [&](FCk_Handle_SmCondition InCondition) -> ECk_Record_ForEachIterationResult
+        {
+            ConditionList.Add(UCk_Utils_SmCondition_UE::Get_ScriptClass(InCondition));
+            return ECk_Record_ForEachIterationResult::Continue;
+        });
+
+        return ECk_Record_ForEachIterationResult::Continue;
+    });
+
+    if (InStateHandle.Has<ck::FFragment_SmState_ComposedFromInProgress>())
+    {
+        const auto& InProgress = InStateHandle.Get<ck::FFragment_SmState_ComposedFromInProgress>();
+        Inputs._ComposedFromClasses = InProgress.Get_ComposedFromClasses();
+        InStateHandle.Try_Remove<ck::FFragment_SmState_ComposedFromInProgress>();
+    }
+
+    auto& FingerprintFrag = InStateHandle.AddOrGet<ck::FFragment_SmState_Fingerprint>();
+    FingerprintFrag._Hash = ck::statemachine::ComputeFingerprint(Inputs);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
