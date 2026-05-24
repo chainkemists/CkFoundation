@@ -185,6 +185,31 @@ public:
     Get_StateTagForClass(
         TSubclassOf<UCk_SmState_EntityScript> InClass);
 
+    // Per-class fingerprint cache (spec §9 verify path support).
+    //
+    // The structural fingerprint of a state class is computed from its DefineState output —
+    // an instance operation that has to wait for the EntityScript Construct pipeline to run.
+    // For replication publication we need the fingerprint *before* the new state's instance
+    // exists, otherwise published transition events ship with fingerprint=0 and clients can't
+    // verify determinism on commit.
+    //
+    // Resolution: cache the fingerprint per class on first compute. Every Construct's call to
+    // DoComputeFingerprint populates this cache. CommitPendingTransition's publication path
+    // reads it. The cache is class-name-keyed so hot reload + PIE-restart cycles don't dangle.
+    // First-ever instantiation of a class still publishes 0 (cache miss); the Construct
+    // backfill (DoBackfillFingerprintToRepData) cleans up that one zero asynchronously.
+    //
+    // Returns 0 when the class has never been seen — caller treats 0 as "no fingerprint, skip
+    // verify" downstream.
+    static auto
+    Get_CachedFingerprint(
+        TSubclassOf<UCk_SmState_EntityScript> InClass) -> int32;
+
+    static auto
+    Set_CachedFingerprint(
+        TSubclassOf<UCk_SmState_EntityScript> InClass,
+        int32 InFingerprint) -> void;
+
     UFUNCTION(BlueprintPure,
         Category = "Ck|SM|State",
         DisplayName = "[Ck][SM] Get Owner StateMachine",
@@ -220,6 +245,16 @@ private:
     // payload state (defensive against fast follow-up transitions racing past this Construct).
     auto
     DoBackfillFingerprintToRepData(
+        FCk_Handle_SmState_UnderConstruction& InStateHandle) -> void;
+
+    // Spec §9 determinism verify. If FProcessor_Sm_CommitPendingTransition attached
+    // FFragment_SmState_ExpectedFingerprint to this state (meaning the commit was driven by a
+    // replicated event with a non-zero fingerprint), compare to the locally-computed hash and
+    // fault the SM on mismatch — exit the bad state and stamp FTag_Sm_DeterminismFault so no
+    // further transitions land. Authority-driven commits never carry the carrier, so this is
+    // a no-op for the authoritative machine.
+    auto
+    DoVerifyFingerprintAgainstExpected(
         FCk_Handle_SmState_UnderConstruction& InStateHandle) -> void;
 
     // ================================================================================================================
