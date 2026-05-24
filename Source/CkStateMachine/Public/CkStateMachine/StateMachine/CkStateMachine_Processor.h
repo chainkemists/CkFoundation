@@ -161,9 +161,49 @@ namespace ck
             FFragment_Sm_Current& InCurrent) -> void;
     };
 
-    // Forward decl — the processor below names CommitPendingTransition in its RunBefore, but
+    // Forward decl — the processors below name CommitPendingTransition in their RunBefore, but
     // declaring it first keeps the replay path next to the request path it complements.
     class FProcessor_Sm_CommitPendingTransition;
+    class FProcessor_Sm_ApplyReplicatedHistory;
+
+    // ================================================================================================================
+    // FLUSH PENDING REPLICATION — DRAIN — Releases stashed rep entries into the replay queue.
+    //
+    // The OnChange/OnAdd handlers (CkStateMachine_Replication.cpp) park incoming events in
+    // FFragment_Sm_PendingReplicationEntries when either FFragment_Sm_Current is not yet present
+    // (Setup hasn't run on the client) or the stash already has entries (preserving arrival
+    // order under back-to-back deliveries). This processor releases the stash into ReplayQueue
+    // in arrival order once Setup is complete and the SM is not faulted.
+    //
+    // Runs BEFORE ApplyReplicatedHistory in the same group so a newly-released entry can be
+    // drained from the queue in the same tick.
+    // ================================================================================================================
+
+    class CKSTATEMACHINE_API FProcessor_Sm_FlushPendingReplication_Drain : public ck_exp::TProcessor<
+        FProcessor_Sm_FlushPendingReplication_Drain,
+        FCk_Handle_StateMachine,
+        TReadOnly<FFragment_Sm_Current>,
+        TReadWrite<FFragment_Sm_PendingReplicationEntries>,
+        TExclude<FTag_Sm_DeterminismFault>,
+        TExclude<FTag_Sm_RequiresSetup>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group         = FGroup_Gameplay_AI;
+        using RunBefore     = TDepList<FProcessor_Sm_ApplyReplicatedHistory>;
+        using MarkedDirtyBy = FFragment_Sm_PendingReplicationEntries;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Sm_Current& InCurrent,
+            FFragment_Sm_PendingReplicationEntries& InStash) -> void;
+    };
 
     // ================================================================================================================
     // APPLY REPLICATED HISTORY — Non-owning client replay path. Drains FFragment_Sm_ReplayQueue
