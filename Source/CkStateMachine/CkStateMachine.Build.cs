@@ -16,6 +16,7 @@ public class CkStateMachine : CkModuleRules
             "Engine",
             "GameplayTags",
 
+            "CkActorRelay",
             "CkCore",
             "CkDynamic",
             "CkEcs",
