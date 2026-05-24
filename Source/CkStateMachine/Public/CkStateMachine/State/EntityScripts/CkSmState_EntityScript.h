@@ -2,6 +2,7 @@
 
 #include "CkEcs/EntityScript/CkEntityScript.h"
 
+#include "CkStateMachine/Net/CkStateMachine_NetContext.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment_Data.h"
 
 #include "CkSmState_EntityScript.generated.h"
@@ -20,11 +21,6 @@ class CKSTATEMACHINE_API UCk_SmState_EntityScript : public UCk_EntityScript_UE
 
 public:
     CK_GENERATED_BODY(UCk_SmState_EntityScript);
-
-    UCk_SmState_EntityScript()
-    {
-        _Replication = ECk_Replication::DoesNotReplicate;
-    }
 
     // ================================================================================================================
     // LIFECYCLE (EntityScript overrides)
@@ -55,11 +51,13 @@ protected:
 public:
     virtual auto
     EnterState(
-        FCk_Handle_SmState InHandle) -> void;
+        FCk_Handle_SmState InHandle,
+        ECk_Sm_NetContext InNetContext) -> void;
 
     virtual auto
     ExitState(
-        FCk_Handle_SmState InHandle) -> void;
+        FCk_Handle_SmState InHandle,
+        ECk_Sm_NetContext InNetContext) -> void;
 
     // ================================================================================================================
     // VIRTUAL METHODS (user overrides)
@@ -100,14 +98,16 @@ protected:
         DisplayName = "Enter State")
     void
     DoEnterState(
-        FCk_Handle_SmState InHandle);
+        FCk_Handle_SmState InHandle,
+        ECk_Sm_NetContext InNetContext);
 
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Ck|SM|State",
         DisplayName = "Exit State")
     void
     DoExitState(
-        FCk_Handle_SmState InHandle);
+        FCk_Handle_SmState InHandle,
+        ECk_Sm_NetContext InNetContext);
 
     // ================================================================================================================
     // BUILDER API (call from DefineState only — enforced by UnderConstruction handle)
