@@ -373,8 +373,37 @@ Note: `FFragment_Goap_Planner_PlanState`, `FFragment_Goap_Planner_Goal`, and `FF
 
 ---
 
+## Design tenets
+
+### Every Planner must always produce a valid plan
+
+**`PlanFailed` is a misconfiguration in a game, never a normal operational state.** Every Planner you author for a real game must have a fallback Action that guarantees `PlanFound` from every world-state. The recommended pattern is a no-precondition, very-high-cost Action whose effect satisfies the Planner's goal:
+
+```cpp
+class UCk_<Feature>_Idle : public UCk_GoapAction_EntityScript
+{
+    virtual auto DefineAction() -> void override
+    {
+        // No preconditions — always selectable.
+        AddEffect(<the Planner's goal key>, true);
+        SetCost(999.0);  // Very high — only wins when nothing else is viable.
+    }
+};
+```
+
+Real-game examples: a combat NPC's `WaitForEnemy` (satisfies `EnemyNeutralized` by attrition / time-out), a worker AI's `Idle` (satisfies `TaskComplete` by waiting for the next assignment), a patrol bot's `StandWatch` (satisfies `AreaPatrolled` by holding position).
+
+**Why this matters at the engine layer:** gameplay code that consumes plans (state-machine drivers, behaviour trees, animation graphs) should treat `PlanFailed` as a hard-error condition that fires a `CK_ENSURE_IF_NOT` or analogous diagnostic. Treating "no plan" as "AI is doing nothing" hides authoring bugs (a missing Action, a precondition typo, a sealed-then-mutated WS key) under silent inactivity. Forcing every Planner to always have at least the fallback plan means `PlanFailed` is structurally impossible at runtime — every observed `PlanFailed` is then a real misconfiguration to surface.
+
+**Fallback cost picks itself.** Any cost much higher than the cheapest real Action wins automatically when no other plan is viable. `999.0` is the convention used in `CkGoapFEARGym_Actions::UCk_GoapFEARGym_WaitForEnemy` — the canonical example. Pick anything well above your real-Action cost ceiling.
+
+**Why the framework still allows `PlanFailed` to exist as a status:** the planner is a search algorithm — `PlanFailed` is a real reachable state in the abstract model, and tests exercise it directly (e.g. `CkAutoTest_Goap_Planner_InvalidGoal`). This tenet is a content/authoring rule, not a framework invariant: the framework correctly reports `PlanFailed` when no plan exists; game authors are responsible for ensuring it can never happen by structuring their catalog with a fallback.
+
+---
+
 ## Anti-patterns
 
+- **Letting a game-authored Planner reach `PlanFailed`.** See *Design tenets / Every Planner must always produce a valid plan*. If a Planner you authored can enter `PlanFailed`, its operator catalog is missing a fallback Action. The framework still surfaces `PlanFailed` correctly (it's a real reachable state and tests exercise it), but at the gameplay-content layer, `PlanFailed` should fire `CK_ENSURE` because it means the catalog is misconfigured.
 - **Calling `Add` on an owner that already has standalone `CkAStar`.** GOAP stamps `FFragment_AStar_Params` per Planner; the two collide. Use `Create` (child entity) or remove the standalone AStar feature.
 - **Setting world state with a tag no Action references.** The key registry is sealed after Setup; writes to unregistered tags are silent no-ops. Reference the key in at least one precondition or effect to register it.
 - **Trying to make a leaf Action also plan.** Leaf Actions have no children registered, so there is nothing to plan over. If you want a leaf to plan, `PromoteActionToPlanner` it first, then `AddAction(PromotedPlanner, ...)` to register children under the promoted host.
