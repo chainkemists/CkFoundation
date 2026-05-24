@@ -183,7 +183,7 @@ namespace ck
     class CKSTATEMACHINE_API FProcessor_Sm_FlushPendingReplication_Drain : public ck_exp::TProcessor<
         FProcessor_Sm_FlushPendingReplication_Drain,
         FCk_Handle_StateMachine,
-        TReadOnly<FFragment_Sm_Current>,
+        TReadWrite<FFragment_Sm_Current>,
         TReadWrite<FFragment_Sm_PendingReplicationEntries>,
         TExclude<FTag_Sm_DeterminismFault>,
         TExclude<FTag_Sm_RequiresSetup>,
@@ -198,11 +198,13 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
+        // Note: FFragment_Sm_Current is TReadWrite because MirrorRunStatus mutates it when
+        // applying the stashed run-status after events drain.
         static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Sm_Current& InCurrent,
+            FFragment_Sm_Current& InCurrent,
             FFragment_Sm_PendingReplicationEntries& InStash) -> void;
     };
 
