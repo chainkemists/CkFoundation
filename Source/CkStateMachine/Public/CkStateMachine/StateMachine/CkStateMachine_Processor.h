@@ -8,6 +8,7 @@
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/EntityScript/CkEntityScript_Processor.h"
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -275,6 +276,46 @@ namespace ck
             const FFragment_Sm_Params& InParams,
             FFragment_Sm_Current& InCurrent,
             FFragment_Sm_PendingTransition& InPending) -> void;
+    };
+
+    // ================================================================================================================
+    // PUSH OWNING-CLIENT BATCH — End-of-frame flush of locally-buffered transitions to the server.
+    //
+    // The owning client of an OwningClientAuthoritative SM applies transitions locally for zero
+    // latency (CommitPendingTransition writes them into FFragment_Sm_PendingClientBatch instead
+    // of the replicated payload). This processor drains the batch into a single RPC call on the
+    // per-actor StateMachineRelay (Server_PushTransitionBatch / Server_PushCurrentState). The
+    // server's RPC handler — wired in a follow-up Phase 10 task — resolves the SM and reconstructs
+    // the transitions, after which the standard server-side publication path takes over.
+    //
+    // ClientOnly NetModeRequirement: the processor is created only on machines that have
+    // FTag_NetMode_IsClient (pure clients + listen-server clients excluded). Server processes
+    // never push to themselves.
+    // ================================================================================================================
+
+    class CKSTATEMACHINE_API FProcessor_Sm_PushOwningClientBatch : public ck_exp::TProcessor<
+        FProcessor_Sm_PushOwningClientBatch,
+        FCk_Handle_StateMachine,
+        TReadOnly<FFragment_Sm_Params>,
+        TReadWrite<FFragment_Sm_PendingClientBatch>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group         = FGroup_Replication;
+        using MarkedDirtyBy = FFragment_Sm_PendingClientBatch;
+
+        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::ClientOnly;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Sm_Params& InParams,
+            FFragment_Sm_PendingClientBatch& InBatch) -> void;
     };
 
     // ================================================================================================================
