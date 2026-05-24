@@ -5,6 +5,7 @@
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
+#include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
 #include "CkStateMachine/Net/CkStateMachine_RepData.h"
 #include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
@@ -90,6 +91,35 @@ namespace ck
             const FFragment_Sm_Requests& InRequests) const
         -> void
     {
+        // Authority gating (spec §5.6/§6): mutating requests (Start/Stop/Pause/Resume/Transition/
+        // AddOverrideState) may only originate on the authority for this SM. Non-authority
+        // machines receive state changes via replication and bypass this processor entirely
+        // through FProcessor_Sm_ApplyReplicatedHistory (Phase 7). DoesNotReplicate SMs are
+        // self-authoritative on every machine — no gating needed.
+        const auto NetContext = ck::statemachine::ComputeNetContext(InHandle);
+        const auto IsRequestAuthority =
+            InParams.Get_Replication() == ECk_Replication::DoesNotReplicate
+            || NetContext == ECk_Sm_NetContext::Standalone
+            || (NetContext == ECk_Sm_NetContext::Server
+                && InParams.Get_AuthorityModel() == ECk_Sm_AuthorityModel::ServerAuthoritative)
+            || (NetContext == ECk_Sm_NetContext::OwningClient
+                && InParams.Get_AuthorityModel() == ECk_Sm_AuthorityModel::OwningClientAuthoritative);
+
+        if (NOT IsRequestAuthority)
+        {
+            CK_ENSURE_IF_NOT(InRequests.Get_Requests().IsEmpty(),
+                TEXT("Non-authority machine attempted to enqueue [{}] SM request(s) on [{}] "
+                     "(NetContext [{}], AuthorityModel [{}]). Requests dropped. Rep-driven transitions "
+                     "bypass this processor via the replay path."),
+                InRequests.Get_Requests().Num(), InHandle, NetContext, InParams.Get_AuthorityModel())
+            {
+                InHandle.Try_Remove<FFragment_Sm_Requests>();
+                return;
+            }
+
+            return;
+        }
+
         InHandle.CopyAndRemove(InRequests, [&](FFragment_Sm_Requests& InRequestsCopy)
         {
             algo::ForEachRequest(InRequestsCopy._Requests, Visitor([&](const auto& InRequest)
