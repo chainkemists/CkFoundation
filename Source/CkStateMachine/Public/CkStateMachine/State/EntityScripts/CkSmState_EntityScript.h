@@ -22,6 +22,16 @@ class CKSTATEMACHINE_API UCk_SmState_EntityScript : public UCk_EntityScript_UE
 public:
     CK_GENERATED_BODY(UCk_SmState_EntityScript);
 
+    UCk_SmState_EntityScript()
+    {
+        // NOTE: until SM Setup propagates params._Replication to child State/Task/Condition entities
+        // (planned for a later phase per spec §8), this default is required to prevent child entities
+        // from defaulting to Replicates and tripping the
+        // "Get_Replication(ReplicatedOwner) == ECk_Replication::Replicates" ensure cascade. Remove
+        // this once propagation is wired.
+        _Replication = ECk_Replication::DoesNotReplicate;
+    }
+
     // ================================================================================================================
     // LIFECYCLE (EntityScript overrides)
     // ================================================================================================================
