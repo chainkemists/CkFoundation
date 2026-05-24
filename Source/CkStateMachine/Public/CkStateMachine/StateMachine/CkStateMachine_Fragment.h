@@ -146,6 +146,7 @@ namespace ck
 
         friend class FProcessor_Sm_HandleRequests;
         friend class FProcessor_Sm_CommitPendingTransition;
+        friend class FProcessor_Sm_ApplyReplicatedHistory;
 
     private:
         FCk_Handle_SmState _PreviousStateHandle;
@@ -153,9 +154,9 @@ namespace ck
         TSubclassOf<UCk_SmState_EntityScript> _TargetStateClass;
 
     public:
-        CK_PROPERTY_GET(_PreviousStateHandle);
-        CK_PROPERTY_GET(_PreviousStateClass);
-        CK_PROPERTY_GET(_TargetStateClass);
+        CK_PROPERTY(_PreviousStateHandle);
+        CK_PROPERTY(_PreviousStateClass);
+        CK_PROPERTY(_TargetStateClass);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -251,7 +252,7 @@ namespace ck
         TArray<FCk_Sm_TransitionEvent> _PendingEvents;
 
     public:
-        CK_PROPERTY_GET(_PendingEvents);
+        CK_PROPERTY(_PendingEvents);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
