@@ -23,6 +23,7 @@
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_ApplyReplicatedHistory);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_CommitPendingTransition);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_EndPlay);
 CK_REGISTER_PROCESSOR(ck::FProcessor_SmScript_CommitPendingAttach);
@@ -423,6 +424,43 @@ namespace ck
         UCk_Utils_StateMachine_UE::TryCheckEntryBreakpoint(InHandle, TargetStateClass);
 
         InHandle.Try_Remove<FFragment_Sm_PendingTransition>();
+    }
+
+    // ================================================================================================================
+    // APPLY REPLICATED HISTORY (non-owning client replay path)
+    // ================================================================================================================
+
+    auto
+        FProcessor_Sm_ApplyReplicatedHistory::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Sm_Params& InParams,
+            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm_ReplayQueue& InQueue)
+        -> void
+    {
+        auto& Queue = InQueue.Get_Queue();
+        if (Queue.IsEmpty())
+        { return; }
+
+        // Drain one event per tick. The TExclude<FFragment_Sm_PendingTransition> on this
+        // processor means the next entry won't drain until the current transition lands via
+        // FProcessor_Sm_CommitPendingTransition (which removes the PendingTransition fragment).
+        // That gives the exit/enter cascade time to flush between transitions and matches the
+        // server-side per-tick pace.
+        const auto Event = Queue[0];
+        Queue.RemoveAt(0);
+
+        auto& Pending = InHandle.AddOrGet<FFragment_Sm_PendingTransition>();
+        Pending._PreviousStateHandle = InCurrent.Get_CurrentStateHandle();
+        Pending._PreviousStateClass  = Event.Get_PreviousStateClass();
+        Pending._TargetStateClass    = Event.Get_NewStateClass();
+
+        // Watermark the highest seq we've applied. The OnChange handler uses this to filter
+        // future delta payloads down to only seqs we haven't yet processed.
+        auto& ReplayState = InHandle.AddOrGet<FFragment_Sm_ClientReplayState>();
+        ReplayState.Set_ClientLastAppliedSeq(Event.Get_Seq());
     }
 
     // ================================================================================================================
