@@ -16,6 +16,8 @@
 #include "CkStateMachine/Transition/CkSmTransition_Utils.h"
 #include "CkStateMachine/Task/CkSmTask_Utils.h"
 
+#include "CkActorRelay/CkActorRelay_Fragment_Data.h"
+
 #include "CkStateMachine_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -233,6 +235,23 @@ public:
     UnbindFrom_OnSmTaskFinished(
         UPARAM(ref) FCk_Handle_SmTask& InTask,
         const FCk_Delegate_SmTask_OnFinished& InDelegate);
+
+    // ================================================================================================================
+    // REPLICATION RELAY (Phase 4 — stub. Phase 10 wires consumption from OwningClient path.)
+    // ================================================================================================================
+
+    // Resolves the StateMachineRelay channel for an SM that opts into OwningClientAuthoritative.
+    // Looks up UCk_StateMachineRelay_Subsystem_UE on the SM's World and acquires a channel via
+    // the actor-relay group infrastructure. Returns an invalid result if the subsystem is missing
+    // or no channel is available yet (the subsystem auto-spawns channels at PostLogin so callers
+    // very early in the world's lifetime may transiently see no channel).
+    //
+    // Phase 10 will refine this to prefer the channel owned by the SM's owning PlayerState; for
+    // now it returns whichever channel the subsystem assigns via its selection algorithm, which
+    // is sufficient for Phase 4's compile-only goal.
+    static auto
+    Acquire_RelayChannel(
+        const FCk_Handle_StateMachine& InStateMachine) -> FCk_ActorRelay_ChannelResult;
 
     // ================================================================================================================
     // DEBUG

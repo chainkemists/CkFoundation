@@ -1,6 +1,7 @@
 #include "CkStateMachine_Utils.h"
 
 #include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
+#include "CkStateMachine/Net/CkStateMachineRelay_Subsystem.h"
 
 #include "CkStateMachine/CkStateMachine_Log.h"
 #include "CkStateMachine/State/CkSmState_Utils.h"
@@ -339,6 +340,29 @@ auto
     RealTimeSeconds = FPlatformTime::Seconds();
     UCk_Utils_EditorOnly_UE::Request_DebugPauseExecution();
 #endif
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_StateMachine_UE::
+    Acquire_RelayChannel(
+        const FCk_Handle_StateMachine& InStateMachine)
+    -> FCk_ActorRelay_ChannelResult
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InStateMachine),
+        TEXT("Acquire_RelayChannel called with invalid SM handle"))
+    { return {}; }
+
+    const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InStateMachine);
+    if (ck::Is_NOT_Valid(World, ck::IsValid_Policy_NullptrOnly{}))
+    { return {}; }
+
+    auto* Subsystem = World->GetSubsystem<UCk_StateMachineRelay_Subsystem_UE>();
+    if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
+    { return {}; }
+
+    return Subsystem->Request_AcquireAnyChannel();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
