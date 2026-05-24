@@ -129,7 +129,9 @@ namespace ck
         TSubclassOf<UCk_SmState_EntityScript> _CurrentStateClass;
 
     public:
-        CK_PROPERTY_GET(_RunStatus);
+        // _RunStatus is CK_PROPERTY (not GET) because the client-side run-status mirror in
+        // CkStateMachine_Replication.cpp needs to write it from outside the friend list.
+        CK_PROPERTY(_RunStatus);
         CK_PROPERTY_GET(_CurrentStateHandle);
         CK_PROPERTY_GET(_CurrentStateClass);
     };
@@ -316,8 +318,17 @@ namespace ck
     private:
         TArray<FCk_Sm_TransitionEvent> _StashedEntries;
 
+        // Latest run-status from any rep payload that arrived while stashing. Applied by Drain
+        // after the stashed events are queued. The bool gate distinguishes "no run-status was
+        // ever observed during stash" (don't mirror) from "stash was empty but RunStatus update
+        // was received during the same stash window" (mirror without touching events).
+        ECk_SmRunStatus _PendingRunStatus = ECk_SmRunStatus::Stopped;
+        bool            _HasPendingRunStatus = false;
+
     public:
         CK_PROPERTY(_StashedEntries);
+        CK_PROPERTY(_PendingRunStatus);
+        CK_PROPERTY(_HasPendingRunStatus);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
