@@ -117,7 +117,7 @@ TSearchState<T_NodeId, T_Graph>::TSearchState(
 	_ClosedSet.Remove(LastValidNode);
 
 	const auto HeuristicCost = _Graph.Heuristic(LastValidNode, _Goal);
-	_OpenSet.HeapPush(TOpenSetEntry<T_NodeId>{LastValidNode, AccumulatedCost + HeuristicCost}, TGreater<>{});
+	_OpenSet.HeapPush(TOpenSetEntry<T_NodeId>{LastValidNode, AccumulatedCost + HeuristicCost}, TLess<>{});
 }
 
 // ====================================================================================================================
@@ -175,7 +175,7 @@ auto
 
 		// Pop best node (lowest FScore)
 		auto Entry = TOpenSetEntry<T_NodeId>{};
-		_OpenSet.HeapPop(Entry, TGreater<>{});
+		_OpenSet.HeapPop(Entry, TLess<>{});
 
 		const auto& Current = Entry.Node;
 
@@ -239,7 +239,7 @@ auto
 			const auto HeuristicCost = _Graph.Heuristic(Neighbor, _Goal);
 			_OpenSet.HeapPush(
 				TOpenSetEntry<T_NodeId>{Neighbor, TentativeG + HeuristicCost},
-				TGreater<>{});
+				TLess<>{});
 		}
 	}
 
@@ -340,7 +340,7 @@ auto
 	_GScores.Add(_Start, 0.0f);
 
 	const auto HeuristicCost = _Graph.Heuristic(_Start, _Goal);
-	_OpenSet.HeapPush(TOpenSetEntry<T_NodeId>{_Start, HeuristicCost}, TGreater<>{});
+	_OpenSet.HeapPush(TOpenSetEntry<T_NodeId>{_Start, HeuristicCost}, TLess<>{});
 }
 
 // ====================================================================================================================
