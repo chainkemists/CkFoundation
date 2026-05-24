@@ -2,6 +2,7 @@
 
 #include "CkRecord/Public/CkRecord/Record/CkRecord_Fragment_Data.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
+#include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
 #include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
 #include "CkStateMachine/Task/CkSmTask_Utils.h"
@@ -64,7 +65,9 @@ namespace ck
         if (auto* Script = Cast<UCk_SmState_EntityScript>(InScriptFragment.Get_Script().Get());
             ck::IsValid(Script))
         {
-            Script->ExitState(InHandle);
+            const auto SmHandle = UCk_Utils_SmState_UE::Get_OwningStateMachine(InHandle);
+            const auto NetContext = ck::statemachine::ComputeNetContext(SmHandle);
+            Script->ExitState(InHandle, NetContext);
         }
 
         InHandle.Try_Remove<FTag_SmState_PendingExit>();

@@ -1,6 +1,7 @@
 #include "CkSmState_EntityScript.h"
 
 #include "CkStateMachine/CkStateMachine_Log.h"
+#include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
 #include "CkStateMachine/Debug/CkStateMachine_Debug_GraphWalk_Fragment.h"
 #include "CkStateMachine/State/CkSmState_Fragment.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
@@ -55,7 +56,8 @@ auto
     { return; }
 
     const auto Self = UCk_Utils_SmState_UE::CastChecked(_AssociatedEntity);
-    EnterState(Self);
+    const auto NetContext = ck::statemachine::ComputeNetContext(_OwnerStateMachine);
+    EnterState(Self, NetContext);
 }
 
 auto
@@ -70,7 +72,8 @@ auto
     auto Self = UCk_Utils_SmState_UE::CastChecked(_AssociatedEntity);
     if (ck::IsValid(Self))
     {
-        ExitState(Self);
+        const auto NetContext = ck::statemachine::ComputeNetContext(_OwnerStateMachine);
+        ExitState(Self, NetContext);
     }
     Super::EndPlay();
 }
@@ -80,19 +83,21 @@ auto
 auto
     UCk_SmState_EntityScript::
     EnterState(
-        FCk_Handle_SmState InHandle)
+        FCk_Handle_SmState InHandle,
+        ECk_Sm_NetContext InNetContext)
     -> void
 {
     ck::sm::VeryVerbose(TEXT("[SM Lifecycle] EnterState [{}] on entity [{}]"), GetClass(), InHandle);
 
     InHandle.AddOrGet<ck::FTag_SmState_Active>();
-    DoEnterState(InHandle);
+    DoEnterState(InHandle, InNetContext);
 }
 
 auto
     UCk_SmState_EntityScript::
     ExitState(
-        FCk_Handle_SmState InHandle)
+        FCk_Handle_SmState InHandle,
+        ECk_Sm_NetContext InNetContext)
     -> void
 {
     if (NOT InHandle.Has<ck::FTag_SmState_Active>())
@@ -101,7 +106,7 @@ auto
     ck::sm::VeryVerbose(TEXT("[SM Lifecycle] ExitState [{}] on entity [{}]"), GetClass(), InHandle);
 
     InHandle.Try_Remove<ck::FTag_SmState_Active>();
-    DoExitState(InHandle);
+    DoExitState(InHandle, InNetContext);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
