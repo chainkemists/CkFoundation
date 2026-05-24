@@ -151,6 +151,7 @@ auto
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
+		const FFragment_Goap_Planner_Params& InParams,
 		FFragment_Goap_Planner_Current& InCurrent,
 		const FFragment_Goap_Planner_ActionCatalogIndex& InCatalogIndex,
 		FFragment_Goap_Planner_WorldStateSource& InWSSource,
@@ -338,6 +339,74 @@ auto
 				}
 			}
 		}
+	}
+
+	// ----------------------------------------------------------------------
+	// Always-valid-plan tenet — static fallback check.
+	//
+	// A Planner is guaranteed never to reach PlanFailed iff its catalog contains
+	// at least one Action with NO preconditions whose effects cover EVERY goal
+	// condition. That Action is always selectable and always satisfies the goal
+	// at some (typically very high) cost — the fallback / "idle" pattern.
+	//
+	// Empty-goal Planners trivially never PlanFail (they emit PlanFound with an
+	// empty plan immediately) — they're treated as having a fallback.
+	//
+	// When the check fails AND _AllowPlanFailed is false, fire CK_ENSURE_IF_NOT.
+	// The cached _HasUnconditionalFallback bool is also read at the runtime
+	// PlanFailed branches in HandleResult / HandleRequests to gate the runtime
+	// ensure.
+	//
+	// See CkGoap/CLAUDE.md § "Design tenets / Every Planner must always produce
+	// a valid plan" for the rationale and the canonical example
+	// (UCk_GoapFEARGym_WaitForEnemy).
+	// ----------------------------------------------------------------------
+	const auto HasUnconditionalFallback = [&]() -> bool
+	{
+		if (InGoal._GoalAuthored.IsEmpty()) { return true; }
+
+		for (const auto& Child : DirectChildren)
+		{
+			if (NOT ck::IsValid(Child)) { continue; }
+
+			const auto& Def = Child.template Get<FFragment_Goap_Action_Definition>();
+			if (NOT Def.Get_Preconditions().IsEmpty()) { continue; }
+
+			const auto& Effects = Def.Get_Effects();
+			auto AllGoalsCovered = true;
+			for (const auto& GoalCond : InGoal._GoalAuthored)
+			{
+				auto Covered = false;
+				for (const auto& Eff : Effects)
+				{
+					if (Eff.Key == GoalCond.Get_Key() && Eff.Value == GoalCond.Get_Value())
+					{
+						Covered = true;
+						break;
+					}
+				}
+				if (NOT Covered) { AllGoalsCovered = false; break; }
+			}
+			if (AllGoalsCovered) { return true; }
+		}
+		return false;
+	}();
+
+	InCurrent._HasUnconditionalFallback = HasUnconditionalFallback;
+
+	if (NOT HasUnconditionalFallback && NOT InParams.Get_AllowPlanFailed())
+	{
+		CK_ENSURE_IF_NOT(false,
+			TEXT("Planner [{}] (tag [{}]) has no unconditional fallback Action that satisfies its goal — "
+				 "the catalog contains no Action with empty preconditions whose effects cover every goal "
+				 "condition. PlanFailed is therefore reachable from some world-state, but "
+				 "PlannerParams._AllowPlanFailed=false. Add a fallback Action (no preconditions, "
+				 "effect=goal, cost ~999.0) such as WaitForEnemy / StandWatch / Idle, OR set "
+				 "_AllowPlanFailed=true if this Planner is intentionally allowed to PlanFail (tests, "
+				 "research catalogs, gyms that demonstrate PlanFailed). See CkGoap/CLAUDE.md § "
+				 "\"Design tenets\"."),
+			InHandle, InParams.Get_PlannerTag())
+		{ /* still proceed; ensure surfaces but doesn't block setup */ }
 	}
 
 	InHandle.Remove<FTag_Goap_Planner_RequiresSetup>();

@@ -22,6 +22,7 @@ namespace ck
 class CKGOAP_API FProcessor_Goap_Planner_Setup : public ck_exp::TProcessor<
 	FProcessor_Goap_Planner_Setup,
 	FCk_Handle_Goap_Planner,
+	ck::TReadOnly<FFragment_Goap_Planner_Params>,
 	ck::TReadWrite<FFragment_Goap_Planner_Current>,
 	ck::TReadOnly<FFragment_Goap_Planner_ActionCatalogIndex>,
 	ck::TReadWrite<FFragment_Goap_Planner_WorldStateSource>,
@@ -46,10 +47,16 @@ public:
 	// the per-Action Setup) because the goal is conceptually a Planner-level
 	// concern. Defers if the Planner has no resolved WS source yet or if any
 	// candidate child still has FTag_Goap_Action_RequiresSetup.
+	//
+	// Always-valid-plan tenet: also runs the static fallback check, caches the
+	// result on InCurrent._HasUnconditionalFallback, and fires CK_ENSURE_IF_NOT
+	// if no fallback exists and InParams._AllowPlanFailed == false. See
+	// CkGoap/CLAUDE.md § "Design tenets".
 	static auto
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
+		const FFragment_Goap_Planner_Params& InParams,
 		FFragment_Goap_Planner_Current& InCurrent,
 		const FFragment_Goap_Planner_ActionCatalogIndex& InCatalogIndex,
 		FFragment_Goap_Planner_WorldStateSource& InWSSource,

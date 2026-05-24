@@ -393,17 +393,24 @@ class UCk_<Feature>_Idle : public UCk_GoapAction_EntityScript
 
 Real-game examples: a combat NPC's `WaitForEnemy` (satisfies `EnemyNeutralized` by attrition / time-out), a worker AI's `Idle` (satisfies `TaskComplete` by waiting for the next assignment), a patrol bot's `StandWatch` (satisfies `AreaPatrolled` by holding position).
 
-**Why this matters at the engine layer:** gameplay code that consumes plans (state-machine drivers, behaviour trees, animation graphs) should treat `PlanFailed` as a hard-error condition that fires a `CK_ENSURE_IF_NOT` or analogous diagnostic. Treating "no plan" as "AI is doing nothing" hides authoring bugs (a missing Action, a precondition typo, a sealed-then-mutated WS key) under silent inactivity. Forcing every Planner to always have at least the fallback plan means `PlanFailed` is structurally impossible at runtime — every observed `PlanFailed` is then a real misconfiguration to surface.
+**The framework enforces this tenet.** Two checks fire automatically:
+
+1. **Setup-time static check (`FProcessor_Goap_Planner_Setup`)**: walks the Planner's catalog and asserts at least one Action has empty preconditions AND effects covering every goal condition. If no fallback exists, fires `CK_ENSURE_IF_NOT` with a clear message + suggested fix. Result is cached on `FFragment_Goap_Planner_Current._HasUnconditionalFallback`.
+2. **Runtime check on `PlanFailed`**: when `FProcessor_Goap_Planner_HandleResult` (or `HandleRequests` on the WS-unresolved path) would set status to `PlanFailed`, fires `CK_ENSURE_IF_NOT` unless `_HasUnconditionalFallback || _AllowPlanFailed`. Belt-and-suspenders: catches cases the static check might miss.
+
+**Opt-out via `FCk_Fragment_Goap_PlannerParamsData._AllowPlanFailed = true`**. Only for framework tests, research catalogs, or gym stations that intentionally demonstrate `PlanFailed` (e.g. `CkAutoTest_Goap_Planner_InvalidGoal` — exercises the unregistered-key diagnostic; `CkGoapGym_MakeTea_Station` — demos PlanFailed when ingredients are missing). **Game-content Planners must never set this true.** The flag is greppable in code review.
+
+**`CostThresholdReached` is exempt from the runtime ensure.** It's a deliberate budget-cap signal (the user explicitly set a CostThreshold and the planner respected it), not a catalog misconfiguration. Consumers can still react via `OnPlanFailed`.
 
 **Fallback cost picks itself.** Any cost much higher than the cheapest real Action wins automatically when no other plan is viable. `999.0` is the convention used in `CkGoapFEARGym_Actions::UCk_GoapFEARGym_WaitForEnemy` — the canonical example. Pick anything well above your real-Action cost ceiling.
 
-**Why the framework still allows `PlanFailed` to exist as a status:** the planner is a search algorithm — `PlanFailed` is a real reachable state in the abstract model, and tests exercise it directly (e.g. `CkAutoTest_Goap_Planner_InvalidGoal`). This tenet is a content/authoring rule, not a framework invariant: the framework correctly reports `PlanFailed` when no plan exists; game authors are responsible for ensuring it can never happen by structuring their catalog with a fallback.
+**Why gameplay code should also check `PlanFailed`:** even with the framework ensure, shipping builds may suppress ensures. Plan-consuming code (state-machine drivers, behaviour trees, animation graphs) should defensively `CK_ENSURE_IF_NOT (status != PlanFailed)` to catch issues in builds that ship with ensure suppression. The framework ensure is the first line; consumer ensure is the second.
 
 ---
 
 ## Anti-patterns
 
-- **Letting a game-authored Planner reach `PlanFailed`.** See *Design tenets / Every Planner must always produce a valid plan*. If a Planner you authored can enter `PlanFailed`, its operator catalog is missing a fallback Action. The framework still surfaces `PlanFailed` correctly (it's a real reachable state and tests exercise it), but at the gameplay-content layer, `PlanFailed` should fire `CK_ENSURE` because it means the catalog is misconfigured.
+- **Letting a game-authored Planner reach `PlanFailed`.** See *Design tenets / Every Planner must always produce a valid plan*. The framework fires `CK_ENSURE_IF_NOT` at Setup (no fallback found) and at runtime (PlanFailed actually reached) when `_AllowPlanFailed=false`. Game-content Planners must include a fallback Action (e.g. `WaitForEnemy`, `StandWatch`, `Idle`) and never set `_AllowPlanFailed=true`.
 - **Calling `Add` on an owner that already has standalone `CkAStar`.** GOAP stamps `FFragment_AStar_Params` per Planner; the two collide. Use `Create` (child entity) or remove the standalone AStar feature.
 - **Setting world state with a tag no Action references.** The key registry is sealed after Setup; writes to unregistered tags are silent no-ops. Reference the key in at least one precondition or effect to register it.
 - **Trying to make a leaf Action also plan.** Leaf Actions have no children registered, so there is nothing to plan over. If you want a leaf to plan, `PromoteActionToPlanner` it first, then `AddAction(PromotedPlanner, ...)` to register children under the promoted host.

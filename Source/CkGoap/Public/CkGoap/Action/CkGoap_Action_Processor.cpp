@@ -415,6 +415,23 @@ auto
 					InPlanState._Plan.Reset();
 					InPlanState._PlanCost = 0.0f;
 					InHandle.Try_Remove<FTag_Goap_Planner_PlanInFlight>();
+
+					// Always-valid-plan tenet — runtime ensure. A Plan request hit
+					// HandleRequests but the Planner's WS source is unresolved.
+					// Either the Planner was misconfigured (top-level Planners must
+					// set PlannerParams._WorldStateSource at construction; promoted
+					// sub-Planners inherit via the activation walk) or this is a
+					// research/test catalog that opted in via _AllowPlanFailed=true.
+					CK_ENSURE_IF_NOT(InCurrent.Get_HasUnconditionalFallback() || InParams.Get_AllowPlanFailed(),
+						TEXT("Planner [{}] (tag [{}]) reached PlanFailed at HandleRequests because the "
+							 "resolved WorldStateSource is invalid, and the catalog has no unconditional "
+							 "fallback Action AND _AllowPlanFailed=false. Set "
+							 "PlannerParams._WorldStateSource (top-level) or verify the activation walk "
+							 "resolved it (promoted), and add a fallback Action so PlanFailed is "
+							 "structurally impossible. See CkGoap/CLAUDE.md § \"Design tenets\"."),
+						InHandle, InParams.Get_PlannerTag())
+					{ /* still proceed — broadcast and let consumers react */ }
+
 					UUtils_Signal_OnGoap_Planner_PlanFailed::Broadcast(
 						InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanFailed{}));
 					return;
@@ -627,6 +644,7 @@ auto
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
+		const FFragment_Goap_Planner_Params& InParams,
 		const FFragment_Goap_Planner_Current& InCurrent,
 		const FFragment_Goap_Planner_Result& InResult,
 		const FFragment_Goap_Planner_PlanContext& InPlanContext,
@@ -708,6 +726,20 @@ auto
 			InPlanState._PlanStatus = ECk_GoapPlanStatus::PlanFailed;
 			InPlanState._Plan.Reset();
 			InPlanState._PlanCost = 0.0f;
+
+			// Always-valid-plan tenet — runtime ensure. A correctly authored game-
+			// content Planner should never reach PlanFailed; if it does, either
+			// the catalog is missing a fallback Action (preferred fix) or the
+			// author intentionally opted in to PlanFailed via _AllowPlanFailed
+			// (tests, research catalogs, gym stations that demonstrate
+			// PlanFailed). See CkGoap/CLAUDE.md § "Design tenets".
+			CK_ENSURE_IF_NOT(InCurrent.Get_HasUnconditionalFallback() || InParams.Get_AllowPlanFailed(),
+				TEXT("Planner [{}] (tag [{}]) reached PlanFailed but has no unconditional fallback "
+					 "Action and PlannerParams._AllowPlanFailed=false. Add a fallback Action "
+					 "(no preconditions, effect=goal, cost ~999.0) or set _AllowPlanFailed=true."),
+				InHandle, InParams.Get_PlannerTag())
+			{ /* still proceed — broadcast and let consumers react */ }
+
 			UUtils_Signal_OnGoap_Planner_PlanFailed::Broadcast(
 				InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanFailed{}));
 			break;
@@ -718,6 +750,12 @@ auto
 			InPlanState._PlanStatus = ECk_GoapPlanStatus::CostThresholdReached;
 			InPlanState._Plan.Reset();
 			InPlanState._PlanCost = 0.0f;
+
+			// CostThresholdReached is a deliberate budget-cap signal, not a
+			// catalog misconfiguration. The runtime ensure does not fire here —
+			// the user explicitly set a CostThreshold and the planner respected
+			// it. (Consumers can still react via OnPlanFailed.)
+
 			UUtils_Signal_OnGoap_Planner_PlanFailed::Broadcast(
 				InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanFailed{}));
 			break;
