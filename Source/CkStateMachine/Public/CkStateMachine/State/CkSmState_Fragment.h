@@ -133,6 +133,29 @@ namespace ck
         CK_PROPERTY_GET(_ComposedFromClasses);
     };
 
+    // Transient fingerprint carrier — placed on a state entity at commit time by
+    // FProcessor_Sm_CommitPendingTransition when the commit was driven by a replicated event
+    // with a non-zero fingerprint. UCk_SmState_EntityScript::Construct reads the value after
+    // DoComputeFingerprint runs, compares to the locally-computed hash, and either removes the
+    // fragment (match) or escalates to FTag_Sm_DeterminismFault on the owning SM (mismatch).
+    //
+    // Authority-driven commits leave PendingTransition._NewStateFingerprint at 0, so this
+    // fragment is only ever attached on non-authority machines that received a replicated event.
+    struct CKSTATEMACHINE_API FFragment_SmState_ExpectedFingerprint
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_SmState_ExpectedFingerprint);
+
+        friend class FProcessor_Sm_CommitPendingTransition;
+        friend class ::UCk_SmState_EntityScript;
+
+    private:
+        int32 _Hash = 0;
+
+    public:
+        CK_PROPERTY(_Hash);
+    };
+
     // ================================================================================================================
     // RECORDS
     // ================================================================================================================
