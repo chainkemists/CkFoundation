@@ -449,10 +449,22 @@ namespace ck
             return;
         }
 
-        const auto PreviousStateClass = InPending._PreviousStateClass;
-        const auto TargetStateClass   = InPending._TargetStateClass;
+        const auto PreviousStateClass     = InPending._PreviousStateClass;
+        const auto TargetStateClass       = InPending._TargetStateClass;
+        const auto IncomingNewFingerprint = InPending._NewStateFingerprint;
 
         FProcessor_Sm_HandleRequests::DoEnterState(InHandle, InCurrent, TargetStateClass);
+
+        // Pass the replicated fingerprint expectation to the new state entity so that its
+        // Construct/DoComputeFingerprint cycle can verify against it (spec §9). Authority-
+        // driven commits (server's own transitions, owning client's own) leave
+        // _NewStateFingerprint at 0 — no carrier, no verify on the local instance.
+        // The fragment lives just long enough for Construct's deferred verify pass.
+        if (IncomingNewFingerprint != 0 && ck::IsValid(InCurrent._CurrentStateHandle))
+        {
+            auto& Expected = InCurrent._CurrentStateHandle.AddOrGet<FFragment_SmState_ExpectedFingerprint>();
+            Expected.Set_Hash(IncomingNewFingerprint);
+        }
 
 #if !UE_BUILD_SHIPPING
         if (ck::IsValid(PreviousStateClass) && ck::IsValid(InCurrent._CurrentStateClass))
@@ -516,14 +528,21 @@ namespace ck
                 const auto SeqValue = NextSeq.Get_Next();
                 NextSeq.Set_Next(SeqValue + 1);
 
-                constexpr auto FingerprintPendingDeferredPopulation = 0;
+                // Per-class fingerprint cache lookup. Populated by UCk_SmState_EntityScript::
+                // DoComputeFingerprint after every state's first Construct anywhere — server,
+                // client, any SM instance. After warm-up the cache returns the real hash here
+                // and clients can verify on commit. On the very first instantiation of a class
+                // anywhere in this process, the lookup returns 0; the Construct backfill path
+                // (DoBackfillFingerprintToRepData) cleans up that single zero asynchronously.
+                const auto NewStateFingerprint =
+                    UCk_SmState_EntityScript::Get_CachedFingerprint(TargetStateClass);
 
                 const auto Event = FCk_Sm_TransitionEvent
                 {
                     PreviousStateClass,
                     TargetStateClass,
                     SeqValue,
-                    FingerprintPendingDeferredPopulation
+                    NewStateFingerprint
                 };
 
                 if (IsServerAuth)
@@ -551,7 +570,7 @@ namespace ck
                                 {
                                     RepData.Set_CurrentStateClass(TargetStateClass);
                                     RepData.Set_Seq(SeqValue);
-                                    RepData.Set_CurrentStateFingerprint(FingerprintPendingDeferredPopulation);
+                                    RepData.Set_CurrentStateFingerprint(NewStateFingerprint);
                                 });
                             break;
                         }
