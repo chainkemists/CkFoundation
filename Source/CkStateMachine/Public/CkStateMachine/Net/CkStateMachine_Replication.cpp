@@ -22,6 +22,62 @@
 
 namespace
 {
+    // Spec §5.4 stash-precedence: rep payloads that arrive before the client's Setup processor
+    // has run (no FFragment_Sm_Current yet) must NOT bypass that setup — they're held in
+    // FFragment_Sm_PendingReplicationEntries until FlushPendingReplication_Drain releases them
+    // in arrival order. Additionally, while a stash is in-flight, all new arrivals also stash
+    // so the original ordering is preserved (otherwise a later OnChange could land ahead of
+    // earlier stashed entries on the next pump).
+    auto
+    Sm_ShouldStash(
+        const FCk_Handle& Entity) -> bool
+    {
+        if (NOT Entity.Has<ck::FFragment_Sm_Current>())
+        { return true; }
+
+        if (Entity.Has<ck::FFragment_Sm_PendingReplicationEntries>())
+        {
+            const auto& Stash = Entity.Get<ck::FFragment_Sm_PendingReplicationEntries>();
+            if (NOT Stash.Get_StashedEntries().IsEmpty())
+            { return true; }
+        }
+
+        return false;
+    }
+
+    // Append events to either the stash (if Sm_ShouldStash) or directly to the replay queue.
+    // Filters by ClientLastAppliedSeq so duplicate or out-of-order arrivals are deduplicated.
+    auto
+    Sm_EnqueueOrStash(
+        FCk_Handle& Entity,
+        TArray<FCk_Sm_TransitionEvent> Events) -> void
+    {
+        if (Events.IsEmpty())
+        { return; }
+
+        const auto LastApplied = Entity.Has<ck::FFragment_Sm_ClientReplayState>()
+            ? Entity.Get<ck::FFragment_Sm_ClientReplayState>().Get_ClientLastAppliedSeq()
+            : 0;
+
+        if (Sm_ShouldStash(Entity))
+        {
+            auto& Stash = Entity.AddOrGet<ck::FFragment_Sm_PendingReplicationEntries>().Get_StashedEntries();
+            for (const auto& Event : Events)
+            {
+                if (Event.Get_Seq() > LastApplied)
+                { Stash.Add(Event); }
+            }
+            return;
+        }
+
+        auto& Queue = Entity.AddOrGet<ck::FFragment_Sm_ReplayQueue>().Get_Queue();
+        for (const auto& Event : Events)
+        {
+            if (Event.Get_Seq() > LastApplied)
+            { Queue.Add(Event); }
+        }
+    }
+
     struct FCk_StateMachineRepHandlerRegistrar
     {
         FCk_StateMachineRepHandlerRegistrar()
@@ -31,45 +87,24 @@ namespace
                 {
                     .OnChange = [](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& Old)
                     {
-                        // Append every replicated entry whose Seq is past our watermark. The
-                        // ApplyReplicatedHistory processor drains the queue one entry per tick,
-                        // bumping ClientLastAppliedSeq as each commits — so an OnChange delivering
-                        // a contiguous window only enqueues entries strictly newer than what we
-                        // last applied. Phase 8 will layer stash-and-flush on top of this for the
-                        // OnAdd-vs-Setup race; Phase 10 will add echo suppression on owning client.
+                        // Phase 8: stash-precedence applied. Phase 10 will add echo suppression
+                        // on owning client; Phase 9 will add the initial-fingerprint trigger.
                         const auto& NewPayload = New.Get<FCk_RepData_StateMachine_WithHistory>();
-                        const auto& History    = NewPayload.Get_History();
+                        Sm_EnqueueOrStash(Entity, NewPayload.Get_History());
 
-                        const auto LastApplied = Entity.Has<ck::FFragment_Sm_ClientReplayState>()
-                            ? Entity.Get<ck::FFragment_Sm_ClientReplayState>().Get_ClientLastAppliedSeq()
-                            : 0;
-
-                        auto& Queue = Entity.AddOrGet<ck::FFragment_Sm_ReplayQueue>().Get_Queue();
-                        for (const auto& Event : History)
-                        {
-                            if (Event.Get_Seq() > LastApplied)
-                            { Queue.Add(Event); }
-                        }
-
-                        ck::sm::VeryVerbose(TEXT("WithHistory OnChange for [{}] — history size [{}], queue size [{}], lastApplied [{}]"),
-                            Entity, History.Num(), Queue.Num(), LastApplied);
+                        ck::sm::VeryVerbose(TEXT("WithHistory OnChange for [{}] — history size [{}]"),
+                            Entity, NewPayload.Get_History().Num());
                     },
                     .OnAdd = [](FCk_Handle& Entity, const FInstancedStruct& Data)
                     {
-                        // OnAdd fires when the client first receives the replicated fragment for
-                        // an SM. For now we treat it the same as OnChange — append every entry —
-                        // but Phase 8's stash-precedence check goes here: if Setup hasn't run yet
-                        // on the client (no FFragment_Sm_Current), entries go to a stash that the
-                        // FlushPendingReplication processors drain after Setup completes.
+                        // First receipt — if Setup hasn't run yet (no FFragment_Sm_Current), the
+                        // stash helper holds the entries for FlushPendingReplication_Drain to
+                        // release once Setup lands.
                         const auto& Payload = Data.Get<FCk_RepData_StateMachine_WithHistory>();
-                        const auto& History = Payload.Get_History();
-
-                        auto& Queue = Entity.AddOrGet<ck::FFragment_Sm_ReplayQueue>().Get_Queue();
-                        for (const auto& Event : History)
-                        { Queue.Add(Event); }
+                        Sm_EnqueueOrStash(Entity, Payload.Get_History());
 
                         ck::sm::VeryVerbose(TEXT("WithHistory OnAdd for [{}] — initial history size [{}]"),
-                            Entity, History.Num());
+                            Entity, Payload.Get_History().Num());
                     }
                 });
 
@@ -78,19 +113,12 @@ namespace
                 {
                     .OnChange = [](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& Old)
                     {
-                        // WithoutHistory replicates the latest state only — no rolling buffer to
-                        // walk. We synthesize a single transition event from local current →
-                        // replicated current, and gate it on the seq advancing past our watermark
-                        // so a duplicate OnChange doesn't double-apply.
+                        // WithoutHistory replicates the latest state only — synthesize a single
+                        // transition event from local current → replicated current and route it
+                        // through the stash-or-queue helper. Echo suppression on owning client is
+                        // Phase 10.
                         const auto& NewPayload = New.Get<FCk_RepData_StateMachine_NoHistory>();
                         const auto NewSeq = NewPayload.Get_Seq();
-
-                        const auto LastApplied = Entity.Has<ck::FFragment_Sm_ClientReplayState>()
-                            ? Entity.Get<ck::FFragment_Sm_ClientReplayState>().Get_ClientLastAppliedSeq()
-                            : 0;
-
-                        if (NewSeq <= LastApplied)
-                        { return; }
 
                         const auto LocalCurrentClass = Entity.Has<ck::FFragment_Sm_Current>()
                             ? Entity.Get<ck::FFragment_Sm_Current>().Get_CurrentStateClass()
@@ -104,8 +132,7 @@ namespace
                             NewPayload.Get_CurrentStateFingerprint()
                         };
 
-                        auto& Queue = Entity.AddOrGet<ck::FFragment_Sm_ReplayQueue>().Get_Queue();
-                        Queue.Add(Event);
+                        Sm_EnqueueOrStash(Entity, TArray<FCk_Sm_TransitionEvent>{Event});
 
                         ck::sm::VeryVerbose(TEXT("NoHistory OnChange for [{}] — synthesized event for seq [{}]"),
                             Entity, NewSeq);
@@ -126,8 +153,7 @@ namespace
                             Payload.Get_CurrentStateFingerprint()
                         };
 
-                        auto& Queue = Entity.AddOrGet<ck::FFragment_Sm_ReplayQueue>().Get_Queue();
-                        Queue.Add(Event);
+                        Sm_EnqueueOrStash(Entity, TArray<FCk_Sm_TransitionEvent>{Event});
 
                         ck::sm::VeryVerbose(TEXT("NoHistory OnAdd for [{}] — initial snap to state [{}]"),
                             Entity, Payload.Get_CurrentStateClass());
