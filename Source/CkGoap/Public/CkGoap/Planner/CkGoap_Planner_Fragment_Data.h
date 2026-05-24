@@ -102,6 +102,21 @@ private:
 		meta = (AllowPrivateAccess = true))
 	bool _PlanOnStart = true;
 
+	// "PlanFailed is a misconfiguration, not a normal state" tenet enforcement.
+	// Default false → the framework's Setup pass verifies this Planner's catalog
+	// contains at least one Action with no preconditions whose effects cover
+	// every goal condition (an unconditional fallback like WaitForEnemy /
+	// StandWatch / Idle). If the check fails, CK_ENSURE_IF_NOT fires. The
+	// runtime check in HandleResult also ensures on Failed / CostThresholdReached.
+	//
+	// Set to true ONLY when PlanFailed is the test/research subject (e.g.
+	// CkAutoTest_Goap_Planner_InvalidGoal, the MakeTea gym station that demos
+	// PlanFailed when ingredients are missing). Game-content Planners must
+	// leave this false — see CkGoap/CLAUDE.md § "Design tenets".
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (AllowPrivateAccess = true))
+	bool _AllowPlanFailed = false;
+
 public:
 	CK_PROPERTY(_PlannerTag);
 	CK_PROPERTY(_InitialToggle);
@@ -112,6 +127,7 @@ public:
 	CK_PROPERTY(_ReplanPolicy);
 	CK_PROPERTY(_MinReplanIntervalSeconds);
 	CK_PROPERTY(_PlanOnStart);
+	CK_PROPERTY(_AllowPlanFailed);
 
 public:
 	CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Goap_PlannerParamsData, _PlannerTag);
