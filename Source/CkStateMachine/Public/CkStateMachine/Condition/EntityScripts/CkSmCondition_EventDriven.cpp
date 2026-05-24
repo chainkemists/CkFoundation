@@ -1,13 +1,15 @@
 #include "CkSmCondition_EventDriven.h"
 
 #include "CkStateMachine/Condition/CkSmCondition_Utils.h"
+#include "CkStateMachine/Net/CkStateMachine_NetContext.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_SmCondition_EventDriven::
     EnterCondition(
-        FCk_Handle_SmCondition InHandle)
+        FCk_Handle_SmCondition InHandle,
+        ECk_Sm_NetContext InNetContext)
     -> void
 {
     // Resting state for event-driven conditions is Fail (not yet satisfied),
@@ -44,7 +46,7 @@ auto
     UCk_Utils_SmCondition_UE::Request_SetInitialResult(
         InHandle, ECk_SmConditionResult::Fail);
 
-    Super::EnterCondition(InHandle);
+    Super::EnterCondition(InHandle, InNetContext);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

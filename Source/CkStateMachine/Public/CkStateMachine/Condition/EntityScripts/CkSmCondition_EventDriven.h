@@ -23,7 +23,8 @@ public:
 public:
     auto
     EnterCondition(
-        FCk_Handle_SmCondition InHandle) -> void override;
+        FCk_Handle_SmCondition InHandle,
+        ECk_Sm_NetContext InNetContext) -> void override;
 
     // ================================================================================================================
     // EVENT-DRIVEN RESULT MARKING
