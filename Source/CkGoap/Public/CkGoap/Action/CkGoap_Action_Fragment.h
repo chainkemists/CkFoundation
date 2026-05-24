@@ -4,12 +4,8 @@
 
 #include "CkGoap/Algorithm/CkGoap_WorldState.h"
 #include "CkGoap/Algorithm/CkGoap_Types.h"
-#include "CkGoap/Algorithm/CkGoap_Graph.h"
 
-#include "CkAStar/CkAStar_Fragment.h"
 #include "CkEcs/Signal/CkSignal_Macros.h"
-
-#include <variant>
 
 // ====================================================================================================================
 
@@ -23,11 +19,8 @@ class UCk_GoapAction_EntityScript;
 namespace ck
 {
 	class FProcessor_Goap_Action_Setup;
-	class FProcessor_Goap_Action_HandleRequests;
-	class FProcessor_Goap_Action_HandleResult;
-	class FProcessor_Goap_Action_AutoReplan;
 	class FProcessor_Goap_Planner_UpdateActivation;
-	// PR-B.1b Stage 3: new Planner-side A*-pipeline processors.
+	// PR-B.1b Stage 3: Planner-side A*-pipeline processors.
 	class FProcessor_Goap_Planner_AutoReplan;
 	class FProcessor_Goap_Planner_HandleRequests;
 	class FProcessor_Goap_Planner_HandleResult;
@@ -37,22 +30,6 @@ namespace ck
 // ====================================================================================================================
 
 	CK_DEFINE_ECS_TAG(FTag_Goap_Action_RequiresSetup);
-	CK_DEFINE_ECS_TAG(FTag_Goap_Action_PlanRequested);
-
-	// Set on action activation; AutoReplan picks it up next frame to fire the
-	// first plan request. Removed by AutoReplan once consumed.
-	CK_DEFINE_ECS_TAG(FTag_Goap_Action_RequiresInitialPlan);
-
-	// Set on an Action while it is actively planning — added by HandleRequests
-	// when a Plan request begins processing (AStar seeded), removed by
-	// HandleResult on terminal status (PlanFound / PlanFailed /
-	// CostThresholdReached) or by Request_CancelPlan. Used to gate child
-	// Actions from draining their own Plan requests while the parent's plan
-	// is in flight: a child whose parent has this tag (or whose parent has
-	// never produced a plan — status still Idle) defers its Plan request,
-	// keeping it queued for retry on the next frame. Root Actions (no parent)
-	// are never gated.
-	CK_DEFINE_ECS_TAG(FTag_Goap_Action_PlanInFlight);
 
 // ====================================================================================================================
 // PARAMS — alias to BlueprintType data
@@ -88,26 +65,6 @@ namespace ck
 	};
 
 // ====================================================================================================================
-// ACTION CLASSES — Registered action EntityScript classes
-// (legacy collection — preserved through Phase U1; full removal handled later.)
-// ====================================================================================================================
-
-	struct CKGOAP_API FFragment_Goap_Action_ActionClasses
-	{
-	public:
-		CK_GENERATED_BODY(FFragment_Goap_Action_ActionClasses);
-
-		friend class ::UCk_Utils_Goap_Action_UE;
-		friend class FProcessor_Goap_Action_Setup;
-
-	private:
-		TArray<TSubclassOf<UCk_GoapAction_EntityScript>> _Classes;
-
-	public:
-		CK_PROPERTY_GET(_Classes);
-	};
-
-// ====================================================================================================================
 // DEFINITION — This Action's own def, CDO-extracted at Setup time.
 // In the unified model, every Action entity carries its OWN def (one def per
 // Action). The parent's planner consumes its children's defs as candidate
@@ -121,8 +78,6 @@ namespace ck
 
 		friend class ::UCk_Utils_Goap_Action_UE;
 		friend class FProcessor_Goap_Action_Setup;
-		friend class FProcessor_Goap_Action_HandleRequests;
-		friend class FProcessor_Goap_Action_HandleResult;
 		friend class FProcessor_Goap_Planner_UpdateActivation;
 		// PR-B.1b Stage 3: SetActionCost mutates child Action's _CachedActionDef
 		// from the Planner-on-Planner HandleRequests processor.
@@ -169,7 +124,7 @@ namespace ck
 		friend class ::UCk_Utils_Goap_Action_UE;
 		friend class ::UCk_Utils_Goap_Planner_UE;
 		friend class FProcessor_Goap_Action_Setup;
-		friend class FProcessor_Goap_Action_HandleResult;
+		friend class FProcessor_Goap_Planner_HandleResult;
 		friend class FProcessor_Goap_Planner_UpdateActivation;
 
 	private:
@@ -180,92 +135,6 @@ namespace ck
 		CK_PROPERTY_GET(_ParentAction);
 		CK_PROPERTY_GET(_ChildActions);
 	};
-
-// ====================================================================================================================
-// REQUESTS — per-action request queue
-// ====================================================================================================================
-
-	struct CKGOAP_API FFragment_Goap_Action_Requests
-	{
-	public:
-		CK_GENERATED_BODY(FFragment_Goap_Action_Requests);
-
-		friend class ::UCk_Utils_Goap_Action_UE;
-		friend class ::UCk_Utils_Goap_Planner_UE;
-		friend class FProcessor_Goap_Action_HandleRequests;
-		friend class FProcessor_Goap_Action_AutoReplan;
-		// PR-B.1b Stage 3: Planner-side processors drain/feed the same queue
-		// type via the FFragment_Goap_Planner_Requests alias.
-		friend class FProcessor_Goap_Planner_HandleRequests;
-		friend class FProcessor_Goap_Planner_AutoReplan;
-
-		using RequestType = std::variant<
-			FCk_Request_Goap_Action_Plan,
-			FCk_Request_Goap_Action_CancelPlan,
-			FCk_Request_Goap_Planner_SetGoal,
-			FCk_Request_Goap_Action_SetActionCost,
-			FCk_Request_Goap_Action_SetReplanInterval,
-			FCk_Request_Goap_Action_SetReplanPolicy,
-			FCk_Request_Goap_Action_SetSearchBudget,
-			FCk_Request_Goap_Action_SetCostThreshold>;
-
-	private:
-		TArray<RequestType> _Requests;
-
-	public:
-		CK_PROPERTY_GET(_Requests);
-	};
-
-// ====================================================================================================================
-// REPLAN THROTTLE — same shape as today's, per-action
-// ====================================================================================================================
-
-	struct CKGOAP_API FFragment_Goap_Action_ReplanThrottle
-	{
-	public:
-		CK_GENERATED_BODY(FFragment_Goap_Action_ReplanThrottle);
-
-		friend class FProcessor_Goap_Action_AutoReplan;
-		friend class FProcessor_Goap_Action_HandleRequests;
-		// PR-B.1b Stage 3: same struct, Planner-side via alias.
-		friend class FProcessor_Goap_Planner_AutoReplan;
-		friend class FProcessor_Goap_Planner_HandleRequests;
-
-	private:
-		float _SecondsSinceLastReplan = 0.0f;
-
-	public:
-		CK_PROPERTY_GET(_SecondsSinceLastReplan);
-	};
-
-// ====================================================================================================================
-// PLAN CONTEXT — Graph reference kept alive between search + result phases
-// ====================================================================================================================
-
-	struct CKGOAP_API FFragment_Goap_Action_PlanContext
-	{
-	public:
-		CK_GENERATED_BODY(FFragment_Goap_Action_PlanContext);
-
-		friend class FProcessor_Goap_Action_HandleRequests;
-		friend class FProcessor_Goap_Action_HandleResult;
-		// PR-B.1b Stage 3: same struct, Planner-side via alias.
-		friend class FProcessor_Goap_Planner_HandleRequests;
-		friend class FProcessor_Goap_Planner_HandleResult;
-
-	private:
-		goap::FGoapGraph _Graph;
-
-	public:
-		CK_PROPERTY_GET(_Graph);
-	};
-
-// ====================================================================================================================
-// A* FRAGMENT ALIASES — concrete types per action
-// ====================================================================================================================
-
-	using FFragment_Goap_Action_SearchState = TFragment_AStar_SearchState<int32, goap::FGoapGraph>;
-	using FFragment_Goap_Action_Result      = TFragment_AStar_Result<int32>;
 
 // ====================================================================================================================
 
