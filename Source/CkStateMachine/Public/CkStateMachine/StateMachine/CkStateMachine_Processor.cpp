@@ -140,6 +140,58 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    // Helper — write the SM's current run-status into the replicated payload when the local
+    // machine is the authority for this SM. Used by Start/Stop/Pause/Resume handlers to mirror
+    // run-status across the wire. Local-only and non-authority machines silently skip
+    // (TryUpdateContainerFragment is itself a no-op without an active rep driver, but checking
+    // params explicitly keeps the intent visible).
+    static auto
+        DoPublishRunStatus(
+            FCk_Handle_StateMachine& InSm,
+            const FFragment_Sm_Params& InParams,
+            ECk_SmRunStatus InNewStatus)
+        -> void
+    {
+        if (InParams.Get_Replication() != ECk_Replication::Replicates)
+        { return; }
+
+        const auto NetContext = ck::statemachine::ComputeNetContext(InSm);
+        const auto AuthModel  = InParams.Get_AuthorityModel();
+
+        const auto IsAuthority =
+            (NetContext == ECk_Sm_NetContext::Server
+                && AuthModel == ECk_Sm_AuthorityModel::ServerAuthoritative)
+            || (NetContext == ECk_Sm_NetContext::OwningClient
+                && AuthModel == ECk_Sm_AuthorityModel::OwningClientAuthoritative);
+
+        if (NOT IsAuthority)
+        { return; }
+
+        switch (InParams.Get_ReplicationModel())
+        {
+            case ECk_Sm_ReplicationModel::WithHistory:
+            {
+                UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_StateMachine_WithHistory>(
+                    InSm,
+                    [&](FCk_RepData_StateMachine_WithHistory& RepData) -> void
+                    {
+                        RepData.Set_RunStatus(InNewStatus);
+                    });
+                break;
+            }
+            case ECk_Sm_ReplicationModel::WithoutHistory:
+            {
+                UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_StateMachine_NoHistory>(
+                    InSm,
+                    [&](FCk_RepData_StateMachine_NoHistory& RepData) -> void
+                    {
+                        RepData.Set_RunStatus(InNewStatus);
+                    });
+                break;
+            }
+        }
+    }
+
     auto
         FProcessor_Sm_HandleRequests::
         DoHandleRequest(
@@ -155,6 +207,8 @@ namespace ck
         InCurrent._RunStatus = ECk_SmRunStatus::Running;
         InHandle.Add<FTag_Sm_Running>();
         InHandle.Try_Remove<FTag_Sm_Paused>();
+
+        DoPublishRunStatus(InHandle, InParams, ECk_SmRunStatus::Running);
 
         DoEnterState(InHandle, InCurrent, InParams.Get_InitialStateClass());
 
@@ -230,6 +284,8 @@ namespace ck
         InHandle.Try_Remove<FTag_Sm_TransitionQueued>();
         InHandle.Try_Remove<FFragment_Sm_PendingTransition>();
 
+        DoPublishRunStatus(InHandle, InParams, ECk_SmRunStatus::Stopped);
+
         UUtils_Signal_OnSmStopped::Broadcast(InHandle,
             MakePayload(InHandle, FCk_Sm_Payload_OnStopped{}));
     }
@@ -248,6 +304,8 @@ namespace ck
 
         InCurrent._RunStatus = ECk_SmRunStatus::Paused;
         InHandle.Add<FTag_Sm_Paused>();
+
+        DoPublishRunStatus(InHandle, InParams, ECk_SmRunStatus::Paused);
     }
 
     auto
@@ -264,6 +322,8 @@ namespace ck
 
         InCurrent._RunStatus = ECk_SmRunStatus::Running;
         InHandle.Remove<FTag_Sm_Paused>();
+
+        DoPublishRunStatus(InHandle, InParams, ECk_SmRunStatus::Running);
     }
 
     auto
@@ -517,12 +577,18 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Sm_Current& InCurrent,
+            FFragment_Sm_Current& InCurrent,
             FFragment_Sm_PendingReplicationEntries& InStash)
         -> void
     {
         auto& StashedEntries = InStash.Get_StashedEntries();
-        if (StashedEntries.IsEmpty())
+
+        // Capture pending run-status before we tear the stash fragment down — applying after
+        // events drain preserves the on-the-wire ordering (transitions then status).
+        const auto HasPendingRunStatus = InStash.Get_HasPendingRunStatus();
+        const auto PendingRunStatus    = InStash.Get_PendingRunStatus();
+
+        if (StashedEntries.IsEmpty() && NOT HasPendingRunStatus)
         {
             // Remove the empty fragment so future deliveries don't re-enter stash mode unless
             // explicitly required (the stash-precedence check treats a non-empty stash as
@@ -532,19 +598,30 @@ namespace ck
             return;
         }
 
-        const auto LastApplied = InHandle.Has<FFragment_Sm_ClientReplayState>()
-            ? InHandle.Get<FFragment_Sm_ClientReplayState>().Get_ClientLastAppliedSeq()
-            : 0;
-
-        auto& Queue = InHandle.AddOrGet<FFragment_Sm_ReplayQueue>().Get_Queue();
-        for (const auto& Event : StashedEntries)
+        if (NOT StashedEntries.IsEmpty())
         {
-            if (Event.Get_Seq() > LastApplied)
-            { Queue.Add(Event); }
+            const auto LastApplied = InHandle.Has<FFragment_Sm_ClientReplayState>()
+                ? InHandle.Get<FFragment_Sm_ClientReplayState>().Get_ClientLastAppliedSeq()
+                : 0;
+
+            auto& Queue = InHandle.AddOrGet<FFragment_Sm_ReplayQueue>().Get_Queue();
+            for (const auto& Event : StashedEntries)
+            {
+                if (Event.Get_Seq() > LastApplied)
+                { Queue.Add(Event); }
+            }
+
+            StashedEntries.Reset();
         }
 
-        StashedEntries.Reset();
+        // Stash teardown precedes mirror so MirrorRunStatus's Has<FFragment_Sm_Current> check
+        // is the only gate — the now-empty stash fragment is gone.
         InHandle.Try_Remove<FFragment_Sm_PendingReplicationEntries>();
+
+        if (HasPendingRunStatus)
+        {
+            ck::statemachine::MirrorRunStatus(InHandle, PendingRunStatus);
+        }
     }
 
     // ================================================================================================================
