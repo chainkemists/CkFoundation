@@ -1,10 +1,12 @@
 #include "CkStateMachine_Replication.h"
 
 #include "CkStateMachine/CkStateMachine_Log.h"
+#include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
 #include "CkStateMachine/Net/CkStateMachine_RepData.h"
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment_Data.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
@@ -71,6 +73,85 @@ namespace
         return false;
     }
 
+    // Phase 11 — receive-side handler for the RepData's run-status. Mirror immediately when the
+    // client has FFragment_Sm_Current; otherwise stash the value alongside the events for
+    // FlushPendingReplication_Drain to apply once Setup completes. Spec §5.4 ordering preserved.
+    auto
+    Sm_HandleRunStatus(
+        FCk_Handle& Entity,
+        ECk_SmRunStatus PayloadStatus) -> void
+    {
+        if (Sm_ShouldStash(Entity))
+        {
+            auto& Stash = Entity.AddOrGet<ck::FFragment_Sm_PendingReplicationEntries>();
+            Stash.Set_PendingRunStatus(PayloadStatus);
+            Stash.Set_HasPendingRunStatus(true);
+            return;
+        }
+
+        ck::statemachine::MirrorRunStatus(Entity, PayloadStatus);
+    }
+
+    // Spec §5.7 lagged-out gap recovery (WithHistory).
+    //
+    // The replicated ring buffer holds the last RingSize events. If a client has been quiet long
+    // enough for the authority to roll older events out of the ring, the client's LastApplied
+    // watermark sits below the earliest seq the payload carries — there's no contiguous path
+    // from LastApplied+1 to History[0].Seq. The recovery: discard the partial history, synthesize
+    // a single snap-to-current event from local current → history.Last(), and let the replay
+    // engine commit it as one transition.
+    //
+    // Snap-no-op: if local current already equals the target (e.g. the client missed a B→A loop
+    // and is still in A), don't enqueue anything — just advance the watermark to avoid
+    // re-triggering on the next delta. Returns the events the caller should hand to
+    // Sm_EnqueueOrStash; empty array means "nothing to enqueue, watermark was advanced for you".
+    auto
+    Sm_DetectAndHandleLaggedOut_WithHistory(
+        FCk_Handle& Entity,
+        const TArray<FCk_Sm_TransitionEvent>& InHistory) -> TArray<FCk_Sm_TransitionEvent>
+    {
+        if (InHistory.IsEmpty())
+        { return {}; }
+
+        const auto LastApplied = Entity.Has<ck::FFragment_Sm_ClientReplayState>()
+            ? Entity.Get<ck::FFragment_Sm_ClientReplayState>().Get_ClientLastAppliedSeq()
+            : 0;
+
+        const auto FirstSeq = InHistory[0].Get_Seq();
+        const auto IsLaggedOut = FirstSeq > LastApplied + 1;
+        if (NOT IsLaggedOut)
+        { return InHistory; }
+
+        const auto& Latest = InHistory.Last();
+        ck::sm::Warning(
+            TEXT("Lagged-out client recovery on [{}] — LastApplied=[{}], history range [{}..{}], snapping to [{}] (seq [{}])"),
+            Entity, LastApplied, FirstSeq, Latest.Get_Seq(),
+            Latest.Get_NewStateClass(), Latest.Get_Seq());
+
+        const auto LocalCurrentClass = Entity.Has<ck::FFragment_Sm_Current>()
+            ? Entity.Get<ck::FFragment_Sm_Current>().Get_CurrentStateClass()
+            : TSubclassOf<UCk_SmState_EntityScript>{};
+
+        if (LocalCurrentClass == Latest.Get_NewStateClass())
+        {
+            // Snap-no-op — already in the target state. Advance watermark and bail without
+            // enqueuing anything; otherwise the next OnChange would re-detect the same gap.
+            auto& ReplayState = Entity.AddOrGet<ck::FFragment_Sm_ClientReplayState>();
+            ReplayState.Set_ClientLastAppliedSeq(Latest.Get_Seq());
+            return {};
+        }
+
+        const auto SnapEvent = FCk_Sm_TransitionEvent
+        {
+            LocalCurrentClass,
+            Latest.Get_NewStateClass(),
+            Latest.Get_Seq(),
+            Latest.Get_NewStateFingerprint()
+        };
+
+        return TArray<FCk_Sm_TransitionEvent>{SnapEvent};
+    }
+
     // Append events to either the stash (if Sm_ShouldStash) or directly to the replay queue.
     // Filters by ClientLastAppliedSeq so duplicate or out-of-order arrivals are deduplicated.
     auto
@@ -117,10 +198,12 @@ namespace
                         { return; }
 
                         const auto& NewPayload = New.Get<FCk_RepData_StateMachine_WithHistory>();
-                        Sm_EnqueueOrStash(Entity, NewPayload.Get_History());
+                        const auto EventsToApply = Sm_DetectAndHandleLaggedOut_WithHistory(Entity, NewPayload.Get_History());
+                        Sm_EnqueueOrStash(Entity, EventsToApply);
+                        Sm_HandleRunStatus(Entity, NewPayload.Get_RunStatus());
 
-                        ck::sm::VeryVerbose(TEXT("WithHistory OnChange for [{}] — history size [{}]"),
-                            Entity, NewPayload.Get_History().Num());
+                        ck::sm::VeryVerbose(TEXT("WithHistory OnChange for [{}] — history size [{}], status [{}]"),
+                            Entity, NewPayload.Get_History().Num(), NewPayload.Get_RunStatus());
                     },
                     .OnAdd = [](FCk_Handle& Entity, const FInstancedStruct& Data)
                     {
@@ -131,10 +214,12 @@ namespace
                         // stash helper holds the entries for FlushPendingReplication_Drain to
                         // release once Setup lands.
                         const auto& Payload = Data.Get<FCk_RepData_StateMachine_WithHistory>();
-                        Sm_EnqueueOrStash(Entity, Payload.Get_History());
+                        const auto EventsToApply = Sm_DetectAndHandleLaggedOut_WithHistory(Entity, Payload.Get_History());
+                        Sm_EnqueueOrStash(Entity, EventsToApply);
+                        Sm_HandleRunStatus(Entity, Payload.Get_RunStatus());
 
-                        ck::sm::VeryVerbose(TEXT("WithHistory OnAdd for [{}] — initial history size [{}]"),
-                            Entity, Payload.Get_History().Num());
+                        ck::sm::VeryVerbose(TEXT("WithHistory OnAdd for [{}] — initial history size [{}], status [{}]"),
+                            Entity, Payload.Get_History().Num(), Payload.Get_RunStatus());
                     }
                 });
 
@@ -165,9 +250,10 @@ namespace
                         };
 
                         Sm_EnqueueOrStash(Entity, TArray<FCk_Sm_TransitionEvent>{Event});
+                        Sm_HandleRunStatus(Entity, NewPayload.Get_RunStatus());
 
-                        ck::sm::VeryVerbose(TEXT("NoHistory OnChange for [{}] — synthesized event for seq [{}]"),
-                            Entity, NewSeq);
+                        ck::sm::VeryVerbose(TEXT("NoHistory OnChange for [{}] — synthesized event for seq [{}], status [{}]"),
+                            Entity, NewSeq, NewPayload.Get_RunStatus());
                     },
                     .OnAdd = [](FCk_Handle& Entity, const FInstancedStruct& Data)
                     {
@@ -177,21 +263,24 @@ namespace
                         // First receipt — only enqueue if Seq > 0 (a Seq of 0 indicates the SM
                         // hasn't transitioned yet on authority and there's nothing to snap to).
                         const auto& Payload = Data.Get<FCk_RepData_StateMachine_NoHistory>();
-                        if (Payload.Get_Seq() <= 0)
-                        { return; }
 
-                        const auto Event = FCk_Sm_TransitionEvent
+                        if (Payload.Get_Seq() > 0)
                         {
-                            TSubclassOf<UCk_SmState_EntityScript>{},
-                            Payload.Get_CurrentStateClass(),
-                            Payload.Get_Seq(),
-                            Payload.Get_CurrentStateFingerprint()
-                        };
+                            const auto Event = FCk_Sm_TransitionEvent
+                            {
+                                TSubclassOf<UCk_SmState_EntityScript>{},
+                                Payload.Get_CurrentStateClass(),
+                                Payload.Get_Seq(),
+                                Payload.Get_CurrentStateFingerprint()
+                            };
 
-                        Sm_EnqueueOrStash(Entity, TArray<FCk_Sm_TransitionEvent>{Event});
+                            Sm_EnqueueOrStash(Entity, TArray<FCk_Sm_TransitionEvent>{Event});
+                        }
 
-                        ck::sm::VeryVerbose(TEXT("NoHistory OnAdd for [{}] — initial snap to state [{}]"),
-                            Entity, Payload.Get_CurrentStateClass());
+                        Sm_HandleRunStatus(Entity, Payload.Get_RunStatus());
+
+                        ck::sm::VeryVerbose(TEXT("NoHistory OnAdd for [{}] — initial snap to state [{}], status [{}]"),
+                            Entity, Payload.Get_CurrentStateClass(), Payload.Get_RunStatus());
                     }
                 });
         }
