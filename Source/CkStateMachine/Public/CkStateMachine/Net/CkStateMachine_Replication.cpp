@@ -4,7 +4,9 @@
 #include "CkStateMachine/Net/CkStateMachine_RepData.h"
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Fragment_Data.h"
 
+#include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -22,6 +24,30 @@
 
 namespace
 {
+    // Spec §5.5 echo suppression: the owning client of an OwningClientAuthoritative SM applies
+    // transitions locally (zero-latency), batches them into FFragment_Sm_PendingClientBatch,
+    // then pushes the batch over RPC. The server applies them and re-publishes via the rep
+    // payload. That replicated payload makes a round trip back to the owning client as a
+    // rep delta — the owning client must NOT route it through the replay queue, or the
+    // transition would land twice (once locally at commit time, once again on rep arrival).
+    //
+    // Detection: the SM is OwningClientAuthoritative AND this machine is the actor's owning
+    // player. Non-owning clients on the same SM continue to apply the rep payload normally.
+    auto
+    Sm_ShouldEchoSuppress(
+        const FCk_Handle& Entity) -> bool
+    {
+        if (NOT Entity.Has<ck::FFragment_Sm_Params>())
+        { return false; }
+
+        const auto& Params = Entity.Get<ck::FFragment_Sm_Params>();
+        if (Params.Get_AuthorityModel() != ECk_Sm_AuthorityModel::OwningClientAuthoritative)
+        { return false; }
+
+        return UCk_Utils_Net_UE::Get_IsEntityLocallyControlled_ByPlayer(Entity)
+            == ECk_Utils_Net_IsLocallyControlled_Result::IsLocallyControlled;
+    }
+
     // Spec §5.4 stash-precedence: rep payloads that arrive before the client's Setup processor
     // has run (no FFragment_Sm_Current yet) must NOT bypass that setup — they're held in
     // FFragment_Sm_PendingReplicationEntries until FlushPendingReplication_Drain releases them
@@ -87,8 +113,9 @@ namespace
                 {
                     .OnChange = [](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& Old)
                     {
-                        // Phase 8: stash-precedence applied. Phase 10 will add echo suppression
-                        // on owning client; Phase 9 will add the initial-fingerprint trigger.
+                        if (Sm_ShouldEchoSuppress(Entity))
+                        { return; }
+
                         const auto& NewPayload = New.Get<FCk_RepData_StateMachine_WithHistory>();
                         Sm_EnqueueOrStash(Entity, NewPayload.Get_History());
 
@@ -97,6 +124,9 @@ namespace
                     },
                     .OnAdd = [](FCk_Handle& Entity, const FInstancedStruct& Data)
                     {
+                        if (Sm_ShouldEchoSuppress(Entity))
+                        { return; }
+
                         // First receipt — if Setup hasn't run yet (no FFragment_Sm_Current), the
                         // stash helper holds the entries for FlushPendingReplication_Drain to
                         // release once Setup lands.
@@ -113,10 +143,12 @@ namespace
                 {
                     .OnChange = [](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& Old)
                     {
+                        if (Sm_ShouldEchoSuppress(Entity))
+                        { return; }
+
                         // WithoutHistory replicates the latest state only — synthesize a single
                         // transition event from local current → replicated current and route it
-                        // through the stash-or-queue helper. Echo suppression on owning client is
-                        // Phase 10.
+                        // through the stash-or-queue helper.
                         const auto& NewPayload = New.Get<FCk_RepData_StateMachine_NoHistory>();
                         const auto NewSeq = NewPayload.Get_Seq();
 
@@ -139,6 +171,9 @@ namespace
                     },
                     .OnAdd = [](FCk_Handle& Entity, const FInstancedStruct& Data)
                     {
+                        if (Sm_ShouldEchoSuppress(Entity))
+                        { return; }
+
                         // First receipt — only enqueue if Seq > 0 (a Seq of 0 indicates the SM
                         // hasn't transitioned yet on authority and there's nothing to snap to).
                         const auto& Payload = Data.Get<FCk_RepData_StateMachine_NoHistory>();
