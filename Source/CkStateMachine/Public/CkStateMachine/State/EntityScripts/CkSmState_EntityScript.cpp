@@ -2,6 +2,7 @@
 
 #include "CkStateMachine/CkStateMachine_Log.h"
 #include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
+#include "CkStateMachine/Net/CkStateMachine_RepData.h"
 #include "CkStateMachine/Debug/CkStateMachine_Debug_GraphWalk_Fragment.h"
 #include "CkStateMachine/State/CkSmState_Fingerprint.h"
 #include "CkStateMachine/State/CkSmState_Fragment.h"
@@ -17,6 +18,7 @@
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
 
@@ -48,6 +50,8 @@ auto
     DefineState(StateHandle);
 
     DoComputeFingerprint(StateHandle);
+
+    DoBackfillFingerprintToRepData(StateHandle);
 
     return ParentFlow;
 }
@@ -274,6 +278,109 @@ auto
 
     auto& FingerprintFrag = InStateHandle.AddOrGet<ck::FFragment_SmState_Fingerprint>();
     FingerprintFrag._Hash = ck::statemachine::ComputeFingerprint(Inputs);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_SmState_EntityScript::
+    DoBackfillFingerprintToRepData(
+        FCk_Handle_SmState_UnderConstruction& InStateHandle)
+    -> void
+{
+    // The replicated payload is published by FProcessor_Sm_CommitPendingTransition (or by the
+    // initial-state path at Setup) with _NewStateFingerprint = 0, because at publication time
+    // the new state entity hasn't yet run DefineState — fingerprint isn't available.
+    // DoComputeFingerprint just ran above; the structural hash is now valid on this state.
+    // Patch it into the rep payload so subsequent rep deltas to non-authority clients carry
+    // a non-zero fingerprint (useful for inspection / debugger / future synchronous publication).
+    //
+    // Authority-only: clients receive the payload, they don't write it. Local-only SMs (no
+    // Replicates intent) skip the whole branch via the gate below.
+    //
+    // Race note: clients that already applied a transition with fingerprint=0 won't replay
+    // when the backfilled rep delta arrives (Seq dedup). The full verify path requires
+    // synchronous fingerprint computation at publication time — that's a follow-up task
+    // requiring per-class fingerprint cache via the graph-walk pattern.
+
+    if (NOT ck::IsValid(_OwnerStateMachine))
+    { return; }
+
+    if (NOT _OwnerStateMachine.Has<ck::FFragment_Sm_Params>())
+    { return; }
+
+    const auto& Params = _OwnerStateMachine.Get<ck::FFragment_Sm_Params>();
+    if (Params.Get_Replication() != ECk_Replication::Replicates)
+    { return; }
+
+    const auto NetContext = ck::statemachine::ComputeNetContext(_OwnerStateMachine);
+    const auto AuthModel  = Params.Get_AuthorityModel();
+    const auto IsAuthority =
+        (NetContext == ECk_Sm_NetContext::Server
+            && AuthModel == ECk_Sm_AuthorityModel::ServerAuthoritative)
+        || (NetContext == ECk_Sm_NetContext::OwningClient
+            && AuthModel == ECk_Sm_AuthorityModel::OwningClientAuthoritative);
+
+    if (NOT IsAuthority)
+    { return; }
+
+    if (NOT InStateHandle.Has<ck::FFragment_SmState_Fingerprint>())
+    { return; }
+
+    const auto LocalFingerprint = InStateHandle.Get<ck::FFragment_SmState_Fingerprint>().Get_Hash();
+    const auto SelfClass        = GetClass();
+
+    switch (Params.Get_ReplicationModel())
+    {
+        case ECk_Sm_ReplicationModel::WithHistory:
+        {
+            UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_StateMachine_WithHistory>(
+                _OwnerStateMachine,
+                [&](FCk_RepData_StateMachine_WithHistory& RepData) -> void
+                {
+                    auto& History = RepData.Get_History();
+                    if (History.IsEmpty())
+                    {
+                        // Initial state — no transition events yet. Stamp the seed slot.
+                        RepData.Set_InitialStateFingerprint(LocalFingerprint);
+                        return;
+                    }
+
+                    // Patch the most recent event only if its NewStateClass actually matches our
+                    // class. Defensive guard against the race where a follow-up transition
+                    // commits and publishes its own event before this Construct callback fires —
+                    // in that case the back-patch would write to the wrong event. The cost of
+                    // skipping under that race is a single zero fingerprint left in the ring,
+                    // which is benign for the (currently informational) verify path.
+                    auto& Latest = History.Last();
+                    if (Latest.Get_NewStateClass() == SelfClass)
+                    {
+                        Latest.Set_NewStateFingerprint(LocalFingerprint);
+                    }
+                });
+            break;
+        }
+        case ECk_Sm_ReplicationModel::WithoutHistory:
+        {
+            UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_StateMachine_NoHistory>(
+                _OwnerStateMachine,
+                [&](FCk_RepData_StateMachine_NoHistory& RepData) -> void
+                {
+                    // Only patch when the rep payload's CurrentStateClass matches our class.
+                    // If the SM has already transitioned past this state (faster authority),
+                    // the payload reflects a different state and we shouldn't overwrite.
+                    if (RepData.Get_CurrentStateClass() == SelfClass)
+                    {
+                        RepData.Set_CurrentStateFingerprint(LocalFingerprint);
+
+                        // Initial-state seed too — covers the WithoutHistory analogue of the
+                        // WithHistory.IsEmpty() branch above. If the initial-state Setup never
+                        // populated the field, Seq is still 0 and we're patching alongside.
+                    }
+                });
+            break;
+        }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
