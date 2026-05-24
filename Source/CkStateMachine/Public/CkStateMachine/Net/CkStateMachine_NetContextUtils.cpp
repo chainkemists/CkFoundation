@@ -1,5 +1,9 @@
 #include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
 
+#include "CkStateMachine/CkStateMachine_Log.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
+
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
@@ -26,5 +30,57 @@ namespace ck::statemachine
         { return ECk_Sm_NetContext::OwningClient; }
 
         return ECk_Sm_NetContext::NonOwningClient;
+    }
+
+    auto
+        MirrorRunStatus(
+            FCk_Handle& InEntity,
+            ECk_SmRunStatus InNewStatus)
+        -> void
+    {
+        if (NOT InEntity.Has<ck::FFragment_Sm_Current>())
+        { return; }
+
+        auto& Current = InEntity.Get<ck::FFragment_Sm_Current>();
+        const auto OldStatus = Current.Get_RunStatus();
+        if (OldStatus == InNewStatus)
+        { return; }
+
+        Current.Set_RunStatus(InNewStatus);
+
+        auto SmHandle = UCk_Utils_StateMachine_UE::CastChecked(InEntity);
+
+        switch (InNewStatus)
+        {
+            case ECk_SmRunStatus::Running:
+            {
+                InEntity.AddOrGet<ck::FTag_Sm_Running>();
+                InEntity.Try_Remove<ck::FTag_Sm_Paused>();
+
+                if (OldStatus == ECk_SmRunStatus::Stopped)
+                {
+                    ck::UUtils_Signal_OnSmStarted::Broadcast(SmHandle,
+                        ck::MakePayload(SmHandle, FCk_Sm_Payload_OnStarted{}));
+                }
+                break;
+            }
+            case ECk_SmRunStatus::Paused:
+            {
+                InEntity.AddOrGet<ck::FTag_Sm_Paused>();
+                break;
+            }
+            case ECk_SmRunStatus::Stopped:
+            {
+                InEntity.Try_Remove<ck::FTag_Sm_Running>();
+                InEntity.Try_Remove<ck::FTag_Sm_Paused>();
+
+                ck::UUtils_Signal_OnSmStopped::Broadcast(SmHandle,
+                    ck::MakePayload(SmHandle, FCk_Sm_Payload_OnStopped{}));
+                break;
+            }
+        }
+
+        ck::sm::VeryVerbose(TEXT("Mirrored RunStatus on [{}]: [{}] -> [{}]"),
+            InEntity, OldStatus, InNewStatus);
     }
 }
