@@ -23,6 +23,7 @@
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_FlushPendingReplication_Drain);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_ApplyReplicatedHistory);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_CommitPendingTransition);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_EndPlay);
@@ -424,6 +425,45 @@ namespace ck
         UCk_Utils_StateMachine_UE::TryCheckEntryBreakpoint(InHandle, TargetStateClass);
 
         InHandle.Try_Remove<FFragment_Sm_PendingTransition>();
+    }
+
+    // ================================================================================================================
+    // FLUSH PENDING REPLICATION — DRAIN
+    // ================================================================================================================
+
+    auto
+        FProcessor_Sm_FlushPendingReplication_Drain::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Sm_Current& InCurrent,
+            FFragment_Sm_PendingReplicationEntries& InStash)
+        -> void
+    {
+        auto& StashedEntries = InStash.Get_StashedEntries();
+        if (StashedEntries.IsEmpty())
+        {
+            // Remove the empty fragment so future deliveries don't re-enter stash mode unless
+            // explicitly required (the stash-precedence check treats a non-empty stash as
+            // "keep stashing"). An empty stash with the fragment still present would force
+            // unnecessary stashing on the next OnChange.
+            InHandle.Try_Remove<FFragment_Sm_PendingReplicationEntries>();
+            return;
+        }
+
+        const auto LastApplied = InHandle.Has<FFragment_Sm_ClientReplayState>()
+            ? InHandle.Get<FFragment_Sm_ClientReplayState>().Get_ClientLastAppliedSeq()
+            : 0;
+
+        auto& Queue = InHandle.AddOrGet<FFragment_Sm_ReplayQueue>().Get_Queue();
+        for (const auto& Event : StashedEntries)
+        {
+            if (Event.Get_Seq() > LastApplied)
+            { Queue.Add(Event); }
+        }
+
+        StashedEntries.Reset();
+        InHandle.Try_Remove<FFragment_Sm_PendingReplicationEntries>();
     }
 
     // ================================================================================================================
