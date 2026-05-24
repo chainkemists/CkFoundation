@@ -141,15 +141,6 @@ public:
 	Get_DependencyCycles(const FCk_Handle_Goap_Planner& InPlanner);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
-		DisplayName = "[Ck][Goap|Planner] Get Root Action")
-	static FCk_Handle_Goap_Action
-	Get_RootAction(const FCk_Handle_Goap_Planner& InPlanner);
-
-	// PR-B.1a: Planner-API verb overloads. In this phase these are thin shims
-	// that look up the Planner's _RootAction and delegate to the Action-side
-	// implementation. B.1b will rewire them to read directly from Planner-side
-	// fragments and drop _RootAction.
-	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
 		DisplayName = "[Ck][Goap|Planner] Get Plan Status")
 	static ECk_GoapPlanStatus
 	Get_PlanStatus(const FCk_Handle_Goap_Planner& InPlanner);
@@ -213,8 +204,7 @@ public:
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
 		const TArray<FCk_GoapWS_Condition_Authored>& InGoal);
 
-	// PR-B.1a: Planner-API request verb overloads. Shims through _RootAction
-	// today; B.1b will route these directly through Planner-side fragments.
+	// Planner-API request verbs. Enqueue on the Planner's own request queue.
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
 		DisplayName = "[Ck][Goap|Planner] Request Plan")
@@ -279,8 +269,6 @@ public:
 	//      and enqueue a Request_Plan so the next plan reflects the updated
 	//      operator set.
 	//
-	// Refuses to remove the implicit-root Action (the Planner's _RootAction)
-	// — removing the root breaks the A* host. Emits a warning + no-op return.
 	// If the class is not registered on this Planner, emits a warning and
 	// returns the Planner unchanged.
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",

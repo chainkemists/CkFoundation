@@ -62,14 +62,12 @@ namespace
 		return Set;
 	}
 
-	// PR-B.1b Stage 3 — given a Planner handle, return the set of candidate-
-	// operator child Actions that the A* search at this Planner consumes.
-	//
-	// Path-A bridge logic (until Stage 5 removes _RootAction):
-	//   * Promoted mid-tier Planner (host carries FFragment_Goap_Action_Tree):
-	//     walk its OWN children.
-	//   * Top-level Planner: candidates are the implicit-root's children.
-	auto Goap_PRB1b_GetCandidateChildren(const FCk_Handle_Goap_Planner& InPlanner)
+	// PR-B.1b Stage 5 — A Planner's candidate operators are its own direct
+	// children. No more implicit-root indirection; every AddAction adds a
+	// direct child of the Planner. Promoted mid-tier Planners read children
+	// from their own Tree fragment (the Planner-cast IS the Action that owns
+	// the tree); top-level Planners read from their ActionCatalogIndex.
+	auto Goap_Planner_GetCandidateChildren(const FCk_Handle_Goap_Planner& InPlanner)
 		-> TArray<FCk_Handle_Goap_Action>
 	{
 		if (NOT ck::IsValid(InPlanner)) { return {}; }
@@ -79,28 +77,26 @@ namespace
 			return InPlanner.template Get<FFragment_Goap_Action_Tree>().Get_ChildActions();
 		}
 
-		const auto& Current = InPlanner.template Get<FFragment_Goap_Planner_Current>();
-		auto Root = Current.Get_RootAction();
-		if (NOT ck::IsValid(Root)) { return {}; }
-		return Root.template Get<FFragment_Goap_Action_Tree>().Get_ChildActions();
+		auto Result = TArray<FCk_Handle_Goap_Action>{};
+		if (NOT InPlanner.template Has<FFragment_Goap_Planner_ActionCatalogIndex>()) { return Result; }
+		const auto& Index = InPlanner.template Get<FFragment_Goap_Planner_ActionCatalogIndex>();
+		Result.Reserve(Index.Get_TagToAction().Num());
+		for (const auto& Pair : Index.Get_TagToAction())
+		{
+			if (ck::IsValid(Pair.Value)) { Result.Add(Pair.Value); }
+		}
+		return Result;
 	}
 
-	// PR-B.1b Stage 3 — resolve the "parent Planner" for parent-plan gating.
+	// PR-B.1b Stage 5 — resolve the "parent Planner" for parent-plan gating.
 	// The intent: defer THIS Planner's Plan request if the Planner whose A*
 	// search picks us as a candidate is still in-flight.
 	//
-	// In Path A:
 	//   * Top-level Planner: no parent Planner — never gated. Return invalid.
-	//   * Promoted mid-tier Planner: walk up the Action parent chain (and then
-	//     lifetime owners) until we find a Planner entity. That's the Planner
-	//     whose candidate set includes us. Returns invalid if none found.
-	//
-	// NOTE: returns the parent as an FCk_Handle_Goap_Planner because the gate
-	// reads the Planner-side FFragment_Goap_Planner_PlanState (where A* now
-	// writes the authoritative plan status post-Stage 3). The previous version
-	// returned FCk_Handle_Goap_Action and read the Action-side PlanState, which
-	// is permanently Idle since A* no longer runs on Action entities.
-	auto Goap_PRB1b_GetParentPlanner(const FCk_Handle_Goap_Planner& InPlanner)
+	//   * Promoted mid-tier Planner: walk up the Action parent chain until we
+	//     find a Planner entity. That's the Planner whose candidate set
+	//     includes us. Returns invalid if none found.
+	auto Goap_Planner_GetParentPlanner(const FCk_Handle_Goap_Planner& InPlanner)
 		-> FCk_Handle_Goap_Planner
 	{
 		if (NOT ck::IsValid(InPlanner)) { return {}; }
@@ -113,60 +109,11 @@ namespace
 		for (auto Depth = 0; Depth < MaxDepth; ++Depth)
 		{
 			if (NOT ck::IsValid(Walker)) { break; }
-
-			// If the current walker entity is itself a Planner (promoted Action
-			// or top-level), we've found the parent Planner.
 			if (UCk_Utils_Goap_Planner_UE::Has(Walker))
 			{
 				return UCk_Utils_Goap_Planner_UE::CastChecked(Walker);
 			}
-
-			// Walker is an Action entity (e.g. the implicit-root Action). Its
-			// lifetime owner is the next candidate (the top-level Planner for
-			// the implicit-root case; further parent Actions otherwise).
 			Walker = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Walker);
-		}
-		return {};
-	}
-
-	// PR-B.1b Stage 3 — resolve the Action entity that carries the
-	// FFragment_Goap_Action_Params for replan-policy / replan-interval reads.
-	// These fields haven't been lifted to PlannerParams yet (Stage 5 will
-	// simplify); for now we read them off the implicit-root Action (top-level
-	// Planner) or the Planner-as-Action (promoted mid-tier).
-	//
-	// Returns an invalid handle if neither is available.
-	auto Goap_PRB1b_GetPolicyHolderAction(const FCk_Handle_Goap_Planner& InPlanner)
-		-> FCk_Handle_Goap_Action
-	{
-		if (NOT ck::IsValid(InPlanner)) { return {}; }
-
-		if (InPlanner.template Has<FFragment_Goap_Action_Tree>())
-		{
-			// Promoted Planner-Action — the Planner IS the Action carrying Params.
-			return UCk_Utils_Goap_Action_UE::CastChecked(InPlanner);
-		}
-
-		const auto& Current = InPlanner.template Get<FFragment_Goap_Planner_Current>();
-		return Current.Get_RootAction();
-	}
-
-	// PR-B.1b Stage 3 — resolve owning Planner from a request enqueued through
-	// the Action-side utility wrappers. Kept here (rather than in the deleted
-	// helper set) because Action utils still expose Request_*(Action) verbs
-	// and the per-Action Setup processor's gate-checks may need it.
-	auto Goap_PRB1b_ResolveOwningPlanner(const FCk_Handle_Goap_Action& InAction)
-		-> FCk_Handle_Goap_Planner
-	{
-		if (NOT ck::IsValid(InAction)) { return {}; }
-		if (UCk_Utils_Goap_Planner_UE::Has(InAction))
-		{
-			return UCk_Utils_Goap_Planner_UE::CastChecked(InAction);
-		}
-		auto Owner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAction);
-		if (UCk_Utils_Goap_Planner_UE::Has(Owner))
-		{
-			return UCk_Utils_Goap_Planner_UE::CastChecked(Owner);
 		}
 		return {};
 	}
@@ -189,7 +136,6 @@ auto
 		TimeType InDeltaT,
 		HandleType InHandle,
 		const FFragment_Goap_Action_Params& InParams,
-		const FFragment_Goap_Action_ActionClasses& InClasses,
 		FFragment_Goap_Action_Definition& InActionDef,
 		FFragment_Goap_Planner_WorldStateSource& InWSSource) -> void
 {
@@ -307,11 +253,6 @@ auto
 			InHandle, InActionDef._InvalidGoal.Num());
 	}
 
-	// _ActionClasses retained as a legacy collection (read by no live code in
-	// the unified model). Candidate sets are built dynamically from
-	// Action_Tree._ChildActions at plan-request time.
-	(void)InClasses;
-
 	// PR-B.1b Stage 3: per-Action Setup no longer touches the Planner-side _Goal
 	// fragment. The owning Planner's goal is resolved by
 	// FProcessor_Goap_Planner_Setup (Planner-tier) which runs after every direct
@@ -330,7 +271,7 @@ auto
 		const FFragment_Goap_Planner_Params& InParams,
 		const FFragment_Goap_Planner_Current& InCurrent,
 		const FFragment_Goap_Planner_WorldStateSource& InWSSource,
-		FFragment_Goap_Action_ReplanThrottle& InThrottle) -> void
+		FFragment_Goap_Planner_ReplanThrottle& InThrottle) -> void
 {
 	// PR-B.1b Stage 3 — disable-toggle pipeline gate reads the Planner's own
 	// FFragment_Goap_Planner_Current directly. Disabled Planners don't replan
@@ -353,25 +294,14 @@ auto
 
 	InThrottle._SecondsSinceLastReplan += InDeltaT.Get_Seconds();
 
-	const auto IsInitialPlanPending = InHandle.Has<FTag_Goap_Action_RequiresInitialPlan>();
+	const auto IsInitialPlanPending = InHandle.Has<FTag_Goap_Planner_RequiresInitialPlan>();
 	const auto WSDirty   = InHandle.Has<FTag_Goap_Dirty_WorldState>();
 	const auto CostDirty = InHandle.Has<FTag_Goap_Dirty_Cost>();
 
-	// PR-B.1b Stage 3: ReplanPolicy / MinReplanIntervalSeconds still live on
-	// ActionParams (Stage 5 will lift them to PlannerParams). Read off the
-	// policy-holder Action — implicit-root (top-level) or Planner-as-Action
-	// (promoted).
-	const auto PolicyHolder = Goap_PRB1b_GetPolicyHolderAction(InHandle);
-	if (NOT ck::IsValid(PolicyHolder))
-	{
-		(void)InParams;  // PlannerParams reserved for Stage 5 simplification.
-		return;
-	}
-	const auto& PolicyParams = PolicyHolder.template Get<FFragment_Goap_Action_Params>();
-
+	// PR-B.1b Stage 5: replan-policy + interval live on PlannerParams.
 	const auto PolicyAllowsReplan = [&]() -> bool
 	{
-		switch (PolicyParams.Get_ReplanPolicy())
+		switch (InParams.Get_ReplanPolicy())
 		{
 			case ECk_Goap_ReplanPolicy::OnWorldStateDirty: return WSDirty;
 			case ECk_Goap_ReplanPolicy::OnCostDirty:       return CostDirty;
@@ -382,18 +312,18 @@ auto
 	}();
 
 	const auto ThrottleElapsed = InThrottle._SecondsSinceLastReplan
-		>= PolicyParams.Get_MinReplanIntervalSeconds();
+		>= InParams.Get_MinReplanIntervalSeconds();
 
 	const auto ShouldFire = IsInitialPlanPending || (PolicyAllowsReplan && ThrottleElapsed);
 	if (NOT ShouldFire) { return; }
 
-	auto& Requests = InHandle.AddOrGet<FFragment_Goap_Action_Requests>();
-	Requests._Requests.Add(FCk_Request_Goap_Action_Plan{});
+	auto& Requests = InHandle.AddOrGet<FFragment_Goap_Planner_Requests>();
+	Requests._Requests.Add(FCk_Request_Goap_Planner_Plan{});
 
 	InThrottle._SecondsSinceLastReplan = 0.0f;
 	InHandle.Try_Remove<FTag_Goap_Dirty_WorldState>();
 	InHandle.Try_Remove<FTag_Goap_Dirty_Cost>();
-	InHandle.Try_Remove<FTag_Goap_Action_RequiresInitialPlan>();
+	InHandle.Try_Remove<FTag_Goap_Planner_RequiresInitialPlan>();
 }
 
 // ====================================================================================================================
@@ -405,16 +335,18 @@ auto
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
+		const FFragment_Goap_Planner_Params& InParams,
 		const FFragment_Goap_Planner_Current& InCurrent,
 		FFragment_AStar_Params& InAStarParams,
 		FFragment_Goap_Planner_PlanState& InPlanState,
 		FFragment_Goap_Planner_Goal& InGoal,
 		FFragment_Goap_Planner_WorldStateSource& InWSSource,
-		const FFragment_Goap_Action_Requests& InRequests,
-		FFragment_Goap_Action_SearchState& InSearchState,
-		FFragment_Goap_Action_Result& InResult,
-		FFragment_Goap_Action_PlanContext& InPlanContext) const -> void
+		const FFragment_Goap_Planner_Requests& InRequests,
+		FFragment_Goap_Planner_SearchState& InSearchState,
+		FFragment_Goap_Planner_Result& InResult,
+		FFragment_Goap_Planner_PlanContext& InPlanContext) const -> void
 {
+	(void)InParams;  // reserved (replan-policy reads moved to AutoReplan)
 	// PR-B.1b Stage 3 — disable-toggle pipeline gate reads InCurrent directly.
 	if (InCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable) { return; }
 
@@ -426,15 +358,10 @@ auto
 	// will simplify this when implicit-root + dual-stamp goes away.
 	const auto IsParentPlanInFlight = [&]() -> bool
 	{
-		const auto Parent = Goap_PRB1b_GetParentPlanner(InHandle);
+		const auto Parent = Goap_Planner_GetParentPlanner(InHandle);
 		if (NOT ck::IsValid(Parent)) { return false; }
 
-		// PR-B.1b Stage 3: read the parent PLANNER's PlanInFlight tag + PlanState.
-		// The Planner entity is authoritative post-Stage 3. The previous version
-		// read off the parent ACTION (implicit-root), whose PlanState stays
-		// permanently Idle since A* no longer runs on it — causing a permanent
-		// false-positive gate for any promoted mid-tier Planner.
-		if (Parent.template Has<FTag_Goap_Action_PlanInFlight>()) { return true; }
+		if (Parent.template Has<FTag_Goap_Planner_PlanInFlight>()) { return true; }
 
 		const auto& ParentPlanState = Parent.template Get<FFragment_Goap_Planner_PlanState>();
 		switch (ParentPlanState.Get_PlanStatus())
@@ -445,33 +372,33 @@ auto
 				// Idle means parent hasn't planned YET. If the parent has the
 				// initial-plan tag pending, we should defer; otherwise the parent
 				// is intentionally not planning and we should not block.
-				return Parent.template Has<FTag_Goap_Action_RequiresInitialPlan>();
+				return Parent.template Has<FTag_Goap_Planner_RequiresInitialPlan>();
 			default:
 				return false;
 		}
 	}();
 
-	InHandle.CopyAndRemove(InRequests, [&](FFragment_Goap_Action_Requests& InRequestsCopy)
+	InHandle.CopyAndRemove(InRequests, [&](FFragment_Goap_Planner_Requests& InRequestsCopy)
 	{
 		algo::ForEachRequest(InRequestsCopy._Requests, ck::Visitor([&](const auto& InTypedRequest)
 		{
 			using T = std::decay_t<decltype(InTypedRequest)>;
 
-			if constexpr (std::is_same_v<T, FCk_Request_Goap_Action_Plan>)
+			if constexpr (std::is_same_v<T, FCk_Request_Goap_Planner_Plan>)
 			{
 				if (IsParentPlanInFlight)
 				{
 					// Parent is still planning (or has never planned yet) —
 					// drop this Plan request and re-arm the initial-plan tag so
 					// AutoReplan re-enqueues a Plan request on the NEXT frame.
-					// We can't simply re-add the request to FFragment_Goap_Action_Requests:
-					// MarkedDirtyBy = FFragment_Goap_Action_Requests means
+					// We can't simply re-add the request to the queue:
+					// MarkedDirtyBy = FFragment_Goap_Planner_Requests means
 					// rewriting the fragment marks it dirty again, and the pump
 					// will re-run HandleRequests this same frame, looping until
 					// the pump limit fires. The tag-driven path takes effect
 					// next frame, by which time the parent's plan may have
 					// settled and released the gate.
-					InHandle.AddOrGet<FTag_Goap_Action_RequiresInitialPlan>();
+					InHandle.AddOrGet<FTag_Goap_Planner_RequiresInitialPlan>();
 					return;
 				}
 
@@ -487,7 +414,7 @@ auto
 					InPlanState._PlanStatus = ECk_GoapPlanStatus::PlanFailed;
 					InPlanState._Plan.Reset();
 					InPlanState._PlanCost = 0.0f;
-					InHandle.Try_Remove<FTag_Goap_Action_PlanInFlight>();
+					InHandle.Try_Remove<FTag_Goap_Planner_PlanInFlight>();
 					UUtils_Signal_OnGoap_Planner_PlanFailed::Broadcast(
 						InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanFailed{}));
 					return;
@@ -535,7 +462,7 @@ auto
 					InPlanState._PlanStatus = ECk_GoapPlanStatus::PlanFound;
 					InPlanState._Plan.Reset();
 					InPlanState._PlanCost = 0.0f;
-					InHandle.Try_Remove<FTag_Goap_Action_PlanInFlight>();
+					InHandle.Try_Remove<FTag_Goap_Planner_PlanInFlight>();
 					UUtils_Signal_OnGoap_Planner_PlanComplete::Broadcast(
 						InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanComplete{
 							TArray<TSubclassOf<UCk_GoapAction_EntityScript>>{}, 0.0f}));
@@ -546,15 +473,13 @@ auto
 				InPlanState._Plan.Reset();
 				InPlanState._PlanCost = 0.0f;
 
-				// Plan now in flight — gate any child Actions from starting their
+				// Plan now in flight — gate any child Planners from starting their
 				// own plans until our terminal status is reached. Removed in
 				// HandleResult / CancelPlan / early-out paths above.
-				InHandle.AddOrGet<FTag_Goap_Action_PlanInFlight>();
+				InHandle.AddOrGet<FTag_Goap_Planner_PlanInFlight>();
 
-				// PR-B.1b Stage 3: build the planner's candidate operator set
-				// from THIS Planner's children. Path-A bridge resolves to the
-				// implicit-root's children for top-level Planners, or this
-				// Planner-as-Action's children for promoted mid-tier.
+				// PR-B.1b Stage 5: candidate operators are this Planner's own
+				// direct children (no implicit-root indirection).
 				//
 				// IMPORTANT: each candidate's ActionIndex MUST be set to its
 				// position in the Candidates array. The FGoapGraph stores this
@@ -563,7 +488,7 @@ auto
 				// default INDEX_NONE causes Cost() to return float::Max() and
 				// Get_ActionForEdge to return INDEX_NONE, which silently drops
 				// every edge from the produced plan (PlanFound + empty plan).
-				const auto ChildHandles = Goap_PRB1b_GetCandidateChildren(InHandle);
+				const auto ChildHandles = Goap_Planner_GetCandidateChildren(InHandle);
 				auto Candidates = TArray<goap::FActionDef>{};
 				Candidates.Reserve(ChildHandles.Num());
 				for (const auto& ChildHandle : ChildHandles)
@@ -591,11 +516,11 @@ auto
 
 				InHandle.Add<FTag_AStar_SearchActive>();
 			}
-			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Action_CancelPlan>)
+			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Planner_CancelPlan>)
 			{
 				InHandle.Try_Remove<FTag_AStar_SearchActive>();
 				InHandle.Try_Remove<FTag_AStar_SearchComplete>();
-				InHandle.Try_Remove<FTag_Goap_Action_PlanInFlight>();
+				InHandle.Try_Remove<FTag_Goap_Planner_PlanInFlight>();
 				InSearchState._State = {};
 				InPlanState._PlanStatus = ECk_GoapPlanStatus::Idle;
 				InPlanState._Plan.Reset();
@@ -638,19 +563,18 @@ auto
 					}
 				}
 
-				InHandle.AddOrGet<FTag_Goap_Action_RequiresInitialPlan>();
+				InHandle.AddOrGet<FTag_Goap_Planner_RequiresInitialPlan>();
 			}
-			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Action_SetActionCost>)
+			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Planner_SetActionCost>)
 			{
-				// PR-B.1b Stage 3: cost lives on a child Action's
-				// Action_Definition._Cost (and its mirrored _CachedActionDef.Cost
-				// consumed by the Planner-on-Planner A* search). Look up the
-				// child by class via this Planner's candidate-children set and
-				// mutate its def directly.
+				// Cost lives on a child Action's Action_Definition._Cost (and
+				// its mirrored _CachedActionDef.Cost consumed by the A* search).
+				// Look up the child by class via this Planner's candidate set
+				// and mutate its def directly.
 				const auto TargetClass = InTypedRequest.Get_ActionClass();
 				const auto NewCost = InTypedRequest.Get_Cost();
 
-				const auto Candidates = Goap_PRB1b_GetCandidateChildren(InHandle);
+				const auto Candidates = Goap_Planner_GetCandidateChildren(InHandle);
 				for (auto ChildHandle : Candidates)
 				{
 					if (NOT ck::IsValid(ChildHandle)) { continue; }
@@ -666,21 +590,21 @@ auto
 
 				InHandle.AddOrGet<FTag_Goap_Dirty_Cost>();
 			}
-			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Action_SetReplanInterval>)
+			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Planner_SetReplanInterval>)
 			{
 				ck::goap::Warning(
-					TEXT("Request_SetReplanInterval not yet wired for per-action runtime tuning — set in ActionParams at AddAction time."));
+					TEXT("Request_SetReplanInterval not yet wired for runtime tuning — set in PlannerParams at Add time."));
 			}
-			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Action_SetReplanPolicy>)
+			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Planner_SetReplanPolicy>)
 			{
 				ck::goap::Warning(
-					TEXT("Request_SetReplanPolicy not yet wired for per-action runtime tuning — set in ActionParams at AddAction time."));
+					TEXT("Request_SetReplanPolicy not yet wired for runtime tuning — set in PlannerParams at Add time."));
 			}
-			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Action_SetSearchBudget>)
+			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Planner_SetSearchBudget>)
 			{
 				InAStarParams.Set_BudgetMicroseconds(InTypedRequest.Get_SearchBudgetMicroseconds());
 			}
-			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Action_SetCostThreshold>)
+			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Planner_SetCostThreshold>)
 			{
 				InAStarParams.Set_CostThreshold(InTypedRequest.Get_CostThreshold());
 			}
@@ -704,8 +628,8 @@ auto
 		TimeType InDeltaT,
 		HandleType InHandle,
 		const FFragment_Goap_Planner_Current& InCurrent,
-		const FFragment_Goap_Action_Result& InResult,
-		const FFragment_Goap_Action_PlanContext& InPlanContext,
+		const FFragment_Goap_Planner_Result& InResult,
+		const FFragment_Goap_Planner_PlanContext& InPlanContext,
 		FFragment_Goap_Planner_PlanState& InPlanState) -> void
 {
 	// PR-B.1b Stage 3 — disable-toggle pipeline gate reads InCurrent directly.
@@ -716,7 +640,7 @@ auto
 	// Any terminal status releases the parent-plan gate for our children.
 	// (No-op if the tag isn't present, e.g. an early-out path that already
 	// removed it before broadcasting.)
-	InHandle.Try_Remove<FTag_Goap_Action_PlanInFlight>();
+	InHandle.Try_Remove<FTag_Goap_Planner_PlanInFlight>();
 
 	switch (InResult._SearchStatus)
 	{
@@ -732,7 +656,7 @@ auto
 			// The search is regressive, so the A* path runs goal -> current.
 			// To produce a forward execution plan we walk edges in order and
 			// reverse at the end.
-			const auto ChildHandles = Goap_PRB1b_GetCandidateChildren(InHandle);
+			const auto ChildHandles = Goap_Planner_GetCandidateChildren(InHandle);
 			const auto& Graph = InPlanContext.Get_Graph();
 			const auto& Actions = Graph.Get_Actions();
 			const auto& Path = InResult._Path;

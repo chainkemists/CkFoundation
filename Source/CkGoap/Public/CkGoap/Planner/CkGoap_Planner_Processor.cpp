@@ -156,7 +156,9 @@ auto
 		FFragment_Goap_Planner_WorldStateSource& InWSSource,
 		FFragment_Goap_Planner_Goal& InGoal) -> void
 {
-	(void)InCatalogIndex;  // U11.4: cycle scan no longer walks the full catalog.
+	// PR-B.1b Stage 5: cycle scan no longer reads InCurrent (the _RootAction
+	// field is gone). InCurrent is still passed as RW because the processor
+	// writes _DependencyCycles below.
 
 	// Resolve this Planner's direct children — the candidate operators it would
 	// pass to A* if it ran a search at its own tier.
@@ -169,11 +171,14 @@ auto
 		const auto& Tree = InHandle.template Get<FFragment_Goap_Action_Tree>();
 		DirectChildren = Tree.Get_ChildActions();
 	}
-	else if (auto RootAction = InCurrent.Get_RootAction(); ck::IsValid(RootAction))
+	else
 	{
-		// Top-level Planner: direct children are its root Action's children.
-		const auto& RootTree = RootAction.template Get<FFragment_Goap_Action_Tree>();
-		DirectChildren = RootTree.Get_ChildActions();
+		// Top-level Planner: direct children come from the ActionCatalogIndex.
+		DirectChildren.Reserve(InCatalogIndex.Get_TagToAction().Num());
+		for (const auto& Pair : InCatalogIndex.Get_TagToAction())
+		{
+			if (ck::IsValid(Pair.Value)) { DirectChildren.Add(Pair.Value); }
+		}
 	}
 
 	if (DirectChildren.IsEmpty())
@@ -536,7 +541,7 @@ auto
 	DoInjectGoalSynchronous(InPlanner);
 	DoSubscribeActionToWorldState(InPlanner);
 
-	InPlanner.template AddOrGet<FTag_Goap_Action_RequiresInitialPlan>();
+	InPlanner.template AddOrGet<FTag_Goap_Planner_RequiresInitialPlan>();
 
 	Activation._IsActive = true;
 
@@ -603,8 +608,8 @@ auto
 
 	// Release any pending plan-initial / in-flight gating tags — Planner is
 	// leaving the chain and won't broadcast a terminal status to drop them itself.
-	InPlanner.template Try_Remove<FTag_Goap_Action_RequiresInitialPlan>();
-	InPlanner.template Try_Remove<FTag_Goap_Action_PlanInFlight>();
+	InPlanner.template Try_Remove<FTag_Goap_Planner_RequiresInitialPlan>();
+	InPlanner.template Try_Remove<FTag_Goap_Planner_PlanInFlight>();
 
 	Activation._IsActive = false;
 	Activation._LastActivatedPlan0 = {};
@@ -700,17 +705,14 @@ auto
 	}
 
 	// The "parent Action" arg for DoActivatePlanner needs to be an Action
-	// handle. For a top-level Planner, the implicit-root is the conceptual
-	// parent of NewStep0 — but Plan[0] entries are children of the
-	// implicit-root (top-level case) or of InHandle-as-Action (promoted case).
+	// handle. For a promoted mid-tier Planner-Action, InHandle is the parent
+	// (it owns Plan[0] via its own Tree). For a top-level Planner, there is
+	// no parent Action — Plan[0] entries are direct children of the Planner,
+	// which is NOT an Action; pass invalid.
 	auto ParentAsAction = FCk_Handle_Goap_Action{};
 	if (InHandle.template Has<FFragment_Goap_Action_Tree>())
 	{
 		ParentAsAction = UCk_Utils_Goap_Action_UE::CastChecked(InHandle);
-	}
-	else
-	{
-		ParentAsAction = InCurrent.Get_RootAction();
 	}
 
 	// Deactivate the old Step0 if it changed AND it was a composite sub-Planner.

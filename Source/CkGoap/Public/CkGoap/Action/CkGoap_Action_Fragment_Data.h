@@ -68,27 +68,12 @@ private:
         meta = (AllowPrivateAccess = true))
     float _CostThreshold = 0.0f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess = true))
-    ECk_Goap_ReplanPolicy _ReplanPolicy = ECk_Goap_ReplanPolicy::OnWorldStateDirty;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
-    float _MinReplanIntervalSeconds = 0.0f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess = true))
-    bool _PlanOnStart = true;
-
 public:
     CK_PROPERTY_GET(_ActionClass);
     CK_PROPERTY_SET(_ActionClass);
     CK_PROPERTY(_WorldStateSource_Override);
     CK_PROPERTY(_SearchBudgetMicroseconds);
     CK_PROPERTY(_CostThreshold);
-    CK_PROPERTY(_ReplanPolicy);
-    CK_PROPERTY(_MinReplanIntervalSeconds);
-    CK_PROPERTY(_PlanOnStart);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Goap_ActionParamsData, _ActionClass);
@@ -99,17 +84,17 @@ public:
 // ====================================================================================================================
 
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Request_Goap_Action_Plan
+struct CKGOAP_API FCk_Request_Goap_Planner_Plan
 {
     GENERATED_BODY()
-    CK_GENERATED_BODY(FCk_Request_Goap_Action_Plan);
+    CK_GENERATED_BODY(FCk_Request_Goap_Planner_Plan);
 };
 
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Request_Goap_Action_CancelPlan
+struct CKGOAP_API FCk_Request_Goap_Planner_CancelPlan
 {
     GENERATED_BODY()
-    CK_GENERATED_BODY(FCk_Request_Goap_Action_CancelPlan);
+    CK_GENERATED_BODY(FCk_Request_Goap_Planner_CancelPlan);
 };
 
 USTRUCT(BlueprintType)
@@ -128,10 +113,10 @@ public:
 };
 
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Request_Goap_Action_SetActionCost
+struct CKGOAP_API FCk_Request_Goap_Planner_SetActionCost
 {
     GENERATED_BODY()
-    CK_GENERATED_BODY(FCk_Request_Goap_Action_SetActionCost);
+    CK_GENERATED_BODY(FCk_Request_Goap_Planner_SetActionCost);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
@@ -143,14 +128,14 @@ private:
 public:
     CK_PROPERTY_GET(_ActionClass);
     CK_PROPERTY_GET(_Cost);
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Goap_Action_SetActionCost, _ActionClass, _Cost);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Goap_Planner_SetActionCost, _ActionClass, _Cost);
 };
 
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Request_Goap_Action_SetReplanInterval
+struct CKGOAP_API FCk_Request_Goap_Planner_SetReplanInterval
 {
     GENERATED_BODY()
-    CK_GENERATED_BODY(FCk_Request_Goap_Action_SetReplanInterval);
+    CK_GENERATED_BODY(FCk_Request_Goap_Planner_SetReplanInterval);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -159,14 +144,14 @@ private:
 
 public:
     CK_PROPERTY_GET(_MinReplanIntervalSeconds);
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Goap_Action_SetReplanInterval, _MinReplanIntervalSeconds);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Goap_Planner_SetReplanInterval, _MinReplanIntervalSeconds);
 };
 
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Request_Goap_Action_SetReplanPolicy
+struct CKGOAP_API FCk_Request_Goap_Planner_SetReplanPolicy
 {
     GENERATED_BODY()
-    CK_GENERATED_BODY(FCk_Request_Goap_Action_SetReplanPolicy);
+    CK_GENERATED_BODY(FCk_Request_Goap_Planner_SetReplanPolicy);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
@@ -174,14 +159,14 @@ private:
 
 public:
     CK_PROPERTY_GET(_Policy);
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Goap_Action_SetReplanPolicy, _Policy);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Goap_Planner_SetReplanPolicy, _Policy);
 };
 
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Request_Goap_Action_SetSearchBudget
+struct CKGOAP_API FCk_Request_Goap_Planner_SetSearchBudget
 {
     GENERATED_BODY()
-    CK_GENERATED_BODY(FCk_Request_Goap_Action_SetSearchBudget);
+    CK_GENERATED_BODY(FCk_Request_Goap_Planner_SetSearchBudget);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -190,14 +175,14 @@ private:
 
 public:
     CK_PROPERTY_GET(_SearchBudgetMicroseconds);
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Goap_Action_SetSearchBudget, _SearchBudgetMicroseconds);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Goap_Planner_SetSearchBudget, _SearchBudgetMicroseconds);
 };
 
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Request_Goap_Action_SetCostThreshold
+struct CKGOAP_API FCk_Request_Goap_Planner_SetCostThreshold
 {
     GENERATED_BODY()
-    CK_GENERATED_BODY(FCk_Request_Goap_Action_SetCostThreshold);
+    CK_GENERATED_BODY(FCk_Request_Goap_Planner_SetCostThreshold);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -206,7 +191,7 @@ private:
 
 public:
     CK_PROPERTY_GET(_CostThreshold);
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Goap_Action_SetCostThreshold, _CostThreshold);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Goap_Planner_SetCostThreshold, _CostThreshold);
 };
 
 // ====================================================================================================================

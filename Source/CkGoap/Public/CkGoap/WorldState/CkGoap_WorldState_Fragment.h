@@ -17,7 +17,7 @@
 // pattern in CkGoap_Fragment.h. Keep this above the `namespace ck` block.
 class UCk_Utils_Goap_WorldState_UE;
 
-namespace ck { class FProcessor_Goap_Action_HandleRequests; class FProcessor_Goap_Planner_HandleRequests; }
+namespace ck { class FProcessor_Goap_Planner_HandleRequests; }
 
 // ====================================================================================================================
 
@@ -138,8 +138,7 @@ public:
 	CK_GENERATED_BODY(FFragment_Goap_WorldState_OverrideStack);
 
 	friend class ::UCk_Utils_Goap_WorldState_UE;
-	friend class FProcessor_Goap_Action_HandleRequests;
-	friend class FProcessor_Goap_Planner_HandleRequests;  // PR-B.1b Stage 3
+	friend class FProcessor_Goap_Planner_HandleRequests;
 
 	struct FLayer
 	{

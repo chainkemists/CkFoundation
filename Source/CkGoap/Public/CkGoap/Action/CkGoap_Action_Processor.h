@@ -27,7 +27,6 @@ class CKGOAP_API FProcessor_Goap_Action_Setup : public ck_exp::TProcessor<
 	FProcessor_Goap_Action_Setup,
 	FCk_Handle_Goap_Action,
 	ck::TReadOnly<FFragment_Goap_Action_Params>,
-	ck::TReadOnly<FFragment_Goap_Action_ActionClasses>,
 	ck::TReadWrite<FFragment_Goap_Action_Definition>,
 	ck::TReadWrite<FFragment_Goap_Planner_WorldStateSource>,
 	FTag_Goap_Action_RequiresSetup,
@@ -50,7 +49,6 @@ public:
 		TimeType InDeltaT,
 		HandleType InHandle,
 		const FFragment_Goap_Action_Params& InParams,
-		const FFragment_Goap_Action_ActionClasses& InClasses,
 		FFragment_Goap_Action_Definition& InActionDef,
 		FFragment_Goap_Planner_WorldStateSource& InWSSource) -> void;
 };
@@ -69,7 +67,7 @@ class CKGOAP_API FProcessor_Goap_Planner_AutoReplan : public ck_exp::TProcessor<
 	ck::TReadOnly<FFragment_Goap_Planner_Params>,
 	ck::TReadOnly<FFragment_Goap_Planner_Current>,
 	ck::TReadOnly<FFragment_Goap_Planner_WorldStateSource>,
-	ck::TReadWrite<FFragment_Goap_Action_ReplanThrottle>,  // alias resolves to Planner-side instance
+	ck::TReadWrite<FFragment_Goap_Planner_ReplanThrottle>,
 	CK_IGNORE_PENDING_KILL>
 {
 public:
@@ -87,7 +85,7 @@ public:
 		const FFragment_Goap_Planner_Params& InParams,
 		const FFragment_Goap_Planner_Current& InCurrent,
 		const FFragment_Goap_Planner_WorldStateSource& InWSSource,
-		FFragment_Goap_Action_ReplanThrottle& InThrottle) -> void;
+		FFragment_Goap_Planner_ReplanThrottle& InThrottle) -> void;
 };
 
 // ====================================================================================================================
@@ -105,15 +103,16 @@ public:
 class CKGOAP_API FProcessor_Goap_Planner_HandleRequests : public ck_exp::TProcessor<
 	FProcessor_Goap_Planner_HandleRequests,
 	FCk_Handle_Goap_Planner,
+	ck::TReadOnly<FFragment_Goap_Planner_Params>,
 	ck::TReadOnly<FFragment_Goap_Planner_Current>,
 	ck::TReadWrite<FFragment_AStar_Params>,
 	ck::TReadWrite<FFragment_Goap_Planner_PlanState>,
 	ck::TReadWrite<FFragment_Goap_Planner_Goal>,
 	ck::TReadWrite<FFragment_Goap_Planner_WorldStateSource>,
-	ck::TReadOnly<FFragment_Goap_Action_Requests>,  // alias resolves to Planner-side instance
-	ck::TReadWrite<FFragment_Goap_Action_SearchState>,
-	ck::TReadWrite<FFragment_Goap_Action_Result>,
-	ck::TReadWrite<FFragment_Goap_Action_PlanContext>,
+	ck::TReadOnly<FFragment_Goap_Planner_Requests>,
+	ck::TReadWrite<FFragment_Goap_Planner_SearchState>,
+	ck::TReadWrite<FFragment_Goap_Planner_Result>,
+	ck::TReadWrite<FFragment_Goap_Planner_PlanContext>,
 	CK_IGNORE_PENDING_KILL>
 {
 public:
@@ -123,7 +122,7 @@ public:
 		FProcessor_Goap_Planner_Setup,
 		FProcessor_Goap_Planner_AutoReplan,
 		FProcessor_Goap_WorldState_HandleRequests>;
-	using MarkedDirtyBy = FFragment_Goap_Action_Requests;
+	using MarkedDirtyBy = FFragment_Goap_Planner_Requests;
 
 public:
 	using TProcessor::TProcessor;
@@ -133,15 +132,16 @@ public:
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
+		const FFragment_Goap_Planner_Params& InParams,
 		const FFragment_Goap_Planner_Current& InCurrent,
 		FFragment_AStar_Params& InAStarParams,
 		FFragment_Goap_Planner_PlanState& InPlanState,
 		FFragment_Goap_Planner_Goal& InGoal,
 		FFragment_Goap_Planner_WorldStateSource& InWSSource,
-		const FFragment_Goap_Action_Requests& InRequests,
-		FFragment_Goap_Action_SearchState& InSearchState,
-		FFragment_Goap_Action_Result& InResult,
-		FFragment_Goap_Action_PlanContext& InPlanContext) const -> void;
+		const FFragment_Goap_Planner_Requests& InRequests,
+		FFragment_Goap_Planner_SearchState& InSearchState,
+		FFragment_Goap_Planner_Result& InResult,
+		FFragment_Goap_Planner_PlanContext& InPlanContext) const -> void;
 };
 
 // ====================================================================================================================
@@ -152,7 +152,7 @@ public:
 
 struct FProcessor_Goap_Planner_Execute
 	: TProcessor_AStar_Execute<FProcessor_Goap_Planner_Execute,
-		FCk_Handle_Goap_Planner, FFragment_Goap_Action_SearchState, FFragment_Goap_Action_Result>
+		FCk_Handle_Goap_Planner, FFragment_Goap_Planner_SearchState, FFragment_Goap_Planner_Result>
 {
 	using TProcessor_AStar_Execute::TProcessor_AStar_Execute;
 	using Group = FGroup_Gameplay_AI;
@@ -170,8 +170,8 @@ class CKGOAP_API FProcessor_Goap_Planner_HandleResult : public ck_exp::TProcesso
 	FProcessor_Goap_Planner_HandleResult,
 	FCk_Handle_Goap_Planner,
 	ck::TReadOnly<FFragment_Goap_Planner_Current>,
-	ck::TReadOnly<FFragment_Goap_Action_Result>,  // alias resolves to Planner-side instance
-	ck::TReadOnly<FFragment_Goap_Action_PlanContext>,
+	ck::TReadOnly<FFragment_Goap_Planner_Result>,
+	ck::TReadOnly<FFragment_Goap_Planner_PlanContext>,
 	ck::TReadWrite<FFragment_Goap_Planner_PlanState>,
 	FTag_AStar_SearchComplete,
 	CK_IGNORE_PENDING_KILL>
@@ -189,8 +189,8 @@ public:
 		TimeType InDeltaT,
 		HandleType InHandle,
 		const FFragment_Goap_Planner_Current& InCurrent,
-		const FFragment_Goap_Action_Result& InResult,
-		const FFragment_Goap_Action_PlanContext& InPlanContext,
+		const FFragment_Goap_Planner_Result& InResult,
+		const FFragment_Goap_Planner_PlanContext& InPlanContext,
 		FFragment_Goap_Planner_PlanState& InPlanState) -> void;
 };
 
@@ -200,7 +200,7 @@ public:
 
 struct FProcessor_Goap_Planner_EndPlay
 	: TProcessor_AStar_EndPlay<FProcessor_Goap_Planner_EndPlay,
-		FCk_Handle_Goap_Planner, FFragment_Goap_Action_SearchState>
+		FCk_Handle_Goap_Planner, FFragment_Goap_Planner_SearchState>
 {
 	using TProcessor_AStar_EndPlay::TProcessor_AStar_EndPlay;
 	using Group = FGroup_EndPlay;

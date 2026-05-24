@@ -62,31 +62,23 @@ auto
 
     ActionEntity.Add<ck::FFragment_Goap_Action_Params>(InParams);
     ActionEntity.Add<ck::FFragment_Goap_Action_Current>();
-    ActionEntity.Add<ck::FFragment_Goap_Action_ActionClasses>();
     ActionEntity.Add<ck::FFragment_Goap_Action_Definition>();
     ActionEntity.Add<ck::FFragment_Goap_Action_Tree>();
 
-    // PR-B.1b Stage 4: atomic leaf Actions are lean — they carry only Action-
-    // role fragments (_Definition, _Params, _Tree, _Current, _ActionClasses)
-    // plus _WorldStateSource (read by FProcessor_Goap_Action_Setup to resolve
+    // PR-B.1b Stage 5: atomic leaf Actions are lean — they carry only Action-
+    // role fragments (_Definition, _Params, _Tree, _Current) plus
+    // _WorldStateSource (read by FProcessor_Goap_Action_Setup to resolve
     // candidate-operator preconditions/effects against the active WS registry,
     // and by UCk_Utils_Goap_Action_UE::Get_WorldStateSource(InAction)).
     //
     // Sub-Planners (composite Actions promoted via PromoteActionToPlanner)
-    // pick up the rest of the Planner-role cluster (PlanState, Goal, Activation,
-    // Requests, ReplanThrottle, SearchState, Result, PlanContext, AStar_Params,
+    // pick up the Planner-role cluster (PlanState, Goal, Activation, Requests,
+    // ReplanThrottle, SearchState, Result, PlanContext, AStar_Params,
     // AStar_Debug) through that promotion's AddOrGet pass.
     ActionEntity.Add<ck::FFragment_Goap_Planner_WorldStateSource>();
 
     // Mark for one-shot setup.
     ActionEntity.AddOrGet<ck::FTag_Goap_Action_RequiresSetup>();
-
-    // PR-B.1b Stage 4: the per-Action FTag_Goap_Action_RequiresInitialPlan
-    // stamp here is dead — FProcessor_Goap_Planner_AutoReplan matches Planner
-    // and reads the tag from the Planner entity, not Action. The Planner-side
-    // stamp lives in AddAction's implicit-root branch (line ~683) for top-
-    // level Planners; PromoteActionToPlanner / DoActivatePlanner cover sub-
-    // Planner activation.
 
     // Register in the ActionSet's catalog record + tag→action index.
     ck::goap::internal_action::FRecordOfGoapActions_Utils::AddIfMissing(InPlanner);
@@ -210,6 +202,23 @@ auto
 
 	PlannerEntity.AddOrGet<ck::FTag_Goap_Planner_RequiresSetup>();
 
+	// PR-B.1b Stage 5: subscribe the top-level Planner to its WS source so
+	// WS-dirty tags land on the Planner for AutoReplan to pick up. Previously
+	// done by AddAction's implicit-root branch.
+	if (ck::IsValid(InParams.Get_WorldStateSource()))
+	{
+		auto PlannerAsGeneric = static_cast<FCk_Handle>(PlannerEntity);
+		auto WS = InParams.Get_WorldStateSource();
+		UCk_Utils_Goap_WorldState_UE::Request_AddSubscriber(WS, PlannerAsGeneric);
+	}
+
+	// PR-B.1b Stage 5: _PlanOnStart lifted to PlannerParams. Stamp the
+	// initial-plan tag so AutoReplan fires the first plan after Setup.
+	if (InParams.Get_PlanOnStart())
+	{
+		PlannerEntity.AddOrGet<ck::FTag_Goap_Planner_RequiresInitialPlan>();
+	}
+
 	// Register the Planner in the owner's record.
 	ck::goap::internal_planner_record::FRecordOfGoapPlanners_Utils::AddIfMissing(InOwner);
 	ck::goap::internal_planner_record::FRecordOfGoapPlanners_Utils::Request_Connect(InOwner, PlannerEntity);
@@ -300,27 +309,11 @@ auto
 {
 	if (NOT ck::IsValid(InPlanner)) { return {}; }
 
-	// PR-B.1b Stage 3: A* now runs on the Planner entity directly, so the
-	// authoritative Plan[0] lives in InPlanner's own PlanState. The chain
-	// still prepends the implicit-root Action for backward-compat with
-	// existing tests / consumers expecting the root in slot 0. PR-B.1b Stage
-	// 5 will simplify: remove the implicit-root prefix and start the chain
-	// with the Planner directly.
+	// PR-B.1b Stage 5: there is no implicit-root prefix. The chain starts
+	// with Plan[0] of the Planner's own PlanState. Subsequent entries are
+	// produced by walking Plan[0] of each composite + active sub-Planner.
 	auto Result = TArray<FCk_Handle_Goap_Action>{};
 
-	const auto& Current = InPlanner.Get<ck::FFragment_Goap_Planner_Current>();
-	const auto Root = Current.Get_RootAction();
-	if (NOT ck::IsValid(Root)) { return Result; }
-
-	Result.Add(Root);
-
-	constexpr auto MaxDepth = 64;
-	auto Seen = TSet<FCk_Handle_Goap_Action>{};
-	Seen.Add(Root);
-
-	// The Planner's own PlanState drives the first walk step (was previously
-	// read off the implicit-root Action — same Plan[0] semantically, since
-	// the Planner's candidate set IS the implicit-root's children).
 	const auto& PlannerPlanState = InPlanner.Get<ck::FFragment_Goap_Planner_PlanState>();
 	const auto& InitialPlan = PlannerPlanState.Get_Plan();
 	if (InitialPlan.IsEmpty()) { return Result; }
@@ -328,34 +321,40 @@ auto
 	auto Curr = InitialPlan[0];
 	if (NOT ck::IsValid(Curr)) { return Result; }
 
-	// First-step inclusion gate: composite + active (same rules as the loop).
+	// First chain entry: if it carries the Planner-role Activation fragment
+	// (i.e. it's a sub-Planner) it must be active. Atomic Actions (no
+	// Activation fragment) are always included as the leaf chain step.
+	if (Curr.Has<ck::FFragment_Goap_Planner_Activation>())
 	{
-		const auto& CurrTree = Curr.Get<ck::FFragment_Goap_Action_Tree>();
-		if (CurrTree.Get_ChildActions().IsEmpty()) { return Result; }
-
 		const auto& CurrActivation = Curr.Get<ck::FFragment_Goap_Planner_Activation>();
 		if (NOT CurrActivation.Get_IsActive()) { return Result; }
-
-		Seen.Add(Curr);
-		Result.Add(Curr);
 	}
 
+	auto Seen = TSet<FCk_Handle_Goap_Action>{};
+	Seen.Add(Curr);
+	Result.Add(Curr);
+
+	constexpr auto MaxDepth = 64;
 	for (auto Depth = 0; Depth < MaxDepth; ++Depth)
 	{
+		// Only composite + active sub-Planners contribute a further step.
+		if (NOT Curr.Has<ck::FFragment_Goap_Action_Tree>()) { break; }
+		const auto& CurrTree = Curr.Get<ck::FFragment_Goap_Action_Tree>();
+		if (CurrTree.Get_ChildActions().IsEmpty()) { break; }
+
+		if (NOT Curr.Has<ck::FFragment_Goap_Planner_Activation>()) { break; }
+		const auto& CurrActivation = Curr.Get<ck::FFragment_Goap_Planner_Activation>();
+		if (NOT CurrActivation.Get_IsActive()) { break; }
+
+		if (NOT Curr.Has<ck::FFragment_Goap_Planner_PlanState>()) { break; }
 		const auto& PlanState = Curr.Get<ck::FFragment_Goap_Planner_PlanState>();
 		const auto& Plan = PlanState.Get_Plan();
 		if (Plan.IsEmpty()) { break; }
 
 		const auto Next = Plan[0];
 		if (NOT ck::IsValid(Next)) { break; }
-
-		const auto& NextTree = Next.Get<ck::FFragment_Goap_Action_Tree>();
-		if (NextTree.Get_ChildActions().IsEmpty()) { break; }
-
-		const auto& NextActivation = Next.Get<ck::FFragment_Goap_Planner_Activation>();
-		if (NOT NextActivation.Get_IsActive()) { break; }
-
 		if (Seen.Contains(Next)) { break; }
+
 		Seen.Add(Next);
 		Result.Add(Next);
 		Curr = Next;
@@ -378,14 +377,6 @@ auto
 {
 	if (NOT ck::IsValid(InPlanner)) { return {}; }
 	return InPlanner.Get<ck::FFragment_Goap_Planner_Current>().Get_DependencyCycles();
-}
-
-auto
-	UCk_Utils_Goap_Planner_UE::
-	Get_RootAction(const FCk_Handle_Goap_Planner& InPlanner) -> FCk_Handle_Goap_Action
-{
-	if (NOT ck::IsValid(InPlanner)) { return {}; }
-	return InPlanner.Get<ck::FFragment_Goap_Planner_Current>().Get_RootAction();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -477,16 +468,22 @@ auto
 // ====================================================================================================================
 // CONSTRUCTION — AddAction (the only construction verb for children)
 //
-// PR-A: canonical U11 construction. Two shapes depending on the Planner's host:
+// PR-B.1b Stage 5: there is no implicit-root concept. Every AddAction creates
+// a direct child of the Planner. Two host shapes still exist:
 //
-// * Top-level Planner (no Action role on the host entity): first AddAction
-//   creates the implicit-root Action (the entity that actually runs A* in the
-//   transitional Path A model). Subsequent AddAction calls add tree children
-//   under that implicit root — those are the planner's candidate operators.
+// * Top-level Planner (no Action role on the host entity): child is parented
+//   directly to the Planner; its WS is resolved from the Planner's _Resolved
+//   (or the child's own override).
 //
-// * Promoted mid-tier Planner (host entity carries the Action role): every
-//   AddAction adds a direct tree child of the host entity. The host itself is
-//   the Action that runs A*; its children are the candidate operators.
+// * Promoted mid-tier Planner (host entity carries the Action role): child
+//   is parented to the host (which is also an Action entity).
+//
+// In both shapes the parent that owns the child's Tree edge is whatever
+// Action entity "owns" the operator catalog at this tier:
+//   - Top-level Planner: there's no such Action — we leave the child's
+//     _ParentAction invalid and the candidate set is read straight from the
+//     Planner's ActionCatalogIndex.
+//   - Promoted mid-tier Planner: the host-cast-to-Action is the parent.
 // ====================================================================================================================
 
 // PR-A shared helper. Declared in CkGoap_Planner_Internal.h; befriended on
@@ -499,12 +496,12 @@ auto
 {
 	// Eagerly resolve the child's WS so its Setup processor can run
 	// (and populate _CachedActionDef) BEFORE any parent plan is requested.
-	// Resolution order mirrors UpdateActivation's
-	// DoResolveAndAssignWorldStateSource:
+	// Resolution order:
 	//   1. Child's own override.
-	//   2. Inherit from parent's already-resolved WS.
+	//   2. Inherit from parent's already-resolved WS (when there IS a parent
+	//      Action — i.e. promoted mid-tier).
 	//   3. Fall back to the Planner-level default WS source on the lifetime
-	//      owner (the top-level Planner entity, in the implicit-root case).
+	//      owner (the top-level Planner entity).
 	auto& ChildWSSource = InChild.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
 	if (ck::IsValid(ChildWSSource.Get_Resolved())) { return; }
 
@@ -531,6 +528,11 @@ auto
 	if (OwnerEntity.Has<ck::FFragment_Goap_Planner_WorldStateSource>())
 	{
 		const auto& OwnerWS = OwnerEntity.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
+		if (ck::IsValid(OwnerWS.Get_Resolved()))
+		{
+			ChildWSSource._Resolved = OwnerWS.Get_Resolved();
+			return;
+		}
 		if (ck::IsValid(OwnerWS.Get_WorldStateSource()))
 		{
 			ChildWSSource._Resolved = OwnerWS.Get_WorldStateSource();
@@ -561,21 +563,18 @@ auto
 	// Action role (and therefore a Tree fragment); top-level Planners don't.
 	const auto IsPromotedMidTier = InPlanner.Has<ck::FFragment_Goap_Action_Tree>();
 
+	auto& ChildTree = ActionEntity.Get<ck::FFragment_Goap_Action_Tree>();
+	if (ck::IsValid(ChildTree.Get_ParentAction()))
+	{
+		// Already parented — DoCreateOrFindActionEntity returned an existing
+		// entry. Keep existing edges intact.
+		return ActionEntity;
+	}
+
 	if (IsPromotedMidTier)
 	{
-		// PR-A: promoted Planner host — wire the new child as a direct tree child
-		// of the host entity. The host runs A* directly; this child is one of
-		// its candidate operators. The host's _RootAction field is NOT used in
-		// this branch (PR-B's "no root concept" §2.5 — promoted Planners
-		// resolve candidates from their own Tree).
-		auto& ChildTree = ActionEntity.Get<ck::FFragment_Goap_Action_Tree>();
-		if (ck::IsValid(ChildTree.Get_ParentAction()))
-		{
-			// Already parented — DoCreateOrFindActionEntity returned an existing
-			// entry. Keep the existing edges intact.
-			return ActionEntity;
-		}
-
+		// Promoted Planner host — the host IS an Action. Wire the new child
+		// as its direct tree child.
 		auto HostAsAction = UCk_Utils_Goap_Action_UE::CastChecked(InPlanner);
 		ChildTree._ParentAction = HostAsAction;
 
@@ -583,109 +582,18 @@ auto
 		HostTree._ChildActions.AddUnique(ActionEntity);
 
 		ck::goap::internal_planner::DoResolveChildWorldStateFromParent(ActionEntity, HostAsAction);
-
-		// Do NOT flip _IsActive — UpdateActivation does this when the parent
-		// picks this child as its Plan[0].
 		return ActionEntity;
 	}
 
-	// Top-level Planner: implicit-root semantics.
-	auto& Current = InPlanner.Get<ck::FFragment_Goap_Planner_Current>();
-
-	if (NOT ck::IsValid(Current._RootAction))
+	// Top-level Planner: the host is not an Action. The child has no Action
+	// parent (its _ParentAction stays invalid); the Planner's
+	// ActionCatalogIndex IS the candidate set, populated by
+	// DoCreateOrFindActionEntity. Resolve the child's WS against the
+	// Planner's _Resolved (or override).
 	{
-		// FIRST AddAction — this Action becomes the implicit root (the entity
-		// that actually runs A*).
-		Current._RootAction = ActionEntity;
-
-		// Resolve WS: child's own override wins, else fall back to the
-		// Planner's WorldStateSource (PR-A — replaces SetRootAction's WS arg).
-		auto& ActionWSSource = ActionEntity.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
-		auto WS = FCk_Handle_Goap_WorldState{};
-
-		const auto Override = InParams.Get_WorldStateSource_Override();
-		if (ck::IsValid(Override))
-		{
-			WS = Override;
-		}
-		else
-		{
-			const auto& PlannerWS = InPlanner.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
-			WS = PlannerWS.Get_WorldStateSource();
-		}
-
-		if (NOT ck::IsValid(WS))
-		{
-			const auto ActionTag = UCk_GoapAction_EntityScript::Get_ActionTagForClass(InParams.Get_ActionClass());
-			ck::goap::Warning(
-				TEXT("Implicit-root action [{}] in Planner [{}] has no WorldStateSource (neither ActionParams._WorldStateSource_Override nor PlannerParams._WorldStateSource set); planning will not run until one is supplied."),
-				ActionTag, InPlanner);
-		}
-		else
-		{
-			ActionWSSource._Resolved = WS;
-			// Also ensure Planner-side _Resolved reflects WS (Add() already
-			// stamps PlannerParams' WSSource, but the implicit-root's WS may
-			// differ via ActionParams._WorldStateSource_Override).
-			{
-				auto& PlannerWSSource = InPlanner.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
-				if (NOT ck::IsValid(PlannerWSSource._Resolved))
-				{
-					PlannerWSSource._Resolved = WS;
-				}
-			}
-
-			// PR-B.1b Stage 3: subscribe the Planner (not the implicit-root
-			// Action) to the WS — WS-dirty tags now need to land on the Planner
-			// so the Planner-on-Planner AutoReplan picks them up.
-			{
-				auto PlannerAsGeneric = static_cast<FCk_Handle>(InPlanner);
-				UCk_Utils_Goap_WorldState_UE::Request_AddSubscriber(WS, PlannerAsGeneric);
-			}
-		}
-
-		// PR-B.1b Stage 4: the implicit-root Action no longer carries a Planner-
-		// role _Goal fragment (the Planner entity owns the authoritative
-		// _GoalAuthored), so the previous "propagate Planner goal to implicit-
-		// root" hand-off is gone. Same for setting _IsActive=true on the
-		// implicit-root's _Activation — A* runs on the Planner entity itself
-		// (Stage 3), and Get_ActiveChain doesn't read the implicit-root's
-		// _Activation (it starts from the Planner's PlanState and only walks
-		// _Activation on composite sub-Planners, which are promoted and carry
-		// the fragment via PromoteActionToPlanner).
-
-		// PR-B.1b Stage 3: stamp the initial-plan trigger on the Planner
-		// itself so the Planner-on-Planner AutoReplan picks it up. Reads
-		// PlanOnStart from the implicit-root's ActionParams — keeps existing
-		// semantics where the first AddAction's _PlanOnStart drives initial
-		// planning. PR-B.1b Stage 5 simplifies this when _PlanOnStart lifts
-		// to PlannerParams.
-		if (InParams.Get_PlanOnStart())
-		{
-			InPlanner.AddOrGet<ck::FTag_Goap_Action_RequiresInitialPlan>();
-		}
-
-		return ActionEntity;
+		auto InvalidParent = FCk_Handle_Goap_Action{};
+		ck::goap::internal_planner::DoResolveChildWorldStateFromParent(ActionEntity, InvalidParent);
 	}
-
-	// SUBSEQUENT AddAction on a top-level Planner — wire as a tree child of
-	// the existing implicit root. These are the candidate operators consumed
-	// by the implicit root's A* search.
-	auto& ChildTree = ActionEntity.Get<ck::FFragment_Goap_Action_Tree>();
-	if (ck::IsValid(ChildTree.Get_ParentAction()))
-	{
-		// Already parented — DoCreateOrFindActionEntity returned an existing
-		// entry. Keep edges intact.
-		return ActionEntity;
-	}
-
-	auto RootAction = Current.Get_RootAction();
-	ChildTree._ParentAction = RootAction;
-
-	auto& RootTree = RootAction.Get<ck::FFragment_Goap_Action_Tree>();
-	RootTree._ChildActions.AddUnique(ActionEntity);
-
-	ck::goap::internal_planner::DoResolveChildWorldStateFromParent(ActionEntity, RootAction);
 
 	return ActionEntity;
 }
@@ -819,28 +727,25 @@ auto
 		TEXT("Invalid ActionSet handle in Request_ResetActiveChain"))
 	{ return InPlanner; }
 
-	// U11.2: walk the current active chain (root → leaf) and deactivate every
-	// sub-Planner past the root. DoDeactivatePlanner handles WS unsubscribe,
-	// live-state reset, _IsActive flip, OnPlannerDeactivated broadcast, and
-	// recursive descendant teardown.
+	// PR-B.1b Stage 5: walk the entire active chain (Plan[0]-derived) and
+	// deactivate every entry. There's no implicit root to skip — the chain
+	// starts at Plan[0] of the Planner. DoDeactivatePlanner handles WS
+	// unsubscribe, live-state reset, _IsActive flip, OnPlannerDeactivated
+	// broadcast, and recursive descendant teardown.
 	const auto Chain = Get_ActiveChain(InPlanner);
-	if (Chain.Num() <= 1) { return InPlanner; }
+	if (Chain.Num() == 0) { return InPlanner; }
 
-	// Deactivate in reverse order (leaf → child-of-root). The root itself
-	// stays active.
-	for (auto i = Chain.Num() - 1; i >= 1; --i)
+	// Deactivate in reverse order (leaf → outermost).
+	for (auto i = Chain.Num() - 1; i >= 0; --i)
 	{
 		auto Action = Chain[i];
 		if (NOT ck::IsValid(Action)) { continue; }
 		ck::FProcessor_Goap_Planner_UpdateActivation::DoDeactivatePlanner(Action);
 	}
 
-	// PR-B.1b Stage 4: the Planner's cached _LastActivatedPlan0 still points
-	// at the old Chain[1]; clear it so the next UpdateActivation tick sees
-	// this as a fresh state transition (rather than no-op'ing because
-	// OldStep0 == NewStep0). Stage 3's FProcessor_Goap_Planner_UpdateActivation
-	// writes _LastActivatedPlan0 to the Planner entity (InHandle), not to the
-	// implicit-root Action.
+	// The Planner's cached _LastActivatedPlan0 still points at the old Chain[0];
+	// clear it so the next UpdateActivation tick sees this as a fresh state
+	// transition (rather than no-op'ing because OldStep0 == NewStep0).
 	{
 		auto& PlannerActivation = InPlanner.Get<ck::FFragment_Goap_Planner_Activation>();
 		PlannerActivation._LastActivatedPlan0 = {};
@@ -881,7 +786,7 @@ auto
 	{ return InPlanner; }
 
 	auto& Reqs = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Action_Plan{});
+	Reqs._Requests.Add(FCk_Request_Goap_Planner_Plan{});
 	return InPlanner;
 }
 
@@ -894,7 +799,7 @@ auto
 	{ return InPlanner; }
 
 	auto& Reqs = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Action_CancelPlan{});
+	Reqs._Requests.Add(FCk_Request_Goap_Planner_CancelPlan{});
 	return InPlanner;
 }
 
@@ -909,7 +814,7 @@ auto
 	{ return InPlanner; }
 
 	auto& Reqs = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Action_SetReplanInterval{InSeconds});
+	Reqs._Requests.Add(FCk_Request_Goap_Planner_SetReplanInterval{InSeconds});
 	return InPlanner;
 }
 
@@ -924,7 +829,7 @@ auto
 	{ return InPlanner; }
 
 	auto& Reqs = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Action_SetReplanPolicy{InPolicy});
+	Reqs._Requests.Add(FCk_Request_Goap_Planner_SetReplanPolicy{InPolicy});
 	return InPlanner;
 }
 
@@ -939,7 +844,7 @@ auto
 	{ return InPlanner; }
 
 	auto& Reqs = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Action_SetSearchBudget{InMicroseconds});
+	Reqs._Requests.Add(FCk_Request_Goap_Planner_SetSearchBudget{InMicroseconds});
 	return InPlanner;
 }
 
@@ -954,7 +859,7 @@ auto
 	{ return InPlanner; }
 
 	auto& Reqs = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Action_SetCostThreshold{InThreshold});
+	Reqs._Requests.Add(FCk_Request_Goap_Planner_SetCostThreshold{InThreshold});
 	return InPlanner;
 }
 
@@ -970,7 +875,7 @@ auto
 	{ return InPlanner; }
 
 	auto& Reqs = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Action_SetActionCost{InChildClass, InCost});
+	Reqs._Requests.Add(FCk_Request_Goap_Planner_SetActionCost{InChildClass, InCost});
 	return InPlanner;
 }
 
@@ -1004,22 +909,12 @@ auto
 		return InPlanner;
 	}
 
-	// Refuse to remove the implicit-root Action — it hosts A* for the
-	// top-level Planner. Removing it would leave the Planner with no entity
-	// to plan on.
-	const auto& Current = InPlanner.Get<ck::FFragment_Goap_Planner_Current>();
-	if (ChildAction == Current.Get_RootAction())
-	{
-		ck::goap::Warning(
-			TEXT("Request_RemoveAction: refusing to remove implicit-root Action [{}] on Planner [{}]; remove the Planner instead."),
-			ChildAction, InPlanner);
-		return InPlanner;
-	}
-
 	// Resolve the parent Action whose _ChildActions list contains this child.
-	// In the top-level case this is the implicit root; in the promoted-mid-tier
-	// case this is the Planner host (cast to Action). Read it from the child's
-	// own Tree fragment — single source of truth populated by AddAction.
+	// In the top-level case this is invalid (child has no parent Action — it's
+	// a direct child of the Planner, which is not an Action); in the
+	// promoted-mid-tier case this is the Planner host (cast to Action). Read
+	// it from the child's own Tree fragment — single source of truth populated
+	// by AddAction.
 	auto ParentAction = FCk_Handle_Goap_Action{};
 	{
 		const auto& ChildTree = ChildAction.Get<ck::FFragment_Goap_Action_Tree>();
@@ -1116,33 +1011,34 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// PR-B.1b Stage 3: per-Planner signals.
+// PR-B.1b Stage 5: per-Planner signals.
 //
-// PlanComplete / PlanFailed broadcast happens on the Planner entity directly
-// (FProcessor_Goap_Planner_HandleRequests and _HandleResult). Bind passes
-// through unmodified — the storage entity matches the broadcast entity.
+// PlanComplete / PlanFailed broadcast on the Planner entity directly
+// (FProcessor_Goap_Planner_HandleRequests and _HandleResult).
 //
-// PlannerActivated / Deactivated broadcast still happens on the Action entity
-// (UpdateActivation::DoActivatePlanner / DoDeactivatePlanner) because sub-
-// Planners ARE Actions in Path A. The Bind utilities resolve Planner-cast-
-// to-Action via DoResolveBroadcastEntity_ForActivation. Stage 5 will collapse.
+// PlannerActivated / Deactivated broadcast on the Action entity for promoted
+// mid-tier Planners (sub-Planners ARE Actions). Top-level Planners don't fire
+// Activate/Deactivate (they're always active). The bind utilities resolve
+// Planner-cast-to-Action when the entity carries the Action role; otherwise
+// they bind on the Planner directly (top-level — never fires but harmless).
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::goap::internal_planner
 {
 	// Resolve a Planner handle to the entity that broadcasts activation
 	// signals. Promoted mid-tier Planner-Actions broadcast on themselves;
-	// top-level Planners' implicit-root broadcasts on the root Action.
-	static auto DoResolveBroadcastEntity_ForActivation(const FCk_Handle_Goap_Planner& InPlanner) -> FCk_Handle_Goap_Action
+	// top-level Planners don't fire activation signals — bind on the Planner
+	// itself (harmless — never fires).
+	static auto DoResolveBroadcastEntity_ForActivation(const FCk_Handle_Goap_Planner& InPlanner) -> FCk_Handle
 	{
 		if (NOT ck::IsValid(InPlanner)) { return {}; }
 
 		if (InPlanner.Has<ck::FFragment_Goap_Action_Tree>())
 		{
-			return UCk_Utils_Goap_Action_UE::CastChecked(InPlanner);
+			return static_cast<FCk_Handle>(UCk_Utils_Goap_Action_UE::CastChecked(InPlanner));
 		}
 
-		return InPlanner.Get<ck::FFragment_Goap_Planner_Current>().Get_RootAction();
+		return static_cast<FCk_Handle>(InPlanner);
 	}
 }
 
@@ -1206,7 +1102,7 @@ auto
 
 	auto BroadcastEntity = ck::goap::internal_planner::DoResolveBroadcastEntity_ForActivation(InPlanner);
 	CK_ENSURE_IF_NOT(ck::IsValid(BroadcastEntity),
-		TEXT("Planner [{}] has no activation-broadcast entity (no _RootAction yet — call AddAction first). Bind ignored."),
+		TEXT("Planner [{}] has no activation-broadcast entity. Bind ignored."),
 		InPlanner)
 	{ return InPlanner; }
 
@@ -1244,7 +1140,7 @@ auto
 
 	auto BroadcastEntity = ck::goap::internal_planner::DoResolveBroadcastEntity_ForActivation(InPlanner);
 	CK_ENSURE_IF_NOT(ck::IsValid(BroadcastEntity),
-		TEXT("Planner [{}] has no activation-broadcast entity (no _RootAction yet — call AddAction first). Bind ignored."),
+		TEXT("Planner [{}] has no activation-broadcast entity. Bind ignored."),
 		InPlanner)
 	{ return InPlanner; }
 
