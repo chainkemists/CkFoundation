@@ -51,6 +51,8 @@ auto
 
     DoComputeFingerprint(StateHandle);
 
+    DoVerifyFingerprintAgainstExpected(StateHandle);
+
     DoBackfillFingerprintToRepData(StateHandle);
 
     return ParentFlow;
@@ -278,6 +280,57 @@ auto
 
     auto& FingerprintFrag = InStateHandle.AddOrGet<ck::FFragment_SmState_Fingerprint>();
     FingerprintFrag._Hash = ck::statemachine::ComputeFingerprint(Inputs);
+
+    // Populate the per-class cache so future replications can publish the fingerprint
+    // synchronously without waiting for an instance to exist (see Get_CachedFingerprint).
+    Set_CachedFingerprint(GetClass(), FingerprintFrag._Hash);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_SmState_EntityScript::
+    DoVerifyFingerprintAgainstExpected(
+        FCk_Handle_SmState_UnderConstruction& InStateHandle)
+    -> void
+{
+    if (NOT InStateHandle.Has<ck::FFragment_SmState_ExpectedFingerprint>())
+    { return; }
+
+    if (NOT InStateHandle.Has<ck::FFragment_SmState_Fingerprint>())
+    { return; }
+
+    const auto Expected = InStateHandle.Get<ck::FFragment_SmState_ExpectedFingerprint>().Get_Hash();
+    const auto Local    = InStateHandle.Get<ck::FFragment_SmState_Fingerprint>().Get_Hash();
+
+    // Carrier consumed regardless of match — Construct only runs once per state instance, so
+    // there's no second chance to verify and no reason to leave the fragment behind.
+    InStateHandle.Try_Remove<ck::FFragment_SmState_ExpectedFingerprint>();
+
+    if (Expected == Local)
+    { return; }
+
+    ck::sm::Warning(
+        TEXT("Determinism fingerprint mismatch on state [{}] of SM [{}]: expected [{}] from authority, local computed [{}]. ")
+        TEXT("Faulting the SM — no further transitions will land. This usually means DefineState diverges between authority and this machine."),
+        GetClass(), _OwnerStateMachine, Expected, Local);
+
+    CK_ENSURE_IF_NOT(false,
+        TEXT("SM determinism fingerprint mismatch on state [{}] of SM [{}]: expected [{}], local [{}]"),
+        GetClass(), _OwnerStateMachine, Expected, Local)
+    {
+        // Body always runs because cond is false. Mark the SM faulted and exit the state.
+        if (ck::IsValid(_OwnerStateMachine))
+        {
+            _OwnerStateMachine.AddOrGet<ck::FTag_Sm_DeterminismFault>();
+        }
+
+        auto SelfState = UCk_Utils_SmState_UE::CastChecked(InStateHandle);
+        if (ck::IsValid(SelfState))
+        {
+            UCk_Utils_SmState_UE::Request_Exit(SelfState);
+        }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -478,6 +531,40 @@ auto
     return UCk_Utils_Object_UE::Get_TagFromClassName(
         InClass,
         ck::Format_UE(TEXT("Auto-generated state tag for {}"), InClass));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Static cache shared across the module. FName-keyed (not UClass*-keyed) so hot reload + PIE
+// restart cycles that recreate UClass objects don't leave dangling keys — a stale FName just
+// re-maps to the new class on next compute. Single-threaded: all CkFoundation processor work
+// runs on the main thread.
+static TMap<FName, int32> GSmStateFingerprintCache;
+
+auto
+    UCk_SmState_EntityScript::
+    Get_CachedFingerprint(
+        TSubclassOf<UCk_SmState_EntityScript> InClass)
+    -> int32
+{
+    if (ck::Is_NOT_Valid(InClass))
+    { return 0; }
+
+    const auto* Found = GSmStateFingerprintCache.Find(InClass->GetFName());
+    return Found != nullptr ? *Found : 0;
+}
+
+auto
+    UCk_SmState_EntityScript::
+    Set_CachedFingerprint(
+        TSubclassOf<UCk_SmState_EntityScript> InClass,
+        int32 InFingerprint)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InClass))
+    { return; }
+
+    GSmStateFingerprintCache.Add(InClass->GetFName(), InFingerprint);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
