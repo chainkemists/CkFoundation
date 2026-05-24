@@ -22,16 +22,6 @@ class CKSTATEMACHINE_API UCk_SmState_EntityScript : public UCk_EntityScript_UE
 public:
     CK_GENERATED_BODY(UCk_SmState_EntityScript);
 
-    UCk_SmState_EntityScript()
-    {
-        // NOTE: until SM Setup propagates params._Replication to child State/Task/Condition entities
-        // (planned for a later phase per spec §8), this default is required to prevent child entities
-        // from defaulting to Replicates and tripping the
-        // "Get_Replication(ReplicatedOwner) == ECk_Replication::Replicates" ensure cascade. Remove
-        // this once propagation is wired.
-        _Replication = ECk_Replication::DoesNotReplicate;
-    }
-
     // ================================================================================================================
     // LIFECYCLE (EntityScript overrides)
     // ================================================================================================================
@@ -47,6 +37,14 @@ protected:
 
     auto
     EndPlay() -> void override;
+
+    // Child entities derive replication from their owning SM's params, not from the EntityScript
+    // CDO default. When _AssociatedEntity is set and has an OwningStateMachine fragment, this
+    // override defers to that SM's params._Replication so local-only SMs produce DoesNotReplicate
+    // children even though the inherited CkEntityScript default is Replicates. CDO calls (before
+    // the script is attached to an entity) fall back to Super.
+    auto
+    Get_EffectiveReplication() const -> ECk_Replication override;
 
     // ================================================================================================================
     // STATE LIFECYCLE (Enter/Exit)
