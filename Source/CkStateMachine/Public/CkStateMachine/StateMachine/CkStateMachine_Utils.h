@@ -148,6 +148,16 @@ public:
         const FCk_Handle_StateMachine& InStateMachine,
         TSubclassOf<UCk_SmState_EntityScript> InStateClass);
 
+    // Returns the SM's current NetContext (Standalone / Server / OwningClient / NonOwningClient),
+    // resolved fresh from authority and ownership queries each call. Same value the SM's
+    // EnterState/ExitState/EnterTask/ExitTask/Tick callbacks receive.
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|StateMachine",
+        DisplayName = "[Ck][SM] Get Net Context")
+    static ECk_Sm_NetContext
+    Get_NetContext(
+        const FCk_Handle_StateMachine& InStateMachine);
+
     // ================================================================================================================
     // SIGNAL BINDING
     // ================================================================================================================

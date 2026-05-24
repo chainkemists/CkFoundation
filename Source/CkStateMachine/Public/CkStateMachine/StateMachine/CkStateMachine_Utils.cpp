@@ -1,5 +1,7 @@
 #include "CkStateMachine_Utils.h"
 
+#include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
+
 #include "CkStateMachine/CkStateMachine_Log.h"
 #include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
@@ -169,6 +171,15 @@ auto
     -> bool
 {
     return InStateMachine.Get<ck::FFragment_Sm_Current>().Get_CurrentStateClass() == InStateClass;
+}
+
+auto
+    UCk_Utils_StateMachine_UE::
+    Get_NetContext(
+        const FCk_Handle_StateMachine& InStateMachine)
+    -> ECk_Sm_NetContext
+{
+    return ck::statemachine::ComputeNetContext(InStateMachine);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
