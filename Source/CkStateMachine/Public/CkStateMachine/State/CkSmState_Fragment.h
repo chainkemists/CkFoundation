@@ -106,12 +106,31 @@ namespace ck
         friend class FProcessor_Sm_FlushPendingReplication_InitialCheck;
         friend class FProcessor_Sm_CommitPendingTransition;
         friend class ::UCk_Utils_SmState_UE;
+        friend class ::UCk_SmState_EntityScript;
 
     private:
         int32 _Hash = 0;
 
     public:
         CK_PROPERTY(_Hash);
+    };
+
+    // Transient scratch fragment used only during the state's DefineState. UCk_SmState_EntityScript::
+    // ComposeFromState appends each composed-from class here in call order; after DefineState
+    // returns, the entity-script's Construct path reads the list to build the fingerprint inputs,
+    // then removes this fragment. Not part of the persistent state representation.
+    struct CKSTATEMACHINE_API FFragment_SmState_ComposedFromInProgress
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_SmState_ComposedFromInProgress);
+
+        friend class ::UCk_SmState_EntityScript;
+
+    private:
+        TArray<TSubclassOf<UCk_SmState_EntityScript>> _ComposedFromClasses;
+
+    public:
+        CK_PROPERTY_GET(_ComposedFromClasses);
     };
 
     // ================================================================================================================
