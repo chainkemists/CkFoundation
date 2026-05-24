@@ -43,6 +43,20 @@ namespace ck
 
         const auto SmHandle = UCk_Utils_SmTask_UE::Get_OwningStateMachine(InHandle);
         const auto NetContext = ck::statemachine::ComputeNetContext(SmHandle);
+
+        // Authority gating (spec §5/§6): only the machine that owns this SM's transitions ticks
+        // tasks. Non-owning clients replay state-entry/exit via the replicated history; their
+        // tasks must not produce side effects locally. Standalone is always authority. Server is
+        // authority for ServerAuth SMs. OwningClient is authority only for OwningClientAuth SMs.
+        // NonOwningClient is never authority.
+        if (NetContext == ECk_Sm_NetContext::NonOwningClient)
+        { return; }
+
+        if (NetContext == ECk_Sm_NetContext::OwningClient
+            && UCk_Utils_StateMachine_UE::Get_AuthorityModel(SmHandle)
+                != ECk_Sm_AuthorityModel::OwningClientAuthoritative)
+        { return; }
+
         const auto Result = TaskScript->Tick(InHandle, InDeltaT, NetContext);
 
         UCk_Utils_SmTask_UE::Request_UpdateTaskResult(InHandle, Result);
