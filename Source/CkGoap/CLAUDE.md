@@ -56,6 +56,8 @@ auto EngagePlanner = UCk_Utils_Goap_Planner_UE::PromoteActionToPlanner(EngageAct
 // After this, AddAction calls on EngagePlanner register children under Engage.
 ```
 
+`AddAction` always creates a direct tree child of the Planner it is called on. There is no longer any "first AddAction is special" rule — every Action handle returned from `AddAction` is registered in the Planner's `FFragment_Goap_Planner_ActionCatalogIndex` and offered as a candidate operator. Hierarchical decompositions use `PromoteActionToPlanner` to make a child Action also a Planner with its own subtree.
+
 ---
 
 ## Architecture in one diagram
@@ -64,27 +66,37 @@ auto EngagePlanner = UCk_Utils_Goap_Planner_UE::PromoteActionToPlanner(EngageAct
         DESIGN TIME (CDO)                    ECS PIPELINE (runtime)
    ─────────────────────────              ────────────────────────────
    UCk_GoapAction_EntityScript            FProcessor_Goap_Action_Setup
-     DefineAction                           scans CDOs of registered
-       AddPrecondition                      Action classes, extracts
-       AddEffect                            ActionDefs, registers WS
-       SetCost                              keys, builds DependencyCycles
+     DefineAction                           per-Action CDO extraction:
+       AddPrecondition                      Preconditions / Effects /
+       AddEffect                            Cost → _CachedActionDef;
+       SetCost                              registers WS keys
                                                        ↓
-                                            FProcessor_Goap_Action_AutoReplan
-                                              consumes dirty tags per Action,
-                                              enqueues Plan requests per policy
+                                            FProcessor_Goap_Planner_Setup
+                                              per-Planner: builds dependency
+                                              graph over child Action defs,
+                                              detects cycles, resolves
+                                              _GoalAuthored → _Goal
                                                        ↓
-                                            FProcessor_Goap_Action_HandleRequests
-                                              drains per-Action request queue,
+                                            FProcessor_Goap_Planner_AutoReplan
+                                              per-Planner: consumes WS / cost
+                                              dirty flags, enqueues Plan
+                                              requests per ReplanPolicy
+                                                       ↓
+                                            FProcessor_Goap_Planner_HandleRequests
+                                              per-Planner: drains request queue,
                                               builds A* graph from child Actions,
-                                              seeds AStar SearchState
+                                              seeds the Planner's AStar
+                                              SearchState
                                                        ↓
                                             TProcessor_AStar_Execute<...>
-                                              time-sliced regressive A*,
-                                              budget = _SearchBudgetMicroseconds
+                                              per-Planner: time-sliced
+                                              regressive A*; budget =
+                                              PlannerParams._SearchBudgetMicroseconds
                                                        ↓
-                                            FProcessor_Goap_Action_HandleResult
-                                              converts A* path to Action entity
-                                              list (PlanState._Plan), fires
+                                            FProcessor_Goap_Planner_HandleResult
+                                              per-Planner: converts A* path to
+                                              Action entity list
+                                              (PlanState._Plan), fires
                                               OnPlanComplete / OnPlanFailed;
                                               sets FTag_Goap_Planner_RequiresChainUpdate
                                                        ↓
@@ -95,13 +107,15 @@ auto EngagePlanner = UCk_Utils_Goap_Planner_UE::PromoteActionToPlanner(EngageAct
                                               walk Plan[0]s to derive active chain
 ```
 
-All processors live in `FGroup_Gameplay_AI`. Order within the group:
+All processors live in `FGroup_Gameplay_AI`. Order within the group (registered via `RunAfter` dep lists):
 
 ```
-Setup → AutoReplan → HandleRequests → AStar_Execute → HandleResult → UpdateActivation
+Action_Setup → Planner_Setup → Planner_AutoReplan → Planner_HandleRequests → AStar_Execute → Planner_HandleResult → Planner_UpdateActivation
 ```
 
-UpdateActivation runs last so every Planner has a fresh `Plan[0]` before activation decisions.
+`Planner_Setup` runs after `Action_Setup` so the WS key registry is fully populated before the Planner resolves `_GoalAuthored → _Goal`. `Planner_UpdateActivation` runs last so every Planner has a fresh `Plan[0]` before activation decisions.
+
+`FProcessor_Goap_Action_Setup` is the only Action-matched processor remaining — its sole job is per-Action CDO extraction. Everything downstream of that is Planner-matched.
 
 ---
 
@@ -136,7 +150,7 @@ Owner entity (NPC)
 | **Construction** | `Add(Owner, Params)` | Stamps Planner role onto Owner. `Params._WorldStateSource` is required for top-level Planners. |
 | | `Create(Owner, Tag, Params)` | Spawns named child Planner entity. |
 | | `Find_Planner(Owner, Tag)` | Lookup by tag for Create-spawned Planners. |
-| | `AddAction(Planner, ActionParams)` | Canonical construction verb for Actions. On a top-level Planner: first call = implicit-root Action (runs A*); subsequent calls become tree children of the implicit root. On a promoted mid-tier Planner: every call adds a direct tree child of the host (which itself runs A*). Returns `FCk_Handle_Goap_Action`. |
+| | `AddAction(Planner, ActionParams)` | Canonical construction verb for Actions. Always creates a direct tree child of the Planner; the child is registered in the Planner's `_TagToAction` catalog and offered as a candidate operator. Returns `FCk_Handle_Goap_Action`. |
 | | `PromoteActionToPlanner(Action, PlannerParams)` | Stamps Planner fragments onto an existing Action entity. After promotion, `AddAction` on the promoted handle adds direct tree children. Returns `FCk_Handle_Goap_Planner`. |
 | **Query** | `Has(Handle)` | True if the entity has the Planner role. |
 | | `Find_Action(Planner, Tag)` | Catalog lookup by class-derived tag. |
@@ -144,36 +158,53 @@ Owner entity (NPC)
 | | `Get_ActiveChain(Planner)` | Walks Plan[0] links from this Planner downward; returns ordered handles. |
 | | `Get_EnableToggle(Planner)` | Current enable/disable state. |
 | | `Get_DependencyCycles(Planner)` | Setup-time cycle diagnostics (Tarjan SCC). |
-| | `Get_RootAction(Planner)` | The `_RootAction` from `FFragment_Goap_Planner_Current`. |
+| | `Get_PlanStatus(Planner)` | `ECk_GoapPlanStatus`: Idle / Planning / PlanFound / PlanFailed / CostThresholdReached. |
+| | `Get_Plan(Planner)` | Ordered child Action **entity handles** from the last plan. |
+| | `Get_PlanClasses(Planner)` | Same as `Get_Plan` but mapped to EntityScript classes. |
+| | `Get_PlanCost(Planner)` | Cost of the last plan. |
+| | `Get_PlanAttemptCount(Planner)` | Replan attempt counter. |
+| | `Get_WorldStateSource(Planner)` | The resolved WS handle this Planner consumes. |
+| | `Get_InvalidGoal(Planner)` | Goal conditions referencing unregistered WS keys (populated at Setup time). |
 | **Requests** | `Request_SetEnableToggle(Planner, Toggle)` | Enable or disable; disabled Planners skip planning and activation. |
 | | `Request_ResetActiveChain(Planner)` | Collapses active chain; fires `OnPlannerDeactivated` per removed node. |
 | | `Request_SetGoal(Planner, Goal)` | Set this Planner's goal. Triggers a replan. |
+| | `Request_Plan(Planner)` | Force an immediate replan. |
+| | `Request_CancelPlan(Planner)` | Abort in-flight A* search. |
+| | `Request_SetReplanInterval(Planner, Seconds)` | Throttle replans. |
+| | `Request_SetReplanPolicy(Planner, Policy)` | Change the replan trigger. |
+| | `Request_SetSearchBudget(Planner, Microseconds)` | Time slice for A* search. |
+| | `Request_SetCostThreshold(Planner, Threshold)` | Early-out when best frontier FScore exceeds threshold. |
+| | `Request_SetChildActionCost(Planner, ChildClass, Cost)` | Adjust a child Action's cost. |
+| | `Request_RemoveAction(Planner, ChildClass)` | Runtime catalog mutation: remove a previously-registered child Action; replans afterward. |
 | **Signals** | `BindTo_OnActiveChainChanged(Planner, Delegate, ...)` | Fires whenever the chain mutates. |
-| | `UnbindFrom_OnActiveChainChanged(...)` | Counterpart unbind. |
+| | `BindTo_OnPlanComplete(Planner, Delegate, ...)` | Fires when `PlanFound`; payload = plan entities + cost. |
+| | `BindTo_OnPlanFailed(Planner, Delegate, ...)` | Fires when planning cannot satisfy the goal. |
+| | `BindTo_OnPlannerActivated(Planner, Delegate, ...)` | Fires when this Planner is activated by a parent selecting it as Plan[0]. Source handle is `FCk_Handle_Goap_Planner`. |
+| | `BindTo_OnPlannerDeactivated(Planner, Delegate, ...)` | Fires when this Planner is deactivated. |
+| | Unbind counterparts | `UnbindFrom_On*` for each signal above. |
 
 ### `UCk_Utils_Goap_Action_UE`
+
+The Action utility class is intentionally thin. Most planner-tier verbs (Plan / CancelPlan / SetReplanPolicy / SetSearchBudget / SetCostThreshold / SetReplanInterval) now live on `UCk_Utils_Goap_Planner_UE`. The Action-facing verbs that remain here either query Action-role state directly or operate per-Action and **delegate to the owning Planner** internally.
 
 | Group | Function | Notes |
 |---|---|---|
 | **Query** | `Has(Handle)` | True if the entity has the Action role. |
-| | `Get_PlanStatus(Action)` | `ECk_GoapPlanStatus`: Idle / Planning / PlanFound / PlanFailed / CostThresholdReached. |
-| | `Get_Plan(Action)` | Ordered child Action **classes** from the last plan (convenience mapping of `PlanState._Plan` entity handles to their EntityScript classes). |
-| | `Get_PlanCost(Action)` | Cost of the last plan. |
+| | `Get_PlanStatus(Action)` | Reads the Planner-role plan status on the Action's own entity (which carries the Planner-role fragments because every Action is also a Planner-in-waiting in the unified model). |
+| | `Get_Plan(Action)` | Plan **classes** for the Action's own planner. |
+| | `Get_PlanCost(Action)` | Cost of the Action's last plan. |
 | | `Get_WorldStateSource(Action)` | The resolved WS handle this Action consumes (`FFragment_Goap_Planner_WorldStateSource._Resolved`). |
 | | `Get_ActiveParentAction(Action)` | Class of the parent Action that injected the current goal; null for top-level / dormant. |
 | | `Get_InvalidGoal(Action)` | Effects referencing unregistered WS keys (populated at Setup time). |
-| **Requests** | `Request_Plan(Action)` | Force an immediate replan. |
-| | `Request_CancelPlan(Action)` | Abort in-flight A* search. |
-| | `Request_SetActionCost(Action, ChildClass, Cost)` | Adjust a child Action's cost. |
-| | `Request_SetReplanInterval(Action, Seconds)` | Throttle replans. |
-| | `Request_SetReplanPolicy(Action, Policy)` | Change the replan trigger. |
-| | `Request_SetSearchBudget(Action, Microseconds)` | Time slice for A* search. |
-| | `Request_SetCostThreshold(Action, Threshold)` | Early-out when best frontier FScore exceeds threshold. |
-| **Signals** | `BindTo_OnPlanComplete(Action, Delegate, ...)` | Fires when `PlanFound`; payload = plan entities + cost. |
-| | `BindTo_OnPlanFailed(Action, Delegate, ...)` | Fires when planning cannot satisfy the goal. |
-| | `BindTo_OnPlannerActivated(Action, Delegate, ...)` | Fires when this Action (in its Planner role) is activated by a parent selecting it as Plan[0]. Source handle is `FCk_Handle_Goap_Action`. |
-| | `BindTo_OnPlannerDeactivated(Action, Delegate, ...)` | Fires when it is deactivated. |
-| | Unbind counterparts | `UnbindFrom_On*` for each signal above. |
+| **Requests** | `Request_Plan(Action)` | Delegates to the owning Planner — enqueues a Plan request on its queue. |
+| | `Request_CancelPlan(Action)` | Delegates to the owning Planner. |
+| | `Request_SetActionCost(Action, ChildClass, Cost)` | Delegates: routes to the owning Planner's `Request_SetChildActionCost`. |
+| | `Request_SetReplanInterval(Action, Seconds)` | Delegates to the owning Planner. |
+| | `Request_SetReplanPolicy(Action, Policy)` | Delegates to the owning Planner. |
+| | `Request_SetSearchBudget(Action, Microseconds)` | Delegates to the owning Planner. |
+| | `Request_SetCostThreshold(Action, Threshold)` | Delegates to the owning Planner. |
+
+Signal bindings have moved to the Planner utility. If you held an `FCk_Handle_Goap_Action` to a node that also carries the Planner role, cast it to `FCk_Handle_Goap_Planner` and bind via `UCk_Utils_Goap_Planner_UE::BindTo_OnPlan*`.
 
 ---
 
@@ -273,7 +304,7 @@ API on `UCk_Utils_Goap_WorldState_UE`:
 
 ## Parent-plan gating
 
-`FTag_Goap_Action_PlanInFlight` — set on an Action while its own A* search is in progress. Child Actions whose parent has this tag defer their own Plan requests one frame. Root-role Planners (no parent) are never gated. This prevents child planners from replanning during a parent's search and thrashing the plan state.
+`FTag_Goap_Planner_PlanInFlight` — set on a Planner while its own A* search is in progress. Child Planners whose parent has this tag defer their own Plan requests one frame. Top-level Planners (no parent) are never gated. This prevents child planners from replanning during a parent's search and thrashing the plan state.
 
 ---
 
@@ -311,51 +342,50 @@ To register an Action under a Planner, call `UCk_Utils_Goap_Planner_UE::AddActio
 | Fragment / tag | Lives on | Contents |
 |---|---|---|
 | `FFragment_Goap_Action_Definition` | Action entity | CDO-extracted `_Preconditions`, `_Effects`, `_Cost`; `_GoalFromEffects`; `_InvalidGoal`; `_CachedActionDef`. **Discriminator for Action role.** |
-| `FFragment_Goap_Action_Params` (`FCk_Fragment_Goap_ActionParamsData`) | Action entity | `_ActionClass`, `_WorldStateSource_Override` |
+| `FFragment_Goap_Action_Params` (`FCk_Fragment_Goap_ActionParamsData`) | Action entity | `_ActionClass`, `_WorldStateSource_Override`, `_SearchBudgetMicroseconds`, `_CostThreshold` (the budget/threshold on ActionParams are vestigial overrides at the Action tier; the authoritative copies live on `FFragment_Goap_Planner_Params` and are what the A* pipeline reads) |
 | `FFragment_Goap_Action_Tree` | Action entity | `_ParentAction`, `_ChildActions` |
 | `FFragment_Goap_Action_Current` | Action entity | `_ActiveParentAction` (the parent class that injected the current goal) |
-| `FFragment_Goap_Action_Requests` | Action entity | `std::variant` request queue |
-| `FFragment_Goap_Action_ReplanThrottle` | Action entity | `_SecondsSinceLastReplan` |
-| `FFragment_Goap_Action_PlanContext` | Action entity | `_Graph` — `FGoapGraph` kept alive between search and result phases |
-| `FFragment_Goap_Action_SearchState` | Action entity | Underlying A* state (aliased `TFragment_AStar_SearchState`) |
-| `FFragment_Goap_Action_Result` | Action entity | Underlying A* result (aliased `TFragment_AStar_Result`) |
-| `FFragment_Goap_Action_ActionClasses` | Action entity | Registered EntityScript classes (legacy catalog, preserved through U11) |
-| `FTag_Goap_Action_RequiresSetup` | Action entity | One-shot setup gate |
-| `FTag_Goap_Action_RequiresInitialPlan` | Action entity | Added when `_PlanOnStart`; drives first plan |
-| `FTag_Goap_Action_PlanRequested` | Action entity | Request-flow gate |
-| `FTag_Goap_Action_PlanInFlight` | Action entity | Parent-plan gating; child Planners defer while parent has this tag |
+| `FTag_Goap_Action_RequiresSetup` | Action entity | One-shot setup gate consumed by `FProcessor_Goap_Action_Setup` |
 
 #### Planner-role fragments
 
 | Fragment / tag | Lives on | Contents |
 |---|---|---|
-| `FFragment_Goap_Planner_Params` (`FCk_Fragment_Goap_PlannerParamsData`) | Planner entity | `_Goal`, `_WorldStateSource`, `_ReplanPolicy`, `_MinReplanIntervalSeconds`, `_SearchBudgetMicroseconds`, `_CostThreshold`, `_PlanOnStart` |
-| `FFragment_Goap_Planner_Current` | Planner entity | `_EnableToggle`, `_DependencyCycles`, `_RootAction` |
+| `FFragment_Goap_Planner_Params` (`FCk_Fragment_Goap_PlannerParamsData`) | Planner entity | `_PlannerTag`, `_InitialToggle`, `_Goal`, `_WorldStateSource`, `_SearchBudgetMicroseconds`, `_CostThreshold`, `_ReplanPolicy`, `_MinReplanIntervalSeconds`, `_PlanOnStart` |
+| `FFragment_Goap_Planner_Current` | Planner entity | `_EnableToggle`, `_DependencyCycles` |
 | `FFragment_Goap_Planner_Activation` | Planner entity | `_LastActivatedPlan0`, `_IsActive` |
 | `FFragment_Goap_Planner_ActionCatalogIndex` | Planner entity | `_TagToAction` map for O(1) tag lookup |
 | `FFragment_Goap_Planner_WorldStateSource` | Planner entity (also Action entities) | `_WorldStateSource` (default), `_Resolved` (eager-resolved at activation) |
 | `FFragment_Goap_Planner_PlanState` | Planner entity (also Action entities) | `_PlanStatus`, `_Plan` (TArray<FCk_Handle_Goap_Action>), `_PlanCost`, `_PlanAttemptCount` |
 | `FFragment_Goap_Planner_Goal` | Planner entity (also Action entities) | `_GoalAuthored`, `_Goal` (resolved), `_InvalidGoal` |
+| `FFragment_Goap_Planner_Requests` | Planner entity | `std::variant` request queue over `FCk_Request_Goap_Planner_{Plan,CancelPlan,SetGoal,SetActionCost,SetReplanInterval,SetReplanPolicy,SetSearchBudget,SetCostThreshold}` |
+| `FFragment_Goap_Planner_ReplanThrottle` | Planner entity | `_SecondsSinceLastReplan` |
+| `FFragment_Goap_Planner_PlanContext` | Planner entity | `_Graph` — `goap::FGoapGraph` kept alive between search and result phases |
+| `FFragment_Goap_Planner_SearchState` | Planner entity | A* search state alias `TFragment_AStar_SearchState<int32, goap::FGoapGraph>` |
+| `FFragment_Goap_Planner_Result` | Planner entity | A* result alias `TFragment_AStar_Result<int32>` |
 | `FTag_Goap_Planner_RequiresSetup` | Planner entity | One-shot setup gate |
 | `FTag_Goap_Planner_RequiresChainUpdate` | Planner entity | Set on plan-complete; consumed by `UpdateActivation` |
+| `FTag_Goap_Planner_RequiresInitialPlan` | Planner entity | Added when `_PlanOnStart`; drives first plan |
+| `FTag_Goap_Planner_PlanRequested` | Planner entity | Request-flow gate |
+| `FTag_Goap_Planner_PlanInFlight` | Planner entity | Parent-plan gating; child Planners defer while parent has this tag |
 
-Note: `FFragment_Goap_Planner_PlanState`, `FFragment_Goap_Planner_Goal`, and `FFragment_Goap_Planner_WorldStateSource` live on every **Action** entity too (Action entities run their own planner). The Planner-role discriminator fragments (`Params`, `Current`, `ActionCatalogIndex`, `Activation`) are what distinguish a bare Action from a dual-role entity.
+Note: `FFragment_Goap_Planner_PlanState`, `FFragment_Goap_Planner_Goal`, and `FFragment_Goap_Planner_WorldStateSource` live on every **Action** entity too (every Action carries the Planner-role data fragments so that promotion via `PromoteActionToPlanner` is a pure stamp of the Planner *discriminator* fragments — `Params`, `Current`, `ActionCatalogIndex`, `Activation` — without needing to backfill any data). The Planner-role discriminator fragments are what distinguish a bare Action from a dual-role entity.
 
 ---
 
 ## Anti-patterns
 
-- **Calling `Add` on an owner that already has standalone `CkAStar`.** GOAP stamps `FFragment_AStar_Params` per Action; the two collide. Use `Create` (child entity) or remove the standalone AStar feature.
+- **Calling `Add` on an owner that already has standalone `CkAStar`.** GOAP stamps `FFragment_AStar_Params` per Planner; the two collide. Use `Create` (child entity) or remove the standalone AStar feature.
 - **Setting world state with a tag no Action references.** The key registry is sealed after Setup; writes to unregistered tags are silent no-ops. Reference the key in at least one precondition or effect to register it.
 - **Trying to make a leaf Action also plan.** Leaf Actions have no children registered, so there is nothing to plan over. If you want a leaf to plan, `PromoteActionToPlanner` it first, then `AddAction(PromotedPlanner, ...)` to register children under the promoted host.
 - **Expecting goal = effects on a composite.** This rule no longer exists. Set `_Goal` on `FCk_Fragment_Goap_PlannerParamsData` independently of the effects the Action-role declares.
 - **Setting `_PlanOnStart = true` on a sub-Planner that should only plan when activated.** Eager planning fires before the first activation. Set `_PlanOnStart = false` to get "plan only when activated" semantics.
 - **Calling `Request_ResetActiveChain` and expecting the chain to stay collapsed.** `UpdateActivation` re-extends the chain on the next frame if the Planner's plan still has a composite Plan[0]. Disable the Planner first via `Request_SetEnableToggle(Planner, Disable)`.
-- **Reading `Get_Plan()` while `Get_PlanStatus() == Planning`.** The plan is only populated after `HandleResult` runs. Wait for `OnPlanComplete` or poll status.
+- **Reading `Get_Plan()` while `Get_PlanStatus() == Planning`.** The plan is only populated after `Planner_HandleResult` runs. Wait for `OnPlanComplete` or poll status.
 - **Skipping `CK_REGISTER_PROCESSOR` when adding a new GOAP processor.** An unregistered processor compiles silently and is never scheduled.
 - **Writing to override layers.** `Set_Value(WS, Key, NewValue)` always mutates the base store, never an override layer. There is no API to write into a layer directly. To express a transient "what if" mutation push an override layer; for a permanent change write to the base. Trying to use override layers as a write target produces the wrong semantics — the base store will be stale relative to the layer until the layer is popped.
 - **Numeric world state.** Classical boolean GOAP only. Project to booleans (`HasEnoughX`, `IsAtY`, `IsLowZ`).
-- **Calling `Request_Plan` immediately after a runtime `AddAction`.** The new child Action's `_CachedActionDef` (Preconditions/Effects/Cost extracted from the CDO) is populated by `FProcessor_Goap_Planner_Setup` on the next group tick. A `Request_Plan` issued in the same frame sees a default-constructed candidate (zero cost, empty effects) and the planner silently sticks with the pre-existing operator set. Symptom: tests that mutate the operator catalog at runtime appear to ignore the new Action. Fix: wait 1-3 frames between `AddAction` and `Request_Plan`, or until `OnGoapAction_SetupComplete` fires on the new child.
+- **Calling `Request_Plan` immediately after a runtime `AddAction`.** The new child Action's `_CachedActionDef` (Preconditions/Effects/Cost extracted from the CDO) is populated by `FProcessor_Goap_Action_Setup` on the next group tick, and the Planner's catalog rebuild runs in `FProcessor_Goap_Planner_Setup` after that. A `Request_Plan` issued in the same frame sees a default-constructed candidate (zero cost, empty effects) and the planner silently sticks with the pre-existing operator set. Symptom: tests that mutate the operator catalog at runtime appear to ignore the new Action. Fix: wait 1-3 frames between `AddAction` and `Request_Plan`, or until `OnGoapAction_SetupComplete` fires on the new child.
 
 ---
 
