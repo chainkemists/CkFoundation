@@ -26,7 +26,8 @@ auto
 auto
     UCk_SmTask_SubStateMachine::
     EnterTask(
-        FCk_Handle_SmTask InHandle)
+        FCk_Handle_SmTask InHandle,
+        ECk_Sm_NetContext InNetContext)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_InitialStateClass),
@@ -100,13 +101,14 @@ auto
     ck::sm::Verbose(TEXT("[SubStateMachine] Started sub-SM with initial state [{}]"),
         _InitialStateClass->GetName());
 
-    Super::EnterTask(InHandle);
+    Super::EnterTask(InHandle, InNetContext);
 }
 
 auto
     UCk_SmTask_SubStateMachine::
     ExitTask(
-        FCk_Handle_SmTask InHandle)
+        FCk_Handle_SmTask InHandle,
+        ECk_Sm_NetContext InNetContext)
     -> void
 {
     if (ck::IsValid(_SubSmHandle))
@@ -133,7 +135,7 @@ auto
     }
 
     _SubSmHandle = {};
-    Super::ExitTask(InHandle);
+    Super::ExitTask(InHandle, InNetContext);
 }
 
 void

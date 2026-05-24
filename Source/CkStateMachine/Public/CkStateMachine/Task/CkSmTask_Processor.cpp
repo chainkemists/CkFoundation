@@ -1,5 +1,7 @@
 #include "CkSmTask_Processor.h"
 
+#include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
+#include "CkStateMachine/Task/CkSmTask_Utils.h"
 #include "CkStateMachine/Task/EntityScripts/CkSmTask_EntityScript.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 
@@ -39,7 +41,9 @@ namespace ck
             TEXT("Tick task entity [{}] script is not a UCk_SmTask_EntityScript — wrong script type added with FTag_SmTask_Tick"), InHandle)
         { return; }
 
-        const auto Result = TaskScript->Tick(InHandle, InDeltaT);
+        const auto SmHandle = UCk_Utils_SmTask_UE::Get_OwningStateMachine(InHandle);
+        const auto NetContext = ck::statemachine::ComputeNetContext(SmHandle);
+        const auto Result = TaskScript->Tick(InHandle, InDeltaT, NetContext);
 
         UCk_Utils_SmTask_UE::Request_UpdateTaskResult(InHandle, Result);
     }
@@ -60,7 +64,9 @@ namespace ck
         if (ck::Is_NOT_Valid(Script))
         { return; }
 
-        Script->ExitTask(InHandle);
+        const auto SmHandle = UCk_Utils_SmTask_UE::Get_OwningStateMachine(InHandle);
+        const auto NetContext = ck::statemachine::ComputeNetContext(SmHandle);
+        Script->ExitTask(InHandle, NetContext);
         InHandle.Try_Remove<FTag_SmTask_PendingExit>();
     }
 
