@@ -161,6 +161,51 @@ namespace ck
             FFragment_Sm_Current& InCurrent) -> void;
     };
 
+    // Forward decl — the processor below names CommitPendingTransition in its RunBefore, but
+    // declaring it first keeps the replay path next to the request path it complements.
+    class FProcessor_Sm_CommitPendingTransition;
+
+    // ================================================================================================================
+    // APPLY REPLICATED HISTORY — Non-owning client replay path. Drains FFragment_Sm_ReplayQueue
+    // one entry per tick into FFragment_Sm_PendingTransition, which the CommitPendingTransition
+    // processor then lands as a real state transition. The replicated history populates the queue
+    // via the OnChange handler registered in CkStateMachine_Replication.cpp.
+    //
+    // TExclude<FFragment_Sm_PendingTransition>: don't double-stack a new replay entry on top of
+    // an in-flight transition — wait for it to commit first.
+    // TExclude<FTag_Sm_DeterminismFault>: fingerprint mismatch puts the SM in a faulted state
+    // where no further transitions land until the fault is cleared (spec §9).
+    // ================================================================================================================
+
+    class CKSTATEMACHINE_API FProcessor_Sm_ApplyReplicatedHistory : public ck_exp::TProcessor<
+        FProcessor_Sm_ApplyReplicatedHistory,
+        FCk_Handle_StateMachine,
+        TReadOnly<FFragment_Sm_Params>,
+        TReadWrite<FFragment_Sm_Current>,
+        TReadWrite<FFragment_Sm_ReplayQueue>,
+        TExclude<FFragment_Sm_PendingTransition>,
+        TExclude<FTag_Sm_DeterminismFault>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group         = FGroup_Gameplay_AI;
+        using RunAfter      = TDepList<FProcessor_Sm_HandleRequests>;
+        using RunBefore     = TDepList<FProcessor_Sm_CommitPendingTransition>;
+        using MarkedDirtyBy = FFragment_Sm_ReplayQueue;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Sm_Params& InParams,
+            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm_ReplayQueue& InQueue) -> void;
+    };
+
     // ================================================================================================================
     // COMMIT PENDING TRANSITION — Defer the new state's entry until the previous state's
     // exit cascade has fully drained.
