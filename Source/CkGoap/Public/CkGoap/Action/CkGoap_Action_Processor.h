@@ -169,6 +169,7 @@ struct FProcessor_Goap_Planner_Execute
 class CKGOAP_API FProcessor_Goap_Planner_HandleResult : public ck_exp::TProcessor<
 	FProcessor_Goap_Planner_HandleResult,
 	FCk_Handle_Goap_Planner,
+	ck::TReadOnly<FFragment_Goap_Planner_Params>,
 	ck::TReadOnly<FFragment_Goap_Planner_Current>,
 	ck::TReadOnly<FFragment_Goap_Planner_Result>,
 	ck::TReadOnly<FFragment_Goap_Planner_PlanContext>,
@@ -188,6 +189,7 @@ public:
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
+		const FFragment_Goap_Planner_Params& InParams,
 		const FFragment_Goap_Planner_Current& InCurrent,
 		const FFragment_Goap_Planner_Result& InResult,
 		const FFragment_Goap_Planner_PlanContext& InPlanContext,

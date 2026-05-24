@@ -85,14 +85,26 @@ namespace ck
 		friend class ::UCk_Utils_Goap_Planner_UE;
 		friend class FProcessor_Goap_Planner_Setup;
 		friend class FProcessor_Goap_Planner_UpdateActivation;
+		friend class FProcessor_Goap_Planner_HandleResult;
+		friend class FProcessor_Goap_Planner_HandleRequests;
 
 	private:
 		ECk_EnableDisable _EnableToggle = ECk_EnableDisable::Enable;
 		TArray<FCk_GoapDiagnostic_DependencyCycle> _DependencyCycles;
 
+		// "Always-valid-plan" tenet — Setup-time cached result. True iff the
+		// Planner's catalog contains at least one Action with no preconditions
+		// whose effects cover every goal condition. Read by HandleResult /
+		// HandleRequests at the PlanFailed branches to gate the runtime ensure
+		// (when combined with PlannerParams._AllowPlanFailed=false). See
+		// FProcessor_Goap_Planner_Setup for the static check and CkGoap/CLAUDE.md
+		// § "Design tenets" for the rationale.
+		bool _HasUnconditionalFallback = false;
+
 	public:
 		CK_PROPERTY_GET(_EnableToggle);
 		CK_PROPERTY_GET(_DependencyCycles);
+		CK_PROPERTY_GET(_HasUnconditionalFallback);
 	};
 
 // ====================================================================================================================
