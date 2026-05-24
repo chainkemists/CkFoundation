@@ -126,7 +126,7 @@ auto
 		TEXT("Action [{}] has no owning Planner; Request_Plan dropped."), InAction)
 	{ return InAction; }
 	auto& Reqs = Owning.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Action_Plan{});
+	Reqs._Requests.Add(FCk_Request_Goap_Planner_Plan{});
 	return InAction;
 }
 
@@ -140,7 +140,7 @@ auto
 		TEXT("Action [{}] has no owning Planner; Request_CancelPlan dropped."), InAction)
 	{ return InAction; }
 	auto& Reqs = Owning.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Action_CancelPlan{});
+	Reqs._Requests.Add(FCk_Request_Goap_Planner_CancelPlan{});
 	return InAction;
 }
 
@@ -157,7 +157,7 @@ auto
 		TEXT("Action [{}] has no owning Planner; Request_SetActionCost dropped."), InAction)
 	{ return InAction; }
 	auto& Reqs = Owning.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Action_SetActionCost{InActionClass, InCost});
+	Reqs._Requests.Add(FCk_Request_Goap_Planner_SetActionCost{InActionClass, InCost});
 	return InAction;
 }
 
@@ -171,7 +171,7 @@ auto
 		TEXT("Action [{}] has no owning Planner; Request_SetReplanInterval dropped."), InAction)
 	{ return InAction; }
 	auto& Reqs = Owning.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Action_SetReplanInterval{InSeconds});
+	Reqs._Requests.Add(FCk_Request_Goap_Planner_SetReplanInterval{InSeconds});
 	return InAction;
 }
 
@@ -185,7 +185,7 @@ auto
 		TEXT("Action [{}] has no owning Planner; Request_SetReplanPolicy dropped."), InAction)
 	{ return InAction; }
 	auto& Reqs = Owning.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Action_SetReplanPolicy{InPolicy});
+	Reqs._Requests.Add(FCk_Request_Goap_Planner_SetReplanPolicy{InPolicy});
 	return InAction;
 }
 
@@ -199,7 +199,7 @@ auto
 		TEXT("Action [{}] has no owning Planner; Request_SetSearchBudget dropped."), InAction)
 	{ return InAction; }
 	auto& Reqs = Owning.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Action_SetSearchBudget{InMicroseconds});
+	Reqs._Requests.Add(FCk_Request_Goap_Planner_SetSearchBudget{InMicroseconds});
 	return InAction;
 }
 
@@ -213,7 +213,7 @@ auto
 		TEXT("Action [{}] has no owning Planner; Request_SetCostThreshold dropped."), InAction)
 	{ return InAction; }
 	auto& Reqs = Owning.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Action_SetCostThreshold{InThreshold});
+	Reqs._Requests.Add(FCk_Request_Goap_Planner_SetCostThreshold{InThreshold});
 	return InAction;
 }
 

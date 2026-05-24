@@ -82,6 +82,26 @@ private:
 		meta = (AllowPrivateAccess = true))
 	float _CostThreshold = 0.0f;
 
+	// Replan trigger policy — when AutoReplan fires a Plan request.
+	// PR-B.1b Stage 5: lifted from FCk_Fragment_Goap_ActionParamsData; goal
+	// independence (spec §3.2) means policy is a Planner-tier concern.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (AllowPrivateAccess = true))
+	ECk_Goap_ReplanPolicy _ReplanPolicy = ECk_Goap_ReplanPolicy::OnWorldStateDirty;
+
+	// Throttle window for AutoReplan dirty triggers. Coalesces multiple dirty
+	// events within the window into one replan. PR-B.1b Stage 5: lifted.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
+	float _MinReplanIntervalSeconds = 0.0f;
+
+	// If true, the Planner fires an initial Plan request after activation
+	// (top-level Planners: immediately; promoted mid-tier Planners: when their
+	// parent picks them as Plan[0]). PR-B.1b Stage 5: lifted from ActionParams.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (AllowPrivateAccess = true))
+	bool _PlanOnStart = true;
+
 public:
 	CK_PROPERTY(_PlannerTag);
 	CK_PROPERTY(_InitialToggle);
@@ -89,6 +109,9 @@ public:
 	CK_PROPERTY(_WorldStateSource);
 	CK_PROPERTY(_SearchBudgetMicroseconds);
 	CK_PROPERTY(_CostThreshold);
+	CK_PROPERTY(_ReplanPolicy);
+	CK_PROPERTY(_MinReplanIntervalSeconds);
+	CK_PROPERTY(_PlanOnStart);
 
 public:
 	CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Goap_PlannerParamsData, _PlannerTag);

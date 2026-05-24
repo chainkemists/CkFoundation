@@ -3,11 +3,15 @@
 #include "CkGoap/Planner/CkGoap_Planner_Fragment_Data.h"
 #include "CkGoap/CkGoap_Fragment_Data.h"  // FCk_GoapDiagnostic_DependencyCycle
 #include "CkGoap/Action/CkGoap_Action_Fragment_Data.h"  // FCk_Handle_Goap_Action, FCk_GoapWS_Condition_Authored, ECk_GoapPlanStatus
-#include "CkGoap/Action/CkGoap_Action_Fragment.h"        // PR-B.1b prep: Planner-side aliases reuse Action-side fragment types
+#include "CkGoap/Action/CkGoap_Action_Fragment.h"        // CDO defs the Planner consumes from child Actions
 #include "CkGoap/Algorithm/CkGoap_WorldState.h"  // goap::FWorldStateCondition
+#include "CkGoap/Algorithm/CkGoap_Graph.h"        // goap::FGoapGraph (FFragment_Goap_Planner_PlanContext)
 #include "CkGoap/WorldState/CkGoap_WorldState_Fragment_Data.h"  // FCk_Handle_Goap_WorldState
 
+#include "CkAStar/CkAStar_Fragment.h"             // TFragment_AStar_SearchState / _Result aliases
 #include "CkEcs/Signal/CkSignal_Macros.h"
+
+#include <variant>
 
 // ====================================================================================================================
 
@@ -32,13 +36,11 @@ namespace ck
 {
 	class FProcessor_Goap_Planner_Setup;
 	class FProcessor_Goap_Planner_UpdateActivation;
-	// PR-B.1b Stage 3: new Planner-side A*-pipeline processors.
+	// PR-B.1b Stage 3: Planner-side A*-pipeline processors.
 	class FProcessor_Goap_Planner_AutoReplan;
 	class FProcessor_Goap_Planner_HandleRequests;
 	class FProcessor_Goap_Planner_HandleResult;
 	class FProcessor_Goap_Action_Setup;
-	class FProcessor_Goap_Action_HandleRequests;
-	class FProcessor_Goap_Action_HandleResult;
 
 // ====================================================================================================================
 // TAGS
@@ -49,6 +51,21 @@ namespace ck
 	// Set whenever any action in the ActionSet completes a plan. Consumed +
 	// removed by UpdateActivation. Optimization to skip walking inert ActionSets.
 	CK_DEFINE_ECS_TAG(FTag_Goap_Planner_RequiresChainUpdate);
+
+	// Set on a Planner after activation; AutoReplan picks it up next frame to
+	// fire the first plan request. Removed by AutoReplan once consumed.
+	CK_DEFINE_ECS_TAG(FTag_Goap_Planner_RequiresInitialPlan);
+
+	// Request-flow gate — set when a Plan request lands on the queue.
+	CK_DEFINE_ECS_TAG(FTag_Goap_Planner_PlanRequested);
+
+	// Set on a Planner while it is actively planning — added by HandleRequests
+	// when a Plan request begins processing (AStar seeded), removed by
+	// HandleResult on terminal status (PlanFound / PlanFailed /
+	// CostThresholdReached) or by Request_CancelPlan. Used to gate child
+	// Planners from draining their own Plan requests while the parent's plan
+	// is in flight.
+	CK_DEFINE_ECS_TAG(FTag_Goap_Planner_PlanInFlight);
 
 // ====================================================================================================================
 // PARAMS — alias to the BlueprintType data shape
@@ -73,19 +90,9 @@ namespace ck
 		ECk_EnableDisable _EnableToggle = ECk_EnableDisable::Enable;
 		TArray<FCk_GoapDiagnostic_DependencyCycle> _DependencyCycles;
 
-		// The implicit-root Action entity for this top-level Planner — the
-		// entity that actually runs A* in the transitional Path A model. Set by
-		// the first AddAction call on a top-level Planner; subsequent AddActions
-		// become tree children of this root. Unused for promoted mid-tier
-		// Planners (the host entity itself runs A* and reads its own Tree).
-		// PR-B is expected to rehost A* onto the Planner entity directly, at
-		// which point this field can be removed.
-		FCk_Handle_Goap_Action _RootAction;
-
 	public:
 		CK_PROPERTY_GET(_EnableToggle);
 		CK_PROPERTY_GET(_DependencyCycles);
-		CK_PROPERTY_GET(_RootAction);
 	};
 
 // ====================================================================================================================
@@ -173,7 +180,6 @@ namespace ck
 		friend class FProcessor_Goap_Planner_Setup;       // PR-B.1b Stage 3
 		friend class FProcessor_Goap_Planner_HandleRequests;  // PR-B.1b Stage 3
 		friend class FProcessor_Goap_Action_Setup;
-		friend class FProcessor_Goap_Action_HandleRequests;
 
 		// PR-A: shared internal helper for AddAction's child-WS resolution.
 		friend auto goap::internal_planner::DoResolveChildWorldStateFromParent(
@@ -218,8 +224,6 @@ namespace ck
 		friend class FProcessor_Goap_Planner_HandleRequests;  // PR-B.1b Stage 3
 		friend class FProcessor_Goap_Planner_HandleResult;    // PR-B.1b Stage 3
 		friend class FProcessor_Goap_Action_Setup;
-		friend class FProcessor_Goap_Action_HandleRequests;
-		friend class FProcessor_Goap_Action_HandleResult;
 
 	private:
 		ECk_GoapPlanStatus                               _PlanStatus = ECk_GoapPlanStatus::Idle;
@@ -268,15 +272,13 @@ namespace ck
 		friend class FProcessor_Goap_Planner_Setup;           // PR-B.1b Stage 3
 		friend class FProcessor_Goap_Planner_HandleRequests;  // PR-B.1b Stage 3
 		friend class FProcessor_Goap_Action_Setup;
-		friend class FProcessor_Goap_Action_HandleRequests;
 
 	private:
 		// Authored (tag-keyed) goal — source of truth, settable at construction
-		// (PlannerParams._Goal — propagated to the implicit-root Action on the
-		// first AddAction call for a top-level Planner) and at runtime
-		// (Request_SetGoal). Persists across chain (de)activations of the
-		// owning Action — DoInjectGoalSynchronous re-resolves from this field,
-		// not from any Action's effects.
+		// (PlannerParams._Goal) and at runtime (Request_SetGoal). Persists
+		// across chain (de)activations of the owning Planner —
+		// DoInjectGoalSynchronous re-resolves from this field, never from any
+		// Action's effects.
 		TArray<FCk_GoapWS_Condition_Authored>            _GoalAuthored;
 
 		TArray<goap::FWorldStateCondition>               _Goal;
@@ -336,36 +338,81 @@ namespace ck
 		FCk_Goap_Payload_OnPlannerDeactivated);
 
 // ====================================================================================================================
-// PR-B.1b prep — Planner-side fragment / tag aliases.
-//
-// These aliases name the A* pipeline fragments + lifecycle tags by their
-// Planner-scoped names. In the transitional B.1b model the underlying types
-// are still the Action-side ones (stamped on the implicit-root Action entity
-// today); the aliases give us the future names to reference now. Subsequent
-// PR-B.1b sub-commits will:
-//   1. Stamp these fragments on the Planner entity (in addition / instead of
-//      the Action entity) and retarget the A*-pipeline processors to read
-//      them from the Planner entity.
-//   2. Retire the Action-side stamps + `_RootAction` indirection.
-//
-// Adding the aliases now is a no-op behaviourally — the names refer to the
-// same underlying types — but lets call-sites in subsequent commits be written
-// against the destination names without churning the type definitions in the
-// same patch.
+// REQUESTS — Planner-side request queue (Plan / CancelPlan / SetGoal / etc.)
 // ====================================================================================================================
 
-	using FFragment_Goap_Planner_Requests       = FFragment_Goap_Action_Requests;
-	using FFragment_Goap_Planner_ReplanThrottle = FFragment_Goap_Action_ReplanThrottle;
-	using FFragment_Goap_Planner_PlanContext    = FFragment_Goap_Action_PlanContext;
-	using FFragment_Goap_Planner_SearchState    = FFragment_Goap_Action_SearchState;
-	using FFragment_Goap_Planner_Result         = FFragment_Goap_Action_Result;
+	struct CKGOAP_API FFragment_Goap_Planner_Requests
+	{
+	public:
+		CK_GENERATED_BODY(FFragment_Goap_Planner_Requests);
 
-	// Lifecycle tags — Planner-scoped names for the A*-pipeline gating tags.
-	// In the transitional model these are stamped on the implicit-root Action;
-	// B.1b commits 2-3 move the stamps to the Planner entity.
-	using FTag_Goap_Planner_PlanRequested       = FTag_Goap_Action_PlanRequested;
-	using FTag_Goap_Planner_RequiresInitialPlan = FTag_Goap_Action_RequiresInitialPlan;
-	using FTag_Goap_Planner_PlanInFlight        = FTag_Goap_Action_PlanInFlight;
+		friend class ::UCk_Utils_Goap_Action_UE;
+		friend class ::UCk_Utils_Goap_Planner_UE;
+		friend class FProcessor_Goap_Planner_HandleRequests;
+		friend class FProcessor_Goap_Planner_AutoReplan;
+
+		using RequestType = std::variant<
+			FCk_Request_Goap_Planner_Plan,
+			FCk_Request_Goap_Planner_CancelPlan,
+			FCk_Request_Goap_Planner_SetGoal,
+			FCk_Request_Goap_Planner_SetActionCost,
+			FCk_Request_Goap_Planner_SetReplanInterval,
+			FCk_Request_Goap_Planner_SetReplanPolicy,
+			FCk_Request_Goap_Planner_SetSearchBudget,
+			FCk_Request_Goap_Planner_SetCostThreshold>;
+
+	private:
+		TArray<RequestType> _Requests;
+
+	public:
+		CK_PROPERTY_GET(_Requests);
+	};
+
+// ====================================================================================================================
+// REPLAN THROTTLE — accumulator for the Planner's replan-interval window.
+// ====================================================================================================================
+
+	struct CKGOAP_API FFragment_Goap_Planner_ReplanThrottle
+	{
+	public:
+		CK_GENERATED_BODY(FFragment_Goap_Planner_ReplanThrottle);
+
+		friend class FProcessor_Goap_Planner_AutoReplan;
+		friend class FProcessor_Goap_Planner_HandleRequests;
+
+	private:
+		float _SecondsSinceLastReplan = 0.0f;
+
+	public:
+		CK_PROPERTY_GET(_SecondsSinceLastReplan);
+	};
+
+// ====================================================================================================================
+// PLAN CONTEXT — Graph reference kept alive between search + result phases.
+// ====================================================================================================================
+
+	struct CKGOAP_API FFragment_Goap_Planner_PlanContext
+	{
+	public:
+		CK_GENERATED_BODY(FFragment_Goap_Planner_PlanContext);
+
+		friend class FProcessor_Goap_Planner_HandleRequests;
+		friend class FProcessor_Goap_Planner_HandleResult;
+
+	private:
+		goap::FGoapGraph _Graph;
+
+	public:
+		CK_PROPERTY_GET(_Graph);
+	};
+
+// ====================================================================================================================
+// A* FRAGMENT ALIASES — concrete CkAStar SearchState / Result types parameterised
+// over goap::FGoapGraph. Each Planner entity carries one instance of each.
+// ====================================================================================================================
+
+	using FFragment_Goap_Planner_SearchState = TFragment_AStar_SearchState<int32, goap::FGoapGraph>;
+	using FFragment_Goap_Planner_Result      = TFragment_AStar_Result<int32>;
 
 // ====================================================================================================================
 
