@@ -94,6 +94,28 @@ auto
 
 auto
     UCk_SmState_EntityScript::
+    Get_EffectiveReplication() const
+    -> ECk_Replication
+{
+    // At spawn time the processor stamps _AssociatedEntity before Construct runs, and the
+    // OwningStateMachine fragment is added by UCk_Utils_SmState_UE::Create before the spawn
+    // request is enqueued — so both calls in CkEntityScript_Processor (pre- and post-Construct)
+    // see a valid SM here. CDO calls (no AssociatedEntity) fall back to Super.
+    if (ck::IsValid(_AssociatedEntity) && ck::TUtils_Sm_OwningStateMachine::Has(_AssociatedEntity))
+    {
+        const auto SmHandle = ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(_AssociatedEntity);
+        if (ck::IsValid(SmHandle) && SmHandle.Has<ck::FFragment_Sm_Params>())
+        {
+            return SmHandle.Get<ck::FFragment_Sm_Params>().Get_Replication();
+        }
+    }
+    return Super::Get_EffectiveReplication();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_SmState_EntityScript::
     EnterState(
         FCk_Handle_SmState InHandle,
         ECk_Sm_NetContext InNetContext)

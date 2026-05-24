@@ -66,6 +66,24 @@ auto
 
 auto
     UCk_SmTask_EntityScript::
+    Get_EffectiveReplication() const
+    -> ECk_Replication
+{
+    if (ck::IsValid(_AssociatedEntity) && ck::TUtils_Sm_OwningStateMachine::Has(_AssociatedEntity))
+    {
+        const auto SmHandle = ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(_AssociatedEntity);
+        if (ck::IsValid(SmHandle) && SmHandle.Has<ck::FFragment_Sm_Params>())
+        {
+            return SmHandle.Get<ck::FFragment_Sm_Params>().Get_Replication();
+        }
+    }
+    return Super::Get_EffectiveReplication();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_SmTask_EntityScript::
     EnterTask(
         FCk_Handle_SmTask InHandle,
         ECk_Sm_NetContext InNetContext)
