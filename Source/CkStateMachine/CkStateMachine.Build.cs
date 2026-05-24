@@ -15,6 +15,7 @@ public class CkStateMachine : CkModuleRules
             "CoreUObject",
             "Engine",
             "GameplayTags",
+            "NetCore",
 
             "CkActorRelay",
             "CkCore",
