@@ -183,6 +183,33 @@ auto
     return ck::statemachine::ComputeNetContext(InStateMachine);
 }
 
+auto
+    UCk_Utils_StateMachine_UE::
+    Get_Replication(
+        const FCk_Handle_StateMachine& InStateMachine)
+    -> ECk_Replication
+{
+    return InStateMachine.Get<ck::FFragment_Sm_Params>().Get_Replication();
+}
+
+auto
+    UCk_Utils_StateMachine_UE::
+    Get_AuthorityModel(
+        const FCk_Handle_StateMachine& InStateMachine)
+    -> ECk_Sm_AuthorityModel
+{
+    return InStateMachine.Get<ck::FFragment_Sm_Params>().Get_AuthorityModel();
+}
+
+auto
+    UCk_Utils_StateMachine_UE::
+    Get_ReplicationModel(
+        const FCk_Handle_StateMachine& InStateMachine)
+    -> ECk_Sm_ReplicationModel
+{
+    return InStateMachine.Get<ck::FFragment_Sm_Params>().Get_ReplicationModel();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
