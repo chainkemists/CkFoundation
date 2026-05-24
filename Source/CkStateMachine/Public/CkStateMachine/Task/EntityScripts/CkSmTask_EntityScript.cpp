@@ -3,6 +3,7 @@
 #include "CkCore/Time/CkTime.h"
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
+#include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
 #include "CkStateMachine/Debug/CkStateMachine_Debug_GraphWalk_Fragment.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 #include "CkStateMachine/Task/CkSmTask_Fragment.h"
@@ -37,7 +38,9 @@ auto
     { return; }
 
     auto Self = UCk_Utils_SmTask_UE::CastChecked(_AssociatedEntity);
-    EnterTask(Self);
+    const auto SmHandle = UCk_Utils_SmTask_UE::Get_OwningStateMachine(Self);
+    const auto NetContext = ck::statemachine::ComputeNetContext(SmHandle);
+    EnterTask(Self, NetContext);
 }
 
 auto
@@ -52,7 +55,9 @@ auto
     auto Self = UCk_Utils_SmTask_UE::CastChecked(_AssociatedEntity);
     if (ck::IsValid(Self))
     {
-        ExitTask(Self);
+        const auto SmHandle = UCk_Utils_SmTask_UE::Get_OwningStateMachine(Self);
+        const auto NetContext = ck::statemachine::ComputeNetContext(SmHandle);
+        ExitTask(Self, NetContext);
     }
     Super::EndPlay();
 }
@@ -62,19 +67,21 @@ auto
 auto
     UCk_SmTask_EntityScript::
     EnterTask(
-        FCk_Handle_SmTask InHandle)
+        FCk_Handle_SmTask InHandle,
+        ECk_Sm_NetContext InNetContext)
     -> void
 {
     ck::sm::VeryVerbose(TEXT("[SM Lifecycle] EnterTask [{}] on entity [{}]"), GetClass(), InHandle);
 
     InHandle.AddOrGet<ck::FTag_SmTask_Active>();
-    DoEnterTask(InHandle);
+    DoEnterTask(InHandle, InNetContext);
 }
 
 auto
     UCk_SmTask_EntityScript::
     ExitTask(
-        FCk_Handle_SmTask InHandle)
+        FCk_Handle_SmTask InHandle,
+        ECk_Sm_NetContext InNetContext)
     -> void
 {
     if (NOT InHandle.Has<ck::FTag_SmTask_Active>())
@@ -83,7 +90,7 @@ auto
     ck::sm::VeryVerbose(TEXT("[SM Lifecycle] ExitTask [{}] on entity [{}]"), GetClass(), InHandle);
 
     InHandle.Try_Remove<ck::FTag_SmTask_Active>();
-    DoExitTask(InHandle);
+    DoExitTask(InHandle, InNetContext);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -92,10 +99,11 @@ auto
     UCk_SmTask_EntityScript::
     Tick(
         FCk_Handle_SmTask InHandle,
-        FCk_Time InDeltaT)
+        FCk_Time InDeltaT,
+        ECk_Sm_NetContext InNetContext)
     -> ECk_SmTaskResult
 {
-    return DoTick(InHandle, InDeltaT);
+    return DoTick(InHandle, InDeltaT, InNetContext);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

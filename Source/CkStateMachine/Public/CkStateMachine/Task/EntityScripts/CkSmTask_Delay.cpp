@@ -7,7 +7,8 @@
 auto
     UCk_SmTask_Delay::
     EnterTask(
-        FCk_Handle_SmTask InHandle)
+        FCk_Handle_SmTask InHandle,
+        ECk_Sm_NetContext InNetContext)
     -> void
 {
     auto ScriptEntity = DoGet_ScriptEntity();
@@ -23,13 +24,14 @@ auto
     Delegate.BindDynamic(this, &ThisType::OnDelayTimerComplete);
     UCk_Utils_Timer_UE::BindTo_OnDone(_DelayTimerHandle, Delegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame);
 
-    Super::EnterTask(InHandle);
+    Super::EnterTask(InHandle, InNetContext);
 }
 
 auto
     UCk_SmTask_Delay::
     ExitTask(
-        FCk_Handle_SmTask InHandle)
+        FCk_Handle_SmTask InHandle,
+        ECk_Sm_NetContext InNetContext)
     -> void
 {
     if (ck::IsValid(_DelayTimerHandle))
@@ -40,7 +42,7 @@ auto
         _DelayTimerHandle = {};
     }
 
-    Super::ExitTask(InHandle);
+    Super::ExitTask(InHandle, InNetContext);
 }
 
 void
