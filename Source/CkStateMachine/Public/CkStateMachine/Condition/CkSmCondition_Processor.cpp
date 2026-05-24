@@ -2,6 +2,8 @@
 
 #include "CkStateMachine/Condition/EntityScripts/CkSmCondition_EntityScript.h"
 #include "CkStateMachine/Condition/EntityScripts/CkSmCondition_Polled.h"
+#include "CkStateMachine/Condition/CkSmCondition_Utils.h"
+#include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
 #include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkStateMachine/Transition/CkSmTransition_Fragment.h"
 
@@ -36,7 +38,9 @@ namespace ck
         if (ck::Is_NOT_Valid(Script))
         { return; }
 
-        Script->ExitCondition(InHandle);
+        const auto SmHandle = UCk_Utils_SmCondition_UE::Get_OwningStateMachine(InHandle);
+        const auto NetContext = ck::statemachine::ComputeNetContext(SmHandle);
+        Script->ExitCondition(InHandle, NetContext);
         InHandle.Try_Remove<FTag_SmCondition_PendingExit>();
     }
 

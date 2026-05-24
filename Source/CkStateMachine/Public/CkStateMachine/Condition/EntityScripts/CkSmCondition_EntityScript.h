@@ -2,6 +2,7 @@
 
 #include "CkEcs/EntityScript/CkEntityScript.h"
 
+#include "CkStateMachine/Net/CkStateMachine_NetContext.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment_Data.h"
 
 #include "CkSmCondition_EntityScript.generated.h"
@@ -28,11 +29,6 @@ class CKSTATEMACHINE_API UCk_SmCondition_EntityScript : public UCk_EntityScript_
 
 public:
     CK_GENERATED_BODY(UCk_SmCondition_EntityScript);
-
-    UCk_SmCondition_EntityScript()
-    {
-        _Replication = ECk_Replication::DoesNotReplicate;
-    }
 
     // ================================================================================================================
     // LIFECYCLE (EntityScript overrides)
@@ -63,11 +59,13 @@ protected:
 public:
     virtual auto
     EnterCondition(
-        FCk_Handle_SmCondition InHandle) -> void;
+        FCk_Handle_SmCondition InHandle,
+        ECk_Sm_NetContext InNetContext) -> void;
 
     virtual auto
     ExitCondition(
-        FCk_Handle_SmCondition InHandle) -> void;
+        FCk_Handle_SmCondition InHandle,
+        ECk_Sm_NetContext InNetContext) -> void;
 
     // ================================================================================================================
     // BLUEPRINT IMPLEMENTABLE EVENTS
@@ -79,14 +77,16 @@ protected:
         DisplayName = "Enter Condition")
     void
     DoEnterCondition(
-        FCk_Handle_SmCondition InHandle);
+        FCk_Handle_SmCondition InHandle,
+        ECk_Sm_NetContext InNetContext);
 
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Ck|SM|Condition",
         DisplayName = "Exit Condition")
     void
     DoExitCondition(
-        FCk_Handle_SmCondition InHandle);
+        FCk_Handle_SmCondition InHandle,
+        ECk_Sm_NetContext InNetContext);
 
     // ================================================================================================================
     // HELPERS

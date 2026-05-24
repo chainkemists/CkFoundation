@@ -3,6 +3,7 @@
 #include "CkStateMachine/CkStateMachine_Log.h"
 #include "CkStateMachine/Condition/CkSmCondition_Utils.h"
 #include "CkStateMachine/Debug/CkStateMachine_Debug_GraphWalk_Fragment.h"
+#include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
@@ -37,7 +38,9 @@ auto
     { return; }
 
     auto Self = UCk_Utils_SmCondition_UE::CastChecked(_AssociatedEntity);
-    EnterCondition(Self);
+    const auto SmHandle = UCk_Utils_SmCondition_UE::Get_OwningStateMachine(Self);
+    const auto NetContext = ck::statemachine::ComputeNetContext(SmHandle);
+    EnterCondition(Self, NetContext);
 }
 
 auto
@@ -52,7 +55,9 @@ auto
     auto Self = UCk_Utils_SmCondition_UE::CastChecked(_AssociatedEntity);
     if (ck::IsValid(Self))
     {
-        ExitCondition(Self);
+        const auto SmHandle = UCk_Utils_SmCondition_UE::Get_OwningStateMachine(Self);
+        const auto NetContext = ck::statemachine::ComputeNetContext(SmHandle);
+        ExitCondition(Self, NetContext);
     }
     Super::EndPlay();
 }
@@ -62,19 +67,21 @@ auto
 auto
     UCk_SmCondition_EntityScript::
     EnterCondition(
-        FCk_Handle_SmCondition InHandle)
+        FCk_Handle_SmCondition InHandle,
+        ECk_Sm_NetContext InNetContext)
     -> void
 {
     ck::sm::VeryVerbose(TEXT("[SM Lifecycle] EnterCondition [{}] on entity [{}]"), GetClass(), InHandle);
 
     InHandle.AddOrGet<ck::FTag_SmCondition_Active>();
-    DoEnterCondition(InHandle);
+    DoEnterCondition(InHandle, InNetContext);
 }
 
 auto
     UCk_SmCondition_EntityScript::
     ExitCondition(
-        FCk_Handle_SmCondition InHandle)
+        FCk_Handle_SmCondition InHandle,
+        ECk_Sm_NetContext InNetContext)
     -> void
 {
     if (NOT InHandle.Has<ck::FTag_SmCondition_Active>())
@@ -83,7 +90,7 @@ auto
     ck::sm::VeryVerbose(TEXT("[SM Lifecycle] ExitCondition [{}] on entity [{}]"), GetClass(), InHandle);
 
     InHandle.Try_Remove<ck::FTag_SmCondition_Active>();
-    DoExitCondition(InHandle);
+    DoExitCondition(InHandle, InNetContext);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
