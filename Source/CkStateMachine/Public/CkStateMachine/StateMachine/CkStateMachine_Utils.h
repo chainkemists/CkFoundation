@@ -160,6 +160,25 @@ public:
     Get_NetContext(
         const FCk_Handle_StateMachine& InStateMachine);
 
+    // Immutable per-SM choice from FFragment_Sm_Params._Replication. Local-only SMs return
+    // DoesNotReplicate; replicated SMs return Replicates. C++-only at this stage to avoid the
+    // AS-binding refresh quirk that bites newly-added BPFL UFUNCTIONs in the same toolbox run.
+    static auto
+    Get_Replication(
+        const FCk_Handle_StateMachine& InStateMachine) -> ECk_Replication;
+
+    // Immutable per-SM choice from FFragment_Sm_Params._AuthorityModel. ServerAuthoritative by
+    // default; OwningClientAuthoritative if opt-in. Read by Phase 6 authority gates.
+    static auto
+    Get_AuthorityModel(
+        const FCk_Handle_StateMachine& InStateMachine) -> ECk_Sm_AuthorityModel;
+
+    // Immutable per-SM choice from FFragment_Sm_Params._ReplicationModel. WithHistory by default;
+    // WithoutHistory for snap-to-current SMs. Read by Phase 6+ to switch on payload shape.
+    static auto
+    Get_ReplicationModel(
+        const FCk_Handle_StateMachine& InStateMachine) -> ECk_Sm_ReplicationModel;
+
     // ================================================================================================================
     // SIGNAL BINDING
     // ================================================================================================================
