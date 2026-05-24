@@ -3,7 +3,9 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
+#include "CkStateMachine/Net/CkStateMachine_RepData.h"
 #include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
@@ -40,6 +42,32 @@ namespace ck
         -> void
     {
         InHandle.Remove<FTag_Sm_RequiresSetup>();
+
+        // Attach the replicated payload fragment on authority. Gated on both the per-SM
+        // replication intent (so local-only SMs are unaffected) and Get_IsEntityNetMode_Host
+        // (so clients don't try to drive the payload — they receive it via the rep handler).
+        // TryAddContainerFragment is itself a no-op when entity replication is DoesNotReplicate
+        // or no replication driver is present, but gating here makes the intent explicit and
+        // avoids the driver lookup in the local-only fast path.
+        if (InParams.Get_Replication() == ECk_Replication::Replicates
+            && UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle))
+        {
+            switch (InParams.Get_ReplicationModel())
+            {
+                case ECk_Sm_ReplicationModel::WithHistory:
+                {
+                    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_StateMachine_WithHistory>(
+                        InHandle, FCk_RepData_StateMachine_WithHistory{});
+                    break;
+                }
+                case ECk_Sm_ReplicationModel::WithoutHistory:
+                {
+                    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_StateMachine_NoHistory>(
+                        InHandle, FCk_RepData_StateMachine_NoHistory{});
+                    break;
+                }
+            }
+        }
 
         if (InParams.Get_AutoStart() == ECk_SmAutoStart::OnSetup)
         {
