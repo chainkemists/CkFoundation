@@ -5,6 +5,7 @@
 #include "CkStateMachine/Condition/CkSmCondition_Utils.h"
 #include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
 #include "CkStateMachine/State/CkSmState_Utils.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 #include "CkStateMachine/Transition/CkSmTransition_Fragment.h"
 
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
@@ -85,6 +86,21 @@ namespace ck
         auto* ConditionScript = Cast<UCk_SmCondition_Polled>(Script);
         CK_ENSURE_IF_NOT(ck::IsValid(ConditionScript),
             TEXT("Polled condition entity [{}] script is not a UCk_SmCondition_Polled — wrong script type added with FTag_SmCondition_Polled"), InHandle)
+        { return; }
+
+        // Authority gating: polled conditions evaluate user-defined predicates that often have
+        // observable side effects (timers, sensors). Only authority should evaluate. Event-driven
+        // conditions are NOT gated here — they fire from external signals which themselves only
+        // broadcast on authority.
+        const auto SmHandle = UCk_Utils_SmCondition_UE::Get_OwningStateMachine(InHandle);
+        const auto NetContext = ck::statemachine::ComputeNetContext(SmHandle);
+
+        if (NetContext == ECk_Sm_NetContext::NonOwningClient)
+        { return; }
+
+        if (NetContext == ECk_Sm_NetContext::OwningClient
+            && UCk_Utils_StateMachine_UE::Get_AuthorityModel(SmHandle)
+                != ECk_Sm_AuthorityModel::OwningClientAuthoritative)
         { return; }
 
         InCurrent._Result = ConditionScript->Evaluate(InHandle, InDeltaT)
