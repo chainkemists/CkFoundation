@@ -212,6 +212,16 @@ private:
     DoComputeFingerprint(
         FCk_Handle_SmState_UnderConstruction& InStateHandle) -> void;
 
+    // On authority + Replicates SMs, patches the locally-computed fingerprint into the SM's
+    // replicated payload. Covers two cases: (1) initial-state seeds _InitialStateFingerprint
+    // when history is empty; (2) subsequent transitions patch History.Last()._NewStateFingerprint
+    // when that event's NewStateClass matches our class. WithoutHistory uses _CurrentStateFingerprint
+    // gated on _CurrentStateClass match. No-op for non-authority, local-only, or non-matching
+    // payload state (defensive against fast follow-up transitions racing past this Construct).
+    auto
+    DoBackfillFingerprintToRepData(
+        FCk_Handle_SmState_UnderConstruction& InStateHandle) -> void;
+
     // ================================================================================================================
     // MEMBERS
     // ================================================================================================================
