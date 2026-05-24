@@ -1,9 +1,11 @@
 #include "CkSmTransition_Processor.h"
 
 #include "CkStateMachine/Condition/CkSmCondition_Utils.h"
+#include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
 #include "CkStateMachine/State/CkSmState_Fragment.h"
 #include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
+#include "CkStateMachine/Transition/CkSmTransition_Utils.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
@@ -42,6 +44,21 @@ namespace ck
         -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
+
+        // Authority gating (spec §5/§6): condition evaluation drives transitions. Non-authority
+        // machines must not evaluate — they receive transitions via replication. Keep the dirty
+        // marker removed (above) so we don't loop; the rep-driven replay path (Phase 7) will
+        // commit the transition on its own schedule.
+        const auto SmHandle = UCk_Utils_SmTransition_UE::Get_OwningStateMachine(InHandle);
+        const auto NetContext = ck::statemachine::ComputeNetContext(SmHandle);
+
+        if (NetContext == ECk_Sm_NetContext::NonOwningClient)
+        { return; }
+
+        if (NetContext == ECk_Sm_NetContext::OwningClient
+            && UCk_Utils_StateMachine_UE::Get_AuthorityModel(SmHandle)
+                != ECk_Sm_AuthorityModel::OwningClientAuthoritative)
+        { return; }
 
         const auto Conditions = UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::Get_ValidEntries(InHandle);
         auto ParentState = TUtils_Sm_ParentState::Get_StoredEntity(InHandle);
