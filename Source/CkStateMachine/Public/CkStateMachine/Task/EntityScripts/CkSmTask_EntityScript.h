@@ -3,6 +3,7 @@
 #include "CkEcs/EntityScript/CkEntityScript.h"
 
 #include "CkCore/Time/CkTime.h"
+#include "CkStateMachine/Net/CkStateMachine_NetContext.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment_Data.h"
 
 #include "CkSmTask_EntityScript.generated.h"
@@ -14,11 +15,6 @@ class CKSTATEMACHINE_API UCk_SmTask_EntityScript : public UCk_EntityScript_UE
 
 public:
     CK_GENERATED_BODY(UCk_SmTask_EntityScript);
-
-    UCk_SmTask_EntityScript()
-    {
-        _Replication = ECk_Replication::DoesNotReplicate;
-    }
 
     // ================================================================================================================
     // LIFECYCLE (EntityScript overrides)
@@ -46,11 +42,13 @@ protected:
 public:
     virtual auto
     EnterTask(
-        FCk_Handle_SmTask InHandle) -> void;
+        FCk_Handle_SmTask InHandle,
+        ECk_Sm_NetContext InNetContext) -> void;
 
     virtual auto
     ExitTask(
-        FCk_Handle_SmTask InHandle) -> void;
+        FCk_Handle_SmTask InHandle,
+        ECk_Sm_NetContext InNetContext) -> void;
 
     // ================================================================================================================
     // VIRTUAL METHODS (user overrides)
@@ -60,7 +58,8 @@ public:
     virtual auto
     Tick(
         FCk_Handle_SmTask InHandle,
-        FCk_Time InDeltaT) -> ECk_SmTaskResult;
+        FCk_Time InDeltaT,
+        ECk_Sm_NetContext InNetContext) -> ECk_SmTaskResult;
 
     // ================================================================================================================
     // BLUEPRINT IMPLEMENTABLE EVENTS
@@ -73,21 +72,24 @@ protected:
     ECk_SmTaskResult
     DoTick(
         FCk_Handle_SmTask InHandle,
-        FCk_Time InDeltaT);
+        FCk_Time InDeltaT,
+        ECk_Sm_NetContext InNetContext);
 
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Ck|SM|Task",
         DisplayName = "Enter Task")
     void
     DoEnterTask(
-        FCk_Handle_SmTask InHandle);
+        FCk_Handle_SmTask InHandle,
+        ECk_Sm_NetContext InNetContext);
 
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Ck|SM|Task",
         DisplayName = "Exit Task")
     void
     DoExitTask(
-        FCk_Handle_SmTask InHandle);
+        FCk_Handle_SmTask InHandle,
+        ECk_Sm_NetContext InNetContext);
 
     // ================================================================================================================
     // HELPERS

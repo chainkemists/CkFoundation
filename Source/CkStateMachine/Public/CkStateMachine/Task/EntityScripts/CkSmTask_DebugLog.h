@@ -23,11 +23,13 @@ public:
 public:
     auto
     EnterTask(
-        FCk_Handle_SmTask InHandle) -> void override;
+        FCk_Handle_SmTask InHandle,
+        ECk_Sm_NetContext InNetContext) -> void override;
 
     auto
     ExitTask(
-        FCk_Handle_SmTask InHandle) -> void override;
+        FCk_Handle_SmTask InHandle,
+        ECk_Sm_NetContext InNetContext) -> void override;
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
