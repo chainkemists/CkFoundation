@@ -153,10 +153,18 @@ namespace ck
         TSubclassOf<UCk_SmState_EntityScript> _PreviousStateClass;
         TSubclassOf<UCk_SmState_EntityScript> _TargetStateClass;
 
+        // Fingerprint carried from the replicated event (set by ApplyReplicatedHistory). The
+        // commit processor uses it post-Construct to verify the non-authority machine's local
+        // DefineState produced the same structural hash as authority (spec §9). Server-originated
+        // transitions (HandleRequests path) leave this at 0 — that's the sentinel for "no
+        // verification, this is the authoritative branch".
+        int32 _NewStateFingerprint = 0;
+
     public:
         CK_PROPERTY(_PreviousStateHandle);
         CK_PROPERTY(_PreviousStateClass);
         CK_PROPERTY(_TargetStateClass);
+        CK_PROPERTY(_NewStateFingerprint);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
