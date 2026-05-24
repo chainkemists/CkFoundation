@@ -424,6 +424,85 @@ namespace ck
 
         UCk_Utils_StateMachine_UE::TryCheckEntryBreakpoint(InHandle, TargetStateClass);
 
+        // Authority-side publication. On a server-authoritative SM the server writes the event
+        // into the replicated payload; on an owning-client-authoritative SM the owning client
+        // buffers the event into FFragment_Sm_PendingClientBatch for end-of-frame RPC push
+        // (Phase 10 wires the push processor).
+        //
+        // The new state's structural fingerprint isn't available at commit time — DefineState
+        // runs inside the EntityScript Construct of the freshly-created state, which is deferred
+        // by one frame from this commit. A follow-up Phase 9 task will introduce a deferred
+        // publication path (filter on the new state's FFragment_SmState_Fingerprint becoming
+        // present) so that the event carries the correct fingerprint. Until that lands, events
+        // ship with _NewStateFingerprint = 0, which the transition-time verify path interprets
+        // as "no fingerprint to compare" and skips. Server publication itself still works —
+        // clients still receive the replayed transitions.
+        if (InParams.Get_Replication() == ECk_Replication::Replicates)
+        {
+            const auto NetContext   = ck::statemachine::ComputeNetContext(InHandle);
+            const auto AuthModel    = InParams.Get_AuthorityModel();
+            const auto IsServerAuth =
+                NetContext == ECk_Sm_NetContext::Server
+                && AuthModel == ECk_Sm_AuthorityModel::ServerAuthoritative;
+            const auto IsOwningClientAuth =
+                NetContext == ECk_Sm_NetContext::OwningClient
+                && AuthModel == ECk_Sm_AuthorityModel::OwningClientAuthoritative;
+
+            if (IsServerAuth || IsOwningClientAuth)
+            {
+                auto& NextSeq = InHandle.AddOrGet<FFragment_Sm_NextSeq>();
+                const auto SeqValue = NextSeq.Get_Next();
+                NextSeq.Set_Next(SeqValue + 1);
+
+                constexpr auto FingerprintPendingDeferredPopulation = 0;
+
+                const auto Event = FCk_Sm_TransitionEvent
+                {
+                    PreviousStateClass,
+                    TargetStateClass,
+                    SeqValue,
+                    FingerprintPendingDeferredPopulation
+                };
+
+                if (IsServerAuth)
+                {
+                    switch (InParams.Get_ReplicationModel())
+                    {
+                        case ECk_Sm_ReplicationModel::WithHistory:
+                        {
+                            UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_StateMachine_WithHistory>(
+                                InHandle,
+                                [&](FCk_RepData_StateMachine_WithHistory& RepData) -> void
+                                {
+                                    auto& History = RepData.Get_History();
+                                    History.Add(Event);
+                                    if (History.Num() > FCk_RepData_StateMachine_WithHistory::RingSize)
+                                    { History.RemoveAt(0); }
+                                });
+                            break;
+                        }
+                        case ECk_Sm_ReplicationModel::WithoutHistory:
+                        {
+                            UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_StateMachine_NoHistory>(
+                                InHandle,
+                                [&](FCk_RepData_StateMachine_NoHistory& RepData) -> void
+                                {
+                                    RepData.Set_CurrentStateClass(TargetStateClass);
+                                    RepData.Set_Seq(SeqValue);
+                                    RepData.Set_CurrentStateFingerprint(FingerprintPendingDeferredPopulation);
+                                });
+                            break;
+                        }
+                    }
+                }
+                else // OwningClientAuth: buffer for RPC push (Phase 10 wires the flush)
+                {
+                    auto& Batch = InHandle.AddOrGet<FFragment_Sm_PendingClientBatch>();
+                    Batch.Get_PendingEvents().Add(Event);
+                }
+            }
+        }
+
         InHandle.Try_Remove<FFragment_Sm_PendingTransition>();
     }
 
@@ -496,6 +575,7 @@ namespace ck
         Pending._PreviousStateHandle = InCurrent.Get_CurrentStateHandle();
         Pending._PreviousStateClass  = Event.Get_PreviousStateClass();
         Pending._TargetStateClass    = Event.Get_NewStateClass();
+        Pending._NewStateFingerprint = Event.Get_NewStateFingerprint();
 
         // Watermark the highest seq we've applied. The OnChange handler uses this to filter
         // future delta payloads down to only seqs we haven't yet processed.
