@@ -59,6 +59,34 @@ auto
 
 auto
     UCk_Utils_StateMachine_UE::
+    Add_WithParams(
+        FCk_Handle& InOwner,
+        const FCk_Fragment_StateMachine_ParamsData& InParams)
+    -> FCk_Handle_StateMachine
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_InitialStateClass()),
+        TEXT("Invalid initial state class when creating StateMachine with params"))
+    { return {}; }
+
+    UCk_Utils_Handle_UE::Set_DebugName(InOwner,
+        *ck::Format_UE(TEXT("State Machine [{}]"), InParams.Get_InitialStateClass()->GetFName()),
+        ECk_Override::DoNotOverride);
+
+    InOwner.Add<ck::FTag_Sm_RequiresSetup>();
+    InOwner.Add<ck::FFragment_Sm_Params>(InParams);
+    InOwner.Add<ck::FFragment_Sm_Current>();
+
+#if CK_BUILD_SM_GRAPH_WALK
+    InOwner.Add<ck::FTag_Sm_Debug_RequiresGraphWalk>();
+#endif
+
+    return Cast(InOwner);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_StateMachine_UE::
     Request_Start(
         FCk_Handle_StateMachine& InStateMachine)
     -> FCk_Handle_StateMachine
