@@ -3,6 +3,7 @@
 #include "CkStateMachine/CkStateMachine_Log.h"
 #include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
 #include "CkStateMachine/Net/CkStateMachine_RepData.h"
+#include "CkStateMachine/Net/CkStateMachine_TestSupport.h"
 #include "CkStateMachine/Debug/CkStateMachine_Debug_GraphWalk_Fragment.h"
 #include "CkStateMachine/State/CkSmState_Fingerprint.h"
 #include "CkStateMachine/State/CkSmState_Fragment.h"
@@ -380,8 +381,24 @@ auto
     if (NOT InStateHandle.Has<ck::FFragment_SmState_Fingerprint>())
     { return; }
 
-    const auto LocalFingerprint = InStateHandle.Get<ck::FFragment_SmState_Fingerprint>().Get_Hash();
+    auto LocalFingerprint = InStateHandle.Get<ck::FFragment_SmState_Fingerprint>().Get_Hash();
     const auto SelfClass        = GetClass();
+
+#if WITH_DEV_AUTOMATION_TESTS
+    // Test-only fake-fingerprint injection for spec §13 test 9 (initial-state mismatch).
+    // The InitialState scope replaces the LocalFingerprint reaching the rep payload so the
+    // FlushPendingReplication_InitialCheck pass on the receive side observes a divergence.
+    if (_OwnerStateMachine.Has<ck::FFragment_Sm_TestFakeFingerprintInjection>())
+    {
+        auto& Injection = _OwnerStateMachine.Get<ck::FFragment_Sm_TestFakeFingerprintInjection>();
+        if (Injection.Get_Scope() == ECk_Sm_TestFakeFingerprintScope::InitialState)
+        {
+            LocalFingerprint = Injection.Get_FakeFingerprint();
+            if (Injection.Get_ConsumeOnUse())
+            { _OwnerStateMachine.Try_Remove<ck::FFragment_Sm_TestFakeFingerprintInjection>(); }
+        }
+    }
+#endif
 
     switch (Params.Get_ReplicationModel())
     {

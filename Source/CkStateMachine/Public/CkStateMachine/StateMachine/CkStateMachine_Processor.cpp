@@ -8,6 +8,7 @@
 #include "CkStateMachine/Net/CkStateMachineRelay_Actor.h"
 #include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
 #include "CkStateMachine/Net/CkStateMachine_RepData.h"
+#include "CkStateMachine/Net/CkStateMachine_TestSupport.h"
 #include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
@@ -537,8 +538,25 @@ namespace ck
                 // and clients can verify on commit. On the very first instantiation of a class
                 // anywhere in this process, the lookup returns 0; the Construct backfill path
                 // (DoBackfillFingerprintToRepData) cleans up that single zero asynchronously.
-                const auto NewStateFingerprint =
+                auto NewStateFingerprint =
                     UCk_SmState_EntityScript::Get_CachedFingerprint(TargetStateClass);
+
+#if WITH_DEV_AUTOMATION_TESTS
+                // Test-only fake-fingerprint injection (spec §13 tests 8 + 9). When armed via
+                // UCk_Utils_StateMachine_Test_UE::Test_InjectFakeFingerprint, replace the cached
+                // value with the test-supplied fake before it reaches the wire. Receive side
+                // runs the genuine verify path; tests assert the determinism fault response.
+                if (InHandle.Has<FFragment_Sm_TestFakeFingerprintInjection>())
+                {
+                    auto& Injection = InHandle.Get<FFragment_Sm_TestFakeFingerprintInjection>();
+                    if (Injection.Get_Scope() == ECk_Sm_TestFakeFingerprintScope::NextTransition)
+                    {
+                        NewStateFingerprint = Injection.Get_FakeFingerprint();
+                        if (Injection.Get_ConsumeOnUse())
+                        { InHandle.Try_Remove<FFragment_Sm_TestFakeFingerprintInjection>(); }
+                    }
+                }
+#endif
 
                 const auto Event = FCk_Sm_TransitionEvent
                 {
