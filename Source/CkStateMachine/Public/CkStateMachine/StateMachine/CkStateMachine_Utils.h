@@ -55,6 +55,18 @@ public:
         TSubclassOf<UCk_SmState_EntityScript> InInitialStateClass,
         ECk_SmAutoStart InAutoStart = ECk_SmAutoStart::OnSetup);
 
+    // Overload accepting a full params struct — required for callers that need to opt into
+    // replication, change the authority model, or override the replication model. The simple
+    // Add() above defaults to DoesNotReplicate / ServerAuthoritative / WithHistory and is fine
+    // for local-only state machines.
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|StateMachine",
+        DisplayName = "[Ck][SM] Add StateMachine With Params")
+    static FCk_Handle_StateMachine
+    Add_WithParams(
+        UPARAM(ref) FCk_Handle& InOwner,
+        const FCk_Fragment_StateMachine_ParamsData& InParams);
+
     // ================================================================================================================
     // CONTROL
     // ================================================================================================================
