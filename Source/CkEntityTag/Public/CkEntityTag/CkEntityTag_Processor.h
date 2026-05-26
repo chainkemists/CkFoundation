@@ -12,7 +12,7 @@ namespace ck
     class CKENTITYTAG_API FProcessor_EntityTag_HandleRequests : public ck_exp::TProcessor<
             FProcessor_EntityTag_HandleRequests,
             FCk_Handle,
-            FFragment_EntityTag_Requests,
+            ck::TReadWrite<FFragment_EntityTag_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
