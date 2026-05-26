@@ -86,6 +86,48 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct CKENTITYTAG_API FCk_Request_EntityTag_AddGameplayTag : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_EntityTag_AddGameplayTag);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_EntityTag_AddGameplayTag);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, Categories="EntityTag"))
+    FGameplayTag _Tag;
+
+public:
+    CK_PROPERTY_GET(_Tag);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_EntityTag_AddGameplayTag, _Tag);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKENTITYTAG_API FCk_Request_EntityTag_TryRemoveGameplayTag : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_EntityTag_TryRemoveGameplayTag);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_EntityTag_TryRemoveGameplayTag);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, Categories="EntityTag"))
+    FGameplayTag _Tag;
+
+public:
+    CK_PROPERTY_GET(_Tag);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_EntityTag_TryRemoveGameplayTag, _Tag);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Delegate_EntityTag_OnTagUpdated,
     FCk_Handle, InOwner,
