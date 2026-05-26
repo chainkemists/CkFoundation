@@ -33,6 +33,7 @@ namespace ck
         TArray<TArray<FCk_Handle>>             _ResultsPerRequirement;
         bool                                   _IsSatisfied  = false;
         bool                                   _HasFiredOnce = false;
+        int32                                  _ContinuousUpdateListenerCount = 0;
 
     public:
         CK_PROPERTY_GET(_Requirements);
@@ -90,6 +91,16 @@ namespace ck
         EntityTagQuery_OnSatisfied,
         FCk_Delegate_EntityTagQuery_OnSatisfied,
         FCk_Handle_EntityTagQuery,
+        TArray<FCk_EntityTagQuery_Result>);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKENTITYTAG_API,
+        EntityTagQuery_OnContinuousUpdate,
+        FCk_Delegate_EntityTagQuery_OnContinuousUpdate,
+        FCk_Handle_EntityTagQuery,
+        bool,
         TArray<FCk_EntityTagQuery_Result>);
 
     // --------------------------------------------------------------------------------------------------------------------

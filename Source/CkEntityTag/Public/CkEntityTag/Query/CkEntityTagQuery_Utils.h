@@ -94,6 +94,24 @@ public:
         UPARAM(ref) FCk_Handle_EntityTagQuery& InQuery,
         const FCk_Delegate_EntityTagQuery_OnSatisfied& InDelegate);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|EntityTagQuery",
+              DisplayName = "[Ck][EntityTagQuery] Bind To OnContinuousUpdate")
+    static FCk_Handle_EntityTagQuery
+    BindTo_OnContinuousUpdate(
+        UPARAM(ref) FCk_Handle_EntityTagQuery& InQuery,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_EntityTagQuery_OnContinuousUpdate& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|EntityTagQuery",
+              DisplayName = "[Ck][EntityTagQuery] Unbind From OnContinuousUpdate")
+    static FCk_Handle_EntityTagQuery
+    UnbindFrom_OnContinuousUpdate(
+        UPARAM(ref) FCk_Handle_EntityTagQuery& InQuery,
+        const FCk_Delegate_EntityTagQuery_OnContinuousUpdate& InDelegate);
+
 public:
     // ---- FName factories ----
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityTagQuery",
