@@ -186,6 +186,16 @@ private:
     DoApply_TryRemove(
         FCk_Handle& InHandle,
         FName InTag) -> void;
+
+    static auto
+    DoApply_AddGameplayTag(
+        FCk_Handle& InHandle,
+        FGameplayTag InTag) -> void;
+
+    static auto
+    DoApply_TryRemoveGameplayTag(
+        FCk_Handle& InHandle,
+        FGameplayTag InTag) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
