@@ -57,6 +57,21 @@ auto
         return InHandle;
     }
 
+    auto& Requests = InHandle.AddOrGet<ck::FFragment_EntityTag_Requests>();
+    Requests._Requests.Emplace(FCk_Request_EntityTag_Add{InTag});
+
+    return InHandle;
+}
+
+// ----
+
+auto
+    UCk_Utils_EntityTag_UE::
+    DoApply_Add(
+        FCk_Handle& InHandle,
+        FName InTag)
+    -> void
+{
     auto& Current = InHandle.AddOrGet<ck::FFragment_EntityTag_Current>();
 
     const auto TagIndex = ck::algo::FindIndex(Current._Tags, [InTag](const ck::FEntityTagCount& InPair)
@@ -82,8 +97,6 @@ auto
             InHandle,
             ck::MakePayload(InHandle, InTag, ECk_EntityTagUpdate::Added));
     }
-
-    return InHandle;
 }
 
 auto
@@ -118,8 +131,6 @@ auto
         Current._GameplayTagCounts[GameplayTagIndex]._Count++;
     }
 
-    // GetGameplayTagParents() returns self + every ancestor (A.B.C -> {A.B.C, A.B, A}).
-    // Adding each as an FName entry lets ForEach_Entity("A.B") find entities tagged "A.B.C".
     for (const auto& TagInChain : InTag.GetGameplayTagParents())
     {
         Add(InHandle, TagInChain.GetTagName());
@@ -166,6 +177,15 @@ auto
     -> bool
 {
     return Has(InHandle, InTag.GetTagName());
+}
+
+auto
+    UCk_Utils_EntityTag_UE::
+    Has_AnyTag(
+        const FCk_Handle& InHandle)
+    -> bool
+{
+    return ck::IsValid(InHandle) && InHandle.Has<ck::FFragment_EntityTag_Current>();
 }
 
 auto
@@ -223,8 +243,26 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Handle passed. Unable to remove Tag [{}] from Entity"), InTag)
     { return ECk_SucceededFailed::Failed; }
 
-    if (NOT InHandle.Has<ck::FFragment_EntityTag_Current>())
+    if (NOT Has(InHandle, InTag))
     { return ECk_SucceededFailed::Failed; }
+
+    auto& Requests = InHandle.AddOrGet<ck::FFragment_EntityTag_Requests>();
+    Requests._Requests.Emplace(FCk_Request_EntityTag_TryRemove{InTag});
+
+    return ECk_SucceededFailed::Succeeded;
+}
+
+// ----
+
+auto
+    UCk_Utils_EntityTag_UE::
+    DoApply_TryRemove(
+        FCk_Handle& InHandle,
+        FName InTag)
+    -> void
+{
+    if (NOT InHandle.Has<ck::FFragment_EntityTag_Current>())
+    { return; }
 
     auto& Current = InHandle.Get<ck::FFragment_EntityTag_Current>();
 
@@ -234,7 +272,7 @@ auto
     });
 
     if (TagIndex == INDEX_NONE)
-    { return ECk_SucceededFailed::Failed; }
+    { return; }
 
     Current._Tags[TagIndex]._Count--;
 
@@ -261,8 +299,6 @@ auto
             InHandle,
             ck::MakePayload(InHandle, InTag, ECk_EntityTagUpdate::Removed));
     }
-
-    return ECk_SucceededFailed::Succeeded;
 }
 
 auto
