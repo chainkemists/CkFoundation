@@ -4,15 +4,24 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Request/CkRequest_Data.h"
+
+#include <StructUtils/InstancedStruct.h>
 
 #include "CkDependencyProvider_Request.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Request struct for the Register_World / Register_GameInstance BPFL calls.
-// Bundles HandleType + ProvidedHandle + OverwritePolicy per project convention §7.
+// Request struct for the Register BPFL call. Carries the typed handle as a
+// single boxed FInstancedStruct — the contained UScriptStruct (e.g.
+// FCk_Handle_DayCycle) serves as the registry key, and the contained bytes
+// carry the FCk_Handle value (typesafe handle subclasses are layout-compatible
+// with FCk_Handle).
+//
+// AS authoring: `FCk_Request_DependencyProvider_Register(FInstancedStruct::Make(_TypedHandle))`.
+// The Hazelight AS plugin preserves the typed UScriptStruct identity through
+// the boxing, so the same call site works for any FCk_Handle_* subclass — no
+// dynamic-handle codegen extension required.
 USTRUCT(BlueprintType)
 struct CKECS_API FCk_Request_DependencyProvider_Register : public FCk_Request_Base
 {
@@ -23,25 +32,16 @@ public:
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_DependencyProvider_Register);
 
 private:
-    // The typed handle's UScriptStruct, used as the lookup key. AS authors
-    // pass `FCk_Handle_<Feature>::StaticStruct()`.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    TObjectPtr<UScriptStruct> _HandleType;
-
-    // The actual handle to hand out on Resolve. May be a typed handle —
-    // the FCk_Handle storage holds the underlying entity reference; consumers
-    // re-cast to the typed handle via the registered type's Cast utility.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FCk_Handle _ProvidedHandle;
+    FInstancedStruct _ProvidedHandle;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     ECk_DependencyProvider_OverwritePolicy _OverwritePolicy = ECk_DependencyProvider_OverwritePolicy::EnsureOnDuplicate;
 
 public:
-    CK_PROPERTY_GET(_HandleType);
     CK_PROPERTY_GET(_ProvidedHandle);
     CK_PROPERTY(_OverwritePolicy);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_DependencyProvider_Register, _HandleType, _ProvidedHandle);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_DependencyProvider_Register, _ProvidedHandle);
 };

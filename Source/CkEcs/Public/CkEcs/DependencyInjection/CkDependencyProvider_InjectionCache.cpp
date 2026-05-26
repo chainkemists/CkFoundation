@@ -36,11 +36,9 @@ namespace
 
         // Unknown scope value → ensure and skip. The class still loads, but
         // this site won't participate in DI. Author needs to fix the meta.
-        CK_ENSURE_IF_NOT(false,
-            TEXT("EntityScript [{}] property [{}] has unknown CkInject scope value [{}]. "
+        CK_TRIGGER_ENSURE(TEXT("EntityScript [{}] property [{}] has unknown CkInject scope value [{}]. "
                  "Expected one of: \"World\", \"GameInstance\". Property skipped from DI."),
-            InScriptClass, InProperty->GetName(), InScopeString)
-        { return {}; }
+            InScriptClass, InProperty->GetName(), InScopeString);
 
         return {};
     }
@@ -74,6 +72,18 @@ auto
 
     {
         FScopeLock Lock(&_PlansLock);
+
+        // Opportunistic dead-weak-ptr prune. AS hot reload reinstances
+        // UClasses (the old UClass becomes GC-eligible) — its weak-ptr key
+        // is still in the map but no longer resolvable. Cleaning up here
+        // keeps the map bounded across long editor sessions without needing
+        // an AS-specific recompile delegate.
+        for (auto It = _Plans.CreateIterator(); It; ++It)
+        {
+            if (NOT It.Key().IsValid())
+            { It.RemoveCurrent(); }
+        }
+
         auto& Stored = _Plans.FindOrAdd(InScriptClass);
         if (Stored.IsEmpty())
         { Stored = MoveTemp(NewPlan); }
@@ -109,7 +119,7 @@ auto
     if (ck::Is_NOT_Valid(InScriptClass))
     { return Plan; }
 
-    const auto* TypeSafeBase = FCk_Handle_TypeSafe::StaticStruct();
+    const auto* TypeSafeBase = FCk_Handle::StaticStruct();
 
     for (auto* Prop : TFieldRange<FStructProperty>(InScriptClass))
     {
@@ -122,15 +132,11 @@ auto
         // Only typed handles (subclasses of FCk_Handle_TypeSafe) participate
         // in DI. The contract IS the typed-handle struct, so injecting into a
         // raw FCk_Handle would have no type signal and is rejected.
-        if (NOT Prop->Struct->IsChildOf(TypeSafeBase))
-        {
-            CK_ENSURE_IF_NOT(false,
+        CK_ENSURE_IF_NOT(Prop->Struct->IsChildOf(TypeSafeBase),
                 TEXT("EntityScript [{}] property [{}] is marked CkInject but its type [{}] "
                      "does not derive from FCk_Handle_TypeSafe. DI requires a typed handle."),
                 InScriptClass, Prop->GetName(), Prop->Struct)
-            { continue; }
-            continue;
-        }
+        { continue; }
 
         const auto ScopeStr = Prop->GetMetaData(CkInjectMetaKey);
         const auto Scope    = ParseScope(ScopeStr, InScriptClass, Prop);

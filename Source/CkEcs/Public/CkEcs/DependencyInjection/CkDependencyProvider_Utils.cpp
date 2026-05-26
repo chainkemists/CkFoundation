@@ -225,3 +225,26 @@ auto
 
     return Plan[InIndex]._HandleType;
 }
+
+auto
+    UCk_Utils_DependencyProvider_UE::
+    Get_InjectionSiteCppTypeName_ForClass(
+        UClass* InScriptClass,
+        int32 InIndex)
+    -> FName
+{
+    const auto& Plan = FCk_InjectionCache::GetOrBuild(InScriptClass);
+    if (NOT Plan.IsValidIndex(InIndex))
+    { return NAME_None; }
+
+    const auto* Prop = Plan[InIndex]._PropertyOnScript;
+    if (Prop == nullptr)
+    { return NAME_None; }
+
+    // GetCPPType returns the spelled-out C++ type for the property (e.g.
+    // "FCk_Handle_DayCycle" for a UPROPERTY of that type). For AS-declared
+    // dynamic handles where FProperty::Struct erases to FCk_Handle, this is
+    // currently our best candidate identity surface for keying the DI
+    // registry on the actual AS-declared type.
+    return FName{*Prop->GetCPPType()};
+}

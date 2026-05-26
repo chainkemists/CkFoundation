@@ -105,4 +105,18 @@ public:
     Get_InjectionSiteHandleType_ForClass(
         UClass* InScriptClass,
         int32 InIndex);
+
+    // Phase 0 diagnostic for the dynamic-handle DI redesign. AS-declared
+    // typed handles (e.g. FCk_Handle_DayCycle) erase to FCk_Handle at the
+    // FProperty::Struct layer, so the current UScriptStruct*-keyed registry
+    // can't distinguish them. Candidate fallback identity: GetCPPType(),
+    // which returns the spelled-out type name ("FCk_Handle_DayCycle"). This
+    // helper exposes it so CkAutoTest_DI_MetaSpike can verify the surface
+    // before the wider refactor commits.
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|DependencyProvider",
+              DisplayName = "[Ck][DI] Get Injection Site CPP Type Name")
+    static FName
+    Get_InjectionSiteCppTypeName_ForClass(
+        UClass* InScriptClass,
+        int32 InIndex);
 };

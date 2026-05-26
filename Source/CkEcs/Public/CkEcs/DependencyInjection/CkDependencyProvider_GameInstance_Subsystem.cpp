@@ -14,12 +14,25 @@ auto
         const FCk_Request_DependencyProvider_Register& InRequest)
     -> void
 {
-    auto* HandleType = InRequest.Get_HandleType().Get();
+    // See sibling World subsystem's Register for rationale on the FInstancedStruct
+    // unboxing pattern — GetPtr<FCk_Handle> covers the typesafe-subclass case.
+    const auto& Boxed = InRequest.Get_ProvidedHandle();
+
+    // See sibling World subsystem for rationale on the const_cast — UScriptStruct
+    // CDOs are engine-lifetime statics and the registry maps key on the
+    // non-const pointer.
+    auto* HandleType = const_cast<UScriptStruct*>(Boxed.GetScriptStruct());
     CK_ENSURE_IF_NOT(ck::IsValid(HandleType),
-        TEXT("DependencyProvider Register called with null HandleType"))
+        TEXT("DependencyProvider Register called with empty FInstancedStruct (no UScriptStruct)"))
     { return; }
 
-    const auto& Provided = InRequest.Get_ProvidedHandle();
+    const auto* ProvidedPtr = Boxed.GetPtr<FCk_Handle>();
+    CK_ENSURE_IF_NOT(ProvidedPtr != nullptr,
+        TEXT("DependencyProvider Register called with type [{}] that is not an FCk_Handle subclass"),
+        HandleType)
+    { return; }
+
+    const auto& Provided = *ProvidedPtr;
     CK_ENSURE_IF_NOT(ck::IsValid(Provided),
         TEXT("DependencyProvider Register called with invalid handle for type [{}]"), HandleType)
     { return; }

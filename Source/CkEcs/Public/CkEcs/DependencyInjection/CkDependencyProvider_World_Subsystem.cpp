@@ -14,12 +14,29 @@ auto
         const FCk_Request_DependencyProvider_Register& InRequest)
     -> void
 {
-    auto* HandleType = InRequest.Get_HandleType().Get();
+    // The request now carries a single boxed FInstancedStruct. UScriptStruct
+    // (registry key) and FCk_Handle (provided value) are both pulled from it.
+    // GetPtr<FCk_Handle> succeeds when the contained struct is FCk_Handle or
+    // any typesafe subclass (FCk_Handle_TypeSafe-derived), which gives us
+    // type validation for free.
+    const auto& Boxed = InRequest.Get_ProvidedHandle();
+
+    // FInstancedStruct::GetScriptStruct returns `const UScriptStruct*`; the
+    // registry maps key on `UScriptStruct*`. UScriptStruct CDOs are
+    // engine-lifetime statics (see header comment on `_Providers`), so the
+    // const_cast is safe and matches the codebase convention.
+    auto* HandleType = const_cast<UScriptStruct*>(Boxed.GetScriptStruct());
     CK_ENSURE_IF_NOT(ck::IsValid(HandleType),
-        TEXT("DependencyProvider Register called with null HandleType"))
+        TEXT("DependencyProvider Register called with empty FInstancedStruct (no UScriptStruct)"))
     { return; }
 
-    const auto& Provided = InRequest.Get_ProvidedHandle();
+    const auto* ProvidedPtr = Boxed.GetPtr<FCk_Handle>();
+    CK_ENSURE_IF_NOT(ProvidedPtr != nullptr,
+        TEXT("DependencyProvider Register called with type [{}] that is not an FCk_Handle subclass"),
+        HandleType)
+    { return; }
+
+    const auto& Provided = *ProvidedPtr;
     CK_ENSURE_IF_NOT(ck::IsValid(Provided),
         TEXT("DependencyProvider Register called with invalid handle for type [{}]"), HandleType)
     { return; }
