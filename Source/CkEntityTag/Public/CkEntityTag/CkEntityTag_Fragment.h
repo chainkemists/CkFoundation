@@ -80,6 +80,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_EntityTag_Requests);
 
         friend class FProcessor_EntityTag_HandleRequests;
+        friend class ::UCk_Utils_EntityTag_UE;
 
         using AddType       = FCk_Request_EntityTag_Add;
         using TryRemoveType = FCk_Request_EntityTag_TryRemove;
