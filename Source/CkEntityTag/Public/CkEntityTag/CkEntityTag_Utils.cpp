@@ -113,6 +113,21 @@ auto
     if (NOT InTag.IsValid())
     { return InHandle; }
 
+    auto& Requests = InHandle.AddOrGet<ck::FFragment_EntityTag_Requests>();
+    Requests._Requests.Emplace(FCk_Request_EntityTag_AddGameplayTag{InTag});
+
+    return InHandle;
+}
+
+// ----
+
+auto
+    UCk_Utils_EntityTag_UE::
+    DoApply_AddGameplayTag(
+        FCk_Handle& InHandle,
+        FGameplayTag InTag)
+    -> void
+{
     auto& Current = InHandle.AddOrGet<ck::FFragment_EntityTag_Current>();
 
     const auto GameplayTagIndex = ck::algo::FindIndex(Current._GameplayTagCounts,
@@ -133,7 +148,7 @@ auto
 
     for (const auto& TagInChain : InTag.GetGameplayTagParents())
     {
-        Add(InHandle, TagInChain.GetTagName());
+        DoApply_Add(InHandle, TagInChain.GetTagName());
     }
 
     if (AddNewGameplayTag)
@@ -142,8 +157,6 @@ auto
             InHandle,
             ck::MakePayload(InHandle, InTag, ECk_EntityTagUpdate::Added));
     }
-
-    return InHandle;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -240,10 +253,8 @@ auto
         FName InTag)
     -> ECk_SucceededFailed
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Handle passed. Unable to remove Tag [{}] from Entity"), InTag)
-    { return ECk_SucceededFailed::Failed; }
-
-    if (NOT Has(InHandle, InTag))
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+        TEXT("Invalid Handle passed. Unable to remove Tag [{}] from Entity"), InTag)
     { return ECk_SucceededFailed::Failed; }
 
     auto& Requests = InHandle.AddOrGet<ck::FFragment_EntityTag_Requests>();
@@ -312,14 +323,29 @@ auto
         TEXT("Invalid Handle passed. Unable to remove Tag [{}] from Entity"), InTag)
     { return ECk_SucceededFailed::Failed; }
 
-    if (NOT InHandle.Has<ck::FFragment_EntityTag_Current>())
+    if (NOT InTag.IsValid())
     { return ECk_SucceededFailed::Failed; }
+
+    auto& Requests = InHandle.AddOrGet<ck::FFragment_EntityTag_Requests>();
+    Requests._Requests.Emplace(FCk_Request_EntityTag_TryRemoveGameplayTag{InTag});
+
+    return ECk_SucceededFailed::Succeeded;
+}
+
+// ----
+
+auto
+    UCk_Utils_EntityTag_UE::
+    DoApply_TryRemoveGameplayTag(
+        FCk_Handle& InHandle,
+        FGameplayTag InTag)
+    -> void
+{
+    if (NOT InHandle.Has<ck::FFragment_EntityTag_Current>())
+    { return; }
 
     auto& Current = InHandle.Get<ck::FFragment_EntityTag_Current>();
 
-    // Reject partial matches: removing `A.B` from an entity that only has `A.B.C` is not allowed.
-    // Only tags added explicitly via Add_UsingGameplayTag appear in _GameplayTagCounts (parents do
-    // not), so an absent entry is exactly the partial-match case we want to reject.
     const auto GameplayTagIndex = ck::algo::FindIndex(Current._GameplayTagCounts,
         [InTag](const ck::FEntityGameplayTagCount& InPair)
     {
@@ -327,7 +353,7 @@ auto
     });
 
     if (GameplayTagIndex == INDEX_NONE)
-    { return ECk_SucceededFailed::Failed; }
+    { return; }
 
     Current._GameplayTagCounts[GameplayTagIndex]._Count--;
     const auto WasRemoved = Current._GameplayTagCounts[GameplayTagIndex]._Count <= 0;
@@ -337,13 +363,9 @@ auto
         Current._GameplayTagCounts.RemoveAtSwap(GameplayTagIndex);
     }
 
-    // Mirror-remove the self + parent FName chain we added on Add_UsingGameplayTag.
     for (const auto& TagInChain : InTag.GetGameplayTagParents())
     {
-        const auto RemoveResult = Request_TryRemove(InHandle, TagInChain.GetTagName());
-        CK_ENSURE_IF_NOT(RemoveResult == ECk_SucceededFailed::Succeeded,
-            TEXT("Failed to remove FName mirror Tag [{}] (in chain for [{}]) on Entity [{}]. EntityTag state is corrupted."), TagInChain, InTag, InHandle)
-        { return ECk_SucceededFailed::Failed; }
+        DoApply_TryRemove(InHandle, TagInChain.GetTagName());
     }
 
     if (WasRemoved)
@@ -352,8 +374,6 @@ auto
             InHandle,
             ck::MakePayload(InHandle, InTag, ECk_EntityTagUpdate::Removed));
     }
-
-    return ECk_SucceededFailed::Succeeded;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

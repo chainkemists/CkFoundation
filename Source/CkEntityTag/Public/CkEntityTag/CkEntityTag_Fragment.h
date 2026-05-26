@@ -82,9 +82,15 @@ namespace ck
         friend class FProcessor_EntityTag_HandleRequests;
         friend class ::UCk_Utils_EntityTag_UE;
 
-        using AddType       = FCk_Request_EntityTag_Add;
-        using TryRemoveType = FCk_Request_EntityTag_TryRemove;
-        using RequestType   = std::variant<AddType, TryRemoveType>;
+        using AddType                  = FCk_Request_EntityTag_Add;
+        using TryRemoveType            = FCk_Request_EntityTag_TryRemove;
+        using AddGameplayTagType       = FCk_Request_EntityTag_AddGameplayTag;
+        using TryRemoveGameplayTagType = FCk_Request_EntityTag_TryRemoveGameplayTag;
+        using RequestType = std::variant<
+            AddType,
+            TryRemoveType,
+            AddGameplayTagType,
+            TryRemoveGameplayTagType>;
 
     private:
         TArray<RequestType> _Requests;

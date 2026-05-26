@@ -56,4 +56,24 @@ namespace ck
     {
         UCk_Utils_EntityTag_UE::DoApply_TryRemove(InHandle, InRequest.Get_Tag());
     }
+
+    auto
+        FProcessor_EntityTag_HandleRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FCk_Request_EntityTag_AddGameplayTag& InRequest)
+        -> void
+    {
+        UCk_Utils_EntityTag_UE::DoApply_AddGameplayTag(InHandle, InRequest.Get_Tag());
+    }
+
+    auto
+        FProcessor_EntityTag_HandleRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FCk_Request_EntityTag_TryRemoveGameplayTag& InRequest)
+        -> void
+    {
+        UCk_Utils_EntityTag_UE::DoApply_TryRemoveGameplayTag(InHandle, InRequest.Get_Tag());
+    }
 }
