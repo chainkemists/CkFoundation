@@ -158,3 +158,126 @@ auto
     }
     return Out;
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+// Make_Requirement_* factories (Blueprint/AS surface — mirror the C++ named factories on FCk_EntityTagQuery_Requirement)
+
+auto
+    UCk_Utils_EntityTagQuery_UE::
+    Make_Requirement_Single(
+        FName InTag)
+    -> FCk_EntityTagQuery_Requirement
+{
+    return FCk_EntityTagQuery_Requirement::Single(InTag);
+}
+
+auto
+    UCk_Utils_EntityTagQuery_UE::
+    Make_Requirement_Of(
+        FName InTag,
+        int32 InCount)
+    -> FCk_EntityTagQuery_Requirement
+{
+    return FCk_EntityTagQuery_Requirement::Of(InTag, InCount);
+}
+
+auto
+    UCk_Utils_EntityTagQuery_UE::
+    Make_Requirement_All(
+        FName InTag)
+    -> FCk_EntityTagQuery_Requirement
+{
+    return FCk_EntityTagQuery_Requirement::All(InTag);
+}
+
+auto
+    UCk_Utils_EntityTagQuery_UE::
+    Make_Requirement_Single_WithEnsure(
+        FName InTag,
+        int32 InMaxAllowed)
+    -> FCk_EntityTagQuery_Requirement
+{
+    return FCk_EntityTagQuery_Requirement::Single(InTag).WithEnsure(InMaxAllowed);
+}
+
+auto
+    UCk_Utils_EntityTagQuery_UE::
+    Make_Requirement_Of_WithEnsure(
+        FName InTag,
+        int32 InCount,
+        int32 InMaxAllowed)
+    -> FCk_EntityTagQuery_Requirement
+{
+    return FCk_EntityTagQuery_Requirement::Of(InTag, InCount).WithEnsure(InMaxAllowed);
+}
+
+auto
+    UCk_Utils_EntityTagQuery_UE::
+    Make_Requirement_All_WithEnsure(
+        FName InTag,
+        int32 InMaxAllowed)
+    -> FCk_EntityTagQuery_Requirement
+{
+    return FCk_EntityTagQuery_Requirement::All(InTag).WithEnsure(InMaxAllowed);
+}
+
+// ---- GameplayTag flavours: convert via InTag.GetTagName() so parent-flattening carries through ----
+
+auto
+    UCk_Utils_EntityTagQuery_UE::
+    Make_Requirement_Single_FromGameplayTag(
+        FGameplayTag InTag)
+    -> FCk_EntityTagQuery_Requirement
+{
+    return Make_Requirement_Single(InTag.GetTagName());
+}
+
+auto
+    UCk_Utils_EntityTagQuery_UE::
+    Make_Requirement_Of_FromGameplayTag(
+        FGameplayTag InTag,
+        int32 InCount)
+    -> FCk_EntityTagQuery_Requirement
+{
+    return Make_Requirement_Of(InTag.GetTagName(), InCount);
+}
+
+auto
+    UCk_Utils_EntityTagQuery_UE::
+    Make_Requirement_All_FromGameplayTag(
+        FGameplayTag InTag)
+    -> FCk_EntityTagQuery_Requirement
+{
+    return Make_Requirement_All(InTag.GetTagName());
+}
+
+auto
+    UCk_Utils_EntityTagQuery_UE::
+    Make_Requirement_Single_FromGameplayTag_WithEnsure(
+        FGameplayTag InTag,
+        int32 InMaxAllowed)
+    -> FCk_EntityTagQuery_Requirement
+{
+    return Make_Requirement_Single_WithEnsure(InTag.GetTagName(), InMaxAllowed);
+}
+
+auto
+    UCk_Utils_EntityTagQuery_UE::
+    Make_Requirement_Of_FromGameplayTag_WithEnsure(
+        FGameplayTag InTag,
+        int32 InCount,
+        int32 InMaxAllowed)
+    -> FCk_EntityTagQuery_Requirement
+{
+    return Make_Requirement_Of_WithEnsure(InTag.GetTagName(), InCount, InMaxAllowed);
+}
+
+auto
+    UCk_Utils_EntityTagQuery_UE::
+    Make_Requirement_All_FromGameplayTag_WithEnsure(
+        FGameplayTag InTag,
+        int32 InMaxAllowed)
+    -> FCk_EntityTagQuery_Requirement
+{
+    return Make_Requirement_All_WithEnsure(InTag.GetTagName(), InMaxAllowed);
+}
