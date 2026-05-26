@@ -4,6 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkEcs/Request/CkRequest_Data.h"
 
 #include <GameplayTagContainer.h>
 
@@ -39,6 +40,48 @@ public:
     CK_PROPERTY_GET(_Tag);
 
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_EntityTag_ParamsData, _Tag);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKENTITYTAG_API FCk_Request_EntityTag_Add : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_EntityTag_Add);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_EntityTag_Add);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, Categories="EntityTag"))
+    FName _Tag;
+
+public:
+    CK_PROPERTY_GET(_Tag);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_EntityTag_Add, _Tag);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKENTITYTAG_API FCk_Request_EntityTag_TryRemove : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_EntityTag_TryRemove);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_EntityTag_TryRemove);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, Categories="EntityTag"))
+    FName _Tag;
+
+public:
+    CK_PROPERTY_GET(_Tag);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_EntityTag_TryRemove, _Tag);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
