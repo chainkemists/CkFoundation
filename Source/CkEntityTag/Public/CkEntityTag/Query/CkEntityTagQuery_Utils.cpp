@@ -71,6 +71,54 @@ auto
     return InQuery;
 }
 
+// ----
+
+auto
+    UCk_Utils_EntityTagQuery_UE::
+    BindTo_OnContinuousUpdate(
+        FCk_Handle_EntityTagQuery& InQuery,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_EntityTagQuery_OnContinuousUpdate& InDelegate)
+    -> FCk_Handle_EntityTagQuery
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InQuery),
+        TEXT("Invalid Query Handle [{}] passed to BindTo_OnContinuousUpdate"), InQuery)
+    { return InQuery; }
+
+    CK_SIGNAL_BIND(ck::UUtils_Signal_EntityTagQuery_OnContinuousUpdate, InQuery, InDelegate, InBindingPolicy, InPostFireBehavior);
+
+    auto& Current = InQuery.AddOrGet<ck::FFragment_EntityTagQuery_Current>();
+    ++Current._ContinuousUpdateListenerCount;
+
+    return InQuery;
+}
+
+auto
+    UCk_Utils_EntityTagQuery_UE::
+    UnbindFrom_OnContinuousUpdate(
+        FCk_Handle_EntityTagQuery& InQuery,
+        const FCk_Delegate_EntityTagQuery_OnContinuousUpdate& InDelegate)
+    -> FCk_Handle_EntityTagQuery
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InQuery),
+        TEXT("Invalid Query Handle [{}] passed to UnbindFrom_OnContinuousUpdate"), InQuery)
+    { return InQuery; }
+
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_EntityTagQuery_OnContinuousUpdate, InQuery, InDelegate);
+
+    if (InQuery.Has<ck::FFragment_EntityTagQuery_Current>())
+    {
+        auto& Current = InQuery.Get<ck::FFragment_EntityTagQuery_Current>();
+        if (Current._ContinuousUpdateListenerCount > 0)
+        {
+            --Current._ContinuousUpdateListenerCount;
+        }
+    }
+
+    return InQuery;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

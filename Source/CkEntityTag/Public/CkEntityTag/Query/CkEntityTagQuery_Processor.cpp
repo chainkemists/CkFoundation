@@ -192,46 +192,64 @@ namespace ck
 
         InCurrent._IsSatisfied = IsNowSatisfied;
 
-        if (NOT IsNowSatisfied)
-        { return; }
-
-        // Fire decision.
-        auto AnyAllModeAppended = false;
-        if (AnyAppendedThisPass)
+        if (IsNowSatisfied)
         {
-            for (const auto& Req : Requirements)
+            // Fire decision.
+            auto AnyAllModeAppended = false;
+            if (AnyAppendedThisPass)
             {
-                if (Req.Get_Mode() == ECk_EntityTagQuery_CountMode::All)
+                for (const auto& Req : Requirements)
                 {
-                    AnyAllModeAppended = true;
-                    break;
+                    if (Req.Get_Mode() == ECk_EntityTagQuery_CountMode::All)
+                    {
+                        AnyAllModeAppended = true;
+                        break;
+                    }
                 }
+            }
+
+            const auto FirstTime      = NOT InCurrent._HasFiredOnce;
+            const auto AllModeRefire  = InCurrent._HasFiredOnce && AnyAllModeAppended;
+            const auto DropAndRecover = InCurrent._HasFiredOnce && NOT WasSatisfied;
+            const auto ShouldFire     = FirstTime || AllModeRefire || DropAndRecover;
+
+            if (ShouldFire)
+            {
+                // Build result payload.
+                auto Payload = TArray<FCk_EntityTagQuery_Result>{};
+                Payload.Reserve(Requirements.Num());
+                for (int32 i = 0; i < Requirements.Num(); ++i)
+                {
+                    Payload.Emplace(FCk_EntityTagQuery_Result{
+                        Requirements[i].Get_Tag(),
+                        InCurrent._ResultsPerRequirement[i]});
+                }
+
+                InCurrent._HasFiredOnce = true;
+
+                ck::UUtils_Signal_EntityTagQuery_OnSatisfied::Broadcast(
+                    InHandle,
+                    ck::MakePayload(InHandle, Payload));
             }
         }
 
-        const auto FirstTime      = NOT InCurrent._HasFiredOnce;
-        const auto AllModeRefire  = InCurrent._HasFiredOnce && AnyAllModeAppended;
-        const auto DropAndRecover = InCurrent._HasFiredOnce && NOT WasSatisfied;
-        const auto ShouldFire     = FirstTime || AllModeRefire || DropAndRecover;
-
-        if (NOT ShouldFire)
-        { return; }
-
-        // Build result payload.
-        auto Payload = TArray<FCk_EntityTagQuery_Result>{};
-        Payload.Reserve(Requirements.Num());
-        for (int32 i = 0; i < Requirements.Num(); ++i)
+        // Continuous update (opt-in). Fires every Evaluate pass when >= 1 listener bound.
+        // Pay-for-what-you-use: skip both payload construction and broadcast when refcount is 0.
+        if (InCurrent._ContinuousUpdateListenerCount > 0)
         {
-            Payload.Emplace(FCk_EntityTagQuery_Result{
-                Requirements[i].Get_Tag(),
-                InCurrent._ResultsPerRequirement[i]});
+            auto ContinuousPayload = TArray<FCk_EntityTagQuery_Result>{};
+            ContinuousPayload.Reserve(Requirements.Num());
+            for (int32 i = 0; i < Requirements.Num(); ++i)
+            {
+                ContinuousPayload.Emplace(FCk_EntityTagQuery_Result{
+                    Requirements[i].Get_Tag(),
+                    InCurrent._ResultsPerRequirement[i]});
+            }
+
+            ck::UUtils_Signal_EntityTagQuery_OnContinuousUpdate::Broadcast(
+                InHandle,
+                ck::MakePayload(InHandle, InCurrent._IsSatisfied, ContinuousPayload));
         }
-
-        InCurrent._HasFiredOnce = true;
-
-        ck::UUtils_Signal_EntityTagQuery_OnSatisfied::Broadcast(
-            InHandle,
-            ck::MakePayload(InHandle, Payload));
     }
 
     // --------------------------------------------------------------------------------------------------------------------

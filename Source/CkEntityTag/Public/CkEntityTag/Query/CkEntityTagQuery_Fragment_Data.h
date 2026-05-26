@@ -170,3 +170,11 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     const TArray<FCk_EntityTagQuery_Result>&, InResults);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+    FCk_Delegate_EntityTagQuery_OnContinuousUpdate,
+    FCk_Handle_EntityTagQuery, InQuery,
+    bool, InIsSatisfied,
+    const TArray<FCk_EntityTagQuery_Result>&, InResults);
+
+// --------------------------------------------------------------------------------------------------------------------
