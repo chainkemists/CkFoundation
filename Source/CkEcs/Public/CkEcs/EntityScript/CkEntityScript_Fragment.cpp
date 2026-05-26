@@ -31,6 +31,36 @@ namespace ck
     {
     }
 
+    // --------------------------------------------------------------------------------------------------------------------
+
+    FFragment_EntityScript_AwaitingDependencies::
+        FFragment_EntityScript_AwaitingDependencies(
+            UCk_EntityScript_UE* InScript,
+            FCk_Time             InStartedAt,
+            FCk_Handle           InLifetimeOwner,
+            FInstancedStruct     InOriginalSpawnParams,
+            FCk_EntityScript_PostConstruction_Func InPostConstruction)
+        : _Script               (InScript)
+        , _StartedAt            (InStartedAt)
+        , _LifetimeOwner        (MoveTemp(InLifetimeOwner))
+        , _OriginalSpawnParams  (MoveTemp(InOriginalSpawnParams))
+        , _PostConstruction_Func(MoveTemp(InPostConstruction))
+    {
+    }
+
+    FRequest_EntityScript_FinishDeferredConstruct::
+        FRequest_EntityScript_FinishDeferredConstruct(
+            UCk_EntityScript_UE* InScript,
+            FCk_Handle           InLifetimeOwner,
+            FInstancedStruct     InOriginalSpawnParams,
+            FCk_EntityScript_PostConstruction_Func InPostConstruction)
+        : _Script               (InScript)
+        , _LifetimeOwner        (MoveTemp(InLifetimeOwner))
+        , _OriginalSpawnParams  (MoveTemp(InOriginalSpawnParams))
+        , _PostConstruction_Func(MoveTemp(InPostConstruction))
+    {
+    }
+
     auto
         FFragment_PendingReplication::
         Add(

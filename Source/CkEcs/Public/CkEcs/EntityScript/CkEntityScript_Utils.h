@@ -111,6 +111,33 @@ public:
     TryInjectEntityScriptSpawnParams(
         UCk_EntityScript_UE* InEntityScript,
         const FInstancedStruct& InSpawnParams) -> void;
+
+    // Walks the CkInject-cached plan for the script class, resolves what it
+    // can against the World / GameInstance dependency provider subsystems,
+    // and registers pending callbacks for unresolved sites. Returns true iff
+    // all sites resolved (or none existed) — caller proceeds to Construct.
+    // Returns false → caller adds FTag_EntityScript_AwaitingDependencies +
+    // FFragment_EntityScript_AwaitingDependencies and defers Construct; the
+    // pending-callback path or the deadline processor finishes the job.
+    static auto
+    TryInjectEntityScriptDependencies(
+        UCk_EntityScript_UE* InEntityScript,
+        const FCk_Handle& InEntity) -> bool;
+
+    // Extracted from the original spawn processor (CkEntityScript_Processor.cpp:122-223).
+    // Replays the post-injection construction flow: NetParams ensure →
+    // EntityReplicationDriver TryAdd → Construct switch → post-construct
+    // replication block + PostConstruction callback. Shared between the
+    // happy-path spawn processor and the FinishDeferredConstruct processor
+    // so deferred constructs go through exactly the same code path as
+    // immediate constructs.
+    static auto
+    DoFinishConstructionFlow(
+        UCk_EntityScript_UE* InEntityScript,
+        FCk_Handle& InEntity,
+        const FCk_Handle& InLifetimeOwner,
+        const FInstancedStruct& InSpawnParams,
+        const FCk_EntityScript_PostConstruction_Func& InPostConstruction) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

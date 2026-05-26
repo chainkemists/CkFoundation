@@ -8,6 +8,8 @@
 #include "CkCore/Time/CkTime_Utils.h"
 
 #include "CkEcs/CkEcsLog.h"
+#include "CkEcs/DependencyInjection/CkDependencyProvider_GameInstance_Subsystem.h"
+#include "CkEcs/DependencyInjection/CkDependencyProvider_World_Subsystem.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Net/CkNet_Fragment.h"
 #include "CkEcs/Net/CkNet_Utils.h"
@@ -15,6 +17,10 @@
 #include "CkEcs/TransientEntity/CkTransientEntity_Utils.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
+#include "CkEcs/Settings/CkEcs_Settings.h"
+
+#include "Engine/GameInstance.h"
+#include "Engine/World.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -25,6 +31,8 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_FinishConstruction);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_PendingReplicationRetry);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_BeginPlay);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_EndPlay);
+CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_AwaitingDependencies_Deadline);
+CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_FinishDeferredConstruct);
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -119,108 +127,46 @@ namespace ck
         ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — Entity=[{}] Replication=[{}]"),
             NewEntity, NewEntityScript->Get_EffectiveReplication());
 
-        // Net_Params is established upstream in UCk_Utils_EntityScript_UE::Add — every code
-        // path that reaches this processor (both Request_SpawnEntity* wrappers and direct Add
-        // callers) guarantees the fragment is present. The ensure below catches any future
-        // caller that bypasses Add when enqueuing a spawn request.
-        CK_ENSURE_IF_NOT(NewEntity.Has<ck::FFragment_Net_Params>(),
-            TEXT("Entity [{}] is missing NetParams before construction. EntityScript: [{}]. "
-                 "Did a caller enqueue FFragment_EntityScript_RequestSpawnEntity directly instead "
-                 "of going through UCk_Utils_EntityScript_UE::Add?"),
-            NewEntity, EntityScriptClassArchetype) {}
+        // ---- Dependency Injection pass ----------------------------------------------------
+        // Runs AFTER spawn-param injection so caller-supplied handles win (the DI pass only
+        // fills in invalid fields). If any CkInject site cannot be resolved against a
+        // registered provider, the entity is tagged AwaitingDependencies and Construct is
+        // deferred — the resolution-callback path (provider lands → callback fires) or the
+        // deadline processor (timeout → ensure + destroy) finishes the job.
+        const auto AllResolved =
+            UCk_Utils_EntityScript_UE::TryInjectEntityScriptDependencies(NewEntityScript, NewEntity);
 
-        // ---- Replication Driver (before Construct) ----------------------------------------
-        // Non-actor-bearing replicated entities (e.g. children spawned under a replicated
-        // parent) need their driver present before Construct so that utilities called during
-        // Construct — e.g. attribute Add that registers a container fragment — find it.
-        //
-        // TryAddReplicatedFragment walks the lifetime chain for an OwningActor and uses that
-        // actor as the driver UObject's Outer. For entities whose chain already contains a
-        // replicated actor (the common non-actor-bearing case), this succeeds. For entities
-        // that will receive their own OwningActor later during Construct (WithActor and
-        // similar), the chain has no actor yet — TryAddReplicatedFragment fails gracefully
-        // (returns NotAdded) and the driver is added by UCk_Utils_OwningActor_UE::Add at the
-        // moment the actor is linked. One add site per entity, keyed on entity shape.
-        UCk_Utils_EntityReplicationDriver_UE::TryAdd(NewEntity);
-
-        // ---- Construct --------------------------------------------------------------------
-        switch (NewEntityScript->Construct(NewEntity, InRequest.Get_SpawnParams()))
+        if (NOT AllResolved)
         {
-            case ECk_EntityScript_ConstructionFlow::Finished:
-            {
-                const auto& ContinueConstructionFuncName = GET_FUNCTION_NAME_CHECKED(UCk_GenericEntityScript_UE, DoContinueConstruction);
-                CK_ENSURE_IF_NOT(NOT NewEntityScript->GetClass()->IsFunctionImplementedInScript(ContinueConstructionFuncName),
-                    TEXT("EntityScript [{}] Construction is FINISHED, but the script [{}] implements the [ContinueConstruction] event!\n"
-                         "This event will be ignored as it is only invoked for ONGOING construction of EntityScript"),
-                NewEntity, NewEntityScript) {}
+            const auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(NewEntity);
+            const auto TimeParams = FCk_Utils_Time_GetWorldTime_Params{World};
+            const auto Now = UCk_Utils_Time_UE::Get_WorldTime(TimeParams).Get_WorldTime().Get_Time();
 
-                CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
-                    TEXT("Construct() returned Finished"));
-                NewEntity.Add<FTag_EntityScript_FinishConstruction>();
-                break;
-            }
-            case ECk_EntityScript_ConstructionFlow::Continue:
-            {
-                CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
-                    TEXT("Construct() returned Continue"));
-                NewEntity.Add<FTag_EntityScript_ContinueConstruction>();
-                break;
-            }
+            NewEntity.Add<FTag_EntityScript_AwaitingDependencies>();
+            NewEntity.Add<FFragment_EntityScript_AwaitingDependencies>(
+                NewEntityScript,
+                Now,
+                InRequest.Get_Owner(),
+                InRequest.Get_SpawnParams(),
+                InRequest.Get_PostConstruction_Func());
+
+            CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
+                TEXT("Construct deferred — awaiting CkInject dependencies"));
+
+            return;
         }
 
-        // ---- Replication Infrastructure (after Construct) ---------------------------------
-        // Driver was already added — either pre-Construct (chain had an actor) or during
-        // Construct via UCk_Utils_OwningActor_UE::Add (entities that get their own actor,
-        // e.g. WithActor). Here we enable actor-side replication and enqueue the replicate
-        // request.
-        if (NewEntityScript->Get_EffectiveReplication() == ECk_Replication::Replicates)
-        {
-            const auto HasOwningActor = UCk_Utils_OwningActor_UE::Has(NewEntity);
-            ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — HasOwningActor=[{}]"), HasOwningActor);
-
-            if (HasOwningActor)
-            {
-                const auto* OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(NewEntity);
-                const auto* World = OwningActor->GetWorld();
-
-                const auto IsNetworkedAuthority =
-                    World->IsNetMode(NM_DedicatedServer) || World->IsNetMode(NM_ListenServer);
-
-                ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — WithActor path, IsNetworkedAuthority=[{}]"),
-                    IsNetworkedAuthority);
-
-                // Only enqueue replication on a networked authority. In NM_Standalone there
-                // is no net driver. On NM_Client, authority-side replication is not our
-                // concern.
-                if (IsNetworkedAuthority)
-                {
-                    NewEntity.Add<ck::FRequest_EntityScript_Replicate>(
-                        NewEntity, InRequest.Get_SpawnParams(), NewEntityScript);
-                }
-            }
-            else
-            {
-                auto ReplicatedOwner = InRequest.Get_Owner();
-                const auto IsHost = UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(ReplicatedOwner);
-                ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — Non-WithActor path, Owner=[{}] IsHost=[{}]"),
-                    ReplicatedOwner, IsHost);
-
-                if (IsHost)
-                {
-                    NewEntity.Add<ck::FRequest_EntityScript_Replicate>(
-                        ReplicatedOwner, InRequest.Get_SpawnParams(), NewEntityScript);
-                }
-                else
-                {
-                    ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — SKIPPED replication request (owner is not host)"));
-                }
-            }
-        }
-
-        if (InRequest.Get_PostConstruction_Func())
-        {
-            InRequest.Get_PostConstruction_Func()(NewEntity);
-        }
+        // ---- Shared finish-construction path ----------------------------------------------
+        // Net_Params ensure, replication driver TryAdd, Construct switch, post-construct
+        // replication block, and the PostConstruction callback all live in the shared helper
+        // so the FinishDeferredConstruct processor (which runs after deferred resolution)
+        // goes through exactly the same code path.
+        UCk_Utils_EntityScript_UE::DoFinishConstructionFlow(
+            NewEntityScript,
+            NewEntity,
+            InRequest.Get_Owner(),
+            InRequest.Get_SpawnParams(),
+            InRequest.Get_PostConstruction_Func());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -470,9 +416,113 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(EntityScript), TEXT("EntityScript is INVALID for [{}] when attempting to invoke EndPlay on it"), InHandle)
         { return; }
 
+        // Drop any DI pending entries this script registered. Prevents the
+        // pending-bucket map from accumulating dead-script references over a
+        // long session. Safe to call unconditionally — the subsystem walk
+        // is keyed on script pointer and no-ops when there are no entries.
+        if (auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+            ck::IsValid(World))
+        {
+            if (auto* WorldSubsystem = World->GetSubsystem<UCk_DependencyProvider_World_Subsystem_UE>())
+            { WorldSubsystem->UnregisterPending(EntityScript); }
+
+            if (auto* GameInstance = World->GetGameInstance())
+            {
+                if (auto* GameInstanceSubsystem = GameInstance->GetSubsystem<UCk_DependencyProvider_GameInstance_Subsystem_UE>())
+                { GameInstanceSubsystem->UnregisterPending(EntityScript); }
+            }
+        }
+
         CK_CALLSTACK_RECORD(ck::FFragment_EntityScript_Current, InHandle);
         EntityScript->EndPlay();
         InHandle.Add<FTag_EntityScript_HasEndedPlay>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+    //                            Dependency-Injection lifecycle processors
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_EntityScript_AwaitingDependencies_Deadline::
+        ForEachEntity(
+            const TimeType&,
+            HandleType InHandle,
+            const FFragment_EntityScript_Current& InScriptCurrent,
+            const FFragment_EntityScript_AwaitingDependencies& InAwaitingCurrent)
+        -> void
+    {
+        auto* Script = InAwaitingCurrent.Get_Script().Get();
+        if (Script == nullptr)
+        {
+            // Script gone — clean up and bail. Should not happen normally
+            // (the StrongObjectPtr on the fragment keeps it alive), but
+            // defensive in case the entity outlives its world.
+            InHandle.Remove<FTag_EntityScript_AwaitingDependencies>();
+            InHandle.Remove<FFragment_EntityScript_AwaitingDependencies>();
+            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
+            return;
+        }
+
+        auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+        if (ck::Is_NOT_Valid(World))
+        { return; }
+
+        const auto TimeParams = FCk_Utils_Time_GetWorldTime_Params{World};
+        const auto TimeResult = UCk_Utils_Time_UE::Get_WorldTime(TimeParams);
+        const auto Now        = TimeResult.Get_WorldTime().Get_Time();
+
+        const auto Timeout = UCk_Utils_Ecs_Settings_UE::Get_DependencyInjection_Timeout();
+        const auto Elapsed = Now - InAwaitingCurrent.Get_StartedAt();
+        if (Elapsed.Get_Seconds() < Timeout.Get_Seconds())
+        { return; }
+
+        // Timeout — ensure and clean up. The script never made it past
+        // Construct because at least one CkInject dependency never landed.
+        CK_ENSURE_IF_NOT(false,
+            TEXT("DependencyInjection timeout: EntityScript [{}] on entity [{}] waited [{}] "
+                 "for a registered provider that never arrived. Check your "
+                 "UCk_Utils_DependencyProvider_UE::Register calls. Destroying entity."),
+            Script, InHandle, Timeout) {}
+
+        // Drop pending callbacks from both subsystems so they don't fire
+        // on a dead script if the provider lands later in the same world.
+        if (auto* WorldSubsystem = World->GetSubsystem<UCk_DependencyProvider_World_Subsystem_UE>())
+        { WorldSubsystem->UnregisterPending(Script); }
+
+        if (auto* GameInstance = World->GetGameInstance())
+        {
+            if (auto* GameInstanceSubsystem = GameInstance->GetSubsystem<UCk_DependencyProvider_GameInstance_Subsystem_UE>())
+            { GameInstanceSubsystem->UnregisterPending(Script); }
+        }
+
+        InHandle.Remove<FTag_EntityScript_AwaitingDependencies>();
+        InHandle.Remove<FFragment_EntityScript_AwaitingDependencies>();
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_EntityScript_FinishDeferredConstruct::
+        ForEachEntity(
+            const TimeType&,
+            HandleType InHandle,
+            const FRequest_EntityScript_FinishDeferredConstruct& InRequest)
+        -> void
+    {
+        InHandle.Remove<MarkedDirtyBy>();
+
+        auto* Script = InRequest.Get_Script().Get();
+        CK_ENSURE_IF_NOT(ck::IsValid(Script),
+            TEXT("FinishDeferredConstruct fired with null script on entity [{}]"), InHandle)
+        { return; }
+
+        auto Entity = InHandle.ConvertToHandle();
+        UCk_Utils_EntityScript_UE::DoFinishConstructionFlow(
+            Script, Entity,
+            InRequest.Get_LifetimeOwner(),
+            InRequest.Get_OriginalSpawnParams(),
+            InRequest.Get_PostConstruction_Func());
     }
 }
 

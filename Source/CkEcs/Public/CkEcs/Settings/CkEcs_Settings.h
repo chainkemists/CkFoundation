@@ -2,6 +2,7 @@
 
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Time/CkTime.h"
 
 #include "CkEcs/Registry/CkRegistry_SlotTable.h"
 
@@ -107,6 +108,19 @@ private:
               meta = (DisplayName = "Hard Cap (read-only)"))
     int32 _RegistrySlot_HardCap = ck::registry_table::kRegistryTable_MaxSlots;
 
+    // Deadline budget for the EntityScript dependency-injection deferral
+    // path. When a level-placed EntityScript declares a CkInject dependency
+    // whose provider hasn't been registered yet, the entity sits in the
+    // AwaitingDependencies state until either the callback resolution path
+    // fires (provider lands) or this budget elapses (deadline processor
+    // ensures and destroys the entity).
+    //
+    // Project-wide rather than per-script because the value reflects the
+    // worst-case latency for *any* provider to arrive — typically the same
+    // few-frame window regardless of which dependent is waiting.
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Dependency Injection")
+    FCk_Time _DependencyInjection_Timeout = FCk_Time{5.0};
+
 public:
     CK_PROPERTY_GET(_EntityScriptSpawnParamsFolderName);
     CK_PROPERTY_GET(_IgnoredSpawnParamsPropertyNames);
@@ -114,6 +128,7 @@ public:
     CK_PROPERTY_GET(_RegistrySlot_WarnThreshold);
     CK_PROPERTY_GET(_RegistrySlot_WarnReporting);
     CK_PROPERTY_GET(_RegistrySlot_HardCap);
+    CK_PROPERTY_GET(_DependencyInjection_Timeout);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -229,6 +244,11 @@ public:
               Category = "Ck|Utils|Ecs|Settings")
     static int32
     Get_RegistrySlot_HardCap();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ecs|Settings")
+    static FCk_Time
+    Get_DependencyInjection_Timeout();
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ecs|Settings")

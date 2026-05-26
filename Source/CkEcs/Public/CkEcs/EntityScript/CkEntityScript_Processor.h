@@ -197,6 +197,70 @@ namespace ck
             HandleType InHandle,
             const FFragment_EntityScript_Current& InCurrent) -> void;
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+    //                            Dependency-Injection lifecycle processors
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Deadline-only processor for entities awaiting CkInject dependency
+    // resolution. Resolution itself is callback-driven via the
+    // World/GameInstance dependency-provider subsystems' pending-bucket
+    // mechanism — this processor only enforces the per-script timeout
+    // budget. PumpPolicy::SkipPump because FTag_EntityScript_AwaitingDependencies
+    // is sticky for the duration of the wait; without SkipPump every pump
+    // pass would re-burn the elapsed-time compare without progress.
+    class CKECS_API FProcessor_EntityScript_AwaitingDependencies_Deadline : public ck_exp::TProcessor<
+            FProcessor_EntityScript_AwaitingDependencies_Deadline,
+            FCk_Handle_EntityScript,
+            ck::TReadOnly<FFragment_EntityScript_Current>,
+            ck::TReadOnly<FFragment_EntityScript_AwaitingDependencies>,
+            FTag_EntityScript_AwaitingDependencies,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay_Script;
+        using MarkedDirtyBy = FTag_EntityScript_AwaitingDependencies;
+        static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const FFragment_EntityScript_Current& InScriptCurrent,
+            const FFragment_EntityScript_AwaitingDependencies& InAwaitingCurrent) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Consumes FRequest_EntityScript_FinishDeferredConstruct fragments
+    // produced by the resolution-callback path. Replays the post-injection
+    // construction flow via UCk_Utils_EntityScript_UE::DoFinishConstructionFlow
+    // so the deferred-resolution path goes through exactly the same code
+    // path as the immediate-spawn path.
+    class CKECS_API FProcessor_EntityScript_FinishDeferredConstruct : public ck_exp::TProcessor<
+            FProcessor_EntityScript_FinishDeferredConstruct,
+            FCk_Handle_EntityScript,
+            ck::TReadOnly<FRequest_EntityScript_FinishDeferredConstruct>,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay_Script;
+        using MarkedDirtyBy = FRequest_EntityScript_FinishDeferredConstruct;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const FRequest_EntityScript_FinishDeferredConstruct& InRequest) -> void;
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------

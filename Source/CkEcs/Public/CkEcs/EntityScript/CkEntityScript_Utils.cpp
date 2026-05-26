@@ -1,16 +1,30 @@
 #include "CkEntityScript_Utils.h"
 
+#include "CkEntityScript.h"
+#include "CkGenericEntityScript.h"
+
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Reflection/CkReflection_Utils.h"
+#include "CkCore/Time/CkTime_Utils.h"
 
 #include "Misc/MTAccessDetector.h"
+#include "Engine/Engine.h"
+#include "Engine/GameInstance.h"
+#include "Engine/World.h"
 
+#include "CkEcs/CkEcsLog.h"
+#include "CkEcs/DependencyInjection/CkDependencyProvider_GameInstance_Subsystem.h"
+#include "CkEcs/DependencyInjection/CkDependencyProvider_InjectionCache.h"
+#include "CkEcs/DependencyInjection/CkDependencyProvider_World_Subsystem.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Net/CkNet_Fragment.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+#include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
 #include <UObject/ObjectPtr.h>
@@ -262,6 +276,268 @@ auto
             EntityScriptProp->CopyCompleteValue(EntityScriptPropAddr, SpawnParamsPropAddr);
         }
     }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+//                         Dependency-Injection pass + finish-construction
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+    // Builds a pending-resolution callback that writes the resolved handle
+    // into the script's property and (when ALL of its injection sites are
+    // now resolved) enqueues the FinishDeferredConstruct request.
+    //
+    // Captured by value where lifetime-safe; the script lives in a
+    // StrongObjectPtr on the AwaitingDependencies fragment, so a weak
+    // pointer here is fine. The entity reference is captured by value
+    // (FCk_Handle is cheap).
+    auto
+    MakePendingCallback(
+        UCk_EntityScript_UE* InScript,
+        FCk_Handle InEntity,
+        FStructProperty* InProperty,
+        const TArray<FCk_InjectionSite>& InPlan)
+        -> TFunction<void(const FCk_Handle&)>
+    {
+        const TWeakObjectPtr<UCk_EntityScript_UE> WeakScript = InScript;
+        return [WeakScript, Entity = InEntity, Property = InProperty, Plan = InPlan]
+               (const FCk_Handle& InResolved) mutable -> void
+        {
+            auto* Script = WeakScript.Get();
+            if (Script == nullptr)
+            { return; }
+
+            if (ck::Is_NOT_Valid(Entity))
+            { return; }
+
+            // Write the resolved value into the script's property.
+            if (Property != nullptr)
+            {
+                auto* HandlePtr = Property->ContainerPtrToValuePtr<FCk_Handle>(Script);
+                *HandlePtr = InResolved;
+            }
+
+            // Re-check ALL sites on this script. If any are still invalid
+            // (other pending dependencies haven't landed yet), we leave the
+            // entity in the awaiting state.
+            for (const auto& Site : Plan)
+            {
+                if (Site._PropertyOnScript == nullptr)
+                { continue; }
+
+                const auto* Ptr = Site._PropertyOnScript->ContainerPtrToValuePtr<FCk_Handle>(Script);
+                if (ck::Is_NOT_Valid(*Ptr))
+                { return; }
+            }
+
+            // All resolved. Transition out of the awaiting state and enqueue
+            // the finish-construct request.
+            if (NOT Entity.Has<ck::FFragment_EntityScript_AwaitingDependencies>())
+            { return; }
+
+            const auto& Awaiting = Entity.Get<ck::FFragment_EntityScript_AwaitingDependencies>();
+            const auto LifetimeOwner = Awaiting.Get_LifetimeOwner();
+            const auto SpawnParams   = Awaiting.Get_OriginalSpawnParams();
+            const auto PostFunc      = Awaiting.Get_PostConstruction_Func();
+
+            Entity.Remove<ck::FTag_EntityScript_AwaitingDependencies>();
+            Entity.Remove<ck::FFragment_EntityScript_AwaitingDependencies>();
+            Entity.Add<ck::FRequest_EntityScript_FinishDeferredConstruct>(
+                Script, LifetimeOwner, SpawnParams, PostFunc);
+        };
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_EntityScript_UE::
+    TryInjectEntityScriptDependencies(
+        UCk_EntityScript_UE* InEntityScript,
+        const FCk_Handle& InEntity)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InEntityScript) || ck::Is_NOT_Valid(InEntity))
+    { return true; }
+
+    const auto& Plan = FCk_InjectionCache::GetOrBuild(InEntityScript->GetClass());
+    if (Plan.IsEmpty())
+    { return true; }
+
+    auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InEntity);
+    CK_ENSURE_IF_NOT(ck::IsValid(World),
+        TEXT("No World for entity [{}] during dependency-injection pass on script [{}]"),
+        InEntity, InEntityScript)
+    { return false; }
+
+    auto* WorldSubsystem        = World->GetSubsystem<UCk_DependencyProvider_World_Subsystem_UE>();
+    auto* GameInstance          = World->GetGameInstance();
+    auto* GameInstanceSubsystem = ck::IsValid(GameInstance)
+        ? GameInstance->GetSubsystem<UCk_DependencyProvider_GameInstance_Subsystem_UE>()
+        : nullptr;
+
+    auto AllResolved = true;
+
+    for (const auto& Site : Plan)
+    {
+        auto* HandlePtr = Site._PropertyOnScript->ContainerPtrToValuePtr<FCk_Handle>(InEntityScript);
+
+        // Caller-supplied value wins — TryInjectEntityScriptSpawnParams already
+        // ran upstream, so a non-empty handle here came from the caller's
+        // SpawnParams. Match the testability story from the plan.
+        if (ck::IsValid(*HandlePtr))
+        { continue; }
+
+        auto Resolved = FCk_Handle{};
+        switch (Site._Scope)
+        {
+            case ECk_DependencyProvider_Scope::GameInstance:
+            {
+                if (GameInstanceSubsystem != nullptr)
+                { Resolved = GameInstanceSubsystem->Resolve(Site._HandleType); }
+                break;
+            }
+            case ECk_DependencyProvider_Scope::World:
+            default:
+            {
+                if (WorldSubsystem != nullptr)
+                { Resolved = WorldSubsystem->Resolve(Site._HandleType); }
+                break;
+            }
+        }
+
+        if (ck::IsValid(Resolved))
+        {
+            *HandlePtr = Resolved;
+            continue;
+        }
+
+        // Missed. Register a pending callback against the appropriate
+        // subsystem and mark this resolve as still in-flight.
+        AllResolved = false;
+
+        auto Pending = UCk_DependencyProvider_World_Subsystem_UE::FPendingResolution{
+            ._Script     = InEntityScript,
+            ._Entity     = InEntity,
+            ._OnResolved = MakePendingCallback(InEntityScript, InEntity, Site._PropertyOnScript, Plan)
+        };
+
+        switch (Site._Scope)
+        {
+            case ECk_DependencyProvider_Scope::GameInstance:
+            {
+                if (GameInstanceSubsystem != nullptr)
+                {
+                    GameInstanceSubsystem->RegisterPending(Site._HandleType,
+                        UCk_DependencyProvider_GameInstance_Subsystem_UE::FPendingResolution{
+                            ._Script     = Pending._Script,
+                            ._Entity     = Pending._Entity,
+                            ._OnResolved = Pending._OnResolved
+                        });
+                }
+                break;
+            }
+            case ECk_DependencyProvider_Scope::World:
+            default:
+            {
+                if (WorldSubsystem != nullptr)
+                { WorldSubsystem->RegisterPending(Site._HandleType, MoveTemp(Pending)); }
+                break;
+            }
+        }
+    }
+
+    return AllResolved;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_EntityScript_UE::
+    DoFinishConstructionFlow(
+        UCk_EntityScript_UE* InEntityScript,
+        FCk_Handle& InEntity,
+        const FCk_Handle& InLifetimeOwner,
+        const FInstancedStruct& InSpawnParams,
+        const FCk_EntityScript_PostConstruction_Func& InPostConstruction)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InEntityScript) && ck::IsValid(InEntity),
+        TEXT("DoFinishConstructionFlow called with invalid Script [{}] or Entity [{}]"),
+        InEntityScript, InEntity)
+    { return; }
+
+    // Net_Params is established upstream. Catch any caller that bypasses Add.
+    CK_ENSURE_IF_NOT(InEntity.Has<ck::FFragment_Net_Params>(),
+        TEXT("Entity [{}] is missing NetParams in DoFinishConstructionFlow. Script: [{}]."),
+        InEntity, InEntityScript) {}
+
+    // ---- Replication Driver (before Construct) ------------------------------------------------
+    UCk_Utils_EntityReplicationDriver_UE::TryAdd(InEntity);
+
+    // ---- Construct ----------------------------------------------------------------------------
+    switch (InEntityScript->Construct(InEntity, InSpawnParams))
+    {
+        case ECk_EntityScript_ConstructionFlow::Finished:
+        {
+            // GET_FUNCTION_NAME_CHECKED would trip protected-access here
+            // (DoContinueConstruction is protected on UCk_GenericEntityScript_UE
+            // and UCk_Utils_EntityScript_UE is not a friend). The literal
+            // FName is stable — the only consumer is IsFunctionImplementedInScript.
+            static const auto ContinueConstructionFuncName = FName{TEXT("DoContinueConstruction")};
+            CK_ENSURE_IF_NOT(NOT InEntityScript->GetClass()->IsFunctionImplementedInScript(ContinueConstructionFuncName),
+                TEXT("EntityScript [{}] Construction is FINISHED, but the script implements ContinueConstruction."),
+                InEntity) {}
+
+            CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, InEntity,
+                TEXT("Construct() returned Finished (deferred path)"));
+            InEntity.Add<ck::FTag_EntityScript_FinishConstruction>();
+            break;
+        }
+        case ECk_EntityScript_ConstructionFlow::Continue:
+        {
+            CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, InEntity,
+                TEXT("Construct() returned Continue (deferred path)"));
+            InEntity.Add<ck::FTag_EntityScript_ContinueConstruction>();
+            break;
+        }
+    }
+
+    // ---- Replication Infrastructure (after Construct) -----------------------------------------
+    if (InEntityScript->Get_EffectiveReplication() == ECk_Replication::Replicates)
+    {
+        const auto HasOwningActor = UCk_Utils_OwningActor_UE::Has(InEntity);
+
+        if (HasOwningActor)
+        {
+            const auto* OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InEntity);
+            const auto* World = OwningActor->GetWorld();
+
+            const auto IsNetworkedAuthority =
+                World->IsNetMode(NM_DedicatedServer) || World->IsNetMode(NM_ListenServer);
+
+            if (IsNetworkedAuthority)
+            {
+                InEntity.Add<ck::FRequest_EntityScript_Replicate>(
+                    InEntity, InSpawnParams, InEntityScript);
+            }
+        }
+        else
+        {
+            auto ReplicatedOwner = InLifetimeOwner;
+            const auto IsHost = UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(ReplicatedOwner);
+
+            if (IsHost)
+            {
+                InEntity.Add<ck::FRequest_EntityScript_Replicate>(
+                    ReplicatedOwner, InSpawnParams, InEntityScript);
+            }
+        }
+    }
+
+    if (InPostConstruction)
+    { InPostConstruction(InEntity); }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

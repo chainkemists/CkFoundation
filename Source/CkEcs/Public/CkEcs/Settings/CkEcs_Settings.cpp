@@ -105,6 +105,19 @@ auto
 
 auto
     UCk_Utils_Ecs_Settings_UE::
+    Get_DependencyInjection_Timeout()
+    -> FCk_Time
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return FCk_Time{5.0}; }
+
+    return Settings->Get_DependencyInjection_Timeout();
+}
+
+auto
+    UCk_Utils_Ecs_Settings_UE::
     Get_HandleDebuggerBehavior()
     -> ECk_Ecs_HandleDebuggerBehavior
 {
