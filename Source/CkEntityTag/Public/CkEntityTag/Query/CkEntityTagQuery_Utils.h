@@ -6,6 +6,8 @@
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
+#include <GameplayTagContainer.h>
+
 #include "CkEntityTagQuery_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -91,4 +93,89 @@ public:
     UnbindFrom_OnSatisfied(
         UPARAM(ref) FCk_Handle_EntityTagQuery& InQuery,
         const FCk_Delegate_EntityTagQuery_OnSatisfied& InDelegate);
+
+public:
+    // ---- FName factories ----
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityTagQuery",
+              DisplayName = "[Ck][EntityTagQuery] Make Requirement (Single)")
+    static FCk_EntityTagQuery_Requirement
+    Make_Requirement_Single(
+        FName InTag);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityTagQuery",
+              DisplayName = "[Ck][EntityTagQuery] Make Requirement (Count)")
+    static FCk_EntityTagQuery_Requirement
+    Make_Requirement_Of(
+        FName InTag,
+        int32 InCount);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityTagQuery",
+              DisplayName = "[Ck][EntityTagQuery] Make Requirement (All)")
+    static FCk_EntityTagQuery_Requirement
+    Make_Requirement_All(
+        FName InTag);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityTagQuery",
+              DisplayName = "[Ck][EntityTagQuery] Make Requirement (Single, With Ensure)")
+    static FCk_EntityTagQuery_Requirement
+    Make_Requirement_Single_WithEnsure(
+        FName InTag,
+        int32 InMaxAllowed);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityTagQuery",
+              DisplayName = "[Ck][EntityTagQuery] Make Requirement (Count, With Ensure)")
+    static FCk_EntityTagQuery_Requirement
+    Make_Requirement_Of_WithEnsure(
+        FName InTag,
+        int32 InCount,
+        int32 InMaxAllowed);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityTagQuery",
+              DisplayName = "[Ck][EntityTagQuery] Make Requirement (All, With Ensure)")
+    static FCk_EntityTagQuery_Requirement
+    Make_Requirement_All_WithEnsure(
+        FName InTag,
+        int32 InMaxAllowed);
+
+    // ---- GameplayTag factories ----
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityTagQuery",
+              DisplayName = "[Ck][EntityTagQuery] Make Requirement (Single, FromGameplayTag)")
+    static FCk_EntityTagQuery_Requirement
+    Make_Requirement_Single_FromGameplayTag(
+        UPARAM(meta = (Categories = "EntityTag")) FGameplayTag InTag);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityTagQuery",
+              DisplayName = "[Ck][EntityTagQuery] Make Requirement (Count, FromGameplayTag)")
+    static FCk_EntityTagQuery_Requirement
+    Make_Requirement_Of_FromGameplayTag(
+        UPARAM(meta = (Categories = "EntityTag")) FGameplayTag InTag,
+        int32 InCount);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityTagQuery",
+              DisplayName = "[Ck][EntityTagQuery] Make Requirement (All, FromGameplayTag)")
+    static FCk_EntityTagQuery_Requirement
+    Make_Requirement_All_FromGameplayTag(
+        UPARAM(meta = (Categories = "EntityTag")) FGameplayTag InTag);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityTagQuery",
+              DisplayName = "[Ck][EntityTagQuery] Make Requirement (Single, FromGameplayTag, With Ensure)")
+    static FCk_EntityTagQuery_Requirement
+    Make_Requirement_Single_FromGameplayTag_WithEnsure(
+        UPARAM(meta = (Categories = "EntityTag")) FGameplayTag InTag,
+        int32 InMaxAllowed);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityTagQuery",
+              DisplayName = "[Ck][EntityTagQuery] Make Requirement (Count, FromGameplayTag, With Ensure)")
+    static FCk_EntityTagQuery_Requirement
+    Make_Requirement_Of_FromGameplayTag_WithEnsure(
+        UPARAM(meta = (Categories = "EntityTag")) FGameplayTag InTag,
+        int32 InCount,
+        int32 InMaxAllowed);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityTagQuery",
+              DisplayName = "[Ck][EntityTagQuery] Make Requirement (All, FromGameplayTag, With Ensure)")
+    static FCk_EntityTagQuery_Requirement
+    Make_Requirement_All_FromGameplayTag_WithEnsure(
+        UPARAM(meta = (Categories = "EntityTag")) FGameplayTag InTag,
+        int32 InMaxAllowed);
 };
