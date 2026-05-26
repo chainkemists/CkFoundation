@@ -12,6 +12,8 @@ namespace ck
 {
     class FProcessor_EntityTagQuery_HandleRequests;
     class FProcessor_EntityTagQuery_Evaluate;
+    class FProcessor_EntityTagQuery_TrackedEntity_Destructor;
+    class FProcessor_EntityTagQuery_Query_Destructor;
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -22,6 +24,8 @@ namespace ck
 
         friend class FProcessor_EntityTagQuery_HandleRequests;
         friend class FProcessor_EntityTagQuery_Evaluate;
+        friend class FProcessor_EntityTagQuery_Query_Destructor;
+        friend class FProcessor_EntityTagQuery_TrackedEntity_Destructor;
         friend class ::UCk_Utils_EntityTagQuery_UE;
 
     private:
@@ -55,6 +59,28 @@ namespace ck
 
     public:
         CK_PROPERTY_GET(_Requests);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Placed on a tagged entity (the entity carrying CkEntityTag) when one or more queries
+    // hold this entity in their _ResultsPerRequirement. The destruction processor walks this
+    // list at the entity's EndPlay to proactively prune queries — no per-pass IsValid scan.
+    struct CKENTITYTAG_API FFragment_EntityTagQuery_TrackedByQueries
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_EntityTagQuery_TrackedByQueries);
+
+        friend class FProcessor_EntityTagQuery_Evaluate;
+        friend class FProcessor_EntityTagQuery_TrackedEntity_Destructor;
+        friend class FProcessor_EntityTagQuery_Query_Destructor;
+        friend class ::UCk_Utils_EntityTagQuery_UE;
+
+    private:
+        TArray<FCk_Handle_EntityTagQuery> _Queries;
+
+    public:
+        CK_PROPERTY_GET(_Queries);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
