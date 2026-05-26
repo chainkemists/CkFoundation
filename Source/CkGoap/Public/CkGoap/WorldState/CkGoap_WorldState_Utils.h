@@ -151,6 +151,31 @@ public:
 	static bool
 	Has_KeyOverride(const FCk_Handle_Goap_WorldState& InWorldState, FGameplayTag InKey);
 
+	// Returns the NAME of the top-most layer currently shadowing this key. Walks
+	// the stack top-down (most recent push wins) and returns the first match,
+	// matching the read semantics of Get_Value. Returns NAME_None when no layer
+	// shadows the key (i.e., the read falls through to the base store). Used by
+	// the debugger to show "shadowed by <layer>" tooltips per WS row.
+	UFUNCTION(BlueprintPure, Category = "Ck|GOAP|WorldState",
+		DisplayName = "[Ck][GOAP|WS] Get Top Override Layer For Key")
+	static FName
+	Get_TopOverrideLayerForKey(const FCk_Handle_Goap_WorldState& InWorldState, FGameplayTag InKey);
+
+	// Returns a snapshot of the key/value pairs in a specific named layer. Empty
+	// map when no layer with that name exists. Used by the debugger's per-layer
+	// drilldown view (the override-layers inspector).
+	UFUNCTION(BlueprintPure, Category = "Ck|GOAP|WorldState",
+		DisplayName = "[Ck][GOAP|WS] Get Layer Values")
+	static TMap<FGameplayTag, bool>
+	Get_LayerValues(const FCk_Handle_Goap_WorldState& InWorldState, FName InLayerName);
+
+	// Convenience — number of keys in a specific named layer (without copying
+	// the value map).
+	UFUNCTION(BlueprintPure, Category = "Ck|GOAP|WorldState",
+		DisplayName = "[Ck][GOAP|WS] Get Layer Key Count")
+	static int32
+	Get_LayerKeyCount(const FCk_Handle_Goap_WorldState& InWorldState, FName InLayerName);
+
 	// ================================================================================================================
 	// SUBSCRIBERS
 	// ================================================================================================================
