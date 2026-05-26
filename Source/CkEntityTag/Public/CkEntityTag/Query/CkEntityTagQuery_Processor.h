@@ -50,6 +50,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using RunAfter = TDepList<FProcessor_EntityTagQuery_HandleRequests>;
         using TProcessor::TProcessor;
 
     public:
