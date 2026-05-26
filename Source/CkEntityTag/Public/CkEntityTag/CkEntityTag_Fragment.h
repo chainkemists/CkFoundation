@@ -74,6 +74,26 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    struct CKENTITYTAG_API FFragment_EntityTag_Requests
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_EntityTag_Requests);
+
+        friend class FProcessor_EntityTag_HandleRequests;
+
+        using AddType       = FCk_Request_EntityTag_Add;
+        using TryRemoveType = FCk_Request_EntityTag_TryRemove;
+        using RequestType   = std::variant<AddType, TryRemoveType>;
+
+    private:
+        TArray<RequestType> _Requests;
+
+    public:
+        CK_PROPERTY_GET(_Requests);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKENTITYTAG_API,
         EntityTag_OnTagUpdated,
