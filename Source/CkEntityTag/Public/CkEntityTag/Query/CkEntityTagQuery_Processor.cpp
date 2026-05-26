@@ -108,9 +108,13 @@ namespace ck
             const auto  Tag     = Req.Get_Tag();
 
             // Lazy prune: drop entries whose tag was removed (Request_TryRemove on a still-living entity).
-            // Destruction is handled proactively by FProcessor_EntityTagQuery_TrackedEntity_Destructor.
+            // Destruction is handled proactively by FProcessor_EntityTagQuery_TrackedEntity_Destructor
+            // in the EndPlay group, but Eval may run before EndPlay in the same frame as the destruction.
+            // Catch that window lazily so we never read tag state from a dying handle.
             Results.RemoveAll([&](const FCk_Handle& H)
             {
+                if (ck::Is_NOT_Valid(H))
+                { return true; }
                 return NOT UCk_Utils_EntityTag_UE::Has(H, Tag);
             });
 
@@ -135,6 +139,14 @@ namespace ck
                     {
                         if (Results.Num() >= Cap)
                         { return; }
+
+                        // Skip pending-kill entities. The storage view doesn't filter them, but we
+                        // must not Add them to results (would persist a dying handle until the
+                        // next prune) and must not AddOrGet on them (CK_ENSURE_IF_NOT in AddOrGet
+                        // fires for pending-kill handles per CkHandle.h:619).
+                        if (ck::Is_NOT_Valid(InEntity))
+                        { return; }
+
                         if (Results.Contains(InEntity))
                         { return; }
                         Results.Add(InEntity);
