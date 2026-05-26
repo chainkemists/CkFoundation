@@ -83,6 +83,66 @@ namespace ck
             FFragment_EntityTagQuery_Current& InCurrent) const
         -> void
     {
-        // TODO(C2/C3): lazy-prune, scan storage, ensure-bound, fire decision.
+        const auto& Requirements = InCurrent._Requirements;
+
+        if (Requirements.Num() == 0)
+        {
+            InCurrent._IsSatisfied = false;
+            return;
+        }
+
+        if (InCurrent._ResultsPerRequirement.Num() != Requirements.Num())
+        {
+            // HandleRequests should keep these in sync. Defensive resize.
+            InCurrent._ResultsPerRequirement.SetNum(Requirements.Num());
+        }
+
+        auto AnyAppendedThisPass = false;
+
+        for (int32 i = 0; i < Requirements.Num(); ++i)
+        {
+            const auto& Req     = Requirements[i];
+            auto&       Results = InCurrent._ResultsPerRequirement[i];
+            const auto  Tag     = Req.Get_Tag();
+
+            // Lazy prune: drop entries that are no longer valid OR no longer carry the tag.
+            Results.RemoveAll([&](const FCk_Handle& H)
+            {
+                return ck::Is_NOT_Valid(H) || NOT UCk_Utils_EntityTag_UE::Has(H, Tag);
+            });
+
+            // Determine target cap by mode.
+            const auto Cap = [&]() -> int32
+            {
+                switch (Req.Get_Mode())
+                {
+                    case ECk_EntityTagQuery_CountMode::SingleOnly: return 1;
+                    case ECk_EntityTagQuery_CountMode::Count:      return Req.Get_Count();
+                    case ECk_EntityTagQuery_CountMode::All:        return MAX_int32;
+                    default:                                       return 1;
+                }
+            }();
+
+            // Append new matches from the global per-tag storage view, up to cap.
+            if (Results.Num() < Cap)
+            {
+                FCk_Handle BaseHandle = InHandle;
+                UCk_Utils_EntityTag_UE::ForEach_Entity(BaseHandle, Tag,
+                    [&](FCk_Handle InEntity)
+                    {
+                        if (Results.Num() >= Cap)
+                        { return; }
+                        if (Results.Contains(InEntity))
+                        { return; }
+                        Results.Add(InEntity);
+                        AnyAppendedThisPass = true;
+                    });
+            }
+        }
+
+        // C3 adds the ensure-check, satisfaction predicate, and fire decision below.
+        // For now, mark satisfied as false unconditionally; C3 will compute it properly.
+        (void)AnyAppendedThisPass;
+        InCurrent._IsSatisfied = false;
     }
 }
