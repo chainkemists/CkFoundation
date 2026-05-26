@@ -10,6 +10,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck { class FProcessor_EntityTag_HandleRequests; }
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS()
 class CKENTITYTAG_API UCk_Utils_EntityTag_UE : public UBlueprintFunctionLibrary
 {
@@ -44,6 +48,14 @@ public:
     Has(
         const FCk_Handle& InHandle,
         FName InTag);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|EntityTag",
+              DisplayName="[Ck][EntityTag] Has Any Tag",
+              meta=(KeyWords = "has,any,tag,component"))
+    static bool
+    Has_AnyTag(
+        const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|EntityTag",
@@ -161,6 +173,19 @@ private:
         FCk_Handle& InHandle,
         FName InTag,
         bool InPresent) -> void;
+
+private:
+    friend class ck::FProcessor_EntityTag_HandleRequests;
+
+    static auto
+    DoApply_Add(
+        FCk_Handle& InHandle,
+        FName InTag) -> void;
+
+    static auto
+    DoApply_TryRemove(
+        FCk_Handle& InHandle,
+        FName InTag) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
