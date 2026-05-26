@@ -12,6 +12,8 @@
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityTagQuery_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityTagQuery_Evaluate);
+CK_REGISTER_PROCESSOR(ck::FProcessor_EntityTagQuery_TrackedEntity_Destructor);
+CK_REGISTER_PROCESSOR(ck::FProcessor_EntityTagQuery_Query_Destructor);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -105,10 +107,11 @@ namespace ck
             auto&       Results = InCurrent._ResultsPerRequirement[i];
             const auto  Tag     = Req.Get_Tag();
 
-            // Lazy prune: drop entries that are no longer valid OR no longer carry the tag.
+            // Lazy prune: drop entries whose tag was removed (Request_TryRemove on a still-living entity).
+            // Destruction is handled proactively by FProcessor_EntityTagQuery_TrackedEntity_Destructor.
             Results.RemoveAll([&](const FCk_Handle& H)
             {
-                return ck::Is_NOT_Valid(H) || NOT UCk_Utils_EntityTag_UE::Has(H, Tag);
+                return NOT UCk_Utils_EntityTag_UE::Has(H, Tag);
             });
 
             // Determine target cap by mode.
@@ -136,6 +139,10 @@ namespace ck
                         { return; }
                         Results.Add(InEntity);
                         AnyAppendedThisPass = true;
+
+                        // Register this query on the tagged entity so the destructor can clean us up.
+                        auto& Tracked = InEntity.AddOrGet<FFragment_EntityTagQuery_TrackedByQueries>();
+                        Tracked._Queries.AddUnique(InHandle);
                     });
             }
         }
@@ -225,5 +232,74 @@ namespace ck
         ck::UUtils_Signal_EntityTagQuery_OnSatisfied::Broadcast(
             InHandle,
             ck::MakePayload(InHandle, Payload));
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_EntityTagQuery_TrackedEntity_Destructor::
+        ForEachEntity(
+            TimeType,
+            HandleType InHandle,
+            const FFragment_EntityTagQuery_TrackedByQueries& InTracked) const
+        -> void
+    {
+        for (const auto& QueryHandle : InTracked.Get_Queries())
+        {
+            // Query may already be dead (concurrent destruction).
+            if (ck::Is_NOT_Valid(QueryHandle))
+            { continue; }
+
+            auto MutableQuery = QueryHandle;
+            if (NOT MutableQuery.Has<FFragment_EntityTagQuery_Current>())
+            { continue; }
+
+            auto& Current = MutableQuery.Get<FFragment_EntityTagQuery_Current>();
+
+            // Remove the dying entity from every result array in this query.
+            for (auto& Results : Current._ResultsPerRequirement)
+            {
+                Results.RemoveAll([&](const FCk_Handle& H)
+                {
+                    return H == InHandle;
+                });
+            }
+        }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_EntityTagQuery_Query_Destructor::
+        ForEachEntity(
+            TimeType,
+            HandleType InHandle,
+            const FFragment_EntityTagQuery_Current& InCurrent) const
+        -> void
+    {
+        // For each entity this query currently tracks, remove the query from its _Queries list.
+        for (const auto& Results : InCurrent.Get_ResultsPerRequirement())
+        {
+            for (const auto& TaggedEntity : Results)
+            {
+                if (ck::Is_NOT_Valid(TaggedEntity))
+                { continue; }
+
+                auto Mutable = TaggedEntity;
+                if (NOT Mutable.Has<FFragment_EntityTagQuery_TrackedByQueries>())
+                { continue; }
+
+                auto& Tracked = Mutable.Get<FFragment_EntityTagQuery_TrackedByQueries>();
+                Tracked._Queries.RemoveAll([&](const FCk_Handle_EntityTagQuery& Q)
+                {
+                    return Q == InHandle;
+                });
+
+                if (Tracked._Queries.Num() == 0)
+                {
+                    Mutable.Try_Remove<FFragment_EntityTagQuery_TrackedByQueries>();
+                }
+            }
+        }
     }
 }
