@@ -6,8 +6,6 @@
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
-#include <GameplayTagContainer.h>
-
 #include "CkEntityTagQuery_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -65,6 +63,10 @@ public:
     CK_PROPERTY_GET(_Count);
     CK_PROPERTY_GET(_MaxAllowedEnsure);
 
+    // Sentinel for `_MaxAllowedEnsure` meaning "no ensure". Pass to `WithEnsure`
+    // to explicitly opt out, or rely on it as the default in the factories.
+    static constexpr int32 NoEnsure = 0;
+
     // Hand-rolled (not CK_DEFINE_CONSTRUCTORS) so we can also expose named factories.
     FCk_EntityTagQuery_Requirement() = default;
     FCk_EntityTagQuery_Requirement(
@@ -73,13 +75,27 @@ public:
         int32 InCount,
         int32 InMaxAllowedEnsure);
 
-    static FCk_EntityTagQuery_Requirement Single(FName InTag);
-    static FCk_EntityTagQuery_Requirement Of(FName InTag, int32 InCount);
-    static FCk_EntityTagQuery_Requirement All(FName InTag);
+    static auto
+    Single(
+        FName InTag) -> FCk_EntityTagQuery_Requirement;
+
+    static auto
+    Of(
+        FName InTag,
+        int32 InCount) -> FCk_EntityTagQuery_Requirement;
+
+    static auto
+    All(
+        FName InTag) -> FCk_EntityTagQuery_Requirement;
 
     // Chainable mutator: `Of(n"A", 3).WithEnsure(5)`
-    FCk_EntityTagQuery_Requirement& WithEnsure(int32 InMaxAllowed) &;
-    FCk_EntityTagQuery_Requirement  WithEnsure(int32 InMaxAllowed) &&;
+    auto
+    WithEnsure(
+        int32 InMaxAllowed) & -> FCk_EntityTagQuery_Requirement&;
+
+    auto
+    WithEnsure(
+        int32 InMaxAllowed) && -> FCk_EntityTagQuery_Requirement;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

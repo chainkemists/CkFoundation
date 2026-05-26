@@ -21,7 +21,7 @@ auto
         FName InTag)
     -> FCk_EntityTagQuery_Requirement
 {
-    return FCk_EntityTagQuery_Requirement{InTag, ECk_EntityTagQuery_CountMode::SingleOnly, 1, 0};
+    return FCk_EntityTagQuery_Requirement{InTag, ECk_EntityTagQuery_CountMode::SingleOnly, 1, NoEnsure};
 }
 
 auto
@@ -31,7 +31,7 @@ auto
         int32 InCount)
     -> FCk_EntityTagQuery_Requirement
 {
-    return FCk_EntityTagQuery_Requirement{InTag, ECk_EntityTagQuery_CountMode::Count, InCount, 0};
+    return FCk_EntityTagQuery_Requirement{InTag, ECk_EntityTagQuery_CountMode::Count, InCount, NoEnsure};
 }
 
 auto
@@ -40,7 +40,7 @@ auto
         FName InTag)
     -> FCk_EntityTagQuery_Requirement
 {
-    return FCk_EntityTagQuery_Requirement{InTag, ECk_EntityTagQuery_CountMode::All, 0, 0};
+    return FCk_EntityTagQuery_Requirement{InTag, ECk_EntityTagQuery_CountMode::All, 0, NoEnsure};
 }
 
 // ----
