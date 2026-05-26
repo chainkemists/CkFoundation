@@ -140,9 +140,90 @@ namespace ck
             }
         }
 
-        // C3 adds the ensure-check, satisfaction predicate, and fire decision below.
-        // For now, mark satisfied as false unconditionally; C3 will compute it properly.
-        (void)AnyAppendedThisPass;
-        InCurrent._IsSatisfied = false;
+        // Ensure-bound check (independent of satisfaction).
+        for (const auto& Req : Requirements)
+        {
+            const auto MaxAllowed = Req.Get_MaxAllowedEnsure();
+            if (MaxAllowed <= FCk_EntityTagQuery_Requirement::NoEnsure)
+            { continue; }
+
+            FCk_Handle BaseHandle = InHandle;
+            auto GlobalCount = int32{0};
+            UCk_Utils_EntityTag_UE::ForEach_Entity(BaseHandle, Req.Get_Tag(),
+                [&](FCk_Handle) { ++GlobalCount; });
+
+            CK_ENSURE_IF_NOT(GlobalCount <= MaxAllowed,
+                TEXT("EntityTagQuery [{}] requirement on tag [{}] exceeded MaxAllowed [{}]; current global count [{}]"),
+                InHandle, Req.Get_Tag(), MaxAllowed, GlobalCount)
+            { /* no-op: continue evaluation */ }
+        }
+
+        // Satisfaction predicate.
+        const auto WasSatisfied   = InCurrent._IsSatisfied;
+        auto       IsNowSatisfied = true;
+        for (int32 i = 0; i < Requirements.Num(); ++i)
+        {
+            const auto& Req       = Requirements[i];
+            const auto  N         = InCurrent._ResultsPerRequirement[i].Num();
+            const auto  Threshold = [&]() -> int32
+            {
+                switch (Req.Get_Mode())
+                {
+                    case ECk_EntityTagQuery_CountMode::SingleOnly: return 1;
+                    case ECk_EntityTagQuery_CountMode::Count:      return Req.Get_Count();
+                    case ECk_EntityTagQuery_CountMode::All:        return 1;
+                    default:                                       return 1;
+                }
+            }();
+
+            if (N < Threshold)
+            {
+                IsNowSatisfied = false;
+                break;
+            }
+        }
+
+        InCurrent._IsSatisfied = IsNowSatisfied;
+
+        if (NOT IsNowSatisfied)
+        { return; }
+
+        // Fire decision.
+        auto AnyAllModeAppended = false;
+        if (AnyAppendedThisPass)
+        {
+            for (const auto& Req : Requirements)
+            {
+                if (Req.Get_Mode() == ECk_EntityTagQuery_CountMode::All)
+                {
+                    AnyAllModeAppended = true;
+                    break;
+                }
+            }
+        }
+
+        const auto FirstTime      = NOT InCurrent._HasFiredOnce;
+        const auto AllModeRefire  = InCurrent._HasFiredOnce && AnyAllModeAppended;
+        const auto DropAndRecover = InCurrent._HasFiredOnce && NOT WasSatisfied;
+        const auto ShouldFire     = FirstTime || AllModeRefire || DropAndRecover;
+
+        if (NOT ShouldFire)
+        { return; }
+
+        // Build result payload.
+        auto Payload = TArray<FCk_EntityTagQuery_Result>{};
+        Payload.Reserve(Requirements.Num());
+        for (int32 i = 0; i < Requirements.Num(); ++i)
+        {
+            Payload.Emplace(FCk_EntityTagQuery_Result{
+                Requirements[i].Get_Tag(),
+                InCurrent._ResultsPerRequirement[i]});
+        }
+
+        InCurrent._HasFiredOnce = true;
+
+        ck::UUtils_Signal_EntityTagQuery_OnSatisfied::Broadcast(
+            InHandle,
+            ck::MakePayload(InHandle, Payload));
     }
 }
