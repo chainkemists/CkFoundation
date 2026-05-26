@@ -572,6 +572,23 @@ auto
 
     auto Bind = FAngelscriptBinds::ValueClass(TypeNameStr, sizeof(FCk_Handle), FBindFlags());
 
+    // Make the AS value-class resolve to a real UScriptStruct when crossed into
+    // UE reflection (FInstancedStruct::Make, FAngelscriptAnyStructParameter,
+    // FInstancedStruct::Get(?&out), Bind_FString.cpp's struct printer, etc.).
+    // FAngelscriptManager::GetUnrealStructFromAngelscriptTypeId returns whatever
+    // is stashed in asITypeInfo::plainUserData; without this, that returns null
+    // for dynamic handles and the engine fork throws "Not a valid USTRUCT".
+    //
+    // FCk_Handle::StaticStruct() is the right target because every dynamic
+    // handle is binary-identical to FCk_Handle by construction (same size, same
+    // layout — the ValueClass above is even sized as sizeof(FCk_Handle)). Boxed
+    // payloads round-trip correctly: callers extract an FCk_Handle and re-apply
+    // .As_<TypeName>() to recover the typed view. Synthesizing a unique
+    // UScriptStruct per dynamic type would add UASStruct / class-generator
+    // coupling and per-type GC bookkeeping for no semantic gain — the struct
+    // ops would just memcpy sizeof(FCk_Handle) bytes either way.
+    Bind.SetTypeUserData(FCk_Handle::StaticStruct());
+
     // Constructors
     Bind.Constructor("void f()", [](FCk_Handle* Address)
     {
