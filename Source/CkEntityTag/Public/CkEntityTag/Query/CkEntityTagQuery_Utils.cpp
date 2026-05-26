@@ -18,7 +18,7 @@ auto
     -> FCk_Handle_EntityTagQuery
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InOwner),
-        TEXT("Invalid Owner Handle passed to EntityTagQuery::Add.{}"), ck::Context(this))
+        TEXT("Invalid Owner Handle [{}] passed to EntityTagQuery::Add"), InOwner)
     { return {}; }
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
