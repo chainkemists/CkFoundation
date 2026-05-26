@@ -458,6 +458,55 @@ auto
 	return false;
 }
 
+auto
+	UCk_Utils_Goap_WorldState_UE::
+	Get_TopOverrideLayerForKey(const FCk_Handle_Goap_WorldState& InWorldState, FGameplayTag InKey)
+	-> FName
+{
+	if (NOT ck::IsValid(InWorldState)) { return NAME_None; }
+	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_OverrideStack>()) { return NAME_None; }
+
+	// Walk top-down: most recently pushed layer wins (matches Get_Value semantics).
+	const auto& Layers = InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>().Get_Layers();
+	for (auto i = Layers.Num() - 1; i >= 0; --i)
+	{
+		if (Layers[i].Values.Contains(InKey)) { return Layers[i].Name; }
+	}
+	return NAME_None;
+}
+
+auto
+	UCk_Utils_Goap_WorldState_UE::
+	Get_LayerValues(const FCk_Handle_Goap_WorldState& InWorldState, FName InLayerName)
+	-> TMap<FGameplayTag, bool>
+{
+	if (NOT ck::IsValid(InWorldState)) { return {}; }
+	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_OverrideStack>()) { return {}; }
+
+	const auto& Layers = InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>().Get_Layers();
+	for (const auto& Layer : Layers)
+	{
+		if (Layer.Name == InLayerName) { return Layer.Values; }
+	}
+	return {};
+}
+
+auto
+	UCk_Utils_Goap_WorldState_UE::
+	Get_LayerKeyCount(const FCk_Handle_Goap_WorldState& InWorldState, FName InLayerName)
+	-> int32
+{
+	if (NOT ck::IsValid(InWorldState)) { return 0; }
+	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_OverrideStack>()) { return 0; }
+
+	const auto& Layers = InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>().Get_Layers();
+	for (const auto& Layer : Layers)
+	{
+		if (Layer.Name == InLayerName) { return Layer.Values.Num(); }
+	}
+	return 0;
+}
+
 // ====================================================================================================================
 // SUBSCRIBERS
 // ====================================================================================================================
