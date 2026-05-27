@@ -10,7 +10,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck { class FProcessor_EntityTag_HandleRequests; }
+namespace ck { class FProcessor_EntityTag_HandleRequests; class FProcessor_EntityTag_BroadcastOnDestroy; }
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -165,6 +165,26 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Delegate_EntityTag_OnGameplayTagUpdated& InDelegate);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|EntityTag",
+              DisplayName = "[Ck][EntityTag] Bind To OnTagUpdated_AnyEntity")
+    static FCk_Handle
+    BindTo_OnTagUpdated_AnyEntity(
+        UPARAM(ref) FCk_Handle& InListenerHost,
+        FName InTagFilter,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_EntityTag_OnTagUpdated_AnyEntity& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|EntityTag",
+              DisplayName = "[Ck][EntityTag] Unbind From OnTagUpdated_AnyEntity")
+    static FCk_Handle
+    UnbindFrom_OnTagUpdated_AnyEntity(
+        UPARAM(ref) FCk_Handle& InListenerHost,
+        FName InTagFilter,
+        const FCk_Delegate_EntityTag_OnTagUpdated_AnyEntity& InDelegate);
+
 private:
     // Set/clear the per-tag EnTT storage marker used by ForEach_Entity. Lives in this
     // class so its friend access to FCk_Registry::Storage<T> resolves.
@@ -174,8 +194,27 @@ private:
         FName InTag,
         bool InPresent) -> void;
 
+    // Increment/decrement the per-tag AnyEntity subscription marker on a listener entity.
+    // Mirrors Set_StoragePresence storage-access idiom; refcounts so multiple delegates
+    // bound on the same (entity, tag) pair share one marker.
+    static auto
+    Set_SubscriptionMarker(
+        FCk_Handle& InListenerHost,
+        FName InTagFilter,
+        bool InIncrement) -> void;
+
+    // Iterate per-tag and wildcard subscription storage, broadcasting OnTagUpdated_AnyEntity
+    // to each registered listener. Called from DoApply_Add / DoApply_TryRemove and from the
+    // destruction processor.
+    static auto
+    DoBroadcast_AnyEntityListeners(
+        FCk_Handle& InMutatedEntity,
+        FName InTag,
+        ECk_EntityTagUpdate InUpdate) -> void;
+
 private:
     friend class ck::FProcessor_EntityTag_HandleRequests;
+    friend class ck::FProcessor_EntityTag_BroadcastOnDestroy;
 
     static auto
     DoApply_Add(

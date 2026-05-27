@@ -47,4 +47,27 @@ namespace ck
             HandleType& InHandle,
             const FCk_Request_EntityTag_TryRemoveGameplayTag& InRequest) -> void;
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // When an entity carrying tags is destroyed, broadcast a Removed event to global
+    // listeners for every tag it currently carries. Runs in FGroup_EndPlay with
+    // CK_IF_END_PLAY, mirroring FProcessor_EntityTagQuery_TrackedEntity_Destructor.
+    class CKENTITYTAG_API FProcessor_EntityTag_BroadcastOnDestroy : public ck_exp::TProcessor<
+            FProcessor_EntityTag_BroadcastOnDestroy,
+            FCk_Handle,
+            ck::TReadOnly<FFragment_EntityTag_Current>,
+            CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_EntityTag_Current& InCurrent) const -> void;
+    };
 }

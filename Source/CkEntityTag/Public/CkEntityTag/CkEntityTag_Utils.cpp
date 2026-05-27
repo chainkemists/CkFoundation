@@ -37,6 +37,83 @@ auto
     }
 }
 
+auto
+    UCk_Utils_EntityTag_UE::
+    Set_SubscriptionMarker(
+        FCk_Handle& InListenerHost,
+        FName InTagFilter,
+        bool InIncrement)
+    -> void
+{
+    auto&& Storage = InListenerHost.Get_RegistryView()
+        .Storage<ck::FFragment_EntityTag_AnyEntitySubscription>(
+            entt::id_type{GetTypeHash(InTagFilter)});
+
+    const auto Entity = InListenerHost.Get_Entity().Get_ID();
+
+    if (InIncrement)
+    {
+        if (NOT Storage.contains(Entity))
+        {
+            Storage.emplace<ck::FFragment_EntityTag_AnyEntitySubscription>(Entity);
+        }
+        auto& Marker = Storage.get(Entity);
+        ++Marker._SubscriptionCount;
+    }
+    else
+    {
+        if (NOT Storage.contains(Entity))
+        { return; }
+
+        auto& Marker = Storage.get(Entity);
+        if (Marker._SubscriptionCount > 0)
+        { --Marker._SubscriptionCount; }
+
+        if (Marker._SubscriptionCount <= 0)
+        {
+            Storage.remove(Entity);
+        }
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_EntityTag_UE::
+    DoBroadcast_AnyEntityListeners(
+        FCk_Handle& InMutatedEntity,
+        FName InTag,
+        ECk_EntityTagUpdate InUpdate)
+    -> void
+{
+    const auto BroadcastTo = [&](FName InStorageKey)
+    {
+        auto&& Storage = InMutatedEntity.Get_RegistryView()
+            .Storage<ck::FFragment_EntityTag_AnyEntitySubscription>(
+                entt::id_type{GetTypeHash(InStorageKey)});
+
+        const auto View = entt::basic_view{Storage};
+        View.each([&](const auto InListenerEntity, const ck::FFragment_EntityTag_AnyEntitySubscription&)
+        {
+            if (NOT InMutatedEntity.Get_RegistryView().IsValid(InListenerEntity))
+            { return; }
+
+            auto ListenerHandle = InMutatedEntity.Get_ValidHandle(InListenerEntity);
+            if (ck::Is_NOT_Valid(ListenerHandle))
+            { return; }
+
+            ck::UUtils_Signal_EntityTag_OnTagUpdated_AnyEntity::Broadcast(
+                ListenerHandle,
+                ck::MakePayload(InTag, InMutatedEntity, InUpdate));
+        });
+    };
+
+    BroadcastTo(InTag);
+
+    if (NOT InTag.IsNone())
+    { BroadcastTo(NAME_None); }
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -96,6 +173,8 @@ auto
         ck::UUtils_Signal_EntityTag_OnTagUpdated::Broadcast(
             InHandle,
             ck::MakePayload(InHandle, InTag, ECk_EntityTagUpdate::Added));
+
+        DoBroadcast_AnyEntityListeners(InHandle, InTag, ECk_EntityTagUpdate::Added);
     }
 }
 
@@ -309,6 +388,8 @@ auto
         ck::UUtils_Signal_EntityTag_OnTagUpdated::Broadcast(
             InHandle,
             ck::MakePayload(InHandle, InTag, ECk_EntityTagUpdate::Removed));
+
+        DoBroadcast_AnyEntityListeners(InHandle, InTag, ECk_EntityTagUpdate::Removed);
     }
 }
 
@@ -500,6 +581,65 @@ auto
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_EntityTag_OnGameplayTagUpdated, InHandle, InDelegate);
     return InHandle;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_EntityTag_UE::
+    BindTo_OnTagUpdated_AnyEntity(
+        FCk_Handle& InListenerHost,
+        FName InTagFilter,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_EntityTag_OnTagUpdated_AnyEntity& InDelegate)
+    -> FCk_Handle
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InListenerHost),
+        TEXT("Invalid Listener Host Handle [{}] passed to BindTo_OnTagUpdated_AnyEntity"), InListenerHost)
+    { return InListenerHost; }
+
+    if (InTagFilter.IsNone())
+    {
+        CK_SIGNAL_BIND(
+            ck::UUtils_Signal_EntityTag_OnTagUpdated_AnyEntity,
+            InListenerHost, InDelegate, InBindingPolicy, InPostFireBehavior);
+    }
+    else
+    {
+        CK_SIGNAL_BIND_WITH_CONDITION(
+            ck::UUtils_Signal_EntityTag_OnTagUpdated_AnyEntity,
+            InListenerHost, InDelegate, InBindingPolicy, InPostFireBehavior,
+            [InTagFilter](FName InTag, FCk_Handle /*InEntity*/, ECk_EntityTagUpdate /*InUpdate*/)
+            {
+                return InTag == InTagFilter;
+            });
+    }
+
+    Set_SubscriptionMarker(InListenerHost, InTagFilter, true);
+
+    return InListenerHost;
+}
+
+auto
+    UCk_Utils_EntityTag_UE::
+    UnbindFrom_OnTagUpdated_AnyEntity(
+        FCk_Handle& InListenerHost,
+        FName InTagFilter,
+        const FCk_Delegate_EntityTag_OnTagUpdated_AnyEntity& InDelegate)
+    -> FCk_Handle
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InListenerHost),
+        TEXT("Invalid Listener Host Handle [{}] passed to UnbindFrom_OnTagUpdated_AnyEntity"), InListenerHost)
+    { return InListenerHost; }
+
+    CK_SIGNAL_UNBIND(
+        ck::UUtils_Signal_EntityTag_OnTagUpdated_AnyEntity,
+        InListenerHost, InDelegate);
+
+    Set_SubscriptionMarker(InListenerHost, InTagFilter, false);
+
+    return InListenerHost;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
