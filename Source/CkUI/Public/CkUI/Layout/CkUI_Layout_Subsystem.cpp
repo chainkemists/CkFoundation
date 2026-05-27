@@ -284,7 +284,7 @@ auto
     { return; }
 
     _Layout->InitializeFromConfig(InConfigAsset);
-    _Layout->AddToViewport(InConfigAsset->Get_LayoutZOrder());
+    _Layout->AddToPlayerScreen(InConfigAsset->Get_LayoutZOrder());
     DoBindLayoutEvents();
 }
 
