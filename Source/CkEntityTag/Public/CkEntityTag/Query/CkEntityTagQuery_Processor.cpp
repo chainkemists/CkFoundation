@@ -50,6 +50,8 @@ namespace ck
     {
         InCurrent._Requirements.Emplace(InRequest.Get_Requirement());
         InCurrent._ResultsPerRequirement.Emplace(TArray<FCk_Handle>{});
+        InCurrent._PendingAdded.Emplace(TArray<FCk_Handle>{});
+        InCurrent._PendingRemoved.Emplace(TArray<FCk_Handle>{});
     }
 
     auto
@@ -72,6 +74,14 @@ namespace ck
         if (Index < InCurrent._ResultsPerRequirement.Num())
         {
             InCurrent._ResultsPerRequirement.RemoveAt(Index);
+        }
+        if (Index < InCurrent._PendingAdded.Num())
+        {
+            InCurrent._PendingAdded.RemoveAt(Index);
+        }
+        if (Index < InCurrent._PendingRemoved.Num())
+        {
+            InCurrent._PendingRemoved.RemoveAt(Index);
         }
     }
 
@@ -98,6 +108,14 @@ namespace ck
             // HandleRequests should keep these in sync. Defensive resize.
             InCurrent._ResultsPerRequirement.SetNum(Requirements.Num());
         }
+        if (InCurrent._PendingAdded.Num() != Requirements.Num())
+        {
+            InCurrent._PendingAdded.SetNum(Requirements.Num());
+        }
+        if (InCurrent._PendingRemoved.Num() != Requirements.Num())
+        {
+            InCurrent._PendingRemoved.SetNum(Requirements.Num());
+        }
 
         auto AnyAppendedThisPass = false;
 
@@ -107,15 +125,26 @@ namespace ck
             auto&       Results = InCurrent._ResultsPerRequirement[i];
             const auto  Tag     = Req.Get_Tag();
 
+            auto& PendingRemoved = InCurrent._PendingRemoved[i];
+
             // Lazy prune: drop entries whose tag was removed (Request_TryRemove on a still-living entity).
             // Destruction is handled proactively by FProcessor_EntityTagQuery_TrackedEntity_Destructor
             // in the EndPlay group, but Eval may run before EndPlay in the same frame as the destruction.
             // Catch that window lazily so we never read tag state from a dying handle.
+            // Record dropped entries into _PendingRemoved so listeners get the delta in the payload.
             Results.RemoveAll([&](const FCk_Handle& H)
             {
                 if (ck::Is_NOT_Valid(H))
-                { return true; }
-                return NOT UCk_Utils_EntityTag_UE::Has(H, Tag);
+                {
+                    PendingRemoved.AddUnique(H);
+                    return true;
+                }
+                if (NOT UCk_Utils_EntityTag_UE::Has(H, Tag))
+                {
+                    PendingRemoved.AddUnique(H);
+                    return true;
+                }
+                return false;
             });
 
             // Determine target cap by mode.
@@ -151,6 +180,7 @@ namespace ck
                         { return; }
                         Results.Add(InEntity);
                         AnyAppendedThisPass = true;
+                        InCurrent._PendingAdded[i].AddUnique(InEntity);
 
                         // Register this query on the tagged entity so the destructor can clean us up.
                         auto& Tracked = InEntity.AddOrGet<FFragment_EntityTagQuery_TrackedByQueries>();
@@ -227,14 +257,16 @@ namespace ck
 
             if (ShouldFire)
             {
-                // Build result payload.
+                // Build result payload (including per-requirement add/remove deltas accumulated this pass).
                 auto Payload = TArray<FCk_EntityTagQuery_Result>{};
                 Payload.Reserve(Requirements.Num());
                 for (int32 i = 0; i < Requirements.Num(); ++i)
                 {
                     Payload.Emplace(FCk_EntityTagQuery_Result{
                         Requirements[i].Get_Tag(),
-                        InCurrent._ResultsPerRequirement[i]});
+                        InCurrent._ResultsPerRequirement[i],
+                        InCurrent._PendingAdded[i],
+                        InCurrent._PendingRemoved[i]});
                 }
 
                 InCurrent._HasFiredOnce = true;
@@ -255,13 +287,23 @@ namespace ck
             {
                 ContinuousPayload.Emplace(FCk_EntityTagQuery_Result{
                     Requirements[i].Get_Tag(),
-                    InCurrent._ResultsPerRequirement[i]});
+                    InCurrent._ResultsPerRequirement[i],
+                    InCurrent._PendingAdded[i],
+                    InCurrent._PendingRemoved[i]});
             }
 
             ck::UUtils_Signal_EntityTagQuery_OnContinuousUpdate::Broadcast(
                 InHandle,
                 ck::MakePayload(InHandle, InCurrent._IsSatisfied, ContinuousPayload));
         }
+
+        // Reset accumulators at the end of every Evaluate pass. Intentional:
+        // - OnContinuousUpdate listeners consume deltas every pass (never dropped).
+        // - OnSatisfied path captures deltas when it fires; otherwise they're dropped.
+        // - The destructor writes _PendingRemoved in FGroup_EndPlay (after Eval), so
+        //   those writes survive to next frame's Eval and get baked into that pass.
+        for (auto& A : InCurrent._PendingAdded)   { A.Reset(); }
+        for (auto& R : InCurrent._PendingRemoved) { R.Reset(); }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -287,12 +329,21 @@ namespace ck
             auto& Current = MutableQuery.Get<FFragment_EntityTagQuery_Current>();
 
             // Remove the dying entity from every result array in this query.
-            for (auto& Results : Current._ResultsPerRequirement)
+            // Record the removal into _PendingRemoved at the matching index so the
+            // next Evaluate pass bakes it into the payload before resetting.
+            for (int32 i = 0; i < Current._ResultsPerRequirement.Num(); ++i)
             {
-                Results.RemoveAll([&](const FCk_Handle& H)
+                auto& Results = Current._ResultsPerRequirement[i];
+
+                const auto RemovedCount = Results.RemoveAll([&](const FCk_Handle& H)
                 {
                     return H == InHandle;
                 });
+
+                if (RemovedCount > 0 && i < Current._PendingRemoved.Num())
+                {
+                    Current._PendingRemoved[i].AddUnique(FCk_Handle{InHandle});
+                }
             }
         }
     }
