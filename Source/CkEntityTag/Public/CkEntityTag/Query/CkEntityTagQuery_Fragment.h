@@ -31,6 +31,8 @@ namespace ck
     private:
         TArray<FCk_EntityTagQuery_Requirement> _Requirements;
         TArray<TArray<FCk_Handle>>             _ResultsPerRequirement;
+        TArray<TArray<FCk_Handle>>             _PendingAdded;      // parallel; cleared after each Evaluate pass
+        TArray<TArray<FCk_Handle>>             _PendingRemoved;    // parallel; populated by Evaluate + destructor
         bool                                   _IsSatisfied  = false;
         bool                                   _HasFiredOnce = false;
         int32                                  _ContinuousUpdateListenerCount = 0;
@@ -38,6 +40,8 @@ namespace ck
     public:
         CK_PROPERTY_GET(_Requirements);
         CK_PROPERTY_GET(_ResultsPerRequirement);
+        CK_PROPERTY_GET(_PendingAdded);
+        CK_PROPERTY_GET(_PendingRemoved);
         CK_PROPERTY_GET(_IsSatisfied);
     };
 

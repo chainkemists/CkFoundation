@@ -115,10 +115,18 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     TArray<FCk_Handle> _Handles;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    TArray<FCk_Handle> _Added;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    TArray<FCk_Handle> _Removed;
+
 public:
     CK_PROPERTY_GET(_Tag);
     CK_PROPERTY_GET(_Handles);
-    CK_DEFINE_CONSTRUCTORS(FCk_EntityTagQuery_Result, _Tag, _Handles);
+    CK_PROPERTY_GET(_Added);
+    CK_PROPERTY_GET(_Removed);
+    CK_DEFINE_CONSTRUCTORS(FCk_EntityTagQuery_Result, _Tag, _Handles, _Added, _Removed);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

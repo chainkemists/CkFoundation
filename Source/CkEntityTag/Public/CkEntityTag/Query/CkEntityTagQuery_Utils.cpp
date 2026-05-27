@@ -202,7 +202,14 @@ auto
     for (int32 i = 0; i < Reqs.Num(); ++i)
     {
         const auto Handles = (i < Results.Num()) ? Results[i] : TArray<FCk_Handle>{};
-        Out.Emplace(FCk_EntityTagQuery_Result{Reqs[i].Get_Tag(), Handles});
+        // Polling snapshot read — no meaningful deltas (caller isn't synchronized with the
+        // Evaluate reset cycle). Surface empty add/remove arrays rather than the live
+        // accumulator state, which would be misleading.
+        Out.Emplace(FCk_EntityTagQuery_Result{
+            Reqs[i].Get_Tag(),
+            Handles,
+            TArray<FCk_Handle>{},
+            TArray<FCk_Handle>{}});
     }
     return Out;
 }
