@@ -417,7 +417,14 @@ auto
     if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
     { return {}; }
 
-    return Subsystem->Request_AcquireAnyChannel();
+    // Request_AcquireAnyChannel was converted to the Promise/Pending pattern after this
+    // wrapper was written (see CkActorRelay's d86703e24 — `convert Request_AcquireChannel to
+    // Promise pattern`), so its return type is now `FCk_Handle_PendingActorRelay` rather than
+    // a resolved `FCk_ActorRelay_ChannelResult`. The owning-client push processor wraps this
+    // in a per-pump retry loop, so the sync-or-null shape is the right fit — Try_ResolvePending
+    // does the immediate resolve without subscribing to a deferred ready-signal.
+    auto Pending = Subsystem->Request_AcquireAnyChannel();
+    return Subsystem->Try_ResolvePending(Pending);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
