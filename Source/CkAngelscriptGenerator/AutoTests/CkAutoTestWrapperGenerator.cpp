@@ -1,5 +1,6 @@
 #include "CkAutoTestWrapperGenerator.h"
 
+#include "CkAngelscriptGenerator/AutoTests/CkAutoTestNetStubGenerator.h"
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
@@ -97,6 +98,15 @@ namespace ck_autotest_wrapper_generator
 #endif
 
         if (UCk_Utils_Reflection_UE::Is_PlaceholderClass(InClass))
+        { return false; }
+
+        // Net-mode tests (Phase 3b/3c) are handled by FCkAutoTestNetStubGenerator — they don't
+        // belong on a Standalone wrapper. Without this filter, the runtime-resolved actor
+        // wrapper still gets emitted for a Net test and would silently fail in single-PIE
+        // because the AS body relies on cross-world coordination that only the multi-PIE
+        // harness provides.
+        if (FCkAutoTestNetStubGenerator::Read_NetMode(InClass) !=
+            FCkAutoTestNetStubGenerator::ENetMode::Standalone)
         { return false; }
 
         return true;
