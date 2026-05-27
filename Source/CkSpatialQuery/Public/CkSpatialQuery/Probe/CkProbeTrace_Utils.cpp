@@ -160,6 +160,7 @@ auto
     auto ProbeTrace = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InSettings.Get_StartPos());
     ProbeTrace.Add<ck::FFragment_ProbeTrace_RayCast>(InSettings);
     ProbeTrace.Add<ck::FTag_ProbeTrace>();
+    ProbeTrace.Add<TSet<FCk_Probe_OverlapInfo>>();
 
     UCk_Utils_Handle_UE::Set_DebugName(ProbeTrace, *ck::Format_UE(TEXT("ProbeTrace_Line_[{}]"), InSettings.Get_StartPos()));
 
@@ -179,6 +180,7 @@ auto
     auto ProbeTrace = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InSettings.Get_StartPos());
     ProbeTrace.Add<ck::FFragment_ProbeTrace_ShapeCast>(InSettings);
     ProbeTrace.Add<ck::FTag_ProbeTrace>();
+    ProbeTrace.Add<TSet<FCk_Probe_OverlapInfo>>();
 
     UCk_Utils_Handle_UE::Set_DebugName(ProbeTrace, *ck::Format_UE(TEXT("ProbeTrace_{}_[{}]"), InSettings.Get_Shape().Get_ShapeType(), InSettings.Get_StartPos()));
 
@@ -230,6 +232,81 @@ auto
 
     Request_DrawShapeTrace(InAnyHandle, InSettings, *Result);
     return *Result;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ProbeTrace_UE::
+    Get_CurrentOverlaps(
+        const FCk_Handle_ProbeTrace& InProbeTrace)
+    -> TSet<FCk_Probe_OverlapInfo>
+{
+    return InProbeTrace.Get<TSet<FCk_Probe_OverlapInfo>>();
+}
+
+auto
+    UCk_Utils_ProbeTrace_UE::
+    Get_IsEnabledDisabled(
+        const FCk_Handle_ProbeTrace& InProbeTrace)
+    -> ECk_EnableDisable
+{
+    return InProbeTrace.Has<ck::FTag_ProbeTrace_Disabled>()
+        ? ECk_EnableDisable::Disable
+        : ECk_EnableDisable::Enable;
+}
+
+auto
+    UCk_Utils_ProbeTrace_UE::
+    Request_EnableDisable(
+        FCk_Handle_ProbeTrace& InProbeTrace,
+        const FCk_Request_Probe_EnableDisable& InRequest)
+    -> FCk_Handle_ProbeTrace
+{
+    switch (InRequest.Get_EnableDisable())
+    {
+        case ECk_EnableDisable::Enable:
+        {
+            InProbeTrace.Try_Remove<ck::FTag_ProbeTrace_Disabled>();
+            break;
+        }
+        case ECk_EnableDisable::Disable:
+        {
+            // Without this, the persistent processor's tick-by-tick "fire
+            // EndOverlap for stale overlaps" loop never runs (we short-circuit
+            // it via the disabled tag), so listeners — e.g. an Interactable
+            // focused by the trace's overlap handler — would keep their state
+            // stuck. Mirrors FProcessor_Probe_EndPlay's same-named lambda.
+            const auto& DoManuallyTriggerAllEndOverlaps = [&]() -> void
+            {
+                for (const auto& OverlapInfo : Get_CurrentOverlaps(InProbeTrace))
+                {
+                    const auto& OtherEntity = OverlapInfo.Get_OtherEntity();
+
+                    ck::UUtils_Signal_OnProbeTraceEndOverlap::Broadcast(InProbeTrace,
+                        ck::MakePayload(InProbeTrace, FCk_Probe_Payload_OnEndOverlap{OtherEntity}));
+
+                    if (auto OtherEntityAsProbe = UCk_Utils_Probe_UE::Cast(OtherEntity);
+                        ck::IsValid(OtherEntityAsProbe))
+                    {
+                        UCk_Utils_Probe_UE::Request_EndOverlap(OtherEntityAsProbe,
+                            FCk_Request_Probe_EndOverlap{InProbeTrace});
+                    }
+                }
+            };
+
+            DoManuallyTriggerAllEndOverlaps();
+
+            // Clear the processor's overlap set so re-enable starts fresh —
+            // the next cast cleanly re-populates as BeginOverlaps.
+            InProbeTrace.Get<TSet<FCk_Probe_OverlapInfo>>().Empty();
+
+            InProbeTrace.AddOrGet<ck::FTag_ProbeTrace_Disabled>();
+            break;
+        }
+    }
+
+    return InProbeTrace;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -418,7 +495,8 @@ auto
     Request_DrawLineTrace(
         const FCk_Handle& InAnyHandle,
         const FCk_Probe_RayCast_Settings& InSettings,
-        TOptional<FCk_Probe_RayCast_Result> InResult)
+        TOptional<FCk_Probe_RayCast_Result> InResult,
+        bool InIsDisabled)
     -> void
 {
     const auto HasDebugDrawTag = InAnyHandle.Has<ck::FTag_ProbeTrace_DebugDraw>();
@@ -454,9 +532,20 @@ auto
         BoxColor = FLinearColor::Yellow;
     }
 
+    // Disabled traces still draw — but flat gray, matching Probe's disabled
+    // visualization (Probe colors with InDebugInfo.Get_DisabledColor()).
+    // No hit/miss split because the underlying cast was skipped.
+    if (InIsDisabled)
+    {
+        HitColor = FLinearColor::Gray;
+        MissColor = FLinearColor::Gray;
+        NoHitColor = FLinearColor::Gray;
+        BoxColor = FLinearColor::Gray;
+    }
+
     const auto WorldContext = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAnyHandle);
 
-    if (ck::IsValid(InResult))
+    if (ck::IsValid(InResult) && NOT InIsDisabled)
     {
         UCk_Utils_DebugDraw_UE::DrawDebugLine(WorldContext, InResult->Get_StartPos(),
             InResult->Get_HitLocation(), HitColor, Duration, LineThickness);
@@ -472,6 +561,17 @@ auto
     {
         UCk_Utils_DebugDraw_UE::DrawDebugLine(WorldContext, InSettings.Get_StartPos(), InSettings.Get_EndPos(),
             NoHitColor, Duration, LineThickness);
+
+        // Disabled traces also paint a small endpoint marker — line traces
+        // alone are visually thin and easy to miss against scene geometry.
+        // The hit case draws a box at the hit location; mirror that for
+        // disabled so the endpoint stays legible.
+        if (InIsDisabled)
+        {
+            UCk_Utils_DebugDraw_UE::DrawDebugBox(WorldContext, InSettings.Get_EndPos(), FVector{1.0},
+                BoxColor,
+                UKismetMathLibrary::FindLookAtRotation(InSettings.Get_EndPos(), InSettings.Get_StartPos()), Duration, LineThickness);
+        }
     }
 }
 
@@ -649,7 +749,8 @@ auto
     Request_DrawShapeTrace(
         const FCk_Handle& InAnyHandle,
         const FCk_ShapeCast_Settings& InSettings,
-        TOptional<FCk_ShapeCast_Result> InResult)
+        TOptional<FCk_ShapeCast_Result> InResult,
+        bool InIsDisabled)
     -> void
 {
     const auto HasDebugDrawTag = InAnyHandle.Has<ck::FTag_ProbeTrace_DebugDraw>();
@@ -664,6 +765,20 @@ auto
     const auto& EndPos = InSettings.Get_EndPos();
     const auto& Orientation = UKismetMathLibrary::FindLookAtRotation(StartPos, EndPos);
     const auto& Shape = InSettings.Get_Shape();
+
+    // Disabled traces draw the swept shape at both ends + a single connector,
+    // all in gray. Mirrors Probe's flat-disabled visualization. The cast
+    // result is ignored because the underlying cast was skipped.
+    if (InIsDisabled)
+    {
+        DrawShapeAtLocation(WorldContext, InSettings, StartPos, Orientation,
+            FLinearColor::Gray, 0, LineThickness);
+        DrawShapeAtLocation(WorldContext, InSettings, EndPos, Orientation,
+            FLinearColor::Gray, 0, LineThickness);
+        DrawShapeConnector(WorldContext, StartPos, EndPos, Shape,
+            FLinearColor::Gray, 0, LineThickness);
+        return;
+    }
 
     if (ck::IsValid(InResult))
     {

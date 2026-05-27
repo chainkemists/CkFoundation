@@ -105,6 +105,29 @@ public:
         const FCk_ShapeCast_Settings& InSettings);
 
 public:
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|ProbeTrace",
+        DisplayName="[Ck][ProbeTrace] Get Current Overlaps")
+    static TSet<FCk_Probe_OverlapInfo>
+    Get_CurrentOverlaps(
+        const FCk_Handle_ProbeTrace& InProbeTrace);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|ProbeTrace",
+        DisplayName="[Ck][ProbeTrace] Get IsEnabled/Disabled")
+    static ECk_EnableDisable
+    Get_IsEnabledDisabled(
+        const FCk_Handle_ProbeTrace& InProbeTrace);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|ProbeTrace",
+        DisplayName="[Ck][ProbeTrace] Request Enable/Disable")
+    static FCk_Handle_ProbeTrace
+    Request_EnableDisable(
+        UPARAM(ref) FCk_Handle_ProbeTrace& InProbeTrace,
+        const FCk_Request_Probe_EnableDisable& InRequest);
+
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ProbeTrace",
               DisplayName = "[Ck][ProbeTrace] Bind To OnBeginOverlap")
@@ -180,7 +203,8 @@ public:
     Request_DrawLineTrace(
         const FCk_Handle& InAnyHandle,
         const FCk_Probe_RayCast_Settings& InSettings,
-        TOptional<FCk_Probe_RayCast_Result> InResult) -> void;
+        TOptional<FCk_Probe_RayCast_Result> InResult,
+        bool InIsDisabled = false) -> void;
 
     static auto
     Request_MultiShapeTrace(
@@ -202,7 +226,8 @@ public:
     Request_DrawShapeTrace(
         const FCk_Handle& InAnyHandle,
         const FCk_ShapeCast_Settings& InSettings,
-        TOptional<FCk_ShapeCast_Result> InResult) -> void;
+        TOptional<FCk_ShapeCast_Result> InResult,
+        bool InIsDisabled = false) -> void;
 
 private:
     static auto

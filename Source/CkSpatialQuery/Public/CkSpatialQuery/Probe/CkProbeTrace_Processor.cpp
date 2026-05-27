@@ -46,6 +46,12 @@ namespace ck
             const FFragment_ProbeTrace_RayCast& InRequest) const
         -> void
     {
+        // Paused via UCk_Utils_ProbeTrace_UE::Request_EnableDisable — skip
+        // the per-tick trace while disabled. Mirrors FTag_Probe_Disabled
+        // gating in the Probe processors.
+        if (InHandle.Has<FTag_ProbeTrace_Disabled>())
+        { return; }
+
         CK_ENSURE_IF_NOT(ck::IsValid(_PhysicsSystem),
             TEXT("PhysicsSystem is NOT valid. Unable to start trace using Handle [{}]"), InHandle)
         {
@@ -170,6 +176,9 @@ namespace ck
             const FFragment_ProbeTrace_ShapeCast& InRequest) const
         -> void
     {
+        if (InHandle.Has<FTag_ProbeTrace_Disabled>())
+        { return; }
+
         CK_ENSURE_IF_NOT(ck::IsValid(_PhysicsSystem),
             TEXT("PhysicsSystem is NOT valid. Unable to start shape trace using Handle [{}]"), InHandle)
         {
@@ -304,6 +313,14 @@ namespace ck
             .Set_BackFaceModeConvex(InRequest.Get_BackFaceModeConvex())
             .Set_BackFaceModeTriangles(InRequest.Get_BackFaceModeTriangles());
 
+        // Disabled traces still visualize — flat gray, no cast — so paused
+        // traces are visible at a glance (parity with FTag_Probe_Disabled).
+        if (InHandle.Has<FTag_ProbeTrace_Disabled>())
+        {
+            UCk_Utils_ProbeTrace_UE::Request_DrawLineTrace(InHandle, RayCastSettings, {}, /*InIsDisabled=*/true);
+            return;
+        }
+
         constexpr auto FireOverlaps = false;
         constexpr auto TryDebugDraw = true;
 
@@ -345,6 +362,14 @@ namespace ck
         const auto ShapeCastSettings = FCk_ShapeCast_Settings{Transform.GetLocation(), EndPos, InRequest.Get_Shape(), InRequest.Get_Filter()}
             .Set_BackFaceModeConvex(InRequest.Get_BackFaceModeConvex())
             .Set_BackFaceModeTriangles(InRequest.Get_BackFaceModeTriangles());
+
+        // Same parity-with-Probe pattern as the line-trace draw — disabled
+        // shape traces visualize in gray, no cast, no overlap firing.
+        if (InHandle.Has<FTag_ProbeTrace_Disabled>())
+        {
+            UCk_Utils_ProbeTrace_UE::Request_DrawShapeTrace(InHandle, ShapeCastSettings, {}, /*InIsDisabled=*/true);
+            return;
+        }
 
         constexpr auto FireOverlaps = false;
         constexpr auto TryDebugDraw = true;
