@@ -140,4 +140,10 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FGameplayTag, InTag,
     ECk_EntityTagUpdate, InUpdateType);
 
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+    FCk_Delegate_EntityTag_OnTagUpdated_AnyEntity,
+    FName, InTag,
+    FCk_Handle, InEntity,
+    ECk_EntityTagUpdate, InUpdateType);
+
 // --------------------------------------------------------------------------------------------------------------------

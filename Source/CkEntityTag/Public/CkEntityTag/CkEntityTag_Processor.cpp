@@ -11,6 +11,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityTag_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_EntityTag_BroadcastOnDestroy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -75,5 +76,23 @@ namespace ck
         -> void
     {
         UCk_Utils_EntityTag_UE::DoApply_TryRemoveGameplayTag(InHandle, InRequest.Get_Tag());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_EntityTag_BroadcastOnDestroy::
+        ForEachEntity(
+            TimeType,
+            HandleType InHandle,
+            const FFragment_EntityTag_Current& InCurrent) const
+        -> void
+    {
+        auto MutatedEntity = InHandle;
+        for (const auto& TagCount : InCurrent.Get_Tags())
+        {
+            UCk_Utils_EntityTag_UE::DoBroadcast_AnyEntityListeners(
+                MutatedEntity, TagCount._Name, ECk_EntityTagUpdate::Removed);
+        }
     }
 }
