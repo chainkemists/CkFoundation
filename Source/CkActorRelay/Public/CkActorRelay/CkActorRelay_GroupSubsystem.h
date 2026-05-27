@@ -29,6 +29,7 @@ public:
 public:
     auto Initialize(FSubsystemCollectionBase& InCollection) -> void override;
     auto Deinitialize() -> void override;
+    auto OnWorldBeginPlay(UWorld& InWorld) -> void override;
 
     /*-------------------------------------------------------------------------
                           VIRTUAL CONFIG METHODS
@@ -85,6 +86,13 @@ public:
 public:
     auto DoBroadcastChannelReadyChanged() -> void;
 
+    // Synchronous, one-shot resolver for callers that want "give me a channel right now or
+    // return invalid — I'll retry next pump." The Promise/Pending pattern's async subscription
+    // path is the wrong fit when the consumer already drives its own retry loop (e.g. an ECS
+    // processor that re-evaluates every tick). Used by CkStateMachine's owning-client push
+    // path; safe to use elsewhere with the same retry-vs-subscribe trade-off in mind.
+    auto Try_ResolvePending(FCk_Handle_PendingActorRelay& InPending) -> FCk_ActorRelay_ChannelResult;
+
     /*-------------------------------------------------------------------------
                               INTERNALS
     --------------------------------------------------------------------------*/
@@ -97,6 +105,7 @@ private:
     auto DoSpawnAndRegister_Channel(
         const TFunction<void(ACk_ActorRelay_UE*)>& InPreFinishSpawnFunc = nullptr) -> ACk_ActorRelay_UE*;
 
+    auto DoSpawnChannels() -> void;
     auto DoSpawnChannels_Server() -> void;
     auto DoSpawnChannels_ForPlayer(APlayerController* InPlayerController) -> void;
     auto DoDestroyChannels_ForPlayer(APlayerState* InPlayerState) -> void;

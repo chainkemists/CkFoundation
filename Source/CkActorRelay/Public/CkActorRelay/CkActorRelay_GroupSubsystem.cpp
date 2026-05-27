@@ -90,6 +90,43 @@ auto
     _LogoutEventDelegateHandle = FGameModeEvents::GameModeLogoutEvent.AddUObject(
         this, &UCk_ActorRelay_Group_Subsystem_Base_UE::OnPlayerLogout);
 
+    // Channel spawning is deferred to OnWorldBeginPlay. Spawning replicated
+    // actors before UWorld::HasBegunPlay() returns true makes UE classify them
+    // as level-startup actors (bNetStartup=true), which causes Iris to
+    // serialize them to clients by path reference instead of by class. The
+    // client then tries to resolve the path in its level package, finds
+    // nothing (these actors are dynamically spawned and don't exist on disk),
+    // and "Could not find static actor" / "Failed to instantiate Handle"
+    // ensures fire in UObjectReplicationBridge.
+    //
+    // If the subsystem is created mid-game (rare — seamless travel etc.) the
+    // world has already begun play, so spawn immediately; OnWorldBeginPlay
+    // will not fire for an already-begun-play world.
+    if (GetWorld()->HasBegunPlay())
+    {
+        DoSpawnChannels();
+    }
+}
+
+auto
+    UCk_ActorRelay_Group_Subsystem_Base_UE::
+    OnWorldBeginPlay(
+        UWorld& InWorld)
+    -> void
+{
+    Super::OnWorldBeginPlay(InWorld);
+
+    if (InWorld.IsNetMode(NM_Client))
+    { return; }
+
+    DoSpawnChannels();
+}
+
+auto
+    UCk_ActorRelay_Group_Subsystem_Base_UE::
+    DoSpawnChannels()
+    -> void
+{
     if (Get_OwnershipPolicy() == ECk_ActorRelay_OwnershipPolicy::ServerOwned)
     {
         DoSpawnChannels_Server();
@@ -189,6 +226,18 @@ auto
     -> void
 {
     _OnChannelReadyChanged.Broadcast();
+}
+
+auto
+    UCk_ActorRelay_Group_Subsystem_Base_UE::
+    Try_ResolvePending(
+        FCk_Handle_PendingActorRelay& InPending)
+    -> FCk_ActorRelay_ChannelResult
+{
+    // Thin public forwarder so consumers that want sync-or-null (e.g. ECS processors with
+    // per-tick retry) don't have to subscribe to _OnChannelReadyChanged via Promise_OnAcquired.
+    // Internal callers still use DoTryResolve directly via friendship.
+    return DoTryResolve(InPending);
 }
 
 auto
