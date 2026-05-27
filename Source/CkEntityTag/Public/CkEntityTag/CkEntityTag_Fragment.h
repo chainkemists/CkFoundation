@@ -74,6 +74,29 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Per-tag subscription marker. The presence of this fragment in the EnTT
+    // per-tag-keyed storage (keyed by entt::id_type{GetTypeHash(Tag)}, mirroring
+    // FFragment_EntityTag_StorageParams) marks the listener entity as interested
+    // in mutations to that tag. NAME_None storage is the wildcard ("any tag").
+    //
+    // Carries a refcount because the same entity may bind multiple delegates for
+    // the same tag — we only want one marker per (entity, tag) pair, removed when
+    // all delegates unbind.
+    struct CKENTITYTAG_API FFragment_EntityTag_AnyEntitySubscription
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_EntityTag_AnyEntitySubscription);
+        friend class ::UCk_Utils_EntityTag_UE;
+
+    private:
+        int32 _SubscriptionCount = 0;
+
+    public:
+        CK_PROPERTY_GET(_SubscriptionCount);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKENTITYTAG_API FFragment_EntityTag_Requests
     {
     public:
@@ -115,6 +138,14 @@ namespace ck
         FCk_Delegate_EntityTag_OnGameplayTagUpdated,
         FCk_Handle,
         FGameplayTag,
+        ECk_EntityTagUpdate);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKENTITYTAG_API,
+        EntityTag_OnTagUpdated_AnyEntity,
+        FCk_Delegate_EntityTag_OnTagUpdated_AnyEntity,
+        FName,
+        FCk_Handle,
         ECk_EntityTagUpdate);
 
     // --------------------------------------------------------------------------------------------------------------------
