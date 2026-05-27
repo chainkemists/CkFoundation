@@ -70,6 +70,38 @@ namespace ck_autotest_netstub_generator
         return 0;
     }
 
+    // ---- _NetSubjectClass reflection ----------------------------------
+
+    // Default subject class path emitted when an AS test doesn't override `_NetSubjectClass`.
+    // The default `ACk_AutoTest_NetSubject` (in CkTests) adds a Float attribute on its entity-
+    // script — sufficient for CkAttribute net tests but not for modules with different per-entity
+    // state. Modules with custom subjects (CkRelationship, CkInventory, CkStateMachine, etc.)
+    // author a subclass and override the UPROPERTY on their AS test class.
+    static const TCHAR* DefaultNetSubjectClassPath = TEXT("/Script/CkTests.ACk_AutoTest_NetSubject");
+
+    // Read the AS test's CDO `_NetSubjectClass` UPROPERTY (declared on UCk_AutoTest_NetBase).
+    // Returns the class path string suitable for emission as an FSoftClassPath literal in the
+    // generated C++ stub. Falls back to the default subject path when the property is unset
+    // (nullptr) or missing (a test class that doesn't derive from NetBase). Reflection mirrors
+    // the existing `Read_NetModeByte` pattern; class properties surface as FClassProperty.
+    auto Read_NetSubjectClassPath(const UClass* InEntityScriptClass) -> FString
+    {
+        const auto* CDO = InEntityScriptClass->GetDefaultObject();
+        if (NOT ck::IsValid(CDO, ck::IsValid_Policy_NullptrOnly{}))
+        { return DefaultNetSubjectClassPath; }
+
+        const auto* Property = InEntityScriptClass->FindPropertyByName(TEXT("_NetSubjectClass"));
+        const auto* ClassProp = CastField<FClassProperty>(Property);
+        if (ClassProp == nullptr)
+        { return DefaultNetSubjectClassPath; }
+
+        auto* Resolved = Cast<UClass>(ClassProp->GetObjectPropertyValue_InContainer(CDO));
+        if (ck::Is_NOT_Valid(Resolved, ck::IsValid_Policy_NullptrOnly{}))
+        { return DefaultNetSubjectClassPath; }
+
+        return Resolved->GetPathName();
+    }
+
     // ---- Locating UCk_AutoTest_Base ------------------------------------
 
     auto Find_AutoTestBaseClass() -> UClass*
@@ -261,15 +293,29 @@ namespace ck_autotest_netstub_generator
 
         if (IsReplicated)
         {
+            // The AS class CDO's `_NetSubjectClass` UPROPERTY (declared on UCk_AutoTest_NetBase)
+            // selects which subject actor the harness spawns. Default fallback is the base
+            // `ACk_AutoTest_NetSubject`. The class path is embedded as an FSoftClassPath literal
+            // and resolved at run time via TryLoadClass — same lazy-resolve pattern the standalone
+            // wrapper generator uses for entity-script class lookups (avoids hard C++ header deps
+            // on a per-test subject subclass).
+            const auto SubjectClassPath = Read_NetSubjectClassPath(InEntityScriptClass);
+
             Block += TEXT("    ADD_LATENT_AUTOMATION_COMMAND(FCk_Latent_RunOnServer(\n");
             Block += TEXT("        FCk_NetAutoTest_ServerAction::CreateLambda([this](UWorld* InServer) -> void\n");
             Block += TEXT("        {\n");
             Block += TEXT("            auto SpawnInfo = FActorSpawnParameters{};\n");
             Block += TEXT("            SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;\n");
+            Block += ck::Format_UE(
+                TEXT("            const auto SubjectClassPath = FSoftClassPath(TEXT(\"{}\"));\n"),
+                SubjectClassPath);
+            Block += TEXT("            auto* SubjectClass = SubjectClassPath.TryLoadClass<ACk_AutoTest_NetSubject>();\n");
+            Block += TEXT("            if (SubjectClass == nullptr)\n");
+            Block += TEXT("            { AddError(TEXT(\"AS-test harness: failed to resolve NetSubject class via FSoftClassPath\")); return; }\n");
             Block += TEXT("            auto* Subject = InServer->SpawnActor<ACk_AutoTest_NetSubject>(\n");
-            Block += TEXT("                ACk_AutoTest_NetSubject::StaticClass(), FTransform::Identity, SpawnInfo);\n");
+            Block += TEXT("                SubjectClass, FTransform::Identity, SpawnInfo);\n");
             Block += TEXT("            if (Subject == nullptr)\n");
-            Block += TEXT("            { AddError(TEXT(\"AS-test harness: server-side spawn of ACk_AutoTest_NetSubject returned null\")); }\n");
+            Block += TEXT("            { AddError(TEXT(\"AS-test harness: server-side SpawnActor returned null\")); }\n");
             Block += TEXT("        })));\n\n");
             Block += TEXT("    ADD_LATENT_AUTOMATION_COMMAND(FCk_Latent_TickWorlds(FramesAfterSpawn));\n\n");
         }
