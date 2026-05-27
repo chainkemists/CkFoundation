@@ -55,7 +55,9 @@ auto
     {
         if (NOT Storage.contains(Entity))
         {
-            Storage.emplace<ck::FFragment_EntityTag_AnyEntitySubscription>(Entity);
+            Storage.emplace<ck::FFragment_EntityTag_AnyEntitySubscription>(
+                Entity,
+                ck::FFragment_EntityTag_AnyEntitySubscription{});
         }
         auto& Marker = Storage.get(Entity);
         ++Marker._SubscriptionCount;
