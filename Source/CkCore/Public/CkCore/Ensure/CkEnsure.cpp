@@ -200,7 +200,13 @@ namespace ck::ensure
             );
         }
 
-        if (UCk_Utils_Core_UserSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::LogOnly)
+        // -unattended / commandlet contexts share the LogOnly fate: the full Error log already
+        // ran above (matching stock UE ensure severity, respects core.EnsuresAreErrors), but
+        // FSlateApplication::AddModalWindow would spin on Sleep with no UI to dismiss. Same
+        // exit ACk_AutoTestRunner forces via Set_EnsureDisplayPolicy(LogOnly).
+        if (UCk_Utils_Core_UserSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::LogOnly
+            || FApp::IsUnattended()
+            || IsRunningCommandlet())
         { return; }
 
         // If we showed an Editor notification, don't also show the dialog
