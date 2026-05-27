@@ -32,6 +32,7 @@ namespace ck { namespace details
     CK_DEFINE_ECS_TAG(FTag_Probe_PersistContacts);
     CK_DEFINE_ECS_TAG(FTag_ProbeTrace);
     CK_DEFINE_ECS_TAG(FTag_ProbeTrace_DebugDraw);
+    CK_DEFINE_ECS_TAG(FTag_ProbeTrace_Disabled);
 
     // --------------------------------------------------------------------------------------------------------------------
 
