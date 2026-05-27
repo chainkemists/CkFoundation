@@ -25,7 +25,9 @@ ACk_IsmRenderer_Actor_UE::
     _RootNode = CreateDefaultSubobject<USceneComponent>(TEXT("DefaultSceneRoot"));
     RootComponent = _RootNode;
 
+#if WITH_EDITORONLY_DATA
     bListedInSceneOutliner = false;
+#endif
 }
 
 auto
