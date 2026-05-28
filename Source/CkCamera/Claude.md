@@ -1,9 +1,11 @@
 # CkCamera
 
-**Purpose:** Camera shake system. Adds `FCk_Handle_CameraShake` entities to a Record on a camera-owner entity. Each shake entity has params (shake asset, intensity, falloff) and a lifecycle managed by processors.
+**Purpose:** Two subsystems —
+1. **`CameraShake/`** — camera shake. Adds `FCk_Handle_CameraShake` entities to a Record on a camera-owner entity; the processor drives `PlayerCameraManager->StartCameraShake`.
+2. **`GameplayCamera/`** — the gameplay camera (stack) system: a per-viewer **director** (`FCk_Handle_GameplayCamera`) owning a Record of **modifier** child entities (`FCk_Handle_CameraModifier`). Each modifier is an **entity script** (`UCk_CameraModifier_EntityScript`, the camera analog of `UCk_SmState_EntityScript`) that contributes to a composed `FCk_GameplayCamera_Profile`; a single POV pipeline resolves an `FMinimalViewInfo` consumed by `UCk_GameplayCameraComponent::GetCameraView`. Client-local only (no replication).
 
-**Depends on:** `CkCore`, `CkEcs`, `CkEcsExt`, `CkLabel`, `CkLog`, `CkProvider`, `CkRecord`, `CkSettings`.
-**Used by:** Ability/VFX systems that trigger camera feedback.
+**Depends on:** `CkCore`, `CkEcs`, `CkEcsExt`, `CkInput`, `CkLabel`, `CkLog`, `CkProvider`, `CkRecord`, `CkSettings`.
+**Used by:** Ability/VFX systems (shake); player/pawn setup (gameplay camera).
 
 ---
 

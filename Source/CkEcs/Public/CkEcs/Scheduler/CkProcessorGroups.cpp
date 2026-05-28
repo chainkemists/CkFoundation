@@ -15,6 +15,7 @@ CK_REGISTER_GROUP(ck::FGroup_Physics);
 CK_REGISTER_GROUP(ck::FGroup_Transform_SyncFrom);
 CK_REGISTER_GROUP(ck::FGroup_Transform);
 CK_REGISTER_GROUP(ck::FGroup_Transform_Finalize);
+CK_REGISTER_GROUP(ck::FGroup_Gameplay_Camera);
 CK_REGISTER_GROUP(ck::FGroup_PostTransform);
 CK_REGISTER_GROUP(ck::FGroup_Replication);
 CK_REGISTER_GROUP(ck::FGroup_EntityLifecycle);

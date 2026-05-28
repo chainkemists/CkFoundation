@@ -20,7 +20,8 @@
 //                     → FGroup_Transform_SyncFrom  (SyncFromActor, SyncFromMeshSocket, Interpolation)
 //                       → FGroup_Transform  (HandleRequests, SceneNode, Tween)
 //                         → FGroup_Transform_Finalize  (SyncToActor, FireSignals)
-//                           → FGroup_PostTransform (OverlapBody, RaySense, UI, etc.)
+//                           → FGroup_Gameplay_Camera (GameplayCamera compose/POV/apply — reads anchors AFTER they are synced this frame)
+//                             → FGroup_PostTransform (OverlapBody, RaySense, UI, etc.)
 //                             → FGroup_Replication
 //                               → FGroup_EntityLifecycle (entity create + DestructionPhase_Endplay — adds the EndPlay tag)
 //                                 → FGroup_EndPlay (all feature-level *_EndPlay processors + EntityScript_EndPlay — CK_IF_END_PLAY matches here because EndPlay tag is set but Teardown is not yet)
@@ -58,6 +59,7 @@ namespace ck
     struct FGroup_Transform_SyncFrom;
     struct FGroup_Transform;
     struct FGroup_Transform_Finalize;
+    struct FGroup_Gameplay_Camera;
     struct FGroup_PostTransform;
     struct FGroup_Replication;
     struct FGroup_EntityLifecycle;
@@ -126,9 +128,17 @@ namespace ck
         using RunAfter = TDepList<FGroup_Transform>;
     };
 
-    struct FGroup_PostTransform
+    // GameplayCamera reads its anchor/look-at FCk_Handle_Transform AFTER the Transform groups have
+    // synced this frame's pose (SyncFromActor/SyncFromMeshSocket → Transform → SyncToActor). Running
+    // here (still TG_PrePhysics) guarantees the POV samples the current-frame anchor, not last frame's.
+    struct FGroup_Gameplay_Camera
     {
         using RunAfter = TDepList<FGroup_Transform_Finalize>;
+    };
+
+    struct FGroup_PostTransform
+    {
+        using RunAfter = TDepList<FGroup_Gameplay_Camera>;
     };
 
     struct FGroup_Replication
