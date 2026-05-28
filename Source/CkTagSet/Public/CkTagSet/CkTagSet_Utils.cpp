@@ -31,8 +31,11 @@ auto
 
     if (InReplicates == ECk_Replication::Replicates)
     {
-        auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
-        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_TagSet>(LifetimeOwner);
+        // The rep container must live on the SAME entity that holds FFragment_TagSet so the
+        // client-side FProcessor_TagSet_SyncReplication (which requires both fragments together)
+        // can match. That entity is InHandle — it carries the replication driver, whereas its
+        // LifetimeOwner (e.g. the Transient Entity for an actor-bridged subject) does not.
+        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_TagSet>(InHandle);
 
         if (InInitialTags.Num() > 0)
         {

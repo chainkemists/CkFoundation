@@ -120,10 +120,10 @@ namespace ck
             const FFragment_TagSet& InTagSet)
         -> void
     {
-        auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
-
+        // Container lives on InHandle (co-located with FFragment_TagSet, which carries the
+        // replication driver) — see UCk_Utils_TagSet_UE::Add.
         UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_TagSet>(
-            LifetimeOwner, [&](FCk_RepData_TagSet& Data)
+            InHandle, [&](FCk_RepData_TagSet& Data)
         {
             Data.Tags = InTagSet.Get_Tags();
         });
