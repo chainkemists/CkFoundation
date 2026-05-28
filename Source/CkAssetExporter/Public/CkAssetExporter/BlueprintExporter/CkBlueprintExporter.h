@@ -14,6 +14,9 @@ class UEdGraphNode;
 class UEdGraphPin;
 class UFunction;
 class UClass;
+class UWidgetBlueprint;
+class UWidget;
+class UWidgetAnimation;
 
 struct FBPVariableDescription;
 struct FEdGraphPinType;
@@ -94,6 +97,22 @@ private:
     DoSerializeInterfaceFunction_Json(
         const UFunction* InFunction) -> TSharedPtr<FJsonObject>;
 
+    // ---- Widget Blueprint (UMG) serialization ----
+
+    static auto
+    DoSerializeWidgetHierarchy_Json(
+        const UWidgetBlueprint* InWidgetBlueprint) -> TSharedPtr<FJsonObject>;
+
+    static auto
+    DoSerializeWidget_Json(
+        const UWidget* InWidget,
+        const FString& InSlotName,
+        int32 InDepth) -> TSharedPtr<FJsonObject>;
+
+    static auto
+    DoSerializeAnimations_Json(
+        const UWidgetBlueprint* InWidgetBlueprint) -> TArray<TSharedPtr<FJsonValue>>;
+
     // ---- Plain-text serialization ----
 
     static auto
@@ -130,6 +149,23 @@ private:
     static auto
     DoSerializeImplementedInterfaces_Text(
         const UBlueprint* InBlueprint,
+        FString& OutText) -> void;
+
+    static auto
+    DoSerializeWidgetHierarchy_Text(
+        const UWidgetBlueprint* InWidgetBlueprint,
+        FString& OutText) -> void;
+
+    static auto
+    DoSerializeWidget_Text(
+        const UWidget* InWidget,
+        const FString& InSlotName,
+        int32 InDepth,
+        FString& OutText) -> void;
+
+    static auto
+    DoSerializeAnimations_Text(
+        const UWidgetBlueprint* InWidgetBlueprint,
         FString& OutText) -> void;
 
     // ---- Helpers ----

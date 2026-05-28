@@ -26,6 +26,16 @@
 #include <K2Node_FunctionEntry.h>
 #include <K2Node_FunctionResult.h>
 
+#include <WidgetBlueprint.h>
+#include <Blueprint/WidgetTree.h>
+#include <Components/Widget.h>
+#include <Components/PanelWidget.h>
+#include <Components/PanelSlot.h>
+#include <Components/NamedSlotInterface.h>
+#include <Components/SlateWrapperTypes.h>
+#include <Animation/WidgetAnimation.h>
+#include <Animation/WidgetAnimationBinding.h>
+
 #include <Dom/JsonObject.h>
 #include <Dom/JsonValue.h>
 #include <Serialization/JsonSerializer.h>
@@ -181,6 +191,16 @@ auto
     RootObject->SetArrayField(TEXT("eventGraphs"),    SerializeGraphSet(InBlueprint->UbergraphPages, TEXT("EventGraph")));
     RootObject->SetArrayField(TEXT("functionGraphs"), SerializeGraphSet(InBlueprint->FunctionGraphs, TEXT("Function")));
     RootObject->SetArrayField(TEXT("macroGraphs"),    SerializeGraphSet(InBlueprint->MacroGraphs,    TEXT("Macro")));
+
+    // Widget Blueprint (UMG) — widget hierarchy and animations live as editor-only
+    // data on the UWidgetBlueprint and are not captured by the generic Blueprint sections.
+    if (const auto* WidgetBlueprint = Cast<UWidgetBlueprint>(InBlueprint))
+    {
+        RootObject->SetObjectField(TEXT("widgetHierarchy"),
+            DoSerializeWidgetHierarchy_Json(WidgetBlueprint));
+        RootObject->SetArrayField(TEXT("animations"),
+            DoSerializeAnimations_Json(WidgetBlueprint));
+    }
 
     return RootObject;
 }
@@ -784,6 +804,158 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+// Widget Blueprint (UMG) Serialization
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_blueprint_exporter
+{
+    // Guards against pathological / cyclic trees (mirrors the execution-flow step guard).
+    constexpr int32 MaxWidgetTreeDepth = 100;
+}
+
+auto
+    FCk_BlueprintExporter::
+    DoSerializeWidgetHierarchy_Json(
+        const UWidgetBlueprint* InWidgetBlueprint)
+    -> TSharedPtr<FJsonObject>
+{
+    auto RootObject = MakeShared<FJsonObject>();
+
+    const auto* WidgetTree = InWidgetBlueprint->WidgetTree.Get();
+    if (ck::Is_NOT_Valid(WidgetTree) || ck::Is_NOT_Valid(WidgetTree->RootWidget))
+    { return RootObject; }
+
+    RootObject->SetObjectField(TEXT("root"),
+        DoSerializeWidget_Json(WidgetTree->RootWidget, FString{}, 0));
+
+    return RootObject;
+}
+
+auto
+    FCk_BlueprintExporter::
+    DoSerializeWidget_Json(
+        const UWidget* InWidget,
+        const FString& InSlotName,
+        int32 InDepth)
+    -> TSharedPtr<FJsonObject>
+{
+    auto WidgetObject = MakeShared<FJsonObject>();
+
+    if (ck::Is_NOT_Valid(InWidget))
+    { return WidgetObject; }
+
+    WidgetObject->SetStringField(TEXT("name"), InWidget->GetName());
+    WidgetObject->SetStringField(TEXT("class"), InWidget->GetClass()->GetName());
+    WidgetObject->SetBoolField(TEXT("isVariable"), InWidget->bIsVariable);
+    WidgetObject->SetStringField(TEXT("visibility"),
+        StaticEnum<ESlateVisibility>()->GetNameStringByValue(static_cast<int64>(InWidget->GetVisibility())));
+
+    if (NOT InSlotName.IsEmpty())
+    {
+        WidgetObject->SetStringField(TEXT("namedSlot"), InSlotName);
+    }
+
+    if (const auto ToolTip = InWidget->GetToolTipText().ToString(); NOT ToolTip.IsEmpty())
+    {
+        WidgetObject->SetStringField(TEXT("toolTip"), ToolTip);
+    }
+
+    // Layout slot (Canvas anchors, VerticalBox padding/alignment, etc.) — properties
+    // declared by the concrete UPanelSlot subclass.
+    if (const auto* PanelSlot = InWidget->Slot.Get())
+    {
+        auto SlotObject = MakeShared<FJsonObject>();
+        SlotObject->SetStringField(TEXT("type"), PanelSlot->GetClass()->GetName());
+        SlotObject->SetArrayField(TEXT("properties"),
+            FCk_DataAssetExporter::DoSerializeProperties_Json(PanelSlot, UPanelSlot::StaticClass()));
+        WidgetObject->SetObjectField(TEXT("slot"), SlotObject);
+    }
+
+    // Type-specific editable properties (Text, Brush, fonts, colors, …) — declared by
+    // classes derived from UWidget (UWidget-level fields are captured explicitly above).
+    if (auto Properties = FCk_DataAssetExporter::DoSerializeProperties_Json(InWidget, UWidget::StaticClass());
+        Properties.Num() > 0)
+    {
+        WidgetObject->SetArrayField(TEXT("properties"), Properties);
+    }
+
+    if (InDepth >= ck_blueprint_exporter::MaxWidgetTreeDepth)
+    { return WidgetObject; }
+
+    auto Children = TArray<TSharedPtr<FJsonValue>>{};
+
+    // Panel children
+    if (const auto* PanelWidget = Cast<UPanelWidget>(InWidget))
+    {
+        for (auto ChildIndex = int32{0}; ChildIndex < PanelWidget->GetChildrenCount(); ++ChildIndex)
+        {
+            if (const auto* Child = PanelWidget->GetChildAt(ChildIndex))
+            {
+                Children.Add(MakeShared<FJsonValueObject>(
+                    DoSerializeWidget_Json(Child, FString{}, InDepth + 1)));
+            }
+        }
+    }
+
+    // Named slots (UserWidgets, etc.)
+    if (const auto* NamedSlotHost = Cast<INamedSlotInterface>(InWidget))
+    {
+        auto SlotNames = TArray<FName>{};
+        NamedSlotHost->GetSlotNames(SlotNames);
+
+        for (const auto& SlotName : SlotNames)
+        {
+            if (const auto* SlotContent = NamedSlotHost->GetContentForSlot(SlotName))
+            {
+                Children.Add(MakeShared<FJsonValueObject>(
+                    DoSerializeWidget_Json(SlotContent, SlotName.ToString(), InDepth + 1)));
+            }
+        }
+    }
+
+    if (Children.Num() > 0)
+    {
+        WidgetObject->SetArrayField(TEXT("children"), Children);
+    }
+
+    return WidgetObject;
+}
+
+auto
+    FCk_BlueprintExporter::
+    DoSerializeAnimations_Json(
+        const UWidgetBlueprint* InWidgetBlueprint)
+    -> TArray<TSharedPtr<FJsonValue>>
+{
+    auto Result = TArray<TSharedPtr<FJsonValue>>{};
+
+    for (const auto& Animation : InWidgetBlueprint->Animations)
+    {
+        if (ck::Is_NOT_Valid(Animation))
+        { continue; }
+
+        auto AnimObject = MakeShared<FJsonObject>();
+
+        AnimObject->SetStringField(TEXT("name"), Animation->GetName());
+        AnimObject->SetStringField(TEXT("displayLabel"), Animation->GetDisplayLabel());
+        AnimObject->SetNumberField(TEXT("startTime"), Animation->GetStartTime());
+        AnimObject->SetNumberField(TEXT("endTime"), Animation->GetEndTime());
+        AnimObject->SetNumberField(TEXT("length"), Animation->GetEndTime() - Animation->GetStartTime());
+
+        auto BoundWidgets = TArray<TSharedPtr<FJsonValue>>{};
+        for (const auto& Binding : Animation->GetBindings())
+        {
+            BoundWidgets.Add(MakeShared<FJsonValueString>(Binding.WidgetName.ToString()));
+        }
+        AnimObject->SetArrayField(TEXT("boundWidgets"), BoundWidgets);
+
+        Result.Add(MakeShared<FJsonValueObject>(AnimObject));
+    }
+
+    return Result;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 // Plain-text Serialization
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -837,6 +1009,12 @@ auto
     DumpGraphs(InBlueprint->UbergraphPages, TEXT("Event Graph"));
     DumpGraphs(InBlueprint->FunctionGraphs, TEXT("Function"));
     DumpGraphs(InBlueprint->MacroGraphs,    TEXT("Macro"));
+
+    if (const auto* WidgetBlueprint = Cast<UWidgetBlueprint>(InBlueprint))
+    {
+        DoSerializeWidgetHierarchy_Text(WidgetBlueprint, Text);
+        DoSerializeAnimations_Text(WidgetBlueprint, Text);
+    }
 
     return Text;
 }
@@ -1233,6 +1411,122 @@ auto
 
             OutText += ck::Format_UE(TEXT("    {} {}({})\n"),
                 ReturnType, Function->GetName(), FString::Join(Params, TEXT(", ")));
+        }
+    }
+
+    OutText += TEXT("\n");
+}
+
+auto
+    FCk_BlueprintExporter::
+    DoSerializeWidgetHierarchy_Text(
+        const UWidgetBlueprint* InWidgetBlueprint,
+        FString& OutText)
+    -> void
+{
+    OutText += TEXT("--- Widget Hierarchy ---\n");
+
+    const auto* WidgetTree = InWidgetBlueprint->WidgetTree.Get();
+    if (ck::Is_NOT_Valid(WidgetTree) || ck::Is_NOT_Valid(WidgetTree->RootWidget))
+    {
+        OutText += TEXT("  (empty)\n\n");
+        return;
+    }
+
+    DoSerializeWidget_Text(WidgetTree->RootWidget, FString{}, 0, OutText);
+    OutText += TEXT("\n");
+}
+
+auto
+    FCk_BlueprintExporter::
+    DoSerializeWidget_Text(
+        const UWidget* InWidget,
+        const FString& InSlotName,
+        int32 InDepth,
+        FString& OutText)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InWidget))
+    { return; }
+
+    const auto Indent = DoGetIndent(InDepth + 1);
+    const auto NamedSlotSuffix = InSlotName.IsEmpty()
+        ? FString{}
+        : ck::Format_UE(TEXT(" (named slot: {})"), InSlotName);
+
+    OutText += ck::Format_UE(TEXT("{}[{}] {}{}\n"),
+        Indent, InWidget->GetClass()->GetName(), InWidget->GetName(), NamedSlotSuffix);
+
+    const auto AttrIndent = DoGetIndent(InDepth + 2);
+    OutText += ck::Format_UE(TEXT("{}isVariable={} | visibility={}\n"),
+        AttrIndent,
+        InWidget->bIsVariable ? TEXT("true") : TEXT("false"),
+        StaticEnum<ESlateVisibility>()->GetNameStringByValue(static_cast<int64>(InWidget->GetVisibility())));
+
+    if (const auto ToolTip = InWidget->GetToolTipText().ToString(); NOT ToolTip.IsEmpty())
+    {
+        OutText += ck::Format_UE(TEXT("{}toolTip=\"{}\"\n"), AttrIndent, ToolTip);
+    }
+
+    if (const auto* PanelSlot = InWidget->Slot.Get())
+    {
+        OutText += ck::Format_UE(TEXT("{}slot: {}\n"), AttrIndent, PanelSlot->GetClass()->GetName());
+        FCk_DataAssetExporter::DoSerializeProperties_Text(PanelSlot, UPanelSlot::StaticClass(), OutText, InDepth + 3);
+    }
+
+    FCk_DataAssetExporter::DoSerializeProperties_Text(InWidget, UWidget::StaticClass(), OutText, InDepth + 2);
+
+    if (InDepth >= ck_blueprint_exporter::MaxWidgetTreeDepth)
+    { return; }
+
+    if (const auto* PanelWidget = Cast<UPanelWidget>(InWidget))
+    {
+        for (auto ChildIndex = int32{0}; ChildIndex < PanelWidget->GetChildrenCount(); ++ChildIndex)
+        {
+            if (const auto* Child = PanelWidget->GetChildAt(ChildIndex))
+            {
+                DoSerializeWidget_Text(Child, FString{}, InDepth + 1, OutText);
+            }
+        }
+    }
+
+    if (const auto* NamedSlotHost = Cast<INamedSlotInterface>(InWidget))
+    {
+        auto SlotNames = TArray<FName>{};
+        NamedSlotHost->GetSlotNames(SlotNames);
+
+        for (const auto& SlotName : SlotNames)
+        {
+            if (const auto* SlotContent = NamedSlotHost->GetContentForSlot(SlotName))
+            {
+                DoSerializeWidget_Text(SlotContent, SlotName.ToString(), InDepth + 1, OutText);
+            }
+        }
+    }
+}
+
+auto
+    FCk_BlueprintExporter::
+    DoSerializeAnimations_Text(
+        const UWidgetBlueprint* InWidgetBlueprint,
+        FString& OutText)
+    -> void
+{
+    OutText += ck::Format_UE(TEXT("--- Animations ({}) ---\n"), InWidgetBlueprint->Animations.Num());
+
+    for (const auto& Animation : InWidgetBlueprint->Animations)
+    {
+        if (ck::Is_NOT_Valid(Animation))
+        { continue; }
+
+        OutText += ck::Format_UE(TEXT("  {} [{:.3f}s -> {:.3f}s]\n"),
+            Animation->GetName(),
+            Animation->GetStartTime(),
+            Animation->GetEndTime());
+
+        for (const auto& Binding : Animation->GetBindings())
+        {
+            OutText += ck::Format_UE(TEXT("    -> {}\n"), Binding.WidgetName.ToString());
         }
     }
 
