@@ -94,10 +94,13 @@ public:
         const FCk_Handle_Acceleration& InHandle);
 
 public:
-    static auto
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Acceleration",
+              DisplayName="[Ck][Acceleration] Request Override Acceleration")
+    static void
     Request_OverrideAcceleration(
         UPARAM(ref) FCk_Handle_Acceleration& InHandle,
-        const FVector& InNewAcceleration) -> void;
+        const FVector& InNewAcceleration);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
