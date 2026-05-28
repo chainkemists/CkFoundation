@@ -143,6 +143,21 @@ namespace ck
 
         for (const auto& Content : EntityCollectionsToReplicate)
         {
+            // Gate 1: local child collection entity must exist (entity-script Construct has run).
+            // Previously implicit — the rep handler's early-return on TryGet failure protected
+            // the downstream Request_RemoveEntities/AddEntities calls below from running on an
+            // invalid handle. After deleting the rep-handler-side early-return (so the snapshot
+            // can survive a transient pending-Setup state until retry), this gate has to move
+            // here. The fragment stays on the entity until both gates pass.
+            if (const auto& LocalCollection = UCk_Utils_EntityCollection_UE::TryGet_EntityCollection(InHandle, Content.Get_CollectionName());
+                ck::Is_NOT_Valid(LocalCollection))
+            { return; }
+
+            // Gate 2: every entity in the snapshot must have a complete EntityReplicationDriver
+            // (NetGuid handshake done). Container reps deliver the snapshot once; this per-tick
+            // retry waits for the referenced entities' replication to land. Without this gate,
+            // we'd local-Add entities whose handles are still in pending-resolve state, ending
+            // up with broken records that never recover.
             const auto& AllValidEntities = ck::algo::AllOf(Content.Get_EntitiesInCollection(), [](
                 const FCk_Handle& MaybeValidHandle)
             {
@@ -194,7 +209,12 @@ namespace ck
                 EntityCollectionToReplicate);
         }
 
-        InHandle.Remove<MarkedDirtyBy>();
+        // Successful apply: remove the SyncReplication fragment so the (now MarkedDirtyBy-less)
+        // processor stops re-firing on this entity until the next rep delivery puts a new fragment
+        // on it. The previous `Remove<MarkedDirtyBy>` was equivalent since MarkedDirtyBy was an alias
+        // for FFragment_EntityCollection_SyncReplication; switched to the explicit type after
+        // MarkedDirtyBy was removed from the processor's template parameters.
+        InHandle.Remove<FFragment_EntityCollection_SyncReplication>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
