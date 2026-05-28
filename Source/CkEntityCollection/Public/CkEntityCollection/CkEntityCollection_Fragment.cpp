@@ -14,27 +14,15 @@ static struct FEntityCollectionRepHandlerRegistrar
     {
         const auto DoApplyEntityCollections = [](FCk_Handle& Entity, const TArray<FCk_EntityCollection_Content>& NewCollections, const TArray<FCk_EntityCollection_Content>& OldCollections)
         {
-            // Validate all new collection entries have valid entity references
-            for (auto Index = OldCollections.Num(); Index < NewCollections.Num(); ++Index)
-            {
-                const auto& EntityCollectionToReplicate = NewCollections[Index];
-
-                if (const auto& EntityCollectionEntity = UCk_Utils_EntityCollection_UE::TryGet_EntityCollection(
-                        Entity, EntityCollectionToReplicate.Get_CollectionName());
-                    ck::Is_NOT_Valid(EntityCollectionEntity))
-                { return; }
-
-                const auto AllValidEntities = ck::algo::AllOf(EntityCollectionToReplicate.Get_EntitiesInCollection(), [](
-                    const FCk_Handle& MaybeValidHandle)
-                {
-                    return ck::IsValid(MaybeValidHandle);
-                });
-
-                if (NOT AllValidEntities)
-                { return; }
-            }
-
-            // Delegate to the SyncReplication processor to handle the actual logic
+            // Always stash the snapshot. The SyncReplication processor has its own (stronger)
+            // validity check on FFragment_EntityCollection_SyncReplication every tick — gating on
+            // local child collection existence + per-entity EntityReplicationDriver completeness —
+            // and only removes the fragment on successful apply. That gives us automatic per-tick
+            // retry, which the previous rep-handler-side early-return defeated: snapshot was
+            // dropped at first delivery and never re-sent (container reps only fire OnChange when
+            // the snapshot changes), so a transient NetGuid-pending state at first-rep-arrival
+            // permanently lost the payload. Symptom pinned by the AS net tests
+            // Ck.EntityCollection.Net.AS_AddEntities_Replicates / AS_RemoveEntities_Replicates.
             Entity.AddOrGet<ck::FFragment_EntityCollection_SyncReplication>(NewCollections, OldCollections);
         };
 

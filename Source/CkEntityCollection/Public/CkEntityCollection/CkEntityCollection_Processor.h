@@ -87,7 +87,15 @@ namespace ck
     public:
         using Group = FGroup_Gameplay;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::ClientOnly;
-        using MarkedDirtyBy = FFragment_EntityCollection_SyncReplication;
+        // Intentionally NO `MarkedDirtyBy` — the processor must fire EVERY tick on any entity
+        // carrying FFragment_EntityCollection_SyncReplication, not just on the tick it was added.
+        // Validity gates (TryGet on the local child collection + EntityReplicationDriver completeness
+        // per handle) commonly fail at first-rep-arrival when NetGuids haven't fully resolved; the
+        // processor returns early in that case and the fragment stays on the entity. With dirty-mark
+        // filtering, that early-return would freeze the fragment forever since container reps don't
+        // re-deliver an unchanged snapshot. Removing the filter gives us per-tick retry until the
+        // gates pass; on success, ForEachEntity calls `InHandle.Remove<FFragment_EntityCollection_SyncReplication>()`
+        // to stop the retry loop.
 
     public:
         using TProcessor::TProcessor;
