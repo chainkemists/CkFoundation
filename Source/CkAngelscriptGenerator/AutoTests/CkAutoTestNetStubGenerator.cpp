@@ -77,7 +77,17 @@ namespace ck_autotest_netstub_generator
     // script — sufficient for CkAttribute net tests but not for modules with different per-entity
     // state. Modules with custom subjects (CkRelationship, CkInventory, CkStateMachine, etc.)
     // author a subclass and override the UPROPERTY on their AS test class.
-    static const TCHAR* DefaultNetSubjectClassPath = TEXT("/Script/CkTests.ACk_AutoTest_NetSubject");
+    //
+    // NOTE: UE's FSoftClassPath C++-class lookup strips the `A`/`U`/`F` prefix from class names —
+    // the resolved path is `/Script/<Module>.<Name-without-prefix>`. The per-test override path
+    // below uses `Resolved->GetPathName()` which already strips correctly, so the bug only
+    // surfaces on the default fallback. Until this fix, every AS net test that DIDN'T override
+    // `_NetSubjectClass` failed at SpawnActor with "failed to resolve NetSubject class via
+    // FSoftClassPath" because TryLoadClass returns nullptr on the prefixed form. The first net
+    // tests authored (CkAttribute) happened to override the path implicitly via the same
+    // mistake working out in the FSoftClassPath registry's tolerance — but newer net tests
+    // (CkTransform, which uses the default subject) tripped it.
+    static const TCHAR* DefaultNetSubjectClassPath = TEXT("/Script/CkTests.Ck_AutoTest_NetSubject");
 
     // Read the AS test's CDO `_NetSubjectClass` UPROPERTY (declared on UCk_AutoTest_NetBase).
     // Returns the class path string suitable for emission as an FSoftClassPath literal in the
