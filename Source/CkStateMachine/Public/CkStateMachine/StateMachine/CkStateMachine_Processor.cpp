@@ -159,15 +159,32 @@ namespace ck
         const auto NetContext = ck::statemachine::ComputeNetContext(InSm);
         const auto AuthModel  = InParams.Get_AuthorityModel();
 
-        const auto IsAuthority =
-            (NetContext == ECk_Sm_NetContext::Server
-                && AuthModel == ECk_Sm_AuthorityModel::ServerAuthoritative)
-            || (NetContext == ECk_Sm_NetContext::OwningClient
-                && AuthModel == ECk_Sm_AuthorityModel::OwningClientAuthoritative);
+        const auto IsServerAuthority =
+            NetContext == ECk_Sm_NetContext::Server
+            && AuthModel == ECk_Sm_AuthorityModel::ServerAuthoritative;
 
-        if (NOT IsAuthority)
+        const auto IsOwningClientAuthority =
+            NetContext == ECk_Sm_NetContext::OwningClient
+            && AuthModel == ECk_Sm_AuthorityModel::OwningClientAuthoritative;
+
+        if (NOT IsServerAuthority && NOT IsOwningClientAuthority)
         { return; }
 
+        // Owning-client run-status changes can't be published through the server→client rep
+        // container (the client doesn't own it — TryUpdateContainerFragment would no-op). Buffer
+        // the run-status for FProcessor_Sm_PushOwningClientBatch to relay via Server_PushRunStatus,
+        // mirroring how owning-client transitions buffer for Server_PushTransitionBatch. Without
+        // this the server's OwningClientAuth SM never reaches Running and ApplyReplicatedHistory
+        // drops every relayed transition.
+        if (IsOwningClientAuthority)
+        {
+            auto& Batch = InSm.AddOrGet<FFragment_Sm_PendingClientBatch>();
+            Batch.Set_PendingRunStatus(InNewStatus);
+            Batch.Set_HasPendingRunStatus(true);
+            return;
+        }
+
+        // Server authority: write the rep container so non-owning clients pick up the change.
         switch (InParams.Get_ReplicationModel())
         {
             case ECk_Sm_ReplicationModel::WithHistory:
@@ -716,18 +733,20 @@ namespace ck
         -> void
     {
         auto& Events = InBatch.Get_PendingEvents();
-        if (Events.IsEmpty())
+        const auto HasRunStatus = InBatch.Get_HasPendingRunStatus();
+
+        if (Events.IsEmpty() && NOT HasRunStatus)
         { return; }
 
         // Spec §5.5 / §5.6: only owning-client-authoritative SMs route through this push, and
         // only on the machine that actually owns the SM's actor. Other machines never accumulate
-        // events in this batch (the publication path in CommitPendingTransition gates the same
-        // way), but the check here is defence in depth — if a misconfigured SM somehow seeded
-        // the batch on the wrong machine, we silently clear it rather than emit RPCs that the
-        // server would reject.
+        // into this batch (the commit + run-status publication paths gate the same way), but the
+        // check here is defence in depth — if a misconfigured SM somehow seeded the batch on the
+        // wrong machine, we silently clear it rather than emit RPCs that the server would reject.
         if (InParams.Get_AuthorityModel() != ECk_Sm_AuthorityModel::OwningClientAuthoritative)
         {
             Events.Reset();
+            InBatch.Set_HasPendingRunStatus(false);
             return;
         }
 
@@ -735,6 +754,7 @@ namespace ck
             != ECk_Utils_Net_IsLocallyControlled_Result::IsLocallyControlled)
         {
             Events.Reset();
+            InBatch.Set_HasPendingRunStatus(false);
             return;
         }
 
@@ -744,33 +764,45 @@ namespace ck
         {
             // Relay not available yet (subsystem hasn't spawned channels, or relay isn't replicated
             // to this client yet). Hold onto the batch — the next pump will retry.
-            ck::sm::VeryVerbose(TEXT("PushOwningClientBatch: no relay yet for [{}], deferring [{}] events"),
-                InHandle, Events.Num());
+            ck::sm::VeryVerbose(TEXT("PushOwningClientBatch: no relay yet for [{}], deferring"),
+                InHandle);
             return;
         }
 
-        switch (InParams.Get_ReplicationModel())
+        // Run-status FIRST: Start must reach the server before any transition so the server's SM is
+        // Running by the time the transition batch lands (ApplyReplicatedHistory drops transitions
+        // on a non-Running SM). Wires up Server_PushRunStatus, which was previously never called.
+        if (HasRunStatus)
         {
-            case ECk_Sm_ReplicationModel::WithHistory:
-            {
-                // One RPC carries the whole batch — server replays them in order.
-                RelayActor->Server_PushTransitionBatch(InHandle, Events);
-                break;
-            }
-            case ECk_Sm_ReplicationModel::WithoutHistory:
-            {
-                // Only the latest entry matters under WithoutHistory; collapse to a single push.
-                const auto& Latest = Events.Last();
-                RelayActor->Server_PushCurrentState(
-                    InHandle,
-                    Latest.Get_NewStateClass(),
-                    Latest.Get_Seq(),
-                    Latest.Get_NewStateFingerprint());
-                break;
-            }
+            RelayActor->Server_PushRunStatus(InHandle, InBatch.Get_PendingRunStatus());
+            InBatch.Set_HasPendingRunStatus(false);
         }
 
-        Events.Reset();
+        if (NOT Events.IsEmpty())
+        {
+            switch (InParams.Get_ReplicationModel())
+            {
+                case ECk_Sm_ReplicationModel::WithHistory:
+                {
+                    // One RPC carries the whole batch — server replays them in order.
+                    RelayActor->Server_PushTransitionBatch(InHandle, Events);
+                    break;
+                }
+                case ECk_Sm_ReplicationModel::WithoutHistory:
+                {
+                    // Only the latest entry matters under WithoutHistory; collapse to a single push.
+                    const auto& Latest = Events.Last();
+                    RelayActor->Server_PushCurrentState(
+                        InHandle,
+                        Latest.Get_NewStateClass(),
+                        Latest.Get_Seq(),
+                        Latest.Get_NewStateFingerprint());
+                    break;
+                }
+            }
+            Events.Reset();
+        }
+
         InHandle.Try_Remove<FFragment_Sm_PendingClientBatch>();
     }
 
