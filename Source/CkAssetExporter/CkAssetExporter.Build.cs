@@ -31,6 +31,8 @@ public class CkAssetExporter : CkModuleRules
             "KismetCompiler",
             "GameplayTags",
             "StructUtils",
+            "UMG",
+            "UMGEditor",
 
             "CkCore",
             "CkEcs",
