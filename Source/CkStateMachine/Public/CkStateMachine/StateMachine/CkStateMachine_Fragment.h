@@ -248,8 +248,16 @@ namespace ck
     // ================================================================================================================
 
     // Owning-client outbound buffer. Filled by FProcessor_Sm_CommitPendingTransition on the
-    // owning client when it lands a transition on an OwningClientAuthoritative SM. Flushed
-    // end-of-frame via FProcessor_Sm_PushOwningClientBatch → Server_PushTransitionBatch RPC.
+    // owning client when it lands a transition on an OwningClientAuthoritative SM, and by
+    // DoPublishRunStatus when the owning client changes run-status (Start/Stop/Pause/Resume).
+    // Flushed end-of-frame via FProcessor_Sm_PushOwningClientBatch → Server_PushTransitionBatch /
+    // Server_PushRunStatus RPCs.
+    //
+    // Run-status relay note: before this was added, owning-client run-status changes only wrote the
+    // server→client rep container (a no-op on the client, which doesn't own it), so Server_PushRunStatus
+    // was dead code and the server's OwningClientAuth SM never started. ApplyReplicatedHistory then
+    // dropped every relayed transition (it requires _RunStatus == Running). Relaying run-status fixes
+    // the owning-client authority path end-to-end.
     struct CKSTATEMACHINE_API FFragment_Sm_PendingClientBatch
     {
     public:
@@ -261,8 +269,13 @@ namespace ck
     private:
         TArray<FCk_Sm_TransitionEvent> _PendingEvents;
 
+        ECk_SmRunStatus _PendingRunStatus = ECk_SmRunStatus::Stopped;
+        bool            _HasPendingRunStatus = false;
+
     public:
         CK_PROPERTY(_PendingEvents);
+        CK_PROPERTY(_PendingRunStatus);
+        CK_PROPERTY(_HasPendingRunStatus);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
