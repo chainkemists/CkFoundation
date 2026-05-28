@@ -2,6 +2,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include <Engine/World.h>
 
@@ -42,6 +43,16 @@ auto
 
     InTopmostOwningActor->AddReplicatedSubObject(Obj);
 
+    // GC anchor — neither the actor's FSubObjectRegistry (weak in PIE/editor builds via
+    // UE_NET_SUBOBJECTLIST_WEAKPTR) nor FCk_ReplicatedObjects (TWeakObjectPtr) roots the
+    // object. Without anchoring on a UPROPERTY-walked root, GC collects on the first
+    // pass and BeginDestroy cascades through Request_DestroyEntity into actor teardown.
+    if (auto* World = InTopmostOwningActor->GetWorld())
+    {
+        if (auto* EcsWorld = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>())
+        { EcsWorld->Anchor_ReplicatedObject(Obj); }
+    }
+
     return Obj;
 }
 
@@ -64,6 +75,13 @@ auto
     { return; }
 
     InRo->_ReplicatedActor->RemoveReplicatedSubObject(InRo);
+
+    // Drop the GC anchor so the object becomes weakly-held; the next GC pass reclaims it.
+    if (auto* World = InRo->_ReplicatedActor->GetWorld())
+    {
+        if (auto* EcsWorld = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>())
+        { EcsWorld->Unanchor_ReplicatedObject(InRo); }
+    }
 }
 
 auto

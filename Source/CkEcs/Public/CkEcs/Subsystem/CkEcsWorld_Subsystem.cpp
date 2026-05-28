@@ -170,6 +170,30 @@ auto
 
 auto
     UCk_EcsWorld_Subsystem_UE::
+    Anchor_ReplicatedObject(
+        UCk_ReplicatedObject_UE* InObj)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InObj, ck::IsValid_Policy_NullptrOnly{}))
+    { return; }
+
+    _AnchoredReplicatedObjects.AddUnique(InObj);
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    Unanchor_ReplicatedObject(
+        UCk_ReplicatedObject_UE* InObj)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InObj, ck::IsValid_Policy_NullptrOnly{}))
+    { return; }
+
+    _AnchoredReplicatedObjects.RemoveSingleSwap(InObj, EAllowShrinking::No);
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
     OnEndFrame_DoRebuild()
     -> void
 {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/ObjectReplication/CkReplicatedObject.h"
 #include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
 
 #include "CkEcs/Registry/CkRegistry.h"
@@ -120,6 +121,19 @@ public:
     auto
     Request_RebuildProcessorGraph() -> void;
 
+    // GC anchor for replicated subobjects created via UCk_Ecs_ReplicatedObject_UE::Create.
+    // Neither AActor's FSubObjectRegistry (TWeakObjectPtr in PIE/editor builds, see
+    // UE_NET_SUBOBJECTLIST_WEAKPTR) nor FCk_ReplicatedObjects (TWeakObjectPtr by design)
+    // roots these objects. Without a UPROPERTY-walked anchor, GC collects them on the
+    // first pass and their BeginDestroy cascades through Request_DestroyEntity into the
+    // OwningActor_Destroy processor, destroying the parent actor.
+    auto
+    Anchor_ReplicatedObject(
+        UCk_ReplicatedObject_UE* InObj) -> void;
+    auto
+    Unanchor_ReplicatedObject(
+        UCk_ReplicatedObject_UE* InObj) -> void;
+
 private:
     auto DoBuildGraphAndSpawnActors(
         UWorld& InWorld) -> void;
@@ -134,6 +148,10 @@ private:
 private:
     UPROPERTY(BlueprintReadOnly, Transient, meta = (AllowPrivateAccess = true))
     FCk_Handle _TransientEntity;
+
+    // See Anchor_ReplicatedObject above for the why.
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UCk_ReplicatedObject_UE>> _AnchoredReplicatedObjects;
 
 private:
     TMap<TEnumAsByte<ETickingGroup>, TStrongObjectPtr<ACk_EcsWorld_Actor_UE>> _WorldActors;
