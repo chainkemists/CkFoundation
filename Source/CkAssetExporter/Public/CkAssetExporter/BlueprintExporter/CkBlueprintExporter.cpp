@@ -629,6 +629,12 @@ namespace ck_blueprint_exporter_internal
         if (ck::Is_NOT_Valid(ActorCDO))
         { return Collected; }
 
+        // UBlueprint::GeneratedClass is typed UClass* (not UBlueprintGeneratedClass*).
+        // Cast once here so the InheritedSCS walk below can pass the leaf BPGC into
+        // DoResolveEffectiveTemplate for ICH lookup. Any UBlueprint we hit in practice
+        // has a UBlueprintGeneratedClass at runtime, but guard for the editor edge case.
+        const auto* LeafBPGC = Cast<UBlueprintGeneratedClass>(GeneratedClass);
+
         // 1. Native components on the CDO
         auto NativeComponents = TArray<UActorComponent*>{};
         ActorCDO->GetComponents(NativeComponents);
@@ -655,7 +661,7 @@ namespace ck_blueprint_exporter_internal
         }
 
         // 2. This-BP SCS nodes
-        DoCollectScsNodes(InBlueprint->SimpleConstructionScript, FString{TEXT("SCS")}, GeneratedClass, Collected, Seen);
+        DoCollectScsNodes(InBlueprint->SimpleConstructionScript, FString{TEXT("SCS")}, LeafBPGC, Collected, Seen);
 
         // 3. Inherited SCS from parent BP chain — leaf BPGC threaded through
         // so DoResolveEffectiveTemplate can consult the child's ICH for
@@ -667,7 +673,7 @@ namespace ck_blueprint_exporter_internal
             if (ck::IsValid(ParentBPGC))
             {
                 DoCollectScsNodes(ParentBPGC->SimpleConstructionScript,
-                    FString{TEXT("InheritedSCS")}, GeneratedClass, Collected, Seen);
+                    FString{TEXT("InheritedSCS")}, LeafBPGC, Collected, Seen);
             }
             ParentClass = ParentClass->GetSuperClass();
         }
