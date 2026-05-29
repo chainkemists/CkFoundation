@@ -47,7 +47,7 @@ public:
     OnFirstValidReplicatedObject(
         const FCk_Handle& InHandle,
         ECk_PendingKill_Policy InPendingKillPolicy,
-        const std::function<void(const TWeakObjectPtr<UCk_ReplicatedObject_UE>& InRO)>& InFunc) -> void;
+        const std::function<void(const TStrongObjectPtr<UCk_ReplicatedObject_UE>& InRO)>& InFunc) -> void;
 
 public:
     static auto

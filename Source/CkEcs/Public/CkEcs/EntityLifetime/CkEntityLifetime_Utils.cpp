@@ -11,6 +11,7 @@
 #include "CkEcs/Net/CkNet_Fragment.h"
 #include "CkEcs/Subsystem/CkEcsEditor_Subsystem.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
+#include "CkEcs/Tag/CkTag_EditorOnly.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

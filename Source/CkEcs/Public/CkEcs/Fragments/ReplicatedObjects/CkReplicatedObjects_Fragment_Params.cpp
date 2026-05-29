@@ -126,9 +126,9 @@ auto
     DoRequest_LinkAssociatedEntity(FCk_Handle InEntity)
     -> void
 {
-    for (const auto RO : _ReplicatedObjects)
+    for (const auto& RO : _ReplicatedObjects)
     {
-        const auto EcsReplicatedObject = Cast<UCk_Ecs_ReplicatedObject_UE>(RO);
+        const auto EcsReplicatedObject = Cast<UCk_Ecs_ReplicatedObject_UE>(RO.Get());
 
         CK_ENSURE_IF_NOT(ck::IsValid(EcsReplicatedObject), TEXT("ReplicatedObject is not valid. Unable to Link with Entity [{}]"),
             InEntity)
@@ -137,6 +137,38 @@ auto
         EcsReplicatedObject->_AssociatedEntity = InEntity;
         EcsReplicatedObject->OnLink();
     }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_ReplicatedObjects::
+    ToWeak(
+        const TArray<TStrongObjectPtr<UCk_ReplicatedObject_UE>>& InStrong)
+    -> TArray<TWeakObjectPtr<UCk_ReplicatedObject_UE>>
+{
+    auto Weak = TArray<TWeakObjectPtr<UCk_ReplicatedObject_UE>>{};
+    Weak.Reserve(InStrong.Num());
+    for (const auto& Strong : InStrong)
+    {
+        Weak.Emplace(Strong.Get());
+    }
+    return Weak;
+}
+
+auto
+    FCk_ReplicatedObjects::
+    ToStrong(
+        const TArray<TWeakObjectPtr<UCk_ReplicatedObject_UE>>& InWeak)
+    -> TArray<TStrongObjectPtr<UCk_ReplicatedObject_UE>>
+{
+    auto Strong = TArray<TStrongObjectPtr<UCk_ReplicatedObject_UE>>{};
+    Strong.Reserve(InWeak.Num());
+    for (const auto& Weak : InWeak)
+    {
+        Strong.Emplace(Weak.Get());
+    }
+    return Strong;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

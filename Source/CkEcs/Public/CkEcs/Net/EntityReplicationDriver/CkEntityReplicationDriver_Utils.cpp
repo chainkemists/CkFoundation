@@ -168,7 +168,7 @@ auto
                 FCk_EntityReplicationDriver_ReplicationData
                 {
                     InConstructionInfos,
-                    FCk_EntityReplicationDriver_ReplicateObjects_Data{ReplicatedObjects.Get_ReplicatedObjects()}
+                    FCk_EntityReplicationDriver_ReplicateObjects_Data{FCk_ReplicatedObjects::ToWeak(ReplicatedObjects.Get_ReplicatedObjects())}
                 }
                 .Set_OwningEntityDriver(InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>())
                 .Set_IsOwningEntityDriverDependentOnThis(IsOwningEntityDriverDependentOnThis)
@@ -241,7 +241,7 @@ auto
                     InEntityScript,
                     InSpawnParams,
                     InReplicatedOwner.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>(),
-                    FCk_EntityReplicationDriver_ReplicateObjects_Data{ReplicatedObjects.Get_ReplicatedObjects()}
+                    FCk_EntityReplicationDriver_ReplicateObjects_Data{FCk_ReplicatedObjects::ToWeak(ReplicatedObjects.Get_ReplicatedObjects())}
                 }
                 .Set_IsOwningEntityDriverDependentOnThis(IsOwningEntityDriverDependentOnThis)
             );
