@@ -538,7 +538,10 @@ namespace ck_blueprint_exporter_internal
 
         const auto Key = FComponentKey{InNode};
 
-        const auto* Cursor = InLeafBPGC;
+        // UBlueprintGeneratedClass::GetInheritableComponentHandler is not
+        // const-callable in UE 5.5/5.6/5.7, even with bCreateIfNecessary=false.
+        // const_cast once at loop entry — we only read from the ICH here.
+        auto* Cursor = const_cast<UBlueprintGeneratedClass*>(InLeafBPGC);
         while (ck::IsValid(Cursor))
         {
             if (const auto* ICH = Cursor->GetInheritableComponentHandler(false))
@@ -547,7 +550,7 @@ namespace ck_blueprint_exporter_internal
                 { return Override; }
             }
 
-            const auto* SuperCls = Cursor->GetSuperClass();
+            auto* SuperCls = Cursor->GetSuperClass();
             Cursor = Cast<UBlueprintGeneratedClass>(SuperCls);
         }
 
