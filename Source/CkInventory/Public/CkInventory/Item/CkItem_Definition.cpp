@@ -100,6 +100,41 @@ auto
     return ck::IsValid(Get_ItemTrait(InTraitClass), ck::IsValid_Policy_NullptrOnly{});
 }
 
+auto
+    UCk_InventoryItem_Definition::
+    Has_ItemTraitByClass(
+        TSubclassOf<UCk_ItemTrait> InTraitClass) const
+    -> bool
+{
+    return Has_ItemTrait(InTraitClass.Get());
+}
+
+auto
+    UCk_InventoryItem_Definition::
+    Has_AnyItemTraitByClass(
+        const TArray<TSubclassOf<UCk_ItemTrait>>& InTraitClasses) const
+    -> bool
+{
+    return ck::algo::AnyOf(InTraitClasses,
+    [&](const TSubclassOf<UCk_ItemTrait>& InTraitClass)
+    {
+        return Has_ItemTrait(InTraitClass.Get());
+    });
+}
+
+auto
+    UCk_InventoryItem_Definition::
+    Has_AllItemTraitsByClass(
+        const TArray<TSubclassOf<UCk_ItemTrait>>& InTraitClasses) const
+    -> bool
+{
+    return ck::algo::AllOf(InTraitClasses,
+    [&](const TSubclassOf<UCk_ItemTrait>& InTraitClass)
+    {
+        return Has_ItemTrait(InTraitClass.Get());
+    });
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
