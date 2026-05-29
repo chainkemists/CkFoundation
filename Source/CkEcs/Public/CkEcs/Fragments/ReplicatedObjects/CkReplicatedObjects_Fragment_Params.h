@@ -7,6 +7,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include <UObject/StrongObjectPtr.h>
+
 #include "CkReplicatedObjects_Fragment_Params.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -124,14 +126,30 @@ public:
     // TODO: clean up the struct
 
 private:
-    UPROPERTY()
-    TArray<TWeakObjectPtr<UCk_ReplicatedObject_UE>> _ReplicatedObjects;
+    // STRONG ownership: this fragment is the GC anchor for its replicated objects, mirroring how
+    // FFragment_EntityScript_Current owns its UCk_EntityScript_UE via TStrongObjectPtr. The actor's
+    // FSubObjectRegistry holds them weakly (UE_NET_SUBOBJECTLIST_WEAKPTR) and the entity-fragment
+    // back-ref is GC-untraced, so without this strong ref GC reclaims the object whenever there is no
+    // active netdriver+channels (standalone / -nullrhi), cascading Request_DestroyEntity into actor
+    // teardown. Not a UPROPERTY because TStrongObjectPtr is not UHT-reflectable; the wire format
+    // (FCk_EntityReplicationDriver_ReplicateObjects_Data::_Objects) stays weak and we convert at the
+    // boundary via ToWeak/ToStrong.
+    TArray<TStrongObjectPtr<UCk_ReplicatedObject_UE>> _ReplicatedObjects;
 
 protected:
     auto DoRequest_LinkAssociatedEntity(FCk_Handle InEntity) -> void;
 
 public:
     CK_PROPERTY(_ReplicatedObjects);
+
+    // Convert between the fragment's strong storage and the weak wire format used by replication.
+    static auto
+    ToWeak(
+        const TArray<TStrongObjectPtr<UCk_ReplicatedObject_UE>>& InStrong) -> TArray<TWeakObjectPtr<UCk_ReplicatedObject_UE>>;
+
+    static auto
+    ToStrong(
+        const TArray<TWeakObjectPtr<UCk_ReplicatedObject_UE>>& InWeak) -> TArray<TStrongObjectPtr<UCk_ReplicatedObject_UE>>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

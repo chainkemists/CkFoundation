@@ -177,7 +177,7 @@ auto
     }
 
     UCk_Utils_ReplicatedObjects_UE::Add(_AssociatedEntity, FCk_ReplicatedObjects{}.
-        Set_ReplicatedObjects(_ReplicationData.Get_ReplicatedObjectsData().Get_Objects()));
+        Set_ReplicatedObjects(FCk_ReplicatedObjects::ToStrong(_ReplicationData.Get_ReplicatedObjectsData().Get_Objects())));
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -235,7 +235,7 @@ auto
         { return; }
 
         UCk_Utils_ReplicatedObjects_UE::Add(ThisAsWeakPtr->_AssociatedEntity, FCk_ReplicatedObjects{}.
-            Set_ReplicatedObjects(ThisAsWeakPtr->_ReplicationData_EntityScript.Get_ReplicatedObjectsData().Get_Objects()));
+            Set_ReplicatedObjects(FCk_ReplicatedObjects::ToStrong(ThisAsWeakPtr->_ReplicationData_EntityScript.Get_ReplicatedObjectsData().Get_Objects())));
 
         // --------------------------------------------------------------------------------------------------------------------
         // Make sure to call this on "self" since the # of dependent rep driver include "self" as well
@@ -316,7 +316,7 @@ auto
     _AssociatedEntity.Add<FCk_EntityReplicationDriver_AbilityData>(_ReplicationData_Ability);
 
     UCk_Utils_ReplicatedObjects_UE::Add(_AssociatedEntity, FCk_ReplicatedObjects{}.
-        Set_ReplicatedObjects(_ReplicationData_Ability.Get_ReplicatedObjectsData().Get_Objects()));
+        Set_ReplicatedObjects(FCk_ReplicatedObjects::ToStrong(_ReplicationData_Ability.Get_ReplicatedObjectsData().Get_Objects())));
 
     // --------------------------------------------------------------------------------------------------------------------
 

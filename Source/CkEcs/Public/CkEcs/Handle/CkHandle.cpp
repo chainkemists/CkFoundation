@@ -780,7 +780,7 @@ namespace UE::Net
         {
             // TODO: This is a temporary fix. We need to find a better way to handle the fact that sometimes the Handle does NOT have a replicated object
             UCk_Utils_ReplicatedObjects_UE::OnFirstValidReplicatedObject(Source, ECk_PendingKill_Policy::IncludePendingKill,
-            [&](const TWeakObjectPtr<UCk_ReplicatedObject_UE>& InRO)
+            [&](const TStrongObjectPtr<UCk_ReplicatedObject_UE>& InRO)
             {
                 auto EcsRO = Cast<UCk_Ecs_ReplicatedObject_UE>(InRO.Get());
                 if (ck::IsValid(EcsRO) && ck::IsValid(EcsRO->Get_AssociatedEntity()))
