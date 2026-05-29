@@ -2,6 +2,7 @@
 
 #include "CkCamera/GameplayCamera/CkGameplayCamera_Fragment_Data.h"
 #include "CkCamera/GameplayCamera/CkGameplayCamera_Profile.h"
+#include "CkCamera/GameplayCamera/CkGameplayCamera_POV.h"
 
 #include "CkCore/Macros/CkMacros.h"
 
@@ -65,11 +66,29 @@ namespace ck
         // The composed profile (accumulated modifier contributions) — written by ComposeProfile.
         FCk_GameplayCamera_Profile _ComposedProfile;
 
+        // Persistent POV pipeline state (boom rotation, smoothed pivot, collision distance, noise) — advanced by UpdatePOV.
+        ck::gameplaycamera::FPov_State _PovState;
+
+        // Abstract orbit intention fed by whoever owns input (PC / ability / rail). Zero = no manual orbit.
+        // The camera module never reads input devices — it only consumes this value.
+        FVector _OrientationIntention = FVector::ZeroVector;
+
+        // Look-at target resolved from the dominant active modifier (for auto-reorient). Set by ComposeProfile,
+        // consumed by UpdatePOV. Unset = the dominant modifier has no look-at (a zero vector is a valid target).
+        TOptional<FVector> _DominantLookAt;
+
+        // Class of the dominant active modifier (highest blend alpha). Set by ComposeProfile; observable via Utils.
+        TSubclassOf<UCk_CameraModifier_EntityScript> _DominantModifierClass;
+
         // The final resolved POV — written by UpdatePOV, read by UCk_GameplayCameraComponent::GetCameraView.
         FMinimalViewInfo _ViewInfo;
 
     public:
         CK_PROPERTY(_ComposedProfile);
+        CK_PROPERTY(_OrientationIntention);
+        CK_PROPERTY_GET(_DominantModifierClass);
+        CK_PROPERTY_GET(_DominantLookAt);
+        CK_PROPERTY_GET(_PovState);
         CK_PROPERTY_GET(_ViewInfo);
     };
 
@@ -100,18 +119,25 @@ namespace ck
     // PER-MODIFIER FRAGMENTS
     // ----------------------------------------------------------------------------------------------------------------
 
-    // Stores the modifier's script class so RemoveModifier can match it after the deferred attach
-    // has consumed FFragment_CameraModifier_PendingAttach.
+    // Per-modifier identity/config: the script class (so RemoveModifier/OneOnly can match), the ordering group,
+    // and an optional look-at target for auto-reorient.
     struct CKCAMERA_API FFragment_CameraModifier_Params
     {
     public:
         CK_GENERATED_BODY(FFragment_CameraModifier_Params);
 
+    public:
+        friend class FProcessor_GameplayCamera_HandleRequests;
+
     private:
         TSubclassOf<UCk_CameraModifier_EntityScript> _ModifierClass;
+        FGameplayTag                                 _OrderingGroup;
+        FCk_Handle_Transform                         _LookAtTarget;
 
     public:
         CK_PROPERTY_GET(_ModifierClass);
+        CK_PROPERTY(_OrderingGroup);
+        CK_PROPERTY(_LookAtTarget);
 
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_CameraModifier_Params, _ModifierClass);
@@ -119,7 +145,8 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    // Per-modifier blend weight in [0,1]. M0: pinned at 1.0; M1 drives blend-in/out over time.
+    // Per-modifier blend weight in [0,1]. _Alpha interpolates toward _TargetAlpha at _BlendRate (units/sec).
+    // Blend-in: target 1. Blend-out (removal / OneOnly eviction): target 0 → pruned when it reaches 0.
     struct CKCAMERA_API FFragment_CameraModifier_Blend
     {
     public:
@@ -131,10 +158,14 @@ namespace ck
         friend class FProcessor_GameplayCamera_UpdatePOV;
 
     private:
-        float _Alpha = 1.0f;
+        float _Alpha       = 0.0f;
+        float _TargetAlpha = 1.0f;
+        float _BlendRate   = 1000.0f; // ~instant unless overridden
 
     public:
         CK_PROPERTY(_Alpha);
+        CK_PROPERTY(_TargetAlpha);
+        CK_PROPERTY(_BlendRate);
     };
 
     // ----------------------------------------------------------------------------------------------------------------

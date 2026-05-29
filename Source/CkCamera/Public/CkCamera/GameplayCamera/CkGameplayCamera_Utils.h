@@ -44,6 +44,32 @@ public:
     Has_Any(
         const FCk_Handle& InHandle);
 
+public:
+    // Number of live modifier entities currently on the camera (active or blending).
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|GameplayCamera",
+        DisplayName = "[Ck][GameplayCamera] Get Modifier Count")
+    static int32
+    Get_ModifierCount(
+        const FCk_Handle_GameplayCamera& InCamera);
+
+    // True if a live modifier of the given class is present on the camera.
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|GameplayCamera",
+        DisplayName = "[Ck][GameplayCamera] Has Modifier")
+    static bool
+    Has_Modifier(
+        const FCk_Handle_GameplayCamera& InCamera,
+        TSubclassOf<UCk_CameraModifier_EntityScript> InModifierClass);
+
+    // Class of the dominant active modifier (highest blend alpha), or null if none.
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|GameplayCamera",
+        DisplayName = "[Ck][GameplayCamera] Get Dominant Modifier Class")
+    static TSubclassOf<UCk_CameraModifier_EntityScript>
+    Get_DominantModifierClass(
+        const FCk_Handle_GameplayCamera& InCamera);
+
 private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|GameplayCamera",
@@ -85,6 +111,29 @@ public:
     Request_RemoveModifier(
         UPARAM(ref) FCk_Handle_GameplayCamera& InCamera,
         const FCk_Request_GameplayCamera_RemoveModifier& InRequest);
+
+public:
+    // Feeds the camera's abstract orbit intention (X = yaw, Y = pitch), already scaled/inverted by the caller's
+    // input/user-preference handling. The camera module never reads input devices — a fixed/follow/lock-on camera
+    // simply never calls this (intention stays zero). Set immediately each frame; consumed later the same frame
+    // by the camera processors (which run after the Transform groups).
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|GameplayCamera",
+              DisplayName = "[Ck][GameplayCamera] Request Set Orientation Intention")
+    static FCk_Handle_GameplayCamera
+    Request_SetOrientationIntention(
+        UPARAM(ref) FCk_Handle_GameplayCamera& InCamera,
+        FVector InOrientationIntention);
+
+public:
+    // The resolved camera view rotation (this frame's composed POV). Handy for camera-relative movement: take the
+    // yaw to derive a horizontal forward/right. Returns zero rotation if the camera has no composed view yet.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayCamera",
+              DisplayName = "[Ck][GameplayCamera] Get View Rotation")
+    static FRotator
+    Get_ViewRotation(
+        const FCk_Handle_GameplayCamera& InCamera);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

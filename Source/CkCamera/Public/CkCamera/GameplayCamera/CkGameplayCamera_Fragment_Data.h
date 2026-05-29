@@ -1,12 +1,16 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Time/CkTime.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
+#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
+
 #include <CoreMinimal.h>
+#include <GameplayTagContainer.h>
 
 #include "CkGameplayCamera_Fragment_Data.generated.h"
 
@@ -82,12 +86,27 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     TSubclassOf<UCk_CameraModifier_EntityScript> _ModifierClass;
 
+    // Ordering-group/layer this modifier belongs to (used by OneOnly stacking + dominant selection).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FGameplayTag _OrderingGroup;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     ECk_GameplayCamera_StackingBehavior _StackingBehavior = ECk_GameplayCamera_StackingBehavior::Additive;
 
+    // Time to blend this modifier in (0 = instant).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FCk_Time _BlendInTime = FCk_Time{0.25};
+
+    // Optional look-at target (for auto-reorient / lock-on). Invalid = no look-at from this modifier.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FCk_Handle_Transform _LookAtTarget;
+
 public:
     CK_PROPERTY_GET(_ModifierClass);
+    CK_PROPERTY(_OrderingGroup);
     CK_PROPERTY(_StackingBehavior);
+    CK_PROPERTY(_BlendInTime);
+    CK_PROPERTY(_LookAtTarget);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_GameplayCamera_AddModifier, _ModifierClass);
@@ -108,8 +127,13 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     TSubclassOf<UCk_CameraModifier_EntityScript> _ModifierClass;
 
+    // Time to blend this modifier out before it is destroyed (0 = instant).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FCk_Time _BlendOutTime = FCk_Time{0.25};
+
 public:
     CK_PROPERTY_GET(_ModifierClass);
+    CK_PROPERTY(_BlendOutTime);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_GameplayCamera_RemoveModifier, _ModifierClass);

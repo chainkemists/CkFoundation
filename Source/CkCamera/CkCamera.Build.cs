@@ -19,7 +19,6 @@ public class CkCamera : CkModuleRules
             "CkCore",
             "CkEcs",
             "CkEcsExt",
-            "CkInput",
             "CkLabel",
             "CkLog",
             "CkProvider",
