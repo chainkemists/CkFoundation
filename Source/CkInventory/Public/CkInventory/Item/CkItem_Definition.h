@@ -97,6 +97,17 @@ public:
         meta = (DeterminesOutputType = "InTraitClass"))
     const UCk_ItemTrait* Get_ItemTraitByClass(TSubclassOf<UCk_ItemTrait> InTraitClass) const;
 
+    UFUNCTION(BlueprintCallable, Category = "Item Traits")
+    bool Has_ItemTraitByClass(TSubclassOf<UCk_ItemTrait> InTraitClass) const;
+
+    // True if the definition carries at least one of the listed trait classes.
+    UFUNCTION(BlueprintCallable, Category = "Item Traits")
+    bool Has_AnyItemTraitByClass(const TArray<TSubclassOf<UCk_ItemTrait>>& InTraitClasses) const;
+
+    // True if the definition carries every one of the listed trait classes.
+    UFUNCTION(BlueprintCallable, Category = "Item Traits")
+    bool Has_AllItemTraitsByClass(const TArray<TSubclassOf<UCk_ItemTrait>>& InTraitClasses) const;
+
     template<typename T> requires std::is_base_of_v<UCk_ItemTrait, T>
     auto Get_ItemTrait() const -> const T*;
 
