@@ -53,9 +53,9 @@ auto
     InHandle.AddOrGet<ck::FFragment_ReplicatedObjects_Params>()
     .Update_ReplicatedObjects([&](FCk_ReplicatedObjects& InReplicatedObjects)
     {
-        InReplicatedObjects.Update_ReplicatedObjects([&](TArray<TWeakObjectPtr<UCk_ReplicatedObject_UE>>& InArray)
+        InReplicatedObjects.Update_ReplicatedObjects([&](TArray<TStrongObjectPtr<UCk_ReplicatedObject_UE>>& InArray)
         {
-            InArray.Add(InReplicatedObject);
+            InArray.AddUnique(TStrongObjectPtr<UCk_ReplicatedObject_UE>{InReplicatedObject});
         });
     });
 }
@@ -71,9 +71,9 @@ auto
 
     auto RoleToReturn = ENetRole::ROLE_None;
 
-    OnFirstValidReplicatedObject(InHandle, ECk_PendingKill_Policy::IncludePendingKill, [&](const TWeakObjectPtr<UCk_ReplicatedObject_UE>& InRO)
+    OnFirstValidReplicatedObject(InHandle, ECk_PendingKill_Policy::IncludePendingKill, [&](const TStrongObjectPtr<UCk_ReplicatedObject_UE>& InRO)
     {
-        const auto& ReplicatedObjectAsActor = Cast<AActor>(InRO.Get(true)->GetOuter());
+        const auto& ReplicatedObjectAsActor = Cast<AActor>(InRO.Get()->GetOuter());
 
         CK_ENSURE_IF_NOT(ck::IsValid(ReplicatedObjectAsActor, ck::IsValid_Policy_NullptrOnly{}),
             TEXT("Outer of Replicated Object [{}] for Entity [{}] is NOT an Actor when expected it to be"), InRO, InHandle)
@@ -90,7 +90,7 @@ auto
     OnFirstValidReplicatedObject(
         const FCk_Handle& InHandle,
         ECk_PendingKill_Policy InPendingKillPolicy,
-        const std::function<void(const TWeakObjectPtr<UCk_ReplicatedObject_UE>& InRO)>& InFunc)
+        const std::function<void(const TStrongObjectPtr<UCk_ReplicatedObject_UE>& InRO)>& InFunc)
     -> void
 {
     if (NOT Ensure(InHandle))
@@ -98,12 +98,14 @@ auto
 
     const auto ReplicatedObjects = Get_ReplicatedObjects(InHandle).Get_ReplicatedObjects();
 
-    const auto& ReplicatedObjectToUse = ReplicatedObjects.FindByPredicate([&](const TWeakObjectPtr<UCk_ReplicatedObject_UE>& InRO) -> bool
+    const auto& ReplicatedObjectToUse = ReplicatedObjects.FindByPredicate([&](const TStrongObjectPtr<UCk_ReplicatedObject_UE>& InRO) -> bool
     {
         switch (InPendingKillPolicy)
         {
+            // TStrongObjectPtr has no IncludePendingKill validity policy; it keeps the object reachable, so the
+            // only failure mode is the pointee being pending-kill. Route that policy through the raw pointer.
             case ECk_PendingKill_Policy::ExcludePendingKill: return ck::IsValid(InRO);
-            case ECk_PendingKill_Policy::IncludePendingKill: return ck::IsValid(InRO, ck::IsValid_Policy_IncludePendingKill{});
+            case ECk_PendingKill_Policy::IncludePendingKill: return ck::IsValid(InRO.Get(), ck::IsValid_Policy_IncludePendingKill{});
             default: return {};
         }
     });
