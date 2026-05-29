@@ -10,6 +10,7 @@
 
 #include <Engine/Blueprint.h>
 #include <Engine/BlueprintGeneratedClass.h>
+#include <Engine/InheritableComponentHandler.h>
 #include <Engine/SimpleConstructionScript.h>
 #include <Engine/SCS_Node.h>
 #include <Components/ActorComponent.h>
@@ -514,11 +515,51 @@ namespace ck_blueprint_exporter_internal
         FString Origin;
     };
 
+    // Resolves the effective component template for a parent-chain SCS node
+    // by consulting the leaf BP's InheritableComponentHandler (ICH). UE stores
+    // child-BP property overrides on inherited SCS components in the ICH, not
+    // on the parent SCS node itself, so reading InNode->ComponentTemplate
+    // directly always returns the un-overridden parent value. Walks the chain
+    // from leaf upward so the closest override wins.
+    //
+    // Returns the parent's template when no override is present.
+    static auto
+        DoResolveEffectiveTemplate(
+            const USCS_Node* InNode,
+            const UBlueprintGeneratedClass* InLeafBPGC)
+        -> const UActorComponent*
+    {
+        const auto* ParentTemplate = ck::IsValid(InNode)
+            ? InNode->ComponentTemplate.Get()
+            : nullptr;
+
+        if (ck::Is_NOT_Valid(InLeafBPGC) || ck::Is_NOT_Valid(InNode))
+        { return ParentTemplate; }
+
+        const auto Key = FComponentKey{InNode};
+
+        const auto* Cursor = InLeafBPGC;
+        while (ck::IsValid(Cursor))
+        {
+            if (const auto* ICH = Cursor->GetInheritableComponentHandler(false))
+            {
+                if (auto* Override = ICH->GetOverridenComponentTemplate(Key))
+                { return Override; }
+            }
+
+            const auto* SuperCls = Cursor->GetSuperClass();
+            Cursor = Cast<UBlueprintGeneratedClass>(SuperCls);
+        }
+
+        return ParentTemplate;
+    }
+
     static auto
         DoVisitScsNode(
             const USCS_Node* InNode,
             const FName& InAttachParent,
             const FString& InOrigin,
+            const UBlueprintGeneratedClass* InLeafBPGC,
             TArray<FCollectedComponent>& OutCollected,
             TSet<const UActorComponent*>& InOutSeen)
         -> void
@@ -526,7 +567,7 @@ namespace ck_blueprint_exporter_internal
         if (ck::Is_NOT_Valid(InNode))
         { return; }
 
-        const auto* Template = InNode->ComponentTemplate.Get();
+        const auto* Template = DoResolveEffectiveTemplate(InNode, InLeafBPGC);
         if (ck::IsValid(Template) && NOT InOutSeen.Contains(Template))
         {
             InOutSeen.Add(Template);
@@ -544,7 +585,7 @@ namespace ck_blueprint_exporter_internal
         const auto SelfName = InNode->GetVariableName();
         for (const auto* Child : InNode->GetChildNodes())
         {
-            DoVisitScsNode(Child, SelfName, InOrigin, OutCollected, InOutSeen);
+            DoVisitScsNode(Child, SelfName, InOrigin, InLeafBPGC, OutCollected, InOutSeen);
         }
     }
 
@@ -552,6 +593,7 @@ namespace ck_blueprint_exporter_internal
         DoCollectScsNodes(
             const USimpleConstructionScript* InScs,
             const FString& InOrigin,
+            const UBlueprintGeneratedClass* InLeafBPGC,
             TArray<FCollectedComponent>& OutCollected,
             TSet<const UActorComponent*>& InOutSeen)
         -> void
@@ -564,7 +606,7 @@ namespace ck_blueprint_exporter_internal
             if (ck::Is_NOT_Valid(Root))
             { continue; }
 
-            DoVisitScsNode(Root, Root->ParentComponentOrVariableName, InOrigin, OutCollected, InOutSeen);
+            DoVisitScsNode(Root, Root->ParentComponentOrVariableName, InOrigin, InLeafBPGC, OutCollected, InOutSeen);
         }
     }
 
@@ -610,9 +652,11 @@ namespace ck_blueprint_exporter_internal
         }
 
         // 2. This-BP SCS nodes
-        DoCollectScsNodes(InBlueprint->SimpleConstructionScript, FString{TEXT("SCS")}, Collected, Seen);
+        DoCollectScsNodes(InBlueprint->SimpleConstructionScript, FString{TEXT("SCS")}, GeneratedClass, Collected, Seen);
 
-        // 3. Inherited SCS from parent BP chain
+        // 3. Inherited SCS from parent BP chain — leaf BPGC threaded through
+        // so DoResolveEffectiveTemplate can consult the child's ICH for
+        // property overrides on inherited components.
         const auto* ParentClass = GeneratedClass->GetSuperClass();
         while (ck::IsValid(ParentClass))
         {
@@ -620,7 +664,7 @@ namespace ck_blueprint_exporter_internal
             if (ck::IsValid(ParentBPGC))
             {
                 DoCollectScsNodes(ParentBPGC->SimpleConstructionScript,
-                    FString{TEXT("InheritedSCS")}, Collected, Seen);
+                    FString{TEXT("InheritedSCS")}, GeneratedClass, Collected, Seen);
             }
             ParentClass = ParentClass->GetSuperClass();
         }
