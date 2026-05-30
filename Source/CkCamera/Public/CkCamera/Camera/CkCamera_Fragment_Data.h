@@ -55,6 +55,19 @@ enum class ECk_Camera_TickMode : uint8
     Tick
 };
 
+// A modifier's contribution role, which decides WHEN it contributes within a frame. The composed profile is rebuilt
+// from scratch every frame, so add/remove recomputes automatically — Modes establish the base, Trims layer on top.
+UENUM(BlueprintType)
+enum class ECk_Camera_ModifierRole : uint8
+{
+    // A whole-camera "mode" (ThirdPerson, TopDown, LockOn). Contributes a full preset via BlendInto and supplies
+    // the structural/discrete blocks. All Modes contribute first (cross-fading by their blend alpha).
+    Mode,
+    // A field-level adjustment (e.g. FOV *= 1.5, a transient framing nudge). Contributes AFTER every Mode, so it
+    // layers on top of the cross-faded base and composes with other Trims. Removing it simply stops the effect.
+    Trim
+};
+
 // How a newly-added modifier interacts with existing modifiers in the same ordering group.
 UENUM(BlueprintType)
 enum class ECk_Camera_StackingBehavior : uint8
