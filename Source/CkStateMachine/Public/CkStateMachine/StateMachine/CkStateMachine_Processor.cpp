@@ -101,14 +101,29 @@ namespace ck
         // machines receive state changes via replication and bypass this processor entirely
         // through FProcessor_Sm_ApplyReplicatedHistory (Phase 7). DoesNotReplicate SMs are
         // self-authoritative on every machine — no gating needed.
+        //
+        // OwningClientAuthoritative authority = "the machine that locally controls the owning
+        // actor". On a remote client that resolves to NetContext == OwningClient. On a LISTEN
+        // SERVER, the host is both the server (ComputeNetContext short-circuits to Server before
+        // the locally-controlled check) AND the owning client for its own pawn — so it is the
+        // authority too. We detect that explicitly: Server context + OwningClientAuth + the host
+        // locally controls this SM's owning actor. A dedicated server controls no player pawn, so
+        // this stays false there (the remote owning client remains the sole authority), and it
+        // stays false for the host's view of OTHER players' pawns.
         const auto NetContext = ck::statemachine::ComputeNetContext(InHandle);
+        const auto IsListenServerHostOwningClient =
+            NetContext == ECk_Sm_NetContext::Server
+            && InParams.Get_AuthorityModel() == ECk_Sm_AuthorityModel::OwningClientAuthoritative
+            && UCk_Utils_Net_UE::Get_IsEntityLocallyControlled_ByPlayer(InHandle)
+                == ECk_Utils_Net_IsLocallyControlled_Result::IsLocallyControlled;
         const auto IsRequestAuthority =
             InParams.Get_Replication() == ECk_Replication::DoesNotReplicate
             || NetContext == ECk_Sm_NetContext::Standalone
             || (NetContext == ECk_Sm_NetContext::Server
                 && InParams.Get_AuthorityModel() == ECk_Sm_AuthorityModel::ServerAuthoritative)
             || (NetContext == ECk_Sm_NetContext::OwningClient
-                && InParams.Get_AuthorityModel() == ECk_Sm_AuthorityModel::OwningClientAuthoritative);
+                && InParams.Get_AuthorityModel() == ECk_Sm_AuthorityModel::OwningClientAuthoritative)
+            || IsListenServerHostOwningClient;
 
         if (NOT IsRequestAuthority)
         {
@@ -159,15 +174,20 @@ namespace ck
         const auto NetContext = ck::statemachine::ComputeNetContext(InSm);
         const auto AuthModel  = InParams.Get_AuthorityModel();
 
-        const auto IsServerAuthority =
-            NetContext == ECk_Sm_NetContext::Server
-            && AuthModel == ECk_Sm_AuthorityModel::ServerAuthoritative;
+        // Mirror the transition-publish split (FProcessor_Sm_CommitPendingTransition): the server
+        // is the canonical rep publisher regardless of authority model. This is what carries the
+        // listen-server host's OwningClientAuth run-status to other clients — the host commits
+        // locally as the owning client (see the gating in ForEachEntity), then publishes here as
+        // the server. A REMOTE owning client (NetContext == OwningClient) instead buffers for the
+        // relay so the server can republish. A dedicated server reaches this only via the relay
+        // handler, not here, since it never locally drives an owning-client SM's run-status.
+        const auto IsRepPublisher = NetContext == ECk_Sm_NetContext::Server;
 
-        const auto IsOwningClientAuthority =
+        const auto IsOwningClientOriginator =
             NetContext == ECk_Sm_NetContext::OwningClient
             && AuthModel == ECk_Sm_AuthorityModel::OwningClientAuthoritative;
 
-        if (NOT IsServerAuthority && NOT IsOwningClientAuthority)
+        if (NOT IsRepPublisher && NOT IsOwningClientOriginator)
         { return; }
 
         // Owning-client run-status changes can't be published through the server→client rep
@@ -176,7 +196,7 @@ namespace ck
         // mirroring how owning-client transitions buffer for Server_PushTransitionBatch. Without
         // this the server's OwningClientAuth SM never reaches Running and ApplyReplicatedHistory
         // drops every relayed transition.
-        if (IsOwningClientAuthority)
+        if (IsOwningClientOriginator)
         {
             auto& Batch = InSm.AddOrGet<FFragment_Sm_PendingClientBatch>();
             Batch.Set_PendingRunStatus(InNewStatus);
@@ -184,7 +204,8 @@ namespace ck
             return;
         }
 
-        // Server authority: write the rep container so non-owning clients pick up the change.
+        // IsRepPublisher (server, including the listen-server host): write the rep container so
+        // non-owning clients pick up the change.
         switch (InParams.Get_ReplicationModel())
         {
             case ECk_Sm_ReplicationModel::WithHistory:
