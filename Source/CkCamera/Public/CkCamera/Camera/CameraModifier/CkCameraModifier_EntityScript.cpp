@@ -98,8 +98,8 @@ auto
 auto
     UCk_CameraModifier_EntityScript::
     ContributeToProfile(
-        FCk_Handle_CameraModifier InHandle,
-        FCk_Handle_CameraProfile InOutProfile,
+        const FCk_Handle_CameraModifier& InHandle,
+        FCk_Handle_CameraProfile& InOutProfile,
         float InBlendAlpha)
     -> void
 {
