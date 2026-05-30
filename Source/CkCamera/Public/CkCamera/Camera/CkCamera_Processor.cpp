@@ -2,6 +2,7 @@
 
 #include "CkCamera/CkCamera_Log.h"
 #include "CkCamera/Camera/CameraModifier/CkCameraModifier_EntityScript.h"
+#include "CkCamera/Camera/CkCameraProfile_Utils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
@@ -166,11 +167,12 @@ namespace ck
             FFragment_Camera_Current& InCurrent) const
         -> void
     {
-        // Start from a fresh default each frame; every active modifier contributes on top, weighted by its own
-        // blend alpha. Per-modifier blend is ticked here (runs every frame); fully-blended-out modifiers are
-        // pruned, and the dominant active modifier (highest alpha, later record order breaks ties) supplies the
-        // look-at target for auto-reorient.
-        auto Profile = FCk_CameraProfile{};
+        // Reset the profile entity to a fresh default each frame; every active modifier contributes on top via
+        // handle (DoContributeToProfile), weighted by its own blend alpha. Per-modifier blend is ticked here
+        // (runs every frame); fully-blended-out modifiers are pruned, and the dominant active modifier (highest
+        // alpha, later record order breaks ties) supplies the look-at target for auto-reorient.
+        auto ProfileEntity = InCurrent.Get_ProfileEntity();
+        UCk_Utils_CameraProfile_UE::Reset(ProfileEntity);
 
         const auto DeltaSeconds = static_cast<float>(InDeltaT.Get_Seconds());
 
@@ -217,7 +219,7 @@ namespace ck
                 Script->Tick(InModifier, InDeltaT);
             }
 
-            Script->ContributeToProfile(InModifier, Profile, Alpha);
+            Script->ContributeToProfile(InModifier, ProfileEntity, Alpha);
 
             if (Alpha >= DominantAlpha)
             {
@@ -226,7 +228,9 @@ namespace ck
             }
         });
 
-        InCurrent._ComposedProfile = Profile;
+        // Cache the resolved composite for observers (UpdatePOV, debugger inspector) — they read the struct
+        // rather than re-resolving the entity on every access.
+        InCurrent._ComposedProfile = UCk_Utils_CameraProfile_UE::Get_Profile(ProfileEntity);
 
         // Resolve the dominant modifier (its class is observable via Utils) + its look-at target (for auto-reorient).
         InCurrent._DominantLookAt.Reset();
