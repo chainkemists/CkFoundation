@@ -70,6 +70,16 @@ public:
     Get_DominantModifierClass(
         const FCk_Handle_Camera& InCamera);
 
+    // The resolved composed profile (this frame's blended Modes + layered Trims). Handy for gameplay that needs
+    // the live FOV / boom / framing, and for tests asserting composition. Refreshed each frame by ComposeProfile;
+    // returns a default profile if the camera has no Current fragment yet.
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Camera",
+        DisplayName = "[Ck][Camera] Get Composed Profile")
+    static FCk_CameraProfile
+    Get_ComposedProfile(
+        const FCk_Handle_Camera& InCamera);
+
 private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Camera",
