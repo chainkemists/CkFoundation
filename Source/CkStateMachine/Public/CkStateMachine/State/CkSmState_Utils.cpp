@@ -175,13 +175,19 @@ auto
 auto
     UCk_Utils_SmState_UE::
     Request_Exit(
-        FCk_Handle_SmState& InState)
+        FCk_Handle_SmState& InState,
+        bool InScheduleDestroy)
     -> FCk_Handle_SmState
 {
-    ck::sm::VeryVerbose(TEXT("[SM Lifecycle] Request_Exit on state [{}]"), InState);
+    ck::sm::VeryVerbose(TEXT("[SM Lifecycle] Request_Exit on state [{}] (ScheduleDestroy=[{}])"),
+        InState, InScheduleDestroy);
 
     InState.AddOrGet<ck::FTag_SmState_PendingExit>();
-    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InState);
+
+    if (InScheduleDestroy)
+    {
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InState);
+    }
 
     return InState;
 }

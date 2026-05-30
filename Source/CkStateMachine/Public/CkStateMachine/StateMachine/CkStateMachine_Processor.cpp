@@ -382,7 +382,14 @@ namespace ck
 
         UCk_Utils_StateMachine_UE::TryCheckExitBreakpoint(InHandle, PreviousStateClass);
 
-        DoExitCurrentState(InHandle, InCurrent);
+        // Run the exit cascade but DO NOT destroy the previous state yet — its handle is stashed
+        // into FFragment_Sm_PendingTransition below and read by FProcessor_Sm_CommitPendingTransition
+        // (Get_IsPendingExit). Destroying it here (deferred to end-of-frame) can win the race
+        // against the commit when the exit cascade straddles a frame boundary, leaving the commit
+        // to query a tombstone handle. CommitPendingTransition destroys it after the new state is
+        // entered.
+        constexpr auto ScheduleDestroyNow = false;
+        DoExitCurrentState(InHandle, InCurrent, ScheduleDestroyNow);
 
         // The actual entry happens in FProcessor_Sm_CommitPendingTransition, after the
         // exit cascade (state -> task -> transition -> condition) has fully drained.
@@ -443,7 +450,8 @@ namespace ck
         FProcessor_Sm_HandleRequests::
         DoExitCurrentState(
             HandleType InSmHandle,
-            FFragment_Sm_Current& InCurrent)
+            FFragment_Sm_Current& InCurrent,
+            bool InScheduleDestroy)
         -> void
     {
         if (ck::Is_NOT_Valid(InCurrent._CurrentStateHandle))
@@ -456,7 +464,7 @@ namespace ck
         ck::sm::VeryVerbose(TEXT("[SM Lifecycle] DoExitCurrentState on SM [{}] -> exiting state [{}]"),
             InSmHandle, InCurrent._CurrentStateHandle);
 
-        UCk_Utils_SmState_UE::Request_Exit(InCurrent._CurrentStateHandle);
+        UCk_Utils_SmState_UE::Request_Exit(InCurrent._CurrentStateHandle, InScheduleDestroy);
 
         InCurrent._CurrentStateHandle = FCk_Handle_SmState{};
         InCurrent._CurrentStateClass = nullptr;
@@ -476,14 +484,24 @@ namespace ck
             FFragment_Sm_PendingTransition& InPending)
         -> void
     {
-        // RunAfter the full exit cascade ensures Get_IsPendingExit is false here in the
-        // normal flow. The check is a safety net for unusual schedules (e.g. an exit
-        // request straddling a frame boundary).
-        if (UCk_Utils_SmState_UE::Get_IsPendingExit(InPending._PreviousStateHandle))
+        // The transition path keeps the previous state ALIVE until here (DoExitCurrentState was
+        // called with ScheduleDestroyNow=false), so its handle is still valid and we destroy it
+        // below, after the new state is entered. We still wait while it is mid-exit
+        // (FProcessor_SmState_Exit hasn't cleared FTag_SmState_PendingExit yet). The validity
+        // guard covers the initial transition (no previous state) and any caller that released it.
+        if (ck::IsValid(InPending._PreviousStateHandle)
+            && UCk_Utils_SmState_UE::Get_IsPendingExit(InPending._PreviousStateHandle))
         { return; }
 
         if (InCurrent._RunStatus != ECk_SmRunStatus::Running)
         {
+            // Still tear down the deferred-alive previous state so we don't leak it when the SM
+            // stopped mid-transition.
+            if (ck::IsValid(InPending._PreviousStateHandle))
+            {
+                auto PreviousToDestroy = FCk_Handle{InPending._PreviousStateHandle};
+                UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(PreviousToDestroy);
+            }
             InHandle.Try_Remove<FFragment_Sm_PendingTransition>();
             return;
         }
@@ -491,8 +509,19 @@ namespace ck
         const auto PreviousStateClass     = InPending._PreviousStateClass;
         const auto TargetStateClass       = InPending._TargetStateClass;
         const auto IncomingNewFingerprint = InPending._NewStateFingerprint;
+        const auto PreviousStateHandle    = InPending._PreviousStateHandle;
 
         FProcessor_Sm_HandleRequests::DoEnterState(InHandle, InCurrent, TargetStateClass);
+
+        // New state is now committed — it is safe to destroy the previous state entity that the
+        // transition path deliberately kept alive (see DoHandleRequest(Transition)). Its exit
+        // lifecycle already ran via FProcessor_SmState_Exit; EndPlay's ExitState is a no-op
+        // (FTag_SmState_Active dedup).
+        if (ck::IsValid(PreviousStateHandle))
+        {
+            auto PreviousToDestroy = FCk_Handle{PreviousStateHandle};
+            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(PreviousToDestroy);
+        }
 
         // Pass the replicated fingerprint expectation to the new state entity so that its
         // Construct/DoComputeFingerprint cycle can verify against it (spec §9). Authority-

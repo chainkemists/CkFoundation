@@ -156,10 +156,14 @@ namespace ck
             FFragment_Sm_Current& InCurrent,
             TSubclassOf<UCk_SmState_EntityScript> InStateClass) -> void;
 
+        // InScheduleDestroy=false runs the exit cascade but leaves the previous state entity
+        // alive; the caller (transition path) is then responsible for destroying it after the
+        // new state is committed. See FProcessor_Sm_CommitPendingTransition.
         static auto
         DoExitCurrentState(
             HandleType InSmHandle,
-            FFragment_Sm_Current& InCurrent) -> void;
+            FFragment_Sm_Current& InCurrent,
+            bool InScheduleDestroy = true) -> void;
     };
 
     // Forward decl — the processors below name CommitPendingTransition in their RunBefore, but

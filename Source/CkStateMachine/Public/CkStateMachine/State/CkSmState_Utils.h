@@ -43,12 +43,19 @@ public:
     // EXIT
     // ================================================================================================================
 
-    // Adds FTag_SmState_PendingExit and requests entity destruction.
+    // Adds FTag_SmState_PendingExit and (when InScheduleDestroy) requests entity destruction.
     // FProcessor_SmState_Exit (EndPlay group) picks up the tag and cascades the exit chain
     // to tasks and transitions before calling ExitState on the state script.
+    //
+    // InScheduleDestroy=false runs the exit cascade but leaves the entity alive — used by the
+    // transition path so FProcessor_Sm_CommitPendingTransition can keep reading the previous
+    // state handle and destroy it only after the new state is entered. Destroying it during
+    // request handling can race the deferred commit across a frame boundary and tombstone the
+    // handle the commit still reads (Get_IsPendingExit), which ensures.
     static auto
     Request_Exit(
-        FCk_Handle_SmState& InState) -> FCk_Handle_SmState;
+        FCk_Handle_SmState& InState,
+        bool InScheduleDestroy = true) -> FCk_Handle_SmState;
 
     // True while FProcessor_SmState_Exit has not yet cleared FTag_SmState_PendingExit.
     static auto
