@@ -24,7 +24,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+        Category = "Ck|Utils|Camera",
               DisplayName = "[Ck][Camera] Add")
     static FCk_Handle_Camera
     Add(
@@ -32,16 +32,11 @@ public:
         const FCk_Fragment_Camera_ParamsData& InParams);
 
 public:
-    // Has Feature
-    static bool
-    Has(
-        const FCk_Handle& InHandle);
-
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Camera",
-        DisplayName = "[Ck][Camera] Has")
+        DisplayName = "[Ck][Camera] Has Feature")
     static bool
-    Has_Any(
+    Has(
         const FCk_Handle& InHandle);
 
 public:
@@ -107,7 +102,7 @@ private:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Camera",
               DisplayName = "[Ck][Camera] Request Add Modifier")
     static FCk_Handle_Camera
     Request_AddModifier(
@@ -115,7 +110,7 @@ public:
         const FCk_Request_Camera_AddModifier& InRequest);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Camera",
               DisplayName = "[Ck][Camera] Request Remove Modifier")
     static FCk_Handle_Camera
     Request_RemoveModifier(
@@ -136,8 +131,17 @@ public:
         FVector InOrientationIntention);
 
 public:
+    // The resolved POV for this frame (the composed view), as written by UpdatePOV. The camera component
+    // (UCk_CameraComponent::GetCameraView) reads this; gameplay can too.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Camera",
+              DisplayName = "[Ck][Camera] Get View Info")
+    static FMinimalViewInfo
+    Get_ViewInfo(
+        const FCk_Handle_Camera& InCamera);
+
     // The resolved camera view rotation (this frame's composed POV). Handy for camera-relative movement: take the
-    // yaw to derive a horizontal forward/right. Returns zero rotation if the camera has no composed view yet.
+    // yaw to derive a horizontal forward/right.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Camera",
               DisplayName = "[Ck][Camera] Get View Rotation")

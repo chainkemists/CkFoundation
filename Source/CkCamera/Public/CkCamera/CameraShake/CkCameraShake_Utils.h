@@ -27,7 +27,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|CameraShake",
               DisplayName="[Ck][CameraShake] Add New CameraShake")
     static FCk_Handle_CameraShake
     Add(
@@ -106,7 +106,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|CameraShake",
               DisplayName="[Ck][CameraShake] Request Play On Target")
     static void
     Request_PlayOnTarget(
@@ -114,7 +114,7 @@ public:
         const FCk_Request_CameraShake_PlayOnTarget& InRequest);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|CameraShake",
               DisplayName="[Ck][CameraShake] Request Play At Location")
     static void
     Request_PlayAtLocation(

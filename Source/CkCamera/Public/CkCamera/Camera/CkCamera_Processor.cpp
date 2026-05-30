@@ -2,7 +2,7 @@
 
 #include "CkCamera/CkCamera_Log.h"
 #include "CkCamera/Camera/CameraModifier/CkCameraModifier_EntityScript.h"
-#include "CkCamera/Camera/CkCameraProfile_Utils.h"
+#include "CkCamera/Camera/Profile/CkCameraProfile_Utils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 

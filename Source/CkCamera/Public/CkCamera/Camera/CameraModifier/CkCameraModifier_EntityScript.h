@@ -5,7 +5,7 @@
 #include "CkCore/Time/CkTime.h"
 
 #include "CkCamera/Camera/CkCamera_Fragment_Data.h"
-#include "CkCamera/Camera/CkCameraProfile.h"
+#include "CkCamera/Camera/Profile/CkCameraProfile.h"
 
 #include "CkCameraModifier_EntityScript.generated.h"
 
