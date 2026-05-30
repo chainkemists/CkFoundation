@@ -248,6 +248,11 @@ namespace ck
 
         ck::camera::FPov::Run(Profile, Input, InCurrent._PovState);
 
+        // The orientation intention is a per-frame DELTA — consume it once applied. Input (OnLook) only fires while
+        // the mouse is moving, so without this the last delta would keep being re-applied every frame after the mouse
+        // stops, drifting the camera. While the mouse is moving, input re-pushes a fresh intention each frame.
+        InCurrent._OrientationIntention = FVector::ZeroVector;
+
         auto ViewInfo = FMinimalViewInfo{};
         ViewInfo.Location    = InCurrent._PovState._CameraTransform.GetLocation();
         ViewInfo.Rotation    = InCurrent._PovState._CameraTransform.Rotator();
