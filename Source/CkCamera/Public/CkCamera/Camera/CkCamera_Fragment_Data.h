@@ -108,7 +108,7 @@ private:
     TSubclassOf<UCk_CameraModifier_EntityScript> _ModifierClass;
 
     // Ordering-group/layer this modifier belongs to (used by OneOnly stacking + dominant selection).
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "Camera.OrderingGroup"))
     FGameplayTag _OrderingGroup;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))

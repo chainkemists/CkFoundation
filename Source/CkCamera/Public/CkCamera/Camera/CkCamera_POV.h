@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkCamera/Camera/CkCameraProfile.h"
+#include "CkCamera/Camera/Profile/CkCameraProfile.h"
 
 #include <CoreMinimal.h>
 

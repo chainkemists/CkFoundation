@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CkCamera/Camera/CkCamera_Fragment_Data.h"
-#include "CkCamera/Camera/CkCameraProfile.h"
+#include "CkCamera/Camera/Profile/CkCameraProfile.h"
 #include "CkCamera/Camera/CkCamera_POV.h"
 
 #include "CkCore/Macros/CkMacros.h"
