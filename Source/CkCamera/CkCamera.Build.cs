@@ -16,6 +16,7 @@ public class CkCamera : CkModuleRules
             "Engine",
             "GameplayTags",
 
+            "CkAttribute",
             "CkCore",
             "CkEcs",
             "CkEcsExt",

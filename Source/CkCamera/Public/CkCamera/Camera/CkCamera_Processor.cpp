@@ -1,8 +1,10 @@
 #include "CkCamera_Processor.h"
 
 #include "CkCamera/CkCamera_Log.h"
-#include "CkCamera/Camera/CameraModifier/CkCameraModifier_EntityScript.h"
-#include "CkCamera/Camera/Profile/CkCameraProfile_Utils.h"
+#include "CkCamera/Camera/CkCamera_Utils.h"
+#include "CkCamera/Camera/CameraLayer/CkCameraLayer_Fragment.h"
+#include "CkCamera/Camera/CameraLayer/CkCameraLayer_Utils.h"
+#include "CkCamera/Camera/CameraLayer/EntityScripts/CkCameraLayer_EntityScript.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
@@ -13,10 +15,14 @@
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include <GameFramework/Pawn.h>
+#include <GameFramework/PlayerController.h>
+
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Camera_HandleRequests);
-CK_REGISTER_PROCESSOR(ck::FProcessor_Camera_ComposeProfile);
+CK_REGISTER_PROCESSOR(ck::FProcessor_CameraLayer_Lifecycle);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Camera_UpdatePOV);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -56,213 +62,159 @@ namespace ck
         FProcessor_Camera_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FCk_Request_Camera_AddModifier& InRequest) const
+            const FCk_Request_Camera_AddLayer& InRequest)
         -> void
     {
-        const auto ModifierClass = InRequest.Get_ModifierClass();
+        const auto LayerClass = InRequest.Get_LayerClass();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(ModifierClass),
-            TEXT("AddModifier: invalid modifier class on camera [{}]"), InHandle)
+        CK_ENSURE_IF_NOT(ck::IsValid(LayerClass),
+            TEXT("AddLayer: invalid layer class on camera [{}]"), InHandle)
         { return; }
 
-        const auto OrderingGroup = InRequest.Get_OrderingGroup();
+        const auto Priority = InRequest.Get_Priority();
 
-        // OneOnly: blend out any existing modifier in the same ordering group (eviction). Done before the new
-        // modifier is connected to the Record so it can't match itself.
+        // OneOnly: blend out any existing layer at the SAME priority (eviction). Done before the new layer is
+        // connected to the Record so it can't match itself.
         if (InRequest.Get_StackingBehavior() == ECk_Camera_StackingBehavior::OneOnly)
         {
-            auto MutableForEvict = InHandle;
-            ck::FUtils_RecordOfCameraModifiers::ForEach_ValidEntry(MutableForEvict,
-            [&](FCk_Handle_CameraModifier InSibling)
+            ck::FUtils_RecordOfCameraLayers::ForEach_ValidEntry(InHandle,
+            [&](FCk_Handle_CameraLayer InSibling)
             {
-                if (NOT InSibling.Has<ck::FFragment_CameraModifier_Params>())
-                { return; }
-                if (InSibling.Get<ck::FFragment_CameraModifier_Params>().Get_OrderingGroup() != OrderingGroup)
-                { return; }
-                if (NOT InSibling.Has<ck::FFragment_CameraModifier_Blend>())
+                // The persistent base layer is never evicted (it lives at the lowest priority, so this also
+                // wouldn't match, but guard explicitly).
+                if (InSibling.Get<FFragment_CameraLayer_Params>().Get_IsDefault())
                 { return; }
 
-                auto& SiblingBlend = InSibling.Get<ck::FFragment_CameraModifier_Blend>();
+                if (InSibling.Get<FFragment_CameraLayer_Params>().Get_Priority() != Priority)
+                { return; }
+
+                auto& SiblingBlend = InSibling.Get<FFragment_CameraLayer_Blend>();
                 SiblingBlend.Set_TargetAlpha(0.0f);
                 SiblingBlend.Set_BlendRate(DoGet_BlendRateFromTime(InRequest.Get_BlendInTime()));
-                InSibling.AddOrGet<ck::FTag_CameraModifier_PendingExit>();
             });
         }
 
-        auto MutableDirector = InHandle;
+        // Entity creation (spawn + owning-camera back-ref + fragments + record connect + EntityScript) lives in the
+        // utils Create (mirrors UCk_Utils_SmTask_UE::Create). The request-specific config (priority, blend rate,
+        // look-at) is applied here.
+        auto TypedLayer = ::UCk_Utils_CameraLayer_UE::Create(InHandle, LayerClass);
 
-        auto NewModifier = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(MutableDirector);
-        UCk_Utils_Handle_UE::Set_DebugName(NewModifier, ModifierClass->GetFName());
+        if (ck::Is_NOT_Valid(TypedLayer))
+        { return; }
 
-        ck::TUtils_CameraModifier_OwningCamera::AddOrReplace(NewModifier, InHandle);
-
-        NewModifier.Add<ck::FFragment_CameraModifier_Params>(ModifierClass);
         {
-            auto& Params = NewModifier.Get<ck::FFragment_CameraModifier_Params>();
-            Params.Set_OrderingGroup(OrderingGroup);
+            auto& Params = TypedLayer.Get<FFragment_CameraLayer_Params>();
+            Params.Set_Priority(Priority);
             Params.Set_LookAtTarget(InRequest.Get_LookAtTarget());
         }
-
-        NewModifier.Add<ck::FFragment_CameraModifier_Blend>();
         {
-            auto& Blend = NewModifier.Get<ck::FFragment_CameraModifier_Blend>();
-            Blend.Set_Alpha(0.0f);
-            Blend.Set_TargetAlpha(1.0f);
+            auto& Blend = TypedLayer.Get<FFragment_CameraLayer_Blend>();
             Blend.Set_BlendRate(DoGet_BlendRateFromTime(InRequest.Get_BlendInTime()));
         }
 
-        auto TypedModifier = ck::StaticCast<FCk_Handle_CameraModifier>(NewModifier);
-
-        ck::FUtils_RecordOfCameraModifiers::AddIfMissing(MutableDirector);
-        ck::FUtils_RecordOfCameraModifiers::Request_Connect(
-            MutableDirector, TypedModifier, ECk_Record_LabelRequirementPolicy::Optional);
-
-        // Attach the modifier EntityScript synchronously (after the back-ref/params/record are in place, so
-        // Construct sees them) — mirrors UCk_Utils_SmState_UE::Create. See the note in the fragment header.
-        UCk_Utils_EntityScript_UE::Add(NewModifier, ModifierClass, FInstancedStruct{});
-
-        camera::VeryVerbose(TEXT("[Camera] AddModifier [{}] -> entity [{}] on camera [{}]"),
-            ModifierClass, TypedModifier, InHandle);
+        camera::VeryVerbose(TEXT("[Camera] AddLayer [{}] -> entity [{}] on camera [{}]"),
+            LayerClass, TypedLayer, InHandle);
     }
 
     auto
         FProcessor_Camera_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FCk_Request_Camera_RemoveModifier& InRequest) const
+            const FCk_Request_Camera_RemoveLayer& InRequest)
         -> void
     {
-        const auto ModifierClass = InRequest.Get_ModifierClass();
-        auto MutableDirector = InHandle;
+        const auto LayerClass = InRequest.Get_LayerClass();
 
-        // Begin blend-out; ComposeProfile prunes (destroys) the entity once its alpha reaches 0.
-        ck::FUtils_RecordOfCameraModifiers::ForEach_ValidEntry(MutableDirector,
-        [&](FCk_Handle_CameraModifier InModifier)
+        // Begin blend-out; the lifecycle processor prunes (destroys) the entity once its alpha reaches 0.
+        ck::FUtils_RecordOfCameraLayers::ForEach_ValidEntry(InHandle,
+        [&](FCk_Handle_CameraLayer InLayer)
         {
-            if (NOT InModifier.Has<ck::FFragment_CameraModifier_Params>())
+            // The persistent base layer is never removed.
+            if (InLayer.Get<ck::FFragment_CameraLayer_Params>().Get_IsDefault())
             { return; }
 
-            if (InModifier.Get<ck::FFragment_CameraModifier_Params>().Get_ModifierClass() != ModifierClass)
+            if (InLayer.Get<ck::FFragment_CameraLayer_Params>().Get_LayerClass() != LayerClass)
             { return; }
 
-            if (NOT InModifier.Has<ck::FFragment_CameraModifier_Blend>())
-            { return; }
-
-            auto& Blend = InModifier.Get<ck::FFragment_CameraModifier_Blend>();
+            auto& Blend = InLayer.Get<ck::FFragment_CameraLayer_Blend>();
             Blend.Set_TargetAlpha(0.0f);
             Blend.Set_BlendRate(DoGet_BlendRateFromTime(InRequest.Get_BlendOutTime()));
-            InModifier.AddOrGet<ck::FTag_CameraModifier_PendingExit>();
         });
     }
 
     // ================================================================================================================
-    // COMPOSE PROFILE
+    // LAYER LIFECYCLE
     // ================================================================================================================
 
     auto
-        FProcessor_Camera_ComposeProfile::
+        FProcessor_CameraLayer_Lifecycle::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Camera_Current& InCurrent) const
+            FFragment_Camera_Current& InCurrent)
         -> void
     {
-        // Reset the profile entity to a fresh default each frame; every active modifier contributes on top via
-        // handle (DoContributeToProfile), weighted by its own blend alpha. Per-modifier blend is ticked here
-        // (runs every frame); fully-blended-out modifiers are pruned, and the dominant active modifier (highest
-        // alpha, later record order breaks ties) supplies the look-at target for auto-reorient.
-        auto ProfileEntity = InCurrent.Get_ProfileEntity();
-        UCk_Utils_CameraProfile_UE::Reset(ProfileEntity);
+        auto Dominant         = FCk_Handle_CameraLayer{};
+        auto DominantAlpha    = -1.0f;
+        auto DominantPriority = TNumericLimits<int32>::Lowest();
 
-        const auto DeltaSeconds = static_cast<float>(InDeltaT.Get_Seconds());
-
-        auto Dominant      = FCk_Handle_CameraModifier{};
-        auto DominantAlpha = -1.0f;
-
-        // Collected during the (single) tick/prune pass, then contributed in role order: every Mode establishes the
-        // cross-faded base + structural blocks first, then every Trim layers field-level adjustments on top.
-        struct FActiveContribution
+        FUtils_RecordOfCameraLayers::ForEach_ValidEntry(InHandle,
+        [&](FCk_Handle_CameraLayer InLayer)
         {
-            FCk_Handle_CameraModifier        Modifier;
-            UCk_CameraModifier_EntityScript* Script = nullptr;
-            float                            Alpha  = 0.0f;
-        };
-        auto Modes = TArray<FActiveContribution>{};
-        auto Trims = TArray<FActiveContribution>{};
-
-        FUtils_RecordOfCameraModifiers::ForEach_ValidEntry(InHandle,
-        [&](FCk_Handle_CameraModifier InModifier)
-        {
-            if (NOT InModifier.Has<FFragment_CameraModifier_Blend>())
-            { return; }
-
-            auto& Blend = InModifier.Get<FFragment_CameraModifier_Blend>();
-            Blend.Set_Alpha(FMath::FInterpConstantTo(
-                Blend.Get_Alpha(), Blend.Get_TargetAlpha(), DeltaSeconds, Blend.Get_BlendRate()));
-
+            const auto& Blend = InLayer.Get<FFragment_CameraLayer_Blend>();
             const auto Alpha = Blend.Get_Alpha();
 
-            // Fully blended out → prune (deferred destroy).
+            // Fully blended out → prune the layer (deferred destroy). The layer's acquired attribute modifiers are
+            // removed in UCk_CameraLayer_EntityScript::ExitLayer (driven by EndPlay), so they don't outlive it.
+            // The persistent base layer is never pruned (it stays pinned at full blend).
             if (Alpha <= 0.0f && Blend.Get_TargetAlpha() <= 0.0f)
             {
-                auto ModifierToDestroy = InModifier;
-                UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(ModifierToDestroy);
+                if (NOT InLayer.Get<FFragment_CameraLayer_Params>().Get_IsDefault())
+                { UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InLayer); }
                 return;
             }
 
             if (Alpha <= 0.0f)
             { return; }
 
-            if (NOT InModifier.Has<FTag_CameraModifier_Active>())
+            if (NOT InLayer.Has<FTag_CameraLayer_Active>())
             { return; }
 
-            if (NOT InModifier.Has<FFragment_EntityScript_Current>())
-            { return; }
-
-            auto* Script = Cast<UCk_CameraModifier_EntityScript>(
-                InModifier.Get<FFragment_EntityScript_Current>().Get_Script().Get());
-
-            if (ck::Is_NOT_Valid(Script))
-            { return; }
-
-            if (Script->Get_TickMode() == ECk_Camera_TickMode::Tick)
+            if (InLayer.Has<FFragment_EntityScript_Current>())
             {
-                Script->Tick(InModifier, InDeltaT);
+                if (auto* Script = Cast<UCk_CameraLayer_EntityScript>(
+                        InLayer.Get<FFragment_EntityScript_Current>().Get_Script().Get());
+                    ck::IsValid(Script))
+                {
+                    if (Script->Get_TickMode() == ECk_Camera_TickMode::Tick)
+                    { Script->Tick(InLayer, InDeltaT); }
+                }
             }
 
-            auto& Bucket = Script->Get_Role() == ECk_Camera_ModifierRole::Trim ? Trims : Modes;
-            Bucket.Add(FActiveContribution{InModifier, Script, Alpha});
-
-            if (Alpha >= DominantAlpha)
+            const auto Priority = InLayer.Get<FFragment_CameraLayer_Params>().Get_Priority();
+            if (Priority > DominantPriority || (Priority == DominantPriority && Alpha >= DominantAlpha))
             {
-                DominantAlpha = Alpha;
-                Dominant      = InModifier;
+                DominantPriority = Priority;
+                DominantAlpha    = Alpha;
+                Dominant         = InLayer;
             }
         });
 
-        // Modes first (cross-faded base + structural), then Trims (field-level layers) — order is the whole point
-        // of the role split; the profile entity is reset above, so this fully rebuilds the composite each frame.
-        for (const auto& Entry : Modes)
-        { Entry.Script->ContributeToProfile(Entry.Modifier, ProfileEntity, Entry.Alpha); }
-        for (const auto& Entry : Trims)
-        { Entry.Script->ContributeToProfile(Entry.Modifier, ProfileEntity, Entry.Alpha); }
+        // Refresh the composed-profile cache from the (already-recomputed-this-frame) tuner attributes.
+        InCurrent._ComposedProfile = ::UCk_Utils_Camera_UE::Get_Profile(InHandle);
 
-        // Cache the resolved composite for observers (UpdatePOV, debugger inspector) — they read the struct
-        // rather than re-resolving the entity on every access.
-        InCurrent._ComposedProfile = UCk_Utils_CameraProfile_UE::Get_Profile(ProfileEntity);
-
-        // Resolve the dominant modifier (its class is observable via Utils) + its look-at target (for auto-reorient).
+        // Resolve the dominant layer (its class is observable via Utils) + its look-at target (for auto-reorient).
         InCurrent._DominantLookAt.Reset();
-        InCurrent._DominantModifierClass = nullptr;
-        if (ck::IsValid(Dominant) && Dominant.Has<FFragment_CameraModifier_Params>())
+        InCurrent._DominantLayerClass = nullptr;
+        if (ck::IsValid(Dominant))
         {
-            const auto& DominantParams = Dominant.Get<FFragment_CameraModifier_Params>();
-            InCurrent._DominantModifierClass = DominantParams.Get_ModifierClass();
+            const auto& DominantParams = Dominant.Get<FFragment_CameraLayer_Params>();
+            InCurrent._DominantLayerClass = DominantParams.Get_LayerClass();
 
-            const auto LookAt = DominantParams.Get_LookAtTarget();
-            if (ck::IsValid(LookAt) && LookAt.Has<ck::FFragment_Transform>())
+            if (const auto& LookAt = DominantParams.Get_LookAtTarget();
+                ck::IsValid(LookAt))
             {
-                InCurrent._DominantLookAt = LookAt.Get<ck::FFragment_Transform>().Get_Transform().GetLocation();
+                InCurrent._DominantLookAt = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(LookAt);
             }
         }
     }
@@ -276,7 +228,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Camera_Current& InCurrent) const
+            FFragment_Camera_Current& InCurrent)
         -> void
     {
         const auto& Profile = InCurrent.Get_ComposedProfile();
@@ -308,6 +260,24 @@ namespace ck
         }
 
         InCurrent._ViewInfo = ViewInfo;
+
+        // Camera-authoritative control rotation: when opted in (player view), publish the resolved view rotation to
+        // the local PlayerController so control-rotation consumers (facing / aim / movement) follow the camera. This
+        // replaces the per-frame SM task BusterBlock used to run. Guarded to the local controller (the director only
+        // exists on the local client anyway). Does NOT feed back into the POV — the camera reads input intention, not
+        // control rotation.
+        if (InHandle.Get<FFragment_Camera_Params>().Get_Params().Get_DriveControllerControlRotation())
+        {
+            if (auto* Pawn = Cast<APawn>(UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle));
+                ck::IsValid(Pawn, ck::IsValid_Policy_NullptrOnly{}))
+            {
+                if (auto* PC = Cast<APlayerController>(Pawn->GetController());
+                    ck::IsValid(PC, ck::IsValid_Policy_NullptrOnly{}) && PC->IsLocalController())
+                {
+                    PC->SetControlRotation(ViewInfo.Rotation);
+                }
+            }
+        }
     }
 }
 
