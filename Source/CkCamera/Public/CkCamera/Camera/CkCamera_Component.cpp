@@ -1,6 +1,6 @@
 #include "CkCamera_Component.h"
 
-#include "CkCamera/Camera/CkCamera_Fragment.h"
+#include "CkCamera/Camera/CkCamera_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -10,9 +10,10 @@ void
         float DeltaTime,
         FMinimalViewInfo& DesiredView)
 {
-    if (ck::IsValid(_DirectorEntity) && _DirectorEntity.Has<ck::FFragment_Camera_Current>())
+    // The stored director handle can legitimately be invalid (not yet wired / destroyed), so this guard stays.
+    if (ck::IsValid(_DirectorEntity))
     {
-        DesiredView = _DirectorEntity.Get<ck::FFragment_Camera_Current>().Get_ViewInfo();
+        DesiredView = UCk_Utils_Camera_UE::Get_ViewInfo(_DirectorEntity);
         return;
     }
 

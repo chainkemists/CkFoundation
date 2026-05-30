@@ -2,7 +2,7 @@
 
 #include "CkCamera/CkCamera_Log.h"
 #include "CkCamera/Camera/CkCamera_Component.h"
-#include "CkCamera/Camera/CkCameraProfile_Utils.h"
+#include "CkCamera/Camera/Profile/CkCameraProfile_Utils.h"
 #include "CkCamera/Camera/CameraModifier/CkCameraModifier_EntityScript.h"
 
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
@@ -23,12 +23,12 @@ auto
 
     ck::FUtils_RecordOfCameraModifiers::AddIfMissing(InHandle);
 
+    auto Director = Cast(InHandle);
+
     // The composed profile lives on its own entity (owned by the director). Modifiers contribute into it via
     // handle in DoContributeToProfile; ComposeProfile resolves it back into the director's read-cache each frame.
-    auto ProfileEntity = UCk_Utils_CameraProfile_UE::Add(InHandle);
+    const auto ProfileEntity = UCk_Utils_CameraProfile_UE::Create(Director);
     InHandle.Get<ck::FFragment_Camera_Current>().Set_ProfileEntity(ProfileEntity);
-
-    auto Director = Cast(InHandle);
 
     if (InParams.Get_OutputMode() == ECk_Camera_OutputMode::DriveCameraComponent)
     {
@@ -36,9 +36,8 @@ auto
 
         if (ck::Is_NOT_Valid(OutputComponent))
         {
-            auto* OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
-
-            if (ck::IsValid(OwningActor))
+            if (auto* OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
+                ck::IsValid(OwningActor))
             {
                 auto* NewComp = NewObject<UCk_CameraComponent>(OwningActor);
 
@@ -74,25 +73,13 @@ auto
 
 auto
     UCk_Utils_Camera_UE::
-    Has_Any(
-        const FCk_Handle& InHandle)
-    -> bool
-{
-    return Has(InHandle);
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_Camera_UE::
     Get_ModifierCount(
         const FCk_Handle_Camera& InCamera)
     -> int32
 {
-    auto MutableCamera = InCamera;
     auto Count = int32{0};
 
-    ck::FUtils_RecordOfCameraModifiers::ForEach_ValidEntry(MutableCamera,
+    ck::FUtils_RecordOfCameraModifiers::ForEach_ValidEntry(InCamera,
     [&](FCk_Handle_CameraModifier)
     {
         ++Count;
@@ -108,10 +95,9 @@ auto
         TSubclassOf<UCk_CameraModifier_EntityScript> InModifierClass)
     -> bool
 {
-    auto MutableCamera = InCamera;
     auto Found = false;
 
-    ck::FUtils_RecordOfCameraModifiers::ForEach_ValidEntry(MutableCamera,
+    ck::FUtils_RecordOfCameraModifiers::ForEach_ValidEntry(InCamera,
     [&](FCk_Handle_CameraModifier InModifier)
     {
         if (Found)
@@ -133,12 +119,7 @@ auto
         const FCk_Handle_Camera& InCamera)
     -> TSubclassOf<UCk_CameraModifier_EntityScript>
 {
-    auto MutableCamera = InCamera;
-
-    if (NOT MutableCamera.Has<ck::FFragment_Camera_Current>())
-    { return nullptr; }
-
-    return MutableCamera.Get<ck::FFragment_Camera_Current>().Get_DominantModifierClass();
+    return InCamera.Get<ck::FFragment_Camera_Current>().Get_DominantModifierClass();
 }
 
 auto
@@ -147,12 +128,16 @@ auto
         const FCk_Handle_Camera& InCamera)
     -> FCk_CameraProfile
 {
-    auto MutableCamera = InCamera;
+    return InCamera.Get<ck::FFragment_Camera_Current>().Get_ComposedProfile();
+}
 
-    if (ck::Is_NOT_Valid(MutableCamera) || NOT MutableCamera.Has<ck::FFragment_Camera_Current>())
-    { return {}; }
-
-    return MutableCamera.Get<ck::FFragment_Camera_Current>().Get_ComposedProfile();
+auto
+    UCk_Utils_Camera_UE::
+    Get_ViewInfo(
+        const FCk_Handle_Camera& InCamera)
+    -> FMinimalViewInfo
+{
+    return InCamera.Get<ck::FFragment_Camera_Current>().Get_ViewInfo();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -190,10 +175,7 @@ auto
         FVector InOrientationIntention)
     -> FCk_Handle_Camera
 {
-    if (InCamera.Has<ck::FFragment_Camera_Current>())
-    {
-        InCamera.Get<ck::FFragment_Camera_Current>().Set_OrientationIntention(InOrientationIntention);
-    }
+    InCamera.Get<ck::FFragment_Camera_Current>().Set_OrientationIntention(InOrientationIntention);
     return InCamera;
 }
 
@@ -203,10 +185,7 @@ auto
         const FCk_Handle_Camera& InCamera)
     -> FRotator
 {
-    if (ck::Is_NOT_Valid(InCamera) || NOT InCamera.Has<ck::FFragment_Camera_Current>())
-    { return FRotator::ZeroRotator; }
-
-    return InCamera.Get<ck::FFragment_Camera_Current>().Get_ViewInfo().Rotation;
+    return Get_ViewInfo(InCamera).Rotation;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
