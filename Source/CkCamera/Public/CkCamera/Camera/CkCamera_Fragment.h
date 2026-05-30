@@ -7,22 +7,24 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Handle/CkHandle.h"
-#include "CkEcs/EntityScript/CkEntityScript.h"
-
-#include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
 
 #include "CkRecord/Record/CkRecord_Fragment.h"
 #include "CkRecord/Record/CkRecord_Utils.h"
 
+#include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment_Data.h"
+#include "CkAttribute/VectorAttribute/CkVectorAttribute_Fragment_Data.h"
+#include "CkAttribute/RotatorAttribute/CkRotatorAttribute_Fragment_Data.h"
+#include "CkAttribute/IntegerAttribute/CkIntegerAttribute_Fragment_Data.h"
+
+#include <AlphaBlend.h>
 #include <Camera/CameraTypes.h>
-#include <StructUtils/InstancedStruct.h>
 
 #include <variant>
 
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_Camera_UE;
-class UCk_CameraModifier_EntityScript;
+class UCk_CameraLayer_EntityScript;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -58,41 +60,57 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Camera_Current);
 
     public:
-        friend class FProcessor_Camera_ComposeProfile;
+        friend class FProcessor_CameraLayer_Lifecycle;
         friend class FProcessor_Camera_UpdatePOV;
         friend class UCk_Utils_Camera_UE;
 
     private:
-        // The dedicated profile entity modifiers contribute into via handle (DoContributeToProfile). Created in
-        // UCk_Utils_Camera_UE::Add, owned by (and destroyed with) the director.
-        FCk_Handle_CameraProfile _ProfileEntity;
-
-        // Resolved read-cache of the profile entity's composed result — refreshed each frame by ComposeProfile.
-        // UpdatePOV and observers (debugger inspector) read this instead of resolving the entity every access.
+        // Resolved read-cache of the composed profile (assembled from the tuner attributes' final values + the
+        // bool/curve leaves below). Refreshed each frame by the lifecycle processor; read by UpdatePOV + observers.
         FCk_CameraProfile _ComposedProfile;
+
+        // ---- Non-attribute leaves (bools + curves) ----
+        // These do not blend, so they are plain data rather than tuner attributes (decision #9 / curves can't be attributes).
+        bool _UseFixedBoomRotation = false;
+        bool _ConstrainAspectRatio = false;
+        bool _HasOrientationControl = true;
+        bool _HasAutoReorient = false;
+        bool _HasCollision = true;
+        bool _UseAsyncTrace = true;
+        bool _UsePostProcess = false;
+
+        FAlphaBlend _XIntentionCurve;
+        FAlphaBlend _YIntentionCurve;
 
         // Persistent POV pipeline state (boom rotation, smoothed pivot, collision distance, noise) — advanced by UpdatePOV.
         ck::camera::FPov_State _PovState;
 
-        // Abstract orbit intention fed by whoever owns input (PC / ability / rail). Zero = no manual orbit.
-        // The camera module never reads input devices — it only consumes this value.
+        // Abstract orbit intention fed by whoever owns input. Zero = no manual orbit. The camera never reads input.
         FVector _OrientationIntention = FVector::ZeroVector;
 
-        // Look-at target resolved from the dominant active modifier (for auto-reorient). Set by ComposeProfile,
-        // consumed by UpdatePOV. Unset = the dominant modifier has no look-at (a zero vector is a valid target).
+        // Look-at target resolved from the dominant active layer (for auto-reorient). Set by the lifecycle processor,
+        // consumed by UpdatePOV. Unset = the dominant layer has no look-at (a zero vector is a valid target).
         TOptional<FVector> _DominantLookAt;
 
-        // Class of the dominant active modifier (highest blend alpha). Set by ComposeProfile; observable via Utils.
-        TSubclassOf<UCk_CameraModifier_EntityScript> _DominantModifierClass;
+        // Class of the dominant active layer (highest blend alpha). Set by the lifecycle processor; observable via Utils.
+        TSubclassOf<UCk_CameraLayer_EntityScript> _DominantLayerClass;
 
         // The final resolved POV — written by UpdatePOV, read by UCk_CameraComponent::GetCameraView.
         FMinimalViewInfo _ViewInfo;
 
     public:
-        CK_PROPERTY(_ProfileEntity);
         CK_PROPERTY(_ComposedProfile);
+        CK_PROPERTY(_UseFixedBoomRotation);
+        CK_PROPERTY(_ConstrainAspectRatio);
+        CK_PROPERTY(_HasOrientationControl);
+        CK_PROPERTY(_HasAutoReorient);
+        CK_PROPERTY(_HasCollision);
+        CK_PROPERTY(_UseAsyncTrace);
+        CK_PROPERTY(_UsePostProcess);
+        CK_PROPERTY(_XIntentionCurve);
+        CK_PROPERTY(_YIntentionCurve);
         CK_PROPERTY(_OrientationIntention);
-        CK_PROPERTY_GET(_DominantModifierClass);
+        CK_PROPERTY_GET(_DominantLayerClass);
         CK_PROPERTY_GET(_DominantLookAt);
         CK_PROPERTY_GET(_PovState);
         CK_PROPERTY_GET(_ViewInfo);
@@ -110,9 +128,9 @@ namespace ck
         friend class UCk_Utils_Camera_UE;
 
     public:
-        using AddModifierRequestType    = FCk_Request_Camera_AddModifier;
-        using RemoveModifierRequestType = FCk_Request_Camera_RemoveModifier;
-        using Requests                  = TArray<std::variant<AddModifierRequestType, RemoveModifierRequestType>>;
+        using AddLayerRequestType    = FCk_Request_Camera_AddLayer;
+        using RemoveLayerRequestType = FCk_Request_Camera_RemoveLayer;
+        using Requests               = TArray<std::variant<AddLayerRequestType, RemoveLayerRequestType>>;
 
     private:
         Requests _Requests;
@@ -122,83 +140,111 @@ namespace ck
     };
 
     // ----------------------------------------------------------------------------------------------------------------
-    // PER-MODIFIER FRAGMENTS
-    // ----------------------------------------------------------------------------------------------------------------
-
-    // Per-modifier identity/config: the script class (so RemoveModifier/OneOnly can match), the ordering group,
-    // and an optional look-at target for auto-reorient.
-    struct CKCAMERA_API FFragment_CameraModifier_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_CameraModifier_Params);
-
-    public:
-        friend class FProcessor_Camera_HandleRequests;
-
-    private:
-        TSubclassOf<UCk_CameraModifier_EntityScript> _ModifierClass;
-        FGameplayTag                                 _OrderingGroup;
-        FCk_Handle_Transform                         _LookAtTarget;
-
-    public:
-        CK_PROPERTY_GET(_ModifierClass);
-        CK_PROPERTY(_OrderingGroup);
-        CK_PROPERTY(_LookAtTarget);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_CameraModifier_Params, _ModifierClass);
-    };
-
-    // ----------------------------------------------------------------------------------------------------------------
-
-    // Per-modifier blend weight in [0,1]. _Alpha interpolates toward _TargetAlpha at _BlendRate (units/sec).
-    // Blend-in: target 1. Blend-out (removal / OneOnly eviction): target 0 → pruned when it reaches 0.
-    struct CKCAMERA_API FFragment_CameraModifier_Blend
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_CameraModifier_Blend);
-
-    public:
-        friend class FProcessor_Camera_HandleRequests;
-        friend class FProcessor_Camera_ComposeProfile;
-        friend class FProcessor_Camera_UpdatePOV;
-
-    private:
-        float _Alpha       = 0.0f;
-        float _TargetAlpha = 1.0f;
-        float _BlendRate   = 1000.0f; // ~instant unless overridden
-
-    public:
-        CK_PROPERTY(_Alpha);
-        CK_PROPERTY(_TargetAlpha);
-        CK_PROPERTY(_BlendRate);
-    };
-
-    // ----------------------------------------------------------------------------------------------------------------
-
-    // Marks an active modifier (admitted to the compose loop). Stamped by EnterModifier, cleared by ExitModifier.
-    CK_DEFINE_ECS_TAG(FTag_CameraModifier_Active);
-
-    // Marks a modifier blending out / awaiting teardown.
-    CK_DEFINE_ECS_TAG(FTag_CameraModifier_PendingExit);
-
-    // ----------------------------------------------------------------------------------------------------------------
-    // BACK-REFERENCE + RECORD
+    // PER-SECTION TUNER-ATTRIBUTE HANDLE FRAGMENTS
     //
-    // NOTE: the modifier EntityScript is attached SYNCHRONOUSLY in FProcessor_Camera_HandleRequests
-    // (mirroring UCk_Utils_SmState_UE::Create), NOT via a deferred PendingAttach. The SM PendingAttach exists
-    // for tasks/conditions composed within DefineState (parent declares, child overrides in the same construction
-    // pass) — a build-time hazard cameras don't have. A camera modifier is a runtime-pushed "mode" (≈ an SM
-    // state, which also attaches synchronously). Same-frame Add(X)->Remove(X) of the identical modifier is not a
-    // supported flow (same as SM states); revisit with request-batch reconciliation if it ever becomes one.
+    // One fragment per FCk_CameraProfile section on the Camera director; each member is a typed attribute handle for
+    // O(1) lookup of the tuner attribute backing a profile leaf. Populated by UCk_Utils_Camera_UE::DoMaterializeAttributes;
+    // read by UCk_Utils_Camera_UE::Get_Profile and by UCk_Utils_CameraLayer_UE::Acquire_CameraModifier_<Tuner>.
+    // FCk_FloatRange leaves are a single Float-with-MinMax attribute (Min/Max = bounds, Current unused).
     // ----------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_ENTITY_HOLDER_AND_UTILS(TUtils_CameraModifier_OwningCamera, FFragment_CameraModifier_OwningCamera, FCk_Handle_Camera);
+    // FCk_CameraProfile_Rotation → Speed (Float) + Limits (Float MinMax) + NormalSpeedRange (Float MinMax) +
+    // OutOfRangeMultiplier (Float). Reused 7× (Noise.Pitch/Yaw/Roll, OrientationControl.Pitch/Yaw, AutoReorient.Pitch/Yaw).
+    struct CKCAMERA_API FCameraAttr_Rotation
+    {
+        FCk_Handle_FloatAttribute _Speed;
+        FCk_Handle_FloatAttribute _Limits;            // MinMax: Min/Max = range bounds
+        FCk_Handle_FloatAttribute _NormalSpeedRange;  // MinMax: Min/Max = range bounds
+        FCk_Handle_FloatAttribute _OutOfRangeMultiplier;
+    };
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfCameraModifiers, FCk_Handle_CameraModifier);
+    // ----------------------------------------------------------------------------------------------------------------
 
-    // Shared record-of-modifiers utility (used by both the processor and the Utils class).
-    struct CKCAMERA_API FUtils_RecordOfCameraModifiers : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfCameraModifiers> {};
+    struct CKCAMERA_API FFragment_Camera_Rig
+    {
+        CK_GENERATED_BODY(FFragment_Camera_Rig);
+
+    public:
+        FCk_Handle_VectorAttribute  _BoomArmPivotOffset;
+        FCk_Handle_FloatAttribute   _BoomArmLength;
+        FCk_Handle_VectorAttribute  _FramingOffset;
+        FCk_Handle_FloatAttribute   _FramingPitch;
+        FCk_Handle_FloatAttribute   _FramingYaw;
+        FCk_Handle_RotatorAttribute _FixedBoomRotation;
+    };
+
+    struct CKCAMERA_API FFragment_Camera_Springs
+    {
+        CK_GENERATED_BODY(FFragment_Camera_Springs);
+
+    public:
+        FCk_Handle_FloatAttribute _GroupBaseLocationInterpSpeed;
+        FCk_Handle_FloatAttribute _LookAtLocationInterpSpeed;
+    };
+
+    struct CKCAMERA_API FFragment_Camera_Sensor
+    {
+        CK_GENERATED_BODY(FFragment_Camera_Sensor);
+
+    public:
+        FCk_Handle_FloatAttribute _FOV;
+        FCk_Handle_FloatAttribute _AspectRatio;
+    };
+
+    struct CKCAMERA_API FFragment_Camera_Noise
+    {
+        CK_GENERATED_BODY(FFragment_Camera_Noise);
+
+    public:
+        FCameraAttr_Rotation _Pitch;
+        FCameraAttr_Rotation _Yaw;
+        FCameraAttr_Rotation _Roll;
+    };
+
+    struct CKCAMERA_API FFragment_Camera_OrientationControl
+    {
+        CK_GENERATED_BODY(FFragment_Camera_OrientationControl);
+
+    public:
+        FCameraAttr_Rotation _Pitch;
+        FCameraAttr_Rotation _Yaw;
+        // _XIntentionCurve / _YIntentionCurve live on FFragment_Camera_Current (FAlphaBlend, not attributes).
+    };
+
+    struct CKCAMERA_API FFragment_Camera_AutoReorient
+    {
+        CK_GENERATED_BODY(FFragment_Camera_AutoReorient);
+
+    public:
+        FCameraAttr_Rotation      _Pitch;
+        FCameraAttr_Rotation      _Yaw;
+        FCk_Handle_FloatAttribute _LookAtTargetLocationPitchOffset;
+        FCk_Handle_FloatAttribute _LookAtTargetLocationYawOffset;
+        FCk_Handle_FloatAttribute _LookAtCameraLocationPitchOffset;
+        FCk_Handle_FloatAttribute _LookAtCameraLocationYawOffset;
+    };
+
+    struct CKCAMERA_API FFragment_Camera_Collision
+    {
+        CK_GENERATED_BODY(FFragment_Camera_Collision);
+
+    public:
+        FCk_Handle_IntegerAttribute _NumPredictionWhiskers;
+        FCk_Handle_FloatAttribute   _MaxWhiskerAngle;
+        FCk_Handle_FloatAttribute   _AdditionalOffsetFromHit;
+        FCk_Handle_FloatAttribute   _ClippingSpeed;
+        FCk_Handle_FloatAttribute   _ReturningSpeed;
+    };
+
+    struct CKCAMERA_API FFragment_Camera_DepthOfField
+    {
+        CK_GENERATED_BODY(FFragment_Camera_DepthOfField);
+
+    public:
+        FCk_Handle_FloatAttribute _Fstop;
+        FCk_Handle_FloatAttribute _FocalDistance;
+        FCk_Handle_FloatAttribute _SensorWidth;
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------

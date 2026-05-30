@@ -233,12 +233,6 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     float _LookAtCameraLocationYawOffset = 0.0f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    bool _HasOrientationControlOverrideTimeout = false;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FCk_Time _OrientationControlOverrideTimeout = FCk_Time{};
-
 public:
     CK_PROPERTY(_Pitch);
     CK_PROPERTY(_Yaw);
@@ -246,8 +240,6 @@ public:
     CK_PROPERTY(_LookAtTargetLocationYawOffset);
     CK_PROPERTY(_LookAtCameraLocationPitchOffset);
     CK_PROPERTY(_LookAtCameraLocationYawOffset);
-    CK_PROPERTY(_HasOrientationControlOverrideTimeout);
-    CK_PROPERTY(_OrientationControlOverrideTimeout);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

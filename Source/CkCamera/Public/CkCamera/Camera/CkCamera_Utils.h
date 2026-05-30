@@ -10,6 +10,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class UCk_CameraLayer_EntityScript;
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Camera"))
 class CKCAMERA_API UCk_Utils_Camera_UE : public UCk_Utils_Ecs_Base_UE
 {
@@ -40,40 +44,59 @@ public:
         const FCk_Handle& InHandle);
 
 public:
-    // Number of live modifier entities currently on the camera (active or blending).
+    // Number of live layer entities currently on the camera (active or blending).
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Camera",
-        DisplayName = "[Ck][Camera] Get Modifier Count")
+        DisplayName = "[Ck][Camera] Get Layer Count")
     static int32
-    Get_ModifierCount(
+    Get_LayerCount(
         const FCk_Handle_Camera& InCamera);
 
-    // True if a live modifier of the given class is present on the camera.
+    // True if a live layer of the given class is present on the camera.
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Camera",
-        DisplayName = "[Ck][Camera] Has Modifier")
+        DisplayName = "[Ck][Camera] Has Layer")
     static bool
-    Has_Modifier(
+    Has_Layer(
         const FCk_Handle_Camera& InCamera,
-        TSubclassOf<UCk_CameraModifier_EntityScript> InModifierClass);
+        TSubclassOf<UCk_CameraLayer_EntityScript> InLayerClass);
 
-    // Class of the dominant active modifier (highest blend alpha), or null if none.
+    // Class of the dominant active layer (highest blend alpha), or null if none.
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Camera",
-        DisplayName = "[Ck][Camera] Get Dominant Modifier Class")
-    static TSubclassOf<UCk_CameraModifier_EntityScript>
-    Get_DominantModifierClass(
+        DisplayName = "[Ck][Camera] Get Dominant Layer Class")
+    static TSubclassOf<UCk_CameraLayer_EntityScript>
+    Get_DominantLayerClass(
         const FCk_Handle_Camera& InCamera);
 
-    // The resolved composed profile (this frame's blended Modes + layered Trims). Handy for gameplay that needs
-    // the live FOV / boom / framing, and for tests asserting composition. Refreshed each frame by ComposeProfile;
-    // returns a default profile if the camera has no Current fragment yet.
+    // The resolved composed profile (this frame's tuner-attribute finals + bool/curve leaves). Handy for gameplay that
+    // needs the live FOV / boom / framing, and for tests asserting composition. Refreshed each frame by the lifecycle
+    // processor; returns a default profile if the camera has no Current fragment yet.
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Camera",
         DisplayName = "[Ck][Camera] Get Composed Profile")
     static FCk_CameraProfile
     Get_ComposedProfile(
         const FCk_Handle_Camera& InCamera);
+
+    // Assembles a fresh FCk_CameraProfile from the camera's tuner attributes' final values + the Current bool/curve
+    // leaves. Get_ComposedProfile returns the cached snapshot refreshed each frame by the lifecycle processor; this
+    // recomputes it on demand (and is what the lifecycle processor calls to refresh the cache).
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Camera",
+        DisplayName = "[Ck][Camera] Get Profile (Assemble)")
+    static FCk_CameraProfile
+    Get_Profile(
+        const FCk_Handle_Camera& InCamera);
+
+private:
+    // Materializes every FCk_CameraProfile leaf into a (non-replicated) tuner attribute on the camera (Float / Vector
+    // / Rotator / Integer; FloatRange → Float-with-MinMax), labels each with its Camera.* native tag, fills the
+    // per-section fragments, and writes the bool/curve leaves onto FFragment_Camera_Current. Called from Add.
+    static auto
+    DoMaterializeAttributes(
+        FCk_Handle_Camera& InCamera,
+        const FCk_CameraProfile& InDefaults) -> void;
 
 private:
     UFUNCTION(BlueprintCallable,
@@ -103,25 +126,23 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Camera",
-              DisplayName = "[Ck][Camera] Request Add Modifier")
+              DisplayName = "[Ck][Camera] Request Add Layer")
     static FCk_Handle_Camera
-    Request_AddModifier(
+    Request_AddLayer(
         UPARAM(ref) FCk_Handle_Camera& InCamera,
-        const FCk_Request_Camera_AddModifier& InRequest);
+        const FCk_Request_Camera_AddLayer& InRequest);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Camera",
-              DisplayName = "[Ck][Camera] Request Remove Modifier")
+              DisplayName = "[Ck][Camera] Request Remove Layer")
     static FCk_Handle_Camera
-    Request_RemoveModifier(
+    Request_RemoveLayer(
         UPARAM(ref) FCk_Handle_Camera& InCamera,
-        const FCk_Request_Camera_RemoveModifier& InRequest);
+        const FCk_Request_Camera_RemoveLayer& InRequest);
 
 public:
     // Feeds the camera's abstract orbit intention (X = yaw, Y = pitch), already scaled/inverted by the caller's
-    // input/user-preference handling. The camera module never reads input devices — a fixed/follow/lock-on camera
-    // simply never calls this (intention stays zero). Set immediately each frame; consumed later the same frame
-    // by the camera processors (which run after the Transform groups).
+    // input/user-preference handling. The camera module never reads input devices.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Camera",
               DisplayName = "[Ck][Camera] Request Set Orientation Intention")
@@ -129,6 +150,38 @@ public:
     Request_SetOrientationIntention(
         UPARAM(ref) FCk_Handle_Camera& InCamera,
         FVector InOrientationIntention);
+
+public:
+    // ---- Toggles for the non-blending bool leaves stored on FFragment_Camera_Current. Local-only, take effect the
+    //      same frame, and are reflected by Get_ComposedProfile / the POV pipeline. ----
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Camera", DisplayName = "[Ck][Camera] Request Set Use Fixed Boom Rotation")
+    static FCk_Handle_Camera
+    Request_Set_UseFixedBoomRotation(UPARAM(ref) FCk_Handle_Camera& InCamera, bool bInEnabled);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Camera", DisplayName = "[Ck][Camera] Request Set Constrain Aspect Ratio")
+    static FCk_Handle_Camera
+    Request_Set_ConstrainAspectRatio(UPARAM(ref) FCk_Handle_Camera& InCamera, bool bInEnabled);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Camera", DisplayName = "[Ck][Camera] Request Set Has Orientation Control")
+    static FCk_Handle_Camera
+    Request_Set_HasOrientationControl(UPARAM(ref) FCk_Handle_Camera& InCamera, bool bInEnabled);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Camera", DisplayName = "[Ck][Camera] Request Set Has Auto Reorient")
+    static FCk_Handle_Camera
+    Request_Set_HasAutoReorient(UPARAM(ref) FCk_Handle_Camera& InCamera, bool bInEnabled);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Camera", DisplayName = "[Ck][Camera] Request Set Has Collision")
+    static FCk_Handle_Camera
+    Request_Set_HasCollision(UPARAM(ref) FCk_Handle_Camera& InCamera, bool bInEnabled);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Camera", DisplayName = "[Ck][Camera] Request Set Use Async Trace")
+    static FCk_Handle_Camera
+    Request_Set_UseAsyncTrace(UPARAM(ref) FCk_Handle_Camera& InCamera, bool bInEnabled);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Camera", DisplayName = "[Ck][Camera] Request Set Use Post Process")
+    static FCk_Handle_Camera
+    Request_Set_UsePostProcess(UPARAM(ref) FCk_Handle_Camera& InCamera, bool bInEnabled);
 
 public:
     // The resolved POV for this frame (the composed view), as written by UpdatePOV. The camera component
@@ -140,8 +193,7 @@ public:
     Get_ViewInfo(
         const FCk_Handle_Camera& InCamera);
 
-    // The resolved camera view rotation (this frame's composed POV). Handy for camera-relative movement: take the
-    // yaw to derive a horizontal forward/right.
+    // The resolved camera view rotation (this frame's composed POV).
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Camera",
               DisplayName = "[Ck][Camera] Get View Rotation")

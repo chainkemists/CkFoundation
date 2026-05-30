@@ -105,23 +105,6 @@ namespace ck::camera
         const auto& AutoReorient = InProfile.Get_AutoReorient();
         const auto  Intention    = InInput._OrientationIntention;
 
-        // Override timeout: while the player is actively orbiting, suppress auto-reorient; resume once the player
-        // has been idle for the timeout. (Both are input-free when no intention is ever fed.)
-        if (AutoReorient.Get_HasOrientationControlOverrideTimeout())
-        {
-            if (NOT Intention.IsNearlyZero())
-            {
-                InOutState._TimeSinceLastOrientationControl = FCk_Time::ZeroSecond();
-                return;
-            }
-
-            InOutState._TimeSinceLastOrientationControl += FCk_Time{InInput._DeltaSeconds};
-
-            if (InOutState._TimeSinceLastOrientationControl
-                < AutoReorient.Get_OrientationControlOverrideTimeout())
-            { return; }
-        }
-
         const auto GroupBaseLocation = InOutState._GroupBaseLocation;
         auto       LookAtLocation    = InOutState._LookAtLocation;
 
@@ -193,31 +176,25 @@ namespace ck::camera
 
         const auto& OrientationControl = InProfile.Get_OrientationControl();
 
-        auto AlphaBlendX = OrientationControl.Get_XIntentionCurve();
-        auto AlphaBlendY = OrientationControl.Get_YIntentionCurve();
+        // The orientation intention is a per-frame DELTA already scaled by the caller (user sensitivity, invert,
+        // etc.), NOT a sustained rate — so it is consumed directly, with NO delta-time multiply and NO response-curve
+        // clamp. This keeps mouse look frame-rate independent and matches the classic AddYawInput/AddPitchInput feel.
+        // (A sustained-rate input such as a gamepad stick should pre-multiply by DeltaSeconds at the caller before
+        // pushing its intention.) Output rotation delta = intention * per-axis Speed gain.
+        //
+        // NOTE: the profile's X/YIntentionCurve (FAlphaBlend) leaves are intentionally NOT consumed here — they
+        // clamp the intention magnitude to [0,1], which is wrong for a raw mouse delta. They remain on the profile
+        // reserved for an explicit analog-shaping path.
+        const auto Intention = InInput._OrientationIntention;
 
-        const auto OriginalIntention = InInput._OrientationIntention;
-        auto       EvaluatedIntention = OriginalIntention;
-
-        AlphaBlendX.SetAlpha(FMath::Abs(static_cast<float>(OriginalIntention.X)));
-        EvaluatedIntention.X = AlphaBlendX.GetBlendedValue() * FMath::Sign(OriginalIntention.X);
-
-        AlphaBlendY.SetAlpha(FMath::Abs(static_cast<float>(OriginalIntention.Y)));
-        EvaluatedIntention.Y = AlphaBlendY.GetBlendedValue() * FMath::Sign(OriginalIntention.Y);
-
-        const auto ScaledOrientation = EvaluatedIntention * InInput._DeltaSeconds;
-
-        if (ScaledOrientation.IsNearlyZero())
+        if (Intention.IsNearlyZero())
         { return FRotator::ZeroRotator; }
-
-        // NOTE: user-preference invert/sensitivity is applied by the caller before pushing the intention
-        // (or in a later increment) — kept out of the module here.
 
         const auto CurrentPitch = FMath::UnwindDegrees(InState._BoomArmRotation.Pitch);
 
         auto Out = FRotator::ZeroRotator;
-        Out.Pitch = ScaledOrientation.Y * OrientationControl.Get_Pitch().Get_Speed();
-        Out.Yaw   = ScaledOrientation.X * OrientationControl.Get_Yaw().Get_Speed();
+        Out.Pitch = static_cast<float>(Intention.Y) * OrientationControl.Get_Pitch().Get_Speed();
+        Out.Yaw   = static_cast<float>(Intention.X) * OrientationControl.Get_Yaw().Get_Speed();
         Out.Roll  = 0.0f;
 
         const auto MinPitch = OrientationControl.Get_Pitch().Get_NormalSpeedRange().Get_Min();
