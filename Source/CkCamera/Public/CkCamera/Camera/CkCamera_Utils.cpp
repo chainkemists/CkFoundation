@@ -141,6 +141,20 @@ auto
     return MutableCamera.Get<ck::FFragment_Camera_Current>().Get_DominantModifierClass();
 }
 
+auto
+    UCk_Utils_Camera_UE::
+    Get_ComposedProfile(
+        const FCk_Handle_Camera& InCamera)
+    -> FCk_CameraProfile
+{
+    auto MutableCamera = InCamera;
+
+    if (ck::Is_NOT_Valid(MutableCamera) || NOT MutableCamera.Has<ck::FFragment_Camera_Current>())
+    { return {}; }
+
+    return MutableCamera.Get<ck::FFragment_Camera_Current>().Get_ComposedProfile();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Camera_UE, FCk_Handle_Camera, ck::FFragment_Camera_Params);
