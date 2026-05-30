@@ -56,9 +56,6 @@ namespace ck::camera
         // Smoothed look-at location (lagged toward the target); equals group-base when there is no look-at.
         FVector    _LookAtLocation = FVector::ZeroVector;
 
-        // Accumulates while the player isn't orbiting; gates the auto-reorient override timeout.
-        FCk_Time   _TimeSinceLastOrientationControl = FCk_Time{};
-
         FTransform _BoomArmEndTransform = FTransform::Identity;
         FTransform _FramingTransform    = FTransform::Identity;
         FTransform _CameraTransform     = FTransform::Identity;
