@@ -1,10 +1,10 @@
 #pragma once
 
-#include "CkCamera/GameplayCamera/CkGameplayCamera_Fragment_Data.h"
+#include "CkCamera/Camera/CkCamera_Fragment_Data.h"
 
 #include <Camera/CameraComponent.h>
 
-#include "CkGameplayCamera_Component.generated.h"
+#include "CkCamera_Component.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 // The output sink. Overrides UCameraComponent::GetCameraView to return the director entity's composed
@@ -14,7 +14,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(ClassGroup = (Ck), meta = (BlueprintSpawnableComponent))
-class CKCAMERA_API UCk_GameplayCameraComponent : public UCameraComponent
+class CKCAMERA_API UCk_CameraComponent : public UCameraComponent
 {
     GENERATED_BODY()
 
@@ -27,14 +27,14 @@ public:
 public:
     auto
     Set_DirectorEntity(
-        FCk_Handle_GameplayCamera InDirectorEntity) -> void;
+        FCk_Handle_Camera InDirectorEntity) -> void;
 
     auto
-    Get_DirectorEntity() const -> FCk_Handle_GameplayCamera { return _DirectorEntity; }
+    Get_DirectorEntity() const -> FCk_Handle_Camera { return _DirectorEntity; }
 
 private:
     UPROPERTY(Transient)
-    FCk_Handle_GameplayCamera _DirectorEntity;
+    FCk_Handle_Camera _DirectorEntity;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

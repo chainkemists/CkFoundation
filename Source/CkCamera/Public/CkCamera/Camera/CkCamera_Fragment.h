@@ -1,8 +1,8 @@
 #pragma once
 
-#include "CkCamera/GameplayCamera/CkGameplayCamera_Fragment_Data.h"
-#include "CkCamera/GameplayCamera/CkGameplayCamera_Profile.h"
-#include "CkCamera/GameplayCamera/CkGameplayCamera_POV.h"
+#include "CkCamera/Camera/CkCamera_Fragment_Data.h"
+#include "CkCamera/Camera/CkCameraProfile.h"
+#include "CkCamera/Camera/CkCamera_POV.h"
 
 #include "CkCore/Macros/CkMacros.h"
 
@@ -21,7 +21,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class UCk_Utils_GameplayCamera_UE;
+class UCk_Utils_Camera_UE;
 class UCk_CameraModifier_EntityScript;
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -32,13 +32,13 @@ namespace ck
     // DIRECTOR FRAGMENTS
     // ----------------------------------------------------------------------------------------------------------------
 
-    struct CKCAMERA_API FFragment_GameplayCamera_Params
+    struct CKCAMERA_API FFragment_Camera_Params
     {
     public:
-        CK_GENERATED_BODY(FFragment_GameplayCamera_Params);
+        CK_GENERATED_BODY(FFragment_Camera_Params);
 
     public:
-        using ParamsType = FCk_Fragment_GameplayCamera_ParamsData;
+        using ParamsType = FCk_Fragment_Camera_ParamsData;
 
     private:
         ParamsType _Params;
@@ -47,27 +47,27 @@ namespace ck
         CK_PROPERTY_GET(_Params);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_GameplayCamera_Params, _Params);
+        CK_DEFINE_CONSTRUCTORS(FFragment_Camera_Params, _Params);
     };
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    struct CKCAMERA_API FFragment_GameplayCamera_Current
+    struct CKCAMERA_API FFragment_Camera_Current
     {
     public:
-        CK_GENERATED_BODY(FFragment_GameplayCamera_Current);
+        CK_GENERATED_BODY(FFragment_Camera_Current);
 
     public:
-        friend class FProcessor_GameplayCamera_ComposeProfile;
-        friend class FProcessor_GameplayCamera_UpdatePOV;
-        friend class UCk_Utils_GameplayCamera_UE;
+        friend class FProcessor_Camera_ComposeProfile;
+        friend class FProcessor_Camera_UpdatePOV;
+        friend class UCk_Utils_Camera_UE;
 
     private:
         // The composed profile (accumulated modifier contributions) — written by ComposeProfile.
-        FCk_GameplayCamera_Profile _ComposedProfile;
+        FCk_CameraProfile _ComposedProfile;
 
         // Persistent POV pipeline state (boom rotation, smoothed pivot, collision distance, noise) — advanced by UpdatePOV.
-        ck::gameplaycamera::FPov_State _PovState;
+        ck::camera::FPov_State _PovState;
 
         // Abstract orbit intention fed by whoever owns input (PC / ability / rail). Zero = no manual orbit.
         // The camera module never reads input devices — it only consumes this value.
@@ -80,7 +80,7 @@ namespace ck
         // Class of the dominant active modifier (highest blend alpha). Set by ComposeProfile; observable via Utils.
         TSubclassOf<UCk_CameraModifier_EntityScript> _DominantModifierClass;
 
-        // The final resolved POV — written by UpdatePOV, read by UCk_GameplayCameraComponent::GetCameraView.
+        // The final resolved POV — written by UpdatePOV, read by UCk_CameraComponent::GetCameraView.
         FMinimalViewInfo _ViewInfo;
 
     public:
@@ -94,18 +94,18 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    struct CKCAMERA_API FFragment_GameplayCamera_Requests
+    struct CKCAMERA_API FFragment_Camera_Requests
     {
     public:
-        CK_GENERATED_BODY(FFragment_GameplayCamera_Requests);
+        CK_GENERATED_BODY(FFragment_Camera_Requests);
 
     public:
-        friend class FProcessor_GameplayCamera_HandleRequests;
-        friend class UCk_Utils_GameplayCamera_UE;
+        friend class FProcessor_Camera_HandleRequests;
+        friend class UCk_Utils_Camera_UE;
 
     public:
-        using AddModifierRequestType    = FCk_Request_GameplayCamera_AddModifier;
-        using RemoveModifierRequestType = FCk_Request_GameplayCamera_RemoveModifier;
+        using AddModifierRequestType    = FCk_Request_Camera_AddModifier;
+        using RemoveModifierRequestType = FCk_Request_Camera_RemoveModifier;
         using Requests                  = TArray<std::variant<AddModifierRequestType, RemoveModifierRequestType>>;
 
     private:
@@ -127,7 +127,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_CameraModifier_Params);
 
     public:
-        friend class FProcessor_GameplayCamera_HandleRequests;
+        friend class FProcessor_Camera_HandleRequests;
 
     private:
         TSubclassOf<UCk_CameraModifier_EntityScript> _ModifierClass;
@@ -153,9 +153,9 @@ namespace ck
         CK_GENERATED_BODY(FFragment_CameraModifier_Blend);
 
     public:
-        friend class FProcessor_GameplayCamera_HandleRequests;
-        friend class FProcessor_GameplayCamera_ComposeProfile;
-        friend class FProcessor_GameplayCamera_UpdatePOV;
+        friend class FProcessor_Camera_HandleRequests;
+        friend class FProcessor_Camera_ComposeProfile;
+        friend class FProcessor_Camera_UpdatePOV;
 
     private:
         float _Alpha       = 0.0f;
@@ -179,7 +179,7 @@ namespace ck
     // ----------------------------------------------------------------------------------------------------------------
     // BACK-REFERENCE + RECORD
     //
-    // NOTE: the modifier EntityScript is attached SYNCHRONOUSLY in FProcessor_GameplayCamera_HandleRequests
+    // NOTE: the modifier EntityScript is attached SYNCHRONOUSLY in FProcessor_Camera_HandleRequests
     // (mirroring UCk_Utils_SmState_UE::Create), NOT via a deferred PendingAttach. The SM PendingAttach exists
     // for tasks/conditions composed within DefineState (parent declares, child overrides in the same construction
     // pass) — a build-time hazard cameras don't have. A camera modifier is a runtime-pushed "mode" (≈ an SM
@@ -187,7 +187,7 @@ namespace ck
     // supported flow (same as SM states); revisit with request-batch reconciliation if it ever becomes one.
     // ----------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_ENTITY_HOLDER_AND_UTILS(TUtils_CameraModifier_OwningCamera, FFragment_CameraModifier_OwningCamera, FCk_Handle_GameplayCamera);
+    CK_DEFINE_ENTITY_HOLDER_AND_UTILS(TUtils_CameraModifier_OwningCamera, FFragment_CameraModifier_OwningCamera, FCk_Handle_Camera);
 
     CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfCameraModifiers, FCk_Handle_CameraModifier);
 

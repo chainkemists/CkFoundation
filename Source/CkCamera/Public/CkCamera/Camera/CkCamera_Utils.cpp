@@ -1,8 +1,8 @@
-#include "CkCamera/GameplayCamera/CkGameplayCamera_Utils.h"
+#include "CkCamera/Camera/CkCamera_Utils.h"
 
 #include "CkCamera/CkCamera_Log.h"
-#include "CkCamera/GameplayCamera/CkGameplayCamera_Component.h"
-#include "CkCamera/GameplayCamera/CameraModifier/CkCameraModifier_EntityScript.h"
+#include "CkCamera/Camera/CkCamera_Component.h"
+#include "CkCamera/Camera/CameraModifier/CkCameraModifier_EntityScript.h"
 
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
@@ -11,20 +11,20 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_GameplayCamera_UE::
+    UCk_Utils_Camera_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_GameplayCamera_ParamsData& InParams)
-    -> FCk_Handle_GameplayCamera
+        const FCk_Fragment_Camera_ParamsData& InParams)
+    -> FCk_Handle_Camera
 {
-    InHandle.Add<ck::FFragment_GameplayCamera_Params>(InParams);
-    InHandle.AddOrGet<ck::FFragment_GameplayCamera_Current>();
+    InHandle.Add<ck::FFragment_Camera_Params>(InParams);
+    InHandle.AddOrGet<ck::FFragment_Camera_Current>();
 
     ck::FUtils_RecordOfCameraModifiers::AddIfMissing(InHandle);
 
     auto Director = Cast(InHandle);
 
-    if (InParams.Get_OutputMode() == ECk_GameplayCamera_OutputMode::DriveCameraComponent)
+    if (InParams.Get_OutputMode() == ECk_Camera_OutputMode::DriveCameraComponent)
     {
         UCameraComponent* OutputComponent = InParams.Get_OutputComponent();
 
@@ -34,7 +34,7 @@ auto
 
             if (ck::IsValid(OwningActor))
             {
-                auto* NewComp = NewObject<UCk_GameplayCameraComponent>(OwningActor);
+                auto* NewComp = NewObject<UCk_CameraComponent>(OwningActor);
 
                 if (auto* Root = OwningActor->GetRootComponent();
                     ck::IsValid(Root))
@@ -47,14 +47,14 @@ auto
             }
             else
             {
-                ck::camera::Warning(TEXT("GameplayCamera Add on entity [{}] requested DriveCameraComponent "
+                ck::camera::Warning(TEXT("Camera Add on entity [{}] requested DriveCameraComponent "
                     "but the entity has no owning actor and no component was supplied."), InHandle);
             }
         }
 
         // NOTE: ::Cast (global UE cast) — unqualified Cast would resolve to this class's own
         // typesafe-handle Cast (from CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE).
-        if (auto* CkComp = ::Cast<UCk_GameplayCameraComponent>(OutputComponent);
+        if (auto* CkComp = ::Cast<UCk_CameraComponent>(OutputComponent);
             ck::IsValid(CkComp))
         {
             CkComp->Set_DirectorEntity(Director);
@@ -67,7 +67,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_GameplayCamera_UE::
+    UCk_Utils_Camera_UE::
     Has_Any(
         const FCk_Handle& InHandle)
     -> bool
@@ -78,9 +78,9 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_GameplayCamera_UE::
+    UCk_Utils_Camera_UE::
     Get_ModifierCount(
-        const FCk_Handle_GameplayCamera& InCamera)
+        const FCk_Handle_Camera& InCamera)
     -> int32
 {
     auto MutableCamera = InCamera;
@@ -96,9 +96,9 @@ auto
 }
 
 auto
-    UCk_Utils_GameplayCamera_UE::
+    UCk_Utils_Camera_UE::
     Has_Modifier(
-        const FCk_Handle_GameplayCamera& InCamera,
+        const FCk_Handle_Camera& InCamera,
         TSubclassOf<UCk_CameraModifier_EntityScript> InModifierClass)
     -> bool
 {
@@ -122,71 +122,71 @@ auto
 }
 
 auto
-    UCk_Utils_GameplayCamera_UE::
+    UCk_Utils_Camera_UE::
     Get_DominantModifierClass(
-        const FCk_Handle_GameplayCamera& InCamera)
+        const FCk_Handle_Camera& InCamera)
     -> TSubclassOf<UCk_CameraModifier_EntityScript>
 {
     auto MutableCamera = InCamera;
 
-    if (NOT MutableCamera.Has<ck::FFragment_GameplayCamera_Current>())
+    if (NOT MutableCamera.Has<ck::FFragment_Camera_Current>())
     { return nullptr; }
 
-    return MutableCamera.Get<ck::FFragment_GameplayCamera_Current>().Get_DominantModifierClass();
+    return MutableCamera.Get<ck::FFragment_Camera_Current>().Get_DominantModifierClass();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_GameplayCamera_UE, FCk_Handle_GameplayCamera, ck::FFragment_GameplayCamera_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Camera_UE, FCk_Handle_Camera, ck::FFragment_Camera_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_GameplayCamera_UE::
+    UCk_Utils_Camera_UE::
     Request_AddModifier(
-        FCk_Handle_GameplayCamera& InCamera,
-        const FCk_Request_GameplayCamera_AddModifier& InRequest)
-    -> FCk_Handle_GameplayCamera
+        FCk_Handle_Camera& InCamera,
+        const FCk_Request_Camera_AddModifier& InRequest)
+    -> FCk_Handle_Camera
 {
-    InCamera.AddOrGet<ck::FFragment_GameplayCamera_Requests>()._Requests.Emplace(InRequest);
+    InCamera.AddOrGet<ck::FFragment_Camera_Requests>()._Requests.Emplace(InRequest);
     return InCamera;
 }
 
 auto
-    UCk_Utils_GameplayCamera_UE::
+    UCk_Utils_Camera_UE::
     Request_RemoveModifier(
-        FCk_Handle_GameplayCamera& InCamera,
-        const FCk_Request_GameplayCamera_RemoveModifier& InRequest)
-    -> FCk_Handle_GameplayCamera
+        FCk_Handle_Camera& InCamera,
+        const FCk_Request_Camera_RemoveModifier& InRequest)
+    -> FCk_Handle_Camera
 {
-    InCamera.AddOrGet<ck::FFragment_GameplayCamera_Requests>()._Requests.Emplace(InRequest);
+    InCamera.AddOrGet<ck::FFragment_Camera_Requests>()._Requests.Emplace(InRequest);
     return InCamera;
 }
 
 auto
-    UCk_Utils_GameplayCamera_UE::
+    UCk_Utils_Camera_UE::
     Request_SetOrientationIntention(
-        FCk_Handle_GameplayCamera& InCamera,
+        FCk_Handle_Camera& InCamera,
         FVector InOrientationIntention)
-    -> FCk_Handle_GameplayCamera
+    -> FCk_Handle_Camera
 {
-    if (InCamera.Has<ck::FFragment_GameplayCamera_Current>())
+    if (InCamera.Has<ck::FFragment_Camera_Current>())
     {
-        InCamera.Get<ck::FFragment_GameplayCamera_Current>().Set_OrientationIntention(InOrientationIntention);
+        InCamera.Get<ck::FFragment_Camera_Current>().Set_OrientationIntention(InOrientationIntention);
     }
     return InCamera;
 }
 
 auto
-    UCk_Utils_GameplayCamera_UE::
+    UCk_Utils_Camera_UE::
     Get_ViewRotation(
-        const FCk_Handle_GameplayCamera& InCamera)
+        const FCk_Handle_Camera& InCamera)
     -> FRotator
 {
-    if (ck::Is_NOT_Valid(InCamera) || NOT InCamera.Has<ck::FFragment_GameplayCamera_Current>())
+    if (ck::Is_NOT_Valid(InCamera) || NOT InCamera.Has<ck::FFragment_Camera_Current>())
     { return FRotator::ZeroRotator; }
 
-    return InCamera.Get<ck::FFragment_GameplayCamera_Current>().Get_ViewInfo().Rotation;
+    return InCamera.Get<ck::FFragment_Camera_Current>().Get_ViewInfo().Rotation;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

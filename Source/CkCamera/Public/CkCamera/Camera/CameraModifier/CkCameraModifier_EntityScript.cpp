@@ -1,7 +1,7 @@
 #include "CkCameraModifier_EntityScript.h"
 
 #include "CkCamera/CkCamera_Log.h"
-#include "CkCamera/GameplayCamera/CkGameplayCamera_Fragment.h"
+#include "CkCamera/Camera/CkCamera_Fragment.h"
 
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
@@ -72,7 +72,7 @@ auto
         FCk_Handle_CameraModifier InHandle)
     -> void
 {
-    ck::camera::VeryVerbose(TEXT("[GameplayCamera] EnterModifier [{}] on entity [{}]"), GetClass(), InHandle);
+    ck::camera::VeryVerbose(TEXT("[Camera] EnterModifier [{}] on entity [{}]"), GetClass(), InHandle);
 
     InHandle.AddOrGet<ck::FTag_CameraModifier_Active>();
     DoEnter(InHandle);
@@ -87,7 +87,7 @@ auto
     if (NOT InHandle.Has<ck::FTag_CameraModifier_Active>())
     { return; }
 
-    ck::camera::VeryVerbose(TEXT("[GameplayCamera] ExitModifier [{}] on entity [{}]"), GetClass(), InHandle);
+    ck::camera::VeryVerbose(TEXT("[Camera] ExitModifier [{}] on entity [{}]"), GetClass(), InHandle);
 
     InHandle.Try_Remove<ck::FTag_CameraModifier_Active>();
     DoExit(InHandle);
@@ -99,7 +99,7 @@ auto
     UCk_CameraModifier_EntityScript::
     ContributeToProfile(
         FCk_Handle_CameraModifier InHandle,
-        FCk_GameplayCamera_Profile& InOutProfile,
+        FCk_CameraProfile& InOutProfile,
         float InBlendAlpha)
     -> void
 {
@@ -121,7 +121,7 @@ auto
 auto
     UCk_CameraModifier_EntityScript::
     Get_OwningCamera() const
-    -> FCk_Handle_GameplayCamera
+    -> FCk_Handle_Camera
 {
     return _OwningCamera;
 }
