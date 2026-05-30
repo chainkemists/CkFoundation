@@ -85,7 +85,10 @@ namespace ck
         // Persistent POV pipeline state (boom rotation, smoothed pivot, collision distance, noise) — advanced by UpdatePOV.
         ck::camera::FPov_State _PovState;
 
-        // Abstract orbit intention fed by whoever owns input. Zero = no manual orbit. The camera never reads input.
+        // Abstract orbit intention (a per-frame DELTA) fed by whoever owns input. Zero = no manual orbit. The camera
+        // never reads input directly; the caller pushes this each frame via Request_SetOrientationIntention.
+        // UpdatePOV CONSUMES it (resets to zero) after applying, so a momentary input doesn't keep applying once the
+        // source stops pushing.
         FVector _OrientationIntention = FVector::ZeroVector;
 
         // Look-at target resolved from the dominant active layer (for auto-reorient). Set by the lifecycle processor,
