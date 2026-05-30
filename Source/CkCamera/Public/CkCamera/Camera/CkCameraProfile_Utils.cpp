@@ -1,6 +1,97 @@
 #include "CkCameraProfile_Utils.h"
 
+#include "CkCamera/Camera/CkCameraProfile_Fragment.h"
+
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CameraProfile_UE::
+    Add(
+        FCk_Handle& InOwner)
+    -> FCk_Handle_CameraProfile
+{
+    auto ProfileEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    UCk_Utils_Handle_UE::Set_DebugName(ProfileEntity, TEXT("CameraProfile"));
+
+    ProfileEntity.Add<ck::FFragment_CameraProfile_Current>();
+
+    return Cast(ProfileEntity);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CameraProfile_UE::
+    Has_Any(
+        const FCk_Handle& InHandle)
+    -> bool
+{
+    return Has(InHandle);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CameraProfile_UE::
+    Get_Profile(
+        const FCk_Handle_CameraProfile& InProfile)
+    -> FCk_CameraProfile
+{
+    auto Profile = InProfile;
+
+    if (ck::Is_NOT_Valid(Profile) || NOT Profile.Has<ck::FFragment_CameraProfile_Current>())
+    { return {}; }
+
+    return Profile.Get<ck::FFragment_CameraProfile_Current>().Get_Profile();
+}
+
+auto
+    UCk_Utils_CameraProfile_UE::
+    Set_Profile(
+        FCk_Handle_CameraProfile& InProfile,
+        const FCk_CameraProfile& InNewProfile)
+    -> FCk_Handle_CameraProfile
+{
+    if (InProfile.Has<ck::FFragment_CameraProfile_Current>())
+    {
+        InProfile.Get<ck::FFragment_CameraProfile_Current>().Set_Profile(InNewProfile);
+    }
+    return InProfile;
+}
+
+auto
+    UCk_Utils_CameraProfile_UE::
+    Reset(
+        FCk_Handle_CameraProfile& InProfile)
+    -> FCk_Handle_CameraProfile
+{
+    return Set_Profile(InProfile, FCk_CameraProfile{});
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CameraProfile_UE::
+    BlendInto(
+        FCk_Handle_CameraProfile& InOutProfile,
+        const FCk_CameraProfile& InTarget,
+        float InAlpha)
+    -> FCk_Handle_CameraProfile
+{
+    if (NOT InOutProfile.Has<ck::FFragment_CameraProfile_Current>())
+    { return InOutProfile; }
+
+    auto& Fragment = InOutProfile.Get<ck::FFragment_CameraProfile_Current>();
+
+    auto Profile = Fragment.Get_Profile();
+    BlendInto(Profile, InTarget, InAlpha);
+    Fragment.Set_Profile(Profile);
+
+    return InOutProfile;
+}
 
 auto
     UCk_Utils_CameraProfile_UE::
@@ -68,5 +159,9 @@ auto
         InOutProfile.Set_UsePostProcess(InTarget.Get_UsePostProcess());
     }
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_CameraProfile_UE, FCk_Handle_CameraProfile, ck::FFragment_CameraProfile_Current);
 
 // --------------------------------------------------------------------------------------------------------------------

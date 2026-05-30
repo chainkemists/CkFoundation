@@ -60,12 +60,13 @@ public:
     ExitModifier(
         FCk_Handle_CameraModifier InHandle) -> void;
 
-    // Called every tick by FProcessor_Camera_ComposeProfile. The modifier writes/accumulates
-    // its contribution into the running profile, weighted by its own blend alpha. [dispatch wired in M1]
+    // Called every tick by FProcessor_Camera_ComposeProfile. The modifier contributes into the running profile
+    // entity (passed as a handle, not a by-ref struct), weighted by its own blend alpha — typically by calling
+    // UCk_Utils_CameraProfile_UE::BlendInto(InOutProfile, <authored target>, InBlendAlpha).
     virtual auto
     ContributeToProfile(
         FCk_Handle_CameraModifier InHandle,
-        FCk_CameraProfile& InOutProfile,
+        FCk_Handle_CameraProfile InOutProfile,
         float InBlendAlpha) -> void;
 
     // Optional per-frame stateful logic, gated by _TickMode. [dispatch wired in M1]
@@ -99,7 +100,7 @@ protected:
     void
     DoContributeToProfile(
         FCk_Handle_CameraModifier InHandle,
-        UPARAM(ref) FCk_CameraProfile& InOutProfile,
+        FCk_Handle_CameraProfile InOutProfile,
         float InBlendAlpha);
 
     UFUNCTION(BlueprintImplementableEvent,
