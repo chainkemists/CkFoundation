@@ -1,23 +1,23 @@
 #pragma once
 
-#include "CkCamera/GameplayCamera/CkGameplayCamera_Fragment.h"
+#include "CkCamera/Camera/CkCamera_Fragment.h"
 
 #include "CkEcsExt/CkEcsExt_Utils.h"
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkGameplayCamera_Utils.generated.h"
+#include "CkCamera_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_GameplayCamera"))
-class CKCAMERA_API UCk_Utils_GameplayCamera_UE : public UCk_Utils_Ecs_Base_UE
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Camera"))
+class CKCAMERA_API UCk_Utils_Camera_UE : public UCk_Utils_Ecs_Base_UE
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Utils_GameplayCamera_UE);
-    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_GameplayCamera);
+    CK_GENERATED_BODY(UCk_Utils_Camera_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Camera);
 
 public:
     friend class UCk_Utils_Ecs_Base_UE;
@@ -25,11 +25,11 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName = "[Ck][GameplayCamera] Add")
-    static FCk_Handle_GameplayCamera
+              DisplayName = "[Ck][Camera] Add")
+    static FCk_Handle_Camera
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_GameplayCamera_ParamsData& InParams);
+        const FCk_Fragment_Camera_ParamsData& InParams);
 
 public:
     // Has Feature
@@ -38,8 +38,8 @@ public:
         const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|GameplayCamera",
-        DisplayName = "[Ck][GameplayCamera] Has")
+        Category = "Ck|Utils|Camera",
+        DisplayName = "[Ck][Camera] Has")
     static bool
     Has_Any(
         const FCk_Handle& InHandle);
@@ -47,70 +47,70 @@ public:
 public:
     // Number of live modifier entities currently on the camera (active or blending).
     UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|GameplayCamera",
-        DisplayName = "[Ck][GameplayCamera] Get Modifier Count")
+        Category = "Ck|Utils|Camera",
+        DisplayName = "[Ck][Camera] Get Modifier Count")
     static int32
     Get_ModifierCount(
-        const FCk_Handle_GameplayCamera& InCamera);
+        const FCk_Handle_Camera& InCamera);
 
     // True if a live modifier of the given class is present on the camera.
     UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|GameplayCamera",
-        DisplayName = "[Ck][GameplayCamera] Has Modifier")
+        Category = "Ck|Utils|Camera",
+        DisplayName = "[Ck][Camera] Has Modifier")
     static bool
     Has_Modifier(
-        const FCk_Handle_GameplayCamera& InCamera,
+        const FCk_Handle_Camera& InCamera,
         TSubclassOf<UCk_CameraModifier_EntityScript> InModifierClass);
 
     // Class of the dominant active modifier (highest blend alpha), or null if none.
     UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|GameplayCamera",
-        DisplayName = "[Ck][GameplayCamera] Get Dominant Modifier Class")
+        Category = "Ck|Utils|Camera",
+        DisplayName = "[Ck][Camera] Get Dominant Modifier Class")
     static TSubclassOf<UCk_CameraModifier_EntityScript>
     Get_DominantModifierClass(
-        const FCk_Handle_GameplayCamera& InCamera);
+        const FCk_Handle_Camera& InCamera);
 
 private:
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|GameplayCamera",
-        DisplayName = "[Ck][GameplayCamera] Cast",
+        Category = "Ck|Utils|Camera",
+        DisplayName = "[Ck][Camera] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
-    static FCk_Handle_GameplayCamera
+    static FCk_Handle_Camera
     DoCast(
         UPARAM(ref) FCk_Handle& InHandle,
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|GameplayCamera",
-        DisplayName = "[Ck][GameplayCamera] Handle -> GameplayCamera Handle",
-        meta = (CompactNodeTitle = "<AsGameplayCamera>", BlueprintAutocast))
-    static FCk_Handle_GameplayCamera
+        Category = "Ck|Utils|Camera",
+        DisplayName = "[Ck][Camera] Handle -> Camera Handle",
+        meta = (CompactNodeTitle = "<AsCamera>", BlueprintAutocast))
+    static FCk_Handle_Camera
     DoCastChecked(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
-        DisplayName = "[Ck] Get Invalid GameplayCamera Handle",
-        Category = "Ck|Utils|GameplayCamera",
-        meta = (CompactNodeTitle = "INVALID_GameplayCameraHandle", Keywords = "make"))
-    static FCk_Handle_GameplayCamera
+        DisplayName = "[Ck] Get Invalid Camera Handle",
+        Category = "Ck|Utils|Camera",
+        meta = (CompactNodeTitle = "INVALID_CameraHandle", Keywords = "make"))
+    static FCk_Handle_Camera
     Get_InvalidHandle() { return {}; };
 
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName = "[Ck][GameplayCamera] Request Add Modifier")
-    static FCk_Handle_GameplayCamera
+              DisplayName = "[Ck][Camera] Request Add Modifier")
+    static FCk_Handle_Camera
     Request_AddModifier(
-        UPARAM(ref) FCk_Handle_GameplayCamera& InCamera,
-        const FCk_Request_GameplayCamera_AddModifier& InRequest);
+        UPARAM(ref) FCk_Handle_Camera& InCamera,
+        const FCk_Request_Camera_AddModifier& InRequest);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName = "[Ck][GameplayCamera] Request Remove Modifier")
-    static FCk_Handle_GameplayCamera
+              DisplayName = "[Ck][Camera] Request Remove Modifier")
+    static FCk_Handle_Camera
     Request_RemoveModifier(
-        UPARAM(ref) FCk_Handle_GameplayCamera& InCamera,
-        const FCk_Request_GameplayCamera_RemoveModifier& InRequest);
+        UPARAM(ref) FCk_Handle_Camera& InCamera,
+        const FCk_Request_Camera_RemoveModifier& InRequest);
 
 public:
     // Feeds the camera's abstract orbit intention (X = yaw, Y = pitch), already scaled/inverted by the caller's
@@ -118,22 +118,22 @@ public:
     // simply never calls this (intention stays zero). Set immediately each frame; consumed later the same frame
     // by the camera processors (which run after the Transform groups).
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|GameplayCamera",
-              DisplayName = "[Ck][GameplayCamera] Request Set Orientation Intention")
-    static FCk_Handle_GameplayCamera
+              Category = "Ck|Utils|Camera",
+              DisplayName = "[Ck][Camera] Request Set Orientation Intention")
+    static FCk_Handle_Camera
     Request_SetOrientationIntention(
-        UPARAM(ref) FCk_Handle_GameplayCamera& InCamera,
+        UPARAM(ref) FCk_Handle_Camera& InCamera,
         FVector InOrientationIntention);
 
 public:
     // The resolved camera view rotation (this frame's composed POV). Handy for camera-relative movement: take the
     // yaw to derive a horizontal forward/right. Returns zero rotation if the camera has no composed view yet.
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|GameplayCamera",
-              DisplayName = "[Ck][GameplayCamera] Get View Rotation")
+              Category = "Ck|Utils|Camera",
+              DisplayName = "[Ck][Camera] Get View Rotation")
     static FRotator
     Get_ViewRotation(
-        const FCk_Handle_GameplayCamera& InCamera);
+        const FCk_Handle_Camera& InCamera);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

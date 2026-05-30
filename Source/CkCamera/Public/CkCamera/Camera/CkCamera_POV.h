@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkCamera/GameplayCamera/CkGameplayCamera_Profile.h"
+#include "CkCamera/Camera/CkCameraProfile.h"
 
 #include <CoreMinimal.h>
 
@@ -16,7 +16,7 @@
 // preferences are layered in later increments.
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck::gameplaycamera
+namespace ck::camera
 {
     // Per-frame inputs to the POV pipeline.
     struct CKCAMERA_API FPov_Input
@@ -79,29 +79,29 @@ namespace ck::gameplaycamera
         // Advances InOutState by one frame. After this, InOutState._CameraTransform holds the resolved POV.
         static auto
         Run(
-            const FCk_GameplayCamera_Profile& InProfile,
+            const FCk_CameraProfile& InProfile,
             const FPov_Input& InInput,
             FPov_State& InOutState) -> void;
 
     private:
-        static auto Step_Attachment   (const FCk_GameplayCamera_Profile&, const FPov_Input&, FPov_State&) -> void;
-        static auto Step_LookAt       (const FCk_GameplayCamera_Profile&, const FPov_Input&, FPov_State&) -> void;
-        static auto Step_BoomRotation (const FCk_GameplayCamera_Profile&, const FPov_Input&, FPov_State&) -> void;
-        static auto Step_BoomEnd      (const FCk_GameplayCamera_Profile&, const FPov_Input&, FPov_State&) -> void;
-        static auto Step_Framing      (const FCk_GameplayCamera_Profile&, const FPov_Input&, FPov_State&) -> void;
-        static auto Step_CameraXform  (const FCk_GameplayCamera_Profile&, const FPov_Input&, FPov_State&) -> void;
-        static auto Step_Collision    (const FCk_GameplayCamera_Profile&, const FPov_Input&, FPov_State&) -> void;
-        static auto Step_Noise        (const FCk_GameplayCamera_Profile&, const FPov_Input&, FPov_State&) -> void;
+        static auto Step_Attachment   (const FCk_CameraProfile&, const FPov_Input&, FPov_State&) -> void;
+        static auto Step_LookAt       (const FCk_CameraProfile&, const FPov_Input&, FPov_State&) -> void;
+        static auto Step_BoomRotation (const FCk_CameraProfile&, const FPov_Input&, FPov_State&) -> void;
+        static auto Step_BoomEnd      (const FCk_CameraProfile&, const FPov_Input&, FPov_State&) -> void;
+        static auto Step_Framing      (const FCk_CameraProfile&, const FPov_Input&, FPov_State&) -> void;
+        static auto Step_CameraXform  (const FCk_CameraProfile&, const FPov_Input&, FPov_State&) -> void;
+        static auto Step_Collision    (const FCk_CameraProfile&, const FPov_Input&, FPov_State&) -> void;
+        static auto Step_Noise        (const FCk_CameraProfile&, const FPov_Input&, FPov_State&) -> void;
 
         // Orbit rotation delta from the (already-scaled) orientation intention. Returns zero when intention is
         // zero or orientation control is disabled — the input-independent path.
         static auto Compute_OrientationControl(
-            const FCk_GameplayCamera_Profile&, const FPov_Input&, const FPov_State&) -> FRotator;
+            const FCk_CameraProfile&, const FPov_Input&, const FPov_State&) -> FRotator;
 
         // Reorients the boom toward the look-at target (lock-on). Input-free; no-op without a look-at target or
         // when auto-reorient is disabled.
         static auto Apply_AutoReorient(
-            const FCk_GameplayCamera_Profile&, const FPov_Input&, FPov_State&, FRotator& InOutRotation) -> void;
+            const FCk_CameraProfile&, const FPov_Input&, FPov_State&, FRotator& InOutRotation) -> void;
     };
 }
 

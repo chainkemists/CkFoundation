@@ -1,7 +1,7 @@
-#include "CkGameplayCamera_Processor.h"
+#include "CkCamera_Processor.h"
 
 #include "CkCamera/CkCamera_Log.h"
-#include "CkCamera/GameplayCamera/CameraModifier/CkCameraModifier_EntityScript.h"
+#include "CkCamera/Camera/CameraModifier/CkCameraModifier_EntityScript.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
@@ -14,9 +14,9 @@
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
-CK_REGISTER_PROCESSOR(ck::FProcessor_GameplayCamera_HandleRequests);
-CK_REGISTER_PROCESSOR(ck::FProcessor_GameplayCamera_ComposeProfile);
-CK_REGISTER_PROCESSOR(ck::FProcessor_GameplayCamera_UpdatePOV);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Camera_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Camera_ComposeProfile);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Camera_UpdatePOV);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -34,14 +34,14 @@ namespace ck
     // ================================================================================================================
 
     auto
-        FProcessor_GameplayCamera_HandleRequests::
+        FProcessor_Camera_HandleRequests::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_GameplayCamera_Requests& InRequestsComp) const
+            const FFragment_Camera_Requests& InRequestsComp) const
         -> void
     {
-        InHandle.CopyAndRemove(InRequestsComp, [&](const FFragment_GameplayCamera_Requests& InRequests)
+        InHandle.CopyAndRemove(InRequestsComp, [&](const FFragment_Camera_Requests& InRequests)
         {
             ck::algo::ForEachRequest(InRequests._Requests, ck::Visitor(
             [&](const auto& InRequest) -> void
@@ -52,10 +52,10 @@ namespace ck
     }
 
     auto
-        FProcessor_GameplayCamera_HandleRequests::
+        FProcessor_Camera_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FCk_Request_GameplayCamera_AddModifier& InRequest) const
+            const FCk_Request_Camera_AddModifier& InRequest) const
         -> void
     {
         const auto ModifierClass = InRequest.Get_ModifierClass();
@@ -68,7 +68,7 @@ namespace ck
 
         // OneOnly: blend out any existing modifier in the same ordering group (eviction). Done before the new
         // modifier is connected to the Record so it can't match itself.
-        if (InRequest.Get_StackingBehavior() == ECk_GameplayCamera_StackingBehavior::OneOnly)
+        if (InRequest.Get_StackingBehavior() == ECk_Camera_StackingBehavior::OneOnly)
         {
             auto MutableForEvict = InHandle;
             ck::FUtils_RecordOfCameraModifiers::ForEach_ValidEntry(MutableForEvict,
@@ -120,15 +120,15 @@ namespace ck
         // Construct sees them) — mirrors UCk_Utils_SmState_UE::Create. See the note in the fragment header.
         UCk_Utils_EntityScript_UE::Add(NewModifier, ModifierClass, FInstancedStruct{});
 
-        camera::VeryVerbose(TEXT("[GameplayCamera] AddModifier [{}] -> entity [{}] on camera [{}]"),
+        camera::VeryVerbose(TEXT("[Camera] AddModifier [{}] -> entity [{}] on camera [{}]"),
             ModifierClass, TypedModifier, InHandle);
     }
 
     auto
-        FProcessor_GameplayCamera_HandleRequests::
+        FProcessor_Camera_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FCk_Request_GameplayCamera_RemoveModifier& InRequest) const
+            const FCk_Request_Camera_RemoveModifier& InRequest) const
         -> void
     {
         const auto ModifierClass = InRequest.Get_ModifierClass();
@@ -159,18 +159,18 @@ namespace ck
     // ================================================================================================================
 
     auto
-        FProcessor_GameplayCamera_ComposeProfile::
+        FProcessor_Camera_ComposeProfile::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_GameplayCamera_Current& InCurrent) const
+            FFragment_Camera_Current& InCurrent) const
         -> void
     {
         // Start from a fresh default each frame; every active modifier contributes on top, weighted by its own
         // blend alpha. Per-modifier blend is ticked here (runs every frame); fully-blended-out modifiers are
         // pruned, and the dominant active modifier (highest alpha, later record order breaks ties) supplies the
         // look-at target for auto-reorient.
-        auto Profile = FCk_GameplayCamera_Profile{};
+        auto Profile = FCk_CameraProfile{};
 
         const auto DeltaSeconds = static_cast<float>(InDeltaT.Get_Seconds());
 
@@ -212,7 +212,7 @@ namespace ck
             if (ck::Is_NOT_Valid(Script))
             { return; }
 
-            if (Script->Get_TickMode() == ECk_GameplayCamera_TickMode::Tick)
+            if (Script->Get_TickMode() == ECk_Camera_TickMode::Tick)
             {
                 Script->Tick(InModifier, InDeltaT);
             }
@@ -249,11 +249,11 @@ namespace ck
     // ================================================================================================================
 
     auto
-        FProcessor_GameplayCamera_UpdatePOV::
+        FProcessor_Camera_UpdatePOV::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_GameplayCamera_Current& InCurrent) const
+            FFragment_Camera_Current& InCurrent) const
         -> void
     {
         const auto& Profile = InCurrent.Get_ComposedProfile();
@@ -263,7 +263,7 @@ namespace ck
         if (NOT InHandle.Has<ck::FFragment_Transform>())
         { return; }
 
-        auto Input = ck::gameplaycamera::FPov_Input{};
+        auto Input = ck::camera::FPov_Input{};
         Input._AnchorTransform      = InHandle.Get<ck::FFragment_Transform>().Get_Transform();
         Input._OrientationIntention = InCurrent.Get_OrientationIntention();
         Input._DeltaSeconds         = static_cast<float>(InDeltaT.Get_Seconds());
@@ -271,7 +271,7 @@ namespace ck
         Input._World                = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
         Input._TraceIgnoreActor     = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
 
-        ck::gameplaycamera::FPov::Run(Profile, Input, InCurrent._PovState);
+        ck::camera::FPov::Run(Profile, Input, InCurrent._PovState);
 
         auto ViewInfo = FMinimalViewInfo{};
         ViewInfo.Location    = InCurrent._PovState._CameraTransform.GetLocation();

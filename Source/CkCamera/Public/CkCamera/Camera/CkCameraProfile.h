@@ -7,7 +7,7 @@
 #include <AlphaBlend.h>
 #include <CoreMinimal.h>
 
-#include "CkGameplayCamera_Profile.generated.h"
+#include "CkCameraProfile.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 // The composed camera profile — the accumulated result of every active modifier's contribution. Ported from the
@@ -21,12 +21,12 @@
 
 // Generic rotation tuning (speed + limits + out-of-range behaviour). Reused by OrientationControl/AutoReorient/Noise.
 USTRUCT(BlueprintType)
-struct CKCAMERA_API FCk_GameplayCamera_Profile_Rotation
+struct CKCAMERA_API FCk_CameraProfile_Rotation
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_GameplayCamera_Profile_Rotation);
+    CK_GENERATED_BODY(FCk_CameraProfile_Rotation);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
@@ -52,12 +52,12 @@ public:
 
 // Boom-arm rig: pivot offset, boom length, and framing offset/rotation applied at the boom end.
 USTRUCT(BlueprintType)
-struct CKCAMERA_API FCk_GameplayCamera_Profile_Rig
+struct CKCAMERA_API FCk_CameraProfile_Rig
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_GameplayCamera_Profile_Rig);
+    CK_GENERATED_BODY(FCk_CameraProfile_Rig);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
@@ -101,12 +101,12 @@ public:
 // an FMath::VInterpTo speed per smoothed location (0 = instant / no lag). The full spring can replace this later
 // without touching the profile's public shape (just the interpolation math in FPov).
 USTRUCT(BlueprintType)
-struct CKCAMERA_API FCk_GameplayCamera_Profile_Springs
+struct CKCAMERA_API FCk_CameraProfile_Springs
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_GameplayCamera_Profile_Springs);
+    CK_GENERATED_BODY(FCk_CameraProfile_Springs);
 
 private:
     // Follow lag for the boom pivot (group-base) location. 0 = instant (snap to anchor).
@@ -125,12 +125,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKCAMERA_API FCk_GameplayCamera_Profile_Sensor
+struct CKCAMERA_API FCk_CameraProfile_Sensor
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_GameplayCamera_Profile_Sensor);
+    CK_GENERATED_BODY(FCk_CameraProfile_Sensor);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
@@ -151,22 +151,22 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKCAMERA_API FCk_GameplayCamera_Profile_Noise
+struct CKCAMERA_API FCk_CameraProfile_Noise
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_GameplayCamera_Profile_Noise);
+    CK_GENERATED_BODY(FCk_CameraProfile_Noise);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FCk_GameplayCamera_Profile_Rotation _Pitch;
+    FCk_CameraProfile_Rotation _Pitch;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FCk_GameplayCamera_Profile_Rotation _Yaw;
+    FCk_CameraProfile_Rotation _Yaw;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FCk_GameplayCamera_Profile_Rotation _Roll;
+    FCk_CameraProfile_Rotation _Roll;
 
 public:
     CK_PROPERTY(_Pitch);
@@ -177,19 +177,19 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKCAMERA_API FCk_GameplayCamera_Profile_OrientationControl
+struct CKCAMERA_API FCk_CameraProfile_OrientationControl
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_GameplayCamera_Profile_OrientationControl);
+    CK_GENERATED_BODY(FCk_CameraProfile_OrientationControl);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FCk_GameplayCamera_Profile_Rotation _Pitch;
+    FCk_CameraProfile_Rotation _Pitch;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FCk_GameplayCamera_Profile_Rotation _Yaw;
+    FCk_CameraProfile_Rotation _Yaw;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FAlphaBlend _XIntentionCurve;
@@ -207,19 +207,19 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKCAMERA_API FCk_GameplayCamera_Profile_AutoReorient
+struct CKCAMERA_API FCk_CameraProfile_AutoReorient
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_GameplayCamera_Profile_AutoReorient);
+    CK_GENERATED_BODY(FCk_CameraProfile_AutoReorient);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FCk_GameplayCamera_Profile_Rotation _Pitch;
+    FCk_CameraProfile_Rotation _Pitch;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FCk_GameplayCamera_Profile_Rotation _Yaw;
+    FCk_CameraProfile_Rotation _Yaw;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     float _LookAtTargetLocationPitchOffset = 0.0f;
@@ -253,12 +253,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKCAMERA_API FCk_GameplayCamera_Profile_Collision
+struct CKCAMERA_API FCk_CameraProfile_Collision
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_GameplayCamera_Profile_Collision);
+    CK_GENERATED_BODY(FCk_CameraProfile_Collision);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
@@ -291,12 +291,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKCAMERA_API FCk_GameplayCamera_Profile_DepthOfField
+struct CKCAMERA_API FCk_CameraProfile_DepthOfField
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_GameplayCamera_Profile_DepthOfField);
+    CK_GENERATED_BODY(FCk_CameraProfile_DepthOfField);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, ClampMin = "1.0", ClampMax = "32.0", DisplayName = "Aperture (F-stop)"))
@@ -317,49 +317,49 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKCAMERA_API FCk_GameplayCamera_Profile
+struct CKCAMERA_API FCk_CameraProfile
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_GameplayCamera_Profile);
+    CK_GENERATED_BODY(FCk_CameraProfile);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FCk_GameplayCamera_Profile_Rig _Rig;
+    FCk_CameraProfile_Rig _Rig;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FCk_GameplayCamera_Profile_Springs _Springs;
+    FCk_CameraProfile_Springs _Springs;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FCk_GameplayCamera_Profile_Sensor _Sensor;
+    FCk_CameraProfile_Sensor _Sensor;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FCk_GameplayCamera_Profile_Noise _Noise;
+    FCk_CameraProfile_Noise _Noise;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     bool _HasOrientationControl = true;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, EditCondition = "_HasOrientationControl"))
-    FCk_GameplayCamera_Profile_OrientationControl _OrientationControl;
+    FCk_CameraProfile_OrientationControl _OrientationControl;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     bool _HasAutoReorient = false;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, EditCondition = "_HasAutoReorient"))
-    FCk_GameplayCamera_Profile_AutoReorient _AutoReorient;
+    FCk_CameraProfile_AutoReorient _AutoReorient;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     bool _HasCollision = true;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, EditCondition = "_HasCollision"))
-    FCk_GameplayCamera_Profile_Collision _Collision;
+    FCk_CameraProfile_Collision _Collision;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     bool _UsePostProcess = false;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, EditCondition = "_UsePostProcess"))
-    FCk_GameplayCamera_Profile_DepthOfField _DepthOfField;
+    FCk_CameraProfile_DepthOfField _DepthOfField;
 
 public:
     CK_PROPERTY(_Rig);

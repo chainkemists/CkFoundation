@@ -1,18 +1,18 @@
-#include "CkGameplayCamera_Component.h"
+#include "CkCamera_Component.h"
 
-#include "CkCamera/GameplayCamera/CkGameplayCamera_Fragment.h"
+#include "CkCamera/Camera/CkCamera_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 void
-    UCk_GameplayCameraComponent::
+    UCk_CameraComponent::
     GetCameraView(
         float DeltaTime,
         FMinimalViewInfo& DesiredView)
 {
-    if (ck::IsValid(_DirectorEntity) && _DirectorEntity.Has<ck::FFragment_GameplayCamera_Current>())
+    if (ck::IsValid(_DirectorEntity) && _DirectorEntity.Has<ck::FFragment_Camera_Current>())
     {
-        DesiredView = _DirectorEntity.Get<ck::FFragment_GameplayCamera_Current>().Get_ViewInfo();
+        DesiredView = _DirectorEntity.Get<ck::FFragment_Camera_Current>().Get_ViewInfo();
         return;
     }
 
@@ -22,9 +22,9 @@ void
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_GameplayCameraComponent::
+    UCk_CameraComponent::
     Set_DirectorEntity(
-        FCk_Handle_GameplayCamera InDirectorEntity)
+        FCk_Handle_Camera InDirectorEntity)
     -> void
 {
     _DirectorEntity = InDirectorEntity;

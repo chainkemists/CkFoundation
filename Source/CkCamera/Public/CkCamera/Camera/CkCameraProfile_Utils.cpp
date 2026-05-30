@@ -1,12 +1,12 @@
-#include "CkGameplayCamera_Profile_Utils.h"
+#include "CkCameraProfile_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_GameplayCamera_Profile_UE::
+    UCk_Utils_CameraProfile_UE::
     BlendInto(
-        FCk_GameplayCamera_Profile& InOutProfile,
-        const FCk_GameplayCamera_Profile& InTarget,
+        FCk_CameraProfile& InOutProfile,
+        const FCk_CameraProfile& InTarget,
         float InAlpha)
     -> void
 {
