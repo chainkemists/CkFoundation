@@ -150,6 +150,9 @@ public:
 
     static auto
     Get_IsNearlyEqual(const FVector& A, const FVector& B) -> bool;
+
+    static auto
+    Get_IsNearlyEqual(const FRotator& A, const FRotator& B) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

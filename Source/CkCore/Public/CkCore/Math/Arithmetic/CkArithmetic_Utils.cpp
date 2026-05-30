@@ -259,6 +259,18 @@ auto
         Get_IsNearlyEqual(A.Z, B.Z);
 }
 
+auto
+    UCk_Utils_Arithmetic_UE::
+    Get_IsNearlyEqual(
+        const FRotator& A,
+        const FRotator& B)
+    -> bool
+{
+    return Get_IsNearlyEqual(A.Pitch, B.Pitch) &&
+        Get_IsNearlyEqual(A.Yaw, B.Yaw) &&
+        Get_IsNearlyEqual(A.Roll, B.Roll);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
