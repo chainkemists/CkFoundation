@@ -2,6 +2,7 @@
 
 #include "CkCamera/CkCamera_Log.h"
 #include "CkCamera/Camera/CkCamera_Component.h"
+#include "CkCamera/Camera/CkCameraProfile_Utils.h"
 #include "CkCamera/Camera/CameraModifier/CkCameraModifier_EntityScript.h"
 
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
@@ -21,6 +22,11 @@ auto
     InHandle.AddOrGet<ck::FFragment_Camera_Current>();
 
     ck::FUtils_RecordOfCameraModifiers::AddIfMissing(InHandle);
+
+    // The composed profile lives on its own entity (owned by the director). Modifiers contribute into it via
+    // handle in DoContributeToProfile; ComposeProfile resolves it back into the director's read-cache each frame.
+    auto ProfileEntity = UCk_Utils_CameraProfile_UE::Add(InHandle);
+    InHandle.Get<ck::FFragment_Camera_Current>().Set_ProfileEntity(ProfileEntity);
 
     auto Director = Cast(InHandle);
 

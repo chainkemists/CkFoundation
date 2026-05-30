@@ -63,7 +63,12 @@ namespace ck
         friend class UCk_Utils_Camera_UE;
 
     private:
-        // The composed profile (accumulated modifier contributions) — written by ComposeProfile.
+        // The dedicated profile entity modifiers contribute into via handle (DoContributeToProfile). Created in
+        // UCk_Utils_Camera_UE::Add, owned by (and destroyed with) the director.
+        FCk_Handle_CameraProfile _ProfileEntity;
+
+        // Resolved read-cache of the profile entity's composed result — refreshed each frame by ComposeProfile.
+        // UpdatePOV and observers (debugger inspector) read this instead of resolving the entity every access.
         FCk_CameraProfile _ComposedProfile;
 
         // Persistent POV pipeline state (boom rotation, smoothed pivot, collision distance, noise) — advanced by UpdatePOV.
@@ -84,6 +89,7 @@ namespace ck
         FMinimalViewInfo _ViewInfo;
 
     public:
+        CK_PROPERTY(_ProfileEntity);
         CK_PROPERTY(_ComposedProfile);
         CK_PROPERTY(_OrientationIntention);
         CK_PROPERTY_GET(_DominantModifierClass);

@@ -33,6 +33,14 @@ USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKCAMERA_API FCk_Handle_CameraModifier : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_CameraModifier); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_CameraModifier);
 
+// The running composed-profile entity owned by a director. Holds the FCk_CameraProfile that active modifiers
+// contribute into each frame. One per director, created in UCk_Utils_Camera_UE::Add and destroyed with it.
+// Modifiers receive this handle in DoContributeToProfile (instead of a by-ref struct) and mutate it via
+// UCk_Utils_CameraProfile_UE — sidestepping the AS/BP by-value-struct footgun.
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
+struct CKCAMERA_API FCk_Handle_CameraProfile : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_CameraProfile); };
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_CameraProfile);
+
 // --------------------------------------------------------------------------------------------------------------------
 // ENUMS
 // --------------------------------------------------------------------------------------------------------------------
