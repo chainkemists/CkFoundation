@@ -133,8 +133,16 @@ protected:
         meta = (AllowPrivateAccess = true))
     ECk_Camera_TickMode _TickMode = ECk_Camera_TickMode::EnterExitOnly;
 
+    // Mode (default) contributes a whole preset and runs before all Trims; Trim layers field-level adjustments on
+    // top. See ECk_Camera_ModifierRole. Existing whole-camera modifiers stay Mode.
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+        Category = "Camera|Modifier",
+        meta = (AllowPrivateAccess = true))
+    ECk_Camera_ModifierRole _Role = ECk_Camera_ModifierRole::Mode;
+
 public:
     CK_PROPERTY_GET(_TickMode);
+    CK_PROPERTY_GET(_Role);
 
 private:
     FCk_Handle_Camera _OwningCamera;

@@ -132,6 +132,17 @@ auto
         InOutProfile.Set_Rig(Rig);
     }
 
+    // ---- Springs (continuous location-lag) ----
+    {
+        auto Springs = InOutProfile.Get_Springs();
+        const auto& Target = InTarget.Get_Springs();
+        Springs.Set_GroupBaseLocationInterpSpeed(FMath::Lerp(
+            Springs.Get_GroupBaseLocationInterpSpeed(), Target.Get_GroupBaseLocationInterpSpeed(), Alpha));
+        Springs.Set_LookAtLocationInterpSpeed(FMath::Lerp(
+            Springs.Get_LookAtLocationInterpSpeed(), Target.Get_LookAtLocationInterpSpeed(), Alpha));
+        InOutProfile.Set_Springs(Springs);
+    }
+
     // ---- Depth of Field (continuous) ----
     {
         auto DoF = InOutProfile.Get_DepthOfField();

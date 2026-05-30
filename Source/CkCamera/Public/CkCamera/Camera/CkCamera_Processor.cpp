@@ -179,6 +179,17 @@ namespace ck
         auto Dominant      = FCk_Handle_CameraModifier{};
         auto DominantAlpha = -1.0f;
 
+        // Collected during the (single) tick/prune pass, then contributed in role order: every Mode establishes the
+        // cross-faded base + structural blocks first, then every Trim layers field-level adjustments on top.
+        struct FActiveContribution
+        {
+            FCk_Handle_CameraModifier        Modifier;
+            UCk_CameraModifier_EntityScript* Script = nullptr;
+            float                            Alpha  = 0.0f;
+        };
+        auto Modes = TArray<FActiveContribution>{};
+        auto Trims = TArray<FActiveContribution>{};
+
         FUtils_RecordOfCameraModifiers::ForEach_ValidEntry(InHandle,
         [&](FCk_Handle_CameraModifier InModifier)
         {
@@ -219,7 +230,8 @@ namespace ck
                 Script->Tick(InModifier, InDeltaT);
             }
 
-            Script->ContributeToProfile(InModifier, ProfileEntity, Alpha);
+            auto& Bucket = Script->Get_Role() == ECk_Camera_ModifierRole::Trim ? Trims : Modes;
+            Bucket.Add(FActiveContribution{InModifier, Script, Alpha});
 
             if (Alpha >= DominantAlpha)
             {
@@ -227,6 +239,13 @@ namespace ck
                 Dominant      = InModifier;
             }
         });
+
+        // Modes first (cross-faded base + structural), then Trims (field-level layers) — order is the whole point
+        // of the role split; the profile entity is reset above, so this fully rebuilds the composite each frame.
+        for (const auto& Entry : Modes)
+        { Entry.Script->ContributeToProfile(Entry.Modifier, ProfileEntity, Entry.Alpha); }
+        for (const auto& Entry : Trims)
+        { Entry.Script->ContributeToProfile(Entry.Modifier, ProfileEntity, Entry.Alpha); }
 
         // Cache the resolved composite for observers (UpdatePOV, debugger inspector) — they read the struct
         // rather than re-resolving the entity on every access.
