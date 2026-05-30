@@ -65,8 +65,8 @@ public:
     // UCk_Utils_CameraProfile_UE::BlendInto(InOutProfile, <authored target>, InBlendAlpha).
     virtual auto
     ContributeToProfile(
-        FCk_Handle_CameraModifier InHandle,
-        FCk_Handle_CameraProfile InOutProfile,
+        const FCk_Handle_CameraModifier& InHandle,
+        FCk_Handle_CameraProfile& InOutProfile,
         float InBlendAlpha) -> void;
 
     // Optional per-frame stateful logic, gated by _TickMode. [dispatch wired in M1]
@@ -99,8 +99,8 @@ protected:
         DisplayName = "Contribute To Profile")
     void
     DoContributeToProfile(
-        FCk_Handle_CameraModifier InHandle,
-        FCk_Handle_CameraProfile InOutProfile,
+        const FCk_Handle_CameraModifier& InHandle,
+        UPARAM(ref) FCk_Handle_CameraProfile& InOutProfile,
         float InBlendAlpha);
 
     UFUNCTION(BlueprintImplementableEvent,
