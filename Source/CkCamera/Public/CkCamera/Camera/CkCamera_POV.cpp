@@ -1,4 +1,4 @@
-#include "CkGameplayCamera_POV.h"
+#include "CkCamera_POV.h"
 
 #include <CollisionQueryParams.h>
 #include <Engine/World.h>
@@ -6,7 +6,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck::gameplaycamera
+namespace ck::camera
 {
     namespace
     {
@@ -26,7 +26,7 @@ namespace ck::gameplaycamera
     auto
         FPov::
         Run(
-            const FCk_GameplayCamera_Profile& InProfile,
+            const FCk_CameraProfile& InProfile,
             const FPov_Input& InInput,
             FPov_State& InOutState)
         -> void
@@ -56,7 +56,7 @@ namespace ck::gameplaycamera
     auto
         FPov::
         Step_Attachment(
-            const FCk_GameplayCamera_Profile& InProfile,
+            const FCk_CameraProfile& InProfile,
             const FPov_Input& InInput,
             FPov_State& InOutState)
         -> void
@@ -76,7 +76,7 @@ namespace ck::gameplaycamera
     auto
         FPov::
         Step_LookAt(
-            const FCk_GameplayCamera_Profile& InProfile,
+            const FCk_CameraProfile& InProfile,
             const FPov_Input& InInput,
             FPov_State& InOutState)
         -> void
@@ -93,7 +93,7 @@ namespace ck::gameplaycamera
     auto
         FPov::
         Apply_AutoReorient(
-            const FCk_GameplayCamera_Profile& InProfile,
+            const FCk_CameraProfile& InProfile,
             const FPov_Input& InInput,
             FPov_State& InOutState,
             FRotator& InOutRotation)
@@ -183,7 +183,7 @@ namespace ck::gameplaycamera
     auto
         FPov::
         Compute_OrientationControl(
-            const FCk_GameplayCamera_Profile& InProfile,
+            const FCk_CameraProfile& InProfile,
             const FPov_Input& InInput,
             const FPov_State& InState)
         -> FRotator
@@ -232,7 +232,7 @@ namespace ck::gameplaycamera
     auto
         FPov::
         Step_BoomRotation(
-            const FCk_GameplayCamera_Profile& InProfile,
+            const FCk_CameraProfile& InProfile,
             const FPov_Input& InInput,
             FPov_State& InOutState)
         -> void
@@ -282,7 +282,7 @@ namespace ck::gameplaycamera
     auto
         FPov::
         Step_BoomEnd(
-            const FCk_GameplayCamera_Profile& InProfile,
+            const FCk_CameraProfile& InProfile,
             const FPov_Input& InInput,
             FPov_State& InOutState)
         -> void
@@ -305,7 +305,7 @@ namespace ck::gameplaycamera
     auto
         FPov::
         Step_Framing(
-            const FCk_GameplayCamera_Profile& InProfile,
+            const FCk_CameraProfile& InProfile,
             const FPov_Input& InInput,
             FPov_State& InOutState)
         -> void
@@ -329,7 +329,7 @@ namespace ck::gameplaycamera
     auto
         FPov::
         Step_CameraXform(
-            const FCk_GameplayCamera_Profile& InProfile,
+            const FCk_CameraProfile& InProfile,
             const FPov_Input& InInput,
             FPov_State& InOutState)
         -> void
@@ -346,7 +346,7 @@ namespace ck::gameplaycamera
     auto
         FPov::
         Step_Collision(
-            const FCk_GameplayCamera_Profile& InProfile,
+            const FCk_CameraProfile& InProfile,
             const FPov_Input& InInput,
             FPov_State& InOutState)
         -> void
@@ -375,7 +375,7 @@ namespace ck::gameplaycamera
 
         // Single synchronous sweep (async whisker fan is a later refinement).
         auto Hit = FHitResult{};
-        const auto QueryParams = FCollisionQueryParams{SCENE_QUERY_STAT(CkGameplayCamera_POV), false, TraceIgnore};
+        const auto QueryParams = FCollisionQueryParams{SCENE_QUERY_STAT(CkCamera_POV), false, TraceIgnore};
 
         constexpr auto TraceChannel = ECollisionChannel::ECC_Camera;
         const auto Blocked = World->LineTraceSingleByChannel(Hit, AttachmentPoint, CameraLocation, TraceChannel, QueryParams);
@@ -412,14 +412,14 @@ namespace ck::gameplaycamera
     auto
         FPov::
         Step_Noise(
-            const FCk_GameplayCamera_Profile& InProfile,
+            const FCk_CameraProfile& InProfile,
             const FPov_Input& InInput,
             FPov_State& InOutState)
         -> void
     {
         const auto& Noise = InProfile.Get_Noise();
 
-        const auto Step = [&](const FCk_GameplayCamera_Profile_Rotation& InRot, float InCurrent, bool& InOutPositive) -> float
+        const auto Step = [&](const FCk_CameraProfile_Rotation& InRot, float InCurrent, bool& InOutPositive) -> float
         {
             const auto Target = InOutPositive ? InRot.Get_Limits().Get_Max() : InRot.Get_Limits().Get_Min();
             const auto Result = FMath::FInterpConstantTo(
