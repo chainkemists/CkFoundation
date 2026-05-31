@@ -19,7 +19,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_CameraLayer_EntityScript;
-class UCameraComponent;
+class UCk_CameraComponent;
 
 // --------------------------------------------------------------------------------------------------------------------
 // TYPE-SAFE HANDLES
@@ -59,18 +59,6 @@ enum class ECk_Camera_StackingBehavior : uint8
     Additive,
     // Evicts (blends out) other layers in the same ordering group.
     OneOnly
-};
-
-// Where the composed POV is delivered.
-UENUM(BlueprintType)
-enum class ECk_Camera_OutputMode : uint8
-{
-    // Drive a UCk_CameraComponent (default PCM pulls it via GetCameraView). Default.
-    DriveCameraComponent,
-    // Drive a USceneCaptureComponent2D (non-player viewer). [M2+]
-    DriveSceneCapture,
-    // Compute at PCM-read time via a custom manager. [optional fallback]
-    DriveViewInfo
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -158,30 +146,25 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    ECk_Camera_OutputMode _OutputMode = ECk_Camera_OutputMode::DriveCameraComponent;
+    TWeakObjectPtr<class UCk_CameraComponent> _OutputComponent;
 
-    // Optional pre-existing output component. If null and OutputMode == DriveCameraComponent,
-    // a UCk_CameraComponent is auto-created on the owning actor.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    TWeakObjectPtr<UCameraComponent> _OutputComponent;
-
-    // The default profile. Every leaf field is materialized into a (non-replicated) tuner attribute on the camera
-    // entity; camera layers acquire modifiers on those attributes. The bool/curve leaves live on the Current fragment.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FCk_CameraProfile _Profile;
 
     // When true and the director's owning actor is a pawn possessed by a LOCAL APlayerController, the UpdatePOV
     // processor publishes the resolved view rotation back to that controller each frame (SetControlRotation) so
     // control-rotation consumers (facing / aim / movement) follow the camera. For a player view; leave false for
-    // non-player viewers (scene-capture, fixed cams).
+    // non-player viewers.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     bool _DriveControllerControlRotation = false;
 
 public:
-    CK_PROPERTY_GET(_OutputMode);
     CK_PROPERTY_GET(_OutputComponent);
     CK_PROPERTY(_Profile);
     CK_PROPERTY(_DriveControllerControlRotation);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Camera_ParamsData, _OutputComponent);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

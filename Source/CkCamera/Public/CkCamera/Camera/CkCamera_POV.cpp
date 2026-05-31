@@ -313,8 +313,8 @@ namespace ck::camera
     {
         const auto& FramingTransform = InOutState._FramingTransform;
 
-        // Auto-reorient look-at rotation is layered in a later increment; for now the camera adopts the framing
-        // rotation directly.
+        // The camera adopts the framing rotation directly — auto-reorient (look-at) already drove the boom rotation
+        // upstream in Step_BoomRotation.
         InOutState._CameraTransform = FTransform(FramingTransform.Rotator(), FramingTransform.GetLocation());
     }
 
@@ -350,7 +350,7 @@ namespace ck::camera
         const auto SweepDistance = SweepDirection.Size();
         SweepDirection.Normalize();
 
-        // Single synchronous sweep (async whisker fan is a later refinement).
+        // Single synchronous sweep from the pivot to the camera.
         auto Hit = FHitResult{};
         const auto QueryParams = FCollisionQueryParams{SCENE_QUERY_STAT(CkCamera_POV), false, TraceIgnore};
 
