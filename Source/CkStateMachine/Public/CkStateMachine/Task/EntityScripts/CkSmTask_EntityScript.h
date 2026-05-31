@@ -32,8 +32,8 @@ protected:
     auto
     EndPlay() -> void override;
 
-    // See UCk_SmState_EntityScript::Get_EffectiveReplication for rationale. Tasks inherit
-    // replication from their owning SM's params, not from the CkEntityScript CDO default.
+    // See UCk_SmState_EntityScript::Get_EffectiveReplication for rationale. Always DoesNotReplicate —
+    // tasks are rebuilt locally via the SM replay path, never replicated as net objects.
     auto
     Get_EffectiveReplication() const -> ECk_Replication override;
 
