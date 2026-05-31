@@ -104,19 +104,15 @@ auto
     Get_EffectiveReplication() const
     -> ECk_Replication
 {
-    // At spawn time the processor stamps _AssociatedEntity before Construct runs, and the
-    // OwningStateMachine fragment is added by UCk_Utils_SmState_UE::Create before the spawn
-    // request is enqueued — so both calls in CkEntityScript_Processor (pre- and post-Construct)
-    // see a valid SM here. CDO calls (no AssociatedEntity) fall back to Super.
-    if (ck::IsValid(_AssociatedEntity) && ck::TUtils_Sm_OwningStateMachine::Has(_AssociatedEntity))
-    {
-        const auto SmHandle = ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(_AssociatedEntity);
-        if (ck::IsValid(SmHandle) && SmHandle.Has<ck::FFragment_Sm_Params>())
-        {
-            return SmHandle.Get<ck::FFragment_Sm_Params>().Get_Replication();
-        }
-    }
-    return Super::Get_EffectiveReplication();
+    // State/condition/task entities are NEVER independent net objects, regardless of whether the
+    // owning SM replicates. The SM's transition-history container fragment is the sole server→client
+    // transport; non-authority machines rebuild the entire state sub-graph locally via the replay
+    // path (FProcessor_Sm_ApplyReplicatedHistory → DoEnterState → Create). Letting these children
+    // inherit the CkEntityScript default of Replicates made the server push each state out as an Iris
+    // net object too, so non-owning clients reconstructed a second, malformed copy via SpawnProcessor:
+    // no FFragment_RecordOfSmTransitions (Create never ran) and an owner ref that resolved to a
+    // tombstone — the orphaned initial-state husks. Forcing DoesNotReplicate removes that second path.
+    return ECk_Replication::DoesNotReplicate;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

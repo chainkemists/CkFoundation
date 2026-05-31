@@ -38,11 +38,11 @@ protected:
     auto
     EndPlay() -> void override;
 
-    // Child entities derive replication from their owning SM's params, not from the EntityScript
-    // CDO default. When _AssociatedEntity is set and has an OwningStateMachine fragment, this
-    // override defers to that SM's params._Replication so local-only SMs produce DoesNotReplicate
-    // children even though the inherited CkEntityScript default is Replicates. CDO calls (before
-    // the script is attached to an entity) fall back to Super.
+    // Always DoesNotReplicate. State/condition/task entities are never independent net objects:
+    // the SM's transition-history container fragment is the only thing on the wire, and clients
+    // rebuild the whole sub-graph locally via the replay path. Overriding the CkEntityScript
+    // Replicates default here is what stops the server from also pushing each state out as an Iris
+    // net object (which produced orphaned, fragment-less state husks on non-owning clients).
     auto
     Get_EffectiveReplication() const -> ECk_Replication override;
 
