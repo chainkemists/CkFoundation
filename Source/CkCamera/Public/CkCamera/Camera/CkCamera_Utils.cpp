@@ -28,6 +28,13 @@ auto
         const FCk_Fragment_Camera_ParamsData& InParams)
     -> FCk_Handle_Camera
 {
+    // The output component is REQUIRED — the whole pull-based pipeline hinges on UCk_CameraComponent::GetCameraView,
+    // so fail loudly (rather than silently building a director that drives nothing) if it's missing.
+    CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_OutputComponent()),
+        TEXT("Camera Add on entity [{}] requires a valid output UCk_CameraComponent supplied in "
+             "FCk_Fragment_Camera_ParamsData — none was provided."), InHandle)
+    { return {}; }
+
     InHandle.Add<ck::FFragment_Camera_Params>(InParams);
     InHandle.AddOrGet<ck::FFragment_Camera_Current>();
 
@@ -55,41 +62,9 @@ auto
         Blend.Set_TargetAlpha(1.0f);
     }
 
-    if (InParams.Get_OutputMode() == ECk_Camera_OutputMode::DriveCameraComponent)
-    {
-        UCameraComponent* OutputComponent = InParams.Get_OutputComponent().Get();
-
-        if (ck::Is_NOT_Valid(OutputComponent))
-        {
-            if (auto* OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
-                ck::IsValid(OwningActor))
-            {
-                auto* NewComp = NewObject<UCk_CameraComponent>(OwningActor);
-
-                if (auto* Root = OwningActor->GetRootComponent();
-                    ck::IsValid(Root))
-                {
-                    NewComp->SetupAttachment(Root);
-                }
-
-                NewComp->RegisterComponent();
-                OutputComponent = NewComp;
-            }
-            else
-            {
-                ck::camera::Warning(TEXT("Camera Add on entity [{}] requested DriveCameraComponent "
-                    "but the entity has no owning actor and no component was supplied."), InHandle);
-            }
-        }
-
-        // NOTE: ::Cast (global UE cast) — unqualified Cast would resolve to this class's own
-        // typesafe-handle Cast (from CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE).
-        if (auto* CkComp = ::Cast<UCk_CameraComponent>(OutputComponent);
-            ck::IsValid(CkComp))
-        {
-            CkComp->Set_DirectorEntity(Director);
-        }
-    }
+    // Wire the (required, already-validated) output component to this director. UCk_CameraComponent::GetCameraView
+    // then pulls the resolved view info each time the default PlayerCameraManager asks for it.
+    InParams.Get_OutputComponent()->Set_DirectorEntity(Director);
 
     // Seed the resolved view immediately so the FIRST GetCameraView (which can happen before FProcessor_Camera_UpdatePOV
     // ticks) returns the real anchor-relative POV instead of a default (origin) FMinimalViewInfo — otherwise the camera

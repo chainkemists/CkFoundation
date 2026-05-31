@@ -5,15 +5,14 @@
 #include <CoreMinimal.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// The POV pipeline — ports the reference Tuq_Camera_POV math into a stateless helper that operates on a persistent
-// FPov_State (stored on the director's Current fragment) plus the composed profile and per-frame inputs.
+// The POV pipeline — a stateless helper that operates on a persistent FPov_State (stored on the director's Current
+// fragment) plus the composed profile and per-frame inputs.
 //
 // Input-independent: OrientationIntention defaults to zero (a fixed/follow camera needs no input). Whoever owns
 // input pushes an intention each frame; the helper just consumes the value.
 //
-// Increment C scope: attachment + spring-lagged pivot, boom rotation (orientation control), boom-end, framing,
-// camera transform, synchronous collision push-in, noise. Auto-reorient (look-at) + async whisker traces + user
-// preferences are layered in later increments.
+// Pipeline: attachment + spring-lagged pivot, boom rotation (orientation control + auto-reorient look-at), boom-end,
+// framing, camera transform, collision push-in, noise.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::camera
