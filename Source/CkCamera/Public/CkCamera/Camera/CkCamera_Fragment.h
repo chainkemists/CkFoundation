@@ -8,9 +8,6 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 
-#include "CkRecord/Record/CkRecord_Fragment.h"
-#include "CkRecord/Record/CkRecord_Utils.h"
-
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment_Data.h"
 #include "CkAttribute/VectorAttribute/CkVectorAttribute_Fragment_Data.h"
 #include "CkAttribute/RotatorAttribute/CkRotatorAttribute_Fragment_Data.h"

@@ -10,11 +10,9 @@
 #include "CkCameraProfile.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// The composed camera profile — the accumulated result of every active modifier's contribution. Ported from the
-// reference FTuq_Camera_Profile_Params, adapted to CkFoundation conventions. The bone-name field is intentionally
-// absent: the anchor is a FCk_Handle_Transform set up by the caller (socket-following transform entity), so the
-// camera module never needs a bone name. Spring settings are added alongside the spring interpolator in the POV
-// increment.
+// The composed camera profile — the accumulated result of every active modifier's contribution. The bone-name field
+// is intentionally absent: the anchor is a FCk_Handle_Transform set up by the caller (socket-following transform
+// entity), so the camera module never needs a bone name.
 //
 // Each leaf uses CK_PROPERTY (get + set) so BlendInto / modifiers can mutate the running profile.
 // --------------------------------------------------------------------------------------------------------------------
@@ -97,9 +95,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Location-lag settings. A pragmatic stand-in for the reference's critically-damped spring interpolator:
-// an FMath::VInterpTo speed per smoothed location (0 = instant / no lag). The full spring can replace this later
-// without touching the profile's public shape (just the interpolation math in FPov).
+// Location-lag settings: an FMath::VInterpTo speed per smoothed location (0 = instant / no lag).
 USTRUCT(BlueprintType)
 struct CKCAMERA_API FCk_CameraProfile_Springs
 {
