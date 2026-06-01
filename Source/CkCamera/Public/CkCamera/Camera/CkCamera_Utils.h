@@ -151,6 +151,28 @@ public:
         UPARAM(ref) FCk_Handle_Camera& InCamera,
         FVector InOrientationIntention);
 
+    // One-shot absolute seed of the persistent boom (view) rotation — the orbit equivalent of a teleport. Unlike
+    // SetOrientationIntention (a per-frame delta) this snaps the view to a world rotation, then orientation-control
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Camera",
+              DisplayName = "[Ck][Camera] Request Snap Boom Rotation")
+    static FCk_Handle_Camera
+    Request_SnapBoomRotation(
+        UPARAM(ref) FCk_Handle_Camera& InCamera,
+        FRotator InWorldRotation);
+
+    // Override the orientation-control yaw clamp window (absolute world yaws). The POV clamp is wrap-safe, so a cone
+    // straddling +/-180 is fine; pass [-180, 180] to restore unrestricted look. Min/Max are the window edges, NOT a
+    // +/- half-angle — callers wanting a cone around a facing pass [Facing - Half, Facing + Half].
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Camera",
+              DisplayName = "[Ck][Camera] Request Set Orientation Yaw Limits")
+    static FCk_Handle_Camera
+    Request_Set_OrientationYawLimits(
+        UPARAM(ref) FCk_Handle_Camera& InCamera,
+        float InMinYaw,
+        float InMaxYaw);
+
 public:
     // ---- Toggles for the non-blending bool leaves stored on FFragment_Camera_Current. Local-only, take effect the
     //      same frame, and are reflected by Get_ComposedProfile / the POV pipeline. ----

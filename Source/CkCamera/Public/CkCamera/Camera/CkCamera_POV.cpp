@@ -19,6 +19,19 @@ namespace ck::camera
             }
             InRotation.Roll = 0.0f;
         }
+
+        // Clamp a yaw into the (possibly wrapping) window [Min, Max], treated as a cone centered at (Min+Max)/2 with
+        // half-width (Max-Min)/2 — clamped by SHORTEST signed angular distance from the center. This is wrap-safe: a
+        // cone like [Facing-100, Facing+100] works for any facing, including those straddling +/-180 where a naive
+        // FMath::Clamp on an unwound angle would snap to the wrong edge. The full-circle case [-180, 180] reduces to
+        // UnwindDegrees (half = 180 => every angle is in range), preserving the prior unrestricted behaviour.
+        auto ClampYawToWindow(float InDesiredYaw, float InMin, float InMax) -> float
+        {
+            const auto Center = (InMin + InMax) * 0.5f;
+            const auto Half   = (InMax - InMin) * 0.5f;
+            const auto Delta  = FMath::UnwindDegrees(InDesiredYaw - Center);
+            return FMath::UnwindDegrees(Center + FMath::Clamp(Delta, -Half, Half));
+        }
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -244,8 +257,8 @@ namespace ck::camera
             OrientationControl.Get_Pitch().Get_Limits().Get_Min(),
             OrientationControl.Get_Pitch().Get_Limits().Get_Max());
 
-        NewRotation.Yaw = FMath::Clamp(
-            FMath::UnwindDegrees(CurrentYaw + OrientationDelta.Yaw),
+        NewRotation.Yaw = ClampYawToWindow(
+            CurrentYaw + OrientationDelta.Yaw,
             OrientationControl.Get_Yaw().Get_Limits().Get_Min(),
             OrientationControl.Get_Yaw().Get_Limits().Get_Max());
 

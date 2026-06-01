@@ -202,6 +202,39 @@ auto
     return InCamera;
 }
 
+auto
+    UCk_Utils_Camera_UE::
+    Request_SnapBoomRotation(
+        FCk_Handle_Camera& InCamera,
+        FRotator InWorldRotation)
+    -> FCk_Handle_Camera
+{
+    InWorldRotation.Roll = 0.0f;
+
+    auto& Current = InCamera.Get<ck::FFragment_Camera_Current>();
+    // Seed the persistent boom rotation directly (UpdatePOV reads it as the starting NewRotation next tick). Mark the
+    // POV state initialized so the seed-from-anchor branch in FPov::Run can't clobber it on a first frame.
+    Current._PovState._BoomArmRotation = InWorldRotation;
+    Current._PovState._Initialized     = true;
+
+    return InCamera;
+}
+
+auto
+    UCk_Utils_Camera_UE::
+    Request_Set_OrientationYawLimits(
+        FCk_Handle_Camera& InCamera,
+        float InMinYaw,
+        float InMaxYaw)
+    -> FCk_Handle_Camera
+{
+    auto& Limits = InCamera.Get<ck::FFragment_Camera_OrientationControl>()._Yaw._Limits;
+    UCk_Utils_FloatAttribute_UE::Request_Override(Limits, InMinYaw, ECk_MinMaxCurrent::Min);
+    UCk_Utils_FloatAttribute_UE::Request_Override(Limits, InMaxYaw, ECk_MinMaxCurrent::Max);
+
+    return InCamera;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
