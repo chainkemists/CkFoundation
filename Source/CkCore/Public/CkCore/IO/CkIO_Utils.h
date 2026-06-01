@@ -265,6 +265,17 @@ public:
     static bool
     IsEngineSafeForBlockingLoads();
 
+    // True when running inside a commandlet (e.g. the cook commandlet). The generated
+    // assets::load::* helpers use this to downgrade the "called before engine init" ensure:
+    // those first-pass loads are expected and self-heal via UCk_DeferredAssetInit_UE's
+    // post-engine-init re-run, so failing a cook over them is wrong. The ensure stays loud
+    // in editor/PIE/game (where IsRunningCommandlet() is false) to catch genuine misuse.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IO",
+              DisplayName = "[Ck] Is Running Commandlet")
+    static bool
+    Get_IsRunningCommandlet();
+
     // Force the blocking-load safety flag to true. Intended for callers that know they run
     // at or after FCoreDelegates::OnFEngineLoopInitComplete but may fire earlier in that
     // delegate's add-order than the internal registrar that sets the flag. Normally the
