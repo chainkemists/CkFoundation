@@ -59,6 +59,17 @@ namespace ck::statemachine
 
                 if (OldStatus == ECk_SmRunStatus::Stopped)
                 {
+                    // First sync: this non-authority machine just learned the SM started, but it
+                    // never ran DoStart (Start is authority-only) and the initial-state entry isn't
+                    // a replayed transition. If it has no current state yet, schedule entry into the
+                    // locally-known initial state so non-owning views show it instead of <none>.
+                    // The actual entry runs in FProcessor_Sm_FirstSyncInitialState (registry-safe,
+                    // outside this replication/RPC callback). Subsequent transitions replay on top.
+                    if (ck::Is_NOT_Valid(Current.Get_CurrentStateHandle()))
+                    {
+                        InEntity.AddOrGet<ck::FTag_Sm_NeedsInitialStateEntry>();
+                    }
+
                     ck::UUtils_Signal_OnSmStarted::Broadcast(SmHandle,
                         ck::MakePayload(SmHandle, FCk_Sm_Payload_OnStarted{}));
                 }
