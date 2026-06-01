@@ -41,11 +41,17 @@ private:
     bool _ClosedLoop = false;
 
 public:
-    CK_PROPERTY_GET(_Curves);
+    // _Curves is FSplineCurves, which is not an AngelScript-bindable type. Expose the getter and the
+    // (FSplineCurves, bool) constructor as plain C++ (NOT via CK_PROPERTY_GET / CK_DEFINE_CONSTRUCTORS,
+    // which would also emit AS bindings) — script never touches FSplineCurves, and the AS auto-bind
+    // attempt otherwise logs "Identifier 'FSplineCurves' is not a data type" errors that fail the cook.
+    const FSplineCurves& Get_Curves() const { return _Curves; }
     CK_PROPERTY_GET(_ClosedLoop);
     CK_PROPERTY(_DefaultUpVector);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Spline_ParamsData, _Curves, _ClosedLoop);
+    FCk_Fragment_Spline_ParamsData() = default;
+    FCk_Fragment_Spline_ParamsData(FSplineCurves InCurves, bool InClosedLoop)
+        : _Curves(MoveTemp(InCurves)), _ClosedLoop(InClosedLoop) {}
 };
 
 // --------------------------------------------------------------------------------------------------------------------
