@@ -487,7 +487,16 @@ auto
     _PreCompileDelegateHandle = FAngelscriptCodeModule::GetPreCompile().AddStatic([]
     {
         LoadFromJsonRegistry();
-        DiscoverAndRegisterAllDefinitions();
+
+        // AS pre-compile runs on a worker thread in packaged (non-editor) builds. The asset-registry
+        // discovery below enumerates in-memory assets, which asserts off the game thread
+        // (AssetRegistry's EnumerateMemoryAssetsHelper requires the game or loading thread). The JSON
+        // registry loaded above is the compile-time source of truth for handle types; asset-defined
+        // UCkDynamic_HandleDefinition discovery is an editor-time convenience, so skip it off-thread.
+        if (IsInGameThread())
+        {
+            DiscoverAndRegisterAllDefinitions();
+        }
 
         FCkAngelScript_HandleRegistry::EnsureAllBindingsComplete();
     });
