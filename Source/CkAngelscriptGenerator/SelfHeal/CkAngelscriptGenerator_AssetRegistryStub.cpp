@@ -754,10 +754,13 @@ namespace ck::angelscriptgenerator::self_heal
         auto Out = FString{};
         Out += FString::Printf(TEXT("    %s %s()"), *InResolvedClassName, *InFunctionName);                        Out += LINE_TERMINATOR;
         Out += TEXT("    {");                                                                                       Out += LINE_TERMINATOR;
+        Out += TEXT("        if (UCk_Utils_IO_UE::IsEngineSafeForBlockingLoads() == false)");                       Out += LINE_TERMINATOR;
+        Out += TEXT("        {");                                                                                   Out += LINE_TERMINATOR;
         Out += FString::Printf(
-            TEXT("        if (ck::EnsureIfNot(UCk_Utils_IO_UE::IsEngineSafeForBlockingLoads(), \"%s::load::%s() called before engine init. Use %s::%s() (soft ref) with UCk_DeferredConfig_UE instead.\"))"),
+            TEXT("            ck::EnsureIfNot(UCk_Utils_IO_UE::Get_IsRunningCommandlet(), \"%s::load::%s() called before engine init. Use %s::%s() (soft ref) with UCk_DeferredConfig_UE instead.\");"),
             *InSoftNamespace, *InFunctionName, *InSoftNamespace, *InFunctionName);                                  Out += LINE_TERMINATOR;
-        Out += TEXT("        { return nullptr; }");                                                                 Out += LINE_TERMINATOR;
+        Out += TEXT("            return nullptr;");                                                                 Out += LINE_TERMINATOR;
+        Out += TEXT("        }");                                                                                   Out += LINE_TERMINATOR;
         Out += FString::Printf(TEXT("        return System::LoadAsset_Blocking(%s::%s());"),
             *InSoftNamespace, *InFunctionName);                                                                     Out += LINE_TERMINATOR;
         Out += TEXT("    }");
@@ -777,10 +780,13 @@ namespace ck::angelscriptgenerator::self_heal
         auto Out = FString{};
         Out += FString::Printf(TEXT("    TSubclassOf<%s> %s()"), *InResolvedClassName, *InFunctionName);            Out += LINE_TERMINATOR;
         Out += TEXT("    {");                                                                                       Out += LINE_TERMINATOR;
+        Out += TEXT("        if (UCk_Utils_IO_UE::IsEngineSafeForBlockingLoads() == false)");                       Out += LINE_TERMINATOR;
+        Out += TEXT("        {");                                                                                   Out += LINE_TERMINATOR;
         Out += FString::Printf(
-            TEXT("        if (ck::EnsureIfNot(UCk_Utils_IO_UE::IsEngineSafeForBlockingLoads(), \"%s::load::%s() called before engine init. Use %s::%s() (soft ref) with UCk_DeferredConfig_UE instead.\"))"),
+            TEXT("            ck::EnsureIfNot(UCk_Utils_IO_UE::Get_IsRunningCommandlet(), \"%s::load::%s() called before engine init. Use %s::%s() (soft ref) with UCk_DeferredConfig_UE instead.\");"),
             *InSoftNamespace, *InFunctionName, *InSoftNamespace, *InFunctionName);                                  Out += LINE_TERMINATOR;
-        Out += TEXT("        { return nullptr; }");                                                                 Out += LINE_TERMINATOR;
+        Out += TEXT("            return nullptr;");                                                                 Out += LINE_TERMINATOR;
+        Out += TEXT("        }");                                                                                   Out += LINE_TERMINATOR;
         Out += FString::Printf(TEXT("        return System::LoadClassAsset_Blocking(%s::%s());"),
             *InSoftNamespace, *InFunctionName);                                                                     Out += LINE_TERMINATOR;
         Out += TEXT("    }");
