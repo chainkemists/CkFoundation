@@ -75,6 +75,14 @@ namespace ck
     // (e.g., net-relevance flip).
     CK_DEFINE_ECS_TAG(FTag_Sm_InitialFingerprintCheckCompleted);
 
+    // One-shot trigger added by MirrorRunStatus when a NON-AUTHORITY machine first learns the SM
+    // is Running but has no current state. The authority enters its initial state via DoStart;
+    // non-authority machines never run Start (it's authority-only) and the initial entry isn't a
+    // replayed transition, so without this they'd sit at <none> until the first transition.
+    // Consumed (removed) by FProcessor_Sm_FirstSyncInitialState, which enters the locally-known
+    // initial state so non-owning views reflect it immediately.
+    CK_DEFINE_ECS_TAG(FTag_Sm_NeedsInitialStateEntry);
+
     // ================================================================================================================
     // FRAGMENTS
     // ================================================================================================================

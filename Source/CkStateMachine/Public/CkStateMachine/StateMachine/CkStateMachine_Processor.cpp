@@ -26,6 +26,7 @@
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_FlushPendingReplication_Drain);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_FirstSyncInitialState);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_ApplyReplicatedHistory);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_CommitPendingTransition);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_PushOwningClientBatch);
@@ -767,6 +768,50 @@ namespace ck
         // future delta payloads down to only seqs we haven't yet processed.
         auto& ReplayState = InHandle.AddOrGet<FFragment_Sm_ClientReplayState>();
         ReplayState.Set_ClientLastAppliedSeq(Event.Get_Seq());
+    }
+
+    // ================================================================================================================
+    // FIRST-SYNC INITIAL STATE
+    // ================================================================================================================
+
+    auto
+        FProcessor_Sm_FirstSyncInitialState::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Sm_Params& InParams,
+            FFragment_Sm_Current& InCurrent) const
+        -> void
+    {
+        InHandle.Try_Remove<FTag_Sm_NeedsInitialStateEntry>();
+
+        // WithHistory only. NoHistory SMs snap to the replicated _CurrentStateClass via their own
+        // OnChange handler — they never sit at <none> and a first-sync here would race/duplicate it.
+        if (InParams.Get_ReplicationModel() != ECk_Sm_ReplicationModel::WithHistory)
+        { return; }
+
+        // Idempotence guards: only enter when the SM is actually Running and hasn't already
+        // acquired a state via the replay path (RunBefore ApplyReplicatedHistory +
+        // TExclude<PendingTransition> normally prevent the race, but stay defensive).
+        if (InCurrent.Get_RunStatus() != ECk_SmRunStatus::Running)
+        { return; }
+
+        if (ck::IsValid(InCurrent.Get_CurrentStateHandle()))
+        { return; }
+
+        // Enter the locally-known initial state (DoEnterState resolves it through the override
+        // map). No publish: this is a local reconstruction on a non-authority machine, mirroring
+        // how the replay path reconstructs transitions.
+        FProcessor_Sm_HandleRequests::DoEnterState(InHandle, InCurrent, InParams.Get_InitialStateClass());
+
+        // Initial-entry fire with PreviousStateClass=null, matching the authority's DoStart so
+        // non-owning consumers (visuals, per-state logic) get the same clean initial pulse.
+        UUtils_Signal_OnSmStateChanged::Broadcast(InHandle,
+            MakePayload(InHandle, FCk_Sm_Payload_OnStateChanged{
+                TSubclassOf<UCk_SmState_EntityScript>{},
+                InCurrent.Get_CurrentStateClass(),
+                InCurrent.Get_CurrentStateHandle()
+            }));
     }
 
     // ================================================================================================================
