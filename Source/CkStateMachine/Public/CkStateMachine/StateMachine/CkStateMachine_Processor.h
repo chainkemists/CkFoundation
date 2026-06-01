@@ -93,6 +93,7 @@ namespace ck
         using MarkedDirtyBy = FFragment_Sm_Requests;
 
         friend class FProcessor_Sm_CommitPendingTransition;
+        friend class FProcessor_Sm_FirstSyncInitialState;
 
     public:
         using TProcessor::TProcessor;
@@ -170,6 +171,48 @@ namespace ck
     // declaring it first keeps the replay path next to the request path it complements.
     class FProcessor_Sm_CommitPendingTransition;
     class FProcessor_Sm_ApplyReplicatedHistory;
+
+    // ================================================================================================================
+    // FIRST-SYNC INITIAL STATE — Non-authority machines enter their initial state on first sync.
+    //
+    // The authority enters its initial state via DoStart (Request_Start). Non-authority machines
+    // never run Start (single-authority rule) and the initial entry is not a replayed transition,
+    // so without this they sit at <none> until the first transition replays — and a sink-state SM
+    // would stay <none> forever. MirrorRunStatus tags the SM (FTag_Sm_NeedsInitialStateEntry) when
+    // it first learns the SM is Running with no current state; this processor enters the locally-
+    // known initial state (resolved through the override map) and fires the initial OnSmStateChanged
+    // (PreviousStateClass=null), matching standalone/owning behaviour. Runs BEFORE ApplyReplicatedHistory
+    // so the initial state is in place before any transition drains; TExclude<PendingTransition>
+    // keeps it from racing an in-flight transition. No publish — each machine reconstructs locally
+    // from the replicated run-status, exactly like the replay path reconstructs transitions.
+    // ================================================================================================================
+
+    class CKSTATEMACHINE_API FProcessor_Sm_FirstSyncInitialState : public ck_exp::TProcessor<
+        FProcessor_Sm_FirstSyncInitialState,
+        FCk_Handle_StateMachine,
+        TReadOnly<FFragment_Sm_Params>,
+        TReadWrite<FFragment_Sm_Current>,
+        TExclude<FFragment_Sm_PendingTransition>,
+        TExclude<FTag_Sm_DeterminismFault>,
+        TExclude<FTag_Sm_RequiresSetup>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group         = FGroup_Gameplay_AI;
+        using RunBefore     = TDepList<FProcessor_Sm_ApplyReplicatedHistory>;
+        using MarkedDirtyBy = FTag_Sm_NeedsInitialStateEntry;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Sm_Params& InParams,
+            FFragment_Sm_Current& InCurrent) const -> void;
+    };
 
     // ================================================================================================================
     // FLUSH PENDING REPLICATION — DRAIN — Releases stashed rep entries into the replay queue.
