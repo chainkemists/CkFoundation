@@ -105,6 +105,10 @@ private:
     auto DoSpawnAndRegister_Channel(
         const TFunction<void(ACk_ActorRelay_UE*)>& InPreFinishSpawnFunc = nullptr) -> ACk_ActorRelay_UE*;
 
+    // Per-pool warm (eager) spawn count: the project-wide warm setting clamped to this group's
+    // Get_ChannelCount() cap, floored at 1 (an empty pool can never resolve or grow).
+    auto Get_WarmChannelCount() const -> int32;
+
     auto DoSpawnChannels() -> void;
     auto DoSpawnChannels_Server() -> void;
     auto DoSpawnChannels_ForPlayer(APlayerController* InPlayerController) -> void;
@@ -113,6 +117,15 @@ private:
     auto DoSelectChannel_FromPool(
         TArray<TObjectPtr<ACk_ActorRelay_UE>>& InPool,
         int32& InOutRoundRobinIndex) const -> FCk_ActorRelay_ChannelResult;
+
+    // Server-side, capacity-driven grow-to-cap. When every channel in the pool is ECS-ready
+    // AND at Get_MaxEntitiesPerChannel(), and the pool is under the Get_ChannelCount() cap,
+    // spawn one more channel. The new channel replicates, becomes ready, and broadcasts
+    // ChannelReadyChanged — which re-drives any pending acquire through the existing retry path.
+    // No-op for unlimited-capacity groups (Get_MaxEntitiesPerChannel() == 0, e.g. Generic).
+    auto DoMaybeGrowPool(
+        TArray<TObjectPtr<ACk_ActorRelay_UE>>& InPool,
+        APlayerState* InOwnerPlayerState) -> void;
 
     auto DoGet_EntityCountOnChannel(
         ACk_ActorRelay_UE* InChannelActor) const -> int32;

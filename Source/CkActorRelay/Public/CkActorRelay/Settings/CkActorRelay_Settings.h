@@ -27,9 +27,15 @@ private:
             ToolTip = "Number of server-owned relay channels spawned for the generic ActorRelay group. Higher values distribute entity load across more actors at the cost of more replicated actors."))
     int32 _GenericChannelCount = 30;
 
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Execution",
+        meta = (AllowPrivateAccess = true, ClampMin = "1", ClampMax = "200",
+            ToolTip = "Number of relay channels each pool spawns 'warm' (eagerly). Pools grow lazily toward the group's channel-count cap as channels saturate (only for capacity-limited groups). Keeping this small avoids a large replicated-actor burst when a client joins."))
+    int32 _WarmChannelCount = 2;
+
 public:
     CK_PROPERTY_GET(_PendingChannelTimeoutSeconds);
     CK_PROPERTY_GET(_GenericChannelCount);
+    CK_PROPERTY_GET(_WarmChannelCount);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -52,6 +58,11 @@ public:
               Category = "Ck|Utils|ActorRelay|Settings")
     static int32
     Get_GenericChannelCount();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|ActorRelay|Settings")
+    static int32
+    Get_WarmChannelCount();
 };
 
 // --------------------------------------------------------------------------------------------------------------------

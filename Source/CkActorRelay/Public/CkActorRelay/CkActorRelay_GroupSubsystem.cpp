@@ -3,6 +3,7 @@
 #include "CkActorRelay_Subsystem.h"
 
 #include "CkActorRelay/CkActorRelay_Log.h"
+#include "CkActorRelay/Settings/CkActorRelay_Settings.h"
 
 #include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/Algorithms/CkAlgorithms.h"
@@ -253,7 +254,14 @@ auto
             if (_ServerChannels.Num() == 0)
             { return {}; }
 
-            return DoSelectChannel_FromPool(_ServerChannels, _ServerRoundRobinIndex);
+            auto Result = DoSelectChannel_FromPool(_ServerChannels, _ServerRoundRobinIndex);
+
+            if (ck::Is_NOT_Valid(Result))
+            {
+                DoMaybeGrowPool(_ServerChannels, nullptr);
+            }
+
+            return Result;
         }
         case ECk_ActorRelay_AcquireKind::ForPlayer:
         {
@@ -266,7 +274,14 @@ auto
             { return {}; }
 
             auto& RoundRobinIndex = _PlayerRoundRobinIndices.FindOrAdd(PlayerState, 0);
-            return DoSelectChannel_FromPool(*FoundPool, RoundRobinIndex);
+            auto Result = DoSelectChannel_FromPool(*FoundPool, RoundRobinIndex);
+
+            if (ck::Is_NOT_Valid(Result))
+            {
+                DoMaybeGrowPool(*FoundPool, PlayerState);
+            }
+
+            return Result;
         }
         case ECk_ActorRelay_AcquireKind::Any:
         {
@@ -413,6 +428,59 @@ auto
     return UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(ChannelEntity).Num();
 }
 
+auto
+    UCk_ActorRelay_Group_Subsystem_Base_UE::
+    DoMaybeGrowPool(
+        TArray<TObjectPtr<ACk_ActorRelay_UE>>& InPool,
+        APlayerState* InOwnerPlayerState)
+    -> void
+{
+    // Channel spawning is server-authoritative; never grow on a client.
+    if (GetWorld()->IsNetMode(NM_Client))
+    { return; }
+
+    const auto MaxEntities = Get_MaxEntitiesPerChannel();
+
+    // Unlimited-capacity groups (e.g. Generic, MaxEntities == 0) host everything on a single
+    // channel, so there is no saturation to react to — the warm pool is their steady state.
+    if (MaxEntities <= 0)
+    { return; }
+
+    if (InPool.Num() >= Get_ChannelCount())
+    { return; }
+
+    // Only grow once EVERY channel is both ECS-ready and full. A not-yet-ready channel means a
+    // previous grow (or the warm pool) is still coming online — wait for it rather than spawning
+    // a burst of channels, which would re-create the very Iris first-packet pressure this
+    // lazy-spawn change exists to avoid.
+    for (const auto& Channel : InPool)
+    {
+        const auto IsReadyAndFull =
+            ck::IsValid(Channel) &&
+            UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(Channel) &&
+            DoGet_EntityCountOnChannel(Channel) >= MaxEntities;
+
+        if (NOT IsReadyAndFull)
+        { return; }
+    }
+
+    ck::actorrelay::Log(TEXT("Growing pool for group [{}] to [{}] channels (capacity-driven)"),
+        Get_GroupTag(), InPool.Num() + 1);
+
+    if (ck::IsValid(InOwnerPlayerState))
+    {
+        [[maybe_unused]] auto Channel = DoSpawnAndRegister_Channel(
+            [InOwnerPlayerState](ACk_ActorRelay_UE* InNewChannel)
+            {
+                InNewChannel->SetOwner(InOwnerPlayerState);
+            });
+    }
+    else
+    {
+        [[maybe_unused]] auto Channel = DoSpawnAndRegister_Channel();
+    }
+}
+
 /*-----------------------------------------------------------------------------
                           ACTOR REGISTRATION
 ------------------------------------------------------------------------------*/
@@ -482,12 +550,22 @@ auto
 
 auto
     UCk_ActorRelay_Group_Subsystem_Base_UE::
+    Get_WarmChannelCount() const
+    -> int32
+{
+    const auto WarmCount = UCk_Utils_ActorRelay_Settings_UE::Get_WarmChannelCount();
+    return FMath::Clamp(WarmCount, 1, Get_ChannelCount());
+}
+
+auto
+    UCk_ActorRelay_Group_Subsystem_Base_UE::
     DoSpawnChannels_Server()
     -> void
 {
-    const auto NumChannels = Get_ChannelCount();
+    const auto NumChannels = Get_WarmChannelCount();
 
-    ck::actorrelay::Log(TEXT("Spawning [{}] server channels for group [{}]"), NumChannels, Get_GroupTag());
+    ck::actorrelay::Log(TEXT("Spawning [{}] warm server channels (cap [{}]) for group [{}]"),
+        NumChannels, Get_ChannelCount(), Get_GroupTag());
 
     for (auto Index = 0; Index < NumChannels; ++Index)
     {
@@ -507,10 +585,10 @@ auto
     if (AlreadyRegistered)
     { return; }
 
-    const auto NumChannels = Get_ChannelCount();
+    const auto NumChannels = Get_WarmChannelCount();
 
-    ck::actorrelay::Log(TEXT("Spawning [{}] player channels for PlayerController [{}] in group [{}]"),
-        NumChannels, InPlayerController->GetName(), Get_GroupTag());
+    ck::actorrelay::Log(TEXT("Spawning [{}] warm player channels (cap [{}]) for PlayerController [{}] in group [{}]"),
+        NumChannels, Get_ChannelCount(), InPlayerController->GetName(), Get_GroupTag());
 
     for (auto Index = 0; Index < NumChannels; ++Index)
     {
