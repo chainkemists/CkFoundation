@@ -9,6 +9,9 @@
 
 #include "Components/CanvasPanel.h"
 #include "Components/SizeBox.h"
+#include "Components/WidgetComponent.h"
+
+#include "Engine/EngineTypes.h"
 
 #include "CkWorldSpaceWidget_Fragment_Data.generated.h"
 
@@ -44,6 +47,116 @@ enum class ECk_WorldSpaceWidget_Scaling_Policy : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_WorldSpaceWidget_Scaling_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// ScreenOverlay (default): the widget is projected world->screen each frame and
+// drawn as a 2D viewport overlay (always screen-facing/billboard, constant pixel
+// size; depth-occlusion only via the OcclusionInfo anchor trace).
+// WorldComponent: the widget is a real 3D UWidgetComponent (Space=World) — fixed
+// world orientation, true perspective scaling, free per-pixel GPU occlusion.
+// Matches the legacy /Script/UMG.WidgetComponent callout.
+UENUM(BlueprintType)
+enum class ECk_WorldSpaceWidget_RenderMode : uint8
+{
+    ScreenOverlay,
+    WorldComponent
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_WorldSpaceWidget_RenderMode);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Consumed only when RenderMode == WorldComponent. The content widget instance
+// (Params._Widget) is handed to the UWidgetComponent via SetWidget — we do NOT
+// rely on the component's own InitWidget/SetWidgetClass instantiation, which is
+// unreliable for runtime-created components.
+USTRUCT(BlueprintType)
+struct CKUI_API FCk_WorldSpaceWidget_WorldComponentInfo
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_WorldSpaceWidget_WorldComponentInfo);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
+    FIntPoint _DrawSize = FIntPoint{512, 512};
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
+    FVector2D _Pivot = FVector2D{0.5f, 0.5f};
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
+    EWidgetBlendMode _BlendMode = EWidgetBlendMode::Masked;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
+    EWidgetGeometryMode _GeometryMode = EWidgetGeometryMode::Plane;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
+    bool _TwoSided = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
+    TObjectPtr<UMaterialInterface> _OverrideMaterial;
+
+public:
+    CK_PROPERTY(_DrawSize);
+    CK_PROPERTY(_Pivot);
+    CK_PROPERTY(_BlendMode);
+    CK_PROPERTY(_GeometryMode);
+    CK_PROPERTY(_TwoSided);
+    CK_PROPERTY(_OverrideMaterial);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_WorldSpaceWidget_WorldComponentInfo, _DrawSize);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// HideWhenOccluded: each frame, trace from the player camera to the widget's
+// world anchor (player pawn ignored); on a blocking hit the overlay is faded to
+// zero opacity. Per-anchor occlusion (whole-widget), not per-pixel GPU masking —
+// the render path stays a screen-space projection. Mirrors the legacy
+// WorldSpaceWidgets plugin's bShouldBeOccluded behaviour.
+UENUM(BlueprintType)
+enum class ECk_WorldSpaceWidget_Occlusion_Policy : uint8
+{
+    None,
+    HideWhenOccluded
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_WorldSpaceWidget_Occlusion_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKUI_API FCk_WorldSpaceWidget_OcclusionInfo
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_WorldSpaceWidget_OcclusionInfo);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
+    ECk_WorldSpaceWidget_Occlusion_Policy _OcclusionPolicy = ECk_WorldSpaceWidget_Occlusion_Policy::None;
+
+    // Legacy WorldSpaceWidgets traced on ECC_Camera; kept as the default.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true, EditCondition="_OcclusionPolicy == ECk_WorldSpaceWidget_Occlusion_Policy::HideWhenOccluded"))
+    TEnumAsByte<ECollisionChannel> _TraceChannel = ECollisionChannel::ECC_Camera;
+
+public:
+    CK_PROPERTY_GET(_OcclusionPolicy);
+    CK_PROPERTY(_TraceChannel);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_WorldSpaceWidget_OcclusionInfo, _OcclusionPolicy);
+};
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -163,6 +276,18 @@ private:
         meta=(AllowPrivateAccess = true))
     FCk_WorldSpaceWidget_FadingInfo _FadingInfo;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
+    FCk_WorldSpaceWidget_OcclusionInfo _OcclusionInfo;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
+    ECk_WorldSpaceWidget_RenderMode _RenderMode = ECk_WorldSpaceWidget_RenderMode::ScreenOverlay;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true, EditCondition="_RenderMode == ECk_WorldSpaceWidget_RenderMode::WorldComponent"))
+    FCk_WorldSpaceWidget_WorldComponentInfo _WorldComponentInfo;
+
 public:
     CK_PROPERTY_GET(_Widget);
     CK_PROPERTY_GET(_InitialViewportOperation);
@@ -170,6 +295,9 @@ public:
     CK_PROPERTY(_LocationInfo);
     CK_PROPERTY(_ScalingInfo);
     CK_PROPERTY(_FadingInfo);
+    CK_PROPERTY(_OcclusionInfo);
+    CK_PROPERTY(_RenderMode);
+    CK_PROPERTY(_WorldComponentInfo);
 
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_WorldSpaceWidget_ParamsData, _Widget, _InitialViewportOperation, _ZOrder);
 };

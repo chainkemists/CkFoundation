@@ -12,6 +12,15 @@ namespace ck
         , _WidgetOwningPlayer(InWrapperWidget->GetOwningPlayer())
     {
     }
+
+    FFragment_WorldSpaceWidget_Current::
+        FFragment_WorldSpaceWidget_Current(
+            UWidgetComponent* InWidgetComponent,
+            UUserWidget* InContentWidget)
+        : _ContentWidgetHardRef(InContentWidget)
+        , _WidgetComponent(InWidgetComponent)
+    {
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -54,6 +54,14 @@ public:
         const FCk_Handle& InHandle);
 
 public:
+    UFUNCTION(BlueprintCallable, BlueprintCosmetic,
+              Category = "Ck|Utils|WorldSpaceWidget",
+              DisplayName="[Ck][WorldSpaceWidget] Request Set Enabled")
+    static FCk_Handle_WorldSpaceWidget
+    Request_SetEnabled(
+        UPARAM(ref) FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle,
+        bool InEnabled);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|WorldSpaceWidget",
               DisplayName="[Ck][WorldSpaceWidget] Get Widget Instance")
@@ -89,6 +97,16 @@ private:
 private:
     static auto
     DoAdd(
+        FCk_Handle_Transform& InHandle,
+        const FCk_Fragment_WorldSpaceWidget_ParamsData& InParams) -> FCk_Handle_WorldSpaceWidget;
+
+    static auto
+    DoAdd_ScreenOverlay(
+        FCk_Handle_Transform& InHandle,
+        const FCk_Fragment_WorldSpaceWidget_ParamsData& InParams) -> FCk_Handle_WorldSpaceWidget;
+
+    static auto
+    DoAdd_WorldComponent(
         FCk_Handle_Transform& InHandle,
         const FCk_Fragment_WorldSpaceWidget_ParamsData& InParams) -> FCk_Handle_WorldSpaceWidget;
 };
