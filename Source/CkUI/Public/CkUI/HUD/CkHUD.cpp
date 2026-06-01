@@ -4,6 +4,7 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
+#include "CkUI/Layout/CkUI_LayoutConfigAsset.h"
 #include "CkUI/Layout/CkUI_Layout_Subsystem.h"
 #include "CkUI/Layout/CkUI_PrimaryGameLayout.h"
 
@@ -78,6 +79,12 @@ auto
     DoInitializeUI()
     -> void
 {
+    // Resolve the soft layout-config ref here (game thread, BeginPlay) rather than from a CDO-time hard-ref default,
+    // which a packaged client cannot block-load safely (it can run on a worker thread during async load) and so leaves
+    // the hard ref null. The hard ref still wins when an editor/C++ subclass set it directly.
+    if (ck::Is_NOT_Valid(_LayoutConfigAsset) && (_LayoutConfigAssetSoft.IsNull() == false))
+    { _LayoutConfigAsset = _LayoutConfigAssetSoft.LoadSynchronous(); }
+
     CK_ENSURE_IF_NOT(ck::IsValid(_LayoutConfigAsset),
         TEXT("HUD [{}] requires a valid LayoutConfigAsset to initialize UI"), this)
     { return; }

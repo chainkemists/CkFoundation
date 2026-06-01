@@ -109,8 +109,20 @@ private:
         meta = (AllowPrivateAccess = true))
     TObjectPtr<UCk_UI_LayoutConfigAsset_UE> _LayoutConfigAsset;
 
+    /**
+     * Soft reference to the layout config. Prefer this over the hard _LayoutConfigAsset for AngelScript / data-driven
+     * subclasses: a hard-ref default is evaluated at CDO/class-registration time (and can run on a worker thread during
+     * async package load), where a blocking load is unsafe and resolves to null — leaving the HUD with no layout. This
+     * soft ref carries only a path at CDO time and is resolved on the game thread in DoInitializeUI (BeginPlay), where
+     * a synchronous load is safe. If both are set, the hard ref wins.
+     */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ck|UI",
+        meta = (AllowPrivateAccess = true))
+    TSoftObjectPtr<UCk_UI_LayoutConfigAsset_UE> _LayoutConfigAssetSoft;
+
 public:
     CK_PROPERTY_GET(_LayoutConfigAsset);
+    CK_PROPERTY_GET(_LayoutConfigAssetSoft);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
