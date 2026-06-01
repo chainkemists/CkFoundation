@@ -3,6 +3,8 @@
 #include "CkCore/CkCoreLog.h"
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include <CoreGlobals.h>
+#include <Misc/CommandLine.h>
 #include <Interfaces/IPluginManager.h>
 #include <Engine/AssetManager.h>
 #include <Engine/Engine.h>
@@ -58,6 +60,32 @@ auto
     { GBlockingLoadWasQueriedWhileUnsafe = true; }
 
     return GIsEngineSafeForBlockingLoads;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_IO_UE::
+    Get_IsRunningCommandlet()
+    -> bool
+{
+    // IsRunningCommandlet() reads PRIVATE_GIsRunningCommandlet, which is set during PreInit —
+    // but a handful of very-early Angelscript CDO constructions fire before that point (we saw
+    // ~130 first-pass blocking-load ensures slip through during cook when relying on the flag
+    // alone). The command line is populated from process start, so also detect a commandlet run
+    // (cook etc.) directly from "-run=". This keeps the diagnostic loud in editor/PIE/game (no
+    // "-run="), while never failing a cook over the benign first-pass loads that the
+    // UCk_DeferredAssetInit_UE sweep heals at runtime.
+    if (::IsRunningCommandlet() || ::IsRunningCookCommandlet())
+    { return true; }
+
+    // Re-evaluated every call (NOT cached): the very first early-init query can run before the
+    // command line is fully populated, so caching that first read would wrongly stick at false
+    // for the rest of the cook. By offender-time the editor's command line carries "-run=Cook"
+    // / "-TargetPlatform=", so a live read reliably identifies the cook.
+    const auto CmdLine = FString{FCommandLine::Get()};
+    return CmdLine.Contains(TEXT("-run="), ESearchCase::IgnoreCase)
+        || CmdLine.Contains(TEXT("-TargetPlatform="), ESearchCase::IgnoreCase);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -406,6 +434,11 @@ auto
     auto Filter = FARFilter{};
     Filter.bRecursivePaths = true;
     Filter.PackagePaths = SearchPaths;
+    // In-memory asset enumeration is game-thread-only (EnumerateMemoryAssetsHelper asserts off it).
+    // These lookups can run off the game thread — e.g. an AS class PostInit calling an asset-search
+    // util during threaded AngelScript init. Off-thread, restrict to on-disk assets (cooked assets
+    // always qualify); on the game thread keep the full search so unsaved editor assets are found.
+    Filter.bIncludeOnlyOnDiskAssets = NOT IsInGameThread();
 
     // Get assets
     auto AssetDataList = TArray<FAssetData>{};
@@ -531,6 +564,9 @@ auto
         auto NameFilter = FARFilter{};
         NameFilter.bRecursivePaths = true;
         NameFilter.PackagePaths = Get_SearchPaths(SearchScope);
+        // On-disk-only off the game thread — see note above; this is the path that crashed during
+        // threaded AS init (LoadAssetByName from an AS class PostInit).
+        NameFilter.bIncludeOnlyOnDiskAssets = NOT IsInGameThread();
 
         if (ck::IsValid(AssetClass, ck::IsValid_Policy_NullptrOnly{}))
         {
@@ -655,6 +691,8 @@ auto
     auto Filter = FARFilter{};
     Filter.bRecursivePaths = true;
     Filter.PackagePaths = SearchPaths;
+    // On-disk-only off the game thread — see note above (avoids the off-thread AssetRegistry assert).
+    Filter.bIncludeOnlyOnDiskAssets = NOT IsInGameThread();
 
     if (ck::IsValid(AssetClass, ck::IsValid_Policy_NullptrOnly{}))
     {
@@ -675,6 +713,7 @@ auto
             auto PathFilter = FARFilter{};
             PathFilter.bRecursivePaths = true;
             PathFilter.PackagePaths.Add(Path);
+            PathFilter.bIncludeOnlyOnDiskAssets = NOT IsInGameThread();
 
             auto PathAssets = TArray<FAssetData>{};
             AssetRegistry.GetAssets(PathFilter, PathAssets);
