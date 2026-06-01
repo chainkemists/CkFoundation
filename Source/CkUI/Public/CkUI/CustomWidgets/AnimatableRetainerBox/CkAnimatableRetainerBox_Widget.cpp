@@ -31,7 +31,7 @@ auto
     if (ck::IsValid(MyRetainerWidget))
     {
         PRAGMA_DISABLE_DEPRECATION_WARNINGS
-        MyRetainerWidget->SetRetainedRendering(IsDesignTime() ? ShowEffectsInDesigner : IsRetainRendering());
+        MyRetainerWidget->SetRetainedRendering(IsDesignTime() ? bShowEffectsPreview : IsRetainRendering());
         PRAGMA_ENABLE_DEPRECATION_WARNINGS
     }
 }
