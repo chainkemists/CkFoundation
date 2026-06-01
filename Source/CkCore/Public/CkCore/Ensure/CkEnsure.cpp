@@ -124,9 +124,22 @@ namespace ck::ensure
         const auto& AsStackTrace = IsMessageOnly ?
             TEXT("[AS StackTrace DISABLED]") :
             UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Angelscript(ck::type_traits::AsString{});
+
+        // UE::GetPlayInEditorID() has checkf(Value != -2), which is FATAL on the async loading
+        // thread: the engine keeps a separate PIE-ID slot per thread (CoreGlobals.cpp), and the
+        // loading-thread slots default to the -2 sentinel until a FPlayInEditorLoadingScope
+        // forwards a value. Only the pure game-thread slot is provably never -2 (inits to -1,
+        // only ever set to -1 or a real PIE id). The non-asserting PRIVATE_GetGPlayInEditorID()
+        // is not CORE_API-exported, so query the asserting accessor only when provably safe;
+        // otherwise feed -1, which flows through the same `- 1 < 0` test to "Server" (exactly
+        // what UE itself returns for worker threads). Used only for the [Server]/[Client] prefix.
+        const auto CanQueryPieId = IsInGameThread() && NOT IsInAsyncLoadingThread();
+        const auto PieId = CanQueryPieId ? UE::GetPlayInEditorID() : -1;
+        const auto* const ServerClientText = PieId - 1 < 0 ? TEXT("Server") : TEXT("Client");
+
         const auto& MessagePlusBpCallStack = ck::Format_UE(
             TEXT("[{}] {}\n{}\n\n == BP CallStack ==\n{}\n\n == AS CallStack ==\n{}"),
-            UE::GetPlayInEditorID() - 1 < 0 ? TEXT("Server") : TEXT("Client"),
+            ServerClientText,
             InExpressionText,
             InMessage,
             BpStackTrace,
@@ -145,7 +158,7 @@ namespace ck::ensure
         }
         const auto& CleanMessagePlusBpCallStack = ck::Format_UE(
             TEXT("[{}] {}\n{}{}"),
-            UE::GetPlayInEditorID() - 1 < 0 ? TEXT("Server") : TEXT("Client"),
+            ServerClientText,
             InExpressionText,
             InMessage,
             CleanScriptSections);
@@ -178,7 +191,7 @@ namespace ck::ensure
             // Show simplified notification without callstack (to avoid UI bugs)
             const auto& SimpleMessage = ck::Format_UE(
                 TEXT("[{}] {}\n{}"),
-                UE::GetPlayInEditorID() - 1 < 0 ? TEXT("Server") : TEXT("Client"),
+                ServerClientText,
                 InExpressionText,
                 InMessage);
 
@@ -239,8 +252,6 @@ namespace ck::ensure
             { UCk_Utils_Ensure_UE::Request_IgnoreEnsure_WithCallstack(BpStackTrace + AsStackTrace); }
             return;
         }
-
-        const auto& ServerClientText = UE::GetPlayInEditorID() - 1 < 0 ? TEXT("Server") : TEXT("Client");
 
         // Tail-trim engine boilerplate frames from the C++ stack for user-facing surfaces
         // (dialog + clipboard). The log above keeps the full trace.
