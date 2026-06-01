@@ -670,10 +670,20 @@ auto
 
                         LoadFunction += ck::Format_UE(TEXT("    {} {}()\n"), AssetType, FinalAssetName);
                         LoadFunction += TEXT("    {\n");
-                        LoadFunction += ck::Format_UE(
-                            TEXT("        if (ck::EnsureIfNot(UCk_Utils_IO_UE::IsEngineSafeForBlockingLoads(), \"{}::load::{}() called before engine init. Use {}::{}() (soft ref) with UCk_DeferredConfig_UE instead.\"))\n"),
-                            InConfig->Namespace, FinalAssetName, InConfig->Namespace, FinalAssetName);
-                        LoadFunction += TEXT("        { return nullptr; }\n");
+                        // Before engine-init, blocking loads are unsafe → return null so the query trips
+                        // WasBlockingLoadQueriedWhileUnsafe and UCk_DeferredAssetInit_UE re-runs post-init.
+                        // Fire LOUD (ck::EnsureIfNot) so a premature assets::load::X() call site is caught —
+                        // the message names the soft-ref replacement. Gated on Get_IsRunningCommandlet() so it
+                        // stays SILENT during cook (firing in the cook commandlet produces InExpression errors).
+                        // Firing during a real client boot is safe because ck::ensure::Ensure_Impl no longer
+                        // calls the loading-thread-fatal UE::GetPlayInEditorID() off the game thread — see the
+                        // 2026-05-31 root-cause fix in CkEnsure.cpp (the asserting accessor was the actual
+                        // boot-crash, NOT the ensure volume).
+                        LoadFunction += TEXT("        if (UCk_Utils_IO_UE::IsEngineSafeForBlockingLoads() == false)\n");
+                        LoadFunction += TEXT("        {\n");
+                        LoadFunction += ck::Format_UE(TEXT("            ck::EnsureIfNot(UCk_Utils_IO_UE::Get_IsRunningCommandlet(), \"{}::load::{}() called before engine init. Use {}::{}() (soft ref) with UCk_DeferredConfig_UE instead.\");\n"), InConfig->Namespace, FinalAssetName, InConfig->Namespace, FinalAssetName);
+                        LoadFunction += TEXT("            return nullptr;\n");
+                        LoadFunction += TEXT("        }\n");
                         LoadFunction += ck::Format_UE(TEXT("        return System::LoadAsset_Blocking({}::{}());\n"), InConfig->Namespace, FinalAssetName);
                         LoadFunction += TEXT("    }\n");
 
@@ -687,10 +697,12 @@ auto
 
                             LoadFunction += ck::Format_UE(TEXT("    TSubclassOf<{}> {}_Class()\n"), AssetType, FinalAssetName);
                             LoadFunction += TEXT("    {\n");
-                            LoadFunction += ck::Format_UE(
-                                TEXT("        if (ck::EnsureIfNot(UCk_Utils_IO_UE::IsEngineSafeForBlockingLoads(), \"{}::load::{}_Class() called before engine init. Use {}::{}_Class() (soft ref) with UCk_DeferredConfig_UE instead.\"))\n"),
-                                InConfig->Namespace, FinalAssetName, InConfig->Namespace, FinalAssetName);
-                            LoadFunction += TEXT("        { return nullptr; }\n");
+                            // See note above: loud commandlet-gated ensure, safe post the CkEnsure.cpp fix.
+                            LoadFunction += TEXT("        if (UCk_Utils_IO_UE::IsEngineSafeForBlockingLoads() == false)\n");
+                            LoadFunction += TEXT("        {\n");
+                            LoadFunction += ck::Format_UE(TEXT("            ck::EnsureIfNot(UCk_Utils_IO_UE::Get_IsRunningCommandlet(), \"{}::load::{}_Class() called before engine init. Use {}::{}_Class() (soft ref) with UCk_DeferredConfig_UE instead.\");\n"), InConfig->Namespace, FinalAssetName, InConfig->Namespace, FinalAssetName);
+                            LoadFunction += TEXT("            return nullptr;\n");
+                            LoadFunction += TEXT("        }\n");
                             LoadFunction += ck::Format_UE(TEXT("        return System::LoadClassAsset_Blocking({}::{}_Class());\n"), InConfig->Namespace, FinalAssetName);
                             LoadFunction += TEXT("    }\n");
 
