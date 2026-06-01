@@ -157,6 +157,14 @@ private:
               meta = (AllowPrivateAccess = true))
     TObjectPtr<UStaticMesh> _Mesh;
 
+    // Authoring prefers this soft ref (assets::Foo()) over an eager assets::load::Foo() into _Mesh:
+    // the blocking load behind assets::load ensures during cook (AS-load runs before the engine is
+    // load-safe), nulling _Mesh. Get_Mesh() resolves this lazily at first consumption (post-init).
+    // If both are set, _Mesh wins.
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    TSoftObjectPtr<UStaticMesh> _MeshSoft;
+
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
     FCk_IsmRenderer_MaterialsInfo _MaterialsInfo;
@@ -188,7 +196,11 @@ private:
 public:
     CK_PROPERTY_GET(_Mobility);
     CK_PROPERTY_GET(_UpdatePolicy);
-    CK_PROPERTY_GET(_Mesh);
+    // Hand-written (not CK_PROPERTY_GET) so it can lazily resolve _MeshSoft into _Mesh on first
+    // read. Every consumer (Setup processor, init functor, subsystem GetOrCreate, proxy utils)
+    // routes through here, so resolution is order-independent and cached after the first call.
+    auto Get_Mesh() const -> const TObjectPtr<UStaticMesh>&;
+    CK_PROPERTY_GET(_MeshSoft);
     CK_PROPERTY_GET(_MaterialsInfo);
     CK_PROPERTY_GET(_PhysicsInfo);
     CK_PROPERTY_GET(_LightingInfo);
