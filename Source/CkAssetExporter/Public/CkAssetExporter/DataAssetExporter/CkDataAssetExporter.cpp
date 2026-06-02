@@ -37,8 +37,8 @@ namespace ck_data_asset_exporter_internal
     // encounters emit a path reference with "alreadyExported": true instead of
     // descending again. Thread-local so it's safe under any caller threading model.
     // Reset at the top of each ExportDataAsset call.
-    static constexpr int32 GMaxObjectRecursionDepth   = 8;
-    static constexpr int32 GMaxPropertyRecursionDepth = 64;
+    static constexpr int32 GMaxObjectRecursionDepth   = 24;
+    static constexpr int32 GMaxPropertyRecursionDepth = 128;
     thread_local int32 GObjectRecursionDepth   = 0;
     thread_local int32 GPropertyRecursionDepth = 0;
     thread_local TSet<const UObject*> GObjectsAlreadyExported;
