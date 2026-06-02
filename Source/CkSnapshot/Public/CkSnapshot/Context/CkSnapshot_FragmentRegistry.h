@@ -15,13 +15,22 @@ class FArchive;
 
 namespace ck
 {
+    // Forward-declared so the registry stays on the FragmentRegistry -> (nothing) side of the include graph.
+    // The Archive writer/reader includes FragmentRegistry (for DoSerializeSnapshot_OneInstance), so the
+    // dependency direction is Archive -> FragmentRegistry. The _Save/_Load closures below reference these
+    // types only in their std::function signatures and inside Do_RegisterSnapshotable<T>'s body; the body
+    // is a template, so the concrete Archive type only needs to be complete at the CK_REGISTER_SNAPSHOTABLE
+    // instantiation site (the fragment's .cpp, which includes the Archive headers).
+    class FSnapshotArchive_Writer;
+    class FSnapshotArchive_Reader;
+
     struct CKSNAPSHOT_API FCk_Snapshot_RegisteredFragment
     {
         FString  _DisplayName;
         uint32   _EnttTypeHash = 0;
 
-        std::function<void(entt::basic_snapshot<entt::registry>&,           FArchive&, FSnapshotContext&)> _Save;
-        std::function<void(entt::basic_continuous_loader<entt::registry>&,  FArchive&, FSnapshotContext&)> _Load;
+        std::function<void(entt::basic_snapshot<SnapshotRegistryType>&,          FSnapshotArchive_Writer&)> _Save;
+        std::function<void(entt::basic_continuous_loader<SnapshotRegistryType>&, FSnapshotArchive_Reader&)> _Load;
 
         UScriptStruct* _ScriptStruct = nullptr;
     };
@@ -68,14 +77,17 @@ namespace ck
                 Entry._ScriptStruct = T::StaticStruct();
             }
 
-            Entry._Save = [](entt::basic_snapshot<entt::registry>& InSnap, FArchive&, FSnapshotContext&) -> void
+            // entt's basic_snapshot::get<T>(Archive&) writes the storage for fragment type T, routing each
+            // instance through the supplied Archive callable (our FSnapshotArchive_Writer, which serializes
+            // T via DoSerializeSnapshot_OneInstance and routes entity handles through FSnapshotContext).
+            Entry._Save = [](entt::basic_snapshot<SnapshotRegistryType>& InSnap, FSnapshotArchive_Writer& InWriter) -> void
             {
-                InSnap.get<T>();
+                InSnap.template get<T>(InWriter);
             };
 
-            Entry._Load = [](entt::basic_continuous_loader<entt::registry>& InLoader, FArchive&, FSnapshotContext&) -> void
+            Entry._Load = [](entt::basic_continuous_loader<SnapshotRegistryType>& InLoader, FSnapshotArchive_Reader& InReader) -> void
             {
-                InLoader.get<T>();
+                InLoader.template get<T>(InReader);
             };
 
             FCk_Snapshot_FragmentRegistry::Get().Register(MoveTemp(Entry));
