@@ -372,15 +372,17 @@ auto
             return MakeShared<FJsonValueObject>(WrapperObject);
         }
 
+        // No address-based dedup for plain inline structs. Such structs are
+        // embedded by value (never heap-shared, never cyclic — a struct cannot
+        // contain itself by value), so an address can only "repeat" when a
+        // nested member lives at offset 0 of its parent: e.g. FTransform's first
+        // reflected member Rotation (FQuat) has the SAME address as the owning
+        // FTransform. Deduping by address there falsely collapses the member to
+        // an "alreadyExported" stub and the real data is lost. The genuine
+        // shared-reference cases (FInstancedStruct payloads, back-referencing
+        // UObjects) are deduped by their own dedicated guards; the property-depth
+        // budget above is the backstop against pathological nesting.
         auto StructObject = MakeShared<FJsonObject>();
-
-        if (GStructMemoryAlreadyExported.Contains(InValuePtr))
-        {
-            StructObject->SetBoolField(TEXT("alreadyExported"), true);
-            return MakeShared<FJsonValueObject>(StructObject);
-        }
-
-        GStructMemoryAlreadyExported.Add(InValuePtr);
 
         for (TFieldIterator<FProperty> It(StructProp->Struct); It; ++It)
         {
