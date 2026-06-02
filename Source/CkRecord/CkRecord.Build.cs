@@ -20,6 +20,10 @@ public class CkRecord : CkModuleRules
             "CkEcs",
             "CkLabel",
             "CkLog",
+
+            // Public: CkRecord_Fragment.h (a public header) includes CkSnapshot/Context/CkSnapshot_Context.h for
+            // TFragment_RecordOfEntities::SerializeSnapshot, so downstream consumers need the include path too.
+            "CkSnapshot",
         });
     }
 }

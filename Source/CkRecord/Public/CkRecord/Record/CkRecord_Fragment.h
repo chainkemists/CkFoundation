@@ -7,6 +7,12 @@
 
 #include "CkRecord/Record/CkRecord_Fragment_Data.h"
 
+// SerializeSnapshot routes each record-entry handle through FSnapshotContext::Snapshot_Handle, so the
+// complete FSnapshotContext type is required here (template body lives in the header).
+#include "CkSnapshot/Context/CkSnapshot_Context.h"
+
+class FArchive;
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_RecordOfEntities_UE;
@@ -20,6 +26,7 @@ namespace ck
     {
     public:
         CK_GENERATED_BODY(TFragment_RecordOfEntities<T_HandleType>);
+        using IsSnapshotable = void;
 
     public:
         friend class UCk_Utils_RecordOfEntities_UE;
@@ -50,6 +57,37 @@ namespace ck
 
     public:
         CK_DEFINE_CONSTRUCTORS(TFragment_RecordOfEntities, _EntryHandlingPolicy);
+
+    public:
+        // Tier-C: every record entry is an entity handle and MUST be remapped through FSnapshotContext.
+        // _RecordEntriesTagNamePairs is the persistent label->entry index (maintained imperatively as labeled
+        // entries are added/removed, NOT lazily rebuilt), so it is round-tripped too — both the FName label and
+        // the handle remap. _EntryHandlingPolicy is a plain enum.
+        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void
+        {
+            auto NumEntries = _RecordEntries.Num();
+            InAr << NumEntries;
+            if (InAr.IsLoading())
+            { _RecordEntries.SetNum(NumEntries); }
+
+            for (auto& Entry : _RecordEntries)
+            { InCtx.Snapshot_Handle(InAr, Entry); }
+
+            auto NumPairs = _RecordEntriesTagNamePairs.Num();
+            InAr << NumPairs;
+            if (InAr.IsLoading())
+            { _RecordEntriesTagNamePairs.SetNum(NumPairs); }
+
+            for (auto& Pair : _RecordEntriesTagNamePairs)
+            {
+                InAr << Pair.Key;
+                InCtx.Snapshot_Handle(InAr, Pair.Value);
+            }
+
+            auto PolicyRaw = static_cast<uint8>(_EntryHandlingPolicy);
+            InAr << PolicyRaw;
+            _EntryHandlingPolicy = static_cast<ECk_Record_EntryHandlingPolicy>(PolicyRaw);
+        }
     };
 }
 

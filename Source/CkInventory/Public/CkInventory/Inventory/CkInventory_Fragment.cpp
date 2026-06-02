@@ -1,1 +1,17 @@
 #include "CkInventory_Fragment.h"
+
+#include "CkSnapshot/Context/CkSnapshot_FragmentRegistry.h"
+#include "CkSnapshot/Archive/CkSnapshot_Archive_Writer.h"
+#include "CkSnapshot/Archive/CkSnapshot_Archive_Reader.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+// Tier-C SerializeSnapshot registration for the inventory record-of-entities fragments. ck:: types are hoisted to
+// unqualified file-scope aliases because CK_REGISTER_SNAPSHOTABLE token-pastes the type name (the `::` cannot be pasted).
+
+using FSnap_RecordOfInventories    = ck::FFragment_RecordOfInventories;
+using FSnap_RecordOfInventoryItems = ck::FFragment_RecordOfInventoryItems;
+
+CK_REGISTER_SNAPSHOTABLE(FSnap_RecordOfInventories);
+CK_REGISTER_SNAPSHOTABLE(FSnap_RecordOfInventoryItems);
+
+// --------------------------------------------------------------------------------------------------------------------
