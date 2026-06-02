@@ -7,6 +7,38 @@
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
+#include "CkSnapshot/Context/CkSnapshot_FragmentRegistry.h"
+#include "CkSnapshot/Archive/CkSnapshot_Archive_Writer.h"
+#include "CkSnapshot/Archive/CkSnapshot_Archive_Reader.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+// Tier-C SerializeSnapshot registration for the Byte attribute family. ck:: types are hoisted to unqualified
+// file-scope aliases because CK_REGISTER_SNAPSHOTABLE token-pastes the type name (the `::` cannot be pasted).
+
+using FSnap_ByteAttribute_Current = ck::FFragment_ByteAttribute_Current;
+using FSnap_ByteAttribute_Min     = ck::FFragment_ByteAttribute_Min;
+using FSnap_ByteAttribute_Max     = ck::FFragment_ByteAttribute_Max;
+
+CK_REGISTER_SNAPSHOTABLE(FSnap_ByteAttribute_Current);
+CK_REGISTER_SNAPSHOTABLE(FSnap_ByteAttribute_Min);
+CK_REGISTER_SNAPSHOTABLE(FSnap_ByteAttribute_Max);
+
+using FSnap_ByteAttributeModifier_Current = ck::FFragment_ByteAttributeModifier_Current;
+using FSnap_ByteAttributeModifier_Min     = ck::FFragment_ByteAttributeModifier_Min;
+using FSnap_ByteAttributeModifier_Max     = ck::FFragment_ByteAttributeModifier_Max;
+
+CK_REGISTER_SNAPSHOTABLE(FSnap_ByteAttributeModifier_Current);
+CK_REGISTER_SNAPSHOTABLE(FSnap_ByteAttributeModifier_Min);
+CK_REGISTER_SNAPSHOTABLE(FSnap_ByteAttributeModifier_Max);
+
+using FSnap_ByteAttribute_PreviousValues_Current = ck::TFragment_Attribute_PreviousValues<ck::FFragment_ByteAttribute_Current>;
+using FSnap_ByteAttribute_PreviousValues_Min     = ck::TFragment_Attribute_PreviousValues<ck::FFragment_ByteAttribute_Min>;
+using FSnap_ByteAttribute_PreviousValues_Max     = ck::TFragment_Attribute_PreviousValues<ck::FFragment_ByteAttribute_Max>;
+
+CK_REGISTER_SNAPSHOTABLE(FSnap_ByteAttribute_PreviousValues_Current);
+CK_REGISTER_SNAPSHOTABLE(FSnap_ByteAttribute_PreviousValues_Min);
+CK_REGISTER_SNAPSHOTABLE(FSnap_ByteAttribute_PreviousValues_Max);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
