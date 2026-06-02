@@ -103,6 +103,11 @@ Asset dependency viewer — shows which assets are loaded/unloaded by `CkResourc
 
 ## Non-editor-variant modules in this group
 
+### `CkPieLayoutEditor`
+**Depends on:** `CkCore`, `CkLog`, `CkSettings`. **No runtime twin** (`Type: Editor`).
+
+Auto-arranges Play-In-Editor (PIE) multiplayer windows into a monitor-aware grid after Play starts. Settings (`UCk_PieLayout_Settings_UE`) appear under Editor Preferences → CkFoundation → "PIE Play Grid" and persist to `EditorPerProjectUserSettings.ini`. The `UCk_PieLayout_Subsystem_UE` editor subsystem hooks `FEditorDelegates::PostPIEStarted`/`EndPIE`, runs an initial arrange pass after a configurable delay, then keeps a short retry window alive (driven by `FCk_Chrono` over an `FTSTicker`) so late-spawning client windows are also placed without re-moving already-arranged ones. The Tools → "Kirosho PlayGrid" menu adds "Open Preferences" and "Arrange PIE Windows Now". Supports four layout modes (Auto Balanced, Equal Grid, Host Focus, Compact) and four monitor targets (Primary, Editor, Mouse Cursor, Specific index).
+
 ### `CkBuildConfig`
 **Depends on:** nothing. **Used by:** `CkCore`, `CkLog`.
 
