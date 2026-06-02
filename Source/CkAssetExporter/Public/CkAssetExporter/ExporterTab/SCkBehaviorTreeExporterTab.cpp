@@ -353,7 +353,7 @@ auto
     auto FailCount = int32{0};
     for (const auto& R : Results)
     {
-        if (R.bSuccess) { ++SuccessCount; }
+        if (R.Succeeded) { ++SuccessCount; }
         else { ++FailCount; }
     }
 
@@ -383,7 +383,7 @@ auto
     {
         auto Entry = MakeShared<FCk_BehaviorTreeExporterTab_ResultEntry>();
         Entry->AssetName = Result.AssetName;
-        Entry->bSuccess = Result.bSuccess;
+        Entry->bSuccess = Result.Succeeded;
         Entry->JsonPath = Result.JsonFilePath;
         Entry->TextPath = Result.TextFilePath;
         Entry->ErrorMessage = Result.ErrorMessage;
