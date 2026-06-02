@@ -29,9 +29,10 @@ struct CKDYNAMIC_API FCk_Fragment_DynamicFragment_Data
 
 public:
     CK_GENERATED_BODY(FCk_Fragment_DynamicFragment_Data);
+    using IsSnapshotable = void;
 
 private:
-    UPROPERTY()
+    UPROPERTY(meta=(SaveGame))
     FInstancedStruct _StructData;
 
 public:
