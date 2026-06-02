@@ -48,22 +48,23 @@ struct CKATTRIBUTE_API FCk_Fragment_IntegerAttributeRefill_ParamsData
 
 public:
     CK_GENERATED_BODY(FCk_Fragment_IntegerAttributeRefill_ParamsData);
+    using IsSnapshotable = void;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "FloatAttribute"))
+              meta = (AllowPrivateAccess = true, Categories = "FloatAttribute", SaveGame))
     FGameplayTag _RefillAttributeName;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta=(AllowPrivateAccess, SaveGame))
     ECk_Attribute_Refill_Policy _RefillBehavior = ECk_Attribute_Refill_Policy::Variable;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta=(AllowPrivateAccess, SaveGame))
     float _FillRate = 0.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta=(AllowPrivateAccess, SaveGame))
     ECk_Attribute_RefillState _StartingState = ECk_Attribute_RefillState::Paused;
 
 public:
@@ -85,35 +86,36 @@ struct CKATTRIBUTE_API FCk_Fragment_IntegerAttribute_ParamsData
 
 public:
     CK_GENERATED_BODY(FCk_Fragment_IntegerAttribute_ParamsData);
+    using IsSnapshotable = void;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "IntegerAttribute"))
+              meta = (AllowPrivateAccess = true, Categories = "IntegerAttribute", SaveGame))
     FGameplayTag _Name;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, SaveGame))
     int32 _BaseValue = 0;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta=(AllowPrivateAccess, SaveGame))
     ECk_MinMax _MinMax = ECk_MinMax::None;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MinMax == ECk_MinMax::Min || _MinMax == ECk_MinMax::MinMax"))
+              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MinMax == ECk_MinMax::Min || _MinMax == ECk_MinMax::MinMax", SaveGame))
     int32 _MinValue = 0;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MinMax == ECk_MinMax::Max || _MinMax == ECk_MinMax::MinMax"))
+              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MinMax == ECk_MinMax::Max || _MinMax == ECk_MinMax::MinMax", SaveGame))
     int32 _MaxValue = 0;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, InlineEditConditionToggle))
+              meta = (AllowPrivateAccess = true, InlineEditConditionToggle, SaveGame))
     bool _EnableRefill = false;
 
     // Non-Replicated fill rate
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess, EditCondition = "_EnableRefill"))
+        meta=(AllowPrivateAccess, EditCondition = "_EnableRefill", SaveGame))
     FCk_Fragment_IntegerAttributeRefill_ParamsData _RefillParams;
 
 public:
