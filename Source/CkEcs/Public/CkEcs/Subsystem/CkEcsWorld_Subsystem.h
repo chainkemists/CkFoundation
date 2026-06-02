@@ -120,6 +120,16 @@ public:
     auto
     Request_RebuildProcessorGraph() -> void;
 
+    // Pumps every ticking-group scheduler with DeltaTime=0 so all pending deferred requests
+    // drain to quiescence WITHOUT advancing game time. Used by CkSnapshot before a capture so
+    // the snapshot reflects a settled (consistent) world. Each scheduler's Tick already loops
+    // its internal DoPump to quiescence (cap _MaxPumpIterations) and logs still-dirty processors.
+    // Returns the total pump-pass count across all schedulers (0 == already quiescent;
+    // a high count == lots of cascading work drained). Safe: skips any scheduler whose tick is
+    // already in progress (re-entrancy guard).
+    auto
+    Request_PumpToQuiescence() -> int32;
+
 private:
     auto DoBuildGraphAndSpawnActors(
         UWorld& InWorld) -> void;
