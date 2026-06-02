@@ -29,5 +29,10 @@ public class CkDynamic : CkModuleRules
             "CkRecord",
             "CkSettings",
         });
+
+        PrivateDependencyModuleNames.AddRange(new string[]
+        {
+            "CkSnapshot",
+        });
     }
 }
