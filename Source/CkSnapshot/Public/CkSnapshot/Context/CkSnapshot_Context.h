@@ -2,6 +2,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Registry/CkRegistry_SlotTable.h"
 
 #include "CkThirdParty/entt-3.16.0/src/entt/entity/registry.hpp"
 #include "CkThirdParty/entt-3.16.0/src/entt/entity/snapshot.hpp"
@@ -12,6 +13,16 @@ class FArchive;
 
 namespace ck
 {
+    // The entt registry type CkFoundation actually instantiates. ck::registry_table::EnttRegistryType
+    // is basic_registry<FCk_Entity::IdType, std::allocator<FCk_Entity::IdType>>, and FCk_Entity::IdType
+    // is entt::entity — so this is the SAME type as entt::registry (basic_registry<>). Aliasing it here
+    // (rather than hard-coding entt::registry) keeps the snapshot machinery pinned to the registry the
+    // ECs world owns: if the project ever swaps its entity id type, every snapshot template follows.
+    using SnapshotRegistryType = ck::registry_table::EnttRegistryType;
+    using SnapshotEntityType   = SnapshotRegistryType::entity_type;
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     // Threaded through every SerializeSnapshot(FArchive&, FSnapshotContext&) call.
     // On save: _Saver non-null, _Loader null. Snapshot_Handle writes the raw entity ID.
     // On load: _Loader non-null, _Saver null.  Snapshot_Handle consults continuous_loader's
@@ -31,10 +42,10 @@ namespace ck
     public:
         FSnapshotContext() = default;
 
-        explicit FSnapshotContext(entt::basic_snapshot<entt::registry>& InSaver)
+        explicit FSnapshotContext(entt::basic_snapshot<SnapshotRegistryType>& InSaver)
             : _Saver(&InSaver) {}
 
-        explicit FSnapshotContext(entt::basic_continuous_loader<entt::registry>& InLoader)
+        explicit FSnapshotContext(entt::basic_continuous_loader<SnapshotRegistryType>& InLoader)
             : _Loader(&InLoader) {}
 
     public:
@@ -62,7 +73,7 @@ namespace ck
         auto IsSaving()  const -> bool { return _Saver  != nullptr; }
 
     private:
-        entt::basic_snapshot<entt::registry>*           _Saver  = nullptr;
-        entt::basic_continuous_loader<entt::registry>*  _Loader = nullptr;
+        entt::basic_snapshot<SnapshotRegistryType>*           _Saver  = nullptr;
+        entt::basic_continuous_loader<SnapshotRegistryType>*  _Loader = nullptr;
     };
 }
