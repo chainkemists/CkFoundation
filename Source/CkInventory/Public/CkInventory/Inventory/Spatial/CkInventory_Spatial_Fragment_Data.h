@@ -26,6 +26,7 @@ struct CKINVENTORY_API FCk_Fragment_Inventory_Spatial_ParamsData
 
 public:
     CK_GENERATED_BODY(FCk_Fragment_Inventory_Spatial_ParamsData);
+    using IsSnapshotable = void;
 
 public:
     FCk_Fragment_Inventory_Spatial_ParamsData() = default;
@@ -34,19 +35,22 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "Inventory"))
+              meta = (AllowPrivateAccess = true, Categories = "Inventory", SaveGame))
     FGameplayTag _Name;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, SaveGame))
     FIntPoint _Dimensions = FIntPoint(1, 1);
 
+    // Not SaveGame: native delegate — runtime wiring, not persisted state.
     FCk_Delegate_Inventory_CustomCanAcceptItem _CustomCanAcceptItem;
 
+    // Not SaveGame: dynamic delegate — runtime wiring, not persisted state.
     UPROPERTY(BlueprintReadWrite, DisplayName = "Custom Can Accept Item",
               meta = (AllowPrivateAccess = true))
     FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic _CustomCanAcceptItemDynamic;
 
+    // Not SaveGame: FMemberReference — Blueprint function reference, not persisted state.
     UPROPERTY(EditAnywhere, DisplayName = "Custom Can Accept Item",
               meta = (AllowPrivateAccess = true,
                       FunctionReference,
@@ -54,12 +58,15 @@ private:
                       PrototypeFunction = "/Script/CkInventory.Ck_Utils_Inventory_UE.Prototype_CanAcceptItem"))
     FMemberReference _CanAcceptItemRef;
 
+    // Not SaveGame: native delegate — runtime wiring, not persisted state.
     FCk_Delegate_Inventory_CustomCanStackItems _CustomCanStackItems;
 
+    // Not SaveGame: dynamic delegate — runtime wiring, not persisted state.
     UPROPERTY(BlueprintReadWrite, DisplayName = "Custom Can Stack Items",
               meta = (AllowPrivateAccess = true))
     FCk_Delegate_Inventory_CustomCanStackItems_Dynamic _CustomCanStackItemsDynamic;
 
+    // Not SaveGame: FMemberReference — Blueprint function reference, not persisted state.
     UPROPERTY(EditAnywhere, DisplayName = "Custom Can Stack Items",
               meta = (AllowPrivateAccess = true,
                       FunctionReference,
@@ -137,21 +144,23 @@ struct CKINVENTORY_API FCk_InventoryItem_Spatial_ReplicatedEntry
 
 public:
     CK_GENERATED_BODY(FCk_InventoryItem_Spatial_ReplicatedEntry);
+    // Tier-B: carries FCk_Handle_Item (entity ref). SerializeSnapshot + registry entry land in Phase 6.
+    using IsSnapshotable = void;
 
     auto operator==(const ThisType& InOther) const -> bool;
     CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, SaveGame))
     FCk_Handle_Item _ItemHandle;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, SaveGame))
     FIntPoint _Coordinate = ck::Inventory::AutoPlaceCoordinate;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, SaveGame))
     ECk_CardinalRotation _Rotation = ECk_CardinalRotation::None;
 
 public:
