@@ -39,6 +39,9 @@ CK_REGISTER_SNAPSHOTABLE(FSnap_IntegerAttribute_PreviousValues_Current);
 CK_REGISTER_SNAPSHOTABLE(FSnap_IntegerAttribute_PreviousValues_Min);
 CK_REGISTER_SNAPSHOTABLE(FSnap_IntegerAttribute_PreviousValues_Max);
 
+using FSnap_RecordOfIntegerAttributes = ck::FFragment_RecordOfIntegerAttributes;
+CK_REGISTER_SNAPSHOTABLE(FSnap_RecordOfIntegerAttributes);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
