@@ -12,6 +12,7 @@
 
 class UCk_UI_LayoutConfigAsset_UE;
 class UCk_UI_PrimaryGameLayout_UE;
+struct FStreamableHandle;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -92,6 +93,7 @@ protected:
 
 private:
     auto DoInitializeUI() -> void;
+    auto HandleLayoutConfigLoaded() -> void;
     auto DoShutdownUI() -> void;
     auto HandlePrimaryGameLayoutCreated() -> void;
     auto HandlePrimaryGameLayoutDestroyed() -> void;
@@ -101,28 +103,17 @@ private:
     // ----------------------------------------------------------------------------------------------------------------
 
 private:
-    /**
-     * Configuration asset defining UI layers and their starting widgets.
-     * Set this in your HUD Blueprint or C++ subclass.
-     */
+    // Layout config (UI layers + starting widgets), set on a subclass default. Soft so the default carries only a path
+    // and is async-loaded in DoInitializeUI at BeginPlay — never block-loaded at CDO/registration time, where a packaged
+    // client can't load it safely (it resolved to null and left the HUD with no UI).
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ck|UI",
         meta = (AllowPrivateAccess = true))
-    TObjectPtr<UCk_UI_LayoutConfigAsset_UE> _LayoutConfigAsset;
+    TSoftObjectPtr<UCk_UI_LayoutConfigAsset_UE> _LayoutConfigAsset;
 
-    /**
-     * Soft reference to the layout config. Prefer this over the hard _LayoutConfigAsset for AngelScript / data-driven
-     * subclasses: a hard-ref default is evaluated at CDO/class-registration time (and can run on a worker thread during
-     * async package load), where a blocking load is unsafe and resolves to null — leaving the HUD with no layout. This
-     * soft ref carries only a path at CDO time and is resolved on the game thread in DoInitializeUI (BeginPlay), where
-     * a synchronous load is safe. If both are set, the hard ref wins.
-     */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ck|UI",
-        meta = (AllowPrivateAccess = true))
-    TSoftObjectPtr<UCk_UI_LayoutConfigAsset_UE> _LayoutConfigAssetSoft;
+    TSharedPtr<FStreamableHandle> _LayoutConfigLoadHandle;
 
 public:
     CK_PROPERTY_GET(_LayoutConfigAsset);
-    CK_PROPERTY_GET(_LayoutConfigAssetSoft);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

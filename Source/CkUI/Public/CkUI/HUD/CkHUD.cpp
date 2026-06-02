@@ -8,6 +8,8 @@
 #include "CkUI/Layout/CkUI_Layout_Subsystem.h"
 #include "CkUI/Layout/CkUI_PrimaryGameLayout.h"
 
+#include <Engine/AssetManager.h>
+#include <Engine/StreamableManager.h>
 #include <GameFramework/PlayerController.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -79,14 +81,29 @@ auto
     DoInitializeUI()
     -> void
 {
-    // Resolve the soft layout-config ref here (game thread, BeginPlay) rather than from a CDO-time hard-ref default,
-    // which a packaged client cannot block-load safely (it can run on a worker thread during async load) and so leaves
-    // the hard ref null. The hard ref still wins when an editor/C++ subclass set it directly.
-    if (ck::Is_NOT_Valid(_LayoutConfigAsset) && (_LayoutConfigAssetSoft.IsNull() == false))
-    { _LayoutConfigAsset = _LayoutConfigAssetSoft.LoadSynchronous(); }
+    CK_ENSURE_IF_NOT(_LayoutConfigAsset.IsNull() == false,
+        TEXT("HUD [{}] requires a LayoutConfigAsset to initialize UI"), this)
+    { return; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(_LayoutConfigAsset),
-        TEXT("HUD [{}] requires a valid LayoutConfigAsset to initialize UI"), this)
+    // Async-load the config off the game thread, then build the layout in HandleLayoutConfigLoaded. The config is a soft
+    // ref so a subclass default carries only a path — a CDO-time hard ref can't block-load safely in a packaged client
+    // (it may run on a worker thread during async load) and resolved to null.
+    _LayoutConfigLoadHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
+        _LayoutConfigAsset.ToSoftObjectPath(),
+        FStreamableDelegate::CreateUObject(this, &ThisClass::HandleLayoutConfigLoaded));
+}
+
+auto
+    ACk_HUD_UE::
+    HandleLayoutConfigLoaded()
+    -> void
+{
+    _LayoutConfigLoadHandle.Reset();
+
+    auto* LayoutConfig = _LayoutConfigAsset.Get();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(LayoutConfig),
+        TEXT("HUD [{}] failed to load its LayoutConfigAsset"), this)
     { return; }
 
     const auto* PlayerController = GetOwningPlayerController();
@@ -112,7 +129,7 @@ auto
 
     Subsystem->OnLayoutCreated.AddUObject(this, &ThisClass::HandlePrimaryGameLayoutCreated);
     Subsystem->OnLayoutDestroyed.AddUObject(this, &ThisClass::HandlePrimaryGameLayoutDestroyed);
-    Subsystem->CreateLayout(_LayoutConfigAsset);
+    Subsystem->CreateLayout(LayoutConfig);
 }
 
 auto
@@ -120,6 +137,12 @@ auto
     DoShutdownUI()
     -> void
 {
+    if (_LayoutConfigLoadHandle.IsValid())
+    {
+        _LayoutConfigLoadHandle->CancelHandle();
+        _LayoutConfigLoadHandle.Reset();
+    }
+
     const auto* PlayerController = GetOwningPlayerController();
 
     if (ck::Is_NOT_Valid(PlayerController))
