@@ -39,6 +39,9 @@ CK_REGISTER_SNAPSHOTABLE(FSnap_ByteAttribute_PreviousValues_Current);
 CK_REGISTER_SNAPSHOTABLE(FSnap_ByteAttribute_PreviousValues_Min);
 CK_REGISTER_SNAPSHOTABLE(FSnap_ByteAttribute_PreviousValues_Max);
 
+using FSnap_RecordOfByteAttributes = ck::FFragment_RecordOfByteAttributes;
+CK_REGISTER_SNAPSHOTABLE(FSnap_RecordOfByteAttributes);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

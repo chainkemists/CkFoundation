@@ -40,6 +40,9 @@ CK_REGISTER_SNAPSHOTABLE(FSnap_FloatAttribute_PreviousValues_Current);
 CK_REGISTER_SNAPSHOTABLE(FSnap_FloatAttribute_PreviousValues_Min);
 CK_REGISTER_SNAPSHOTABLE(FSnap_FloatAttribute_PreviousValues_Max);
 
+using FSnap_RecordOfFloatAttributes = ck::FFragment_RecordOfFloatAttributes;
+CK_REGISTER_SNAPSHOTABLE(FSnap_RecordOfFloatAttributes);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
