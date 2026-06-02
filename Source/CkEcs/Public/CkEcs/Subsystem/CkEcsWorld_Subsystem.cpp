@@ -170,6 +170,35 @@ auto
 
 auto
     UCk_EcsWorld_Subsystem_UE::
+    Request_PumpToQuiescence()
+    -> int32
+{
+    auto TotalPumpCount = int32{0};
+
+    for (auto& [TickGroup, Actor] : _WorldActors)
+    {
+        if (NOT Actor.IsValid())
+        { continue; }
+
+        if (NOT Actor->_Scheduler.IsSet())
+        { continue; }
+
+        if (Actor->_Scheduler->Get_IsTickInProgress())
+        {
+            ck::ecs::Warning(TEXT("Request_PumpToQuiescence skipping tick group [{}]: a Tick is already in progress (re-entrant pump)"),
+                TickGroup);
+            continue;
+        }
+
+        Actor->_Scheduler->Tick(FCk_Time{0.0}, _Registry);
+        TotalPumpCount += Actor->_Scheduler->Get_LastFramePumpCount();
+    }
+
+    return TotalPumpCount;
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
     OnEndFrame_DoRebuild()
     -> void
 {
