@@ -19,6 +19,7 @@
 #include <HAL/FileManager.h>
 
 #include <Interfaces/IPluginManager.h>
+#include <ModuleDescriptor.h>
 
 #include <Misc/FileHelper.h>
 #include <Misc/Paths.h>
@@ -293,7 +294,39 @@ auto
         return false;
     }
 
-    // Check if module name contains "Editor" (since your module is "CkEditorGraph")
+    // Resolve the module's host type from its owning plugin descriptor. A module whose Type is editor-only
+    // (Editor / UncookedOnly / DeveloperTool / etc.) is not compiled into a cooked game, so any AngelScript
+    // wrapper for its functions must be guarded with #if EDITOR. Relying on the module NAME containing the
+    // substring "Editor" (the previous heuristic) silently missed editor-only modules named otherwise (e.g.
+    // a module typed "Editor" but called "CkPieLayoutEditor" is caught either way, but "CkFooTooling" was not).
+    const auto IsEditorOnlyHostType = [](EHostType::Type InType) -> bool
+    {
+        switch (InType)
+        {
+            case EHostType::Editor:
+            case EHostType::EditorNoCommandlet:
+            case EHostType::EditorAndProgram:
+            case EHostType::UncookedOnly:
+            case EHostType::DeveloperTool:
+            case EHostType::Developer:
+            case EHostType::Program:
+                return true;
+            default:
+                return false;
+        }
+    };
+
+    for (const auto& Plugin : IPluginManager::Get().GetDiscoveredPlugins())
+    {
+        for (const auto& ModuleDesc : Plugin->GetDescriptor().Modules)
+        {
+            if (ModuleDesc.Name.ToString() == ModuleName)
+            { return IsEditorOnlyHostType(ModuleDesc.Type); }
+        }
+    }
+
+    // Fallback to the historical name-substring heuristic for classes whose module isn't found in any
+    // plugin descriptor (e.g. a game/engine module class).
     return ModuleName.Contains(TEXT("Editor"));
 }
 
@@ -545,7 +578,7 @@ auto
 
     if (IsEditorOnly)
     {
-        Result += TEXT("#if editor\n");
+        Result += TEXT("#if EDITOR\n");
     }
 
     Result += ck::Format_UE(TEXT("    {}\n"), ReturnType);
