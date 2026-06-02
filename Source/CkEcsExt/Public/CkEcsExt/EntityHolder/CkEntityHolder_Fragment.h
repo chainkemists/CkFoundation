@@ -4,6 +4,12 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkCore/Macros/CkMacros.h"
 
+// SerializeSnapshot routes the held entity handle through FSnapshotContext::Snapshot_Handle, so the complete
+// FSnapshotContext type is required here (template body lives in the header).
+#include "CkSnapshot/Context/CkSnapshot_Context.h"
+
+class FArchive;
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -13,6 +19,7 @@ namespace ck
     {
     public:
         CK_GENERATED_BODY(TFragment_EntityHolder<T_HandleType>);
+        using IsSnapshotable = void;
 
     public:
         template <typename>
@@ -32,6 +39,13 @@ namespace ck
 
     public:
         CK_DEFINE_CONSTRUCTORS(TFragment_EntityHolder, _Entity);
+
+    public:
+        // Tier-C: holds a single entity handle, remapped through FSnapshotContext.
+        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void
+        {
+            InCtx.Snapshot_Handle(InAr, _Entity);
+        }
     };
 
 }

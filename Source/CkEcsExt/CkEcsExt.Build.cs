@@ -28,6 +28,10 @@ public class CkEcsExt : CkModuleRules
             "CkLog",
             "CkRecord",
             "CkSettings",
+
+            // Public: CkEntityHolder_Fragment.h (a public header) includes CkSnapshot/Context/CkSnapshot_Context.h
+            // for TFragment_EntityHolder::SerializeSnapshot, so downstream consumers need the include path too.
+            "CkSnapshot",
         });
 
         if (Target.bBuildEditor)
