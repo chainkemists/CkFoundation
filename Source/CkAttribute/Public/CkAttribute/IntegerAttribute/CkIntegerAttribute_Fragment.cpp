@@ -42,6 +42,13 @@ CK_REGISTER_SNAPSHOTABLE(FSnap_IntegerAttribute_PreviousValues_Max);
 using FSnap_RecordOfIntegerAttributes = ck::FFragment_RecordOfIntegerAttributes;
 CK_REGISTER_SNAPSHOTABLE(FSnap_RecordOfIntegerAttributes);
 
+// Tier-C TFragment_EntityHolder specializations for the integer refill relationship.
+using FSnap_RefillAttribute_Integer       = ck::TFragment_RefillAttribute<FCk_Handle_IntegerAttributeRefill>;
+using FSnap_RefillAttributeTarget_Integer = ck::TFragment_RefillAttributeTarget<FCk_Handle_IntegerAttribute>;
+
+CK_REGISTER_SNAPSHOTABLE(FSnap_RefillAttribute_Integer);
+CK_REGISTER_SNAPSHOTABLE(FSnap_RefillAttributeTarget_Integer);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
