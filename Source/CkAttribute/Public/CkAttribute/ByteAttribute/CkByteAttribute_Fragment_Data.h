@@ -40,26 +40,27 @@ struct CKATTRIBUTE_API FCk_Fragment_ByteAttribute_ParamsData
 
 public:
     CK_GENERATED_BODY(FCk_Fragment_ByteAttribute_ParamsData);
+    using IsSnapshotable = void;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "ByteAttribute"))
+              meta = (AllowPrivateAccess = true, Categories = "ByteAttribute", SaveGame))
     FGameplayTag _Name;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, SaveGame))
     uint8 _BaseValue = 0;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta=(AllowPrivateAccess, SaveGame))
     ECk_MinMax _MinMax = ECk_MinMax::None;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MinMax == ECk_MinMax::Min || _MinMax == ECk_MinMax::MinMax"))
+              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MinMax == ECk_MinMax::Min || _MinMax == ECk_MinMax::MinMax", SaveGame))
     uint8 _MinValue = 0;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MinMax == ECk_MinMax::Max || _MinMax == ECk_MinMax::MinMax"))
+              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MinMax == ECk_MinMax::Max || _MinMax == ECk_MinMax::MinMax", SaveGame))
     uint8 _MaxValue = 0;
 
 public:
