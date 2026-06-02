@@ -70,31 +70,41 @@ auto
         TEXT("GridObject footprint extent [{}] must be positive on both axes"), Extent)
     { return {}; }
 
-    const auto CenterOffset = Params.Get_Centering() == ECk_GridObject_Centering::Center
-        ? FIntPoint(W / 2, H / 2)
-        : FIntPoint::ZeroValue;
-
-    const auto AnchorOffset = Params.Get_AnchorOffset();
-
-    auto Offsets = TArray<FIntPoint>{};
-    Offsets.Reserve(W * H);
+    auto RawOffsets = TArray<FIntPoint>{};
+    RawOffsets.Reserve(W * H);
 
     for (auto Y = 0; Y < H; ++Y)
     {
         for (auto X = 0; X < W; ++X)
         {
-            Offsets.Add(FIntPoint(X, Y) - CenterOffset + AnchorOffset);
+            RawOffsets.Add(FIntPoint(X, Y));
         }
     }
 
-    const auto RotatedOffsets = UCk_Utils_Grid2D_UE::Get_RotatedShape(Offsets, InRotation);
+    // Get_RotatedShape rotates AND re-normalizes to a non-negative bounding box, so centering and
+    // anchor-offset are applied AFTER rotation (against the rotated extent) — otherwise the
+    // normalization would erase them and a centered object would only stay centered at 0 rotation.
+    const auto RotatedOffsets = UCk_Utils_Grid2D_UE::Get_RotatedShape(RawOffsets, InRotation);
+
+    auto RotatedExtent = FIntPoint::ZeroValue;
+    for (const auto& Offset : RotatedOffsets)
+    {
+        RotatedExtent.X = FMath::Max(RotatedExtent.X, Offset.X + 1);
+        RotatedExtent.Y = FMath::Max(RotatedExtent.Y, Offset.Y + 1);
+    }
+
+    const auto CenterOffset = Params.Get_Centering() == ECk_GridObject_Centering::Center
+        ? FIntPoint(RotatedExtent.X / 2, RotatedExtent.Y / 2)
+        : FIntPoint::ZeroValue;
+
+    const auto AnchorOffset = Params.Get_AnchorOffset();
 
     auto ResolvedCells = TArray<FIntPoint>{};
     ResolvedCells.Reserve(RotatedOffsets.Num());
 
     for (const auto& Offset : RotatedOffsets)
     {
-        ResolvedCells.Add(InAnchor + Offset);
+        ResolvedCells.Add(InAnchor + Offset - CenterOffset + AnchorOffset);
     }
 
     return ResolvedCells;
