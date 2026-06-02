@@ -26,6 +26,7 @@ struct CKINVENTORY_API FCk_Fragment_Inventory_DataOnly_ParamsData
 
 public:
     CK_GENERATED_BODY(FCk_Fragment_Inventory_DataOnly_ParamsData);
+    using IsSnapshotable = void;
 
 public:
     FCk_Fragment_Inventory_DataOnly_ParamsData() = default;
@@ -34,24 +35,27 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "Inventory"))
+              meta = (AllowPrivateAccess = true, Categories = "Inventory", SaveGame))
     FGameplayTag _Name;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, SaveGame))
     ECk_Inventory_DataOnly_BoundMode _BoundMode = ECk_Inventory_DataOnly_BoundMode::Unbounded;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = 1, EditConditionHides,
-                      EditCondition = "_BoundMode == ECk_Inventory_DataOnly_BoundMode::Bounded"))
+                      EditCondition = "_BoundMode == ECk_Inventory_DataOnly_BoundMode::Bounded", SaveGame))
     int32 _BoundLimit = 1;
 
+    // Not SaveGame: native delegate — runtime wiring, not persisted state.
     FCk_Delegate_Inventory_CustomCanAcceptItem _CustomCanAcceptItem;
 
+    // Not SaveGame: dynamic delegate — runtime wiring, not persisted state.
     UPROPERTY(BlueprintReadWrite, DisplayName = "Custom Can Accept Item",
               meta = (AllowPrivateAccess = true))
     FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic _CustomCanAcceptItemDynamic;
 
+    // Not SaveGame: FMemberReference — Blueprint function reference, not persisted state.
     UPROPERTY(EditAnywhere, DisplayName = "Custom Can Accept Item",
               meta = (AllowPrivateAccess = true,
                       FunctionReference,
@@ -59,12 +63,15 @@ private:
                       PrototypeFunction = "/Script/CkInventory.Ck_Utils_Inventory_UE.Prototype_CanAcceptItem"))
     FMemberReference _CanAcceptItemRef;
 
+    // Not SaveGame: native delegate — runtime wiring, not persisted state.
     FCk_Delegate_Inventory_CustomCanStackItems _CustomCanStackItems;
 
+    // Not SaveGame: dynamic delegate — runtime wiring, not persisted state.
     UPROPERTY(BlueprintReadWrite, DisplayName = "Custom Can Stack Items",
               meta = (AllowPrivateAccess = true))
     FCk_Delegate_Inventory_CustomCanStackItems_Dynamic _CustomCanStackItemsDynamic;
 
+    // Not SaveGame: FMemberReference — Blueprint function reference, not persisted state.
     UPROPERTY(EditAnywhere, DisplayName = "Custom Can Stack Items",
               meta = (AllowPrivateAccess = true,
                       FunctionReference,
