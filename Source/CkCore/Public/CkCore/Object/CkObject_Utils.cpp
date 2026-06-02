@@ -5,6 +5,13 @@
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
 #include "Interfaces/IPluginManager.h"
 
+#include "HAL/IConsoleManager.h"
+#include "UObject/GarbageCollection.h"
+#include "UObject/Package.h"
+#include "UObject/UObjectArray.h"
+#include "UObject/UObjectGlobals.h"
+#include "UObject/UObjectHash.h"
+
 #include <Engine/Blueprint.h>
 #include <Engine/BlueprintGeneratedClass.h>
 
@@ -420,6 +427,208 @@ auto
     }
 
     return ECk_SucceededFailed::Failed;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// [Ck][Diag] AngelScript runtime-asset GC diagnostic.
+// Dumps every object under /Script/AngelscriptAssets with its (and its outer's) GC-relevant
+// internal-object-flag picture, forces a full GC, then dumps again. Diagnostic-only — no
+// behavior change. Drives the root-cause investigation of why `asset ... of` sub-objects
+// (item traits, PlayerMappableKeySettings) are reclaimed on the first sweep even though their
+// rooted owner references them via a UPROPERTY. Grep the log for [ASGCDIAG].
+// --------------------------------------------------------------------------------------------------------------------
+namespace ck_asgcdiag
+{
+    static auto DescribeGcFlags(UObject* InObject) -> FString
+    {
+        const auto* Item = GUObjectArray.ObjectToObjectItem(InObject);
+        const auto ClusterRootIndex = Item != nullptr ? Item->GetOwnerIndex() : 0;
+
+        return FString::Printf(
+            TEXT("Rooted=%d Native=%d LoaderImport=%d ClusterRoot=%d Garbage=%d Unreachable=%d Disregard=%d ClusterRootIdx=%d"),
+            InObject->IsRooted() ? 1 : 0,
+            InObject->HasAnyInternalFlags(EInternalObjectFlags::Native) ? 1 : 0,
+            InObject->HasAnyInternalFlags(EInternalObjectFlags::LoaderImport) ? 1 : 0,
+            InObject->HasAnyInternalFlags(EInternalObjectFlags::ClusterRoot) ? 1 : 0,
+            InObject->HasAnyInternalFlags(EInternalObjectFlags::Garbage) ? 1 : 0,
+            InObject->HasAnyInternalFlags(EInternalObjectFlags::Unreachable) ? 1 : 0,
+            GUObjectArray.IsDisregardForGC(InObject) ? 1 : 0,
+            ClusterRootIndex);
+    }
+
+    static auto DumpAngelscriptAssets(const TCHAR* InLabel) -> void
+    {
+        auto* AssetsPackage = FindObject<UPackage>(nullptr, TEXT("/Script/AngelscriptAssets"));
+        if (AssetsPackage == nullptr)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("[ASGCDIAG][%s] pkg /Script/AngelscriptAssets NOT FOUND"), InLabel);
+            return;
+        }
+
+        auto Total = 0;
+        auto NotRooted = 0;
+        auto Garbage = 0;
+        // Among the NotRooted (the at-risk sub-objects), tally what their OWNER looks like — this
+        // single summary instantly discriminates the leading hypotheses.
+        auto NotRooted_OwnerClusterRoot = 0;
+        auto NotRooted_OwnerNative = 0;
+        auto NotRooted_OwnerLoaderImport = 0;
+        auto NotRooted_OwnerDisregard = 0;
+        auto NotRooted_SelfClusterMember = 0;
+
+        constexpr auto bIncludeNestedObjects = true;
+        ForEachObjectWithOuter(AssetsPackage, [&](UObject* O)
+        {
+            const auto bRooted = O->IsRooted();
+            const auto bGarbage = O->HasAnyInternalFlags(EInternalObjectFlags::Garbage | EInternalObjectFlags::Unreachable);
+            auto* Outer = O->GetOuter();
+
+            UE_LOG(LogTemp, Warning, TEXT("[ASGCDIAG][%s] OBJ %s | class=%s | %s || OUTER %s | %s"),
+                InLabel,
+                *O->GetName(),
+                *GetNameSafe(O->GetClass()),
+                *DescribeGcFlags(O),
+                *GetNameSafe(Outer),
+                Outer != nullptr ? *DescribeGcFlags(Outer) : TEXT("(none)"));
+
+            ++Total;
+            if (bGarbage) { ++Garbage; }
+            if (NOT bRooted)
+            {
+                ++NotRooted;
+
+                const auto* SelfItem = GUObjectArray.ObjectToObjectItem(O);
+                if (SelfItem != nullptr && SelfItem->GetOwnerIndex() > 0) { ++NotRooted_SelfClusterMember; }
+
+                if (Outer != nullptr)
+                {
+                    if (Outer->HasAnyInternalFlags(EInternalObjectFlags::ClusterRoot))   { ++NotRooted_OwnerClusterRoot; }
+                    if (Outer->HasAnyInternalFlags(EInternalObjectFlags::Native))        { ++NotRooted_OwnerNative; }
+                    if (Outer->HasAnyInternalFlags(EInternalObjectFlags::LoaderImport))  { ++NotRooted_OwnerLoaderImport; }
+                    if (GUObjectArray.IsDisregardForGC(Outer))                           { ++NotRooted_OwnerDisregard; }
+                }
+            }
+        }, bIncludeNestedObjects);
+
+        UE_LOG(LogTemp, Warning,
+            TEXT("[ASGCDIAG][%s] === Total %d | NotRooted %d | Garbage %d || NotRooted-owner: ClusterRoot %d Native %d LoaderImport %d Disregard %d | self-ClusterMember %d ==="),
+            InLabel, Total, NotRooted, Garbage,
+            NotRooted_OwnerClusterRoot, NotRooted_OwnerNative, NotRooted_OwnerLoaderImport, NotRooted_OwnerDisregard,
+            NotRooted_SelfClusterMember);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Phase-1 scope probe — the CDO side of the same bug.
+    //
+    // The literal-asset dump above covers Phase 2 (our minted sub-objects under disregard owners in
+    // /Script/AngelscriptAssets). Phase 1 lives in /Script/Angelscript: each AS class CDO is a
+    // disregard object, and CkDeferredAssetInit re-runs `default X = assets::load::...` on it, leaving
+    // the disregard CDO pointing at a normal-pool cooked asset. Those are the refs the GC verifier
+    // (GarbageCollectionVerification.cpp:110) flags. We enumerate them directly here: for every CDO,
+    // FindReferences with NO outer limit (LimitOuter=nullptr) so EXTERNAL asset refs are captured —
+    // unlike Phase 2's owner-scoped, direct-outer finder. A ref is a violation iff its referencing CDO
+    // is disregard AND the ref is not rooted, not disregard, not garbage, not a cluster member.
+    // ----------------------------------------------------------------------------------------------------------------
+    static auto DumpAngelscriptCDOs(const TCHAR* InLabel) -> void
+    {
+        auto* AsPackage = FindObject<UPackage>(nullptr, TEXT("/Script/Angelscript"));
+        if (AsPackage == nullptr)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("[ASGCDIAG-CDO][%s] pkg /Script/Angelscript NOT FOUND"), InLabel);
+            return;
+        }
+
+        auto CdoTotal           = 0;
+        auto CdoDisregard       = 0;
+        auto ViolatingRefs      = 0;
+        auto ViolatorBytes      = uint64{0};
+        auto DistinctViolators  = TSet<FString>{};
+
+        constexpr auto bIncludeNestedObjects = false;
+        ForEachObjectWithOuter(AsPackage, [&](UObject* O)
+        {
+            auto* AsUClass = Cast<UClass>(O);
+            if (AsUClass == nullptr)
+            { return; }
+
+            constexpr auto bCreateIfNeeded = false;
+            auto* CDO = AsUClass->GetDefaultObject(bCreateIfNeeded);
+            if (CDO == nullptr)
+            { return; }
+
+            ++CdoTotal;
+            const auto bCdoDisregard = GUObjectArray.IsDisregardForGC(CDO);
+            if (bCdoDisregard) { ++CdoDisregard; }
+
+            // Only disregard CDOs can trip the verifier — skip the rest (e.g. classes whose CDO landed
+            // in the normal pool would be traced normally).
+            if (NOT bCdoDisregard)
+            { return; }
+
+            auto OutRefs = TArray<UObject*>{};
+            constexpr auto bRequireDirectOuter = false;
+            auto Finder = FReferenceFinder{OutRefs, nullptr, bRequireDirectOuter};
+            Finder.FindReferences(CDO);
+
+            for (auto* Ref : OutRefs)
+            {
+                if (Ref == nullptr)
+                { continue; }
+
+                const auto bRooted    = Ref->IsRooted();
+                const auto bDisregard = GUObjectArray.IsDisregardForGC(Ref);
+                const auto bGarbage   = Ref->HasAnyInternalFlags(EInternalObjectFlags::Garbage | EInternalObjectFlags::Unreachable);
+                const auto* RefItem   = GUObjectArray.ObjectToObjectItem(Ref);
+                const auto bCluster   = RefItem != nullptr && (RefItem->GetOwnerIndex() > 0 || RefItem->HasAnyFlags(EInternalObjectFlags::ClusterRoot));
+
+                const auto bViolation = NOT bRooted && NOT bDisregard && NOT bGarbage && NOT bCluster;
+                if (NOT bViolation)
+                { continue; }
+
+                ++ViolatingRefs;
+                DistinctViolators.Add(FString::Printf(TEXT("%s:%s"), *GetNameSafe(Ref->GetClass()), *GetNameSafe(Ref)));
+                ViolatorBytes += static_cast<uint64>(Ref->GetResourceSizeBytes(EResourceSizeMode::EstimatedTotal));
+
+                UE_LOG(LogTemp, Warning, TEXT("[ASGCDIAG-CDO][%s] VIOLATION CDO %s -> %s | class=%s | %s"),
+                    InLabel, *CDO->GetName(), *Ref->GetName(), *GetNameSafe(Ref->GetClass()), *DescribeGcFlags(Ref));
+            }
+        }, bIncludeNestedObjects);
+
+        UE_LOG(LogTemp, Warning,
+            TEXT("[ASGCDIAG-CDO][%s] === CDOs %d | Disregard-CDOs %d | Phase1-violating-refs %d | distinct-assets %d | ~%llu KB ==="),
+            InLabel, CdoTotal, CdoDisregard, ViolatingRefs, DistinctViolators.Num(), ViolatorBytes / 1024);
+    }
+
+    static FAutoConsoleCommand GCmd_DumpAngelscriptAssets(
+        TEXT("Ck.Diag.DumpAngelscriptAssets"),
+        TEXT("[Ck][Diag] dump AS asset+subobject+CDO GC state (with owner flags), force a full GC, dump again"),
+        FConsoleCommandDelegate::CreateLambda([]()
+        {
+            DumpAngelscriptAssets(TEXT("BEFORE-GC"));
+            DumpAngelscriptCDOs(TEXT("BEFORE-GC"));
+            constexpr auto bFullPurge = true;
+            CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS, bFullPurge);
+            DumpAngelscriptAssets(TEXT("AFTER-GC"));
+            DumpAngelscriptCDOs(TEXT("AFTER-GC"));
+        }));
+
+    // The authoritative oracle: turn the engine's own disregard-for-GC verifier on, then force a
+    // full-purge GC. It logs every "Disregard for GC object X referencing Y which is not part of root
+    // set" as a Warning, then Fatals (GarbageCollectionVerification.cpp:155). All warnings flush to the
+    // log before the crash, so this enumerates the COMPLETE violation list (Phase 1 + Phase 2). Use to
+    // cross-validate the structured dumps above. Expect a Fatal on an unfixed build.
+    static FAutoConsoleCommand GCmd_VerifyGCAssumptions(
+        TEXT("Ck.Diag.VerifyGCAssumptions"),
+        TEXT("[Ck][Diag] enable gc.VerifyAssumptions(+OnFullPurge), force a full-purge GC (enumerates violations as Warnings, then Fatals)"),
+        FConsoleCommandDelegate::CreateLambda([]()
+        {
+            if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("gc.VerifyAssumptions")))
+            { CVar->Set(1); }
+            if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("gc.VerifyAssumptionsOnFullPurge")))
+            { CVar->Set(1); }
+            constexpr auto bFullPurge = true;
+            CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS, bFullPurge);
+        }));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
