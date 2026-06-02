@@ -5,6 +5,9 @@
 #include "CkEcs/EntityScript/CkEntityScript.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
+#include "Serialization/Archive.h"
+#include "UObject/Package.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_ECS_DEFINE_CALLSTACK_ANGELSCRIPT_UTILS(CKECS_API, entity_script, ck::FFragment_EntityScript_Current);
@@ -18,6 +21,36 @@ namespace ck
             UCk_EntityScript_UE* InScript)
         : _Script(InScript)
     {
+    }
+
+    auto
+        FFragment_EntityScript_Current::
+        SerializeSnapshot(
+            FArchive& InAr,
+            ck::FSnapshotContext& /*InCtx*/)
+        -> void
+    {
+        UClass* Class = nullptr;
+        if (InAr.IsSaving())
+        { Class = _Script.IsValid() ? _Script->GetClass() : nullptr; }
+
+        UObject* AsObj = Class;
+        InAr << AsObj;
+        Class = Cast<UClass>(AsObj);
+
+        if (InAr.IsLoading() && Class == nullptr)
+        {
+            _Script.Reset();
+            return;
+        }
+
+        if (InAr.IsLoading())
+        {
+            _Script = TStrongObjectPtr<UCk_EntityScript_UE>(NewObject<UCk_EntityScript_UE>(GetTransientPackage(), Class));
+        }
+
+        if (_Script.IsValid())
+        { _Script->Serialize(InAr); }
     }
 
     FRequest_EntityScript_Replicate::
