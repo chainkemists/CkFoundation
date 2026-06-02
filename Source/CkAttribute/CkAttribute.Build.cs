@@ -27,5 +27,10 @@ public class CkAttribute : CkModuleRules
             "CkProvider",
             "CkRecord",
         });
+
+        PrivateDependencyModuleNames.AddRange(new string[]
+        {
+            "CkSnapshot",
+        });
     }
 }
