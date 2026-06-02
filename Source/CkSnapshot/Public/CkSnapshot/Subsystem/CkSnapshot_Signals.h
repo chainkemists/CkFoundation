@@ -31,6 +31,16 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// UHT anchor so the file-scope dynamic delegates above register and the .generated.h is valid (the signal
+// structs below are plain C++, not reflected). Carries no data; never instantiated.
+USTRUCT()
+struct FCk_Snapshot_SignalsAnchor
+{
+    GENERATED_BODY()
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
