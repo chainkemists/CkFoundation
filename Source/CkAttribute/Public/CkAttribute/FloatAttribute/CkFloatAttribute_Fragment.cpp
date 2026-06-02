@@ -43,6 +43,13 @@ CK_REGISTER_SNAPSHOTABLE(FSnap_FloatAttribute_PreviousValues_Max);
 using FSnap_RecordOfFloatAttributes = ck::FFragment_RecordOfFloatAttributes;
 CK_REGISTER_SNAPSHOTABLE(FSnap_RecordOfFloatAttributes);
 
+// Tier-C TFragment_EntityHolder specializations for the float refill relationship.
+using FSnap_RefillAttribute_Float       = ck::TFragment_RefillAttribute<FCk_Handle_FloatAttributeRefill>;
+using FSnap_RefillAttributeTarget_Float = ck::TFragment_RefillAttributeTarget<FCk_Handle_FloatAttribute>;
+
+CK_REGISTER_SNAPSHOTABLE(FSnap_RefillAttribute_Float);
+CK_REGISTER_SNAPSHOTABLE(FSnap_RefillAttributeTarget_Float);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
