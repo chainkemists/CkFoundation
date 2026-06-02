@@ -523,14 +523,7 @@ auto
 
     return Manager.RequestGameplayTag(TagName);
 #else
-    // Outside the editor we cannot write new tags to the INI — the tag must already have been baked at cook time
-    // (auto-generated tags, e.g. SM-state/cue/camera-layer class-name tags, are written to DefaultGameplayTags.ini
-    // on first in-editor use, then committed). Reaching here in a packaged build means a reachable tag was never
-    // baked. Soft-fail with an empty tag rather than hard-crash. NOTE: the [{}] below MUST be paired with TagName —
-    // an unpaired '{}' makes ck::Format_UE (libfmt) throw an uncaught fmt::format_error → std::terminate.
-    CK_TRIGGER_ENSURE(TEXT("Cannot add Gameplay Tag [{}] to INI outside of the Editor! ")
-                      TEXT("It must be baked into DefaultGameplayTags.ini before cooking. Returning an empty tag."),
-                      TagName);
+    CK_TRIGGER_ENSURE(TEXT("Cannot add Gameplay Tag [{}] to INI outside of the Editor!"), TagName);
     return {};
 #endif
 }
