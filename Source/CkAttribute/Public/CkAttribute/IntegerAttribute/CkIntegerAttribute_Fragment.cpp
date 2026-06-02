@@ -7,6 +7,38 @@
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
+#include "CkSnapshot/Context/CkSnapshot_FragmentRegistry.h"
+#include "CkSnapshot/Archive/CkSnapshot_Archive_Writer.h"
+#include "CkSnapshot/Archive/CkSnapshot_Archive_Reader.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+// Tier-C SerializeSnapshot registration for the Integer attribute family. ck:: types are hoisted to unqualified
+// file-scope aliases because CK_REGISTER_SNAPSHOTABLE token-pastes the type name (the `::` cannot be pasted).
+
+using FSnap_IntegerAttribute_Current = ck::FFragment_IntegerAttribute_Current;
+using FSnap_IntegerAttribute_Min     = ck::FFragment_IntegerAttribute_Min;
+using FSnap_IntegerAttribute_Max     = ck::FFragment_IntegerAttribute_Max;
+
+CK_REGISTER_SNAPSHOTABLE(FSnap_IntegerAttribute_Current);
+CK_REGISTER_SNAPSHOTABLE(FSnap_IntegerAttribute_Min);
+CK_REGISTER_SNAPSHOTABLE(FSnap_IntegerAttribute_Max);
+
+using FSnap_IntegerAttributeModifier_Current = ck::FFragment_IntegerAttributeModifier_Current;
+using FSnap_IntegerAttributeModifier_Min     = ck::FFragment_IntegerAttributeModifier_Min;
+using FSnap_IntegerAttributeModifier_Max     = ck::FFragment_IntegerAttributeModifier_Max;
+
+CK_REGISTER_SNAPSHOTABLE(FSnap_IntegerAttributeModifier_Current);
+CK_REGISTER_SNAPSHOTABLE(FSnap_IntegerAttributeModifier_Min);
+CK_REGISTER_SNAPSHOTABLE(FSnap_IntegerAttributeModifier_Max);
+
+using FSnap_IntegerAttribute_PreviousValues_Current = ck::TFragment_Attribute_PreviousValues<ck::FFragment_IntegerAttribute_Current>;
+using FSnap_IntegerAttribute_PreviousValues_Min     = ck::TFragment_Attribute_PreviousValues<ck::FFragment_IntegerAttribute_Min>;
+using FSnap_IntegerAttribute_PreviousValues_Max     = ck::TFragment_Attribute_PreviousValues<ck::FFragment_IntegerAttribute_Max>;
+
+CK_REGISTER_SNAPSHOTABLE(FSnap_IntegerAttribute_PreviousValues_Current);
+CK_REGISTER_SNAPSHOTABLE(FSnap_IntegerAttribute_PreviousValues_Min);
+CK_REGISTER_SNAPSHOTABLE(FSnap_IntegerAttribute_PreviousValues_Max);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
