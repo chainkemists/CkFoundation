@@ -1,6 +1,6 @@
 #include "CkSnapshot_FragmentRegistry.h"
 
-#include "CkSnapshot_Log.h"
+#include "CkSnapshot/CkSnapshot_Log.h"
 
 namespace ck
 {
