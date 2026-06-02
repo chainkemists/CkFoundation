@@ -29,15 +29,20 @@
 
 namespace ck_data_asset_exporter_internal
 {
-    // Cap recursion depth and detect cycles to keep cyclic instanced-object graphs
-    // (e.g. component subobjects that reference back to their owner) from blowing
-    // the stack. Thread-local so it's safe under any caller threading model.
-    static constexpr int32 GMaxObjectRecursionDepth   = 8;
-    static constexpr int32 GMaxPropertyRecursionDepth = 64;
+    // Cap recursion depth as a defensive secondary guard, plus per-export visited
+    // sets so DAG-shaped reference graphs (e.g. multiple Instanced UItemTrait
+    // subobjects sharing a referenced UObject, or fragments that back-reference
+    // the owning DataAsset) don't re-serialize the same subtree at every encounter.
+    // Once an object or FInstancedStruct payload has been exported, subsequent
+    // encounters emit a path reference with "alreadyExported": true instead of
+    // descending again. Thread-local so it's safe under any caller threading model.
+    // Reset at the top of each ExportDataAsset call.
+    static constexpr int32 GMaxObjectRecursionDepth   = 24;
+    static constexpr int32 GMaxPropertyRecursionDepth = 128;
     thread_local int32 GObjectRecursionDepth   = 0;
     thread_local int32 GPropertyRecursionDepth = 0;
-    thread_local TSet<const UObject*> GObjectsInProgress;
-    thread_local TSet<const void*>    GStructMemoryInProgress;
+    thread_local TSet<const UObject*> GObjectsAlreadyExported;
+    thread_local TSet<const void*>    GStructMemoryAlreadyExported;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -50,6 +55,8 @@ auto
         UDataAsset* InDataAsset)
     -> FCk_DataAssetExportResult
 {
+    using namespace ck_data_asset_exporter_internal;
+
     auto Result = FCk_DataAssetExportResult{};
 
     if (ck::Is_NOT_Valid(InDataAsset))
@@ -57,6 +64,14 @@ auto
         Result.ErrorMessage = TEXT("Invalid DataAsset");
         return Result;
     }
+
+    // Reset per-export bookkeeping. Thread-locals persist for the thread's lifetime,
+    // so stale entries from a previous export would otherwise leak in and mark
+    // everything as "already exported" on the second call.
+    GObjectRecursionDepth   = 0;
+    GPropertyRecursionDepth = 0;
+    GObjectsAlreadyExported.Reset();
+    GStructMemoryAlreadyExported.Reset();
 
     Result.AssetName = InDataAsset->GetName();
 
@@ -99,7 +114,7 @@ auto
         return Result;
     }
 
-    Result.bSuccess = true;
+    Result.Succeeded = true;
     Result.JsonFilePath = JsonPath;
     Result.TextFilePath = TextPath;
     return Result;
@@ -329,14 +344,13 @@ auto
             WrapperObject->SetStringField(TEXT("structType"), InnerStruct->GetName());
             WrapperObject->SetStringField(TEXT("structPath"), InnerStruct->GetPathName());
 
-            if (GStructMemoryInProgress.Contains(InnerMemory))
+            if (GStructMemoryAlreadyExported.Contains(InnerMemory))
             {
-                WrapperObject->SetBoolField(TEXT("truncated"), true);
+                WrapperObject->SetBoolField(TEXT("alreadyExported"), true);
                 return MakeShared<FJsonValueObject>(WrapperObject);
             }
 
-            GStructMemoryInProgress.Add(InnerMemory);
-            ON_SCOPE_EXIT { GStructMemoryInProgress.Remove(InnerMemory); };
+            GStructMemoryAlreadyExported.Add(InnerMemory);
 
             auto InnerObject = MakeShared<FJsonObject>();
             for (TFieldIterator<FProperty> InnerIt(InnerStruct); InnerIt; ++InnerIt)
@@ -360,14 +374,13 @@ auto
 
         auto StructObject = MakeShared<FJsonObject>();
 
-        if (GStructMemoryInProgress.Contains(InValuePtr))
+        if (GStructMemoryAlreadyExported.Contains(InValuePtr))
         {
-            StructObject->SetBoolField(TEXT("truncated"), true);
+            StructObject->SetBoolField(TEXT("alreadyExported"), true);
             return MakeShared<FJsonValueObject>(StructObject);
         }
 
-        GStructMemoryInProgress.Add(InValuePtr);
-        ON_SCOPE_EXIT { GStructMemoryInProgress.Remove(InValuePtr); };
+        GStructMemoryAlreadyExported.Add(InValuePtr);
 
         for (TFieldIterator<FProperty> It(StructProp->Struct); It; ++It)
         {
@@ -508,21 +521,23 @@ auto
     Result->SetStringField(TEXT("objectClass"), InObject->GetClass()->GetName());
     Result->SetStringField(TEXT("objectClassPath"), InObject->GetClass()->GetPathName());
     Result->SetStringField(TEXT("objectName"), InObject->GetName());
+    Result->SetStringField(TEXT("objectPath"), InObject->GetPathName());
 
-    if (GObjectRecursionDepth >= GMaxObjectRecursionDepth || GObjectsInProgress.Contains(InObject))
+    if (GObjectsAlreadyExported.Contains(InObject))
     {
-        Result->SetStringField(TEXT("objectPath"), InObject->GetPathName());
+        Result->SetBoolField(TEXT("alreadyExported"), true);
+        return Result;
+    }
+
+    if (GObjectRecursionDepth >= GMaxObjectRecursionDepth)
+    {
         Result->SetBoolField(TEXT("truncated"), true);
         return Result;
     }
 
+    GObjectsAlreadyExported.Add(InObject);
     ++GObjectRecursionDepth;
-    GObjectsInProgress.Add(InObject);
-    ON_SCOPE_EXIT
-    {
-        GObjectsInProgress.Remove(InObject);
-        --GObjectRecursionDepth;
-    };
+    ON_SCOPE_EXIT { --GObjectRecursionDepth; };
 
     Result->SetArrayField(TEXT("properties"),
         DoSerializeProperties_Json(InObject, InStopAtClass));
