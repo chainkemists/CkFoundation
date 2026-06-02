@@ -45,6 +45,10 @@ public:
               DisplayName = "[Ck] Note Deferred Asset Load (Active Context)")
     static void
     Note_DeferredAssetLoad_FromActiveContext();
+
+    // FCoreUObjectDelegates::GetPreGarbageCollectDelegate — re-roots the disregard-for-GC violation targets
+    // right before each collection (non-editor only; catches lazily-resolved refs). See the .cpp for the why.
+    static void OnPreGarbageCollect();
 };
 
 // --------------------------------------------------------------------------------------------------------------------
