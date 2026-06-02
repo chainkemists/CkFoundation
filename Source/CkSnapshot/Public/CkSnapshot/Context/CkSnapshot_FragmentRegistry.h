@@ -8,9 +8,8 @@
 #include "CkThirdParty/entt-3.16.0/src/entt/entity/registry.hpp"
 #include "CkThirdParty/entt-3.16.0/src/entt/entity/snapshot.hpp"
 
-#include "Serialization/StructuredArchiveAdapters.h"
-
 #include <functional>
+#include <type_traits>
 
 class UScriptStruct;
 class FArchive;
@@ -53,20 +52,36 @@ namespace ck
 
     namespace detail
     {
+        // Unified dispatch for one fragment instance.
+        //
+        // Const handling: entt's SAVE path (basic_snapshot::get<T>) hands the archive callable a `const T&`
+        // because the snapshot is read-only over the registry; the LOAD path (basic_continuous_loader::get<T>)
+        // hands a mutable `T&`. Both UScriptStruct::SerializeItem and the Tier-B/C SerializeSnapshot methods are
+        // non-const (they read on save, write on load), so we strip const here. On the save path no mutation
+        // actually occurs, so this is safe — it matches UE's own serialize-through-const_cast idiom.
         template <typename T>
-            requires ck::concepts::FragmentHasCustomSnapshotSerialize<T>
+            requires ck::concepts::FragmentIsSnapshotable<std::remove_const_t<T>>
         auto DoSerializeSnapshot_OneInstance(FArchive& InAr, FSnapshotContext& InCtx, T& InFragment) -> void
         {
-            InFragment.SerializeSnapshot(InAr, InCtx);
-        }
+            using MutableT = std::remove_const_t<T>;
+            auto& MutableFragment = const_cast<MutableT&>(InFragment);
 
-        template <typename T>
-            requires ck::concepts::FragmentIsUStructSnapshotable<T>
-        auto DoSerializeSnapshot_OneInstance(FArchive& InAr, FSnapshotContext& /*InCtx*/, T& InFragment) -> void
-        {
-            // UE5: FArchive -> FStructuredArchive bridge; ArIsSaveGame flag is already set on the proxy.
-            FStructuredArchiveFromArchive StructuredArWrapper(InAr);
-            T::StaticStruct()->SerializeItem(StructuredArWrapper.GetSlot(), &InFragment, /*Defaults=*/nullptr);
+            if constexpr (ck::concepts::FragmentHasCustomSnapshotSerialize<MutableT>)
+            {
+                // Tier B / C — fragment provides its own serialize body (handles entity-handle remap via InCtx).
+                MutableFragment.SerializeSnapshot(InAr, InCtx);
+            }
+            else
+            {
+                static_assert(ck::concepts::FragmentIsUStructSnapshotable<MutableT>,
+                    "Snapshotable fragment reached dispatch with no serialization path: it must be a USTRUCT "
+                    "(StaticStruct) or declare SerializeSnapshot(FArchive&, ck::FSnapshotContext&).");
+
+                // Tier A — plain USTRUCT. The proxy archive already has ArIsSaveGame=true (see the
+                // FSnapshotArchive_Writer/Reader ctors), so tagged-property gating drops any field without
+                // meta=(SaveGame) automatically.
+                MutableT::StaticStruct()->SerializeItem(InAr, &MutableFragment, /*Defaults=*/nullptr);
+            }
         }
 
         template <typename T>
