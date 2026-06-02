@@ -8,6 +8,8 @@
 #include "CkThirdParty/entt-3.16.0/src/entt/entity/registry.hpp"
 #include "CkThirdParty/entt-3.16.0/src/entt/entity/snapshot.hpp"
 
+#include "Serialization/StructuredArchiveAdapters.h"
+
 #include <functional>
 
 class UScriptStruct;
@@ -62,7 +64,9 @@ namespace ck
             requires ck::concepts::FragmentIsUStructSnapshotable<T>
         auto DoSerializeSnapshot_OneInstance(FArchive& InAr, FSnapshotContext& /*InCtx*/, T& InFragment) -> void
         {
-            T::StaticStruct()->SerializeItem(InAr, &InFragment, /*Defaults=*/nullptr);
+            // UE5: FArchive -> FStructuredArchive bridge; ArIsSaveGame flag is already set on the proxy.
+            FStructuredArchiveFromArchive StructuredArWrapper(InAr);
+            T::StaticStruct()->SerializeItem(StructuredArWrapper.GetSlot(), &InFragment, /*Defaults=*/nullptr);
         }
 
         template <typename T>
@@ -97,6 +101,9 @@ namespace ck
 
 // CK_REGISTER_SNAPSHOTABLE(T) -- one line in T's *_Fragment.cpp.
 //
+// Uses _FragmentType_ (not __LINE__) in the generated struct name to stay unique across unity-build TUs
+// where multiple .cpp files may have registrations at the same line number.
+//
 // static_assert fires with a precise message if T satisfies neither tier.
 #define CK_REGISTER_SNAPSHOTABLE(_FragmentType_) \
     static_assert( \
@@ -106,10 +113,10 @@ namespace ck
         "either declare `auto SerializeSnapshot(FArchive&, ck::FSnapshotContext&) -> void;` as a member, " \
         "OR make " #_FragmentType_ " a USTRUCT with GENERATED_BODY()."); \
     namespace { \
-        struct CK_CONCAT(FCk_SnapshotAutoReg_, __LINE__) { \
-            CK_CONCAT(FCk_SnapshotAutoReg_, __LINE__)() { \
+        struct CK_CONCAT(FCk_SnapshotAutoReg_, _FragmentType_) { \
+            CK_CONCAT(FCk_SnapshotAutoReg_, _FragmentType_)() { \
                 ck::detail::Do_RegisterSnapshotable<_FragmentType_>(TEXT(#_FragmentType_)); \
             } \
         }; \
-        static CK_CONCAT(FCk_SnapshotAutoReg_, __LINE__) CK_CONCAT(_AutoReg_, __LINE__){}; \
+        static CK_CONCAT(FCk_SnapshotAutoReg_, _FragmentType_) CK_CONCAT(_AutoReg_, _FragmentType_){}; \
     }
