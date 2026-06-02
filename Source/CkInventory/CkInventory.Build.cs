@@ -37,5 +37,10 @@ public class CkInventory : CkModuleRules
             "SlateCore",
             "InputCore",
         });
+
+        PrivateDependencyModuleNames.AddRange(new string[]
+        {
+            "CkSnapshot",
+        });
     }
 }

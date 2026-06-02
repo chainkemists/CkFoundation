@@ -355,6 +355,9 @@ struct CKINVENTORY_API FCk_Fragment_Inventory_ParamsData
 
 public:
     CK_GENERATED_BODY(FCk_Fragment_Inventory_ParamsData);
+    // Tier-A marker. Note: all fields are non-UPROPERTY (internal copy struct); zero fields are SaveGame-tagged.
+    // The typed Spatial/DataOnly ParamsData structs are the real user-facing save targets.
+    using IsSnapshotable = void;
 
 public:
     FCk_Fragment_Inventory_ParamsData() = default;
