@@ -4,6 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Tag/CkTag.h"
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
 #include "CkRecord/Record/CkRecord_Fragment.h"
 
@@ -66,6 +67,38 @@ namespace ck
         CK_PROPERTY_GET(_Placement);
     };
 
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Authority-side dirty marker: set whenever the grid's placement record changes. The
+    // AuthorityOnly Replicate processor consumes it, rebuilds the RepData from the live record,
+    // and pushes it into the container (mirrors FTag_Inventory_MayRequireReplication).
+    CK_DEFINE_ECS_TAG(FTag_2dGridOccupancy_MayRequireReplication);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Client-side apply payload. The RegisterLazy handler stamps the incoming (current) and
+    // previous replicated entries here; the ClientOnly SyncReplication processor diffs them and
+    // rebuilds / tears down client placement entities (mirrors FFragment_Inventory_Spatial_SyncReplication).
+    struct CKGRID_API FFragment_2dGridOccupancy_SyncReplication
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_2dGridOccupancy_SyncReplication);
+
+    private:
+        TArray<FCk_2dGridPlacement_ReplicatedEntry> _PlacementsToReplicate;
+        TArray<FCk_2dGridPlacement_ReplicatedEntry> _PlacementsToReplicate_Previous;
+
+    public:
+        CK_PROPERTY_GET(_PlacementsToReplicate);
+        CK_PROPERTY_GET(_PlacementsToReplicate_Previous);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_2dGridOccupancy_SyncReplication, _PlacementsToReplicate, _PlacementsToReplicate_Previous);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    using FFragment_ContainerRef_2dGridPlacements = TFragment_ContainerEntryRef<FCk_RepData_2dGridPlacements>;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
