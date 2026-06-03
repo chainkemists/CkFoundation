@@ -208,6 +208,41 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+auto
+    UCk_Utils_CrowdAgent_UE::
+    Request_SetDebugOverride(
+        FCk_Handle_CrowdAgent& InAgent,
+        bool InOverride)
+    -> FCk_Handle_CrowdAgent
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InAgent),
+        TEXT("Invalid CrowdAgent handle [{}] passed to Request_SetDebugOverride"), InAgent)
+    { return InAgent; }
+
+    if (InOverride)
+    { InAgent.AddOrGet<ck::FTag_CrowdAgent_DebugOverride>(); }
+    else
+    { InAgent.Try_Remove<ck::FTag_CrowdAgent_DebugOverride>(); }
+
+    return InAgent;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    Get_HasDebugOverride(
+        const FCk_Handle_CrowdAgent& InAgent)
+    -> bool
+{
+    if (NOT ck::IsValid(InAgent))
+    { return false; }
+
+    return InAgent.Has<ck::FTag_CrowdAgent_DebugOverride>();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_CrowdAgent_UE, FCk_Handle_CrowdAgent, ck::FFragment_CrowdAgent_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
