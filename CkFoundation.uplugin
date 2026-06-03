@@ -507,6 +507,16 @@
       ]
     },
     {
+      "Name": "CkGridEditor",
+      "Type": "UncookedOnly",
+      "LoadingPhase": "Default",
+      "WhitelistPlatforms": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
+    },
+    {
       "Name": "CkInput",
       "Type": "Runtime",
       "LoadingPhase": "Default",
