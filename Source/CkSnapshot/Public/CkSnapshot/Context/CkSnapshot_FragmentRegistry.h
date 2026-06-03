@@ -32,8 +32,6 @@ namespace ck
 
         std::function<void(entt::basic_snapshot<SnapshotRegistryType>&,          FSnapshotArchive_Writer&)> _Save;
         std::function<void(entt::basic_continuous_loader<SnapshotRegistryType>&, FSnapshotArchive_Reader&)> _Load;
-
-        UScriptStruct* _ScriptStruct = nullptr;
     };
 
     class CKSNAPSHOT_API FCk_Snapshot_FragmentRegistry
@@ -91,10 +89,13 @@ namespace ck
             Entry._DisplayName  = InDisplayName;
             Entry._EnttTypeHash = entt::type_hash<T>::value();
 
-            if constexpr (ck::concepts::FragmentIsUStructSnapshotable<T>)
-            {
-                Entry._ScriptStruct = T::StaticStruct();
-            }
+            // NOTE: Do NOT resolve T::StaticStruct() here. Do_RegisterSnapshotable runs from a file-scope
+            // `static` object constructor (see CK_REGISTER_SNAPSHOTABLE below), i.e. during C++ static
+            // initialization at DLL load — BEFORE the owning module's /Script/<Module> UObject package has
+            // been constructed by ProcessNewlyLoadedUObjects. Calling StaticStruct() at that point forces
+            // premature/reentrant UObject construction and trips the `FoundPackage` assert
+            // ("Code not found for generated code (package /Script/<Module>)"). The serialize path resolves
+            // StaticStruct() lazily at capture/restore time (DoSerializeSnapshot_OneInstance), which is safe.
 
             // entt's basic_snapshot::get<T>(Archive&) writes the storage for fragment type T, routing each
             // instance through the supplied Archive callable (our FSnapshotArchive_Writer, which serializes
