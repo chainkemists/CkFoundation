@@ -5,6 +5,7 @@
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkGrid/2dGridSystem/Cell/Ck2dGridCell_Fragment_Data.h"
 
+#include <GameplayTagContainer.h>
 #include <Math/TransformCalculus2D.h>
 
 #include "Ck2dGridSystem_Fragment_Data.generated.h"
@@ -157,12 +158,19 @@ private:
               meta = (AllowPrivateAccess = true))
     FTransform _Pivot;
 
+    // Tags applied to EVERY cell of this grid by default. Unioned with each cell's own
+    // _Tags when the placement layer evaluates an object's required/forbidden cell-tag gating.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, Categories = "2dGridCell"))
+    FGameplayTagContainer _DefaultCellTags;
+
 public:
     CK_PROPERTY(_Dimensions);
     CK_PROPERTY(_CellSize);
     CK_PROPERTY(_DefaultCellState);
     CK_PROPERTY(_ExceptionCoordinates);
     CK_PROPERTY(_Pivot);
+    CK_PROPERTY(_DefaultCellTags);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_2dGridSystem_ParamsData, _Dimensions, _CellSize);
