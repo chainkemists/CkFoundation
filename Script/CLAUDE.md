@@ -196,9 +196,12 @@ auto AudioDirectorH     = SelfEntity.To_FCk_Handle_AudioDirector();
 // Gotchas:
 // - RequiredFragments drops the `F` prefix — `FBb_Feature_X` → `Bb_Feature_X`.
 // - SourceAsset follows `/Script/AngelscriptAssets.<Name>Handle`.
-// - Editor restart is required after regenerating the registry — hot reload
-//   does not pick it up (see ForceRefreshDynamicHandleBindings below, which
-//   attempts hot rebinding without restart).
+// - In the normal self-heal path (see "ADDING A NEW HANDLE" below) no restart
+//   is needed — the deferred regen rebinds the live AS types mid-session. The
+//   restart caveat below applies only to the EDGE-CASE manual recovery (when
+//   self-heal is disabled): a hand-regenerated registry is not picked up by
+//   hot reload, so restart the editor (or run ForceRefreshDynamicHandleBindings
+//   below, which attempts hot rebinding without restart).
 
 // HOW TO REGENERATE (don't hand-edit unless you know why):
 // `UCkDynamicHandleSubsystem` (editor subsystem) exposes two CallInEditor
@@ -216,44 +219,54 @@ auto AudioDirectorH     = SelfEntity.To_FCk_Handle_AudioDirector();
 // - Registry load:
 //   Source/CkAngelscriptGenerator/DynamicHandles/CkDynamicHandleSubsystem.cpp
 
-// ADDING A NEW HANDLE TO A LIVE PROJECT — ALWAYS TWO-PHASE
+// ADDING A NEW HANDLE TO A LIVE PROJECT — ONE EDIT (self-heal recovers)
 //
-// A new typesafe handle type cannot be referenced by any AS code until it
-// exists in <Project>/Script/Generated/DynamicHandleTypes.json AND the editor
-// has been restarted (or ForceRefreshDynamicHandleBindings has run) to rebind
-// the AS types. Landing the declaration and its consumers in one commit
-// creates an unrecoverable lockup:
+// NORMAL PATH (self-heal enabled, which is the default): land the handle
+// declaration + the empty feature struct (FBb_Feature_<X> {}) + the first
+// consumer (e.g. a utils Add returning As_<X>()) all in ONE edit, then boot
+// the editor. The AS bootstrap self-heal dispatcher auto-recovers the
+// registration end-to-end in a single boot — no manual JSON edit, no two-phase
+// split, no editor restart. Observed cycle (see the canonical mechanism write-up
+// in Source/CkAngelscriptGenerator/Claude.md → "Recovery strategies" / the
+// DynamicHandle row):
 //
-//   1. AS files reference FCk_Handle_<X> -> registry doesn't have it yet ->
-//      AS compile fails project-wide ("Identifier 'FCk_Handle_<X>' is not a
-//      data type" across every consuming file).
-//   2. Because AS compile failed, GenerateHandleTypeRegistry() can't run
-//      normally -- the editor button depends on the AS plugin being healthy.
-//   3. The only way out is to revert the consumer files, regenerate the
-//      registry, restart, then re-add the consumers.
+//   1. First-pass compile fails: "Identifier 'FCk_Handle_<X>' is not a data
+//      type" + the consumer's no-matching-signature error + "Hot reload failed
+//      ... Keeping all old script code".
+//   2. Self-heal synthesizes a JSON stub
+//      (Script/Generated/_StubRecovery_DynamicHandleTypes.json) plus a
+//      permissive validator and logs "Self-heal recovered: FCk_Handle_<X>".
+//   3. On OnPostEngineInit a deferred regen writes the REAL entry into
+//      Script/Generated/DynamicHandleTypes.json (correctly sorted by TypeName,
+//      UTF-16 LE BOM preserved, `F`-prefix stripped in RequiredFragments:
+//      FBb_Feature_<X> -> Bb_Feature_<X>), bumps GeneratedAt, removes the stub,
+//      and upgrades the in-memory validator from permissive to strict.
+//   4. The recompile pass compiles the consumer clean.
 //
-// Recipe (do not skip):
+// IMPORTANT — the first-pass "not a data type" / consumer-no-match /
+// hot-reload-failed errors are EXPECTED TRANSIENTS of the self-heal cycle, not
+// a real failure. Per the "never report an AS change done without reading the
+// log" rule, the success gate is a clean reload window AFTER the deferred regen
+// fires, plus the entry present in DynamicHandleTypes.json — NOT the absence of
+// first-pass errors.
 //
-//   PHASE 1 -- handle declaration in isolation
-//     - Land ONLY the `asset <X>Handle of UCkDynamic_HandleDefinition { ... }`
-//       declaration plus the empty feature struct (FBb_Feature_<X> {}).
-//     - No params, fragments, utils, processors, or any reference to
-//       FCk_Handle_<X> itself in AS code yet.
-//     - This compiles cleanly because the asset declaration doesn't reference
-//       the handle type by name.
+// HISTORICAL — "ALWAYS TWO-PHASE / unrecoverable lockup" (pre-self-heal):
+// older revisions of this doc mandated a two-phase split (land the declaration
+// alone, manually regenerate the registry + restart, THEN add consumers) and
+// warned that landing everything in one commit caused an "unrecoverable
+// lockup." That lockup meant un-recoverable VIA IN-EDITOR HOT RELOAD — the AS
+// compile failed project-wide, so the GenerateHandleTypeRegistry() editor
+// button (which needs a healthy AS plugin) couldn't run. It was never
+// repo-bricking: closing the editor and hand-adding the JSON entry always
+// recovered. Self-heal now automates exactly that recovery on boot, so the
+// two-phase split is no longer required.
 //
-//   USER STEP (manual, in editor)
-//     - Invoke UCkDynamicHandleSubsystem::GenerateHandleTypeRegistry() via the
-//       Editor Subsystems panel CallInEditor button.
-//     - Restart the editor (or click ForceRefreshDynamicHandleBindings()).
-//     - Confirm output log: AS compile clean, FCk_Handle_<X> resolves.
-//
-//   PHASE 2 -- everything else
-//     - Now safe to add params, fragments, request structs, processors, utils
-//       namespaces, and any AS code that references FCk_Handle_<X>.
-//
-// This applies to every project consuming CkFoundation -- the lockup is a
-// property of the dynamic-handle system, not of any one project.
+// EDGE-CASE MANUAL RECOVERY (only when self-heal is DISABLED — `-NoCkAsRegen`
+// per-session, or `_EnableAsBootstrapSelfHeal = false` in CkFoundation.ini):
+// fall back to the manual path. With the editor CLOSED, either hand-add the
+// JSON entry (preserve the UTF-16 LE encoding) or, once the AS plugin is
+// healthy again, run UCkDynamicHandleSubsystem::GenerateHandleTypeRegistry()
+// and restart the editor (or click ForceRefreshDynamicHandleBindings()).
 
 //============================================================================
 // 8. ACTORS & COMPONENTS
