@@ -6,6 +6,7 @@
 
 #include <InstancedStruct.h>
 #include <Net/Serialization/FastArraySerializer.h>
+#include <Misc/Optional.h>
 
 #include "CkReplicatedFragmentContainer.generated.h"
 
@@ -45,8 +46,23 @@ public:
         FTypeResolver InTypeResolver,
         FHandler InHandler) -> void;
 
+    /**
+     * Register a single catch-all handler consulted by Resolve() when no per-type handler matches.
+     * Used by runtime-typed features (e.g. dynamic fragments) whose payload UScriptStruct is not
+     * known at compile time, so per-type registration is impossible. The fallback only ever sees
+     * types that nobody registered explicitly — registered types always win via Find().
+     */
+    static auto
+    RegisterFallback(
+        FHandler InHandler) -> void;
+
     static auto
     Find(
+        const UScriptStruct* InType) -> const FHandler*;
+
+    /** Find() the per-type handler, else the registered fallback (or nullptr if neither exists). */
+    static auto
+    Resolve(
         const UScriptStruct* InType) -> const FHandler*;
 
 private:
@@ -61,6 +77,7 @@ private:
 
     static TMap<const UScriptStruct*, FHandler> _Handlers;
     static TArray<FLazyEntry> _PendingHandlers;
+    static TOptional<FHandler> _Fallback;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
