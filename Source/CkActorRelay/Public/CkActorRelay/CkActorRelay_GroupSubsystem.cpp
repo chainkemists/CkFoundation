@@ -71,9 +71,6 @@ auto
 
     InCollection.InitializeDependency<UCk_ActorRelay_Subsystem_UE>();
 
-    if (GetWorld()->IsNetMode(NM_Client))
-    { return; }
-
     auto RelaySubsystem = GetWorld()->GetSubsystem<UCk_ActorRelay_Subsystem_UE>();
 
     CK_ENSURE_IF_NOT(ck::IsValid(RelaySubsystem),
@@ -81,6 +78,9 @@ auto
     { return; }
 
     RelaySubsystem->DoRegisterGroup(this);
+
+    if (GetWorld()->IsNetMode(NM_Client))
+    { return; }
 
     _PostLoadMapWithWorldDelegateHandle = FCoreUObjectDelegates::PostLoadMapWithWorld.AddUObject(
         this, &UCk_ActorRelay_Group_Subsystem_Base_UE::OnPostLoadMapWithWorld);
