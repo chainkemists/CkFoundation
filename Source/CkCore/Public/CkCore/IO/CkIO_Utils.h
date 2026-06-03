@@ -290,6 +290,28 @@ public:
     static bool
     WasBlockingLoadQueriedWhileUnsafe();
 
+    // Side-effect-free read of the blocking-load safety flag. Unlike IsEngineSafeForBlockingLoads(),
+    // this does NOT set the "queried while unsafe" flag — use it for guard checks that must not
+    // perturb the DeferredAssetInit short-circuit (e.g. skipping the pre-engine-safe post-reload).
+    static bool
+    Get_IsEngineSafeForBlockingLoads_Peek();
+
+public:
+    // ---- Premature-load diagnostic aggregator (cheap; zero stack walks) ----
+    // Replaces a per-call ck::EnsureIfNot in the generated assets::load::* accessors (each ensure
+    // captures three stack traces, ~15ms). Records a count + the first message only. The
+    // DeferredAssetInit sweep emits a single summary and resets via Reset_PrematureAssetLoadReport.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|IO",
+              DisplayName = "[Ck] Report Premature Asset Load")
+    static void
+    Report_PrematureAssetLoad(
+        const FString& InMessage);
+
+    static int32   Get_PrematureAssetLoadCount();
+    static FString Get_FirstPrematureAssetLoadMessage();
+    static void    Reset_PrematureAssetLoadReport();
+
 public:
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Load Assets By Name",

@@ -61,6 +61,24 @@ namespace ck
         return ck::Ensure(InExpression, InMessage) == false;
     }
 
+    // Cheap diagnostic for premature assets::load::* calls (before engine-safe). Unlike EnsureIfNot,
+    // this does NOT capture stack traces (each full ensure walks C++/BP/AS stacks ~15ms) — it records
+    // a count + first message via UCk_Utils_IO_UE, which UCk_DeferredAssetInit_UE surfaces as one
+    // aggregated line. Called from the generated assets::load::* accessors. Returns true when reported.
+    //
+    // Also notes the deferred load for the surgical heal (UNGATED — must run in cook too, before the
+    // commandlet gate below), so UCk_DeferredAssetInit_UE re-runs only the CDOs that actually deferred.
+    bool EnsureIfNot_PrematureAssetLoad(bool InExpression, FString InMessage)
+    {
+        UCk_DeferredAssetInit_UE::Note_DeferredAssetLoad_FromActiveContext();
+
+        if (InExpression)
+        { return false; }
+
+        UCk_Utils_IO_UE::Report_PrematureAssetLoad(InMessage);
+        return true;
+    }
+
     void TriggerEnsure(FString InMessage)
     {
         UCk_Utils_Ensure_UE::TriggerEnsure(FText::FromString(InMessage));

@@ -25,6 +25,10 @@ namespace
     bool GIsEngineSafeForBlockingLoads          = false;
     bool GBlockingLoadWasQueriedWhileUnsafe     = false;
 
+    // ---- Premature-load diagnostic aggregator state ----
+    int32   GPrematureAssetLoadCount        = 0;
+    FString GFirstPrematureAssetLoadMessage;
+
     struct FBlockingLoadSafetyRegistrar
     {
         FBlockingLoadSafetyRegistrar()
@@ -106,6 +110,55 @@ auto
     -> bool
 {
     return GBlockingLoadWasQueriedWhileUnsafe;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_IO_UE::
+    Get_IsEngineSafeForBlockingLoads_Peek()
+    -> bool
+{
+    return GIsEngineSafeForBlockingLoads;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_IO_UE::
+    Report_PrematureAssetLoad(
+        const FString& InMessage)
+    -> void
+{
+    if (GPrematureAssetLoadCount == 0)
+    { GFirstPrematureAssetLoadMessage = InMessage; }
+
+    ++GPrematureAssetLoadCount;
+}
+
+auto
+    UCk_Utils_IO_UE::
+    Get_PrematureAssetLoadCount()
+    -> int32
+{
+    return GPrematureAssetLoadCount;
+}
+
+auto
+    UCk_Utils_IO_UE::
+    Get_FirstPrematureAssetLoadMessage()
+    -> FString
+{
+    return GFirstPrematureAssetLoadMessage;
+}
+
+auto
+    UCk_Utils_IO_UE::
+    Reset_PrematureAssetLoadReport()
+    -> void
+{
+    GPrematureAssetLoadCount = 0;
+    GFirstPrematureAssetLoadMessage.Reset();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
