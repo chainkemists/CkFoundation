@@ -142,6 +142,27 @@ public:
     Get_DebugColor(
         const FCk_Handle_CrowdAgent& InAgent);
 
+    // ---- Debug override (debugger "take control") --------------------------------------------
+    //
+    // Set/clear the FTag_CrowdAgent_DebugOverride marker. While set, gameplay code (e.g. the NPC SM)
+    // must check Get_HasDebugOverride and skip issuing its own MoveTo, so a debugger-issued goal
+    // isn't immediately overwritten. The debugger sets this on "take control", clears it on release.
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Set Debug Override")
+    static FCk_Handle_CrowdAgent
+    Request_SetDebugOverride(
+        UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
+        bool InOverride);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Has Debug Override")
+    static bool
+    Get_HasDebugOverride(
+        const FCk_Handle_CrowdAgent& InAgent);
+
 private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|CrowdAgent",
