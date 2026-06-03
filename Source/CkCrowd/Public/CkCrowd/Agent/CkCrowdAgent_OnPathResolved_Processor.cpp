@@ -32,8 +32,21 @@ namespace ck
                 auto NonConstHandle = InHandle;
                 NonConstHandle.Try_Remove<FTag_CrowdAgent_PathPending>();
                 NonConstHandle.AddOrGet<FTag_CrowdAgent_Walking>();
-                ck::crowd::Verbose(TEXT("CrowdAgent [{}] PathPending → Walking ({} waypoints)"),
-                    InHandle, InPathResult.Get_Waypoints().Num());
+
+                // Diagnostic for the "agent orbits its goal" bug: log the path shape so the failing
+                // case can be reproduced exactly. A polyline length much larger than the straight-line
+                // distance means the path wraps around an obstacle (e.g. a reservation point on the far
+                // face of a gondola) — the suspected orbit trigger.
+                const auto& Wps = InPathResult.Get_Waypoints();
+                auto PolylineLen = 0.0;
+                for (auto i = 0; i < Wps.Num() - 1; ++i)
+                { PolylineLen += FVector::Dist(Wps[i], Wps[i + 1]); }
+                const auto StraightLen = Wps.Num() >= 2 ? FVector::Dist(Wps[0], Wps.Last()) : 0.0;
+                ck::crowd::Verbose(
+                    TEXT("CrowdAgent [{}] PathPending → Walking ({} wps, polyline={}cm, straight={}cm, start={}, end={})"),
+                    InHandle, Wps.Num(), PolylineLen, StraightLen,
+                    Wps.Num() > 0 ? Wps[0] : FVector::ZeroVector,
+                    Wps.Num() > 0 ? Wps.Last() : FVector::ZeroVector);
                 break;
             }
             case ECk_Nav_PathStatus::Failed:

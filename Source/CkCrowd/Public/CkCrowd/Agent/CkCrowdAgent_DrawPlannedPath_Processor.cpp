@@ -39,6 +39,11 @@ namespace
     constexpr auto PlannedPath_Thickness_Selected = 4.0f;
     constexpr auto PlannedPath_AlphaScale         = 0.55f;
     constexpr auto PlannedPath_DurationOneFrame   = 0.0f;
+    // The planned path is drawn DASHED so it reads as "where the agent intends to go" — visually
+    // distinct from the solid breadcrumb trail (FProcessor_CrowdAgent_DiagDraw), which is where the
+    // agent actually went. When the two diverge (e.g. an agent orbiting its goal), the dashed line
+    // still points at the goal while the solid trail circles.
+    constexpr auto PlannedPath_DashSize           = 20.0f;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -50,7 +55,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Nav_PathResult& InPathResult)
+            const FFragment_Nav_PathResult& InPathResult,
+            const FFragment_CrowdAgent_PathFollow& InPathFollow)
         -> void
     {
         const auto bDrawAll = UCk_Utils_Crowd_DebugSettings_UE::Get_DrawPlannedPaths();
@@ -63,6 +69,15 @@ namespace ck
         const auto& Waypoints = InPathResult.Get_Waypoints();
         if (Waypoints.Num() == 0)
         { return; }
+
+        // Draw only the REMAINING path — from the waypoint the agent is currently heading toward
+        // onward. Starting at Waypoints[0] (the path's start) would connect the agent backward to a
+        // point it has already passed, painting a useless line from the start to the agent. Once the
+        // cursor is past the last waypoint (goal reached) there is nothing ahead to draw.
+        const auto NextWaypoint = InPathFollow.Get_WaypointIndex();
+        if (NextWaypoint >= Waypoints.Num())
+        { return; }
+        const auto FirstIndex = FMath::Max(0, NextWaypoint);
 
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
         if (NOT IsValid(World))
@@ -77,19 +92,19 @@ namespace ck
         const auto Thickness = bIsSelected ? PlannedPath_Thickness_Selected : PlannedPath_Thickness;
         const auto Lift = FVector(0.0f, 0.0f, PlannedPath_LiftZ);
 
-        // Start segment connects the agent's current position to the first waypoint. Fall back
-        // to drawing only between waypoints if the transform feature isn't on the agent.
-        auto Prev = Waypoints[0] + Lift;
+        // Start segment connects the agent's current position to its NEXT waypoint. Fall back to
+        // the next waypoint itself if the transform feature isn't on the agent.
+        auto Prev = Waypoints[FirstIndex] + Lift;
         if (auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle); ck::IsValid(TransformHandle))
         {
             Prev = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle) + Lift;
         }
 
-        for (const auto& Wp : Waypoints)
+        for (auto i = FirstIndex; i < Waypoints.Num(); ++i)
         {
-            const auto Curr = Wp + Lift;
-            UCk_Utils_DebugDraw_UE::DrawDebugLine(
-                World, Prev, Curr, PathColor, PlannedPath_DurationOneFrame, Thickness);
+            const auto Curr = Waypoints[i] + Lift;
+            UCk_Utils_DebugDraw_UE::DrawDebugDashedLine(
+                World, Prev, Curr, PlannedPath_DashSize, PathColor, PlannedPath_DurationOneFrame, Thickness);
             Prev = Curr;
         }
     }
