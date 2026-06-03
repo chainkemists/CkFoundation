@@ -96,9 +96,89 @@ auto
         }
     }
 
-    // TODO(Task: GridConnectivity): RequireConnected adjacency is implemented in a later task.
-    // For now the connectivity parameter is accepted but ignored.
-    (void)InConnectivity;
+    // Connectivity: a multi-cell footprint must form a single 4-connected component, treating
+    // disabled / out-of-bounds footprint cells as walls (impassable). Occupied cells are passable
+    // (occupancy is a soft constraint for connectivity, not a topological cut). A single-cell
+    // footprint is trivially connected, so there is nothing to validate there.
+    if (InConnectivity == ECk_GridConnectivity::RequireConnected && Cells.Num() > 1)
+    {
+        const auto IsWall = [&](const FIntPoint& InCoord) -> bool
+        {
+            const auto Cell = UCk_Utils_2dGridSystem_UE::Get_CellAt(InGrid, InCoord);
+            // Out-of-bounds (invalid cell) and disabled cells are both walls.
+            return ck::Is_NOT_Valid(Cell) || UCk_Utils_2dGridCell_UE::Get_IsDisabled(Cell);
+        };
+
+        auto FootprintSet = TSet<FIntPoint>{};
+        FootprintSet.Reserve(Cells.Num());
+        for (const auto& Coord : Cells)
+        { FootprintSet.Add(Coord); }
+
+        // Start the flood from the anchor cell if it is part of the footprint and not a wall;
+        // otherwise from the first non-wall footprint cell.
+        auto StartCoord = FIntPoint{};
+        auto FoundStart = false;
+        if (FootprintSet.Contains(InAnchor) && NOT IsWall(InAnchor))
+        {
+            StartCoord = InAnchor;
+            FoundStart = true;
+        }
+        else
+        {
+            for (const auto& Coord : Cells)
+            {
+                if (NOT IsWall(Coord))
+                {
+                    StartCoord = Coord;
+                    FoundStart = true;
+                    break;
+                }
+            }
+        }
+
+        auto Reached = TSet<FIntPoint>{};
+        if (FoundStart)
+        {
+            Reached.Reserve(Cells.Num());
+
+            auto Frontier = TArray<FIntPoint>{};
+            Frontier.Add(StartCoord);
+            Reached.Add(StartCoord);
+
+            const FIntPoint Neighbours[] =
+            {
+                FIntPoint{ 1,  0},
+                FIntPoint{-1,  0},
+                FIntPoint{ 0,  1},
+                FIntPoint{ 0, -1}
+            };
+
+            while (NOT Frontier.IsEmpty())
+            {
+                const auto Current = Frontier.Pop(EAllowShrinking::No);
+                for (const auto& Delta : Neighbours)
+                {
+                    const auto Next = Current + Delta;
+                    // Only traverse to footprint cells that are not walls and not yet reached.
+                    if (FootprintSet.Contains(Next) && NOT Reached.Contains(Next) && NOT IsWall(Next))
+                    {
+                        Reached.Add(Next);
+                        Frontier.Add(Next);
+                    }
+                }
+            }
+        }
+
+        // Any non-wall footprint cell the flood did not reach is disconnected from the start
+        // component. Wall cells are unreachable by definition AND already produced their own
+        // per-cell failure above (Disabled / OutOfBounds), so we skip them here to avoid a
+        // duplicate / mis-reasoned entry in _FailedCells.
+        for (const auto& Coord : Cells)
+        {
+            if (NOT Reached.Contains(Coord) && NOT IsWall(Coord))
+            { RecordFailure(Coord, ECk_2dGridPlacement_Failure::Disconnected); }
+        }
+    }
 
     if (NOT FailedCells.IsEmpty())
     { return FCk_2dGridPlacement_Result::Failure(Reason, MoveTemp(FailedCells)); }
