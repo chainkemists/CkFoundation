@@ -143,7 +143,7 @@ auto
     { return RootObject; }
 
     // Root parameters
-    const auto& RootParameterBag = EditorData->GetRootParametersPropertyBag();
+    const auto& RootParameterBag = EditorData->RootParameters.Parameters;
     if (const auto* BagStruct = RootParameterBag.GetPropertyBagStruct())
     {
         RootObject->SetObjectField(TEXT("rootParameters"),
@@ -196,11 +196,6 @@ auto
     StateObject->SetStringField(TEXT("selectionBehavior"), DoGetEnumValueAsString(StaticEnum<EStateTreeStateSelectionBehavior>(), static_cast<int64>(InState->SelectionBehavior)));
     StateObject->SetStringField(TEXT("id"), InState->ID.ToString());
     StateObject->SetBoolField(TEXT("enabled"), InState->bEnabled);
-
-    if (!InState->Description.IsEmpty())
-    {
-        StateObject->SetStringField(TEXT("description"), InState->Description);
-    }
 
     if (InState->Tag.IsValid())
     {
@@ -408,7 +403,7 @@ auto
     }
 
     // Root parameters
-    const auto& RootParameterBag = EditorData->GetRootParametersPropertyBag();
+    const auto& RootParameterBag = EditorData->RootParameters.Parameters;
     if (const auto* BagStruct = RootParameterBag.GetPropertyBagStruct())
     {
         Text += TEXT("--- Root Parameters ---\n");
@@ -475,11 +470,6 @@ auto
         *InState->Name.ToString(),
         *TypeName,
         InState->bEnabled ? TEXT("") : TEXT(" [disabled]"));
-
-    if (!InState->Description.IsEmpty())
-    {
-        OutText += FString::Printf(TEXT("%s  Description: %s\n"), *Indent, *InState->Description);
-    }
 
     OutText += FString::Printf(TEXT("%s  SelectionBehavior: %s\n"), *Indent,
         *DoGetEnumValueAsString(StaticEnum<EStateTreeStateSelectionBehavior>(), static_cast<int64>(InState->SelectionBehavior)));
