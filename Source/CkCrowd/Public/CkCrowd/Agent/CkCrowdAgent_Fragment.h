@@ -59,6 +59,11 @@ namespace ck
     // Gate 4 sleep optimization is wire-compatible without retro-fitting every view.
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_Asleep);
 
+    // Debugger "take control" marker. While present, gameplay code (e.g. the NPC SM) must NOT issue
+    // its own MoveTo for this agent, so the debugger's manually-issued goal isn't immediately fought.
+    // Set/cleared via UCk_Utils_CrowdAgent_UE::Request_SetDebugOverride; checked via Get_HasDebugOverride.
+    CK_DEFINE_ECS_TAG(FTag_CrowdAgent_DebugOverride);
+
     // --------------------------------------------------------------------------------------------------------------------
     // Lifecycle signals fired by the steering chain. OnGoalReached fires once when the agent's
     // path-follow cursor crosses the final waypoint within _ActiveArrivalRadius (Walking → Idle).
