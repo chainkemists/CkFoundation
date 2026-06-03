@@ -757,7 +757,7 @@ namespace ck::angelscriptgenerator::self_heal
         Out += TEXT("        if (UCk_Utils_IO_UE::IsEngineSafeForBlockingLoads() == false)");                       Out += LINE_TERMINATOR;
         Out += TEXT("        {");                                                                                   Out += LINE_TERMINATOR;
         Out += FString::Printf(
-            TEXT("            ck::EnsureIfNot(UCk_Utils_IO_UE::Get_IsRunningCommandlet(), \"%s::load::%s() called before engine init. Use %s::%s() (soft ref) with UCk_DeferredConfig_UE instead.\");"),
+            TEXT("            ck::EnsureIfNot_PrematureAssetLoad(UCk_Utils_IO_UE::Get_IsRunningCommandlet(), \"%s::load::%s() called before engine init. Use %s::%s() (soft ref) with UCk_DeferredConfig_UE instead.\");"),
             *InSoftNamespace, *InFunctionName, *InSoftNamespace, *InFunctionName);                                  Out += LINE_TERMINATOR;
         Out += TEXT("            return nullptr;");                                                                 Out += LINE_TERMINATOR;
         Out += TEXT("        }");                                                                                   Out += LINE_TERMINATOR;
@@ -783,7 +783,7 @@ namespace ck::angelscriptgenerator::self_heal
         Out += TEXT("        if (UCk_Utils_IO_UE::IsEngineSafeForBlockingLoads() == false)");                       Out += LINE_TERMINATOR;
         Out += TEXT("        {");                                                                                   Out += LINE_TERMINATOR;
         Out += FString::Printf(
-            TEXT("            ck::EnsureIfNot(UCk_Utils_IO_UE::Get_IsRunningCommandlet(), \"%s::load::%s() called before engine init. Use %s::%s() (soft ref) with UCk_DeferredConfig_UE instead.\");"),
+            TEXT("            ck::EnsureIfNot_PrematureAssetLoad(UCk_Utils_IO_UE::Get_IsRunningCommandlet(), \"%s::load::%s() called before engine init. Use %s::%s() (soft ref) with UCk_DeferredConfig_UE instead.\");"),
             *InSoftNamespace, *InFunctionName, *InSoftNamespace, *InFunctionName);                                  Out += LINE_TERMINATOR;
         Out += TEXT("            return nullptr;");                                                                 Out += LINE_TERMINATOR;
         Out += TEXT("        }");                                                                                   Out += LINE_TERMINATOR;
