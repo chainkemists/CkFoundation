@@ -2,6 +2,8 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
 #include "CkRecord/Record/CkRecord_Utils.h"
 
@@ -31,6 +33,13 @@ auto
     // StampCells processor runs un-gated and reconciles from the record every tick.
     ck::RecordOf_GridPlacements_Utils::AddIfMissing(GridBase);
     InGrid.AddOrGet<ck::FFragment_2dGridOccupancy_Current>();
+
+    // Ensure the replicated container exists on the grid (no-op off-host / non-replicating /
+    // already-present) and flag the grid for the authority-only Replicate pass to rebuild + push
+    // the RepData. Both are safe to call on clients too (the client-apply processor reuses this
+    // helper): TryAddContainerFragment / the Replicate processor are host/authority gated.
+    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_2dGridPlacements>(GridBase);
+    InGrid.AddOrGet<ck::FTag_2dGridOccupancy_MayRequireReplication>();
 
     // Create the placement entity with the GRID as its lifetime owner so it dies with the grid.
     // The generated constructor covers (Occupant, Grid, Anchor, Cells); set Rotation explicitly.
@@ -79,6 +88,14 @@ auto
 {
     if (ck::Is_NOT_Valid(InPlacement))
     { return false; }
+
+    // Flag the grid so the authority Replicate pass re-pushes the (now-shorter) placement set.
+    // Read the grid BEFORE destroying the placement entity (its params go away with it).
+    if (auto Grid = InPlacement.Get<ck::FFragment_2dGridPlacement_Params>().Get_Grid();
+        ck::IsValid(Grid))
+    {
+        Grid.AddOrGet<ck::FTag_2dGridOccupancy_MayRequireReplication>();
+    }
 
     // CkRecord's reverse-link prunes the now-dead record entry; the un-gated StampCells pass
     // then un-stamps its cells on the next tick.

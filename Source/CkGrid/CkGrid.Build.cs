@@ -18,6 +18,9 @@ public class CkGrid : CkModuleRules
             "GameplayTags",
             "DeveloperSettings",
 
+            "IrisCore",
+            "NetCore",
+
             "CkCore",
             "CkEcs",
             "CkEcsExt",
