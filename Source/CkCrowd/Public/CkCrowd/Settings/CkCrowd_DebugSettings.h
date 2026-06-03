@@ -73,12 +73,18 @@ private:
                       ToolTip = "Draw a navmesh-projection marker (green/red circle on the floor) under every crowd agent each tick. Off by default — at scale this is the most expensive Crowd debug viz because it runs a synchronous ProjectPointToNavigation per agent every frame."))
     bool _DrawNavProjection = false;
 
+    UPROPERTY(Config, EditAnywhere, Category = "Visualization",
+              meta = (AllowPrivateAccess = true,
+                      ToolTip = "Draw the orbit-diagnosis rings for every crowd agent: arrival ring (green) + predicted-orbit ring (red, = MaxSpeed/MaxTurnRate) at the goal, the turn-radius circle (blue, = speed/MaxTurnRate) tangent to the agent, and the velocity vector (yellow). The selected agent is always drawn regardless of this toggle."))
+    bool _DrawAgentRings = false;
+
 public:
     CK_PROPERTY(_DrawAgentBody);
     CK_PROPERTY(_DrawSeparation);
     CK_PROPERTY(_DrawBreadcrumbs);
     CK_PROPERTY(_DrawPlannedPaths);
     CK_PROPERTY(_DrawNavProjection);
+    CK_PROPERTY(_DrawAgentRings);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -113,6 +119,10 @@ public:
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|DebugSettings")
     static bool
     Get_DrawNavProjection();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|DebugSettings")
+    static bool
+    Get_DrawAgentRings();
 };
 
 // --------------------------------------------------------------------------------------------------------------------
