@@ -6,6 +6,7 @@
 #include <Engine/Blueprint.h>
 #include <Engine/DataAsset.h>
 #include <EnvironmentQuery/EnvQuery.h>
+#include <StateTree.h>
 #include <ContentBrowserModule.h>
 #include <IContentBrowserSingleton.h>
 #include <Styling/AppStyle.h>
@@ -141,6 +142,21 @@ auto
                 .Text(FText::FromString(TEXT("Export Selected EQS")))
                 .ToolTipText(FText::FromString(TEXT("Export EQS Queries currently selected in the Content Browser to JSON and Text files")))
                 .OnClicked(this, &SCkBehaviorTreeExporterTab::DoOnExportSelectedEQSClicked)
+                .HAlign(HAlign_Center)
+            ]
+        ]
+
+        + SHorizontalBox::Slot()
+        .AutoWidth()
+        .Padding(0, 0, BehaviorTreeExporterTab_Constants::SectionSpacing, 0)
+        [
+            SNew(SBox)
+            .WidthOverride(200.0f)
+            [
+                SNew(SButton)
+                .Text(FText::FromString(TEXT("Export Selected StateTrees")))
+                .ToolTipText(FText::FromString(TEXT("Export State Trees currently selected in the Content Browser to JSON and Text files")))
+                .OnClicked(this, &SCkBehaviorTreeExporterTab::DoOnExportSelectedStateTreesClicked)
                 .HAlign(HAlign_Center)
             ]
         ];
@@ -450,6 +466,81 @@ auto
     SCkBehaviorTreeExporterTab::
     DoRefreshResultsListFromEQSResults(
         const TArray<FCk_EQSExportResult>& InResults)
+    -> void
+{
+    _ResultEntries.Empty();
+
+    for (const auto& Result : InResults)
+    {
+        auto Entry = MakeShared<FCk_BehaviorTreeExporterTab_ResultEntry>();
+        Entry->AssetName = Result.AssetName;
+        Entry->Succeeded = Result.Succeeded;
+        Entry->JsonPath = Result.JsonFilePath;
+        Entry->TextPath = Result.TextFilePath;
+        Entry->ErrorMessage = Result.ErrorMessage;
+        _ResultEntries.Add(Entry);
+    }
+
+    if (_ResultsListView.IsValid())
+    {
+        _ResultsListView->RequestListRefresh();
+    }
+}
+
+auto
+    SCkBehaviorTreeExporterTab::
+    DoOnExportSelectedStateTreesClicked()
+    -> FReply
+{
+    // Get selected State Trees from Content Browser
+    auto& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+    auto SelectedAssets = TArray<FAssetData>{};
+    ContentBrowserModule.Get().GetSelectedAssets(SelectedAssets);
+
+    auto StateTrees = TArray<UStateTree*>{};
+    for (const auto& AssetData : SelectedAssets)
+    {
+        if (auto* ST = Cast<UStateTree>(AssetData.GetAsset()))
+        {
+            StateTrees.Add(ST);
+        }
+    }
+
+    if (StateTrees.Num() == 0)
+    {
+        _StatusText->SetText(FText::FromString(TEXT("No State Tree assets selected in the Content Browser.")));
+        return FReply::Handled();
+    }
+
+    const auto Results = FCk_StateTreeExporter::ExportStateTrees(StateTrees);
+    DoRefreshResultsListFromStateTreeResults(Results);
+
+    auto SuccessCount = int32{0};
+    auto FailCount = int32{0};
+    for (const auto& R : Results)
+    {
+        if (R.Succeeded) { ++SuccessCount; }
+        else { ++FailCount; }
+    }
+
+    if (FailCount == 0)
+    {
+        _StatusText->SetText(FText::FromString(
+            FString::Printf(TEXT("Successfully exported %d State Tree(s)."), SuccessCount)));
+    }
+    else
+    {
+        _StatusText->SetText(FText::FromString(
+            FString::Printf(TEXT("Exported %d, failed %d State Tree(s)."), SuccessCount, FailCount)));
+    }
+
+    return FReply::Handled();
+}
+
+auto
+    SCkBehaviorTreeExporterTab::
+    DoRefreshResultsListFromStateTreeResults(
+        const TArray<FCk_StateTreeExportResult>& InResults)
     -> void
 {
     _ResultEntries.Empty();
