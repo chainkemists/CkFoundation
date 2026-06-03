@@ -57,3 +57,18 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+    FCk_Delegate_2dGridPlacement_ObjectPlaced,
+    FCk_Handle_2dGridSystem, InGrid,
+    FCk_Handle, InOccupant,
+    const TArray<FIntPoint>&, InCells);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_2dGridPlacement_ObjectRemoved,
+    FCk_Handle_2dGridSystem, InGrid,
+    FCk_Handle, InOccupant);
+
+// --------------------------------------------------------------------------------------------------------------------
