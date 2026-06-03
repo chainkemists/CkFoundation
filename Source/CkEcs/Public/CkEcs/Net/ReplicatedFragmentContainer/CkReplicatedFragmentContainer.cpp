@@ -11,6 +11,9 @@ TMap<const UScriptStruct*, FCk_ReplicatedFragmentHandlerRegistry::FHandler>
 TArray<FCk_ReplicatedFragmentHandlerRegistry::FLazyEntry>
     FCk_ReplicatedFragmentHandlerRegistry::_PendingHandlers;
 
+TOptional<FCk_ReplicatedFragmentHandlerRegistry::FHandler>
+    FCk_ReplicatedFragmentHandlerRegistry::_Fallback;
+
 auto
     FCk_ReplicatedFragmentHandlerRegistry::
     Register(
@@ -50,6 +53,15 @@ auto
 
 auto
     FCk_ReplicatedFragmentHandlerRegistry::
+    RegisterFallback(
+        FHandler InHandler)
+    -> void
+{
+    _Fallback = MoveTemp(InHandler);
+}
+
+auto
+    FCk_ReplicatedFragmentHandlerRegistry::
     Find(
         const UScriptStruct* InType)
     -> const FHandler*
@@ -60,6 +72,18 @@ auto
     }
 
     return _Handlers.Find(InType);
+}
+
+auto
+    FCk_ReplicatedFragmentHandlerRegistry::
+    Resolve(
+        const UScriptStruct* InType)
+    -> const FHandler*
+{
+    if (const auto* Handler = Find(InType))
+    { return Handler; }
+
+    return _Fallback.IsSet() ? &_Fallback.GetValue() : nullptr;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -83,7 +107,7 @@ auto
     {
         auto& Entry = _Items[Index];
 
-        const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Find(Entry.Data.GetScriptStruct());
+        const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Resolve(Entry.Data.GetScriptStruct());
         if (Handler == nullptr || !Handler->OnRemove)
         { continue; }
 
@@ -118,7 +142,7 @@ auto
         if (NOT IsConstructionComplete)
         { continue; }
 
-        const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Find(Entry.Data.GetScriptStruct());
+        const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Resolve(Entry.Data.GetScriptStruct());
         if (Handler == nullptr || !Handler->OnAdd)
         { continue; }
 
@@ -144,7 +168,7 @@ auto
     {
         auto& Entry = _Items[Index];
 
-        const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Find(Entry.Data.GetScriptStruct());
+        const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Resolve(Entry.Data.GetScriptStruct());
         if (Handler != nullptr && Handler->OnChange)
         {
             Handler->OnChange(Entity, Entry.Data, Entry._PreviousData);

@@ -86,7 +86,7 @@ auto
 
     for (auto& Entry : _Fragments._Items)
     {
-        const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Find(Entry.Data.GetScriptStruct());
+        const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Resolve(Entry.Data.GetScriptStruct());
         if (Handler == nullptr || NOT Handler->OnAdd)
         { continue; }
 
@@ -428,6 +428,29 @@ auto
     {
         return InEntry.Data.GetScriptStruct() == InType;
     });
+}
+
+auto
+    UCk_Fragment_EntityReplicationDriver_Rep::
+    SetFragmentData_Runtime(
+        const FInstancedStruct& InData)
+    -> int32
+{
+    if (auto* Entry = FindEntry(InData.GetScriptStruct()))
+    {
+        Entry->Data = InData;
+        MarkFragmentDirty(*Entry);
+        return _Fragments._Items.IndexOfByPredicate([Entry](const FCk_ReplicatedFragmentEntry& InEntry)
+        {
+            return &InEntry == Entry;
+        });
+    }
+
+    auto& NewEntry = _Fragments._Items.AddDefaulted_GetRef();
+    NewEntry.Data = InData;
+    MarkFragmentDirty(NewEntry);
+
+    return _Fragments._Items.Num() - 1;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

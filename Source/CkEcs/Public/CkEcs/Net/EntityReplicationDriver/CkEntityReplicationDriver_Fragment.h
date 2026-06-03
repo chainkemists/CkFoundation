@@ -238,6 +238,13 @@ public:
     SetFragmentData(
         const TDataStruct& InData) -> int32;
 
+    // Runtime (non-templated) sibling of SetFragmentData<T> for payloads whose UScriptStruct is only
+    // known at runtime (e.g. dynamic fragments). Entries are keyed by Data.GetScriptStruct(), so each
+    // distinct payload type occupies its own FastArray entry, identical to the templated path.
+    auto
+    SetFragmentData_Runtime(
+        const FInstancedStruct& InData) -> int32;
+
     auto
     FindEntry(
         const UScriptStruct* InType) -> FCk_ReplicatedFragmentEntry*;
