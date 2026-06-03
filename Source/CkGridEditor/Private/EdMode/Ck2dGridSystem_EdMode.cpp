@@ -184,27 +184,46 @@ void
         return Transform.TransformPosition(FVector(InLocalX, InLocalY, 0.0));
     };
 
+    const auto DrawCellEdges = [&](int32 InX, int32 InY, const FLinearColor& InColor)
+    {
+        const auto MinX = InX * CellSize.X;
+        const auto MinY = InY * CellSize.Y;
+        const auto MaxX = (InX + 1) * CellSize.X;
+        const auto MaxY = (InY + 1) * CellSize.Y;
+
+        const auto C00 = LocalToWorld(MinX, MinY);
+        const auto C10 = LocalToWorld(MaxX, MinY);
+        const auto C11 = LocalToWorld(MaxX, MaxY);
+        const auto C01 = LocalToWorld(MinX, MaxY);
+
+        InPDI->DrawLine(C00, C10, InColor, SDPG_Foreground, ck_grid_editor_detail::CellLineThickness);
+        InPDI->DrawLine(C10, C11, InColor, SDPG_Foreground, ck_grid_editor_detail::CellLineThickness);
+        InPDI->DrawLine(C11, C01, InColor, SDPG_Foreground, ck_grid_editor_detail::CellLineThickness);
+        InPDI->DrawLine(C01, C00, InColor, SDPG_Foreground, ck_grid_editor_detail::CellLineThickness);
+    };
+
+    // Two passes so a special cell's color wins on the edges it shares with an enabled neighbour.
+    // Each cell draws all four of its own edges; a shared edge is drawn by both adjacent cells, and
+    // the later draw wins. Pass 1 draws every enabled (green) cell; pass 2 redraws the non-enabled
+    // cells in their state color LAST, so a disabled/blocker/tagged cell's full outline is colored
+    // (otherwise an adjacent green cell drawn afterwards would overwrite its top/left edges).
     for (auto Y = 0; Y < Dimensions.Y; ++Y)
     {
         for (auto X = 0; X < Dimensions.X; ++X)
         {
-            const auto Coordinate = FIntPoint(X, Y);
-            const auto Color      = ck_grid_editor_detail::Resolve_CellColor(Spec, Coordinate);
+            const auto Color = ck_grid_editor_detail::Resolve_CellColor(Spec, FIntPoint(X, Y));
+            if (Color == ck_grid_editor_detail::ColorEnabled)
+            { DrawCellEdges(X, Y, Color); }
+        }
+    }
 
-            const auto MinX = X * CellSize.X;
-            const auto MinY = Y * CellSize.Y;
-            const auto MaxX = (X + 1) * CellSize.X;
-            const auto MaxY = (Y + 1) * CellSize.Y;
-
-            const auto C00 = LocalToWorld(MinX, MinY);
-            const auto C10 = LocalToWorld(MaxX, MinY);
-            const auto C11 = LocalToWorld(MaxX, MaxY);
-            const auto C01 = LocalToWorld(MinX, MaxY);
-
-            InPDI->DrawLine(C00, C10, Color, SDPG_Foreground, ck_grid_editor_detail::CellLineThickness);
-            InPDI->DrawLine(C10, C11, Color, SDPG_Foreground, ck_grid_editor_detail::CellLineThickness);
-            InPDI->DrawLine(C11, C01, Color, SDPG_Foreground, ck_grid_editor_detail::CellLineThickness);
-            InPDI->DrawLine(C01, C00, Color, SDPG_Foreground, ck_grid_editor_detail::CellLineThickness);
+    for (auto Y = 0; Y < Dimensions.Y; ++Y)
+    {
+        for (auto X = 0; X < Dimensions.X; ++X)
+        {
+            const auto Color = ck_grid_editor_detail::Resolve_CellColor(Spec, FIntPoint(X, Y));
+            if (Color != ck_grid_editor_detail::ColorEnabled)
+            { DrawCellEdges(X, Y, Color); }
         }
     }
 
