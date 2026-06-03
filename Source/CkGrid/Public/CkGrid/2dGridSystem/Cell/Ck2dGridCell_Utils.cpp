@@ -137,6 +137,41 @@ auto
 
 auto
     UCk_Utils_2dGridCell_UE::
+    Request_AddTag(
+        FCk_Handle_2dGridCell& InCell,
+        FGameplayTag InTag)
+    -> FCk_Handle_2dGridCell
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InCell), TEXT("Cell is invalid"))
+    { return InCell; }
+
+    CK_ENSURE_IF_NOT(InTag.IsValid(), TEXT("Request_AddTag: tag is invalid"))
+    { return InCell; }
+
+    auto& Params = InCell.Get<ck::FFragment_2dGridCell_Params>();
+    Params.Get_Tags().AddTag(InTag);
+
+    return InCell;
+}
+
+auto
+    UCk_Utils_2dGridCell_UE::
+    Request_RemoveTag(
+        FCk_Handle_2dGridCell& InCell,
+        FGameplayTag InTag)
+    -> FCk_Handle_2dGridCell
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InCell), TEXT("Cell is invalid"))
+    { return InCell; }
+
+    auto& Params = InCell.Get<ck::FFragment_2dGridCell_Params>();
+    Params.Get_Tags().RemoveTag(InTag);
+
+    return InCell;
+}
+
+auto
+    UCk_Utils_2dGridCell_UE::
     Get_Bounds(
         const FCk_Handle_2dGridCell& InCell,
         ECk_LocalWorld InLocalWorld)

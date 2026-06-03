@@ -118,6 +118,26 @@ public:
         UPARAM(ref) FCk_Handle_2dGridCell& InCell,
         ECk_EnableDisable InEnableDisable);
 
+    // Adds a tag to this cell's own _Tags set. The placement layer unions these with the grid's
+    // _DefaultCellTags when evaluating an object's required/forbidden cell-tag gating. Direct
+    // params-fragment mutation (the cell feature is data-only, not request/processor-driven).
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|2dGridCell",
+              DisplayName="[Ck][2dGridCell] Request Add Tag")
+    static FCk_Handle_2dGridCell
+    Request_AddTag(
+        UPARAM(ref) FCk_Handle_2dGridCell& InCell,
+        FGameplayTag InTag);
+
+    // Removes a tag from this cell's own _Tags set (no-op if absent).
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|2dGridCell",
+              DisplayName="[Ck][2dGridCell] Request Remove Tag")
+    static FCk_Handle_2dGridCell
+    Request_RemoveTag(
+        UPARAM(ref) FCk_Handle_2dGridCell& InCell,
+        FGameplayTag InTag);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|2dGridCell",
               DisplayName="[Ck][2dGridCell] Get Local Bounds")
