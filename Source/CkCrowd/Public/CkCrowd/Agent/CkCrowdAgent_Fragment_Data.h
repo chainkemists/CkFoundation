@@ -196,9 +196,16 @@ private:
     UPROPERTY()
     float _ActiveArrivalRadius = 30.0f;
 
+    // World-space goal of the active MoveTo. Used by HandleRequests to no-op a re-issued MoveTo
+    // that targets (nearly) the same goal we're already walking to — re-issuing would reset the
+    // waypoint cursor and prevent the final-stop from ever latching (the "orbit" failure mode).
+    UPROPERTY()
+    FVector _ActiveGoal = FVector::ZeroVector;
+
 public:
     CK_PROPERTY_GET(_WaypointIndex);
     CK_PROPERTY_GET(_ActiveArrivalRadius);
+    CK_PROPERTY_GET(_ActiveGoal);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

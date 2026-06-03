@@ -49,6 +49,20 @@ namespace ck
             const FCk_Request_CrowdAgent_MoveTo& InRequest)
         -> void
     {
+        // Same-goal no-op: if a fresh MoveTo lands on (nearly) the goal we're already walking to,
+        // ignore it. Re-issuing the same goal resets the waypoint cursor to 0 and preserves stale
+        // momentum; a noisy re-issuer (e.g. a state machine that re-fires MoveTo several times a
+        // second) thereby prevents the final-stop from ever latching, and the agent orbits its goal.
+        // A genuinely different target (beyond the epsilon) re-paths as normal.
+        constexpr auto SameGoalEpsilonCm = 20.0f;
+        if (InHandle.Has<FTag_CrowdAgent_Walking>() &&
+            FVector::Dist(InRequest.Get_Target(), InPathFollow.Get_ActiveGoal()) <= SameGoalEpsilonCm)
+        {
+            ck::crowd::Verbose(TEXT("CrowdAgent [{}] MoveTo {} ignored (same goal, already walking)"),
+                InHandle, InRequest.Get_Target());
+            return;
+        }
+
         // Pick the active arrival radius — per-request override wins, otherwise fall back to the
         // params default. Steering reads this each frame for its "stop near final waypoint" check.
         const auto ArrivalRadius = InRequest.Get_ArrivalRadiusOverrideMode() == ECk_Override::Override
@@ -57,6 +71,7 @@ namespace ck
 
         InPathFollow._WaypointIndex = 0;
         InPathFollow._ActiveArrivalRadius = ArrivalRadius;
+        InPathFollow._ActiveGoal = InRequest.Get_Target();
 
         // Intentionally do NOT zero _DesiredVelocity here. Re-targeting mid-walk should preserve
         // the agent's current momentum; once the new path resolves and steering's view fires
