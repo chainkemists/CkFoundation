@@ -4,6 +4,8 @@
 
 #include "CkDynamic/CkDynamic_Fragment.h"
 
+#include <UObject/UnrealType.h>
+
 #if WITH_ANGELSCRIPT_CK
 #include <AngelscriptBindString.h>
 #include <AngelscriptBinds.h>
@@ -61,7 +63,8 @@ auto
     UCk_Utils_DynamicFragment_UE::
     Add_Fragment(
         FCk_Handle& InHandle,
-        const FInstancedStruct& InFragmentData)
+        const FInstancedStruct& InFragmentData,
+        ECk_Replication InReplication)
     -> FCk_Handle
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Handle passed. Unable to add Fragment"))
@@ -89,6 +92,11 @@ auto
         InHandle.Add<ck::FFragment_DynamicFragment_Data>(Fragment);
     }
 
+    if (InReplication == ECk_Replication::Replicates)
+    {
+        DoSetupReplication(InHandle, InFragmentData);
+    }
+
     return InHandle;
 }
 
@@ -96,12 +104,13 @@ auto
     UCk_Utils_DynamicFragment_UE::
     AddOrGet_Fragment_TypeUnsafe(
         FCk_Handle& InHandle,
-        const UScriptStruct* InStructType)
+        const UScriptStruct* InStructType,
+        ECk_Replication InReplication)
     -> FInstancedStruct&
 {
     if (NOT Has_Fragment(InHandle, InStructType))
     {
-        Add_Fragment(InHandle, FInstancedStruct(InStructType));
+        Add_Fragment(InHandle, FInstancedStruct(InStructType), InReplication);
     }
 
     return Get_Fragment_TypeUnsafe(InHandle, InStructType);
@@ -396,27 +405,100 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+auto
+    UCk_Utils_DynamicFragment_UE::
+    DoSetupReplication(
+        FCk_Handle& InHandle,
+        const FInstancedStruct& InStructData)
+    -> void
+{
+    const auto* StructType = InStructData.GetScriptStruct();
+
+    // A struct with no reflected properties (tag / size-0) carries no replicable data. The iterator's
+    // operator bool is true iff there is at least one FProperty — no loop body, so no C4702.
+    const auto HasReplicableData = static_cast<bool>(TFieldIterator<FProperty>{StructType});
+
+    CK_ENSURE_IF_NOT(HasReplicableData,
+        TEXT("Dynamic Fragment [{}] on Entity [{}] was requested to replicate, but the struct has no ")
+        TEXT("properties (tag / size-0). Replicating it carries no data and is meaningless. Add it without ")
+        TEXT("ECk_Replication::Replicates, or give the struct a replicated property."),
+        StructType, InHandle)
+    { return; }
+
+    InHandle.AddOrGet<ck::FFragment_DynamicFragment_ReplicatedTypes>().Get_Types().Add(StructType);
+    InHandle.AddOrGet<ck::FTag_DynamicFragment_MayRequireReplication>();
+}
+
+auto
+    UCk_Utils_DynamicFragment_UE::
+    Request_MarkReplicationDirty(
+        FCk_Handle& InHandle,
+        const UScriptStruct* InStructType)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+        TEXT("Invalid Handle passed to Request_MarkReplicationDirty"))
+    { return; }
+
+    const auto IsReplicated = InHandle.Has<ck::FFragment_DynamicFragment_ReplicatedTypes>() &&
+        InHandle.Get<ck::FFragment_DynamicFragment_ReplicatedTypes>().Get_Types().Contains(InStructType);
+
+    CK_ENSURE_IF_NOT(IsReplicated,
+        TEXT("Request_MarkReplicationDirty: Dynamic Fragment [{}] on Entity [{}] is NOT set up to replicate. ")
+        TEXT("Add it with ECk_Replication::Replicates before marking it dirty."),
+        InStructType, InHandle)
+    { return; }
+
+    InHandle.AddOrGet<ck::FTag_DynamicFragment_MayRequireReplication>();
+}
+
+auto
+    UCk_Utils_DynamicFragment_UE::
+    BindTo_OnRepNotify(
+        FCk_Handle& InHandle,
+        const FCk_DynamicFragment_OnRepNotify& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> void
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_DynamicFragment_OnRepNotify, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+}
+
+auto
+    UCk_Utils_DynamicFragment_UE::
+    UnbindFrom_OnRepNotify(
+        FCk_Handle& InHandle,
+        const FCk_DynamicFragment_OnRepNotify& InDelegate)
+    -> void
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_DynamicFragment_OnRepNotify, InHandle, InDelegate);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 #if WITH_ANGELSCRIPT_CK
 auto
     UCk_Utils_DynamicFragment_UE::
     Add_Fragment(
         FCk_Handle& InHandle,
-        const FAngelscriptAnyStructParameter& InStructData)
+        const FAngelscriptAnyStructParameter& InStructData,
+        ECk_Replication InReplication)
     -> FCk_Handle
 {
-    return Add_Fragment(InHandle, InStructData.InstancedStruct);
+    return Add_Fragment(InHandle, InStructData.InstancedStruct, InReplication);
 }
 
 auto
     UCk_Utils_DynamicFragment_UE::
     AddOrGet_Fragment(
         FCk_Handle& InHandle,
-        const UScriptStruct* InStructType)
+        const UScriptStruct* InStructType,
+        ECk_Replication InReplication)
     -> FScriptStructWildcard&
 {
     if (NOT Has_Fragment(InHandle, InStructType))
     {
-        Add_Fragment(InHandle, FInstancedStruct{InStructType});
+        Add_Fragment(InHandle, FInstancedStruct{InStructType}, InReplication);
     }
 
     return Get_Fragment(InHandle, InStructType);
@@ -457,24 +539,24 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind Bind_CkDynamicFragment(static_cast<
     auto ExistingClass = FAngelscriptBinds::ExistingClass("FCk_Handle");
 
     ExistingClass.Method(
-        "FCk_Handle Add_Fragment(const FInstancedStruct& InFragmentData)",
-        [](FCk_Handle& Self, const FInstancedStruct& InFragmentData) -> FCk_Handle
+        "FCk_Handle Add_Fragment(const FInstancedStruct& InFragmentData, ECk_Replication InReplication = ECk_Replication::DoesNotReplicate)",
+        [](FCk_Handle& Self, const FInstancedStruct& InFragmentData, ECk_Replication InReplication) -> FCk_Handle
         {
-            return UCk_Utils_DynamicFragment_UE::Add_Fragment(Self, InFragmentData);
+            return UCk_Utils_DynamicFragment_UE::Add_Fragment(Self, InFragmentData, InReplication);
         });
 
     ExistingClass.Method(
-        "FCk_Handle Add_Fragment(const FAngelscriptAnyStructParameter& InFragmentData)",
-        [](FCk_Handle& Self, const FAngelscriptAnyStructParameter& InFragmentData) -> FCk_Handle
+        "FCk_Handle Add_Fragment(const FAngelscriptAnyStructParameter& InFragmentData, ECk_Replication InReplication = ECk_Replication::DoesNotReplicate)",
+        [](FCk_Handle& Self, const FAngelscriptAnyStructParameter& InFragmentData, ECk_Replication InReplication) -> FCk_Handle
         {
-            return UCk_Utils_DynamicFragment_UE::Add_Fragment(Self, InFragmentData);
+            return UCk_Utils_DynamicFragment_UE::Add_Fragment(Self, InFragmentData, InReplication);
         });
 
     ExistingClass.Method(
-        "FScriptStructWildcard& AddOrGet_Fragment(const UScriptStruct InStructType)",
-        [](FCk_Handle& Self, const UScriptStruct* InStructType) -> FScriptStructWildcard&
+        "FScriptStructWildcard& AddOrGet_Fragment(const UScriptStruct InStructType, ECk_Replication InReplication = ECk_Replication::DoesNotReplicate)",
+        [](FCk_Handle& Self, const UScriptStruct* InStructType, ECk_Replication InReplication) -> FScriptStructWildcard&
         {
-            return UCk_Utils_DynamicFragment_UE::AddOrGet_Fragment(Self, InStructType);
+            return UCk_Utils_DynamicFragment_UE::AddOrGet_Fragment(Self, InStructType, InReplication);
         });
     FAngelscriptBinds::SetPreviousBindArgumentDeterminesOutputType(0);
 

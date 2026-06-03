@@ -42,3 +42,25 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+// RepNotify payload — carries WHICH dynamic-fragment type changed (not the data, to avoid the
+// ProcessEvent frame-buffer staleness hazard documented in CkDynamic_Utils.h). The bound handler
+// reads the new value via UCk_Utils_DynamicFragment_UE::Get_Fragment(Handle, ChangedType).
+
+USTRUCT(BlueprintType)
+struct CKDYNAMIC_API FCk_DynamicFragment_RepNotifyInfo
+{
+    GENERATED_BODY()
+
+public:
+    UPROPERTY(BlueprintReadOnly, Category = "Ck|DynamicFragment")
+    TObjectPtr<UScriptStruct> ChangedType = nullptr;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_DynamicFragment_OnRepNotify,
+    FCk_Handle, InHandle,
+    FCk_DynamicFragment_RepNotifyInfo, InInfo);
+
+// --------------------------------------------------------------------------------------------------------------------
