@@ -25,6 +25,7 @@ namespace ck_crowd_debug_settings_cvars
     static int32 GDrawBreadcrumbs   = 0;
     static int32 GDrawPlannedPaths  = 0;
     static int32 GDrawNavProjection = 0;
+    static int32 GDrawAgentRings    = 0;
 
     template <typename TFieldGetter, typename TFieldSetter>
     auto WriteToSettings(TFieldGetter&& InFieldGetter, TFieldSetter&& InFieldSetter, IConsoleVariable* InCVar) -> void
@@ -124,6 +125,21 @@ namespace ck_crowd_debug_settings_cvars
                 InCVar);
         }),
         ECVF_Cheat);
+
+    static FAutoConsoleVariableRef CVarDrawAgentRings(
+        TEXT("ck.Crowd.DrawAgentRings"),
+        GDrawAgentRings,
+        TEXT("Draw the orbit-diagnosis rings for crowd agents (arrival / predicted-orbit / turn-radius / velocity).\n")
+        TEXT("  0 = off (default — but the debugger-selected agent always draws)\n")
+        TEXT("  1 = on — every agent draws its arrival ring, predicted-orbit ring, turn-radius circle, velocity"),
+        FConsoleVariableDelegate::CreateLambda([](IConsoleVariable* InCVar)
+        {
+            WriteToSettings(
+                [](UCk_Crowd_DebugSettings_UE* InS) { return InS->Get_DrawAgentRings(); },
+                [](UCk_Crowd_DebugSettings_UE* InS, bool InV) { InS->Set_DrawAgentRings(InV); },
+                InCVar);
+        }),
+        ECVF_Cheat);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -152,6 +168,8 @@ auto
     { CVar->SetWithCurrentPriority(_DrawPlannedPaths ? 1 : 0); }
     if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawNavProjection")))
     { CVar->SetWithCurrentPriority(_DrawNavProjection ? 1 : 0); }
+    if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawAgentRings")))
+    { CVar->SetWithCurrentPriority(_DrawAgentRings ? 1 : 0); }
 }
 
 #if WITH_EDITOR
@@ -190,6 +208,11 @@ auto
     {
         if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawNavProjection")))
         { CVar->SetWithCurrentPriority(_DrawNavProjection ? 1 : 0); }
+    }
+    else if (Name == GET_MEMBER_NAME_CHECKED(UCk_Crowd_DebugSettings_UE, _DrawAgentRings))
+    {
+        if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawAgentRings")))
+        { CVar->SetWithCurrentPriority(_DrawAgentRings ? 1 : 0); }
     }
 }
 #endif
@@ -249,6 +272,17 @@ auto
     if (ck::Is_NOT_Valid(Settings))
     { return false; }
     return Settings->Get_DrawNavProjection();
+}
+
+auto
+    UCk_Utils_Crowd_DebugSettings_UE::
+    Get_DrawAgentRings()
+    -> bool
+{
+    const auto* Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Crowd_DebugSettings_UE>();
+    if (ck::Is_NOT_Valid(Settings))
+    { return false; }
+    return Settings->Get_DrawAgentRings();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
