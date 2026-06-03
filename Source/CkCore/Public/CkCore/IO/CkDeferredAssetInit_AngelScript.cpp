@@ -5,6 +5,7 @@
 #include "CkCore/IO/CkIO_Utils.h"
 
 #include <Misc/CoreDelegates.h>
+#include <HAL/IConsoleManager.h>
 
 #if WITH_ANGELSCRIPT_CK
 #include <AngelscriptManager.h>
@@ -133,6 +134,92 @@ namespace
     }
 
     // ----------------------------------------------------------------------------------------------------------------
+    // Surgical-heal attribution.
+    //
+    // The full sweep re-runs ALL ~1200 CDO DefaultsFunctions (Phase 1) and ALL literal __Inits
+    // (Phase 2) just to heal the handful that actually deferred a (null) asset load during first-pass
+    // — and measurement showed the sweep is dominated by that AS execution, not the IO. So we record
+    // the EXACT entities that deferred and re-run only those: CDOs in GDeferredLoadCDOs (Phase 1),
+    // literal asset names in GDeferredLiteralNames (Phase 2).
+    //
+    // Attribution is captured in Note_DeferredAssetLoad_FromActiveContext (called from the AS
+    // premature-load helper, ungated so it also runs during cook) via CaptureDeferredAttribution,
+    // which walks the active AS call stack ONCE. It mirrors the engine's own GetASConstructionScriptObject
+    // (Bind_UObject.cpp): a frame whose `this` class chain owns the executing DefaultsFunction is a
+    // CDO default; a frame running a __Init_<Name> global function is a literal asset body.
+    //
+    // Safety: a load that maps to neither (some other first-pass AS code) was never healed by the
+    // original sweep either, so ignoring it is not a regression. If we cannot read the active context
+    // at all, GAttributionUncertain forces BOTH phases to the full sweep. The
+    // ck.DeferredAssetInit.ForceFullHeal CVar is a manual escape hatch. We NEVER under-heal.
+    // ----------------------------------------------------------------------------------------------------------------
+
+    TSet<TWeakObjectPtr<UObject>> GDeferredLoadCDOs;     // Phase 1: CDOs whose defaults deferred a load
+    TSet<FString>                 GDeferredLiteralNames;  // Phase 2: literal assets whose __Init deferred
+    bool                          GAttributionUncertain = false;
+
+    bool GForceFullAssetHeal = false;
+    static FAutoConsoleVariableRef CVar_ForceFullAssetHeal(
+        TEXT("ck.DeferredAssetInit.ForceFullHeal"),
+        GForceFullAssetHeal,
+        TEXT("Re-run ALL Angelscript CDO defaults during the deferred-asset heal sweep instead of only "
+             "those with deferred loads. Safety fallback if a startup asset ever comes up null."),
+        ECVF_Default);
+
+    // Walk the active AS call stack ONCE and attribute the deferred load to (a) the CDO whose
+    // DefaultsFunction is running [Phase 1] and/or (b) the literal __Init_<Name> running [Phase 2].
+    // Either, both, or neither may be present in a given stack:
+    //   - direct CDO default load        → DefaultsFunction frame (this == CDO)
+    //   - literal referenced by a CDO     → both the CDO frame AND the __Init_<Name> frame
+    //   - standalone literal init         → __Init_<Name> frame only (global function, no `this`)
+    //   - anything else (not a default/literal) → neither; the original sweep never healed those.
+    // We only flag uncertainty (→ full fallback) when the active context can't be read at all.
+    auto CaptureDeferredAttribution() -> void
+    {
+        // FAngelscriptManager::GetCurrentScriptContext() is Hazelight's exported wrapper over
+        // asGetActiveContext() — the raw library free function isn't exported to CkCore, but this
+        // member is (same path as FAngelscriptManager::Get()/GetActiveModules() used here already).
+        auto* Context = FAngelscriptManager::GetCurrentScriptContext();
+        if (Context == nullptr)
+        {
+            GAttributionUncertain = true;
+            return;
+        }
+
+        static const auto LiteralInitPrefix = FString{TEXT("__Init_")};
+
+        const auto StackDepth = static_cast<int32>(Context->GetCallstackSize());
+        for (auto Frame = 0; Frame < StackDepth; ++Frame)
+        {
+            auto* Func = Context->GetFunction(Frame);
+            if (Func == nullptr)
+            { continue; }
+
+            // (a) CDO default: a frame whose `this` class chain owns this DefaultsFunction.
+            if (auto* ThisObj = static_cast<UObject*>(Context->GetThisPointer(Frame));
+                ck::IsValid(ThisObj, ck::IsValid_Policy_NullptrOnly{}))
+            {
+                for (auto* CheckClass = ThisObj->GetClass();
+                     ck::IsValid(CheckClass, ck::IsValid_Policy_NullptrOnly{});
+                     CheckClass = CheckClass->GetSuperClass())
+                {
+                    const auto* ASClass = Cast<UASClass>(CheckClass);
+                    if (ASClass != nullptr && ASClass->DefaultsFunction == Func)
+                    {
+                        GDeferredLoadCDOs.Add(ThisObj);
+                        break;
+                    }
+                }
+            }
+
+            // (b) Literal asset: a frame running the preprocessor-generated __Init_<Name> body.
+            const auto FuncName = FString{StringCast<TCHAR>(Func->GetName()).Get()};
+            if (FuncName.StartsWith(LiteralInitPrefix))
+            { GDeferredLiteralNames.Add(FuncName.RightChop(LiteralInitPrefix.Len())); }
+        }
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
     // Phase 1: re-run DefaultsFunction on every AS class CDO.
     //
     // Matches the engine's ExecuteDefaultsFunctions pattern in ASClass.cpp — walk the super chain
@@ -147,6 +234,51 @@ namespace
     // every non-AS UClass in the process (thousands) just to Cast<UASClass> them away.
     // ----------------------------------------------------------------------------------------------------------------
 
+    // Re-run one class's DefaultsFunction super-chain on its CDO. Returns true if all ran cleanly.
+    auto ReRunClassDefaultsFor(UASClass* InASClass) -> bool
+    {
+        if (ck::Is_NOT_Valid(InASClass, ck::IsValid_Policy_NullptrOnly{}))
+        { return false; }
+
+        if (InASClass->DefaultsFunction == nullptr)
+        { return false; }
+
+        if (InASClass->HasAnyClassFlags(CLASS_Abstract | CLASS_NewerVersionExists))
+        { return false; }
+
+        auto* CDO = InASClass->GetDefaultObject(ShouldCreateCDO);
+        if (ck::Is_NOT_Valid(CDO, ck::IsValid_Policy_NullptrOnly{}))
+        { return false; }
+
+        auto DefaultsFunctions = TArray<asIScriptFunction*, TFixedAllocator<32>>{};
+        for (auto* WalkClass = InASClass; ck::IsValid(WalkClass, ck::IsValid_Policy_NullptrOnly{}); WalkClass = Cast<UASClass>(WalkClass->GetSuperClass()))
+        {
+            if (WalkClass->DefaultsFunction != nullptr)
+            { DefaultsFunctions.Add(WalkClass->DefaultsFunction); }
+        }
+
+        // Each DefaultsFunction in the super chain is invoked independently — a failure
+        // in one does NOT skip the rest. Mirrors the engine's ExecuteDefaultsFunctions
+        // (ASClass.cpp:1070-1077) where every function gets its own context and is
+        // executed regardless of sibling success.
+        auto AllOk = true;
+        for (auto i = DefaultsFunctions.Num() - 1; i >= 0; --i)
+        {
+            auto Context = FAngelscriptContext{CDO};
+            Context->Prepare(DefaultsFunctions[i]);
+            Context->m_executeVirtualCall = false;
+            Context->SetObject(CDO);
+
+            if (NOT Execute_Logging(Context, ck::Format_UE(TEXT("DefaultsFunction for class '{}'"),
+                                                           InASClass->GetName())))
+            { AllOk = false; }
+        }
+
+        return AllOk;
+    }
+
+    // Full sweep: re-run every AS class's DefaultsFunction. Used when surgical attribution is
+    // unavailable/uncertain (safe fallback — never under-heals).
     auto ReRunAllClassDefaults() -> int32
     {
         auto SucceededCount = int32{0};
@@ -157,48 +289,33 @@ namespace
         {
             ck::algo::ForEach(Module->Classes, [&](const TSharedRef<FAngelscriptClassDesc>& ClassDesc)
             {
-                auto* ASClass = Cast<UASClass>(ClassDesc->Class);
-                if (ck::Is_NOT_Valid(ASClass, ck::IsValid_Policy_NullptrOnly{}))
-                { return; }
-
-                if (ASClass->DefaultsFunction == nullptr)
-                { return; }
-
-                if (ASClass->HasAnyClassFlags(CLASS_Abstract | CLASS_NewerVersionExists))
-                { return; }
-
-                auto* CDO = ASClass->GetDefaultObject(ShouldCreateCDO);
-                if (ck::Is_NOT_Valid(CDO, ck::IsValid_Policy_NullptrOnly{}))
-                { return; }
-
-                auto DefaultsFunctions = TArray<asIScriptFunction*, TFixedAllocator<32>>{};
-                for (auto* WalkClass = ASClass; ck::IsValid(WalkClass, ck::IsValid_Policy_NullptrOnly{}); WalkClass = Cast<UASClass>(WalkClass->GetSuperClass()))
-                {
-                    if (WalkClass->DefaultsFunction != nullptr)
-                    { DefaultsFunctions.Add(WalkClass->DefaultsFunction); }
-                }
-
-                // Each DefaultsFunction in the super chain is invoked independently — a failure
-                // in one does NOT skip the rest. Mirrors the engine's ExecuteDefaultsFunctions
-                // (ASClass.cpp:1070-1077) where every function gets its own context and is
-                // executed regardless of sibling success.
-                auto AllOk = true;
-                for (auto i = DefaultsFunctions.Num() - 1; i >= 0; --i)
-                {
-                    auto Context = FAngelscriptContext{CDO};
-                    Context->Prepare(DefaultsFunctions[i]);
-                    Context->m_executeVirtualCall = false;
-                    Context->SetObject(CDO);
-
-                    if (NOT Execute_Logging(Context, ck::Format_UE(TEXT("DefaultsFunction for class '{}'"),
-                                                                   ASClass->GetName())))
-                    { AllOk = false; }
-                }
-
-                if (AllOk)
+                if (ReRunClassDefaultsFor(Cast<UASClass>(ClassDesc->Class)))
                 { ++SucceededCount; }
             });
         });
+
+        return SucceededCount;
+    }
+
+    // Surgical sweep: re-run ONLY the CDOs whose DefaultsFunction actually deferred a load during
+    // first-pass (captured in GDeferredLoadCDOs). Returns the number of distinct CDOs re-run.
+    auto ReRunDeferredClassDefaults() -> int32
+    {
+        auto SucceededCount = int32{0};
+
+        for (const auto& WeakCdo : GDeferredLoadCDOs)
+        {
+            auto* CDO = WeakCdo.Get();
+            if (ck::Is_NOT_Valid(CDO, ck::IsValid_Policy_NullptrOnly{}))
+            { continue; }
+
+            // Only objects that are genuinely a class CDO (the `this` of a DefaultsFunction).
+            if (NOT CDO->HasAnyFlags(RF_ClassDefaultObject))
+            { continue; }
+
+            if (ReRunClassDefaultsFor(Cast<UASClass>(CDO->GetClass())))
+            { ++SucceededCount; }
+        }
 
         return SucceededCount;
     }
@@ -227,7 +344,10 @@ namespace
         int32 Declared  = 0;
     };
 
-    auto ReRunAllLiteralAssetInits() -> FPhase2Stats
+    // Phase 2 sweep. When InFullHeal is false, re-run ONLY the literals whose __Init deferred a load
+    // during first-pass (GDeferredLiteralNames) — the rest had nothing to heal. Full heal is used as
+    // the safety fallback and for hot-reloads (where first-pass attribution doesn't apply).
+    auto ReRunLiteralAssetInits(bool InFullHeal) -> FPhase2Stats
     {
         auto Stats = FPhase2Stats{};
 
@@ -249,6 +369,10 @@ namespace
 
             ck::algo::ForEach(Module->DeclaredLiteralAssets, [&](const FString& AssetName)
             {
+                // Surgical: skip literals that never deferred a load during first-pass.
+                if (NOT InFullHeal && NOT GDeferredLiteralNames.Contains(AssetName))
+                { return; }
+
                 ++Stats.Declared;
 
                 const auto InitFunctionName = ck::Format_UE(TEXT("__Init_{}"), AssetName);
@@ -315,6 +439,18 @@ namespace
 
 auto
     UCk_DeferredAssetInit_UE::
+    Note_DeferredAssetLoad_FromActiveContext()
+    -> void
+{
+#if WITH_ANGELSCRIPT_CK
+    CaptureDeferredAttribution();
+#endif
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_DeferredAssetInit_UE::
     ResolveAllPending()
     -> void
 {
@@ -344,31 +480,62 @@ auto
     ck::core::Verbose(TEXT("[DeferredAssetInit] Engine init complete — re-running Angelscript default inits"));
 #endif
 
-    const auto CdoCount = ReRunAllClassDefaults();
+    // Phase 1: re-run AS class CDO DefaultsFunctions. The full sweep re-runs all ~1200 CDOs just to
+    // heal the handful that deferred a load — and measurement showed the sweep is AS-EXECUTION bound,
+    // not IO bound. So by default we re-run ONLY the CDOs that actually deferred a load during
+    // first-pass (GDeferredLoadCDOs). Fall back to the full sweep if attribution was uncertain or the
+    // CVar forces it — Phase 2 below is always full, and this never leaves a CDO asset null.
+    const auto UseFullHeal = GForceFullAssetHeal || GAttributionUncertain;
+    const auto HealMode    = UseFullHeal ? FString(TEXT("full")) : FString(TEXT("surgical"));
+    const auto CdoCount    = UseFullHeal ? ReRunAllClassDefaults() : ReRunDeferredClassDefaults();
 
 #if WITH_EDITOR
-    ck::core::Display(TEXT("[DeferredAssetInit] Phase 1: re-initialized {} Angelscript CDO(s)"), CdoCount);
+    ck::core::Display(TEXT("[DeferredAssetInit] Phase 1: re-initialized {} Angelscript CDO(s) [{}]"), CdoCount, HealMode);
 #else
-    ck::core::Verbose(TEXT("[DeferredAssetInit] Phase 1: re-initialized {} Angelscript CDO(s)"), CdoCount);
+    ck::core::Verbose(TEXT("[DeferredAssetInit] Phase 1: re-initialized {} Angelscript CDO(s) [{}]"), CdoCount, HealMode);
 #endif
 
-    const auto LiteralAssetStats = ReRunAllLiteralAssetInits();
+    // Phase 2: same surgical/full choice as Phase 1. Surgical re-runs only literals whose __Init
+    // deferred during first-pass (GDeferredLiteralNames); full is the fallback.
+    const auto LiteralAssetStats = ReRunLiteralAssetInits(UseFullHeal);
     if (LiteralAssetStats.Succeeded < LiteralAssetStats.Declared)
     {
         // Always Warning — a discrepancy here is a real signal worth surfacing in every config.
-        ck::core::Warning(TEXT("[DeferredAssetInit] Phase 2: re-initialized {}/{} literal asset(s) — missing entries indicate AS preprocessor drift"),
-                          LiteralAssetStats.Succeeded, LiteralAssetStats.Declared);
+        ck::core::Warning(TEXT("[DeferredAssetInit] Phase 2: re-initialized {}/{} literal asset(s) [{}] — missing entries indicate AS preprocessor drift"),
+                          LiteralAssetStats.Succeeded, LiteralAssetStats.Declared, HealMode);
     }
     else
     {
 #if WITH_EDITOR
-        ck::core::Display(TEXT("[DeferredAssetInit] Phase 2: re-initialized {}/{} literal asset(s)"),
-                          LiteralAssetStats.Succeeded, LiteralAssetStats.Declared);
+        ck::core::Display(TEXT("[DeferredAssetInit] Phase 2: re-initialized {}/{} literal asset(s) [{}]"),
+                          LiteralAssetStats.Succeeded, LiteralAssetStats.Declared, HealMode);
 #else
-        ck::core::Verbose(TEXT("[DeferredAssetInit] Phase 2: re-initialized {}/{} literal asset(s)"),
-                          LiteralAssetStats.Succeeded, LiteralAssetStats.Declared);
+        ck::core::Verbose(TEXT("[DeferredAssetInit] Phase 2: re-initialized {}/{} literal asset(s) [{}]"),
+                          LiteralAssetStats.Succeeded, LiteralAssetStats.Declared, HealMode);
 #endif
     }
+
+    // ONE aggregated line for assets::load::* calls that ran before engine-safe (first-pass CDO/
+    // literal init), instead of a per-call stack-walking ensure (the old ~15ms-each storm). These
+    // are expected and healed by this sweep, so it's informational — a non-zero count that surprises
+    // you points at a soft-ref candidate. The cheap counter still catches genuine early misuse.
+    if (const auto PrematureCount = UCk_Utils_IO_UE::Get_PrematureAssetLoadCount();
+        PrematureCount > 0)
+    {
+#if WITH_EDITOR
+        ck::core::Display(TEXT("[DeferredAssetInit] {} assets::load::* call(s) deferred before engine-safe and resolved by this sweep (first: '{}')"),
+                          PrematureCount, UCk_Utils_IO_UE::Get_FirstPrematureAssetLoadMessage());
+#else
+        ck::core::Verbose(TEXT("[DeferredAssetInit] {} assets::load::* call(s) deferred before engine-safe and resolved by this sweep (first: '{}')"),
+                          PrematureCount, UCk_Utils_IO_UE::Get_FirstPrematureAssetLoadMessage());
+#endif
+    }
+    UCk_Utils_IO_UE::Reset_PrematureAssetLoadReport();
+
+    // Attribution is single-use per boot sweep — clear so a later hot-reload starts clean.
+    GDeferredLoadCDOs.Reset();
+    GDeferredLiteralNames.Reset();
+    GAttributionUncertain = false;
 
 #endif // WITH_ANGELSCRIPT_CK
 }
@@ -383,6 +550,17 @@ auto
 {
 #if WITH_ANGELSCRIPT_CK
 
+    // The initial-compile post-reload fires BEFORE OnFEngineLoopInitComplete (blocking loads still
+    // unsafe). Running the sweep here heals nothing — every assets::load::* returns null — and would
+    // fire a stack-walking ensure per call (the measured ~2.7s startup ensure storm). ResolveAllPending
+    // (also bound to OnFEngineLoopInitComplete) is a strict superset and does the real heal. Use the
+    // side-effect-free peek so this guard never trips the WasBlockingLoadQueriedWhileUnsafe short-circuit.
+    if (NOT UCk_Utils_IO_UE::Get_IsEngineSafeForBlockingLoads_Peek())
+    {
+        ck::core::Verbose(TEXT("[DeferredAssetInit] Post-reload before engine-safe — skipping (ResolveAllPending heals)"));
+        return;
+    }
+
 #if WITH_EDITOR
     ck::core::Display(TEXT("[DeferredAssetInit] Angelscript post-reload (FullReload=[{}]) — re-running literal asset inits"),
                       InFullReload);
@@ -391,7 +569,11 @@ auto
                       InFullReload);
 #endif
 
-    const auto Stats = ReRunAllLiteralAssetInits();
+    // Hot-reload always re-runs ALL literals: first-pass attribution doesn't apply here (the reload
+    // happens engine-safe, so accessors load directly and Note never fires), and the full re-run is
+    // what fixes the `_Arr.Add(...)` doubling the reload would otherwise cause.
+    constexpr auto FullHeal = true;
+    const auto Stats = ReRunLiteralAssetInits(FullHeal);
     if (Stats.Succeeded < Stats.Declared)
     {
         ck::core::Warning(TEXT("[DeferredAssetInit] Post-reload: re-initialized {}/{} literal asset(s) — missing entries indicate AS preprocessor drift"),

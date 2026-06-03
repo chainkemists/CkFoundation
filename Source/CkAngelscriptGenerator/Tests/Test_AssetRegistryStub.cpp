@@ -208,11 +208,11 @@ bool FCkTest_AssetRegistryStub_Build_BlockingLoad::RunTest(const FString&)
 
     TestTrue(TEXT("contains return type (no Soft wrapper)"), Body.Contains(TEXT("USkeletalMesh MALE_SKEL_NEW()")));
     TestTrue(TEXT("contains engine-init guard"), Body.Contains(TEXT("UCk_Utils_IO_UE::IsEngineSafeForBlockingLoads() == false")));
-    // First-pass loads are benign and self-heal via UCk_DeferredAssetInit_UE. The guard ensures, but
-    // COMMANDLET-GATED on Get_IsRunningCommandlet() so it stays silent during cook (where the benign
-    // first pass would otherwise fail it) and loud in editor/PIE/game to catch genuine early misuse.
-    TestTrue(TEXT("guard ensures, commandlet-gated (cook-safe)"),
-        Body.Contains(TEXT("ck::EnsureIfNot(UCk_Utils_IO_UE::Get_IsRunningCommandlet()")));
+    // First-pass loads are benign and self-heal via UCk_DeferredAssetInit_UE. The premature-load report
+    // is COMMANDLET-GATED on Get_IsRunningCommandlet() so it stays silent during cook and loud in
+    // editor/PIE/game — but cheap (no per-call stack walks) via EnsureIfNot_PrematureAssetLoad.
+    TestTrue(TEXT("guard reports (cheap), commandlet-gated (cook-safe)"),
+        Body.Contains(TEXT("ck::EnsureIfNot_PrematureAssetLoad(UCk_Utils_IO_UE::Get_IsRunningCommandlet()")));
     TestTrue(TEXT("contains nullptr early return"), Body.Contains(TEXT("return nullptr;")));
     TestTrue(TEXT("delegates to soft accessor"), Body.Contains(TEXT("System::LoadAsset_Blocking(assets::MALE_SKEL_NEW())")));
     // Error message correctly references both namespaces.
@@ -241,8 +241,8 @@ bool FCkTest_AssetRegistryStub_Build_BlockingLoadClass::RunTest(const FString&)
 
     TestTrue(TEXT("contains TSubclassOf return shape"), Body.Contains(TEXT("TSubclassOf<AActor> MyActor_BP_Class()")));
     TestTrue(TEXT("contains engine-init guard"), Body.Contains(TEXT("UCk_Utils_IO_UE::IsEngineSafeForBlockingLoads() == false")));
-    TestTrue(TEXT("guard ensures, commandlet-gated (cook-safe)"),
-        Body.Contains(TEXT("ck::EnsureIfNot(UCk_Utils_IO_UE::Get_IsRunningCommandlet()")));
+    TestTrue(TEXT("guard reports (cheap), commandlet-gated (cook-safe)"),
+        Body.Contains(TEXT("ck::EnsureIfNot_PrematureAssetLoad(UCk_Utils_IO_UE::Get_IsRunningCommandlet()")));
     TestTrue(TEXT("contains nullptr early return"), Body.Contains(TEXT("return nullptr;")));
     TestTrue(TEXT("delegates to LoadClassAsset_Blocking with soft-class accessor"),
         Body.Contains(TEXT("System::LoadClassAsset_Blocking(assets::MyActor_BP_Class())")));

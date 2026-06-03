@@ -35,6 +35,16 @@ public:
     // FAngelscriptClassGenerator::OnPostReload — runs Phase 2 only. Phase 1 is skipped because
     // the AS plugin updates CDOs in place during reload.
     static void OnAngelscriptPostReload(bool InFullReload);
+
+    // Called from the AS premature-load helper (ck::EnsureIfNot_PrematureAssetLoad) on every
+    // assets::load::* that returns null before engine-safe. Captures the exact CDO whose
+    // DefaultsFunction is executing (via the active AS call stack) so the heal sweep can re-run
+    // ONLY those CDOs instead of all ~1200. Ungated (runs in cook too). Cheap — no stack symbolication.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|DeferredAssetInit",
+              DisplayName = "[Ck] Note Deferred Asset Load (Active Context)")
+    static void
+    Note_DeferredAssetLoad_FromActiveContext();
 };
 
 // --------------------------------------------------------------------------------------------------------------------
