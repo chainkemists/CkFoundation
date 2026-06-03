@@ -33,6 +33,8 @@ public class CkAssetExporter : CkModuleRules
             "StructUtils",
             "UMG",
             "UMGEditor",
+            "StateTreeModule",
+            "StateTreeEditorModule",
 
             "CkCore",
             "CkEcs",
