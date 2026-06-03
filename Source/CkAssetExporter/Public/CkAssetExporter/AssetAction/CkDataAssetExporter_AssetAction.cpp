@@ -4,6 +4,8 @@
 #include "CkAssetExporter/DataAssetExporter/CkDataAssetExporter.h"
 
 #include <Engine/DataAsset.h>
+#include <StateTree.h>
+#include <EnvironmentQuery/EnvQuery.h>
 #include <ContentBrowserModule.h>
 #include <IContentBrowserSingleton.h>
 #include <ToolMenus.h>
@@ -15,6 +17,31 @@
 
 namespace ck::asset_exporter
 {
+
+// Some UDataAsset subclasses (e.g. UStateTree, UEnvQuery) have their own dedicated,
+// structure-aware exporter. Exclude them from the generic DataAsset exporter so the
+// content-browser menu only offers the most specific option per asset type.
+static auto
+    DoHasDedicatedExporter(
+        const UClass* InClass)
+    -> bool
+{
+    if (InClass == nullptr)
+    { return false; }
+
+    static const TArray<const UClass*> ClassesWithDedicatedExporter = {
+        UStateTree::StaticClass(),
+        UEnvQuery::StaticClass(),
+    };
+
+    for (const auto* DedicatedClass : ClassesWithDedicatedExporter)
+    {
+        if (InClass->IsChildOf(DedicatedClass))
+        { return true; }
+    }
+
+    return false;
+}
 
 static auto
     DoGetSelectedDataAssets()
@@ -30,6 +57,9 @@ static auto
     {
         if (auto* DA = Cast<UDataAsset>(AssetData.GetAsset()))
         {
+            if (DoHasDedicatedExporter(DA->GetClass()))
+            { continue; }
+
             DataAssets.Add(DA);
         }
     }
