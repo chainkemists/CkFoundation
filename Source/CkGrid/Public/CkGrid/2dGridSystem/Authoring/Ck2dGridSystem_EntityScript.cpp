@@ -35,7 +35,11 @@ auto
     }
 
     // ---- Grid -----------------------------------------------------------------------------------
-    auto Transform = UCk_Utils_Transform_UE::Cast(InHandle);
+    // UCk_GenericEntityScript_UE does NOT add a Transform (unlike the WithActor base). Add one from
+    // the spawner-injected SpawnTransform BEFORE building the grid — otherwise Cast(InHandle) yields
+    // a tombstone handle and the grid Add ensures ("Handle [TOMBSTONE] ... does NOT have a valid
+    // Registry"). The spawner writes its actor transform into SpawnTransform before Construct runs.
+    auto Transform = UCk_Utils_Transform_UE::Add(InHandle, SpawnTransform, ECk_Replication::DoesNotReplicate);
     auto Grid = UCk_Utils_2dGridSystem_UE::Add(Transform, Spec->Resolve_GridParams());
 
     // ---- Per-cell tags --------------------------------------------------------------------------
