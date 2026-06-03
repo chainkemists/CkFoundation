@@ -210,5 +210,5 @@ The canonical files are never touched. Both the BB root `.gitignore` and CkFound
 
 - `/Source/CLAUDE.md` section 15 — `asset ... of UCkAssetRegistryConfig` AngelScript syntax.
 - `CkCore/Reflection/README.md` — property/class introspection used by the generators.
-- `Plugins/CkFoundation/Script/CLAUDE.md` — adding a new dynamic handle (two-phase workflow).
+- `Plugins/CkFoundation/Script/CLAUDE.md` — adding a new dynamic handle (one-step self-heal landing; manual two-phase is historical edge-case recovery).
 - BB `Script/CLAUDE.md` "Codegen lag" section — what the dispatcher automates.
