@@ -4,6 +4,10 @@ public class CkGridEditor : CkModuleRules
 {
     public CkGridEditor(ReadOnlyTargetRules Target) : base(Target)
     {
+        // The module-root header (CkGridEditor_Log.h, next to this Build.cs) is included from
+        // Public/Private subfolder files; add the root so it resolves from anywhere in the module.
+        PublicIncludePaths.Add(ModuleDirectory);
+
         PublicDependencyModuleNames.AddRange(new string[]
         {
             "Core",
@@ -18,6 +22,7 @@ public class CkGridEditor : CkModuleRules
             "ToolMenus",
             "LevelEditor",
             "PropertyEditor",
+            "GameplayTags",
 
             "CkCore",
             "CkEcs",
