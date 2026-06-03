@@ -20,39 +20,24 @@
 namespace ck::snapshot
 {
     auto
-        Run_Capture(
-            UWorld& InWorld,
+        Run_Capture_Registry(
+            ck::SnapshotRegistryType& InRegistry,
             FArchive& InByteWriter,
             FCk_Snapshot_Header& InOutHeader)
         -> ECk_SnapshotResult
     {
-        // ---- Resolve the live entt registry --------------------------------------------------------------------
-        auto* EcsWorld = InWorld.GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
-        if (ck::Is_NOT_Valid(EcsWorld))
-        {
-            ck::snapshot::Error(TEXT("Run_Capture: no UCk_EcsWorld_Subsystem_UE on World [{}]"), InWorld.GetName());
-            return ECk_SnapshotResult::Failed_IO;
-        }
-
-        auto& CkRegistry = EcsWorld->Get_Registry();
-        auto* RawRegistry = ck::registry_table::TryResolve(CkRegistry.Get_RegistryHandle());
-        if (RawRegistry == nullptr)
-        {
-            ck::snapshot::Error(TEXT("Run_Capture: could not resolve the raw entt registry from World [{}]"), InWorld.GetName());
-            return ECk_SnapshotResult::Failed_IO;
-        }
-
         // ---- Stamp header --------------------------------------------------------------------------------------
+        // _WorldAssetPath is intentionally left untouched here — the registry core has no UWorld. The UWorld
+        // wrapper stamps it before delegating.
         InOutHeader.Set_FormatVersion(1);
         InOutHeader.Set_EngineVersion(FEngineVersion::Current().ToString());
         InOutHeader.Set_TimestampUTC(FDateTime::UtcNow());
-        InOutHeader.Set_WorldAssetPath(FSoftObjectPath{&InWorld});
 
         // ---- Build the snapshot saver + archive ----------------------------------------------------------------
         constexpr auto LoadIfFindFails = true;
         auto ProxyArchive = FObjectAndNameAsStringProxyArchive{InByteWriter, LoadIfFindFails};
 
-        auto Snapshot = entt::basic_snapshot<ck::SnapshotRegistryType>{*RawRegistry};
+        auto Snapshot = entt::basic_snapshot<ck::SnapshotRegistryType>{InRegistry};
 
         auto Context = ck::FSnapshotContext{Snapshot};
         auto Writer  = ck::FSnapshotArchive_Writer{ProxyArchive, Context};
@@ -61,7 +46,7 @@ namespace ck::snapshot
         // it carries the entity set + versions, not a fragment storage.
         Snapshot.get<ck::SnapshotEntityType>(Writer);
 
-        const auto TotalEntities = static_cast<int32>(RawRegistry->storage<ck::SnapshotEntityType>().size());
+        const auto TotalEntities = static_cast<int32>(InRegistry.storage<ck::SnapshotEntityType>().size());
         InOutHeader.Set_EntityCount(TotalEntities);
 
         // ---- Per-fragment-type manifest entries ----------------------------------------------------------------
@@ -91,10 +76,44 @@ namespace ck::snapshot
 
         InOutHeader.Set_Manifest(MoveTemp(Manifest));
 
-        ck::snapshot::Verbose(TEXT("Run_Capture: captured [{}] entities, [{}] fragment-type manifest entries from World [{}]"),
-            TotalEntities, InOutHeader.Get_Manifest().Num(), InWorld.GetName());
+        ck::snapshot::Verbose(TEXT("Run_Capture_Registry: captured [{}] entities, [{}] fragment-type manifest entries"),
+            TotalEntities, InOutHeader.Get_Manifest().Num());
 
         return ECk_SnapshotResult::Success;
+    }
+
+    auto
+        Run_Capture(
+            UWorld& InWorld,
+            FArchive& InByteWriter,
+            FCk_Snapshot_Header& InOutHeader)
+        -> ECk_SnapshotResult
+    {
+        // ---- Resolve the live entt registry --------------------------------------------------------------------
+        auto* EcsWorld = InWorld.GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+        if (ck::Is_NOT_Valid(EcsWorld))
+        {
+            ck::snapshot::Error(TEXT("Run_Capture: no UCk_EcsWorld_Subsystem_UE on World [{}]"), InWorld.GetName());
+            return ECk_SnapshotResult::Failed_IO;
+        }
+
+        auto& CkRegistry = EcsWorld->Get_Registry();
+        auto* RawRegistry = ck::registry_table::TryResolve(CkRegistry.Get_RegistryHandle());
+        if (RawRegistry == nullptr)
+        {
+            ck::snapshot::Error(TEXT("Run_Capture: could not resolve the raw entt registry from World [{}]"), InWorld.GetName());
+            return ECk_SnapshotResult::Failed_IO;
+        }
+
+        // The world asset path is a UWorld-only concern; stamp it here so the registry core stays world-agnostic.
+        InOutHeader.Set_WorldAssetPath(FSoftObjectPath{&InWorld});
+
+        const auto Result = Run_Capture_Registry(*RawRegistry, InByteWriter, InOutHeader);
+
+        ck::snapshot::Verbose(TEXT("Run_Capture: captured [{}] entities from World [{}]"),
+            InOutHeader.Get_EntityCount(), InWorld.GetName());
+
+        return Result;
     }
 }
 
