@@ -42,6 +42,7 @@ public class CkUI : CkModuleRules
                 "UMG",
                 "CommonUI",
                 "CommonInput",
+                "Paper2D",
 
                 "CkThirdParty",
                 "CkCore",
