@@ -23,6 +23,7 @@ namespace ck
             FProcessor_CrowdAgent_DrawPlannedPath,
             FCk_Handle_CrowdAgent,
             ck::TReadOnly<FFragment_Nav_PathResult>,
+            ck::TReadOnly<FFragment_CrowdAgent_PathFollow>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -33,7 +34,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Nav_PathResult& InPathResult) -> void;
+            const FFragment_Nav_PathResult& InPathResult,
+            const FFragment_CrowdAgent_PathFollow& InPathFollow) -> void;
     };
 }
 
