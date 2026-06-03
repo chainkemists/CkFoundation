@@ -42,7 +42,8 @@ public:
     static FCk_Handle
     Add_Fragment(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FInstancedStruct& InStructData);
+        const FInstancedStruct& InStructData,
+        ECk_Replication InReplication = ECk_Replication::DoesNotReplicate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
@@ -51,7 +52,8 @@ public:
     static FInstancedStruct&
     AddOrGet_Fragment_TypeUnsafe(
         UPARAM(ref) FCk_Handle& InHandle,
-        const UScriptStruct* InStructType);
+        const UScriptStruct* InStructType,
+        ECk_Replication InReplication = ECk_Replication::DoesNotReplicate);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -180,12 +182,14 @@ public:
     static auto
     Add_Fragment(
         FCk_Handle& InHandle,
-        const FAngelscriptAnyStructParameter& InStructData) -> FCk_Handle;
+        const FAngelscriptAnyStructParameter& InStructData,
+        ECk_Replication InReplication = ECk_Replication::DoesNotReplicate) -> FCk_Handle;
 
     static auto
     AddOrGet_Fragment(
         FCk_Handle& InHandle,
-        const UScriptStruct* InStructType) -> FScriptStructWildcard&;
+        const UScriptStruct* InStructType,
+        ECk_Replication InReplication = ECk_Replication::DoesNotReplicate) -> FScriptStructWildcard&;
 
     static auto
     Get_Fragment(
@@ -193,7 +197,44 @@ public:
         const UScriptStruct* InStructType) -> FScriptStructWildcard&;
 #endif
 
+public:
+    // ---- Replication ----
+
+    // Re-replicate a replicated dynamic fragment after it was mutated in-place via Get_Fragment.
+    // Ensures the fragment was added with ECk_Replication::Replicates. Host-side only (the AuthorityOnly
+    // replicate processor is the real gate). No automatic change detection — call this after mutating.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|DynamicFragment",
+              DisplayName="[Ck][DynamicFragment] Request Mark Replication Dirty")
+    static void
+    Request_MarkReplicationDirty(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const UScriptStruct* InStructType);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|DynamicFragment",
+              DisplayName="[Ck][DynamicFragment] Bind To OnRepNotify")
+    static void
+    BindTo_OnRepNotify(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_DynamicFragment_OnRepNotify& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|DynamicFragment",
+              DisplayName="[Ck][DynamicFragment] Unbind From OnRepNotify")
+    static void
+    UnbindFrom_OnRepNotify(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_DynamicFragment_OnRepNotify& InDelegate);
+
 private:
+    static auto
+    DoSetupReplication(
+        FCk_Handle& InHandle,
+        const FInstancedStruct& InStructData) -> void;
+
     template<size_t N, typename T_Callback>
     static auto
     ForEachEntity_WithDynamicFragments(
