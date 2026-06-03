@@ -4,6 +4,7 @@
 #include "CkAssetExporter/BlueprintExporter/CkBlueprintExporter.h"
 #include "CkAssetExporter/DataAssetExporter/CkDataAssetExporter.h"
 #include "CkAssetExporter/EQSExporter/CkEQSExporter.h"
+#include "CkAssetExporter/StateTreeExporter/CkStateTreeExporter.h"
 
 #include <Widgets/SCompoundWidget.h>
 #include <Widgets/Views/SListView.h>
@@ -39,10 +40,12 @@ private:
     auto DoOnExportSelectedBlueprintsClicked() -> FReply;
     auto DoOnExportSelectedDataAssetsClicked() -> FReply;
     auto DoOnExportSelectedEQSClicked() -> FReply;
+    auto DoOnExportSelectedStateTreesClicked() -> FReply;
     auto DoRefreshResultsList(const TArray<FCk_BehaviorTreeExportResult>& InResults) -> void;
     auto DoRefreshResultsListFromBlueprintResults(const TArray<FCk_BlueprintExportResult>& InResults) -> void;
     auto DoRefreshResultsListFromDataAssetResults(const TArray<FCk_DataAssetExportResult>& InResults) -> void;
     auto DoRefreshResultsListFromEQSResults(const TArray<FCk_EQSExportResult>& InResults) -> void;
+    auto DoRefreshResultsListFromStateTreeResults(const TArray<FCk_StateTreeExportResult>& InResults) -> void;
 
     auto DoGenerateResultRow(
         TSharedPtr<FCk_BehaviorTreeExporterTab_ResultEntry> InEntry,
