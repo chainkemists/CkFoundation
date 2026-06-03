@@ -47,15 +47,23 @@ auto
         GridBase, Placement, ECk_Record_LabelRequirementPolicy::Optional);
 
     // Death-watch the OCCUPANT: store a back-ref so the handler can find + destroy the placement.
+    // The watch is bound at most ONCE per occupant — the handler always reads the CURRENT back-ref,
+    // so an auto-replace re-place just overwrites _Placement; re-binding would double-bind the same
+    // delegate signature and trip CkEnsure (ContainsDelegateWithSignature). The PlacementRef fragment
+    // is added in lockstep with the watch, so its prior presence means the watch is already bound.
     if (ck::IsValid(InOccupant))
     {
         auto Occupant = InOccupant;
+        const auto AlreadyWatched = Occupant.Has<ck::FFragment_2dGridOccupant_PlacementRef>();
         Occupant.AddOrGet<ck::FFragment_2dGridOccupant_PlacementRef>()._Placement = Placement;
 
-        auto OccupantWatch = FCk_Delegate_OnBeginDestroy{};
-        OccupantWatch.BindUFunction(GetMutableDefault<UCk_Utils_2dGridOccupancy_UE>(),
-            GET_FUNCTION_NAME_CHECKED(UCk_Utils_2dGridOccupancy_UE, OnOccupantBeginDestroy));
-        UCk_Utils_EntityLifetime_UE::BindTo_OnBeginDestroy(Occupant, OccupantWatch);
+        if (NOT AlreadyWatched)
+        {
+            auto OccupantWatch = FCk_Delegate_OnBeginDestroy{};
+            OccupantWatch.BindUFunction(GetMutableDefault<UCk_Utils_2dGridOccupancy_UE>(),
+                GET_FUNCTION_NAME_CHECKED(UCk_Utils_2dGridOccupancy_UE, OnOccupantBeginDestroy));
+            UCk_Utils_EntityLifetime_UE::BindTo_OnBeginDestroy(Occupant, OccupantWatch);
+        }
     }
 
     return Placement;
@@ -128,7 +136,21 @@ auto
     if (NOT Cell.Has<ck::FFragment_2dGridCell_Occupancy>())
     { return {}; }
 
-    return Cell.Get<ck::FFragment_2dGridCell_Occupancy>().Get_Placement();
+    auto Placement = Cell.Get<ck::FFragment_2dGridCell_Occupancy>().Get_Placement();
+    if (ck::Is_NOT_Valid(Placement))
+    { return {}; }
+
+    // The Occupied tag + back-ref un-stamp one reconcile tick AFTER the placement entity is
+    // destroyed. In the window between Request_RemovePlacement (which tags the placement
+    // pending-destroy) and the next reconcile, the stale stamp still points at a dying placement.
+    // Treat a pending-destroy placement as already gone so the cell reads free synchronously —
+    // otherwise a same-tick remove+re-place sees the cell as still occupied and rejects the new
+    // placement until the reconcile catches up.
+    if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(
+            FCk_Handle{Placement}, ECk_EntityLifetime_DestructionPhase::BeginDestroy))
+    { return {}; }
+
+    return Placement;
 }
 
 auto
@@ -143,6 +165,21 @@ auto
     { return {}; }
 
     return Placement.Get<ck::FFragment_2dGridPlacement_Params>().Get_Occupant();
+}
+
+auto
+    UCk_Utils_2dGridOccupancy_UE::
+    Get_PlacementForOccupant(
+        const FCk_Handle& InOccupant)
+    -> FCk_Handle_2dGridPlacement
+{
+    if (ck::Is_NOT_Valid(InOccupant))
+    { return {}; }
+
+    if (NOT InOccupant.Has<ck::FFragment_2dGridOccupant_PlacementRef>())
+    { return {}; }
+
+    return InOccupant.Get<ck::FFragment_2dGridOccupant_PlacementRef>().Get_Placement();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

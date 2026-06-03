@@ -47,14 +47,6 @@ public:
         const FCk_Handle_2dGridObject& InObject,
         ECk_CardinalRotation InRotation);
 
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|2dGridPlacement",
-              DisplayName="[Ck][2dGridPlacement] Get Occupant At")
-    static FCk_Handle
-    Get_OccupantAt(
-        const FCk_Handle_2dGridSystem& InGrid,
-        const FIntPoint& InCoordinate);
-
 public:
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,

@@ -68,14 +68,15 @@ auto
             continue;
         }
 
-        if (UCk_Utils_2dGridOccupancy_UE::Get_IsOccupied(InGrid, Coord))
+        // Occupied check via the pending-destroy-aware occupant query — NOT the raw Occupied tag,
+        // which lags one reconcile tick and would falsely reject a same-tick remove+re-place (the
+        // dying placement's stamp lingers a tick). A cell counts as occupied only if a VALID
+        // occupant other than this object holds it.
+        const auto OccupantThere = UCk_Utils_2dGridOccupancy_UE::Get_OccupantAt(InGrid, Coord);
+        if (ck::IsValid(OccupantThere) && OccupantThere != SelfOccupant)
         {
-            const auto OccupantThere = UCk_Utils_2dGridOccupancy_UE::Get_OccupantAt(InGrid, Coord);
-            if (OccupantThere != SelfOccupant)
-            {
-                RecordFailure(Coord, ECk_2dGridPlacement_Failure::Occupied);
-                continue;
-            }
+            RecordFailure(Coord, ECk_2dGridPlacement_Failure::Occupied);
+            continue;
         }
 
         // Tag-gating: the effective tag set for a cell is the grid's default tags unioned with
@@ -219,18 +220,6 @@ auto
 
 auto
     UCk_Utils_2dGridPlacement_UE::
-    Get_OccupantAt(
-        const FCk_Handle_2dGridSystem& InGrid,
-        const FIntPoint& InCoordinate)
-    -> FCk_Handle
-{
-    return UCk_Utils_2dGridOccupancy_UE::Get_OccupantAt(InGrid, InCoordinate);
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_2dGridPlacement_UE::
     Request_Place(
         FCk_Handle_2dGridSystem& InGrid,
         FCk_Handle& InOccupant,
@@ -261,6 +250,16 @@ auto
     { return {}; }
 
     const auto Cells = UCk_Utils_2dGridObject_UE::Get_ResolvedCells(Object, InAnchor, InRotation);
+
+    // Auto-replace: if this occupant already holds a placement, remove it first so its old cells
+    // free before we add the new one. Lets a re-place at a different anchor/rotation reconcile
+    // cleanly instead of leaving the old footprint stamped. Get_CanPlace above already treats the
+    // occupant's own cells as non-colliding (SelfOccupant), so an in-place move still validates.
+    if (auto Existing = UCk_Utils_2dGridOccupancy_UE::Get_PlacementForOccupant(InOccupant);
+        ck::IsValid(Existing))
+    {
+        UCk_Utils_2dGridOccupancy_UE::Request_RemovePlacement(Existing);
+    }
 
     auto Placement = UCk_Utils_2dGridOccupancy_UE::Request_AddPlacement(
         InGrid, InOccupant, InAnchor, InRotation, Cells);

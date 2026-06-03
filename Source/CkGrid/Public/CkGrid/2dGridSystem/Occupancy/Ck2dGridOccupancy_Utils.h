@@ -75,6 +75,16 @@ public:
         const FCk_Handle_2dGridSystem& InGrid,
         const FIntPoint& InCoordinate);
 
+    // The placement an occupant currently owns (via its back-ref fragment), or an invalid handle
+    // if the occupant has none. Lets a higher layer free an occupant's existing placement before
+    // adding a new one without reaching into the back-ref fragment directly.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|2dGridOccupancy",
+              DisplayName="[Ck][2dGridOccupancy] Get Placement For Occupant")
+    static FCk_Handle_2dGridPlacement
+    Get_PlacementForOccupant(
+        const FCk_Handle& InOccupant);
+
 private:
     // Death-watch handler bound on the OCCUPANT entity. When the occupant is destroyed,
     // reads its back-ref fragment and destroys the placement it owns. Non-static: dynamic
