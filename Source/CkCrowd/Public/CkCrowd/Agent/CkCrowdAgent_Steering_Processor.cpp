@@ -116,6 +116,7 @@ namespace ck
 
         const auto MaxSpeed = InParams.Get_MaxSpeed();
         const auto MaxAccel = InParams.Get_MaxAcceleration();
+        const auto MaxTurnRate = InParams.Get_MaxTurnRate();
 
         // Braking ramp: stopping distance for speed v at deceleration a is v² / (2a). Solving for v
         // given the remaining distance gives the max speed at which we can still stop in time.
@@ -125,11 +126,24 @@ namespace ck
             BrakingSpeedCap = FMath::Sqrt(2.0f * MaxAccel * DistanceToFinal);
         }
 
+        // Turn-radius arrival cap: an agent moving at speed v can turn no tighter than its minimum
+        // turning radius r = v / MaxTurnRate (the velocity direction is bounded to MaxTurnRate rad/s
+        // by AccelClamp). If r exceeds the remaining distance to the goal, the agent physically
+        // cannot curve onto the goal and ORBITS it instead — the root cause of the "agent circles
+        // its target" bug. Capping speed at v <= MaxTurnRate * DistanceToFinal keeps the turning
+        // radius within the remaining distance, so the agent spirals in and stops. It only bites in
+        // the final ~MaxSpeed/MaxTurnRate cm (≈60cm at defaults); on open path it has no effect.
+        auto TurnRadiusSpeedCap = MaxSpeed;
+        if (MaxTurnRate > 0.0f)
+        {
+            TurnRadiusSpeedCap = MaxTurnRate * DistanceToFinal;
+        }
+
         // Phase 1.2 — the per-frame scalar PreviousSpeed clamp that used to live here is gone;
         // FProcessor_CrowdAgent_AccelClamp now ramps the velocity in vector space (so direction
         // changes are bounded too, not just magnitude). Steering writes the raw target velocity;
         // AccelClamp downstream brings it into the per-frame budget.
-        const auto NewSpeed = FMath::Min(MaxSpeed, BrakingSpeedCap);
+        const auto NewSpeed = FMath::Min3(MaxSpeed, BrakingSpeedCap, TurnRadiusSpeedCap);
 
         // Gate 3C — combine path-follow with separation. Naive `path + separation` produces
         // vibration on head-on encounters: both forces fire at full strength, the clamp eats both,
