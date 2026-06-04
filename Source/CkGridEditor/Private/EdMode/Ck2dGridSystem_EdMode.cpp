@@ -55,6 +55,12 @@ namespace ck_grid_editor_detail
     constexpr auto BlockerSelectedInset     = 0.04;
     constexpr auto BlockerSelectedThickness = 4.0f;
 
+    // Select tool: when the pick lands on a blocker, the WHOLE blocker group is outlined as a single
+    // bright-magenta rect (the bounding RangeMin..RangeMax border) — visually distinct from both the
+    // single-cell cyan Select marker and the orange Blocker-tool per-cell inset.
+    constexpr auto ColorBlockerGroup     = FLinearColor(1.0f, 0.0f, 1.0f); // magenta
+    constexpr auto BlockerGroupThickness = 5.0f;
+
     constexpr auto CellLineThickness  = 1.0f;
     constexpr auto PivotMarkerSize     = 20.0f;
     constexpr auto PivotLineThickness  = 3.0f;
@@ -145,17 +151,21 @@ auto
 {
     _ActiveTool = InTool;
 
-    // Blocker selection only makes sense while the Blocker tool is active; clear it on any tool change
-    // away from Blocker (best-effort) so a stale highlight doesn't linger.
+    // The pending drag-rect corners only make sense while the Blocker tool is active.
     if (_ActiveTool != ECk_GridPaint_Tool::Blocker)
     {
-        _SelectedBlockerIndex = INDEX_NONE;
         _BlockerDragStart.Reset();
         _BlockerDragCurrent.Reset();
     }
 
-    // The Select-tool inspection highlight only makes sense while the Select tool is active; clear it on
-    // any tool change away from Select so a stale highlight doesn't linger.
+    // _SelectedBlockerIndex is shared by the Blocker tool (place/select/delete) and the Select tool (a
+    // pick that lands on a blocker selects the whole group). It's meaningless under Shape/Tags, so clear
+    // it on any tool change away from both — otherwise a stale highlight lingers.
+    if (_ActiveTool != ECk_GridPaint_Tool::Blocker && _ActiveTool != ECk_GridPaint_Tool::Select)
+    { _SelectedBlockerIndex = INDEX_NONE; }
+
+    // The Select-tool pick highlight only makes sense while the Select tool is active; clear it on any
+    // tool change away from Select so a stale highlight doesn't linger.
     if (_ActiveTool != ECk_GridPaint_Tool::Select)
     { _SelectedCell.Reset(); }
 }
@@ -292,9 +302,12 @@ void
     InPDI->DrawLine(PivotWorld - FVector(0, 0, Half), PivotWorld + FVector(0, 0, Half),
         ck_grid_editor_detail::ColorPivot, SDPG_Foreground, ck_grid_editor_detail::PivotLineThickness);
 
-    // Selected-blocker highlight: emphasize the selected blocker's cells with a bright-orange thick
-    // inset square (drawn before hover so the white hover marker still reads on top).
-    if (_SelectedBlockerIndex != INDEX_NONE && Spec->Blockers.IsValidIndex(_SelectedBlockerIndex))
+    // Selected-blocker highlight (Blocker tool): emphasize the selected blocker's cells with a
+    // bright-orange thick inset square (drawn before hover so the white hover marker still reads on top).
+    // The Select tool draws its blocker selection as a magenta GROUP outline further below instead, so
+    // this per-cell inset is scoped to the Blocker tool to keep the two selection visuals distinct.
+    if (_ActiveTool == ECk_GridPaint_Tool::Blocker &&
+        _SelectedBlockerIndex != INDEX_NONE && Spec->Blockers.IsValidIndex(_SelectedBlockerIndex))
     {
         const auto& Blocker = Spec->Blockers[_SelectedBlockerIndex];
         const auto MinX = FMath::Min(Blocker.RangeMin.X, Blocker.RangeMax.X);
@@ -343,10 +356,47 @@ void
         InPDI->DrawLine(C01, C00, ck_grid_editor_detail::ColorBlockerDrag, SDPG_Foreground, ck_grid_editor_detail::BlockerDragThickness);
     }
 
-    // Select-tool inspection highlight: a thick cyan inset square on the cell picked for the Details
-    // panel. Drawn before hover so the white hover marker still reads on top when both land on the same
-    // cell, and inset less than the state markers so it frames them.
-    if (_SelectedCell.IsSet())
+    // Select-tool blocker-group highlight: when the Select pick landed on a blocker, outline the WHOLE
+    // blocker (the bounding RangeMin..RangeMax rect) in bright magenta as a single border, distinct from
+    // the orange per-cell inset the Blocker tool draws above and the cyan single-cell marker below. Only
+    // drawn for the Select tool — under the Blocker tool the orange inset already conveys the selection.
+    const auto bSelectBlockerGroup =
+        _ActiveTool == ECk_GridPaint_Tool::Select &&
+        _SelectedBlockerIndex != INDEX_NONE &&
+        Spec->Blockers.IsValidIndex(_SelectedBlockerIndex);
+
+    if (bSelectBlockerGroup)
+    {
+        const auto& Blocker = Spec->Blockers[_SelectedBlockerIndex];
+        const auto BMinX = FMath::Max(0,                FMath::Min(Blocker.RangeMin.X, Blocker.RangeMax.X));
+        const auto BMaxX = FMath::Min(Dimensions.X - 1, FMath::Max(Blocker.RangeMin.X, Blocker.RangeMax.X));
+        const auto BMinY = FMath::Max(0,                FMath::Min(Blocker.RangeMin.Y, Blocker.RangeMax.Y));
+        const auto BMaxY = FMath::Min(Dimensions.Y - 1, FMath::Max(Blocker.RangeMin.Y, Blocker.RangeMax.Y));
+
+        if (BMinX <= BMaxX && BMinY <= BMaxY)
+        {
+            const auto LoX = BMinX       * CellSize.X;
+            const auto LoY = BMinY       * CellSize.Y;
+            const auto HiX = (BMaxX + 1) * CellSize.X;
+            const auto HiY = (BMaxY + 1) * CellSize.Y;
+
+            const auto G00 = LocalToWorld(LoX, LoY);
+            const auto G10 = LocalToWorld(HiX, LoY);
+            const auto G11 = LocalToWorld(HiX, HiY);
+            const auto G01 = LocalToWorld(LoX, HiY);
+
+            InPDI->DrawLine(G00, G10, ck_grid_editor_detail::ColorBlockerGroup, SDPG_Foreground, ck_grid_editor_detail::BlockerGroupThickness);
+            InPDI->DrawLine(G10, G11, ck_grid_editor_detail::ColorBlockerGroup, SDPG_Foreground, ck_grid_editor_detail::BlockerGroupThickness);
+            InPDI->DrawLine(G11, G01, ck_grid_editor_detail::ColorBlockerGroup, SDPG_Foreground, ck_grid_editor_detail::BlockerGroupThickness);
+            InPDI->DrawLine(G01, G00, ck_grid_editor_detail::ColorBlockerGroup, SDPG_Foreground, ck_grid_editor_detail::BlockerGroupThickness);
+        }
+    }
+
+    // Select-tool single-cell inspection highlight: a thick cyan inset square on the cell picked for the
+    // Details panel. Suppressed when the pick resolved to a blocker (the magenta group outline above is
+    // the selection indicator in that case). Drawn before hover so the white hover marker still reads on
+    // top when both land on the same cell, and inset less than the state markers so it frames them.
+    if (_SelectedCell.IsSet() && ! bSelectBlockerGroup)
     {
         const auto& Cell = _SelectedCell.GetValue();
         if (Cell.X >= 0 && Cell.X < Dimensions.X && Cell.Y >= 0 && Cell.Y < Dimensions.Y)
@@ -727,6 +777,182 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+auto
+    UCk_2dGridSystem_EdMode::
+    Set_SelectedCellDisabled(
+        bool InDisabled) -> void
+{
+    if (! _SelectedCell.IsSet())
+    { return; }
+
+    const auto Selection = Resolve_SelectedGridSpawner();
+    if (! Selection.IsValid())
+    { return; }
+
+    auto* Spec = Selection.Spec;
+    const auto Cell = _SelectedCell.GetValue();
+
+    const auto bAlreadyDisabled = Spec->DisabledCells.Contains(Cell);
+    if (bAlreadyDisabled == InDisabled)
+    { return; }
+
+    const auto Transaction = FScopedTransaction(
+        NSLOCTEXT("Ck_2dGridSystem_EdMode", "SetCellDisabled", "Grid Paint: Set Cell Disabled"));
+
+    Spec->Modify();
+    if (InDisabled)
+    { Spec->DisabledCells.Add(Cell); }
+    else
+    { Spec->DisabledCells.RemoveSingleSwap(Cell); }
+
+    Selection.Spawner->EditorOnly_RebuildEntity();
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Get_SelectedCellDisabled() const -> bool
+{
+    if (! _SelectedCell.IsSet())
+    { return false; }
+
+    const auto Selection = Resolve_SelectedGridSpawner();
+    if (! Selection.IsValid())
+    { return false; }
+
+    return Selection.Spec->DisabledCells.Contains(_SelectedCell.GetValue());
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Add_SelectedCellTag(
+        const FGameplayTag& InTag) -> void
+{
+    if (! InTag.IsValid())
+    { return; }
+
+    if (! _SelectedCell.IsSet())
+    { return; }
+
+    const auto Selection = Resolve_SelectedGridSpawner();
+    if (! Selection.IsValid())
+    { return; }
+
+    auto* Spec = Selection.Spec;
+    const auto Cell = _SelectedCell.GetValue();
+
+    const auto Transaction = FScopedTransaction(
+        NSLOCTEXT("Ck_2dGridSystem_EdMode", "AddCellTag", "Grid Paint: Add Cell Tag"));
+
+    Spec->Modify();
+    auto& Container = Spec->PerCellTags.FindOrAdd(Cell);
+    Container.AddTag(InTag);
+
+    Selection.Spawner->EditorOnly_RebuildEntity();
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Remove_SelectedCellTag(
+        const FGameplayTag& InTag) -> void
+{
+    if (! _SelectedCell.IsSet())
+    { return; }
+
+    const auto Selection = Resolve_SelectedGridSpawner();
+    if (! Selection.IsValid())
+    { return; }
+
+    auto* Spec = Selection.Spec;
+    const auto Cell = _SelectedCell.GetValue();
+
+    auto* Container = Spec->PerCellTags.Find(Cell);
+    if (Container == nullptr || ! Container->HasTagExact(InTag))
+    { return; }
+
+    const auto Transaction = FScopedTransaction(
+        NSLOCTEXT("Ck_2dGridSystem_EdMode", "RemoveCellTag", "Grid Paint: Remove Cell Tag"));
+
+    Spec->Modify();
+    Container->RemoveTag(InTag);
+
+    // Drop the map entry entirely when the cell no longer carries any per-cell tag, so the Spec doesn't
+    // accumulate empty containers (mirrors the authored-data convention — no entry == no overrides).
+    if (Container->IsEmpty())
+    { Spec->PerCellTags.Remove(Cell); }
+
+    Selection.Spawner->EditorOnly_RebuildEntity();
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Get_SelectedCellTags() const -> FGameplayTagContainer
+{
+    if (! _SelectedCell.IsSet())
+    { return FGameplayTagContainer{}; }
+
+    const auto Selection = Resolve_SelectedGridSpawner();
+    if (! Selection.IsValid())
+    { return FGameplayTagContainer{}; }
+
+    if (const auto* Container = Selection.Spec->PerCellTags.Find(_SelectedCell.GetValue()))
+    { return *Container; }
+
+    return FGameplayTagContainer{};
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Get_SelectedBlockerRange(
+        FIntPoint& OutMin,
+        FIntPoint& OutMax) const -> bool
+{
+    if (_SelectedBlockerIndex == INDEX_NONE)
+    { return false; }
+
+    const auto Selection = Resolve_SelectedGridSpawner();
+    if (! Selection.IsValid())
+    { return false; }
+
+    if (! Selection.Spec->Blockers.IsValidIndex(_SelectedBlockerIndex))
+    { return false; }
+
+    const auto& Blocker = Selection.Spec->Blockers[_SelectedBlockerIndex];
+    OutMin = FIntPoint(FMath::Min(Blocker.RangeMin.X, Blocker.RangeMax.X), FMath::Min(Blocker.RangeMin.Y, Blocker.RangeMax.Y));
+    OutMax = FIntPoint(FMath::Max(Blocker.RangeMin.X, Blocker.RangeMax.X), FMath::Max(Blocker.RangeMin.Y, Blocker.RangeMax.Y));
+    return true;
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Delete_SelectedBlocker() -> void
+{
+    if (_SelectedBlockerIndex == INDEX_NONE)
+    { return; }
+
+    const auto Selection = Resolve_SelectedGridSpawner();
+    if (! Selection.IsValid())
+    { return; }
+
+    auto* Spec = Selection.Spec;
+    if (! Spec->Blockers.IsValidIndex(_SelectedBlockerIndex))
+    {
+        ck::grid_editor::Warning(TEXT("Select tool: selected blocker index is stale — cannot delete"));
+        _SelectedBlockerIndex = INDEX_NONE;
+        return;
+    }
+
+    const auto Transaction = FScopedTransaction(
+        NSLOCTEXT("Ck_2dGridSystem_EdMode", "DeleteBlockerSelect", "Grid Paint: Delete Blocker"));
+
+    Spec->Modify();
+    Spec->Blockers.RemoveAt(_SelectedBlockerIndex);
+    Selection.Spawner->EditorOnly_RebuildEntity();
+
+    _SelectedBlockerIndex = INDEX_NONE;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 bool
     UCk_2dGridSystem_EdMode::
     HandleClick(
@@ -820,11 +1046,13 @@ auto
         HHitProxy*             InHitProxy,
         const FViewportClick&  InClick) -> bool
 {
-    // Read-only: resolve the clicked cell and store it for the Details panel (no transaction, no mutation).
+    // Resolve the clicked cell and store it for the Details panel (the pick itself never mutates the Spec
+    // — the Details-panel editors do).
     const auto Selection = Resolve_SelectedGridSpawner();
     if (! Selection.IsValid())
     {
         _SelectedCell.Reset();
+        _SelectedBlockerIndex = INDEX_NONE;
         return true;
     }
 
@@ -832,8 +1060,16 @@ auto
         Selection.GridTransform, Selection.Spec->CellSize, Selection.Spec->Dimensions,
         InClick.GetOrigin(), InClick.GetDirection());
 
-    // Off-grid click clears the selection; otherwise store the picked cell.
+    // Off-grid click clears both selections; otherwise store the picked cell.
     _SelectedCell = Cell;
+
+    // Blocker precedence: if the picked cell is covered by a blocker, select the WHOLE blocker group so the
+    // Details panel switches to the blocker editor. A bare cell click clears any prior blocker selection so
+    // the panel falls back to the single-cell editor.
+    _SelectedBlockerIndex = Cell.IsSet()
+        ? Find_BlockerCovering(Selection, Cell.GetValue())
+        : INDEX_NONE;
+
     return true;
 }
 
