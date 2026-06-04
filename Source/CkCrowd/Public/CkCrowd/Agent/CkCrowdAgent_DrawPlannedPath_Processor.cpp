@@ -18,32 +18,28 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_DrawPlannedPath);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_crowd_agent_draw_planned_path_processor
 {
-    // CVar `ck.Crowd.DrawPlannedPaths` is now declared via UPROPERTY in
-    // UCk_Crowd_DebugSettings_UE — read it through the settings BPFL so values persist
-    // across editor sessions. Selected agent (CVarSelectedEntityId) draws regardless.
-
-    // Looked up by name — defined in CkCrowdAgent_DiagDraw_Processor.cpp. Sharing the same CVar
-    // across the two draw processors via FindConsoleVariable lets the debugger write a single
-    // selection state without us having to expose a global int between modules.
+    // Reads the selected agent's type-hash from the shared CVar `ck.Crowd.SelectedEntityId`
+    // (the CVar object itself lives in CkCrowdAgent_DiagDraw_Processor.cpp); -1 means "no selection".
+    // CVar `ck.Crowd.DrawPlannedPaths` is read through the settings BPFL so it persists across sessions;
+    // the selected agent draws regardless of that toggle.
     auto GetSelectedEntityId() -> int32
     {
         const auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.SelectedEntityId"));
         return CVar != nullptr ? CVar->GetInt() : -1;
     }
 
-    // Prefixed to avoid Unity-build collisions with same-named constants in sibling draw processors.
-    constexpr auto PlannedPath_LiftZ              = 96.0f;
-    constexpr auto PlannedPath_Thickness          = 2.0f;
-    constexpr auto PlannedPath_Thickness_Selected = 4.0f;
-    constexpr auto PlannedPath_AlphaScale         = 0.55f;
-    constexpr auto PlannedPath_DurationOneFrame   = 0.0f;
+    constexpr auto LiftZ              = 96.0f;
+    constexpr auto Thickness          = 2.0f;
+    constexpr auto Thickness_Selected = 4.0f;
+    constexpr auto AlphaScale         = 0.55f;
+    constexpr auto DurationOneFrame   = 0.0f;
     // The planned path is drawn DASHED so it reads as "where the agent intends to go" — visually
     // distinct from the solid breadcrumb trail (FProcessor_CrowdAgent_DiagDraw), which is where the
     // agent actually went. When the two diverge (e.g. an agent orbiting its goal), the dashed line
     // still points at the goal while the solid trail circles.
-    constexpr auto PlannedPath_DashSize           = 20.0f;
+    constexpr auto DashSize           = 20.0f;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -59,8 +55,10 @@ namespace ck
             const FFragment_CrowdAgent_PathFollow& InPathFollow)
         -> void
     {
+        namespace draw = ck_crowd_agent_draw_planned_path_processor;
+
         const auto bDrawAll = UCk_Utils_Crowd_DebugSettings_UE::Get_DrawPlannedPaths();
-        const auto SelectedHash = GetSelectedEntityId();
+        const auto SelectedHash = draw::GetSelectedEntityId();
         const auto bIsSelected = SelectedHash >= 0
             && static_cast<int32>(GetTypeHash(InHandle)) == SelectedHash;
         if (NOT bDrawAll && NOT bIsSelected)
@@ -87,10 +85,10 @@ namespace ck
         // still read distinctly when they overlap (which they will for an agent walking its
         // intended path).
         auto PathColor = UCk_Utils_CrowdAgent_UE::Get_DebugColor(InHandle);
-        PathColor.A *= PlannedPath_AlphaScale;
+        PathColor.A *= draw::AlphaScale;
 
-        const auto Thickness = bIsSelected ? PlannedPath_Thickness_Selected : PlannedPath_Thickness;
-        const auto Lift = FVector(0.0f, 0.0f, PlannedPath_LiftZ);
+        const auto PathThickness = bIsSelected ? draw::Thickness_Selected : draw::Thickness;
+        const auto Lift = FVector(0.0f, 0.0f, draw::LiftZ);
 
         // Start segment connects the agent's current position to its NEXT waypoint. Fall back to
         // the next waypoint itself if the transform feature isn't on the agent.
@@ -104,7 +102,7 @@ namespace ck
         {
             const auto Curr = Waypoints[i] + Lift;
             UCk_Utils_DebugDraw_UE::DrawDebugDashedLine(
-                World, Prev, Curr, PlannedPath_DashSize, PathColor, PlannedPath_DurationOneFrame, Thickness);
+                World, Prev, Curr, draw::DashSize, PathColor, draw::DurationOneFrame, PathThickness);
             Prev = Curr;
         }
     }
