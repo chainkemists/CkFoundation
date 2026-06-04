@@ -152,6 +152,12 @@ private:
 
     bool _EditorRebuildPending = false;
     FDelegateHandle _EditorRebuildEndFrameHandle;
+
+public:
+    // Read-only access to the editor preview entity this spawner currently owns. Used by editor-only
+    // gating (e.g. the grid debug-draw processor) to correlate a selected spawner with its preview
+    // entity. Returns an invalid handle when no preview entity exists.
+    CK_PROPERTY_GET(_EditorEntityHandle);
 #endif
 };
 

@@ -12,6 +12,7 @@ enum class ECk_GridPaint_Tool : uint8;
 enum class ECk_GridPaint_TagScope : uint8;
 
 class SGameplayTagPicker;
+class SVerticalBox;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -85,18 +86,54 @@ private:
     // drives a lazy re-seed of the selected-blocker picker when the selected index changes.
     auto Get_SelectedBlockerText() const -> FText;
 
-    // Builds the Select-tool Details widget (read-only cell inspector). Its visibility is bound to "is
-    // the Select tool active"; the value text blocks read the EdMode + Spec live each frame.
+    // Builds the Select-tool Details widget. Its visibility is bound to "is the Select tool active". The
+    // panel hosts TWO mutually-exclusive editors (sub-block visibilities below switch between them): a
+    // single-CELL editor (read-only state line + grid-default tags, Disabled toggle, per-cell tag list +
+    // add picker) and a BLOCKER editor (index/range/tag text + tag picker + Delete) shown when the pick
+    // landed on a blocker. Value text blocks read the EdMode + Spec live each frame.
     auto Build_DetailsSection() -> TSharedRef<SWidget>;
 
     // Visible only while the Select tool is the active tool.
     auto Get_DetailsSectionVisibility() const -> EVisibility;
 
-    // Live-bound text for the Details panel, each reading the EdMode's selected-cell info off the Spec.
+    // Single-cell editor sub-block: visible while the Select tool is active AND the pick did NOT land on a
+    // blocker (otherwise the blocker editor takes over).
+    auto Get_DetailsCellEditorVisibility() const -> EVisibility;
+
+    // Blocker editor sub-block: visible while the Select tool is active AND the pick landed on a blocker.
+    auto Get_DetailsBlockerEditorVisibility() const -> EVisibility;
+
+    // Live-bound text for the single-cell editor, each reading the EdMode's selected-cell info off the Spec.
     auto Get_DetailsCoordinateText() const -> FText;
     auto Get_DetailsStateText() const -> FText;
-    auto Get_DetailsCellTagsText() const -> FText;
     auto Get_DetailsGridDefaultTagsText() const -> FText;
+
+    // Disabled toggle for the selected cell: reflects/sets the cell's membership in Spec->DisabledCells.
+    auto Get_SelectedCellDisabledState() const -> ECheckBoxState;
+    auto On_SelectedCellDisabledChanged(ECheckBoxState InNewState) -> void;
+
+    // Rebuilds the per-cell tag list (one row per tag with a Remove button) into PerCellTagListContainer.
+    // Called from Init and re-driven each frame from Get_SelectedCellTagsSignature when the cell's tag set
+    // changes, so the list tracks live edits (add via picker, remove via button, or external Spec edits).
+    auto Rebuild_PerCellTagList() -> void;
+
+    // A cheap hash of (selected cell + its per-cell tags) used to detect when the per-cell tag list needs
+    // a rebuild. Called by the live-bound coordinate text getter so the rebuild rides the normal repaint.
+    auto Compute_PerCellTagListSignature() const -> FString;
+
+    // Add-picker callback: take the first chosen tag and add it to the selected cell via Add_SelectedCellTag.
+    auto On_AddCellTagChanged(const TArray<FGameplayTagContainer>& InContainers) -> void;
+
+    // Remove one tag from the selected cell (bound per row to the row's tag).
+    auto On_RemoveCellTag(FGameplayTag InTag) -> FReply;
+
+    // Live-bound text for the blocker editor (index + range + tag), and the Delete button handler.
+    auto Get_DetailsBlockerText() const -> FText;
+    auto On_DeleteSelectedBlocker() -> FReply;
+
+    // Blocker editor tag picker callback: write the chosen tag to the selected blocker's Name (reuses the
+    // EdMode's Set_SelectedBlockerName, shared with the Blocker tool).
+    auto On_DetailsBlockerTagChanged(const TArray<FGameplayTagContainer>& InContainers) -> void;
 
 private:
     TSharedPtr<SWidget>           InlineContent;
@@ -113,6 +150,24 @@ private:
     // Last selected-blocker index the SelectedBlockerTagPicker was seeded for. Lets the live-bound text
     // getter detect a selection change and re-seed the picker's displayed value to match the new blocker.
     int32 SeededSelectedBlockerIndex = INDEX_NONE;
+
+    // Select-tool single-cell editor: picker whose chosen tag is ADDED to the selected cell's PerCellTags.
+    TSharedPtr<SGameplayTagPicker> AddCellTagPicker;
+
+    // Select-tool single-cell editor: container holding one removable row per tag on the selected cell.
+    // Rebuilt imperatively (Rebuild_PerCellTagList) whenever the cell or its tag set changes.
+    TSharedPtr<SVerticalBox> PerCellTagListContainer;
+
+    // Signature of the per-cell tag list the rows were last built for (selected cell + its tags). Lets the
+    // live-bound coordinate getter detect a change and re-drive Rebuild_PerCellTagList.
+    FString SeededPerCellTagSignature;
+
+    // Select-tool blocker editor: picker editing the SELECTED blocker's Name (reuses Set_SelectedBlockerName).
+    TSharedPtr<SGameplayTagPicker> DetailsBlockerTagPicker;
+
+    // Last blocker index the DetailsBlockerTagPicker was seeded for (re-seed detection, mirrors the Blocker
+    // tool's SeededSelectedBlockerIndex but specific to the Select-tool Details picker).
+    int32 SeededDetailsBlockerIndex = INDEX_NONE;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

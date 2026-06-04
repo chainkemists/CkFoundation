@@ -377,8 +377,8 @@ auto
     FCk_2dGridSystem_EdModeToolkit::
     Build_DetailsSection() -> TSharedRef<SWidget>
 {
-    // Read-only cell inspector. Every value text block is bound to a getter that reads the EdMode's
-    // selected-cell info off the Spec each frame, so it tracks live edits to the Spec.
+    // Live-bound label/value row helper. Value text blocks read the EdMode's selected-cell info off the
+    // Spec each frame, so they track live edits to the Spec.
     const auto MakeRow = [](const FText& InLabel, TAttribute<FText> InValue) -> TSharedRef<SWidget>
     {
         return SNew(SHorizontalBox)
@@ -397,16 +397,34 @@ auto
             ];
     };
 
-    return SNew(SBox)
-        .Visibility(this, &FCk_2dGridSystem_EdModeToolkit::Get_DetailsSectionVisibility)
+    // Add-tag picker for the single-cell editor: each chosen tag is ADDED to the selected cell.
+    AddCellTagPicker = SNew(SGameplayTagPicker)
+        .MultiSelect(false)
+        .GameplayTagPickerMode(EGameplayTagPickerMode::SelectionMode)
+        .MaxHeight(250.0f)
+        .OnTagChanged(this, &FCk_2dGridSystem_EdModeToolkit::On_AddCellTagChanged)
+        .TagContainers(TArray<FGameplayTagContainer>{ FGameplayTagContainer{} });
+
+    // Vertical list of one removable row per tag on the selected cell. Rebuilt imperatively whenever the
+    // cell or its tag set changes (see Rebuild_PerCellTagList / Compute_PerCellTagListSignature).
+    SAssignNew(PerCellTagListContainer, SVerticalBox);
+
+    // Blocker editor tag picker: writes the selected blocker's Name via the shared Set_SelectedBlockerName.
+    DetailsBlockerTagPicker = SNew(SGameplayTagPicker)
+        .MultiSelect(false)
+        .GameplayTagPickerMode(EGameplayTagPickerMode::SelectionMode)
+        .MaxHeight(250.0f)
+        .OnTagChanged(this, &FCk_2dGridSystem_EdModeToolkit::On_DetailsBlockerTagChanged)
+        .TagContainers(TArray<FGameplayTagContainer>{ FGameplayTagContainer{} });
+
+    // Seed the per-cell tag list once up-front (empty until a cell is selected).
+    Rebuild_PerCellTagList();
+
+    // Single-CELL editor sub-block.
+    const auto CellEditor = SNew(SBox)
+        .Visibility(this, &FCk_2dGridSystem_EdModeToolkit::Get_DetailsCellEditorVisibility)
         [
             SNew(SVerticalBox)
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            .Padding(0.0f, 0.0f, 0.0f, 4.0f)
-            [
-                SNew(STextBlock).Text(LOCTEXT("DetailsLabel", "Cell Details"))
-            ]
             + SVerticalBox::Slot()
             .AutoHeight()
             .Padding(0.0f, 0.0f, 0.0f, 2.0f)
@@ -423,16 +441,103 @@ auto
             ]
             + SVerticalBox::Slot()
             .AutoHeight()
-            .Padding(0.0f, 0.0f, 0.0f, 2.0f)
+            .Padding(0.0f, 2.0f, 0.0f, 2.0f)
             [
-                MakeRow(LOCTEXT("DetailsCellTags", "Cell tags:"),
-                    TAttribute<FText>(this, &FCk_2dGridSystem_EdModeToolkit::Get_DetailsCellTagsText))
+                SNew(SCheckBox)
+                .IsChecked(this, &FCk_2dGridSystem_EdModeToolkit::Get_SelectedCellDisabledState)
+                .OnCheckStateChanged(this, &FCk_2dGridSystem_EdModeToolkit::On_SelectedCellDisabledChanged)
+                [
+                    SNew(STextBlock).Text(LOCTEXT("DetailsDisabledToggle", "Disabled"))
+                ]
+            ]
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .Padding(0.0f, 4.0f, 0.0f, 2.0f)
+            [
+                SNew(STextBlock).Text(LOCTEXT("DetailsCellTagsLabel", "Cell tags:"))
             ]
             + SVerticalBox::Slot()
             .AutoHeight()
             [
+                PerCellTagListContainer.ToSharedRef()
+            ]
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .Padding(0.0f, 4.0f, 0.0f, 2.0f)
+            [
+                SNew(STextBlock).Text(LOCTEXT("DetailsAddCellTagLabel", "Add cell tag"))
+            ]
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            [
+                AddCellTagPicker.ToSharedRef()
+            ]
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .Padding(0.0f, 6.0f, 0.0f, 0.0f)
+            [
                 MakeRow(LOCTEXT("DetailsGridDefaultTags", "Grid-default tags:"),
                     TAttribute<FText>(this, &FCk_2dGridSystem_EdModeToolkit::Get_DetailsGridDefaultTagsText))
+            ]
+        ];
+
+    // BLOCKER editor sub-block (shown when the pick landed on a blocker).
+    const auto BlockerEditor = SNew(SBox)
+        .Visibility(this, &FCk_2dGridSystem_EdModeToolkit::Get_DetailsBlockerEditorVisibility)
+        [
+            SNew(SVerticalBox)
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .Padding(0.0f, 0.0f, 0.0f, 4.0f)
+            [
+                SNew(STextBlock)
+                .Text(this, &FCk_2dGridSystem_EdModeToolkit::Get_DetailsBlockerText)
+                .AutoWrapText(true)
+            ]
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .Padding(0.0f, 0.0f, 0.0f, 2.0f)
+            [
+                SNew(STextBlock).Text(LOCTEXT("DetailsBlockerTagLabel", "Blocker tag"))
+            ]
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            [
+                DetailsBlockerTagPicker.ToSharedRef()
+            ]
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .Padding(0.0f, 6.0f, 0.0f, 0.0f)
+            [
+                SNew(SButton)
+                .HAlign(HAlign_Center)
+                .OnClicked(this, &FCk_2dGridSystem_EdModeToolkit::On_DeleteSelectedBlocker)
+                .ToolTipText(LOCTEXT("DetailsDeleteBlockerTip", "Remove this blocker from the grid"))
+                [
+                    SNew(STextBlock).Text(LOCTEXT("DetailsDeleteBlocker", "Delete Blocker"))
+                ]
+            ]
+        ];
+
+    return SNew(SBox)
+        .Visibility(this, &FCk_2dGridSystem_EdModeToolkit::Get_DetailsSectionVisibility)
+        [
+            SNew(SVerticalBox)
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .Padding(0.0f, 0.0f, 0.0f, 4.0f)
+            [
+                SNew(STextBlock).Text(LOCTEXT("DetailsLabel", "Cell Details"))
+            ]
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            [
+                CellEditor
+            ]
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            [
+                BlockerEditor
             ]
         ];
 }
@@ -448,8 +553,56 @@ auto
 
 auto
     FCk_2dGridSystem_EdModeToolkit::
+    Get_DetailsCellEditorVisibility() const -> EVisibility
+{
+    if (Get_ActiveTool() != ECk_GridPaint_Tool::Select)
+    { return EVisibility::Collapsed; }
+
+    const auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
+    if (Mode == nullptr)
+    { return EVisibility::Collapsed; }
+
+    // Single-cell editor is shown for any non-blocker Select pick (including no pick yet — then the
+    // coordinate row reads "Select a cell").
+    return Mode->Get_HasBlockerSelection()
+        ? EVisibility::Collapsed
+        : EVisibility::Visible;
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    Get_DetailsBlockerEditorVisibility() const -> EVisibility
+{
+    if (Get_ActiveTool() != ECk_GridPaint_Tool::Select)
+    { return EVisibility::Collapsed; }
+
+    const auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
+    if (Mode == nullptr)
+    { return EVisibility::Collapsed; }
+
+    return Mode->Get_HasBlockerSelection()
+        ? EVisibility::Visible
+        : EVisibility::Collapsed;
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
     Get_DetailsCoordinateText() const -> FText
 {
+    // This getter is live-bound (called each repaint while the cell editor is visible); piggyback the
+    // per-cell tag-list rebuild here so the removable rows track live edits without a manual refresh.
+    // const_cast: logically const, but it owns the toolkit's view-state bookkeeping (mirrors the Blocker
+    // section's Get_SelectedBlockerText re-seed).
+    {
+        const auto Signature = Compute_PerCellTagListSignature();
+        if (Signature != SeededPerCellTagSignature)
+        {
+            auto* MutableThis = const_cast<FCk_2dGridSystem_EdModeToolkit*>(this);
+            MutableThis->SeededPerCellTagSignature = Signature;
+            MutableThis->Rebuild_PerCellTagList();
+        }
+    }
+
     const auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
     if (Mode == nullptr)
     { return LOCTEXT("DetailsNoCell", "Select a cell"); }
@@ -498,20 +651,202 @@ auto
 
 auto
     FCk_2dGridSystem_EdModeToolkit::
-    Get_DetailsCellTagsText() const -> FText
+    Get_SelectedCellDisabledState() const -> ECheckBoxState
 {
     const auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
     if (Mode == nullptr)
-    { return FText::GetEmpty(); }
+    { return ECheckBoxState::Unchecked; }
+
+    return Mode->Get_SelectedCellDisabled()
+        ? ECheckBoxState::Checked
+        : ECheckBoxState::Unchecked;
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    On_SelectedCellDisabledChanged(
+        ECheckBoxState InNewState) -> void
+{
+    if (auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get()))
+    { Mode->Set_SelectedCellDisabled(InNewState == ECheckBoxState::Checked); }
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    Compute_PerCellTagListSignature() const -> FString
+{
+    const auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
+    if (Mode == nullptr)
+    { return FString{}; }
 
     const auto Info = Mode->Resolve_SelectedCellInfo();
     if (! Info.bHasSelection)
+    { return FString{}; }
+
+    // Cell coordinate + its per-cell tags uniquely identifies what the row list should show. A blocker
+    // selection collapses the cell editor, so its tags don't matter to the signature.
+    return FString::Printf(TEXT("%d,%d:%s"),
+        Info.Coordinate.X, Info.Coordinate.Y, *Info.CellTags.ToStringSimple());
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    Rebuild_PerCellTagList() -> void
+{
+    if (! PerCellTagListContainer.IsValid())
+    { return; }
+
+    PerCellTagListContainer->ClearChildren();
+
+    const auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
+    const auto Tags  = (Mode != nullptr) ? Mode->Get_SelectedCellTags() : FGameplayTagContainer{};
+
+    if (Tags.IsEmpty())
+    {
+        PerCellTagListContainer->AddSlot()
+        .AutoHeight()
+        [
+            SNew(STextBlock).Text(LOCTEXT("DetailsTagsNone", "(none)"))
+        ];
+        return;
+    }
+
+    for (const auto& Tag : Tags)
+    {
+        PerCellTagListContainer->AddSlot()
+        .AutoHeight()
+        .Padding(0.0f, 1.0f)
+        [
+            SNew(SHorizontalBox)
+            + SHorizontalBox::Slot()
+            .FillWidth(1.0f)
+            .VAlign(VAlign_Center)
+            [
+                SNew(STextBlock).Text(FText::FromName(Tag.GetTagName()))
+            ]
+            + SHorizontalBox::Slot()
+            .AutoWidth()
+            [
+                SNew(SButton)
+                .ToolTipText(LOCTEXT("DetailsRemoveCellTagTip", "Remove this tag from the cell"))
+                .OnClicked(this, &FCk_2dGridSystem_EdModeToolkit::On_RemoveCellTag, Tag)
+                [
+                    SNew(STextBlock).Text(LOCTEXT("DetailsRemoveCellTag", "Remove"))
+                ]
+            ]
+        ];
+    }
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    On_AddCellTagChanged(
+        const TArray<FGameplayTagContainer>& InContainers) -> void
+{
+    const auto NewTag = InContainers.IsEmpty() ? FGameplayTag() : InContainers[0].First();
+    if (! NewTag.IsValid())
+    { return; }
+
+    auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
+    if (Mode == nullptr)
+    { return; }
+
+    Mode->Add_SelectedCellTag(NewTag);
+
+    // Reset the picker back to empty so it reads as an "add" control (the row list below is the source of
+    // truth for what the cell currently carries). The list rebuild rides the next live-bound repaint.
+    if (AddCellTagPicker.IsValid())
+    { AddCellTagPicker->SetTagContainers(TArray<FGameplayTagContainer>{ FGameplayTagContainer{} }); }
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    On_RemoveCellTag(
+        FGameplayTag InTag) -> FReply
+{
+    if (auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get()))
+    { Mode->Remove_SelectedCellTag(InTag); }
+
+    return FReply::Handled();
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    Get_DetailsBlockerText() const -> FText
+{
+    auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
+    if (Mode == nullptr)
     { return FText::GetEmpty(); }
 
-    if (Info.CellTags.IsEmpty())
-    { return LOCTEXT("DetailsTagsNone", "(none)"); }
+    const auto Index = Mode->Get_SelectedBlockerIndex();
 
-    return FText::FromString(Info.CellTags.ToStringSimple());
+    // Re-seed the blocker tag picker's displayed value when the selected blocker changes (the picker has
+    // no live-bound value attribute). const_cast: this getter is live-bound and owns the view-state seed.
+    if (Index != SeededDetailsBlockerIndex)
+    {
+        auto* MutableThis = const_cast<FCk_2dGridSystem_EdModeToolkit*>(this);
+        MutableThis->SeededDetailsBlockerIndex = Index;
+
+        if (DetailsBlockerTagPicker.IsValid())
+        {
+            auto Container = FGameplayTagContainer{};
+            const auto SelectedTag = Mode->Get_SelectedBlockerName();
+            if (SelectedTag.IsValid())
+            { Container.AddTag(SelectedTag); }
+
+            DetailsBlockerTagPicker->SetTagContainers(TArray<FGameplayTagContainer>{ Container });
+        }
+    }
+
+    if (Index == INDEX_NONE)
+    { return FText::GetEmpty(); }
+
+    auto Min = FIntPoint::ZeroValue;
+    auto Max = FIntPoint::ZeroValue;
+    if (! Mode->Get_SelectedBlockerRange(Min, Max))
+    { return FText::GetEmpty(); }
+
+    const auto SelectedTag = Mode->Get_SelectedBlockerName();
+    const auto TagText = SelectedTag.IsValid()
+        ? FText::FromName(SelectedTag.GetTagName())
+        : LOCTEXT("DetailsBlockerUnnamed2", "(unnamed)");
+
+    return FText::Format(
+        LOCTEXT("DetailsBlockerInfo", "Blocker #{0}  range ({1},{2})..({3},{4})  tag: {5}"),
+        FText::AsNumber(Index),
+        FText::AsNumber(Min.X), FText::AsNumber(Min.Y),
+        FText::AsNumber(Max.X), FText::AsNumber(Max.Y),
+        TagText);
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    On_DeleteSelectedBlocker() -> FReply
+{
+    if (auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get()))
+    { Mode->Delete_SelectedBlocker(); }
+
+    return FReply::Handled();
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    On_DetailsBlockerTagChanged(
+        const TArray<FGameplayTagContainer>& InContainers) -> void
+{
+    const auto NewTag = InContainers.IsEmpty() ? FGameplayTag() : InContainers[0].First();
+
+    auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
+    if (Mode == nullptr)
+    { return; }
+
+    // Ignore writes when no blocker is selected (the picker still emits OnTagChanged after a re-seed to
+    // the empty container). Mirrors the Blocker section's On_SelectedBlockerTagChanged guard.
+    if (Mode->Get_SelectedBlockerIndex() == INDEX_NONE)
+    { return; }
+
+    Mode->Set_SelectedBlockerName(NewTag);
+    SeededDetailsBlockerIndex = Mode->Get_SelectedBlockerIndex();
 }
 
 auto

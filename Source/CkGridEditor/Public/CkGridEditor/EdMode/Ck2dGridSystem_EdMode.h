@@ -32,7 +32,9 @@ enum class ECk_GridPaint_Tool : uint8
     Tags,
     // Drag-rect places blocker footprints; click selects an existing blocker (Delete removes it).
     Blocker,
-    // Read-only: click selects a cell and the toolkit's Details panel inspects its authored state.
+    // Click selects a cell (or, if the click lands on a blocker, the whole blocker group); the toolkit's
+    // Details panel then EDITS that cell (disabled toggle + per-cell tag add/remove) or that blocker
+    // (tag edit + delete).
     Select
 };
 
@@ -160,6 +162,40 @@ public:
     // snapshot with bHasSelection == false when no cell or no grid spawner is selected.
     auto Resolve_SelectedCellInfo() const -> FSelectedCellInfo;
 
+    // Select tool: true when the current Select-tool pick landed on a blocker (so the toolkit shows the
+    // BLOCKER editor instead of the single-cell editor). A blocker selection takes precedence over the
+    // single-cell selection: _SelectedBlockerIndex is set and _SelectedCell still records the click.
+    auto Get_HasBlockerSelection() const -> bool { return _SelectedBlockerIndex != INDEX_NONE; }
+
+    // Select tool: write InDisabled for the currently selected cell — adds the cell to (true) or removes
+    // it from (false) the Spec's DisabledCells. Transacted + rebuild. No-op if no cell or no grid is
+    // selected. The cell is bounds-clamped to the Spec dimensions implicitly (any FIntPoint is storable).
+    auto Set_SelectedCellDisabled(bool InDisabled) -> void;
+
+    // Select tool: returns whether the currently selected cell is in the Spec's DisabledCells. False when
+    // no cell or no grid is selected (used to drive the toolkit's Disabled checkbox state).
+    auto Get_SelectedCellDisabled() const -> bool;
+
+    // Select tool: add InTag to the currently selected cell's PerCellTags container (FindOrAdd). Transacted
+    // + rebuild. No-op if the tag is invalid or no cell/grid is selected.
+    auto Add_SelectedCellTag(const FGameplayTag& InTag) -> void;
+
+    // Select tool: remove InTag from the currently selected cell's PerCellTags container; if the container
+    // becomes empty, the map entry is dropped. Transacted + rebuild. No-op if no cell/grid is selected.
+    auto Remove_SelectedCellTag(const FGameplayTag& InTag) -> void;
+
+    // Select tool: snapshot of the currently selected cell's per-cell tags (empty when no cell/grid is
+    // selected). Read by the toolkit to build the editable per-cell tag list.
+    auto Get_SelectedCellTags() const -> FGameplayTagContainer;
+
+    // Select tool: range (min/max corners) of the currently selected blocker, written to the out params.
+    // Returns false (out params untouched) when no blocker is selected or the index is stale.
+    auto Get_SelectedBlockerRange(FIntPoint& OutMin, FIntPoint& OutMax) const -> bool;
+
+    // Select tool: delete the currently selected blocker from the Spec's Blockers (transacted + rebuild)
+    // and clear the blocker selection. No-op if no blocker is selected or the index is stale.
+    auto Delete_SelectedBlocker() -> void;
+
 private:
     // Resolved grid selection: the selected spawner whose _EntityScript is a grid script, plus the
     // Spec it hosts and the spawner's world transform. Invalid when the current selection is not a
@@ -280,12 +316,15 @@ private:
     // Blocker tool: the cell currently under the cursor during a blocker drag (the rect's other corner).
     TOptional<FIntPoint> _BlockerDragCurrent;
 
-    // Blocker tool: index into Spec->Blockers of the currently selected blocker (for highlight + Delete),
-    // or INDEX_NONE. Cleared when the tool/selection changes.
+    // Blocker AND Select tool: index into Spec->Blockers of the currently selected blocker (for highlight,
+    // Delete, and the Select-tool blocker editor), or INDEX_NONE. In the Select tool this is set when the
+    // pick lands on a blocker (blocker selection takes precedence over the single-cell selection). Cleared
+    // when the tool/selection changes.
     int32 _SelectedBlockerIndex = INDEX_NONE;
 
-    // Select tool: the cell the user picked for inspection (highlighted in Render, read by the toolkit's
-    // Details panel). Unset until a cell is clicked, or after an off-grid click / actor-selection change.
+    // Select tool: the cell the user picked (highlighted in Render, edited by the toolkit's Details panel).
+    // Unset until a cell is clicked, or after an off-grid click / actor-selection change. When the pick
+    // landed on a blocker, _SelectedBlockerIndex is also set and the Details panel shows the blocker editor.
     TOptional<FIntPoint> _SelectedCell;
 };
 
