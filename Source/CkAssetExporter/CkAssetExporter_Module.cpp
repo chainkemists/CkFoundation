@@ -5,7 +5,8 @@
 #include "CkAssetExporter/AssetAction/CkDataAssetExporter_AssetAction.h"
 #include "CkAssetExporter/AssetAction/CkEQSExporter_AssetAction.h"
 #include "CkAssetExporter/AssetAction/CkStateTreeExporter_AssetAction.h"
-#include "CkAssetExporter/ExporterTab/SCkBehaviorTreeExporterTab.h"
+#include "CkAssetExporter/AssetAction/CkUserDefinedStructExporter_AssetAction.h"
+#include "CkAssetExporter/ExporterTab/SCkAssetExporterTab.h"
 
 #include <ToolMenus.h>
 #include <WorkspaceMenuStructure.h>
@@ -46,6 +47,7 @@ auto
     ck::asset_exporter::RegisterDataAssetContextMenu();
     ck::asset_exporter::RegisterEQSContextMenu();
     ck::asset_exporter::RegisterStateTreeContextMenu();
+    ck::asset_exporter::RegisterUserDefinedStructContextMenu();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -62,7 +64,7 @@ auto
         FOnSpawnTab::CreateRaw(this, &FCkAssetExporterModule::DoOnSpawnTab)
     )
     .SetDisplayName(FText::FromString(ExporterTab_TabDisplayName))
-    .SetTooltipText(FText::FromString(TEXT("Export assets (Behavior Trees, Blueprints, DataAssets, EQS, State Trees) to JSON and plain-text formats")))
+    .SetTooltipText(FText::FromString(TEXT("Export assets (Behavior Trees, Blueprints, DataAssets, EQS, State Trees, Structs) to JSON and plain-text formats")))
     .SetGroup(WorkspaceMenu::GetMenuStructure().GetDeveloperToolsDebugCategory());
 }
 
@@ -87,7 +89,7 @@ auto
         .Label(FText::FromString(ExporterTab_TabDisplayName))
         .ToolTipText(FText::FromString(TEXT("Export assets to JSON and plain-text formats")))
         [
-            SNew(SCkBehaviorTreeExporterTab)
+            SNew(SCkAssetExporterTab)
         ];
 }
 

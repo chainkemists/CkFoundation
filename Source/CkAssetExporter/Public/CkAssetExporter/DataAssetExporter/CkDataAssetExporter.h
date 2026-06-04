@@ -64,6 +64,13 @@ public:
     DoShouldIncludeProperty(
         const FProperty* InProperty) -> bool;
 
+    // Resets the thread-local recursion/dedup bookkeeping used by the shared
+    // serializers. Call this before driving DoSerializeProperties_Json /
+    // DoSerializePropertyValue_Json from a non-DataAsset exporter so stale
+    // "alreadyExported" entries from a previous export don't leak in.
+    static auto
+    ResetSharedRecursionState() -> void;
+
 private:
     // ---- JSON serialization ----
 
