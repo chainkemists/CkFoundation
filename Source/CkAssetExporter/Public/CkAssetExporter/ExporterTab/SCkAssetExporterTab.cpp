@@ -1,4 +1,4 @@
-#include "SCkBehaviorTreeExporterTab.h"
+#include "SCkAssetExporterTab.h"
 
 #include "CkAssetExporter_Log.h"
 
@@ -7,6 +7,7 @@
 #include <Engine/DataAsset.h>
 #include <EnvironmentQuery/EnvQuery.h>
 #include <StateTree.h>
+#include <StructUtils/UserDefinedStruct.h>
 #include <ContentBrowserModule.h>
 #include <IContentBrowserSingleton.h>
 #include <Styling/AppStyle.h>
@@ -17,7 +18,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace BehaviorTreeExporterTab_Constants
+namespace AssetExporterTab_Constants
 {
     constexpr float PanelPadding = 8.0f;
     constexpr float ButtonWidth = 180.0f;
@@ -30,7 +31,7 @@ namespace BehaviorTreeExporterTab_Constants
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    SCkBehaviorTreeExporterTab::
+    SCkAssetExporterTab::
     Construct(const FArguments& InArgs)
     -> void
 {
@@ -38,14 +39,14 @@ auto
     [
         SNew(SBorder)
         .BorderImage(FAppStyle::GetBrush("ToolPanel.GroupBorder"))
-        .Padding(BehaviorTreeExporterTab_Constants::PanelPadding)
+        .Padding(AssetExporterTab_Constants::PanelPadding)
         [
             SNew(SVerticalBox)
 
             // Button bar
             + SVerticalBox::Slot()
             .AutoHeight()
-            .Padding(0, 0, 0, BehaviorTreeExporterTab_Constants::SectionSpacing)
+            .Padding(0, 0, 0, AssetExporterTab_Constants::SectionSpacing)
             [
                 DoCreateButtonBar()
             ]
@@ -53,7 +54,7 @@ auto
             // Separator
             + SVerticalBox::Slot()
             .AutoHeight()
-            .Padding(0, 0, 0, BehaviorTreeExporterTab_Constants::SectionSpacing)
+            .Padding(0, 0, 0, AssetExporterTab_Constants::SectionSpacing)
             [
                 SNew(SSeparator)
             ]
@@ -61,7 +62,7 @@ auto
             // Status text
             + SVerticalBox::Slot()
             .AutoHeight()
-            .Padding(0, 0, 0, BehaviorTreeExporterTab_Constants::SectionSpacing)
+            .Padding(0, 0, 0, AssetExporterTab_Constants::SectionSpacing)
             [
                 SAssignNew(_StatusText, STextBlock)
                 .Text(FText::FromString(TEXT("Select assets in the Content Browser, then click Export.")))
@@ -80,7 +81,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    SCkBehaviorTreeExporterTab::
+    SCkAssetExporterTab::
     DoCreateButtonBar()
     -> TSharedRef<SWidget>
 {
@@ -88,22 +89,22 @@ auto
 
         + SHorizontalBox::Slot()
         .AutoWidth()
-        .Padding(0, 0, BehaviorTreeExporterTab_Constants::SectionSpacing, 0)
+        .Padding(0, 0, AssetExporterTab_Constants::SectionSpacing, 0)
         [
             SNew(SBox)
-            .WidthOverride(BehaviorTreeExporterTab_Constants::ButtonWidth)
+            .WidthOverride(AssetExporterTab_Constants::ButtonWidth)
             [
                 SNew(SButton)
                 .Text(FText::FromString(TEXT("Export Selected BTs")))
                 .ToolTipText(FText::FromString(TEXT("Export Behavior Trees currently selected in the Content Browser to JSON and Text files")))
-                .OnClicked(this, &SCkBehaviorTreeExporterTab::DoOnExportSelectedClicked)
+                .OnClicked(this, &SCkAssetExporterTab::DoOnExportSelectedClicked)
                 .HAlign(HAlign_Center)
             ]
         ]
 
         + SHorizontalBox::Slot()
         .AutoWidth()
-        .Padding(0, 0, BehaviorTreeExporterTab_Constants::SectionSpacing, 0)
+        .Padding(0, 0, AssetExporterTab_Constants::SectionSpacing, 0)
         [
             SNew(SBox)
             .WidthOverride(200.0f)
@@ -111,14 +112,14 @@ auto
                 SNew(SButton)
                 .Text(FText::FromString(TEXT("Export Selected Blueprints")))
                 .ToolTipText(FText::FromString(TEXT("Export Blueprints currently selected in the Content Browser to JSON and Text files")))
-                .OnClicked(this, &SCkBehaviorTreeExporterTab::DoOnExportSelectedBlueprintsClicked)
+                .OnClicked(this, &SCkAssetExporterTab::DoOnExportSelectedBlueprintsClicked)
                 .HAlign(HAlign_Center)
             ]
         ]
 
         + SHorizontalBox::Slot()
         .AutoWidth()
-        .Padding(0, 0, BehaviorTreeExporterTab_Constants::SectionSpacing, 0)
+        .Padding(0, 0, AssetExporterTab_Constants::SectionSpacing, 0)
         [
             SNew(SBox)
             .WidthOverride(200.0f)
@@ -126,14 +127,14 @@ auto
                 SNew(SButton)
                 .Text(FText::FromString(TEXT("Export Selected DataAssets")))
                 .ToolTipText(FText::FromString(TEXT("Export DataAssets currently selected in the Content Browser to JSON and Text files")))
-                .OnClicked(this, &SCkBehaviorTreeExporterTab::DoOnExportSelectedDataAssetsClicked)
+                .OnClicked(this, &SCkAssetExporterTab::DoOnExportSelectedDataAssetsClicked)
                 .HAlign(HAlign_Center)
             ]
         ]
 
         + SHorizontalBox::Slot()
         .AutoWidth()
-        .Padding(0, 0, BehaviorTreeExporterTab_Constants::SectionSpacing, 0)
+        .Padding(0, 0, AssetExporterTab_Constants::SectionSpacing, 0)
         [
             SNew(SBox)
             .WidthOverride(200.0f)
@@ -141,14 +142,14 @@ auto
                 SNew(SButton)
                 .Text(FText::FromString(TEXT("Export Selected EQS")))
                 .ToolTipText(FText::FromString(TEXT("Export EQS Queries currently selected in the Content Browser to JSON and Text files")))
-                .OnClicked(this, &SCkBehaviorTreeExporterTab::DoOnExportSelectedEQSClicked)
+                .OnClicked(this, &SCkAssetExporterTab::DoOnExportSelectedEQSClicked)
                 .HAlign(HAlign_Center)
             ]
         ]
 
         + SHorizontalBox::Slot()
         .AutoWidth()
-        .Padding(0, 0, BehaviorTreeExporterTab_Constants::SectionSpacing, 0)
+        .Padding(0, 0, AssetExporterTab_Constants::SectionSpacing, 0)
         [
             SNew(SBox)
             .WidthOverride(200.0f)
@@ -156,21 +157,36 @@ auto
                 SNew(SButton)
                 .Text(FText::FromString(TEXT("Export Selected StateTrees")))
                 .ToolTipText(FText::FromString(TEXT("Export State Trees currently selected in the Content Browser to JSON and Text files")))
-                .OnClicked(this, &SCkBehaviorTreeExporterTab::DoOnExportSelectedStateTreesClicked)
+                .OnClicked(this, &SCkAssetExporterTab::DoOnExportSelectedStateTreesClicked)
+                .HAlign(HAlign_Center)
+            ]
+        ]
+
+        + SHorizontalBox::Slot()
+        .AutoWidth()
+        .Padding(0, 0, AssetExporterTab_Constants::SectionSpacing, 0)
+        [
+            SNew(SBox)
+            .WidthOverride(200.0f)
+            [
+                SNew(SButton)
+                .Text(FText::FromString(TEXT("Export Selected Structs")))
+                .ToolTipText(FText::FromString(TEXT("Export Blueprint structs currently selected in the Content Browser to JSON and Text files")))
+                .OnClicked(this, &SCkAssetExporterTab::DoOnExportSelectedUserDefinedStructsClicked)
                 .HAlign(HAlign_Center)
             ]
         ];
 }
 
 auto
-    SCkBehaviorTreeExporterTab::
+    SCkAssetExporterTab::
     DoCreateResultsPanel()
     -> TSharedRef<SWidget>
 {
     return SAssignNew(_ResultsListView,
-        SListView<TSharedPtr<FCk_BehaviorTreeExporterTab_ResultEntry>>)
+        SListView<TSharedPtr<FCk_AssetExporterTab_ResultEntry>>)
         .ListItemsSource(&_ResultEntries)
-        .OnGenerateRow(this, &SCkBehaviorTreeExporterTab::DoGenerateResultRow)
+        .OnGenerateRow(this, &SCkAssetExporterTab::DoGenerateResultRow)
         .HeaderRow(
             SNew(SHeaderRow)
             + SHeaderRow::Column("Status")
@@ -188,7 +204,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    SCkBehaviorTreeExporterTab::
+    SCkAssetExporterTab::
     DoOnExportSelectedClicked()
     -> FReply
 {
@@ -238,7 +254,7 @@ auto
 }
 
 auto
-    SCkBehaviorTreeExporterTab::
+    SCkAssetExporterTab::
     DoRefreshResultsList(
         const TArray<FCk_BehaviorTreeExportResult>& InResults)
     -> void
@@ -247,7 +263,7 @@ auto
 
     for (const auto& Result : InResults)
     {
-        auto Entry = MakeShared<FCk_BehaviorTreeExporterTab_ResultEntry>();
+        auto Entry = MakeShared<FCk_AssetExporterTab_ResultEntry>();
         Entry->AssetName = Result.AssetName;
         Entry->Succeeded = Result.Succeeded;
         Entry->JsonPath = Result.JsonFilePath;
@@ -263,7 +279,7 @@ auto
 }
 
 auto
-    SCkBehaviorTreeExporterTab::
+    SCkAssetExporterTab::
     DoOnExportSelectedBlueprintsClicked()
     -> FReply
 {
@@ -313,7 +329,7 @@ auto
 }
 
 auto
-    SCkBehaviorTreeExporterTab::
+    SCkAssetExporterTab::
     DoRefreshResultsListFromBlueprintResults(
         const TArray<FCk_BlueprintExportResult>& InResults)
     -> void
@@ -322,7 +338,7 @@ auto
 
     for (const auto& Result : InResults)
     {
-        auto Entry = MakeShared<FCk_BehaviorTreeExporterTab_ResultEntry>();
+        auto Entry = MakeShared<FCk_AssetExporterTab_ResultEntry>();
         Entry->AssetName = Result.AssetName;
         Entry->Succeeded = Result.Succeeded;
         Entry->JsonPath = Result.JsonFilePath;
@@ -338,7 +354,7 @@ auto
 }
 
 auto
-    SCkBehaviorTreeExporterTab::
+    SCkAssetExporterTab::
     DoOnExportSelectedDataAssetsClicked()
     -> FReply
 {
@@ -388,7 +404,7 @@ auto
 }
 
 auto
-    SCkBehaviorTreeExporterTab::
+    SCkAssetExporterTab::
     DoRefreshResultsListFromDataAssetResults(
         const TArray<FCk_DataAssetExportResult>& InResults)
     -> void
@@ -397,7 +413,7 @@ auto
 
     for (const auto& Result : InResults)
     {
-        auto Entry = MakeShared<FCk_BehaviorTreeExporterTab_ResultEntry>();
+        auto Entry = MakeShared<FCk_AssetExporterTab_ResultEntry>();
         Entry->AssetName = Result.AssetName;
         Entry->Succeeded = Result.Succeeded;
         Entry->JsonPath = Result.JsonFilePath;
@@ -413,7 +429,7 @@ auto
 }
 
 auto
-    SCkBehaviorTreeExporterTab::
+    SCkAssetExporterTab::
     DoOnExportSelectedEQSClicked()
     -> FReply
 {
@@ -463,7 +479,7 @@ auto
 }
 
 auto
-    SCkBehaviorTreeExporterTab::
+    SCkAssetExporterTab::
     DoRefreshResultsListFromEQSResults(
         const TArray<FCk_EQSExportResult>& InResults)
     -> void
@@ -472,7 +488,7 @@ auto
 
     for (const auto& Result : InResults)
     {
-        auto Entry = MakeShared<FCk_BehaviorTreeExporterTab_ResultEntry>();
+        auto Entry = MakeShared<FCk_AssetExporterTab_ResultEntry>();
         Entry->AssetName = Result.AssetName;
         Entry->Succeeded = Result.Succeeded;
         Entry->JsonPath = Result.JsonFilePath;
@@ -488,7 +504,7 @@ auto
 }
 
 auto
-    SCkBehaviorTreeExporterTab::
+    SCkAssetExporterTab::
     DoOnExportSelectedStateTreesClicked()
     -> FReply
 {
@@ -538,7 +554,7 @@ auto
 }
 
 auto
-    SCkBehaviorTreeExporterTab::
+    SCkAssetExporterTab::
     DoRefreshResultsListFromStateTreeResults(
         const TArray<FCk_StateTreeExportResult>& InResults)
     -> void
@@ -547,7 +563,7 @@ auto
 
     for (const auto& Result : InResults)
     {
-        auto Entry = MakeShared<FCk_BehaviorTreeExporterTab_ResultEntry>();
+        auto Entry = MakeShared<FCk_AssetExporterTab_ResultEntry>();
         Entry->AssetName = Result.AssetName;
         Entry->Succeeded = Result.Succeeded;
         Entry->JsonPath = Result.JsonFilePath;
@@ -563,15 +579,90 @@ auto
 }
 
 auto
-    SCkBehaviorTreeExporterTab::
+    SCkAssetExporterTab::
+    DoOnExportSelectedUserDefinedStructsClicked()
+    -> FReply
+{
+    // Get selected Blueprint structs from Content Browser
+    auto& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+    auto SelectedAssets = TArray<FAssetData>{};
+    ContentBrowserModule.Get().GetSelectedAssets(SelectedAssets);
+
+    auto Structs = TArray<UUserDefinedStruct*>{};
+    for (const auto& AssetData : SelectedAssets)
+    {
+        if (auto* Struct = Cast<UUserDefinedStruct>(AssetData.GetAsset()))
+        {
+            Structs.Add(Struct);
+        }
+    }
+
+    if (Structs.Num() == 0)
+    {
+        _StatusText->SetText(FText::FromString(TEXT("No Blueprint struct assets selected in the Content Browser.")));
+        return FReply::Handled();
+    }
+
+    const auto Results = FCk_UserDefinedStructExporter::ExportUserDefinedStructs(Structs);
+    DoRefreshResultsListFromUserDefinedStructResults(Results);
+
+    auto SuccessCount = int32{0};
+    auto FailCount = int32{0};
+    for (const auto& R : Results)
+    {
+        if (R.Succeeded) { ++SuccessCount; }
+        else { ++FailCount; }
+    }
+
+    if (FailCount == 0)
+    {
+        _StatusText->SetText(FText::FromString(
+            FString::Printf(TEXT("Successfully exported %d Struct(s)."), SuccessCount)));
+    }
+    else
+    {
+        _StatusText->SetText(FText::FromString(
+            FString::Printf(TEXT("Exported %d, failed %d Struct(s)."), SuccessCount, FailCount)));
+    }
+
+    return FReply::Handled();
+}
+
+auto
+    SCkAssetExporterTab::
+    DoRefreshResultsListFromUserDefinedStructResults(
+        const TArray<FCk_UserDefinedStructExportResult>& InResults)
+    -> void
+{
+    _ResultEntries.Empty();
+
+    for (const auto& Result : InResults)
+    {
+        auto Entry = MakeShared<FCk_AssetExporterTab_ResultEntry>();
+        Entry->AssetName = Result.AssetName;
+        Entry->Succeeded = Result.Succeeded;
+        Entry->JsonPath = Result.JsonFilePath;
+        Entry->TextPath = Result.TextFilePath;
+        Entry->ErrorMessage = Result.ErrorMessage;
+        _ResultEntries.Add(Entry);
+    }
+
+    if (_ResultsListView.IsValid())
+    {
+        _ResultsListView->RequestListRefresh();
+    }
+}
+
+auto
+    SCkAssetExporterTab::
     DoGenerateResultRow(
-        TSharedPtr<FCk_BehaviorTreeExporterTab_ResultEntry> InEntry,
+        TSharedPtr<FCk_AssetExporterTab_ResultEntry> InEntry,
         const TSharedRef<STableViewBase>& InOwnerTable)
     -> TSharedRef<ITableRow>
 {
     const auto StatusColor = InEntry->Succeeded
-        ? BehaviorTreeExporterTab_Constants::Color_Success
-        : BehaviorTreeExporterTab_Constants::Color_Error;
+        ? AssetExporterTab_Constants::Color_Success
+        : AssetExporterTab_Constants::Color_Error;
 
     const auto StatusLabel = InEntry->Succeeded ? TEXT("OK") : TEXT("FAIL");
 
@@ -579,7 +670,7 @@ auto
         ? FString::Printf(TEXT("%s\n%s"), *InEntry->JsonPath, *InEntry->TextPath)
         : InEntry->ErrorMessage;
 
-    return SNew(STableRow<TSharedPtr<FCk_BehaviorTreeExporterTab_ResultEntry>>, InOwnerTable)
+    return SNew(STableRow<TSharedPtr<FCk_AssetExporterTab_ResultEntry>>, InOwnerTable)
         [
             SNew(SHorizontalBox)
 
