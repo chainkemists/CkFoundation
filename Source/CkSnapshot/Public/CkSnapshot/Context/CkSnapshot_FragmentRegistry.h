@@ -8,7 +8,6 @@
 #include "CkThirdParty/entt-3.16.0/src/entt/entity/registry.hpp"
 #include "CkThirdParty/entt-3.16.0/src/entt/entity/snapshot.hpp"
 
-#include <functional>
 #include <type_traits>
 
 class UScriptStruct;
@@ -30,8 +29,17 @@ namespace ck
         FString  _DisplayName;
         uint32   _EnttTypeHash = 0;
 
-        std::function<void(entt::basic_snapshot<SnapshotRegistryType>&,          FSnapshotArchive_Writer&)> _Save;
-        std::function<void(entt::basic_continuous_loader<SnapshotRegistryType>&, FSnapshotArchive_Reader&)> _Load;
+        // Plain function pointers, NOT std::function. These entries live in a TArray inside the registry
+        // singleton; as registrations stream in from every module during static-init, that TArray grows and
+        // relocates its elements bitwise. std::function is not safely bitwise-relocatable (SBO / self-
+        // referential internals), so relocation corrupts its impl pointer -> AV when later invoked. The
+        // Save/Load lambdas in Do_RegisterSnapshotable are captureless, so they decay to function pointers,
+        // which ARE trivially relocatable.
+        using SaveFnPtr = void (*)(entt::basic_snapshot<SnapshotRegistryType>&,          FSnapshotArchive_Writer&);
+        using LoadFnPtr = void (*)(entt::basic_continuous_loader<SnapshotRegistryType>&, FSnapshotArchive_Reader&);
+
+        SaveFnPtr _Save = nullptr;
+        LoadFnPtr _Load = nullptr;
     };
 
     class CKSNAPSHOT_API FCk_Snapshot_FragmentRegistry
