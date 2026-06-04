@@ -15,6 +15,8 @@
 #include "EditorViewportClient.h"
 #include "Engine/Selection.h"
 #include "InputCoreTypes.h"
+#include "TimerManager.h"
+#include "UnrealClient.h"
 #include "SceneManagement.h"
 #include "SceneView.h"
 #include "ScopedTransaction.h"
@@ -460,30 +462,37 @@ auto
 
 auto
     UCk_2dGridSystem_EdMode::
-    Toggle_ShapeCell(
+    Set_ShapeCellDisabled(
         const FResolvedGridSelection& InSelection,
-        const FIntPoint&              InCell) -> void
+        const FIntPoint&              InCell,
+        bool                          InDisabled) -> void
 {
     if (! InSelection.IsValid())
     { return; }
 
     auto* Spec = InSelection.Spec;
 
+    // Idempotent: skip the Modify()/rebuild when the cell is already in the requested state.
+    const auto bAlreadyDisabled = Spec->DisabledCells.Contains(InCell);
+    if (bAlreadyDisabled == InDisabled)
+    { return; }
+
     Spec->Modify();
 
-    if (Spec->DisabledCells.Contains(InCell))
-    { Spec->DisabledCells.RemoveSingleSwap(InCell); }
-    else
+    if (InDisabled)
     { Spec->DisabledCells.Add(InCell); }
+    else
+    { Spec->DisabledCells.RemoveSingleSwap(InCell); }
 
     InSelection.Spawner->EditorOnly_RebuildEntity();
 }
 
 auto
     UCk_2dGridSystem_EdMode::
-    Paint_TagCell(
+    Set_TagCell(
         const FResolvedGridSelection& InSelection,
-        const FIntPoint&              InCell) -> void
+        const FIntPoint&              InCell,
+        bool                          InAdd) -> void
 {
     if (! InSelection.IsValid())
     { return; }
@@ -496,11 +505,32 @@ auto
 
     auto* Spec = InSelection.Spec;
 
-    Spec->Modify();
+    if (InAdd)
+    {
+        // Idempotent ADD: no-op (and no Modify/rebuild) when the cell already carries the tag.
+        if (const auto* Existing = Spec->PerCellTags.Find(InCell);
+            Existing != nullptr && Existing->HasTagExact(_ActivePaintTag))
+        { return; }
 
-    // Idempotent ADD (bulk-paint only adds — never toggles).
-    auto& Container = Spec->PerCellTags.FindOrAdd(InCell);
-    Container.AddTag(_ActivePaintTag);
+        Spec->Modify();
+        auto& Container = Spec->PerCellTags.FindOrAdd(InCell);
+        Container.AddTag(_ActivePaintTag);
+        InSelection.Spawner->EditorOnly_RebuildEntity();
+        return;
+    }
+
+    // REMOVE: no-op when the cell doesn't carry the tag.
+    auto* Container = Spec->PerCellTags.Find(InCell);
+    if (Container == nullptr || ! Container->HasTagExact(_ActivePaintTag))
+    { return; }
+
+    Spec->Modify();
+    Container->RemoveTag(_ActivePaintTag);
+
+    // Drop the map entry entirely when the cell no longer carries any per-cell tag (no entry == no
+    // overrides), mirroring Remove_SelectedCellTag.
+    if (Container->IsEmpty())
+    { Spec->PerCellTags.Remove(InCell); }
 
     InSelection.Spawner->EditorOnly_RebuildEntity();
 }
@@ -509,18 +539,21 @@ auto
     UCk_2dGridSystem_EdMode::
     Paint_StrokeCell(
         const FResolvedGridSelection& InSelection,
-        const FIntPoint&              InCell) -> void
+        const FIntPoint&              InCell,
+        bool                          InErase) -> void
 {
     switch (_ActiveTool)
     {
         case ECk_GridPaint_Tool::Shape:
         {
-            Toggle_ShapeCell(InSelection, InCell);
+            // ADD disables the cell; ERASE re-enables it.
+            Set_ShapeCellDisabled(InSelection, InCell, ! InErase);
             break;
         }
         case ECk_GridPaint_Tool::Tags:
         {
-            Paint_TagCell(InSelection, InCell);
+            // ADD writes the active tag; ERASE removes it.
+            Set_TagCell(InSelection, InCell, ! InErase);
             break;
         }
         default:
@@ -562,6 +595,9 @@ auto
     if (! Selection.IsValid())
     { return; }
 
+    // Record the latest painted pixel so EndTracking can land the cursor on the stroke's END cell.
+    _StrokeLastMousePixel = FIntPoint(InMouseX, InMouseY);
+
     const auto Cell = Resolve_CellAtCursor(InViewportClient, InMouseX, InMouseY);
     if (! Cell.IsSet())
     { return; }
@@ -572,7 +608,7 @@ auto
     { return; }
 
     _StrokeToggledCells.Add(Cell.GetValue());
-    Paint_StrokeCell(Selection, Cell.GetValue());
+    Paint_StrokeCell(Selection, Cell.GetValue(), _StrokeErase);
 }
 
 auto
@@ -651,9 +687,10 @@ auto
     Is_PlainLeftClick(
         const FViewportClick& InClick) const -> bool
 {
-    // Plain LMB = no modifier held AND the click's button is the Left mouse button. Any modifier or a
-    // non-left button means the user is driving the camera (RMB-look, Alt+LMB orbit, etc.).
-    if (InClick.IsControlDown() || InClick.IsShiftDown() || InClick.IsAltDown())
+    // LMB with NO Ctrl/Alt. Shift IS allowed — it selects the erase direction for the Shape/Tags paint
+    // (Is_EraseModifier). Ctrl/Alt or a non-left button means the user is driving the camera (RMB-look,
+    // Alt+LMB orbit, etc.).
+    if (InClick.IsControlDown() || InClick.IsAltDown())
     { return false; }
 
     return InClick.GetKey() == EKeys::LeftMouseButton;
@@ -668,8 +705,8 @@ auto
     if (InViewportClient == nullptr || InViewport == nullptr)
     { return false; }
 
-    // Modifier held → camera gesture (Alt-orbit etc.), not a paint stroke.
-    if (InViewportClient->IsShiftPressed() || InViewportClient->IsCtrlPressed() || InViewportClient->IsAltPressed())
+    // Ctrl/Alt held → camera gesture (Alt-orbit etc.), not a paint stroke. Shift IS allowed (erase mode).
+    if (InViewportClient->IsCtrlPressed() || InViewportClient->IsAltPressed())
     { return false; }
 
     // Left button must be down; right button must NOT be (LMB+RMB is the camera pan gesture).
@@ -677,6 +714,48 @@ auto
     const auto bRightDown = InViewport->KeyState(EKeys::RightMouseButton);
 
     return bLeftDown && ! bRightDown;
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Is_EraseModifier(
+        const FViewportClick& InClick) const -> bool
+{
+    return InClick.IsShiftDown();
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Is_EraseModifier(
+        FEditorViewportClient* InViewportClient) const -> bool
+{
+    return InViewportClient != nullptr && InViewportClient->IsShiftPressed();
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Schedule_RestoreCursorToStrokeEnd(
+        FViewport*       InViewport,
+        const FIntPoint& InMousePixel) -> void
+{
+    if (InViewport == nullptr || GEditor == nullptr)
+    { return; }
+
+    // Defer to the next editor tick: the OS restores the cursor to the raw-mouse capture origin when Slate
+    // exits high-precision mode LATER in this same input pass, so repositioning now would be overwritten.
+    // A next-tick timer fires after that, landing the cursor on the stroke's end cell.
+    auto* RawViewport = InViewport;
+
+    GEditor->GetTimerManager()->SetTimerForNextTick(
+        FTimerDelegate::CreateLambda([RawViewport, InMousePixel]()
+        {
+            // RawViewport may have been torn down between scheduling and firing (mode exit, viewport close).
+            // GEditor outlives the timer manager that owns this delegate, so the manager itself is safe; we
+            // only guard the viewport pointer. There is no public "is this FViewport still alive" probe, but
+            // a next-tick timer in practice fires before any viewport teardown that could invalidate it.
+            if (RawViewport != nullptr)
+            { RawViewport->SetMouse(InMousePixel.X, InMousePixel.Y); }
+        }));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -979,16 +1058,27 @@ bool
         return true;
     }
 
-    // Only plain-LMB (no Shift/Ctrl/Alt, left button) clicks paint or select; anything else falls through
-    // to default camera nav so RMB-look / modifier gestures aren't hijacked.
+    // Only LMB clicks with no Ctrl/Alt paint or select; anything else falls through to default camera nav so
+    // RMB-look / modifier gestures aren't hijacked. (Shift is allowed here — it selects erase for Shape/Tags;
+    // the Blocker/Select branches re-reject it below since they don't honor the erase modifier.)
     if (! Is_PlainLeftClick(InClick))
     { return Super::HandleClick(InViewportClient, InHitProxy, InClick); }
 
+    // Blocker and Select are plain-LMB only — Shift is NOT special there, so a Shift+LMB falls through to
+    // camera nav rather than mis-firing a place/select.
     if (_ActiveTool == ECk_GridPaint_Tool::Blocker)
-    { return HandleClick_Blocker(InViewportClient, InHitProxy, InClick); }
+    {
+        return InClick.IsShiftDown()
+            ? Super::HandleClick(InViewportClient, InHitProxy, InClick)
+            : HandleClick_Blocker(InViewportClient, InHitProxy, InClick);
+    }
 
     if (_ActiveTool == ECk_GridPaint_Tool::Select)
-    { return HandleClick_Select(InViewportClient, InHitProxy, InClick); }
+    {
+        return InClick.IsShiftDown()
+            ? Super::HandleClick(InViewportClient, InHitProxy, InClick)
+            : HandleClick_Select(InViewportClient, InHitProxy, InClick);
+    }
 
     if (_ActiveTool != ECk_GridPaint_Tool::Shape && _ActiveTool != ECk_GridPaint_Tool::Tags)
     { return Super::HandleClick(InViewportClient, InHitProxy, InClick); }
@@ -1003,12 +1093,15 @@ bool
     if (! Cell.IsSet())
     { return Super::HandleClick(InViewportClient, InHitProxy, InClick); }
 
-    const auto TransactionLabel = _ActiveTool == ECk_GridPaint_Tool::Shape
-        ? NSLOCTEXT("Ck_2dGridSystem_EdMode", "PaintShapeCell", "Grid Paint: Toggle Cell")
-        : NSLOCTEXT("Ck_2dGridSystem_EdMode", "PaintTagCell",   "Grid Paint: Paint Tag");
+    // Plain LMB adds; Shift+LMB erases. Label the transaction by direction so undo reads correctly.
+    const auto bErase = Is_EraseModifier(InClick);
+
+    const auto TransactionLabel = bErase
+        ? NSLOCTEXT("Ck_2dGridSystem_EdMode", "EraseCell", "Grid Erase: Cell")
+        : NSLOCTEXT("Ck_2dGridSystem_EdMode", "PaintCell", "Grid Paint: Cell");
 
     const auto Transaction = FScopedTransaction(TransactionLabel);
-    Paint_StrokeCell(Selection, Cell.GetValue());
+    Paint_StrokeCell(Selection, Cell.GetValue(), bErase);
 
     return true;
 }
@@ -1127,8 +1220,9 @@ bool
     if (! Selection.IsValid())
     { return Super::StartTracking(InViewportClient, InViewport); }
 
-    // Only a plain-LMB drag (no Shift/Ctrl/Alt, LMB down, RMB up) begins a paint stroke / blocker rect;
-    // every other gesture (RMB-look, Alt-orbit, LMB+RMB-pan, wheel) is left to the camera.
+    // Only a LMB drag with no Ctrl/Alt (LMB down, RMB up) begins a paint stroke / blocker rect; every other
+    // gesture (RMB-look, Alt-orbit, LMB+RMB-pan, wheel) is left to the camera. Shift is allowed for Shape/Tags
+    // (erase) but rejected for Blocker below.
     if (! Is_PlainLeftDrag(InViewportClient, InViewport))
     { return Super::StartTracking(InViewportClient, InViewport); }
 
@@ -1136,10 +1230,14 @@ bool
     if (_ActiveTool == ECk_GridPaint_Tool::Select)
     { return Super::StartTracking(InViewportClient, InViewport); }
 
-    // Blocker: begin a rubber-band rect drag. No per-cell transaction is opened — the single append
-    // is transacted in EndTracking. Just record the start/current corner so Render can preview it.
+    // Blocker: begin a rubber-band rect drag. It does NOT honor the erase modifier — a Shift+LMB drag falls
+    // through to camera nav rather than starting a rect. No per-cell transaction is opened — the single
+    // append is transacted in EndTracking. Just record the start/current corner so Render can preview it.
     if (_ActiveTool == ECk_GridPaint_Tool::Blocker)
     {
+        if (InViewportClient->IsShiftPressed())
+        { return Super::StartTracking(InViewportClient, InViewport); }
+
         const auto StartCell = (InViewport != nullptr)
             ? Resolve_CellAtCursor(InViewportClient, InViewport->GetMouseX(), InViewport->GetMouseY())
             : TOptional<FIntPoint>{};
@@ -1154,15 +1252,20 @@ bool
     if (_ActiveTool != ECk_GridPaint_Tool::Shape && _ActiveTool != ECk_GridPaint_Tool::Tags)
     { return Super::StartTracking(InViewportClient, InViewport); }
 
+    // Capture the erase direction for the WHOLE stroke up front (so releasing Shift mid-drag doesn't flip
+    // add↔erase part-way through). Plain LMB adds; Shift+LMB erases.
+    _StrokeErase = Is_EraseModifier(InViewportClient);
+
     // Open ONE transaction for the whole drag stroke so a single Ctrl-Z undoes every cell painted
-    // during the drag. Closed in EndTracking.
-    const auto StrokeLabel = _ActiveTool == ECk_GridPaint_Tool::Shape
-        ? NSLOCTEXT("Ck_2dGridSystem_EdMode", "PaintShapeStroke", "Grid Paint: Paint Cells")
-        : NSLOCTEXT("Ck_2dGridSystem_EdMode", "PaintTagStroke",   "Grid Paint: Paint Tags");
+    // during the drag. Closed in EndTracking. Labelled by direction (Paint vs Erase).
+    const auto StrokeLabel = _StrokeErase
+        ? NSLOCTEXT("Ck_2dGridSystem_EdMode", "EraseStroke", "Grid Erase: Cells")
+        : NSLOCTEXT("Ck_2dGridSystem_EdMode", "PaintStroke", "Grid Paint: Cells");
     GEditor->BeginTransaction(StrokeLabel);
 
     _IsPaintingStroke = true;
     _StrokeToggledCells.Reset();
+    _StrokeLastMousePixel.Reset();
 
     // Paint the cell under the press point immediately (CapturedMouseMove only fires once the mouse
     // actually moves).
@@ -1247,6 +1350,14 @@ bool
 
     _IsPaintingStroke = false;
     GEditor->EndTransaction();
+
+    // Keep the cursor on the cell where the stroke ENDED instead of letting the OS snap it back to the press
+    // point when high-precision raw-mouse mode releases. Deferred to next tick so it lands after that reset.
+    if (_StrokeLastMousePixel.IsSet())
+    {
+        Schedule_RestoreCursorToStrokeEnd(InViewport, _StrokeLastMousePixel.GetValue());
+        _StrokeLastMousePixel.Reset();
+    }
 
     const auto bToggledAny = ! _StrokeToggledCells.IsEmpty();
     // NOTE: not cleared here — HandleClick fires AFTER EndTracking on a click-drag and consults this
