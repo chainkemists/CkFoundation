@@ -7,6 +7,8 @@
 
 #include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Fragment_Data.h"
 
+#include <GameplayTagContainer.h>
+
 #include "Ck2dGridBlocker_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -42,10 +44,17 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FIntPoint _RangeMax = FIntPoint::ZeroValue;
 
+    // Optional GameplayTag name. When set, the blocker is added to the grid's blocker record
+    // under this label so gameplay can find it via Get_BlockerWithTag and toggle it at runtime.
+    // Empty = anonymous (still recorded, just not label-addressable).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "Grid.Blocker"))
+    FGameplayTag _Name;
+
 public:
     CK_PROPERTY(_Grid);
     CK_PROPERTY(_RangeMin);
     CK_PROPERTY(_RangeMax);
+    CK_PROPERTY(_Name);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_2dGridBlocker_ParamsData, _Grid, _RangeMin, _RangeMax);

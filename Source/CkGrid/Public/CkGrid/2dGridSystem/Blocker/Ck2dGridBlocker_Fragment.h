@@ -4,6 +4,8 @@
 
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
+#include "CkRecord/Record/CkRecord_Fragment.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_2dGridBlocker_UE;
@@ -13,6 +15,15 @@ class UCk_Utils_2dGridBlocker_UE;
 namespace ck
 {
     using FFragment_2dGridBlocker_Params = FCk_Fragment_2dGridBlocker_ParamsData;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Grid-side record of the blockers currently registered on this grid. CkRecord auto-prunes a
+    // dead blocker (reverse-link) when its entity is destroyed. Named blockers connect with their
+    // GameplayLabel so Get_BlockerWithTag can resolve them; anonymous blockers connect Optional.
+    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOf_GridBlockers, FCk_Handle_2dGridBlocker);
+
+    using RecordOf_GridBlockers_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOf_GridBlockers>;
 
     // --------------------------------------------------------------------------------------------------------------------
 

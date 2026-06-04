@@ -107,6 +107,23 @@ public:
     auto Get_TagScope() const -> ECk_GridPaint_TagScope { return _TagScope; }
     auto Set_TagScope(ECk_GridPaint_TagScope InScope) -> void { _TagScope = InScope; }
 
+    // Active blocker tag (Blocker tool). The toolkit's tag picker writes the chosen tag here; the next
+    // drag-rect commit stamps it onto the new blocker's Name. Invalid = anonymous (empty Name).
+    auto Get_ActiveBlockerTag() const -> FGameplayTag { return _ActiveBlockerTag; }
+    auto Set_ActiveBlockerTag(const FGameplayTag& InTag) -> void { _ActiveBlockerTag = InTag; }
+
+    // Blocker tool: the index of the currently selected blocker (INDEX_NONE when none). Read by the
+    // toolkit so it can show/edit the selected blocker's Name tag.
+    auto Get_SelectedBlockerIndex() const -> int32 { return _SelectedBlockerIndex; }
+
+    // Blocker tool: the Name tag of the currently selected blocker, resolved live from the selected
+    // grid's Spec. Invalid when no blocker is selected, no grid is selected, or the index is stale.
+    auto Get_SelectedBlockerName() const -> FGameplayTag;
+
+    // Blocker tool: write InTag to the selected blocker's Name (transacted + rebuild). Bounds-checked
+    // against the current Spec->Blockers; no-op if no blocker is selected or no grid is selected.
+    auto Set_SelectedBlockerName(const FGameplayTag& InTag) -> void;
+
     // GridDefault-scope actions invoked from the toolkit: add/remove _ActivePaintTag in the selected
     // grid's DefaultCellTags (transacted + rebuild). No-op if no grid is selected or the tag is invalid.
     auto Apply_GridDefaultTag() -> void;
@@ -133,6 +150,8 @@ public:
         ECellState            State         = ECellState::Enabled;
         // Index into Spec->Blockers when State == Blocked; INDEX_NONE otherwise.
         int32                 BlockerIndex  = INDEX_NONE;
+        // The covering blocker's Name tag when State == Blocked (invalid = unnamed/anonymous).
+        FGameplayTag          BlockerName;
         FGameplayTagContainer CellTags;
         FGameplayTagContainer GridDefaultTags;
     };
@@ -249,6 +268,10 @@ private:
 
     // Tags tool: which collection the tag writes target (per-cell bulk vs grid-wide default).
     ECk_GridPaint_TagScope _TagScope = ECk_GridPaint_TagScope::PerCellBulk;
+
+    // Blocker tool: the tag stamped onto the Name of each NEW blocker created by a drag-rect commit.
+    // Invalid until the toolkit picker sets one (invalid = anonymous blocker).
+    FGameplayTag _ActiveBlockerTag;
 
     // Blocker tool: the cell where the current rubber-band rect drag began. Set on StartTracking while
     // tool == Blocker; unset otherwise.

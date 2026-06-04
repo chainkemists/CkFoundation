@@ -19,6 +19,12 @@ struct CKGRID_API FCk_2dGridSystem_Spec_Blocker
     GENERATED_BODY()
 
 public:
+    // Optional GameplayTag name for this blocker. When set, the runtime blocker is recorded under
+    // this label so gameplay can find it (UCk_Utils_2dGridBlocker_UE::Get_BlockerWithTag) and toggle
+    // it on/off via Request_SetActive. Empty = anonymous.
+    UPROPERTY(EditAnywhere, Category = "Grid", meta = (Categories = "Grid.Blocker"))
+    FGameplayTag Name;
+
     UPROPERTY(EditAnywhere, Category = "Grid")
     FIntPoint RangeMin = FIntPoint::ZeroValue;
 

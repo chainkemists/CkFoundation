@@ -585,6 +585,7 @@ auto
         {
             Result.State        = ECellState::Blocked;
             Result.BlockerIndex = BlockerIndex;
+            Result.BlockerName  = Spec->Blockers[BlockerIndex].Name;
         }
         else
         {
@@ -675,6 +676,52 @@ auto
 
     Spec->Modify();
     Spec->DefaultCellTags.RemoveTag(_ActivePaintTag);
+    Selection.Spawner->EditorOnly_RebuildEntity();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Get_SelectedBlockerName() const -> FGameplayTag
+{
+    if (_SelectedBlockerIndex == INDEX_NONE)
+    { return FGameplayTag{}; }
+
+    const auto Selection = Resolve_SelectedGridSpawner();
+    if (! Selection.IsValid())
+    { return FGameplayTag{}; }
+
+    if (! Selection.Spec->Blockers.IsValidIndex(_SelectedBlockerIndex))
+    { return FGameplayTag{}; }
+
+    return Selection.Spec->Blockers[_SelectedBlockerIndex].Name;
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Set_SelectedBlockerName(
+        const FGameplayTag& InTag) -> void
+{
+    if (_SelectedBlockerIndex == INDEX_NONE)
+    { return; }
+
+    const auto Selection = Resolve_SelectedGridSpawner();
+    if (! Selection.IsValid())
+    { return; }
+
+    auto* Spec = Selection.Spec;
+    if (! Spec->Blockers.IsValidIndex(_SelectedBlockerIndex))
+    {
+        ck::grid_editor::Warning(TEXT("Blocker tool: selected blocker index is stale — cannot set Name"));
+        return;
+    }
+
+    const auto Transaction = FScopedTransaction(
+        NSLOCTEXT("Ck_2dGridSystem_EdMode", "SetBlockerName", "Grid Paint: Set Blocker Tag"));
+
+    Spec->Modify();
+    Spec->Blockers[_SelectedBlockerIndex].Name = InTag;
     Selection.Spawner->EditorOnly_RebuildEntity();
 }
 
@@ -946,6 +993,9 @@ bool
             auto NewBlocker     = FCk_2dGridSystem_Spec_Blocker{};
             NewBlocker.RangeMin = RangeMin;
             NewBlocker.RangeMax = RangeMax;
+            // Stamp the active blocker tag onto the new entry (invalid = anonymous). Inside the same
+            // transaction as the append below so a single undo reverts both.
+            NewBlocker.Name     = _ActiveBlockerTag;
 
             auto* Spec = Selection.Spec;
             Spec->Modify();

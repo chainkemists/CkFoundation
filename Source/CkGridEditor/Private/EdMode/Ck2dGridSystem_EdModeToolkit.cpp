@@ -90,6 +90,12 @@ void
         .AutoHeight()
         .Padding(0.0f, 8.0f, 0.0f, 0.0f)
         [
+            Build_BlockerSection()
+        ]
+        + SVerticalBox::Slot()
+        .AutoHeight()
+        .Padding(0.0f, 8.0f, 0.0f, 0.0f)
+        [
             Build_DetailsSection()
         ]
     ];
@@ -190,6 +196,179 @@ auto
                 ]
             ]
         ];
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    Build_BlockerSection() -> TSharedRef<SWidget>
+{
+    // New-blocker tag picker: writes the EdMode's _ActiveBlockerTag, stamped onto the next drag-rect
+    // blocker. Single-select, mirroring the Tags-tool picker. No PropertyHandle (driven imperatively).
+    NewBlockerTagPicker = SNew(SGameplayTagPicker)
+        .MultiSelect(false)
+        .GameplayTagPickerMode(EGameplayTagPickerMode::SelectionMode)
+        .MaxHeight(250.0f)
+        .OnTagChanged(this, &FCk_2dGridSystem_EdModeToolkit::On_NewBlockerTagChanged)
+        .TagContainers(TArray<FGameplayTagContainer>{ FGameplayTagContainer{} });
+
+    // Selected-blocker tag picker: writes the chosen tag to the currently selected blocker's Name via
+    // Set_SelectedBlockerName. Its displayed value is re-seeded imperatively whenever the selected
+    // blocker index changes (see Get_SelectedBlockerText, called live each frame).
+    SelectedBlockerTagPicker = SNew(SGameplayTagPicker)
+        .MultiSelect(false)
+        .GameplayTagPickerMode(EGameplayTagPickerMode::SelectionMode)
+        .MaxHeight(250.0f)
+        .OnTagChanged(this, &FCk_2dGridSystem_EdModeToolkit::On_SelectedBlockerTagChanged)
+        .TagContainers(TArray<FGameplayTagContainer>{ FGameplayTagContainer{} });
+
+    return SNew(SBox)
+        .Visibility(this, &FCk_2dGridSystem_EdModeToolkit::Get_BlockerSectionVisibility)
+        [
+            SNew(SVerticalBox)
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .Padding(0.0f, 0.0f, 0.0f, 4.0f)
+            [
+                SNew(STextBlock).Text(LOCTEXT("NewBlockerTagLabel", "New blocker tag"))
+            ]
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            [
+                NewBlockerTagPicker.ToSharedRef()
+            ]
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .Padding(0.0f, 8.0f, 0.0f, 2.0f)
+            [
+                SNew(STextBlock)
+                .Text(this, &FCk_2dGridSystem_EdModeToolkit::Get_SelectedBlockerText)
+                .AutoWrapText(true)
+            ]
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            [
+                SNew(SBox)
+                .Visibility(this, &FCk_2dGridSystem_EdModeToolkit::Get_SelectedBlockerEditorVisibility)
+                [
+                    SNew(SVerticalBox)
+                    + SVerticalBox::Slot()
+                    .AutoHeight()
+                    .Padding(0.0f, 4.0f, 0.0f, 4.0f)
+                    [
+                        SNew(STextBlock).Text(LOCTEXT("SelectedBlockerTagLabel", "Selected blocker tag"))
+                    ]
+                    + SVerticalBox::Slot()
+                    .AutoHeight()
+                    [
+                        SelectedBlockerTagPicker.ToSharedRef()
+                    ]
+                ]
+            ]
+        ];
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    Get_BlockerSectionVisibility() const -> EVisibility
+{
+    return Get_ActiveTool() == ECk_GridPaint_Tool::Blocker
+        ? EVisibility::Visible
+        : EVisibility::Collapsed;
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    On_NewBlockerTagChanged(
+        const TArray<FGameplayTagContainer>& InContainers) -> void
+{
+    // Single-select picker: take the first tag of the first container (mirrors the Tags-tool picker).
+    const auto NewTag = InContainers.IsEmpty() ? FGameplayTag() : InContainers[0].First();
+
+    if (auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get()))
+    { Mode->Set_ActiveBlockerTag(NewTag); }
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    On_SelectedBlockerTagChanged(
+        const TArray<FGameplayTagContainer>& InContainers) -> void
+{
+    const auto NewTag = InContainers.IsEmpty() ? FGameplayTag() : InContainers[0].First();
+
+    auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
+    if (Mode == nullptr)
+    { return; }
+
+    // Ignore writes when no blocker is selected (the picker still emits an OnTagChanged after a re-seed
+    // to the empty container). Set_SelectedBlockerName is itself a no-op for INDEX_NONE, but guarding
+    // here also keeps SeededSelectedBlockerIndex honest below.
+    if (Mode->Get_SelectedBlockerIndex() == INDEX_NONE)
+    { return; }
+
+    Mode->Set_SelectedBlockerName(NewTag);
+
+    // The picker now reflects this tag for the current selection; record it so Get_SelectedBlockerText
+    // does not immediately re-seed (and clobber) the value the user just chose.
+    SeededSelectedBlockerIndex = Mode->Get_SelectedBlockerIndex();
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    Get_SelectedBlockerEditorVisibility() const -> EVisibility
+{
+    const auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
+    if (Mode == nullptr)
+    { return EVisibility::Collapsed; }
+
+    return Mode->Get_SelectedBlockerIndex() != INDEX_NONE
+        ? EVisibility::Visible
+        : EVisibility::Collapsed;
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    Get_SelectedBlockerText() const -> FText
+{
+    auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
+    if (Mode == nullptr)
+    { return LOCTEXT("SelectedBlockerNone", "Selected blocker: none selected"); }
+
+    const auto Index = Mode->Get_SelectedBlockerIndex();
+
+    // Re-seed the selected-blocker picker's displayed value when the selection changes (the picker has
+    // no live-bound value attribute, so we drive it imperatively here — this getter is called each
+    // frame by the live-bound text block). const_cast: this getter is logically const but owns the
+    // toolkit's view-state bookkeeping.
+    if (Index != SeededSelectedBlockerIndex)
+    {
+        auto* MutableThis = const_cast<FCk_2dGridSystem_EdModeToolkit*>(this);
+        MutableThis->SeededSelectedBlockerIndex = Index;
+
+        if (SelectedBlockerTagPicker.IsValid())
+        {
+            auto Container = FGameplayTagContainer{};
+            const auto SelectedTag = Mode->Get_SelectedBlockerName();
+            if (SelectedTag.IsValid())
+            { Container.AddTag(SelectedTag); }
+
+            SelectedBlockerTagPicker->SetTagContainers(TArray<FGameplayTagContainer>{ Container });
+        }
+    }
+
+    if (Index == INDEX_NONE)
+    { return LOCTEXT("SelectedBlockerNone", "Selected blocker: none selected"); }
+
+    const auto SelectedTag = Mode->Get_SelectedBlockerName();
+    if (! SelectedTag.IsValid())
+    {
+        return FText::Format(LOCTEXT("SelectedBlockerUnnamed", "Selected blocker: #{0} (unnamed)"),
+            FText::AsNumber(Index));
+    }
+
+    return FText::Format(LOCTEXT("SelectedBlockerNamed", "Selected blocker: #{0} (tag: {1})"),
+        FText::AsNumber(Index), FText::FromName(SelectedTag.GetTagName()));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -303,8 +482,12 @@ auto
         }
         case UCk_2dGridSystem_EdMode::ECellState::Blocked:
         {
-            return FText::Format(LOCTEXT("DetailsStateBlocked", "Blocked (blocker #{0})"),
-                FText::AsNumber(Info.BlockerIndex));
+            const auto TagText = Info.BlockerName.IsValid()
+                ? FText::FromName(Info.BlockerName.GetTagName())
+                : LOCTEXT("DetailsBlockerUnnamed", "(unnamed)");
+
+            return FText::Format(LOCTEXT("DetailsStateBlocked", "Blocked (blocker #{0}, tag: {1})"),
+                FText::AsNumber(Info.BlockerIndex), TagText);
         }
         default:
         {

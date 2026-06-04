@@ -5,6 +5,10 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
+#include "CkLabel/Public/CkLabel/CkLabel_Utils.h"
+
+#include "CkRecord/Record/CkRecord_Utils.h"
+
 #include "CkGrid/2dGridSystem/Cell/Ck2dGridCell_Fragment.h"
 #include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Utils.h"
 
@@ -27,7 +31,30 @@ auto
     DeathWatch.BindUFunction(GetMutableDefault<UCk_Utils_2dGridBlocker_UE>(), GET_FUNCTION_NAME_CHECKED(UCk_Utils_2dGridBlocker_UE, OnBlockerBeginDestroy));
     UCk_Utils_EntityLifetime_UE::BindTo_OnBeginDestroy(InHandle, DeathWatch);
 
-    return Cast(InHandle);
+    auto Blocker = Cast(InHandle);
+
+    // Register the blocker into the grid's blocker record so gameplay can enumerate / look it up.
+    // When _Name is set, stamp the GameplayLabel on the blocker entity first: Request_Connect reads
+    // the entry's label and indexes it under that tag name, which is what Get_BlockerWithTag queries.
+    // CkRecord's reverse-link auto-prunes the entry when the blocker entity dies.
+    if (const auto Grid = InParams.Get_Grid();
+        ck::IsValid(Grid))
+    {
+        auto GridBase = FCk_Handle{Grid};
+        ck::RecordOf_GridBlockers_Utils::AddIfMissing(GridBase);
+
+        if (const auto& Name = InParams.Get_Name();
+            Name.IsValid())
+        {
+            auto BlockerBase = FCk_Handle{Blocker};
+            UCk_Utils_GameplayLabel_UE::Add(BlockerBase, Name);
+        }
+
+        ck::RecordOf_GridBlockers_Utils::Request_Connect(
+            GridBase, Blocker, ECk_Record_LabelRequirementPolicy::Optional);
+    }
+
+    return Blocker;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -68,6 +95,31 @@ auto
     -> TArray<FIntPoint>
 {
     return InBlocker.Get<ck::FFragment_2dGridBlocker_Current>().Get_StampedCells();
+}
+
+auto
+    UCk_Utils_2dGridBlocker_UE::
+    Get_Blockers(
+        const FCk_Handle_2dGridSystem& InGrid)
+    -> TArray<FCk_Handle_2dGridBlocker>
+{
+    if (ck::Is_NOT_Valid(InGrid))
+    { return {}; }
+
+    return ck::RecordOf_GridBlockers_Utils::Get_ValidEntries(FCk_Handle{InGrid});
+}
+
+auto
+    UCk_Utils_2dGridBlocker_UE::
+    Get_BlockerWithTag(
+        const FCk_Handle_2dGridSystem& InGrid,
+        FGameplayTag InTag)
+    -> FCk_Handle_2dGridBlocker
+{
+    if (ck::Is_NOT_Valid(InGrid) || NOT InTag.IsValid())
+    { return {}; }
+
+    return ck::RecordOf_GridBlockers_Utils::Get_ValidEntry_ByTag(FCk_Handle{InGrid}, InTag);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

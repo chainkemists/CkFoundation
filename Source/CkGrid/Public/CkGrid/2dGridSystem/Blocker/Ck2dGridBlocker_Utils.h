@@ -84,6 +84,21 @@ public:
     Get_BlockedCells(
         const FCk_Handle_2dGridBlocker& InBlocker);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|2dGridBlocker",
+              DisplayName="[Ck][2dGridBlocker] Get Blockers")
+    static TArray<FCk_Handle_2dGridBlocker>
+    Get_Blockers(
+        const FCk_Handle_2dGridSystem& InGrid);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|2dGridBlocker",
+              DisplayName="[Ck][2dGridBlocker] Get Blocker With Tag")
+    static FCk_Handle_2dGridBlocker
+    Get_BlockerWithTag(
+        const FCk_Handle_2dGridSystem& InGrid,
+        FGameplayTag InTag);
+
 private:
     // Death-watch handler: when the blocker entity is destroyed, decrement the
     // counted Disabled tag on every cell it stamped so the block is released.
