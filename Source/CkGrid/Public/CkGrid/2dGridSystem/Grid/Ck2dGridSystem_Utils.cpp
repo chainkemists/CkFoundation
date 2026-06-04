@@ -231,8 +231,11 @@ auto
 {
     const auto& Dimensions = Get_Dimensions(InGrid);
 
-    CK_ENSURE_IF_NOT(UCk_Utils_Grid2D_UE::Get_IsValidCoordinate(Dimensions, InCoordinate),
-        TEXT("Invalid coordinate [{}] for grid [{}] with dimensions [{}]"), InCoordinate, InGrid, Dimensions)
+    // Out-of-bounds is a valid query RESULT, not an error: callers like Get_CanPlace and the
+    // connectivity flood deliberately probe coordinates outside the grid (e.g. a footprint that
+    // straddles an edge) and rely on an invalid handle coming back. Return invalid silently — per
+    // the Get_CellAt contract — rather than ensuring, so an edge query doesn't spam errors.
+    if (NOT UCk_Utils_Grid2D_UE::Get_IsValidCoordinate(Dimensions, InCoordinate))
     { return {}; }
 
     const auto Index = UCk_Utils_Grid2D_UE::Get_CoordinateAsIndex(InCoordinate, Dimensions);
