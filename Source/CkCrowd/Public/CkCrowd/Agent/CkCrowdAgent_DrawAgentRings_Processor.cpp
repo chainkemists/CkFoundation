@@ -17,29 +17,28 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_DrawAgentRings);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_crowd_agent_draw_agent_rings_processor
 {
-    // Shared with the other CrowdAgent draw processors (declared in CkCrowdAgent_DiagDraw_Processor.cpp).
-    // The debugger writes the selected agent's type-hash here; -1 means "no selection".
+    // Reads the selected agent's type-hash from the shared CVar `ck.Crowd.SelectedEntityId`
+    // (the CVar object itself lives in CkCrowdAgent_DiagDraw_Processor.cpp); -1 means "no selection".
     auto GetSelectedEntityId() -> int32
     {
         const auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.SelectedEntityId"));
         return CVar != nullptr ? CVar->GetInt() : -1;
     }
 
-    // Prefixed to avoid Unity-build collisions with same-named constants in sibling draw processors.
-    constexpr auto AgentRings_LiftZ            = 2.0f;
-    constexpr auto AgentRings_Segments         = 32;
-    constexpr auto AgentRings_Thickness        = 2.0f;
-    constexpr auto AgentRings_DurationOneFrame = 0.0f;
-    constexpr auto AgentRings_MinSpeedToDraw   = 5.0f;   // cm/s — below this the agent is effectively stopped
-    constexpr auto AgentRings_MaxVelArrowLen   = 300.0f; // visual cap so a sprinting arrow isn't room-length
+    constexpr auto LiftZ            = 2.0f;
+    constexpr auto Segments         = 32;
+    constexpr auto Thickness        = 2.0f;
+    constexpr auto DurationOneFrame = 0.0f;
+    constexpr auto MinSpeedToDraw   = 5.0f;   // cm/s — below this the agent is effectively stopped
+    constexpr auto MaxVelArrowLen   = 300.0f; // visual cap so a sprinting arrow isn't room-length
 
     // Colours mirror the debugger mockup legend.
-    const auto AgentRings_Color_Arrival = FLinearColor{0.21f, 0.82f, 0.48f, 0.9f};  // green
-    const auto AgentRings_Color_Orbit   = FLinearColor{1.0f,  0.36f, 0.36f, 0.9f};  // red (predicted)
-    const auto AgentRings_Color_Turn    = FLinearColor{0.31f, 0.63f, 1.0f,  0.7f};  // blue
-    const auto AgentRings_Color_Vel     = FLinearColor{1.0f,  0.82f, 0.30f, 0.95f}; // yellow
+    const auto Color_Arrival = FLinearColor{0.21f, 0.82f, 0.48f, 0.9f};  // green
+    const auto Color_Orbit   = FLinearColor{1.0f,  0.36f, 0.36f, 0.9f};  // red (predicted)
+    const auto Color_Turn    = FLinearColor{0.31f, 0.63f, 1.0f,  0.7f};  // blue
+    const auto Color_Vel     = FLinearColor{1.0f,  0.82f, 0.30f, 0.95f}; // yellow
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -56,8 +55,10 @@ namespace ck
             const FFragment_CrowdAgent_DesiredVelocity& InDesiredVelocity)
         -> void
     {
+        namespace draw = ck_crowd_agent_draw_agent_rings_processor;
+
         const auto DrawAll = UCk_Utils_Crowd_DebugSettings_UE::Get_DrawAgentRings();
-        const auto SelectedHash = GetSelectedEntityId();
+        const auto SelectedHash = draw::GetSelectedEntityId();
         const auto IsSelected = SelectedHash >= 0
             && static_cast<int32>(GetTypeHash(InHandle)) == SelectedHash;
         if (NOT DrawAll && NOT IsSelected)
@@ -71,7 +72,7 @@ namespace ck
         if (NOT IsValid(World))
         { return; }
 
-        const auto Lift     = FVector{0.0, 0.0, AgentRings_LiftZ};
+        const auto Lift     = FVector{0.0, 0.0, draw::LiftZ};
         const auto Feet     = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(SelfTransform) + Lift;
         const auto Velocity = InDesiredVelocity.Get_Velocity();
         const auto Speed    = Velocity.Size();
@@ -87,19 +88,19 @@ namespace ck
 
             UCk_Utils_DebugDraw_UE::DrawDebugCircle_PlaneAxis(
                 World, Goal, InPathFollow.Get_ActiveArrivalRadius(), ECk_Plane_Axis::XY,
-                AgentRings_Segments, AgentRings_Color_Arrival, AgentRings_DurationOneFrame, AgentRings_Thickness);
+                draw::Segments, draw::Color_Arrival, draw::DurationOneFrame, draw::Thickness);
 
             if (MaxTurnRate > 0.0f)
             {
                 const auto PredictedOrbitRadius = MaxSpeed / MaxTurnRate;
                 UCk_Utils_DebugDraw_UE::DrawDebugCircle_PlaneAxis(
                     World, Goal, PredictedOrbitRadius, ECk_Plane_Axis::XY,
-                    AgentRings_Segments, AgentRings_Color_Orbit, AgentRings_DurationOneFrame, AgentRings_Thickness);
+                    draw::Segments, draw::Color_Orbit, draw::DurationOneFrame, draw::Thickness);
             }
         }
 
         // --- Turn-radius circle + velocity vector, only while moving -------------------------------
-        if (Speed < AgentRings_MinSpeedToDraw)
+        if (Speed < draw::MinSpeedToDraw)
         { return; }
 
         const auto VelDir = Velocity / Speed;
@@ -115,14 +116,14 @@ namespace ck
             const auto Centre     = Feet + PerpLeft * TurnRadius;
             UCk_Utils_DebugDraw_UE::DrawDebugCircle_PlaneAxis(
                 World, Centre, TurnRadius, ECk_Plane_Axis::XY,
-                AgentRings_Segments, AgentRings_Color_Turn, AgentRings_DurationOneFrame, AgentRings_Thickness);
+                draw::Segments, draw::Color_Turn, draw::DurationOneFrame, draw::Thickness);
         }
 
-        const auto ArrowLen = FMath::Min<double>(Speed, AgentRings_MaxVelArrowLen);
+        const auto ArrowLen = FMath::Min<double>(Speed, draw::MaxVelArrowLen);
         const auto ArrowEnd = Feet + VelDir * ArrowLen;
         constexpr auto ArrowSize = 20.0f;
         UCk_Utils_DebugDraw_UE::DrawDebugArrow(
-            World, Feet, ArrowEnd, ArrowSize, AgentRings_Color_Vel, AgentRings_DurationOneFrame, AgentRings_Thickness);
+            World, Feet, ArrowEnd, ArrowSize, draw::Color_Vel, draw::DurationOneFrame, draw::Thickness);
     }
 }
 
