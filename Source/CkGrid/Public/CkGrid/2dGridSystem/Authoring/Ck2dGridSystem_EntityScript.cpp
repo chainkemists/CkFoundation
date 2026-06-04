@@ -65,9 +65,13 @@ auto
         // The blocker entity's lifetime is owned by the grid entity, so destroying the grid releases
         // its blocks. UCk_Utils_2dGridBlocker_UE::Add takes a plain FCk_Handle&.
         auto BlockerEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
-        UCk_Utils_2dGridBlocker_UE::Add(
-            BlockerEntity,
-            FCk_Fragment_2dGridBlocker_ParamsData{Grid, Blocker.RangeMin, Blocker.RangeMax});
+
+        // The 3-arg ctor covers {Grid, RangeMin, RangeMax}; set the optional name post-construction
+        // (mirrors how placements set Rotation). An empty Name leaves the blocker anonymous.
+        auto BlockerParams = FCk_Fragment_2dGridBlocker_ParamsData{Grid, Blocker.RangeMin, Blocker.RangeMax};
+        BlockerParams.Set_Name(Blocker.Name);
+
+        UCk_Utils_2dGridBlocker_UE::Add(BlockerEntity, BlockerParams);
     }
 
     return Flow;

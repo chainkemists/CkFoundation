@@ -63,6 +63,28 @@ private:
     auto On_ApplyGridDefaultTag() -> FReply;
     auto On_RemoveGridDefaultTag() -> FReply;
 
+    // Builds the Blocker-section widget (new-blocker tag picker + selected-blocker tag editor). The
+    // whole section's visibility is bound to "is the Blocker tool active".
+    auto Build_BlockerSection() -> TSharedRef<SWidget>;
+
+    // Visible only while the Blocker tool is the active tool.
+    auto Get_BlockerSectionVisibility() const -> EVisibility;
+
+    // New-blocker tag picker callback: take the first tag and push it onto the EdMode's
+    // _ActiveBlockerTag (stamped onto the next drag-rect blocker).
+    auto On_NewBlockerTagChanged(const TArray<FGameplayTagContainer>& InContainers) -> void;
+
+    // Selected-blocker tag picker callback: take the first tag and write it to the selected blocker via
+    // the EdMode's Set_SelectedBlockerName (transacted + rebuild).
+    auto On_SelectedBlockerTagChanged(const TArray<FGameplayTagContainer>& InContainers) -> void;
+
+    // Visible only when a blocker is currently selected (gates the selected-blocker editor sub-block).
+    auto Get_SelectedBlockerEditorVisibility() const -> EVisibility;
+
+    // Live-bound text describing which blocker is selected (index + tag), or "none selected". Also
+    // drives a lazy re-seed of the selected-blocker picker when the selected index changes.
+    auto Get_SelectedBlockerText() const -> FText;
+
     // Builds the Select-tool Details widget (read-only cell inspector). Its visibility is bound to "is
     // the Select tool active"; the value text blocks read the EdMode + Spec live each frame.
     auto Build_DetailsSection() -> TSharedRef<SWidget>;
@@ -80,6 +102,17 @@ private:
     TSharedPtr<SWidget>           InlineContent;
     TWeakObjectPtr<UEdMode>       OwningMode;
     TSharedPtr<SGameplayTagPicker> TagPicker;
+
+    // Blocker tool: picker for the tag stamped onto NEW blockers (writes EdMode::_ActiveBlockerTag).
+    TSharedPtr<SGameplayTagPicker> NewBlockerTagPicker;
+
+    // Blocker tool: picker editing the SELECTED blocker's Name tag (writes via Set_SelectedBlockerName).
+    // Re-seeded imperatively whenever the selected blocker index changes (see Get_SelectedBlockerText).
+    TSharedPtr<SGameplayTagPicker> SelectedBlockerTagPicker;
+
+    // Last selected-blocker index the SelectedBlockerTagPicker was seeded for. Lets the live-bound text
+    // getter detect a selection change and re-seed the picker's displayed value to match the new blocker.
+    int32 SeededSelectedBlockerIndex = INDEX_NONE;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
