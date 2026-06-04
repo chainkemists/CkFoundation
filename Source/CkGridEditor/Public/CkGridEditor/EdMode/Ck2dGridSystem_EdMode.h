@@ -226,23 +226,28 @@ private:
         FVector&               OutRayOrigin,
         FVector&               OutRayDirection) const -> bool;
 
-    // Shape-tool cell toggle: flips InCell's membership in the selection's DisabledCells, brackets the
-    // mutation in Spec->Modify(), and rebuilds the live preview. Assumes a caller-owned transaction is
-    // already open (single-click opens an FScopedTransaction; the drag stroke opens a GEditor txn).
-    auto Toggle_ShapeCell(const FResolvedGridSelection& InSelection, const FIntPoint& InCell) -> void;
+    // Shape-tool directional cell paint: idempotently ADDS (InDisabled == true) or REMOVES (false) InCell's
+    // membership in the selection's DisabledCells, brackets the mutation in Spec->Modify(), and rebuilds the
+    // live preview. Idempotent — re-applying the same direction is a no-op. Assumes a caller-owned
+    // transaction is already open (single-click opens an FScopedTransaction; the drag stroke opens a GEditor
+    // txn). Plain-LMB paints disabled (true); Shift+LMB erases (false).
+    auto Set_ShapeCellDisabled(const FResolvedGridSelection& InSelection, const FIntPoint& InCell, bool InDisabled) -> void;
 
-    // Tags-tool (PerCellBulk) cell paint: idempotently ADDS _ActivePaintTag to InCell's PerCellTags
-    // (never toggles — bulk-paint only adds). Brackets in Spec->Modify() + rebuild. Assumes a
-    // caller-owned transaction is open. No-op if _ActivePaintTag is invalid.
-    auto Paint_TagCell(const FResolvedGridSelection& InSelection, const FIntPoint& InCell) -> void;
+    // Tags-tool (PerCellBulk) directional cell paint: ADDS (InAdd == true) or REMOVES (false) _ActivePaintTag
+    // on InCell's PerCellTags. On remove, the PerCellTags map entry is dropped if its container becomes empty
+    // (mirrors the authored-data convention — no entry == no overrides). Brackets in Spec->Modify() + rebuild.
+    // Assumes a caller-owned transaction is open. No-op if _ActivePaintTag is invalid. Plain-LMB adds;
+    // Shift+LMB removes.
+    auto Set_TagCell(const FResolvedGridSelection& InSelection, const FIntPoint& InCell, bool InAdd) -> void;
 
-    // Dispatches the per-cell stroke action for the active tool (Shape toggles, Tags paints). Deduped
-    // by the caller via _StrokeToggledCells. Blocker is NOT a per-cell stroke (it is a drag-rect).
-    auto Paint_StrokeCell(const FResolvedGridSelection& InSelection, const FIntPoint& InCell) -> void;
+    // Dispatches the per-cell stroke action for the active tool, applying ADD (InErase == false) or ERASE
+    // (true). Shape: disable on add / enable on erase; Tags: add / remove _ActivePaintTag. Deduped by the
+    // caller via _StrokeToggledCells. Blocker is NOT a per-cell stroke (it is a drag-rect).
+    auto Paint_StrokeCell(const FResolvedGridSelection& InSelection, const FIntPoint& InCell, bool InErase) -> void;
 
     // Resolves the cell under the given viewport pixel during an active drag stroke and applies the
-    // active tool's per-cell action, deduping via _StrokeToggledCells so jitter inside one cell can't
-    // re-apply repeatedly.
+    // active tool's per-cell action in the stroke's captured direction (_StrokeErase), deduping via
+    // _StrokeToggledCells so jitter inside one cell can't re-apply repeatedly.
     auto Paint_StrokeAtCursor(
         FEditorViewportClient* InViewportClient,
         int32                  InMouseX,
@@ -271,16 +276,34 @@ private:
         HHitProxy*             InHitProxy,
         const FViewportClick&  InClick) -> bool;
 
-    // True when InClick is a plain Left-Mouse click with NO Shift/Ctrl/Alt modifier held. Painting (and
-    // the Select pick) only engages for plain-LMB; everything else falls through to default camera nav.
+    // True when InClick is a Left-Mouse click with NO Ctrl/Alt held (Shift IS permitted — it selects the
+    // erase direction for the Shape/Tags paint, see Is_EraseModifier). Painting and the Select/Blocker pick
+    // engage for this; Ctrl/Alt + LMB and RMB fall through to default camera nav. The Blocker and Select
+    // tools additionally require Shift to be UP (they don't honor the erase modifier) — that extra check is
+    // applied at their call sites, not here.
     auto Is_PlainLeftClick(const FViewportClick& InClick) const -> bool;
 
-    // True when the current tracking gesture is a plain Left-Mouse drag with NO modifier held. Read off
-    // the viewport (LMB down, RMB up) + the viewport client (no Shift/Ctrl/Alt). Painting strokes and the
-    // blocker rect only begin when this holds, so RMB-look / Alt-orbit / LMB+RMB-pan stay with the camera.
+    // True when the current tracking gesture is a Left-Mouse drag with NO Ctrl/Alt held (Shift IS permitted).
+    // Read off the viewport (LMB down, RMB up) + the viewport client (no Ctrl/Alt). Painting strokes and the
+    // blocker rect begin when this holds, so RMB-look / Alt-orbit / LMB+RMB-pan stay with the camera. The
+    // Blocker tool additionally requires Shift up (checked at its StartTracking call site).
     auto Is_PlainLeftDrag(
         FEditorViewportClient* InViewportClient,
         FViewport*             InViewport) const -> bool;
+
+    // True when the erase modifier (Shift) is held for a click. Shift+LMB on the Shape/Tags tools selects
+    // the ERASE direction (Shape enables the cell / Tags removes the active tag); plain LMB ADDS.
+    auto Is_EraseModifier(const FViewportClick& InClick) const -> bool;
+
+    // Viewport-client variant of Is_EraseModifier for the drag path (Shift read off the client at
+    // StartTracking time, captured into _StrokeErase for the whole stroke).
+    auto Is_EraseModifier(FEditorViewportClient* InViewportClient) const -> bool;
+
+    // Schedules a next-tick FViewport::SetMouse(InMousePixel) so the cursor lands on the cell where a paint
+    // stroke ENDED rather than snapping back to where it began. Must run AFTER the current Slate input pass
+    // releases high-precision raw-mouse mode (the OS restores the cursor to the capture origin at that
+    // point); a next-tick editor timer fires after that, so the reposition wins. No-op outside the editor.
+    auto Schedule_RestoreCursorToStrokeEnd(FViewport* InViewport, const FIntPoint& InMousePixel) -> void;
 
 private:
     // Current paint tool. Default Shape (the only functional tool this task).
@@ -297,6 +320,16 @@ private:
 
     // Cells already painted during the current stroke (so re-entering a cell on jitter is a no-op).
     TSet<FIntPoint> _StrokeToggledCells;
+
+    // Captured at StartTracking from the Shift state: true erases (Shape enables / Tags removes the active
+    // tag), false adds. Held for the whole stroke so a drag is add-or-erase consistently even if the user
+    // releases Shift mid-drag.
+    bool _StrokeErase = false;
+
+    // Last viewport pixel painted during the current stroke (start press + every CapturedMouseMove). On
+    // EndTracking this is the cursor's END position; we schedule a next-tick FViewport::SetMouse there to
+    // counter the OS raw-mouse-mode snap-back that would otherwise return the cursor to the press point.
+    TOptional<FIntPoint> _StrokeLastMousePixel;
 
     // Tags tool: the tag the bulk-paint stroke / GridDefault actions write. Invalid until the toolkit
     // picker sets one.

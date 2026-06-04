@@ -126,6 +126,7 @@ auto
     // No PropertyHandle (we drive the value imperatively) — start with an empty container.
     TagPicker = SNew(SGameplayTagPicker)
         .MultiSelect(false)
+        .Filter(TEXT("Grid"))
         .GameplayTagPickerMode(EGameplayTagPickerMode::SelectionMode)
         .MaxHeight(250.0f)
         .OnTagChanged(this, &FCk_2dGridSystem_EdModeToolkit::On_PaintTagChanged)
@@ -208,6 +209,7 @@ auto
     // blocker. Single-select, mirroring the Tags-tool picker. No PropertyHandle (driven imperatively).
     NewBlockerTagPicker = SNew(SGameplayTagPicker)
         .MultiSelect(false)
+        .Filter(TEXT("Grid"))
         .GameplayTagPickerMode(EGameplayTagPickerMode::SelectionMode)
         .MaxHeight(250.0f)
         .OnTagChanged(this, &FCk_2dGridSystem_EdModeToolkit::On_NewBlockerTagChanged)
@@ -218,6 +220,7 @@ auto
     // blocker index changes (see Get_SelectedBlockerText, called live each frame).
     SelectedBlockerTagPicker = SNew(SGameplayTagPicker)
         .MultiSelect(false)
+        .Filter(TEXT("Grid"))
         .GameplayTagPickerMode(EGameplayTagPickerMode::SelectionMode)
         .MaxHeight(250.0f)
         .OnTagChanged(this, &FCk_2dGridSystem_EdModeToolkit::On_SelectedBlockerTagChanged)
@@ -400,6 +403,7 @@ auto
     // Add-tag picker for the single-cell editor: each chosen tag is ADDED to the selected cell.
     AddCellTagPicker = SNew(SGameplayTagPicker)
         .MultiSelect(false)
+        .Filter(TEXT("Grid"))
         .GameplayTagPickerMode(EGameplayTagPickerMode::SelectionMode)
         .MaxHeight(250.0f)
         .OnTagChanged(this, &FCk_2dGridSystem_EdModeToolkit::On_AddCellTagChanged)
@@ -412,6 +416,7 @@ auto
     // Blocker editor tag picker: writes the selected blocker's Name via the shared Set_SelectedBlockerName.
     DetailsBlockerTagPicker = SNew(SGameplayTagPicker)
         .MultiSelect(false)
+        .Filter(TEXT("Grid"))
         .GameplayTagPickerMode(EGameplayTagPickerMode::SelectionMode)
         .MaxHeight(250.0f)
         .OnTagChanged(this, &FCk_2dGridSystem_EdModeToolkit::On_DetailsBlockerTagChanged)
