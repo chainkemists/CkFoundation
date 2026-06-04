@@ -2,10 +2,10 @@
 
 #include "CkGridEditor_Log.h"
 
+#include "CkGridEditor/Draw/Ck2dGridSystem_AuthoredOverlay.h"
 #include "CkGridEditor/EdMode/Ck2dGridSystem_EdModeToolkit.h"
 #include "CkGridEditor/EdMode/Ck2dGridSystem_EdMode_Hit.h"
 
-#include "CkGrid/2dGridSystem/Authoring/Ck2dGridSystem_EntityScript.h"
 #include "CkGrid/2dGridSystem/Authoring/Ck2dGridSystem_Spec.h"
 
 #include "CkEntitySpawner/CkEntitySpawner_Actor.h"
@@ -34,14 +34,12 @@ const FEditorModeID UCk_2dGridSystem_EdMode::EM_Ck2dGridSystemPaintModeId = TEXT
 
 namespace ck_grid_editor_detail
 {
-    // Authored-state color convention for the cell overlay. Priority is disabled > blocker > tagged >
-    // enabled (a cell that is both disabled and inside a blocker reads as disabled).
-    constexpr auto ColorEnabled  = FLinearColor(0.0f, 1.0f, 0.0f); // green
-    constexpr auto ColorDisabled = FLinearColor(1.0f, 0.0f, 0.0f); // red
-    constexpr auto ColorBlocker  = FLinearColor(1.0f, 0.5f, 0.0f); // orange
-    constexpr auto ColorTagged   = FLinearColor(0.2f, 0.4f, 1.0f); // blue tint
-    constexpr auto ColorPivot    = FLinearColor(1.0f, 1.0f, 0.0f); // yellow
-    constexpr auto ColorHover    = FLinearColor(1.0f, 1.0f, 1.0f); // white
+    // Interaction-overlay colors/metrics — these are PAINT-MODE ONLY (hover, select marker, blocker
+    // drag/selection/group). The AUTHORED-state colors (enabled/disabled/blocker/tagged/pivot), the
+    // per-cell color resolve, and the base-grid + state-marker draw all live in the shared overlay
+    // (ck::grid_editor, Ck2dGridSystem_AuthoredOverlay.h) so the in-mode and out-of-mode previews match.
+
+    constexpr auto ColorHover = FLinearColor(1.0f, 1.0f, 1.0f); // white
 
     // Select tool: the inspected cell, drawn as a thick cyan inset square — distinct from the white
     // hover marker so the two read separately when both land on the same cell.
@@ -63,69 +61,10 @@ namespace ck_grid_editor_detail
     constexpr auto ColorBlockerGroup     = FLinearColor(1.0f, 0.0f, 1.0f); // magenta
     constexpr auto BlockerGroupThickness = 5.0f;
 
-    constexpr auto CellLineThickness  = 1.0f;
-    constexpr auto PivotMarkerSize     = 20.0f;
-    constexpr auto PivotLineThickness  = 3.0f;
-
-    // Per-state marker: an inset square drawn inside a non-enabled cell (not coincident with the
-    // green base-grid lines, so it can't be z-fought away).
-    constexpr auto CellMarkerInset     = 0.12;
-    constexpr auto CellMarkerThickness = 2.0f;
-
     // Hover highlight: a slightly smaller inset than the state markers (so it nests inside any state
     // marker on the same cell) drawn thick and white.
     constexpr auto HoverMarkerInset     = 0.06;
     constexpr auto HoverMarkerThickness = 3.0f;
-
-    // Returns true if InCoordinate is covered by any blocker's inclusive [RangeMin, RangeMax] rect.
-    auto Is_CoveredByBlocker(
-        const UCk_2dGridSystem_Spec* InSpec,
-        const FIntPoint&             InCoordinate) -> bool
-    {
-        for (const auto& Blocker : InSpec->Blockers)
-        {
-            const auto MinX = FMath::Min(Blocker.RangeMin.X, Blocker.RangeMax.X);
-            const auto MaxX = FMath::Max(Blocker.RangeMin.X, Blocker.RangeMax.X);
-            const auto MinY = FMath::Min(Blocker.RangeMin.Y, Blocker.RangeMax.Y);
-            const auto MaxY = FMath::Max(Blocker.RangeMin.Y, Blocker.RangeMax.Y);
-
-            if (InCoordinate.X >= MinX && InCoordinate.X <= MaxX &&
-                InCoordinate.Y >= MinY && InCoordinate.Y <= MaxY)
-            { return true; }
-        }
-        return false;
-    }
-
-    // Returns true if InCoordinate carries any authored tag (grid-wide default or per-cell override).
-    auto Has_AuthoredTag(
-        const UCk_2dGridSystem_Spec* InSpec,
-        const FIntPoint&             InCoordinate) -> bool
-    {
-        if (! InSpec->DefaultCellTags.IsEmpty())
-        { return true; }
-
-        if (const auto* PerCell = InSpec->PerCellTags.Find(InCoordinate))
-        { return ! PerCell->IsEmpty(); }
-
-        return false;
-    }
-
-    // Authored color for a single cell, applying the priority order.
-    auto Resolve_CellColor(
-        const UCk_2dGridSystem_Spec* InSpec,
-        const FIntPoint&             InCoordinate) -> FLinearColor
-    {
-        if (InSpec->DisabledCells.Contains(InCoordinate))
-        { return ColorDisabled; }
-
-        if (Is_CoveredByBlocker(InSpec, InCoordinate))
-        { return ColorBlocker; }
-
-        if (Has_AuthoredTag(InSpec, InCoordinate))
-        { return ColorTagged; }
-
-        return ColorEnabled;
-    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -194,23 +133,11 @@ auto
         if (Spawner == nullptr)
         { continue; }
 
-        const auto& EntityScript = Spawner->Get_EntityScript();
-        auto* GridScript = Cast<UCk_2dGridSystem_EntityScript>(EntityScript);
-        if (GridScript == nullptr)
-        { continue; }
-
-        // The Spec is a private UPROPERTY on the grid script; read it reflectively (no public getter).
-        const auto* SpecProperty = FindFProperty<FObjectProperty>(
-            UCk_2dGridSystem_EntityScript::StaticClass(), TEXT("Spec"));
-        if (SpecProperty == nullptr)
-        { continue; }
-
-        auto* Spec = Cast<UCk_2dGridSystem_Spec>(
-            SpecProperty->GetObjectPropertyValue_InContainer(GridScript));
+        // Resolve the hosted grid Spec via the shared helper (the single reflective-read site). Spec is
+        // exposed mutably on the result so paint actions can Modify()+mutate it; Render only reads it.
+        auto* Spec = ck::grid_editor::Resolve_SpecFromSpawner(Spawner);
         if (Spec == nullptr)
         { continue; }
-
-        // Spec is exposed mutably on the result; Render only reads through it.
 
         Result.Spawner       = Spawner;
         Result.Spec          = Spec;
@@ -274,35 +201,10 @@ void
         InPDI->DrawLine(C01, C00, InColor, SDPG_Foreground, InThickness);
     };
 
-    // Pass 1: the full grid wireframe in one uniform color (enabled/green). Shared edges are drawn
-    // twice but always in the SAME color, so there is no coincident-color conflict.
-    for (auto Y = 0; Y < Dimensions.Y; ++Y)
-    {
-        for (auto X = 0; X < Dimensions.X; ++X)
-        { DrawCellSquare(X, Y, ck_grid_editor_detail::ColorEnabled, 0.0, ck_grid_editor_detail::CellLineThickness); }
-    }
-
-    // Pass 2: mark each non-enabled cell with an INSET square in its state color. Inset so it never
-    // overlaps the green base lines — guaranteeing the marker is always visible on all four sides.
-    for (auto Y = 0; Y < Dimensions.Y; ++Y)
-    {
-        for (auto X = 0; X < Dimensions.X; ++X)
-        {
-            const auto Color = ck_grid_editor_detail::Resolve_CellColor(Spec, FIntPoint(X, Y));
-            if (Color != ck_grid_editor_detail::ColorEnabled)
-            { DrawCellSquare(X, Y, Color, ck_grid_editor_detail::CellMarkerInset, ck_grid_editor_detail::CellMarkerThickness); }
-        }
-    }
-
-    // Pivot marker at the grid-local origin (cell (0,0) min corner).
-    const auto PivotWorld = LocalToWorld(0.0, 0.0);
-    const auto Half       = ck_grid_editor_detail::PivotMarkerSize;
-    InPDI->DrawLine(PivotWorld - FVector(Half, 0, 0), PivotWorld + FVector(Half, 0, 0),
-        ck_grid_editor_detail::ColorPivot, SDPG_Foreground, ck_grid_editor_detail::PivotLineThickness);
-    InPDI->DrawLine(PivotWorld - FVector(0, Half, 0), PivotWorld + FVector(0, Half, 0),
-        ck_grid_editor_detail::ColorPivot, SDPG_Foreground, ck_grid_editor_detail::PivotLineThickness);
-    InPDI->DrawLine(PivotWorld - FVector(0, 0, Half), PivotWorld + FVector(0, 0, Half),
-        ck_grid_editor_detail::ColorPivot, SDPG_Foreground, ck_grid_editor_detail::PivotLineThickness);
+    // Authored-state passes (base-grid wireframe + per-cell state markers + pivot) are drawn by the
+    // SHARED overlay so the in-mode and out-of-mode (component visualizer) previews are identical. Only
+    // the interaction overlays below (hover / select / blocker drag/selection/group) are paint-mode-only.
+    ck::grid_editor::Draw_GridAuthoredOverlay(InPDI, Spec, Transform);
 
     // Selected-blocker highlight (Blocker tool): emphasize the selected blocker's cells with a
     // bright-orange thick inset square (drawn before hover so the white hover marker still reads on top).
@@ -419,6 +321,25 @@ void
                 ck_grid_editor_detail::HoverMarkerInset, ck_grid_editor_detail::HoverMarkerThickness);
         }
     }
+}
+
+void
+    UCk_2dGridSystem_EdMode::
+    DrawHUD(
+        FEditorViewportClient* InViewportClient,
+        FViewport*             InViewport,
+        const FSceneView*      InView,
+        FCanvas*               InCanvas)
+{
+    Super::DrawHUD(InViewportClient, InViewport, InView, InCanvas);
+
+    // Per-cell tag TEXT labels (toggle: ck.Grid.PreviewShowTags, default off). Drawn via the shared
+    // helper so the labels match the out-of-mode component-visualizer view.
+    const auto Selection = Resolve_SelectedGridSpawner();
+    if (! Selection.IsValid())
+    { return; }
+
+    ck::grid_editor::Draw_GridTagLabels(InCanvas, InView, Selection.Spec, Selection.GridTransform);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
