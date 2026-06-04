@@ -158,14 +158,26 @@ auto
         InPDI->DrawLine(C01, C00, InColor, SDPG_Foreground, InThickness);
     };
 
-    // Pass 1: the full grid wireframe in one uniform color (enabled/green). Shared edges are drawn twice
-    // but always in the SAME color, so there is no coincident-color conflict.
+    // Pass 1: base grid as spanning gridlines, each drawn ONCE (Dimensions+1 lines per axis) rather than
+    // a per-cell square. A per-cell square redraws every interior edge twice (once per adjacent cell);
+    // coincident PDI lines composite brighter, and that brightening grows with grid size — which read as
+    // a "different green" on larger grids. Drawing each edge exactly once removes the size dependence.
     if (InOptions.bDrawBaseGrid)
     {
-        for (auto Y = 0; Y < Dimensions.Y; ++Y)
+        const auto MaxLocalX = Dimensions.X * CellSize.X;
+        const auto MaxLocalY = Dimensions.Y * CellSize.Y;
+
+        for (auto X = 0; X <= Dimensions.X; ++X)
         {
-            for (auto X = 0; X < Dimensions.X; ++X)
-            { DrawCellSquare(X, Y, ColorEnabled, 0.0, CellLineThickness); }
+            const auto LineX = X * CellSize.X;
+            InPDI->DrawLine(LocalToWorld(LineX, 0.0), LocalToWorld(LineX, MaxLocalY),
+                ColorEnabled, SDPG_Foreground, CellLineThickness);
+        }
+        for (auto Y = 0; Y <= Dimensions.Y; ++Y)
+        {
+            const auto LineY = Y * CellSize.Y;
+            InPDI->DrawLine(LocalToWorld(0.0, LineY), LocalToWorld(MaxLocalX, LineY),
+                ColorEnabled, SDPG_Foreground, CellLineThickness);
         }
     }
 
