@@ -13,6 +13,7 @@
 class ACk_EntitySpawner_UE;
 class UCk_2dGridSystem_Spec;
 
+class FCanvas;
 class FEditorViewportClient;
 class FPrimitiveDrawInterface;
 class FSceneView;
@@ -80,6 +81,7 @@ public:
 
     // ILegacyEdModeWidgetInterface (via UBaseLegacyWidgetEdMode)
     virtual void Render(const FSceneView* InView, FViewport* InViewport, FPrimitiveDrawInterface* InPDI) override;
+    virtual void DrawHUD(FEditorViewportClient* InViewportClient, FViewport* InViewport, const FSceneView* InView, FCanvas* InCanvas) override;
     virtual bool InputDelta(FEditorViewportClient* InViewportClient, FViewport* InViewport, FVector& InDrag, FRotator& InRot, FVector& InScale) override;
 
     // ILegacyEdModeViewportInterface (via UBaseLegacyWidgetEdMode)
