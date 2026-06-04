@@ -23,6 +23,7 @@ public class CkGridEditor : CkModuleRules
             "LevelEditor",
             "PropertyEditor",
             "GameplayTags",
+            "GameplayTagsEditor",
 
             "CkCore",
             "CkEcs",

@@ -14,6 +14,7 @@
 #include "EditorModeManager.h"
 #include "EditorViewportClient.h"
 #include "Engine/Selection.h"
+#include "InputCoreTypes.h"
 #include "SceneManagement.h"
 #include "SceneView.h"
 #include "ScopedTransaction.h"
@@ -39,6 +40,20 @@ namespace ck_grid_editor_detail
     constexpr auto ColorTagged   = FLinearColor(0.2f, 0.4f, 1.0f); // blue tint
     constexpr auto ColorPivot    = FLinearColor(1.0f, 1.0f, 0.0f); // yellow
     constexpr auto ColorHover    = FLinearColor(1.0f, 1.0f, 1.0f); // white
+
+    // Select tool: the inspected cell, drawn as a thick cyan inset square — distinct from the white
+    // hover marker so the two read separately when both land on the same cell.
+    constexpr auto ColorSelected         = FLinearColor(0.0f, 1.0f, 1.0f); // cyan
+    constexpr auto SelectedMarkerInset     = 0.02;
+    constexpr auto SelectedMarkerThickness = 4.0f;
+
+    // Blocker drag-rect candidate preview (cyan) and selected-blocker emphasis (bright orange).
+    constexpr auto ColorBlockerDrag     = FLinearColor(0.0f, 1.0f, 1.0f);  // cyan
+    constexpr auto ColorBlockerSelected = FLinearColor(1.0f, 0.75f, 0.2f); // bright orange
+
+    constexpr auto BlockerDragThickness     = 3.0f;
+    constexpr auto BlockerSelectedInset     = 0.04;
+    constexpr auto BlockerSelectedThickness = 4.0f;
 
     constexpr auto CellLineThickness  = 1.0f;
     constexpr auto PivotMarkerSize     = 20.0f;
@@ -121,6 +136,28 @@ void
     CreateToolkit()
 {
     Toolkit = MakeShared<FCk_2dGridSystem_EdModeToolkit>();
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Set_ActiveTool(
+        ECk_GridPaint_Tool InTool) -> void
+{
+    _ActiveTool = InTool;
+
+    // Blocker selection only makes sense while the Blocker tool is active; clear it on any tool change
+    // away from Blocker (best-effort) so a stale highlight doesn't linger.
+    if (_ActiveTool != ECk_GridPaint_Tool::Blocker)
+    {
+        _SelectedBlockerIndex = INDEX_NONE;
+        _BlockerDragStart.Reset();
+        _BlockerDragCurrent.Reset();
+    }
+
+    // The Select-tool inspection highlight only makes sense while the Select tool is active; clear it on
+    // any tool change away from Select so a stale highlight doesn't linger.
+    if (_ActiveTool != ECk_GridPaint_Tool::Select)
+    { _SelectedCell.Reset(); }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -255,6 +292,70 @@ void
     InPDI->DrawLine(PivotWorld - FVector(0, 0, Half), PivotWorld + FVector(0, 0, Half),
         ck_grid_editor_detail::ColorPivot, SDPG_Foreground, ck_grid_editor_detail::PivotLineThickness);
 
+    // Selected-blocker highlight: emphasize the selected blocker's cells with a bright-orange thick
+    // inset square (drawn before hover so the white hover marker still reads on top).
+    if (_SelectedBlockerIndex != INDEX_NONE && Spec->Blockers.IsValidIndex(_SelectedBlockerIndex))
+    {
+        const auto& Blocker = Spec->Blockers[_SelectedBlockerIndex];
+        const auto MinX = FMath::Min(Blocker.RangeMin.X, Blocker.RangeMax.X);
+        const auto MaxX = FMath::Max(Blocker.RangeMin.X, Blocker.RangeMax.X);
+        const auto MinY = FMath::Min(Blocker.RangeMin.Y, Blocker.RangeMax.Y);
+        const auto MaxY = FMath::Max(Blocker.RangeMin.Y, Blocker.RangeMax.Y);
+
+        for (auto Y = MinY; Y <= MaxY; ++Y)
+        {
+            for (auto X = MinX; X <= MaxX; ++X)
+            {
+                if (X >= 0 && X < Dimensions.X && Y >= 0 && Y < Dimensions.Y)
+                {
+                    DrawCellSquare(X, Y, ck_grid_editor_detail::ColorBlockerSelected,
+                        ck_grid_editor_detail::BlockerSelectedInset, ck_grid_editor_detail::BlockerSelectedThickness);
+                }
+            }
+        }
+    }
+
+    // Blocker drag-rect preview: outline the candidate rect spanning min..max of the start/current
+    // corners as a single cyan border (full-cell edges of the bounding rect, no per-cell lines).
+    if (_BlockerDragStart.IsSet())
+    {
+        const auto Start   = _BlockerDragStart.GetValue();
+        const auto Current = _BlockerDragCurrent.IsSet() ? _BlockerDragCurrent.GetValue() : Start;
+
+        const auto MinX = FMath::Min(Start.X, Current.X);
+        const auto MaxX = FMath::Max(Start.X, Current.X);
+        const auto MinY = FMath::Min(Start.Y, Current.Y);
+        const auto MaxY = FMath::Max(Start.Y, Current.Y);
+
+        const auto LoX = MinX               * CellSize.X;
+        const auto LoY = MinY               * CellSize.Y;
+        const auto HiX = (MaxX + 1)         * CellSize.X;
+        const auto HiY = (MaxY + 1)         * CellSize.Y;
+
+        const auto C00 = LocalToWorld(LoX, LoY);
+        const auto C10 = LocalToWorld(HiX, LoY);
+        const auto C11 = LocalToWorld(HiX, HiY);
+        const auto C01 = LocalToWorld(LoX, HiY);
+
+        InPDI->DrawLine(C00, C10, ck_grid_editor_detail::ColorBlockerDrag, SDPG_Foreground, ck_grid_editor_detail::BlockerDragThickness);
+        InPDI->DrawLine(C10, C11, ck_grid_editor_detail::ColorBlockerDrag, SDPG_Foreground, ck_grid_editor_detail::BlockerDragThickness);
+        InPDI->DrawLine(C11, C01, ck_grid_editor_detail::ColorBlockerDrag, SDPG_Foreground, ck_grid_editor_detail::BlockerDragThickness);
+        InPDI->DrawLine(C01, C00, ck_grid_editor_detail::ColorBlockerDrag, SDPG_Foreground, ck_grid_editor_detail::BlockerDragThickness);
+    }
+
+    // Select-tool inspection highlight: a thick cyan inset square on the cell picked for the Details
+    // panel. Drawn before hover so the white hover marker still reads on top when both land on the same
+    // cell, and inset less than the state markers so it frames them.
+    if (_SelectedCell.IsSet())
+    {
+        const auto& Cell = _SelectedCell.GetValue();
+        if (Cell.X >= 0 && Cell.X < Dimensions.X && Cell.Y >= 0 && Cell.Y < Dimensions.Y)
+        {
+            DrawCellSquare(Cell.X, Cell.Y, ck_grid_editor_detail::ColorSelected,
+                ck_grid_editor_detail::SelectedMarkerInset, ck_grid_editor_detail::SelectedMarkerThickness);
+        }
+    }
+
     // Hover highlight: a thick white inset square on the cell currently under the cursor. Drawn last so
     // it sits on top of the state markers. Only valid coordinates are stored in _HoveredCell.
     if (_HoveredCell.IsSet())
@@ -330,7 +431,79 @@ auto
 
 auto
     UCk_2dGridSystem_EdMode::
-    Paint_ShapeStrokeAtCursor(
+    Paint_TagCell(
+        const FResolvedGridSelection& InSelection,
+        const FIntPoint&              InCell) -> void
+{
+    if (! InSelection.IsValid())
+    { return; }
+
+    if (! _ActivePaintTag.IsValid())
+    {
+        ck::grid_editor::Warning(TEXT("Tags tool: no active paint tag set — skipping cell paint"));
+        return;
+    }
+
+    auto* Spec = InSelection.Spec;
+
+    Spec->Modify();
+
+    // Idempotent ADD (bulk-paint only adds — never toggles).
+    auto& Container = Spec->PerCellTags.FindOrAdd(InCell);
+    Container.AddTag(_ActivePaintTag);
+
+    InSelection.Spawner->EditorOnly_RebuildEntity();
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Paint_StrokeCell(
+        const FResolvedGridSelection& InSelection,
+        const FIntPoint&              InCell) -> void
+{
+    switch (_ActiveTool)
+    {
+        case ECk_GridPaint_Tool::Shape:
+        {
+            Toggle_ShapeCell(InSelection, InCell);
+            break;
+        }
+        case ECk_GridPaint_Tool::Tags:
+        {
+            Paint_TagCell(InSelection, InCell);
+            break;
+        }
+        default:
+        {
+            // Blocker is a drag-rect, not a per-cell stroke; nothing to do here.
+            break;
+        }
+    }
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Resolve_CellAtCursor(
+        FEditorViewportClient* InViewportClient,
+        int32                  InMouseX,
+        int32                  InMouseY) const -> TOptional<FIntPoint>
+{
+    const auto Selection = Resolve_SelectedGridSpawner();
+    if (! Selection.IsValid())
+    { return {}; }
+
+    auto RayOrigin    = FVector::ZeroVector;
+    auto RayDirection = FVector::ZeroVector;
+    if (! Compute_CursorRay(InViewportClient, InMouseX, InMouseY, RayOrigin, RayDirection))
+    { return {}; }
+
+    return ck::grid_editor::Resolve_CellFromRay(
+        Selection.GridTransform, Selection.Spec->CellSize, Selection.Spec->Dimensions, RayOrigin, RayDirection);
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Paint_StrokeAtCursor(
         FEditorViewportClient* InViewportClient,
         int32                  InMouseX,
         int32                  InMouseY) -> void
@@ -339,23 +512,170 @@ auto
     if (! Selection.IsValid())
     { return; }
 
-    auto RayOrigin    = FVector::ZeroVector;
-    auto RayDirection = FVector::ZeroVector;
-    if (! Compute_CursorRay(InViewportClient, InMouseX, InMouseY, RayOrigin, RayDirection))
-    { return; }
-
-    const auto Cell = ck::grid_editor::Resolve_CellFromRay(
-        Selection.GridTransform, Selection.Spec->CellSize, Selection.Spec->Dimensions, RayOrigin, RayDirection);
+    const auto Cell = Resolve_CellAtCursor(InViewportClient, InMouseX, InMouseY);
     if (! Cell.IsSet())
     { return; }
 
-    // Dedupe: a cell is toggled at most once per stroke, so mouse jitter inside it can't flip it
-    // on/off repeatedly.
+    // Dedupe: a cell is painted at most once per stroke, so mouse jitter inside it can't re-apply the
+    // tool action repeatedly.
     if (_StrokeToggledCells.Contains(Cell.GetValue()))
     { return; }
 
     _StrokeToggledCells.Add(Cell.GetValue());
-    Toggle_ShapeCell(Selection, Cell.GetValue());
+    Paint_StrokeCell(Selection, Cell.GetValue());
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Find_BlockerCovering(
+        const FResolvedGridSelection& InSelection,
+        const FIntPoint&              InCell) const -> int32
+{
+    if (! InSelection.IsValid())
+    { return INDEX_NONE; }
+
+    const auto& Blockers = InSelection.Spec->Blockers;
+    for (auto Index = 0; Index < Blockers.Num(); ++Index)
+    {
+        const auto& Blocker = Blockers[Index];
+        const auto MinX = FMath::Min(Blocker.RangeMin.X, Blocker.RangeMax.X);
+        const auto MaxX = FMath::Max(Blocker.RangeMin.X, Blocker.RangeMax.X);
+        const auto MinY = FMath::Min(Blocker.RangeMin.Y, Blocker.RangeMax.Y);
+        const auto MaxY = FMath::Max(Blocker.RangeMin.Y, Blocker.RangeMax.Y);
+
+        if (InCell.X >= MinX && InCell.X <= MaxX && InCell.Y >= MinY && InCell.Y <= MaxY)
+        { return Index; }
+    }
+
+    return INDEX_NONE;
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Resolve_SelectedCellInfo() const -> FSelectedCellInfo
+{
+    auto Result = FSelectedCellInfo{};
+
+    if (! _SelectedCell.IsSet())
+    { return Result; }
+
+    const auto Selection = Resolve_SelectedGridSpawner();
+    if (! Selection.IsValid())
+    { return Result; }
+
+    const auto* Spec = Selection.Spec;
+    const auto  Cell = _SelectedCell.GetValue();
+
+    Result.bHasSelection   = true;
+    Result.Coordinate      = Cell;
+    Result.GridDefaultTags = Spec->DefaultCellTags;
+
+    if (const auto* PerCell = Spec->PerCellTags.Find(Cell))
+    { Result.CellTags = *PerCell; }
+
+    // State priority mirrors the Render color convention: disabled > blocker > enabled.
+    if (Spec->DisabledCells.Contains(Cell))
+    {
+        Result.State = ECellState::Disabled;
+    }
+    else
+    {
+        const auto BlockerIndex = Find_BlockerCovering(Selection, Cell);
+        if (BlockerIndex != INDEX_NONE)
+        {
+            Result.State        = ECellState::Blocked;
+            Result.BlockerIndex = BlockerIndex;
+        }
+        else
+        {
+            Result.State = ECellState::Enabled;
+        }
+    }
+
+    return Result;
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Is_PlainLeftClick(
+        const FViewportClick& InClick) const -> bool
+{
+    // Plain LMB = no modifier held AND the click's button is the Left mouse button. Any modifier or a
+    // non-left button means the user is driving the camera (RMB-look, Alt+LMB orbit, etc.).
+    if (InClick.IsControlDown() || InClick.IsShiftDown() || InClick.IsAltDown())
+    { return false; }
+
+    return InClick.GetKey() == EKeys::LeftMouseButton;
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Is_PlainLeftDrag(
+        FEditorViewportClient* InViewportClient,
+        FViewport*             InViewport) const -> bool
+{
+    if (InViewportClient == nullptr || InViewport == nullptr)
+    { return false; }
+
+    // Modifier held → camera gesture (Alt-orbit etc.), not a paint stroke.
+    if (InViewportClient->IsShiftPressed() || InViewportClient->IsCtrlPressed() || InViewportClient->IsAltPressed())
+    { return false; }
+
+    // Left button must be down; right button must NOT be (LMB+RMB is the camera pan gesture).
+    const auto bLeftDown  = InViewport->KeyState(EKeys::LeftMouseButton);
+    const auto bRightDown = InViewport->KeyState(EKeys::RightMouseButton);
+
+    return bLeftDown && ! bRightDown;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Apply_GridDefaultTag() -> void
+{
+    const auto Selection = Resolve_SelectedGridSpawner();
+    if (! Selection.IsValid())
+    { return; }
+
+    if (! _ActivePaintTag.IsValid())
+    {
+        ck::grid_editor::Warning(TEXT("Tags tool: no active paint tag set — cannot apply grid-default tag"));
+        return;
+    }
+
+    auto* Spec = Selection.Spec;
+
+    const auto Transaction = FScopedTransaction(
+        NSLOCTEXT("Ck_2dGridSystem_EdMode", "ApplyGridDefaultTag", "Grid Paint: Add Grid-Default Tag"));
+
+    Spec->Modify();
+    Spec->DefaultCellTags.AddTag(_ActivePaintTag);
+    Selection.Spawner->EditorOnly_RebuildEntity();
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Remove_GridDefaultTag() -> void
+{
+    const auto Selection = Resolve_SelectedGridSpawner();
+    if (! Selection.IsValid())
+    { return; }
+
+    if (! _ActivePaintTag.IsValid())
+    {
+        ck::grid_editor::Warning(TEXT("Tags tool: no active paint tag set — cannot remove grid-default tag"));
+        return;
+    }
+
+    auto* Spec = Selection.Spec;
+
+    const auto Transaction = FScopedTransaction(
+        NSLOCTEXT("Ck_2dGridSystem_EdMode", "RemoveGridDefaultTag", "Grid Paint: Remove Grid-Default Tag"));
+
+    Spec->Modify();
+    Spec->DefaultCellTags.RemoveTag(_ActivePaintTag);
+    Selection.Spawner->EditorOnly_RebuildEntity();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -377,7 +697,27 @@ bool
         return true;
     }
 
-    if (_ActiveTool != ECk_GridPaint_Tool::Shape)
+    // A Blocker drag also routes through StartTracking/EndTracking; if one just finished, swallow the
+    // trailing HandleClick so it isn't mis-read as a select-click on the freshly-placed rect.
+    if (_BlockerDragStart.IsSet())
+    {
+        _BlockerDragStart.Reset();
+        _BlockerDragCurrent.Reset();
+        return true;
+    }
+
+    // Only plain-LMB (no Shift/Ctrl/Alt, left button) clicks paint or select; anything else falls through
+    // to default camera nav so RMB-look / modifier gestures aren't hijacked.
+    if (! Is_PlainLeftClick(InClick))
+    { return Super::HandleClick(InViewportClient, InHitProxy, InClick); }
+
+    if (_ActiveTool == ECk_GridPaint_Tool::Blocker)
+    { return HandleClick_Blocker(InViewportClient, InHitProxy, InClick); }
+
+    if (_ActiveTool == ECk_GridPaint_Tool::Select)
+    { return HandleClick_Select(InViewportClient, InHitProxy, InClick); }
+
+    if (_ActiveTool != ECk_GridPaint_Tool::Shape && _ActiveTool != ECk_GridPaint_Tool::Tags)
     { return Super::HandleClick(InViewportClient, InHitProxy, InClick); }
 
     const auto Selection = Resolve_SelectedGridSpawner();
@@ -390,10 +730,63 @@ bool
     if (! Cell.IsSet())
     { return Super::HandleClick(InViewportClient, InHitProxy, InClick); }
 
-    const auto Transaction = FScopedTransaction(
-        NSLOCTEXT("Ck_2dGridSystem_EdMode", "PaintShapeCell", "Grid Paint: Toggle Cell"));
-    Toggle_ShapeCell(Selection, Cell.GetValue());
+    const auto TransactionLabel = _ActiveTool == ECk_GridPaint_Tool::Shape
+        ? NSLOCTEXT("Ck_2dGridSystem_EdMode", "PaintShapeCell", "Grid Paint: Toggle Cell")
+        : NSLOCTEXT("Ck_2dGridSystem_EdMode", "PaintTagCell",   "Grid Paint: Paint Tag");
 
+    const auto Transaction = FScopedTransaction(TransactionLabel);
+    Paint_StrokeCell(Selection, Cell.GetValue());
+
+    return true;
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    HandleClick_Blocker(
+        FEditorViewportClient* InViewportClient,
+        HHitProxy*             InHitProxy,
+        const FViewportClick&  InClick) -> bool
+{
+    const auto Selection = Resolve_SelectedGridSpawner();
+    if (! Selection.IsValid())
+    { return Super::HandleClick(InViewportClient, InHitProxy, InClick); }
+
+    const auto Cell = ck::grid_editor::Resolve_CellFromRay(
+        Selection.GridTransform, Selection.Spec->CellSize, Selection.Spec->Dimensions,
+        InClick.GetOrigin(), InClick.GetDirection());
+    if (! Cell.IsSet())
+    {
+        // Clicked off-grid: clear any blocker selection.
+        _SelectedBlockerIndex = INDEX_NONE;
+        return true;
+    }
+
+    // Select the blocker under the click (or clear the selection if the click is on a bare cell).
+    _SelectedBlockerIndex = Find_BlockerCovering(Selection, Cell.GetValue());
+    return true;
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    HandleClick_Select(
+        FEditorViewportClient* InViewportClient,
+        HHitProxy*             InHitProxy,
+        const FViewportClick&  InClick) -> bool
+{
+    // Read-only: resolve the clicked cell and store it for the Details panel (no transaction, no mutation).
+    const auto Selection = Resolve_SelectedGridSpawner();
+    if (! Selection.IsValid())
+    {
+        _SelectedCell.Reset();
+        return true;
+    }
+
+    const auto Cell = ck::grid_editor::Resolve_CellFromRay(
+        Selection.GridTransform, Selection.Spec->CellSize, Selection.Spec->Dimensions,
+        InClick.GetOrigin(), InClick.GetDirection());
+
+    // Off-grid click clears the selection; otherwise store the picked cell.
+    _SelectedCell = Cell;
     return true;
 }
 
@@ -447,17 +840,43 @@ bool
         FEditorViewportClient* InViewportClient,
         FViewport*             InViewport)
 {
-    if (_ActiveTool != ECk_GridPaint_Tool::Shape)
-    { return Super::StartTracking(InViewportClient, InViewport); }
-
     const auto Selection = Resolve_SelectedGridSpawner();
     if (! Selection.IsValid())
     { return Super::StartTracking(InViewportClient, InViewport); }
 
-    // Open ONE transaction for the whole drag stroke so a single Ctrl-Z undoes every cell toggled
+    // Only a plain-LMB drag (no Shift/Ctrl/Alt, LMB down, RMB up) begins a paint stroke / blocker rect;
+    // every other gesture (RMB-look, Alt-orbit, LMB+RMB-pan, wheel) is left to the camera.
+    if (! Is_PlainLeftDrag(InViewportClient, InViewport))
+    { return Super::StartTracking(InViewportClient, InViewport); }
+
+    // The Select tool is read-only; it never begins a stroke (its pick happens in HandleClick).
+    if (_ActiveTool == ECk_GridPaint_Tool::Select)
+    { return Super::StartTracking(InViewportClient, InViewport); }
+
+    // Blocker: begin a rubber-band rect drag. No per-cell transaction is opened — the single append
+    // is transacted in EndTracking. Just record the start/current corner so Render can preview it.
+    if (_ActiveTool == ECk_GridPaint_Tool::Blocker)
+    {
+        const auto StartCell = (InViewport != nullptr)
+            ? Resolve_CellAtCursor(InViewportClient, InViewport->GetMouseX(), InViewport->GetMouseY())
+            : TOptional<FIntPoint>{};
+        if (! StartCell.IsSet())
+        { return Super::StartTracking(InViewportClient, InViewport); }
+
+        _BlockerDragStart   = StartCell;
+        _BlockerDragCurrent = StartCell;
+        return true;
+    }
+
+    if (_ActiveTool != ECk_GridPaint_Tool::Shape && _ActiveTool != ECk_GridPaint_Tool::Tags)
+    { return Super::StartTracking(InViewportClient, InViewport); }
+
+    // Open ONE transaction for the whole drag stroke so a single Ctrl-Z undoes every cell painted
     // during the drag. Closed in EndTracking.
-    GEditor->BeginTransaction(
-        NSLOCTEXT("Ck_2dGridSystem_EdMode", "PaintShapeStroke", "Grid Paint: Paint Cells"));
+    const auto StrokeLabel = _ActiveTool == ECk_GridPaint_Tool::Shape
+        ? NSLOCTEXT("Ck_2dGridSystem_EdMode", "PaintShapeStroke", "Grid Paint: Paint Cells")
+        : NSLOCTEXT("Ck_2dGridSystem_EdMode", "PaintTagStroke",   "Grid Paint: Paint Tags");
+    GEditor->BeginTransaction(StrokeLabel);
 
     _IsPaintingStroke = true;
     _StrokeToggledCells.Reset();
@@ -466,7 +885,7 @@ bool
     // actually moves).
     if (InViewport != nullptr)
     {
-        Paint_ShapeStrokeAtCursor(InViewportClient,
+        Paint_StrokeAtCursor(InViewportClient,
             InViewport->GetMouseX(), InViewport->GetMouseY());
     }
 
@@ -483,8 +902,16 @@ bool
 {
     if (_IsPaintingStroke)
     {
-        // Keep the hover highlight tracking the cursor during the stroke too.
-        Paint_ShapeStrokeAtCursor(InViewportClient, InMouseX, InMouseY);
+        Paint_StrokeAtCursor(InViewportClient, InMouseX, InMouseY);
+        return true;
+    }
+
+    // Blocker drag: update the rect's trailing corner so Render previews the candidate rect.
+    if (_BlockerDragStart.IsSet())
+    {
+        const auto Cell = Resolve_CellAtCursor(InViewportClient, InMouseX, InMouseY);
+        if (Cell.IsSet())
+        { _BlockerDragCurrent = Cell; }
         return true;
     }
 
@@ -497,6 +924,38 @@ bool
         FEditorViewportClient* InViewportClient,
         FViewport*             InViewport)
 {
+    // Blocker rect drag finished: commit ONE blocker spanning min..max of the start/current corners in
+    // a single FScopedTransaction (no per-cell stroke txn was ever opened).
+    if (_BlockerDragStart.IsSet())
+    {
+        const auto Selection = Resolve_SelectedGridSpawner();
+        const auto Start     = _BlockerDragStart.GetValue();
+        const auto Current   = _BlockerDragCurrent.IsSet() ? _BlockerDragCurrent.GetValue() : Start;
+
+        // NOTE: _BlockerDragStart is intentionally LEFT SET here — the trailing HandleClick (which
+        // fires after EndTracking on a click-drag) consults it to avoid mis-reading the drag as a
+        // select-click, then clears it.
+        if (Selection.IsValid())
+        {
+            const auto RangeMin = FIntPoint(FMath::Min(Start.X, Current.X), FMath::Min(Start.Y, Current.Y));
+            const auto RangeMax = FIntPoint(FMath::Max(Start.X, Current.X), FMath::Max(Start.Y, Current.Y));
+
+            const auto Transaction = FScopedTransaction(
+                NSLOCTEXT("Ck_2dGridSystem_EdMode", "PlaceBlocker", "Grid Paint: Place Blocker"));
+
+            auto NewBlocker     = FCk_2dGridSystem_Spec_Blocker{};
+            NewBlocker.RangeMin = RangeMin;
+            NewBlocker.RangeMax = RangeMax;
+
+            auto* Spec = Selection.Spec;
+            Spec->Modify();
+            Spec->Blockers.Add(NewBlocker);
+            Selection.Spawner->EditorOnly_RebuildEntity();
+        }
+
+        return true;
+    }
+
     if (! _IsPaintingStroke)
     { return Super::EndTracking(InViewportClient, InViewport); }
 
@@ -505,7 +964,7 @@ bool
 
     const auto bToggledAny = ! _StrokeToggledCells.IsEmpty();
     // NOTE: not cleared here — HandleClick fires AFTER EndTracking on a click-drag and consults this
-    // to avoid a double-toggle. It's reset at the start of the next stroke (and stays harmless until
+    // to avoid a double-apply. It's reset at the start of the next stroke (and stays harmless until
     // then because painting only reads it within an active stroke).
     return bToggledAny;
 }
@@ -514,9 +973,59 @@ bool
     UCk_2dGridSystem_EdMode::
     DisallowMouseDeltaTracking() const
 {
-    // While a Shape stroke is active, suppress the gizmo/camera delta-tracker so the drag paints
-    // cells instead of moving the selected actor.
-    return _IsPaintingStroke;
+    // While a per-cell stroke (Shape/Tags) OR a Blocker rect drag is active, suppress the gizmo/camera
+    // delta-tracker so the drag paints/draws instead of moving the selected actor.
+    return _IsPaintingStroke || _BlockerDragStart.IsSet();
+}
+
+bool
+    UCk_2dGridSystem_EdMode::
+    InputKey(
+        FEditorViewportClient* InViewportClient,
+        FViewport*             InViewport,
+        FKey                   InKey,
+        EInputEvent            InEvent)
+{
+    // Delete the selected blocker on Delete (or platform Delete) while the Blocker tool is active.
+    const auto bIsDelete = InKey == EKeys::Delete || InKey == EKeys::Platform_Delete;
+    if (InEvent == IE_Pressed && bIsDelete &&
+        _ActiveTool == ECk_GridPaint_Tool::Blocker &&
+        _SelectedBlockerIndex != INDEX_NONE)
+    {
+        const auto Selection = Resolve_SelectedGridSpawner();
+        if (Selection.IsValid() && Selection.Spec->Blockers.IsValidIndex(_SelectedBlockerIndex))
+        {
+            const auto Transaction = FScopedTransaction(
+                NSLOCTEXT("Ck_2dGridSystem_EdMode", "DeleteBlocker", "Grid Paint: Delete Blocker"));
+
+            auto* Spec = Selection.Spec;
+            Spec->Modify();
+            Spec->Blockers.RemoveAt(_SelectedBlockerIndex);
+            Selection.Spawner->EditorOnly_RebuildEntity();
+        }
+
+        _SelectedBlockerIndex = INDEX_NONE;
+        return true;
+    }
+
+    return Super::InputKey(InViewportClient, InViewport, InKey, InEvent);
+}
+
+void
+    UCk_2dGridSystem_EdMode::
+    ActorSelectionChangeNotify()
+{
+    // The blocker selection indexes into a specific grid's Blockers array; invalidate it whenever the
+    // editor's actor selection changes (best-effort — covers picking a different spawner/deselecting).
+    _SelectedBlockerIndex = INDEX_NONE;
+    _BlockerDragStart.Reset();
+    _BlockerDragCurrent.Reset();
+
+    // The inspected cell is meaningful only against a specific grid; drop it when the actor selection
+    // changes (covers picking a different spawner / deselecting).
+    _SelectedCell.Reset();
+
+    Super::ActorSelectionChangeNotify();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
