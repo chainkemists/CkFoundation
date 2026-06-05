@@ -30,7 +30,6 @@ public class CkAttribute : CkModuleRules
 
         PrivateDependencyModuleNames.AddRange(new string[]
         {
-            "CkSnapshot",
         });
     }
 }

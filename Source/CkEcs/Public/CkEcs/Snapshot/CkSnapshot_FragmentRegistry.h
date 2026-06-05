@@ -3,7 +3,7 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkEcs/Concepts/CkSnapshot_Concepts.h"
 
-#include "CkSnapshot/Context/CkSnapshot_Context.h"
+#include "CkEcs/Snapshot/CkSnapshot_Context.h"
 
 #include "CkThirdParty/entt-3.16.0/src/entt/entity/registry.hpp"
 #include "CkThirdParty/entt-3.16.0/src/entt/entity/snapshot.hpp"
@@ -24,7 +24,7 @@ namespace ck
     class FSnapshotArchive_Writer;
     class FSnapshotArchive_Reader;
 
-    struct CKSNAPSHOT_API FCk_Snapshot_RegisteredFragment
+    struct CKECS_API FCk_Snapshot_RegisteredFragment
     {
         FString  _DisplayName;
         uint32   _EnttTypeHash = 0;
@@ -42,7 +42,7 @@ namespace ck
         LoadFnPtr _Load = nullptr;
     };
 
-    class CKSNAPSHOT_API FCk_Snapshot_FragmentRegistry
+    class CKECS_API FCk_Snapshot_FragmentRegistry
     {
     public:
         static auto Get() -> FCk_Snapshot_FragmentRegistry&;
@@ -71,13 +71,7 @@ namespace ck
         {
             using MutableT = std::remove_const_t<T>;
 
-            if constexpr (std::is_empty_v<MutableT>)
-            {
-                // Tier T — empty tag. entt serializes presence via the entity stream only; nothing per-instance.
-                // (entt never routes empty types through this per-instance callback; this branch makes that explicit.)
-                return;
-            }
-            else if constexpr (ck::concepts::FragmentHasCustomSnapshotSerialize<MutableT>)
+            if constexpr (ck::concepts::FragmentHasCustomSnapshotSerialize<MutableT>)
             {
                 // Tier B / C — fragment provides its own serialize body (handles entity-handle remap via InCtx).
                 auto& MutableFragment = const_cast<MutableT&>(InFragment);
@@ -139,12 +133,10 @@ namespace ck
 #define CK_REGISTER_SNAPSHOTABLE(_FragmentType_) \
     static_assert( \
         ck::concepts::FragmentHasCustomSnapshotSerialize<_FragmentType_> || \
-        ck::concepts::FragmentIsUStructSnapshotable<_FragmentType_> || \
-        ck::concepts::FragmentIsEmptyTagSnapshotable<_FragmentType_>, \
+        ck::concepts::FragmentIsUStructSnapshotable<_FragmentType_>, \
         "Fragment " #_FragmentType_ " provides no serialization path: declare " \
         "`auto SerializeSnapshot(FArchive&, ck::FSnapshotContext&) -> void;` as a member, " \
-        "make " #_FragmentType_ " a USTRUCT with GENERATED_BODY(), " \
-        "OR (for empty tags) ensure it is an empty type."); \
+        "OR make " #_FragmentType_ " a USTRUCT with GENERATED_BODY()."); \
     namespace { \
         struct CK_CONCAT(FCk_SnapshotAutoReg_, _FragmentType_) { \
             CK_CONCAT(FCk_SnapshotAutoReg_, _FragmentType_)() { \
