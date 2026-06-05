@@ -16,6 +16,9 @@
 #include "Materials/MaterialExpressionTextureCoordinate.h"
 #include "SceneTypes.h"
 #include "UObject/SavePackage.h"
+#include "UObject/UObjectGlobals.h"
+#include "UObject/Package.h"
+#include "Misc/PackageName.h"
 #include "Modules/ModuleManager.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -92,10 +95,25 @@ namespace ck::usf_editor
 
         const auto Config = Get_DomainConfig(InDef->_Domain);
 
-        // ---- Create package + UMaterial (overwrite existing -> idempotent refresh) ----
+        // ---- Create package + UMaterial (idempotent refresh) ----
         const auto PkgPath = ck::usf::Get_GeneratedMasterPackagePath(LookName);
-        auto* Package = CreatePackage(*PkgPath);
         const auto AssetName = FString::Printf(TEXT("M_CkUsf_Look_%s"), *LookName.ToString());
+
+        // Fully load any previously-generated package first; otherwise an asset-registry
+        // stub leaves it partially loaded and SavePackage asserts. Then replace the old
+        // material object so NewObject doesn't clash with the existing name.
+        UPackage* Package = FPackageName::DoesPackageExist(PkgPath)
+            ? LoadPackage(nullptr, *PkgPath, LOAD_None)
+            : nullptr;
+        if (Package == nullptr) { Package = CreatePackage(*PkgPath); }
+
+        if (auto* Old = StaticFindObject(UMaterial::StaticClass(), Package, *AssetName))
+        {
+            Old->ClearFlags(RF_Standalone | RF_Public);
+            Old->Rename(nullptr, GetTransientPackage(),
+                REN_DontCreateRedirectors | REN_NonTransactional);
+        }
+
         auto* Material = NewObject<UMaterial>(Package, *AssetName, RF_Public | RF_Standalone);
 
         Material->MaterialDomain = Config.Domain;
