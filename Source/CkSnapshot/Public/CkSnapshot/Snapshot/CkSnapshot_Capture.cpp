@@ -6,6 +6,7 @@
 #include "CkSnapshot/Context/CkSnapshot_FragmentRegistry.h"
 #include "CkSnapshot/SaveGame/CkSnapshot_Header.h"
 
+#include "CkEcs/Registry/CkRegistry.h"
 #include "CkEcs/Registry/CkRegistry_SlotTable.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
@@ -48,6 +49,13 @@ namespace ck::snapshot
 
         const auto TotalEntities = static_cast<int32>(InRegistry.storage<ck::SnapshotEntityType>().size());
         InOutHeader.Set_EntityCount(TotalEntities);
+
+        // Stamp the transient entity id so the live-world restore can adopt the restored transient. The registry-core
+        // path (FEcsWorld with no transient ctx) leaves the header sentinel untouched; only the live-world restore reads it.
+        if (const auto* TransientCtx = InRegistry.ctx().find<const ck::FCtx_TransientEntity>())
+        {
+            InOutHeader.Set_TransientEntityId(static_cast<uint32>(TransientCtx->Entity.Get_ID()));
+        }
 
         // ---- Per-fragment-type manifest entries ----------------------------------------------------------------
         auto Manifest = TArray<FCk_Snapshot_Header_FragmentManifestEntry>{};
