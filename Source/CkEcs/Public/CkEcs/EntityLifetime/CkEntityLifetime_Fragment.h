@@ -8,6 +8,11 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class FArchive;
+namespace ck { class FSnapshotContext; }
+
+// --------------------------------------------------------------------------------------------------------------------
+
 /*
 ┌─────────────────────────────────────────────────────────────────────────┐
 │ DOCUMENTATION IN CPP FILE                                               │
@@ -49,6 +54,7 @@ namespace ck
     struct FFragment_LifetimeDependents
     {
         CK_GENERATED_BODY(FFragment_LifetimeDependents);
+        using IsSnapshotable = void;
 
         friend class UCk_Utils_EntityLifetime_UE;
 
@@ -61,6 +67,9 @@ namespace ck
 
     public:
         CK_PROPERTY_GET(_Entities);
+
+        // Tier B/C — array of handle refs; body defined out-of-line in CkSnapshot (needs full FSnapshotContext).
+        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -68,6 +77,7 @@ namespace ck
     struct FFragment_LifetimeOwner
     {
         CK_GENERATED_BODY(FFragment_LifetimeOwner);
+        using IsSnapshotable = void;
 
     public:
         // TODO: Use FCk_DebuggableEntity when available [OBS-845]
@@ -80,6 +90,9 @@ namespace ck
         CK_PROPERTY_GET(_Entity);
 
         CK_DEFINE_CONSTRUCTORS(FFragment_LifetimeOwner, _Entity);
+
+        // Tier B/C — single handle ref; body defined out-of-line in CkSnapshot (needs full FSnapshotContext).
+        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

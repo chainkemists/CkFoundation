@@ -1114,11 +1114,15 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class FArchive;
+namespace ck { class FSnapshotContext; }
+
 namespace ck
 {
     struct FFragment_ContextOwner
     {
         CK_GENERATED_BODY(FFragment_ContextOwner);
+        using IsSnapshotable = void;
 
     public:
         using EntityType = FCk_Handle;
@@ -1130,6 +1134,9 @@ namespace ck
         CK_PROPERTY_GET(_Entity);
 
         CK_DEFINE_CONSTRUCTORS(FFragment_ContextOwner, _Entity);
+
+        // Tier B/C — single handle ref; body defined out-of-line in CkSnapshot (needs full FSnapshotContext).
+        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
     };
 }
 
