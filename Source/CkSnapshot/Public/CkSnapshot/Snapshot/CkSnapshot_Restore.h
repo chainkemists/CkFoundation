@@ -2,7 +2,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkSnapshot/Context/CkSnapshot_Context.h"
+#include "CkEcs/Snapshot/CkSnapshot_Context.h"
 #include "CkSnapshot/Snapshot/CkSnapshot_LoadReport.h"
 
 class UWorld;

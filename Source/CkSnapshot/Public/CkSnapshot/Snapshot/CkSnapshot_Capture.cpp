@@ -1,9 +1,10 @@
 #include "CkSnapshot_Capture.h"
 
 #include "CkSnapshot/CkSnapshot_Log.h"
-#include "CkSnapshot/Archive/CkSnapshot_Archive_Writer.h"
-#include "CkSnapshot/Context/CkSnapshot_Context.h"
-#include "CkSnapshot/Context/CkSnapshot_FragmentRegistry.h"
+#include "CkEcs/Snapshot/CkSnapshot_Archive_Writer.h"
+#include "CkEcs/Snapshot/CkSnapshot_Context.h"
+#include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
+#include "CkEcs/Snapshot/CkSnapshot_TagDriver.h"
 #include "CkSnapshot/SaveGame/CkSnapshot_Header.h"
 
 #include "CkEcs/Registry/CkRegistry.h"
@@ -83,6 +84,10 @@ namespace ck::snapshot
         }
 
         InOutHeader.Set_Manifest(MoveTemp(Manifest));
+
+        // ---- Tag section: self-describing, appended after all fragment passes ----------------------------------
+        InOutHeader.Set_TagSectionByteOffset(InByteWriter.Tell());
+        ck::snapshot::Capture_Tags(InRegistry, InByteWriter);
 
         ck::snapshot::Verbose(TEXT("Run_Capture_Registry: captured [{}] entities, [{}] fragment-type manifest entries"),
             TotalEntities, InOutHeader.Get_Manifest().Num());

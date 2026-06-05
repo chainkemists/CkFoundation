@@ -40,7 +40,6 @@ public class CkInventory : CkModuleRules
 
         PrivateDependencyModuleNames.AddRange(new string[]
         {
-            "CkSnapshot",
         });
     }
 }
