@@ -30,7 +30,7 @@ class UCk_CameraLayer_EntityScript;
 namespace ck
 {
     // Per-layer identity/config: the script class (so RemoveLayer / OneOnly can match), the ordering group, and an
-    // optional look-at target for auto-reorient.
+    // optional camera target (rig re-orient or composed-POV blend, per its mode).
     struct CKCAMERA_API FFragment_CameraLayer_Params
     {
     public:
@@ -42,7 +42,7 @@ namespace ck
     private:
         TSubclassOf<UCk_CameraLayer_EntityScript> _LayerClass;
         int32                                     _Priority = 0;
-        FCk_Handle_Transform                      _LookAtTarget;
+        FCk_Camera_Target                         _CameraTarget;
 
         // The persistent base layer created by UCk_Utils_Camera_UE::Add (one per director). It represents the
         // resting profile, is pinned at full blend, and is never evicted (OneOnly), pruned, or removed — feature
@@ -52,7 +52,7 @@ namespace ck
     public:
         CK_PROPERTY_GET(_LayerClass);
         CK_PROPERTY(_Priority);
-        CK_PROPERTY(_LookAtTarget);
+        CK_PROPERTY(_CameraTarget);
         CK_PROPERTY(_IsDefault);
 
     public:

@@ -28,6 +28,18 @@ class UCk_CameraLayer_EntityScript;
 namespace ck
 {
     // ----------------------------------------------------------------------------------------------------------------
+    // Director-side resolved ViewTarget state for the dominant layer's ViewTarget branch. _IsActive gates the
+    // final-POV blend in UpdatePOV; _Alpha reuses the dominant layer's blend alpha so the POV eases on the same
+    // curve as the layer. Plain data (not an attribute) — it is blended against the rig POV in the processor.
+    // ----------------------------------------------------------------------------------------------------------------
+    struct FCk_Camera_ViewTargetResolved
+    {
+        bool       _IsActive = false;
+        FTransform _Target   = FTransform::Identity;
+        float      _Alpha    = 0.0f;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
     // DIRECTOR FRAGMENTS
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -92,6 +104,11 @@ namespace ck
         // consumed by UpdatePOV. Unset = the dominant layer has no look-at (a zero vector is a valid target).
         TOptional<FVector> _DominantLookAt;
 
+        // ViewTarget resolved from the dominant active layer (full-POV blend). Set by the lifecycle processor,
+        // consumed by UpdatePOV. _IsActive=false = the dominant layer has no ViewTarget. Mutually exclusive with
+        // _DominantLookAt per the dominant layer's FCk_Camera_Target mode.
+        FCk_Camera_ViewTargetResolved _ViewTarget;
+
         // Class of the dominant active layer (highest blend alpha). Set by the lifecycle processor; observable via Utils.
         TSubclassOf<UCk_CameraLayer_EntityScript> _DominantLayerClass;
 
@@ -112,6 +129,7 @@ namespace ck
         CK_PROPERTY(_OrientationIntention);
         CK_PROPERTY_GET(_DominantLayerClass);
         CK_PROPERTY_GET(_DominantLookAt);
+        CK_PROPERTY_GET(_ViewTarget);
         CK_PROPERTY_GET(_PovState);
         CK_PROPERTY_GET(_ViewInfo);
     };
