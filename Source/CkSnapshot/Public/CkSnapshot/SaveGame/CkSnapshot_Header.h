@@ -49,6 +49,10 @@ private:
     UPROPERTY() FSoftObjectPath     _WorldAssetPath;
     UPROPERTY() TArray<FCk_Snapshot_Header_FragmentManifestEntry> _Manifest;
     UPROPERTY() int32               _EntityCount = 0;
+    // Raw entt id (underlying uint32) of the registry's transient entity at capture time. Consumed only by the
+    // live-world restore to adopt the restored transient. 0xFFFFFFFF == entt::null (registry-core captures with
+    // no transient ctx leave it at the sentinel; that path never adopts).
+    UPROPERTY() uint32              _TransientEntityId = 0xFFFFFFFFu;
 
 public:
     CK_PROPERTY(_FormatVersion);
@@ -58,4 +62,5 @@ public:
     CK_PROPERTY(_WorldAssetPath);
     CK_PROPERTY(_Manifest);
     CK_PROPERTY(_EntityCount);
+    CK_PROPERTY(_TransientEntityId);
 };

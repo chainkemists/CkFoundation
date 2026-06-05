@@ -130,6 +130,14 @@ public:
     auto
     Request_PumpToQuiescence() -> int32;
 
+    // Re-point this world's ECS bookkeeping at a transient entity that a snapshot restore rebuilt into the
+    // registry. Overwrites FCtx_TransientEntity (via insert_or_assign — entt's emplace would NOT overwrite the
+    // stale post-clear ctx), refreshes the cached _TransientEntity handle, and re-attaches the world-fragment.
+    // Used by Run_Restore(UWorld&) after the continuous_loader rebuilds the entity set.
+    auto
+    Request_AdoptRestoredTransient(
+        FCk_Entity InRestoredTransient) -> void;
+
 private:
     auto DoBuildGraphAndSpawnActors(
         UWorld& InWorld) -> void;
