@@ -14,6 +14,8 @@
 // FSnapshotContext is forward-declared here; the full definition lives in CkSnapshot/Context/CkSnapshot_Context.h.
 // --------------------------------------------------------------------------------------------------------------------
 
+#include <type_traits>
+
 namespace ck
 {
     class FSnapshotContext;
@@ -45,4 +47,13 @@ namespace ck::concepts
         FragmentIsSnapshotable<T> &&
         not FragmentHasCustomSnapshotSerialize<T> &&
         requires { T::StaticStruct(); };
+
+    // Tier T: empty ECS tag. entt's snapshot serializes empty types as entity-presence only (no per-instance
+    // bytes), so no SerializeSnapshot / StaticStruct is required. An explicit CK_REGISTER_SNAPSHOTABLE IS the
+    // opt-in here, so the IsSnapshotable marker is intentionally NOT required (tags have no data member to mark).
+    template <typename T>
+    concept FragmentIsEmptyTagSnapshotable =
+        std::is_empty_v<T> &&
+        not FragmentHasCustomSnapshotSerialize<T> &&
+        not FragmentIsUStructSnapshotable<T>;
 }
