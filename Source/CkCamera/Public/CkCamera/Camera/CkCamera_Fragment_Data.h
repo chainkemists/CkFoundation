@@ -62,6 +62,46 @@ enum class ECk_Camera_StackingBehavior : uint8
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+// CAMERA TARGET
+// --------------------------------------------------------------------------------------------------------------------
+
+// How a layer's camera target is applied. LookAt re-orients the rig toward the target's location (the rig stays
+// anchored to the camera entity). ViewTarget blends the final composed POV to the target's full transform — a
+// position+rotation move like UE's SetViewTargetWithBlend — easing on the layer's own blend alpha.
+UENUM(BlueprintType)
+enum class ECk_Camera_TargetMode : uint8
+{
+    LookAt,
+    ViewTarget
+};
+
+// A camera layer's optional target. An invalid _Target means the layer contributes no target. _Mode selects how a
+// valid target is consumed (re-orient the rig vs. blend the composed POV); the two modes are mutually exclusive by
+// construction, so a single field replaces a parallel look-at/view-target pair.
+USTRUCT(BlueprintType)
+struct CKCAMERA_API FCk_Camera_Target
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Camera_Target);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FCk_Handle_Transform _Target;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    ECk_Camera_TargetMode _Mode = ECk_Camera_TargetMode::LookAt;
+
+public:
+    CK_PROPERTY(_Target);
+    CK_PROPERTY(_Mode);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Camera_Target, _Target, _Mode);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
 // REQUESTS
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -90,16 +130,17 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FCk_Time _BlendInTime = FCk_Time{0.25};
 
-    // Optional look-at target (for auto-reorient / lock-on). Invalid = no look-at from this layer.
+    // Optional camera target for this layer: re-orient the rig toward it (LookAt) or blend the composed POV to it
+    // (ViewTarget). Invalid target = this layer contributes none.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FCk_Handle_Transform _LookAtTarget;
+    FCk_Camera_Target _CameraTarget;
 
 public:
     CK_PROPERTY_GET(_LayerClass);
     CK_PROPERTY(_Priority);
     CK_PROPERTY(_StackingBehavior);
     CK_PROPERTY(_BlendInTime);
-    CK_PROPERTY(_LookAtTarget);
+    CK_PROPERTY(_CameraTarget);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Camera_AddLayer, _LayerClass);
