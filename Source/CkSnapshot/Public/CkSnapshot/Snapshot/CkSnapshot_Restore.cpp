@@ -123,9 +123,63 @@ namespace ck::snapshot
             return Report;
         }
 
-        Report = Run_Restore_Registry(*RawRegistry, InByteReader, InHeader);
+        // ---- WIPE + REBUILD (live-world). Same wipe-then-restore as Run_Restore_Registry, but afterwards we ADOPT
+        // the restored transient: the world's bookkeeping (FCtx_TransientEntity + cached handle + world-fragment) is
+        // re-pointed at it, so every restored LifetimeOwner/ContextOwner ref resolves and entities come back LIVE
+        // (not data-only). The registry-core Run_Restore_Registry stays clear-based for the FEcsWorld test (no subsystem).
+        RawRegistry->clear();
 
-        ck::snapshot::Verbose(TEXT("Run_Restore: restored [{}] entities into World [{}], skipped [{}] fragment types"),
+        constexpr auto LoadIfFindFails = true;
+        auto ProxyArchive = FObjectAndNameAsStringProxyArchive{InByteReader, LoadIfFindFails};
+        auto Loader  = entt::basic_continuous_loader<ck::SnapshotRegistryType>{*RawRegistry};
+        auto Context = ck::FSnapshotContext{Loader};
+        auto Reader  = ck::FSnapshotArchive_Reader{ProxyArchive, Context};
+
+        Loader.get<ck::SnapshotEntityType>(Reader);
+
+        const auto& Registry = ck::FCk_Snapshot_FragmentRegistry::Get();
+        auto SkippedTypes = TArray<FString>{};
+
+        for (const auto& Entry : InHeader.Get_Manifest())
+        {
+            const auto* Registered = Registry.Find_ByEnttHash(Entry.Get_EnttTypeHash());
+
+            if (Registered != nullptr && Registered->_Load)
+            {
+                Registered->_Load(Loader, Reader);
+            }
+            else
+            {
+                InByteReader.Seek(Entry.Get_ByteOffset() + Entry.Get_ByteLength());
+                SkippedTypes.Emplace(Entry.Get_DisplayName());
+
+                ck::snapshot::Warning(TEXT("Run_Restore: skipped unknown fragment type [{}] (hash [{}], [{}] bytes)"),
+                    Entry.Get_DisplayName(), Entry.Get_EnttTypeHash(), Entry.Get_ByteLength());
+            }
+        }
+
+        // ---- ADOPT the restored transient. Do this BEFORE orphans() so it is never released (it carries
+        // LifetimeDependents, so orphans would keep it anyway, but the explicit adopt re-wires the world bookkeeping).
+        const auto CapturedTransient = static_cast<entt::entity>(InHeader.Get_TransientEntityId());
+        const auto RestoredTransient = Loader.map(CapturedTransient);
+
+        if (RestoredTransient != entt::null)
+        {
+            EcsWorld->Request_AdoptRestoredTransient(FCk_Entity{RestoredTransient});
+        }
+        else
+        {
+            ck::snapshot::Error(TEXT("Run_Restore: captured transient id [{}] did not map to a restored entity on World [{}]"),
+                InHeader.Get_TransientEntityId(), InWorld.GetName());
+        }
+
+        Loader.orphans();
+
+        Report.Set_SkippedFragmentTypes(MoveTemp(SkippedTypes));
+        Report.Set_EntitiesRestored(static_cast<int32>(RawRegistry->storage<ck::SnapshotEntityType>().size()));
+        Report.Set_Result(ECk_SnapshotResult::Success);
+
+        ck::snapshot::Verbose(TEXT("Run_Restore: restored [{}] entities into World [{}] (live), skipped [{}] fragment types"),
             Report.Get_EntitiesRestored(), InWorld.GetName(), Report.Get_SkippedFragmentTypes().Num());
 
         return Report;

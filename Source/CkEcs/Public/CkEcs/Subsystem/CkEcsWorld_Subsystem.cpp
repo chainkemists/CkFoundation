@@ -103,6 +103,31 @@ auto
 
 auto
     UCk_EcsWorld_Subsystem_UE::
+    Request_AdoptRestoredTransient(
+        FCk_Entity InRestoredTransient)
+    -> void
+{
+    CK_ENSURE_IF_NOT(_OwnedRegistry.IsValid(),
+        TEXT("Request_AdoptRestoredTransient: no owned registry"))
+    { return; }
+
+    // entt's ctx().emplace (what FCk_Registry::SetContext uses) is try_emplace — it would NOT overwrite the stale
+    // FCtx_TransientEntity left behind by registry.clear(). insert_or_assign overwrites unconditionally.
+    _OwnedRegistry->ctx().insert_or_assign(ck::FCtx_TransientEntity{InRestoredTransient});
+
+    _TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(_Registry);
+    UCk_Utils_Handle_UE::Set_DebugName(_TransientEntity, TEXT("Transient Entity (restored)"));
+
+    // Re-attach the world-fragment (non-snapshotable TWeakObjectPtr<UWorld>). The restored transient never carries
+    // it (it is not captured), but guard anyway — EnTT emplace asserts if already present.
+    if (NOT _TransientEntity.Has<TWeakObjectPtr<UWorld>>())
+    {
+        _TransientEntity.Add<TWeakObjectPtr<UWorld>>(GetWorld());
+    }
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
     Deinitialize()
         -> void
 {
