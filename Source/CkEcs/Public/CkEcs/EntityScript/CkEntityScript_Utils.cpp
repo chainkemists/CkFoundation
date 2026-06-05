@@ -49,6 +49,11 @@ auto
         InEntityScriptClass, InLifetimeOwner)
     { return {}; }
 
+    CK_ENSURE_IF_NOT(ck::IsValid(InLifetimeOwner),
+        TEXT("LifetimeOwner is INVALID. Unable to SpawnEntity using EntityScriptClass [{}]."),
+        InEntityScriptClass)
+    { return {}; }
+
     if (const auto DefaultObject = InEntityScriptClass->GetDefaultObject<UCk_EntityScript_UE>();
         ck::IsValid(DefaultObject))
     {
@@ -88,6 +93,11 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InEntityScriptClassArchetype),
         TEXT("EntityScriptClass [{}] is INVALID. Unable to SpawnEntity using LifetimeOwner [{}]."),
         InEntityScriptClassArchetype, InLifetimeOwner)
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InLifetimeOwner),
+        TEXT("LifetimeOwner is INVALID. Unable to SpawnEntity using EntityScriptClass [{}]."),
+        InEntityScriptClassArchetype)
     { return {}; }
 
     if (InEntityScriptClassArchetype->Get_EffectiveReplication() == ECk_Replication::Replicates &&
@@ -141,6 +151,11 @@ auto
         const FCk_EntityScript_PostConstruction_Func& InOptionalFunc)
     -> FCk_Handle_PendingEntityScript
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InScriptEntity),
+        TEXT("Cannot Add EntityScript [{}] to an INVALID Entity. Aborting to avoid operating on a dead Registry handle."),
+        InEntityScriptClassArchetype)
+    { return {}; }
+
     CK_ENSURE_IF_NOT(ck::IsValid(InEntityScriptClassArchetype), TEXT("Invalid EntityScript supplied, cannot request to Spawn Entity"))
     { return {}; }
 
