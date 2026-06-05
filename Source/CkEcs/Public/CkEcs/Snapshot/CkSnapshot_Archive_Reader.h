@@ -3,8 +3,8 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkEcs/Concepts/CkSnapshot_Concepts.h"
 
-#include "CkSnapshot/Context/CkSnapshot_Context.h"
-#include "CkSnapshot/Context/CkSnapshot_FragmentRegistry.h"
+#include "CkEcs/Snapshot/CkSnapshot_Context.h"
+#include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
 
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 
@@ -12,7 +12,7 @@
 
 namespace ck
 {
-    class CKSNAPSHOT_API FSnapshotArchive_Reader
+    class CKECS_API FSnapshotArchive_Reader
     {
     public:
         FSnapshotArchive_Reader(FObjectAndNameAsStringProxyArchive& InProxy, FSnapshotContext& InContext)

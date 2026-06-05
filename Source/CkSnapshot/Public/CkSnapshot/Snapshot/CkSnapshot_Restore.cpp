@@ -1,9 +1,10 @@
 #include "CkSnapshot_Restore.h"
 
 #include "CkSnapshot/CkSnapshot_Log.h"
-#include "CkSnapshot/Archive/CkSnapshot_Archive_Reader.h"
-#include "CkSnapshot/Context/CkSnapshot_Context.h"
-#include "CkSnapshot/Context/CkSnapshot_FragmentRegistry.h"
+#include "CkEcs/Snapshot/CkSnapshot_Archive_Reader.h"
+#include "CkEcs/Snapshot/CkSnapshot_Context.h"
+#include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
+#include "CkEcs/Snapshot/CkSnapshot_TagDriver.h"
 #include "CkSnapshot/SaveGame/CkSnapshot_Header.h"
 
 #include "CkEcs/Registry/CkRegistry_SlotTable.h"
@@ -81,6 +82,10 @@ namespace ck::snapshot
             }
         }
 
+        // ---- Tag section + defensive lifecycle strip (BEFORE orphans, so tag-only entities survive) -----------
+        ck::snapshot::Restore_Tags(InRegistry, Loader, InByteReader, InHeader.Get_TagSectionByteOffset());
+        ck::snapshot::Strip_LifecycleTags(InRegistry);
+
         // ---- Finalize: release entities that ended up with no components ---------------------------------------
         Loader.orphans();
 
@@ -157,6 +162,10 @@ namespace ck::snapshot
                     Entry.Get_DisplayName(), Entry.Get_EnttTypeHash(), Entry.Get_ByteLength());
             }
         }
+
+        // ---- Tag section + defensive lifecycle strip (BEFORE the transient adopt + orphans) ---------------------
+        ck::snapshot::Restore_Tags(*RawRegistry, Loader, InByteReader, InHeader.Get_TagSectionByteOffset());
+        ck::snapshot::Strip_LifecycleTags(*RawRegistry);
 
         // ---- ADOPT the restored transient. Do this BEFORE orphans() so it is never released (it carries
         // LifetimeDependents, so orphans would keep it anyway, but the explicit adopt re-wires the world bookkeeping).

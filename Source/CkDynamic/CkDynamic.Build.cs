@@ -32,7 +32,6 @@ public class CkDynamic : CkModuleRules
 
         PrivateDependencyModuleNames.AddRange(new string[]
         {
-            "CkSnapshot",
         });
     }
 }
