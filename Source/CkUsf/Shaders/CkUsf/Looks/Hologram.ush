@@ -1,0 +1,15 @@
+// /CkUsf/Looks/Hologram.ush
+#pragma once
+#include "/CkUsf/Common.ush"
+
+// Params (must match LookDefinition order), then generator-appended Time + UV (mesh TexCoord0).
+// Params: TintColor (Vector), ScanSpeed (Scalar)
+FCkUsf_SurfaceOutput CkUsf_Look_Hologram(float3 TintColor, float ScanSpeed, float Time, float2 UV)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+    const float scan = saturate(0.5 + 0.5 * sin((UV.y * 80.0) + Time * ScanSpeed));
+    O.EmissiveColor = TintColor * scan * 2.0;
+    O.BaseColor = float3(0.0, 0.0, 0.0);
+    O.Opacity = 0.5 + 0.5 * scan;
+    return O;
+}
