@@ -1,7 +1,5 @@
 #include "CkSnapshot_FragmentRegistry.h"
 
-#include "CkSnapshot/CkSnapshot_Log.h"
-
 namespace ck
 {
     auto FCk_Snapshot_FragmentRegistry::Get() -> FCk_Snapshot_FragmentRegistry&

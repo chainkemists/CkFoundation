@@ -6,7 +6,7 @@
 
 // SerializeSnapshot routes the held entity handle through FSnapshotContext::Snapshot_Handle, so the complete
 // FSnapshotContext type is required here (template body lives in the header).
-#include "CkSnapshot/Context/CkSnapshot_Context.h"
+#include "CkEcs/Snapshot/CkSnapshot_Context.h"
 
 class FArchive;
 

@@ -53,6 +53,9 @@ private:
     // live-world restore to adopt the restored transient. 0xFFFFFFFF == entt::null (registry-core captures with
     // no transient ctx leave it at the sentinel; that path never adopts).
     UPROPERTY() uint32              _TransientEntityId = 0xFFFFFFFFu;
+    // Byte offset (within the snapshot stream) of the self-describing tag section, appended after all fragment
+    // passes. Restore Seeks here rather than trusting the stream position, since the fragment manifest byte-jumps.
+    UPROPERTY() int64               _TagSectionByteOffset = 0;
 
 public:
     CK_PROPERTY(_FormatVersion);
@@ -63,4 +66,5 @@ public:
     CK_PROPERTY(_Manifest);
     CK_PROPERTY(_EntityCount);
     CK_PROPERTY(_TransientEntityId);
+    CK_PROPERTY(_TagSectionByteOffset);
 };

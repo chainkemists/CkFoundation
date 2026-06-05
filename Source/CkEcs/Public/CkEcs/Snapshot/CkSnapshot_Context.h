@@ -37,7 +37,7 @@ namespace ck
     // FCk_Handle::Get_Entity() returns FCk_Entity (the project's wrapper around entt::entity).
     // FCk_Entity::Get_ID() exposes the raw entt::entity. Snapshot_Handle bridges these layers
     // so call sites use FCk_Handle-family handles naturally.
-    class CKSNAPSHOT_API FSnapshotContext
+    class CKECS_API FSnapshotContext
     {
     public:
         FSnapshotContext() = default;
