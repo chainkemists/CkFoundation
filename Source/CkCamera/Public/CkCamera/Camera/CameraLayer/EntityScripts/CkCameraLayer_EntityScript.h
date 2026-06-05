@@ -73,6 +73,18 @@ public:
         FCk_Handle_CameraLayer InHandle,
         float InAlpha) -> void;
 
+    // Fired exactly once when the layer's blend alpha reaches 1 (fully blended in) and once when it reaches 0 (fully
+    // blended out, just before prune). Standard tuner blending is automatic; these are the opt-in boundary hooks for
+    // sequencing logic on blend completion (e.g. open a panel once a focus push has fully settled). NOTE: FullyBlendedOut
+    // is best-effort — if the layer is pruned before the blend processor observes alpha 0, only ExitLayer/DoExit runs.
+    virtual auto
+    FullyBlendedIn(
+        FCk_Handle_CameraLayer InHandle) -> void;
+
+    virtual auto
+    FullyBlendedOut(
+        FCk_Handle_CameraLayer InHandle) -> void;
+
     // The layer's unique gameplay tag, derived from its class name (e.g. CameraLayer_Zoom -> "CameraLayer.Zoom").
     // Used as the modifier NAME when acquiring attribute modifiers, so each layer's modifiers are uniquely identified.
     UFUNCTION(BlueprintPure,
@@ -115,6 +127,20 @@ protected:
     DoBlend(
         FCk_Handle_CameraLayer InHandle,
         float InAlpha);
+
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Ck|Camera|Layer",
+        DisplayName = "Fully Blended In")
+    void
+    DoFullyBlendedIn(
+        FCk_Handle_CameraLayer InHandle);
+
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Ck|Camera|Layer",
+        DisplayName = "Fully Blended Out")
+    void
+    DoFullyBlendedOut(
+        FCk_Handle_CameraLayer InHandle);
 
     // ================================================================================================================
     // HELPERS

@@ -125,6 +125,26 @@ auto
     DoBlend(InHandle, InAlpha);
 }
 
+auto
+    UCk_CameraLayer_EntityScript::
+    FullyBlendedIn(
+        FCk_Handle_CameraLayer InHandle)
+    -> void
+{
+    ck::camera::VeryVerbose(TEXT("[Camera] FullyBlendedIn [{}] on entity [{}]"), GetClass(), InHandle);
+    DoFullyBlendedIn(InHandle);
+}
+
+auto
+    UCk_CameraLayer_EntityScript::
+    FullyBlendedOut(
+        FCk_Handle_CameraLayer InHandle)
+    -> void
+{
+    ck::camera::VeryVerbose(TEXT("[Camera] FullyBlendedOut [{}] on entity [{}]"), GetClass(), InHandle);
+    DoFullyBlendedOut(InHandle);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
