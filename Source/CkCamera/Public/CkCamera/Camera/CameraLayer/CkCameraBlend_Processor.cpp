@@ -163,6 +163,21 @@ namespace ck
             ck::IsValid(Script))
         {
             Script->Blend(InLayer, Alpha);
+
+            // Edge-detect the blend boundaries and fire the once-only hooks. FullyBlendedOut is best-effort: if a
+            // removal prunes the layer before this processor observes alpha 0, only ExitLayer/DoExit runs.
+            if (InBlend._TargetAlpha >= 1.0f && Alpha >= 1.0f - KINDA_SMALL_NUMBER && NOT InBlend._FiredBlendedIn)
+            {
+                InBlend._FiredBlendedIn  = true;
+                InBlend._FiredBlendedOut = false;
+                Script->FullyBlendedIn(InLayer);
+            }
+            else if (InBlend._TargetAlpha <= 0.0f && Alpha <= KINDA_SMALL_NUMBER && NOT InBlend._FiredBlendedOut)
+            {
+                InBlend._FiredBlendedOut = true;
+                InBlend._FiredBlendedIn  = false;
+                Script->FullyBlendedOut(InLayer);
+            }
         }
     }
 }
