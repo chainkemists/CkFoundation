@@ -497,6 +497,16 @@
       ]
     },
     {
+      "Name": "CkUsf",
+      "Type": "Runtime",
+      "LoadingPhase": "PostConfigInit",
+      "WhitelistPlatforms": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
+    },
+    {
       "Name": "CkGrid",
       "Type": "Runtime",
       "LoadingPhase": "Default",
