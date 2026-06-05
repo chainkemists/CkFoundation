@@ -105,7 +105,7 @@ namespace ck
         {
             auto& Params = TypedLayer.Get<FFragment_CameraLayer_Params>();
             Params.Set_Priority(Priority);
-            Params.Set_LookAtTarget(InRequest.Get_LookAtTarget());
+            Params.Set_CameraTarget(InRequest.Get_CameraTarget());
         }
         {
             auto& Blend = TypedLayer.Get<FFragment_CameraLayer_Blend>();
@@ -203,18 +203,36 @@ namespace ck
         // Refresh the composed-profile cache from the (already-recomputed-this-frame) tuner attributes.
         InCurrent._ComposedProfile = ::UCk_Utils_Camera_UE::Get_Profile(InHandle);
 
-        // Resolve the dominant layer (its class is observable via Utils) + its look-at target (for auto-reorient).
+        // Resolve the dominant layer (its class is observable via Utils) + its camera target. A LookAt target feeds
+        // the rig re-orient (a location); a ViewTarget feeds the final-POV blend (a full transform). Both resolved
+        // states reset each frame; only the dominant layer's chosen mode repopulates one of them.
         InCurrent._DominantLookAt.Reset();
+        InCurrent._ViewTarget         = FCk_Camera_ViewTargetResolved{};
         InCurrent._DominantLayerClass = nullptr;
         if (ck::IsValid(Dominant))
         {
             const auto& DominantParams = Dominant.Get<FFragment_CameraLayer_Params>();
             InCurrent._DominantLayerClass = DominantParams.Get_LayerClass();
 
-            if (const auto& LookAt = DominantParams.Get_LookAtTarget();
-                ck::IsValid(LookAt))
+            const auto& CameraTarget = DominantParams.Get_CameraTarget();
+            if (const auto& TargetHandle = CameraTarget.Get_Target();
+                ck::IsValid(TargetHandle))
             {
-                InCurrent._DominantLookAt = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(LookAt);
+                switch (CameraTarget.Get_Mode())
+                {
+                    case ECk_Camera_TargetMode::LookAt:
+                    {
+                        InCurrent._DominantLookAt = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TargetHandle);
+                        break;
+                    }
+                    case ECk_Camera_TargetMode::ViewTarget:
+                    {
+                        InCurrent._ViewTarget._IsActive = true;
+                        InCurrent._ViewTarget._Target   = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(TargetHandle);
+                        InCurrent._ViewTarget._Alpha    = DominantAlpha;
+                        break;
+                    }
+                }
             }
         }
     }
@@ -253,9 +271,19 @@ namespace ck
         // stops, drifting the camera. While the mouse is moving, input re-pushes a fresh intention each frame.
         InCurrent._OrientationIntention = FVector::ZeroVector;
 
+        // ViewTarget override (after FPov::Run): blend the final composed POV toward the dominant layer's view-target
+        // transform on the layer's own alpha — a SetViewTargetWithBlend-style move that overrides boom/framing rather
+        // than the anchor. Inactive = the rig POV passes through untouched. FOV is unaffected (the layer's FOV
+        // modifier eases it independently).
+        auto FinalXf = InCurrent._PovState._CameraTransform;
+        if (InCurrent._ViewTarget._IsActive)
+        {
+            FinalXf.Blend(InCurrent._PovState._CameraTransform, InCurrent._ViewTarget._Target, InCurrent._ViewTarget._Alpha);
+        }
+
         auto ViewInfo = FMinimalViewInfo{};
-        ViewInfo.Location    = InCurrent._PovState._CameraTransform.GetLocation();
-        ViewInfo.Rotation    = InCurrent._PovState._CameraTransform.Rotator();
+        ViewInfo.Location    = FinalXf.GetLocation();
+        ViewInfo.Rotation    = FinalXf.Rotator();
         ViewInfo.FOV         = Sensor.Get_FOV();
         ViewInfo.DesiredFOV  = Sensor.Get_FOV();
         if (Sensor.Get_ConstrainAspectRatio())

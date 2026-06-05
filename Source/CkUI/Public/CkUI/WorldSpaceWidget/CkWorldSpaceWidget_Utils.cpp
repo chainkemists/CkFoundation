@@ -44,7 +44,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_Widget()), TEXT("Cannot Create WorldSpaceWidget because the Widget supplied is INVALID"))
     { return {}; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InAttachTo, ck::IsValid_Policy_NullptrOnly{}), TEXT("Cannot Create WorldSpaceWidget because the Component to attach to is INVALID"))
+    CK_ENSURE_IF_NOT(ck::IsValid(InAttachTo), TEXT("Cannot Create WorldSpaceWidget because the Component to attach to is INVALID"))
     { return {}; }
 
     auto EntityAtLocation = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_TransientOwner(InAttachTo);
@@ -153,7 +153,7 @@ auto
 {
     const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(World),
         TEXT("Cannot Create WorldComponent WorldSpaceWidget: invalid World for entity [{}]"), InHandle)
     { return {}; }
 
@@ -162,7 +162,7 @@ auto
 
     auto WidgetComponent = NewObject<UWidgetComponent>(World);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(WidgetComponent, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(WidgetComponent),
         TEXT("Failed to create UWidgetComponent for WorldSpaceWidget"))
     { return {}; }
 
