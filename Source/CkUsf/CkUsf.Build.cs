@@ -12,6 +12,7 @@ public class CkUsf : CkModuleRules
             "CoreUObject",
             "Engine",
             "RenderCore",
+            "Projects",
             "GameplayTags",
 
             "CkCore",
