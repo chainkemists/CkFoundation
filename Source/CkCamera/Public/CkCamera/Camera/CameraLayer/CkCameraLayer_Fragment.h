@@ -79,10 +79,18 @@ namespace ck
         float _TargetAlpha = 1.0f;
         float _BlendRate   = 1000.0f; // ~instant unless overridden
 
+        // Edge-detect guards so the blend processor fires FullyBlendedIn / FullyBlendedOut
+        // exactly once per crossing. Each fire resets the opposite guard, so a layer that
+        // blends in, out, then in again re-fires correctly.
+        bool _FiredBlendedIn  = false;
+        bool _FiredBlendedOut = false;
+
     public:
         CK_PROPERTY(_Alpha);
         CK_PROPERTY(_TargetAlpha);
         CK_PROPERTY(_BlendRate);
+        CK_PROPERTY(_FiredBlendedIn);
+        CK_PROPERTY(_FiredBlendedOut);
     };
 
     // ----------------------------------------------------------------------------------------------------------------
