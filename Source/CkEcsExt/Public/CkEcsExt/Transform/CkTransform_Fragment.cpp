@@ -46,6 +46,17 @@ static struct FTransformRepHandlerRegistrar
                     }
 
                     UCk_Utils_Transform_UE::Request_SetLocation(HandleTransform, FCk_Request_Transform_SetLocation{Location});
+                },
+                .OnAdd = [](FCk_Handle& Entity, const FInstancedStruct& Data)
+                {
+                    // Initial replication arrives as an Add, never a Change — snap directly
+                    // (no interpolation offset, which would glide the entity in from origin).
+                    auto HandleTransform = UCk_Utils_Transform_UE::Cast(Entity);
+                    if (ck::Is_NOT_Valid(HandleTransform))
+                    { return; }
+
+                    UCk_Utils_Transform_UE::Request_SetLocation(HandleTransform,
+                        FCk_Request_Transform_SetLocation{Data.Get<FCk_RepData_Location>().Value});
                 }
             });
 
@@ -70,6 +81,16 @@ static struct FTransformRepHandlerRegistrar
                     }
 
                     UCk_Utils_Transform_UE::Request_SetRotation(HandleTransform, FCk_Request_Transform_SetRotation{Rotation.Rotator()});
+                },
+                .OnAdd = [](FCk_Handle& Entity, const FInstancedStruct& Data)
+                {
+                    // Initial replication arrives as an Add, never a Change — snap directly.
+                    auto HandleTransform = UCk_Utils_Transform_UE::Cast(Entity);
+                    if (ck::Is_NOT_Valid(HandleTransform))
+                    { return; }
+
+                    UCk_Utils_Transform_UE::Request_SetRotation(HandleTransform,
+                        FCk_Request_Transform_SetRotation{Data.Get<FCk_RepData_Rotation>().Value.Rotator()});
                 }
             });
 
@@ -84,6 +105,17 @@ static struct FTransformRepHandlerRegistrar
 
                     UCk_Utils_Transform_UE::Request_SetScale(HandleTransform,
                         FCk_Request_Transform_SetScale{New.Get<FCk_RepData_Scale>().Value}
+                            .Set_LocalWorld(ECk_LocalWorld::World));
+                },
+                .OnAdd = [](FCk_Handle& Entity, const FInstancedStruct& Data)
+                {
+                    // Initial replication arrives as an Add, never a Change — snap directly.
+                    auto HandleTransform = UCk_Utils_Transform_UE::Cast(Entity);
+                    if (ck::Is_NOT_Valid(HandleTransform))
+                    { return; }
+
+                    UCk_Utils_Transform_UE::Request_SetScale(HandleTransform,
+                        FCk_Request_Transform_SetScale{Data.Get<FCk_RepData_Scale>().Value}
                             .Set_LocalWorld(ECk_LocalWorld::World));
                 }
             });
