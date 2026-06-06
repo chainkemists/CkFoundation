@@ -1,0 +1,174 @@
+// /CkUsf/Looks/Aiekick.ush
+// Port of the displacement-sphere raymarcher by Stephane Cuillerdier (@Aiekick, 2016),
+// CC BY-NC-SA 3.0 (softshadow/AO/normal from IQ). Runs per-pixel over the mesh UV.
+//   iChannel0 = reflection/refraction cubemap (TextureCube param)
+//   iChannel1 = displacement noise (Texture2D param)
+// dstepf is GLSL's mutable global; here it is threaded as `inout` through map() and callers.
+#pragma once
+#include "/CkUsf/Common.ush"
+
+// Params order (must match LookDefinition): iChannel0 (TextureCube), iChannel1 (Texture2D), then Time, UV.
+
+float4 Ak_Displ(float3 p, Texture2D Ch1, SamplerState Ch1s, float Tm)
+{
+    float2 g = p.xz;
+    float3 col = Texture2DSampleLevel(Ch1, Ch1s, g + Tm * 0.1, 0.0).rrr;
+    col = clamp(col, 0.0, 1.0);
+    float dist = dot(col, float3(0.1, 0.1, 0.1));
+    return float4(dist, col);
+}
+
+float4 Ak_Map(float3 p, Texture2D Ch1, SamplerState Ch1s, float Tm, inout float dstepf)
+{
+    float4 disp1 = Ak_Displ(p * 0.1, Ch1, Ch1s, Tm);
+    float4 disp2 = Ak_Displ(p * 0.2, Ch1, Ch1s, Tm);
+    float m = length(p);
+    float me = m - 4.78 + disp1.x;
+    float mi = m - 4.5 - disp1.x;
+    float mk = m - 4.5 + disp2.x;
+    float mei = max(-mi, me);
+    if (mk < mei)
+    {
+        dstepf += 0.025;
+        return float4(mk, disp2.y * float3(0.2, 0.5, 0.2));
+    }
+    dstepf += 0.015;
+    return float4(mei, disp1.y * float3(0.5, 0.2, 0.5));
+}
+
+float Ak_SoftShadow(float3 ro, float3 rd, float mint, float tmax, Texture2D Ch1, SamplerState Ch1s, float Tm, inout float dstepf)
+{
+    float res = 1.0;
+    float t = mint;
+    for (int i = 0; i < 16; i++)
+    {
+        float h = Ak_Map(ro + rd * t, Ch1, Ch1s, Tm, dstepf).x;
+        res = min(res, 8.0 * h / t);
+        t += clamp(h, 0.02, 0.10);
+        if (h < 0.001 || t > tmax) break;
+    }
+    return clamp(res, 0.0, 1.0);
+}
+
+float3 Ak_CalcNormal(float3 pos, Texture2D Ch1, SamplerState Ch1s, float Tm, inout float dstepf)
+{
+    float3 eps = float3(0.03, 0.0, 0.0);
+    float3 nor = float3(
+        Ak_Map(pos + eps.xyy, Ch1, Ch1s, Tm, dstepf).x - Ak_Map(pos - eps.xyy, Ch1, Ch1s, Tm, dstepf).x,
+        Ak_Map(pos + eps.yxy, Ch1, Ch1s, Tm, dstepf).x - Ak_Map(pos - eps.yxy, Ch1, Ch1s, Tm, dstepf).x,
+        Ak_Map(pos + eps.yyx, Ch1, Ch1s, Tm, dstepf).x - Ak_Map(pos - eps.yyx, Ch1, Ch1s, Tm, dstepf).x);
+    return normalize(nor);
+}
+
+float Ak_CalcAO(float3 pos, float3 nor, Texture2D Ch1, SamplerState Ch1s, float Tm, inout float dstepf)
+{
+    float occ = 0.0;
+    float sca = 1.0;
+    for (int i = 0; i < 5; i++)
+    {
+        float hr = 0.01 + 0.12 * float(i) / 4.0;
+        float3 aopos = nor * hr + pos;
+        float dd = Ak_Map(aopos, Ch1, Ch1s, Tm, dstepf).x;
+        occ += -(dd - hr) * sca;
+        sca *= 0.95;
+    }
+    return clamp(1.0 - 3.0 * occ, 0.0, 1.0);
+}
+
+float Ak_March(float3 ro, float3 rd, float rmPrec, float maxd, float mapPrec, Texture2D Ch1, SamplerState Ch1s, float Tm, inout float dstepf)
+{
+    float s = rmPrec, so = s;
+    float d = 0.0;
+    for (int i = 0; i < 250; i++)
+    {
+        if (s < rmPrec || s > maxd) break;
+        s = Ak_Map(ro + rd * d, Ch1, Ch1s, Tm, dstepf).x;
+        s *= (s > so ? 1.5 : 1.0); so = s;
+        d += s * mapPrec;
+    }
+    return d;
+}
+
+FCkUsf_SurfaceOutput CkUsf_Look_Aiekick(
+    TextureCube iChannel0, SamplerState iChannel0Sampler,
+    Texture2D iChannel1, SamplerState iChannel1Sampler,
+    float Time, float2 UV)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float dstepf = 0.0;
+    float time = Time * 0.25;
+    float cam_a = time;
+    float cam_e = 5.52;
+    float cam_d = 1.88;
+    float3 camUp = float3(0.0, 1.0, 0.0);
+    float3 camView = float3(0.0, 0.0, 0.0);
+    float li = 0.6;
+    float prec = 0.00001;
+    float maxd = 50.0;
+    float refl_i = 0.45;
+    float refr_a = 0.7;
+    float refr_i = 0.8;
+    float bii = 0.35;
+    float marchPrecision = 0.5;
+
+    float2 uv = UV * 2.0 - 1.0; // aspect ~1 on the sphere
+
+    float3 col = float3(0.0, 0.0, 0.0);
+    float3 ro = float3(-sin(cam_a) * cam_d, cam_e + 1.0, cos(cam_a) * cam_d);
+    float3 rov = normalize(camView - ro);
+    float3 u = normalize(cross(camUp, rov));
+    float3 v = cross(rov, u);
+    float3 rd = normalize(rov + uv.x * u + uv.y * v);
+
+    float b = bii;
+    float d = Ak_March(ro, rd, prec, maxd, marchPrecision, iChannel1, iChannel1Sampler, time, dstepf);
+
+    if (d < maxd)
+    {
+        float3 p = ro + rd * d;
+        float3 n = Ak_CalcNormal(p, iChannel1, iChannel1Sampler, time, dstepf);
+        b = li;
+
+        float3 reflRay = reflect(rd, n);
+        float3 refrRay = refract(rd, n, refr_a);
+        float3 cubeRefl = TextureCubeSampleLevel(iChannel0, iChannel0Sampler, reflRay, 0.0).rgb * refl_i;
+        float3 cubeRefr = TextureCubeSampleLevel(iChannel0, iChannel0Sampler, refrRay, 0.0).rgb * refr_i;
+        col = cubeRefl + cubeRefr + pow(b, 15.0);
+
+        float occ = Ak_CalcAO(p, n, iChannel1, iChannel1Sampler, time, dstepf);
+        float3 lig = normalize(float3(-0.6, 0.7, -0.5));
+        float amb = clamp(0.5 + 0.5 * n.y, 0.0, 1.0);
+        float dif = clamp(dot(n, lig), 0.0, 1.0);
+        float bac = clamp(dot(n, normalize(float3(-lig.x, 0.0, -lig.z))), 0.0, 1.0) * clamp(1.0 - p.y, 0.0, 1.0);
+        float dom = smoothstep(-0.1, 0.1, reflRay.y);
+        float fre = pow(clamp(1.0 + dot(n, rd), 0.0, 1.0), 2.0);
+        float spe = pow(clamp(dot(reflRay, lig), 0.0, 1.0), 16.0);
+
+        dif *= Ak_SoftShadow(p, lig, 0.02, 2.5, iChannel1, iChannel1Sampler, time, dstepf);
+        dom *= Ak_SoftShadow(p, reflRay, 0.02, 2.5, iChannel1, iChannel1Sampler, time, dstepf);
+
+        float3 brdf = float3(0.0, 0.0, 0.0);
+        brdf += 1.20 * dif * float3(1.00, 0.90, 0.60);
+        brdf += 1.20 * spe * float3(1.00, 0.90, 0.60) * dif;
+        brdf += 0.30 * amb * float3(0.50, 0.70, 1.00) * occ;
+        brdf += 0.40 * dom * float3(0.50, 0.70, 1.00) * occ;
+        brdf += 0.30 * bac * float3(0.25, 0.25, 0.25) * occ;
+        brdf += 0.40 * fre * float3(1.00, 1.00, 1.00) * occ;
+        brdf += 0.02;
+        col = col * brdf;
+
+        col = lerp(col, float3(0.8, 0.9, 1.0), 1.0 - exp(-0.0005 * d * d));
+        col = lerp(col, Ak_Map(p, iChannel1, iChannel1Sampler, time, dstepf).yzw, 0.5);
+    }
+    else
+    {
+        b += 0.1;
+        col = TextureCubeSample(iChannel0, iChannel0Sampler, rd).rgb;
+    }
+
+    O.EmissiveColor = col * dstepf;
+    O.BaseColor = float3(0.0, 0.0, 0.0);
+    O.Opacity = 1.0;
+    return O;
+}

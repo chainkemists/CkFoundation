@@ -1,0 +1,195 @@
+// /CkUsf/Looks/Seascape.ush
+// Port of "Seascape" by Alexander Alekseev aka TDM (2014), CC BY-NC-SA 3.0.
+// Fully procedural raymarched ocean — runs per-pixel over the mesh UV (acts as a viewport).
+#pragma once
+#include "/CkUsf/Common.ush"
+
+// Params: Speed (Scalar), then Time, UV.
+
+#define SEA_NUM_STEPS 32
+#define SEA_PI 3.141592
+#define SEA_EPSILON 1e-3
+#define SEA_ITER_GEOMETRY 3
+#define SEA_ITER_FRAGMENT 5
+#define SEA_HEIGHT 0.6
+#define SEA_CHOPPY 4.0
+#define SEA_FREQ 0.16
+#define SEA_SPEED 0.8
+
+static const float3 SEA_BASE        = float3(0.0, 0.09, 0.18);
+static const float3 SEA_WATER_COLOR = float3(0.8, 0.9, 0.6) * 0.6;
+
+float Sea_Hash(float2 p)
+{
+    float h = dot(p, float2(127.1, 311.7));
+    return frac(sin(h) * 43758.5453123);
+}
+
+float Sea_Noise(float2 p)
+{
+    float2 i = floor(p);
+    float2 f = frac(p);
+    float2 u = f * f * (3.0 - 2.0 * f);
+    return -1.0 + 2.0 * lerp(
+        lerp(Sea_Hash(i + float2(0.0, 0.0)), Sea_Hash(i + float2(1.0, 0.0)), u.x),
+        lerp(Sea_Hash(i + float2(0.0, 1.0)), Sea_Hash(i + float2(1.0, 1.0)), u.x), u.y);
+}
+
+float Sea_Diffuse(float3 n, float3 l, float p) { return pow(dot(n, l) * 0.4 + 0.6, p); }
+float Sea_Specular(float3 n, float3 l, float3 e, float s)
+{
+    float nrm = (s + 8.0) / (SEA_PI * 8.0);
+    return pow(max(dot(reflect(e, n), l), 0.0), s) * nrm;
+}
+
+float3 Sea_GetSkyColor(float3 e)
+{
+    e.y = (max(e.y, 0.0) * 0.8 + 0.2) * 0.8;
+    return float3(pow(1.0 - e.y, 2.0), 1.0 - e.y, 0.6 + (1.0 - e.y) * 0.4) * 1.1;
+}
+
+float Sea_Octave(float2 uv, float choppy)
+{
+    uv += Sea_Noise(uv);
+    float2 wv = 1.0 - abs(sin(uv));
+    float2 swv = abs(cos(uv));
+    wv = lerp(wv, swv, wv);
+    return pow(1.0 - pow(wv.x * wv.y, 0.65), choppy);
+}
+
+// octave_m = mat2(1.6,1.2,-1.2,1.6) applied as GLSL `uv * octave_m` (explicit to avoid major-order bugs).
+float2 Sea_OctaveM(float2 uv)
+{
+    return float2(1.6 * uv.x + 1.2 * uv.y, -1.2 * uv.x + 1.6 * uv.y);
+}
+
+float Sea_Map(float3 p, float Tm)
+{
+    float SeaTime = 1.0 + Tm * SEA_SPEED;
+    float freq = SEA_FREQ;
+    float amp = SEA_HEIGHT;
+    float choppy = SEA_CHOPPY;
+    float2 uv = p.xz; uv.x *= 0.75;
+
+    float d, h = 0.0;
+    for (int i = 0; i < SEA_ITER_GEOMETRY; i++)
+    {
+        d  = Sea_Octave((uv + SeaTime) * freq, choppy);
+        d += Sea_Octave((uv - SeaTime) * freq, choppy);
+        h += d * amp;
+        uv = Sea_OctaveM(uv); freq *= 1.9; amp *= 0.22;
+        choppy = lerp(choppy, 1.0, 0.2);
+    }
+    return p.y - h;
+}
+
+float Sea_MapDetailed(float3 p, float Tm)
+{
+    float SeaTime = 1.0 + Tm * SEA_SPEED;
+    float freq = SEA_FREQ;
+    float amp = SEA_HEIGHT;
+    float choppy = SEA_CHOPPY;
+    float2 uv = p.xz; uv.x *= 0.75;
+
+    float d, h = 0.0;
+    for (int i = 0; i < SEA_ITER_FRAGMENT; i++)
+    {
+        d  = Sea_Octave((uv + SeaTime) * freq, choppy);
+        d += Sea_Octave((uv - SeaTime) * freq, choppy);
+        h += d * amp;
+        uv = Sea_OctaveM(uv); freq *= 1.9; amp *= 0.22;
+        choppy = lerp(choppy, 1.0, 0.2);
+    }
+    return p.y - h;
+}
+
+float3 Sea_GetSeaColor(float3 p, float3 n, float3 l, float3 eye, float3 dist)
+{
+    float fresnel = clamp(1.0 - dot(n, -eye), 0.0, 1.0);
+    fresnel = min(fresnel * fresnel * fresnel, 0.5);
+
+    float3 reflected = Sea_GetSkyColor(reflect(eye, n));
+    float3 refracted = SEA_BASE + Sea_Diffuse(n, l, 80.0) * SEA_WATER_COLOR * 0.12;
+
+    float3 color = lerp(refracted, reflected, fresnel);
+
+    float atten = max(1.0 - dot(dist, dist) * 0.001, 0.0);
+    color += SEA_WATER_COLOR * (p.y - SEA_HEIGHT) * 0.18 * atten;
+    color += Sea_Specular(n, l, eye, 600.0 * rsqrt(dot(dist, dist)));
+    return color;
+}
+
+float3 Sea_GetNormal(float3 p, float eps, float Tm)
+{
+    float3 n;
+    n.y = Sea_MapDetailed(p, Tm);
+    n.x = Sea_MapDetailed(float3(p.x + eps, p.y, p.z), Tm) - n.y;
+    n.z = Sea_MapDetailed(float3(p.x, p.y, p.z + eps), Tm) - n.y;
+    n.y = eps;
+    return normalize(n);
+}
+
+float Sea_HeightMapTracing(float3 ori, float3 dir, out float3 p, float Tm)
+{
+    float tm = 0.0;
+    float tx = 1000.0;
+    float hx = Sea_Map(ori + dir * tx, Tm);
+    if (hx > 0.0) { p = ori + dir * tx; return tx; }
+    float hm = Sea_Map(ori, Tm);
+    for (int i = 0; i < SEA_NUM_STEPS; i++)
+    {
+        float tmid = lerp(tm, tx, hm / (hm - hx));
+        p = ori + dir * tmid;
+        float hmid = Sea_Map(p, Tm);
+        if (hmid < 0.0) { tx = tmid; hx = hmid; }
+        else            { tm = tmid; hm = hmid; }
+        if (abs(hmid) < SEA_EPSILON) break;
+    }
+    return lerp(tm, tx, hm / (hm - hx));
+}
+
+FCkUsf_SurfaceOutput CkUsf_Look_Seascape(float Speed, float Time, float2 UV)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float Tm = Time * Speed;
+    float time = Tm * 0.3;
+
+    // Screen-style coords from mesh UV (aspect ~1 on the sphere).
+    float2 uv = UV * 2.0 - 1.0;
+
+    // Camera (fromEuler folded into an explicit basis to keep matrix order correct).
+    float3 ang = float3(sin(time * 3.0) * 0.1, sin(time) * 0.2 + 0.3, time);
+    float3 ori = float3(0.0, 3.5, time * 5.0);
+    float3 dir = normalize(float3(uv.x, uv.y, -2.0)); dir.z += length(uv) * 0.14;
+    dir = normalize(dir);
+
+    // fromEuler(ang): rows are the GLSL columns; GLSL `dir * m` == mul(M, dir).
+    float2 a1 = float2(sin(ang.x), cos(ang.x));
+    float2 a2 = float2(sin(ang.y), cos(ang.y));
+    float2 a3 = float2(sin(ang.z), cos(ang.z));
+    float3 c0 = float3(a1.y * a3.y + a1.x * a2.x * a3.x, a1.y * a2.x * a3.x + a3.y * a1.x, -a2.y * a3.x);
+    float3 c1 = float3(-a2.y * a1.x, a1.y * a2.y, a2.x);
+    float3 c2 = float3(a3.y * a1.x * a2.x + a1.y * a3.x, a1.x * a3.x - a1.y * a3.y * a2.x, a2.y * a3.y);
+    float3x3 M = float3x3(c0, c1, c2);
+    dir = mul(M, dir);
+
+    float3 p;
+    Sea_HeightMapTracing(ori, dir, p, Tm);
+    float3 dist = p - ori;
+    float eps = dot(dist, dist) * 0.0001;
+    float3 n = Sea_GetNormal(p, eps, Tm);
+    float3 light = normalize(float3(0.0, 1.0, 0.8));
+
+    float3 color = lerp(
+        Sea_GetSkyColor(dir),
+        Sea_GetSeaColor(p, n, light, dir, dist),
+        pow(smoothstep(0.0, -0.02, dir.y), 0.2));
+
+    color = pow(color, float3(0.65, 0.65, 0.65)); // post tonemap from the original
+
+    O.EmissiveColor = color;
+    O.BaseColor = float3(0.0, 0.0, 0.0);
+    O.Opacity = 1.0;
+    return O;
+}
