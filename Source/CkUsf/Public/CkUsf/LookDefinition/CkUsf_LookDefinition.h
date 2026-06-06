@@ -21,7 +21,8 @@ enum class ECk_Usf_ParamType : uint8
 {
     Scalar,
     Vector,
-    Texture
+    Texture2D,
+    TextureCube
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -43,8 +44,10 @@ struct CKUSF_API FCk_Usf_ParamDesc
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     FLinearColor _DefaultVector = FLinearColor::Black;
 
+    // Object path for Texture2D / TextureCube params, e.g.
+    // "/Engine/MapTemplates/Sky/DaylightAmbientCubemap.DaylightAmbientCubemap".
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
-    TSoftObjectPtr<UTexture> _DefaultTexture;
+    FString _DefaultTexturePath;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -73,5 +76,7 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     FName _LookName = NAME_None;
 
-    auto Get_EffectiveLookName() const -> FName;
+    UFUNCTION(BlueprintCallable, Category = "CkUsf",
+              DisplayName = "[Ck][Usf] Get Effective Look Name")
+    FName Get_EffectiveLookName() const;
 };
