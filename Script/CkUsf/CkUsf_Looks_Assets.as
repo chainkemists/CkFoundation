@@ -19,4 +19,142 @@ namespace CkUsf
         Speed._DefaultScalar = 3.0;
         _Parameters.Add(Speed);
     }
+
+    asset Plasma of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/Plasma.ush";
+        _UshFunctionName = n"CkUsf_Look_Plasma";
+        _Domain          = ECk_Usf_Domain::SurfaceUnlit;
+        _LookName        = n"Plasma";
+
+        FCk_Usf_ParamDesc ColorA;
+        ColorA._Name = n"ColorA";
+        ColorA._Type = ECk_Usf_ParamType::Vector;
+        ColorA._DefaultVector = FLinearColor(1.0, 0.1, 0.4, 1.0);
+        _Parameters.Add(ColorA);
+
+        FCk_Usf_ParamDesc ColorB;
+        ColorB._Name = n"ColorB";
+        ColorB._Type = ECk_Usf_ParamType::Vector;
+        ColorB._DefaultVector = FLinearColor(0.1, 0.6, 1.0, 1.0);
+        _Parameters.Add(ColorB);
+
+        FCk_Usf_ParamDesc Speed;
+        Speed._Name = n"Speed";
+        Speed._Type = ECk_Usf_ParamType::Scalar;
+        Speed._DefaultScalar = 1.5;
+        _Parameters.Add(Speed);
+    }
+
+    asset Voronoi of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/Voronoi.ush";
+        _UshFunctionName = n"CkUsf_Look_Voronoi";
+        _Domain          = ECk_Usf_Domain::SurfaceUnlit;
+        _LookName        = n"Voronoi";
+
+        FCk_Usf_ParamDesc CellColor;
+        CellColor._Name = n"CellColor";
+        CellColor._Type = ECk_Usf_ParamType::Vector;
+        CellColor._DefaultVector = FLinearColor(0.2, 1.0, 0.6, 1.0);
+        _Parameters.Add(CellColor);
+
+        FCk_Usf_ParamDesc Scale;
+        Scale._Name = n"Scale";
+        Scale._Type = ECk_Usf_ParamType::Scalar;
+        Scale._DefaultScalar = 8.0;
+        _Parameters.Add(Scale);
+
+        FCk_Usf_ParamDesc Speed;
+        Speed._Name = n"Speed";
+        Speed._Type = ECk_Usf_ParamType::Scalar;
+        Speed._DefaultScalar = 1.0;
+        _Parameters.Add(Speed);
+    }
+
+    asset Julia of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/Julia.ush";
+        _UshFunctionName = n"CkUsf_Look_Julia";
+        _Domain          = ECk_Usf_Domain::SurfaceUnlit;
+        _LookName        = n"Julia";
+
+        FCk_Usf_ParamDesc ColorInner;
+        ColorInner._Name = n"ColorInner";
+        ColorInner._Type = ECk_Usf_ParamType::Vector;
+        ColorInner._DefaultVector = FLinearColor(1.0, 0.5, 0.1, 1.0);
+        _Parameters.Add(ColorInner);
+
+        FCk_Usf_ParamDesc ColorOuter;
+        ColorOuter._Name = n"ColorOuter";
+        ColorOuter._Type = ECk_Usf_ParamType::Vector;
+        ColorOuter._DefaultVector = FLinearColor(0.1, 0.2, 0.8, 1.0);
+        _Parameters.Add(ColorOuter);
+
+        FCk_Usf_ParamDesc Speed;
+        Speed._Name = n"Speed";
+        Speed._Type = ECk_Usf_ParamType::Scalar;
+        Speed._DefaultScalar = 1.0;
+        _Parameters.Add(Speed);
+    }
+
+    asset FbmWarp of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/FbmWarp.ush";
+        _UshFunctionName = n"CkUsf_Look_FbmWarp";
+        _Domain          = ECk_Usf_Domain::SurfaceUnlit;
+        _LookName        = n"FbmWarp";
+
+        FCk_Usf_ParamDesc ColorLow;
+        ColorLow._Name = n"ColorLow";
+        ColorLow._Type = ECk_Usf_ParamType::Vector;
+        ColorLow._DefaultVector = FLinearColor(0.05, 0.0, 0.1, 1.0);
+        _Parameters.Add(ColorLow);
+
+        FCk_Usf_ParamDesc ColorHigh;
+        ColorHigh._Name = n"ColorHigh";
+        ColorHigh._Type = ECk_Usf_ParamType::Vector;
+        ColorHigh._DefaultVector = FLinearColor(1.0, 0.7, 0.2, 1.0);
+        _Parameters.Add(ColorHigh);
+
+        FCk_Usf_ParamDesc Speed;
+        Speed._Name = n"Speed";
+        Speed._Type = ECk_Usf_ParamType::Scalar;
+        Speed._DefaultScalar = 1.0;
+        _Parameters.Add(Speed);
+    }
+
+    asset Seascape of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/Seascape.ush";
+        _UshFunctionName = n"CkUsf_Look_Seascape";
+        _Domain          = ECk_Usf_Domain::SurfaceUnlit;
+        _LookName        = n"Seascape";
+
+        FCk_Usf_ParamDesc Speed;
+        Speed._Name = n"Speed";
+        Speed._Type = ECk_Usf_ParamType::Scalar;
+        Speed._DefaultScalar = 1.0;
+        _Parameters.Add(Speed);
+    }
+
+    asset Aiekick of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/Aiekick.ush";
+        _UshFunctionName = n"CkUsf_Look_Aiekick";
+        _Domain          = ECk_Usf_Domain::SurfaceUnlit;
+        _LookName        = n"Aiekick";
+
+        FCk_Usf_ParamDesc Cube;
+        Cube._Name = n"iChannel0";
+        Cube._Type = ECk_Usf_ParamType::TextureCube;
+        Cube._DefaultTexturePath = "/Engine/MapTemplates/Sky/DaylightAmbientCubemap.DaylightAmbientCubemap";
+        _Parameters.Add(Cube);
+
+        FCk_Usf_ParamDesc Noise;
+        Noise._Name = n"iChannel1";
+        Noise._Type = ECk_Usf_ParamType::Texture2D;
+        Noise._DefaultTexturePath = "/Engine/EngineMaterials/Good64x64TilingNoiseHighFreq.Good64x64TilingNoiseHighFreq";
+        _Parameters.Add(Noise);
+    }
 }
