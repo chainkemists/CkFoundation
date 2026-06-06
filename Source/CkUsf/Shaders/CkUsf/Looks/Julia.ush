@@ -1,0 +1,49 @@
+// /CkUsf/Looks/Julia.ush
+#pragma once
+#include "/CkUsf/Common.ush"
+
+// Params: ColorInner (Vector), ColorOuter (Vector), Speed (Scalar), then Time, UV.
+// Escape-time Julia set with a constant that orbits over time. Per-pixel iterated
+// math — the heavy-showcase look. Smooth (continuous) iteration count for clean bands.
+FCkUsf_SurfaceOutput CkUsf_Look_Julia(float3 ColorInner, float3 ColorOuter, float Speed, float Time, float2 UV)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    // Centered, aspect-neutral coords with a gentle zoom breath.
+    float Zoom = 1.5 + 0.3 * sin(Time * Speed * 0.25);
+    float2 Z = (UV - 0.5) * 2.0 * Zoom;
+
+    // Orbiting Julia constant traces a smooth path through interesting territory.
+    float  T = Time * Speed * 0.5;
+    float2 C = float2(0.7885 * cos(T), 0.7885 * sin(T * 1.13));
+
+    const int MaxIter = 96;
+    int   Iter = 0;
+    float Mag2 = 0.0;
+    for (int I = 0; I < MaxIter; ++I)
+    {
+        // z = z^2 + c
+        Z = float2(Z.x * Z.x - Z.y * Z.y, 2.0 * Z.x * Z.y) + C;
+        Mag2 = dot(Z, Z);
+        if (Mag2 > 16.0) { break; }
+        Iter = I;
+    }
+
+    if (Mag2 <= 16.0)
+    {
+        // Inside the set — deep core colour.
+        O.EmissiveColor = ColorInner * 0.15;
+    }
+    else
+    {
+        // Smooth iteration count -> vivid palette band.
+        float Smooth = float(Iter) + 1.0 - log2(log2(Mag2) * 0.5);
+        float M = frac(Smooth * 0.06 + Time * Speed * 0.1);
+        float3 Banded = lerp(ColorOuter, ColorInner, 0.5 + 0.5 * sin(Smooth * 0.35));
+        O.EmissiveColor = Banded * (1.0 + M) * 1.6;
+    }
+
+    O.BaseColor = float3(0.0, 0.0, 0.0);
+    O.Opacity = 1.0;
+    return O;
+}

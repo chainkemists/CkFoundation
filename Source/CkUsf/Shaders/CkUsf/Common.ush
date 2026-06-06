@@ -22,3 +22,52 @@ FCkUsf_SurfaceOutput CkUsf_DefaultSurface()
     O.Opacity = 1.0;
     return O;
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+// Hash / noise / fbm helpers shared by the procedural looks.
+// --------------------------------------------------------------------------------------------------------------------
+
+float CkUsf_Hash21(float2 P)
+{
+    float3 P3 = frac(float3(P.xyx) * 0.1031);
+    P3 += dot(P3, P3.yzx + 33.33);
+    return frac((P3.x + P3.y) * P3.z);
+}
+
+float2 CkUsf_Hash22(float2 P)
+{
+    float3 P3 = frac(float3(P.xyx) * float3(0.1031, 0.1030, 0.0973));
+    P3 += dot(P3, P3.yzx + 33.33);
+    return frac((P3.xx + P3.yz) * P3.zy);
+}
+
+float CkUsf_ValueNoise(float2 P)
+{
+    float2 I = floor(P);
+    float2 F = frac(P);
+    float2 U = F * F * (3.0 - 2.0 * F);
+    float A = CkUsf_Hash21(I + float2(0.0, 0.0));
+    float B = CkUsf_Hash21(I + float2(1.0, 0.0));
+    float C = CkUsf_Hash21(I + float2(0.0, 1.0));
+    float D = CkUsf_Hash21(I + float2(1.0, 1.0));
+    return lerp(lerp(A, B, U.x), lerp(C, D, U.x), U.y);
+}
+
+float CkUsf_Fbm(float2 P)
+{
+    float V = 0.0;
+    float Amp = 0.5;
+    for (int I = 0; I < 5; ++I)
+    {
+        V += Amp * CkUsf_ValueNoise(P);
+        P *= 2.0;
+        Amp *= 0.5;
+    }
+    return V;
+}
+
+// Cosine palette (Inigo Quilez): cheap, vivid color ramps from a scalar T.
+float3 CkUsf_Palette(float T, float3 A, float3 B, float3 C, float3 D)
+{
+    return A + B * cos(6.28318 * (C * T + D));
+}
