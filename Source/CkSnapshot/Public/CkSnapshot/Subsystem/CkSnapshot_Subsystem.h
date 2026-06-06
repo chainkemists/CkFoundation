@@ -99,13 +99,18 @@ public:
 private:
     auto DoGet_SnapshotSource() const -> FCk_Handle;
 
-    // ---- M2a load orchestration -------------------------------------------------------------------------------
-    enum class ELoadPhase : uint8 { Idle, TearingDown };
+    // ---- M2b-1 load orchestration (extends M2a) ---------------------------------------------------------------
+    enum class ELoadPhase : uint8 { Idle, TearingDown, Traveling, AwaitingWorld, Restoring, RespawningActors };
 
-    auto DoInitiate_Teardown() -> void;                  // Request_DestroyEntity all gameplay roots; record them
-    auto DoIs_TeardownComplete() const -> bool;          // all roots invalid AND no FTag_DestroyEntity_* remain
+    auto DoInitiate_Teardown() -> void;                  // M2a: Request_DestroyEntity all gameplay roots; record them
+    auto DoIs_TeardownComplete() const -> bool;          // M2a: all requested roots now invalid
+    auto DoInitiate_Travel() -> void;                    // M2b: OpenLevel the current map (once)
+    auto DoIs_NewWorldReady() const -> bool;             // M2b: a new world (!= pre-travel) HasBegunPlay
+    auto DoRun_Restore() -> FCk_Snapshot_LoadReport;     // M2b: Run_Restore into the post-travel world
+    auto DoRespawn_BridgedActors() -> int32;             // M2b: spawn + rebind actors from FFragment_ActorSpawnIntent
     auto DoTick_Load(float InDeltaSeconds) -> bool;      // FTSTicker callback; advances the machine
-    auto DoFinish_Load(const FCk_Snapshot_LoadReport& InReport) -> void; // clear flag, fire delegate/signal, reset
+    auto DoFinish_Load(const FCk_Snapshot_LoadReport& InReport) -> void; // M2a: clear flag, fire delegate/signal, reset
+    auto DoSet_ReconstitutionFlag(bool InInProgress) -> void; // M2b: set flag on the CURRENT world's EcsWorld subsystem
 
 private:
     UPROPERTY(Transient)
@@ -124,7 +129,15 @@ private:
     FTSTicker::FDelegateHandle _LoadTickerHandle;
     int32 _LoadFrameCount = 0;
 
+    // M2b travel state
+    TWeakObjectPtr<UWorld> _PreTravelWorld;  // captured before OpenLevel; AwaitingWorld waits for a different world
+    FString _TravelMapName;                  // resolved from the pre-travel world (RemovePIEPrefix)
+    FCk_Snapshot_LoadReport _PendingRestoreReport; // stashed between Restoring and the final DoFinish_Load
+    int32 _RespawnQuiescenceFramesRemaining = 0;   // post-respawn settle so deferred WithActor constructs abstain
+
     static constexpr int32 kLoad_TeardownFrameCap = 600; // ~10s @ 60fps; abort guard for a stuck/non-ticking world
+    static constexpr int32 kLoad_TravelFrameCap = 600;          // abort if the post-travel world never comes up
+    static constexpr int32 kLoad_RespawnQuiescenceFrames = 5;   // frames to keep the flag set after the respawn pass
 };
 
 // --------------------------------------------------------------------------------------------------------------------

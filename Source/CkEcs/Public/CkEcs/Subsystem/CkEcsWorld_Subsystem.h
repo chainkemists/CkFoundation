@@ -138,6 +138,14 @@ public:
     Request_AdoptRestoredTransient(
         FCk_Entity InRestoredTransient) -> void;
 
+    // True while a CkSnapshot load is reconstituting THIS world's ECS (set by the load state machine across the
+    // level-reload boundary). Bridged-actor construction (UCk_EntityScript_WithActor_UE::Construct) reads this and
+    // ABSTAINS — the snapshot is the sole creator, so a respawned actor must not duplicate the restored entity.
+    // Lives here (CkEcs, world-scoped, reachable by every module tier) because the CkSnapshot subsystem is above
+    // CkEcsExt/CkEcs and cannot be referenced from WithActor::Construct.
+    auto Get_IsReconstitutionInProgress() const -> bool;
+    auto Set_ReconstitutionInProgress(bool InInProgress) -> void;
+
 private:
     auto DoBuildGraphAndSpawnActors(
         UWorld& InWorld) -> void;
@@ -158,6 +166,9 @@ private:
 
     bool _PendingRebuildGraph = false;
     FDelegateHandle _OnEndFrameHandle;
+
+    // M2b-1: set by the CkSnapshot load state machine; read by WithActor::Construct to abstain during a load.
+    bool _ReconstitutionInProgress = false;
 
 private:
     // Owns the underlying entt registry. Slot is registered with
