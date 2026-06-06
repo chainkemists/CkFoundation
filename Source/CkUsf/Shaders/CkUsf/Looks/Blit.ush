@@ -1,0 +1,14 @@
+// /CkUsf/Looks/Blit.ush
+// Trivial display look: samples iChannel0 (a render target) straight to emissive.
+// Used to show a multi-pass renderer's output RT on a mesh.
+#pragma once
+#include "/CkUsf/Common.ush"
+
+FCkUsf_SurfaceOutput CkUsf_Blit(Texture2D iChannel0, SamplerState iChannel0Sampler, float Time, float2 UV)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+    O.EmissiveColor = iChannel0.Sample(iChannel0Sampler, UV).rgb;
+    O.BaseColor = float3(0.0, 0.0, 0.0);
+    O.Opacity = 1.0;
+    return O;
+}
