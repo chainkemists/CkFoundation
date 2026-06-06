@@ -157,4 +157,83 @@ namespace CkUsf
         Noise._DefaultTexturePath = "/Engine/EngineMaterials/Good64x64TilingNoiseHighFreq.Good64x64TilingNoiseHighFreq";
         _Parameters.Add(Noise);
     }
+
+    // ---- Multi-pass (render-texture) passes ----
+
+    asset SmokeBuffer of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/SmokeBuffer.ush";
+        _UshFunctionName = n"CkUsf_Pass_SmokeBuffer";
+        _Domain          = ECk_Usf_Domain::SurfaceUnlit;
+        _LookName        = n"SmokeBuffer";
+
+        FCk_Usf_ParamDesc Ch0;
+        Ch0._Name = n"iChannel0";
+        Ch0._Type = ECk_Usf_ParamType::Texture2D;   // bound to a render target at runtime
+        _Parameters.Add(Ch0);
+
+        FCk_Usf_ParamDesc Resolution;
+        Resolution._Name = n"iResolution";
+        Resolution._Type = ECk_Usf_ParamType::Vector;
+        Resolution._DefaultVector = FLinearColor(512.0, 512.0, 0.0, 1.0);
+        _Parameters.Add(Resolution);
+
+        FCk_Usf_ParamDesc Frame;
+        Frame._Name = n"iFrame";
+        Frame._Type = ECk_Usf_ParamType::Scalar;
+        Frame._DefaultScalar = 0.0;
+        _Parameters.Add(Frame);
+
+        FCk_Usf_ParamDesc Delta;
+        Delta._Name = n"iTimeDelta";
+        Delta._Type = ECk_Usf_ParamType::Scalar;
+        Delta._DefaultScalar = 0.016;
+        _Parameters.Add(Delta);
+    }
+
+    asset SmokeImage of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/SmokeImage.ush";
+        _UshFunctionName = n"CkUsf_Pass_SmokeImage";
+        _Domain          = ECk_Usf_Domain::SurfaceUnlit;
+        _LookName        = n"SmokeImage";
+
+        FCk_Usf_ParamDesc Ch0;
+        Ch0._Name = n"iChannel0";
+        Ch0._Type = ECk_Usf_ParamType::Texture2D;
+        Ch0._DefaultTexturePath = "/Engine/EngineMaterials/Good64x64TilingNoiseHighFreq.Good64x64TilingNoiseHighFreq"; // placeholder; RT bound at runtime
+        _Parameters.Add(Ch0);
+
+        FCk_Usf_ParamDesc Resolution;
+        Resolution._Name = n"iResolution";
+        Resolution._Type = ECk_Usf_ParamType::Vector;
+        Resolution._DefaultVector = FLinearColor(512.0, 512.0, 0.0, 1.0);
+        _Parameters.Add(Resolution);
+
+        FCk_Usf_ParamDesc Frame;
+        Frame._Name = n"iFrame";
+        Frame._Type = ECk_Usf_ParamType::Scalar;
+        Frame._DefaultScalar = 0.0;
+        _Parameters.Add(Frame);
+
+        FCk_Usf_ParamDesc Delta;
+        Delta._Name = n"iTimeDelta";
+        Delta._Type = ECk_Usf_ParamType::Scalar;
+        Delta._DefaultScalar = 0.016;
+        _Parameters.Add(Delta);
+    }
+
+    asset Blit of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/Blit.ush";
+        _UshFunctionName = n"CkUsf_Blit";
+        _Domain          = ECk_Usf_Domain::SurfaceUnlit;
+        _LookName        = n"Blit";
+
+        FCk_Usf_ParamDesc Ch0;
+        Ch0._Name = n"iChannel0";
+        Ch0._Type = ECk_Usf_ParamType::Texture2D;
+        Ch0._DefaultTexturePath = "/Engine/EngineMaterials/Good64x64TilingNoiseHighFreq.Good64x64TilingNoiseHighFreq"; // placeholder; RT bound at runtime
+        _Parameters.Add(Ch0);
+    }
 }
