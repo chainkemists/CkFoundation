@@ -12,8 +12,10 @@
 #include "Materials/MaterialExpressionCustom.h"
 #include "Materials/MaterialExpressionScalarParameter.h"
 #include "Materials/MaterialExpressionVectorParameter.h"
+#include "Materials/MaterialExpressionTextureObjectParameter.h"
 #include "Materials/MaterialExpressionTime.h"
 #include "Materials/MaterialExpressionTextureCoordinate.h"
+#include "Engine/Texture.h"
 #include "SceneTypes.h"
 #include "UObject/SavePackage.h"
 #include "UObject/UObjectGlobals.h"
@@ -60,10 +62,22 @@ namespace ck::usf_editor
         FString Args;
         for (const auto& P : InDef->_Parameters)
         {
-            if (P._Type == ECk_Usf_ParamType::Texture) { continue; }  // v1: skip textures
-            // Vector params connect a (possibly float4) output; .rgb makes the HLSL type float3.
-            const auto Suffix = (P._Type == ECk_Usf_ParamType::Vector) ? TEXT(".rgb") : TEXT("");
-            Args += FString::Printf(TEXT("%s%s, "), *P._Name.ToString(), Suffix);
+            const auto Name = P._Name.ToString();
+            switch (P._Type)
+            {
+                // Vector params connect a (possibly float4) output; .rgb makes the HLSL type float3.
+                case ECk_Usf_ParamType::Vector:
+                    Args += FString::Printf(TEXT("%s.rgb, "), *Name);
+                    break;
+                // Texture object inputs expose both the texture and an auto <Name>Sampler in HLSL.
+                case ECk_Usf_ParamType::Texture2D:
+                case ECk_Usf_ParamType::TextureCube:
+                    Args += FString::Printf(TEXT("%s, %sSampler, "), *Name, *Name);
+                    break;
+                default: // Scalar
+                    Args += FString::Printf(TEXT("%s, "), *Name);
+                    break;
+            }
         }
         Args += TEXT("Time, UV");
 
@@ -134,11 +148,10 @@ namespace ck::usf_editor
             Custom->AdditionalOutputs.Add(FCustomOutput{ FName(E.Name), E.Type });
         }
 
-        // Inputs: one per (non-texture) param, then Time + UV.
+        // Inputs: one per param (incl. textures), then Time + UV.
         Custom->Inputs.Reset();
         for (const auto& P : InDef->_Parameters)
         {
-            if (P._Type == ECk_Usf_ParamType::Texture) { continue; }
             FCustomInput In; In.InputName = P._Name; Custom->Inputs.Add(In);
         }
         { FCustomInput T; T.InputName = TEXT("Time"); Custom->Inputs.Add(T); }
@@ -152,24 +165,56 @@ namespace ck::usf_editor
         int32 ParamRow = 0;
         for (const auto& P : InDef->_Parameters)
         {
-            if (P._Type == ECk_Usf_ParamType::Texture) { continue; }  // v1
             UMaterialExpression* ParamExpr = nullptr;
-            if (P._Type == ECk_Usf_ParamType::Scalar)
+            switch (P._Type)
             {
-                auto* S = Cast<UMaterialExpressionScalarParameter>(
-                    UMaterialEditingLibrary::CreateMaterialExpression(
-                        Material, UMaterialExpressionScalarParameter::StaticClass(), -800, ParamRow * 120));
-                S->ParameterName = P._Name; S->DefaultValue = P._DefaultScalar; ParamExpr = S;
+                case ECk_Usf_ParamType::Scalar:
+                {
+                    auto* S = Cast<UMaterialExpressionScalarParameter>(
+                        UMaterialEditingLibrary::CreateMaterialExpression(
+                            Material, UMaterialExpressionScalarParameter::StaticClass(), -800, ParamRow * 120));
+                    S->ParameterName = P._Name; S->DefaultValue = P._DefaultScalar; ParamExpr = S;
+                    break;
+                }
+                case ECk_Usf_ParamType::Vector:
+                {
+                    auto* V = Cast<UMaterialExpressionVectorParameter>(
+                        UMaterialEditingLibrary::CreateMaterialExpression(
+                            Material, UMaterialExpressionVectorParameter::StaticClass(), -800, ParamRow * 120));
+                    V->ParameterName = P._Name; V->DefaultValue = P._DefaultVector; ParamExpr = V;
+                    break;
+                }
+                case ECk_Usf_ParamType::Texture2D:
+                case ECk_Usf_ParamType::TextureCube:
+                {
+                    auto* T = Cast<UMaterialExpressionTextureObjectParameter>(
+                        UMaterialEditingLibrary::CreateMaterialExpression(
+                            Material, UMaterialExpressionTextureObjectParameter::StaticClass(), -800, ParamRow * 120));
+                    T->ParameterName = P._Name;
+                    if (P._DefaultTexturePath.IsEmpty() == false)
+                    {
+                        auto* Tex = LoadObject<UTexture>(nullptr, *P._DefaultTexturePath);
+                        if (ck::IsValid(Tex, ck::IsValid_Policy_NullptrOnly{}))
+                        {
+                            T->Texture = Tex;
+                            T->AutoSetSampleType();
+                        }
+                        else
+                        {
+                            ck::usf_editor::Warning(TEXT("Look [{}] texture not found: [{}]"),
+                                LookName, P._DefaultTexturePath);
+                        }
+                    }
+                    ParamExpr = T;
+                    break;
+                }
             }
-            else // Vector
+
+            if (ck::IsValid(ParamExpr, ck::IsValid_Policy_NullptrOnly{}))
             {
-                auto* V = Cast<UMaterialExpressionVectorParameter>(
-                    UMaterialEditingLibrary::CreateMaterialExpression(
-                        Material, UMaterialExpressionVectorParameter::StaticClass(), -800, ParamRow * 120));
-                V->ParameterName = P._Name; V->DefaultValue = P._DefaultVector; ParamExpr = V;
+                UMaterialEditingLibrary::ConnectMaterialExpressions(
+                    ParamExpr, FString(), Custom, P._Name.ToString());
             }
-            UMaterialEditingLibrary::ConnectMaterialExpressions(
-                ParamExpr, FString(), Custom, P._Name.ToString());
             ++ParamRow;
         }
 

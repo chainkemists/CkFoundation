@@ -8,6 +8,7 @@
 
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Engine/Texture.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -58,9 +59,13 @@ auto
             case ECk_Usf_ParamType::Vector:
                 MID->SetVectorParameterValue(P._Name, P._DefaultVector);
                 break;
-            case ECk_Usf_ParamType::Texture:
-                if (auto* T = P._DefaultTexture.LoadSynchronous())
-                { MID->SetTextureParameterValue(P._Name, T); }
+            case ECk_Usf_ParamType::Texture2D:
+            case ECk_Usf_ParamType::TextureCube:
+                if (P._DefaultTexturePath.IsEmpty() == false)
+                {
+                    if (auto* T = LoadObject<UTexture>(nullptr, *P._DefaultTexturePath))
+                    { MID->SetTextureParameterValue(P._Name, T); }
+                }
                 break;
         }
     }
