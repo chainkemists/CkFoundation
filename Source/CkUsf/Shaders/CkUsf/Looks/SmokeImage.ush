@@ -1,0 +1,21 @@
+// /CkUsf/Looks/SmokeImage.ush
+// Image pass: reads BufferA (iChannel0) and colorizes the field into the display RT.
+#pragma once
+#include "/CkUsf/Common.ush"
+
+FCkUsf_SurfaceOutput CkUsf_Pass_SmokeImage(
+    Texture2D iChannel0, SamplerState iChannel0Sampler,
+    float3 iResolution, float iFrame, float iTimeDelta,
+    float Time, float2 UV)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float field = iChannel0.Sample(iChannel0Sampler, UV).r;
+    float3 col = CkUsf_Palette(field * 0.9 + Time * 0.05,
+        float3(0.5, 0.5, 0.5), float3(0.5, 0.5, 0.5), float3(1.0, 1.0, 1.0), float3(0.0, 0.33, 0.67));
+
+    O.EmissiveColor = col * field * 1.8;
+    O.BaseColor = float3(0.0, 0.0, 0.0);
+    O.Opacity = 1.0;
+    return O;
+}

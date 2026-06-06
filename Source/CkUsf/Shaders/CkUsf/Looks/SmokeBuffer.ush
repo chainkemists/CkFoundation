@@ -1,0 +1,33 @@
+// /CkUsf/Looks/SmokeBuffer.ush
+// Feedback buffer pass: reads its OWN previous frame (iChannel0 = BufferA), diffuses + decays,
+// and injects from a moving emitter. Proves render-to-texture feedback. Output stored in RGB.
+#pragma once
+#include "/CkUsf/Common.ush"
+
+// Params order: iChannel0 (Texture2D=self), iResolution (Vector), iFrame (Scalar), iTimeDelta (Scalar), then Time, UV.
+FCkUsf_SurfaceOutput CkUsf_Pass_SmokeBuffer(
+    Texture2D iChannel0, SamplerState iChannel0Sampler,
+    float3 iResolution, float iFrame, float iTimeDelta,
+    float Time, float2 UV)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float2 texel = 1.0 / max(iResolution.xy, float2(1.0, 1.0));
+    float c  = iChannel0.Sample(iChannel0Sampler, UV).r;
+    float l  = iChannel0.Sample(iChannel0Sampler, UV + float2(-texel.x, 0.0)).r;
+    float r  = iChannel0.Sample(iChannel0Sampler, UV + float2( texel.x, 0.0)).r;
+    float u  = iChannel0.Sample(iChannel0Sampler, UV + float2(0.0, -texel.y)).r;
+    float dn = iChannel0.Sample(iChannel0Sampler, UV + float2(0.0,  texel.y)).r;
+
+    float field = (c * 0.6 + (l + r + u + dn) * 0.1) * 0.985; // diffuse + decay
+
+    float2 emitter = float2(0.5, 0.5) + 0.32 * float2(sin(Time * 0.7), cos(Time * 1.1));
+    field += smoothstep(0.05, 0.0, distance(UV, emitter)) * 0.9;
+
+    if (iFrame < 0.5) { field = 0.0; } // clear on first frame
+
+    field = saturate(field);
+    O.EmissiveColor = float3(field, field, field);
+    O.Opacity = 1.0;
+    return O;
+}
