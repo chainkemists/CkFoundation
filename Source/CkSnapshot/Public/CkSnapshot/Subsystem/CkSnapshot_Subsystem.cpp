@@ -7,6 +7,10 @@
 #include "CkSnapshot/Subsystem/CkSnapshot_Signals.h"
 
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
+#include "CkEcs/Handle/CkHandle.h"                       // ck::FTag_DestroyEntity_*, FFragment_LifetimeDependents
+#include "CkEcs/Registry/CkRegistry_SlotTable.h"
 
 #include "Kismet/GameplayStatics.h"
 #include "Misc/ScopeExit.h"
@@ -49,6 +53,34 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+bool
+    UCk_Snapshot_Subsystem_UE::
+    Get_IsLoadInProgress() const
+{
+    return _LoadInProgress;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    Deinitialize()
+    -> void
+{
+    // The world/game-instance is going away mid-load: drop the ticker so the callback never fires into a dead subsystem.
+    if (_LoadTickerHandle.IsValid())
+    {
+        FTSTicker::GetCoreTicker().RemoveTicker(_LoadTickerHandle);
+        _LoadTickerHandle.Reset();
+    }
+    _LoadInProgress = false;
+    _LoadPhase = ELoadPhase::Idle;
+
+    Super::Deinitialize();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 void
     UCk_Snapshot_Subsystem_UE::
     Request_Save(
@@ -64,7 +96,7 @@ void
         return;
     }
 
-    CK_ENSURE_IF_NOT(NOT _SnapshotInProgress,
+    CK_ENSURE_IF_NOT(NOT _SnapshotInProgress && NOT _LoadInProgress,
         TEXT("Request_Save refused: a snapshot operation is already in progress"))
     {
         InDelegate.ExecuteIfBound(ECk_SnapshotResult::Failed_IO);
@@ -151,30 +183,18 @@ void
         return;
     }
 
-    CK_ENSURE_IF_NOT(NOT _SnapshotInProgress,
+    CK_ENSURE_IF_NOT(NOT _SnapshotInProgress && NOT _LoadInProgress,
         TEXT("Request_Load refused: a snapshot operation is already in progress"))
     {
         InDelegate.ExecuteIfBound(MakeFailureReport(ECk_SnapshotResult::Failed_IO));
         return;
     }
 
-    _SnapshotInProgress = true;
-    ON_SCOPE_EXIT { _SnapshotInProgress = false; };
-
-    auto Source = DoGet_SnapshotSource();
-    ck::UUtils_Signal_Snapshot_OnPreLoad::Broadcast(Source, ck::MakePayload(Source));
-
-    auto DoFinish = [&](const FCk_Snapshot_LoadReport& InReport) -> void
-    {
-        ck::UUtils_Signal_Snapshot_OnLoadComplete::Broadcast(Source, ck::MakePayload(Source, InReport));
-        InDelegate.ExecuteIfBound(InReport);
-    };
-
     auto* SaveGame = Cast<UCk_Snapshot_SaveGame>(UGameplayStatics::LoadGameFromSlot(InSlotName.ToString(), ck_snapshot_subsystem::UserIndex));
     if (ck::Is_NOT_Valid(SaveGame))
     {
         ck::snapshot::Error(TEXT("Request_Load: no/invalid save in slot [{}]"), InSlotName);
-        DoFinish(MakeFailureReport(ECk_SnapshotResult::Failed_IO));
+        InDelegate.ExecuteIfBound(MakeFailureReport(ECk_SnapshotResult::Failed_IO));
         return;
     }
 
@@ -182,18 +202,134 @@ void
     {
         ck::snapshot::Error(TEXT("Request_Load: incompatible format version [{}] in slot [{}]"),
             SaveGame->_Header.Get_FormatVersion(), InSlotName);
-        DoFinish(MakeFailureReport(ECk_SnapshotResult::Failed_IncompatibleSave));
+        InDelegate.ExecuteIfBound(MakeFailureReport(ECk_SnapshotResult::Failed_IncompatibleSave));
         return;
     }
 
-    auto ByteReader = FMemoryReader{SaveGame->_SnapshotBytes, /*bIsPersistent=*/true};
+    // ---- Latch the load (spans real frames from here) ------------------------------------------------------
+    _LoadInProgress      = true;
+    _LoadPhase           = ELoadPhase::TearingDown;
+    _PendingLoadBytes    = SaveGame->_SnapshotBytes;   // copy — the SaveGame object is not kept alive across frames
+    _PendingLoadHeader   = SaveGame->_Header;
+    _PendingLoadDelegate = InDelegate;
+    _LoadFrameCount      = 0;
 
-    const auto Report = ck::snapshot::Run_Restore(*World, ByteReader, SaveGame->_Header);
+    auto Source = DoGet_SnapshotSource();
+    ck::UUtils_Signal_Snapshot_OnPreLoad::Broadcast(Source, ck::MakePayload(Source));
 
-    ck::snapshot::Display(TEXT("Request_Load: restored slot [{}] with result [{}] ([{}] entities)"),
-        InSlotName, Report.Get_Result(), Report.Get_EntitiesRestored());
+    DoInitiate_Teardown();
 
-    DoFinish(Report);
+    _LoadTickerHandle = FTSTicker::GetCoreTicker().AddTicker(
+        FTickerDelegate::CreateUObject(this, &UCk_Snapshot_Subsystem_UE::DoTick_Load));
+
+    ck::snapshot::Display(TEXT("Request_Load: load started for slot [{}] ([{}] roots tearing down)"),
+        InSlotName, _PendingTeardownRoots.Num());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoInitiate_Teardown()
+    -> void
+{
+    _PendingTeardownRoots.Reset();
+
+    const auto Transient = DoGet_SnapshotSource();
+    if (ck::Is_NOT_Valid(Transient) || NOT Transient.Has<ck::FFragment_LifetimeDependents>())
+    {
+        // Nothing to tear down (empty world) — completion poll will pass immediately.
+        return;
+    }
+
+    // Copy the roots BEFORE destroying — Request_DestroyEntity mutates the dependents list.
+    _PendingTeardownRoots = Transient.Get<ck::FFragment_LifetimeDependents>().Get_Entities();
+
+    for (auto& Root : _PendingTeardownRoots)
+    {
+        if (ck::IsValid(Root))
+        { UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(Root); }
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoIs_TeardownComplete() const
+    -> bool
+{
+    // Complete when every gameplay root we requested destroyed has finalized (handle now invalid). The root
+    // finalizes only AFTER its whole subtree's cascade — incl. EndPlay — has run, so this also covers children.
+    // We deliberately do NOT additionally require the FTag_DestroyEntity_* storages to be globally empty: a
+    // continuously-ticking world always has some framework scratch/deferred entity mid-destruction, so that
+    // global clause never settles. Any such straggler is wiped by Run_Restore's clear() immediately after.
+    for (const auto& Root : _PendingTeardownRoots)
+    {
+        if (ck::IsValid(Root))
+        { return false; }
+    }
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoTick_Load(float /*InDeltaSeconds*/)
+    -> bool
+{
+    if (_LoadPhase != ELoadPhase::TearingDown)
+    { return false; } // nothing to do — stop ticking
+
+    ++_LoadFrameCount;
+
+    if (NOT DoIs_TeardownComplete())
+    {
+        if (_LoadFrameCount >= kLoad_TeardownFrameCap)
+        {
+            ck::snapshot::Error(TEXT("Request_Load: teardown did not drain within [{}] frames — aborting"),
+                kLoad_TeardownFrameCap);
+
+            auto Report = FCk_Snapshot_LoadReport{};
+            Report.Set_Result(ECk_SnapshotResult::Failed_IO);
+            DoFinish_Load(Report);
+            return false;
+        }
+        return true; // keep waiting
+    }
+
+    // ---- Teardown drained → restore in-place (M1 clear + adopt, unchanged) ---------------------------------
+    const auto World = GetWorld();
+    auto Reader = FMemoryReader{_PendingLoadBytes, /*bIsPersistent=*/true};
+    const auto Report = ck::snapshot::Run_Restore(*World, Reader, _PendingLoadHeader);
+
+    ck::snapshot::Display(TEXT("Request_Load: restored after [{}] teardown frames ([{}] entities)"),
+        _LoadFrameCount, Report.Get_EntitiesRestored());
+
+    DoFinish_Load(Report);
+    return false; // done — unregister
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoFinish_Load(const FCk_Snapshot_LoadReport& InReport)
+    -> void
+{
+    _LoadTickerHandle.Reset(); // DoTick_Load returns false to unregister; just drop our copy of the handle
+    _LoadPhase = ELoadPhase::Idle;
+    _LoadInProgress = false;
+    _PendingTeardownRoots.Reset();
+    _PendingLoadBytes.Reset();
+
+    const auto Delegate = _PendingLoadDelegate;
+    _PendingLoadDelegate.Unbind();
+
+    const auto Source = DoGet_SnapshotSource(); // re-resolve: the restored/adopted transient
+    ck::UUtils_Signal_Snapshot_OnLoadComplete::Broadcast(Source, ck::MakePayload(Source, InReport));
+    Delegate.ExecuteIfBound(InReport);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
