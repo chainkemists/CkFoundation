@@ -46,7 +46,7 @@ auto
     }
     else
     {
-        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Player>(InHandle);
+        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Player>(InHandle, FCk_RepData_Player{InPlayerID});
     }
 
     return Cast(InHandle);

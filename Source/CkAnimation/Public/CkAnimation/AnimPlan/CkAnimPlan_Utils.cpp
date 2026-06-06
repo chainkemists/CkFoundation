@@ -51,6 +51,11 @@ auto
     Current._AnimCluster = InParams.Get_StartingAnimCluster();
     Current._AnimState = InParams.Get_StartingAnimState();
 
+    if (InReplicates != ECk_Replication::DoesNotReplicate && ck::IsValid(InParams.Get_StartingAnimState()))
+    {
+        Request_TryReplicateAnimPlan(NewAnimPlanEntity);
+    }
+
     return NewAnimPlanEntity;
 }
 

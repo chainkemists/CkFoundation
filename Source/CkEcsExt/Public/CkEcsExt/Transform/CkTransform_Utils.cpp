@@ -54,9 +54,9 @@ auto
         return Cast(InHandle);
     }
 
-    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Location>(InHandle);
-    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Rotation>(InHandle);
-    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Scale>(InHandle);
+    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Location>(InHandle, FCk_RepData_Location{InInitialTransform.GetLocation()});
+    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Rotation>(InHandle, FCk_RepData_Rotation{InInitialTransform.GetRotation()});
+    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Scale>(InHandle, FCk_RepData_Scale{InInitialTransform.GetScale3D()});
 
     return Cast(InHandle);
 }
@@ -123,9 +123,10 @@ auto
         return Cast(InHandle);
     }
 
-    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Location>(InHandle);
-    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Rotation>(InHandle);
-    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Scale>(InHandle);
+    const auto ComponentWorldTransform = InAttachTo->GetComponentToWorld();
+    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Location>(InHandle, FCk_RepData_Location{ComponentWorldTransform.GetLocation()});
+    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Rotation>(InHandle, FCk_RepData_Rotation{ComponentWorldTransform.GetRotation()});
+    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Scale>(InHandle, FCk_RepData_Scale{ComponentWorldTransform.GetScale3D()});
 
     return Cast(InHandle);
 }
@@ -189,9 +190,10 @@ auto
         return Cast(InHandle);
     }
 
-    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Location>(InHandle);
-    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Rotation>(InHandle);
-    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Scale>(InHandle);
+    const auto SocketWorldTransform = InAttachTo->GetSocketTransform(InSocketName);
+    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Location>(InHandle, FCk_RepData_Location{SocketWorldTransform.GetLocation()});
+    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Rotation>(InHandle, FCk_RepData_Rotation{SocketWorldTransform.GetRotation()});
+    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Scale>(InHandle, FCk_RepData_Scale{SocketWorldTransform.GetScale3D()});
 
     return Cast(InHandle);
 }
