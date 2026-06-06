@@ -10,6 +10,8 @@
 
 #include <Subsystems/GameInstanceSubsystem.h>
 
+#include "Containers/Ticker.h"
+
 #include "CkSnapshot_Subsystem.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -76,6 +78,18 @@ public:
     auto Publish_SaveKey(FGuid InKey, FCk_Handle InHandle) -> void;
     auto Consume_SaveKey(FGuid InKey) -> void;
 
+public:
+    // True from the start of a Request_Load until OnLoadComplete fires (spans real frames). Distinct from the
+    // synchronous _SnapshotInProgress save guard. The live signal M2b's bridged-actor abstention reads at BeginPlay.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Snapshot",
+              DisplayName = "[Ck][Snapshot] Get Is Load In Progress")
+    bool
+    Get_IsLoadInProgress() const;
+
+protected:
+    virtual auto Deinitialize() -> void override;
+
 #if WITH_AUTOMATION_TESTS
 public:
     // Phase 8 test hook: the pump-pass count Request_Save observed on its last invocation.
@@ -85,12 +99,32 @@ public:
 private:
     auto DoGet_SnapshotSource() const -> FCk_Handle;
 
+    // ---- M2a load orchestration -------------------------------------------------------------------------------
+    enum class ELoadPhase : uint8 { Idle, TearingDown };
+
+    auto DoInitiate_Teardown() -> void;                  // Request_DestroyEntity all gameplay roots; record them
+    auto DoIs_TeardownComplete() const -> bool;          // all roots invalid AND no FTag_DestroyEntity_* remain
+    auto DoTick_Load(float InDeltaSeconds) -> bool;      // FTSTicker callback; advances the machine
+    auto DoFinish_Load(const FCk_Snapshot_LoadReport& InReport) -> void; // clear flag, fire delegate/signal, reset
+
 private:
     UPROPERTY(Transient)
     TMap<FGuid, FCk_Handle> _SaveKeyResolverMap;
 
     bool _SnapshotInProgress = false;
     int32 _LastPumpCount = 0;
+
+    // M2a load state
+    bool _LoadInProgress = false;
+    ELoadPhase _LoadPhase = ELoadPhase::Idle;
+    TArray<uint8> _PendingLoadBytes;
+    FCk_Snapshot_Header _PendingLoadHeader;
+    FCk_Delegate_OnLoadComplete _PendingLoadDelegate;
+    TArray<FCk_Handle> _PendingTeardownRoots;
+    FTSTicker::FDelegateHandle _LoadTickerHandle;
+    int32 _LoadFrameCount = 0;
+
+    static constexpr int32 kLoad_TeardownFrameCap = 600; // ~10s @ 60fps; abort guard for a stuck/non-ticking world
 };
 
 // --------------------------------------------------------------------------------------------------------------------
