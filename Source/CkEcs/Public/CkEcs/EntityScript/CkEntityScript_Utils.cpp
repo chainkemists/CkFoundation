@@ -12,12 +12,32 @@
 #include "CkEcs/Net/CkNet_Fragment.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h" // M2b-1 reconstitution-in-progress gate
 
 #include <UObject/ObjectPtr.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_EntityScript_UE, FCk_Handle_EntityScript, ck::FFragment_EntityScript_Current);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// M2b-1: while a CkSnapshot load is reconstituting the entity's world, the snapshot is the sole creator — a
+// respawned bridged actor's BeginPlay would call Request_SpawnEntity to make a DUPLICATE of the entity the snapshot
+// re-bridges. Suppress the spawn entirely (no entity created → no features added → no half-built entity reaches the
+// feature Setup processors). The respawn pass owns the real binding. The flag lives on the CkEcs EcsWorld subsystem
+// (reachable here, unlike the CkSnapshot subsystem which is a higher tier).
+static auto
+    DoIs_WorldReconstituting(
+        const FCk_Handle& InLifetimeOwner) -> bool
+{
+    const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InLifetimeOwner);
+    if (ck::Is_NOT_Valid(World))
+    { return false; }
+
+    auto* EcsWorld = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+    return ck::IsValid(EcsWorld) && EcsWorld->Get_IsReconstitutionInProgress();
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -52,6 +72,9 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InLifetimeOwner),
         TEXT("LifetimeOwner is INVALID. Unable to SpawnEntity using EntityScriptClass [{}]."),
         InEntityScriptClass)
+    { return {}; }
+
+    if (DoIs_WorldReconstituting(InLifetimeOwner))
     { return {}; }
 
     if (const auto DefaultObject = InEntityScriptClass->GetDefaultObject<UCk_EntityScript_UE>();
@@ -98,6 +121,9 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InLifetimeOwner),
         TEXT("LifetimeOwner is INVALID. Unable to SpawnEntity using EntityScriptClass [{}]."),
         InEntityScriptClassArchetype)
+    { return {}; }
+
+    if (DoIs_WorldReconstituting(InLifetimeOwner))
     { return {}; }
 
     if (InEntityScriptClassArchetype->Get_EffectiveReplication() == ECk_Replication::Replicates &&
