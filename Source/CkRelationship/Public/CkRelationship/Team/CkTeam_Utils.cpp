@@ -52,7 +52,7 @@ auto
     }
     else
     {
-        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Team>(InHandle);
+        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Team>(InHandle, FCk_RepData_Team{InTeamID});
     }
 
     return Cast(InHandle);

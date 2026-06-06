@@ -40,7 +40,7 @@ auto
 
     if (InReplicates != ECk_Replication::DoesNotReplicate)
     {
-        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Velocity>(InHandle);
+        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Velocity>(InHandle, FCk_RepData_Velocity{InParams.Get_StartingVelocity()});
     }
 
     return Cast(InHandle);
