@@ -26,7 +26,7 @@ auto
 
     if (InReplicates != ECk_Replication::DoesNotReplicate)
     {
-        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Acceleration>(InHandle);
+        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Acceleration>(InHandle, FCk_RepData_Acceleration{InParams.Get_StartingAcceleration()});
     }
 
     return Cast(InHandle);
