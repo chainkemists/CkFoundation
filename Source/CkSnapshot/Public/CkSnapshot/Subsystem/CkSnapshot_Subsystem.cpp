@@ -10,7 +10,11 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Handle/CkHandle.h"                       // ck::FTag_DestroyEntity_*, FFragment_LifetimeDependents
+#include "CkEcs/Handle/CkHandle_Utils.h"                 // M2b: ck::MakeHandle
 #include "CkEcs/Registry/CkRegistry_SlotTable.h"
+
+#include "CkEcsExt/OwningActor/CkActorSpawnIntent_Fragment.h" // M2b: respawn intent
+#include "CkEcsExt/OwningActor/CkActorRebind_Utils.h"         // M2b: Request_RebindActor
 
 #include "Kismet/GameplayStatics.h"
 #include "Misc/ScopeExit.h"
@@ -18,6 +22,8 @@
 #include "Serialization/MemoryReader.h"
 
 #include <Engine/World.h>
+#include <GameFramework/Actor.h>   // M2b: SpawnActor<AActor> needs the complete type
+#include "UObject/SoftObjectPath.h" // M2b: FSoftClassPath::TryLoadClass for the respawn pass
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -73,6 +79,7 @@ auto
         FTSTicker::GetCoreTicker().RemoveTicker(_LoadTickerHandle);
         _LoadTickerHandle.Reset();
     }
+    DoSet_ReconstitutionFlag(false); // clear the world flag if we tear down mid-load
     _LoadInProgress = false;
     _LoadPhase = ELoadPhase::Idle;
 
@@ -206,13 +213,19 @@ void
         return;
     }
 
-    // ---- Latch the load (spans real frames from here) ------------------------------------------------------
+    // ---- Latch the load (spans real frames + a level reload from here) -------------------------------------
     _LoadInProgress      = true;
     _LoadPhase           = ELoadPhase::TearingDown;
     _PendingLoadBytes    = SaveGame->_SnapshotBytes;   // copy — the SaveGame object is not kept alive across frames
     _PendingLoadHeader   = SaveGame->_Header;
     _PendingLoadDelegate = InDelegate;
     _LoadFrameCount      = 0;
+    _PreTravelWorld      = nullptr;
+    _TravelMapName.Reset();
+    _RespawnQuiescenceFramesRemaining = 0;
+
+    // Mark THIS world as reconstituting so any bridged actor torn down + any straggler construct abstains.
+    DoSet_ReconstitutionFlag(true);
 
     auto Source = DoGet_SnapshotSource();
     ck::UUtils_Signal_Snapshot_OnPreLoad::Broadcast(Source, ck::MakePayload(Source));
@@ -276,39 +289,224 @@ auto
 
 auto
     UCk_Snapshot_Subsystem_UE::
+    DoSet_ReconstitutionFlag(
+        bool InInProgress)
+    -> void
+{
+    const auto World = GetWorld();
+    if (ck::Is_NOT_Valid(World))
+    { return; }
+
+    if (auto* EcsWorld = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+        ck::IsValid(EcsWorld))
+    {
+        EcsWorld->Set_ReconstitutionInProgress(InInProgress);
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoInitiate_Travel()
+    -> void
+{
+    const auto World = GetWorld();
+    if (ck::Is_NOT_Valid(World))
+    { return; }
+
+    _PreTravelWorld = World;
+    _TravelMapName  = World->RemovePIEPrefix(World->GetOutermost()->GetName());
+
+    ck::snapshot::Display(TEXT("DIAG: Request_Load travel — OpenLevel to map [{}] (pre-travel world [{}])"),
+        _TravelMapName, World->GetName());
+
+    constexpr auto AbsoluteTravel = true;
+    UGameplayStatics::OpenLevel(World, FName{*_TravelMapName}, AbsoluteTravel);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoIs_NewWorldReady() const
+    -> bool
+{
+    const auto World = GetWorld();
+    if (ck::Is_NOT_Valid(World))
+    { return false; }
+
+    // A different world object than the one we left (OpenLevel produces a fresh world — Phase A confirmed it is
+    // NM_Standalone, so detect by instance + HasBegunPlay, NOT netmode), and it has begun play (its EcsWorld
+    // subsystem has re-inited a clean registry).
+    if (World == _PreTravelWorld.Get())
+    { return false; }
+
+    return World->HasBegunPlay();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoRun_Restore()
+    -> FCk_Snapshot_LoadReport
+{
+    const auto World = GetWorld();
+    auto Reader = FMemoryReader{_PendingLoadBytes, /*bIsPersistent=*/true};
+    return ck::snapshot::Run_Restore(*World, Reader, _PendingLoadHeader);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoRespawn_BridgedActors()
+    -> int32
+{
+    const auto World = GetWorld();
+    if (ck::Is_NOT_Valid(World))
+    { return 0; }
+
+    auto* EcsWorld = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+    if (ck::Is_NOT_Valid(EcsWorld))
+    { return 0; }
+
+    auto* RawRegistry = ck::registry_table::TryResolve(EcsWorld->Get_Registry().Get_RegistryHandle());
+    if (RawRegistry == nullptr)
+    { return 0; }
+
+    const auto Transient = EcsWorld->Get_TransientEntity();
+
+    // Collect the restored bridged entities FIRST — spawning actors mutates the registry, so do not spawn mid-view.
+    // The raw entt view yields FCk_Entity::IdType; wrap in FCk_Entity for MakeHandle (per CkSnapshot_Context).
+    auto BridgedEntities = TArray<FCk_Handle>{};
+    for (const auto Entity : RawRegistry->view<FFragment_ActorSpawnIntent>())
+    {
+        BridgedEntities.Add(ck::MakeHandle(FCk_Entity{Entity}, Transient));
+    }
+
+    auto RespawnedCount = 0;
+    for (auto& Entity : BridgedEntities)
+    {
+        if (ck::Is_NOT_Valid(Entity) || NOT Entity.Has<FFragment_ActorSpawnIntent>())
+        { continue; }
+
+        const auto& ActorClassPath = Entity.Get<FFragment_ActorSpawnIntent>().Get_ActorClassPath();
+        auto* ActorClass = FSoftClassPath{ActorClassPath}.TryLoadClass<AActor>();
+        if (ActorClass == nullptr)
+        {
+            ck::snapshot::Warning(TEXT("DIAG: respawn — entity [{}] actor class path [{}] unloadable; skipped"),
+                Entity, ActorClassPath);
+            continue;
+        }
+        ck::snapshot::Display(TEXT("DIAG: respawn — entity [{}] spawning actor of class [{}]"), Entity, ActorClassPath);
+
+        // NOTE (M2b-1): position does not round-trip (FFragment_Transform is not snapshotable), so spawn at
+        // identity. Request_RebindActor re-creates the transform bridge bound to this actor. Position-restore is
+        // a follow-up.
+        auto SpawnInfo = FActorSpawnParameters{};
+        SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        auto* Actor = World->SpawnActor<AActor>(ActorClass, FTransform::Identity, SpawnInfo);
+        if (Actor == nullptr)
+        {
+            ck::snapshot::Warning(TEXT("DIAG: respawn — SpawnActor failed for entity [{}]"), Entity);
+            continue;
+        }
+
+        UCk_Utils_ActorRebind_UE::Request_RebindActor(Entity, Actor);
+        ++RespawnedCount;
+    }
+
+    ck::snapshot::Display(TEXT("DIAG: respawn — re-spawned + re-bridged [{}] bridged actors"), RespawnedCount);
+    return RespawnedCount;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
     DoTick_Load(float /*InDeltaSeconds*/)
     -> bool
 {
-    if (_LoadPhase != ELoadPhase::TearingDown)
-    { return false; } // nothing to do — stop ticking
-
     ++_LoadFrameCount;
 
-    if (NOT DoIs_TeardownComplete())
+    switch (_LoadPhase)
     {
-        if (_LoadFrameCount >= kLoad_TeardownFrameCap)
+        case ELoadPhase::TearingDown:
         {
-            ck::snapshot::Error(TEXT("Request_Load: teardown did not drain within [{}] frames — aborting"),
-                kLoad_TeardownFrameCap);
+            if (NOT DoIs_TeardownComplete())
+            {
+                if (_LoadFrameCount >= kLoad_TeardownFrameCap)
+                {
+                    ck::snapshot::Error(TEXT("Request_Load: teardown did not drain within [{}] frames — aborting"),
+                        kLoad_TeardownFrameCap);
+                    auto Report = FCk_Snapshot_LoadReport{};
+                    Report.Set_Result(ECk_SnapshotResult::Failed_IO);
+                    DoFinish_Load(Report);
+                    return false;
+                }
+                return true; // keep waiting
+            }
 
-            auto Report = FCk_Snapshot_LoadReport{};
-            Report.Set_Result(ECk_SnapshotResult::Failed_IO);
-            DoFinish_Load(Report);
-            return false;
+            ck::snapshot::Display(TEXT("DIAG: teardown drained after [{}] frames — initiating travel"), _LoadFrameCount);
+            DoInitiate_Travel();
+            _LoadFrameCount = 0;
+            _LoadPhase = ELoadPhase::AwaitingWorld;
+            return true;
         }
-        return true; // keep waiting
+
+        case ELoadPhase::AwaitingWorld:
+        {
+            if (NOT DoIs_NewWorldReady())
+            {
+                if (_LoadFrameCount >= kLoad_TravelFrameCap)
+                {
+                    ck::snapshot::Error(TEXT("Request_Load: post-travel world not ready within [{}] frames — aborting"),
+                        kLoad_TravelFrameCap);
+                    auto Report = FCk_Snapshot_LoadReport{};
+                    Report.Set_Result(ECk_SnapshotResult::Failed_IO);
+                    DoFinish_Load(Report);
+                    return false;
+                }
+                return true;
+            }
+
+            ck::snapshot::Display(TEXT("DIAG: post-travel world ready after [{}] frames — restoring"), _LoadFrameCount);
+            // The new world's EcsWorld subsystem started fresh (flag default false) — set it so the respawn pass's
+            // spawned actors abstain in their own (deferred) WithActor::Construct.
+            DoSet_ReconstitutionFlag(true);
+            _LoadPhase = ELoadPhase::Restoring;
+            return true;
+        }
+
+        case ELoadPhase::Restoring:
+        {
+            _PendingRestoreReport = DoRun_Restore();
+            ck::snapshot::Display(TEXT("DIAG: restored [{}] entities into post-travel world — respawning actors"),
+                _PendingRestoreReport.Get_EntitiesRestored());
+
+            DoRespawn_BridgedActors();
+            _RespawnQuiescenceFramesRemaining = kLoad_RespawnQuiescenceFrames;
+            _LoadPhase = ELoadPhase::RespawningActors;
+            return true;
+        }
+
+        case ELoadPhase::RespawningActors:
+        {
+            // Let deferred WithActor constructs (from respawned actors) run + abstain while the flag is still set.
+            if (_RespawnQuiescenceFramesRemaining-- > 0)
+            { return true; }
+
+            DoSet_ReconstitutionFlag(false);
+            ck::snapshot::Display(TEXT("DIAG: respawn quiescence complete — finishing load"));
+            DoFinish_Load(_PendingRestoreReport);
+            return false; // done — unregister
+        }
+
+        default:
+            return false; // Idle / unexpected — stop ticking
     }
-
-    // ---- Teardown drained → restore in-place (M1 clear + adopt, unchanged) ---------------------------------
-    const auto World = GetWorld();
-    auto Reader = FMemoryReader{_PendingLoadBytes, /*bIsPersistent=*/true};
-    const auto Report = ck::snapshot::Run_Restore(*World, Reader, _PendingLoadHeader);
-
-    ck::snapshot::Display(TEXT("Request_Load: restored after [{}] teardown frames ([{}] entities)"),
-        _LoadFrameCount, Report.Get_EntitiesRestored());
-
-    DoFinish_Load(Report);
-    return false; // done — unregister
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -318,6 +516,7 @@ auto
     DoFinish_Load(const FCk_Snapshot_LoadReport& InReport)
     -> void
 {
+    DoSet_ReconstitutionFlag(false); // defensive: a teardown/travel abort must never leave a world reconstituting
     _LoadTickerHandle.Reset(); // DoTick_Load returns false to unregister; just drop our copy of the handle
     _LoadPhase = ELoadPhase::Idle;
     _LoadInProgress = false;
