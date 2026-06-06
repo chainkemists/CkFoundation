@@ -1,0 +1,48 @@
+// /CkUsf/Looks/Voronoi.ush
+#pragma once
+#include "/CkUsf/Common.ush"
+
+// Params: CellColor (Vector), Scale (Scalar), Speed (Scalar), then Time, UV.
+// Animated Voronoi: feature points drift over time; glow the cell edges where
+// the two nearest points are equidistant. Heavier — a 3x3 neighbourhood search.
+FCkUsf_SurfaceOutput CkUsf_Look_Voronoi(float3 CellColor, float Scale, float Speed, float Time, float2 UV)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float2 P = (UV - 0.5) * Scale;
+    float2 G = floor(P);
+    float2 F = frac(P);
+
+    float  D1 = 8.0; // nearest
+    float  D2 = 8.0; // second nearest
+    float  CellId = 0.0;
+
+    for (int Y = -1; Y <= 1; ++Y)
+    for (int X = -1; X <= 1; ++X)
+    {
+        float2 Neighbor = float2(X, Y);
+        float2 Rnd = CkUsf_Hash22(G + Neighbor);
+        float2 Point = Neighbor + (0.5 + 0.5 * sin(Time * Speed + 6.28318 * Rnd)) - F;
+        float  Dist = dot(Point, Point);
+
+        if (Dist < D1)
+        {
+            D2 = D1; D1 = Dist;
+            CellId = CkUsf_Hash21(G + Neighbor);
+        }
+        else if (Dist < D2)
+        {
+            D2 = Dist;
+        }
+    }
+
+    // Border distance: ~0 at a cell seam, larger toward a cell centre.
+    float Border = sqrt(D2) - sqrt(D1);
+    float Fill = smoothstep(0.0, 0.08, Border);   // 0 on seams, 1 inside cells
+    float3 Body = CellColor * (0.35 + 0.65 * CellId);
+    // Dark glowing seams, vivid cell interiors.
+    O.EmissiveColor = lerp(float3(0.02, 0.02, 0.04), Body * 2.2, Fill);
+    O.BaseColor = float3(0.0, 0.0, 0.0);
+    O.Opacity = 1.0;
+    return O;
+}
