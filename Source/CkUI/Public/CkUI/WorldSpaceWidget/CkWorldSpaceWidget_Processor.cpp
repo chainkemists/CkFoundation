@@ -204,7 +204,7 @@ namespace ck
         -> void
     {
         if (const auto WidgetComponent = InCurrent.Get_WidgetComponent().Get();
-            ck::IsValid(WidgetComponent, ck::IsValid_Policy_NullptrOnly{}))
+            ck::IsValid(WidgetComponent))
         {
             WidgetComponent->DestroyComponent();
         }

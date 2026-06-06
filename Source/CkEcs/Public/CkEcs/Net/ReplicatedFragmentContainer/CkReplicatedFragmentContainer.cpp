@@ -1,5 +1,7 @@
 #include "CkReplicatedFragmentContainer.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
+
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -21,6 +23,7 @@ auto
         FHandler InHandler)
     -> void
 {
+    DoValidateHandler(InType, InHandler);
     _Handlers.Add(InType, MoveTemp(InHandler));
 }
 
@@ -44,8 +47,9 @@ auto
 
     for (auto& Entry : Pending)
     {
-        if (auto* Type = Entry.TypeResolver())
+        if (const auto* Type = Entry.TypeResolver())
         {
+            DoValidateHandler(Type, Entry.Handler);
             _Handlers.Add(Type, MoveTemp(Entry.Handler));
         }
     }
@@ -57,7 +61,37 @@ auto
         FHandler InHandler)
     -> void
 {
+    DoValidateHandler(nullptr, InHandler);
     _Fallback = MoveTemp(InHandler);
+}
+
+auto
+    FCk_ReplicatedFragmentHandlerRegistry::
+    DoValidateHandler(
+        const UScriptStruct* InType,
+        const FHandler& InHandler)
+    -> void
+{
+    const auto TypeName = ck::IsValid(InType)
+        ? InType->GetName()
+        : FString{TEXT("<dynamic fallback>")};
+
+    const auto HandlesChange = static_cast<bool>(InHandler.OnChange);
+    const auto HandlesAdd    = static_cast<bool>(InHandler.OnAdd);
+
+    // Invariant: reacting to changes requires reacting to the initial Add. A value cannot change on
+    // a client before it has first been added, so OnChange without OnAdd can only ever drop the
+    // first replicated value. (The reverse — OnAdd without OnChange — is fine for write-once data.)
+    const auto OnChangeRequiresOnAdd = HandlesAdd || NOT HandlesChange;
+
+    CK_ENSURE_IF_NOT(OnChangeRequiresOnAdd,
+        TEXT("Replicated fragment handler for [{}] registers OnChange but no OnAdd. Initial "
+             "replication of a fragment always arrives as an Add (PostReplicatedAdd dispatches to "
+             "OnAdd, never OnChange), so the first replicated value would be silently dropped on "
+             "clients and the entity would keep its default. Add an OnAdd handler that applies the "
+             "initial value (typically snapping it, mirroring OnChange)."),
+        TypeName)
+    { }
 }
 
 auto

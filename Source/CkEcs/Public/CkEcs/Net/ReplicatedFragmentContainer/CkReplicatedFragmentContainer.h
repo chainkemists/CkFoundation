@@ -69,6 +69,13 @@ private:
     static auto
     ResolvePending() -> void;
 
+    // Enforces the OnChange => OnAdd invariant. Initial replication always arrives as an Add, so a
+    // handler that reacts to changes but not adds would silently drop the first replicated value.
+    static auto
+    DoValidateHandler(
+        const UScriptStruct* InType,
+        const FHandler& InHandler) -> void;
+
     struct FLazyEntry
     {
         FTypeResolver TypeResolver;
