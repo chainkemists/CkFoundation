@@ -128,6 +128,23 @@ auto
 
 auto
     UCk_EcsWorld_Subsystem_UE::
+    Get_IsReconstitutionInProgress() const
+    -> bool
+{
+    return _ReconstitutionInProgress;
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    Set_ReconstitutionInProgress(
+        bool InInProgress)
+    -> void
+{
+    _ReconstitutionInProgress = InInProgress;
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
     Deinitialize()
         -> void
 {

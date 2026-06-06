@@ -7,6 +7,7 @@
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
+#include "CkEcsExt/OwningActor/CkActorSpawnIntent_Fragment.h"   // M2b-1 respawn-intent stamp
 #include "CkLabel/CkLabel_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -25,6 +26,10 @@ auto
              "Did you pass FCk_EntityScript_WithActor_SpawnParams with the Actor?"),
         GetClass()->GetName())
     { return ECk_EntityScript_ConstructionFlow::Finished; }
+
+    // NOTE (M2b-1 abstention): a respawned bridged actor's self-spawn is suppressed at the Request_SpawnEntity
+    // chokepoint (CkEcs) while the world is reconstituting, so this Construct never runs during a load — no
+    // duplicate entity is created here. See UCk_Utils_EntityScript_UE::Request_SpawnEntity.
 
     ck::ecs::Display(TEXT("[REP_DEBUG] WithActor::Construct Actor=[{}] ActorReplicates=[{}] EffectiveReplication=[{}]"),
         _OwningActor->GetName(),
@@ -49,6 +54,15 @@ auto
 
     UCk_Utils_GameplayLabel_UE::Add(InHandle, {});
     UCk_Utils_Handle_UE::Set_DebugName(InHandle, *_OwningActor->GetName());
+
+    // M2b-1: record how to re-spawn this bridged actor on a future load (snapshotable; raw actor ptr is never
+    // serialized — only the class path). The snapshot respawn pass reads this after restore. Opt-in only: framework
+    // infrastructure actors (relays) must NOT be entity-respawned (the framework re-acquires them on demand).
+    if (Get_IsSnapshotRespawnable())
+    {
+        InHandle.AddOrGet<FFragment_ActorSpawnIntent>(
+            FFragment_ActorSpawnIntent{_OwningActor->GetClass()->GetPathName()});
+    }
 
     return Super::Construct(InHandle, InSpawnParams);
 }
@@ -108,6 +122,14 @@ auto
 auto
     UCk_EntityScript_WithActor_UE::
     ShowReplicationInEditor() const
+    -> bool
+{
+    return false;
+}
+
+auto
+    UCk_EntityScript_WithActor_UE::
+    Get_IsSnapshotRespawnable() const
     -> bool
 {
     return false;
