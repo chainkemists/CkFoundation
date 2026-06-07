@@ -25,11 +25,11 @@ auto
     UCk_Utils_OwningActor_UE::SetupActorEntityLink(InEntity, InActor);
     UCk_Utils_OwningActor_UE::Add(InEntity, InActor);
 
-    // The Transform fragment is non-snapshotable, so it is ABSENT post-restore — re-create it bound to the fresh
-    // actor's root (re-establishing the transform-sync bridge). NOTE (M2b-1 limitation): the entity's saved WORLD
-    // POSITION does not round-trip yet (FFragment_Transform is not snapshotable), so the actor is positioned at its
-    // current/spawn transform. Position-restore is a follow-up (mark FFragment_Transform snapshotable).
-    if (ck::IsValid(InActor->GetRootComponent()) && NOT UCk_Utils_Transform_UE::Has(InEntity))
+    // Re-bind the actor's root component to the entity's Transform. Transform::Add routes (OwningActor is now
+    // present) to AddAndAttachToUnrealComponent, which binds the root + (via its own Has<FFragment_Transform> check)
+    // PRESERVES the restored world-transform value while establishing the transform-sync binding. So the entity's
+    // saved position is kept; if the entity has no Transform (edge), the actor's spawn transform seeds it.
+    if (ck::IsValid(InActor->GetRootComponent()))
     {
         UCk_Utils_Transform_UE::Add(InEntity, InActor->GetActorTransform());
     }
