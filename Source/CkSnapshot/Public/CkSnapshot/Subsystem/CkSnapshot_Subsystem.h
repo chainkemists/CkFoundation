@@ -107,7 +107,8 @@ private:
     auto DoInitiate_Travel() -> void;                    // M2b: OpenLevel the current map (once)
     auto DoIs_NewWorldReady() const -> bool;             // M2b: a new world (!= pre-travel) HasBegunPlay
     auto DoRun_Restore() -> FCk_Snapshot_LoadReport;     // M2b: Run_Restore into the post-travel world
-    auto DoRespawn_BridgedActors() -> int32;             // M2b: spawn + rebind actors from FFragment_ActorSpawnIntent
+    auto DoStamp_RespawnMarkers() -> int32;              // M2b-2a: stamp FTag_ActorRespawn_Pending on restored bridged entities
+    auto DoIs_RespawnComplete() const -> bool;           // M2b-2a: true when no entity still carries the marker (processor drained them)
     auto DoTick_Load(float InDeltaSeconds) -> bool;      // FTSTicker callback; advances the machine
     auto DoFinish_Load(const FCk_Snapshot_LoadReport& InReport) -> void; // M2a: clear flag, fire delegate/signal, reset
     auto DoSet_ReconstitutionFlag(bool InInProgress) -> void; // M2b: set flag on the CURRENT world's EcsWorld subsystem
@@ -134,10 +135,12 @@ private:
     FString _TravelMapName;                  // resolved from the pre-travel world (RemovePIEPrefix)
     FCk_Snapshot_LoadReport _PendingRestoreReport; // stashed between Restoring and the final DoFinish_Load
     int32 _RespawnQuiescenceFramesRemaining = 0;   // post-respawn settle so deferred WithActor constructs abstain
+    bool _RespawnQuiescenceStarted = false;        // sentinel: lazy-init the countdown once (a natural terminal 0 must not re-arm it)
 
     static constexpr int32 kLoad_TeardownFrameCap = 600; // ~10s @ 60fps; abort guard for a stuck/non-ticking world
     static constexpr int32 kLoad_TravelFrameCap = 600;          // abort if the post-travel world never comes up
     static constexpr int32 kLoad_RespawnQuiescenceFrames = 5;   // frames to keep the flag set after the respawn pass
+    static constexpr int32 kLoad_RespawnFrameCap = 600;         // abort if the respawn processor never drains the markers
 };
 
 // --------------------------------------------------------------------------------------------------------------------
