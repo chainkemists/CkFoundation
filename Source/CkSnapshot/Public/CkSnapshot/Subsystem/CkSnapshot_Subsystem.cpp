@@ -15,6 +15,7 @@
 
 #include "CkEcsExt/OwningActor/CkActorSpawnIntent_Fragment.h" // M2b: respawn intent
 #include "CkEcsExt/OwningActor/CkActorRebind_Utils.h"         // M2b: Request_RebindActor
+#include "CkEcsExt/Transform/CkTransform_Utils.h"             // M2b position-restore: restored spawn transform
 
 #include "Kismet/GameplayStatics.h"
 #include "Misc/ScopeExit.h"
@@ -402,12 +403,15 @@ auto
         }
         ck::snapshot::Display(TEXT("DIAG: respawn — entity [{}] spawning actor of class [{}]"), Entity, ActorClassPath);
 
-        // NOTE (M2b-1): position does not round-trip (FFragment_Transform is not snapshotable), so spawn at
-        // identity. Request_RebindActor re-creates the transform bridge bound to this actor. Position-restore is
-        // a follow-up.
+        // Spawn at the restored world transform (FFragment_Transform round-trips), so the actor starts at its
+        // saved position; Request_RebindActor then re-binds its root component to the restored Transform value.
+        const auto SpawnTransform = UCk_Utils_Transform_UE::Has(Entity)
+            ? UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(Entity)
+            : FTransform::Identity;
+
         auto SpawnInfo = FActorSpawnParameters{};
         SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-        auto* Actor = World->SpawnActor<AActor>(ActorClass, FTransform::Identity, SpawnInfo);
+        auto* Actor = World->SpawnActor<AActor>(ActorClass, SpawnTransform, SpawnInfo);
         if (Actor == nullptr)
         {
             ck::snapshot::Warning(TEXT("DIAG: respawn — SpawnActor failed for entity [{}]"), Entity);
