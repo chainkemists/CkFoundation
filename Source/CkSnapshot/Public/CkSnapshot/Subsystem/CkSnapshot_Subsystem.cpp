@@ -14,7 +14,7 @@
 #include "CkEcs/Registry/CkRegistry_SlotTable.h"
 
 #include "CkEcsExt/OwningActor/CkActorSpawnIntent_Fragment.h" // M2b: respawn intent
-#include "CkEcsExt/OwningActor/CkActorRebind_Utils.h"         // M2b: Request_RebindActor
+#include "CkEcsExt/OwningActor/CkActorRespawn_Fragment.h"     // M2b-2a: FTag_ActorRespawn_Pending marker
 #include "CkEcsExt/Transform/CkTransform_Utils.h"             // M2b position-restore: restored spawn transform
 
 #include "Kismet/GameplayStatics.h"
@@ -224,6 +224,7 @@ void
     _PreTravelWorld      = nullptr;
     _TravelMapName.Reset();
     _RespawnQuiescenceFramesRemaining = 0;
+    _RespawnQuiescenceStarted = false;
 
     // Mark THIS world as reconstituting so any bridged actor torn down + any straggler construct abstains.
     DoSet_ReconstitutionFlag(true);
@@ -362,7 +363,7 @@ auto
 
 auto
     UCk_Snapshot_Subsystem_UE::
-    DoRespawn_BridgedActors()
+    DoStamp_RespawnMarkers()
     -> int32
 {
     const auto World = GetWorld();
@@ -373,57 +374,62 @@ auto
     if (ck::Is_NOT_Valid(EcsWorld))
     { return 0; }
 
-    auto* RawRegistry = ck::registry_table::TryResolve(EcsWorld->Get_Registry().Get_RegistryHandle());
+    auto& CkRegistry = EcsWorld->Get_Registry();
+    auto* RawRegistry = ck::registry_table::TryResolve(CkRegistry.Get_RegistryHandle());
     if (RawRegistry == nullptr)
     { return 0; }
 
-    const auto Transient = EcsWorld->Get_TransientEntity();
-
-    // Collect the restored bridged entities FIRST — spawning actors mutates the registry, so do not spawn mid-view.
-    // The raw entt view yields FCk_Entity::IdType; wrap in FCk_Entity for MakeHandle (per CkSnapshot_Context).
+    // Stamp every restored bridged entity so FProcessor_ActorRespawn (scheduler tick) respawns + re-bridges it.
+    // Collect first (Add mutates storages the view is over), then stamp.
     auto BridgedEntities = TArray<FCk_Handle>{};
     for (const auto Entity : RawRegistry->view<FFragment_ActorSpawnIntent>())
     {
-        BridgedEntities.Add(ck::MakeHandle(FCk_Entity{Entity}, Transient));
+        BridgedEntities.Add(ck::MakeHandle(FCk_Entity{Entity}, CkRegistry));
     }
 
-    auto RespawnedCount = 0;
+    auto StampedCount = 0;
     for (auto& Entity : BridgedEntities)
     {
-        if (ck::Is_NOT_Valid(Entity) || NOT Entity.Has<FFragment_ActorSpawnIntent>())
+        if (ck::Is_NOT_Valid(Entity))
         { continue; }
 
-        const auto& ActorClassPath = Entity.Get<FFragment_ActorSpawnIntent>().Get_ActorClassPath();
-        auto* ActorClass = FSoftClassPath{ActorClassPath}.TryLoadClass<AActor>();
-        if (ActorClass == nullptr)
-        {
-            ck::snapshot::Warning(TEXT("DIAG: respawn — entity [{}] actor class path [{}] unloadable; skipped"),
-                Entity, ActorClassPath);
-            continue;
-        }
-        ck::snapshot::Display(TEXT("DIAG: respawn — entity [{}] spawning actor of class [{}]"), Entity, ActorClassPath);
-
-        // Spawn at the restored world transform (FFragment_Transform round-trips), so the actor starts at its
-        // saved position; Request_RebindActor then re-binds its root component to the restored Transform value.
-        const auto SpawnTransform = UCk_Utils_Transform_UE::Has(Entity)
-            ? UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(Entity)
-            : FTransform::Identity;
-
-        auto SpawnInfo = FActorSpawnParameters{};
-        SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-        auto* Actor = World->SpawnActor<AActor>(ActorClass, SpawnTransform, SpawnInfo);
-        if (Actor == nullptr)
-        {
-            ck::snapshot::Warning(TEXT("DIAG: respawn — SpawnActor failed for entity [{}]"), Entity);
-            continue;
-        }
-
-        UCk_Utils_ActorRebind_UE::Request_RebindActor(Entity, Actor);
-        ++RespawnedCount;
+        Entity.Add<ck::FTag_ActorRespawn_Pending>();
+        ++StampedCount;
     }
 
-    ck::snapshot::Display(TEXT("DIAG: respawn — re-spawned + re-bridged [{}] bridged actors"), RespawnedCount);
-    return RespawnedCount;
+    ck::snapshot::Display(TEXT("DIAG: stamped [{}] restored bridged entities for actor-respawn"), StampedCount);
+    return StampedCount;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoIs_RespawnComplete() const
+    -> bool
+{
+    const auto World = GetWorld();
+    if (ck::Is_NOT_Valid(World))
+    { return true; } // no world → nothing to wait on
+
+    auto* EcsWorld = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+    if (ck::Is_NOT_Valid(EcsWorld))
+    { return true; }
+
+    auto& CkRegistry = EcsWorld->Get_Registry();
+    auto* RawRegistry = ck::registry_table::TryResolve(CkRegistry.Get_RegistryHandle());
+    if (RawRegistry == nullptr)
+    { return true; }
+
+    // Complete once the processor has consumed every marker. The marker tag's storage uses in_place deletion
+    // (so the processor may Clear it mid-iteration) → entt SFINAE-disables view::empty() for that policy. Iterate
+    // instead: the view skips tombstones, so any yielded entity means a marker is still pending.
+    for (const auto Entity : RawRegistry->view<ck::FTag_ActorRespawn_Pending>())
+    {
+        (void)Entity;
+        return false;
+    }
+    return true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -487,23 +493,62 @@ auto
         case ELoadPhase::Restoring:
         {
             _PendingRestoreReport = DoRun_Restore();
-            ck::snapshot::Display(TEXT("DIAG: restored [{}] entities into post-travel world — respawning actors"),
+            ck::snapshot::Display(TEXT("DIAG: restored [{}] entities into post-travel world — stamping respawn markers"),
                 _PendingRestoreReport.Get_EntitiesRestored());
 
-            DoRespawn_BridgedActors();
-            _RespawnQuiescenceFramesRemaining = kLoad_RespawnQuiescenceFrames;
+            DoStamp_RespawnMarkers();
+
+            // Run_Restore did registry.clear() + adopted a new transient. Every processor in this world cached its
+            // registry/transient context at construction (pre-restore) and is now blind to the restored entities.
+            // Rebuild the processor graph so processors are re-created against the restored registry — this is what
+            // lets FProcessor_ActorRespawn (and any other processor) see the restored world. The rebuild is deferred
+            // to OnEndFrame and is safe to call mid-tick.
+            if (const auto World = GetWorld();
+                ck::IsValid(World))
+            {
+                if (auto* EcsWorld = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+                    ck::IsValid(EcsWorld))
+                {
+                    ck::snapshot::Display(TEXT("DIAG: rebuilding processor graph against the restored registry"));
+                    EcsWorld->Request_RebuildProcessorGraph();
+                }
+            }
+
+            _LoadFrameCount = 0; // reset so the respawn-drain cap measures from here
             _LoadPhase = ELoadPhase::RespawningActors;
             return true;
         }
 
         case ELoadPhase::RespawningActors:
         {
-            // Let deferred WithActor constructs (from respawned actors) run + abstain while the flag is still set.
+            // Stage 1: wait for FProcessor_ActorRespawn (scheduler tick) to spawn + re-bridge every stamped entity.
+            if (NOT DoIs_RespawnComplete())
+            {
+                if (_LoadFrameCount >= kLoad_RespawnFrameCap)
+                {
+                    ck::snapshot::Error(TEXT("Request_Load: actor respawn did not drain within [{}] frames — aborting"),
+                        kLoad_RespawnFrameCap);
+                    auto Report = FCk_Snapshot_LoadReport{};
+                    Report.Set_Result(ECk_SnapshotResult::Failed_IO);
+                    DoFinish_Load(Report);
+                    return false;
+                }
+                return true;
+            }
+
+            // Stage 2: let deferred WithActor constructs (from the respawned actors' BeginPlay) run + abstain while
+            // the reconstitution flag is still set, before clearing it. The sentinel arms the countdown exactly
+            // once — the natural terminal 0 must NOT re-arm it (that would loop forever).
+            if (NOT _RespawnQuiescenceStarted)
+            {
+                _RespawnQuiescenceStarted = true;
+                _RespawnQuiescenceFramesRemaining = kLoad_RespawnQuiescenceFrames;
+            }
             if (_RespawnQuiescenceFramesRemaining-- > 0)
             { return true; }
 
             DoSet_ReconstitutionFlag(false);
-            ck::snapshot::Display(TEXT("DIAG: respawn quiescence complete — finishing load"));
+            ck::snapshot::Display(TEXT("DIAG: respawn drained + quiescence complete — finishing load"));
             DoFinish_Load(_PendingRestoreReport);
             return false; // done — unregister
         }
