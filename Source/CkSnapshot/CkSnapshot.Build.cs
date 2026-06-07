@@ -14,7 +14,7 @@ public class CkSnapshot : CkModuleRules
 
             "CkCore",
             "CkEcs",
-            "CkEcsExt", // M2b-1: FFragment_ActorSpawnIntent + Request_RebindActor for the respawn pass
+            "CkEcsExt", // FFragment_ActorSpawnIntent + FTag_ActorRespawn_Pending for the respawn marker pass
             "CkLog",
             "CkThirdParty",
         });
