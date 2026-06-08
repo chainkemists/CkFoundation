@@ -7,6 +7,8 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "MaterialEditingLibrary.h"
+#include "MaterialShared.h"
+#include "ShaderCompiler.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialExpressionCustom.h"
@@ -15,6 +17,8 @@
 #include "Materials/MaterialExpressionTextureObjectParameter.h"
 #include "Materials/MaterialExpressionTime.h"
 #include "Materials/MaterialExpressionTextureCoordinate.h"
+#include "Materials/MaterialExpressionSceneTexture.h"
+#include "Materials/MaterialExpressionScreenPosition.h"
 #include "Engine/Texture.h"
 #include "SceneTypes.h"
 #include "UObject/SavePackage.h"
@@ -57,9 +61,14 @@ namespace ck::usf_editor
     }
 
     // ---- Build the Custom node Code (call + output assignments) ----
-    static auto Build_CustomCode(const UCkUsf_LookDefinition* InDef) -> FString
+    static auto Build_CustomCode(const UCkUsf_LookDefinition* InDef, bool InIsPostProcess) -> FString
     {
         FString Args;
+        if (InIsPostProcess)
+        {
+            // Managed scene-texture inputs come first (see Generate_LookMaterial).
+            Args += TEXT("SceneColor, SceneDepth, SceneNormal, ");
+        }
         for (const auto& P : InDef->_Parameters)
         {
             const auto Name = P._Name.ToString();
@@ -83,6 +92,14 @@ namespace ck::usf_editor
 
         FString Code = FString::Printf(
             TEXT("FCkUsf_SurfaceOutput O = %s(%s);\n"), *InDef->_UshFunctionName.ToString(), *Args);
+
+        if (InIsPostProcess)
+        {
+            // PostProcess materials expose only EmissiveColor; the primary Custom output is the final pixel.
+            Code += TEXT("return O.EmissiveColor;");
+            return Code;
+        }
+
         Code += TEXT("EmissiveColor = O.EmissiveColor;\n");
         Code += TEXT("Roughness = O.Roughness;\n");
         Code += TEXT("Metallic = O.Metallic;\n");
@@ -134,22 +151,41 @@ namespace ck::usf_editor
         Material->BlendMode = Config.Blend;
         if (Config.Unlit) { Material->SetShadingModel(MSM_Unlit); }
 
+        if (Config.Domain == MD_PostProcess)
+        {
+            // A programmatically-created PP material does not reliably default to a compositing
+            // location; set it explicitly so the blendable actually draws over the final image.
+            Material->BlendableLocation = BL_SceneColorAfterTonemapping;
+            Material->BlendablePriority = 0;
+        }
+
         // ---- Custom node (added to material via editing library) ----
         auto* Custom = Cast<UMaterialExpressionCustom>(
             UMaterialEditingLibrary::CreateMaterialExpression(
                 Material, UMaterialExpressionCustom::StaticClass(), -400, 0));
 
-        Custom->OutputType = CMOT_Float3;               // primary = BaseColor
+        const auto IsPostProcess = InDef->_Domain == ECk_Usf_Domain::PostProcess;
+
+        Custom->OutputType = CMOT_Float3;               // primary = BaseColor (surface) / EmissiveColor (post-process)
         Custom->IncludeFilePaths.Add(InDef->_UshIncludePath);
 
         Custom->AdditionalOutputs.Reset();
-        for (const auto& E : Get_ExtraOutputs())
+        if (NOT IsPostProcess)
         {
-            Custom->AdditionalOutputs.Add(FCustomOutput{ FName(E.Name), E.Type });
+            for (const auto& E : Get_ExtraOutputs())
+            {
+                Custom->AdditionalOutputs.Add(FCustomOutput{ FName(E.Name), E.Type });
+            }
         }
 
-        // Inputs: one per param (incl. textures), then Time + UV.
+        // Inputs: [scene textures (PP only)] + one per param (incl. textures) + Time + UV.
         Custom->Inputs.Reset();
+        if (IsPostProcess)
+        {
+            { FCustomInput In; In.InputName = TEXT("SceneColor");  Custom->Inputs.Add(In); }
+            { FCustomInput In; In.InputName = TEXT("SceneDepth");  Custom->Inputs.Add(In); }
+            { FCustomInput In; In.InputName = TEXT("SceneNormal"); Custom->Inputs.Add(In); }
+        }
         for (const auto& P : InDef->_Parameters)
         {
             FCustomInput In; In.InputName = P._Name; Custom->Inputs.Add(In);
@@ -157,9 +193,26 @@ namespace ck::usf_editor
         { FCustomInput T; T.InputName = TEXT("Time"); Custom->Inputs.Add(T); }
         { FCustomInput U; U.InputName = TEXT("UV");   Custom->Inputs.Add(U); }
 
-        Custom->Code = Build_CustomCode(InDef);
+        Custom->Code = Build_CustomCode(InDef, IsPostProcess);
         Custom->RebuildOutputs();
         Custom->PostEditChange();
+
+        // ---- PostProcess: managed scene-texture inputs (also declares scene-texture usage,
+        //      which legalizes raw SceneTextureLookup() in the look's .ush) ----
+        if (IsPostProcess)
+        {
+            const auto AddSceneTexture = [&](ESceneTextureId InId, const TCHAR* InInputName, int32 InRow) -> void
+            {
+                auto* Expr = Cast<UMaterialExpressionSceneTexture>(
+                    UMaterialEditingLibrary::CreateMaterialExpression(
+                        Material, UMaterialExpressionSceneTexture::StaticClass(), -1100, InRow * 160));
+                Expr->SceneTextureId = InId;
+                UMaterialEditingLibrary::ConnectMaterialExpressions(Expr, FString(), Custom, InInputName);
+            };
+            AddSceneTexture(PPI_PostProcessInput0, TEXT("SceneColor"),  0);
+            AddSceneTexture(PPI_SceneDepth,        TEXT("SceneDepth"),  1);
+            AddSceneTexture(PPI_WorldNormal,       TEXT("SceneNormal"), 2);
+        }
 
         // ---- Parameter nodes wired to Custom inputs by name ----
         int32 ParamRow = 0;
@@ -223,15 +276,26 @@ namespace ck::usf_editor
             Material, UMaterialExpressionTime::StaticClass(), -800, (ParamRow + 1) * 120);
         UMaterialEditingLibrary::ConnectMaterialExpressions(TimeExpr, FString(), Custom, TEXT("Time"));
 
-        auto* UvExpr = UMaterialEditingLibrary::CreateMaterialExpression(
-            Material, UMaterialExpressionTextureCoordinate::StaticClass(), -800, (ParamRow + 2) * 120);
+        auto* UvExpr = IsPostProcess
+            ? UMaterialEditingLibrary::CreateMaterialExpression(
+                Material, UMaterialExpressionScreenPosition::StaticClass(), -800, (ParamRow + 2) * 120)
+            : UMaterialEditingLibrary::CreateMaterialExpression(
+                Material, UMaterialExpressionTextureCoordinate::StaticClass(), -800, (ParamRow + 2) * 120);
         UMaterialEditingLibrary::ConnectMaterialExpressions(UvExpr, FString(), Custom, TEXT("UV"));
 
         // ---- Connect Custom outputs to material pins ----
-        UMaterialEditingLibrary::ConnectMaterialProperty(Custom, FString(), MP_BaseColor);
-        for (const auto& E : Get_ExtraOutputs())
+        if (IsPostProcess)
         {
-            UMaterialEditingLibrary::ConnectMaterialProperty(Custom, FString(E.Name), E.Prop);
+            // PostProcess: the primary output IS the final emissive pixel; no other pins are valid.
+            UMaterialEditingLibrary::ConnectMaterialProperty(Custom, FString(), MP_EmissiveColor);
+        }
+        else
+        {
+            UMaterialEditingLibrary::ConnectMaterialProperty(Custom, FString(), MP_BaseColor);
+            for (const auto& E : Get_ExtraOutputs())
+            {
+                UMaterialEditingLibrary::ConnectMaterialProperty(Custom, FString(E.Name), E.Prop);
+            }
         }
 
         UMaterialEditingLibrary::LayoutMaterialExpressions(Material);
@@ -250,6 +314,31 @@ namespace ck::usf_editor
         return Material;
     }
 
+    // Forces the just-generated material's shaders to finish compiling and reports any compile
+    // errors. This catches the "compiles as a UMaterial object but the HLSL is broken" case — the
+    // silent fallback-to-default-material that object + MID checks miss. Notably covers PostProcess
+    // permutations (FPostProcessMaterialPS), which only surface their errors once realised.
+    static auto Validate_LookShaders(UMaterial* InMaterial, FName InLookName, TArray<FString>& OutErrors) -> bool
+    {
+        if (ck::Is_NOT_Valid(InMaterial, ck::IsValid_Policy_NullptrOnly{}))
+        { return true; }
+
+        if (GShaderCompilingManager != nullptr)
+        { GShaderCompilingManager->FinishAllCompilation(); }
+
+        if (NOT InMaterial->IsCompilingOrHadCompileError(GMaxRHIShaderPlatform))
+        { return true; }
+
+        // The specific HLSL error (file:line + message) is emitted by LogShaderCompilers during
+        // the compile above; this surfaces WHICH look failed and fails the generate/test.
+        const auto Msg = FString::Printf(
+            TEXT("Look [%s] SHADER FAILED TO COMPILE — see the LogShaderCompilers '*.ush ... error:' line above"),
+            *InLookName.ToString());
+        ck::usf_editor::Error(TEXT("{}"), Msg);
+        OutErrors.Add(Msg);
+        return false;
+    }
+
     auto Generate_AllLookMaterials() -> FGenerateResult
     {
         FGenerateResult Result;
@@ -259,11 +348,15 @@ namespace ck::usf_editor
         for (const auto& A : Assets)
         {
             auto* Def = Cast<UCkUsf_LookDefinition>(A.GetAsset());
-            if (Generate_LookMaterial(Def) != nullptr) { ++Result.NumGenerated; }
-            else { ++Result.NumSkipped; }
+            auto* Material = Generate_LookMaterial(Def);
+            if (ck::Is_NOT_Valid(Material, ck::IsValid_Policy_NullptrOnly{}))
+            { ++Result.NumSkipped; continue; }
+
+            ++Result.NumGenerated;
+            Validate_LookShaders(Material, Def->Get_EffectiveLookName(), Result.Errors);
         }
-        ck::usf_editor::Log(TEXT("CkUsf generate: {} generated, {} skipped"),
-            Result.NumGenerated, Result.NumSkipped);
+        ck::usf_editor::Log(TEXT("CkUsf generate: {} generated, {} skipped, {} shader error(s)"),
+            Result.NumGenerated, Result.NumSkipped, Result.Errors.Num());
         return Result;
     }
 }

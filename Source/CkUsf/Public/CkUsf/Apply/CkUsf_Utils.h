@@ -9,6 +9,8 @@ class UCkUsf_LookDefinition;
 class UMaterialInterface;
 class UMaterialInstanceDynamic;
 class UTexture;
+class UCameraComponent;
+class UPostProcessComponent;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -31,6 +33,20 @@ public:
     Create_MID_ForLook(
         const UCkUsf_LookDefinition* InLook,
         UObject* InOuter);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Usf",
+              DisplayName = "[Ck][Usf] Apply PostProcess To Camera")
+    static UMaterialInstanceDynamic*
+    Apply_PostProcess_ToCamera(
+        UCameraComponent* InCamera,
+        const UCkUsf_LookDefinition* InLook);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Usf",
+              DisplayName = "[Ck][Usf] Apply PostProcess To Component")
+    static UMaterialInstanceDynamic*
+    Apply_PostProcess_ToComponent(
+        UPostProcessComponent* InPostProcess,
+        const UCkUsf_LookDefinition* InLook);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Usf",
               DisplayName = "[Ck][Usf] Set Scalar")

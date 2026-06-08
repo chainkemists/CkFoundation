@@ -11,6 +11,7 @@ public class CkUsfEditor : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
+            "RHI",
             "UnrealEd",
             "EditorSubsystem",
             "MaterialEditor",
