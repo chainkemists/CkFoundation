@@ -338,10 +338,19 @@ auto
     // client along (PlayerController/PlayerState persist; pawns are re-created). "?listen" keeps the server a
     // listen server. The server restores into the post-travel world (M2b-2a path); clients re-derive the restored
     // world via replication over the preserved connection.
+    // Enable seamless travel on the (pre-travel) authoritative GameMode. A fresh GameMode is constructed on the
+    // destination map (GameMode is not a seamless carry-over actor by default), so this mutation does not persist
+    // beyond this travel — a subsequent load re-sets it on the new GameMode. If there is no authoritative GameMode
+    // the travel would degrade to HARD (clients would NOT follow the reload), so make that loud rather than silent.
     if (auto* GameMode = World->GetAuthGameMode();
         ck::IsValid(GameMode))
     {
         GameMode->bUseSeamlessTravel = true;
+    }
+    else
+    {
+        ck::snapshot::Error(TEXT("DoInitiate_Travel: no authoritative GameMode on a server world — seamless travel "
+            "NOT enabled; clients will NOT follow the reload. This should not happen on an authoritative server."));
     }
 
     ck::snapshot::Display(TEXT("DIAG: Request_Load travel — seamless ServerTravel (netmode [{}]) to map [{}] (pre-travel world [{}])"),
