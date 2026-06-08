@@ -52,6 +52,18 @@ namespace ck
             const FFragment_ActorSpawnIntent& InIntent) -> void;
 
     private:
+        // Re-issue the entity-script REPLICATION for a restored+re-bridged entity. Request_RebindActor re-adds the
+        // driver fragment (OwningActor::Add -> EntityReplicationDriver::TryAdd) but, unlike the fresh-spawn path
+        // (FProcessor_EntityScript_Spawn), does NOT enqueue the replicate request that populates the driver's
+        // ReplicationData_EntityScript. Without that payload the server's replicated driver object stays empty, so
+        // clients receive the (independently-replicating) actor but never the ECS entity -> no bridge, no fragments.
+        // Mirrors the fresh-spawn step, on the networked authority, for replicated entities only.
+        auto
+        DoReplicate_RestoredEntity(
+            FCk_Handle& InEntity,
+            AActor* InActor) -> void;
+
+    private:
         // Filled by ForEachEntity (during the view iteration), consumed by DoTick (after it). Collect-then-act:
         // SpawnActor + the driver Request_CreateEntity mutate the registry, so they must not run mid-view.
         TArray<FCk_Handle> _PendingRespawns;
