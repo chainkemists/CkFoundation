@@ -5,8 +5,10 @@
 // Params: CellColor (Vector), Scale (Scalar), Speed (Scalar), then Time, UV.
 // Animated Voronoi: feature points drift over time; glow the cell edges where
 // the two nearest points are equidistant. Heavier — a 3x3 neighbourhood search.
-FCkUsf_SurfaceOutput CkUsf_Look_Voronoi(float3 CellColor, float Scale, float Speed, float Time, float2 UV)
+FCkUsf_SurfaceOutput CkUsf_Look_Voronoi(FCkUsf_SurfaceInput In, float3 CellColor, float Scale, float Speed)
 {
+    float Time = In.Time;
+    float2 UV = In.UV;
     FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
 
     float2 P = (UV - 0.5) * Scale;

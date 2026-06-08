@@ -5,8 +5,10 @@
 // Params: ColorLow (Vector), ColorHigh (Vector), Speed (Scalar), then Time, UV.
 // Domain-warped fractal noise (Inigo Quilez style): fbm of fbm of fbm. Many octaves
 // of value noise — swirling, cloud-like, heavy. Uses the warp magnitude to colour.
-FCkUsf_SurfaceOutput CkUsf_Look_FbmWarp(float3 ColorLow, float3 ColorHigh, float Speed, float Time, float2 UV)
+FCkUsf_SurfaceOutput CkUsf_Look_FbmWarp(FCkUsf_SurfaceInput In, float3 ColorLow, float3 ColorHigh, float Speed)
 {
+    float Time = In.Time;
+    float2 UV = In.UV;
     FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
 
     float2 P = (UV - 0.5) * 6.0;

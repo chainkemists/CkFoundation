@@ -6,10 +6,12 @@
 
 // Params order: iChannel0 (Texture2D=self), iResolution (Vector), iFrame (Scalar), iTimeDelta (Scalar), then Time, UV.
 FCkUsf_SurfaceOutput CkUsf_Pass_SmokeBuffer(
+    FCkUsf_SurfaceInput In,
     Texture2D iChannel0, SamplerState iChannel0Sampler,
-    float3 iResolution, float iFrame, float iTimeDelta,
-    float Time, float2 UV)
+    float3 iResolution, float iFrame, float iTimeDelta)
 {
+    float Time = In.Time;
+    float2 UV = In.UV;
     FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
 
     float2 texel = 1.0 / max(iResolution.xy, float2(1.0, 1.0));

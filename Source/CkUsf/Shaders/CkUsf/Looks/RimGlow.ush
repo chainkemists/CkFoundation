@@ -1,0 +1,20 @@
+// /CkUsf/Looks/RimGlow.ush
+// Fresnel rim light: brightens grazing angles from the surface normal vs the view direction.
+// Proves the FCkUsf_SurfaceInput world-space inputs (CameraVector + VertexNormal) flow correctly.
+#pragma once
+#include "/CkUsf/Common.ush"
+
+// Params: RimColor (Vector), RimPower (Scalar)
+FCkUsf_SurfaceOutput CkUsf_Look_RimGlow(FCkUsf_SurfaceInput In, float3 RimColor, float RimPower)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float3 N = normalize(In.VertexNormal);
+    float3 V = normalize(In.CameraVector);
+    float  fresnel = pow(1.0 - saturate(dot(N, V)), max(RimPower, 0.0001));
+
+    O.EmissiveColor = RimColor * fresnel * 2.0;
+    O.BaseColor = float3(0.02, 0.02, 0.03);
+    O.Opacity = 1.0;
+    return O;
+}

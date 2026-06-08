@@ -6,8 +6,10 @@
 // Underwater caustics: a few iterations of domain distortion build interlocking
 // sine ridges whose crossings read as the bright dancing cells of pool caustics.
 // Division-free (robust — no NaN/inf pixels).
-FCkUsf_SurfaceOutput CkUsf_Look_Caustics(float3 WaterColor, float Scale, float Speed, float Time, float2 UV)
+FCkUsf_SurfaceOutput CkUsf_Look_Caustics(FCkUsf_SurfaceInput In, float3 WaterColor, float Scale, float Speed)
 {
+    float Time = In.Time;
+    float2 UV = In.UV;
     FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
 
     float2 p = (UV - 0.5) * Scale;

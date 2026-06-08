@@ -5,8 +5,10 @@
 // Params: ColorInner (Vector), ColorOuter (Vector), Speed (Scalar), then Time, UV.
 // Escape-time Julia set with a constant that orbits over time. Per-pixel iterated
 // math — the heavy-showcase look. Smooth (continuous) iteration count for clean bands.
-FCkUsf_SurfaceOutput CkUsf_Look_Julia(float3 ColorInner, float3 ColorOuter, float Speed, float Time, float2 UV)
+FCkUsf_SurfaceOutput CkUsf_Look_Julia(FCkUsf_SurfaceInput In, float3 ColorInner, float3 ColorOuter, float Speed)
 {
+    float Time = In.Time;
+    float2 UV = In.UV;
     FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
 
     // Centered, aspect-neutral coords with a gentle zoom breath.
