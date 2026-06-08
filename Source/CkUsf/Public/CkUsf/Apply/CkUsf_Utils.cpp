@@ -9,6 +9,8 @@
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Engine/Texture.h"
+#include "Camera/CameraComponent.h"
+#include "Components/PostProcessComponent.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -100,6 +102,50 @@ auto
 {
     if (ck::IsValid(InMID, ck::IsValid_Policy_NullptrOnly{}))
     { InMID->SetTextureParameterValue(InName, InValue); }
+}
+
+auto
+    UCk_Utils_Usf_UE::
+    Apply_PostProcess_ToCamera(
+        UCameraComponent* InCamera,
+        const UCkUsf_LookDefinition* InLook)
+    -> UMaterialInstanceDynamic*
+{
+    if (ck::Is_NOT_Valid(InCamera, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        ck::usf::Warning(TEXT("Apply_PostProcess_ToCamera: null camera"));
+        return nullptr;
+    }
+
+    auto* MID = Create_MID_ForLook(InLook, InCamera);
+    if (ck::Is_NOT_Valid(MID, ck::IsValid_Policy_NullptrOnly{}))
+    { return nullptr; }
+
+    constexpr auto Weight = 1.0f;
+    InCamera->PostProcessSettings.AddBlendable(MID, Weight);
+    return MID;
+}
+
+auto
+    UCk_Utils_Usf_UE::
+    Apply_PostProcess_ToComponent(
+        UPostProcessComponent* InPostProcess,
+        const UCkUsf_LookDefinition* InLook)
+    -> UMaterialInstanceDynamic*
+{
+    if (ck::Is_NOT_Valid(InPostProcess, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        ck::usf::Warning(TEXT("Apply_PostProcess_ToComponent: null post-process component"));
+        return nullptr;
+    }
+
+    auto* MID = Create_MID_ForLook(InLook, InPostProcess);
+    if (ck::Is_NOT_Valid(MID, ck::IsValid_Policy_NullptrOnly{}))
+    { return nullptr; }
+
+    constexpr auto Weight = 1.0f;
+    InPostProcess->Settings.AddBlendable(MID, Weight);
+    return MID;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
