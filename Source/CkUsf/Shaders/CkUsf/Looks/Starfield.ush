@@ -5,8 +5,10 @@
 // Params: StarColor (Vector), Speed (Scalar), Density (Scalar), then Time, UV.
 // Sparse, sharp star points across a few slowly-drifting parallax layers on a near-black sky.
 // Stars are kept away from cell edges so the underlying grid never shows.
-FCkUsf_SurfaceOutput CkUsf_Look_Starfield(float3 StarColor, float Speed, float Density, float Time, float2 UV)
+FCkUsf_SurfaceOutput CkUsf_Look_Starfield(FCkUsf_SurfaceInput In, float3 StarColor, float Speed, float Density)
 {
+    float Time = In.Time;
+    float2 UV = In.UV;
     FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
 
     float3 col = float3(0.01, 0.012, 0.03); // deep-space backdrop

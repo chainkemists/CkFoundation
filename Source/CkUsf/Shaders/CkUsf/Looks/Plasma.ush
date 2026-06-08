@@ -4,8 +4,10 @@
 
 // Params: ColorA (Vector), ColorB (Vector), Speed (Scalar), then Time, UV.
 // Classic animated plasma: a sum of sine fields blended between two colors.
-FCkUsf_SurfaceOutput CkUsf_Look_Plasma(float3 ColorA, float3 ColorB, float Speed, float Time, float2 UV)
+FCkUsf_SurfaceOutput CkUsf_Look_Plasma(FCkUsf_SurfaceInput In, float3 ColorA, float3 ColorB, float Speed)
 {
+    float Time = In.Time;
+    float2 UV = In.UV;
     FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
 
     float2 P = (UV - 0.5) * 10.0;

@@ -242,6 +242,26 @@ namespace CkUsf
         _Parameters.Add(Speed);
     }
 
+    asset RimGlow of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/RimGlow.ush";
+        _UshFunctionName = n"CkUsf_Look_RimGlow";
+        _Domain          = ECk_Usf_Domain::SurfaceUnlit;
+        _LookName        = n"RimGlow";
+
+        FCk_Usf_ParamDesc RimColor;
+        RimColor._Name = n"RimColor";
+        RimColor._Type = ECk_Usf_ParamType::Vector;
+        RimColor._DefaultVector = FLinearColor(0.2, 0.7, 1.0, 1.0);
+        _Parameters.Add(RimColor);
+
+        FCk_Usf_ParamDesc RimPower;
+        RimPower._Name = n"RimPower";
+        RimPower._Type = ECk_Usf_ParamType::Scalar;
+        RimPower._DefaultScalar = 3.0;
+        _Parameters.Add(RimPower);
+    }
+
     // ---- Multi-pass (render-texture) passes ----
 
     asset SmokeBuffer of UCkUsf_LookDefinition

@@ -148,8 +148,10 @@ float Sea_HeightMapTracing(float3 ori, float3 dir, out float3 p, float Tm)
     return lerp(tm, tx, hm / (hm - hx));
 }
 
-FCkUsf_SurfaceOutput CkUsf_Look_Seascape(float Speed, float Time, float2 UV)
+FCkUsf_SurfaceOutput CkUsf_Look_Seascape(FCkUsf_SurfaceInput In, float Speed)
 {
+    float Time = In.Time;
+    float2 UV = In.UV;
     FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
 
     float Tm = Time * Speed;
