@@ -36,7 +36,18 @@ UCk_Fragment_EntityReplicationDriver_Rep::
     auto World = UObject::GetWorld();
 
     if (ck::Is_NOT_Valid(World))
-    { return; }
+    {
+        // ROOT FAILURE (surfaced loudly on purpose). A replicated EntityReplicationDriver was constructed on
+        // a client before its outer Actor had a UWorld. _AssociatedEntity is created ONLY here, so it stays
+        // permanently invalid — any child entity-driver that lists this one as its owner will park forever
+        // (the park queues in the OnReps below are never drained, and this owner never becomes valid). This
+        // is not expected to occur; if it ever does it explains a silently-missing replicated subtree on the
+        // client (followed ~10s later by PendingReplicationRetry timeouts). Investigated 2026-06: never
+        // reproduced across same-actor + cross-actor burst stress — see the EntityReplicationDriver.Net tests.
+        ck::ecs::Warning(TEXT("EntityReplicationDriver constructed with NO valid UWorld (Outer=[{}]). Its associated "
+            "entity can never be created, permanently stranding any dependent child drivers on the client."), GetOuter());
+        return;
+    }
 
     // Creating via registry since we want 'Request_SetupEntityWithLifetimeOwner' to execute during the OnRep_XYZ
     auto TransientHandle = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(World);
@@ -130,6 +141,12 @@ auto
     // wait on the owning entity to fully replicate
     if (ck::Is_NOT_Valid(OwningEntity))
     {
+        // The owner driver has no valid associated entity. On the client a driver's _AssociatedEntity never
+        // recovers (it is only ever set in the ctor), so this child cannot be set up now or later —
+        // _PendingChildEntityConstructions is never drained. Surfaced loudly so a real occurrence is visible
+        // rather than a silent missing subtree. See the ctor no-world warning above for the root cause.
+        ck::ecs::Warning(TEXT("Replicated child driver [{}] cannot construct: owner driver [{}] has no valid associated "
+            "entity and will never recover. Child parked in a queue that is never drained."), this, OwningEntityDriver);
         OwningEntityDriver->_PendingChildEntityConstructions.Emplace(this);
         return;
     }
@@ -211,6 +228,13 @@ auto
 
         if (ck::Is_NOT_Valid(OwningEntity))
         {
+            // The owner driver has no valid associated entity. On the client a driver's _AssociatedEntity
+            // never recovers, so this child entity-script cannot be set up now or later —
+            // _PendingChildEntityConstructions is never drained. Surfaced loudly so a real occurrence is
+            // visible rather than a silent missing subtree. See the ctor no-world warning for the root cause.
+            ck::ecs::Warning(TEXT("Replicated child entity-script driver [{}] cannot construct: owner driver [{}] has no "
+                "valid associated entity and will never recover. Child parked in a queue that is never drained."),
+                this, _ReplicationData_EntityScript.Get_OwningEntityDriver());
             _ReplicationData_EntityScript.Get_OwningEntityDriver()->_PendingChildEntityConstructions.Emplace(this);
             return;
         }
@@ -290,6 +314,12 @@ auto
     // wait on the owning entity to fully replicate
     if (ck::Is_NOT_Valid(OwningEntity))
     {
+        // The owner driver has no valid associated entity. On the client a driver's _AssociatedEntity never
+        // recovers, so this child ability cannot be set up now or later — _PendingChildAbilityEntityConstructions
+        // is never drained. Surfaced loudly so a real occurrence is visible. See the ctor no-world warning.
+        ck::ecs::Warning(TEXT("Replicated child ability driver [{}] cannot construct: owner driver [{}] has no valid "
+            "associated entity and will never recover. Child parked in a queue that is never drained."),
+            this, _ReplicationData_Ability.Get_OwningEntityDriver());
         _ReplicationData_Ability.Get_OwningEntityDriver()->_PendingChildAbilityEntityConstructions.Emplace(this);
         return;
     }
