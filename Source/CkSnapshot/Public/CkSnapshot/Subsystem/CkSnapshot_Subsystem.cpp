@@ -24,6 +24,7 @@
 
 #include <Engine/World.h>
 #include <GameFramework/Actor.h>   // M2b: SpawnActor<AActor> needs the complete type
+#include <GameFramework/GameModeBase.h>   // M2b-2b: AGameModeBase::bUseSeamlessTravel for seamless ServerTravel
 #include "UObject/SoftObjectPath.h" // M2b: FSoftClassPath::TryLoadClass for the respawn pass
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -320,11 +321,33 @@ auto
     _PreTravelWorld = World;
     _TravelMapName  = World->RemovePIEPrefix(World->GetOutermost()->GetName());
 
-    ck::snapshot::Display(TEXT("DIAG: Request_Load travel — OpenLevel to map [{}] (pre-travel world [{}])"),
-        _TravelMapName, World->GetName());
-
     constexpr auto AbsoluteTravel = true;
-    UGameplayStatics::OpenLevel(World, FName{*_TravelMapName}, AbsoluteTravel);
+
+    // A true single-player game (NM_Standalone) reloads via OpenLevel — there are no clients to bring along.
+    if (World->GetNetMode() == ENetMode::NM_Standalone)
+    {
+        ck::snapshot::Display(TEXT("DIAG: Request_Load travel — OpenLevel (Standalone) to map [{}] (pre-travel world [{}])"),
+            _TravelMapName, World->GetName());
+        UGameplayStatics::OpenLevel(World, FName{*_TravelMapName}, AbsoluteTravel);
+        return;
+    }
+
+    // A server (listen/dedicated) must stay a server across the reload AND keep its connected clients. A HARD
+    // ServerTravel cannot carry clients in one-process PIE (net-driver teardown/reconnect race — proven by spike),
+    // so we use SEAMLESS travel: it preserves the UNetConnection across the world swap, so the engine carries each
+    // client along (PlayerController/PlayerState persist; pawns are re-created). "?listen" keeps the server a
+    // listen server. The server restores into the post-travel world (M2b-2a path); clients re-derive the restored
+    // world via replication over the preserved connection.
+    if (auto* GameMode = World->GetAuthGameMode();
+        ck::IsValid(GameMode))
+    {
+        GameMode->bUseSeamlessTravel = true;
+    }
+
+    ck::snapshot::Display(TEXT("DIAG: Request_Load travel — seamless ServerTravel (netmode [{}]) to map [{}] (pre-travel world [{}])"),
+        static_cast<int32>(World->GetNetMode()), _TravelMapName, World->GetName());
+
+    World->ServerTravel(_TravelMapName + TEXT("?listen"), AbsoluteTravel);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -338,10 +361,16 @@ auto
     if (ck::Is_NOT_Valid(World))
     { return false; }
 
-    // A different world object than the one we left (OpenLevel produces a fresh world — Phase A confirmed it is
-    // NM_Standalone, so detect by instance + HasBegunPlay, NOT netmode), and it has begun play (its EcsWorld
-    // subsystem has re-inited a clean registry).
+    // A different world object than the one we left (both OpenLevel and seamless ServerTravel produce a fresh
+    // world; detect by instance + HasBegunPlay, netmode-agnostic).
     if (World == _PreTravelWorld.Get())
+    { return false; }
+
+    // Seamless travel transits through an intermediate TRANSITION map before the destination map. We reload the
+    // SAME map, so the destination's package name equals _TravelMapName; the transition map has a different name
+    // and must be skipped (restoring into it would be wrong). For the OpenLevel/Standalone path there is no
+    // transition map and the reloaded world's name also equals _TravelMapName, so this filter is uniformly safe.
+    if (World->RemovePIEPrefix(World->GetOutermost()->GetName()) != _TravelMapName)
     { return false; }
 
     return World->HasBegunPlay();
