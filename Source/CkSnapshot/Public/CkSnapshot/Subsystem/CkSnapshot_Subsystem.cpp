@@ -22,6 +22,7 @@
 #include "Serialization/BufferArchive.h"
 #include "Serialization/MemoryReader.h"
 
+#include <Engine/NetDriver.h>   // M2b-2b: UNetDriver::ClientConnections to decide seamless-vs-OpenLevel
 #include <Engine/World.h>
 #include <GameFramework/Actor.h>   // M2b: SpawnActor<AActor> needs the complete type
 #include <GameFramework/GameModeBase.h>   // M2b-2b: AGameModeBase::bUseSeamlessTravel for seamless ServerTravel
@@ -323,25 +324,28 @@ auto
 
     constexpr auto AbsoluteTravel = true;
 
-    // A true single-player game (NM_Standalone) reloads via OpenLevel — there are no clients to bring along.
-    if (World->GetNetMode() == ENetMode::NM_Standalone)
+    // Decide the travel mechanism by whether there are connected clients to carry across the reload. Seamless
+    // ServerTravel is connection-preserving (it brings clients along) but heavier — it transits a transition map
+    // and incurs a ~4s ServerTravelPause, and only makes sense when there is actually a client connection to
+    // preserve. With NO remote clients — true single-player (NM_Standalone) OR a server with zero client
+    // connections — a plain OpenLevel reload is correct and immediate. (A hard ServerTravel cannot carry clients
+    // in one-process PIE anyway — proven by spike — so the with-clients case MUST be seamless.)
+    auto* NetDriver = World->GetNetDriver();
+    const auto HasConnectedClients =
+        ck::IsValid(NetDriver, ck::IsValid_Policy_NullptrOnly{}) && NetDriver->ClientConnections.Num() > 0;
+
+    if (World->GetNetMode() == ENetMode::NM_Standalone || NOT HasConnectedClients)
     {
-        ck::snapshot::Display(TEXT("DIAG: Request_Load travel — OpenLevel (Standalone) to map [{}] (pre-travel world [{}])"),
+        ck::snapshot::Display(TEXT("DIAG: Request_Load travel — OpenLevel (no connected clients) to map [{}] (pre-travel world [{}])"),
             _TravelMapName, World->GetName());
         UGameplayStatics::OpenLevel(World, FName{*_TravelMapName}, AbsoluteTravel);
         return;
     }
 
-    // A server (listen/dedicated) must stay a server across the reload AND keep its connected clients. A HARD
-    // ServerTravel cannot carry clients in one-process PIE (net-driver teardown/reconnect race — proven by spike),
-    // so we use SEAMLESS travel: it preserves the UNetConnection across the world swap, so the engine carries each
-    // client along (PlayerController/PlayerState persist; pawns are re-created). "?listen" keeps the server a
-    // listen server. The server restores into the post-travel world (M2b-2a path); clients re-derive the restored
-    // world via replication over the preserved connection.
-    // Enable seamless travel on the (pre-travel) authoritative GameMode. A fresh GameMode is constructed on the
-    // destination map (GameMode is not a seamless carry-over actor by default), so this mutation does not persist
-    // beyond this travel — a subsequent load re-sets it on the new GameMode. If there is no authoritative GameMode
-    // the travel would degrade to HARD (clients would NOT follow the reload), so make that loud rather than silent.
+    // Server with connected clients → seamless ServerTravel so the engine carries each client across the reload on
+    // a preserved UNetConnection (PlayerController/PlayerState persist; pawns are re-created). Set on the pre-travel
+    // GameMode; the destination GameMode is freshly constructed (GameMode is not a seamless carry-over actor by
+    // default), so the mutation does not persist beyond this travel. "?listen" keeps the server a listen server.
     if (auto* GameMode = World->GetAuthGameMode();
         ck::IsValid(GameMode))
     {
@@ -353,8 +357,8 @@ auto
             "NOT enabled; clients will NOT follow the reload. This should not happen on an authoritative server."));
     }
 
-    ck::snapshot::Display(TEXT("DIAG: Request_Load travel — seamless ServerTravel (netmode [{}]) to map [{}] (pre-travel world [{}])"),
-        static_cast<int32>(World->GetNetMode()), _TravelMapName, World->GetName());
+    ck::snapshot::Display(TEXT("DIAG: Request_Load travel — seamless ServerTravel (netmode [{}], [{}] client connection(s)) to map [{}] (pre-travel world [{}])"),
+        static_cast<int32>(World->GetNetMode()), NetDriver->ClientConnections.Num(), _TravelMapName, World->GetName());
 
     World->ServerTravel(_TravelMapName + TEXT("?listen"), AbsoluteTravel);
 }
