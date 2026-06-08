@@ -158,6 +158,90 @@ namespace CkUsf
         _Parameters.Add(Noise);
     }
 
+    asset Truchet of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/Truchet.ush";
+        _UshFunctionName = n"CkUsf_Look_Truchet";
+        _Domain          = ECk_Usf_Domain::SurfaceUnlit;
+        _LookName        = n"Truchet";
+
+        FCk_Usf_ParamDesc ColorA;
+        ColorA._Name = n"ColorA";
+        ColorA._Type = ECk_Usf_ParamType::Vector;
+        ColorA._DefaultVector = FLinearColor(0.1, 0.9, 1.0, 1.0);
+        _Parameters.Add(ColorA);
+
+        FCk_Usf_ParamDesc ColorB;
+        ColorB._Name = n"ColorB";
+        ColorB._Type = ECk_Usf_ParamType::Vector;
+        ColorB._DefaultVector = FLinearColor(1.0, 0.3, 0.8, 1.0);
+        _Parameters.Add(ColorB);
+
+        FCk_Usf_ParamDesc Scale;
+        Scale._Name = n"Scale";
+        Scale._Type = ECk_Usf_ParamType::Scalar;
+        Scale._DefaultScalar = 8.0;
+        _Parameters.Add(Scale);
+
+        FCk_Usf_ParamDesc Speed;
+        Speed._Name = n"Speed";
+        Speed._Type = ECk_Usf_ParamType::Scalar;
+        Speed._DefaultScalar = 1.0;
+        _Parameters.Add(Speed);
+    }
+
+    asset Starfield of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/Starfield.ush";
+        _UshFunctionName = n"CkUsf_Look_Starfield";
+        _Domain          = ECk_Usf_Domain::SurfaceUnlit;
+        _LookName        = n"Starfield";
+
+        FCk_Usf_ParamDesc StarColor;
+        StarColor._Name = n"StarColor";
+        StarColor._Type = ECk_Usf_ParamType::Vector;
+        StarColor._DefaultVector = FLinearColor(0.9, 0.95, 1.0, 1.0);
+        _Parameters.Add(StarColor);
+
+        FCk_Usf_ParamDesc Speed;
+        Speed._Name = n"Speed";
+        Speed._Type = ECk_Usf_ParamType::Scalar;
+        Speed._DefaultScalar = 1.0;
+        _Parameters.Add(Speed);
+
+        FCk_Usf_ParamDesc Density;
+        Density._Name = n"Density";
+        Density._Type = ECk_Usf_ParamType::Scalar;
+        Density._DefaultScalar = 1.0;
+        _Parameters.Add(Density);
+    }
+
+    asset Caustics of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/Caustics.ush";
+        _UshFunctionName = n"CkUsf_Look_Caustics";
+        _Domain          = ECk_Usf_Domain::SurfaceUnlit;
+        _LookName        = n"Caustics";
+
+        FCk_Usf_ParamDesc WaterColor;
+        WaterColor._Name = n"WaterColor";
+        WaterColor._Type = ECk_Usf_ParamType::Vector;
+        WaterColor._DefaultVector = FLinearColor(0.1, 0.6, 0.8, 1.0);
+        _Parameters.Add(WaterColor);
+
+        FCk_Usf_ParamDesc Scale;
+        Scale._Name = n"Scale";
+        Scale._Type = ECk_Usf_ParamType::Scalar;
+        Scale._DefaultScalar = 12.0;
+        _Parameters.Add(Scale);
+
+        FCk_Usf_ParamDesc Speed;
+        Speed._Name = n"Speed";
+        Speed._Type = ECk_Usf_ParamType::Scalar;
+        Speed._DefaultScalar = 1.0;
+        _Parameters.Add(Speed);
+    }
+
     // ---- Multi-pass (render-texture) passes ----
 
     asset SmokeBuffer of UCkUsf_LookDefinition
@@ -235,5 +319,41 @@ namespace CkUsf
         Ch0._Type = ECk_Usf_ParamType::Texture2D;
         Ch0._DefaultTexturePath = "/Engine/EngineMaterials/Good64x64TilingNoiseHighFreq.Good64x64TilingNoiseHighFreq"; // placeholder; RT bound at runtime
         _Parameters.Add(Ch0);
+    }
+
+    // ---- PostProcess (#2: scene-texture access) ----
+
+    asset EdgeOutline of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/EdgeOutline.ush";
+        _UshFunctionName = n"CkUsf_PP_EdgeOutline";
+        _Domain          = ECk_Usf_Domain::PostProcess;
+        _LookName        = n"EdgeOutline";
+
+        FCk_Usf_ParamDesc OutlineColor;
+        OutlineColor._Name = n"OutlineColor";
+        OutlineColor._Type = ECk_Usf_ParamType::Vector;
+        OutlineColor._DefaultVector = FLinearColor(0.0, 0.0, 0.0, 1.0);
+        _Parameters.Add(OutlineColor);
+
+        // Relative depth-Laplacian scale (~0..0.3). The shader currently hardcodes 0.15;
+        // this default is kept on the same scale so the exposed param is not misleading.
+        FCk_Usf_ParamDesc DepthThreshold;
+        DepthThreshold._Name = n"DepthThreshold";
+        DepthThreshold._Type = ECk_Usf_ParamType::Scalar;
+        DepthThreshold._DefaultScalar = 0.15;
+        _Parameters.Add(DepthThreshold);
+
+        FCk_Usf_ParamDesc NormalThreshold;
+        NormalThreshold._Name = n"NormalThreshold";
+        NormalThreshold._Type = ECk_Usf_ParamType::Scalar;
+        NormalThreshold._DefaultScalar = 0.4;
+        _Parameters.Add(NormalThreshold);
+
+        FCk_Usf_ParamDesc Thickness;
+        Thickness._Name = n"Thickness";
+        Thickness._Type = ECk_Usf_ParamType::Scalar;
+        Thickness._DefaultScalar = 1.0;
+        _Parameters.Add(Thickness);
     }
 }

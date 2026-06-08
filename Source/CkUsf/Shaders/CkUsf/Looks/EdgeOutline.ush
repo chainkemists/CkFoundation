@@ -1,0 +1,55 @@
+// /CkUsf/Looks/EdgeOutline.ush
+// PostProcess edge outline: depth + world-normal discontinuity detection via neighbor taps.
+// Managed inputs (SceneColor/SceneDepth/SceneNormal) provide the center samples AND declare
+// scene-texture usage so raw SceneTextureLookup() below is legal in the Custom node.
+#pragma once
+#include "/CkUsf/Common.ush"
+
+FCkUsf_SurfaceOutput CkUsf_PP_EdgeOutline(
+    float4 SceneColor, float4 SceneDepth, float4 SceneNormal,
+    float3 OutlineColor, float DepthThreshold, float NormalThreshold, float Thickness,
+    float Time, float2 ViewportUV)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    // Texel size in SCENE-TEXTURE (buffer) UV space.
+    float2 texel = View.BufferSizeAndInvSize.zw * max(Thickness, 1.0);
+    float2 uv = ViewportUV;
+
+    float  dC = SceneDepth.r;
+    float3 nC = normalize(SceneNormal.rgb);
+
+    // 4 neighbour depth taps.
+    float dL  = SceneTextureLookup(uv + float2(-texel.x, 0.0), PPI_SceneDepth, false).r;
+    float dR  = SceneTextureLookup(uv + float2( texel.x, 0.0), PPI_SceneDepth, false).r;
+    float dU  = SceneTextureLookup(uv + float2(0.0, -texel.y), PPI_SceneDepth, false).r;
+    float dDn = SceneTextureLookup(uv + float2(0.0,  texel.y), PPI_SceneDepth, false).r;
+
+    // Depth discontinuity via the LAPLACIAN (second derivative). A flat surface — even at a grazing
+    // angle — has a linear depth ramp, so its Laplacian is ~0; only silhouettes/creases spike.
+    // Divide by depth so the test is distance-independent.
+    float depthLaplacian = abs((dL + dR + dU + dDn) - 4.0 * dC);
+    float depthEdge = depthLaplacian / max(dC, 1.0);
+
+    // Normal discontinuity: largest angle to the 4 neighbours.
+    float normalEdge = 0.0;
+    const float2 noffs[4] =
+    {
+        float2( texel.x, 0.0), float2(-texel.x, 0.0),
+        float2(0.0,  texel.y), float2(0.0, -texel.y)
+    };
+    [unroll]
+    for (int i = 0; i < 4; ++i)
+    {
+        float3 nN = normalize(SceneTextureLookup(uv + noffs[i], PPI_WorldNormal, false).rgb);
+        normalEdge = max(normalEdge, 1.0 - saturate(dot(nC, nN)));
+    }
+
+    // Outline where EITHER the depth Laplacian or the normal angle exceeds its threshold.
+    // Depth threshold is hardcoded to the relative-Laplacian scale (the DepthThreshold param is
+    // on a different, absolute scale and is intentionally unused here).
+    float edge = saturate(step(0.15, depthEdge) + step(NormalThreshold, normalEdge));
+    O.EmissiveColor = lerp(SceneColor.rgb, OutlineColor, edge);
+    O.Opacity = 1.0;
+    return O;
+}

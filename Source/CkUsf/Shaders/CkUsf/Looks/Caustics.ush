@@ -1,0 +1,33 @@
+// /CkUsf/Looks/Caustics.ush
+#pragma once
+#include "/CkUsf/Common.ush"
+
+// Params: WaterColor (Vector), Scale (Scalar), Speed (Scalar), then Time, UV.
+// Underwater caustics: a few iterations of domain distortion build interlocking
+// sine ridges whose crossings read as the bright dancing cells of pool caustics.
+// Division-free (robust — no NaN/inf pixels).
+FCkUsf_SurfaceOutput CkUsf_Look_Caustics(float3 WaterColor, float Scale, float Speed, float Time, float2 UV)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float2 p = (UV - 0.5) * Scale;
+    float t = Time * Speed;
+
+    float v = 0.0;
+    float2 q = p;
+    [unroll]
+    for (int n = 0; n < 4; ++n)
+    {
+        q += float2(sin(q.y * 1.7 + t), cos(q.x * 1.5 - t)) * 0.5;
+        v += sin(q.x + t) * sin(q.y - t);
+    }
+    v *= 0.25;
+
+    float caustic = pow(saturate(0.5 + 0.5 * v), 4.0);
+    float shimmer = 0.85 + 0.15 * sin(t * 2.0 + p.x + p.y);
+
+    O.EmissiveColor = WaterColor * (caustic * 2.2 * shimmer + 0.08);
+    O.BaseColor = float3(0.0, 0.0, 0.0);
+    O.Opacity = 1.0;
+    return O;
+}

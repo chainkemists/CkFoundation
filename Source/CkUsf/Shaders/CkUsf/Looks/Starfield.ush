@@ -1,0 +1,40 @@
+// /CkUsf/Looks/Starfield.ush
+#pragma once
+#include "/CkUsf/Common.ush"
+
+// Params: StarColor (Vector), Speed (Scalar), Density (Scalar), then Time, UV.
+// Sparse, sharp star points across a few slowly-drifting parallax layers on a near-black sky.
+// Stars are kept away from cell edges so the underlying grid never shows.
+FCkUsf_SurfaceOutput CkUsf_Look_Starfield(float3 StarColor, float Speed, float Density, float Time, float2 UV)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float3 col = float3(0.01, 0.012, 0.03); // deep-space backdrop
+
+    const int LAYERS = 3;
+    [unroll]
+    for (int i = 0; i < LAYERS; ++i)
+    {
+        float fi = float(i);
+        float scale = (45.0 + fi * 35.0) * Density;        // lots of small cells
+        float drift = Time * Speed * 0.015 * (fi + 1.0);
+        float2 P = UV * scale + float2(drift, fi * 19.0);
+        float2 G = floor(P);
+        float2 F = frac(P);
+
+        float2 rnd = CkUsf_Hash22(G + fi * 41.0);
+        float present = step(0.85, rnd.x);                 // ~15% of cells hold a star
+        float2 starPos = 0.25 + 0.5 * float2(CkUsf_Hash21(G + fi * 7.0), rnd.y); // off the edges
+        float d = length(F - starPos);
+
+        float size = lerp(0.025, 0.07, rnd.y);             // varied star sizes
+        float twinkle = 0.55 + 0.45 * sin(Time * (3.0 + rnd.y * 5.0) + rnd.x * 6.28318);
+        float star = present * smoothstep(size, 0.0, d) * twinkle;
+        col += StarColor * star * (1.1 - fi * 0.2);
+    }
+
+    O.EmissiveColor = col;
+    O.BaseColor = float3(0.0, 0.0, 0.0);
+    O.Opacity = 1.0;
+    return O;
+}

@@ -1,0 +1,35 @@
+// /CkUsf/Looks/Truchet.ush
+#pragma once
+#include "/CkUsf/Common.ush"
+
+// Params: ColorA (Vector), ColorB (Vector), Scale (Scalar), Speed (Scalar), then Time, UV.
+// Animated Truchet tiling: each cell randomly flips a pair of quarter-arcs, forming
+// connected glowing circuit-like curves that slowly drift and pulse.
+FCkUsf_SurfaceOutput CkUsf_Look_Truchet(float3 ColorA, float3 ColorB, float Scale, float Speed, float Time, float2 UV)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float2 P = (UV - 0.5) * Scale + float2(Time * Speed * 0.1, Time * Speed * 0.05);
+    float2 G = floor(P);
+    float2 F = frac(P);
+
+    // Per-cell random flip rotates the arc pair so neighbours connect.
+    float Flip = step(0.5, CkUsf_Hash21(G));
+    if (Flip > 0.5) { F.x = 1.0 - F.x; }
+
+    // Two quarter-arcs (radius 0.5) centred on opposite corners.
+    float d1 = abs(length(F - float2(0.0, 0.0)) - 0.5);
+    float d2 = abs(length(F - float2(1.0, 1.0)) - 0.5);
+    float d = min(d1, d2);
+
+    float linev = smoothstep(0.09, 0.0, d);
+    float glow = 0.035 / (d + 0.02);
+
+    float pulse = 0.5 + 0.5 * sin(Time * Speed + CkUsf_Hash21(G) * 6.28318);
+    float3 col = lerp(ColorA, ColorB, pulse);
+
+    O.EmissiveColor = col * (linev * 1.6 + glow * 0.55);
+    O.BaseColor = float3(0.0, 0.0, 0.0);
+    O.Opacity = 1.0;
+    return O;
+}
