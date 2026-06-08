@@ -4,14 +4,20 @@
 
 #include "CkEcs/CkEcsLog.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"   // Get_WorldForEntity
+#include "CkEcs/EntityScript/CkEntityScript.h"             // UCk_EntityScript_UE (complete type)
+#include "CkEcs/EntityScript/CkEntityScript_Fragment.h"    // FFragment_EntityScript_Current
+#include "CkEcs/Net/CkNet_Utils.h"                         // UCk_Utils_Net_UE
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h" // Request_Replicate
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkEcsExt/EntityScript/CkEntityScript_WithActor_Data.h" // FCk_EntityScript_WithActor_SpawnParams
 #include "CkEcsExt/OwningActor/CkActorSpawnIntent_Fragment.h"
 #include "CkEcsExt/OwningActor/CkActorRebind_Utils.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"          // Has + Get_EntityCurrentTransform
 
 #include <Engine/World.h>
 #include <GameFramework/Actor.h>
+#include <StructUtils/InstancedStruct.h>
 #include "UObject/SoftObjectPath.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -83,9 +89,59 @@ namespace ck
 
             // Driver re-establish happens INSIDE this scheduler tick (FGroup_Gameplay_Script) — safe.
             UCk_Utils_ActorRebind_UE::Request_RebindActor(Entity, Actor);
+
+            // Re-issue the entity-script replication so the re-established driver actually pushes the entity to
+            // clients (the rebind only re-adds the driver fragment; see DoReplicate_RestoredEntity).
+            DoReplicate_RestoredEntity(Entity, Actor);
         }
 
         _PendingRespawns.Reset();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_ActorRespawn::
+        DoReplicate_RestoredEntity(
+            FCk_Handle& InEntity,
+            AActor* InActor)
+        -> void
+    {
+        if (NOT UCk_Utils_Net_UE::Has(InEntity))
+        { return; }
+
+        if (UCk_Utils_Net_UE::Get_Replication(InEntity) != ECk_Replication::Replicates)
+        { return; }
+
+        if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InEntity))
+        { return; }
+
+        if (NOT InEntity.Has<FFragment_EntityScript_Current>())
+        { return; }
+
+        if (NOT UCk_Utils_EntityReplicationDriver_UE::Has(InEntity))
+        { return; }
+
+        // Snapshot-restored: FFragment_EntityScript_Current is snapshotable and round-trips the script instance via
+        // its class-path, so the restored entity carries its EntityScript — the source of the class we replicate.
+        const auto& Script = InEntity.Get<FFragment_EntityScript_Current>().Get_Script();
+        if (ck::Is_NOT_Valid(Script))
+        { return; }
+
+        // WithActor spawn params reference the freshly respawned actor. The replicated reconstitution payload carries
+        // these so the client matches the replicated entity to its own replicated actor copy (Get_AreSpawnParamsMatching).
+        auto SpawnParams = FInstancedStruct::Make<FCk_EntityScript_WithActor_SpawnParams>(InActor);
+
+        ck::ecs::Display(TEXT("[M2b] DoReplicate_RestoredEntity: re-issuing replicate for Entity=[{}] Script=[{}] Actor=[{}]"),
+            InEntity, Script.Get(), InActor->GetName());
+
+        // Call Request_Replicate DIRECTLY rather than enqueuing FRequest_EntityScript_Replicate. The
+        // FProcessor_EntityScript_Replicate view also requires FTag_EntityScript_FinishConstruction, which a RESTORED
+        // entity no longer carries (construction completed pre-save), so an enqueued request would never be processed.
+        // A WithActor entity is self-owned, so the replicated owner is the entity itself. This sets the driver's
+        // ReplicationData_EntityScript — the payload Iris pushes to materialize + bridge the entity on clients.
+        UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(
+            InEntity, InEntity, Script->GetClass(), SpawnParams);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
