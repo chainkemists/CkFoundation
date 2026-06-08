@@ -364,7 +364,7 @@ auto
     { return; }
 
     const auto NetContext = ck::statemachine::ComputeNetContext(_OwnerStateMachine);
-    const auto AuthModel  = Params.Get_AuthorityModel();
+    const auto AuthModel  = UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel(_OwnerStateMachine);
     const auto IsAuthority =
         (NetContext == ECk_Sm_NetContext::Server
             && AuthModel == ECk_Sm_AuthorityModel::ServerAuthoritative)

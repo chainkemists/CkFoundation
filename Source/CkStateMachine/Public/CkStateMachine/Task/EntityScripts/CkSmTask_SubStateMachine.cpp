@@ -40,10 +40,9 @@ auto
 
     auto ScriptEntity = DoGet_ScriptEntity();
     auto TypeUnsafeSubSmHandle = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(ScriptEntity);
-    _SubSmHandle = UCk_Utils_StateMachine_UE::Add(
-        TypeUnsafeSubSmHandle,
-        _InitialStateClass,
-        ECk_SmAutoStart::Disabled);
+    auto SubSmParams = FCk_Fragment_StateMachine_ParamsData{_InitialStateClass};
+    SubSmParams.Set_AutoStart(ECk_SmAutoStart::Disabled);
+    _SubSmHandle = UCk_Utils_StateMachine_UE::Add(TypeUnsafeSubSmHandle, SubSmParams);
 
     CK_ENSURE_IF_NOT(ck::IsValid(_SubSmHandle),
         TEXT("Failed to create sub-StateMachine for task [{}]"), InHandle)

@@ -25,11 +25,18 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Sm_NetContext);
 
 // Per-SM choice of who drives transitions. Immutable for the SM's lifetime.
 // Single-authority-per-SM rule (spec §5.6): an SM is either ServerAuth or OwningClientAuth, never mixed.
+//
+// AutoDetect is the default: the effective model is resolved on demand from the SM host's net
+// ownership (player-controlled pawn -> OwningClientAuthoritative, everything else -> ServerAuthoritative).
+// Resolve via UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel — it never returns AutoDetect.
+// Explicit ServerAuthoritative / OwningClientAuthoritative override the auto-resolution (e.g. for debugging
+// or to force server authority on a player pawn).
 UENUM(BlueprintType)
 enum class ECk_Sm_AuthorityModel : uint8
 {
-    ServerAuthoritative,         // Default. Server evaluates conditions, drives transitions.
-    OwningClientAuthoritative    // Opt-in. Owning client evaluates locally, pushes to server via RPC.
+    AutoDetect,                  // Default. Resolved from host ownership at use-time (see Get_EffectiveAuthorityModel).
+    ServerAuthoritative,         // Server evaluates conditions, drives transitions.
+    OwningClientAuthoritative    // Owning client evaluates locally, pushes to server via RPC.
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Sm_AuthorityModel);
