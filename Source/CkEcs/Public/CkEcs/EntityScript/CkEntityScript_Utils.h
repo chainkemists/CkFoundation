@@ -111,6 +111,20 @@ public:
     TryInjectEntityScriptSpawnParams(
         UCk_EntityScript_UE* InEntityScript,
         const FInstancedStruct& InSpawnParams) -> void;
+
+    // Establishes entity-script replication for an already-constructed, driver-bearing entity on the authority:
+    // resolves the owning driver, accounts for a just-created owner's dependent count, calls Request_Replicate (which
+    // sets the driver's ReplicationData_EntityScript — the payload Iris pushes so clients materialise + re-derive the
+    // entity), and marks it to fire OnDependentsReplicationComplete. SHARED by the fresh-spawn replicate processor
+    // (FProcessor_EntityScript_Replicate) and the snapshot respawn re-replicate (FProcessor_ActorRespawn) so the two
+    // establishment paths cannot drift. Caller must ensure InHandle already has a ReplicationDriver fragment.
+    static auto
+    Request_ReplicateEntityScript(
+        FCk_Handle& InHandle,
+        const FCk_Handle& InReplicatedOwner,
+        UCk_EntityScript_UE* InEntityScript,
+        const FInstancedStruct& InSpawnParams,
+        const TOptional<FCk_Handle>& InContextOwnerOverride = {}) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

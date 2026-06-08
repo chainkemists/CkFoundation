@@ -229,6 +229,7 @@ public:
 public:
     // TODO: reduce the exposure of this variable
     CK_PROPERTY_GET(_ReplicationData);
+    CK_PROPERTY_GET(_ReplicationData_EntityScript);
     CK_PROPERTY_GET(_ReplicationData_Ability);
     CK_PROPERTY_GET(_ExpectedNumberOfDependentReplicationDrivers);
 

@@ -5,12 +5,16 @@
 
 #include "Misc/MTAccessDetector.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h" // ck::FTag_EntityJustCreated
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/EntityScript/CkEntityScript.h"             // UCk_EntityScript_UE (complete type)
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Net/CkNet_Fragment.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h" // M2b-1 reconstitution-in-progress gate
 
@@ -306,6 +310,56 @@ auto
             EntityScriptProp->CopyCompleteValue(EntityScriptPropAddr, SpawnParamsPropAddr);
         }
     }
+}
+
+auto
+    UCk_Utils_EntityScript_UE::
+    Request_ReplicateEntityScript(
+        FCk_Handle& InHandle,
+        const FCk_Handle& InReplicatedOwner,
+        UCk_EntityScript_UE* InEntityScript,
+        const FInstancedStruct& InSpawnParams,
+        const TOptional<FCk_Handle>& InContextOwnerOverride)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InEntityScript, ck::IsValid_Policy_NullptrOnly{}),
+        TEXT("Cannot replicate EntityScript for [{}]: the EntityScript instance is invalid"), InHandle)
+    { return; }
+
+    auto ReplicatedOwner = InReplicatedOwner;
+    const auto IsSelfOwned = ReplicatedOwner == InHandle;
+
+    if (NOT IsSelfOwned)
+    {
+        CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_Replication(ReplicatedOwner) == ECk_Replication::Replicates,
+            TEXT("Cannot replicate EntityScript for [{}]: replicated owner [{}] does NOT replicate"),
+            InHandle, ReplicatedOwner)
+        { return; }
+    }
+
+    CK_ENSURE_IF_NOT(InHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>(),
+        TEXT("Cannot replicate EntityScript for [{}]: entity has no ReplicationDriver"), InHandle)
+    { return; }
+
+    const auto& OwnerReplicationDriver = IsSelfOwned
+        ? InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>()
+        : ReplicatedOwner.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(OwnerReplicationDriver),
+        TEXT("Cannot replicate EntityScript for [{}]: owner [{}] ReplicationDriver is invalid"),
+        InHandle, ReplicatedOwner)
+    { return; }
+
+    if (ReplicatedOwner.Has<ck::FTag_EntityJustCreated>())
+    {
+        OwnerReplicationDriver->Set_ExpectedNumberOfDependentReplicationDrivers(
+            OwnerReplicationDriver->Get_ExpectedNumberOfDependentReplicationDrivers() + 1);
+    }
+
+    UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(
+        InHandle, ReplicatedOwner, InEntityScript->GetClass(), InSpawnParams, InContextOwnerOverride);
+
+    InHandle.Add<ck::FTag_EntityReplicationDriver_FireOnDependentReplicationComplete>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
