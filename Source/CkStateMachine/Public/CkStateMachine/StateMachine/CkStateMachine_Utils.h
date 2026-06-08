@@ -46,24 +46,15 @@ public:
     // CREATION
     // ================================================================================================================
 
+    // Adds a state machine to InOwner from a params struct. For a local-only SM, construct the
+    // params from just the initial state class — FCk_Fragment_StateMachine_ParamsData(InitialState) —
+    // which defaults to AutoStart=OnSetup / DoesNotReplicate / AuthorityModel=AutoDetect / WithHistory.
+    // Opt into replication / authority / replication-model via the struct's setters.
     UFUNCTION(BlueprintCallable,
         Category = "Ck|StateMachine",
         DisplayName = "[Ck][SM] Add StateMachine")
     static FCk_Handle_StateMachine
     Add(
-        UPARAM(ref) FCk_Handle& InOwner,
-        TSubclassOf<UCk_SmState_EntityScript> InInitialStateClass,
-        ECk_SmAutoStart InAutoStart = ECk_SmAutoStart::OnSetup);
-
-    // Overload accepting a full params struct — required for callers that need to opt into
-    // replication, change the authority model, or override the replication model. The simple
-    // Add() above defaults to DoesNotReplicate / ServerAuthoritative / WithHistory and is fine
-    // for local-only state machines.
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|StateMachine",
-        DisplayName = "[Ck][SM] Add StateMachine With Params")
-    static FCk_Handle_StateMachine
-    Add_WithParams(
         UPARAM(ref) FCk_Handle& InOwner,
         const FCk_Fragment_StateMachine_ParamsData& InParams);
 
@@ -179,10 +170,21 @@ public:
     Get_Replication(
         const FCk_Handle_StateMachine& InStateMachine) -> ECk_Replication;
 
-    // Immutable per-SM choice from FFragment_Sm_Params._AuthorityModel. ServerAuthoritative by
-    // default; OwningClientAuthoritative if opt-in. Read by Phase 6 authority gates.
+    // Raw, authored per-SM choice from FFragment_Sm_Params._AuthorityModel — may be AutoDetect.
+    // For authority decisions use Get_EffectiveAuthorityModel; this getter is for introspection
+    // (debugger / tooling that wants to show what was authored).
     static auto
     Get_AuthorityModel(
+        const FCk_Handle_StateMachine& InStateMachine) -> ECk_Sm_AuthorityModel;
+
+    // Resolved authority model — NEVER returns AutoDetect. If the authored value is explicit
+    // (ServerAuthoritative / OwningClientAuthoritative) it is returned as-is. AutoDetect resolves
+    // from the SM host's net ownership: a player-controlled pawn host -> OwningClientAuthoritative,
+    // everything else (bots, non-pawn / non-actor-bridged entities) -> ServerAuthoritative.
+    // Resolution is lazy/on-demand, so the host's PlayerState/ownership is settled by the time the
+    // authority gates read it. ALL authority gates must use this, not Get_AuthorityModel.
+    static auto
+    Get_EffectiveAuthorityModel(
         const FCk_Handle_StateMachine& InStateMachine) -> ECk_Sm_AuthorityModel;
 
     // Immutable per-SM choice from FFragment_Sm_Params._ReplicationModel. WithHistory by default;

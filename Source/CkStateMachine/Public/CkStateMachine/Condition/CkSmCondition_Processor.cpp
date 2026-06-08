@@ -99,7 +99,7 @@ namespace ck
         { return; }
 
         if (NetContext == ECk_Sm_NetContext::OwningClient
-            && UCk_Utils_StateMachine_UE::Get_AuthorityModel(SmHandle)
+            && UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel(SmHandle)
                 != ECk_Sm_AuthorityModel::OwningClientAuthoritative)
         { return; }
 
