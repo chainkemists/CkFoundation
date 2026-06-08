@@ -6,8 +6,10 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"   // Get_WorldForEntity
 #include "CkEcs/EntityScript/CkEntityScript.h"             // UCk_EntityScript_UE (complete type)
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"    // FFragment_EntityScript_Current
+#include "CkEcs/EntityScript/CkEntityScript_Utils.h"       // Request_ReplicateEntityScript (shared establish)
 #include "CkEcs/Net/CkNet_Utils.h"                         // UCk_Utils_Net_UE
-#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h" // Request_Replicate
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h" // UCk_Fragment_EntityReplicationDriver_Rep
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"    // Has
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEcsExt/EntityScript/CkEntityScript_WithActor_Data.h" // FCk_EntityScript_WithActor_SpawnParams
@@ -107,25 +109,44 @@ namespace ck
             AActor* InActor)
         -> void
     {
+        // Gate: only replicated entities on the networked authority need re-replication. Non-replicated / client /
+        // non-net entities legitimately do nothing here.
         if (NOT UCk_Utils_Net_UE::Has(InEntity))
         { return; }
 
         if (UCk_Utils_Net_UE::Get_Replication(InEntity) != ECk_Replication::Replicates)
         { return; }
 
+        // EFFECTIVE replication gate (mirrors UCk_EntityScript_WithActor_UE::Get_EffectiveReplication): a WithActor
+        // entity whose bridged actor does NOT replicate reports Replicates via its net-params fragment but never pushes
+        // to the wire (no driver is ever created). Use the actor's actual replication — NOT the net-params value — so
+        // these entities are skipped cleanly instead of tripping the "no driver" invariant below. The two values can
+        // disagree (net-params is declared per-entity-script; effective is downgraded by the actor).
+        if (NOT InActor->GetIsReplicated())
+        { return; }
+
         if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InEntity))
         { return; }
 
-        if (NOT InEntity.Has<FFragment_EntityScript_Current>())
+        // #2 invariant — past the gate the entity MUST be re-replicable. A silent skip here is exactly the M2b-2b bug:
+        // clients receive the respawned (independently-replicating) actor but never the ECS entity, so no bridge and no
+        // fragments. Surface each precondition LOUDLY instead of returning quietly.
+        CK_ENSURE_IF_NOT(InEntity.Has<FFragment_EntityScript_Current>(),
+            TEXT("Restored replicated entity [{}] has no EntityScript fragment — cannot re-replicate; clients will get "
+                 "the respawned actor but never the ECS entity"), InEntity)
         { return; }
 
-        if (NOT UCk_Utils_EntityReplicationDriver_UE::Has(InEntity))
+        CK_ENSURE_IF_NOT(UCk_Utils_EntityReplicationDriver_UE::Has(InEntity),
+            TEXT("Restored replicated entity [{}] has no ReplicationDriver after rebind — cannot re-replicate to clients"),
+            InEntity)
         { return; }
 
         // Snapshot-restored: FFragment_EntityScript_Current is snapshotable and round-trips the script instance via
         // its class-path, so the restored entity carries its EntityScript — the source of the class we replicate.
         const auto& Script = InEntity.Get<FFragment_EntityScript_Current>().Get_Script();
-        if (ck::Is_NOT_Valid(Script))
+        CK_ENSURE_IF_NOT(ck::IsValid(Script),
+            TEXT("Restored replicated entity [{}] has an invalid EntityScript instance — cannot re-replicate to clients"),
+            InEntity)
         { return; }
 
         // WithActor spawn params reference the freshly respawned actor. The replicated reconstitution payload carries
@@ -135,13 +156,22 @@ namespace ck
         ck::ecs::Display(TEXT("[M2b] DoReplicate_RestoredEntity: re-issuing replicate for Entity=[{}] Script=[{}] Actor=[{}]"),
             InEntity, Script.Get(), InActor->GetName());
 
-        // Call Request_Replicate DIRECTLY rather than enqueuing FRequest_EntityScript_Replicate. The
-        // FProcessor_EntityScript_Replicate view also requires FTag_EntityScript_FinishConstruction, which a RESTORED
-        // entity no longer carries (construction completed pre-save), so an enqueued request would never be processed.
-        // A WithActor entity is self-owned, so the replicated owner is the entity itself. This sets the driver's
-        // ReplicationData_EntityScript — the payload Iris pushes to materialize + bridge the entity on clients.
-        UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(
-            InEntity, InEntity, Script->GetClass(), SpawnParams);
+        // SHARED establishment with the fresh-spawn replicate processor (FProcessor_EntityScript_Replicate) — see
+        // UCk_Utils_EntityScript_UE::Request_ReplicateEntityScript. A WithActor entity is self-owned, so the replicated
+        // owner is the entity itself. We call it directly (not via FRequest_EntityScript_Replicate) because that
+        // processor's view also requires FTag_EntityScript_FinishConstruction, which a RESTORED entity no longer
+        // carries (construction completed pre-save), so an enqueued request would never be processed.
+        UCk_Utils_EntityScript_UE::Request_ReplicateEntityScript(InEntity, InEntity, Script.Get(), SpawnParams);
+
+        // #2 invariant — by the end of the respawn frame the driver MUST carry a populated ReplicationData_EntityScript
+        // (the payload Iris pushes). If it is still empty the client silently never materialises the entity; catch that
+        // regression here, loudly, instead of in a playtest.
+        const auto& Driver = InEntity.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
+        CK_ENSURE_IF_NOT(ck::IsValid(Driver) &&
+            ck::IsValid(Driver->Get_ReplicationData_EntityScript().Get_EntityScriptClass().Get(), ck::IsValid_Policy_NullptrOnly{}),
+            TEXT("Restored replicated entity [{}] has an empty ReplicationData_EntityScript after re-replicate — "
+                 "clients will NOT receive the entity"), InEntity)
+        { return; }
     }
 
     // --------------------------------------------------------------------------------------------------------------------

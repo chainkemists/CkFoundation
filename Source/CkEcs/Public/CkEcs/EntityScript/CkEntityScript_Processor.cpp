@@ -285,55 +285,27 @@ namespace ck
         ck::ecs::Display(TEXT("[REP_DEBUG] ReplicateProcessor — Handle=[{}] Owner=[{}] IsSelfOwned=[{}]"),
             InHandle, ReplicatedOwner, IsSelfOwned);
 
-        if (NOT IsSelfOwned)
-        {
-            CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_Replication(ReplicatedOwner) == ECk_Replication::Replicates,
-                TEXT("Attempting to Replicate newly spawned Entity Script [{}] with the Owner [{}] which is NOT Replicated!"),
-                InHandle,
-                ReplicatedOwner)
-            {
-                InHandle.Remove<MarkedDirtyBy>();
-                return;
-            }
-        }
-
+        // Defer (retry next frame, KEEP the dirty marker) until the ReplicationDriver exists. Entities that acquire
+        // their OwningActor during Construct (WithActor) get their driver via OwningActor::Add slightly after this
+        // request lands. This retry bookkeeping is processor-specific, so it stays here, not in the shared helper.
         if (NOT InHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>())
         {
             ck::ecs::Display(TEXT("[REP_DEBUG] ReplicateProcessor — Handle [{}] does NOT have ReplicationDriver yet, deferring"), InHandle);
             return;
         }
 
-        const auto& OwnerReplicationDriver = IsSelfOwned
-            ? InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>()
-            : ReplicatedOwner.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
-
-        CK_ENSURE_IF_NOT(ck::IsValid(OwnerReplicationDriver),
-            TEXT("Entity [{}] is missing a ReplicationDriver Fragment!"), ReplicatedOwner)
-        {
-            InHandle.Remove<MarkedDirtyBy>();
-            return;
-        }
-
-        ck::ecs::Display(TEXT("[REP_DEBUG] ReplicateProcessor — ReplicationDriver found, OwnerHasJustCreatedTag=[{}]"),
-            ReplicatedOwner.Has<FTag_EntityJustCreated>());
-
-        if (ReplicatedOwner.Has<FTag_EntityJustCreated>())
-        {
-            OwnerReplicationDriver->Set_ExpectedNumberOfDependentReplicationDrivers(
-                OwnerReplicationDriver->Get_ExpectedNumberOfDependentReplicationDrivers() + 1);
-        }
-
         // NOTE: Copy on purpose otherwise the data doesn't make its way over correctly
         const auto SpawnParamsCopy = InRequest.Get_SpawnParams();
 
-        ck::ecs::Display(TEXT("[REP_DEBUG] ReplicateProcessor — Calling Request_Replicate for [{}] with owner [{}]"), InHandle, ReplicatedOwner);
+        ck::ecs::Display(TEXT("[REP_DEBUG] ReplicateProcessor — Calling Request_ReplicateEntityScript for [{}] with owner [{}]"), InHandle, ReplicatedOwner);
 
-        UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(InHandle, ReplicatedOwner,
-            InRequest.Get_Script()->GetClass(), SpawnParamsCopy, InRequest.Get_ContextOwnerOverride());
+        // Shared establishment path — also used by the snapshot respawn re-replicate (FProcessor_ActorRespawn) so the
+        // two cannot drift (the validation, dependent-count accounting, Request_Replicate, and FireOnDependent tag all
+        // live in one place). The ContextOwnerOverride is threaded through so spawn-time context-owner preservation
+        // survives the shared-helper refactor.
+        UCk_Utils_EntityScript_UE::Request_ReplicateEntityScript(InHandle, ReplicatedOwner, EntityScript.Get(), SpawnParamsCopy,
+            InRequest.Get_ContextOwnerOverride());
 
-        ck::ecs::Display(TEXT("[REP_DEBUG] ReplicateProcessor — Request_Replicate completed, adding FireOnDependentReplicationComplete tag"));
-
-        InHandle.Add<FTag_EntityReplicationDriver_FireOnDependentReplicationComplete>();
         InHandle.Remove<MarkedDirtyBy>();
     }
 
