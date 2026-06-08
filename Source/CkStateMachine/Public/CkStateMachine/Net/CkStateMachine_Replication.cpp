@@ -42,8 +42,8 @@ namespace
         if (NOT Entity.Has<ck::FFragment_Sm_Params>())
         { return false; }
 
-        const auto& Params = Entity.Get<ck::FFragment_Sm_Params>();
-        if (Params.Get_AuthorityModel() != ECk_Sm_AuthorityModel::OwningClientAuthoritative)
+        const auto SmHandle = ck::StaticCast<FCk_Handle_StateMachine>(Entity);
+        if (UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel(SmHandle) != ECk_Sm_AuthorityModel::OwningClientAuthoritative)
         { return false; }
 
         return UCk_Utils_Net_UE::Get_IsEntityLocallyControlled_ByPlayer(Entity)

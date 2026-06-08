@@ -111,19 +111,20 @@ namespace ck
         // locally controls this SM's owning actor. A dedicated server controls no player pawn, so
         // this stays false there (the remote owning client remains the sole authority), and it
         // stays false for the host's view of OTHER players' pawns.
-        const auto NetContext = ck::statemachine::ComputeNetContext(InHandle);
+        const auto NetContext    = ck::statemachine::ComputeNetContext(InHandle);
+        const auto EffectiveAuth = UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel(InHandle);
         const auto IsListenServerHostOwningClient =
             NetContext == ECk_Sm_NetContext::Server
-            && InParams.Get_AuthorityModel() == ECk_Sm_AuthorityModel::OwningClientAuthoritative
+            && EffectiveAuth == ECk_Sm_AuthorityModel::OwningClientAuthoritative
             && UCk_Utils_Net_UE::Get_IsEntityLocallyControlled_ByPlayer(InHandle)
                 == ECk_Utils_Net_IsLocallyControlled_Result::IsLocallyControlled;
         const auto IsRequestAuthority =
             InParams.Get_Replication() == ECk_Replication::DoesNotReplicate
             || NetContext == ECk_Sm_NetContext::Standalone
             || (NetContext == ECk_Sm_NetContext::Server
-                && InParams.Get_AuthorityModel() == ECk_Sm_AuthorityModel::ServerAuthoritative)
+                && EffectiveAuth == ECk_Sm_AuthorityModel::ServerAuthoritative)
             || (NetContext == ECk_Sm_NetContext::OwningClient
-                && InParams.Get_AuthorityModel() == ECk_Sm_AuthorityModel::OwningClientAuthoritative)
+                && EffectiveAuth == ECk_Sm_AuthorityModel::OwningClientAuthoritative)
             || IsListenServerHostOwningClient;
 
         if (NOT IsRequestAuthority)
@@ -132,7 +133,7 @@ namespace ck
                 TEXT("Non-authority machine attempted to enqueue [{}] SM request(s) on [{}] "
                      "(NetContext [{}], AuthorityModel [{}]). Requests dropped. Rep-driven transitions "
                      "bypass this processor via the replay path."),
-                InRequests.Get_Requests().Num(), InHandle, NetContext, InParams.Get_AuthorityModel())
+                InRequests.Get_Requests().Num(), InHandle, NetContext, EffectiveAuth)
             {
                 InHandle.Try_Remove<FFragment_Sm_Requests>();
                 return;
@@ -173,7 +174,7 @@ namespace ck
         { return; }
 
         const auto NetContext = ck::statemachine::ComputeNetContext(InSm);
-        const auto AuthModel  = InParams.Get_AuthorityModel();
+        const auto AuthModel  = UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel(InSm);
 
         // Mirror the transition-publish split (FProcessor_Sm_CommitPendingTransition): the server
         // is the canonical rep publisher regardless of authority model. This is what carries the
@@ -587,7 +588,7 @@ namespace ck
         if (InParams.Get_Replication() == ECk_Replication::Replicates)
         {
             const auto NetContext = ck::statemachine::ComputeNetContext(InHandle);
-            const auto AuthModel  = InParams.Get_AuthorityModel();
+            const auto AuthModel  = UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel(InHandle);
 
             const auto IsRepPublisher          = NetContext == ECk_Sm_NetContext::Server;
             const auto IsOwningClientOriginator =
@@ -838,7 +839,7 @@ namespace ck
         // into this batch (the commit + run-status publication paths gate the same way), but the
         // check here is defence in depth — if a misconfigured SM somehow seeded the batch on the
         // wrong machine, we silently clear it rather than emit RPCs that the server would reject.
-        if (InParams.Get_AuthorityModel() != ECk_Sm_AuthorityModel::OwningClientAuthoritative)
+        if (UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel(InHandle) != ECk_Sm_AuthorityModel::OwningClientAuthoritative)
         {
             Events.Reset();
             InBatch.Set_HasPendingRunStatus(false);
@@ -855,11 +856,17 @@ namespace ck
 
         const auto ChannelResult = UCk_Utils_StateMachine_UE::Acquire_RelayChannel(InHandle);
         auto* RelayActor = Cast<ACk_StateMachineRelay_UE>(ChannelResult.Get_ChannelActor().Get());
-        if (ck::Is_NOT_Valid(RelayActor, ck::IsValid_Policy_NullptrOnly{}))
+
+        // The relay must be RPC-callable from THIS client to push: a client may only invoke a
+        // Server_* RPC on an actor it owns (NetConnection resolved → AutonomousProxy). Right after
+        // Start the owning channel can still be a SimulatedProxy with no NetConnection (ownership not
+        // yet replicated); flushing onto it would have UE silently DROP the RPC, and since we'd then
+        // clear the batch the run-status/transition would be lost. Treat "not RPC-ready" exactly like
+        // "no relay yet" — defer and retry next pump (the batch is retained).
+        if (ck::Is_NOT_Valid(RelayActor, ck::IsValid_Policy_NullptrOnly{})
+            || RelayActor->GetNetConnection() == nullptr)
         {
-            // Relay not available yet (subsystem hasn't spawned channels, or relay isn't replicated
-            // to this client yet). Hold onto the batch — the next pump will retry.
-            ck::sm::VeryVerbose(TEXT("PushOwningClientBatch: no relay yet for [{}], deferring"),
+            ck::sm::VeryVerbose(TEXT("PushOwningClientBatch: relay not RPC-ready for [{}], deferring"),
                 InHandle);
             return;
         }

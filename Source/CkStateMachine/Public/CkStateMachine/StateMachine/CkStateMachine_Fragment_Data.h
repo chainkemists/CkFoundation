@@ -220,7 +220,7 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true,
                 EditCondition = "_Replication == Replicates"))
-    ECk_Sm_AuthorityModel _AuthorityModel = ECk_Sm_AuthorityModel::ServerAuthoritative;
+    ECk_Sm_AuthorityModel _AuthorityModel = ECk_Sm_AuthorityModel::AutoDetect;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true,

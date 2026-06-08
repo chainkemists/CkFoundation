@@ -350,8 +350,18 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group         = FGroup_Replication;
-        using MarkedDirtyBy = FFragment_Sm_PendingClientBatch;
+        using Group = FGroup_Replication;
+
+        // Intentionally NO MarkedDirtyBy. This processor flushes a buffered batch over the
+        // owning-client → server relay RPC, but the relay channel is server-spawned and must
+        // replicate to this client first — which can take several frames after the transition is
+        // committed. Acquire_RelayChannel is a sync "resolve-or-retry-next-pump" call; if the relay
+        // isn't ready yet the push DEFERS without consuming the batch. A MarkedDirtyBy gate only
+        // re-fires when the batch fragment's dirty-version bumps (i.e. a new transition), so a
+        // deferred batch would STRAND until the next transition — the server would silently never
+        // receive the relayed transition. Running every tick while a pending batch exists (the
+        // fragment is removed on a successful push) makes the flush retry until the relay resolves.
+        // The fragment is transient, so this iterates nothing on the vast majority of frames.
 
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::ClientOnly;
 
