@@ -90,10 +90,12 @@ float Ak_March(float3 ro, float3 rd, float rmPrec, float maxd, float mapPrec, Te
 }
 
 FCkUsf_SurfaceOutput CkUsf_Look_Aiekick(
+    FCkUsf_SurfaceInput In,
     TextureCube iChannel0, SamplerState iChannel0Sampler,
-    Texture2D iChannel1, SamplerState iChannel1Sampler,
-    float Time, float2 UV)
+    Texture2D iChannel1, SamplerState iChannel1Sampler)
 {
+    float Time = In.Time;
+    float2 UV = In.UV;
     FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
 
     float dstepf = 0.0;

@@ -19,6 +19,11 @@
 #include "Materials/MaterialExpressionTextureCoordinate.h"
 #include "Materials/MaterialExpressionSceneTexture.h"
 #include "Materials/MaterialExpressionScreenPosition.h"
+#include "Materials/MaterialExpressionWorldPosition.h"
+#include "Materials/MaterialExpressionCameraVectorWS.h"
+#include "Materials/MaterialExpressionVertexNormalWS.h"
+#include "Materials/MaterialExpressionPixelDepth.h"
+#include "Materials/MaterialExpressionVertexColor.h"
 #include "Engine/Texture.h"
 #include "SceneTypes.h"
 #include "UObject/SavePackage.h"
@@ -60,15 +65,31 @@ namespace ck::usf_editor
         };
     }
 
-    // ---- Build the Custom node Code (call + output assignments) ----
+    // ---- Build the Custom node Code (assemble FCkUsf_SurfaceInput, call, assign outputs) ----
     static auto Build_CustomCode(const UCkUsf_LookDefinition* InDef, bool InIsPostProcess) -> FString
     {
-        FString Args;
+        // Assemble the per-pixel input struct from the wired Custom-node inputs. The generator wires
+        // the domain-appropriate inputs (see Generate_LookMaterial); unwired fields keep their defaults.
+        FString Code = TEXT("FCkUsf_SurfaceInput In = CkUsf_DefaultInput();\n");
+        Code += TEXT("In.Time = Time;\n");
+        Code += TEXT("In.UV = UV;\n");
         if (InIsPostProcess)
         {
-            // Managed scene-texture inputs come first (see Generate_LookMaterial).
-            Args += TEXT("SceneColor, SceneDepth, SceneNormal, ");
+            Code += TEXT("In.SceneColor = SceneColor;\n");
+            Code += TEXT("In.SceneDepth = SceneDepth;\n");
+            Code += TEXT("In.SceneNormal = SceneNormal;\n");
         }
+        else
+        {
+            Code += TEXT("In.WorldPosition = WorldPosition;\n");
+            Code += TEXT("In.CameraVector = CameraVector;\n");
+            Code += TEXT("In.VertexNormal = VertexNormal;\n");
+            Code += TEXT("In.PixelDepth = PixelDepth;\n");
+            Code += TEXT("In.VertexColor = VertexColor;\n");
+        }
+
+        // The look fn takes In first, then the LookDefinition params in order.
+        FString Args = TEXT("In");
         for (const auto& P : InDef->_Parameters)
         {
             const auto Name = P._Name.ToString();
@@ -76,21 +97,20 @@ namespace ck::usf_editor
             {
                 // Vector params connect a (possibly float4) output; .rgb makes the HLSL type float3.
                 case ECk_Usf_ParamType::Vector:
-                    Args += FString::Printf(TEXT("%s.rgb, "), *Name);
+                    Args += FString::Printf(TEXT(", %s.rgb"), *Name);
                     break;
                 // Texture object inputs expose both the texture and an auto <Name>Sampler in HLSL.
                 case ECk_Usf_ParamType::Texture2D:
                 case ECk_Usf_ParamType::TextureCube:
-                    Args += FString::Printf(TEXT("%s, %sSampler, "), *Name, *Name);
+                    Args += FString::Printf(TEXT(", %s, %sSampler"), *Name, *Name);
                     break;
                 default: // Scalar
-                    Args += FString::Printf(TEXT("%s, "), *Name);
+                    Args += FString::Printf(TEXT(", %s"), *Name);
                     break;
             }
         }
-        Args += TEXT("Time, UV");
 
-        FString Code = FString::Printf(
+        Code += FString::Printf(
             TEXT("FCkUsf_SurfaceOutput O = %s(%s);\n"), *InDef->_UshFunctionName.ToString(), *Args);
 
         if (InIsPostProcess)
@@ -159,6 +179,15 @@ namespace ck::usf_editor
             Material->BlendablePriority = 0;
         }
 
+        if (Config.Domain == MD_Surface)
+        {
+            // Compile the instanced + skeletal permutations up-front so looks are safe on
+            // CkIsmRenderer / CkIskmRenderer in cooked builds. The renderers auto-enable these at
+            // runtime, but that path warns it falls back to the default material when packaged.
+            Material->bUsedWithInstancedStaticMeshes = true;
+            Material->bUsedWithSkeletalMesh = true;
+        }
+
         // ---- Custom node (added to material via editing library) ----
         auto* Custom = Cast<UMaterialExpressionCustom>(
             UMaterialEditingLibrary::CreateMaterialExpression(
@@ -178,13 +207,21 @@ namespace ck::usf_editor
             }
         }
 
-        // Inputs: [scene textures (PP only)] + one per param (incl. textures) + Time + UV.
+        // Inputs: [scene textures (PP only) | world-space inputs (surface only)] + one per param + Time + UV.
         Custom->Inputs.Reset();
         if (IsPostProcess)
         {
             { FCustomInput In; In.InputName = TEXT("SceneColor");  Custom->Inputs.Add(In); }
             { FCustomInput In; In.InputName = TEXT("SceneDepth");  Custom->Inputs.Add(In); }
             { FCustomInput In; In.InputName = TEXT("SceneNormal"); Custom->Inputs.Add(In); }
+        }
+        else
+        {
+            { FCustomInput In; In.InputName = TEXT("WorldPosition"); Custom->Inputs.Add(In); }
+            { FCustomInput In; In.InputName = TEXT("CameraVector");  Custom->Inputs.Add(In); }
+            { FCustomInput In; In.InputName = TEXT("VertexNormal");  Custom->Inputs.Add(In); }
+            { FCustomInput In; In.InputName = TEXT("PixelDepth");    Custom->Inputs.Add(In); }
+            { FCustomInput In; In.InputName = TEXT("VertexColor");   Custom->Inputs.Add(In); }
         }
         for (const auto& P : InDef->_Parameters)
         {
@@ -212,6 +249,21 @@ namespace ck::usf_editor
             AddSceneTexture(PPI_PostProcessInput0, TEXT("SceneColor"),  0);
             AddSceneTexture(PPI_SceneDepth,        TEXT("SceneDepth"),  1);
             AddSceneTexture(PPI_WorldNormal,       TEXT("SceneNormal"), 2);
+        }
+        else
+        {
+            // ---- Surface: world-space per-pixel inputs feeding FCkUsf_SurfaceInput ----
+            const auto AddInput = [&](UClass* InClass, const TCHAR* InInputName, int32 InRow) -> void
+            {
+                auto* Expr = UMaterialEditingLibrary::CreateMaterialExpression(
+                    Material, InClass, -1100, InRow * 160);
+                UMaterialEditingLibrary::ConnectMaterialExpressions(Expr, FString(), Custom, InInputName);
+            };
+            AddInput(UMaterialExpressionWorldPosition::StaticClass(),  TEXT("WorldPosition"), 0);
+            AddInput(UMaterialExpressionCameraVectorWS::StaticClass(), TEXT("CameraVector"),  1);
+            AddInput(UMaterialExpressionVertexNormalWS::StaticClass(), TEXT("VertexNormal"),  2);
+            AddInput(UMaterialExpressionPixelDepth::StaticClass(),     TEXT("PixelDepth"),    3);
+            AddInput(UMaterialExpressionVertexColor::StaticClass(),    TEXT("VertexColor"),   4);
         }
 
         // ---- Parameter nodes wired to Custom inputs by name ----

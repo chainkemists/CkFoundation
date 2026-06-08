@@ -6,10 +6,14 @@
 #include "/CkUsf/Common.ush"
 
 FCkUsf_SurfaceOutput CkUsf_PP_EdgeOutline(
-    float4 SceneColor, float4 SceneDepth, float4 SceneNormal,
-    float3 OutlineColor, float DepthThreshold, float NormalThreshold, float Thickness,
-    float Time, float2 ViewportUV)
+    FCkUsf_SurfaceInput In,
+    float3 OutlineColor, float DepthThreshold, float NormalThreshold, float Thickness)
 {
+    float4 SceneColor = In.SceneColor;
+    float4 SceneDepth = In.SceneDepth;
+    float4 SceneNormal = In.SceneNormal;
+    float Time = In.Time;
+    float2 ViewportUV = In.UV;
     FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
 
     // Texel size in SCENE-TEXTURE (buffer) UV space.

@@ -5,8 +5,10 @@
 // Params: ColorA (Vector), ColorB (Vector), Scale (Scalar), Speed (Scalar), then Time, UV.
 // Animated Truchet tiling: each cell randomly flips a pair of quarter-arcs, forming
 // connected glowing circuit-like curves that slowly drift and pulse.
-FCkUsf_SurfaceOutput CkUsf_Look_Truchet(float3 ColorA, float3 ColorB, float Scale, float Speed, float Time, float2 UV)
+FCkUsf_SurfaceOutput CkUsf_Look_Truchet(FCkUsf_SurfaceInput In, float3 ColorA, float3 ColorB, float Scale, float Speed)
 {
+    float Time = In.Time;
+    float2 UV = In.UV;
     FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
 
     float2 P = (UV - 0.5) * Scale + float2(Time * Speed * 0.1, Time * Speed * 0.05);
