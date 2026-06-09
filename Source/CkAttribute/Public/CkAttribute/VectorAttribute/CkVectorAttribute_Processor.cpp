@@ -13,6 +13,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_VectorAttribute_MinMaxClamp);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VectorAttribute_FireSignals);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VectorAttributeModifier_EndPlayAll);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VectorAttribute_Replicate);
+CK_REGISTER_PROCESSOR(ck::FProcessor_VectorAttribute_RetryPendingReplication);
 
 // --------------------------------------------------------------------------------------------------------------------
 
