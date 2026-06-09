@@ -38,17 +38,21 @@ FCkUsf_SurfaceInput CkUsf_DefaultInput()
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Per-pixel outputs a look writes. The generator wires each to the matching material pin (unlit looks ignore the
-// lit-only pins). Lit G-buffer outputs (Specular/AO) and WorldPositionOffset arrive with later capability bundles.
+// Per-pixel outputs a look writes. The generator wires each to the matching material pin: lit pins (Metallic/Specular/
+// Roughness/AmbientOcclusion) are ignored by unlit looks; Opacity is wired only for translucent-family blends and
+// OpacityMask only for the Masked blend. WorldPositionOffset arrives with a later (vertex) bundle.
 // --------------------------------------------------------------------------------------------------------------------
 struct FCkUsf_SurfaceOutput
 {
     float3 BaseColor;
     float  Metallic;
+    float  Specular;
     float  Roughness;
+    float  AmbientOcclusion;
     float3 EmissiveColor;
-    float3 Normal;   // tangent space
-    float  Opacity;
+    float3 Normal;       // tangent space
+    float  Opacity;      // translucent-family blends
+    float  OpacityMask;  // Masked blend clip (kept where >= the material's mask clip value)
 };
 
 FCkUsf_SurfaceOutput CkUsf_DefaultSurface()
@@ -56,10 +60,13 @@ FCkUsf_SurfaceOutput CkUsf_DefaultSurface()
     FCkUsf_SurfaceOutput O;
     O.BaseColor = float3(0.5, 0.5, 0.5);
     O.Metallic = 0.0;
+    O.Specular = 0.5;
     O.Roughness = 0.5;
+    O.AmbientOcclusion = 1.0;
     O.EmissiveColor = float3(0.0, 0.0, 0.0);
     O.Normal = float3(0.0, 0.0, 1.0);
     O.Opacity = 1.0;
+    O.OpacityMask = 1.0;
     return O;
 }
 

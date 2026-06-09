@@ -51,17 +51,52 @@ namespace ck::usf_editor
         }
     }
 
-    // Additional outputs every look exposes besides the primary (BaseColor).
+    // Resolve the per-look blend override on top of the domain default (`Inherit` keeps the default).
+    static auto Resolve_BlendMode(ECk_Usf_BlendMode In, EBlendMode InDomainDefault) -> EBlendMode
+    {
+        switch (In)
+        {
+            case ECk_Usf_BlendMode::Opaque:      return BLEND_Opaque;
+            case ECk_Usf_BlendMode::Masked:      return BLEND_Masked;
+            case ECk_Usf_BlendMode::Translucent: return BLEND_Translucent;
+            case ECk_Usf_BlendMode::Additive:    return BLEND_Additive;
+            case ECk_Usf_BlendMode::Modulate:    return BLEND_Modulate;
+            default:                             return InDomainDefault;
+        }
+    }
+
+    static auto Resolve_Unlit(ECk_Usf_ShadingModel In, bool InDomainUnlit) -> bool
+    {
+        switch (In)
+        {
+            case ECk_Usf_ShadingModel::Unlit:      return true;
+            case ECk_Usf_ShadingModel::DefaultLit: return false;
+            default:                               return InDomainUnlit;
+        }
+    }
+
+    // Blends that read the Opacity pin (vs the Masked blend, which reads OpacityMask).
+    static auto Is_TranslucentFamily(EBlendMode In) -> bool
+    {
+        return In == BLEND_Translucent || In == BLEND_Additive
+            || In == BLEND_Modulate    || In == BLEND_AlphaComposite;
+    }
+
+    // Additional outputs every surface look exposes besides the primary (BaseColor). The Custom node
+    // always outputs all of them; the pin WIRING in Generate_LookMaterial gates Opacity/OpacityMask by blend.
     struct FExtraOutput { const TCHAR* Name; ECustomMaterialOutputType Type; EMaterialProperty Prop; };
 
     static auto Get_ExtraOutputs() -> TArray<FExtraOutput>
     {
         return {
-            { TEXT("EmissiveColor"), CMOT_Float3, MP_EmissiveColor },
-            { TEXT("Roughness"),     CMOT_Float1, MP_Roughness },
-            { TEXT("Metallic"),      CMOT_Float1, MP_Metallic },
-            { TEXT("Normal"),        CMOT_Float3, MP_Normal },
-            { TEXT("Opacity"),       CMOT_Float1, MP_Opacity },
+            { TEXT("EmissiveColor"),    CMOT_Float3, MP_EmissiveColor },
+            { TEXT("Roughness"),        CMOT_Float1, MP_Roughness },
+            { TEXT("Metallic"),         CMOT_Float1, MP_Metallic },
+            { TEXT("Specular"),         CMOT_Float1, MP_Specular },
+            { TEXT("AmbientOcclusion"), CMOT_Float1, MP_AmbientOcclusion },
+            { TEXT("Normal"),           CMOT_Float3, MP_Normal },
+            { TEXT("Opacity"),          CMOT_Float1, MP_Opacity },
+            { TEXT("OpacityMask"),      CMOT_Float1, MP_OpacityMask },
         };
     }
 
@@ -123,8 +158,11 @@ namespace ck::usf_editor
         Code += TEXT("EmissiveColor = O.EmissiveColor;\n");
         Code += TEXT("Roughness = O.Roughness;\n");
         Code += TEXT("Metallic = O.Metallic;\n");
+        Code += TEXT("Specular = O.Specular;\n");
+        Code += TEXT("AmbientOcclusion = O.AmbientOcclusion;\n");
         Code += TEXT("Normal = O.Normal;\n");
         Code += TEXT("Opacity = O.Opacity;\n");
+        Code += TEXT("OpacityMask = O.OpacityMask;\n");
         Code += TEXT("return O.BaseColor;");
         return Code;
     }
@@ -145,6 +183,10 @@ namespace ck::usf_editor
         }
 
         const auto Config = Get_DomainConfig(InDef->_Domain);
+        const auto IsSurface = Config.Domain == MD_Surface;
+        // Surface domains honour the per-look blend/shading/two-sided overrides; other domains keep the domain config.
+        const auto EffectiveBlend = IsSurface ? Resolve_BlendMode(InDef->_BlendMode, Config.Blend) : Config.Blend;
+        const auto EffectiveUnlit = IsSurface ? Resolve_Unlit(InDef->_ShadingModel, Config.Unlit) : Config.Unlit;
 
         // ---- Create package + UMaterial (idempotent refresh) ----
         const auto PkgPath = ck::usf::Get_GeneratedMasterPackagePath(LookName);
@@ -168,8 +210,9 @@ namespace ck::usf_editor
         auto* Material = NewObject<UMaterial>(Package, *AssetName, RF_Public | RF_Standalone);
 
         Material->MaterialDomain = Config.Domain;
-        Material->BlendMode = Config.Blend;
-        if (Config.Unlit) { Material->SetShadingModel(MSM_Unlit); }
+        Material->BlendMode = EffectiveBlend;
+        Material->SetShadingModel(EffectiveUnlit ? MSM_Unlit : MSM_DefaultLit);
+        if (IsSurface) { Material->TwoSided = InDef->_TwoSided; }
 
         if (Config.Domain == MD_PostProcess)
         {
@@ -346,6 +389,9 @@ namespace ck::usf_editor
             UMaterialEditingLibrary::ConnectMaterialProperty(Custom, FString(), MP_BaseColor);
             for (const auto& E : Get_ExtraOutputs())
             {
+                // Opacity is valid only for translucent-family blends; OpacityMask only for the Masked blend.
+                if (E.Prop == MP_Opacity     && NOT Is_TranslucentFamily(EffectiveBlend)) { continue; }
+                if (E.Prop == MP_OpacityMask && EffectiveBlend != BLEND_Masked)           { continue; }
                 UMaterialEditingLibrary::ConnectMaterialProperty(Custom, FString(E.Name), E.Prop);
             }
         }
