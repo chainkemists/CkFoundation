@@ -8,6 +8,7 @@
 #include "CkCore/Time/CkTime_Utils.h"
 
 #include "CkEcs/CkEcsLog.h"
+#include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Net/CkNet_Fragment.h"
 #include "CkEcs/Net/CkNet_Utils.h"
@@ -175,6 +176,19 @@ namespace ck
         // request.
         if (NewEntityScript->Get_EffectiveReplication() == ECk_Replication::Replicates)
         {
+            // Resolve the ContextOwner the client copy must adopt. The entity's live ContextOwner
+            // fragment is authoritative here: it reflects both the inherited value AND any retarget
+            // the spawner applied (e.g. Request_OverrideToSelf on the entity-under-construction). When
+            // the entity is its own ContextOwner we leave the override unset — OnRep then maps it back
+            // to self on the client rather than to the replicated lifetime-owner (the ActorRelay channel).
+            auto ContextOwnerOverride = TOptional<FCk_Handle>{};
+            if (UCk_Utils_ContextOwner_UE::Has(NewEntity))
+            {
+                if (const auto EntityContextOwner = UCk_Utils_ContextOwner_UE::Get_ContextOwner(NewEntity);
+                    EntityContextOwner != NewEntity)
+                { ContextOwnerOverride = EntityContextOwner; }
+            }
+
             const auto HasOwningActor = UCk_Utils_OwningActor_UE::Has(NewEntity);
             ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — HasOwningActor=[{}]"), HasOwningActor);
 
@@ -195,7 +209,7 @@ namespace ck
                 if (IsNetworkedAuthority)
                 {
                     NewEntity.Add<ck::FRequest_EntityScript_Replicate>(
-                        NewEntity, InRequest.Get_SpawnParams(), NewEntityScript);
+                        NewEntity, ContextOwnerOverride, InRequest.Get_SpawnParams(), NewEntityScript);
                 }
             }
             else
@@ -208,7 +222,7 @@ namespace ck
                 if (IsHost)
                 {
                     NewEntity.Add<ck::FRequest_EntityScript_Replicate>(
-                        ReplicatedOwner, InRequest.Get_SpawnParams(), NewEntityScript);
+                        ReplicatedOwner, ContextOwnerOverride, InRequest.Get_SpawnParams(), NewEntityScript);
                 }
                 else
                 {
@@ -315,7 +329,7 @@ namespace ck
         ck::ecs::Display(TEXT("[REP_DEBUG] ReplicateProcessor — Calling Request_Replicate for [{}] with owner [{}]"), InHandle, ReplicatedOwner);
 
         UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(InHandle, ReplicatedOwner,
-            InRequest.Get_Script()->GetClass(), SpawnParamsCopy);
+            InRequest.Get_Script()->GetClass(), SpawnParamsCopy, InRequest.Get_ContextOwnerOverride());
 
         ck::ecs::Display(TEXT("[REP_DEBUG] ReplicateProcessor — Request_Replicate completed, adding FireOnDependentReplicationComplete tag"));
 

@@ -114,12 +114,20 @@ private:
     UPROPERTY()
     bool _IsOwningEntityDriverDependentOnThis = false;
 
+    // ContextOwner the client copy must adopt. An INVALID handle means 'unset' — OnRep then maps the
+    // ContextOwner to the entity itself rather than letting it inherit the lifetime-owner's ContextOwner
+    // (the ActorRelay channel). A plain FCk_Handle (not TOptional) is used so the value rides the
+    // FCk_Handle NetSerializer that remaps the entity across machines.
+    UPROPERTY()
+    FCk_Handle _ContextOwnerOverride;
+
 public:
     CK_PROPERTY_GET(_EntityScriptClass);
     CK_PROPERTY_GET(_SpawnParams);
     CK_PROPERTY_GET(_OwningEntityDriver);
     CK_PROPERTY_GET(_ReplicatedObjectsData);
     CK_PROPERTY(_IsOwningEntityDriverDependentOnThis);
+    CK_PROPERTY(_ContextOwnerOverride);
 
     CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_ReplicationData_EntityScript, _EntityScriptClass,
         _SpawnParams, _OwningEntityDriver, _ReplicatedObjectsData);

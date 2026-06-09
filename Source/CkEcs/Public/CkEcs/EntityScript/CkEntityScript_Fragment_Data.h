@@ -61,6 +61,13 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_Handle _Owner;
 
+    // ContextOwner the spawned entity should resolve to. Defaults to the Owner (in the Ctor) but may
+    // be retargeted by the spawner (e.g. to the entity itself) so the replicated copy on clients does
+    // NOT inherit the lifetime-owner's ContextOwner (the ActorRelay channel) by mistake.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _ContextOwner;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     TWeakObjectPtr<UCk_EntityScript_UE> _EntityScriptClassArchetype;
@@ -77,6 +84,7 @@ public:
     CK_PROPERTY_GET(_EntityScriptClassArchetype);
     CK_PROPERTY_GET(_Owner);
 
+    CK_PROPERTY(_ContextOwner);
     CK_PROPERTY(_SpawnParams);
     CK_PROPERTY(_PostConstruction_Func);
 

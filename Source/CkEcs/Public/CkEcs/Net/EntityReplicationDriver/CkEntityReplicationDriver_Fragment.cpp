@@ -5,6 +5,7 @@
 #include "CkCore/Payload/CkPayload.h"
 
 #include "CkEcs/CkEcsLog.h"
+#include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
@@ -243,9 +244,19 @@ auto
     }
     else
     {
-        auto TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(GetWorld());
+        const auto TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(GetWorld());
         UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(_AssociatedEntity, TransientEntity);
     }
+
+    // Re-home the ContextOwner the client copy resolves to. Request_SetupEntityWithLifetimeOwner above
+    // inherited it from the lifetime owner (for the non-self-referencing case, the ActorRelay channel),
+    // which is the regression. An unset (invalid) override means the authority resolved the entity as
+    // its own ContextOwner, so map it back to self; otherwise adopt the replicated override entity.
+    if (const auto& ContextOwnerOverride = _ReplicationData_EntityScript.Get_ContextOwnerOverride();
+        ck::IsValid(ContextOwnerOverride))
+    { UCk_Utils_ContextOwner_UE::Request_Override(_AssociatedEntity, ContextOwnerOverride); }
+    else
+    { UCk_Utils_ContextOwner_UE::Request_OverrideToSelf(_AssociatedEntity); }
 
     // On clients, the entity's ownership chain may not resolve to a World yet
     // (the owning entity hasn't been fully constructed). Add the World directly
