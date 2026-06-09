@@ -1,6 +1,7 @@
 #include "CkSmTask_SubStateMachine.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
@@ -58,6 +59,10 @@ auto
         // hold OwningStateMachine; lets consumers ask "is this a sub-SM? who owns it?" without
         // walking lifetime → task → owning-SM.
         ck::TUtils_Sm_OwningStateMachine::AddOrReplace(_SubSmHandle, OwningStateMachine);
+
+        _SubSmHandle.Add<ck::FFragment_Sm_NetIdentity>(
+            UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel(OwningStateMachine),
+            ck::statemachine::ComputeNetContext(OwningStateMachine));
 
         if (OwningStateMachine.Has<ck::FFragment_Sm_StateOverrides>())
         {

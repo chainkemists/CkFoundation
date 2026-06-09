@@ -16,6 +16,11 @@ namespace ck::statemachine
             const FCk_Handle_StateMachine& InSm)
         -> ECk_Sm_NetContext
     {
+        // Sub-SMs carry a resolved-once snapshot (they can't resolve their owning pawn live —
+        // see FFragment_Sm_NetIdentity). Use it when present; top-level SMs fall through to live.
+        if (InSm.Has<ck::FFragment_Sm_NetIdentity>())
+        { return InSm.Get<ck::FFragment_Sm_NetIdentity>().Get_NetContext(); }
+
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InSm);
 
         if (ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}) && World->IsNetMode(NM_Standalone))

@@ -209,6 +209,12 @@ auto
         const FCk_Handle_StateMachine& InStateMachine)
     -> ECk_Sm_AuthorityModel
 {
+    // Sub-SMs carry a resolved-once snapshot of the parent's effective authority (they can't
+    // resolve their owning pawn live — see FFragment_Sm_NetIdentity). It already holds a concrete
+    // model (never AutoDetect), so return it directly. Top-level SMs fall through to live resolution.
+    if (InStateMachine.Has<ck::FFragment_Sm_NetIdentity>())
+    { return InStateMachine.Get<ck::FFragment_Sm_NetIdentity>().Get_EffectiveAuthority(); }
+
     const auto Authored = InStateMachine.Get<ck::FFragment_Sm_Params>().Get_AuthorityModel();
 
     if (Authored != ECk_Sm_AuthorityModel::AutoDetect)

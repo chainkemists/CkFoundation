@@ -251,6 +251,40 @@ namespace ck
         CK_PROPERTY_GET(_Requests);
     };
 
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Resolved-once net identity, present only on SUB-SMs. A sub-SM entity is created detached
+    // from the pawn (Request_CreateEntity under the task entity), so it never carries
+    // FFragment_OwningActor_Current. The live ComputeNetContext / Get_EffectiveAuthorityModel
+    // queries need the owning pawn (non-recursive owning-actor lookup) and therefore misresolve
+    // on a sub-SM — it would see itself as NonOwningClient on the owning client and AutoDetect to
+    // ServerAuthoritative. The SubStateMachine task snapshots the PARENT SM's live-resolved
+    // identity into this fragment at EnterTask. EnterTask runs on every machine and the parent is
+    // fully resolved by then, so each machine captures its own correct per-machine role. When
+    // present, ComputeNetContext / Get_EffectiveAuthorityModel return these stored values instead
+    // of resolving live. Top-level SMs never carry it (they hold the pawn and resolve live).
+    // Nesting chains automatically: a nested sub-SM reads its parent sub-SM's already-stored value.
+    //
+    // Snapshot caveat: the per-machine NetContext is frozen at EnterTask. A mid-life re-possession
+    // of the owning pawn would leave it stale; sub-SMs are expected not to outlive a possession
+    // change. The EffectiveAuthority half is machine-independent and immutable, so it is never stale.
+    struct CKSTATEMACHINE_API FFragment_Sm_NetIdentity
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Sm_NetIdentity);
+
+    private:
+        ECk_Sm_AuthorityModel _EffectiveAuthority = ECk_Sm_AuthorityModel::AutoDetect;
+        ECk_Sm_NetContext     _NetContext         = ECk_Sm_NetContext::Standalone;
+
+    public:
+        CK_PROPERTY_GET(_EffectiveAuthority);
+        CK_PROPERTY_GET(_NetContext);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Sm_NetIdentity, _EffectiveAuthority, _NetContext);
+    };
+
     // ================================================================================================================
     // REPLICATION FRAGMENTS
     // ================================================================================================================

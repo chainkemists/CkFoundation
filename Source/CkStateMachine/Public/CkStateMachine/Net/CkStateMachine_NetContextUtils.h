@@ -8,7 +8,9 @@
 namespace ck::statemachine
 {
     // Computes the NetContext for a given SM entity based on its current authority/role.
-    // Resolved fresh per call from UCk_Utils_Net_UE queries — no caching, no fragment storage.
+    // Resolved fresh per call from UCk_Utils_Net_UE queries — EXCEPT for sub-SMs, which carry a
+    // resolved-once snapshot in FFragment_Sm_NetIdentity (they can't resolve their owning pawn
+    // live); when that fragment is present its stored NetContext is returned directly.
     CKSTATEMACHINE_API auto
     ComputeNetContext(
         const FCk_Handle_StateMachine& InSm) -> ECk_Sm_NetContext;
