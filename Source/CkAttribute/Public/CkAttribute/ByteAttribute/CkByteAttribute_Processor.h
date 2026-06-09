@@ -56,6 +56,27 @@ namespace ck
         TFragment_ByteAttribute, FCk_RepData_ByteAttributes>;
 
     // --------------------------------------------------------------------------------------------------------------------
+
+    // Re-drives replication of RESTORED Byte-attribute values to clients after a snapshot load. See
+    // FProcessor_FloatAttribute_ReplicateOnRestore + ck::FTag_Snapshot_JustRestored. View iterates the clean Current
+    // fragment and POINT-QUERIES the in_place marker inside ForEachEntity (listing the tag in the view yields tombstones).
+    class CKATTRIBUTE_API FProcessor_ByteAttribute_ReplicateOnRestore
+        : public ck_exp::TProcessor<FProcessor_ByteAttribute_ReplicateOnRestore, FCk_Handle_ByteAttribute,
+            ck::TReadOnly<FFragment_ByteAttribute_Current>, CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay;
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            FCk_Handle_ByteAttribute InHandle,
+            const FFragment_ByteAttribute_Current& InCurrent) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------
