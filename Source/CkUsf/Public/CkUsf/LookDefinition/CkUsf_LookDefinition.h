@@ -16,6 +16,28 @@ enum class ECk_Usf_Domain : uint8
     Decal
 };
 
+// Blend-mode override on top of the domain default. `Inherit` keeps the domain's blend.
+UENUM(BlueprintType)
+enum class ECk_Usf_BlendMode : uint8
+{
+    Inherit,
+    Opaque,
+    Masked,
+    Translucent,
+    Additive,
+    Modulate
+};
+
+// Shading-model override. `Inherit` keeps the domain default (SurfaceLit→DefaultLit, others→Unlit).
+// Exotic models (Subsurface/ClearCoat/Cloth) arrive with their dedicated outputs in a later bundle.
+UENUM(BlueprintType)
+enum class ECk_Usf_ShadingModel : uint8
+{
+    Inherit,
+    Unlit,
+    DefaultLit
+};
+
 UENUM(BlueprintType)
 enum class ECk_Usf_ParamType : uint8
 {
@@ -68,6 +90,16 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     ECk_Usf_Domain _Domain = ECk_Usf_Domain::SurfaceLit;
+
+    // Surface-domain overrides (ignored for PostProcess/UI/Decal, which keep their domain config).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    ECk_Usf_BlendMode _BlendMode = ECk_Usf_BlendMode::Inherit;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    ECk_Usf_ShadingModel _ShadingModel = ECk_Usf_ShadingModel::Inherit;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    bool _TwoSided = false;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     TArray<FCk_Usf_ParamDesc> _Parameters;
