@@ -46,6 +46,14 @@ auto CKECS_API GetTypeHash(const FCk_EntityOwningActor_BasicDetails& InBasicDeta
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Fired once the Actor becomes ECS ready, i.e. its OwningActor component has been linked to a valid Entity.
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_OwningActor_OnEcsReady,
+    AActor*, InActor,
+    FCk_Handle, InEntity);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintType, NotBlueprintable)
 class CKECS_API UCk_EntityOwningActor_ActorComponent_UE
     : public UCk_ActorComponent_UE
@@ -69,6 +77,12 @@ public:
 
 private:
     FCk_Handle _EntityHandle;
+
+    // Promises queued by Promise_OnActorEcsReady while the Actor was not yet ECS ready. Flushed (and
+    // emptied) the moment the OwningActor link is established. These live with the component, so they
+    // are discarded automatically if the Actor is destroyed before ever becoming ECS ready.
+    TArray<FCk_Delegate_OwningActor_OnEcsReady> _PendingEcsReadyDelegates;
+    TArray<TFunction<void(AActor*, FCk_Handle)>> _PendingEcsReadyCallbacks;
 
 public:
     CK_PROPERTY_GET(_EntityHandle);
