@@ -321,6 +321,12 @@ private:
 public:
     CK_PROPERTY(_Entity);
 
+    // Re-home this handle onto a different registry slot. Needed by the snapshot loader: on a
+    // cross-world (seamless-travel) restore, a deserialized handle's entity-id is remapped but its
+    // _RegistryHandle still points at the saving world's (now-freed) slot. Snapshot_Handle calls this
+    // to re-point it at the live load-target registry. Typesafe handles inherit it via FCk_Handle.
+    auto Set_Registry(FCk_RegistryHandle InRegistryHandle) -> void;
+
 #if WITH_EDITORONLY_DATA
 private:
     UPROPERTY(NotReplicated, Transient) // needs to be a UPROPERTY so that it shows up when debugging Blueprints

@@ -45,8 +45,12 @@ namespace ck
         explicit FSnapshotContext(entt::basic_snapshot<SnapshotRegistryType>& InSaver)
             : _Saver(&InSaver) {}
 
-        explicit FSnapshotContext(entt::basic_continuous_loader<SnapshotRegistryType>& InLoader)
-            : _Loader(&InLoader) {}
+        // InLoadRegistryHandle is the live load-target registry. On load, Snapshot_Handle re-homes every
+        // restored handle onto it (see below). Defaults to Unset for the registry-only restore path
+        // (Run_Restore_Registry) which has no FCk_Registry / subsystem and never crosses a world boundary.
+        explicit FSnapshotContext(entt::basic_continuous_loader<SnapshotRegistryType>& InLoader,
+                                  FCk_RegistryHandle InLoadRegistryHandle = FCk_RegistryHandle::Unset())
+            : _Loader(&InLoader), _LoadRegistryHandle(InLoadRegistryHandle) {}
 
     public:
         // Serialize a raw entt entity (used by archive writer/reader).
@@ -67,6 +71,14 @@ namespace ck
             auto Entity = InOutHandle.Get_Entity();
             Snapshot_Entity(InAr, Entity);
             InOutHandle.Set_Entity(Entity);
+
+            // Re-home the restored handle onto the live load-target registry. The deserialized handle's
+            // _RegistryHandle still points at the SAVING world's slot — harmless on a same-world (OpenLevel)
+            // load, but after seamless travel that slot belongs to the destroyed world, so the handle resolves
+            // to [INVALID REGISTRY] (breaking Get_LifetimeOwner, Records, every handle-storing fragment). Only
+            // re-home when we actually have a load target (the registry-only path passes Unset and skips this).
+            if (IsLoading() && _LoadRegistryHandle.IsSet())
+            { InOutHandle.Set_Registry(_LoadRegistryHandle); }
         }
 
         auto IsLoading() const -> bool { return _Loader != nullptr; }
@@ -75,5 +87,9 @@ namespace ck
     private:
         entt::basic_snapshot<SnapshotRegistryType>*           _Saver  = nullptr;
         entt::basic_continuous_loader<SnapshotRegistryType>*  _Loader = nullptr;
+
+        // The live registry restored handles are re-homed onto (load path only). Unset on save and on the
+        // registry-only restore path.
+        FCk_RegistryHandle _LoadRegistryHandle = FCk_RegistryHandle::Unset();
     };
 }

@@ -4,9 +4,12 @@
 #include "CkEcs/Snapshot/CkSnapshot_Archive_Reader.h"
 #include "CkEcs/Snapshot/CkSnapshot_Context.h"
 #include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
+#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h" // ck::FTag_Snapshot_JustRestored
 #include "CkEcs/Snapshot/CkSnapshot_TagDriver.h"
 #include "CkSnapshot/SaveGame/CkSnapshot_Header.h"
 
+#include "CkEcs/Handle/CkHandle.h"        // FCk_Handle + Add<ck::FTag_Snapshot_JustRestored>
+#include "CkEcs/Handle/CkHandle_Utils.h"  // ck::MakeHandle
 #include "CkEcs/Registry/CkRegistry_SlotTable.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
@@ -48,6 +51,9 @@ namespace ck::snapshot
 
         auto Loader = entt::basic_continuous_loader<ck::SnapshotRegistryType>{InRegistry};
 
+        // No load-target registry handle here: this registry-only path (FEcsWorld unit test) restores into a
+        // raw entt registry with no FCk_Registry / subsystem, and never crosses a world boundary — so handle
+        // re-homing is unnecessary. Snapshot_Handle's IsSet() guard skips it for the default-Unset context.
         auto Context = ck::FSnapshotContext{Loader};
         auto Reader  = ck::FSnapshotArchive_Reader{ProxyArchive, Context};
 
@@ -137,7 +143,9 @@ namespace ck::snapshot
         constexpr auto LoadIfFindFails = true;
         auto ProxyArchive = FObjectAndNameAsStringProxyArchive{InByteReader, LoadIfFindFails};
         auto Loader  = entt::basic_continuous_loader<ck::SnapshotRegistryType>{*RawRegistry};
-        auto Context = ck::FSnapshotContext{Loader};
+        // Pass the live registry handle so Snapshot_Handle re-homes every restored handle onto THIS world
+        // (post-seamless-travel the saved slot is gone). Without it, restored handles read [INVALID REGISTRY].
+        auto Context = ck::FSnapshotContext{Loader, CkRegistry.Get_RegistryHandle()};
         auto Reader  = ck::FSnapshotArchive_Reader{ProxyArchive, Context};
 
         Loader.get<ck::SnapshotEntityType>(Reader);
@@ -183,6 +191,23 @@ namespace ck::snapshot
         }
 
         Loader.orphans();
+
+        // Stamp a generic "just restored" marker on every surviving restored entity so replicated features (e.g.
+        // CkAttribute) can RE-DRIVE replication of the restored VALUES to clients. The per-feature replication trigger
+        // tags are transient + consumed before a save, so they are NOT restored — without this, a client keeps its
+        // Construct-default values for restored entities. Collect first: Add mutates the entity storage being iterated.
+        {
+            auto RestoredEntities = TArray<FCk_Handle>{};
+            for (const auto Entity : RawRegistry->storage<ck::SnapshotEntityType>())
+            {
+                RestoredEntities.Add(ck::MakeHandle(FCk_Entity{Entity}, CkRegistry));
+            }
+            for (auto& Handle : RestoredEntities)
+            {
+                if (ck::IsValid(Handle))
+                { Handle.Add<ck::FTag_Snapshot_JustRestored>(); }
+            }
+        }
 
         Report.Set_SkippedFragmentTypes(MoveTemp(SkippedTypes));
         Report.Set_EntitiesRestored(static_cast<int32>(RawRegistry->storage<ck::SnapshotEntityType>().size()));

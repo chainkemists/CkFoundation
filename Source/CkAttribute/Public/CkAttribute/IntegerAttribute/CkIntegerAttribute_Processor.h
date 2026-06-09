@@ -67,6 +67,27 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
+
+    // Re-drives replication of RESTORED Integer-attribute values to clients after a snapshot load. See
+    // FProcessor_FloatAttribute_ReplicateOnRestore + ck::FTag_Snapshot_JustRestored. View iterates the clean Current
+    // fragment and POINT-QUERIES the in_place marker inside ForEachEntity (listing the tag in the view yields tombstones).
+    class CKATTRIBUTE_API FProcessor_IntegerAttribute_ReplicateOnRestore
+        : public ck_exp::TProcessor<FProcessor_IntegerAttribute_ReplicateOnRestore, FCk_Handle_IntegerAttribute,
+            ck::TReadOnly<FFragment_IntegerAttribute_Current>, CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay;
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            FCk_Handle_IntegerAttribute InHandle,
+            const FFragment_IntegerAttribute_Current& InCurrent) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------
