@@ -1,0 +1,25 @@
+// /CkUsf/Looks/Dissolve.ush
+// Masked dissolve: OpacityMask clips the surface below an animated noise threshold, with a glowing
+// burn edge just above the cut. Exercises BlendMode=Masked + TwoSided + the OpacityMask output.
+#pragma once
+#include "/CkUsf/Common.ush"
+
+// Params: BaseColor (Vector), EdgeColor (Vector), Scale (Scalar)
+FCkUsf_SurfaceOutput CkUsf_Look_Dissolve(FCkUsf_SurfaceInput In, float3 BaseColor, float3 EdgeColor, float Scale)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float n = CkUsf_Fbm(In.UV * Scale);
+    float threshold = 0.35 + 0.30 * (0.5 + 0.5 * sin(In.Time * 0.6));  // the cut line breathes over time
+
+    O.OpacityMask = step(threshold, n);                               // clip pixels below the threshold
+
+    // Glowing band just above the cut (bright where n is barely above the threshold).
+    float edge = saturate(1.0 - (n - threshold) / 0.08) * O.OpacityMask;
+
+    O.BaseColor = BaseColor;
+    O.Roughness = 0.6;
+    O.EmissiveColor = EdgeColor * edge * 4.0;
+    O.Opacity = 1.0;
+    return O;
+}

@@ -1,0 +1,23 @@
+// /CkUsf/Looks/LitMetal.ush
+// Lit PBR demo: a checker of metal vs dielectric squares with varying roughness, lit by the scene.
+// Exercises DefaultLit shading + the Metallic/Specular/Roughness/AmbientOcclusion outputs.
+#pragma once
+#include "/CkUsf/Common.ush"
+
+// Params: ColorA (Vector), ColorB (Vector), Tiles (Scalar)
+FCkUsf_SurfaceOutput CkUsf_Look_LitMetal(FCkUsf_SurfaceInput In, float3 ColorA, float3 ColorB, float Tiles)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float2 g = floor(In.UV * Tiles);
+    float  checker = frac((g.x + g.y) * 0.5) * 2.0;   // 0 or 1 in a checkerboard
+
+    O.BaseColor = lerp(ColorA, ColorB, checker);
+    O.Metallic = checker;                             // metal squares vs dielectric squares
+    O.Roughness = lerp(0.15, 0.6, checker);
+    O.Specular = 0.5;
+    O.AmbientOcclusion = 1.0;
+    O.EmissiveColor = float3(0.0, 0.0, 0.0);
+    O.Opacity = 1.0;
+    return O;
+}

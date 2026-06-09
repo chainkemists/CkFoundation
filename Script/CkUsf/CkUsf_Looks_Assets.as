@@ -262,6 +262,60 @@ namespace CkUsf
         _Parameters.Add(RimPower);
     }
 
+    asset Dissolve of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/Dissolve.ush";
+        _UshFunctionName = n"CkUsf_Look_Dissolve";
+        _Domain          = ECk_Usf_Domain::SurfaceLit;
+        _BlendMode       = ECk_Usf_BlendMode::Masked;
+        _TwoSided        = true;
+        _LookName        = n"Dissolve";
+
+        FCk_Usf_ParamDesc BaseColor;
+        BaseColor._Name = n"BaseColor";
+        BaseColor._Type = ECk_Usf_ParamType::Vector;
+        BaseColor._DefaultVector = FLinearColor(0.30, 0.35, 0.40, 1.0);
+        _Parameters.Add(BaseColor);
+
+        FCk_Usf_ParamDesc EdgeColor;
+        EdgeColor._Name = n"EdgeColor";
+        EdgeColor._Type = ECk_Usf_ParamType::Vector;
+        EdgeColor._DefaultVector = FLinearColor(1.0, 0.4, 0.05, 1.0);
+        _Parameters.Add(EdgeColor);
+
+        FCk_Usf_ParamDesc Scale;
+        Scale._Name = n"Scale";
+        Scale._Type = ECk_Usf_ParamType::Scalar;
+        Scale._DefaultScalar = 5.0;
+        _Parameters.Add(Scale);
+    }
+
+    asset LitMetal of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/LitMetal.ush";
+        _UshFunctionName = n"CkUsf_Look_LitMetal";
+        _Domain          = ECk_Usf_Domain::SurfaceLit;
+        _LookName        = n"LitMetal";
+
+        FCk_Usf_ParamDesc ColorA;
+        ColorA._Name = n"ColorA";
+        ColorA._Type = ECk_Usf_ParamType::Vector;
+        ColorA._DefaultVector = FLinearColor(0.90, 0.70, 0.30, 1.0);
+        _Parameters.Add(ColorA);
+
+        FCk_Usf_ParamDesc ColorB;
+        ColorB._Name = n"ColorB";
+        ColorB._Type = ECk_Usf_ParamType::Vector;
+        ColorB._DefaultVector = FLinearColor(0.20, 0.25, 0.30, 1.0);
+        _Parameters.Add(ColorB);
+
+        FCk_Usf_ParamDesc Tiles;
+        Tiles._Name = n"Tiles";
+        Tiles._Type = ECk_Usf_ParamType::Scalar;
+        Tiles._DefaultScalar = 6.0;
+        _Parameters.Add(Tiles);
+    }
+
     // ---- Multi-pass (render-texture) passes ----
 
     asset SmokeBuffer of UCkUsf_LookDefinition
