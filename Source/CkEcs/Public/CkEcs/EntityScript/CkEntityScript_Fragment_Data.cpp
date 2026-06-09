@@ -15,6 +15,7 @@ FCk_Request_EntityScript_SpawnEntity(
     : FCk_Request_Base()
     , _NewEntity(InNewEntity)
     , _Owner(InOwner)
+    , _ContextOwner(InOwner)
     , _EntityScriptClassArchetype(InEntityScriptClass.GetDefaultObject())
 {
 }

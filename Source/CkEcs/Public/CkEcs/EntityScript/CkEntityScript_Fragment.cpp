@@ -23,9 +23,11 @@ namespace ck
     FRequest_EntityScript_Replicate::
         FRequest_EntityScript_Replicate(
             const FCk_Handle& InOwner,
+            const TOptional<FCk_Handle>& InContextOwnerOverride,
             const FInstancedStruct& InSpawnParams,
             UCk_EntityScript_UE* InScript)
         : _Owner(InOwner)
+        , _ContextOwnerOverride(InContextOwnerOverride)
         , _SpawnParams(InSpawnParams)
         , _Script(InScript)
     {

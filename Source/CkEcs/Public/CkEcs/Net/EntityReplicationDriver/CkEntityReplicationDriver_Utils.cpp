@@ -195,7 +195,8 @@ auto
         FCk_Handle& InHandleToReplicate,
         FCk_Handle InReplicatedOwner,
         TSubclassOf<UCk_EntityScript_UE> InEntityScript,
-        const FInstancedStruct& InSpawnParams)
+        const FInstancedStruct& InSpawnParams,
+        const TOptional<FCk_Handle>& InReplicatedContextOwnerOverride)
     -> void
 {
     if (const auto ScriptStruct = InSpawnParams.GetScriptStruct();
@@ -244,6 +245,7 @@ auto
                     FCk_EntityReplicationDriver_ReplicateObjects_Data{FCk_ReplicatedObjects::ToWeak(ReplicatedObjects.Get_ReplicatedObjects())}
                 }
                 .Set_IsOwningEntityDriverDependentOnThis(IsOwningEntityDriverDependentOnThis)
+                .Set_ContextOwnerOverride(InReplicatedContextOwnerOverride.Get(FCk_Handle{}))
             );
 
             break;

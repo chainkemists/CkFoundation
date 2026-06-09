@@ -60,7 +60,7 @@ auto
         if (DefaultObject->Get_EffectiveReplication() == ECk_Replication::Replicates &&
             UCk_Utils_Net_UE::Get_EntityNetMode(InLifetimeOwner) == ECk_Net_NetModeType::Client)
         {
-            auto PendingEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
+            const auto& PendingEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
             auto& PendingFragment = InLifetimeOwner.AddOrGet<ck::FFragment_PendingReplication>();
             PendingFragment.Add(InEntityScriptClass.Get(), PendingEntity, InSpawnParams);
             return FCk_Handle_PendingEntityScript{PendingEntity};
@@ -78,7 +78,7 @@ auto
     CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
         TEXT("Request_SpawnEntity called with class: {}"), InEntityScriptClass);
 
-    auto CDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(InEntityScriptClass);
+    const auto CDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(InEntityScriptClass);
     return Add(NewEntity, MakeWeakObjectPtr(CDO), InSpawnParams);
 }
 
@@ -103,7 +103,7 @@ auto
     if (InEntityScriptClassArchetype->Get_EffectiveReplication() == ECk_Replication::Replicates &&
         UCk_Utils_Net_UE::Get_EntityNetMode(InLifetimeOwner) == ECk_Net_NetModeType::Client)
     {
-        auto PendingEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
+        const auto& PendingEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
         auto& PendingFragment = InLifetimeOwner.AddOrGet<ck::FFragment_PendingReplication>();
         PendingFragment.Add(InEntityScriptClassArchetype->GetClass(), PendingEntity, InSpawnParams);
         return FCk_Handle_PendingEntityScript{PendingEntity};
@@ -178,7 +178,7 @@ auto
         const auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InScriptEntity);
         const auto& Settings = TransientEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings();
 
-        auto Replication = InEntityScriptClassArchetype->Get_EffectiveReplication();
+        const auto Replication = InEntityScriptClassArchetype->Get_EffectiveReplication();
         auto NetRole = Settings.Get_NetRole();
 
         if (Replication == ECk_Replication::Replicates
@@ -196,10 +196,13 @@ auto
 
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InScriptEntity);
 
+    const auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InScriptEntity);
+
     const auto Request = FCk_Request_EntityScript_SpawnEntity{
                              InScriptEntity,
-                             UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InScriptEntity),
+                             LifetimeOwner,
                              InEntityScriptClassArchetype}
+                        .Set_ContextOwner(LifetimeOwner)
                         .Set_SpawnParams(InSpawnParams)
                         .Set_PostConstruction_Func(InOptionalFunc);
 
