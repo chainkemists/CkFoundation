@@ -316,6 +316,142 @@ namespace CkUsf
         _Parameters.Add(Tiles);
     }
 
+    asset Displace of UCkUsf_LookDefinition
+    {
+        _UshIncludePath   = "/CkUsf/Looks/Displace.ush";
+        _UshFunctionName  = n"CkUsf_Look_Displace";
+        _WpoFunctionName  = n"CkUsf_Look_Displace_WPO";
+        _Domain           = ECk_Usf_Domain::SurfaceLit;
+        _LookName         = n"Displace";
+
+        FCk_Usf_ParamDesc BaseColor;
+        BaseColor._Name = n"BaseColor";
+        BaseColor._Type = ECk_Usf_ParamType::Vector;
+        BaseColor._DefaultVector = FLinearColor(0.20, 0.55, 0.85, 1.0);
+        _Parameters.Add(BaseColor);
+
+        FCk_Usf_ParamDesc Amplitude;
+        Amplitude._Name = n"Amplitude";
+        Amplitude._Type = ECk_Usf_ParamType::Scalar;
+        Amplitude._DefaultScalar = 12.0;
+        _Parameters.Add(Amplitude);
+
+        FCk_Usf_ParamDesc Frequency;
+        Frequency._Name = n"Frequency";
+        Frequency._Type = ECk_Usf_ParamType::Scalar;
+        Frequency._DefaultScalar = 0.05;
+        _Parameters.Add(Frequency);
+
+        FCk_Usf_ParamDesc Speed;
+        Speed._Name = n"Speed";
+        Speed._Type = ECk_Usf_ParamType::Scalar;
+        Speed._DefaultScalar = 3.0;
+        _Parameters.Add(Speed);
+    }
+
+    asset PerInstanceHue of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/PerInstanceHue.ush";
+        _UshFunctionName = n"CkUsf_Look_PerInstanceHue";
+        _Domain          = ECk_Usf_Domain::SurfaceUnlit;
+        _LookName        = n"PerInstanceHue";
+
+        // Per-instance scalar: on an ISM each instance writes its own slot-0 value → distinct colours from ONE material.
+        FCk_Usf_ParamDesc Hue;
+        Hue._Name = n"Hue";
+        Hue._Type = ECk_Usf_ParamType::Scalar;
+        Hue._DefaultScalar = 0.0;
+        Hue._PerInstance = true;
+        _Parameters.Add(Hue);
+
+        FCk_Usf_ParamDesc Brightness;
+        Brightness._Name = n"Brightness";
+        Brightness._Type = ECk_Usf_ParamType::Scalar;
+        Brightness._DefaultScalar = 1.5;
+        _Parameters.Add(Brightness);
+    }
+
+    asset Glass of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/Glass.ush";
+        _UshFunctionName = n"CkUsf_Look_Glass";
+        _Domain          = ECk_Usf_Domain::SurfaceLit;
+        _BlendMode       = ECk_Usf_BlendMode::Translucent;
+        _LookName        = n"Glass";
+
+        FCk_Usf_ParamDesc Tint;
+        Tint._Name = n"TintColor";
+        Tint._Type = ECk_Usf_ParamType::Vector;
+        Tint._DefaultVector = FLinearColor(0.70, 0.85, 1.0, 1.0);
+        _Parameters.Add(Tint);
+
+        FCk_Usf_ParamDesc Alpha;
+        Alpha._Name = n"Alpha";
+        Alpha._Type = ECk_Usf_ParamType::Scalar;
+        Alpha._DefaultScalar = 0.25;
+        _Parameters.Add(Alpha);
+
+        FCk_Usf_ParamDesc Ior;
+        Ior._Name = n"Ior";
+        Ior._Type = ECk_Usf_ParamType::Scalar;
+        Ior._DefaultScalar = 1.12;
+        _Parameters.Add(Ior);
+    }
+
+    asset Skin of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/Skin.ush";
+        _UshFunctionName = n"CkUsf_Look_Skin";
+        _Domain          = ECk_Usf_Domain::SurfaceLit;
+        _ShadingModel    = ECk_Usf_ShadingModel::Subsurface;
+        _LookName        = n"Skin";
+
+        FCk_Usf_ParamDesc SkinColor;
+        SkinColor._Name = n"SkinColor";
+        SkinColor._Type = ECk_Usf_ParamType::Vector;
+        SkinColor._DefaultVector = FLinearColor(0.85, 0.60, 0.50, 1.0);
+        _Parameters.Add(SkinColor);
+
+        FCk_Usf_ParamDesc ScatterColor;
+        ScatterColor._Name = n"ScatterColor";
+        ScatterColor._Type = ECk_Usf_ParamType::Vector;
+        ScatterColor._DefaultVector = FLinearColor(0.80, 0.15, 0.10, 1.0);
+        _Parameters.Add(ScatterColor);
+
+        FCk_Usf_ParamDesc ScatterAmount;
+        ScatterAmount._Name = n"ScatterAmount";
+        ScatterAmount._Type = ECk_Usf_ParamType::Scalar;
+        ScatterAmount._DefaultScalar = 0.7;
+        _Parameters.Add(ScatterAmount);
+    }
+
+    asset CarPaint of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/CarPaint.ush";
+        _UshFunctionName = n"CkUsf_Look_CarPaint";
+        _Domain          = ECk_Usf_Domain::SurfaceLit;
+        _ShadingModel    = ECk_Usf_ShadingModel::ClearCoat;
+        _LookName        = n"CarPaint";
+
+        FCk_Usf_ParamDesc PaintColor;
+        PaintColor._Name = n"PaintColor";
+        PaintColor._Type = ECk_Usf_ParamType::Vector;
+        PaintColor._DefaultVector = FLinearColor(0.60, 0.05, 0.10, 1.0);
+        _Parameters.Add(PaintColor);
+
+        FCk_Usf_ParamDesc Flake;
+        Flake._Name = n"Flake";
+        Flake._Type = ECk_Usf_ParamType::Scalar;
+        Flake._DefaultScalar = 0.15;
+        _Parameters.Add(Flake);
+
+        FCk_Usf_ParamDesc CoatRoughness;
+        CoatRoughness._Name = n"CoatRoughness";
+        CoatRoughness._Type = ECk_Usf_ParamType::Scalar;
+        CoatRoughness._DefaultScalar = 0.08;
+        _Parameters.Add(CoatRoughness);
+    }
+
     // ---- Multi-pass (render-texture) passes ----
 
     asset SmokeBuffer of UCkUsf_LookDefinition

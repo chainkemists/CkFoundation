@@ -38,6 +38,33 @@ FCkUsf_SurfaceInput CkUsf_DefaultInput()
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+// Per-vertex inputs a WorldPositionOffset look receives. WPO is a VERTEX-shader output, so this carries
+// only VS-safe inputs (no PixelDepth, no Scene* — those are pixel-only and would force a VS compile of
+// pixel code). A look opts in by authoring a second entry point:
+//   float3 CkUsf_Look_<Name>_WPO(FCkUsf_VertexInput In, <same params as the pixel fn>)
+// returning a world-space offset. The generator wires this into a separate VS Custom node (MP_WorldPositionOffset).
+// --------------------------------------------------------------------------------------------------------------------
+struct FCkUsf_VertexInput
+{
+    float  Time;
+    float2 UV;             // mesh TexCoord0
+    float3 WorldPosition;  // world-space vertex position
+    float3 VertexNormal;   // world-space vertex normal
+    float3 VertexColor;    // interpolated vertex color RGB / per-instance via material
+};
+
+FCkUsf_VertexInput CkUsf_DefaultVertexInput()
+{
+    FCkUsf_VertexInput I;
+    I.Time = 0.0;
+    I.UV = float2(0.0, 0.0);
+    I.WorldPosition = float3(0.0, 0.0, 0.0);
+    I.VertexNormal = float3(0.0, 0.0, 1.0);
+    I.VertexColor = float3(1.0, 1.0, 1.0);
+    return I;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 // Per-pixel outputs a look writes. The generator wires each to the matching material pin: lit pins (Metallic/Specular/
 // Roughness/AmbientOcclusion) are ignored by unlit looks; Opacity is wired only for translucent-family blends and
 // OpacityMask only for the Masked blend. WorldPositionOffset arrives with a later (vertex) bundle.
@@ -50,9 +77,13 @@ struct FCkUsf_SurfaceOutput
     float  Roughness;
     float  AmbientOcclusion;
     float3 EmissiveColor;
-    float3 Normal;       // tangent space
-    float  Opacity;      // translucent-family blends
-    float  OpacityMask;  // Masked blend clip (kept where >= the material's mask clip value)
+    float3 Normal;            // tangent space
+    float  Opacity;           // translucent-family blends
+    float  OpacityMask;       // Masked blend clip (kept where >= the material's mask clip value)
+    float  Refraction;        // IOR scalar; wired only for translucent-family blends (1.0 = no bend / air)
+    float3 SubsurfaceColor;   // wired only for the Subsurface shading model
+    float  ClearCoat;         // wired only for the ClearCoat shading model (MP_CustomData0)
+    float  ClearCoatRoughness;// wired only for the ClearCoat shading model (MP_CustomData1)
 };
 
 FCkUsf_SurfaceOutput CkUsf_DefaultSurface()
@@ -67,6 +98,10 @@ FCkUsf_SurfaceOutput CkUsf_DefaultSurface()
     O.Normal = float3(0.0, 0.0, 1.0);
     O.Opacity = 1.0;
     O.OpacityMask = 1.0;
+    O.Refraction = 1.0;
+    O.SubsurfaceColor = float3(0.5, 0.2, 0.1);
+    O.ClearCoat = 1.0;
+    O.ClearCoatRoughness = 0.1;
     return O;
 }
 

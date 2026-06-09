@@ -1,0 +1,25 @@
+// /CkUsf/Looks/Glass.ush
+// Refraction demo: lit translucent glass. Outputs an IOR scalar to Refraction (wired only for translucent
+// blends, with RefractionMethod = RM_IndexOfRefraction set on the master) so the surface bends scene color.
+#pragma once
+#include "/CkUsf/Common.ush"
+
+// Params: TintColor (Vector), Alpha (Scalar), Ior (Scalar)
+// NOTE: a param must NOT be named after a Custom-node output (Opacity/Roughness/Refraction/...) — the
+// generated CustomExpression signature lists both the input param and the inout output → "redefinition".
+FCkUsf_SurfaceOutput CkUsf_Look_Glass(FCkUsf_SurfaceInput In, float3 TintColor, float Alpha, float Ior)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    O.BaseColor = TintColor;
+    O.Metallic = 0.0;
+    O.Roughness = 0.05;
+    O.Specular = 1.0;
+    O.Opacity = Alpha;
+    O.Refraction = Ior;          // 1.0 = no bend (air); ~1.1-1.2 = glass
+
+    // Gentle animated normal perturbation for a wobbly-glass feel.
+    float n = sin(In.WorldPosition.x * 0.05 + In.Time) * 0.05;
+    O.Normal = normalize(float3(n, n, 1.0));
+    return O;
+}

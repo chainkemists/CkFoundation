@@ -1,0 +1,18 @@
+// /CkUsf/Looks/Skin.ush
+// Subsurface shading-model demo: BaseColor + a SubsurfaceColor scatter tint. For MSM_Subsurface the
+// Opacity output drives the scatter amount (the generator wires Opacity for Subsurface even when opaque).
+#pragma once
+#include "/CkUsf/Common.ush"
+
+// Params: SkinColor (Vector), ScatterColor (Vector), ScatterAmount (Scalar)
+FCkUsf_SurfaceOutput CkUsf_Look_Skin(FCkUsf_SurfaceInput In, float3 SkinColor, float3 ScatterColor, float ScatterAmount)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    O.BaseColor = SkinColor;
+    O.Roughness = 0.45;
+    O.Specular = 0.35;
+    O.SubsurfaceColor = ScatterColor;
+    O.Opacity = saturate(ScatterAmount);   // Subsurface: opacity = scatter strength
+    return O;
+}

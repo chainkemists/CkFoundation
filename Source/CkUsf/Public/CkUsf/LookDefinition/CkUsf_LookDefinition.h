@@ -29,13 +29,16 @@ enum class ECk_Usf_BlendMode : uint8
 };
 
 // Shading-model override. `Inherit` keeps the domain default (SurfaceLit→DefaultLit, others→Unlit).
-// Exotic models (Subsurface/ClearCoat/Cloth) arrive with their dedicated outputs in a later bundle.
+// Each exotic model is wired together with its required G-buffer outputs (see the generator):
+//   Subsurface → SubsurfaceColor (+ Opacity drives scatter); ClearCoat → ClearCoat + ClearCoatRoughness.
 UENUM(BlueprintType)
 enum class ECk_Usf_ShadingModel : uint8
 {
     Inherit,
     Unlit,
-    DefaultLit
+    DefaultLit,
+    Subsurface,
+    ClearCoat
 };
 
 UENUM(BlueprintType)
@@ -66,6 +69,14 @@ struct CKUSF_API FCk_Usf_ParamDesc
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     FLinearColor _DefaultVector = FLinearColor::Black;
 
+    // Scalar-only: source this param from per-instance custom data (ISM/CkIsmRenderer) instead of a uniform.
+    // The generator assigns each per-instance scalar param a 0-based slot in declaration order and wires a
+    // PerInstanceCustomData node (DataIndex=slot, ConstDefaultValue=_DefaultScalar). On a non-instanced mesh
+    // the node returns the const default, so the look is safe everywhere. The runtime writer must use the
+    // SAME slot index (CkIsmRenderer SetCustomDataValueById). Vector per-instance is a follow-up (3 slots).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    bool _PerInstance = false;
+
     // Object path for Texture2D / TextureCube params, e.g.
     // "/Engine/MapTemplates/Sky/DaylightAmbientCubemap.DaylightAmbientCubemap".
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
@@ -87,6 +98,12 @@ public:
     // HLSL function name inside the include, e.g. "CkUsf_Look_Hologram"
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     FName _UshFunctionName = NAME_None;
+
+    // Optional WorldPositionOffset entry point (vertex shader), e.g. "CkUsf_Look_Displace_WPO".
+    // None = no WPO. Takes FCkUsf_VertexInput + the same params as the pixel fn, returns a world-space offset.
+    // Surface domains only; wired into a separate VS-safe Custom node (the pixel node reads pixel-only inputs).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    FName _WpoFunctionName = NAME_None;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     ECk_Usf_Domain _Domain = ECk_Usf_Domain::SurfaceLit;
