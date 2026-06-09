@@ -14,6 +14,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_FloatAttribute_FireSignals);
 CK_REGISTER_PROCESSOR(ck::FProcessor_FloatAttributeModifier_EndPlayAll);
 CK_REGISTER_PROCESSOR(ck::FProcessor_FloatAttribute_Replicate);
 CK_REGISTER_PROCESSOR(ck::FProcessor_FloatAttribute_Refill);
+CK_REGISTER_PROCESSOR(ck::FProcessor_FloatAttribute_RetryPendingReplication);
 
 // --------------------------------------------------------------------------------------------------------------------
 

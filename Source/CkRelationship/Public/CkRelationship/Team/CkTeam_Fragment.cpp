@@ -15,7 +15,11 @@ static struct FTeamRepHandlerRegistrar
         {
             if (NOT UCk_Utils_Team_UE::Has(Entity))
             {
-                UCk_Utils_Team_UE::Add(Entity, InTeamID);
+                // The container OnAdd replay at PostLink runs before OnConstructed-driven composition
+                // on clients. Never compose the feature from the apply path — stash the authoritative
+                // value and let FProcessor_Team_RetryPendingReplication apply it once the feature exists.
+                Entity.AddOrGet<ck::FFragment_Team_PendingReplication>() =
+                    ck::FFragment_Team_PendingReplication{InTeamID};
                 return;
             }
 

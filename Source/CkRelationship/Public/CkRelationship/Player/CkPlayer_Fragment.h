@@ -66,6 +66,24 @@ struct CKRELATIONSHIP_API FCk_RepData_Player
 namespace ck
 {
     using FFragment_ContainerRef_Player = TFragment_ContainerEntryRef<FCk_RepData_Player>;
+
+    // Stash for a replicated Player ID that arrived before the feature was composed on this entity
+    // (the container OnAdd replay at PostLink precedes OnConstructed-driven composition on clients).
+    // FProcessor_Player_RetryPendingReplication applies and removes it once the feature exists.
+    struct CKRELATIONSHIP_API FFragment_Player_PendingReplication
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Player_PendingReplication);
+
+    private:
+        ECk_Player_ID _PlayerID = ECk_Player_ID::Unassigned;
+
+    public:
+        CK_PROPERTY_GET(_PlayerID);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Player_PendingReplication, _PlayerID);
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------

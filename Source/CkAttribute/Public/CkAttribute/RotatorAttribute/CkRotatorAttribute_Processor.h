@@ -4,6 +4,8 @@
 
 #include "CkAttribute/RotatorAttribute/CkRotatorAttribute_Fragment.h"
 
+#include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -59,6 +61,11 @@ namespace ck
         : public ck_exp::TProcessor<FProcessor_RotatorAttribute_RetryPendingReplication, FCk_Handle,
             ck::TReadWrite<FFragment_RotatorAttribute_PendingReplicationEntries>, CK_IGNORE_PENDING_KILL>
     {
+    public:
+        using Group = FGroup_Gameplay;
+        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::ClientOnly;
+        using MarkedDirtyBy = FFragment_RotatorAttribute_PendingReplicationEntries;
+
     public:
         using TProcessor::TProcessor;
 

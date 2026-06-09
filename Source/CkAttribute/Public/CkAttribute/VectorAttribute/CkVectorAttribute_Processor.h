@@ -5,6 +5,8 @@
 
 #include "CkAttribute/VectorAttribute/CkVectorAttribute_Fragment.h"
 
+#include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -60,6 +62,11 @@ namespace ck
         : public ck_exp::TProcessor<FProcessor_VectorAttribute_RetryPendingReplication, FCk_Handle,
             ck::TReadWrite<FFragment_VectorAttribute_PendingReplicationEntries>, CK_IGNORE_PENDING_KILL>
     {
+    public:
+        using Group = FGroup_Gameplay;
+        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::ClientOnly;
+        using MarkedDirtyBy = FFragment_VectorAttribute_PendingReplicationEntries;
+
     public:
         using TProcessor::TProcessor;
 
