@@ -347,16 +347,6 @@
       ]
     },
     {
-      "Name": "CkEcsTemplate",
-      "Type": "Runtime",
-      "LoadingPhase": "Default",
-      "WhitelistPlatforms": [
-        "Win64",
-        "Mac",
-        "Linux"
-      ]
-    },
-    {
       "Name": "CkEditorStyle",
       "Type": "UncookedOnly",
       "LoadingPhase": "PreDefault",
@@ -888,16 +878,6 @@
     },
     {
       "Name": "CkTargeting",
-      "Type": "Runtime",
-      "LoadingPhase": "Default",
-      "WhitelistPlatforms": [
-        "Win64",
-        "Mac",
-        "Linux"
-      ]
-    },
-    {
-      "Name": "CkTemplate",
       "Type": "Runtime",
       "LoadingPhase": "Default",
       "WhitelistPlatforms": [
