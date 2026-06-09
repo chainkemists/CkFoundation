@@ -24,6 +24,7 @@
 #include "Materials/MaterialExpressionVertexNormalWS.h"
 #include "Materials/MaterialExpressionPixelDepth.h"
 #include "Materials/MaterialExpressionVertexColor.h"
+#include "Materials/MaterialExpressionPerInstanceCustomData.h"
 #include "Engine/Texture.h"
 #include "SceneTypes.h"
 #include "UObject/SavePackage.h"
@@ -65,13 +66,17 @@ namespace ck::usf_editor
         }
     }
 
-    static auto Resolve_Unlit(ECk_Usf_ShadingModel In, bool InDomainUnlit) -> bool
+    // Resolve the per-look shading-model override to a concrete EMaterialShadingModel.
+    // `Inherit` keeps the domain default (unlit domains → MSM_Unlit, else MSM_DefaultLit).
+    static auto Resolve_ShadingModel(ECk_Usf_ShadingModel In, bool InDomainUnlit) -> EMaterialShadingModel
     {
         switch (In)
         {
-            case ECk_Usf_ShadingModel::Unlit:      return true;
-            case ECk_Usf_ShadingModel::DefaultLit: return false;
-            default:                               return InDomainUnlit;
+            case ECk_Usf_ShadingModel::Unlit:      return MSM_Unlit;
+            case ECk_Usf_ShadingModel::DefaultLit: return MSM_DefaultLit;
+            case ECk_Usf_ShadingModel::Subsurface: return MSM_Subsurface;
+            case ECk_Usf_ShadingModel::ClearCoat:  return MSM_ClearCoat;
+            default:                               return InDomainUnlit ? MSM_Unlit : MSM_DefaultLit;
         }
     }
 
@@ -89,14 +94,19 @@ namespace ck::usf_editor
     static auto Get_ExtraOutputs() -> TArray<FExtraOutput>
     {
         return {
-            { TEXT("EmissiveColor"),    CMOT_Float3, MP_EmissiveColor },
-            { TEXT("Roughness"),        CMOT_Float1, MP_Roughness },
-            { TEXT("Metallic"),         CMOT_Float1, MP_Metallic },
-            { TEXT("Specular"),         CMOT_Float1, MP_Specular },
-            { TEXT("AmbientOcclusion"), CMOT_Float1, MP_AmbientOcclusion },
-            { TEXT("Normal"),           CMOT_Float3, MP_Normal },
-            { TEXT("Opacity"),          CMOT_Float1, MP_Opacity },
-            { TEXT("OpacityMask"),      CMOT_Float1, MP_OpacityMask },
+            { TEXT("EmissiveColor"),      CMOT_Float3, MP_EmissiveColor },
+            { TEXT("Roughness"),          CMOT_Float1, MP_Roughness },
+            { TEXT("Metallic"),           CMOT_Float1, MP_Metallic },
+            { TEXT("Specular"),           CMOT_Float1, MP_Specular },
+            { TEXT("AmbientOcclusion"),   CMOT_Float1, MP_AmbientOcclusion },
+            { TEXT("Normal"),             CMOT_Float3, MP_Normal },
+            { TEXT("Opacity"),            CMOT_Float1, MP_Opacity },
+            { TEXT("OpacityMask"),        CMOT_Float1, MP_OpacityMask },
+            { TEXT("Refraction"),         CMOT_Float1, MP_Refraction },
+            { TEXT("SubsurfaceColor"),    CMOT_Float3, MP_SubsurfaceColor },
+            // ClearCoat / ClearCoatRoughness have no dedicated MP_ enum — they live in the custom-data slots.
+            { TEXT("ClearCoat"),          CMOT_Float1, MP_CustomData0 },
+            { TEXT("ClearCoatRoughness"), CMOT_Float1, MP_CustomData1 },
         };
     }
 
@@ -163,8 +173,102 @@ namespace ck::usf_editor
         Code += TEXT("Normal = O.Normal;\n");
         Code += TEXT("Opacity = O.Opacity;\n");
         Code += TEXT("OpacityMask = O.OpacityMask;\n");
+        Code += TEXT("Refraction = O.Refraction;\n");
+        Code += TEXT("SubsurfaceColor = O.SubsurfaceColor;\n");
+        Code += TEXT("ClearCoat = O.ClearCoat;\n");
+        Code += TEXT("ClearCoatRoughness = O.ClearCoatRoughness;\n");
         Code += TEXT("return O.BaseColor;");
         return Code;
+    }
+
+    // ---- Build the WPO (vertex) Custom node Code. Mirrors Build_CustomCode but assembles the VS-safe
+    //      FCkUsf_VertexInput and calls the look's _WpoFunctionName, returning a world-space offset. ----
+    static auto Build_WpoCustomCode(const UCkUsf_LookDefinition* InDef) -> FString
+    {
+        FString Code = TEXT("FCkUsf_VertexInput In = CkUsf_DefaultVertexInput();\n");
+        Code += TEXT("In.Time = Time;\n");
+        Code += TEXT("In.UV = UV;\n");
+        Code += TEXT("In.WorldPosition = WorldPosition;\n");
+        Code += TEXT("In.VertexNormal = VertexNormal;\n");
+        Code += TEXT("In.VertexColor = VertexColor;\n");
+
+        // The WPO fn takes In first, then the same LookDefinition params in the same order as the pixel fn.
+        FString Args = TEXT("In");
+        for (const auto& P : InDef->_Parameters)
+        {
+            const auto Name = P._Name.ToString();
+            switch (P._Type)
+            {
+                case ECk_Usf_ParamType::Vector:
+                    Args += FString::Printf(TEXT(", %s.rgb"), *Name);
+                    break;
+                case ECk_Usf_ParamType::Texture2D:
+                case ECk_Usf_ParamType::TextureCube:
+                    Args += FString::Printf(TEXT(", %s, %sSampler"), *Name, *Name);
+                    break;
+                default: // Scalar
+                    Args += FString::Printf(TEXT(", %s"), *Name);
+                    break;
+            }
+        }
+
+        Code += FString::Printf(
+            TEXT("return %s(%s);"), *InDef->_WpoFunctionName.ToString(), *Args);
+        return Code;
+    }
+
+    // Create the material expression that feeds a look param into a Custom node input.
+    // A per-instance scalar becomes a PerInstanceCustomData node (DataIndex = its 0-based slot among the
+    // look's per-instance scalars; ConstDefaultValue = the uniform fallback returned on non-instanced meshes).
+    // Everything else is a named parameter. InOutPerInstanceSlot advances on each per-instance scalar so the
+    // pixel and WPO nodes derive the SAME slot map (they iterate _Parameters in the same order).
+    static auto Make_ParamExpression(
+        UMaterial* InMaterial, const FCk_Usf_ParamDesc& P, FName InLookName, int32 InRow, int32& InOutPerInstanceSlot)
+        -> UMaterialExpression*
+    {
+        if (P._Type == ECk_Usf_ParamType::Scalar && P._PerInstance)
+        {
+            auto* PerInstanceExpr = Cast<UMaterialExpressionPerInstanceCustomData>(
+                UMaterialEditingLibrary::CreateMaterialExpression(
+                    InMaterial, UMaterialExpressionPerInstanceCustomData::StaticClass(), -800, InRow));
+            PerInstanceExpr->DataIndex = InOutPerInstanceSlot++;
+            PerInstanceExpr->ConstDefaultValue = P._DefaultScalar;
+            return PerInstanceExpr;
+        }
+
+        switch (P._Type)
+        {
+            case ECk_Usf_ParamType::Scalar:
+            {
+                auto* S = Cast<UMaterialExpressionScalarParameter>(
+                    UMaterialEditingLibrary::CreateMaterialExpression(
+                        InMaterial, UMaterialExpressionScalarParameter::StaticClass(), -800, InRow));
+                S->ParameterName = P._Name; S->DefaultValue = P._DefaultScalar;
+                return S;
+            }
+            case ECk_Usf_ParamType::Vector:
+            {
+                auto* V = Cast<UMaterialExpressionVectorParameter>(
+                    UMaterialEditingLibrary::CreateMaterialExpression(
+                        InMaterial, UMaterialExpressionVectorParameter::StaticClass(), -800, InRow));
+                V->ParameterName = P._Name; V->DefaultValue = P._DefaultVector;
+                return V;
+            }
+            default: // Texture2D / TextureCube
+            {
+                auto* T = Cast<UMaterialExpressionTextureObjectParameter>(
+                    UMaterialEditingLibrary::CreateMaterialExpression(
+                        InMaterial, UMaterialExpressionTextureObjectParameter::StaticClass(), -800, InRow));
+                T->ParameterName = P._Name;
+                if (P._DefaultTexturePath.IsEmpty() == false)
+                {
+                    auto* Tex = LoadObject<UTexture>(nullptr, *P._DefaultTexturePath);
+                    if (ck::IsValid(Tex, ck::IsValid_Policy_NullptrOnly{})) { T->Texture = Tex; T->AutoSetSampleType(); }
+                    else { ck::usf_editor::Warning(TEXT("Look [{}] texture not found: [{}]"), InLookName, P._DefaultTexturePath); }
+                }
+                return T;
+            }
+        }
     }
 
     auto Generate_LookMaterial(UCkUsf_LookDefinition* InDef) -> UMaterial*
@@ -186,7 +290,14 @@ namespace ck::usf_editor
         const auto IsSurface = Config.Domain == MD_Surface;
         // Surface domains honour the per-look blend/shading/two-sided overrides; other domains keep the domain config.
         const auto EffectiveBlend = IsSurface ? Resolve_BlendMode(InDef->_BlendMode, Config.Blend) : Config.Blend;
-        const auto EffectiveUnlit = IsSurface ? Resolve_Unlit(InDef->_ShadingModel, Config.Unlit) : Config.Unlit;
+        const auto EffectiveShadingModel = IsSurface
+            ? Resolve_ShadingModel(InDef->_ShadingModel, Config.Unlit)
+            : (Config.Unlit ? MSM_Unlit : MSM_DefaultLit);
+        const auto IsTranslucent = Is_TranslucentFamily(EffectiveBlend);
+        // Refraction applies to LIT translucent surfaces (e.g. glass). Scoping to lit keeps the existing
+        // unlit emissive looks byte-unchanged (they have no use for an IOR bend) and avoids an
+        // unlit-translucent + refraction permutation.
+        const auto WantsRefraction = IsSurface && IsTranslucent && EffectiveShadingModel != MSM_Unlit;
 
         // ---- Create package + UMaterial (idempotent refresh) ----
         const auto PkgPath = ck::usf::Get_GeneratedMasterPackagePath(LookName);
@@ -211,8 +322,13 @@ namespace ck::usf_editor
 
         Material->MaterialDomain = Config.Domain;
         Material->BlendMode = EffectiveBlend;
-        Material->SetShadingModel(EffectiveUnlit ? MSM_Unlit : MSM_DefaultLit);
+        Material->SetShadingModel(EffectiveShadingModel);
         if (IsSurface) { Material->TwoSided = InDef->_TwoSided; }
+
+        // Refraction is wired only for translucent-family surface looks (see the output gating below);
+        // the pin is inert unless RefractionMethod is set, so enable IOR-based refraction when it applies.
+        // A look that wants no bend simply outputs Refraction == 1.0 (air) — identity, like Opacity == 1.0.
+        if (WantsRefraction) { Material->RefractionMethod = RM_IndexOfRefraction; }
 
         if (Config.Domain == MD_PostProcess)
         {
@@ -309,55 +425,12 @@ namespace ck::usf_editor
             AddInput(UMaterialExpressionVertexColor::StaticClass(),    TEXT("VertexColor"),   4);
         }
 
-        // ---- Parameter nodes wired to Custom inputs by name ----
+        // ---- Parameter nodes wired to Custom inputs by name (per-instance scalars → PerInstanceCustomData) ----
         int32 ParamRow = 0;
+        int32 PerInstanceSlot = 0;
         for (const auto& P : InDef->_Parameters)
         {
-            UMaterialExpression* ParamExpr = nullptr;
-            switch (P._Type)
-            {
-                case ECk_Usf_ParamType::Scalar:
-                {
-                    auto* S = Cast<UMaterialExpressionScalarParameter>(
-                        UMaterialEditingLibrary::CreateMaterialExpression(
-                            Material, UMaterialExpressionScalarParameter::StaticClass(), -800, ParamRow * 120));
-                    S->ParameterName = P._Name; S->DefaultValue = P._DefaultScalar; ParamExpr = S;
-                    break;
-                }
-                case ECk_Usf_ParamType::Vector:
-                {
-                    auto* V = Cast<UMaterialExpressionVectorParameter>(
-                        UMaterialEditingLibrary::CreateMaterialExpression(
-                            Material, UMaterialExpressionVectorParameter::StaticClass(), -800, ParamRow * 120));
-                    V->ParameterName = P._Name; V->DefaultValue = P._DefaultVector; ParamExpr = V;
-                    break;
-                }
-                case ECk_Usf_ParamType::Texture2D:
-                case ECk_Usf_ParamType::TextureCube:
-                {
-                    auto* T = Cast<UMaterialExpressionTextureObjectParameter>(
-                        UMaterialEditingLibrary::CreateMaterialExpression(
-                            Material, UMaterialExpressionTextureObjectParameter::StaticClass(), -800, ParamRow * 120));
-                    T->ParameterName = P._Name;
-                    if (P._DefaultTexturePath.IsEmpty() == false)
-                    {
-                        auto* Tex = LoadObject<UTexture>(nullptr, *P._DefaultTexturePath);
-                        if (ck::IsValid(Tex, ck::IsValid_Policy_NullptrOnly{}))
-                        {
-                            T->Texture = Tex;
-                            T->AutoSetSampleType();
-                        }
-                        else
-                        {
-                            ck::usf_editor::Warning(TEXT("Look [{}] texture not found: [{}]"),
-                                LookName, P._DefaultTexturePath);
-                        }
-                    }
-                    ParamExpr = T;
-                    break;
-                }
-            }
-
+            auto* ParamExpr = Make_ParamExpression(Material, P, LookName, ParamRow * 120, PerInstanceSlot);
             if (ck::IsValid(ParamExpr, ck::IsValid_Policy_NullptrOnly{}))
             {
                 UMaterialEditingLibrary::ConnectMaterialExpressions(
@@ -387,13 +460,82 @@ namespace ck::usf_editor
         else
         {
             UMaterialEditingLibrary::ConnectMaterialProperty(Custom, FString(), MP_BaseColor);
+            const auto IsSubsurface = EffectiveShadingModel == MSM_Subsurface;
+            const auto IsClearCoat  = EffectiveShadingModel == MSM_ClearCoat;
             for (const auto& E : Get_ExtraOutputs())
             {
-                // Opacity is valid only for translucent-family blends; OpacityMask only for the Masked blend.
-                if (E.Prop == MP_Opacity     && NOT Is_TranslucentFamily(EffectiveBlend)) { continue; }
-                if (E.Prop == MP_OpacityMask && EffectiveBlend != BLEND_Masked)           { continue; }
+                // Opacity: translucent-family blends, plus Subsurface (where it drives the scatter amount).
+                if (E.Prop == MP_Opacity         && NOT IsTranslucent && NOT IsSubsurface) { continue; }
+                if (E.Prop == MP_OpacityMask     && EffectiveBlend != BLEND_Masked)        { continue; }
+                if (E.Prop == MP_Refraction      && NOT WantsRefraction)                   { continue; }
+                if (E.Prop == MP_SubsurfaceColor && NOT IsSubsurface)                      { continue; }
+                if (E.Prop == MP_CustomData0     && NOT IsClearCoat)                       { continue; } // ClearCoat
+                if (E.Prop == MP_CustomData1     && NOT IsClearCoat)                       { continue; } // ClearCoatRoughness
                 UMaterialEditingLibrary::ConnectMaterialProperty(Custom, FString(E.Name), E.Prop);
             }
+        }
+
+        // ---- WorldPositionOffset: a SEPARATE vertex Custom node (the pixel node above reads pixel-only
+        //      inputs like PixelDepth/SceneTexture, which cannot legally compile in the vertex shader). ----
+        if (IsSurface && NOT InDef->_WpoFunctionName.IsNone())
+        {
+            auto* Wpo = Cast<UMaterialExpressionCustom>(
+                UMaterialEditingLibrary::CreateMaterialExpression(
+                    Material, UMaterialExpressionCustom::StaticClass(), -400, 700));
+            Wpo->OutputType = CMOT_Float3;          // single float3 world-space offset, no additional outputs
+            Wpo->IncludeFilePaths.Add(InDef->_UshIncludePath);
+            Wpo->AdditionalOutputs.Reset();
+
+            Wpo->Inputs.Reset();
+            { FCustomInput In; In.InputName = TEXT("WorldPosition"); Wpo->Inputs.Add(In); }
+            { FCustomInput In; In.InputName = TEXT("VertexNormal");  Wpo->Inputs.Add(In); }
+            { FCustomInput In; In.InputName = TEXT("VertexColor");   Wpo->Inputs.Add(In); }
+            for (const auto& P : InDef->_Parameters)
+            {
+                FCustomInput In; In.InputName = P._Name; Wpo->Inputs.Add(In);
+            }
+            { FCustomInput T; T.InputName = TEXT("Time"); Wpo->Inputs.Add(T); }
+            { FCustomInput U; U.InputName = TEXT("UV");   Wpo->Inputs.Add(U); }
+
+            Wpo->Code = Build_WpoCustomCode(InDef);
+            Wpo->RebuildOutputs();
+            Wpo->PostEditChange();
+
+            // VS-safe world-space inputs (WorldPosition uses absolute world position so the look reads true coords).
+            const auto AddWpoInput = [&](UClass* InClass, const TCHAR* InInputName, int32 InRow) -> void
+            {
+                auto* Expr = UMaterialEditingLibrary::CreateMaterialExpression(
+                    Material, InClass, -1100, 800 + InRow * 160);
+                UMaterialEditingLibrary::ConnectMaterialExpressions(Expr, FString(), Wpo, InInputName);
+            };
+            AddWpoInput(UMaterialExpressionWorldPosition::StaticClass(), TEXT("WorldPosition"), 0);
+            AddWpoInput(UMaterialExpressionVertexNormalWS::StaticClass(), TEXT("VertexNormal"),  1);
+            AddWpoInput(UMaterialExpressionVertexColor::StaticClass(),    TEXT("VertexColor"),   2);
+
+            // Param nodes — same helper as the pixel node, so per-instance scalars derive identical slot
+            // indices (PerInstanceCustomData here too: WPO runs in the VS where per-instance data is valid).
+            int32 WpoParamRow = 0;
+            int32 WpoPerInstanceSlot = 0;
+            for (const auto& P : InDef->_Parameters)
+            {
+                auto* ParamExpr = Make_ParamExpression(Material, P, LookName, 800 + WpoParamRow * 120, WpoPerInstanceSlot);
+                if (ck::IsValid(ParamExpr, ck::IsValid_Policy_NullptrOnly{}))
+                {
+                    UMaterialEditingLibrary::ConnectMaterialExpressions(
+                        ParamExpr, FString(), Wpo, P._Name.ToString());
+                }
+                ++WpoParamRow;
+            }
+
+            auto* WpoTime = UMaterialEditingLibrary::CreateMaterialExpression(
+                Material, UMaterialExpressionTime::StaticClass(), -800, 800 + (WpoParamRow + 1) * 120);
+            UMaterialEditingLibrary::ConnectMaterialExpressions(WpoTime, FString(), Wpo, TEXT("Time"));
+
+            auto* WpoUv = UMaterialEditingLibrary::CreateMaterialExpression(
+                Material, UMaterialExpressionTextureCoordinate::StaticClass(), -800, 800 + (WpoParamRow + 2) * 120);
+            UMaterialEditingLibrary::ConnectMaterialExpressions(WpoUv, FString(), Wpo, TEXT("UV"));
+
+            UMaterialEditingLibrary::ConnectMaterialProperty(Wpo, FString(), MP_WorldPositionOffset);
         }
 
         UMaterialEditingLibrary::LayoutMaterialExpressions(Material);

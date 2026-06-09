@@ -1,0 +1,24 @@
+// /CkUsf/Looks/PerInstanceHue.ush
+// Per-instance custom-data demo: the Hue param is sourced from per-instance custom data (ISM slot 0),
+// so N instances of ONE material render N distinct colours. On a non-instanced mesh the generator's
+// PerInstanceCustomData node returns the param's const default (Hue 0 = red), so the look is safe anywhere.
+#pragma once
+#include "/CkUsf/Common.ush"
+
+float3 CkUsf_HueToRGB(float h)
+{
+    float3 k = float3(1.0, 2.0 / 3.0, 1.0 / 3.0);
+    float3 p = abs(frac(h + k) * 6.0 - 3.0);
+    return saturate(p - 1.0);
+}
+
+// Params: Hue (Scalar, PER-INSTANCE), Brightness (Scalar)
+FCkUsf_SurfaceOutput CkUsf_Look_PerInstanceHue(FCkUsf_SurfaceInput In, float Hue, float Brightness)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float3 rgb = CkUsf_HueToRGB(frac(Hue));
+    O.EmissiveColor = rgb * Brightness;
+    O.BaseColor = rgb * 0.2;
+    return O;
+}
