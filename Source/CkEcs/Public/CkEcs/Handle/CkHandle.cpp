@@ -107,6 +107,15 @@ FCk_Handle::
 }
 
 auto
+    FCk_Handle::
+    Set_Registry(
+        FCk_RegistryHandle InRegistryHandle)
+    -> void
+{
+    _RegistryHandle = InRegistryHandle;
+}
+
+auto
     FCk_Handle::Swap(
         ThisType& InOther) -> void
 {

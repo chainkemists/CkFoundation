@@ -4,6 +4,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
+#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h" // ck::FTag_Snapshot_JustRestored (re-replicate restored values)
 
 #include <type_traits>
 

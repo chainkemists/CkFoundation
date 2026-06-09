@@ -65,6 +65,34 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
+
+    // Re-drives replication of RESTORED Float-attribute values to clients after a snapshot load. The normal replication
+    // trigger (FTag_MayRequireReplication) is transient and consumed before a save, so a restored attribute carries its
+    // value but no trigger — the client keeps its Construct default. Keyed on ck::FTag_Snapshot_JustRestored (stamped by
+    // CkSnapshot on every restored entity): once the owner's replication driver is re-established (snapshot respawn
+    // pass), re-arm the per-component triggers so FProcessor_FloatAttribute_Replicate re-pushes the restored values,
+    // then clear the marker. See ck::FTag_Snapshot_JustRestored — every replicated feature needs an analogous processor.
+    //
+    // The view iterates the clean Current fragment (default deletion policy, tombstone-free) and POINT-QUERIES the
+    // marker inside ForEachEntity — a view that lists the in_place marker tag directly yields TOMBSTONE entities
+    // (same trap FProcessor_ActorRespawn documents).
+    class CKATTRIBUTE_API FProcessor_FloatAttribute_ReplicateOnRestore
+        : public ck_exp::TProcessor<FProcessor_FloatAttribute_ReplicateOnRestore, FCk_Handle_FloatAttribute,
+            ck::TReadOnly<FFragment_FloatAttribute_Current>, CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay;
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            FCk_Handle_FloatAttribute InHandle,
+            const FFragment_FloatAttribute_Current& InCurrent) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------
