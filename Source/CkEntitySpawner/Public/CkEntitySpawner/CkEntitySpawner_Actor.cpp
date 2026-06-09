@@ -6,6 +6,7 @@
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
 #include "CkCore/Reflection/CkReflection_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
+#include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Data.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -389,14 +390,9 @@ auto
 
     DoInjectActorTransform();
 
-    const auto Replication = _EntityScript->Get_EffectiveReplication();
-    const auto IsReplicated = Replication == ECk_Replication::Replicates;
-
-    if (IsReplicated)
+    if (const auto Replication = _EntityScript->Get_EffectiveReplication();
+        Replication == ECk_Replication::Replicates && HasAuthority())
     {
-        if (NOT HasAuthority())
-        { return; }
-
         CK_ENSURE_IF_NOT(_ReplicatedChannelGroup.IsValid(),
             TEXT("EntitySpawner [{}] has an invalid ReplicatedChannelGroup tag."), this)
         { return; }
@@ -428,8 +424,10 @@ auto
         TEXT("EntitySpawner [{}] could not resolve the TransientEntity for the current world."), this)
     { return; }
 
-    auto PendingEntity = UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(TransientEntity, _EntityScript, FInstancedStruct{});
+    const auto PendingEntity = UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(TransientEntity, _EntityScript, FInstancedStruct{});
     _RuntimeEntityHandle = PendingEntity.Get_EntityUnderConstruction();
+    if (ck::IsValid(_RuntimeEntityHandle))
+    { UCk_Utils_ContextOwner_UE::Request_OverrideToSelf(_RuntimeEntityHandle); }
 }
 
 auto

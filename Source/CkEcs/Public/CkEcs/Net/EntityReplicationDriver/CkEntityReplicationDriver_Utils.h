@@ -64,7 +64,8 @@ public:
         FCk_Handle& InHandleToReplicate,
         FCk_Handle InReplicatedOwner,
         TSubclassOf<UCk_EntityScript_UE> InEntityScript,
-        const FInstancedStruct& InSpawnParams) -> void;
+        const FInstancedStruct& InSpawnParams,
+        const TOptional<FCk_Handle>& InReplicatedContextOwnerOverride = {}) -> void;
 
 public:
     UFUNCTION(BlueprintPure,

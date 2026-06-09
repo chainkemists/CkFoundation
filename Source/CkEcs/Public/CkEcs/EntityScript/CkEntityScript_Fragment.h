@@ -81,16 +81,19 @@ namespace ck
         FRequest_EntityScript_Replicate() = default;
         FRequest_EntityScript_Replicate(
             const FCk_Handle& InOwner,
+            const TOptional<FCk_Handle>& InContextOwnerOverride,
             const FInstancedStruct& InSpawnParams,
             UCk_EntityScript_UE* InScript);
 
     private:
         FCk_Handle _Owner;
+        TOptional<FCk_Handle> _ContextOwnerOverride;
         FInstancedStruct _SpawnParams;
         TWeakObjectPtr<UCk_EntityScript_UE> _Script;
 
     public:
         CK_PROPERTY_GET(_Owner);
+        CK_PROPERTY_GET(_ContextOwnerOverride);
         CK_PROPERTY_GET(_SpawnParams);
         CK_PROPERTY_GET(_Script);
     };
