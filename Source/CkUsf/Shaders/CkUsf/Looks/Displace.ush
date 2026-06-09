@@ -1,0 +1,27 @@
+// /CkUsf/Looks/Displace.ush
+// WorldPositionOffset demo: a travelling sine wave along the surface normal, driven by Time.
+// Proves the separate VS Custom node path — the _WPO entry point runs in the vertex shader and
+// must read only VS-safe inputs (FCkUsf_VertexInput: no PixelDepth/SceneTexture).
+// NOTE: visible deformation needs a tessellated mesh; a stock low-poly Sphere shows coarse motion.
+#pragma once
+#include "/CkUsf/Common.ush"
+
+// Params: BaseColor (Vector), Amplitude (Scalar), Frequency (Scalar), Speed (Scalar)
+// The pixel fn ignores Amplitude — both entry points share one param list (same wiring order).
+FCkUsf_SurfaceOutput CkUsf_Look_Displace(FCkUsf_SurfaceInput In, float3 BaseColor, float Amplitude, float Frequency, float Speed)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float wave = sin(In.WorldPosition.x * Frequency + In.Time * Speed);
+    O.BaseColor = BaseColor * (0.55 + 0.45 * wave);
+    O.Roughness = 0.4;
+    O.Specular = 0.5;
+    return O;
+}
+
+// WorldPositionOffset entry point — VERTEX shader. Returns a world-space offset.
+float3 CkUsf_Look_Displace_WPO(FCkUsf_VertexInput In, float3 BaseColor, float Amplitude, float Frequency, float Speed)
+{
+    float wave = sin(In.WorldPosition.x * Frequency + In.Time * Speed);
+    return normalize(In.VertexNormal) * wave * Amplitude;
+}

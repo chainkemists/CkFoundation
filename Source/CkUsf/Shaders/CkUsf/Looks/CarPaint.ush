@@ -1,0 +1,22 @@
+// /CkUsf/Looks/CarPaint.ush
+// ClearCoat shading-model demo: a metallic base with a clear lacquer coat. ClearCoat + ClearCoatRoughness
+// route to the custom-data slots (MP_CustomData0 / MP_CustomData1), wired only when the model is ClearCoat.
+#pragma once
+#include "/CkUsf/Common.ush"
+
+// Params: PaintColor (Vector), Flake (Scalar), CoatRoughness (Scalar)
+FCkUsf_SurfaceOutput CkUsf_Look_CarPaint(FCkUsf_SurfaceInput In, float3 PaintColor, float Flake, float CoatRoughness)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    // Subtle metallic-flake sparkle from a hash of world position.
+    float flake = CkUsf_Hash21(floor(In.WorldPosition.xy * 4.0)) * Flake;
+
+    O.BaseColor = saturate(PaintColor + flake);
+    O.Metallic = 0.9;
+    O.Roughness = 0.35;
+    O.Specular = 0.6;
+    O.ClearCoat = 1.0;
+    O.ClearCoatRoughness = CoatRoughness;
+    return O;
+}
