@@ -26,7 +26,8 @@ namespace ck::snapshot
         Run_Restore_Registry(
             ck::SnapshotRegistryType& InRegistry,
             FArchive& InByteReader,
-            const FCk_Snapshot_Header& InHeader)
+            const FCk_Snapshot_Header& InHeader,
+            FCk_RegistryHandle InLoadRegistryHandle)
         -> FCk_Snapshot_LoadReport
     {
         auto Report = FCk_Snapshot_LoadReport{};
@@ -51,10 +52,10 @@ namespace ck::snapshot
 
         auto Loader = entt::basic_continuous_loader<ck::SnapshotRegistryType>{InRegistry};
 
-        // No load-target registry handle here: this registry-only path (FEcsWorld unit test) restores into a
-        // raw entt registry with no FCk_Registry / subsystem, and never crosses a world boundary — so handle
-        // re-homing is unnecessary. Snapshot_Handle's IsSet() guard skips it for the default-Unset context.
-        auto Context = ck::FSnapshotContext{Loader};
+        // Re-home restored handles onto InLoadRegistryHandle when provided (cross-registry restore, e.g. a unit
+        // test capturing in world A and restoring into world B). Defaults to Unset for the same-registry case,
+        // where Snapshot_Handle's IsSet() guard skips re-homing and the entity-id remap alone is correct.
+        auto Context = ck::FSnapshotContext{Loader, InLoadRegistryHandle};
         auto Reader  = ck::FSnapshotArchive_Reader{ProxyArchive, Context};
 
         // The entities pass is restored first (Capture wrote it before the manifest entries). The continuous
