@@ -28,6 +28,11 @@ struct CKSPLINE_API FCk_Fragment_Spline_ParamsData
 public:
     CK_GENERATED_BODY(FCk_Fragment_Spline_ParamsData);
 
+public:
+    FCk_Fragment_Spline_ParamsData() = default;
+    FCk_Fragment_Spline_ParamsData(FSplineCurves InCurves, bool InClosedLoop)
+        : _Curves(MoveTemp(InCurves)), _ClosedLoop(InClosedLoop) {}
+
 private:
     UPROPERTY()
     FSplineCurves _Curves;
@@ -42,16 +47,10 @@ private:
 
 public:
     // _Curves is FSplineCurves, which is not an AngelScript-bindable type. Expose the getter and the
-    // (FSplineCurves, bool) constructor as plain C++ (NOT via CK_PROPERTY_GET / CK_DEFINE_CONSTRUCTORS,
-    // which would also emit AS bindings) — script never touches FSplineCurves, and the AS auto-bind
-    // attempt otherwise logs "Identifier 'FSplineCurves' is not a data type" errors that fail the cook.
+    // (FSplineCurves, bool) constructor as plain C++
     const FSplineCurves& Get_Curves() const { return _Curves; }
     CK_PROPERTY_GET(_ClosedLoop);
     CK_PROPERTY(_DefaultUpVector);
-
-    FCk_Fragment_Spline_ParamsData() = default;
-    FCk_Fragment_Spline_ParamsData(FSplineCurves InCurves, bool InClosedLoop)
-        : _Curves(MoveTemp(InCurves)), _ClosedLoop(InClosedLoop) {}
 };
 
 // --------------------------------------------------------------------------------------------------------------------
