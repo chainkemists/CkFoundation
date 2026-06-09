@@ -118,6 +118,20 @@ public:
     Get_IsActorEcsReady(
         const AActor* InActor);
 
+    UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck][OwningActor] Promise/Future On Actor Ecs Ready",
+              Category = "Ck|Utils|OwningActor",
+              meta = (DefaultToSelf = "InActor", Keywords = "bind, wait, when, ready, ecs, future"))
+    static void
+    Promise_OnActorEcsReady(
+        AActor* InActor,
+        const FCk_Delegate_OwningActor_OnEcsReady& InDelegate);
+
+    static void
+    Promise_OnActorEcsReady(
+        AActor* InActor,
+        TFunction<void(AActor*, FCk_Handle)> InCallback);
+
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck][OwningActor] OwningActorBasicDetails == OwningActorBasicDetails",
               Category = "Ck|Utils|OwningActor",
@@ -144,6 +158,17 @@ private:
     static FCk_Handle
     Get_ActorEntityHandleFromSelf(
         const AActor* InActor);
+
+private:
+    static auto
+    DoGetOrAdd_EntityOwningActorComponent(
+        AActor* InActor) -> UCk_EntityOwningActor_ActorComponent_UE*;
+
+    static auto
+    DoFlush_PendingEcsReady(
+        UCk_EntityOwningActor_ActorComponent_UE* InComp,
+        AActor* InActor,
+        const FCk_Handle& InEntity) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

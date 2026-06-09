@@ -54,25 +54,15 @@ auto
         AActor* InActor)
     -> void
 {
-    if (const auto EntityOwningActorComponent = InActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
-        ck::IsValid(EntityOwningActorComponent))
-    {
-        EntityOwningActorComponent->_EntityHandle = InHandle;
-    }
-    else
-    {
-        UCk_Utils_Actor_UE::Request_AddNewActorComponent<UCk_EntityOwningActor_ActorComponent_UE>
-        (
-            UCk_Utils_Actor_UE::AddNewActorComponent_Params<UCk_EntityOwningActor_ActorComponent_UE>
-            {
-                InActor,
-            },
-            [&](UCk_EntityOwningActor_ActorComponent_UE* InComp)
-            {
-                InComp->_EntityHandle = InHandle;
-            }
-        );
-    }
+    auto EntityOwningActorComponent = DoGetOrAdd_EntityOwningActorComponent(InActor);
+
+    if (ck::Is_NOT_Valid(EntityOwningActorComponent))
+    { return; }
+
+    EntityOwningActorComponent->_EntityHandle = InHandle;
+
+    // The Actor is now ECS ready — flush any promises queued via Promise_OnActorEcsReady.
+    DoFlush_PendingEcsReady(EntityOwningActorComponent, InActor, InHandle);
 }
 
 auto
@@ -228,9 +218,72 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Cannot check if Actor is ECS ready because it is invalid!"))
     { return {}; }
 
-    const auto& EntityOwningActorComp = InActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
+    const auto EntityOwningActorComp = InActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
 
-    return ck::IsValid(EntityOwningActorComp);
+    if (ck::Is_NOT_Valid(EntityOwningActorComp))
+    { return false; }
+
+    // The component may exist with an as-yet-unlinked Entity if a promise was queued before the
+    // Actor↔Entity link was established. ECS readiness requires the Entity link to be valid.
+    return ck::IsValid(EntityOwningActorComp->Get_EntityHandle());
+}
+
+auto
+    UCk_Utils_OwningActor_UE::
+    Promise_OnActorEcsReady(
+        AActor* InActor,
+        const FCk_Delegate_OwningActor_OnEcsReady& InDelegate)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor),
+        TEXT("Promise_OnActorEcsReady called with an invalid Actor"))
+    { return; }
+
+    CK_ENSURE_IF_NOT(InDelegate.IsBound(),
+        TEXT("Promise_OnActorEcsReady called with an unbound delegate for Actor [{}]"), InActor)
+    { return; }
+
+    if (Get_IsActorEcsReady(InActor))
+    {
+        InDelegate.ExecuteIfBound(InActor, Get_ActorEntityHandle(InActor));
+        return;
+    }
+
+    auto EntityOwningActorComp = DoGetOrAdd_EntityOwningActorComponent(InActor);
+
+    if (ck::Is_NOT_Valid(EntityOwningActorComp))
+    { return; }
+
+    EntityOwningActorComp->_PendingEcsReadyDelegates.Add(InDelegate);
+}
+
+auto
+    UCk_Utils_OwningActor_UE::
+    Promise_OnActorEcsReady(
+        AActor* InActor,
+        TFunction<void(AActor*, FCk_Handle)> InCallback)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor),
+        TEXT("Promise_OnActorEcsReady called with an invalid Actor"))
+    { return; }
+
+    CK_ENSURE_IF_NOT(static_cast<bool>(InCallback),
+        TEXT("Promise_OnActorEcsReady called with an empty callback for Actor [{}]"), InActor)
+    { return; }
+
+    if (Get_IsActorEcsReady(InActor))
+    {
+        InCallback(InActor, Get_ActorEntityHandle(InActor));
+        return;
+    }
+
+    auto EntityOwningActorComp = DoGetOrAdd_EntityOwningActorComponent(InActor);
+
+    if (ck::Is_NOT_Valid(EntityOwningActorComp))
+    { return; }
+
+    EntityOwningActorComp->_PendingEcsReadyCallbacks.Add(MoveTemp(InCallback));
 }
 
 auto
@@ -260,6 +313,56 @@ auto
     -> FCk_Handle
 {
     return Get_ActorEntityHandle(InActor);
+}
+
+auto
+    UCk_Utils_OwningActor_UE::
+    DoGetOrAdd_EntityOwningActorComponent(
+        AActor* InActor)
+    -> UCk_EntityOwningActor_ActorComponent_UE*
+{
+    if (auto ExistingComp = InActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
+        ck::IsValid(ExistingComp))
+    { return ExistingComp; }
+
+    return UCk_Utils_Actor_UE::Request_AddNewActorComponent<UCk_EntityOwningActor_ActorComponent_UE>
+    (
+        UCk_Utils_Actor_UE::AddNewActorComponent_Params<UCk_EntityOwningActor_ActorComponent_UE>
+        {
+            InActor,
+        }
+    );
+}
+
+auto
+    UCk_Utils_OwningActor_UE::
+    DoFlush_PendingEcsReady(
+        UCk_EntityOwningActor_ActorComponent_UE* InComp,
+        AActor* InActor,
+        const FCk_Handle& InEntity)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InComp))
+    { return; }
+
+    // Move out before executing so a promise that queues another promise during its own callback
+    // does not mutate the container we are iterating (and is itself fired immediately since the
+    // Actor is already ECS ready by this point).
+    const auto PendingDelegates = MoveTemp(InComp->_PendingEcsReadyDelegates);
+    const auto PendingCallbacks = MoveTemp(InComp->_PendingEcsReadyCallbacks);
+    InComp->_PendingEcsReadyDelegates.Reset();
+    InComp->_PendingEcsReadyCallbacks.Reset();
+
+    for (const auto& Delegate : PendingDelegates)
+    {
+        Delegate.ExecuteIfBound(InActor, InEntity);
+    }
+
+    for (const auto& Callback : PendingCallbacks)
+    {
+        if (Callback)
+        { Callback(InActor, InEntity); }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
