@@ -129,16 +129,32 @@ namespace ck
 
         if (NOT IsRequestAuthority)
         {
-            CK_ENSURE_IF_NOT(InRequests.Get_Requests().IsEmpty(),
-                TEXT("Non-authority machine attempted to enqueue [{}] SM request(s) on [{}] "
+            // AutoStart (FProcessor_Sm_Setup) enqueues a Start on EVERY machine, including
+            // non-authority ones. On a non-authority copy of a Replicates SM that Start is
+            // expected to be dropped here — the SM reaches Running via the replicated run-status
+            // (server relay / rep mirror), not its local AutoStart — so it is NOT misuse. Only the
+            // authority-only mutations (Stop/Pause/Resume/Transition/AddOverrideState), which can
+            // only originate from an explicit Request_*, signal a programming error on a
+            // non-authority machine. Scope the ensure to those; a pure-Start batch drops silently.
+            const auto NonStartRequestCount = algo::CountIf(InRequests.Get_Requests(),
+                [](const FFragment_Sm_Requests::RequestType& InRequest) -> bool
+                {
+                    return NOT std::holds_alternative<FCk_Request_Sm_Start>(InRequest);
+                });
+
+            CK_ENSURE_IF_NOT(NonStartRequestCount == 0,
+                TEXT("Non-authority machine attempted to enqueue [{}] authority-only SM request(s) on [{}] "
                      "(NetContext [{}], AuthorityModel [{}]). Requests dropped. Rep-driven transitions "
                      "bypass this processor via the replay path."),
-                InRequests.Get_Requests().Num(), InHandle, NetContext, EffectiveAuth)
+                NonStartRequestCount, InHandle, NetContext, EffectiveAuth)
             {
                 InHandle.Try_Remove<FFragment_Sm_Requests>();
                 return;
             }
 
+            // Pure AutoStart echo on a non-authority machine — drop silently; the SM reaches
+            // Running via the replicated run-status.
+            InHandle.Try_Remove<FFragment_Sm_Requests>();
             return;
         }
 
