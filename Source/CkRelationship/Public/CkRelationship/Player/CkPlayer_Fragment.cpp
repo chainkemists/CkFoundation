@@ -15,7 +15,11 @@ static struct FPlayerRepHandlerRegistrar
         {
             if (NOT UCk_Utils_Player_UE::Has(Entity))
             {
-                UCk_Utils_Player_UE::Add(Entity, InPlayerID);
+                // The container OnAdd replay at PostLink runs before OnConstructed-driven composition
+                // on clients. Never compose the feature from the apply path — stash the authoritative
+                // value and let FProcessor_Player_RetryPendingReplication apply it once the feature exists.
+                Entity.AddOrGet<ck::FFragment_Player_PendingReplication>() =
+                    ck::FFragment_Player_PendingReplication{InPlayerID};
                 return;
             }
 
