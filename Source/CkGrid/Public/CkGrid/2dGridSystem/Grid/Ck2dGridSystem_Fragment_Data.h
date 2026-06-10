@@ -135,32 +135,38 @@ struct CKGRID_API FCk_Fragment_2dGridSystem_ParamsData
 public:
     CK_GENERATED_BODY(FCk_Fragment_2dGridSystem_ParamsData);
 
+    // Tier-A snapshot opt-in: pure-value params, every field carries the SaveGame SPECIFIER
+    // (meta=(SaveGame) is inert — the ArIsSaveGame gate checks CPF_SaveGame). The LIVE half of a
+    // grid (FFragment_2dGridSystem_Current: the private cell registry + pivot SceneNode) can never
+    // round-trip; FProcessor_2dGridSystem_RestoreRecompose rebuilds it from these restored params.
+    using IsSnapshotable = void;
+
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FIntPoint _Dimensions = FIntPoint(1, 1);
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FVector2D _CellSize = FVector2D(100.0f, 100.0f);
 
     // Default state for all cells
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     ECk_EnableDisable _DefaultCellState = ECk_EnableDisable::Enable;
 
     // Coordinates that should be the opposite of the default state
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     TArray<FIntPoint> _ExceptionCoordinates;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FTransform _Pivot;
 
     // Tags applied to EVERY cell of this grid by default. Unioned with each cell's own
     // _Tags when the placement layer evaluates an object's required/forbidden cell-tag gating.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, Categories = "2dGridCell"))
     FGameplayTagContainer _DefaultCellTags;
 

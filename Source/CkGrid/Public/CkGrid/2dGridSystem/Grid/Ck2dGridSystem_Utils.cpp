@@ -20,29 +20,21 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Composes the LIVE half of the grid (pivot SceneNode + Current's private cell registry + the cell
+// entities) from the Params fragment ALREADY present on the entity. Shared by Add (fresh composition)
+// and Request_RecomposeFromSnapshot (Params restored by a snapshot load; the live half never round-trips).
 auto
     UCk_Utils_2dGridSystem_UE::
-    Add(
-        FCk_Handle_Transform& InHandle,
-        const FCk_Fragment_2dGridSystem_ParamsData& InParams)
+    DoCompose_PivotCurrentAndCells(
+        FCk_Handle_Transform& InHandle)
     -> FCk_Handle_2dGridSystem
 {
-    // Validate all active coordinates are within grid dimensions
-    for (const auto& ResolvedActiveCoords = InParams.Get_ResolvedActiveCoordinates();
-        const auto& Coordinate : ResolvedActiveCoords)
-    {
-        CK_ENSURE_IF_NOT(UCk_Utils_Grid2D_UE::Get_IsValidCoordinate(InParams.Get_Dimensions(), Coordinate),
-            TEXT("Cannot Create 2dGridSystem because ActiveCoordinate [{}] is invalid for grid dimensions [{}]"),
-            Coordinate, InParams.Get_Dimensions())
-        { return {}; }
-    }
-
-    InHandle.Add<ck::FFragment_2dGridSystem_Params>(InParams);
+    const auto InParams = InHandle.Get<ck::FFragment_2dGridSystem_Params>();
 
     auto PivotSceneNode = UCk_Utils_SceneNode_UE::Create(InHandle, InParams.Get_Pivot());
     UCk_Utils_Handle_UE::Set_DebugName(PivotSceneNode, TEXT("GridPivot"));
     InHandle.Add<ck::FFragment_2dGridSystem_Current>(PivotSceneNode);
-    auto GridEntity = Cast(InHandle);
+    auto GridEntity = UCk_Utils_2dGridSystem_UE::Cast(InHandle);
 
     const auto& Dimensions = InParams.Get_Dimensions();
 
@@ -64,6 +56,49 @@ auto
     UCk_Utils_Handle_UE::Set_DebugName(GridEntity, *ck::Format_UE(TEXT("2dGridSystem_[{}x{}]"), Dimensions.X, Dimensions.Y));
 
     return GridEntity;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_2dGridSystem_UE::
+    Add(
+        FCk_Handle_Transform& InHandle,
+        const FCk_Fragment_2dGridSystem_ParamsData& InParams)
+    -> FCk_Handle_2dGridSystem
+{
+    // Validate all active coordinates are within grid dimensions
+    for (const auto& ResolvedActiveCoords = InParams.Get_ResolvedActiveCoordinates();
+        const auto& Coordinate : ResolvedActiveCoords)
+    {
+        CK_ENSURE_IF_NOT(UCk_Utils_Grid2D_UE::Get_IsValidCoordinate(InParams.Get_Dimensions(), Coordinate),
+            TEXT("Cannot Create 2dGridSystem because ActiveCoordinate [{}] is invalid for grid dimensions [{}]"),
+            Coordinate, InParams.Get_Dimensions())
+        { return {}; }
+    }
+
+    InHandle.Add<ck::FFragment_2dGridSystem_Params>(InParams);
+
+    return DoCompose_PivotCurrentAndCells(InHandle);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_2dGridSystem_UE::
+    Request_RecomposeFromSnapshot(
+        FCk_Handle_Transform& InHandle)
+    -> FCk_Handle_2dGridSystem
+{
+    CK_ENSURE_IF_NOT(InHandle.Has<ck::FFragment_2dGridSystem_Params>(),
+        TEXT("Request_RecomposeFromSnapshot on [{}]: no restored 2dGridSystem Params"), InHandle)
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(NOT InHandle.Has<ck::FFragment_2dGridSystem_Current>(),
+        TEXT("Request_RecomposeFromSnapshot on [{}]: grid already composed"), InHandle)
+    { return {}; }
+
+    return DoCompose_PivotCurrentAndCells(InHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -3,19 +3,24 @@
 #include "Ck2dGridOccupancy_Utils.h"
 
 #include "CkGrid/2dGridSystem/Cell/Ck2dGridCell_Fragment.h"
+#include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Fragment.h"
 #include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Utils.h"
 #include "CkGrid/2dGridSystem/Placement/Ck2dGridPlacement_Fragment.h"
+#include "CkGrid/CkGrid_Log.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
+#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"
 
 #include "CkRecord/Record/CkRecord_Utils.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_2dGridOccupancy_StampCells);
 CK_REGISTER_PROCESSOR(ck::FProcessor_2dGridOccupancy_Replicate);
+CK_REGISTER_PROCESSOR(ck::FProcessor_2dGridOccupancy_ReplicateOnRestore);
 CK_REGISTER_PROCESSOR(ck::FProcessor_2dGridOccupancy_SyncReplication);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -110,6 +115,53 @@ namespace ck
         });
 
         InHandle.Remove<MarkedDirtyBy>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_2dGridOccupancy_ReplicateOnRestore::
+        ForEachEntity(
+            TimeType /*InDeltaT*/,
+            HandleType InHandle,
+            const FFragment_RecordOf_GridPlacements& /*InRecord*/) const
+        -> void
+    {
+        if (NOT InHandle.Has<FTag_Snapshot_JustRestored>())
+        { return; }
+
+        if (InHandle.Has<FTag_2dGridOccupancy_RestoreReplicated>())
+        { return; }
+
+        // The grid's live half (private cell registry) is rebuilt by
+        // FProcessor_2dGridSystem_RestoreRecompose — wait for it; StampCells needs real cells.
+        if (NOT InHandle.Has<FFragment_2dGridSystem_Current>())
+        { return; }
+
+        auto MutableHandle = InHandle;
+
+        // Re-derive the (never-snapshotted) stamped-cells reconcile target. StampCells then rebuilds
+        // the cell stamps from the restored record + placement params on its next pass.
+        MutableHandle.AddOrGet<FFragment_2dGridOccupancy_Current>();
+
+        // Replication half — only for grids that replicate. A local-only occupancy grid is fully
+        // restored at this point.
+        if (UCk_Utils_Net_UE::Has(MutableHandle)
+            && UCk_Utils_Net_UE::Get_Replication(MutableHandle) == ECk_Replication::Replicates)
+        {
+            // Grid-resident container: the driver rides THIS entity, re-established by the snapshot
+            // respawn pass — retry next tick until it lands.
+            if (NOT UCk_Utils_EntityReplicationDriver_UE::Has(MutableHandle))
+            { return; }
+
+            UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_2dGridPlacements>(MutableHandle);
+            MutableHandle.AddOrGet<FTag_2dGridOccupancy_MayRequireReplication>();
+        }
+
+        ck::grid::Display(TEXT("[RESTORE_DEBUG] Occupancy ReplicateOnRestore [{}]: container re-created + replication re-armed"),
+            InHandle);
+
+        MutableHandle.Add<FTag_2dGridOccupancy_RestoreReplicated>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------

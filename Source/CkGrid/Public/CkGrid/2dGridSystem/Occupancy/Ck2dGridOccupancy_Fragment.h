@@ -60,11 +60,26 @@ namespace ck
     public:
         friend class ::UCk_Utils_2dGridOccupancy_UE;
 
+    public:
+        // Tier-C: single entity handle, remapped through FSnapshotContext (the complete context type
+        // comes in via the CkRecord fragment include above). NOTE: the death-watch DELEGATE binding
+        // that pairs with this back-ref is NOT restored (signal bindings never round-trip) — a
+        // restored occupant's destruction will not auto-destroy its placement.
+        using IsSnapshotable = void;
+
+        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void
+        {
+            InCtx.Snapshot_Handle(InAr, _Placement);
+        }
+
     private:
         FCk_Handle_2dGridPlacement _Placement;
 
     public:
         CK_PROPERTY_GET(_Placement);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_2dGridOccupant_PlacementRef, _Placement);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -73,6 +88,13 @@ namespace ck
     // AuthorityOnly Replicate processor consumes it, rebuilds the RepData from the live record,
     // and pushes it into the container (mirrors FTag_Inventory_MayRequireReplication).
     CK_DEFINE_ECS_TAG(FTag_2dGridOccupancy_MayRequireReplication);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Per-feature restore-replication done marker. ck::FTag_Snapshot_JustRestored is shared by every
+    // feature on the restored entity, so no single feature may remove it —
+    // FProcessor_2dGridOccupancy_ReplicateOnRestore pairs it with this done tag instead.
+    CK_DEFINE_ECS_TAG(FTag_2dGridOccupancy_RestoreReplicated);
 
     // --------------------------------------------------------------------------------------------------------------------
 
