@@ -14,23 +14,14 @@ static struct FAccelerationRepHandlerRegistrar
         FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
             []() -> UScriptStruct* { return FCk_RepData_Acceleration::StaticStruct(); },
             {
-                .OnChange = [](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& /*Old*/)
+                .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
                 {
                     auto AccelerationHandle = UCk_Utils_Acceleration_UE::Cast(Entity);
                     if (ck::Is_NOT_Valid(AccelerationHandle))
-                    { return; }
+                    { return ECk_RepFragment_ApplyResult::NotReady; }
 
                     UCk_Utils_Acceleration_UE::Request_OverrideAcceleration(AccelerationHandle, New.Get<FCk_RepData_Acceleration>().Value);
-                },
-                .OnAdd = [](FCk_Handle& Entity, const FInstancedStruct& Data)
-                {
-                    // Initial replication arrives as an Add, never a Change — an entity that spawns
-                    // with a starting acceleration would otherwise drop it on clients.
-                    auto AccelerationHandle = UCk_Utils_Acceleration_UE::Cast(Entity);
-                    if (ck::Is_NOT_Valid(AccelerationHandle))
-                    { return; }
-
-                    UCk_Utils_Acceleration_UE::Request_OverrideAcceleration(AccelerationHandle, Data.Get<FCk_RepData_Acceleration>().Value);
+                    return ECk_RepFragment_ApplyResult::Applied;
                 }
             });
     }
