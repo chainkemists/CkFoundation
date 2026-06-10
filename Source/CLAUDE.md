@@ -104,6 +104,7 @@
 //   ...ECS spatial volume query               → CkSpatialQuery
 //   ...spline path data / follow a spline     → CkSpline (+ CkTween for follow)
 //   ...ECS raycast sensing                    → CkRaySense
+//   ...replicate render target pixels / draw calls → CkRenderTarget
 //   ...ECS targeting / scoring                → CkTargeting
 //   ...ECS aggro / threat table               → CkAggro
 //   ...ECS entity relationships (ally/enemy)  → CkRelationship
@@ -182,6 +183,7 @@
 //   CkPmg              | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkPmg/Claude.md
 //   CkProjectile       | T4 | Core,Ecs,EcsExt,Log,Physics,Record,Variables | CkProjectile/Claude.md
 //   CkRaySense         | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Shapes | CkRaySense/Claude.md
+//   CkRenderTarget     | T4 | ActorRelay,Core,Ecs,EcsExt,Label,Log,Profile,Record,Settings,Timer | CkRenderTarget/CLAUDE.md
 //   CkRelationship     | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkRelationship/Claude.md
 //   CkResolver         | T4 | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Targeting | CkResolver/Claude.md
 //   CkScripts          | T4 | (varies)                                | CkScripts/Claude.md
