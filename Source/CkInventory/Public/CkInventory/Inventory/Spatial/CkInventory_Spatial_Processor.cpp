@@ -6,7 +6,6 @@
 #include "CkInventory/Item/CkItem_Definition.h"
 #include "CkInventory/Item/CkItem_Fragment.h"
 #include "CkInventory/Item/CkItem_Utils.h"
-#include "CkInventory/ItemTrait/Dimensions/CkItemTrait_Dimensions.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
@@ -16,8 +15,7 @@
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"
 
-#include "CkEcsExt/Transform/CkTransform_Utils.h"
-
+#include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Fragment.h"
 #include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Utils.h"
 
 #include "CkRecord/Record/CkRecord_Utils.h"
@@ -78,67 +76,38 @@ namespace ck
         { return; }
 
         // ---- Pre-driver re-derives (idempotent across retries) ----
-        // Even a never-replicated restored inventory needs its shape tag, the PreviousItems diff
-        // cache, and a WORKING GRID back for the request/query paths.
+        // Even a never-replicated restored inventory needs its shape tag and the PreviousItems
+        // diff cache back for the request/query paths.
 
         InHandle.AddOrGet<FTag_Inventory_Spatial>();
         InHandle.AddOrGet<FFragment_Inventory_PreviousItems>();
 
-        // The inventory's 2dGridSystem cannot survive a save (its cells live in a PRIVATE nested
-        // registry) — re-compose it from the restored Params exactly like Setup_PerShape does on
-        // first composition.
+        // The grids' LIVE halves (private cell registries — the inventory's own grid AND the items'
+        // Dimensions-trait shape grids) are rebuilt from their restored Params by CkGrid's
+        // FProcessor_2dGridSystem_RestoreRecompose. Wait for the inventory grid here; the per-item
+        // loop below waits for each item's grid.
         if (NOT UCk_Utils_2dGridSystem_UE::Has(InHandle))
-        {
-            auto TransformHandle = UCk_Utils_Transform_UE::Has(InHandle)
-                ? UCk_Utils_Transform_UE::CastChecked(InHandle)
-                : UCk_Utils_Transform_UE::Add(InHandle, FTransform::Identity);
-
-            const auto GridParams = FCk_Fragment_2dGridSystem_ParamsData(
-                InParams.Get_Dimensions(),
-                FVector2D(1.0, 1.0));
-
-            auto Grid = UCk_Utils_2dGridSystem_UE::Add(TransformHandle, GridParams);
-
-            UCk_Utils_2dGridSystem_UE::ForEach_Cell(Grid, ECk_2dGridSystem_CellFilter::OnlyActiveCells,
-                [&](FCk_Handle_2dGridCell InCell)
-            {
-                ck::TUtils_InventorySlot_ItemRef::Clear(InCell);
-            });
-
-            ck::inventory::Display(TEXT("[RESTORE_DEBUG] Spatial ReplicateOnRestore [{}]: re-composed [{}x{}] grid"),
-                InHandle, InParams.Get_Dimensions().X, InParams.Get_Dimensions().Y);
-        }
+        { return; }
 
         auto SpatialInventory = UCk_Utils_Inventory_Spatial_UE::CastChecked(InHandle);
 
-        // ---- Per-item re-compose + re-stamp (idempotent across retries) ----
-        // Construct is abstained during reconstitution, so item traits never re-ran: re-build each
-        // item's Dimensions-trait shape grid from its restored Definition, then re-stamp the item
-        // onto the rebuilt inventory grid from its restored placement decision record
-        // (FFragment_Item_SpatialPlacement). Items without the record were never placed — skip.
+        // ---- Per-item re-stamp (idempotent across retries) ----
+        // Re-stamp each item onto the rebuilt inventory grid from its restored placement decision
+        // record (FFragment_Item_SpatialPlacement). An item whose restored shape-grid Params have
+        // not been re-composed yet would stamp its 1x1 FALLBACK footprint — wait for that grid
+        // instead of stamping wrong cells. Items without a placement record were never placed — skip.
 
+        auto AllItemGridsReady = true;
         const auto& Items = UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils::Get_ValidEntries(InHandle);
         algo::ForEachIsValid(Items, [&](const FCk_Handle_Item& InItemHandle)
         {
             auto Item = InItemHandle;
 
-            const auto* Definition = UCk_Utils_Item_UE::Get_Definition(InItemHandle);
-
-            if (NOT UCk_Utils_2dGridSystem_UE::Has(Item))
+            const auto ItemHasRestoredGridParams = Item.Has<FFragment_2dGridSystem_Params>();
+            if (ItemHasRestoredGridParams && NOT UCk_Utils_2dGridSystem_UE::Has(Item))
             {
-                if (ck::Is_NOT_Valid(Definition))
-                {
-                    ck::inventory::Warning(TEXT("[RESTORE_DEBUG] Spatial item [{}] restored with NO definition — "
-                        "cannot re-compose its shape grid"), Item);
-                    return;
-                }
-
-                if (const auto* DimensionsTrait = Definition->Get_ItemTrait<UCk_ItemTrait_Dimensions>();
-                    DimensionsTrait != nullptr)
-                {
-                    auto ItemBase = FCk_Handle{Item};
-                    DimensionsTrait->Construct(ItemBase);
-                }
+                AllItemGridsReady = false;
+                return;
             }
 
             if (NOT Item.Has<FFragment_Item_SpatialPlacement>())
@@ -149,6 +118,9 @@ namespace ck
             UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(
                 SpatialInventory, InItemHandle, Placement.Get_Anchor(), Placement.Get_Rotation());
         });
+
+        if (NOT AllItemGridsReady)
+        { return; }
 
         // ---- Owner-hosted container: the driver rides the LIFETIME OWNER. Not re-established yet -> retry. ----
 
