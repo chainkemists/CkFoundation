@@ -191,6 +191,79 @@ auto
 
 auto
     UCk_Utils_EntityReplicationDriver_UE::
+    Request_TryReplicateExisting(
+        FCk_Handle& InExistingEntity,
+        FCk_Handle& InReplicatedOwner,
+        const TArray<FCk_EntityReplicationDriver_ConstructionInfo>& InConstructionInfos)
+    -> void
+{
+    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InReplicatedOwner))
+    { return; }
+
+    CK_ENSURE_IF_NOT(NOT InConstructionInfos.IsEmpty(),
+        TEXT("Unable to ReplicateExisting [{}] as ConstructionInfos is empty"), InExistingEntity)
+    { return; }
+
+    for (const auto& ConstructionInfo : InConstructionInfos)
+    {
+        CK_ENSURE_IF_NOT(ck::IsValid(ConstructionInfo.Get_ConstructionScript()),
+            TEXT("Unable to ReplicateExisting [{}] as ConstructionScript is [{}]"),
+            InExistingEntity, ConstructionInfo.Get_ConstructionScript())
+        { return; }
+    }
+
+    UCk_Utils_Net_UE::Copy(InReplicatedOwner, InExistingEntity);
+    TryAdd(InExistingEntity);
+
+    if (UCk_Utils_Net_UE::Get_EntityReplication(InReplicatedOwner) == ECk_Replication::DoesNotReplicate)
+    { return; }
+
+    CK_ENSURE_IF_NOT(InReplicatedOwner.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>(),
+        TEXT("Owner [{}] does NOT have a ReplicationDriver. Unable to ReplicateExisting [{}]."),
+        InReplicatedOwner, InExistingEntity)
+    { return; }
+
+    switch (const auto NetMode = UCk_Utils_Net_UE::Get_EntityNetMode(InReplicatedOwner))
+    {
+        case ECk_Net_NetModeType::Host:
+        case ECk_Net_NetModeType::ClientAndHost:
+        {
+            const auto& RepDriver = InExistingEntity.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
+            const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(InExistingEntity);
+            const auto& IsOwningEntityDriverDependentOnThis = InReplicatedOwner.Has<ck::FTag_EntityJustCreated>();
+
+            const auto& DependentRepDriversAddedDuringConstruction = RepDriver->Get_ExpectedNumberOfDependentReplicationDrivers();
+
+            RepDriver->Set_ExpectedNumberOfDependentReplicationDrivers(
+                Get_NumOfReplicationDriversIncludingDependents(InExistingEntity) +
+                DependentRepDriversAddedDuringConstruction);
+
+            RepDriver->Set_ReplicationData
+            (
+                FCk_EntityReplicationDriver_ReplicationData
+                {
+                    InConstructionInfos,
+                    FCk_EntityReplicationDriver_ReplicateObjects_Data{FCk_ReplicatedObjects::ToWeak(ReplicatedObjects.Get_ReplicatedObjects())}
+                }
+                .Set_OwningEntityDriver(InReplicatedOwner.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>())
+                .Set_IsOwningEntityDriverDependentOnThis(IsOwningEntityDriverDependentOnThis)
+            );
+            ck::UUtils_Signal_OnReplicationComplete::Broadcast(InExistingEntity, ck::MakePayload(InExistingEntity));
+            ck::UUtils_Signal_OnDependentsReplicationComplete::Broadcast(InExistingEntity, ck::MakePayload(InExistingEntity));
+
+            break;
+        }
+        case ECk_Net_NetModeType::Unknown:
+        default:
+        {
+            CK_INVALID_ENUM(NetMode);
+            break;
+        }
+    }
+}
+
+auto
+    UCk_Utils_EntityReplicationDriver_UE::
     Request_Replicate(
         FCk_Handle& InHandleToReplicate,
         FCk_Handle InReplicatedOwner,
