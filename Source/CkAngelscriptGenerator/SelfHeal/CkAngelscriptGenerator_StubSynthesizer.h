@@ -3,22 +3,40 @@
 #include "CoreMinimal.h"
 
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_AsErrorParser.h"
+#include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_AsSourceScanner.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 // Emergency stub synthesizer for the Rev 10 self-heal dispatcher.
 //
-// Given a parsed `No matching signatures to '<NS>::Params(<args>)'` error,
-// synthesizes a minimum-viable USTRUCT + namespace block satisfying the
-// missing accessor into a sibling `_StubRecovery_<Plugin>_EntitySpawnParams.as`
-// file. AS namespace-merge across files makes compile succeed without
-// touching the canonical. Sibling files are gitignored + deleted by
-// PostCompile after a successful compile.
+// Synthesizes minimum-viable USTRUCT + namespace blocks satisfying missing
+// EntitySpawnParams accessors into a sibling
+// `_StubRecovery_<Plugin>_EntitySpawnParams.as` file. AS namespace-merge
+// across files makes compile succeed without touching the canonical.
+// Sibling files are gitignored + deleted by PostCompile after a successful
+// compile.
 //
-// Stub shape: empty struct + Params() returning a default-constructed value.
-// Arg names are Arg0, Arg1, ... since the AS error gives types not names.
-// Same-session repeat drifts for the same accessor are dedup-gated (the
-// 2026-05-14 fix that prevented duplicate-function compile failures).
+// Two stub flavors:
+//
+//  * SOURCE-DERIVED FULL SHAPE (preferred) — the class's declaring .as file
+//    is parsed (FCkAsSourceScanner) for its flattened ExposeOnSpawn
+//    properties, and the stub mirrors the real generator's output: fielded
+//    struct (real names + types, no defaults) + positional ctor + both
+//    Params() overloads. Covers ALL caller patterns, including direct
+//    construction and field access (`P.Phase = ...`) — the wholesale-missing
+//    case a gitignored canonical creates on every fresh clone.
+//
+//  * ERROR-TEXT FALLBACK — built from the compile error alone: empty struct
+//    + Params(<arg types>) returning a default-constructed value. Arg names
+//    are Arg0, Arg1, ... since the AS error gives types not names. Covers
+//    Params()-overload callers only; retained as the floor when the class
+//    source can't be found/parsed, and as the per-signature path for
+//    incremental drift (struct already present in the canonical).
+//
+// Same-session repeat drifts for the same accessor are dedup-gated on the
+// CANONICAL (const-stripped) signature, with a declaration-level backstop
+// (the 2026-05-14 fix, extended 2026-06 after bulk synthesis let
+// const-aliased raw args duplicate the same emitted overload).
 //
 // See CkAngelscriptGenerator/Claude.md for the full sibling-file model.
 
@@ -46,6 +64,11 @@ namespace ck::angelscriptgenerator::self_heal
         // Script` -> `FBb_DeliveryTruck_EntityScript_SpawnParams`).
         static auto Derive_SpawnParamsStructName(const FString& InNamespaceName) -> FString;
 
+        // Inverse: F<X>_SpawnParams -> U<X>. Empty when the input doesn't
+        // match the generated-struct name shape — the dispatcher uses that
+        // as the classification gate for direct-construction errors.
+        static auto Derive_ClassNameFromStructName(const FString& InStructName) -> FString;
+
         // Picks the candidate file that references the failing namespace or
         // its struct. Empty when nothing matches (caller falls back to
         // Anchor_ByCallerAsPath for the brand-new-namespace case).
@@ -71,6 +94,36 @@ namespace ck::angelscriptgenerator::self_heal
         // convergence key all use this normalization so those variants collapse
         // to one stub instead of two mutually-ambiguous overloads.
         static auto Normalize_ArgsList(const FString& InArgsList) -> FString;
+
+        // Source-derived full-shape stub text for a scanned class shape:
+        // fielded struct (no defaults) + positional ctor + Params() /
+        // Params(allFields), mirroring the real generator's Format_ClassBlock.
+        // Ends with a class-level full-shape marker plus per-overload
+        // end-markers (same prefix the error-text dedup gate scans), so later
+        // error-text re-fires for either canonical overload no-op.
+        static auto Build_EntityScriptParamsStub_FullShape(
+            const FCk_AsClassShape&  InShape,
+            const FCk_AsParsedError& InError) -> FString;
+
+        // Source-derived injection. Scans for U<InClassName>'s declaring .as,
+        // parses the flattened exposed-property shape, and appends a
+        // full-shape stub to the sibling. FAILS (caller falls back to the
+        // error-text path) when:
+        //  * the class source can't be found/parsed (scan failure), or
+        //  * the struct already exists in the canonical or in a sibling stub
+        //    that isn't our own full shape — incremental drift is owned by
+        //    the per-signature error-text path.
+        // A re-fire for a class whose full shape is already in the sibling
+        // no-ops with Success = true.
+        static auto Inject_EntityScriptParamsStub_SourceDerived(
+            const FString&           InClassName,
+            const FCk_AsParsedError& InError,
+            const TArray<FString>&   InCandidateFilePaths,
+            const TArray<FString>&   InScanRoots) -> FCk_StubInjectionResult;
+
+        // `// End synthesized full-shape stub for <ClassName>` — the
+        // class-level dedup marker for source-derived stubs.
+        static auto Get_FullShapeMarkerLine(const FString& InClassName) -> FString;
 
         static auto Get_MarkerComment    () -> FString;
         static auto Get_StubFileHeader   () -> FString;

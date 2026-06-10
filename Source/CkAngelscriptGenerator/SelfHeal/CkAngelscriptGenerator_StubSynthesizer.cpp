@@ -237,6 +237,26 @@ namespace ck::angelscriptgenerator::self_heal
 
     auto
         FCkAsStubSynthesizer::
+        Derive_ClassNameFromStructName(
+            const FString& InStructName)
+        -> FString
+    {
+        static const auto Suffix = FString{TEXT("_SpawnParams")};
+
+        if (NOT InStructName.StartsWith(TEXT("F")) || NOT InStructName.EndsWith(Suffix))
+        { return FString{}; }
+
+        const auto Core = InStructName.Mid(1, InStructName.Len() - 1 - Suffix.Len());
+        if (Core.IsEmpty())
+        { return FString{}; }
+
+        return FString::Printf(TEXT("U%s"), *Core);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FCkAsStubSynthesizer::
         Build_EntityScriptParamsStub(
             const FCk_AsParsedError& InError,
             bool                     InEmitStruct)
@@ -280,10 +300,12 @@ namespace ck::angelscriptgenerator::self_heal
         // Include the NORMALIZED args list in the marker so distinct overloads
         // of the same NS::FUNC name dedup independently (int vs float stay
         // separate), while call-site argument-category variants of the SAME
-        // logical signature (const int vs int& — literal vs lvalue) collapse
-        // to one stub. Keying on the raw args list is the bug pinned by the
-        // 2026-06-10 CheckoutSettle incident: two stubs differing only by
-        // lvalue-ness made every call site ambiguous and the compile unhealable.
+        // logical signature collapse to one stub: literal vs lvalue
+        // ("const int" vs "int&" — the 2026-06-10 CheckoutSettle ambiguity
+        // wedge) AND const-qualified duplicates that emit the same declaration
+        // ("const FTransform" vs "FTransform" — the fresh-clone bulk-synthesis
+        // duplicate-overload wedge). The `// Target:` line above keeps the raw
+        // error string for forensics.
         Out += FString::Printf(TEXT("// End synthesized stub for %s::%s(%s)"),
             *InError.TargetNamespace, *InError.FunctionName, *Normalize_ArgsList(InError.ArgsList)); Out += LINE_TERMINATOR;
 
@@ -445,6 +467,24 @@ namespace ck::angelscriptgenerator::self_heal
                     return Result;
                 }
             }
+
+            // Declaration-level backstop: even when the marker key differs,
+            // appending a block whose EMITTED overload declaration already
+            // exists in the sibling wedges the merged namespace ("A function
+            // with the same name and parameters already exists"). The marker
+            // canonicalization covers const-aliasing; this catches any alias
+            // class it doesn't (e.g. engine type aliases). A decl line
+            // embeds the struct name, so it uniquely identifies
+            // (namespace, signature) within the sibling.
+            const auto DeclLine = FString::Printf(TEXT("%s %s(%s)"),
+                *StructName, *InError.FunctionName, *Format_ParameterList(InError.ArgsList));
+            if (ExistingStub.Contains(DeclLine))
+            {
+                Result.Success        = true;
+                Result.TargetFilePath = StubPath;
+                Result.InjectedBlock  = StubBlock;
+                return Result;
+            }
         }
 
         auto NewContents = FString{};
@@ -456,6 +496,222 @@ namespace ck::angelscriptgenerator::self_heal
         {
             NewContents = Get_StubFileHeader() + StubBlock;
         }
+
+        if (NOT Try_AtomicWrite(StubPath, NewContents))
+        {
+            Result.ErrorMessage = FString::Printf(
+                TEXT("Atomic write failed for stub file '%s'."), *StubPath);
+            return Result;
+        }
+
+        Result.Success        = true;
+        Result.TargetFilePath = StubPath;
+        Result.InjectedBlock  = StubBlock;
+        return Result;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FCkAsStubSynthesizer::
+        Get_FullShapeMarkerLine(
+            const FString& InClassName)
+        -> FString
+    {
+        return FString::Printf(TEXT("// End synthesized full-shape stub for %s"), *InClassName);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FCkAsStubSynthesizer::
+        Build_EntityScriptParamsStub_FullShape(
+            const FCk_AsClassShape&  InShape,
+            const FCk_AsParsedError& InError)
+        -> FString
+    {
+        const auto StructName = Derive_SpawnParamsStructName(InShape.ClassName);
+        if (StructName.IsEmpty())
+        { return FString{}; }
+
+        const auto& Props = InShape.FlattenedProperties;
+
+        auto ParamParts = TArray<FString>{};
+        auto ArgParts   = TArray<FString>{};
+        auto TypeParts  = TArray<FString>{};
+        for (const auto& Prop : Props)
+        {
+            ParamParts.Add(FString::Printf(TEXT("%s In%s"), *Prop.TypeText, *Prop.Name));
+            ArgParts.Add(FString::Printf(TEXT("In%s"), *Prop.Name));
+            TypeParts.Add(Prop.TypeText);
+        }
+        const auto ParamList = FString::Join(ParamParts, TEXT(", "));
+        const auto ArgList   = FString::Join(ArgParts,   TEXT(", "));
+
+        const auto Target = InError.Kind == ECk_AsParsedError_Kind::IdentifierNotADataType
+            ? FString::Printf(TEXT("missing type '%s'"), *InError.MissingIdentifier)
+            : FString::Printf(TEXT("%s::%s(%s)"),
+                *InError.TargetNamespace, *InError.FunctionName, *InError.ArgsList);
+
+        auto Out = FString{};
+        Out += LINE_TERMINATOR;
+        Out += Get_MarkerComment();                                                               Out += LINE_TERMINATOR;
+        Out += FString::Printf(TEXT("// Target: %s"), *Target);                                  Out += LINE_TERMINATOR;
+        Out += FString::Printf(TEXT("// Triggering site: %s:%d:%d"),
+            *InError.FilePath, InError.Line, InError.Column);                                     Out += LINE_TERMINATOR;
+        if (NOT InShape.SourceFilePath.IsEmpty())
+        {
+            Out += FString::Printf(TEXT("// Source-derived from: %s"), *InShape.SourceFilePath); Out += LINE_TERMINATOR;
+        }
+
+        Out += TEXT("USTRUCT()");                                                                 Out += LINE_TERMINATOR;
+        Out += FString::Printf(TEXT("struct %s"), *StructName);                                   Out += LINE_TERMINATOR;
+        Out += TEXT("{");                                                                         Out += LINE_TERMINATOR;
+        for (auto Index = 0; Index < Props.Num(); ++Index)
+        {
+            Out += TEXT("    UPROPERTY()");                                                       Out += LINE_TERMINATOR;
+            Out += FString::Printf(TEXT("    %s %s;"),
+                *Props[Index].TypeText, *Props[Index].Name);                                      Out += LINE_TERMINATOR;
+            if (Index + 1 < Props.Num())
+            { Out += LINE_TERMINATOR; }
+        }
+        if (Props.Num() > 0)
+        {
+            Out += LINE_TERMINATOR;
+            Out += FString::Printf(TEXT("    %s(%s)"), *StructName, *ParamList);                  Out += LINE_TERMINATOR;
+            Out += TEXT("    {");                                                                 Out += LINE_TERMINATOR;
+            for (const auto& Prop : Props)
+            {
+                Out += FString::Printf(TEXT("        %s = In%s;"), *Prop.Name, *Prop.Name);       Out += LINE_TERMINATOR;
+            }
+            Out += TEXT("    }");                                                                 Out += LINE_TERMINATOR;
+        }
+        Out += TEXT("}");                                                                         Out += LINE_TERMINATOR;
+        Out += LINE_TERMINATOR;
+
+        Out += FString::Printf(TEXT("namespace %s"), *InShape.ClassName);                         Out += LINE_TERMINATOR;
+        Out += TEXT("{");                                                                         Out += LINE_TERMINATOR;
+        Out += FString::Printf(TEXT("    %s Params()"), *StructName);                             Out += LINE_TERMINATOR;
+        Out += TEXT("    {");                                                                     Out += LINE_TERMINATOR;
+        Out += FString::Printf(TEXT("        return %s();"), *StructName);                        Out += LINE_TERMINATOR;
+        Out += TEXT("    }");                                                                     Out += LINE_TERMINATOR;
+        if (Props.Num() > 0)
+        {
+            Out += LINE_TERMINATOR;
+            Out += FString::Printf(TEXT("    %s Params(%s)"), *StructName, *ParamList);           Out += LINE_TERMINATOR;
+            Out += TEXT("    {");                                                                 Out += LINE_TERMINATOR;
+            Out += FString::Printf(TEXT("        return %s(%s);"), *StructName, *ArgList);        Out += LINE_TERMINATOR;
+            Out += TEXT("    }");                                                                 Out += LINE_TERMINATOR;
+        }
+        Out += TEXT("}");                                                                         Out += LINE_TERMINATOR;
+
+        // Class-level marker (re-fire dedup for source-derived injects) plus
+        // per-overload end-markers carrying the SAME prefix the error-text
+        // dedup gate scans — a later error-text inject for either canonical
+        // overload must no-op against this block.
+        Out += Get_FullShapeMarkerLine(InShape.ClassName);                                        Out += LINE_TERMINATOR;
+        Out += FString::Printf(TEXT("// End synthesized stub for %s::Params()"),
+            *InShape.ClassName);                                                                  Out += LINE_TERMINATOR;
+        if (Props.Num() > 0)
+        {
+            Out += FString::Printf(TEXT("// End synthesized stub for %s::Params(%s)"),
+                *InShape.ClassName, *Normalize_ArgsList(FString::Join(TypeParts, TEXT(", "))));   Out += LINE_TERMINATOR;
+        }
+
+        return Out;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FCkAsStubSynthesizer::
+        Inject_EntityScriptParamsStub_SourceDerived(
+            const FString&           InClassName,
+            const FCk_AsParsedError& InError,
+            const TArray<FString>&   InCandidateFilePaths,
+            const TArray<FString>&   InScanRoots)
+        -> FCk_StubInjectionResult
+    {
+        auto Result = FCk_StubInjectionResult{};
+
+        const auto StructName = Derive_SpawnParamsStructName(InClassName);
+        if (StructName.IsEmpty())
+        {
+            Result.ErrorMessage = FString::Printf(
+                TEXT("'%s' is not an entity-script class name shape (expected U<X>)."), *InClassName);
+            return Result;
+        }
+
+        const auto Shape = FCkAsSourceScanner::Scan_ClassShape(InClassName, InScanRoots);
+        if (NOT Shape.Found)
+        {
+            Result.ErrorMessage = FString::Printf(
+                TEXT("Source scan failed for '%s': %s"), *InClassName, *Shape.ErrorMessage);
+            return Result;
+        }
+
+        auto CanonicalPath = Find_TargetFile_ByContent(InClassName, InCandidateFilePaths);
+        if (CanonicalPath.IsEmpty() && NOT Shape.SourceFilePath.IsEmpty())
+        {
+            // The class's declaring file determines the owning plugin/project
+            // bucket — the same attribution the real generator uses.
+            CanonicalPath = Anchor_ByCallerAsPath(Shape.SourceFilePath);
+        }
+        if (CanonicalPath.IsEmpty())
+        { CanonicalPath = Anchor_ByCallerAsPath(InError.FilePath); }
+        if (CanonicalPath.IsEmpty())
+        {
+            Result.ErrorMessage = FString::Printf(
+                TEXT("Could not anchor full-shape stub for '%s': no candidate matched and neither the class file '%s' nor the caller '%s' has a .uplugin or .uproject ancestor."),
+                *InClassName, *Shape.SourceFilePath, *InError.FilePath);
+            return Result;
+        }
+
+        const auto StubPath = Derive_StubSiblingPath(CanonicalPath);
+        if (StubPath.IsEmpty())
+        {
+            Result.ErrorMessage = FString::Printf(
+                TEXT("Failed to derive stub sibling path from canonical '%s'."), *CanonicalPath);
+            return Result;
+        }
+
+        auto ExistingStub = FString{};
+        const auto StubFileExists = Try_ReadFile(StubPath, ExistingStub);
+
+        // Re-fire for a class whose full shape already landed: no-op success.
+        if (StubFileExists && ExistingStub.Contains(Get_FullShapeMarkerLine(InClassName)))
+        {
+            Result.Success        = true;
+            Result.TargetFilePath = StubPath;
+            return Result;
+        }
+
+        // A struct defined in the canonical (or by an earlier error-text
+        // stub) means this is incremental drift, not wholesale-missing —
+        // appending a second struct definition would itself wedge the
+        // compile. The per-signature error-text path owns that case.
+        auto CanonicalContents = FString{};
+        Try_ReadFile(CanonicalPath, CanonicalContents);
+        if (Has_SpawnParamsStruct(CanonicalContents, StructName) ||
+            Has_SpawnParamsStruct(ExistingStub, StructName))
+        {
+            Result.ErrorMessage = FString::Printf(
+                TEXT("Struct '%s' already defined in canonical or sibling — full-shape synthesis defers to the per-signature path."),
+                *StructName);
+            return Result;
+        }
+
+        const auto StubBlock = Build_EntityScriptParamsStub_FullShape(Shape, InError);
+        if (StubBlock.IsEmpty())
+        {
+            Result.ErrorMessage = FString::Printf(
+                TEXT("Build_EntityScriptParamsStub_FullShape returned empty output for '%s'."), *InClassName);
+            return Result;
+        }
+
+        const auto NewContents = StubFileExists
+            ? ExistingStub + StubBlock
+            : Get_StubFileHeader() + StubBlock;
 
         if (NOT Try_AtomicWrite(StubPath, NewContents))
         {

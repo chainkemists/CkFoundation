@@ -47,6 +47,43 @@ namespace
         E.ArgsList         = InArgsList;
         return E;
     }
+
+    auto Count_Occurrences(
+        const FString& InHaystack,
+        const FString& InNeedle) -> int32
+    {
+        auto Cursor = 0;
+        auto Hits   = 0;
+        while ((Cursor = InHaystack.Find(InNeedle, ESearchCase::CaseSensitive, ESearchDir::FromStart, Cursor)) != INDEX_NONE)
+        {
+            ++Hits;
+            Cursor += InNeedle.Len();
+        }
+        return Hits;
+    }
+
+    // Extracts every emitted overload DECLARATION line from a stub file's
+    // contents — the `    F<X>_SpawnParams Params(<params>)` lines AS would
+    // collide on during namespace-merge. Comment lines (`// Target:`,
+    // end-markers) reference `::Params(` without a leading space and are
+    // excluded by the `" Params("` needle; `return F<X>_SpawnParams();`
+    // lines don't contain the needle at all.
+    auto Extract_OverloadDeclLines(
+        const FString& InStubContents) -> TArray<FString>
+    {
+        auto Lines = TArray<FString>{};
+        InStubContents.ParseIntoArrayLines(Lines, /*InCullEmpty=*/true);
+
+        auto Out = TArray<FString>{};
+        for (const auto& Line : Lines)
+        {
+            if (Line.TrimStart().StartsWith(TEXT("//")))
+            { continue; }
+            if (Line.Contains(TEXT(" Params("), ESearchCase::CaseSensitive))
+            { Out.Add(Line.TrimStartAndEnd()); }
+        }
+        return Out;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -127,6 +164,32 @@ bool FCkTest_StubSynthesizer_Build_TypedArg_StripsConst::RunTest(const FString&)
     // The diagnostic comment "// Target: <NS>::Params(const FTransform)" preserves
     // the original error string verbatim for forensic context; only the parameter
     // declaration itself is canonicalized to match the real generator's shape.
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Build_EntityScriptParamsStub: a 'T&' lvalue-spelled arg is emitted by-value
+// — matching the real generator's parameter shape and preventing a dueling
+// 'T'/'T&' overload pair ("Multiple matching signatures" wedge).
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StubSynthesizer_Build_TypedArg_StripsRefMarker,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.Build_TypedArg_StripsRefMarker",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StubSynthesizer_Build_TypedArg_StripsRefMarker::RunTest(const FString&)
+{
+    const auto Error = Make_ParsedError(
+        TEXT("UBb_RefArgs_EntityScript"), TEXT("Params"),
+        TEXT("UStaticMeshComponent&, FCk_Handle_CheckoutCounter, const FTransform&"));
+    const auto Stub = FCkAsStubSynthesizer::Build_EntityScriptParamsStub(Error, /*InEmitStruct=*/false);
+
+    TestTrue(TEXT("emits all params by value"),
+        Stub.Contains(TEXT("Params(UStaticMeshComponent Arg0, FCk_Handle_CheckoutCounter Arg1, FTransform Arg2)")));
+    TestFalse(TEXT("no '&' in the emitted parameter list"),
+        Stub.Contains(TEXT("& Arg")));
 
     return true;
 }
@@ -675,9 +738,9 @@ bool FCkTest_StubSynthesizer_Inject_Accumulating::RunTest(const FString&)
 // function) must NOT produce a duplicate `Params(...)` declaration in the
 // sibling — AS namespace-merge would reject it with "A function with the
 // same name and parameters already exists" at next compile. The per-accessor
-// dedup gate in Try_AtomicWriteOrAppend_StubFile_Utf16 scans existing
-// sibling content for the unique `// End synthesized stub for <NS>::<FUNC>`
-// marker line and short-circuits the append when present.
+// dedup gate in Inject_EntityScriptParamsStub scans existing sibling content
+// for the unique `// End synthesized stub for <NS>::<FUNC>(<args>)` marker
+// line and short-circuits the append when present.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -733,6 +796,7 @@ bool FCkTest_StubSynthesizer_Inject_DedupOnSameAccessor::RunTest(const FString&)
     IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
     return true;
 }
+
 
 // --------------------------------------------------------------------------------------------------------------------
 // Normalize_ArgsList: strips const and & per token; distinct base types stay
@@ -827,6 +891,417 @@ bool FCkTest_StubSynthesizer_Inject_DedupOnArgCategoryVariants::RunTest(const FS
     TestTrue(TEXT("emitted param list is value-typed"),
         Stub.Contains(TEXT("Params(FTransform Arg0, FCk_Handle_CheckoutCounter Arg1, EBb_Role Arg2, int Arg3, FVector Arg4)")));
     TestFalse(TEXT("no reference-typed int param emitted"), Stub.Contains(TEXT("int& Arg3")));
+
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+    return true;
+}
+
+
+// --------------------------------------------------------------------------------------------------------------------
+// Dedup on const-aliased args: regression for the BULK-synthesis duplicate-
+// overload collision (fresh-clone boot test, 2026-06 — errors at
+// _StubRecovery_BusterBlock_EntitySpawnParams.as (761:5)/(911:5)).
+//
+// Two call sites hit the same overload with differently-qualified arguments,
+// so the parser reports two RAW args lists ("FTransform" vs "const
+// FTransform"). The emitted declaration is const-stripped in both cases —
+// `Params(FTransform Arg0)` — so unless the dedup key is canonicalized the
+// same way, both blocks append and AS rejects the merged namespace with
+// "A function with the same name and parameters already exists".
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StubSynthesizer_Inject_DedupOnConstAliasedArgs,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.Inject_DedupOnConstAliasedArgs",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StubSynthesizer_Inject_DedupOnConstAliasedArgs::RunTest(const FString&)
+{
+    const auto TempRoot         = FPaths::ProjectIntermediateDir() / TEXT("CkStubSynthTest_ConstAlias");
+    const auto FixtureFile      = TempRoot / TEXT("BusterBlock_EntitySpawnParams.as");
+    const auto ExpectedStubFile = TempRoot / TEXT("_StubRecovery_BusterBlock_EntitySpawnParams.as");
+    IFileManager::Get().MakeDirectory(*TempRoot, /*Tree=*/true);
+
+    const auto Original = FString{TEXT("// References UBb_Delta_EntityScript as a string.\n")};
+    FFileHelper::SaveStringToFile(Original, *FixtureFile,
+        FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+
+    const auto ErrorPlain   = Make_ParsedError(TEXT("UBb_Delta_EntityScript"), TEXT("Params"), TEXT("FTransform"));
+    const auto ErrorConst   = Make_ParsedError(TEXT("UBb_Delta_EntityScript"), TEXT("Params"), TEXT("const FTransform"));
+    const auto ErrorRef     = Make_ParsedError(TEXT("UBb_Delta_EntityScript"), TEXT("Params"), TEXT("FTransform&"));
+
+    const auto ResultA = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(ErrorPlain, {FixtureFile});
+    TestTrue(TEXT("plain-args inject succeeded"), ResultA.Success);
+
+    const auto ResultB = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(ErrorConst, {FixtureFile});
+    TestTrue(TEXT("const-args inject (same canonical overload) reports success (no-op)"), ResultB.Success);
+
+    const auto ResultC = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(ErrorRef, {FixtureFile});
+    TestTrue(TEXT("ref-args inject (lvalue 'T&' spelling) reports success (no-op)"), ResultC.Success);
+
+    auto Stub = FString{};
+    TestTrue(TEXT("sibling readable"), FFileHelper::LoadFileToString(Stub, *ExpectedStubFile));
+
+    TestEqual(TEXT("emitted Params(FTransform Arg0) declaration appears exactly once"),
+        Count_Occurrences(Stub, TEXT(" Params(FTransform Arg0)")), 1);
+    TestFalse(TEXT("no by-ref overload emitted (dueling 'T&' stub)"),
+        Stub.Contains(TEXT("FTransform&")));
+
+    const auto DeclLines = Extract_OverloadDeclLines(Stub);
+    const auto UniqueDecls = TSet<FString>{DeclLines};
+    TestEqual(TEXT("no duplicate overload declarations in sibling"),
+        UniqueDecls.Num(), DeclLines.Num());
+
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Bulk synthesis sweep: the wholesale-missing-ESP case a fresh clone creates.
+// Many accessors across several namespaces synthesize into one sibling, with
+// the whole batch re-fired a second time (a second modal-tick drain after a
+// still-failing compile) including const-aliased variants. Every emitted
+// overload declaration must appear exactly once — any duplicate wedges the
+// next compile.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StubSynthesizer_Inject_BulkSynthesis_NoDuplicateOverloads,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.Inject_BulkSynthesis_NoDuplicateOverloads",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StubSynthesizer_Inject_BulkSynthesis_NoDuplicateOverloads::RunTest(const FString&)
+{
+    const auto TempRoot         = FPaths::ProjectIntermediateDir() / TEXT("CkStubSynthTest_Bulk");
+    const auto FixtureFile      = TempRoot / TEXT("BusterBlock_EntitySpawnParams.as");
+    const auto ExpectedStubFile = TempRoot / TEXT("_StubRecovery_BusterBlock_EntitySpawnParams.as");
+    IFileManager::Get().MakeDirectory(*TempRoot, /*Tree=*/true);
+
+    const auto Original = FString{TEXT(
+        "// References UBb_BulkA_EntityScript, UBb_BulkB_EntityScript,\n"
+        "// UBb_BulkC_EntityScript, UBb_BulkD_EntityScript as strings.\n")};
+    FFileHelper::SaveStringToFile(Original, *FixtureFile,
+        FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+
+    // Drain 1: distinct namespaces and overload shapes, including a
+    // const-aliased pair within the batch (BulkB).
+    const auto Drain1 = TArray<FCk_AsParsedError>{
+        Make_ParsedError(TEXT("UBb_BulkA_EntityScript"), TEXT("Params"), TEXT("")),
+        Make_ParsedError(TEXT("UBb_BulkB_EntityScript"), TEXT("Params"), TEXT("const FTransform")),
+        Make_ParsedError(TEXT("UBb_BulkB_EntityScript"), TEXT("Params"), TEXT("FTransform")),
+        Make_ParsedError(TEXT("UBb_BulkC_EntityScript"), TEXT("Params"), TEXT("FTransform, const int32")),
+        Make_ParsedError(TEXT("UBb_BulkD_EntityScript"), TEXT("Params"), TEXT("const UClass, bool")),
+    };
+
+    // Drain 2: the same batch re-fires (compile still failing), with the
+    // const-qualifications flipped on the multi-arg signatures.
+    const auto Drain2 = TArray<FCk_AsParsedError>{
+        Make_ParsedError(TEXT("UBb_BulkA_EntityScript"), TEXT("Params"), TEXT("")),
+        Make_ParsedError(TEXT("UBb_BulkB_EntityScript"), TEXT("Params"), TEXT("FTransform")),
+        Make_ParsedError(TEXT("UBb_BulkC_EntityScript"), TEXT("Params"), TEXT("const FTransform, int32")),
+        Make_ParsedError(TEXT("UBb_BulkD_EntityScript"), TEXT("Params"), TEXT("UClass, bool")),
+    };
+
+    for (const auto& Error : Drain1)
+    {
+        TestTrue(TEXT("drain-1 inject succeeded"),
+            FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(Error, {FixtureFile}).Success);
+    }
+    for (const auto& Error : Drain2)
+    {
+        TestTrue(TEXT("drain-2 inject succeeded (no-op or append)"),
+            FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(Error, {FixtureFile}).Success);
+    }
+
+    auto Stub = FString{};
+    TestTrue(TEXT("sibling readable"), FFileHelper::LoadFileToString(Stub, *ExpectedStubFile));
+
+    const auto DeclLines   = Extract_OverloadDeclLines(Stub);
+    const auto UniqueDecls = TSet<FString>{DeclLines};
+    TestEqual(TEXT("every overload declaration appears exactly once"),
+        UniqueDecls.Num(), DeclLines.Num());
+
+    // 4 distinct canonical overloads total: A(), B(FTransform),
+    // C(FTransform, int32), D(UClass, bool) — and nothing else.
+    TestEqual(TEXT("exactly 4 canonical overload declarations emitted"), DeclLines.Num(), 4);
+
+    // Struct definitions must also be unique per namespace.
+    for (const auto* StructName : {
+        TEXT("struct FBb_BulkA_EntityScript_SpawnParams"),
+        TEXT("struct FBb_BulkB_EntityScript_SpawnParams"),
+        TEXT("struct FBb_BulkC_EntityScript_SpawnParams"),
+        TEXT("struct FBb_BulkD_EntityScript_SpawnParams")})
+    {
+        TestEqual(FString::Printf(TEXT("%s defined exactly once"), StructName),
+            Count_Occurrences(Stub, StructName), 1);
+    }
+
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Derive_ClassNameFromStructName: inverse of Derive_SpawnParamsStructName.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StubSynthesizer_DeriveClassNameFromStructName,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.DeriveClassNameFromStructName",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StubSynthesizer_DeriveClassNameFromStructName::RunTest(const FString&)
+{
+    TestEqual(TEXT("F<X>_SpawnParams -> U<X>"),
+        FCkAsStubSynthesizer::Derive_ClassNameFromStructName(TEXT("FBb_CombatReceiver_DamageReceiver_SpawnParams")),
+        FString{TEXT("UBb_CombatReceiver_DamageReceiver")});
+
+    // Round-trip with the forward derivation.
+    const auto Forward = FCkAsStubSynthesizer::Derive_SpawnParamsStructName(TEXT("UBb_DayCycle_EntityScript"));
+    TestEqual(TEXT("round-trip"),
+        FCkAsStubSynthesizer::Derive_ClassNameFromStructName(Forward),
+        FString{TEXT("UBb_DayCycle_EntityScript")});
+
+    TestEqual(TEXT("non-F prefix -> empty"),
+        FCkAsStubSynthesizer::Derive_ClassNameFromStructName(TEXT("Bb_SpawnParams")), FString{});
+    TestEqual(TEXT("no _SpawnParams suffix -> empty"),
+        FCkAsStubSynthesizer::Derive_ClassNameFromStructName(TEXT("FBb_SomeRandomStruct")), FString{});
+    TestEqual(TEXT("bare F_SpawnParams (empty core) -> empty"),
+        FCkAsStubSynthesizer::Derive_ClassNameFromStructName(TEXT("F_SpawnParams")), FString{});
+    TestEqual(TEXT("empty -> empty"),
+        FCkAsStubSynthesizer::Derive_ClassNameFromStructName(FString{}), FString{});
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Build_EntityScriptParamsStub_FullShape: fielded struct (no defaults) +
+// positional ctor + both Params overloads + class-level and per-overload
+// dedup markers with canonical (const-stripped) types.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StubSynthesizer_Build_FullShape,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.Build_FullShape",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StubSynthesizer_Build_FullShape::RunTest(const FString&)
+{
+    auto Shape = FCk_AsClassShape{};
+    Shape.Found          = true;
+    Shape.ClassName      = TEXT("UBb_Fielded_EntityScript");
+    Shape.SourceFilePath = TEXT("D:/Test/BB_Fielded.as");
+    Shape.FlattenedProperties = {
+        FCk_AsExposedProperty{TEXT("FGameplayTag"),                       TEXT("Phase")},
+        FCk_AsExposedProperty{TEXT("const UCk_InventoryItem_Definition"), TEXT("Definition")},
+        FCk_AsExposedProperty{TEXT("TMap<FGameplayTag, float32>"),        TEXT("Weights")},
+    };
+
+    auto Error = FCk_AsParsedError{};
+    Error.Kind              = ECk_AsParsedError_Kind::IdentifierNotADataType;
+    Error.MissingIdentifier = TEXT("FBb_Fielded_EntityScript_SpawnParams");
+    Error.FilePath          = TEXT("D:/Test/Caller.as");
+    Error.Line              = 85;
+    Error.Column            = 30;
+
+    const auto Stub = FCkAsStubSynthesizer::Build_EntityScriptParamsStub_FullShape(Shape, Error);
+
+    TestTrue(TEXT("not empty"), NOT Stub.IsEmpty());
+    TestTrue(TEXT("struct decl"),      Stub.Contains(TEXT("struct FBb_Fielded_EntityScript_SpawnParams")));
+    TestTrue(TEXT("field: Phase"),     Stub.Contains(TEXT("    FGameplayTag Phase;")));
+    TestTrue(TEXT("field: Definition (verbatim const)"),
+        Stub.Contains(TEXT("    const UCk_InventoryItem_Definition Definition;")));
+    TestTrue(TEXT("field: Weights (template with comma)"),
+        Stub.Contains(TEXT("    TMap<FGameplayTag, float32> Weights;")));
+    TestFalse(TEXT("no default initializers on fields"),
+        Stub.Contains(TEXT("Phase = FGameplayTag()")));
+
+    TestTrue(TEXT("positional ctor"),
+        Stub.Contains(TEXT("FBb_Fielded_EntityScript_SpawnParams(FGameplayTag InPhase, const UCk_InventoryItem_Definition InDefinition, TMap<FGameplayTag, float32> InWeights)")));
+    TestTrue(TEXT("ctor assigns Phase"), Stub.Contains(TEXT("        Phase = InPhase;")));
+
+    TestTrue(TEXT("namespace"),        Stub.Contains(TEXT("namespace UBb_Fielded_EntityScript")));
+    TestTrue(TEXT("no-arg overload"),  Stub.Contains(TEXT(" Params()")));
+    TestTrue(TEXT("all-args overload forwards"),
+        Stub.Contains(TEXT("return FBb_Fielded_EntityScript_SpawnParams(InPhase, InDefinition, InWeights);")));
+
+    TestTrue(TEXT("full-shape marker"),
+        Stub.Contains(FCkAsStubSynthesizer::Get_FullShapeMarkerLine(TEXT("UBb_Fielded_EntityScript"))));
+    TestTrue(TEXT("no-arg end-marker (error-text dedup prefix)"),
+        Stub.Contains(TEXT("// End synthesized stub for UBb_Fielded_EntityScript::Params()")));
+    TestTrue(TEXT("all-args end-marker uses canonical const-stripped types"),
+        Stub.Contains(TEXT("// End synthesized stub for UBb_Fielded_EntityScript::Params(FGameplayTag, UCk_InventoryItem_Definition, TMap<FGameplayTag, float32>)")));
+
+    TestTrue(TEXT("forensic: source path"), Stub.Contains(TEXT("// Source-derived from: D:/Test/BB_Fielded.as")));
+    TestTrue(TEXT("forensic: target identifier"), Stub.Contains(TEXT("missing type 'FBb_Fielded_EntityScript_SpawnParams'")));
+
+    // Zero-property shape: no positional ctor, single Params(), single end-marker.
+    auto EmptyShape = FCk_AsClassShape{};
+    EmptyShape.Found     = true;
+    EmptyShape.ClassName = TEXT("UBb_Empty_EntityScript");
+    const auto EmptyStub = FCkAsStubSynthesizer::Build_EntityScriptParamsStub_FullShape(EmptyShape, Error);
+    TestTrue(TEXT("zero-prop: struct emitted"), EmptyStub.Contains(TEXT("struct FBb_Empty_EntityScript_SpawnParams")));
+    TestEqual(TEXT("zero-prop: only the no-arg overload is declared"),
+        Count_Occurrences(EmptyStub, TEXT(" Params(")), 1);
+    // The ctor decl would sit at 4-space indent; the no-arg overload's
+    // `return FBb_...();` body line does not match this needle.
+    TestFalse(TEXT("zero-prop: no positional ctor"),
+        EmptyStub.Contains(TEXT("    FBb_Empty_EntityScript_SpawnParams(")));
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Inject_EntityScriptParamsStub_SourceDerived: end-to-end against a temp
+// project tree — the CombatReceiver-shaped wholesale-missing case. The class
+// declares 6 ExposeOnSpawn props; the sibling stub must carry all of them
+// (so `P.Phase = ...` field-access callers compile), re-fires must no-op,
+// and a subsequent ERROR-TEXT inject for the same class's Params() must
+// dedup against the full-shape block (cross-path dedup).
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StubSynthesizer_Inject_SourceDerived_EndToEnd,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.Inject_SourceDerived_EndToEnd",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StubSynthesizer_Inject_SourceDerived_EndToEnd::RunTest(const FString&)
+{
+    const auto TempRoot = FPaths::ConvertRelativePathToFull(
+        FPaths::ProjectIntermediateDir() / TEXT("CkStubSynthTest_SourceDerived"));
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+
+    const auto ScriptRoot   = TempRoot / TEXT("Script");
+    const auto ClassFile    = ScriptRoot / TEXT("Classes/TestSynth_DamageReceiver.as");
+    const auto ExpectedStub = ScriptRoot / TEXT("Generated/_StubRecovery_FakeProj_EntitySpawnParams.as");
+
+    IFileManager::Get().MakeDirectory(*FPaths::GetPath(ClassFile), /*Tree=*/true);
+    FFileHelper::SaveStringToFile(FString{TEXT("{}")}, *(TempRoot / TEXT("FakeProj.uproject")));
+    FFileHelper::SaveStringToFile(FString{TEXT(
+        "class UTestSynth_DamageReceiver : UCk_GenericEntityScript_UE\n"
+        "{\n"
+        "    UPROPERTY(ExposeOnSpawn)\n"
+        "    FGameplayTagContainer DataBundleNames;\n"
+        "    UPROPERTY(ExposeOnSpawn)\n"
+        "    FGameplayTag Phase;\n"
+        "    UPROPERTY(ExposeOnSpawn)\n"
+        "    FCk_Handle_ResolverTarget ResolverTarget;\n"
+        "    UPROPERTY(ExposeOnSpawn)\n"
+        "    FCk_Handle_CombatReceiver Receiver;\n"
+        "    UPROPERTY(ExposeOnSpawn)\n"
+        "    FGameplayTagRequirements GameplayTagRequirements;\n"
+        "    UPROPERTY(ExposeOnSpawn)\n"
+        "    FGameplayTag HitCue;\n"
+        "}\n")}, *ClassFile, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+
+    auto Error = FCk_AsParsedError{};
+    Error.Kind              = ECk_AsParsedError_Kind::BareCtorNoMatchingSignatures;
+    Error.MissingIdentifier = TEXT("FTestSynth_DamageReceiver_SpawnParams");
+    Error.FilePath          = TEXT("D:/Test/Caller.as");
+    Error.Line              = 85;
+    Error.Column            = 30;
+
+    const auto ResultA = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub_SourceDerived(
+        TEXT("UTestSynth_DamageReceiver"), Error, /*InCandidateFilePaths=*/{}, /*InScanRoots=*/{ScriptRoot});
+
+    TestTrue(TEXT("first inject succeeded"), ResultA.Success);
+    if (NOT ResultA.Success)
+    {
+        AddError(FString::Printf(TEXT("Inject failed: %s"), *ResultA.ErrorMessage));
+        IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+        return false;
+    }
+    TestEqual(TEXT("anchored to the class file's project bucket"), ResultA.TargetFilePath, ExpectedStub);
+
+    auto Stub = FString{};
+    TestTrue(TEXT("sibling readable"), FFileHelper::LoadFileToString(Stub, *ExpectedStub));
+
+    // The fields that make `ReceiverParams.Phase = ...`-style callers compile.
+    TestTrue(TEXT("field: DataBundleNames"), Stub.Contains(TEXT("    FGameplayTagContainer DataBundleNames;")));
+    TestTrue(TEXT("field: Phase typed FGameplayTag"), Stub.Contains(TEXT("    FGameplayTag Phase;")));
+    TestTrue(TEXT("field: Receiver"), Stub.Contains(TEXT("    FCk_Handle_CombatReceiver Receiver;")));
+    TestTrue(TEXT("field: HitCue"), Stub.Contains(TEXT("    FGameplayTag HitCue;")));
+    TestTrue(TEXT("positional ctor assigns"), Stub.Contains(TEXT("        Phase = InPhase;")));
+    TestTrue(TEXT("namespace block"), Stub.Contains(TEXT("namespace UTestSynth_DamageReceiver")));
+
+    // Re-fire: no-op success, struct still defined exactly once.
+    const auto ResultB = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub_SourceDerived(
+        TEXT("UTestSynth_DamageReceiver"), Error, {}, {ScriptRoot});
+    TestTrue(TEXT("re-fire reports success (no-op)"), ResultB.Success);
+
+    // Cross-path dedup: an error-text inject for the same class's Params()
+    // must no-op against the full-shape block's end-marker. No candidates
+    // (the canonical doesn't exist on a fresh clone) — the caller-path
+    // anchor resolves the same project bucket and thus the same sibling.
+    const auto ErrorText = Make_ParsedError(TEXT("UTestSynth_DamageReceiver"), TEXT("Params"), TEXT(""), *ClassFile);
+    const auto ResultC = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(ErrorText, /*InCandidateFilePaths=*/{});
+    TestTrue(TEXT("error-text inject after full shape reports success (no-op)"), ResultC.Success);
+
+    FFileHelper::LoadFileToString(Stub, *ExpectedStub);
+    TestEqual(TEXT("struct defined exactly once after all injects"),
+        Count_Occurrences(Stub, TEXT("struct FTestSynth_DamageReceiver_SpawnParams")), 1);
+    TestEqual(TEXT("no-arg Params() declared exactly once after all injects"),
+        Count_Occurrences(Stub, TEXT(" Params()")), 1);
+
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Inject_EntityScriptParamsStub_SourceDerived: when the struct already exists
+// in the canonical, full-shape synthesis must DEFER (Success = false) — that
+// is incremental drift, owned by the battle-tested per-signature error-text
+// path; a second struct definition would itself wedge the compile.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StubSynthesizer_Inject_SourceDerived_DefersOnExistingStruct,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.Inject_SourceDerived_DefersOnExistingStruct",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StubSynthesizer_Inject_SourceDerived_DefersOnExistingStruct::RunTest(const FString&)
+{
+    const auto TempRoot = FPaths::ConvertRelativePathToFull(
+        FPaths::ProjectIntermediateDir() / TEXT("CkStubSynthTest_SourceDerivedDefer"));
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+
+    const auto ScriptRoot    = TempRoot / TEXT("Script");
+    const auto ClassFile     = ScriptRoot / TEXT("Classes/TestSynth_Drift.as");
+    const auto CanonicalFile = ScriptRoot / TEXT("Generated/FakeProj_EntitySpawnParams.as");
+
+    IFileManager::Get().MakeDirectory(*FPaths::GetPath(ClassFile), /*Tree=*/true);
+    IFileManager::Get().MakeDirectory(*FPaths::GetPath(CanonicalFile), /*Tree=*/true);
+    FFileHelper::SaveStringToFile(FString{TEXT("{}")}, *(TempRoot / TEXT("FakeProj.uproject")));
+    FFileHelper::SaveStringToFile(FString{TEXT(
+        "class UTestSynth_Drift : UCk_GenericEntityScript_UE\n"
+        "{\n"
+        "    UPROPERTY(ExposeOnSpawn)\n"
+        "    int32 Knob;\n"
+        "}\n")}, *ClassFile, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+
+    // Canonical already defines the struct (stale shape — incremental drift).
+    FFileHelper::SaveStringToFile(FString{TEXT(
+        "USTRUCT()\n"
+        "struct FTestSynth_Drift_SpawnParams\n"
+        "{\n"
+        "}\n"
+        "namespace UTestSynth_Drift { FTestSynth_Drift_SpawnParams Params() { return FTestSynth_Drift_SpawnParams(); } }\n")},
+        *CanonicalFile, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+
+    auto Error = FCk_AsParsedError{};
+    Error.Kind             = ECk_AsParsedError_Kind::NoMatchingSignatures;
+    Error.TargetNamespace  = TEXT("UTestSynth_Drift");
+    Error.FunctionName     = TEXT("Params");
+    Error.ArgsList         = TEXT("int32");
+    Error.FilePath         = TEXT("D:/Test/Caller.as");
+
+    const auto Result = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub_SourceDerived(
+        TEXT("UTestSynth_Drift"), Error, /*InCandidateFilePaths=*/{CanonicalFile}, /*InScanRoots=*/{ScriptRoot});
+
+    TestFalse(TEXT("defers (Success = false)"), Result.Success);
+    TestTrue(TEXT("reason mentions deferral to per-signature path"),
+        Result.ErrorMessage.Contains(TEXT("defers")));
+    TestFalse(TEXT("no sibling stub written"),
+        IFileManager::Get().FileExists(*(ScriptRoot / TEXT("Generated/_StubRecovery_FakeProj_EntitySpawnParams.as"))));
 
     IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
     return true;
