@@ -63,6 +63,15 @@ namespace ck::angelscriptgenerator::self_heal
             const FCk_AsParsedError& InError,
             const TArray<FString>&   InCandidateFilePaths) -> FCk_StubInjectionResult;
 
+        // Canonicalizes an error-reported args list to value-typed form (strips
+        // "const " / trailing "&" per token). The AS error reports the call
+        // site's argument category, not the declared parameter — a literal vs
+        // an lvalue at two call sites of the SAME function yields "const int"
+        // vs "int&". Stub emission, the dedup end-marker, and the dispatcher's
+        // convergence key all use this normalization so those variants collapse
+        // to one stub instead of two mutually-ambiguous overloads.
+        static auto Normalize_ArgsList(const FString& InArgsList) -> FString;
+
         static auto Get_MarkerComment    () -> FString;
         static auto Get_StubFileHeader   () -> FString;
         static auto Derive_StubSiblingPath(const FString& InCanonicalFilePath) -> FString;
