@@ -1010,6 +1010,14 @@
     {
       "Name": "MeshModelingToolset",
       "Enabled": true
+    },
+    {
+      "Name": "StructUtils",
+      "Enabled": true
+    },
+    {
+      "Name": "StateTree",
+      "Enabled": true
     }
   ]
 }
