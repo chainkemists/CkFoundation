@@ -3,6 +3,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Tag/CkTag.h"
 
 #include <InstancedStruct.h>
 #include <Net/Serialization/FastArraySerializer.h>
@@ -15,6 +16,25 @@
 class UCk_Fragment_EntityReplicationDriver_Rep;
 
 // --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    // Set on the associated entity whenever its replication driver holds container entries (or
+    // removals) that have not been applied yet. Drained by FProcessor_ReplicatedFragments_Dispatch.
+    CK_DEFINE_ECS_TAG(FTag_RepFragments_PendingApply);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Result of FHandler::Apply. NotReady means the feature the data targets is not composed on this
+// entity yet — the entry stays pending and the dispatcher retries next tick.
+enum class ECk_RepFragment_ApplyResult : uint8
+{
+    Applied,
+    NotReady
+};
+
+// --------------------------------------------------------------------------------------------------------------------
 // Handler Registry — generic callback dispatch by UScriptStruct* type
 
 class CKECS_API FCk_ReplicatedFragmentHandlerRegistry
@@ -22,6 +42,20 @@ class CKECS_API FCk_ReplicatedFragmentHandlerRegistry
 public:
     struct FHandler
     {
+        // ---- New contract (deferred dispatch) ----
+        // Called by FProcessor_ReplicatedFragments_Dispatch after OnConstructed-driven composition,
+        // never inline during net receive. OldData is unset on the first application of this entry.
+        // Return NotReady to retry next tick (composition not done yet) — never compose the feature
+        // from inside Apply.
+        TFunction<ECk_RepFragment_ApplyResult(FCk_Handle& Entity,
+                        const FInstancedStruct& NewData,
+                        const TOptional<FInstancedStruct>& OldData)> Apply;
+
+        TFunction<void(FCk_Handle& Entity)> Remove;
+
+        // ---- Legacy contract (inline dispatch during net receive / PostLink replay) ----
+        // Migration in progress: a handler defines EITHER Apply/Remove OR the three below. Types
+        // whose handler defines Apply are routed exclusively through the deferred dispatcher.
         TFunction<void(FCk_Handle& Entity,
                         const FInstancedStruct& NewData,
                         const FInstancedStruct& OldData)> OnChange;
@@ -104,6 +138,18 @@ public:
 
     // Client-side previous data for change detection (NOT replicated)
     FInstancedStruct _PreviousData;
+
+    // ---- Client-local deferred-dispatch state (NOT replicated) ----
+    // Set on receive/link, cleared by FProcessor_ReplicatedFragments_Dispatch once Apply succeeds.
+    bool _PendingApply = false;
+
+    // Accumulated while Apply keeps returning NotReady; past the timeout the entry is dropped LOUDLY.
+    float _PendingForSeconds = 0.0f;
+
+    // Last data successfully applied on this client — the Old side of the next Apply. Distinct from
+    // _PreviousData (last RECEIVED): coalesced receives must diff against what was actually applied.
+    FInstancedStruct _LastAppliedData;
+    bool _WasEverApplied = false;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -143,6 +189,12 @@ public:
 
     UPROPERTY(NotReplicated)
     TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep> _OwningDriver = nullptr;
+
+    // Client-local: last data of entries removed by replication whose handler speaks the new
+    // contract. FProcessor_ReplicatedFragments_Dispatch resolves Remove by the stored type and
+    // drains this — removal is never dispatched inline during net receive.
+    UPROPERTY(NotReplicated)
+    TArray<FInstancedStruct> _PendingRemovals;
 };
 
 template<>

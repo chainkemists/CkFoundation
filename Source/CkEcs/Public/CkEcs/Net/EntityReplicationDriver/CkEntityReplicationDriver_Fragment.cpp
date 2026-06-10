@@ -99,7 +99,21 @@ auto
     for (auto& Entry : _Fragments._Items)
     {
         const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Resolve(Entry.Data.GetScriptStruct());
-        if (Handler == nullptr || NOT Handler->OnAdd)
+        if (Handler == nullptr)
+        { continue; }
+
+        // New contract: link is pure bookkeeping — the deferred dispatcher applies the entry after
+        // OnConstructed-driven composition has run (FProcessor_ReplicatedFragments_Dispatch runs
+        // after FProcessor_EntityScript_FinishConstruction in the same frame).
+        if (Handler->Apply)
+        {
+            Entry._PendingApply = true;
+            Entry._PendingForSeconds = 0.0f;
+            Entity.AddOrGet<ck::FTag_RepFragments_PendingApply>();
+            continue;
+        }
+
+        if (NOT Handler->OnAdd)
         { continue; }
 
         Handler->OnAdd(Entity, Entry.Data);
