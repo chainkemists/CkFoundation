@@ -5,14 +5,21 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 // Parses Hazelight's AS compile-error output into typed root-cause records.
-// Three patterns recognized. The first two correspond to drift classes the
-// dispatcher can auto-fix; the third is an author-side authoring bug the
+// Four patterns recognized. The first three correspond to drift classes the
+// dispatcher can auto-fix; the fourth is an author-side authoring bug the
 // dispatcher only diagnoses (no auto-fix — modifying user source code is
 // out of contract):
 //   * `No matching signatures to '<NS>::<func>(<args>)'`  — stale EntitySpawn-
 //     Params stub OR missing asset registry accessor (auto-fix).
+//   * `No matching signatures to '<Ident>(<args>)'`       — bare constructor-
+//     style call on an unregistered type. Observed when a caller directly
+//     constructs a generated `F<X>_SpawnParams` whose canonical file is
+//     missing (gitignored ESP / fresh clone) — the dispatcher routes the
+//     `*_SpawnParams` shapes to ESP synthesis (auto-fix); anything else is
+//     an authoring error left to the terminal banner.
 //   * `Identifier '<X>' is not a data type`               — missing
-//     dynamic-handle JSON entry (auto-fix).
+//     dynamic-handle JSON entry, or a `F<X>_SpawnParams` used as a declared
+//     type while its canonical file is missing (auto-fix).
 //   * `Instead found '<string constant>'`                 — adjacent string
 //     literals in author source (`"foo " "bar"` C-style splice). AS rejects;
 //     the dispatcher recognizes the pattern but only surfaces a clear
@@ -23,8 +30,9 @@
 // unrecognized-failure case and surfaces a terminal banner.
 //
 // Error format is NOT a stable Hazelight public API contract. The unit tests
-// under Tests/Test_AsErrorParser.cpp snapshot the three known-good formats
-// (captured 2026-05-11 via the corruption probes) — engine-upgrade canary.
+// under Tests/Test_AsErrorParser.cpp snapshot the known-good formats
+// (captured 2026-05-11 via the corruption probes; bare-ctor form derived
+// from the 2026-06 fresh-clone ESP boot test) — engine-upgrade canary.
 // If they go red, fix the parser regex against the new format before the
 // dispatcher can resume working.
 
@@ -35,6 +43,7 @@ namespace ck::angelscriptgenerator::self_heal
         NoMatchingSignatures,
         IdentifierNotADataType,
         AdjacentStringLiteral,  // Hazelight emits "Expected ')' or ','" + "Instead found '<string constant>'" — `"foo " "bar"` C-style splice.
+        BareCtorNoMatchingSignatures,  // `No matching signatures to '<Ident>(<args>)'` — no `::`; constructor-style call on an unregistered type.
     };
 
     struct CKANGELSCRIPTGENERATOR_API FCk_AsParsedError
@@ -47,9 +56,10 @@ namespace ck::angelscriptgenerator::self_heal
         // Populated for Kind == NoMatchingSignatures.
         FString TargetNamespace;
         FString FunctionName;
-        FString ArgsList;          // e.g. "const FTransform"; empty for no-arg
+        FString ArgsList;          // e.g. "const FTransform"; empty for no-arg. Also populated for BareCtorNoMatchingSignatures (the ctor args).
 
-        // Populated for Kind == IdentifierNotADataType.
+        // Populated for Kind == IdentifierNotADataType (the missing type) and
+        // BareCtorNoMatchingSignatures (the constructed type).
         FString MissingIdentifier;
         FString LookupScope;       // empty when "in global namespace" or absent
 
