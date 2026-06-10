@@ -15,11 +15,11 @@ FCkUsf_SurfaceOutput CkUsf_Pass_SmokeBuffer(
     FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
 
     float2 texel = 1.0 / max(iResolution.xy, float2(1.0, 1.0));
-    float c  = iChannel0.Sample(iChannel0Sampler, UV).r;
-    float l  = iChannel0.Sample(iChannel0Sampler, UV + float2(-texel.x, 0.0)).r;
-    float r  = iChannel0.Sample(iChannel0Sampler, UV + float2( texel.x, 0.0)).r;
-    float u  = iChannel0.Sample(iChannel0Sampler, UV + float2(0.0, -texel.y)).r;
-    float dn = iChannel0.Sample(iChannel0Sampler, UV + float2(0.0,  texel.y)).r;
+    float c  = iChannel0.SampleLevel(iChannel0Sampler, UV, 0).r;
+    float l  = iChannel0.SampleLevel(iChannel0Sampler, UV + float2(-texel.x, 0.0), 0).r;
+    float r  = iChannel0.SampleLevel(iChannel0Sampler, UV + float2( texel.x, 0.0), 0).r;
+    float u  = iChannel0.SampleLevel(iChannel0Sampler, UV + float2(0.0, -texel.y), 0).r;
+    float dn = iChannel0.SampleLevel(iChannel0Sampler, UV + float2(0.0,  texel.y), 0).r;
 
     float field = (c * 0.6 + (l + r + u + dn) * 0.1) * 0.985; // diffuse + decay
 

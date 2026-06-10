@@ -9,7 +9,7 @@ FCkUsf_SurfaceOutput CkUsf_Blit(FCkUsf_SurfaceInput In, Texture2D iChannel0, Sam
     float Time = In.Time;
     float2 UV = In.UV;
     FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
-    O.EmissiveColor = iChannel0.Sample(iChannel0Sampler, UV).rgb;
+    O.EmissiveColor = iChannel0.SampleLevel(iChannel0Sampler, UV, 0).rgb;
     O.BaseColor = float3(0.0, 0.0, 0.0);
     O.Opacity = 1.0;
     return O;
