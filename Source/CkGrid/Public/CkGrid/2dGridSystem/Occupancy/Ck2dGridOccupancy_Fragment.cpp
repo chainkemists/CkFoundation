@@ -22,13 +22,16 @@
         FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
             []() -> UScriptStruct* { return FCk_RepData_2dGridPlacements::StaticStruct(); },
             {
-                .OnChange = [DoApplyPlacements](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& Old)
+                // Stamps the sync fragment consumed by the Occupancy SyncReplication processor
+                // (which owns rebuild + reconcile) — always Applied, the processor has its own gating.
+                .Apply = [DoApplyPlacements](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
                 {
-                    DoApplyPlacements(Entity, New.Get<FCk_RepData_2dGridPlacements>().Placements, Old.Get<FCk_RepData_2dGridPlacements>().Placements);
-                },
-                .OnAdd = [DoApplyPlacements](FCk_Handle& Entity, const FInstancedStruct& Data)
-                {
-                    DoApplyPlacements(Entity, Data.Get<FCk_RepData_2dGridPlacements>().Placements, TArray<FCk_2dGridPlacement_ReplicatedEntry>{});
+                    DoApplyPlacements(Entity,
+                        New.Get<FCk_RepData_2dGridPlacements>().Placements,
+                        Old.IsSet()
+                            ? Old.GetValue().Get<FCk_RepData_2dGridPlacements>().Placements
+                            : TArray<FCk_2dGridPlacement_ReplicatedEntry>{});
+                    return ECk_RepFragment_ApplyResult::Applied;
                 }
             });
     }
