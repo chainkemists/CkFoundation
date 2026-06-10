@@ -1,5 +1,7 @@
 ﻿#include "CkAnimatableRetainerBox_Widget.h"
 
+#include "CkUI/Types/CkUI_Types.h"
+
 #include "Slate/SRetainerWidget.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -65,6 +67,14 @@ auto
 
     // Called at the end because we want to handle SynchronizeProperties before our parent
     Super::PostEditChangeProperty(PropertyChangedEvent);
+}
+
+auto
+    UCk_AnimatableRetainerBox::
+    GetPaletteCategory()
+    -> const FText
+{
+    return ck::widget_palette_categories::Default;
 }
 #endif
 

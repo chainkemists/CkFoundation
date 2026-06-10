@@ -1,18 +1,3 @@
-// Nativized from the BP "Flipbook" UMG widgets (CSWFlipbookUMG / WBP_Flipbook).
-// An animated image that pre-bakes one FSlateBrush per frame and swaps them on a
-// looping timer. Two source modes feed the same playback machinery:
-//   - PaperFlipbook : one brush per UPaperFlipbook sprite keyframe.
-//   - SpriteSheet   : one brush per Rows x Columns cell of a single texture,
-//                     each brush sharing the texture but carrying its cell's
-//                     UVRegion (no material / Phase-tween required).
-//
-// Self-contained UImage subclass: no BindWidget, no companion WBP. Drop
-// "Ck Flipbook" straight into any widget and set the source mode / Loop / etc.
-//
-// Improvements over the BP source (per CkFoundation conventions): type-safe
-// FTimerManager member-delegate stepping, OnFinished / OnLoop delegates,
-// FCk_Time frame interval, ck::IsValid guards.
-
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
