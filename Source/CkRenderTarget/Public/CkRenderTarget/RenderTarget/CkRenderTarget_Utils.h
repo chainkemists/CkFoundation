@@ -244,15 +244,29 @@ public:
 public:
     // Test seam: injects a synthetic readback result directly after the GPU step, so
     // diff → compress → payload (and transport/apply downstream) run under -nullrhi CI. Not for
-    // gameplay use; no-ops with an ensure in Shipping builds.
+    // gameplay use; no-ops in Shipping builds.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|RenderTarget",
-              DisplayName="[Ck][RenderTarget] DEBUG Inject Captured Pixels")
+              DisplayName="[Ck][RenderTarget] DEBUG Inject Captured Pixels",
+              meta = (DevelopmentOnly))
     static FCk_Handle_RenderTarget
     Debug_InjectCapturedPixels(
         UPARAM(ref) FCk_Handle_RenderTarget& InRenderTargetEntity,
         const TArray<uint8>& InPixels,
         FIntPoint InSize);
+
+    // Test seam companion to Debug_InjectCapturedPixels: redraws the local target from the
+    // last captured snapshot through the same transient-upload-texture path the pixel-apply
+    // processors use. Paired with a follow-up capture, this pins the GPU round trip as
+    // byte-preserving — a gamma/format mismatch in the redraw produces a spurious diff.
+    // Requires a prior capture and a real RHI; no-ops in Shipping builds.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|RenderTarget",
+              DisplayName="[Ck][RenderTarget] DEBUG Redraw Target From Last Snapshot",
+              meta = (DevelopmentOnly))
+    static FCk_Handle_RenderTarget
+    Debug_RedrawTargetFromLastSnapshot(
+        UPARAM(ref) FCk_Handle_RenderTarget& InRenderTargetEntity);
 
 public:
     UFUNCTION(BlueprintCallable,

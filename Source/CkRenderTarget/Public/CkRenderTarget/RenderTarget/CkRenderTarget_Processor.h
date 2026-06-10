@@ -14,6 +14,22 @@ class UWorld;
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_render_target_processor
+{
+    // Draws a CPU pixel buffer into the entity's local render target through a transient
+    // upload texture. Shared by the pixel-apply processors and the Utils test seam
+    // (Debug_RedrawTargetFromLastSnapshot). Defined in CkRenderTarget_Processor.cpp.
+    CKRENDERTARGET_API auto
+    DrawPixelsToTarget(
+        const FCk_Handle_RenderTarget& InRenderTargetEntity,
+        const ck::FFragment_RenderTarget_Current& InCurrent,
+        const TArray<uint8>& InPixels,
+        const FIntPoint& InSize,
+        TStrongObjectPtr<UTexture2D>& InOutUploadTexture) -> void;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     // Resolves the drawable target for the sync entity: Managed mode creates a transient RGBA8
