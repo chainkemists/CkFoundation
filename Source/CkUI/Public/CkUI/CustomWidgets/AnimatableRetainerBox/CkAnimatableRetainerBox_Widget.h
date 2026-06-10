@@ -36,6 +36,8 @@ protected:
 #if WITH_EDITOR
     auto PostEditChangeProperty(
         FPropertyChangedEvent& PropertyChangedEvent) -> void override;
+
+    auto GetPaletteCategory() -> const FText override;
 #endif
 };
 
