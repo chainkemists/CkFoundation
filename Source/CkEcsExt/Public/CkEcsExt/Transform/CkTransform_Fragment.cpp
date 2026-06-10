@@ -25,98 +25,73 @@ static struct FTransformRepHandlerRegistrar
 {
     FTransformRepHandlerRegistrar()
     {
+        // Transform is composed during construction proper (pre-link), so it always exists by
+        // dispatch time — Apply never returns NotReady. An unset Old means first application: snap
+        // directly (an interpolation offset would glide the entity in from origin).
+
         FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
             []() -> UScriptStruct* { return FCk_RepData_Location::StaticStruct(); },
             {
-                .OnChange = [](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& /*Old*/)
+                .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
                 {
                     auto HandleTransform = UCk_Utils_Transform_UE::Cast(Entity);
                     if (ck::Is_NOT_Valid(HandleTransform))
-                    { return; }
+                    { return ECk_RepFragment_ApplyResult::Applied; }
 
                     const auto& Location = New.Get<FCk_RepData_Location>().Value;
 
-                    if (UCk_Utils_TransformInterpolation_UE::Has(HandleTransform))
+                    if (Old.IsSet() && UCk_Utils_TransformInterpolation_UE::Has(HandleTransform))
                     {
                         auto HandleTransformInterpolation = UCk_Utils_TransformInterpolation_UE::CastChecked(Entity);
                         const auto CurrentLoc = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(HandleTransform);
                         UCk_Utils_TransformInterpolation_UE::Request_SetInterpolationGoal_LocationOffset(
                             HandleTransformInterpolation, Location - CurrentLoc);
-                        return;
+                        return ECk_RepFragment_ApplyResult::Applied;
                     }
 
                     UCk_Utils_Transform_UE::Request_SetLocation(HandleTransform, FCk_Request_Transform_SetLocation{Location});
-                },
-                .OnAdd = [](FCk_Handle& Entity, const FInstancedStruct& Data)
-                {
-                    // Initial replication arrives as an Add, never a Change — snap directly
-                    // (no interpolation offset, which would glide the entity in from origin).
-                    auto HandleTransform = UCk_Utils_Transform_UE::Cast(Entity);
-                    if (ck::Is_NOT_Valid(HandleTransform))
-                    { return; }
-
-                    UCk_Utils_Transform_UE::Request_SetLocation(HandleTransform,
-                        FCk_Request_Transform_SetLocation{Data.Get<FCk_RepData_Location>().Value});
+                    return ECk_RepFragment_ApplyResult::Applied;
                 }
             });
 
         FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
             []() -> UScriptStruct* { return FCk_RepData_Rotation::StaticStruct(); },
             {
-                .OnChange = [](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& /*Old*/)
+                .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
                 {
                     auto HandleTransform = UCk_Utils_Transform_UE::Cast(Entity);
                     if (ck::Is_NOT_Valid(HandleTransform))
-                    { return; }
+                    { return ECk_RepFragment_ApplyResult::Applied; }
 
                     const auto& Rotation = New.Get<FCk_RepData_Rotation>().Value;
 
-                    if (UCk_Utils_TransformInterpolation_UE::Has(HandleTransform))
+                    if (Old.IsSet() && UCk_Utils_TransformInterpolation_UE::Has(HandleTransform))
                     {
                         auto HandleTransformInterpolation = UCk_Utils_TransformInterpolation_UE::CastChecked(Entity);
                         const auto CurrentRot = UCk_Utils_Transform_UE::Get_EntityCurrentRotation(HandleTransform);
                         UCk_Utils_TransformInterpolation_UE::Request_SetInterpolationGoal_RotationOffset(
                             HandleTransformInterpolation, Rotation.Rotator() - CurrentRot);
-                        return;
+                        return ECk_RepFragment_ApplyResult::Applied;
                     }
 
                     UCk_Utils_Transform_UE::Request_SetRotation(HandleTransform, FCk_Request_Transform_SetRotation{Rotation.Rotator()});
-                },
-                .OnAdd = [](FCk_Handle& Entity, const FInstancedStruct& Data)
-                {
-                    // Initial replication arrives as an Add, never a Change — snap directly.
-                    auto HandleTransform = UCk_Utils_Transform_UE::Cast(Entity);
-                    if (ck::Is_NOT_Valid(HandleTransform))
-                    { return; }
-
-                    UCk_Utils_Transform_UE::Request_SetRotation(HandleTransform,
-                        FCk_Request_Transform_SetRotation{Data.Get<FCk_RepData_Rotation>().Value.Rotator()});
+                    return ECk_RepFragment_ApplyResult::Applied;
                 }
             });
 
         FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
             []() -> UScriptStruct* { return FCk_RepData_Scale::StaticStruct(); },
             {
-                .OnChange = [](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& /*Old*/)
+                .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
                 {
                     auto HandleTransform = UCk_Utils_Transform_UE::Cast(Entity);
                     if (ck::Is_NOT_Valid(HandleTransform))
-                    { return; }
+                    { return ECk_RepFragment_ApplyResult::Applied; }
 
                     UCk_Utils_Transform_UE::Request_SetScale(HandleTransform,
                         FCk_Request_Transform_SetScale{New.Get<FCk_RepData_Scale>().Value}
                             .Set_LocalWorld(ECk_LocalWorld::World));
-                },
-                .OnAdd = [](FCk_Handle& Entity, const FInstancedStruct& Data)
-                {
-                    // Initial replication arrives as an Add, never a Change — snap directly.
-                    auto HandleTransform = UCk_Utils_Transform_UE::Cast(Entity);
-                    if (ck::Is_NOT_Valid(HandleTransform))
-                    { return; }
-
-                    UCk_Utils_Transform_UE::Request_SetScale(HandleTransform,
-                        FCk_Request_Transform_SetScale{Data.Get<FCk_RepData_Scale>().Value}
-                            .Set_LocalWorld(ECk_LocalWorld::World));
+                    return ECk_RepFragment_ApplyResult::Applied;
                 }
             });
     }
