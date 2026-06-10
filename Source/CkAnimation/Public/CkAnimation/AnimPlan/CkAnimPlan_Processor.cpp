@@ -6,11 +6,14 @@
 #include "CkAnimation/AnimPlan/CkAnimPlan_Utils.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
+#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_AnimPlan_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_AnimPlan_Replicate);
+CK_REGISTER_PROCESSOR(ck::FProcessor_AnimPlan_ReplicateOnRestore);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -137,6 +140,35 @@ namespace ck
             else
             { *Found = ToReplicate; }
         });
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_AnimPlan_ReplicateOnRestore::
+        ForEachEntity(
+            TimeType /*InDeltaT*/,
+            HandleType InHandle,
+            const FFragment_AnimPlan_Params& /*InParams*/,
+            const FFragment_AnimPlan_Current& /*InCurrent*/) const
+        -> void
+    {
+        if (NOT InHandle.Has<FTag_Snapshot_JustRestored>())
+        { return; }
+
+        if (InHandle.Has<FTag_AnimPlan_RestoreReplicated>())
+        { return; }
+
+        auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+
+        // Owner driver not re-established yet -> retry next tick (the shared marker stays in place).
+        if (NOT UCk_Utils_EntityReplicationDriver_UE::Has(LifetimeOwner))
+        { return; }
+
+        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_AnimPlans>(LifetimeOwner);
+
+        InHandle.AddOrGet<FTag_AnimPlan_MayRequireReplication>();
+        InHandle.Add<FTag_AnimPlan_RestoreReplicated>();
     }
 }
 
