@@ -12,6 +12,8 @@
 
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
+#include <Serialization/Archive.h>
+
 #include "CkAcceleration_Fragment.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -19,11 +21,17 @@
 class UCk_Utils_Acceleration_UE;
 class UCk_Utils_BulkAccelerationModifier_UE;
 
+namespace ck { class FSnapshotContext; }
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_Acceleration_NeedsSetup);
+
+    // Per-feature restore-replication done marker — see FTag_TagSet_RestoreReplicated for the pattern
+    // (the shared ck::FTag_Snapshot_JustRestored may not be removed by any single owner-resident feature).
+    CK_DEFINE_ECS_TAG(FTag_Acceleration_RestoreReplicated);
     CK_DEFINE_ECS_TAG(FTag_AccelerationChannel);
     CK_DEFINE_ECS_TAG(FTag_AccelerationModifier);
     CK_DEFINE_ECS_TAG(FTag_AccelerationModifier_NeedsSetup);
@@ -39,6 +47,23 @@ namespace ck
 
     public:
         using ParamsType = FCk_Fragment_Acceleration_ParamsData;
+        using IsSnapshotable = void;
+
+        // Tier-C: hand-rolled — the wrapped reflected struct exposes its fields only through
+        // getters + the generated constructor, so round-trip through locals.
+        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& /*InCtx*/) -> void
+        {
+            auto Coordinates = static_cast<uint8>(_Params.Get_Coordinates());
+            auto StartingAcceleration = _Params.Get_StartingAcceleration();
+
+            InAr << Coordinates;
+            InAr << StartingAcceleration;
+
+            if (InAr.IsLoading())
+            {
+                _Params = ParamsType{static_cast<ECk_LocalWorld>(Coordinates), StartingAcceleration};
+            }
+        }
 
     private:
         ParamsType _Params;
@@ -62,6 +87,14 @@ namespace ck
         friend class FProcessor_Acceleration_Setup;
         friend class FProcessor_AccelerationModifier_Setup;
         friend class FProcessor_AccelerationModifier_EndPlay;
+
+    public:
+        using IsSnapshotable = void;
+
+        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& /*InCtx*/) -> void
+        {
+            InAr << _CurrentAcceleration;
+        }
 
     private:
         FVector _CurrentAcceleration = FVector::ZeroVector;

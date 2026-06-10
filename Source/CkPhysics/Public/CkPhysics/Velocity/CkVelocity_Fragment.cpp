@@ -4,6 +4,21 @@
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
+#include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
+#include "CkEcs/Snapshot/CkSnapshot_Archive_Writer.h"
+#include "CkEcs/Snapshot/CkSnapshot_Archive_Reader.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+// Tier-C SerializeSnapshot registration (aliases because CK_REGISTER_SNAPSHOTABLE token-pastes the name).
+
+using FSnap_Velocity_Params  = ck::FFragment_Velocity_Params;
+using FSnap_Velocity_Current = ck::FFragment_Velocity_Current;
+using FSnap_Velocity_MinMax  = ck::FFragment_Velocity_MinMax;
+
+CK_REGISTER_SNAPSHOTABLE(FSnap_Velocity_Params);
+CK_REGISTER_SNAPSHOTABLE(FSnap_Velocity_Current);
+CK_REGISTER_SNAPSHOTABLE(FSnap_Velocity_MinMax);
+
 // --------------------------------------------------------------------------------------------------------------------
 // Container-based replication handler for Velocity
 
