@@ -11,25 +11,19 @@ static struct FMontagePlayerRepHandlerRegistrar
 {
     FMontagePlayerRepHandlerRegistrar()
     {
-        const auto DoApply = [](FCk_Handle& InEntity, const FCk_MontagePlayer_State& InNewState, bool InIsOnAdd) -> void
-        {
-            auto Handle = UCk_Utils_MontagePlayer_UE::Cast(InEntity);
-            if (ck::Is_NOT_Valid(Handle))
-            { return; }
-
-            UCk_Utils_MontagePlayer_UE::DoDispatchReplicatedState(Handle, InNewState, InIsOnAdd);
-        };
-
         FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
             []() -> UScriptStruct* { return FCk_RepData_MontagePlayer::StaticStruct(); },
             {
-                .OnChange = [DoApply](FCk_Handle& InEntity, const FInstancedStruct& New, const FInstancedStruct& /*Old*/)
+                .Apply = [](FCk_Handle& InEntity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
                 {
-                    DoApply(InEntity, New.Get<FCk_RepData_MontagePlayer>().Value, /*IsOnAdd=*/false);
-                },
-                .OnAdd = [DoApply](FCk_Handle& InEntity, const FInstancedStruct& Data)
-                {
-                    DoApply(InEntity, Data.Get<FCk_RepData_MontagePlayer>().Value, /*IsOnAdd=*/true);
+                    auto Handle = UCk_Utils_MontagePlayer_UE::Cast(InEntity);
+                    if (ck::Is_NOT_Valid(Handle))
+                    { return ECk_RepFragment_ApplyResult::NotReady; }
+
+                    const auto IsFirstApplication = NOT Old.IsSet();
+                    UCk_Utils_MontagePlayer_UE::DoDispatchReplicatedState(
+                        Handle, New.Get<FCk_RepData_MontagePlayer>().Value, IsFirstApplication);
+                    return ECk_RepFragment_ApplyResult::Applied;
                 }
             });
     }
