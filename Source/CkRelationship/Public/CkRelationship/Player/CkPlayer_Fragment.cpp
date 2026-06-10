@@ -11,36 +11,21 @@ static struct FPlayerRepHandlerRegistrar
 {
     FPlayerRepHandlerRegistrar()
     {
-        const auto DoApplyPlayer = [](FCk_Handle& Entity, ECk_Player_ID InPlayerID)
-        {
-            if (NOT UCk_Utils_Player_UE::Has(Entity))
-            {
-                // The container OnAdd replay at PostLink runs before OnConstructed-driven composition
-                // on clients. Never compose the feature from the apply path — stash the authoritative
-                // value and let FProcessor_Player_RetryPendingReplication apply it once the feature exists.
-                Entity.AddOrGet<ck::FFragment_Player_PendingReplication>() =
-                    ck::FFragment_Player_PendingReplication{InPlayerID};
-                return;
-            }
-
-            auto PlayerEntity = UCk_Utils_Player_UE::Cast(Entity);
-
-            if (UCk_Utils_Player_UE::Get_IsAssignedTo(PlayerEntity, InPlayerID))
-            { return; }
-
-            UCk_Utils_Player_UE::Assign(PlayerEntity, InPlayerID);
-        };
-
         FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
         []() -> UScriptStruct* { return FCk_RepData_Player::StaticStruct(); },
         {
-            .OnChange = [DoApplyPlayer](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& /*Old*/)
+            .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
             {
-                DoApplyPlayer(Entity, New.Get<FCk_RepData_Player>().Value);
-            },
-            .OnAdd = [DoApplyPlayer](FCk_Handle& Entity, const FInstancedStruct& Data)
-            {
-                DoApplyPlayer(Entity, Data.Get<FCk_RepData_Player>().Value);
+                if (NOT UCk_Utils_Player_UE::Has(Entity))
+                { return ECk_RepFragment_ApplyResult::NotReady; }
+
+                auto PlayerEntity = UCk_Utils_Player_UE::Cast(Entity);
+                const auto PlayerID = New.Get<FCk_RepData_Player>().Value;
+
+                if (NOT UCk_Utils_Player_UE::Get_IsAssignedTo(PlayerEntity, PlayerID))
+                { UCk_Utils_Player_UE::Assign(PlayerEntity, PlayerID); }
+
+                return ECk_RepFragment_ApplyResult::Applied;
             }
         });
     }
