@@ -765,8 +765,12 @@ namespace ck::angelscriptgenerator::self_heal
         // ---- Per-signature convergence gate ----------------------------------------
         //
         // Built from the same content the existing Describe_Action helper uses
-        // for log/MessageLog entries — keeps the banner output and the cap key
-        // textually aligned.
+        // for log/MessageLog entries, except the args list is NORMALIZED
+        // (const/& stripped) so call-site argument-category variants of the
+        // same logical signature (literal vs lvalue → "const int" vs "int&")
+        // share one tracker instead of each getting an independent repeat
+        // budget. Describe_Action stays raw on purpose — it echoes the error
+        // verbatim for forensics.
         auto Build_SignatureKey(
             const FCk_RecoveryAction& InAction) -> FString
         {
@@ -778,7 +782,7 @@ namespace ck::angelscriptgenerator::self_heal
                     return FString::Printf(TEXT("%s::%s(%s)"),
                         *InAction.Error.TargetNamespace,
                         *InAction.Error.FunctionName,
-                        *InAction.Error.ArgsList);
+                        *FCkAsStubSynthesizer::Normalize_ArgsList(InAction.Error.ArgsList));
                 }
                 case ECk_RecoveryStrategy::KickGenerator_DynamicHandle:
                 {
