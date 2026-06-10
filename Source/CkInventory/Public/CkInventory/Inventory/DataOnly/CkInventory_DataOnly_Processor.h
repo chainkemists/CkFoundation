@@ -52,13 +52,12 @@ namespace ck
     // the owner-hosted container entry is missing (Construct is abstained during reconstitution) —
     // re-derive all three from the restored FFragment_Inventory_Params (whose _InventoryType is the
     // shape discriminator), then re-arm FTag_Inventory_MayRequireReplication so the Replicate
-    // processor rebuilds the wire entries from the restored item record. SPATIAL inventories are
-    // deliberately NOT handled: their grid child entity does not survive a save until CkGrid gains
-    // snapshot wiring — restored Spatial inventories stay shape-tagless and inert (see the
-    // restore-coverage ratchet reason). The view has no shape tag (it is lost); the body filters on
-    // the discriminator. Pairs ck::FTag_Snapshot_JustRestored (shared per-entity, never removed
-    // here) with the per-feature done tag, and POINT-QUERIES the in_place marker (listing it in
-    // the view would surface tombstones).
+    // processor rebuilds the wire entries from the restored item record. SPATIAL inventories
+    // re-drive through their own sibling (FProcessor_Inventory_Spatial_ReplicateOnRestore), which
+    // additionally re-composes the snapshot-invisible grid state. The view has no shape tag
+    // dependency; the body filters on the discriminator. Pairs ck::FTag_Snapshot_JustRestored
+    // (shared per-entity, never removed here) with the per-feature done tag, and POINT-QUERIES the
+    // in_place marker (listing it in the view would surface tombstones).
     class CKINVENTORY_API FProcessor_Inventory_DataOnly_ReplicateOnRestore : public ck_exp::TProcessor<
             FProcessor_Inventory_DataOnly_ReplicateOnRestore,
             FCk_Handle_Inventory,

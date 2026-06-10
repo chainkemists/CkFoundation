@@ -3,6 +3,7 @@
 #include "CkInventory/Inventory/CkInventory_Fragment.h"
 #include "CkInventory/Inventory/CkInventory_Utils.h"
 #include "CkInventory/Inventory/Spatial/CkInventory_Spatial_RequestTraits.h"
+#include "CkInventory/Item/CkItem_Fragment.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Validation/CkIsValid.h"
@@ -238,6 +239,12 @@ auto
         const FCk_Handle_Item& InItem)
     -> ECk_CardinalRotation
 {
+    // Placement decision record (written by Request_PlaceItemOnGrid) — O(1) and snapshot-stable.
+    // The Transform-yaw derivation remains the fallback for items placed before the fragment existed.
+    if (auto Item = InItem;
+        Item.Has<ck::FFragment_Item_SpatialPlacement>())
+    { return Item.Get<ck::FFragment_Item_SpatialPlacement>().Get_Rotation(); }
+
     auto TransformHandle = UCk_Utils_Transform_UE::Cast(InItem);
 
     if (ck::Is_NOT_Valid(TransformHandle))
@@ -265,9 +272,19 @@ auto
         const FCk_Handle_Item& InItem)
     -> FIntPoint
 {
+    // Placement decision record (written by Request_PlaceItemOnGrid) — O(1) and snapshot-stable.
+    // The cell scan below remains the fallback for items placed before the fragment existed.
+    if (auto Item = InItem;
+        Item.Has<ck::FFragment_Item_SpatialPlacement>())
+    { return Item.Get<ck::FFragment_Item_SpatialPlacement>().Get_Anchor(); }
+
     auto Coordinate = ck::Inventory::AutoPlaceCoordinate;
 
+    // A Spatial inventory without a (re)composed grid — e.g. freshly snapshot-restored before its
+    // restore processor runs — has nothing to scan; walking the tombstone handle would crash.
     const auto& GridHandle = Get_Grid(InInventory);
+    if (ck::Is_NOT_Valid(GridHandle))
+    { return Coordinate; }
 
     UCk_Utils_2dGridSystem_UE::ForEach_Cell(GridHandle, ECk_2dGridSystem_CellFilter::OnlyActiveCells,
         [&](const FCk_Handle_2dGridCell& InCell)
@@ -435,6 +452,17 @@ auto
         }
     });
 
+    // ---- Store the placement decision record on the item ----
+    // The cell ItemRefs above are DERIVED state in the grid's private cell registry (invisible to
+    // snapshots); this fragment is the persistent + O(1)-readable home for the placement.
+
+    {
+        auto Item = InItem;
+        auto& Placement = Item.AddOrGet<ck::FFragment_Item_SpatialPlacement>();
+        Placement._Anchor = InCoordinate;
+        Placement._Rotation = InRotation;
+    }
+
     // ---- Store rotation on item's Transform ----
 
     if (auto TransformHandle = UCk_Utils_Transform_UE::Cast(InItem);
@@ -465,6 +493,13 @@ auto
             ck::TUtils_InventorySlot_ItemRef::Clear(InCell);
         }
     });
+
+    // ---- Drop the placement decision record ----
+
+    {
+        auto Item = InItem;
+        Item.Try_Remove<ck::FFragment_Item_SpatialPlacement>();
+    }
 
     // ---- Reset rotation on item's Transform ----
 
