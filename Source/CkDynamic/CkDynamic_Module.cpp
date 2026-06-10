@@ -1,9 +1,11 @@
 #include "CkDynamic_Module.h"
 
+#include "CkCore/Payload/CkPayload.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkDynamic/CkDynamic_Fragment.h"
 #include "CkDynamic/CkDynamic_ScriptProcessor_Host.h"
+#include "CkDynamic/CkDynamic_Utils.h"
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
@@ -14,24 +16,26 @@ void FCkDynamicModule::StartupModule()
     ck::FScriptProcessor_Host::Startup();
 
     // Generic catch-all for replicated dynamic fragments: their payload UScriptStruct is only known at
-    // runtime, so no per-type handler can be registered. On a client, when a replicated dynamic-fragment
-    // payload arrives/changes, stash it onto the entity for FProcessor_DynamicFragment_SyncReplication to
-    // apply + signal on the game thread (never write storage / broadcast inline on the OnRep path).
+    // runtime, so no per-type handler can be registered. The dispatcher invokes Apply on the game
+    // thread after composition — dynamic fragments need no composition, so write storage + broadcast
+    // RepNotify directly and return Applied.
     FCk_ReplicatedFragmentHandlerRegistry::RegisterFallback(
     {
-        .OnChange = [](FCk_Handle& InEntity, const FInstancedStruct& InNew, const FInstancedStruct& /*InOld*/)
+        .Apply = [](FCk_Handle& InEntity, const FInstancedStruct& InNew, const TOptional<FInstancedStruct>& /*InOld*/) -> ECk_RepFragment_ApplyResult
         {
-            if (ck::Is_NOT_Valid(InNew.GetScriptStruct()))
-            { return; }
+            const auto* Type = InNew.GetScriptStruct();
+            if (ck::Is_NOT_Valid(Type))
+            { return ECk_RepFragment_ApplyResult::Applied; }
 
-            InEntity.AddOrGet<ck::FFragment_DynamicFragment_SyncReplication>().Get_PendingPayloads().Add(InNew);
-        },
-        .OnAdd = [](FCk_Handle& InEntity, const FInstancedStruct& InData)
-        {
-            if (ck::Is_NOT_Valid(InData.GetScriptStruct()))
-            { return; }
+            auto& Storage = UCk_Utils_DynamicFragment_UE::AddOrGet_Fragment_TypeUnsafe(InEntity, Type);
+            Storage = InNew;
 
-            InEntity.AddOrGet<ck::FFragment_DynamicFragment_SyncReplication>().Get_PendingPayloads().Add(InData);
+            auto Info = FCk_DynamicFragment_RepNotifyInfo{};
+            Info.ChangedType = const_cast<UScriptStruct*>(Type);
+
+            ck::UUtils_Signal_DynamicFragment_OnRepNotify::Broadcast(InEntity, ck::MakePayload(InEntity, Info));
+
+            return ECk_RepFragment_ApplyResult::Applied;
         }
     });
 }
