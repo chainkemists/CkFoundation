@@ -18,6 +18,7 @@
 #include "CkIskmProxy_Fragment_Data.generated.h"
 
 class UCk_IskmAnimCollection_Data;
+class UMaterialInterface;
 
 // ---- enums ----
 
@@ -275,6 +276,80 @@ public:
     CK_PROPERTY(_Value);
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_IskmProxy_SetCustomDataFloat, _Offset, _Value);
+};
+
+// Per-proxy material override on the BASE SKMC only (v1 scope — submeshes carry
+// their own def-time override materials via FCk_IskmRenderer_MeshDesc). Stored
+// sparsely in FFragment_IskmProxy_MaterialOverrides so EndPlay can restore the
+// pooled SKMC's mesh-default materials and Setup can re-apply after a
+// (re)allocation. SlotIndex is validated in the handler against the mesh's
+// material-slot count.
+USTRUCT(BlueprintType)
+struct CKISKMRENDERER_API FCk_Request_IskmProxy_SetMaterialOverride : public FCk_Request_Base
+{
+    GENERATED_BODY()
+public:
+    CK_GENERATED_BODY(FCk_Request_IskmProxy_SetMaterialOverride);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IskmProxy_SetMaterialOverride);
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    int32 _SlotIndex = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    TObjectPtr<UMaterialInterface> _Material;
+public:
+    CK_PROPERTY_GET(_SlotIndex);
+    CK_PROPERTY_GET(_Material);
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_IskmProxy_SetMaterialOverride, _SlotIndex, _Material);
+};
+
+// Drops every recorded override and restores the mesh's default material on
+// all base-SKMC slots.
+USTRUCT(BlueprintType)
+struct CKISKMRENDERER_API FCk_Request_IskmProxy_ClearMaterialOverrides : public FCk_Request_Base
+{
+    GENERATED_BODY()
+public:
+    CK_GENERATED_BODY(FCk_Request_IskmProxy_ClearMaterialOverrides);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IskmProxy_ClearMaterialOverrides);
+};
+
+// Per-proxy morph-target (blend-shape) write on the BASE SKMC only (v1 scope —
+// LeaderPoseComponent copies bone transforms, not morph curves, so submeshes do
+// NOT inherit these). Stored in FFragment_IskmProxy_MorphTargets so EndPlay can
+// ClearMorphTargets() on the pooled SKMC and Setup can re-apply after a
+// (re)allocation. Names that don't exist on the mesh are stored as curves with
+// no visual effect (engine behavior) — no validation against the mesh's morph
+// list is performed.
+USTRUCT(BlueprintType)
+struct CKISKMRENDERER_API FCk_Request_IskmProxy_SetMorphTarget : public FCk_Request_Base
+{
+    GENERATED_BODY()
+public:
+    CK_GENERATED_BODY(FCk_Request_IskmProxy_SetMorphTarget);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IskmProxy_SetMorphTarget);
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FName _MorphName = NAME_None;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    float _Value = 0.0f;
+public:
+    CK_PROPERTY_GET(_MorphName);
+    CK_PROPERTY_GET(_Value);
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_IskmProxy_SetMorphTarget, _MorphName, _Value);
+};
+
+// Drops every recorded morph target and clears all morph curves on the base SKMC.
+USTRUCT(BlueprintType)
+struct CKISKMRENDERER_API FCk_Request_IskmProxy_ClearMorphTargets : public FCk_Request_Base
+{
+    GENERATED_BODY()
+public:
+    CK_GENERATED_BODY(FCk_Request_IskmProxy_ClearMorphTargets);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IskmProxy_ClearMorphTargets);
 };
 
 // Outfit submesh attach. The submesh is identified by name (resolved against the

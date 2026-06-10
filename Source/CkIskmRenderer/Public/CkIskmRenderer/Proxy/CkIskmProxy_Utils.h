@@ -111,6 +111,83 @@ public:
         const FCk_Handle_IskmProxy& InHandle,
         int32 InOffset);
 
+    // ---- per-proxy material overrides ----
+    //
+    // V1 scope: overrides apply to the BASE SKMC only. Submeshes keep their
+    // def-time override materials (FCk_IskmRenderer_MeshDesc::_OverrideMaterials);
+    // static cosmetics are CkIsm-side. Overrides are reset to mesh defaults when
+    // the proxy returns its SKMC to the renderer pool (no leak across borrowers).
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Request Set Material Override")
+    static FCk_Handle_IskmProxy
+    Request_SetMaterialOverride(
+        UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
+        const FCk_Request_IskmProxy_SetMaterialOverride& InRequest);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Request Clear Material Overrides")
+    static FCk_Handle_IskmProxy
+    Request_ClearMaterialOverrides(UPARAM(ref) FCk_Handle_IskmProxy& InHandle);
+
+    // Returns the override recorded for the slot, or nullptr if the slot is
+    // not overridden.
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Get Material Override")
+    static UMaterialInterface*
+    Get_MaterialOverride(
+        const FCk_Handle_IskmProxy& InHandle,
+        int32 InSlotIndex);
+
+    // Effective material on the base SKMC for the slot (the override if one is
+    // applied, else the mesh default). Returns nullptr before Setup completes
+    // or for an out-of-range slot.
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Get Material")
+    static UMaterialInterface*
+    Get_Material(
+        const FCk_Handle_IskmProxy& InHandle,
+        int32 InSlotIndex);
+
+    // ---- per-proxy morph targets ----
+    //
+    // V1 scope: morphs apply to the BASE body mesh only. LeaderPoseComponent
+    // copies bone transforms, not morph curves, so outfit submeshes do NOT
+    // inherit these. Morph state is cleared when the proxy returns its SKMC to
+    // the renderer pool (no leak across borrowers).
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Request Set Morph Target")
+    static FCk_Handle_IskmProxy
+    Request_SetMorphTarget(
+        UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
+        FName InMorphName,
+        float InValue);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Request Clear Morph Targets")
+    static FCk_Handle_IskmProxy
+    Request_ClearMorphTargets(UPARAM(ref) FCk_Handle_IskmProxy& InHandle);
+
+    // Returns the value recorded for the morph via Request_SetMorphTarget, or
+    // 0 if unset (or cleared).
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Get Morph Target")
+    static float
+    Get_MorphTarget(
+        const FCk_Handle_IskmProxy& InHandle,
+        FName InMorphName);
+
+    // Live curve weight on the base SKMC for the morph (0 before Setup
+    // completes or if no curve is set). Reads the component, not the recorded
+    // request state — use this to observe what the renderer actually applied.
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Get Morph Target Weight")
+    static float
+    Get_MorphTargetWeight(
+        const FCk_Handle_IskmProxy& InHandle,
+        FName InMorphName);
+
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
         DisplayName="[Ck][IskmProxy] Request Attach Submesh")
     static FCk_Handle_IskmProxy

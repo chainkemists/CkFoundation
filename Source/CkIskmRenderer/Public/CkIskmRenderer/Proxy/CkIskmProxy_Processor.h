@@ -19,6 +19,8 @@ namespace ck
         TReadWrite<FFragment_IskmProxy_AnimState>,
         TReadWrite<FFragment_IskmProxy_PoseSource>,
         TReadWrite<FFragment_IskmProxy_CustomData>,
+        TReadWrite<FFragment_IskmProxy_MaterialOverrides>,
+        TReadWrite<FFragment_IskmProxy_MorphTargets>,
         FTag_IskmProxy_NeedsSetup,
         CK_IGNORE_PENDING_KILL>
     {
@@ -41,7 +43,9 @@ namespace ck
             FFragment_IskmProxy_Current& InCurrent,
             FFragment_IskmProxy_AnimState& InAnimState,
             FFragment_IskmProxy_PoseSource& InPoseSource,
-            FFragment_IskmProxy_CustomData& InCustomData) const -> void;
+            FFragment_IskmProxy_CustomData& InCustomData,
+            FFragment_IskmProxy_MaterialOverrides& InMaterialOverrides,
+            FFragment_IskmProxy_MorphTargets& InMorphTargets) const -> void;
 
     private:
         mutable TWeakObjectPtr<UWorld> _World;
@@ -87,6 +91,10 @@ namespace ck
         auto DoHandleRequest(HandleType& InHandle, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&, FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&, FFragment_IskmProxy_CustomData&, const FCk_Request_IskmProxy_StopAnimation&) const -> void;
         auto DoHandleRequest(HandleType& InHandle, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&, FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&, FFragment_IskmProxy_CustomData&, const FCk_Request_IskmProxy_SetPlayRate&) const -> void;
         auto DoHandleRequest(HandleType& InHandle, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&, FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&, FFragment_IskmProxy_CustomData&, const FCk_Request_IskmProxy_SetCustomDataFloat&) const -> void;
+        auto DoHandleRequest(HandleType& InHandle, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&, FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&, FFragment_IskmProxy_CustomData&, const FCk_Request_IskmProxy_SetMaterialOverride&) const -> void;
+        auto DoHandleRequest(HandleType& InHandle, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&, FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&, FFragment_IskmProxy_CustomData&, const FCk_Request_IskmProxy_ClearMaterialOverrides&) const -> void;
+        auto DoHandleRequest(HandleType& InHandle, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&, FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&, FFragment_IskmProxy_CustomData&, const FCk_Request_IskmProxy_SetMorphTarget&) const -> void;
+        auto DoHandleRequest(HandleType& InHandle, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&, FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&, FFragment_IskmProxy_CustomData&, const FCk_Request_IskmProxy_ClearMorphTargets&) const -> void;
         auto DoHandleRequest(HandleType& InHandle, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&, FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&, FFragment_IskmProxy_CustomData&, const FCk_Request_IskmProxy_AttachSubmesh&) const -> void;
         auto DoHandleRequest(HandleType& InHandle, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&, FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&, FFragment_IskmProxy_CustomData&, const FCk_Request_IskmProxy_DetachSubmesh&) const -> void;
         auto DoHandleRequest(HandleType& InHandle, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&, FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&, FFragment_IskmProxy_CustomData&, const FCk_Request_IskmProxy_DetachAllSubmeshes&) const -> void;

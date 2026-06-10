@@ -69,7 +69,9 @@ namespace ck
             FFragment_IskmProxy_Current& InCurrent,
             FFragment_IskmProxy_AnimState& InAnimState,
             FFragment_IskmProxy_PoseSource& InPoseSource,
-            FFragment_IskmProxy_CustomData& InCustomData) const -> void
+            FFragment_IskmProxy_CustomData& InCustomData,
+            FFragment_IskmProxy_MaterialOverrides& InMaterialOverrides,
+            FFragment_IskmProxy_MorphTargets& InMorphTargets) const -> void
     {
         auto RendererHandle = InParams.Get_Renderer();
         CK_ENSURE_IF_NOT(ck::IsValid(RendererHandle),
@@ -172,6 +174,23 @@ namespace ck
                 SKMC->SetCustomPrimitiveDataFloat(SlotIdx, FloatArray[Offset]);
             }
         }
+
+        // Re-apply stored material overrides. Empty on first Setup (requests only
+        // drain post-Setup) — load-bearing if the SKMC is ever (re)acquired after
+        // overrides were recorded on this entity.
+        for (const auto& Kvp : InMaterialOverrides._SlotToMaterial)
+        {
+            SKMC->SetMaterial(Kvp.Key, Kvp.Value.Get());
+        }
+        InMaterialOverrides._Dirty = false;
+
+        // Re-apply stored morph targets — same rationale as the material
+        // overrides above.
+        for (const auto& Kvp : InMorphTargets._Values)
+        {
+            SKMC->SetMorphTarget(Kvp.Key, Kvp.Value);
+        }
+        InMorphTargets._Dirty = false;
 
         // A3: tag the entity as movable if requested. Static proxies (no tag) are skipped
         // by FProcessor_IskmProxy_UpdateTransform every frame.
@@ -286,6 +305,17 @@ namespace ck
         }
         InCurrent._SubmeshSKMCs.Reset();
         InCurrent._AttachedSubmeshIndices.Reset();
+
+        // Pool hygiene (load-bearing): OverrideMaterials is a component-level array
+        // that survives Release_BaseSKMC's SetSkeletalMesh(nullptr) — without this
+        // clear, per-proxy material overrides leak to the next proxy that borrows
+        // this SKMC. V1 owns ALL override slots on the base SKMC, so a full clear
+        // restores mesh-default materials exactly.
+        SKMC->EmptyOverrideMaterials();
+
+        // Same pool hygiene for morph curves: MorphTargetCurves survives
+        // Release_BaseSKMC, so per-proxy morphs would leak to the next borrower.
+        SKMC->ClearMorphTargets();
 
         if (auto* Owner = SKMC->GetOwner())
         {
@@ -451,6 +481,135 @@ namespace ck
                 Child->SetCustomPrimitiveDataFloat(InRequest.Get_Offset(), InRequest.Get_Value());
             }
         }
+    }
+
+    auto
+        FProcessor_IskmProxy_HandleRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_IskmProxy_Params& /*InParams*/,
+            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy_AnimState& /*InAnimState*/,
+            FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
+            FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FCk_Request_IskmProxy_SetMaterialOverride& InRequest) const -> void
+    {
+        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
+            TEXT("IskmProxy [{}]: BaseSKMC missing in SetMaterialOverride handler"),
+            InHandle)
+        { return; }
+
+        CK_ENSURE_IF_NOT(ck::IsValid(InRequest.Get_Material()),
+            TEXT("IskmProxy [{}]: SetMaterialOverride request has a null Material for slot [{}]. Use Request_ClearMaterialOverrides to restore mesh-default materials"),
+            InHandle, InRequest.Get_SlotIndex())
+        { return; }
+
+        CK_ENSURE_IF_NOT(InRequest.Get_SlotIndex() >= 0 && InRequest.Get_SlotIndex() < SKMC->GetNumMaterials(),
+            TEXT("IskmProxy [{}]: SetMaterialOverride slot [{}] is out of range (mesh has [{}] material slots)"),
+            InHandle, InRequest.Get_SlotIndex(), SKMC->GetNumMaterials())
+        { return; }
+
+        // MaterialOverrides is added unconditionally in Add(...) but isn't threaded
+        // through the processor signature — re-threading every DoHandleRequest
+        // overload for two consumers isn't worth the churn.
+        auto& Overrides = InHandle.Get<FFragment_IskmProxy_MaterialOverrides>();
+        Overrides._SlotToMaterial.Add(
+            InRequest.Get_SlotIndex(),
+            TStrongObjectPtr<UMaterialInterface>{InRequest.Get_Material().Get()});
+        Overrides._Dirty = true;
+
+        SKMC->SetMaterial(InRequest.Get_SlotIndex(), InRequest.Get_Material());
+    }
+
+    auto
+        FProcessor_IskmProxy_HandleRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_IskmProxy_Params& /*InParams*/,
+            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy_AnimState& /*InAnimState*/,
+            FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
+            FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FCk_Request_IskmProxy_ClearMaterialOverrides& /*InRequest*/) const -> void
+    {
+        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
+            TEXT("IskmProxy [{}]: BaseSKMC missing in ClearMaterialOverrides handler"),
+            InHandle)
+        { return; }
+
+        auto& Overrides = InHandle.Get<FFragment_IskmProxy_MaterialOverrides>();
+
+        // Intentional silent return: clearing with no recorded overrides is a
+        // no-op (e.g. a randomizer that always clears before re-rolling).
+        if (Overrides._SlotToMaterial.IsEmpty()) { return; }
+
+        Overrides._SlotToMaterial.Reset();
+        Overrides._Dirty = true;
+
+        // V1 owns ALL override slots on the base SKMC, so a full component-level
+        // clear restores mesh-default materials exactly.
+        SKMC->EmptyOverrideMaterials();
+    }
+
+    auto
+        FProcessor_IskmProxy_HandleRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_IskmProxy_Params& /*InParams*/,
+            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy_AnimState& /*InAnimState*/,
+            FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
+            FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FCk_Request_IskmProxy_SetMorphTarget& InRequest) const -> void
+    {
+        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
+            TEXT("IskmProxy [{}]: BaseSKMC missing in SetMorphTarget handler"),
+            InHandle)
+        { return; }
+
+        CK_ENSURE_IF_NOT(InRequest.Get_MorphName() != NAME_None,
+            TEXT("IskmProxy [{}]: SetMorphTarget request has MorphName == None. Caller must supply a morph-target name"),
+            InHandle)
+        { return; }
+
+        // MorphTargets is added unconditionally in Add(...) but isn't threaded
+        // through the processor signature — same rationale as MaterialOverrides.
+        auto& Morphs = InHandle.Get<FFragment_IskmProxy_MorphTargets>();
+        Morphs._Values.Add(InRequest.Get_MorphName(), InRequest.Get_Value());
+        Morphs._Dirty = true;
+
+        SKMC->SetMorphTarget(InRequest.Get_MorphName(), InRequest.Get_Value());
+    }
+
+    auto
+        FProcessor_IskmProxy_HandleRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_IskmProxy_Params& /*InParams*/,
+            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy_AnimState& /*InAnimState*/,
+            FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
+            FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FCk_Request_IskmProxy_ClearMorphTargets& /*InRequest*/) const -> void
+    {
+        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
+            TEXT("IskmProxy [{}]: BaseSKMC missing in ClearMorphTargets handler"),
+            InHandle)
+        { return; }
+
+        auto& Morphs = InHandle.Get<FFragment_IskmProxy_MorphTargets>();
+
+        // Intentional silent return: clearing with no recorded morphs is a no-op.
+        if (Morphs._Values.IsEmpty()) { return; }
+
+        Morphs._Values.Reset();
+        Morphs._Dirty = true;
+
+        SKMC->ClearMorphTargets();
     }
 
     auto

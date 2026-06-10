@@ -24,6 +24,8 @@ auto
     InHandle.Add<ck::FFragment_IskmProxy_AnimState>();
     InHandle.Add<ck::FFragment_IskmProxy_PoseSource>();
     InHandle.Add<ck::FFragment_IskmProxy_CustomData>();
+    InHandle.Add<ck::FFragment_IskmProxy_MaterialOverrides>();
+    InHandle.Add<ck::FFragment_IskmProxy_MorphTargets>();
     InHandle.Add<ck::FFragment_IskmProxy_Requests>();
     InHandle.Add<ck::FTag_IskmProxy_NeedsSetup>();
 
@@ -181,6 +183,120 @@ auto
     if (ck::Is_NOT_Valid(InHandle)) { return 0.0f; }
     const auto& Cd = InHandle.Get<ck::FFragment_IskmProxy_CustomData>();
     return Cd.Get_Values().IsValidIndex(InOffset) ? Cd.Get_Values()[InOffset] : 0.0f;
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Request_SetMaterialOverride(
+        FCk_Handle_IskmProxy& InHandle,
+        const FCk_Request_IskmProxy_SetMaterialOverride& InRequest)
+    -> FCk_Handle_IskmProxy
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return InHandle; }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(InRequest);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Request_ClearMaterialOverrides(FCk_Handle_IskmProxy& InHandle)
+    -> FCk_Handle_IskmProxy
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return InHandle; }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(
+        FCk_Request_IskmProxy_ClearMaterialOverrides{});
+    return InHandle;
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Get_MaterialOverride(
+        const FCk_Handle_IskmProxy& InHandle,
+        int32 InSlotIndex)
+    -> UMaterialInterface*
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return nullptr; }
+
+    const auto& Overrides = InHandle.Get<ck::FFragment_IskmProxy_MaterialOverrides>();
+    if (const auto* Found = Overrides.Get_SlotToMaterial().Find(InSlotIndex))
+    {
+        return Found->Get();
+    }
+    return nullptr;
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Get_Material(
+        const FCk_Handle_IskmProxy& InHandle,
+        int32 InSlotIndex)
+    -> UMaterialInterface*
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return nullptr; }
+
+    auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_BaseSKMC().Get();
+    if (ck::Is_NOT_Valid(SKMC)) { return nullptr; }
+
+    // GetMaterial resolves override-then-mesh-default and returns nullptr for
+    // out-of-range slots — no extra range guard needed.
+    return SKMC->GetMaterial(InSlotIndex);
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Request_SetMorphTarget(
+        FCk_Handle_IskmProxy& InHandle,
+        FName InMorphName,
+        float InValue)
+    -> FCk_Handle_IskmProxy
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return InHandle; }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(
+        FCk_Request_IskmProxy_SetMorphTarget{InMorphName, InValue});
+    return InHandle;
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Request_ClearMorphTargets(FCk_Handle_IskmProxy& InHandle)
+    -> FCk_Handle_IskmProxy
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return InHandle; }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(
+        FCk_Request_IskmProxy_ClearMorphTargets{});
+    return InHandle;
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Get_MorphTarget(
+        const FCk_Handle_IskmProxy& InHandle,
+        FName InMorphName)
+    -> float
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return 0.0f; }
+
+    const auto& Morphs = InHandle.Get<ck::FFragment_IskmProxy_MorphTargets>();
+    if (const auto* Found = Morphs.Get_Values().Find(InMorphName))
+    {
+        return *Found;
+    }
+    return 0.0f;
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Get_MorphTargetWeight(
+        const FCk_Handle_IskmProxy& InHandle,
+        FName InMorphName)
+    -> float
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return 0.0f; }
+
+    auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_BaseSKMC().Get();
+    if (ck::Is_NOT_Valid(SKMC)) { return 0.0f; }
+
+    return SKMC->GetMorphTarget(InMorphName);
 }
 
 auto
