@@ -8,12 +8,15 @@
 #include "CkTagSet/CkTagSet_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
+#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_TagSet_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_TagSet_Replicate);
+CK_REGISTER_PROCESSOR(ck::FProcessor_TagSet_ReplicateOnRestore);
 CK_REGISTER_PROCESSOR(ck::FProcessor_TagSet_SyncReplication);
 
 namespace ck
@@ -127,6 +130,33 @@ namespace ck
         {
             Data.Tags = InTagSet.Get_Tags();
         });
+    }
+
+    // ---- ReplicateOnRestore (Server-side, post-snapshot-load) ----
+
+    auto
+        FProcessor_TagSet_ReplicateOnRestore::
+        ForEachEntity(
+            TimeType /*InDeltaT*/,
+            HandleType InHandle,
+            const FFragment_TagSet& /*InTagSet*/) const
+        -> void
+    {
+        if (NOT InHandle.Has<FTag_Snapshot_JustRestored>())
+        { return; }
+
+        if (InHandle.Has<FTag_TagSet_RestoreReplicated>())
+        { return; }
+
+        // Self-resident container: the driver rides this entity (see FProcessor_TagSet_Replicate).
+        // Not re-established yet -> retry next tick (the shared marker stays in place).
+        if (NOT UCk_Utils_EntityReplicationDriver_UE::Has(InHandle))
+        { return; }
+
+        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_TagSet>(InHandle);
+
+        InHandle.AddOrGet<FTag_TagSet_MayRequireReplication>();
+        InHandle.Add<FTag_TagSet_RestoreReplicated>();
     }
 
     // ---- SyncReplication (Client-side) ----
