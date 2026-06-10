@@ -734,4 +734,102 @@ bool FCkTest_StubSynthesizer_Inject_DedupOnSameAccessor::RunTest(const FString&)
     return true;
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+// Normalize_ArgsList: strips const and & per token; distinct base types stay
+// distinct. This is the canonicalization shared by stub emission, the dedup
+// end-marker, and the dispatcher's convergence key.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StubSynthesizer_NormalizeArgsList,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.NormalizeArgsList",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StubSynthesizer_NormalizeArgsList::RunTest(const FString&)
+{
+    TestEqual(TEXT("const + ref variants collapse to value form"),
+        FCkAsStubSynthesizer::Normalize_ArgsList(
+            TEXT("FTransform, FCk_Handle_CheckoutCounter&, const EBb_Role, const int, FVector")),
+        FString{TEXT("FTransform, FCk_Handle_CheckoutCounter, EBb_Role, int, FVector")});
+
+    TestEqual(TEXT("int& and const int normalize identically"),
+        FCkAsStubSynthesizer::Normalize_ArgsList(TEXT("int&")),
+        FCkAsStubSynthesizer::Normalize_ArgsList(TEXT("const int")));
+
+    TestNotEqual(TEXT("distinct base types stay distinct"),
+        FCkAsStubSynthesizer::Normalize_ArgsList(TEXT("int")),
+        FCkAsStubSynthesizer::Normalize_ArgsList(TEXT("float")));
+
+    TestEqual(TEXT("empty -> empty"),
+        FCkAsStubSynthesizer::Normalize_ArgsList(FString{}), FString{});
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Dedup on argument-category variants: regression for the 2026-06-10
+// CheckoutSettle incident. Two call sites of the SAME Params() — one passing
+// a literal (error reports "const int"), one passing an lvalue (error reports
+// "int&") — must produce ONE value-typed stub, not two. Two stubs differing
+// only by lvalue-ness are mutually ambiguous at every call site ("Multiple
+// matching signatures"), which the dispatcher cannot recognize or heal.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StubSynthesizer_Inject_DedupOnArgCategoryVariants,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.Inject_DedupOnArgCategoryVariants",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StubSynthesizer_Inject_DedupOnArgCategoryVariants::RunTest(const FString&)
+{
+    const auto TempRoot         = FPaths::ProjectIntermediateDir() / TEXT("CkStubSynthTest_DedupVariants");
+    const auto FixtureFile      = TempRoot / TEXT("BusterBlock_EntitySpawnParams.as");
+    const auto ExpectedStubFile = TempRoot / TEXT("_StubRecovery_BusterBlock_EntitySpawnParams.as");
+    IFileManager::Get().MakeDirectory(*TempRoot, /*Tree=*/true);
+
+    const auto Original = FString{TEXT("// References UBb_Settle_EntityScript as a string.\n")};
+    FFileHelper::SaveStringToFile(Original, *FixtureFile,
+        FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+
+    // Same function, two call sites: literal int vs lvalue int.
+    const auto ErrorLiteral = Make_ParsedError(
+        TEXT("UBb_Settle_EntityScript"), TEXT("Params"),
+        TEXT("FTransform, FCk_Handle_CheckoutCounter&, const EBb_Role, const int, FVector"),
+        TEXT("D:/Test/Caller.as"), 319, 9);
+    const auto ErrorLvalue = Make_ParsedError(
+        TEXT("UBb_Settle_EntityScript"), TEXT("Params"),
+        TEXT("FTransform, FCk_Handle_CheckoutCounter&, const EBb_Role, int&, FVector"),
+        TEXT("D:/Test/Caller.as"), 543, 13);
+
+    const auto ResultA = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(ErrorLiteral, {FixtureFile});
+    TestTrue(TEXT("first inject succeeded"), ResultA.Success);
+
+    const auto ResultB = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(ErrorLvalue, {FixtureFile});
+    TestTrue(TEXT("second inject (category variant) reports success (no-op)"), ResultB.Success);
+
+    auto Stub = FString{};
+    TestTrue(TEXT("sibling readable"), FFileHelper::LoadFileToString(Stub, *ExpectedStubFile));
+
+    // Exactly one Params(...) declaration — the AS-side identifier that would
+    // be ambiguous on namespace-merge if both variants landed.
+    auto Cursor   = 0;
+    auto HitCount = 0;
+    const auto Needle = FString{TEXT(" Params(")};
+    while ((Cursor = Stub.Find(Needle, ESearchCase::CaseSensitive, ESearchDir::FromStart, Cursor)) != INDEX_NONE)
+    {
+        ++HitCount;
+        Cursor += Needle.Len();
+    }
+    TestEqual(TEXT("Params(...) declaration appears exactly once"), HitCount, 1);
+
+    // The emitted parameter list is value-typed — accepts both a literal and
+    // an lvalue at the call sites.
+    TestTrue(TEXT("emitted param list is value-typed"),
+        Stub.Contains(TEXT("Params(FTransform Arg0, FCk_Handle_CheckoutCounter Arg1, EBb_Role Arg2, int Arg3, FVector Arg4)")));
+    TestFalse(TEXT("no reference-typed int param emitted"), Stub.Contains(TEXT("int& Arg3")));
+
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+    return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

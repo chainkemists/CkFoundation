@@ -34,16 +34,24 @@ namespace ck::angelscriptgenerator::self_heal
             return Out;
         }
 
-        // Strips a leading "const " from a type token. The AS error reports "const T"
-        // but the real generator emits parameter declarations without const, matching
-        // how the property would appear on the originating UPROPERTY. Match the real
-        // generator's shape so stubs look authentic.
-        auto Strip_LeadingConst(
+        // Canonicalizes a type token to the value-typed shape the real generator
+        // emits: strips a leading "const " and a trailing "&". The AS error reports
+        // the CALL SITE's argument category, not the function's declared parameter
+        // — the same Params() called with a literal vs an lvalue yields "const int"
+        // vs "int&" in two otherwise-identical error records. Stubs must collapse
+        // those to one value-typed overload: value params accept every argument
+        // category, whereas emitting one stub per reported variant produces
+        // overloads that are mutually ambiguous at every call site ("Multiple
+        // matching signatures" — unhealable, since the dispatcher only recognizes
+        // "No matching signatures").
+        auto Normalize_TypeToken(
             const FString& InTypeToken) -> FString
         {
-            const auto Trimmed = InTypeToken.TrimStartAndEnd();
+            auto Trimmed = InTypeToken.TrimStartAndEnd();
             if (Trimmed.StartsWith(TEXT("const ")))
-            { return Trimmed.RightChop(6).TrimStart(); }
+            { Trimmed = Trimmed.RightChop(6).TrimStart(); }
+            if (Trimmed.EndsWith(TEXT("&")))
+            { Trimmed = Trimmed.LeftChop(1).TrimEnd(); }
             return Trimmed;
         }
 
@@ -58,7 +66,7 @@ namespace ck::angelscriptgenerator::self_heal
             auto Parts = TArray<FString>{};
             for (auto i = 0; i < Types.Num(); ++i)
             {
-                Parts.Add(FString::Printf(TEXT("%s Arg%d"), *Strip_LeadingConst(Types[i]), i));
+                Parts.Add(FString::Printf(TEXT("%s Arg%d"), *Normalize_TypeToken(Types[i]), i));
             }
             return FString::Join(Parts, TEXT(", "));
         }
@@ -98,6 +106,21 @@ namespace ck::angelscriptgenerator::self_heal
 
             return IFileManager::Get().Move(*InPath, *TempPath, /*Replace=*/true);
         }
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FCkAsStubSynthesizer::
+        Normalize_ArgsList(
+            const FString& InArgsList)
+        -> FString
+    {
+        const auto Types = Split_ArgTypes(InArgsList);
+        auto Parts = TArray<FString>{};
+        for (const auto& Type : Types)
+        { Parts.Add(Normalize_TypeToken(Type)); }
+        return FString::Join(Parts, TEXT(", "));
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -254,13 +277,15 @@ namespace ck::angelscriptgenerator::self_heal
         Out += FString::Printf(TEXT("        return %s();"), *StructName);                        Out += LINE_TERMINATOR;
         Out += TEXT("    }");                                                                     Out += LINE_TERMINATOR;
         Out += TEXT("}");                                                                         Out += LINE_TERMINATOR;
-        // Include the full args list in the marker so distinct overloads of
-        // the same NS::FUNC name dedup independently. Otherwise the first
-        // synthesized overload of e.g. `UBb_X::Params(...)` blocks every
-        // subsequent overload, even when the calling AS source genuinely
-        // needs multiple Params() variants with different signatures.
+        // Include the NORMALIZED args list in the marker so distinct overloads
+        // of the same NS::FUNC name dedup independently (int vs float stay
+        // separate), while call-site argument-category variants of the SAME
+        // logical signature (const int vs int& — literal vs lvalue) collapse
+        // to one stub. Keying on the raw args list is the bug pinned by the
+        // 2026-06-10 CheckoutSettle incident: two stubs differing only by
+        // lvalue-ness made every call site ambiguous and the compile unhealable.
         Out += FString::Printf(TEXT("// End synthesized stub for %s::%s(%s)"),
-            *InError.TargetNamespace, *InError.FunctionName, *InError.ArgsList);                  Out += LINE_TERMINATOR;
+            *InError.TargetNamespace, *InError.FunctionName, *Normalize_ArgsList(InError.ArgsList)); Out += LINE_TERMINATOR;
 
         return Out;
     }
