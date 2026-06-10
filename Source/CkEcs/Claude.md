@@ -282,6 +282,23 @@ Flag: `ECk_Replication` — set per-EntityScript's `_Replication` property. Defa
 
 Use `ECk_Processor_NetModePolicy` (see `CkProcessor_NetModePolicy.h`) to gate a processor to server-only, client-only, or both.
 
+### Replicated fragment containers — deferred dispatch
+
+Server-side writes go through `UCk_Utils_Net_UE::TryAddContainerFragment` / `TryUpdateContainerFragment` (host-gated) into a FastArray on the entity's `UCk_Fragment_EntityReplicationDriver_Rep`. Client-side application is fully deferred:
+
+1. **Net receive and driver link are pure bookkeeping.** `PostReplicatedAdd/Change` and `PostLink` only mark entries pending and tag the associated entity with `ck::FTag_RepFragments_PendingApply`; `PreReplicatedRemove` queues the removed entry. No handler runs inline during net receive.
+2. **One dispatch site.** `FProcessor_ReplicatedFragments_Dispatch` (`FGroup_Gameplay_Script`, after `FProcessor_EntityScript_FinishConstruction`, ClientOnly) drains pending entries each tick by resolving `FCk_ReplicatedFragmentHandlerRegistry` handlers.
+3. **The handler contract is `Apply(Entity, New, TOptional Old) -> Applied | NotReady`** (plus optional `Remove`). `Old` is unset on the first application and otherwise holds the last APPLIED data — coalesced receives diff against what was actually applied. Return `NotReady` while the targeted feature is not composed yet; the dispatcher retries each tick and, past a timeout (5s dev / 2s shipping), drops the entry with an ensure naming the type and entity. Never compose the feature from inside Apply — composition belongs to construction / OnConstructed.
+
+Registration lives in the feature's `_Fragment.cpp` via `RegisterLazy` (per-type) or `RegisterFallback` (runtime-typed payloads, e.g. dynamic fragments). The reference handler is Team (`CkRelationship/Team/CkTeam_Fragment.cpp`): `Has` check → `NotReady`, else assign → `Applied`.
+
+### Two-signal client lifecycle contract
+
+- **`OnConstructed`** (entity script) — the entity is COMPOSED. Replicated container values are NOT applied yet (the dispatcher runs after FinishConstruction in the same frame). Compose features here; do not read replicated values (team, attributes, SM state).
+- **`OnReplicationComplete`** (`UCk_Utils_EntityReplicationDriver_UE::Promise_OnReplicationComplete`) — replicated values are applied. The dispatcher's group (`FGroup_Gameplay_Script`) precedes `FGroup_Replication`, where `FProcessor_ReplicationDriver_FireOnDependentReplicationComplete` broadcasts — so by the time the callback runs, the initial container data has been dispatched. Read replicated values here. The promise fires retroactively if bound late (payload-in-flight semantics).
+
+Pinned by `Ck.Attribute.Net.Values_AppliedBefore_OnReplicationComplete`, `Float_InitialBakedValue_Replicates`, and `Float_PreComposition_StashedValue_Applies` in CkTests.
+
 ---
 
 ## Anti-patterns

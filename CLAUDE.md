@@ -177,13 +177,24 @@ CK_SIGNAL_BIND_REQUEST_FULFILLED(
 UFUNCTION parameters use `AutoCreateRefTerm` for the optional delegate.
 
 ### Replication Handler Registration
-Client-side sync requires registering with `FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy`:
+Client-side sync requires registering with `FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy`.
+Handlers speak the deferred `Apply` contract: invoked by `FProcessor_ReplicatedFragments_Dispatch`
+AFTER OnConstructed-driven composition (never inline during net receive). `Old` is unset on the
+first application. Return `NotReady` while the target feature is not composed yet — the dispatcher
+retries each tick and drops LOUDLY (ensure) after a timeout. Never compose the feature from Apply.
 ```cpp
 FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
-    []() -> UScriptStruct* { return FCk_RepData_InventoryItems::StaticStruct(); },
+    []() -> UScriptStruct* { return FCk_RepData_Team::StaticStruct(); },
     {
-        .OnChange = [](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& Old) { ... },
-        .OnAdd    = [](FCk_Handle& Entity, const FInstancedStruct& Data) { ... }
+        .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
+        {
+            if (NOT UCk_Utils_Team_UE::Has(Entity))
+            { return ECk_RepFragment_ApplyResult::NotReady; }
+
+            auto TeamEntity = UCk_Utils_Team_UE::Cast(Entity);
+            UCk_Utils_Team_UE::Assign(TeamEntity, New.Get<FCk_RepData_Team>().Value);
+            return ECk_RepFragment_ApplyResult::Applied;
+        }
     });
 ```
 
@@ -345,7 +356,8 @@ Technique.ProcessAllSteps(Context);
 
 ## Common Pitfalls
 
-- **Missing replication handler:** If a `SyncReplication` processor never fires on clients, check that `FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy` is registered in the `_Fragment.cpp`.
+- **Missing replication handler:** If replicated container data never lands on clients, check that `FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy` is registered in the `_Fragment.cpp`. An entry whose `Apply` keeps returning `NotReady` fires a timeout ensure naming the type — that means the feature it targets is never composed on the client.
+- **Reading replicated values at OnConstructed time:** OnConstructed means "composed", not "values applied". Replicated container values are applied by the dispatcher AFTER OnConstructed (same frame), and `OnReplicationComplete` fires after that. Consumers needing replicated values must bind `Promise_OnReplicationComplete`, not read in the OnConstructed callback.
 - **Parameter shadowing:** Never use `Instigator`, `Controller`, or other AActor member names as parameters.
 - **`TObjectPtr` vs raw pointers:** Use `TObjectPtr` for `UPROPERTY` members. Raw pointers are fine for local variables and non-reflected code.
 - **Overload ambiguity with const/non-const:** When adding both mutating (`T&` → `void`) and copy (`const T&` → `T`) overloads, the mutating overload wins for non-const arguments. Use distinct names (e.g., `Filter` vs `FilterInPlace`) when callers might assign the return value.
