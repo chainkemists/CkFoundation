@@ -59,6 +59,18 @@ public:
         const TArray<FCk_EntityReplicationDriver_ConstructionInfo>& InConstructionInfos,
         const std::function<void(FCk_Handle)>& InFunc_OnCreateEntityBeforeBuild = nullptr) -> FCk_Handle;
 
+    // Restore-path sibling of Request_TryBuildAndReplicate for an EXISTING entity (snapshot-restored):
+    // the entity's fragments were already reconstituted from snapshot bytes, so this SKIPS entity
+    // creation and construction-script execution and only re-establishes the replication half —
+    // driver fragment + the ReplicationData that lets clients construct their mirror from the
+    // ConstructionInfos. Idempotent w.r.t. the driver (TryAdd); call once per restored entity, after
+    // the OWNER's driver is re-established (snapshot respawn pass).
+    static auto
+    Request_TryReplicateExisting(
+        FCk_Handle& InExistingEntity,
+        FCk_Handle& InReplicatedOwner,
+        const TArray<FCk_EntityReplicationDriver_ConstructionInfo>& InConstructionInfos) -> void;
+
     static auto
     Request_Replicate(
         FCk_Handle& InHandleToReplicate,
