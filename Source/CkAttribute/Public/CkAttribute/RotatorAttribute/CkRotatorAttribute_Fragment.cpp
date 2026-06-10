@@ -54,25 +54,6 @@ static auto
     }
 }
 
-static auto
-    StashPendingRotatorAttributeEntry(
-        FCk_Handle& InOwnerEntity,
-        const FCk_Fragment_RotatorAttribute_BaseFinal& InEntry)
-    -> void
-{
-    auto& Pending = InOwnerEntity.AddOrGet<ck::FFragment_RotatorAttribute_PendingReplicationEntries>();
-
-    auto Existing = Pending._PendingEntries.FindByPredicate([&](const FCk_Fragment_RotatorAttribute_BaseFinal& InElement)
-    {
-        return InElement.Get_AttributeName() == InEntry.Get_AttributeName() && InElement.Get_Component() == InEntry.Get_Component();
-    });
-
-    if (ck::IsValid(Existing, ck::IsValid_Policy_NullptrOnly{}))
-    { *Existing = InEntry; }
-    else
-    { Pending._PendingEntries.Emplace(InEntry); }
-}
-
 // --------------------------------------------------------------------------------------------------------------------
 // Container-based replication handler for Rotator Attributes
 
@@ -83,10 +64,14 @@ static struct FRotatorAttributeRepHandlerRegistrar
         FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
             []() -> UScriptStruct* { return FCk_RepData_RotatorAttributes::StaticStruct(); },
             {
-                .OnChange = [](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& Old)
+                .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
                 {
                     const auto& NewAttrs = New.Get<FCk_RepData_RotatorAttributes>().Attributes;
-                    const auto& OldAttrs = Old.Get<FCk_RepData_RotatorAttributes>().Attributes;
+                    const auto* OldAttrs = Old.IsSet()
+                        ? &Old.GetValue().Get<FCk_RepData_RotatorAttributes>().Attributes
+                        : nullptr;
+
+                    auto Result = ECk_RepFragment_ApplyResult::Applied;
 
                     for (auto Index = 0; Index < NewAttrs.Num(); ++Index)
                     {
@@ -95,47 +80,34 @@ static struct FRotatorAttributeRepHandlerRegistrar
                         auto AttributeEntity = UCk_Utils_RotatorAttribute_UE::TryGet(Entity, Entry.Get_AttributeName());
                         if (ck::Is_NOT_Valid(AttributeEntity))
                         {
-                            StashPendingRotatorAttributeEntry(Entity, Entry);
+                            // Not composed yet — keep the whole container entry pending. Siblings
+                            // that did apply are skipped on the retry by the value check below.
+                            Result = ECk_RepFragment_ApplyResult::NotReady;
                             continue;
                         }
 
-                        if (!OldAttrs.IsValidIndex(Index))
+                        const auto UnchangedSinceLastApply = OldAttrs != nullptr &&
+                            OldAttrs->IsValidIndex(Index) && (*OldAttrs)[Index] == Entry;
+                        if (UnchangedSinceLastApply)
+                        { continue; }
+
+                        const auto CurrentValues = FCk_Fragment_RotatorAttribute_BaseFinal
                         {
-                            ck::attribute::Verbose(TEXT("Replicating ROTATOR Attribute [{}] for the FIRST time to [{}|{}]"),
-                                Entry.Get_AttributeName(), Entry.Get_Base(), Entry.Get_Final());
+                            Entry.Get_AttributeName(),
+                            UCk_Utils_RotatorAttribute_UE::Get_BaseValue(AttributeEntity, Entry.Get_Component()),
+                            UCk_Utils_RotatorAttribute_UE::Get_FinalValue(AttributeEntity, Entry.Get_Component()),
+                            Entry.Get_Component()
+                        };
+                        if (CurrentValues == Entry)
+                        { continue; }
 
-                            ApplyReplicatedRotatorAttributeEntry(AttributeEntity, Entry);
-                            continue;
-                        }
-
-                        if (OldAttrs[Index] != Entry)
-                        {
-                            ck::attribute::Verbose(TEXT("Replicating ROTATOR Attribute [{}] and UPDATING it to [{}|{}]"),
-                                Entry.Get_AttributeName(), Entry.Get_Base(), Entry.Get_Final());
-
-                            ApplyReplicatedRotatorAttributeEntry(AttributeEntity, Entry);
-                            continue;
-                        }
-                    }
-                },
-                .OnAdd = [](FCk_Handle& Entity, const FInstancedStruct& Data)
-                {
-                    const auto& Attributes = Data.Get<FCk_RepData_RotatorAttributes>().Attributes;
-
-                    for (const auto& Entry : Attributes)
-                    {
-                        auto AttributeEntity = UCk_Utils_RotatorAttribute_UE::TryGet(Entity, Entry.Get_AttributeName());
-                        if (ck::Is_NOT_Valid(AttributeEntity))
-                        {
-                            StashPendingRotatorAttributeEntry(Entity, Entry);
-                            continue;
-                        }
-
-                        ck::attribute::Verbose(TEXT("Replicating ROTATOR Attribute [{}] for the FIRST time to [{}|{}]"),
+                        ck::attribute::Verbose(TEXT("Replicating ROTATOR Attribute [{}] to [{}|{}]"),
                             Entry.Get_AttributeName(), Entry.Get_Base(), Entry.Get_Final());
 
                         ApplyReplicatedRotatorAttributeEntry(AttributeEntity, Entry);
                     }
+
+                    return Result;
                 }
             });
     }
