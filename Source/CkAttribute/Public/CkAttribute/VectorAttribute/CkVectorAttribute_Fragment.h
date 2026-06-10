@@ -318,7 +318,6 @@ struct CKATTRIBUTE_API FCk_RepData_VectorAttributes
 namespace ck
 {
     using FFragment_ContainerRef_VectorAttributes = TFragment_ContainerEntryRef<FCk_RepData_VectorAttributes>;
-    using FFragment_VectorAttribute_PendingReplicationEntries = TFragment_PendingReplicationEntries<FCk_Fragment_VectorAttribute_BaseFinal>;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

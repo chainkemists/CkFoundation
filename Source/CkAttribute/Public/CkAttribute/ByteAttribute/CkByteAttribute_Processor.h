@@ -4,8 +4,6 @@
 
 #include "CkAttribute/ByteAttribute/CkByteAttribute_Fragment.h"
 
-#include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
-
 namespace ck { struct FProcessor_VectorAttribute_MinMaxClamp; }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -56,28 +54,6 @@ namespace ck
 
     using FProcessor_ByteAttribute_Replicate = TProcessor_Attribute_Replicate_All<
         TFragment_ByteAttribute, FCk_RepData_ByteAttributes>;
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKATTRIBUTE_API FProcessor_ByteAttribute_RetryPendingReplication
-        : public ck_exp::TProcessor<FProcessor_ByteAttribute_RetryPendingReplication, FCk_Handle,
-            ck::TReadWrite<FFragment_ByteAttribute_PendingReplicationEntries>, CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using Group = FGroup_Gameplay;
-        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::ClientOnly;
-        using MarkedDirtyBy = FFragment_ByteAttribute_PendingReplicationEntries;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            FCk_Handle InHandle,
-            FFragment_ByteAttribute_PendingReplicationEntries& InPending) const -> void;
-    };
 
     // --------------------------------------------------------------------------------------------------------------------
 }
