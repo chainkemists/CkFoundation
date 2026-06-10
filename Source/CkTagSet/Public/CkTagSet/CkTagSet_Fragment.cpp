@@ -12,15 +12,13 @@ static struct FTagSetRepHandlerRegistrar
         FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
             []() -> UScriptStruct* { return FCk_RepData_TagSet::StaticStruct(); },
             {
-                .OnChange = [](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& Old)
+                // Stamps the sync fragment consumed by the TagSet SyncReplication processor (which
+                // owns the actual diff/apply) — always Applied, the processor has its own gating.
+                .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
                 {
                     Entity.AddOrGet<ck::FFragment_TagSet_SyncReplication>(
                         New.Get<FCk_RepData_TagSet>().Tags);
-                },
-                .OnAdd = [](FCk_Handle& Entity, const FInstancedStruct& Data)
-                {
-                    Entity.AddOrGet<ck::FFragment_TagSet_SyncReplication>(
-                        Data.Get<FCk_RepData_TagSet>().Tags);
+                    return ECk_RepFragment_ApplyResult::Applied;
                 }
             });
     }
