@@ -105,45 +105,45 @@ public:
     /** AUTHORITY ONLY. Ensures and no-ops on clients. The replication callback uses
      *  the private FromReplication entry point instead. */
     UFUNCTION(BlueprintCallable,
+              BlueprintAuthorityOnly,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName="[Ck][MontagePlayer] Request Play",
-              meta = (BlueprintAuthorityOnly))
+              DisplayName="[Ck][MontagePlayer] Request Play")
     static FCk_Handle_MontagePlayer
     Request_Play(
         UPARAM(ref) FCk_Handle_MontagePlayer& InHandle,
         const FCk_Request_MontagePlayer_Play& InRequest);
 
     UFUNCTION(BlueprintCallable,
+              BlueprintAuthorityOnly,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName="[Ck][MontagePlayer] Request Stop",
-              meta = (BlueprintAuthorityOnly))
+              DisplayName="[Ck][MontagePlayer] Request Stop")
     static FCk_Handle_MontagePlayer
     Request_Stop(
         UPARAM(ref) FCk_Handle_MontagePlayer& InHandle,
         const FCk_Request_MontagePlayer_Stop& InRequest);
 
     UFUNCTION(BlueprintCallable,
+              BlueprintAuthorityOnly,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName="[Ck][MontagePlayer] Request Pause",
-              meta = (BlueprintAuthorityOnly))
+              DisplayName="[Ck][MontagePlayer] Request Pause")
     static FCk_Handle_MontagePlayer
     Request_Pause(
         UPARAM(ref) FCk_Handle_MontagePlayer& InHandle,
         const FCk_Request_MontagePlayer_Pause& InRequest);
 
     UFUNCTION(BlueprintCallable,
+              BlueprintAuthorityOnly,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName="[Ck][MontagePlayer] Request Resume",
-              meta = (BlueprintAuthorityOnly))
+              DisplayName="[Ck][MontagePlayer] Request Resume")
     static FCk_Handle_MontagePlayer
     Request_Resume(
         UPARAM(ref) FCk_Handle_MontagePlayer& InHandle,
         const FCk_Request_MontagePlayer_Resume& InRequest);
 
     UFUNCTION(BlueprintCallable,
+              BlueprintAuthorityOnly,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName="[Ck][MontagePlayer] Request Jump To Section",
-              meta = (BlueprintAuthorityOnly))
+              DisplayName="[Ck][MontagePlayer] Request Jump To Section")
     static FCk_Handle_MontagePlayer
     Request_JumpToSection(
         UPARAM(ref) FCk_Handle_MontagePlayer& InHandle,
