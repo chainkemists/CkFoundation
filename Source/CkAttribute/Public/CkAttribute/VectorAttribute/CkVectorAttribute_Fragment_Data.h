@@ -40,26 +40,27 @@ struct CKATTRIBUTE_API FCk_Fragment_VectorAttribute_ParamsData
 
 public:
     CK_GENERATED_BODY(FCk_Fragment_VectorAttribute_ParamsData);
+    using IsSnapshotable = void;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "VectorAttribute"))
+              meta = (AllowPrivateAccess = true, Categories = "VectorAttribute", SaveGame))
     FGameplayTag _Name;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, SaveGame))
     FVector _BaseValue = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta=(AllowPrivateAccess, SaveGame))
     ECk_MinMax _MinMax = ECk_MinMax::None;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MinMax == ECk_MinMax::Min || _MinMax == ECk_MinMax::MinMax"))
+              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MinMax == ECk_MinMax::Min || _MinMax == ECk_MinMax::MinMax", SaveGame))
     FVector _MinValue = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MinMax == ECk_MinMax::Max || _MinMax == ECk_MinMax::MinMax"))
+              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MinMax == ECk_MinMax::Max || _MinMax == ECk_MinMax::MinMax", SaveGame))
     FVector _MaxValue = FVector::ZeroVector;
 
 public:
