@@ -60,6 +60,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     class FProcessor_AbilityOwner_HandleRequests;
+    class FProcessor_ReplicatedFragments_Dispatch;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -143,6 +144,7 @@ public:
 
 public:
     friend class ck::FProcessor_AbilityOwner_HandleRequests;
+    friend class ck::FProcessor_ReplicatedFragments_Dispatch;
 
 public:
     UCk_Fragment_EntityReplicationDriver_Rep(
