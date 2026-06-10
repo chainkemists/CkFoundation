@@ -11,7 +11,8 @@ static struct FAnimPlanRepHandlerRegistrar
 {
     FAnimPlanRepHandlerRegistrar()
     {
-        const auto DoApplyAnimPlans = [](FCk_Handle& Entity, const TArray<FCk_AnimPlan_State>& NewPlans, const TArray<FCk_AnimPlan_State>& OldPlans)
+        // All-or-nothing: NotReady until every targeted AnimPlan is composed, then diff-apply.
+        const auto DoApplyAnimPlans = [](FCk_Handle& Entity, const TArray<FCk_AnimPlan_State>& NewPlans, const TArray<FCk_AnimPlan_State>& OldPlans) -> ECk_RepFragment_ApplyResult
         {
             for (auto Index = 0; Index < NewPlans.Num(); ++Index)
             {
@@ -19,7 +20,7 @@ static struct FAnimPlanRepHandlerRegistrar
 
                 if (const auto& AnimPlanEntity = UCk_Utils_AnimPlan_UE::TryGet_AnimPlan(Entity, AnimPlanToReplicate.Get_AnimGoal());
                     ck::Is_NOT_Valid(AnimPlanEntity))
-                { return; }
+                { return ECk_RepFragment_ApplyResult::NotReady; }
             }
 
             for (auto Index = 0; Index < NewPlans.Num(); ++Index)
@@ -32,18 +33,20 @@ static struct FAnimPlanRepHandlerRegistrar
                     UCk_Utils_AnimPlan_UE::Request_UpdateAnimState(AnimPlanEntity, FCk_Request_AnimPlan_UpdateAnimState{AnimPlanToReplicate.Get_AnimCluster(), AnimPlanToReplicate.Get_AnimState()});
                 }
             }
+
+            return ECk_RepFragment_ApplyResult::Applied;
         };
 
         FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
             []() -> UScriptStruct* { return FCk_RepData_AnimPlans::StaticStruct(); },
             {
-                .OnChange = [DoApplyAnimPlans](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& Old)
+                .Apply = [DoApplyAnimPlans](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
                 {
-                    DoApplyAnimPlans(Entity, New.Get<FCk_RepData_AnimPlans>().AnimPlans, Old.Get<FCk_RepData_AnimPlans>().AnimPlans);
-                },
-                .OnAdd = [DoApplyAnimPlans](FCk_Handle& Entity, const FInstancedStruct& Data)
-                {
-                    DoApplyAnimPlans(Entity, Data.Get<FCk_RepData_AnimPlans>().AnimPlans, TArray<FCk_AnimPlan_State>{});
+                    return DoApplyAnimPlans(Entity,
+                        New.Get<FCk_RepData_AnimPlans>().AnimPlans,
+                        Old.IsSet()
+                            ? Old.GetValue().Get<FCk_RepData_AnimPlans>().AnimPlans
+                            : TArray<FCk_AnimPlan_State>{});
                 }
             });
     }
