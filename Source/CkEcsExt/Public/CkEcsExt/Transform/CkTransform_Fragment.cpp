@@ -25,9 +25,10 @@ static struct FTransformRepHandlerRegistrar
 {
     FTransformRepHandlerRegistrar()
     {
-        // Transform is composed during construction proper (pre-link), so it always exists by
-        // dispatch time — Apply never returns NotReady. An unset Old means first application: snap
-        // directly (an interpolation offset would glide the entity in from origin).
+        // Transform is composed during construction proper (pre-link), so it exists by dispatch
+        // time in every healthy flow — the NotReady branches below are violation detectors (loud
+        // via the dispatcher's timeout ensure), not an expected wait. An unset Old means first
+        // application: snap directly (an interpolation offset would glide the entity in from origin).
 
         FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
             []() -> UScriptStruct* { return FCk_RepData_Location::StaticStruct(); },
@@ -36,7 +37,7 @@ static struct FTransformRepHandlerRegistrar
                 {
                     auto HandleTransform = UCk_Utils_Transform_UE::Cast(Entity);
                     if (ck::Is_NOT_Valid(HandleTransform))
-                    { return ECk_RepFragment_ApplyResult::Applied; }
+                    { return ECk_RepFragment_ApplyResult::NotReady; }
 
                     const auto& Location = New.Get<FCk_RepData_Location>().Value;
 
@@ -61,7 +62,7 @@ static struct FTransformRepHandlerRegistrar
                 {
                     auto HandleTransform = UCk_Utils_Transform_UE::Cast(Entity);
                     if (ck::Is_NOT_Valid(HandleTransform))
-                    { return ECk_RepFragment_ApplyResult::Applied; }
+                    { return ECk_RepFragment_ApplyResult::NotReady; }
 
                     const auto& Rotation = New.Get<FCk_RepData_Rotation>().Value;
 
@@ -86,7 +87,7 @@ static struct FTransformRepHandlerRegistrar
                 {
                     auto HandleTransform = UCk_Utils_Transform_UE::Cast(Entity);
                     if (ck::Is_NOT_Valid(HandleTransform))
-                    { return ECk_RepFragment_ApplyResult::Applied; }
+                    { return ECk_RepFragment_ApplyResult::NotReady; }
 
                     UCk_Utils_Transform_UE::Request_SetScale(HandleTransform,
                         FCk_Request_Transform_SetScale{New.Get<FCk_RepData_Scale>().Value}
