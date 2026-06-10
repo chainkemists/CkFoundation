@@ -6,8 +6,10 @@
 
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "Materials/Material.h"
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "RHIGlobals.h"
 #include "Engine/Texture.h"
 #include "Camera/CameraComponent.h"
 #include "Components/PostProcessComponent.h"
@@ -34,6 +36,20 @@ auto
         ck::usf::Warning(TEXT("No generated master for look [{}] at [{}] - run Generate Look Materials"),
             InLook->Get_EffectiveLookName(), ObjPath);
         return nullptr;
+    }
+
+    // A master whose shaders failed to compile renders as the engine's checkered DefaultMaterial
+    // with no error at the point of use — name the look loudly instead. Generation-time validation
+    // can miss permutations the generating session never compiled (e.g. ray-tracing hit shaders
+    // when RT was enabled after the look was generated).
+    if (auto* AsMaterial = Mat->GetMaterial();
+        AsMaterial != nullptr && AsMaterial->IsCompilingOrHadCompileError(GMaxRHIShaderPlatform))
+    {
+        ck::usf::Warning(
+            TEXT("Look [{}] master material has shader compile errors (or is still compiling) — it will "
+                 "render as the checkered DefaultMaterial. See LogShaderCompilers for the HLSL error, "
+                 "then re-run Generate Look Materials or 'RecompileShaders Material {}'."),
+            InLook->Get_EffectiveLookName(), AsMaterial->GetName());
     }
     return Mat;
 }
