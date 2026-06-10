@@ -2,6 +2,7 @@
 
 #include "CkCore/Math/Vector/CkVector_Utils.h"
 #include "CkAttribute/CkAttribute_Processor.h"
+#include "CkAttribute/CkAttribute_ReplicateOnRestore.h"
 
 #include "CkAttribute/VectorAttribute/CkVectorAttribute_Fragment.h"
 
@@ -54,6 +55,11 @@ namespace ck
 
     using FProcessor_VectorAttribute_Replicate = TProcessor_Attribute_Replicate_All<
         TFragment_VectorAttribute, FCk_RepData_VectorAttributes>;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    using FProcessor_VectorAttribute_ReplicateOnRestore = TProcessor_Attribute_ReplicateOnRestore_All<
+        FCk_Handle_VectorAttribute, TFragment_VectorAttribute, FCk_RepData_VectorAttributes>;
 
     // --------------------------------------------------------------------------------------------------------------------
 }
