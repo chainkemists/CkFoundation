@@ -31,7 +31,10 @@
 #include <Kismet/KismetRenderingLibrary.h>
 #include <Materials/MaterialInterface.h>
 #include <Misc/App.h>
+#include <RHICommandList.h>
+#include <RenderingThread.h>
 #include <Rendering/Texture2DResource.h>
+#include <TextureResource.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -102,6 +105,13 @@ namespace ck_render_target_processor
     // upload texture (full-rect; per-block dirty rects are a possible later optimization).
     // No-ops when the process cannot render. Shared by the client staging apply and the host's
     // accepted-upload redraw.
+    //
+    // The final hop is an RHI CopyTexture, NOT a canvas draw: canvas writes go through the
+    // material/gamma pipeline and are not byte-preserving (display-gamma encode on write), and
+    // the upload texture must match the target's native pixel format (RTF_RGBA8 is PF_B8G8R8A8
+    // under the hood) or the channels swizzle. Staging bytes are raw readback bytes — the redraw
+    // must put back EXACTLY those bytes or every reconcile visibly corrupts the board
+    // (pinned by CkAutoTest_RenderTarget_GpuRoundTrip_BytePreserving).
     auto
     DrawPixelsToTarget(
         const FCk_Handle_RenderTarget& InRenderTargetEntity,
@@ -121,18 +131,29 @@ namespace ck_render_target_processor
         if (InSize.X <= 0 || InSize.Y <= 0 || InPixels.Num() != InSize.X * InSize.Y * ck::render_target::pixel::BytesPerPixel)
         { return; }
 
+        if (Target->SizeX != InSize.X || Target->SizeY != InSize.Y)
+        {
+            ck::render_target::Warning(
+                TEXT("RenderTarget [{}] staging size [{}x{}] does not match the target [{}x{}] — redraw skipped"),
+                InRenderTargetEntity, InSize.X, InSize.Y, Target->SizeX, Target->SizeY);
+            return;
+        }
+
+        const auto TargetFormat = Target->GetFormat();
         auto* UploadTexture = InOutUploadTexture.Get();
 
         if (ck::Is_NOT_Valid(UploadTexture)
             || UploadTexture->GetSizeX() != InSize.X
-            || UploadTexture->GetSizeY() != InSize.Y)
+            || UploadTexture->GetSizeY() != InSize.Y
+            || UploadTexture->GetPixelFormat() != TargetFormat)
         {
-            UploadTexture = UTexture2D::CreateTransient(InSize.X, InSize.Y, PF_R8G8B8A8);
+            UploadTexture = UTexture2D::CreateTransient(InSize.X, InSize.Y, TargetFormat);
 
             if (ck::Is_NOT_Valid(UploadTexture))
             { return; }
 
             UploadTexture->NeverStream = true;
+            UploadTexture->SRGB = false;
             UploadTexture->UpdateResource();
             InOutUploadTexture = TStrongObjectPtr{UploadTexture};
         }
@@ -154,24 +175,30 @@ namespace ck_render_target_processor
                 delete InRegions;
             });
 
-        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InRenderTargetEntity);
+        // Enqueued after the region update above, so the copy sees the new bytes. Both
+        // resources are pinned by fragments (TStrongObjectPtr), so they outlive the command.
+        ENQUEUE_RENDER_COMMAND(CkRenderTarget_CopyStagingToTarget)(
+            [UploadResource = UploadTexture->GetResource(),
+             TargetResource = Target->GameThread_GetRenderTargetResource()]
+            (FRHICommandListImmediate& RHICmdList) -> void
+            {
+                if (UploadResource == nullptr || TargetResource == nullptr)
+                { return; }
 
-        if (ck::Is_NOT_Valid(World, ck::IsValid_Policy_NullptrOnly{}))
-        { return; }
+                FRHITexture* SrcRHI = UploadResource->GetTexture2DRHI();
+                FRHITexture* DstRHI = TargetResource->GetRenderTargetTexture();
 
-        auto Canvas = static_cast<UCanvas*>(nullptr);
-        auto CanvasSize = FVector2D{};
-        auto Context = FDrawToRenderTargetContext{};
+                if (SrcRHI == nullptr || DstRHI == nullptr)
+                { return; }
 
-        UKismetRenderingLibrary::BeginDrawCanvasToRenderTarget(World, Target, Canvas, CanvasSize, Context);
+                RHICmdList.Transition(FRHITransitionInfo{SrcRHI, ERHIAccess::Unknown, ERHIAccess::CopySrc});
+                RHICmdList.Transition(FRHITransitionInfo{DstRHI, ERHIAccess::Unknown, ERHIAccess::CopyDest});
 
-        if (ck::IsValid(Canvas))
-        {
-            Canvas->K2_DrawTexture(UploadTexture, FVector2D::ZeroVector, CanvasSize,
-                FVector2D::ZeroVector, FVector2D::UnitVector, FLinearColor::White, BLEND_Opaque);
-        }
+                RHICmdList.CopyTexture(SrcRHI, DstRHI, FRHICopyTextureInfo{});
 
-        UKismetRenderingLibrary::EndDrawCanvasToRenderTarget(World, Context);
+                RHICmdList.Transition(FRHITransitionInfo{SrcRHI, ERHIAccess::CopySrc, ERHIAccess::SRVMask});
+                RHICmdList.Transition(FRHITransitionInfo{DstRHI, ERHIAccess::CopyDest, ERHIAccess::SRVMask});
+            });
     }
 
     // Builds the per-player chunk queue entries for one compressed payload.
@@ -853,13 +880,16 @@ namespace ck
         if (InParams.Get_SyncInterval() <= FCk_Time::ZeroSecond())
         { return; }
 
-        // Same authoring gate as PixelCapture — only machines that may capture tick the interval.
-        const auto IsCaptureAuthor =
+        // Interval reconciliation is the AUTHORITY's job — narrower than PixelCapture's
+        // authoring gate on purpose. Letting Allowed clients tick the interval makes every
+        // authoring client full-upload its board each period (uploads are FullSync-only),
+        // ping-ponging state against the host's own reconcile. Clients upload explicitly
+        // via Request_SyncPixels.
+        const auto IsReconcileAuthority =
             InParams.Get_Replication() == ECk_Replication::DoesNotReplicate
-            || UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InRenderTargetEntity)
-            || InParams.Get_ClientAuthoring() == ECk_RenderTarget_ClientAuthoring::Allowed;
+            || UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InRenderTargetEntity);
 
-        if (NOT IsCaptureAuthor)
+        if (NOT IsReconcileAuthority)
         { return; }
 
         InPixelSync._IntervalChrono.Tick(InDeltaT);
@@ -1384,7 +1414,7 @@ namespace ck
             // NetCullDistanceSquared are skipped and their baseline invalidated — on re-entry
             // the no-baseline path forces a FullSync before any deltas.
             if (ck::IsValid(OwningActor, ck::IsValid_Policy_NullptrOnly{})
-                && OwningActor->NetCullDistanceSquared > 0.0f)
+                && OwningActor->GetNetCullDistanceSquared() > 0.0f)
             {
                 if (const auto* PlayerPawn = Player->GetPawn();
                     ck::IsValid(PlayerPawn, ck::IsValid_Policy_NullptrOnly{}))
@@ -1392,7 +1422,7 @@ namespace ck
                     const auto DistSq = FVector::DistSquared(
                         PlayerPawn->GetActorLocation(), OwningActor->GetActorLocation());
 
-                    if (DistSq > OwningActor->NetCullDistanceSquared)
+                    if (DistSq > OwningActor->GetNetCullDistanceSquared())
                     {
                         if (Stream._HasBaseline || NOT Stream._Chunks.IsEmpty())
                         {
