@@ -47,6 +47,12 @@ namespace ck
 
     using FFragment_Inventory_DataOnly_Requests = TFragment_Inventory_Requests<FCk_Handle_Inventory_DataOnly>;
 
+    // Per-feature restore-replication done marker. ck::FTag_Snapshot_JustRestored lives on the OWNER
+    // entity and is shared by every owner-resident feature, so no single feature may remove it —
+    // each feature pairs it with its own done tag instead. Never leaks across restores: a restore
+    // rebuilds entities from snapshot bytes and this tag is not snapshotted.
+    CK_DEFINE_ECS_TAG(FTag_Inventory_DataOnly_RestoreReplicated);
+
     struct CKINVENTORY_API FFragment_Inventory_DataOnly_SyncReplication
     {
     public:
