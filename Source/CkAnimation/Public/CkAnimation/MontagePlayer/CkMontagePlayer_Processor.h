@@ -106,6 +106,40 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // ---- ReplicateOnRestore (Server-side, post-snapshot-load) ----
+
+    // Re-drives replication of a RESTORED MontagePlayer to clients after a snapshot load: once this
+    // entity's replication driver is re-established (snapshot respawn pass), re-create the
+    // self-resident container entry SEEDED with the restored State (Construct is abstained during
+    // reconstitution) and re-arm FTag_MontagePlayer_MayRequireReplication. Clients receive the State
+    // and replay it through the normal dispatch (DoDispatchReplicatedState), so client-side playback
+    // resumes; SERVER-side playback stays inert (the Params mesh component does not survive a save —
+    // see FFragment_MontagePlayer_Params::SerializeSnapshot). Pairs ck::FTag_Snapshot_JustRestored
+    // (shared per-entity, never removed here) with the per-feature done tag. The view iterates the
+    // clean FFragment_MontagePlayer_Current and POINT-QUERIES the in_place marker (listing it in the
+    // view would surface tombstones).
+    class CKANIMATION_API FProcessor_MontagePlayer_ReplicateOnRestore : public ck_exp::TProcessor<
+            FProcessor_MontagePlayer_ReplicateOnRestore,
+            FCk_Handle_MontagePlayer,
+            TReadOnly<FFragment_MontagePlayer_Current>,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_MontagePlayer_Current& InCurrent) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKANIMATION_API FProcessor_MontagePlayer_Replicate : public ck_exp::TProcessor<
             FProcessor_MontagePlayer_Replicate,
             FCk_Handle_MontagePlayer,

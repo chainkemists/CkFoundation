@@ -4,6 +4,18 @@
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
+#include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
+#include "CkEcs/Snapshot/CkSnapshot_Archive_Writer.h"
+#include "CkEcs/Snapshot/CkSnapshot_Archive_Reader.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+// Tier-C SerializeSnapshot registration (aliases because CK_REGISTER_SNAPSHOTABLE token-pastes the name).
+
+using FSnap_MontagePlayerParams = ck::FFragment_MontagePlayer_Params;
+using FSnap_MontagePlayerCurrent = ck::FFragment_MontagePlayer_Current;
+CK_REGISTER_SNAPSHOTABLE(FSnap_MontagePlayerParams);
+CK_REGISTER_SNAPSHOTABLE(FSnap_MontagePlayerCurrent);
+
 // --------------------------------------------------------------------------------------------------------------------
 // Container-based replication handler for MontagePlayer (single-row, fragment-on-entity).
 
