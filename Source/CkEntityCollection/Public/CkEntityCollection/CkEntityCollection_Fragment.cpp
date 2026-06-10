@@ -29,13 +29,14 @@ static struct FEntityCollectionRepHandlerRegistrar
         FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
             []() -> UScriptStruct* { return FCk_RepData_EntityCollections::StaticStruct(); },
             {
-                .OnChange = [DoApplyEntityCollections](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& Old)
+                .Apply = [DoApplyEntityCollections](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
                 {
-                    DoApplyEntityCollections(Entity, New.Get<FCk_RepData_EntityCollections>().EntityCollections, Old.Get<FCk_RepData_EntityCollections>().EntityCollections);
-                },
-                .OnAdd = [DoApplyEntityCollections](FCk_Handle& Entity, const FInstancedStruct& Data)
-                {
-                    DoApplyEntityCollections(Entity, Data.Get<FCk_RepData_EntityCollections>().EntityCollections, TArray<FCk_EntityCollection_Content>{});
+                    DoApplyEntityCollections(Entity,
+                        New.Get<FCk_RepData_EntityCollections>().EntityCollections,
+                        Old.IsSet()
+                            ? Old.GetValue().Get<FCk_RepData_EntityCollections>().EntityCollections
+                            : TArray<FCk_EntityCollection_Content>{});
+                    return ECk_RepFragment_ApplyResult::Applied;
                 }
             });
     }
