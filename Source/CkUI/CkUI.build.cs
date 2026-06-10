@@ -35,6 +35,7 @@ public class CkUI : CkModuleRules
             {
                 "CoreUObject",
                 "Engine",
+                "InputCore",
                 "Slate",
                 "SlateCore",
                 "GameplayTags",
