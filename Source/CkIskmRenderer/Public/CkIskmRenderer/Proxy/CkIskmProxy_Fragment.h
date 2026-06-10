@@ -2,6 +2,8 @@
 
 #include "CoreMinimal.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Materials/MaterialInterface.h"
+#include "UObject/StrongObjectPtr.h"
 
 #include "CkCore/Macros/CkMacros.h"
 #include "CkEcs/Tag/CkTag.h"
@@ -128,6 +130,60 @@ namespace ck
         CK_PROPERTY_GET(_Values);
     };
 
+    // ---- per-proxy material overrides ----
+    //
+    // V1 scope: overrides apply to the BASE SKMC only — submeshes carry their own
+    // def-time override materials (FCk_IskmRenderer_MeshDesc::_OverrideMaterials).
+    // Sparse: only overridden slots are stored. TStrongObjectPtr pins the material
+    // so an applied override can't be GC'd out from under the pooled SKMC.
+    //
+    // Pooling discipline (load-bearing): the SKMC is borrowed from the renderer
+    // pool and OverrideMaterials is a component-level array that survives
+    // Release_BaseSKMC's SetSkeletalMesh(nullptr). EndPlay calls
+    // EmptyOverrideMaterials() on release so the next borrower sees mesh-default
+    // materials; Setup re-applies this map in case the SKMC is (re)acquired after
+    // overrides were recorded.
+    struct CKISKMRENDERER_API FFragment_IskmProxy_MaterialOverrides
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_IskmProxy_MaterialOverrides);
+        friend class FProcessor_IskmProxy_Setup;
+        friend class FProcessor_IskmProxy_HandleRequests;
+
+    private:
+        TMap<int32, TStrongObjectPtr<UMaterialInterface>> _SlotToMaterial;
+        bool _Dirty = false;
+
+    public:
+        CK_PROPERTY_GET(_SlotToMaterial);
+    };
+
+    // ---- per-proxy morph targets ----
+    //
+    // V1 scope: morphs apply to the BASE body mesh only — LeaderPoseComponent
+    // copies bone transforms, not morph curves, so outfit submeshes do NOT
+    // inherit these. If future modular skeletal clothing needs shared morphs,
+    // that's a separate change (per-submesh curve propagation).
+    //
+    // Pooling discipline (load-bearing): MorphTargetCurves is component-level
+    // state that survives Release_BaseSKMC. EndPlay calls ClearMorphTargets()
+    // on release so the next borrower starts clean; Setup re-applies this map
+    // in case the SKMC is (re)acquired after morphs were recorded.
+    struct CKISKMRENDERER_API FFragment_IskmProxy_MorphTargets
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_IskmProxy_MorphTargets);
+        friend class FProcessor_IskmProxy_Setup;
+        friend class FProcessor_IskmProxy_HandleRequests;
+
+    private:
+        TMap<FName, float> _Values;
+        bool _Dirty = false;
+
+    public:
+        CK_PROPERTY_GET(_Values);
+    };
+
     // ---- request fragment ----
 
     struct CKISKMRENDERER_API FFragment_IskmProxy_Requests
@@ -143,6 +199,10 @@ namespace ck
             FCk_Request_IskmProxy_StopAnimation,
             FCk_Request_IskmProxy_SetPlayRate,
             FCk_Request_IskmProxy_SetCustomDataFloat,
+            FCk_Request_IskmProxy_SetMaterialOverride,
+            FCk_Request_IskmProxy_ClearMaterialOverrides,
+            FCk_Request_IskmProxy_SetMorphTarget,
+            FCk_Request_IskmProxy_ClearMorphTargets,
             FCk_Request_IskmProxy_AttachSubmesh,
             FCk_Request_IskmProxy_DetachSubmesh,
             FCk_Request_IskmProxy_DetachAllSubmeshes,
