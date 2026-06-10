@@ -14,7 +14,7 @@ auto
     -> bool
 {
     return _AttributeName == InOther.Get_AttributeName() &&
-        _Component == Get_Component() &&
+        _Component == InOther.Get_Component() &&
         _Base.Equals(InOther.Get_Base()) &&
         _Final.Equals(InOther.Get_Final());
 }
