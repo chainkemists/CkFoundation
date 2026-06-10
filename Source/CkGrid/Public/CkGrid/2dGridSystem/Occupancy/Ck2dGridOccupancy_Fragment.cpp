@@ -2,6 +2,20 @@
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
+#include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
+#include "CkEcs/Snapshot/CkSnapshot_Archive_Writer.h"
+#include "CkEcs/Snapshot/CkSnapshot_Archive_Reader.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+// Snapshot registrations (aliases because CK_REGISTER_SNAPSHOTABLE token-pastes the name). The grid's
+// placement record + each occupant's back-ref round-trip; FFragment_2dGridOccupancy_Current does NOT
+// (its _StampedCells map is DERIVED — the StampCells reconcile rebuilds it from the restored record).
+
+using FSnap_RecordOf_GridPlacements    = ck::FFragment_RecordOf_GridPlacements;
+using FSnap_2dGridOccupant_PlacementRef = ck::FFragment_2dGridOccupant_PlacementRef;
+CK_REGISTER_SNAPSHOTABLE(FSnap_RecordOf_GridPlacements);
+CK_REGISTER_SNAPSHOTABLE(FSnap_2dGridOccupant_PlacementRef);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 // Client-side RegisterLazy registrar. The container entry lives on the GRID entity, so the
