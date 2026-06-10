@@ -1,5 +1,6 @@
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_Dispatcher.h"
 
+#include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_AsSourceScanner.h"
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_AssetRegistryStub.h"
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_StubSynthesizer.h"
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
@@ -293,6 +294,22 @@ namespace ck::angelscriptgenerator::self_heal
 
         // ---- Strategy application --------------------------------------------------
 
+        // ESP-strategy actions arrive via two error shapes: the classic
+        // `U<X>::Params(<args>)` overload miss (NoMatchingSignatures), and
+        // the direct-construction shapes — `F<X>_SpawnParams` as a missing
+        // declared type (IdentifierNotADataType) or as a bare ctor call
+        // (BareCtorNoMatchingSignatures). The latter two carry the struct
+        // name in MissingIdentifier instead of a namespace + signature.
+        auto Get_EspStructErrorIdentifier(
+            const FCk_AsParsedError& InError) -> FString
+        {
+            const auto IsStructShapedError =
+                   InError.Kind == ECk_AsParsedError_Kind::IdentifierNotADataType
+                || InError.Kind == ECk_AsParsedError_Kind::BareCtorNoMatchingSignatures;
+
+            return IsStructShapedError ? InError.MissingIdentifier : FString{};
+        }
+
         auto Apply_Strategy(
             ECk_RecoveryStrategy     InStrategy,
             const FCk_AsParsedError& InError) -> bool
@@ -302,17 +319,71 @@ namespace ck::angelscriptgenerator::self_heal
                 case ECk_RecoveryStrategy::SynthesizeStub_EntitySpawnParams:
                 {
                     const auto Candidates = Collect_EntitySpawnParamsCandidates();
-                    const auto Result     = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(InError, Candidates);
+
+                    const auto StructIdentifier = Get_EspStructErrorIdentifier(InError);
+                    const auto ClassName = StructIdentifier.IsEmpty()
+                        ? InError.TargetNamespace
+                        : FCkAsStubSynthesizer::Derive_ClassNameFromStructName(StructIdentifier);
+
+                    if (ClassName.IsEmpty())
+                    {
+                        Warning(TEXT("[SelfHeal] Cannot derive an entity-script class from '{}' — no stub synthesized."),
+                            StructIdentifier);
+                        return false;
+                    }
+
+                    // Prefer source-derived full-shape synthesis: parse the
+                    // entity-script class's own .as declaration for the
+                    // complete ExposeOnSpawn field set, so direct
+                    // construction and field-access callers (`P.Phase = ...`)
+                    // heal too — the wholesale-missing case a gitignored
+                    // canonical creates on every fresh clone. Falls back to
+                    // the error-text stub when the class source can't be
+                    // found/parsed, or when the struct already exists in the
+                    // canonical (incremental drift — the per-signature path
+                    // owns that, and it's the battle-tested behavior).
+                    const auto SourceDerived = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub_SourceDerived(
+                        ClassName, InError, Candidates, FCkAsSourceScanner::Get_DefaultScanRoots());
+
+                    if (SourceDerived.Success)
+                    {
+                        Log(TEXT("[SelfHeal] Source-derived full-shape stub for {} -> {}"),
+                            ClassName, SourceDerived.TargetFilePath);
+                        return true;
+                    }
+
+                    Log(TEXT("[SelfHeal] Source-derived synthesis unavailable for {} ({}) — falling back to error-text stub."),
+                        ClassName, SourceDerived.ErrorMessage);
+
+                    // Error-text fallback. Direct-construction errors carry
+                    // no namespace signature — synthesize the no-arg shape
+                    // (empty struct + Params()), which heals no-arg
+                    // construction and Params() callers; field-access
+                    // callers are unrecoverable without the class source and
+                    // surface the convergence banner.
+                    auto FallbackError = InError;
+                    if (NOT StructIdentifier.IsEmpty())
+                    {
+                        FallbackError                 = FCk_AsParsedError{};
+                        FallbackError.Kind            = ECk_AsParsedError_Kind::NoMatchingSignatures;
+                        FallbackError.FilePath        = InError.FilePath;
+                        FallbackError.Line            = InError.Line;
+                        FallbackError.Column          = InError.Column;
+                        FallbackError.TargetNamespace = ClassName;
+                        FallbackError.FunctionName    = TEXT("Params");
+                    }
+
+                    const auto Result = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(FallbackError, Candidates);
 
                     if (Result.Success)
                     {
                         Log(TEXT("[SelfHeal] Synthesized stub for {}::{}({}) -> {}"),
-                            InError.TargetNamespace, InError.FunctionName, InError.ArgsList, Result.TargetFilePath);
+                            FallbackError.TargetNamespace, FallbackError.FunctionName, FallbackError.ArgsList, Result.TargetFilePath);
                         return true;
                     }
 
                     Warning(TEXT("[SelfHeal] Stub synthesis failed for {}::{}({}): {}"),
-                        InError.TargetNamespace, InError.FunctionName, InError.ArgsList, Result.ErrorMessage);
+                        FallbackError.TargetNamespace, FallbackError.FunctionName, FallbackError.ArgsList, Result.ErrorMessage);
                     return false;
                 }
 
@@ -471,6 +542,12 @@ namespace ck::angelscriptgenerator::self_heal
                 case ECk_RecoveryStrategy::SynthesizeStub_EntitySpawnParams:
                 case ECk_RecoveryStrategy::KickGenerator_AssetRegistry:
                 {
+                    if (const auto StructIdentifier = Get_EspStructErrorIdentifier(InAction.Error);
+                        NOT StructIdentifier.IsEmpty())
+                    {
+                        return FString::Printf(TEXT("%s (direct construction)"), *StructIdentifier);
+                    }
+
                     return FString::Printf(TEXT("%s::%s(%s)"),
                         *InAction.Error.TargetNamespace,
                         *InAction.Error.FunctionName,
@@ -779,6 +856,17 @@ namespace ck::angelscriptgenerator::self_heal
                 case ECk_RecoveryStrategy::SynthesizeStub_EntitySpawnParams:
                 case ECk_RecoveryStrategy::KickGenerator_AssetRegistry:
                 {
+                    // Direct-construction ESP errors carry a struct name, not
+                    // a namespace + signature — one convergence key per
+                    // struct, NOT one shared "::()"-shaped key for all of
+                    // them (which would trip the breaker after 3 distinct
+                    // classes during bulk bootstrap).
+                    if (const auto StructIdentifier = Get_EspStructErrorIdentifier(InAction.Error);
+                        NOT StructIdentifier.IsEmpty())
+                    {
+                        return FString::Printf(TEXT("EspStruct::%s"), *StructIdentifier);
+                    }
+
                     return FString::Printf(TEXT("%s::%s(%s)"),
                         *InAction.Error.TargetNamespace,
                         *InAction.Error.FunctionName,
@@ -1011,6 +1099,25 @@ namespace ck::angelscriptgenerator::self_heal
             {
                 if (InError.MissingIdentifier.StartsWith(TEXT("FCk_Handle_")))
                 { return ECk_RecoveryStrategy::KickGenerator_DynamicHandle; }
+
+                // `F<X>_SpawnParams` used as a declared type while its
+                // generated canonical is missing (gitignored ESP / fresh
+                // clone) — ESP synthesis, preferring the source-derived
+                // full shape.
+                if (NOT FCkAsStubSynthesizer::Derive_ClassNameFromStructName(InError.MissingIdentifier).IsEmpty())
+                { return ECk_RecoveryStrategy::SynthesizeStub_EntitySpawnParams; }
+
+                return ECk_RecoveryStrategy::Unrecognized;
+            }
+
+            case ECk_AsParsedError_Kind::BareCtorNoMatchingSignatures:
+            {
+                // Direct construction of a generated `F<X>_SpawnParams`
+                // (`auto P = FBb_X_SpawnParams(...)`) whose canonical is
+                // missing. Any other bare-ctor miss is an authoring error —
+                // terminal banner.
+                if (NOT FCkAsStubSynthesizer::Derive_ClassNameFromStructName(InError.MissingIdentifier).IsEmpty())
+                { return ECk_RecoveryStrategy::SynthesizeStub_EntitySpawnParams; }
 
                 return ECk_RecoveryStrategy::Unrecognized;
             }

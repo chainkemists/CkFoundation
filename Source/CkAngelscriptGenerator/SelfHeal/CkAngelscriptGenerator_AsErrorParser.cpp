@@ -91,6 +91,47 @@ namespace ck::angelscriptgenerator::self_heal
             return true;
         }
 
+        // "(L:C) No matching signatures to '<Ident>(<args>)'" — no `::`.
+        //
+        // A constructor-style call on a type AS couldn't register. Observed
+        // (2026-06 fresh-clone ESP boot test) when a caller directly
+        // constructs a generated `F<X>_SpawnParams` whose canonical file is
+        // missing: `auto P = FBb_X_SpawnParams();` errors with this form,
+        // while the subsequent `P.Field = ...` lines cascade as
+        // "'Field' is not a member of 'Unknown'" (dropped as noise — fixing
+        // the root type fixes them).
+        //
+        // The identifier class [A-Za-z_][A-Za-z0-9_]* forbids ':' so this
+        // can never shadow the namespace-qualified form above; matcher order
+        // in ParseErrors is belt-and-braces only.
+        auto Try_MatchBareCtorNoMatchingSignatures(
+            const FString&    InLine,
+            const FString&    InCurrentFile,
+            FCk_AsParsedError& OutError) -> bool
+        {
+            static const auto Pattern = FRegexPattern{TEXT(
+                R"(^\((\d+):(\d+)\) No matching signatures to '([A-Za-z_][A-Za-z0-9_]*)\(([^)]*)\)'$)")};
+
+            auto Matcher = FRegexMatcher{Pattern, InLine.TrimStartAndEnd()};
+            if (NOT Matcher.FindNext())
+            { return false; }
+
+            const auto ArgsList = Matcher.GetCaptureGroup(4);
+
+            // Same cascade filter as the namespace-qualified form.
+            if (ArgsList.Contains(TEXT("Unknown")))
+            { return false; }
+
+            OutError                   = FCk_AsParsedError{};
+            OutError.Kind              = ECk_AsParsedError_Kind::BareCtorNoMatchingSignatures;
+            OutError.FilePath          = InCurrentFile;
+            OutError.Line              = FCString::Atoi(*Matcher.GetCaptureGroup(1));
+            OutError.Column            = FCString::Atoi(*Matcher.GetCaptureGroup(2));
+            OutError.MissingIdentifier = Matcher.GetCaptureGroup(3);
+            OutError.ArgsList          = ArgsList;
+            return true;
+        }
+
         // "(L:C) Identifier '<X>' is not a data type [in namespace '<N>' or parent | in global namespace]"
         //
         // The in-clause is optional in the regex so we tolerate the (rare) case
@@ -184,6 +225,7 @@ namespace ck::angelscriptgenerator::self_heal
 
             auto Error = FCk_AsParsedError{};
             if (Try_MatchNoMatchingSignatures(Line, CurrentFile, Error)
+                || Try_MatchBareCtorNoMatchingSignatures(Line, CurrentFile, Error)
                 || Try_MatchIdentifierNotADataType(Line, CurrentFile, Error)
                 || Try_MatchAdjacentStringLiteral(Line, CurrentFile, Error))
             {
@@ -226,6 +268,10 @@ namespace ck::angelscriptgenerator::self_heal
                     // diagnostics; a re-emit of the same line is one.
                     Key = FString::Printf(TEXT("adj|%s:%d:%d"),
                         *Err.FilePath, Err.Line, Err.Column);
+                    break;
+                case ECk_AsParsedError_Kind::BareCtorNoMatchingSignatures:
+                    Key = FString::Printf(TEXT("ctor|%s(%s)"),
+                        *Err.MissingIdentifier, *Err.ArgsList);
                     break;
             }
 
