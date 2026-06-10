@@ -12,7 +12,9 @@
 // ck:: hoisted to an unqualified alias because CK_REGISTER_SNAPSHOTABLE token-pastes the type name.
 
 using FSnap_InventoryItem = ck::FFragment_InventoryItem;
+using FSnap_Item_SpatialPlacement = ck::FFragment_Item_SpatialPlacement;
 CK_REGISTER_SNAPSHOTABLE(FSnap_InventoryItem);
+CK_REGISTER_SNAPSHOTABLE(FSnap_Item_SpatialPlacement);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -34,6 +36,27 @@ auto
         InAr << Raw;
         _Definition = Cast<UCk_InventoryItem_Definition>(Raw);
     }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ck::FFragment_Item_SpatialPlacement::
+    SerializeSnapshot(
+        FArchive& InAr,
+        ck::FSnapshotContext& /*InCtx*/)
+    -> void
+{
+    auto RotationByte = uint8{0};
+
+    if (InAr.IsSaving())
+    { RotationByte = static_cast<uint8>(_Rotation); }
+
+    InAr << _Anchor;
+    InAr << RotationByte;
+
+    if (InAr.IsLoading())
+    { _Rotation = static_cast<ECk_CardinalRotation>(RotationByte); }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
