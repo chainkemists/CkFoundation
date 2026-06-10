@@ -16,7 +16,7 @@ auto
     -> bool
 {
     return _AttributeName == InOther.Get_AttributeName() &&
-        _Component == Get_Component() &&
+        _Component == InOther.Get_Component() &&
         UCk_Utils_Arithmetic_UE::Get_IsNearlyEqual(_Base, InOther.Get_Base()) &&
         UCk_Utils_Arithmetic_UE::Get_IsNearlyEqual(_Final, InOther.Get_Final());
 }
