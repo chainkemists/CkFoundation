@@ -68,13 +68,17 @@ static struct FGeometryCollectionOwnerRepHandlerRegistrar
         FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
             []() -> UScriptStruct* { return FCk_RepData_GeometryCollectionOwner::StaticStruct(); },
             {
-                .OnChange = [DoApply](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& Old)
+                // Event-edge semantics (crumble/anchor/strain requests fire on field deltas vs the
+                // last APPLIED data) — always Applied; a not-yet-populated GC record just means the
+                // events have no targets, same as the old inline path.
+                .Apply = [DoApply](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
                 {
-                    DoApply(Entity, New.Get<FCk_RepData_GeometryCollectionOwner>(), Old.Get<FCk_RepData_GeometryCollectionOwner>());
-                },
-                .OnAdd = [DoApply](FCk_Handle& Entity, const FInstancedStruct& Data)
-                {
-                    DoApply(Entity, Data.Get<FCk_RepData_GeometryCollectionOwner>(), FCk_RepData_GeometryCollectionOwner{});
+                    DoApply(Entity,
+                        New.Get<FCk_RepData_GeometryCollectionOwner>(),
+                        Old.IsSet()
+                            ? Old.GetValue().Get<FCk_RepData_GeometryCollectionOwner>()
+                            : FCk_RepData_GeometryCollectionOwner{});
+                    return ECk_RepFragment_ApplyResult::Applied;
                 }
             });
     }
