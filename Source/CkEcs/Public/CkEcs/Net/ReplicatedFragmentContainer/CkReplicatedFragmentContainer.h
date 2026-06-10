@@ -42,28 +42,17 @@ class CKECS_API FCk_ReplicatedFragmentHandlerRegistry
 public:
     struct FHandler
     {
-        // ---- New contract (deferred dispatch) ----
         // Called by FProcessor_ReplicatedFragments_Dispatch after OnConstructed-driven composition,
-        // never inline during net receive. OldData is unset on the first application of this entry.
-        // Return NotReady to retry next tick (composition not done yet) — never compose the feature
-        // from inside Apply.
+        // never inline during net receive. OldData is unset on the first application of this entry
+        // and otherwise holds the last APPLIED data (coalesced receives diff against it). Return
+        // NotReady to retry next tick (composition not done yet) — never compose the feature from
+        // inside Apply.
         TFunction<ECk_RepFragment_ApplyResult(FCk_Handle& Entity,
                         const FInstancedStruct& NewData,
                         const TOptional<FInstancedStruct>& OldData)> Apply;
 
+        // Optional — dispatched (deferred) when the entry is removed by replication.
         TFunction<void(FCk_Handle& Entity)> Remove;
-
-        // ---- Legacy contract (inline dispatch during net receive / PostLink replay) ----
-        // Migration in progress: a handler defines EITHER Apply/Remove OR the three below. Types
-        // whose handler defines Apply are routed exclusively through the deferred dispatcher.
-        TFunction<void(FCk_Handle& Entity,
-                        const FInstancedStruct& NewData,
-                        const FInstancedStruct& OldData)> OnChange;
-
-        TFunction<void(FCk_Handle& Entity,
-                        const FInstancedStruct& Data)> OnAdd;
-
-        TFunction<void(FCk_Handle& Entity)> OnRemove;
     };
 
     using FTypeResolver = TFunction<UScriptStruct*()>;
@@ -103,13 +92,6 @@ private:
     static auto
     ResolvePending() -> void;
 
-    // Enforces the OnChange => OnAdd invariant. Initial replication always arrives as an Add, so a
-    // handler that reacts to changes but not adds would silently drop the first replicated value.
-    static auto
-    DoValidateHandler(
-        const UScriptStruct* InType,
-        const FHandler& InHandler) -> void;
-
     struct FLazyEntry
     {
         FTypeResolver TypeResolver;
@@ -136,9 +118,6 @@ public:
     UPROPERTY()
     FInstancedStruct Data;
 
-    // Client-side previous data for change detection (NOT replicated)
-    FInstancedStruct _PreviousData;
-
     // ---- Client-local deferred-dispatch state (NOT replicated) ----
     // Set on receive/link, cleared by FProcessor_ReplicatedFragments_Dispatch once Apply succeeds.
     bool _PendingApply = false;
@@ -146,8 +125,8 @@ public:
     // Accumulated while Apply keeps returning NotReady; past the timeout the entry is dropped LOUDLY.
     float _PendingForSeconds = 0.0f;
 
-    // Last data successfully applied on this client — the Old side of the next Apply. Distinct from
-    // _PreviousData (last RECEIVED): coalesced receives must diff against what was actually applied.
+    // Last data successfully applied on this client — the Old side of the next Apply. Coalesced
+    // receives diff against what was actually applied, not the last received snapshot.
     FInstancedStruct _LastAppliedData;
     bool _WasEverApplied = false;
 };

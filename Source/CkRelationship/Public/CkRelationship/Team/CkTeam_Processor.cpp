@@ -1,13 +1,11 @@
 #include "CkTeam_Processor.h"
 
-#include "CkRelationship/CkRelationship_Log.h"
 #include "CkRelationship/Team/CkTeam_Utils.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_TeamAssignedSignal_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_OnTeamAssigned_Setup);
-CK_REGISTER_PROCESSOR(ck::FProcessor_Team_RetryPendingReplication);
 
 namespace
 ck
@@ -78,29 +76,5 @@ ck
         });
 
         InHandle.Remove<FTag_OnTeamAssigned_Setup>();
-    }
-
-    auto
-        FProcessor_Team_RetryPendingReplication::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_Team_PendingReplication& InPending) const
-        -> void
-    {
-        if (NOT UCk_Utils_Team_UE::Has(InHandle))
-        { return; }
-
-        auto TeamEntity = UCk_Utils_Team_UE::Cast(InHandle);
-
-        if (NOT UCk_Utils_Team_UE::Get_IsAssignedTo(TeamEntity, InPending.Get_TeamID()))
-        {
-            ck::relationship::Verbose(TEXT("Applying pending replicated Team ID [{}] to Entity [{}]"),
-                InPending.Get_TeamID(), InHandle);
-
-            UCk_Utils_Team_UE::Assign(TeamEntity, InPending.Get_TeamID());
-        }
-
-        InHandle.Remove<FFragment_Team_PendingReplication>();
     }
 }

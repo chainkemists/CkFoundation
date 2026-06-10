@@ -5,7 +5,6 @@
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment.h"
 #include "CkAttribute/IntegerAttribute/CkIntegerAttribute_Fragment.h"
 
-#include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
 
 namespace ck { struct FProcessor_VectorAttribute_MinMaxClamp; }
 
@@ -65,28 +64,6 @@ namespace ck
         using TProcessor_Attribute_AccumulatedRefill::TProcessor_Attribute_AccumulatedRefill;
         using Group = FGroup_Gameplay;
         using RunAfter = TDepList<FProcessor_IntegerAttribute_FireSignals>;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKATTRIBUTE_API FProcessor_IntegerAttribute_RetryPendingReplication
-        : public ck_exp::TProcessor<FProcessor_IntegerAttribute_RetryPendingReplication, FCk_Handle,
-            ck::TReadWrite<FFragment_IntegerAttribute_PendingReplicationEntries>, CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using Group = FGroup_Gameplay;
-        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::ClientOnly;
-        using MarkedDirtyBy = FFragment_IntegerAttribute_PendingReplicationEntries;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            FCk_Handle InHandle,
-            FFragment_IntegerAttribute_PendingReplicationEntries& InPending) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
