@@ -7,6 +7,22 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Compact label for scene-node debug names: the anchor's own debug name when set,
+// else its entity number. The full detailed handle format ("37|0(37)(Default__...)")
+// made these names unreadable on every debugger surface that displays them.
+static auto
+Get_SceneNodeAnchorLabel(
+    const FCk_Handle& InHandle) -> FString
+{
+    const auto DebugName = UCk_Utils_Handle_UE::Get_DebugName(InHandle);
+    if (NOT DebugName.IsNone())
+    { return DebugName.ToString(); }
+
+    return ck::Format_UE(TEXT("#{}"), InHandle.Get_Entity().Get_EntityNumber());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Utils_SceneNode_UE::
     Add(
@@ -29,7 +45,7 @@ auto
     -> FCk_Handle_SceneNode
 {
     auto SceneNodeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
-    UCk_Utils_Handle_UE::Set_DebugName(SceneNodeEntity, *ck::Format_UE(TEXT("SCENE NODE: [{}]"), InOwner));
+    UCk_Utils_Handle_UE::Set_DebugName(SceneNodeEntity, *ck::Format_UE(TEXT("SceneNode({})"), Get_SceneNodeAnchorLabel(InOwner)));
 
     const auto& OwnerTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(InOwner);
 
@@ -46,7 +62,7 @@ auto
     -> FCk_Handle_SceneNode
 {
     auto SceneNodeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttachTo);
-    UCk_Utils_Handle_UE::Set_DebugName(SceneNodeEntity, *ck::Format_UE(TEXT("SCENE NODE: [{} > {}]"), InAttachTo, InSceneComponent));
+    UCk_Utils_Handle_UE::Set_DebugName(SceneNodeEntity, *ck::Format_UE(TEXT("SceneNode({} > {})"), Get_SceneNodeAnchorLabel(InAttachTo), GetNameSafe(InSceneComponent)));
 
     auto SceneNodeWithTransform = UCk_Utils_Transform_UE::AddAndAttachToUnrealComponent(SceneNodeEntity, InSceneComponent, ECk_Replication::DoesNotReplicate);
 
@@ -64,7 +80,7 @@ auto
     -> FCk_Handle_SceneNode
 {
     auto SceneNodeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttachTo);
-    UCk_Utils_Handle_UE::Set_DebugName(SceneNodeEntity, *ck::Format_UE(TEXT("SCENE NODE: [{} > {} > {}]"), InAttachTo, InMeshComponent, InSocketName));
+    UCk_Utils_Handle_UE::Set_DebugName(SceneNodeEntity, *ck::Format_UE(TEXT("SceneNode({} > {}:{})"), Get_SceneNodeAnchorLabel(InAttachTo), GetNameSafe(InMeshComponent), InSocketName));
 
     auto SceneNodeWithTransform = UCk_Utils_Transform_UE::AddAndAttachToUnrealMesh(SceneNodeEntity, InMeshComponent, InSocketName, ECk_Replication::DoesNotReplicate);
 
