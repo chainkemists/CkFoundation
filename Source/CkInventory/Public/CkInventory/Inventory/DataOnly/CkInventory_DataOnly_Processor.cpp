@@ -44,7 +44,7 @@ namespace ck
         if (InHandle.Has<FTag_Inventory_DataOnly_RestoreReplicated>())
         { return; }
 
-        // Spatial restore is blocked on CkGrid snapshot wiring — leave those inert (and untagged).
+        // Spatial inventories re-drive through their own sibling (FProcessor_Inventory_Spatial_ReplicateOnRestore).
         if (InParams.Get_InventoryType() != ECk_InventoryType::DataOnly)
         { return; }
 
