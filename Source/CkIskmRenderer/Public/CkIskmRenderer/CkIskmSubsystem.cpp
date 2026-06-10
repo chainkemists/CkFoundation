@@ -54,7 +54,11 @@ auto
 {
     if (ck::Is_NOT_Valid(InComp)) { return; }
     InComp->SetVisibility(false);
-    InComp->Stop();
+    // No Stop() here: on a component whose AnimScriptInstance is an AnimBP (or
+    // the notify bridge), Stop() logs the "Currently in Animation Blueprint
+    // mode" Warning — which the AutoTest harness escalates to a failure for any
+    // proxy destroyed mid-test. SetAnimInstanceClass(nullptr) destroys the live
+    // instance outright (single-node or AnimBP), halting playback either way.
     InComp->SetAnimInstanceClass(nullptr);
     InComp->SetSkeletalMesh(nullptr);
     InComp->SetSimulatePhysics(false);
