@@ -45,6 +45,42 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // ---- ReplicateOnRestore (Server-side, post-snapshot-load) ----
+
+    // Re-drives a RESTORED DataOnly inventory after a snapshot load. The shape tag
+    // (FTag_Inventory_DataOnly) and the transient PreviousItems diff cache are not snapshotted, and
+    // the owner-hosted container entry is missing (Construct is abstained during reconstitution) —
+    // re-derive all three from the restored FFragment_Inventory_Params (whose _InventoryType is the
+    // shape discriminator), then re-arm FTag_Inventory_MayRequireReplication so the Replicate
+    // processor rebuilds the wire entries from the restored item record. SPATIAL inventories are
+    // deliberately NOT handled: their grid child entity does not survive a save until CkGrid gains
+    // snapshot wiring — restored Spatial inventories stay shape-tagless and inert (see the
+    // restore-coverage ratchet reason). The view has no shape tag (it is lost); the body filters on
+    // the discriminator. Pairs ck::FTag_Snapshot_JustRestored (shared per-entity, never removed
+    // here) with the per-feature done tag, and POINT-QUERIES the in_place marker (listing it in
+    // the view would surface tombstones).
+    class CKINVENTORY_API FProcessor_Inventory_DataOnly_ReplicateOnRestore : public ck_exp::TProcessor<
+            FProcessor_Inventory_DataOnly_ReplicateOnRestore,
+            FCk_Handle_Inventory,
+            TReadOnly<FFragment_Inventory_Params>,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Inventory_Params& InParams) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKINVENTORY_API FProcessor_Inventory_DataOnly_Replicate : public ck_exp::TProcessor<
             FProcessor_Inventory_DataOnly_Replicate,
             FCk_Handle_Inventory_DataOnly,
