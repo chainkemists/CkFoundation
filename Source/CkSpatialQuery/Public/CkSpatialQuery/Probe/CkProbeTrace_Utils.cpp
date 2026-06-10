@@ -444,7 +444,11 @@ auto
     {
         const auto ProbeName = UCk_Utils_Probe_UE::Get_Name(Hit.Get_Probe());
 
-        if (NOT InSettings.Get_Filter().HasTag(ProbeName))
+        // Match direction must mirror Get_CanOverlapWith (Name vs Filter). The
+        // previous Filter.HasTag(ProbeName) expanded the FILTER's parents, so a
+        // probe with the default root "Probe" name matched any filter — large
+        // trigger volumes stole Single-policy traces from real targets.
+        if (NOT ProbeName.MatchesAny(InSettings.Get_Filter()))
         { continue; }
 
         if (InTryDrawDebug)
@@ -695,7 +699,8 @@ auto
     {
         const auto ProbeName = UCk_Utils_Probe_UE::Get_Name(Hit.Get_Probe());
 
-        if (NOT InSettings.Get_Filter().HasTag(ProbeName))
+        // Same Name-vs-Filter direction fix as the line-trace path above.
+        if (NOT ProbeName.MatchesAny(InSettings.Get_Filter()))
         { continue; }
 
         if (InTryDrawDebug)
