@@ -11,36 +11,21 @@ static struct FTeamRepHandlerRegistrar
 {
     FTeamRepHandlerRegistrar()
     {
-        const auto DoApplyTeam = [](FCk_Handle& Entity, ECk_Team_ID InTeamID)
-        {
-            if (NOT UCk_Utils_Team_UE::Has(Entity))
-            {
-                // The container OnAdd replay at PostLink runs before OnConstructed-driven composition
-                // on clients. Never compose the feature from the apply path — stash the authoritative
-                // value and let FProcessor_Team_RetryPendingReplication apply it once the feature exists.
-                Entity.AddOrGet<ck::FFragment_Team_PendingReplication>() =
-                    ck::FFragment_Team_PendingReplication{InTeamID};
-                return;
-            }
-
-            auto TeamEntity = UCk_Utils_Team_UE::Cast(Entity);
-
-            if (UCk_Utils_Team_UE::Get_IsAssignedTo(TeamEntity, InTeamID))
-            { return; }
-
-            UCk_Utils_Team_UE::Assign(TeamEntity, InTeamID);
-        };
-
         FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
         []() -> UScriptStruct* { return FCk_RepData_Team::StaticStruct(); },
         {
-            .OnChange = [DoApplyTeam](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& /*Old*/)
+            .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
             {
-                DoApplyTeam(Entity, New.Get<FCk_RepData_Team>().Value);
-            },
-            .OnAdd = [DoApplyTeam](FCk_Handle& Entity, const FInstancedStruct& Data)
-            {
-                DoApplyTeam(Entity, Data.Get<FCk_RepData_Team>().Value);
+                if (NOT UCk_Utils_Team_UE::Has(Entity))
+                { return ECk_RepFragment_ApplyResult::NotReady; }
+
+                auto TeamEntity = UCk_Utils_Team_UE::Cast(Entity);
+                const auto TeamID = New.Get<FCk_RepData_Team>().Value;
+
+                if (NOT UCk_Utils_Team_UE::Get_IsAssignedTo(TeamEntity, TeamID))
+                { UCk_Utils_Team_UE::Assign(TeamEntity, TeamID); }
+
+                return ECk_RepFragment_ApplyResult::Applied;
             }
         });
     }
