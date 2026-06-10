@@ -656,6 +656,13 @@ auto
     if (ck::Is_NOT_Valid(InWorld))
     { return; }
 
+    // PostLoadMapWithWorld is process-global: under multi-PIE it also fires when ANOTHER PIE
+    // world (e.g. a joining client) finishes loading. Reacting to a foreign world wipes this
+    // world's player pools (its PCs don't belong to InWorld) and spawns channels owned by the
+    // foreign world's PlayerStates. Only ever react to our own world's load.
+    if (InWorld != GetWorld())
+    { return; }
+
     if (GetWorld()->IsNetMode(NM_Client))
     { return; }
 
