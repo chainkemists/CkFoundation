@@ -24,7 +24,10 @@ namespace ck
             }
             case ECk_ProcessorNetModeRequirement::AuthorityOnly:
             {
-                return UCk_Utils_Net_UE::Get_HasAuthority(InTransientEntity);
+                // NOT Get_HasAuthority: the transient entity is locally owned in every world, so
+                // its authority tag is present on pure clients too. The Host net-mode tag is the
+                // world-level signal the enum documents.
+                return UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InTransientEntity);
             }
             case ECk_ProcessorNetModeRequirement::ClientOnly:
             {
