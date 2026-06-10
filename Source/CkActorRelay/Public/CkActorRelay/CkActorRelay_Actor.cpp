@@ -103,10 +103,23 @@ auto
     auto GroupSubsystem = Cast<UCk_ActorRelay_Group_Subsystem_Base_UE>(GetWorld()->GetSubsystemBase(_GroupSubsystemClass));
 
     if (ck::Is_NOT_Valid(GroupSubsystem))
-    { return false; }
+    {
+        ck::actorrelay::Verbose(TEXT("Relay [{}]: group subsystem [{}] not found yet"),
+            this, _GroupSubsystemClass);
+        return false;
+    }
+
+    if (NOT GroupSubsystem->DoRegisterChannelActor(this))
+    {
+        ck::actorrelay::Verbose(TEXT("Relay [{}]: subsystem [{}] found but registration not possible yet (Owner [{}] not a resolvable PlayerState)"),
+            this, GroupSubsystem, GetOwner());
+        return false;
+    }
 
     _GroupSubsystem = GroupSubsystem;
-    GroupSubsystem->DoRegisterChannelActor(this);
+
+    ck::actorrelay::Verbose(TEXT("Relay [{}]: registered with [{}] (Owner [{}])"),
+        this, GroupSubsystem, GetOwner());
 
     DoStartBroadcastWhenReadyPolling();
 

@@ -100,7 +100,9 @@ public:
 private:
     auto DoTryResolve(FCk_Handle_PendingActorRelay& InPending) -> FCk_ActorRelay_ChannelResult;
 
-    auto DoRegisterChannelActor(ACk_ActorRelay_UE* InChannelActor) -> void;
+    // Returns false when the channel cannot be filed yet (PlayerOwned group whose Owner
+    // PlayerState has not resolved on this machine) — callers must retry.
+    auto DoRegisterChannelActor(ACk_ActorRelay_UE* InChannelActor) -> bool;
 
     auto DoSpawnAndRegister_Channel(
         const TFunction<void(ACk_ActorRelay_UE*)>& InPreFinishSpawnFunc = nullptr) -> ACk_ActorRelay_UE*;

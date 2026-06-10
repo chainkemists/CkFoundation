@@ -489,19 +489,25 @@ auto
     UCk_ActorRelay_Group_Subsystem_Base_UE::
     DoRegisterChannelActor(
         ACk_ActorRelay_UE* InChannelActor)
-    -> void
+    -> bool
 {
     if (Get_OwnershipPolicy() == ECk_ActorRelay_OwnershipPolicy::ServerOwned)
     {
         _ServerChannels.AddUnique(InChannelActor);
-        return;
+        return true;
     }
 
+    // On clients the channel's Owner (a PlayerState) replicates independently of the channel
+    // actor and may not have resolved yet — report failure so the caller's retry keeps driving
+    // registration instead of silently dropping the channel from the pool forever.
     if (auto OwnerPlayerState = Cast<APlayerState>(InChannelActor->GetOwner());
         ck::IsValid(OwnerPlayerState))
     {
         _PlayerChannels.FindOrAdd(OwnerPlayerState).AddUnique(InChannelActor);
+        return true;
     }
+
+    return false;
 }
 
 /*-----------------------------------------------------------------------------
