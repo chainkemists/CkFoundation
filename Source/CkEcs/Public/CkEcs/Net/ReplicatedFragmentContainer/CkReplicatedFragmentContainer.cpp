@@ -76,8 +76,21 @@ auto
         ? InType->GetName()
         : FString{TEXT("<dynamic fallback>")};
 
+    const auto HandlesApply  = static_cast<bool>(InHandler.Apply);
     const auto HandlesChange = static_cast<bool>(InHandler.OnChange);
     const auto HandlesAdd    = static_cast<bool>(InHandler.OnAdd);
+
+    // A handler speaks exactly one contract: Apply/Remove (deferred dispatch) or
+    // OnAdd/OnChange/OnRemove (legacy inline). Mixing them would dispatch the type twice.
+    CK_ENSURE_IF_NOT(NOT (HandlesApply && (HandlesChange || HandlesAdd || static_cast<bool>(InHandler.OnRemove))),
+        TEXT("Replicated fragment handler for [{}] registers BOTH Apply and legacy OnAdd/OnChange/"
+             "OnRemove callbacks. The type would dispatch through the deferred dispatcher AND the "
+             "inline path. Register one contract only."),
+        TypeName)
+    { return; }
+
+    if (HandlesApply)
+    { return; }
 
     // Invariant: reacting to changes requires reacting to the initial Add. A value cannot change on
     // a client before it has first been added, so OnChange without OnAdd can only ever drop the
@@ -123,6 +136,17 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 // FCk_ReplicatedFragmentArray
 
+static auto
+    MarkEntryPendingApply(
+        FCk_ReplicatedFragmentEntry& InEntry,
+        FCk_Handle& InEntity)
+    -> void
+{
+    InEntry._PendingApply = true;
+    InEntry._PendingForSeconds = 0.0f;
+    InEntity.AddOrGet<ck::FTag_RepFragments_PendingApply>();
+}
+
 auto
     FCk_ReplicatedFragmentArray::
     PreReplicatedRemove(
@@ -142,7 +166,18 @@ auto
         auto& Entry = _Items[Index];
 
         const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Resolve(Entry.Data.GetScriptStruct());
-        if (Handler == nullptr || !Handler->OnRemove)
+        if (Handler == nullptr)
+        { continue; }
+
+        // New contract: removal dispatches from the deferred dispatcher, never inline.
+        if (Handler->Remove)
+        {
+            _PendingRemovals.Emplace(Entry.Data);
+            Entity.AddOrGet<ck::FTag_RepFragments_PendingApply>();
+            continue;
+        }
+
+        if (!Handler->OnRemove)
         { continue; }
 
         Handler->OnRemove(Entity);
@@ -173,11 +208,22 @@ auto
         auto& Entry = _Items[Index];
         Entry._PreviousData = Entry.Data;
 
+        const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Resolve(Entry.Data.GetScriptStruct());
+        if (Handler == nullptr)
+        { continue; }
+
+        // New contract: pure bookkeeping here — the deferred dispatcher applies after composition.
+        // Pre-link receives are also covered: PostLink re-marks every Apply-handled entry pending.
+        if (Handler->Apply)
+        {
+            MarkEntryPendingApply(Entry, Entity);
+            continue;
+        }
+
         if (NOT IsConstructionComplete)
         { continue; }
 
-        const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Resolve(Entry.Data.GetScriptStruct());
-        if (Handler == nullptr || !Handler->OnAdd)
+        if (!Handler->OnAdd)
         { continue; }
 
         Handler->OnAdd(Entity, Entry.Data);
@@ -203,7 +249,12 @@ auto
         auto& Entry = _Items[Index];
 
         const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Resolve(Entry.Data.GetScriptStruct());
-        if (Handler != nullptr && Handler->OnChange)
+
+        if (Handler != nullptr && Handler->Apply)
+        {
+            MarkEntryPendingApply(Entry, Entity);
+        }
+        else if (Handler != nullptr && Handler->OnChange)
         {
             Handler->OnChange(Entity, Entry.Data, Entry._PreviousData);
         }
