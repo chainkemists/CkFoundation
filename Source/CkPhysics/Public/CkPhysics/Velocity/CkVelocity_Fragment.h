@@ -12,6 +12,8 @@
 
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
+#include <Serialization/Archive.h>
+
 #include "CkVelocity_Fragment.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -20,11 +22,17 @@ class UMovementComponent;
 class UCk_Utils_Velocity_UE;
 class UCk_Utils_BulkVelocityModifier_UE;
 
+namespace ck { class FSnapshotContext; }
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_Velocity_NeedsSetup);
+
+    // Per-feature restore-replication done marker — see FTag_TagSet_RestoreReplicated for the pattern
+    // (the shared ck::FTag_Snapshot_JustRestored may not be removed by any single owner-resident feature).
+    CK_DEFINE_ECS_TAG(FTag_Velocity_RestoreReplicated);
     CK_DEFINE_ECS_TAG(FTag_VelocityChannel);
     CK_DEFINE_ECS_TAG(FTag_VelocityModifier);
     CK_DEFINE_ECS_TAG(FTag_VelocityModifier_NeedsSetup);
@@ -40,6 +48,32 @@ namespace ck
 
     public:
         using ParamsType = FCk_Fragment_Velocity_ParamsData;
+        using IsSnapshotable = void;
+
+        // Tier-C: hand-rolled — the wrapped reflected structs expose their fields only through
+        // getters + the generated constructors, so round-trip through locals.
+        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& /*InCtx*/) -> void
+        {
+            auto Coordinates = static_cast<uint8>(_Params.Get_Coordinates());
+            auto StartingVelocity = _Params.Get_StartingVelocity();
+            auto HasMinSpeed = _Params.Get_VelocityMinMax().Get_HasMinSpeed();
+            auto MinSpeed    = _Params.Get_VelocityMinMax().Get_MinSpeed();
+            auto HasMaxSpeed = _Params.Get_VelocityMinMax().Get_HasMaxSpeed();
+            auto MaxSpeed    = _Params.Get_VelocityMinMax().Get_MaxSpeed();
+
+            InAr << Coordinates;
+            InAr << StartingVelocity;
+            InAr << HasMinSpeed;
+            InAr << MinSpeed;
+            InAr << HasMaxSpeed;
+            InAr << MaxSpeed;
+
+            if (InAr.IsLoading())
+            {
+                _Params = ParamsType{static_cast<ECk_LocalWorld>(Coordinates), StartingVelocity}
+                    .Set_VelocityMinMax(FCk_Fragment_Velocity_MinMax_ParamsData{HasMinSpeed, MinSpeed, HasMaxSpeed, MaxSpeed});
+            }
+        }
 
     private:
         ParamsType _Params;
@@ -82,6 +116,14 @@ namespace ck
         friend class FProcessor_VelocityModifier_Setup;
         friend class FProcessor_VelocityModifier_EndPlay;
 
+    public:
+        using IsSnapshotable = void;
+
+        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& /*InCtx*/) -> void
+        {
+            InAr << _CurrentVelocity;
+        }
+
     private:
         FVector _CurrentVelocity = FVector::ZeroVector;
 
@@ -101,6 +143,29 @@ namespace ck
 
     public:
         friend class UCk_Utils_Velocity_UE;
+
+    public:
+        using IsSnapshotable = void;
+
+        // Tier-C: TOptional has no FArchive operator<< — persist a set-flag + value per speed bound.
+        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& /*InCtx*/) -> void
+        {
+            auto HasMin = _MinSpeed.IsSet();
+            auto Min    = _MinSpeed.Get(0.0f);
+            auto HasMax = _MaxSpeed.IsSet();
+            auto Max    = _MaxSpeed.Get(0.0f);
+
+            InAr << HasMin;
+            InAr << Min;
+            InAr << HasMax;
+            InAr << Max;
+
+            if (InAr.IsLoading())
+            {
+                _MinSpeed = HasMin ? TOptional<float>{Min} : TOptional<float>{};
+                _MaxSpeed = HasMax ? TOptional<float>{Max} : TOptional<float>{};
+            }
+        }
 
     private:
         TOptional<float> _MinSpeed;

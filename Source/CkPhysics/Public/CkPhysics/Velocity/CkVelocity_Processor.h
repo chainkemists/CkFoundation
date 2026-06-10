@@ -229,6 +229,32 @@ namespace ck
             const FFragment_Velocity_Current& InCurrent,
             const FFragment_ContainerRef_Velocity& InContainerRef) const -> void;
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Re-drives replication of a RESTORED Velocity to clients after a snapshot load: re-creates the
+    // self-resident container entry seeded with the restored value (Construct is abstained during
+    // reconstitution, so the entry + FFragment_ContainerRef_Velocity the Replicate processor keys on
+    // are missing). No trigger tag to re-arm — Replicate pushes every frame once the ref exists.
+    // Pairs the shared ck::FTag_Snapshot_JustRestored with FTag_Velocity_RestoreReplicated (see the
+    // TagSet processor for the done-tag pattern); POINT-QUERIES the in_place marker (tombstone trap).
+    class CKPHYSICS_API FProcessor_Velocity_ReplicateOnRestore : public TProcessor<
+            FProcessor_Velocity_ReplicateOnRestore,
+            ck::TReadOnly<FFragment_Velocity_Current>,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Velocity_Current& InCurrent) const -> void;
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -1,7 +1,9 @@
 #include "CkAcceleration_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
+#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 #include "CkPhysics/Acceleration/CkAcceleration_Utils.h"
 
@@ -14,6 +16,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_BulkAccelerationModifier_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_BulkAccelerationModifier_AddNewTargets);
 CK_REGISTER_PROCESSOR(ck::FProcessor_BulkAccelerationModifier_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Acceleration_Replicate);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Acceleration_ReplicateOnRestore);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -259,6 +262,32 @@ namespace ck
     {
         UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_Acceleration>(
             InHandle, FCk_RepData_Acceleration{InCurrent.Get_CurrentAcceleration()});
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Acceleration_ReplicateOnRestore::
+        ForEachEntity(
+            TimeType /*InDeltaT*/,
+            HandleType InHandle,
+            const FFragment_Acceleration_Current& InCurrent) const
+        -> void
+    {
+        if (NOT InHandle.Has<FTag_Snapshot_JustRestored>())
+        { return; }
+
+        if (InHandle.Has<FTag_Acceleration_RestoreReplicated>())
+        { return; }
+
+        // Driver not re-established yet -> retry next tick (the shared marker stays in place).
+        if (NOT UCk_Utils_EntityReplicationDriver_UE::Has(InHandle))
+        { return; }
+
+        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Acceleration>(
+            InHandle, FCk_RepData_Acceleration{InCurrent.Get_CurrentAcceleration()});
+
+        InHandle.Add<FTag_Acceleration_RestoreReplicated>();
     }
 }
 

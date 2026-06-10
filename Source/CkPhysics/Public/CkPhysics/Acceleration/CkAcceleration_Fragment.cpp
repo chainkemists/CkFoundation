@@ -4,6 +4,19 @@
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
+#include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
+#include "CkEcs/Snapshot/CkSnapshot_Archive_Writer.h"
+#include "CkEcs/Snapshot/CkSnapshot_Archive_Reader.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+// Tier-C SerializeSnapshot registration (aliases because CK_REGISTER_SNAPSHOTABLE token-pastes the name).
+
+using FSnap_Acceleration_Params  = ck::FFragment_Acceleration_Params;
+using FSnap_Acceleration_Current = ck::FFragment_Acceleration_Current;
+
+CK_REGISTER_SNAPSHOTABLE(FSnap_Acceleration_Params);
+CK_REGISTER_SNAPSHOTABLE(FSnap_Acceleration_Current);
+
 // --------------------------------------------------------------------------------------------------------------------
 // Container-based replication handler for Acceleration
 

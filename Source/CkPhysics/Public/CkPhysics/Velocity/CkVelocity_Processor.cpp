@@ -3,7 +3,9 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Math/ValueRange/CkValueRange.h"
 #include "CkCore/Math/Vector/CkVector_Utils.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
+#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkPhysics/PredictedVelocity/CkPredictedVelocity_Utils.h"
@@ -19,6 +21,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_BulkVelocityModifier_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_BulkVelocityModifier_AddNewTargets);
 CK_REGISTER_PROCESSOR(ck::FProcessor_BulkVelocityModifier_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Velocity_Replicate);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Velocity_ReplicateOnRestore);
 
 #include "GameFramework/Character.h"
 #include "GameFramework/PawnMovementComponent.h"
@@ -309,6 +312,32 @@ namespace ck
     {
         UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_Velocity>(
             InHandle, FCk_RepData_Velocity{InCurrent.Get_CurrentVelocity()});
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Velocity_ReplicateOnRestore::
+        ForEachEntity(
+            TimeType /*InDeltaT*/,
+            HandleType InHandle,
+            const FFragment_Velocity_Current& InCurrent) const
+        -> void
+    {
+        if (NOT InHandle.Has<FTag_Snapshot_JustRestored>())
+        { return; }
+
+        if (InHandle.Has<FTag_Velocity_RestoreReplicated>())
+        { return; }
+
+        // Driver not re-established yet -> retry next tick (the shared marker stays in place).
+        if (NOT UCk_Utils_EntityReplicationDriver_UE::Has(InHandle))
+        { return; }
+
+        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Velocity>(
+            InHandle, FCk_RepData_Velocity{InCurrent.Get_CurrentVelocity()});
+
+        InHandle.Add<FTag_Velocity_RestoreReplicated>();
     }
 }
 
