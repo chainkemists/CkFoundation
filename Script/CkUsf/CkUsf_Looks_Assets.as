@@ -452,6 +452,32 @@ namespace CkUsf
         _Parameters.Add(CoatRoughness);
     }
 
+    asset PainterlyRuins of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/PainterlyRuins.ush";
+        _UshFunctionName = n"CkUsf_Look_PainterlyRuins";
+        _Domain          = ECk_Usf_Domain::SurfaceUnlit;
+        _LookName        = n"PainterlyRuins";
+
+        FCk_Usf_ParamDesc SkyTint;
+        SkyTint._Name = n"SkyTint";
+        SkyTint._Type = ECk_Usf_ParamType::Vector;
+        SkyTint._DefaultVector = FLinearColor(0.55, 0.65, 0.74, 1.0);
+        _Parameters.Add(SkyTint);
+
+        FCk_Usf_ParamDesc FoliageTint;
+        FoliageTint._Name = n"FoliageTint";
+        FoliageTint._Type = ECk_Usf_ParamType::Vector;
+        FoliageTint._DefaultVector = FLinearColor(0.30, 0.50, 0.28, 1.0);
+        _Parameters.Add(FoliageTint);
+
+        FCk_Usf_ParamDesc Speed;
+        Speed._Name = n"Speed";
+        Speed._Type = ECk_Usf_ParamType::Scalar;
+        Speed._DefaultScalar = 1.0;
+        _Parameters.Add(Speed);
+    }
+
     // ---- Multi-pass (render-texture) passes ----
 
     asset SmokeBuffer of UCkUsf_LookDefinition

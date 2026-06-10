@@ -1,0 +1,146 @@
+// /CkUsf/Looks/PainterlyRuins.ush
+// Painterly concept-art landscape: an overgrown stone arch ruin on a mirror-calm lake, misty cliff
+// faces behind, a tiny rider at the waterline for scale. Flat-brush look from hard SDF fills with
+// fbm-perturbed edges + light posterization; the water is a compressed vertical mirror of the scene
+// with a slow ripple drift. 2D "viewport on a sphere" port style (like Seascape/Truchet).
+#pragma once
+#include "/CkUsf/Common.ush"
+
+float CkUsf_PR_Box(float2 P, float2 C, float2 B)
+{
+    float2 D = abs(P - C) - B;
+    return length(max(D, 0.0)) + min(max(D.x, D.y), 0.0);
+}
+
+float CkUsf_PR_Ellipse(float2 P, float2 C, float2 R)
+{
+    float2 Q = (P - C) / R;
+    return (length(Q) - 1.0) * min(R.x, R.y);
+}
+
+// Stone blocks: pillars left/right, the arch span, a base slab. (center.xy, halfsize.xy)
+static const float4 CKUSF_PR_STONE[6] =
+{
+    float4(0.300, 0.520, 0.026, 0.220),   // L outer pillar
+    float4(0.360, 0.500, 0.022, 0.200),   // L inner pillar
+    float4(0.620, 0.520, 0.024, 0.220),   // R inner pillar
+    float4(0.680, 0.550, 0.027, 0.250),   // R outer pillar (tallest)
+    float4(0.490, 0.475, 0.165, 0.048),   // arch span
+    float4(0.490, 0.305, 0.245, 0.018),   // base slab at the waterline
+};
+
+// Foliage clumps: (center.xy, radii.xy). Shade picked per-clump from 3 greens by hash.
+static const float4 CKUSF_PR_FOLIAGE[16] =
+{
+    float4(0.300, 0.760, 0.052, 0.050),   // L outer crown
+    float4(0.335, 0.690, 0.058, 0.048),
+    float4(0.362, 0.745, 0.040, 0.052),
+    float4(0.310, 0.580, 0.044, 0.038),   // L mid clump
+    float4(0.490, 0.560, 0.100, 0.042),   // span canopy
+    float4(0.448, 0.598, 0.050, 0.038),
+    float4(0.548, 0.588, 0.058, 0.042),
+    float4(0.620, 0.785, 0.050, 0.058),   // R crown
+    float4(0.662, 0.725, 0.058, 0.058),
+    float4(0.700, 0.720, 0.030, 0.140),   // tall cypress, right
+    float4(0.742, 0.620, 0.022, 0.100),   // smaller cypress, far right
+    float4(0.640, 0.500, 0.038, 0.038),   // hanging clump, R of opening
+    float4(0.372, 0.468, 0.034, 0.034),   // hanging clump, L of opening
+    float4(0.425, 0.322, 0.060, 0.024),   // base bushes
+    float4(0.575, 0.318, 0.068, 0.020),
+    float4(0.600, 0.296, 0.075, 0.013),   // grass spit the rider stands on
+};
+
+float3 CkUsf_PR_Scene(float2 P, float Time, float3 SkyTint, float3 FoliageTint, float Speed)
+{
+    // ---- Sky: flat tint with faint vertical brush streaks ----
+    float Streak = CkUsf_Fbm(float2(P.x * 14.0, P.y * 2.0));
+    float3 Col = SkyTint * (0.96 + 0.10 * Streak);
+
+    // ---- Distant cliff faces: tall soft masses, brighter mist toward the horizon ----
+    float Cliff = CkUsf_Fbm(float2(P.x * 2.6 + 7.0, P.y * 0.7) + Time * Speed * 0.01);
+    float CliffMask = smoothstep(0.42, 0.72, Cliff) * smoothstep(0.95, 0.40, P.y);
+    Col = lerp(Col, SkyTint * 0.86, CliffMask * 0.55);
+    Col = lerp(Col, SkyTint * 1.08, smoothstep(0.46, 0.30, P.y) * 0.45);
+
+    // ---- Far shoreline silhouettes on the horizon ----
+    float Horizon = 1.0 - smoothstep(0.0, 0.018, abs(P.y - 0.318));
+    float IslandRow = step(0.62, CkUsf_ValueNoise(float2(P.x * 6.0, 3.7)));
+    Col = lerp(Col, SkyTint * 0.55, Horizon * IslandRow * 0.7);
+
+    // ---- Stone arch: union of blocks minus the arch opening ----
+    float EdgeNoise = (CkUsf_Fbm(P * 22.0) - 0.5) * 0.012;
+    float StoneD = 1e5;
+    for (int S = 0; S < 6; ++S)
+    {
+        StoneD = min(StoneD, CkUsf_PR_Box(P, CKUSF_PR_STONE[S].xy, CKUSF_PR_STONE[S].zw));
+    }
+    float OpenD = min(
+        length(P - float2(0.490, 0.430)) - 0.085,
+        CkUsf_PR_Box(P, float2(0.490, 0.360), float2(0.085, 0.070)));
+    StoneD = max(StoneD, -OpenD) + EdgeNoise;
+
+    float Tone = floor(CkUsf_Fbm(P * 9.0) * 4.0) / 3.0;   // 4 flat stone tones
+    float3 Stone = lerp(float3(0.28, 0.36, 0.49), float3(0.58, 0.65, 0.72), Tone);
+    // sparse purple accents in the masonry
+    Stone = lerp(Stone, float3(0.42, 0.27, 0.52), step(0.82, CkUsf_ValueNoise(P * 13.0)) * 0.5);
+    Col = lerp(Col, Stone, smoothstep(0.005, -0.005, StoneD));
+
+    // ---- Foliage clumps, three quantized greens, faint sway ----
+    for (int F = 0; F < 16; ++F)
+    {
+        float2 Fp = P;
+        Fp.x += sin(Time * Speed * 0.8 + float(F) * 2.1) * 0.0025;
+        float D = CkUsf_PR_Ellipse(Fp, CKUSF_PR_FOLIAGE[F].xy, CKUSF_PR_FOLIAGE[F].zw)
+                + (CkUsf_Fbm(Fp * 26.0 + float(F) * 3.3) - 0.5) * 0.022;
+        float Shade = floor(CkUsf_Hash21(float2(float(F), 1.3)) * 3.0) / 2.0;   // 0, 0.5, 1
+        float3 Green = FoliageTint * lerp(0.55, 1.45, Shade);
+        Col = lerp(Col, Green, smoothstep(0.004, -0.004, D));
+    }
+
+    // ---- Tiny rider at the waterline (scale cue) ----
+    float Rider = min(
+        CkUsf_PR_Ellipse(P, float2(0.598, 0.302), float2(0.016, 0.008)),    // mount
+        CkUsf_PR_Ellipse(P, float2(0.594, 0.315), float2(0.006, 0.010)));   // rider
+    Col = lerp(Col, float3(0.62, 0.55, 0.35), smoothstep(0.003, -0.003, Rider));
+
+    return Col;
+}
+
+// Params: SkyTint (Vector), FoliageTint (Vector), Speed (Scalar)
+FCkUsf_SurfaceOutput CkUsf_Look_PainterlyRuins(FCkUsf_SurfaceInput In, float3 SkyTint, float3 FoliageTint, float Speed)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float2 P = float2(In.UV.x, 1.0 - In.UV.y);   // y-up canvas
+    const float Waterline = 0.300;
+
+    float3 Col;
+    if (P.y > Waterline)
+    {
+        Col = CkUsf_PR_Scene(P, In.Time, SkyTint, FoliageTint, Speed);
+    }
+    else
+    {
+        // Mirror about the waterline, slightly compressed, with a slow ripple drift.
+        float Depth = Waterline - P.y;
+        float2 Rp = float2(P.x, Waterline + Depth * 1.05);
+        Rp.x += sin(P.y * 80.0 + In.Time * Speed) * 0.004 * (Depth + 0.2);
+        float3 Refl = CkUsf_PR_Scene(Rp, In.Time, SkyTint, FoliageTint, Speed);
+
+        float3 Water = SkyTint * 1.06;
+        Col = lerp(Refl, Water, 0.45 + 0.25 * smoothstep(0.0, 0.35, Depth));
+        float Streaks = CkUsf_Fbm(float2(P.x * 6.0, P.y * 40.0));
+        Col = lerp(Col, Water, smoothstep(0.4, 0.7, Streaks) * 0.3);
+    }
+
+    // Foreground grass bank, bottom-left corner (painted over water).
+    float Bank = CkUsf_PR_Ellipse(P, float2(0.08, -0.02), float2(0.30, 0.07))
+               + (CkUsf_Fbm(P * 20.0) - 0.5) * 0.02;
+    Col = lerp(Col, FoliageTint * 1.35, smoothstep(0.004, -0.004, Bank));
+
+    Col = floor(Col * 12.0 + 0.5) / 12.0;   // light posterize for the flat-brush feel
+
+    O.EmissiveColor = Col;
+    O.BaseColor = Col * 0.05;
+    return O;
+}
