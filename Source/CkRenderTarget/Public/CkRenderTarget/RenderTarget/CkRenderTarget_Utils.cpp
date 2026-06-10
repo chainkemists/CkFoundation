@@ -10,6 +10,7 @@
 
 #include "CkRenderTarget/CkRenderTarget_Log.h"
 #include "CkRenderTarget/Pixels/CkRenderTarget_PixelMath.h"
+#include "CkRenderTarget/RenderTarget/CkRenderTarget_Processor.h"
 #include "CkRenderTarget/Settings/CkRenderTarget_Settings.h"
 
 #include <Engine/TextureRenderTarget2D.h>
@@ -334,10 +335,7 @@ auto
         FIntPoint InSize)
     -> FCk_Handle_RenderTarget
 {
-#if UE_BUILD_SHIPPING
-    CK_TRIGGER_ENSURE(TEXT("Debug_InjectCapturedPixels is a test seam and is unavailable in Shipping builds"));
-    return InRenderTargetEntity;
-#else
+#if !UE_BUILD_SHIPPING
     CK_ENSURE_IF_NOT(InPixels.Num() == InSize.X * InSize.Y * ck::render_target::pixel::BytesPerPixel,
         TEXT("Debug_InjectCapturedPixels buffer size [{}] does not match [{}x{}] RGBA8 ([{}] bytes expected)"),
         InPixels.Num(), InSize.X, InSize.Y, InSize.X * InSize.Y * ck::render_target::pixel::BytesPerPixel)
@@ -364,9 +362,36 @@ auto
         IsUploadBound ? FIntPoint::ZeroValue : PixelSync._SnapshotSize,
         UCk_Utils_RenderTarget_Settings_UE::Get_BlockSize());
     InRenderTargetEntity.Add<ck::FTag_RenderTarget_PixelSyncInFlight>();
+#endif
 
     return InRenderTargetEntity;
+}
+
+auto
+    UCk_Utils_RenderTarget_UE::
+    Debug_RedrawTargetFromLastSnapshot(
+        FCk_Handle_RenderTarget& InRenderTargetEntity)
+    -> FCk_Handle_RenderTarget
+{
+#if !UE_BUILD_SHIPPING
+    const auto& PixelSync = InRenderTargetEntity.Get<ck::FFragment_RenderTarget_PixelSync>();
+
+    CK_ENSURE_IF_NOT(PixelSync.Get_LastSyncedSnapshot().Num() > 0,
+        TEXT("Debug_RedrawTargetFromLastSnapshot called on [{}] with no captured snapshot — capture first"),
+        InRenderTargetEntity)
+    { return InRenderTargetEntity; }
+
+    auto& Staging = InRenderTargetEntity.AddOrGet<ck::FFragment_RenderTarget_ClientStaging>();
+
+    ck_render_target_processor::DrawPixelsToTarget(
+        InRenderTargetEntity,
+        InRenderTargetEntity.Get<ck::FFragment_RenderTarget_Current>(),
+        PixelSync.Get_LastSyncedSnapshot(),
+        PixelSync.Get_SnapshotSize(),
+        Staging._UploadTexture);
 #endif
+
+    return InRenderTargetEntity;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
