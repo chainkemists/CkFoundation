@@ -54,6 +54,20 @@ namespace
         E.Column    = 13;
         return E;
     }
+
+    auto Make_BareCtor(
+        const TCHAR* InMissingIdentifier,
+        const TCHAR* InArgsList = TEXT("")) -> FCk_AsParsedError
+    {
+        auto E              = FCk_AsParsedError{};
+        E.Kind              = ECk_AsParsedError_Kind::BareCtorNoMatchingSignatures;
+        E.MissingIdentifier = InMissingIdentifier;
+        E.ArgsList          = InArgsList;
+        E.FilePath          = TEXT("D:/Test/Caller.as");
+        E.Line              = 10;
+        E.Column            = 5;
+        return E;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -125,6 +139,49 @@ bool FCkTest_Dispatcher_Classify_DynamicHandle::RunTest(const FString&)
         static_cast<int32>(FCkAsRecoveryDispatcher::Classify(
             Make_IdentifierNotADataType(TEXT("FCk_Handle_X"), TEXT("bb_checkout_cheats")))),
         static_cast<int32>(ECk_RecoveryStrategy::KickGenerator_DynamicHandle));
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Classify: direct-construction shapes of a generated F<X>_SpawnParams route
+// to SynthesizeStub_EntitySpawnParams (the source-derived full-shape path) —
+// both as a missing declared type (IdentifierNotADataType) and as a bare
+// ctor call (BareCtorNoMatchingSignatures). Non-SpawnParams shapes stay
+// Unrecognized.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_Dispatcher_Classify_SpawnParamsDirectConstruction,
+    "CkAngelscriptGenerator.UnitTests.Dispatcher.Classify_SpawnParamsDirectConstruction",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_Dispatcher_Classify_SpawnParamsDirectConstruction::RunTest(const FString&)
+{
+    TestEqual(TEXT("F<X>_SpawnParams as missing declared type -> SynthesizeStub"),
+        static_cast<int32>(FCkAsRecoveryDispatcher::Classify(
+            Make_IdentifierNotADataType(TEXT("FBb_DayCycle_EntityScript_SpawnParams")))),
+        static_cast<int32>(ECk_RecoveryStrategy::SynthesizeStub_EntitySpawnParams));
+
+    TestEqual(TEXT("F<X>_SpawnParams bare ctor (no args) -> SynthesizeStub"),
+        static_cast<int32>(FCkAsRecoveryDispatcher::Classify(
+            Make_BareCtor(TEXT("FBb_CombatReceiver_DamageReceiver_SpawnParams")))),
+        static_cast<int32>(ECk_RecoveryStrategy::SynthesizeStub_EntitySpawnParams));
+
+    TestEqual(TEXT("F<X>_SpawnParams bare ctor (typed args) -> SynthesizeStub"),
+        static_cast<int32>(FCkAsRecoveryDispatcher::Classify(
+            Make_BareCtor(TEXT("FBb_Npc_EntityScript_SpawnParams"), TEXT("const FTransform")))),
+        static_cast<int32>(ECk_RecoveryStrategy::SynthesizeStub_EntitySpawnParams));
+
+    TestEqual(TEXT("bare ctor on a non-SpawnParams type -> Unrecognized (authoring error)"),
+        static_cast<int32>(FCkAsRecoveryDispatcher::Classify(
+            Make_BareCtor(TEXT("FVector"), TEXT("float32")))),
+        static_cast<int32>(ECk_RecoveryStrategy::Unrecognized));
+
+    TestEqual(TEXT("non-F-prefixed *_SpawnParams -> Unrecognized"),
+        static_cast<int32>(FCkAsRecoveryDispatcher::Classify(
+            Make_BareCtor(TEXT("Bb_SpawnParams")))),
+        static_cast<int32>(ECk_RecoveryStrategy::Unrecognized));
 
     return true;
 }

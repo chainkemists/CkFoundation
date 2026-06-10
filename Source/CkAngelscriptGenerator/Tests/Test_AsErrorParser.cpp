@@ -324,4 +324,86 @@ bool FCkTest_AsErrorParser_CascadeUnknownFilter::RunTest(const FString&)
     return true;
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+// Probe: bare constructor-style call — `No matching signatures to '<Ident>(<args>)'`
+// with NO namespace qualifier. The direct-construction shape from the 2026-06
+// fresh-clone ESP boot test: a caller constructs a generated F<X>_SpawnParams
+// whose canonical file is missing; the subsequent field accesses cascade as
+// "'<Field>' is not a member of 'Unknown'" lines that must be dropped.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_AsErrorParser_BareCtorProbe,
+    "CkAngelscriptGenerator.UnitTests.AsErrorParser.BareCtorProbe",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_AsErrorParser_BareCtorProbe::RunTest(const FString&)
+{
+    const auto Input = FString{TEXT(
+        "D:/Repos/BusterBlock/Script/ECS/CombatReceiver/BB_CombatReceiver_Utils.as:\n"
+        "(63:5) Compiling FCk_Handle_CombatReceiver utils_combat_receiver::Add(FCk_Handle, FBb_Fragment_CombatReceiver_Params)\n"
+        "(85:30) No matching signatures to 'FBb_CombatReceiver_DamageReceiver_SpawnParams()'\n"
+        "(87:24) 'Phase' is not a member of 'Unknown'\n"
+        "D:/Repos/BusterBlock/Script/ECS/NpcPortal/BB_NpcPortal_Cheats.as:\n"
+        "(70:28) No matching signatures to 'FBb_Npc_EntityScript_SpawnParams(const FTransform)'\n")};
+
+    const auto Errors = FCkAsErrorParser::ParseErrors(Input);
+
+    // Two bare-ctor roots; the Compiling context and the 'not a member of
+    // Unknown' cascade are dropped.
+    TestEqual(TEXT("error count"), Errors.Num(), 2);
+    if (Errors.Num() < 2) { return false; }
+
+    {
+        const auto& E = Errors[0];
+        TestEqual(TEXT("[0] Kind"),              static_cast<int32>(E.Kind), static_cast<int32>(ECk_AsParsedError_Kind::BareCtorNoMatchingSignatures));
+        TestEqual(TEXT("[0] FilePath"),          E.FilePath,                  FString{TEXT("D:/Repos/BusterBlock/Script/ECS/CombatReceiver/BB_CombatReceiver_Utils.as")});
+        TestEqual(TEXT("[0] Line"),              E.Line,                      85);
+        TestEqual(TEXT("[0] Column"),            E.Column,                    30);
+        TestEqual(TEXT("[0] MissingIdentifier"), E.MissingIdentifier,         FString{TEXT("FBb_CombatReceiver_DamageReceiver_SpawnParams")});
+        TestEqual(TEXT("[0] ArgsList"),          E.ArgsList,                  FString{});
+    }
+
+    {
+        const auto& E = Errors[1];
+        TestEqual(TEXT("[1] Kind"),              static_cast<int32>(E.Kind), static_cast<int32>(ECk_AsParsedError_Kind::BareCtorNoMatchingSignatures));
+        TestEqual(TEXT("[1] FilePath"),          E.FilePath,                  FString{TEXT("D:/Repos/BusterBlock/Script/ECS/NpcPortal/BB_NpcPortal_Cheats.as")});
+        TestEqual(TEXT("[1] MissingIdentifier"), E.MissingIdentifier,         FString{TEXT("FBb_Npc_EntityScript_SpawnParams")});
+        TestEqual(TEXT("[1] ArgsList"),          E.ArgsList,                  FString{TEXT("const FTransform")});
+    }
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Bare-ctor cascade filter + dedup: 'Unknown' args are dropped; identical
+// roots across cascade sites collapse to one.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_AsErrorParser_BareCtor_CascadeAndDedup,
+    "CkAngelscriptGenerator.UnitTests.AsErrorParser.BareCtor_CascadeAndDedup",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_AsErrorParser_BareCtor_CascadeAndDedup::RunTest(const FString&)
+{
+    const auto Input = FString{TEXT(
+        "D:/Repos/BusterBlock/Script/Sample.as:\n"
+        "(10:5) No matching signatures to 'FBb_Foo_SpawnParams()'\n"
+        "(20:5) No matching signatures to 'FBb_Foo_SpawnParams()'\n"
+        "(30:5) No matching signatures to 'SomeHelper(Unknown)'\n")};
+
+    const auto Errors  = FCkAsErrorParser::ParseErrors(Input);
+    TestEqual(TEXT("Unknown-args bare ctor filtered"), Errors.Num(), 2);
+
+    const auto Deduped = FCkAsErrorParser::DeduplicateRoots(Errors);
+    TestEqual(TEXT("identical bare-ctor roots dedup to one"), Deduped.Num(), 1);
+    if (Deduped.Num() < 1) { return false; }
+
+    TestEqual(TEXT("survivor identifier"),
+        Deduped[0].MissingIdentifier, FString{TEXT("FBb_Foo_SpawnParams")});
+
+    return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS
