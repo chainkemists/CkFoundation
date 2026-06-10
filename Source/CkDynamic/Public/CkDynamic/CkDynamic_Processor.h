@@ -40,33 +40,6 @@ namespace ck
             const FFragment_DynamicFragment_ReplicatedTypes& InReplicatedTypes) const -> void;
     };
 
-    // --------------------------------------------------------------------------------------------------------------------
-
-    // ---- SyncReplication (Client-side) ----
-
-    // Drains the payloads stashed by the fallback rep handler: writes each into per-type dynamic-fragment
-    // storage so Get_Fragment observes the replicated value, then broadcasts OnRepNotify.
-    class CKDYNAMIC_API FProcessor_DynamicFragment_SyncReplication : public ck_exp::TProcessor<
-            FProcessor_DynamicFragment_SyncReplication,
-            FCk_Handle,
-            ck::TReadWrite<FFragment_DynamicFragment_SyncReplication>,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using Group = FGroup_Gameplay;
-        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::ClientOnly;
-        using MarkedDirtyBy = FFragment_DynamicFragment_SyncReplication;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_DynamicFragment_SyncReplication& InSync) const -> void;
-    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------

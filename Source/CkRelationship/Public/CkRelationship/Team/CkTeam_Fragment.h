@@ -95,24 +95,6 @@ struct CKRELATIONSHIP_API FCk_RepData_Team
 namespace ck
 {
     using FFragment_ContainerRef_Team = TFragment_ContainerEntryRef<FCk_RepData_Team>;
-
-    // Stash for a replicated Team ID that arrived before the feature was composed on this entity
-    // (the container OnAdd replay at PostLink precedes OnConstructed-driven composition on clients).
-    // FProcessor_Team_RetryPendingReplication applies and removes it once the feature exists.
-    struct CKRELATIONSHIP_API FFragment_Team_PendingReplication
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_Team_PendingReplication);
-
-    private:
-        ECk_Team_ID _TeamID = ECk_Team_ID::Unassigned;
-
-    public:
-        CK_PROPERTY_GET(_TeamID);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Team_PendingReplication, _TeamID);
-    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------

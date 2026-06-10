@@ -47,21 +47,6 @@ namespace ck
     // Host-side dirty gate for FProcessor_DynamicFragment_Replicate.
     CK_DEFINE_ECS_TAG(FTag_DynamicFragment_MayRequireReplication);
 
-    // Client-side: payloads whose replicated data just arrived/changed and still need to be written into
-    // per-type dynamic-fragment storage + signalled. Written by the fallback rep handler, drained by
-    // FProcessor_DynamicFragment_SyncReplication. Coalesces multiple changed types in one tick.
-    struct CKDYNAMIC_API FFragment_DynamicFragment_SyncReplication
-    {
-        CK_GENERATED_BODY(FFragment_DynamicFragment_SyncReplication);
-
-    private:
-        TArray<FInstancedStruct> _PendingPayloads;
-
-    public:
-        CK_PROPERTY_GET(_PendingPayloads);
-        CK_PROPERTY_GET_NON_CONST(_PendingPayloads);
-    };
-
     // --------------------------------------------------------------------------------------------------------------------
     // Signal
 

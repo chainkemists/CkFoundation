@@ -56,27 +56,6 @@ namespace ck
             const FFragment_TeamInfo& InTeamInfo) const -> void;
     };
 
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKRELATIONSHIP_API FProcessor_Team_RetryPendingReplication : public ck_exp::TProcessor<
-        FProcessor_Team_RetryPendingReplication,
-        FCk_Handle,
-        ck::TReadWrite<FFragment_Team_PendingReplication>,
-        CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using Group = FGroup_Gameplay;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_Team_PendingReplication& InPending) const -> void;
-    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------

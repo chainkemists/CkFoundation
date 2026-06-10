@@ -4,7 +4,6 @@
 
 #include "CkAttribute/RotatorAttribute/CkRotatorAttribute_Fragment.h"
 
-#include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -54,28 +53,6 @@ namespace ck
 
     using FProcessor_RotatorAttribute_Replicate = TProcessor_Attribute_Replicate_All<
         TFragment_RotatorAttribute, FCk_RepData_RotatorAttributes>;
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKATTRIBUTE_API FProcessor_RotatorAttribute_RetryPendingReplication
-        : public ck_exp::TProcessor<FProcessor_RotatorAttribute_RetryPendingReplication, FCk_Handle,
-            ck::TReadWrite<FFragment_RotatorAttribute_PendingReplicationEntries>, CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using Group = FGroup_Gameplay;
-        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::ClientOnly;
-        using MarkedDirtyBy = FFragment_RotatorAttribute_PendingReplicationEntries;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            FCk_Handle InHandle,
-            FFragment_RotatorAttribute_PendingReplicationEntries& InPending) const -> void;
-    };
 
     // --------------------------------------------------------------------------------------------------------------------
 }

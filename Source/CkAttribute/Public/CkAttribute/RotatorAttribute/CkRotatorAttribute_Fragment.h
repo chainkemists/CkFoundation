@@ -335,7 +335,6 @@ struct CKATTRIBUTE_API FCk_RepData_RotatorAttributes
 namespace ck
 {
     using FFragment_ContainerRef_RotatorAttributes = TFragment_ContainerEntryRef<FCk_RepData_RotatorAttributes>;
-    using FFragment_RotatorAttribute_PendingReplicationEntries = TFragment_PendingReplicationEntries<FCk_Fragment_RotatorAttribute_BaseFinal>;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

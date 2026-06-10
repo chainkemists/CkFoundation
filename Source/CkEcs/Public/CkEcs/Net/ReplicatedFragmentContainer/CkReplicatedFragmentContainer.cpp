@@ -1,7 +1,5 @@
 #include "CkReplicatedFragmentContainer.h"
 
-#include "CkCore/Ensure/CkEnsure.h"
-
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -23,7 +21,6 @@ auto
         FHandler InHandler)
     -> void
 {
-    DoValidateHandler(InType, InHandler);
     _Handlers.Add(InType, MoveTemp(InHandler));
 }
 
@@ -49,7 +46,6 @@ auto
     {
         if (const auto* Type = Entry.TypeResolver())
         {
-            DoValidateHandler(Type, Entry.Handler);
             _Handlers.Add(Type, MoveTemp(Entry.Handler));
         }
     }
@@ -61,50 +57,7 @@ auto
         FHandler InHandler)
     -> void
 {
-    DoValidateHandler(nullptr, InHandler);
     _Fallback = MoveTemp(InHandler);
-}
-
-auto
-    FCk_ReplicatedFragmentHandlerRegistry::
-    DoValidateHandler(
-        const UScriptStruct* InType,
-        const FHandler& InHandler)
-    -> void
-{
-    const auto TypeName = ck::IsValid(InType)
-        ? InType->GetName()
-        : FString{TEXT("<dynamic fallback>")};
-
-    const auto HandlesApply  = static_cast<bool>(InHandler.Apply);
-    const auto HandlesChange = static_cast<bool>(InHandler.OnChange);
-    const auto HandlesAdd    = static_cast<bool>(InHandler.OnAdd);
-
-    // A handler speaks exactly one contract: Apply/Remove (deferred dispatch) or
-    // OnAdd/OnChange/OnRemove (legacy inline). Mixing them would dispatch the type twice.
-    CK_ENSURE_IF_NOT(NOT (HandlesApply && (HandlesChange || HandlesAdd || static_cast<bool>(InHandler.OnRemove))),
-        TEXT("Replicated fragment handler for [{}] registers BOTH Apply and legacy OnAdd/OnChange/"
-             "OnRemove callbacks. The type would dispatch through the deferred dispatcher AND the "
-             "inline path. Register one contract only."),
-        TypeName)
-    { return; }
-
-    if (HandlesApply)
-    { return; }
-
-    // Invariant: reacting to changes requires reacting to the initial Add. A value cannot change on
-    // a client before it has first been added, so OnChange without OnAdd can only ever drop the
-    // first replicated value. (The reverse — OnAdd without OnChange — is fine for write-once data.)
-    const auto OnChangeRequiresOnAdd = HandlesAdd || NOT HandlesChange;
-
-    CK_ENSURE_IF_NOT(OnChangeRequiresOnAdd,
-        TEXT("Replicated fragment handler for [{}] registers OnChange but no OnAdd. Initial "
-             "replication of a fragment always arrives as an Add (PostReplicatedAdd dispatches to "
-             "OnAdd, never OnChange), so the first replicated value would be silently dropped on "
-             "clients and the entity would keep its default. Add an OnAdd handler that applies the "
-             "initial value (typically snapping it, mirroring OnChange)."),
-        TypeName)
-    { }
 }
 
 auto
@@ -166,21 +119,12 @@ auto
         auto& Entry = _Items[Index];
 
         const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Resolve(Entry.Data.GetScriptStruct());
-        if (Handler == nullptr)
+        if (Handler == nullptr || NOT Handler->Remove)
         { continue; }
 
-        // New contract: removal dispatches from the deferred dispatcher, never inline.
-        if (Handler->Remove)
-        {
-            _PendingRemovals.Emplace(Entry.Data);
-            Entity.AddOrGet<ck::FTag_RepFragments_PendingApply>();
-            continue;
-        }
-
-        if (!Handler->OnRemove)
-        { continue; }
-
-        Handler->OnRemove(Entity);
+        // Removal dispatches from the deferred dispatcher, never inline during net receive.
+        _PendingRemovals.Emplace(Entry.Data);
+        Entity.AddOrGet<ck::FTag_RepFragments_PendingApply>();
     }
 }
 
@@ -198,35 +142,17 @@ auto
     if (ck::Is_NOT_Valid(Entity))
     { return; }
 
-    // During initial replication, PostReplicatedAdd fires before construction scripts
-    // have run — child entities don't exist yet so handlers would silently no-op.
-    // PostLink on the driver will replay OnAdd handlers after construction completes.
-    const auto IsConstructionComplete = Entity.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
-
+    // Pure bookkeeping — the deferred dispatcher applies after composition. Pre-link receives
+    // are also covered: PostLink re-marks every entry pending.
     for (const auto& Index : InAddedIndices)
     {
         auto& Entry = _Items[Index];
-        Entry._PreviousData = Entry.Data;
 
         const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Resolve(Entry.Data.GetScriptStruct());
-        if (Handler == nullptr)
+        if (Handler == nullptr || NOT Handler->Apply)
         { continue; }
 
-        // New contract: pure bookkeeping here — the deferred dispatcher applies after composition.
-        // Pre-link receives are also covered: PostLink re-marks every Apply-handled entry pending.
-        if (Handler->Apply)
-        {
-            MarkEntryPendingApply(Entry, Entity);
-            continue;
-        }
-
-        if (NOT IsConstructionComplete)
-        { continue; }
-
-        if (!Handler->OnAdd)
-        { continue; }
-
-        Handler->OnAdd(Entity, Entry.Data);
+        MarkEntryPendingApply(Entry, Entity);
     }
 }
 
@@ -249,17 +175,10 @@ auto
         auto& Entry = _Items[Index];
 
         const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Resolve(Entry.Data.GetScriptStruct());
+        if (Handler == nullptr || NOT Handler->Apply)
+        { continue; }
 
-        if (Handler != nullptr && Handler->Apply)
-        {
-            MarkEntryPendingApply(Entry, Entity);
-        }
-        else if (Handler != nullptr && Handler->OnChange)
-        {
-            Handler->OnChange(Entity, Entry.Data, Entry._PreviousData);
-        }
-
-        Entry._PreviousData = Entry.Data;
+        MarkEntryPendingApply(Entry, Entity);
     }
 }
 

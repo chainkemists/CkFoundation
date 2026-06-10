@@ -550,18 +550,5 @@ namespace ck::algo
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck
-{
-    template <typename T_BaseFinalEntry>
-    struct TFragment_PendingReplicationEntries
-    {
-        CK_GENERATED_BODY(TFragment_PendingReplicationEntries<T_BaseFinalEntry>);
-
-        TArray<T_BaseFinalEntry> _PendingEntries;
-    };
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
 // ReSharper disable once CppUnusedIncludeDirective
 #include "CkAttribute_Fragment.inl.h"
