@@ -189,98 +189,72 @@ namespace
     {
         FCk_StateMachineRepHandlerRegistrar()
         {
+            // Both shapes keep their own spec-governed receive machinery (§5.4 stash-and-flush,
+            // §5.5 echo suppression, §5.7 lagged-out recovery) and therefore always return Applied
+            // — pre-Setup arrivals stash via Sm_ShouldStash, never via dispatcher NotReady retries,
+            // preserving the arrival-order contract FlushPendingReplication_Drain relies on.
+
             FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
                 []() -> UScriptStruct* { return FCk_RepData_StateMachine_WithHistory::StaticStruct(); },
                 {
-                    .OnChange = [](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& Old)
+                    .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
                     {
                         if (Sm_ShouldEchoSuppress(Entity))
-                        { return; }
+                        { return ECk_RepFragment_ApplyResult::Applied; }
 
                         const auto& NewPayload = New.Get<FCk_RepData_StateMachine_WithHistory>();
                         const auto EventsToApply = Sm_DetectAndHandleLaggedOut_WithHistory(Entity, NewPayload.Get_History());
                         Sm_EnqueueOrStash(Entity, EventsToApply);
                         Sm_HandleRunStatus(Entity, NewPayload.Get_RunStatus());
 
-                        ck::sm::VeryVerbose(TEXT("WithHistory OnChange for [{}] — history size [{}], status [{}]"),
+                        ck::sm::VeryVerbose(TEXT("WithHistory Apply for [{}] — history size [{}], status [{}]"),
                             Entity, NewPayload.Get_History().Num(), NewPayload.Get_RunStatus());
-                    },
-                    .OnAdd = [](FCk_Handle& Entity, const FInstancedStruct& Data)
-                    {
-                        if (Sm_ShouldEchoSuppress(Entity))
-                        { return; }
 
-                        // First receipt — if Setup hasn't run yet (no FFragment_Sm_Current), the
-                        // stash helper holds the entries for FlushPendingReplication_Drain to
-                        // release once Setup lands.
-                        const auto& Payload = Data.Get<FCk_RepData_StateMachine_WithHistory>();
-                        const auto EventsToApply = Sm_DetectAndHandleLaggedOut_WithHistory(Entity, Payload.Get_History());
-                        Sm_EnqueueOrStash(Entity, EventsToApply);
-                        Sm_HandleRunStatus(Entity, Payload.Get_RunStatus());
-
-                        ck::sm::VeryVerbose(TEXT("WithHistory OnAdd for [{}] — initial history size [{}], status [{}]"),
-                            Entity, Payload.Get_History().Num(), Payload.Get_RunStatus());
+                        return ECk_RepFragment_ApplyResult::Applied;
                     }
                 });
 
             FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
                 []() -> UScriptStruct* { return FCk_RepData_StateMachine_NoHistory::StaticStruct(); },
                 {
-                    .OnChange = [](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& Old)
+                    .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
                     {
                         if (Sm_ShouldEchoSuppress(Entity))
-                        { return; }
+                        { return ECk_RepFragment_ApplyResult::Applied; }
 
                         // WithoutHistory replicates the latest state only — synthesize a single
                         // transition event from local current → replicated current and route it
-                        // through the stash-or-queue helper.
+                        // through the stash-or-queue helper. On first application (Old unset) a
+                        // Seq of 0 means the SM hasn't transitioned on authority yet — nothing to
+                        // snap to; the run status still mirrors.
                         const auto& NewPayload = New.Get<FCk_RepData_StateMachine_NoHistory>();
                         const auto NewSeq = NewPayload.Get_Seq();
 
-                        const auto LocalCurrentClass = Entity.Has<ck::FFragment_Sm_Current>()
-                            ? Entity.Get<ck::FFragment_Sm_Current>().Get_CurrentStateClass()
-                            : TSubclassOf<UCk_SmState_EntityScript>{};
-
-                        const auto Event = FCk_Sm_TransitionEvent
+                        if (Old.IsSet() || NewSeq > 0)
                         {
-                            LocalCurrentClass,
-                            NewPayload.Get_CurrentStateClass(),
-                            NewSeq,
-                            NewPayload.Get_CurrentStateFingerprint()
-                        };
+                            // First application snaps from a null From-class (nothing applied yet);
+                            // subsequent applications transition from the local current state.
+                            const auto FromClass = Old.IsSet() && Entity.Has<ck::FFragment_Sm_Current>()
+                                ? Entity.Get<ck::FFragment_Sm_Current>().Get_CurrentStateClass()
+                                : TSubclassOf<UCk_SmState_EntityScript>{};
 
-                        Sm_EnqueueOrStash(Entity, TArray<FCk_Sm_TransitionEvent>{Event});
-                        Sm_HandleRunStatus(Entity, NewPayload.Get_RunStatus());
-
-                        ck::sm::VeryVerbose(TEXT("NoHistory OnChange for [{}] — synthesized event for seq [{}], status [{}]"),
-                            Entity, NewSeq, NewPayload.Get_RunStatus());
-                    },
-                    .OnAdd = [](FCk_Handle& Entity, const FInstancedStruct& Data)
-                    {
-                        if (Sm_ShouldEchoSuppress(Entity))
-                        { return; }
-
-                        // First receipt — only enqueue if Seq > 0 (a Seq of 0 indicates the SM
-                        // hasn't transitioned yet on authority and there's nothing to snap to).
-                        const auto& Payload = Data.Get<FCk_RepData_StateMachine_NoHistory>();
-
-                        if (Payload.Get_Seq() > 0)
-                        {
                             const auto Event = FCk_Sm_TransitionEvent
                             {
-                                TSubclassOf<UCk_SmState_EntityScript>{},
-                                Payload.Get_CurrentStateClass(),
-                                Payload.Get_Seq(),
-                                Payload.Get_CurrentStateFingerprint()
+                                FromClass,
+                                NewPayload.Get_CurrentStateClass(),
+                                NewSeq,
+                                NewPayload.Get_CurrentStateFingerprint()
                             };
 
                             Sm_EnqueueOrStash(Entity, TArray<FCk_Sm_TransitionEvent>{Event});
                         }
 
-                        Sm_HandleRunStatus(Entity, Payload.Get_RunStatus());
+                        Sm_HandleRunStatus(Entity, NewPayload.Get_RunStatus());
 
-                        ck::sm::VeryVerbose(TEXT("NoHistory OnAdd for [{}] — initial snap to state [{}], status [{}]"),
-                            Entity, Payload.Get_CurrentStateClass(), Payload.Get_RunStatus());
+                        ck::sm::VeryVerbose(TEXT("NoHistory Apply for [{}] — seq [{}], status [{}]"),
+                            Entity, NewSeq, NewPayload.Get_RunStatus());
+
+                        return ECk_RepFragment_ApplyResult::Applied;
                     }
                 });
         }
