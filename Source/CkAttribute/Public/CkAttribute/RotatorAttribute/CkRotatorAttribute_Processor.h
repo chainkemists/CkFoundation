@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkAttribute/CkAttribute_Processor.h"
+#include "CkAttribute/CkAttribute_ReplicateOnRestore.h"
 
 #include "CkAttribute/RotatorAttribute/CkRotatorAttribute_Fragment.h"
 
@@ -53,6 +54,11 @@ namespace ck
 
     using FProcessor_RotatorAttribute_Replicate = TProcessor_Attribute_Replicate_All<
         TFragment_RotatorAttribute, FCk_RepData_RotatorAttributes>;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    using FProcessor_RotatorAttribute_ReplicateOnRestore = TProcessor_Attribute_ReplicateOnRestore_All<
+        FCk_Handle_RotatorAttribute, TFragment_RotatorAttribute, FCk_RepData_RotatorAttributes>;
 
     // --------------------------------------------------------------------------------------------------------------------
 }
