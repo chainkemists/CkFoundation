@@ -204,25 +204,34 @@ struct CKSTATEMACHINE_API FCk_Fragment_StateMachine_ParamsData
 public:
     CK_GENERATED_BODY(FCk_Fragment_StateMachine_ParamsData);
 
+    // Tier-A snapshot opt-in: all five fields carry the SaveGame SPECIFIER — the flag that sets
+    // CPF_SaveGame, which the ArIsSaveGame tagged-property gate checks. `meta=(SaveGame)` is inert
+    // metadata and round-trips NOTHING (empirically: every field restored to its default). They
+    // serialize through the reflected SerializeItem path (the proxy archive writes
+    // _InitialStateClass by path string). Used directly as FFragment_Sm_Params; the post-load
+    // re-drive (FProcessor_Sm_RestoreRedrive) re-runs Setup/Start/Transition from these +
+    // FFragment_Sm_Current's persisted decision record.
+    using IsSnapshotable = void;
+
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
     TSubclassOf<UCk_SmState_EntityScript> _InitialStateClass;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
     ECk_SmAutoStart _AutoStart = ECk_SmAutoStart::OnSetup;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
     ECk_Replication _Replication = ECk_Replication::DoesNotReplicate;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true,
                 EditCondition = "_Replication == Replicates"))
     ECk_Sm_AuthorityModel _AuthorityModel = ECk_Sm_AuthorityModel::AutoDetect;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true,
                 EditCondition = "_Replication == Replicates"))
     ECk_Sm_ReplicationModel _ReplicationModel = ECk_Sm_ReplicationModel::WithHistory;

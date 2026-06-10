@@ -27,6 +27,9 @@ class UCk_EntityScript_UE;
 class UCk_Utils_StateMachine_UE;
 class UCk_Utils_SmTask_UE;
 class UCk_Utils_SmCondition_UE;
+class FArchive;
+
+namespace ck { class FSnapshotContext; }
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -47,6 +50,12 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_Sm_RequiresSetup);
     CK_DEFINE_ECS_TAG(FTag_Sm_Running);
     CK_DEFINE_ECS_TAG(FTag_Sm_Paused);
+
+    // Per-feature restore-redrive done marker. ck::FTag_Snapshot_JustRestored is shared by every
+    // feature on the restored entity, so no single feature may remove it — FProcessor_Sm_RestoreRedrive
+    // pairs it with this done tag instead. Never leaks across restores: a restore rebuilds entities
+    // from snapshot bytes and this tag is not snapshotted.
+    CK_DEFINE_ECS_TAG(FTag_Sm_RestoreRedriven);
 
     // Marks an SM child entity (Task/Condition) whose user-authored EntityScript has been
     // deferred. A commit processor materializes the script before EntityScript processors
@@ -129,7 +138,19 @@ namespace ck
         friend class FProcessor_Sm_CommitPendingTransition;
         friend class FProcessor_Sm_Setup;
         friend class FProcessor_Sm_EndPlay;
+        friend class FProcessor_Sm_RestoreRedrive;
         friend class ::UCk_Utils_StateMachine_UE;
+
+    public:
+        using IsSnapshotable = void;
+
+        // Tier-C: the persisted DECISION RECORD only — {_RunStatus byte, _CurrentStateClass by soft
+        // class path (skip-if-missing on load)}. _CurrentStateHandle is deliberately NOT persisted:
+        // the live state graph (state entity + its tasks/conditions/timers/bound signals) is
+        // meaningless post-restore; FProcessor_Sm_RestoreRedrive re-drives the SM through its own
+        // Setup/Start/Transition machinery to recreate it. Body out-of-line in
+        // CkStateMachine_Fragment.cpp (needs the complete UCk_SmState_EntityScript for TryLoadClass).
+        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
 
     private:
         ECk_SmRunStatus _RunStatus = ECk_SmRunStatus::Stopped;
@@ -142,6 +163,9 @@ namespace ck
         CK_PROPERTY(_RunStatus);
         CK_PROPERTY_GET(_CurrentStateHandle);
         CK_PROPERTY_GET(_CurrentStateClass);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Sm_Current, _RunStatus, _CurrentStateHandle, _CurrentStateClass);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -186,6 +210,12 @@ namespace ck
     public:
         CK_GENERATED_BODY(FFragment_Sm_ParentHierarchy);
 
+    public:
+        using IsSnapshotable = void;
+
+        // Tier-C: plain tag array by name. Body out-of-line in CkStateMachine_Fragment.cpp.
+        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
+
     private:
         TArray<FGameplayTag> _ParentHierarchy;
 
@@ -215,6 +245,14 @@ namespace ck
             TSubclassOf<UCk_SmState_EntityScript> _OverrideStateClass;
             TArray<FGameplayTag> _CachedStatesToOverride;
         };
+
+    public:
+        using IsSnapshotable = void;
+
+        // Tier-C: entries persist by class path + cached override tags by name, restored BEFORE any
+        // processor runs so the re-drive's Setup/Create sees the same override table the saving
+        // world had. Body out-of-line in CkStateMachine_Fragment.cpp.
+        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
 
     private:
         TArray<FEntry> _Overrides;
@@ -249,6 +287,51 @@ namespace ck
 
     public:
         CK_PROPERTY_GET(_Requests);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Transient phase ladder for the post-snapshot-load re-drive (FProcessor_Sm_RestoreRedrive).
+    // Created on first visit from the RESTORED FFragment_Sm_Current's decision record (which is then
+    // reset to virgin so the SM re-enters its lifecycle from scratch); removed when the re-drive
+    // converges on the desired {RunStatus, CurrentStateClass}. Never snapshotted (transient by
+    // construction — only exists between a load and the re-drive's completion).
+    struct CKSTATEMACHINE_API FFragment_Sm_RestorePending
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Sm_RestorePending);
+
+        friend class FProcessor_Sm_RestoreRedrive;
+
+        enum class EPhase : uint8
+        {
+            WaitDriver,   // decision record stashed; wait for the respawn pass to re-establish the replication driver, then re-add RequiresSetup
+            Start,        // drive RunStatus toward the desired value (Start, or Stop if AutoStart resurrected a saved-Stopped SM)
+            Transition,   // once Running: transition InitialState -> saved state (Option A replay-through)
+            Finalize      // re-apply Paused if that's what was saved, then mark done
+        };
+
+    private:
+        ECk_SmRunStatus _DesiredRunStatus = ECk_SmRunStatus::Stopped;
+        TSubclassOf<UCk_SmState_EntityScript> _DesiredStateClass;
+
+        EPhase _Phase = EPhase::WaitDriver;
+
+        // One-shot request guards — each Request_* is enqueued exactly once; the ladder then
+        // observes FFragment_Sm_Current until the request's effect lands (requests are deferred).
+        bool _StartEnqueued = false;
+        bool _StopEnqueued = false;
+        bool _TransitionEnqueued = false;
+        bool _PauseEnqueued = false;
+
+    public:
+        CK_PROPERTY_GET(_DesiredRunStatus);
+        CK_PROPERTY_GET(_DesiredStateClass);
+        CK_PROPERTY_GET(_Phase);
+        CK_PROPERTY_GET(_StartEnqueued);
+        CK_PROPERTY_GET(_StopEnqueued);
+        CK_PROPERTY_GET(_TransitionEnqueued);
+        CK_PROPERTY_GET(_PauseEnqueued);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

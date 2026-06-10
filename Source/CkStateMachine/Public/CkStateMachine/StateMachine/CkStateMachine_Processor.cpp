@@ -4,6 +4,8 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
 #include "CkStateMachine/Net/CkStateMachineRelay_Actor.h"
 #include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
@@ -29,6 +31,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_FlushPendingReplication_Drain);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_FirstSyncInitialState);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_ApplyReplicatedHistory);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_CommitPendingTransition);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_RestoreRedrive);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_PushOwningClientBatch);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_EndPlay);
 CK_REGISTER_PROCESSOR(ck::FProcessor_SmScript_CommitPendingAttach);
@@ -800,6 +803,15 @@ namespace ck
             FFragment_Sm_Current& InCurrent) const
         -> void
     {
+        // A snapshot-RESTORED machine arrives in exactly the shape this processor repairs — RunStatus
+        // Running (tag section + Tier-C value both round-trip) with no current state handle — but its
+        // reconstruction belongs to FProcessor_Sm_RestoreRedrive, which must stash the restored
+        // {RunStatus, CurrentStateClass} decision record FIRST. Entering InitialState here would
+        // overwrite the restored CurrentStateClass before the stash (the WithHistory MPReload gate
+        // caught exactly that). The shared restored marker stays until the redrive's done tag lands.
+        if (InHandle.Has<FTag_Snapshot_JustRestored>() && NOT InHandle.Has<FTag_Sm_RestoreRedriven>())
+        { return; }
+
         InHandle.Try_Remove<FTag_Sm_NeedsInitialStateEntry>();
 
         // WithHistory only. NoHistory SMs snap to the replicated _CurrentStateClass via their own
@@ -829,6 +841,227 @@ namespace ck
                 InCurrent.Get_CurrentStateClass(),
                 InCurrent.Get_CurrentStateHandle()
             }));
+    }
+
+    // ================================================================================================================
+    // RESTORE REDRIVE (server-side, post-snapshot-load)
+    // ================================================================================================================
+
+    auto
+        FProcessor_Sm_RestoreRedrive::
+        ForEachEntity(
+            TimeType /*InDeltaT*/,
+            HandleType InHandle,
+            const FFragment_Sm_Params& InParams,
+            FFragment_Sm_Current& InCurrent) const
+        -> void
+    {
+        if (NOT InHandle.Has<FTag_Snapshot_JustRestored>())
+        { return; }
+
+        if (InHandle.Has<FTag_Sm_RestoreRedriven>())
+        { return; }
+
+        // ---- First visit: stash the restored decision record IMMEDIATELY + reset to virgin ----
+        // No gates before the stash: the restored {RunStatus, CurrentStateClass} is the source of
+        // truth and any tick spent waiting (e.g. on the replication driver) is a window in which
+        // another processor could mutate Current.
+
+        if (NOT InHandle.Has<FFragment_Sm_RestorePending>())
+        {
+            auto& Pending = InHandle.AddOrGet<FFragment_Sm_RestorePending>();
+            Pending._DesiredRunStatus = InCurrent.Get_RunStatus();
+            Pending._DesiredStateClass = InCurrent.Get_CurrentStateClass();
+
+            InCurrent._RunStatus = ECk_SmRunStatus::Stopped;
+            InCurrent._CurrentStateHandle = FCk_Handle_SmState{};
+            InCurrent._CurrentStateClass = nullptr;
+
+            // The snapshot's generic tag section restores EVERY ECS tag present at capture — including
+            // FTag_Sm_Running/Paused and a queued-transition marker. The virgin reset must strip them
+            // or the re-driven Start's Add<FTag_Sm_Running> trips the duplicate-tag ensure and the
+            // machine's tag state disagrees with the reset _RunStatus.
+            auto MutableHandle = InHandle;
+            MutableHandle.Try_Remove<FTag_Sm_Running>();
+            MutableHandle.Try_Remove<FTag_Sm_Paused>();
+            MutableHandle.Try_Remove<FTag_Sm_TransitionQueued>();
+
+            ck::sm::Display(TEXT("[SM RestoreRedrive] [{}] stash: desired RunStatus [{}] state [{}]; virgin reset"),
+                InHandle, Pending.Get_DesiredRunStatus(),
+                ck::IsValid(Pending.Get_DesiredStateClass())
+                    ? Pending.Get_DesiredStateClass()->GetFName()
+                    : FName{TEXT("<none>")});
+            return;
+        }
+
+        auto& Pending = InHandle.Get<FFragment_Sm_RestorePending>();
+
+        // ---- WaitDriver: re-run Setup once the replication driver is back ----
+
+        if (Pending.Get_Phase() == FFragment_Sm_RestorePending::EPhase::WaitDriver)
+        {
+            // Driver gate (replicated SMs only): Setup's TryAddContainerFragment targets THIS entity's
+            // replication driver, re-established by the snapshot respawn pass — retry next tick until
+            // it lands. Local-only SMs proceed immediately.
+            if (InParams.Get_Replication() == ECk_Replication::Replicates
+                && NOT UCk_Utils_EntityReplicationDriver_UE::Has(InHandle))
+            { return; }
+
+            // FProcessor_Sm_Setup re-attaches the replicated container + relay exactly as on first
+            // composition — the entire "ReplicateOnRestore" half — and enqueues AutoStart's Start
+            // when configured.
+            auto MutableHandle = InHandle;
+            MutableHandle.AddOrGet<FTag_Sm_RequiresSetup>();
+            Pending._Phase = FFragment_Sm_RestorePending::EPhase::Start;
+
+            ck::sm::Display(TEXT("[SM RestoreRedrive] [{}] driver ready — RequiresSetup re-added"), InHandle);
+            return;
+        }
+
+        // Setup hasn't consumed the tag yet — wait.
+        if (InHandle.Has<FTag_Sm_RequiresSetup>())
+        { return; }
+
+        const auto DoMarkRedriven = [&]() -> void
+        {
+            ck::sm::Display(TEXT("[SM RestoreRedrive] [{}] done — RunStatus [{}] state [{}]"),
+                InHandle, InCurrent.Get_RunStatus(),
+                ck::IsValid(InCurrent.Get_CurrentStateClass())
+                    ? InCurrent.Get_CurrentStateClass()->GetFName()
+                    : FName{TEXT("<none>")});
+
+            auto MutableHandle = InHandle;
+            MutableHandle.Remove<FFragment_Sm_RestorePending>();
+            MutableHandle.Add<FTag_Sm_RestoreRedriven>();
+        };
+
+        // v1 scope (design doc §4): only re-drive where THIS machine passes the same request-authority
+        // gate FProcessor_Sm_HandleRequests enforces — otherwise every Request_* below would be
+        // ensure-dropped. Non-authority restores (OwningClientAuth on a dedicated server / non-owning
+        // listen host) come back composed-but-Stopped; authority-side resume is a follow-up design.
+        const auto NetContext    = ck::statemachine::ComputeNetContext(InHandle);
+        const auto EffectiveAuth = UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel(InHandle);
+        const auto IsListenServerHostOwningClient =
+            NetContext == ECk_Sm_NetContext::Server
+            && EffectiveAuth == ECk_Sm_AuthorityModel::OwningClientAuthoritative
+            && UCk_Utils_Net_UE::Get_IsEntityLocallyControlled_ByPlayer(InHandle)
+                == ECk_Utils_Net_IsLocallyControlled_Result::IsLocallyControlled;
+        const auto IsRequestAuthority =
+            InParams.Get_Replication() == ECk_Replication::DoesNotReplicate
+            || NetContext == ECk_Sm_NetContext::Standalone
+            || (NetContext == ECk_Sm_NetContext::Server
+                && EffectiveAuth == ECk_Sm_AuthorityModel::ServerAuthoritative)
+            || (NetContext == ECk_Sm_NetContext::OwningClient
+                && EffectiveAuth == ECk_Sm_AuthorityModel::OwningClientAuthoritative)
+            || IsListenServerHostOwningClient;
+
+        if (NOT IsRequestAuthority)
+        {
+            ck::sm::Log(TEXT("RestoreRedrive: SM [{}] restored on a non-authority machine "
+                "(NetContext [{}], AuthorityModel [{}]) — container/relay re-attached, but the saved "
+                "RunStatus [{}] / state are NOT re-driven (v1 scope cut, design doc §4)"),
+                InHandle, NetContext, EffectiveAuth, Pending.Get_DesiredRunStatus());
+            DoMarkRedriven();
+            return;
+        }
+
+        auto Sm = InHandle;
+
+        switch (Pending.Get_Phase())
+        {
+            case FFragment_Sm_RestorePending::EPhase::WaitDriver:
+            {
+                // Handled before the switch — unreachable.
+                return;
+            }
+            case FFragment_Sm_RestorePending::EPhase::Start:
+            {
+                if (Pending.Get_DesiredRunStatus() == ECk_SmRunStatus::Stopped)
+                {
+                    // Saved Stopped, but AutoStart=OnSetup resurrected the machine through the re-run
+                    // Setup — converge back to Stopped (re-runs InitialState's exit side effects;
+                    // accepted Option A noise).
+                    if (InCurrent.Get_RunStatus() != ECk_SmRunStatus::Stopped)
+                    {
+                        if (NOT Pending.Get_StopEnqueued())
+                        {
+                            UCk_Utils_StateMachine_UE::Request_Stop(Sm);
+                            Pending._StopEnqueued = true;
+                        }
+                        return;
+                    }
+
+                    DoMarkRedriven();
+                    return;
+                }
+
+                if (InCurrent.Get_RunStatus() != ECk_SmRunStatus::Running)
+                {
+                    if (NOT Pending.Get_StartEnqueued())
+                    {
+                        // Idempotent overlap with AutoStart=OnSetup's own Start — HandleRequests drops
+                        // a Start on an already-Running machine.
+                        ck::sm::Display(TEXT("[SM RestoreRedrive] [{}] Start phase: enqueueing Request_Start"), InHandle);
+                        UCk_Utils_StateMachine_UE::Request_Start(Sm);
+                        Pending._StartEnqueued = true;
+                    }
+                    return;
+                }
+
+                ck::sm::Display(TEXT("[SM RestoreRedrive] [{}] Start phase: Running observed -> Transition phase"), InHandle);
+                Pending._Phase = FFragment_Sm_RestorePending::EPhase::Transition;
+                return;
+            }
+            case FFragment_Sm_RestorePending::EPhase::Transition:
+            {
+                // An in-flight transition (the restore transition, or AutoStart racing a gameplay
+                // request) must commit before the ladder advances.
+                if (InHandle.Has<FFragment_Sm_PendingTransition>())
+                { return; }
+
+                const auto& DesiredClass = Pending.Get_DesiredStateClass();
+
+                // A null desired class means the SM was saved mid-transition (target not persisted —
+                // see FFragment_Sm_Current::SerializeSnapshot) or before any state entry; staying in
+                // InitialState is the v1 contract for both.
+                if (ck::IsValid(DesiredClass) && InCurrent.Get_CurrentStateClass() != DesiredClass)
+                {
+                    if (NOT Pending.Get_TransitionEnqueued())
+                    {
+                        ck::sm::Display(TEXT("[SM RestoreRedrive] [{}] Transition phase: enqueueing Request_Transition -> [{}]"),
+                            InHandle, DesiredClass->GetFName());
+                        UCk_Utils_StateMachine_UE::Request_Transition(Sm, DesiredClass);
+                        Pending._TransitionEnqueued = true;
+                    }
+                    return;
+                }
+
+                ck::sm::Display(TEXT("[SM RestoreRedrive] [{}] Transition phase: current matches desired -> Finalize phase"), InHandle);
+                Pending._Phase = FFragment_Sm_RestorePending::EPhase::Finalize;
+                return;
+            }
+            case FFragment_Sm_RestorePending::EPhase::Finalize:
+            {
+                if (Pending.Get_DesiredRunStatus() == ECk_SmRunStatus::Paused)
+                {
+                    if (InCurrent.Get_RunStatus() == ECk_SmRunStatus::Running)
+                    {
+                        if (NOT Pending.Get_PauseEnqueued())
+                        {
+                            UCk_Utils_StateMachine_UE::Request_Pause(Sm);
+                            Pending._PauseEnqueued = true;
+                        }
+                        return;
+                    }
+
+                    if (InCurrent.Get_RunStatus() != ECk_SmRunStatus::Paused)
+                    { return; }
+                }
+
+                DoMarkRedriven();
+                return;
+            }
+        }
     }
 
     // ================================================================================================================
