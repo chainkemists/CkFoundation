@@ -326,7 +326,7 @@ auto
     // Script classes (e.g. Angelscript) live in /Script/Angelscript with no way to
     // resolve back to the owning plugin's content root.
 #if WITH_ANGELSCRIPT_CK
-    ck::ecs::Display(TEXT("[SpawnParams] DoGetOrCreate called for [{}] | bIsScriptClass=[{}] | CompiledFromBP=[{}] | Package=[{}]"),
+    ck::ecs::Verbose(TEXT("[SpawnParams] DoGetOrCreate called for [{}] | bIsScriptClass=[{}] | CompiledFromBP=[{}] | Package=[{}]"),
         InEntityScriptClass->GetName(),
         InEntityScriptClass->bIsScriptClass,
         InEntityScriptClass->HasAnyClassFlags(CLASS_CompiledFromBlueprint),
@@ -334,7 +334,7 @@ auto
 
     if (InEntityScriptClass->bIsScriptClass)
     {
-        ck::ecs::Display(TEXT("[SpawnParams] Skipping [{}] — bIsScriptClass is true"), InEntityScriptClass->GetName());
+        ck::ecs::Verbose(TEXT("[SpawnParams] Skipping [{}] — bIsScriptClass is true"), InEntityScriptClass->GetName());
         return {};
     }
 #endif
