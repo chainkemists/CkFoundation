@@ -686,6 +686,17 @@ auto
         }
     }
 
+    // The loop above can only remove entries via a still-valid PC — a PC destroyed
+    // before this point leaves its PlayerState entry behind forever (the subsystem
+    // outlives worlds). Prune any entry whose PlayerState is dead or foreign.
+    for (auto It = _PlayerChannels.CreateIterator(); It; ++It)
+    {
+        const auto PlayerState = It.Key().Get();
+
+        if (ck::Is_NOT_Valid(PlayerState) || PlayerState->GetWorld() != InWorld)
+        { It.RemoveCurrent(); }
+    }
+
     _ServerChannels = ck::algo::Filter(_ServerChannels, [&](const ACk_ActorRelay_UE* InChannel)
     {
         return ck::IsValid(InChannel) && InChannel->GetWorld() == InWorld;
