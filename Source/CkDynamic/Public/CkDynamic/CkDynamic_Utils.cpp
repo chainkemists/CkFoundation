@@ -17,44 +17,41 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+static auto PassesDestroyFilter(const FCk_Handle& InHandle, ECk_DestroyFilter InFilter) -> bool
 {
-    auto PassesDestroyFilter(const FCk_Handle& InHandle, ECk_DestroyFilter InFilter) -> bool
+    switch (InFilter)
     {
-        switch (InFilter)
+        case ECk_DestroyFilter::None:
         {
-            case ECk_DestroyFilter::None:
-            {
-                return true;
-            }
-            case ECk_DestroyFilter::IgnorePendingKill:
-            {
-                return NOT (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InHandle, ECk_EntityLifetime_DestructionPhase::BeginDestroy) ||
-                            UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InHandle, ECk_EntityLifetime_DestructionPhase::Teardown) ||
-                            UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InHandle, ECk_EntityLifetime_DestructionPhase::Destroyed));
-            }
-            case ECk_DestroyFilter::Teardown:
-            {
-                return UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InHandle, ECk_EntityLifetime_DestructionPhase::Teardown);
-            }
-            default:
-            {
-                CK_INVALID_ENUM(InFilter);
-                return false;
-            }
+            return true;
+        }
+        case ECk_DestroyFilter::IgnorePendingKill:
+        {
+            return NOT (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InHandle, ECk_EntityLifetime_DestructionPhase::BeginDestroy) ||
+                        UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InHandle, ECk_EntityLifetime_DestructionPhase::Teardown) ||
+                        UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InHandle, ECk_EntityLifetime_DestructionPhase::Destroyed));
+        }
+        case ECk_DestroyFilter::Teardown:
+        {
+            return UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InHandle, ECk_EntityLifetime_DestructionPhase::Teardown);
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InFilter);
+            return false;
         }
     }
+}
 
-    auto Get_InvalidSentinel_FragmentData(const UScriptStruct* InStructType) -> FInstancedStruct&
+static auto Get_InvalidSentinel_FragmentData(const UScriptStruct* InStructType) -> FInstancedStruct&
+{
+    static TMap<const UScriptStruct*, FInstancedStruct> Sentinels;
+    auto& Instance = Sentinels.FindOrAdd(InStructType);
+    if (NOT Instance.IsValid() || Instance.GetScriptStruct() != InStructType)
     {
-        static TMap<const UScriptStruct*, FInstancedStruct> Sentinels;
-        auto& Instance = Sentinels.FindOrAdd(InStructType);
-        if (NOT Instance.IsValid() || Instance.GetScriptStruct() != InStructType)
-        {
-            Instance.InitializeAs(InStructType);
-        }
-        return Instance;
+        Instance.InitializeAs(InStructType);
     }
+    return Instance;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -85,11 +82,13 @@ auto
         InFragmentData.GetScriptStruct(), InHandle)
     { return InHandle; }
 
-    Storage.emplace(Entity, std::move(Fragment));
+    Storage.emplace(Entity, MoveTemp(Fragment));
 
+    // The default-storage fragment is only a presence marker (Has<>/removal) —
+    // the real data lives in the named storage. Keep it default-constructed.
     if (NOT InHandle.Has<ck::FFragment_DynamicFragment_Data>())
     {
-        InHandle.Add<ck::FFragment_DynamicFragment_Data>(Fragment);
+        InHandle.Add<ck::FFragment_DynamicFragment_Data>(ck::FFragment_DynamicFragment_Data{});
     }
 
     if (InReplication == ECk_Replication::Replicates)
