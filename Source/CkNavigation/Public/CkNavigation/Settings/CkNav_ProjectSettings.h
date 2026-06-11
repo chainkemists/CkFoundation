@@ -4,7 +4,12 @@
 
 #include "CkSettings/ProjectSettings/CkProjectSettings.h"
 
+#include <GameplayTagContainer.h>
+#include <Templates/SubclassOf.h>
+
 #include "CkNav_ProjectSettings.generated.h"
+
+class UNavigationQueryFilter;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -32,9 +37,17 @@ private:
             ToolTip = "Half-extent (cm) used to project Start/End onto the navmesh. Default 500cm covers the rental-store geometry; bump higher for steep slopes or thin navmesh."))
     float _NavQuerySearchHalfExtent = 500.0f;
 
+    // Maps FCk_Request_Nav_FindPath::_QueryFilter tags to UNavigationQueryFilter
+    // classes (the "Phase 2" mapping the request field reserved). Unmapped/empty
+    // tags fall back to NavData's default filter.
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Pathfinding",
+        meta = (AllowPrivateAccess = true))
+    TMap<FGameplayTag, TSoftClassPtr<UNavigationQueryFilter>> _QueryFilters;
+
 public:
     CK_PROPERTY_GET(_MaxPathQueriesPerFrame);
     CK_PROPERTY_GET(_NavQuerySearchHalfExtent);
+    CK_PROPERTY_GET(_QueryFilters);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -53,6 +66,12 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Nav|Settings")
     static float Get_NavQuerySearchHalfExtent();
+
+    // Resolves a request's QueryFilter tag through the settings map. Empty tag or
+    // no mapping -> null class (callers fall back to NavData's default filter);
+    // a non-empty tag with no mapping additionally fires an ensure.
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Nav|Settings")
+    static TSubclassOf<UNavigationQueryFilter> Get_QueryFilterClass(const FGameplayTag& InFilterTag);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

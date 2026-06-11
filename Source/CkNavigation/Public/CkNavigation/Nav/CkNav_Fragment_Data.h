@@ -164,7 +164,8 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     bool _AllowPartialPath = true;
 
-    // Reserved — Phase 2 will map this to UNavigationQueryFilter subclasses.
+    // Maps to a UNavigationQueryFilter class via UCk_Nav_ProjectSettings_UE::_QueryFilters.
+    // Empty/unmapped -> NavData's default filter.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     FGameplayTag _QueryFilter;
 

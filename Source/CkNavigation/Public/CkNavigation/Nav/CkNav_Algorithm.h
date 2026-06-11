@@ -3,10 +3,12 @@
 #include "CkNavigation/Nav/CkNav_Fragment_Data.h"
 
 #include <CoreMinimal.h>
+#include <Templates/SubclassOf.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
 class ARecastNavMesh;
+class UNavigationQueryFilter;
 class UNavigationSystemV1;
 struct FPathFindingResult;
 
@@ -36,7 +38,8 @@ struct CKNAVIGATION_API FCk_Nav_Algorithm
         bool                 InAllowPartial,
         float                InProjectionHalfExtent,    // cm; from project setting (default 500)
         float                InAgentRadiusForFirstSkip, // cm; 0 disables the skip-first-waypoint pass (Gate 2+ wires this in)
-        FCk_Nav_PathResult&  OutResult) -> bool;
+        FCk_Nav_PathResult&  OutResult,
+        TSubclassOf<UNavigationQueryFilter> InFilterClass = {}) -> bool; // null -> NavData's default filter
 
     // Convert a raw FPathFindingResult into the FCk_Nav_PathResult shape, updating
     // _Status + _Diagnostics. If InAgentRadius > 0, drops the first waypoint when it

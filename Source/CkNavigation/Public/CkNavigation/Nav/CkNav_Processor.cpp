@@ -241,6 +241,8 @@ namespace ck
             ck::algo::ForEachRequest(InSnapshot._Requests, ck::Visitor(
                 [&](const auto& InFindPath) -> void
                 {
+                    const auto FilterClass = UCk_Utils_Nav_Settings_UE::Get_QueryFilterClass(InFindPath.Get_QueryFilter());
+
                     const auto bSucceeded = FCk_Nav_Algorithm::FindPathSync(
                         *NavSys,
                         *NavData,
@@ -249,7 +251,8 @@ namespace ck
                         InFindPath.Get_AllowPartialPath(),
                         ProjectionExtent,
                         /*InAgentRadiusForFirstSkip*/ 0.0f,
-                        InResult);
+                        InResult,
+                        FilterClass);
 
                     ck::nav::Verbose(TEXT("FindPathSync on [{}] -> target [{}]: {} (waypoints={} reason={})"),
                         InHandle,

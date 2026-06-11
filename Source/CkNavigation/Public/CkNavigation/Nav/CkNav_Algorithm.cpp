@@ -21,7 +21,8 @@ auto
         bool                 InAllowPartial,
         float                InProjectionHalfExtent,
         float                InAgentRadiusForFirstSkip,
-        FCk_Nav_PathResult&  OutResult)
+        FCk_Nav_PathResult&  OutResult,
+        TSubclassOf<UNavigationQueryFilter> InFilterClass)
         -> bool
 {
     // Reset and seed per-query diagnostics. Captured for every attempt (success or failure)
@@ -108,9 +109,11 @@ auto
     // The parameterized FPathFindingQuery ctor populates NavAgentProperties from
     // InNavData.GetConfig() and derives the DefaultFilter from NavData when SourceFilter
     // is nullptr. Passing it explicitly avoids relying on that fallback.
-    const auto DefaultFilter = InNavData.GetDefaultQueryFilter();
+    auto QueryFilter = InNavData.GetDefaultQueryFilter();
+    if (InFilterClass.Get() != nullptr)
+    { QueryFilter = UNavigationQueryFilter::GetQueryFilter(InNavData, InFilterClass); }
 
-    if (NOT DefaultFilter.IsValid())
+    if (NOT QueryFilter.IsValid())
     {
         OutResult._Status    = ECk_Nav_PathStatus::Failed;
         Diag._LastFailReason = ECk_Nav_PathFailReason::NoDefaultFilter;
@@ -123,7 +126,7 @@ auto
         /* NavData */        InNavData,
         /* Start */          StartProj.Location,
         /* End */            EndProj.Location,
-        /* SourceFilter */   DefaultFilter
+        /* SourceFilter */   QueryFilter
     };
     Query.SetAllowPartialPaths(InAllowPartial);
 
