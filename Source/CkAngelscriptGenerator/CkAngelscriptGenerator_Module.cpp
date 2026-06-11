@@ -588,6 +588,13 @@ void FCkAngelscriptGeneratorModule::StartupModule()
     _PostAngelscriptCompileHandle = FAngelscriptCodeModule::GetPostCompile().AddLambda(
         []()
         {
+            // PostCompile fires on SUCCESSFUL compile only — any recovery
+            // actions still queued were parsed from errors this compile just
+            // invalidated. Drop them before anything else: a deferred drain
+            // firing later would re-synthesize stubs from those stale records
+            // into the now-healthy state (the 2026-06-10 re-corruption).
+            ck::angelscriptgenerator::self_heal::FCkAsRecoveryDispatcher::Clear_PendingRecoveryState();
+
             Run_AllGenerators();
             Maybe_RegenDynamicHandleJson_OnPostCompile();
             Maybe_RegenAssetRegistry_OnPostCompile();

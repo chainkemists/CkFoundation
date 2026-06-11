@@ -1169,6 +1169,41 @@ namespace ck::angelscriptgenerator::self_heal
         // sModalTickHandle left as-is; OnModalLoopTick self-cleans on empty queue.
     }
 
+    auto FCkAsRecoveryDispatcher::Clear_PendingRecoveryState() -> void
+    {
+        if (sPendingActions.Num() > 0)
+        {
+            Log(TEXT("[SelfHeal] Compile succeeded with {} stale queued recovery action(s) — dropping them. ")
+                TEXT("(A deferred drain firing after a clean compile would re-synthesize stubs from stale ")
+                TEXT("error records and re-corrupt a healthy state.)"),
+                sPendingActions.Num());
+        }
+        sPendingActions.Reset();
+        sModalTicksWaited = 0;
+
+        if (sTickerHandle.IsValid())
+        {
+            FTSTicker::GetCoreTicker().RemoveTicker(sTickerHandle);
+            sTickerHandle.Reset();
+        }
+
+        if (sModalTickHandle.IsValid() && FSlateApplication::IsInitialized())
+        {
+            FSlateApplication::Get().GetOnModalLoopTickEvent().Remove(sModalTickHandle);
+        }
+        sModalTickHandle.Reset();
+
+        // The in-progress toast is normally transitioned by the drain that
+        // applied the recovery; if it's still pending here, the compile
+        // succeeded without our intervention — fade it out.
+        if (auto Item = sInProgressNotification.Pin(); Item.IsValid())
+        {
+            Item->SetCompletionState(SNotificationItem::CS_None);
+            Item->ExpireAndFadeout();
+        }
+        sInProgressNotification.Reset();
+    }
+
     auto FCkAsRecoveryDispatcher::Did_SynthesizeJsonStub_ThisSession() -> bool
     { return sDidSynthesizeJsonStub; }
 

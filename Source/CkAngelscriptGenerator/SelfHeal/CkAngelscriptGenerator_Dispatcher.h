@@ -77,6 +77,18 @@ namespace ck::angelscriptgenerator::self_heal
         static auto Get_CyclesRun  () -> int32;
         static auto Reset_CyclesRun() -> void;
 
+        // Invoked from the Module's PostCompile hook (fires on SUCCESSFUL
+        // compile only). Drops queued-but-undrained recovery actions and
+        // disarms the modal-tick / FTSTicker drains: a deferred cycle firing
+        // after a clean compile would re-synthesize stubs from stale error
+        // records and re-corrupt a healthy state (observed 2026-06-10 — the
+        // re-corruption fired minutes after the user had hand-fixed the
+        // wedge). The per-signature convergence trackers and blacklist
+        // intentionally survive — they exist precisely to span cleanup
+        // boundaries (see "Cleanup boundaries vs in-memory state" in the
+        // module CLAUDE.md).
+        static auto Clear_PendingRecoveryState() -> void;
+
         // Routes OnAngelscriptReloadHadErrors to modal-tick vs FTSTicker.
         // Flipped by the Module's OnFEngineLoopInitComplete lambda.
         static auto Is_BootstrapMode     () -> bool;

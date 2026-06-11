@@ -96,13 +96,15 @@ Mechanics, mirroring `MaxCycles`:
 
 ### Cleanup boundaries vs in-memory state
 
-The per-signature tracker and blacklist live in the anonymous namespace alongside `sCyclesRun` — pure session-static memory. They **survive every existing cleanup boundary** because all three of those boundaries touch *files* only:
+The per-signature tracker and blacklist live in the anonymous namespace alongside `sCyclesRun` — pure session-static memory. They **survive every cleanup boundary**:
 
 - `StartupModule`'s `Delete_AllStubRecoveryFiles()` sweep (cold-launch only)
 - `OnPostCompile` synchronous ESP+DH stub deletion
 - `Maybe_RegenAssetRegistry_OnPostCompile`'s FTSTicker post-regen AR stub deletion
 
 A signature that flips to blacklisted stays blacklisted regardless of how many stub files self-heal cleans up between attempts. This is exactly the case the cap is designed for — the dueling-overloads symptom hides itself between cleanup boundaries.
+
+**One piece of in-memory state IS cleared on successful compile:** the pending-action queue. `OnPostCompile` calls `FCkAsRecoveryDispatcher::Clear_PendingRecoveryState()` first thing — it drops queued-but-undrained `sPendingActions` and disarms the modal-tick / FTSTicker drains. Without this, a recovery cycle deferred from an earlier failed reload could fire *after* a subsequent successful compile and re-synthesize stubs from stale error records, re-corrupting a healthy state (observed 2026-06-10: a stale cycle re-wrote a `<null handle>` stub minutes after the wedge had been hand-fixed and compiled clean). The convergence tracker and blacklist deliberately survive this clear — they exist precisely to span cleanup boundaries.
 
 ### Opt-out surfaces
 
