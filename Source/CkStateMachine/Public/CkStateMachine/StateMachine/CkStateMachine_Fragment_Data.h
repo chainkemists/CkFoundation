@@ -228,12 +228,12 @@ private:
 
     UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true,
-                EditCondition = "_Replication == Replicates"))
+                EditCondition = "_Replication == ECk_Replication::Replicates"))
     ECk_Sm_AuthorityModel _AuthorityModel = ECk_Sm_AuthorityModel::AutoDetect;
 
     UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true,
-                EditCondition = "_Replication == Replicates"))
+                EditCondition = "_Replication == ECk_Replication::Replicates"))
     ECk_Sm_ReplicationModel _ReplicationModel = ECk_Sm_ReplicationModel::WithHistory;
 
 public:
