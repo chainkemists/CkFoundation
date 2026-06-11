@@ -19,8 +19,9 @@
 // across files satisfies compile. Canonical files are never touched.
 //
 // Class resolution:
-//   * Tier 1/2 — LoadObject + Get_NonBlueprintParentClass (walks UBlueprint
-//     -> native parent for BPs).
+//   * Tiers 2/2.5/2.6 — FCkAssetRegistry_ClassResolver
+//     (Assets/CkAssetRegistry_ClassResolver.h), shared with the canonical
+//     generator's sync-resolve path.
 //   * Tier 3 — REFUSED for all flavors as of 2026-05-13 (probe_a2.log).
 //
 //     The original 2026-05-12 policy emitted `TSoftObjectPtr<UObject>` stubs
@@ -138,16 +139,11 @@ namespace ck::angelscriptgenerator::self_heal
         // path. Tier 3 is REFUSED (see file-header rationale); the dispatcher
         // logs the message and Hazelight's modal keeps showing the original
         // actionable AS error.
+        //
+        // Class resolution (Tiers 2/2.5/2.6) is delegated to
+        // FCkAssetRegistry_ClassResolver (Assets/CkAssetRegistry_ClassResolver.h),
+        // shared with the canonical generator's sync-resolve path.
         static auto Inject_AssetRegistryStub(const FCk_AsParsedError& InError) -> FCk_AssetStubInjectionResult;
-
-        // Reads `.uasset` linker tables to derive parent-class name when
-        // LoadObject can't construct the asset. Shared by self-heal Tier 2.6
-        // and the canonical generator's sync resolve — both MUST use the same
-        // path or canonical-vs-self-heal divergence triggers a synth-cleanup
-        // loop. InPackagePath: "/Game/X/Y/Asset.Asset" (FSoftObjectPath form).
-        // Returns emit-ready class name (e.g. "UBb_X", "UUserWidget"); empty
-        // on resolution failure.
-        static auto Resolve_ClassName_FromPackageReader_OnDisk(const FString& InPackagePath) -> FString;
     };
 }
 

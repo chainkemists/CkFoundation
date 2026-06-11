@@ -92,6 +92,15 @@ public:
     Is_PlaceholderClass(
         const UClass* InClass) -> bool;
 
+    // Returns true when the class is declared in an editor-only module. The owning plugin
+    // module's host type (Editor/EditorNoCommandlet/EditorAndProgram/UncookedOnly) is
+    // authoritative when the module is described by a plugin descriptor; engine modules fall
+    // back to a known-editor-modules set, then a name heuristic (contains "Editor"). Used by
+    // codegen tooling to decide whether emitted references need `#if Editor` guards.
+    static auto
+    Is_EditorOnlyClass(
+        const UClass* InClass) -> bool;
+
     // AngelScript-specific escaping for emission into generated .as files.
     static auto
     Get_EscapedStringForAngelscript(
