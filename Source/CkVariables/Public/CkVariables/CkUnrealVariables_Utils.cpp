@@ -239,10 +239,7 @@ auto
     -> TMap<FName, UObject*>
 {
     if (NOT UtilsType::Has(InHandle))
-    {
-        static TMap<FName, UObject*> Invalid;
-        return Invalid;
-    }
+    { return {}; }
 
     const auto& Variables = InHandle.Get<FragmentType>().Get_Variables();
 
