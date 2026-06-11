@@ -12,6 +12,7 @@
 namespace ck
 {
     class FProcessor_PredictedVelocity_Update;
+    class FProcessor_EulerIntegrator_DoOnePredictiveUpdate;
 
     class CKPHYSICS_API FProcessor_Velocity_Setup : public TProcessor<
             FProcessor_Velocity_Setup,
@@ -50,7 +51,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Physics;
-        using RunAfter = TDepList<FProcessor_PredictedVelocity_Update>;
+        using RunAfter = TDepList<FProcessor_PredictedVelocity_Update, FProcessor_EulerIntegrator_DoOnePredictiveUpdate>;
         using MarkedDirtyBy = FFragment_Velocity_MinMax;
 
     public:

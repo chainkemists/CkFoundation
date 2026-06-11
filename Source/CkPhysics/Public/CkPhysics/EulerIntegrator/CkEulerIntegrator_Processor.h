@@ -14,6 +14,7 @@ namespace ck
 {
     class FProcessor_AccelerationModifier_Setup;
     class FProcessor_VelocityModifier_Setup;
+    class FProcessor_EulerIntegrator_Update;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -32,7 +33,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Physics;
-        using RunAfter = TDepList<FProcessor_AccelerationModifier_Setup, FProcessor_VelocityModifier_Setup>;
+        using RunAfter = TDepList<FProcessor_AccelerationModifier_Setup, FProcessor_VelocityModifier_Setup, FProcessor_EulerIntegrator_Update>;
 
     public:
         using TProcessor::TProcessor;
