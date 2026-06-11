@@ -839,6 +839,8 @@ auto
 
     // ---- Step 3: walk every writer pair and check for unresolved ordering ----
     auto AllOk = true;
+    auto AutoInsertedEdgeCount = int32{0};
+    auto AutoInsertedFragmentNames = TSet<FName>{};
 
     for (const auto& [FragmentHashUnused, Bucket] : WritersByFragmentHash)
     {
@@ -890,7 +892,11 @@ auto
                 }
                 else
                 {
-                    ck::ecs::Warning(
+                    // Per-pair detail at Verbose only — a full graph build emits hundreds of
+                    // these (every co-writing pair in every module), drowning the startup log.
+                    // The aggregate Warning below keeps the signal; the per-pair records are
+                    // also retained in _WriteConflicts for the scheduler debug view.
+                    ck::ecs::Verbose(
                         TEXT("Write conflict: processors [{}] and [{}] both write fragment [{}] ")
                         TEXT("with no explicit RunAfter/RunBefore ordering. ")
                         TEXT("Inserting implicit edge [{}] -> [{}] from descriptor declaration order. ")
@@ -900,11 +906,24 @@ auto
                     DoAddEdge(FirstIndex, SecondIndex);
                     UpdateClosureForNewEdge(FirstClosureIdx, SecondClosureIdx);
 
+                    ++AutoInsertedEdgeCount;
+                    AutoInsertedFragmentNames.Add(FragmentName);
+
                     ConflictRecord._AutoInserted = true;
                     _WriteConflicts.Add(MoveTemp(ConflictRecord));
                 }
             }
         }
+    }
+
+    if (AutoInsertedEdgeCount > 0)
+    {
+        ck::ecs::Warning(
+            TEXT("Inserted {} implicit write-ordering edge(s) across {} fragment(s) from descriptor ")
+            TEXT("declaration order (deterministic, but unintentional). Add explicit TDepList deps to make ")
+            TEXT("the ordering intentional; per-pair detail is logged at Verbose and recorded in the ")
+            TEXT("scheduler debug data."),
+            AutoInsertedEdgeCount, AutoInsertedFragmentNames.Num());
     }
 
     return AllOk;
