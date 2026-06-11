@@ -232,7 +232,8 @@ auto
     UCk_Utils_OwningActor_UE::
     Promise_OnActorEcsReady(
         AActor* InActor,
-        const FCk_Delegate_OwningActor_OnEcsReady& InDelegate)
+        const FCk_Delegate_OwningActor_OnEcsReady& InDelegate,
+        ECk_ActorEcsReady_Policy InPolicy)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InActor),
@@ -243,25 +244,44 @@ auto
         TEXT("Promise_OnActorEcsReady called with an unbound delegate for Actor [{}]"), InActor)
     { return; }
 
-    if (Get_IsActorEcsReady(InActor))
-    {
-        InDelegate.ExecuteIfBound(InActor, Get_ActorEntityHandle(InActor));
-        return;
-    }
-
     auto EntityOwningActorComp = DoGetOrAdd_EntityOwningActorComponent(InActor);
 
     if (ck::Is_NOT_Valid(EntityOwningActorComp))
     { return; }
 
-    EntityOwningActorComp->_PendingEcsReadyDelegates.Add(InDelegate);
+    if (Get_IsActorEcsReady(InActor))
+    {
+        const auto Entity = Get_ActorEntityHandle(InActor);
+
+        if (InPolicy == ECk_ActorEcsReady_Policy::LinkEstablished ||
+            NOT DoGet_ShouldDeferUntilReplicationComplete(Entity))
+        {
+            InDelegate.ExecuteIfBound(InActor, Entity);
+            return;
+        }
+
+        EntityOwningActorComp->_PendingEcsReadyDelegates_ValuesReplicated.Add(InDelegate);
+        DoBind_ReplicationCompleteTrampoline(EntityOwningActorComp, Entity);
+        return;
+    }
+
+    switch (InPolicy)
+    {
+        case ECk_ActorEcsReady_Policy::LinkEstablished:
+            EntityOwningActorComp->_PendingEcsReadyDelegates_LinkEstablished.Add(InDelegate);
+            break;
+        case ECk_ActorEcsReady_Policy::ValuesReplicated:
+            EntityOwningActorComp->_PendingEcsReadyDelegates_ValuesReplicated.Add(InDelegate);
+            break;
+    }
 }
 
 auto
     UCk_Utils_OwningActor_UE::
     Promise_OnActorEcsReady(
         AActor* InActor,
-        TFunction<void(AActor*, FCk_Handle)> InCallback)
+        TFunction<void(AActor*, FCk_Handle)> InCallback,
+        ECk_ActorEcsReady_Policy InPolicy)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InActor),
@@ -272,18 +292,36 @@ auto
         TEXT("Promise_OnActorEcsReady called with an empty callback for Actor [{}]"), InActor)
     { return; }
 
-    if (Get_IsActorEcsReady(InActor))
-    {
-        InCallback(InActor, Get_ActorEntityHandle(InActor));
-        return;
-    }
-
     auto EntityOwningActorComp = DoGetOrAdd_EntityOwningActorComponent(InActor);
 
     if (ck::Is_NOT_Valid(EntityOwningActorComp))
     { return; }
 
-    EntityOwningActorComp->_PendingEcsReadyCallbacks.Add(MoveTemp(InCallback));
+    if (Get_IsActorEcsReady(InActor))
+    {
+        const auto Entity = Get_ActorEntityHandle(InActor);
+
+        if (InPolicy == ECk_ActorEcsReady_Policy::LinkEstablished ||
+            NOT DoGet_ShouldDeferUntilReplicationComplete(Entity))
+        {
+            InCallback(InActor, Entity);
+            return;
+        }
+
+        EntityOwningActorComp->_PendingEcsReadyCallbacks_ValuesReplicated.Add(MoveTemp(InCallback));
+        DoBind_ReplicationCompleteTrampoline(EntityOwningActorComp, Entity);
+        return;
+    }
+
+    switch (InPolicy)
+    {
+        case ECk_ActorEcsReady_Policy::LinkEstablished:
+            EntityOwningActorComp->_PendingEcsReadyCallbacks_LinkEstablished.Add(MoveTemp(InCallback));
+            break;
+        case ECk_ActorEcsReady_Policy::ValuesReplicated:
+            EntityOwningActorComp->_PendingEcsReadyCallbacks_ValuesReplicated.Add(MoveTemp(InCallback));
+            break;
+    }
 }
 
 auto
@@ -345,13 +383,39 @@ auto
     if (ck::Is_NOT_Valid(InComp))
     { return; }
 
+    DoFlush_PendingEcsReady_LinkEstablished(InComp, InActor, InEntity);
+
+    if (InComp->_PendingEcsReadyDelegates_ValuesReplicated.IsEmpty() &&
+        InComp->_PendingEcsReadyCallbacks_ValuesReplicated.IsEmpty())
+    { return; }
+
+    if (DoGet_ShouldDeferUntilReplicationComplete(InEntity))
+    {
+        DoBind_ReplicationCompleteTrampoline(InComp, InEntity);
+        return;
+    }
+
+    DoFlush_PendingEcsReady_ValuesReplicated(InComp, InActor, InEntity);
+}
+
+auto
+    UCk_Utils_OwningActor_UE::
+    DoFlush_PendingEcsReady_LinkEstablished(
+        UCk_EntityOwningActor_ActorComponent_UE* InComp,
+        AActor* InActor,
+        const FCk_Handle& InEntity)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InComp))
+    { return; }
+
     // Move out before executing so a promise that queues another promise during its own callback
     // does not mutate the container we are iterating (and is itself fired immediately since the
     // Actor is already ECS ready by this point).
-    const auto PendingDelegates = MoveTemp(InComp->_PendingEcsReadyDelegates);
-    const auto PendingCallbacks = MoveTemp(InComp->_PendingEcsReadyCallbacks);
-    InComp->_PendingEcsReadyDelegates.Reset();
-    InComp->_PendingEcsReadyCallbacks.Reset();
+    const auto PendingDelegates = MoveTemp(InComp->_PendingEcsReadyDelegates_LinkEstablished);
+    const auto PendingCallbacks = MoveTemp(InComp->_PendingEcsReadyCallbacks_LinkEstablished);
+    InComp->_PendingEcsReadyDelegates_LinkEstablished.Reset();
+    InComp->_PendingEcsReadyCallbacks_LinkEstablished.Reset();
 
     for (const auto& Delegate : PendingDelegates)
     {
@@ -363,6 +427,69 @@ auto
         if (Callback)
         { Callback(InActor, InEntity); }
     }
+}
+
+auto
+    UCk_Utils_OwningActor_UE::
+    DoFlush_PendingEcsReady_ValuesReplicated(
+        UCk_EntityOwningActor_ActorComponent_UE* InComp,
+        AActor* InActor,
+        const FCk_Handle& InEntity)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InComp))
+    { return; }
+
+    const auto PendingDelegates = MoveTemp(InComp->_PendingEcsReadyDelegates_ValuesReplicated);
+    const auto PendingCallbacks = MoveTemp(InComp->_PendingEcsReadyCallbacks_ValuesReplicated);
+    InComp->_PendingEcsReadyDelegates_ValuesReplicated.Reset();
+    InComp->_PendingEcsReadyCallbacks_ValuesReplicated.Reset();
+
+    for (const auto& Delegate : PendingDelegates)
+    {
+        Delegate.ExecuteIfBound(InActor, InEntity);
+    }
+
+    for (const auto& Callback : PendingCallbacks)
+    {
+        if (Callback)
+        { Callback(InActor, InEntity); }
+    }
+}
+
+auto
+    UCk_Utils_OwningActor_UE::
+    DoGet_ShouldDeferUntilReplicationComplete(
+        const FCk_Handle& InEntity)
+    -> bool
+{
+    if (UCk_Utils_EntityReplicationDriver_UE::Has(InEntity))
+    { return NOT UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationComplete(InEntity); }
+
+    // The link is established mid-Construct, BEFORE OwningActor::Add adds the ReplicationDriver —
+    // fall back to the Entity's replication setting (populated by the spawn processor pre-Construct)
+    // to decide whether OnReplicationComplete will eventually fire for this Entity.
+    return UCk_Utils_Net_UE::Has(InEntity) &&
+        UCk_Utils_Net_UE::Get_Replication(InEntity) == ECk_Replication::Replicates;
+}
+
+auto
+    UCk_Utils_OwningActor_UE::
+    DoBind_ReplicationCompleteTrampoline(
+        UCk_EntityOwningActor_ActorComponent_UE* InComp,
+        const FCk_Handle& InEntity)
+    -> void
+{
+    if (InComp->_OnReplicationCompleteTrampolineBound)
+    { return; }
+
+    auto Delegate = FCk_Delegate_EntityReplicationDriver_OnReplicationComplete{};
+    Delegate.BindDynamic(InComp, &UCk_EntityOwningActor_ActorComponent_UE::DoHandle_LinkedEntityReplicationComplete);
+
+    auto Entity = InEntity;
+    UCk_Utils_EntityReplicationDriver_UE::Promise_OnReplicationComplete(Entity, Delegate);
+
+    InComp->_OnReplicationCompleteTrampolineBound = true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

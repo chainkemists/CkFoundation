@@ -1,6 +1,7 @@
 #include "CkOwningActor_Fragment_Data.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include "Net/UnrealNetwork.h"
@@ -23,6 +24,15 @@ auto
     Super::EndPlay(InEndPlayReason);
 
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(_EntityHandle);
+}
+
+auto
+    UCk_EntityOwningActor_ActorComponent_UE::
+    DoHandle_LinkedEntityReplicationComplete(
+        FCk_Handle InEntity)
+    -> void
+{
+    UCk_Utils_OwningActor_UE::DoFlush_PendingEcsReady_ValuesReplicated(this, GetOwner(), InEntity);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
