@@ -93,6 +93,13 @@ namespace ck::angelscriptgenerator::self_heal
         // vs "int&". Stub emission, the dedup end-marker, and the dispatcher's
         // convergence key all use this normalization so those variants collapse
         // to one stub instead of two mutually-ambiguous overloads.
+        //
+        // Compiler placeholders for uninferable arg types (`<null handle>` for
+        // a bare nullptr) map to UObject — emitting the placeholder verbatim
+        // makes the stub file unparseable, wedging every subsequent compile
+        // (2026-06-10 incident). Inject_* additionally refuses to land a
+        // fallback-bearing stub alongside a typed stub of the same arity (or
+        // vice versa): the pair is mutually ambiguous at every call site.
         static auto Normalize_ArgsList(const FString& InArgsList) -> FString;
 
         // Source-derived full-shape stub text for a scanned class shape:

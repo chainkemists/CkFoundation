@@ -827,6 +827,10 @@ bool FCkTest_StubSynthesizer_NormalizeArgsList::RunTest(const FString&)
     TestEqual(TEXT("empty -> empty"),
         FCkAsStubSynthesizer::Normalize_ArgsList(FString{}), FString{});
 
+    TestEqual(TEXT("nullptr placeholder maps to UObject fallback"),
+        FCkAsStubSynthesizer::Normalize_ArgsList(TEXT("FTransform, <null handle>")),
+        FString{TEXT("FTransform, UObject")});
+
     return true;
 }
 
@@ -1302,6 +1306,180 @@ bool FCkTest_StubSynthesizer_Inject_SourceDerived_DefersOnExistingStruct::RunTes
         Result.ErrorMessage.Contains(TEXT("defers")));
     TestFalse(TEXT("no sibling stub written"),
         IFileManager::Get().FileExists(*(ScriptRoot / TEXT("Generated/_StubRecovery_FakeProj_EntitySpawnParams.as"))));
+
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Build_EntityScriptParamsStub: a bare-nullptr call-site arg arrives as the
+// compiler placeholder `<null handle>` — it must be emitted as a UObject
+// fallback param, never verbatim. Verbatim emission makes the stub file
+// unparseable ("Expected data type / Instead found '<'"), which wedges every
+// subsequent compile and is unrecoverable because the corrupt file is
+// self-heal's own output (2026-06-10 UBb_StoreDriver_EntityScript incident).
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StubSynthesizer_Build_NullHandleArg_EmitsUObjectFallback,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.Build_NullHandleArg_EmitsUObjectFallback",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StubSynthesizer_Build_NullHandleArg_EmitsUObjectFallback::RunTest(const FString&)
+{
+    const auto Error = Make_ParsedError(
+        TEXT("UBb_StoreDriver_EntityScript"),
+        TEXT("Params"),
+        TEXT("FTransform, bool, <null handle>"));
+
+    const auto Stub = FCkAsStubSynthesizer::Build_EntityScriptParamsStub(Error, /*InEmitStruct=*/false);
+
+    TestTrue(TEXT("placeholder emitted as UObject fallback param"),
+        Stub.Contains(TEXT("Params(FTransform Arg0, bool Arg1, UObject Arg2)")));
+    TestFalse(TEXT("placeholder never emitted as a param type"),
+        Stub.Contains(TEXT("<null handle> Arg")));
+    // The diagnostic `// Target:` line keeps the raw error verbatim for
+    // forensics — a comment can hold the placeholder safely.
+    TestTrue(TEXT("Target comment preserves the raw error"),
+        Stub.Contains(TEXT("// Target: UBb_StoreDriver_EntityScript::Params(FTransform, bool, <null handle>)")));
+    // The end-marker uses the normalized list, so the placeholder never leaks
+    // into the dedup key either.
+    TestTrue(TEXT("end-marker uses the normalized (UObject) list"),
+        Stub.Contains(TEXT("// End synthesized stub for UBb_StoreDriver_EntityScript::Params(FTransform, bool, UObject)")));
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Same-arity ambiguity gate, typed-first order: once a fully-typed stub
+// exists, a nullptr-variant (UObject fallback) of the same arity must NOT be
+// appended — nullptr binds against the typed stub, and the pair would be
+// mutually ambiguous ("Multiple matching signatures", which the dispatcher
+// cannot recognize or heal). A fallback variant of a DIFFERENT arity is a
+// genuinely distinct overload and must still land.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StubSynthesizer_Inject_NullVariant_SkippedWhenTypedSameArityExists,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.Inject_NullVariant_SkippedWhenTypedSameArityExists",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StubSynthesizer_Inject_NullVariant_SkippedWhenTypedSameArityExists::RunTest(const FString&)
+{
+    const auto TempRoot         = FPaths::ProjectIntermediateDir() / TEXT("CkStubSynthTest_NullVsTyped");
+    const auto FixtureFile      = TempRoot / TEXT("BusterBlock_EntitySpawnParams.as");
+    const auto ExpectedStubFile = TempRoot / TEXT("_StubRecovery_BusterBlock_EntitySpawnParams.as");
+    IFileManager::Get().MakeDirectory(*TempRoot, /*Tree=*/true);
+
+    const auto Original = FString{TEXT("// References UBb_StoreDriver_EntityScript as a string.\n")};
+    FFileHelper::SaveStringToFile(Original, *FixtureFile,
+        FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+
+    // Call site A passes a real config object; call site B passes nullptr.
+    const auto ErrorTyped = Make_ParsedError(
+        TEXT("UBb_StoreDriver_EntityScript"), TEXT("Params"),
+        TEXT("FTransform, UBb_StoreCustomization_Config"),
+        TEXT("D:/Test/CallerA.as"), 100, 9);
+    const auto ErrorNull = Make_ParsedError(
+        TEXT("UBb_StoreDriver_EntityScript"), TEXT("Params"),
+        TEXT("FTransform, <null handle>"),
+        TEXT("D:/Test/CallerB.as"), 200, 13);
+
+    const auto ResultTyped = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(ErrorTyped, {FixtureFile});
+    TestTrue(TEXT("typed inject succeeded"), ResultTyped.Success);
+
+    const auto ResultNull = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(ErrorNull, {FixtureFile});
+    TestTrue(TEXT("null-variant inject reports success (no-op)"), ResultNull.Success);
+
+    auto Stub = FString{};
+    TestTrue(TEXT("sibling readable"), FFileHelper::LoadFileToString(Stub, *ExpectedStubFile));
+
+    auto Cursor   = 0;
+    auto HitCount = 0;
+    const auto Needle = FString{TEXT(" Params(")};
+    while ((Cursor = Stub.Find(Needle, ESearchCase::CaseSensitive, ESearchDir::FromStart, Cursor)) != INDEX_NONE)
+    {
+        ++HitCount;
+        Cursor += Needle.Len();
+    }
+    TestEqual(TEXT("exactly one Params(...) declaration"), HitCount, 1);
+    TestTrue(TEXT("the typed stub is the one that landed"),
+        Stub.Contains(TEXT("Params(FTransform Arg0, UBb_StoreCustomization_Config Arg1)")));
+    TestFalse(TEXT("no UObject-fallback overload landed"),
+        Stub.Contains(TEXT("UObject Arg1)")));
+
+    // A fallback variant of a DIFFERENT arity is a distinct overload — it
+    // must still append.
+    const auto ErrorNull3Arg = Make_ParsedError(
+        TEXT("UBb_StoreDriver_EntityScript"), TEXT("Params"),
+        TEXT("FTransform, bool, <null handle>"),
+        TEXT("D:/Test/CallerC.as"), 300, 5);
+    const auto ResultNull3Arg = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(ErrorNull3Arg, {FixtureFile});
+    TestTrue(TEXT("different-arity null variant succeeded"), ResultNull3Arg.Success);
+
+    TestTrue(TEXT("sibling re-readable"), FFileHelper::LoadFileToString(Stub, *ExpectedStubFile));
+    TestTrue(TEXT("different-arity fallback overload landed"),
+        Stub.Contains(TEXT("Params(FTransform Arg0, bool Arg1, UObject Arg2)")));
+
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Same-arity ambiguity gate, fallback-first order: when the nullptr variant
+// landed first (UObject fallback stub), a later fully-typed variant of the
+// same arity must NOT be appended — the typed call site's handle implicitly
+// converts to UObject, so the existing fallback stub already satisfies it,
+// and appending the typed twin would create the same mutual ambiguity.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StubSynthesizer_Inject_TypedVariant_SkippedWhenFallbackSameArityExists,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.Inject_TypedVariant_SkippedWhenFallbackSameArityExists",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StubSynthesizer_Inject_TypedVariant_SkippedWhenFallbackSameArityExists::RunTest(const FString&)
+{
+    const auto TempRoot         = FPaths::ProjectIntermediateDir() / TEXT("CkStubSynthTest_TypedVsNull");
+    const auto FixtureFile      = TempRoot / TEXT("BusterBlock_EntitySpawnParams.as");
+    const auto ExpectedStubFile = TempRoot / TEXT("_StubRecovery_BusterBlock_EntitySpawnParams.as");
+    IFileManager::Get().MakeDirectory(*TempRoot, /*Tree=*/true);
+
+    const auto Original = FString{TEXT("// References UBb_StoreDriver_EntityScript as a string.\n")};
+    FFileHelper::SaveStringToFile(Original, *FixtureFile,
+        FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+
+    const auto ErrorNull = Make_ParsedError(
+        TEXT("UBb_StoreDriver_EntityScript"), TEXT("Params"),
+        TEXT("FTransform, <null handle>"),
+        TEXT("D:/Test/CallerB.as"), 200, 13);
+    const auto ErrorTyped = Make_ParsedError(
+        TEXT("UBb_StoreDriver_EntityScript"), TEXT("Params"),
+        TEXT("FTransform, UBb_StoreCustomization_Config"),
+        TEXT("D:/Test/CallerA.as"), 100, 9);
+
+    const auto ResultNull = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(ErrorNull, {FixtureFile});
+    TestTrue(TEXT("null-variant inject succeeded"), ResultNull.Success);
+
+    const auto ResultTyped = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(ErrorTyped, {FixtureFile});
+    TestTrue(TEXT("typed inject reports success (no-op)"), ResultTyped.Success);
+
+    auto Stub = FString{};
+    TestTrue(TEXT("sibling readable"), FFileHelper::LoadFileToString(Stub, *ExpectedStubFile));
+
+    auto Cursor   = 0;
+    auto HitCount = 0;
+    const auto Needle = FString{TEXT(" Params(")};
+    while ((Cursor = Stub.Find(Needle, ESearchCase::CaseSensitive, ESearchDir::FromStart, Cursor)) != INDEX_NONE)
+    {
+        ++HitCount;
+        Cursor += Needle.Len();
+    }
+    TestEqual(TEXT("exactly one Params(...) declaration"), HitCount, 1);
+    TestTrue(TEXT("the fallback stub is the one that landed"),
+        Stub.Contains(TEXT("Params(FTransform Arg0, UObject Arg1)")));
+    TestFalse(TEXT("no typed twin landed"),
+        Stub.Contains(TEXT("UBb_StoreCustomization_Config Arg1)")));
 
     IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
     return true;

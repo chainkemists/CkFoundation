@@ -34,6 +34,23 @@ namespace ck::angelscriptgenerator::self_heal
             return Out;
         }
 
+        // Fallback param type for call-site arguments whose type the AS error
+        // cannot report (a bare `nullptr` has no inferable type — the compiler
+        // emits the placeholder `<null handle>` instead). Stub bodies discard
+        // their args, and a nullptr literal binds to a UObject param, so this
+        // is the weakest type that still satisfies the call site.
+        constexpr auto* kUninferableTypeFallback = TEXT("UObject");
+
+        // True when the (already-trimmed) token is a compiler placeholder like
+        // `<null handle>` rather than a real type. Placeholders are always a
+        // whole bracketed token; templated types (TArray<int>) start with an
+        // identifier character and don't match.
+        auto Is_UninferablePlaceholder(
+            const FString& InTrimmedToken) -> bool
+        {
+            return InTrimmedToken.StartsWith(TEXT("<"));
+        }
+
         // Canonicalizes a type token to the value-typed shape the real generator
         // emits: strips a leading "const " and a trailing "&". The AS error reports
         // the CALL SITE's argument category, not the function's declared parameter
@@ -44,6 +61,14 @@ namespace ck::angelscriptgenerator::self_heal
         // overloads that are mutually ambiguous at every call site ("Multiple
         // matching signatures" — unhealable, since the dispatcher only recognizes
         // "No matching signatures").
+        //
+        // Compiler placeholders (`<null handle>` for a bare nullptr arg) map to
+        // the UObject fallback instead of passing through: emitting the
+        // placeholder verbatim produces an unparseable stub ("Expected data
+        // type / Instead found '<'") that wedges every subsequent compile —
+        // worse than the original mismatch, because the corrupt file is self-
+        // heal's own output and it parses "0 actionable roots" from it. Pinned
+        // by the 2026-06-10 UBb_StoreDriver_EntityScript incident.
         auto Normalize_TypeToken(
             const FString& InTypeToken) -> FString
         {
@@ -52,7 +77,20 @@ namespace ck::angelscriptgenerator::self_heal
             { Trimmed = Trimmed.RightChop(6).TrimStart(); }
             if (Trimmed.EndsWith(TEXT("&")))
             { Trimmed = Trimmed.LeftChop(1).TrimEnd(); }
+            if (Is_UninferablePlaceholder(Trimmed))
+            { return kUninferableTypeFallback; }
             return Trimmed;
+        }
+
+        auto Has_UninferableArg(
+            const FString& InArgsList) -> bool
+        {
+            for (const auto& Type : Split_ArgTypes(InArgsList))
+            {
+                if (Is_UninferablePlaceholder(Type))
+                { return true; }
+            }
+            return false;
         }
 
         // "FTransform, const UClass" -> "FTransform Arg0, UClass Arg1"
@@ -69,6 +107,44 @@ namespace ck::angelscriptgenerator::self_heal
                 Parts.Add(FString::Printf(TEXT("%s Arg%d"), *Normalize_TypeToken(Types[i]), i));
             }
             return FString::Join(Parts, TEXT(", "));
+        }
+
+        // Extracts the normalized args list of every already-synthesized stub
+        // for <NS>::<FUNC> in the sibling's content, by scanning its
+        // `// End synthesized stub for <NS>::<FUNC>(<args>)` marker lines.
+        // Full-shape (source-derived) blocks emit per-overload markers with
+        // the same prefix, so their overloads are visible here too.
+        auto Collect_ExistingStubArgsLists(
+            const FString& InExistingStub,
+            const FString& InNamespace,
+            const FString& InFunction) -> TArray<FString>
+        {
+            auto Out = TArray<FString>{};
+            const auto Prefix = FString::Printf(TEXT("// End synthesized stub for %s::%s("),
+                *InNamespace, *InFunction);
+
+            auto Cursor = 0;
+            while (true)
+            {
+                const auto Pos = InExistingStub.Find(Prefix, ESearchCase::CaseSensitive, ESearchDir::FromStart, Cursor);
+                if (Pos == INDEX_NONE)
+                { break; }
+
+                const auto ArgsStart = Pos + Prefix.Len();
+                const auto LineEnd   = InExistingStub.Find(
+                    FString{LINE_TERMINATOR}, ESearchCase::CaseSensitive, ESearchDir::FromStart, ArgsStart);
+                auto Line = LineEnd != INDEX_NONE
+                    ? InExistingStub.Mid(ArgsStart, LineEnd - ArgsStart)
+                    : InExistingStub.Mid(ArgsStart);
+
+                const auto CloseParen = Line.Find(TEXT(")"), ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+                if (CloseParen != INDEX_NONE)
+                { Line = Line.Left(CloseParen); }
+                Out.Add(Line);
+
+                Cursor = ArgsStart;
+            }
+            return Out;
         }
 
         // ---- File IO helpers -------------------------------------------------------
@@ -484,6 +560,43 @@ namespace ck::angelscriptgenerator::self_heal
                 Result.TargetFilePath = StubPath;
                 Result.InjectedBlock  = StubBlock;
                 return Result;
+            }
+        }
+
+        // Same-arity ambiguity gate (2026-06-10 nullptr-arg incident). A call
+        // site passing a bare nullptr reports the uninferable placeholder
+        // `<null handle>`, which we emit as a UObject fallback param. A
+        // fallback stub and a typed stub of the same NS::FUNC + arity are
+        // mutually ambiguous at every call site (nullptr binds to both, and a
+        // typed handle implicitly converts to UObject) — "Multiple matching
+        // signatures", which the dispatcher can't recognize or heal. Never
+        // write the second one, in either order: stub bodies discard their
+        // args, so whichever stub landed first satisfies every call site of
+        // that arity. Full-shape (source-derived) blocks emit per-overload
+        // markers with the same prefix, so a nullptr variant of a full-shape
+        // typed overload is suppressed here too. Distinct fully-typed
+        // same-arity overloads (int vs float) still dedup independently —
+        // the gate only fires when a fallback is involved on either side.
+        if (StubFileExists)
+        {
+            const auto NewArity       = Split_ArgTypes(InError.ArgsList).Num();
+            const auto NewHasFallback = Has_UninferableArg(InError.ArgsList);
+
+            for (const auto& ExistingArgsList : Collect_ExistingStubArgsLists(
+                ExistingStub, InError.TargetNamespace, InError.FunctionName))
+            {
+                const auto ExistingArgs = Split_ArgTypes(ExistingArgsList);
+                if (ExistingArgs.Num() != NewArity)
+                { continue; }
+
+                const auto ExistingHasFallback = ExistingArgs.Contains(FString{kUninferableTypeFallback});
+                if (NewHasFallback || ExistingHasFallback)
+                {
+                    Result.Success        = true;
+                    Result.TargetFilePath = StubPath;
+                    Result.InjectedBlock  = StubBlock;
+                    return Result;
+                }
             }
         }
 
