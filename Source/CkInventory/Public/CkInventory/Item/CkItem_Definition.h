@@ -55,6 +55,8 @@ class CKINVENTORY_API UCk_InventoryItem_Definition : public UCk_Entity_Construct
 public:
     CK_GENERATED_BODY(UCk_InventoryItem_Definition);
 
+    friend class UCk_Utils_Item_UE;
+
 public:
     auto
     DoConstruct_Implementation(
