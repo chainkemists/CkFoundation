@@ -166,7 +166,8 @@ auto
     { return {}; }
 
     auto& Bridge = ck_actor_component_internal::Get_BridgeMap();
-    if (auto* Found = Bridge.Find(TWeakObjectPtr<UActorComponent>{InComponent}))
+    if (auto* Found = Bridge.Find(TWeakObjectPtr<UActorComponent>{InComponent});
+        Found != nullptr && ck::IsValid(*Found))
     { return *Found; }
 
     return {};
@@ -341,7 +342,18 @@ auto
     if (ck::Is_NOT_Valid(InComponent))
     { return; }
 
-    ck_actor_component_internal::Get_BridgeMap().Add(TWeakObjectPtr{InComponent}, InHandle);
+    auto& Bridge = ck_actor_component_internal::Get_BridgeMap();
+
+    // Opportunistically prune entries whose component died without going
+    // through DoUnregisterBridge (e.g. PIE teardown ordering) — the map is
+    // process-lifetime static and would otherwise grow unbounded.
+    for (auto It = Bridge.CreateIterator(); It; ++It)
+    {
+        if (ck::Is_NOT_Valid(It.Key()))
+        { It.RemoveCurrent(); }
+    }
+
+    Bridge.Add(TWeakObjectPtr{InComponent}, InHandle);
 }
 
 auto
