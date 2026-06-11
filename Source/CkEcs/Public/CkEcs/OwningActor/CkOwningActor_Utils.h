@@ -121,16 +121,18 @@ public:
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck][OwningActor] Promise/Future On Actor Ecs Ready",
               Category = "Ck|Utils|OwningActor",
-              meta = (DefaultToSelf = "InActor", Keywords = "bind, wait, when, ready, ecs, future"))
+              meta = (DefaultToSelf = "InActor", Keywords = "bind, wait, when, ready, ecs, future, replicated"))
     static void
     Promise_OnActorEcsReady(
         AActor* InActor,
-        const FCk_Delegate_OwningActor_OnEcsReady& InDelegate);
+        const FCk_Delegate_OwningActor_OnEcsReady& InDelegate,
+        ECk_ActorEcsReady_Policy InPolicy = ECk_ActorEcsReady_Policy::ValuesReplicated);
 
     static void
     Promise_OnActorEcsReady(
         AActor* InActor,
-        TFunction<void(AActor*, FCk_Handle)> InCallback);
+        TFunction<void(AActor*, FCk_Handle)> InCallback,
+        ECk_ActorEcsReady_Policy InPolicy = ECk_ActorEcsReady_Policy::ValuesReplicated);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck][OwningActor] OwningActorBasicDetails == OwningActorBasicDetails",
@@ -160,6 +162,8 @@ private:
         const AActor* InActor);
 
 private:
+    friend class UCk_EntityOwningActor_ActorComponent_UE;
+
     static auto
     DoGetOrAdd_EntityOwningActorComponent(
         AActor* InActor) -> UCk_EntityOwningActor_ActorComponent_UE*;
@@ -168,6 +172,27 @@ private:
     DoFlush_PendingEcsReady(
         UCk_EntityOwningActor_ActorComponent_UE* InComp,
         AActor* InActor,
+        const FCk_Handle& InEntity) -> void;
+
+    static auto
+    DoFlush_PendingEcsReady_LinkEstablished(
+        UCk_EntityOwningActor_ActorComponent_UE* InComp,
+        AActor* InActor,
+        const FCk_Handle& InEntity) -> void;
+
+    static auto
+    DoFlush_PendingEcsReady_ValuesReplicated(
+        UCk_EntityOwningActor_ActorComponent_UE* InComp,
+        AActor* InActor,
+        const FCk_Handle& InEntity) -> void;
+
+    static auto
+    DoGet_ShouldDeferUntilReplicationComplete(
+        const FCk_Handle& InEntity) -> bool;
+
+    static auto
+    DoBind_ReplicationCompleteTrampoline(
+        UCk_EntityOwningActor_ActorComponent_UE* InComp,
         const FCk_Handle& InEntity) -> void;
 };
 
