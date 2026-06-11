@@ -92,6 +92,7 @@ namespace ck
     {
     public:
         using Group = FGroup_EndPlay;
+        using RunAfter = TDepList<FProcessor_UnrealComponent_Setup>;
 
     public:
         using TProcessor::TProcessor;

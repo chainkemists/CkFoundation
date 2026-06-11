@@ -69,6 +69,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_Rendering;
+        using RunAfter = TDepList<FProcessor_IskmProxy_Setup>;
         using MarkedDirtyBy = FFragment_IskmProxy_Requests;
     public:
         using TProcessor::TProcessor;
@@ -140,6 +141,7 @@ namespace ck
     {
     public:
         using Group = FGroup_PostTransform;
+        using RunAfter = TDepList<FProcessor_IskmProxy_UpdateTransform>;
     public:
         using TProcessor::TProcessor;
         auto

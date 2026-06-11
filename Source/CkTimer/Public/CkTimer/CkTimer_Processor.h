@@ -123,7 +123,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_TimeDelta;
-        using RunAfter = TDepList<FProcessor_Timer_HandleRequests>;
+        using RunAfter = TDepList<FProcessor_Timer_HandleRequests, FProcessor_Timer_Update>;
         using HandleType = FCk_Handle_Timer;
 
     public:

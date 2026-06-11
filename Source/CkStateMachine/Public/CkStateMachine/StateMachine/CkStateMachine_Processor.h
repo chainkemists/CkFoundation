@@ -199,6 +199,7 @@ namespace ck
     {
     public:
         using Group         = FGroup_Gameplay_AI;
+        using RunAfter      = TDepList<FProcessor_Sm_FlushPendingReplication_Drain>;
         using RunBefore     = TDepList<FProcessor_Sm_ApplyReplicatedHistory>;
         using MarkedDirtyBy = FTag_Sm_NeedsInitialStateEntry;
 
@@ -238,6 +239,7 @@ namespace ck
     {
     public:
         using Group         = FGroup_Gameplay_AI;
+        using RunAfter      = TDepList<FProcessor_Sm_HandleRequests>;
         using RunBefore     = TDepList<FProcessor_Sm_ApplyReplicatedHistory>;
         using MarkedDirtyBy = FFragment_Sm_PendingReplicationEntries;
 
