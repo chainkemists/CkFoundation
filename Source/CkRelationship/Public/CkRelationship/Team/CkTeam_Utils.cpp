@@ -65,14 +65,14 @@ auto
         ECk_Team_ID InTeamID)
     -> FCk_Handle_Team
 {
-    const auto OldID = Has(InHandle) ? Get_ID(Cast(InHandle)) : ECk_Team_ID::Unassigned;
+    auto TeamHandle = Cast(InHandle);
+    const auto OldID = ck::IsValid(TeamHandle) ? Get_ID(TeamHandle) : ECk_Team_ID::Unassigned;
 
     if (OldID == InTeamID)
-    { return Cast(InHandle); } // TODO: performing the cast twice (on in Get_ID above), can we fix this?
+    { return TeamHandle; }
 
-    if (Has(InHandle))
+    if (ck::IsValid(TeamHandle))
     {
-        auto TeamHandle = Cast(InHandle);
         DoRemoveExistingTeam(TeamHandle);
     }
 
