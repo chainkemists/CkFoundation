@@ -174,6 +174,15 @@ Determinism guarantees:
 2. **Stable sort orders** — buckets sorted by plugin name, classes within a bucket sorted by name, properties within a class sorted by declaration order.
 3. **Platform-native line endings on write** (CRLF on Windows) with LF-normalized compare beforehand, so externally-converted files don't trigger unnecessary rewrites.
 
+### Mtime stability is startup-time load-bearing (2026-06-11)
+
+The Hazelight hot-reload checker baselines `.as` file **mtimes** from its initial script scan. Any `Script/Generated/*.as` whose mtime changes after that baseline — even with byte-identical content — triggers a hot reload AFTER engine init: a recompile of the touched modules plus a multi-second soft-reload sweep of all script classes, a full literal-asset re-init, and a debug-database rebroadcast to attached VS Code clients, all on the game thread exactly while the editor window is visible but not yet interactive. Two generator bugs used to reproduce this on EVERY editor launch (~8s of frozen editor):
+
+- `FCkAngelscriptWrapperGenerator::GenerateAllWrappers` (runs at every boot via `FAngelscriptBinds` Early bind) **deleted every `*.as` in CkFoundation's `Script/Generated/`** before regenerating its own wrappers — including `CkFoundation_EntitySpawnParams.as`, owned by the ES Params generator which only runs post-compile. The post-compile regen then re-created the file → "new module" structural reload. Fixed: cleanup is now manifest-based — the previous run's `_index.as` lists the wrapper files the generator owns; only `manifest − generated-this-run` is deleted. **Never add a blanket delete of shared Generated directories.**
+- The same generator rewrote all ~250 wrapper files unconditionally each boot (byte-identical, fresh mtimes) → code-only reload of every wrapper module post-init. Fixed: `SaveWrapperFile_IfChanged` (LF-normalized compare) on every write site.
+
+The ES Params generator logs a **rewrite reason** (missing file, or first differing line old/new) whenever a bucket rewrites — if a post-init structural reload of `Generated.<Plugin>_EntitySpawnParams` ever reappears, that log line says why.
+
 The synthesizer follows the same rules — its stub blocks have no timestamps and use `LINE_TERMINATOR` for platform-native EOL.
 
 ### Sibling-file stub model + force-quit safety

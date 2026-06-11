@@ -510,6 +510,53 @@ auto
             continue;
         }
 
+        // Rewrite-reason diagnostic. A rewrite of an unchanged class set should be rare —
+        // every rewrite the AS file-watcher sees triggers a structural hot-reload and a
+        // full soft-reload sweep AFTER engine init (multi-second editor freeze), so when
+        // one happens we want the log to say exactly why.
+        if (NOT HasExisting)
+        {
+            ck::angelscriptgenerator::Log(
+                TEXT("[CkAS ES Params] [{}] rewrite reason: no existing file (or unreadable) at [{}]"),
+                Bucket.PluginName, Bucket.OutputFilePath);
+        }
+        else
+        {
+            auto ExistingLines = TArray<FString>{};
+            auto NewLines = TArray<FString>{};
+            constexpr auto CullEmpty = false;
+            ExistingForCompare.ParseIntoArray(ExistingLines, TEXT("\n"), CullEmpty);
+            ContentForCompare.ParseIntoArray(NewLines, TEXT("\n"), CullEmpty);
+
+            const auto CommonLineCount = FMath::Min(ExistingLines.Num(), NewLines.Num());
+            auto FirstDiffLine = int32{INDEX_NONE};
+            for (auto LineIndex = int32{0}; LineIndex < CommonLineCount; ++LineIndex)
+            {
+                if (NOT ExistingLines[LineIndex].Equals(NewLines[LineIndex], ESearchCase::CaseSensitive))
+                {
+                    FirstDiffLine = LineIndex;
+                    break;
+                }
+            }
+
+            if (FirstDiffLine != INDEX_NONE)
+            {
+                ck::angelscriptgenerator::Log(
+                    TEXT("[CkAS ES Params] [{}] rewrite reason: first diff at line {} (old lines: {}, new lines: {})\n    old: [{}]\n    new: [{}]"),
+                    Bucket.PluginName, FirstDiffLine + 1, ExistingLines.Num(), NewLines.Num(),
+                    ExistingLines[FirstDiffLine], NewLines[FirstDiffLine]);
+            }
+            else
+            {
+                ck::angelscriptgenerator::Log(
+                    TEXT("[CkAS ES Params] [{}] rewrite reason: line-count change only — old lines: {}, new lines: {}, first extra line: [{}]"),
+                    Bucket.PluginName, ExistingLines.Num(), NewLines.Num(),
+                    ExistingLines.Num() > NewLines.Num()
+                        ? ExistingLines[CommonLineCount]
+                        : NewLines[CommonLineCount]);
+            }
+        }
+
 #if PLATFORM_WINDOWS
         // Match project convention: .as files live as CRLF on Windows disk (checkout converts
         // index-LF → WC-CRLF via core.autocrlf). Without this step, the generator writes LF,

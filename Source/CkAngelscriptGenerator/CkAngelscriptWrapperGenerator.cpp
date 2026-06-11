@@ -29,6 +29,33 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Write only when content differs from what's on disk (LF-normalized compare).
+// These files are regenerated on every editor boot BEFORE the initial AS compile, but the AS
+// hot-reload checker baselines file mtimes from its initial script scan — an unchanged file
+// freshly rewritten still reads as "modified" and triggers a code-only reload of every wrapper
+// module AFTER engine init: a multi-second soft-reload sweep on the game thread while the editor
+// window is visible but unresponsive. Skipping identical writes keeps mtimes stable.
+static auto
+SaveWrapperFile_IfChanged(
+    const FString& InContent,
+    const FString& InPath) -> bool
+{
+    auto ExistingContent = FString{};
+    if (FFileHelper::LoadFileToString(ExistingContent, *InPath))
+    {
+        auto ContentForCompare = InContent;
+        ContentForCompare.ReplaceInline(TEXT("\r\n"), TEXT("\n"));
+        ExistingContent.ReplaceInline(TEXT("\r\n"), TEXT("\n"));
+
+        if (ExistingContent.Equals(ContentForCompare, ESearchCase::CaseSensitive))
+        { return false; }
+    }
+
+    return FFileHelper::SaveStringToFile(InContent, *InPath);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     FCkAngelscriptWrapperGenerator::
     GenerateAllWrappers()
@@ -45,14 +72,33 @@ auto
     IFileManager::Get().MakeDirectory(*ScriptDir, true);
     IFileManager::Get().MakeDirectory(*GeneratedDir, true);
 
-    // Clean old generated files
-    auto ExistingFiles = TArray<FString>{};
-    IFileManager::Get().FindFiles(ExistingFiles, *GeneratedDir, TEXT("*.as"));
-    for (const auto& File : ExistingFiles)
+    // Stale-wrapper cleanup happens AFTER generation, and only for files THIS generator wrote
+    // on a previous run — recorded in the `_index.as` manifest. This directory is shared with
+    // other generators' canonical outputs (<Plugin>_EntitySpawnParams.as, _StubRecovery_*, ...)
+    // which do not exist yet / must not be touched at this point: we run BEFORE the initial AS
+    // compile, while those generators run AFTER it. Deleting a foreign canonical here forces its
+    // owner to rewrite it post-compile, which the AS file-watcher then hot-reloads as a NEW
+    // module — a full structural reload + soft-reload sweep on the game thread right as the
+    // editor window becomes visible (a multi-second freeze, reproduced on every launch).
+    const auto PreviouslyGeneratedFiles = [&GeneratedDir]() -> TArray<FString>
     {
-        IFileManager::Get().Delete(*(GeneratedDir / File));
-    }
-    ck::angelscriptgenerator::Log(TEXT("Cleaned {} existing generated files"), ExistingFiles.Num());
+        auto Result = TArray<FString>{};
+        auto IndexContent = FString{};
+        if (NOT FFileHelper::LoadFileToString(IndexContent, *(GeneratedDir / TEXT("_index.as"))))
+        { return Result; }
+
+        auto IndexLines = TArray<FString>{};
+        IndexContent.ParseIntoArrayLines(IndexLines);
+        for (auto& Line : IndexLines)
+        {
+            Line.TrimStartAndEndInline();
+            if (Line.RemoveFromStart(TEXT("- ")))
+            {
+                Result.Add(Line + TEXT(".as"));
+            }
+        }
+        return Result;
+    }();
 
     auto GeneratedFiles = TArray<FString>{};
 
@@ -116,7 +162,10 @@ auto
     Request_GeneratePhysicalSurfaceConstants(GeneratedDir);
     GeneratedFiles.Add(TEXT("physicalsurface.as"));
 
-    // Generate master index
+    // Generate master index. Sorted — TObjectIterator order varies per boot, and an
+    // order-churned _index.as is an mtime change the AS hot-reload checker acts on post-init.
+    GeneratedFiles.Sort();
+
     if (GeneratedFiles.Num() > 0)
     {
         auto IndexContent = FString{TEXT("// Auto-generated index of all Blueprint Function Library wrappers\n")};
@@ -132,13 +181,27 @@ auto
         IndexContent += TEXT("*/\n");
 
         auto IndexPath = GeneratedDir / TEXT("_index.as");
-        FFileHelper::SaveStringToFile(IndexContent, *IndexPath);
+        SaveWrapperFile_IfChanged(IndexContent, IndexPath);
 
         ck::angelscriptgenerator::Log(TEXT("Generated {} Angelscript wrapper files"), GeneratedFiles.Num());
     }
     else
     {
         ck::angelscriptgenerator::Warning(TEXT("No Blueprint Function Libraries found to wrap"));
+    }
+
+    // Delete stale wrappers: files the previous run's manifest claims we own but that this run
+    // no longer produced (their BPFL was deleted/renamed). Foreign generators' files are never
+    // in the manifest, so they are structurally unreachable here — see the comment at the top.
+    for (const auto& StaleFile : PreviouslyGeneratedFiles)
+    {
+        if (GeneratedFiles.Contains(StaleFile))
+        { continue; }
+
+        if (IFileManager::Get().Delete(*(GeneratedDir / StaleFile), /*RequireExists=*/false, /*EvenReadOnly=*/false, /*Quiet=*/true))
+        {
+            ck::angelscriptgenerator::Log(TEXT("Deleted stale wrapper file [{}] (no longer generated)"), StaleFile);
+        }
     }
 }
 
@@ -418,9 +481,11 @@ auto
 
     if (FunctionCount > 0)
     {
-        FFileHelper::SaveStringToFile(Content, *OutputPath);
-        ck::angelscriptgenerator::Log(TEXT("    Generated: {}.as with {} functions ({} skipped)"),
-                                     NamespaceName, FunctionCount, SkippedFunctionCount);
+        if (SaveWrapperFile_IfChanged(Content, OutputPath))
+        {
+            ck::angelscriptgenerator::Log(TEXT("    Generated: {}.as with {} functions ({} skipped)"),
+                                         NamespaceName, FunctionCount, SkippedFunctionCount);
+        }
     }
     else
     {
@@ -1292,9 +1357,10 @@ auto
     Content += TEXT("}\n");
 
     const auto FilePath = GeneratedDir / TEXT("cvar.as");
-    FFileHelper::SaveStringToFile(Content, *FilePath);
-
-    ck::angelscriptgenerator::Log(TEXT("Generated {} CVar constants in cvar.as"), GeneratedCount);
+    if (SaveWrapperFile_IfChanged(Content, FilePath))
+    {
+        ck::angelscriptgenerator::Log(TEXT("Generated {} CVar constants in cvar.as"), GeneratedCount);
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -1498,10 +1564,11 @@ auto
     // ---- Write file ----
 
     const auto FilePath = GeneratedDir / TEXT("collision.as");
-    FFileHelper::SaveStringToFile(Content, *FilePath);
-
-    ck::angelscriptgenerator::Log(TEXT("Generated collision constants in collision.as ({} channels, {} profiles)"),
-        Channels.Num(), SortedProfiles.Num());
+    if (SaveWrapperFile_IfChanged(Content, FilePath))
+    {
+        ck::angelscriptgenerator::Log(TEXT("Generated collision constants in collision.as ({} channels, {} profiles)"),
+            Channels.Num(), SortedProfiles.Num());
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -1599,10 +1666,11 @@ auto
     // ---- Write file ----
 
     const auto FilePath = GeneratedDir / TEXT("physicalsurface.as");
-    FFileHelper::SaveStringToFile(Content, *FilePath);
-
-    ck::angelscriptgenerator::Log(TEXT("Generated physical surface constants in physicalsurface.as ({} surfaces)"),
-        Surfaces.Num());
+    if (SaveWrapperFile_IfChanged(Content, FilePath))
+    {
+        ck::angelscriptgenerator::Log(TEXT("Generated physical surface constants in physicalsurface.as ({} surfaces)"),
+            Surfaces.Num());
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
