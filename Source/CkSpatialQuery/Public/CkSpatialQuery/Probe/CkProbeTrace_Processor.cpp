@@ -52,7 +52,9 @@ namespace ck
         if (InHandle.Has<FTag_ProbeTrace_Disabled>())
         { return; }
 
-        CK_ENSURE_IF_NOT(ck::IsValid(_PhysicsSystem),
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(PhysicsSystem),
             TEXT("PhysicsSystem is NOT valid. Unable to start trace using Handle [{}]"), InHandle)
         {
             UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
@@ -80,11 +82,11 @@ namespace ck
 
         const auto& Overlaps =
             InRequest.Get_TracePolicy() == ECk_ProbeTrace_Policy::Multi ?
-            UCk_Utils_ProbeTrace_UE::Request_MultiLineTrace(InHandle, RayCastSettings, FireOverlaps, TryDebugDraw, *_PhysicsSystem.Pin()) :
+            UCk_Utils_ProbeTrace_UE::Request_MultiLineTrace(InHandle, RayCastSettings, FireOverlaps, TryDebugDraw, *PhysicsSystem) :
             [&]
             {
                 auto Result = UCk_Utils_ProbeTrace_UE::Request_SingleLineTrace(InHandle, RayCastSettings, FireOverlaps,
-                    TryDebugDraw, *_PhysicsSystem.Pin());
+                    TryDebugDraw, *PhysicsSystem);
 
                 if (ck::Is_NOT_Valid(Result))
                 { return TArray<FCk_Probe_RayCast_Result>{}; }
@@ -179,7 +181,9 @@ namespace ck
         if (InHandle.Has<FTag_ProbeTrace_Disabled>())
         { return; }
 
-        CK_ENSURE_IF_NOT(ck::IsValid(_PhysicsSystem),
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(PhysicsSystem),
             TEXT("PhysicsSystem is NOT valid. Unable to start shape trace using Handle [{}]"), InHandle)
         {
             UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
@@ -207,11 +211,11 @@ namespace ck
 
         const auto& Overlaps =
             InRequest.Get_TracePolicy() == ECk_ProbeTrace_Policy::Multi ?
-            UCk_Utils_ProbeTrace_UE::Request_MultiShapeTrace(InHandle, ShapeCastSettings, FireOverlaps, TryDebugDraw, *_PhysicsSystem.Pin()) :
+            UCk_Utils_ProbeTrace_UE::Request_MultiShapeTrace(InHandle, ShapeCastSettings, FireOverlaps, TryDebugDraw, *PhysicsSystem) :
             [&]
             {
                 auto Result = UCk_Utils_ProbeTrace_UE::Request_SingleShapeTrace(InHandle, ShapeCastSettings, FireOverlaps,
-                    TryDebugDraw, *_PhysicsSystem.Pin());
+                    TryDebugDraw, *PhysicsSystem);
 
                 if (ck::Is_NOT_Valid(Result))
                 { return TArray<FCk_ShapeCast_Result>{}; }
@@ -303,7 +307,9 @@ namespace ck
             const FFragment_ProbeTrace_RayCast& InRequest) const
         -> void
     {
-        if (ck::Is_NOT_Valid(_PhysicsSystem) || ck::Is_NOT_Valid(InRequest.Get_StartPos()))
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+
+        if (ck::Is_NOT_Valid(PhysicsSystem) || ck::Is_NOT_Valid(InRequest.Get_StartPos()))
         { return; }
 
         const auto& Transform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(InRequest.Get_StartPos());
@@ -326,11 +332,11 @@ namespace ck
 
         if (InRequest.Get_TracePolicy() == ECk_ProbeTrace_Policy::Multi)
         {
-            UCk_Utils_ProbeTrace_UE::Request_MultiLineTrace(InHandle, RayCastSettings, FireOverlaps, TryDebugDraw, *_PhysicsSystem.Pin());
+            UCk_Utils_ProbeTrace_UE::Request_MultiLineTrace(InHandle, RayCastSettings, FireOverlaps, TryDebugDraw, *PhysicsSystem);
         }
         else
         {
-            UCk_Utils_ProbeTrace_UE::Request_SingleLineTrace(InHandle, RayCastSettings, FireOverlaps, TryDebugDraw, *_PhysicsSystem.Pin());
+            UCk_Utils_ProbeTrace_UE::Request_SingleLineTrace(InHandle, RayCastSettings, FireOverlaps, TryDebugDraw, *PhysicsSystem);
         }
     }
 
@@ -353,7 +359,9 @@ namespace ck
             const FFragment_ProbeTrace_ShapeCast& InRequest) const
         -> void
     {
-        if (ck::Is_NOT_Valid(_PhysicsSystem) || ck::Is_NOT_Valid(InRequest.Get_StartPos()))
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+
+        if (ck::Is_NOT_Valid(PhysicsSystem) || ck::Is_NOT_Valid(InRequest.Get_StartPos()))
         { return; }
 
         const auto& Transform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(InRequest.Get_StartPos());
@@ -376,11 +384,11 @@ namespace ck
 
         if (InRequest.Get_TracePolicy() == ECk_ProbeTrace_Policy::Multi)
         {
-            UCk_Utils_ProbeTrace_UE::Request_MultiShapeTrace(InHandle, ShapeCastSettings, FireOverlaps, TryDebugDraw, *_PhysicsSystem.Pin());
+            UCk_Utils_ProbeTrace_UE::Request_MultiShapeTrace(InHandle, ShapeCastSettings, FireOverlaps, TryDebugDraw, *PhysicsSystem);
         }
         else
         {
-            UCk_Utils_ProbeTrace_UE::Request_SingleShapeTrace(InHandle, ShapeCastSettings, FireOverlaps, TryDebugDraw, *_PhysicsSystem.Pin());
+            UCk_Utils_ProbeTrace_UE::Request_SingleShapeTrace(InHandle, ShapeCastSettings, FireOverlaps, TryDebugDraw, *PhysicsSystem);
         }
     }
 }
