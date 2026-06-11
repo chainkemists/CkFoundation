@@ -60,14 +60,14 @@ auto
         ECk_Replication InReplicates)
     -> FCk_Handle_Player
 {
-    const auto OldID = Get_ID(Cast(InHandle));
+    auto PlayerHandle = Cast(InHandle);
+    const auto OldID = ck::IsValid(PlayerHandle) ? Get_ID(PlayerHandle) : ECk_Player_ID::Unassigned;
 
     if (OldID == InPlayerID)
-    { return Cast(InHandle); } // TODO: performing the cast twice (on in Get_ID above), can we fix this?
+    { return PlayerHandle; }
 
-    if (Has(InHandle))
+    if (ck::IsValid(PlayerHandle))
     {
-        auto PlayerHandle = Cast(InHandle);
         DoRemoveExistingPlayer(PlayerHandle);
     }
 
