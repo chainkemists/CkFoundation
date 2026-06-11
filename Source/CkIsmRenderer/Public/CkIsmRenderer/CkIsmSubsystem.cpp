@@ -4,9 +4,8 @@
 #include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
-#include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
-#include "CkEcsExt/EntityScript/CkEntityScript_WithActor_Data.h"
+#include "CkEcsExt/EntityScript/CkEntityScript_WithActor_Utils.h"
 
 #include "CkIsmRenderer/CkIsmRenderer_EntityScript.h"
 #include "CkIsmRenderer/Renderer/CkIsmRenderer_TransientFactory.h"
@@ -42,13 +41,13 @@ auto
     if (ck::Is_NOT_Valid(World))
     { return; }
 
+    // The registry may not be ready yet — keep _Initialized false so DoInitialize retries later.
     auto TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(World);
     if (ck::Is_NOT_Valid(TransientEntity))
     { return; }
 
-    auto SpawnParams = FInstancedStruct::Make<FCk_EntityScript_WithActor_SpawnParams>(this);
-    UCk_Utils_EntityScript_UE::Request_SpawnEntity(
-        TransientEntity, UCk_EntityScript_IsmRenderer_UE::StaticClass(), SpawnParams);
+    UCk_Utils_EntityScript_WithActor_UE::Request_SpawnEntityScript_OnActor(
+        this, UCk_EntityScript_IsmRenderer_UE::StaticClass());
 
     _Initialized = true;
 }
