@@ -91,6 +91,7 @@ namespace ck
         // and writes FFragment_Nav_PathResult on the same entity; OnPathResolved sees the result
         // and finalizes the state transition.
         auto Request = FCk_Request_Nav_FindPath{InRequest.Get_Target()};
+        Request.Set_QueryFilter(InParams.Get_NavQueryFilter());
         UCk_Utils_Nav_UE::Request_FindPath(NonConstHandle, Request);
 
         ck::crowd::Verbose(TEXT("CrowdAgent [{}] MoveTo {} (arrival={})"),

@@ -74,6 +74,12 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.1"))
     float _MaxTurnRate = 4.0f;
 
+    // Resolved via UCk_Nav_ProjectSettings_UE::_QueryFilters for EVERY FindPath this
+    // agent issues (initial MoveTo + all replans — they share one call site). Empty
+    // tag -> NavData's default filter.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    FGameplayTag _NavQueryFilter;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1.0"))
     float _ArrivalRadius = 30.0f;
 
@@ -122,6 +128,7 @@ public:
     CK_PROPERTY(_MaxSpeed);
     CK_PROPERTY(_MaxAcceleration);
     CK_PROPERTY(_MaxTurnRate);
+    CK_PROPERTY(_NavQueryFilter);
     CK_PROPERTY(_ArrivalRadius);
     CK_PROPERTY(_WaypointArrivalRadius);
     CK_PROPERTY(_SeparationRadius);
