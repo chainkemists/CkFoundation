@@ -239,6 +239,11 @@ auto
             [OwnerEntity = InOwnerEntity, CueName = InCueName, SpawnParams = InSpawnParams, IsReliable, InMulticastPolicy]
             (ACk_CueRelay_UE* CueRelay)
             {
+                // The relay can come up well after the cue was queued — the owner
+                // may have been destroyed in the interim. Don't ship a dead handle.
+                if (ck::Is_NOT_Valid(OwnerEntity))
+                { return; }
+
                 switch (InMulticastPolicy)
                 {
                     case ECk_Cue_MulticastPolicy::ServerOnly:
@@ -291,6 +296,11 @@ auto
             {
                 auto CueRelay = Cast<ACk_CueRelay_UE>(InResult.Get_ChannelActor().Get());
                 if (ck::Is_NOT_Valid(CueRelay))
+                { return; }
+
+                // Same as the client path — the owner may have been destroyed while
+                // waiting for a channel. Don't multicast a dead handle.
+                if (ck::Is_NOT_Valid(OwnerEntity))
                 { return; }
 
                 auto OriginatingPlayerState = static_cast<APlayerState*>(nullptr);
