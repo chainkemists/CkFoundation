@@ -1,11 +1,12 @@
 #include "CkAssetRegistrySubsystem.h"
 
 #include "CkAssetRegistryConfig.h"
+#include "CkAngelscriptGenerator/Assets/CkAssetRegistry_ClassResolver.h"
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
-#include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_AssetRegistryStub.h"
 
 #include "CkCore/IO/CkIO_Utils.h"
 #include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
+#include "CkCore/Reflection/CkReflection_Utils.h"
 
 #include <AssetRegistry/AssetRegistryModule.h>
 #include <Editor.h>
@@ -23,85 +24,6 @@
 #if WITH_ANGELSCRIPT_CK
 #include <AngelscriptCodeModule.h>
 #endif
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCkAssetRegistrySubsystem::
-    IsEditorOnlyClass(
-        const UClass* InClass)
-    -> bool
-{
-    if (ck::Is_NOT_Valid(InClass))
-    { return false; }
-
-    auto Package = InClass->GetOutermost();
-    if (ck::Is_NOT_Valid(Package))
-    { return false; }
-
-    const auto PackageName = Package->GetName();
-    const auto ModuleName = FPackageName::GetShortFName(Package->GetFName());
-    const auto ModuleNameStr = ModuleName.ToString();
-
-    // Heuristic: module names ending with or containing "Editor" are typically editor-only
-    if (ModuleNameStr.EndsWith(TEXT("Editor")) ||
-        ModuleNameStr.Contains(TEXT("Editor")))
-    { return true; }
-
-    // Check plugin modules for host type
-    for (const auto& Plugin : IPluginManager::Get().GetEnabledPlugins())
-    {
-        for (const auto& Module : Plugin->GetDescriptor().Modules)
-        {
-            if (Module.Name == ModuleName)
-            {
-                switch (Module.Type)
-                {
-                    case EHostType::Editor:
-                    case EHostType::EditorNoCommandlet:
-                    case EHostType::EditorAndProgram:
-                    case EHostType::UncookedOnly:
-                        return true;
-                    default:
-                        break;
-                }
-                // Found the module, no need to keep searching
-                return false;
-            }
-        }
-    }
-
-    // Check if module is loaded and in the known editor modules list
-    if (FModuleManager::Get().IsModuleLoaded(ModuleName))
-    {
-        static const TSet<FName> EditorModules = {
-            TEXT("UnrealEd"),
-            TEXT("ViewportInteraction"),
-            TEXT("VREditor"),
-            TEXT("Blutility"),
-            TEXT("Kismet"),
-            TEXT("AssetTools"),
-            TEXT("PlacementMode"),
-            TEXT("MaterialEditor"),
-            TEXT("LandscapeEditor"),
-        };
-
-        if (EditorModules.Contains(ModuleName))
-        { return true; }
-    }
-
-    // Check plugin modules
-    for (const auto& Plugin : IPluginManager::Get().GetEnabledPlugins())
-    {
-        for (const auto& Module : Plugin->GetDescriptor().Modules)
-        {
-            if (Module.Name == ModuleName)
-            { return Module.Type == EHostType::Editor; }
-        }
-    }
-
-    return false;
-}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -132,31 +54,26 @@ auto
 
         if (IsBlueprintAsset)
         {
-            const auto SyncResolvedClassName = ck::angelscriptgenerator::self_heal::FCkAsAssetRegistryStubSynthesizer
-                ::Resolve_ClassName_FromPackageReader_OnDisk(AssetPath.ToString());
+            const auto SyncResolved = ck::angelscriptgenerator::FCkAssetRegistry_ClassResolver
+                ::Resolve_ViaPackageReader(AssetPath.ToString());
 
-            if (NOT SyncResolvedClassName.IsEmpty())
+            if (NOT SyncResolved.ClassName.IsEmpty())
             {
-                // Recover IsEditorOnly opportunistically. TryFindTypeSlow
-                // returns null for AS-defined classes during the AS reload
-                // window, but those classes are runtime by definition (UCk_*
-                // AS classes aren't editor-only), so the false-default is the
-                // correct answer in that failure mode. Native editor-utility
-                // classes (UEditorUtilityWidget, etc.) are always findable
-                // since they're loaded at engine startup.
-                auto IsEditorOnly = false;
-                if (const auto ResolvedClass = UClass::TryFindTypeSlow<UClass>(SyncResolvedClassName);
-                    ck::IsValid(ResolvedClass))
-                {
-                    if (IsEditorOnlyClass(ResolvedClass))
-                    { IsEditorOnly = true; }
-                }
+                // ResolvedClass is null when the name was derived without a
+                // live UClass (AS reload window), but those classes are
+                // runtime by definition (UCk_* AS classes aren't editor-only),
+                // so the false-default is the correct answer in that failure
+                // mode. Native editor-utility parents (UEditorUtilityWidget,
+                // etc.) always carry a live UClass since they're loaded at
+                // engine startup.
+                const auto IsEditorOnly = ck::IsValid(SyncResolved.ResolvedClass)
+                    && UCk_Utils_Reflection_UE::Is_EditorOnlyClass(SyncResolved.ResolvedClass);
 
                 ck::angelscriptgenerator::Log(TEXT("Sync-resolved BP class via FPackageReader linker: {} for {} (IsEditorOnly: {})"),
-                    SyncResolvedClassName, AssetName, IsEditorOnly);
+                    SyncResolved.ClassName, AssetName, IsEditorOnly);
 
                 constexpr auto IsBlueprintLike = true;
-                OnResolved.ExecuteIfBound(SyncResolvedClassName, IsBlueprintLike, IsEditorOnly);
+                OnResolved.ExecuteIfBound(SyncResolved.ClassName, IsBlueprintLike, IsEditorOnly);
                 return;
             }
         }
@@ -164,12 +81,12 @@ auto
         {
             // Non-BP path. Loses LoadedAsset->IsEditorOnly() (instance-level
             // UObject flag) vs the async path; preserves the class-level
-            // IsEditorOnlyClass check, which is the load-bearing branch on
+            // Is_EditorOnlyClass check, which is the load-bearing branch on
             // game assets.
             if (const auto NativeParentClass = Get_NonBlueprintParentClass(AssetClass);
                 ck::IsValid(NativeParentClass))
             {
-                const auto IsEditorOnly = IsEditorOnlyClass(NativeParentClass);
+                const auto IsEditorOnly = UCk_Utils_Reflection_UE::Is_EditorOnlyClass(NativeParentClass);
                 const auto Result = Get_CorrectClassNameWithPrefix(NativeParentClass);
 
                 ck::angelscriptgenerator::Log(TEXT("Sync-resolved non-BP class via AssetData: {} for {} (IsEditorOnly: {})"),
@@ -223,7 +140,7 @@ auto
                     ck::IsValid(NativeParentClass))
                 {
                     // Check if the class is from an editor-only module
-                    if (IsEditorOnlyClass(NativeParentClass))
+                    if (UCk_Utils_Reflection_UE::Is_EditorOnlyClass(NativeParentClass))
                     { IsEditorOnly = true; }
 
                     auto Result = Get_CorrectClassNameWithPrefix(NativeParentClass);
@@ -247,7 +164,7 @@ auto
                         ck::IsValid(NativeParentClass))
                     {
                         // Check if the class is from an editor-only module
-                        if (IsEditorOnlyClass(NativeParentClass))
+                        if (UCk_Utils_Reflection_UE::Is_EditorOnlyClass(NativeParentClass))
                         { IsEditorOnly = true; }
 
                         auto Result = Get_CorrectClassNameWithPrefix(NativeParentClass);
@@ -408,26 +325,29 @@ auto
 
     ck::angelscriptgenerator::Log(TEXT("Found {} Asset Registry config assets"), AllConfigs.Num());
 
-    auto GeneratedCount = int32{0};
-    auto FailedCount = int32{0};
+    auto DispatchedCount = int32{0};
+    auto InvalidConfigCount = int32{0};
 
     for (auto Config : AllConfigs)
     {
         CK_ENSURE_IF_NOT(ck::IsValid(Config),
             TEXT("Invalid Asset Registry config found"))
         {
-            FailedCount++;
+            InvalidConfigCount++;
             continue;
         }
 
         ck::angelscriptgenerator::Log(TEXT("Generating for config: {}"), Config->GetDisplayName());
 
         GenerateAssetRegistryForConfig_Internal(Config);
-        GeneratedCount++;
+        DispatchedCount++;
     }
 
-    ck::angelscriptgenerator::Log(TEXT("Asset Registry generation completed: {} succeeded, {} failed"),
-                                 GeneratedCount, FailedCount);
+    // _Internal generates synchronously OR queues when a generation is already
+    // in flight — per-config success is reported by OnAssetRegistryComplete,
+    // so only dispatch counts are knowable here.
+    ck::angelscriptgenerator::Log(TEXT("Asset Registry generation dispatched: {} configs ({} invalid skipped)"),
+                                 DispatchedCount, InvalidConfigCount);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -792,8 +712,6 @@ auto
         Request_ProcessNextInQueue();
     }
 }
-
-// --------------------------------------------------------------------------------------------------------------------
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -1191,7 +1109,7 @@ auto
     }
 
     ck::angelscriptgenerator::Log(
-        TEXT("[AssetRegistry] Seeded %d asset references from %d generated files (%d namespaces)"),
+        TEXT("[AssetRegistry] Seeded {} asset references from {} generated files ({} namespaces)"),
         AssetPathToFunctionName.Num(), Configs.Num(), ActiveNamespaces.Num());
 }
 
@@ -1219,12 +1137,22 @@ auto
     auto AsFiles = TArray<FString>{};
     IFileManager::Get().FindFilesRecursive(AsFiles, *ScriptDir, TEXT("*.as"), true, false);
 
+    // Built once per scan — per-occurrence membership checks against the
+    // generated function names would otherwise be linear map scans (FindKey)
+    // repeated for every candidate in every script file.
+    auto GeneratedFunctionNames = TSet<FString>{};
+    GeneratedFunctionNames.Reserve(AssetPathToFunctionName.Num());
+    for (const auto& [AssetPath, FunctionName] : AssetPathToFunctionName)
+    {
+        GeneratedFunctionNames.Add(FunctionName);
+    }
+
     for (const auto& FilePath : AsFiles)
     {
         if (FilePath.StartsWith(GeneratedDir))
         { continue; }
 
-        auto UsedFunctions = ScanSingleScriptFile(FilePath);
+        auto UsedFunctions = ScanSingleScriptFile(FilePath, GeneratedFunctionNames);
         for (const auto& FunctionName : UsedFunctions)
         {
             FunctionUsageMap.FindOrAdd(FunctionName).AddUnique(FilePath);
@@ -1232,7 +1160,7 @@ auto
     }
 
     ck::angelscriptgenerator::Log(
-        TEXT("[AssetRegistry] Script usage scan complete: %d asset functions referenced from %d script files"),
+        TEXT("[AssetRegistry] Script usage scan complete: {} asset functions referenced from {} script files"),
         FunctionUsageMap.Num(), AsFiles.Num());
 }
 
@@ -1241,7 +1169,8 @@ auto
 auto
     UCkAssetRegistrySubsystem::
     ScanSingleScriptFile(
-        const FString& FilePath) const
+        const FString& FilePath,
+        const TSet<FString>& InGeneratedFunctionNames) const
     -> TSet<FString>
 {
     auto Result = TSet<FString>{};
@@ -1268,7 +1197,7 @@ auto
             if (ParenIndex != INDEX_NONE && (ParenIndex - NameStart) < 128)
             {
                 auto FunctionName = FileContents.Mid(NameStart, ParenIndex - NameStart).TrimStartAndEnd();
-                if (FunctionName.Len() > 0 && AssetPathToFunctionName.FindKey(FunctionName) != nullptr)
+                if (FunctionName.Len() > 0 && InGeneratedFunctionNames.Contains(FunctionName))
                 {
                     Result.Add(FunctionName);
                 }
@@ -1297,7 +1226,7 @@ auto
             {
                 auto FunctionName = FileContents.Mid(NameStart, ParenIndex - NameStart).TrimStartAndEnd();
                 if (FunctionName.Len() > 0 && FunctionName != TEXT("load")
-                    && AssetPathToFunctionName.FindKey(FunctionName) != nullptr)
+                    && InGeneratedFunctionNames.Contains(FunctionName))
                 {
                     Result.Add(FunctionName);
                 }

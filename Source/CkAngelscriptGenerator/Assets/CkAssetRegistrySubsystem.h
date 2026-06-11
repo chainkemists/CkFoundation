@@ -105,7 +105,8 @@ private:
 
     auto
     ScanSingleScriptFile(
-        const FString& FilePath) const -> TSet<FString>;
+        const FString& FilePath,
+        const TSet<FString>& InGeneratedFunctionNames) const -> TSet<FString>;
 
     static auto
     Get_ScriptDirectory() -> FString;
@@ -121,10 +122,6 @@ private:
     Get_AssetTypeFromAssetData(
         const FAssetData& InAssetData,
         const FOnAssetTypeResolved& OnResolved) -> void;
-
-    static auto
-    IsEditorOnlyClass(
-        const UClass* InClass) -> bool;
 
     static auto
     Get_AssetTypeFromClass(

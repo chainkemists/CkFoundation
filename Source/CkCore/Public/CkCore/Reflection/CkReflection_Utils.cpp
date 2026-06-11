@@ -5,6 +5,9 @@
 
 #include <Algo/Reverse.h>
 #include <GameplayTagContainer.h>
+#include <Interfaces/IPluginManager.h>
+#include <Misc/PackageName.h>
+#include <UObject/Package.h>
 
 #include <Math/Rotator.h>
 #include <Math/Transform.h>
@@ -349,7 +352,7 @@ auto
         const UClass* InClass)
     -> bool
 {
-    if (ck::Is_NOT_Valid(InClass, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(InClass))
     { return false; }
 
     const auto& Name = InClass->GetName();
@@ -357,6 +360,66 @@ auto
         || Name.StartsWith(TEXT("REINST_"))
         || Name.StartsWith(TEXT("TRASHCLASS_"))
         || Name.StartsWith(TEXT("HOTRELOADED_"));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Reflection_UE::
+    Is_EditorOnlyClass(
+        const UClass* InClass)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InClass))
+    { return false; }
+
+    const auto Package = InClass->GetOutermost();
+    if (ck::Is_NOT_Valid(Package))
+    { return false; }
+
+    const auto ModuleName = FPackageName::GetShortFName(Package->GetFName());
+
+    // Plugin module host type is authoritative when the module is described
+    // by a plugin descriptor.
+    for (const auto& Plugin : IPluginManager::Get().GetEnabledPlugins())
+    {
+        for (const auto& Module : Plugin->GetDescriptor().Modules)
+        {
+            if (Module.Name != ModuleName)
+            { continue; }
+
+            switch (Module.Type)
+            {
+                case EHostType::Editor:
+                case EHostType::EditorNoCommandlet:
+                case EHostType::EditorAndProgram:
+                case EHostType::UncookedOnly:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+    }
+
+    // Engine editor modules whose names don't carry "Editor".
+    static const auto EditorModules = TSet<FName>{
+        TEXT("UnrealEd"),
+        TEXT("ViewportInteraction"),
+        TEXT("VREditor"),
+        TEXT("Blutility"),
+        TEXT("Kismet"),
+        TEXT("AssetTools"),
+        TEXT("PlacementMode"),
+        TEXT("MaterialEditor"),
+        TEXT("LandscapeEditor"),
+    };
+
+    if (EditorModules.Contains(ModuleName))
+    { return true; }
+
+    // Name heuristic LAST — only consulted for modules no plugin descriptor
+    // describes (engine/native modules outside the known set).
+    return ModuleName.ToString().Contains(TEXT("Editor"));
 }
 
 auto
@@ -665,7 +728,7 @@ namespace ck_reflection_detail
 {
     auto Has_UObjectPointerField_Recursive(const UScriptStruct* InStruct) -> bool
     {
-        if (ck::Is_NOT_Valid(InStruct, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(InStruct))
         { return false; }
 
         for (TFieldIterator<FProperty> FieldIt(InStruct, EFieldIteratorFlags::IncludeSuper); FieldIt; ++FieldIt)
@@ -693,7 +756,7 @@ namespace ck_reflection_detail
         const FString&       InPathPrefix,
         TArray<FCk_StructFieldOverride>& OutOverrides) -> void
     {
-        if (ck::Is_NOT_Valid(InStruct, ck::IsValid_Policy_NullptrOnly{}) || InValuePtr == nullptr)
+        if (ck::Is_NOT_Valid(InStruct) || InValuePtr == nullptr)
         { return; }
 
         auto DefaultBuffer = TArray<uint8>{};
@@ -767,7 +830,7 @@ auto
     { return Out; }
 
     auto* Struct = InStructProperty->Struct.Get();
-    if (ck::Is_NOT_Valid(Struct, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Struct))
     { return Out; }
 
     const auto* StructValuePtr = InStructProperty->ContainerPtrToValuePtr<void>(InContainer);
