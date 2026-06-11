@@ -132,6 +132,12 @@ namespace ck::angelscriptgenerator::self_heal
         // class-level dedup marker for source-derived stubs.
         static auto Get_FullShapeMarkerLine(const FString& InClassName) -> FString;
 
+        // Clears the session-static "full shapes written this process" set —
+        // lets tests simulate the next-process boundary (headless cook
+        // retry) where a signature miss against an on-disk full shape defers
+        // to the per-signature path instead of no-op'ing.
+        static auto Reset_SessionState_ForTests() -> void;
+
         static auto Get_MarkerComment    () -> FString;
         static auto Get_StubFileHeader   () -> FString;
         static auto Derive_StubSiblingPath(const FString& InCanonicalFilePath) -> FString;

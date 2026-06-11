@@ -147,6 +147,16 @@ namespace ck::angelscriptgenerator::self_heal
             return Out;
         }
 
+        // Classes whose source-derived FULL SHAPE was synthesized by THIS
+        // process. Distinguishes "signature error in the same bulk drain that
+        // wrote the full shape" (never compile-tested — wait for the next
+        // compile) from "signature error after a compile that already
+        // included the full shape" (genuine divergence — per-signature
+        // fallback). Session-static on purpose: mirrors the dispatcher's
+        // convergence trackers; a new process starts clean, which is exactly
+        // the headless cook-retry boundary.
+        TSet<FString> sFullShapeClassesThisSession;
+
         // ---- File IO helpers -------------------------------------------------------
 
         // Read full file contents as text. Returns empty string + false if not found.
@@ -791,11 +801,38 @@ namespace ck::angelscriptgenerator::self_heal
         auto ExistingStub = FString{};
         const auto StubFileExists = Try_ReadFile(StubPath, ExistingStub);
 
-        // Re-fire for a class whose full shape already landed: no-op success.
+        // Re-fire for a class whose full shape already landed:
+        //  - struct-shaped errors (missing type / bare ctor): the struct
+        //    exists in the sibling — satisfied, no-op success.
+        //  - signature errors (NoMatchingSignatures) where the full shape was
+        //    written THIS SESSION (typically the same bulk drain): the
+        //    signature has never been compile-tested against the fresh full
+        //    shape — no-op success and let the next compile decide. Deferring
+        //    here appended junk per-signature overloads for calls the full
+        //    shape would have satisfied (and a `nullptr`-passing call then
+        //    coexists ambiguously with the full-shape overload).
+        //  - signature errors where the full shape came from a PREVIOUS
+        //    session/process (marker on disk, not in the session set — the
+        //    headless cook-retry flow): that compile already ran against the
+        //    full shape and still missed, so the caller genuinely diverges
+        //    (arg-order drift, base-vs-typed-handle slot). Return failure so
+        //    the dispatcher falls back to the per-signature error-text append
+        //    ALONGSIDE the full shape. Returning success unconditionally
+        //    swallowed that fallback and wedged the headless cook retry on
+        //    BB_CorridorGym.as's stale 25-arg StoreDriver call (2026-06-10).
         if (StubFileExists && ExistingStub.Contains(Get_FullShapeMarkerLine(InClassName)))
         {
-            Result.Success        = true;
-            Result.TargetFilePath = StubPath;
+            if (InError.Kind != ECk_AsParsedError_Kind::NoMatchingSignatures
+                || sFullShapeClassesThisSession.Contains(InClassName))
+            {
+                Result.Success        = true;
+                Result.TargetFilePath = StubPath;
+                return Result;
+            }
+
+            Result.ErrorMessage = FString::Printf(
+                TEXT("Full shape for '%s' already in the sibling (from a prior compile) but this Params overload is still unmatched — defer to the per-signature path."),
+                *InClassName);
             return Result;
         }
 
@@ -833,10 +870,22 @@ namespace ck::angelscriptgenerator::self_heal
             return Result;
         }
 
+        sFullShapeClassesThisSession.Add(InClassName);
+
         Result.Success        = true;
         Result.TargetFilePath = StubPath;
         Result.InjectedBlock  = StubBlock;
         return Result;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FCkAsStubSynthesizer::
+        Reset_SessionState_ForTests()
+        -> void
+    {
+        sFullShapeClassesThisSession.Reset();
     }
 }
 

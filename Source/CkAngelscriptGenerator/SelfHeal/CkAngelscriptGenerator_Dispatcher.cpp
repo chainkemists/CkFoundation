@@ -995,6 +995,53 @@ namespace ck::angelscriptgenerator::self_heal
             sModalTicksWaited = 0;
         }
 
+        // Headless (commandlet / unattended) bootstrap drain. No Slate modal
+        // will ever pump here, and for commandlets Hazelight hard-exits the
+        // process right after the OnReloadHadErrors broadcast returns
+        // ("Cannot run when angelscript has failed to compile" —
+        // AngelscriptManager.cpp's IsRunningCommandlet() guard). There is no
+        // hot-reload watcher thread in that flow either, so the mtime-baseline
+        // hazard the modal-tick deferral exists for does not apply — applying
+        // strategies SYNCHRONOUSLY inside the broadcast is safe and is the
+        // only window we get. The stubs land on disk before the exit: the
+        // next invocation of the same commandlet (e.g. a CI cook step with
+        // automatic retry) compiles against them, regenerates the canonicals
+        // post-compile, and proceeds. Pinned by the 2026-06-10 CI cook
+        // failure on the first gitignored-EntitySpawnParams fresh clone.
+        auto Drain_PendingActions_Headless() -> void
+        {
+            Log(TEXT("[SelfHeal] Headless bootstrap — applying {} recovery action(s) synchronously ")
+                TEXT("(no modal pump in commandlet/unattended mode)."),
+                sPendingActions.Num());
+
+            auto AppliedActions = TArray<FCk_RecoveryAction>{};
+            for (const auto& Action : sPendingActions)
+            {
+                if (NOT Try_ReserveSynthesis(Action))
+                { continue; }
+                if (Apply_Strategy(Action.Strategy, Action.Error))
+                { AppliedActions.Add(Action); }
+            }
+            const auto QueuedCount = sPendingActions.Num();
+            sPendingActions.Reset();
+
+            if (AppliedActions.Num() > 0)
+            {
+                ++sCyclesRun;
+                Log(TEXT("[SelfHeal] Cycle {} applied {} strategy/strategies synchronously. ")
+                    TEXT("If this process exits with 'Cannot run when angelscript has failed to ")
+                    TEXT("compile', RE-RUN THE SAME COMMAND — the next run compiles against the ")
+                    TEXT("synthesized recovery stubs and regenerates the canonical files."),
+                    sCyclesRun, AppliedActions.Num());
+
+                Log_AppliedActions_ToMessageLog(AppliedActions);
+            }
+            else
+            {
+                Log_TerminalBanner_AllUnactionable(QueuedCount);
+            }
+        }
+
         auto Ensure_ModalTickSubscribed() -> void
         {
             if (sModalTickHandle.IsValid())
@@ -1002,8 +1049,7 @@ namespace ck::angelscriptgenerator::self_heal
 
             if (NOT FSlateApplication::IsInitialized())
             {
-                Warning(TEXT("[SelfHeal] FSlateApplication not initialized — cannot subscribe to ")
-                        TEXT("modal-tick pump. Recovery deferral will not fire. (Is this a -nullrhi run?)"));
+                Drain_PendingActions_Headless();
                 return;
             }
 
