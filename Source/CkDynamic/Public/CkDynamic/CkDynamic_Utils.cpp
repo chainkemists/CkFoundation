@@ -85,12 +85,14 @@ auto
         InFragmentData.GetScriptStruct(), InHandle)
     { return InHandle; }
 
-    Storage.emplace(Entity, std::move(Fragment));
+    Storage.emplace(Entity, MoveTemp(Fragment));
     InHandle.Get_RegistryView().BumpDirtyMarkerVersion(Get_DirtyMarkerHash(InFragmentData.GetScriptStruct()));
 
+    // The default-storage fragment is only a presence marker (Has<>/removal) —
+    // the real data lives in the named storage. Keep it default-constructed.
     if (NOT InHandle.Has<ck::FFragment_DynamicFragment_Data>())
     {
-        InHandle.Add<ck::FFragment_DynamicFragment_Data>(Fragment);
+        InHandle.Add<ck::FFragment_DynamicFragment_Data>(ck::FFragment_DynamicFragment_Data{});
     }
 
     if (InReplication == ECk_Replication::Replicates)
