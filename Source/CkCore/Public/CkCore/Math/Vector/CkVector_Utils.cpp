@@ -308,9 +308,7 @@ auto
         ECk_Plane_Axis InAxis)
     -> FVector
 {
-    auto V = Get_Flattened(InVector, InAxis);
-    V.Normalize();
-    return V;
+    return Get_Flattened(InVector, InAxis).GetSafeNormal();
 }
 
 auto
