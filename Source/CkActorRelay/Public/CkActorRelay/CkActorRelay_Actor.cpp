@@ -4,11 +4,9 @@
 
 #include "CkActorRelay/CkActorRelay_Log.h"
 
-#include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
-#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 #include "CkEcsExt/EntityScript/CkEntityScript_WithActor.h"
-#include "CkEcsExt/EntityScript/CkEntityScript_WithActor_Data.h"
+#include "CkEcsExt/EntityScript/CkEntityScript_WithActor_Utils.h"
 
 #include <Net/UnrealNetwork.h>
 #include <Net/Core/PushModel/PushModel.h>
@@ -32,12 +30,7 @@ auto
 {
     Super::BeginPlay();
 
-    if (HasAuthority())
-    {
-        auto TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(GetWorld());
-        auto SpawnParams = FInstancedStruct::Make<FCk_EntityScript_WithActor_SpawnParams>(this);
-        UCk_Utils_EntityScript_UE::Request_SpawnEntity(TransientEntity, UCk_EntityScript_WithActor_UE::StaticClass(), SpawnParams);
-    }
+    UCk_Utils_EntityScript_WithActor_UE::Request_SpawnEntityScript_OnActor(this, UCk_EntityScript_WithActor_UE::StaticClass());
 
     OnRep_GroupSubsystemClass();
 }
