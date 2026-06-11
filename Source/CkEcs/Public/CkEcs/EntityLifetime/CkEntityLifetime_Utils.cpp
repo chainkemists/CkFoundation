@@ -505,10 +505,23 @@ auto
     if (InLifetimeOwner.Has<ck::FTag_EditorOnlyEntity>())
     { InNewEntity.Add<ck::FTag_EditorOnlyEntity>(); }
 
-    // Not doing something like this because it is undefined behavior: *const_cast<FCk_Handle*>(&InHandle)
-    auto NonConstLifetimeOwnerHandle = InLifetimeOwner;
+    // Register the reverse dependent link ONLY when the new entity lives in the SAME registry as its
+    // lifetime owner. A cross-registry child — e.g. a 2dGridSystem cell, which lives in the grid's private
+    // nested FEcsWorld yet is lifetime-owned by the main-registry grid — must NOT be added to the owner's
+    // FFragment_LifetimeDependents: that fragment (and its snapshot serialization) assumes same-registry
+    // handles. Serialized, a foreign handle keeps only its bare entity-id; on restore Snapshot_Handle
+    // re-homes it onto the load registry, where its nested id aliases an unrelated entity — including the
+    // owner itself, forming a self-cycle that stack-overflows the lifetime-dependents walk. Such children
+    // are lifetime-managed by their own (nested) registry/world, so the forward owner link above suffices.
+    const auto SameRegistry =
+        InNewEntity.Get_RegistryView().Get_RegistryHandle() == InLifetimeOwner.Get_RegistryView().Get_RegistryHandle();
 
-    NonConstLifetimeOwnerHandle.AddOrGet<ck::FFragment_LifetimeDependents>()._Entities.Emplace(InNewEntity);
+    if (SameRegistry)
+    {
+        // Not doing something like this because it is undefined behavior: *const_cast<FCk_Handle*>(&InHandle)
+        auto NonConstLifetimeOwnerHandle = InLifetimeOwner;
+        NonConstLifetimeOwnerHandle.AddOrGet<ck::FFragment_LifetimeDependents>()._Entities.Emplace(InNewEntity);
+    }
 }
 
 auto
