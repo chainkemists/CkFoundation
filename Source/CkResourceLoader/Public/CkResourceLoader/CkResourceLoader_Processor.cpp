@@ -212,6 +212,13 @@ namespace ck
 
         const auto& FoundPendingObject = AllPendingObjects[FoundPendingObjectIndex];
         const auto& StreamingHandle    = FoundPendingObject.Get_StreamableHandle();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(StreamingHandle),
+            TEXT("Streamable Handle for Streamed Object [{}] is INVALID — the async load likely completed "
+                 "synchronously before the handle was stored on the pending entry."),
+            InObjectStreamed)
+        { return; }
+
         const auto& LoadedAsset        = StreamingHandle->GetLoadedAsset();
         const auto ObjectToLoadHardRef = FCk_ResourceLoader_ObjectReference_Hard{LoadedAsset};
         const auto LoadedObject        = FCk_ResourceLoader_LoadedObject{InObjectStreamed, ObjectToLoadHardRef}.Set_StreamableHandle(StreamingHandle);
@@ -236,6 +243,11 @@ namespace ck
 
         const auto& FoundPendingObjectBatch = AllPendingObjectBatches[FoundPendingObjectBatchIndex];
         const auto& StreamingHandle         = FoundPendingObjectBatch.Get_StreamableHandle();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(StreamingHandle),
+            TEXT("Streamable Handle for Streamed Object Batch is INVALID — the async load likely completed "
+                 "synchronously before the handle was stored on the pending entry."))
+        { return; }
 
         auto LoadedAssets = TArray<UObject*>{};
         StreamingHandle->GetLoadedAssets(LoadedAssets);
