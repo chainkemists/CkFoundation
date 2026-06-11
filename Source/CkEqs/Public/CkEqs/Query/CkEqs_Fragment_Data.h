@@ -449,13 +449,16 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "Probe"))
     FGameplayTagContainer _OverlapFilter;
 
-    // VolumeCheck test — AABB containment in world space.
+    // VolumeCheck test — oriented-box containment in world space (zero rotation = AABB).
     // When Inverted=false, candidates INSIDE the box pass; when true, candidates OUTSIDE pass.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FVector _VolumeCheck_WorldCenter = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FVector _VolumeCheck_HalfExtent = FVector(100.0f, 100.0f, 100.0f);
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FRotator _VolumeCheck_WorldRotation = FRotator::ZeroRotator;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     bool _VolumeCheck_Inverted = false;
@@ -481,6 +484,7 @@ public:
     CK_PROPERTY(_OverlapFilter);
     CK_PROPERTY(_VolumeCheck_WorldCenter);
     CK_PROPERTY(_VolumeCheck_HalfExtent);
+    CK_PROPERTY(_VolumeCheck_WorldRotation);
     CK_PROPERTY(_VolumeCheck_Inverted);
 };
 
