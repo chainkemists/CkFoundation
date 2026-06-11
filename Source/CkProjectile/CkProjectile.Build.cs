@@ -23,6 +23,8 @@ public class CkProjectile : CkModuleRules
 
             "CkPhysics",
             "CkLog",
+            "CkShapes",
+            "CkSpatialQuery",
             "CkVariables",
         });
     }
