@@ -94,6 +94,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_TagSet_HandleRequests>;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::ClientOnly;
         using MarkedDirtyBy = FFragment_TagSet_SyncReplication;
 

@@ -229,6 +229,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    class FProcessor_Probe_EnsureStaticNotMoved_DEBUG;
+
     class CKSPATIALQUERY_API FProcessor_Probe_UpdateTransform_LinearCast : public ck_exp::TProcessor<
             FProcessor_Probe_UpdateTransform_LinearCast,
             FCk_Handle_Probe,
@@ -242,6 +244,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Overlap;
+        using RunAfter = TDepList<FProcessor_Probe_EnsureStaticNotMoved_DEBUG>;
         static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
         FProcessor_Probe_UpdateTransform_LinearCast(
@@ -351,6 +354,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Overlap;
+        using RunAfter = TDepList<FProcessor_Probe_UpdateTransform_LinearCast>;
         using MarkedDirtyBy = FFragment_Probe_Requests;
         static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 

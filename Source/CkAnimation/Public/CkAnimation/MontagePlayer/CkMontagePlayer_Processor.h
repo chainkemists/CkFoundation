@@ -90,6 +90,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_MontagePlayer_HandleRequests>;
 
     public:
         using TProcessor::TProcessor;
