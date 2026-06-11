@@ -175,6 +175,15 @@ struct CKEQS_API FCk_Eqs_Algorithm
         FFragment_EqsQuery_DebugInfo& InOutDebug,
         int32 InTestIndex) -> void;
 
+    // Pure containment test shared by DoRunTest_VolumeCheck and unit tests.
+    // Zero rotation degenerates to the legacy AABB check.
+    static auto
+    Get_IsPointInOrientedBox(
+        const FVector& InPoint,
+        const FVector& InCenter,
+        const FVector& InHalfExtent,
+        const FRotator& InRotation) -> bool;
+
     static auto
     DoRunTest_Random(
         const FCk_Eqs_TestParams& InTest,

@@ -947,6 +947,7 @@ auto
 {
     const auto Center = InTest.Get_VolumeCheck_WorldCenter();
     const auto HalfExtent = InTest.Get_VolumeCheck_HalfExtent();
+    const auto Rotation = InTest.Get_VolumeCheck_WorldRotation();
     const auto Inverted = InTest.Get_VolumeCheck_Inverted();
 
     auto RawValues = TArray<float>{};
@@ -961,10 +962,7 @@ auto
         }
 
         const auto& Loc = InOutCandidates[i].Get_Location();
-        const auto InsideBox =
-            FMath::Abs(Loc.X - Center.X) <= HalfExtent.X &&
-            FMath::Abs(Loc.Y - Center.Y) <= HalfExtent.Y &&
-            FMath::Abs(Loc.Z - Center.Z) <= HalfExtent.Z;
+        const auto InsideBox = Get_IsPointInOrientedBox(Loc, Center, HalfExtent, Rotation);
 
         const auto Passes = Inverted ? NOT InsideBox : InsideBox;
         const auto Raw = Passes ? 1.0f : 0.0f;
@@ -973,6 +971,21 @@ auto
     }
 
     FinishTest(InTest, InOutCandidates, RawValues, InOutDebug, InTestIndex);
+}
+
+auto
+    FCk_Eqs_Algorithm::
+    Get_IsPointInOrientedBox(
+        const FVector& InPoint,
+        const FVector& InCenter,
+        const FVector& InHalfExtent,
+        const FRotator& InRotation)
+    -> bool
+{
+    const auto Local = InRotation.UnrotateVector(InPoint - InCenter);
+    return FMath::Abs(Local.X) <= InHalfExtent.X
+        && FMath::Abs(Local.Y) <= InHalfExtent.Y
+        && FMath::Abs(Local.Z) <= InHalfExtent.Z;
 }
 
 auto
