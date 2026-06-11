@@ -39,6 +39,16 @@ public:
         UPARAM(ref) FCk_Handle& InOwnerEntity,
         const UCk_InventoryItem_Definition* InDefinition);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Item",
+              DisplayName = "[Ck][Item] Get Or Create Transient Item Definition")
+    static UCk_InventoryItem_Definition*
+    GetOrCreate_TransientItemDefinition(
+        UObject* InOuter,
+        FName InName,
+        const FCk_InventoryItem_CoreInfo& InCoreInfo,
+        const TArray<UCk_ItemTrait*>& InTraits);
+
 public:
     static bool
     Has(

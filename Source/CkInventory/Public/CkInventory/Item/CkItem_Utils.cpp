@@ -61,6 +61,64 @@ auto
 
 auto
     UCk_Utils_Item_UE::
+    GetOrCreate_TransientItemDefinition(
+        UObject* InOuter,
+        FName InName,
+        const FCk_InventoryItem_CoreInfo& InCoreInfo,
+        const TArray<UCk_ItemTrait*>& InTraits)
+    -> UCk_InventoryItem_Definition*
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InOuter),
+        TEXT("GetOrCreate_TransientItemDefinition: Null outer"))
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InName),
+        TEXT("GetOrCreate_TransientItemDefinition: Name is None — runtime definitions need a deterministic name"))
+    { return {}; }
+
+    auto Definition = FindObject<UCk_InventoryItem_Definition>(InOuter, *InName.ToString());
+
+    if (ck::Is_NOT_Valid(Definition))
+    {
+        const auto ExistingOfOtherClass = FindObject<UObject>(InOuter, *InName.ToString());
+        CK_ENSURE_IF_NOT(ck::Is_NOT_Valid(ExistingOfOtherClass),
+            TEXT("GetOrCreate_TransientItemDefinition: [{}] already exists under [{}] but is a [{}], not an item definition"),
+            InName, InOuter, ExistingOfOtherClass->GetClass())
+        { return {}; }
+
+        Definition = NewObject<UCk_InventoryItem_Definition>(InOuter, InName, RF_Transient);
+    }
+
+    CK_ENSURE_IF_NOT(NOT Definition->IsAsset(),
+        TEXT("GetOrCreate_TransientItemDefinition: [{}] is an on-disk/script asset — refusing to repopulate it"),
+        Definition)
+    { return {}; }
+
+    Definition->_CoreInfo = InCoreInfo;
+
+    Definition->_ItemTraits.Reset();
+    for (const auto& Trait : InTraits)
+    {
+        CK_ENSURE_IF_NOT(ck::IsValid(Trait),
+            TEXT("GetOrCreate_TransientItemDefinition: Null trait passed for [{}]"), InName)
+        { continue; }
+
+        if (Trait->GetOuter() != Definition)
+        {
+            constexpr const TCHAR* KeepExistingName = nullptr;
+            Trait->Rename(KeepExistingName, Definition, REN_DontCreateRedirectors | REN_NonTransactional | REN_DoNotDirty);
+        }
+
+        Definition->_ItemTraits.Add(Trait);
+    }
+
+    return Definition;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Item_UE::
     Get_Definition(
         const FCk_Handle_Item& InItem)
     -> const UCk_InventoryItem_Definition*
