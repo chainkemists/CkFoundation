@@ -321,7 +321,6 @@ namespace ck
             const FFragment_Marker_Params&  InParamsComp) const
         -> void
     {
-        // TODO: Extract this in a common function to avoid code duplication between similar system for Sensor
         const auto& MarkerAttachedEntityAndActor = InCurrentComp.Get_AttachedEntityAndActor();
         const auto& MarkerAttachedActor          = MarkerAttachedEntityAndActor.Get_Actor();
 
@@ -334,38 +333,8 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(Marker), TEXT("Invalid Marker Actor Component stored for Marker Entity [{}]"), InMarkerEntity)
         { return; }
 
-        const auto& BoneTransform = [&]() -> TOptional<FTransform>
-        {
-            const auto& Params           = InParamsComp.Get_Params();
-            const auto& AttachmentParams = Params.Get_AttachmentParams();
-            const auto& BoneName         = AttachmentParams.Get_BoneName();
-
-            CK_ENSURE_IF_NOT(UCk_Utils_Actor_UE::Get_DoesBoneExistInSkeletalMesh(MarkerAttachedActor.Get(), BoneName),
-                TEXT("Marker Entity [{}] cannot update its Transform according to Bone [{}] because its Attached Actor [{}] does NOT have it in its Skeletal Mesh"),
-                InMarkerEntity,
-                BoneName,
-                MarkerAttachedEntityAndActor)
-            { return {}; }
-
-            const auto& AttachedActorSkeletalMeshComponent = MarkerAttachedActor->FindComponentByClass<USkeletalMeshComponent>();
-            const auto& SocketBoneName                     = AttachedActorSkeletalMeshComponent->GetSocketBoneName(BoneName);
-            const auto& BoneIndex                          = AttachedActorSkeletalMeshComponent->GetBoneIndex(SocketBoneName);
-            const auto& AttachedActorTransform             = MarkerAttachedActor->GetTransform();
-            const auto& AttachmentPolicy                   = AttachmentParams.Get_AttachmentPolicy();
-            auto SkeletonTransform                         = AttachedActorSkeletalMeshComponent->GetBoneTransform(BoneIndex);
-
-            if (NOT EnumHasAnyFlags(AttachmentPolicy, ECk_Marker_AttachmentPolicy::UseBoneRotation))
-            {
-                SkeletonTransform.CopyRotation(AttachedActorTransform);
-            }
-
-            if (NOT EnumHasAnyFlags(AttachmentPolicy, ECk_Marker_AttachmentPolicy::UseBonePosition))
-            {
-                SkeletonTransform.CopyTranslation(AttachedActorTransform);
-            }
-
-            return SkeletonTransform;
-        }();
+        const auto& BoneTransform = UCk_Utils_MarkerAndSensor_UE::Get_MarkerOrSensor_BoneFollowTransform(
+            InMarkerEntity, MarkerAttachedEntityAndActor, InParamsComp.Get_Params().Get_AttachmentParams());
 
         if (ck::Is_NOT_Valid(BoneTransform))
         { return; }
