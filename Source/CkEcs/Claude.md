@@ -299,6 +299,25 @@ Registration lives in the feature's `_Fragment.cpp` via `RegisterLazy` (per-type
 
 Pinned by `Ck.Attribute.Net.Values_AppliedBefore_OnReplicationComplete`, `Float_InitialBakedValue_Replicates`, and `Float_PreComposition_StashedValue_Applies` in CkTests.
 
+### Actor-side unified promise
+
+For actor-linked entities (`EntityScript_WithActor`), consumers should not juggle the two signals
+directly. `UCk_Utils_OwningActor_UE::Promise_OnActorEcsReady(Actor, Delegate, Policy)` is the one
+actor-side hook that works on every world:
+
+- `ECk_ActorEcsReady_Policy::ValuesReplicated` (default) — fires once the Actor↔Entity link exists
+  AND `OnReplicationComplete` has fired for the linked entity. Collapses to link-time on authority
+  and for non-replicated entities. Replicated values are readable inside the callback.
+- `ECk_ActorEcsReady_Policy::LinkEstablished` — fires at link time (OnConstructed-equivalent on
+  clients; replicated values may not be applied yet).
+
+The promise fires immediately when bound after the actor is already ready, queues on the
+(non-replicated, auto-added) `UCk_EntityOwningActor_ActorComponent_UE` otherwise, and is discarded
+if the actor is destroyed before ever becoming ready. To spawn the actor-linked entity in the first
+place, use `UCk_Utils_EntityScript_WithActor_UE::Request_SpawnEntityScript_OnActor` (CkEcsExt) or
+add the `Ck Entity Script (With Actor)` component in the editor — both are authority-gated and
+replication-correct.
+
 ---
 
 ## Anti-patterns
