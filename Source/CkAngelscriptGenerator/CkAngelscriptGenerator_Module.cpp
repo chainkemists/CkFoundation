@@ -90,6 +90,26 @@ namespace
 
                 for (const auto& File : Files)
                 {
+                    // A stub is only a STALE SURVIVOR when its canonical file
+                    // exists to supersede it. With gitignored canonicals
+                    // (*_EntitySpawnParams.as), the stub IS the bootstrap for
+                    // the upcoming AS compile — in commandlets this module
+                    // loads BEFORE Hazelight's initial compile, so deleting it
+                    // here re-wedges the cook retry that synthesized it
+                    // (pinned by the 2026-06-10 two-pass cook verification).
+                    // Once the compile succeeds, the canonical regenerates
+                    // and the very next sweep (PostCompile or next startup)
+                    // deletes the stub as before.
+                    const auto CanonicalPath = FPaths::GetPath(File) /
+                        FPaths::GetCleanFilename(File).Replace(TEXT("_StubRecovery_"), TEXT(""));
+                    if (NOT IFileManager::Get().FileExists(*CanonicalPath))
+                    {
+                        ck::angelscriptgenerator::Log(
+                            TEXT("[Module] Retaining self-heal stub (its canonical is absent — the stub is ")
+                            TEXT("the bootstrap for the next AS compile): {}"), File);
+                        continue;
+                    }
+
                     if (IFileManager::Get().Delete(*File, /*RequireExists=*/false, /*EvenReadOnly=*/false, /*Quiet=*/true))
                     {
                         ck::angelscriptgenerator::Log(

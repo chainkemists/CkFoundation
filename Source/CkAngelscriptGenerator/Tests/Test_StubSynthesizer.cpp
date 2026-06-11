@@ -1227,10 +1227,39 @@ bool FCkTest_StubSynthesizer_Inject_SourceDerived_EndToEnd::RunTest(const FStrin
     TestTrue(TEXT("positional ctor assigns"), Stub.Contains(TEXT("        Phase = InPhase;")));
     TestTrue(TEXT("namespace block"), Stub.Contains(TEXT("namespace UTestSynth_DamageReceiver")));
 
-    // Re-fire: no-op success, struct still defined exactly once.
+    // Re-fire with a struct-shaped error: no-op success, struct still
+    // defined exactly once.
     const auto ResultB = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub_SourceDerived(
         TEXT("UTestSynth_DamageReceiver"), Error, {}, {ScriptRoot});
-    TestTrue(TEXT("re-fire reports success (no-op)"), ResultB.Success);
+    TestTrue(TEXT("struct-shaped re-fire reports success (no-op)"), ResultB.Success);
+
+    // Re-fire with a SIGNATURE error in the SAME session that wrote the full
+    // shape: never compile-tested against it yet — must no-op success and
+    // let the next compile decide (deferring here appended junk overloads
+    // for calls the full shape satisfies).
+    auto DivergentSignature = FCk_AsParsedError{};
+    DivergentSignature.Kind            = ECk_AsParsedError_Kind::NoMatchingSignatures;
+    DivergentSignature.TargetNamespace = TEXT("UTestSynth_DamageReceiver");
+    DivergentSignature.FunctionName    = TEXT("Params");
+    DivergentSignature.ArgsList        = TEXT("FGameplayTag, const int");
+    DivergentSignature.FilePath        = *ClassFile;
+    const auto ResultSameSession = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub_SourceDerived(
+        TEXT("UTestSynth_DamageReceiver"), DivergentSignature, {}, {ScriptRoot});
+    TestTrue(TEXT("same-session signature re-fire no-ops (Success = true)"), ResultSameSession.Success);
+
+    // Same signature error from the NEXT process (headless cook retry — the
+    // full shape is on disk from the prior run and the compile that just
+    // failed already included it): the caller genuinely diverges — must
+    // DEFER so the dispatcher's error-text fallback appends the
+    // per-signature overload alongside the full shape. Returning success
+    // here swallowed the fallback and wedged the headless cook retry
+    // (BB_CorridorGym's stale 25-arg StoreDriver call, 2026-06-10).
+    FCkAsStubSynthesizer::Reset_SessionState_ForTests();
+    const auto ResultNextSession = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub_SourceDerived(
+        TEXT("UTestSynth_DamageReceiver"), DivergentSignature, {}, {ScriptRoot});
+    TestFalse(TEXT("next-session signature miss against on-disk full shape DEFERS (Success = false)"), ResultNextSession.Success);
+    TestTrue(TEXT("deferral reason mentions per-signature path"),
+        ResultNextSession.ErrorMessage.Contains(TEXT("per-signature")));
 
     // Cross-path dedup: an error-text inject for the same class's Params()
     // must no-op against the full-shape block's end-marker. No candidates
