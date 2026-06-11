@@ -41,7 +41,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKPROJECTILE_API, Projectile_OnAimAheadCalculated,
-        FCk_Delegate_Projectile_OnAimAheadCalculated, ECk_SucceededFailed, FVector, FInstancedStruct);
+        FCk_Delegate_Projectile_OnAimAheadCalculated, ECk_SucceededFailed, FVector, FCk_Time, FInstancedStruct);
 
     CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_Projectile_Requests);
 }
