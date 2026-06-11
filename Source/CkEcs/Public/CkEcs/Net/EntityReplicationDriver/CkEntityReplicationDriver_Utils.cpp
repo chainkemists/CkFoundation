@@ -6,6 +6,8 @@
 
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
+
 #if UE_WITH_IRIS
 #include <Iris/ReplicationSystem/ReplicationSystem.h>
 #include <Net/Iris/ReplicationSystem/EngineReplicationBridge.h>
@@ -42,25 +44,48 @@ auto
     return AddedOrNot;
 }
 
+// Cycle-safe DFS over the lifetime-dependents subtree counting replication drivers. Lifetime ownership
+// is a TREE, so a revisit means the dependents graph is cyclic — a corruption that must never happen in
+// steady state. Truncating at the revisit keeps an unbounded recursion from overflowing the stack (which
+// terminates the process with NO crash dump), and the ensure names the offending entity so the underlying
+// data bug can be found instead of silently crashing. In an acyclic graph the visited set never triggers,
+// so the count is identical to the naive recursion.
+static auto
+    DoCount_ReplicationDriversIncludingDependents(
+        const FCk_Handle& InHandle,
+        TSet<FCk_Entity>& InOutVisited)
+    -> int32
+{
+    if (NOT UCk_Utils_EntityReplicationDriver_UE::Has(InHandle))
+    { return 0; }
+
+    auto AlreadyVisited = false;
+    InOutVisited.Add(InHandle.Get_Entity(), &AlreadyVisited);
+
+    if (AlreadyVisited)
+    {
+        CK_TRIGGER_ENSURE(TEXT("Cyclic LifetimeDependents detected at Entity [{}] while counting replication "
+            "drivers — the lifetime-ownership graph must be a tree. Truncating to avoid infinite recursion."),
+            InHandle);
+        return 0;
+    }
+
+    const auto& Dependents = UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(InHandle);
+
+    return std::accumulate(Dependents.begin(), Dependents.end(), 1, [&](const int32 Value, const FCk_Handle& Dependent)
+    {
+        return Value + DoCount_ReplicationDriversIncludingDependents(Dependent, InOutVisited);
+    });
+}
+
 auto
     UCk_Utils_EntityReplicationDriver_UE::
     Get_NumOfReplicationDriversIncludingDependents(
         const FCk_Handle& InHandle)
     -> int32
 {
-    if (Has(InHandle))
-    {
-        const auto& Dependents = UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(InHandle);
-
-        const auto Total = std::accumulate(Dependents.begin(), Dependents.end(), 1, [&](const int32 Value, const FCk_Handle& Dependent)
-        {
-            return Value + Get_NumOfReplicationDriversIncludingDependents(Dependent);
-        });
-
-        return Total;
-    }
-
-    return 0;
+    auto Visited = TSet<FCk_Entity>{};
+    return DoCount_ReplicationDriversIncludingDependents(InHandle, Visited);
 }
 
 auto
