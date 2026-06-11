@@ -54,6 +54,23 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Controls when Promise_OnActorEcsReady fires.
+UENUM(BlueprintType)
+enum class ECk_ActorEcsReady_Policy : uint8
+{
+    // Fire once the Entity is linked AND its replicated values have been applied
+    // (OnReplicationComplete). On authority and for non-replicated Entities this collapses to
+    // link-time. The multiplayer-safe default — replicated values (attributes, team, state
+    // machine state, etc.) are readable inside the callback on every world.
+    ValuesReplicated,
+
+    // Fire as soon as the Actor↔Entity link is established. On clients this is OnConstructed-time:
+    // the Entity is composed but replicated values may NOT be applied yet.
+    LinkEstablished,
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintType, NotBlueprintable)
 class CKECS_API UCk_EntityOwningActor_ActorComponent_UE
     : public UCk_ActorComponent_UE
@@ -76,13 +93,25 @@ public:
     friend class UCk_Fragment_EntityReplicationDriver_Rep;
 
 private:
+    UFUNCTION()
+    void
+    DoHandle_LinkedEntityReplicationComplete(
+        FCk_Handle InEntity);
+
+private:
     FCk_Handle _EntityHandle;
 
-    // Promises queued by Promise_OnActorEcsReady while the Actor was not yet ECS ready. Flushed (and
-    // emptied) the moment the OwningActor link is established. These live with the component, so they
-    // are discarded automatically if the Actor is destroyed before ever becoming ECS ready.
-    TArray<FCk_Delegate_OwningActor_OnEcsReady> _PendingEcsReadyDelegates;
-    TArray<TFunction<void(AActor*, FCk_Handle)>> _PendingEcsReadyCallbacks;
+    // Promises queued by Promise_OnActorEcsReady while the Actor was not yet ECS ready (and, for the
+    // ValuesReplicated policy, while the linked Entity's replication was still pending). These live
+    // with the component, so they are discarded automatically if the Actor is destroyed before ever
+    // becoming ready. LinkEstablished queues flush the moment the OwningActor link is established;
+    // ValuesReplicated queues flush once the linked Entity's OnReplicationComplete fires (immediately
+    // at link-time when the Entity does not replicate).
+    TArray<FCk_Delegate_OwningActor_OnEcsReady> _PendingEcsReadyDelegates_LinkEstablished;
+    TArray<TFunction<void(AActor*, FCk_Handle)>> _PendingEcsReadyCallbacks_LinkEstablished;
+    TArray<FCk_Delegate_OwningActor_OnEcsReady> _PendingEcsReadyDelegates_ValuesReplicated;
+    TArray<TFunction<void(AActor*, FCk_Handle)>> _PendingEcsReadyCallbacks_ValuesReplicated;
+    bool _OnReplicationCompleteTrampolineBound = false;
 
 public:
     CK_PROPERTY_GET(_EntityHandle);
