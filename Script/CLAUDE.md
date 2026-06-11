@@ -483,6 +483,48 @@ auto Spawned = utils_entity_script::Request_SpawnEntity(
     FInstancedStruct::Make(Params));
 
 //============================================================================
+// 10.1 ACTOR ↔ ENTITY LINKUP (EntityScript_WithActor)
+//============================================================================
+//
+// To give an Actor an ECS Entity, use the one-call helper — do NOT hand-roll
+// the spawn-params + TransientEntity + HasAuthority boilerplate:
+
+class AMyActor : AActor
+{
+    default bReplicates = true;
+
+    UFUNCTION(BlueprintOverride)
+    void BeginPlay()
+    {
+        // Authority-gated internally: on clients this returns an INVALID pending
+        // handle and the Entity arrives via the EntityScript replication pipeline.
+        auto PendingEntity = utils_entity_script_with_actor::Request_SpawnEntityScript_OnActor(
+            this, UMyEntityScript);
+    }
+}
+
+// Editor/designer path: add the "Ck Entity Script (With Actor)" component
+// (UCk_EntityScript_WithActor_ActorComponent_UE) to the Actor and pick the
+// EntityScript class — zero code, same pipeline.
+//
+// To know when the Actor is ECS ready ON EVERY WORLD (server, client, late
+// join), bind the actor-side promise — works whether or not this world did
+// the spawning:
+//
+//   utils_owning_actor::Promise_OnActorEcsReady(
+//       this, FCk_Delegate_OwningActor_OnEcsReady(this, n"OnEcsReady"));
+//
+//   UFUNCTION()
+//   private void OnEcsReady(AActor InActor, FCk_Handle InEntity)
+//   { /* Entity linked; replicated values applied (default policy) */ }
+//
+// Policies (3rd param, optional): ValuesReplicated (default — safe to read
+// replicated attributes/team/SM state) | LinkEstablished (earlier; replicated
+// values may not be applied yet on clients).
+// Fires immediately if the Actor is already ready; auto-discards if the Actor
+// is destroyed before ever becoming ready.
+
+//============================================================================
 // 11. TIMERS / TICK PATTERN
 //============================================================================
 
