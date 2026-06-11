@@ -24,6 +24,39 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_Sensor_EndPlay);
 
 namespace ck
 {
+    // Shared by EnableDisable request handling and Teardown — fires an
+    // EndOverlap signal for every Marker overlap the Sensor currently tracks.
+    template <typename T_SensorHandle>
+    static auto
+    DoManuallyTriggerAllEndOverlaps(
+        const T_SensorHandle& InSensorEntity,
+        const FFragment_Sensor_Current& InCurrentComp,
+        const FCk_Sensor_BasicDetails& InSensorBasicDetails) -> void
+    {
+        for (const auto& OverlapKvp : InCurrentComp.Get_CurrentMarkerOverlaps().Get_Overlaps())
+        {
+            const auto& MarkerDetails = OverlapKvp.Key;
+            const auto& OverlapDetails = OverlapKvp.Value.Get_OverlapDetails();
+
+            const auto& OnEndOverlapPayload = FCk_Sensor_Payload_OnEndOverlap
+            {
+                InSensorBasicDetails,
+                MarkerDetails,
+                FCk_Sensor_EndOverlap_UnrealDetails
+                {
+                    OverlapDetails.Get_OverlappedComponent().Get(),
+                    OverlapDetails.Get_OtherActor().Get(),
+                    OverlapDetails.Get_OtherComp().Get()
+                }
+            };
+
+            UUtils_Signal_OnSensorEndOverlap::Broadcast(InSensorEntity, MakePayload(
+                InCurrentComp.Get_AttachedEntityAndActor().Get_Handle(), OnEndOverlapPayload));
+        }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     auto
         FProcessor_Sensor_Setup::
         DoTick(
@@ -192,31 +225,6 @@ namespace ck
             InCurrentComp.Get_AttachedEntityAndActor()
         };
 
-        // TODO: this is repeated in this file, consolidate
-        const auto& DoManuallyTriggerAllEndOverlaps = [&]() -> void
-        {
-            for (const auto& OverlapKvp : InCurrentComp.Get_CurrentMarkerOverlaps().Get_Overlaps())
-            {
-                const auto& MarkerDetails = OverlapKvp.Key;
-                const auto& OverlapDetails = OverlapKvp.Value.Get_OverlapDetails();
-
-                const auto& OnEndOverlapPayload = FCk_Sensor_Payload_OnEndOverlap
-                {
-                    SensorBasicDetails,
-                    MarkerDetails,
-                    FCk_Sensor_EndOverlap_UnrealDetails
-                    {
-                        OverlapDetails.Get_OverlappedComponent().Get(),
-                        OverlapDetails.Get_OtherActor().Get(),
-                        OverlapDetails.Get_OtherComp().Get()
-                    }
-                };
-
-                UUtils_Signal_OnSensorEndOverlap::Broadcast(InSensorEntity, MakePayload(
-                    InCurrentComp.Get_AttachedEntityAndActor().Get_Handle(), OnEndOverlapPayload));
-            }
-        };
-
         const auto& CurrentEnableDisable = InCurrentComp.Get_EnableDisable();
         const auto& NewEnableDisable     = InRequest.Get_EnableDisable();
 
@@ -234,7 +242,7 @@ namespace ck
 
         if (NewEnableDisable == ECk_EnableDisable::Disable)
         {
-            DoManuallyTriggerAllEndOverlaps();
+            DoManuallyTriggerAllEndOverlaps(InSensorEntity, InCurrentComp, SensorBasicDetails);
             InCurrentComp._CurrentMarkerOverlaps = {};
         }
 
@@ -530,7 +538,6 @@ namespace ck
             const FFragment_Sensor_Params&  InParamsComp)
             -> void
     {
-        // TODO: Extract this in a common function to avoid code duplication between similar system for Marker
         const auto& SensorAttachedEntityAndActor = InCurrentComp.Get_AttachedEntityAndActor();
         const auto& SensorAttachedActor          = SensorAttachedEntityAndActor.Get_Actor();
 
@@ -543,38 +550,8 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(Sensor), TEXT("Invalid Sensor Actor Component stored for Sensor Entity [{}]"), InSensorEntity)
         { return; }
 
-        const auto& BoneTransform = [&]() -> TOptional<FTransform>
-        {
-            const auto& Params           = InParamsComp.Get_Params();
-            const auto& AttachmentParams = Params.Get_AttachmentParams();
-            const auto& BoneName         = AttachmentParams.Get_BoneName();
-
-            CK_ENSURE_IF_NOT(UCk_Utils_Actor_UE::Get_DoesBoneExistInSkeletalMesh(SensorAttachedActor.Get(), BoneName),
-                TEXT("Sensor Entity [{}] cannot update its Transform according to Bone [{}] because its Attached Actor [{}] does NOT have it in its Skeletal Mesh"),
-                InSensorEntity,
-                BoneName,
-                SensorAttachedEntityAndActor)
-            { return {}; }
-
-            const auto& AttachedActorSkeletalMeshComponent = SensorAttachedActor->FindComponentByClass<USkeletalMeshComponent>();
-            const auto& AttachedActorTransform             = SensorAttachedActor->GetTransform();
-            const auto& AttachmentPolicy                   = AttachmentParams.Get_AttachmentPolicy();
-            const auto& SocketBoneName                     = AttachedActorSkeletalMeshComponent->GetSocketBoneName(BoneName);
-            const auto& BoneIndex                          = AttachedActorSkeletalMeshComponent->GetBoneIndex(SocketBoneName);
-            auto SkeletonTransform                         = AttachedActorSkeletalMeshComponent->GetBoneTransform(BoneIndex);
-
-            if (NOT EnumHasAnyFlags(AttachmentPolicy, ECk_Sensor_AttachmentPolicy::UseBoneRotation))
-            {
-                SkeletonTransform.CopyRotation(AttachedActorTransform);
-            }
-
-            if (NOT EnumHasAnyFlags(AttachmentPolicy, ECk_Sensor_AttachmentPolicy::UseBonePosition))
-            {
-                SkeletonTransform.CopyTranslation(AttachedActorTransform);
-            }
-
-            return SkeletonTransform;
-        }();
+        const auto& BoneTransform = UCk_Utils_MarkerAndSensor_UE::Get_MarkerOrSensor_BoneFollowTransform(
+            InSensorEntity, SensorAttachedEntityAndActor, InParamsComp.Get_Params().Get_AttachmentParams());
 
         if (ck::Is_NOT_Valid(BoneTransform))
         { return; }
@@ -622,30 +599,7 @@ namespace ck
             InCurrentComp.Get_AttachedEntityAndActor()
         };
 
-        const auto& DoManuallyTriggerAllEndOverlaps = [&]() -> void
-        {
-            for (const auto& OverlapKvp : InCurrentComp.Get_CurrentMarkerOverlaps().Get_Overlaps())
-            {
-                const auto& MarkerDetails = OverlapKvp.Key;
-                const auto& OverlapDetails = OverlapKvp.Value.Get_OverlapDetails();
-
-                const auto& OnEndOverlapPayload = FCk_Sensor_Payload_OnEndOverlap
-                {
-                    SensorBasicDetails,
-                    MarkerDetails,
-                    FCk_Sensor_EndOverlap_UnrealDetails
-                    {
-                        OverlapDetails.Get_OverlappedComponent().Get(),
-                        OverlapDetails.Get_OtherActor().Get(),
-                        OverlapDetails.Get_OtherComp().Get()
-                    }
-                };
-
-                UUtils_Signal_OnSensorEndOverlap::Broadcast(InSensorEntity, MakePayload(
-                    InCurrentComp.Get_AttachedEntityAndActor().Get_Handle(), OnEndOverlapPayload));
-            }
-        };
-        DoManuallyTriggerAllEndOverlaps();
+        DoManuallyTriggerAllEndOverlaps(InSensorEntity, InCurrentComp, SensorBasicDetails);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
