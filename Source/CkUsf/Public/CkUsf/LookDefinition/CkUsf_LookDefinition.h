@@ -118,6 +118,21 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     bool _TwoSided = false;
 
+    // Usage flags baked into the generated master at generation time. Hand-set
+    // flags on a generated master are wiped by the next regeneration, and a
+    // missing flag falls back to the default material in packaged builds — so
+    // any look rendered through CkIsm needs InstancedStaticMeshes, and any look
+    // rendered through CkIskm needs SkeletalMesh (+ MorphTargets if the mesh
+    // animates morphs).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    bool _UsedWithInstancedStaticMeshes = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    bool _UsedWithSkeletalMesh = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    bool _UsedWithMorphTargets = false;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     TArray<FCk_Usf_ParamDesc> _Parameters;
 

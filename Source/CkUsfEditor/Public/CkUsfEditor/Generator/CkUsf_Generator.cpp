@@ -325,6 +325,13 @@ namespace ck::usf_editor
         Material->SetShadingModel(EffectiveShadingModel);
         if (IsSurface) { Material->TwoSided = InDef->_TwoSided; }
 
+        // Bake usage flags from the definition — regeneration would otherwise wipe
+        // any hand-set flags, and a missing flag means default-material fallback in
+        // packaged builds (the CkIsm/CkIskm renderers ensure on these at setup).
+        Material->bUsedWithInstancedStaticMeshes = InDef->_UsedWithInstancedStaticMeshes;
+        Material->bUsedWithSkeletalMesh = InDef->_UsedWithSkeletalMesh;
+        Material->bUsedWithMorphTargets = InDef->_UsedWithMorphTargets;
+
         // Refraction is wired only for translucent-family surface looks (see the output gating below);
         // the pin is inert unless RefractionMethod is set, so enable IOR-based refraction when it applies.
         // A look that wants no bend simply outputs Refraction == 1.0 (air) — identity, like Opacity == 1.0.
