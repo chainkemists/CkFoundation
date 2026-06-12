@@ -646,7 +646,7 @@ void FCkAngelscriptGeneratorModule::StartupModule()
         _SelfHealArmed = true;
 
         ck::angelscriptgenerator::Log(
-            TEXT("[Module] AS bootstrap self-heal armed (Rev 10, cycle cap {})."),
+            TEXT("[Module] AS bootstrap self-heal armed (Rev 11, cycle cap {})."),
             ck::angelscriptgenerator::self_heal::FCkAsRecoveryDispatcher::MaxCycles);
     }
 #endif
