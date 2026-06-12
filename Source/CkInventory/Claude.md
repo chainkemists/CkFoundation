@@ -12,7 +12,8 @@
 ```
 FCk_Handle_Inventory                  // shared base; queries that work for both shapes
 ├── FCk_Handle_Inventory_Spatial      // grid placement; FIntPoint + ECk_CardinalRotation per item
-└── FCk_Handle_Inventory_DataOnly     // slot-based; ECk_Inventory_DataOnly_BoundMode {Unbounded, Bounded}
+└── FCk_Handle_Inventory_DataOnly     // slot-based; ECk_Inventory_DataOnly_BoundMode
+                                      //   {Unbounded, BoundedByUniqueEntries, BoundedByTotalUnits}
 
 FCk_Handle_Item                       // the item entity; one per item, never owned by an actor directly
 ```
@@ -21,11 +22,63 @@ Handles live in `*_Fragment_Data.h` (not `*_Fragment.h`) so UHT-reflected types 
 
 ## Public API surface (Blueprint / AngelScript)
 
-- **`UCk_Utils_Inventory_UE`** — the canonical home for all `Request_*` operations. Hosts: `Request_AddItem`, `Request_RemoveItem`, `Request_StackItems`, `Request_SplitStack`, `Request_AddItemByDefinition`, `Request_Sort`, `Request_TransferItem_ToSpatial`, `Request_TransferItem_ToDataOnly`. Each performs auth + signal bind once at the public Utils boundary, then runtime-branches on the inventory's shape tag (one tag check) via `ck::inventory_helpers::DispatchEnqueue` and constructs the typed entry. Also hosts shape-agnostic queries: `Get_CanAcceptItem`, `Get_ContainsItem`, `Get_Items`, `Get_NumItems`, `Get_StackRoomFor`, `Get_InventoryType`, `Get_IsSpatial`, `Get_IsDataOnly`, `RecordOfInventories_Utils`, `RecordOfInventoryItems_Utils`. No `Add()` / `AddMultiple()` / `Make_*` here — those need shape-specific Params and live on the typed Utils.
+- **`UCk_Utils_Inventory_UE`** — the canonical home for all `Request_*` operations. Hosts: `Request_AddItem`, `Request_RemoveItem`, `Request_StackItems`, `Request_SplitStack`, `Request_AddItemByDefinition`, `Request_Sort`, `Request_TransferItem_ToSpatial`, `Request_TransferItem_ToDataOnly`. Each performs auth + signal bind once at the public Utils boundary, then runtime-branches on the inventory's shape tag (one tag check) via `ck::inventory_helpers::DispatchEnqueue` and constructs the typed entry. Also hosts shape-agnostic queries: `Get_CanAcceptItem`, `Get_ContainsItem`, `Get_Items`, `Get_NumItems`, `Get_TotalUnits`, `Get_AbsorbableUnits`, `Get_StackRoomFor`, `Get_InventoryType`, `Get_IsSpatial`, `Get_IsDataOnly`, `RecordOfInventories_Utils`, `RecordOfInventoryItems_Utils`. No `Add()` / `AddMultiple()` / `Make_*` here — those need shape-specific Params and live on the typed Utils.
 - **`UCk_Utils_Inventory_Spatial_UE`** — Spatial-only API. `Make_Params`, `Add` / `AddMultiple`, queries (`Get_Dimensions`, `Get_NumFreeCells`, `Get_FirstAvailablePlacement`, `Get_CanPlaceItemAt`, `Get_ItemPlacementCoordinate`, `Get_ItemPlacementRotation`, `Get_ItemActiveCells_Rotated`, `Get_ItemAtCoordinate`, `Get_Grid`). Two **placement-aware overloads** of operations whose default lives on base: `Request_AddItem(Handle, Request, FCk_SpatialPlacement, Delegate)` and `Request_SplitStack(Handle, Request, FCk_SpatialPlacement, Delegate)` — these accept an explicit placement; the placement-free versions on the base default to `AutoPlace`. **`Request_RelocateItem`** is Spatial-only (no shape-agnostic equivalent — DataOnly has no cell placement to relocate).
-- **`UCk_Utils_Inventory_DataOnly_UE`** — DataOnly-only API. `Make_Params` / `Make_Params_Bounded`, `Add` / `AddMultiple`, queries (`Get_BoundsInfo`, `Get_BoundMax`, `Get_RemainingSlots`), and `Request_OverrideBounds` (DataOnly-specific operation). **No `Request_*` for the standard inventory operations** — those live on base only and reach DataOnly handles via mixin propagation.
+- **`UCk_Utils_Inventory_DataOnly_UE`** — DataOnly-only API. `Make_Params` / `Make_Params_Bounded` (entries metric) / `Make_Params_BoundedByTotalUnits` (units metric), `Add` / `AddMultiple`, queries (`Get_BoundsInfo`, `Get_BoundMax`, `Get_EffectiveBoundMode`, `Get_RemainingSlots` (entries only), `Get_RemainingCapacity` (metric-aware)), and `Request_OverrideBounds` (DataOnly-specific operation; changes the limit VALUE only — the metric is immutable at creation). **No `Request_*` for the standard inventory operations** — those live on base only and reach DataOnly handles via mixin propagation.
 - **`UCk_Utils_Item_UE`** — create / destroy items, query their definition / parent inventory.
-- **Item traits** under `ItemTrait/` — `Stackable`, `Dimensions`, `Tags`. Stackable stack-count is itself an `IntegerAttribute`; not stored as a raw int on the item.
+- **Item traits** under `ItemTrait/` — `Stackable`, `Dimensions`, `Tags`. Stackable stack-count is itself an `IntegerAttribute`; not stored as a raw int on the item. `UCk_Utils_ItemTrait_Stackable_UE` additionally exposes the inventory-context capacity reads: `Get_EffectiveMaxStackSize` (+ `_ByDefinition`) and `Get_RemainingStackCapacity_InInventory` — see *Capacity policies* below.
+
+## Capacity policies
+
+Two orthogonal data knobs on the inventory params govern capacity; both are designer data
+(SaveGame + snapshot-serialized), not code wiring:
+
+1. **Bound metric** (DataOnly only) — `ECk_Inventory_DataOnly_BoundMode`:
+   - `Unbounded`
+   - `BoundedByUniqueEntries` — `_BoundLimit` counts item ENTRIES (record entries); stack counts
+     are invisible to it.
+   - `BoundedByTotalUnits` — `_BoundLimit` counts the SUM of stack counts (a non-stackable item
+     is 1 unit); entry count is unconstrained.
+   The limit value lives in the `IntegerAttribute.Inventory.BoundMax` attribute (so capacity
+   buffs/modifiers work for both metrics); the METRIC is immutable at creation.
+   `Request_OverrideBounds` changes the value only. `Get_EffectiveBoundMode` reports what is in
+   effect right now (a runtime override on a declared-Unbounded inventory reads as
+   BoundedByUniqueEntries — the legacy interpretation).
+
+2. **Stacking policy** (both shapes) — `ECk_Inventory_StackingPolicy`:
+   `UseItemDefinition` (default) / `ClampMaxStackSize` (`_MaxStackSizeClamp`) / `NoStacking`.
+   Effective max per stack = `min(item definition max, inventory clamp)`; computed at decision
+   time via `Get_EffectiveMaxStackSize` — the item's attribute keeps its definition-level Max
+   clamp, because items move between inventories. Threaded through every stack-capacity site:
+   `Get_StackRoomFor`, `Get_CanStackItems`, `Request_FillExistingStacks`, `TStackItems`,
+   `TAddByDefinition`, `DoTransfer` pre-fill and split, `TSplitStack`.
+
+"6 unique items, stack ≤ 1 each" = `Make_Params_Bounded(6)` + `_StackingPolicy = NoStacking`.
+
+### Acceptance contract — categorical vs quantitative
+
+Custom acceptance rules split into two hooks with DIFFERENT retry semantics:
+
+- **Categorical** (`_CustomCanAcceptItem*` bool predicate) — "this item never belongs here"
+  → `Failed_RejectedByCustomAcceptanceLogic`. Permanent; retry loops should give up.
+- **Quantitative** (`_CustomGetAbsorbableUnits*` → int32, MAX_int32 = unconstrained) — "how many
+  MORE units can this inventory absorb under custom rules (weight, volume, ...)"
+  → `Failed_NoSpaceAvailable`. Transient; retryable, partial amounts meaningful. Composes by
+  `min()` with the built-in metrics (can only tighten). Must be a pure function of committed
+  state. This is how a game ships weight without a built-in weight metric.
+
+`Get_AbsorbableUnits(Inventory, Definition)` is the planning number: min over (existing-stack
+room with effective max, new-entry room, the bound metric's remaining capacity, the custom
+quota). Handlers re-derive it at execution time and use budget-decrement accounting within a
+drain (their own stack writes are deferred attribute modifiers — re-reading mid-loop would
+double-count room).
+
+### Per-definition caps recipe ("max 3 potions in this container")
+
+Not a built-in — express it with the categorical predicate: bind `CustomCanAcceptItem`, count
+entries of that definition via `Get_Items` + `UCk_Utils_Item_UE::Get_Definition`, reject at the
+cap. For unit-counted caps, use the quantitative quota hook instead (return
+`Cap − units of that definition currently held`, MAX_int32 for other definitions).
 
 ## Internal layering
 
