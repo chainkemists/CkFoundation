@@ -111,6 +111,91 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_stackable_details
+{
+    // Applies the inventory's StackingPolicy to a definition-level max (MAX_int32 = uncapped).
+    static auto
+    ApplyStackingPolicy(
+        const FCk_Handle_Inventory& InInventory,
+        int32 InDefinitionMax) -> int32
+    {
+        if (ck::Is_NOT_Valid(InInventory))
+        { return InDefinitionMax; }
+
+        const auto& Params = InInventory.Get<ck::FFragment_Inventory_Params>();
+
+        switch (Params.Get_StackingPolicy())
+        {
+            case ECk_Inventory_StackingPolicy::ClampMaxStackSize:
+            { return FMath::Min(InDefinitionMax, FMath::Max(1, Params.Get_MaxStackSizeClamp())); }
+            case ECk_Inventory_StackingPolicy::NoStacking:
+            { return 1; }
+            case ECk_Inventory_StackingPolicy::UseItemDefinition:
+            default:
+            { return InDefinitionMax; }
+        }
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ItemTrait_Stackable_UE::
+    Get_EffectiveMaxStackSize(
+        const FCk_Handle_Inventory& InInventory,
+        const FCk_Handle_Item& InItem)
+    -> int32
+{
+    if (NOT Get_IsStackable(InItem))
+    { return 1; }
+
+    const auto DefinitionMax = Get_HasMaxStackSize(InItem) ? Get_MaxStackSize(InItem) : MAX_int32;
+    return ck_stackable_details::ApplyStackingPolicy(InInventory, DefinitionMax);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ItemTrait_Stackable_UE::
+    Get_EffectiveMaxStackSize_ByDefinition(
+        const FCk_Handle_Inventory& InInventory,
+        const UCk_InventoryItem_Definition* InDefinition)
+    -> int32
+{
+    if (ck::Is_NOT_Valid(InDefinition, ck::IsValid_Policy_NullptrOnly{}))
+    { return 1; }
+
+    const auto* Trait = InDefinition->Get_ItemTrait<UCk_ItemTrait_Stackable>();
+
+    if (ck::Is_NOT_Valid(Trait, ck::IsValid_Policy_NullptrOnly{}))
+    { return 1; }
+
+    const auto DefinitionMax = Trait->Get_HasMaxStackSize() ? Trait->Get_MaxStackSize() : MAX_int32;
+    return ck_stackable_details::ApplyStackingPolicy(InInventory, DefinitionMax);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ItemTrait_Stackable_UE::
+    Get_RemainingStackCapacity_InInventory(
+        const FCk_Handle_Inventory& InInventory,
+        const FCk_Handle_Item& InItem)
+    -> int32
+{
+    if (NOT Get_IsStackable(InItem))
+    { return 0; }
+
+    const auto EffectiveMax = Get_EffectiveMaxStackSize(InInventory, InItem);
+
+    if (EffectiveMax == MAX_int32)
+    { return MAX_int32; }
+
+    return FMath::Max(0, EffectiveMax - Get_StackCount(InItem));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Utils_ItemTrait_Stackable_UE::
     Get_CanStackItems(
@@ -149,6 +234,13 @@ auto
     { return ECk_Inventory_OperationResult_Stack::Failed_RejectedByCustomStackLogic; }
 
     if (Get_IsStackFull(InTargetItem))
+    { return ECk_Inventory_OperationResult_Stack::Failed_TargetStackFull; }
+
+    // The inventory's StackingPolicy may cap stacks tighter than the item definition does.
+    // Only checkable with a valid inventory (callers that pass an invalid inventory to skip the
+    // containment check — e.g. Get_StackRoomFor — apply the clamp themselves).
+    if (ck::IsValid(InInventory)
+        && Get_StackCount(InTargetItem) >= Get_EffectiveMaxStackSize(InInventory, InTargetItem))
     { return ECk_Inventory_OperationResult_Stack::Failed_TargetStackFull; }
 
     return ECk_Inventory_OperationResult_Stack::Success;
@@ -271,7 +363,8 @@ auto
     Request_FillExistingStacks(
         const FCk_Handle_Inventory& InInventory,
         const UCk_InventoryItem_Definition* InDefinition,
-        int32 InCount)
+        int32 InCount,
+        const FCk_Handle_Item& InSourceItem)
     -> FCk_FillExistingStacksResult
 {
     const auto* StackableTrait = InDefinition->Get_ItemTrait<UCk_ItemTrait_Stackable>();
@@ -292,7 +385,14 @@ auto
         if (UCk_Utils_Item_UE::Get_Definition(ExistingItem) != InDefinition)
         { continue; }
 
-        const auto Space = Get_RemainingStackCapacity(ExistingItem);
+        // The inventory's custom stack hooks must also gate this fill path — otherwise a
+        // per-inventory stacking restriction is enforced on direct StackItems requests but
+        // silently bypassed by AddByDefinition / Transfer pre-fill. InSourceItem may be invalid
+        // (definition-driven fills); validators must tolerate that.
+        if (NOT Get_PassesCustomStackValidation(InInventory, InSourceItem, ExistingItem))
+        { continue; }
+
+        const auto Space = Get_RemainingStackCapacity_InInventory(InInventory, ExistingItem);
 
         if (Space <= 0)
         { continue; }
