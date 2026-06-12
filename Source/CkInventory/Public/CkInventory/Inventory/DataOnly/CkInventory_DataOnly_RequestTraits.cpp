@@ -13,7 +13,7 @@ namespace ck
     {
         InInventoryEntity.Add<FTag_Inventory_DataOnly>();
 
-        const auto BoundValue = (InParams.Get_BoundMode() == ECk_Inventory_DataOnly_BoundMode::Bounded)
+        const auto BoundValue = (InParams.Get_BoundMode() != ECk_Inventory_DataOnly_BoundMode::Unbounded)
             ? InParams.Get_BoundLimit()
             : ck::Inventory::UnboundedBoundLimit;
 

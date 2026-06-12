@@ -28,12 +28,14 @@ auto
 
 FCk_Fragment_Inventory_DataOnly_ParamsData::
 FCk_Fragment_Inventory_DataOnly_ParamsData(
-    FGameplayTag InName, TOptional<int32> InBoundLimit)
+    FGameplayTag InName, TOptional<int32> InBoundLimit, ECk_Inventory_DataOnly_BoundMode InBoundMode)
     : _Name(InName)
 {
     if (InBoundLimit.IsSet())
     {
-        _BoundMode = ECk_Inventory_DataOnly_BoundMode::Bounded;
+        _BoundMode = (InBoundMode == ECk_Inventory_DataOnly_BoundMode::Unbounded)
+            ? ECk_Inventory_DataOnly_BoundMode::BoundedByUniqueEntries
+            : InBoundMode;
         _BoundLimit = InBoundLimit.GetValue();
     }
 }
