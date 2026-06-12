@@ -169,10 +169,38 @@ auto
 
 auto
     UCk_EditorEcsWorld_Subsystem_UE::
+    Get_IsEditorEcsMutationSafe() const
+    -> bool
+{
+#if WITH_EDITOR
+    // PIE active: editor-world handles can briefly outlive their registry across the PIE start/stop
+    // transition. Same condition the scheduler-tick guard checks in Tick().
+    if (ck::IsValid(GEditor, ck::IsValid_Policy_NullptrOnly{}) && ck::IsValid(GEditor->PlayWorld))
+    { return false; }
+#endif
+
+    // Registry freed (Deinitialize) or not yet initialized — the transient entity resolves invalid
+    // in both cases (fail-safe per the Deinitialize free-slot-first ordering). A processor-graph
+    // rebuild does NOT free the registry, so the transient stays valid and spawning is not gated.
+    if (ck::Is_NOT_Valid(_TransientEntity))
+    { return false; }
+
+    return true;
+}
+
+auto
+    UCk_EditorEcsWorld_Subsystem_UE::
     Request_SpawnEditorEntity(
         UCk_EntityScript_UE* InScriptArchetype)
     -> FCk_Handle
 {
+    // Hard backstop: never enqueue an editor-entity spawn during the PIE-transition window. The
+    // deferred spawn would later resolve a stale archetype and the synchronous Set_DebugName would
+    // Has-query a torn-down registry. The spawner's rebuild path re-arms for the next safe
+    // end-of-frame, so the preview is not lost.
+    if (NOT Get_IsEditorEcsMutationSafe())
+    { return {}; }
+
     CK_ENSURE_IF_NOT(ck::IsValid(InScriptArchetype),
         TEXT("Cannot spawn editor entity with invalid script archetype"))
     { return {}; }

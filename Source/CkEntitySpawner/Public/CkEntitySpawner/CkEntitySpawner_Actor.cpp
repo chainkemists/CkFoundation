@@ -247,6 +247,21 @@ auto
     if (World->WorldType != EWorldType::Editor)
     { return; }
 
+    auto* EditorSubsystem = World->GetSubsystem<UCk_EditorEcsWorld_Subsystem_UE>();
+    if (ck::Is_NOT_Valid(EditorSubsystem))
+    { return; }
+
+    // PIE start/stop briefly tears down the editor ECS registry. Touching it now — the destroy
+    // below (a deferred lifetime request), the in-flight-destroy handle queries, or the spawn —
+    // resolves stale handles against a freed registry and floods the MessageLog with INVALID
+    // REGISTRY DEBUG_NAME has-queries and INVALID archetype spawn ensures. Re-arm for the next
+    // safe end-of-frame; mirrors the scheduler-tick guard in UCk_EditorEcsWorld_Subsystem_UE::Tick.
+    if (NOT EditorSubsystem->Get_IsEditorEcsMutationSafe())
+    {
+        EditorOnly_RebuildEntity();
+        return;
+    }
+
     // If a previous rebuild's destroy hasn't finished walking the entity-lifetime phase
     // chain (Initiate -> EndPlay -> Teardown -> Await -> Finalize), don't pile a synchronous
     // spawn on top of it — re-arm for the next end-of-frame and let the destroy complete.
@@ -272,10 +287,6 @@ auto
     // "EntityScriptArchetype is INVALID. Cannot Spawn Entity". Silently skip — the next
     // end-of-frame pass runs with the real class.
     if (UCk_Utils_Reflection_UE::Is_PlaceholderClass(_EntityScript->GetClass()))
-    { return; }
-
-    auto* EditorSubsystem = World->GetSubsystem<UCk_EditorEcsWorld_Subsystem_UE>();
-    if (ck::Is_NOT_Valid(EditorSubsystem))
     { return; }
 
     DoInjectActorTransform();
