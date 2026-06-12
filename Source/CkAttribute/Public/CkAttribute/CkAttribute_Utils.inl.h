@@ -111,7 +111,7 @@ namespace ck
             AttributeHandleType& InHandle)
         -> void
     {
-        InHandle.template AddOrGet<FTag_MayRequireClamping>();
+        InHandle.template AddOrGet<TTag_Attribute_MayRequireClamping<typename T_DerivedAttribute::HandleType>>();
     }
 
     template <concepts::ValidAttributeFragment T_DerivedAttribute>

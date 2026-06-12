@@ -666,7 +666,9 @@ namespace ck
         _MinClamp.Tick(InDeltaT);
         _MaxClamp.Tick(InDeltaT);
 
-        UCk_Utils_EntityLifetime_UE::Get_TransientEntity(_Registry).Clear<FTag_MayRequireClamping>();
+        // Family-typed marker: this Clear only consumes THIS family's pending clamps.
+        using ClampMarkerType = TTag_Attribute_MayRequireClamping<typename T_DerivedAttribute<ECk_MinMaxCurrent::Current>::HandleType>;
+        UCk_Utils_EntityLifetime_UE::Get_TransientEntity(_Registry).template Clear<ClampMarkerType>();
     }
 
     template <template <ECk_MinMaxCurrent T_Component> typename T_DerivedAttribute>
@@ -678,7 +680,8 @@ namespace ck
         _MinClamp.Pump();
         _MaxClamp.Pump();
 
-        UCk_Utils_EntityLifetime_UE::Get_TransientEntity(_Registry).Clear<FTag_MayRequireClamping>();
+        using ClampMarkerType = TTag_Attribute_MayRequireClamping<typename T_DerivedAttribute<ECk_MinMaxCurrent::Current>::HandleType>;
+        UCk_Utils_EntityLifetime_UE::Get_TransientEntity(_Registry).template Clear<ClampMarkerType>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
