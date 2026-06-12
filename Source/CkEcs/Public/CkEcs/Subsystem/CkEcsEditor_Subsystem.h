@@ -63,6 +63,15 @@ public:
     auto
     Request_Redraw() -> void;
 
+    // False during the PIE start/stop transition window: either PIE is active (GEditor->PlayWorld
+    // valid) or the editor ECS registry has been torn down / not yet built (the transient entity
+    // resolves invalid). Mutating editor entities in this window — spawning (Set_DebugName Has-query
+    // + deferred archetype spawn) or destroying — resolves stale handles against a freed registry
+    // and floods the MessageLog. Callers must skip and re-arm. Mirrors the scheduler-tick guard in
+    // Tick().
+    auto
+    Get_IsEditorEcsMutationSafe() const -> bool;
+
 public:
     CK_PROPERTY_GET(_Registry);
     CK_PROPERTY_GET_NON_CONST(_Registry);

@@ -16,6 +16,7 @@
 #include "CkEcs/TransientEntity/CkTransientEntity_Utils.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
+#include "CkEcs/Tag/CkTag_EditorOnly.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -62,6 +63,27 @@ namespace ck
     {
         QUICK_SCOPE_CYCLE_COUNTER(FCk_Request_EntityScript_SpawnEntity)
         const auto EntityScriptClassArchetype = InRequest.Get_EntityScriptClassArchetype();
+
+#if WITH_EDITOR
+        // Editor-preview spawns (ACk_EntitySpawner_UE) pass the spawner's INSTANCED script as the
+        // archetype — runtime spawns pass a CDO, which cannot die. Drag-drop destroys the preview
+        // actor on drop, taking its instanced script with it AFTER the request was enqueued; the
+        // entity-destroy cascade races this processor and loses. That staleness is expected churn
+        // (the dropped actor enqueues its own fresh request), not an error — drop silently and
+        // clean up the orphaned entity-under-construction. Editor-only entities never reach this
+        // processor with a CDO archetype that legitimately died, so the runtime ensure is preserved.
+        if (ck::Is_NOT_Valid(EntityScriptClassArchetype) && InHandle.Has<FTag_EditorOnlyEntity>())
+        {
+            ck::ecs::Verbose(TEXT("Dropping editor-only spawn request [{}] — instanced archetype died before processing (drag-drop preview churn)"), InHandle);
+
+            if (auto OrphanedEntity = InRequest.Get_NewEntity();
+                ck::IsValid(OrphanedEntity))
+            {
+                UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(OrphanedEntity);
+            }
+            return;
+        }
+#endif
 
         CK_ENSURE_IF_NOT(ck::IsValid(EntityScriptClassArchetype),
             TEXT("EntityScriptArchetype [{}] is INVALID. Cannot Spawn Entity"), EntityScriptClassArchetype)
