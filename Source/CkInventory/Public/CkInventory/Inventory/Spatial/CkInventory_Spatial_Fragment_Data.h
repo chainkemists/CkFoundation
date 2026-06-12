@@ -45,6 +45,15 @@ private:
               meta = (AllowPrivateAccess = true, SaveGame))
     FIntPoint _Dimensions = FIntPoint(1, 1);
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, SaveGame))
+    ECk_Inventory_StackingPolicy _StackingPolicy = ECk_Inventory_StackingPolicy::UseItemDefinition;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 1, EditConditionHides,
+                      EditCondition = "_StackingPolicy == ECk_Inventory_StackingPolicy::ClampMaxStackSize", SaveGame))
+    int32 _MaxStackSizeClamp = 1;
+
     // Not SaveGame: native delegate — runtime wiring, not persisted state.
     FCk_Delegate_Inventory_CustomCanAcceptItem _CustomCanAcceptItem;
 
@@ -77,15 +86,36 @@ private:
                       PrototypeFunction = "/Script/CkInventory.Ck_Utils_ItemTrait_Stackable_UE.Prototype_CanStackItems"))
     FMemberReference _CanStackItemsRef;
 
+    // Not SaveGame: native delegate — runtime wiring, not persisted state.
+    FCk_Delegate_Inventory_CustomGetAbsorbableUnits _CustomGetAbsorbableUnits;
+
+    // Not SaveGame: dynamic delegate — runtime wiring, not persisted state.
+    UPROPERTY(BlueprintReadWrite, DisplayName = "Custom Get Absorbable Units",
+              meta = (AllowPrivateAccess = true))
+    FCk_Delegate_Inventory_CustomGetAbsorbableUnits_Dynamic _CustomGetAbsorbableUnitsDynamic;
+
+    // Not SaveGame: FMemberReference — Blueprint function reference, not persisted state.
+    UPROPERTY(EditAnywhere, DisplayName = "Custom Get Absorbable Units",
+              meta = (AllowPrivateAccess = true,
+                      FunctionReference,
+                      AllowFunctionLibraries,
+                      PrototypeFunction = "/Script/CkInventory.Ck_Utils_Inventory_UE.Prototype_GetAbsorbableUnits"))
+    FMemberReference _GetAbsorbableUnitsRef;
+
 public:
     CK_PROPERTY_GET(_Name);
     CK_PROPERTY_GET(_Dimensions);
+    CK_PROPERTY(_StackingPolicy);
+    CK_PROPERTY(_MaxStackSizeClamp);
     CK_PROPERTY(_CustomCanAcceptItem);
     CK_PROPERTY(_CustomCanAcceptItemDynamic);
     CK_PROPERTY(_CanAcceptItemRef);
     CK_PROPERTY(_CustomCanStackItems);
     CK_PROPERTY(_CustomCanStackItemsDynamic);
     CK_PROPERTY(_CanStackItemsRef);
+    CK_PROPERTY(_CustomGetAbsorbableUnits);
+    CK_PROPERTY(_CustomGetAbsorbableUnitsDynamic);
+    CK_PROPERTY(_GetAbsorbableUnitsRef);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

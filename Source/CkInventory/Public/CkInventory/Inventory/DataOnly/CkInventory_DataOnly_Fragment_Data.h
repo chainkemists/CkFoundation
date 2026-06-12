@@ -34,7 +34,10 @@ public:
 public:
     FCk_Fragment_Inventory_DataOnly_ParamsData() = default;
 
-    explicit FCk_Fragment_Inventory_DataOnly_ParamsData(FGameplayTag InName, TOptional<int32> InBoundLimit = {});
+    explicit FCk_Fragment_Inventory_DataOnly_ParamsData(
+        FGameplayTag InName,
+        TOptional<int32> InBoundLimit = {},
+        ECk_Inventory_DataOnly_BoundMode InBoundMode = ECk_Inventory_DataOnly_BoundMode::BoundedByUniqueEntries);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -47,8 +50,17 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = 1, EditConditionHides,
-                      EditCondition = "_BoundMode == ECk_Inventory_DataOnly_BoundMode::Bounded", SaveGame))
+                      EditCondition = "_BoundMode != ECk_Inventory_DataOnly_BoundMode::Unbounded", SaveGame))
     int32 _BoundLimit = 1;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, SaveGame))
+    ECk_Inventory_StackingPolicy _StackingPolicy = ECk_Inventory_StackingPolicy::UseItemDefinition;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 1, EditConditionHides,
+                      EditCondition = "_StackingPolicy == ECk_Inventory_StackingPolicy::ClampMaxStackSize", SaveGame))
+    int32 _MaxStackSizeClamp = 1;
 
     // Not SaveGame: native delegate — runtime wiring, not persisted state.
     FCk_Delegate_Inventory_CustomCanAcceptItem _CustomCanAcceptItem;
@@ -82,16 +94,37 @@ private:
                       PrototypeFunction = "/Script/CkInventory.Ck_Utils_ItemTrait_Stackable_UE.Prototype_CanStackItems"))
     FMemberReference _CanStackItemsRef;
 
+    // Not SaveGame: native delegate — runtime wiring, not persisted state.
+    FCk_Delegate_Inventory_CustomGetAbsorbableUnits _CustomGetAbsorbableUnits;
+
+    // Not SaveGame: dynamic delegate — runtime wiring, not persisted state.
+    UPROPERTY(BlueprintReadWrite, DisplayName = "Custom Get Absorbable Units",
+              meta = (AllowPrivateAccess = true))
+    FCk_Delegate_Inventory_CustomGetAbsorbableUnits_Dynamic _CustomGetAbsorbableUnitsDynamic;
+
+    // Not SaveGame: FMemberReference — Blueprint function reference, not persisted state.
+    UPROPERTY(EditAnywhere, DisplayName = "Custom Get Absorbable Units",
+              meta = (AllowPrivateAccess = true,
+                      FunctionReference,
+                      AllowFunctionLibraries,
+                      PrototypeFunction = "/Script/CkInventory.Ck_Utils_Inventory_UE.Prototype_GetAbsorbableUnits"))
+    FMemberReference _GetAbsorbableUnitsRef;
+
 public:
     CK_PROPERTY_GET(_Name);
     CK_PROPERTY_GET(_BoundMode);
     CK_PROPERTY_GET(_BoundLimit);
+    CK_PROPERTY(_StackingPolicy);
+    CK_PROPERTY(_MaxStackSizeClamp);
     CK_PROPERTY(_CustomCanAcceptItem);
     CK_PROPERTY(_CustomCanAcceptItemDynamic);
     CK_PROPERTY(_CanAcceptItemRef);
     CK_PROPERTY(_CustomCanStackItems);
     CK_PROPERTY(_CustomCanStackItemsDynamic);
     CK_PROPERTY(_CanStackItemsRef);
+    CK_PROPERTY(_CustomGetAbsorbableUnits);
+    CK_PROPERTY(_CustomGetAbsorbableUnitsDynamic);
+    CK_PROPERTY(_GetAbsorbableUnitsRef);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -128,9 +161,10 @@ public:
 
     FCk_Inventory_DataOnly_BoundsInfo() = default;
 
-    /** Constructs a Bounded result. Use the default constructor for Unbounded. */
-    explicit FCk_Inventory_DataOnly_BoundsInfo(int32 InValue)
-        : _Mode(ECk_Inventory_DataOnly_BoundMode::Bounded), _Value(InValue) {}
+    /** Constructs a Bounded result (mode names the metric the value limits).
+     *  Use the default constructor for Unbounded. */
+    explicit FCk_Inventory_DataOnly_BoundsInfo(ECk_Inventory_DataOnly_BoundMode InMode, int32 InValue)
+        : _Mode(InMode), _Value(InValue) {}
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -139,7 +173,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, EditConditionHides,
-                      EditCondition = "_Mode == ECk_Inventory_DataOnly_BoundMode::Bounded"))
+                      EditCondition = "_Mode != ECk_Inventory_DataOnly_BoundMode::Unbounded"))
     int32 _Value = 0;
 
 public:

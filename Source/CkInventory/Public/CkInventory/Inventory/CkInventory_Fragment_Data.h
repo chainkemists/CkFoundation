@@ -77,10 +77,30 @@ UENUM(BlueprintType)
 enum class ECk_Inventory_DataOnly_BoundMode : uint8
 {
     Unbounded,
-    Bounded
+    // Limit counts unique item entries (record entries). Stack counts are invisible to the bound.
+    BoundedByUniqueEntries,
+    // Limit counts total units (sum of stack counts; a non-stackable item is 1 unit).
+    // Entry count is unconstrained.
+    BoundedByTotalUnits
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_DataOnly_BoundMode);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Inventory_StackingPolicy : uint8
+{
+    // Stack sizes are governed solely by each item definition's Stackable trait.
+    UseItemDefinition,
+    // Stacks in this inventory may not exceed MaxStackSizeClamp (effective max =
+    // min(item definition max, clamp)). The item's definition-level max still applies elsewhere.
+    ClampMaxStackSize,
+    // No stack in this inventory may exceed 1 unit (sugar for a clamp of 1; reads as intent).
+    NoStacking
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_StackingPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -263,6 +283,32 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(
     bool&, OutCanStack);
 
 // --------------------------------------------------------------------------------------------------------------------
+// Quantitative acceptance quota: "how many MORE units of this definition can this inventory absorb
+// under your custom rule (weight, volume, ...)?". MAX_int32 = unconstrained. Composes by min() with
+// the built-in capacity metrics — it can only tighten, never widen. Distinct from the bool
+// CustomCanAcceptItem predicate: the predicate is CATEGORICAL (permanent rejection — retry loops
+// give up), the quota is QUANTITATIVE (transient "full" — retryable, partial amounts meaningful).
+// Must be a pure function of committed state (same plan-time vs drain-time constraints as the
+// built-in metrics). InItem may be invalid for definition-level planning queries.
+// --------------------------------------------------------------------------------------------------------------------
+
+class UCk_InventoryItem_Definition;
+
+DECLARE_DELEGATE_RetVal_ThreeParams(
+    int32,
+    FCk_Delegate_Inventory_CustomGetAbsorbableUnits,
+    FCk_Handle_Inventory,
+    const UCk_InventoryItem_Definition*,
+    FCk_Handle_Item);
+
+DECLARE_DYNAMIC_DELEGATE_FourParams(
+    FCk_Delegate_Inventory_CustomGetAbsorbableUnits_Dynamic,
+    FCk_Handle_Inventory, InInventory,
+    const UCk_InventoryItem_Definition*, InDefinition,
+    FCk_Handle_Item, InItem,
+    int32&, OutAbsorbableUnits);
+
+// --------------------------------------------------------------------------------------------------------------------
 
 // Sort comparator for inventory candidates: returns true if InCandidateA should rank ahead of InCandidateB
 // when picking a transfer target for InItem. Same shape as a TArray::Sort predicate.
@@ -375,6 +421,8 @@ public:
         auto Dimensions = FIntPoint{1, 1};
         auto BoundModeByte = uint8{0};
         auto BoundLimit = int32{1};
+        auto StackingPolicyByte = uint8{0};
+        auto MaxStackSizeClamp = int32{1};
 
         if (InAr.IsSaving())
         {
@@ -383,6 +431,8 @@ public:
             Dimensions = _Dimensions;
             BoundModeByte = static_cast<uint8>(_BoundMode);
             BoundLimit = _BoundLimit;
+            StackingPolicyByte = static_cast<uint8>(_StackingPolicy);
+            MaxStackSizeClamp = _MaxStackSizeClamp;
         }
 
         InAr << NameTagName;
@@ -390,6 +440,8 @@ public:
         InAr << Dimensions;
         InAr << BoundModeByte;
         InAr << BoundLimit;
+        InAr << StackingPolicyByte;
+        InAr << MaxStackSizeClamp;
 
         if (InAr.IsLoading())
         {
@@ -399,6 +451,8 @@ public:
             _Dimensions = Dimensions;
             _BoundMode = static_cast<ECk_Inventory_DataOnly_BoundMode>(BoundModeByte);
             _BoundLimit = BoundLimit;
+            _StackingPolicy = static_cast<ECk_Inventory_StackingPolicy>(StackingPolicyByte);
+            _MaxStackSizeClamp = MaxStackSizeClamp;
         }
     }
 
@@ -417,12 +471,17 @@ private:
     FIntPoint _Dimensions = FIntPoint(1, 1);
     ECk_Inventory_DataOnly_BoundMode _BoundMode = ECk_Inventory_DataOnly_BoundMode::Unbounded;
     int32 _BoundLimit = 1;
+    ECk_Inventory_StackingPolicy _StackingPolicy = ECk_Inventory_StackingPolicy::UseItemDefinition;
+    int32 _MaxStackSizeClamp = 1;
     FCk_Delegate_Inventory_CustomCanAcceptItem _CustomCanAcceptItem;
     FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic _CustomCanAcceptItemDynamic;
     FMemberReference _CanAcceptItemRef;
     FCk_Delegate_Inventory_CustomCanStackItems _CustomCanStackItems;
     FCk_Delegate_Inventory_CustomCanStackItems_Dynamic _CustomCanStackItemsDynamic;
     FMemberReference _CanStackItemsRef;
+    FCk_Delegate_Inventory_CustomGetAbsorbableUnits _CustomGetAbsorbableUnits;
+    FCk_Delegate_Inventory_CustomGetAbsorbableUnits_Dynamic _CustomGetAbsorbableUnitsDynamic;
+    FMemberReference _GetAbsorbableUnitsRef;
 
 public:
     CK_PROPERTY_GET(_Name);
@@ -430,12 +489,17 @@ public:
     CK_PROPERTY_GET(_Dimensions);
     CK_PROPERTY_GET(_BoundMode);
     CK_PROPERTY_GET(_BoundLimit);
+    CK_PROPERTY_GET(_StackingPolicy);
+    CK_PROPERTY_GET(_MaxStackSizeClamp);
     CK_PROPERTY(_CustomCanAcceptItem);
     CK_PROPERTY(_CustomCanAcceptItemDynamic);
     CK_PROPERTY(_CanAcceptItemRef);
     CK_PROPERTY(_CustomCanStackItems);
     CK_PROPERTY(_CustomCanStackItemsDynamic);
     CK_PROPERTY(_CanStackItemsRef);
+    CK_PROPERTY(_CustomGetAbsorbableUnits);
+    CK_PROPERTY(_CustomGetAbsorbableUnitsDynamic);
+    CK_PROPERTY(_GetAbsorbableUnitsRef);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
