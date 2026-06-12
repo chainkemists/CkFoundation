@@ -134,6 +134,7 @@ namespace ck
         friend class FProcessor_RenderTarget_PixelSyncPump;
         friend class FProcessor_RenderTarget_PaceStreams;
         friend class FProcessor_RenderTarget_ReceiveClientUploads;
+        friend class FProcessor_RenderTarget_ReplicateOnRestore;
         friend class UCk_Utils_RenderTarget_UE;
 
     private:

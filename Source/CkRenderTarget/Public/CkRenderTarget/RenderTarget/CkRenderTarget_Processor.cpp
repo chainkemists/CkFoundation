@@ -9,9 +9,6 @@
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"
-#include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
-#include "CkEcs/Snapshot/CkSnapshot_Archive_Writer.h"
-#include "CkEcs/Snapshot/CkSnapshot_Archive_Reader.h"
 
 #include "CkRenderTarget/Net/CkRenderTargetRelay_Actor.h"
 #include "CkRenderTarget/Net/CkRenderTargetRelay_Subsystem.h"
@@ -61,15 +58,6 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_RenderTarget_ApplyClientBatches);
 CK_REGISTER_PROCESSOR(ck::FProcessor_RenderTarget_ReceiveClientUploads);
 CK_REGISTER_PROCESSOR(ck::FProcessor_RenderTarget_IntervalSync);
 CK_REGISTER_PROCESSOR(ck::FProcessor_RenderTarget_ReplicateOnRestore);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-// Tier-C: the owner-hosted RecordOfRenderTargets connection must round-trip so the restored sync child
-// resolves by sync name (UCk_Utils_RenderTarget_UE::TryGet_RenderTarget) after a load — otherwise the
-// child is orphaned from the owner's record and the restore re-drive cannot reach it. ck:: type hoisted
-// to a file-scope alias because CK_REGISTER_SNAPSHOTABLE token-pastes the type name (mirrors CkInventory).
-using FSnap_RecordOfRenderTargets = ck::FFragment_RecordOfRenderTargets;
-CK_REGISTER_SNAPSHOTABLE(FSnap_RecordOfRenderTargets);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -349,6 +337,12 @@ namespace ck
 
         InCurrent._Target = TStrongObjectPtr{ResolvedTarget};
 
+        // Composition anchor for the snapshot restore pass: ReplicateOnRestore's view keys on
+        // Params + AuthoredLog, so the log must exist on EVERY sync entity from setup — not lazily at
+        // first publish — or a never-drawn (or non-publishing) target restores as a half-composed
+        // zombie (Params only, no Current/label, unreachable). Empty until a covered author records.
+        InRenderTargetEntity.AddOrGet<FFragment_RenderTarget_AuthoredLog>();
+
         // Attach the owner-entity instruction container on authority (channel A). One container
         // per owner, one channel per sync child. TryAddContainerFragment no-ops when the owner
         // doesn't replicate or has no driver — gating here keeps the local-only fast path free
@@ -416,37 +410,55 @@ namespace ck
         { return; }
 
         // Re-derive the runtime fragments Construct/Setup would have added — none are snapshotted.
-        // Idempotent across the driver-gate retries below. Adding Current is also what makes the
-        // entity satisfy the FCk_Handle_RenderTarget typesafe contract (Current + Params) again — the
-        // reason this processor iterates the generic FCk_Handle rather than the typed handle.
+        // HadCurrent distinguishes the FIRST pass from driver-gate retries: the one-time work below
+        // (notably the repaint — replaying translucent draws every retry tick visibly accumulates
+        // alpha) must not repeat while we wait for the owner's driver. Adding Current is also what
+        // makes the entity satisfy the FCk_Handle_RenderTarget typesafe contract (Current + Params)
+        // again — the reason this processor iterates the generic FCk_Handle rather than the typed handle.
+        const auto HadCurrent = InHandle.Has<FFragment_RenderTarget_Current>();
         auto& Current = InHandle.AddOrGet<FFragment_RenderTarget_Current>();
-        InHandle.AddOrGet<FFragment_RenderTarget_PixelSync>();
+        auto& PixelSync = InHandle.AddOrGet<FFragment_RenderTarget_PixelSync>();
         InHandle.AddOrGet<FFragment_RenderTarget_ClientStaging>();
 
         auto RenderTargetEntity = ck::StaticCast<FCk_Handle_RenderTarget>(InHandle);
 
-        // The GameplayLabel (sync name) is not restored — re-derive it from the snapshotted Params so
-        // the owner's RecordOfRenderTargets tag lookup (TryGet_RenderTarget) resolves the restored
-        // child again. Set-once: guard on Has.
-        if (NOT UCk_Utils_GameplayLabel_UE::Has(InHandle))
-        { UCk_Utils_GameplayLabel_UE::Add(InHandle, InParams.Get_SyncName()); }
-
-        // Re-create the drawable target (the transient UTextureRenderTarget2D does not survive a load).
-        // On a non-rendering process (dedicated server / -nullrhi) this stays null and the repaint
-        // below no-ops — the instruction stream is still re-published to clients.
-        if (ck::Is_NOT_Valid(Current._Target.Get()))
+        if (NOT HadCurrent)
         {
+            // The generic tag section restores ALL ECS tags — strip the transient pixel-pipeline
+            // markers a mid-sync save would have captured. A restored PixelSyncInFlight with no
+            // readback/job shared-ptrs (not snapshotted) trips PixelSyncPump's recovery ensure.
+            if (InHandle.Has<FTag_RenderTarget_PixelCapturePending>())
+            { InHandle.Remove<FTag_RenderTarget_PixelCapturePending>(); }
+            if (InHandle.Has<FTag_RenderTarget_PixelSyncInFlight>())
+            { InHandle.Remove<FTag_RenderTarget_PixelSyncInFlight>(); }
+
+            // The GameplayLabel (sync name) is not restored — re-derive it from the snapshotted
+            // Params so the owner's RecordOfRenderTargets tag lookup (TryGet_RenderTarget) resolves
+            // the restored child again. Set-once: guard on Has.
+            if (NOT UCk_Utils_GameplayLabel_UE::Has(InHandle))
+            { UCk_Utils_GameplayLabel_UE::Add(InHandle, InParams.Get_SyncName()); }
+
+            // Re-seed the Interval pixel-sync chrono (Setup-only state, not snapshotted) so the
+            // policy resumes after a load. Non-positive intervals already ensured loudly at the
+            // original Setup — stay quiet here.
+            if (InParams.Get_PixelSyncPolicy() == ECk_RenderTarget_PixelSyncPolicy::Interval
+                && InParams.Get_SyncInterval() > FCk_Time::ZeroSecond())
+            { PixelSync._IntervalChrono = FCk_Chrono{InParams.Get_SyncInterval()}; }
+
+            // Re-create the drawable target (the transient UTextureRenderTarget2D does not survive a
+            // load). On a non-rendering process (dedicated server / -nullrhi) the repaint below
+            // no-ops — the instruction stream is still re-published to clients.
             if (auto* ResolvedTarget = ck_render_target_processor::ResolveDrawableTarget(RenderTargetEntity, InParams))
             { Current._Target = TStrongObjectPtr{ResolvedTarget}; }
+
+            // Restore the author seq watermark so Get_LatestAppliedBatchSeq reports the pre-save
+            // value and future local draws continue monotonically.
+            Current._NextBatchSeq = InAuthoredLog.Get_NextBatchSeq();
+
+            // Repaint the restored target by replaying the persisted instruction ring (no-ops headless).
+            for (const auto& Batch : InAuthoredLog.Get_Batches())
+            { FProcessor_RenderTarget_HandleRequests::DoApplyBatch(RenderTargetEntity, Current, Batch.Get_Cmds()); }
         }
-
-        // Restore the author seq watermark so Get_LatestAppliedBatchSeq reports the pre-save value and
-        // future local draws continue monotonically.
-        Current._NextBatchSeq = InAuthoredLog.Get_NextBatchSeq();
-
-        // Repaint the restored target by replaying the persisted instruction ring (no-ops headless).
-        for (const auto& Batch : InAuthoredLog.Get_Batches())
-        { FProcessor_RenderTarget_HandleRequests::DoApplyBatch(RenderTargetEntity, Current, Batch.Get_Cmds()); }
 
         // Re-establish replication: the owner-hosted container is gone (added by Setup, abstained on
         // restore). Re-create it + the channel and refill from the restored ring, marking it dirty so
@@ -587,6 +599,18 @@ namespace ck
                     .Set_Cmds(Cmds)
                     .Set_Sender(ck_render_target_processor::Get_LocalPlayerState(World)));
             }
+        }
+        else if (InParams.Get_Replication() == ECk_Replication::DoesNotReplicate)
+        {
+            // Local-only targets never publish (no DoPublishBatch), but their drawn state must still
+            // persist through a snapshot — record the applied batch into the authored log directly.
+            // Each world is self-authoritative for DoesNotReplicate; only the server world is ever
+            // captured, so recording everywhere is harmless. Replicates+Pixels falls through both
+            // branches unrecorded — pixel-baseline persistence is the documented v1 deferral.
+            InRenderTargetEntity.AddOrGet<FFragment_RenderTarget_AuthoredLog>()
+                .Record_PublishedBatch(
+                    FCk_RenderTarget_InstructionBatch{}.Set_Seq(BatchSeq).Set_Cmds(Cmds),
+                    BatchSeq + 1);
         }
 
         UUtils_Signal_RenderTarget_OnInstructionsApplied::Broadcast(InRenderTargetEntity,

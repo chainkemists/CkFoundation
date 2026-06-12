@@ -68,7 +68,10 @@ public:
     OneSecond() -> const FCk_Time&;
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    // SaveGame: FCk_Time is a plain UHT struct (no native serializer), so CkSnapshot's SaveGame-gated
+    // tagged-property recursion needs the inner field tagged or any snapshotted FCk_Time restores as
+    // 0s even when the OUTER field carries SaveGame (e.g. RenderTarget Params' _SyncInterval).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true, Units = "Seconds", UIMin = "0.0", ClampMin = "0.0"))
     double _Seconds = 0.0;
 
