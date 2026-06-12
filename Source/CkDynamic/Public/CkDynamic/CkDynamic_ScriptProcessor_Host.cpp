@@ -108,8 +108,9 @@ namespace ck
             if (auto* MarkedDirtyBy = CDO->Get_MarkedDirtyBy().Get())
             {
                 Descriptor._HasDirtyMarker = true;
-                Descriptor._DirtyMarkerName = FName{*MarkedDirtyBy->GetPathName()};
-                Descriptor._DirtyMarkerHash = static_cast<uint32>(GetTypeHash(Descriptor._DirtyMarkerName));
+                const auto DirtyMarkerName = FName{*MarkedDirtyBy->GetPathName()};
+                Descriptor._DirtyMarkerNames.Add(DirtyMarkerName);
+                Descriptor._DirtyMarkerHashes.Add(static_cast<uint32>(GetTypeHash(DirtyMarkerName)));
 
                 Descriptor._IsDirtyChecker =
                     [WeakStruct = TWeakObjectPtr<UScriptStruct>(MarkedDirtyBy)]

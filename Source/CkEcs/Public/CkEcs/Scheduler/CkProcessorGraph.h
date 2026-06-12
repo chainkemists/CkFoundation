@@ -27,16 +27,19 @@ namespace ck
         FDirtyChecker _IsDirtyChecker;
         FProcessorFactory _Factory;
 
-        // Hash of the MarkedDirtyBy fragment type (0 when _HasDirtyMarker is false).
-        // Used by the scheduler's pump pass to query FCk_Registry::Get_DirtyMarkerVersion
-        // without needing the original type.
-        uint32 _DirtyMarkerHash = 0;
-        FName _DirtyMarkerName;
+        // Hashes of the MarkedDirtyBy / MarkedDirtyByAnyOf fragment types (empty when
+        // _HasDirtyMarker is false). Used by the scheduler's pump pass to query
+        // FCk_Registry::Get_DirtyMarkerVersion without needing the original types.
+        // Index-aligned with _DirtyMarkerNames (diagnostics only).
+        TArray<uint32> _DirtyMarkerHashes;
+        TArray<FName> _DirtyMarkerNames;
 
-        // Per-node cache of the last observed dirty marker version, updated by the pump pass.
-        // Reset to 0 at the start of each scheduler Tick() so the first pass of the frame
-        // always re-evaluates _IsDirtyChecker. Subsequent pump passes compare against this
-        // value and skip the expensive Has_AnyEntityWith scan when nothing has changed.
+        // Per-node cache of the last observed dirty marker version SUM across all marker
+        // hashes (each per-hash version is monotonic, so the sum is too), updated by the
+        // pump pass. Reset to 0 at the start of each scheduler Tick() so the first pass of
+        // the frame always re-evaluates _IsDirtyChecker. Subsequent pump passes compare
+        // against this value and skip the expensive Has_AnyEntityWith scan when nothing has
+        // changed.
         mutable uint64 _LastSeenDirtyVersion = 0;
 
         TOptional<concepts::FTickableType> _Instance;

@@ -40,6 +40,26 @@ namespace ck
         }
 
         // ----------------------------------------------------------------------------------------------------------------
+        // Multi-marker extraction for `MarkedDirtyByAnyOf = TDepList<FTag_A, FTag_B, ...>`. Fills the
+        // descriptor's index-aligned hash/name arrays and installs a combined any-of dirty checker.
+        template <typename... T_Markers>
+        auto
+        ExtractDirtyMarkers(
+            entt::type_list<T_Markers...>,
+            FProcessorDescriptor& OutDescriptor) -> void
+        {
+            static_assert(sizeof...(T_Markers) > 0, "MarkedDirtyByAnyOf must list at least one marker fragment");
+
+            OutDescriptor._HasDirtyMarker = true;
+            (OutDescriptor._DirtyMarkerHashes.Add(static_cast<uint32>(entt::type_hash<T_Markers>::value())), ...);
+            (OutDescriptor._DirtyMarkerNames.Add(Get_ProcessorCanonicalName<T_Markers>()), ...);
+            OutDescriptor._IsDirtyChecker = [](const FCk_Registry& InRegistry) -> bool
+            {
+                return (InRegistry.Has_AnyEntityWith<T_Markers>() || ...);
+            };
+        }
+
+        // ----------------------------------------------------------------------------------------------------------------
         // Fragment access extraction — walks a processor's FragmentList (the pack of T_Fragments in the CRTP base) and
         // sorts each entry into either the read-only or read-write hash bucket on the descriptor. Excluded filter
         // wrappers (TExclude<X>) and empty tag types are skipped because they do not participate in data access.
@@ -145,13 +165,22 @@ namespace ck
         {
             using DirtyFragment = typename T_Processor::MarkedDirtyBy;
             Descriptor._HasDirtyMarker = true;
-            Descriptor._DirtyMarkerHash = static_cast<uint32>(entt::type_hash<DirtyFragment>::value());
+            Descriptor._DirtyMarkerHashes.Add(static_cast<uint32>(entt::type_hash<DirtyFragment>::value()));
             const auto DirtyMarkerTypeName = entt::type_name<DirtyFragment>::value();
-            Descriptor._DirtyMarkerName = FName{static_cast<int32>(DirtyMarkerTypeName.size()), DirtyMarkerTypeName.data()};
+            Descriptor._DirtyMarkerNames.Add(FName{static_cast<int32>(DirtyMarkerTypeName.size()), DirtyMarkerTypeName.data()});
             Descriptor._IsDirtyChecker = [](const FCk_Registry& InRegistry) -> bool
             {
                 return InRegistry.Has_AnyEntityWith<DirtyFragment>();
             };
+        }
+        else if constexpr (requires { typename T_Processor::MarkedDirtyByAnyOf; })
+        {
+            // Multi-marker form for composite processors whose internal sub-processors consume
+            // several distinct markers (e.g. the attribute pipeline composites: one tag per
+            // Min/Max/Current component). Pump-eligible when ANY of the markers has entities.
+            detail::ExtractDirtyMarkers(
+                typename T_Processor::MarkedDirtyByAnyOf::Types{},
+                Descriptor);
         }
 
         // ---- Extract fragment access metadata from the processor's FragmentList ----
