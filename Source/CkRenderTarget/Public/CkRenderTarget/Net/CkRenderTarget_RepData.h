@@ -133,13 +133,22 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Host-authoritative, snapshotable mirror of one sync child's published instruction ring (channel A).
-// Lives on the SYNC CHILD entity (not the owner): the owner-hosted FCk_RepData_RenderTarget container
-// is stored inside the replication driver's FastArray, which is re-created EMPTY on a snapshot load and
-// is not itself a snapshotable ECS fragment — so the instruction stream has no other persistent home.
-// FProcessor_RenderTarget_HandleRequests::DoPublishBatch mirrors every published batch here (host only,
-// ring-capped to RingSize identically to the channel); FProcessor_RenderTarget_ReplicateOnRestore reads
-// it back after a load to repaint the restored target and re-publish into a fresh owner container.
+// Authoritative, snapshotable mirror of one sync child's applied instruction ring. Lives on the SYNC
+// CHILD entity (not the owner): the owner-hosted FCk_RepData_RenderTarget container is stored inside
+// the replication driver's FastArray, which is re-created EMPTY on a snapshot load and is not itself a
+// snapshotable ECS fragment — so the instruction stream has no other persistent home.
+//
+// Recording sites (both ring-capped to RingSize identically to the channel):
+//   - Replicates + non-Pixels host: FProcessor_RenderTarget_HandleRequests::DoPublishBatch (covers
+//     direct server draws AND applied client batches).
+//   - DoesNotReplicate (any mode):  FProcessor_RenderTarget_HandleRequests::ForEachEntity — local-only
+//     targets never publish but their drawn state must still persist.
+//   - Replicates + Pixels: NOT recorded — pixel-baseline persistence is the documented v1 deferral.
+//
+// Setup additionally AddOrGets an EMPTY log on every sync entity: it is the composition anchor for
+// FProcessor_RenderTarget_ReplicateOnRestore's view (Params + AuthoredLog), so a never-drawn target
+// still restores fully composed. ReplicateOnRestore reads the log back after a load to repaint the
+// restored target and (Replicates only) re-publish into a fresh owner container.
 USTRUCT()
 struct CKRENDERTARGET_API FFragment_RenderTarget_AuthoredLog
 {
@@ -164,8 +173,8 @@ public:
     CK_PROPERTY_GET(_NextBatchSeq);
 
 public:
-    // Records a just-published batch (ring-capped to FCk_RenderTarget_ChannelState::RingSize) and
-    // advances the persisted author watermark. Called from DoPublishBatch on the host.
+    // Records a just-applied/published batch (ring-capped to FCk_RenderTarget_ChannelState::RingSize)
+    // and advances the persisted author watermark. See the recording-sites note above.
     auto
     Record_PublishedBatch(
         const FCk_RenderTarget_InstructionBatch& InBatch,
