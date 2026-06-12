@@ -182,6 +182,16 @@ namespace ck::inventory_handlers
             return R;
         }
 
+        // The split-off entry may not exceed the inventory's effective max stack size
+        // (StackingPolicy clamp). Placement gates the entry itself further below.
+        if (SplitCount > UCk_Utils_ItemTrait_Stackable_UE::Get_EffectiveMaxStackSize(Base, SourceItem))
+        {
+            R = Result::Failed_NoSpaceForNewItem;
+            ck::inventory::Display(TEXT("SplitStack_Spatial: Split count [{}] exceeds the effective max stack size of inventory [{}]"),
+                SplitCount, InHandle);
+            return R;
+        }
+
         auto* Definition  = UCk_Utils_Item_UE::Get_Definition(SourceItem);
         auto ContextOwner = UCk_Utils_ContextOwner_UE::Get_ContextOwner(Base);
         NewItem = UCk_Utils_Item_UE::Create(ContextOwner, Definition);

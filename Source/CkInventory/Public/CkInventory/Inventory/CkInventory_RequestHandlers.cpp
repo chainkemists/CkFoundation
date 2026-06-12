@@ -3,6 +3,7 @@
 #include "CkInventory/CkInventory_Log.h"
 #include "CkInventory/Inventory/CkInventory_Fragment.h"
 #include "CkInventory/Inventory/CkInventory_Utils.h"
+#include "CkInventory/Inventory/DataOnly/CkInventory_DataOnly_Utils.h"
 #include "CkInventory/Inventory/Spatial/CkInventory_Spatial_RequestTraits.h"
 #include "CkInventory/Inventory/DataOnly/CkInventory_DataOnly_RequestTraits.h"
 #include "CkInventory/Item/CkItem_Definition.h"
@@ -155,7 +156,10 @@ namespace ck::inventory_handlers
         const auto CanStackResult = UCk_Utils_ItemTrait_Stackable_UE::Get_CanStackItems(Base, SourceItem, TargetItem);
         if (CanStackResult != Result::Success)
         {
-            ck::inventory::Warning(TEXT("StackItems: Failed [{}] for source [{}] and target [{}] in inventory [{}]"),
+            // Caller-attributable rejection (full stack, custom rejection, mismatch) — surface
+            // through the Result enum, log at Display so the AutoTest framework doesn't escalate
+            // the diagnostic to a test failure.
+            ck::inventory::Display(TEXT("StackItems: Failed [{}] for source [{}] and target [{}] in inventory [{}]"),
                 CanStackResult, SourceItem, TargetItem, InHandle);
             R = CanStackResult;
             return R;
@@ -163,9 +167,8 @@ namespace ck::inventory_handlers
 
         const auto SourceCount = UCk_Utils_ItemTrait_Stackable_UE::Get_StackCount(SourceItem);
         const auto TargetCount = UCk_Utils_ItemTrait_Stackable_UE::Get_StackCount(TargetItem);
-        const auto MaxTarget   = UCk_Utils_ItemTrait_Stackable_UE::Get_HasMaxStackSize(TargetItem)
-            ? UCk_Utils_ItemTrait_Stackable_UE::Get_MaxStackSize(TargetItem)
-            : MAX_int32;
+        // Effective max = min(definition max, the inventory's StackingPolicy clamp); MAX_int32 when uncapped.
+        const auto MaxTarget   = UCk_Utils_ItemTrait_Stackable_UE::Get_EffectiveMaxStackSize(Base, TargetItem);
         const auto Available   = MaxTarget - TargetCount;
 
         const auto Requested     = (InRequest.Get_Count() == ck::Inventory::AllAvailableCount)
@@ -245,6 +248,28 @@ namespace ck::inventory_handlers
             return R;
         }
 
+        // A split mints a NEW entry, so the entry bound must gate it (Spatial's specialization
+        // gates via placement instead). A split is unit-neutral — Get_RemainingSlots only
+        // constrains under BoundedByUniqueEntries; Unbounded / BoundedByTotalUnits pass.
+        if (const auto DataOnlyHandle = UCk_Utils_Inventory_DataOnly_UE::Cast(Base);
+            ck::IsValid(DataOnlyHandle)
+            && UCk_Utils_Inventory_DataOnly_UE::Get_RemainingSlots(DataOnlyHandle) <= 0)
+        {
+            R = Result::Failed_NoSpaceForNewItem;
+            ck::inventory::Display(TEXT("SplitStack: No entry room for the split-off item in bounded inventory [{}]"),
+                InHandle);
+            return R;
+        }
+
+        // The split-off entry may not exceed the inventory's effective max stack size.
+        if (SplitCount > UCk_Utils_ItemTrait_Stackable_UE::Get_EffectiveMaxStackSize(Base, SourceItem))
+        {
+            R = Result::Failed_NoSpaceForNewItem;
+            ck::inventory::Display(TEXT("SplitStack: Split count [{}] exceeds the effective max stack size of inventory [{}]"),
+                SplitCount, InHandle);
+            return R;
+        }
+
         auto* Definition  = UCk_Utils_Item_UE::Get_Definition(SourceItem);
         auto ContextOwner = UCk_Utils_ContextOwner_UE::Get_ContextOwner(Base);
         NewItem = UCk_Utils_Item_UE::Create(ContextOwner, Definition);
@@ -312,17 +337,28 @@ namespace ck::inventory_handlers
         auto Remaining = Amount;
         const auto IsStackable = Definition->template Has_ItemTrait<UCk_ItemTrait_Stackable>();
 
+        // Units budget from committed state (bound metric + per-entry room + custom quota).
+        // Our own stack writes inside this handler are deferred (attribute modifiers fold next
+        // pump pass), so re-reading capacity mid-loop would double-count room — decrement the
+        // budget instead.
+        auto UnitsBudget = UCk_Utils_Inventory_UE::Get_AbsorbableUnits(Base, Definition);
+
         if (IsStackable && Policy == ECk_Inventory_AddPolicy::PreferStacking)
         {
-            const auto FillResult = UCk_Utils_ItemTrait_Stackable_UE::Request_FillExistingStacks(Base, Definition, Remaining);
+            const auto FillResult = UCk_Utils_ItemTrait_Stackable_UE::Request_FillExistingStacks(
+                Base, Definition, FMath::Min(Remaining, UnitsBudget));
             const auto Filled     = FillResult.Get_FilledCount();
             Remaining   -= Filled;
             AmountAdded += Filled;
+            UnitsBudget -= Filled;
         }
 
         auto ContextOwner = UCk_Utils_ContextOwner_UE::Get_ContextOwner(Base);
         while (Remaining > 0)
         {
+            if (UnitsBudget <= 0)
+            { break; }
+
             auto NewItem = UCk_Utils_Item_UE::Create(ContextOwner, Definition);
             if (ck::Is_NOT_Valid(NewItem))
             {
@@ -330,7 +366,19 @@ namespace ck::inventory_handlers
                 break;
             }
 
-            if (const auto AcceptResult = UCk_Utils_Inventory_UE::Get_CanAcceptItem(Base, NewItem);
+            auto CountForThisItem = int32{1};
+            if (IsStackable)
+            {
+                const auto EffectiveMax = UCk_Utils_ItemTrait_Stackable_UE::Get_EffectiveMaxStackSize(Base, NewItem);
+                CountForThisItem        = FMath::Min3(Remaining, EffectiveMax, UnitsBudget);
+                UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(NewItem, CountForThisItem);
+            }
+
+            // Explicit-count acceptance check: the stack write above is still settling (modifier
+            // folds next pump pass), so deriving the count from the item would read the trait's
+            // initial count instead of CountForThisItem.
+            if (const auto AcceptResult = UCk_Utils_Inventory_UE::Get_CanAcceptItem_WithCount(
+                    Base, NewItem, ECk_Inventory_AddPolicy::ForceNewItem, CountForThisItem);
                 AcceptResult != ECk_Inventory_OperationResult_Add::Success)
             {
                 // Map the specific Get_CanAcceptItem failure to the closest AddByDefinition
@@ -342,15 +390,6 @@ namespace ck::inventory_handlers
                     : Result::Failed_NoSpaceAvailable;
                 UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(NewItem);
                 break;
-            }
-
-            auto CountForThisItem = int32{1};
-            if (IsStackable)
-            {
-                const auto* StackableTrait = Definition->template Get_ItemTrait<UCk_ItemTrait_Stackable>();
-                const auto  MaxStack       = StackableTrait->Get_HasMaxStackSize() ? StackableTrait->Get_MaxStackSize() : MAX_int32;
-                CountForThisItem           = FMath::Min(Remaining, MaxStack);
-                UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(NewItem, CountForThisItem);
             }
 
             if (NOT TryPlace(InHandle, NewItem))
@@ -367,6 +406,7 @@ namespace ck::inventory_handlers
 
             Remaining   -= CountForThisItem;
             AmountAdded += CountForThisItem;
+            UnitsBudget -= CountForThisItem;
         }
 
         if (Remaining <= 0)
@@ -455,6 +495,20 @@ namespace ck::inventory_handlers
         if (TransferCount <= 0)
         { return ECk_Inventory_OperationResult_Transfer::Failed_ZeroCount; }
 
+        const auto* Definition = UCk_Utils_Item_UE::Get_Definition(InSourceItem);
+
+        if (IsStackable)
+        {
+            // Clamp to what the target can absorb right now (bound metric + per-entry room +
+            // custom quota, from committed state). A clamped transfer settles as Success_Partial
+            // instead of failing after the pre-fill already moved units.
+            TransferCount = FMath::Min(TransferCount,
+                UCk_Utils_Inventory_UE::Get_AbsorbableUnits(BaseTarget, Definition));
+
+            if (TransferCount <= 0)
+            { return ECk_Inventory_OperationResult_Transfer::Failed_NoSpaceInTarget; }
+        }
+
         // Helper lambdas: synthesize a Remove/Add call by constructing a synthetic request entry
         // and dispatching through the typed Handle. This keeps Transfer's algorithm shape-agnostic
         // while routing through each shape's actual Add/Remove logic (including grid placement).
@@ -485,9 +539,8 @@ namespace ck::inventory_handlers
 
         if (IsStackable && InPolicy == ECk_Inventory_AddPolicy::PreferStacking)
         {
-            const auto* Definition = UCk_Utils_Item_UE::Get_Definition(InSourceItem);
             const auto FillResult = UCk_Utils_ItemTrait_Stackable_UE::Request_FillExistingStacks(
-                BaseTarget, Definition, TransferCount);
+                BaseTarget, Definition, TransferCount, InSourceItem);
             const auto Filled = FillResult.Get_FilledCount();
 
             if (Filled > 0 && ck::IsValid(FillResult.Get_LastFilledItem()))
@@ -518,7 +571,14 @@ namespace ck::inventory_handlers
                 : ECk_Inventory_OperationResult_Transfer::Success_Partial;
         }
 
-        if (TransferCount >= SourceCount)
+        // The remainder lands as ONE entry in the target (whole item or split-off item), which may
+        // not exceed the target's effective max stack size (StackingPolicy clamp).
+        const auto MaxPerNewEntry = IsStackable
+            ? UCk_Utils_ItemTrait_Stackable_UE::Get_EffectiveMaxStackSize_ByDefinition(BaseTarget, Definition)
+            : MAX_int32;
+        const auto MoveCount = FMath::Min(TransferCount, MaxPerNewEntry);
+
+        if (MoveCount >= SourceCount)
         {
             DoRemoveFromSource(InSourceItem);
 
@@ -549,40 +609,39 @@ namespace ck::inventory_handlers
             }
 
             OutNewTargetItem = InSourceItem;
-            OutCountTransferred += TransferCount;
+            OutCountTransferred += MoveCount;
             UCk_Utils_Inventory_UE::Request_MarkInventory_AsMayHaveChanged(BaseTarget);
         }
         else
         {
-            UCk_Utils_ItemTrait_Stackable_UE::Request_AdjustStackCount(InSourceItem, -TransferCount);
+            UCk_Utils_ItemTrait_Stackable_UE::Request_AdjustStackCount(InSourceItem, -MoveCount);
 
-            auto* Definition = UCk_Utils_Item_UE::Get_Definition(InSourceItem);
             auto TargetContextOwner = UCk_Utils_ContextOwner_UE::Get_ContextOwner(BaseTarget);
             auto NewItem = UCk_Utils_Item_UE::Create(TargetContextOwner, Definition);
 
             if (ck::Is_NOT_Valid(NewItem))
             {
-                UCk_Utils_ItemTrait_Stackable_UE::Request_AdjustStackCount(InSourceItem, +TransferCount);
+                UCk_Utils_ItemTrait_Stackable_UE::Request_AdjustStackCount(InSourceItem, +MoveCount);
                 ck::inventory::Warning(TEXT("TransferItem: Failed to create new item for partial transfer"));
                 return ECk_Inventory_OperationResult_Transfer::Failed_NoSpaceInTarget;
             }
 
             Definition->OnSplit(InSourceItem, NewItem);
-            UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(NewItem, TransferCount);
+            UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(NewItem, MoveCount);
 
             const auto AddResult = DoAddToTarget(NewItem);
 
             if (AddResult != ECk_Inventory_OperationResult_Add::Success)
             {
                 UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(NewItem);
-                UCk_Utils_ItemTrait_Stackable_UE::Request_AdjustStackCount(InSourceItem, +TransferCount);
+                UCk_Utils_ItemTrait_Stackable_UE::Request_AdjustStackCount(InSourceItem, +MoveCount);
                 ck::inventory::Warning(TEXT("TransferItem: Target [{}] refused split add of [{}] ({}); restored source stack"),
                     InTarget, NewItem, AddResult);
                 return detail::MapAddResultToTransfer(AddResult);
             }
 
             OutNewTargetItem = NewItem;
-            OutCountTransferred += TransferCount;
+            OutCountTransferred += MoveCount;
             UCk_Utils_Inventory_UE::Request_MarkInventory_AsMayHaveChanged(BaseTarget);
         }
 
