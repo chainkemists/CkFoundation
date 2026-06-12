@@ -164,12 +164,12 @@ namespace ck::detail
             typename T_DerivedAttributeCurrent::HandleType,
             ck::TReadWrite<T_DerivedAttributeCurrent>,
             ck::TReadOnly<T_DerivedAttributeBound>,
-            FTag_MayRequireClamping,
+            TTag_Attribute_MayRequireClamping<typename T_DerivedAttributeCurrent::HandleType>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Gameplay;
-        using MarkedDirtyBy = FTag_MayRequireClamping;
+        using MarkedDirtyBy = TTag_Attribute_MayRequireClamping<typename T_DerivedAttributeCurrent::HandleType>;
 
     public:
         using AttributeFragmentType_Current = T_DerivedAttributeCurrent;
@@ -177,7 +177,7 @@ namespace ck::detail
         using AttributeDataType             = typename AttributeFragmentType_Current::AttributeDataType;
         using HandleType                    = typename AttributeFragmentType_Current::HandleType;
         using ThisType                      = TProcessor_Attribute_Clamp<T_DerivedProcessor, AttributeFragmentType_Current, AttributeFragmentType_Bound, T_Direction>;
-        using Super                         = ck_exp::TProcessor<ThisType, HandleType, ck::TReadWrite<AttributeFragmentType_Current>, ck::TReadOnly<AttributeFragmentType_Bound>, FTag_MayRequireClamping, CK_IGNORE_PENDING_KILL>;
+        using Super                         = ck_exp::TProcessor<ThisType, HandleType, ck::TReadWrite<AttributeFragmentType_Current>, ck::TReadOnly<AttributeFragmentType_Bound>, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
         using TimeType                      = typename Super::TimeType;
 
     public:
@@ -612,6 +612,16 @@ namespace ck
         using TimeType     = FCk_Time;
         using RegistryType = FCk_Registry;
 
+        // Pump-eligibility — see TProcessor_Attribute_RecomputeAll_CurrentMinMax for why the
+        // REGISTERED composite must surface the markers its internals consume. The clamped-signal
+        // tags live on the Current component's fragment type (the clamped value is Current).
+        using MarkedDirtyByAnyOf = TDepList<
+            typename T_DerivedAttribute<ECk_MinMaxCurrent::Current>::FTag_FireSignals_ValueChanged,
+            typename T_DerivedAttribute<ECk_MinMaxCurrent::Min>::FTag_FireSignals_ValueChanged,
+            typename T_DerivedAttribute<ECk_MinMaxCurrent::Max>::FTag_FireSignals_ValueChanged,
+            typename T_DerivedAttribute<ECk_MinMaxCurrent::Current>::FTag_FireSignals_MinClamped,
+            typename T_DerivedAttribute<ECk_MinMaxCurrent::Current>::FTag_FireSignals_MaxClamped>;
+
         template <ECk_MinMaxCurrent T_Component>
         using TValueChangedProcessorType = detail::TProcessor_Attribute_FireSignals_ValueChanged<
             TProcessor_Attribute_FireSignals_CurrentMinMax,
@@ -694,6 +704,11 @@ namespace ck
         using TimeType     = FCk_Time;
         using RegistryType = FCk_Registry;
 
+        // Pump-eligibility — see TProcessor_Attribute_RecomputeAll_CurrentMinMax. The clamp
+        // marker is family-typed (keyed on the family's HandleType), so this composite's
+        // registry-wide Clear and dirty marker are scoped to its own family.
+        using MarkedDirtyBy = TTag_Attribute_MayRequireClamping<typename T_DerivedAttribute<ECk_MinMaxCurrent::Current>::HandleType>;
+
     public:
         explicit
         TProcessor_Attribute_MinMaxClamp(RegistryType InRegistry);
@@ -724,6 +739,17 @@ namespace ck
     public:
         using TimeType     = FCk_Time;
         using RegistryType = FCk_Registry;
+
+        // Pump-eligibility: this composite is what gets REGISTERED with the scheduler — the
+        // internal per-component processors' MarkedDirtyBy declarations never reach a descriptor.
+        // Without this alias the pump loop skips the composite entirely and attribute folds
+        // become strictly once-per-frame (writes made during pump passes — e.g. request drains
+        // triggered by callback chains — only became readable after this composite's slot in the
+        // NEXT frame).
+        using MarkedDirtyByAnyOf = TDepList<
+            typename T_DerivedAttributeModifier<ECk_MinMaxCurrent::Current>::AttributeFragmentType::FTag_RecomputeFinalValue,
+            typename T_DerivedAttributeModifier<ECk_MinMaxCurrent::Min>::AttributeFragmentType::FTag_RecomputeFinalValue,
+            typename T_DerivedAttributeModifier<ECk_MinMaxCurrent::Max>::AttributeFragmentType::FTag_RecomputeFinalValue>;
 
         template <ECk_MinMaxCurrent T_Component>
         using TInternalProcessorType = detail::TProcessor_Attribute_RecomputeAll<
@@ -765,6 +791,13 @@ namespace ck
     public:
         using TimeType     = FCk_Time;
         using RegistryType = FCk_Registry;
+
+        // Pump-eligibility — see TProcessor_Attribute_RecomputeAll_CurrentMinMax for why the
+        // REGISTERED composite must surface the markers its internals consume.
+        using MarkedDirtyByAnyOf = TDepList<
+            typename T_DerivedAttributeModifier<ECk_MinMaxCurrent::Current>::FTag_ComputeResult,
+            typename T_DerivedAttributeModifier<ECk_MinMaxCurrent::Min>::FTag_ComputeResult,
+            typename T_DerivedAttributeModifier<ECk_MinMaxCurrent::Max>::FTag_ComputeResult>;
 
         template <ECk_MinMaxCurrent T_Component>
         using TInternalProcessorType = detail::TProcessor_AttributeModifier_ComputeAll<T_DerivedAttributeModifier<T_Component>>;
