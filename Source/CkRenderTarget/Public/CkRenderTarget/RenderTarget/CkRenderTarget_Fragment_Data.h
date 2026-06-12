@@ -153,59 +153,65 @@ public:
     CK_GENERATED_BODY(FCk_RenderTarget_DrawCmd);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    // All fields are SaveGame: CkSnapshot persists the published instruction ring via
+    // FFragment_RenderTarget_AuthoredLog, which recurses into each batch's _Cmds. Object refs
+    // (_Asset / _ExtraAssets) round-trip as paths (FObjectAndNameAsStringProxyArchive). NOTE:
+    // FCanvasUVTri (engine struct) has no SaveGame members, so _Triangles' vertex data does NOT
+    // round-trip through a snapshot — Triangles cmds are a documented restore gap (v1 persists the
+    // instruction stream for line/box/texture/material/text/border/polygon/clear).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true))
     ECk_RenderTarget_DrawCmdType _Type = ECk_RenderTarget_DrawCmdType::Line;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true))
     FVector2D _PositionA = FVector2D::ZeroVector;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true))
     FVector2D _PositionB = FVector2D::ZeroVector;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true))
     FVector2D _Size = FVector2D::ZeroVector;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true))
     FVector2D _CoordinatePosition = FVector2D::ZeroVector;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true))
     FVector2D _CoordinateSize = FVector2D::UnitVector;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true))
     FLinearColor _Color = FLinearColor::White;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true))
     float _Rotation = 0.0f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true))
     float _Thickness = 1.0f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true))
     FString _Text;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true))
     TObjectPtr<UObject> _Asset;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true))
     TArray<TObjectPtr<UObject>> _ExtraAssets;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true))
     TArray<FCanvasUVTri> _Triangles;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true))
     int32 _Sides = 3;
 
@@ -236,43 +242,47 @@ struct CKRENDERTARGET_API FCk_Fragment_RenderTarget_ParamsData
 public:
     CK_GENERATED_BODY(FCk_Fragment_RenderTarget_ParamsData);
 
+    // Tier-A snapshotable: the restored host re-derives its target + container from these params
+    // (Setup/Construct is abstained on a snapshot load — see FProcessor_RenderTarget_ReplicateOnRestore).
+    using IsSnapshotable = void;
+
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true, Categories = "RenderTarget"))
     FGameplayTag _SyncName;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true))
     ECk_RenderTarget_TargetMode _TargetMode = ECk_RenderTarget_TargetMode::CreateManaged;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true,
                 EditCondition = "_TargetMode == ECk_RenderTarget_TargetMode::UseProvided"))
     TObjectPtr<UTextureRenderTarget2D> _ProvidedTarget;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true,
                 EditCondition = "_TargetMode == ECk_RenderTarget_TargetMode::CreateManaged"))
     FIntPoint _Size = FIntPoint(512, 512);
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true))
     ECk_RenderTarget_SyncMode _SyncMode = ECk_RenderTarget_SyncMode::InstructionsOnly;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true))
     ECk_RenderTarget_PixelSyncPolicy _PixelSyncPolicy = ECk_RenderTarget_PixelSyncPolicy::Manual;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true,
                 EditCondition = "_PixelSyncPolicy == ECk_RenderTarget_PixelSyncPolicy::Interval"))
     FCk_Time _SyncInterval;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true))
     ECk_RenderTarget_ClientAuthoring _ClientAuthoring = ECk_RenderTarget_ClientAuthoring::Disallowed;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true))
     ECk_Replication _Replication = ECk_Replication::Replicates;
 
