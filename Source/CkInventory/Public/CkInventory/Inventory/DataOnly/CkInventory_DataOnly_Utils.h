@@ -43,12 +43,26 @@ public:
         const FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic& InCustomCanAcceptItem,
         const FCk_Delegate_Inventory_CustomCanStackItems_Dynamic& InCustomCanStackItems);
 
+    /** Bounded by UNIQUE ENTRIES — the limit counts item entries; stack counts are invisible to it. */
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Inventory|DataOnly",
-              DisplayName = "[Ck][Inventory][DataOnly] Make Params (Bounded)",
+              DisplayName = "[Ck][Inventory][DataOnly] Make Params (Bounded By Unique Entries)",
               meta = (NativeMakeFunc, AutoCreateRefTerm = "InCustomCanAcceptItem, InCustomCanStackItems"))
     static FCk_Fragment_Inventory_DataOnly_ParamsData
     Make_Params_Bounded(
+        UPARAM(meta = (Categories = "Inventory")) FGameplayTag InName,
+        int32 InBoundLimit,
+        const FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic& InCustomCanAcceptItem,
+        const FCk_Delegate_Inventory_CustomCanStackItems_Dynamic& InCustomCanStackItems);
+
+    /** Bounded by TOTAL UNITS — the limit counts the sum of stack counts (a non-stackable item is
+     *  1 unit). Entry count is unconstrained. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Inventory|DataOnly",
+              DisplayName = "[Ck][Inventory][DataOnly] Make Params (Bounded By Total Units)",
+              meta = (NativeMakeFunc, AutoCreateRefTerm = "InCustomCanAcceptItem, InCustomCanStackItems"))
+    static FCk_Fragment_Inventory_DataOnly_ParamsData
+    Make_Params_BoundedByTotalUnits(
         UPARAM(meta = (Categories = "Inventory")) FGameplayTag InName,
         int32 InBoundLimit,
         const FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic& InCustomCanAcceptItem,
@@ -118,11 +132,34 @@ public:
     Get_BoundMax(
         const FCk_Handle_Inventory_DataOnly& InInventory);
 
+    /** The bound mode that is actually in effect right now. Differs from the params' declared
+     *  mode when Request_OverrideBounds changed boundedness at runtime: an attribute value of
+     *  UnboundedBoundLimit reports Unbounded; a bounded value on a declared-Unbounded inventory
+     *  reports BoundedByUniqueEntries (the legacy interpretation). */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Inventory|DataOnly",
+              DisplayName = "[Ck][Inventory][DataOnly] Get Effective Bound Mode")
+    static ECk_Inventory_DataOnly_BoundMode
+    Get_EffectiveBoundMode(
+        const FCk_Handle_Inventory_DataOnly& InInventory);
+
+    /** Remaining ENTRY room. Only the BoundedByUniqueEntries metric constrains entries —
+     *  Unbounded and BoundedByTotalUnits inventories return MAX_int32 here.
+     *  For the metric-aware room (units under BoundedByTotalUnits), use Get_RemainingCapacity. */
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Inventory|DataOnly",
               DisplayName = "[Ck][Inventory][DataOnly] Get Remaining Slots")
     static int32
     Get_RemainingSlots(
+        const FCk_Handle_Inventory_DataOnly& InInventory);
+
+    /** Metric-aware remaining room: entries left under BoundedByUniqueEntries, units left under
+     *  BoundedByTotalUnits, MAX_int32 when Unbounded. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Inventory|DataOnly",
+              DisplayName = "[Ck][Inventory][DataOnly] Get Remaining Capacity")
+    static int32
+    Get_RemainingCapacity(
         const FCk_Handle_Inventory_DataOnly& InInventory);
 
 public:

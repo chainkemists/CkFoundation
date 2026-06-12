@@ -40,7 +40,26 @@ auto
         const FCk_Delegate_Inventory_CustomCanStackItems_Dynamic& InCustomCanStackItems)
     -> FCk_Fragment_Inventory_DataOnly_ParamsData
 {
-    auto Params = FCk_Fragment_Inventory_DataOnly_ParamsData(InName, InBoundLimit);
+    auto Params = FCk_Fragment_Inventory_DataOnly_ParamsData(
+        InName, InBoundLimit, ECk_Inventory_DataOnly_BoundMode::BoundedByUniqueEntries);
+    Params.Set_CustomCanAcceptItemDynamic(InCustomCanAcceptItem);
+    Params.Set_CustomCanStackItemsDynamic(InCustomCanStackItems);
+    return Params;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_DataOnly_UE::
+    Make_Params_BoundedByTotalUnits(
+        FGameplayTag InName,
+        int32 InBoundLimit,
+        const FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic& InCustomCanAcceptItem,
+        const FCk_Delegate_Inventory_CustomCanStackItems_Dynamic& InCustomCanStackItems)
+    -> FCk_Fragment_Inventory_DataOnly_ParamsData
+{
+    auto Params = FCk_Fragment_Inventory_DataOnly_ParamsData(
+        InName, InBoundLimit, ECk_Inventory_DataOnly_BoundMode::BoundedByTotalUnits);
     Params.Set_CustomCanAcceptItemDynamic(InCustomCanAcceptItem);
     Params.Set_CustomCanStackItemsDynamic(InCustomCanStackItems);
     return Params;
@@ -125,8 +144,30 @@ auto
     -> FCk_Inventory_DataOnly_BoundsInfo
 {
     const auto Maybe = Get_BoundMax(InInventory);
-    return Maybe.IsSet() ? FCk_Inventory_DataOnly_BoundsInfo{Maybe.GetValue()}
+    return Maybe.IsSet() ? FCk_Inventory_DataOnly_BoundsInfo{Get_EffectiveBoundMode(InInventory), Maybe.GetValue()}
                          : FCk_Inventory_DataOnly_BoundsInfo{};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_DataOnly_UE::
+    Get_EffectiveBoundMode(
+        const FCk_Handle_Inventory_DataOnly& InInventory)
+    -> ECk_Inventory_DataOnly_BoundMode
+{
+    const auto BoundMax = Get_BoundMax(InInventory);
+    if (NOT BoundMax.IsSet())
+    { return ECk_Inventory_DataOnly_BoundMode::Unbounded; }
+
+    const auto& Params = InInventory.Get<ck::FFragment_Inventory_Params>();
+
+    // A runtime Request_OverrideBounds on a declared-Unbounded inventory has no metric on
+    // record — fall back to the legacy interpretation (entries).
+    if (Params.Get_BoundMode() == ECk_Inventory_DataOnly_BoundMode::Unbounded)
+    { return ECk_Inventory_DataOnly_BoundMode::BoundedByUniqueEntries; }
+
+    return Params.Get_BoundMode();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -137,11 +178,38 @@ auto
         const FCk_Handle_Inventory_DataOnly& InInventory)
     -> int32
 {
-    const auto BoundMax = Get_BoundMax(InInventory);
-    if (NOT BoundMax.IsSet())
+    if (Get_EffectiveBoundMode(InInventory) != ECk_Inventory_DataOnly_BoundMode::BoundedByUniqueEntries)
     { return TNumericLimits<int32>::Max(); }
 
+    const auto BoundMax = Get_BoundMax(InInventory);
     return FMath::Max(0, BoundMax.GetValue() - UCk_Utils_Inventory_UE::Get_NumItems(InInventory));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_DataOnly_UE::
+    Get_RemainingCapacity(
+        const FCk_Handle_Inventory_DataOnly& InInventory)
+    -> int32
+{
+    switch (Get_EffectiveBoundMode(InInventory))
+    {
+        case ECk_Inventory_DataOnly_BoundMode::BoundedByUniqueEntries:
+        {
+            return Get_RemainingSlots(InInventory);
+        }
+        case ECk_Inventory_DataOnly_BoundMode::BoundedByTotalUnits:
+        {
+            const auto BoundMax = Get_BoundMax(InInventory);
+            return FMath::Max(0, BoundMax.GetValue() - UCk_Utils_Inventory_UE::Get_TotalUnits(InInventory));
+        }
+        case ECk_Inventory_DataOnly_BoundMode::Unbounded:
+        default:
+        {
+            return TNumericLimits<int32>::Max();
+        }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

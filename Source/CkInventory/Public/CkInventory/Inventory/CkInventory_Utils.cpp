@@ -16,6 +16,10 @@
 
 #include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Utils.h"
 
+#include "CkInventory/Item/CkItem_Definition.h"
+#include "CkInventory/Item/CkItem_Utils.h"
+#include "CkInventory/ItemTrait/Dimensions/CkItemTrait_Dimensions.h"
+#include "CkInventory/ItemTrait/Stackable/CkItemTrait_Stackable.h"
 #include "CkInventory/ItemTrait/Stackable/CkItemTrait_Stackable_Utils.h"
 
 namespace
@@ -72,6 +76,8 @@ namespace ck
             { AcceptRef.SetExternalMember(AcceptRef.GetMemberName(), ContextClass); }
             if (auto& StackRef = FixedParams.Get_CanStackItemsRef(); StackRef.IsSelfContext())
             { StackRef.SetExternalMember(StackRef.GetMemberName(), ContextClass); }
+            if (auto& AbsorbRef = FixedParams.Get_GetAbsorbableUnitsRef(); AbsorbRef.IsSelfContext())
+            { AbsorbRef.SetExternalMember(AbsorbRef.GetMemberName(), ContextClass); }
         }
 
         NewInventoryEntity.Add<ck::FFragment_Inventory_Params>(FixedParams);
@@ -349,6 +355,26 @@ auto
 
 auto
     UCk_Utils_Inventory_UE::
+    Get_TotalUnits(
+        const FCk_Handle_Inventory& InInventory)
+    -> int32
+{
+    auto TotalUnits = 0;
+
+    for (const auto& Item : Get_Items(InInventory))
+    {
+        TotalUnits += UCk_Utils_ItemTrait_Stackable_UE::Get_IsStackable(Item)
+            ? UCk_Utils_ItemTrait_Stackable_UE::Get_StackCount(Item)
+            : 1;
+    }
+
+    return TotalUnits;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_UE::
     Get_ContainsItem(
         const FCk_Handle_Inventory& InInventory,
         const FCk_Handle_Item& InItem)
@@ -382,10 +408,11 @@ auto
             != ECk_Inventory_OperationResult_Stack::Success)
         { continue; }
 
-        const auto Remaining = UCk_Utils_ItemTrait_Stackable_UE::Get_RemainingStackCapacity(ExistingItem);
+        const auto Remaining = UCk_Utils_ItemTrait_Stackable_UE::Get_RemainingStackCapacity_InInventory(
+            InInventory, ExistingItem);
 
-        // Get_RemainingStackCapacity returns MAX_int32 when the stack has no max size.
-        // Any single such match means the inventory has effectively unbounded stack room.
+        // Remaining capacity is MAX_int32 when neither the definition nor the inventory caps the
+        // stack. Any single such match means the inventory has effectively unbounded stack room.
         if (Remaining == TNumericLimits<int32>::Max())
         { return TNumericLimits<int32>::Max(); }
 
@@ -442,6 +469,21 @@ auto
         ECk_Inventory_AddPolicy InPolicy)
     -> ECk_Inventory_OperationResult_Add
 {
+    constexpr auto DeriveUnitsFromItem = -1;
+    return Get_CanAcceptItem_WithCount(InInventory, InItem, InPolicy, DeriveUnitsFromItem);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_UE::
+    Get_CanAcceptItem_WithCount(
+        const FCk_Handle_Inventory& InInventory,
+        const FCk_Handle_Item& InItem,
+        ECk_Inventory_AddPolicy InPolicy,
+        int32 InIncomingUnits)
+    -> ECk_Inventory_OperationResult_Add
+{
     if (ck::Is_NOT_Valid(InItem))
     { return ECk_Inventory_OperationResult_Add::Failed_InvalidItem; }
 
@@ -451,14 +493,33 @@ auto
     if (NOT Get_PassesCustomAcceptValidation(InInventory, InItem))
     { return ECk_Inventory_OperationResult_Add::Failed_RejectedByCustomAcceptanceLogic; }
 
-    // PreferStacking lets the soft "no room" failures (DataOnly bound full, Spatial no fit) pass
-    // when an existing item in this inventory can absorb InItem via stacking. Computed lazily —
-    // Get_StackRoomFor walks the item list, so we only call it on a soft-failure path.
+    const auto IsStackable = UCk_Utils_ItemTrait_Stackable_UE::Get_IsStackable(InItem);
+    const auto IncomingUnits = (InIncomingUnits > 0)
+        ? InIncomingUnits
+        : (IsStackable ? FMath::Max(1, UCk_Utils_ItemTrait_Stackable_UE::Get_StackCount(InItem)) : 1);
+
+    // PreferStacking lets the soft "no room as a new entry" failures (entry bound full, per-entry
+    // stack clamp exceeded, Spatial no fit) pass when existing stacks in this inventory can absorb
+    // the item's FULL unit count. Count-aware on purpose: room for 1 unit must not green-light a
+    // 99-unit item. Computed lazily — Get_StackRoomFor walks the item list, so we only call it on
+    // a soft-failure path.
     const auto CanFallBackToStacking = [&]() -> bool
     {
         return InPolicy == ECk_Inventory_AddPolicy::PreferStacking
-            && Get_StackRoomFor(InInventory, InItem) > 0;
+            && Get_StackRoomFor(InInventory, InItem) >= IncomingUnits;
     };
+
+    // ---- Per-entry stacking clamp: a whole-item add lands as ONE entry, which may not exceed the
+    //      inventory's effective max stack size ----
+
+    if (IsStackable
+        && IncomingUnits > UCk_Utils_ItemTrait_Stackable_UE::Get_EffectiveMaxStackSize(InInventory, InItem))
+    {
+        if (CanFallBackToStacking())
+        { return ECk_Inventory_OperationResult_Add::Success; }
+
+        return ECk_Inventory_OperationResult_Add::Failed_NoSpaceAvailable;
+    }
 
     // ---- Bounds check for DataOnly inventories ----
 
@@ -467,13 +528,30 @@ auto
         if (const auto DataOnlyHandle = UCk_Utils_Inventory_DataOnly_UE::Cast(InInventory);
             ck::IsValid(DataOnlyHandle))
         {
-            if (const auto BoundMax = UCk_Utils_Inventory_DataOnly_UE::Get_BoundMax(DataOnlyHandle);
-                BoundMax.IsSet() && Get_NumItems(InInventory) >= BoundMax.GetValue())
+            switch (UCk_Utils_Inventory_DataOnly_UE::Get_EffectiveBoundMode(DataOnlyHandle))
             {
-                if (CanFallBackToStacking())
-                { return ECk_Inventory_OperationResult_Add::Success; }
+                case ECk_Inventory_DataOnly_BoundMode::BoundedByUniqueEntries:
+                {
+                    if (UCk_Utils_Inventory_DataOnly_UE::Get_RemainingSlots(DataOnlyHandle) <= 0)
+                    {
+                        if (CanFallBackToStacking())
+                        { return ECk_Inventory_OperationResult_Add::Success; }
 
-                return ECk_Inventory_OperationResult_Add::Failed_NoSpaceAvailable;
+                        return ECk_Inventory_OperationResult_Add::Failed_NoSpaceAvailable;
+                    }
+                    break;
+                }
+                case ECk_Inventory_DataOnly_BoundMode::BoundedByTotalUnits:
+                {
+                    // No stacking fallback: units consume the bound no matter which route they
+                    // enter through, so a units-full inventory cannot be rescued by merging.
+                    if (UCk_Utils_Inventory_DataOnly_UE::Get_RemainingCapacity(DataOnlyHandle) < IncomingUnits)
+                    { return ECk_Inventory_OperationResult_Add::Failed_NoSpaceAvailable; }
+                    break;
+                }
+                case ECk_Inventory_DataOnly_BoundMode::Unbounded:
+                default:
+                { break; }
             }
         }
     }
@@ -498,6 +576,13 @@ auto
             }
         }
     }
+
+    // ---- Custom quantitative quota (weight-style rules). No stacking fallback — absorbed units
+    //      count against the quota no matter which route they enter through ----
+
+    if (const auto Quota = Get_CustomAbsorbableUnits(InInventory, UCk_Utils_Item_UE::Get_Definition(InItem), InItem);
+        Quota < IncomingUnits)
+    { return ECk_Inventory_OperationResult_Add::Failed_NoSpaceAvailable; }
 
     return ECk_Inventory_OperationResult_Add::Success;
 }
@@ -542,6 +627,157 @@ auto
     }
 
     return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_UE::
+    Get_CustomAbsorbableUnits(
+        const FCk_Handle_Inventory& InInventory,
+        const UCk_InventoryItem_Definition* InDefinition,
+        const FCk_Handle_Item& InItem)
+    -> int32
+{
+    if (ck::Is_NOT_Valid(InInventory))
+    { return TNumericLimits<int32>::Max(); }
+
+    const auto& Params = InInventory.Get<ck::FFragment_Inventory_Params>();
+    auto Quota = TNumericLimits<int32>::Max();
+
+    if (const auto& NativeDelegate = Params.Get_CustomGetAbsorbableUnits();
+        NativeDelegate.IsBound())
+    { Quota = FMath::Min(Quota, NativeDelegate.Execute(InInventory, InDefinition, InItem)); }
+
+    if (const auto& DynamicDelegate = Params.Get_CustomGetAbsorbableUnitsDynamic();
+        DynamicDelegate.IsBound())
+    {
+        auto Result = TNumericLimits<int32>::Max();
+        DynamicDelegate.ExecuteIfBound(InInventory, InDefinition, InItem, Result);
+        Quota = FMath::Min(Quota, Result);
+    }
+
+    if (const auto MemberRefResult = Resolve_GetAbsorbableUnits(
+            Params.Get_GetAbsorbableUnitsRef(), InInventory, InDefinition, InItem);
+        MemberRefResult.IsSet())
+    { Quota = FMath::Min(Quota, MemberRefResult.GetValue()); }
+
+    return FMath::Max(0, Quota);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_UE::
+    Get_AbsorbableUnits(
+        const FCk_Handle_Inventory& InInventory,
+        const UCk_InventoryItem_Definition* InDefinition)
+    -> int32
+{
+    if (ck::Is_NOT_Valid(InInventory))
+    { return 0; }
+
+    if (ck::Is_NOT_Valid(InDefinition, ck::IsValid_Policy_NullptrOnly{}))
+    { return 0; }
+
+    const auto SaturatingAdd = [](int32 InA, int32 InB) -> int32
+    {
+        return (InA > TNumericLimits<int32>::Max() - InB)
+            ? TNumericLimits<int32>::Max()
+            : InA + InB;
+    };
+
+    const auto SaturatingMul = [](int32 InA, int32 InB) -> int32
+    {
+        if (InA == 0 || InB == 0)
+        { return 0; }
+
+        return (InA > TNumericLimits<int32>::Max() / InB)
+            ? TNumericLimits<int32>::Max()
+            : InA * InB;
+    };
+
+    const auto IsStackable = InDefinition->Has_ItemTrait<UCk_ItemTrait_Stackable>();
+    const auto EffectiveMaxPerEntry = UCk_Utils_ItemTrait_Stackable_UE::Get_EffectiveMaxStackSize_ByDefinition(
+        InInventory, InDefinition);
+
+    // ---- Room in existing same-definition stacks (mirrors Request_FillExistingStacks: definition
+    //      match + custom stack validation with no source item, since this is a definition-level
+    //      planning query) ----
+
+    auto StackRoom = 0;
+
+    if (IsStackable)
+    {
+        for (const auto& ExistingItem : Get_Items(InInventory))
+        {
+            if (UCk_Utils_Item_UE::Get_Definition(ExistingItem) != InDefinition)
+            { continue; }
+
+            const auto NoSourceItem = FCk_Handle_Item{};
+            if (NOT UCk_Utils_ItemTrait_Stackable_UE::Get_PassesCustomStackValidation(
+                    InInventory, NoSourceItem, ExistingItem))
+            { continue; }
+
+            StackRoom = SaturatingAdd(StackRoom,
+                UCk_Utils_ItemTrait_Stackable_UE::Get_RemainingStackCapacity_InInventory(InInventory, ExistingItem));
+        }
+    }
+
+    // ---- Room from creating new entries ----
+
+    auto NewEntryUnits = TNumericLimits<int32>::Max();
+
+    if (Get_IsDataOnly(InInventory))
+    {
+        if (const auto DataOnlyHandle = UCk_Utils_Inventory_DataOnly_UE::Cast(InInventory);
+            ck::IsValid(DataOnlyHandle)
+            && UCk_Utils_Inventory_DataOnly_UE::Get_EffectiveBoundMode(DataOnlyHandle)
+                == ECk_Inventory_DataOnly_BoundMode::BoundedByUniqueEntries)
+        {
+            NewEntryUnits = SaturatingMul(
+                UCk_Utils_Inventory_DataOnly_UE::Get_RemainingSlots(DataOnlyHandle), EffectiveMaxPerEntry);
+        }
+        // TotalUnits / Unbounded modes leave entry count unconstrained — the metric ceiling below governs.
+    }
+    else if (Get_IsSpatial(InInventory))
+    {
+        const auto SpatialHandle = UCk_Utils_Inventory_Spatial_UE::Cast(InInventory);
+        const auto* DimensionsTrait = InDefinition->Get_ItemTrait<UCk_ItemTrait_Dimensions>();
+
+        if (ck::Is_NOT_Valid(SpatialHandle) || ck::Is_NOT_Valid(DimensionsTrait, ck::IsValid_Policy_NullptrOnly{}))
+        { NewEntryUnits = 0; }
+        else
+        {
+            // Free cells / footprint area is an UPPER BOUND on placements — it ignores
+            // fragmentation. Good enough for planning; placement still gates at execution time.
+            const auto Footprint = DimensionsTrait->Get_Dimensions();
+            const auto FootprintArea = FMath::Max(1, Footprint.X * Footprint.Y);
+            const auto MaxPlacements = UCk_Utils_Inventory_Spatial_UE::Get_NumFreeCells(SpatialHandle) / FootprintArea;
+            NewEntryUnits = SaturatingMul(MaxPlacements, EffectiveMaxPerEntry);
+        }
+    }
+
+    auto Total = SaturatingAdd(StackRoom, NewEntryUnits);
+
+    // ---- Metric ceiling: under BoundedByTotalUnits every absorbed unit consumes the bound,
+    //      regardless of whether it enters via stacking or a new entry ----
+
+    if (Get_IsDataOnly(InInventory))
+    {
+        if (const auto DataOnlyHandle = UCk_Utils_Inventory_DataOnly_UE::Cast(InInventory);
+            ck::IsValid(DataOnlyHandle)
+            && UCk_Utils_Inventory_DataOnly_UE::Get_EffectiveBoundMode(DataOnlyHandle)
+                == ECk_Inventory_DataOnly_BoundMode::BoundedByTotalUnits)
+        {
+            Total = FMath::Min(Total, UCk_Utils_Inventory_DataOnly_UE::Get_RemainingCapacity(DataOnlyHandle));
+        }
+    }
+
+    // ---- Custom quantitative quota ----
+
+    const auto NoItem = FCk_Handle_Item{};
+    return FMath::Min(Total, Get_CustomAbsorbableUnits(InInventory, InDefinition, NoItem));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -609,6 +845,41 @@ auto
 
 auto
     UCk_Utils_Inventory_UE::
+    Resolve_GetAbsorbableUnits(
+        const FMemberReference& InRef,
+        FCk_Handle_Inventory InInventory,
+        const UCk_InventoryItem_Definition* InDefinition,
+        FCk_Handle_Item InItem)
+    -> TOptional<int32>
+{
+    auto* const MemberClass = InRef.GetMemberParentClass();
+
+    if (ck::Is_NOT_Valid(MemberClass))
+    { return {}; }
+
+    auto* const Function = InRef.ResolveMember<UFunction>(MemberClass);
+
+    if (ck::Is_NOT_Valid(Function))
+    { return {}; }
+
+    struct
+    {
+        FCk_Handle_Inventory Inventory;
+        const UCk_InventoryItem_Definition* Definition = nullptr;
+        FCk_Handle_Item Item;
+        int32 ReturnValue = 0;
+    } Args = { MoveTemp(InInventory), InDefinition, MoveTemp(InItem) };
+
+    auto* const Context = MemberClass->GetDefaultObject();
+    Context->ProcessEvent(Function, &Args);
+
+    return Args.ReturnValue;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_UE::
     Request_TryReplicateInventory(
         FCk_Handle_Inventory& InInventory)
     -> void
@@ -640,7 +911,7 @@ namespace ck_item_resolution
     };
 
     // Maps each inventory subtype to its remaining-capacity metric.
-    // DataOnly: Get_RemainingSlots (BoundMax - NumItems, MAX_int32 for unbounded).
+    // DataOnly: Get_RemainingCapacity (metric-aware: entries or units left; MAX_int32 for unbounded).
     // Spatial:  Get_NumFreeCells  (active unoccupied cells; ignores item footprints, but exact for cells).
     // Unknown subtype: MAX_int32 so it doesn't bias ordering against typed inventories.
     auto Compute_RemainingCapacity(const FCk_Handle_Inventory& InCandidate) -> int32
@@ -649,7 +920,7 @@ namespace ck_item_resolution
         {
             if (const auto DataOnlyHandle = UCk_Utils_Inventory_DataOnly_UE::Cast(InCandidate);
                 ck::IsValid(DataOnlyHandle))
-            { return UCk_Utils_Inventory_DataOnly_UE::Get_RemainingSlots(DataOnlyHandle); }
+            { return UCk_Utils_Inventory_DataOnly_UE::Get_RemainingCapacity(DataOnlyHandle); }
         }
 
         if (UCk_Utils_Inventory_UE::Get_IsSpatial(InCandidate))

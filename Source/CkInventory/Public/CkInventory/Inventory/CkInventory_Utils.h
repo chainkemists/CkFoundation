@@ -55,8 +55,13 @@ public:
     friend class UCk_Utils_ItemTrait_Stackable_UE;
 
 public:
-    /** PreferStacking lets soft "no room" failures pass when an existing item can absorb via stacking.
-     *  Hard failures (invalid, already-in-inventory, custom rejection, missing dimensions trait) cannot. */
+    /** PreferStacking lets soft "no room" failures pass when existing items can absorb the item's
+     *  full stack via stacking. Hard failures (invalid, already-in-inventory, custom rejection,
+     *  missing dimensions trait) cannot.
+     *  NOTE: the incoming unit count is read from the item's committed stack count — for an item
+     *  whose stack was written this frame (attribute modifiers fold next pump pass) this reads the
+     *  pre-write value. Internal handlers that know the intended count use the explicit-count
+     *  overload below. */
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Inventory",
               DisplayName = "[Ck][Inventory] Get Can Accept Item")
@@ -66,6 +71,15 @@ public:
         const FCk_Handle_Item& InItem,
         ECk_Inventory_AddPolicy InPolicy = ECk_Inventory_AddPolicy::ForceNewItem);
 
+    /** Explicit-count variant for callers that know the unit count the item will carry once
+     *  pending stack writes settle. InIncomingUnits <= 0 derives the count from the item. */
+    static auto
+    Get_CanAcceptItem_WithCount(
+        const FCk_Handle_Inventory& InInventory,
+        const FCk_Handle_Item& InItem,
+        ECk_Inventory_AddPolicy InPolicy,
+        int32 InIncomingUnits) -> ECk_Inventory_OperationResult_Add;
+
     /** Runs only the custom acceptance logic (native delegate, dynamic delegate,
      *  FMemberReference). Skips structural checks (validity, containment).
      *  Returns true if no custom logic rejects. */
@@ -73,6 +87,16 @@ public:
     Get_PassesCustomAcceptValidation(
         const FCk_Handle_Inventory& InInventory,
         const FCk_Handle_Item& InItem);
+
+    /** Resolves the custom quantitative quota (native delegate, dynamic delegate,
+     *  FMemberReference) — "how many MORE units of this definition can this inventory absorb under
+     *  custom rules (weight, ...)". Returns MAX_int32 when no quota logic is bound. Multiple bound
+     *  hooks compose by min(). Never negative. InItem may be invalid (definition-level queries). */
+    static auto
+    Get_CustomAbsorbableUnits(
+        const FCk_Handle_Inventory& InInventory,
+        const UCk_InventoryItem_Definition* InDefinition,
+        const FCk_Handle_Item& InItem) -> int32;
 
 public:
     static bool
@@ -133,6 +157,28 @@ public:
     static int32
     Get_NumItems(
         const FCk_Handle_Inventory& InInventory);
+
+    /** Sum of stack counts across all items (a non-stackable item counts as 1 unit). */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Inventory",
+              DisplayName = "[Ck][Inventory] Get Total Units")
+    static int32
+    Get_TotalUnits(
+        const FCk_Handle_Inventory& InInventory);
+
+    /** How many units of InDefinition this inventory can absorb in total right now:
+     *  min over (room in existing same-definition stacks, new-entry room x effective max stack,
+     *  the bound metric's remaining capacity, the custom absorbable-units quota).
+     *  Computed from committed state — queued-but-undrained requests are invisible (plan-time
+     *  number; handlers re-check at execution time). Spatial new-entry room divides free cells by
+     *  the definition's footprint area, which ignores fragmentation — treat as an upper bound. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Inventory",
+              DisplayName = "[Ck][Inventory] Get Absorbable Units")
+    static int32
+    Get_AbsorbableUnits(
+        const FCk_Handle_Inventory& InInventory,
+        const UCk_InventoryItem_Definition* InDefinition);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Inventory",
@@ -292,7 +338,16 @@ public:
         FCk_Handle_Inventory InInventory,
         FCk_Handle_Item InItem) -> TOptional<bool>;
 
-    // FMemberReference function-picker prototype — signature reference only; not meant to be called.
+    /** Resolves a FMemberReference and invokes it with the GetAbsorbableUnits signature.
+     *  Returns empty TOptional if the reference is unbound. */
+    static auto
+    Resolve_GetAbsorbableUnits(
+        const FMemberReference& InRef,
+        FCk_Handle_Inventory InInventory,
+        const UCk_InventoryItem_Definition* InDefinition,
+        FCk_Handle_Item InItem) -> TOptional<int32>;
+
+    // FMemberReference function-picker prototypes — signature references only; not meant to be called.
 #if WITH_EDITOR
 private:
     UFUNCTION(meta = (BlueprintInternalUseOnly = "true"))
@@ -301,6 +356,14 @@ private:
         FCk_Handle_Inventory InInventory,
         FCk_Handle_Item InItem)
     { return false; }
+
+    UFUNCTION(meta = (BlueprintInternalUseOnly = "true"))
+    static int32
+    Prototype_GetAbsorbableUnits(
+        FCk_Handle_Inventory InInventory,
+        const UCk_InventoryItem_Definition* InDefinition,
+        FCk_Handle_Item InItem)
+    { return 0; }
 #endif
 
 public:
