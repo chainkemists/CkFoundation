@@ -200,8 +200,8 @@ auto
             StartNode._ProcessorName = Descriptor._Name;
             StartNode._HasDirtyMarker = Descriptor._HasDirtyMarker;
             StartNode._IsDirtyChecker = Descriptor._IsDirtyChecker;
-            StartNode._DirtyMarkerHash = Descriptor._DirtyMarkerHash;
-            StartNode._DirtyMarkerName = Descriptor._DirtyMarkerName;
+            StartNode._DirtyMarkerHashes = Descriptor._DirtyMarkerHashes;
+            StartNode._DirtyMarkerNames = Descriptor._DirtyMarkerNames;
             StartNode._PumpPolicy = Descriptor._PumpPolicy;
             StartNode._Factory = Descriptor._Factory;
             StartNode._IsGroupStart = true;
@@ -237,8 +237,8 @@ auto
             Node._ProcessorName = Descriptor._Name;
             Node._HasDirtyMarker = Descriptor._HasDirtyMarker;
             Node._IsDirtyChecker = Descriptor._IsDirtyChecker;
-            Node._DirtyMarkerHash = Descriptor._DirtyMarkerHash;
-            Node._DirtyMarkerName = Descriptor._DirtyMarkerName;
+            Node._DirtyMarkerHashes = Descriptor._DirtyMarkerHashes;
+            Node._DirtyMarkerNames = Descriptor._DirtyMarkerNames;
             Node._PumpPolicy = Descriptor._PumpPolicy;
             Node._Factory = Descriptor._Factory;
             Node._IsGhost = IsGhost;
@@ -651,7 +651,10 @@ auto
         if (NOT Descriptor._HasDirtyMarker)
         { continue; }
 
-        ProcessorsByMarkerHash.FindOrAdd(Descriptor._DirtyMarkerHash).Add(Descriptor._Name);
+        for (const auto MarkerHash : Descriptor._DirtyMarkerHashes)
+        {
+            ProcessorsByMarkerHash.FindOrAdd(MarkerHash).Add(Descriptor._Name);
+        }
     }
 
     // Early out: nothing to check if no marker is shared by 2+ processors.

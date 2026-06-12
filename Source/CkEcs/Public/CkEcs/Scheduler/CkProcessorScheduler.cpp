@@ -139,7 +139,13 @@ auto
         auto VersionBeforePump = uint64{0};
         if (_UseDirtyMarkerVersionShortCircuit)
         {
-            VersionBeforePump = InRegistry.Get_DirtyMarkerVersion(Node._DirtyMarkerHash);
+            // Sum across all marker hashes (multi-marker composites). Each per-hash version is
+            // monotonic, so the sum is too — an unchanged sum means no marker moved.
+            for (const auto MarkerHash : Node._DirtyMarkerHashes)
+            {
+                VersionBeforePump += InRegistry.Get_DirtyMarkerVersion(MarkerHash);
+            }
+
             if (VersionBeforePump == Node._LastSeenDirtyVersion)
             { continue; }
 

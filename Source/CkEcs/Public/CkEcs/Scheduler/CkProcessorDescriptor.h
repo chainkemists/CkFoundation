@@ -108,10 +108,14 @@ namespace ck
         FGameplayTagContainer _RunAfterTags;
         FGameplayTagContainer _RunBeforeTags;
 
+        // A processor is pump-eligible when it declares at least one dirty marker — either a single
+        // `using MarkedDirtyBy = FTag_X;` or `using MarkedDirtyByAnyOf = TDepList<FTag_A, FTag_B, ...>;`
+        // (composites whose internal sub-processors consume several distinct markers). The hash and
+        // name arrays are index-aligned; _IsDirtyChecker returns true when ANY marker has entities.
         bool _HasDirtyMarker = false;
         FDirtyChecker _IsDirtyChecker;
-        uint32 _DirtyMarkerHash = 0;
-        FName _DirtyMarkerName;
+        TArray<uint32> _DirtyMarkerHashes;
+        TArray<FName> _DirtyMarkerNames;
 
         // Fragment access metadata inferred from TReadOnly<F>/TReadWrite<F> wrappers on the processor's
         // template parameter list. Used by FProcessorGraphBuilder to detect write-write conflicts between
