@@ -6,11 +6,18 @@
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
+#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"
+#include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
+#include "CkEcs/Snapshot/CkSnapshot_Archive_Writer.h"
+#include "CkEcs/Snapshot/CkSnapshot_Archive_Reader.h"
 
 #include "CkRenderTarget/Net/CkRenderTargetRelay_Actor.h"
 #include "CkRenderTarget/Net/CkRenderTargetRelay_Subsystem.h"
 #include "CkRenderTarget/Net/CkRenderTarget_RepData.h"
+
+#include "CkLabel/CkLabel_Utils.h"
 
 #include "CkRenderTarget/CkRenderTarget_Log.h"
 #include "CkRenderTarget/Pixels/CkRenderTarget_PixelMath.h"
@@ -53,6 +60,16 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_RenderTarget_PushClientBatches);
 CK_REGISTER_PROCESSOR(ck::FProcessor_RenderTarget_ApplyClientBatches);
 CK_REGISTER_PROCESSOR(ck::FProcessor_RenderTarget_ReceiveClientUploads);
 CK_REGISTER_PROCESSOR(ck::FProcessor_RenderTarget_IntervalSync);
+CK_REGISTER_PROCESSOR(ck::FProcessor_RenderTarget_ReplicateOnRestore);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Tier-C: the owner-hosted RecordOfRenderTargets connection must round-trip so the restored sync child
+// resolves by sync name (UCk_Utils_RenderTarget_UE::TryGet_RenderTarget) after a load — otherwise the
+// child is orphaned from the owner's record and the restore re-drive cannot reach it. ck:: type hoisted
+// to a file-scope alias because CK_REGISTER_SNAPSHOTABLE token-pastes the type name (mirrors CkInventory).
+using FSnap_RecordOfRenderTargets = ck::FFragment_RecordOfRenderTargets;
+CK_REGISTER_SNAPSHOTABLE(FSnap_RecordOfRenderTargets);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -201,6 +218,79 @@ namespace ck_render_target_processor
             });
     }
 
+    // Resolves (or creates) the drawable RGBA8 target for a sync entity from its params — the
+    // managed/provided switch shared by FProcessor_RenderTarget_Setup and the snapshot restore pass
+    // (FProcessor_RenderTarget_ReplicateOnRestore). Returns null after a loud ensure on
+    // misconfiguration; the caller pins the result into FFragment_RenderTarget_Current::_Target.
+    auto
+    ResolveDrawableTarget(
+        const FCk_Handle_RenderTarget& InRenderTargetEntity,
+        const ck::FFragment_RenderTarget_Params& InParams) -> UTextureRenderTarget2D*
+    {
+        switch (InParams.Get_TargetMode())
+        {
+            case ECk_RenderTarget_TargetMode::UseProvided:
+            {
+                auto* ProvidedTarget = InParams.Get_ProvidedTarget().Get();
+
+                CK_ENSURE_IF_NOT(ck::IsValid(ProvidedTarget),
+                    TEXT("RenderTarget [{}] is set to UseProvided but no render target was provided."),
+                    InRenderTargetEntity)
+                { return nullptr; }
+
+                CK_ENSURE_IF_NOT(ProvidedTarget->RenderTargetFormat == ETextureRenderTargetFormat::RTF_RGBA8,
+                    TEXT("RenderTarget [{}] was provided target [{}] with format [{}]. Only RTF_RGBA8 is supported in v1."),
+                    InRenderTargetEntity, ProvidedTarget,
+                    static_cast<int32>(ProvidedTarget->RenderTargetFormat))
+                { return nullptr; }
+
+                return ProvidedTarget;
+            }
+            case ECk_RenderTarget_TargetMode::CreateManaged:
+            {
+                const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InRenderTargetEntity);
+
+                CK_ENSURE_IF_NOT(ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}),
+                    TEXT("RenderTarget [{}] could not resolve a World to create its managed target in."),
+                    InRenderTargetEntity)
+                { return nullptr; }
+
+                const auto RequestedSize = InParams.Get_Size();
+
+                CK_ENSURE_IF_NOT(RequestedSize.X > 0 && RequestedSize.Y > 0,
+                    TEXT("RenderTarget [{}] has invalid managed size [{}x{}]."),
+                    InRenderTargetEntity, RequestedSize.X, RequestedSize.Y)
+                { return nullptr; }
+
+                const auto ClampedSize = FIntPoint
+                {
+                    FMath::Min(RequestedSize.X, UCk_Utils_RenderTarget_Settings_UE::Get_MaxManagedSize()),
+                    FMath::Min(RequestedSize.Y, UCk_Utils_RenderTarget_Settings_UE::Get_MaxManagedSize())
+                };
+
+                if (ClampedSize != RequestedSize)
+                {
+                    ck::render_target::Warning(
+                        TEXT("RenderTarget [{}] managed size [{}x{}] exceeds the cap [{}] — clamped to [{}x{}]"),
+                        InRenderTargetEntity, RequestedSize.X, RequestedSize.Y,
+                        UCk_Utils_RenderTarget_Settings_UE::Get_MaxManagedSize(), ClampedSize.X, ClampedSize.Y);
+                }
+
+                auto* CreatedTarget = UKismetRenderingLibrary::CreateRenderTarget2D(
+                    World, ClampedSize.X, ClampedSize.Y, ETextureRenderTargetFormat::RTF_RGBA8);
+
+                CK_ENSURE_IF_NOT(ck::IsValid(CreatedTarget),
+                    TEXT("RenderTarget [{}] failed to create its managed [{}x{}] target."),
+                    InRenderTargetEntity, ClampedSize.X, ClampedSize.Y)
+                { return nullptr; }
+
+                return CreatedTarget;
+            }
+        }
+
+        return nullptr;
+    }
+
     // Builds the per-player chunk queue entries for one compressed payload.
     auto
     BuildChunks(
@@ -252,68 +342,12 @@ namespace ck
     {
         InRenderTargetEntity.Remove<MarkedDirtyBy>();
 
-        switch (InParams.Get_TargetMode())
-        {
-            case ECk_RenderTarget_TargetMode::UseProvided:
-            {
-                auto* ProvidedTarget = InParams.Get_ProvidedTarget().Get();
+        auto* ResolvedTarget = ck_render_target_processor::ResolveDrawableTarget(InRenderTargetEntity, InParams);
 
-                CK_ENSURE_IF_NOT(ck::IsValid(ProvidedTarget),
-                    TEXT("RenderTarget [{}] is set to UseProvided but no render target was provided."),
-                    InRenderTargetEntity)
-                { return; }
+        if (ck::Is_NOT_Valid(ResolvedTarget))
+        { return; }
 
-                CK_ENSURE_IF_NOT(ProvidedTarget->RenderTargetFormat == ETextureRenderTargetFormat::RTF_RGBA8,
-                    TEXT("RenderTarget [{}] was provided target [{}] with format [{}]. Only RTF_RGBA8 is supported in v1."),
-                    InRenderTargetEntity, ProvidedTarget,
-                    static_cast<int32>(ProvidedTarget->RenderTargetFormat))
-                { return; }
-
-                InCurrent._Target = TStrongObjectPtr{ProvidedTarget};
-                break;
-            }
-            case ECk_RenderTarget_TargetMode::CreateManaged:
-            {
-                const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InRenderTargetEntity);
-
-                CK_ENSURE_IF_NOT(ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}),
-                    TEXT("RenderTarget [{}] could not resolve a World to create its managed target in."),
-                    InRenderTargetEntity)
-                { return; }
-
-                const auto RequestedSize = InParams.Get_Size();
-
-                CK_ENSURE_IF_NOT(RequestedSize.X > 0 && RequestedSize.Y > 0,
-                    TEXT("RenderTarget [{}] has invalid managed size [{}x{}]."),
-                    InRenderTargetEntity, RequestedSize.X, RequestedSize.Y)
-                { return; }
-
-                const auto ClampedSize = FIntPoint
-                {
-                    FMath::Min(RequestedSize.X, UCk_Utils_RenderTarget_Settings_UE::Get_MaxManagedSize()),
-                    FMath::Min(RequestedSize.Y, UCk_Utils_RenderTarget_Settings_UE::Get_MaxManagedSize())
-                };
-
-                if (ClampedSize != RequestedSize)
-                {
-                    render_target::Warning(
-                        TEXT("RenderTarget [{}] managed size [{}x{}] exceeds the cap [{}] — clamped to [{}x{}]"),
-                        InRenderTargetEntity, RequestedSize.X, RequestedSize.Y,
-                        UCk_Utils_RenderTarget_Settings_UE::Get_MaxManagedSize(), ClampedSize.X, ClampedSize.Y);
-                }
-
-                auto* CreatedTarget = UKismetRenderingLibrary::CreateRenderTarget2D(
-                    World, ClampedSize.X, ClampedSize.Y, ETextureRenderTargetFormat::RTF_RGBA8);
-
-                CK_ENSURE_IF_NOT(ck::IsValid(CreatedTarget),
-                    TEXT("RenderTarget [{}] failed to create its managed [{}x{}] target."),
-                    InRenderTargetEntity, ClampedSize.X, ClampedSize.Y)
-                { return; }
-
-                InCurrent._Target = TStrongObjectPtr{CreatedTarget};
-                break;
-            }
-        }
+        InCurrent._Target = TStrongObjectPtr{ResolvedTarget};
 
         // Attach the owner-entity instruction container on authority (channel A). One container
         // per owner, one channel per sync child. TryAddContainerFragment no-ops when the owner
@@ -360,6 +394,106 @@ namespace ck
 
         render_target::Verbose(TEXT("RenderTarget [{}] setup complete — target [{}]"),
             InRenderTargetEntity, InCurrent._Target.Get());
+    }
+
+    // ================================================================================================================
+    // REPLICATE ON RESTORE
+    // ================================================================================================================
+
+    auto
+        FProcessor_RenderTarget_ReplicateOnRestore::
+        ForEachEntity(
+            TimeType /*InDeltaT*/,
+            HandleType InHandle,
+            const FFragment_RenderTarget_Params& InParams,
+            const FFragment_RenderTarget_AuthoredLog& InAuthoredLog) const
+        -> void
+    {
+        if (NOT InHandle.Has<FTag_Snapshot_JustRestored>())
+        { return; }
+
+        if (InHandle.Has<FTag_RenderTarget_RestoreReplicated>())
+        { return; }
+
+        // Re-derive the runtime fragments Construct/Setup would have added — none are snapshotted.
+        // Idempotent across the driver-gate retries below. Adding Current is also what makes the
+        // entity satisfy the FCk_Handle_RenderTarget typesafe contract (Current + Params) again — the
+        // reason this processor iterates the generic FCk_Handle rather than the typed handle.
+        auto& Current = InHandle.AddOrGet<FFragment_RenderTarget_Current>();
+        InHandle.AddOrGet<FFragment_RenderTarget_PixelSync>();
+        InHandle.AddOrGet<FFragment_RenderTarget_ClientStaging>();
+
+        auto RenderTargetEntity = ck::StaticCast<FCk_Handle_RenderTarget>(InHandle);
+
+        // The GameplayLabel (sync name) is not restored — re-derive it from the snapshotted Params so
+        // the owner's RecordOfRenderTargets tag lookup (TryGet_RenderTarget) resolves the restored
+        // child again. Set-once: guard on Has.
+        if (NOT UCk_Utils_GameplayLabel_UE::Has(InHandle))
+        { UCk_Utils_GameplayLabel_UE::Add(InHandle, InParams.Get_SyncName()); }
+
+        // Re-create the drawable target (the transient UTextureRenderTarget2D does not survive a load).
+        // On a non-rendering process (dedicated server / -nullrhi) this stays null and the repaint
+        // below no-ops — the instruction stream is still re-published to clients.
+        if (ck::Is_NOT_Valid(Current._Target.Get()))
+        {
+            if (auto* ResolvedTarget = ck_render_target_processor::ResolveDrawableTarget(RenderTargetEntity, InParams))
+            { Current._Target = TStrongObjectPtr{ResolvedTarget}; }
+        }
+
+        // Restore the author seq watermark so Get_LatestAppliedBatchSeq reports the pre-save value and
+        // future local draws continue monotonically.
+        Current._NextBatchSeq = InAuthoredLog.Get_NextBatchSeq();
+
+        // Repaint the restored target by replaying the persisted instruction ring (no-ops headless).
+        for (const auto& Batch : InAuthoredLog.Get_Batches())
+        { FProcessor_RenderTarget_HandleRequests::DoApplyBatch(RenderTargetEntity, Current, Batch.Get_Cmds()); }
+
+        // Re-establish replication: the owner-hosted container is gone (added by Setup, abstained on
+        // restore). Re-create it + the channel and refill from the restored ring, marking it dirty so
+        // the fresh post-travel client reconverges via the ordinary ApplyReplicatedBatches path. Gate
+        // on the owner's replication driver — re-established by the snapshot respawn pass; retry (leave
+        // both markers) until it exists.
+        if (InParams.Get_Replication() == ECk_Replication::Replicates
+            && UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle))
+        {
+            auto OwnerEntity = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InHandle);
+
+            if (ck::Is_NOT_Valid(OwnerEntity))
+            { return; }
+
+            if (NOT UCk_Utils_EntityReplicationDriver_UE::Has(OwnerEntity))
+            { return; }
+
+            UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_RenderTarget>(OwnerEntity);
+
+            // Sync name from the snapshotted Params (the channel's network identity), not the label —
+            // robust regardless of label re-derivation ordering.
+            const auto SyncName        = InParams.Get_SyncName();
+            const auto& RestoredBatches = InAuthoredLog.Get_Batches();
+
+            UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_RenderTarget>(
+                OwnerEntity,
+                [&](FCk_RepData_RenderTarget& RepData) -> void
+                {
+                    if (RepData.Find_Channel(SyncName) == nullptr)
+                    {
+                        RepData.Get_Channels().Emplace(
+                            FCk_RenderTarget_ChannelState{}.Set_SyncName(SyncName));
+                    }
+
+                    auto* Channel = RepData.Find_Channel(SyncName);
+                    Channel->Set_Batches(RestoredBatches);
+
+                    if (NOT RestoredBatches.IsEmpty())
+                    { Channel->Set_LatestSeq(RestoredBatches.Last().Get_Seq()); }
+                });
+        }
+
+        InHandle.Add<FTag_RenderTarget_RestoreReplicated>();
+        InHandle.Remove<FTag_Snapshot_JustRestored>();
+
+        render_target::Verbose(TEXT("RenderTarget [{}] restore-replication complete — [{}] batch(es) re-published, next seq [{}]"),
+            RenderTargetEntity, InAuthoredLog.Get_Batches().Num(), InAuthoredLog.Get_NextBatchSeq());
     }
 
     // ================================================================================================================
@@ -480,6 +614,11 @@ namespace ck
 
         const auto SyncName = UCk_Utils_RenderTarget_UE::Get_SyncName(InRenderTargetEntity);
 
+        const auto Batch = FCk_RenderTarget_InstructionBatch{}
+            .Set_Seq(InBatchSeq)
+            .Set_Cmds(InCmds)
+            .Set_Sender(InSender);
+
         UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_RenderTarget>(
             OwnerEntity,
             [&](FCk_RepData_RenderTarget& RepData) -> void
@@ -492,16 +631,22 @@ namespace ck
                 { return; }
 
                 auto& Batches = Channel->Get_Batches();
-                Batches.Emplace(FCk_RenderTarget_InstructionBatch{}
-                    .Set_Seq(InBatchSeq)
-                    .Set_Cmds(InCmds)
-                    .Set_Sender(InSender));
+                Batches.Emplace(Batch);
 
                 if (Batches.Num() > FCk_RenderTarget_ChannelState::RingSize)
                 { Batches.RemoveAt(0); }
 
                 Channel->Set_LatestSeq(InBatchSeq);
             });
+
+        // Mirror the published batch into the snapshotable host-authoritative log on the SYNC CHILD.
+        // The channel ring above lives in the replication driver's FastArray, which is re-created
+        // empty on a snapshot load and is not itself a snapshotable fragment — so this mirror is the
+        // only persistent home for the instruction stream (see FFragment_RenderTarget_AuthoredLog).
+        // DoPublishBatch is the single host-side publish site (server draws + applied client batches
+        // both flow through it), so the log stays an exact mirror of the channel ring.
+        InRenderTargetEntity.AddOrGet<FFragment_RenderTarget_AuthoredLog>()
+            .Record_PublishedBatch(Batch, InBatchSeq + 1);
     }
 
     // ----------------------------------------------------------------------------------------------------------------
