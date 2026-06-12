@@ -14,6 +14,7 @@
 #include "CkRenderTarget/Settings/CkRenderTarget_Settings.h"
 
 #include <Engine/TextureRenderTarget2D.h>
+#include <Misc/App.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -100,6 +101,14 @@ auto
     -> UTextureRenderTarget2D*
 {
     return InRenderTargetEntity.Get<ck::FFragment_RenderTarget_Current>().Get_Target().Get();
+}
+
+auto
+    UCk_Utils_RenderTarget_UE::
+    Get_CanRenderOnThisProcess()
+    -> bool
+{
+    return FApp::CanEverRender();
 }
 
 auto
