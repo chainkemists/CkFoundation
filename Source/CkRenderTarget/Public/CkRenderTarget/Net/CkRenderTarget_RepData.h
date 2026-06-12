@@ -37,14 +37,18 @@ public:
     CK_GENERATED_BODY(FCk_RenderTarget_InstructionBatch);
 
 private:
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+    // SaveGame: persisted by CkSnapshot (FFragment_RenderTarget_AuthoredLog snapshots the published
+    // batch ring; the restored host re-applies + re-publishes these on FTag_Snapshot_JustRestored).
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, SaveGame,
         meta = (AllowPrivateAccess = true))
     int32 _Seq = 0;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, SaveGame,
         meta = (AllowPrivateAccess = true))
     TArray<FCk_RenderTarget_DrawCmd> _Cmds;
 
+    // NOT SaveGame: _Sender is runtime net identity (the authoring PlayerState) — meaningless after a
+    // reload/seamless travel. Dropped on restore, so re-published batches read as server-authored.
     UPROPERTY(VisibleAnywhere,
         meta = (AllowPrivateAccess = true))
     TWeakObjectPtr<APlayerState> _Sender;
@@ -125,6 +129,47 @@ public:
     auto
     Find_Channel(
         const FGameplayTag& InSyncName) const -> const FCk_RenderTarget_ChannelState*;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Host-authoritative, snapshotable mirror of one sync child's published instruction ring (channel A).
+// Lives on the SYNC CHILD entity (not the owner): the owner-hosted FCk_RepData_RenderTarget container
+// is stored inside the replication driver's FastArray, which is re-created EMPTY on a snapshot load and
+// is not itself a snapshotable ECS fragment — so the instruction stream has no other persistent home.
+// FProcessor_RenderTarget_HandleRequests::DoPublishBatch mirrors every published batch here (host only,
+// ring-capped to RingSize identically to the channel); FProcessor_RenderTarget_ReplicateOnRestore reads
+// it back after a load to repaint the restored target and re-publish into a fresh owner container.
+USTRUCT()
+struct CKRENDERTARGET_API FFragment_RenderTarget_AuthoredLog
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FFragment_RenderTarget_AuthoredLog);
+
+    // Tier-A snapshotable: pure value data (no entity-handle refs), captured via tagged-property
+    // serialization of the SaveGame fields below.
+    using IsSnapshotable = void;
+
+private:
+    UPROPERTY(SaveGame)
+    TArray<FCk_RenderTarget_InstructionBatch> _Batches;
+
+    UPROPERTY(SaveGame)
+    int32 _NextBatchSeq = 1;
+
+public:
+    CK_PROPERTY_GET(_Batches);
+    CK_PROPERTY_GET(_NextBatchSeq);
+
+public:
+    // Records a just-published batch (ring-capped to FCk_RenderTarget_ChannelState::RingSize) and
+    // advances the persisted author watermark. Called from DoPublishBatch on the host.
+    auto
+    Record_PublishedBatch(
+        const FCk_RenderTarget_InstructionBatch& InBatch,
+        int32 InNextBatchSeq) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
