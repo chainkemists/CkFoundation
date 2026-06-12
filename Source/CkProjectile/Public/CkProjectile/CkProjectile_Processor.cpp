@@ -1,6 +1,7 @@
 #include "CkProjectile_Processor.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
+#include "CkProjectile/Homing/CkHoming_ProNav.h"
 #include "CkVariables/CkUnrealVariables_Utils.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
@@ -65,11 +66,6 @@ namespace ck
             const FFragment_Projectile_Requests::RequestType& InRequest)
         -> void
     {
-        // Theory: https://www.gamedeveloper.com/programming/shooting-a-moving-target
-
-        const auto& ProjectileStartingLoc = InRequest.Get_ProjectileStartingLoc();
-        const auto& ProjectileSpeed = InRequest.Get_ProjectileSpeed();
-
         const auto& TargetVel = InRequest.Get_TargetVel();
         const auto& TargetLoc = [&]() -> FVector
         {
@@ -91,30 +87,19 @@ namespace ck
             }
         }();
 
-        const auto& ToTarget = TargetLoc - ProjectileStartingLoc;
-
-        const auto& A = FVector::DotProduct(TargetVel, TargetVel) - (ProjectileSpeed * ProjectileSpeed);
-        const auto& B = FVector::DotProduct(TargetVel, ToTarget) * 2.0f;
-        const auto& C = FVector::DotProduct(ToTarget, ToTarget);
-
         const auto& OptionalPayload = UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag, ECk_Recursion::NotRecursive, IgnoreSucceededFailed);
 
-        // If the discriminant is negative, then there is no solution
-        if (const auto& Discriminant = (B * B) - (4.0f * A * C);
-            Discriminant > 0.0f)
-        {
-            // Calculate the time the bullet will collide if it's possible to hit the target.
-            const auto& HitDeltaT = (2.0f * C) / (FMath::Sqrt(Discriminant) - B);
-            const auto& TargetAimPoint = TargetLoc + (TargetVel * HitDeltaT);
-
-            UUtils_Signal_Projectile_OnAimAheadCalculated::Broadcast(
-                InHandle, MakePayload(ECk_SucceededFailed::Succeeded, TargetAimPoint, OptionalPayload));
-
-            return;
-        }
+        const auto FiringSolution = pronav::Compute_FiringSolution(
+            InRequest.Get_ProjectileStartingLoc(),
+            InRequest.Get_ShooterVel(),
+            TargetLoc,
+            TargetVel,
+            InRequest.Get_ProjectileSpeed(),
+            InRequest.Get_InterceptPreference());
 
         UUtils_Signal_Projectile_OnAimAheadCalculated::Broadcast(
-                InHandle, MakePayload(ECk_SucceededFailed::Failed, FVector::ZeroVector, OptionalPayload));
+            InHandle, MakePayload(FiringSolution.Get_Result(), FiringSolution.Get_ImpactLocation(),
+                FiringSolution.Get_TimeToImpact(), OptionalPayload));
     }
 }
 

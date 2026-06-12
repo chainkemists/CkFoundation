@@ -1,8 +1,12 @@
 #pragma once
 
+#include "CkCore/Time/CkTime.h"
+
 #include "CkPhysics/Acceleration/CkAcceleration_Fragment_Data.h"
 #include "CkPhysics/AutoReorient/CkAutoReorient_Fragment_Data.h"
 #include "CkPhysics/Velocity/CkVelocity_Fragment_Data.h"
+
+#include "CkProjectile/Homing/CkHoming_ProNav.h"
 
 #include <StructUtils/InstancedStruct.h>
 
@@ -83,20 +87,32 @@ private:
               meta = (AllowPrivateAccess = true))
     FVector _TargetVel = FVector::ZeroVector;
 
+    // Velocity the projectile inherits from its shooter at launch. Zero for emplaced launchers
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FVector _ShooterVel = FVector::ZeroVector;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Homing_InterceptPreference _InterceptPreference = ECk_Homing_InterceptPreference::EarliestIntercept;
+
 public:
     CK_PROPERTY(_AimAheadPolicy);
     CK_PROPERTY(_ProjectileStartingLoc);
     CK_PROPERTY(_ProjectileSpeed);
     CK_PROPERTY(_TargetLoc);
     CK_PROPERTY(_TargetVel);
+    CK_PROPERTY(_ShooterVel);
+    CK_PROPERTY(_InterceptPreference);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+DECLARE_DYNAMIC_DELEGATE_FourParams(
     FCk_Delegate_Projectile_OnAimAheadCalculated,
     ECk_SucceededFailed, InSuccessFailed,
     const FVector&, InTargetAimPoint,
+    FCk_Time, InTimeToImpact,
     const FInstancedStruct&, InOptionalPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
