@@ -25,12 +25,17 @@ FCk_Fragment_Inventory_ParamsData::FCk_Fragment_Inventory_ParamsData(const FCk_F
     , _InventoryType(ECk_InventoryType::DataOnly)
     , _BoundMode(InDataOnlyParams.Get_BoundMode())
     , _BoundLimit(InDataOnlyParams.Get_BoundLimit())
+    , _StackingPolicy(InDataOnlyParams.Get_StackingPolicy())
+    , _MaxStackSizeClamp(InDataOnlyParams.Get_MaxStackSizeClamp())
     , _CustomCanAcceptItem(InDataOnlyParams.Get_CustomCanAcceptItem())
     , _CustomCanAcceptItemDynamic(InDataOnlyParams.Get_CustomCanAcceptItemDynamic())
     , _CanAcceptItemRef(InDataOnlyParams.Get_CanAcceptItemRef())
     , _CustomCanStackItems(InDataOnlyParams.Get_CustomCanStackItems())
     , _CustomCanStackItemsDynamic(InDataOnlyParams.Get_CustomCanStackItemsDynamic())
     , _CanStackItemsRef(InDataOnlyParams.Get_CanStackItemsRef())
+    , _CustomGetAbsorbableUnits(InDataOnlyParams.Get_CustomGetAbsorbableUnits())
+    , _CustomGetAbsorbableUnitsDynamic(InDataOnlyParams.Get_CustomGetAbsorbableUnitsDynamic())
+    , _GetAbsorbableUnitsRef(InDataOnlyParams.Get_GetAbsorbableUnitsRef())
 {}
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -39,12 +44,17 @@ FCk_Fragment_Inventory_ParamsData::FCk_Fragment_Inventory_ParamsData(const FCk_F
     : _Name(InSpatialParams.Get_Name())
     , _InventoryType(ECk_InventoryType::Spatial)
     , _Dimensions(InSpatialParams.Get_Dimensions())
+    , _StackingPolicy(InSpatialParams.Get_StackingPolicy())
+    , _MaxStackSizeClamp(InSpatialParams.Get_MaxStackSizeClamp())
     , _CustomCanAcceptItem(InSpatialParams.Get_CustomCanAcceptItem())
     , _CustomCanAcceptItemDynamic(InSpatialParams.Get_CustomCanAcceptItemDynamic())
     , _CanAcceptItemRef(InSpatialParams.Get_CanAcceptItemRef())
     , _CustomCanStackItems(InSpatialParams.Get_CustomCanStackItems())
     , _CustomCanStackItemsDynamic(InSpatialParams.Get_CustomCanStackItemsDynamic())
     , _CanStackItemsRef(InSpatialParams.Get_CanStackItemsRef())
+    , _CustomGetAbsorbableUnits(InSpatialParams.Get_CustomGetAbsorbableUnits())
+    , _CustomGetAbsorbableUnitsDynamic(InSpatialParams.Get_CustomGetAbsorbableUnitsDynamic())
+    , _GetAbsorbableUnitsRef(InSpatialParams.Get_GetAbsorbableUnitsRef())
 {}
 
 // --------------------------------------------------------------------------------------------------------------------
