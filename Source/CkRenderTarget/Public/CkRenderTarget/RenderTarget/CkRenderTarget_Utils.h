@@ -98,14 +98,27 @@ public:
     Get_SyncName(
         const FCk_Handle_RenderTarget& InRenderTargetEntity);
 
-    // The drawable target object. Invalid until the Setup processor has run (one tick after Add)
-    // and on machines that cannot render.
+    // The drawable target object. Invalid until the Setup processor has run (one tick after
+    // Add). NOTE: the object EXISTS even on processes that cannot render (Setup resolves it
+    // unconditionally so the CPU-staging/replication paths have its identity) — use
+    // Get_CanRenderOnThisProcess to detect render capability, not this object's validity.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|RenderTarget",
               DisplayName="[Ck][RenderTarget] Get Target")
     static UTextureRenderTarget2D*
     Get_Target(
         const FCk_Handle_RenderTarget& InRenderTargetEntity);
+
+    /** Whether this process can execute GPU work (FApp::CanEverRender) — the SAME gate the
+     *  pixel-capture/redraw paths use to drop work on headless processes (-nullrhi, commandlets).
+     *  Tests and tools that exercise the real-RHI legs (Request_SyncPixels,
+     *  Debug_RedrawTargetFromLastSnapshot) must skip when this is false; the CPU-staging seam
+     *  (Debug_InjectCapturedPixels) works regardless. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|RenderTarget",
+              DisplayName="[Ck][RenderTarget] Get Can Render On This Process")
+    static bool
+    Get_CanRenderOnThisProcess();
 
     // The seq of the last instruction batch applied in THIS world — locally authored on the
     // authority, replayed from the wire on clients. 0 before any batch has applied.
