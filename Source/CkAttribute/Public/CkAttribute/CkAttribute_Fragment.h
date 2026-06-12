@@ -67,7 +67,16 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_IsRefillAttribute);
     CK_DEFINE_ECS_TAG(FTag_RefillBehaviorAlwaysToZero);
     CK_DEFINE_ECS_TAG(FTag_IsRefillRunning);
-    CK_DEFINE_ECS_TAG(FTag_MayRequireClamping);
+
+    // Per-FAMILY clamp marker, keyed on the family's shared HandleType (identical across the
+    // Current/Min/Max component fragments) so a write to ANY component triggers that family's
+    // clamp pass. Deliberately not a single global tag: the MinMaxClamp composites consume the
+    // marker with a registry-wide Clear, and a global tag would let one family's Clear wipe
+    // another family's pending clamps (and, in pump passes, skip their pump entirely). A
+    // family-typed tag also gives each registered clamp composite a unique dirty-marker hash,
+    // keeping the shared-dirty-marker graph validation quiet.
+    template <typename T_AttributeHandle>
+    struct TTag_Attribute_MayRequireClamping : public TTag<TTag_Attribute_MayRequireClamping<T_AttributeHandle>> { };
 
     struct FFragment_RefillAccumulator
     {
