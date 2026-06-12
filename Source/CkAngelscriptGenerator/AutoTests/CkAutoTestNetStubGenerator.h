@@ -12,15 +12,29 @@
 // multi-PIE harness, not a single-world placed actor — so the stub is C++ that drives the
 // harness latent commands.
 //
-// Output convention (one file per "feature" derived from the AS source path's `Script/Ck<Feature>/`
-// subdir; falls back to `AS` when no such subdir exists):
-//   Plugins/CkTests/Source/CkTests/Private/Net/Generated/<Feature>_NetAutoTestStubs.spec.cpp
+// Output convention (one file per "feature" derived from the AS source path; falls back to `AS`
+// when no convention matches):
+//   * Plugin-authored tests (`Plugins/<X>/Script/Ck<Feature>/...`):
+//       Plugins/CkTests/Source/CkTests/Private/Net/Generated/<Feature>_NetAutoTestStubs.spec.cpp
+//   * Project-authored tests (`<ProjectDir>/Script/Tests/<Feature>/...`, or anywhere under the
+//     project's `Script/` tree):
+//       <ProjectDir>/Source/<ProjectName>/Tests/Net/Generated/<Feature>_NetAutoTestStubs.spec.cpp
 //
-// The file is unconditionally rooted under `CkTests` so the emitted C++ sees the harness API
+// The split is load-bearing, not cosmetic: these stubs are COMMITTED (UBT must compile them
+// before the editor can ever boot to regenerate them), and the generator actively prunes stale
+// files. A stub must therefore live in the SAME repo as the .as test class it references — git
+// keeps the pair atomic across branch switches. Before the split, a project-authored test's stub
+// landed in the CkTests submodule; any machine whose project checkout lacked that class (older
+// branch, different host project) had the committed file pruned, surfacing as a mysterious
+// deletion in the submodule on every boot.
+//
+// Plugin-authored output is rooted under `CkTests` so the emitted C++ sees the harness API
 // (`CkTests/Net/CkAutoTest_NetSubject.h`, `CkTests/Net/CkNetAutomation_Common.h`) and the
 // generator does not need a build-dependency on `CkTests` itself — only the runtime path is
-// crossed. `_NetMode` and `_TimeoutSeconds` are read off the CDO via reflection (same pattern
-// the wrapper generator uses), so this generator's module deps stay unchanged.
+// crossed. Project-authored output requires the project's primary module to depend on `CkTests`
+// (the harness headers are public and the latent commands are `CKTESTS_API`-exported).
+// `_NetMode` and `_TimeoutSeconds` are read off the CDO via reflection (same pattern the wrapper
+// generator uses), so this generator's module deps stay unchanged.
 //
 // Triggers: same as `FCkAutoTestWrapperGenerator` — `OnPostEngineInit` and every successful
 // AS PostCompile. Determinism guarantees match: stable sort, no timestamps, LF-normalized diff
@@ -49,6 +63,24 @@ public:
     // through here so they stay in lock-step.
     static auto
     Read_NetMode(const UClass* InEntityScriptClass) -> ENetMode;
+
+    // Derives the per-test "feature" bucket segment from an AS source file path. Pure path
+    // logic, exposed for unit testing. Recognizes (nearest-to-leaf match wins, the matched
+    // segment must be a directory, never the filename):
+    //   * `Script/Ck<Feature>/` — plugin convention -> `<Feature>`
+    //   * `Tests/<Feature>/`    — project convention (`<ProjectDir>/Script/Tests/<Feature>/`)
+    // Falls back to `AS` when neither applies, keeping unconventionally-located tests
+    // discoverable.
+    static auto
+    Derive_FeatureFromSourcePath(const FString& InSourcePath) -> FString;
+
+    // True when the AS source path lives under the host project's own `Script/` tree (as
+    // opposed to a plugin's). Drives the output-root split documented above. `InProjectDir`
+    // is parameterized for unit testing; production callers pass `FPaths::ProjectDir()`.
+    // Note this deliberately checks `<ProjectDir>/Script/` and not `<ProjectDir>/` — plugins
+    // physically live under the project dir too.
+    static auto
+    Get_IsProjectAuthoredPath(const FString& InSourcePath, const FString& InProjectDir) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

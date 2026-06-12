@@ -193,43 +193,28 @@ namespace ck_autotest_netstub_generator
         return BareName;
     }
 
-    // Derives the "feature" segment used in the test path's middle component (e.g. "Attribute"
-    // for `Ck.Attribute.Net.AS_*`) AND in the output filename. Reads the AS source path; expects
-    // the convention `Plugins/<Plugin>/Script/Ck<Feature>/<file>.as`. Returns `AS` as a fallback
-    // bucket when the convention doesn't apply — keeps tests discoverable even if they live in
-    // an unconventional location.
-    auto Get_TestFeature(const UClass* InEntityScriptClass) -> FString
+    // Resolves the AS source file path for a test class. Empty when the class isn't AS-backed
+    // (or AS support is compiled out) — callers treat empty as "no path convention applies".
+    auto Get_AsSourceFilePath(const UClass* InEntityScriptClass) -> FString
     {
 #if WITH_ANGELSCRIPT_CK
         auto* ASClass = UASClass::GetFirstASClass(const_cast<UClass*>(InEntityScriptClass));
         if (ASClass == nullptr)
-        { return TEXT("AS"); }
+        { return {}; }
 
-        const auto SourcePath = ASClass->GetSourceFilePath();
-        if (SourcePath.IsEmpty())
-        { return TEXT("AS"); }
-
-        // Walk path components from leaf to root looking for the `Script/Ck<Feature>` pair.
-        // Stops at the first match so deeper nestings (`Script/CkAttribute/Sub/foo.as`) still
-        // bucket to `Attribute`.
-        auto Normalized = FPaths::ConvertRelativePathToFull(SourcePath);
-        FPaths::NormalizeFilename(Normalized);
-
-        auto Parts = TArray<FString>{};
-        Normalized.ParseIntoArray(Parts, TEXT("/"), /*InCullEmpty=*/true);
-
-        for (auto i = Parts.Num() - 1; i > 0; --i)
-        {
-            if (Parts[i - 1].Equals(TEXT("Script"), ESearchCase::IgnoreCase) &&
-                Parts[i].StartsWith(TEXT("Ck"), ESearchCase::CaseSensitive))
-            {
-                const auto Feature = Parts[i].RightChop(2);
-                if (NOT Feature.IsEmpty())
-                { return Feature; }
-            }
-        }
+        return ASClass->GetSourceFilePath();
+#else
+        return {};
 #endif
-        return TEXT("AS");
+    }
+
+    // Derives the "feature" segment used in the test path's middle component (e.g. "Attribute"
+    // for `Ck.Attribute.Net.AS_*`) AND in the output filename. Reads the AS source path; the
+    // path-convention logic lives in `Derive_FeatureFromSourcePath` (pure, unit-tested).
+    auto Get_TestFeature(const UClass* InEntityScriptClass) -> FString
+    {
+        return FCkAutoTestNetStubGenerator::Derive_FeatureFromSourcePath(
+            Get_AsSourceFilePath(InEntityScriptClass));
     }
 
     // The C++ AutomationTest class identifier emitted to `IMPLEMENT_SIMPLE_AUTOMATION_TEST`.
@@ -365,46 +350,116 @@ namespace ck_autotest_netstub_generator
         TArray<UClass*> Classes;
     };
 
-    auto Bucket_ClassesByFeature(const TArray<UClass*>& InClasses) -> TArray<FFeatureBucket>
+    // Output root for plugin-authored tests. Empty when CkTests isn't enabled.
+    auto Get_CkTestsOutputDir() -> FString
     {
-        // All output lands under CkTests by construction — see header docstring for why.
-        auto OutputDir = FString{};
         if (const auto CkTestsPlugin = IPluginManager::Get().FindPlugin(TEXT("CkTests")))
         {
-            OutputDir = CkTestsPlugin->GetBaseDir() / TEXT("Source") / TEXT("CkTests")
-                      / TEXT("Private") / TEXT("Net") / TEXT("Generated");
+            return CkTestsPlugin->GetBaseDir() / TEXT("Source") / TEXT("CkTests")
+                 / TEXT("Private") / TEXT("Net") / TEXT("Generated");
         }
-        else
-        {
-            // Fallback: skip emission entirely if CkTests isn't enabled. Caller logs.
-            return {};
-        }
+        return {};
+    }
+
+    // Output root for project-authored tests: `<ProjectDir>/Source/<ProjectName>/Tests/Net/
+    // Generated`. Empty when the project has no `Source/<ProjectName>` module dir to emit into
+    // (e.g. a content-only project, or a primary module named differently from the .uproject) —
+    // we refuse to guess rather than fall back to the CkTests submodule, because a cross-repo
+    // stub is exactly the churn this split exists to prevent.
+    auto Get_ProjectOutputDir() -> FString
+    {
+        const auto ProjectModuleDir = FPaths::GameSourceDir() / FApp::GetProjectName();
+        if (NOT IFileManager::Get().DirectoryExists(*ProjectModuleDir))
+        { return {}; }
+
+        return ProjectModuleDir / TEXT("Tests") / TEXT("Net") / TEXT("Generated");
+    }
+
+    // Buckets by (output root, feature): plugin-authored tests group under CkTests, project-
+    // authored ones under the project's own source tree — see the header docstring for why the
+    // split matters. Classes whose root is unavailable are skipped with a warning (never
+    // silently, never rerouted across repos).
+    auto Bucket_ClassesByFeature(const TArray<UClass*>& InClasses) -> TArray<FFeatureBucket>
+    {
+        const auto CkTestsOutputDir = Get_CkTestsOutputDir();
+        const auto ProjectOutputDir = Get_ProjectOutputDir();
 
         auto BucketMap = TMap<FString, FFeatureBucket>{};
+        auto SkippedNoCkTests = int32{0};
+        auto SkippedNoProjectDir = int32{0};
 
         for (auto* Class : InClasses)
         {
-            const auto Feature = Get_TestFeature(Class);
+            const auto SourcePath = Get_AsSourceFilePath(Class);
+            const auto IsProjectAuthored = FCkAutoTestNetStubGenerator::Get_IsProjectAuthoredPath(
+                SourcePath, FPaths::ProjectDir());
 
-            if (NOT BucketMap.Contains(Feature))
+            const auto& OutputDir = IsProjectAuthored ? ProjectOutputDir : CkTestsOutputDir;
+            if (OutputDir.IsEmpty())
+            {
+                (IsProjectAuthored ? SkippedNoProjectDir : SkippedNoCkTests)++;
+                continue;
+            }
+
+            const auto Feature = FCkAutoTestNetStubGenerator::Derive_FeatureFromSourcePath(SourcePath);
+            const auto OutputFilePath = OutputDir
+                / ck::Format_UE(TEXT("{}_NetAutoTestStubs.spec.cpp"), Feature);
+
+            if (NOT BucketMap.Contains(OutputFilePath))
             {
                 auto Bucket = FFeatureBucket{};
                 Bucket.FeatureName = Feature;
-                Bucket.OutputFilePath = OutputDir
-                    / ck::Format_UE(TEXT("{}_NetAutoTestStubs.spec.cpp"), Feature);
-                BucketMap.Add(Feature, MoveTemp(Bucket));
+                Bucket.OutputFilePath = OutputFilePath;
+                BucketMap.Add(OutputFilePath, MoveTemp(Bucket));
             }
 
-            BucketMap[Feature].Classes.Add(Class);
+            BucketMap[OutputFilePath].Classes.Add(Class);
+        }
+
+        if (SkippedNoCkTests > 0)
+        {
+            ck::angelscriptgenerator::Warning(
+                TEXT("[CkAS Net Stubs] CkTests plugin not enabled — {} plugin-authored net-mode ")
+                TEXT("test stub(s) can't be written to disk; skipped."),
+                SkippedNoCkTests);
+        }
+        if (SkippedNoProjectDir > 0)
+        {
+            ck::angelscriptgenerator::Warning(
+                TEXT("[CkAS Net Stubs] Project module source dir [{}] not found — {} project-")
+                TEXT("authored net-mode test stub(s) can't be written to disk; skipped."),
+                FPaths::GameSourceDir() / FApp::GetProjectName(), SkippedNoProjectDir);
         }
 
         auto Result = TArray<FFeatureBucket>{};
         BucketMap.GenerateValueArray(Result);
         Result.Sort([](const FFeatureBucket& A, const FFeatureBucket& B)
         {
-            return A.FeatureName < B.FeatureName;
+            return A.OutputFilePath < B.OutputFilePath;
         });
         return Result;
+    }
+
+    // Deletes every `*_NetAutoTestStubs.spec.cpp` under `InOutputDir` that isn't in the expected
+    // set. No-op when the root is unresolved. Membership is by full path, so one combined
+    // expected set serves both roots.
+    auto Prune_StaleStubs(const FString& InOutputDir, const TSet<FString>& InExpectedPaths) -> void
+    {
+        if (InOutputDir.IsEmpty())
+        { return; }
+
+        auto ExistingFiles = TArray<FString>{};
+        IFileManager::Get().FindFiles(ExistingFiles, *(InOutputDir / TEXT("*_NetAutoTestStubs.spec.cpp")), true, false);
+        for (const auto& Leaf : ExistingFiles)
+        {
+            const auto FullPath = FPaths::ConvertRelativePathToFull(InOutputDir / Leaf);
+            if (NOT InExpectedPaths.Contains(FullPath))
+            {
+                IFileManager::Get().Delete(*FullPath, /*RequireExists=*/false, /*EvenReadOnly=*/false, /*Quiet=*/true);
+                ck::angelscriptgenerator::Log(
+                    TEXT("[CkAS Net Stubs] Pruned stale generated file: {}"), FullPath);
+            }
+        }
     }
 
     // ---- File content -------------------------------------------------
@@ -459,6 +514,64 @@ namespace ck_autotest_netstub_generator
 
 auto
     FCkAutoTestNetStubGenerator::
+    Derive_FeatureFromSourcePath(const FString& InSourcePath) -> FString
+{
+    const auto Fallback = FString{TEXT("AS")};
+
+    if (InSourcePath.IsEmpty())
+    { return Fallback; }
+
+    auto Normalized = FPaths::ConvertRelativePathToFull(InSourcePath);
+    FPaths::NormalizeFilename(Normalized);
+
+    auto Parts = TArray<FString>{};
+    Normalized.ParseIntoArray(Parts, TEXT("/"), /*InCullEmpty=*/true);
+
+    // Walk path components from leaf to root looking for a convention match; the nearest match
+    // to the leaf wins, so deeper nestings (`Script/CkAttribute/Sub/foo.as`) still bucket to
+    // `Attribute`. The loop starts at the file's PARENT — the feature segment must be a
+    // directory, never the filename itself.
+    for (auto i = Parts.Num() - 2; i > 0; --i)
+    {
+        // Plugin convention: `Script/Ck<Feature>/`.
+        if (Parts[i - 1].Equals(TEXT("Script"), ESearchCase::IgnoreCase) &&
+            Parts[i].StartsWith(TEXT("Ck"), ESearchCase::CaseSensitive))
+        {
+            const auto Feature = Parts[i].RightChop(2);
+            if (NOT Feature.IsEmpty())
+            { return Feature; }
+        }
+
+        // Project convention: `Script/Tests/<Feature>/`. Matched on the `Tests/<Feature>` pair —
+        // plugin trees never produce one (their tests sit directly under `Script/Ck<Feature>/`,
+        // which the branch above claims first when both could apply).
+        if (Parts[i - 1].Equals(TEXT("Tests"), ESearchCase::IgnoreCase))
+        { return Parts[i]; }
+    }
+
+    return Fallback;
+}
+
+auto
+    FCkAutoTestNetStubGenerator::
+    Get_IsProjectAuthoredPath(const FString& InSourcePath, const FString& InProjectDir) -> bool
+{
+    if (InSourcePath.IsEmpty() || InProjectDir.IsEmpty())
+    { return false; }
+
+    auto NormalizedSource = FPaths::ConvertRelativePathToFull(InSourcePath);
+    FPaths::NormalizeFilename(NormalizedSource);
+
+    auto ProjectScriptDir = FPaths::ConvertRelativePathToFull(InProjectDir / TEXT("Script"));
+    FPaths::NormalizeDirectoryName(ProjectScriptDir);
+
+    // Trailing separator guards against sibling-prefix false positives (`.../ScriptExtra/`).
+    // Case-insensitive: generated/source paths on Windows mix casings freely.
+    return NormalizedSource.StartsWith(ProjectScriptDir + TEXT("/"), ESearchCase::IgnoreCase);
+}
+
+auto
+    FCkAutoTestNetStubGenerator::
     Read_NetMode(const UClass* InEntityScriptClass) -> ENetMode
 {
 #if WITH_EDITOR
@@ -510,44 +623,35 @@ auto
 
     const auto Buckets = ck_autotest_netstub_generator::Bucket_ClassesByFeature(AllSubclasses);
 
-    if (Buckets.Num() == 0 && AllSubclasses.Num() > 0)
-    {
-        ck::angelscriptgenerator::Warning(
-            TEXT("[CkAS Net Stubs] CkTests plugin not enabled — net-mode tests can't be ")
-            TEXT("written to disk. {} subclasses discovered but skipped."),
-            AllSubclasses.Num());
-        return;
-    }
-
     // Prune stale generated files. Unlike the wrapper generator (one file per plugin, plugin
     // names don't churn), this generator's bucket key is "feature subdir under Script/" — and
-    // a feature can disappear if its last net test is deleted. Without active pruning, a stale
-    // `<DeadFeature>_NetAutoTestStubs.spec.cpp` would survive on disk and trip UBT compile
-    // errors for class names whose AS source is gone. We walk the output dir, build the set of
-    // file paths the current pass intends to write, and delete every other matching file.
+    // a feature can disappear if its last net test is deleted, or MOVE buckets if its source
+    // file relocates (a stale copy left behind would then duplicate the emitted C++ test class
+    // and trip UBT). Each output root is pruned against the set of file paths the current pass
+    // intends to write.
+    //
+    // Conservative guard: when discovery finds ZERO net-mode classes, skip pruning entirely.
+    // A legitimate all-tests-deleted state is indistinguishable here from a broken discovery
+    // pass (e.g. an unusual boot where AS classes aren't registered), and deleting committed
+    // files on a broken pass surfaces as mysterious repo churn on every affected machine. The
+    // cost of skipping is bounded: a genuinely-orphaned stub compiles standalone (its class
+    // references are string paths) and merely surfaces a phantom Session Frontend entry.
+    if (AllSubclasses.Num() > 0)
     {
-        if (const auto CkTestsPlugin = IPluginManager::Get().FindPlugin(TEXT("CkTests")))
-        {
-            const auto OutputDir = CkTestsPlugin->GetBaseDir() / TEXT("Source") / TEXT("CkTests")
-                                 / TEXT("Private") / TEXT("Net") / TEXT("Generated");
+        auto ExpectedPaths = TSet<FString>{};
+        for (const auto& Bucket : Buckets)
+        { ExpectedPaths.Add(FPaths::ConvertRelativePathToFull(Bucket.OutputFilePath)); }
 
-            auto ExpectedPaths = TSet<FString>{};
-            for (const auto& Bucket : Buckets)
-            { ExpectedPaths.Add(FPaths::ConvertRelativePathToFull(Bucket.OutputFilePath)); }
-
-            auto ExistingFiles = TArray<FString>{};
-            IFileManager::Get().FindFiles(ExistingFiles, *(OutputDir / TEXT("*_NetAutoTestStubs.spec.cpp")), true, false);
-            for (const auto& Leaf : ExistingFiles)
-            {
-                const auto FullPath = FPaths::ConvertRelativePathToFull(OutputDir / Leaf);
-                if (NOT ExpectedPaths.Contains(FullPath))
-                {
-                    IFileManager::Get().Delete(*FullPath, /*RequireExists=*/false, /*EvenReadOnly=*/false, /*Quiet=*/true);
-                    ck::angelscriptgenerator::Log(
-                        TEXT("[CkAS Net Stubs] Pruned stale generated file: {}"), FullPath);
-                }
-            }
-        }
+        ck_autotest_netstub_generator::Prune_StaleStubs(
+            ck_autotest_netstub_generator::Get_CkTestsOutputDir(), ExpectedPaths);
+        ck_autotest_netstub_generator::Prune_StaleStubs(
+            ck_autotest_netstub_generator::Get_ProjectOutputDir(), ExpectedPaths);
+    }
+    else
+    {
+        ck::angelscriptgenerator::Log(
+            TEXT("[CkAS Net Stubs] No net-mode classes discovered — skipping stale-file prune ")
+            TEXT("(conservative: can't distinguish all-deleted from a broken discovery pass)."));
     }
 
     auto TotalEmitted = int32{0};
