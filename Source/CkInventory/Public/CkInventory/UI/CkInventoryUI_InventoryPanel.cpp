@@ -68,7 +68,15 @@ auto
     -> void
 {
     if (_InventoryHandle == InInventory)
-    { return; }
+    {
+        // Same-inventory re-injection happens when a pooled widget is reused
+        // (CommonUI layer containers pool by class): NativeDestruct unbound the
+        // signal but kept the handle, so the early-out must restore the binding
+        // and re-sync the slots instead of assuming both are still live.
+        DoBindSignal();
+        RefreshPanel();
+        return;
+    }
 
     // ---- Unbind previous ----
 
