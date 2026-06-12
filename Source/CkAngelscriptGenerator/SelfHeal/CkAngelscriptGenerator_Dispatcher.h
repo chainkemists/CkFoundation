@@ -6,7 +6,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// AS bootstrap self-heal dispatcher (Rev 10). Bridges parsed AS-compile-error
+// AS bootstrap self-heal dispatcher (Rev 11 = Rev 10 error-driven dispatch
+// + stale-canonical quarantine escalation). Bridges parsed AS-compile-error
 // roots to recovery actions and defers their apply.
 //
 // Why deferred — empirical finding 2026-05-12: the hot-reload checker thread

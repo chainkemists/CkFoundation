@@ -339,9 +339,8 @@ namespace ck::angelscriptgenerator::self_heal
                     // heal too — the wholesale-missing case a gitignored
                     // canonical creates on every fresh clone. Falls back to
                     // the error-text stub when the class source can't be
-                    // found/parsed, or when the struct already exists in the
-                    // canonical (incremental drift — the per-signature path
-                    // owns that, and it's the battle-tested behavior).
+                    // found/parsed or when an earlier error-text stub in the
+                    // sibling owns the struct (in-session incremental drift).
                     const auto SourceDerived = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub_SourceDerived(
                         ClassName, InError, Candidates, FCkAsSourceScanner::Get_DefaultScanRoots());
 
@@ -350,6 +349,35 @@ namespace ck::angelscriptgenerator::self_heal
                         Log(TEXT("[SelfHeal] Source-derived full-shape stub for {} -> {}"),
                             ClassName, SourceDerived.TargetFilePath);
                         return true;
+                    }
+
+                    // Rev 11 stale-canonical escalation: the struct exists in
+                    // a PRESENT canonical whose signatures drifted from the
+                    // source (untracked leftover surviving a pull). The
+                    // per-signature error-text path cannot heal mixed-type
+                    // callers against it (the 2026-06-11 wedge) — quarantine
+                    // the canonical (forensic copy + delete; it regenerates
+                    // on the next successful compile) and bulk-resynthesize
+                    // exact-typed full shapes for every class it covered.
+                    if (SourceDerived.FailReason == ECk_StubInjectFailReason::StructExistsInCanonical)
+                    {
+                        Log(TEXT("[SelfHeal] Stale canonical detected for {} ('{}') — escalating to quarantine + full-shape resynthesis."),
+                            ClassName, SourceDerived.CanonicalFilePath);
+
+                        const auto Quarantined = FCkAsStubSynthesizer::Quarantine_And_ResynthesizeFullShapes(
+                            SourceDerived.CanonicalFilePath, {ClassName}, InError,
+                            FCkAsSourceScanner::Get_DefaultScanRoots());
+
+                        if (Quarantined.Success)
+                        {
+                            Log(TEXT("[SelfHeal] Quarantined stale canonical '{}' and rebuilt full-shape stubs -> {}. {}"),
+                                SourceDerived.CanonicalFilePath, Quarantined.TargetFilePath, Quarantined.ErrorMessage);
+                            return true;
+                        }
+
+                        Warning(TEXT("[SelfHeal] Quarantine escalation FAILED for {}: {}"),
+                            ClassName, Quarantined.ErrorMessage);
+                        return false;
                     }
 
                     Log(TEXT("[SelfHeal] Source-derived synthesis unavailable for {} ({}) — falling back to error-text stub."),
@@ -380,6 +408,33 @@ namespace ck::angelscriptgenerator::self_heal
                         Log(TEXT("[SelfHeal] Synthesized stub for {}::{}({}) -> {}"),
                             FallbackError.TargetNamespace, FallbackError.FunctionName, FallbackError.ArgsList, Result.TargetFilePath);
                         return true;
+                    }
+
+                    // Rev 11: the same-arity ambiguity gate no longer fakes
+                    // success — an existing same-arity stub that does NOT
+                    // satisfy this caller (mixed static types across call
+                    // sites) is unhealable per-signature. Escalate: rebuild
+                    // the sibling from exact-typed full shapes (quarantining
+                    // the canonical too, when one exists).
+                    if (Result.FailReason == ECk_StubInjectFailReason::SameArityAmbiguous)
+                    {
+                        Log(TEXT("[SelfHeal] Same-arity wedge for {}::{} — escalating to quarantine + full-shape resynthesis."),
+                            FallbackError.TargetNamespace, FallbackError.FunctionName);
+
+                        const auto Quarantined = FCkAsStubSynthesizer::Quarantine_And_ResynthesizeFullShapes(
+                            Result.CanonicalFilePath, {ClassName}, FallbackError,
+                            FCkAsSourceScanner::Get_DefaultScanRoots());
+
+                        if (Quarantined.Success)
+                        {
+                            Log(TEXT("[SelfHeal] Rebuilt full-shape stubs after same-arity wedge -> {}. {}"),
+                                Quarantined.TargetFilePath, Quarantined.ErrorMessage);
+                            return true;
+                        }
+
+                        Warning(TEXT("[SelfHeal] Quarantine escalation FAILED after same-arity wedge for {}::{}: {}"),
+                            FallbackError.TargetNamespace, FallbackError.FunctionName, Quarantined.ErrorMessage);
+                        return false;
                     }
 
                     Warning(TEXT("[SelfHeal] Stub synthesis failed for {}::{}({}): {}"),

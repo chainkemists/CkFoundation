@@ -4,6 +4,7 @@
 
 #include "HAL/FileManager.h"
 #include "HAL/PlatformFileManager.h"
+#include "Misc/DateTime.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 
@@ -473,6 +474,7 @@ namespace ck::angelscriptgenerator::self_heal
 
         if (InError.Kind != ECk_AsParsedError_Kind::NoMatchingSignatures)
         {
+            Result.FailReason   = ECk_StubInjectFailReason::NotApplicable;
             Result.ErrorMessage = TEXT("Stub synthesizer only handles NoMatchingSignatures errors.");
             return Result;
         }
@@ -489,15 +491,19 @@ namespace ck::angelscriptgenerator::self_heal
         }
         if (CanonicalPath.IsEmpty())
         {
+            Result.FailReason   = ECk_StubInjectFailReason::AnchorFailed;
             Result.ErrorMessage = FString::Printf(
                 TEXT("Could not anchor stub for namespace '%s': no candidate file matched and caller path '%s' has no .uplugin or .uproject ancestor."),
                 *InError.TargetNamespace, *InError.FilePath);
             return Result;
         }
 
+        Result.CanonicalFilePath = CanonicalPath;
+
         const auto StubPath = Derive_StubSiblingPath(CanonicalPath);
         if (StubPath.IsEmpty())
         {
+            Result.FailReason   = ECk_StubInjectFailReason::AnchorFailed;
             Result.ErrorMessage = FString::Printf(
                 TEXT("Failed to derive stub sibling path from canonical '%s'."), *CanonicalPath);
             return Result;
@@ -521,6 +527,7 @@ namespace ck::angelscriptgenerator::self_heal
         const auto StubBlock = Build_EntityScriptParamsStub(InError, EmitStruct);
         if (StubBlock.IsEmpty())
         {
+            Result.FailReason   = ECk_StubInjectFailReason::NotApplicable;
             Result.ErrorMessage = FString::Printf(
                 TEXT("Build_EntityScriptParamsStub returned empty output for namespace '%s' (unrecognized name shape?)."),
                 *InError.TargetNamespace);
@@ -581,12 +588,22 @@ namespace ck::angelscriptgenerator::self_heal
         // typed handle implicitly converts to UObject) — "Multiple matching
         // signatures", which the dispatcher can't recognize or heal. Never
         // write the second one, in either order: stub bodies discard their
-        // args, so whichever stub landed first satisfies every call site of
-        // that arity. Full-shape (source-derived) blocks emit per-overload
+        // args. Full-shape (source-derived) blocks emit per-overload
         // markers with the same prefix, so a nullptr variant of a full-shape
         // typed overload is suppressed here too. Distinct fully-typed
         // same-arity overloads (int vs float) still dedup independently —
         // the gate only fires when a fallback is involved on either side.
+        //
+        // Rev 11: the gate FAILS LOUDLY (SameArityAmbiguous) instead of
+        // returning fake success. "Whichever stub landed first satisfies
+        // them all" only holds when every caller's static arg types are
+        // compatible with the existing overload — mixed-type callers at the
+        // same position (FCk_Handle_Economy vs plain FCk_Handle at the
+        // StoreEntity slot; AS has no implicit base→typesafe conversion)
+        // stay unmatched forever while the heal reports green (the
+        // 2026-06-11 stale-canonical wedge: green toast, red compile,
+        // editor modal blocked indefinitely). The dispatcher escalates this
+        // reason to the canonical-quarantine path.
         if (StubFileExists)
         {
             const auto NewArity       = Split_ArgTypes(InError.ArgsList).Num();
@@ -602,9 +619,13 @@ namespace ck::angelscriptgenerator::self_heal
                 const auto ExistingHasFallback = ExistingArgs.Contains(FString{kUninferableTypeFallback});
                 if (NewHasFallback || ExistingHasFallback)
                 {
-                    Result.Success        = true;
+                    Result.FailReason     = ECk_StubInjectFailReason::SameArityAmbiguous;
                     Result.TargetFilePath = StubPath;
-                    Result.InjectedBlock  = StubBlock;
+                    Result.ErrorMessage   = FString::Printf(
+                        TEXT("Same-arity ambiguity: an overload of %s::%s with arity %d already exists in the sibling ")
+                        TEXT("(fallback-typed on one side) — appending another would be mutually ambiguous at every call ")
+                        TEXT("site, and the existing one does not satisfy this caller. Escalation required."),
+                        *InError.TargetNamespace, *InError.FunctionName, NewArity);
                     return Result;
                 }
             }
@@ -622,6 +643,7 @@ namespace ck::angelscriptgenerator::self_heal
 
         if (NOT Try_AtomicWrite(StubPath, NewContents))
         {
+            Result.FailReason   = ECk_StubInjectFailReason::WriteFailed;
             Result.ErrorMessage = FString::Printf(
                 TEXT("Atomic write failed for stub file '%s'."), *StubPath);
             return Result;
@@ -760,6 +782,7 @@ namespace ck::angelscriptgenerator::self_heal
         const auto StructName = Derive_SpawnParamsStructName(InClassName);
         if (StructName.IsEmpty())
         {
+            Result.FailReason   = ECk_StubInjectFailReason::NotApplicable;
             Result.ErrorMessage = FString::Printf(
                 TEXT("'%s' is not an entity-script class name shape (expected U<X>)."), *InClassName);
             return Result;
@@ -768,6 +791,7 @@ namespace ck::angelscriptgenerator::self_heal
         const auto Shape = FCkAsSourceScanner::Scan_ClassShape(InClassName, InScanRoots);
         if (NOT Shape.Found)
         {
+            Result.FailReason   = ECk_StubInjectFailReason::ScanFailed;
             Result.ErrorMessage = FString::Printf(
                 TEXT("Source scan failed for '%s': %s"), *InClassName, *Shape.ErrorMessage);
             return Result;
@@ -784,15 +808,19 @@ namespace ck::angelscriptgenerator::self_heal
         { CanonicalPath = Anchor_ByCallerAsPath(InError.FilePath); }
         if (CanonicalPath.IsEmpty())
         {
+            Result.FailReason   = ECk_StubInjectFailReason::AnchorFailed;
             Result.ErrorMessage = FString::Printf(
                 TEXT("Could not anchor full-shape stub for '%s': no candidate matched and neither the class file '%s' nor the caller '%s' has a .uplugin or .uproject ancestor."),
                 *InClassName, *Shape.SourceFilePath, *InError.FilePath);
             return Result;
         }
 
+        Result.CanonicalFilePath = CanonicalPath;
+
         const auto StubPath = Derive_StubSiblingPath(CanonicalPath);
         if (StubPath.IsEmpty())
         {
+            Result.FailReason   = ECk_StubInjectFailReason::AnchorFailed;
             Result.ErrorMessage = FString::Printf(
                 TEXT("Failed to derive stub sibling path from canonical '%s'."), *CanonicalPath);
             return Result;
@@ -830,23 +858,37 @@ namespace ck::angelscriptgenerator::self_heal
                 return Result;
             }
 
+            Result.FailReason   = ECk_StubInjectFailReason::FullShapeOnDiskStillMismatched;
             Result.ErrorMessage = FString::Printf(
                 TEXT("Full shape for '%s' already in the sibling (from a prior compile) but this Params overload is still unmatched — defer to the per-signature path."),
                 *InClassName);
             return Result;
         }
 
-        // A struct defined in the canonical (or by an earlier error-text
-        // stub) means this is incremental drift, not wholesale-missing —
-        // appending a second struct definition would itself wedge the
-        // compile. The per-signature error-text path owns that case.
+        // A struct defined in the canonical means the canonical is PRESENT
+        // but its accessor signatures no longer match the source — the
+        // stale-canonical case (e.g. an untracked leftover surviving a pull).
+        // Appending a full-shape block alongside it would duplicate the
+        // struct and the Params() overloads in the merged namespace. Rev 11:
+        // surface StructExistsInCanonical so the dispatcher escalates to
+        // canonical quarantine (delete + bulk full-shape resynthesis). A
+        // struct defined only by an earlier error-text stub in the sibling
+        // is in-session incremental drift — the per-signature path owns it.
         auto CanonicalContents = FString{};
         Try_ReadFile(CanonicalPath, CanonicalContents);
-        if (Has_SpawnParamsStruct(CanonicalContents, StructName) ||
-            Has_SpawnParamsStruct(ExistingStub, StructName))
+        if (Has_SpawnParamsStruct(CanonicalContents, StructName))
         {
+            Result.FailReason   = ECk_StubInjectFailReason::StructExistsInCanonical;
             Result.ErrorMessage = FString::Printf(
-                TEXT("Struct '%s' already defined in canonical or sibling — full-shape synthesis defers to the per-signature path."),
+                TEXT("Struct '%s' already defined in the canonical — stale-canonical drift; quarantine escalation applies."),
+                *StructName);
+            return Result;
+        }
+        if (Has_SpawnParamsStruct(ExistingStub, StructName))
+        {
+            Result.FailReason   = ECk_StubInjectFailReason::StructExistsInSibling;
+            Result.ErrorMessage = FString::Printf(
+                TEXT("Struct '%s' already defined in the sibling stub — full-shape synthesis defers to the per-signature path."),
                 *StructName);
             return Result;
         }
@@ -854,6 +896,7 @@ namespace ck::angelscriptgenerator::self_heal
         const auto StubBlock = Build_EntityScriptParamsStub_FullShape(Shape, InError);
         if (StubBlock.IsEmpty())
         {
+            Result.FailReason   = ECk_StubInjectFailReason::NotApplicable;
             Result.ErrorMessage = FString::Printf(
                 TEXT("Build_EntityScriptParamsStub_FullShape returned empty output for '%s'."), *InClassName);
             return Result;
@@ -865,6 +908,7 @@ namespace ck::angelscriptgenerator::self_heal
 
         if (NOT Try_AtomicWrite(StubPath, NewContents))
         {
+            Result.FailReason   = ECk_StubInjectFailReason::WriteFailed;
             Result.ErrorMessage = FString::Printf(
                 TEXT("Atomic write failed for stub file '%s'."), *StubPath);
             return Result;
@@ -875,6 +919,213 @@ namespace ck::angelscriptgenerator::self_heal
         Result.Success        = true;
         Result.TargetFilePath = StubPath;
         Result.InjectedBlock  = StubBlock;
+        return Result;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FCkAsStubSynthesizer::
+        Enumerate_EntityScriptNamespaces(
+            const FString& InCanonicalContents)
+        -> TArray<FString>
+    {
+        auto Out  = TArray<FString>{};
+        auto Seen = TSet<FString>{};
+
+        auto Lines = TArray<FString>{};
+        InCanonicalContents.ParseIntoArrayLines(Lines, /*InCullEmpty=*/true);
+
+        static const auto NamespaceKeyword = FString{TEXT("namespace ")};
+        for (const auto& RawLine : Lines)
+        {
+            const auto Line = RawLine.TrimStartAndEnd();
+            if (NOT Line.StartsWith(NamespaceKeyword))
+            { continue; }
+
+            auto Name = Line.RightChop(NamespaceKeyword.Len()).TrimStartAndEnd();
+            // Tolerate a same-line opening brace ("namespace UFoo {").
+            const auto BracePos = Name.Find(TEXT("{"));
+            if (BracePos != INDEX_NONE)
+            { Name = Name.Left(BracePos).TrimEnd(); }
+
+            // Only entity-script namespaces (U<X>), corroborated by their
+            // derived F<X>_SpawnParams struct being defined in the same text
+            // — guards against unrelated namespaces in a hand-mangled file.
+            const auto StructName = Derive_SpawnParamsStructName(Name);
+            if (StructName.IsEmpty() || NOT Has_SpawnParamsStruct(InCanonicalContents, StructName))
+            { continue; }
+
+            if (Seen.Contains(Name))
+            { continue; }
+            Seen.Add(Name);
+            Out.Add(Name);
+        }
+        return Out;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FCkAsStubSynthesizer::
+        Quarantine_And_ResynthesizeFullShapes(
+            const FString&           InCanonicalPath,
+            const TArray<FString>&   InSeedClassNames,
+            const FCk_AsParsedError& InError,
+            const TArray<FString>&   InScanRoots)
+        -> FCk_StubInjectionResult
+    {
+        auto Result = FCk_StubInjectionResult{};
+        Result.CanonicalFilePath = InCanonicalPath;
+
+        if (InCanonicalPath.IsEmpty())
+        {
+            Result.FailReason   = ECk_StubInjectFailReason::AnchorFailed;
+            Result.ErrorMessage = TEXT("Quarantine requires a resolved canonical path.");
+            return Result;
+        }
+
+        const auto StubPath = Derive_StubSiblingPath(InCanonicalPath);
+
+        // ---- 1. Class union, gathered BEFORE anything is deleted ----------
+        auto ClassUnion = TArray<FString>{};
+        auto Seen       = TSet<FString>{};
+        const auto AddClass = [&](const FString& InName) -> void
+        {
+            if (InName.IsEmpty() || Seen.Contains(InName))
+            { return; }
+            Seen.Add(InName);
+            ClassUnion.Add(InName);
+        };
+
+        for (const auto& Name : InSeedClassNames)
+        { AddClass(Name); }
+
+        auto CanonicalContents = FString{};
+        const auto CanonicalExists = Try_ReadFile(InCanonicalPath, CanonicalContents);
+        if (CanonicalExists)
+        {
+            for (const auto& Name : Enumerate_EntityScriptNamespaces(CanonicalContents))
+            { AddClass(Name); }
+        }
+
+        auto SiblingContents = FString{};
+        const auto SiblingExists = Try_ReadFile(StubPath, SiblingContents);
+        if (SiblingExists)
+        {
+            // Classes already healed this session — full-shape markers
+            // (`// End synthesized full-shape stub for <X>`) and error-text
+            // markers (`// End synthesized stub for <NS>::...`) both name
+            // the class; carry them into the rebuilt sibling so the retry
+            // compile doesn't regress accessors that were already covered.
+            auto SiblingLines = TArray<FString>{};
+            SiblingContents.ParseIntoArrayLines(SiblingLines, /*InCullEmpty=*/true);
+
+            static const auto FullShapePrefix = FString{TEXT("// End synthesized full-shape stub for ")};
+            static const auto ErrorTextPrefix = FString{TEXT("// End synthesized stub for ")};
+            for (const auto& RawLine : SiblingLines)
+            {
+                const auto Line = RawLine.TrimStartAndEnd();
+                if (Line.StartsWith(FullShapePrefix))
+                {
+                    AddClass(Line.RightChop(FullShapePrefix.Len()).TrimStartAndEnd());
+                }
+                else if (Line.StartsWith(ErrorTextPrefix))
+                {
+                    const auto Remainder = Line.RightChop(ErrorTextPrefix.Len());
+                    const auto ScopePos  = Remainder.Find(TEXT("::"));
+                    if (ScopePos != INDEX_NONE)
+                    { AddClass(Remainder.Left(ScopePos).TrimStartAndEnd()); }
+                }
+            }
+        }
+
+        // ---- 2. Drop the sibling (may hold the wedged per-call-site stub) -
+        if (SiblingExists)
+        { IFileManager::Get().Delete(*StubPath, /*RequireExists=*/false, /*EvenReadOnly=*/false, /*Quiet=*/true); }
+
+        // ---- 3. Quarantine the canonical -----------------------------------
+        // Forensic copy lands under Saved/ (ignored, outside the AS script
+        // roots so the copy itself can never compile); the canonical is then
+        // DELETED — it is rewritten from live reflection on every successful
+        // compile, and the startup stub-sweep retention rule keeps the
+        // rebuilt sibling alive across a force-quit while its canonical is
+        // missing (the proven fresh-bootstrap path). If hot-reload ever
+        // proves blind to the deletion mid-session, switch to an atomic
+        // truncate-in-place (one-line header) — mtime-detected, compiles to
+        // empty, PostCompile regen restores it.
+        if (CanonicalExists)
+        {
+            const auto QuarantineDir = FPaths::ProjectSavedDir() / TEXT("CkSelfHeal/Quarantine");
+            IFileManager::Get().MakeDirectory(*QuarantineDir, /*Tree=*/true);
+
+            const auto Stamp        = FDateTime::UtcNow().ToString(TEXT("%Y.%m.%d-%H.%M.%S"));
+            const auto ForensicPath = QuarantineDir /
+                FString::Printf(TEXT("%s.stale_%s"), *FPaths::GetCleanFilename(InCanonicalPath), *Stamp);
+
+            // Copy failure is log-worthy but not blocking — the forensic
+            // copy is a courtesy; the heal itself only needs the delete.
+            if (IFileManager::Get().Copy(*ForensicPath, *InCanonicalPath) != COPY_OK)
+            {
+                Result.ErrorMessage = FString::Printf(
+                    TEXT("Forensic copy to '%s' failed (continuing). "), *ForensicPath);
+            }
+
+            if (NOT IFileManager::Get().Delete(*InCanonicalPath, /*RequireExists=*/false, /*EvenReadOnly=*/true, /*Quiet=*/true))
+            {
+                Result.FailReason    = ECk_StubInjectFailReason::WriteFailed;
+                Result.ErrorMessage += FString::Printf(
+                    TEXT("Could not delete stale canonical '%s' — quarantine aborted (sibling was already dropped; ")
+                    TEXT("the next heal cycle re-enters here)."), *InCanonicalPath);
+                return Result;
+            }
+        }
+
+        // ---- 4. Bulk full-shape resynthesis --------------------------------
+        // Empty candidate list on purpose: the canonical no longer exists, so
+        // each class anchors via its own declaring file's plugin/project root
+        // (the same attribution the real generator uses).
+        auto SeedFailures = TArray<FString>{};
+        auto SkippedCount = 0;
+        for (const auto& ClassName : ClassUnion)
+        {
+            const auto Injected = Inject_EntityScriptParamsStub_SourceDerived(
+                ClassName, InError, /*InCandidateFilePaths=*/{}, InScanRoots);
+
+            if (Injected.Success)
+            {
+                if (Result.TargetFilePath.IsEmpty())
+                { Result.TargetFilePath = Injected.TargetFilePath; }
+                continue;
+            }
+
+            if (InSeedClassNames.Contains(ClassName))
+            {
+                SeedFailures.Add(FString::Printf(TEXT("%s: %s"), *ClassName, *Injected.ErrorMessage));
+            }
+            else
+            {
+                // Non-seed scan failures are expected for deleted classes —
+                // they simply drop out of the regenerated canonical; a live
+                // caller of one surfaces the convergence banner, correctly.
+                ++SkippedCount;
+            }
+        }
+
+        if (SeedFailures.Num() > 0)
+        {
+            Result.FailReason    = ECk_StubInjectFailReason::ScanFailed;
+            Result.ErrorMessage += FString::Printf(
+                TEXT("Quarantine resynthesis failed for seed class(es): %s"),
+                *FString::Join(SeedFailures, TEXT("; ")));
+            return Result;
+        }
+
+        Result.Success      = true;
+        Result.FailReason   = ECk_StubInjectFailReason::None;
+        Result.ErrorMessage = SkippedCount > 0
+            ? FString::Printf(TEXT("%d non-seed class(es) skipped (no scannable source)."), SkippedCount)
+            : FString{};
         return Result;
     }
 

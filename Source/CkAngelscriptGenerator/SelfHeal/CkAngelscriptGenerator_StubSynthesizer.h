@@ -7,7 +7,9 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Emergency stub synthesizer for the Rev 10 self-heal dispatcher.
+// Emergency stub synthesizer for the self-heal dispatcher (Rev 10 dispatch
+// model; Rev 11 adds the stale-canonical quarantine escalation —
+// Quarantine_And_ResynthesizeFullShapes below).
 //
 // Synthesizes minimum-viable USTRUCT + namespace blocks satisfying missing
 // EntitySpawnParams accessors into a sibling
@@ -42,12 +44,34 @@
 
 namespace ck::angelscriptgenerator::self_heal
 {
+    // Typed failure reasons so the dispatcher can branch on WHY an injection
+    // failed (escalate vs fall back) instead of pattern-matching ErrorMessage
+    // strings. Rev 11: StructExistsInCanonical and SameArityAmbiguous route
+    // to the canonical-quarantine escalation — both are wedge states the
+    // per-signature error-text path cannot heal (pinned by the 2026-06-11
+    // stale-canonical incident: a 25-param canonical vs 29-arg callers with
+    // mixed static types at the StoreEntity position).
+    enum class ECk_StubInjectFailReason : uint8
+    {
+        None,                           // success (or no failure recorded)
+        NotApplicable,                  // wrong error kind / unrecognized name shape
+        ScanFailed,                     // class source not found / not parseable
+        AnchorFailed,                   // no canonical path could be resolved
+        WriteFailed,                    // file IO failure
+        StructExistsInCanonical,        // stale-but-present canonical owns the struct — quarantine escalation
+        StructExistsInSibling,          // an earlier error-text stub owns the struct — per-signature path
+        FullShapeOnDiskStillMismatched, // prior-process full shape didn't satisfy the caller — per-signature path
+        SameArityAmbiguous,             // fallback/typed same-arity overload conflict — quarantine escalation
+    };
+
     struct CKANGELSCRIPTGENERATOR_API FCk_StubInjectionResult
     {
         bool    Success = false;
-        FString TargetFilePath;   // sibling stub file (empty on failure)
-        FString InjectedBlock;    // verbatim stub text (empty on failure)
-        FString ErrorMessage;     // populated on failure
+        ECk_StubInjectFailReason FailReason = ECk_StubInjectFailReason::None;
+        FString TargetFilePath;    // sibling stub file (empty on failure)
+        FString CanonicalFilePath; // canonical the injection resolved against (when resolution got that far)
+        FString InjectedBlock;     // verbatim stub text (empty on failure)
+        FString ErrorMessage;      // populated on failure
     };
 
     class CKANGELSCRIPTGENERATOR_API FCkAsStubSynthesizer
@@ -131,6 +155,48 @@ namespace ck::angelscriptgenerator::self_heal
         // `// End synthesized full-shape stub for <ClassName>` — the
         // class-level dedup marker for source-derived stubs.
         static auto Get_FullShapeMarkerLine(const FString& InClassName) -> FString;
+
+        // Scans canonical-file contents for `namespace U<X>` blocks whose
+        // derived `F<X>_SpawnParams` struct is also defined in the same text.
+        // Used by the quarantine escalation to enumerate every class the
+        // stale canonical covered, so ONE retry compile converges instead of
+        // burning a bootstrap cycle per "every other class just lost its
+        // struct". Pure string scan — unit-testable.
+        static auto Enumerate_EntityScriptNamespaces(
+            const FString& InCanonicalContents) -> TArray<FString>;
+
+        // Rev 11 stale-canonical escalation. A PRESENT canonical whose
+        // accessor signatures no longer match the entity-script source (e.g.
+        // an untracked leftover after the gitignore flip survives a pull)
+        // cannot be healed by the per-signature error-text path: error-text
+        // stubs are typed from ONE call site's static arg types, and mixed-
+        // type callers at the same position (typesafe vs base handle) make
+        // any single same-arity overload unsatisfiable for the rest — the
+        // same-arity ambiguity gate then wedges (SameArityAmbiguous).
+        //
+        // This routine converts "stale" into the proven "missing" bootstrap:
+        //  1. Builds the class union: InSeedClassNames ∪ namespaces in the
+        //     canonical ∪ classes named by markers in the existing sibling.
+        //  2. Deletes the sibling stub (it may hold the wedged per-call-site
+        //     stub; rebuilt cleanly below).
+        //  3. Quarantines the canonical — forensic copy to
+        //     Saved/CkSelfHeal/Quarantine/<name>.stale_<UTC>, then DELETE
+        //     (the canonical is rewritten on every successful compile; the
+        //     startup stub-sweep retention rule keeps the rebuilt sibling
+        //     alive across a force-quit while its canonical is missing).
+        //  4. Source-derived full-shape synthesis for every class in the
+        //     union (exact-typed named params satisfy ALL call sites —
+        //     typesafe→base by-value conversion is implicit in AS). Classes
+        //     whose source can't be scanned (deleted classes) are logged and
+        //     skipped; they simply drop out of the regenerated canonical.
+        //
+        // Success requires every seed class to have synthesized; skipped
+        // non-seed classes don't fail the escalation.
+        static auto Quarantine_And_ResynthesizeFullShapes(
+            const FString&           InCanonicalPath,
+            const TArray<FString>&   InSeedClassNames,
+            const FCk_AsParsedError& InError,
+            const TArray<FString>&   InScanRoots) -> FCk_StubInjectionResult;
 
         // Clears the session-static "full shapes written this process" set —
         // lets tests simulate the next-process boundary (headless cook

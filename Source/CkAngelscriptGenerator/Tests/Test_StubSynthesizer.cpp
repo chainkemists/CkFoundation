@@ -1281,9 +1281,11 @@ bool FCkTest_StubSynthesizer_Inject_SourceDerived_EndToEnd::RunTest(const FStrin
 
 // --------------------------------------------------------------------------------------------------------------------
 // Inject_EntityScriptParamsStub_SourceDerived: when the struct already exists
-// in the canonical, full-shape synthesis must DEFER (Success = false) — that
-// is incremental drift, owned by the battle-tested per-signature error-text
-// path; a second struct definition would itself wedge the compile.
+// in the canonical, full-shape synthesis must fail with
+// StructExistsInCanonical (a second struct definition would itself wedge the
+// compile) — the DISPATCHER then escalates that reason to the Rev 11
+// canonical-quarantine path. The synthesizer itself never mutates the
+// canonical here.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -1330,11 +1332,15 @@ bool FCkTest_StubSynthesizer_Inject_SourceDerived_DefersOnExistingStruct::RunTes
     const auto Result = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub_SourceDerived(
         TEXT("UTestSynth_Drift"), Error, /*InCandidateFilePaths=*/{CanonicalFile}, /*InScanRoots=*/{ScriptRoot});
 
-    TestFalse(TEXT("defers (Success = false)"), Result.Success);
-    TestTrue(TEXT("reason mentions deferral to per-signature path"),
-        Result.ErrorMessage.Contains(TEXT("defers")));
+    TestFalse(TEXT("fails (Success = false)"), Result.Success);
+    TestTrue(TEXT("FailReason is StructExistsInCanonical (quarantine-escalation trigger)"),
+        Result.FailReason == ECk_StubInjectFailReason::StructExistsInCanonical);
+    TestEqual(TEXT("canonical path surfaced for the dispatcher's escalation"),
+        Result.CanonicalFilePath, CanonicalFile);
     TestFalse(TEXT("no sibling stub written"),
         IFileManager::Get().FileExists(*(ScriptRoot / TEXT("Generated/_StubRecovery_FakeProj_EntitySpawnParams.as"))));
+    TestTrue(TEXT("canonical untouched by the synthesizer itself"),
+        IFileManager::Get().FileExists(*CanonicalFile));
 
     IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
     return true;
@@ -1417,8 +1423,14 @@ bool FCkTest_StubSynthesizer_Inject_NullVariant_SkippedWhenTypedSameArityExists:
     const auto ResultTyped = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(ErrorTyped, {FixtureFile});
     TestTrue(TEXT("typed inject succeeded"), ResultTyped.Success);
 
+    // Rev 11: the gate FAILS LOUDLY instead of faking success — the existing
+    // typed stub does not necessarily satisfy the nullptr caller's other
+    // args, and a fake success hid exactly that wedge (2026-06-11 incident).
+    // The dispatcher escalates SameArityAmbiguous to canonical quarantine.
     const auto ResultNull = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(ErrorNull, {FixtureFile});
-    TestTrue(TEXT("null-variant inject reports success (no-op)"), ResultNull.Success);
+    TestFalse(TEXT("null-variant inject FAILS (no fake success)"), ResultNull.Success);
+    TestTrue(TEXT("FailReason is SameArityAmbiguous"),
+        ResultNull.FailReason == ECk_StubInjectFailReason::SameArityAmbiguous);
 
     auto Stub = FString{};
     TestTrue(TEXT("sibling readable"), FFileHelper::LoadFileToString(Stub, *ExpectedStubFile));
@@ -1490,8 +1502,12 @@ bool FCkTest_StubSynthesizer_Inject_TypedVariant_SkippedWhenFallbackSameArityExi
     const auto ResultNull = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(ErrorNull, {FixtureFile});
     TestTrue(TEXT("null-variant inject succeeded"), ResultNull.Success);
 
+    // Rev 11: fails loudly (SameArityAmbiguous) — see the typed-first twin
+    // test above. Nothing is appended either way.
     const auto ResultTyped = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(ErrorTyped, {FixtureFile});
-    TestTrue(TEXT("typed inject reports success (no-op)"), ResultTyped.Success);
+    TestFalse(TEXT("typed inject FAILS (no fake success)"), ResultTyped.Success);
+    TestTrue(TEXT("FailReason is SameArityAmbiguous"),
+        ResultTyped.FailReason == ECk_StubInjectFailReason::SameArityAmbiguous);
 
     auto Stub = FString{};
     TestTrue(TEXT("sibling readable"), FFileHelper::LoadFileToString(Stub, *ExpectedStubFile));
@@ -1509,6 +1525,393 @@ bool FCkTest_StubSynthesizer_Inject_TypedVariant_SkippedWhenFallbackSameArityExi
         Stub.Contains(TEXT("Params(FTransform Arg0, UObject Arg1)")));
     TestFalse(TEXT("no typed twin landed"),
         Stub.Contains(TEXT("UBb_StoreCustomization_Config Arg1)")));
+
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Enumerate_EntityScriptNamespaces: pure string scan — entity-script
+// namespaces (U<X> with a corroborating F<X>_SpawnParams struct in the same
+// text) are enumerated in order, deduped; unrelated namespaces and
+// struct-less ones are ignored.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StubSynthesizer_EnumerateEntityScriptNamespaces,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.EnumerateEntityScriptNamespaces",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StubSynthesizer_EnumerateEntityScriptNamespaces::RunTest(const FString&)
+{
+    const auto Contents = FString{TEXT(
+        "// header noise\n"
+        "USTRUCT()\n"
+        "struct FTestEnum_A_SpawnParams\n"
+        "{\n"
+        "}\n"
+        "namespace UTestEnum_A\n"
+        "{\n"
+        "    FTestEnum_A_SpawnParams Params() { return FTestEnum_A_SpawnParams(); }\n"
+        "}\n"
+        "struct FTestEnum_B_SpawnParams\n"
+        "{\n"
+        "}\n"
+        "namespace UTestEnum_B {\n"
+        "}\n"
+        "namespace UTestEnum_NoStruct\n"   // no F..._SpawnParams struct in text — ignored
+        "{\n"
+        "}\n"
+        "namespace assets\n"               // not U-prefixed — ignored
+        "{\n"
+        "}\n"
+        "namespace UTestEnum_A\n"          // duplicate — deduped
+        "{\n"
+        "}\n")};
+
+    const auto Names = FCkAsStubSynthesizer::Enumerate_EntityScriptNamespaces(Contents);
+
+    TestEqual(TEXT("two namespaces enumerated"), Names.Num(), 2);
+    if (Names.Num() == 2)
+    {
+        TestEqual(TEXT("first is UTestEnum_A"),  Names[0], FString{TEXT("UTestEnum_A")});
+        TestEqual(TEXT("second is UTestEnum_B (same-line brace tolerated)"), Names[1], FString{TEXT("UTestEnum_B")});
+    }
+
+    TestEqual(TEXT("empty contents -> empty"),
+        FCkAsStubSynthesizer::Enumerate_EntityScriptNamespaces(FString{}).Num(), 0);
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Quarantine_And_ResynthesizeFullShapes: scaled replay of the 2026-06-11
+// incident. A stale canonical holds a 2-param accessor while the class
+// source declares 3 ExposeOnSpawn props (one a typesafe handle). Quarantine
+// must delete the canonical (forensic copy under Saved/), rebuild the
+// sibling with the exact-typed full shape, and define the struct once.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StubSynthesizer_Quarantine_StaleCanonical_EndToEnd,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.Quarantine_StaleCanonical_EndToEnd",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StubSynthesizer_Quarantine_StaleCanonical_EndToEnd::RunTest(const FString&)
+{
+    FCkAsStubSynthesizer::Reset_SessionState_ForTests();
+
+    const auto TempRoot = FPaths::ConvertRelativePathToFull(
+        FPaths::ProjectIntermediateDir() / TEXT("CkStubSynthTest_Quarantine"));
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+
+    const auto ScriptRoot    = TempRoot / TEXT("Script");
+    const auto ClassFile     = ScriptRoot / TEXT("Classes/TestQ_Driver.as");
+    const auto CanonicalFile = ScriptRoot / TEXT("Generated/FakeProj_EntitySpawnParams.as");
+    const auto SiblingFile   = ScriptRoot / TEXT("Generated/_StubRecovery_FakeProj_EntitySpawnParams.as");
+
+    IFileManager::Get().MakeDirectory(*FPaths::GetPath(ClassFile),     /*Tree=*/true);
+    IFileManager::Get().MakeDirectory(*FPaths::GetPath(CanonicalFile), /*Tree=*/true);
+    FFileHelper::SaveStringToFile(FString{TEXT("{}")}, *(TempRoot / TEXT("FakeProj.uproject")));
+
+    // Current source: THREE props, the second a typesafe handle.
+    FFileHelper::SaveStringToFile(FString{TEXT(
+        "class UTestQ_Driver : UCk_GenericEntityScript_UE\n"
+        "{\n"
+        "    UPROPERTY(ExposeOnSpawn)\n"
+        "    FGameplayTag Phase;\n"
+        "    UPROPERTY(ExposeOnSpawn)\n"
+        "    FCk_Handle StoreEntity;\n"
+        "    UPROPERTY(ExposeOnSpawn)\n"
+        "    int32 Knob;\n"
+        "}\n")}, *ClassFile, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+
+    // Stale canonical: TWO-param accessor from before the third prop landed.
+    FFileHelper::SaveStringToFile(FString{TEXT(
+        "USTRUCT()\n"
+        "struct FTestQ_Driver_SpawnParams\n"
+        "{\n"
+        "    UPROPERTY()\n"
+        "    FGameplayTag Phase;\n"
+        "    UPROPERTY()\n"
+        "    FCk_Handle StoreEntity;\n"
+        "}\n"
+        "namespace UTestQ_Driver\n"
+        "{\n"
+        "    FTestQ_Driver_SpawnParams Params() { return FTestQ_Driver_SpawnParams(); }\n"
+        "    FTestQ_Driver_SpawnParams Params(FGameplayTag InPhase, FCk_Handle InStoreEntity) { return FTestQ_Driver_SpawnParams(); }\n"
+        "}\n")}, *CanonicalFile, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+
+    const auto Error = Make_ParsedError(
+        TEXT("UTestQ_Driver"), TEXT("Params"), TEXT("FGameplayTag, FCk_Handle, const int"));
+
+    const auto Result = FCkAsStubSynthesizer::Quarantine_And_ResynthesizeFullShapes(
+        CanonicalFile, {TEXT("UTestQ_Driver")}, Error, {ScriptRoot});
+
+    TestTrue(TEXT("quarantine succeeded"), Result.Success);
+    if (NOT Result.Success)
+    { AddError(FString::Printf(TEXT("Quarantine failed: %s"), *Result.ErrorMessage)); }
+
+    TestFalse(TEXT("stale canonical deleted"), IFileManager::Get().FileExists(*CanonicalFile));
+
+    // Forensic copy landed under Saved/CkSelfHeal/Quarantine.
+    auto ForensicMatches = TArray<FString>{};
+    IFileManager::Get().FindFiles(ForensicMatches,
+        *(FPaths::ProjectSavedDir() / TEXT("CkSelfHeal/Quarantine") / TEXT("FakeProj_EntitySpawnParams.as.stale_*")),
+        /*Files=*/true, /*Dirs=*/false);
+    TestTrue(TEXT("forensic copy exists under Saved/CkSelfHeal/Quarantine"), ForensicMatches.Num() >= 1);
+
+    auto Stub = FString{};
+    TestTrue(TEXT("sibling rebuilt"), FFileHelper::LoadFileToString(Stub, *SiblingFile));
+    TestEqual(TEXT("struct defined exactly once"),
+        Count_Occurrences(Stub, TEXT("struct FTestQ_Driver_SpawnParams")), 1);
+    TestTrue(TEXT("full shape carries the NEW third prop"),
+        Stub.Contains(TEXT("    int32 Knob;")));
+    TestTrue(TEXT("exact-typed positional ctor (all three props)"),
+        Stub.Contains(TEXT("FTestQ_Driver_SpawnParams(FGameplayTag InPhase, FCk_Handle InStoreEntity, int32 InKnob)")));
+    TestTrue(TEXT("full-shape marker present"),
+        Stub.Contains(FCkAsStubSynthesizer::Get_FullShapeMarkerLine(TEXT("UTestQ_Driver"))));
+
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Quarantine rebuilds the sibling from scratch: a wedged per-call-site
+// error-text stub (typed from ONE caller — the Arg0..ArgN shape that cannot
+// satisfy mixed-type callers) must be GONE after quarantine, replaced by the
+// exact-typed full shape.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StubSynthesizer_Quarantine_RebuildsSibling_DroppingWedgedErrorTextStub,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.Quarantine_RebuildsSibling_DroppingWedgedErrorTextStub",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StubSynthesizer_Quarantine_RebuildsSibling_DroppingWedgedErrorTextStub::RunTest(const FString&)
+{
+    FCkAsStubSynthesizer::Reset_SessionState_ForTests();
+
+    const auto TempRoot = FPaths::ConvertRelativePathToFull(
+        FPaths::ProjectIntermediateDir() / TEXT("CkStubSynthTest_QuarantineWedge"));
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+
+    const auto ScriptRoot    = TempRoot / TEXT("Script");
+    const auto ClassFile     = ScriptRoot / TEXT("Classes/TestQ_Wedge.as");
+    const auto CanonicalFile = ScriptRoot / TEXT("Generated/FakeProj_EntitySpawnParams.as");
+    const auto SiblingFile   = ScriptRoot / TEXT("Generated/_StubRecovery_FakeProj_EntitySpawnParams.as");
+
+    IFileManager::Get().MakeDirectory(*FPaths::GetPath(ClassFile),     /*Tree=*/true);
+    IFileManager::Get().MakeDirectory(*FPaths::GetPath(CanonicalFile), /*Tree=*/true);
+    FFileHelper::SaveStringToFile(FString{TEXT("{}")}, *(TempRoot / TEXT("FakeProj.uproject")));
+
+    FFileHelper::SaveStringToFile(FString{TEXT(
+        "class UTestQ_Wedge : UCk_GenericEntityScript_UE\n"
+        "{\n"
+        "    UPROPERTY(ExposeOnSpawn)\n"
+        "    FCk_Handle StoreEntity;\n"
+        "    UPROPERTY(ExposeOnSpawn)\n"
+        "    int32 Knob;\n"
+        "}\n")}, *ClassFile, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+
+    FFileHelper::SaveStringToFile(FString{TEXT(
+        "USTRUCT()\n"
+        "struct FTestQ_Wedge_SpawnParams\n"
+        "{\n"
+        "}\n"
+        "namespace UTestQ_Wedge\n"
+        "{\n"
+        "    FTestQ_Wedge_SpawnParams Params() { return FTestQ_Wedge_SpawnParams(); }\n"
+        "}\n")}, *CanonicalFile, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+
+    // The wedged leftover: an error-text stub typed from ONE call site
+    // (Economy-typed handle at the StoreEntity slot).
+    FFileHelper::SaveStringToFile(FString{TEXT(
+        "// stub header\n"
+        "namespace UTestQ_Wedge\n"
+        "{\n"
+        "    FTestQ_Wedge_SpawnParams Params(FCk_Handle_Economy Arg0, int Arg1)\n"
+        "    {\n"
+        "        return FTestQ_Wedge_SpawnParams();\n"
+        "    }\n"
+        "}\n"
+        "// End synthesized stub for UTestQ_Wedge::Params(FCk_Handle_Economy, int)\n")},
+        *SiblingFile, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+
+    const auto Error = Make_ParsedError(
+        TEXT("UTestQ_Wedge"), TEXT("Params"), TEXT("FCk_Handle, const int"));
+
+    const auto Result = FCkAsStubSynthesizer::Quarantine_And_ResynthesizeFullShapes(
+        CanonicalFile, {TEXT("UTestQ_Wedge")}, Error, {ScriptRoot});
+
+    TestTrue(TEXT("quarantine succeeded"), Result.Success);
+
+    auto Stub = FString{};
+    TestTrue(TEXT("sibling rebuilt"), FFileHelper::LoadFileToString(Stub, *SiblingFile));
+    TestFalse(TEXT("wedged Arg0-style error-text stub is gone"),
+        Stub.Contains(TEXT("Arg0")));
+    TestFalse(TEXT("the one-caller Economy-typed param is gone"),
+        Stub.Contains(TEXT("FCk_Handle_Economy")));
+    TestTrue(TEXT("exact-typed full shape landed (named In<Prop> params)"),
+        Stub.Contains(TEXT("FTestQ_Wedge_SpawnParams(FCk_Handle InStoreEntity, int32 InKnob)")));
+    TestEqual(TEXT("struct defined exactly once"),
+        Count_Occurrences(Stub, TEXT("struct FTestQ_Wedge_SpawnParams")), 1);
+
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Quarantine synthesizes the UNION of canonical classes — not just the seed.
+// Deleting the canonical removes EVERY class's struct; rebuilding only the
+// erroring one would burn a bootstrap cycle per remaining class.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StubSynthesizer_Quarantine_SynthesizesUnionOfCanonicalClasses,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.Quarantine_SynthesizesUnionOfCanonicalClasses",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StubSynthesizer_Quarantine_SynthesizesUnionOfCanonicalClasses::RunTest(const FString&)
+{
+    FCkAsStubSynthesizer::Reset_SessionState_ForTests();
+
+    const auto TempRoot = FPaths::ConvertRelativePathToFull(
+        FPaths::ProjectIntermediateDir() / TEXT("CkStubSynthTest_QuarantineUnion"));
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+
+    const auto ScriptRoot    = TempRoot / TEXT("Script");
+    const auto CanonicalFile = ScriptRoot / TEXT("Generated/FakeProj_EntitySpawnParams.as");
+    const auto SiblingFile   = ScriptRoot / TEXT("Generated/_StubRecovery_FakeProj_EntitySpawnParams.as");
+
+    IFileManager::Get().MakeDirectory(*(ScriptRoot / TEXT("Classes")), /*Tree=*/true);
+    IFileManager::Get().MakeDirectory(*FPaths::GetPath(CanonicalFile), /*Tree=*/true);
+    FFileHelper::SaveStringToFile(FString{TEXT("{}")}, *(TempRoot / TEXT("FakeProj.uproject")));
+
+    FFileHelper::SaveStringToFile(FString{TEXT(
+        "class UTestQ_UnionA : UCk_GenericEntityScript_UE\n"
+        "{\n"
+        "    UPROPERTY(ExposeOnSpawn)\n"
+        "    int32 A;\n"
+        "}\n")}, *(ScriptRoot / TEXT("Classes/TestQ_UnionA.as")), FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+    FFileHelper::SaveStringToFile(FString{TEXT(
+        "class UTestQ_UnionB : UCk_GenericEntityScript_UE\n"
+        "{\n"
+        "    UPROPERTY(ExposeOnSpawn)\n"
+        "    int32 B;\n"
+        "}\n")}, *(ScriptRoot / TEXT("Classes/TestQ_UnionB.as")), FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+
+    FFileHelper::SaveStringToFile(FString{TEXT(
+        "struct FTestQ_UnionA_SpawnParams\n"
+        "{\n"
+        "}\n"
+        "namespace UTestQ_UnionA\n"
+        "{\n"
+        "}\n"
+        "struct FTestQ_UnionB_SpawnParams\n"
+        "{\n"
+        "}\n"
+        "namespace UTestQ_UnionB\n"
+        "{\n"
+        "}\n")}, *CanonicalFile, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+
+    const auto Error = Make_ParsedError(TEXT("UTestQ_UnionA"), TEXT("Params"), TEXT("const int"));
+
+    const auto Result = FCkAsStubSynthesizer::Quarantine_And_ResynthesizeFullShapes(
+        CanonicalFile, {TEXT("UTestQ_UnionA")}, Error, {ScriptRoot});
+
+    TestTrue(TEXT("quarantine succeeded"), Result.Success);
+
+    auto Stub = FString{};
+    TestTrue(TEXT("sibling rebuilt"), FFileHelper::LoadFileToString(Stub, *SiblingFile));
+    TestTrue(TEXT("seed class UTestQ_UnionA synthesized"),
+        Stub.Contains(TEXT("namespace UTestQ_UnionA")));
+    TestTrue(TEXT("non-seed canonical class UTestQ_UnionB synthesized too"),
+        Stub.Contains(TEXT("namespace UTestQ_UnionB")));
+
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Quarantine skips non-seed classes whose source can't be scanned (deleted
+// entity-script classes drop out of the regenerated canonical) without
+// failing the escalation; the seed still synthesizes.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StubSynthesizer_Quarantine_SkipsClassesWithNoSource,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.Quarantine_SkipsClassesWithNoSource",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StubSynthesizer_Quarantine_SkipsClassesWithNoSource::RunTest(const FString&)
+{
+    FCkAsStubSynthesizer::Reset_SessionState_ForTests();
+
+    const auto TempRoot = FPaths::ConvertRelativePathToFull(
+        FPaths::ProjectIntermediateDir() / TEXT("CkStubSynthTest_QuarantineSkip"));
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+
+    const auto ScriptRoot    = TempRoot / TEXT("Script");
+    const auto CanonicalFile = ScriptRoot / TEXT("Generated/FakeProj_EntitySpawnParams.as");
+    const auto SiblingFile   = ScriptRoot / TEXT("Generated/_StubRecovery_FakeProj_EntitySpawnParams.as");
+
+    IFileManager::Get().MakeDirectory(*(ScriptRoot / TEXT("Classes")), /*Tree=*/true);
+    IFileManager::Get().MakeDirectory(*FPaths::GetPath(CanonicalFile), /*Tree=*/true);
+    FFileHelper::SaveStringToFile(FString{TEXT("{}")}, *(TempRoot / TEXT("FakeProj.uproject")));
+
+    FFileHelper::SaveStringToFile(FString{TEXT(
+        "class UTestQ_Live : UCk_GenericEntityScript_UE\n"
+        "{\n"
+        "    UPROPERTY(ExposeOnSpawn)\n"
+        "    int32 Live;\n"
+        "}\n")}, *(ScriptRoot / TEXT("Classes/TestQ_Live.as")), FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+    // UTestQ_Gone has NO source file — a deleted class surviving in the
+    // stale canonical.
+
+    FFileHelper::SaveStringToFile(FString{TEXT(
+        "struct FTestQ_Live_SpawnParams\n"
+        "{\n"
+        "}\n"
+        "namespace UTestQ_Live\n"
+        "{\n"
+        "}\n"
+        "struct FTestQ_Gone_SpawnParams\n"
+        "{\n"
+        "}\n"
+        "namespace UTestQ_Gone\n"
+        "{\n"
+        "}\n")}, *CanonicalFile, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+
+    const auto Error = Make_ParsedError(TEXT("UTestQ_Live"), TEXT("Params"), TEXT("const int"));
+
+    const auto Result = FCkAsStubSynthesizer::Quarantine_And_ResynthesizeFullShapes(
+        CanonicalFile, {TEXT("UTestQ_Live")}, Error, {ScriptRoot});
+
+    TestTrue(TEXT("quarantine succeeded despite the unscannable non-seed class"), Result.Success);
+    TestTrue(TEXT("skip is reported in the message"),
+        Result.ErrorMessage.Contains(TEXT("skipped")));
+
+    auto Stub = FString{};
+    TestTrue(TEXT("sibling rebuilt"), FFileHelper::LoadFileToString(Stub, *SiblingFile));
+    TestTrue(TEXT("live class synthesized"),  Stub.Contains(TEXT("namespace UTestQ_Live")));
+    TestFalse(TEXT("gone class absent"),      Stub.Contains(TEXT("namespace UTestQ_Gone")));
+
+    // A seed whose source is unscannable must FAIL the escalation loudly.
+    FCkAsStubSynthesizer::Reset_SessionState_ForTests();
+    FFileHelper::SaveStringToFile(FString{TEXT(
+        "struct FTestQ_Gone_SpawnParams\n"
+        "{\n"
+        "}\n"
+        "namespace UTestQ_Gone\n"
+        "{\n"
+        "}\n")}, *CanonicalFile, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+
+    const auto SeedGone = FCkAsStubSynthesizer::Quarantine_And_ResynthesizeFullShapes(
+        CanonicalFile, {TEXT("UTestQ_Gone")}, Error, {ScriptRoot});
+    TestFalse(TEXT("unscannable SEED fails the escalation"), SeedGone.Success);
+    TestTrue(TEXT("seed failure reason is ScanFailed"),
+        SeedGone.FailReason == ECk_StubInjectFailReason::ScanFailed);
 
     IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
     return true;
