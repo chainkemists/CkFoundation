@@ -115,6 +115,37 @@ namespace ck
         CK_PROPERTY_GET(_PoseSource);
     };
 
+    // ---- socket follower ----
+    //
+    // Lives on a FOLLOWER entity (e.g. a hair/hat cosmetic rendered via CkIsm)
+    // whose Transform must track a socket on an IskmProxy LEADER. The follower's
+    // world transform is recomputed by FProcessor_IskmProxy_SocketFollower_SyncTransform
+    // AFTER the Transform request pass as:
+    //     Offset × Socket(Component-space) × LeaderEntityTransform
+    // Sampling the SKMC's WORLD-space socket instead (as a SyncFrom-group
+    // processor would) reads the leader's previous-frame position — the SKMC is
+    // only moved at PostTransform — and the follower trails by one frame of
+    // velocity. Component-space sampling keeps only the animation pose a frame
+    // stale (sub-cm) while the root-motion term is always current.
+    struct CKISKMRENDERER_API FFragment_IskmProxy_SocketFollower
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_IskmProxy_SocketFollower);
+
+    private:
+        FCk_Handle_IskmProxy _Leader;
+        FName _Socket;
+        FTransform _Offset = FTransform::Identity;
+
+    public:
+        CK_PROPERTY_GET(_Leader);
+        CK_PROPERTY_GET(_Socket);
+        CK_PROPERTY_GET(_Offset);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_IskmProxy_SocketFollower, _Leader, _Socket, _Offset);
+    };
+
     // ---- per-instance custom data ----
 
     struct CKISKMRENDERER_API FFragment_IskmProxy_CustomData

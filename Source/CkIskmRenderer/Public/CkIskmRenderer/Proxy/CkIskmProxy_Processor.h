@@ -5,6 +5,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
+#include "CkEcsExt/Transform/CkTransform_Processor.h"
 
 #include "CkIskmRenderer/Proxy/CkIskmProxy_Fragment.h"
 #include "CkIskmRenderer/Proxy/CkIskmProxy_Fragment_Data.h"
@@ -129,6 +130,34 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_IskmProxy_Current& InCurrent) const -> void;
+    };
+
+    // Runs AFTER the Transform request pass (same group, explicit dep) so the
+    // leader's current-frame movement is already applied when the follower's
+    // world transform is composed — see FFragment_IskmProxy_SocketFollower for
+    // why a SyncFrom-group processor would trail by one frame of velocity.
+    // Marks FTag_Transform_Updated so the renderer flushes (FGroup_PostTransform)
+    // pick the new transform up the same frame.
+    class CKISKMRENDERER_API FProcessor_IskmProxy_SocketFollower_SyncTransform : public ck_exp::TProcessor<
+        FProcessor_IskmProxy_SocketFollower_SyncTransform,
+        FCk_Handle_Transform,
+        TReadWrite<FFragment_Transform>,
+        TReadWrite<FFragment_Transform_Previous>,
+        TReadOnly<FFragment_IskmProxy_SocketFollower>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Transform;
+        using RunAfter = TDepList<FProcessor_Transform_HandleRequests>;
+    public:
+        using TProcessor::TProcessor;
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_Transform& InTransform,
+            FFragment_Transform_Previous& InPrevTransform,
+            const FFragment_IskmProxy_SocketFollower& InFollower) const -> void;
     };
 
     class CKISKMRENDERER_API FProcessor_IskmProxy_EmitFinishedEvents : public ck_exp::TProcessor<
