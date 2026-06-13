@@ -4,6 +4,7 @@
 #include "Components/SkeletalMeshComponent.h"
 
 #include "CkCore/Validation/CkIsValid.h"
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
 #include "CkIskmRenderer/Proxy/CkIskmProxy_Fragment.h"
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Utils.h"
 
@@ -474,6 +475,27 @@ auto
     const auto Space = (InSpace == ECk_IskmProxy_TransformSpace::Component)
         ? RTS_Component : RTS_World;
     return SKMC->GetSocketTransform(InSocketName, Space);
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Add_SocketFollower(
+        FCk_Handle& InFollower,
+        FCk_Handle_IskmProxy& InLeader,
+        FName InSocketName,
+        const FTransform& InOffset)
+    -> FCk_Handle
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InLeader),
+        TEXT("Add_SocketFollower: leader proxy is invalid for follower [{}]"), InFollower)
+    { return InFollower; }
+
+    CK_ENSURE_IF_NOT(UCk_Utils_Transform_UE::Has(InFollower),
+        TEXT("Add_SocketFollower: follower [{}] has no Transform feature — add Transform first"), InFollower)
+    { return InFollower; }
+
+    InFollower.Add<ck::FFragment_IskmProxy_SocketFollower>(InLeader, InSocketName, InOffset);
+    return InFollower;
 }
 
 auto
