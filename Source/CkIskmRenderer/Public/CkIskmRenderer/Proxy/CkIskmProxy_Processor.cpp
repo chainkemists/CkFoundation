@@ -6,6 +6,7 @@
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_Fragment_Data.h"
+#include "CkIskmRenderer/Proxy/CkIskmProxy_Utils.h"
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Fragment.h"
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Utils.h"
 #include "CkIskmRenderer/CkIskmSubsystem.h"
@@ -247,6 +248,46 @@ namespace ck
         // changed) and TExclude<FTag_IskmProxy_Ragdolling> (physics drives ragdolls).
         const auto NewTransform = ::UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InHandle);
         SKMC->SetWorldTransform(NewTransform);
+    }
+
+    auto
+        FProcessor_IskmProxy_SocketFollower_SyncTransform::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_Transform& InTransform,
+            FFragment_Transform_Previous& InPrevTransform,
+            const FFragment_IskmProxy_SocketFollower& InFollower) const
+        -> void
+    {
+        auto Leader = InFollower.Get_Leader();
+
+        if (ck::Is_NOT_Valid(Leader))
+        { return; }
+
+        // Component-space socket = pure animation pose (the SKMC's world placement
+        // is deliberately NOT consulted — it is one frame stale by construction);
+        // the root term comes from the leader's live entity transform instead.
+        const auto SocketComponentSpace = ::UCk_Utils_IskmProxy_UE::Get_SocketTransform(
+            Leader, InFollower.Get_Socket(), ECk_IskmProxy_TransformSpace::Component);
+
+        const auto LeaderTransform = ::UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(Leader);
+
+        const auto NewTransform = InFollower.Get_Offset() * SocketComponentSpace * LeaderTransform;
+
+        if (InTransform.Get_Transform().Equals(NewTransform))
+        { return; }
+
+        const auto ComponentsModified = ::UCk_Utils_Transform_UE::Apply_SetTransform_DirectWrite(
+            InTransform, InPrevTransform, NewTransform);
+
+        if (EnumHasAnyFlags(ComponentsModified,
+            ECk_TransformComponents::Location |
+            ECk_TransformComponents::Rotation |
+            ECk_TransformComponents::Scale))
+        {
+            InHandle.AddOrGet<FTag_Transform_Updated>();
+        }
     }
 
     auto
@@ -932,5 +973,6 @@ namespace ck
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_UpdateTransform);
+CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_SocketFollower_SyncTransform);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_EmitFinishedEvents);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_EndPlay);

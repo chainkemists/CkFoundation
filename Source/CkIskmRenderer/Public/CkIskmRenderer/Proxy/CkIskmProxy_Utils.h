@@ -293,6 +293,20 @@ public:
         FName InSocketName,
         ECk_IskmProxy_TransformSpace InSpace);
 
+    // The follower entity must already have the Transform feature. Its world
+    // transform is then recomputed every frame (after the Transform request
+    // pass) as Offset × Socket(Component-space) × LeaderEntityTransform —
+    // lag-free with respect to the leader's root motion, unlike sampling the
+    // leader SKMC's world-space socket (one frame stale by construction).
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Add Socket Follower")
+    static FCk_Handle
+    Add_SocketFollower(
+        UPARAM(ref) FCk_Handle& InFollower,
+        UPARAM(ref) FCk_Handle_IskmProxy& InLeader,
+        FName InSocketName,
+        const FTransform& InOffset);
+
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
         DisplayName="[Ck][IskmProxy] Line Trace Instance")
     static bool
