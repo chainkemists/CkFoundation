@@ -47,10 +47,14 @@ namespace ck_entity_script_params_generator
         // native C++ or AngelScript. Blueprint-asset entity scripts are excluded: their
         // spawn params are authored in the BP editor and are never referenced by a
         // static AS identifier, so a generated namespace block for them is dead weight.
+        // Worse, BP classes only exist in processes that happen to have the BP loaded,
+        // so emitting them makes the file's content depend on per-process load state —
+        // two editor instances of the same project then rewrite the file back and forth
+        // forever (the 2026-06-12 hot-reload ping-pong incident).
         // NOTE: CLASS_CompiledFromBlueprint cannot be used here — the AS engine fork
         // sets that flag on AngelScript classes too. UASClass derives directly from
-        // UClass, so only true BP assets are UBlueprintGeneratedClass.
-        if (InClass->IsChildOf(UBlueprintGeneratedClass::StaticClass()))
+        // UClass, so only true BP assets are instances of UBlueprintGeneratedClass.
+        if (ck::IsValid(Cast<UBlueprintGeneratedClass>(InClass), ck::IsValid_Policy_NullptrOnly{}))
         { return false; }
 
         constexpr auto DisqualifyingFlags =
@@ -588,6 +592,19 @@ auto
         Buckets.Num(), TotalClasses, TotalProperties);
 
 #endif // WITH_EDITOR
+}
+
+auto
+    FCkAngelscriptEntityScriptParamsGenerator::
+    Is_IncludedEntityScriptClass(
+        UClass* InClass)
+    -> bool
+{
+#if WITH_EDITOR
+    return ck_entity_script_params_generator::Is_IncludedEntityScriptClass(InClass);
+#else
+    return false;
+#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------

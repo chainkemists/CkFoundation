@@ -22,6 +22,13 @@ public:
     // Full, deterministic regeneration across all plugins. Editor-only.
     static auto
     GenerateAll() -> void;
+
+    // The class filter GenerateAll enumerates with. Exposed for unit tests — the
+    // Blueprint-generated-class exclusion is load-bearing for cross-process determinism
+    // (BP classes only exist in processes that loaded the BP; see Tests/Test_EntityScriptParamsGenerator.cpp).
+    static auto
+    Is_IncludedEntityScriptClass(
+        UClass* InClass) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
