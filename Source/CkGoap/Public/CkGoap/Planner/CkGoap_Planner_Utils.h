@@ -252,6 +252,13 @@ public:
 		TSubclassOf<UCk_GoapAction_EntityScript> InChildClass,
 		float InCost);
 
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Request Register Action Cost Provider")
+	static FCk_Handle_Goap_Planner
+	Request_RegisterActionCostProvider(
+		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
+		TSubclassOf<UCk_GoapAction_EntityScript> InChildClass);
+
 	// Request_RemoveAction — runtime catalog mutation: remove a previously-
 	// registered child Action from this Planner. Inverse of AddAction.
 	//
