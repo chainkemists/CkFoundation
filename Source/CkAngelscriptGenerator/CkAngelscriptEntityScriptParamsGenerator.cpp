@@ -1,6 +1,7 @@
 #include "CkAngelscriptEntityScriptParamsGenerator.h"
 
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
+#include "CkAngelscriptGenerator/CkAngelscriptGenerator_RegenOwnership.h"
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_SharedUtils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
@@ -451,6 +452,14 @@ auto
     -> void
 {
 #if WITH_EDITOR
+
+    // Single-writer gate (G3): a secondary instance must not rewrite the generated file — its
+    // class set differs from the owner's (TObjectIterator only sees classes loaded in THIS
+    // process), so its write would flip-flop the file against the owner's. This is the exact
+    // site of the 2026-06-12 ping-pong.
+    if (NOT FCkAngelscriptGenerator_RegenOwnership::Try_AcquireOrGet_IsOwner(
+            TEXT("ESPGenerator.GenerateAll")))
+    { return; }
 
     ck::angelscriptgenerator::Log(TEXT("[CkAS ES Params] === Generating EntityScript Spawn Params ==="));
 

@@ -4,6 +4,7 @@
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_AssetRegistryStub.h"
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_StubSynthesizer.h"
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
+#include "CkAngelscriptGenerator/CkAngelscriptGenerator_RegenOwnership.h"
 
 #include "CkCore/Macros/CkMacros.h"
 #include "CkDynamic/CkDynamic_AngelScript.h"
@@ -987,6 +988,25 @@ namespace ck::angelscriptgenerator::self_heal
             return false;
         }
 
+        // Single-writer gate (G9) for the drain handlers. Every recovery strategy mutates a
+        // generated/sibling file, so a SECONDARY instance must not drain — it drops its queued
+        // actions, self-cleans the subscription via the caller's empty-queue path on the next
+        // tick, and relies on the OWNER's heals reaching this process through its hot-reload
+        // watcher (passive cross-process healing). Returns true when the drain should be skipped.
+        auto Should_SuppressDrain_AsSecondary(FStringView InGateSite) -> bool
+        {
+            if (FCkAngelscriptGenerator_RegenOwnership::Try_AcquireOrGet_IsOwner(InGateSite))
+            { return false; }
+
+            const auto QueuedCount = sPendingActions.Num();
+            sPendingActions.Reset();
+            Log(TEXT("[SelfHeal] {} recovery action(s) suppressed — SECONDARY instance (another ")
+                TEXT("editor owns Script/Generated regen). The owning instance's self-heal writes ")
+                TEXT("reach this process via its hot-reload watcher; this instance takes over if the ")
+                TEXT("owner exits."), QueuedCount);
+            return true;
+        }
+
         // ---- Modal-tick handler (cold-start deferred apply) ------------------------
 
         auto OnModalLoopTick(
@@ -999,6 +1019,17 @@ namespace ck::angelscriptgenerator::self_heal
             }
 
             if (sPendingActions.Num() == 0)
+            {
+                if (sModalTickHandle.IsValid() && FSlateApplication::IsInitialized())
+                {
+                    FSlateApplication::Get().GetOnModalLoopTickEvent().Remove(sModalTickHandle);
+                }
+                sModalTickHandle.Reset();
+                sModalTicksWaited = 0;
+                return;
+            }
+
+            if (Should_SuppressDrain_AsSecondary(TEXT("Dispatcher.OnModalLoopTick")))
             {
                 if (sModalTickHandle.IsValid() && FSlateApplication::IsInitialized())
                 {
@@ -1065,6 +1096,9 @@ namespace ck::angelscriptgenerator::self_heal
         // failure on the first gitignored-EntitySpawnParams fresh clone.
         auto Drain_PendingActions_Headless() -> void
         {
+            if (Should_SuppressDrain_AsSecondary(TEXT("Dispatcher.Drain_PendingActions_Headless")))
+            { return; }
+
             Log(TEXT("[SelfHeal] Headless bootstrap — applying {} recovery action(s) synchronously ")
                 TEXT("(no modal pump in commandlet/unattended mode)."),
                 sPendingActions.Num());
@@ -1118,6 +1152,12 @@ namespace ck::angelscriptgenerator::self_heal
             float /*InDeltaTime*/) -> bool
         {
             if (sPendingActions.Num() == 0)
+            {
+                sTickerHandle.Reset();
+                return false;
+            }
+
+            if (Should_SuppressDrain_AsSecondary(TEXT("Dispatcher.OnTicker_DrainActions")))
             {
                 sTickerHandle.Reset();
                 return false;
