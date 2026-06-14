@@ -368,6 +368,7 @@ namespace ck
 			FCk_Request_Goap_Planner_CancelPlan,
 			FCk_Request_Goap_Planner_SetGoal,
 			FCk_Request_Goap_Planner_SetActionCost,
+			FCk_Request_Goap_Planner_RegisterActionCostProvider,
 			FCk_Request_Goap_Planner_SetReplanInterval,
 			FCk_Request_Goap_Planner_SetReplanPolicy,
 			FCk_Request_Goap_Planner_SetSearchBudget,
