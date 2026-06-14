@@ -1,6 +1,7 @@
 #include "CkAngelscriptWrapperGenerator.h"
 
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
+#include "CkAngelscriptGenerator/CkAngelscriptGenerator_RegenOwnership.h"
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_SharedUtils.h"
 
 #include "CkCVar/CkCVar_Data.h"
@@ -61,6 +62,12 @@ auto
     GenerateAllWrappers()
     -> void
 {
+    // Single-writer gate (G6): a secondary instance must not rewrite the ~250 wrapper files or
+    // run their manifest-based stale-delete pass — both churn mtimes the owner's watcher reacts to.
+    if (NOT FCkAngelscriptGenerator_RegenOwnership::Try_AcquireOrGet_IsOwner(
+            TEXT("WrapperGenerator.GenerateAllWrappers")))
+    { return; }
+
     ck::angelscriptgenerator::Log(TEXT("=== Generating Angelscript Wrappers from Reflection ==="));
 
     // Get plugin directory

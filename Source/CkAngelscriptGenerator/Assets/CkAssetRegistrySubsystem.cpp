@@ -3,6 +3,7 @@
 #include "CkAssetRegistryConfig.h"
 #include "CkAngelscriptGenerator/Assets/CkAssetRegistry_ClassResolver.h"
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
+#include "CkAngelscriptGenerator/CkAngelscriptGenerator_RegenOwnership.h"
 
 #include "CkCore/IO/CkIO_Utils.h"
 #include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
@@ -373,6 +374,21 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InConfig),
         TEXT("Cannot generate asset registry for invalid config"))
     { return; }
+
+    // Single-writer gate (G8): the single choke point for every *Assets.as canonical write
+    // (editor buttons, PostCompile/PostInit AR tickers, asset-change regen queue). A secondary
+    // must write nothing — clear the queue and broadcast a "did nothing" completion so listeners
+    // aren't left hanging, and never flip IsGenerationInProgress (which a deferred ticker reads).
+    if (NOT FCkAngelscriptGenerator_RegenOwnership::Try_AcquireOrGet_IsOwner(
+            TEXT("AssetRegistrySubsystem.GenerateAssetRegistryForConfig")))
+    {
+        ck::angelscriptgenerator::Warning(
+            TEXT("[AssetRegistry] Skipped generation for [{}] — this editor instance is a SECONDARY ")
+            TEXT("(another instance owns Script/Generated regen)."), InConfig->GetDisplayName());
+        PendingGenerationQueue.Empty();
+        OnAssetRegistryComplete.Broadcast(0, 0, 0);
+        return;
+    }
 
     // If generation is in progress, queue this request
     if (IsGenerationInProgress)

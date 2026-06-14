@@ -9,7 +9,7 @@
 
 ## What this module is responsible for
 
-Three loosely-coupled responsibilities under one module:
+Four loosely-coupled responsibilities under one module:
 
 1. **Generators** — write the canonical generated `.as` / `.json` accessor files from live reflection + asset state.
    - `FCkAngelscriptEntityScriptParamsGenerator` — `<Plugin>_EntitySpawnParams.as`, one per plugin.
@@ -20,6 +20,40 @@ Three loosely-coupled responsibilities under one module:
 2. **AS bootstrap self-heal dispatcher (Rev 10)** — module-level wiring in `FCkAngelscriptGeneratorModule::StartupModule()` that recovers automatically when a committed accessor file is stale at editor launch. See *Self-heal dispatcher* below.
 
 3. **Drift-detection commandlet** *(not yet re-introduced in Rev 10; preserved as unwired reference on `archive/rev9-as-attempt-2026-05-11`)* — CI guardrail that runs the deterministic Tier 1+2 generators and lets `git diff --exit-code` flag drift between committed and freshly-regenerated files.
+
+4. **Cross-process single-writer ownership (Rev 12)** — `FCkAngelscriptGenerator_RegenOwnership`: an OS file lock guaranteeing only ONE editor/commandlet instance per project mutates `Script/Generated`. See *Cross-process single-writer ownership* below.
+
+---
+
+## Cross-process single-writer ownership (Rev 12)
+
+**Problem.** Two editor processes of the SAME project each regenerate the generated files from their own in-process view, and each write trips the *other* instance's mtime-based AS hot-reload watcher (Hazelight engine-side, not ours). When the two views differ even slightly the file flip-flops forever. The 2026-06-12 incident: a live editor (with a `_BP_C` entity script loaded → 9097 lines) and a headless `BusterBlockEditor-Cmd` compile-check boot (without it → 9072 lines) drove **496 mirror-image rewrites** of `BusterBlock_EntitySpawnParams.as` and **686 full AS reloads**; the headless boot never honored `-ExecCmds="Quit"` and had to be killed. Compare-before-write (already in place, working) cannot converge this — both processes are "right" relative to their own truth, so only serializing the writers fixes it. (The BP-class half of that specific divergence is *also* fixed at the source — see the BPGC exclusion below — but stale-AS-class-mid-refactor and mismatched-binary divergence remain, which is why the lock exists.)
+
+**Mechanism.** An exclusive-write OS file handle on `<ProjectSavedDir>/CkAngelscriptGenerator_RegenOwner.lock`, held for process lifetime (`FCkAngelscriptGenerator_RegenOwnership::Try_AcquireOrGet_IsOwner`). Windows `CreateFile(GENERIC_WRITE, FILE_SHARE_READ)` makes a second `OpenWrite` fail with a sharing violation; the OS releases the handle on ANY process exit (clean/crash/kill), so **stale locks are impossible** — no lockfile-staleness handling needed. **POSIX caveat:** POSIX `OpenWrite` does not enforce write exclusivity, so off-Windows the guard degrades to always-owner (acceptable — this editor workflow is Windows-only).
+
+**Owner vs secondary.** The owner behaves exactly as before. A **secondary** early-outs at every generated-file mutation funnel: reads, AS compiles, and in-memory work are untouched, but no file is written or deleted. It emits one prominent startup Warning, `VeryVerbose` per-site skips, and `Warning` at user-facing sites (editor buttons, self-heal drains). **Lazy takeover:** every gated site re-attempts acquisition, so a surviving secondary becomes owner at its next regen event after the prior owner exits (look for the "Ownership ACQUIRED" log line). All gated sites are game-thread (PostCompile broadcast, FTSTicker callbacks, Slate modal-tick, streamable callbacks, editor buttons, commandlet `Main`) — pinned with an `IsInGameThread()` ensure; no mutex.
+
+**Gated funnels** (gate inside the writer, not at every caller):
+
+| Gate | Site | Covers |
+|---|---|---|
+| G1 | `StartupModule` (before the stub sweep) | first acquisition + the one-time secondary Warning |
+| G2 | `Delete_StubRecoveryFiles_ForPatterns` | every `_StubRecovery_*` delete (startup sweep, PostCompile, AR tickers) |
+| G3 | `FCkAngelscriptEntityScriptParamsGenerator::GenerateAll` | `<Plugin>_EntitySpawnParams.as` (the ping-pong file) |
+| G4 | `FCkAutoTestWrapperGenerator::GenerateAll` | `<Plugin>_AutoTestActors.as` |
+| G5 | `FCkAutoTestNetStubGenerator::GenerateAll` | net-test `.spec.cpp` writes + prunes |
+| G6 | `FCkAngelscriptWrapperGenerator::GenerateAllWrappers` | ~250 wrapper writes + manifest deletes (boot-time Early bind) |
+| G7 | `UCkDynamicHandleSubsystem::GenerateHandleTypeRegistry` | `DynamicHandleTypes.json` (button → Warning + `OnGenerationComplete.Broadcast(0,false)`) |
+| G8 | `UCkAssetRegistrySubsystem::GenerateAssetRegistryForConfig_Internal` | all `*Assets.as` writes (single choke point; secondary clears the queue, broadcasts complete, never sets `IsGenerationInProgress`) |
+| G9 | self-heal drains (`OnModalLoopTick`, `Drain_PendingActions_Headless`, `OnTicker_DrainActions`) | every dispatcher file mutation; secondary drops `sPendingActions`, self-cleans the subscription, and relies on the owner's heals arriving via the hot-reload watcher |
+| G10 | `ShutdownModule` | `Release()` (symmetry / in-process module reload; OS covers crashes) |
+| G11 | `CkAngelscriptGenerator_DriftCommandlet::Main` | **must own or exit 1 loudly** — a silent-secondary drift check skips every write → `git diff` finds nothing → FALSE-CLEAN CI verdict. This is the one non-zero exit; the drift verdict still rides the exit-0 + `git diff --exit-code` contract |
+
+**Consequences worth knowing.** A headless compile-check boot launched while an editor is open is now a safe read-only **secondary** — it compiles against the owner's canonicals and never contends. A cook launched while the editor is open likewise becomes a secondary (an *improvement*: cook-time regen is what used to re-drop `_BP_C` params). The self-heal banner is status-aware: `armed (Rev 12, cycle cap N)` for the owner, `armed in SECONDARY mode …` otherwise. Self-heal stays armed in a secondary (drain-time gate + lazy takeover make that correct). `-NoCkAsRegen` is orthogonal and unchanged.
+
+### BPGC exclusion is now actually enforced
+
+`FCkAngelscriptEntityScriptParamsGenerator` excludes Blueprint-asset entity scripts (their spawn params are authored in the BP editor, never referenced by a static AS identifier, and — being process-load-dependent — are the everyday source of the cross-process divergence above). The original exclusion (commit `e55fe07df`) used `InClass->IsChildOf(UBlueprintGeneratedClass)`, a wrong-level check that is *never true* (a BP class is an INSTANCE of `UBlueprintGeneratedClass`, not a subclass). The Rev 12 fix is `ck::IsValid(Cast<UBlueprintGeneratedClass>(InClass), ck::IsValid_Policy_NullptrOnly{})` — pinned by `CkAngelscriptGenerator.UnitTests.ParamsGenerator.ClassFilter_ExcludesBlueprintGeneratedClasses`. `UASClass` derives directly from `UClass`, so the `Cast` doesn't catch AngelScript classes.
 
 ---
 
@@ -222,6 +256,7 @@ The marker (and the emitted parameter list, and the dispatcher's convergence key
 2. **Don't apply file mutations synchronously inside `OnReloadHadErrors`.** Use the modal-tick deferral — see the timing-constraint paragraph above.
 3. **Don't introduce non-determinism into generator output** (timestamps, GUIDs, machine-specific paths). The drift commandlet + atomic-write diff-skip both rely on determinism.
 4. **Don't mutate canonical generated files from the self-heal dispatcher.** Recovery stubs go to sibling `_StubRecovery_*` files only — anything else breaks the "canonical files are byte-clean from HEAD" invariant the new model depends on. **One sanctioned exception (Rev 11):** gitignored ESP canonicals (`*_EntitySpawnParams.as`) are machine-local artifacts, not tracked state — the stale-canonical quarantine (forensic copy to `Saved/CkSelfHeal/Quarantine/` + delete; rewritten by the real generator on the next successful compile) is the only permitted canonical mutation, and it is delete-only, never an in-place edit.
+5. **Don't add a generated-file write or delete path without routing it through an ownership-gated funnel.** Every `Script/Generated` (and net-stub `.spec.cpp`) mutation must sit behind `FCkAngelscriptGenerator_RegenOwnership::Try_AcquireOrGet_IsOwner` (see *Cross-process single-writer ownership*). A new ungated writer re-opens the two-instance ping-pong.
 
 ---
 
