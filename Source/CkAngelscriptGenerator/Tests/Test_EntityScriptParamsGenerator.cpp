@@ -17,9 +17,11 @@
 
 #include "CkAngelscriptGenerator/Tests/Test_EntityScriptParamsGenerator_Fixtures.h"
 
+#include "CkAngelscriptGenerator/CkAngelscriptEntityScriptParamsGenerator.h"
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Reflection/CkReflection_Utils.h"
 
+#include "Engine/BlueprintGeneratedClass.h"
 #include "Misc/AutomationTest.h"
 #include "UObject/Class.h"
 #include "UObject/UnrealType.h"
@@ -124,6 +126,54 @@ bool FCkTest_ParamsGen_Get_StructFieldOverrides_PodDiff::RunTest(const FString&)
     // it — but it should mention FVector and 10.
     TestTrue(TEXT("literal references FVector"), Expr.Contains(TEXT("FVector")));
     TestTrue(TEXT("literal contains the X coord value"),  Expr.Contains(TEXT("10")));
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Is_IncludedEntityScriptClass: Blueprint-generated entity-script classes are EXCLUDED.
+//
+// Regression pin for the 2026-06-12 two-instance hot-reload ping-pong: BP classes exist only in
+// processes that happen to have the BP loaded, so emitting them makes the generated file's
+// content depend on per-process load state — two editors of the same project then rewrite the
+// file back and forth forever. The original exclusion (e55fe07df) used
+// `InClass->IsChildOf(UBlueprintGeneratedClass)` — a wrong-level check (a BP class is an
+// INSTANCE of UBlueprintGeneratedClass, never a subclass of it) that never fired.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_ParamsGen_ClassFilter_ExcludesBlueprintGeneratedClasses,
+    "CkAngelscriptGenerator.UnitTests.ParamsGenerator.ClassFilter_ExcludesBlueprintGeneratedClasses",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_ParamsGen_ClassFilter_ExcludesBlueprintGeneratedClasses::RunTest(const FString&)
+{
+    TestTrue(TEXT("concrete native entity-script subclass -> included"),
+        FCkAngelscriptEntityScriptParamsGenerator::Is_IncludedEntityScriptClass(
+            UCkTest_ParamsGenerator_NativeEntityScript::StaticClass()));
+
+    TestFalse(TEXT("UCk_EntityScript_UE base itself -> excluded"),
+        FCkAngelscriptEntityScriptParamsGenerator::Is_IncludedEntityScriptClass(
+            UCk_EntityScript_UE::StaticClass()));
+
+    TestFalse(TEXT("non-entity-script class -> excluded"),
+        FCkAngelscriptEntityScriptParamsGenerator::Is_IncludedEntityScriptClass(
+            UCkTest_ParamsGenerator_Host::StaticClass()));
+
+    // Synthetic UBlueprintGeneratedClass parented to an entity script — the shape of every
+    // `<X>_BP_C` class. The filter must reject it BEFORE any flag/AS-source checks. (Auto-named
+    // so a second run in the same process can't collide.)
+    auto* Bpgc = NewObject<UBlueprintGeneratedClass>(GetTransientPackage());
+    if (NOT TestNotNull(TEXT("synthetic BPGC allocated"), Bpgc))
+    { return false; }
+
+    Bpgc->SetSuperStruct(UCkTest_ParamsGenerator_NativeEntityScript::StaticClass());
+
+    TestTrue(TEXT("sanity: synthetic BPGC IS an entity-script subclass"),
+        Bpgc->IsChildOf(UCk_EntityScript_UE::StaticClass()));
+
+    TestFalse(TEXT("Blueprint-generated entity-script class -> excluded"),
+        FCkAngelscriptEntityScriptParamsGenerator::Is_IncludedEntityScriptClass(Bpgc));
 
     return true;
 }

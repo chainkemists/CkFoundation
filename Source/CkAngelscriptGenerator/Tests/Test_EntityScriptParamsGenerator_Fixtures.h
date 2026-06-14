@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include "CkEcs/EntityScript/CkEntityScript.h"
+
 #include <CoreMinimal.h>
 #include <Sound/SoundBase.h>
 #include <UObject/Object.h>
@@ -41,4 +43,12 @@ class UCkTest_ParamsGenerator_Host : public UObject
     GENERATED_BODY()
 public:
     UPROPERTY() FCkTest_ParamsGenerator_MixedFields Params;
+};
+
+// Concrete native entity-script subclass — the "included" shape for the class-filter test
+// (the UCk_EntityScript_UE base itself is UCLASS(Abstract) and therefore excluded).
+UCLASS(NotBlueprintable)
+class UCkTest_ParamsGenerator_NativeEntityScript : public UCk_EntityScript_UE
+{
+    GENERATED_BODY()
 };
