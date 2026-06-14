@@ -6,6 +6,7 @@
 #include "CkAngelscriptGenerator/AutoTests/CkAutoTestWrapperGenerator.h"
 #include "CkAngelscriptGenerator/CkAngelscriptCompileGuard.h"
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
+#include "CkAngelscriptGenerator/CkAngelscriptGenerator_RegenOwnership.h"
 #include "CkAngelscriptGenerator/DynamicHandles/CkDynamicHandleSubsystem.h"
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_Dispatcher.h"
 #include "CkAngelscriptGenerator/Settings/CkAngelscriptGenerator_Settings.h"
@@ -70,6 +71,13 @@ namespace
     auto Delete_StubRecoveryFiles_ForPatterns(
         TArrayView<const TCHAR* const> Patterns) -> int32
     {
+        // Single-writer gate (G2): deleting stub-recovery siblings is a Script/Generated
+        // mutation. A secondary instance must not touch them — the owner manages the full
+        // synth/cleanup lifecycle, and a secondary delete would race the owner mid-heal.
+        if (NOT FCkAngelscriptGenerator_RegenOwnership::Try_AcquireOrGet_IsOwner(
+                TEXT("Module.Delete_StubRecoveryFiles")))
+        { return 0; }
+
         auto Dirs = TArray<FString>{};
         Dirs.Add(FPaths::ProjectDir() / TEXT("Script") / TEXT("Generated"));
         for (const auto& Plugin : IPluginManager::Get().GetEnabledPlugins())
@@ -559,6 +567,13 @@ namespace
 void FCkAngelscriptGeneratorModule::StartupModule()
 {
 #if WITH_EDITOR
+    // Single-writer ownership (G1): establish whether this process owns Script/Generated regen
+    // BEFORE the first mutation (the stub sweep below). When a second editor/commandlet of the
+    // same project is already running, this is the earliest, most visible point at which the
+    // one-time SECONDARY warning fires — and it stops the sweep, generators, and self-heal from
+    // contending over the shared generated files (the 2026-06-12 hot-reload ping-pong).
+    FCkAngelscriptGenerator_RegenOwnership::Try_AcquireOrGet_IsOwner(TEXT("Module.StartupModule"));
+
     // Defensive: PostCompile is the only path that deletes self-heal sibling
     // stubs, so a force-quit or crash between stub synthesis and the next
     // clean compile leaves `_StubRecovery_*` files on disk. Carrying them
@@ -645,9 +660,26 @@ void FCkAngelscriptGeneratorModule::StartupModule()
             &ck::angelscriptgenerator::self_heal::FCkAsRecoveryDispatcher::OnAngelscriptReloadHadErrors);
         _SelfHealArmed = true;
 
-        ck::angelscriptgenerator::Log(
-            TEXT("[Module] AS bootstrap self-heal armed (Rev 11, cycle cap {})."),
-            ck::angelscriptgenerator::self_heal::FCkAsRecoveryDispatcher::MaxCycles);
+        // Self-heal stays ARMED in a secondary (its file-mutating drains are gated at G9, and
+        // lazy takeover means it becomes effective the moment this instance acquires ownership),
+        // but the banner reflects which mode it boots in so a stuck-secondary is diagnosable.
+        // Rev 12 = Rev 11 + cross-process single-writer ownership.
+        const auto IsOwner = FCkAngelscriptGenerator_RegenOwnership::Try_AcquireOrGet_IsOwner(
+            TEXT("Module.SelfHealArmBanner"));
+        if (IsOwner)
+        {
+            ck::angelscriptgenerator::Log(
+                TEXT("[Module] AS bootstrap self-heal armed (Rev 12, cycle cap {})."),
+                ck::angelscriptgenerator::self_heal::FCkAsRecoveryDispatcher::MaxCycles);
+        }
+        else
+        {
+            ck::angelscriptgenerator::Log(
+                TEXT("[Module] AS bootstrap self-heal armed in SECONDARY mode (Rev 12, cycle cap {}) ")
+                TEXT("— recovery writes are deferred to the owning instance; this instance takes over ")
+                TEXT("automatically if the owner exits."),
+                ck::angelscriptgenerator::self_heal::FCkAsRecoveryDispatcher::MaxCycles);
+        }
     }
 #endif
 #endif // WITH_EDITOR
@@ -693,6 +725,10 @@ void FCkAngelscriptGeneratorModule::ShutdownModule()
         auto& MessageLogModule = FModuleManager::GetModuleChecked<FMessageLogModule>(TEXT("MessageLog"));
         MessageLogModule.UnregisterLogListing(FName{sSelfHealLogChannel});
     }
+
+    // Single-writer ownership (G10): release the lock for symmetry and in-process module reload.
+    // The OS would release it on process exit regardless, so this is not load-bearing for crashes.
+    FCkAngelscriptGenerator_RegenOwnership::Release();
 #endif // WITH_EDITOR
 }
 

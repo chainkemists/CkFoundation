@@ -1,6 +1,7 @@
 #include "CkAutoTestNetStubGenerator.h"
 
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
+#include "CkAngelscriptGenerator/CkAngelscriptGenerator_RegenOwnership.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Format/CkFormat.h"
@@ -590,6 +591,12 @@ auto
     -> void
 {
 #if WITH_EDITOR
+
+    // Single-writer gate (G5): a secondary instance must not write/prune the net-test .spec.cpp
+    // stubs (these land in Source trees but carry the identical two-process churn risk).
+    if (NOT FCkAngelscriptGenerator_RegenOwnership::Try_AcquireOrGet_IsOwner(
+            TEXT("NetStubGenerator.GenerateAll")))
+    { return; }
 
     ck::angelscriptgenerator::Log(TEXT("[CkAS Net Stubs] === Generating net-mode AutoTest C++ stubs ==="));
 

@@ -1,6 +1,7 @@
 #include "CkDynamicHandleSubsystem.h"
 
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
+#include "CkAngelscriptGenerator/CkAngelscriptGenerator_RegenOwnership.h"
 
 #include "CkDynamic/Settings/CkDynamic_Settings.h"
 #include "CkDynamic/CkDynamic_AngelScript.h"
@@ -60,6 +61,20 @@ auto
     GenerateHandleTypeRegistry()
     -> void
 {
+    // Single-writer gate (G7): the DynamicHandleTypes.json write is a Script/Generated mutation.
+    // This is also a CallInEditor button, so a secondary logs a clear Warning (not a silent skip)
+    // and broadcasts a "did nothing" completion so Blueprint/editor listeners aren't left hanging.
+    if (NOT FCkAngelscriptGenerator_RegenOwnership::Try_AcquireOrGet_IsOwner(
+            TEXT("DynamicHandleSubsystem.GenerateHandleTypeRegistry")))
+    {
+        ck::angelscriptgenerator::Warning(
+            TEXT("[DynamicHandleSubsystem] Skipped registry generation — this editor instance is a ")
+            TEXT("SECONDARY (another instance owns Script/Generated regen). Close the other instance ")
+            TEXT("or run this from the owning one."));
+        OnGenerationComplete.Broadcast(0, false);
+        return;
+    }
+
     auto Definitions = DiscoverAllDefinitions();
 
     Definitions.Sort([](const UCkDynamic_HandleDefinition& A, const UCkDynamic_HandleDefinition& B)

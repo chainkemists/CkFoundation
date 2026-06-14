@@ -2,6 +2,7 @@
 
 #include "CkAngelscriptGenerator/AutoTests/CkAutoTestNetStubGenerator.h"
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
+#include "CkAngelscriptGenerator/CkAngelscriptGenerator_RegenOwnership.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Format/CkFormat.h"
@@ -458,6 +459,11 @@ auto
     -> void
 {
 #if WITH_EDITOR
+
+    // Single-writer gate (G4): a secondary instance must not rewrite <Plugin>_AutoTestActors.as.
+    if (NOT FCkAngelscriptGenerator_RegenOwnership::Try_AcquireOrGet_IsOwner(
+            TEXT("AutoTestWrapperGenerator.GenerateAll")))
+    { return; }
 
     ck::angelscriptgenerator::Log(TEXT("[CkAS AutoTest Wrappers] === Generating AutoTest actor wrappers ==="));
 
