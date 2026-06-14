@@ -31,6 +31,11 @@ namespace ck
 
 	CK_DEFINE_ECS_TAG(FTag_Goap_Action_RequiresSetup);
 
+	// Marks an Action whose _Cost is driven by an external provider (pushed via
+	// Request_SetChildActionCost from the consumer's change-signal). Declarative /
+	// introspection only — the planner still reads _Cost; this does not gate planning.
+	CK_DEFINE_ECS_TAG(FTag_Goap_Action_HasCostProvider);
+
 // ====================================================================================================================
 // PARAMS — alias to BlueprintType data
 // ====================================================================================================================

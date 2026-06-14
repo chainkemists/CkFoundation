@@ -60,6 +60,11 @@ public:
 	static TArray<FCk_GoapWS_Condition_Authored>
 	Get_InvalidGoal(const FCk_Handle_Goap_Action& InAction);
 
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Action",
+		DisplayName = "[Ck][Goap|Action] Get Has Cost Provider")
+	static bool
+	Get_HasCostProvider(const FCk_Handle_Goap_Action& InAction);
+
 	// ================================================================================================================
 	// REQUESTS
 	// ================================================================================================================

@@ -607,6 +607,25 @@ auto
 
 				InHandle.AddOrGet<FTag_Goap_Dirty_Cost>();
 			}
+			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Planner_RegisterActionCostProvider>)
+			{
+				// Mark the named child Action as externally cost-driven. Declarative
+				// only — the cost itself is pushed via SetActionCost; this tag makes
+				// the dynamic-cost contract first-class + introspectable.
+				const auto TargetClass = InTypedRequest.Get_ActionClass();
+
+				const auto Candidates = Goap_Planner_GetCandidateChildren(InHandle);
+				for (auto ChildHandle : Candidates)
+				{
+					if (NOT ck::IsValid(ChildHandle)) { continue; }
+
+					const auto& ChildParams = ChildHandle.template Get<FFragment_Goap_Action_Params>();
+					if (ChildParams.Get_ActionClass() != TargetClass) { continue; }
+
+					ChildHandle.template AddOrGet<FTag_Goap_Action_HasCostProvider>();
+					break;
+				}
+			}
 			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Planner_SetReplanInterval>)
 			{
 				ck::goap::Warning(
