@@ -131,6 +131,25 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Goap_Planner_SetActionCost, _ActionClass, _Cost);
 };
 
+// Registers a child Action as externally cost-driven. The cost value itself is
+// pushed via FCk_Request_Goap_Planner_SetActionCost; this request just stamps the
+// FTag_Goap_Action_HasCostProvider marker so the dynamic-cost contract is
+// first-class and introspectable. CkGoap stays attribute-agnostic.
+USTRUCT(BlueprintType)
+struct CKGOAP_API FCk_Request_Goap_Planner_RegisterActionCostProvider
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_Request_Goap_Planner_RegisterActionCostProvider);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    TSubclassOf<UCk_GoapAction_EntityScript> _ActionClass;
+
+public:
+    CK_PROPERTY_GET(_ActionClass);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Goap_Planner_RegisterActionCostProvider, _ActionClass);
+};
+
 USTRUCT(BlueprintType)
 struct CKGOAP_API FCk_Request_Goap_Planner_SetReplanInterval
 {

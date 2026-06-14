@@ -881,6 +881,21 @@ auto
 
 auto
 	UCk_Utils_Goap_Planner_UE::
+	Request_RegisterActionCostProvider(
+		FCk_Handle_Goap_Planner& InPlanner,
+		TSubclassOf<UCk_GoapAction_EntityScript> InChildClass) -> FCk_Handle_Goap_Planner
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Request_RegisterActionCostProvider"))
+	{ return InPlanner; }
+
+	auto& Reqs = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
+	Reqs._Requests.Add(FCk_Request_Goap_Planner_RegisterActionCostProvider{InChildClass});
+	return InPlanner;
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
 	Request_RemoveAction(
 		FCk_Handle_Goap_Planner& InPlanner,
 		TSubclassOf<UCk_GoapAction_EntityScript> InChildActionClass) -> FCk_Handle_Goap_Planner
