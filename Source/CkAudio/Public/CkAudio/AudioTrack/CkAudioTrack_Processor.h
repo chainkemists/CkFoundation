@@ -232,6 +232,9 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_Audio;
+        // The 4 DebugDraw processors all write FFragment_AudioTrack_Debug (disjoint entity sets).
+        // Chain them in declaration order to make the deterministic write-ordering explicit.
+        using RunAfter = TDepList<FProcessor_AudioTrack_DebugDraw_Individual_Spatial>;
 
     public:
         using TProcessor::TProcessor;
@@ -263,6 +266,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_Audio;
+        using RunAfter = TDepList<FProcessor_AudioTrack_DebugDraw_Individual_NonSpatial>;
 
     public:
         using TProcessor::TProcessor;
@@ -298,6 +302,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_Audio;
+        using RunAfter = TDepList<FProcessor_AudioTrack_DebugDraw_All_Spatial>;
 
     public:
         using TProcessor::TProcessor;

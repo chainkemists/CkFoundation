@@ -230,6 +230,10 @@ namespace ck
     public:
         using Group = FGroup_PostTransform;
         using MarkedDirtyBy = FFragment_RaySense_Requests;
+        // Also writes FFragment_RaySense_Current (as do the 5 *_Update processors). Declaration order
+        // puts the Updates first; RunAfter the chain tail (Cylinder) makes that write-ordering explicit
+        // — transitively orders HandleRequests after all 5 Updates via their chain.
+        using RunAfter = TDepList<FProcessor_RaySense_CylinderSweep_Update>;
 
     public:
         using TProcessor::TProcessor;
