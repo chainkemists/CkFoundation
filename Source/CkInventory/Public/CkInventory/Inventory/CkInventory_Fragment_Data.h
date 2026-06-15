@@ -638,6 +638,21 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Whether an AddItem request re-runs the inventory's acceptance check (Get_CanAcceptItem) before
+// placing the item. AlreadyValidated is an internal flag for a caller that already proved acceptance
+// against an equivalent item in the same synchronous pass: ExecuteTransfer's split branch validates
+// the SOURCE (whose runtime tags are committed) before minting the split-off copy, whose OnSplit tag
+// copy is a deferred request that has not drained when the add's check runs. It skips ONLY the
+// categorical acceptance recheck; placement / grid-space / dimensions checks still run.
+UENUM(BlueprintType)
+enum class ECk_AddAcceptance : uint8
+{
+    Validate,
+    AlreadyValidated
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKINVENTORY_API FCk_Request_Inventory_AddItem : public FCk_Request_Base
 {
@@ -652,8 +667,14 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_Handle_Item _ItemToAdd;
 
+    // Internal: AlreadyValidated lets ExecuteTransfer's split branch skip the redundant categorical
+    // acceptance recheck after it has validated the source item. Defaults to Validate; not editable.
+    UPROPERTY()
+    ECk_AddAcceptance _Acceptance = ECk_AddAcceptance::Validate;
+
 public:
     CK_PROPERTY_GET(_ItemToAdd);
+    CK_PROPERTY(_Acceptance);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_AddItem, _ItemToAdd);
