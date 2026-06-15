@@ -1,0 +1,53 @@
+// /CkParticles/CkParticles_Behaviors.ush — behavior registry + dispatch.
+//
+// To add a behavior: author /CkParticles/Behaviors/Behavior_<Name>.ush, #include it below, add a branch here,
+// and mirror the exact math in NDICkParticlesLocal::ExecuteStage_CPU (CkParticles_DataInterface.cpp).
+// The GPU (this file) and CPU mirror MUST stay in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+#include "/CkParticles/Behaviors/Behavior_Gravity.ush"
+#include "/CkParticles/Behaviors/Behavior_Swirl.ush"
+
+FCkParticles_StageOutput CkParticles_ExecuteStage(FCkParticles_StageInput In)
+{
+    if (In.BehaviorId == 1)
+    {
+        return CkParticles_Behavior_Swirl(In);
+    }
+
+    // BehaviorId 0 (and any unknown id) -> Gravity.
+    return CkParticles_Behavior_Gravity(In);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Single-output convenience wrappers used by the from-scratch template builder (CkParticles_TemplateBuilder).
+// The builder wires each into a "Set Particles.<Attr>" module as a custom-HLSL expression, so one call per
+// attribute. (Hand-built templates can call ExecuteStage once via the DI instead — these are just for the
+// auto-built template where a per-attribute dynamic input is the cleanest code-buildable path.)
+// --------------------------------------------------------------------------------------------------------------------
+FCkParticles_StageInput CkParticles_MakeInput(int BehaviorId, float DeltaTime, float Age, float Lifetime, float3 Position, float3 Velocity)
+{
+    FCkParticles_StageInput In;
+    In.BehaviorId = BehaviorId;
+    In.DeltaTime  = DeltaTime;
+    In.Age        = Age;
+    In.Lifetime   = Lifetime;
+    In.Position   = Position;
+    In.Velocity   = Velocity;
+    return In;
+}
+
+float3 CkParticles_DynPosition(int BehaviorId, float DeltaTime, float Age, float Lifetime, float3 Position, float3 Velocity)
+{
+    return CkParticles_ExecuteStage(CkParticles_MakeInput(BehaviorId, DeltaTime, Age, Lifetime, Position, Velocity)).Position;
+}
+
+float3 CkParticles_DynVelocity(int BehaviorId, float DeltaTime, float Age, float Lifetime, float3 Position, float3 Velocity)
+{
+    return CkParticles_ExecuteStage(CkParticles_MakeInput(BehaviorId, DeltaTime, Age, Lifetime, Position, Velocity)).Velocity;
+}
+
+float4 CkParticles_DynColor(int BehaviorId, float DeltaTime, float Age, float Lifetime, float3 Position, float3 Velocity)
+{
+    return CkParticles_ExecuteStage(CkParticles_MakeInput(BehaviorId, DeltaTime, Age, Lifetime, Position, Velocity)).Color;
+}
