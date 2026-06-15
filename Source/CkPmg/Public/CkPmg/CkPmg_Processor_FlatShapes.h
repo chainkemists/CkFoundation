@@ -6,6 +6,7 @@
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 #include "CkPmg/CkPmg_ProcessorGroups.h"
+#include "CkPmg_Processor_BasicShapes.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
@@ -24,6 +25,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Pmg_DebugShape_Setup;
+        using RunAfter = TDepList<FProcessor_Pmg_Torus_Setup>;
         using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
         using TProcessor::TProcessor;
 
@@ -51,6 +53,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Pmg_DebugShape_Setup;
+        using RunAfter = TDepList<FProcessor_Pmg_Circle_Setup>;
         using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
         using TProcessor::TProcessor;
 
@@ -78,6 +81,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Pmg_DebugShape_Setup;
+        using RunAfter = TDepList<FProcessor_Pmg_Triangle_Setup>;
         using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
         using TProcessor::TProcessor;
 
@@ -105,6 +109,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Pmg_DebugShape_Setup;
+        using RunAfter = TDepList<FProcessor_Pmg_Plane_Setup>;
         using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
         using TProcessor::TProcessor;
 
@@ -132,6 +137,7 @@ class CKPMG_API FProcessor_Pmg_Cross_Setup : public ck_exp::TProcessor<
 {
 public:
     using Group = FGroup_Pmg_DebugShape_Setup;
+    using RunAfter = TDepList<FProcessor_Pmg_Ring_Setup>;
     using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
     using TProcessor::TProcessor;
 
@@ -159,6 +165,7 @@ class CKPMG_API FProcessor_Pmg_Star_Setup : public ck_exp::TProcessor<
 {
 public:
     using Group = FGroup_Pmg_DebugShape_Setup;
+    using RunAfter = TDepList<FProcessor_Pmg_Cross_Setup>;
     using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
     using TProcessor::TProcessor;
 
@@ -186,6 +193,7 @@ class CKPMG_API FProcessor_Pmg_Checkmark_Setup : public ck_exp::TProcessor<
 {
 public:
     using Group = FGroup_Pmg_DebugShape_Setup;
+    using RunAfter = TDepList<FProcessor_Pmg_Star_Setup>;
     using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
     using TProcessor::TProcessor;
 
@@ -213,6 +221,7 @@ class CKPMG_API FProcessor_Pmg_Diamond_Setup : public ck_exp::TProcessor<
 {
 public:
     using Group = FGroup_Pmg_DebugShape_Setup;
+    using RunAfter = TDepList<FProcessor_Pmg_Checkmark_Setup>;
     using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
     using TProcessor::TProcessor;
 
