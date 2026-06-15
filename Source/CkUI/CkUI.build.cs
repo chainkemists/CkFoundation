@@ -44,6 +44,7 @@ public class CkUI : CkModuleRules
                 "CommonUI",
                 "CommonInput",
                 "Paper2D",
+                "RenderCore",
 
                 "CkThirdParty",
                 "CkCore",
