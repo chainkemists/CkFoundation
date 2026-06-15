@@ -78,16 +78,19 @@ namespace ck::inventory_handlers
         const auto Guard = ck::MakeRequestResultGuard<UUtils_Signal_Inventory_OnOperationResult_Add>(
             InRequest, [&]{ return MakePayload(Base, ItemHandle, R); });
 
-        R = UCk_Utils_Inventory_UE::Get_CanAcceptItem(Base, ItemHandle);
-        if (R != Result::Success)
+        if (InRequest.Get_Acceptance() == ECk_AddAcceptance::Validate)
         {
-            // Caller-attributable rejection (e.g. Failed_ItemAlreadyInInventory,
-            // Failed_RejectedByCustomAcceptanceLogic) — surface through the Result
-            // enum, log at Display so the AutoTest framework doesn't escalate the
-            // diagnostic to a test failure.
-            ck::inventory::Display(TEXT("AddItem: Failed [{}] for item [{}] in inventory [{}]"),
-                R, ItemHandle, InHandle);
-            return R;
+            R = UCk_Utils_Inventory_UE::Get_CanAcceptItem(Base, ItemHandle);
+            if (R != Result::Success)
+            {
+                // Caller-attributable rejection (e.g. Failed_ItemAlreadyInInventory,
+                // Failed_RejectedByCustomAcceptanceLogic) — surface through the Result
+                // enum, log at Display so the AutoTest framework doesn't escalate the
+                // diagnostic to a test failure.
+                ck::inventory::Display(TEXT("AddItem: Failed [{}] for item [{}] in inventory [{}]"),
+                    R, ItemHandle, InHandle);
+                return R;
+            }
         }
 
         UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils::Request_Connect(
@@ -520,10 +523,12 @@ namespace ck::inventory_handlers
                 InSource, FFragment_Inventory_Params{}, SourceRemoveEntry{Req});
         };
 
-        const auto DoAddToTarget = [&](FCk_Handle_Item ItemToAdd) -> ECk_Inventory_OperationResult_Add
+        const auto DoAddToTarget = [&](FCk_Handle_Item ItemToAdd,
+            ECk_AddAcceptance InAcceptance = ECk_AddAcceptance::Validate) -> ECk_Inventory_OperationResult_Add
         {
             using TargetAddEntry = typename TInventoryRequestTraits<TTargetHandle>::AddItem::Entry;
             FCk_Request_Inventory_AddItem Req{ItemToAdd};
+            Req.Set_Acceptance(InAcceptance);
             // Construct entry: with placement addon if Spatial, else default.
             if constexpr (std::is_same_v<typename TargetAddEntry::AddonType, FCk_SpatialPlacement>)
             {
@@ -614,6 +619,23 @@ namespace ck::inventory_handlers
         }
         else
         {
+            // The split copy below inherits the source's runtime tags via a DEFERRED OnSplit
+            // request, so the synchronous CATEGORICAL acceptance check (custom CanAcceptItem —
+            // tags / type / traits) would see the not-yet-copied tags and wrongly reject it. Decide
+            // that categorical question against the SOURCE (whose tags are committed) — the same
+            // Get_CanAcceptItem the Stock prompt runs on the held item — and skip only it on the
+            // copy. Abort ONLY on a categorical rejection: quantitative capacity is already clamped
+            // into TransferCount above (Get_AbsorbableUnits) and re-derived on the copy, so a NoSpace
+            // result must fall through to the normal partial-transfer path rather than abort it.
+            // Checked before touching the source stack so a rejection needs no rollback.
+            if (const auto SourceAccept = UCk_Utils_Inventory_UE::Get_CanAcceptItem(BaseTarget, InSourceItem);
+                SourceAccept == ECk_Inventory_OperationResult_Add::Failed_RejectedByCustomAcceptanceLogic)
+            {
+                ck::inventory::Display(TEXT("TransferItem: source [{}] categorically rejected by target [{}]; split skipped"),
+                    InSourceItem, InTarget);
+                return detail::MapAddResultToTransfer(SourceAccept);
+            }
+
             UCk_Utils_ItemTrait_Stackable_UE::Request_AdjustStackCount(InSourceItem, -MoveCount);
 
             auto TargetContextOwner = UCk_Utils_ContextOwner_UE::Get_ContextOwner(BaseTarget);
@@ -629,7 +651,9 @@ namespace ck::inventory_handlers
             Definition->OnSplit(InSourceItem, NewItem);
             UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(NewItem, MoveCount);
 
-            const auto AddResult = DoAddToTarget(NewItem);
+            // Acceptance already proven against the source above; skip the redundant categorical
+            // recheck on the not-yet-tag-copied split unit. Placement / grid-space checks still run.
+            const auto AddResult = DoAddToTarget(NewItem, ECk_AddAcceptance::AlreadyValidated);
 
             if (AddResult != ECk_Inventory_OperationResult_Add::Success)
             {

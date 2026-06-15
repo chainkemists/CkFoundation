@@ -45,16 +45,19 @@ namespace ck::inventory_handlers
         const auto Guard = ck::MakeRequestResultGuard<UUtils_Signal_Inventory_OnOperationResult_Add>(
             InRequest, [&]{ return MakePayload(Base, ItemHandle, R); });
 
-        R = UCk_Utils_Inventory_UE::Get_CanAcceptItem(Base, ItemHandle);
-        if (R != Result::Success)
+        if (InRequest.Get_Acceptance() == ECk_AddAcceptance::Validate)
         {
-            // Caller-attributable rejection (e.g. Failed_ItemAlreadyInInventory,
-            // Failed_RejectedByCustomAcceptanceLogic) — surface through the Result
-            // enum, log at Display so the AutoTest framework doesn't escalate the
-            // diagnostic to a test failure.
-            ck::inventory::Display(TEXT("AddItem_Spatial: Failed [{}] for item [{}] in inventory [{}]"),
-                R, ItemHandle, InHandle);
-            return R;
+            R = UCk_Utils_Inventory_UE::Get_CanAcceptItem(Base, ItemHandle);
+            if (R != Result::Success)
+            {
+                // Caller-attributable rejection (e.g. Failed_ItemAlreadyInInventory,
+                // Failed_RejectedByCustomAcceptanceLogic) — surface through the Result
+                // enum, log at Display so the AutoTest framework doesn't escalate the
+                // diagnostic to a test failure.
+                ck::inventory::Display(TEXT("AddItem_Spatial: Failed [{}] for item [{}] in inventory [{}]"),
+                    R, ItemHandle, InHandle);
+                return R;
+            }
         }
 
         if (NOT UCk_Utils_2dGridSystem_UE::Has(ItemHandle))
