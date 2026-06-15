@@ -7,6 +7,7 @@
 #include "CkNavigation/Nav/CkNav_Fragment.h"
 
 #include "CkCrowd/Agent/CkCrowdAgent_Fragment.h"
+#include "CkCrowd/Agent/CkCrowdAgent_HandleRequests_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -35,6 +36,9 @@ namespace ck
     public:
         using Group = FGroup_Gameplay;
         static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;
+        // Both this and HandleRequests write FFragment_CrowdAgent_PathFollow; declaration order put
+        // HandleRequests first. RunAfter it to make that write-ordering explicit.
+        using RunAfter = TDepList<FProcessor_CrowdAgent_HandleRequests>;
 
     public:
         using TProcessor::TProcessor;
