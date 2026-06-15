@@ -30,6 +30,7 @@ public class CkCrowd : CkModuleRules
 
 			"CkPhysics",
 			"CkPmg",            // for FProcessor_CrowdAgent_DrawBody_Setup body capsule + cone
+			"CkProjectile",     // FProcessor_CrowdAgent_ApplyOffset RunAfter FProcessor_Projectile_Update (shared FTag_EulerIntegrator_NeedsUpdate marker)
 			"CkShapes",
 			"CkSpatialQuery",
 

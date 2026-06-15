@@ -6,6 +6,8 @@
 
 #include "CkPhysics/EulerIntegrator/CkEulerIntegrator_Fragment.h"
 
+#include "CkProjectile/CkProjectile_Processor.h"
+
 #include "CkCrowd/Agent/CkCrowdAgent_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -29,7 +31,11 @@ namespace ck
     {
     public:
         using Group = FGroup_Physics;
-        using RunAfter = TDepList<FProcessor_EulerIntegrator_Update>;
+        // Shares MarkedDirtyBy (FTag_EulerIntegrator_NeedsUpdate) with FProcessor_Projectile_Update;
+        // the two act on disjoint entity sets (crowd agents vs projectiles), so ordering is
+        // immaterial for correctness — declare it explicitly to silence the dirty-marker-conflict
+        // advisory. EulerIntegrator_Update stays first (we observe the value it just produced).
+        using RunAfter = TDepList<FProcessor_EulerIntegrator_Update, FProcessor_Projectile_Update>;
         using MarkedDirtyBy = FTag_EulerIntegrator_NeedsUpdate;
         // Time-stepping consumer: re-running with DeltaT=0 would re-enqueue the same _DistanceOffset
         // and double per-frame movement. The integrator's NeedsUpdate tag is sticky (not consumed by us).

@@ -76,7 +76,10 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_Chaos;
-        using RunAfter = TDepList<FProcessor_GeometryCollection_HandleRequests>;
+        // Both Crumble and RemoveAllAnchors share MarkedDirtyBy + RunAfter HandleRequests, leaving them
+        // unordered vs each other (disjoint tags, both TReadOnly Params — order is immaterial). Add the
+        // sibling to impose HandleRequests -> Crumble -> RemoveAllAnchors and silence the advisory.
+        using RunAfter = TDepList<FProcessor_GeometryCollection_HandleRequests, FProcessor_GeometryCollection_CrumbleNonActiveClusters>;
         using MarkedDirtyBy = FFragment_GeometryCollection_Requests;
 
     public:

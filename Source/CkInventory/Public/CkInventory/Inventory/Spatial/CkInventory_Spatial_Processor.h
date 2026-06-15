@@ -3,6 +3,7 @@
 #include "CkInventory/Inventory/CkInventory_Fragment.h"
 #include "CkInventory/Inventory/CkInventory_Processor.h"
 #include "CkInventory/Inventory/Spatial/CkInventory_Spatial_Fragment.h"
+#include "CkInventory/Inventory/DataOnly/CkInventory_DataOnly_Processor.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
@@ -105,6 +106,11 @@ namespace ck
         using Group = FGroup_Replication;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::AuthorityOnly;
         using MarkedDirtyBy = FTag_Inventory_MayRequireReplication;
+        // Shares MarkedDirtyBy (FTag_Inventory_MayRequireReplication) with the DataOnly sibling.
+        // The two filter to disjoint shapes (FTag_Inventory_Spatial vs FTag_Inventory_DataOnly), so
+        // ordering is immaterial for correctness — declare it explicitly to silence the scheduler's
+        // dirty-marker-conflict advisory.
+        using RunAfter = TDepList<FProcessor_Inventory_DataOnly_Replicate>;
         using TProcessor::TProcessor;
 
         static auto
