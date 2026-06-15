@@ -23,6 +23,10 @@ namespace ck
     public:
         using Group = FGroup_Overlap;
         using MarkedDirtyBy = FFragment_Probe_Requests;
+        // RayCast/ShapeCast + Probe_HandleRequests all share MarkedDirtyBy (FFragment_Probe_Requests).
+        // Order them HandleRequests -> RayCast -> ShapeCast; the trace views are FFragment_ProbeTrace_*
+        // (the Requests fragment is a trigger only, not required), so running after HandleRequests is safe.
+        using RunAfter = TDepList<FProcessor_Probe_HandleRequests>;
         static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
         FProcessor_ProbeTrace_RayCast(
@@ -50,6 +54,8 @@ namespace ck
     public:
         using Group = FGroup_Overlap;
         using MarkedDirtyBy = FFragment_Probe_Requests;
+        // Shares MarkedDirtyBy with Probe_HandleRequests + RayCast; ordered last in that trio.
+        using RunAfter = TDepList<FProcessor_Probe_HandleRequests, FProcessor_ProbeTrace_RayCast>;
         static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
         FProcessor_ProbeTrace_ShapeCast(

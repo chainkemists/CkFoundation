@@ -145,6 +145,11 @@ namespace ck
         static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
         using TProcessor::TProcessor;
         using MarkedDirtyBy = FTag_Transform_Updated;
+        // Shares MarkedDirtyBy (FTag_Transform_Updated) with the real transform writer
+        // FProcessor_IsmProxy_TransformInstance. This read-only debug check must run AFTER the
+        // instance transforms are actually pushed — declare it to resolve the scheduler's
+        // dirty-marker-conflict advisory.
+        using RunAfter = TDepList<FProcessor_IsmProxy_TransformInstance>;
 
     public:
         static auto
