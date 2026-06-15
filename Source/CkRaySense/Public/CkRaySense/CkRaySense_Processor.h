@@ -13,6 +13,8 @@
 #include "CkShapes/Public/CkShapes/Cylinder/CkShapeCylinder_Fragment.h"
 #include "CkShapes/Public/CkShapes/Sphere/CkShapeSphere_Fragment.h"
 
+#include "CkIsmRenderer/Public/CkIsmRenderer/Proxy/CkIsmProxy_Processor.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -35,6 +37,10 @@ namespace ck
     public:
         using Group = FGroup_PostTransform;
         using MarkedDirtyBy = FTag_Transform_Updated;
+        // Shares MarkedDirtyBy (FTag_Transform_Updated) with the IsmProxy PostTransform processors;
+        // traces read instance transforms after they are pushed. Declared to order the cross-module
+        // pairs and silence the scheduler's dirty-marker-conflict advisory.
+        using RunAfter = TDepList<FProcessor_IsmProxy_TransformInstance, FProcessor_IsmProxy_EnsureStaticNotMoved_DEBUG>;
         // Performs a line trace from cached transforms and broadcasts UUtils_Signal_OnRaySenseTraceHit on hit.
         // Pump would re-trace and re-broadcast the same hit within the same frame; FTag_Transform_Updated is sticky here.
         static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;
@@ -70,6 +76,10 @@ namespace ck
     public:
         using Group = FGroup_PostTransform;
         using MarkedDirtyBy = FTag_Transform_Updated;
+        // Shares MarkedDirtyBy (FTag_Transform_Updated) with the IsmProxy PostTransform processors;
+        // traces read instance transforms after they are pushed. Declared to order the cross-module
+        // pairs and silence the scheduler's dirty-marker-conflict advisory.
+        using RunAfter = TDepList<FProcessor_IsmProxy_TransformInstance, FProcessor_IsmProxy_EnsureStaticNotMoved_DEBUG, FProcessor_RaySense_LineTrace_Update>;
         // Sweeps a box from cached transforms and broadcasts UUtils_Signal_OnRaySenseTraceHit on hit (via DoSweepTrace helper).
         // Pump would re-sweep and re-broadcast the same hit within the same frame; FTag_Transform_Updated is sticky here.
         static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;
@@ -106,6 +116,10 @@ namespace ck
     public:
         using Group = FGroup_PostTransform;
         using MarkedDirtyBy = FTag_Transform_Updated;
+        // Shares MarkedDirtyBy (FTag_Transform_Updated) with the IsmProxy PostTransform processors;
+        // traces read instance transforms after they are pushed. Declared to order the cross-module
+        // pairs and silence the scheduler's dirty-marker-conflict advisory.
+        using RunAfter = TDepList<FProcessor_IsmProxy_TransformInstance, FProcessor_IsmProxy_EnsureStaticNotMoved_DEBUG, FProcessor_RaySense_BoxSweep_Update>;
         // Sweeps a sphere from cached transforms and broadcasts UUtils_Signal_OnRaySenseTraceHit on hit (via DoSweepTrace helper).
         // Pump would re-sweep and re-broadcast the same hit within the same frame; FTag_Transform_Updated is sticky here.
         static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;
@@ -142,6 +156,10 @@ namespace ck
     public:
         using Group = FGroup_PostTransform;
         using MarkedDirtyBy = FTag_Transform_Updated;
+        // Shares MarkedDirtyBy (FTag_Transform_Updated) with the IsmProxy PostTransform processors;
+        // traces read instance transforms after they are pushed. Declared to order the cross-module
+        // pairs and silence the scheduler's dirty-marker-conflict advisory.
+        using RunAfter = TDepList<FProcessor_IsmProxy_TransformInstance, FProcessor_IsmProxy_EnsureStaticNotMoved_DEBUG, FProcessor_RaySense_SphereSweep_Update>;
         // Sweeps a capsule from cached transforms and broadcasts UUtils_Signal_OnRaySenseTraceHit on hit (via DoSweepTrace helper).
         // Pump would re-sweep and re-broadcast the same hit within the same frame; FTag_Transform_Updated is sticky here.
         static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;
@@ -178,6 +196,10 @@ namespace ck
     public:
         using Group = FGroup_PostTransform;
         using MarkedDirtyBy = FTag_Transform_Updated;
+        // Shares MarkedDirtyBy (FTag_Transform_Updated) with the IsmProxy PostTransform processors;
+        // traces read instance transforms after they are pushed. Declared to order the cross-module
+        // pairs and silence the scheduler's dirty-marker-conflict advisory.
+        using RunAfter = TDepList<FProcessor_IsmProxy_TransformInstance, FProcessor_IsmProxy_EnsureStaticNotMoved_DEBUG, FProcessor_RaySense_CapsuleSweep_Update>;
 
     public:
         using TProcessor::TProcessor;
