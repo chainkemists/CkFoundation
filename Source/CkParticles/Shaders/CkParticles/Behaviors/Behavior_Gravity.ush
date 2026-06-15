@@ -1,0 +1,16 @@
+// /CkParticles/Behaviors/Behavior_Gravity.ush — BehaviorId 0.
+// Constant downward acceleration, integrate, tint warm -> dark over life.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+FCkParticles_StageOutput CkParticles_Behavior_Gravity(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    const float3 Gravity = float3(0.0, 0.0, -980.0);
+    O.Velocity = In.Velocity + Gravity * In.DeltaTime;
+    O.Position = In.Position + O.Velocity * In.DeltaTime;
+    O.Color    = lerp(float4(1.0, 0.8, 0.2, 1.0), float4(0.6, 0.1, 0.0, 1.0), CkParticles_NormalizedAge(In));
+
+    return O;
+}

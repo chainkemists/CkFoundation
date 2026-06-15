@@ -1,0 +1,25 @@
+// /CkParticles/CkParticles_DataInterfaceTemplate.ush
+//
+// Delivered to the Niagara GPU translator via UCkParticles_DataInterface::GetParameterDefinitionHLSL ->
+// AppendTemplateHLSL. {ParameterName} is replaced with the DI's per-instance HLSL symbol, so the generated
+// GPU function is ExecuteStage_<symbol> (matching Niagara's <FunctionName>_<symbol> convention for the pure
+// "ExecuteStage" signature). The actual logic lives in the #included behavior files.
+
+#include "/CkParticles/CkParticles_Behaviors.ush"
+
+void ExecuteStage_{ParameterName}(in int BehaviorId, in float DeltaTime, in float Age, in float Lifetime, in float3 InPosition, in float3 InVelocity, out float3 OutPosition, out float3 OutVelocity, out float4 OutColor)
+{
+    FCkParticles_StageInput In;
+    In.BehaviorId = BehaviorId;
+    In.DeltaTime  = DeltaTime;
+    In.Age        = Age;
+    In.Lifetime   = Lifetime;
+    In.Position   = InPosition;
+    In.Velocity   = InVelocity;
+
+    FCkParticles_StageOutput Out = CkParticles_ExecuteStage(In);
+
+    OutPosition = Out.Position;
+    OutVelocity = Out.Velocity;
+    OutColor    = Out.Color;
+}
