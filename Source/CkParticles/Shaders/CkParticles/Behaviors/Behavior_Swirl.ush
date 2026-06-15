@@ -1,0 +1,22 @@
+// /CkParticles/Behaviors/Behavior_Swirl.ush — BehaviorId 1.
+// Rotate the XY velocity around +Z, integrate, tint blue -> magenta over life.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+FCkParticles_StageOutput CkParticles_Behavior_Swirl(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    const float AngularSpeed = 2.0;
+    const float Angle = AngularSpeed * In.DeltaTime;
+    const float S = sin(Angle);
+    const float C = cos(Angle);
+
+    O.Velocity = float3(C * In.Velocity.x - S * In.Velocity.y,
+                        S * In.Velocity.x + C * In.Velocity.y,
+                        In.Velocity.z);
+    O.Position = In.Position + O.Velocity * In.DeltaTime;
+    O.Color    = lerp(float4(0.1, 0.4, 1.0, 1.0), float4(1.0, 0.2, 0.6, 1.0), CkParticles_NormalizedAge(In));
+
+    return O;
+}

@@ -1,0 +1,41 @@
+// /CkParticles/Common.ush — shared CkParticles stage I/O + helpers.
+#pragma once
+
+// --------------------------------------------------------------------------------------------------------------------
+// Per-particle inputs a behavior receives for one stage (typically Particle Update).
+// --------------------------------------------------------------------------------------------------------------------
+struct FCkParticles_StageInput
+{
+    int    BehaviorId;   // selects the behavior (see CkParticles_ExecuteStage)
+    float  DeltaTime;    // seconds since last stage execution
+    float  Age;          // particle age in seconds
+    float  Lifetime;     // particle lifetime in seconds (0 if unset)
+    float3 Position;     // current particle position (sim space)
+    float3 Velocity;     // current particle velocity
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+// Per-particle outputs a behavior writes. The caller assigns these back to particle attributes.
+// --------------------------------------------------------------------------------------------------------------------
+struct FCkParticles_StageOutput
+{
+    float3 Position;
+    float3 Velocity;
+    float4 Color;
+};
+
+// Pass-through defaults (a behavior overrides only what it changes).
+FCkParticles_StageOutput CkParticles_DefaultOutput(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O;
+    O.Position = In.Position;
+    O.Velocity = In.Velocity;
+    O.Color    = float4(1.0, 1.0, 1.0, 1.0);
+    return O;
+}
+
+// 0..1 over the particle's lifetime (0 when lifetime is unset).
+float CkParticles_NormalizedAge(FCkParticles_StageInput In)
+{
+    return In.Lifetime > 0.0 ? saturate(In.Age / In.Lifetime) : 0.0;
+}
