@@ -507,6 +507,26 @@
       ]
     },
     {
+      "Name": "CkParticles",
+      "Type": "Runtime",
+      "LoadingPhase": "Default",
+      "WhitelistPlatforms": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
+    },
+    {
+      "Name": "CkParticlesEditor",
+      "Type": "Editor",
+      "LoadingPhase": "Default",
+      "WhitelistPlatforms": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
+    },
+    {
       "Name": "CkGrid",
       "Type": "Runtime",
       "LoadingPhase": "Default",
