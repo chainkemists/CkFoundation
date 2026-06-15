@@ -6,6 +6,7 @@
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 #include "CkPmg/CkPmg_ProcessorGroups.h"
+#include "CkPmg_Processor_DirectionalShapes.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
@@ -24,6 +25,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Pmg_DebugShape_Setup;
+        using RunAfter = TDepList<FProcessor_Pmg_DashedLine_Setup>;
         using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
         using TProcessor::TProcessor;
 
@@ -51,6 +53,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Pmg_DebugShape_Setup;
+        using RunAfter = TDepList<FProcessor_Pmg_Warning_Setup>;
         using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
         using TProcessor::TProcessor;
 
@@ -78,6 +81,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Pmg_DebugShape_Setup;
+        using RunAfter = TDepList<FProcessor_Pmg_Prohibition_Setup>;
         using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
         using TProcessor::TProcessor;
 
@@ -105,6 +109,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Pmg_DebugShape_Setup;
+        using RunAfter = TDepList<FProcessor_Pmg_NoEntry_Setup>;
         using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
         using TProcessor::TProcessor;
 

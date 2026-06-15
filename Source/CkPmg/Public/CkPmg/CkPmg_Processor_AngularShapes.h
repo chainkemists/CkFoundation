@@ -51,6 +51,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Pmg_DebugShape_Setup;
+        using RunAfter = TDepList<FProcessor_Pmg_Wedge_Setup>;
         using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
         using TProcessor::TProcessor;
 
@@ -78,6 +79,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Pmg_DebugShape_Setup;
+        using RunAfter = TDepList<FProcessor_Pmg_Arc_Setup>;
         using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
         using TProcessor::TProcessor;
 

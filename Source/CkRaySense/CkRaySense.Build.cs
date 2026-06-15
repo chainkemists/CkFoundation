@@ -27,6 +27,7 @@ public class CkRaySense : CkModuleRules
             "CkRecord",
             "CkSettings",
             "CkShapes",
+            "CkIsmRenderer",    // RaySense PostTransform processors RunAfter the IsmProxy PostTransform processors (shared FTag_Transform_Updated marker)
         });
     }
 }
