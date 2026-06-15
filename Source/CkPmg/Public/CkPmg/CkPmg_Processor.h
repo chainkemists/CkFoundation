@@ -212,7 +212,9 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_Rendering;
-        using RunAfter = TDepList<FGroup_Pmg_DebugShape_Setup>;
+        // UpdateTransform/CheckDuration/HandleRequests all write FFragment_Pmg_DebugShape_Current;
+        // chain them in declaration order to make the deterministic write-ordering explicit.
+        using RunAfter = TDepList<FGroup_Pmg_DebugShape_Setup, FProcessor_Pmg_DebugShape_UpdateTransform>;
         using TProcessor::TProcessor;
 
     public:
@@ -268,7 +270,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_Rendering;
-        using RunAfter = TDepList<FGroup_Pmg_DebugShape_Setup>;
+        using RunAfter = TDepList<FGroup_Pmg_DebugShape_Setup, FProcessor_Pmg_DebugShape_CheckDuration>;
         using MarkedDirtyBy = FFragment_Pmg_DebugShape_Requests;
 
     public:
