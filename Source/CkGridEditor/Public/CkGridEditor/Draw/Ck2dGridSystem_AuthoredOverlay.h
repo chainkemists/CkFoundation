@@ -5,6 +5,8 @@
 #include "Math/IntPoint.h"
 #include "Math/Transform.h"
 
+#include <GameplayTagContainer.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class ACk_EntitySpawner_UE;
@@ -42,6 +44,12 @@ namespace ck::grid_editor
     constexpr auto PivotMarkerSize     = 20.0f;
     constexpr auto PivotLineThickness  = 3.0f;
 
+    // Tagged-cell marker: a bold DOUBLE inset ring in the tag's per-tag color, far more visible than the
+    // thin single state marker (the old ColorTagged 2px outline read as "barely visible").
+    constexpr auto TaggedMarkerInsetOuter = 0.06;
+    constexpr auto TaggedMarkerInsetInner = 0.22;
+    constexpr auto TaggedMarkerThickness  = 3.0f;
+
     // What the shared overlay draws. The interaction overlays (hover/select/blocker-drag/blocker-group)
     // are NOT here — they are paint-mode-only and stay in the UEdMode.
     struct FAuthoredOverlayOptions
@@ -76,6 +84,38 @@ namespace ck::grid_editor
     Resolve_CellColor(
         const UCk_2dGridSystem_Spec* InSpec,
         const FIntPoint&             InCoordinate) -> FLinearColor;
+
+    // Deterministic distinct color for a tag, hashed from InName -> hue (fixed high saturation/value).
+    // Stable across sessions and independent of tag order/count. The testable core of Resolve_TagColor.
+    CKGRIDEDITOR_API auto
+    Resolve_TagColor_FromName(
+        const FName& InName) -> FLinearColor;
+
+    // Distinct color for a gameplay tag (delegates to Resolve_TagColor_FromName). Invalid tag -> ColorTagged.
+    CKGRIDEDITOR_API auto
+    Resolve_TagColor(
+        const FGameplayTag& InTag) -> FLinearColor;
+
+    // The cell's PRIMARY per-cell tag (first tag of its PerCellTags entry), or an invalid tag when the cell
+    // has no per-cell tag override. DefaultCellTags are intentionally NOT considered here — grid-wide defaults
+    // do not recolor cells (they would flood the whole grid); they appear only in the legend.
+    CKGRIDEDITOR_API auto
+    Resolve_PrimaryCellTag(
+        const UCk_2dGridSystem_Spec* InSpec,
+        const FIntPoint&             InCoordinate) -> FGameplayTag;
+
+    // All distinct PER-CELL tags authored on the Spec, paired with how many cells carry each (a cell with
+    // N tags counts once per tag). Sorted by tag name for stable list ordering. Grid-wide DefaultCellTags
+    // are NOT included here (the toolkit lists them separately as grid-wide).
+    CKGRIDEDITOR_API auto
+    Collect_PerCellTagsWithCounts(
+        const UCk_2dGridSystem_Spec* InSpec) -> TArray<TPair<FGameplayTag, int32>>;
+
+    // Every coordinate whose PerCellTags entry contains InTag. Empty when the Spec/tag is invalid.
+    CKGRIDEDITOR_API auto
+    Get_CellsWithTag(
+        const UCk_2dGridSystem_Spec* InSpec,
+        const FGameplayTag&          InTag) -> TArray<FIntPoint>;
 
     // Draws the authored-state PDI overlay for InSpec at InTransform: the green base-grid wireframe, an
     // inset state-color marker on every non-enabled cell, and the pivot gizmo (gated by InOptions). No-op

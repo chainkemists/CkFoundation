@@ -190,6 +190,19 @@ public:
     // selected). Read by the toolkit to build the editable per-cell tag list.
     auto Get_SelectedCellTags() const -> FGameplayTagContainer;
 
+    // Read-only access to the selected grid's authoring Spec (or nullptr when no grid spawner is selected).
+    // Used by the toolkit to build the Blockers/Tags lists without resolving the spawner itself.
+    auto Get_SelectedSpec() const -> UCk_2dGridSystem_Spec*;
+
+    // Select tool: set/clear the blocker selected from the toolkit's Blockers list (bounds-checked; clears
+    // the tag-group selection). INDEX_NONE clears it.
+    auto Set_SelectedBlockerIndex(int32 InIndex) -> void;
+
+    // Select tool: the tag whose cells are highlighted (set from the toolkit's Tags list). Unset = none.
+    auto Get_SelectedTag() const -> TOptional<FGameplayTag> { return _SelectedTag; }
+    // Setting a valid tag clears the cell/blocker selection so the three Select highlights stay exclusive.
+    auto Set_SelectedTag(const TOptional<FGameplayTag>& InTag) -> void;
+
     // Select tool: range (min/max corners) of the currently selected blocker, written to the out params.
     // Returns false (out params untouched) when no blocker is selected or the index is stale.
     auto Get_SelectedBlockerRange(FIntPoint& OutMin, FIntPoint& OutMax) const -> bool;
@@ -228,32 +241,26 @@ private:
         FVector&               OutRayOrigin,
         FVector&               OutRayDirection) const -> bool;
 
-    // Shape-tool directional cell paint: idempotently ADDS (InDisabled == true) or REMOVES (false) InCell's
-    // membership in the selection's DisabledCells, brackets the mutation in Spec->Modify(), and rebuilds the
-    // live preview. Idempotent — re-applying the same direction is a no-op. Assumes a caller-owned
-    // transaction is already open (single-click opens an FScopedTransaction; the drag stroke opens a GEditor
-    // txn). Plain-LMB paints disabled (true); Shift+LMB erases (false).
-    auto Set_ShapeCellDisabled(const FResolvedGridSelection& InSelection, const FIntPoint& InCell, bool InDisabled) -> void;
+    // Shape-tool cell paint: idempotently sets InCell's membership in the selection's DisabledCells.
+    // Calls Spec->Modify() only when it actually changes state. Returns true if it changed the Spec.
+    // Does NOT rebuild — the caller rebuilds once after a batch. Assumes a caller-owned transaction is open.
+    auto Set_ShapeCellDisabled(const FResolvedGridSelection& InSelection, const FIntPoint& InCell, bool InDisabled) -> bool;
 
-    // Tags-tool (PerCellBulk) directional cell paint: ADDS (InAdd == true) or REMOVES (false) _ActivePaintTag
-    // on InCell's PerCellTags. On remove, the PerCellTags map entry is dropped if its container becomes empty
-    // (mirrors the authored-data convention — no entry == no overrides). Brackets in Spec->Modify() + rebuild.
-    // Assumes a caller-owned transaction is open. No-op if _ActivePaintTag is invalid. Plain-LMB adds;
-    // Shift+LMB removes.
-    auto Set_TagCell(const FResolvedGridSelection& InSelection, const FIntPoint& InCell, bool InAdd) -> void;
+    // Tags-tool (PerCellBulk) cell paint: ADDS (InAdd) or REMOVES _ActivePaintTag on InCell's PerCellTags.
+    // On remove, drops the map entry if its container becomes empty. Calls Spec->Modify() only on change.
+    // Returns true if it changed the Spec; false (no-op) if _ActivePaintTag is invalid or already in state.
+    // Does NOT rebuild — the caller rebuilds once. Assumes a caller-owned transaction is open.
+    auto Set_TagCell(const FResolvedGridSelection& InSelection, const FIntPoint& InCell, bool InAdd) -> bool;
 
-    // Dispatches the per-cell stroke action for the active tool, applying ADD (InErase == false) or ERASE
-    // (true). Shape: disable on add / enable on erase; Tags: add / remove _ActivePaintTag. Deduped by the
-    // caller via _StrokeToggledCells. Blocker is NOT a per-cell stroke (it is a drag-rect).
-    auto Paint_StrokeCell(const FResolvedGridSelection& InSelection, const FIntPoint& InCell, bool InErase) -> void;
+    // Dispatches the per-cell paint for the active tool (Shape/Tags). ADD when InErase == false. Returns
+    // true if the Spec changed. Blocker/Select are not per-cell paints and return false.
+    auto Paint_Cell(const FResolvedGridSelection& InSelection, const FIntPoint& InCell, bool InErase) -> bool;
 
-    // Resolves the cell under the given viewport pixel during an active drag stroke and applies the
-    // active tool's per-cell action in the stroke's captured direction (_StrokeErase), deduping via
-    // _StrokeToggledCells so jitter inside one cell can't re-apply repeatedly.
-    auto Paint_StrokeAtCursor(
-        FEditorViewportClient* InViewportClient,
-        int32                  InMouseX,
-        int32                  InMouseY) -> void;
+    // Box-select rect fill for the Shape/Tags tools: applies Paint_Cell to every in-bounds cell of the
+    // inclusive rect InMin..InMax (corners pre-ordered by the caller), then rebuilds ONCE if anything
+    // changed. For the Tags tool, emits a single warning and no-ops if _ActivePaintTag is invalid. Assumes
+    // a caller-owned transaction is open (HandleClick for a click; EndTracking for a drag).
+    auto Apply_RectFill(const FResolvedGridSelection& InSelection, const FIntPoint& InMin, const FIntPoint& InMax, bool InErase) -> void;
 
     // Resolves the cell under the given viewport pixel into a grid coordinate (or unset). Shared by the
     // hover/stroke/blocker-drag paths.
@@ -298,40 +305,16 @@ private:
     auto Is_EraseModifier(const FViewportClick& InClick) const -> bool;
 
     // Viewport-client variant of Is_EraseModifier for the drag path (Shift read off the client at
-    // StartTracking time, captured into _StrokeErase for the whole stroke).
+    // StartTracking time, captured into _DragErase for the whole drag).
     auto Is_EraseModifier(FEditorViewportClient* InViewportClient) const -> bool;
 
-    // Schedules a next-tick FViewport::SetMouse(InMousePixel) so the cursor lands on the cell where a paint
-    // stroke ENDED rather than snapping back to where it began. Must run AFTER the current Slate input pass
-    // releases high-precision raw-mouse mode (the OS restores the cursor to the capture origin at that
-    // point); a next-tick editor timer fires after that, so the reposition wins. No-op outside the editor.
-    auto Schedule_RestoreCursorToStrokeEnd(FViewport* InViewport, const FIntPoint& InMousePixel) -> void;
-
 private:
-    // Current paint tool. Default Shape (the only functional tool this task).
+    // Current paint tool. Default Shape.
     ECk_GridPaint_Tool _ActiveTool = ECk_GridPaint_Tool::Shape;
 
     // Cell currently under the cursor (for the hover highlight in Render). Unset when no cell is
     // hovered or no grid is selected.
     TOptional<FIntPoint> _HoveredCell;
-
-    // True between StartTracking/EndTracking when a per-cell drag stroke (Shape or Tags) is active.
-    // While set, the mode disables the gizmo delta-tracker so the drag paints instead of dragging an
-    // actor.
-    bool _IsPaintingStroke = false;
-
-    // Cells already painted during the current stroke (so re-entering a cell on jitter is a no-op).
-    TSet<FIntPoint> _StrokeToggledCells;
-
-    // Captured at StartTracking from the Shift state: true erases (Shape enables / Tags removes the active
-    // tag), false adds. Held for the whole stroke so a drag is add-or-erase consistently even if the user
-    // releases Shift mid-drag.
-    bool _StrokeErase = false;
-
-    // Last viewport pixel painted during the current stroke (start press + every CapturedMouseMove). On
-    // EndTracking this is the cursor's END position; we schedule a next-tick FViewport::SetMouse there to
-    // counter the OS raw-mouse-mode snap-back that would otherwise return the cursor to the press point.
-    TOptional<FIntPoint> _StrokeLastMousePixel;
 
     // Tags tool: the tag the bulk-paint stroke / GridDefault actions write. Invalid until the toolkit
     // picker sets one.
@@ -344,12 +327,16 @@ private:
     // Invalid until the toolkit picker sets one (invalid = anonymous blocker).
     FGameplayTag _ActiveBlockerTag;
 
-    // Blocker tool: the cell where the current rubber-band rect drag began. Set on StartTracking while
-    // tool == Blocker; unset otherwise.
-    TOptional<FIntPoint> _BlockerDragStart;
+    // All paint tools: the cell where the current rubber-band rect drag began (one rect corner). Set on
+    // StartTracking for Shape/Tags/Blocker; unset otherwise.
+    TOptional<FIntPoint> _DragStart;
 
-    // Blocker tool: the cell currently under the cursor during a blocker drag (the rect's other corner).
-    TOptional<FIntPoint> _BlockerDragCurrent;
+    // All paint tools: the cell currently under the cursor during a drag (the rect's other corner).
+    TOptional<FIntPoint> _DragCurrent;
+
+    // Captured at StartTracking from the Shift state for the Shape/Tags drag: true = erase (Shape enables /
+    // Tags removes the active tag), false = add. Held for the whole drag. Unused by Blocker (ignores Shift).
+    bool _DragErase = false;
 
     // Blocker AND Select tool: index into Spec->Blockers of the currently selected blocker (for highlight,
     // Delete, and the Select-tool blocker editor), or INDEX_NONE. In the Select tool this is set when the
@@ -361,6 +348,11 @@ private:
     // Unset until a cell is clicked, or after an off-grid click / actor-selection change. When the pick
     // landed on a blocker, _SelectedBlockerIndex is also set and the Details panel shows the blocker editor.
     TOptional<FIntPoint> _SelectedCell;
+
+    // Select tool: the tag whose cells are highlighted (driven by the toolkit's Tags list). Mutually
+    // exclusive with _SelectedCell / _SelectedBlockerIndex. Cleared on tool change away from Select and on
+    // actor-selection change.
+    TOptional<FGameplayTag> _SelectedTag;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
