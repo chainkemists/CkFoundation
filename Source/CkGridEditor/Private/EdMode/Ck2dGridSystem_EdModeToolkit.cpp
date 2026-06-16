@@ -1,11 +1,13 @@
 #include "CkGridEditor/EdMode/Ck2dGridSystem_EdModeToolkit.h"
 
 #include "CkGridEditor/EdMode/Ck2dGridSystem_EdMode.h"
+#include "CkGridEditor/Draw/Ck2dGridSystem_AuthoredOverlay.h"
 
 #include "SGameplayTagPicker.h"
 
 #include "Styling/AppStyle.h"
 
+#include "Widgets/Colors/SColorBlock.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SCheckBox.h"
 #include "Widgets/Layout/SBorder.h"
@@ -132,6 +134,10 @@ auto
         .OnTagChanged(this, &FCk_2dGridSystem_EdModeToolkit::On_PaintTagChanged)
         .TagContainers(TArray<FGameplayTagContainer>{ FGameplayTagContainer{} });
 
+    // Read-only per-tag color legend (swatch + name + count), rebuilt from the Spec on repaint.
+    SAssignNew(TagLegendContainer, SVerticalBox);
+    Rebuild_TagLegend();
+
     return SNew(SBox)
         .Visibility(this, &FCk_2dGridSystem_EdModeToolkit::Get_TagsSectionVisibility)
         [
@@ -141,6 +147,17 @@ auto
             .Padding(0.0f, 0.0f, 0.0f, 4.0f)
             [
                 SNew(STextBlock).Text(LOCTEXT("PaintTagLabel", "Paint Tag"))
+            ]
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .Padding(0.0f, 8.0f, 0.0f, 2.0f)
+            [
+                SNew(STextBlock).Text(LOCTEXT("TagColorsLabel", "Tag colors"))
+            ]
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            [
+                TagLegendContainer.ToSharedRef()
             ]
             + SVerticalBox::Slot()
             .AutoHeight()
@@ -197,6 +214,69 @@ auto
                 ]
             ]
         ];
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    Compute_TagLegendSignature() const -> FString
+{
+    const auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
+    if (Mode == nullptr)
+    { return FString{}; }
+
+    const auto* Spec = Mode->Get_SelectedSpec();
+    if (Spec == nullptr)
+    { return FString{}; }
+
+    auto Sig = FString{};
+    for (const auto& Pair : ck::grid_editor::Collect_PerCellTagsWithCounts(Spec))
+    { Sig += Pair.Key.GetTagName().ToString() + FString::Printf(TEXT(":%d;"), Pair.Value); }
+    return Sig;
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    Rebuild_TagLegend() -> void
+{
+    if (! TagLegendContainer.IsValid())
+    { return; }
+
+    TagLegendContainer->ClearChildren();
+
+    auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
+    const auto* Spec = Mode != nullptr ? Mode->Get_SelectedSpec() : nullptr;
+    const auto Entries = Spec != nullptr
+        ? ck::grid_editor::Collect_PerCellTagsWithCounts(Spec)
+        : TArray<TPair<FGameplayTag, int32>>{};
+
+    if (Entries.Num() == 0)
+    {
+        TagLegendContainer->AddSlot().AutoHeight()
+        [ SNew(STextBlock).Text(LOCTEXT("LegendNone", "(no per-cell tags)")) ];
+        return;
+    }
+
+    for (const auto& Entry : Entries)
+    {
+        const auto Color = ck::grid_editor::Resolve_TagColor(Entry.Key);
+        const auto Label = FText::FromString(FString::Printf(
+            TEXT("%s  (%d)"), *Entry.Key.GetTagName().ToString(), Entry.Value));
+
+        TagLegendContainer->AddSlot().AutoHeight().Padding(0.0f, 1.0f)
+        [
+            SNew(SHorizontalBox)
+            + SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(0.0f, 0.0f, 6.0f, 0.0f)
+            [
+                SNew(SColorBlock).Color(Color).Size(FVector2D(14.0f, 14.0f))
+            ]
+            + SHorizontalBox::Slot().FillWidth(1.0f).VAlign(VAlign_Center)
+            [
+                SNew(STextBlock).Text(Label)
+            ]
+        ];
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -923,6 +1003,14 @@ auto
     FCk_2dGridSystem_EdModeToolkit::
     Get_TagsSectionVisibility() const -> EVisibility
 {
+    // Re-drive the legend on repaint when the per-cell tag set changes (mirrors the const-cast-in-getter
+    // refresh idiom used by Get_DetailsCoordinateText). The signature guard keeps it cheap.
+    if (const auto Sig = Compute_TagLegendSignature(); Sig != SeededTagLegendSignature)
+    {
+        const_cast<FCk_2dGridSystem_EdModeToolkit*>(this)->SeededTagLegendSignature = Sig;
+        const_cast<FCk_2dGridSystem_EdModeToolkit*>(this)->Rebuild_TagLegend();
+    }
+
     return Get_ActiveTool() == ECk_GridPaint_Tool::Tags
         ? EVisibility::Visible
         : EVisibility::Collapsed;

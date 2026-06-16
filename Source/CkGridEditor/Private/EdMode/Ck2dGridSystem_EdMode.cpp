@@ -15,7 +15,6 @@
 #include "EditorViewportClient.h"
 #include "Engine/Selection.h"
 #include "InputCoreTypes.h"
-#include "TimerManager.h"
 #include "UnrealClient.h"
 #include "SceneManagement.h"
 #include "SceneView.h"
@@ -95,8 +94,8 @@ auto
     // The pending drag-rect corners only make sense while the Blocker tool is active.
     if (_ActiveTool != ECk_GridPaint_Tool::Blocker)
     {
-        _BlockerDragStart.Reset();
-        _BlockerDragCurrent.Reset();
+        _DragStart.Reset();
+        _DragCurrent.Reset();
     }
 
     // _SelectedBlockerIndex is shared by the Blocker tool (place/select/delete) and the Select tool (a
@@ -105,10 +104,13 @@ auto
     if (_ActiveTool != ECk_GridPaint_Tool::Blocker && _ActiveTool != ECk_GridPaint_Tool::Select)
     { _SelectedBlockerIndex = INDEX_NONE; }
 
-    // The Select-tool pick highlight only makes sense while the Select tool is active; clear it on any
-    // tool change away from Select so a stale highlight doesn't linger.
+    // The Select-tool pick highlights (single cell + tag group) only make sense while the Select tool is
+    // active; clear them on any tool change away from Select so a stale highlight doesn't linger.
     if (_ActiveTool != ECk_GridPaint_Tool::Select)
-    { _SelectedCell.Reset(); }
+    {
+        _SelectedCell.Reset();
+        _SelectedTag.Reset();
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -232,32 +234,44 @@ void
         }
     }
 
-    // Blocker drag-rect preview: outline the candidate rect spanning min..max of the start/current
-    // corners as a single cyan border (full-cell edges of the bounding rect, no per-cell lines).
-    if (_BlockerDragStart.IsSet())
+    // Drag-rect preview (all paint tools): outline the candidate rect (full-cell edges of the bounding rect,
+    // no per-cell lines), colored by tool + erase direction.
+    if (_DragStart.IsSet())
     {
-        const auto Start   = _BlockerDragStart.GetValue();
-        const auto Current = _BlockerDragCurrent.IsSet() ? _BlockerDragCurrent.GetValue() : Start;
+        const auto Start   = _DragStart.GetValue();
+        const auto Current = _DragCurrent.IsSet() ? _DragCurrent.GetValue() : Start;
 
         const auto MinX = FMath::Min(Start.X, Current.X);
         const auto MaxX = FMath::Max(Start.X, Current.X);
         const auto MinY = FMath::Min(Start.Y, Current.Y);
         const auto MaxY = FMath::Max(Start.Y, Current.Y);
 
-        const auto LoX = MinX               * CellSize.X;
-        const auto LoY = MinY               * CellSize.Y;
-        const auto HiX = (MaxX + 1)         * CellSize.X;
-        const auto HiY = (MaxY + 1)         * CellSize.Y;
+        const auto LoX = MinX       * CellSize.X;
+        const auto LoY = MinY       * CellSize.Y;
+        const auto HiX = (MaxX + 1) * CellSize.X;
+        const auto HiY = (MaxY + 1) * CellSize.Y;
 
         const auto C00 = LocalToWorld(LoX, LoY);
         const auto C10 = LocalToWorld(HiX, LoY);
         const auto C11 = LocalToWorld(HiX, HiY);
         const auto C01 = LocalToWorld(LoX, HiY);
 
-        InPDI->DrawLine(C00, C10, ck_grid_editor_detail::ColorBlockerDrag, SDPG_Foreground, ck_grid_editor_detail::BlockerDragThickness);
-        InPDI->DrawLine(C10, C11, ck_grid_editor_detail::ColorBlockerDrag, SDPG_Foreground, ck_grid_editor_detail::BlockerDragThickness);
-        InPDI->DrawLine(C11, C01, ck_grid_editor_detail::ColorBlockerDrag, SDPG_Foreground, ck_grid_editor_detail::BlockerDragThickness);
-        InPDI->DrawLine(C01, C00, ck_grid_editor_detail::ColorBlockerDrag, SDPG_Foreground, ck_grid_editor_detail::BlockerDragThickness);
+        // Shape: red (add -> Disabled) / green (erase -> Enabled). Tags: active-tag color (add) / red (erase).
+        // Blocker: cyan.
+        auto PreviewColor = ck_grid_editor_detail::ColorBlockerDrag;
+        switch (_ActiveTool)
+        {
+            case ECk_GridPaint_Tool::Shape:
+            { PreviewColor = _DragErase ? ck::grid_editor::ColorEnabled : ck::grid_editor::ColorDisabled; break; }
+            case ECk_GridPaint_Tool::Tags:
+            { PreviewColor = _DragErase ? ck::grid_editor::ColorDisabled : ck::grid_editor::Resolve_TagColor(_ActivePaintTag); break; }
+            default: break; // Blocker keeps cyan
+        }
+
+        InPDI->DrawLine(C00, C10, PreviewColor, SDPG_Foreground, ck_grid_editor_detail::BlockerDragThickness);
+        InPDI->DrawLine(C10, C11, PreviewColor, SDPG_Foreground, ck_grid_editor_detail::BlockerDragThickness);
+        InPDI->DrawLine(C11, C01, PreviewColor, SDPG_Foreground, ck_grid_editor_detail::BlockerDragThickness);
+        InPDI->DrawLine(C01, C00, PreviewColor, SDPG_Foreground, ck_grid_editor_detail::BlockerDragThickness);
     }
 
     // Select-tool blocker-group highlight: when the Select pick landed on a blocker, outline the WHOLE
@@ -386,17 +400,17 @@ auto
     Set_ShapeCellDisabled(
         const FResolvedGridSelection& InSelection,
         const FIntPoint&              InCell,
-        bool                          InDisabled) -> void
+        bool                          InDisabled) -> bool
 {
     if (! InSelection.IsValid())
-    { return; }
+    { return false; }
 
     auto* Spec = InSelection.Spec;
 
-    // Idempotent: skip the Modify()/rebuild when the cell is already in the requested state.
+    // Idempotent: skip the Modify() when the cell is already in the requested state.
     const auto bAlreadyDisabled = Spec->DisabledCells.Contains(InCell);
     if (bAlreadyDisabled == InDisabled)
-    { return; }
+    { return false; }
 
     Spec->Modify();
 
@@ -405,7 +419,7 @@ auto
     else
     { Spec->DisabledCells.RemoveSingleSwap(InCell); }
 
-    InSelection.Spawner->EditorOnly_RebuildEntity();
+    return true;
 }
 
 auto
@@ -413,37 +427,31 @@ auto
     Set_TagCell(
         const FResolvedGridSelection& InSelection,
         const FIntPoint&              InCell,
-        bool                          InAdd) -> void
+        bool                          InAdd) -> bool
 {
-    if (! InSelection.IsValid())
-    { return; }
-
-    if (! _ActivePaintTag.IsValid())
-    {
-        ck::grid_editor::Warning(TEXT("Tags tool: no active paint tag set — skipping cell paint"));
-        return;
-    }
+    // Invalid tag is a silent no-op here — the single warning is emitted by the batch caller (Apply_RectFill).
+    if (! InSelection.IsValid() || ! _ActivePaintTag.IsValid())
+    { return false; }
 
     auto* Spec = InSelection.Spec;
 
     if (InAdd)
     {
-        // Idempotent ADD: no-op (and no Modify/rebuild) when the cell already carries the tag.
+        // Idempotent ADD: no-op (and no Modify) when the cell already carries the tag.
         if (const auto* Existing = Spec->PerCellTags.Find(InCell);
             Existing != nullptr && Existing->HasTagExact(_ActivePaintTag))
-        { return; }
+        { return false; }
 
         Spec->Modify();
         auto& Container = Spec->PerCellTags.FindOrAdd(InCell);
         Container.AddTag(_ActivePaintTag);
-        InSelection.Spawner->EditorOnly_RebuildEntity();
-        return;
+        return true;
     }
 
     // REMOVE: no-op when the cell doesn't carry the tag.
     auto* Container = Spec->PerCellTags.Find(InCell);
     if (Container == nullptr || ! Container->HasTagExact(_ActivePaintTag))
-    { return; }
+    { return false; }
 
     Spec->Modify();
     Container->RemoveTag(_ActivePaintTag);
@@ -453,36 +461,53 @@ auto
     if (Container->IsEmpty())
     { Spec->PerCellTags.Remove(InCell); }
 
-    InSelection.Spawner->EditorOnly_RebuildEntity();
+    return true;
 }
 
 auto
     UCk_2dGridSystem_EdMode::
-    Paint_StrokeCell(
+    Paint_Cell(
         const FResolvedGridSelection& InSelection,
         const FIntPoint&              InCell,
-        bool                          InErase) -> void
+        bool                          InErase) -> bool
 {
     switch (_ActiveTool)
     {
         case ECk_GridPaint_Tool::Shape:
-        {
-            // ADD disables the cell; ERASE re-enables it.
-            Set_ShapeCellDisabled(InSelection, InCell, ! InErase);
-            break;
-        }
+        { return Set_ShapeCellDisabled(InSelection, InCell, ! InErase); }
         case ECk_GridPaint_Tool::Tags:
-        {
-            // ADD writes the active tag; ERASE removes it.
-            Set_TagCell(InSelection, InCell, ! InErase);
-            break;
-        }
+        { return Set_TagCell(InSelection, InCell, ! InErase); }
         default:
-        {
-            // Blocker is a drag-rect, not a per-cell stroke; nothing to do here.
-            break;
-        }
+        { return false; }
     }
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Apply_RectFill(
+        const FResolvedGridSelection& InSelection,
+        const FIntPoint&              InMin,
+        const FIntPoint&              InMax,
+        bool                          InErase) -> void
+{
+    if (! InSelection.IsValid())
+    { return; }
+
+    // Tags tool needs an active tag; warn ONCE (not per cell) and bail.
+    if (_ActiveTool == ECk_GridPaint_Tool::Tags && ! _ActivePaintTag.IsValid())
+    {
+        ck::grid_editor::Warning(TEXT("Tags tool: no active paint tag set — skipping rect fill"));
+        return;
+    }
+
+    const auto Cells = ck::grid_editor::Compute_RectCells(InMin, InMax, InSelection.Spec->Dimensions);
+
+    auto bAnyChange = false;
+    for (const auto& Cell : Cells)
+    { bAnyChange |= Paint_Cell(InSelection, Cell, InErase); }
+
+    if (bAnyChange)
+    { InSelection.Spawner->EditorOnly_RebuildEntity(); }
 }
 
 auto
@@ -503,33 +528,6 @@ auto
 
     return ck::grid_editor::Resolve_CellFromRay(
         Selection.GridTransform, Selection.Spec->CellSize, Selection.Spec->Dimensions, RayOrigin, RayDirection);
-}
-
-auto
-    UCk_2dGridSystem_EdMode::
-    Paint_StrokeAtCursor(
-        FEditorViewportClient* InViewportClient,
-        int32                  InMouseX,
-        int32                  InMouseY) -> void
-{
-    const auto Selection = Resolve_SelectedGridSpawner();
-    if (! Selection.IsValid())
-    { return; }
-
-    // Record the latest painted pixel so EndTracking can land the cursor on the stroke's END cell.
-    _StrokeLastMousePixel = FIntPoint(InMouseX, InMouseY);
-
-    const auto Cell = Resolve_CellAtCursor(InViewportClient, InMouseX, InMouseY);
-    if (! Cell.IsSet())
-    { return; }
-
-    // Dedupe: a cell is painted at most once per stroke, so mouse jitter inside it can't re-apply the
-    // tool action repeatedly.
-    if (_StrokeToggledCells.Contains(Cell.GetValue()))
-    { return; }
-
-    _StrokeToggledCells.Add(Cell.GetValue());
-    Paint_StrokeCell(Selection, Cell.GetValue(), _StrokeErase);
 }
 
 auto
@@ -652,34 +650,6 @@ auto
 {
     return InViewportClient != nullptr && InViewportClient->IsShiftPressed();
 }
-
-auto
-    UCk_2dGridSystem_EdMode::
-    Schedule_RestoreCursorToStrokeEnd(
-        FViewport*       InViewport,
-        const FIntPoint& InMousePixel) -> void
-{
-    if (InViewport == nullptr || GEditor == nullptr)
-    { return; }
-
-    // Defer to the next editor tick: the OS restores the cursor to the raw-mouse capture origin when Slate
-    // exits high-precision mode LATER in this same input pass, so repositioning now would be overwritten.
-    // A next-tick timer fires after that, landing the cursor on the stroke's end cell.
-    auto* RawViewport = InViewport;
-
-    GEditor->GetTimerManager()->SetTimerForNextTick(
-        FTimerDelegate::CreateLambda([RawViewport, InMousePixel]()
-        {
-            // RawViewport may have been torn down between scheduling and firing (mode exit, viewport close).
-            // GEditor outlives the timer manager that owns this delegate, so the manager itself is safe; we
-            // only guard the viewport pointer. There is no public "is this FViewport still alive" probe, but
-            // a next-tick timer in practice fires before any viewport teardown that could invalidate it.
-            if (RawViewport != nullptr)
-            { RawViewport->SetMouse(InMousePixel.X, InMousePixel.Y); }
-        }));
-}
-
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_2dGridSystem_EdMode::
@@ -960,22 +930,13 @@ bool
         HHitProxy*             InHitProxy,
         const FViewportClick&  InClick)
 {
-    // A click that turned into a drag is painted by the StartTracking/CapturedMouseMove/EndTracking
-    // path; swallow the trailing HandleClick so the cell isn't toggled a second time. EndTracking
-    // leaves _StrokeToggledCells populated precisely so we can detect that here; consume it now so a
-    // later pure single-click isn't wrongly swallowed.
-    if (_IsPaintingStroke || (! _StrokeToggledCells.IsEmpty()))
+    // A click that turned into a drag is committed by the StartTracking/CapturedMouseMove/EndTracking path
+    // for EVERY paint tool (Shape/Tags rect fill, Blocker rect append). EndTracking intentionally leaves
+    // _DragStart set so this trailing HandleClick can swallow the click instead of applying it a second time.
+    if (_DragStart.IsSet())
     {
-        _StrokeToggledCells.Reset();
-        return true;
-    }
-
-    // A Blocker drag also routes through StartTracking/EndTracking; if one just finished, swallow the
-    // trailing HandleClick so it isn't mis-read as a select-click on the freshly-placed rect.
-    if (_BlockerDragStart.IsSet())
-    {
-        _BlockerDragStart.Reset();
-        _BlockerDragCurrent.Reset();
+        _DragStart.Reset();
+        _DragCurrent.Reset();
         return true;
     }
 
@@ -1014,7 +975,8 @@ bool
     if (! Cell.IsSet())
     { return Super::HandleClick(InViewportClient, InHitProxy, InClick); }
 
-    // Plain LMB adds; Shift+LMB erases. Label the transaction by direction so undo reads correctly.
+    // Plain LMB adds; Shift+LMB erases. A single click is a 1x1 rect fill (one undo step), sharing the same
+    // commit path as a drag. Label the transaction by direction so undo reads correctly.
     const auto bErase = Is_EraseModifier(InClick);
 
     const auto TransactionLabel = bErase
@@ -1022,7 +984,7 @@ bool
         : NSLOCTEXT("Ck_2dGridSystem_EdMode", "PaintCell", "Grid Paint: Cell");
 
     const auto Transaction = FScopedTransaction(TransactionLabel);
-    Paint_StrokeCell(Selection, Cell.GetValue(), bErase);
+    Apply_RectFill(Selection, Cell.GetValue(), Cell.GetValue(), bErase);
 
     return true;
 }
@@ -1141,61 +1103,35 @@ bool
     if (! Selection.IsValid())
     { return Super::StartTracking(InViewportClient, InViewport); }
 
-    // Only a LMB drag with no Ctrl/Alt (LMB down, RMB up) begins a paint stroke / blocker rect; every other
-    // gesture (RMB-look, Alt-orbit, LMB+RMB-pan, wheel) is left to the camera. Shift is allowed for Shape/Tags
-    // (erase) but rejected for Blocker below.
+    // Only a plain LMB drag (LMB down, RMB up, no Ctrl/Alt) begins a rect. Shift is allowed for Shape/Tags
+    // (erase); the Blocker tool rejects Shift below so a Shift+LMB drag stays camera nav.
     if (! Is_PlainLeftDrag(InViewportClient, InViewport))
     { return Super::StartTracking(InViewportClient, InViewport); }
 
-    // The Select tool is read-only; it never begins a stroke (its pick happens in HandleClick).
+    // The Select tool is read-only; its pick happens in HandleClick, never a drag.
     if (_ActiveTool == ECk_GridPaint_Tool::Select)
     { return Super::StartTracking(InViewportClient, InViewport); }
 
-    // Blocker: begin a rubber-band rect drag. It does NOT honor the erase modifier — a Shift+LMB drag falls
-    // through to camera nav rather than starting a rect. No per-cell transaction is opened — the single
-    // append is transacted in EndTracking. Just record the start/current corner so Render can preview it.
-    if (_ActiveTool == ECk_GridPaint_Tool::Blocker)
-    {
-        if (InViewportClient->IsShiftPressed())
-        { return Super::StartTracking(InViewportClient, InViewport); }
-
-        const auto StartCell = (InViewport != nullptr)
-            ? Resolve_CellAtCursor(InViewportClient, InViewport->GetMouseX(), InViewport->GetMouseY())
-            : TOptional<FIntPoint>{};
-        if (! StartCell.IsSet())
-        { return Super::StartTracking(InViewportClient, InViewport); }
-
-        _BlockerDragStart   = StartCell;
-        _BlockerDragCurrent = StartCell;
-        return true;
-    }
-
-    if (_ActiveTool != ECk_GridPaint_Tool::Shape && _ActiveTool != ECk_GridPaint_Tool::Tags)
+    if (_ActiveTool != ECk_GridPaint_Tool::Shape &&
+        _ActiveTool != ECk_GridPaint_Tool::Tags &&
+        _ActiveTool != ECk_GridPaint_Tool::Blocker)
     { return Super::StartTracking(InViewportClient, InViewport); }
 
-    // Capture the erase direction for the WHOLE stroke up front (so releasing Shift mid-drag doesn't flip
-    // add↔erase part-way through). Plain LMB adds; Shift+LMB erases.
-    _StrokeErase = Is_EraseModifier(InViewportClient);
+    // Blocker does not honor the erase modifier — a Shift+LMB drag falls through to camera nav.
+    if (_ActiveTool == ECk_GridPaint_Tool::Blocker && InViewportClient->IsShiftPressed())
+    { return Super::StartTracking(InViewportClient, InViewport); }
 
-    // Open ONE transaction for the whole drag stroke so a single Ctrl-Z undoes every cell painted
-    // during the drag. Closed in EndTracking. Labelled by direction (Paint vs Erase).
-    const auto StrokeLabel = _StrokeErase
-        ? NSLOCTEXT("Ck_2dGridSystem_EdMode", "EraseStroke", "Grid Erase: Cells")
-        : NSLOCTEXT("Ck_2dGridSystem_EdMode", "PaintStroke", "Grid Paint: Cells");
-    GEditor->BeginTransaction(StrokeLabel);
+    const auto StartCell = (InViewport != nullptr)
+        ? Resolve_CellAtCursor(InViewportClient, InViewport->GetMouseX(), InViewport->GetMouseY())
+        : TOptional<FIntPoint>{};
+    if (! StartCell.IsSet())
+    { return Super::StartTracking(InViewportClient, InViewport); }
 
-    _IsPaintingStroke = true;
-    _StrokeToggledCells.Reset();
-    _StrokeLastMousePixel.Reset();
-
-    // Paint the cell under the press point immediately (CapturedMouseMove only fires once the mouse
-    // actually moves).
-    if (InViewport != nullptr)
-    {
-        Paint_StrokeAtCursor(InViewportClient,
-            InViewport->GetMouseX(), InViewport->GetMouseY());
-    }
-
+    // Capture erase direction up-front for Shape/Tags (releasing Shift mid-drag won't flip add<->erase).
+    // Blocker ignores it. No transaction is opened here — the commit is transacted in EndTracking.
+    _DragErase   = (_ActiveTool != ECk_GridPaint_Tool::Blocker) && Is_EraseModifier(InViewportClient);
+    _DragStart   = StartCell;
+    _DragCurrent = StartCell;
     return true;
 }
 
@@ -1207,18 +1143,12 @@ bool
         int32                  InMouseX,
         int32                  InMouseY)
 {
-    if (_IsPaintingStroke)
-    {
-        Paint_StrokeAtCursor(InViewportClient, InMouseX, InMouseY);
-        return true;
-    }
-
-    // Blocker drag: update the rect's trailing corner so Render previews the candidate rect.
-    if (_BlockerDragStart.IsSet())
+    // Any paint tool's rect drag: update the rect's trailing corner so Render previews the candidate rect.
+    if (_DragStart.IsSet())
     {
         const auto Cell = Resolve_CellAtCursor(InViewportClient, InMouseX, InMouseY);
         if (Cell.IsSet())
-        { _BlockerDragCurrent = Cell; }
+        { _DragCurrent = Cell; }
         return true;
     }
 
@@ -1231,69 +1161,63 @@ bool
         FEditorViewportClient* InViewportClient,
         FViewport*             InViewport)
 {
-    // Blocker rect drag finished: commit ONE blocker spanning min..max of the start/current corners in
-    // a single FScopedTransaction (no per-cell stroke txn was ever opened).
-    if (_BlockerDragStart.IsSet())
-    {
-        const auto Selection = Resolve_SelectedGridSpawner();
-        const auto Start     = _BlockerDragStart.GetValue();
-        const auto Current   = _BlockerDragCurrent.IsSet() ? _BlockerDragCurrent.GetValue() : Start;
-
-        // NOTE: _BlockerDragStart is intentionally LEFT SET here — the trailing HandleClick (which
-        // fires after EndTracking on a click-drag) consults it to avoid mis-reading the drag as a
-        // select-click, then clears it.
-        if (Selection.IsValid())
-        {
-            const auto RangeMin = FIntPoint(FMath::Min(Start.X, Current.X), FMath::Min(Start.Y, Current.Y));
-            const auto RangeMax = FIntPoint(FMath::Max(Start.X, Current.X), FMath::Max(Start.Y, Current.Y));
-
-            const auto Transaction = FScopedTransaction(
-                NSLOCTEXT("Ck_2dGridSystem_EdMode", "PlaceBlocker", "Grid Paint: Place Blocker"));
-
-            auto NewBlocker     = FCk_2dGridSystem_Spec_Blocker{};
-            NewBlocker.RangeMin = RangeMin;
-            NewBlocker.RangeMax = RangeMax;
-            // Stamp the active blocker tag onto the new entry (invalid = anonymous). Inside the same
-            // transaction as the append below so a single undo reverts both.
-            NewBlocker.Name     = _ActiveBlockerTag;
-
-            auto* Spec = Selection.Spec;
-            Spec->Modify();
-            Spec->Blockers.Add(NewBlocker);
-            Selection.Spawner->EditorOnly_RebuildEntity();
-        }
-
-        return true;
-    }
-
-    if (! _IsPaintingStroke)
+    if (! _DragStart.IsSet())
     { return Super::EndTracking(InViewportClient, InViewport); }
 
-    _IsPaintingStroke = false;
-    GEditor->EndTransaction();
+    const auto Selection = Resolve_SelectedGridSpawner();
+    const auto Start     = _DragStart.GetValue();
+    const auto Current   = _DragCurrent.IsSet() ? _DragCurrent.GetValue() : Start;
 
-    // Keep the cursor on the cell where the stroke ENDED instead of letting the OS snap it back to the press
-    // point when high-precision raw-mouse mode releases. Deferred to next tick so it lands after that reset.
-    if (_StrokeLastMousePixel.IsSet())
+    const auto RangeMin = FIntPoint(FMath::Min(Start.X, Current.X), FMath::Min(Start.Y, Current.Y));
+    const auto RangeMax = FIntPoint(FMath::Max(Start.X, Current.X), FMath::Max(Start.Y, Current.Y));
+
+    // NOTE: _DragStart is intentionally LEFT SET — the trailing HandleClick (fires after EndTracking on a
+    // click-drag) consults it to swallow the click, then clears it.
+    if (Selection.IsValid())
     {
-        Schedule_RestoreCursorToStrokeEnd(InViewport, _StrokeLastMousePixel.GetValue());
-        _StrokeLastMousePixel.Reset();
+        switch (_ActiveTool)
+        {
+            case ECk_GridPaint_Tool::Blocker:
+            {
+                const auto Transaction = FScopedTransaction(
+                    NSLOCTEXT("Ck_2dGridSystem_EdMode", "PlaceBlocker", "Grid Paint: Place Blocker"));
+
+                auto NewBlocker     = FCk_2dGridSystem_Spec_Blocker{};
+                NewBlocker.RangeMin = RangeMin;
+                NewBlocker.RangeMax = RangeMax;
+                NewBlocker.Name     = _ActiveBlockerTag; // invalid = anonymous
+
+                auto* Spec = Selection.Spec;
+                Spec->Modify();
+                Spec->Blockers.Add(NewBlocker);
+                Selection.Spawner->EditorOnly_RebuildEntity();
+                break;
+            }
+            case ECk_GridPaint_Tool::Shape:
+            case ECk_GridPaint_Tool::Tags:
+            {
+                const auto Label = _DragErase
+                    ? NSLOCTEXT("Ck_2dGridSystem_EdMode", "EraseCells", "Grid Erase: Cells")
+                    : NSLOCTEXT("Ck_2dGridSystem_EdMode", "PaintCells", "Grid Paint: Cells");
+
+                const auto Transaction = FScopedTransaction(Label);
+                Apply_RectFill(Selection, RangeMin, RangeMax, _DragErase);
+                break;
+            }
+            default: break;
+        }
     }
 
-    const auto bToggledAny = ! _StrokeToggledCells.IsEmpty();
-    // NOTE: not cleared here — HandleClick fires AFTER EndTracking on a click-drag and consults this
-    // to avoid a double-apply. It's reset at the start of the next stroke (and stays harmless until
-    // then because painting only reads it within an active stroke).
-    return bToggledAny;
+    return true;
 }
 
 bool
     UCk_2dGridSystem_EdMode::
     DisallowMouseDeltaTracking() const
 {
-    // While a per-cell stroke (Shape/Tags) OR a Blocker rect drag is active, suppress the gizmo/camera
-    // delta-tracker so the drag paints/draws instead of moving the selected actor.
-    return _IsPaintingStroke || _BlockerDragStart.IsSet();
+    // While any paint tool's rect drag is active, suppress the gizmo/camera delta-tracker so the LMB drag
+    // draws the rect instead of moving the selected actor.
+    return _DragStart.IsSet();
 }
 
 bool
@@ -1336,14 +1260,54 @@ void
     // The blocker selection indexes into a specific grid's Blockers array; invalidate it whenever the
     // editor's actor selection changes (best-effort — covers picking a different spawner/deselecting).
     _SelectedBlockerIndex = INDEX_NONE;
-    _BlockerDragStart.Reset();
-    _BlockerDragCurrent.Reset();
+    _DragStart.Reset();
+    _DragCurrent.Reset();
 
-    // The inspected cell is meaningful only against a specific grid; drop it when the actor selection
-    // changes (covers picking a different spawner / deselecting).
+    // The inspected cell and the tag-group highlight are meaningful only against a specific grid; drop them
+    // when the actor selection changes (covers picking a different spawner / deselecting).
     _SelectedCell.Reset();
+    _SelectedTag.Reset();
 
     Super::ActorSelectionChangeNotify();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Get_SelectedSpec() const -> UCk_2dGridSystem_Spec*
+{
+    return Resolve_SelectedGridSpawner().Spec;
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Set_SelectedBlockerIndex(
+        int32 InIndex) -> void
+{
+    const auto Selection = Resolve_SelectedGridSpawner();
+    const auto bValid = Selection.IsValid() && Selection.Spec->Blockers.IsValidIndex(InIndex);
+
+    _SelectedBlockerIndex = bValid ? InIndex : INDEX_NONE;
+    if (bValid)
+    {
+        // Selecting a blocker takes over the Select highlight; clear the tag-group selection.
+        _SelectedTag.Reset();
+    }
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Set_SelectedTag(
+        const TOptional<FGameplayTag>& InTag) -> void
+{
+    _SelectedTag = (InTag.IsSet() && InTag.GetValue().IsValid()) ? InTag : TOptional<FGameplayTag>{};
+    if (_SelectedTag.IsSet())
+    {
+        // Tag-group highlight takes over; clear the cell/blocker selection.
+        _SelectedCell.Reset();
+        _SelectedBlockerIndex = INDEX_NONE;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

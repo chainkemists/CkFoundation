@@ -64,6 +64,13 @@ private:
     auto On_ApplyGridDefaultTag() -> FReply;
     auto On_RemoveGridDefaultTag() -> FReply;
 
+    // Builds a compact, read-only per-tag color legend (swatch + name) shown inside the Tags section so the
+    // painter can see which color each existing per-cell tag maps to. Rebuilt each repaint from the Spec.
+    auto Rebuild_TagLegend() -> void;
+
+    // A cheap signature of the current per-cell tag set, used to detect when the legend needs a rebuild.
+    auto Compute_TagLegendSignature() const -> FString;
+
     // Builds the Blocker-section widget (new-blocker tag picker + selected-blocker tag editor). The
     // whole section's visibility is bound to "is the Blocker tool active".
     auto Build_BlockerSection() -> TSharedRef<SWidget>;
@@ -139,6 +146,10 @@ private:
     TSharedPtr<SWidget>           InlineContent;
     TWeakObjectPtr<UEdMode>       OwningMode;
     TSharedPtr<SGameplayTagPicker> TagPicker;
+
+    // Tags section: container holding one read-only swatch+name row per distinct per-cell tag.
+    TSharedPtr<SVerticalBox> TagLegendContainer;
+    FString SeededTagLegendSignature;
 
     // Blocker tool: picker for the tag stamped onto NEW blockers (writes EdMode::_ActiveBlockerTag).
     TSharedPtr<SGameplayTagPicker> NewBlockerTagPicker;

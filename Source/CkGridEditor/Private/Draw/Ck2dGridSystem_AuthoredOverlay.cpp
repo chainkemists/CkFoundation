@@ -8,6 +8,7 @@
 #include "CanvasItem.h"
 #include "CanvasTypes.h"
 #include "Engine/Engine.h"
+#include "Misc/Crc.h"
 #include "SceneManagement.h"
 #include "SceneView.h"
 
@@ -106,10 +107,101 @@ auto
     if (Is_CoveredByBlocker(InSpec, InCoordinate))
     { return ColorBlocker; }
 
-    if (Has_AuthoredTag(InSpec, InCoordinate))
-    { return ColorTagged; }
+    if (const auto PrimaryTag = Resolve_PrimaryCellTag(InSpec, InCoordinate); PrimaryTag.IsValid())
+    { return Resolve_TagColor(PrimaryTag); }
 
     return ColorEnabled;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ck::grid_editor::
+    Resolve_TagColor_FromName(
+        const FName& InName) -> FLinearColor
+{
+    // Hash the name string to a hue byte; keep saturation/value high for a bright, distinct swatch.
+    const auto NameStr = InName.ToString();
+    const auto Hash    = FCrc::StrCrc32(*NameStr);
+    const auto Hue     = static_cast<uint8>(Hash % 256);
+
+    constexpr auto Saturation = static_cast<uint8>(200);
+    constexpr auto Value      = static_cast<uint8>(255);
+
+    return FLinearColor::MakeFromHSV8(Hue, Saturation, Value);
+}
+
+auto
+    ck::grid_editor::
+    Resolve_TagColor(
+        const FGameplayTag& InTag) -> FLinearColor
+{
+    if (! InTag.IsValid())
+    { return ColorTagged; }
+
+    return Resolve_TagColor_FromName(InTag.GetTagName());
+}
+
+auto
+    ck::grid_editor::
+    Resolve_PrimaryCellTag(
+        const UCk_2dGridSystem_Spec* InSpec,
+        const FIntPoint&             InCoordinate) -> FGameplayTag
+{
+    if (InSpec == nullptr)
+    { return FGameplayTag{}; }
+
+    const auto* PerCell = InSpec->PerCellTags.Find(InCoordinate);
+    if (PerCell == nullptr || PerCell->IsEmpty())
+    { return FGameplayTag{}; }
+
+    // First tag in the container (stable for given content) is the cell's "primary" for coloring.
+    return PerCell->First();
+}
+
+auto
+    ck::grid_editor::
+    Collect_PerCellTagsWithCounts(
+        const UCk_2dGridSystem_Spec* InSpec) -> TArray<TPair<FGameplayTag, int32>>
+{
+    auto Result = TArray<TPair<FGameplayTag, int32>>{};
+    if (InSpec == nullptr)
+    { return Result; }
+
+    auto Counts = TMap<FGameplayTag, int32>{};
+    for (const auto& Pair : InSpec->PerCellTags)
+    {
+        for (const auto& Tag : Pair.Value)
+        { Counts.FindOrAdd(Tag) += 1; }
+    }
+
+    Result.Reserve(Counts.Num());
+    for (const auto& Pair : Counts)
+    { Result.Add(Pair); }
+
+    Result.Sort([](const TPair<FGameplayTag, int32>& A, const TPair<FGameplayTag, int32>& B)
+    {
+        return A.Key.GetTagName().LexicalLess(B.Key.GetTagName());
+    });
+    return Result;
+}
+
+auto
+    ck::grid_editor::
+    Get_CellsWithTag(
+        const UCk_2dGridSystem_Spec* InSpec,
+        const FGameplayTag&          InTag) -> TArray<FIntPoint>
+{
+    auto Result = TArray<FIntPoint>{};
+    if (InSpec == nullptr || ! InTag.IsValid())
+    { return Result; }
+
+    for (const auto& Pair : InSpec->PerCellTags)
+    {
+        if (Pair.Value.HasTagExact(InTag))
+        { Result.Add(Pair.Key); }
+    }
+    return Result;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -181,16 +273,34 @@ auto
         }
     }
 
-    // Pass 2: mark each non-enabled cell with an INSET square in its state color.
+    // Pass 2: mark each non-enabled cell. Disabled/blocker cells get the single thin state marker; per-cell
+    // TAGGED cells get a bold DOUBLE ring in the tag's distinct color so each tag reads clearly.
     if (InOptions.bDrawStateMarkers)
     {
         for (auto Y = 0; Y < Dimensions.Y; ++Y)
         {
             for (auto X = 0; X < Dimensions.X; ++X)
             {
-                const auto Color = Resolve_CellColor(InSpec, FIntPoint(X, Y));
-                if (Color != ColorEnabled)
-                { DrawCellSquare(X, Y, Color, CellMarkerInset, CellMarkerThickness); }
+                const auto Coord = FIntPoint(X, Y);
+
+                if (InSpec->DisabledCells.Contains(Coord))
+                {
+                    DrawCellSquare(X, Y, ColorDisabled, CellMarkerInset, CellMarkerThickness);
+                    continue;
+                }
+                if (Is_CoveredByBlocker(InSpec, Coord))
+                {
+                    DrawCellSquare(X, Y, ColorBlocker, CellMarkerInset, CellMarkerThickness);
+                    continue;
+                }
+
+                const auto PrimaryTag = Resolve_PrimaryCellTag(InSpec, Coord);
+                if (PrimaryTag.IsValid())
+                {
+                    const auto TagColor = Resolve_TagColor(PrimaryTag);
+                    DrawCellSquare(X, Y, TagColor, TaggedMarkerInsetOuter, TaggedMarkerThickness);
+                    DrawCellSquare(X, Y, TagColor, TaggedMarkerInsetInner, TaggedMarkerThickness);
+                }
             }
         }
     }
