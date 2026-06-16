@@ -1329,6 +1329,53 @@ auto
     }
 }
 
+auto
+    UCk_2dGridSystem_EdMode::
+    Set_GridDimensions(
+        FIntPoint InDimensions) -> void
+{
+    const auto Selection = Resolve_SelectedGridSpawner();
+    if (! Selection.IsValid())
+    { return; }
+
+    const auto Clamped = FIntPoint(FMath::Max(1, InDimensions.X), FMath::Max(1, InDimensions.Y));
+
+    auto* Spec = Selection.Spec;
+    if (Spec->Dimensions == Clamped)
+    { return; }
+
+    const auto Transaction = FScopedTransaction(
+        NSLOCTEXT("Ck_2dGridSystem_EdMode", "SetGridDimensions", "Grid Paint: Set Dimensions"));
+
+    Spec->Modify();
+    Spec->Dimensions = Clamped;
+    Selection.Spawner->EditorOnly_RebuildEntity();
+}
+
+auto
+    UCk_2dGridSystem_EdMode::
+    Set_GridCellSize(
+        FVector2D InCellSize) -> void
+{
+    const auto Selection = Resolve_SelectedGridSpawner();
+    if (! Selection.IsValid())
+    { return; }
+
+    constexpr auto MinCellSize = 1.0;
+    const auto Clamped = FVector2D(FMath::Max(MinCellSize, InCellSize.X), FMath::Max(MinCellSize, InCellSize.Y));
+
+    auto* Spec = Selection.Spec;
+    if (Spec->CellSize.Equals(Clamped))
+    { return; }
+
+    const auto Transaction = FScopedTransaction(
+        NSLOCTEXT("Ck_2dGridSystem_EdMode", "SetGridCellSize", "Grid Paint: Set Cell Size"));
+
+    Spec->Modify();
+    Spec->CellSize = Clamped;
+    Selection.Spawner->EditorOnly_RebuildEntity();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 #undef LOCTEXT_NAMESPACE

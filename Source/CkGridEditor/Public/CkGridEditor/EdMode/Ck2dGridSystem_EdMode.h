@@ -203,6 +203,14 @@ public:
     // Setting a valid tag clears the cell/blocker selection so the three Select highlights stay exclusive.
     auto Set_SelectedTag(const TOptional<FGameplayTag>& InTag) -> void;
 
+    // Grid section (toolkit): set the selected grid's Dimensions (clamped to >= 1 on each axis). Transacted
+    // + rebuild. No-op if no grid is selected or the value is unchanged.
+    auto Set_GridDimensions(FIntPoint InDimensions) -> void;
+
+    // Grid section (toolkit): set the selected grid's CellSize (clamped to a small positive minimum on each
+    // axis). Transacted + rebuild. No-op if no grid is selected or the value is unchanged.
+    auto Set_GridCellSize(FVector2D InCellSize) -> void;
+
     // Select tool: range (min/max corners) of the currently selected blocker, written to the out params.
     // Returns false (out params untouched) when no blocker is selected or the index is stale.
     auto Get_SelectedBlockerRange(FIntPoint& OutMin, FIntPoint& OutMax) const -> bool;
