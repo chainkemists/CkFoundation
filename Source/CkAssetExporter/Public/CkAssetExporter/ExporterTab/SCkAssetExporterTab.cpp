@@ -7,6 +7,7 @@
 #include <Engine/DataAsset.h>
 #include <EnvironmentQuery/EnvQuery.h>
 #include <StateTree.h>
+#include <Engine/UserDefinedEnum.h>
 #include <StructUtils/UserDefinedStruct.h>
 #include <ContentBrowserModule.h>
 #include <IContentBrowserSingleton.h>
@@ -173,6 +174,21 @@ auto
                 .Text(FText::FromString(TEXT("Export Selected Structs")))
                 .ToolTipText(FText::FromString(TEXT("Export Blueprint structs currently selected in the Content Browser to JSON and Text files")))
                 .OnClicked(this, &SCkAssetExporterTab::DoOnExportSelectedUserDefinedStructsClicked)
+                .HAlign(HAlign_Center)
+            ]
+        ]
+
+        + SHorizontalBox::Slot()
+        .AutoWidth()
+        .Padding(0, 0, AssetExporterTab_Constants::SectionSpacing, 0)
+        [
+            SNew(SBox)
+            .WidthOverride(200.0f)
+            [
+                SNew(SButton)
+                .Text(FText::FromString(TEXT("Export Selected Enums")))
+                .ToolTipText(FText::FromString(TEXT("Export Blueprint enums currently selected in the Content Browser to JSON and Text files")))
+                .OnClicked(this, &SCkAssetExporterTab::DoOnExportSelectedUserDefinedEnumsClicked)
                 .HAlign(HAlign_Center)
             ]
         ];
@@ -632,6 +648,81 @@ auto
     SCkAssetExporterTab::
     DoRefreshResultsListFromUserDefinedStructResults(
         const TArray<FCk_UserDefinedStructExportResult>& InResults)
+    -> void
+{
+    _ResultEntries.Empty();
+
+    for (const auto& Result : InResults)
+    {
+        auto Entry = MakeShared<FCk_AssetExporterTab_ResultEntry>();
+        Entry->AssetName = Result.AssetName;
+        Entry->Succeeded = Result.Succeeded;
+        Entry->JsonPath = Result.JsonFilePath;
+        Entry->TextPath = Result.TextFilePath;
+        Entry->ErrorMessage = Result.ErrorMessage;
+        _ResultEntries.Add(Entry);
+    }
+
+    if (_ResultsListView.IsValid())
+    {
+        _ResultsListView->RequestListRefresh();
+    }
+}
+
+auto
+    SCkAssetExporterTab::
+    DoOnExportSelectedUserDefinedEnumsClicked()
+    -> FReply
+{
+    // Get selected Blueprint enums from Content Browser
+    auto& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+    auto SelectedAssets = TArray<FAssetData>{};
+    ContentBrowserModule.Get().GetSelectedAssets(SelectedAssets);
+
+    auto Enums = TArray<UUserDefinedEnum*>{};
+    for (const auto& AssetData : SelectedAssets)
+    {
+        if (auto* Enum = Cast<UUserDefinedEnum>(AssetData.GetAsset()))
+        {
+            Enums.Add(Enum);
+        }
+    }
+
+    if (Enums.Num() == 0)
+    {
+        _StatusText->SetText(FText::FromString(TEXT("No Blueprint enum assets selected in the Content Browser.")));
+        return FReply::Handled();
+    }
+
+    const auto Results = FCk_UserDefinedEnumExporter::ExportUserDefinedEnums(Enums);
+    DoRefreshResultsListFromUserDefinedEnumResults(Results);
+
+    auto SuccessCount = int32{0};
+    auto FailCount = int32{0};
+    for (const auto& R : Results)
+    {
+        if (R.Succeeded) { ++SuccessCount; }
+        else { ++FailCount; }
+    }
+
+    if (FailCount == 0)
+    {
+        _StatusText->SetText(FText::FromString(
+            FString::Printf(TEXT("Successfully exported %d Enum(s)."), SuccessCount)));
+    }
+    else
+    {
+        _StatusText->SetText(FText::FromString(
+            FString::Printf(TEXT("Exported %d, failed %d Enum(s)."), SuccessCount, FailCount)));
+    }
+
+    return FReply::Handled();
+}
+
+auto
+    SCkAssetExporterTab::
+    DoRefreshResultsListFromUserDefinedEnumResults(
+        const TArray<FCk_UserDefinedEnumExportResult>& InResults)
     -> void
 {
     _ResultEntries.Empty();
