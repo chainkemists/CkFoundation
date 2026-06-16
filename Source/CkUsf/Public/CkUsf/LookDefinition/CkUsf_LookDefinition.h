@@ -50,6 +50,20 @@ enum class ECk_Usf_ParamType : uint8
     TextureCube
 };
 
+// PostProcess-only: which scene textures a look's Custom node receives (and thereby declares usage for,
+// legalizing raw SceneTextureLookup() in the look's .ush). Maps to ESceneTextureId in the generator.
+// An EMPTY _SceneTextures on a PostProcess look means the historical default trio (SceneColor/SceneDepth/
+// SceneNormal), so existing looks are unaffected.
+UENUM(BlueprintType)
+enum class ECk_Usf_SceneTexture : uint8
+{
+    SceneColor,     // PPI_PostProcessInput0  -> In.SceneColor
+    SceneDepth,     // PPI_SceneDepth         -> In.SceneDepth
+    SceneNormal,    // PPI_WorldNormal        -> In.SceneNormal
+    CustomDepth,    // PPI_CustomDepth        -> In.CustomDepth
+    CustomStencil   // PPI_CustomStencil      -> In.CustomStencil
+};
+
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
@@ -107,6 +121,12 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     ECk_Usf_Domain _Domain = ECk_Usf_Domain::SurfaceLit;
+
+    // PostProcess-only: the scene textures this look's Custom node receives. EMPTY = the default trio
+    // (SceneColor/SceneDepth/SceneNormal), so existing PostProcess looks need not set this. Set it
+    // explicitly to opt into CustomDepth/CustomStencil (e.g. the SolidOutline look). Ignored for non-PostProcess domains.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    TArray<ECk_Usf_SceneTexture> _SceneTextures;
 
     // Surface-domain overrides (ignored for PostProcess/UI/Decal, which keep their domain config).
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")

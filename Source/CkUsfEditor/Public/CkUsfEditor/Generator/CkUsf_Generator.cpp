@@ -110,6 +110,31 @@ namespace ck::usf_editor
         };
     }
 
+    // ---- PostProcess scene-texture wiring: enum -> (ESceneTextureId, Custom-node input / FCkUsf_SurfaceInput field name) ----
+    struct FSceneTextureWiring { ESceneTextureId Id; const TCHAR* HlslName; };
+
+    static auto Get_SceneTextureWiring(ECk_Usf_SceneTexture In) -> FSceneTextureWiring
+    {
+        switch (In)
+        {
+            case ECk_Usf_SceneTexture::SceneColor:    return { PPI_PostProcessInput0, TEXT("SceneColor") };
+            case ECk_Usf_SceneTexture::SceneDepth:    return { PPI_SceneDepth,        TEXT("SceneDepth") };
+            case ECk_Usf_SceneTexture::SceneNormal:   return { PPI_WorldNormal,       TEXT("SceneNormal") };
+            case ECk_Usf_SceneTexture::CustomDepth:   return { PPI_CustomDepth,       TEXT("CustomDepth") };
+            case ECk_Usf_SceneTexture::CustomStencil: return { PPI_CustomStencil,     TEXT("CustomStencil") };
+            default:                                  return { PPI_PostProcessInput0, TEXT("SceneColor") };
+        }
+    }
+
+    // Effective PostProcess scene-texture set: an empty _SceneTextures keeps the historical default trio
+    // (SceneColor/SceneDepth/SceneNormal) so existing looks regenerate byte-identically.
+    static auto Get_EffectiveSceneTextures(const UCkUsf_LookDefinition* InDef) -> TArray<ECk_Usf_SceneTexture>
+    {
+        if (InDef->_SceneTextures.IsEmpty() == false)
+        { return InDef->_SceneTextures; }
+        return { ECk_Usf_SceneTexture::SceneColor, ECk_Usf_SceneTexture::SceneDepth, ECk_Usf_SceneTexture::SceneNormal };
+    }
+
     // ---- Build the Custom node Code (assemble FCkUsf_SurfaceInput, call, assign outputs) ----
     static auto Build_CustomCode(const UCkUsf_LookDefinition* InDef, bool InIsPostProcess) -> FString
     {
@@ -120,9 +145,12 @@ namespace ck::usf_editor
         Code += TEXT("In.UV = UV;\n");
         if (InIsPostProcess)
         {
-            Code += TEXT("In.SceneColor = SceneColor;\n");
-            Code += TEXT("In.SceneDepth = SceneDepth;\n");
-            Code += TEXT("In.SceneNormal = SceneNormal;\n");
+            // Assign only the declared scene-texture inputs (default trio when _SceneTextures is empty).
+            for (const auto& Tex : Get_EffectiveSceneTextures(InDef))
+            {
+                const auto* Name = Get_SceneTextureWiring(Tex).HlslName;
+                Code += FString::Printf(TEXT("In.%s = %s;\n"), Name, Name);
+            }
         }
         else
         {
@@ -377,9 +405,10 @@ namespace ck::usf_editor
         Custom->Inputs.Reset();
         if (IsPostProcess)
         {
-            { FCustomInput In; In.InputName = TEXT("SceneColor");  Custom->Inputs.Add(In); }
-            { FCustomInput In; In.InputName = TEXT("SceneDepth");  Custom->Inputs.Add(In); }
-            { FCustomInput In; In.InputName = TEXT("SceneNormal"); Custom->Inputs.Add(In); }
+            for (const auto& Tex : Get_EffectiveSceneTextures(InDef))
+            {
+                FCustomInput In; In.InputName = FName(Get_SceneTextureWiring(Tex).HlslName); Custom->Inputs.Add(In);
+            }
         }
         else
         {
@@ -412,9 +441,12 @@ namespace ck::usf_editor
                 Expr->SceneTextureId = InId;
                 UMaterialEditingLibrary::ConnectMaterialExpressions(Expr, FString(), Custom, InInputName);
             };
-            AddSceneTexture(PPI_PostProcessInput0, TEXT("SceneColor"),  0);
-            AddSceneTexture(PPI_SceneDepth,        TEXT("SceneDepth"),  1);
-            AddSceneTexture(PPI_WorldNormal,       TEXT("SceneNormal"), 2);
+            int32 SceneTexRow = 0;
+            for (const auto& Tex : Get_EffectiveSceneTextures(InDef))
+            {
+                const auto Wiring = Get_SceneTextureWiring(Tex);
+                AddSceneTexture(Wiring.Id, Wiring.HlslName, SceneTexRow++);
+            }
         }
         else
         {
