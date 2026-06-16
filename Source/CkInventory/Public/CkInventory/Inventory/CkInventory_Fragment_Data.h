@@ -11,6 +11,7 @@
 #include "CkInventory/Item/CkItem_Fragment_Data.h"
 
 #include <GameplayTags.h>
+#include <GameplayTagContainer.h>
 #include <NativeGameplayTags.h>
 #include <Engine/BlueprintGeneratedClass.h>
 #include <Serialization/Archive.h>
@@ -130,6 +131,27 @@ enum class ECk_ItemResolution_StackingPreference : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ItemResolution_StackingPreference);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Inventory_MassTransfer_Result : uint8
+{
+    // Every gathered item was fully moved.
+    Success,
+    // Some items moved, some could not be placed in any candidate.
+    Success_Partial,
+    // Gather produced zero items (empty sources, or a filter that matched nothing).
+    Failed_NothingToTransfer,
+    // Items existed but NOT ONE unit could be placed in any candidate.
+    Failed_NoCandidateAccepts,
+    // Synchronous reject at the Utils boundary (no authority, or no valid sources / candidates).
+    Failed_NotEnqueued,
+    // Op entity destroyed before completion (cancel / teardown drain).
+    Failed_OperationCancelled
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_MassTransfer_Result);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -919,5 +941,75 @@ public:
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_TransferItem_ToDataOnly, _SourceItem, _TargetInventory);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Bulk move of every (filtered) item out of a set of source inventories into the best-fitting member
+// of the embedded candidate set, paced over multiple pump passes so deferred stack-count writes fold
+// between transfers (coherent capacity reads). Self-owned: Request_MassTransfer spawns a transient-
+// owned op entity (a plain FCk_Handle, discriminated by FFragment_Inventory_MassTransfer_InFlight)
+// and returns it; the request struct itself is just the input bundle, NOT scoped to any one inventory.
+USTRUCT(BlueprintType)
+struct CKINVENTORY_API FCk_Request_Inventory_MassTransfer : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Inventory_MassTransfer);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_MassTransfer);
+
+private:
+    // Essential — pull items FROM these.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TArray<FCk_Handle_Inventory> _SourceInventories;
+
+    // Essential — candidates + stacking preference + add policy + custom sort. Passed straight to
+    // ResolveBestTransferTarget per item; no duplication.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_BestTransferTargetParams _TargetResolution;
+
+    // Optional — empty query accepts every item in the sources.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTagQuery _ItemFilter;
+
+    // Optional — items moved per pump pass. MUST stay 1 for coherent capacity reads (one item's
+    // deferred stack writes fold before the next item resolves its target).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 1))
+    int32 _StepsPerPass = 1;
+
+    // Optional — per-frame step cap. Each merge-step's transfer cascades extra pump passes (deferred
+    // stack-count fold + inventory signal), and >1 step/frame also forces a churn re-bump pass — at
+    // 2 steps/frame the worst case (every item merges into one bounded stack) measured 8 passes, which
+    // trips the scheduler's pump-count warn (>=8). Default 1 keeps even that worst case warn-free;
+    // larger batches spread across frames. Relocate-heavy (non-merging) transfers can raise it (the
+    // caller re-verifies zero pump warns), but the default must be safe for the merge case.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 1))
+    int32 _MaxStepsPerFrame = 1;
+
+public:
+    CK_PROPERTY_GET(_SourceInventories);
+    CK_PROPERTY_GET(_TargetResolution);
+    CK_PROPERTY(_ItemFilter);
+    CK_PROPERTY(_StepsPerPass);
+    CK_PROPERTY(_MaxStepsPerFrame);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_MassTransfer, _SourceInventories, _TargetResolution);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_FiveParams(
+    FCk_Delegate_Inventory_MassTransfer_OnComplete,
+    FCk_Handle, InOperation,
+    ECk_Inventory_MassTransfer_Result, InResult,
+    int32, InUnitsMoved,
+    int32, InItemsFullyMoved,
+    int32, InItemsFailed);
 
 // --------------------------------------------------------------------------------------------------------------------

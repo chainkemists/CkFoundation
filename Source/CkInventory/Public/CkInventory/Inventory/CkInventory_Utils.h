@@ -309,6 +309,24 @@ public:
         const FCk_Request_Inventory_TransferItem_ToDataOnly& InRequest,
         const FCk_Delegate_Inventory_OnOperationResult_Transfer& InDelegate);
 
+    /** Bulk-moves every (filtered) item out of InRequest.SourceInventories into the best-fitting
+     *  candidate (InRequest.TargetResolution), paced over multiple pump passes so deferred stack-count
+     *  writes fold between transfers. Standalone + self-owned: spawns a transient-owned op entity (a
+     *  plain FCk_Handle, discriminated by FFragment_Inventory_MassTransfer_InFlight) from
+     *  InAnyHandle's world/registry and returns it — NOT scoped to any one inventory. InAnyHandle is any
+     *  live handle, used only to resolve context + authority. InDelegate fires once on completion (or
+     *  synchronously with Failed_NotEnqueued on a boundary reject). */
+    UFUNCTION(BlueprintCallable,
+              BlueprintAuthorityOnly,
+              Category = "Ck|Utils|Inventory",
+              DisplayName = "[Ck][Inventory] Request Mass Transfer",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle
+    Request_MassTransfer(
+        const FCk_Handle& InAnyHandle,
+        const FCk_Request_Inventory_MassTransfer& InRequest,
+        const FCk_Delegate_Inventory_MassTransfer_OnComplete& InDelegate);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Inventory",

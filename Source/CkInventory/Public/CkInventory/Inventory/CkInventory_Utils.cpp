@@ -21,6 +21,7 @@
 #include "CkInventory/ItemTrait/Dimensions/CkItemTrait_Dimensions.h"
 #include "CkInventory/ItemTrait/Stackable/CkItemTrait_Stackable.h"
 #include "CkInventory/ItemTrait/Stackable/CkItemTrait_Stackable_Utils.h"
+#include "CkInventory/ItemTrait/Tags/CkItemTrait_Tags_Utils.h"
 
 namespace
 {
@@ -403,6 +404,93 @@ auto
             Typed.template AddOrGet<TFragment>()._Requests.Emplace(
                 typename TFragment::TransferItemToDataOnlyEntry{InRequest});
         });
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_UE::
+    Request_MassTransfer(
+        const FCk_Handle& InAnyHandle,
+        const FCk_Request_Inventory_MassTransfer& InRequest,
+        const FCk_Delegate_Inventory_MassTransfer_OnComplete& InDelegate)
+    -> FCk_Handle
+{
+    // Boundary reject — fire the delegate once with Failed_NotEnqueued, no op entity.
+    const auto RejectNotEnqueued = [&]() -> FCk_Handle
+    {
+        InDelegate.ExecuteIfBound(FCk_Handle{},
+            ECk_Inventory_MassTransfer_Result::Failed_NotEnqueued, 0, 0, 0);
+        return {};
+    };
+
+    if (NOT UCk_Utils_Net_UE::Get_HasAuthority(InAnyHandle))
+    {
+        ck::inventory::Display(TEXT("Request_MassTransfer: no authority over [{}] — rejected (not enqueued)."),
+            InAnyHandle);
+        return RejectNotEnqueued();
+    }
+
+    // Need at least one valid candidate AND one valid source. An EMPTY-but-valid source is NOT a
+    // sync reject — that resolves to Failed_NothingToTransfer asynchronously on the same channel.
+    const auto HasValidCandidate = ck::algo::AnyOf(
+        InRequest.Get_TargetResolution().Get_Candidates(), ck::algo::IsValidEntityHandle{});
+    const auto HasValidSource = ck::algo::AnyOf(
+        InRequest.Get_SourceInventories(), ck::algo::IsValidEntityHandle{});
+
+    if (NOT HasValidCandidate || NOT HasValidSource)
+    {
+        ck::inventory::Display(
+            TEXT("Request_MassTransfer: rejected (not enqueued) — validCandidate=[{}], validSource=[{}]."),
+            HasValidCandidate, HasValidSource);
+        return RejectNotEnqueued();
+    }
+
+    // Gather the work list once (committed read), deduped. An item lives in exactly one inventory, so
+    // item-level dups only arise from a source listed twice — dedup the source list, then the items.
+    const auto& Filter        = InRequest.Get_ItemFilter();
+    const auto  FilterIsEmpty = Filter.IsEmpty();
+
+    auto SeenSources = TArray<FCk_Handle_Inventory>{};
+    for (const auto& Source : InRequest.Get_SourceInventories())
+    {
+        if (ck::IsValid(Source))
+        { SeenSources.AddUnique(Source); }
+    }
+
+    auto Pending = TArray<FCk_Handle_Item>{};
+    for (const auto& Source : SeenSources)
+    {
+        // §4.3 caveat: into >=2 candidate inventories that share one lifetime-owner AND shape, the
+        // multi-same-owner replicated-container clobber (deferred to Adam's pass) still applies on
+        // clients. MVP is correct for distinct-owner targets (the common case).
+        for (const auto& Item : UCk_Utils_Inventory_UE::Get_Items(Source))
+        {
+            if (ck::Is_NOT_Valid(Item))
+            { continue; }
+
+            if (NOT FilterIsEmpty && NOT Filter.Matches(UCk_Utils_ItemTrait_Tags_UE::Get_Tags(Item)))
+            { continue; }
+
+            Pending.AddUnique(Item);
+        }
+    }
+
+    // Self-owned op entity from the transient owner — survives independent of any inventory. A plain
+    // FCk_Handle (NOT a typesafe handle); FFragment_Inventory_MassTransfer_InFlight discriminates it.
+    auto Transient = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InAnyHandle);
+    auto Op = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(Transient);
+
+    // The Add marks the churn's MarkedDirtyBy fragment dirty -> pump-eligible.
+    auto& InFlight = Op.AddOrGet<ck::FFragment_Inventory_MassTransfer_InFlight>();
+    InFlight._Pending          = MoveTemp(Pending);
+    InFlight._TargetResolution = InRequest.Get_TargetResolution();
+    InFlight._StepsPerPass     = FMath::Max(1, InRequest.Get_StepsPerPass());
+    InFlight._MaxStepsPerFrame = FMath::Max(1, InRequest.Get_MaxStepsPerFrame());
+
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_MassTransfer_OnComplete, Op, InDelegate);
+
+    return Op;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
