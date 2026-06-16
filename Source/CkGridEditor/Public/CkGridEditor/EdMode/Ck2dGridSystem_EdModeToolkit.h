@@ -67,6 +67,22 @@ private:
     auto Get_ToolCheckState(ECk_GridPaint_Tool InTool) const -> ECheckBoxState;
     auto On_ToolCheckChanged(ECheckBoxState InNewState, ECk_GridPaint_Tool InTool) -> void;
 
+    // Builds the always-visible Grid section: Dimensions (X/Y) and Cell Size (X/Y) numeric entry, editing the
+    // selected grid's Spec via the EdMode's Set_GridDimensions / Set_GridCellSize.
+    auto Build_GridSection() -> TSharedRef<SWidget>;
+
+    // Grid section numeric value getters (unset when no grid spawner is selected).
+    auto Get_GridDimensionX() const -> TOptional<int32>;
+    auto Get_GridDimensionY() const -> TOptional<int32>;
+    auto Get_GridCellSizeX() const -> TOptional<double>;
+    auto Get_GridCellSizeY() const -> TOptional<double>;
+
+    // Grid section numeric commit handlers (read the other axis off the Spec, then push the combined value).
+    auto On_GridDimensionXCommitted(int32 InValue, ETextCommit::Type InCommitType) -> void;
+    auto On_GridDimensionYCommitted(int32 InValue, ETextCommit::Type InCommitType) -> void;
+    auto On_GridCellSizeXCommitted(double InValue, ETextCommit::Type InCommitType) -> void;
+    auto On_GridCellSizeYCommitted(double InValue, ETextCommit::Type InCommitType) -> void;
+
     // Builds the Tags-section widget (tag picker + scope toggle + grid-default Apply/Remove). The
     // whole section's visibility is bound to "is the Tags tool active".
     auto Build_TagsSection() -> TSharedRef<SWidget>;
