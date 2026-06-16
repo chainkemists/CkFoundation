@@ -19,6 +19,8 @@ struct FCkUsf_SurfaceInput
     float4 SceneColor;     // post-process input 0 (post-process)
     float4 SceneDepth;     // scene depth (post-process)
     float4 SceneNormal;    // world-space scene normal (post-process)
+    float4 CustomDepth;    // custom depth buffer (post-process; .r = depth) — wired only if the look declares it
+    float4 CustomStencil;  // custom stencil buffer (post-process; .r = stencil value) — wired only if declared
 };
 
 FCkUsf_SurfaceInput CkUsf_DefaultInput()
@@ -34,6 +36,8 @@ FCkUsf_SurfaceInput CkUsf_DefaultInput()
     I.SceneColor = float4(0.0, 0.0, 0.0, 1.0);
     I.SceneDepth = float4(0.0, 0.0, 0.0, 0.0);
     I.SceneNormal = float4(0.0, 0.0, 1.0, 0.0);
+    I.CustomDepth = float4(0.0, 0.0, 0.0, 0.0);
+    I.CustomStencil = float4(0.0, 0.0, 0.0, 0.0);
     return I;
 }
 

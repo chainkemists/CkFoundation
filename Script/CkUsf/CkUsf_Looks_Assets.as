@@ -592,4 +592,49 @@ namespace CkUsf
         Thickness._DefaultScalar = 1.0;
         _Parameters.Add(Thickness);
     }
+
+    // ---- PostProcess (selective SOLID-COLOR OUTLINE via Custom Depth/Stencil) ----
+    // Reads the Custom Stencil buffer to draw a per-preset silhouette around marked objects. Stencil value
+    // selects a column of the OutlineParams LUT (written by UCkUsf_OutlineSubsystem). Needs the project's
+    // Custom Depth-Stencil pass enabled with stencil (Config/DefaultEngine.ini r.CustomDepth=3).
+
+    asset SolidOutline of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/SolidOutline.ush";
+        _UshFunctionName = n"CkUsf_PP_SolidOutline";
+        _Domain          = ECk_Usf_Domain::PostProcess;
+        _LookName        = n"SolidOutline";
+
+        // Custom stencil/depth + scene color/depth (no scene normal needed for a stencil silhouette).
+        _SceneTextures.Add(ECk_Usf_SceneTexture::SceneColor);
+        _SceneTextures.Add(ECk_Usf_SceneTexture::SceneDepth);
+        _SceneTextures.Add(ECk_Usf_SceneTexture::CustomDepth);
+        _SceneTextures.Add(ECk_Usf_SceneTexture::CustomStencil);
+
+        // 16 x 2 RGBA16f params LUT, bound at runtime by the outline subsystem. The stock noise texture is a
+        // compile-time placeholder so the generated master has a valid texture object.
+        FCk_Usf_ParamDesc OutlineParams;
+        OutlineParams._Name = n"OutlineParams";
+        OutlineParams._Type = ECk_Usf_ParamType::Texture2D;
+        OutlineParams._DefaultTexturePath = "/Engine/EngineMaterials/Good64x64TilingNoiseHighFreq.Good64x64TilingNoiseHighFreq";
+        _Parameters.Add(OutlineParams);
+
+        FCk_Usf_ParamDesc GlobalThickness;
+        GlobalThickness._Name = n"GlobalThickness";
+        GlobalThickness._Type = ECk_Usf_ParamType::Scalar;
+        GlobalThickness._DefaultScalar = 5.0;
+        _Parameters.Add(GlobalThickness);
+
+        FCk_Usf_ParamDesc StencilMin;
+        StencilMin._Name = n"StencilMin";
+        StencilMin._Type = ECk_Usf_ParamType::Scalar;
+        StencilMin._DefaultScalar = 240.0;
+        _Parameters.Add(StencilMin);
+
+        FCk_Usf_ParamDesc StencilMax;
+        StencilMax._Name = n"StencilMax";
+        StencilMax._Type = ECk_Usf_ParamType::Scalar;
+        StencilMax._DefaultScalar = 255.0;
+        _Parameters.Add(StencilMax);
+    }
 }
