@@ -1,6 +1,7 @@
 #include "CkGridEditor/EdMode/Ck2dGridSystem_EdModeToolkit.h"
 
 #include "CkGridEditor/EdMode/Ck2dGridSystem_EdMode.h"
+#include "CkGridEditor/EdMode/Ck2dGridSystem_ToolkitWidgets.h"
 #include "CkGridEditor/Draw/Ck2dGridSystem_AuthoredOverlay.h"
 
 #include "CkGrid/2dGridSystem/Authoring/Ck2dGridSystem_Spec.h"
@@ -9,11 +10,12 @@
 
 #include "Styling/AppStyle.h"
 
-#include "Widgets/Colors/SColorBlock.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SCheckBox.h"
+#include "Widgets/Input/SNumericEntryBox.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
+#include "Widgets/Layout/SScrollBox.h"
 #include "Widgets/Layout/SUniformGridPanel.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Text/STextBlock.h"
@@ -53,19 +55,25 @@ void
             ];
     };
 
+    namespace style = ck::grid_paint_style;
+
     SAssignNew(InlineContent, SBorder)
-    .Padding(8.0f)
+    .BorderImage(style::WhiteBrush())
+    .BorderBackgroundColor(FSlateColor(style::BgRoot()))
+    .Padding(FMargin(style::SpaceM))
     [
-        SNew(SVerticalBox)
-        + SVerticalBox::Slot()
-        .AutoHeight()
-        .Padding(0.0f, 0.0f, 0.0f, 6.0f)
+        SNew(SScrollBox)
+        + SScrollBox::Slot()
+        .Padding(0.0f, 0.0f, 0.0f, style::SpaceM)
         [
-            SNew(STextBlock)
-            .Text(LOCTEXT("PaintToolsLabel", "Paint Tool"))
+            Build_GridSection()
         ]
-        + SVerticalBox::Slot()
-        .AutoHeight()
+        + SScrollBox::Slot()
+        [
+            style::Make_SectionHeader(LOCTEXT("PaintToolsLabel", "Paint Tool"))
+        ]
+        + SScrollBox::Slot()
+        .Padding(0.0f, 0.0f, 0.0f, style::SpaceM)
         [
             SNew(SUniformGridPanel)
             .SlotPadding(FMargin(2.0f))
@@ -86,27 +94,197 @@ void
                 MakeToolButton(ECk_GridPaint_Tool::Select,  LOCTEXT("ToolSelect",  "Select"))
             ]
         ]
-        + SVerticalBox::Slot()
-        .AutoHeight()
-        .Padding(0.0f, 8.0f, 0.0f, 0.0f)
+        + SScrollBox::Slot()
         [
             Build_TagsSection()
         ]
-        + SVerticalBox::Slot()
-        .AutoHeight()
-        .Padding(0.0f, 8.0f, 0.0f, 0.0f)
+        + SScrollBox::Slot()
         [
             Build_BlockerSection()
         ]
-        + SVerticalBox::Slot()
-        .AutoHeight()
-        .Padding(0.0f, 8.0f, 0.0f, 0.0f)
+        + SScrollBox::Slot()
         [
             Build_DetailsSection()
         ]
     ];
 
     FModeToolkit::Init(InToolkitHost, InOwningMode);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    Build_GridSection() -> TSharedRef<SWidget>
+{
+    namespace style = ck::grid_paint_style;
+
+    const auto MakeAxisLabel = [](const FText& InLabel) -> TSharedRef<SWidget>
+    {
+        return SNew(STextBlock)
+            .Text(InLabel)
+            .Font(style::Font_Regular(9))
+            .ColorAndOpacity(FSlateColor(style::TextMute()));
+    };
+
+    auto Body = SNew(SVerticalBox)
+        + SVerticalBox::Slot()
+        .AutoHeight()
+        .Padding(0.0f, 0.0f, 0.0f, style::SpaceS)
+        [
+            SNew(SHorizontalBox)
+            + SHorizontalBox::Slot().FillWidth(0.42f).VAlign(VAlign_Center)
+            [
+                MakeAxisLabel(LOCTEXT("GridDimensions", "Dimensions"))
+            ]
+            + SHorizontalBox::Slot().FillWidth(0.29f).Padding(style::SpaceXS, 0.0f)
+            [
+                SNew(SNumericEntryBox<int32>)
+                .Value(this, &FCk_2dGridSystem_EdModeToolkit::Get_GridDimensionX)
+                .OnValueCommitted(this, &FCk_2dGridSystem_EdModeToolkit::On_GridDimensionXCommitted)
+                .AllowSpin(true)
+                .MinValue(1)
+                .MinSliderValue(1)
+                .MaxSliderValue(64)
+            ]
+            + SHorizontalBox::Slot().FillWidth(0.29f).Padding(style::SpaceXS, 0.0f)
+            [
+                SNew(SNumericEntryBox<int32>)
+                .Value(this, &FCk_2dGridSystem_EdModeToolkit::Get_GridDimensionY)
+                .OnValueCommitted(this, &FCk_2dGridSystem_EdModeToolkit::On_GridDimensionYCommitted)
+                .AllowSpin(true)
+                .MinValue(1)
+                .MinSliderValue(1)
+                .MaxSliderValue(64)
+            ]
+        ]
+        + SVerticalBox::Slot()
+        .AutoHeight()
+        [
+            SNew(SHorizontalBox)
+            + SHorizontalBox::Slot().FillWidth(0.42f).VAlign(VAlign_Center)
+            [
+                MakeAxisLabel(LOCTEXT("GridCellSize", "Cell Size"))
+            ]
+            + SHorizontalBox::Slot().FillWidth(0.29f).Padding(style::SpaceXS, 0.0f)
+            [
+                SNew(SNumericEntryBox<double>)
+                .Value(this, &FCk_2dGridSystem_EdModeToolkit::Get_GridCellSizeX)
+                .OnValueCommitted(this, &FCk_2dGridSystem_EdModeToolkit::On_GridCellSizeXCommitted)
+                .AllowSpin(true)
+                .MinValue(1.0)
+                .MinSliderValue(1.0)
+                .MaxSliderValue(1000.0)
+            ]
+            + SHorizontalBox::Slot().FillWidth(0.29f).Padding(style::SpaceXS, 0.0f)
+            [
+                SNew(SNumericEntryBox<double>)
+                .Value(this, &FCk_2dGridSystem_EdModeToolkit::Get_GridCellSizeY)
+                .OnValueCommitted(this, &FCk_2dGridSystem_EdModeToolkit::On_GridCellSizeYCommitted)
+                .AllowSpin(true)
+                .MinValue(1.0)
+                .MinSliderValue(1.0)
+                .MaxSliderValue(1000.0)
+            ]
+        ];
+
+    return style::Make_LabeledGroup(LOCTEXT("GridSectionTitle", "Grid"), Body);
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    Get_GridDimensionX() const -> TOptional<int32>
+{
+    const auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
+    const auto* Spec = Mode != nullptr ? Mode->Get_SelectedSpec() : nullptr;
+    if (Spec == nullptr)
+    { return TOptional<int32>{}; }
+    return Spec->Dimensions.X;
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    Get_GridDimensionY() const -> TOptional<int32>
+{
+    const auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
+    const auto* Spec = Mode != nullptr ? Mode->Get_SelectedSpec() : nullptr;
+    if (Spec == nullptr)
+    { return TOptional<int32>{}; }
+    return Spec->Dimensions.Y;
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    Get_GridCellSizeX() const -> TOptional<double>
+{
+    const auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
+    const auto* Spec = Mode != nullptr ? Mode->Get_SelectedSpec() : nullptr;
+    if (Spec == nullptr)
+    { return TOptional<double>{}; }
+    return Spec->CellSize.X;
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    Get_GridCellSizeY() const -> TOptional<double>
+{
+    const auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
+    const auto* Spec = Mode != nullptr ? Mode->Get_SelectedSpec() : nullptr;
+    if (Spec == nullptr)
+    { return TOptional<double>{}; }
+    return Spec->CellSize.Y;
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    On_GridDimensionXCommitted(
+        int32             InValue,
+        ETextCommit::Type InCommitType) -> void
+{
+    auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
+    const auto* Spec = Mode != nullptr ? Mode->Get_SelectedSpec() : nullptr;
+    if (Mode == nullptr || Spec == nullptr)
+    { return; }
+    Mode->Set_GridDimensions(FIntPoint(InValue, Spec->Dimensions.Y));
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    On_GridDimensionYCommitted(
+        int32             InValue,
+        ETextCommit::Type InCommitType) -> void
+{
+    auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
+    const auto* Spec = Mode != nullptr ? Mode->Get_SelectedSpec() : nullptr;
+    if (Mode == nullptr || Spec == nullptr)
+    { return; }
+    Mode->Set_GridDimensions(FIntPoint(Spec->Dimensions.X, InValue));
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    On_GridCellSizeXCommitted(
+        double            InValue,
+        ETextCommit::Type InCommitType) -> void
+{
+    auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
+    const auto* Spec = Mode != nullptr ? Mode->Get_SelectedSpec() : nullptr;
+    if (Mode == nullptr || Spec == nullptr)
+    { return; }
+    Mode->Set_GridCellSize(FVector2D(InValue, Spec->CellSize.Y));
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    On_GridCellSizeYCommitted(
+        double            InValue,
+        ETextCommit::Type InCommitType) -> void
+{
+    auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
+    const auto* Spec = Mode != nullptr ? Mode->Get_SelectedSpec() : nullptr;
+    if (Mode == nullptr || Spec == nullptr)
+    { return; }
+    Mode->Set_GridCellSize(FVector2D(Spec->CellSize.X, InValue));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -142,81 +320,84 @@ auto
     SAssignNew(TagLegendContainer, SVerticalBox);
     Rebuild_TagLegend();
 
+    namespace style = ck::grid_paint_style;
+
+    auto Body = SNew(SVerticalBox)
+        + SVerticalBox::Slot()
+        .AutoHeight()
+        [
+            style::Make_SectionHeader(LOCTEXT("PaintTagLabel", "Paint Tag"))
+        ]
+        + SVerticalBox::Slot()
+        .AutoHeight()
+        [
+            TagPicker.ToSharedRef()
+        ]
+        + SVerticalBox::Slot()
+        .AutoHeight()
+        .Padding(0.0f, style::SpaceM, 0.0f, 0.0f)
+        [
+            style::Make_SectionHeader(LOCTEXT("TagColorsLabel", "Tag Colors"))
+        ]
+        + SVerticalBox::Slot()
+        .AutoHeight()
+        [
+            TagLegendContainer.ToSharedRef()
+        ]
+        + SVerticalBox::Slot()
+        .AutoHeight()
+        .Padding(0.0f, style::SpaceM, 0.0f, 0.0f)
+        [
+            style::Make_SectionHeader(LOCTEXT("TagScopeLabel", "Scope"))
+        ]
+        + SVerticalBox::Slot()
+        .AutoHeight()
+        [
+            SNew(SUniformGridPanel)
+            .SlotPadding(FMargin(2.0f))
+            + SUniformGridPanel::Slot(0, 0)
+            [
+                MakeScopeButton(ECk_GridPaint_TagScope::PerCellBulk, LOCTEXT("ScopePerCell", "Per-Cell Bulk"))
+            ]
+            + SUniformGridPanel::Slot(1, 0)
+            [
+                MakeScopeButton(ECk_GridPaint_TagScope::GridDefault, LOCTEXT("ScopeGridDefault", "Grid Default"))
+            ]
+        ]
+        + SVerticalBox::Slot()
+        .AutoHeight()
+        .Padding(0.0f, style::SpaceM, 0.0f, 0.0f)
+        [
+            SNew(SUniformGridPanel)
+            .SlotPadding(FMargin(2.0f))
+            + SUniformGridPanel::Slot(0, 0)
+            [
+                SNew(SButton)
+                .HAlign(HAlign_Center)
+                .IsEnabled(this, &FCk_2dGridSystem_EdModeToolkit::Get_GridDefaultButtonsEnabled)
+                .OnClicked(this, &FCk_2dGridSystem_EdModeToolkit::On_ApplyGridDefaultTag)
+                .ToolTipText(LOCTEXT("ApplyGridDefaultTip", "Add the active tag to the grid's DefaultCellTags"))
+                [
+                    SNew(STextBlock).Text(LOCTEXT("ApplyGridDefault", "Apply Grid-Default Tag"))
+                ]
+            ]
+            + SUniformGridPanel::Slot(1, 0)
+            [
+                SNew(SButton)
+                .HAlign(HAlign_Center)
+                .IsEnabled(this, &FCk_2dGridSystem_EdModeToolkit::Get_GridDefaultButtonsEnabled)
+                .OnClicked(this, &FCk_2dGridSystem_EdModeToolkit::On_RemoveGridDefaultTag)
+                .ToolTipText(LOCTEXT("RemoveGridDefaultTip", "Remove the active tag from the grid's DefaultCellTags"))
+                [
+                    SNew(STextBlock).Text(LOCTEXT("RemoveGridDefault", "Remove"))
+                ]
+            ]
+        ];
+
     return SNew(SBox)
         .Visibility(this, &FCk_2dGridSystem_EdModeToolkit::Get_TagsSectionVisibility)
         [
-            SNew(SVerticalBox)
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            .Padding(0.0f, 0.0f, 0.0f, 4.0f)
-            [
-                SNew(STextBlock).Text(LOCTEXT("PaintTagLabel", "Paint Tag"))
-            ]
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            .Padding(0.0f, 8.0f, 0.0f, 2.0f)
-            [
-                SNew(STextBlock).Text(LOCTEXT("TagColorsLabel", "Tag colors"))
-            ]
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            [
-                TagLegendContainer.ToSharedRef()
-            ]
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            [
-                TagPicker.ToSharedRef()
-            ]
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            .Padding(0.0f, 8.0f, 0.0f, 4.0f)
-            [
-                SNew(STextBlock).Text(LOCTEXT("TagScopeLabel", "Scope"))
-            ]
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            [
-                SNew(SUniformGridPanel)
-                .SlotPadding(FMargin(2.0f))
-                + SUniformGridPanel::Slot(0, 0)
-                [
-                    MakeScopeButton(ECk_GridPaint_TagScope::PerCellBulk, LOCTEXT("ScopePerCell", "Per-Cell Bulk"))
-                ]
-                + SUniformGridPanel::Slot(1, 0)
-                [
-                    MakeScopeButton(ECk_GridPaint_TagScope::GridDefault, LOCTEXT("ScopeGridDefault", "Grid Default"))
-                ]
-            ]
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            .Padding(0.0f, 6.0f, 0.0f, 0.0f)
-            [
-                SNew(SUniformGridPanel)
-                .SlotPadding(FMargin(2.0f))
-                + SUniformGridPanel::Slot(0, 0)
-                [
-                    SNew(SButton)
-                    .HAlign(HAlign_Center)
-                    .IsEnabled(this, &FCk_2dGridSystem_EdModeToolkit::Get_GridDefaultButtonsEnabled)
-                    .OnClicked(this, &FCk_2dGridSystem_EdModeToolkit::On_ApplyGridDefaultTag)
-                    .ToolTipText(LOCTEXT("ApplyGridDefaultTip", "Add the active tag to the grid's DefaultCellTags"))
-                    [
-                        SNew(STextBlock).Text(LOCTEXT("ApplyGridDefault", "Apply Grid-Default Tag"))
-                    ]
-                ]
-                + SUniformGridPanel::Slot(1, 0)
-                [
-                    SNew(SButton)
-                    .HAlign(HAlign_Center)
-                    .IsEnabled(this, &FCk_2dGridSystem_EdModeToolkit::Get_GridDefaultButtonsEnabled)
-                    .OnClicked(this, &FCk_2dGridSystem_EdModeToolkit::On_RemoveGridDefaultTag)
-                    .ToolTipText(LOCTEXT("RemoveGridDefaultTip", "Remove the active tag from the grid's DefaultCellTags"))
-                    [
-                        SNew(STextBlock).Text(LOCTEXT("RemoveGridDefault", "Remove"))
-                    ]
-                ]
-            ]
+            style::Make_LabeledGroup(LOCTEXT("TagsSectionTitle", "Tags"), Body)
         ];
 }
 
@@ -255,29 +436,42 @@ auto
         ? ck::grid_editor::Collect_PerCellTagsWithCounts(Spec)
         : TArray<TPair<FGameplayTag, int32>>{};
 
+    namespace style = ck::grid_paint_style;
+
     if (Entries.Num() == 0)
     {
         TagLegendContainer->AddSlot().AutoHeight()
-        [ SNew(STextBlock).Text(LOCTEXT("LegendNone", "(no per-cell tags)")) ];
+        [
+            SNew(STextBlock)
+            .Text(LOCTEXT("LegendNone", "(no per-cell tags)"))
+            .Font(style::Font_Regular(9))
+            .ColorAndOpacity(FSlateColor(style::TextMute()))
+        ];
         return;
     }
 
     for (const auto& Entry : Entries)
     {
         const auto Color = ck::grid_editor::Resolve_TagColor(Entry.Key);
-        const auto Label = FText::FromString(FString::Printf(
-            TEXT("%s  (%d)"), *Entry.Key.GetTagName().ToString(), Entry.Value));
+        const auto Name  = FText::FromString(Entry.Key.GetTagName().ToString());
 
         TagLegendContainer->AddSlot().AutoHeight().Padding(0.0f, 1.0f)
         [
             SNew(SHorizontalBox)
-            + SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(0.0f, 0.0f, 6.0f, 0.0f)
+            + SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(0.0f, 0.0f, style::SpaceM, 0.0f)
             [
-                SNew(SColorBlock).Color(Color).Size(FVector2D(14.0f, 14.0f))
+                style::Make_Swatch(Color, 12.0f)
             ]
             + SHorizontalBox::Slot().FillWidth(1.0f).VAlign(VAlign_Center)
             [
-                SNew(STextBlock).Text(Label)
+                SNew(STextBlock)
+                .Text(Name)
+                .Font(style::Font_Regular(9))
+                .ColorAndOpacity(FSlateColor(style::Text()))
+            ]
+            + SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+            [
+                style::Make_CountBadge(Entry.Value)
             ]
         ];
     }
@@ -310,49 +504,54 @@ auto
         .OnTagChanged(this, &FCk_2dGridSystem_EdModeToolkit::On_SelectedBlockerTagChanged)
         .TagContainers(TArray<FGameplayTagContainer>{ FGameplayTagContainer{} });
 
+    namespace style = ck::grid_paint_style;
+
+    auto Body = SNew(SVerticalBox)
+        + SVerticalBox::Slot()
+        .AutoHeight()
+        [
+            style::Make_SectionHeader(LOCTEXT("NewBlockerTagLabel", "New Blocker Tag"))
+        ]
+        + SVerticalBox::Slot()
+        .AutoHeight()
+        [
+            NewBlockerTagPicker.ToSharedRef()
+        ]
+        + SVerticalBox::Slot()
+        .AutoHeight()
+        .Padding(0.0f, style::SpaceM, 0.0f, style::SpaceXS)
+        [
+            SNew(STextBlock)
+            .Text(this, &FCk_2dGridSystem_EdModeToolkit::Get_SelectedBlockerText)
+            .Font(style::Font_Regular(9))
+            .ColorAndOpacity(FSlateColor(style::TextDim()))
+            .AutoWrapText(true)
+        ]
+        + SVerticalBox::Slot()
+        .AutoHeight()
+        [
+            SNew(SBox)
+            .Visibility(this, &FCk_2dGridSystem_EdModeToolkit::Get_SelectedBlockerEditorVisibility)
+            [
+                SNew(SVerticalBox)
+                + SVerticalBox::Slot()
+                .AutoHeight()
+                .Padding(0.0f, style::SpaceS, 0.0f, 0.0f)
+                [
+                    style::Make_SectionHeader(LOCTEXT("SelectedBlockerTagLabel", "Selected Blocker Tag"))
+                ]
+                + SVerticalBox::Slot()
+                .AutoHeight()
+                [
+                    SelectedBlockerTagPicker.ToSharedRef()
+                ]
+            ]
+        ];
+
     return SNew(SBox)
         .Visibility(this, &FCk_2dGridSystem_EdModeToolkit::Get_BlockerSectionVisibility)
         [
-            SNew(SVerticalBox)
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            .Padding(0.0f, 0.0f, 0.0f, 4.0f)
-            [
-                SNew(STextBlock).Text(LOCTEXT("NewBlockerTagLabel", "New blocker tag"))
-            ]
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            [
-                NewBlockerTagPicker.ToSharedRef()
-            ]
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            .Padding(0.0f, 8.0f, 0.0f, 2.0f)
-            [
-                SNew(STextBlock)
-                .Text(this, &FCk_2dGridSystem_EdModeToolkit::Get_SelectedBlockerText)
-                .AutoWrapText(true)
-            ]
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            [
-                SNew(SBox)
-                .Visibility(this, &FCk_2dGridSystem_EdModeToolkit::Get_SelectedBlockerEditorVisibility)
-                [
-                    SNew(SVerticalBox)
-                    + SVerticalBox::Slot()
-                    .AutoHeight()
-                    .Padding(0.0f, 4.0f, 0.0f, 4.0f)
-                    [
-                        SNew(STextBlock).Text(LOCTEXT("SelectedBlockerTagLabel", "Selected blocker tag"))
-                    ]
-                    + SVerticalBox::Slot()
-                    .AutoHeight()
-                    [
-                        SelectedBlockerTagPicker.ToSharedRef()
-                    ]
-                ]
-            ]
+            style::Make_LabeledGroup(LOCTEXT("BlockerSectionTitle", "Blocker"), Body)
         ];
 }
 
@@ -464,24 +663,13 @@ auto
     FCk_2dGridSystem_EdModeToolkit::
     Build_DetailsSection() -> TSharedRef<SWidget>
 {
-    // Live-bound label/value row helper. Value text blocks read the EdMode's selected-cell info off the
-    // Spec each frame, so they track live edits to the Spec.
+    namespace style = ck::grid_paint_style;
+
+    // Live-bound key/value row helper (debugger-style). Value text reads the EdMode's selected-cell info
+    // off the Spec each frame, so it tracks live edits to the Spec.
     const auto MakeRow = [](const FText& InLabel, TAttribute<FText> InValue) -> TSharedRef<SWidget>
     {
-        return SNew(SHorizontalBox)
-            + SHorizontalBox::Slot()
-            .AutoWidth()
-            .Padding(0.0f, 0.0f, 6.0f, 0.0f)
-            [
-                SNew(STextBlock).Text(InLabel)
-            ]
-            + SHorizontalBox::Slot()
-            .FillWidth(1.0f)
-            [
-                SNew(STextBlock)
-                .Text(InValue)
-                .AutoWrapText(true)
-            ];
+        return style::Make_KeyValueRow(InLabel, InValue);
     };
 
     // Add-tag picker for the single-cell editor: each chosen tag is ADDED to the selected cell.
@@ -541,9 +729,9 @@ auto
             ]
             + SVerticalBox::Slot()
             .AutoHeight()
-            .Padding(0.0f, 4.0f, 0.0f, 2.0f)
+            .Padding(0.0f, style::SpaceS, 0.0f, 0.0f)
             [
-                SNew(STextBlock).Text(LOCTEXT("DetailsCellTagsLabel", "Cell tags:"))
+                style::Make_SectionHeader(LOCTEXT("DetailsCellTagsLabel", "Cell Tags"))
             ]
             + SVerticalBox::Slot()
             .AutoHeight()
@@ -552,9 +740,9 @@ auto
             ]
             + SVerticalBox::Slot()
             .AutoHeight()
-            .Padding(0.0f, 4.0f, 0.0f, 2.0f)
+            .Padding(0.0f, style::SpaceS, 0.0f, 0.0f)
             [
-                SNew(STextBlock).Text(LOCTEXT("DetailsAddCellTagLabel", "Add cell tag"))
+                style::Make_SectionHeader(LOCTEXT("DetailsAddCellTagLabel", "Add Cell Tag"))
             ]
             + SVerticalBox::Slot()
             .AutoHeight()
@@ -622,51 +810,46 @@ auto
 
     Rebuild_SelectLists();
 
+    auto Body = SNew(SVerticalBox)
+        + SVerticalBox::Slot()
+        .AutoHeight()
+        [
+            style::Make_SectionHeader(LOCTEXT("BlockersListLabel", "Blockers"))
+        ]
+        + SVerticalBox::Slot()
+        .AutoHeight()
+        .MaxHeight(140.0f)
+        [
+            BlockerListView.ToSharedRef()
+        ]
+        + SVerticalBox::Slot()
+        .AutoHeight()
+        .Padding(0.0f, style::SpaceM, 0.0f, 0.0f)
+        [
+            style::Make_SectionHeader(LOCTEXT("TagsListLabel", "Tags"))
+        ]
+        + SVerticalBox::Slot()
+        .AutoHeight()
+        .MaxHeight(140.0f)
+        [
+            TagListView.ToSharedRef()
+        ]
+        + SVerticalBox::Slot()
+        .AutoHeight()
+        .Padding(0.0f, style::SpaceM, 0.0f, 0.0f)
+        [
+            CellEditor
+        ]
+        + SVerticalBox::Slot()
+        .AutoHeight()
+        [
+            BlockerEditor
+        ];
+
     return SNew(SBox)
         .Visibility(this, &FCk_2dGridSystem_EdModeToolkit::Get_DetailsSectionVisibility)
         [
-            SNew(SVerticalBox)
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            .Padding(0.0f, 0.0f, 0.0f, 4.0f)
-            [
-                SNew(STextBlock).Text(LOCTEXT("DetailsLabel", "Cell Details"))
-            ]
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            .Padding(0.0f, 0.0f, 0.0f, 2.0f)
-            [
-                SNew(STextBlock).Text(LOCTEXT("BlockersListLabel", "Blockers"))
-            ]
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            .MaxHeight(140.0f)
-            [
-                BlockerListView.ToSharedRef()
-            ]
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            .Padding(0.0f, 6.0f, 0.0f, 2.0f)
-            [
-                SNew(STextBlock).Text(LOCTEXT("TagsListLabel", "Tags"))
-            ]
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            .MaxHeight(140.0f)
-            [
-                TagListView.ToSharedRef()
-            ]
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            .Padding(0.0f, 6.0f, 0.0f, 0.0f)
-            [
-                CellEditor
-            ]
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            [
-                BlockerEditor
-            ]
+            style::Make_LabeledGroup(LOCTEXT("DetailsLabel", "Cell Details"), Body)
         ];
 }
 
@@ -698,7 +881,16 @@ auto
     if (Spec == nullptr)
     { return FString{}; }
 
+    // Include each blocker's name + range so a rename / re-range re-drives the Blockers list row labels
+    // (count alone misses an in-place edit via the blocker tag picker).
     auto Sig = FString::Printf(TEXT("B%d|"), Spec->Blockers.Num());
+    for (const auto& Blocker : Spec->Blockers)
+    {
+        Sig += FString::Printf(TEXT("%s@%d,%d:%d,%d;"),
+            *Blocker.Name.GetTagName().ToString(),
+            Blocker.RangeMin.X, Blocker.RangeMin.Y, Blocker.RangeMax.X, Blocker.RangeMax.Y);
+    }
+    Sig += TEXT("|");
     for (const auto& Pair : ck::grid_editor::Collect_PerCellTagsWithCounts(Spec))
     { Sig += FString::Printf(TEXT("%s:%d;"), *Pair.Key.GetTagName().ToString(), Pair.Value); }
     return Sig;
@@ -747,6 +939,8 @@ auto
         TSharedPtr<FCk_GridBlockerListItem> InItem,
         const TSharedRef<STableViewBase>&   InOwner) -> TSharedRef<ITableRow>
 {
+    namespace style = ck::grid_paint_style;
+
     const auto NameStr = InItem->Name.IsValid() ? InItem->Name.GetTagName().ToString() : FString(TEXT("(anon)"));
     const auto Label = FText::FromString(FString::Printf(
         TEXT("#%d  %s  (%d,%d)..(%d,%d)"),
@@ -754,8 +948,13 @@ auto
         InItem->RangeMin.X, InItem->RangeMin.Y, InItem->RangeMax.X, InItem->RangeMax.Y));
 
     return SNew(STableRow<TSharedPtr<FCk_GridBlockerListItem>>, InOwner)
+        .Padding(FMargin(0.0f, 1.0f))
+        .ShowSelection(true)
     [
-        SNew(STextBlock).Text(Label)
+        SNew(STextBlock)
+        .Text(Label)
+        .Font(style::Font_Regular(9))
+        .ColorAndOpacity(FSlateColor(style::Text()))
     ];
 }
 
@@ -765,20 +964,30 @@ auto
         TSharedPtr<FCk_GridTagListItem>   InItem,
         const TSharedRef<STableViewBase>& InOwner) -> TSharedRef<ITableRow>
 {
+    namespace style = ck::grid_paint_style;
+
     const auto Color = ck::grid_editor::Resolve_TagColor(InItem->Tag);
-    const auto Label = FText::FromString(FString::Printf(
-        TEXT("%s  (%d)"), *InItem->Tag.GetTagName().ToString(), InItem->CellCount));
+    const auto Name  = FText::FromString(InItem->Tag.GetTagName().ToString());
 
     return SNew(STableRow<TSharedPtr<FCk_GridTagListItem>>, InOwner)
+        .Padding(FMargin(0.0f, 1.0f))
+        .ShowSelection(true)
     [
         SNew(SHorizontalBox)
-        + SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(0.0f, 0.0f, 6.0f, 0.0f)
+        + SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(0.0f, 0.0f, style::SpaceM, 0.0f)
         [
-            SNew(SColorBlock).Color(Color).Size(FVector2D(14.0f, 14.0f))
+            style::Make_Swatch(Color, 12.0f)
         ]
         + SHorizontalBox::Slot().FillWidth(1.0f).VAlign(VAlign_Center)
         [
-            SNew(STextBlock).Text(Label)
+            SNew(STextBlock)
+            .Text(Name)
+            .Font(style::Font_Regular(9))
+            .ColorAndOpacity(FSlateColor(style::Text()))
+        ]
+        + SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+        [
+            style::Make_CountBadge(InItem->CellCount)
         ]
     ];
 }
