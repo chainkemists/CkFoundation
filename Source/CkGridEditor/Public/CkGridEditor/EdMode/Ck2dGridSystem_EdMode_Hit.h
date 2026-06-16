@@ -31,6 +31,15 @@ namespace ck::grid_editor
         FIntPoint         InDimensions,
         const FVector&    InRayOrigin,
         const FVector&    InRayDirection) -> TOptional<FIntPoint>;
+
+    // Enumerates every in-bounds cell of the inclusive rectangle spanning InCornerA..InCornerB (corners in
+    // any order). Coordinates are clamped to [0, InDimensions); a rectangle fully outside the grid yields an
+    // empty array. Used by the box-select rect fill for the Shape and Tags tools.
+    CKGRIDEDITOR_API auto
+    Compute_RectCells(
+        const FIntPoint& InCornerA,
+        const FIntPoint& InCornerB,
+        const FIntPoint& InDimensions) -> TArray<FIntPoint>;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

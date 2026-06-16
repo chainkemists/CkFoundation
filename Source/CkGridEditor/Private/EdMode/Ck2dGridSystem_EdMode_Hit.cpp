@@ -42,6 +42,35 @@ namespace ck::grid_editor
 
         return FIntPoint(CellX, CellY);
     }
+
+    auto
+        Compute_RectCells(
+            const FIntPoint& InCornerA,
+            const FIntPoint& InCornerB,
+            const FIntPoint& InDimensions) -> TArray<FIntPoint>
+    {
+        auto Result = TArray<FIntPoint>{};
+
+        if (InDimensions.X <= 0 || InDimensions.Y <= 0)
+        { return Result; }
+
+        const auto MinX = FMath::Max(0,                  FMath::Min(InCornerA.X, InCornerB.X));
+        const auto MaxX = FMath::Min(InDimensions.X - 1, FMath::Max(InCornerA.X, InCornerB.X));
+        const auto MinY = FMath::Max(0,                  FMath::Min(InCornerA.Y, InCornerB.Y));
+        const auto MaxY = FMath::Min(InDimensions.Y - 1, FMath::Max(InCornerA.Y, InCornerB.Y));
+
+        if (MinX > MaxX || MinY > MaxY)
+        { return Result; }
+
+        Result.Reserve((MaxX - MinX + 1) * (MaxY - MinY + 1));
+        for (auto Y = MinY; Y <= MaxY; ++Y)
+        {
+            for (auto X = MinX; X <= MaxX; ++X)
+            { Result.Add(FIntPoint(X, Y)); }
+        }
+
+        return Result;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
