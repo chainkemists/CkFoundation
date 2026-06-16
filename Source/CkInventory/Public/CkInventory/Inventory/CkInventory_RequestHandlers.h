@@ -5,6 +5,8 @@
 #include "CkInventory/Inventory/Spatial/CkInventory_Spatial_Fragment_Data.h"
 #include "CkInventory/Inventory/DataOnly/CkInventory_DataOnly_Fragment_Data.h"
 
+#include "CkCore/Payload/CkPayload.h"
+
 #include <variant>
 
 namespace ck::inventory_handlers
@@ -157,6 +159,74 @@ namespace ck::inventory_handlers
         {
             static_assert(sizeof(TEntry) == 0,
                 "DispatchToHandler: entry type does not match any operation in TInventoryRequestTraits.");
+        }
+    }
+
+    // Teardown counterpart to DispatchToHandler: fires each queued request's completion signal with
+    // Failed_OperationCancelled when its inventory is destroyed before the request could be processed.
+    // Fires only if the request still owns a valid handle, and destroys that handle on fire.
+    template <typename Traits, typename TInventoryHandle, typename TEntry>
+    auto DispatchCancel(
+        TInventoryHandle& InHandle,
+        const TEntry& InEntry) -> void
+    {
+        const auto& Req = InEntry.Common;
+        if (NOT Req.Get_IsRequestHandleValid())
+        { return; }
+
+        FCk_Handle_Inventory Base = InHandle;
+
+        if constexpr (std::is_same_v<TEntry, typename Traits::AddItem::Entry>)
+            UUtils_Signal_Inventory_OnOperationResult_Add::Broadcast(Req.GetAndDestroyRequestHandle(),
+                MakePayload(Base, Req.Get_ItemToAdd(),
+                    ECk_Inventory_OperationResult_Add::Failed_OperationCancelled));
+        else if constexpr (std::is_same_v<TEntry, typename Traits::RemoveItem::Entry>)
+            UUtils_Signal_Inventory_OnOperationResult_Remove::Broadcast(Req.GetAndDestroyRequestHandle(),
+                MakePayload(Base, Req.Get_ItemToRemove(),
+                    ECk_Inventory_OperationResult_Remove::Failed_OperationCancelled));
+        else if constexpr (std::is_same_v<TEntry, typename Traits::StackItems::Entry>)
+            UUtils_Signal_Inventory_OnOperationResult_Stack::Broadcast(Req.GetAndDestroyRequestHandle(),
+                MakePayload(Base, Req.Get_SourceItem(), Req.Get_TargetItem(),
+                    ECk_Inventory_OperationResult_Stack::Failed_OperationCancelled));
+        else if constexpr (std::is_same_v<TEntry, typename Traits::SplitStack::Entry>)
+            UUtils_Signal_Inventory_OnOperationResult_Split::Broadcast(Req.GetAndDestroyRequestHandle(),
+                MakePayload(Base, Req.Get_SourceItem(), FCk_Handle_Item{},
+                    ECk_Inventory_OperationResult_Split::Failed_OperationCancelled));
+        else if constexpr (std::is_same_v<TEntry, typename Traits::AddByDefinition::Entry>)
+            UUtils_Signal_Inventory_OnOperationResult_AddByDefinition::Broadcast(Req.GetAndDestroyRequestHandle(),
+                MakePayload(Base, ECk_Inventory_OperationResult_AddByDefinition::Failed_OperationCancelled,
+                    0, TArray<FCk_Handle_Item>{}));
+        else if constexpr (std::is_same_v<TEntry, typename Traits::Sort::Entry>)
+            UUtils_Signal_Inventory_OnOperationResult_Sort::Broadcast(Req.GetAndDestroyRequestHandle(),
+                MakePayload(Base, ECk_Inventory_OperationResult_Sort::Failed_OperationCancelled));
+        else if constexpr (std::is_same_v<TEntry, typename Traits::Transfer_ToSpatial::Entry>)
+        {
+            FCk_Handle_Inventory TargetBase = Req.Get_TargetInventory();
+            UUtils_Signal_Inventory_OnOperationResult_Transfer::Broadcast(Req.GetAndDestroyRequestHandle(),
+                MakePayload(Base, Req.Get_SourceItem(), TargetBase, 0, FCk_Handle_Item{},
+                    ECk_Inventory_OperationResult_Transfer::Failed_OperationCancelled));
+        }
+        else if constexpr (std::is_same_v<TEntry, typename Traits::Transfer_ToDataOnly::Entry>)
+        {
+            FCk_Handle_Inventory TargetBase = Req.Get_TargetInventory();
+            UUtils_Signal_Inventory_OnOperationResult_Transfer::Broadcast(Req.GetAndDestroyRequestHandle(),
+                MakePayload(Base, Req.Get_SourceItem(), TargetBase, 0, FCk_Handle_Item{},
+                    ECk_Inventory_OperationResult_Transfer::Failed_OperationCancelled));
+        }
+        else if constexpr (detail::HasRelocate<Traits>::value)
+        {
+            if constexpr (std::is_same_v<TEntry, typename Traits::Relocate::Entry>)
+                UUtils_Signal_Inventory_OnOperationResult_Relocate::Broadcast(Req.GetAndDestroyRequestHandle(),
+                    MakePayload(Base, Req.Get_Item(), FIntPoint{},
+                        ECk_Inventory_OperationResult_Relocate::Failed_OperationCancelled));
+            else
+                static_assert(sizeof(TEntry) == 0,
+                    "DispatchCancel: entry type does not match any operation in TInventoryRequestTraits.");
+        }
+        else
+        {
+            static_assert(sizeof(TEntry) == 0,
+                "DispatchCancel: entry type does not match any operation in TInventoryRequestTraits.");
         }
     }
 }
