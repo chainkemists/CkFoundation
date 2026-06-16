@@ -18,6 +18,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Inventory_DataOnly_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Inventory_DataOnly_CancelOnEndPlay);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Inventory_DataOnly_Replicate);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Inventory_DataOnly_ReplicateOnRestore);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Inventory_DataOnly_SyncReplication);

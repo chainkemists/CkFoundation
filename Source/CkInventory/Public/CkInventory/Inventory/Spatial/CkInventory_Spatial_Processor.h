@@ -55,6 +55,20 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Thin derived over the shared EndPlay teardown base.
+    class CKINVENTORY_API FProcessor_Inventory_Spatial_CancelOnEndPlay : public TProcessor_Inventory_CancelOnEndPlay_Base<
+            FProcessor_Inventory_Spatial_CancelOnEndPlay,
+            FCk_Handle_Inventory_Spatial,
+            FFragment_Inventory_Spatial_Requests,
+            FTag_Inventory_Spatial>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+        using TProcessor_Inventory_CancelOnEndPlay_Base::TProcessor_Inventory_CancelOnEndPlay_Base;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     // ---- ReplicateOnRestore (Server-side, post-snapshot-load) ----
 
     // Re-drives a RESTORED Spatial inventory after a snapshot load (DataOnly sibling:

@@ -45,6 +45,20 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Thin derived over the shared EndPlay teardown base.
+    class CKINVENTORY_API FProcessor_Inventory_DataOnly_CancelOnEndPlay : public TProcessor_Inventory_CancelOnEndPlay_Base<
+            FProcessor_Inventory_DataOnly_CancelOnEndPlay,
+            FCk_Handle_Inventory_DataOnly,
+            FFragment_Inventory_DataOnly_Requests,
+            FTag_Inventory_DataOnly>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+        using TProcessor_Inventory_CancelOnEndPlay_Base::TProcessor_Inventory_CancelOnEndPlay_Base;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     // ---- ReplicateOnRestore (Server-side, post-snapshot-load) ----
 
     // Re-drives a RESTORED DataOnly inventory after a snapshot load. The shape tag

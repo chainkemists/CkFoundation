@@ -142,7 +142,9 @@ enum class ECk_Inventory_OperationResult_Add : uint8
     Failed_NoSpaceAvailable,
     Failed_PlacementBlocked,
     Failed_RejectedByCustomAcceptanceLogic,
-    Failed_MissingDimensionsTrait
+    Failed_MissingDimensionsTrait,
+    Failed_NotEnqueued,
+    Failed_OperationCancelled
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Add);
@@ -154,7 +156,9 @@ enum class ECk_Inventory_OperationResult_Remove : uint8
 {
     Success,
     Failed_InvalidItem,
-    Failed_ItemNotInInventory
+    Failed_ItemNotInInventory,
+    Failed_NotEnqueued,
+    Failed_OperationCancelled
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Remove);
@@ -173,7 +177,9 @@ enum class ECk_Inventory_OperationResult_Stack : uint8
     Failed_DefinitionMismatch,
     Failed_IncompatibleFragments,
     Failed_TargetStackFull,
-    Failed_RejectedByCustomStackLogic
+    Failed_RejectedByCustomStackLogic,
+    Failed_NotEnqueued,
+    Failed_OperationCancelled
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Stack);
@@ -188,7 +194,9 @@ enum class ECk_Inventory_OperationResult_Split : uint8
     Failed_SourceNotInInventory,
     Failed_ItemNotStackable,
     Failed_InsufficientCount,
-    Failed_NoSpaceForNewItem
+    Failed_NoSpaceForNewItem,
+    Failed_NotEnqueued,
+    Failed_OperationCancelled
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Split);
@@ -203,7 +211,9 @@ enum class ECk_Inventory_OperationResult_AddByDefinition : uint8
     Failed_InvalidDefinition,
     Failed_NoSpaceAvailable,
     Failed_ZeroAmount,
-    Failed_RejectedByCustomAcceptanceLogic
+    Failed_RejectedByCustomAcceptanceLogic,
+    Failed_NotEnqueued,
+    Failed_OperationCancelled
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_AddByDefinition);
@@ -222,7 +232,9 @@ enum class ECk_Inventory_OperationResult_Transfer : uint8
     Failed_NoSpaceInTarget,
     Failed_ZeroCount,
     Failed_IncompatibleFragments,
-    Failed_RejectedByCustomAcceptanceLogic
+    Failed_RejectedByCustomAcceptanceLogic,
+    Failed_NotEnqueued,
+    Failed_OperationCancelled
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Transfer);
@@ -233,7 +245,10 @@ UENUM(BlueprintType)
 enum class ECk_Inventory_OperationResult_Sort : uint8
 {
     Success,
-    Failed_InvalidInventory
+    Failed_InvalidInventory,
+    Failed_NoPredicate,
+    Failed_NotEnqueued,
+    Failed_OperationCancelled
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Sort);
@@ -247,7 +262,9 @@ enum class ECk_Inventory_OperationResult_Relocate : uint8
     Failed_InvalidItem,
     Failed_ItemNotInInventory,
     Failed_NotSpatialInventory,
-    Failed_PlacementBlocked
+    Failed_PlacementBlocked,
+    Failed_NotEnqueued,
+    Failed_OperationCancelled
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Relocate);

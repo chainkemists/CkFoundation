@@ -24,35 +24,92 @@
 
 namespace
 {
-    // Auth check + runtime-branch on the inventory's shape tag, hands the typed handle to
-    // the caller-supplied lambda. The shape-branch lives ONLY here at the public Utils boundary.
-    template <typename TEnqueueFn>
-    auto DispatchEnqueue(
-        FCk_Handle_Inventory& InInventory,
+    enum class EDispatchValidity
+    {
+        Valid,
+        NoAuthority,    // caller lacks authority over the inventory entity
+        UnknownShape    // inventory has neither the Spatial nor DataOnly shape tag (composition bug)
+    };
+
+    auto Get_DispatchValidity(const FCk_Handle_Inventory& InInventory) -> EDispatchValidity
+    {
+        if (NOT UCk_Utils_Net_UE::Get_HasAuthority(InInventory))
+        { return EDispatchValidity::NoAuthority; }
+
+        if (UCk_Utils_Inventory_Spatial_UE::Has(InInventory) || UCk_Utils_Inventory_DataOnly_UE::Has(InInventory))
+        { return EDispatchValidity::Valid; }
+
+        return EDispatchValidity::UnknownShape;
+    }
+
+    // NoAuthority is a legitimate client-side outcome (Display, so AutoTests don't escalate it);
+    // UnknownShape is a composition bug (ensure).
+    auto LogDispatchRejection(
+        EDispatchValidity InValidity,
         const TCHAR* InContext,
-        FName InDelegateFunctionName,
+        const FCk_Handle_Inventory& InInventory) -> void
+    {
+        switch (InValidity)
+        {
+            case EDispatchValidity::NoAuthority:
+                ck::inventory::Display(TEXT("{}: No authority over inventory [{}] — request rejected (not enqueued)."),
+                    InContext, InInventory);
+                break;
+            case EDispatchValidity::UnknownShape:
+                CK_TRIGGER_ENSURE(TEXT("{}: Inventory [{}] has no recognized shape tag (neither Spatial nor DataOnly) — request rejected."),
+                    InContext, InInventory);
+                break;
+            default:
+                break;
+        }
+    }
+
+    // Returns true when the request may be bound + enqueued. On failure (reused request, no authority,
+    // or unknown shape) it invokes InReject once — which fires the completion delegate with
+    // Failed_NotEnqueued — and returns false without populating or binding.
+    template <typename TRequest, typename TReject>
+    auto ValidateRequestForDispatch(
+        const FCk_Handle_Inventory& InInventory,
+        const TRequest& InRequest,
+        const TCHAR* InContext,
+        TReject InReject) -> bool
+    {
+        CK_ENSURE_IF_NOT(NOT InRequest.Get_IsRequestHandleValid(),
+            TEXT("{}: request struct reused (already populated) for inventory [{}]. Construct a fresh request per submission."),
+            InContext, InInventory)
+        {
+            InReject();
+            return false;
+        }
+
+        if (const auto Validity = Get_DispatchValidity(InInventory);
+            Validity != EDispatchValidity::Valid)
+        {
+            LogDispatchRejection(Validity, InContext, InInventory);
+            InReject();
+            return false;
+        }
+
+        return true;
+    }
+
+    // Shape-branches once (the only such branch at the public Utils boundary) and hands the typed
+    // handle to the enqueue lambda. Precondition: Get_DispatchValidity(InInventory) == Valid.
+    template <typename TEnqueueFn>
+    auto DispatchEnqueue_Checked(
+        FCk_Handle_Inventory& InInventory,
         TEnqueueFn InEnqueueFn) -> FCk_Handle_Inventory
     {
-        CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InInventory),
-            TEXT("{}: No authority over inventory [{}].{}"),
-            InContext, InInventory, ck::Context(InDelegateFunctionName))
-        { return InInventory; }
-
         if (UCk_Utils_Inventory_Spatial_UE::Has(InInventory))
         {
             auto Typed = UCk_Utils_Inventory_Spatial_UE::CastChecked(InInventory);
             InEnqueueFn(Typed);
-            return InInventory;
         }
-        if (UCk_Utils_Inventory_DataOnly_UE::Has(InInventory))
+        else if (UCk_Utils_Inventory_DataOnly_UE::Has(InInventory))
         {
             auto Typed = UCk_Utils_Inventory_DataOnly_UE::CastChecked(InInventory);
             InEnqueueFn(Typed);
-            return InInventory;
         }
-
-        CK_TRIGGER_ENSURE(TEXT("{}: Inventory [{}] has no recognized shape tag (neither Spatial nor DataOnly)"),
-            InContext, InInventory);
         return InInventory;
     }
 }
@@ -123,11 +180,16 @@ auto
         const FCk_Delegate_Inventory_OnOperationResult_Add& InDelegate)
     -> FCk_Handle_Inventory
 {
+    if (NOT ValidateRequestForDispatch(InInventory, InRequest, TEXT("Request_AddItem"),
+        [&]{ InDelegate.ExecuteIfBound(InInventory, InRequest.Get_ItemToAdd(),
+                ECk_Inventory_OperationResult_Add::Failed_NotEnqueued); }))
+    { return InInventory; }
+
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Add,
         InRequest.PopulateRequestHandle(InInventory), InDelegate);
 
-    return DispatchEnqueue(
-        InInventory, TEXT("Request_AddItem"), InDelegate.GetFunctionName(),
+    return DispatchEnqueue_Checked(
+        InInventory,
         [&InRequest](auto& Typed)
         {
             using TShape = std::remove_reference_t<decltype(Typed)>;
@@ -147,11 +209,16 @@ auto
         const FCk_Delegate_Inventory_OnOperationResult_Remove& InDelegate)
     -> FCk_Handle_Inventory
 {
+    if (NOT ValidateRequestForDispatch(InInventory, InRequest, TEXT("Request_RemoveItem"),
+        [&]{ InDelegate.ExecuteIfBound(InInventory, InRequest.Get_ItemToRemove(),
+                ECk_Inventory_OperationResult_Remove::Failed_NotEnqueued); }))
+    { return InInventory; }
+
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Remove,
         InRequest.PopulateRequestHandle(InInventory), InDelegate);
 
-    return DispatchEnqueue(
-        InInventory, TEXT("Request_RemoveItem"), InDelegate.GetFunctionName(),
+    return DispatchEnqueue_Checked(
+        InInventory,
         [&InRequest](auto& Typed)
         {
             using TShape = std::remove_reference_t<decltype(Typed)>;
@@ -171,11 +238,16 @@ auto
         const FCk_Delegate_Inventory_OnOperationResult_Stack& InDelegate)
     -> FCk_Handle_Inventory
 {
+    if (NOT ValidateRequestForDispatch(InInventory, InRequest, TEXT("Request_StackItems"),
+        [&]{ InDelegate.ExecuteIfBound(InInventory, InRequest.Get_SourceItem(), InRequest.Get_TargetItem(),
+                ECk_Inventory_OperationResult_Stack::Failed_NotEnqueued); }))
+    { return InInventory; }
+
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Stack,
         InRequest.PopulateRequestHandle(InInventory), InDelegate);
 
-    return DispatchEnqueue(
-        InInventory, TEXT("Request_StackItems"), InDelegate.GetFunctionName(),
+    return DispatchEnqueue_Checked(
+        InInventory,
         [&InRequest](auto& Typed)
         {
             using TShape = std::remove_reference_t<decltype(Typed)>;
@@ -195,11 +267,16 @@ auto
         const FCk_Delegate_Inventory_OnOperationResult_Split& InDelegate)
     -> FCk_Handle_Inventory
 {
+    if (NOT ValidateRequestForDispatch(InInventory, InRequest, TEXT("Request_SplitStack"),
+        [&]{ InDelegate.ExecuteIfBound(InInventory, InRequest.Get_SourceItem(), FCk_Handle_Item{},
+                ECk_Inventory_OperationResult_Split::Failed_NotEnqueued); }))
+    { return InInventory; }
+
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Split,
         InRequest.PopulateRequestHandle(InInventory), InDelegate);
 
-    return DispatchEnqueue(
-        InInventory, TEXT("Request_SplitStack"), InDelegate.GetFunctionName(),
+    return DispatchEnqueue_Checked(
+        InInventory,
         [&InRequest](auto& Typed)
         {
             using TShape = std::remove_reference_t<decltype(Typed)>;
@@ -219,11 +296,16 @@ auto
         const FCk_Delegate_Inventory_OnOperationResult_AddByDefinition& InDelegate)
     -> FCk_Handle_Inventory
 {
+    if (NOT ValidateRequestForDispatch(InInventory, InRequest, TEXT("Request_AddItemByDefinition"),
+        [&]{ InDelegate.ExecuteIfBound(InInventory,
+                ECk_Inventory_OperationResult_AddByDefinition::Failed_NotEnqueued, 0, TArray<FCk_Handle_Item>{}); }))
+    { return InInventory; }
+
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_AddByDefinition,
         InRequest.PopulateRequestHandle(InInventory), InDelegate);
 
-    return DispatchEnqueue(
-        InInventory, TEXT("Request_AddItemByDefinition"), InDelegate.GetFunctionName(),
+    return DispatchEnqueue_Checked(
+        InInventory,
         [&InRequest](auto& Typed)
         {
             using TShape = std::remove_reference_t<decltype(Typed)>;
@@ -243,12 +325,17 @@ auto
         const FCk_Delegate_Inventory_OnOperationResult_Sort& InDelegate)
     -> FCk_Handle_Inventory
 {
+    if (NOT ValidateRequestForDispatch(InInventory, InRequest, TEXT("Request_Sort"),
+        [&]{ InDelegate.ExecuteIfBound(InInventory,
+                ECk_Inventory_OperationResult_Sort::Failed_NotEnqueued); }))
+    { return InInventory; }
+
     auto Request = InRequest;  // Sort carries native delegates that need a mutable copy for PopulateRequestHandle.
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Sort,
         Request.PopulateRequestHandle(InInventory), InDelegate);
 
-    return DispatchEnqueue(
-        InInventory, TEXT("Request_Sort"), InDelegate.GetFunctionName(),
+    return DispatchEnqueue_Checked(
+        InInventory,
         [&Request](auto& Typed)
         {
             using TShape = std::remove_reference_t<decltype(Typed)>;
@@ -268,11 +355,17 @@ auto
         const FCk_Delegate_Inventory_OnOperationResult_Transfer& InDelegate)
     -> FCk_Handle_Inventory
 {
+    if (NOT ValidateRequestForDispatch(InSourceInventory, InRequest, TEXT("Request_TransferItem_ToSpatial"),
+        [&]{ InDelegate.ExecuteIfBound(InSourceInventory, InRequest.Get_SourceItem(),
+                InRequest.Get_TargetInventory(), 0, FCk_Handle_Item{},
+                ECk_Inventory_OperationResult_Transfer::Failed_NotEnqueued); }))
+    { return InSourceInventory; }
+
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Transfer,
         InRequest.PopulateRequestHandle(InSourceInventory), InDelegate);
 
-    return DispatchEnqueue(
-        InSourceInventory, TEXT("Request_TransferItem_ToSpatial"), InDelegate.GetFunctionName(),
+    return DispatchEnqueue_Checked(
+        InSourceInventory,
         [&InRequest](auto& Typed)
         {
             using TShape = std::remove_reference_t<decltype(Typed)>;
@@ -292,11 +385,17 @@ auto
         const FCk_Delegate_Inventory_OnOperationResult_Transfer& InDelegate)
     -> FCk_Handle_Inventory
 {
+    if (NOT ValidateRequestForDispatch(InSourceInventory, InRequest, TEXT("Request_TransferItem_ToDataOnly"),
+        [&]{ InDelegate.ExecuteIfBound(InSourceInventory, InRequest.Get_SourceItem(),
+                InRequest.Get_TargetInventory(), 0, FCk_Handle_Item{},
+                ECk_Inventory_OperationResult_Transfer::Failed_NotEnqueued); }))
+    { return InSourceInventory; }
+
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Transfer,
         InRequest.PopulateRequestHandle(InSourceInventory), InDelegate);
 
-    return DispatchEnqueue(
-        InSourceInventory, TEXT("Request_TransferItem_ToDataOnly"), InDelegate.GetFunctionName(),
+    return DispatchEnqueue_Checked(
+        InSourceInventory,
         [&InRequest](auto& Typed)
         {
             using TShape = std::remove_reference_t<decltype(Typed)>;

@@ -13,7 +13,9 @@
 
 namespace ck
 {
-    // Should be used as the base for all c++ only requests
+    // Should be used as the base for all c++ only requests.
+    // One-shot: PopulateRequestHandle may be called at most once per struct (a second call returns an
+    // invalid handle), so construct a fresh request per submission rather than reusing one.
     struct CKECS_API FRequest_Base
     {
     public:
@@ -55,7 +57,9 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Should be used as the base for all requests that may need to be BP exposed
+// Should be used as the base for all requests that may need to be BP exposed.
+// One-shot: PopulateRequestHandle may be called at most once per struct (a second call returns an
+// invalid handle), so construct a fresh request per submission rather than reusing one.
 USTRUCT(BlueprintType)
 struct CKECS_API FCk_Request_Base
 {

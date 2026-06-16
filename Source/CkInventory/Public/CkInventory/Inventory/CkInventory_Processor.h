@@ -9,6 +9,7 @@
 #include "CkCore/Payload/CkPayload.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
+#include "CkEcs/Pacing/CkPacedWork.h"
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
@@ -169,24 +170,84 @@ namespace ck
         using ParentProcessor::ParentProcessor;
 
     public:
+        // Drain one request per pump pass (not the whole queue at once) so a request's deferred,
+        // attribute-backed writes fold before the next request reads them — same-pass requests would
+        // otherwise read each other's un-settled state. The Requests fragment is the dirty marker
+        // (every enqueue path touches it); FFragment_PacedWork bounds the per-frame count internally.
         auto
         ForEachEntity(
-            TimeType,
+            TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Inventory_Params& InParams,
             TRequestsFragment& InRequestsComp) const -> void
         {
-            InHandle.CopyAndRemove(InRequestsComp, [&](const TRequestsFragment& InRequests)
+            FCk_Handle Base  = InHandle;
+            auto&      Pacer = Base.AddOrGet<FFragment_PacedWork>(1, 8);
+
+            // RunPacedSteps removes TRequestsFragment (the marker) once the step reports Done, so
+            // InRequestsComp must not be read after this returns true — drive teardown off Done.
+            const auto Done = ck::RunPacedSteps<TRequestsFragment>(Base, Pacer, InDeltaT, [&]() -> ck::EPacedStepResult
             {
-                ck::algo::ForEachRequest(InRequests.Get_Requests(),
-                    ck::Visitor([&](const auto& InEntry)
-                    {
-                        inventory_handlers::DispatchToHandler<Traits>(InHandle, InParams, InEntry);
-                    }),
-                    ck::policy::DontResetContainer{});
+                auto& Requests = InRequestsComp.Get_RequestsMutable();
+                if (Requests.IsEmpty())
+                { return ck::EPacedStepResult::Done; }
+
+                const auto Entry = Requests[0];
+                Requests.RemoveAt(0);
+
+                std::visit([&](const auto& InEntry)
+                {
+                    inventory_handlers::DispatchToHandler<Traits>(InHandle, InParams, InEntry);
+                }, Entry);
+
+                return Requests.IsEmpty() ? ck::EPacedStepResult::Done : ck::EPacedStepResult::Continue;
             });
 
+            if (Done)
+            { Base.Try_Remove<FFragment_PacedWork>(); }
+
             UCk_Utils_Inventory_UE::Request_MarkInventory_AsMayHaveChanged(InHandle);
+        }
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests carries CK_IGNORE_PENDING_KILL, so a destroyed inventory's still-queued requests
+    // are never drained. This EndPlay processor fires each with Failed_OperationCancelled via
+    // DispatchCancel so callers awaiting completion don't hang.
+    template <typename T_Derived, typename TInventoryHandle, typename TRequestsFragment, typename TInventoryTypeTag>
+    class TProcessor_Inventory_CancelOnEndPlay_Base : public ck_exp::TProcessor<
+            T_Derived,
+            TInventoryHandle,
+            TReadOnly<TRequestsFragment>,
+            TInventoryTypeTag,
+            CK_IF_END_PLAY>
+    {
+    public:
+        using ParentProcessor = ck_exp::TProcessor<
+            T_Derived,
+            TInventoryHandle,
+            TReadOnly<TRequestsFragment>,
+            TInventoryTypeTag,
+            CK_IF_END_PLAY>;
+        using HandleType = TInventoryHandle;
+        using TimeType   = typename ParentProcessor::TimeType;
+        using Traits     = TInventoryRequestTraits<TInventoryHandle>;
+        using ParentProcessor::ParentProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType,
+            HandleType InHandle,
+            const TRequestsFragment& InRequestsComp) const -> void
+        {
+            ck::algo::ForEachRequest(InRequestsComp.Get_Requests(),
+                ck::Visitor([&](const auto& InEntry)
+                {
+                    inventory_handlers::DispatchCancel<Traits>(InHandle, InEntry);
+                }),
+                ck::policy::DontResetContainer{});
         }
     };
 }
