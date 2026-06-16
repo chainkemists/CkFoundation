@@ -5,6 +5,7 @@
 #include "CkAssetExporter/DataAssetExporter/CkDataAssetExporter.h"
 #include "CkAssetExporter/EQSExporter/CkEQSExporter.h"
 #include "CkAssetExporter/StateTreeExporter/CkStateTreeExporter.h"
+#include "CkAssetExporter/UserDefinedEnumExporter/CkUserDefinedEnumExporter.h"
 #include "CkAssetExporter/UserDefinedStructExporter/CkUserDefinedStructExporter.h"
 
 #include <Widgets/SCompoundWidget.h>
@@ -42,12 +43,14 @@ private:
     auto DoOnExportSelectedDataAssetsClicked() -> FReply;
     auto DoOnExportSelectedEQSClicked() -> FReply;
     auto DoOnExportSelectedStateTreesClicked() -> FReply;
+    auto DoOnExportSelectedUserDefinedEnumsClicked() -> FReply;
     auto DoOnExportSelectedUserDefinedStructsClicked() -> FReply;
     auto DoRefreshResultsList(const TArray<FCk_BehaviorTreeExportResult>& InResults) -> void;
     auto DoRefreshResultsListFromBlueprintResults(const TArray<FCk_BlueprintExportResult>& InResults) -> void;
     auto DoRefreshResultsListFromDataAssetResults(const TArray<FCk_DataAssetExportResult>& InResults) -> void;
     auto DoRefreshResultsListFromEQSResults(const TArray<FCk_EQSExportResult>& InResults) -> void;
     auto DoRefreshResultsListFromStateTreeResults(const TArray<FCk_StateTreeExportResult>& InResults) -> void;
+    auto DoRefreshResultsListFromUserDefinedEnumResults(const TArray<FCk_UserDefinedEnumExportResult>& InResults) -> void;
     auto DoRefreshResultsListFromUserDefinedStructResults(const TArray<FCk_UserDefinedStructExportResult>& InResults) -> void;
 
     auto DoGenerateResultRow(
