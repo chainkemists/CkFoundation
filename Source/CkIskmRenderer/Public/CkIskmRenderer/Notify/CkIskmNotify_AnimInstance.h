@@ -11,6 +11,10 @@ class CKISKMRENDERER_API UCk_IskmNotify_AnimInstance : public UAnimInstance
 {
     GENERATED_BODY()
 
+    // Reads _OwningHandle to expose the owning proxy/entity to anim code, per the
+    // utils-as-public-API standard (the accessor takes the AnimInstance).
+    friend class UCk_Utils_IskmNotify_UE;
+
 public:
     UFUNCTION(BlueprintCallable, Category = "Ck|IskmNotify")
     void
