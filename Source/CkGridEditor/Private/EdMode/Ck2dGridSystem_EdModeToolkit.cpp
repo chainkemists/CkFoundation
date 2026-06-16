@@ -3,6 +3,8 @@
 #include "CkGridEditor/EdMode/Ck2dGridSystem_EdMode.h"
 #include "CkGridEditor/Draw/Ck2dGridSystem_AuthoredOverlay.h"
 
+#include "CkGrid/2dGridSystem/Authoring/Ck2dGridSystem_Spec.h"
+
 #include "SGameplayTagPicker.h"
 
 #include "Styling/AppStyle.h"
@@ -15,6 +17,8 @@
 #include "Widgets/Layout/SUniformGridPanel.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Text/STextBlock.h"
+#include "Widgets/Views/SListView.h"
+#include "Widgets/Views/STableRow.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -604,6 +608,20 @@ auto
             ]
         ];
 
+    SAssignNew(BlockerListView, SListView<TSharedPtr<FCk_GridBlockerListItem>>)
+        .ListItemsSource(&BlockerListItems)
+        .SelectionMode(ESelectionMode::Single)
+        .OnGenerateRow(this, &FCk_2dGridSystem_EdModeToolkit::OnGenerate_BlockerRow)
+        .OnSelectionChanged(this, &FCk_2dGridSystem_EdModeToolkit::On_BlockerRowSelected);
+
+    SAssignNew(TagListView, SListView<TSharedPtr<FCk_GridTagListItem>>)
+        .ListItemsSource(&TagListItems)
+        .SelectionMode(ESelectionMode::Single)
+        .OnGenerateRow(this, &FCk_2dGridSystem_EdModeToolkit::OnGenerate_TagRow)
+        .OnSelectionChanged(this, &FCk_2dGridSystem_EdModeToolkit::On_TagRowSelected);
+
+    Rebuild_SelectLists();
+
     return SNew(SBox)
         .Visibility(this, &FCk_2dGridSystem_EdModeToolkit::Get_DetailsSectionVisibility)
         [
@@ -616,6 +634,31 @@ auto
             ]
             + SVerticalBox::Slot()
             .AutoHeight()
+            .Padding(0.0f, 0.0f, 0.0f, 2.0f)
+            [
+                SNew(STextBlock).Text(LOCTEXT("BlockersListLabel", "Blockers"))
+            ]
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .MaxHeight(140.0f)
+            [
+                BlockerListView.ToSharedRef()
+            ]
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .Padding(0.0f, 6.0f, 0.0f, 2.0f)
+            [
+                SNew(STextBlock).Text(LOCTEXT("TagsListLabel", "Tags"))
+            ]
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .MaxHeight(140.0f)
+            [
+                TagListView.ToSharedRef()
+            ]
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .Padding(0.0f, 6.0f, 0.0f, 0.0f)
             [
                 CellEditor
             ]
@@ -631,9 +674,146 @@ auto
     FCk_2dGridSystem_EdModeToolkit::
     Get_DetailsSectionVisibility() const -> EVisibility
 {
+    // Re-drive the Blockers/Tags lists on repaint when the Spec's blocker/tag set changes (mirrors the
+    // const-cast-in-getter refresh idiom). The signature guard keeps it cheap.
+    if (const auto Sig = Compute_SelectListsSignature(); Sig != SeededSelectListsSignature)
+    {
+        const_cast<FCk_2dGridSystem_EdModeToolkit*>(this)->SeededSelectListsSignature = Sig;
+        const_cast<FCk_2dGridSystem_EdModeToolkit*>(this)->Rebuild_SelectLists();
+    }
+
     return Get_ActiveTool() == ECk_GridPaint_Tool::Select
         ? EVisibility::Visible
         : EVisibility::Collapsed;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    Compute_SelectListsSignature() const -> FString
+{
+    auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
+    const auto* Spec = Mode != nullptr ? Mode->Get_SelectedSpec() : nullptr;
+    if (Spec == nullptr)
+    { return FString{}; }
+
+    auto Sig = FString::Printf(TEXT("B%d|"), Spec->Blockers.Num());
+    for (const auto& Pair : ck::grid_editor::Collect_PerCellTagsWithCounts(Spec))
+    { Sig += FString::Printf(TEXT("%s:%d;"), *Pair.Key.GetTagName().ToString(), Pair.Value); }
+    return Sig;
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    Rebuild_SelectLists() -> void
+{
+    BlockerListItems.Reset();
+    TagListItems.Reset();
+
+    auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
+    const auto* Spec = Mode != nullptr ? Mode->Get_SelectedSpec() : nullptr;
+    if (Spec != nullptr)
+    {
+        for (auto Index = 0; Index < Spec->Blockers.Num(); ++Index)
+        {
+            const auto& B = Spec->Blockers[Index];
+            auto Item      = MakeShared<FCk_GridBlockerListItem>();
+            Item->Index    = Index;
+            Item->Name     = B.Name;
+            Item->RangeMin = B.RangeMin;
+            Item->RangeMax = B.RangeMax;
+            BlockerListItems.Add(Item);
+        }
+
+        for (const auto& Pair : ck::grid_editor::Collect_PerCellTagsWithCounts(Spec))
+        {
+            auto Item       = MakeShared<FCk_GridTagListItem>();
+            Item->Tag       = Pair.Key;
+            Item->CellCount = Pair.Value;
+            TagListItems.Add(Item);
+        }
+    }
+
+    if (BlockerListView.IsValid())
+    { BlockerListView->RequestListRefresh(); }
+    if (TagListView.IsValid())
+    { TagListView->RequestListRefresh(); }
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    OnGenerate_BlockerRow(
+        TSharedPtr<FCk_GridBlockerListItem> InItem,
+        const TSharedRef<STableViewBase>&   InOwner) -> TSharedRef<ITableRow>
+{
+    const auto NameStr = InItem->Name.IsValid() ? InItem->Name.GetTagName().ToString() : FString(TEXT("(anon)"));
+    const auto Label = FText::FromString(FString::Printf(
+        TEXT("#%d  %s  (%d,%d)..(%d,%d)"),
+        InItem->Index, *NameStr,
+        InItem->RangeMin.X, InItem->RangeMin.Y, InItem->RangeMax.X, InItem->RangeMax.Y));
+
+    return SNew(STableRow<TSharedPtr<FCk_GridBlockerListItem>>, InOwner)
+    [
+        SNew(STextBlock).Text(Label)
+    ];
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    OnGenerate_TagRow(
+        TSharedPtr<FCk_GridTagListItem>   InItem,
+        const TSharedRef<STableViewBase>& InOwner) -> TSharedRef<ITableRow>
+{
+    const auto Color = ck::grid_editor::Resolve_TagColor(InItem->Tag);
+    const auto Label = FText::FromString(FString::Printf(
+        TEXT("%s  (%d)"), *InItem->Tag.GetTagName().ToString(), InItem->CellCount));
+
+    return SNew(STableRow<TSharedPtr<FCk_GridTagListItem>>, InOwner)
+    [
+        SNew(SHorizontalBox)
+        + SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(0.0f, 0.0f, 6.0f, 0.0f)
+        [
+            SNew(SColorBlock).Color(Color).Size(FVector2D(14.0f, 14.0f))
+        ]
+        + SHorizontalBox::Slot().FillWidth(1.0f).VAlign(VAlign_Center)
+        [
+            SNew(STextBlock).Text(Label)
+        ]
+    ];
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    On_BlockerRowSelected(
+        TSharedPtr<FCk_GridBlockerListItem> InItem,
+        ESelectInfo::Type                   InSelectInfo) -> void
+{
+    auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
+    if (Mode == nullptr || ! InItem.IsValid())
+    { return; }
+
+    Mode->Set_SelectedBlockerIndex(InItem->Index);
+
+    // Clear the Tags list's visual selection so the two lists don't both look active.
+    if (TagListView.IsValid())
+    { TagListView->ClearSelection(); }
+}
+
+auto
+    FCk_2dGridSystem_EdModeToolkit::
+    On_TagRowSelected(
+        TSharedPtr<FCk_GridTagListItem> InItem,
+        ESelectInfo::Type               InSelectInfo) -> void
+{
+    auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get());
+    if (Mode == nullptr || ! InItem.IsValid())
+    { return; }
+
+    Mode->Set_SelectedTag(TOptional<FGameplayTag>(InItem->Tag));
+
+    if (BlockerListView.IsValid())
+    { BlockerListView->ClearSelection(); }
 }
 
 auto

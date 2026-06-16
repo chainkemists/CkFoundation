@@ -60,6 +60,11 @@ namespace ck_grid_editor_detail
     constexpr auto ColorBlockerGroup     = FLinearColor(1.0f, 0.0f, 1.0f); // magenta
     constexpr auto BlockerGroupThickness = 5.0f;
 
+    // Select tool: cells carrying the Tags-list-selected tag, outlined full-cell in bright white so the
+    // group reads as "selected" rather than merely "tagged" (distinct from the per-tag authored color).
+    constexpr auto ColorTagSelected     = FLinearColor(1.0f, 1.0f, 1.0f); // white
+    constexpr auto TagSelectedThickness = 4.0f;
+
     // Hover highlight: a slightly smaller inset than the state markers (so it nests inside any state
     // marker on the same cell) drawn thick and white.
     constexpr auto HoverMarkerInset     = 0.06;
@@ -307,6 +312,20 @@ void
             InPDI->DrawLine(G10, G11, ck_grid_editor_detail::ColorBlockerGroup, SDPG_Foreground, ck_grid_editor_detail::BlockerGroupThickness);
             InPDI->DrawLine(G11, G01, ck_grid_editor_detail::ColorBlockerGroup, SDPG_Foreground, ck_grid_editor_detail::BlockerGroupThickness);
             InPDI->DrawLine(G01, G00, ck_grid_editor_detail::ColorBlockerGroup, SDPG_Foreground, ck_grid_editor_detail::BlockerGroupThickness);
+        }
+    }
+
+    // Select-tool tag-group highlight: outline every cell carrying the Tags-list-selected tag full-cell in
+    // white. Mutually exclusive with cell/blocker selection (Set_SelectedTag clears those).
+    if (_ActiveTool == ECk_GridPaint_Tool::Select && _SelectedTag.IsSet())
+    {
+        for (const auto& Cell : ck::grid_editor::Get_CellsWithTag(Spec, _SelectedTag.GetValue()))
+        {
+            if (Cell.X >= 0 && Cell.X < Dimensions.X && Cell.Y >= 0 && Cell.Y < Dimensions.Y)
+            {
+                DrawCellSquare(Cell.X, Cell.Y, ck_grid_editor_detail::ColorTagSelected,
+                    /*Inset*/ 0.0, ck_grid_editor_detail::TagSelectedThickness);
+            }
         }
     }
 

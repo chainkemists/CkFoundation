@@ -4,6 +4,8 @@
 
 #include "Toolkits/BaseToolkit.h"
 
+#include "Types/SlateEnums.h"
+
 #include <GameplayTagContainer.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -13,6 +15,27 @@ enum class ECk_GridPaint_TagScope : uint8;
 
 class SGameplayTagPicker;
 class SVerticalBox;
+class ITableRow;
+class STableViewBase;
+template <typename ItemType> class SListView;
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// One row in the Select-tab Blockers list.
+struct FCk_GridBlockerListItem
+{
+    int32        Index = INDEX_NONE;
+    FGameplayTag Name;
+    FIntPoint    RangeMin = FIntPoint::ZeroValue;
+    FIntPoint    RangeMax = FIntPoint::ZeroValue;
+};
+
+// One row in the Select-tab Tags list (doubles as the clickable legend).
+struct FCk_GridTagListItem
+{
+    FGameplayTag Tag;
+    int32        CellCount = 0;
+};
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -142,6 +165,20 @@ private:
     // EdMode's Set_SelectedBlockerName, shared with the Blocker tool).
     auto On_DetailsBlockerTagChanged(const TArray<FGameplayTagContainer>& InContainers) -> void;
 
+    // Rebuilds the Blockers + Tags list item arrays from the selected grid's Spec, then refreshes both views.
+    auto Rebuild_SelectLists() -> void;
+
+    // A signature of (blocker count + per-cell tag set) used to detect when the lists need rebuilding.
+    auto Compute_SelectListsSignature() const -> FString;
+
+    // SListView row generators.
+    auto OnGenerate_BlockerRow(TSharedPtr<FCk_GridBlockerListItem> InItem, const TSharedRef<STableViewBase>& InOwner) -> TSharedRef<ITableRow>;
+    auto OnGenerate_TagRow(TSharedPtr<FCk_GridTagListItem> InItem, const TSharedRef<STableViewBase>& InOwner) -> TSharedRef<ITableRow>;
+
+    // Selection callbacks: push the chosen blocker/tag onto the EdMode (highlights it in the viewport).
+    auto On_BlockerRowSelected(TSharedPtr<FCk_GridBlockerListItem> InItem, ESelectInfo::Type InSelectInfo) -> void;
+    auto On_TagRowSelected(TSharedPtr<FCk_GridTagListItem> InItem, ESelectInfo::Type InSelectInfo) -> void;
+
 private:
     TSharedPtr<SWidget>           InlineContent;
     TWeakObjectPtr<UEdMode>       OwningMode;
@@ -179,6 +216,13 @@ private:
     // Last blocker index the DetailsBlockerTagPicker was seeded for (re-seed detection, mirrors the Blocker
     // tool's SeededSelectedBlockerIndex but specific to the Select-tool Details picker).
     int32 SeededDetailsBlockerIndex = INDEX_NONE;
+
+    // Select-tab lists. Item arrays are rebuilt from the Spec via Rebuild_SelectLists.
+    TArray<TSharedPtr<FCk_GridBlockerListItem>> BlockerListItems;
+    TArray<TSharedPtr<FCk_GridTagListItem>>     TagListItems;
+    TSharedPtr<SListView<TSharedPtr<FCk_GridBlockerListItem>>> BlockerListView;
+    TSharedPtr<SListView<TSharedPtr<FCk_GridTagListItem>>>     TagListView;
+    FString SeededSelectListsSignature;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
