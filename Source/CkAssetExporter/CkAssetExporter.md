@@ -5,7 +5,7 @@ Editor tool that exports Unreal assets (Behavior Trees, Blueprints, Data Assets,
 ## Key Concepts
 
 - **Dual Format** — Every export produces both a `.json` (structured, for tools) and a `.txt` (human-readable, indented tree view).
-- **Supported Asset Types** — Behavior Trees, Blueprints, Data Assets, Environment Queries (EQS).
+- **Supported Asset Types** — Behavior Trees, Blueprints, Data Assets, Environment Queries (EQS), State Trees, Blueprint structs (`UUserDefinedStruct`), and Blueprint enums (`UUserDefinedEnum`).
 - **Content Browser Actions** — Right-click any supported asset to export it directly.
 - **Exporter Tab** — Editor window (`Window > Asset Exporter`) with buttons per asset type, status bar, and results list.
 
