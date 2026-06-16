@@ -441,7 +441,10 @@ namespace ck::inventory_handlers
 
         const auto SortPredicate = detail::BuildSortPredicate(InRequest);
         if (NOT SortPredicate)
-        { return R; }
+        {
+            R = Result::Failed_NoPredicate;
+            return R;
+        }
 
         FInventoryItemRecord::Sort(Base, [&](const FCk_Handle_Item& A, const FCk_Handle_Item& B)
         { return SortPredicate(A, B); });
@@ -458,7 +461,7 @@ namespace ck::inventory_handlers
         const Entry&) -> Result
     {
         ck::inventory::Warning(TEXT("RelocateItem: not supported for this inventory shape"));
-        return Result::Failed_InvalidItem;
+        return Result::Failed_NotSpatialInventory;
     }
 
     // ---- TTransfer: cross-shape, single body. Calls SourceTraits/TargetTraits-supplied
@@ -497,6 +500,10 @@ namespace ck::inventory_handlers
 
         if (TransferCount <= 0)
         { return ECk_Inventory_OperationResult_Transfer::Failed_ZeroCount; }
+
+        // Captured once from the pre-fill source count; recomputing it at the return sites from the
+        // already-decremented SourceCount + OutCountTransferred would double-count pre-filled units.
+        const auto RequestedTotal = (InCount == ck::Inventory::AllAvailableCount) ? SourceCount : InCount;
 
         const auto* Definition = UCk_Utils_Item_UE::Get_Definition(InSourceItem);
 
@@ -570,8 +577,7 @@ namespace ck::inventory_handlers
         if (TransferCount <= 0)
         {
             UCk_Utils_Inventory_UE::Request_MarkInventory_AsMayHaveChanged(BaseTarget);
-            const auto RequestedCount = (InCount == ck::Inventory::AllAvailableCount) ? (SourceCount + OutCountTransferred) : InCount;
-            return (OutCountTransferred >= RequestedCount)
+            return (OutCountTransferred >= RequestedTotal)
                 ? ECk_Inventory_OperationResult_Transfer::Success
                 : ECk_Inventory_OperationResult_Transfer::Success_Partial;
         }
@@ -669,8 +675,7 @@ namespace ck::inventory_handlers
             UCk_Utils_Inventory_UE::Request_MarkInventory_AsMayHaveChanged(BaseTarget);
         }
 
-        const auto RequestedCount = (InCount == ck::Inventory::AllAvailableCount) ? (SourceCount + OutCountTransferred) : InCount;
-        return (OutCountTransferred >= RequestedCount)
+        return (OutCountTransferred >= RequestedTotal)
             ? ECk_Inventory_OperationResult_Transfer::Success
             : ECk_Inventory_OperationResult_Transfer::Success_Partial;
     }

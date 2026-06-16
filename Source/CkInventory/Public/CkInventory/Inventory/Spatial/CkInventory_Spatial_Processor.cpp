@@ -23,6 +23,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Inventory_Spatial_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Inventory_Spatial_CancelOnEndPlay);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Inventory_Spatial_Replicate);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Inventory_Spatial_ReplicateOnRestore);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Inventory_Spatial_SyncReplication);

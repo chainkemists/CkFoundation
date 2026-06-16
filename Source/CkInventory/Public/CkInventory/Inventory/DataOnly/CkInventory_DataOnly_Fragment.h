@@ -43,6 +43,7 @@ namespace ck
 
     public:
         CK_PROPERTY_GET(_Requests);
+        auto Get_RequestsMutable() -> RequestList& { return _Requests; }
     };
 
     using FFragment_Inventory_DataOnly_Requests = TFragment_Inventory_Requests<FCk_Handle_Inventory_DataOnly>;
