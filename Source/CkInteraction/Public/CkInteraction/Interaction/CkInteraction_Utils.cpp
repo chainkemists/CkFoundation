@@ -3,6 +3,9 @@
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Utils.h"
 
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
+
+#include "CkLabel/CkLabel_Utils.h"
 
 #include "CkInteraction/Interaction/CkInteraction_EntityScript.h"
 #include "CkInteraction/Interaction/CkInteraction_Fragment.h"
@@ -26,11 +29,39 @@ auto
         InHandle)
     { return {}; }
 
-    auto NewInteractionEntity = ck::StaticCast<FCk_Handle_Interaction>(
-        PendingEntity.Get_EntityUnderConstruction());
+    auto NewInteractionEntityBase = PendingEntity.Get_EntityUnderConstruction();
+    NewInteractionEntityBase.Add<ck::FFragment_Interaction_Params>(InParams);
+    NewInteractionEntityBase.Add<ck::FFragment_Interaction_Current>();
+
+    auto NewInteractionEntity = Cast(NewInteractionEntityBase);
+
+    if (InParams.Get_CompletionPolicy() == ECk_Interaction_CompletionPolicy::Timed)
+    {
+        const auto& TimeRefillAttributeParams = FCk_Fragment_FloatAttributeRefill_ParamsData{
+            TAG_InteractionTimeRefill_FloatAttribute_Name,
+            1.0f}
+            .Set_StartingState(ECk_Attribute_RefillState::Running)
+            .Set_RefillBehavior(ECk_Attribute_Refill_Policy::Variable);
+
+        const auto TimeAttributeParams = FCk_Fragment_FloatAttribute_ParamsData{
+            TAG_InteractionTime_FloatAttribute_Name,
+            0.0f}
+            .Set_MinMax(ECk_MinMax::MinMax)
+            .Set_MinValue(0.0f)
+            .Set_MaxValue(InParams.Get_InteractionDuration().Get_Seconds())
+            .Set_EnableRefill(true)
+            .Set_RefillParams(TimeRefillAttributeParams);
+
+        UCk_Utils_FloatAttribute_UE::Add(NewInteractionEntity, TimeAttributeParams, ECk_Replication::DoesNotReplicate);
+    }
+
+    auto InteractTarget = InParams.Get_Target();
+    UCk_Utils_GameplayLabel_UE::Add(NewInteractionEntity, InParams.Get_InteractionChannel());
+    UCk_Utils_Handle_UE::Set_DebugName(NewInteractionEntity,
+        *ck::Format_UE(TEXT("Interaction: Source [{}] Target [{}]"), InParams.Get_Source(), InteractTarget));
 
     RecordOfInteractions_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::Default);
-    // NOTE: Record connection happens inside the Interaction Entity Script's Construct function 
+    RecordOfInteractions_Utils::Request_Connect(InteractTarget, NewInteractionEntity);
 
     return NewInteractionEntity;
 }

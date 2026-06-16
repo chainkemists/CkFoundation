@@ -21,9 +21,6 @@ public:
     UCk_Interaction_EntityScript(const FObjectInitializer& InInitializer);
 
 protected:
-    auto Construct(
-        FCk_Handle& InHandle,
-        const FInstancedStruct& InSpawnParams) -> ECk_EntityScript_ConstructionFlow override;
     auto BeginPlay() -> void override;
 
     auto ShowReplicationInEditor() const -> bool override;
