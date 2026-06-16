@@ -250,6 +250,83 @@ namespace ck
                 ck::policy::DontResetContainer{});
         }
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Forward decls — the churn's RunAfter references both shapes' HandleRequests, which are defined in
+    // the shape processor headers (those include THIS header). TDepList is a pure type list, so forward
+    // decls suffice; CkInventory_Processor.cpp includes the shape headers for registration.
+    class FProcessor_Inventory_Spatial_HandleRequests;
+    class FProcessor_Inventory_DataOnly_HandleRequests;
+
+    // Drains a standalone mass-transfer op ONE item per pump pass (paced) so each transfer's deferred,
+    // attribute-backed stack writes fold before the next item resolves its target — coherent capacity
+    // reads, same hazard the paced HandleRequests fix addressed. Runs AFTER both shapes' HandleRequests
+    // so a step reads the prior step's folded writes. The op is a plain FCk_Handle discriminated by
+    // FFragment_Inventory_MassTransfer_InFlight (NOT a typesafe handle, NOT scoped to an inventory).
+    class CKINVENTORY_API FProcessor_Inventory_MassTransfer_Churn : public ck_exp::TProcessor<
+            FProcessor_Inventory_MassTransfer_Churn,
+            FCk_Handle,
+            TReadWrite<FFragment_Inventory_MassTransfer_InFlight>,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group         = FGroup_Gameplay;
+        using RunAfter      = TDepList<FProcessor_Inventory_Spatial_HandleRequests, FProcessor_Inventory_DataOnly_HandleRequests>;
+        using MarkedDirtyBy = FFragment_Inventory_MassTransfer_InFlight;
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_Inventory_MassTransfer_InFlight& InFlight) -> void;
+
+    private:
+        // Captured INSIDE the completing step (before RunPacedSteps removes the in-flight marker), so
+        // the finish broadcast never reads the freed fragment.
+        struct FFinishSnapshot
+        {
+            ECk_Inventory_MassTransfer_Result Result = ECk_Inventory_MassTransfer_Result::Failed_NothingToTransfer;
+            int32 Units  = 0;
+            int32 Fully  = 0;
+            int32 Failed = 0;
+        };
+
+        static auto
+        DoOneStep(
+            FFragment_Inventory_MassTransfer_InFlight& InFlight,
+            FFinishSnapshot& OutFinish) -> ck::EPacedStepResult;
+
+        static auto
+        ComputeFinish(
+            const FFragment_Inventory_MassTransfer_InFlight& InFlight) -> FFinishSnapshot;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // The churn carries CK_IGNORE_PENDING_KILL, so an op destroyed mid-flight (world teardown) never
+    // finishes its drain. This fires the completion signal with Failed_OperationCancelled so a caller
+    // awaiting OnComplete doesn't hang. Normal completion removes the in-flight fragment first, so a
+    // completed op no longer matches this view — no double-fire.
+    class CKINVENTORY_API FProcessor_Inventory_MassTransfer_CancelOnEndPlay : public ck_exp::TProcessor<
+            FProcessor_Inventory_MassTransfer_CancelOnEndPlay,
+            FCk_Handle,
+            TReadOnly<FFragment_Inventory_MassTransfer_InFlight>,
+            CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Inventory_MassTransfer_InFlight& InFlight) -> void;
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------

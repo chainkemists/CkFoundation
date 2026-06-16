@@ -105,6 +105,17 @@ namespace ck::inventory_handlers
         using Result = ECk_Inventory_OperationResult_Relocate;
         static auto Handle(TInventoryHandle&, const FFragment_Inventory_Params&, const Entry&) -> Result;
     };
+
+    // Synchronous, non-deferred single-item transfer for the mass-transfer churn. Resolves the source
+    // from InItem's parent inventory, runtime-branches the 2x2 (Spatial/DataOnly source x target), and
+    // invokes the SAME typed DoTransfer body the deferred Request_TransferItem_* path uses — executed
+    // NOW (the attribute writes fold before the next churn step, which is paced one item/pass). Returns
+    // the units moved (0 on invalid input / same-inventory / no room). Transfers the full source stack
+    // (AllAvailableCount). NOT exposed as a public Request_* — internal to the churn.
+    CKINVENTORY_API auto ExecuteTransferNow(
+        FCk_Handle_Item& InItem,
+        FCk_Handle_Inventory& InTarget,
+        ECk_Inventory_AddPolicy InPolicy) -> int32;
 }
 
 namespace ck

@@ -22,11 +22,48 @@ Handles live in `*_Fragment_Data.h` (not `*_Fragment.h`) so UHT-reflected types 
 
 ## Public API surface (Blueprint / AngelScript)
 
-- **`UCk_Utils_Inventory_UE`** — the canonical home for all `Request_*` operations. Hosts: `Request_AddItem`, `Request_RemoveItem`, `Request_StackItems`, `Request_SplitStack`, `Request_AddItemByDefinition`, `Request_Sort`, `Request_TransferItem_ToSpatial`, `Request_TransferItem_ToDataOnly`. Each performs auth + signal bind once at the public Utils boundary, then runtime-branches on the inventory's shape tag (one tag check) via `ck::inventory_helpers::DispatchEnqueue` and constructs the typed entry. Also hosts shape-agnostic queries: `Get_CanAcceptItem`, `Get_ContainsItem`, `Get_Items`, `Get_NumItems`, `Get_TotalUnits`, `Get_AbsorbableUnits`, `Get_StackRoomFor`, `Get_InventoryType`, `Get_IsSpatial`, `Get_IsDataOnly`, `RecordOfInventories_Utils`, `RecordOfInventoryItems_Utils`. No `Add()` / `AddMultiple()` / `Make_*` here — those need shape-specific Params and live on the typed Utils.
+- **`UCk_Utils_Inventory_UE`** — the canonical home for all `Request_*` operations. Hosts: `Request_AddItem`, `Request_RemoveItem`, `Request_StackItems`, `Request_SplitStack`, `Request_AddItemByDefinition`, `Request_Sort`, `Request_TransferItem_ToSpatial`, `Request_TransferItem_ToDataOnly`, `Request_MassTransfer` (standalone bulk op — see *ItemResolution — standalone ops* below). Each performs auth + signal bind once at the public Utils boundary, then runtime-branches on the inventory's shape tag (one tag check) via `ck::inventory_helpers::DispatchEnqueue` and constructs the typed entry. Also hosts shape-agnostic queries: `Get_CanAcceptItem`, `Get_ContainsItem`, `Get_Items`, `Get_NumItems`, `Get_TotalUnits`, `Get_AbsorbableUnits`, `Get_StackRoomFor`, `Get_InventoryType`, `Get_IsSpatial`, `Get_IsDataOnly`, `RecordOfInventories_Utils`, `RecordOfInventoryItems_Utils`. No `Add()` / `AddMultiple()` / `Make_*` here — those need shape-specific Params and live on the typed Utils.
 - **`UCk_Utils_Inventory_Spatial_UE`** — Spatial-only API. `Make_Params`, `Add` / `AddMultiple`, queries (`Get_Dimensions`, `Get_NumFreeCells`, `Get_FirstAvailablePlacement`, `Get_CanPlaceItemAt`, `Get_ItemPlacementCoordinate`, `Get_ItemPlacementRotation`, `Get_ItemActiveCells_Rotated`, `Get_ItemAtCoordinate`, `Get_Grid`). Two **placement-aware overloads** of operations whose default lives on base: `Request_AddItem(Handle, Request, FCk_SpatialPlacement, Delegate)` and `Request_SplitStack(Handle, Request, FCk_SpatialPlacement, Delegate)` — these accept an explicit placement; the placement-free versions on the base default to `AutoPlace`. **`Request_RelocateItem`** is Spatial-only (no shape-agnostic equivalent — DataOnly has no cell placement to relocate).
 - **`UCk_Utils_Inventory_DataOnly_UE`** — DataOnly-only API. `Make_Params` / `Make_Params_Bounded` (entries metric) / `Make_Params_BoundedByTotalUnits` (units metric), `Add` / `AddMultiple`, queries (`Get_BoundsInfo`, `Get_BoundMax`, `Get_EffectiveBoundMode`, `Get_RemainingSlots` (entries only), `Get_RemainingCapacity` (metric-aware)), and `Request_OverrideBounds` (DataOnly-specific operation; changes the limit VALUE only — the metric is immutable at creation). **No `Request_*` for the standard inventory operations** — those live on base only and reach DataOnly handles via mixin propagation.
 - **`UCk_Utils_Item_UE`** — create / destroy items, query their definition / parent inventory.
 - **Item traits** under `ItemTrait/` — `Stackable`, `Dimensions`, `Tags`. Stackable stack-count is itself an `IntegerAttribute`; not stored as a raw int on the item. `UCk_Utils_ItemTrait_Stackable_UE` additionally exposes the inventory-context capacity reads: `Get_EffectiveMaxStackSize` (+ `_ByDefinition`) and `Get_RemainingStackCapacity_InInventory` — see *Capacity policies* below.
+- **`UCk_Utils_ItemResolution_UE`** — item-placement decisions + standalone ops (see *ItemResolution — standalone ops* below).
+
+## ItemResolution — standalone ops
+
+Cross-inventory placement logic that is NOT a request on a single inventory:
+
+- **`UCk_Utils_ItemResolution_UE::ResolveBestTransferTarget(Item, FCk_BestTransferTargetParams)`** —
+  pure (no mutation) "which candidate should receive this item" ranker: filters candidates by
+  `Get_CanAcceptItem` (which rejects the item's own current inventory), honors `StackingPreference`
+  (Prefer / Require / Ignore) and an optional custom sort. Returns an invalid handle if none qualify.
+- **`UCk_Utils_Inventory_UE::Request_MassTransfer(AnyHandle, FCk_Request_Inventory_MassTransfer, OnComplete)`**
+  — bulk move every (filtered) item out of a set of source inventories into the best-fitting candidate,
+  paced over multiple pump passes. Lives on `UCk_Utils_Inventory_UE` (NOT on `UCk_Utils_ItemResolution_UE`,
+  whose only member is the per-item `ResolveBestTransferTarget` primitive the churn reuses).
+  **Standalone + self-owned:** it spawns a transient-owned op entity — a **plain `FCk_Handle`** (NOT a
+  typesafe handle), discriminated by `FFragment_Inventory_MassTransfer_InFlight` — and returns it;
+  it is NOT a mixin on an inventory handle. `AnyHandle` is any live handle, used only to resolve
+  world/registry context + authority. The
+  churn (`FProcessor_Inventory_MassTransfer_Churn`, in `CkInventory_Processor.{h,cpp}`,
+  `FGroup_Gameplay`, `RunAfter` both shapes' HandleRequests) drains one item per pass via
+  `ck::RunPacedSteps`, executing each transfer **synchronously** through
+  `inventory_handlers::ExecuteTransferNow` (the same `DoTransfer` body the deferred
+  `Request_TransferItem_*` path uses) so deferred stack-count writes fold before the next item resolves
+  capacity — coherent reads, no over-commit. `OnComplete` fires once with the result +
+  `(UnitsMoved, ItemsFullyMoved, ItemsFailed)`. There is **no public cancel** — a teardown net
+  (`FProcessor_Inventory_MassTransfer_CancelOnEndPlay`) fires `Failed_OperationCancelled` if the op
+  is destroyed mid-flight (world teardown). The in-flight fragment + completion signal live in
+  `CkInventory_Fragment.h`; the processors in `CkInventory_Processor.{h,cpp}`. This is the canonical
+  "standalone paced operation" pattern (mirrors CkGoap / CkAudioTrack transient-owned ops).
+  **Pump budget:** each merge-step cascades extra pump passes (deferred fold + inventory signal), so the
+  request's `_MaxStepsPerFrame` defaults to **1** — at 2+ merge-steps/frame the worst case trips the
+  scheduler's pump-count warn (≥8). Relocate-heavy transfers can raise it.
+
+  **§4.3 caveat (deferred to Adam's pass):** mass transfer into **≥2 candidate inventories that share
+  one lifetime-owner AND shape** inherits the pre-existing multi-same-owner replicated-container
+  clobber on clients. The MVP is correct for distinct-owner targets (the common case). The gather site
+  carries a one-line comment to the same effect.
 
 ## Capacity policies
 

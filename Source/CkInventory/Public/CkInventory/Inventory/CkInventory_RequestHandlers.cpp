@@ -730,6 +730,67 @@ namespace ck::inventory_handlers
         return R;
     }
 
+    // ---- ExecuteTransferNow: synchronous single-item dispatch for the mass-transfer churn.
+    //      Branches the 2x2 source/target shapes and calls the SAME DoTransfer body the deferred
+    //      Request_TransferItem_* path uses. The per-shape DoTransfer instantiations already exist
+    //      (TTransfer<...>::Handle instantiates all four below).
+    auto ExecuteTransferNow(
+        FCk_Handle_Item& InItem,
+        FCk_Handle_Inventory& InTarget,
+        ECk_Inventory_AddPolicy InPolicy) -> int32
+    {
+        if (ck::Is_NOT_Valid(InItem) || ck::Is_NOT_Valid(InTarget))
+        { return 0; }
+
+        if (NOT TUtils_Item_ParentInventory::Has(InItem))
+        { return 0; }
+
+        auto Source = TUtils_Item_ParentInventory::Get_StoredEntity(InItem);
+        if (ck::Is_NOT_Valid(Source))
+        { return 0; }
+
+        auto NewItem = FCk_Handle_Item{};
+        auto Count   = int32{0};
+
+        const auto SourceIsSpatial = UCk_Utils_Inventory_Spatial_UE::Has(Source);
+        const auto TargetIsSpatial = UCk_Utils_Inventory_Spatial_UE::Has(InTarget);
+
+        if (SourceIsSpatial && TargetIsSpatial)
+        {
+            auto TypedSource = UCk_Utils_Inventory_Spatial_UE::CastChecked(Source);
+            auto TypedTarget = UCk_Utils_Inventory_Spatial_UE::CastChecked(InTarget);
+            DoTransfer<FCk_Handle_Inventory_Spatial, FCk_Handle_Inventory_Spatial, FCk_EmptyAddon>(
+                TypedSource, TypedTarget, InItem, ck::Inventory::AllAvailableCount, InPolicy,
+                FCk_SpatialPlacement{}, NewItem, Count);
+        }
+        else if (SourceIsSpatial)
+        {
+            auto TypedSource = UCk_Utils_Inventory_Spatial_UE::CastChecked(Source);
+            auto TypedTarget = UCk_Utils_Inventory_DataOnly_UE::CastChecked(InTarget);
+            DoTransfer<FCk_Handle_Inventory_Spatial, FCk_Handle_Inventory_DataOnly, FCk_EmptyAddon>(
+                TypedSource, TypedTarget, InItem, ck::Inventory::AllAvailableCount, InPolicy,
+                FCk_SpatialPlacement{}, NewItem, Count);
+        }
+        else if (TargetIsSpatial)
+        {
+            auto TypedSource = UCk_Utils_Inventory_DataOnly_UE::CastChecked(Source);
+            auto TypedTarget = UCk_Utils_Inventory_Spatial_UE::CastChecked(InTarget);
+            DoTransfer<FCk_Handle_Inventory_DataOnly, FCk_Handle_Inventory_Spatial, FCk_EmptyAddon>(
+                TypedSource, TypedTarget, InItem, ck::Inventory::AllAvailableCount, InPolicy,
+                FCk_SpatialPlacement{}, NewItem, Count);
+        }
+        else
+        {
+            auto TypedSource = UCk_Utils_Inventory_DataOnly_UE::CastChecked(Source);
+            auto TypedTarget = UCk_Utils_Inventory_DataOnly_UE::CastChecked(InTarget);
+            DoTransfer<FCk_Handle_Inventory_DataOnly, FCk_Handle_Inventory_DataOnly, FCk_EmptyAddon>(
+                TypedSource, TypedTarget, InItem, ck::Inventory::AllAvailableCount, InPolicy,
+                FCk_SpatialPlacement{}, NewItem, Count);
+        }
+
+        return Count;
+    }
+
     // Explicit instantiations for every (Handle, Addon) pair the framework uses. Located here
     // (not in the per-shape Traits.cpp files) because the default Handle template bodies live
     // in this TU. Specializations declared in the per-shape Traits.h are visible (both headers

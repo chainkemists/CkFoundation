@@ -22,6 +22,10 @@ class UCk_Utils_Inventory_UE;
 
 namespace ck
 {
+    class FProcessor_Inventory_MassTransfer_Churn;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     CK_DEFINE_ECS_TAG(FTag_Inventory_DataOnly);
     CK_DEFINE_ECS_TAG(FTag_Inventory_Spatial);
     CK_DEFINE_ECS_TAG(FTag_Inventory_MayRequireReplication);
@@ -168,6 +172,55 @@ namespace ck
         FCk_Handle_Item,
         FIntPoint,
         ECk_Inventory_OperationResult_Relocate);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // In-flight state for a standalone mass-transfer op. Lives on a transient-owned op entity (a plain
+    // FCk_Handle, discriminated by this fragment) — NOT on any inventory. The churn is its friend; the
+    // Utils boundary populates it at kickoff. ck::FFragment_PacedWork is added separately by the churn
+    // (pacer/budget only).
+    struct CKINVENTORY_API FFragment_Inventory_MassTransfer_InFlight
+    {
+        CK_GENERATED_BODY(FFragment_Inventory_MassTransfer_InFlight);
+
+        friend class FProcessor_Inventory_MassTransfer_Churn;
+        friend class ::UCk_Utils_Inventory_UE;
+
+    private:
+        // Gathered once at kickoff (committed read); never resized after — _Cursor advances instead,
+        // so _Pending.IsEmpty() at finish == "empty at kickoff".
+        TArray<FCk_Handle_Item>      _Pending;
+        int32                        _Cursor = 0;
+        FCk_BestTransferTargetParams _TargetResolution;
+
+        int32 _StepsPerPass     = 1;
+        int32 _MaxStepsPerFrame = 1;
+
+        int32 _UnitsMoved      = 0;
+        int32 _ItemsFullyMoved = 0;
+        int32 _ItemsFailed     = 0;
+        // Distinguishes Failed_NoCandidateAccepts (nothing placed) from Success_Partial.
+        bool  _AnyUnitMoved    = false;
+
+    public:
+        CK_PROPERTY_GET(_StepsPerPass);
+        CK_PROPERTY_GET(_MaxStepsPerFrame);
+        CK_PROPERTY_GET(_UnitsMoved);
+        CK_PROPERTY_GET(_ItemsFullyMoved);
+        CK_PROPERTY_GET(_ItemsFailed);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKINVENTORY_API,
+        Inventory_MassTransfer_OnComplete,
+        FCk_Delegate_Inventory_MassTransfer_OnComplete,
+        FCk_Handle,
+        ECk_Inventory_MassTransfer_Result,
+        int32,
+        int32,
+        int32);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
