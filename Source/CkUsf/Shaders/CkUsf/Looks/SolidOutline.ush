@@ -1,0 +1,116 @@
+// /CkUsf/Looks/SolidOutline.ush
+// PostProcess SELECTIVE outline: draws a solid-color silhouette around objects that wrote a value into
+// the Custom Stencil buffer. Per-preset appearance is fetched from a small RGBA16f params LUT (one column
+// per active preset / stencil slot), owned and written by UCkUsf_OutlineSubsystem and bound as OutlineParams:
+//   LUT is CKUSF_OUTLINE_LUT_W (=16, max active presets) wide x CKUSF_OUTLINE_LUT_H (=2) tall.
+//     row 0: rgb = OutlineColor * OutlineBrightness, a = OutlineType (0=Normal, 1=SeeThrough, 2=MaskedSeeThrough)
+//     row 1: rgb = FillColor,                        a = FillOpacity (0 => no fill)
+// Stencil slot = round(CustomStencil) - StencilMin, in [0, 15]. Sampled at exact texel centers so filtering
+// is irrelevant. Managed scene-texture inputs (SceneColor/SceneDepth/CustomDepth/CustomStencil) provide the
+// center samples AND declare scene-texture usage, which legalizes raw SceneTextureLookup() below.
+#pragma once
+#include "/CkUsf/Common.ush"
+
+#define CKUSF_OUTLINE_LUT_W 16.0
+#define CKUSF_OUTLINE_LUT_H 2.0
+
+FCkUsf_SurfaceOutput CkUsf_PP_SolidOutline(
+    FCkUsf_SurfaceInput In,
+    Texture2D OutlineParams, SamplerState OutlineParamsSampler,
+    float GlobalThickness, float StencilMin, float StencilMax)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+    float3 Scene = In.SceneColor.rgb;
+    float2 uv = In.UV;
+
+    float sC = round(In.CustomStencil.r);
+    bool centerMarked = (sC >= StencilMin && sC <= StencilMax);
+
+    // Outline band radius in scene-texture (buffer) UV space.
+    float2 texel = View.BufferSizeAndInvSize.zw;
+    float thickness = max(GlobalThickness, 1.0);
+
+    // Ring scan (8 directions at the thickness radius). A pixel within `thickness` of a silhouette has at
+    // least one toward-object tap that lands on the marked region, so this fills a band of ~thickness width
+    // OUTSIDE the object. We capture the neighbour's stencil + depths for occlusion of the outline pixels.
+    const float2 dirs[8] =
+    {
+        float2( 1.0,  0.0), float2(-1.0,  0.0), float2( 0.0,  1.0), float2( 0.0, -1.0),
+        float2( 0.70711,  0.70711), float2(-0.70711,  0.70711),
+        float2( 0.70711, -0.70711), float2(-0.70711, -0.70711)
+    };
+
+    bool  foundMarkedNeighbor = false;
+    float ringStencil      = 0.0;
+    float ringObjDepth     = 0.0;   // CustomDepth at the marked neighbour
+    float ringSceneDepth   = 0.0;   // SceneDepth  at the marked neighbour
+
+    [unroll]
+    for (int i = 0; i < 8; ++i)
+    {
+        float2 nuv = uv + dirs[i] * texel * thickness;
+        float sN = round(SceneTextureLookup(nuv, PPI_CustomStencil, false).r);
+        if (sN >= StencilMin && sN <= StencilMax)
+        {
+            foundMarkedNeighbor = true;
+            ringStencil    = sN;
+            ringObjDepth   = SceneTextureLookup(nuv, PPI_CustomDepth, false).r;
+            ringSceneDepth = SceneTextureLookup(nuv, PPI_SceneDepth,  false).r;
+        }
+    }
+
+    // Outline pixels (outside the object) use the neighbour's preset; fill pixels (inside) use the center's.
+    float slotStencil = centerMarked ? sC : ringStencil;
+    if ((centerMarked || foundMarkedNeighbor) == false ||
+        slotStencil < StencilMin || slotStencil > StencilMax)
+    {
+        O.EmissiveColor = Scene;
+        O.Opacity = 1.0;
+        return O;
+    }
+
+    // ---- Fetch the preset params from the LUT column for this stencil slot (exact texel centers) ----
+    float slot = slotStencil - StencilMin;
+    float u = (slot + 0.5) / CKUSF_OUTLINE_LUT_W;
+    float4 P0 = Texture2DSampleLevel(OutlineParams, OutlineParamsSampler, float2(u, 0.5 / CKUSF_OUTLINE_LUT_H), 0.0);
+    float4 P1 = Texture2DSampleLevel(OutlineParams, OutlineParamsSampler, float2(u, 1.5 / CKUSF_OUTLINE_LUT_H), 0.0);
+
+    float3 outlineColor = P0.rgb;
+    float  outlineType  = round(P0.a);   // 0 Normal, 1 SeeThrough, 2 MaskedSeeThrough
+    float3 fillColor    = P1.rgb;
+    float  fillOpacity  = P1.a;
+    bool   seeThrough   = (outlineType > 0.5);
+
+    float3 outColor = Scene;
+
+    // ---- Fill (inside the silhouette). Normal hides where the object is occluded (scene closer than the
+    //      object's own custom depth); see-through / masked ignore occlusion. ----
+    if (centerMarked && fillOpacity > 0.0)
+    {
+        bool visibleHere = seeThrough || (In.CustomDepth.r <= In.SceneDepth.r + 1.0);
+        if (visibleHere)
+        {
+            float op = fillOpacity;
+            // MaskedSeeThrough: stipple the fill into a screen-space checker so it reads as "masked".
+            if (outlineType > 1.5)
+            {
+                float2 px = uv * View.ViewSizeAndInvSize.xy;
+                float checker = fmod(floor(px.x / 4.0) + floor(px.y / 4.0), 2.0);
+                op *= checker;
+            }
+            outColor = lerp(outColor, fillColor, saturate(op));
+        }
+    }
+
+    // ---- Outline ring (outside the object). Normal hides the ring where the neighbour object is occluded. ----
+    if (centerMarked == false && foundMarkedNeighbor)
+    {
+        bool visible = seeThrough || (ringObjDepth <= ringSceneDepth + 1.0);
+        if (visible)
+        { outColor = outlineColor; }
+    }
+
+    O.EmissiveColor = outColor;
+    O.Opacity = 1.0;
+    return O;
+}
