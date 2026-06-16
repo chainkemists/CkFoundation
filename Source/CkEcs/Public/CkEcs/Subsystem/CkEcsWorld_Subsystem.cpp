@@ -99,6 +99,16 @@ auto
     //    takes FCk_Registry&; Phase 3 will swap this for the slot+gen ctor).
     _TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(_Registry);
     UCk_Utils_Handle_UE::Set_DebugName(_TransientEntity, TEXT("Transient Entity"));
+
+    // 6. Bind the world to the transient up front so the "transient always has a valid world"
+    //    invariant (asserted by Get_WorldForEntity) holds from creation, not only from
+    //    OnWorldBeginPlay. Actor construction at PIE start (e.g. the default pawn's
+    //    ConstructionScript) can call Request_SpawnEntity in the Initialize→OnWorldBeginPlay
+    //    window; without this the transient is world-less there and the spawn guard ensures.
+    if (auto* World = GetWorld(); ck::IsValid(World))
+    {
+        _TransientEntity.Add<TWeakObjectPtr<UWorld>>(World);
+    }
 }
 
 auto
@@ -178,9 +188,13 @@ auto
 {
     Super::OnWorldBeginPlay(InWorld);
 
-    // Bind the world to the transient entity once — DoBuildGraphAndSpawnActors reads it back, but
-    // must not re-add it on subsequent rebuilds (EnTT emplace asserts if already present).
-    _TransientEntity.Add<TWeakObjectPtr<UWorld>>(&InWorld);
+    // The world is normally bound in Initialize; backfill only if that ran before GetWorld() was
+    // valid. Guarded because EnTT emplace asserts on double-add (also covers OnWorldBeginPlay
+    // re-entry on seamless travel). DoBuildGraphAndSpawnActors reads the fragment back.
+    if (NOT _TransientEntity.Has<TWeakObjectPtr<UWorld>>())
+    {
+        _TransientEntity.Add<TWeakObjectPtr<UWorld>>(&InWorld);
+    }
 
     DoBuildGraphAndSpawnActors(InWorld);
 }
