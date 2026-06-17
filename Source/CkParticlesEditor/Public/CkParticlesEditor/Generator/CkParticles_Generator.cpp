@@ -71,16 +71,23 @@ namespace ck::particles_editor
         System->SetFlags(RF_Public | RF_Standalone);
 
         // ---- Patch the BehaviorId user parameter on the duplicated system ----
+        // Exposed/User parameters are addressed with the "User." prefix in the parameter store, and
+        // SetParameterValue matches by exact name. Accept either the bare ("BehaviorId") or fully-qualified
+        // ("User.BehaviorId") form on the ScriptDefinition by normalising to the prefixed name here.
         auto& ExposedParams = System->GetExposedParameters();
-        const FNiagaraVariable BehaviorVar(FNiagaraTypeDefinition::GetIntDef(), InDef->_BehaviorIdParameterName);
+        auto BehaviorParamName = InDef->_BehaviorIdParameterName.ToString();
+        if (NOT BehaviorParamName.StartsWith(TEXT("User.")))
+        { BehaviorParamName = FString(TEXT("User.")) + BehaviorParamName; }
+
+        const FNiagaraVariable BehaviorVar(FNiagaraTypeDefinition::GetIntDef(), FName(*BehaviorParamName));
         constexpr auto DontAddIfMissing = false;
         const auto bSet = ExposedParams.SetParameterValue<int32>(InDef->_BehaviorId, BehaviorVar, DontAddIfMissing);
         if (NOT bSet)
         {
             ck::particles_editor::Warning(
                 TEXT("Template for [{}] has no int User parameter named [{}] — BehaviorId {} NOT applied. "
-                     "Add a 'User.{}' int parameter to the template system."),
-                ScriptName, InDef->_BehaviorIdParameterName, InDef->_BehaviorId, InDef->_BehaviorIdParameterName);
+                     "Add that int User parameter to the template system."),
+                ScriptName, BehaviorParamName, InDef->_BehaviorId);
         }
 
         // ---- Recompile (incl. GPU shaders) so the patched system is ready, then save ----

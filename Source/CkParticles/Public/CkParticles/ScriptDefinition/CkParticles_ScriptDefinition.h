@@ -31,9 +31,10 @@ public:
     TSoftObjectPtr<UNiagaraSystem> _TemplateSystem;
 
     // Name of the int User parameter on the template that carries BehaviorId. The generator sets its default
-    // on the duplicated system so the same template can drive every behavior.
+    // on the duplicated system so the same template can drive every behavior. Fully-qualified ("User.BehaviorId");
+    // a bare name ("BehaviorId") is also accepted and auto-prefixed by the generator.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkParticles")
-    FName _BehaviorIdParameterName = TEXT("BehaviorId");
+    FName _BehaviorIdParameterName = TEXT("User.BehaviorId");
 
     UFUNCTION(BlueprintCallable, Category = "CkParticles",
               DisplayName = "[Ck][Particles] Get Effective Script Name")
