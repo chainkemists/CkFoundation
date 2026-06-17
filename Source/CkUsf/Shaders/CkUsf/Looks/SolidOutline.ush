@@ -6,8 +6,14 @@
 //     row 0: rgb = OutlineColor * OutlineBrightness, a = OutlineType (0=Normal, 1=SeeThrough, 2=MaskedSeeThrough)
 //     row 1: rgb = FillColor,                        a = FillOpacity (0 => no fill)
 // Stencil slot = round(CustomStencil) - StencilMin, in [0, 15]. Sampled at exact texel centers so filtering
-// is irrelevant. Managed scene-texture inputs (SceneColor/SceneDepth/CustomDepth/CustomStencil) provide the
-// center samples AND declare scene-texture usage, which legalizes raw SceneTextureLookup() below.
+// is irrelevant. Declaring the SceneColor/SceneDepth/CustomDepth/CustomStencil inputs legalizes raw
+// SceneTextureLookup() below.
+//
+// IMPORTANT (viewport vs buffer UV): the look's In.UV is the VIEWPORT UV (0..1 across the view), but
+// SceneTextureLookup() expects the scene-texture BUFFER UV. When the view rect does not fill the whole scene
+// buffer (editor/PIE window resize, screen percentage, dynamic resolution) those differ, and sampling at raw
+// ViewportUV makes the whole outline drift off its object. We convert ViewportUV -> BufferUV once and sample
+// everything (center + neighbours, stencil + depth) in buffer space so the mask always aligns with the object.
 #pragma once
 #include "/CkUsf/Common.ush"
 
@@ -21,9 +27,11 @@ FCkUsf_SurfaceOutput CkUsf_PP_SolidOutline(
 {
     FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
     float3 Scene = In.SceneColor.rgb;
-    float2 uv = In.UV;
 
-    float sC = round(In.CustomStencil.r);
+    // ViewportUV (In.UV) -> scene-texture BUFFER UV. Accounts for the view rect not filling the buffer.
+    float2 bufferUV = (In.UV * View.ViewSizeAndInvSize.xy + View.ViewRectMin.xy) * View.BufferSizeAndInvSize.zw;
+
+    float sC = round(SceneTextureLookup(bufferUV, PPI_CustomStencil, false).r);
     bool centerMarked = (sC >= StencilMin && sC <= StencilMax);
 
     // Outline band radius in scene-texture (buffer) UV space.
@@ -48,7 +56,7 @@ FCkUsf_SurfaceOutput CkUsf_PP_SolidOutline(
     [unroll]
     for (int i = 0; i < 8; ++i)
     {
-        float2 nuv = uv + dirs[i] * texel * thickness;
+        float2 nuv = bufferUV + dirs[i] * texel * thickness;
         float sN = round(SceneTextureLookup(nuv, PPI_CustomStencil, false).r);
         if (sN >= StencilMin && sN <= StencilMax)
         {
@@ -87,14 +95,16 @@ FCkUsf_SurfaceOutput CkUsf_PP_SolidOutline(
     //      object's own custom depth); see-through / masked ignore occlusion. ----
     if (centerMarked && fillOpacity > 0.0)
     {
-        bool visibleHere = seeThrough || (In.CustomDepth.r <= In.SceneDepth.r + 1.0);
+        float centerObjDepth   = SceneTextureLookup(bufferUV, PPI_CustomDepth, false).r;
+        float centerSceneDepth = SceneTextureLookup(bufferUV, PPI_SceneDepth,  false).r;
+        bool  visibleHere = seeThrough || (centerObjDepth <= centerSceneDepth + 1.0);
         if (visibleHere)
         {
             float op = fillOpacity;
             // MaskedSeeThrough: stipple the fill into a screen-space checker so it reads as "masked".
             if (outlineType > 1.5)
             {
-                float2 px = uv * View.ViewSizeAndInvSize.xy;
+                float2 px = In.UV * View.ViewSizeAndInvSize.xy;
                 float checker = fmod(floor(px.x / 4.0) + floor(px.y / 4.0), 2.0);
                 op *= checker;
             }
