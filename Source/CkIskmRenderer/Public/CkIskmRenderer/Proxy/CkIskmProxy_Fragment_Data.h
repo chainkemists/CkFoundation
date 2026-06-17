@@ -254,6 +254,27 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_IskmProxy_SetPlayRate, _Rate);
 };
 
+// Deferred via the request queue so visibility flips in the same handle-requests pass as
+// animation/pose updates (avoids mid-frame flicker). Hides the base SKMC and all attached
+// submesh SKMCs. Pool-hygiene note: a released SKMC keeps its last visibility; the V1 caller
+// (named NPCs that never release their proxy) is unaffected — add a Setup reset if a future
+// caller hides a proxy then returns its SKMC to the pool.
+USTRUCT(BlueprintType)
+struct CKISKMRENDERER_API FCk_Request_IskmProxy_SetVisibility : public FCk_Request_Base
+{
+    GENERATED_BODY()
+public:
+    CK_GENERATED_BODY(FCk_Request_IskmProxy_SetVisibility);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IskmProxy_SetVisibility);
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    bool _IsVisible = true;
+public:
+    CK_PROPERTY_GET(_IsVisible);
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_IskmProxy_SetVisibility, _IsVisible);
+};
+
 // Per-instance custom data slot write. Bounded by AnimCollection's _NumCustomDataFloat
 // (validated in the handler against InCustomData._Values.IsValidIndex). The handler
 // also fans the write out to attached submesh SKMCs so material parameters stay in
