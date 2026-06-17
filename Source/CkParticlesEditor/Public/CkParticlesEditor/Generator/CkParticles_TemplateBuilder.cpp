@@ -12,6 +12,7 @@
 #include "NiagaraSystemFactoryNew.h"
 #include "NiagaraEmitterFactoryNew.h"
 #include "NiagaraTypes.h"
+#include "NiagaraEditorUtilities.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Misc/PackageName.h"
@@ -58,14 +59,20 @@ namespace ck::particles_editor
         auto* System = NewObject<UNiagaraSystem>(Package, AssetName, RF_Public | RF_Standalone);
         UNiagaraSystemFactoryNew::InitializeSystem(System, /*bCreateDefaultNodes*/ true);
 
-        auto* Emitter = NewObject<UNiagaraEmitter>(GetTransientPackage(), NAME_None, RF_Transactional);
+        auto* Emitter = NewObject<UNiagaraEmitter>(GetTransientPackage(), TEXT("CkParticles"), RF_Transactional);
         UNiagaraEmitterFactoryNew::InitializeEmitter(Emitter, /*bAddDefaultModulesAndRenderers*/ true);
         if (auto* EmitterData = Emitter->GetLatestEmitterData())
         {
             EmitterData->SimTarget = ENiagaraSimTarget::GPUComputeSim;
         }
 
-        System->AddEmitterHandle(*Emitter, TEXT("CkParticles"), FGuid());
+        // Use the editor utility (exported) instead of the raw runtime UNiagaraSystem::AddEmitterHandle. The raw
+        // call only appends to the EmitterHandles array; it does NOT build the system-script emitter nodes
+        // (RebuildEmitterNodes -> simulation) or create the System Overview node
+        // (SynchronizeOverviewGraphWithSystem -> visible emitter track). AddEmitterToSystem does all three, so the
+        // emitter is both wired and visible. It copies the emitter into the System (bCreateCopy) and derives the
+        // track name from the emitter's FName ("CkParticles").
+        FNiagaraEditorUtilities::AddEmitterToSystem(*System, *Emitter, FGuid(), /*bCreateCopy*/ true);
 
         // ---- User parameters: BehaviorId int (generator patches it) + the DI as ParticleScript ----
         auto& Exposed = System->GetExposedParameters();
