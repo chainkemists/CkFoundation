@@ -60,14 +60,19 @@ namespace NDICkParticlesLocal
 
         switch (InBehaviorId)
         {
-            case 1: // Swirl — rotate the XY velocity around +Z, integrate, tint blue->magenta over life.
+            case 1: // Swirl — self-driving Age-based vortex helix (mirrors Behavior_Swirl.ush). Tint blue->magenta.
             {
-                constexpr float AngularSpeed = 2.0f;
-                const float Angle = AngularSpeed * InDeltaTime;
+                constexpr float AngularSpeed = 3.0f;   // radians / second
+                constexpr float RadialSpeed  = 120.0f; // units / second outward
+                constexpr float RiseSpeed    = 80.0f;  // units / second upward
+                const float Angle  = AngularSpeed * InAge;
+                const float Radius = RadialSpeed * InAge;
                 const float S = FMath::Sin(Angle);
                 const float C = FMath::Cos(Angle);
-                Out.Velocity = FVector3f(C * InVelocity.X - S * InVelocity.Y, S * InVelocity.X + C * InVelocity.Y, InVelocity.Z);
-                Out.Position = InPosition + Out.Velocity * InDeltaTime;
+                Out.Position = FVector3f(Radius * C, Radius * S, RiseSpeed * InAge);
+                Out.Velocity = FVector3f(RadialSpeed * C - Radius * AngularSpeed * S,
+                                         RadialSpeed * S + Radius * AngularSpeed * C,
+                                         RiseSpeed);
                 Out.Color    = FMath::Lerp(FLinearColor(0.1f, 0.4f, 1.0f, 1.0f), FLinearColor(1.0f, 0.2f, 0.6f, 1.0f), NormalizedAge);
                 break;
             }
