@@ -498,6 +498,35 @@ namespace ck
             FFragment_IskmProxy_Current& InCurrent,
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
+            FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FCk_Request_IskmProxy_SetVisibility& InRequest) const -> void
+    {
+        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
+            TEXT("IskmProxy [{}]: BaseSKMC missing in SetVisibility handler"),
+            InHandle)
+        { return; }
+
+        const auto IsVisible = InRequest.Get_IsVisible();
+        SKMC->SetVisibility(IsVisible);
+
+        for (const auto& WeakChild : InCurrent.Get_SubmeshSKMCs())
+        {
+            if (auto* Child = WeakChild.Get(); ck::IsValid(Child))
+            {
+                Child->SetVisibility(IsVisible);
+            }
+        }
+    }
+
+    auto
+        FProcessor_IskmProxy_HandleRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_IskmProxy_Params& /*InParams*/,
+            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy_AnimState& /*InAnimState*/,
+            FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& InCustomData,
             const FCk_Request_IskmProxy_SetCustomDataFloat& InRequest) const -> void
     {
