@@ -236,12 +236,28 @@ private:
                 EditCondition = "_Replication == ECk_Replication::Replicates"))
     ECk_Sm_ReplicationModel _ReplicationModel = ECk_Sm_ReplicationModel::WithHistory;
 
+    // Construct-time, SYMMETRIC override registration. Registered into
+    // FFragment_Sm_StateOverrides by FProcessor_Sm_Setup on EVERY machine (not just
+    // the authority), so a Replicates SM resolves and fingerprints states identically
+    // server-side and client-side. This is the replication-safe alternative to the
+    // authority-only runtime Request_AddOverrideState, which a non-authority client
+    // can't enqueue (single-authority rule) and which never lands on the wire.
+    //
+    // Deliberately NOT SaveGame: FFragment_Sm_StateOverrides owns its own snapshot
+    // restore (its SerializeSnapshot), so persisting here too would double-register on
+    // the restore-redrive's re-run of Setup. Construct-time population is unaffected
+    // (the field is set in-memory by Add, not via serialization).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    TArray<TSubclassOf<UCk_SmState_EntityScript>> _OverrideStates;
+
 public:
     CK_PROPERTY_GET(_InitialStateClass);
     CK_PROPERTY(_AutoStart);
     CK_PROPERTY(_Replication);
     CK_PROPERTY(_AuthorityModel);
     CK_PROPERTY(_ReplicationModel);
+    CK_PROPERTY(_OverrideStates);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_StateMachine_ParamsData, _InitialStateClass);

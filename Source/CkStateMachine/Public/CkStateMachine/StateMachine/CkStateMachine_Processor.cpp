@@ -79,6 +79,32 @@ namespace ck
             }
         }
 
+        // Symmetric override registration (replication-safe path). Mirrors the runtime
+        // DoHandleRequest(FCk_Request_Sm_AddOverrideState) handler below but WITHOUT the
+        // single-authority gate — that omission is the whole point: every machine (server +
+        // clients) must build the same override table so a Replicates SM resolves and
+        // fingerprints states identically. Setup RunBefore HandleRequests, so the table is in
+        // place before the first Get_ResolvedStateClass (the Start handler's DoEnterState).
+        // _OverrideStates is non-SaveGame, so a restore-redrive re-run of Setup sees it empty and
+        // leaves the snapshot-restored FFragment_Sm_StateOverrides untouched. Empty params (the
+        // default / opt-out path) skip the block entirely — non-opted-in SMs are byte-identical.
+        for (const auto& OverrideClass : InParams.Get_OverrideStates())
+        {
+            if (ck::Is_NOT_Valid(OverrideClass))
+            { continue; }
+
+            const auto* CDO = OverrideClass->GetDefaultObject<UCk_SmState_EntityScript>();
+            const auto StatesToOverride = CDO->Get_StatesToOverride();
+
+            CK_ENSURE_IF_NOT(StatesToOverride.Num() > 0,
+                TEXT("SM [{}] params _OverrideStates class [{}] returns empty Get_StatesToOverride()"),
+                InHandle, *OverrideClass->GetName())
+            { continue; }
+
+            auto& Overrides = InHandle.AddOrGet<FFragment_Sm_StateOverrides>();
+            Overrides._Overrides.Add(FFragment_Sm_StateOverrides::FEntry{OverrideClass, StatesToOverride});
+        }
+
         if (InParams.Get_AutoStart() == ECk_SmAutoStart::OnSetup)
         {
             auto& Requests = InHandle.AddOrGet<FFragment_Sm_Requests>();
@@ -626,8 +652,18 @@ namespace ck
                 // and clients can verify on commit. On the very first instantiation of a class
                 // anywhere in this process, the lookup returns 0; the Construct backfill path
                 // (DoBackfillFingerprintToRepData) cleans up that single zero asynchronously.
+                //
+                // RESOLVE the override before the cache lookup: TargetStateClass is the REQUESTED
+                // (base) class, but DoEnterState spawns the override-RESOLVED class, whose Construct
+                // caches the fingerprint under the override's name. Publishing the base's hash for an
+                // overridden state ships the wrong expectation — the receiving client computes the
+                // override's hash locally and determinism-faults on the mismatch. Resolving here makes
+                // the published fingerprint describe the state actually entered. (Non-overridden states:
+                // Get_ResolvedStateClass returns the input unchanged, so this is a no-op for them.)
+                const auto ResolvedTargetStateClass =
+                    UCk_Utils_SmState_UE::Get_ResolvedStateClass(InHandle, TargetStateClass);
                 auto NewStateFingerprint =
-                    UCk_SmState_EntityScript::Get_CachedFingerprint(TargetStateClass);
+                    UCk_SmState_EntityScript::Get_CachedFingerprint(ResolvedTargetStateClass);
 
 #if WITH_DEV_AUTOMATION_TESTS
                 // Test-only fake-fingerprint injection (spec §13 tests 8 + 9). When armed via

@@ -236,6 +236,7 @@ namespace ck
     public:
         CK_GENERATED_BODY(FFragment_Sm_StateOverrides);
 
+        friend class FProcessor_Sm_Setup;
         friend class FProcessor_Sm_HandleRequests;
         friend class ::UCk_Utils_StateMachine_UE;
         friend class ::UCk_Utils_SmState_UE;
