@@ -97,6 +97,16 @@
       ]
     },
     {
+      "Name": "CkSubsystemBrowser",
+      "Type": "UncookedOnly",
+      "LoadingPhase": "Default",
+      "WhitelistPlatforms": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
+    },
+    {
       "Name": "CkAnimation",
       "Type": "Runtime",
       "LoadingPhase": "Default",
