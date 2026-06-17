@@ -1,5 +1,7 @@
 // /CkParticles/Behaviors/Behavior_Swirl.ush — BehaviorId 1.
-// Rotate the XY velocity around +Z, integrate, tint blue -> magenta over life.
+// Self-driving vortex: each particle orbits +Z on an outward-spiralling, rising helix parameterised by its Age.
+// Unlike a velocity-rotation, this needs no initial XY velocity, so it swirls from any spawn (even an on-axis
+// column). Tint blue -> magenta over life. Knobs: AngularSpeed / RadialSpeed / RiseSpeed (keep CPU mirror in sync).
 #pragma once
 #include "/CkParticles/Common.ush"
 
@@ -7,16 +9,24 @@ FCkParticles_StageOutput CkParticles_Behavior_Swirl(FCkParticles_StageInput In)
 {
     FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
 
-    const float AngularSpeed = 2.0;
-    const float Angle = AngularSpeed * In.DeltaTime;
+    const float AngularSpeed = 3.0;   // radians / second  (~2.4 turns over a 5s life)
+    const float RadialSpeed  = 120.0; // units / second outward
+    const float RiseSpeed    = 80.0;  // units / second upward
+
+    const float Angle  = AngularSpeed * In.Age;
+    const float Radius = RadialSpeed * In.Age;
     const float S = sin(Angle);
     const float C = cos(Angle);
 
-    O.Velocity = float3(C * In.Velocity.x - S * In.Velocity.y,
-                        S * In.Velocity.x + C * In.Velocity.y,
-                        In.Velocity.z);
-    O.Position = In.Position + O.Velocity * In.DeltaTime;
-    O.Color    = lerp(float4(0.1, 0.4, 1.0, 1.0), float4(1.0, 0.2, 0.6, 1.0), CkParticles_NormalizedAge(In));
+    // Position on the helix (sim space, centred on the emitter origin).
+    O.Position = float3(Radius * C, Radius * S, RiseSpeed * In.Age);
+
+    // Velocity = d(Position)/d(Age) so it stays analytically consistent with the orbit.
+    O.Velocity = float3(RadialSpeed * C - Radius * AngularSpeed * S,
+                        RadialSpeed * S + Radius * AngularSpeed * C,
+                        RiseSpeed);
+
+    O.Color = lerp(float4(0.1, 0.4, 1.0, 1.0), float4(1.0, 0.2, 0.6, 1.0), CkParticles_NormalizedAge(In));
 
     return O;
 }
