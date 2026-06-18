@@ -3,10 +3,12 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkGraphics/CkGraphics_Common.h"
 
+#include <Engine/Texture.h>
 #include <Engine/World.h>
 #include <EngineUtils.h>
 #include <Materials/Material.h>
 #include <Materials/MaterialInterface.h>
+#include <Materials/MaterialInstanceDynamic.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -111,6 +113,45 @@ auto
     }
 
     return Result;
+}
+
+auto
+    UCk_Utils_Graphics_UE::
+    Apply_MaterialParameter(
+        UMaterialInstanceDynamic*     InDynamicMaterial,
+        const FCk_Material_Parameter& InParameter)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InDynamicMaterial),
+        TEXT("Invalid Dynamic Material supplied to Apply_MaterialParameter for parameter [{}]"), InParameter.Get_ParameterName())
+    { return; }
+
+    switch (InParameter.Get_Type())
+    {
+        case ECk_Material_ParameterType::Scalar:
+        {
+            InDynamicMaterial->SetScalarParameterValue(InParameter.Get_ParameterName(), InParameter.Get_ScalarValue());
+            break;
+        }
+        case ECk_Material_ParameterType::Color:
+        {
+            InDynamicMaterial->SetVectorParameterValue(InParameter.Get_ParameterName(), InParameter.Get_ColorValue());
+            break;
+        }
+        case ECk_Material_ParameterType::Texture:
+        {
+            if (ck::IsValid(InParameter.Get_TextureValue()))
+            {
+                InDynamicMaterial->SetTextureParameterValue(InParameter.Get_ParameterName(), InParameter.Get_TextureValue());
+            }
+            break;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InParameter.Get_Type());
+            break;
+        }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
