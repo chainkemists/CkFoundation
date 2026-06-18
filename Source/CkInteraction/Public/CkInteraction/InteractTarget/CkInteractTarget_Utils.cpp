@@ -1,9 +1,46 @@
 #include "CkInteractTarget_Utils.h"
 
 #include "CkInteraction/InteractTarget/CkInteractTarget_Fragment.h"
+#include "CkInteraction/InteractTarget/CkInteractTarget_ConstructionScript.h"
 #include "CkInteraction/CkInteraction_Log.h"
 #include "CkInteraction/InteractSource/CkInteractSource_Utils.h"
 #include "CkInteraction/Interaction/CkInteraction_Utils.h"
+
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment_Data.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_interact_target
+{
+    // Walk the lifetime chain from InStart (inclusive) to the nearest entity that owns a replication
+    // driver — the only valid owner for Request_BuildAndReplicate. The InteractTarget owner handed to
+    // Add (e.g. an Interactable probe-node) usually has none; its replicated ancestor (the entity-script
+    // root) does. Guards against a malformed/cyclic chain (Get_LifetimeOwner returns self at the root).
+    static auto
+        DoFind_DriverBearingOwner(
+            const FCk_Handle& InStart)
+        -> FCk_Handle
+    {
+        auto Current = InStart;
+        auto Guard = 0;
+
+        while (ck::IsValid(Current) && Guard++ < 64)
+        {
+            if (UCk_Utils_EntityReplicationDriver_UE::Has(Current))
+            { return Current; }
+
+            const auto Owner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Current);
+            if (Owner == Current)
+            { break; }
+
+            Current = Owner;
+        }
+
+        return {};
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -13,9 +50,47 @@ auto
         FCk_Handle& InInteractTargetOwner,
         const FCk_Fragment_InteractTarget_ParamsData& InParams,
         ECk_Replication InReplicates,
+        TSubclassOf<UCk_InteractTarget_ConstructionScript> InReplicatedConstructionScript,
         const UObject* InWorldContextObject)
     -> FCk_Handle_InteractTarget
 {
+    // Replicated path: a supplied construction-script class is the REAL opt-in (not the InReplicates
+    // enum, whose default is Replicates and is relied on by every plain caller). When set, net-link the
+    // InteractTarget via Request_BuildAndReplicate so its construction-script-folded SM replicates. The
+    // class — net-stable — is the recipe the client re-runs to rebuild IT+SM; a runtime archetype would
+    // null out on the client. Build under the nearest driver-bearing ancestor; the host returns a valid
+    // InteractTarget, the client returns invalid (build is host-only) and receives the replicated copy.
+    if (InReplicates == ECk_Replication::Replicates && ck::IsValid(InReplicatedConstructionScript))
+    {
+        // Host-only build. On a client this Add runs again during the entity-script reconstruction, but
+        // the replicated InteractTarget arrives via replication — building a local duplicate here would
+        // shadow it. Return invalid so the caller skips local wiring and waits for the replicated copy.
+        if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InInteractTargetOwner))
+        { return {}; }
+
+        if (auto DriverOwner = ck_interact_target::DoFind_DriverBearingOwner(InInteractTargetOwner);
+            ck::IsValid(DriverOwner))
+        {
+            const auto CtorInfo = FCk_EntityReplicationDriver_ConstructionInfo{InReplicatedConstructionScript};
+            auto NewReplicatedTarget = UCk_Utils_EntityReplicationDriver_UE::Request_BuildAndReplicate(DriverOwner, CtorInfo);
+
+            if (ck::Is_NOT_Valid(NewReplicatedTarget))
+            { return {}; }
+
+            auto NewReplicatedTargetTyped = Cast(NewReplicatedTarget);
+
+            // Connect into the owner's Record (lifetime-independent) so Get_AllInteractTargets finds it —
+            // the target was built under DriverOwner, not necessarily under InInteractTargetOwner.
+            RecordOfInteractTargets_Utils::AddIfMissing(InInteractTargetOwner, ECk_Record_EntryHandlingPolicy::Default);
+            RecordOfInteractTargets_Utils::Request_Connect(InInteractTargetOwner, NewReplicatedTargetTyped);
+
+            return NewReplicatedTargetTyped;
+        }
+
+        ck::interaction::Warning(TEXT("InteractTarget replication requested for owner [{}] but no driver-bearing "
+            "entity exists in its lifetime chain — falling back to a non-replicated InteractTarget."), InInteractTargetOwner);
+    }
+
     auto NewInteractTargetEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_InteractTarget>(InInteractTargetOwner);
 
     auto FixedParams = InParams;
@@ -55,7 +130,7 @@ auto
     return ck::algo::Transform<TArray<FCk_Handle_InteractTarget>>(
         InParams.Get_InteractTargetParams(), [&](const FCk_Fragment_InteractTarget_ParamsData& InParam)
     {
-        return Add(InInteractTargetOwner, InParam, InReplicates, InWorldContextObject);
+        return Add(InInteractTargetOwner, InParam, InReplicates, nullptr, InWorldContextObject);
     });
 }
 

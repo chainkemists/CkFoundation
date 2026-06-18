@@ -14,6 +14,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class UCk_InteractTarget_ConstructionScript;
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_InteractTarget"))
 class CKINTERACTION_API UCk_Utils_InteractTarget_UE :  public UBlueprintFunctionLibrary
 {
@@ -36,6 +40,7 @@ public:
         UPARAM(ref) FCk_Handle& InInteractTargetOwner,
         const FCk_Fragment_InteractTarget_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates,
+        TSubclassOf<UCk_InteractTarget_ConstructionScript> InReplicatedConstructionScript = nullptr,
         const UObject* InWorldContextObject = nullptr);
 
     UFUNCTION(BlueprintCallable,
