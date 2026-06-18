@@ -128,3 +128,35 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+FCk_Material_Parameter::
+    FCk_Material_Parameter(
+        FName InParameterName,
+        float InValue)
+    : _ParameterName(InParameterName)
+    , _Type(ECk_Material_ParameterType::Scalar)
+    , _ScalarValue(InValue)
+{
+}
+
+FCk_Material_Parameter::
+    FCk_Material_Parameter(
+        FName InParameterName,
+        FLinearColor InValue)
+    : _ParameterName(InParameterName)
+    , _Type(ECk_Material_ParameterType::Color)
+    , _ColorValue(InValue)
+{
+}
+
+FCk_Material_Parameter::
+    FCk_Material_Parameter(
+        FName InParameterName,
+        UTexture* InValue)
+    : _ParameterName(InParameterName)
+    , _Type(ECk_Material_ParameterType::Texture)
+    , _TextureValue(InValue)
+{
+}
+
+// --------------------------------------------------------------------------------------------------------------------
