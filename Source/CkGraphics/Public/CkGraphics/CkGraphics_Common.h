@@ -8,6 +8,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class UTexture;
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKGRAPHICS_API FCk_MeshMaterialOverride
 {
@@ -137,6 +141,83 @@ public:
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_CustomPrimitiveData, _CustomDataIndex , _Value);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Material_ParameterType : uint8
+{
+    Scalar,
+    Color,
+    Texture
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Material_ParameterType);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
+ * A single Material parameter paired with the value to drive it. Tagged-union shape (mirrors
+ * FCk_CustomPrimitiveData_Value), restricted to the parameter kinds a UMaterialInstanceDynamic can set at
+ * runtime: Scalar (float), Color (FLinearColor) and Texture. _Override gates whether a consumer should
+ * apply this value or leave the material's own default in place (non-destructive); the apply helper
+ * UCk_Utils_Graphics_UE::Apply_MaterialParameter does not consult it — the caller decides. _Type is
+ * normally assigned by discovery from the source material, not hand-picked.
+ */
+USTRUCT(BlueprintType)
+struct CKGRAPHICS_API FCk_Material_Parameter
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Material_Parameter);
+
+public:
+    FCk_Material_Parameter() = default;
+    FCk_Material_Parameter(FName InParameterName, float InValue);
+    FCk_Material_Parameter(FName InParameterName, FLinearColor InValue);
+    FCk_Material_Parameter(FName InParameterName, UTexture* InValue);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Material Parameter",
+              meta = (AllowPrivateAccess = true))
+    FName _ParameterName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Material Parameter",
+              meta = (AllowPrivateAccess = true))
+    ECk_Material_ParameterType _Type = ECk_Material_ParameterType::Scalar;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Material Parameter",
+              meta = (AllowPrivateAccess = true))
+    bool _Override = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Material Parameter",
+              meta = (AllowPrivateAccess = true,
+                      EditCondition = "_Type == ECk_Material_ParameterType::Scalar", EditConditionHides))
+    float _ScalarValue = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Material Parameter",
+              meta = (AllowPrivateAccess = true, sRGB = "true",
+                      EditCondition = "_Type == ECk_Material_ParameterType::Color", EditConditionHides))
+    FLinearColor _ColorValue = FLinearColor::White;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Material Parameter",
+              meta = (AllowPrivateAccess = true,
+                      EditCondition = "_Type == ECk_Material_ParameterType::Texture", EditConditionHides))
+    TObjectPtr<UTexture> _TextureValue = nullptr;
+
+public:
+    CK_PROPERTY(_ParameterName);
+    CK_PROPERTY(_Type);
+    CK_PROPERTY(_Override);
+    CK_PROPERTY(_ScalarValue);
+    CK_PROPERTY(_ColorValue);
+    CK_PROPERTY(_TextureValue);
+
+public:
+    CK_ANGELSCRIPT_CTOR_REGISTRATION(FCk_Material_Parameter, _ParameterName, _ScalarValue)
+    CK_ANGELSCRIPT_CTOR_REGISTRATION(FCk_Material_Parameter, _ParameterName, _ColorValue)
 };
 
 // --------------------------------------------------------------------------------------------------------------------
