@@ -2,7 +2,6 @@
 
 #include "CkPmg_Fragment.h"
 #include "CkPmg_Fragment_TextShapes.h"
-#include "CkPmg_ProcessorGroups.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
