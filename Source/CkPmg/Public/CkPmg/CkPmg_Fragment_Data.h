@@ -67,6 +67,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Pmg_ConeOrientation);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_Pmg_TextAlign : uint8
+{
+    Left,
+    Center,
+    Right
+};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Pmg_TextAlign);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_Pmg_DebugShape_Type : uint8
 {
     Sphere,
@@ -99,7 +110,8 @@ enum class ECk_Pmg_DebugShape_Type : uint8
     ExclamationMark,
     Flag,
     InfoCircle,
-    Pin
+    Pin,
+    Text
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Pmg_DebugShape_Type);
 
@@ -215,6 +227,26 @@ private:
 public:
     CK_PROPERTY_GET(_NewColor);
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Pmg_DebugShape_SetColor, _NewColor);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKPMG_API FCk_Request_Pmg_DebugShape_SetText : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Pmg_DebugShape_SetText);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Pmg_DebugShape_SetText);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FString _NewText;
+
+public:
+    CK_PROPERTY_GET(_NewText);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Pmg_DebugShape_SetText, _NewText);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
