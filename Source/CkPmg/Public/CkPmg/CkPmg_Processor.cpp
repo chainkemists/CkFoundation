@@ -5,6 +5,7 @@
 #include "CkPmg_Processor_FlatShapes.h"
 #include "CkPmg_Processor_IconShapes.h"
 #include "CkPmg_Processor_SymbolShapes.h"
+#include "CkPmg_Processor_TextShapes.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
@@ -59,6 +60,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_ExclamationMark_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Flag_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_InfoCircle_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Pin_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Text_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Wedge_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Arc_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_WedgeCone_Setup);
