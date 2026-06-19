@@ -267,7 +267,7 @@ namespace ck
 
     public:
         friend class FProcessor_Pmg_DebugShape_HandleRequests;
-        friend class UCk_Utils_Pmg_DebugShape_UE;
+        friend class ::UCk_Utils_Pmg_DebugShape_UE;
 
         using SetColorRequestType           = FCk_Request_Pmg_DebugShape_SetColor;
         using SetLineThicknessRequestType   = FCk_Request_Pmg_DebugShape_SetLineThickness;

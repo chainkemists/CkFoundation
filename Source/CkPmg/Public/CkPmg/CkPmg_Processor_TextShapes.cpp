@@ -54,8 +54,6 @@ namespace ck::pmg
 
 namespace
 {
-    using namespace ck;
-
     auto SetupMeshComponent_Text(FCk_Handle InHandle) -> UProceduralMeshComponent*
     {
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
