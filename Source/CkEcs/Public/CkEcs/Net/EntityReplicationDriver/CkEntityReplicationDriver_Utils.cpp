@@ -1,6 +1,7 @@
 #include "CkEntityReplicationDriver_Utils.h"
 
 #include "CkEcs/CkEcsLog.h"
+#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
@@ -155,6 +156,9 @@ auto
 
     for (const auto& ConstructionInfo : InConstructionInfos)
     {
+        if (ConstructionInfo.Get_ConstructionConfig().IsValid())
+        { NewEntity.AddOrGet<ck::FFragment_EntityConstructionConfig>(ConstructionInfo.Get_ConstructionConfig()); }
+
         if (ck::IsValid(ConstructionInfo.Get_ConstructionScriptArchetype()))
         {
             ConstructionInfo.Get_ConstructionScriptArchetype()->Construct(NewEntity);

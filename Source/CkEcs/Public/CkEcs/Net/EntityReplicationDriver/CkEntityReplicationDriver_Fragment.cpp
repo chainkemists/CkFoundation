@@ -188,6 +188,9 @@ auto
 
     for (const auto& ConstructionInfo : ConstructionInfos)
     {
+        if (ConstructionInfo.Get_ConstructionConfig().IsValid())
+        { _AssociatedEntity.AddOrGet<ck::FFragment_EntityConstructionConfig>(ConstructionInfo.Get_ConstructionConfig()); }
+
         if (ck::IsValid(ConstructionInfo.Get_ConstructionScriptArchetype()))
         {
             ConstructionInfo.Get_ConstructionScriptArchetype()->Construct(_AssociatedEntity);

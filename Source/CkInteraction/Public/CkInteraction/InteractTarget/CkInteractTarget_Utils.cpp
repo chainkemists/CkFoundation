@@ -51,6 +51,7 @@ auto
         const FCk_Fragment_InteractTarget_ParamsData& InParams,
         ECk_Replication InReplicates,
         TSubclassOf<UCk_InteractTarget_ConstructionScript> InReplicatedConstructionScript,
+        const FInstancedStruct& InConstructionConfig,
         const UObject* InWorldContextObject)
     -> FCk_Handle_InteractTarget
 {
@@ -71,7 +72,10 @@ auto
         if (auto DriverOwner = ck_interact_target::DoFind_DriverBearingOwner(InInteractTargetOwner);
             ck::IsValid(DriverOwner))
         {
-            const auto CtorInfo = FCk_EntityReplicationDriver_ConstructionInfo{InReplicatedConstructionScript};
+            // Carry the optional by-value recipe so the GENERIC UCk_InteractTarget_ConstructionScript can
+            // build from it on both host and client; empty config => the supplied subclass CDO is used.
+            const auto CtorInfo = FCk_EntityReplicationDriver_ConstructionInfo{InReplicatedConstructionScript}
+                .Set_ConstructionConfig(InConstructionConfig);
             auto NewReplicatedTarget = UCk_Utils_EntityReplicationDriver_UE::Request_BuildAndReplicate(DriverOwner, CtorInfo);
 
             if (ck::Is_NOT_Valid(NewReplicatedTarget))
@@ -130,7 +134,7 @@ auto
     return ck::algo::Transform<TArray<FCk_Handle_InteractTarget>>(
         InParams.Get_InteractTargetParams(), [&](const FCk_Fragment_InteractTarget_ParamsData& InParam)
     {
-        return Add(InInteractTargetOwner, InParam, InReplicates, nullptr, InWorldContextObject);
+        return Add(InInteractTargetOwner, InParam, InReplicates, nullptr, FInstancedStruct{}, InWorldContextObject);
     });
 }
 

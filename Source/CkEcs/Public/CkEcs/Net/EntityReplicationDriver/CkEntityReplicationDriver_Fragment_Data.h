@@ -8,6 +8,8 @@
 #include "CkEcs/EntityScript/CkEntityScript.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
+#include <StructUtils/InstancedStruct.h>
+
 #include "CkEntityReplicationDriver_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -29,9 +31,18 @@ private:
         meta=(AllowPrivateAccess=true))
     TObjectPtr<const UCk_Entity_ConstructionScript_PDA> _ConstructionScriptArchetype;
 
+    // Optional by-value recipe a GENERIC construction script reads (in lieu of a per-type subclass CDO).
+    // Net-translates because TSubclassOf/FGameplayTag inside the wrapped struct are net-stable — exactly
+    // like _SpawnParams on FCk_EntityReplicationDriver_ReplicationData_EntityScript. Empty by default; set
+    // via the generated setter, so existing callers are unaffected.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess=true))
+    FInstancedStruct _ConstructionConfig;
+
 public:
     CK_PROPERTY_GET(_ConstructionScript);
     CK_PROPERTY(_ConstructionScriptArchetype);
+    CK_PROPERTY(_ConstructionConfig);
 
     CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_ConstructionInfo, _ConstructionScript);
 };

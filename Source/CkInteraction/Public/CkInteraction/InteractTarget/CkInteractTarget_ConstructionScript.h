@@ -13,6 +13,39 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// By-value recipe for a NET-LINKED InteractTarget whose interaction SM replicates, carried inside an
+// FInstancedStruct via FCk_EntityReplicationDriver_ConstructionInfo::_ConstructionConfig so the GENERIC
+// UCk_InteractTarget_ConstructionScript can build from it — no per-type subclass CDO required. Mirrors the
+// five CDO recipe fields below; net-stable because TSubclassOf / FGameplayTag inside it net-translate. When
+// present on the built entity (as ck::FFragment_EntityConstructionConfig), DoConstruct reads THESE instead
+// of the CDO fields, leaving existing subclass-CDO callers byte-identical.
+USTRUCT(BlueprintType)
+struct CKINTERACTION_API FCk_InteractTarget_ConstructionConfig
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_InteractTarget_ConstructionConfig);
+
+public:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "InteractTarget")
+    FCk_Fragment_InteractTarget_ParamsData InteractTargetParams;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "InteractTarget")
+    ECk_Interaction_CompletionPolicy CompletionPolicy = ECk_Interaction_CompletionPolicy::Timed;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "InteractTarget")
+    FCk_Fragment_StateMachine_ParamsData SmParams;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "InteractTarget")
+    TSubclassOf<UCk_SmState_EntityScript> InteractionStateClass;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "InteractTarget")
+    TSubclassOf<UCk_SmState_EntityScript> FocusedStateClass;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // The construction-script recipe for a NET-LINKED InteractTarget whose interaction SM replicates.
 // It composes the InteractTarget's (C++-internal) fragments AND a replicated SM onto the SAME entity.
 // Built via Request_BuildAndReplicate from a driver-bearing owner so the InteractTarget gets its own

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Types/DataAsset/CkDataAsset.h"
 
 #include "CkEcs/Handle/CkHandle.h"
@@ -7,6 +8,29 @@
 #include <StructUtils/InstancedStruct.h>
 
 #include "CkEntity_ConstructionScript.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    // Carries an optional, by-value construction config (a typed payload wrapped in an FInstancedStruct)
+    // onto a freshly-built entity so a GENERIC construction script can read it instead of relying on a
+    // per-type subclass CDO. Stamped (when present) immediately before Construct on both host and client
+    // by the EntityReplicationDriver build loops, so the config rides replication via
+    // FCk_EntityReplicationDriver_ConstructionInfo::_ConstructionConfig.
+    struct CKECS_API FFragment_EntityConstructionConfig
+    {
+        CK_GENERATED_BODY(FFragment_EntityConstructionConfig);
+
+    private:
+        FInstancedStruct _Config;
+
+    public:
+        CK_PROPERTY_GET(_Config);
+
+        CK_DEFINE_CONSTRUCTORS(FFragment_EntityConstructionConfig, _Config);
+    };
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 

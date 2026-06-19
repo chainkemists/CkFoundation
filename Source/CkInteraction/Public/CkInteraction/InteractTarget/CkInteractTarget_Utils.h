@@ -41,6 +41,7 @@ public:
         const FCk_Fragment_InteractTarget_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates,
         TSubclassOf<UCk_InteractTarget_ConstructionScript> InReplicatedConstructionScript = nullptr,
+        const FInstancedStruct& InConstructionConfig = FInstancedStruct(),
         const UObject* InWorldContextObject = nullptr);
 
     UFUNCTION(BlueprintCallable,
