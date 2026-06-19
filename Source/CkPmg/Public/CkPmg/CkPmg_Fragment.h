@@ -142,6 +142,7 @@ namespace ck
         friend class FProcessor_Pmg_Arrow_Setup;
         friend class FProcessor_Pmg_Pivot_Setup;
         friend class FProcessor_Pmg_DashedLine_Setup;
+        friend class FProcessor_Pmg_Text_Setup;
         friend class FProcessor_Pmg_DebugShape_HandleRequests;
 
     private:
@@ -187,6 +188,7 @@ namespace ck
 
     public:
         friend class FProcessor_Pmg_DebugShape_BakeLines;
+        friend class FProcessor_Pmg_Text_Setup;
 
     public:
         TArray<FCk_Pmg_DebugLine> _Lines;
@@ -238,6 +240,7 @@ namespace ck
         friend class FProcessor_Pmg_Arrow_Setup;
         friend class FProcessor_Pmg_Pivot_Setup;
         friend class FProcessor_Pmg_DashedLine_Setup;
+        friend class FProcessor_Pmg_Text_Setup;
 
     private:
         TStrongObjectPtr<UProceduralMeshComponent> _MeshComponent;
