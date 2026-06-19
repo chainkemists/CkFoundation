@@ -84,6 +84,34 @@ For multi-shape overlays (e.g. capsule + marker spheres), use `Create_*(ParentEn
 
 ---
 
+## Text Shapes (UTF-8)
+
+Arbitrary live UTF-8 strings — including CJK — rendered as debug geometry in both tiers: wireframe glyph contours (line segments) and a filled triangulated procmesh. Glyph outlines come from FreeType; tessellation uses `FConstrainedDelaunay2d` (NonZero winding). A module glyph cache keyed by `(face, codepoint)` in EM units makes live text cheap — glyph extraction and tessellation run once per unique glyph, not per entity tick.
+
+**API (three tiers, same pattern as the other families):**
+
+| Call | Output |
+|---|---|
+| `UCk_Utils_Pmg_TextShapes::Add_Text(InHandle, Transform, Text, Size, Color, DrawLines, DrawFilled, LineThickness, Align, Axis, FontOverride, Duration)` | Filled procmesh + wireframe on `InHandle`. |
+| `UCk_Utils_Pmg_TextShapes::Create_Text(InOwningEntity, ...)` | Same, but spawns a new child entity owned by `InOwningEntity`. |
+| `UCk_Utils_Pmg_TextShapes::DrawText(WCO, Center, ...)` | Fire-and-forget (DevelopmentOnly). Spawns a one-off entity. |
+
+`InDrawLines` + `InDrawFilled` select wireframe-only / filled-only / both (default both).
+
+**Live mutation:** `UCk_Utils_Pmg_DebugShape_UE::Request_SetText(handle, NewText)` sets new text and re-arms `FTag_Pmg_DebugShape_NeedsSetup`; the Setup processor rebuilds geometry next tick. Thanks to the glyph cache, only genuinely new codepoints are re-tessellated.
+
+**Shape type:** `ECk_Pmg_DebugShape_Type::Text`.
+
+**Axis default is XZ (upright)** — deliberately different from symbol/icon families' XY default, because flat text reads edge-on and is invisible to a normal camera. For full readability from an arbitrary camera the caller must billboard the entity transform; no auto-billboard is applied.
+
+**Font:** default resolves to a bundled `UFontFace` at `/CkFoundation/CkPmg/Fonts/NotoSansCJK_Medium` if present, else the engine's Roboto TTF (Latin only). Pass a `UFontFace*` override for a specific font or full CJK coverage.
+
+> **NOTE (follow-up):** the bundled Noto CJK `.uasset` is **not yet imported**. Until a maintainer imports it (Loading Policy = Inline), the default is Latin-only Roboto. Missing glyphs render the font's `.notdef` box.
+
+**Server:** FreeType is not compiled for dedicated server (`CK_PMG_WITH_FREETYPE=0`); text entities are inert there.
+
+---
+
 ## See also
 
 - `CkVfx/Claude.md` — Niagara-based VFX on entities.
