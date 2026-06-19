@@ -31,7 +31,7 @@ namespace ck::pmg
         void               Shutdown();
 
     private:
-        FFontGlyphCache() = default;
+        FFontGlyphCache(); // out-of-line: FFaceEntry is incomplete in this header
 
         void*                          _FtLibrary = nullptr; // FT_Library (opaque — keeps FreeType out of this public header)
 

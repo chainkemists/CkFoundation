@@ -138,6 +138,10 @@ namespace ck::pmg
         return Instance;
     }
 
+    // Out-of-line ctor/dtor: FFaceEntry (above) is complete here, so the _Faces
+    // TUniquePtr cleanup never instantiates against the header's forward decl.
+    FFontGlyphCache::FFontGlyphCache() = default;
+
     FFontGlyphCache::~FFontGlyphCache()
     {
         Shutdown();
