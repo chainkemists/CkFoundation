@@ -18,6 +18,8 @@ public class CkPmg : CkModuleRules
             "ProceduralMeshComponent",
             "MeshDescription",
             "StaticMeshDescription",
+            "GeometryCore",
+            "GeometryAlgorithms",
 
             "CkCore",
             "CkEcs",
@@ -38,5 +40,14 @@ public class CkPmg : CkModuleRules
                 "UnrealEd",
             });
         }
+
+        // FreeType is an engine ThirdParty lib (used by Slate/Text3D). It is NOT
+        // compiled for dedicated-server targets, so gate the glyph code behind a define.
+        bool bWithFreeType = Target.Type != TargetType.Server && Target.bCompileFreeType;
+        if (bWithFreeType)
+        {
+            AddEngineThirdPartyPrivateStaticDependencies(Target, "FreeType2");
+        }
+        PublicDefinitions.Add("CK_PMG_WITH_FREETYPE=" + (bWithFreeType ? "1" : "0"));
     }
 }
