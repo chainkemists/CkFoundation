@@ -104,24 +104,17 @@ namespace ck::pmg
             for (const FIndex3i& T : Delaunay.Triangles) { OutTris.Add(FIntVector(T.A, T.B, T.C)); }
         }
     }
+#endif // CK_PMG_WITH_FREETYPE
 
     struct FFontGlyphCache::FFaceEntry
     {
-        TArray<uint8>            Bytes;       // retained — FT_New_Memory_Face does not copy
-        FT_Face                  Face = nullptr;
-        float                    UnitsPerEm = 1.0f;
-        TMap<uint32, FCachedGlyph> Glyphs;
+        TArray<uint8>                          Bytes;       // retained — FT_New_Memory_Face does not copy
+        float                                  UnitsPerEm = 1.0f;
+        TMap<uint32, TUniquePtr<FCachedGlyph>> Glyphs;      // unique_ptr -> stable glyph addresses across map growth
+#if CK_PMG_WITH_FREETYPE
+        FT_Face                                Face = nullptr;
+#endif
     };
-
-    namespace
-    {
-        FT_Library& GlobalFtLibrary()
-        {
-            static FT_Library Library = []{ FT_Library L = nullptr; FT_Init_FreeType(&L); return L; }();
-            return Library;
-        }
-    }
-#endif // CK_PMG_WITH_FREETYPE
 
     FFontGlyphCache& FFontGlyphCache::Get()
     {
@@ -129,21 +122,38 @@ namespace ck::pmg
         return Instance;
     }
 
+    FFontGlyphCache::~FFontGlyphCache()
+    {
+        Shutdown();
+    }
+
     int32 FFontGlyphCache::EnsureFace(const TArray<uint8>& InFontBytes)
     {
 #if CK_PMG_WITH_FREETYPE
         if (InFontBytes.Num() == 0) { return INDEX_NONE; }
+
         const uint32 Hash = FCrc::MemCrc32(InFontBytes.GetData(), InFontBytes.Num());
-        if (const int32* Found = _FaceKeyByHash.Find(Hash)) { return *Found; }
+        if (const int32* Found = _FaceKeyByHash.Find(Hash))
+        {
+            // Guard the (astronomically rare) CRC32 collision: only reuse on exact bytes.
+            if (_Faces.IsValidIndex(*Found) && _Faces[*Found]->Bytes == InFontBytes) { return *Found; }
+        }
+
+        if (_FtLibrary == nullptr)
+        {
+            FT_Library Lib = nullptr;
+            if (FT_Init_FreeType(&Lib) != 0) { return INDEX_NONE; }
+            _FtLibrary = Lib;
+        }
 
         auto Entry = MakeUnique<FFaceEntry>();
         Entry->Bytes = InFontBytes; // retain
-        if (FT_New_Memory_Face(GlobalFtLibrary(), Entry->Bytes.GetData(), Entry->Bytes.Num(), 0, &Entry->Face) != 0)
+        if (FT_New_Memory_Face(static_cast<FT_Library>(_FtLibrary), Entry->Bytes.GetData(), Entry->Bytes.Num(), 0, &Entry->Face) != 0)
         { return INDEX_NONE; }
         Entry->UnitsPerEm = Entry->Face->units_per_EM != 0 ? static_cast<float>(Entry->Face->units_per_EM) : 1.0f;
 
         const int32 Key = _Faces.Add(MoveTemp(Entry));
-        _FaceKeyByHash.Add(Hash, Key);
+        _FaceKeyByHash.Add(Hash, Key); // TMap::Add overwrites on collision; byte-compare above keeps lookups correct
         return Key;
 #else
         return INDEX_NONE;
@@ -155,9 +165,10 @@ namespace ck::pmg
 #if CK_PMG_WITH_FREETYPE
         if (!_Faces.IsValidIndex(InFaceKey)) { return _EmptyGlyph; }
         FFaceEntry& Entry = *_Faces[InFaceKey];
-        if (const FCachedGlyph* Cached = Entry.Glyphs.Find(InCodepoint)) { return *Cached; }
+        if (const TUniquePtr<FCachedGlyph>* Cached = Entry.Glyphs.Find(InCodepoint)) { return **Cached; }
 
-        FCachedGlyph Glyph;
+        auto NewGlyph = MakeUnique<FCachedGlyph>();
+        FCachedGlyph& Glyph = *NewGlyph;
         const FT_UInt GlyphIndex = FT_Get_Char_Index(Entry.Face, InCodepoint); // 0 -> .notdef
         if (FT_Load_Glyph(Entry.Face, GlyphIndex, FT_LOAD_NO_SCALE | FT_LOAD_NO_BITMAP) == 0)
         {
@@ -176,10 +187,10 @@ namespace ck::pmg
             if (Glyph.Contours.Num() > 0)
             {
                 TessellateContours(Glyph.Contours, Glyph.TessVerts, Glyph.TessTris);
-                Glyph.bHasGeometry = Glyph.TessTris.Num() > 0 || Glyph.Contours.Num() > 0;
             }
+            Glyph.bHasGeometry = Glyph.TessTris.Num() > 0; // fillable geometry; false for whitespace / failed tess
         }
-        return Entry.Glyphs.Add(InCodepoint, MoveTemp(Glyph));
+        return *Entry.Glyphs.Add(InCodepoint, MoveTemp(NewGlyph));
 #else
         return _EmptyGlyph;
 #endif
@@ -202,6 +213,14 @@ namespace ck::pmg
 #if CK_PMG_WITH_FREETYPE
         for (TUniquePtr<FFaceEntry>& E : _Faces)
         { if (E && E->Face) { FT_Done_Face(E->Face); E->Face = nullptr; } }
+        _Faces.Empty();
+        _FaceKeyByHash.Empty();
+        if (_FtLibrary != nullptr)
+        {
+            FT_Done_FreeType(static_cast<FT_Library>(_FtLibrary));
+            _FtLibrary = nullptr;
+        }
+#else
         _Faces.Empty();
         _FaceKeyByHash.Empty();
 #endif

@@ -20,6 +20,11 @@ namespace ck::pmg
     public:
         static FFontGlyphCache& Get();
 
+        // Singleton: non-copyable. Out-of-line dtor (FFaceEntry is incomplete in this header).
+        FFontGlyphCache(const FFontGlyphCache&) = delete;
+        FFontGlyphCache& operator=(const FFontGlyphCache&) = delete;
+        ~FFontGlyphCache();
+
         int32              EnsureFace(const TArray<uint8>& InFontBytes);
         const FCachedGlyph& GetOrBuildGlyph(int32 InFaceKey, uint32 InCodepoint);
         float              Get_LineHeightEm(int32 InFaceKey) const;
@@ -28,9 +33,11 @@ namespace ck::pmg
     private:
         FFontGlyphCache() = default;
 
+        void*                          _FtLibrary = nullptr; // FT_Library (opaque — keeps FreeType out of this public header)
+
         struct FFaceEntry;
         TArray<TUniquePtr<FFaceEntry>> _Faces;
-        TMap<uint32, int32>            _FaceKeyByHash;  // font-bytes hash -> index into _Faces
+        TMap<uint32, int32>            _FaceKeyByHash;  // font-bytes CRC -> index into _Faces
         FCachedGlyph                   _EmptyGlyph;     // returned on hard failure
     };
 }
