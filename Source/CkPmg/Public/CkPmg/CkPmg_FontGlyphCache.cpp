@@ -87,12 +87,28 @@ namespace ck::pmg
             Delaunay.bOrientedEdges = true;
             Delaunay.FillRule = FConstrainedDelaunay2d::EFillRule::NonZero; // TrueType winding
 
+            // Inputs are at FONT-UNIT scale here, so a sub-pixel tolerance is safe.
+            constexpr double DedupeTolSq = 0.01 * 0.01;
+
             for (const TArray<FVector2D>& Contour : InContours)
             {
-                const int32 N = Contour.Num();
+                // Drop consecutive coincident points and a closing duplicate — degenerate
+                // zero-length edges make the constrained triangulation fail outright.
+                TArray<FVector2D> Clean;
+                Clean.Reserve(Contour.Num());
+                for (const FVector2D& P : Contour)
+                {
+                    if (Clean.Num() == 0 || FVector2D::DistSquared(P, Clean.Last()) > DedupeTolSq)
+                    { Clean.Add(P); }
+                }
+                if (Clean.Num() >= 2 && FVector2D::DistSquared(Clean[0], Clean.Last()) <= DedupeTolSq)
+                { Clean.Pop(); }
+
+                const int32 N = Clean.Num();
                 if (N < 3) { continue; }
+
                 const int32 Start = Delaunay.Vertices.Num();
-                for (const FVector2D& P : Contour) { Delaunay.Vertices.Add(FVector2d(P.X, P.Y)); }
+                for (const FVector2D& P : Clean) { Delaunay.Vertices.Add(FVector2d(P.X, P.Y)); }
                 for (int32 a = N - 1, b = 0; b < N; a = b++)
                 { Delaunay.Edges.Add(FIndex2i(Start + a, Start + b)); }
             }
@@ -175,6 +191,7 @@ namespace ck::pmg
             const float InvEm = 1.0f / Entry.UnitsPerEm;
             Glyph.AdvanceEm = static_cast<float>(Entry.Face->glyph->advance.x) * InvEm;
 
+            // Decompose the outline in FONT UNITS (large, well-conditioned coords).
             FT_Outline& Outline = Entry.Face->glyph->outline;
             FDecomposeCtx Ctx; Ctx.Contours = &Glyph.Contours;
             FT_Outline_Funcs Funcs{};
@@ -182,13 +199,18 @@ namespace ck::pmg
             Funcs.conic_to = &Decomp_ConicTo; Funcs.cubic_to = &Decomp_CubicTo;
             FT_Outline_Decompose(&Outline, &Funcs, &Ctx);
 
-            for (TArray<FVector2D>& C : Glyph.Contours) { for (FVector2D& P : C) { P *= InvEm; } }
-
+            // Tessellate at font-unit scale (EM-normalized 0..1 input collapses under the
+            // Delaunay tolerance and yields zero triangles).
             if (Glyph.Contours.Num() > 0)
             {
                 TessellateContours(Glyph.Contours, Glyph.TessVerts, Glyph.TessTris);
             }
-            Glyph.bHasGeometry = Glyph.TessTris.Num() > 0; // fillable geometry; false for whitespace / failed tess
+
+            // Normalize contours AND tessellated verts to EM units (size-independent cache).
+            for (TArray<FVector2D>& C : Glyph.Contours) { for (FVector2D& P : C) { P *= InvEm; } }
+            for (FVector2D& V : Glyph.TessVerts) { V *= InvEm; }
+
+            Glyph.bHasGeometry = Glyph.TessTris.Num() > 0;
         }
         return *Entry.Glyphs.Add(InCodepoint, MoveTemp(NewGlyph));
 #else
