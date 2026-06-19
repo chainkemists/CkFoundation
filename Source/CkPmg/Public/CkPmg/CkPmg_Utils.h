@@ -225,6 +225,14 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName = "[Ck][Pmg][DebugShape] Request Set Text")
+    static FCk_Handle_Pmg_DebugShape
+    Request_SetText(
+        UPARAM(ref) FCk_Handle_Pmg_DebugShape& InHandle,
+        FString InNewText);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
               DisplayName = "[Ck][Pmg][DebugShape] Request Set Line Thickness")
     static FCk_Handle_Pmg_DebugShape
     Request_SetLineThickness(

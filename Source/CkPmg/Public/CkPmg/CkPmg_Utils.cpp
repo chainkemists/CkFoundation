@@ -2,6 +2,7 @@
 
 #include "CkPmg/CkPmg_Log.h"
 #include "CkPmg_Fragment.h"
+#include "CkPmg/CkPmg_Fragment_TextShapes.h"
 
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
@@ -252,6 +253,22 @@ auto
     -> FCk_Handle_Pmg_DebugShape
 {
     InHandle.AddOrGet<ck::FFragment_Pmg_DebugShape_Requests>()._Requests.Emplace(InRequest);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_Pmg_DebugShape_UE::
+    Request_SetText(
+        FCk_Handle_Pmg_DebugShape& InHandle,
+        FString InNewText)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    CK_ENSURE_IF_NOT(InHandle.Has<ck::FFragment_Pmg_Text_Params>(),
+        TEXT("Request_SetText called on a non-text PMG shape [{}]"), InHandle)
+    { return InHandle; }
+
+    InHandle.Get<ck::FFragment_Pmg_Text_Params>().Set_Text(InNewText);
+    InHandle.AddOrGet<ck::FTag_Pmg_DebugShape_NeedsSetup>();
     return InHandle;
 }
 
