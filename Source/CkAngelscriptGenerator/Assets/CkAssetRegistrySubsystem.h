@@ -4,7 +4,8 @@
 #include "EditorSubsystem.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Engine/StreamableManager.h"
-#include "Misc/ScopedSlowTask.h"
+#include "Framework/Notifications/NotificationManager.h"
+#include "Containers/Ticker.h"
 
 #include "CkAssetRegistrySubsystem.generated.h"
 
@@ -146,6 +147,15 @@ private:
         UCkAssetRegistryConfig* InConfig,
         const FString& InRootPath) -> FString;
 
+    // Removes the active non-blocking status-bar progress notification (if any) and
+    // invalidates the handle. Safe to call when no notification is active.
+    auto
+    Dismiss_ProgressNotification() -> void;
+
+    // Removes the active per-frame asset-dispatch ticker (if any). Safe when none is active.
+    auto
+    Dismiss_GenerationTicker() -> void;
+
 // --------------------------------------------------------------------------------------------------------------------
 
 private:
@@ -178,7 +188,8 @@ private:
     TMap<UClass*, FString> AssetTypeCache;
     TSet<FString> GloballyGeneratedAssets;
     FStreamableManager StreamableManager;
-    TSharedPtr<FScopedSlowTask> ActiveSlowTask;
+    FProgressNotificationHandle ActiveProgressNotification;
+    FTSTicker::FDelegateHandle GenerationTickerHandle;
     bool IsGenerationInProgress = false;
 
     UPROPERTY(Transient)
