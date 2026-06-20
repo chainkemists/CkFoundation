@@ -7,6 +7,7 @@
 #include "CkCore/Math/Vector/CkVector_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
+#include "Interfaces/IPluginManager.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "UObject/StrongObjectPtr.h"
@@ -53,30 +54,35 @@ namespace ck::pmg
 
     namespace
     {
-        const TArray<uint8>* LoadBundledFontBytes_Cached(const TCHAR* InAssetPath, TStrongObjectPtr<UFontFace>& InOutCache)
+        // Loads raw font bytes from a file under the CkFoundation plugin's CkPmg Resources dir.
+        // Tried once (the tried flag avoids re-hitting the filesystem every frame when absent).
+        const TArray<uint8>* LoadResourceFontBytes_Cached(const TCHAR* InFileName, TArray<uint8>& InOutBytes, bool& InOutTried)
         {
-            if (InOutCache.IsValid() == false)
+            if (InOutTried == false)
             {
-                if (auto* Loaded = LoadObject<UFontFace>(nullptr, InAssetPath)) { InOutCache.Reset(Loaded); }
+                InOutTried = true;
+                if (const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("CkFoundation")))
+                {
+                    const FString Path = Plugin->GetBaseDir() / TEXT("Source/CkPmg/Resources") / InFileName;
+                    FFileHelper::LoadFileToArray(InOutBytes, *Path);
+                }
             }
-            return InOutCache.IsValid() ? &InOutCache->GetFontFaceData()->GetData() : nullptr;
+            return InOutBytes.Num() > 0 ? &InOutBytes : nullptr;
         }
     }
 
-    // Ordered glyph-fallback chain: primary text font, then emoji, then symbols. Each fallback is a bundled
-    // UFontFace loaded by path if present (absent -> simply skipped, so those codepoints render .notdef).
+    // Ordered glyph-fallback chain: primary text font, then bundled Noto Emoji, then Noto Sans Symbols 2.
+    // The fallbacks ship as raw .ttf under Source/CkPmg/Resources (staged for packaged builds).
     auto ResolveTextFontChain(UFontFace* InOverride, TArray<const TArray<uint8>*>& OutChain) -> void
     {
         if (const auto* Primary = ResolveTextFontBytes(InOverride)) { OutChain.Add(Primary); }
 
-        static TStrongObjectPtr<UFontFace> EmojiFont;
-        if (const auto* Emoji = LoadBundledFontBytes_Cached(
-            TEXT("/CkFoundation/CkPmg/Fonts/NotoEmoji_Medium.NotoEmoji_Medium"), EmojiFont))
+        static TArray<uint8> EmojiBytes;   static bool EmojiTried = false;
+        if (const auto* Emoji = LoadResourceFontBytes_Cached(TEXT("NotoEmoji-Medium.ttf"), EmojiBytes, EmojiTried))
         { OutChain.Add(Emoji); }
 
-        static TStrongObjectPtr<UFontFace> SymbolsFont;
-        if (const auto* Symbols = LoadBundledFontBytes_Cached(
-            TEXT("/CkFoundation/CkPmg/Fonts/NotoSansSymbols2_Regular.NotoSansSymbols2_Regular"), SymbolsFont))
+        static TArray<uint8> SymbolsBytes; static bool SymbolsTried = false;
+        if (const auto* Symbols = LoadResourceFontBytes_Cached(TEXT("NotoSansSymbols2-Regular.ttf"), SymbolsBytes, SymbolsTried))
         { OutChain.Add(Symbols); }
     }
 }

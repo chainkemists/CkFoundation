@@ -14,6 +14,7 @@ public class CkPmg : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
+            "Projects",
             "GameplayTags",
             "ProceduralMeshComponent",
             "MeshDescription",
@@ -49,5 +50,9 @@ public class CkPmg : CkModuleRules
             AddEngineThirdPartyPrivateStaticDependencies(Target, "FreeType2");
         }
         PublicDefinitions.Add("CK_PMG_WITH_FREETYPE=" + (bWithFreeType ? "1" : "0"));
+
+        // Stage the bundled fallback fonts (emoji/symbols) so they load in packaged builds too.
+        RuntimeDependencies.Add(Path.Combine(PluginDirectory, "Source", "CkPmg", "Resources", "NotoEmoji-Medium.ttf"), StagedFileType.NonUFS);
+        RuntimeDependencies.Add(Path.Combine(PluginDirectory, "Source", "CkPmg", "Resources", "NotoSansSymbols2-Regular.ttf"), StagedFileType.NonUFS);
     }
 }

@@ -104,9 +104,7 @@ Arbitrary live UTF-8 strings — including CJK — rendered as debug geometry in
 
 **Axis default is XZ (upright)** — deliberately different from symbol/icon families' XY default, because flat text reads edge-on and is invisible to a normal camera. For full readability from an arbitrary camera the caller must billboard the entity transform; no auto-billboard is applied.
 
-**Font:** default resolves to a bundled `UFontFace` at `/CkFoundation/CkPmg/Fonts/NotoSansCJK_Medium` if present, else the engine's Roboto TTF (Latin only). Pass a `UFontFace*` override for a specific font or full CJK coverage.
-
-> **NOTE (follow-up):** the bundled Noto CJK `.uasset` is **not yet imported**. Until a maintainer imports it (Loading Policy = Inline), the default is Latin-only Roboto. Missing glyphs render the font's `.notdef` box.
+**Font:** default resolves to **Noto Emoji** + **Noto Sans Symbols 2** as raw `.ttf` files under `Source/CkPmg/Resources/` (staged for packaged builds), applying per-glyph font fallback: primary text font → emoji → symbols. Mixed strings like `"Wave 3 ⚠"` work out of the box. Emoji/symbols render as single-color silhouettes. The primary font falls back to the engine's Roboto TTF (Latin only) unless a `UFontFace*` override is passed. CJK still needs a CJK primary font supplied via `FontOverride`.
 
 **Server:** FreeType is not compiled for dedicated server (`CK_PMG_WITH_FREETYPE=0`); text entities are inert there.
 
