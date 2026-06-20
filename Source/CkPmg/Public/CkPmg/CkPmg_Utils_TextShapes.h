@@ -73,6 +73,15 @@ public:
         ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XZ,
         UFontFace* InFontOverride = nullptr,
         float InDuration = 0.0f);
+
+    // Builds a string from space-separated hex Unicode code points (e.g. "48 49 2190 1F600" -> "HI<-:)").
+    // Lets BP/AS author symbol/emoji strings without embedding non-ASCII literals. Handles supplementary
+    // planes (codepoints > 0xFFFF) via UTF-16 surrogate pairs.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Make Text From Hex Codepoints")
+    static FString
+    MakeText_FromHexCodepoints(const FString& InHexCodepoints);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
