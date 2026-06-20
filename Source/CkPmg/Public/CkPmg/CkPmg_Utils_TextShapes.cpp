@@ -66,3 +66,30 @@ auto
     return Add_Text(NewEntity, Transform, InText, InSize, InColor, InDrawLines, InDrawFilled,
         InLineThickness, InAlign, InDefaultAxis, InFontOverride, InDuration);
 }
+
+auto
+    UCk_Utils_Pmg_TextShapes::
+    MakeText_FromHexCodepoints(
+        const FString& InHexCodepoints)
+    -> FString
+{
+    FString Result;
+    TArray<FString> Tokens;
+    InHexCodepoints.ParseIntoArray(Tokens, TEXT(" "), true);
+    for (const FString& Token : Tokens)
+    {
+        const uint32 Codepoint = static_cast<uint32>(FCString::Strtoui64(*Token, nullptr, 16));
+        if (Codepoint == 0) { continue; }
+        if (Codepoint <= 0xFFFF)
+        {
+            Result.AppendChar(static_cast<TCHAR>(Codepoint));
+        }
+        else
+        {
+            const uint32 V = Codepoint - 0x10000;
+            Result.AppendChar(static_cast<TCHAR>(0xD800 + (V >> 10)));
+            Result.AppendChar(static_cast<TCHAR>(0xDC00 + (V & 0x3FF)));
+        }
+    }
+    return Result;
+}
