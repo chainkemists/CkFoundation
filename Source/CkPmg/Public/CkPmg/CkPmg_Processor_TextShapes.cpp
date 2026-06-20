@@ -50,6 +50,35 @@ namespace ck::pmg
         }
         return RobotoBytes.Num() > 0 ? &RobotoBytes : nullptr;
     }
+
+    namespace
+    {
+        const TArray<uint8>* LoadBundledFontBytes_Cached(const TCHAR* InAssetPath, TStrongObjectPtr<UFontFace>& InOutCache)
+        {
+            if (InOutCache.IsValid() == false)
+            {
+                if (auto* Loaded = LoadObject<UFontFace>(nullptr, InAssetPath)) { InOutCache.Reset(Loaded); }
+            }
+            return InOutCache.IsValid() ? &InOutCache->GetFontFaceData()->GetData() : nullptr;
+        }
+    }
+
+    // Ordered glyph-fallback chain: primary text font, then emoji, then symbols. Each fallback is a bundled
+    // UFontFace loaded by path if present (absent -> simply skipped, so those codepoints render .notdef).
+    auto ResolveTextFontChain(UFontFace* InOverride, TArray<const TArray<uint8>*>& OutChain) -> void
+    {
+        if (const auto* Primary = ResolveTextFontBytes(InOverride)) { OutChain.Add(Primary); }
+
+        static TStrongObjectPtr<UFontFace> EmojiFont;
+        if (const auto* Emoji = LoadBundledFontBytes_Cached(
+            TEXT("/CkFoundation/CkPmg/Fonts/NotoEmoji_Medium.NotoEmoji_Medium"), EmojiFont))
+        { OutChain.Add(Emoji); }
+
+        static TStrongObjectPtr<UFontFace> SymbolsFont;
+        if (const auto* Symbols = LoadBundledFontBytes_Cached(
+            TEXT("/CkFoundation/CkPmg/Fonts/NotoSansSymbols2_Regular.NotoSansSymbols2_Regular"), SymbolsFont))
+        { OutChain.Add(Symbols); }
+    }
 }
 
 namespace
@@ -144,7 +173,7 @@ namespace
     // the wireframe (axis quat below) align. Rows descend in -Y.
     auto LayoutText(
         const FString& InText,
-        int32 InFaceKey,
+        const TArray<int32>& InFaceChain,
         float InSize,
         float InLineSpacing,
         ECk_Pmg_TextAlign InAlign,
@@ -153,7 +182,8 @@ namespace
         -> void
     {
         auto& Cache = ck::pmg::FFontGlyphCache::Get();
-        const float LineH = Cache.Get_LineHeightEm(InFaceKey) * InSize * InLineSpacing;
+        const int32 PrimaryFace = InFaceChain[0]; // chain is guaranteed non-empty by the caller
+        const float LineH = Cache.Get_LineHeightEm(PrimaryFace) * InSize * InLineSpacing;
 
         TArray<TArray<const ck::pmg::FCachedGlyph*>> Lines; Lines.AddDefaulted();
         TArray<float> LineWidths; LineWidths.Add(0.0f);
@@ -172,7 +202,14 @@ namespace
 
             if (Codepoint == static_cast<uint32>('\n')) { Lines.AddDefaulted(); LineWidths.Add(0.0f); continue; }
 
-            const auto& G = Cache.GetOrBuildGlyph(InFaceKey, Codepoint);
+            // Font fallback: first face in the chain that has this codepoint; else the primary (.notdef).
+            int32 ChosenFace = PrimaryFace;
+            for (int32 Fk : InFaceChain)
+            {
+                if (Cache.FaceHasCodepoint(Fk, Codepoint)) { ChosenFace = Fk; break; }
+            }
+
+            const auto& G = Cache.GetOrBuildGlyph(ChosenFace, Codepoint);
             Lines.Last().Add(&G);
             LineWidths.Last() += G.AdvanceEm * InSize;
         }
@@ -202,20 +239,30 @@ namespace ck
         FFragment_Pmg_DebugShape_Current& InCurrent)
         -> void
     {
-        const auto* FontBytes = ck::pmg::ResolveTextFontBytes(InParams.Get_FontOverride().Get());
-        if (FontBytes == nullptr || FontBytes->Num() == 0)
+        TArray<const TArray<uint8>*> FontChain;
+        ck::pmg::ResolveTextFontChain(InParams.Get_FontOverride().Get(), FontChain);
+        if (FontChain.Num() == 0)
         {
-            // No font available (e.g. dedicated server). Clear the gate so we don't spin.
             InHandle.Remove<FTag_Pmg_DebugShape_NeedsSetup>();
             return;
         }
 
         auto& Cache = ck::pmg::FFontGlyphCache::Get();
-        const int32 FaceKey = Cache.EnsureFace(*FontBytes);
-        if (FaceKey == INDEX_NONE) { InHandle.Remove<FTag_Pmg_DebugShape_NeedsSetup>(); return; }
+        TArray<int32> FaceChain;
+        for (const TArray<uint8>* Bytes : FontChain)
+        {
+            if (Bytes == nullptr || Bytes->Num() == 0) { continue; }
+            const int32 Fk = Cache.EnsureFace(*Bytes);
+            if (Fk != INDEX_NONE) { FaceChain.Add(Fk); }
+        }
+        if (FaceChain.Num() == 0)
+        {
+            InHandle.Remove<FTag_Pmg_DebugShape_NeedsSetup>();
+            return;
+        }
 
         TArray<FPlacedGlyph_Text> Placed;
-        LayoutText(InParams.Get_Text(), FaceKey, InParams.Get_Size(), InParams.Get_LineSpacing(),
+        LayoutText(InParams.Get_Text(), FaceChain, InParams.Get_Size(), InParams.Get_LineSpacing(),
             InParams.Get_Align(), InParams.Get_MaxGlyphs(), Placed);
 
         // Reuse the existing procmesh on rebuild (SetText); else create a fresh one.

@@ -234,6 +234,16 @@ namespace ck::pmg
 #endif
     }
 
+    bool FFontGlyphCache::FaceHasCodepoint(int32 InFaceKey, uint32 InCodepoint) const
+    {
+#if CK_PMG_WITH_FREETYPE
+        if (!_Faces.IsValidIndex(InFaceKey)) { return false; }
+        return FT_Get_Char_Index(_Faces[InFaceKey]->Face, InCodepoint) != 0;
+#else
+        return false;
+#endif
+    }
+
     void FFontGlyphCache::Shutdown()
     {
 #if CK_PMG_WITH_FREETYPE

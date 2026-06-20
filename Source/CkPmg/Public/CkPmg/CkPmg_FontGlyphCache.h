@@ -28,6 +28,8 @@ namespace ck::pmg
         int32              EnsureFace(const TArray<uint8>& InFontBytes);
         const FCachedGlyph& GetOrBuildGlyph(int32 InFaceKey, uint32 InCodepoint);
         float              Get_LineHeightEm(int32 InFaceKey) const;
+        // True if this face has a glyph for the codepoint (FT_Get_Char_Index != 0). Used for font fallback.
+        bool               FaceHasCodepoint(int32 InFaceKey, uint32 InCodepoint) const;
         void               Shutdown();
 
     private:
