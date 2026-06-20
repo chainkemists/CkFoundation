@@ -430,8 +430,8 @@ namespace ck
             -> void
     {
         auto MeshComponent = InCurrent._MeshComponent.Get();
-        CK_ENSURE_IF_NOT(ck::IsValid(MeshComponent),
-            TEXT("Pmg Donut [{}] has invalid mesh component"), InHandle)
+        // Tolerate a torn-down mesh (reset by EndPlay during teardown) — skip gracefully.
+        if (ck::Is_NOT_Valid(MeshComponent))
         { return; }
 
         const auto& CurrentTransform = InTransform.Get_Transform();
@@ -476,8 +476,10 @@ namespace ck
             -> void
     {
         auto MeshComponent = InCurrent._MeshComponent.Get();
-        CK_ENSURE_IF_NOT(ck::IsValid(MeshComponent),
-            TEXT("Pmg DebugShape [{}] has invalid mesh component"), InHandle)
+        // Tolerate a torn-down mesh: the EndPlay processor resets _MeshComponent during teardown,
+        // and a transform tick can race that window. Nothing to update if the procmesh is gone —
+        // skip gracefully (matches FProcessor_Pmg_DebugShape_BakeLines' guard) rather than ensure.
+        if (ck::Is_NOT_Valid(MeshComponent))
         { return; }
 
         MeshComponent->SetWorldTransform(InTransform.Get_Transform());
