@@ -245,13 +245,19 @@ namespace ck
         FFragment_Pmg_DebugShape_Current& InCurrent)
         -> void
     {
+        // Ensure a procmesh exists FIRST (reuse on rebuild) so Current is always valid once
+        // NeedsSetup is cleared. Otherwise a no-font early-out would clear NeedsSetup while leaving
+        // an invalid mesh, which FProcessor_Pmg_DebugShape_UpdateTransform then ensures on.
+        auto* Mesh = InCurrent._MeshComponent.Get();
+        if (ck::Is_NOT_Valid(Mesh))
+        {
+            Mesh = SetupMeshComponent_Text(InHandle);
+            if (ck::Is_NOT_Valid(Mesh)) { return; } // no world yet; keep NeedsSetup, retry next tick
+        }
+        Mesh->ClearAllMeshSections();
+
         TArray<const TArray<uint8>*> FontChain;
         ck::pmg::ResolveTextFontChain(InParams.Get_FontOverride().Get(), FontChain);
-        if (FontChain.Num() == 0)
-        {
-            InHandle.Remove<FTag_Pmg_DebugShape_NeedsSetup>();
-            return;
-        }
 
         auto& Cache = ck::pmg::FFontGlyphCache::Get();
         TArray<int32> FaceChain;
@@ -263,22 +269,14 @@ namespace ck
         }
         if (FaceChain.Num() == 0)
         {
-            InHandle.Remove<FTag_Pmg_DebugShape_NeedsSetup>();
+            // No usable font (e.g. dedicated server): leave the shape inert with a valid empty mesh.
+            FinalizeMeshComponent_Text(Mesh, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
             return;
         }
 
         TArray<FPlacedGlyph_Text> Placed;
         LayoutText(InParams.Get_Text(), FaceChain, InParams.Get_Size(), InParams.Get_LineSpacing(),
             InParams.Get_Align(), InParams.Get_MaxGlyphs(), Placed);
-
-        // Reuse the existing procmesh on rebuild (SetText); else create a fresh one.
-        auto* Mesh = InCurrent._MeshComponent.Get();
-        if (ck::IsValid(Mesh)) { Mesh->ClearAllMeshSections(); }
-        else
-        {
-            Mesh = SetupMeshComponent_Text(InHandle);
-            if (ck::Is_NOT_Valid(Mesh)) { return; } // ensure already fired; leave NeedsSetup, retry next tick
-        }
 
         // ---- Filled tier (local XY plane, Z=0) ----
         if (InParams.Get_DrawFilled())
@@ -297,6 +295,18 @@ namespace ck
                 for (const FIntVector& T : P.Glyph->TessTris)
                 { Triangles.Add(Base + T.X); Triangles.Add(Base + T.Y); Triangles.Add(Base + T.Z); }
             }
+
+            // Double-sided fill: the constrained-Delaunay winding isn't guaranteed to face the
+            // camera and the glyph quad is flat, so add reversed triangles — otherwise the fill is
+            // backface-culled and only the wireframe outline shows.
+            const int32 ForwardTriCount = Triangles.Num();
+            for (int32 t = 0; t + 2 < ForwardTriCount; t += 3)
+            {
+                Triangles.Add(Triangles[t]);
+                Triangles.Add(Triangles[t + 2]);
+                Triangles.Add(Triangles[t + 1]);
+            }
+
             if (Vertices.Num() > 0)
             {
                 UCk_Utils_Vector3_UE::ApplyPlaneAxisRotation(Vertices, Normals, InParams.Get_Axis());
