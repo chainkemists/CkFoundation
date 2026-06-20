@@ -302,9 +302,14 @@ namespace ck
             const int32 ForwardTriCount = Triangles.Num();
             for (int32 t = 0; t + 2 < ForwardTriCount; t += 3)
             {
-                Triangles.Add(Triangles[t]);
-                Triangles.Add(Triangles[t + 2]);
-                Triangles.Add(Triangles[t + 1]);
+                // Copy to locals first — Triangles.Add(Triangles[i]) aliases into the array and
+                // asserts when the Add reallocates (Array.h "adding element from same array").
+                const int32 I0 = Triangles[t];
+                const int32 I1 = Triangles[t + 1];
+                const int32 I2 = Triangles[t + 2];
+                Triangles.Add(I0);
+                Triangles.Add(I2);
+                Triangles.Add(I1);
             }
 
             if (Vertices.Num() > 0)
