@@ -4,6 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkEcs/Request/CkRequest_Data.h"
 
 #include "CkUI/CkUI_Utils.h"
 
@@ -28,11 +29,18 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_WorldSpaceWidg
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// None: the widget is hidden (opacity 0) when its anchor projects off-screen or
+// behind the camera. ClampToViewport: the widget's pivot is kept inside the
+// viewport rect so it rides the screen edge. ClampToViewport_ByBounds: the rect
+// is shrunk by the widget's desired size first, so the WHOLE widget (not just its
+// pivot) stays on-screen. Collapses the legacy plugin's two interacting bools
+// (bShouldClampToViewport + bShouldClampByBounds) into one policy.
 UENUM(BlueprintType)
 enum class ECk_WorldSpaceWidget_Clamping_Policy : uint8
 {
     None,
-    ClampToViewport
+    ClampToViewport,
+    ClampToViewport_ByBounds
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_WorldSpaceWidget_Clamping_Policy);
@@ -201,6 +209,22 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_WorldSpaceWidget_Fading_Policy : uint8
+{
+    None,
+    FadeWithDistance
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_WorldSpaceWidget_Fading_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// FadeWithDistance maps camera->anchor distance to an opacity in [MinOpacity,
+// MaxOpacity]: at/below StartDistance the widget renders at MaxOpacity, at/above
+// EndDistance at MinOpacity, lerped between. Composed into the single per-frame
+// opacity as a multiplier of the enabled-state (it never fights occlusion or the
+// off-screen hide, which force opacity to 0).
 USTRUCT(BlueprintType)
 struct CKUI_API FCk_WorldSpaceWidget_FadingInfo
 {
@@ -208,6 +232,119 @@ struct CKUI_API FCk_WorldSpaceWidget_FadingInfo
 
 public:
     CK_GENERATED_BODY(FCk_WorldSpaceWidget_FadingInfo);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
+    ECk_WorldSpaceWidget_Fading_Policy _FadingPolicy = ECk_WorldSpaceWidget_Fading_Policy::None;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true, UIMin = "0.0", ClampMin = "0.0", UIMax = "1.0", ClampMax = "1.0",
+              EditCondition="_FadingPolicy == ECk_WorldSpaceWidget_Fading_Policy::FadeWithDistance"))
+    float _MaxOpacity = 1.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true, UIMin = "0.0", ClampMin = "0.0", UIMax = "1.0", ClampMax = "1.0",
+              EditCondition="_FadingPolicy == ECk_WorldSpaceWidget_Fading_Policy::FadeWithDistance"))
+    float _MinOpacity = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true, EditCondition="_FadingPolicy == ECk_WorldSpaceWidget_Fading_Policy::FadeWithDistance"))
+    float _FadeFalloff_StartDistance = 500.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true, EditCondition="_FadingPolicy == ECk_WorldSpaceWidget_Fading_Policy::FadeWithDistance"))
+    float _FadeFalloff_EndDistance = 5000.0f;
+
+public:
+    CK_PROPERTY_GET(_FadingPolicy);
+    CK_PROPERTY(_MaxOpacity);
+    CK_PROPERTY(_MinOpacity);
+    CK_PROPERTY(_FadeFalloff_StartDistance);
+    CK_PROPERTY(_FadeFalloff_EndDistance);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_WorldSpaceWidget_FadingInfo, _FadingPolicy);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Optional, opt-in scaling of the SCREEN-SPACE offset (not the widget itself).
+// AspectScaling scales the X offset by the viewport aspect ratio vs 16:9 (clamped)
+// so horizontal callouts don't drift on ultrawide/narrow displays. DistanceScaling
+// scales the offset per-axis by camera distance (close = Max, far = Min). Both are
+// independent and compose; either off leaves that axis untouched.
+UENUM(BlueprintType)
+enum class ECk_WorldSpaceWidget_AspectScaling_Policy : uint8
+{
+    None,
+    ScaleXByAspectRatio
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_WorldSpaceWidget_AspectScaling_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_WorldSpaceWidget_OffsetDistanceScaling_Policy : uint8
+{
+    None,
+    ScaleWithDistance
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_WorldSpaceWidget_OffsetDistanceScaling_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKUI_API FCk_WorldSpaceWidget_ScreenOffsetScalingInfo
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_WorldSpaceWidget_ScreenOffsetScalingInfo);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
+    ECk_WorldSpaceWidget_AspectScaling_Policy _AspectScalingPolicy = ECk_WorldSpaceWidget_AspectScaling_Policy::None;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true, EditCondition="_AspectScalingPolicy == ECk_WorldSpaceWidget_AspectScaling_Policy::ScaleXByAspectRatio"))
+    float _AspectRatio_MinScale = 0.5f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true, EditCondition="_AspectScalingPolicy == ECk_WorldSpaceWidget_AspectScaling_Policy::ScaleXByAspectRatio"))
+    float _AspectRatio_MaxScale = 1.5f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
+    ECk_WorldSpaceWidget_OffsetDistanceScaling_Policy _DistanceScalingPolicy = ECk_WorldSpaceWidget_OffsetDistanceScaling_Policy::None;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true, EditCondition="_DistanceScalingPolicy == ECk_WorldSpaceWidget_OffsetDistanceScaling_Policy::ScaleWithDistance"))
+    FVector2D _DistanceScale_Max = FVector2D{1.0, 1.0};
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true, EditCondition="_DistanceScalingPolicy == ECk_WorldSpaceWidget_OffsetDistanceScaling_Policy::ScaleWithDistance"))
+    FVector2D _DistanceScale_Min = FVector2D{0.1, 0.1};
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true, EditCondition="_DistanceScalingPolicy == ECk_WorldSpaceWidget_OffsetDistanceScaling_Policy::ScaleWithDistance"))
+    float _DistanceFalloff_StartDistance = 500.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true, EditCondition="_DistanceScalingPolicy == ECk_WorldSpaceWidget_OffsetDistanceScaling_Policy::ScaleWithDistance"))
+    float _DistanceFalloff_EndDistance = 5000.0f;
+
+public:
+    CK_PROPERTY_GET(_AspectScalingPolicy);
+    CK_PROPERTY(_AspectRatio_MinScale);
+    CK_PROPERTY(_AspectRatio_MaxScale);
+    CK_PROPERTY_GET(_DistanceScalingPolicy);
+    CK_PROPERTY(_DistanceScale_Max);
+    CK_PROPERTY(_DistanceScale_Min);
+    CK_PROPERTY(_DistanceFalloff_StartDistance);
+    CK_PROPERTY(_DistanceFalloff_EndDistance);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -233,10 +370,15 @@ private:
         meta=(AllowPrivateAccess = true))
     ECk_WorldSpaceWidget_Clamping_Policy _ClampingPolicy = ECk_WorldSpaceWidget_Clamping_Policy::None;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
+    FCk_WorldSpaceWidget_ScreenOffsetScalingInfo _ScreenOffsetScaling;
+
 public:
     CK_PROPERTY_GET(_WorldSpaceOffset);
     CK_PROPERTY_GET(_ScreenSpaceOffset);
     CK_PROPERTY_GET(_ClampingPolicy);
+    CK_PROPERTY_GET(_ScreenOffsetScaling);
 
     CK_DEFINE_CONSTRUCTORS(FCk_WorldSpaceWidget_LocationInfo, _WorldSpaceOffset, _ScreenSpaceOffset, _ClampingPolicy);
 };
@@ -300,6 +442,100 @@ public:
     CK_PROPERTY(_WorldComponentInfo);
 
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_WorldSpaceWidget_ParamsData, _Widget, _InitialViewportOperation, _ZOrder);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+// Runtime-reconfiguration requests. Each overwrites the matching sub-struct on the
+// live Params fragment via the deferred HandleRequests processor (the framework's
+// mutate-through-requests contract). SetScalingInfo additionally flips the
+// NeedsUpdateScaling tag so distance-scaling can be toggled on/off at runtime —
+// the creation-time-only tag grant was the legacy parity gap.
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKUI_API FCk_Request_WorldSpaceWidget_SetLocationInfo : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_WorldSpaceWidget_SetLocationInfo);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_WorldSpaceWidget_SetLocationInfo);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
+    FCk_WorldSpaceWidget_LocationInfo _LocationInfo;
+
+public:
+    CK_PROPERTY_GET(_LocationInfo);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_WorldSpaceWidget_SetLocationInfo, _LocationInfo);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKUI_API FCk_Request_WorldSpaceWidget_SetScalingInfo : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_WorldSpaceWidget_SetScalingInfo);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_WorldSpaceWidget_SetScalingInfo);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
+    FCk_WorldSpaceWidget_ScalingInfo _ScalingInfo;
+
+public:
+    CK_PROPERTY_GET(_ScalingInfo);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_WorldSpaceWidget_SetScalingInfo, _ScalingInfo);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKUI_API FCk_Request_WorldSpaceWidget_SetFadingInfo : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_WorldSpaceWidget_SetFadingInfo);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_WorldSpaceWidget_SetFadingInfo);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
+    FCk_WorldSpaceWidget_FadingInfo _FadingInfo;
+
+public:
+    CK_PROPERTY_GET(_FadingInfo);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_WorldSpaceWidget_SetFadingInfo, _FadingInfo);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKUI_API FCk_Request_WorldSpaceWidget_SetOcclusionInfo : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_WorldSpaceWidget_SetOcclusionInfo);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_WorldSpaceWidget_SetOcclusionInfo);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
+    FCk_WorldSpaceWidget_OcclusionInfo _OcclusionInfo;
+
+public:
+    CK_PROPERTY_GET(_OcclusionInfo);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_WorldSpaceWidget_SetOcclusionInfo, _OcclusionInfo);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
