@@ -12,51 +12,18 @@
 
 #include "Kismet/GameplayStatics.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
+
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+#include "CkUI/WorldSpaceWidget/CkWorldSpaceWidget_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_WorldSpaceWidget_UpdateLocation);
 CK_REGISTER_PROCESSOR(ck::FProcessor_WorldSpaceWidget_UpdateScaling);
+CK_REGISTER_PROCESSOR(ck::FProcessor_WorldSpaceWidget_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_WorldSpaceWidget_EndPlay);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-// Mirrors the legacy WorldSpaceWidgets plugin: trace camera -> widget anchor on
-// the configured channel (player pawn ignored); a blocking hit means occluded.
-static auto
-DoIsAnchorOccluded(
-    const APlayerController* InPlayerController,
-    const FVector& InAnchorWorldLocation,
-    const FCk_WorldSpaceWidget_OcclusionInfo& InOcclusionInfo)
-    -> bool
-{
-    if (ck::Is_NOT_Valid(InPlayerController, ck::IsValid_Policy_NullptrOnly{}))
-    { return false; }
-
-    const auto CameraManager = InPlayerController->PlayerCameraManager;
-    if (ck::Is_NOT_Valid(CameraManager))
-    { return false; }
-
-    const auto World = InPlayerController->GetWorld();
-    if (ck::Is_NOT_Valid(World, ck::IsValid_Policy_NullptrOnly{}))
-    { return false; }
-
-    auto QueryParams = FCollisionQueryParams{FName{TEXT("CkWorldSpaceWidgetOcclusion")}, true};
-    if (const auto PlayerPawn = InPlayerController->GetPawn();
-        ck::IsValid(PlayerPawn))
-    { QueryParams.AddIgnoredActor(PlayerPawn); }
-
-    auto Hit = FHitResult{};
-    World->LineTraceSingleByChannel(
-        Hit,
-        CameraManager->GetCameraLocation(),
-        InAnchorWorldLocation,
-        InOcclusionInfo.Get_TraceChannel().GetValue(),
-        QueryParams);
-
-    return Hit.IsValidBlockingHit();
-}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -90,60 +57,130 @@ namespace ck
             return;
         }
 
-        auto Widget = InCurrent.Get_WrapperWidget().Get();
+        const auto WrapperWidget = InCurrent.Get_WrapperWidget().Get();
 
-        if (ck::Is_NOT_Valid(Widget))
+        if (ck::Is_NOT_Valid(WrapperWidget))
         {
             UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
             return;
         }
 
         const auto& LocationInfo = InParams.Get_LocationInfo();
-        const auto ProjectionWorldLocation = InTransform.Get_Transform().GetLocation() + LocationInfo.Get_WorldSpaceOffset();
-        auto PlayerController = InCurrent.Get_WidgetOwningPlayer().Get();
+        const auto AnchorWorldLocation = InTransform.Get_Transform().GetLocation() + LocationInfo.Get_WorldSpaceOffset();
+        const auto PlayerController = InCurrent.Get_WidgetOwningPlayer().Get();
 
         CK_ENSURE_IF_NOT(ck::IsValid(PlayerController),
             TEXT("Invalid PlayerController. Unable to Project [{}] at World Location [{}]"),
-            InParams.Get_Widget(), ProjectionWorldLocation)
+            InParams.Get_Widget(), AnchorWorldLocation)
         { return; }
 
-        // Visibility rides RenderOpacity: enabled-state, then the per-frame
-        // occlusion test forces it to zero when the anchor is blocked.
-        auto TargetOpacity = InCurrent.Get_Enabled() ? 1.0f : 0.0f;
+        const auto CameraManager = PlayerController->PlayerCameraManager;
+        const auto CameraLocation = ck::IsValid(CameraManager)
+            ? CameraManager->GetCameraLocation()
+            : AnchorWorldLocation;
+        const auto DistanceToCamera = FVector::Dist(CameraLocation, AnchorWorldLocation);
 
-        if (TargetOpacity > 0.0f &&
-            InParams.Get_OcclusionInfo().Get_OcclusionPolicy() == ECk_WorldSpaceWidget_Occlusion_Policy::HideWhenOccluded &&
-            DoIsAnchorOccluded(PlayerController, ProjectionWorldLocation, InParams.Get_OcclusionInfo()))
-        {
-            TargetOpacity = 0.0f;
-        }
+        // ---- Occlusion (anchor trace; independent of screen projection). The policy
+        // gate short-circuits the trace so Get_IsAnchorOccluded only runs when needed.
+        const auto& OcclusionInfo = InParams.Get_OcclusionInfo();
+        const auto IsOccluded =
+            OcclusionInfo.Get_OcclusionPolicy() == ECk_WorldSpaceWidget_Occlusion_Policy::HideWhenOccluded &&
+            UCk_Utils_WorldSpaceWidget_UE::Get_IsAnchorOccluded(InHandle);
 
-        if (Widget->GetRenderOpacity() != TargetOpacity)
-        { Widget->SetRenderOpacity(TargetOpacity); }
+        // ---- Distance fade factor (multiplier on the enabled-state) ----
+        const auto& FadingInfo = InParams.Get_FadingInfo();
+        const auto FadeFactor = FadingInfo.Get_FadingPolicy() == ECk_WorldSpaceWidget_Fading_Policy::FadeWithDistance
+            ? FMath::GetMappedRangeValueClamped(
+                UE::Math::TVector2(FadingInfo.Get_FadeFalloff_StartDistance(), FadingInfo.Get_FadeFalloff_EndDistance()),
+                UE::Math::TVector2(FadingInfo.Get_MaxOpacity(), FadingInfo.Get_MinOpacity()),
+                static_cast<float>(DistanceToCamera))
+            : 1.0f;
 
+        // ---- Project world -> screen ----
         auto ProjectedScreenPosition = FVector2D{};
         const auto ProjectionSuccess = UGameplayStatics::ProjectWorldToScreen(
             PlayerController,
-            ProjectionWorldLocation,
+            AnchorWorldLocation,
             ProjectedScreenPosition);
 
-        if (NOT ProjectionSuccess)
-        { return; }
+        // ---- Viewport size (needed for off-screen test, clamping, aspect scaling) ----
+        auto ViewportSize = FVector2D::ZeroVector;
+        const auto HasViewport = ck::IsValid(GEngine, ck::IsValid_Policy_NullptrOnly{}) && GEngine->GameViewport != nullptr;
+        if (HasViewport)
+        { GEngine->GameViewport->GetViewportSize(ViewportSize); }
 
-        auto ScreenPosition = ProjectedScreenPosition + LocationInfo.Get_ScreenSpaceOffset();
-
-        if (LocationInfo.Get_ClampingPolicy() == ECk_WorldSpaceWidget_Clamping_Policy::ClampToViewport)
+        // ---- Screen-space offset (+ optional aspect / distance scaling) ----
+        auto AppliedScreenOffset = LocationInfo.Get_ScreenSpaceOffset();
         {
-            auto ViewportSize = FVector2D{};
-            GEngine->GameViewport->GetViewportSize(ViewportSize);
+            const auto& OffsetScaling = LocationInfo.Get_ScreenOffsetScaling();
 
-            const auto ViewportRect = FVector4(0, 0, ViewportSize.X, ViewportSize.Y);
+            if (OffsetScaling.Get_AspectScalingPolicy() == ECk_WorldSpaceWidget_AspectScaling_Policy::ScaleXByAspectRatio &&
+                HasViewport && ViewportSize.Y > KINDA_SMALL_NUMBER)
+            {
+                constexpr auto StandardAspect = 16.0f / 9.0f;
+                const auto CurrentAspect = static_cast<float>(ViewportSize.X / ViewportSize.Y);
+                const auto AspectScaleX = FMath::Clamp(CurrentAspect / StandardAspect,
+                    OffsetScaling.Get_AspectRatio_MinScale(), OffsetScaling.Get_AspectRatio_MaxScale());
+                AppliedScreenOffset.X *= AspectScaleX;
+            }
 
+            if (OffsetScaling.Get_DistanceScalingPolicy() == ECk_WorldSpaceWidget_OffsetDistanceScaling_Policy::ScaleWithDistance)
+            {
+                const auto FalloffRange = UE::Math::TVector2<float>(
+                    OffsetScaling.Get_DistanceFalloff_StartDistance(), OffsetScaling.Get_DistanceFalloff_EndDistance());
+
+                const auto OffsetScaleX = FMath::GetMappedRangeValueClamped(FalloffRange,
+                    UE::Math::TVector2<float>(static_cast<float>(OffsetScaling.Get_DistanceScale_Max().X), static_cast<float>(OffsetScaling.Get_DistanceScale_Min().X)),
+                    static_cast<float>(DistanceToCamera));
+                const auto OffsetScaleY = FMath::GetMappedRangeValueClamped(FalloffRange,
+                    UE::Math::TVector2<float>(static_cast<float>(OffsetScaling.Get_DistanceScale_Max().Y), static_cast<float>(OffsetScaling.Get_DistanceScale_Min().Y)),
+                    static_cast<float>(DistanceToCamera));
+
+                AppliedScreenOffset.X *= OffsetScaleX;
+                AppliedScreenOffset.Y *= OffsetScaleY;
+            }
+        }
+
+        auto ScreenPosition = ProjectedScreenPosition + AppliedScreenOffset;
+
+        // ---- Clamp rect (optionally shrunk by the widget's bounds) ----
+        const auto ClampingPolicy = LocationInfo.Get_ClampingPolicy();
+        const auto ShouldClamp = ClampingPolicy != ECk_WorldSpaceWidget_Clamping_Policy::None;
+
+        auto ViewportRect = FVector4(0.0, 0.0, ViewportSize.X, ViewportSize.Y);
+        if (ClampingPolicy == ECk_WorldSpaceWidget_Clamping_Policy::ClampToViewport_ByBounds)
+        {
+            if (const auto DesiredSize = WrapperWidget->GetDesiredSize();
+                DesiredSize.SizeSquared() > KINDA_SMALL_NUMBER)
+            {
+                ViewportRect += FVector4(DesiredSize.X, DesiredSize.Y, -DesiredSize.X, -DesiredSize.Y);
+            }
+        }
+
+        const auto IsOffScreen = HasViewport &&
+            (ScreenPosition.X < ViewportRect.X || ScreenPosition.Y < ViewportRect.Y ||
+             ScreenPosition.X >= ViewportRect.Z || ScreenPosition.Y >= ViewportRect.W);
+
+        // ---- Resolve a single opacity. Enabled gates everything; fade is a
+        // multiplier; occlusion and (when not clamping) the off-screen / failed-
+        // projection hide each force it to zero. One write, no frame-to-frame fight.
+        auto TargetOpacity = InCurrent.Get_Enabled() ? FadeFactor : 0.0f;
+        if (IsOccluded)
+        { TargetOpacity = 0.0f; }
+        if (NOT ShouldClamp && (IsOffScreen || NOT ProjectionSuccess))
+        { TargetOpacity = 0.0f; }
+
+        if (WrapperWidget->GetRenderOpacity() != TargetOpacity)
+        { WrapperWidget->SetRenderOpacity(TargetOpacity); }
+
+        // ---- Position (clamp the pivot into the rect when a clamping policy is set) ----
+        if (ShouldClamp)
+        {
             ScreenPosition.X = FMath::Clamp(ScreenPosition.X, ViewportRect.X, ViewportRect.Z);
             ScreenPosition.Y = FMath::Clamp(ScreenPosition.Y, ViewportRect.Y, ViewportRect.W);
         }
 
-        Widget->SetPositionInViewport(ScreenPosition);
+        WrapperWidget->SetPositionInViewport(ScreenPosition);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -195,6 +232,104 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
+        FProcessor_WorldSpaceWidget_HandleRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_WorldSpaceWidget_Current& InCurrent,
+            FFragment_WorldSpaceWidget_Params& InParams,
+            FFragment_WorldSpaceWidget_Requests& InRequests) const
+        -> void
+    {
+        const auto RequestsCopy = InRequests._Requests;
+        InRequests._Requests.Reset();
+
+        algo::ForEachRequest(RequestsCopy, ck::Visitor(
+        [&](const auto& InRequest) -> void
+        {
+            DoHandleRequest(InHandle, InCurrent, InParams, InRequest);
+
+            if (InRequest.Get_IsRequestHandleValid())
+            { InRequest.GetAndDestroyRequestHandle(); }
+        }), policy::DontResetContainer{});
+
+        if (InRequests._Requests.IsEmpty())
+        { InHandle.Remove<MarkedDirtyBy>(); }
+    }
+
+    auto
+        FProcessor_WorldSpaceWidget_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_WorldSpaceWidget_Current& InCurrent,
+            FFragment_WorldSpaceWidget_Params& InParams,
+            const FCk_Request_WorldSpaceWidget_SetLocationInfo& InRequest)
+        -> void
+    {
+        InParams.Set_LocationInfo(InRequest.Get_LocationInfo());
+    }
+
+    auto
+        FProcessor_WorldSpaceWidget_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_WorldSpaceWidget_Current& InCurrent,
+            FFragment_WorldSpaceWidget_Params& InParams,
+            const FCk_Request_WorldSpaceWidget_SetScalingInfo& InRequest)
+        -> void
+    {
+        InParams.Set_ScalingInfo(InRequest.Get_ScalingInfo());
+
+        // Distance-scaling only applies to ScreenOverlay (WorldComponent scales in 3D
+        // natively). Flip the per-frame NeedsUpdateScaling tag so the scaling can be
+        // toggled at runtime — the legacy parity gap was that this was granted only at
+        // creation, making it impossible to enable later.
+        const auto ScalingEnabled =
+            InParams.Get_RenderMode() == ECk_WorldSpaceWidget_RenderMode::ScreenOverlay &&
+            InRequest.Get_ScalingInfo().Get_ScalingPolicy() == ECk_WorldSpaceWidget_Scaling_Policy::ScaleWithDistance;
+
+        if (ScalingEnabled)
+        {
+            InHandle.AddOrGet<FTag_WorldSpaceWidget_NeedsUpdateScaling>();
+            return;
+        }
+
+        InHandle.Remove<FTag_WorldSpaceWidget_NeedsUpdateScaling>();
+
+        // Scaling just turned off — reset the scale box so it doesn't stay stuck at
+        // the last distance-driven scale.
+        if (const auto WrapperWidget = InCurrent.Get_WrapperWidget().Get();
+            ck::IsValid(WrapperWidget))
+        { WrapperWidget->Request_SetWidgetScale(FVector2D{1.0, 1.0}); }
+    }
+
+    auto
+        FProcessor_WorldSpaceWidget_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_WorldSpaceWidget_Current& InCurrent,
+            FFragment_WorldSpaceWidget_Params& InParams,
+            const FCk_Request_WorldSpaceWidget_SetFadingInfo& InRequest)
+        -> void
+    {
+        InParams.Set_FadingInfo(InRequest.Get_FadingInfo());
+    }
+
+    auto
+        FProcessor_WorldSpaceWidget_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_WorldSpaceWidget_Current& InCurrent,
+            FFragment_WorldSpaceWidget_Params& InParams,
+            const FCk_Request_WorldSpaceWidget_SetOcclusionInfo& InRequest)
+        -> void
+    {
+        InParams.Set_OcclusionInfo(InRequest.Get_OcclusionInfo());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_WorldSpaceWidget_EndPlay::
         ForEachEntity(
             TimeType InDeltaT,
@@ -209,10 +344,14 @@ namespace ck
             WidgetComponent->DestroyComponent();
         }
 
-        if (auto Widget = InParams.Get_Widget();
-            ck::IsValid(Widget))
+        // ScreenOverlay: the WRAPPER (not the content widget) was added to the
+        // viewport in Request_WrapWidget, so the wrapper is what must be removed.
+        // Removing it takes its content child with it; removing only the content
+        // (the previous behaviour) leaked the wrapper into the viewport forever.
+        if (const auto WrapperWidget = InCurrent.Get_WrapperWidget().Get();
+            ck::IsValid(WrapperWidget))
         {
-            Widget->RemoveFromParent();
+            WrapperWidget->RemoveFromParent();
         }
     }
 }
