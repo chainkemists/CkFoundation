@@ -25,7 +25,7 @@ namespace ck
         TStrongObjectPtr<UFontFace> _FontOverride;   // empty -> bundled default
         float                       _Size = 100.0f;
         ECk_Pmg_TextAlign           _Align = ECk_Pmg_TextAlign::Left;
-        ECk_Plane_Axis              _Axis = ECk_Plane_Axis::XZ; // upright (spec axis note)
+        ECk_Plane_Axis              _Axis = ECk_Plane_Axis::YZ; // default: upright, facing the play camera (YZ is now the upright plane)
         bool                        _DrawFilled = true;
         float                       _LineSpacing = 1.2f;        // multiple of font line height
         int32                       _MaxGlyphs = 4096;

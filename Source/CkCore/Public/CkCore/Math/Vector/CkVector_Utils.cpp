@@ -790,7 +790,12 @@ auto
     {
         case ECk_Plane_Axis::XY: return FQuat::Identity;
         case ECk_Plane_Axis::XZ: return FQuat(FVector::ForwardVector, PI * 0.5f);
-        case ECk_Plane_Axis::YZ: return FQuat(FVector::RightVector, -PI * 0.5f);
+        // YZ uses the UPRIGHT in-plane convention: a local-XY shape maps x->+Y, y->+Z (up),
+        // z->+X. Symmetric shapes (circles/spheres) are unaffected (rotationally symmetric
+        // about the plane normal), but asymmetric debug shapes (text/symbols/arrows) stand
+        // upright facing +/-X instead of being rotated 90 deg (the old RightVector,-90 form
+        // laid them on their side). CkCrowd only ever uses XY, so this is contained.
+        case ECk_Plane_Axis::YZ: return FQuat(FVector::UpVector, PI * 0.5f) * FQuat(FVector::ForwardVector, PI * 0.5f);
         default: return FQuat::Identity;
     }
 }

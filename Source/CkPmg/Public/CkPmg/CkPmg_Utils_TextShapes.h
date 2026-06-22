@@ -33,7 +33,7 @@ public:
         bool InDrawFilled = true,
         float InLineThickness = 2.0f,
         ECk_Pmg_TextAlign InAlign = ECk_Pmg_TextAlign::Left,
-        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XZ,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::YZ,
         UFontFace* InFontOverride = nullptr,
         float InDuration = 0.0f);
 
@@ -51,7 +51,7 @@ public:
         bool InDrawFilled = true,
         float InLineThickness = 2.0f,
         ECk_Pmg_TextAlign InAlign = ECk_Pmg_TextAlign::Left,
-        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XZ,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::YZ,
         UFontFace* InFontOverride = nullptr,
         float InDuration = 0.0f);
 
@@ -70,7 +70,7 @@ public:
         bool InDrawFilled = true,
         float InLineThickness = 2.0f,
         ECk_Pmg_TextAlign InAlign = ECk_Pmg_TextAlign::Left,
-        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XZ,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::YZ,
         UFontFace* InFontOverride = nullptr,
         float InDuration = 0.0f);
 

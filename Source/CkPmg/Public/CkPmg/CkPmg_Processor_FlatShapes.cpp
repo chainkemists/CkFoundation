@@ -731,7 +731,7 @@ namespace ck
                     {
                         case ECk_Plane_Axis::XY: AxisRotation = FQuat::Identity; break;
                         case ECk_Plane_Axis::XZ: AxisRotation = FQuat(FVector::ForwardVector, PI * 0.5f); break;
-                        case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::RightVector, -PI * 0.5f); break;
+                        case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::UpVector, PI * 0.5f) * FQuat(FVector::ForwardVector, PI * 0.5f); break;
                     }
 
                     const auto Rotation = Transform.Get_Transform().GetRotation();
@@ -776,7 +776,7 @@ namespace ck
                 {
                     case ECk_Plane_Axis::XY: AxisRotation = FQuat::Identity; break;
                     case ECk_Plane_Axis::XZ: AxisRotation = FQuat(FVector::ForwardVector, PI * 0.5f); break;
-                    case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::RightVector, -PI * 0.5f); break;
+                    case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::UpVector, PI * 0.5f) * FQuat(FVector::ForwardVector, PI * 0.5f); break;
                 }
 
                 const auto FinalRotation = Rotation * AxisRotation;
@@ -824,7 +824,7 @@ namespace ck
                 {
                     case ECk_Plane_Axis::XY: AxisRotation = FQuat::Identity; break;
                     case ECk_Plane_Axis::XZ: AxisRotation = FQuat(FVector::ForwardVector, PI * 0.5f); break;
-                    case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::RightVector, -PI * 0.5f); break;
+                    case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::UpVector, PI * 0.5f) * FQuat(FVector::ForwardVector, PI * 0.5f); break;
                 }
 
                 const auto FinalRotation = Rotation * AxisRotation;
@@ -903,7 +903,7 @@ namespace ck
                 {
                     case ECk_Plane_Axis::XY: AxisRotation = FQuat::Identity; break;
                     case ECk_Plane_Axis::XZ: AxisRotation = FQuat(FVector::ForwardVector, PI * 0.5f); break;
-                    case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::RightVector, -PI * 0.5f); break;
+                    case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::UpVector, PI * 0.5f) * FQuat(FVector::ForwardVector, PI * 0.5f); break;
                 }
 
                 const auto FinalRotation = Rotation * AxisRotation;
@@ -965,7 +965,7 @@ namespace ck
                 {
                     case ECk_Plane_Axis::XY: AxisRotation = FQuat::Identity; break;
                     case ECk_Plane_Axis::XZ: AxisRotation = FQuat(FVector::ForwardVector, PI * 0.5f); break;
-                    case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::RightVector, -PI * 0.5f); break;
+                    case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::UpVector, PI * 0.5f) * FQuat(FVector::ForwardVector, PI * 0.5f); break;
                 }
 
                 const auto FinalRotation = Rotation * AxisRotation;
@@ -1022,7 +1022,7 @@ namespace ck
                 {
                     case ECk_Plane_Axis::XY: AxisRotation = FQuat::Identity; break;
                     case ECk_Plane_Axis::XZ: AxisRotation = FQuat(FVector::ForwardVector, PI * 0.5f); break;
-                    case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::RightVector, -PI * 0.5f); break;
+                    case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::UpVector, PI * 0.5f) * FQuat(FVector::ForwardVector, PI * 0.5f); break;
                 }
 
                 // Apply AxisRotation first, then actor/world rotation
@@ -1079,7 +1079,7 @@ namespace ck
                 {
                     case ECk_Plane_Axis::XY: AxisRotation = FQuat::Identity; break;
                     case ECk_Plane_Axis::XZ: AxisRotation = FQuat(FVector::ForwardVector, PI * 0.5f); break;
-                    case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::RightVector, -PI * 0.5f); break;
+                    case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::UpVector, PI * 0.5f) * FQuat(FVector::ForwardVector, PI * 0.5f); break;
                 }
 
                 const auto FinalRotation = Rotation * AxisRotation;
