@@ -31,7 +31,7 @@ public:
         FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
-        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::YZ,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -43,7 +43,7 @@ public:
         FTransform InTransform,
         float InAxisLength = 100.0f,
         float InArrowSize = 10.0f,
-        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::YZ,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -58,7 +58,7 @@ public:
         float InGapLength = 10.0f,
         float InThickness = 2.0f,
         FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f),
-        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::YZ,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -75,7 +75,7 @@ public:
         FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
-        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::YZ,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -87,7 +87,7 @@ public:
         FTransform InTransform,
         float InAxisLength = 100.0f,
         float InArrowSize = 10.0f,
-        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::YZ,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -102,7 +102,7 @@ public:
         float InGapLength = 10.0f,
         float InThickness = 2.0f,
         FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f),
-        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::YZ,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -121,7 +121,7 @@ public:
         FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
-        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::YZ,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -135,7 +135,7 @@ public:
         FRotator InRotation = FRotator(0, 0, 0),
         float InAxisLength = 100.0f,
         float InArrowSize = 10.0f,
-        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::YZ,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -151,7 +151,7 @@ public:
         float InGapLength = 10.0f,
         float InThickness = 2.0f,
         FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f),
-        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::YZ,
         float InDuration = 0.0f);
 };
 

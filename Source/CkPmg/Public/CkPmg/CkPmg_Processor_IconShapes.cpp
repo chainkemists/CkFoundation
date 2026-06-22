@@ -44,7 +44,7 @@ auto
     {
         case ECk_Plane_Axis::XY: AxisRotation = FQuat::Identity; break;
         case ECk_Plane_Axis::XZ: AxisRotation = FQuat(FVector::ForwardVector, PI * 0.5f); break;
-        case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::RightVector, -PI * 0.5f); break;
+        case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::UpVector, PI * 0.5f) * FQuat(FVector::ForwardVector, PI * 0.5f); break;
     }
 
     const auto TriangleSize = Size * 1.3f;
@@ -152,7 +152,7 @@ auto
     {
         case ECk_Plane_Axis::XY: AxisRotation = FQuat::Identity; break;
         case ECk_Plane_Axis::XZ: AxisRotation = FQuat(FVector::ForwardVector, PI * 0.5f); break;
-        case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::RightVector, -PI * 0.5f); break;
+        case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::UpVector, PI * 0.5f) * FQuat(FVector::ForwardVector, PI * 0.5f); break;
     }
 
     const auto CircleTransform = FTransform(AxisRotation, FVector::ZeroVector, FVector::OneVector) * ParentTransform;
@@ -241,7 +241,7 @@ auto
     {
         case ECk_Plane_Axis::XY: AxisRotation = FQuat::Identity; break;
         case ECk_Plane_Axis::XZ: AxisRotation = FQuat(FVector::ForwardVector, PI * 0.5f); break;
-        case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::RightVector, -PI * 0.5f); break;
+        case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::UpVector, PI * 0.5f) * FQuat(FVector::ForwardVector, PI * 0.5f); break;
     }
 
     const auto CircleTransform = FTransform(AxisRotation, FVector::ZeroVector, FVector::OneVector) * ParentTransform;
@@ -314,7 +314,7 @@ auto
     {
         case ECk_Plane_Axis::XY: AxisRotation = FQuat::Identity; break;
         case ECk_Plane_Axis::XZ: AxisRotation = FQuat(FVector::ForwardVector, PI * 0.5f); break;
-        case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::RightVector, -PI * 0.5f); break;
+        case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::UpVector, PI * 0.5f) * FQuat(FVector::ForwardVector, PI * 0.5f); break;
     }
 
     const auto CircleTransform = FTransform(AxisRotation, FVector::ZeroVector, FVector::OneVector) * ParentTransform;
