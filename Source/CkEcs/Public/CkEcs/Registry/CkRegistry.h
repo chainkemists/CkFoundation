@@ -333,9 +333,13 @@ auto CKECS_API GetTypeHash(const FCk_Registry& InRegistry) -> uint32;
 
 CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Registry, [](const FCk_Registry& InObj)
 {
+    // Escape the literal braces: {{ -> '{', }} -> '}', and {} are the two positional args. The former
+    // TEXT("{slot={},gen={}}") made fmt parse "{slot=...}" as a NAMED field 'slot' it couldn't resolve,
+    // throwing fmt::format_error — which crashed every ensure that formats a registry (e.g. the tombstone-
+    // handle ensures fired during a CkSnapshot load).
     return ck::Format
     (
-        TEXT("{slot={},gen={}}"),
+        TEXT("{{slot={},gen={}}}"),
         InObj.Get_RegistryHandle().SlotIndex,
         InObj.Get_RegistryHandle().Generation
     );
