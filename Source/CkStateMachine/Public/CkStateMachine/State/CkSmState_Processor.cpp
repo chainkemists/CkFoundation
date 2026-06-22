@@ -101,6 +101,18 @@ namespace ck
 
         InHandle.Try_Remove<FTag_SmState_NeedsEvaluation>();
 
+        // A CkSnapshot restore brings SM state-entities back with their FTag_SmState_Active tag (the generic tag
+        // section restores every tag present at capture), but FFragment_Sm_OwningStateMachine (the owning-SM
+        // EntityHolder) is NOT snapshotable — so a restored state is orphaned. FProcessor_Sm_RestoreRedrive
+        // recreates the live state graph fresh, so this stale orphan must not be evaluated. Strip its Active tag
+        // up front so it drops out of the loop — mirrors the redrive's virgin-reset tag strip on the SM entity
+        // (CkStateMachine_Processor.cpp:880-887) — and avoids the Get_StoredEntity ensure on the missing holder.
+        if (NOT TUtils_Sm_OwningStateMachine::Has(InHandle))
+        {
+            InHandle.Try_Remove<FTag_SmState_Active>();
+            return;
+        }
+
         auto StateMachine = TUtils_Sm_OwningStateMachine::Get_StoredEntity(InHandle);
 
         if (ck::Is_NOT_Valid(StateMachine))
