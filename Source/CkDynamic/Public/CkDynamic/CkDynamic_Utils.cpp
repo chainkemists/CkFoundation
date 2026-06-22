@@ -456,12 +456,22 @@ auto
     UCk_Utils_DynamicFragment_UE::
     BindTo_OnRepNotify(
         FCk_Handle& InHandle,
+        const UScriptStruct* InStructType,
         const FCk_DynamicFragment_OnRepNotify& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> void
 {
-    CK_SIGNAL_BIND(ck::UUtils_Signal_DynamicFragment_OnRepNotify, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    CK_ENSURE_IF_NOT(ck::IsValid(InStructType),
+        TEXT("Invalid Dynamic Fragment type passed to BindTo_OnRepNotify on Handle [{}]"), InHandle)
+    { return; }
+
+    CK_SIGNAL_BIND_WITH_CONDITION(ck::UUtils_Signal_DynamicFragment_OnRepNotify, InHandle, InDelegate,
+        InBindingPolicy, InPostFireBehavior,
+        [InStructType](FCk_Handle /*InHandle*/, FCk_DynamicFragment_RepNotifyInfo InInfo)
+        {
+            return InInfo.ChangedType.Get() == InStructType;
+        });
 }
 
 auto
