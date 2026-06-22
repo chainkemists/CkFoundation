@@ -278,6 +278,10 @@ namespace ck
         LayoutText(InParams.Get_Text(), FaceChain, InParams.Get_Size(), InParams.Get_LineSpacing(),
             InParams.Get_Align(), InParams.Get_MaxGlyphs(), Placed);
 
+        // Orientation applied to BOTH the filled mesh and the wireframe so they stay aligned.
+        // Keyed on _Axis (default YZ = upright, facing the play camera; see Get_PlaneAxisRotation).
+        const FQuat OrientQuat = UCk_Utils_Vector3_UE::Get_PlaneAxisRotation(InParams.Get_Axis());
+
         // ---- Filled tier (local XY plane, Z=0) ----
         if (InParams.Get_DrawFilled())
         {
@@ -314,7 +318,8 @@ namespace ck
 
             if (Vertices.Num() > 0)
             {
-                UCk_Utils_Vector3_UE::ApplyPlaneAxisRotation(Vertices, Normals, InParams.Get_Axis());
+                for (FVector& V : Vertices) { V = OrientQuat.RotateVector(V); }
+                for (FVector& N : Normals)  { N = OrientQuat.RotateVector(N); }
                 Mesh->CreateMeshSection_LinearColor(0, Vertices, Triangles, Normals, UVs,
                     TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
             }
@@ -328,14 +333,6 @@ namespace ck
             if (InHandle.Has<FFragment_Pmg_DebugShape_Lines>())
             { InHandle.Get<FFragment_Pmg_DebugShape_Lines>()._Lines.Empty(); }
 
-            auto AxisRotation = FQuat::Identity;
-            switch (InParams.Get_Axis())
-            {
-                case ECk_Plane_Axis::XY: AxisRotation = FQuat::Identity; break;
-                case ECk_Plane_Axis::XZ: AxisRotation = FQuat(FVector::ForwardVector, PI * 0.5f); break;
-                case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::RightVector, -PI * 0.5f); break;
-            }
-
             auto Center = FVector::ZeroVector;
             auto EntityRotation = FQuat::Identity;
             if (InHandle.Has<FFragment_Transform>())
@@ -344,7 +341,7 @@ namespace ck
                 Center = Xform.GetLocation();
                 EntityRotation = Xform.GetRotation();
             }
-            const auto FinalRotation = EntityRotation * AxisRotation;
+            const auto FinalRotation = EntityRotation * OrientQuat;
 
             auto LineColor = InCommon.Get_Color(); LineColor.A = 1.0f;
             const float Size = InParams.Get_Size();

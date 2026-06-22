@@ -22,7 +22,7 @@ namespace ck
         float _ShaftWidth = 20.0f;
         float _ArrowHeadRatio = 0.3f;
         float _ArrowHeadWidthMultiplier = 2.0f;
-        ECk_Plane_Axis _Axis = ECk_Plane_Axis::XY;
+        ECk_Plane_Axis _Axis = ECk_Plane_Axis::YZ;
 
     public:
         CK_PROPERTY(_Length);
@@ -45,7 +45,7 @@ namespace ck
     private:
         float _AxisLength = 100.0f;
         float _ArrowSize = 10.0f;
-        ECk_Plane_Axis _Axis = ECk_Plane_Axis::XY;
+        ECk_Plane_Axis _Axis = ECk_Plane_Axis::YZ;
 
     public:
         CK_PROPERTY(_AxisLength);
@@ -68,7 +68,7 @@ namespace ck
         float _DashLength = 20.0f;
         float _GapLength = 10.0f;
         float _Thickness = 2.0f;
-        ECk_Plane_Axis _Axis = ECk_Plane_Axis::XY;
+        ECk_Plane_Axis _Axis = ECk_Plane_Axis::YZ;
 
     public:
         CK_PROPERTY(_Length);

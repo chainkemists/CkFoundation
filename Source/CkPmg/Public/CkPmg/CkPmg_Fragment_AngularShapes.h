@@ -22,7 +22,7 @@ namespace ck
         float _StartAngle = 0.0f;
         float _EndAngle = 90.0f;
         int32 _Segments = 32;
-        ECk_Plane_Axis _Axis = ECk_Plane_Axis::XY;
+        ECk_Plane_Axis _Axis = ECk_Plane_Axis::YZ;
 
     public:
         CK_PROPERTY(_Radius);
@@ -48,7 +48,7 @@ namespace ck
         float _EndAngle = 90.0f;
         float _Thickness = 5.0f;
         int32 _Segments = 32;
-        ECk_Plane_Axis _Axis = ECk_Plane_Axis::XY;
+        ECk_Plane_Axis _Axis = ECk_Plane_Axis::YZ;
 
     public:
         CK_PROPERTY(_Radius);
@@ -75,7 +75,7 @@ namespace ck
         float _StartAngle = 0.0f;
         float _EndAngle = 90.0f;
         int32 _Segments = 16;
-        ECk_Plane_Axis _Axis = ECk_Plane_Axis::XY;
+        ECk_Plane_Axis _Axis = ECk_Plane_Axis::YZ;
 
     public:
         CK_PROPERTY(_Radius);

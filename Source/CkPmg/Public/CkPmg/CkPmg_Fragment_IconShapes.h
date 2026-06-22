@@ -19,7 +19,7 @@ namespace ck
 
     private:
         float _Size = 100.0f;
-        ECk_Plane_Axis _Axis = ECk_Plane_Axis::XY;
+        ECk_Plane_Axis _Axis = ECk_Plane_Axis::YZ;
 
     public:
         CK_PROPERTY(_Size);
@@ -39,7 +39,7 @@ namespace ck
     private:
         float _Radius = 100.0f;
         int32 _Segments = 32;
-        ECk_Plane_Axis _Axis = ECk_Plane_Axis::XY;
+        ECk_Plane_Axis _Axis = ECk_Plane_Axis::YZ;
 
     public:
         CK_PROPERTY(_Radius);
@@ -60,7 +60,7 @@ namespace ck
     private:
         float _Radius = 100.0f;
         int32 _Segments = 32;
-        ECk_Plane_Axis _Axis = ECk_Plane_Axis::XY;
+        ECk_Plane_Axis _Axis = ECk_Plane_Axis::YZ;
 
     public:
         CK_PROPERTY(_Radius);
@@ -81,7 +81,7 @@ namespace ck
     private:
         float _Radius = 100.0f;
         int32 _Segments = 32;
-        ECk_Plane_Axis _Axis = ECk_Plane_Axis::XY;
+        ECk_Plane_Axis _Axis = ECk_Plane_Axis::YZ;
 
     public:
         CK_PROPERTY(_Radius);

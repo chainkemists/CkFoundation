@@ -19,7 +19,7 @@ namespace ck
 
     private:
         float _Size = 100.0f;
-        ECk_Plane_Axis _Axis = ECk_Plane_Axis::XY;
+        ECk_Plane_Axis _Axis = ECk_Plane_Axis::YZ;
 
     public:
         CK_PROPERTY(_Size);
@@ -38,7 +38,7 @@ namespace ck
 
     private:
         float _Size = 100.0f;
-        ECk_Plane_Axis _Axis = ECk_Plane_Axis::XY;
+        ECk_Plane_Axis _Axis = ECk_Plane_Axis::YZ;
 
     public:
         CK_PROPERTY(_Size);
@@ -57,7 +57,7 @@ namespace ck
 
     private:
         float _Size = 100.0f;
-        ECk_Plane_Axis _Axis = ECk_Plane_Axis::XY;
+        ECk_Plane_Axis _Axis = ECk_Plane_Axis::YZ;
 
     public:
         CK_PROPERTY(_Size);
@@ -76,7 +76,7 @@ namespace ck
 
     private:
         float _Size = 100.0f;
-        ECk_Plane_Axis _Axis = ECk_Plane_Axis::XY;
+        ECk_Plane_Axis _Axis = ECk_Plane_Axis::YZ;
 
     public:
         CK_PROPERTY(_Size);
@@ -95,7 +95,7 @@ namespace ck
 
     private:
         float _Size = 100.0f;
-        ECk_Plane_Axis _Axis = ECk_Plane_Axis::XY;
+        ECk_Plane_Axis _Axis = ECk_Plane_Axis::YZ;
 
     public:
         CK_PROPERTY(_Size);
