@@ -17,6 +17,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
+#include "HAL/FileManager.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Serialization/JsonSerializer.h"
@@ -218,6 +219,87 @@ auto
                         TEXT("[DynamicHandleTypes] Merged %d stub entry/entries from sibling recovery file: %s"),
                         MergedCount, *StubFilePath);
                 }
+            }
+        }
+    }
+
+    // Test-only handle registries. Any enabled plugin (or the project) may drop a
+    // `Script/Generated/DynamicHandleTypes.TESTONLY.json` to register `FCk_Handle_TESTONLY_*`
+    // types for automation tests WITHOUT polluting the committed canonical registry. Discovered
+    // by directory iteration (thread-safe, no IPluginManager dependency so this is safe on the
+    // packaged off-thread PreCompile path), merged with the same dedup-by-TypeName rule — canonical
+    // and stub entries always win, so a test registry can never override a real handle type.
+    {
+        auto TestRegistryFiles = TArray<FString>{};
+
+        const auto CollectIfPresent = [&TestRegistryFiles](const FString& InBaseDir) -> void
+        {
+            const auto Candidate = InBaseDir / TEXT("Script") / TEXT("Generated") / TEXT("DynamicHandleTypes.TESTONLY.json");
+            if (FPaths::FileExists(Candidate))
+            { TestRegistryFiles.AddUnique(FPaths::ConvertRelativePathToFull(Candidate)); }
+        };
+
+        CollectIfPresent(FPaths::ProjectDir());
+
+        const auto PluginsRoot = FPaths::ProjectPluginsDir();
+        auto PluginDirNames = TArray<FString>{};
+        constexpr auto FindFiles = false;
+        constexpr auto FindDirectories = true;
+        IFileManager::Get().FindFiles(PluginDirNames, *(PluginsRoot / TEXT("*")), FindFiles, FindDirectories);
+        for (const auto& PluginDirName : PluginDirNames)
+        {
+            CollectIfPresent(PluginsRoot / PluginDirName);
+        }
+
+        for (const auto& TestFilePath : TestRegistryFiles)
+        {
+            auto TestJsonString = FString{};
+            if (NOT FFileHelper::LoadFileToString(TestJsonString, *TestFilePath))
+            { continue; }
+
+            auto TestReader = TJsonReaderFactory<>::Create(TestJsonString);
+            auto TestRoot   = TSharedPtr<FJsonObject>{};
+            if (NOT (FJsonSerializer::Deserialize(TestReader, TestRoot) && TestRoot.IsValid()
+                && TestRoot->HasField(TEXT("HandleTypes"))))
+            { continue; }
+
+            const auto TestEntries = TestRoot->GetArrayField(TEXT("HandleTypes"));
+
+            auto ExistingTypeNames = TSet<FString>{};
+            for (const auto& Entry : HandleTypesArray)
+            {
+                const auto Obj = Entry->AsObject();
+                if (Obj.IsValid())
+                {
+                    auto Name = FString{};
+                    Obj->TryGetStringField(TEXT("TypeName"), Name);
+                    if (NOT Name.IsEmpty())
+                    { ExistingTypeNames.Add(Name); }
+                }
+            }
+
+            auto MergedCount = 0;
+            for (const auto& TestEntry : TestEntries)
+            {
+                const auto Obj = TestEntry->AsObject();
+                if (NOT Obj.IsValid())
+                { continue; }
+
+                auto Name = FString{};
+                Obj->TryGetStringField(TEXT("TypeName"), Name);
+                if (Name.IsEmpty() || ExistingTypeNames.Contains(Name))
+                { continue; }
+
+                HandleTypesArray.Add(TestEntry);
+                ExistingTypeNames.Add(Name);
+                ++MergedCount;
+            }
+
+            if (MergedCount > 0)
+            {
+                ck::dynamic::Log(
+                    TEXT("[DynamicHandleTypes] Merged %d TEST-ONLY handle type(s) from: %s"),
+                    MergedCount, *TestFilePath);
             }
         }
     }
