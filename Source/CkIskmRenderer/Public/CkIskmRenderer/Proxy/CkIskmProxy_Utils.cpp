@@ -132,6 +132,19 @@ auto
 
 auto
     UCk_Utils_IskmProxy_UE::
+    Request_SetVisibility(
+        FCk_Handle_IskmProxy& InHandle,
+        bool InIsVisible)
+    -> FCk_Handle_IskmProxy
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return InHandle; }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(
+        FCk_Request_IskmProxy_SetVisibility{InIsVisible});
+    return InHandle;
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
     Get_PlayingAnimation(const FCk_Handle_IskmProxy& InHandle)
     -> UAnimSequenceBase*
 {

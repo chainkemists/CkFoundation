@@ -4,8 +4,18 @@
 
 #include "CkEcsExt/SceneNode/CkSceneNode_Utils.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
+#include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
 #include "CkUI/WorldSpaceWidget/CkWorldSpaceWidget_Fragment.h"
+
+#include "CollisionQueryParams.h"
+
+#include "Camera/PlayerCameraManager.h"
+
+#include "Engine/World.h"
+
+#include "GameFramework/Pawn.h"
+#include "GameFramework/PlayerController.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -110,23 +120,21 @@ auto
 
     auto& Current = InHandle.Get<ck::FFragment_WorldSpaceWidget_Current>();
 
+    // The wrapper (which already parents the content widget under its ScalingBox) is
+    // added to the viewport once, in Request_WrapWidget. Visibility then rides the
+    // wrapper's RenderOpacity — do NOT add/remove the content widget to the viewport
+    // here, which would re-parent it out of the wrapper and bypass scaling/tracking.
     switch (const auto& ViewportOperation = InParams.Get_InitialViewportOperation())
     {
         case ECk_UI_Widget_ViewportOperation::DoNothing:
+        case ECk_UI_Widget_ViewportOperation::RemoveFromViewport:
         {
             Current._Enabled = false;
             break;
         }
         case ECk_UI_Widget_ViewportOperation::AddToViewport:
         {
-            ContentWidget->AddToViewport();
             Current._Enabled = true;
-            break;
-        }
-        case ECk_UI_Widget_ViewportOperation::RemoveFromViewport:
-        {
-            ContentWidget->RemoveFromParent();
-            Current._Enabled = false;
             break;
         }
         default:
@@ -222,9 +230,6 @@ auto
         return InWorldSpaceWidgetHandle;
     }
 
-    // ScreenOverlay: visibility rides RenderOpacity (legacy WorldSpaceWidgets
-    // pattern) so the occlusion processor can compose enabled-state with the
-    // per-frame occlusion test without fighting AddToViewport/RemoveFromParent.
     if (const auto WrapperWidget = Current.Get_WrapperWidget().Get();
         ck::IsValid(WrapperWidget))
     {
@@ -236,11 +241,108 @@ auto
 
 auto
     UCk_Utils_WorldSpaceWidget_UE::
+    Request_SetLocationInfo(
+        FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle,
+        const FCk_WorldSpaceWidget_LocationInfo& InLocationInfo)
+    -> FCk_Handle_WorldSpaceWidget
+{
+    InWorldSpaceWidgetHandle.AddOrGet<ck::FFragment_WorldSpaceWidget_Requests>()._Requests.Emplace(
+        FCk_Request_WorldSpaceWidget_SetLocationInfo{InLocationInfo});
+
+    return InWorldSpaceWidgetHandle;
+}
+
+auto
+    UCk_Utils_WorldSpaceWidget_UE::
+    Request_SetScalingInfo(
+        FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle,
+        const FCk_WorldSpaceWidget_ScalingInfo& InScalingInfo)
+    -> FCk_Handle_WorldSpaceWidget
+{
+    InWorldSpaceWidgetHandle.AddOrGet<ck::FFragment_WorldSpaceWidget_Requests>()._Requests.Emplace(
+        FCk_Request_WorldSpaceWidget_SetScalingInfo{InScalingInfo});
+
+    return InWorldSpaceWidgetHandle;
+}
+
+auto
+    UCk_Utils_WorldSpaceWidget_UE::
+    Request_SetFadingInfo(
+        FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle,
+        const FCk_WorldSpaceWidget_FadingInfo& InFadingInfo)
+    -> FCk_Handle_WorldSpaceWidget
+{
+    InWorldSpaceWidgetHandle.AddOrGet<ck::FFragment_WorldSpaceWidget_Requests>()._Requests.Emplace(
+        FCk_Request_WorldSpaceWidget_SetFadingInfo{InFadingInfo});
+
+    return InWorldSpaceWidgetHandle;
+}
+
+auto
+    UCk_Utils_WorldSpaceWidget_UE::
+    Request_SetOcclusionInfo(
+        FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle,
+        const FCk_WorldSpaceWidget_OcclusionInfo& InOcclusionInfo)
+    -> FCk_Handle_WorldSpaceWidget
+{
+    InWorldSpaceWidgetHandle.AddOrGet<ck::FFragment_WorldSpaceWidget_Requests>()._Requests.Emplace(
+        FCk_Request_WorldSpaceWidget_SetOcclusionInfo{InOcclusionInfo});
+
+    return InWorldSpaceWidgetHandle;
+}
+
+auto
+    UCk_Utils_WorldSpaceWidget_UE::
     Get_Instance(
         const FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle)
     -> UUserWidget*
 {
     return InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget_Current>()._ContentWidgetHardRef.Get();
+}
+
+auto
+    UCk_Utils_WorldSpaceWidget_UE::
+    Get_IsAnchorOccluded(
+        const FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InWorldSpaceWidgetHandle))
+    { return false; }
+
+    const auto& Params = InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget_Params>();
+    const auto& Current = InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget_Current>();
+
+    const auto PlayerController = Current.Get_WidgetOwningPlayer().Get();
+    if (ck::Is_NOT_Valid(PlayerController))
+    { return false; }
+
+    const auto CameraManager = PlayerController->PlayerCameraManager;
+    if (ck::Is_NOT_Valid(CameraManager))
+    { return false; }
+
+    const auto World = PlayerController->GetWorld();
+    if (ck::Is_NOT_Valid(World))
+    { return false; }
+
+    const auto& WidgetTransform = InWorldSpaceWidgetHandle.Get<ck::FFragment_Transform>().Get_Transform().GetLocation();
+    const auto& WidgetOffset = Params.Get_LocationInfo().Get_WorldSpaceOffset();
+
+    const auto AnchorWorldLocation = WidgetTransform + WidgetOffset;
+
+    auto QueryParams = FCollisionQueryParams{FName{TEXT("CkWorldSpaceWidgetOcclusion")}, true};
+    if (const auto PlayerPawn = PlayerController->GetPawn();
+        ck::IsValid(PlayerPawn))
+    { QueryParams.AddIgnoredActor(PlayerPawn); }
+
+    auto Hit = FHitResult{};
+    World->LineTraceSingleByChannel(
+        Hit,
+        CameraManager->GetCameraLocation(),
+        AnchorWorldLocation,
+        Params.Get_OcclusionInfo().Get_TraceChannel().GetValue(),
+        QueryParams);
+
+    return Hit.IsValidBlockingHit();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
