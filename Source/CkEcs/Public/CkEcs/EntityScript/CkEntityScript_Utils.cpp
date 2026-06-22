@@ -371,6 +371,14 @@ auto
         const FCk_Delegate_EntityScript_Constructed& InDelegate)
     -> void
 {
+    // Request_SpawnEntity returns an INVALID pending handle when the spawn was suppressed — notably during a
+    // CkSnapshot load's world reconstitution (see Request_SpawnEntity :81-82), and after it has already ensured
+    // on a genuine bad class/owner (:71-79). In either case there is no entity-under-construction, so binding
+    // would AddOrGet the OnConstructed signal fragment on a TOMBSTONE handle and ensure (and, until the registry
+    // formatter fix, crash). No-op: the delegate simply never fires, which is correct — nothing was spawned.
+    if (ck::Is_NOT_Valid(InPendingEntityScript.Get_EntityUnderConstruction()))
+    { return; }
+
     ck::UUtils_Signal_OnConstructed_PostFireUnbind::Bind(
         InPendingEntityScript.Get_EntityUnderConstruction(), InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
 }
