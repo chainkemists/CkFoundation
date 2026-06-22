@@ -197,7 +197,22 @@ namespace ck::pmg
             float InThickness)
         -> void
     {
-        const auto Quat = UCk_Utils_Vector3_UE::Get_PlaneAxisRotation(InAxis);
+        // Compose the entity's world rotation with the plane-axis rotation, mirroring
+        // the hand-authored wireframes (Triangle/Plane/etc. use FinalRotation = Rotation
+        // * AxisRotation). This helper previously applied ONLY the plane-axis rotation.
+        // For an IDENTITY entity rotation (the common case) that is identical — the
+        // round-trip Append_DebugLine_World -> WorldToLocal divides the entity transform
+        // back out either way. But for a circle/ring drawn on a ROTATED entity, omitting
+        // the entity rotation here leaves the baked wireframe in the wrong plane while the
+        // filled mesh (which receives the entity rotation via the procmesh
+        // SetWorldTransform) rotates correctly. Composing it makes the circle path
+        // identical to the non-circle path, so both resolve to EntityRot * AxisRot * local
+        // under any entity rotation.
+        auto EntityRotation = FQuat::Identity;
+        if (InHandle.Has<ck::FFragment_Transform>())
+        { EntityRotation = InHandle.Get<ck::FFragment_Transform>().Get_Transform().GetRotation(); }
+
+        const auto Quat = EntityRotation * UCk_Utils_Vector3_UE::Get_PlaneAxisRotation(InAxis);
         const auto Steps = FMath::Max(3, InSegments);
 
         for (auto i = 0; i < Steps; ++i)
