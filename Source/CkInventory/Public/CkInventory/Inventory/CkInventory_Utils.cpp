@@ -520,6 +520,46 @@ auto
 
 auto
     UCk_Utils_Inventory_UE::
+    ForEach_Inventories(
+        FCk_Handle& InOwnerEntity,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate)
+    -> TArray<FCk_Handle_Inventory>
+{
+    auto Inventories = TArray<FCk_Handle_Inventory>{};
+
+    ForEach_Inventories(InOwnerEntity, [&](FCk_Handle_Inventory& InInventory)
+    {
+        if (InDelegate.IsBound())
+        { InDelegate.Execute(InInventory, InOptionalPayload); }
+        else
+        { Inventories.Emplace(InInventory); }
+    });
+
+    return Inventories;
+}
+
+auto
+    UCk_Utils_Inventory_UE::
+    ForEach_Inventories(
+        FCk_Handle& InOwnerEntity,
+        const TFunction<void(FCk_Handle_Inventory&)>& InFunc)
+    -> void
+{
+    RecordOfInventories_Utils::ForEach_ValidEntry
+    (
+        InOwnerEntity,
+        [&](FCk_Handle_Inventory InInventory)
+        {
+            InFunc(InInventory);
+        }
+    );
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_UE::
     Get_Items(
         const FCk_Handle_Inventory& InInventory)
     -> TArray<FCk_Handle_Item>

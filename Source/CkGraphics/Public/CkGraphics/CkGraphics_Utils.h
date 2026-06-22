@@ -61,6 +61,16 @@ public:
     static TArray<FCk_MeshMaterialOverride>
     Get_MeshComponentEffectiveMaterials(
         const UMeshComponent* InMeshComponent);
+
+    // Sets the parameter's value onto the dynamic material instance using the setter for its type.
+    // Does NOT consult the parameter's _Override flag — the caller decides whether to apply.
+    UFUNCTION(BlueprintCallable,
+              DisplayName  = "[Ck] Apply Material Parameter",
+              Category = "Ck|Utils|Graphics")
+    static void
+    Apply_MaterialParameter(
+        UMaterialInstanceDynamic* InDynamicMaterial,
+        const FCk_Material_Parameter& InParameter);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -167,6 +167,13 @@ public:
     static int32
     Get_CPUThreadCount();
 
+    /** Returns the primary GPU brand/adapter name (e.g. "NVIDIA GeForce RTX 4080"). */
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck] Get GPU Brand",
+              Category = "Ck|Utils|Profile|Stats")
+    static FString
+    Get_GPUBrand();
+
     UFUNCTION(BlueprintPure,
               DisplayName="[Ck] Get OS Version",
               Category = "Ck|Utils|Profile|Stats")

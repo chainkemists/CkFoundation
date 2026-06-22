@@ -5,6 +5,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Delegates/CkDelegates.h"
 
 #include "CkEcsExt/CkEcsExt_Utils.h"
 
@@ -143,6 +144,24 @@ public:
     TryGet_Inventory(
         const FCk_Handle& InOwnerEntity,
         UPARAM(meta = (Categories = "Inventory")) FGameplayTag InInventoryName);
+
+    /** Enumerate every inventory composed on InOwnerEntity (its RecordOfInventories).
+     *  Mirrors ForEach_AnimPlan: call with an unbound delegate to simply get the array of
+     *  all inventory handles; bind InDelegate to run it per-inventory instead. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Inventory",
+              DisplayName = "[Ck][Inventory] For Each Inventory",
+              meta = (AutoCreateRefTerm = "InOptionalPayload, InDelegate"))
+    static TArray<FCk_Handle_Inventory>
+    ForEach_Inventories(
+        UPARAM(ref) FCk_Handle& InOwnerEntity,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate);
+
+    static auto
+    ForEach_Inventories(
+        FCk_Handle& InOwnerEntity,
+        const TFunction<void(FCk_Handle_Inventory&)>& InFunc) -> void;
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Inventory",

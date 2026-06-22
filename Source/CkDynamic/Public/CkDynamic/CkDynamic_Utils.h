@@ -217,6 +217,7 @@ public:
     static void
     BindTo_OnRepNotify(
         UPARAM(ref) FCk_Handle& InHandle,
+        const UScriptStruct* InStructType,
         const FCk_DynamicFragment_OnRepNotify& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
         ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);

@@ -81,6 +81,13 @@ public:
         UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
         float InRate);
 
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Request Set Visibility")
+    static FCk_Handle_IskmProxy
+    Request_SetVisibility(
+        UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
+        bool InIsVisible);
+
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
         DisplayName="[Ck][IskmProxy] Get Playing Animation")
     static UAnimSequenceBase*
