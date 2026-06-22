@@ -3,6 +3,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
 
+#include "CkEcs/Registry/CkRegistry.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include "CkSpatialQuery/CkSpatialQuery_Log.h"
@@ -710,6 +711,20 @@ auto
     { return; }
 
     const auto TransientEntity = _EcsWorldSubsystem->Get_TransientEntity();
+    const auto RegView = TransientEntity.Get_RegistryView();
+
+    // Jolt body UserData carries a raw (versioned) entity id baked in at body registration. A snapshot load
+    // wipes/restores the registry, so a contact queued pre-load resolves to an id that is dead in the fresh
+    // registry. Get_ValidHandle ENSURES on a stale id — and that fires BEFORE the ck::IsValid(Body) guards
+    // below can absorb it. Do a non-ensuring registry-liveness check first (FCk_Registry::IsValid -> entt
+    // valid()); a dead id yields an invalid handle the existing guards already tolerate.
+    const auto ResolveBodyEntity = [&](uint64 InUserData) -> FCk_Handle
+    {
+        const auto Entity = FCk_Entity{FCk_Entity::IdType{static_cast<FCk_Entity::IdType>(InUserData)}};
+        if (NOT RegView.IsValid(Entity))
+        { return {}; }
+        return TransientEntity.Get_ValidHandle(Entity.Get_ID());
+    };
 
     int32 AddedCount = 0;
     int32 PersistedCount = 0;
@@ -724,10 +739,8 @@ auto
                 SCOPE_CYCLE_COUNTER(STAT_CkSpatialQuery_JoltContactsAdded);
                 ++AddedCount;
 
-                auto Body1Entity = TransientEntity.Get_ValidHandle(
-                    FCk_Entity::IdType{static_cast<FCk_Entity::IdType>(Event.Body1UserData)});
-                auto Body2Entity = TransientEntity.Get_ValidHandle(
-                    FCk_Entity::IdType{static_cast<FCk_Entity::IdType>(Event.Body2UserData)});
+                auto Body1Entity = ResolveBodyEntity(Event.Body1UserData);
+                auto Body2Entity = ResolveBodyEntity(Event.Body2UserData);
 
                 auto Body1 = UCk_Utils_Probe_UE::Cast(Body1Entity);
                 auto Body2 = UCk_Utils_Probe_UE::Cast(Body2Entity);
@@ -761,10 +774,8 @@ auto
                 SCOPE_CYCLE_COUNTER(STAT_CkSpatialQuery_JoltContactsPersisted);
                 ++PersistedCount;
 
-                auto Body1Entity = TransientEntity.Get_ValidHandle(
-                    FCk_Entity::IdType{static_cast<FCk_Entity::IdType>(Event.Body1UserData)});
-                auto Body2Entity = TransientEntity.Get_ValidHandle(
-                    FCk_Entity::IdType{static_cast<FCk_Entity::IdType>(Event.Body2UserData)});
+                auto Body1Entity = ResolveBodyEntity(Event.Body1UserData);
+                auto Body2Entity = ResolveBodyEntity(Event.Body2UserData);
 
                 auto Body1 = UCk_Utils_Probe_UE::Cast(Body1Entity);
                 auto Body2 = UCk_Utils_Probe_UE::Cast(Body2Entity);
@@ -800,10 +811,8 @@ auto
                 SCOPE_CYCLE_COUNTER(STAT_CkSpatialQuery_JoltContactsRemoved);
                 ++RemovedCount;
 
-                auto Body1Entity = TransientEntity.Get_ValidHandle(
-                    FCk_Entity::IdType{static_cast<FCk_Entity::IdType>(Event.Body1UserData)});
-                auto Body2Entity = TransientEntity.Get_ValidHandle(
-                    FCk_Entity::IdType{static_cast<FCk_Entity::IdType>(Event.Body2UserData)});
+                auto Body1Entity = ResolveBodyEntity(Event.Body1UserData);
+                auto Body2Entity = ResolveBodyEntity(Event.Body2UserData);
 
                 auto Body1 = UCk_Utils_Probe_UE::Cast(Body1Entity);
                 auto Body2 = UCk_Utils_Probe_UE::Cast(Body2Entity);
