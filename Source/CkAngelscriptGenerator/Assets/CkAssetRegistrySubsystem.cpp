@@ -10,6 +10,7 @@
 #include "CkCore/Reflection/CkReflection_Utils.h"
 
 #include <AssetRegistry/AssetRegistryModule.h>
+#include <Containers/Ticker.h>
 #include <Editor.h>
 #include <Engine/Blueprint.h>
 #include <Engine/Engine.h>
@@ -77,6 +78,45 @@ auto
                 OnResolved.ExecuteIfBound(SyncResolved.ClassName, IsBlueprintLike, IsEditorOnly);
                 return;
             }
+
+            // ViaPackageReader couldn't resolve the parent. A Blueprint whose parent
+            // class was deleted/renamed must NOT fall through to the async load below:
+            // regenerating its BPGC requires the parent class, so the package load is
+            // cancelled and its streamable completion delegate never fires — *PendingAssets
+            // never drains, WriteCanonicalAndAdvance never runs, and the whole batch stalls
+            // (IsGenerationInProgress stuck true, completion delegate never broadcast, and
+            // the progress notification hangs sub-100% forever). Resolve the parent straight
+            // from the asset-registry tags (no asset load) and SKIP the BP if it has none —
+            // either way the BP branch always fires the callback and returns.
+            auto BlueprintParentClass = UBlueprint::GetBlueprintParentClassFromAssetTags(InAssetData);
+
+            if (ck::Is_NOT_Valid(BlueprintParentClass))
+            {
+                ck::angelscriptgenerator::Warning(
+                    TEXT("Skipping Blueprint with no resolvable parent class (deleted/renamed parent?): {}"), AssetName);
+                OnResolved.ExecuteIfBound(FString{}, false, false);
+                return;
+            }
+
+            const auto NativeParentClass = Get_NonBlueprintParentClass(BlueprintParentClass);
+
+            if (ck::Is_NOT_Valid(NativeParentClass))
+            {
+                ck::angelscriptgenerator::Warning(
+                    TEXT("Skipping Blueprint whose parent chain has no native/script ancestor: {}"), AssetName);
+                OnResolved.ExecuteIfBound(FString{}, false, false);
+                return;
+            }
+
+            const auto ParentIsEditorOnly = UCk_Utils_Reflection_UE::Is_EditorOnlyClass(NativeParentClass);
+            const auto ParentClassName = Get_CorrectClassNameWithPrefix(NativeParentClass);
+
+            ck::angelscriptgenerator::Log(TEXT("Sync-resolved BP parent via AssetData tags: {} for {} (IsEditorOnly: {})"),
+                ParentClassName, AssetName, ParentIsEditorOnly);
+
+            constexpr auto IsBlueprintLike = true;
+            OnResolved.ExecuteIfBound(ParentClassName, IsBlueprintLike, ParentIsEditorOnly);
+            return;
         }
         else
         {
@@ -276,7 +316,8 @@ auto
     Deinitialize()
     -> void
 {
-    ActiveSlowTask.Reset();
+    Dismiss_GenerationTicker();
+    Dismiss_ProgressNotification();
     IsGenerationInProgress = false;
     PendingGenerationQueue.Empty();
 
@@ -309,9 +350,50 @@ auto
 
 auto
     UCkAssetRegistrySubsystem::
+    Dismiss_ProgressNotification()
+    -> void
+{
+    if (NOT ActiveProgressNotification.IsValid())
+    { return; }
+
+    FSlateNotificationManager::Get().CancelProgressNotification(ActiveProgressNotification);
+    ActiveProgressNotification.Reset();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCkAssetRegistrySubsystem::
+    Dismiss_GenerationTicker()
+    -> void
+{
+    if (NOT GenerationTickerHandle.IsValid())
+    { return; }
+
+    FTSTicker::GetCoreTicker().RemoveTicker(GenerationTickerHandle);
+    GenerationTickerHandle.Reset();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCkAssetRegistrySubsystem::
     GenerateAllAssetRegistries()
     -> void
 {
+    // In-flight guard: generation now spans multiple frames (per-frame ticker), so a
+    // re-trigger landing mid-run (config-asset change → 1s timer → ExecuteDelayedRegeneration,
+    // or a PostCompile/PostInit ticker) must NOT reset the shared dedup/name state under the
+    // active batch — that would corrupt its output and can kick a self-heal regen cycle.
+    // Reschedule instead; the timer retries once the current run drains.
+    if (IsGenerationInProgress)
+    {
+        ck::angelscriptgenerator::Warning(
+            TEXT("GenerateAllAssetRegistries requested while a generation is in progress — rescheduling."));
+        Request_ScheduleRegeneration();
+        return;
+    }
+
     GloballyGeneratedAssets.Reset();
 
     ck::angelscriptgenerator::Log(TEXT("=== Generating All Asset Registries ==="));
@@ -359,6 +441,16 @@ auto
         UCkAssetRegistryConfig* InConfig)
     -> void
 {
+    // In-flight guard (see GenerateAllAssetRegistries): never reset shared dedup/name state
+    // under an active multi-frame run. Reschedule and let the timer retry once it drains.
+    if (IsGenerationInProgress)
+    {
+        ck::angelscriptgenerator::Warning(
+            TEXT("GenerateAssetRegistryForConfig requested while a generation is in progress — rescheduling."));
+        Request_ScheduleRegeneration();
+        return;
+    }
+
     GloballyGeneratedAssets.Reset();
     GenerateAssetRegistryForConfig_Internal(InConfig);
 }
@@ -444,13 +536,15 @@ auto
     auto TotalAssets = DiscoveredAssets.Num();
     ck::angelscriptgenerator::Log(TEXT("Processing {} assets with async loading"), TotalAssets);
 
-    // Create slow task for progress status bar
-    ActiveSlowTask = MakeShared<FScopedSlowTask>(
-        static_cast<float>(TotalAssets),
+    // Non-blocking status-bar progress notification (bottom-right), the same surface
+    // the engine uses for shader/static-mesh compilation. Unlike FScopedSlowTask::MakeDialog
+    // this does NOT block editor interaction. Headless/commandlet boots have no status-bar
+    // handler registered, so these calls are silent no-ops there. Auto-dismisses once
+    // work-done reaches total (the last async callback drives it there); the completion
+    // sites then Cancel to remove the entry from the status bar's tracking array.
+    ActiveProgressNotification = FSlateNotificationManager::Get().StartProgressNotification(
         FText::FromString(ck::Format_UE(TEXT("Generating Asset Registry: {}"), InConfig->OutputFileName)),
-        true
-    );
-    ActiveSlowTask->MakeDialog(false); // false = can't cancel
+        TotalAssets);
 
     auto Content = BuildFileHeader(InConfig, RootPath);
     auto GeneratedFunctionCount = MakeShared<int32>(0);
@@ -526,7 +620,7 @@ auto
                         TEXT("Skipping write; next regen pass will retry once catalog is ready."),
                         InConfig->OutputFileName, PriorAccessorCount);
 
-                    ActiveSlowTask.Reset();
+                    Dismiss_ProgressNotification();
                     IsGenerationInProgress = false;
                     ScanScriptFilesForUsage();
                     OnAssetRegistryComplete.Broadcast(*GeneratedFunctionCount, *SkippedAssetCount, TotalAssets);
@@ -548,14 +642,19 @@ auto
             ck::angelscriptgenerator::Warning(TEXT("Failed to write file: {}"), OutputPath);
         }
 
-        ActiveSlowTask.Reset();
+        Dismiss_ProgressNotification();
         IsGenerationInProgress = false;
         ScanScriptFilesForUsage();
         OnAssetRegistryComplete.Broadcast(*GeneratedFunctionCount, *SkippedAssetCount, TotalAssets);
         Request_ProcessNextInQueue();
     };
 
-    for (const auto& AssetData : DiscoveredAssets)
+    // Per-asset dispatch (the body is unchanged — hoisted into a reusable lambda so the
+    // per-frame ticker below can call it on a slice of assets at a time).
+    auto DispatchOneAsset = [this, PendingAssets, CollectedFunctions, CollectedLoadFunctions,
+                             GeneratedFunctionCount, SkippedAssetCount, ProcessedAssetCount,
+                             InConfig, TotalAssets, DispatchComplete, WriteCanonicalAndAdvance]
+        (const FAssetData& AssetData) -> void
     {
         (*PendingAssets)++;
 
@@ -676,9 +775,11 @@ auto
                 (*PendingAssets)--;
                 (*ProcessedAssetCount)++;
 
-                if (ActiveSlowTask.IsValid())
+                if (ActiveProgressNotification.IsValid())
                 {
-                    ActiveSlowTask->EnterProgressFrame(1.0f);
+                    // TotalWorkDone is cumulative (not incremental); ProcessedAssetCount already tracks it.
+                    FSlateNotificationManager::Get().UpdateProgressNotification(
+                        ActiveProgressNotification, *ProcessedAssetCount, TotalAssets);
                 }
 
                 OnAssetRegistryProgress.Broadcast(*ProcessedAssetCount, TotalAssets);
@@ -690,15 +791,53 @@ auto
                     WriteCanonicalAndAdvance();
                 }
             }));
-    }
+    };
 
-    // All-sync path: callbacks already drained gated; fire write here.
-    // All-async path: PendingAssets > 0, last async callback owns the write.
-    *DispatchComplete = true;
-    if (*PendingAssets <= 0)
-    {
-        WriteCanonicalAndAdvance();
-    }
+    // Why a per-frame ticker instead of a tight for-loop: nearly every asset now
+    // resolves SYNCHRONOUSLY (sync linker walk / AssetData-tag parent resolution),
+    // so a single for-loop would process the whole batch in one game-thread burst —
+    // Slate never ticks, the status-bar progress bar can't repaint until the burst
+    // ends, and the editor freezes for a second or two with the bar only flashing in
+    // near 100%. Dispatching a time-boxed slice of assets per frame yields to Slate
+    // between slices: the editor stays interactive and the bar fills live. (Resolution
+    // touches UObject/reflection/AssetData, which is game-thread-only — no worker thread.)
+    auto RemainingAssets = MakeShared<TArray<FAssetData>>(MoveTemp(DiscoveredAssets));
+    auto NextIndex = MakeShared<int32>(0);
+
+    Dismiss_GenerationTicker();
+    GenerationTickerHandle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda(
+        [this, RemainingAssets, NextIndex, DispatchOneAsset, DispatchComplete, PendingAssets, WriteCanonicalAndAdvance]
+        (float) -> bool
+        {
+            // ~8ms/frame budget keeps the editor interactive (knob: lower = smoother
+            // editor + longer wall-clock; higher = faster finish + more hitch per frame).
+            constexpr auto TickBudgetSeconds = 0.008;
+            const auto SliceStartTime = FPlatformTime::Seconds();
+            const auto Total = RemainingAssets->Num();
+
+            while (*NextIndex < Total)
+            {
+                DispatchOneAsset((*RemainingAssets)[*NextIndex]);
+                (*NextIndex)++;
+
+                if ((FPlatformTime::Seconds() - SliceStartTime) >= TickBudgetSeconds)
+                { break; }
+            }
+
+            if (*NextIndex < Total)
+            { return true; } // more assets to dispatch next frame — keep ticking
+
+            // All assets dispatched. Reset the handle BEFORE WriteCanonicalAndAdvance,
+            // which may start the next queued config (and overwrite GenerationTickerHandle).
+            // All-sync path: drain already complete, fire the write here.
+            // All-async path: PendingAssets > 0, the last async callback owns the write.
+            GenerationTickerHandle.Reset();
+            *DispatchComplete = true;
+            if (*PendingAssets <= 0)
+            { WriteCanonicalAndAdvance(); }
+
+            return false; // dispatch done — stop this ticker
+        }));
 }
 
 // --------------------------------------------------------------------------------------------------------------------

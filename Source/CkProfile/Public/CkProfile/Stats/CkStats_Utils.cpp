@@ -239,6 +239,15 @@ auto
 
 auto
     UCk_Utils_Stats_UE::
+    Get_GPUBrand()
+    -> FString
+{
+    static const FString Brand = FPlatformMisc::GetPrimaryGPUBrand().TrimStartAndEnd();
+    return Brand;
+}
+
+auto
+    UCk_Utils_Stats_UE::
     Get_OSVersion()
     -> FString
 {

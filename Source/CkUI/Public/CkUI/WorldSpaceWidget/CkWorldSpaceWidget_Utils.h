@@ -62,11 +62,55 @@ public:
         UPARAM(ref) FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle,
         bool InEnabled);
 
+    UFUNCTION(BlueprintCallable, BlueprintCosmetic,
+              Category = "Ck|Utils|WorldSpaceWidget",
+              DisplayName="[Ck][WorldSpaceWidget] Request Set Location Info")
+    static FCk_Handle_WorldSpaceWidget
+    Request_SetLocationInfo(
+        UPARAM(ref) FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle,
+        const FCk_WorldSpaceWidget_LocationInfo& InLocationInfo);
+
+    UFUNCTION(BlueprintCallable, BlueprintCosmetic,
+              Category = "Ck|Utils|WorldSpaceWidget",
+              DisplayName="[Ck][WorldSpaceWidget] Request Set Scaling Info")
+    static FCk_Handle_WorldSpaceWidget
+    Request_SetScalingInfo(
+        UPARAM(ref) FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle,
+        const FCk_WorldSpaceWidget_ScalingInfo& InScalingInfo);
+
+    UFUNCTION(BlueprintCallable, BlueprintCosmetic,
+              Category = "Ck|Utils|WorldSpaceWidget",
+              DisplayName="[Ck][WorldSpaceWidget] Request Set Fading Info")
+    static FCk_Handle_WorldSpaceWidget
+    Request_SetFadingInfo(
+        UPARAM(ref) FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle,
+        const FCk_WorldSpaceWidget_FadingInfo& InFadingInfo);
+
+    UFUNCTION(BlueprintCallable, BlueprintCosmetic,
+              Category = "Ck|Utils|WorldSpaceWidget",
+              DisplayName="[Ck][WorldSpaceWidget] Request Set Occlusion Info")
+    static FCk_Handle_WorldSpaceWidget
+    Request_SetOcclusionInfo(
+        UPARAM(ref) FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle,
+        const FCk_WorldSpaceWidget_OcclusionInfo& InOcclusionInfo);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|WorldSpaceWidget",
               DisplayName="[Ck][WorldSpaceWidget] Get Widget Instance")
     static UUserWidget*
     Get_Instance(
+        const FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle);
+
+    // Traces from the player camera to the widget's world anchor (the entity's
+    // transform + LocationInfo world offset) on the configured occlusion channel,
+    // ignoring the player pawn; a blocking hit means occluded. Does NOT gate on the
+    // OcclusionPolicy — it answers the raw geometric question. BlueprintCallable
+    // (not Pure) because it performs a world line trace each call.
+    UFUNCTION(BlueprintCallable, BlueprintCosmetic,
+              Category = "Ck|Utils|WorldSpaceWidget",
+              DisplayName="[Ck][WorldSpaceWidget] Get Is Anchor Occluded")
+    static bool
+    Get_IsAnchorOccluded(
         const FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle);
 
 private:

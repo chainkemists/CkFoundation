@@ -6,6 +6,8 @@
 
 #include <GameFramework/PlayerController.h>
 
+#include <variant>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_WorldSpaceWidget_UE;
@@ -61,5 +63,31 @@ namespace ck
         CK_PROPERTY_GET(_ContentWidgetHardRef);
         CK_PROPERTY_GET(_WidgetComponent);
         CK_PROPERTY(_Enabled);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKUI_API FFragment_WorldSpaceWidget_Requests
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_WorldSpaceWidget_Requests);
+
+    public:
+        friend class FProcessor_WorldSpaceWidget_HandleRequests;
+        friend class UCk_Utils_WorldSpaceWidget_UE;
+
+    public:
+        using RequestType = std::variant<
+            FCk_Request_WorldSpaceWidget_SetLocationInfo,
+            FCk_Request_WorldSpaceWidget_SetScalingInfo,
+            FCk_Request_WorldSpaceWidget_SetFadingInfo,
+            FCk_Request_WorldSpaceWidget_SetOcclusionInfo>;
+        using RequestList = TArray<RequestType>;
+
+    private:
+        RequestList _Requests;
+
+    public:
+        CK_PROPERTY_GET(_Requests);
     };
 }

@@ -15,6 +15,7 @@
 
 #include "Components/ActorComponent.h"
 #include "Components/SceneComponent.h"
+#include "GameFramework/Actor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -70,7 +71,21 @@ namespace ck
             { return; }
         }
 
-        auto NewComponent = UCk_Utils_Object_UE::Request_CreateNewObject<UActorComponent>(World, ComponentClass, ComponentArchetype, nullptr);
+        // Scene components must be owned by an Actor or they can never register with the
+        // navigation octree (UNavigationSystemV1::RegisterComponentToNavOctree early-outs
+        // when GetOwner() is null), so collidable fixtures hosted this way would never cut
+        // the navmesh. Parent scene components under the per-world ComponentHost actor; the
+        // engine still gates geometry export on collision, so cosmetic NoCollision meshes
+        // stay inert. Non-scene components have no nav relevance and remain World-hosted.
+        UObject* ComponentOuter = World;
+        if (IsSceneComponent)
+        {
+            const auto HostActor = Host->Get_HostActor();
+            if (ck::IsValid(HostActor))
+            { ComponentOuter = HostActor; }
+        }
+
+        auto NewComponent = UCk_Utils_Object_UE::Request_CreateNewObject<UActorComponent>(ComponentOuter, ComponentClass, ComponentArchetype, nullptr);
 
         CK_ENSURE_IF_NOT(ck::IsValid(NewComponent),
             TEXT("UnrealComponent [{}] failed to instantiate component of class [{}]"),

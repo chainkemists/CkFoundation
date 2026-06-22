@@ -21,6 +21,19 @@ namespace ck::statemachine
         if (InSm.Has<ck::FFragment_Sm_NetIdentity>())
         { return InSm.Get<ck::FFragment_Sm_NetIdentity>().Get_NetContext(); }
 
+        // DoesNotReplicate SMs are self-authoritative on EVERY machine — the same contract
+        // FProcessor_Sm_HandleRequests already honors (it exempts DoesNotReplicate from the
+        // single-authority gate). They have no replicated history to replay, so the lifecycle
+        // processors' NonOwningClient / OwningClient gates (FProcessor_SmTask_Tick,
+        // FProcessor_SmCondition, FProcessor_SmTransition) must NOT suppress them. A local-only SM
+        // hosted on a server-replicated, non-player-owned entity would otherwise resolve
+        // NonOwningClient on a client and go inert there while running fine on the host. Resolving
+        // to Standalone makes each machine run the full lifecycle locally, which IS the
+        // DoesNotReplicate semantic. (Sub-SMs short-circuit above via FFragment_Sm_NetIdentity, so
+        // their stamped identity is preserved either way.)
+        if (UCk_Utils_StateMachine_UE::Get_Replication(InSm) == ECk_Replication::DoesNotReplicate)
+        { return ECk_Sm_NetContext::Standalone; }
+
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InSm);
 
         if (ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}) && World->IsNetMode(NM_Standalone))
