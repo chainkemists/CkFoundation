@@ -14,7 +14,10 @@ public:
     using IsSnapshotable = void;
 
 private:
-    UPROPERTY(meta=(SaveGame))
+    // UPROPERTY(SaveGame) sets the real CPF_SaveGame flag so Tier-A reflection serializes _Key under an
+    // ArIsSaveGame archive. The former UPROPERTY(meta=(SaveGame)) only stuffed "SaveGame" into the metadata
+    // map (not the flag), so the GUID round-tripped empty — see FFragment_ActorSpawnIntent.h:29-32.
+    UPROPERTY(SaveGame)
     FGuid _Key;
 
 public:
