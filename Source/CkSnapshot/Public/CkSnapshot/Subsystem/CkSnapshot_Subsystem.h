@@ -108,6 +108,7 @@ private:
     auto DoIs_NewWorldReady() const -> bool;             // M2b: a new world (!= pre-travel) HasBegunPlay
     auto DoRun_Restore() -> FCk_Snapshot_LoadReport;     // M2b: Run_Restore into the post-travel world
     auto DoStamp_RespawnMarkers() -> int32;              // M2b-2a: stamp FTag_ActorRespawn_Pending on restored bridged entities
+    auto DoRehydrate_SaveKeyResolver() -> void;          // Phase0: repopulate _SaveKeyResolverMap from restored FFragment_SaveKey entities
     auto DoIs_RespawnComplete() const -> bool;           // M2b-2a: true when no entity still carries the marker (processor drained them)
     auto DoTick_Load(float InDeltaSeconds) -> bool;      // FTSTicker callback; advances the machine
     auto DoFinish_Load(const FCk_Snapshot_LoadReport& InReport) -> void; // M2a: clear flag, fire delegate/signal, reset

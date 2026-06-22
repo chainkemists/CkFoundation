@@ -15,6 +15,7 @@
 
 #include "CkEcsExt/OwningActor/CkActorSpawnIntent_Fragment.h" // M2b: respawn intent
 #include "CkEcsExt/OwningActor/CkActorRespawn_Fragment.h"     // M2b-2a: FTag_ActorRespawn_Pending marker
+#include "CkSnapshot/SaveKey/CkSnapshot_SaveKey_Fragment.h"   // Phase0: DoRehydrate_SaveKeyResolver
 #include "CkEcsExt/Transform/CkTransform_Utils.h"             // M2b position-restore: restored spawn transform
 
 #include "Kismet/GameplayStatics.h"
@@ -447,6 +448,45 @@ auto
 
 auto
     UCk_Snapshot_Subsystem_UE::
+    DoRehydrate_SaveKeyResolver()
+    -> void
+{
+    _SaveKeyResolverMap.Reset(); // pre-load entries point at pre-wipe handles — dead after registry.clear()
+
+    const auto World = GetWorld();
+    if (ck::Is_NOT_Valid(World))
+    { return; }
+
+    auto* EcsWorld = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+    if (ck::Is_NOT_Valid(EcsWorld))
+    { return; }
+
+    auto& CkRegistry = EcsWorld->Get_Registry();
+    auto* RawRegistry = ck::registry_table::TryResolve(CkRegistry.Get_RegistryHandle());
+    if (RawRegistry == nullptr)
+    { return; }
+
+    // Read-only over the registry view; the only mutation is to _SaveKeyResolverMap (a separate TMap),
+    // so unlike DoStamp_RespawnMarkers there is no need to collect-first.
+    auto PublishedCount = 0;
+    for (const auto Entity : RawRegistry->view<FFragment_SaveKey>())
+    {
+        const auto Handle = ck::MakeHandle(FCk_Entity{Entity}, CkRegistry);
+        if (ck::Is_NOT_Valid(Handle))
+        { continue; }
+
+        const auto& Frag = RawRegistry->get<FFragment_SaveKey>(Entity);
+        Publish_SaveKey(Frag.Get_Key(), Handle);
+        ++PublishedCount;
+    }
+
+    ck::snapshot::Display(TEXT("DIAG: rehydrated SaveKey resolver with [{}] entries"), PublishedCount);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
     DoIs_RespawnComplete() const
     -> bool
 {
@@ -539,6 +579,7 @@ auto
                 _PendingRestoreReport.Get_EntitiesRestored());
 
             DoStamp_RespawnMarkers();
+            DoRehydrate_SaveKeyResolver(); // Phase0: repopulate the SaveKey resolver from restored entities
 
             // Run_Restore did registry.clear() + adopted a new transient. Every processor in this world cached its
             // registry/transient context at construction (pre-restore) and is now blind to the restored entities.
