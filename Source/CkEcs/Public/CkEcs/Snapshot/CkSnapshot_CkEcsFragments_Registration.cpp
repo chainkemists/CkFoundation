@@ -66,3 +66,22 @@ CK_REGISTER_SNAPSHOTABLE(FSnap_LifetimeDependents);
 CK_REGISTER_SNAPSHOTABLE(FSnap_Net_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
+// DEBUG_NAME — the debug-only handle-name fragment (compiled out when CK_DISABLE_ECS_HANDLE_DEBUGGING). Persist just
+// the current name so a restored world keeps readable handle names; _PreviousNames is debug churn and not worth saving.
+// No entity handles inside, so the snapshot context is unused. Gated to match the fragment's own #if.
+
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
+
+auto
+    DEBUG_NAME::
+    SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& /*InCtx*/)
+    -> void
+{
+    InAr << _Name;
+}
+
+CK_REGISTER_SNAPSHOTABLE(DEBUG_NAME);
+
+#endif
+
+// --------------------------------------------------------------------------------------------------------------------
