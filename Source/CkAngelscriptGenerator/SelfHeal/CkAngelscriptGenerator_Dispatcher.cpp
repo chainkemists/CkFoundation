@@ -311,15 +311,23 @@ namespace ck::angelscriptgenerator::self_heal
             return IsStructShapedError ? InError.MissingIdentifier : FString{};
         }
 
+        // InCandidates / InScanRoots / InScanCache are hoisted to ONCE PER DRAIN
+        // by the drain handlers (QW1/QW2) — the candidate set and scan roots are
+        // invariant across every action in a drain, and the scan cache shares
+        // the *.as enumeration + file reads across every ESP drift (and every
+        // class in a quarantine). Non-ESP strategies ignore them.
         auto Apply_Strategy(
             ECk_RecoveryStrategy     InStrategy,
-            const FCk_AsParsedError& InError) -> bool
+            const FCk_AsParsedError& InError,
+            const TArray<FString>&   InCandidates,
+            const TArray<FString>&   InScanRoots,
+            FCk_AsSourceScanCache*   InScanCache) -> bool
         {
             switch (InStrategy)
             {
                 case ECk_RecoveryStrategy::SynthesizeStub_EntitySpawnParams:
                 {
-                    const auto Candidates = Collect_EntitySpawnParamsCandidates();
+                    const auto& Candidates = InCandidates;
 
                     const auto StructIdentifier = Get_EspStructErrorIdentifier(InError);
                     const auto ClassName = StructIdentifier.IsEmpty()
@@ -343,7 +351,7 @@ namespace ck::angelscriptgenerator::self_heal
                     // found/parsed or when an earlier error-text stub in the
                     // sibling owns the struct (in-session incremental drift).
                     const auto SourceDerived = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub_SourceDerived(
-                        ClassName, InError, Candidates, FCkAsSourceScanner::Get_DefaultScanRoots());
+                        ClassName, InError, Candidates, InScanRoots, InScanCache);
 
                     if (SourceDerived.Success)
                     {
@@ -367,7 +375,7 @@ namespace ck::angelscriptgenerator::self_heal
 
                         const auto Quarantined = FCkAsStubSynthesizer::Quarantine_And_ResynthesizeFullShapes(
                             SourceDerived.CanonicalFilePath, {ClassName}, InError,
-                            FCkAsSourceScanner::Get_DefaultScanRoots());
+                            InScanRoots, InScanCache);
 
                         if (Quarantined.Success)
                         {
@@ -424,7 +432,7 @@ namespace ck::angelscriptgenerator::self_heal
 
                         const auto Quarantined = FCkAsStubSynthesizer::Quarantine_And_ResynthesizeFullShapes(
                             Result.CanonicalFilePath, {ClassName}, FallbackError,
-                            FCkAsSourceScanner::Get_DefaultScanRoots());
+                            InScanRoots, InScanCache);
 
                         if (Quarantined.Success)
                         {
@@ -1043,12 +1051,23 @@ namespace ck::angelscriptgenerator::self_heal
             Log(TEXT("[SelfHeal] Modal-tick deferred apply firing — draining {} pending action(s)."),
                 sPendingActions.Num());
 
+            // Hoisted once per drain (QW1/QW2): the scan roots and ESP candidate
+            // set are identical for every action in this drain, and DrainScanCache
+            // shares the *.as enumeration + file-contents across every ESP drift
+            // (and every class in a quarantine resynthesis) instead of re-walking
+            // the tree per drift. DrainScanCache is a drain-LOCAL — it is destroyed
+            // when this handler returns, so it can never carry a stale shape into a
+            // later compile cycle (see FCk_AsSourceScanCache lifetime contract).
+            const auto DrainScanRoots  = FCkAsSourceScanner::Get_DefaultScanRoots();
+            const auto DrainCandidates = Collect_EntitySpawnParamsCandidates();
+            auto       DrainScanCache  = FCk_AsSourceScanCache{};
+
             auto AppliedActions = TArray<FCk_RecoveryAction>{};
             for (const auto& Action : sPendingActions)
             {
                 if (NOT Try_ReserveSynthesis(Action))
                 { continue; }
-                if (Apply_Strategy(Action.Strategy, Action.Error))
+                if (Apply_Strategy(Action.Strategy, Action.Error, DrainCandidates, DrainScanRoots, &DrainScanCache))
                 { AppliedActions.Add(Action); }
             }
             const auto QueuedCount = sPendingActions.Num();
@@ -1103,12 +1122,23 @@ namespace ck::angelscriptgenerator::self_heal
                 TEXT("(no modal pump in commandlet/unattended mode)."),
                 sPendingActions.Num());
 
+            // Hoisted once per drain (QW1/QW2): the scan roots and ESP candidate
+            // set are identical for every action in this drain, and DrainScanCache
+            // shares the *.as enumeration + file-contents across every ESP drift
+            // (and every class in a quarantine resynthesis) instead of re-walking
+            // the tree per drift. DrainScanCache is a drain-LOCAL — it is destroyed
+            // when this handler returns, so it can never carry a stale shape into a
+            // later compile cycle (see FCk_AsSourceScanCache lifetime contract).
+            const auto DrainScanRoots  = FCkAsSourceScanner::Get_DefaultScanRoots();
+            const auto DrainCandidates = Collect_EntitySpawnParamsCandidates();
+            auto       DrainScanCache  = FCk_AsSourceScanCache{};
+
             auto AppliedActions = TArray<FCk_RecoveryAction>{};
             for (const auto& Action : sPendingActions)
             {
                 if (NOT Try_ReserveSynthesis(Action))
                 { continue; }
-                if (Apply_Strategy(Action.Strategy, Action.Error))
+                if (Apply_Strategy(Action.Strategy, Action.Error, DrainCandidates, DrainScanRoots, &DrainScanCache))
                 { AppliedActions.Add(Action); }
             }
             const auto QueuedCount = sPendingActions.Num();
@@ -1166,12 +1196,23 @@ namespace ck::angelscriptgenerator::self_heal
             Log(TEXT("[SelfHeal] Mid-session ticker firing — draining {} pending action(s)."),
                 sPendingActions.Num());
 
+            // Hoisted once per drain (QW1/QW2): the scan roots and ESP candidate
+            // set are identical for every action in this drain, and DrainScanCache
+            // shares the *.as enumeration + file-contents across every ESP drift
+            // (and every class in a quarantine resynthesis) instead of re-walking
+            // the tree per drift. DrainScanCache is a drain-LOCAL — it is destroyed
+            // when this handler returns, so it can never carry a stale shape into a
+            // later compile cycle (see FCk_AsSourceScanCache lifetime contract).
+            const auto DrainScanRoots  = FCkAsSourceScanner::Get_DefaultScanRoots();
+            const auto DrainCandidates = Collect_EntitySpawnParamsCandidates();
+            auto       DrainScanCache  = FCk_AsSourceScanCache{};
+
             auto AppliedActions = TArray<FCk_RecoveryAction>{};
             for (const auto& Action : sPendingActions)
             {
                 if (NOT Try_ReserveSynthesis(Action))
                 { continue; }
-                if (Apply_Strategy(Action.Strategy, Action.Error))
+                if (Apply_Strategy(Action.Strategy, Action.Error, DrainCandidates, DrainScanRoots, &DrainScanCache))
                 { AppliedActions.Add(Action); }
             }
             const auto QueuedCount = sPendingActions.Num();

@@ -57,6 +57,27 @@ namespace ck::angelscriptgenerator::self_heal
         FString ErrorMessage;    // populated when Found == false
     };
 
+    // Drain-scoped memoization for Scan_ClassShape (QW1). A self-heal drain
+    // resolves one class shape PER DRIFT (and one per class during a quarantine
+    // resynthesis) — each call otherwise re-runs the full recursive *.as
+    // enumeration AND cold-re-reads files until the class matches, for the same
+    // unchanging on-disk tree. Threading one cache through a drain collapses N
+    // tree walks + redundant reads into a single walk + read-once-per-file.
+    //
+    // LIFETIME CONTRACT: the cache MUST live no longer than a single drain. The
+    // drain handler owns it as a stack local, so a subsequent compile cycle
+    // (whose on-disk source may have changed) re-enumerates from scratch —
+    // never reusing a shape that would mismatch what the post-compile generator
+    // will later emit (which would defeat the canonical diff-skip and re-trigger
+    // a recompile). The cache also assumes a STABLE root set for its lifetime
+    // (every call in one drain passes the same Get_DefaultScanRoots() result).
+    struct CKANGELSCRIPTGENERATOR_API FCk_AsSourceScanCache
+    {
+        TArray<FString>        Files;                   // enumerated *.as, built once
+        bool                   FilesEnumerated = false; // guards the one-time enumeration
+        TMap<FString, FString> ContentsByPath;          // lazily loaded; empty value = load failed / empty file
+    };
+
     class CKANGELSCRIPTGENERATOR_API FCkAsSourceScanner
     {
     public:
@@ -85,9 +106,16 @@ namespace ck::angelscriptgenerator::self_heal
         // reflection). Found == false when the root class or any link of
         // the chain resolves neither way — callers fall back to the
         // error-text stub path.
+        //
+        // InCache (optional, drain-scoped): when supplied, the *.as
+        // enumeration and per-file contents are shared across every call that
+        // passes the same cache, eliminating the per-drift tree re-walk +
+        // cold re-reads. nullptr reproduces the original walk-every-time
+        // behavior (tests, one-off callers). See FCk_AsSourceScanCache.
         static auto Scan_ClassShape(
             const FString&         InClassName,
-            const TArray<FString>& InScanRoots) -> FCk_AsClassShape;
+            const TArray<FString>& InScanRoots,
+            FCk_AsSourceScanCache* InCache = nullptr) -> FCk_AsClassShape;
     };
 }
 
