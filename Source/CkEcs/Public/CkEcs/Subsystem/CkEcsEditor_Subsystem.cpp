@@ -70,8 +70,8 @@ auto
     _TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(_Registry);
     UCk_Utils_Handle_UE::Set_DebugName(_TransientEntity, TEXT("Transient Entity (Editor)"));
 
-    auto* World = GetWorld();
-    if (ck::IsValid(World))
+    if (auto* World = GetWorld();
+        ck::IsValid(World))
     {
         _TransientEntity.Add<TWeakObjectPtr<UWorld>>(World);
     }
@@ -209,12 +209,12 @@ auto
         TEXT("Editor transient entity is invalid — subsystem not initialized?"))
     { return {}; }
 
-    auto PendingEntity = UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(
+    const auto PendingEntity = UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(
         _TransientEntity,
         InScriptArchetype,
         FInstancedStruct{});
 
-    auto NewEntity = PendingEntity.Get_EntityUnderConstruction();
+    const auto NewEntity = PendingEntity.Get_EntityUnderConstruction();
 
     Request_Redraw();
 

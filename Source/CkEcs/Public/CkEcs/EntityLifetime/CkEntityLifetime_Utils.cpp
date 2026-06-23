@@ -1,6 +1,5 @@
 #include "CkEntityLifetime_Utils.h"
 
-#include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/SharedValues/CkSharedValues.h"
 
 #include "CkEcs/CkEcsLog.h"
@@ -9,7 +8,6 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Net/CkNet_Fragment.h"
-#include "CkEcs/Subsystem/CkEcsEditor_Subsystem.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 #include "CkEcs/Tag/CkTag_EditorOnly.h"
 

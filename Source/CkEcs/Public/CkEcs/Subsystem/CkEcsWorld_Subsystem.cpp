@@ -280,7 +280,7 @@ auto
     // Reset schedulers first so FProcessor_ScriptHosted destructors fire EndPlay on script instances.
     for (auto& [TickGroup, Actor] : _WorldActors)
     {
-        if (Actor.IsValid())
+         if (ck::IsValid(Actor))
         {
             Actor->_Scheduler.Reset();
         }
@@ -289,7 +289,7 @@ auto
     // Destroy the world actors and clear the map (registry + entities are untouched).
     for (auto& [TickGroup, Actor] : _WorldActors)
     {
-        if (Actor.IsValid())
+        if (ck::IsValid(Actor))
         {
             Actor->Destroy();
         }
@@ -476,10 +476,11 @@ DoHandleExportSchedulerGraphCommand(
         OutputPath = FPaths::ConvertRelativePathToFull(OutputPath);
     }
 
-    const auto OutputDir = FPaths::GetPath(OutputPath);
-    if (NOT OutputDir.IsEmpty())
+    if (const auto& OutputDir = FPaths::GetPath(OutputPath);
+        NOT OutputDir.IsEmpty())
     {
-        IFileManager::Get().MakeDirectory(*OutputDir, /*Tree=*/true);
+        constexpr auto Tree = true;
+        IFileManager::Get().MakeDirectory(*OutputDir, Tree);
     }
 
     if (FFileHelper::SaveStringToFile(DotContent, *OutputPath))
@@ -558,10 +559,11 @@ DoHandleExportSchedulerOrderCommand(
         OutputPath = FPaths::ConvertRelativePathToFull(OutputPath);
     }
 
-    const auto OutputDir = FPaths::GetPath(OutputPath);
-    if (NOT OutputDir.IsEmpty())
+    if (const auto& OutputDir = FPaths::GetPath(OutputPath);
+        NOT OutputDir.IsEmpty())
     {
-        IFileManager::Get().MakeDirectory(*OutputDir, /*Tree=*/true);
+        constexpr auto Tree = true;
+        IFileManager::Get().MakeDirectory(*OutputDir, Tree);
     }
 
     if (FFileHelper::SaveStringToFile(OrderContent, *OutputPath))
