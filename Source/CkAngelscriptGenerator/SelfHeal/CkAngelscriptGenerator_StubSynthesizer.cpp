@@ -774,7 +774,8 @@ namespace ck::angelscriptgenerator::self_heal
             const FString&           InClassName,
             const FCk_AsParsedError& InError,
             const TArray<FString>&   InCandidateFilePaths,
-            const TArray<FString>&   InScanRoots)
+            const TArray<FString>&   InScanRoots,
+            FCk_AsSourceScanCache*   InCache)
         -> FCk_StubInjectionResult
     {
         auto Result = FCk_StubInjectionResult{};
@@ -788,7 +789,7 @@ namespace ck::angelscriptgenerator::self_heal
             return Result;
         }
 
-        const auto Shape = FCkAsSourceScanner::Scan_ClassShape(InClassName, InScanRoots);
+        const auto Shape = FCkAsSourceScanner::Scan_ClassShape(InClassName, InScanRoots, InCache);
         if (NOT Shape.Found)
         {
             Result.FailReason   = ECk_StubInjectFailReason::ScanFailed;
@@ -972,7 +973,8 @@ namespace ck::angelscriptgenerator::self_heal
             const FString&           InCanonicalPath,
             const TArray<FString>&   InSeedClassNames,
             const FCk_AsParsedError& InError,
-            const TArray<FString>&   InScanRoots)
+            const TArray<FString>&   InScanRoots,
+            FCk_AsSourceScanCache*   InCache)
         -> FCk_StubInjectionResult
     {
         auto Result = FCk_StubInjectionResult{};
@@ -1090,7 +1092,7 @@ namespace ck::angelscriptgenerator::self_heal
         for (const auto& ClassName : ClassUnion)
         {
             const auto Injected = Inject_EntityScriptParamsStub_SourceDerived(
-                ClassName, InError, /*InCandidateFilePaths=*/{}, InScanRoots);
+                ClassName, InError, /*InCandidateFilePaths=*/{}, InScanRoots, InCache);
 
             if (Injected.Success)
             {

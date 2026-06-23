@@ -146,11 +146,16 @@ namespace ck::angelscriptgenerator::self_heal
         //    the per-signature error-text path.
         // A re-fire for a class whose full shape is already in the sibling
         // no-ops with Success = true.
+        // InCache (optional, drain-scoped): forwarded to Scan_ClassShape so a
+        // bulk drain (or a quarantine resynthesis) reuses one *.as enumeration
+        // + file-contents cache instead of re-walking the tree per class. See
+        // FCk_AsSourceScanCache for the lifetime contract.
         static auto Inject_EntityScriptParamsStub_SourceDerived(
             const FString&           InClassName,
             const FCk_AsParsedError& InError,
             const TArray<FString>&   InCandidateFilePaths,
-            const TArray<FString>&   InScanRoots) -> FCk_StubInjectionResult;
+            const TArray<FString>&   InScanRoots,
+            FCk_AsSourceScanCache*   InCache = nullptr) -> FCk_StubInjectionResult;
 
         // `// End synthesized full-shape stub for <ClassName>` — the
         // class-level dedup marker for source-derived stubs.
@@ -196,7 +201,8 @@ namespace ck::angelscriptgenerator::self_heal
             const FString&           InCanonicalPath,
             const TArray<FString>&   InSeedClassNames,
             const FCk_AsParsedError& InError,
-            const TArray<FString>&   InScanRoots) -> FCk_StubInjectionResult;
+            const TArray<FString>&   InScanRoots,
+            FCk_AsSourceScanCache*   InCache = nullptr) -> FCk_StubInjectionResult;
 
         // Clears the session-static "full shapes written this process" set —
         // lets tests simulate the next-process boundary (headless cook

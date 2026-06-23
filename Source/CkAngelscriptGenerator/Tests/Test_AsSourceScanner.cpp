@@ -335,4 +335,94 @@ bool FCkTest_AsSourceScanner_ScanShape_FailureModes::RunTest(const FString&)
     return true;
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+// Scan_ClassShape: the drain-scoped FCk_AsSourceScanCache (QW1) must (a) produce
+// results identical to the uncached walk, and (b) actually REUSE its enumeration
+// + file-contents on subsequent calls. (b) is proven white-box by poisoning the
+// cache: if the cache were ignored, a fresh enumeration/read would still find
+// the class — so a NotFound proves the cached state was trusted.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_AsSourceScanner_ScanShape_DrainCache,
+    "CkAngelscriptGenerator.UnitTests.AsSourceScanner.ScanShape_DrainCache",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_AsSourceScanner_ScanShape_DrainCache::RunTest(const FString&)
+{
+    const auto TempRoot = FPaths::ConvertRelativePathToFull(
+        FPaths::ProjectIntermediateDir() / TEXT("CkScannerTest_DrainCache"));
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+
+    const auto ScriptRoot = TempRoot / TEXT("Script");
+    Write_Fixture(ScriptRoot / TEXT("Base.as"), TEXT(
+        "class UTestScanCache_Base\n"
+        "{\n"
+        "    UPROPERTY(ExposeOnSpawn)\n"
+        "    int32 BaseProp;\n"
+        "}\n"));
+    Write_Fixture(ScriptRoot / TEXT("Sub/Derived.as"), TEXT(
+        "class UTestScanCache_Derived : UTestScanCache_Base\n"
+        "{\n"
+        "    UPROPERTY(ExposeOnSpawn)\n"
+        "    int32 DerivedProp;\n"
+        "}\n"));
+
+    // ---- (a) Equivalence: cached scan == uncached scan, and the cache fills ----
+    auto       Cache    = FCk_AsSourceScanCache{};
+    const auto Cached   = FCkAsSourceScanner::Scan_ClassShape(TEXT("UTestScanCache_Derived"), {ScriptRoot}, &Cache);
+    const auto Uncached = FCkAsSourceScanner::Scan_ClassShape(TEXT("UTestScanCache_Derived"), {ScriptRoot}, nullptr);
+
+    TestTrue(TEXT("cached: Found"),   Cached.Found);
+    TestTrue(TEXT("uncached: Found"), Uncached.Found);
+    TestEqual(TEXT("cached vs uncached flattened count"),
+        Cached.FlattenedProperties.Num(), Uncached.FlattenedProperties.Num());
+    if (Cached.FlattenedProperties.Num() == Uncached.FlattenedProperties.Num())
+    {
+        for (auto Index = 0; Index < Cached.FlattenedProperties.Num(); ++Index)
+        {
+            TestEqual(FString::Printf(TEXT("prop [%d] name parity"), Index),
+                Cached.FlattenedProperties[Index].Name, Uncached.FlattenedProperties[Index].Name);
+        }
+    }
+    TestTrue(TEXT("cache: enumeration recorded"), Cache.FilesEnumerated);
+    TestTrue(TEXT("cache: file list populated"),  Cache.Files.Num() > 0);
+    TestTrue(TEXT("cache: contents populated"),    Cache.ContentsByPath.Num() > 0);
+
+    // ---- (b1) Enumeration reuse: a cache marked enumerated to an EMPTY file ----
+    // list must NOT re-enumerate — the class becomes unfindable. A fresh walk
+    // would find Derived.as, so NotFound proves the cached list was trusted.
+    {
+        auto Poisoned = FCk_AsSourceScanCache{};
+        Poisoned.FilesEnumerated = true; // Files left empty on purpose
+        const auto Shape = FCkAsSourceScanner::Scan_ClassShape(
+            TEXT("UTestScanCache_Derived"), {ScriptRoot}, &Poisoned);
+        TestFalse(TEXT("enumeration reused (empty cached list => NotFound)"), Shape.Found);
+    }
+
+    // ---- (b2) Contents reuse: poison the derived file's cached contents to "" --
+    // A re-read from disk would still find the class; NotFound proves the cached
+    // (poisoned) contents were used instead of re-reading the file.
+    {
+        auto Cache2 = FCk_AsSourceScanCache{};
+        TestTrue(TEXT("warm-up scan found"),
+            FCkAsSourceScanner::Scan_ClassShape(TEXT("UTestScanCache_Derived"), {ScriptRoot}, &Cache2).Found);
+
+        auto PoisonedAny = false;
+        for (auto& Pair : Cache2.ContentsByPath)
+        {
+            if (FPaths::GetCleanFilename(Pair.Key) == TEXT("Derived.as"))
+            { Pair.Value.Reset(); PoisonedAny = true; }
+        }
+        TestTrue(TEXT("derived file was in the contents cache to poison"), PoisonedAny);
+
+        const auto Shape = FCkAsSourceScanner::Scan_ClassShape(
+            TEXT("UTestScanCache_Derived"), {ScriptRoot}, &Cache2);
+        TestFalse(TEXT("contents reused (poisoned cached contents => NotFound)"), Shape.Found);
+    }
+
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+    return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

@@ -428,7 +428,8 @@ namespace ck::angelscriptgenerator::self_heal
         FCkAsSourceScanner::
         Scan_ClassShape(
             const FString&         InClassName,
-            const TArray<FString>& InScanRoots)
+            const TArray<FString>& InScanRoots,
+            FCk_AsSourceScanCache* InCache)
         -> FCk_AsClassShape
     {
         auto Result = FCk_AsClassShape{};
@@ -440,19 +441,59 @@ namespace ck::angelscriptgenerator::self_heal
             return Result;
         }
 
-        const auto Files = Enumerate_AsSourceFiles(InScanRoots);
+        // Enumerate once. With a drain-scoped cache the recursive *.as walk is
+        // shared across every class resolved in this drain; without it the walk
+        // runs per call (original behavior — tests, one-off callers).
+        auto       LocalFiles = TArray<FString>{};
+        const auto FilesFor   = [&]() -> const TArray<FString>&
+        {
+            if (InCache == nullptr)
+            {
+                LocalFiles = Enumerate_AsSourceFiles(InScanRoots);
+                return LocalFiles;
+            }
+            if (NOT InCache->FilesEnumerated)
+            {
+                InCache->Files           = Enumerate_AsSourceFiles(InScanRoots);
+                InCache->FilesEnumerated = true;
+            }
+            return InCache->Files;
+        };
+        const auto& Files = FilesFor();
 
-        const auto FindAndParse = [&Files](const FString& ClassName) -> FCk_AsClassParseResult
+        const auto FindAndParse = [&Files, InCache](const FString& ClassName) -> FCk_AsClassParseResult
         {
             for (const auto& Path : Files)
             {
-                auto Contents = FString{};
-                if (NOT FFileHelper::LoadFileToString(Contents, *Path))
-                { continue; }
-                if (NOT Contents.Contains(ClassName))
+                // Read once per file: a cache hit avoids re-reading a base-class
+                // file shared by multiple derived classes (and across drifts).
+                // An empty cached value means a prior load failed / empty file —
+                // Contains() then no-matches it exactly as a fresh failed read.
+                auto              LocalContents = FString{};
+                const FString*    ContentsPtr   = nullptr;
+                if (InCache != nullptr)
+                {
+                    if (auto* Cached = InCache->ContentsByPath.Find(Path))
+                    {
+                        ContentsPtr = Cached;
+                    }
+                    else
+                    {
+                        FFileHelper::LoadFileToString(LocalContents, *Path);
+                        ContentsPtr = &InCache->ContentsByPath.Add(Path, MoveTemp(LocalContents));
+                    }
+                }
+                else
+                {
+                    if (NOT FFileHelper::LoadFileToString(LocalContents, *Path))
+                    { continue; }
+                    ContentsPtr = &LocalContents;
+                }
+
+                if (NOT ContentsPtr->Contains(ClassName))
                 { continue; }
 
-                auto Parsed = FCkAsSourceScanner::Parse_ClassDeclaration(Contents, ClassName, Path);
+                auto Parsed = FCkAsSourceScanner::Parse_ClassDeclaration(*ContentsPtr, ClassName, Path);
                 if (Parsed.Found)
                 { return Parsed; }
             }
