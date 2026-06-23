@@ -45,7 +45,16 @@ namespace ck
 
     const FCk_Handle TransientEntity()
     {
-        return Subsystem::GetWorldSubsystem(UCk_EcsWorld_Subsystem_UE).Get_TransientEntity();
+        const auto EcsWorldSubsystem = Subsystem::GetWorldSubsystem(UCk_EcsWorld_Subsystem_UE);
+        if (ck::IsValid(EcsWorldSubsystem))
+        {
+            return EcsWorldSubsystem.Get_TransientEntity();
+        }
+        else
+        {
+            return Subsystem::GetWorldSubsystem(UCk_EditorEcsWorld_Subsystem_UE).Get_TransientEntity();
+
+        }
     }
 
     bool Ensure(bool InExpression, FString InMessage)
