@@ -11,6 +11,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_EntityScript_UE;
+class UWorld;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -63,6 +64,16 @@ public:
     static TSubclassOf<UCk_EntityScript_UE>
     Get_ScriptClass(
         const FCk_Handle_EntityScript& InHandle);
+
+public:
+    // Re-establish every entity script's _AssociatedEntity back-pointer to its owning entity after a CkSnapshot
+    // restore. The back-pointer is a Transient field set only at spawn (see FProcessor_EntityScript_SpawnEntity),
+    // so restore — which recreates each script UObject — leaves it unset; the next teardown's EndPlay would then
+    // read a default (tombstone) handle and ensure. Not Blueprint-exposed; internal restore plumbing. Returns the
+    // number of scripts re-linked.
+    static int32
+    Relink_AssociatedEntities_AfterRestore(
+        UWorld* InWorld);
 
 public:
     // Hidden in the editor through the DefaultCkFoundation.ini Config file (see: BlueprintEditor.Menu section)
