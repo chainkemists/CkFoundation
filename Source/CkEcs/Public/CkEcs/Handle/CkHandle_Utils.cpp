@@ -3,8 +3,18 @@
 #include "CkCore/Debug/CkDebug_Utils.h"
 
 #include "CkEcs/CkEcsLog.h"
+#include "CkEcs/Tag/CkTag_EditorOnly.h"
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Handle_UE::
+    Get_IsEditorOnly(
+        const FCk_Handle& InHandle)
+    -> bool
+{
+    return InHandle.Has<ck::FTag_EditorOnlyEntity>();
+}
 
 auto
     UCk_Utils_Handle_UE::

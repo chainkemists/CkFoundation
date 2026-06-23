@@ -17,6 +17,14 @@ public:
 
 private:
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is EditorOnly Handle",
+              Category = "Ck|Utils|Handle",
+              meta = (CompactNodeTitle = "EditorOnly?"))
+    static bool
+    Get_IsEditorOnly(
+        const FCk_Handle& InHandle);
+
+    UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Is Valid (Handle)",
               Category = "Ck|Utils|Handle",
               meta = (CompactNodeTitle = "IsValid"))
