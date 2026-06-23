@@ -12,6 +12,7 @@
 #include "CkEcs/Handle/CkHandle.h"                       // ck::FTag_DestroyEntity_*, FFragment_LifetimeDependents
 #include "CkEcs/Handle/CkHandle_Utils.h"                 // M2b: ck::MakeHandle
 #include "CkEcs/Registry/CkRegistry_SlotTable.h"
+#include "CkEcs/EntityScript/CkEntityScript_Utils.h"     // Phase0: re-link restored entity-script back-pointers
 
 #include "CkEcsExt/OwningActor/CkActorSpawnIntent_Fragment.h" // M2b: respawn intent
 #include "CkEcsExt/OwningActor/CkActorRespawn_Fragment.h"     // M2b-2a: FTag_ActorRespawn_Pending marker
@@ -580,6 +581,14 @@ auto
 
             DoStamp_RespawnMarkers();
             DoRehydrate_SaveKeyResolver(); // Phase0: repopulate the SaveKey resolver from restored entities
+
+            // Restored entity scripts get a fresh UObject whose Transient _AssociatedEntity back-pointer is unset;
+            // re-link each to its owning entity so the NEXT teardown's EndPlay (e.g. a second load) doesn't read a
+            // default (tombstone) handle and ensure.
+            {
+                const auto RelinkedCount = UCk_Utils_EntityScript_UE::Relink_AssociatedEntities_AfterRestore(GetWorld());
+                ck::snapshot::Display(TEXT("DIAG: relinked [{}] restored entity-script associations"), RelinkedCount);
+            }
 
             // Run_Restore did registry.clear() + adopted a new transient. Every processor in this world cached its
             // registry/transient context at construction (pre-restore) and is now blind to the restored entities.
