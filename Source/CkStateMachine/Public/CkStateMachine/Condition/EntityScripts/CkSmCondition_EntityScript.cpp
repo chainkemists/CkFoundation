@@ -74,9 +74,13 @@ auto
     // (e.g. conditions in a sub-SM destroyed via parent state cascade). Dedup'd via
     // FTag_SmCondition_Active inside ExitCondition — if the processor already handled this
     // condition, the tag is gone and ExitCondition is a no-op.
-    auto Self = UCk_Utils_SmCondition_UE::CastChecked(_AssociatedEntity);
-    if (ck::IsValid(Self))
+    //
+    // Has-guard (not CastChecked) because a snapshot-restored SM-graph entity is an orphan: its
+    // EntityScript is captured but the SmCondition feature fragment is not (the redrive rebuilds the
+    // real graph fresh), so CastChecked would ensure. No fragment -> nothing to exit; skip.
+    if (UCk_Utils_SmCondition_UE::Has(_AssociatedEntity))
     {
+        auto Self = UCk_Utils_SmCondition_UE::CastChecked(_AssociatedEntity);
         const auto SmHandle = UCk_Utils_SmCondition_UE::Get_OwningStateMachine(Self);
         const auto NetContext = ck::statemachine::ComputeNetContext(SmHandle);
         ExitCondition(Self, NetContext);
