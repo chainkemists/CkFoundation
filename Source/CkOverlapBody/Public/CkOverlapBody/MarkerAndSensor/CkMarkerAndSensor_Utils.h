@@ -17,6 +17,7 @@
 #include "CkPhysics/CkPhysics_Common.h"
 #include "CkPhysics/CkPhysics_Utils.h"
 
+#include <Components/SkeletalMeshComponent.h>
 #include <CoreMinimal.h>
 
 #include "CkMarkerAndSensor_Utils.generated.h"
@@ -74,6 +75,16 @@ public:
         T_MarkerOrSensorCompType* InMarkerOrSensorComp,
         T_MarkerOrSensorPhysicsParams InMarkerOrSensorPhysicsParams,
         ECk_EnableDisable InEnableGenerateOverlapEvents) -> void;
+
+    // Shared by the Marker and Sensor UpdateTransform processors — computes the
+    // bone-following world transform per the attachment params' policy flags.
+    // Returns an unset optional if the bone does not exist on the attached actor.
+    template <typename T_HandleType, typename T_AttachmentParams>
+    static auto
+    Get_MarkerOrSensor_BoneFollowTransform(
+        const T_HandleType& InMarkerOrSensorEntity,
+        const FCk_EntityOwningActor_BasicDetails& InAttachedEntityAndActor,
+        const T_AttachmentParams& InAttachmentParams) -> TOptional<FTransform>;
 
 private:
     template <typename T_MarkerOrSensorCurrent, typename T_MarkerOrSensorParams>
@@ -616,6 +627,47 @@ auto
     UCk_Utils_Physics_UE::Request_SetOverlapBehavior(InMarkerOrSensorComp, OverlapBehavior);
     UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(InMarkerOrSensorComp, InEnableGenerateOverlapEvents);
     UCk_Utils_Physics_UE::Request_SetCollisionEnabled(InMarkerOrSensorComp, CollisionEnabled);
+}
+
+template <typename T_HandleType, typename T_AttachmentParams>
+auto
+    UCk_Utils_MarkerAndSensor_UE::
+    Get_MarkerOrSensor_BoneFollowTransform(
+        const T_HandleType& InMarkerOrSensorEntity,
+        const FCk_EntityOwningActor_BasicDetails& InAttachedEntityAndActor,
+        const T_AttachmentParams& InAttachmentParams)
+    -> TOptional<FTransform>
+{
+    const auto& AttachedActor = InAttachedEntityAndActor.Get_Actor();
+    const auto& BoneName      = InAttachmentParams.Get_BoneName();
+
+    CK_ENSURE_IF_NOT(UCk_Utils_Actor_UE::Get_DoesBoneExistInSkeletalMesh(AttachedActor.Get(), BoneName),
+        TEXT("Marker/Sensor Entity [{}] cannot update its Transform according to Bone [{}] because its Attached Actor [{}] does NOT have it in its Skeletal Mesh"),
+        InMarkerOrSensorEntity,
+        BoneName,
+        InAttachedEntityAndActor)
+    { return {}; }
+
+    using AttachmentPolicyType = std::decay_t<decltype(InAttachmentParams.Get_AttachmentPolicy())>;
+
+    const auto& AttachedActorSkeletalMeshComponent = AttachedActor->FindComponentByClass<USkeletalMeshComponent>();
+    const auto& SocketBoneName                     = AttachedActorSkeletalMeshComponent->GetSocketBoneName(BoneName);
+    const auto& BoneIndex                          = AttachedActorSkeletalMeshComponent->GetBoneIndex(SocketBoneName);
+    const auto& AttachedActorTransform             = AttachedActor->GetTransform();
+    const auto& AttachmentPolicy                   = InAttachmentParams.Get_AttachmentPolicy();
+    auto SkeletonTransform                         = AttachedActorSkeletalMeshComponent->GetBoneTransform(BoneIndex);
+
+    if (NOT EnumHasAnyFlags(AttachmentPolicy, AttachmentPolicyType::UseBoneRotation))
+    {
+        SkeletonTransform.CopyRotation(AttachedActorTransform);
+    }
+
+    if (NOT EnumHasAnyFlags(AttachmentPolicy, AttachmentPolicyType::UseBonePosition))
+    {
+        SkeletonTransform.CopyTranslation(AttachedActorTransform);
+    }
+
+    return SkeletonTransform;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

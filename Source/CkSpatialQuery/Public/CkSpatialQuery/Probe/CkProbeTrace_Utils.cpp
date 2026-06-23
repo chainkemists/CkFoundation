@@ -47,6 +47,9 @@ namespace ck::details
 
             const auto OtherProbe = UCk_Utils_Probe_UE::Cast(_AnyHandle.Get_ValidHandle(Entity));
 
+            if (ck::Is_NOT_Valid(OtherProbe))
+            { return; }
+
             _Hits.Emplace(std::make_pair(OtherProbe, InResult.mFraction));
         }
 
@@ -81,6 +84,10 @@ namespace ck::details
             { return; }
 
             const auto OtherProbe = UCk_Utils_Probe_UE::Cast(_AnyHandle.Get_ValidHandle(Entity));
+
+            if (ck::Is_NOT_Valid(OtherProbe))
+            { return; }
+
             _Hits.Emplace(std::make_pair(OtherProbe, InResult.mFraction));
         }
 

@@ -42,8 +42,8 @@ public:
     FCk_Animation_MontageSection_LengthInfo(
         FCk_Time&& _StartTime,
         FCk_Time&& _EndTime)
-        : _StartTime(std::move(_StartTime))
-        , _EndTime(std::move(_EndTime))
+        : _StartTime(MoveTemp(_StartTime))
+        , _EndTime(MoveTemp(_EndTime))
         , _Length(this->_EndTime - this->_StartTime)
     {};
 };
@@ -81,8 +81,8 @@ public:
     FCk_Animation_MontageNotify_TimeInfo(
         FCk_Time&& _StartTime,
         FCk_Time&& _EndTime)
-        : _StartTime(std::move(_StartTime))
-        , _EndTime(std::move(_EndTime))
+        : _StartTime(MoveTemp(_StartTime))
+        , _EndTime(MoveTemp(_EndTime))
         , _Length(this->_EndTime - this->_StartTime)
     {};
 };

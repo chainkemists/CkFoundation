@@ -69,10 +69,22 @@ namespace ck
         -> void
     {
         // assuming that the record is already sorted
-        // assuming that the incoming handle has an Actor (TODO: remove this assumption)
+        // TODO: support actor-less AggroOwners (line-of-sight needs a UWorld which we currently reach via the Actor)
 
         const auto OwningActorEntity = UCk_Utils_OwningActor_UE::TryGet_Entity_OwningActor_InOwnershipChain(InHandle);
+
+        CK_ENSURE_IF_NOT(ck::IsValid(OwningActorEntity),
+            TEXT("AggroOwner [{}] has no OwningActor in its ownership chain — cannot line-of-sight score its Aggros"),
+            InHandle)
+        { return; }
+
         const auto Actor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(OwningActorEntity);
+
+        CK_ENSURE_IF_NOT(ck::IsValid(Actor),
+            TEXT("AggroOwner [{}] OwningActor entity [{}] does NOT have a valid Actor — cannot line-of-sight score its Aggros"),
+            InHandle, OwningActorEntity)
+        { return; }
+
         const auto OwnerLocation = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
 
         ck::FUtils_RecordOfAggros::ForEach_ValidEntry(InHandle, [&](FCk_Handle_Aggro InAggro)
@@ -91,8 +103,7 @@ namespace ck
             CollisionParams.AddIgnoredActor(OtherActor);
 
             auto Response = FCollisionResponseParams{};
-            auto HitResult = FHitResult{}; // TODO: for debugging only, to remove
-            auto Hit = Actor->GetWorld()->LineTraceSingleByChannel(HitResult, OwnerLocation, TargetLocation, ECC_Visibility, CollisionParams, Response);
+            const auto Hit = Actor->GetWorld()->LineTraceTestByChannel(OwnerLocation, TargetLocation, ECC_Visibility, CollisionParams, Response);
 
             if (Hit)
             { return ECk_Record_ForEachIterationResult::Continue; }
