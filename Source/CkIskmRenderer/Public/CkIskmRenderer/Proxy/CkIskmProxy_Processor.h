@@ -109,14 +109,17 @@ namespace ck
     };
 
     // A3: gated by FTag_IskmProxy_Movable AND FTag_Transform_Updated. Static proxies
-    // (no _Movable tag) are skipped entirely. Movable proxies that didn't change
-    // transform this frame (no _Transform_Updated tag set by CkEcsExt's transform
+    // (no _Movable tag) are skipped entirely at runtime. Movable proxies that didn't
+    // change transform this frame (no _Transform_Updated tag set by CkEcsExt's transform
     // system) are also skipped. Plan-1's old per-frame Equals() guard is gone.
+    // TIgnoreInEditor<FTag_IskmProxy_Movable>: in editor worlds the _Movable gate is
+    // dropped so editor-placed proxies (which aren't tagged _Movable) still get their
+    // transform pushed when moved — mirrors FProcessor_IsmProxy_TransformInstance.
     class CKISKMRENDERER_API FProcessor_IskmProxy_UpdateTransform : public ck_exp::TProcessor<
         FProcessor_IskmProxy_UpdateTransform,
         FCk_Handle_IskmProxy,
         TReadWrite<FFragment_IskmProxy_Current>,
-        FTag_IskmProxy_Movable,
+        TIgnoreInEditor<FTag_IskmProxy_Movable>,
         FTag_Transform_Updated,
         TExclude<FTag_IskmProxy_Ragdolling>,
         TExclude<FTag_IskmProxy_NeedsSetup>,
