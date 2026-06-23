@@ -11,6 +11,8 @@
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
+#include "CkEcs/Registry/CkRegistry.h"
+#include "CkEcs/Registry/CkRegistry_SlotTable.h"   // ck::registry_table::TryResolve
 #include "CkEcs/Net/CkNet_Fragment.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
@@ -58,6 +60,45 @@ auto
     { return {}; }
 
     return InHandle.Get<ck::FFragment_EntityScript_Current>().Get_Script()->GetClass();
+}
+
+auto
+    UCk_Utils_EntityScript_UE::
+    Relink_AssociatedEntities_AfterRestore(
+        UWorld* InWorld)
+    -> int32
+{
+    if (ck::Is_NOT_Valid(InWorld, ck::IsValid_Policy_NullptrOnly{}))
+    { return 0; }
+
+    auto* EcsWorld = InWorld->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+    if (ck::Is_NOT_Valid(EcsWorld))
+    { return 0; }
+
+    auto& CkRegistry = EcsWorld->Get_Registry();
+    auto* RawRegistry = ck::registry_table::TryResolve(CkRegistry.Get_RegistryHandle());
+    if (RawRegistry == nullptr)
+    { return 0; }
+
+    auto Count = 0;
+    for (const auto Entity : RawRegistry->view<ck::FFragment_EntityScript_Current>())
+    {
+        auto Handle = ck::MakeHandle(FCk_Entity{Entity}, CkRegistry);
+        if (ck::Is_NOT_Valid(Handle))
+        { continue; }
+
+        auto* Script = Handle.Get<ck::FFragment_EntityScript_Current>().Get_Script().Get();
+        if (ck::Is_NOT_Valid(Script))
+        { continue; }
+
+        // _AssociatedEntity is a Transient back-pointer set only at spawn; restore recreates the script
+        // UObject without it, leaving it default (tombstone). Re-derive it from the owning entity — friend
+        // access via this Utils class — mirroring FProcessor_EntityScript_SpawnEntity's assignment.
+        Script->_AssociatedEntity = Handle;
+        ++Count;
+    }
+
+    return Count;
 }
 
 auto
