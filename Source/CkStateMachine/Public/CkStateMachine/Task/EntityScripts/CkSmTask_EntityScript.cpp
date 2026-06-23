@@ -52,9 +52,13 @@ auto
     // (e.g. sub-SM tasks destroyed via parent state cascade). Dedup'd via FTag_SmTask_Active
     // inside ExitTask — if the processor already handled this task, the tag is gone and
     // ExitTask is a no-op.
-    auto Self = UCk_Utils_SmTask_UE::CastChecked(_AssociatedEntity);
-    if (ck::IsValid(Self))
+    //
+    // Has-guard (not CastChecked) because a snapshot-restored SM-graph entity keeps its EntityScript
+    // but not its SmTask feature fragment (the redrive rebuilds the real graph fresh), so CastChecked
+    // would ensure. No fragment -> nothing to exit; skip.
+    if (UCk_Utils_SmTask_UE::Has(_AssociatedEntity))
     {
+        auto Self = UCk_Utils_SmTask_UE::CastChecked(_AssociatedEntity);
         const auto SmHandle = UCk_Utils_SmTask_UE::Get_OwningStateMachine(Self);
         const auto NetContext = ck::statemachine::ComputeNetContext(SmHandle);
         ExitTask(Self, NetContext);
