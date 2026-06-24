@@ -52,6 +52,10 @@ auto
         return;
     }
 
+    // Mark this as a sub-SM so a snapshot restore can destroy the captured orphan copy — the redrive
+    // recreates the live sub-SM right here, fresh, on every load (FProcessor_Sm_RestoreRedrive).
+    _SubSmHandle.Add<ck::FTag_Sm_IsSubMachine>();
+
     if (const auto OwningStateMachine = ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(InHandle);
         ck::IsValid(OwningStateMachine))
     {
