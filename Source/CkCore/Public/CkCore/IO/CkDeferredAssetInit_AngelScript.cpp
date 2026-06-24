@@ -2,6 +2,7 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/CkCoreLog.h"
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/IO/CkIO_Utils.h"
 
 #include <Misc/CoreDelegates.h>
@@ -468,7 +469,9 @@ namespace
     // ----------------------------------------------------------------------------------------------------------------
 
 #if !WITH_EDITOR
-    TArray<TWeakObjectPtr<UObject>> GRootedByUs;
+    // Count of distinct targets we've rooted this process — for the log line / diagnostics only. We
+    // never unroot (see the design note above), so a running total is all this needs to be.
+    int32 GTotalRooted = 0;
 
     // Roots normal-pool objects referenced by a disregard-for-GC object — exactly the edges the engine's
     // disregard verifier flags. Runs single-threaded (DefaultOptions is not parallel), so AddToRoot is safe.
@@ -505,13 +508,20 @@ namespace
             { return; }
 
             InObject->AddToRoot();
-            GRootedByUs.Emplace(InObject);
+            ++GTotalRooted;
             ++NewlyRooted;
         }
     };
 
     auto RootAngelscriptDisregardViolations() -> void
     {
+        // The single-context collector below runs synchronously on the calling thread, and AddToRoot
+        // (in the processor) is not thread-safe. The pre-GC delegate is game-thread — assert it so a
+        // future move off-thread (or to a parallel collector) trips loudly instead of racing silently.
+        CK_ENSURE_IF_NOT(IsInGameThread(),
+            TEXT("[DeferredAssetInit] disregard-for-GC rooting must run on the game thread"))
+        { return; }
+
         static const TCHAR* AsPackageNames[] =
         {
             TEXT("/Script/AngelscriptAssets"),
@@ -551,7 +561,7 @@ namespace
         if (Processor.NewlyRooted > 0)
         {
             ck::core::Display(TEXT("[DeferredAssetInit] Rooted {} new disregard-for-GC violation target(s) ({} total)"),
-                              Processor.NewlyRooted, GRootedByUs.Num());
+                              Processor.NewlyRooted, GTotalRooted);
         }
     }
 #endif // !WITH_EDITOR
