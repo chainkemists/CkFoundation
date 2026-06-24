@@ -29,7 +29,8 @@ auto
     UCk_Utils_WidgetRasterizer_UE::
     RenderWidgetToTexture(
         UUserWidget* InWidget,
-        FIntPoint InRenderSize)
+        FIntPoint InRenderSize,
+        ECk_WidgetRasterizer_GammaCorrection InGammaCorrection)
     -> UTexture2D*
 {
     if (ck::Is_NOT_Valid(InWidget))
@@ -52,10 +53,11 @@ auto
     RenderTarget->UpdateResourceImmediate(true);
 
     // ---- Widget renderer + headless virtual window ----
-    // bUseGammaCorrection=true matches the legacy BB cover generator; the art
-    // reads correctly with the RT left in sRGB and the texture marked SRGB.
+    // The RT is left sRGB (encodes on write). With GammaCorrection::Enabled the renderer ALSO
+    // encodes, double-applying gamma (washed-out); Disabled lets the sRGB RT do the single encode.
 
-    FWidgetRenderer* WidgetRenderer = new FWidgetRenderer(/*bUseGammaCorrection*/ true);
+    const auto UseGammaCorrection = InGammaCorrection == ECk_WidgetRasterizer_GammaCorrection::Enabled;
+    FWidgetRenderer* WidgetRenderer = new FWidgetRenderer(UseGammaCorrection);
     if (WidgetRenderer == nullptr)
     { return nullptr; }
 
