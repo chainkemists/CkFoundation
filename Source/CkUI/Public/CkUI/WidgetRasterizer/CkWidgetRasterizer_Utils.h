@@ -13,6 +13,21 @@ class UTexture2D;
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_WidgetRasterizer_GammaCorrection : uint8
+{
+    // Renderer applies gamma correction (linear->sRGB). Correct when the render target is left
+    // linear; against an sRGB render target it double-encodes (washes the result out). Default
+    // to preserve existing callers.
+    Enabled,
+
+    // Renderer skips gamma correction — the source widget's sRGB art is drawn as-is so the sRGB
+    // render target does the single encode. Use this when Enabled looks washed-out / too light.
+    Disabled
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 /**
  * Off-screen UMG widget -> transient UTexture2D rasterizer (no viewport needed).
  *
@@ -51,7 +66,8 @@ public:
     static UTexture2D*
     RenderWidgetToTexture(
         UUserWidget* InWidget,
-        FIntPoint InRenderSize);
+        FIntPoint InRenderSize,
+        ECk_WidgetRasterizer_GammaCorrection InGammaCorrection = ECk_WidgetRasterizer_GammaCorrection::Enabled);
 
     /** Whether widget rasterization can run on this process (real RHI + Slate renderer present). */
     UFUNCTION(BlueprintPure,
