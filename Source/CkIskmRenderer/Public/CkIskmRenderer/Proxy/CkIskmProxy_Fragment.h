@@ -66,10 +66,17 @@ namespace ck
         // index into AnimCollection->Submeshes; parallel to _SubmeshSKMCs
         TArray<int32> _AttachedSubmeshIndices;
 
+        // Per-instance local render offset (entity-space), cached from ParamsData at Setup and composed
+        // into the SKMC world transform each frame (Setup + UpdateTransform). Lets a proxy render off
+        // its entity origin — e.g. a Character-actor entity whose transform is the capsule CENTER drops
+        // by the half-height so the feet land on the ground. Zero for the common case (entity at feet).
+        FVector _LocalLocationOffset = FVector::ZeroVector;
+
     public:
         CK_PROPERTY_GET(_BaseSKMC);
         CK_PROPERTY_GET(_SubmeshSKMCs);
         CK_PROPERTY_GET(_AttachedSubmeshIndices);
+        CK_PROPERTY_GET(_LocalLocationOffset);
     };
 
     // ---- anim state ----
@@ -234,6 +241,7 @@ namespace ck
             FCk_Request_IskmProxy_ClearMaterialOverrides,
             FCk_Request_IskmProxy_SetMorphTarget,
             FCk_Request_IskmProxy_ClearMorphTargets,
+            FCk_Request_IskmProxy_SetSkeletalMesh,
             FCk_Request_IskmProxy_AttachSubmesh,
             FCk_Request_IskmProxy_DetachSubmesh,
             FCk_Request_IskmProxy_DetachAllSubmeshes,

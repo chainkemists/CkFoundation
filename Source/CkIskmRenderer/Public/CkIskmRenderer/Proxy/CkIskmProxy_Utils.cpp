@@ -290,6 +290,19 @@ auto
 
 auto
     UCk_Utils_IskmProxy_UE::
+    Request_SetSkeletalMesh(
+        FCk_Handle_IskmProxy& InHandle,
+        USkeletalMesh* InMesh)
+    -> FCk_Handle_IskmProxy
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return InHandle; }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(
+        FCk_Request_IskmProxy_SetSkeletalMesh{InMesh});
+    return InHandle;
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
     Get_MorphTarget(
         const FCk_Handle_IskmProxy& InHandle,
         FName InMorphName)

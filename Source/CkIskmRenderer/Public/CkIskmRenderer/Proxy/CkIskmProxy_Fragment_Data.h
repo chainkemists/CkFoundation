@@ -19,6 +19,7 @@
 
 class UCk_IskmAnimCollection_Data;
 class UMaterialInterface;
+class USkeletalMesh;
 
 // ---- enums ----
 
@@ -78,9 +79,9 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     ECk_EnableDisable _IsMovable = ECk_EnableDisable::Enable;
 
-    // B2: per-instance transform offsets relative to the entity transform. Reservation
-    // only — Plan-1 always pins the SKMC to the entity transform exactly. Plan-2 honors
-    // these in the cluster proxy. Declared now so callers don't migrate.
+    // B2: per-instance transform offsets relative to the entity transform. _LocalLocationOffset is
+    // HONORED in Plan-1 (composed into the SKMC world transform each frame — see Setup + UpdateTransform);
+    // _LocalRotationOffset and _ScaleMultiplier remain reserved for the Plan-2 cluster proxy.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FVector _LocalLocationOffset = FVector::ZeroVector;
 
@@ -371,6 +372,26 @@ struct CKISKMRENDERER_API FCk_Request_IskmProxy_ClearMorphTargets : public FCk_R
 public:
     CK_GENERATED_BODY(FCk_Request_IskmProxy_ClearMorphTargets);
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IskmProxy_ClearMorphTargets);
+};
+
+// Swaps the BASE SKMC's skeletal mesh (e.g. a male<->female body sharing one skeleton).
+// SetSkeletalMesh re-runs InitAnim (fresh AnimInstance of the preserved AnimClass); the
+// handler re-establishes the notify bridge and re-applies recorded material overrides,
+// morphs and per-instance custom data so the swap keeps the current outfit / body shape.
+USTRUCT(BlueprintType)
+struct CKISKMRENDERER_API FCk_Request_IskmProxy_SetSkeletalMesh : public FCk_Request_Base
+{
+    GENERATED_BODY()
+public:
+    CK_GENERATED_BODY(FCk_Request_IskmProxy_SetSkeletalMesh);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IskmProxy_SetSkeletalMesh);
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    TObjectPtr<USkeletalMesh> _Mesh;
+public:
+    CK_PROPERTY_GET(_Mesh);
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_IskmProxy_SetSkeletalMesh, _Mesh);
 };
 
 // Outfit submesh attach. The submesh is identified by name (resolved against the

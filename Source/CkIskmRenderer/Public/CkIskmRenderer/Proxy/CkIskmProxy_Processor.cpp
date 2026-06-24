@@ -115,7 +115,13 @@ namespace ck
         { return; }
 
         SKMC->SetSkeletalMesh(AnimCollection->Get_DefaultMesh());
-        SKMC->SetWorldTransform(InParams.Get_SpawnTransform());
+
+        // Cache the per-instance render offset and compose it into the initial pose (entity-space ->
+        // world via the spawn rotation). UpdateTransform re-applies it every frame for movable proxies.
+        InCurrent._LocalLocationOffset = InParams.Get_LocalLocationOffset();
+        auto SpawnXf = InParams.Get_SpawnTransform();
+        SpawnXf.AddToTranslation(SpawnXf.GetRotation().RotateVector(InCurrent._LocalLocationOffset));
+        SKMC->SetWorldTransform(SpawnXf);
 
         // Resolve the AnimBP class. Sync-load — see Claude.md note about hitch on first
         // use of an AnimCollection. Fall back to the notify-bridging UAnimInstance subclass
@@ -257,7 +263,10 @@ namespace ck
         // onto the SKMC. Gated by FTag_IskmProxy_Movable + FTag_Transform_Updated
         // (CkEcsExt's transform system sets the latter only when the transform
         // changed) and TExclude<FTag_IskmProxy_Ragdolling> (physics drives ragdolls).
-        const auto NewTransform = ::UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InHandle);
+        auto NewTransform = ::UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InHandle);
+        // Compose the cached per-instance render offset (entity-space) into the world transform so the
+        // body renders off the entity origin (e.g. drop a Character-actor proxy by the capsule half-height).
+        NewTransform.AddToTranslation(NewTransform.GetRotation().RotateVector(InCurrent.Get_LocalLocationOffset()));
         SKMC->SetWorldTransform(NewTransform);
     }
 
@@ -284,7 +293,12 @@ namespace ck
         const auto SocketComponentSpace = ::UCk_Utils_IskmProxy_UE::Get_SocketTransform(
             Leader, InFollower.Get_Socket(), ECk_IskmProxy_TransformSpace::Component);
 
-        const auto LeaderTransform = ::UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(Leader);
+        auto LeaderTransform = ::UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(Leader);
+        // Compose the leader's render offset into the root so followers track the *offset* body
+        // rather than the entity origin — must match FProcessor_IskmProxy_UpdateTransform's SKMC
+        // placement (line ~258), or cosmetics float by the offset (e.g. a Character's capsule half-height).
+        const auto LeaderOffset = Leader.Get<FFragment_IskmProxy_Current>().Get_LocalLocationOffset();
+        LeaderTransform.AddToTranslation(LeaderTransform.GetRotation().RotateVector(LeaderOffset));
 
         const auto NewTransform = InFollower.Get_Offset() * SocketComponentSpace * LeaderTransform;
 
@@ -695,6 +709,62 @@ namespace ck
         Morphs._Dirty = true;
 
         SKMC->ClearMorphTargets();
+    }
+
+    auto
+        FProcessor_IskmProxy_HandleRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_IskmProxy_Params& /*InParams*/,
+            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy_AnimState& /*InAnimState*/,
+            FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
+            FFragment_IskmProxy_CustomData& InCustomData,
+            const FCk_Request_IskmProxy_SetSkeletalMesh& InRequest) const -> void
+    {
+        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
+            TEXT("IskmProxy [{}]: BaseSKMC missing in SetSkeletalMesh handler"),
+            InHandle)
+        { return; }
+
+        CK_ENSURE_IF_NOT(ck::IsValid(InRequest.Get_Mesh()),
+            TEXT("IskmProxy [{}]: SetSkeletalMesh request has a null Mesh"),
+            InHandle)
+        { return; }
+
+        constexpr auto ReinitPose = true;
+        SKMC->SetSkeletalMesh(InRequest.Get_Mesh(), ReinitPose);
+
+        // SetSkeletalMesh re-runs InitAnim -> a fresh AnimInstance of the preserved AnimClass.
+        // Re-establish the notify bridge's owning-proxy handle on the new instance (mirrors
+        // DoApply_AnimInstanceClass) so OnAnimationNotify / OnMontageFinished keep routing.
+        if (auto* IskmAI = Cast<::UCk_IskmNotify_AnimInstance>(SKMC->GetAnimInstance()))
+        {
+            IskmAI->Set_OwningProxyHandle(FCk_Handle_IskmProxy{InHandle});
+        }
+
+        // The swap rebuilt the component's material slots / morph curves / custom data —
+        // re-apply the proxy's recorded state (mirrors the Setup re-apply path).
+        auto& Overrides = InHandle.Get<FFragment_IskmProxy_MaterialOverrides>();
+        for (const auto& Kvp : Overrides._SlotToMaterial)
+        {
+            if (Kvp.Key >= 0 && Kvp.Key < SKMC->GetNumMaterials())
+            {
+                SKMC->SetMaterial(Kvp.Key, Kvp.Value.Get());
+            }
+        }
+
+        auto& Morphs = InHandle.Get<FFragment_IskmProxy_MorphTargets>();
+        for (const auto& Kvp : Morphs._Values)
+        {
+            SKMC->SetMorphTarget(Kvp.Key, Kvp.Value);
+        }
+
+        for (auto Idx = 0; Idx < InCustomData._Values.Num(); ++Idx)
+        {
+            SKMC->SetCustomPrimitiveDataFloat(Idx, InCustomData._Values[Idx]);
+        }
     }
 
     auto

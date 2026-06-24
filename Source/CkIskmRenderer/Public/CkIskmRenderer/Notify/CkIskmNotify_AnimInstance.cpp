@@ -15,7 +15,10 @@ void UCk_IskmNotify_AnimInstance::Set_OwningProxyHandle(FCk_Handle_IskmProxy InH
 void UCk_IskmNotify_AnimInstance::NativeInitializeAnimation()
 {
     Super::NativeInitializeAnimation();
-    OnMontageEnded.AddDynamic(this, &UCk_IskmNotify_AnimInstance::OnMontageEndedHook);
+    // AddUnique, not AddDynamic: a SetSkeletalMesh(..., bReinitPose=true) re-runs
+    // NativeInitializeAnimation on the *reused* instance, so a plain AddDynamic would
+    // bind (this, OnMontageEndedHook) a second time and trip the AddInternal ensure.
+    OnMontageEnded.AddUniqueDynamic(this, &UCk_IskmNotify_AnimInstance::OnMontageEndedHook);
 }
 
 bool UCk_IskmNotify_AnimInstance::HandleNotify(const FAnimNotifyEvent& AnimNotifyEvent)

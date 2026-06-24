@@ -176,6 +176,15 @@ public:
     static FCk_Handle_IskmProxy
     Request_ClearMorphTargets(UPARAM(ref) FCk_Handle_IskmProxy& InHandle);
 
+    // Swaps the base body skeletal mesh (shared-skeleton male/female). The handler re-applies
+    // recorded material/morph/custom-data so the outfit and body shape survive the swap.
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Request Set Skeletal Mesh")
+    static FCk_Handle_IskmProxy
+    Request_SetSkeletalMesh(
+        UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
+        USkeletalMesh* InMesh);
+
     // Returns the value recorded for the morph via Request_SetMorphTarget, or
     // 0 if unset (or cleared).
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
