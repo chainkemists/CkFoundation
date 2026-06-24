@@ -1,10 +1,27 @@
 #pragma once
 
 #include "CkAStar_Fragment.h"
+#include "CkAStar/CkAStar_Stats.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Processor/CkParallelProcessor.h"
 #include "CkEcs/Processor/CkProcessor_AccessPolicy.h"
+
+// ====================================================================================================================
+// PERF STATS — templated header: these create per-TU internal-linkage statics (acceptable; few TUs).
+//
+// These two cycle stats are the body-level scopes for the shared template ForEachEntity bodies below. A single
+// declaration per template covers every derived/aliased processor that instantiates it:
+//   - STAT_AStar_Execute  → TProcessor_AStar_Execute::ForEachEntity  (FProcessor_Goap_Planner_Execute,
+//                                                                       FProcessor_AStarTest_Execute)
+//   - STAT_AStar_EndPlay  → TProcessor_AStar_EndPlay::ForEachEntity  (FProcessor_Goap_Planner_EndPlay,
+//                                                                       FProcessor_AStarTest_EndPlay)
+// Both report under STATGROUP_CkAStar (the template's owning module). The GOAP aliases therefore surface under
+// CkAStar rather than CkGoap — intentional, since the executing code lives in CkAStar.
+// ====================================================================================================================
+
+DECLARE_CYCLE_STAT(TEXT("AStar::Execute"), STAT_AStar_Execute, STATGROUP_CkAStar);
+DECLARE_CYCLE_STAT(TEXT("AStar::EndPlay"), STAT_AStar_EndPlay, STATGROUP_CkAStar);
 
 // ====================================================================================================================
 //
@@ -70,6 +87,8 @@ public:
 		T_SearchStateFragment& InSearchState,
 		T_ResultFragment& InResult) -> void
 	{
+		SCOPE_CYCLE_COUNTER(STAT_AStar_Execute);
+
 		const auto SearchParams = InParams.ToSearchParams();
 		const auto PreviousIterations = InSearchState._State.GetTotalIterations();
 
@@ -167,6 +186,8 @@ public:
 		typename Super::HandleType InHandle,
 		T_SearchStateFragment& InSearchState) -> void
 	{
+		SCOPE_CYCLE_COUNTER(STAT_AStar_EndPlay);
+
 		InSearchState._State = {};
 	}
 };

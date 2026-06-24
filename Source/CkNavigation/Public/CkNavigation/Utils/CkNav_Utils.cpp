@@ -1,11 +1,16 @@
 #include "CkNav_Utils.h"
 
 #include "CkNavigation/CkNavigation_Log.h"
+#include "CkNavigation/CkNavigation_Stats.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Signal/CkSignal_Utils.h"
 
 #include <NavigationSystem.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Nav::ProjectOntoNavmesh"), STAT_Nav_ProjectOntoNavmesh, STATGROUP_CkNav);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -120,6 +125,8 @@ auto
         FVector& OutSnappedPosition)
     -> bool
 {
+    SCOPE_CYCLE_COUNTER(STAT_Nav_ProjectOntoNavmesh);
+
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
         TEXT("Invalid handle [{}] passed to Try_ProjectOntoNavmesh"), InHandle)
     { return false; }

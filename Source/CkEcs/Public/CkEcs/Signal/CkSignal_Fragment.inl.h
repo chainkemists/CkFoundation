@@ -2,6 +2,8 @@
 
 #include "CkSignal_Fragment.h"
 
+#include "CkCore/Format/CkFormat.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -78,6 +80,23 @@ namespace ck
         { _Connection.release(); }
     }
 
+#if STATS
+    // Build a "ClassName::FunctionName" label for a bound dynamic delegate, for the per-listener stat.
+    template <typename T_DynamicDelegate>
+    auto
+        Get_SignalListenerName(
+            const T_DynamicDelegate& InDelegate)
+        -> FString
+    {
+        const auto* BoundObject = InDelegate.GetUObject();
+        const auto& FunctionName = InDelegate.GetFunctionName().ToString();
+
+        return ck::IsValid(BoundObject, ck::IsValid_Policy_NullptrOnly{})
+            ? ck::Format_UE(TEXT("{}::{}"), BoundObject->GetClass()->GetName(), FunctionName)
+            : FunctionName;
+    }
+#endif
+
     template <typename T_DynamicDelegate, ECk_Signal_PostFireBehavior T_PostFireBehavior, typename ... T_Args>
     auto
         TFragment_Signal_Delegate<T_DynamicDelegate, T_PostFireBehavior, T_Args...>::
@@ -88,10 +107,19 @@ namespace ck
         auto UnconditionalDelegatesCopy = _UnconditionalDelegates;
         auto ConditionalInvocationListCopy = _ConditionalInvocationList;
 
+#if STATS
+        const auto ShouldStatListeners = ck::Get_ShouldStat_SignalListeners();
+#endif
+
         for (const auto& Delegate : UnconditionalDelegatesCopy)
         {
             if (Delegate.IsBound())
             {
+#if STATS
+                auto ListenerStat = FScopeCycleCounter{ShouldStatListeners
+                    ? ck::Make_SignalListenerStatId(ck::Get_SignalListenerName(Delegate))
+                    : TStatId{}};
+#endif
                 auto ArgsCopy = std::make_tuple(InArgs...);
                 std::apply([&]<typename... T0>(T0&&... CopiedArgs) {
                     Delegate.Execute(TTypeConverter<T_Args, TypeConverterPolicy::TypeToUnreal>{}(std::forward<T0>(CopiedArgs))...);
@@ -120,6 +148,11 @@ namespace ck
 
                 if (DelegateToInvoke.IsBound())
                 {
+#if STATS
+                    auto ListenerStat = FScopeCycleCounter{ShouldStatListeners
+                        ? ck::Make_SignalListenerStatId(ck::Get_SignalListenerName(DelegateToInvoke))
+                        : TStatId{}};
+#endif
                     std::apply([&]<typename... T0>(T0&&... CopiedArgs) {
                         DelegateToInvoke.Execute(TTypeConverter<T_Args, TypeConverterPolicy::TypeToUnreal>{}(std::forward<T0>(CopiedArgs))...);
                     }, std::move(ArgsCopy));

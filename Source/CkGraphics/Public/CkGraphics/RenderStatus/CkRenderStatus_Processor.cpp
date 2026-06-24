@@ -6,12 +6,18 @@
 #include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
 
 #include "CkGraphics/CkGraphics_Utils.h"
+#include "CkGraphics/CkGraphics_Stats.h"
 
 #include "CkVariables/CkUnrealVariables_Utils.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_RenderStatus_HandleRequests);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Graphics::RenderStatusQuery"), STAT_Graphics_RenderStatusQuery, STATGROUP_CkGraphics);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Graphics RenderStatus Actors Tested"), STAT_Graphics_RenderStatusActorsTested, STATGROUP_CkGraphics);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -57,13 +63,20 @@ namespace ck
             const FCk_Request_RenderStatus_QueryRenderedActors& InRequest)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_Graphics_RenderStatusQuery);
+
         const auto& TimeTolerance = InRequest.Get_TimeTolerance();
         const auto& RenderGroup = InRequest.Get_RenderGroup();
 
         auto RenderedEntityWithActors = TArray<FCk_EntityOwningActor_BasicDetails>{};
 
+        // Instrumentation-only: counts every actor probed by the view loop below, fed to the DWORD stat at the end.
+        auto NumActorsTested = int32{0};
+
         const auto& TryAddToRenderedActorsList = [&](AActor* InActor, const FCk_Handle& InActorEntity)
         {
+            ++NumActorsTested;
+
             if (ck::Is_NOT_Valid(InActor))
             { return; }
 
@@ -125,6 +138,8 @@ namespace ck
                 break;
             }
         }
+
+        INC_DWORD_STAT_BY(STAT_Graphics_RenderStatusActorsTested, NumActorsTested);
 
         const auto RenderedActorsList = FCk_RenderedActorsList{}
                                           .Set_RenderGroup(RenderGroup)

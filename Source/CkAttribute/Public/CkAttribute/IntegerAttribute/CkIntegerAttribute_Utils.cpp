@@ -1,6 +1,7 @@
 #include "CkIntegerAttribute_Utils.h"
 
 #include "CkAttribute/CkAttribute_Log.h"
+#include "CkAttribute/CkAttribute_Stats.h"
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Utils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
@@ -13,6 +14,14 @@
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
 #include "CkLabel/CkLabel_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Attribute::TryGet"), STAT_CkAttribute_TryGet_Integer, STATGROUP_CkAttribute);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Attribute TryGet Calls"), STAT_CkAttribute_TryGetCalls_Integer, STATGROUP_CkAttribute);
+DECLARE_CYCLE_STAT(TEXT("Add_Integer_Modifier_Revocable"), STAT_CkAttribute_AddIntegerModifierRevocable, STATGROUP_CkAttribute);
+DECLARE_CYCLE_STAT(TEXT("Add_Integer_Modifier_NotRevocable"), STAT_CkAttribute_AddIntegerModifierNotRevocable, STATGROUP_CkAttribute);
+DECLARE_CYCLE_STAT(TEXT("TryGet_IntegerAttributeModifier"), STAT_CkAttribute_TryGetIntegerModifier, STATGROUP_CkAttribute);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -173,7 +182,8 @@ auto
         FGameplayTag      InAttributeName)
     -> FCk_Handle_IntegerAttribute
 {
-    QUICK_SCOPE_CYCLE_COUNTER(TryGet_IntegerAttribute)
+    SCOPE_CYCLE_COUNTER(STAT_CkAttribute_TryGet_Integer);
+    INC_DWORD_STAT(STAT_CkAttribute_TryGetCalls_Integer);
     return RecordOfIntegerAttributes_Utils::Get_ValidEntry_ByTag(InAttributeOwnerEntity, InAttributeName);
 }
 
@@ -751,7 +761,7 @@ auto
         const FCk_Fragment_IntegerAttributeModifier_ParamsData& InParams)
     -> FCk_Handle_IntegerAttributeModifier
 {
-    QUICK_SCOPE_CYCLE_COUNTER(Add_Integer_Modifier_Revocable)
+    SCOPE_CYCLE_COUNTER(STAT_CkAttribute_AddIntegerModifierRevocable);
 
     auto ParamsToUse = InParams;
     ParamsToUse.Set_TargetAttributeName(UCk_Utils_GameplayLabel_UE::Get_Label(InAttribute));
@@ -808,7 +818,7 @@ auto
         const FCk_Fragment_IntegerAttributeModifier_ParamsData& InParams)
     -> void
 {
-    QUICK_SCOPE_CYCLE_COUNTER(Add_Integer_Modifier_NotRevocable)
+    SCOPE_CYCLE_COUNTER(STAT_CkAttribute_AddIntegerModifierNotRevocable);
 
     auto ParamsToUse = InParams;
     ParamsToUse.Set_TargetAttributeName(UCk_Utils_GameplayLabel_UE::Get_Label(InAttribute));
@@ -946,7 +956,7 @@ auto
         ECk_MinMaxCurrent InComponent)
     -> FCk_Handle_IntegerAttributeModifier
 {
-    QUICK_SCOPE_CYCLE_COUNTER(TryGet_IntegerAttributeModifier)
+    SCOPE_CYCLE_COUNTER(STAT_CkAttribute_TryGetIntegerModifier);
     switch(InComponent)
     {
         case ECk_MinMaxCurrent::Current:

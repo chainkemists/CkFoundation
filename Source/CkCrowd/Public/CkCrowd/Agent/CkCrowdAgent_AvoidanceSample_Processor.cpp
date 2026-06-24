@@ -8,11 +8,18 @@
 #include "CkPhysics/Velocity/CkVelocity_Utils.h"
 
 #include "CkCrowd/Agent/CkCrowdAgent_Avoidance_Fragment.h"
+#include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_AvoidanceSample);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Crowd::AvoidanceSample"), STAT_CkCrowd_AvoidanceSampleProc, STATGROUP_CkCrowd);
+DECLARE_CYCLE_STAT(TEXT("Crowd::AvoidanceSample (scan)"), STAT_CkCrowd_AvoidanceSample_Scan, STATGROUP_CkCrowd);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Crowd Agents Sampled"), STAT_CkCrowd_AgentsSampled, STATGROUP_CkCrowd);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -220,6 +227,8 @@ namespace ck
             FFragment_CrowdAgent_DesiredVelocity& InDesired)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkCrowd_AvoidanceSampleProc);
+
         // Trigger gate. Off-path leaves the force solver's _Velocity in place (which will then be
         // ramped by AccelClamp downstream).
         if (NOT ShouldSample(InHandle, InNeighborCache))
@@ -227,6 +236,9 @@ namespace ck
 
         if (NOT IsSamplingFrame(InHandle))
         { return; }
+
+        // Counted only past both gates — shows how many agents the round-robin stride actually let through.
+        INC_DWORD_STAT(STAT_CkCrowd_AgentsSampled);
 
         const auto& Neighbors = InNeighborCache.Get_Neighbors();
         if (Neighbors.Num() == 0)
@@ -272,42 +284,47 @@ namespace ck
         auto BestPenalty = TNumericLimits<float>::Max();
         auto BestVel     = DesiredVel;
 
-        for (const auto& Cand : Samples)
         {
-            // wDesVel: deviation from the path-follow heading (normalised by MaxSpeed).
-            const auto DesPen = WDes * static_cast<float>(FVector::Dist2D(Cand, DesiredVel)) * InvVMax;
-            // wCurVel: deviation from current velocity — the inertia bias.
-            const auto CurPen = WCur * static_cast<float>(FVector::Dist2D(Cand, CurrentVel)) * InvVMax;
+            // The only nested-loop processor in the module: Samples × Neighbors per sampling agent.
+            SCOPE_CYCLE_COUNTER(STAT_CkCrowd_AvoidanceSample_Scan);
 
-            // wToi: minimum time-to-collision across neighbors. Reciprocal-scaled so short TTCs
-            // dominate (the formula is tpen = wToi * 1/(0.1 + tmin*invHorizTime), per dtCrowd).
-            auto TMin = FLT_MAX;
-            for (const auto& Nbr : Neighbors)
+            for (const auto& Cand : Samples)
             {
-                const auto NbrRad = AgentRad + AgentRad;  // approximation: neighbors share radius
-                const auto Ttc = TimeToCollision(Cand, CurrentVel, Nbr.Get_RelativeOffset(), Nbr.Get_RelativeVelocity(), NbrRad, Horizon);
-                if (Ttc < TMin) { TMin = Ttc; }
-            }
-            const auto ToiPen = (TMin >= FLT_MAX)
-                ? 0.0f
-                : (WToi * (1.0f / (0.1f + TMin * InvHorizon)));
+                // wDesVel: deviation from the path-follow heading (normalised by MaxSpeed).
+                const auto DesPen = WDes * static_cast<float>(FVector::Dist2D(Cand, DesiredVel)) * InvVMax;
+                // wCurVel: deviation from current velocity — the inertia bias.
+                const auto CurPen = WCur * static_cast<float>(FVector::Dist2D(Cand, CurrentVel)) * InvVMax;
 
-            // wSide: penalty for going against the chosen side preference. Normalised by MaxSpeed
-            // so it's comparable to the other weighted terms.
-            auto SidePen = 0.0f;
-            if (SideEnabled)
-            {
-                const auto Rightness = SideRightness(Cand, MotionDir) * InvVMax;
-                // SideSign = +1 (PassLeft) penalizes positive rightness; -1 (PassRight) penalizes
-                // negative rightness. Negative penalty would be a bonus — clamp to zero.
-                SidePen = WSide * FMath::Max(0.0f, Rightness * SideSign);
-            }
+                // wToi: minimum time-to-collision across neighbors. Reciprocal-scaled so short TTCs
+                // dominate (the formula is tpen = wToi * 1/(0.1 + tmin*invHorizTime), per dtCrowd).
+                auto TMin = FLT_MAX;
+                for (const auto& Nbr : Neighbors)
+                {
+                    const auto NbrRad = AgentRad + AgentRad;  // approximation: neighbors share radius
+                    const auto Ttc = TimeToCollision(Cand, CurrentVel, Nbr.Get_RelativeOffset(), Nbr.Get_RelativeVelocity(), NbrRad, Horizon);
+                    if (Ttc < TMin) { TMin = Ttc; }
+                }
+                const auto ToiPen = (TMin >= FLT_MAX)
+                    ? 0.0f
+                    : (WToi * (1.0f / (0.1f + TMin * InvHorizon)));
 
-            const auto Penalty = DesPen + CurPen + ToiPen + SidePen;
-            if (Penalty < BestPenalty)
-            {
-                BestPenalty = Penalty;
-                BestVel     = Cand;
+                // wSide: penalty for going against the chosen side preference. Normalised by MaxSpeed
+                // so it's comparable to the other weighted terms.
+                auto SidePen = 0.0f;
+                if (SideEnabled)
+                {
+                    const auto Rightness = SideRightness(Cand, MotionDir) * InvVMax;
+                    // SideSign = +1 (PassLeft) penalizes positive rightness; -1 (PassRight) penalizes
+                    // negative rightness. Negative penalty would be a bonus — clamp to zero.
+                    SidePen = WSide * FMath::Max(0.0f, Rightness * SideSign);
+                }
+
+                const auto Penalty = DesPen + CurPen + ToiPen + SidePen;
+                if (Penalty < BestPenalty)
+                {
+                    BestPenalty = Penalty;
+                    BestVel     = Cand;
+                }
             }
         }
 

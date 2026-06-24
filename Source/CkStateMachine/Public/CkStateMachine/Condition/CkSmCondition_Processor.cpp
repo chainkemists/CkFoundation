@@ -1,5 +1,6 @@
 #include "CkSmCondition_Processor.h"
 
+#include "CkStateMachine/CkStateMachine_Stats.h"
 #include "CkStateMachine/Condition/EntityScripts/CkSmCondition_EntityScript.h"
 #include "CkStateMachine/Condition/EntityScripts/CkSmCondition_Polled.h"
 #include "CkStateMachine/Condition/CkSmCondition_Utils.h"
@@ -21,6 +22,14 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_SmCondition_Exit);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+DECLARE_CYCLE_STAT(TEXT("SmCondition::Exit"), STAT_SmCondition_Exit, STATGROUP_CkStateMachine);
+DECLARE_CYCLE_STAT(TEXT("SmCondition::ResetEveryFrame"), STAT_SmCondition_ResetEveryFrame, STATGROUP_CkStateMachine);
+DECLARE_CYCLE_STAT(TEXT("SmCondition::Polled (proc)"), STAT_SmCondition_PolledProc, STATGROUP_CkStateMachine);
+DECLARE_CYCLE_STAT(TEXT("SmCondition::Evaluate (user)"), STAT_SmCondition_Evaluate, STATGROUP_CkStateMachine);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Sm Conditions Evaluated"), STAT_SmConditionsEvaluated, STATGROUP_CkStateMachine);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     // ================================================================================================================
@@ -35,6 +44,8 @@ namespace ck
             const FFragment_EntityScript_Current& InScriptFragment)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_SmCondition_Exit);
+
         auto* Script = Cast<UCk_SmCondition_EntityScript>(InScriptFragment.Get_Script().Get());
         if (ck::Is_NOT_Valid(Script))
         { return; }
@@ -57,6 +68,8 @@ namespace ck
             FFragment_SmCondition_Current& InCurrent)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_SmCondition_ResetEveryFrame);
+
         InCurrent._Result = ECk_SmConditionResult::Undetermined;
     }
 
@@ -72,6 +85,8 @@ namespace ck
             FFragment_SmCondition_Current& InCurrent)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_SmCondition_PolledProc);
+
         CK_ENSURE_IF_NOT(InHandle.Has<FFragment_EntityScript_Current>(),
             TEXT("Polled condition entity [{}] is missing FFragment_EntityScript_Current — tag should not have been added without a script"), InHandle)
         { return; }
@@ -103,9 +118,15 @@ namespace ck
                 != ECk_Sm_AuthorityModel::OwningClientAuthoritative)
         { return; }
 
-        InCurrent._Result = ConditionScript->Evaluate(InHandle, InDeltaT)
-            ? ECk_SmConditionResult::Pass
-            : ECk_SmConditionResult::Fail;
+        INC_DWORD_STAT(STAT_SmConditionsEvaluated);
+
+        {
+            SCOPE_CYCLE_COUNTER(STAT_SmCondition_Evaluate);
+
+            InCurrent._Result = ConditionScript->Evaluate(InHandle, InDeltaT)
+                ? ECk_SmConditionResult::Pass
+                : ECk_SmConditionResult::Fail;
+        }
 
         // Wake the parent transition so it re-checks condition results in the pump
 

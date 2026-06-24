@@ -2,8 +2,15 @@
 
 #include "CkInteraction/InteractTarget/CkInteractTarget_Fragment.h"
 #include "CkInteraction/CkInteraction_Log.h"
+#include "CkInteraction/CkInteraction_Stats.h"
 #include "CkInteraction/InteractSource/CkInteractSource_Utils.h"
 #include "CkInteraction/Interaction/CkInteraction_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Interaction::CanInteractWith"), STAT_Interaction_CanInteractWith, STATGROUP_CkInteraction);
+DECLARE_CYCLE_STAT(TEXT("Interaction::CustomCanInteract ProcessEvent"), STAT_Interaction_CustomCanInteract_ProcessEvent, STATGROUP_CkInteraction);
+DECLARE_CYCLE_STAT(TEXT("InteractTarget::TryGet"), STAT_Interaction_InteractTarget_TryGet, STATGROUP_CkInteraction);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -144,6 +151,8 @@ auto
         const FCk_Handle& InSource)
     -> ECk_CanInteractWithResult
 {
+    SCOPE_CYCLE_COUNTER(STAT_Interaction_CanInteractWith);
+
     if (ck::Is_NOT_Valid(InTarget))
     { return ECk_CanInteractWithResult::TargetNotValid; }
 
@@ -235,7 +244,7 @@ auto
         FGameplayTag InInteractionChannel)
     -> FCk_Handle_InteractTarget
 {
-    QUICK_SCOPE_CYCLE_COUNTER(TryGet)
+    SCOPE_CYCLE_COUNTER(STAT_Interaction_InteractTarget_TryGet);
     return RecordOfInteractTargets_Utils::Get_ValidEntry_ByTag(InInteractTargetOwner, InInteractionChannel);
 }
 
@@ -335,6 +344,8 @@ auto
         FCk_Handle InInteractInstigator)
     -> TOptional<bool>
 {
+    SCOPE_CYCLE_COUNTER(STAT_Interaction_CustomCanInteract_ProcessEvent);
+
     auto* const MemberClass = InRef.GetMemberParentClass();
 
     if (ck::Is_NOT_Valid(MemberClass))

@@ -5,9 +5,15 @@
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkAudio/CkAudio_Log.h"
+#include "CkAudio/CkAudio_Stats.h"
 #include "CkAudioTrack_Utils.h"
 
 #include "CkAudio/CkAudio_Settings.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Audio::Playback"),      STAT_Audio_Playback,      STATGROUP_CkAudio);
+DECLARE_CYCLE_STAT(TEXT("Audio::SpatialUpdate"), STAT_Audio_SpatialUpdate, STATGROUP_CkAudio);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -563,6 +569,8 @@ namespace ck
             FFragment_AudioTrack_Current& InCurrent)
             -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_Audio_Playback);
+
         CK_ENSURE_IF_NOT(ck::IsValid(InCurrent._AudioComponent), TEXT("AudioTrack [{}] has no AudioComponent"), InHandle)
         { return; }
 
@@ -626,6 +634,8 @@ namespace ck
             const FFragment_Transform& InTransform)
             -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_Audio_SpatialUpdate);
+
         if (NOT ck::IsValid(InCurrent._AudioComponent))
         { return; }
 

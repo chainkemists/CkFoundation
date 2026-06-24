@@ -18,6 +18,14 @@
 
 #include "CkUI/WorldSpaceWidget/CkWorldSpaceWidget_Utils.h"
 
+#include "CkUI/CkUI_Stats.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("UI::WSWidget Projection"), STAT_CkUI_WSWidget_Projection, STATGROUP_CkUI);
+DECLARE_CYCLE_STAT(TEXT("UI::WSWidget Occlusion"),  STAT_CkUI_WSWidget_Occlusion,  STATGROUP_CkUI);
+DECLARE_CYCLE_STAT(TEXT("UI::WSWidget UMGWrite"),   STAT_CkUI_WSWidget_UMGWrite,   STATGROUP_CkUI);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_WorldSpaceWidget_UpdateLocation);
@@ -83,9 +91,13 @@ namespace ck
         // ---- Occlusion (anchor trace; independent of screen projection). The policy
         // gate short-circuits the trace so Get_IsAnchorOccluded only runs when needed.
         const auto& OcclusionInfo = InParams.Get_OcclusionInfo();
-        const auto IsOccluded =
-            OcclusionInfo.Get_OcclusionPolicy() == ECk_WorldSpaceWidget_Occlusion_Policy::HideWhenOccluded &&
-            UCk_Utils_WorldSpaceWidget_UE::Get_IsAnchorOccluded(InHandle);
+        auto IsOccluded = false;
+        {
+            SCOPE_CYCLE_COUNTER(STAT_CkUI_WSWidget_Occlusion);
+            IsOccluded =
+                OcclusionInfo.Get_OcclusionPolicy() == ECk_WorldSpaceWidget_Occlusion_Policy::HideWhenOccluded &&
+                UCk_Utils_WorldSpaceWidget_UE::Get_IsAnchorOccluded(InHandle);
+        }
 
         // ---- Distance fade factor (multiplier on the enabled-state) ----
         const auto& FadingInfo = InParams.Get_FadingInfo();
@@ -98,16 +110,21 @@ namespace ck
 
         // ---- Project world -> screen ----
         auto ProjectedScreenPosition = FVector2D{};
-        const auto ProjectionSuccess = UGameplayStatics::ProjectWorldToScreen(
-            PlayerController,
-            AnchorWorldLocation,
-            ProjectedScreenPosition);
-
-        // ---- Viewport size (needed for off-screen test, clamping, aspect scaling) ----
+        auto ProjectionSuccess = false;
         auto ViewportSize = FVector2D::ZeroVector;
         const auto HasViewport = ck::IsValid(GEngine, ck::IsValid_Policy_NullptrOnly{}) && GEngine->GameViewport != nullptr;
-        if (HasViewport)
-        { GEngine->GameViewport->GetViewportSize(ViewportSize); }
+        {
+            SCOPE_CYCLE_COUNTER(STAT_CkUI_WSWidget_Projection);
+
+            ProjectionSuccess = UGameplayStatics::ProjectWorldToScreen(
+                PlayerController,
+                AnchorWorldLocation,
+                ProjectedScreenPosition);
+
+            // ---- Viewport size (needed for off-screen test, clamping, aspect scaling) ----
+            if (HasViewport)
+            { GEngine->GameViewport->GetViewportSize(ViewportSize); }
+        }
 
         // ---- Screen-space offset (+ optional aspect / distance scaling) ----
         auto AppliedScreenOffset = LocationInfo.Get_ScreenSpaceOffset();
@@ -170,17 +187,21 @@ namespace ck
         if (NOT ShouldClamp && (IsOffScreen || NOT ProjectionSuccess))
         { TargetOpacity = 0.0f; }
 
-        if (WrapperWidget->GetRenderOpacity() != TargetOpacity)
-        { WrapperWidget->SetRenderOpacity(TargetOpacity); }
-
-        // ---- Position (clamp the pivot into the rect when a clamping policy is set) ----
-        if (ShouldClamp)
         {
-            ScreenPosition.X = FMath::Clamp(ScreenPosition.X, ViewportRect.X, ViewportRect.Z);
-            ScreenPosition.Y = FMath::Clamp(ScreenPosition.Y, ViewportRect.Y, ViewportRect.W);
-        }
+            SCOPE_CYCLE_COUNTER(STAT_CkUI_WSWidget_UMGWrite);
 
-        WrapperWidget->SetPositionInViewport(ScreenPosition);
+            if (WrapperWidget->GetRenderOpacity() != TargetOpacity)
+            { WrapperWidget->SetRenderOpacity(TargetOpacity); }
+
+            // ---- Position (clamp the pivot into the rect when a clamping policy is set) ----
+            if (ShouldClamp)
+            {
+                ScreenPosition.X = FMath::Clamp(ScreenPosition.X, ViewportRect.X, ViewportRect.Z);
+                ScreenPosition.Y = FMath::Clamp(ScreenPosition.Y, ViewportRect.Y, ViewportRect.W);
+            }
+
+            WrapperWidget->SetPositionInViewport(ScreenPosition);
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------

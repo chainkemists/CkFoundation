@@ -6,6 +6,7 @@
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include "CkSpatialQuery/CkSpatialQuery_Log.h"
+#include "CkSpatialQuery/CkSpatialQuery_Stats.h"
 #include "CkSpatialQuery/CkSpatialQuery_Utils.h"
 #include "CkSpatialQuery/Probe/CkProbe_Fragment.h"
 #include "CkSpatialQuery/Probe/CkProbe_Utils.h"
@@ -25,6 +26,22 @@
 #include <Jolt/Physics/Body/BodyActivationListener.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Renderer/DebugRendererSimple.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("SpatialQuery_Subsystem_Tick"), STAT_CkSpatialQuery_SubsystemTick, STATGROUP_CkSpatialQuery);
+DECLARE_CYCLE_STAT(TEXT("JoltPhysics_WaitForAsync"), STAT_CkSpatialQuery_JoltWaitForAsync, STATGROUP_CkSpatialQuery);
+DECLARE_CYCLE_STAT(TEXT("JoltPhysics_ProcessQueuedContacts"), STAT_CkSpatialQuery_JoltProcessQueuedContacts, STATGROUP_CkSpatialQuery);
+DECLARE_CYCLE_STAT(TEXT("JoltPhysics_Update_Async"), STAT_CkSpatialQuery_JoltUpdateAsync, STATGROUP_CkSpatialQuery);
+DECLARE_CYCLE_STAT(TEXT("JoltPhysics_Update"), STAT_CkSpatialQuery_JoltUpdate, STATGROUP_CkSpatialQuery);
+DECLARE_CYCLE_STAT(TEXT("JoltContacts_DrainQueue"), STAT_CkSpatialQuery_JoltContactsDrainQueue, STATGROUP_CkSpatialQuery);
+DECLARE_CYCLE_STAT(TEXT("JoltContacts_Added"), STAT_CkSpatialQuery_JoltContactsAdded, STATGROUP_CkSpatialQuery);
+DECLARE_CYCLE_STAT(TEXT("JoltContacts_Persisted"), STAT_CkSpatialQuery_JoltContactsPersisted, STATGROUP_CkSpatialQuery);
+DECLARE_CYCLE_STAT(TEXT("JoltContacts_Removed"), STAT_CkSpatialQuery_JoltContactsRemoved, STATGROUP_CkSpatialQuery);
+
+DECLARE_DWORD_COUNTER_STAT(TEXT("SpatialQuery Contacts Added"), STAT_CkSpatialQuery_ContactsAdded, STATGROUP_CkSpatialQuery);
+DECLARE_DWORD_COUNTER_STAT(TEXT("SpatialQuery Contacts Persisted"), STAT_CkSpatialQuery_ContactsPersisted, STATGROUP_CkSpatialQuery);
+DECLARE_DWORD_COUNTER_STAT(TEXT("SpatialQuery Contacts Removed"), STAT_CkSpatialQuery_ContactsRemoved, STATGROUP_CkSpatialQuery);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -576,14 +593,14 @@ auto
         float InDeltaTime)
         -> void
 {
-    QUICK_SCOPE_CYCLE_COUNTER(SpatialQuery_Subsystem_Tick);
+    SCOPE_CYCLE_COUNTER(STAT_CkSpatialQuery_SubsystemTick);
     Super::Tick(InDeltaTime);
 
     // Always consume any in-flight async result first (even if paused).
     // This ensures the previous frame's physics is complete before we process contacts.
     if (_PhysicsAsyncFuture.IsValid())
     {
-        QUICK_SCOPE_CYCLE_COUNTER(JoltPhysics_WaitForAsync);
+        SCOPE_CYCLE_COUNTER(STAT_CkSpatialQuery_JoltWaitForAsync);
         _PhysicsAsyncFuture.Wait();
         _PhysicsAsyncFuture = {};
     }
@@ -592,7 +609,7 @@ auto
     // In async mode, these are from the previous frame's Update().
     // In sync mode, these are from the current frame (processed right after Update below).
     {
-        QUICK_SCOPE_CYCLE_COUNTER(JoltPhysics_ProcessQueuedContacts);
+        SCOPE_CYCLE_COUNTER(STAT_CkSpatialQuery_JoltProcessQueuedContacts);
         ProcessQueuedContacts();
     }
 
@@ -605,13 +622,13 @@ auto
         _PhysicsAsyncFuture = Async(EAsyncExecution::TaskGraph,
             [this, DeltaTime = InDeltaTime]()
             {
-                QUICK_SCOPE_CYCLE_COUNTER(JoltPhysics_Update_Async);
+                SCOPE_CYCLE_COUNTER(STAT_CkSpatialQuery_JoltUpdateAsync);
                 _PhysicsSystem->Update(DeltaTime, _CollisionSteps, &*_TempAllocator, _JobSystem);
             });
     }
     else
     {
-        QUICK_SCOPE_CYCLE_COUNTER(JoltPhysics_Update);
+        SCOPE_CYCLE_COUNTER(STAT_CkSpatialQuery_JoltUpdate);
         _PhysicsSystem->Update(InDeltaTime, _CollisionSteps, &*_TempAllocator, _JobSystem);
     }
 
@@ -685,7 +702,7 @@ auto
     auto Events = TArray<FCk_ContactEvent>{};
 
     {
-        QUICK_SCOPE_CYCLE_COUNTER(JoltContacts_DrainQueue);
+        SCOPE_CYCLE_COUNTER(STAT_CkSpatialQuery_JoltContactsDrainQueue);
         _ContactListener->DrainQueue(Events);
     }
 
@@ -704,7 +721,7 @@ auto
         {
             case FCk_ContactEvent::EType::Added:
             {
-                QUICK_SCOPE_CYCLE_COUNTER(JoltContacts_Added);
+                SCOPE_CYCLE_COUNTER(STAT_CkSpatialQuery_JoltContactsAdded);
                 ++AddedCount;
 
                 auto Body1Entity = TransientEntity.Get_ValidHandle(
@@ -741,7 +758,7 @@ auto
 
             case FCk_ContactEvent::EType::Persisted:
             {
-                QUICK_SCOPE_CYCLE_COUNTER(JoltContacts_Persisted);
+                SCOPE_CYCLE_COUNTER(STAT_CkSpatialQuery_JoltContactsPersisted);
                 ++PersistedCount;
 
                 auto Body1Entity = TransientEntity.Get_ValidHandle(
@@ -780,7 +797,7 @@ auto
 
             case FCk_ContactEvent::EType::Removed:
             {
-                QUICK_SCOPE_CYCLE_COUNTER(JoltContacts_Removed);
+                SCOPE_CYCLE_COUNTER(STAT_CkSpatialQuery_JoltContactsRemoved);
                 ++RemovedCount;
 
                 auto Body1Entity = TransientEntity.Get_ValidHandle(
@@ -811,6 +828,10 @@ auto
             }
         }
     }
+
+    SET_DWORD_STAT(STAT_CkSpatialQuery_ContactsAdded, AddedCount);
+    SET_DWORD_STAT(STAT_CkSpatialQuery_ContactsPersisted, PersistedCount);
+    SET_DWORD_STAT(STAT_CkSpatialQuery_ContactsRemoved, RemovedCount);
 
     ck::spatialquery::VeryVerbose(TEXT("ProcessQueuedContacts: [{}] events (Added: [{}], Persisted: [{}], Removed: [{}])"),
         Events.Num(), AddedCount, PersistedCount, RemovedCount);

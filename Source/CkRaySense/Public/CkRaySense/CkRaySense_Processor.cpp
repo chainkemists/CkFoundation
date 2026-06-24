@@ -7,6 +7,7 @@
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkRaySense/CkRaySense_Log.h"
+#include "CkRaySense/CkRaySense_Stats.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
 
@@ -41,6 +42,15 @@ namespace ck_raysense
 
 // --------------------------------------------------------------------------------------------------------------------
 
+DECLARE_CYCLE_STAT(TEXT("RaySense::LineTrace"), STAT_RaySense_LineTrace, STATGROUP_CkRaySense);
+DECLARE_CYCLE_STAT(TEXT("RaySense::BoxSweep"), STAT_RaySense_BoxSweep, STATGROUP_CkRaySense);
+DECLARE_CYCLE_STAT(TEXT("RaySense::SphereSweep"), STAT_RaySense_SphereSweep, STATGROUP_CkRaySense);
+DECLARE_CYCLE_STAT(TEXT("RaySense::CapsuleSweep"), STAT_RaySense_CapsuleSweep, STATGROUP_CkRaySense);
+DECLARE_CYCLE_STAT(TEXT("RaySense::DiscreteOverlap"), STAT_RaySense_DiscreteOverlap, STATGROUP_CkRaySense);
+DECLARE_DWORD_COUNTER_STAT(TEXT("RaySense Traces Issued"), STAT_RaySense_TracesIssued, STATGROUP_CkRaySense);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck_raysense
 {
     template<typename T_Handle, typename T_DiscreteOverlapFn, typename T_ContinuousSweepFn>
@@ -69,6 +79,7 @@ namespace ck_raysense
         {
             if (InParams.Get_CollisionQuality() == ECk_RaySense_CollisionQuality::Discrete)
             {
+                SCOPE_CYCLE_COUNTER(STAT_RaySense_DiscreteOverlap);
                 return InDiscreteOverlapFn(World, CurrTransform, InParams);
             }
 
@@ -125,6 +136,9 @@ namespace ck
             const FFragment_Transform& InTransform)
             -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_RaySense_LineTrace);
+        INC_DWORD_STAT(STAT_RaySense_TracesIssued);
+
         auto World = UCk_Utils_TransientEntity_UE::Get_World(InHandle);
 
         CK_ENSURE_IF_NOT(ck::IsValid(World),
@@ -182,6 +196,9 @@ namespace ck
             const FFragment_Transform& InTransform)
             -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_RaySense_BoxSweep);
+        INC_DWORD_STAT(STAT_RaySense_TracesIssued);
+
         ck_raysense::DoSweepTrace(
             InHandle, InParams, InTransform_Prev, InTransform,
             [&](UWorld* InWorld, const FTransform& InCurrTransform, const FFragment_RaySense_Params& InP) -> bool
@@ -224,6 +241,9 @@ namespace ck
             const FFragment_Transform& InTransform)
             -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_RaySense_SphereSweep);
+        INC_DWORD_STAT(STAT_RaySense_TracesIssued);
+
         ck_raysense::DoSweepTrace(
             InHandle, InParams, InTransform_Prev, InTransform,
             [&](UWorld* InWorld, const FTransform& InCurrTransform, const FFragment_RaySense_Params& InP) -> bool
@@ -265,6 +285,9 @@ namespace ck
             const FFragment_Transform& InTransform)
             -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_RaySense_CapsuleSweep);
+        INC_DWORD_STAT(STAT_RaySense_TracesIssued);
+
         ck_raysense::DoSweepTrace(
             InHandle, InParams, InTransform_Prev, InTransform,
             [&](UWorld* InWorld, const FTransform& InCurrTransform, const FFragment_RaySense_Params& InP) -> bool

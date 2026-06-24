@@ -1,6 +1,7 @@
 #include "CkRotatorAttribute_Utils.h"
 
 #include "CkAttribute/CkAttribute_Log.h"
+#include "CkAttribute/CkAttribute_Stats.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
@@ -10,6 +11,14 @@
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
 #include "CkLabel/CkLabel_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Attribute::TryGet"), STAT_CkAttribute_TryGet_Rotator, STATGROUP_CkAttribute);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Attribute TryGet Calls"), STAT_CkAttribute_TryGetCalls_Rotator, STATGROUP_CkAttribute);
+DECLARE_CYCLE_STAT(TEXT("Add_Rotator_Modifier_Revocable"), STAT_CkAttribute_AddRotatorModifierRevocable, STATGROUP_CkAttribute);
+DECLARE_CYCLE_STAT(TEXT("Add_Rotator_Modifier_NotRevocable"), STAT_CkAttribute_AddRotatorModifierNotRevocable, STATGROUP_CkAttribute);
+DECLARE_CYCLE_STAT(TEXT("TryGet_RotatorAttributeModifier"), STAT_CkAttribute_TryGetRotatorModifier, STATGROUP_CkAttribute);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -150,7 +159,8 @@ auto
         FGameplayTag      InAttributeName)
     -> FCk_Handle_RotatorAttribute
 {
-    QUICK_SCOPE_CYCLE_COUNTER(TryGet_RotatorAttribute)
+    SCOPE_CYCLE_COUNTER(STAT_CkAttribute_TryGet_Rotator);
+    INC_DWORD_STAT(STAT_CkAttribute_TryGetCalls_Rotator);
     return RecordOfRotatorAttributes_Utils::Get_ValidEntry_ByTag(InAttributeOwnerEntity, InAttributeName);
 }
 
@@ -606,7 +616,7 @@ auto
         const FCk_Fragment_RotatorAttributeModifier_ParamsData& InParams)
     -> FCk_Handle_RotatorAttributeModifier
 {
-    QUICK_SCOPE_CYCLE_COUNTER(Add_Rotator_Modifier_Revocable)
+    SCOPE_CYCLE_COUNTER(STAT_CkAttribute_AddRotatorModifierRevocable);
 
     auto ParamsToUse = InParams;
     ParamsToUse.Set_TargetAttributeName(UCk_Utils_GameplayLabel_UE::Get_Label(InAttribute));
@@ -663,7 +673,7 @@ auto
         const FCk_Fragment_RotatorAttributeModifier_ParamsData& InParams)
     -> void
 {
-    QUICK_SCOPE_CYCLE_COUNTER(Add_Rotator_Modifier_NotRevocable)
+    SCOPE_CYCLE_COUNTER(STAT_CkAttribute_AddRotatorModifierNotRevocable);
 
     auto ParamsToUse = InParams;
     ParamsToUse.Set_TargetAttributeName(UCk_Utils_GameplayLabel_UE::Get_Label(InAttribute));
@@ -801,7 +811,7 @@ auto
         ECk_MinMaxCurrent InComponent)
     -> FCk_Handle_RotatorAttributeModifier
 {
-    QUICK_SCOPE_CYCLE_COUNTER(TryGet_RotatorAttributeModifier)
+    SCOPE_CYCLE_COUNTER(STAT_CkAttribute_TryGetRotatorModifier);
     switch(InComponent)
     {
         case ECk_MinMaxCurrent::Current:

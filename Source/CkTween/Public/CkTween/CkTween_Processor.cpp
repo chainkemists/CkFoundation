@@ -12,6 +12,14 @@
 
 #include "CkSpline/CkSpline_Utils.h"
 
+#include "CkTween/CkTween_Stats.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Tween::SplineFollowEval"), STAT_Tween_SplineFollowEval, STATGROUP_CkTween);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 CK_REGISTER_PROCESSOR(ck::FProcessor_Tween_Update);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Tween_HandleYoyoDelays);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Tween_HandleRequests);
@@ -95,6 +103,8 @@ namespace ck_tween
         auto MaybeTransformHandle = UCk_Utils_Transform_UE::Cast(TargetEntity);
         if (ck::Is_NOT_Valid(MaybeTransformHandle))
         { return; }
+
+        SCOPE_CYCLE_COUNTER(STAT_Tween_SplineFollowEval);
 
         const auto Distance = FMath::Clamp(InProgress, 0.0f, 1.0f) * UCk_Utils_Spline_UE::Get_Length(SplineHandle);
 

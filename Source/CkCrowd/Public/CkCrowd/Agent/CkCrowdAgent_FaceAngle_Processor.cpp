@@ -4,9 +4,15 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "CkCrowd/CkCrowd_Stats.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_FaceAngle);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Crowd::FaceAngle"), STAT_CkCrowd_FaceAngleProc, STATGROUP_CkCrowd);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -22,6 +28,8 @@ namespace ck
             FFragment_CrowdAgent_FaceAngle& InFaceAngle)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkCrowd_FaceAngleProc);
+
         // Project desired velocity onto the XY plane — yaw is independent of vertical motion (a path
         // descent shouldn't make the agent face the ground). When horizontal speed is ~0 there's no
         // meaningful target heading; keep the last cached _TargetYaw and skip the rotation request.

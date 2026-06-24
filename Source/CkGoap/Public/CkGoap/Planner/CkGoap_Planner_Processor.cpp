@@ -1,6 +1,7 @@
 #include "CkGoap/Planner/CkGoap_Planner_Processor.h"
 
 #include "CkGoap/CkGoap_Log.h"
+#include "CkGoap/CkGoap_Stats.h"
 #include "CkGoap/Action/CkGoap_Action_Fragment.h"
 #include "CkGoap/Action/CkGoap_Action_Utils.h"  // PR-B.1b Stage 3: CastChecked for Planner-as-Action
 #include "CkGoap/Algorithm/CkGoap_WorldState.h"
@@ -17,6 +18,11 @@
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Planner_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Planner_UpdateActivation);
+
+// ====================================================================================================================
+
+DECLARE_CYCLE_STAT(TEXT("GoapPlanner::Setup"), STAT_Goap_Planner_Setup, STATGROUP_CkGoap);
+DECLARE_CYCLE_STAT(TEXT("GoapPlanner::UpdateActivation"), STAT_Goap_Planner_UpdateActivation, STATGROUP_CkGoap);
 
 // ====================================================================================================================
 
@@ -157,6 +163,8 @@ auto
 		FFragment_Goap_Planner_WorldStateSource& InWSSource,
 		FFragment_Goap_Planner_Goal& InGoal) -> void
 {
+	SCOPE_CYCLE_COUNTER(STAT_Goap_Planner_Setup);
+
 	// PR-B.1b Stage 5: cycle scan no longer reads InCurrent (the _RootAction
 	// field is gone). InCurrent is still passed as RW because the processor
 	// writes _DependencyCycles below.
@@ -707,6 +715,8 @@ auto
 		const FFragment_Goap_Planner_PlanState& InPlanState,
 		FFragment_Goap_Planner_Activation& InActivation) const -> void
 {
+	SCOPE_CYCLE_COUNTER(STAT_Goap_Planner_UpdateActivation);
+
 	// PR-B.1b Stage 3: matches Planner directly. Top-level Planners (created
 	// via Add) have _IsActive=true at construction; promoted mid-tier
 	// Planners flip via parent's UpdateActivation pass.

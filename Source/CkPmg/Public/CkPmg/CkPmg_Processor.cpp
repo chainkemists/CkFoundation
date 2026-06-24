@@ -12,6 +12,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 #include "CkPmg/CkPmg_Log.h"
+#include "CkPmg/CkPmg_Stats.h"
 #include "CkPmg_Utils.h"
 #include "CkPmg_Utils_IconShapes.h"
 #include "CkPmg_Utils_SymbolShapes.h"
@@ -21,6 +22,11 @@
 #include <ProceduralMeshComponent.h>
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Pmg::DebugDrawLines"), STAT_Pmg_DebugDrawLines, STATGROUP_CkPmg);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Pmg Debug Lines"), STAT_Pmg_DebugLines, STATGROUP_CkPmg);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -603,6 +609,9 @@ namespace ck
             const FFragment_Pmg_DebugShape_Current& InCurrent)
             -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_Pmg_DebugDrawLines);
+        INC_DWORD_STAT_BY(STAT_Pmg_DebugLines, InLines.Get_Lines().Num());
+
         // Consume the gate immediately — even if we early-out below (no
         // valid mesh, no lines), the entity shouldn't keep re-firing this
         // processor every tick. A fresh stamp (via Append_Debug*_World) will
