@@ -51,6 +51,12 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_Sm_Running);
     CK_DEFINE_ECS_TAG(FTag_Sm_Paused);
 
+    // Marks a sub-state-machine (created by UCk_SmTask_SubStateMachine, owned by a parent SM's task) vs
+    // a top-level SM. Sub-SMs are derived graph state: a snapshot load captures them, but the parent's
+    // redrive recreates the live sub-SM fresh — so FProcessor_Sm_RestoreRedrive destroys the restored
+    // (orphan) copy on load. Top-level SMs never carry this tag.
+    CK_DEFINE_ECS_TAG(FTag_Sm_IsSubMachine);
+
     // Per-feature restore-redrive done marker. ck::FTag_Snapshot_JustRestored is shared by every
     // feature on the restored entity, so no single feature may remove it — FProcessor_Sm_RestoreRedrive
     // pairs it with this done tag instead. Never leaks across restores: a restore rebuilds entities
