@@ -2,8 +2,14 @@
 
 #include "CkEntityTag/CkEntityTag_Fragment.h"
 #include "CkEntityTag/CkEntityTag_Log.h"
+#include "CkEntityTag/CkEntityTag_Stats.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("EntityTag::ForEach_Entity"), STAT_EntityTag_ForEach_Entity, STATGROUP_CkEntityTag);
+DECLARE_DWORD_COUNTER_STAT(TEXT("EntityTag Entities Scanned"), STAT_EntityTag_EntitiesScanned, STATGROUP_CkEntityTag);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -484,6 +490,8 @@ auto
         const TFunction<void(FCk_Handle)>& InFunc)
     -> void
 {
+    SCOPE_CYCLE_COUNTER(STAT_EntityTag_ForEach_Entity);
+
     CK_ENSURE_IF_NOT(ck::IsValid(InAnyHandle), TEXT("Invalid Handle passed. Unable to iterate over Entities with Tag [{}]"), InTag)
     { return; }
 
@@ -494,6 +502,8 @@ auto
     const auto View = entt::basic_view{Storage};
     View.each([&](const auto InEntity, const ck::FFragment_EntityTag_StorageParams& /*InParams*/)
     {
+        INC_DWORD_STAT(STAT_EntityTag_EntitiesScanned);
+
         if (NOT InAnyHandle.Get_RegistryView().IsValid(InEntity))
         { return; }
 

@@ -2,7 +2,12 @@
 
 #include "CkInteraction/InteractSource/CkInteractSource_Fragment.h"
 #include "CkInteraction/CkInteraction_Log.h"
+#include "CkInteraction/CkInteraction_Stats.h"
 #include "CkInteraction/Interaction/CkInteraction_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("InteractSource::TryGet"), STAT_Interaction_InteractSource_TryGet, STATGROUP_CkInteraction);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -195,7 +200,7 @@ auto
         FGameplayTag InInteractionChannel)
     -> FCk_Handle_InteractSource
 {
-    QUICK_SCOPE_CYCLE_COUNTER(TryGet)
+    SCOPE_CYCLE_COUNTER(STAT_Interaction_InteractSource_TryGet);
     return RecordOfInteractSources_Utils::Get_ValidEntry_ByTag(InInteractSourceOwner, InInteractionChannel);
 }
 

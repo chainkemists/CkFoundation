@@ -3,6 +3,7 @@
 #include "CkCore/SharedValues/CkSharedValues.h"
 
 #include "CkEcs/CkEcsLog.h"
+#include "CkEcs/CkEcs_Stats.h"
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkEcs/Delegates/CkDelegates.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
@@ -13,6 +14,15 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+DECLARE_CYCLE_STAT(TEXT("EntityLifetime::Request_DestroyEntity"), STAT_CkEcs_Request_DestroyEntity, STATGROUP_CkEcs);
+DECLARE_CYCLE_STAT(TEXT("EntityLifetime::Get_WorldForEntity"),    STAT_CkEcs_Get_WorldForEntity,    STATGROUP_CkEcs);
+DECLARE_CYCLE_STAT(TEXT("EntityLifetime::Get_EntityNetMode"),     STAT_CkEcs_Get_EntityNetMode,     STATGROUP_CkEcs);
+
+DECLARE_DWORD_COUNTER_STAT(TEXT("Ecs Entities Destroyed"), STAT_CkEcs_EntitiesDestroyed, STATGROUP_CkEcs);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Ecs Entities Spawned"),   STAT_CkEcs_EntitiesSpawned,   STATGROUP_CkEcs);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Utils_EntityLifetime_UE::
     Request_DestroyEntity(
@@ -20,7 +30,7 @@ auto
         ECk_EntityLifetime_DestructionBehavior InDestructionBehavior)
     -> void
 {
-    QUICK_SCOPE_CYCLE_COUNTER(Request_Destroy_Entity)
+    SCOPE_CYCLE_COUNTER(STAT_CkEcs_Request_DestroyEntity);
 
     if (ck::Is_NOT_Valid(InHandle))
     { return; }
@@ -50,6 +60,7 @@ auto
 
     ck::ecs::VeryVerbose(TEXT("Entity [{}] set to 'Initiate Destruction'"), InHandle);
     InHandle.AddOrGet<ck::FTag_DestroyEntity_Initiate>();
+    INC_DWORD_STAT(STAT_CkEcs_EntitiesDestroyed);
 
     auto LifetimeDependents = Get_LifetimeDependents(InHandle);
     Request_DestroyEntities(LifetimeDependents);
@@ -201,6 +212,8 @@ auto
         const FCk_Handle& InHandle)
     -> UWorld*
 {
+    SCOPE_CYCLE_COUNTER(STAT_CkEcs_Get_WorldForEntity);
+
     if (InHandle.Has<TWeakObjectPtr<UWorld>>())
     { return InHandle.Get<TWeakObjectPtr<UWorld>>().Get(); }
 
@@ -289,6 +302,8 @@ auto
         const FCk_Handle& InEntity)
     -> ECk_Net_NetModeType
 {
+    SCOPE_CYCLE_COUNTER(STAT_CkEcs_Get_EntityNetMode);
+
     if (ck::Is_NOT_Valid(InEntity))
     { return ECk_Net_NetModeType::Unknown; }
 
@@ -360,6 +375,7 @@ auto
     QUICK_SCOPE_CYCLE_COUNTER(Request_Create_Entity)
 
     const auto& NewEntity = InRegistry.CreateEntity();
+    INC_DWORD_STAT(STAT_CkEcs_EntitiesSpawned);
 
     auto NewEntityHandle = HandleType{ NewEntity, InRegistry.Get_RegistryHandle() };
     UCk_Utils_Handle_UE::Set_DebugName(NewEntityHandle, TEXT("NO NAME"));
@@ -384,6 +400,7 @@ auto
     QUICK_SCOPE_CYCLE_COUNTER(Request_Create_Entity)
 
     const auto& NewEntity = InRegistry.CreateEntity(InEntityHint.Get_Entity());
+    INC_DWORD_STAT(STAT_CkEcs_EntitiesSpawned);
 
     auto NewEntityHandle = HandleType{ NewEntity, InRegistry.Get_RegistryHandle() };
     NewEntityHandle.Add<ck::FTag_EntityJustCreated>();

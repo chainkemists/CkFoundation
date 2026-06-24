@@ -1,6 +1,7 @@
 #include "CkGoap/Action/CkGoap_Action_Processor.h"
 
 #include "CkGoap/CkGoap_Log.h"
+#include "CkGoap/CkGoap_Stats.h"
 #include "CkGoap/CkGoap_Fragment.h"  // dirty tags FTag_Goap_Dirty_WorldState / _Cost
 #include "CkGoap/Action/CkGoap_Action_Utils.h"  // PR-B.1b Stage 3: CastChecked for Planner-as-Action
 #include "CkGoap/EntityScripts/CkGoapAction_EntityScript.h"
@@ -23,6 +24,22 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Planner_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Planner_Execute);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Planner_HandleResult);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Planner_EndPlay);
+
+// ====================================================================================================================
+// PERF STATS
+// ====================================================================================================================
+
+// Body-level per-processor cycle scopes. STAT_Goap_HandleRequestsProc nests the
+// pre-existing STAT_Goap_BuildGraphAndSeed sub-scope inside it.
+DECLARE_CYCLE_STAT(TEXT("GoapAction::Setup"), STAT_Goap_Action_Setup, STATGROUP_CkGoap);
+DECLARE_CYCLE_STAT(TEXT("GoapPlanner::AutoReplan"), STAT_Goap_Planner_AutoReplan, STATGROUP_CkGoap);
+DECLARE_CYCLE_STAT(TEXT("GoapPlanner::HandleRequests"), STAT_Goap_HandleRequestsProc, STATGROUP_CkGoap);
+DECLARE_CYCLE_STAT(TEXT("GoapPlanner::HandleResult"), STAT_Goap_Planner_HandleResult, STATGROUP_CkGoap);
+
+DECLARE_CYCLE_STAT(TEXT("Goap::BuildGraphAndSeed"), STAT_Goap_BuildGraphAndSeed, STATGROUP_CkGoap);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Goap Replans Requested"), STAT_Goap_ReplansRequested, STATGROUP_CkGoap);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Goap Plans Completed"), STAT_Goap_PlansCompleted, STATGROUP_CkGoap);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Goap Plans Failed"), STAT_Goap_PlansFailed, STATGROUP_CkGoap);
 
 // ====================================================================================================================
 
@@ -139,6 +156,8 @@ auto
 		FFragment_Goap_Action_Definition& InActionDef,
 		FFragment_Goap_Planner_WorldStateSource& InWSSource) -> void
 {
+	SCOPE_CYCLE_COUNTER(STAT_Goap_Action_Setup);
+
 	// Setup must wait for the WS source to be resolved. Top-level Actions
 	// resolve it at AddAction time (if override is valid);
 	// non-root Actions get it at activation time via ChainUpdate. If the
@@ -273,6 +292,8 @@ auto
 		const FFragment_Goap_Planner_WorldStateSource& InWSSource,
 		FFragment_Goap_Planner_ReplanThrottle& InThrottle) -> void
 {
+	SCOPE_CYCLE_COUNTER(STAT_Goap_Planner_AutoReplan);
+
 	// PR-B.1b Stage 3 — disable-toggle pipeline gate reads the Planner's own
 	// FFragment_Goap_Planner_Current directly. Disabled Planners don't replan
 	// (spec §3.3). Initial-plan / dirty tags remain set so re-enable resumes
@@ -317,6 +338,9 @@ auto
 	const auto ShouldFire = IsInitialPlanPending || (PolicyAllowsReplan && ThrottleElapsed);
 	if (NOT ShouldFire) { return; }
 
+	// Replan frequency across all Planners — #1 scaling risk (default replan throttle is 0).
+	INC_DWORD_STAT(STAT_Goap_ReplansRequested);
+
 	auto& Requests = InHandle.AddOrGet<FFragment_Goap_Planner_Requests>();
 	Requests._Requests.Add(FCk_Request_Goap_Planner_Plan{});
 
@@ -346,6 +370,8 @@ auto
 		FFragment_Goap_Planner_Result& InResult,
 		FFragment_Goap_Planner_PlanContext& InPlanContext) const -> void
 {
+	SCOPE_CYCLE_COUNTER(STAT_Goap_HandleRequestsProc);
+
 	(void)InParams;  // reserved (replan-policy reads moved to AutoReplan)
 	// PR-B.1b Stage 3 — disable-toggle pipeline gate reads InCurrent directly.
 	if (InCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable) { return; }
@@ -432,6 +458,7 @@ auto
 						InHandle, InParams.Get_PlannerTag())
 					{ /* still proceed — broadcast and let consumers react */ }
 
+					INC_DWORD_STAT(STAT_Goap_PlansFailed);
 					UUtils_Signal_OnGoap_Planner_PlanFailed::Broadcast(
 						InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanFailed{}));
 					return;
@@ -480,6 +507,7 @@ auto
 					InPlanState._Plan.Reset();
 					InPlanState._PlanCost = 0.0f;
 					InHandle.Try_Remove<FTag_Goap_Planner_PlanInFlight>();
+					INC_DWORD_STAT(STAT_Goap_PlansCompleted);
 					UUtils_Signal_OnGoap_Planner_PlanComplete::Broadcast(
 						InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanComplete{
 							TArray<TSubclassOf<UCk_GoapAction_EntityScript>>{}, 0.0f}));
@@ -505,6 +533,9 @@ auto
 				// default INDEX_NONE causes Cost() to return float::Max() and
 				// Get_ActionForEdge to return INDEX_NONE, which silently drops
 				// every edge from the produced plan (PlanFound + empty plan).
+				// Times candidate-copy + FGoapGraph build + A* search seed (the per-replan setup cost).
+				SCOPE_CYCLE_COUNTER(STAT_Goap_BuildGraphAndSeed);
+
 				const auto ChildHandles = Goap_Planner_GetCandidateChildren(InHandle);
 				auto Candidates = TArray<goap::FActionDef>{};
 				Candidates.Reserve(ChildHandles.Num());
@@ -669,6 +700,8 @@ auto
 		const FFragment_Goap_Planner_PlanContext& InPlanContext,
 		FFragment_Goap_Planner_PlanState& InPlanState) -> void
 {
+	SCOPE_CYCLE_COUNTER(STAT_Goap_Planner_HandleResult);
+
 	// PR-B.1b Stage 3 — disable-toggle pipeline gate reads InCurrent directly.
 	if (InCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable) { return; }
 
@@ -734,6 +767,7 @@ auto
 			InPlanState._PlanStatus = ECk_GoapPlanStatus::PlanFound;
 			InPlanState._PlanCost = InResult._TotalCost;
 
+			INC_DWORD_STAT(STAT_Goap_PlansCompleted);
 			UUtils_Signal_OnGoap_Planner_PlanComplete::Broadcast(
 				InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanComplete{
 					InPlanState.Get_PlanClasses(), InResult._TotalCost}));
@@ -759,6 +793,7 @@ auto
 				InHandle, InParams.Get_PlannerTag())
 			{ /* still proceed — broadcast and let consumers react */ }
 
+			INC_DWORD_STAT(STAT_Goap_PlansFailed);
 			UUtils_Signal_OnGoap_Planner_PlanFailed::Broadcast(
 				InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanFailed{}));
 			break;
@@ -775,6 +810,7 @@ auto
 			// the user explicitly set a CostThreshold and the planner respected
 			// it. (Consumers can still react via OnPlanFailed.)
 
+			INC_DWORD_STAT(STAT_Goap_PlansFailed);
 			UUtils_Signal_OnGoap_Planner_PlanFailed::Broadcast(
 				InHandle, ck::MakePayload(InHandle, FCk_Goap_Payload_OnPlanFailed{}));
 			break;

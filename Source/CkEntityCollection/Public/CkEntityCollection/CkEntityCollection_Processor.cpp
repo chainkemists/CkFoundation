@@ -3,6 +3,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkEntityCollection/CkEntityCollection_Log.h"
+#include "CkEntityCollection/CkEntityCollection_Stats.h"
 #include "CkEntityCollection/CkEntityCollection_Utils.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
@@ -11,6 +12,13 @@
 #include "CkRecord/Record/CkRecord_Utils.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("EntityCollection::StorePrevious"), STAT_EntityCollection_StorePrevious, STATGROUP_CkEntityCollection);
+DECLARE_CYCLE_STAT(TEXT("EntityCollection::DiffContent"), STAT_EntityCollection_DiffContent, STATGROUP_CkEntityCollection);
+
+// --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityCollection_StorePrevious);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityCollection_HandleRequests);
@@ -31,6 +39,8 @@ namespace ck
             FFragment_EntityCollection_Requests&)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_EntityCollection_StorePrevious);
+
         UCk_Utils_EntityCollection_UE::Request_StorePreviousCollection(InHandle);
     }
 
@@ -61,10 +71,14 @@ namespace ck
             }), ck::policy::DontResetContainer{});
         });
 
-        const auto UpdatedContent = UCk_Utils_EntityCollection_UE::Get_EntitiesInCollection(InHandle);
+        {
+            SCOPE_CYCLE_COUNTER(STAT_EntityCollection_DiffContent);
 
-        if (PreviousContent == UpdatedContent)
-        { return; }
+            const auto UpdatedContent = UCk_Utils_EntityCollection_UE::Get_EntitiesInCollection(InHandle);
+
+            if (PreviousContent == UpdatedContent)
+            { return; }
+        }
 
         UCk_Utils_EntityCollection_UE::Request_CollectionUpdated(InHandle);
         UCk_Utils_EntityCollection_UE::Request_TryReplicateEntityCollection(InHandle);

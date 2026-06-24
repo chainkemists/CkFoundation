@@ -2,10 +2,16 @@
 
 #include "CkPhysics_Utils.h"
 
+#include "CkPhysics/CkPhysics_Stats.h"
+
 #include "CkCore/Ensure/CkEnsure.h"
 
 #include <Components/PrimitiveComponent.h>
 #include <Engine/CollisionProfile.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Physics::IsValidCollisionProfileName"), STAT_CkPhysics_IsValidCollisionProfileName, STATGROUP_CkPhysics);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -190,6 +196,8 @@ auto
         const UObject* InContext)
     -> bool
 {
+    SCOPE_CYCLE_COUNTER(STAT_CkPhysics_IsValidCollisionProfileName);
+
     TArray<TSharedPtr<FName>> OutExistingProfileNames;
 
     UCollisionProfile::GetProfileNames(OutExistingProfileNames);

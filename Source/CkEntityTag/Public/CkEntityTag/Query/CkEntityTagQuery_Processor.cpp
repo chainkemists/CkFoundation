@@ -4,9 +4,16 @@
 
 #include "CkEntityTag/CkEntityTag_Fragment.h"
 #include "CkEntityTag/CkEntityTag_Log.h"
+#include "CkEntityTag/CkEntityTag_Stats.h"
 #include "CkEntityTag/CkEntityTag_Utils.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("EntityTagQuery::AppendScan"), STAT_EntityTagQuery_AppendScan, STATGROUP_CkEntityTag);
+DECLARE_CYCLE_STAT(TEXT("EntityTagQuery::EnsureScan"), STAT_EntityTagQuery_EnsureScan, STATGROUP_CkEntityTag);
+DECLARE_CYCLE_STAT(TEXT("EntityTagQuery::BuildPayload"), STAT_EntityTagQuery_BuildPayload, STATGROUP_CkEntityTag);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -162,6 +169,8 @@ namespace ck
             // Append new matches from the global per-tag storage view, up to cap.
             if (Results.Num() < Cap)
             {
+                SCOPE_CYCLE_COUNTER(STAT_EntityTagQuery_AppendScan);
+
                 FCk_Handle BaseHandle = InHandle;
                 UCk_Utils_EntityTag_UE::ForEach_Entity(BaseHandle, Tag,
                     [&](FCk_Handle InEntity)
@@ -190,21 +199,25 @@ namespace ck
         }
 
         // Ensure-bound check (independent of satisfaction).
-        for (const auto& Req : Requirements)
         {
-            const auto MaxAllowed = Req.Get_MaxAllowedEnsure();
-            if (MaxAllowed <= FCk_EntityTagQuery_Requirement::NoEnsure)
-            { continue; }
+            SCOPE_CYCLE_COUNTER(STAT_EntityTagQuery_EnsureScan);
 
-            FCk_Handle BaseHandle = InHandle;
-            auto GlobalCount = int32{0};
-            UCk_Utils_EntityTag_UE::ForEach_Entity(BaseHandle, Req.Get_Tag(),
-                [&](FCk_Handle) { ++GlobalCount; });
+            for (const auto& Req : Requirements)
+            {
+                const auto MaxAllowed = Req.Get_MaxAllowedEnsure();
+                if (MaxAllowed <= FCk_EntityTagQuery_Requirement::NoEnsure)
+                { continue; }
 
-            CK_ENSURE_IF_NOT(GlobalCount <= MaxAllowed,
-                TEXT("EntityTagQuery [{}] requirement on tag [{}] exceeded MaxAllowed [{}]; current global count [{}]"),
-                InHandle, Req.Get_Tag(), MaxAllowed, GlobalCount)
-            { /* no-op: continue evaluation */ }
+                FCk_Handle BaseHandle = InHandle;
+                auto GlobalCount = int32{0};
+                UCk_Utils_EntityTag_UE::ForEach_Entity(BaseHandle, Req.Get_Tag(),
+                    [&](FCk_Handle) { ++GlobalCount; });
+
+                CK_ENSURE_IF_NOT(GlobalCount <= MaxAllowed,
+                    TEXT("EntityTagQuery [{}] requirement on tag [{}] exceeded MaxAllowed [{}]; current global count [{}]"),
+                    InHandle, Req.Get_Tag(), MaxAllowed, GlobalCount)
+                { /* no-op: continue evaluation */ }
+            }
         }
 
         // Satisfaction predicate.
@@ -259,14 +272,18 @@ namespace ck
             {
                 // Build result payload (including per-requirement add/remove deltas accumulated this pass).
                 auto Payload = TArray<FCk_EntityTagQuery_Result>{};
-                Payload.Reserve(Requirements.Num());
-                for (int32 i = 0; i < Requirements.Num(); ++i)
                 {
-                    Payload.Emplace(FCk_EntityTagQuery_Result{
-                        Requirements[i].Get_Tag(),
-                        InCurrent._ResultsPerRequirement[i],
-                        InCurrent._PendingAdded[i],
-                        InCurrent._PendingRemoved[i]});
+                    SCOPE_CYCLE_COUNTER(STAT_EntityTagQuery_BuildPayload);
+
+                    Payload.Reserve(Requirements.Num());
+                    for (int32 i = 0; i < Requirements.Num(); ++i)
+                    {
+                        Payload.Emplace(FCk_EntityTagQuery_Result{
+                            Requirements[i].Get_Tag(),
+                            InCurrent._ResultsPerRequirement[i],
+                            InCurrent._PendingAdded[i],
+                            InCurrent._PendingRemoved[i]});
+                    }
                 }
 
                 InCurrent._HasFiredOnce = true;

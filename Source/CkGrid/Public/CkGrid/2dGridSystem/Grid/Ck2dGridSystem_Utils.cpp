@@ -13,10 +13,16 @@
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkGrid/CkGrid_Log.h"
+#include "CkGrid/CkGrid_Stats.h"
 #include "CkGrid/CkGrid_Utils.h"
 #include "CkGrid/2dGridSystem/Cell/Ck2dGridCell_Fragment.h"
 #include "CkGrid/2dGridSystem/Cell/Ck2dGridCell_Utils.h"
 #include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Fragment.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Grid::Intersections"), STAT_Grid_Intersections, STATGROUP_CkGrid);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Grid Cell Pairs Tested"), STAT_Grid_CellPairsTested, STATGROUP_CkGrid);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -873,6 +879,8 @@ auto
         float InCellOverlapThreshold0to1)
     -> FCk_GridIntersectionResult
 {
+    SCOPE_CYCLE_COUNTER(STAT_Grid_Intersections);
+
     auto Result = FCk_GridIntersectionResult{};
     auto IntersectingCells = TArray<FCk_GridCellIntersection>{};
     auto IntersectingCellsA = TSet<FCk_Handle_2dGridCell>{};
@@ -885,6 +893,9 @@ auto
     // Track total cell counts for percentage calculations
     auto TotalCellsA = 0;
     auto TotalCellsB = 0;
+
+    // Instrumentation-only: counts every CellA×CellB pair the inner loop actually overlap-tests.
+    auto NumCellPairsTested = int32{0};
 
     // Build spatial index for GridB cells for faster lookups
     TMap<FIntPoint, FCk_Handle_2dGridCell> GridBCellMap;
@@ -918,6 +929,8 @@ auto
         // Only check cells in GridB that could potentially overlap
         for (const auto& [CoordB, CellB] : GridBCellMap)
         {
+            ++NumCellPairsTested;
+
             const auto& BoundsB = GridBBoundsCache[CellB];
 
             if (NOT BoundsA.Intersect(BoundsB))
@@ -998,6 +1011,8 @@ auto
         }
     }
 
+    INC_DWORD_STAT_BY(STAT_Grid_CellPairsTested, NumCellPairsTested);
+
     return Result;
 }
 
@@ -1011,7 +1026,12 @@ auto
         float InCellOverlapThreshold0to1)
     -> FCk_GridIntersectionResult
 {
+    SCOPE_CYCLE_COUNTER(STAT_Grid_Intersections);
+
     auto Result = FCk_GridIntersectionResult{};
+
+    // Instrumentation-only: counts every CellA×CellB candidate the clamped inner loop overlap-tests.
+    auto NumCellPairsTested = int32{0};
 
     const auto& PivotA = Get_Pivot(InGridA, ECk_LocalWorld::World);
     const auto& PivotB = Get_Pivot(InGridB, ECk_LocalWorld::World);
@@ -1117,6 +1137,7 @@ auto
                 }
 
                 // Calculate actual overlap
+                ++NumCellPairsTested;
                 const auto& OverlapPercent = UCk_Utils_Geometry2D_UE::Calculate_OverlapPercent(BoundsA, BoundsB);
 
                 if (OverlapPercent < InCellOverlapThreshold0to1)
@@ -1153,6 +1174,8 @@ auto
             }
         }
     });
+
+    INC_DWORD_STAT_BY(STAT_Grid_CellPairsTested, NumCellPairsTested);
 
     // Populate result
     Result.Set_IntersectingCells(IntersectingCells);

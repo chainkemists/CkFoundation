@@ -3,10 +3,15 @@
 #include "CkAggro/CkAggroOwner_Fragment.h"
 #include "CkAggro/CkAggro_Fragment.h"
 #include "CkAggro/CkAggro_Utils.h"
+#include "CkAggro/CkAggro_Stats.h"
 
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Utils.h"
 
 #include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Aggro::ForEachSorted"), STAT_Aggro_ForEachSorted, STATGROUP_CkAggro);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -177,6 +182,8 @@ auto
         const TFunction<void(FCk_Handle_Aggro)>& InFunc)
     -> void
 {
+    SCOPE_CYCLE_COUNTER(STAT_Aggro_ForEachSorted);
+
     using Utils = UCk_Utils_Aggro_UE;
 
     auto AggroHandles = ForEach_Aggro(InAggroOwnerEntity, InExclusionPolicy, {}, FCk_Lambda_InHandle {});

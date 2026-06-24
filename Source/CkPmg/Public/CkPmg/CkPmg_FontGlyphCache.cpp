@@ -1,5 +1,7 @@
 #include "CkPmg/CkPmg_FontGlyphCache.h"
 
+#include "CkPmg/CkPmg_Stats.h"
+
 #if CK_PMG_WITH_FREETYPE
 #include "ft2build.h"
 #include FT_FREETYPE_H
@@ -7,6 +9,12 @@
 
 #include "ConstrainedDelaunay2.h"
 #endif
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Pmg::BuildGlyph"), STAT_Pmg_BuildGlyph, STATGROUP_CkPmg);
+
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::pmg
 {
@@ -186,6 +194,9 @@ namespace ck::pmg
         if (!_Faces.IsValidIndex(InFaceKey)) { return _EmptyGlyph; }
         FFaceEntry& Entry = *_Faces[InFaceKey];
         if (const TUniquePtr<FCachedGlyph>* Cached = Entry.Glyphs.Find(InCodepoint)) { return **Cached; }
+
+        // Cache miss only — the one-time glyph extraction + tessellation cost (the cache-hit path above is excluded).
+        SCOPE_CYCLE_COUNTER(STAT_Pmg_BuildGlyph);
 
         auto NewGlyph = MakeUnique<FCachedGlyph>();
         FCachedGlyph& Glyph = *NewGlyph;

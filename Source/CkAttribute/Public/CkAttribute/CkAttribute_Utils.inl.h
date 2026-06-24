@@ -2,6 +2,8 @@
 
 #include "CkAttribute_Utils.h"
 
+#include "CkAttribute/CkAttribute_Stats.h"
+
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
 #include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
 
@@ -9,6 +11,11 @@
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Attribute::AddModifier"), STAT_CkAttribute_AddModifier, STATGROUP_CkAttribute);
+DECLARE_CYCLE_STAT(TEXT("Attribute::ClearAllModifiers"), STAT_CkAttribute_ClearAllModifiers, STATGROUP_CkAttribute);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -234,6 +241,8 @@ namespace ck
             AttributeHandleType& InAttributeHandle)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkAttribute_ClearAllModifiers);
+
         static const auto TagsToIgnore = UCk_Utils_GameplayTag_UE::Get_GameplayTagContainerFromTags(
             FAttributeModifier_ReplicationTags::Get_BaseTag(), FAttributeModifier_ReplicationTags::Get_FinalTag());
 
@@ -366,6 +375,8 @@ namespace ck
             ECk_ModifierOperation_RevocablePolicy InRevocablePolicy)
         -> AttributeModifierHandleType
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkAttribute_AddModifier);
+
         auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeHandle);
         auto NewModifierEntity = ck::StaticCast<AttributeModifierHandleType>(NewEntity);
 

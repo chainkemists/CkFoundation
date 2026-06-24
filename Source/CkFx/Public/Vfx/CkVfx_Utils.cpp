@@ -3,11 +3,20 @@
 #include "Vfx/CkVfx_Fragment.h"
 
 #include "CkFx/CkFx_Log.h"
+#include "CkFx/CkFx_Stats.h"
 
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
 #include <NiagaraFunctionLibrary.h>
 #include <NiagaraComponent.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Fx::VfxSpawnAttached"),   STAT_Fx_VfxSpawnAttached,   STATGROUP_CkFx);
+DECLARE_CYCLE_STAT(TEXT("Fx::VfxSpawnAtLocation"), STAT_Fx_VfxSpawnAtLocation, STATGROUP_CkFx);
+
+// Single shared "Fx Effects Spawned" counter (declared EXTERN in CkFx_Stats.h, also INC'd from CkSfx_Utils.cpp).
+DEFINE_STAT(STAT_Fx_EffectsSpawned);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -128,6 +137,8 @@ auto
         const FCk_Request_Vfx_PlayAttached& InRequest)
     -> FCk_Handle_Vfx
 {
+    SCOPE_CYCLE_COUNTER(STAT_Fx_VfxSpawnAttached);
+
     CK_CALLSTACK_RECORD(ck::FFragment_Vfx_Requests, InVfxHandle);
 
     // TODO: Move this to processor
@@ -152,6 +163,8 @@ auto
     if (ck::Is_NOT_Valid(SpawnedVfx))
     { return InVfxHandle; }
 
+    INC_DWORD_STAT(STAT_Fx_EffectsSpawned);
+
     DoSet_NiagaraInstanceParameter(SpawnedVfx, InRequest.Get_InstanceParameterSettings());
 
     SpawnedVfx->SetAbsolute
@@ -171,6 +184,8 @@ auto
         const FCk_Request_Vfx_PlayAtLocation& InRequest)
     -> FCk_Handle_Vfx
 {
+    SCOPE_CYCLE_COUNTER(STAT_Fx_VfxSpawnAtLocation);
+
     CK_CALLSTACK_RECORD(ck::FFragment_Vfx_Requests, InVfxHandle);
 
     // TODO: Move this to processor
@@ -190,6 +205,8 @@ auto
     // This may be invalid if it is pre-culled
     if (ck::Is_NOT_Valid(SpawnedVfx))
     { return InVfxHandle; }
+
+    INC_DWORD_STAT(STAT_Fx_EffectsSpawned);
 
     DoSet_NiagaraInstanceParameter(SpawnedVfx, InRequest.Get_InstanceParameterSettings());
 

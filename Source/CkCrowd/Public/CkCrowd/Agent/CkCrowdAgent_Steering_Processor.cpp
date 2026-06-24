@@ -4,9 +4,15 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "CkCrowd/CkCrowd_Stats.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_Steering);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Crowd::Steering"), STAT_CkCrowd_SteeringProc, STATGROUP_CkCrowd);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -24,6 +30,8 @@ namespace ck
             FFragment_CrowdAgent_DesiredVelocity& InDesired)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkCrowd_SteeringProc);
+
         const auto Bail = [&]()
         {
             InDesired._Velocity = FVector::ZeroVector;

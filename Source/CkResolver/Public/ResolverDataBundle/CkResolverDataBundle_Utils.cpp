@@ -5,7 +5,13 @@
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
+#include "CkResolver/CkResolver_Stats.h"
+
 #include "ResolverDataBundle/CkResolverDataBundle_Fragment.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Resolver::CreateBundle"), STAT_Resolver_CreateBundle, STATGROUP_CkResolver);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -17,6 +23,8 @@ auto
         const FCk_Fragment_ResolverDataBundle_ParamsData& InParams)
     -> FCk_Handle_ResolverDataBundle
 {
+    SCOPE_CYCLE_COUNTER(STAT_Resolver_CreateBundle);
+
     CK_ENSURE_IF_NOT(NOT InParams.Get_Phases().IsEmpty(),
         TEXT("Unable to create a ResolverDataBundle with Owner [{}]. There must be at least ONE phase in a ResolverDataBundle"), InOwner)
     { return {}; }

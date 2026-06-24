@@ -11,7 +11,21 @@
 #include "CkLabel/Public/CkLabel/CkLabel_Fragment.h"
 #include "CkLabel/Public/CkLabel/CkLabel_Utils.h"
 
+#include "CkRecord/CkRecord_Stats.h"
+
 #include "CkRecord_Utils.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Record::Get_ContainsEntry"),   STAT_CkRecord_Get_ContainsEntry,   STATGROUP_CkRecord);
+DECLARE_CYCLE_STAT(TEXT("Record::Get_Entries"),         STAT_CkRecord_Get_Entries,         STATGROUP_CkRecord);
+DECLARE_CYCLE_STAT(TEXT("Record::Get_ValidEntries"),    STAT_CkRecord_Get_ValidEntries,    STATGROUP_CkRecord);
+DECLARE_CYCLE_STAT(TEXT("Record::Get_ValidEntries_If"), STAT_CkRecord_Get_ValidEntries_If, STATGROUP_CkRecord);
+DECLARE_CYCLE_STAT(TEXT("Record::Get_ValidEntry_If"),   STAT_CkRecord_Get_ValidEntry_If,   STATGROUP_CkRecord);
+DECLARE_CYCLE_STAT(TEXT("Record::Get_ValidEntry_ByTag"),STAT_CkRecord_Get_ValidEntry_ByTag,STATGROUP_CkRecord);
+DECLARE_CYCLE_STAT(TEXT("Record::ForEach_Entry"),       STAT_CkRecord_ForEach_Entry,       STATGROUP_CkRecord);
+
+DECLARE_DWORD_COUNTER_STAT(TEXT("Record Entries Visited"), STAT_CkRecord_EntriesVisited, STATGROUP_CkRecord);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -300,7 +314,7 @@ namespace ck
             const MaybeTypeSafeHandle& InRecordEntry)
         -> bool
     {
-        QUICK_SCOPE_CYCLE_COUNTER(Get_ContainsEntry)
+        SCOPE_CYCLE_COUNTER(STAT_CkRecord_Get_ContainsEntry);
         if (NOT InRecordHandle.Has<RecordType>())
         { return {}; }
 
@@ -333,7 +347,7 @@ namespace ck
             const FCk_Handle& InRecordHandle)
         -> TArray<RecordEntryMaybeTypeSafeHandle>
     {
-        QUICK_SCOPE_CYCLE_COUNTER(Get_Entries)
+        SCOPE_CYCLE_COUNTER(STAT_CkRecord_Get_Entries);
         if (NOT InRecordHandle.Has<RecordType>())
         { return {}; }
 
@@ -356,7 +370,7 @@ namespace ck
             const FCk_Handle& InRecordHandle)
         -> TArray<RecordEntryMaybeTypeSafeHandle>
     {
-        QUICK_SCOPE_CYCLE_COUNTER(Get_ValidEntries)
+        SCOPE_CYCLE_COUNTER(STAT_CkRecord_Get_ValidEntries);
         const auto& Entries = Get_Entries(InRecordHandle);
 
         auto FilteredEntries = ck::algo::Filter(Entries, [](const RecordEntryMaybeTypeSafeHandle& InRecordEntry) -> bool
@@ -382,7 +396,7 @@ namespace ck
             T_Predicate InPredicate)
         -> TArray<RecordEntryMaybeTypeSafeHandle>
     {
-        QUICK_SCOPE_CYCLE_COUNTER(Get_ValidEntries_If)
+        SCOPE_CYCLE_COUNTER(STAT_CkRecord_Get_ValidEntries_If);
         const auto& Entries = Get_Entries(InRecordHandle);
 
         auto FilteredEntries = ck::algo::Filter(Entries, [InPredicate](const RecordEntryMaybeTypeSafeHandle& InRecordEntry) -> bool
@@ -528,7 +542,7 @@ namespace ck
             T_Predicate InPredicate)
         -> MaybeTypeSafeHandle
     {
-        QUICK_SCOPE_CYCLE_COUNTER(Get_ValidEntry_If)
+        SCOPE_CYCLE_COUNTER(STAT_CkRecord_Get_ValidEntry_If);
         if (NOT InRecordHandle.Has<RecordType>())
         { return {}; }
 
@@ -576,7 +590,7 @@ namespace ck
             const FGameplayTag& InTag)
         -> MaybeTypeSafeHandle
     {
-        QUICK_SCOPE_CYCLE_COUNTER(Get_ValidEntry_ByTag)
+        SCOPE_CYCLE_COUNTER(STAT_CkRecord_Get_ValidEntry_ByTag);
         if (NOT InRecordHandle.Has<RecordType>())
         { return {}; }
 
@@ -789,7 +803,7 @@ namespace ck
             T_Func InFunc)
         -> void
     {
-        QUICK_SCOPE_CYCLE_COUNTER(DoForEach_Entry)
+        SCOPE_CYCLE_COUNTER(STAT_CkRecord_ForEach_Entry);
         if (NOT InHandle.Has<RecordType>())
         { return; }
 
@@ -809,6 +823,8 @@ namespace ck
                 }
                 continue;
             }
+
+            INC_DWORD_STAT(STAT_CkRecord_EntriesVisited);
 
             if constexpr (std::is_void_v<decltype(InFunc(RecordEntryHandle))>)
             {
@@ -831,7 +847,7 @@ namespace ck
             T_Func InFunc)
         -> void
     {
-        QUICK_SCOPE_CYCLE_COUNTER(DoForEach_Entry)
+        SCOPE_CYCLE_COUNTER(STAT_CkRecord_ForEach_Entry);
         if (NOT InHandle.Has<RecordType>())
         { return; }
 
@@ -852,6 +868,8 @@ namespace ck
                 }
                 continue;
             }
+
+            INC_DWORD_STAT(STAT_CkRecord_EntriesVisited);
 
             if constexpr (std::is_void_v<decltype(InFunc(RecordEntryHandle))>)
             {

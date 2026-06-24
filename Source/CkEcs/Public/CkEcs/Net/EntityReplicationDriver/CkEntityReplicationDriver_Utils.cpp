@@ -29,12 +29,12 @@ auto
     const auto IsHost = UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle);
     const auto HasOwningActor = UCk_Utils_OwningActor_UE::TryGet_Entity_OwningActor_InOwnershipChain(InHandle);
 
-    ck::ecs::Display(TEXT("[REP_DEBUG] ReplicationDriver::Add — Handle=[{}] HasNetParams=[{}] EntityReplication=[{}] IsHost=[{}] HasOwningActorInChain=[{}]"),
+    ck::ecs::VeryVerbose(TEXT("[REP_DEBUG] ReplicationDriver::Add — Handle=[{}] HasNetParams=[{}] EntityReplication=[{}] IsHost=[{}] HasOwningActorInChain=[{}]"),
         InHandle, HasNetParams, EntityReplication, IsHost, ck::IsValid(HasOwningActor));
 
     const auto AddedOrNot = UCk_Utils_Net_UE::TryAddReplicatedFragment<UCk_Fragment_EntityReplicationDriver_Rep>(InHandle);
 
-    ck::ecs::Display(TEXT("[REP_DEBUG] ReplicationDriver::Add — Result=[{}]"), AddedOrNot);
+    ck::ecs::VeryVerbose(TEXT("[REP_DEBUG] ReplicationDriver::Add — Result=[{}]"), AddedOrNot);
 
     if (AddedOrNot == ECk_AddedOrNot::Added)
     {

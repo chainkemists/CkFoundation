@@ -1,6 +1,7 @@
 #include "CkNav_Processor.h"
 
 #include "CkNavigation/CkNavigation_Log.h"
+#include "CkNavigation/CkNavigation_Stats.h"
 #include "CkNavigation/Nav/CkNav_Algorithm.h"
 #include "CkNavigation/Settings/CkNav_ProjectSettings.h"
 #include "CkNavigation/Utils/CkNav_Utils.h"
@@ -16,6 +17,14 @@
 
 #include <NavigationSystem.h>
 #include <NavMesh/RecastNavMesh.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Nav::DeferredDrain"),   STAT_Nav_DeferredDrain,   STATGROUP_CkNav);
+DECLARE_CYCLE_STAT(TEXT("Nav::HandleRequests"),  STAT_Nav_HandleRequests,  STATGROUP_CkNav);
+
+DECLARE_DWORD_COUNTER_STAT(TEXT("Nav Deferred Queue Depth"),    STAT_Nav_DeferredQueueDepth,    STATGROUP_CkNav);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Nav Deferred Reprojections"),  STAT_Nav_DeferredReprojections, STATGROUP_CkNav);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -73,6 +82,9 @@ namespace ck
         // tile right now". Same call FindPathSync uses internally.
         if (GDeferredNavRequests.Num() > 0)
         {
+            SCOPE_CYCLE_COUNTER(STAT_Nav_DeferredDrain);
+            SET_DWORD_STAT(STAT_Nav_DeferredQueueDepth, GDeferredNavRequests.Num());
+
             const auto Now = FPlatformTime::Seconds();
             const auto MaxDeferralSec = static_cast<double>(CVarMaxDeferralSeconds.GetValueOnGameThread());
 
@@ -101,6 +113,7 @@ namespace ck
                     const auto StartLocation = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle);
                     const auto Extent = FVector(UCk_Utils_Nav_Settings_UE::Get_NavQuerySearchHalfExtent());
                     auto ProbeProj = FNavLocation{};
+                    INC_DWORD_STAT(STAT_Nav_DeferredReprojections);
                     const auto bReady = NavSys->ProjectPointToNavigation(StartLocation, ProbeProj, Extent, NavData);
                     if (bReady)
                     {
@@ -153,6 +166,8 @@ namespace ck
             FFragment_Nav_PathResult& InResult) const
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_Nav_HandleRequests);
+
         // Server-authoritative: drop client-side requests on the floor.
         if (NOT UCk_Utils_Net_UE::Get_HasAuthority(InHandle))
         {

@@ -2,6 +2,8 @@
 
 #if CK_BUILD_SM_GRAPH_WALK
 
+#include "CkStateMachine/CkStateMachine_Stats.h"
+
 #include "CkCore/Object/CkObject_Utils.h"
 
 #include "CkStateMachine/Condition/CkSmCondition_Utils.h"
@@ -25,6 +27,13 @@
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_Debug_GraphWalk);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_Debug_GraphWalk_Iterate);
 
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("SmDebug::GraphWalk (kickoff)"), STAT_Sm_Debug_GraphWalk, STATGROUP_CkStateMachine);
+DECLARE_CYCLE_STAT(TEXT("SmDebug::GraphWalk::Iterate"), STAT_Sm_Debug_GraphWalk_Iterate, STATGROUP_CkStateMachine);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     // ================================================================================================================
@@ -39,6 +48,8 @@ namespace ck
             const FFragment_Sm_Params& InParams)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_Sm_Debug_GraphWalk);
+
         InHandle.Remove<FTag_Sm_Debug_RequiresGraphWalk>();
 
         auto InitialStateClass = InParams.Get_InitialStateClass();
@@ -104,6 +115,8 @@ namespace ck
             const FFragment_Sm_Debug_GraphWalk_Progress& /*InProgress*/)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_Sm_Debug_GraphWalk_Iterate);
+
         auto& Progress = InHandle.Get<FFragment_Sm_Debug_GraphWalk_Progress>();
 
         if (Progress._PendingEntities.IsEmpty())

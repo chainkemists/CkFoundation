@@ -5,11 +5,17 @@
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_PushApart);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Crowd::PushApart"), STAT_CkCrowd_PushApartProc, STATGROUP_CkCrowd);
+DECLARE_CYCLE_STAT(TEXT("Crowd::PushApart (relax)"), STAT_CkCrowd_PushApart, STATGROUP_CkCrowd);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -42,6 +48,8 @@ namespace ck
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkCrowd_PushApartProc);
+
         const auto Iterations = Get_IterationCount(UCk_Utils_Crowd_Settings_UE::Get_PushApartMode());
         if (Iterations <= 0)
         { return; }
@@ -58,38 +66,43 @@ namespace ck
 
         auto Displacement = FVector::ZeroVector;
 
-        for (auto Iter = 0; Iter < Iterations; ++Iter)
         {
-            for (const auto& Nbr : Neighbors)
+            // O(Iterations × Neighbors) relaxation — the per-iteration re-scan is the hidden cost.
+            SCOPE_CYCLE_COUNTER(STAT_CkCrowd_PushApart);
+
+            for (auto Iter = 0; Iter < Iterations; ++Iter)
             {
-                // Use the cache's RelativeOffset directly — it's NbrLoc - SelfLoc as of NeighborSync.
-                // After self has displaced by Displacement, the offset from new-self to neighbor is:
-                //   NbrLoc - (SelfLoc + Displacement) = RelOffset - Displacement
-                // We want the vector pointing FROM neighbor TO new-self (the push direction):
-                //   (SelfLoc + Displacement) - NbrLoc = -RelOffset + Displacement
-                auto Diff = -Nbr.Get_RelativeOffset() + Displacement;
-                // Crowd push is planar — agents walk on the navmesh, Z is owned by path-follow
-                // and the integrator. Without this, any Z delta between agents gets amplified
-                // each iteration and shoves capsules through the floor.
-                Diff.Z = 0.0f;
-                const auto Dist = static_cast<float>(Diff.Size());
-                const auto NeighborRadius = SelfRadius;  // approximation — neighbors share radius
-                const auto CombinedRadius = SelfRadius + NeighborRadius;
-
-                if (Dist >= CombinedRadius)
-                { continue; }
-
-                if (Dist < KINDA_SMALL_NUMBER)
+                for (const auto& Nbr : Neighbors)
                 {
-                    // Degenerate overlap (exact center match). Push along an arbitrary axis to
-                    // unstick. Mirrors dtCrowd's degenerate-case handling.
-                    Displacement += FVector(0.5f * CombinedRadius, 0.0f, 0.0f);
-                    continue;
-                }
+                    // Use the cache's RelativeOffset directly — it's NbrLoc - SelfLoc as of NeighborSync.
+                    // After self has displaced by Displacement, the offset from new-self to neighbor is:
+                    //   NbrLoc - (SelfLoc + Displacement) = RelOffset - Displacement
+                    // We want the vector pointing FROM neighbor TO new-self (the push direction):
+                    //   (SelfLoc + Displacement) - NbrLoc = -RelOffset + Displacement
+                    auto Diff = -Nbr.Get_RelativeOffset() + Displacement;
+                    // Crowd push is planar — agents walk on the navmesh, Z is owned by path-follow
+                    // and the integrator. Without this, any Z delta between agents gets amplified
+                    // each iteration and shoves capsules through the floor.
+                    Diff.Z = 0.0f;
+                    const auto Dist = static_cast<float>(Diff.Size());
+                    const auto NeighborRadius = SelfRadius;  // approximation — neighbors share radius
+                    const auto CombinedRadius = SelfRadius + NeighborRadius;
 
-                const auto Penetration = CombinedRadius - Dist;
-                const auto Pen = (Penetration * 0.5f) * COLLISION_RESOLVE_FACTOR / Dist;
-                Displacement += Diff * Pen;
+                    if (Dist >= CombinedRadius)
+                    { continue; }
+
+                    if (Dist < KINDA_SMALL_NUMBER)
+                    {
+                        // Degenerate overlap (exact center match). Push along an arbitrary axis to
+                        // unstick. Mirrors dtCrowd's degenerate-case handling.
+                        Displacement += FVector(0.5f * CombinedRadius, 0.0f, 0.0f);
+                        continue;
+                    }
+
+                    const auto Penetration = CombinedRadius - Dist;
+                    const auto Pen = (Penetration * 0.5f) * COLLISION_RESOLVE_FACTOR / Dist;
+                    Displacement += Diff * Pen;
+                }
             }
         }
 

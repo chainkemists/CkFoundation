@@ -1,6 +1,7 @@
 #include "CkCrowdAgent_Neighbors_Processor.h"
 
 #include "CkCrowd/CkCrowd_Log.h"
+#include "CkCrowd/CkCrowd_Stats.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
@@ -17,6 +18,13 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_NeighborSync);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+DECLARE_CYCLE_STAT(TEXT("Crowd::NeighborSync"), STAT_CkCrowd_NeighborSyncProc, STATGROUP_CkCrowd);
+DECLARE_CYCLE_STAT(TEXT("Crowd::NeighborSync (map overlaps)"), STAT_CkCrowd_NeighborSync_MapOverlaps, STATGROUP_CkCrowd);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Crowd Overlaps Processed"), STAT_CkCrowd_OverlapsProcessed, STATGROUP_CkCrowd);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Crowd Neighbors Kept"), STAT_CkCrowd_NeighborsKept, STATGROUP_CkCrowd);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     auto
@@ -29,6 +37,8 @@ namespace ck
             FFragment_CrowdAgent_NeighborCache& InNeighborCache)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkCrowd_NeighborSyncProc);
+
         InNeighborCache._Neighbors.Reset();
 
         auto ProbeHandle = InProbeRef.Get_ProbeChild();
@@ -51,45 +61,52 @@ namespace ck
         if (Overlaps.Num() == 0)
         { return; }
 
+        // Raw overlap count BEFORE the neighbor cap — dense clumps inflate this far past _MaxNeighborsForSteering.
+        INC_DWORD_STAT_BY(STAT_CkCrowd_OverlapsProcessed, Overlaps.Num());
+
         InNeighborCache._Neighbors.Reserve(Overlaps.Num());
 
-        for (const auto& Overlap : Overlaps)
         {
-            // The probe's _OtherEntity is the *other probe child*, not the other agent. Walk one
-            // lifetime-owner hop to map back to the agent entity. ExcludePendingKill is the default
-            // and what we want — neighbors that are mid-destroy aren't useful for steering.
-            auto OtherProbeChild = Overlap.Get_OtherEntity();
-            if (ck::Is_NOT_Valid(OtherProbeChild))
-            { continue; }
+            SCOPE_CYCLE_COUNTER(STAT_CkCrowd_NeighborSync_MapOverlaps);
 
-            auto OtherAgent = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(OtherProbeChild);
-            if (ck::Is_NOT_Valid(OtherAgent))
-            { continue; }
+            for (const auto& Overlap : Overlaps)
+            {
+                // The probe's _OtherEntity is the *other probe child*, not the other agent. Walk one
+                // lifetime-owner hop to map back to the agent entity. ExcludePendingKill is the default
+                // and what we want — neighbors that are mid-destroy aren't useful for steering.
+                auto OtherProbeChild = Overlap.Get_OtherEntity();
+                if (ck::Is_NOT_Valid(OtherProbeChild))
+                { continue; }
 
-            // Defensive: in theory the probe's same-context filter prevents an agent from overlapping
-            // its own probe — but with policy Any, the agent's probe could conceivably show up.
-            if (OtherAgent == static_cast<const FCk_Handle&>(InHandle))
-            { continue; }
+                auto OtherAgent = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(OtherProbeChild);
+                if (ck::Is_NOT_Valid(OtherAgent))
+                { continue; }
 
-            auto OtherTransform = UCk_Utils_Transform_UE::Cast(OtherAgent);
-            if (ck::Is_NOT_Valid(OtherTransform))
-            { continue; }
-            const auto OtherLoc = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(OtherTransform);
+                // Defensive: in theory the probe's same-context filter prevents an agent from overlapping
+                // its own probe — but with policy Any, the agent's probe could conceivably show up.
+                if (OtherAgent == static_cast<const FCk_Handle&>(InHandle))
+                { continue; }
 
-            auto OtherVelocity = UCk_Utils_Velocity_UE::Cast(OtherAgent);
-            const auto OtherVel = ck::IsValid(OtherVelocity)
-                ? UCk_Utils_Velocity_UE::Get_CurrentVelocity(OtherVelocity)
-                : FVector::ZeroVector;
+                auto OtherTransform = UCk_Utils_Transform_UE::Cast(OtherAgent);
+                if (ck::Is_NOT_Valid(OtherTransform))
+                { continue; }
+                const auto OtherLoc = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(OtherTransform);
 
-            const auto RelativeOffset = OtherLoc - SelfLoc;
-            const auto Distance = static_cast<float>(RelativeOffset.Size());
-            const auto RelativeVelocity = OtherVel - SelfVel;
+                auto OtherVelocity = UCk_Utils_Velocity_UE::Cast(OtherAgent);
+                const auto OtherVel = ck::IsValid(OtherVelocity)
+                    ? UCk_Utils_Velocity_UE::Get_CurrentVelocity(OtherVelocity)
+                    : FVector::ZeroVector;
 
-            InNeighborCache._Neighbors.Emplace(FCk_CrowdAgent_Neighbor{
-                OtherAgent,
-                RelativeOffset,
-                RelativeVelocity,
-                Distance});
+                const auto RelativeOffset = OtherLoc - SelfLoc;
+                const auto Distance = static_cast<float>(RelativeOffset.Size());
+                const auto RelativeVelocity = OtherVel - SelfVel;
+
+                InNeighborCache._Neighbors.Emplace(FCk_CrowdAgent_Neighbor{
+                    OtherAgent,
+                    RelativeOffset,
+                    RelativeVelocity,
+                    Distance});
+            }
         }
 
         // Sort ascending by distance — the closest neighbors dominate the separation force, and
@@ -105,6 +122,9 @@ namespace ck
         {
             InNeighborCache._Neighbors.SetNum(MaxN, EAllowShrinking::No);
         }
+
+        // Trimmed neighbor count — diff against "Overlaps Processed" to see how hard the cap is biting.
+        INC_DWORD_STAT_BY(STAT_CkCrowd_NeighborsKept, InNeighborCache._Neighbors.Num());
     }
 }
 
