@@ -972,6 +972,18 @@ namespace ck
         if (NOT InHandle.Has<FTag_Snapshot_JustRestored>())
         { return; }
 
+        // A restored sub-SM is an orphan duplicate: this redrive rebuilds the parent's graph and the
+        // parent's SubStateMachine task recreates the live sub-SM fresh, so the captured copy must not
+        // survive (it would otherwise linger as a disconnected NO-NAME husk). Top-level SMs never carry
+        // FTag_Sm_IsSubMachine, and the fresh redrive-created sub-SM lacks FTag_Snapshot_JustRestored —
+        // so only the restored orphan matches here. Destroy it before any redrive bookkeeping runs.
+        if (InHandle.Has<FTag_Sm_IsSubMachine>())
+        {
+            auto ToDestroy = FCk_Handle{InHandle};
+            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(ToDestroy);
+            return;
+        }
+
         if (InHandle.Has<FTag_Sm_RestoreRedriven>())
         { return; }
 
