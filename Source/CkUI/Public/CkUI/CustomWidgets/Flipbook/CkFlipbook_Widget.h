@@ -14,6 +14,8 @@
 
 class UPaperFlipbook;
 class UTexture2D;
+class FActiveTimerHandle;
+enum class EActiveTimerReturnType : uint8;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -185,6 +187,12 @@ protected:
               meta = (AllowPrivateAccess = true))
     bool _Autoplay = true;
 
+    // Editor-only: play the animation live in the UMG designer preview. Deliberately
+    // not BlueprintReadWrite — it has no runtime meaning, only design-time preview.
+    UPROPERTY(EditAnywhere, Category = "Flipbook",
+              meta = (EditCondition = "_Autoplay"))
+    bool _PreviewInDesigner = true;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flipbook",
               meta = (AllowPrivateAccess = true))
     bool _Loop = true;
@@ -209,11 +217,23 @@ private:
     void
     HandleFlipbookTick();
 
+    // Design-time preview driver. Runtime uses the world timer (PlayFlipbookAnimation),
+    // which the designer preview world does not tick — so the editor preview is driven
+    // off a Slate active timer on MyImage instead.
+    auto ArmDesignPreview() -> void;
+    auto DisarmDesignPreview() -> void;
+
+    EActiveTimerReturnType
+    HandleDesignPreviewTick(
+        double InCurrentTime,
+        float  InDeltaTime);
+
 private:
     UPROPERTY(Transient)
     TArray<FSlateBrush> _Brushes;
 
     FTimerHandle _TickTimer;
+    TWeakPtr<FActiveTimerHandle> _DesignPreviewTimer;
     int32 _FrameIndex = 0;
     int32 _FramesTotal = 0;
     bool _IsPlaying = false;

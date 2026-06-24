@@ -12,6 +12,9 @@
 #include <PaperFlipbook.h>
 #include <PaperSprite.h>
 
+#include <Widgets/SWidget.h>
+#include <Widgets/Images/SImage.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -27,9 +30,19 @@ auto
     _FrameIndex = _StartKeyFrame;
     SetBrushAtFrame(_StartKeyFrame);
 
-    // Design-time shows the start frame; at runtime, autoplay kicks the timer.
-    if (NOT IsDesignTime() && _Autoplay)
-    { PlayFlipbookAnimation(_StartKeyFrame); }
+    // Runtime autoplay kicks the world timer; design-time preview uses a Slate active
+    // timer (the designer preview world does not tick FTimerManager).
+    if (NOT IsDesignTime())
+    {
+        if (_Autoplay)
+        { PlayFlipbookAnimation(_StartKeyFrame); }
+    }
+    else
+    {
+        DisarmDesignPreview();
+        if (_Autoplay && _PreviewInDesigner)
+        { ArmDesignPreview(); }
+    }
 }
 
 auto
@@ -38,6 +51,8 @@ auto
         bool bReleaseChildren)
     -> void
 {
+    DisarmDesignPreview();
+
     if (const auto World = GetWorld();
         ck::IsValid(World))
     {
@@ -322,6 +337,63 @@ auto
     }
     _IsPlaying = false;
     OnFinished.Broadcast();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_FlipbookWidget_UE::
+    ArmDesignPreview()
+    -> void
+{
+    if (NOT MyImage.IsValid() || _Brushes.IsEmpty())
+    { return; }
+
+    _FrameIndex = _StartKeyFrame;
+    SetBrushAtFrame(_FrameIndex);
+
+    _DesignPreviewTimer = MyImage->RegisterActiveTimer(
+        static_cast<float>(Get_FrameInterval().Get_Seconds()),
+        FWidgetActiveTimerDelegate::CreateUObject(this, &UCk_FlipbookWidget_UE::HandleDesignPreviewTick));
+}
+
+auto
+    UCk_FlipbookWidget_UE::
+    DisarmDesignPreview()
+    -> void
+{
+    if (const auto Handle = _DesignPreviewTimer.Pin();
+        Handle.IsValid() && MyImage.IsValid())
+    {
+        MyImage->UnRegisterActiveTimer(Handle.ToSharedRef());
+    }
+    _DesignPreviewTimer.Reset();
+}
+
+auto
+    UCk_FlipbookWidget_UE::
+    HandleDesignPreviewTick(
+        double InCurrentTime,
+        float  InDeltaTime)
+    -> EActiveTimerReturnType
+{
+    SetBrushAtFrame(_FrameIndex);
+
+    const auto IsLastFrame = _FrameIndex + 1 >= _FramesTotal;
+    if (NOT IsLastFrame)
+    {
+        ++_FrameIndex;
+        return EActiveTimerReturnType::Continue;
+    }
+
+    if (_Loop)
+    {
+        _FrameIndex = 0;
+        return EActiveTimerReturnType::Continue;
+    }
+
+    // Non-looping: hold on the last frame.
+    return EActiveTimerReturnType::Stop;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
