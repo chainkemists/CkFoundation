@@ -107,7 +107,12 @@ namespace ck
     {
         ecs::VeryVerbose(TEXT("[DESTRUCTION] Destroying Entity [{}]"), InHandle);
 
-        if (InHandle.Has<FTag_Replicated>())
+        // FTag_Replicated alone isn't enough: a snapshot-restored husk (e.g. an orphan SM-graph entity
+        // cascade-destroyed when its restored sub-SM is reconciled) carries the tag — tags ride the
+        // snapshot's opt-out tag section — but NOT FFragment_ReplicatedObjects_Params, which isn't
+        // registered snapshotable. Require the params fragment too, so a husk with nothing to clean up
+        // is skipped rather than tripping the Get<...> ensure.
+        if (InHandle.Has<FTag_Replicated>() && UCk_Utils_ReplicatedObjects_UE::Has(InHandle))
         {
             ck::algo::ForEachIsValid(UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(InHandle).Get_ReplicatedObjects(),
                 [&](const TStrongObjectPtr<UCk_ReplicatedObject_UE>& InRO)
