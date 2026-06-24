@@ -1,12 +1,17 @@
 #include "CkCrowdAgent_OnPathResolved_Processor.h"
 
 #include "CkCrowd/CkCrowd_Log.h"
+#include "CkCrowd/CkCrowd_Stats.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_OnPathResolved);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Crowd::OnPathResolved"), STAT_CkCrowd_OnPathResolvedProc, STATGROUP_CkCrowd);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -21,6 +26,8 @@ namespace ck
             FFragment_CrowdAgent_PathFollow& InPathFollow)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkCrowd_OnPathResolvedProc);
+
         switch (InPathResult.Get_Status())
         {
             case ECk_Nav_PathStatus::Ready:

@@ -7,6 +7,13 @@
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 #include "CkIskmRenderer/Proxy/CkIskmProxy_Fragment.h"
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Utils.h"
+#include "CkIskmRenderer/CkIskmRenderer_Stats.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Iskm::GetSocketTransform"), STAT_CkIskm_GetSocketTransform, STATGROUP_CkIskmRenderer);
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_IskmProxy_UE::
@@ -482,6 +489,8 @@ auto
         ECk_IskmProxy_TransformSpace InSpace)
     -> FTransform
 {
+    SCOPE_CYCLE_COUNTER(STAT_CkIskm_GetSocketTransform);
+
     if (ck::Is_NOT_Valid(InHandle)) { return FTransform::Identity; }
     auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_BaseSKMC().Get();
     if (ck::Is_NOT_Valid(SKMC)) { return FTransform::Identity; }

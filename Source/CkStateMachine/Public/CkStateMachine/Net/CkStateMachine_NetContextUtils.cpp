@@ -1,6 +1,7 @@
 #include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
 
 #include "CkStateMachine/CkStateMachine_Log.h"
+#include "CkStateMachine/CkStateMachine_Stats.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 
@@ -9,6 +10,12 @@
 
 #include "Engine/World.h"
 
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Sm::ComputeNetContext"), STAT_Sm_ComputeNetContext, STATGROUP_CkStateMachine);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck::statemachine
 {
     auto
@@ -16,6 +23,8 @@ namespace ck::statemachine
             const FCk_Handle_StateMachine& InSm)
         -> ECk_Sm_NetContext
     {
+        SCOPE_CYCLE_COUNTER(STAT_Sm_ComputeNetContext);
+
         // Sub-SMs carry a resolved-once snapshot (they can't resolve their owning pawn live —
         // see FFragment_Sm_NetIdentity). Use it when present; top-level SMs fall through to live.
         if (InSm.Has<ck::FFragment_Sm_NetIdentity>())

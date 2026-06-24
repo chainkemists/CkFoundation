@@ -1,6 +1,7 @@
 #include "CkVectorAttribute_Utils.h"
 
 #include "CkAttribute/CkAttribute_Log.h"
+#include "CkAttribute/CkAttribute_Stats.h"
 
 #include "CkCore/Math/Vector/CkVector_Utils.h"
 #include "CkCore/Algorithms/CkAlgorithms.h"
@@ -12,6 +13,14 @@
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
 #include "CkLabel/CkLabel_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Attribute::TryGet"), STAT_CkAttribute_TryGet_Vector, STATGROUP_CkAttribute);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Attribute TryGet Calls"), STAT_CkAttribute_TryGetCalls_Vector, STATGROUP_CkAttribute);
+DECLARE_CYCLE_STAT(TEXT("Add_Vector_Modifier_Revocable"), STAT_CkAttribute_AddVectorModifierRevocable, STATGROUP_CkAttribute);
+DECLARE_CYCLE_STAT(TEXT("Add_Vector_Modifier_NotRevocable"), STAT_CkAttribute_AddVectorModifierNotRevocable, STATGROUP_CkAttribute);
+DECLARE_CYCLE_STAT(TEXT("TryGet_VectorAttributeModifier"), STAT_CkAttribute_TryGetVectorModifier, STATGROUP_CkAttribute);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -140,7 +149,8 @@ auto
         FGameplayTag      InAttributeName)
     -> FCk_Handle_VectorAttribute
 {
-    QUICK_SCOPE_CYCLE_COUNTER(TryGet_VectorAttribute)
+    SCOPE_CYCLE_COUNTER(STAT_CkAttribute_TryGet_Vector);
+    INC_DWORD_STAT(STAT_CkAttribute_TryGetCalls_Vector);
     return RecordOfVectorAttributes_Utils::Get_ValidEntry_ByTag(InAttributeOwnerEntity, InAttributeName);
 }
 
@@ -596,7 +606,7 @@ auto
         const FCk_Fragment_VectorAttributeModifier_ParamsData& InParams)
     -> FCk_Handle_VectorAttributeModifier
 {
-    QUICK_SCOPE_CYCLE_COUNTER(Add_Vector_Modifier_Revocable)
+    SCOPE_CYCLE_COUNTER(STAT_CkAttribute_AddVectorModifierRevocable);
 
     auto ParamsToUse = InParams;
     ParamsToUse.Set_TargetAttributeName(UCk_Utils_GameplayLabel_UE::Get_Label(InAttribute));
@@ -653,7 +663,7 @@ auto
         const FCk_Fragment_VectorAttributeModifier_ParamsData& InParams)
     -> void
 {
-    QUICK_SCOPE_CYCLE_COUNTER(Add_Vector_Modifier_NotRevocable)
+    SCOPE_CYCLE_COUNTER(STAT_CkAttribute_AddVectorModifierNotRevocable);
 
     auto ParamsToUse = InParams;
     ParamsToUse.Set_TargetAttributeName(UCk_Utils_GameplayLabel_UE::Get_Label(InAttribute));
@@ -791,7 +801,7 @@ auto
         ECk_MinMaxCurrent InComponent)
     -> FCk_Handle_VectorAttributeModifier
 {
-    QUICK_SCOPE_CYCLE_COUNTER(TryGet_VectorAttributeModifier)
+    SCOPE_CYCLE_COUNTER(STAT_CkAttribute_TryGetVectorModifier);
     switch(InComponent)
     {
         case ECk_MinMaxCurrent::Current:

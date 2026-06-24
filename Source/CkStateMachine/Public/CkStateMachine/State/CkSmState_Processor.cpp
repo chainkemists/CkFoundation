@@ -2,6 +2,7 @@
 
 #include "CkRecord/Public/CkRecord/Record/CkRecord_Fragment_Data.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
+#include "CkStateMachine/CkStateMachine_Stats.h"
 #include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
 #include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
@@ -22,6 +23,14 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_SmState_Exit);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+DECLARE_CYCLE_STAT(TEXT("SmState::Update"), STAT_SmState_Update, STATGROUP_CkStateMachine);
+DECLARE_CYCLE_STAT(TEXT("SmState::Exit"), STAT_SmState_Exit, STATGROUP_CkStateMachine);
+DECLARE_CYCLE_STAT(TEXT("SmState::Evaluate (proc)"), STAT_SmState_EvaluateProc, STATGROUP_CkStateMachine);
+DECLARE_CYCLE_STAT(TEXT("SmState::Evaluate (transition walk)"), STAT_SmState_Evaluate, STATGROUP_CkStateMachine);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Sm States Evaluated"), STAT_SmStatesEvaluated, STATGROUP_CkStateMachine);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     // ================================================================================================================
@@ -35,6 +44,8 @@ namespace ck
             HandleType InHandle)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_SmState_Update);
+
         UCk_Utils_SmState_UE::Request_Evaluate(InHandle);
     }
 
@@ -50,6 +61,8 @@ namespace ck
             const FFragment_EntityScript_Current& InScriptFragment)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_SmState_Exit);
+
         UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::ForEach_Entry(InHandle,
         [](FCk_Handle_SmTask InTask)
         {
@@ -84,6 +97,8 @@ namespace ck
             HandleType InHandle)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_SmState_EvaluateProc);
+
         InHandle.Try_Remove<FTag_SmState_NeedsEvaluation>();
 
         auto StateMachine = TUtils_Sm_OwningStateMachine::Get_StoredEntity(InHandle);
@@ -97,6 +112,9 @@ namespace ck
         { return; }
 
         // ---- Walk transitions in record order (insertion order = priority order) ----
+
+        INC_DWORD_STAT(STAT_SmStatesEvaluated);
+        SCOPE_CYCLE_COUNTER(STAT_SmState_Evaluate);
 
         UCk_Utils_StateMachine_UE::RecordOfSmTransitions_Utils::ForEach_ValidEntry(InHandle,
         [&](FCk_Handle_SmTransition InTransition) -> ECk_Record_ForEachIterationResult

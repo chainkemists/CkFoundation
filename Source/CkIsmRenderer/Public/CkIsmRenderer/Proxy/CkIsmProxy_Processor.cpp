@@ -7,10 +7,19 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 #include "CkIsmRenderer/CkIsmRenderer_Log.h"
+#include "CkIsmRenderer/CkIsmRenderer_Stats.h"
 
 #include "CkIsmRenderer/CkIsmSubsystem.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Ism::FindRendererIsmComp"),    STAT_CkIsm_FindRendererIsmComp,    STATGROUP_CkIsmRenderer);
+DECLARE_CYCLE_STAT(TEXT("Ism::UpdateInstanceTransform"), STAT_CkIsm_UpdateInstanceTransform, STATGROUP_CkIsmRenderer);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Ism Instances Transformed"), STAT_CkIsm_InstancesTransformed, STATGROUP_CkIsmRenderer);
+
+// --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_AddInstance);
@@ -29,6 +38,8 @@ namespace ck_ism_proxy_processor
             const UCk_IsmRenderer_Data* InRendererData)
         -> TWeakObjectPtr<UInstancedStaticMeshComponent>
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkIsm_FindRendererIsmComp);
+
         if (ck::Is_NOT_Valid(InRendererData))
         { return {}; }
 
@@ -310,7 +321,12 @@ namespace ck
 
         const auto& NewInstanceTransform = Get_TransformWithLocalOffset(InTransform.Get_Transform());
 
-        IsmComp->UpdateInstanceTransformById(InstanceId, NewInstanceTransform, TransformAsWorldSpace);
+        {
+            SCOPE_CYCLE_COUNTER(STAT_CkIsm_UpdateInstanceTransform);
+            INC_DWORD_STAT(STAT_CkIsm_InstancesTransformed);
+
+            IsmComp->UpdateInstanceTransformById(InstanceId, NewInstanceTransform, TransformAsWorldSpace);
+        }
 
         ck::ismrenderer::VeryVerbose(TEXT("Updating ISM Proxy [{}] instance transform to [{}]"), InHandle, NewInstanceTransform);
     }

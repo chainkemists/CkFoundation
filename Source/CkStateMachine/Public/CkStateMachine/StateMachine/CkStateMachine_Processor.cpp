@@ -7,6 +7,7 @@
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 #include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
+#include "CkStateMachine/CkStateMachine_Stats.h"
 #include "CkStateMachine/Net/CkStateMachineRelay_Actor.h"
 #include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
 #include "CkStateMachine/Net/CkStateMachine_RepData.h"
@@ -36,6 +37,22 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_PushOwningClientBatch);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_EndPlay);
 CK_REGISTER_PROCESSOR(ck::FProcessor_SmScript_CommitPendingAttach);
 
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Sm::Setup"), STAT_Sm_Setup, STATGROUP_CkStateMachine);
+DECLARE_CYCLE_STAT(TEXT("Sm::HandleRequests"), STAT_Sm_HandleRequests, STATGROUP_CkStateMachine);
+DECLARE_CYCLE_STAT(TEXT("Sm::CommitPendingTransition"), STAT_Sm_CommitPendingTransition, STATGROUP_CkStateMachine);
+DECLARE_CYCLE_STAT(TEXT("Sm::FlushPendingReplication_Drain"), STAT_Sm_FlushPendingReplication_Drain, STATGROUP_CkStateMachine);
+DECLARE_CYCLE_STAT(TEXT("Sm::ApplyReplicatedHistory"), STAT_Sm_ApplyReplicatedHistory, STATGROUP_CkStateMachine);
+DECLARE_CYCLE_STAT(TEXT("Sm::FirstSyncInitialState"), STAT_Sm_FirstSyncInitialState, STATGROUP_CkStateMachine);
+DECLARE_CYCLE_STAT(TEXT("Sm::RestoreRedrive"), STAT_Sm_RestoreRedrive, STATGROUP_CkStateMachine);
+DECLARE_CYCLE_STAT(TEXT("Sm::PushOwningClientBatch"), STAT_Sm_PushOwningClientBatch, STATGROUP_CkStateMachine);
+DECLARE_CYCLE_STAT(TEXT("Sm::EndPlay"), STAT_Sm_EndPlay, STATGROUP_CkStateMachine);
+DECLARE_CYCLE_STAT(TEXT("SmScript::CommitPendingAttach"), STAT_SmScript_CommitPendingAttach, STATGROUP_CkStateMachine);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Sm Transitions Committed"), STAT_SmTransitionsCommitted, STATGROUP_CkStateMachine);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     // ================================================================================================================
@@ -51,6 +68,8 @@ namespace ck
             FFragment_Sm_Current& InCurrent)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_Sm_Setup);
+
         InHandle.Remove<FTag_Sm_RequiresSetup>();
 
         // Attach the replicated payload fragment on authority. Gated on both the per-SM
@@ -100,6 +119,8 @@ namespace ck
             const FFragment_Sm_Requests& InRequests) const
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_Sm_HandleRequests);
+
         // Authority gating (spec §5.6/§6): mutating requests (Start/Stop/Pause/Resume/Transition/
         // AddOverrideState) may only originate on the authority for this SM. Non-authority
         // machines receive state changes via replication and bypass this processor entirely
@@ -505,6 +526,8 @@ namespace ck
             FFragment_Sm_PendingTransition& InPending)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_Sm_CommitPendingTransition);
+
         // The transition path keeps the previous state ALIVE until here (DoExitCurrentState was
         // called with ScheduleDestroyNow=false), so its handle is still valid and we destroy it
         // below, after the new state is entered. We still wait while it is mid-exit
@@ -577,6 +600,8 @@ namespace ck
             UCk_Utils_StateMachineDebug_UE::Request_RecordTransition(InHandle, Request);
         }
 #endif
+
+        INC_DWORD_STAT(STAT_SmTransitionsCommitted);
 
         UUtils_Signal_OnSmStateChanged::Broadcast(InHandle,
             MakePayload(InHandle, FCk_Sm_Payload_OnStateChanged{
@@ -709,6 +734,8 @@ namespace ck
             FFragment_Sm_PendingReplicationEntries& InStash)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_Sm_FlushPendingReplication_Drain);
+
         auto& StashedEntries = InStash.Get_StashedEntries();
 
         // Capture pending run-status before we tear the stash fragment down — applying after
@@ -766,6 +793,8 @@ namespace ck
             FFragment_Sm_ReplayQueue& InQueue)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_Sm_ApplyReplicatedHistory);
+
         auto& Queue = InQueue.Get_Queue();
         if (Queue.IsEmpty())
         { return; }
@@ -803,6 +832,8 @@ namespace ck
             FFragment_Sm_Current& InCurrent) const
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_Sm_FirstSyncInitialState);
+
         // A snapshot-RESTORED machine arrives in exactly the shape this processor repairs — RunStatus
         // Running (tag section + Tier-C value both round-trip) with no current state handle — but its
         // reconstruction belongs to FProcessor_Sm_RestoreRedrive, which must stash the restored
@@ -856,6 +887,8 @@ namespace ck
             FFragment_Sm_Current& InCurrent) const
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_Sm_RestoreRedrive);
+
         if (NOT InHandle.Has<FTag_Snapshot_JustRestored>())
         { return; }
 
@@ -1077,6 +1110,8 @@ namespace ck
             FFragment_Sm_PendingClientBatch& InBatch)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_Sm_PushOwningClientBatch);
+
         auto& Events = InBatch.Get_PendingEvents();
         const auto HasRunStatus = InBatch.Get_HasPendingRunStatus();
 
@@ -1169,6 +1204,8 @@ namespace ck
             FFragment_Sm_Current& InCurrent)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_Sm_EndPlay);
+
         ck::sm::VeryVerbose(TEXT("[SM Lifecycle] FProcessor_Sm_EndPlay on SM [{}] — current state [{}]"),
             InHandle, InCurrent._CurrentStateHandle);
 
@@ -1196,6 +1233,8 @@ namespace ck
             const FFragment_SmScript_PendingAttach& InPending)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_SmScript_CommitPendingAttach);
+
         const auto ScriptClass = InPending.Get_ScriptClass();
         const auto SpawnParams = InPending.Get_SpawnParams();
 

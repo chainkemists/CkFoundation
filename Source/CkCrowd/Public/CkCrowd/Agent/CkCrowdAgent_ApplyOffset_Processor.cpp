@@ -4,9 +4,15 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "CkCrowd/CkCrowd_Stats.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_ApplyOffset);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Crowd::ApplyOffset"), STAT_CkCrowd_ApplyOffsetProc, STATGROUP_CkCrowd);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -20,6 +26,8 @@ namespace ck
             const FFragment_EulerIntegrator_Current& InIntegrator)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkCrowd_ApplyOffsetProc);
+
         if (InIntegrator.Get_DistanceOffset().IsNearlyZero())
         { return; }
 

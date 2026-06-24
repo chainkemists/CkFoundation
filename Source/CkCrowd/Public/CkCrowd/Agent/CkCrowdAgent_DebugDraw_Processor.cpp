@@ -1,5 +1,6 @@
 #include "CkCrowdAgent_DebugDraw_Processor.h"
 
+#include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Settings/CkCrowd_DebugSettings.h"
 
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
@@ -12,6 +13,10 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_DebugDraw);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Crowd::DebugDraw"), STAT_CkCrowd_DebugDrawProc, STATGROUP_CkCrowd);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -33,6 +38,8 @@ namespace ck
             const FFragment_CrowdAgent_SeparationForce& InSeparationForce)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkCrowd_DebugDrawProc);
+
         if (NOT UCk_Utils_Crowd_DebugSettings_UE::Get_DrawSeparation())
         { return; }
 

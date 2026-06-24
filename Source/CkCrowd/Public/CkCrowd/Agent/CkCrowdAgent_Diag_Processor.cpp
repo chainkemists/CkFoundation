@@ -1,6 +1,7 @@
 #include "CkCrowdAgent_Diag_Processor.h"
 
 #include "CkCrowd/Agent/CkCrowdAgent_Utils.h"
+#include "CkCrowd/CkCrowd_Stats.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
@@ -11,6 +12,10 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_DiagRecorder);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Crowd::DiagRecorder"), STAT_CkCrowd_DiagRecorderProc, STATGROUP_CkCrowd);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -49,6 +54,8 @@ namespace ck
             FFragment_CrowdAgent_DiagRecorder& InRecorder)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkCrowd_DiagRecorderProc);
+
         const auto Dt = static_cast<float>(InDeltaT.Get_Seconds());
         InRecorder._ElapsedSec += Dt;
         InRecorder._SecsSinceLastSample += Dt;

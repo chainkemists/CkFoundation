@@ -1,6 +1,7 @@
 #include "CkGeometryCollection_Processor.h"
 
 #include "CkChaos/CkChaos_Log.h"
+#include "CkChaos/CkChaos_Stats.h"
 #include "CkChaos/GeometryCollection/CkGeometryCollection_Utils.h"
 #include "CkChaos/Settings/CkChaos_Settings.h"
 #include "CkCore/Algorithms/CkAlgorithms.h"
@@ -19,6 +20,10 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_GeometryCollection_CrumbleNonActiveClusters
 
 // --------------------------------------------------------------------------------------------------------------------
 
+DECLARE_CYCLE_STAT(TEXT("Chaos::RadialShellFilter"), STAT_CkChaos_RadialShellFilter, STATGROUP_CkChaos);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck_geometry_collection
 {
     auto
@@ -29,6 +34,8 @@ namespace ck_geometry_collection
         const float InRadiusMax)
     -> decltype(Proxy->GetUnorderedParticles_Internal())
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkChaos_RadialShellFilter);
+
         using ClusterHandleType = FGeometryCollectionPhysicsProxy::FClusterHandle;
 
         // TODO: Do we need to call `_External` for external strains?

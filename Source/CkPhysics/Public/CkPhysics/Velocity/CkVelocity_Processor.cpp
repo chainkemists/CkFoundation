@@ -8,8 +8,15 @@
 #include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "CkPhysics/CkPhysics_Stats.h"
 #include "CkPhysics/PredictedVelocity/CkPredictedVelocity_Utils.h"
 #include "CkPhysics/Velocity/CkVelocity_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Physics::BulkVelocity Setup Scan"), STAT_CkPhysics_BulkVelocitySetupScan, STATGROUP_CkPhysics);
+DECLARE_CYCLE_STAT(TEXT("Physics::BulkVelocity AddTargets Scan"), STAT_CkPhysics_BulkVelocityAddTargetsScan, STATGROUP_CkPhysics);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Physics BulkVelocity Targets Matched"), STAT_CkPhysics_BulkVelocityTargetsMatched, STATGROUP_CkPhysics);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -181,20 +188,26 @@ namespace ck
     {
         const auto& TargetVelocityChannels = InParams.Get_Params().Get_TargetChannels();
 
-        InHandle.View<FFragment_RecordOfVelocityChannels>().ForEach(
-        [&](FCk_Entity InEntity, const FFragment_RecordOfVelocityChannels& InVelocityChannels)
         {
-            const auto& TargetEntity = MakeHandle(InEntity, InHandle);
+            SCOPE_CYCLE_COUNTER(STAT_CkPhysics_BulkVelocitySetupScan);
 
-            if (NOT UCk_Utils_VelocityChannel_UE::Get_IsAffectedByAnyOtherChannel(TargetEntity, TargetVelocityChannels))
-            { return; }
+            InHandle.View<FFragment_RecordOfVelocityChannels>().ForEach(
+            [&](FCk_Entity InEntity, const FFragment_RecordOfVelocityChannels& InVelocityChannels)
+            {
+                const auto& TargetEntity = MakeHandle(InEntity, InHandle);
 
-            UCk_Utils_BulkVelocityModifier_UE::DoRequest_AddTarget
-            (
-                InHandle,
-                FCk_Request_BulkVelocityModifier_AddTarget{TargetEntity}
-            );
-        });
+                if (NOT UCk_Utils_VelocityChannel_UE::Get_IsAffectedByAnyOtherChannel(TargetEntity, TargetVelocityChannels))
+                { return; }
+
+                INC_DWORD_STAT(STAT_CkPhysics_BulkVelocityTargetsMatched);
+
+                UCk_Utils_BulkVelocityModifier_UE::DoRequest_AddTarget
+                (
+                    InHandle,
+                    FCk_Request_BulkVelocityModifier_AddTarget{TargetEntity}
+                );
+            });
+        }
 
         InHandle.Remove<MarkedDirtyBy>();
     }
@@ -210,11 +223,15 @@ namespace ck
             const FFragment_RecordOfVelocityChannels& InVelocityChannels) const
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkPhysics_BulkVelocityAddTargetsScan);
+
         InHandle.View<FFragment_BulkVelocityModifier_Params, FTag_BulkVelocityModifier_GlobalScope>().ForEach(
         [&](FCk_Entity InModifierEntity, const FFragment_BulkVelocityModifier_Params& InMultiTargetVelocityModifierParams)
         {
             if (NOT UCk_Utils_VelocityChannel_UE::Get_IsAffectedByAnyOtherChannel(InHandle, InMultiTargetVelocityModifierParams.Get_Params().Get_TargetChannels()))
             { return; }
+
+            INC_DWORD_STAT(STAT_CkPhysics_BulkVelocityTargetsMatched);
 
             auto ModifierHandle = MakeHandle(InModifierEntity, InHandle);
             UCk_Utils_BulkVelocityModifier_UE::DoRequest_AddTarget

@@ -1,5 +1,7 @@
 #include "CkCrowdAgent_DrawNavStatus_Processor.h"
 
+#include "CkCrowd/CkCrowd_Stats.h"
+
 #include "CkNavigation/Nav/CkNav_Fragment_Data.h"
 
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
@@ -14,6 +16,10 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_DrawNavStatus);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Crowd::DrawNavStatus"), STAT_CkCrowd_DrawNavStatusProc, STATGROUP_CkCrowd);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -44,6 +50,8 @@ namespace ck
             const FFragment_Nav_PathResult& InPathResult)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkCrowd_DrawNavStatusProc);
+
         const auto Status = InPathResult.Get_Status();
         const auto bIsFailed  = Status == ECk_Nav_PathStatus::Failed;
         const auto bIsPending = Status == ECk_Nav_PathStatus::Pending;

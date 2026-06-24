@@ -139,7 +139,7 @@ namespace ck
         CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
             TEXT("EntityScript created: {}"), EntityScriptClassArchetype);
 
-        ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — Entity=[{}] Replication=[{}]"),
+        ck::ecs::VeryVerbose(TEXT("[REP_DEBUG] SpawnProcessor — Entity=[{}] Replication=[{}]"),
             NewEntity, NewEntityScript->Get_EffectiveReplication());
 
         // Net_Params is established upstream in UCk_Utils_EntityScript_UE::Add — every code
@@ -212,7 +212,7 @@ namespace ck
             }
 
             const auto HasOwningActor = UCk_Utils_OwningActor_UE::Has(NewEntity);
-            ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — HasOwningActor=[{}]"), HasOwningActor);
+            ck::ecs::VeryVerbose(TEXT("[REP_DEBUG] SpawnProcessor — HasOwningActor=[{}]"), HasOwningActor);
 
             if (HasOwningActor)
             {
@@ -222,7 +222,7 @@ namespace ck
                 const auto IsNetworkedAuthority =
                     World->IsNetMode(NM_DedicatedServer) || World->IsNetMode(NM_ListenServer);
 
-                ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — WithActor path, IsNetworkedAuthority=[{}]"),
+                ck::ecs::VeryVerbose(TEXT("[REP_DEBUG] SpawnProcessor — WithActor path, IsNetworkedAuthority=[{}]"),
                     IsNetworkedAuthority);
 
                 // Only enqueue replication on a networked authority. In NM_Standalone there
@@ -238,7 +238,7 @@ namespace ck
             {
                 auto ReplicatedOwner = InRequest.Get_Owner();
                 const auto IsHost = UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(ReplicatedOwner);
-                ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — Non-WithActor path, Owner=[{}] IsHost=[{}]"),
+                ck::ecs::VeryVerbose(TEXT("[REP_DEBUG] SpawnProcessor — Non-WithActor path, Owner=[{}] IsHost=[{}]"),
                     ReplicatedOwner, IsHost);
 
                 if (IsHost)
@@ -248,7 +248,7 @@ namespace ck
                 }
                 else
                 {
-                    ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — SKIPPED replication request (owner is not host)"));
+                    ck::ecs::VeryVerbose(TEXT("[REP_DEBUG] SpawnProcessor — SKIPPED replication request (owner is not host)"));
                 }
             }
         }
@@ -304,7 +304,7 @@ namespace ck
         auto ReplicatedOwner = InRequest.Get_Owner();
         const auto IsSelfOwned = ReplicatedOwner == InHandle;
 
-        ck::ecs::Display(TEXT("[REP_DEBUG] ReplicateProcessor — Handle=[{}] Owner=[{}] IsSelfOwned=[{}]"),
+        ck::ecs::VeryVerbose(TEXT("[REP_DEBUG] ReplicateProcessor — Handle=[{}] Owner=[{}] IsSelfOwned=[{}]"),
             InHandle, ReplicatedOwner, IsSelfOwned);
 
         // Defer (retry next frame, KEEP the dirty marker) until the ReplicationDriver exists. Entities that acquire
@@ -312,14 +312,14 @@ namespace ck
         // request lands. This retry bookkeeping is processor-specific, so it stays here, not in the shared helper.
         if (NOT InHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>())
         {
-            ck::ecs::Display(TEXT("[REP_DEBUG] ReplicateProcessor — Handle [{}] does NOT have ReplicationDriver yet, deferring"), InHandle);
+            ck::ecs::VeryVerbose(TEXT("[REP_DEBUG] ReplicateProcessor — Handle [{}] does NOT have ReplicationDriver yet, deferring"), InHandle);
             return;
         }
 
         // NOTE: Copy on purpose otherwise the data doesn't make its way over correctly
         const auto SpawnParamsCopy = InRequest.Get_SpawnParams();
 
-        ck::ecs::Display(TEXT("[REP_DEBUG] ReplicateProcessor — Calling Request_ReplicateEntityScript for [{}] with owner [{}]"), InHandle, ReplicatedOwner);
+        ck::ecs::VeryVerbose(TEXT("[REP_DEBUG] ReplicateProcessor — Calling Request_ReplicateEntityScript for [{}] with owner [{}]"), InHandle, ReplicatedOwner);
 
         // Shared establishment path — also used by the snapshot respawn re-replicate (FProcessor_ActorRespawn) so the
         // two cannot drift (the validation, dependent-count accounting, Request_Replicate, and FireOnDependent tag all

@@ -8,6 +8,8 @@
 
 #include "CkUI/WorldSpaceWidget/CkWorldSpaceWidget_Fragment.h"
 
+#include "CkUI/CkUI_Stats.h"
+
 #include "CollisionQueryParams.h"
 
 #include "Camera/PlayerCameraManager.h"
@@ -21,6 +23,11 @@
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_WorldSpaceWidget_UE, FCk_Handle_WorldSpaceWidget,
     ck::FFragment_WorldSpaceWidget_Current, ck::FFragment_WorldSpaceWidget_Params);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("UI::WorldSpaceWidget OcclusionTrace"), STAT_CkUI_WSWidget_OcclusionTrace, STATGROUP_CkUI);
+DECLARE_DWORD_COUNTER_STAT(TEXT("UI Occlusion Traces"), STAT_CkUI_OcclusionTraces, STATGROUP_CkUI);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -306,6 +313,9 @@ auto
         const FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle)
     -> bool
 {
+    SCOPE_CYCLE_COUNTER(STAT_CkUI_WSWidget_OcclusionTrace);
+    INC_DWORD_STAT(STAT_CkUI_OcclusionTraces);
+
     if (ck::Is_NOT_Valid(InWorldSpaceWidgetHandle))
     { return false; }
 

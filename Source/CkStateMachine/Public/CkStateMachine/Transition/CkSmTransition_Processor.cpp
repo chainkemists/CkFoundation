@@ -1,5 +1,6 @@
 #include "CkSmTransition_Processor.h"
 
+#include "CkStateMachine/CkStateMachine_Stats.h"
 #include "CkStateMachine/Condition/CkSmCondition_Utils.h"
 #include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
 #include "CkStateMachine/State/CkSmState_Fragment.h"
@@ -17,6 +18,11 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_SmTransition_Exit);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+DECLARE_CYCLE_STAT(TEXT("SmTransition::Exit"), STAT_SmTransition_Exit, STATGROUP_CkStateMachine);
+DECLARE_CYCLE_STAT(TEXT("SmTransition::Evaluate"), STAT_SmTransition_Evaluate, STATGROUP_CkStateMachine);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     auto
@@ -26,6 +32,8 @@ namespace ck
             HandleType InHandle)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_SmTransition_Exit);
+
         UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::ForEach_Entry(InHandle,
         [](FCk_Handle_SmCondition InCondition)
         {
@@ -43,6 +51,8 @@ namespace ck
             FFragment_SmTransition_Current& InCurrent)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_SmTransition_Evaluate);
+
         InHandle.Remove<MarkedDirtyBy>();
 
         // Authority gating (spec §5/§6): condition evaluation drives transitions. Non-authority

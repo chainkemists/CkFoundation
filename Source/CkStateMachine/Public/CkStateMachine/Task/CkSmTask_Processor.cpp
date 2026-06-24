@@ -1,5 +1,6 @@
 #include "CkSmTask_Processor.h"
 
+#include "CkStateMachine/CkStateMachine_Stats.h"
 #include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
 #include "CkStateMachine/Task/CkSmTask_Utils.h"
 #include "CkStateMachine/Task/EntityScripts/CkSmTask_EntityScript.h"
@@ -12,6 +13,14 @@
 CK_REGISTER_PROCESSOR(ck::FProcessor_SmTask_Tick);
 CK_REGISTER_PROCESSOR(ck::FProcessor_SmTask_FireFinishedSignal);
 CK_REGISTER_PROCESSOR(ck::FProcessor_SmTask_Exit);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("SmTask::Tick (proc)"), STAT_SmTask_TickProc, STATGROUP_CkStateMachine);
+DECLARE_CYCLE_STAT(TEXT("SmTask::Exit"), STAT_SmTask_Exit, STATGROUP_CkStateMachine);
+DECLARE_CYCLE_STAT(TEXT("SmTask::FireFinishedSignal"), STAT_SmTask_FireFinishedSignal, STATGROUP_CkStateMachine);
+DECLARE_CYCLE_STAT(TEXT("SmTask::Tick (user)"), STAT_SmTask_Tick, STATGROUP_CkStateMachine);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Sm Tasks Ticked"), STAT_SmTasksTicked, STATGROUP_CkStateMachine);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -30,6 +39,8 @@ namespace ck
             const FFragment_EntityScript_Current& InScriptFragment)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_SmTask_TickProc);
+
         auto* Script = InScriptFragment.Get_Script().Get();
 
         CK_ENSURE_IF_NOT(ck::IsValid(Script),
@@ -57,7 +68,13 @@ namespace ck
                 != ECk_Sm_AuthorityModel::OwningClientAuthoritative)
         { return; }
 
-        const auto Result = TaskScript->Tick(InHandle, InDeltaT, NetContext);
+        INC_DWORD_STAT(STAT_SmTasksTicked);
+
+        const auto Result = [&]
+        {
+            SCOPE_CYCLE_COUNTER(STAT_SmTask_Tick);
+            return TaskScript->Tick(InHandle, InDeltaT, NetContext);
+        }(); // immediately-invoked so the scope times only the user Tick, not Request_UpdateTaskResult
 
         UCk_Utils_SmTask_UE::Request_UpdateTaskResult(InHandle, Result);
     }
@@ -74,6 +91,8 @@ namespace ck
             const FFragment_EntityScript_Current& InScriptFragment)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_SmTask_Exit);
+
         auto* Script = Cast<UCk_SmTask_EntityScript>(InScriptFragment.Get_Script().Get());
         if (ck::Is_NOT_Valid(Script))
         { return; }
@@ -96,6 +115,8 @@ namespace ck
             const FFragment_SmTask_Current& InCurrent)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_SmTask_FireFinishedSignal);
+
         InHandle.Remove<FTag_SmTask_ResultDirty>();
 
         UUtils_Signal_OnSmTaskFinished::Broadcast(InHandle,

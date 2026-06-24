@@ -4,6 +4,7 @@
 #include "CkInventory/Inventory/CkInventory_Utils.h"
 #include "CkInventory/Inventory/Spatial/CkInventory_Spatial_RequestTraits.h"
 #include "CkInventory/Item/CkItem_Fragment.h"
+#include "CkInventory/CkInventory_Stats.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Validation/CkIsValid.h"
@@ -17,6 +18,12 @@
 #include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Utils.h"
 #include "CkGrid/2dGridSystem/Cell/Ck2dGridCell_Utils.h"
 #include "CkGrid/CkGrid_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Inventory::FirstAvailablePlacement"), STAT_Inventory_FirstAvailablePlacement, STATGROUP_CkInventory);
+DECLARE_CYCLE_STAT(TEXT("Inventory::CanPlaceItemAt"), STAT_Inventory_CanPlaceItemAt, STATGROUP_CkInventory);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Inventory Cells Tested"), STAT_Inventory_CellsTested, STATGROUP_CkInventory);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -346,6 +353,8 @@ auto
         ECk_CardinalRotation InRotation)
     -> bool
 {
+    SCOPE_CYCLE_COUNTER(STAT_Inventory_CanPlaceItemAt);
+
     if (NOT UCk_Utils_Inventory_UE::Get_IsSpatial(InInventory))
     { return false; }
 
@@ -361,6 +370,8 @@ auto
 
     return ck::algo::NoneOf(RotatedCells, [&](const FIntPoint& CellOffset)
     {
+        INC_DWORD_STAT(STAT_Inventory_CellsTested);
+
         const auto& Coord = InCoordinate + CellOffset;
         const auto& CellHandle = UCk_Utils_2dGridSystem_UE::Get_CellAt(GridHandle, Coord);
         return ck::IsValid(ck::TUtils_InventorySlot_ItemRef::Get_StoredEntity(CellHandle));
@@ -406,6 +417,8 @@ auto
         const FCk_Handle_Item& InItem)
     -> FCk_SpatialPlacementResult
 {
+    SCOPE_CYCLE_COUNTER(STAT_Inventory_FirstAvailablePlacement);
+
     if (NOT UCk_Utils_Inventory_UE::Get_IsSpatial(InInventory))
     { return FCk_SpatialPlacementResult::Failed(); }
 

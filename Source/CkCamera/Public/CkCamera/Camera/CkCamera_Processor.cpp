@@ -1,6 +1,7 @@
 #include "CkCamera_Processor.h"
 
 #include "CkCamera/CkCamera_Log.h"
+#include "CkCamera/CkCamera_Stats.h"
 #include "CkCamera/Camera/CkCamera_Utils.h"
 #include "CkCamera/Camera/CameraLayer/CkCameraLayer_Fragment.h"
 #include "CkCamera/Camera/CameraLayer/CkCameraLayer_Utils.h"
@@ -24,6 +25,10 @@
 CK_REGISTER_PROCESSOR(ck::FProcessor_Camera_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_CameraLayer_Lifecycle);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Camera_UpdatePOV);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Camera::PovRun"), STAT_Camera_PovRun, STATGROUP_CkCamera);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -264,7 +269,10 @@ namespace ck
         Input._World                = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
         Input._TraceIgnoreActor     = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
 
-        ck::camera::FPov::Run(Profile, Input, InCurrent._PovState);
+        {
+            SCOPE_CYCLE_COUNTER(STAT_Camera_PovRun);
+            ck::camera::FPov::Run(Profile, Input, InCurrent._PovState);
+        }
 
         // The orientation intention is a per-frame DELTA — consume it once applied. Input (OnLook) only fires while
         // the mouse is moving, so without this the last delta would keep being re-applied every frame after the mouse

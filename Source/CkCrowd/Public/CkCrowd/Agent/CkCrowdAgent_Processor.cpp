@@ -1,6 +1,7 @@
 #include "CkCrowdAgent_Processor.h"
 
 #include "CkCrowd/CkCrowd_Log.h"
+#include "CkCrowd/CkCrowd_Stats.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
@@ -18,6 +19,10 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_Setup);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+DECLARE_CYCLE_STAT(TEXT("Crowd::Setup"), STAT_CkCrowd_SetupProc, STATGROUP_CkCrowd);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     auto
@@ -30,6 +35,8 @@ namespace ck
             FFragment_CrowdAgent_ProbeRef& InProbeRef) const
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkCrowd_SetupProc);
+
         const auto Radius = InParams.Get_Radius();
         const auto Height = InParams.Get_Height();
         const auto HalfHeight = Height * 0.5f;

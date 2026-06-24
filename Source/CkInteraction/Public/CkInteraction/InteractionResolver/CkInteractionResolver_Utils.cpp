@@ -6,10 +6,17 @@
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
 #include "CkInteraction/CkInteraction_Log.h"
+#include "CkInteraction/CkInteraction_Stats.h"
 
 #include "CkInteraction/InteractTarget/CkInteractTarget_Utils.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Interaction::ResolveTargets"), STAT_Interaction_ResolveTargets, STATGROUP_CkInteraction);
+DECLARE_CYCLE_STAT(TEXT("Interaction::SortByDistance"), STAT_Interaction_SortByDistance, STATGROUP_CkInteraction);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Interaction CanInteractWith Calls"), STAT_Interaction_CanInteractWithCalls, STATGROUP_CkInteraction);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -148,6 +155,8 @@ auto
         const TArray<FCk_Handle_InteractTarget>& InAvailableTargets)
     -> TArray<FCk_Handle_InteractTarget>
 {
+    SCOPE_CYCLE_COUNTER(STAT_Interaction_ResolveTargets);
+
     CK_ENSURE_IF_NOT(ck::IsValid(InResolver),
         TEXT("Cannot resolve targets for invalid resolver handle"))
     { return {}; }
@@ -196,6 +205,7 @@ auto
             // Allow targets that already have an active interaction to remain in the resolved set.
             // Without this, re-evaluation triggered by an unrelated intent stopping would drop
             // targets with active interactions, causing the bridge code to cancel those interactions.
+            INC_DWORD_STAT(STAT_Interaction_CanInteractWithCalls);
             const auto CanInteractResult = UCk_Utils_InteractTarget_UE::Get_CanInteractWith(Target, InResolver);
             if (CanInteractResult != ECk_CanInteractWithResult::CanInteractWith &&
                 CanInteractResult != ECk_CanInteractWithResult::AlreadyExists &&
@@ -226,6 +236,8 @@ auto
         TArray<FCk_Handle_InteractTarget>& InOutTargets)
     -> void
 {
+    SCOPE_CYCLE_COUNTER(STAT_Interaction_SortByDistance);
+
     const auto SourceHandle = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InResolver);
 
     if (NOT UCk_Utils_Transform_UE::Has(SourceHandle))

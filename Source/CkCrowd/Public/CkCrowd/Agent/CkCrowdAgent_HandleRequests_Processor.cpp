@@ -1,6 +1,7 @@
 #include "CkCrowdAgent_HandleRequests_Processor.h"
 
 #include "CkCrowd/CkCrowd_Log.h"
+#include "CkCrowd/CkCrowd_Stats.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
@@ -11,6 +12,10 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_HandleRequests);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Crowd::HandleRequests"), STAT_CkCrowd_HandleRequestsProc, STATGROUP_CkCrowd);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -27,6 +32,8 @@ namespace ck
             FFragment_CrowdAgent_MoveRequests& InRequests) const
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkCrowd_HandleRequestsProc);
+
         InHandle.CopyAndRemove(InRequests, [&](const auto& InSnapshot)
         {
             algo::ForEachRequest(InSnapshot._Requests, ck::Visitor(

@@ -10,6 +10,11 @@
 #include "CkInteraction/Interaction/CkInteraction_EntityScript.h"
 #include "CkInteraction/Interaction/CkInteraction_Fragment.h"
 #include "CkInteraction/CkInteraction_Log.h"
+#include "CkInteraction/CkInteraction_Stats.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Interaction::TryGet"), STAT_Interaction_Interaction_TryGet, STATGROUP_CkInteraction);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -119,7 +124,7 @@ auto
         FGameplayTag InInteractionChannel)
     -> FCk_Handle_Interaction
 {
-    QUICK_SCOPE_CYCLE_COUNTER(TryGet)
+    SCOPE_CYCLE_COUNTER(STAT_Interaction_Interaction_TryGet);
     return RecordOfInteractions_Utils::Get_ValidEntry_If(InInteractionOwner,
     [&](const FCk_Handle_Interaction& InHandle) -> bool
     {

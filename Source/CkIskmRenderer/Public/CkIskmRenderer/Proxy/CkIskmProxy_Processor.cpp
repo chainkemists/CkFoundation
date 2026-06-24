@@ -11,11 +11,20 @@
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Utils.h"
 #include "CkIskmRenderer/CkIskmSubsystem.h"
 #include "CkIskmRenderer/CkIskmRenderer_Log.h"
+#include "CkIskmRenderer/CkIskmRenderer_Stats.h"
 #include "CkIskmRenderer/Notify/CkIskmNotify_AnimInstance.h"
 
 // Phase K: ck::Is_NOT_Valid on UPhysicsAsset* needs the full class definition
 // for the validation trait's __is_base_of intrinsic.
 #include "PhysicsEngine/PhysicsAsset.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Iskm::UpdateTransform"),    STAT_CkIskm_UpdateTransform,    STATGROUP_CkIskmRenderer);
+DECLARE_CYCLE_STAT(TEXT("Iskm::SocketFollowerSync"), STAT_CkIskm_SocketFollowerSync, STATGROUP_CkIskmRenderer);
+DECLARE_CYCLE_STAT(TEXT("Iskm::EmitFinishedEvents"), STAT_CkIskm_EmitFinishedEvents, STATGROUP_CkIskmRenderer);
+
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
@@ -235,6 +244,8 @@ namespace ck
             HandleType InHandle,
             FFragment_IskmProxy_Current& InCurrent) const -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkIskm_UpdateTransform);
+
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
             TEXT("IskmProxy [{}]: BaseSKMC missing in UpdateTransform processor"),
@@ -260,6 +271,8 @@ namespace ck
             const FFragment_IskmProxy_SocketFollower& InFollower) const
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkIskm_SocketFollowerSync);
+
         auto Leader = InFollower.Get_Leader();
 
         if (ck::Is_NOT_Valid(Leader))
@@ -298,6 +311,8 @@ namespace ck
             FFragment_IskmProxy_Current& InCurrent,
             FFragment_IskmProxy_AnimState& InAnimState) const -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkIskm_EmitFinishedEvents);
+
         if (InAnimState._LastFinishedDispatched) { return; }
 
         // Intentional silent return: no current sequence means there's no

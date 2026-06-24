@@ -1,6 +1,7 @@
 #include "CkCrowdAgent_DiagDraw_Processor.h"
 
 #include "CkCrowd/Agent/CkCrowdAgent_Utils.h"
+#include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Settings/CkCrowd_DebugSettings.h"
 
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
@@ -15,6 +16,10 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_DiagDrawBreadcrumb);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Crowd::DiagDrawBreadcrumb"), STAT_CkCrowd_DiagDrawBreadcrumbProc, STATGROUP_CkCrowd);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -56,6 +61,8 @@ namespace ck
             const FFragment_CrowdAgent_DiagRecorder& InRecorder)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkCrowd_DiagDrawBreadcrumbProc);
+
         const auto bDrawAll = UCk_Utils_Crowd_DebugSettings_UE::Get_DrawBreadcrumbs();
         const auto SelectedHash = CVarSelectedEntityId.GetValueOnGameThread();
         const auto bIsSelected = SelectedHash >= 0

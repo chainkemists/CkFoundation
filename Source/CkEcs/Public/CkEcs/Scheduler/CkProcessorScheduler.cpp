@@ -7,13 +7,47 @@
 
 #if !UE_BUILD_SHIPPING
 #include "HAL/PlatformTime.h"
+#include "HAL/IConsoleManager.h"
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
 
 #if !UE_BUILD_SHIPPING
 int32 ck::GDebug_LastProcessedEntityCount = 0;
+
+// Gate for the Scheduler Debugger's per-processor wall-clock timing. That timing costs TWO
+// FPlatformTime::Seconds() (QueryPerformanceCounter) calls per processor per frame and is REDUNDANT
+// with the stat system (STAT_Tick already times every processor). On machines with slow QPC it is the
+// dominant unattributed cost inside Scheduler::Dispatch (the "gap" between processor scopes). Default on
+// to preserve the debugger; set `ck.Scheduler.DebugTiming 0` to eliminate it while profiling.
+static TAutoConsoleVariable<bool> CVar_SchedulerDebugTiming(
+    TEXT("ck.Scheduler.DebugTiming"),
+    true,
+    TEXT("Collect per-processor wall-clock timings for the Scheduler Debugger (default on). Set 0 to skip ")
+    TEXT("the 2x QueryPerformanceCounter-per-processor cost that otherwise shows as Scheduler::Dispatch self-time."),
+    ECVF_Default);
 #endif
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Scheduler orchestration stats. The per-processor STAT_Tick / STAT_ForEachEntity scopes
+// (STATGROUP_CkProcessors) nest INSIDE these, so the self-time of each scope below is exactly the
+// "gap" work the scheduler does between/around processors: the dispatch loop, the dev-build per-processor
+// timing capture, the pump passes, and the per-pump dirty-marker rescans.
+DECLARE_STATS_GROUP(TEXT("CkScheduler"), STATGROUP_CkScheduler, STATCAT_Advanced);
+
+DECLARE_CYCLE_STAT(TEXT("Scheduler::ResetPumpVersions"), STAT_Scheduler_ResetPumpVersions, STATGROUP_CkScheduler);
+DECLARE_CYCLE_STAT(TEXT("Scheduler::MainPass"),          STAT_Scheduler_MainPass,          STATGROUP_CkScheduler);
+DECLARE_CYCLE_STAT(TEXT("Scheduler::Dispatch"),          STAT_Scheduler_Dispatch,          STATGROUP_CkScheduler);
+DECLARE_CYCLE_STAT(TEXT("Scheduler::Pump"),              STAT_Scheduler_Pump,              STATGROUP_CkScheduler);
+DECLARE_CYCLE_STAT(TEXT("Scheduler::PumpDispatch"),      STAT_Scheduler_PumpDispatch,      STATGROUP_CkScheduler);
+DECLARE_CYCLE_STAT(TEXT("Scheduler::PumpDirtyCheck"),    STAT_Scheduler_PumpDirtyCheck,    STATGROUP_CkScheduler);
+
+// Dev-only: the Scheduler Debugger's per-processor QueryPerformanceCounter timing. Carved out of
+// Scheduler::Dispatch self-time so you can SEE how much of the inter-processor "gap" is this redundant
+// dev measurement (eliminable via `ck.Scheduler.DebugTiming 0`) vs. the inherent dispatch-loop cost
+// (node fetch + entt::poly call) that remains as Dispatch self-time. Zero cost when DebugTiming is off.
+DECLARE_CYCLE_STAT(TEXT("Scheduler::DebugRecord"),       STAT_Scheduler_DebugRecord,       STATGROUP_CkScheduler);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -37,6 +71,7 @@ auto
     _IsTickInProgress = true;
 
 #if !UE_BUILD_SHIPPING
+    const auto DebugTimingEnabled = CVar_SchedulerDebugTiming.GetValueOnGameThread();
     DoDebugBeginFrame();
     const auto FrameStartTime = FPlatformTime::Seconds();
 #endif
@@ -44,40 +79,69 @@ auto
     // Reset per-node pump version cache for this frame. Only meaningful when the short-circuit is
     // enabled (see _UseDirtyMarkerVersionShortCircuit, cached at construction), but the reset is
     // cheap enough that there's no point branching on the flag here.
-    for (auto& Node : _Partition._Nodes)
     {
-        if (Node._HasDirtyMarker)
+        SCOPE_CYCLE_COUNTER(STAT_Scheduler_ResetPumpVersions);
+        for (auto& Node : _Partition._Nodes)
         {
-            Node._LastSeenDirtyVersion = 0;
+            if (Node._HasDirtyMarker)
+            {
+                Node._LastSeenDirtyVersion = 0;
+            }
         }
     }
 
-    for (const auto NodeIndex : _Partition._ExecutionOrder)
+    // Main pass — every processor ticks once. Each processor's own STAT_Tick scope nests inside;
+    // STAT_Scheduler_MainPass self-time is the inter-processor dispatch + dev-build timing capture
+    // (the gaps between processor scopes on the scheduler track).
     {
-        auto& Node = _Partition._Nodes[NodeIndex];
-        if (Node._Instance.IsSet() and not Node._IsGhost)
+        SCOPE_CYCLE_COUNTER(STAT_Scheduler_MainPass);
+        for (const auto NodeIndex : _Partition._ExecutionOrder)
         {
+            // Per-node dispatch — covers EVERY node (incl. ghost/skipped ones that emit no processor box),
+            // so the inter-processor "gaps" on the scheduler track become labeled Dispatch self-time.
+            // In a dev build that self-time is dominated by the scheduler-debugger's own per-processor
+            // FPlatformTime timing below (redundant with STAT_Tick; compiled out in Test/Shipping).
+            SCOPE_CYCLE_COUNTER(STAT_Scheduler_Dispatch);
+
+            auto& Node = _Partition._Nodes[NodeIndex];
+            if (Node._Instance.IsSet() and not Node._IsGhost)
+            {
 #if !UE_BUILD_SHIPPING
-            const auto ProcessorStartTime = FPlatformTime::Seconds();
-            ck::GDebug_LastProcessedEntityCount = 0;
+                auto ProcessorStartTime = 0.0;
+                if (DebugTimingEnabled)
+                {
+                    SCOPE_CYCLE_COUNTER(STAT_Scheduler_DebugRecord);
+                    ProcessorStartTime = FPlatformTime::Seconds();
+                    ck::GDebug_LastProcessedEntityCount = 0;
+                }
 #endif
 
-            (*Node._Instance)->Tick(InDeltaTime);
+                (*Node._Instance)->Tick(InDeltaTime);
 
 #if !UE_BUILD_SHIPPING
-            const auto ProcessorElapsedMs = (FPlatformTime::Seconds() - ProcessorStartTime) * 1000.0;
-            DoDebugRecordProcessorTick(NodeIndex, ProcessorElapsedMs, ck::GDebug_LastProcessedEntityCount);
+                if (DebugTimingEnabled)
+                {
+                    SCOPE_CYCLE_COUNTER(STAT_Scheduler_DebugRecord);
+                    const auto ProcessorElapsedMs = (FPlatformTime::Seconds() - ProcessorStartTime) * 1000.0;
+                    DoDebugRecordProcessorTick(NodeIndex, ProcessorElapsedMs, ck::GDebug_LastProcessedEntityCount);
+                }
 #endif
+            }
         }
     }
 
-    _LastFramePumpCount = 0;
-    for (auto PumpIndex = 0; PumpIndex < _MaxPumpIterations; ++PumpIndex)
+    // Pump passes — drain cascading reactive work. Each processor's Pump scope nests inside;
+    // STAT_Scheduler_Pump self-time (minus STAT_Scheduler_PumpDirtyCheck) is the pump-loop overhead.
     {
-        const auto AnotherPumpNeeded = DoPump(InRegistry, PumpIndex);
-        if (NOT AnotherPumpNeeded)
-        { break; }
-        ++_LastFramePumpCount;
+        SCOPE_CYCLE_COUNTER(STAT_Scheduler_Pump);
+        _LastFramePumpCount = 0;
+        for (auto PumpIndex = 0; PumpIndex < _MaxPumpIterations; ++PumpIndex)
+        {
+            const auto AnotherPumpNeeded = DoPump(InRegistry, PumpIndex);
+            if (NOT AnotherPumpNeeded)
+            { break; }
+            ++_LastFramePumpCount;
+        }
     }
 
     constexpr auto WarnThreshold = 8;
@@ -120,6 +184,10 @@ auto
 {
     auto AnyProcessorTicked = false;
 
+#if !UE_BUILD_SHIPPING
+    const auto DebugTimingEnabled = CVar_SchedulerDebugTiming.GetValueOnGameThread();
+#endif
+
     for (const auto NodeIndex : _Partition._ExecutionOrder)
     {
         auto& Node = _Partition._Nodes[NodeIndex];
@@ -149,7 +217,12 @@ auto
             if (VersionBeforePump == Node._LastSeenDirtyVersion)
             { continue; }
 
-            if (NOT Node._IsDirtyChecker(InRegistry))
+            auto IsDirty = false;
+            {
+                SCOPE_CYCLE_COUNTER(STAT_Scheduler_PumpDirtyCheck);
+                IsDirty = Node._IsDirtyChecker(InRegistry);
+            }
+            if (NOT IsDirty)
             {
                 // Nothing dirty right now — remember the version so we don't scan again until
                 // another mutation happens.
@@ -160,23 +233,39 @@ auto
         else
         {
             // Legacy path — rescan every pump pass. Behavior is identical to pre-short-circuit.
-            if (NOT Node._IsDirtyChecker(InRegistry))
+            auto IsDirty = false;
+            {
+                SCOPE_CYCLE_COUNTER(STAT_Scheduler_PumpDirtyCheck);
+                IsDirty = Node._IsDirtyChecker(InRegistry);
+            }
+            if (NOT IsDirty)
             { continue; }
         }
 
         if (Node._Instance.IsSet() and not Node._IsGhost)
         {
+            SCOPE_CYCLE_COUNTER(STAT_Scheduler_PumpDispatch);
+
 #if !UE_BUILD_SHIPPING
-            const auto PumpStartTime = FPlatformTime::Seconds();
-            ck::GDebug_LastProcessedEntityCount = 0;
+            auto PumpStartTime = 0.0;
+            if (DebugTimingEnabled)
+            {
+                SCOPE_CYCLE_COUNTER(STAT_Scheduler_DebugRecord);
+                PumpStartTime = FPlatformTime::Seconds();
+                ck::GDebug_LastProcessedEntityCount = 0;
+            }
 #endif
 
             (*Node._Instance)->Pump();
             AnyProcessorTicked = true;
 
 #if !UE_BUILD_SHIPPING
-            const auto PumpElapsedMs = (FPlatformTime::Seconds() - PumpStartTime) * 1000.0;
-            DoDebugRecordProcessorPump(NodeIndex, InPumpIndex, PumpElapsedMs, ck::GDebug_LastProcessedEntityCount);
+            if (DebugTimingEnabled)
+            {
+                SCOPE_CYCLE_COUNTER(STAT_Scheduler_DebugRecord);
+                const auto PumpElapsedMs = (FPlatformTime::Seconds() - PumpStartTime) * 1000.0;
+                DoDebugRecordProcessorPump(NodeIndex, InPumpIndex, PumpElapsedMs, ck::GDebug_LastProcessedEntityCount);
+            }
 #endif
 
             if (_UseDirtyMarkerVersionShortCircuit)

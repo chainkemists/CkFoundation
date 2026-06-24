@@ -2,6 +2,7 @@
 
 #include "CkGoap/CkGoap_Fragment.h"
 #include "CkGoap/CkGoap_Log.h"
+#include "CkGoap/CkGoap_Stats.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
@@ -10,6 +11,10 @@
 // ====================================================================================================================
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_WorldState_HandleRequests);
+
+// ====================================================================================================================
+
+DECLARE_CYCLE_STAT(TEXT("GoapWorldState::HandleRequests"), STAT_Goap_WorldState_HandleRequests, STATGROUP_CkGoap);
 
 // ====================================================================================================================
 
@@ -31,6 +36,8 @@ auto
 		const FFragment_Goap_WorldState_Requests& InRequests) const
 	-> void
 {
+	SCOPE_CYCLE_COUNTER(STAT_Goap_WorldState_HandleRequests);
+
 	InHandle.CopyAndRemove(InRequests, [&](FFragment_Goap_WorldState_Requests& InRequestsCopy)
 	{
 		algo::ForEachRequest(InRequestsCopy._Requests, ck::Visitor([&](const auto& InTypedRequest)

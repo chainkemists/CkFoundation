@@ -5,7 +5,13 @@
 #include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkOverlapBody/CkOverlapBody_Log.h"
+#include "CkOverlapBody/CkOverlapBody_Stats.h"
 #include "CkOverlapBody/MarkerAndSensor/CkMarkerAndSensor_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("OverlapBody::SortOverlapsByDistance"), STAT_CkOverlapBody_SortMarkerOverlapsByDistance, STATGROUP_CkOverlapBody);
+DECLARE_CYCLE_STAT(TEXT("OverlapBody::SortOverlapsByDistance"), STAT_CkOverlapBody_SortNonMarkerOverlapsByDistance, STATGROUP_CkOverlapBody);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -315,6 +321,8 @@ auto
         ECk_DistanceSortingPolicy InSortingPolicy)
     -> void
 {
+    SCOPE_CYCLE_COUNTER(STAT_CkOverlapBody_SortMarkerOverlapsByDistance);
+
     ck::algo::Sort(InMarkerOverlaps, [&](const FCk_Sensor_MarkerOverlapInfo& InA, const FCk_Sensor_MarkerOverlapInfo& InB)
     {
         constexpr auto IncludePendingKill = true;
@@ -355,6 +363,8 @@ auto
         ECk_DistanceSortingPolicy InSortingPolicy)
     -> void
 {
+    SCOPE_CYCLE_COUNTER(STAT_CkOverlapBody_SortNonMarkerOverlapsByDistance);
+
     ck::algo::Sort(InMarkerOverlaps, [&](const FCk_Sensor_NonMarkerOverlapInfo& InA, const FCk_Sensor_NonMarkerOverlapInfo& InB)
     {
         constexpr auto IncludePendingKill = true;

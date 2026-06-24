@@ -1,6 +1,7 @@
 #include "CkNav_Algorithm.h"
 
 #include "CkNavigation/CkNavigation_Log.h"
+#include "CkNavigation/CkNavigation_Stats.h"
 
 #include "CkCore/Validation/CkIsValid.h"
 
@@ -8,6 +9,15 @@
 #include <NavMesh/RecastNavMesh.h>
 #include <NavigationData.h>
 #include <NavFilters/NavigationQueryFilter.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Nav::FindPathSync"),     STAT_Nav_FindPathSync,     STATGROUP_CkNav);
+DECLARE_CYCLE_STAT(TEXT("Nav::ProjectStartEnd"),  STAT_Nav_ProjectStartEnd,  STATGROUP_CkNav);
+DECLARE_CYCLE_STAT(TEXT("Nav::RecastFindPath"),   STAT_Nav_RecastFindPath,   STATGROUP_CkNav);
+
+DECLARE_DWORD_COUNTER_STAT(TEXT("Nav Path Queries"),       STAT_Nav_PathQueries,       STATGROUP_CkNav);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Nav Waypoints Extracted"), STAT_Nav_WaypointsExtracted, STATGROUP_CkNav);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -25,6 +35,9 @@ auto
         TSubclassOf<UNavigationQueryFilter> InFilterClass)
         -> bool
 {
+    SCOPE_CYCLE_COUNTER(STAT_Nav_FindPathSync);
+    INC_DWORD_STAT(STAT_Nav_PathQueries);
+
     // Reset and seed per-query diagnostics. Captured for every attempt (success or failure)
     // so the debugger can show a complete picture of the last path query without round-
     // tripping through logs.
@@ -45,8 +58,13 @@ auto
     const auto ProjectionExtent = FVector{InProjectionHalfExtent};
     auto StartProj = FNavLocation{};
     auto EndProj   = FNavLocation{};
-    const auto bStartProjected = InNavSys.ProjectPointToNavigation(InStart, StartProj, ProjectionExtent, &InNavData);
-    const auto bEndProjected   = InNavSys.ProjectPointToNavigation(InEnd,   EndProj,   ProjectionExtent, &InNavData);
+    auto bStartProjected = false;
+    auto bEndProjected   = false;
+    {
+        SCOPE_CYCLE_COUNTER(STAT_Nav_ProjectStartEnd);
+        bStartProjected = InNavSys.ProjectPointToNavigation(InStart, StartProj, ProjectionExtent, &InNavData);
+        bEndProjected   = InNavSys.ProjectPointToNavigation(InEnd,   EndProj,   ProjectionExtent, &InNavData);
+    }
 
     Diag._StartProjected     = bStartProjected;
     Diag._EndProjected       = bEndProjected;
@@ -132,7 +150,11 @@ auto
 
     // ARecastNavMesh::FindPath skips the NavSys agent-dispatch step. The
     // Query.NavAgentProperties was populated from InNavData.GetConfig() by the ctor.
-    const auto Result = ARecastNavMesh::FindPath(Query.NavAgentProperties, Query);
+    auto Result = FPathFindingResult{};
+    {
+        SCOPE_CYCLE_COUNTER(STAT_Nav_RecastFindPath);
+        Result = ARecastNavMesh::FindPath(Query.NavAgentProperties, Query);
+    }
 
     ExtractWaypoints(Result, InStart, InAgentRadiusForFirstSkip, OutResult);
     FinishWithDuration();
@@ -198,6 +220,7 @@ auto
     }
 
     Diag._ExtractedWaypointCount = NewWaypoints.Num();
+    INC_DWORD_STAT_BY(STAT_Nav_WaypointsExtracted, NewWaypoints.Num());
 
     if (NewWaypoints.IsEmpty())
     {

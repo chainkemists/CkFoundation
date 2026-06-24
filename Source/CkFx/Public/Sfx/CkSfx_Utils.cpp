@@ -3,10 +3,18 @@
 #include "Sfx/CkSfx_Fragment.h"
 
 #include "CkFx/CkFx_Log.h"
+#include "CkFx/CkFx_Stats.h"
 
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
 #include <Kismet/GameplayStatics.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Fx::SfxSpawnAttached"),   STAT_Fx_SfxSpawnAttached,   STATGROUP_CkFx);
+DECLARE_CYCLE_STAT(TEXT("Fx::SfxSpawnAtLocation"), STAT_Fx_SfxSpawnAtLocation, STATGROUP_CkFx);
+
+// "Fx Effects Spawned" counter is the single shared stat declared EXTERN in CkFx_Stats.h (defined in CkVfx_Utils.cpp).
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -118,6 +126,8 @@ auto
         const FCk_Request_Sfx_PlayAttached& InRequest)
     -> FCk_Handle_Sfx
 {
+    SCOPE_CYCLE_COUNTER(STAT_Fx_SfxSpawnAttached);
+
     CK_CALLSTACK_RECORD(ck::FFragment_Sfx_Requests, InSfxHandle);
 
     // TODO: Move this to processor
@@ -146,6 +156,8 @@ auto
         Params.Get_ConcurrencySettings()
     );
 
+    INC_DWORD_STAT(STAT_Fx_EffectsSpawned);
+
     return InSfxHandle;
 }
 
@@ -156,6 +168,8 @@ auto
         const FCk_Request_Sfx_PlayAtLocation& InRequest)
     -> FCk_Handle_Sfx
 {
+    SCOPE_CYCLE_COUNTER(STAT_Fx_SfxSpawnAtLocation);
+
     CK_CALLSTACK_RECORD(ck::FFragment_Sfx_Requests, InSfxHandle);
 
     // TODO: Move this to processor
@@ -180,6 +194,8 @@ auto
         Params.Get_AttenuationSettings(),
         Params.Get_ConcurrencySettings()
     );
+
+    INC_DWORD_STAT(STAT_Fx_EffectsSpawned);
 
     return InSfxHandle;
 }

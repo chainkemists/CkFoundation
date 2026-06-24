@@ -1,6 +1,7 @@
 #include "CkCrowdAgent_DrawBody_Processor.h"
 
 #include "CkCrowd/CkCrowd_Log.h"
+#include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Utils.h"
 #include "CkCrowd/Settings/CkCrowd_DebugSettings.h"
 
@@ -18,6 +19,11 @@
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_DrawBody_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_DrawBody_Update);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Crowd::DrawBody_Setup"), STAT_CkCrowd_DrawBody_SetupProc, STATGROUP_CkCrowd);
+DECLARE_CYCLE_STAT(TEXT("Crowd::DrawBody_Update"), STAT_CkCrowd_DrawBody_UpdateProc, STATGROUP_CkCrowd);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -74,6 +80,8 @@ namespace ck
             const FFragment_CrowdAgent_Params& InParams) const
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkCrowd_DrawBody_SetupProc);
+
         auto AgentTransform = UCk_Utils_Transform_UE::Cast(InHandle);
         if (ck::Is_NOT_Valid(AgentTransform))
         { return; }
@@ -191,6 +199,8 @@ namespace ck
             FFragment_CrowdAgent_DebugBody& InDebugBody) const
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkCrowd_DrawBody_UpdateProc);
+
         const auto WantVisible = UCk_Utils_Crowd_DebugSettings_UE::Get_DrawAgentBody();
 
         // Visibility flip — only request when changing. The single Request_SetVisible call

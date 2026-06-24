@@ -1,6 +1,7 @@
 #include "CkAggroOwner_Processor.h"
 
 #include "CkAggro/CkAggro_Utils.h"
+#include "CkAggro/CkAggro_Stats.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
@@ -9,6 +10,15 @@
 CK_REGISTER_PROCESSOR(ck::FProcessor_Aggro_DistanceScore);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Aggro_LineOfSightScore);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Aggro_UpdateBestAggro);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Aggro::DistanceScore"), STAT_Aggro_DistanceScore, STATGROUP_CkAggro);
+DECLARE_CYCLE_STAT(TEXT("Aggro::RecordSort"), STAT_Aggro_RecordSort, STATGROUP_CkAggro);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Aggro Entries Scored"), STAT_Aggro_EntriesScored, STATGROUP_CkAggro);
+DECLARE_CYCLE_STAT(TEXT("Aggro::LineOfSightScore"), STAT_Aggro_LineOfSightScore, STATGROUP_CkAggro);
+DECLARE_CYCLE_STAT(TEXT("Aggro::LoS Trace"), STAT_Aggro_LoSTrace, STATGROUP_CkAggro);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Aggro LoS Traces"), STAT_Aggro_LoSTraces, STATGROUP_CkAggro);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -22,11 +32,15 @@ namespace ck
             const FFragment_AggroOwner_Params& InParams) const
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_Aggro_DistanceScore);
+
         const auto OwnerLocation = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
         const auto SquaredRange = FMath::Square(InParams.Get_Params().Get_AggroFilter_Distance().Get_AggroRange());
 
         ck::FUtils_RecordOfAggros::ForEach_ValidEntry(InHandle, [&](FCk_Handle_Aggro InAggro)
         {
+            INC_DWORD_STAT(STAT_Aggro_EntriesScored);
+
             const auto AggroTarget = UCk_Utils_Aggro_UE::Get_AggroTarget(InAggro);
 
             if (ck::Is_NOT_Valid(AggroTarget))
@@ -44,13 +58,17 @@ namespace ck
             return ECk_Record_ForEachIterationResult::Continue;
         });
 
-        FUtils_RecordOfAggros::Sort(InHandle, [&](const FCk_Handle_Aggro& A, const FCk_Handle_Aggro& B)
         {
-            if (A.Has<FTag_Aggro_Excluded>())
-            { return false; }
+            SCOPE_CYCLE_COUNTER(STAT_Aggro_RecordSort);
 
-            return A.Get<FFragment_Aggro_Current>().Get_Score() < B.Get<FFragment_Aggro_Current>().Get_Score();
-        });
+            FUtils_RecordOfAggros::Sort(InHandle, [&](const FCk_Handle_Aggro& A, const FCk_Handle_Aggro& B)
+            {
+                if (A.Has<FTag_Aggro_Excluded>())
+                { return false; }
+
+                return A.Get<FFragment_Aggro_Current>().Get_Score() < B.Get<FFragment_Aggro_Current>().Get_Score();
+            });
+        }
 
         if (NOT FUtils_RecordOfAggros::Get_Entries(InHandle).IsEmpty())
         {
@@ -68,6 +86,8 @@ namespace ck
             HandleType InHandle) const
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_Aggro_LineOfSightScore);
+
         // assuming that the record is already sorted
         // assuming that the incoming handle has an Actor (TODO: remove this assumption)
 
@@ -92,7 +112,12 @@ namespace ck
 
             auto Response = FCollisionResponseParams{};
             auto HitResult = FHitResult{}; // TODO: for debugging only, to remove
-            auto Hit = Actor->GetWorld()->LineTraceSingleByChannel(HitResult, OwnerLocation, TargetLocation, ECC_Visibility, CollisionParams, Response);
+            const auto Hit = [&]() -> bool
+            {
+                SCOPE_CYCLE_COUNTER(STAT_Aggro_LoSTrace);
+                INC_DWORD_STAT(STAT_Aggro_LoSTraces);
+                return Actor->GetWorld()->LineTraceSingleByChannel(HitResult, OwnerLocation, TargetLocation, ECC_Visibility, CollisionParams, Response);
+            }();
 
             if (Hit)
             { return ECk_Record_ForEachIterationResult::Continue; }

@@ -2,6 +2,13 @@
 
 #include "CkRelationship/Team/CkTeam_Utils.h"
 
+#include "CkRelationship/CkRelationship_Stats.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Relationship::GetAttitudeTowards"), STAT_Relationship_GetAttitudeTowards, STATGROUP_CkRelationship);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Attitude Queries"), STAT_Relationship_AttitudeQueries, STATGROUP_CkRelationship);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -11,6 +18,9 @@ auto
         const FCk_Handle& InTo)
     -> ECk_RelationshipAttitude
 {
+    SCOPE_CYCLE_COUNTER(STAT_Relationship_GetAttitudeTowards);
+    INC_DWORD_STAT(STAT_Relationship_AttitudeQueries);
+
     CK_ENSURE_IF_NOT(ck::IsValid(InFrom), TEXT("Unable to Get_AttitudeTowards [{}] because [{}] is INVALID."), InTo, InFrom)
     { return ECk_RelationshipAttitude::Neutral; }
 

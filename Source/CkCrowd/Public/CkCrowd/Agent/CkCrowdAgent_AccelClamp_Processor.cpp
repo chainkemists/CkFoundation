@@ -2,11 +2,16 @@
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_AccelClamp);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Crowd::AccelClamp"), STAT_CkCrowd_AccelClampProc, STATGROUP_CkCrowd);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -21,6 +26,8 @@ namespace ck
             FFragment_CrowdAgent_DesiredVelocity& InDesired)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkCrowd_AccelClampProc);
+
         // Project-wide enable. Disabled mode is for A/B comparison only — production should leave
         // this on to kill snap-flips that drive Gate-3 vibration.
         if (UCk_Utils_Crowd_Settings_UE::Get_AccelClampMode() == ECk_AccelClampMode::Disabled)

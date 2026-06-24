@@ -1,10 +1,18 @@
 #include "CkCrowdAgent_Separation_Processor.h"
 
+#include "CkCrowd/CkCrowd_Stats.h"
+
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_Separation);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Crowd::Separation"), STAT_CkCrowd_SeparationProc, STATGROUP_CkCrowd);
+DECLARE_CYCLE_STAT(TEXT("Crowd::Separation (accum)"), STAT_CkCrowd_Separation, STATGROUP_CkCrowd);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Crowd Active Agents"), STAT_CkCrowd_ActiveAgents, STATGROUP_CkCrowd);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -20,6 +28,11 @@ namespace ck
             FFragment_CrowdAgent_SeparationForce& InSeparationForce)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkCrowd_SeparationProc);
+
+        // Per-frame active-agent population — every agent the steering layer ticks passes through here.
+        INC_DWORD_STAT(STAT_CkCrowd_ActiveAgents);
+
         const auto SeparationRadius = InParams.Get_SeparationRadius();
         const auto SeparationWeight = InParams.Get_SeparationWeight();
         const auto MaxSpeed = InParams.Get_MaxSpeed();
@@ -34,31 +47,36 @@ namespace ck
 
         auto Force = FVector::ZeroVector;
 
-        for (const auto& Nbr : InNeighborCache.Get_Neighbors())
         {
-            const auto Distance = Nbr.Get_Distance();
-            if (Distance >= SeparationRadius)
-            { continue; }
+            // O(Neighbors) accumulation of the separation force.
+            SCOPE_CYCLE_COUNTER(STAT_CkCrowd_Separation);
 
-            // Push direction: away from the neighbor. _RelativeOffset is (NbrLoc - SelfLoc),
-            // so negate to push self away. Project to 2D first — crowd separation is planar
-            // (agents walk on a navmesh; Z belongs to path-follow / integrator). Without the
-            // projection, any Z delta becomes part of the push direction and gets amplified
-            // by quadratic falloff, shoving capsules through the floor during head-on/cluster
-            // collisions. Normalize by planar distance so the unit-vector retains full XY
-            // magnitude even when there's vertical misalignment.
-            auto OffsetPlanar = Nbr.Get_RelativeOffset();
-            OffsetPlanar.Z = 0.0f;
-            const auto SafeDistance = FMath::Max(static_cast<float>(OffsetPlanar.Size()), 0.01f);
-            const auto Push = -OffsetPlanar / SafeDistance;
+            for (const auto& Nbr : InNeighborCache.Get_Neighbors())
+            {
+                const auto Distance = Nbr.Get_Distance();
+                if (Distance >= SeparationRadius)
+                { continue; }
 
-            // Quadratic falloff: contribution is full at distance 0, zero at SeparationRadius.
-            // Pow-2 makes nearby neighbors dominate, which matches the "everybody breaks the
-            // tie by stepping back from whoever's closest" heuristic crowds expect.
-            const auto Normalized = 1.0f - (Distance / SeparationRadius);
-            const auto Falloff = Normalized * Normalized;
+                // Push direction: away from the neighbor. _RelativeOffset is (NbrLoc - SelfLoc),
+                // so negate to push self away. Project to 2D first — crowd separation is planar
+                // (agents walk on a navmesh; Z belongs to path-follow / integrator). Without the
+                // projection, any Z delta becomes part of the push direction and gets amplified
+                // by quadratic falloff, shoving capsules through the floor during head-on/cluster
+                // collisions. Normalize by planar distance so the unit-vector retains full XY
+                // magnitude even when there's vertical misalignment.
+                auto OffsetPlanar = Nbr.Get_RelativeOffset();
+                OffsetPlanar.Z = 0.0f;
+                const auto SafeDistance = FMath::Max(static_cast<float>(OffsetPlanar.Size()), 0.01f);
+                const auto Push = -OffsetPlanar / SafeDistance;
 
-            Force += Push * Falloff;
+                // Quadratic falloff: contribution is full at distance 0, zero at SeparationRadius.
+                // Pow-2 makes nearby neighbors dominate, which matches the "everybody breaks the
+                // tie by stepping back from whoever's closest" heuristic crowds expect.
+                const auto Normalized = 1.0f - (Distance / SeparationRadius);
+                const auto Falloff = Normalized * Normalized;
+
+                Force += Push * Falloff;
+            }
         }
 
         // No active force → no output. Skipping the jitter when there are no neighbors keeps

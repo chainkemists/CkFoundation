@@ -1,6 +1,15 @@
 #pragma once
 
+#include "CkAStar/CkAStar_Stats.h"
+
 #include "HAL/PlatformTime.h"
+
+// ====================================================================================================================
+// PERF STATS — templated header: these create per-TU internal-linkage statics (acceptable; few TUs).
+// ====================================================================================================================
+
+DECLARE_CYCLE_STAT(TEXT("AStar::ContinueSearch"), STAT_AStar_ContinueSearch, STATGROUP_CkAStar);
+DECLARE_DWORD_COUNTER_STAT(TEXT("AStar Iterations"), STAT_AStar_Iterations, STATGROUP_CkAStar);
 
 // ====================================================================================================================
 
@@ -136,6 +145,10 @@ auto
 		return _Status;
 	}
 
+	// Times the time-sliced A* inner loop. Thread-safe — appears in Insights even on worker threads
+	// (TProcessor_AStar_Execute runs parallel).
+	SCOPE_CYCLE_COUNTER(STAT_AStar_ContinueSearch);
+
 	const auto StartCycles = FPlatformTime::Cycles64();
 	auto IterationsThisTick = int32{0};
 
@@ -215,6 +228,7 @@ auto
 		// Expand node
 		_ClosedSet.Add(Current);
 		++IterationsThisTick;
+		INC_DWORD_STAT(STAT_AStar_Iterations);
 
 		const auto CurrentG = _GScores.FindChecked(Current);
 

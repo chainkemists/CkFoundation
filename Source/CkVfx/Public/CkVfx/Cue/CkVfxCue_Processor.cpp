@@ -6,12 +6,18 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 #include "CkVfx/CkVfx_Log.h"
+#include "CkVfx/CkVfx_Stats.h"
 #include "CkVfxCue_Utils.h"
 
 #include <NiagaraComponent.h>
 #include <NiagaraFunctionLibrary.h>
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Vfx::CueLifetimeMonitor"), STAT_Vfx_CueLifetimeMonitor, STATGROUP_CkVfx);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Vfx Active Managed Effects"), STAT_Vfx_ActiveManagedEffects, STATGROUP_CkVfx);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -236,6 +242,9 @@ namespace ck
             FFragment_VfxCue_Current& InCurrent)
             -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_Vfx_CueLifetimeMonitor);
+        INC_DWORD_STAT(STAT_Vfx_ActiveManagedEffects);
+
         auto NiagaraComponent = InCurrent._NiagaraComponent.Get();
         CK_ENSURE_IF_NOT(ck::IsValid(NiagaraComponent),
             TEXT("VfxCue [{}] has invalid NiagaraComponent"), InHandle)

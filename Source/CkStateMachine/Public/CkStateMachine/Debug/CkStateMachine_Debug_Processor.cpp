@@ -4,6 +4,8 @@
 #include "CkStateMachine/Debug/CkStateMachine_Debug_GraphWalk_Fragment.h"
 #endif
 
+#include "CkStateMachine/CkStateMachine_Stats.h"
+
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Object/CkObject_Utils.h"
 
@@ -25,6 +27,13 @@
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_Debug);
 CK_REGISTER_PROCESSOR(ck::FProcessor_SmDebug_HandleRequests);
 
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("SmDebug::Poll"), STAT_Sm_Debug, STATGROUP_CkStateMachine);
+DECLARE_CYCLE_STAT(TEXT("SmDebug::HandleRequests"), STAT_SmDebug_HandleRequests, STATGROUP_CkStateMachine);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     auto
@@ -36,6 +45,8 @@ namespace ck
             const FFragment_Sm_Params& InParams)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_Sm_Debug);
+
         auto& Debug = InHandle.AddOrGet<FFragment_Sm_Debug>();
 
         // Run lifecycle detection
@@ -163,6 +174,8 @@ namespace ck
             const FFragment_SmDebug_Requests& InRequests) const
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_SmDebug_HandleRequests);
+
         InHandle.CopyAndRemove(InRequests, [&](FFragment_SmDebug_Requests& InRequestsCopy)
         {
             algo::ForEachRequest(InRequestsCopy._Requests, Visitor([&](const auto& InRequest)

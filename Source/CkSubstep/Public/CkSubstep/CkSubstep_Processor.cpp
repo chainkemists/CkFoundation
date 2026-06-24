@@ -2,6 +2,12 @@
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkSubstep/CkSubstep_Stats.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DWORD_COUNTER_STAT(TEXT("Substep Steps Executed"), STAT_Substep_StepsExecuted, STATGROUP_CkSubstep);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Substep_Update);
@@ -40,6 +46,7 @@ namespace ck
         while(AdjustedTickRate >= TickRate)
         {
             ++StepNumber;
+            INC_DWORD_STAT(STAT_Substep_StepsExecuted);
             AdjustedTickRate -= TickRate;
             UUtils_Signal_OnSubstepUpdate::Broadcast(InHandle, MakePayload(InHandle, TickRate, StepNumber, InDeltaT));
 

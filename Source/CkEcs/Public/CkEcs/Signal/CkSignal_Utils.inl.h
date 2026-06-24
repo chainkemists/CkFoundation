@@ -47,6 +47,9 @@ namespace ck
             TPayload<T_Args...>&& InPayload)
     {
         auto& Signal  = InHandle.template AddOrGet<SignalType, ck::IsValid_Policy_IncludePendingKill>();
+
+        CK_STAT(STAT_SignalBroadcast);
+
         const auto Invoker = [&Signal](auto&&... InArgs)
         {
             // Store the payload tuple FIRST. We use forward<T_Args>() here, which for

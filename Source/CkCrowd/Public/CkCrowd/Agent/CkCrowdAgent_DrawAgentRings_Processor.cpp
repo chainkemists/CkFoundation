@@ -1,5 +1,6 @@
 #include "CkCrowdAgent_DrawAgentRings_Processor.h"
 
+#include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Settings/CkCrowd_DebugSettings.h"
 
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
@@ -14,6 +15,10 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_DrawAgentRings);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Crowd::DrawAgentRings"), STAT_CkCrowd_DrawAgentRingsProc, STATGROUP_CkCrowd);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -55,6 +60,8 @@ namespace ck
             const FFragment_CrowdAgent_DesiredVelocity& InDesiredVelocity)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkCrowd_DrawAgentRingsProc);
+
         namespace draw = ck_crowd_agent_draw_agent_rings_processor;
 
         const auto DrawAll = UCk_Utils_Crowd_DebugSettings_UE::Get_DrawAgentRings();

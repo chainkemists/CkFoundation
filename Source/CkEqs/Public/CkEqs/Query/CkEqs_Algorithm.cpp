@@ -1,6 +1,7 @@
 #include "CkEqs/Query/CkEqs_Algorithm.h"
 
 #include "CkEqs/CkEqs_Log.h"
+#include "CkEqs/CkEqs_Stats.h"
 
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Validation/CkIsValid.h"
@@ -17,6 +18,21 @@
 #include <Algo/MinElement.h>
 #include <Math/UnrealMathUtility.h>
 #include <NavigationSystem.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Eqs::Generate"), STAT_Eqs_Generate, STATGROUP_CkEqs);
+DECLARE_CYCLE_STAT(TEXT("Eqs::RunTests"), STAT_Eqs_RunTests, STATGROUP_CkEqs);
+DECLARE_CYCLE_STAT(TEXT("Eqs::Finalize"), STAT_Eqs_Finalize, STATGROUP_CkEqs);
+DECLARE_CYCLE_STAT(TEXT("Eqs::Test_Distance"), STAT_Eqs_Test_Distance, STATGROUP_CkEqs);
+DECLARE_CYCLE_STAT(TEXT("Eqs::Test_Dot"), STAT_Eqs_Test_Dot, STATGROUP_CkEqs);
+DECLARE_CYCLE_STAT(TEXT("Eqs::Test_Trace"), STAT_Eqs_Test_Trace, STATGROUP_CkEqs);
+DECLARE_CYCLE_STAT(TEXT("Eqs::Test_GameplayTag"), STAT_Eqs_Test_GameplayTag, STATGROUP_CkEqs);
+DECLARE_CYCLE_STAT(TEXT("Eqs::Test_Overlap"), STAT_Eqs_Test_Overlap, STATGROUP_CkEqs);
+DECLARE_CYCLE_STAT(TEXT("Eqs::Test_VolumeCheck"), STAT_Eqs_Test_VolumeCheck, STATGROUP_CkEqs);
+DECLARE_CYCLE_STAT(TEXT("Eqs::Test_Random"), STAT_Eqs_Test_Random, STATGROUP_CkEqs);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Eqs Candidates Generated"), STAT_Eqs_CandidatesGenerated, STATGROUP_CkEqs);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Eqs Physics Casts Issued"), STAT_Eqs_PhysicsCastsIssued, STATGROUP_CkEqs);
 
 // --------------------------------------------------------------------------------------------------------------------
 // Anonymous-namespace helpers. All file-local. No state retained between calls.
@@ -219,6 +235,8 @@ auto
         const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
     -> bool
 {
+    SCOPE_CYCLE_COUNTER(STAT_Eqs_Generate);
+
     const auto& Querier = InParams.Get_Querier();
 
     if (ck::Is_NOT_Valid(Querier))
@@ -294,6 +312,8 @@ auto
         }
     }
 
+    INC_DWORD_STAT_BY(STAT_Eqs_CandidatesGenerated, OutCandidates.Num());
+
     return NOT OutCandidates.IsEmpty();
 }
 
@@ -355,6 +375,7 @@ auto
         const auto End = Candidate._Location - FVector::UpVector * ProjectDown;
 
         const auto Settings = FCk_Probe_RayCast_Settings{Start, End, Filter};
+        INC_DWORD_STAT(STAT_Eqs_PhysicsCastsIssued);
         const auto Result = UCk_Utils_ProbeTrace_UE::Request_SingleLineTrace(InAnyHandle, Settings);
 
         if (ck::IsValid(Result.Get_Probe()))
@@ -528,6 +549,8 @@ auto
         int32& InOutRemainingBudget)
     -> bool
 {
+    SCOPE_CYCLE_COUNTER(STAT_Eqs_RunTests);
+
     const auto& Tests = InParams.Get_Tests();
     const auto NumTests = Tests.Num();
 
@@ -687,6 +710,8 @@ auto
         int32 InTestIndex)
     -> void
 {
+    SCOPE_CYCLE_COUNTER(STAT_Eqs_Test_Distance);
+
     const auto RefLocation = Eqs_GetReferenceLocation(InParams, InTest.Get_DistanceTo());
     const auto Mode = InTest.Get_DistanceMode();
 
@@ -720,6 +745,8 @@ auto
         int32 InTestIndex)
     -> void
 {
+    SCOPE_CYCLE_COUNTER(STAT_Eqs_Test_Dot);
+
     const auto FromLocation = Eqs_GetDotFromLocation(InParams, InTest.Get_DotFrom());
     const auto Forward = Eqs_GetDotFromForward(InParams, InTest.Get_DotFrom()).GetSafeNormal();
     const auto Mode = InTest.Get_DotMode();
@@ -752,6 +779,8 @@ auto
         int32 InTestIndex)
     -> void
 {
+    SCOPE_CYCLE_COUNTER(STAT_Eqs_Test_Trace);
+
     if (NOT InPhysicsSystem.IsValid())
     {
         ck::eqs::Warning(TEXT("DoRunTest_Trace: physics unavailable; failing every candidate for this test."));
@@ -790,6 +819,7 @@ auto
             case ECk_Eqs_TraceMode::LineTrace:
             {
                 const auto Settings = FCk_Probe_RayCast_Settings{QuerierLocation, Candidate.Get_Location(), TraceFilter};
+                INC_DWORD_STAT(STAT_Eqs_PhysicsCastsIssued);
                 const auto Result = UCk_Utils_ProbeTrace_UE::Request_SingleLineTrace(InAnyHandle, Settings);
                 LosClear = ck::Is_NOT_Valid(Result.Get_Probe());
                 break;
@@ -797,6 +827,7 @@ auto
             case ECk_Eqs_TraceMode::ShapeTrace:
             {
                 const auto Settings = FCk_ShapeCast_Settings{QuerierLocation, Candidate.Get_Location(), InTest.Get_TraceShape(), TraceFilter};
+                INC_DWORD_STAT(STAT_Eqs_PhysicsCastsIssued);
                 const auto Result = UCk_Utils_ProbeTrace_UE::Request_SingleShapeTrace(InAnyHandle, Settings);
                 LosClear = ck::Is_NOT_Valid(Result.Get_Probe());
                 break;
@@ -821,6 +852,8 @@ auto
         int32 InTestIndex)
     -> void
 {
+    SCOPE_CYCLE_COUNTER(STAT_Eqs_Test_GameplayTag);
+
     const auto Tag = InTest.Get_RequiredTag();
     const auto MatchMode = InTest.Get_TagMatchMode();
     const auto Weight = InTest.Get_Weight();
@@ -894,6 +927,8 @@ auto
         int32 InTestIndex)
     -> void
 {
+    SCOPE_CYCLE_COUNTER(STAT_Eqs_Test_Overlap);
+
     if (NOT InPhysicsSystem.IsValid())
     {
         ck::eqs::Warning(TEXT("DoRunTest_Overlap: physics unavailable; failing every candidate for this test."));
@@ -926,6 +961,7 @@ auto
 
         const auto& Loc = Candidate.Get_Location();
         const auto Settings = FCk_ShapeCast_Settings{Loc, Loc, Sphere, OverlapFilter};
+        INC_DWORD_STAT(STAT_Eqs_PhysicsCastsIssued);
         const auto Hits = UCk_Utils_ProbeTrace_UE::Request_MultiShapeTrace(InAnyHandle, Settings);
 
         const auto Raw = static_cast<float>(Hits.Num());
@@ -945,6 +981,8 @@ auto
         int32 InTestIndex)
     -> void
 {
+    SCOPE_CYCLE_COUNTER(STAT_Eqs_Test_VolumeCheck);
+
     const auto Center = InTest.Get_VolumeCheck_WorldCenter();
     const auto HalfExtent = InTest.Get_VolumeCheck_HalfExtent();
     const auto Rotation = InTest.Get_VolumeCheck_WorldRotation();
@@ -997,6 +1035,8 @@ auto
         int32 InTestIndex)
     -> void
 {
+    SCOPE_CYCLE_COUNTER(STAT_Eqs_Test_Random);
+
     auto RawValues = TArray<float>{};
     RawValues.Reserve(InOutCandidates.Num());
 
@@ -1029,6 +1069,8 @@ auto
         FFragment_EqsQuery_DebugInfo& InOutDebug)
     -> FCk_Eqs_QueryResults
 {
+    SCOPE_CYCLE_COUNTER(STAT_Eqs_Finalize);
+
     auto Results = FCk_Eqs_QueryResults{};
     auto& Final = Results._Candidates;
 

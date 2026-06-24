@@ -1,6 +1,7 @@
 #include "CkCrowdAgent_DrawPlannedPath_Processor.h"
 
 #include "CkCrowd/Agent/CkCrowdAgent_Utils.h"
+#include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Settings/CkCrowd_DebugSettings.h"
 
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
@@ -15,6 +16,10 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_DrawPlannedPath);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Crowd::DrawPlannedPath"), STAT_CkCrowd_DrawPlannedPathProc, STATGROUP_CkCrowd);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -55,6 +60,8 @@ namespace ck
             const FFragment_CrowdAgent_PathFollow& InPathFollow)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkCrowd_DrawPlannedPathProc);
+
         namespace draw = ck_crowd_agent_draw_planned_path_processor;
 
         const auto bDrawAll = UCk_Utils_Crowd_DebugSettings_UE::Get_DrawPlannedPaths();

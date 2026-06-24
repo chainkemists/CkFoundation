@@ -13,6 +13,7 @@
 #include "CkShapes/Sphere/CkShapeSphere_Utils.h"
 
 #include "CkSpatialQuery/CkSpatialQuery_Log.h"
+#include "CkSpatialQuery/CkSpatialQuery_Stats.h"
 #include "CkSpatialQuery/CkSpatialQuery_Utils.h"
 #include "CkSpatialQuery/Probe/CkProbe_Utils.h"
 #include "CkSpatialQuery/Settings/CkSpatialQuery_Settings.h"
@@ -34,6 +35,11 @@
 #include <DrawDebugHelpers.h>
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("SpatialQuery::CastShape"), STAT_CkSpatialQuery_CastShape, STATGROUP_CkSpatialQuery);
+DECLARE_CYCLE_STAT(TEXT("SpatialQuery::OverlapReconcile"), STAT_CkSpatialQuery_OverlapReconcile, STATGROUP_CkSpatialQuery);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -644,44 +650,52 @@ namespace ck
         };
 
         auto Collector = details::ContactCastCollector{InHandle, &BodyInterface};
-        PhysicsSystem->GetNarrowPhaseQuery().CastShape(ShapeCast, Settings, Vec3::sReplicate(0.0f), Collector);
+
+        {
+            SCOPE_CYCLE_COUNTER(STAT_CkSpatialQuery_CastShape);
+            PhysicsSystem->GetNarrowPhaseQuery().CastShape(ShapeCast, Settings, Vec3::sReplicate(0.0f), Collector);
+        }
 
         const auto& OverlappingProbes = Collector.Get_OverlappingProbes();
         const auto& BeginOverlaps = Collector.Get_BeginOverlaps();
 
-        for (const auto& Overlap : OverlappingProbes)
         {
-            auto Probe = Overlap.Get_Probe();
+            SCOPE_CYCLE_COUNTER(STAT_CkSpatialQuery_OverlapReconcile);
 
-            // Other LinearCast Probes will do their own overlaps
-            if (Probe != InHandle && Probe.Has<FTag_Probe_LinearCast>())
-            { continue; }
-
-            if (ck::IsValid(Overlap.Get_BeginOverlap()))
+            for (const auto& Overlap : OverlappingProbes)
             {
-                UCk_Utils_Probe_UE::Request_BeginOverlap(Probe, *Overlap.Get_BeginOverlap());
+                auto Probe = Overlap.Get_Probe();
+
+                // Other LinearCast Probes will do their own overlaps
+                if (Probe != InHandle && Probe.Has<FTag_Probe_LinearCast>())
+                { continue; }
+
+                if (ck::IsValid(Overlap.Get_BeginOverlap()))
+                {
+                    UCk_Utils_Probe_UE::Request_BeginOverlap(Probe, *Overlap.Get_BeginOverlap());
+                }
+                else
+                {
+                    UCk_Utils_Probe_UE::Request_OverlapUpdated(Probe, *Overlap.Get_UpdateOverlap());
+                }
+
             }
-            else
+
+            for (auto Overlap : InCurrent.Get_CurrentOverlaps())
             {
-                UCk_Utils_Probe_UE::Request_OverlapUpdated(Probe, *Overlap.Get_UpdateOverlap());
+                auto OtherEntity = Overlap.Get_OtherEntity();
+
+                if (BeginOverlaps.Contains(OtherEntity))
+                { continue; }
+
+                auto MaybeOtherProbe = UCk_Utils_Probe_UE::Cast(OtherEntity);
+
+                if (ck::Is_NOT_Valid(MaybeOtherProbe))
+                { continue; }
+
+                UCk_Utils_Probe_UE::Request_EndOverlap(InHandle, FCk_Request_Probe_EndOverlap{OtherEntity});
+                UCk_Utils_Probe_UE::Request_EndOverlap(MaybeOtherProbe, FCk_Request_Probe_EndOverlap{InHandle});
             }
-
-        }
-
-        for (auto Overlap : InCurrent.Get_CurrentOverlaps())
-        {
-            auto OtherEntity = Overlap.Get_OtherEntity();
-
-            if (BeginOverlaps.Contains(OtherEntity))
-            { continue; }
-
-            auto MaybeOtherProbe = UCk_Utils_Probe_UE::Cast(OtherEntity);
-
-            if (ck::Is_NOT_Valid(MaybeOtherProbe))
-            { continue; }
-
-            UCk_Utils_Probe_UE::Request_EndOverlap(InHandle, FCk_Request_Probe_EndOverlap{OtherEntity});
-            UCk_Utils_Probe_UE::Request_EndOverlap(MaybeOtherProbe, FCk_Request_Probe_EndOverlap{InHandle});
         }
     }
 

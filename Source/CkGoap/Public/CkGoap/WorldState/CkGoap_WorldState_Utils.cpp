@@ -3,6 +3,7 @@
 #include "CkGoap_WorldState_Fragment.h"
 
 #include "CkGoap/CkGoap_Fragment.h"      // FTag_Goap_Dirty_WorldState
+#include "CkGoap/CkGoap_Stats.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
@@ -12,6 +13,11 @@
 
 #include "CkRecord/Record/CkRecord_Fragment.h"
 #include "CkRecord/Record/CkRecord_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Goap::WS_GetValue"), STAT_Goap_WS_GetValue, STATGROUP_CkGoap);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Goap WS Reads"), STAT_Goap_WS_Reads, STATGROUP_CkGoap);
 
 // ====================================================================================================================
 // RECORD — owner's record of WorldState children created by Create.
@@ -131,6 +137,9 @@ auto
 	Get_Value(const FCk_Handle_Goap_WorldState& InWorldState, FGameplayTag InKey)
 	-> bool
 {
+	SCOPE_CYCLE_COUNTER(STAT_Goap_WS_GetValue);
+	INC_DWORD_STAT(STAT_Goap_WS_Reads);
+
 	if (NOT ck::IsValid(InWorldState)) { return false; }
 	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_KeyRegistry>()) { return false; }
 

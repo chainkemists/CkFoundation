@@ -3,8 +3,14 @@
 #include <GeometryCollection/GeometryCollectionComponent.h>
 #include <PhysicsProxy/GeometryCollectionPhysicsProxy.h>
 
+#include "CkChaos/CkChaos_Stats.h"
+
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Format/CkFormat.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Chaos::ClosestParticle"), STAT_CkChaos_ClosestParticle, STATGROUP_CkChaos);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -15,6 +21,8 @@ auto
         const FVector& InLocation)
     -> int32
 {
+    SCOPE_CYCLE_COUNTER(STAT_CkChaos_ClosestParticle);
+
     const auto GeometryCollectionComponent = InGeometryCollection;
 
     CK_ENSURE_IF_NOT(ck::IsValid(GeometryCollectionComponent), TEXT("Unable to iterate over clusters of GeometryCollection [{}] because its"

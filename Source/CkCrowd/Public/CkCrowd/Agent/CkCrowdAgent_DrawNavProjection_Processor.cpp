@@ -1,5 +1,6 @@
 #include "CkCrowdAgent_DrawNavProjection_Processor.h"
 
+#include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Settings/CkCrowd_DebugSettings.h"
 
 #include "CkNavigation/Settings/CkNav_ProjectSettings.h"
@@ -21,6 +22,10 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_DrawNavProjection);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+DECLARE_CYCLE_STAT(TEXT("Crowd::DrawNavProjection"), STAT_CkCrowd_DrawNavProjectionProc, STATGROUP_CkCrowd);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // Constants are inlined into the function body below (rather than in an anonymous namespace)
 // because UE's Unity-build merges multiple .cpp files into a single TU, causing
 // same-named anonymous-namespace symbols across draw processors to collide at link time.
@@ -37,6 +42,8 @@ namespace ck
             const FFragment_CrowdAgent_Params& InParams)
         -> void
     {
+        SCOPE_CYCLE_COUNTER(STAT_CkCrowd_DrawNavProjectionProc);
+
         // Gate before any work — the synchronous ProjectPointToNavigation + 16-segment
         // circle draw per agent is the most expensive Crowd debug viz at scale (linear
         // in agent count and runs every tick). Off by default; opt in via

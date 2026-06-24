@@ -4,11 +4,17 @@
 
 #include "CkEcs/Net/CkNet_Utils.h"
 
+#include "CkGrid/CkGrid_Stats.h"
 #include "CkGrid/2dGridSystem/Cell/Ck2dGridCell_Utils.h"
 #include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Fragment.h"
 #include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Utils.h"
 #include "CkGrid/2dGridSystem/Object/Ck2dGridObject_Utils.h"
 #include "CkGrid/2dGridSystem/Occupancy/Ck2dGridOccupancy_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("Grid::FirstAvailable"), STAT_Grid_FirstAvailable, STATGROUP_CkGrid);
+DECLARE_CYCLE_STAT(TEXT("Grid::CanPlace"),       STAT_Grid_CanPlace,       STATGROUP_CkGrid);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -22,6 +28,8 @@ auto
         ECk_GridConnectivity InConnectivity)
     -> FCk_2dGridPlacement_Result
 {
+    SCOPE_CYCLE_COUNTER(STAT_Grid_CanPlace);
+
     CK_ENSURE_IF_NOT(ck::IsValid(InGrid),
         TEXT("Get_CanPlace: grid handle is invalid"))
     { return FCk_2dGridPlacement_Result::Failure(ECk_2dGridPlacement_Failure::OutOfBounds, {}); }
@@ -197,6 +205,8 @@ auto
         ECk_CardinalRotation InRotation)
     -> FIntPoint
 {
+    SCOPE_CYCLE_COUNTER(STAT_Grid_FirstAvailable);
+
     if (ck::Is_NOT_Valid(InGrid) || ck::Is_NOT_Valid(InObject))
     { return FIntPoint(-1, -1); }
 

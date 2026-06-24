@@ -7,12 +7,29 @@
 
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
+#include "CkProfile/Stats/CkStats.h"
+
 #include <entt/signal/sigh.hpp>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_STATS_GROUP(TEXT("CkSignals_Listeners"), STATGROUP_CkSignals_Listeners, STATCAT_Advanced);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
+    // Per-LISTENER signal profiling (opt-in via `ck.Signal.StatListeners 1`). When enabled,
+    // each bound delegate invoked during a signal broadcast is timed under `stat CkSignals_Listeners`,
+    // named "ClassName::FunctionName" — this answers "WHICH listener of a hot signal (e.g.
+    // OnTimerUpdate) is expensive", which the per-signal-TYPE stat alone cannot. Off by default
+    // (the dynamic stat-id construction is not free), so there is zero cost on the hot path unless
+    // a profiling session opts in.
+    CKECS_API auto Get_ShouldStat_SignalListeners() -> bool;
+    CKECS_API auto Make_SignalListenerStatId(const FString& InListenerName) -> TStatId;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <typename... T_Args>
     struct TFragment_Signal
     {
