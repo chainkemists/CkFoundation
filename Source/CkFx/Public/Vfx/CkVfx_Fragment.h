@@ -66,7 +66,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfVfx, FCk_Handle_Vfx);
+    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfVfx, FCk_Handle_Vfx);
 
     // --------------------------------------------------------------------------------------------------------------------
 

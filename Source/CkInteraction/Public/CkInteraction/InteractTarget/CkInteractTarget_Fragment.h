@@ -21,7 +21,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfInteractTargets, FCk_Handle_InteractTarget);
+    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfInteractTargets, FCk_Handle_InteractTarget);
 
     // --------------------------------------------------------------------------------------------------------------------
 

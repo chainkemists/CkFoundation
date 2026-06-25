@@ -69,13 +69,13 @@ namespace ck
     // RECORDS
     // ================================================================================================================
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfSmTransitions, FCk_Handle_SmTransition);
+    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfSmTransitions, FCk_Handle_SmTransition);
 
     // ================================================================================================================
     // ENTITY-HOLDER BACK-REFERENCES
     // ================================================================================================================
 
-    CK_DEFINE_ENTITY_HOLDER_AND_UTILS(TUtils_Sm_ParentTransition, FFragment_Sm_ParentTransition, FCk_Handle_SmTransition);
+    CK_DEFINE_ENTITY_HOLDER_AND_UTILS_TRANSIENT(TUtils_Sm_ParentTransition, FFragment_Sm_ParentTransition, FCk_Handle_SmTransition);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -58,7 +58,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfCameraShakes, FCk_Handle_CameraShake);
+    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfCameraShakes, FCk_Handle_CameraShake);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

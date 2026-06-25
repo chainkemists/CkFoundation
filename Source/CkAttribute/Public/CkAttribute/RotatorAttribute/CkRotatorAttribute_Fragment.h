@@ -39,7 +39,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfRotatorAttributes, FCk_Handle_RotatorAttribute);
+    CK_DEFINE_RECORD_OF_ENTITIES_ROUNDTRIP(FFragment_RecordOfRotatorAttributes, FCk_Handle_RotatorAttribute);
 
     // --------------------------------------------------------------------------------------------------------------------
     // FRotator has no operator* / operator/ / operator< — provide component-wise behavior so the generic
