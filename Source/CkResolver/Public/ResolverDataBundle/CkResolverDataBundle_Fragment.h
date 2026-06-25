@@ -144,7 +144,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfDataBundles, FCk_Handle_ResolverDataBundle);
+    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfDataBundles, FCk_Handle_ResolverDataBundle);
 
     // --------------------------------------------------------------------------------------------------------------------
 

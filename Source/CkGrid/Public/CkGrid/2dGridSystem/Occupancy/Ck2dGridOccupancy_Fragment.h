@@ -24,7 +24,7 @@ namespace ck
 
     // Grid-side record of the placements currently registered on this grid. CkRecord
     // auto-prunes a dead placement (reverse-link) when its entity is destroyed.
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOf_GridPlacements, FCk_Handle_2dGridPlacement);
+    CK_DEFINE_RECORD_OF_ENTITIES_ROUNDTRIP(FFragment_RecordOf_GridPlacements, FCk_Handle_2dGridPlacement);
 
     using RecordOf_GridPlacements_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOf_GridPlacements>;
 

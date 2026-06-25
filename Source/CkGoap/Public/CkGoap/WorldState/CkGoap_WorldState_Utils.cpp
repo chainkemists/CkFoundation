@@ -31,7 +31,7 @@ DECLARE_DWORD_COUNTER_STAT(TEXT("Goap WS Reads"), STAT_Goap_WS_Reads, STATGROUP_
 
 namespace ck
 {
-	CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfGoapWorldStates, FCk_Handle_Goap_WorldState);
+	CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfGoapWorldStates, FCk_Handle_Goap_WorldState);
 }
 
 namespace

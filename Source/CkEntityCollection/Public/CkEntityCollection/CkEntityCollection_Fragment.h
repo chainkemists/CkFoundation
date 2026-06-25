@@ -87,9 +87,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfEntityCollections, FCk_Handle_EntityCollection);
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_EntityCollections_RecordOfEntities, FCk_Handle);
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_EntityCollections_RecordOfEntities_Previous, FCk_Handle);
+    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfEntityCollections, FCk_Handle_EntityCollection);
+    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_EntityCollections_RecordOfEntities, FCk_Handle);
+    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_EntityCollections_RecordOfEntities_Previous, FCk_Handle);
 
     // --------------------------------------------------------------------------------------------------------------------
 

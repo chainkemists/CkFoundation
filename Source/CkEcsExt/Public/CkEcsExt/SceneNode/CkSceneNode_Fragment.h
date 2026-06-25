@@ -95,11 +95,11 @@ namespace ck
     // FSnapshotContext, so a re-loaded SceneNode stays attached to its (remapped) parent and the parent keeps
     // its (remapped) children. (Authoritative state — nothing rebuilds SceneNodes on restore; Construct is not
     // re-run for a re-bridged entity.)
-    CK_DEFINE_ENTITY_HOLDER_AND_UTILS(USceneNodeParent_Utils, SceneNodeParent, FCk_Handle_Transform);
+    CK_DEFINE_ENTITY_HOLDER_AND_UTILS_ROUNDTRIP(USceneNodeParent_Utils, SceneNodeParent, FCk_Handle_Transform);
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES_AND_UTILS(FUtils_RecordOfSceneNodes, FFragment_RecordOfSceneNodes, FCk_Handle_SceneNode);
+    CK_DEFINE_RECORD_OF_ENTITIES_AND_UTILS_ROUNDTRIP(FUtils_RecordOfSceneNodes, FFragment_RecordOfSceneNodes, FCk_Handle_SceneNode);
 
     // --------------------------------------------------------------------------------------------------------------------
 }

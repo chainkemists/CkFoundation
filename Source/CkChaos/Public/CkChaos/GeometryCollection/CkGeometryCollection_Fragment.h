@@ -83,7 +83,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES_AND_UTILS(FUtils_RecordOfGeometryCollections, FFragment_RecordOfGeometryCollections, FCk_Handle_GeometryCollection);
+    CK_DEFINE_RECORD_OF_ENTITIES_AND_UTILS_TRANSIENT(FUtils_RecordOfGeometryCollections, FFragment_RecordOfGeometryCollections, FCk_Handle_GeometryCollection);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

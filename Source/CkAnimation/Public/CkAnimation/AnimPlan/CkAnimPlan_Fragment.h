@@ -158,7 +158,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfAnimPlans, FCk_Handle_AnimPlan);
+    CK_DEFINE_RECORD_OF_ENTITIES_ROUNDTRIP(FFragment_RecordOfAnimPlans, FCk_Handle_AnimPlan);
 
     // --------------------------------------------------------------------------------------------------------------------
 

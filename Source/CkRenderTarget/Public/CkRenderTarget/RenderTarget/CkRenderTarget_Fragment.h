@@ -593,7 +593,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfRenderTargets, FCk_Handle_RenderTarget);
+    CK_DEFINE_RECORD_OF_ENTITIES_ROUNDTRIP(FFragment_RecordOfRenderTargets, FCk_Handle_RenderTarget);
 
     // --------------------------------------------------------------------------------------------------------------------
 

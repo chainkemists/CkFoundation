@@ -10,6 +10,10 @@
 // SerializeSnapshot routes each record-entry handle through FSnapshotContext::Snapshot_Handle, so the
 // complete FSnapshotContext type is required here (template body lives in the header).
 #include "CkEcs/Snapshot/CkSnapshot_Context.h"
+// Snapshot classification policy (RoundTrip vs Transient) + the IsSnapshotable marker base.
+#include "CkEcs/Snapshot/CkSnapshot_Policy.h"
+// CK_SNAPSHOT_ANNOUNCE_EXPECTED — the _ROUNDTRIP macros emit a static-init announce for the capture-time audit.
+#include "CkEcs/Snapshot/CkSnapshot_Audit.h"
 
 class FArchive;
 
@@ -21,12 +25,15 @@ class UCk_Utils_RecordOfEntities_UE;
 
 namespace ck
 {
-    template <concepts::ValidHandleType T_HandleType>
-    struct TFragment_RecordOfEntities
+    // T_Policy classifies this record for snapshot: ck::FSnapshotPolicy_RoundTrip (captured + must be registered
+    // via CK_REGISTER_SNAPSHOTABLE) or ck::FSnapshotPolicy_Transient (reconstructed on restore — not captured).
+    // T_Policy is REQUIRED — omitting the classification is a compile error. Use the
+    // CK_DEFINE_RECORD_OF_ENTITIES_ROUNDTRIP / _TRANSIENT macros, which supply the policy.
+    template <concepts::ValidHandleType T_HandleType, typename T_Policy>
+    struct TFragment_RecordOfEntities : public detail::TSnapshotMarker<T_Policy>
     {
     public:
-        CK_GENERATED_BODY(TFragment_RecordOfEntities<T_HandleType>);
-        using IsSnapshotable = void;
+        CK_GENERATED_BODY(TFragment_RecordOfEntities<T_HandleType COMMA T_Policy>);
 
     public:
         friend class UCk_Utils_RecordOfEntities_UE;
@@ -91,11 +98,26 @@ namespace ck
     };
 }
 
-#define CK_DEFINE_RECORD_OF_ENTITIES(_NameOfRecord_, _HandleType_)         \
-struct _NameOfRecord_ : public ck::TFragment_RecordOfEntities<_HandleType_>\
-{                                                                          \
-    using TFragment_RecordOfEntities::TFragment_RecordOfEntities;          \
+// Policy-blind define is removed — every record must classify its snapshot policy. Using it is now a hard error.
+#define CK_DEFINE_RECORD_OF_ENTITIES(_NameOfRecord_, _HandleType_)                                                  \
+    static_assert(false, "CK_DEFINE_RECORD_OF_ENTITIES is removed: choose CK_DEFINE_RECORD_OF_ENTITIES_ROUNDTRIP "  \
+        "(authoritative state that must survive save/load — also add CK_REGISTER_SNAPSHOTABLE in the .cpp) "        \
+        "or CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT (state reconstructed on restore).")
+
+// Explicit-policy defines. Pick _ROUNDTRIP for authoritative state that must survive save/load (and add a
+// CK_REGISTER_SNAPSHOTABLE in the .cpp), or _TRANSIENT for state reconstructed on restore.
+#define CK_DEFINE_RECORD_OF_ENTITIES_WITH_POLICY(_NameOfRecord_, _HandleType_, _Policy_)         \
+struct _NameOfRecord_ : public ck::TFragment_RecordOfEntities<_HandleType_, _Policy_>            \
+{                                                                                                \
+    using TFragment_RecordOfEntities::TFragment_RecordOfEntities;                                \
 }
+
+#define CK_DEFINE_RECORD_OF_ENTITIES_ROUNDTRIP(_NameOfRecord_, _HandleType_)                                \
+    CK_DEFINE_RECORD_OF_ENTITIES_WITH_POLICY(_NameOfRecord_, _HandleType_, ck::FSnapshotPolicy_RoundTrip);   \
+    CK_SNAPSHOT_ANNOUNCE_EXPECTED(_NameOfRecord_)
+
+#define CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(_NameOfRecord_, _HandleType_) \
+    CK_DEFINE_RECORD_OF_ENTITIES_WITH_POLICY(_NameOfRecord_, _HandleType_, ck::FSnapshotPolicy_Transient)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -104,7 +126,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     // NOTE: this _should_ be in CkEntityExtensions but then we have a circular dependency
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfEntityExtensions, FCk_Handle_EntityExtension);
+    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfEntityExtensions, FCk_Handle_EntityExtension);
 
     // --------------------------------------------------------------------------------------------------------------------
 }

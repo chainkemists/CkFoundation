@@ -13,7 +13,7 @@ class UCk_Utils_Interaction_UE;
 
 namespace ck
 {
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfInteractions, FCk_Handle_Interaction);
+    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfInteractions, FCk_Handle_Interaction);
 
     // --------------------------------------------------------------------------------------------------------------------
 

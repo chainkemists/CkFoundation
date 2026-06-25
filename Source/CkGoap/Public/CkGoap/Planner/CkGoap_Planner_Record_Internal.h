@@ -20,7 +20,7 @@
 
 namespace ck
 {
-	CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfGoapPlanners, FCk_Handle_Goap_Planner);
+	CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfGoapPlanners, FCk_Handle_Goap_Planner);
 }
 
 namespace ck::goap::internal_planner_record

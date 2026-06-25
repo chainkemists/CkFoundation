@@ -223,19 +223,19 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_ENTITY_HOLDER(FFragment_Velocity_Target, FCk_Handle_Transform);
+    CK_DEFINE_ENTITY_HOLDER_TRANSIENT(FFragment_Velocity_Target, FCk_Handle_Transform);
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfVelocityModifiers, FCk_Handle);
+    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfVelocityModifiers, FCk_Handle);
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfBulkVelocityModifiers, FCk_Handle);
+    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfBulkVelocityModifiers, FCk_Handle);
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfVelocityChannels, FCk_Handle);
+    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfVelocityChannels, FCk_Handle);
 
     // --------------------------------------------------------------------------------------------------------------------
 

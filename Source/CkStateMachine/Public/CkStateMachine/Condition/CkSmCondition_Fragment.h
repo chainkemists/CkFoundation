@@ -75,7 +75,7 @@ namespace ck
     // RECORDS
     // ================================================================================================================
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfSmConditions, FCk_Handle_SmCondition);
+    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfSmConditions, FCk_Handle_SmCondition);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

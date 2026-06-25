@@ -498,7 +498,7 @@ namespace ck
     // ENTITY-HOLDER BACK-REFERENCES
     // ================================================================================================================
 
-    CK_DEFINE_ENTITY_HOLDER_AND_UTILS(TUtils_Sm_OwningStateMachine, FFragment_Sm_OwningStateMachine, FCk_Handle_StateMachine);
+    CK_DEFINE_ENTITY_HOLDER_AND_UTILS_TRANSIENT(TUtils_Sm_OwningStateMachine, FFragment_Sm_OwningStateMachine, FCk_Handle_StateMachine);
 
     // ================================================================================================================
     // SIGNALS

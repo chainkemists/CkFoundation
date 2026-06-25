@@ -102,7 +102,7 @@ namespace ck
     // RECORDS
     // ================================================================================================================
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfSmTasks, FCk_Handle_SmTask);
+    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfSmTasks, FCk_Handle_SmTask);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -160,13 +160,13 @@ namespace ck
     // RECORDS
     // ================================================================================================================
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfSmStates, FCk_Handle_SmState);
+    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfSmStates, FCk_Handle_SmState);
 
     // ================================================================================================================
     // ENTITY-HOLDER BACK-REFERENCES
     // ================================================================================================================
 
-    CK_DEFINE_ENTITY_HOLDER_AND_UTILS(TUtils_Sm_ParentState, FFragment_Sm_ParentState, FCk_Handle_SmState);
+    CK_DEFINE_ENTITY_HOLDER_AND_UTILS_TRANSIENT(TUtils_Sm_ParentState, FFragment_Sm_ParentState, FCk_Handle_SmState);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

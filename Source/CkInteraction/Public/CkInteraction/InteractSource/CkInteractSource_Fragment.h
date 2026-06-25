@@ -20,7 +20,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfInteractSources, FCk_Handle_InteractSource);
+    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfInteractSources, FCk_Handle_InteractSource);
 
     // --------------------------------------------------------------------------------------------------------------------
 
