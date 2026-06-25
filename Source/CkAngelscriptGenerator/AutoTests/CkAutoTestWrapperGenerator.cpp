@@ -525,10 +525,26 @@ auto
     {
         auto Content = FString{ck_autotest_wrapper_generator::FileHeader};
 
+        // Guard the PROJECT's wrapper file (<Project>_AutoTestActors.as) in #if EDITOR. Its wrappers
+        // inherit ACk_AutoTestRunner (CkTests — non-redistributable, disabled in Shipping/Test). The
+        // project Script root is ALWAYS compiled (unlike a disabled plugin's), so without the guard
+        // these wrappers reference the absent base and break the cook/packaged AS compile
+        // (bUseEditorScripts=false makes the base absent AND #if EDITOR false → bodies skipped, file
+        // inert). Plugin wrapper files are deliberately NOT guarded: a disabled test plugin excludes
+        // its whole Script root at runtime anyway, and its sibling *Assets.as references these wrapper
+        // types OUTSIDE an EDITOR block (autotest-map OFPA actor accessors) — guarding them would make
+        // those accessors fail "Cannot use editor-only type outside of an EDITOR block" in the editor.
+        const auto IsProjectBucket = Bucket.PluginName == FApp::GetProjectName();
+        if (IsProjectBucket)
+        { Content += TEXT("#if EDITOR\n\n"); }
+
         for (auto* Class : Bucket.Classes)
         {
             Content += ck_autotest_wrapper_generator::Format_WrapperBlock(Class);
         }
+
+        if (IsProjectBucket)
+        { Content += TEXT("#endif // EDITOR\n"); }
 
         const auto OutputDir = FPaths::GetPath(Bucket.OutputFilePath);
         IFileManager::Get().MakeDirectory(*OutputDir, true);
