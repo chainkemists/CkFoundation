@@ -39,7 +39,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfVectorAttributes, FCk_Handle_VectorAttribute);
+    CK_DEFINE_RECORD_OF_ENTITIES_ROUNDTRIP(FFragment_RecordOfVectorAttributes, FCk_Handle_VectorAttribute);
 
     // --------------------------------------------------------------------------------------------------------------------
 

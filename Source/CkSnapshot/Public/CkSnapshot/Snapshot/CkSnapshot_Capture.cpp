@@ -4,6 +4,7 @@
 #include "CkEcs/Snapshot/CkSnapshot_Archive_Writer.h"
 #include "CkEcs/Snapshot/CkSnapshot_Context.h"
 #include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
+#include "CkEcs/Snapshot/CkSnapshot_Audit.h"
 #include "CkEcs/Snapshot/CkSnapshot_TagDriver.h"
 #include "CkSnapshot/SaveGame/CkSnapshot_Header.h"
 
@@ -28,6 +29,19 @@ namespace ck::snapshot
             FCk_Snapshot_Header& InOutHeader)
         -> ECk_SnapshotResult
     {
+        // ---- One-shot classification audit -----------------------------------------------------------------------
+        // Every RoundTrip-classified holder/record must be registered snapshotable. All macro-emitted RoundTrip
+        // announces complete at static-init (before any capture), so a single pass at the first capture catches a
+        // forgotten CK_REGISTER_SNAPSHOTABLE and ensures by name instead of silently dropping the type on save/load.
+        {
+            static auto bAuditedThisProcess = false;
+            if (NOT bAuditedThisProcess)
+            {
+                bAuditedThisProcess = true;
+                ck::snapshot_audit::Audit_ExpectedAreRegistered();
+            }
+        }
+
         // ---- Stamp header --------------------------------------------------------------------------------------
         // _WorldAssetPath is intentionally left untouched here — the registry core has no UWorld. The UWorld
         // wrapper stamps it before delegating.

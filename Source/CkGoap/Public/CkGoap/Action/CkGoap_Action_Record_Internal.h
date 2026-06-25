@@ -16,7 +16,7 @@
 
 namespace ck
 {
-	CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfGoapActions, FCk_Handle_Goap_Action);
+	CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfGoapActions, FCk_Handle_Goap_Action);
 }
 
 namespace ck::goap::internal_action

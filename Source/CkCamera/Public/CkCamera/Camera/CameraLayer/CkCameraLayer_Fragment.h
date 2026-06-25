@@ -135,9 +135,9 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_ENTITY_HOLDER_AND_UTILS(TUtils_CameraLayer_OwningCamera, FFragment_CameraLayer_OwningCamera, FCk_Handle_Camera);
+    CK_DEFINE_ENTITY_HOLDER_AND_UTILS_TRANSIENT(TUtils_CameraLayer_OwningCamera, FFragment_CameraLayer_OwningCamera, FCk_Handle_Camera);
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfCameraLayers, FCk_Handle_CameraLayer);
+    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfCameraLayers, FCk_Handle_CameraLayer);
 
     // Shared record-of-layers utility (used by both the processors and the Utils class).
     struct CKCAMERA_API FUtils_RecordOfCameraLayers : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfCameraLayers> {};

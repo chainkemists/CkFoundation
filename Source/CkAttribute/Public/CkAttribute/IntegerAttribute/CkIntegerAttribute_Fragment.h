@@ -39,7 +39,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfIntegerAttributes, FCk_Handle_IntegerAttribute);
+    CK_DEFINE_RECORD_OF_ENTITIES_ROUNDTRIP(FFragment_RecordOfIntegerAttributes, FCk_Handle_IntegerAttribute);
 
     // --------------------------------------------------------------------------------------------------------------------
 

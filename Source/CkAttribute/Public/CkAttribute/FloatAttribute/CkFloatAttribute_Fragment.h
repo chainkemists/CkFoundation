@@ -39,7 +39,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfFloatAttributes, FCk_Handle_FloatAttribute);
+    CK_DEFINE_RECORD_OF_ENTITIES_ROUNDTRIP(FFragment_RecordOfFloatAttributes, FCk_Handle_FloatAttribute);
 
     // --------------------------------------------------------------------------------------------------------------------
 

@@ -17,14 +17,14 @@ class UCk_Entity_ConstructionScript_PDA;
 
 namespace ck
 {
-    CK_DEFINE_RECORD_OF_ENTITIES_AND_UTILS(FUtils_RecordOfAggros, FFragment_RecordOfAggro, FCk_Handle_Aggro);
+    CK_DEFINE_RECORD_OF_ENTITIES_AND_UTILS_TRANSIENT(FUtils_RecordOfAggros, FFragment_RecordOfAggro, FCk_Handle_Aggro);
 
     // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_ECS_TAG(FTag_Aggro);
     CK_DEFINE_ECS_TAG(FTag_Aggro_Excluded);
 
-    CK_DEFINE_ENTITY_HOLDER_AND_UTILS(UAggroedEntity_Utils, AggroedEntity, FCk_Handle);
+    CK_DEFINE_ENTITY_HOLDER_AND_UTILS_TRANSIENT(UAggroedEntity_Utils, AggroedEntity, FCk_Handle);
 
     // --------------------------------------------------------------------------------------------------------------------
 

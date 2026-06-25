@@ -12,7 +12,7 @@
 
 namespace ck
 {
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfMessengers, FCk_Handle);
+    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfMessengers, FCk_Handle);
 
     // --------------------------------------------------------------------------------------------------------------------
 

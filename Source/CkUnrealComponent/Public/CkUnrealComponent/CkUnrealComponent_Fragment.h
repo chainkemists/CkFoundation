@@ -61,7 +61,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES_AND_UTILS(
+    CK_DEFINE_RECORD_OF_ENTITIES_AND_UTILS_TRANSIENT(
         RecordOfUnrealComponents_Utils,
         FFragment_RecordOfUnrealComponents,
         FCk_Handle_UnrealComponent);

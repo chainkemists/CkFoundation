@@ -22,8 +22,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfAudioTracks, FCk_Handle_AudioTrack);
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfAudioTimers, FCk_Handle_Timer);
+    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfAudioTracks, FCk_Handle_AudioTrack);
+    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfAudioTimers, FCk_Handle_Timer);
 
     // --------------------------------------------------------------------------------------------------------------------
 

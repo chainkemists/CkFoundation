@@ -116,7 +116,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfSensors, FCk_Handle_Sensor);
+    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfSensors, FCk_Handle_Sensor);
 
     // --------------------------------------------------------------------------------------------------------------------
 
