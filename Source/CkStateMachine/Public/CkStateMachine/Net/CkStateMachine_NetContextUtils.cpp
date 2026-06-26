@@ -68,10 +68,17 @@ namespace ck::statemachine
         const auto EffectiveAuth = UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel(InSm);
         const auto Replication   = UCk_Utils_StateMachine_UE::Get_Replication(InSm);
 
+        // The locally-controlled probe MUST target the ROOT SM (which is bridged to the pawn), not InSm.
+        // A sub-SM is a driverless child entity with no owning-actor, so probing it directly always
+        // returns IsNotValidPawn — a listen host that owns the pawn would then be misread as "not the
+        // owning client" and its OWN sub-SM suppressed below, freezing it in its initial child state
+        // (the player locomotion sub-SM stuck in Loco_Idle, which has no Movement task → the listen
+        // server can't move). Get_RootStateMachine returns InSm unchanged for a top-level SM.
+        const auto RootSm = UCk_Utils_StateMachine_UE::Get_RootStateMachine(InSm);
         const auto IsHostOwningClient =
             NetContext == ECk_Sm_NetContext::Server
             && EffectiveAuth == ECk_Sm_AuthorityModel::OwningClientAuthoritative
-            && UCk_Utils_Net_UE::Get_IsEntityLocallyControlled_ByPlayer(InSm)
+            && UCk_Utils_Net_UE::Get_IsEntityLocallyControlled_ByPlayer(RootSm)
                 == ECk_Utils_Net_IsLocallyControlled_Result::IsLocallyControlled;
 
         // Suppress self-evaluation for a RELAYED sub-SM (DoesNotReplicate, but carrying an
