@@ -87,6 +87,12 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_Watermark_GroupPlacement _InfoGroupPlacement;
 
+    // Bottom-center by default: ECS pump pressure now; reserved for Server/Client connection + version
+    // mismatch info in the near future. Sits between the bottom-left (info) and bottom-right (stats) grids.
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Watermark|Placement",
+              meta = (AllowPrivateAccess = true))
+    FCk_Watermark_GroupPlacement _CenterGroupPlacement;
+
     // ---- ECS -----------------------------------------------------------------
     // Tags listed here each get one stat row in Detailed mode.
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Watermark|ECS",
