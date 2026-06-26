@@ -736,8 +736,15 @@ namespace ck
                 const auto IsOwningClientOriginator =
                     NetContext == ECk_Sm_NetContext::OwningClient
                     && AuthModel == ECk_Sm_AuthorityModel::OwningClientAuthoritative;
+                // Leg 2 (server -> non-owning clients): the server commits this sub-SM transition only
+                // via the relayed replay queue (it is not the transition authority for an OwningClientAuth
+                // sub-SM — see Get_IsTransitionAuthority), so every sub-SM transition it commits is a
+                // relayed one that must be republished to observers.
+                const auto IsServerRepublisher =
+                    NetContext == ECk_Sm_NetContext::Server
+                    && AuthModel == ECk_Sm_AuthorityModel::OwningClientAuthoritative;
 
-                if (IsOwningClientOriginator)
+                if (IsOwningClientOriginator || IsServerRepublisher)
                 {
                     auto Root = UCk_Utils_StateMachine_UE::Get_RootStateMachine(InHandle);
                     if (UCk_Utils_StateMachine_UE::Get_Replication(Root) == ECk_Replication::Replicates)
@@ -755,8 +762,37 @@ namespace ck
                         };
                         Event.Set_SubSmIdentity(SubSmIdentity);
 
-                        auto& Batch = Root.AddOrGet<FFragment_Sm_PendingClientBatch>();
-                        Batch.Get_PendingEvents().Add(Event);
+                        if (IsOwningClientOriginator)
+                        {
+                            // Leg 1 (owning client -> server): buffer onto the root's client batch for
+                            // FProcessor_Sm_PushOwningClientBatch to RPC via Server_PushTransitionBatch.
+                            auto& Batch = Root.AddOrGet<FFragment_Sm_PendingClientBatch>();
+                            Batch.Get_PendingEvents().Add(Event);
+                        }
+                        else // IsServerRepublisher
+                        {
+                            // Republish the identity-tagged event onto the ROOT's WithHistory container
+                            // (the root rides the pawn entity's replication driver) so non-owning observers
+                            // dispatch it to their local sub-SM by identity. The owning client echo-
+                            // suppresses this delta (it already applied the transition locally). NoHistory
+                            // roots have no field to carry the identity, so the relay is WithHistory-only —
+                            // mirrors leg 1's Server_PushTransitionBatch (WithHistory) vs Server_PushCurrentState.
+                            if (UCk_Utils_StateMachine_UE::Get_ReplicationModel(Root) == ECk_Sm_ReplicationModel::WithHistory)
+                            {
+                                UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_StateMachine_WithHistory>(
+                                    Root,
+                                    [&](FCk_RepData_StateMachine_WithHistory& RepData) -> void
+                                    {
+                                        auto& History = RepData.Get_History();
+                                        History.Add(Event);
+                                        if (History.Num() > FCk_RepData_StateMachine_WithHistory::RingSize)
+                                        { History.RemoveAt(0); }
+                                    });
+
+                                ck::sm::Verbose(TEXT("[SubSmRelay] server republished sub-SM transition [{}] -> [{}] (seq [{}]) onto root [{}] WithHistory container"),
+                                    PreviousStateClass, TargetStateClass, SeqValue, Root);
+                            }
+                        }
                     }
                 }
             }

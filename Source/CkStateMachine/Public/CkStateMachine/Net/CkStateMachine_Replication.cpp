@@ -185,6 +185,84 @@ namespace
         }
     }
 
+    // Leg-2 receive dispatch (P4 / "A"). The root's WithHistory container can carry a MIX of root-level
+    // transition events (empty _SubSmIdentity, the root's own seq space) and sub-SM events relayed through
+    // the root on behalf of a non-replicated sub-SM (non-empty _SubSmIdentity, each sub-SM's OWN
+    // server-assigned seq space — see FProcessor_Sm_CommitPendingTransition's IsServerRepublisher branch).
+    //
+    // Partition by identity and run dedup (§5.5) + lagged-out recovery (§5.7) PER TARGET, each against its
+    // own FFragment_Sm_ClientReplayState / FFragment_Sm_ReplayQueue. The existing helpers are already
+    // per-entity, so passing the resolved sub-SM as the target makes the seq bookkeeping correct for free.
+    // This partitioning is load-bearing: feeding a sub-SM's events through the ROOT's seq space would
+    // corrupt the dedup watermark AND let lagged-out recovery snap the root to a sub-SM's state class (its
+    // "snap to History.Last()" must use the last event FOR THAT TARGET, which the per-bucket slice gives).
+    // Mirrors ACk_StateMachineRelay_UE::Server_PushTransitionBatch's identity routing for the leg-1 path.
+    auto
+    Sm_DispatchWithHistory(
+        FCk_Handle& RootEntity,
+        const TArray<FCk_Sm_TransitionEvent>& InHistory) -> void
+    {
+        struct FSubSmBucket
+        {
+            TArray<FGameplayTag>           Identity;
+            TArray<FCk_Sm_TransitionEvent> Events;
+        };
+
+        auto RootEvents = TArray<FCk_Sm_TransitionEvent>{};
+        auto SubBuckets = TArray<FSubSmBucket>{};
+
+        for (const auto& Event : InHistory)
+        {
+            const auto& Identity = Event.Get_SubSmIdentity();
+            if (Identity.IsEmpty())
+            {
+                RootEvents.Add(Event);
+                continue;
+            }
+
+            if (auto* Bucket = SubBuckets.FindByPredicate(
+                    [&](const FSubSmBucket& InBucket) -> bool { return InBucket.Identity == Identity; }))
+            {
+                Bucket->Events.Add(Event);
+            }
+            else
+            {
+                SubBuckets.Add(FSubSmBucket{Identity, TArray<FCk_Sm_TransitionEvent>{Event}});
+            }
+        }
+
+        // Root-level events apply to the receiving (root) entity exactly as before this split.
+        if (NOT RootEvents.IsEmpty())
+        {
+            const auto ToApply = Sm_DetectAndHandleLaggedOut_WithHistory(RootEntity, RootEvents);
+            Sm_EnqueueOrStash(RootEntity, ToApply);
+        }
+
+        if (SubBuckets.IsEmpty())
+        { return; }
+
+        const auto RootHandle = UCk_Utils_StateMachine_UE::CastChecked(RootEntity);
+
+        for (auto& Bucket : SubBuckets)
+        {
+            auto TargetSubSm = UCk_Utils_StateMachine_UE::TryFind_ActiveSubSm_ByParentHierarchy(RootHandle, Bucket.Identity);
+            if (ck::Is_NOT_Valid(TargetSubSm))
+            {
+                // The hosting parent state isn't active yet on this machine (the local sub-SM doesn't
+                // exist). The repro's 30-frame settle means the parent is long-entered by the time sub-SM
+                // events arrive; a true parent-then-child race (stash-and-defer) is deferred (roadmap), so
+                // log + drop rather than land the event on the wrong SM.
+                ck::sm::Warning(TEXT("WithHistory Apply: sub-SM for identity-path (depth [{}]) not active under root [{}]; dropping [{}] relayed event(s)"),
+                    Bucket.Identity.Num(), RootEntity, Bucket.Events.Num());
+                continue;
+            }
+
+            auto TargetEntity = FCk_Handle{TargetSubSm};
+            const auto ToApply = Sm_DetectAndHandleLaggedOut_WithHistory(TargetEntity, Bucket.Events);
+            Sm_EnqueueOrStash(TargetEntity, ToApply);
+        }
+    }
+
     struct FCk_StateMachineRepHandlerRegistrar
     {
         FCk_StateMachineRepHandlerRegistrar()
@@ -203,8 +281,7 @@ namespace
                         { return ECk_RepFragment_ApplyResult::Applied; }
 
                         const auto& NewPayload = New.Get<FCk_RepData_StateMachine_WithHistory>();
-                        const auto EventsToApply = Sm_DetectAndHandleLaggedOut_WithHistory(Entity, NewPayload.Get_History());
-                        Sm_EnqueueOrStash(Entity, EventsToApply);
+                        Sm_DispatchWithHistory(Entity, NewPayload.Get_History());
                         Sm_HandleRunStatus(Entity, NewPayload.Get_RunStatus());
 
                         ck::sm::VeryVerbose(TEXT("WithHistory Apply for [{}] — history size [{}], status [{}]"),
