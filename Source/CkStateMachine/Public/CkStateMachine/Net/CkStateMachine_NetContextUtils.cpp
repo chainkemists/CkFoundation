@@ -60,6 +60,37 @@ namespace ck::statemachine
     }
 
     auto
+        Get_IsTransitionAuthority(
+            const FCk_Handle_StateMachine& InSm)
+        -> bool
+    {
+        const auto NetContext    = ComputeNetContext(InSm);
+        const auto EffectiveAuth = UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel(InSm);
+
+        switch (NetContext)
+        {
+            case ECk_Sm_NetContext::Standalone:
+                return true;
+
+            case ECk_Sm_NetContext::Server:
+                // Server drives transitions for ServerAuth SMs. For OwningClientAuth it follows the
+                // relay — EXCEPT the listen-server host on its own pawn, which IS the owning client.
+                if (EffectiveAuth == ECk_Sm_AuthorityModel::ServerAuthoritative)
+                { return true; }
+                return EffectiveAuth == ECk_Sm_AuthorityModel::OwningClientAuthoritative
+                    && UCk_Utils_Net_UE::Get_IsEntityLocallyControlled_ByPlayer(InSm)
+                        == ECk_Utils_Net_IsLocallyControlled_Result::IsLocallyControlled;
+
+            case ECk_Sm_NetContext::OwningClient:
+                return EffectiveAuth == ECk_Sm_AuthorityModel::OwningClientAuthoritative;
+
+            case ECk_Sm_NetContext::NonOwningClient:
+            default:
+                return false;
+        }
+    }
+
+    auto
         MirrorRunStatus(
             FCk_Handle& InEntity,
             ECk_SmRunStatus InNewStatus)
