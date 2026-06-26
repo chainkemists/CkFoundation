@@ -118,6 +118,14 @@ protected:
         meta=(AllowPrivateAccess, InvalidEnumValues = "NotInstanced"))
     ECk_EntityScript_InstancingPolicy _InstancingPolicy = ECk_EntityScript_InstancingPolicy::InstancedPerEntity;
 
+    // Opt-in: when true, this EntityScript appears in the 'Ck Entity Scripts' tab of the editor's
+    // Place Actors panel and can be dragged straight into a level (the drag spawns a configured
+    // ACk_EntitySpawner_UE). AngelScript: 'default _ShowInPlaceActors = true;'.
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
+        Category = "Ck|EntityScript",
+        meta=(AllowPrivateAccess = true))
+    bool _ShowInPlaceActors = false;
+
     UPROPERTY(Transient)
     FCk_Handle _AssociatedEntity;
 
@@ -130,6 +138,7 @@ public:
     // CK_PROPERTY_GET(_Replication); // Use Get_EffectiveReplication
     CK_PROPERTY_GET(_InstancingPolicy);
     CK_PROPERTY_GET(_AssociatedEntity);
+    CK_PROPERTY_GET(_ShowInPlaceActors);
 };
 
 // ----------------------------------------------------------------------------------------------------------
