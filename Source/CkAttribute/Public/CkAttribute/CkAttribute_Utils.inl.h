@@ -177,18 +177,19 @@ namespace ck
             ECk_AttributeValueChange_SyncPolicy InSyncPolicy)
         -> void
     {
-        // A same-frame Request_ClearAllModifiers (the replicated-attribute apply path does
-        // exactly this) marks the existing NotRevocable modifier for DEFERRED destroy
-        // (FTag_DestroyEntity_Initiate) without erasing it yet. Coalescing the new delta into
-        // that doomed modifier silently loses the write the moment the destroy drains — which is
-        // why a replicated attribute Override'd in alternating frames sticks on the client every
-        // other edge. Treat a pending-destroy modifier as absent so we fall through and create a
-        // fresh one that survives.
         if (auto MaybeExistingModifier = RecordOfAttributeModifiers_Utils::Get_ValidEntry_If(
             InAttributeHandle, ck::algo::MatchesAttributeModifierWithOperation<AttributeModifierFragmentType, typename AttributeModifierFragmentType::FTag_IsNotRevocableModification>{InModifierOperation});
-            ck::IsValid(MaybeExistingModifier) &&
-            NOT UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(MaybeExistingModifier, ECk_EntityLifetime_DestructionPhase::BeginDestroy))
+            ck::IsValid(MaybeExistingModifier))
         {
+            // NotRevocable modifiers are permanent — Request_ClearAllModifiers never destroys them,
+            // so this coalesce target can never be queued for destruction. Tripwire: if a future
+            // code path starts removing NotRevocable modifiers, coalescing into a pending-destroy
+            // entity would silently lose the write when the destroy drains (the replicated-attribute
+            // alternating-override stick). Fail loudly instead of coalescing into a doomed modifier.
+            CK_ENSURE_IF_NOT(NOT UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(MaybeExistingModifier, ECk_EntityLifetime_DestructionPhase::BeginDestroy),
+                TEXT("Add_NotRevocable coalescing into NotRevocable modifier [{}] that is pending destroy."), MaybeExistingModifier)
+            { return; }
+
             const auto& CurrentModifierValue = MaybeExistingModifier.template Get<AttributeModifierFragmentType>().Get_ModifierDelta();
 
             switch (InModifierOperation)
@@ -261,6 +262,13 @@ namespace ck
             }, [](
             AttributeModifierHandleType InAttributeModifier)
             {
+                // NotRevocable modifiers are permanent (set-once / accumulate) and must never be
+                // cleared. Clearing them queued the EmptyTag Override modifier for deferred destroy
+                // and let a same-frame Add_NotRevocable coalesce into a doomed entity — the
+                // replicated-attribute alternating-override stick.
+                if (InAttributeModifier.template Has<typename AttributeModifierFragmentType::FTag_IsNotRevocableModification>())
+                { return false; }
+
                 if (UCk_Utils_GameplayLabel_UE::Has(InAttributeModifier) &&
                     UCk_Utils_GameplayLabel_UE::MatchesAny(InAttributeModifier, TagsToIgnore))
                 { return false; }
