@@ -15,6 +15,7 @@ public class CkEntitySpawnerEditor : CkModuleRules
             "Projects",
 
             "InputCore",
+            "PlacementMode",
             "PropertyEditor",
             "Slate",
             "SlateCore",

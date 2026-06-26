@@ -10,13 +10,16 @@
 
 #include "CkEntitySpawnerEditor_Log.h"
 
+#include "CkCore/Reflection/CkReflection_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkEcs/EntityScript/CkEntityScript.h"
 
 #include "UObject/UObjectGlobals.h"
+#include "UObject/UObjectHash.h"
 
 #include "ActorFactories/ActorFactory.h"
+#include "AssetRegistry/AssetData.h"
 #include "Components/BillboardComponent.h"
 #include "Editor.h"
 #include "Engine/Engine.h"
@@ -25,6 +28,7 @@
 #include "EngineUtils.h"
 #include "ImageUtils.h"
 #include "Interfaces/IPluginManager.h"
+#include "IPlacementModeModule.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"
@@ -122,6 +126,138 @@ namespace ck::entity_spawner_editor_internal
 
         UE_LOG(CkEntitySpawnerEditor, Verbose, TEXT("Applied icon to EntitySpawner [%s]"), *Spawner->GetName());
     }
+
+    // ----------------------------------------------------------------------------------------------------
+    // Place Actors panel integration: a 'Ck Entity Scripts' category populated with one draggable item per
+    // opt-in (UCk_EntityScript_UE::Get_ShowInPlaceActors) EntityScript class. Dragging an item routes
+    // through UCk_EntitySpawner_ActorFactory_UE, which already accepts a bare EntityScript UClass as its
+    // asset — so the drop spawns a configured ACk_EntitySpawner_UE with the script pre-assigned, with no
+    // Blueprint wrapper required.
+
+    static auto Get_PlacementCategoryHandle() -> FName
+    {
+        static const FName Handle = TEXT("CkEntityScripts");
+        return Handle;
+    }
+
+    static TArray<FPlacementModeID> GRegisteredPlaceableItemIDs;
+    static bool GPlacementCategoryRegistered = false;
+
+    static auto DoRegisterPlacementCategory() -> void
+    {
+        if (GPlacementCategoryRegistered)
+        { return; }
+
+        auto& PlacementMode = IPlacementModeModule::Get();
+
+        constexpr auto SortOrder = 45;
+        const auto CategoryInfo = FPlacementCategoryInfo
+        {
+            LOCTEXT("CkEntityScripts_DisplayName", "Ck Entity Scripts"),
+            Get_PlacementCategoryHandle(),
+            TEXT("PMCkEntityScripts"),
+            SortOrder
+        };
+
+        GPlacementCategoryRegistered = PlacementMode.RegisterPlacementCategory(CategoryInfo);
+    }
+
+    static auto DoEnumeratePlaceableEntityScriptClasses() -> TArray<UClass*>
+    {
+        auto Result = TArray<UClass*>{};
+
+        auto DerivedClasses = TArray<UClass*>{};
+        constexpr auto Recursive = true;
+        GetDerivedClasses(UCk_EntityScript_UE::StaticClass(), DerivedClasses, Recursive);
+
+        for (auto* DerivedClass : DerivedClasses)
+        {
+            if (ck::Is_NOT_Valid(DerivedClass))
+            { continue; }
+
+            if (DerivedClass->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists))
+            { continue; }
+
+            if (UCk_Utils_Reflection_UE::Is_PlaceholderClass(DerivedClass))
+            { continue; }
+
+            const auto* CDO = Cast<UCk_EntityScript_UE>(DerivedClass->GetDefaultObject());
+            if (ck::Is_NOT_Valid(CDO))
+            { continue; }
+
+            if (NOT CDO->Get_ShowInPlaceActors())
+            { continue; }
+
+            Result.Add(DerivedClass);
+        }
+
+        return Result;
+    }
+
+    static auto DoRefreshPlaceableEntityScripts() -> void
+    {
+        if (GEditor == nullptr)
+        { return; }
+
+        DoRegisterPlacementCategory();
+
+        if (NOT GPlacementCategoryRegistered)
+        { return; }
+
+        auto& PlacementMode = IPlacementModeModule::Get();
+
+        for (const auto& ItemID : GRegisteredPlaceableItemIDs)
+        {
+            PlacementMode.UnregisterPlaceableItem(ItemID);
+        }
+        GRegisteredPlaceableItemIDs.Reset();
+
+        // The factory is registered with GEditor in DoPostEngineInit; FindActorFactoryByClass returns that
+        // shared instance, so every placeable item reuses the same factory the content-browser drag uses.
+        auto* Factory = GEditor->FindActorFactoryByClass(UCk_EntitySpawner_ActorFactory_UE::StaticClass());
+        if (ck::Is_NOT_Valid(Factory))
+        { return; }
+
+        for (auto* EntityScriptClass : DoEnumeratePlaceableEntityScriptClasses())
+        {
+            const auto AssetData = FAssetData{EntityScriptClass};
+            const auto Item = MakeShared<FPlaceableItem>(Factory, AssetData);
+
+            if (const auto ItemID = PlacementMode.RegisterPlaceableItem(Get_PlacementCategoryHandle(), Item);
+                ItemID.IsSet())
+            {
+                GRegisteredPlaceableItemIDs.Add(ItemID.GetValue());
+            }
+        }
+
+        UE_LOG(CkEntitySpawnerEditor, Log,
+            TEXT("Place Actors 'Ck Entity Scripts': registered %d placeable EntityScript item(s)"),
+            GRegisteredPlaceableItemIDs.Num());
+    }
+
+    static auto DoUnregisterPlacement() -> void
+    {
+        if (NOT IPlacementModeModule::IsAvailable())
+        {
+            GRegisteredPlaceableItemIDs.Reset();
+            GPlacementCategoryRegistered = false;
+            return;
+        }
+
+        auto& PlacementMode = IPlacementModeModule::Get();
+
+        for (const auto& ItemID : GRegisteredPlaceableItemIDs)
+        {
+            PlacementMode.UnregisterPlaceableItem(ItemID);
+        }
+        GRegisteredPlaceableItemIDs.Reset();
+
+        if (GPlacementCategoryRegistered)
+        {
+            PlacementMode.UnregisterPlacementCategory(Get_PlacementCategoryHandle());
+            GPlacementCategoryRegistered = false;
+        }
+    }
 }
 
 void FCkEntitySpawnerEditorModule::StartupModule()
@@ -204,6 +340,10 @@ void FCkEntitySpawnerEditorModule::DoPostEngineInit()
         _MapOpenedHandle = FEditorDelegates::OnMapOpened.AddLambda(
             [this](const FString&, bool) { DoRebuildAllEditorEntities(); });
     }
+
+    // Register the 'Ck Entity Scripts' Place Actors category and populate it from the opt-in EntityScript
+    // classes loaded at this point (native + AngelScript + already-loaded Blueprints).
+    ck::entity_spawner_editor_internal::DoRefreshPlaceableEntityScripts();
 }
 
 void FCkEntitySpawnerEditorModule::ShutdownModule()
@@ -222,6 +362,8 @@ void FCkEntitySpawnerEditorModule::ShutdownModule()
 
     if (_EndFrameRebuildHandle.IsValid())
     { FCoreDelegates::OnEndFrame.Remove(_EndFrameRebuildHandle); }
+
+    ck::entity_spawner_editor_internal::DoUnregisterPlacement();
 
     ck::entity_spawner_editor_internal::GEntitySpawnerIcon.Reset();
 
@@ -363,6 +505,10 @@ void FCkEntitySpawnerEditorModule::OnEndFrame_RebuildSpawners()
             It->EditorOnly_RebuildEntity();
         }
     }
+
+    // AngelScript post-compile and BP/AS reinstancing both funnel here — that is exactly when the set of
+    // opt-in EntityScript classes (or their display names) can change, so refresh the Place Actors items.
+    ck::entity_spawner_editor_internal::DoRefreshPlaceableEntityScripts();
 }
 
 UTexture2D* FCkEntitySpawnerEditorModule::Get_EntitySpawnerIconTexture()
