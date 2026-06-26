@@ -49,6 +49,12 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_Watermark_ColorBands_LowerIsBetter _Watermark_UniqueEnsureCount_ColorBands;
 
+    // ECS scheduler pump passes this frame (lower is better). Defaults set in the constructor,
+    // scaled to the default pump budget (30): green 0-1, lime 2-4, yellow 5-8, orange 9-20, red 21+.
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Color Bands|Pump Count",
+              meta = (AllowPrivateAccess = true))
+    FCk_Watermark_ColorBands_LowerIsBetter _Watermark_PumpCount_ColorBands;
+
     // ---- Font sizes ----------------------------------------------------------
     UPROPERTY(Config, EditAnywhere, Category = "Watermark|Fonts",
               meta = (AllowPrivateAccess = true, ClampMin = 4, ClampMax = 72))
@@ -128,6 +134,12 @@ private:
               meta = (AllowPrivateAccess = true))
     FLinearColor _Watermark_UncoloredStat_Color = FLinearColor(0.55f, 0.55f, 0.55f, 1.f);
 
+    // Color of the "pump limit exceeded" warning banner shown in the center group when the
+    // frame's pump count reaches the scheduler's budget.
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Colors",
+              meta = (AllowPrivateAccess = true))
+    FLinearColor _Watermark_PumpLimit_WarningColor = FLinearColor(1.0f, 0.1f, 0.1f, 1.f);
+
     UPROPERTY(Config, EditAnywhere, Category = "Watermark|Colors|Build Config",
               meta = (AllowPrivateAccess = true))
     FLinearColor _Watermark_BuildConfig_Debug_Color = FLinearColor(1.0f, 0.5f, 0.15f, 1.f);
@@ -186,6 +198,10 @@ private:
     UPROPERTY(Config, EditAnywhere, Category = "Watermark|Stat Visibility|Performance",
               meta = (AllowPrivateAccess = true))
     ECk_Watermark_DisplayPolicy _Watermark_MinPolicy_Frame = ECk_Watermark_DisplayPolicy::Regular;
+
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Stat Visibility|Performance",
+              meta = (AllowPrivateAccess = true))
+    ECk_Watermark_DisplayPolicy _Watermark_MinPolicy_PumpCount = ECk_Watermark_DisplayPolicy::Regular;
 
     // ---- Minimum Display Policy — Replication --------------------------------
     UPROPERTY(Config, EditAnywhere, Category = "Watermark|Stat Visibility|Replication",
@@ -420,6 +436,8 @@ public:
     CK_PROPERTY_GET(_Watermark_Ping_ColorBands);
     CK_PROPERTY_GET(_Watermark_EnsureCount_ColorBands);
     CK_PROPERTY_GET(_Watermark_UniqueEnsureCount_ColorBands);
+    CK_PROPERTY_GET(_Watermark_PumpCount_ColorBands);
+    CK_PROPERTY_GET(_Watermark_PumpLimit_WarningColor);
     CK_PROPERTY_GET(_Watermark_FontOverride);
     CK_PROPERTY_GET(_Watermark_ValueFontSize);
     CK_PROPERTY_GET(_Watermark_LabelFontSize);
@@ -450,6 +468,7 @@ public:
     CK_PROPERTY_GET(_Watermark_MinPolicy_Fps);
     CK_PROPERTY_GET(_Watermark_MinPolicy_Time);
     CK_PROPERTY_GET(_Watermark_MinPolicy_Frame);
+    CK_PROPERTY_GET(_Watermark_MinPolicy_PumpCount);
     CK_PROPERTY_GET(_Watermark_MinPolicy_RepActors);
     CK_PROPERTY_GET(_Watermark_MinPolicy_RepComponents);
     CK_PROPERTY_GET(_Watermark_MinPolicy_RepObjects);
@@ -510,6 +529,8 @@ public:
     static const FCk_Watermark_ColorBands_LowerIsBetter&  Get_Watermark_Ping_ColorBands();
     static const FCk_Watermark_ColorBands_LowerIsBetter&  Get_Watermark_EnsureCount_ColorBands();
     static const FCk_Watermark_ColorBands_LowerIsBetter&  Get_Watermark_UniqueEnsureCount_ColorBands();
+    static const FCk_Watermark_ColorBands_LowerIsBetter&  Get_Watermark_PumpCount_ColorBands();
+    static FLinearColor Get_Watermark_PumpLimit_WarningColor();
     static FSlateFontInfo Get_Watermark_FontOverride();
     static int32          Get_Watermark_ValueFontSize();
     static int32          Get_Watermark_LabelFontSize();
@@ -540,6 +561,7 @@ public:
     static ECk_Watermark_DisplayPolicy Get_Watermark_MinPolicy_Fps();
     static ECk_Watermark_DisplayPolicy Get_Watermark_MinPolicy_Time();
     static ECk_Watermark_DisplayPolicy Get_Watermark_MinPolicy_Frame();
+    static ECk_Watermark_DisplayPolicy Get_Watermark_MinPolicy_PumpCount();
     static ECk_Watermark_DisplayPolicy Get_Watermark_MinPolicy_RepActors();
     static ECk_Watermark_DisplayPolicy Get_Watermark_MinPolicy_RepComponents();
     static ECk_Watermark_DisplayPolicy Get_Watermark_MinPolicy_RepObjects();

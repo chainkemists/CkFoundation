@@ -24,6 +24,13 @@ UCk_Watermark_ProjectSettings_UE::UCk_Watermark_ProjectSettings_UE(
     _Watermark_UniqueEnsureCount_ColorBands.Good_Threshold     = 4.f;
     _Watermark_UniqueEnsureCount_ColorBands.Okay_Threshold     = 9.f;
     _Watermark_UniqueEnsureCount_ColorBands.Bad_Threshold      = 9.f;  // same as Okay → no orange band
+
+    // Pump Count (scheduler pump passes this frame; default budget is 30):
+    // green 0-1, lime 2-4, yellow 5-8 (the old WarnThreshold), orange 9-20, red 21+ (approaching the limit).
+    _Watermark_PumpCount_ColorBands.VeryGood_Threshold = 1.f;
+    _Watermark_PumpCount_ColorBands.Good_Threshold     = 4.f;
+    _Watermark_PumpCount_ColorBands.Okay_Threshold     = 8.f;
+    _Watermark_PumpCount_ColorBands.Bad_Threshold      = 20.f;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -90,6 +97,22 @@ auto
     -> const FCk_Watermark_ColorBands_LowerIsBetter&
 {
     return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_UniqueEnsureCount_ColorBands();
+}
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_PumpCount_ColorBands()
+    -> const FCk_Watermark_ColorBands_LowerIsBetter&
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_PumpCount_ColorBands();
+}
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_PumpLimit_WarningColor()
+    -> FLinearColor
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_PumpLimit_WarningColor();
 }
 
 auto
@@ -264,6 +287,7 @@ auto UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_ServerFps()
 auto UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_Fps()             -> ECk_Watermark_DisplayPolicy { return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_MinPolicy_Fps(); }
 auto UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_Time()            -> ECk_Watermark_DisplayPolicy { return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_MinPolicy_Time(); }
 auto UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_Frame()           -> ECk_Watermark_DisplayPolicy { return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_MinPolicy_Frame(); }
+auto UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_PumpCount()       -> ECk_Watermark_DisplayPolicy { return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_MinPolicy_PumpCount(); }
 auto UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_RepActors()       -> ECk_Watermark_DisplayPolicy { return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_MinPolicy_RepActors(); }
 auto UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_RepComponents()   -> ECk_Watermark_DisplayPolicy { return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_MinPolicy_RepComponents(); }
 auto UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_RepObjects()      -> ECk_Watermark_DisplayPolicy { return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_MinPolicy_RepObjects(); }
