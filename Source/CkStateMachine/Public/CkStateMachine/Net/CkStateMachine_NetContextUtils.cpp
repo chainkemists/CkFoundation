@@ -74,14 +74,21 @@ namespace ck::statemachine
             && UCk_Utils_Net_UE::Get_IsEntityLocallyControlled_ByPlayer(InSm)
                 == ECk_Utils_Net_IsLocallyControlled_Result::IsLocallyControlled;
 
-        // The ONE case the sprint fix must suppress: a RELAYED sub-SM (DoesNotReplicate, but carrying
-        // an OwningClientAuthoritative NetIdentity inherited from its replicated root) on the server
-        // that the host does NOT own. It must follow the owning client's relayed transitions, not
-        // self-evaluate (which would revert the relayed state on a locally-true release condition).
-        // This is the single exception to the DoesNotReplicate-is-self-authoritative shortcut below.
+        // Suppress self-evaluation for a RELAYED sub-SM (DoesNotReplicate, but carrying an
+        // OwningClientAuthoritative NetIdentity inherited from its replicated root) on EVERY machine
+        // except the owning client — the only machine that holds the client-local input and originates
+        // the transition. Two such machines:
+        //   - the server the host does NOT own (it follows the owning client's relayed transitions), and
+        //   - non-owning observer clients (P4: they follow the server's leg-2 republish onto the root's
+        //     WithHistory container — they have neither the non-replicated input nor authority).
+        // Without this, such a machine self-evaluates the release condition (its local input copy is 0)
+        // and reverts the relayed state right back (the sprint self-revert). This is the single exception
+        // to the DoesNotReplicate-is-self-authoritative shortcut below; a ServerAuthoritative sub-SM still
+        // self-derives on every machine from its replicated inputs (the "preserve non-owning self-derive"
+        // intent is untouched — only OwningClientAuth relayed sub-SMs, now driven by the relay, are gated).
         if (Replication == ECk_Replication::DoesNotReplicate
             && EffectiveAuth == ECk_Sm_AuthorityModel::OwningClientAuthoritative
-            && NetContext == ECk_Sm_NetContext::Server
+            && (NetContext == ECk_Sm_NetContext::Server || NetContext == ECk_Sm_NetContext::NonOwningClient)
             && NOT IsHostOwningClient)
         { return false; }
 
