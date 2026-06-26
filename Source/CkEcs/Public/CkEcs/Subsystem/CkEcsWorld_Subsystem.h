@@ -130,6 +130,14 @@ public:
     auto
     Request_PumpToQuiescence() -> int32;
 
+    // Worst-case (maximum) pump-pass count across all per-ticking-group schedulers for the most recent
+    // frame. 0 when no schedulers exist (e.g. menu world). Surfaced live by CkWatermark to show pump
+    // pressure; mirrors the per-scheduler condition that drives the throttled pump-limit log warning.
+    auto Get_WorstFramePumpCount() const -> int32;
+
+    // The per-frame pump-iteration budget (max across schedulers). 0 when no schedulers exist.
+    auto Get_MaxPumpIterations() const -> int32;
+
     // Re-point this world's ECS bookkeeping at a transient entity that a snapshot restore rebuilt into the
     // registry. Overwrites FCtx_TransientEntity (via insert_or_assign — entt's emplace would NOT overwrite the
     // stale post-clear ctx), refreshes the cached _TransientEntity handle, and re-attaches the world-fragment.

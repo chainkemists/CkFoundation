@@ -5,8 +5,9 @@
 
 #include "CkProfile/Stats/CkStats.h"
 
-#if !UE_BUILD_SHIPPING
 #include "HAL/PlatformTime.h"
+
+#if !UE_BUILD_SHIPPING
 #include "HAL/IConsoleManager.h"
 #endif
 
@@ -48,6 +49,15 @@ DECLARE_CYCLE_STAT(TEXT("Scheduler::PumpDirtyCheck"),    STAT_Scheduler_PumpDirt
 // dev measurement (eliminable via `ck.Scheduler.DebugTiming 0`) vs. the inherent dispatch-loop cost
 // (node fetch + entt::poly call) that remains as Dispatch self-time. Zero cost when DebugTiming is off.
 DECLARE_CYCLE_STAT(TEXT("Scheduler::DebugRecord"),       STAT_Scheduler_DebugRecord,       STATGROUP_CkScheduler);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Wall-clock throttle for the pump-pressure warnings. A persistently over-budget frame used to log
+// EVERY frame (one line + one per still-dirty processor) — that spam is now surfaced live in CkWatermark.
+// These logs are retained for dedicated/headless servers where no watermark renders; they fire at most
+// once per this interval, with a still-dirty-SET change bypassing the throttle so a newly-stuck processor
+// surfaces promptly. Unique name avoids unity-build collisions across translation units.
+static constexpr double GCk_Scheduler_PumpWarningThrottleSeconds = 5.0;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -145,13 +155,21 @@ auto
     }
 
     constexpr auto WarnThreshold = 8;
+    const auto Now = FPlatformTime::Seconds();
     if (_LastFramePumpCount >= _MaxPumpIterations)
     {
-        DoLogPumpLimitReached(InRegistry);
+        DoLogPumpLimitReached(InRegistry, Now);
     }
     else if (_LastFramePumpCount >= WarnThreshold)
     {
-        ck::ecs::Warning(TEXT("High pump count this frame: [{}]"), _LastFramePumpCount);
+        // Throttled — see GCk_Scheduler_PumpWarningThrottleSeconds. Clear the cached still-dirty set so the
+        // limit-reached path re-logs immediately if the frame escalates from "high" to "at limit".
+        if (Now - _LastPumpWarningTime >= GCk_Scheduler_PumpWarningThrottleSeconds)
+        {
+            _LastPumpWarningTime = Now;
+            _LastWarnedStillDirtyNames.Reset();
+            ck::ecs::Warning(TEXT("High pump count this frame: [{}]"), _LastFramePumpCount);
+        }
     }
 
 #if !UE_BUILD_SHIPPING
@@ -293,7 +311,8 @@ auto
 auto
     ck::FProcessorScheduler::
     DoLogPumpLimitReached(
-        const FCk_Registry& InRegistry)
+        const FCk_Registry& InRegistry,
+        double InNow)
     -> void
 {
     auto StillDirtyNames = TArray<FName>{};
@@ -305,6 +324,16 @@ auto
             StillDirtyNames.Add(Node._ProcessorName);
         }
     }
+
+    // Re-log only when the throttle interval has elapsed OR the set of still-dirty processors changed
+    // (StillDirtyNames is gathered in stable _ExecutionOrder, so element-wise inequality == a real change).
+    const auto SetChanged = StillDirtyNames != _LastWarnedStillDirtyNames;
+    const auto ThrottleElapsed = InNow - _LastPumpWarningTime >= GCk_Scheduler_PumpWarningThrottleSeconds;
+    if (NOT SetChanged and NOT ThrottleElapsed)
+    { return; }
+
+    _LastPumpWarningTime = InNow;
+    _LastWarnedStillDirtyNames = StillDirtyNames;
 
     ck::ecs::Warning(TEXT("Pump limit [{}] reached. Still dirty: [{}]"),
         _MaxPumpIterations, StillDirtyNames.Num());
