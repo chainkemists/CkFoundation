@@ -104,18 +104,13 @@ namespace ck
         { return; }
 
         // Authority gating: polled conditions evaluate user-defined predicates that often have
-        // observable side effects (timers, sensors). Only authority should evaluate. Event-driven
-        // conditions are NOT gated here — they fire from external signals which themselves only
-        // broadcast on authority.
+        // observable side effects (timers, sensors). Only the SM's transition authority evaluates.
+        // Uses the shared predicate so the Server-of-OwningClientAuth case is covered too (a relayed
+        // sub-SM is OwningClientAuth on the server, which must follow the relay, not poll) — the prior
+        // inline gate only skipped NonOwningClient and non-OwningClientAuth OwningClient.
         const auto SmHandle = UCk_Utils_SmCondition_UE::Get_OwningStateMachine(InHandle);
-        const auto NetContext = ck::statemachine::ComputeNetContext(SmHandle);
 
-        if (NetContext == ECk_Sm_NetContext::NonOwningClient)
-        { return; }
-
-        if (NetContext == ECk_Sm_NetContext::OwningClient
-            && UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel(SmHandle)
-                != ECk_Sm_AuthorityModel::OwningClientAuthoritative)
+        if (NOT ck::statemachine::Get_IsTransitionAuthority(SmHandle))
         { return; }
 
         INC_DWORD_STAT(STAT_SmConditionsEvaluated);

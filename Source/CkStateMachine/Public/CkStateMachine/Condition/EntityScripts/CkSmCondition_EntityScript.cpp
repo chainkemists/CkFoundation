@@ -52,6 +52,16 @@ auto
     auto Self = UCk_Utils_SmCondition_UE::CastChecked(_AssociatedEntity);
     const auto SmHandle = UCk_Utils_SmCondition_UE::Get_OwningStateMachine(Self);
     const auto NetContext = ck::statemachine::ComputeNetContext(SmHandle);
+
+    // Transition-authority gate: only the machine that decides this SM's transitions evaluates
+    // conditions. Non-authority machines (the server of an OwningClientAuth SM, non-owning clients)
+    // follow the relay; entering here would bind signals and run DoEnterCondition's initial evaluation
+    // (which can have observable side effects) and feed a decision the machine must not make. Skipping
+    // enter leaves FTag_SmCondition_Active unset, so ExitCondition is a clean no-op — the whole
+    // condition lifecycle is suppressed on non-authority.
+    if (NOT ck::statemachine::Get_IsTransitionAuthority(SmHandle))
+    { return; }
+
     EnterCondition(Self, NetContext);
 }
 

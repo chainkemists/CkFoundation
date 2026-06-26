@@ -111,6 +111,14 @@ namespace ck
             || StateMachine.Has<FTag_Sm_TransitionQueued>())
         { return; }
 
+        // Transition-authority gate: only the machine that DECIDES this SM's transitions walks them.
+        // Non-authority machines (the server of an OwningClientAuth SM, all non-owning clients) follow
+        // the replicated/relayed transitions and must NOT self-evaluate — else they fight the relay
+        // (e.g. a server self-reverting a relayed sub-SM when a release condition is locally true).
+        // Gating here prevents the decision outright: nothing is queued, so nothing is dropped later.
+        if (NOT ck::statemachine::Get_IsTransitionAuthority(StateMachine))
+        { return; }
+
         // ---- Walk transitions in record order (insertion order = priority order) ----
 
         INC_DWORD_STAT(STAT_SmStatesEvaluated);
