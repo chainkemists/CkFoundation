@@ -17,6 +17,11 @@ public:
 private:
     UPROPERTY() FString  _DisplayName;
     UPROPERTY() uint32   _EnttTypeHash = 0;
+    // The entt storage id this entry was captured from. For most fragments this equals _EnttTypeHash (the default
+    // storage). Dynamic fragments (CkDynamic) keep one NAMED storage per AS struct type, all of value-type
+    // FCk_Fragment_DynamicFragment_Data -- so several entries share _EnttTypeHash but carry distinct _StorageId.
+    // Restore replays each entry onto ITS storage id via entt's id-parameterized get<T>(archive, id).
+    UPROPERTY() uint32   _StorageId    = 0;
     UPROPERTY() int32    _EntityCount  = 0;
     UPROPERTY() int64    _ByteLength   = 0;
     UPROPERTY() int64    _ByteOffset   = 0;
@@ -24,6 +29,7 @@ private:
 public:
     CK_PROPERTY(_DisplayName);
     CK_PROPERTY(_EnttTypeHash);
+    CK_PROPERTY(_StorageId);
     CK_PROPERTY(_EntityCount);
     CK_PROPERTY(_ByteLength);
     CK_PROPERTY(_ByteOffset);

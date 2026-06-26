@@ -72,21 +72,35 @@ namespace ck::snapshot
             InOutHeader.Set_TransientEntityId(static_cast<uint32>(TransientCtx->Entity.Get_ID()));
         }
 
-        // ---- Per-fragment-type manifest entries ----------------------------------------------------------------
+        // ---- Per-storage manifest entries ----------------------------------------------------------------------
+        // Iterate the registry's STORAGES, not just the registered fragment TYPES. Most fragments live only in
+        // their default storage (id == entt::type_hash<T>), but dynamic fragments (CkDynamic) keep one NAMED
+        // storage per AS struct type (id == hash of the struct path). entt's snapshot is opt-in PER STORAGE, so a
+        // single get<T>() with the default id would miss every named storage -- silently dropping all
+        // dynamic/AngelScript fragments on save/load. Each storage whose value-type maps to a registered
+        // snapshotable fragment is captured with ITS id; restore replays it onto the same id. Ordinary
+        // single-storage fragments are captured exactly as before (their only storage IS the default one).
         auto Manifest = TArray<FCk_Snapshot_Header_FragmentManifestEntry>{};
 
-        for (const auto& Registered : ck::FCk_Snapshot_FragmentRegistry::Get().Get_All())
+        const auto& FragmentRegistry = ck::FCk_Snapshot_FragmentRegistry::Get();
+
+        for (auto&& StoragePair : InRegistry.storage())
         {
-            if (NOT Registered._Save)
-            { continue; }
+            const auto StorageId = StoragePair.first;
+            const auto TypeHash  = static_cast<uint32>(StoragePair.second.info().hash());
+
+            const auto* Registered = FragmentRegistry.Find_ByEnttHash(TypeHash);
+            if (Registered == nullptr || NOT Registered->_Save)
+            { continue; } // not a registered snapshotable type (e.g. the entity storage, captured separately above).
 
             const auto ByteOffset = InByteWriter.Tell();
-            Registered._Save(Snapshot, Writer);
+            Registered->_Save(Snapshot, Writer, StorageId);
             const auto ByteLength = InByteWriter.Tell() - ByteOffset;
 
             auto Entry = FCk_Snapshot_Header_FragmentManifestEntry{};
-            Entry.Set_DisplayName(Registered._DisplayName);
-            Entry.Set_EnttTypeHash(Registered._EnttTypeHash);
+            Entry.Set_DisplayName(Registered->_DisplayName);
+            Entry.Set_EnttTypeHash(TypeHash);
+            Entry.Set_StorageId(StorageId);
             // Per-fragment instance count is not available through the type-erased _Save closure (the entt
             // get<T> writes the storage count into the byte stream, not back to us). Left 0 for V1; the
             // header's top-level _EntityCount carries the total entity set size, which is what Restore needs.

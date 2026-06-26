@@ -35,8 +35,11 @@ namespace ck
         // referential internals), so relocation corrupts its impl pointer -> AV when later invoked. The
         // Save/Load lambdas in Do_RegisterSnapshotable are captureless, so they decay to function pointers,
         // which ARE trivially relocatable.
-        using SaveFnPtr = void (*)(entt::basic_snapshot<SnapshotRegistryType>&,          FSnapshotArchive_Writer&);
-        using LoadFnPtr = void (*)(entt::basic_continuous_loader<SnapshotRegistryType>&, FSnapshotArchive_Reader&);
+        // The trailing entt::id_type is the STORAGE id to capture/restore. It defaults to type_hash<T> at the call
+        // site for ordinary single-storage fragments; dynamic fragments pass each NAMED per-type storage id so all
+        // of them round-trip (a single default-id get<T> would miss every named storage -- see CkSnapshot_Capture).
+        using SaveFnPtr = void (*)(entt::basic_snapshot<SnapshotRegistryType>&,          FSnapshotArchive_Writer&, entt::id_type);
+        using LoadFnPtr = void (*)(entt::basic_continuous_loader<SnapshotRegistryType>&, FSnapshotArchive_Reader&, entt::id_type);
 
         SaveFnPtr _Save = nullptr;
         LoadFnPtr _Load = nullptr;
@@ -106,17 +109,19 @@ namespace ck
             // ("Code not found for generated code (package /Script/<Module>)"). The serialize path resolves
             // StaticStruct() lazily at capture/restore time (DoSerializeSnapshot_OneInstance), which is safe.
 
-            // entt's basic_snapshot::get<T>(Archive&) writes the storage for fragment type T, routing each
-            // instance through the supplied Archive callable (our FSnapshotArchive_Writer, which serializes
-            // T via DoSerializeSnapshot_OneInstance and routes entity handles through FSnapshotContext).
-            Entry._Save = [](entt::basic_snapshot<SnapshotRegistryType>& InSnap, FSnapshotArchive_Writer& InWriter) -> void
+            // entt's basic_snapshot::get<T>(Archive&, id) writes the storage with the given id (as fragment type
+            // T), routing each instance through the supplied Archive callable (our FSnapshotArchive_Writer, which
+            // serializes T via DoSerializeSnapshot_OneInstance and routes entity handles through FSnapshotContext).
+            // The id lets one registered type span multiple NAMED storages (dynamic fragments); ordinary fragments
+            // are captured with id == type_hash<T> (their default storage), preserving previous behavior exactly.
+            Entry._Save = [](entt::basic_snapshot<SnapshotRegistryType>& InSnap, FSnapshotArchive_Writer& InWriter, entt::id_type InStorageId) -> void
             {
-                InSnap.template get<T>(InWriter);
+                InSnap.template get<T>(InWriter, InStorageId);
             };
 
-            Entry._Load = [](entt::basic_continuous_loader<SnapshotRegistryType>& InLoader, FSnapshotArchive_Reader& InReader) -> void
+            Entry._Load = [](entt::basic_continuous_loader<SnapshotRegistryType>& InLoader, FSnapshotArchive_Reader& InReader, entt::id_type InStorageId) -> void
             {
-                InLoader.template get<T>(InReader);
+                InLoader.template get<T>(InReader, InStorageId);
             };
 
             FCk_Snapshot_FragmentRegistry::Get().Register(MoveTemp(Entry));

@@ -74,7 +74,7 @@ namespace ck::snapshot
 
             if (Registered != nullptr && Registered->_Load)
             {
-                Registered->_Load(Loader, Reader);
+                Registered->_Load(Loader, Reader, Entry.Get_StorageId());
             }
             else
             {
@@ -160,7 +160,7 @@ namespace ck::snapshot
 
             if (Registered != nullptr && Registered->_Load)
             {
-                Registered->_Load(Loader, Reader);
+                Registered->_Load(Loader, Reader, Entry.Get_StorageId());
             }
             else
             {
