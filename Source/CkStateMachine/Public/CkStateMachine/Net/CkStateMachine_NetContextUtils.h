@@ -26,11 +26,13 @@ namespace ck::statemachine
     // non-owning clients deriving sub-SM state) — with ONE exception:
     //
     //   A RELAYED sub-SM (DoesNotReplicate but with an OwningClientAuthoritative NetIdentity inherited
-    //   from its replicated root) on the server the host does NOT own returns FALSE here. That server
-    //   must follow the owning client's relayed transitions, not self-evaluate (which would revert the
-    //   relayed state on a locally-true release condition — the sprint self-revert). The START lifecycle
-    //   in HandleRequests keeps the plain DoesNotReplicate shortcut, so the sub-SM still starts locally
-    //   on the server to exist for the relay; only transition DECISIONS are suppressed there.
+    //   from its replicated root) returns FALSE here on every machine EXCEPT the owning client: the server
+    //   the host does NOT own AND non-owning observer clients (P4). Both follow the relay — the server the
+    //   owning client's relayed transitions, observers the server's leg-2 republish onto the root's
+    //   WithHistory container — rather than self-evaluate (which would revert the relayed state on a
+    //   locally-true release condition — the sprint self-revert). The START lifecycle in HandleRequests
+    //   keeps the plain DoesNotReplicate shortcut, so the sub-SM still starts locally on these machines to
+    //   exist for the relay; only transition DECISIONS are suppressed there.
     CKSTATEMACHINE_API auto
     Get_IsTransitionAuthority(
         const FCk_Handle_StateMachine& InSm) -> bool;
