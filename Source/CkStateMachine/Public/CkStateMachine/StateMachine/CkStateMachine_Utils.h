@@ -194,6 +194,38 @@ public:
         const FCk_Handle_StateMachine& InStateMachine) -> ECk_Sm_ReplicationModel;
 
     // ================================================================================================================
+    // SUB-SM TRANSITION RELAY (identity + resolution)
+    // ================================================================================================================
+    //
+    // Sub-SMs are non-replicated local entities (created by UCk_SmTask_SubStateMachine), so they have
+    // no transport of their own. To replicate an owning-client sub-SM's transitions to the server /
+    // non-owning clients, the events are routed through the ROOT SM's transport (the root rides the
+    // pawn entity's replication driver) and addressed by a deterministic identity: the sub-SM's
+    // FFragment_Sm_ParentHierarchy (root->leaf state-tag path to its hosting state). The topology is
+    // deterministic across machines, so the same path resolves the corresponding sub-SM on every peer.
+
+    // Walk OwningStateMachine to the top-level SM. Returns InStateMachine itself when it is already a
+    // root (no owning SM). C++-only — internal to the replication routing.
+    static auto
+    Get_RootStateMachine(
+        const FCk_Handle_StateMachine& InStateMachine) -> FCk_Handle_StateMachine;
+
+    // The cross-machine identity of a sub-SM: its parent hierarchy path. Empty for a root SM (a root
+    // has no FFragment_Sm_ParentHierarchy). C++-only.
+    static auto
+    Get_SubSmParentHierarchy(
+        const FCk_Handle_StateMachine& InStateMachine) -> TArray<FGameplayTag>;
+
+    // Resolve the local sub-SM under InRoot whose parent hierarchy equals InParentHierarchy, by
+    // walking the active state tree (current state -> hosted sub-SMs, recursively). Returns an invalid
+    // handle if no active sub-SM matches (e.g. the hosting parent state isn't currently active — the
+    // caller must defer/stash in that case). C++-only.
+    static auto
+    TryFind_ActiveSubSm_ByParentHierarchy(
+        const FCk_Handle_StateMachine& InRoot,
+        const TArray<FGameplayTag>& InParentHierarchy) -> FCk_Handle_StateMachine;
+
+    // ================================================================================================================
     // SIGNAL BINDING
     // ================================================================================================================
 
