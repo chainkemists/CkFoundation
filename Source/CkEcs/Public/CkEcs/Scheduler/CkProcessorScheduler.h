@@ -29,7 +29,8 @@ namespace ck
             int32 InPumpIndex) -> bool;
 
         auto DoLogPumpLimitReached(
-            const FCk_Registry& InRegistry) -> void;
+            const FCk_Registry& InRegistry,
+            double InNow) -> void;
 
     private:
         FProcessorGraphPartition _Partition;
@@ -43,6 +44,10 @@ namespace ck
     private:
         int32 _LastFramePumpCount = 0;
         double _LastGraphBuildTimeMs = 0.0;
+
+        // Throttle state for the pump-pressure warnings (see GCk_Scheduler_PumpWarningThrottleSeconds in the .cpp).
+        double _LastPumpWarningTime = 0.0;
+        TArray<FName> _LastWarnedStillDirtyNames;
 
 #if !UE_BUILD_SHIPPING
     private:

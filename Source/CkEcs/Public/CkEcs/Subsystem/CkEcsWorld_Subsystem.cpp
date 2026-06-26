@@ -255,6 +255,46 @@ auto
 
 auto
     UCk_EcsWorld_Subsystem_UE::
+    Get_WorstFramePumpCount() const
+    -> int32
+{
+    auto Worst = int32{0};
+    for (const auto& [TickGroup, Actor] : _WorldActors)
+    {
+        if (NOT Actor.IsValid())
+        { continue; }
+
+        const auto& SchedulerOpt = Actor->Get_Scheduler();
+        if (NOT SchedulerOpt.IsSet())
+        { continue; }
+
+        Worst = FMath::Max(Worst, SchedulerOpt.GetValue().Get_LastFramePumpCount());
+    }
+    return Worst;
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    Get_MaxPumpIterations() const
+    -> int32
+{
+    auto MaxIterations = int32{0};
+    for (const auto& [TickGroup, Actor] : _WorldActors)
+    {
+        if (NOT Actor.IsValid())
+        { continue; }
+
+        const auto& SchedulerOpt = Actor->Get_Scheduler();
+        if (NOT SchedulerOpt.IsSet())
+        { continue; }
+
+        MaxIterations = FMath::Max(MaxIterations, SchedulerOpt.GetValue().Get_MaxPumpIterations());
+    }
+    return MaxIterations;
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
     OnEndFrame_DoRebuild()
     -> void
 {
