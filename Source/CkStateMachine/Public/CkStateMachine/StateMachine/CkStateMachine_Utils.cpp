@@ -6,6 +6,7 @@
 #include "CkStateMachine/CkStateMachine_Log.h"
 #include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
+#include "CkStateMachine/Task/CkSmTask_Fragment.h"
 #include "CkStateMachine/Debug/CkStateMachine_Debug_Fragment.h"
 
 #if CK_BUILD_SM_GRAPH_WALK
@@ -239,6 +240,99 @@ auto
     -> ECk_Sm_ReplicationModel
 {
     return InStateMachine.Get<ck::FFragment_Sm_Params>().Get_ReplicationModel();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// SUB-SM TRANSITION RELAY (identity + resolution)
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_StateMachine_UE::
+    Get_RootStateMachine(
+        const FCk_Handle_StateMachine& InStateMachine)
+    -> FCk_Handle_StateMachine
+{
+    auto Current = InStateMachine;
+    while (ck::TUtils_Sm_OwningStateMachine::Has(Current))
+    {
+        const auto Owner = ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(Current);
+        if (ck::Is_NOT_Valid(Owner))
+        { break; }
+        Current = Owner;
+    }
+    return Current;
+}
+
+auto
+    UCk_Utils_StateMachine_UE::
+    Get_SubSmParentHierarchy(
+        const FCk_Handle_StateMachine& InStateMachine)
+    -> TArray<FGameplayTag>
+{
+    if (InStateMachine.Has<ck::FFragment_Sm_ParentHierarchy>())
+    { return InStateMachine.Get<ck::FFragment_Sm_ParentHierarchy>().Get_ParentHierarchy(); }
+    return {};
+}
+
+namespace
+{
+    // Depth-first walk of the ACTIVE state tree under InSm: current state -> its hosted sub-SMs ->
+    // (recurse). Returns the sub-SM whose stored ParentHierarchy equals InTarget, or an invalid handle
+    // if none is active. The hierarchy path is a unique, deterministic address for a hosting state, so
+    // the first exact match is the one.
+    auto
+    DoFind_ActiveSubSm(
+        const FCk_Handle_StateMachine& InSm,
+        const TArray<FGameplayTag>& InTarget)
+    -> FCk_Handle_StateMachine
+    {
+        const auto CurrentState = UCk_Utils_StateMachine_UE::Get_CurrentStateHandle(InSm);
+        if (ck::Is_NOT_Valid(CurrentState))
+        { return {}; }
+
+        auto Result = FCk_Handle_StateMachine{};
+
+        UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::ForEach_ValidEntry(CurrentState,
+        [&](FCk_Handle_SmTask InTask) -> ECk_Record_ForEachIterationResult
+        {
+            if (NOT InTask.Has<ck::FFragment_SmTask_SubStateMachine>())
+            { return ECk_Record_ForEachIterationResult::Continue; }
+
+            const auto SubSm = InTask.Get<ck::FFragment_SmTask_SubStateMachine>().Get_SubStateMachineHandle();
+            if (ck::Is_NOT_Valid(SubSm))
+            { return ECk_Record_ForEachIterationResult::Continue; }
+
+            if (UCk_Utils_StateMachine_UE::Get_SubSmParentHierarchy(SubSm) == InTarget)
+            {
+                Result = SubSm;
+                return ECk_Record_ForEachIterationResult::Break;
+            }
+
+            if (const auto Nested = DoFind_ActiveSubSm(SubSm, InTarget);
+                ck::IsValid(Nested))
+            {
+                Result = Nested;
+                return ECk_Record_ForEachIterationResult::Break;
+            }
+
+            return ECk_Record_ForEachIterationResult::Continue;
+        });
+
+        return Result;
+    }
+}
+
+auto
+    UCk_Utils_StateMachine_UE::
+    TryFind_ActiveSubSm_ByParentHierarchy(
+        const FCk_Handle_StateMachine& InRoot,
+        const TArray<FGameplayTag>& InParentHierarchy)
+    -> FCk_Handle_StateMachine
+{
+    if (ck::Is_NOT_Valid(InRoot) || InParentHierarchy.IsEmpty())
+    { return {}; }
+
+    return DoFind_ActiveSubSm(InRoot, InParentHierarchy);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
