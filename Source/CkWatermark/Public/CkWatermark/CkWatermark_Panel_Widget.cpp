@@ -10,6 +10,7 @@
 #include "CkWatermark/CkWatermark_ActivityBar_Widget.h"
 #include "CkMemory/CkMemory_Subsystem.h"
 #include "CkEcs/Subsystem/CkEcsWorldStats_Subsystem.h"
+#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 #include "CkEcs/Settings/CkEcs_Settings.h"
 #include "CkSpatialQuery/Subsystem/CkSpatialQuery_Subsystem.h"
 #include "CkWatermark/Stats/CkWatermarkStat_Base_Widget.h"
@@ -24,6 +25,7 @@
 #include <HAL/PlatformTime.h>
 #include <Styling/CoreStyle.h>
 #include <Widgets/Layout/SBox.h>
+#include <Widgets/Text/STextBlock.h>
 
 ENGINE_API extern float  GAverageFPS;
 extern ENGINE_API uint64 GFrameCounter;
@@ -78,6 +80,9 @@ UCkWatermark_Panel_UWidget_UE::UCkWatermark_Panel_UWidget_UE()
 
     _InfoGroupPlacement.Anchor      = ECk_Watermark_GroupAnchor::BottomLeft;
     _InfoGroupPlacement.EdgePadding = FMargin(8.f, 0.f, 0.f, 8.f);
+
+    _CenterGroupPlacement.Anchor      = ECk_Watermark_GroupAnchor::BottomCenter;
+    _CenterGroupPlacement.EdgePadding = FMargin(0.f, 0.f, 0.f, 8.f);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -1233,6 +1238,83 @@ auto
             ];
     }
 
+    // ---- Center group (bottom-center) — ECS pump pressure -------------------
+    // This frame's worst-case scheduler pump count vs the budget, color-banded like the other perf
+    // stats (lower is better), plus a red "PUMP LIMIT EXCEEDED" banner when the budget is reached.
+    // Replaces the per-frame log spam the scheduler used to emit. This group is also the reserved
+    // home for upcoming Server/Client connection + version-mismatch info — add rows below the warning.
+    const auto PumpMinPolicy = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_PumpCount();
+
+    // Worst-case pump count + budget across this world's per-ticking-group schedulers.
+    // {0, 0} when there is no ECS world (e.g. front-end menu) — the stat then renders "---".
+    auto QueryPumps = [](const UWorld* InWorld) -> TPair<int32, int32>
+    {
+        if (!InWorld) { return {0, 0}; }
+        const auto* Sub = InWorld->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+        if (!Sub)     { return {0, 0}; }
+        return {Sub->Get_WorstFramePumpCount(), Sub->Get_MaxPumpIterations()};
+    };
+
+    const auto PumpWarnColorAttr = TAttribute<FSlateColor>::CreateLambda([]() -> FSlateColor
+    {
+        return FSlateColor(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_PumpLimit_WarningColor());
+    });
+
+    const auto PumpWarnVis = TAttribute<EVisibility>::CreateWeakLambda(this,
+        [this, QueryPumps, PumpMinPolicy]() -> EVisibility
+        {
+            if (PumpMinPolicy == ECk_Watermark_DisplayPolicy::Hidden || _CurrentDisplayPolicy < PumpMinPolicy)
+            { return EVisibility::Collapsed; }
+            const auto Info = QueryPumps(GetWorld());
+            return (Info.Value > 0 && Info.Key >= Info.Value)
+                ? EVisibility::SelfHitTestInvisible
+                : EVisibility::Collapsed;
+        });
+
+    TSharedRef<SVerticalBox> CenterGroupBox = SNew(SVerticalBox)
+
+        // Pump count stat — [ N / Max ] with "Pumps" label.
+        + SVerticalBox::Slot()
+        .AutoHeight()
+        .Padding(0.f, RowVPad)
+        .HAlign(HAlign_Center)
+        [
+            SNew(SBox)
+            .Visibility(MakeVisForMinPolicy(PumpMinPolicy))
+            [
+                MakeStat(
+                    TAttribute<FText>::CreateWeakLambda(this, [this, QueryPumps]() -> FText
+                    {
+                        const auto Info = QueryPumps(GetWorld());
+                        if (Info.Value <= 0) { return FText::FromString(TEXT("---")); }
+                        return FText::FromString(FString::Printf(TEXT("%d / %d"), Info.Key, Info.Value));
+                    }),
+                    TAttribute<FSlateColor>::CreateWeakLambda(this, [this, QueryPumps]() -> FSlateColor
+                    {
+                        const auto Info = QueryPumps(GetWorld());
+                        return FSlateColor(
+                            UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_PumpCount_ColorBands()
+                            .GetColorForValue(static_cast<float>(Info.Key)));
+                    }),
+                    FText::FromString(TEXT("Pumps")))
+            ]
+        ]
+
+        // Over-budget warning banner — collapsed unless this frame's pump count reaches the budget.
+        + SVerticalBox::Slot()
+        .AutoHeight()
+        .Padding(0.f, RowVPad)
+        .HAlign(HAlign_Center)
+        [
+            SNew(STextBlock)
+            .Text(FText::FromString(TEXT("PUMP LIMIT EXCEEDED")))
+            .Font(ValueFont)
+            .ColorAndOpacity(PumpWarnColorAttr)
+            .ShadowOffset(ShadowOffsetAttr)
+            .ShadowColorAndOpacity(ShadowColorAttr)
+            .Visibility(PumpWarnVis)
+        ];
+
     // ---- Full layout --------------------------------------------------------
     TSharedRef<SOverlay> Panel = SNew(SOverlay)
         // The watermark is a non-interactive debug overlay — never steal input.
@@ -1258,6 +1340,16 @@ auto
             [
                 InfoGroupBox
             ]
+        ]
+
+        // ── Center group (bottom-center by default) — pump pressure ─────────
+        // Per-element visibility (MinPolicy + over-budget) is handled inside CenterGroupBox.
+        + SOverlay::Slot()
+        .HAlign(GetHAlign(_CenterGroupPlacement.Anchor))
+        .VAlign(GetVAlign(_CenterGroupPlacement.Anchor))
+        .Padding(_CenterGroupPlacement.EdgePadding)
+        [
+            CenterGroupBox
         ]
 
         // ── ECS groups (top-right by default, Detailed only) ────────────────
