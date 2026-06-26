@@ -66,28 +66,38 @@ namespace ck::statemachine
     {
         const auto NetContext    = ComputeNetContext(InSm);
         const auto EffectiveAuth = UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel(InSm);
+        const auto Replication   = UCk_Utils_StateMachine_UE::Get_Replication(InSm);
 
-        switch (NetContext)
-        {
-            case ECk_Sm_NetContext::Standalone:
-                return true;
+        const auto IsHostOwningClient =
+            NetContext == ECk_Sm_NetContext::Server
+            && EffectiveAuth == ECk_Sm_AuthorityModel::OwningClientAuthoritative
+            && UCk_Utils_Net_UE::Get_IsEntityLocallyControlled_ByPlayer(InSm)
+                == ECk_Utils_Net_IsLocallyControlled_Result::IsLocallyControlled;
 
-            case ECk_Sm_NetContext::Server:
-                // Server drives transitions for ServerAuth SMs. For OwningClientAuth it follows the
-                // relay — EXCEPT the listen-server host on its own pawn, which IS the owning client.
-                if (EffectiveAuth == ECk_Sm_AuthorityModel::ServerAuthoritative)
-                { return true; }
-                return EffectiveAuth == ECk_Sm_AuthorityModel::OwningClientAuthoritative
-                    && UCk_Utils_Net_UE::Get_IsEntityLocallyControlled_ByPlayer(InSm)
-                        == ECk_Utils_Net_IsLocallyControlled_Result::IsLocallyControlled;
+        // The ONE case the sprint fix must suppress: a RELAYED sub-SM (DoesNotReplicate, but carrying
+        // an OwningClientAuthoritative NetIdentity inherited from its replicated root) on the server
+        // that the host does NOT own. It must follow the owning client's relayed transitions, not
+        // self-evaluate (which would revert the relayed state on a locally-true release condition).
+        // This is the single exception to the DoesNotReplicate-is-self-authoritative shortcut below.
+        if (Replication == ECk_Replication::DoesNotReplicate
+            && EffectiveAuth == ECk_Sm_AuthorityModel::OwningClientAuthoritative
+            && NetContext == ECk_Sm_NetContext::Server
+            && NOT IsHostOwningClient)
+        { return false; }
 
-            case ECk_Sm_NetContext::OwningClient:
-                return EffectiveAuth == ECk_Sm_AuthorityModel::OwningClientAuthoritative;
-
-            case ECk_Sm_NetContext::NonOwningClient:
-            default:
-                return false;
-        }
+        // Otherwise mirror FProcessor_Sm_HandleRequests' request-authority, INCLUDING the
+        // DoesNotReplicate-self-authoritative shortcut. A non-relayed local sub-SM (ServerAuth or
+        // standalone NetIdentity) still self-derives on EVERY machine from its replicated inputs, so
+        // non-owning clients keep deriving sub-SM state exactly as before this gate was introduced.
+        // Replicates SMs do NOT get the shortcut: their non-authority machines (server of an
+        // OwningClientAuth root, all non-owning clients) follow replication and never self-evaluate.
+        return Replication == ECk_Replication::DoesNotReplicate
+            || NetContext == ECk_Sm_NetContext::Standalone
+            || (NetContext == ECk_Sm_NetContext::Server
+                && EffectiveAuth == ECk_Sm_AuthorityModel::ServerAuthoritative)
+            || (NetContext == ECk_Sm_NetContext::OwningClient
+                && EffectiveAuth == ECk_Sm_AuthorityModel::OwningClientAuthoritative)
+            || IsHostOwningClient;
     }
 
     auto
