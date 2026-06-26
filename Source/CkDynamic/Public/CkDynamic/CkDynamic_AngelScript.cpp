@@ -229,6 +229,14 @@ auto
     // by directory iteration (thread-safe, no IPluginManager dependency so this is safe on the
     // packaged off-thread PreCompile path), merged with the same dedup-by-TypeName rule — canonical
     // and stub entries always win, so a test registry can never override a real handle type.
+    //
+    // SHIPPING/TEST GATE: this merge is strictly "for automation tests". Test plugins (CkTests, etc.)
+    // are disabled in Shipping/Test client builds, so their `FCk_Handle_TESTONLY_*` types have NO C++
+    // backing — registering them yields asINVALID_TYPE and cascades through every handle mixin
+    // (StoreVar_*, GetVar_*, ...) registered onto the dead types. The staged `.TESTONLY.json` is
+    // harmless as data; it must simply never be merged outside dev/editor builds. Condition mirrors
+    // the engine's WITH_AS_DEBUGSERVER gate (!UE_BUILD_SHIPPING && !UE_BUILD_TEST).
+#if !UE_BUILD_SHIPPING && !UE_BUILD_TEST
     {
         auto TestRegistryFiles = TArray<FString>{};
 
@@ -303,6 +311,7 @@ auto
             }
         }
     }
+#endif // !UE_BUILD_SHIPPING && !UE_BUILD_TEST
 
     if (HandleTypesArray.Num() == 0)
     {
