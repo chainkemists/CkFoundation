@@ -814,7 +814,9 @@ auto
     for (const auto& SourcePair : Types)
     {
         const auto& SourceType = SourcePair.Value;
-        auto SourceBind = FAngelscriptBinds::ExistingClass(TCHAR_TO_ANSI(*SourceType->TypeName));
+        // Pass the FString (owned copy) — a TCHAR_TO_ANSI() temporary would dangle in FBindString and
+        // corrupt later RegisterObjectMethod object-type args. See the note in BindBaseMixinMethods.
+        auto SourceBind = FAngelscriptBinds::ExistingClass(SourceType->TypeName);
         if (SourceBind.GetTypeInfo() == nullptr)
         {
             continue;
@@ -1199,7 +1201,14 @@ auto
     for (const auto& Entry : Entries)
     {
         const auto& DerivedType = Entry.TypeInfo;
-        auto DerivedBind = FAngelscriptBinds::ExistingClass(TCHAR_TO_ANSI(*DerivedType->TypeName));
+        // Pass the FString so FBindString owns a copy of the name. FBindString stores a
+        // `const ANSICHAR*` by raw pointer, so a TCHAR_TO_ANSI() temporary would dangle the moment this
+        // statement ends — and this binder is used later in the loop. The freed slot then gets reused by
+        // the TCHAR_TO_ANSI() of a method declaration, so the binder's object-type name reads back as the
+        // declaration string, corrupting RegisterObjectMethod's object-type argument (asINVALID_TYPE ->
+        // the engine's configFailed flag latches -> every subsequent AS registration fails). This only
+        // bit packaged builds, where the freed-slot reuse is deterministic.
+        auto DerivedBind = FAngelscriptBinds::ExistingClass(DerivedType->TypeName);
 
         auto* DerivedTypeInfo = DerivedBind.GetTypeInfo();
         if (DerivedTypeInfo == nullptr)
@@ -1279,7 +1288,14 @@ auto
     for (const auto& Entry : Entries)
     {
         const auto& DerivedType = Entry.TypeInfo;
-        auto DerivedBind = FAngelscriptBinds::ExistingClass(TCHAR_TO_ANSI(*DerivedType->TypeName));
+        // Pass the FString so FBindString owns a copy of the name. FBindString stores a
+        // `const ANSICHAR*` by raw pointer, so a TCHAR_TO_ANSI() temporary would dangle the moment this
+        // statement ends — and this binder is used later in the loop. The freed slot then gets reused by
+        // the TCHAR_TO_ANSI() of a method declaration, so the binder's object-type name reads back as the
+        // declaration string, corrupting RegisterObjectMethod's object-type argument (asINVALID_TYPE ->
+        // the engine's configFailed flag latches -> every subsequent AS registration fails). This only
+        // bit packaged builds, where the freed-slot reuse is deterministic.
+        auto DerivedBind = FAngelscriptBinds::ExistingClass(DerivedType->TypeName);
 
         if (DerivedBind.GetTypeInfo() == nullptr)
         { continue; }
