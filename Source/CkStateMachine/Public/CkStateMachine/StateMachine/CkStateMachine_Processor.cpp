@@ -718,6 +718,50 @@ namespace ck
             }
         }
 
+        // Sub-SM transition relay. A sub-SM created by UCk_SmTask_SubStateMachine is DoesNotReplicate
+        // (no transport of its own), so the Replicates publish block above is skipped for it entirely.
+        // On the OWNING CLIENT of a replicated OwningClientAuthoritative root, route the sub-SM's
+        // transition through the ROOT's client->server batch (the root rides the pawn entity's
+        // replication driver), tagged with the sub-SM's parent-hierarchy identity so the server /
+        // non-owning clients dispatch it to the matching local sub-SM. The server & non-owning copies
+        // of the sub-SM commit via that relayed replay — they are not the owning client, so they don't
+        // re-originate here.
+        if (InParams.Get_Replication() != ECk_Replication::Replicates)
+        {
+            const auto SubSmIdentity = UCk_Utils_StateMachine_UE::Get_SubSmParentHierarchy(InHandle);
+            if (NOT SubSmIdentity.IsEmpty())
+            {
+                const auto NetContext = ck::statemachine::ComputeNetContext(InHandle);
+                const auto AuthModel  = UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel(InHandle);
+                const auto IsOwningClientOriginator =
+                    NetContext == ECk_Sm_NetContext::OwningClient
+                    && AuthModel == ECk_Sm_AuthorityModel::OwningClientAuthoritative;
+
+                if (IsOwningClientOriginator)
+                {
+                    auto Root = UCk_Utils_StateMachine_UE::Get_RootStateMachine(InHandle);
+                    if (UCk_Utils_StateMachine_UE::Get_Replication(Root) == ECk_Replication::Replicates)
+                    {
+                        auto& NextSeq = InHandle.AddOrGet<FFragment_Sm_NextSeq>();
+                        const auto SeqValue = NextSeq.Get_Next();
+                        NextSeq.Set_Next(SeqValue + 1);
+
+                        auto Event = FCk_Sm_TransitionEvent
+                        {
+                            PreviousStateClass,
+                            TargetStateClass,
+                            SeqValue,
+                            UCk_SmState_EntityScript::Get_CachedFingerprint(TargetStateClass)
+                        };
+                        Event.Set_SubSmIdentity(SubSmIdentity);
+
+                        auto& Batch = Root.AddOrGet<FFragment_Sm_PendingClientBatch>();
+                        Batch.Get_PendingEvents().Add(Event);
+                    }
+                }
+            }
+        }
+
         InHandle.Try_Remove<FFragment_Sm_PendingTransition>();
     }
 

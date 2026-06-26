@@ -2,6 +2,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "GameplayTagContainer.h"
+
 #include "CkStateMachine_NetContext.generated.h"
 
 class UCk_SmState_EntityScript;
@@ -82,11 +84,23 @@ private:
         meta = (AllowPrivateAccess = true))
     int32 _NewStateFingerprint = 0;
 
+    // Cross-machine address of the sub-SM this event belongs to: its FFragment_Sm_ParentHierarchy
+    // (root->leaf state-tag path to its hosting state). EMPTY means a root-level event (the common
+    // case — unchanged behavior). Non-empty means the event was relayed through the root SM's
+    // transport on behalf of a non-replicated sub-SM, and the receiver must dispatch it to the local
+    // sub-SM resolved by this path (see UCk_Utils_StateMachine_UE::TryFind_ActiveSubSm_ByParentHierarchy).
+    // Not in CK_DEFINE_CONSTRUCTORS: set via Set_SubSmIdentity so the 4-arg construction sites and the
+    // root-level path stay untouched.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+        meta = (AllowPrivateAccess = true))
+    TArray<FGameplayTag> _SubSmIdentity;
+
 public:
     CK_PROPERTY(_PreviousStateClass);
     CK_PROPERTY(_NewStateClass);
     CK_PROPERTY(_Seq);
     CK_PROPERTY(_NewStateFingerprint);
+    CK_PROPERTY(_SubSmIdentity);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Sm_TransitionEvent, _PreviousStateClass, _NewStateClass, _Seq, _NewStateFingerprint);

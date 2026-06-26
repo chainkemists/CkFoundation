@@ -5,6 +5,7 @@
 #include "CkStateMachine/Net/CkStateMachine_RepData.h"
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
 
@@ -49,16 +50,41 @@ auto
     ck::sm::Verbose(TEXT("Server_PushTransitionBatch: enqueuing [{}] events on SM [{}]"),
         InBatch.Num(), InSMHandle);
 
-    // Push events onto the server's replay queue. ApplyReplicatedHistory drains one per tick
+    // Push events onto the appropriate replay queue. ApplyReplicatedHistory drains one per tick
     // into PendingTransition; CommitPendingTransition then lands the transition and republishes
     // via the IsRepPublisher branch in CkStateMachine_Processor.cpp. NextSeq on the server
     // assigns its own monotonic sequence — non-owning clients see server-side seqs (consistent
     // within the server's history), and the owning client's echo suppression prevents it from
     // ever interpreting the server's seqs (its own _ClientLastAppliedSeq is its own bookkeeping).
-    auto& Queue = InSMHandle.AddOrGet<ck::FFragment_Sm_ReplayQueue>().Get_Queue();
+    //
+    // Identity routing: a root-level event (empty _SubSmIdentity) enqueues on InSMHandle (the root).
+    // An event tagged with a sub-SM parent-hierarchy path was relayed through the root on behalf of a
+    // non-replicated sub-SM — resolve the server's matching local sub-SM and enqueue onto ITS replay
+    // queue so the transition lands on the right SM, not the root.
+    const auto RootHandle = UCk_Utils_StateMachine_UE::CastChecked(InSMHandle);
+
     for (const auto& Event : InBatch)
     {
-        Queue.Add(Event);
+        const auto& SubSmIdentity = Event.Get_SubSmIdentity();
+
+        if (SubSmIdentity.IsEmpty())
+        {
+            InSMHandle.AddOrGet<ck::FFragment_Sm_ReplayQueue>().Get_Queue().Add(Event);
+            continue;
+        }
+
+        auto TargetSubSm = UCk_Utils_StateMachine_UE::TryFind_ActiveSubSm_ByParentHierarchy(RootHandle, SubSmIdentity);
+        if (ck::Is_NOT_Valid(TargetSubSm))
+        {
+            // The hosting parent state isn't active yet (the sub-SM doesn't exist on this machine).
+            // P4 will stash-and-defer for the parent-then-child ordering case; for now log + drop so a
+            // mis-timed event can't land on the wrong SM.
+            ck::sm::Warning(TEXT("Server_PushTransitionBatch: sub-SM for identity-path [{}] not active under root [{}]; dropping event (seq [{}])"),
+                SubSmIdentity.Num(), InSMHandle, Event.Get_Seq());
+            continue;
+        }
+
+        TargetSubSm.AddOrGet<ck::FFragment_Sm_ReplayQueue>().Get_Queue().Add(Event);
     }
 }
 
