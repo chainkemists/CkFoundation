@@ -177,9 +177,17 @@ namespace ck
             ECk_AttributeValueChange_SyncPolicy InSyncPolicy)
         -> void
     {
+        // A same-frame Request_ClearAllModifiers (the replicated-attribute apply path does
+        // exactly this) marks the existing NotRevocable modifier for DEFERRED destroy
+        // (FTag_DestroyEntity_Initiate) without erasing it yet. Coalescing the new delta into
+        // that doomed modifier silently loses the write the moment the destroy drains — which is
+        // why a replicated attribute Override'd in alternating frames sticks on the client every
+        // other edge. Treat a pending-destroy modifier as absent so we fall through and create a
+        // fresh one that survives.
         if (auto MaybeExistingModifier = RecordOfAttributeModifiers_Utils::Get_ValidEntry_If(
             InAttributeHandle, ck::algo::MatchesAttributeModifierWithOperation<AttributeModifierFragmentType, typename AttributeModifierFragmentType::FTag_IsNotRevocableModification>{InModifierOperation});
-            ck::IsValid(MaybeExistingModifier))
+            ck::IsValid(MaybeExistingModifier) &&
+            NOT UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(MaybeExistingModifier, ECk_EntityLifetime_DestructionPhase::BeginDestroy))
         {
             const auto& CurrentModifierValue = MaybeExistingModifier.template Get<AttributeModifierFragmentType>().Get_ModifierDelta();
 
