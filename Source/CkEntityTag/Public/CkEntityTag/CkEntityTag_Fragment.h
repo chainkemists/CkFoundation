@@ -4,9 +4,12 @@
 
 #include "CkEntityTag_Fragment_Data.h"
 
+#include "CkEcs/Snapshot/CkSnapshot_Context.h" // ck::FSnapshotContext (referenced by FFragment_EntityTag_Current::SerializeSnapshot)
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_EntityTag_UE;
+class FArchive;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -57,6 +60,7 @@ namespace ck
     {
     public:
         CK_GENERATED_BODY(FFragment_EntityTag_Current);
+        using IsSnapshotable = void;
 
         friend class ::UCk_Utils_EntityTag_UE;
 
@@ -70,6 +74,11 @@ namespace ck
 
     public:
         FFragment_EntityTag_Current() = default;
+
+        // Tier-C: authoritative tag membership (name + gameplay-tag counts) with no entity-handle ref. Body in the
+        // .cpp serializes both count arrays so a restored entity keeps Has/Get_AllTags. Registered alongside the
+        // per-tag StorageParams (which drives ForEach_Entity) so the two views stay consistent across a save/load.
+        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
