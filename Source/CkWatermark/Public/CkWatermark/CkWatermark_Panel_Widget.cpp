@@ -2,10 +2,12 @@
 
 #include "CkCore/Ensure/CkEnsure_Subsystem.h"
 #include "CkCore/Engine/CkGameState.h"
+#include "CkCore/Engine/CkPlayerState.h"
+#include "CkCore/BuildId/CkBuildId.h"
 #include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/Format/CkFormat.h"
 #include "CkWatermark/Settings/CkWatermark_Settings.h"
-#include "CkWatermark/Generated/CkWatermark_BuildId.h"
+#include "CkCore/Generated/CkCore_BuildId.h"
 #include "CkWatermark/Subsystem/CkWatermark_Subsystem.h"
 #include "CkWatermark/CkWatermark_ActivityBar_Widget.h"
 #include "CkMemory/CkMemory_Subsystem.h"
@@ -543,28 +545,28 @@ auto
     // (we are at that branch's tip). Diverged entries use the inactive color.
     // If HEAD does not match any branch a final "HEAD" entry is appended.
     {
-        static const FString BakedHead(UTF8_TO_TCHAR(CkWatermarkBuildId::HeadHash));
+        static const FString BakedHead(UTF8_TO_TCHAR(CkCoreBuildId::HeadHash));
 
         const TArray<FString>& EnabledBranches =
             UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BuildId_EnabledBranches();
 
         bool HeadMatchesAny = false;
-        for (int32 i = 0; i < CkWatermarkBuildId::BranchCount; ++i)
+        for (int32 i = 0; i < CkCoreBuildId::BranchCount; ++i)
         {
-            const FString BranchName(UTF8_TO_TCHAR(CkWatermarkBuildId::BranchNames[i]));
+            const FString BranchName(UTF8_TO_TCHAR(CkCoreBuildId::BranchNames[i]));
             if (!EnabledBranches.Contains(BranchName))
             {
                 continue;
             }
 
             const bool IsActive =
-                BakedHead == FString(UTF8_TO_TCHAR(CkWatermarkBuildId::MergeBaseHashes[i]));
+                BakedHead == FString(UTF8_TO_TCHAR(CkCoreBuildId::MergeBaseHashes[i]));
             if (IsActive) { HeadMatchesAny = true; }
 
             FCkWatermarkInfoBarEntry BranchEntry;
             BranchEntry.Key        = FText::FromString(BranchName);
             BranchEntry.Value      = TAttribute<FText>(FText::FromString(
-                                         FString(UTF8_TO_TCHAR(CkWatermarkBuildId::MergeBaseHashes[i]))));
+                                         FString(UTF8_TO_TCHAR(CkCoreBuildId::MergeBaseHashes[i]))));
             BranchEntry.Visibility = BuildIdVis;
             BranchEntry.ValueColorOverride = TAttribute<FSlateColor>::CreateLambda([IsActive]() -> FSlateColor
             {
@@ -1314,6 +1316,156 @@ auto
             .ShadowColorAndOpacity(ShadowColorAttr)
             .Visibility(PumpWarnVis)
         ];
+
+    // ---- Connection rows (Server/Client build-version) — appended to the center group ----
+    // Client (NM_Client): one row "Server <hash> [OK|VERSION MISMATCH]".
+    // Host (NM_ListenServer): "Clients (N)" header + up to MaxClientRows fixed per-client rows.
+    // Dedicated server has no watermark — its surface is the server-side log in ACk_PlayerState_UE.
+    const auto ConnMinPolicy  = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_Connection();
+    const int32 MaxClientRows = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Connection_MaxClientRows();
+
+    // Stateless: remote clients (excludes the local/host player), stable-sorted by PlayerId.
+    auto GetRemoteClients = [](const UWorld* InWorld) -> TArray<const ACk_PlayerState_UE*>
+    {
+        TArray<const ACk_PlayerState_UE*> Out;
+        if (!InWorld) { return Out; }
+        const auto* GS = InWorld->GetGameState<AGameStateBase>();
+        if (!GS) { return Out; }
+
+        const APlayerController* LocalPC = InWorld->GetFirstPlayerController();
+        const APlayerState* LocalPS = nullptr;
+        if (LocalPC && LocalPC->IsLocalController()) { LocalPS = LocalPC->PlayerState; }
+
+        for (const APlayerState* PS : GS->PlayerArray)
+        {
+            if (!PS || PS == LocalPS) { continue; }
+            if (const auto* CkPS = Cast<ACk_PlayerState_UE>(PS)) { Out.Add(CkPS); }
+        }
+        Out.Sort([](const ACk_PlayerState_UE& A, const ACk_PlayerState_UE& B)
+        {
+            return A.GetPlayerId() < B.GetPlayerId();
+        });
+        return Out;
+    };
+
+    const auto PendingColor = FSlateColor(FLinearColor(0.55f, 0.55f, 0.55f, 1.f));
+
+    // Client row — the server we're connected to + whether our build matches it.
+    CenterGroupBox->AddSlot()
+        .AutoHeight()
+        .Padding(0.f, RowVPad)
+        .HAlign(HAlign_Center)
+        [
+            SNew(STextBlock)
+            .Font(ValueFont)
+            .ShadowOffset(ShadowOffsetAttr)
+            .ShadowColorAndOpacity(ShadowColorAttr)
+            .Text(TAttribute<FText>::CreateWeakLambda(this, [this]() -> FText
+            {
+                const auto* World = GetWorld();
+                const auto* GS = World ? World->GetGameState<ACk_GameState_UE>() : nullptr;
+                const FString ServerId = GS ? GS->Get_ServerBuildId() : FString();
+                if (ServerId.IsEmpty()) { return FText::FromString(TEXT("Server: ---")); }
+                const bool Match = ServerId == ck::Get_BuildId();
+                return FText::FromString(FString::Printf(TEXT("Server %s  %s"),
+                    *ServerId, Match ? TEXT("[OK]") : TEXT("[VERSION MISMATCH]")));
+            }))
+            .ColorAndOpacity(TAttribute<FSlateColor>::CreateWeakLambda(this, [this, PendingColor]() -> FSlateColor
+            {
+                const auto* World = GetWorld();
+                const auto* GS = World ? World->GetGameState<ACk_GameState_UE>() : nullptr;
+                const FString ServerId = GS ? GS->Get_ServerBuildId() : FString();
+                if (ServerId.IsEmpty()) { return PendingColor; }
+                return FSlateColor(ServerId == ck::Get_BuildId()
+                    ? UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Connection_OkColor()
+                    : UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Connection_MismatchColor());
+            }))
+            .Visibility(TAttribute<EVisibility>::CreateWeakLambda(this, [this, ConnMinPolicy]() -> EVisibility
+            {
+                if (ConnMinPolicy == ECk_Watermark_DisplayPolicy::Hidden || _CurrentDisplayPolicy < ConnMinPolicy)
+                { return EVisibility::Collapsed; }
+                const auto* World = GetWorld();
+                return (World && World->GetNetMode() == NM_Client)
+                    ? EVisibility::SelfHitTestInvisible
+                    : EVisibility::Collapsed;
+            }))
+        ];
+
+    // Host header — "Clients (N)".
+    CenterGroupBox->AddSlot()
+        .AutoHeight()
+        .Padding(0.f, RowVPad)
+        .HAlign(HAlign_Center)
+        [
+            SNew(STextBlock)
+            .Font(ValueFont)
+            .ColorAndOpacity(LabelColor)
+            .ShadowOffset(ShadowOffsetAttr)
+            .ShadowColorAndOpacity(ShadowColorAttr)
+            .Text(TAttribute<FText>::CreateWeakLambda(this, [this, GetRemoteClients]() -> FText
+            {
+                return FText::FromString(FString::Printf(TEXT("Clients (%d)"),
+                    GetRemoteClients(GetWorld()).Num()));
+            }))
+            .Visibility(TAttribute<EVisibility>::CreateWeakLambda(this, [this, ConnMinPolicy]() -> EVisibility
+            {
+                if (ConnMinPolicy == ECk_Watermark_DisplayPolicy::Hidden || _CurrentDisplayPolicy < ConnMinPolicy)
+                { return EVisibility::Collapsed; }
+                const auto* World = GetWorld();
+                return (World && World->GetNetMode() == NM_ListenServer)
+                    ? EVisibility::SelfHitTestInvisible
+                    : EVisibility::Collapsed;
+            }))
+        ];
+
+    // Host per-client rows — fixed slots; each reads the i-th remote client, collapses when unused.
+    for (int32 RowIdx = 0; RowIdx < MaxClientRows; ++RowIdx)
+    {
+        CenterGroupBox->AddSlot()
+            .AutoHeight()
+            .Padding(0.f, RowVPad)
+            .HAlign(HAlign_Center)
+            [
+                SNew(STextBlock)
+                .Font(ValueFont)
+                .ShadowOffset(ShadowOffsetAttr)
+                .ShadowColorAndOpacity(ShadowColorAttr)
+                .Text(TAttribute<FText>::CreateWeakLambda(this, [this, GetRemoteClients, RowIdx]() -> FText
+                {
+                    const auto Clients = GetRemoteClients(GetWorld());
+                    if (!Clients.IsValidIndex(RowIdx)) { return FText::GetEmpty(); }
+                    const auto* PS = Clients[RowIdx];
+                    const FString Name = PS->GetPlayerName();
+                    const FString Id   = PS->Get_ClientBuildId();
+                    if (Id.IsEmpty())
+                    { return FText::FromString(FString::Printf(TEXT("%s  ---"), *Name)); }
+                    const bool Match = Id == ck::Get_BuildId();
+                    return FText::FromString(FString::Printf(TEXT("%s  %s  %s"),
+                        *Name, *Id, Match ? TEXT("[OK]") : TEXT("[MISMATCH]")));
+                }))
+                .ColorAndOpacity(TAttribute<FSlateColor>::CreateWeakLambda(this, [this, GetRemoteClients, RowIdx, PendingColor]() -> FSlateColor
+                {
+                    const auto Clients = GetRemoteClients(GetWorld());
+                    if (!Clients.IsValidIndex(RowIdx)) { return FSlateColor(FLinearColor::White); }
+                    const FString Id = Clients[RowIdx]->Get_ClientBuildId();
+                    if (Id.IsEmpty()) { return PendingColor; }
+                    return FSlateColor(Id == ck::Get_BuildId()
+                        ? UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Connection_OkColor()
+                        : UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Connection_MismatchColor());
+                }))
+                .Visibility(TAttribute<EVisibility>::CreateWeakLambda(this, [this, GetRemoteClients, RowIdx, ConnMinPolicy]() -> EVisibility
+                {
+                    if (ConnMinPolicy == ECk_Watermark_DisplayPolicy::Hidden || _CurrentDisplayPolicy < ConnMinPolicy)
+                    { return EVisibility::Collapsed; }
+                    const auto* World = GetWorld();
+                    if (!(World && World->GetNetMode() == NM_ListenServer))
+                    { return EVisibility::Collapsed; }
+                    return GetRemoteClients(World).IsValidIndex(RowIdx)
+                        ? EVisibility::SelfHitTestInvisible
+                        : EVisibility::Collapsed;
+                }))
+            ];
+    }
 
     // ---- Full layout --------------------------------------------------------
     TSharedRef<SOverlay> Panel = SNew(SOverlay)

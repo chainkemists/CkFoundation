@@ -140,6 +140,15 @@ private:
               meta = (AllowPrivateAccess = true))
     FLinearColor _Watermark_PumpLimit_WarningColor = FLinearColor(1.0f, 0.1f, 0.1f, 1.f);
 
+    // Connection rows: color when the client/server build ids match vs when they mismatch.
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Colors|Connection",
+              meta = (AllowPrivateAccess = true))
+    FLinearColor _Watermark_Connection_OkColor = FLinearColor(0.2f, 1.0f, 0.4f, 1.f);
+
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Colors|Connection",
+              meta = (AllowPrivateAccess = true))
+    FLinearColor _Watermark_Connection_MismatchColor = FLinearColor(1.0f, 0.1f, 0.1f, 1.f);
+
     UPROPERTY(Config, EditAnywhere, Category = "Watermark|Colors|Build Config",
               meta = (AllowPrivateAccess = true))
     FLinearColor _Watermark_BuildConfig_Debug_Color = FLinearColor(1.0f, 0.5f, 0.15f, 1.f);
@@ -202,6 +211,17 @@ private:
     UPROPERTY(Config, EditAnywhere, Category = "Watermark|Stat Visibility|Performance",
               meta = (AllowPrivateAccess = true))
     ECk_Watermark_DisplayPolicy _Watermark_MinPolicy_PumpCount = ECk_Watermark_DisplayPolicy::Regular;
+
+    // ---- Connection (Server/Client build-version rows in the center group) ----
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Stat Visibility|Connection",
+              meta = (AllowPrivateAccess = true))
+    ECk_Watermark_DisplayPolicy _Watermark_MinPolicy_Connection = ECk_Watermark_DisplayPolicy::Regular;
+
+    // Max number of client rows the host renders (fixed slots; unused ones collapse). 4-player co-op
+    // needs few — default 8.
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Connection",
+              meta = (AllowPrivateAccess = true, ClampMin = 1, ClampMax = 64))
+    int32 _Watermark_Connection_MaxClientRows = 8;
 
     // ---- Minimum Display Policy — Replication --------------------------------
     UPROPERTY(Config, EditAnywhere, Category = "Watermark|Stat Visibility|Replication",
@@ -438,6 +458,10 @@ public:
     CK_PROPERTY_GET(_Watermark_UniqueEnsureCount_ColorBands);
     CK_PROPERTY_GET(_Watermark_PumpCount_ColorBands);
     CK_PROPERTY_GET(_Watermark_PumpLimit_WarningColor);
+    CK_PROPERTY_GET(_Watermark_MinPolicy_Connection);
+    CK_PROPERTY_GET(_Watermark_Connection_MaxClientRows);
+    CK_PROPERTY_GET(_Watermark_Connection_OkColor);
+    CK_PROPERTY_GET(_Watermark_Connection_MismatchColor);
     CK_PROPERTY_GET(_Watermark_FontOverride);
     CK_PROPERTY_GET(_Watermark_ValueFontSize);
     CK_PROPERTY_GET(_Watermark_LabelFontSize);
@@ -531,6 +555,10 @@ public:
     static const FCk_Watermark_ColorBands_LowerIsBetter&  Get_Watermark_UniqueEnsureCount_ColorBands();
     static const FCk_Watermark_ColorBands_LowerIsBetter&  Get_Watermark_PumpCount_ColorBands();
     static FLinearColor Get_Watermark_PumpLimit_WarningColor();
+    static ECk_Watermark_DisplayPolicy Get_Watermark_MinPolicy_Connection();
+    static int32        Get_Watermark_Connection_MaxClientRows();
+    static FLinearColor Get_Watermark_Connection_OkColor();
+    static FLinearColor Get_Watermark_Connection_MismatchColor();
     static FSlateFontInfo Get_Watermark_FontOverride();
     static int32          Get_Watermark_ValueFontSize();
     static int32          Get_Watermark_LabelFontSize();

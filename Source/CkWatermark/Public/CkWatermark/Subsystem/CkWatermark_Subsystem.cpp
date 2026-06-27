@@ -6,7 +6,7 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkWatermark/Settings/CkWatermark_Settings.h"
-#include "CkWatermark/Generated/CkWatermark_BuildId.h"
+#include "CkCore/Generated/CkCore_BuildId.h"
 
 #include "CkEcs/Settings/CkEcs_Settings.h"
 #include "CkWatermark/CkWatermark_Log.h"
@@ -246,12 +246,12 @@ auto
 
     // ---- Build IDs -----------------------------------------------------------
     {
-        static auto BakedHead = FString{UTF8_TO_TCHAR(CkWatermarkBuildId::HeadHash)};
+        static auto BakedHead = FString{UTF8_TO_TCHAR(CkCoreBuildId::HeadHash)};
         auto HeadMatchesAny   = false;
-        for (auto I = 0; I < CkWatermarkBuildId::BranchCount; ++I)
+        for (auto I = 0; I < CkCoreBuildId::BranchCount; ++I)
         {
-            auto BranchName = FString{UTF8_TO_TCHAR(CkWatermarkBuildId::BranchNames[I])};
-            auto MergeHash = FString{UTF8_TO_TCHAR(CkWatermarkBuildId::MergeBaseHashes[I])};
+            auto BranchName = FString{UTF8_TO_TCHAR(CkCoreBuildId::BranchNames[I])};
+            auto MergeHash = FString{UTF8_TO_TCHAR(CkCoreBuildId::MergeBaseHashes[I])};
             const auto Active = (BakedHead == MergeHash);
 
             if (Active)
@@ -380,7 +380,7 @@ auto
     GetBuildHeadHash() const
     -> FString
 {
-    return FString(UTF8_TO_TCHAR(CkWatermarkBuildId::HeadHash));
+    return FString(UTF8_TO_TCHAR(CkCoreBuildId::HeadHash));
 }
 
 auto
