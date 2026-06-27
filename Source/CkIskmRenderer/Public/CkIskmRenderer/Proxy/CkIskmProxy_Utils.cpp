@@ -19,7 +19,7 @@ DECLARE_CYCLE_STAT(TEXT("Iskm::GetSocketTransform"), STAT_CkIskm_GetSocketTransf
 auto
     UCk_Utils_IskmProxy_UE::
     Add(
-        FCk_Handle& InHandle,
+        FCk_Handle_Transform& InHandle,
         const FCk_Fragment_IskmProxy_ParamsData& InParams)
     -> FCk_Handle_IskmProxy
 {

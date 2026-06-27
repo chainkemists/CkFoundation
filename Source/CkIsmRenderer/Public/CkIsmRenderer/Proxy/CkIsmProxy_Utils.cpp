@@ -14,7 +14,7 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_IsmProxy_UE, FCk_Handle_IsmPro
 auto
     UCk_Utils_IsmProxy_UE::
     Add(
-        FCk_Handle& InHandle,
+        FCk_Handle_Transform& InHandle,
         const FCk_Fragment_IsmProxy_ParamsData& InParams)
     -> FCk_Handle_IsmProxy
 {

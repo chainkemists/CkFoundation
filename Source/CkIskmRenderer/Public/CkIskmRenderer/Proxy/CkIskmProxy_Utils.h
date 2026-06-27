@@ -3,6 +3,7 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 
 #include "CkIskmRenderer/Proxy/CkIskmProxy_Fragment_Data.h"
+#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 
 #include "CkIskmProxy_Utils.generated.h"
 
@@ -22,7 +23,7 @@ public:
         DisplayName="[Ck][IskmProxy] Add")
     static FCk_Handle_IskmProxy
     Add(
-        UPARAM(ref) FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle_Transform& InHandle,
         const FCk_Fragment_IskmProxy_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",

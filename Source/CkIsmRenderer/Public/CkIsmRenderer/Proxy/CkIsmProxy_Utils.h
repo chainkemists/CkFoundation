@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkIsmRenderer/Proxy/CkIsmProxy_Fragment_Data.h"
+#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 
 #include "CkIsmProxy_Utils.generated.h"
 
@@ -31,7 +32,7 @@ public:
               DisplayName="[Ck][IsmProxy] Add Feature")
     static FCk_Handle_IsmProxy
     Add(
-        UPARAM(ref) FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle_Transform& InHandle,
         const FCk_Fragment_IsmProxy_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
