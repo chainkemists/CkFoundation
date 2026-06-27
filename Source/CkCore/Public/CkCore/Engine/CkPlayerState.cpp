@@ -1,15 +1,18 @@
 #include "CkPlayerState.h"
 
+#include "CkCore/BuildId/CkBuildId.h"
 #include "CkCore/Game/CkGame_Utils.h"
 #include "CkCore/Time/CkTime_Utils.h"
 
 #include "GameFramework/PlayerController.h"
 #include "Misc/App.h"
 #include "Net/UnrealNetwork.h"
+#include "Net/Core/PushModel/PushModel.h"
 #include "Engine/GameInstance.h"
 #include "TimerManager.h"
 
 #include "CkCore/CkCoreLog.h"
+#include "CkCore/Validation/CkIsValid.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -106,6 +109,105 @@ auto
     TRACE_BOOKMARK(TEXT("Player State Begin Play"));
     ck::core::Log(TEXT("Player State [{}] Begin Play"), this);
     Super::BeginPlay();
+
+    // Covers the authority/host + standalone case (owner is set synchronously). The remote-client case
+    // is handled by ClientInitialize once the owning controller link replicates. Both are idempotent.
+    DoTryReportBuildId();
+}
+
+auto
+    ACk_PlayerState_UE::
+    ClientInitialize(
+        AController* InController)
+    -> void
+{
+    Super::ClientInitialize(InController);
+
+    // Fired on the owning client once this PlayerState is associated with its controller — the
+    // earliest point at which a Server RPC on this (now-owned) PlayerState is guaranteed to route.
+    DoTryReportBuildId();
+}
+
+auto
+    ACk_PlayerState_UE::
+    GetLifetimeReplicatedProps(
+        TArray<FLifetimeProperty>& OutLifetimeProps) const
+    -> void
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
+
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ClientBuildId, Params);
+}
+
+auto
+    ACk_PlayerState_UE::
+    DoTryReportBuildId()
+    -> void
+{
+    if (_HasReportedBuildId)
+    { return; }
+
+    // Only the locally-controlled PlayerState reports. Other players' PlayerStates also exist on this
+    // machine as simulated proxies; a Server RPC from those would not route (not owned by this connection).
+    const auto* OwningController = GetOwningController();
+    if (ck::Is_NOT_Valid(OwningController) || NOT OwningController->IsLocalController())
+    { return; }
+
+    _HasReportedBuildId = true;
+
+    const auto LocalBuildId = ck::Get_BuildId();
+
+    if (HasAuthority())
+    {
+        // Listen-host local player (or standalone) — set directly; no RPC needed.
+        _ClientBuildId = LocalBuildId;
+        MARK_PROPERTY_DIRTY_FROM_NAME(ACk_PlayerState_UE, _ClientBuildId, this);
+    }
+    else
+    {
+        Server_ReportBuildId(LocalBuildId);
+    }
+}
+
+bool
+    ACk_PlayerState_UE::
+    Server_ReportBuildId_Validate(
+        const FString& InClientBuildId)
+{
+    return true;
+}
+
+void
+    ACk_PlayerState_UE::
+    Server_ReportBuildId_Implementation(
+        const FString& InClientBuildId)
+{
+    _ClientBuildId = InClientBuildId;
+    MARK_PROPERTY_DIRTY_FROM_NAME(ACk_PlayerState_UE, _ClientBuildId, this);
+
+    // Server-authoritative comparison — the surface that works on a headless dedicated server (which
+    // renders no watermark). Event-driven (once per client report), so it never spams the log.
+    const auto ServerBuildId = ck::Get_BuildId();
+    if (InClientBuildId != ServerBuildId)
+    {
+        ck::core::Warning(TEXT("[Version] Client [{}] connected with build [{}] != server build [{}] - VERSION MISMATCH"),
+            GetPlayerName(), InClientBuildId, ServerBuildId);
+    }
+    else
+    {
+        ck::core::Log(TEXT("[Version] Client [{}] connected with matching build [{}]"),
+            GetPlayerName(), InClientBuildId);
+    }
+}
+
+auto
+    ACk_PlayerState_UE::
+    Get_ClientBuildId() const
+    -> FString
+{
+    return _ClientBuildId;
 }
 
 auto
