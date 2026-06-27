@@ -13,9 +13,12 @@
 
 #include "CkTimer/CkTimer_Fragment_Data.h"
 
+#include "CkEcs/Snapshot/CkSnapshot_Context.h" // ck::FSnapshotContext (referenced by FFragment_Timer_Current::SerializeSnapshot)
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_Timer_UE;
+class FArchive;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -35,6 +38,7 @@ namespace ck
     {
     public:
         CK_GENERATED_BODY(FFragment_Timer_Current);
+        using IsSnapshotable = void;
 
     public:
         friend class FProcessor_Timer_Setup;
@@ -51,6 +55,11 @@ namespace ck
 
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_Timer_Current, _Chrono);
+
+        // Tier-C: the countdown progress (FCk_Chrono, incl. its Transient _CurrentValue) is authoritative timer
+        // state with no entity-handle ref. Body in the .cpp delegates to FCk_Chrono::SerializeSnapshot. Registered
+        // so a restored timer RESUMES mid-countdown (the run/pause + count-direction tags already round-trip free).
+        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
