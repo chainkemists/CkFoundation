@@ -16,14 +16,3 @@ auto
 
     return InAnimInstance->_OwningHandle;
 }
-
-auto
-    UCk_Utils_IskmNotify_UE::
-    Get_OwningEntity(
-        const UCk_IskmNotify_AnimInstance* InAnimInstance)
-    -> FCk_Handle
-{
-    // FCk_Handle_IskmProxy derives from FCk_Handle (via FCk_Handle_TypeSafe), so the
-    // proxy handle slices to the base entity handle the proxy is composed on.
-    return Get_OwningProxyHandle(InAnimInstance);
-}
