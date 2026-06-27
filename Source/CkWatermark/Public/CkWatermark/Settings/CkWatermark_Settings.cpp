@@ -115,6 +115,32 @@ auto
     return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_PumpLimit_WarningColor();
 }
 
+auto UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_Connection()    -> ECk_Watermark_DisplayPolicy { return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_MinPolicy_Connection(); }
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_Connection_MaxClientRows()
+    -> int32
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_Connection_MaxClientRows();
+}
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_Connection_OkColor()
+    -> FLinearColor
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_Connection_OkColor();
+}
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_Connection_MismatchColor()
+    -> FLinearColor
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_Connection_MismatchColor();
+}
+
 auto
     UCk_Utils_Watermark_ProjectSettings_UE::
     Get_Watermark_FontOverride()
