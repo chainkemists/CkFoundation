@@ -47,18 +47,9 @@ public:
     float
     Get_ServerFPS() const;
 
-    // The server's build id (short git hash), replicated to all clients so each client can compare it
-    // against its own and flag a version mismatch. Empty until the server's BeginPlay has set it.
-    UFUNCTION(BlueprintCallable)
-    FString
-    Get_ServerBuildId() const;
-
 private:
     UPROPERTY(Replicated)
     float _ServerFPS;
-
-    UPROPERTY(Replicated)
-    FString _ServerBuildId;
 
 protected:
     auto

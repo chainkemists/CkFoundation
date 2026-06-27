@@ -1,6 +1,5 @@
 #include "CkGameState.h"
 
-#include "CkCore/BuildId/CkBuildId.h"
 #include "CkCore/CkCoreLog.h"
 #include "CkCore/Validation/CkIsValid.h"
 
@@ -48,7 +47,6 @@ auto
     constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
 
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ServerFPS, Params);
-    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ServerBuildId, Params);
 }
 
 auto
@@ -69,14 +67,6 @@ auto
     TRACE_BOOKMARK(TEXT("Game State Begin Play"));
     ck::core::Log(TEXT("Game State [{}] Begin Play"), this);
     Super::BeginPlay();
-
-    // The authoritative server stamps its build id once; it replicates to every client so they can
-    // compare against their own and surface a version mismatch.
-    if (HasAuthority())
-    {
-        _ServerBuildId = ck::Get_BuildId();
-        MARK_PROPERTY_DIRTY_FROM_NAME(ACk_GameState_UE, _ServerBuildId, this);
-    }
 }
 
 auto
@@ -85,14 +75,6 @@ auto
     -> float
 {
     return _ServerFPS;
-}
-
-auto
-    ACk_GameState_UE::
-    Get_ServerBuildId() const
-    -> FString
-{
-    return _ServerBuildId;
 }
 
 auto
