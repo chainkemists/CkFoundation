@@ -316,16 +316,25 @@ private:
     auto DoRemove_FragmentDebugInfo() -> void;
 
 protected:
-    UPROPERTY(BlueprintReadOnly, NotReplicated)
+    // Transient: a handle's raw entity-id + registry slot are RUNTIME, session-specific values -- meaningless across
+    // a save/load, so they must NEVER persist as raw bytes. The snapshot is the only system that persists a handle,
+    // and it does so by REMAPPING the entity id through FSnapshotContext::Snapshot_Handle (entt continuous-loader),
+    // never by serializing these fields. Transient keeps them out of CkSnapshot's whole-fragment data pass (which is
+    // non-SaveGame-gated -- see CkSnapshot_Archive_Writer.h) so a handle inside a dynamic fragment is round-tripped
+    // by the remap path, not double-serialized. Does not affect runtime copy/duplication (non-persistent archives)
+    // or replication (FCk_HandleNetSerializer, a separate path).
+    UPROPERTY(BlueprintReadOnly, NotReplicated, Transient)
     FCk_Entity _Entity;
 
     // Replaces TOptional<FCk_Registry>. Trivially copyable POD (slot-index + generation).
     // Resolved to the live entt::registry on demand via ck::registry_table::Resolve.
-    UPROPERTY()
+    // Transient (see _Entity): re-homed onto the live registry by Snapshot_Handle on load, never persisted raw.
+    UPROPERTY(Transient)
     FCk_RegistryHandle _RegistryHandle;
 
 private:
-    UPROPERTY()
+    // Transient (see _Entity): a weak ptr to a runtime replication-driver object -- session-specific, never persisted.
+    UPROPERTY(Transient)
     TWeakObjectPtr<class UCk_Ecs_ReplicatedObject_UE> _ReplicationDriver;
 
 #if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
