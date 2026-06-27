@@ -45,7 +45,7 @@ void UCk_IskmNotify_AnimInstance::NativeOnMontageBlendingOut(UAnimMontage* Monta
         {
             AnimState._CurrentMontage.Reset();
         }
-        _OwningHandle.Remove<ck::FTag_IskmProxy_HasActiveMontage>();
+        _OwningHandle.Try_Remove<ck::FTag_IskmProxy_HasActiveMontage>();
 
         ck::UUtils_Signal_IskmProxy_OnMontageFinished::Broadcast(
             _OwningHandle,
