@@ -28,10 +28,4 @@ public:
     static FCk_Handle_IskmProxy
     Get_OwningProxyHandle(
         const UCk_IskmNotify_AnimInstance* InAnimInstance);
-
-    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmNotify",
-        DisplayName="[Ck][IskmNotify] Get Owning Entity")
-    static FCk_Handle
-    Get_OwningEntity(
-        const UCk_IskmNotify_AnimInstance* InAnimInstance);
 };
