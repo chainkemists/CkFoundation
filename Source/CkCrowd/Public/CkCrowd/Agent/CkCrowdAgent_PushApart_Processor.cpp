@@ -93,9 +93,20 @@ namespace ck
 
                     if (Dist < KINDA_SMALL_NUMBER)
                     {
-                        // Degenerate overlap (exact center match). Push along an arbitrary axis to
-                        // unstick. Mirrors dtCrowd's degenerate-case handling.
-                        Displacement += FVector(0.5f * CombinedRadius, 0.0f, 0.0f);
+                        // Degenerate overlap (exact center match). The old code pushed EVERY
+                        // coincident agent along a shared +X, so two stacked agents translated
+                        // together forever (the "slide off in +X" bug) instead of separating.
+                        // Derive a deterministic axis from the unordered pair — both agents agree
+                        // on the LINE — and give each the OPPOSITE sign along it so they move APART.
+                        // Once they are a hair apart, the penetration resolution below takes over.
+                        const auto SelfHash  = GetTypeHash(static_cast<const FCk_Handle&>(InHandle));
+                        const auto NbrHash   = GetTypeHash(Nbr.Get_Handle());
+                        // (SelfHash ^ NbrHash) is symmetric → same axis for both; % 3600 * (PI/1800)
+                        // maps to [0, 2π) at 0.1° resolution.
+                        const auto PairAngle = static_cast<float>((SelfHash ^ NbrHash) % 3600) * (PI / 1800.0f);
+                        const auto Axis      = FVector(FMath::Cos(PairAngle), FMath::Sin(PairAngle), 0.0f);
+                        const auto Sign      = SelfHash > NbrHash ? 1.0f : -1.0f;
+                        Displacement += Axis * (Sign * 0.5f * CombinedRadius);
                         continue;
                     }
 
