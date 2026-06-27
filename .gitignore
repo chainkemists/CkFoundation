@@ -93,6 +93,6 @@ DerivedDataCache/*
 *.idea/*
 Source/CkScripts/.idea
 
-# Auto-generated build-id header (written by CkWatermark.Build.cs)
-Source/CkWatermark/Public/CkWatermark/Generated/
+# Auto-generated build-id header (written by CkCore.Build.cs)
+Source/CkCore/Public/CkCore/Generated/CkCore_BuildId.h
 *.orig
