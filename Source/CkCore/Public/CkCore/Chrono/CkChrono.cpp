@@ -2,9 +2,33 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include "Serialization/Archive.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 const FCk_Chrono FCk_Chrono::Zero = FCk_Chrono{ FCk_Time::ZeroSecond() };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_Chrono::
+    SerializeSnapshot(
+        FArchive& InAr)
+    -> void
+{
+    // FCk_Time has no native serializer; round-trip the raw seconds and rebuild (FCk_Time is constructible from a
+    // double — see Get_TimeElapsed). _CurrentValue is Transient (dropped by the reflected/replicated paths), so
+    // capturing it here is exactly what lets a save/load RESUME a mid-countdown instead of restarting at zero.
+    auto GoalSeconds    = _GoalValue.Get_Seconds();
+    auto CurrentSeconds = _CurrentValue.Get_Seconds();
+    InAr << GoalSeconds;
+    InAr << CurrentSeconds;
+    if (InAr.IsLoading())
+    {
+        _GoalValue    = FCk_Time{ GoalSeconds };
+        _CurrentValue = FCk_Time{ CurrentSeconds };
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
