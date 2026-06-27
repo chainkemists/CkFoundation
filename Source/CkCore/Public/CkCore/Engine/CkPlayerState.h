@@ -100,6 +100,8 @@ public:
 public:
     auto UpdatePing(float InPing) -> void override;
     auto PostActorCreated() -> void override;
+    auto ClientInitialize(AController* InController) -> void override;
+    auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
 protected:
     auto BeginPlay() -> void override;
 
@@ -107,9 +109,24 @@ public:
     auto Get_MinPing() const -> FCk_Time;
     auto Get_MaxPing() const -> FCk_Time;
 
+    // This client's build id (short git hash), replicated from the server once the owning client has
+    // reported it. The host reads every PlayerState's value to flag clients on the wrong version.
+    UFUNCTION(BlueprintCallable)
+    FString Get_ClientBuildId() const;
+
+    // Client -> server: the controlling client reports its local build id. The server stores it
+    // (replicated to all) and logs a version mismatch (the dedicated-server-visible surface).
+    UFUNCTION(Server, Reliable, WithValidation)
+    void Server_ReportBuildId(const FString& InClientBuildId);
+
 #if NOT CK_BUILD_TEST_OR_SHIPPING
     auto Get_PingRangeHistoryEntries() const -> TArray<FCk_PlayerState_PingRange_History_Entry>;
 #endif
+
+private:
+    // Sends this client's build id to the server exactly once, only from the locally-controlled
+    // PlayerState. On authority (listen-host / standalone) it sets the value directly instead of RPCing.
+    auto DoTryReportBuildId() -> void;
 
 private:
     FCk_PlayerState_PingRange _PingRange;
@@ -117,6 +134,11 @@ private:
     FTimerHandle _PingTimerHandle;
 
     FCk_Time _PingSentTime = FCk_Time::ZeroSecond();
+
+    UPROPERTY(Replicated)
+    FString _ClientBuildId;
+
+    bool _HasReportedBuildId = false;
 
 public:
     CK_PROPERTY_GET(_PingSentTime);
