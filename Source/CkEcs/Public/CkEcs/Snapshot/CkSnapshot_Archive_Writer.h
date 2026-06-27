@@ -18,7 +18,15 @@ namespace ck
         FSnapshotArchive_Writer(FObjectAndNameAsStringProxyArchive& InProxy, FSnapshotContext& InContext)
             : _Proxy(InProxy), _Context(InContext)
         {
-            _Proxy.ArIsSaveGame = true;
+            // CkSnapshot captures the WHOLE fragment, not just SaveGame-marked fields -- a snapshot is a complete
+            // ECS-world capture, so the persistence contract is "everything EXCEPT Transient". ArIsSaveGame=false
+            // disables SaveGame gating (bare UPROPERTY data round-trips; AngelScript fragments cannot reliably set
+            // CPF_SaveGame -- they only reach meta=(SaveGame), which is not the real flag). ArIsPersistent=true makes
+            // CPF_Transient the single opt-out, applied SYMMETRICALLY with the reader -- a writer/reader flag mismatch
+            // would desync the byte stream. (Handles stay out of this data pass via Transient on FCk_Handle's fields
+            // and are round-tripped through FSnapshotContext::Snapshot_Handle's entity-id remap instead.)
+            _Proxy.ArIsSaveGame = false;
+            _Proxy.SetIsPersistent(true);
         }
 
         auto operator()(entt::entity InEntity) -> void;
