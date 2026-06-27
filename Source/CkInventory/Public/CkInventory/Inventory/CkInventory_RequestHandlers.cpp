@@ -519,6 +519,14 @@ namespace ck::inventory_handlers
             { return ECk_Inventory_OperationResult_Transfer::Failed_NoSpaceInTarget; }
         }
 
+        // Past validation the transfer always mutates the SOURCE (removes the item or reduces its
+        // stack), so flag it dirty here. DoTransfer is reached both by the deferred Request_TransferItem
+        // path (whose request processor would also flag the source) AND synchronously by ExecuteTransferNow
+        // for mass-transfer, which has NO such processor — without this, FProcessor_Inventory_FireSignals
+        // never diffs a drained source and OnItemsChanged (hence downstream OnEmptied) never fires. The
+        // TARGET is flagged at each success site below, since it only changes on a committed move.
+        UCk_Utils_Inventory_UE::Request_MarkInventory_AsMayHaveChanged(BaseSource);
+
         // Helper lambdas: synthesize a Remove/Add call by constructing a synthetic request entry
         // and dispatching through the typed Handle. This keeps Transfer's algorithm shape-agnostic
         // while routing through each shape's actual Add/Remove logic (including grid placement).
