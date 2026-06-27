@@ -16,6 +16,13 @@ namespace ck
     {
         return FString{UTF8_TO_TCHAR(CkCoreBuildId::HeadHash)};
     }
+
+    // The build id REPORTED across the network (server stamp into GameState + client report via RPC).
+    // Equals Get_BuildId() except when the dev-only CVar `ck.Net.BuildIdOverride` is non-empty
+    // (non-shipping only) — then it returns the override. Comparisons keep using Get_BuildId(), so an
+    // override forces a client/server version mismatch for testing the watermark rows (in PIE both sides
+    // share one build, so the real hashes always match). Defined in CkBuildId.cpp.
+    CKCORE_API auto Get_ReportedBuildId() -> FString;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
