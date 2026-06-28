@@ -294,28 +294,46 @@ namespace ck
             }
         }
 
-        // Continuous update (opt-in). Fires every Evaluate pass when >= 1 listener bound.
-        // Pay-for-what-you-use: skip both payload construction and broadcast when refcount is 0.
+        // Continuous update (opt-in). Broadcasts ONLY on passes where the result set actually
+        // changed this pass (an entity entered or left a requirement's results) — not every
+        // pass. Every consumer reacts to the per-requirement _Added / _Removed deltas and
+        // no-ops on empty deltas, so a no-change pass has nothing to deliver; skipping it
+        // avoids a per-frame payload alloc + broadcast + delegate invocation per bound query
+        // (the dominant cost when many queries each hold a continuous listener). A satisfaction
+        // flip cannot happen without a result-count change, so _IsSatisfied transitions still
+        // ride out on the same pass as their delta. Pay-for-what-you-use: skip entirely when
+        // refcount is 0.
         if (InCurrent._ContinuousUpdateListenerCount > 0)
         {
-            auto ContinuousPayload = TArray<FCk_EntityTagQuery_Result>{};
-            ContinuousPayload.Reserve(Requirements.Num());
-            for (int32 i = 0; i < Requirements.Num(); ++i)
+            auto AnyRemovedThisPass = false;
+            for (const auto& Removed : InCurrent._PendingRemoved)
             {
-                ContinuousPayload.Emplace(FCk_EntityTagQuery_Result{
-                    Requirements[i].Get_Tag(),
-                    InCurrent._ResultsPerRequirement[i],
-                    InCurrent._PendingAdded[i],
-                    InCurrent._PendingRemoved[i]});
+                if (Removed.Num() > 0)
+                { AnyRemovedThisPass = true; break; }
             }
 
-            ck::UUtils_Signal_EntityTagQuery_OnContinuousUpdate::Broadcast(
-                InHandle,
-                ck::MakePayload(InHandle, InCurrent._IsSatisfied, ContinuousPayload));
+            if (AnyAppendedThisPass || AnyRemovedThisPass)
+            {
+                auto ContinuousPayload = TArray<FCk_EntityTagQuery_Result>{};
+                ContinuousPayload.Reserve(Requirements.Num());
+                for (int32 i = 0; i < Requirements.Num(); ++i)
+                {
+                    ContinuousPayload.Emplace(FCk_EntityTagQuery_Result{
+                        Requirements[i].Get_Tag(),
+                        InCurrent._ResultsPerRequirement[i],
+                        InCurrent._PendingAdded[i],
+                        InCurrent._PendingRemoved[i]});
+                }
+
+                ck::UUtils_Signal_EntityTagQuery_OnContinuousUpdate::Broadcast(
+                    InHandle,
+                    ck::MakePayload(InHandle, InCurrent._IsSatisfied, ContinuousPayload));
+            }
         }
 
         // Reset accumulators at the end of every Evaluate pass. Intentional:
-        // - OnContinuousUpdate listeners consume deltas every pass (never dropped).
+        // - OnContinuousUpdate fires (and consumes deltas) only on passes that changed; a
+        //   no-change pass has empty _PendingAdded/_PendingRemoved, so nothing is dropped.
         // - OnSatisfied path captures deltas when it fires; otherwise they're dropped.
         // - The destructor writes _PendingRemoved in FGroup_EndPlay (after Eval), so
         //   those writes survive to next frame's Eval and get baked into that pass.
