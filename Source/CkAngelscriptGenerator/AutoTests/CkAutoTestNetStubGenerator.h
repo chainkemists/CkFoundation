@@ -13,12 +13,17 @@
 // harness latent commands.
 //
 // Output convention (one file per "feature" derived from the AS source path; falls back to `AS`
-// when no convention matches):
-//   * Plugin-authored tests (`Plugins/<X>/Script/Ck<Feature>/...`):
-//       Plugins/CkTests/Source/CkTests/Private/Net/Generated/<Feature>_NetAutoTestStubs.spec.cpp
-//   * Project-authored tests (`<ProjectDir>/Script/Tests/<Feature>/...`, or anywhere under the
-//     project's `Script/` tree):
+// when no convention matches). THREE destinations, chosen so a committed stub always lands in the
+// SAME git repo as the .as test class it references:
+//   * Project-authored tests (anywhere under `<ProjectDir>/Script/`):
 //       <ProjectDir>/Source/<ProjectName>/Tests/Net/Generated/<Feature>_NetAutoTestStubs.spec.cpp
+//   * Tests authored in a plugin OTHER than CkTests that ships its own compiled C++ module
+//     (e.g. an editor-only test plugin like `BusterBlockTests`):
+//       Plugins/<X>/Source/<Module>/Private/Net/Generated/<Feature>_NetAutoTestStubs.spec.cpp
+//     (`<Module>` = the plugin's first Runtime, else UncookedOnly/DeveloperTool, module.)
+//   * Everything else — CkTests' OWN net tests, or a plugin that has no hostable C++ module
+//     (script-only) — falls back to CkTests:
+//       Plugins/CkTests/Source/CkTests/Private/Net/Generated/<Feature>_NetAutoTestStubs.spec.cpp
 //
 // The split is load-bearing, not cosmetic: these stubs are COMMITTED (UBT must compile them
 // before the editor can ever boot to regenerate them), and the generator actively prunes stale
@@ -26,13 +31,16 @@
 // keeps the pair atomic across branch switches. Before the split, a project-authored test's stub
 // landed in the CkTests submodule; any machine whose project checkout lacked that class (older
 // branch, different host project) had the committed file pruned, surfacing as a mysterious
-// deletion in the submodule on every boot.
+// deletion in the submodule on every boot. The plugin-module destination extends that same
+// guarantee to plugins that own their tests: routing a plugin's stub into the CkTests submodule
+// would re-create exactly that cross-repo churn for the plugin's repo.
 //
-// Plugin-authored output is rooted under `CkTests` so the emitted C++ sees the harness API
-// (`CkTests/Net/CkAutoTest_NetSubject.h`, `CkTests/Net/CkNetAutomation_Common.h`) and the
-// generator does not need a build-dependency on `CkTests` itself — only the runtime path is
-// crossed. Project-authored output requires the project's primary module to depend on `CkTests`
-// (the harness headers are public and the latent commands are `CKTESTS_API`-exported).
+// Whichever destination is chosen, the emitted C++ #includes the CkTests harness API
+// (`CkTests/Net/CkAutoTest_NetSubject.h`, `CkTests/Net/CkNetAutomation_Common.h`) and resolves
+// the subject actor via `/Script/CkTests.Ck_AutoTest_NetSubject` — so the HOSTING module (the
+// project's primary module, or the plugin's chosen module) must publicly depend on `CkTests` (the
+// harness headers are public and the latent commands are `CKTESTS_API`-exported). The generator
+// itself needs no build-dependency on `CkTests`; only the emitted runtime path crosses to it.
 // `_NetMode` and `_TimeoutSeconds` are read off the CDO via reflection (same pattern the wrapper
 // generator uses), so this generator's module deps stay unchanged.
 //

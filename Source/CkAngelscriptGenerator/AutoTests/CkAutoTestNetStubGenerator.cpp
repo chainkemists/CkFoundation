@@ -9,6 +9,7 @@
 
 #include <HAL/FileManager.h>
 #include <Interfaces/IPluginManager.h>
+#include <ModuleDescriptor.h>
 #include <Misc/App.h>
 #include <Misc/FileHelper.h>
 #include <Misc/Paths.h>
@@ -376,10 +377,96 @@ namespace ck_autotest_netstub_generator
         return ProjectModuleDir / TEXT("Tests") / TEXT("Net") / TEXT("Generated");
     }
 
-    // Buckets by (output root, feature): plugin-authored tests group under CkTests, project-
-    // authored ones under the project's own source tree — see the header docstring for why the
-    // split matters. Classes whose root is unavailable are skipped with a warning (never
-    // silently, never rerouted across repos).
+    // Longest-base-dir-prefix match of a source path against every enabled plugin. Mirrors
+    // FCkAutoTestWrapperGenerator::Find_PluginByPathPrefix verbatim — the proven in-repo way to
+    // resolve an AS source file's owning plugin (this engine fork has no path->plugin lookup we
+    // rely on; the wrapper generator uses exactly this).
+    auto Find_PluginByPathPrefix(const FString& InPath) -> const IPlugin*
+    {
+        if (InPath.IsEmpty())
+        { return nullptr; }
+
+        auto NormalizedPath = FPaths::ConvertRelativePathToFull(InPath);
+        FPaths::NormalizeFilename(NormalizedPath);
+
+        const IPlugin* BestMatch = nullptr;
+        auto BestMatchLen = int32{0};
+
+        for (const auto& Plugin : IPluginManager::Get().GetEnabledPlugins())
+        {
+            auto PluginDir = FPaths::ConvertRelativePathToFull(Plugin->GetBaseDir());
+            FPaths::NormalizeDirectoryName(PluginDir);
+
+            if (NormalizedPath.StartsWith(PluginDir, ESearchCase::IgnoreCase))
+            {
+                if (PluginDir.Len() > BestMatchLen)
+                {
+                    BestMatch = &Plugin.Get();
+                    BestMatchLen = PluginDir.Len();
+                }
+            }
+        }
+        return BestMatch;
+    }
+
+    // Output root for a test authored in a plugin OTHER than CkTests that ships its own compiled
+    // C++ module to host the stub: `<Plugin>/Source/<Module>/Private/Net/Generated`, mirroring
+    // CkTests' own layout. Returns empty (caller falls back to CkTests, preserving prior behavior)
+    // when:
+    //   * the source path resolves to no enabled plugin,
+    //   * the owning plugin IS CkTests (keep its dedicated, byte-stable Get_CkTestsOutputDir branch),
+    //   * the plugin has no host-able code module (script-only plugin), or
+    //   * the chosen module's Source dir doesn't exist on disk (refuse to guess, same precedent as
+    //     Get_ProjectOutputDir).
+    // A plugin hosting these stubs MUST have a module that publicly depends on CkTests — the emitted
+    // C++ #includes the CkTests/Net/* harness headers (same requirement the project module carries).
+    auto Get_PluginOutputDir(const FString& InSourcePath) -> FString
+    {
+        const auto* Plugin = Find_PluginByPathPrefix(InSourcePath);
+        if (Plugin == nullptr)
+        { return {}; }
+
+        // CkTests keeps its dedicated root so its own net tests stay byte-identical (its module
+        // dir would resolve to the same path here, but routing it explicitly through
+        // Get_CkTestsOutputDir leaves that code path untouched).
+        if (Plugin->GetName() == TEXT("CkTests"))
+        { return {}; }
+
+        // Pick a host-able module: prefer Runtime (matches where CkTests itself hosts net stubs),
+        // then UncookedOnly / DeveloperTool. Editor-typed modules are intentionally skipped — the
+        // stub bodies are WITH_DEV_AUTOMATION_TESTS-guarded, but the file must still compile in the
+        // editor target's build, which a Runtime/UncookedOnly module in an Editor-gated plugin does.
+        auto HostModuleName = FString{};
+        const auto& Modules = Plugin->GetDescriptor().Modules;
+        for (const auto& Module : Modules)
+        {
+            if (Module.Type == EHostType::Runtime)
+            { HostModuleName = Module.Name.ToString(); break; }
+        }
+        if (HostModuleName.IsEmpty())
+        {
+            for (const auto& Module : Modules)
+            {
+                if (Module.Type == EHostType::UncookedOnly || Module.Type == EHostType::DeveloperTool)
+                { HostModuleName = Module.Name.ToString(); break; }
+            }
+        }
+        if (HostModuleName.IsEmpty())
+        { return {}; }
+
+        const auto ModuleDir = Plugin->GetBaseDir() / TEXT("Source") / HostModuleName;
+        if (NOT IFileManager::Get().DirectoryExists(*ModuleDir))
+        { return {}; }
+
+        return ModuleDir / TEXT("Private") / TEXT("Net") / TEXT("Generated");
+    }
+
+    // Buckets by (output root, feature) using a THREE-way routing decision: the project's own
+    // Script tree -> the project module; a plugin (other than CkTests) that ships its own code
+    // module -> that plugin's module; everything else (CkTests' own tests, or a plugin with no
+    // hostable module) -> CkTests. The plugin branch keeps a plugin's committed stub in the SAME
+    // repo as its .as test — the same atomicity the project/CkTests split already enforces. Classes
+    // whose root is unavailable are skipped with a warning (never silently, never rerouted cross-repo).
     auto Bucket_ClassesByFeature(const TArray<UClass*>& InClasses) -> TArray<FFeatureBucket>
     {
         const auto CkTestsOutputDir = Get_CkTestsOutputDir();
@@ -395,7 +482,19 @@ namespace ck_autotest_netstub_generator
             const auto IsProjectAuthored = FCkAutoTestNetStubGenerator::Get_IsProjectAuthoredPath(
                 SourcePath, FPaths::ProjectDir());
 
-            const auto& OutputDir = IsProjectAuthored ? ProjectOutputDir : CkTestsOutputDir;
+            // Three-way routing (see the function header). A plugin with its own code module roots
+            // its stub there; otherwise we keep the prior project-vs-CkTests outcome unchanged.
+            auto OutputDir = FString{};
+            if (IsProjectAuthored)
+            {
+                OutputDir = ProjectOutputDir;
+            }
+            else
+            {
+                const auto PluginOutputDir = Get_PluginOutputDir(SourcePath);
+                OutputDir = PluginOutputDir.IsEmpty() ? CkTestsOutputDir : PluginOutputDir;
+            }
+
             if (OutputDir.IsEmpty())
             {
                 (IsProjectAuthored ? SkippedNoProjectDir : SkippedNoCkTests)++;
@@ -646,13 +745,30 @@ auto
     if (AllSubclasses.Num() > 0)
     {
         auto ExpectedPaths = TSet<FString>{};
+        auto OutputRoots   = TSet<FString>{};
         for (const auto& Bucket : Buckets)
-        { ExpectedPaths.Add(FPaths::ConvertRelativePathToFull(Bucket.OutputFilePath)); }
+        {
+            ExpectedPaths.Add(FPaths::ConvertRelativePathToFull(Bucket.OutputFilePath));
+            OutputRoots.Add(FPaths::ConvertRelativePathToFull(FPaths::GetPath(Bucket.OutputFilePath)));
+        }
 
-        ck_autotest_netstub_generator::Prune_StaleStubs(
-            ck_autotest_netstub_generator::Get_CkTestsOutputDir(), ExpectedPaths);
-        ck_autotest_netstub_generator::Prune_StaleStubs(
-            ck_autotest_netstub_generator::Get_ProjectOutputDir(), ExpectedPaths);
+        // Always prune the two fixed roots even when this pass wrote nothing to them, so a feature
+        // whose LAST test was deleted (its bucket vanishes -> root absent from OutputRoots) still
+        // gets its orphaned stub removed — preserving the original unconditional two-root prune.
+        // Plugin roots only appear when a bucket targeted them this pass, which is correct: never
+        // enumerate (and risk deleting in) a plugin dir the current pass knows nothing about.
+        const auto CkTestsRoot = ck_autotest_netstub_generator::Get_CkTestsOutputDir();
+        if (NOT CkTestsRoot.IsEmpty())
+        { OutputRoots.Add(FPaths::ConvertRelativePathToFull(CkTestsRoot)); }
+
+        const auto ProjectRoot = ck_autotest_netstub_generator::Get_ProjectOutputDir();
+        if (NOT ProjectRoot.IsEmpty())
+        { OutputRoots.Add(FPaths::ConvertRelativePathToFull(ProjectRoot)); }
+
+        // Membership is by full path, so the single combined ExpectedPaths set is safe across every
+        // root — a stub expected in root A is never pruned by the pass over root B.
+        for (const auto& Root : OutputRoots)
+        { ck_autotest_netstub_generator::Prune_StaleStubs(Root, ExpectedPaths); }
     }
     else
     {
