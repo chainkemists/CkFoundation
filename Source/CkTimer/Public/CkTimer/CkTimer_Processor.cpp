@@ -87,7 +87,7 @@ namespace ck
 
                 {
 #if STATS
-                    auto TimerStatCounter = FScopeCycleCounter{InTimerEntity.Get<TStatId>()};
+                    auto TimerStatCounter = FScopeCycleCounter{MakeStatIdFromParams(InTimerEntity.Get<FFragment_Timer_Params>())};
 #endif // STATS
                     UUtils_Signal_OnTimerReset::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
                 }
@@ -99,7 +99,7 @@ namespace ck
 
                 {
 #if STATS
-                    auto TimerStatCounter = FScopeCycleCounter{InTimerEntity.Get<TStatId>()};
+                    auto TimerStatCounter = FScopeCycleCounter{MakeStatIdFromParams(InTimerEntity.Get<FFragment_Timer_Params>())};
 #endif // STATS
                     UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
                 }
@@ -112,7 +112,7 @@ namespace ck
 
                 {
 #if STATS
-                    auto TimerStatCounter = FScopeCycleCounter{InTimerEntity.Get<TStatId>()};
+                    auto TimerStatCounter = FScopeCycleCounter{MakeStatIdFromParams(InTimerEntity.Get<FFragment_Timer_Params>())};
 #endif // STATS
                     UUtils_Signal_OnTimerReset::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
                 }
@@ -124,13 +124,13 @@ namespace ck
 
                 {
 #if STATS
-                    auto TimerStatCounter = FScopeCycleCounter{InTimerEntity.Get<TStatId>()};
+                    auto TimerStatCounter = FScopeCycleCounter{MakeStatIdFromParams(InTimerEntity.Get<FFragment_Timer_Params>())};
 #endif // STATS
                     UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
                 }
                 {
 #if STATS
-                    auto TimerStatCounter = FScopeCycleCounter{InTimerEntity.Get<TStatId>()};
+                    auto TimerStatCounter = FScopeCycleCounter{MakeStatIdFromParams(InTimerEntity.Get<FFragment_Timer_Params>())};
 #endif // STATS
                     UUtils_Signal_OnTimerDone::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
                 }
@@ -144,7 +144,7 @@ namespace ck
                 if (InTimerEntity.Try_Remove<FTag_Timer_NeedsUpdate>())
                 {
 #if STATS
-                    auto TimerStatCounter = FScopeCycleCounter{InTimerEntity.Get<TStatId>()};
+                    auto TimerStatCounter = FScopeCycleCounter{MakeStatIdFromParams(InTimerEntity.Get<FFragment_Timer_Params>())};
 #endif // STATS
                     UUtils_Signal_OnTimerStop::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
                 }
@@ -152,7 +152,7 @@ namespace ck
                 TimerChrono.Reset();
                 {
 #if STATS
-                    auto TimerStatCounter = FScopeCycleCounter{InTimerEntity.Get<TStatId>()};
+                    auto TimerStatCounter = FScopeCycleCounter{MakeStatIdFromParams(InTimerEntity.Get<FFragment_Timer_Params>())};
 #endif // STATS
                     UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
                 }
@@ -166,7 +166,7 @@ namespace ck
                 if (InTimerEntity.Try_Remove<FTag_Timer_NeedsUpdate>())
                 {
 #if STATS
-                    auto TimerStatCounter = FScopeCycleCounter{InTimerEntity.Get<TStatId>()};
+                    auto TimerStatCounter = FScopeCycleCounter{MakeStatIdFromParams(InTimerEntity.Get<FFragment_Timer_Params>())};
 #endif // STATS
                     UUtils_Signal_OnTimerPause::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
                 }
@@ -181,7 +181,7 @@ namespace ck
                 {
                     InTimerEntity.Add<FTag_Timer_NeedsUpdate>();
 #if STATS
-                    auto TimerStatCounter = FScopeCycleCounter{InTimerEntity.Get<TStatId>()};
+                    auto TimerStatCounter = FScopeCycleCounter{MakeStatIdFromParams(InTimerEntity.Get<FFragment_Timer_Params>())};
 #endif // STATS
                     UUtils_Signal_OnTimerResume::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
                 }
@@ -228,13 +228,13 @@ namespace ck
                                         : ECk_Timer_JumpDirection::Backwards;
             const auto& JumpAmount = FCk_Time(FMath::Abs(InRequest.Get_JumpDuration().Get_Seconds()));
 #if STATS
-            auto TimerStatCounter = FScopeCycleCounter{InHandle.Get<TStatId>()};
+            auto TimerStatCounter = FScopeCycleCounter{MakeStatIdFromParams(InHandle.Get<FFragment_Timer_Params>())};
 #endif // STATS
             UUtils_Signal_OnTimerJump::Broadcast(InHandle, MakePayload(InHandle, TimerChrono, InDeltaT, JumpDirection, JumpAmount));
         }
         {
 #if STATS
-            auto TimerStatCounter = FScopeCycleCounter{InHandle.Get<TStatId>()};
+            auto TimerStatCounter = FScopeCycleCounter{MakeStatIdFromParams(InHandle.Get<FFragment_Timer_Params>())};
 #endif // STATS
             UUtils_Signal_OnTimerUpdate::Broadcast(InHandle, MakePayload(InHandle, TimerChrono, InDeltaT));
         }
@@ -263,7 +263,7 @@ namespace ck
                 if (TimerChrono.Get_IsDepleted() && PreviousTimeElapsed != TimerChrono.Get_TimeElapsed())
                 {
 #if STATS
-                    auto TimerStatCounter = FScopeCycleCounter{InHandle.Get<TStatId>()};
+                    auto TimerStatCounter = FScopeCycleCounter{MakeStatIdFromParams(InHandle.Get<FFragment_Timer_Params>())};
 #endif // STATS
                     UUtils_Signal_OnTimerDepleted::Broadcast(InHandle, MakePayload(InHandle, TimerChrono, InDeltaT));
                 }
@@ -277,7 +277,7 @@ namespace ck
                 if (TimerChrono.Get_IsDone() && PreviousTimeElapsed != TimerChrono.Get_TimeElapsed())
                 {
 #if STATS
-                    auto TimerStatCounter = FScopeCycleCounter{InHandle.Get<TStatId>()};
+                    auto TimerStatCounter = FScopeCycleCounter{MakeStatIdFromParams(InHandle.Get<FFragment_Timer_Params>())};
 #endif // STATS
                     UUtils_Signal_OnTimerDepleted::Broadcast(InHandle, MakePayload(InHandle, TimerChrono, InDeltaT));
                 }
@@ -289,7 +289,7 @@ namespace ck
         if (PreviousTimeElapsed != TimerChrono.Get_TimeElapsed())
         {
 #if STATS
-            auto TimerStatCounter = FScopeCycleCounter{InHandle.Get<TStatId>()};
+            auto TimerStatCounter = FScopeCycleCounter{MakeStatIdFromParams(InHandle.Get<FFragment_Timer_Params>())};
 #endif // STATS
             UUtils_Signal_OnTimerUpdate::Broadcast(InHandle, MakePayload(InHandle, TimerChrono, InDeltaT));
         }
@@ -318,7 +318,7 @@ namespace ck
 
         {
 #if STATS
-            auto TimerStatCounter = FScopeCycleCounter{InTimerEntity.Get<TStatId>()};
+            auto TimerStatCounter = FScopeCycleCounter{MakeStatIdFromParams(InTimerEntity.Get<FFragment_Timer_Params>())};
 #endif // STATS
             UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
         }
@@ -376,7 +376,7 @@ namespace ck
 
         {
 #if STATS
-            auto TimerStatCounter = FScopeCycleCounter{InTimerEntity.Get<TStatId>()};
+            auto TimerStatCounter = FScopeCycleCounter{MakeStatIdFromParams(InTimerEntity.Get<FFragment_Timer_Params>())};
 #endif // STATS
             UUtils_Signal_OnTimerDone::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
         }
@@ -402,7 +402,7 @@ namespace ck
 
         {
 #if STATS
-            auto TimerStatCounter = FScopeCycleCounter{InTimerEntity.Get<TStatId>()};
+            auto TimerStatCounter = FScopeCycleCounter{MakeStatIdFromParams(InTimerEntity.Get<FFragment_Timer_Params>())};
 #endif // STATS
             UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
         }
@@ -460,7 +460,7 @@ namespace ck
 
         {
 #if STATS
-            auto TimerStatCounter = FScopeCycleCounter{InTimerEntity.Get<TStatId>()};
+            auto TimerStatCounter = FScopeCycleCounter{MakeStatIdFromParams(InTimerEntity.Get<FFragment_Timer_Params>())};
 #endif // STATS
             UUtils_Signal_OnTimerDone::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
         }

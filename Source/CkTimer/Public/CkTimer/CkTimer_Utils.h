@@ -20,6 +20,17 @@ CKTIMER_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Tag_Timer_CategoryName);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck
+{
+    // Derive a timer's profiling stat-id ("Timer Broadcast Event [<name>]") from its params. Called on-the-fly inside
+    // the timer processors (under #if STATS) to scope each signal broadcast's CPU cost — the id is deliberately NOT
+    // cached as a fragment (a cached fragment did not survive snapshot restore; per-broadcast derivation has no such
+    // gap and is a profiling-build-only cost).
+    CKTIMER_API auto MakeStatIdFromParams(const FCk_Fragment_Timer_ParamsData& InParams) -> TStatId;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Timer"))
 class CKTIMER_API UCk_Utils_Timer_UE : public UCk_Utils_Ecs_Base_UE
 {

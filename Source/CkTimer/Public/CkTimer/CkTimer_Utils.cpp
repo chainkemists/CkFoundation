@@ -27,7 +27,7 @@ DECLARE_STATS_GROUP(TEXT("CkTimer"), STATGROUP_CkTimer_Details, STATCAT_Advanced
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    MakeStatIdFromParams(
+    ck::MakeStatIdFromParams(
         const FCk_Fragment_Timer_ParamsData& InParams)
     -> TStatId
 {
@@ -58,9 +58,11 @@ auto
         InNewEntity.Add<ck::FFragment_Timer_Params>(InParams);
         InNewEntity.Add<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
 
-#if STATS
-        InNewEntity.Add<TStatId>(MakeStatIdFromParams(InParams));
-#endif
+        // NOTE: the profiling TStatId is intentionally NOT cached as a fragment. It is derived on-the-fly (under
+        // #if STATS) from this entity's Params inside the timer processors (FScopeCycleCounter{MakeStatIdFromParams(...)}).
+        // Caching it as a fragment created a snapshot-restore gap (restored timers came back without it); deriving it
+        // per-broadcast removes that gap entirely. Cost is a #if STATS-only string-format + dynamic-stat lookup per
+        // broadcast — never present in Shipping/Test.
 
         InNewEntity.Add<ck::FTag_Timer_NeedsSetup>();
 
@@ -96,9 +98,7 @@ auto
     MaybeExistingTimerEntity.Replace<ck::FFragment_Timer_Params>(InParams);
     MaybeExistingTimerEntity.Replace<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
 
-#if STATS
-    MaybeExistingTimerEntity.AddOrGet<TStatId>() = MakeStatIdFromParams(InParams);
-#endif
+    // TStatId is derived on-the-fly in the processors (see Add) — no cached fragment.
 
     if (InParams.Get_StartingState() == ECk_Timer_State::Running)
     {
