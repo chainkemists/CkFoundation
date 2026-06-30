@@ -1,0 +1,17 @@
+// ====================================================================================================================
+//  CkIskmRenderer Plan-2 — batched skeletal-instancing shader common header.
+//
+//  Mapped to the virtual path "/CkIskmRenderer" by FCkIskmRendererModule::StartupModule
+//  (CkIskmRenderer_Module.cpp). Include from a vertex factory as: #include "/CkIskmRenderer/CkIskm_Common.ush".
+//
+//  Phase 0 ships this placeholder so the shader directory mapping resolves to a real folder.
+//  Phase 1 adds CkIskm_BatchedVertexFactory.ush (the GPU linear-blend-skinning vertex factory).
+// ====================================================================================================================
+
+#pragma once
+
+// Fetch a bone's transposed 3x4 matrix from the baked animation buffer.
+//   matrixIndex = frame * BoneCount + bone, each entry = 3 x float4.
+// (Definition deferred to Phase 1 once the AnimationBuffer SRV + uniform params are bound.)
+//
+// float3x4 CkIskm_GetBoneMatrix(uint AnimationFrameIndex, uint BoneIndex);
