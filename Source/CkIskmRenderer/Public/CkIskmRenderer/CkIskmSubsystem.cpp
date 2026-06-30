@@ -44,6 +44,11 @@ auto
     NewComp->RegisterComponent();
     NewComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     NewComp->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+    // Update Rate Optimization: throttle full pose+bone evaluation by significance
+    // (screen size / distance) with interpolation between, instead of evaluating every
+    // pooled SKMC every frame. Pose still evaluates (AlwaysTickPose kept), so sockets /
+    // leader-pose followers keep working — only distant instances update less often.
+    NewComp->bEnableUpdateRateOptimizations = true;
     _LiveSKMCs.Add(NewComp);
     return NewComp;
 }
