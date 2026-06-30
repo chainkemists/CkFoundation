@@ -105,22 +105,40 @@ auto
         };
     }
 
-    return [FragmentNames = InFragmentNames](const FCk_Handle& InHandle) -> bool
+    // Resolve each required-fragment name to its UScriptStruct ONCE and cache it. This
+    // validator is invoked on EVERY As_<X>() / Is_<X>() conversion of this handle type,
+    // and FindScriptStructByName can fall through to a full TObjectIterator<UScriptStruct>
+    // scan — so re-resolving by string per call made each conversion O(UScriptStructCount).
+    // The cache is a shared array captured by value (the validator is copied by value into
+    // the handle-type registry, so the cache must outlive the lambda copy). A slot that is
+    // still unresolved (the struct was not yet loaded when first probed) stays null and is
+    // retried on the next call, preserving the original lazy late-registration semantics.
+    // UScriptStruct reflection objects are root-held for the process lifetime, so the raw
+    // pointers never dangle.
+    auto ResolvedCache = MakeShared<TArray<const UScriptStruct*>>();
+    ResolvedCache->SetNumZeroed(InFragmentNames.Num());
+
+    return [FragmentNames = InFragmentNames, ResolvedCache](const FCk_Handle& InHandle) -> bool
     {
         if (NOT ck::IsValid(InHandle))
         {
             return false;
         }
 
-        for (const auto& FragmentName : FragmentNames)
+        for (int32 FragmentIndex = 0; FragmentIndex < FragmentNames.Num(); ++FragmentIndex)
         {
-            const auto* StructType = FCkDynamic_HandleTypeRegistry::FindScriptStructByName(FragmentName);
-            if (StructType == nullptr)
+            const UScriptStruct*& CachedStruct = (*ResolvedCache)[FragmentIndex];
+            if (CachedStruct == nullptr)
+            {
+                CachedStruct = FCkDynamic_HandleTypeRegistry::FindScriptStructByName(FragmentNames[FragmentIndex]);
+            }
+
+            if (CachedStruct == nullptr)
             {
                 return false;
             }
 
-            if (NOT UCk_Utils_DynamicFragment_UE::Has_Fragment(InHandle, StructType))
+            if (NOT UCk_Utils_DynamicFragment_UE::Has_Fragment(InHandle, CachedStruct))
             {
                 return false;
             }
