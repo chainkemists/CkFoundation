@@ -30,10 +30,18 @@ public class CkIskmRenderer : CkModuleRules
 
             "CkAnimation",
             "CkPhysics",
+
+            // ---- Plan-2 (batched GPU-skinned instancing) render-thread deps ----
+            // RenderCore: FRenderResource / shader-dir mapping (ShaderCore.h).
+            // RHI:        GPU buffers + SRVs for the baked bone-matrix pose buffer.
+            "RenderCore",
+            "RHI",
         });
 
         PrivateDependencyModuleNames.AddRange(new string[]
         {
+            // Projects: IPluginManager, used by StartupModule to resolve the shader dir.
+            "Projects",
         });
     }
 }
