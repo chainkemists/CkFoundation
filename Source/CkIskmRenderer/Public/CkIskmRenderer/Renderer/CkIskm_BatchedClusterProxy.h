@@ -65,6 +65,11 @@ public:
     virtual uint32 GetMemoryFootprint() const override { return sizeof(*this) + GetAllocatedSize(); }
     virtual FPrimitiveViewRelevance GetViewRelevance(const FSceneView* View) const override;
     virtual bool CanBeOccluded() const override { return !MaterialRelevance.bDisableDepthTest; }
+    // Opt each instance into per-instance GPU occlusion (HZB) culling — the crowd-correct mechanism (Skelot parity):
+    // instances behind occluders are culled individually on the GPU, rather than the whole cluster being one
+    // occlusion unit. Feeds FPrimitiveSceneProxy scene-data flags (PrimitiveSceneProxy.cpp:792). The single shared
+    // InstanceLocalBounds is valid — GetInstanceLocalBounds clamps 1-or-N (InstanceDataSceneProxy.h:166).
+    virtual bool AllowInstanceCullingOcclusionQueries() const override { return true; }
     virtual void CreateRenderThreadResources(FRHICommandListBase& RHICmdList) override;
     virtual void DrawStaticElements(FStaticPrimitiveDrawInterface* PDI) override;
     virtual float GetGpuLodInstanceRadius() const override { return GPULODRadius; }
