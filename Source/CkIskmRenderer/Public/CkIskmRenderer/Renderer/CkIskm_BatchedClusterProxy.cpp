@@ -48,17 +48,27 @@ namespace ck_iskm_proxy
         const TArray<UCk_Iskm_BatchedClusterComponent::FInstance>& Instances = InComponent->Get_Instances();
         const int32 N = Instances.Num();
 
+        // Seed PER-INSTANCE custom data from the start (not per-component CustomPrimitiveData[0]) so a static cluster
+        // with distinct per-instance frames renders correctly, and there's no per-component->per-instance pop on the
+        // first animated frame. [asfloat(Cur), asfloat(Pre), 0, 0] per instance, matching SendRenderDynamicData.
         Out.Transforms.Reserve(N);
         Out.PrevTransforms.Reserve(N);
-        for (const UCk_Iskm_BatchedClusterComponent::FInstance& Inst : Instances)
+        Out.NumCustomDataFloats = 4;
+        Out.CustomData.SetNumZeroed(N * 4);
+        for (int32 i = 0; i < N; ++i)
         {
+            const UCk_Iskm_BatchedClusterComponent::FInstance& Inst = Instances[i];
             const FMatrix M = Inst.Transform.ToMatrixWithScale();
             Out.Transforms.Add(FRenderTransform(M));
             Out.PrevTransforms.Add(FRenderTransform(M));
-        }
 
-        // Phase 1-2: the baked frame is carried per-component in CustomPrimitiveData[0] (no per-instance custom data).
-        Out.NumCustomDataFloats = 0;
+            float CurBits = 0.0f;
+            float PreBits = 0.0f;
+            FMemory::Memcpy(&CurBits, &Inst.CurFrame, sizeof(float));
+            FMemory::Memcpy(&PreBits, &Inst.PrevFrame, sizeof(float));
+            Out.CustomData[i * 4 + 0] = CurBits;
+            Out.CustomData[i * 4 + 1] = PreBits;
+        }
 
         const FBox MeshBox = (InMesh != nullptr) ? InMesh->GetBounds().GetBox() : FBox(FVector(-1.0), FVector(1.0));
         Out.LocalBounds = FRenderBounds(MeshBox);
