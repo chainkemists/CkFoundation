@@ -271,13 +271,9 @@ void
         const FSkeletalMeshLODRenderData& LODData = RenderData->LODRenderData[LODIndex];
         const FSkinWeightVertexBuffer* SkinVB = LODData.GetSkinWeightVertexBuffer();
 
-        // MVP guard: >4 influences skin incorrectly (dropped weights are not renormalized). The mannequin is <=4.
-        for (const FSkelMeshRenderSection& S : LODData.RenderSections)
-        {
-            ensureMsgf(S.MaxBoneInfluences <= 4,
-                TEXT("[CkIskm] Batched renderer MVP supports <= 4 bone influences; a section has %d — extra influences dropped."),
-                S.MaxBoneInfluences);
-        }
+        // The MVP >4-bone-influence guard (dropped weights are not renormalized) lives in the CkCore-linked caller
+        // UCk_IskmAnimCollection_Data::EnsureRenderResources as a CK_ENSURE_IF_NOT. This module is engine-only
+        // (PostConfigInit, no Ck deps) so it can't CK_ENSURE here.
 
         FLODData* OutPtr = new FLODData();
         LODs.Add(OutPtr);

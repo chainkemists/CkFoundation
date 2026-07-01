@@ -3,6 +3,7 @@
 #include "CkIskmRendererVF/CkIskm_BatchedRenderResources.h"
 
 #include "CkCore/Validation/CkIsValid.h"
+#include "CkCore/Ensure/CkEnsure.h"
 
 #include "RenderingThread.h"
 #include "RenderUtils.h"
@@ -270,6 +271,23 @@ auto
     // remap table directly so the engine-only VF module stays decoupled from this asset type.
     if (ck::IsValid(_DefaultMesh) && ck::IsValid(_Skeleton))
     {
+        // MVP bone-influence guard. Policy lives here — the CkCore-linked module — because the engine-only VF
+        // module (PostConfigInit, no Ck deps) can't CK_ENSURE. >4 influences skin incorrectly: the batched path
+        // keeps only the first 4 weights and does NOT renormalize the dropped ones.
+        if (const FSkeletalMeshRenderData* RenderData = _DefaultMesh->GetResourceForRendering())
+        {
+            for (const FSkeletalMeshLODRenderData& LODData : RenderData->LODRenderData)
+            {
+                for (const FSkelMeshRenderSection& Section : LODData.RenderSections)
+                {
+                    CK_ENSURE_IF_NOT(Section.MaxBoneInfluences <= 4,
+                        TEXT("[CkIskm] Batched renderer MVP supports <= 4 bone influences; a section has {} — extra influences dropped."),
+                        Section.MaxBoneInfluences)
+                    { }
+                }
+            }
+        }
+
         RD->DefaultMeshData.InitFromMesh(_DefaultMesh, _Skeleton, Baked->SkeletonBoneToRenderBone, GMaxRHIFeatureLevel);
     }
 
