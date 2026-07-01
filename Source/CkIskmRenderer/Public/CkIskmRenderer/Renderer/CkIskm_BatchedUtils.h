@@ -8,6 +8,7 @@
 
 class UCk_IskmAnimCollection_Data;
 class UCk_Iskm_BatchedClusterComponent;
+class ACk_Iskm_BatchedCrowd_Actor;
 
 // ====================================================================================================================
 //  CkIskmRenderer Plan-2 — debug/gym driver for the batched skeletal renderer.
@@ -44,4 +45,31 @@ public:
         DisplayName = "[Ck][IskmBatched] Get Cluster Instance Count")
     static int32
     Get_InstanceCount(const UCk_Iskm_BatchedClusterComponent* InCluster);
+
+    // Spawns a crowd of InNumInstances scattered (deterministic grid) over a 2*InAreaExtent square around
+    // InBaseTransform, spatially partitioned into tile clusters of InTileSize so frustum + per-instance occlusion
+    // culling operate per-tile (Phase 4b). Returns the crowd manager actor (or null on failure).
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
+        meta = (WorldContext = "InWorldContextObject"),
+        DisplayName = "[Ck][IskmBatched] Debug Spawn Scattered Crowd")
+    static ACk_Iskm_BatchedCrowd_Actor*
+    Debug_SpawnScatteredCrowd(
+        UObject* InWorldContextObject,
+        UCk_IskmAnimCollection_Data* InCollection,
+        const FTransform& InBaseTransform,
+        int32 InNumInstances = 100,
+        float InAreaExtent = 6000.0f,
+        float InTileSize = 2000.0f,
+        int32 InSequenceIndex = 0,
+        float InRate = 1.0f);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Get Crowd Tile Count")
+    static int32
+    Get_CrowdTileCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Get Crowd Instance Count")
+    static int32
+    Get_CrowdInstanceCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd);
 };
