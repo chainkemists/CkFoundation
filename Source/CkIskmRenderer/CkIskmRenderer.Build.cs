@@ -6,6 +6,10 @@ public class CkIskmRenderer : CkModuleRules
     public CkIskmRenderer(ReadOnlyTargetRules Target) : base(Target)
     {
         PrivateIncludePaths.AddRange(new string[] {
+            // Plan-2 Phase 3: FScene::PrimitiveUpdates + FUpdate*Command live in these private renderer headers
+            // (version-fragile — re-verify on engine bumps). Used by the batched cluster proxy's per-frame upload.
+            System.IO.Path.Combine(GetModuleDirectory("Renderer"), "Private"),
+            System.IO.Path.Combine(GetModuleDirectory("Renderer"), "Internal"),
         });
 
         PublicDependencyModuleNames.AddRange(new string[]
@@ -44,6 +48,8 @@ public class CkIskmRenderer : CkModuleRules
 
         PrivateDependencyModuleNames.AddRange(new string[]
         {
+            // Renderer: FScene / FScene::PrimitiveUpdates for the batched cluster proxy's per-frame instance upload.
+            "Renderer",
         });
     }
 }

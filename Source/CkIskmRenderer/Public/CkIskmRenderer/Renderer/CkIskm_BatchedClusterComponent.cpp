@@ -2,15 +2,18 @@
 
 #include "CkIskm_BatchedClusterProxy.h"
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_Fragment_Data.h"
+#include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_BakedPose.h"
 
 #include "Engine/SkeletalMesh.h"
 #include "Materials/MaterialInterface.h"
 #include "RHIDefinitions.h"
 #include "RenderUtils.h"
+#include "RenderingThread.h"
 
 UCk_Iskm_BatchedClusterComponent::UCk_Iskm_BatchedClusterComponent()
 {
-    PrimaryComponentTick.bCanEverTick = false;
+    PrimaryComponentTick.bCanEverTick = true;
+    PrimaryComponentTick.bStartWithTickEnabled = true;
     SetCollisionEnabled(ECollisionEnabled::NoCollision);
     SetGenerateOverlapEvents(false);
     bSelectable = false;
@@ -131,4 +134,88 @@ void
     FMemory::Memcpy(&PreBits, &Pre, sizeof(float));
     SetCustomPrimitiveDataFloat(0, CurBits);
     SetCustomPrimitiveDataFloat(1, PreBits);
+}
+
+void
+    UCk_Iskm_BatchedClusterComponent::
+    TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+    if (_AnimCollection == nullptr || _Instances.Num() == 0)
+    { return; }
+    const FCk_Iskm_BakedPose* Baked = _AnimCollection->Get_BakedPose();
+    if (Baked == nullptr)
+    { return; }
+
+    bool bAnyChanged = false;
+    for (FInstance& Inst : _Instances)
+    {
+        if (Inst.Rate == 0.0f)
+        { continue; }
+        Inst.Time += DeltaTime * Inst.Rate;
+        const int32 NewFrame = Baked->Get_LoopedFrameAtTime(Inst.SequenceIndex, Inst.Time);
+        Inst.PrevFrame = Inst.CurFrame;
+        Inst.CurFrame = NewFrame;
+        if (NewFrame != Inst.PrevFrame)
+        { bAnyChanged = true; }
+    }
+
+    if (bAnyChanged)
+    { MarkRenderDynamicDataDirty(); }
+}
+
+void
+    UCk_Iskm_BatchedClusterComponent::
+    SendRenderDynamicData_Concurrent()
+{
+    Super::SendRenderDynamicData_Concurrent();
+
+    if (SceneProxy == nullptr)
+    { return; }
+
+    const int32 N = _Instances.Num();
+    FCk_Iskm_CompDynData* DynData = new FCk_Iskm_CompDynData();
+    DynData->Transforms.Reserve(N);
+    DynData->PrevTransforms.Reserve(N);
+    DynData->NumCustomDataFloats = 4; // [Cur, Pre, 0, 0] per instance (must be % 4 == 0)
+    DynData->CustomData.SetNumZeroed(N * 4);
+
+    for (int32 i = 0; i < N; ++i)
+    {
+        const FInstance& Inst = _Instances[i];
+        const FMatrix M = Inst.Transform.ToMatrixWithScale();
+        DynData->Transforms.Add(FRenderTransform(M));
+        DynData->PrevTransforms.Add(FRenderTransform(M));
+
+        float CurBits = 0.0f;
+        float PreBits = 0.0f;
+        FMemory::Memcpy(&CurBits, &Inst.CurFrame, sizeof(float));
+        FMemory::Memcpy(&PreBits, &Inst.PrevFrame, sizeof(float));
+        DynData->CustomData[i * 4 + 0] = CurBits;
+        DynData->CustomData[i * 4 + 1] = PreBits;
+    }
+
+    const FBox MeshBox = (_Mesh != nullptr) ? _Mesh->GetBounds().GetBox() : FBox(FVector(-1.0), FVector(1.0));
+    DynData->LocalBounds = FRenderBounds(MeshBox);
+    DynData->LocalBoundsSphere = FBoxSphereBounds(MeshBox);
+    const FTransform CompXf = GetComponentTransform();
+    DynData->LocalToWorld = CompXf.ToMatrixWithScale();
+    DynData->PrevLocalToWorld = DynData->LocalToWorld;
+    DynData->WorldBounds = DynData->LocalBoundsSphere.TransformBy(CompXf);
+
+    if (N > 0)
+    {
+        FCk_Iskm_InstanceRun Run;
+        Run.StartOffset = 0;
+        Run.EndOffset = static_cast<uint32>(N - 1);
+        DynData->InstanceRuns.Add(Run);
+    }
+
+    FCk_Iskm_BatchedClusterProxy* Proxy = static_cast<FCk_Iskm_BatchedClusterProxy*>(SceneProxy);
+    ENQUEUE_RENDER_COMMAND(CkIskm_UpdateBatchedCluster)(
+        [Proxy, DynData](FRHICommandListImmediate&)
+        {
+            Proxy->UpdateInstanceBuffer(DynData);
+        });
 }

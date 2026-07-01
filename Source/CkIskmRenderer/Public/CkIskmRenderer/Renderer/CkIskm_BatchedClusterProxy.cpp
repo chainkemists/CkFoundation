@@ -13,6 +13,15 @@
 #include "SceneManagement.h"
 #include "SceneInterface.h"
 
+// Plan-2 Phase 3: FScene::PrimitiveUpdates + the FUpdate*Command structs are in PRIVATE renderer headers.
+// The #define private public hack exposes FScene internals (Skelot pattern; version-fragile — re-verify on bumps).
+#ifndef private
+#define private public
+#endif
+#include "ScenePrivate.h"
+#undef private
+#include "ScenePrimitiveUpdates.h"
+
 // ====================================================================================================================
 //  FCk_Iskm_ClusterInstanceData
 // ====================================================================================================================
@@ -65,7 +74,8 @@ namespace ck_iskm_proxy
         const FTransform CompXf = InComponent->GetComponentTransform();
         Out.LocalToWorld = CompXf.ToMatrixWithScale();
         Out.PrevLocalToWorld = Out.LocalToWorld;
-        Out.WorldBounds = FBoxSphereBounds(MeshBox).TransformBy(CompXf);
+        Out.LocalBoundsSphere = FBoxSphereBounds(MeshBox);
+        Out.WorldBounds = Out.LocalBoundsSphere.TransformBy(CompXf);
     }
 }
 
@@ -188,11 +198,33 @@ void
     UpdateInstanceBuffer(FCk_Iskm_CompDynData* InDynData)
 {
     check(IsInRenderingThread());
+
+    // Snapshot bounds/transforms before WriteInstanceBuffer MoveTemps the per-instance arrays out of DynData.
+    // (Locals suffixed _Snap to avoid shadowing FPrimitiveSceneProxy members LocalToWorld/Scene/LocalBounds.)
+    const FBoxSphereBounds WorldBounds_Snap = InDynData->WorldBounds;
+    const FBoxSphereBounds LocalBounds_Snap = InDynData->LocalBoundsSphere;
+    const FMatrix LocalToWorld_Snap = InDynData->LocalToWorld;
+    const FMatrix PrevLocalToWorld_Snap = InDynData->PrevLocalToWorld;
+
     DynData = TUniquePtr<FCk_Iskm_CompDynData>(InDynData);
     WriteInstanceBuffer();
-    // Phase 3: enqueue FScene::PrimitiveUpdates { FUpdateTransformCommand, FUpdateOverridePreviousTransformData,
-    //          FUpdateInstanceCommand } to notify the scene of per-frame instance changes (needs ScenePrivate.h +
-    //          Renderer/Private/ScenePrimitiveUpdates.h). Not required for the static Phase-1 case.
+
+    FScene* RenderScene = GetScene().GetRenderScene();
+    FPrimitiveSceneInfo* PSI = GetPrimitiveSceneInfo();
+    if (RenderScene == nullptr || PSI == nullptr)
+    { return; }
+
+    // Notify the scene of the new instance transforms + custom data (GPUScene re-uploads the instance buffer).
+    RenderScene->PrimitiveUpdates.Enqueue(PSI, FUpdateTransformCommand{
+        .WorldBounds = WorldBounds_Snap,
+        .LocalBounds = LocalBounds_Snap,
+        .LocalToWorld = LocalToWorld_Snap,
+        .AttachmentRootPosition = FVector::ZeroVector });
+    RenderScene->PrimitiveUpdates.Enqueue(PSI, FUpdateOverridePreviousTransformData(PrevLocalToWorld_Snap));
+    RenderScene->PrimitiveUpdates.Enqueue(PSI, FUpdateInstanceCommand{
+        .PrimitiveSceneProxy = this,
+        .WorldBounds = WorldBounds_Snap,
+        .LocalBounds = LocalBounds_Snap });
 }
 
 void

@@ -39,8 +39,9 @@ struct FCk_Iskm_CompDynData
     TArray<float>            CustomData;            // [Cur(int bits), Pre(int bits), user...] per instance, padded to %4
     int32                    NumCustomDataFloats = 0;
     TArray<FRenderBounds>    InstanceLocalBounds;   // per-instance (Phase 4) or a single shared bound
-    FRenderBounds            LocalBounds;
-    FBoxSphereBounds         WorldBounds = FBoxSphereBounds(ForceInit);
+    FRenderBounds            LocalBounds;                                  // for the ISDB (FRenderBounds)
+    FBoxSphereBounds         WorldBounds = FBoxSphereBounds(ForceInit);    // for the scene-update commands (FBoxSphereBounds)
+    FBoxSphereBounds         LocalBoundsSphere = FBoxSphereBounds(ForceInit);
     FMatrix                  LocalToWorld = FMatrix::Identity;
     FMatrix                  PrevLocalToWorld = FMatrix::Identity;
     // Per-submesh instance runs. MVP single submesh -> one TArray with one run {0, N-1}.

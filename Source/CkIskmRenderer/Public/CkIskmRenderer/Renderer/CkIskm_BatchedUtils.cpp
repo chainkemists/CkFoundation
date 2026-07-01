@@ -18,7 +18,8 @@ UCk_Iskm_BatchedClusterComponent*
         const FTransform& InBaseTransform,
         int32 InGridSize,
         float InSpacing,
-        int32 InFrameIndex)
+        int32 InSequenceIndex,
+        float InRate)
 {
     if (ck::Is_NOT_Valid(InWorldContextObject) || ck::Is_NOT_Valid(InCollection))
     { return nullptr; }
@@ -61,8 +62,11 @@ UCk_Iskm_BatchedClusterComponent*
             UCk_Iskm_BatchedClusterComponent::FInstance Inst;
             Inst.Transform = FTransform(FVector((static_cast<float>(X) - Center) * InSpacing,
                                                 (static_cast<float>(Y) - Center) * InSpacing, 0.0f));
-            Inst.CurFrame = InFrameIndex;
-            Inst.PrevFrame = InFrameIndex;
+            Inst.SequenceIndex = InSequenceIndex;
+            Inst.Rate = InRate;
+            Inst.Time = static_cast<float>(X * N + Y) * 0.137f; // per-instance phase offset for out-of-sync looping
+            Inst.CurFrame = 0; // recomputed each tick from Time
+            Inst.PrevFrame = 0;
             Instances.Add(Inst);
         }
     }
