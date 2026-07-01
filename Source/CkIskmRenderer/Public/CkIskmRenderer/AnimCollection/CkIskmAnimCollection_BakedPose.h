@@ -2,6 +2,9 @@
 
 #include "CoreMinimal.h"
 
+// FCk_Iskm_BoneMatrix3x4 lives in the engine-only PostConfigInit VF module (shared by the baker + the GPU upload).
+#include "CkIskmRendererVF/CkIskm_BoneMatrix.h"
+
 // ====================================================================================================================
 //  CkIskmRenderer Plan-2 — CPU bone-matrix bake output
 //
@@ -21,15 +24,6 @@
 // ====================================================================================================================
 
 class UAnimSequenceBase;
-
-// One bone's transposed 3x4 matrix == 3 rows of float4 == 12 contiguous floats (PF_A32B32G32R32F upload-ready).
-// Default value is the transposed 3x4 of the identity matrix.
-struct FCk_Iskm_BoneMatrix3x4
-{
-    float M[12] = { 1.f, 0.f, 0.f, 0.f,
-                    0.f, 1.f, 0.f, 0.f,
-                    0.f, 0.f, 1.f, 0.f };
-};
 
 // Per-sequence offset table entry (mirrors Skelot FSkelotSequenceDef's render-relevant fields).
 struct FCk_Iskm_BakedSequence
