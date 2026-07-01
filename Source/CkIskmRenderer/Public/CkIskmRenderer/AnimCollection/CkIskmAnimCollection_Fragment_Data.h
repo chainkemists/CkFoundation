@@ -8,12 +8,16 @@
 #include "CkCore/Types/DataAsset/CkDataAsset.h"
 
 #include "Templates/PimplPtr.h"
+#include "RenderCommandFence.h"
 
 #include "CkIskmAnimCollection_Fragment_Data.generated.h"
 
 // Plan-2 transient CPU bone-matrix bake (see CkIskmAnimCollection_BakedPose.h). Forward-declared here so the
-// widely-included asset header stays light; the full type is only pulled into the .cpp.
+// widely-included asset header stays light; the full types are only pulled into the .cpp.
 struct FCk_Iskm_BakedPose;
+// Plan-2 render-thread resources (the baked SRV, its uniform buffer, the default mesh's vertex factories).
+struct FCk_Iskm_BatchedRenderData;
+class FCk_Iskm_BatchedMeshData;
 
 UENUM(BlueprintType)
 enum class ECk_IskmAnimCollection_ValidationResult : uint8
@@ -133,6 +137,9 @@ private:
 
     // ---- Plan-2 transient bake (not reflected, not serialized; rebuilt on demand) ----
     TPimplPtr<FCk_Iskm_BakedPose> _BakedPose;
+    // ---- Plan-2 transient render resources (built from the bake; render-thread lifetime) ----
+    TPimplPtr<FCk_Iskm_BatchedRenderData> _RenderData;
+    FRenderCommandFence _ReleaseResourcesFence;
 
 public:
     CK_PROPERTY_GET(_Skeleton);
@@ -168,4 +175,25 @@ public:
 
     auto
     Get_IsBaked() const -> bool;
+
+    // ---- Plan-2 GPU render resources ----
+
+    // Idempotent: ensures the CPU bake exists, then builds + uploads the GPU SRV / uniform buffer / per-mesh
+    // vertex factories (render thread). No-op when the app cannot render (headless / -nullrhi).
+    auto
+    EnsureRenderResources() -> void;
+
+    // The default mesh's render data (bone-index buffers + vertex factories), or null until EnsureRenderResources.
+    auto
+    Get_DefaultMeshData() const -> const FCk_Iskm_BatchedMeshData*;
+
+    //~ UObject — release render resources on the render thread before destruction.
+    virtual auto BeginDestroy() -> void override;
+    virtual auto IsReadyForFinishDestroy() -> bool override;
+
+private:
+    // Called from BeginDestroy only. Does NOT reset _RenderData — the _ReleaseResourcesFence keeps the resource
+    // objects alive until their render-thread ReleaseRHI completes (UObject destruction is gated on the fence).
+    auto
+    ReleaseRenderResources() -> void;
 };

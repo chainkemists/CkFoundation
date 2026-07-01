@@ -1,7 +1,13 @@
 #include "CkIskmAnimCollection_Fragment_Data.h"
 #include "CkIskmAnimCollection_BakedPose.h"
+#include "CkIskmRendererVF/CkIskm_BatchedRenderResources.h"
 
 #include "CkCore/Validation/CkIsValid.h"
+
+#include "RenderingThread.h"
+#include "RenderUtils.h"
+#include "RHIGlobals.h"
+#include "Misc/App.h"
 
 #include "Animation/Skeleton.h"
 #include "Animation/AnimSequence.h"
@@ -226,6 +232,102 @@ auto
     -> bool
 {
     return _BakedPose.IsValid() && _BakedPose->bIsBaked;
+}
+
+// ====================================================================================================================
+//  Plan-2 GPU render resources
+// ====================================================================================================================
+auto
+    UCk_IskmAnimCollection_Data::
+    EnsureRenderResources()
+    -> void
+{
+    if (FApp::CanEverRender() == false)
+    { return; } // headless / -nullrhi: CPU bake only, no GPU resources
+
+    if (Get_IsBaked() == false)
+    {
+        if (Build_BakedPoseData() == false)
+        { return; }
+    }
+
+    if (_RenderData.IsValid())
+    { return; }
+
+    const FCk_Iskm_BakedPose* Baked = Get_BakedPose();
+    if (Baked == nullptr || Baked->Matrices.Num() == 0)
+    { return; }
+
+    _RenderData = MakePimpl<FCk_Iskm_BatchedRenderData>();
+    FCk_Iskm_BatchedRenderData* RD = _RenderData.Get();
+
+    // CPU: copy the baked matrices into the SRV-backing resource array.
+    RD->AnimationBuffer.Matrices.SetNumUninitialized(Baked->Matrices.Num());
+    FMemory::Memcpy(RD->AnimationBuffer.Matrices.GetData(), Baked->Matrices.GetData(),
+        Baked->Matrices.Num() * sizeof(FCk_Iskm_BoneMatrix3x4));
+
+    // CPU: build the default mesh's render data (render-bone remap + vertex factories). Pass the skeleton +
+    // remap table directly so the engine-only VF module stays decoupled from this asset type.
+    if (ck::IsValid(_DefaultMesh) && ck::IsValid(_Skeleton))
+    {
+        RD->DefaultMeshData.InitFromMesh(_DefaultMesh, _Skeleton, Baked->SkeletonBoneToRenderBone, GMaxRHIFeatureLevel);
+    }
+
+    const uint32 BoneCount = static_cast<uint32>(Baked->RenderBoneCount);
+
+    ENQUEUE_RENDER_COMMAND(CkIskm_InitAnimCollectionResources)(
+        [RD, BoneCount](FRHICommandListImmediate& RHICmdList)
+        {
+            RD->AnimationBuffer.InitResource(RHICmdList);
+
+            FCk_Iskm_AnimCollectionUniformParams Params;
+            Params.BoneCount = BoneCount;
+            Params.AnimationBuffer = RD->AnimationBuffer.ShaderResourceViewRHI;
+            RD->AnimCollectionUB = FCk_Iskm_AnimCollectionUniformParamsRef::CreateUniformBufferImmediate(Params, UniformBuffer_MultiFrame);
+
+            RD->DefaultMeshData.InitResources(RHICmdList, RD->AnimCollectionUB.GetReference());
+        });
+}
+
+auto
+    UCk_IskmAnimCollection_Data::
+    Get_DefaultMeshData() const
+    -> const FCk_Iskm_BatchedMeshData*
+{
+    return _RenderData.IsValid() ? &_RenderData->DefaultMeshData : nullptr;
+}
+
+auto
+    UCk_IskmAnimCollection_Data::
+    ReleaseRenderResources()
+    -> void
+{
+    if (_RenderData.IsValid() == false)
+    { return; }
+
+    // Game-thread ReleaseResource enqueues the render-thread ReleaseRHI; the _ReleaseResourcesFence (BeginDestroy)
+    // gates UObject destruction until those complete, so the resource objects outlive their GPU release.
+    _RenderData->DefaultMeshData.ReleaseResources();
+    _RenderData->AnimationBuffer.ReleaseResource();
+    _RenderData->AnimCollectionUB.SafeRelease();
+}
+
+auto
+    UCk_IskmAnimCollection_Data::
+    BeginDestroy()
+    -> void
+{
+    Super::BeginDestroy();
+    ReleaseRenderResources();
+    _ReleaseResourcesFence.BeginFence();
+}
+
+auto
+    UCk_IskmAnimCollection_Data::
+    IsReadyForFinishDestroy()
+    -> bool
+{
+    return Super::IsReadyForFinishDestroy() && _ReleaseResourcesFence.IsFenceComplete();
 }
 
 #if WITH_EDITOR
