@@ -23,9 +23,10 @@ public:
     CK_GENERATED_BODY(UCk_Utils_IskmBatched_UE);
 
 public:
-    // Spawns an actor hosting a batched cluster component with an InGridSize x InGridSize grid of instances, all
-    // pinned to the given baked frame. Returns the component (or null on failure). CPU-safe under -nullrhi
-    // (component spawns; the GPU proxy only materializes when the app can render).
+    // Spawns an actor hosting a batched cluster component with an InGridSize x InGridSize grid of instances, each
+    // playing InSequenceIndex with a per-instance phase offset (independent looping animation). InRate 0 = hold the
+    // sequence's first frame. Returns the component (or null on failure). CPU-safe under -nullrhi (component spawns;
+    // the GPU proxy + animation only materialize when the app can render).
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
         meta = (WorldContext = "InWorldContextObject"),
         DisplayName = "[Ck][IskmBatched] Debug Spawn Cluster")
@@ -36,7 +37,8 @@ public:
         const FTransform& InBaseTransform,
         int32 InGridSize = 1,
         float InSpacing = 150.0f,
-        int32 InFrameIndex = 0);
+        int32 InSequenceIndex = 0,
+        float InRate = 1.0f);
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
         DisplayName = "[Ck][IskmBatched] Get Cluster Instance Count")

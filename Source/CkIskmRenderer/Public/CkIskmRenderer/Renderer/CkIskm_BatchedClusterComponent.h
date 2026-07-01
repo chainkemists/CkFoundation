@@ -29,6 +29,10 @@ public:
         FTransform Transform = FTransform::Identity; // relative to the component
         int32 CurFrame = 0;
         int32 PrevFrame = 0;
+        // Per-instance independent animation (Phase 3): advanced each tick to a looped baked frame.
+        float Time = 0.0f;
+        float Rate = 0.0f;      // 0 = static (holds CurFrame); >0 = animate at this multiplier
+        int32 SequenceIndex = 0;
     };
 
     // Bind the AnimCollection (provides the baked SRV/UB + per-mesh render data) and the visible mesh to draw.
@@ -41,8 +45,12 @@ public:
     UCk_IskmAnimCollection_Data* Get_AnimCollection() const { return _AnimCollection; }
     USkeletalMesh* Get_Mesh() const { return _Mesh; }
 
+    //~ UActorComponent
+    virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
     //~ UPrimitiveComponent
     virtual FPrimitiveSceneProxy* CreateSceneProxy() override;
+    virtual void SendRenderDynamicData_Concurrent() override;
     virtual void GetUsedMaterials(TArray<UMaterialInterface*>& OutMaterials, bool bGetDebugMaterials) const override;
     virtual int32 GetNumMaterials() const override;
     virtual UMaterialInterface* GetMaterial(int32 ElementIndex) const override;
