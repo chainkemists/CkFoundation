@@ -135,8 +135,19 @@ ACk_Iskm_BatchedCrowd_Actor*
                 -InAreaExtent + static_cast<float>(Row) * Step,
                 0.0f);
             const FTransform Xf(FRotator::ZeroRotator, Pos, FVector::OneVector);
+
+            // InSequenceIndex < 0 => cycle idle/walk/jog per instance so per-instance animation is visually obvious
+            // (idle alone is too subtle to read the phase offsets). Assumes the AnimCollection_Demo layout
+            // (0=Idle, 2=Walk, 3=Jog; index 1 = the non-looping Jump is skipped). >= 0 => that sequence for all.
+            int32 Seq = InSequenceIndex;
+            if (InSequenceIndex < 0)
+            {
+                const int32 VariedSeqs[3] = { 0, 2, 3 };
+                Seq = VariedSeqs[Placed % 3];
+            }
+
             const float TimeOffset = static_cast<float>(Placed) * 0.137f;
-            Crowd->AddInstance(Xf, InSequenceIndex, InRate, TimeOffset);
+            Crowd->AddInstance(Xf, Seq, InRate, TimeOffset);
             ++Placed;
         }
     }
