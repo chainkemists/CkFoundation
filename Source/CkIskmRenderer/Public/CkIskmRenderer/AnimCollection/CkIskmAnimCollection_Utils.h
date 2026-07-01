@@ -87,4 +87,15 @@ public:
         DisplayName="[Ck][IskmAnimCollection] Get Is Ref Pose Frame Identity")
     static bool
     Get_IsRefPoseFrameIdentity(const UCk_IskmAnimCollection_Data* InAsset, float InTolerance = 0.01f);
+
+    // Per-instance looped frame advance: GlobalFrame = SequenceFrameIndex + (trunc(time*SampleFrequency) mod FrameCount).
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmAnimCollection",
+        DisplayName="[Ck][IskmAnimCollection] Get Looped Frame At Time")
+    static int32
+    Get_LoopedFrameAtTime(const UCk_IskmAnimCollection_Data* InAsset, int32 InSequenceIndex, float InTimeSeconds);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmAnimCollection",
+        DisplayName="[Ck][IskmAnimCollection] Get Sequence Sample Frequency")
+    static int32
+    Get_SequenceSampleFrequency(const UCk_IskmAnimCollection_Data* InAsset, int32 InSequenceIndex);
 };

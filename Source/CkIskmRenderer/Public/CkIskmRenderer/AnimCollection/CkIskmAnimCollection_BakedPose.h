@@ -74,4 +74,22 @@ struct FCk_Iskm_BakedPose
         const int32 Local = FMath::Clamp(InLocalFrame, 0, FMath::Max(0, Seq.AnimationFrameCount - 1));
         return Seq.AnimationFrameIndex + Local;
     }
+
+    // Per-instance frame advance for a LOOPING sequence: GlobalFrame = AnimationFrameIndex + (trunc(time*rate) mod count).
+    // This is the CPU-side of Skelot's UpdateAnimation (LocalFrame = trunc(time*SampleFrequency)); the batched sync
+    // uploads the result as the per-instance frame index. Negative wrap handled for safety.
+    int32 Get_LoopedFrameAtTime(int32 InSequenceIndex, float InTimeSeconds) const
+    {
+        if (!Sequences.IsValidIndex(InSequenceIndex)) { return 0; }
+        const FCk_Iskm_BakedSequence& Seq = Sequences[InSequenceIndex];
+        if (Seq.AnimationFrameCount <= 0) { return Seq.AnimationFrameIndex; }
+        const int32 LocalFrame = FMath::TruncToInt32(InTimeSeconds * static_cast<float>(Seq.SampleFrequency));
+        const int32 Wrapped = ((LocalFrame % Seq.AnimationFrameCount) + Seq.AnimationFrameCount) % Seq.AnimationFrameCount;
+        return Seq.AnimationFrameIndex + Wrapped;
+    }
+
+    int32 Get_SequenceSampleFrequency(int32 InSequenceIndex) const
+    {
+        return Sequences.IsValidIndex(InSequenceIndex) ? Sequences[InSequenceIndex].SampleFrequency : 30;
+    }
 };
