@@ -44,8 +44,6 @@ struct FCk_Iskm_CompDynData
     FBoxSphereBounds         LocalBoundsSphere = FBoxSphereBounds(ForceInit);
     FMatrix                  LocalToWorld = FMatrix::Identity;
     FMatrix                  PrevLocalToWorld = FMatrix::Identity;
-    // Per-submesh instance runs. MVP single submesh -> one TArray with one run {0, N-1}.
-    TArray<FCk_Iskm_InstanceRun> InstanceRuns;
 };
 
 // FInstanceSceneDataBuffers subclass — sets the per-instance data flags.
@@ -90,4 +88,12 @@ private:
 
     FCk_Iskm_ClusterInstanceData InstanceBuffer;
     TUniquePtr<FCk_Iskm_CompDynData> DynData;
+
+    // STABLE storage for the instance-run array. DrawStaticElements caches a raw pointer to this into the static
+    // FMeshBatchElement (BatchElement.InstanceRuns -> VisibleMeshDrawCommand.RunArray, MeshPassProcessor.h:1843),
+    // which InstanceCullingContext dereferences EVERY FRAME (AddInstanceRunsToDrawCommand, InstanceCullingContext.cpp:1610).
+    // It MUST outlive the per-frame DynData swaps in UpdateInstanceBuffer: pointing RunArray into a DynData that a
+    // later swap frees leaves it dangling from frame 1 on -> garbage instance ranges -> flicker. Seeded once in the
+    // ctor; N is fixed for the proxy's lifetime (Set_Instances recreates the proxy via MarkRenderStateDirty).
+    TArray<FCk_Iskm_InstanceRun> StableInstanceRuns;
 };
