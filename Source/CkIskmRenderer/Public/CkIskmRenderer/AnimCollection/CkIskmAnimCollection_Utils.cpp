@@ -140,3 +140,21 @@ bool
     }
     return true;
 }
+
+int32
+    UCk_Utils_IskmAnimCollection_UE::
+    Get_LoopedFrameAtTime(const UCk_IskmAnimCollection_Data* InAsset, int32 InSequenceIndex, float InTimeSeconds)
+{
+    if (ck::Is_NOT_Valid(InAsset)) { return 0; }
+    const auto* Baked = InAsset->Get_BakedPose();
+    return Baked != nullptr ? Baked->Get_LoopedFrameAtTime(InSequenceIndex, InTimeSeconds) : 0;
+}
+
+int32
+    UCk_Utils_IskmAnimCollection_UE::
+    Get_SequenceSampleFrequency(const UCk_IskmAnimCollection_Data* InAsset, int32 InSequenceIndex)
+{
+    if (ck::Is_NOT_Valid(InAsset)) { return 0; }
+    const auto* Baked = InAsset->Get_BakedPose();
+    return Baked != nullptr ? Baked->Get_SequenceSampleFrequency(InSequenceIndex) : 0;
+}
