@@ -162,3 +162,48 @@ int32
     { return 0; }
     return InCrowd->Get_InstanceCount();
 }
+
+int32
+    UCk_Utils_IskmBatched_UE::
+    Get_CrowdMemberCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return 0; }
+    return InCrowd->Get_MemberCount();
+}
+
+FTransform
+    UCk_Utils_IskmBatched_UE::
+    Get_CrowdMemberTransform(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return FTransform::Identity; }
+    return InCrowd->Get_MemberWorldTransform(InIndex);
+}
+
+int32
+    UCk_Utils_IskmBatched_UE::
+    Get_CrowdMemberSequenceIndex(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return 0; }
+    return InCrowd->Get_MemberSequenceIndex(InIndex);
+}
+
+void
+    UCk_Utils_IskmBatched_UE::
+    Set_CrowdMemberVisible(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, bool bInVisible)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return; }
+    InCrowd->Set_MemberVisible(InIndex, bInVisible);
+}
+
+int32
+    UCk_Utils_IskmBatched_UE::
+    Get_CrowdRenderedInstanceCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return 0; }
+    return InCrowd->Get_RenderedInstanceCount();
+}
