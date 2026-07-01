@@ -4,6 +4,8 @@
 #include "CkIskmRendererVF/CkIskm_BatchedRenderResources.h"
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_Fragment_Data.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
+
 #include "Engine/SkeletalMesh.h"
 #include "Materials/MaterialInterface.h"
 #include "Materials/Material.h"
@@ -73,14 +75,6 @@ namespace ck_iskm_proxy
         const FBox MeshBox = (InMesh != nullptr) ? InMesh->GetBounds().GetBox() : FBox(FVector(-1.0), FVector(1.0));
         Out.LocalBounds = FRenderBounds(MeshBox);
 
-        if (N > 0)
-        {
-            FCk_Iskm_InstanceRun Run;
-            Run.StartOffset = 0;
-            Run.EndOffset = static_cast<uint32>(N - 1);
-            Out.InstanceRuns.Add(Run);
-        }
-
         const FTransform CompXf = InComponent->GetComponentTransform();
         Out.LocalToWorld = CompXf.ToMatrixWithScale();
         Out.PrevLocalToWorld = Out.LocalToWorld;
@@ -133,6 +127,16 @@ FCk_Iskm_BatchedClusterProxy::FCk_Iskm_BatchedClusterProxy(UCk_Iskm_BatchedClust
     // Initial instance payload (consumed by CreateRenderThreadResources / DrawStaticElements).
     DynData = MakeUnique<FCk_Iskm_CompDynData>();
     ck_iskm_proxy::BuildDynData(InComponent, Mesh, *DynData);
+
+    // Seed the STABLE instance-run storage once — a single contiguous run [0, N-1] over all instances. See the
+    // StableInstanceRuns comment in the header: this backs the cached RunArray that the renderer derefs every frame.
+    if (const int32 NumInstances = DynData->Transforms.Num(); NumInstances > 0)
+    {
+        FCk_Iskm_InstanceRun Run;
+        Run.StartOffset = 0;
+        Run.EndOffset = static_cast<uint32>(NumInstances - 1);
+        StableInstanceRuns.Add(Run);
+    }
 
     SetupInstanceSceneDataBuffers(&InstanceBuffer);
     InstanceBuffer.Init(bWithPerInstanceLocalBound);
@@ -207,7 +211,12 @@ void
     FCk_Iskm_BatchedClusterProxy::
     UpdateInstanceBuffer(FCk_Iskm_CompDynData* InDynData)
 {
-    check(IsInRenderingThread());
+    CK_ENSURE_IF_NOT(IsInRenderingThread(), TEXT("UpdateInstanceBuffer must run on the render thread"))
+    {
+        // We own InDynData (SendRenderDynamicData_Concurrent new'd it). Free it on the guard path so we don't leak.
+        delete InDynData;
+        return;
+    }
 
     // Snapshot bounds/transforms before WriteInstanceBuffer MoveTemps the per-instance arrays out of DynData.
     // (Locals suffixed _Snap to avoid shadowing FPrimitiveSceneProxy members LocalToWorld/Scene/LocalBounds.)
@@ -273,7 +282,7 @@ void
 {
     if (DynData.IsValid() == false || Mesh == nullptr || AnimCollection == nullptr)
     { return; }
-    if (DynData->InstanceRuns.Num() == 0)
+    if (StableInstanceRuns.Num() == 0)
     { return; }
 
     const FSkeletalMeshRenderData* RenderData = Mesh->GetResourceForRendering();
@@ -317,8 +326,8 @@ void
             { BatchElement.MinScreenSize = NextLODInfo->ScreenSize.GetValue(); }
 
             BatchElement.bIsInstanceRuns = true;
-            BatchElement.NumInstances = DynData->InstanceRuns.Num();
-            BatchElement.InstanceRuns = reinterpret_cast<uint32*>(DynData->InstanceRuns.GetData());
+            BatchElement.NumInstances = StableInstanceRuns.Num();
+            BatchElement.InstanceRuns = reinterpret_cast<uint32*>(StableInstanceRuns.GetData());
 
             PDI->DrawMesh(MeshBatch, ScreenSize);
         }

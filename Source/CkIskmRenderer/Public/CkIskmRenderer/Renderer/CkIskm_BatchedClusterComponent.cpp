@@ -204,14 +204,6 @@ void
     DynData->PrevLocalToWorld = DynData->LocalToWorld;
     DynData->WorldBounds = DynData->LocalBoundsSphere.TransformBy(CompXf);
 
-    if (N > 0)
-    {
-        FCk_Iskm_InstanceRun Run;
-        Run.StartOffset = 0;
-        Run.EndOffset = static_cast<uint32>(N - 1);
-        DynData->InstanceRuns.Add(Run);
-    }
-
     FCk_Iskm_BatchedClusterProxy* Proxy = static_cast<FCk_Iskm_BatchedClusterProxy*>(SceneProxy);
     ENQUEUE_RENDER_COMMAND(CkIskm_UpdateBatchedCluster)(
         [Proxy, DynData](FRHICommandListImmediate&)
