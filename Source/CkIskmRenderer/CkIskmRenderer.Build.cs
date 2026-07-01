@@ -32,16 +32,18 @@ public class CkIskmRenderer : CkModuleRules
             "CkPhysics",
 
             // ---- Plan-2 (batched GPU-skinned instancing) render-thread deps ----
-            // RenderCore: FRenderResource / shader-dir mapping (ShaderCore.h).
-            // RHI:        GPU buffers + SRVs for the baked bone-matrix pose buffer.
+            // RenderCore: FRenderTransform/FRenderBounds + ENQUEUE_RENDER_COMMAND (proxy + AnimCollection upload).
+            // RHI:        uniform-buffer creation for the baked pose buffer.
             "RenderCore",
             "RHI",
+
+            // The engine-only PostConfigInit module holding the vertex factory + render resources (so the VF type
+            // registers before the engine seals the VF list). Phase 3 will add Renderer/Private here for PrimitiveUpdates.
+            "CkIskmRendererVF",
         });
 
         PrivateDependencyModuleNames.AddRange(new string[]
         {
-            // Projects: IPluginManager, used by StartupModule to resolve the shader dir.
-            "Projects",
         });
     }
 }
