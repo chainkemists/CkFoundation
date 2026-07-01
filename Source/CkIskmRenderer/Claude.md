@@ -5,9 +5,14 @@
   submeshes, per-instance custom data, sockets, line traces, notify events. The fallback for anything the baked path can't express.
 - **Plan-2 (batched GPU-skinned instancing)** — N sequence-mode instances share one baked bone-matrix `Buffer<float4>` SRV,
   are skinned in a custom `FVertexFactory`, and draw through cluster `FPrimitiveSceneProxy`(es) via GPUScene instance data.
-  A Skelot port. Status: **Phases 0-2 landed** (baker + full render pipeline + N-instance static rendering; compiles/loads/
-  renders on GPU, shader verified under --no-nullrhi, 24 autotests green). Per-instance independent animation, ECS `Add`
-  routing, LOD/culling, and the SKMC fallback are Phases 3-6 — see `CONTINUATION_PROMPT_Plan2.md`.
+  A Skelot port. Status: **Phases 0-5 landed** — baker; full GPU render pipeline; N-instance rendering; per-instance
+  independent animation; spatial tile clustering (`ACk_Iskm_BatchedCrowd_Actor` — one cluster proxy per spatial tile
+  with tight bounds) + per-instance GPU occlusion culling (`AllowInstanceCullingOcclusionQueries`); and the distance-LOD
+  SKMC flip (members closest to the player leave their batched tile — `Set_MemberVisible(false)` — for a real per-SKMC
+  Plan-1 proxy so they can ragdoll/montage, then return to batched when they move away). Compiles/loads/renders on GPU,
+  shader + tiling verified under `--no-nullrhi`. Pixel/skinning correctness + the flip behaviour need a human in the
+  `IskmRenderer Batched` gym (Crowd + GPU<->SKMC Flip stations). Remaining refinements: per-frame *animated* culling
+  bounds (currently static mesh bounds) and moving-crowd tile re-bucketing.
 
 **Plan-2 module layout:** the vertex factory + render resources live in a separate engine-only module `CkIskmRendererVF`
 (LoadingPhase `PostConfigInit`) so the VF type registers before the engine seals its vertex-factory list; the rest
