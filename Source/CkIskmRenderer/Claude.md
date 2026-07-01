@@ -1,6 +1,17 @@
 # CkIskmRenderer
 
-**Purpose:** Skeletal-mesh rendering for ECS entities. Per-entity `USkeletalMeshComponent` (Plan-1; Plan-2 will add a batched cluster proxy with a GPU pose buffer). Supports anim sequences, montages, optional AnimBP, ragdoll, modular outfit submeshes, per-instance custom data, sockets, line traces, and notify events.
+**Purpose:** Skeletal-mesh rendering for ECS entities. Two paths, selected by `ECk_IskmProxy_PoseSource`:
+- **Plan-1 (per-entity `USkeletalMeshComponent`)** — anim sequences, montages, optional AnimBP, ragdoll, modular outfit
+  submeshes, per-instance custom data, sockets, line traces, notify events. The fallback for anything the baked path can't express.
+- **Plan-2 (batched GPU-skinned instancing)** — N sequence-mode instances share one baked bone-matrix `Buffer<float4>` SRV,
+  are skinned in a custom `FVertexFactory`, and draw through cluster `FPrimitiveSceneProxy`(es) via GPUScene instance data.
+  A Skelot port. Status: **Phases 0-2 landed** (baker + full render pipeline + N-instance static rendering; compiles/loads/
+  renders on GPU, shader verified under --no-nullrhi, 24 autotests green). Per-instance independent animation, ECS `Add`
+  routing, LOD/culling, and the SKMC fallback are Phases 3-6 — see `CONTINUATION_PROMPT_Plan2.md`.
+
+**Plan-2 module layout:** the vertex factory + render resources live in a separate engine-only module `CkIskmRendererVF`
+(LoadingPhase `PostConfigInit`) so the VF type registers before the engine seals its vertex-factory list; the rest
+(proxy, component, AnimCollection GPU upload) stays in `CkIskmRenderer` (Default).
 
 **Depends on:** `Core,CoreUObject,Engine,GameplayTags,AnimGraphRuntime,CkCore,CkEcs,CkEcsExt,CkLabel,CkLog,CkGraphics,CkProvider,CkRecord,CkSettings,CkAnimation,CkPhysics`.
 
