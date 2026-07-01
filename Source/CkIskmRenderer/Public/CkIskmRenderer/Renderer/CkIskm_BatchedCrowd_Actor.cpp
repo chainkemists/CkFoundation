@@ -71,28 +71,89 @@ void
     // Component-relative transform: the tile component sits at the tile centre with identity rotation/scale.
     const FTransform TileXf(TileCentre(Tile));
 
-    UCk_Iskm_BatchedClusterComponent::FInstance Inst;
-    Inst.Transform = InWorldTransform.GetRelativeTransform(TileXf);
-    Inst.SequenceIndex = InSequenceIndex;
-    Inst.Rate = InRate;
-    Inst.Time = InTimeOffset;
-    Inst.CurFrame = 0;
-    Inst.PrevFrame = 0;
+    FMember Member;
+    Member.WorldXf = InWorldTransform;
+    Member.Tile = Tile;
+    Member.bVisible = true;
+    Member.Inst.Transform = InWorldTransform.GetRelativeTransform(TileXf);
+    Member.Inst.SequenceIndex = InSequenceIndex;
+    Member.Inst.Rate = InRate;
+    Member.Inst.Time = InTimeOffset;
+    Member.Inst.CurFrame = 0;
+    Member.Inst.PrevFrame = 0;
 
-    _PendingInstances.FindOrAdd(Tile).Add(Inst);
-    ++_TotalInstances;
+    _Members.Add(Member);
+}
+
+void
+    ACk_Iskm_BatchedCrowd_Actor::
+    RebuildTile(const FIntPoint& InTile)
+{
+    UCk_Iskm_BatchedClusterComponent* Comp = _Tiles.FindRef(InTile);
+    if (Comp == nullptr)
+    { return; }
+
+    TArray<UCk_Iskm_BatchedClusterComponent::FInstance> Visible;
+    for (const FMember& M : _Members)
+    {
+        if (M.Tile == InTile && M.bVisible)
+        { Visible.Add(M.Inst); }
+    }
+    Comp->Set_Instances(Visible);
 }
 
 void
     ACk_Iskm_BatchedCrowd_Actor::
     Finalize()
 {
-    for (auto& Pair : _PendingInstances)
+    for (const auto& Pair : _Tiles)
     {
-        if (UCk_Iskm_BatchedClusterComponent* Comp = _Tiles.FindRef(Pair.Key))
-        {
-            Comp->Set_Instances(Pair.Value);
-        }
+        RebuildTile(Pair.Key);
     }
-    _PendingInstances.Empty();
+}
+
+FTransform
+    ACk_Iskm_BatchedCrowd_Actor::
+    Get_MemberWorldTransform(int32 InIndex) const
+{
+    return _Members.IsValidIndex(InIndex) ? _Members[InIndex].WorldXf : FTransform::Identity;
+}
+
+int32
+    ACk_Iskm_BatchedCrowd_Actor::
+    Get_MemberSequenceIndex(int32 InIndex) const
+{
+    return _Members.IsValidIndex(InIndex) ? _Members[InIndex].Inst.SequenceIndex : 0;
+}
+
+bool
+    ACk_Iskm_BatchedCrowd_Actor::
+    Get_MemberVisible(int32 InIndex) const
+{
+    return _Members.IsValidIndex(InIndex) ? _Members[InIndex].bVisible : false;
+}
+
+void
+    ACk_Iskm_BatchedCrowd_Actor::
+    Set_MemberVisible(int32 InIndex, bool bInVisible)
+{
+    if (_Members.IsValidIndex(InIndex) == false)
+    { return; }
+    if (_Members[InIndex].bVisible == bInVisible)
+    { return; }
+    _Members[InIndex].bVisible = bInVisible;
+    RebuildTile(_Members[InIndex].Tile);
+}
+
+int32
+    ACk_Iskm_BatchedCrowd_Actor::
+    Get_RenderedInstanceCount() const
+{
+    int32 Total = 0;
+    for (const auto& Pair : _Tiles)
+    {
+        if (Pair.Value != nullptr)
+        { Total += Pair.Value->Get_Instances().Num(); }
+    }
+    return Total;
 }

@@ -72,4 +72,34 @@ public:
         DisplayName = "[Ck][IskmBatched] Get Crowd Instance Count")
     static int32
     Get_CrowdInstanceCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd);
+
+    // ---- LOD-facing (Phase 5): member queries + per-member visibility ----
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Get Crowd Member Count")
+    static int32
+    Get_CrowdMemberCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Get Crowd Member Transform")
+    static FTransform
+    Get_CrowdMemberTransform(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Get Crowd Member Sequence Index")
+    static int32
+    Get_CrowdMemberSequenceIndex(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex);
+
+    // Hide/show a member in its batched tile. Hide a member so a per-SKMC proxy can stand in for it (ragdoll/montage);
+    // show it to return to batched rendering.
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Set Crowd Member Visible")
+    static void
+    Set_CrowdMemberVisible(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, bool bInVisible);
+
+    // Total instances actually in the tile proxies right now (only visible members) — drops when a member is hidden.
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Get Crowd Rendered Instance Count")
+    static int32
+    Get_CrowdRenderedInstanceCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd);
 };
