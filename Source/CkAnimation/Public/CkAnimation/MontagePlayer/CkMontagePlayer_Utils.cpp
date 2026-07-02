@@ -62,6 +62,25 @@ auto
     return Cast(InHandle);
 }
 
+auto
+    UCk_Utils_MontagePlayer_UE::
+    Request_RebindSkeletalMeshComponent(
+        FCk_Handle_MontagePlayer& InMontagePlayer,
+        USkeletalMeshComponent* InSkeletalMeshComponent)
+    -> FCk_Handle_MontagePlayer
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InSkeletalMeshComponent, ck::IsValid_Policy_NullptrOnly{}),
+        TEXT("Rebinding MontagePlayer on Entity [{}] with an INVALID SkeletalMeshComponent!"), InMontagePlayer)
+    { return InMontagePlayer; }
+
+    // The SKMC is the one param that cannot round-trip a snapshot (Params' SerializeSnapshot is deliberately
+    // empty) — replace the whole Params payload with one wrapping the re-created mesh.
+    auto& ParamsFragment = InMontagePlayer.Get<ck::FFragment_MontagePlayer_Params>();
+    ParamsFragment._Params = FCk_Fragment_MontagePlayer_ParamsData{InSkeletalMeshComponent};
+
+    return InMontagePlayer;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_MontagePlayer_UE, FCk_Handle_MontagePlayer, ck::FFragment_MontagePlayer_Params);
