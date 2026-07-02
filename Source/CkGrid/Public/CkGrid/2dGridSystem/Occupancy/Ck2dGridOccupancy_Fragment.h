@@ -94,7 +94,7 @@ namespace ck
     // Per-feature restore-replication done marker. ck::FTag_Snapshot_JustRestored is shared by every
     // feature on the restored entity, so no single feature may remove it —
     // FProcessor_2dGridOccupancy_ReplicateOnRestore pairs it with this done tag instead.
-    CK_DEFINE_ECS_TAG(FTag_2dGridOccupancy_RestoreReplicated);
+    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_2dGridOccupancy_RestoreReplicated);
 
     // --------------------------------------------------------------------------------------------------------------------
 

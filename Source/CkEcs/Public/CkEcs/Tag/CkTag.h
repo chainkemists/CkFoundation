@@ -25,6 +25,16 @@ namespace ck
     static_assert(std::is_empty_v<_TagName_>, "Tags must not carry any data");\
     [[maybe_unused]] static inline const bool _TagAutoReg_##_TagName_ = ::ck::detail::Register_SnapshotableTag<_TagName_>()
 
+// CK_DEFINE_ECS_TAG_TRANSIENT: defines an empty ECS tag that is NEVER captured into a snapshot (the opt-out from the
+// opt-OUT model above). Use for one-shot restore-lifecycle bookkeeping — FTag_Snapshot_JustRestored and the
+// per-feature FTag_*_RestoreReplicated / FTag_Sm_RestoreRedriven done markers. Letting those round-trip is a
+// correctness trap: a save taken AFTER a load captures the done markers, so the NEXT load of that save restores them
+// and every ReplicateOnRestore / SM RestoreRedrive pass is silently skipped (clients keep construct-default values,
+// state machines are never re-driven), while a restored JustRestored collides with the fresh post-restore stamp.
+#define CK_DEFINE_ECS_TAG_TRANSIENT(_TagName_)\
+    struct _TagName_ : public ck::TTag<_TagName_> { };\
+    static_assert(std::is_empty_v<_TagName_>, "Tags must not carry any data")
+
 #define CK_DEFINE_ECS_TAG_COUNTED(_TagName_)\
     struct _TagName_ : public ck::FTag_CountedTag { };\
     static_assert(sizeof(_TagName_) == sizeof(int32), "Counted Tags must NOT carry any additional data")

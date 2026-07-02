@@ -51,7 +51,7 @@ namespace ck
     // FProcessor_RenderTarget_ReplicateOnRestore has re-derived the target + re-published the
     // restored instruction ring, it stamps this so the (idempotent) re-drive does not repeat.
     // Pairs with ck::FTag_Snapshot_JustRestored (shared, removed by the same pass).
-    CK_DEFINE_ECS_TAG(FTag_RenderTarget_RestoreReplicated);
+    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_RenderTarget_RestoreReplicated);
 
     // --------------------------------------------------------------------------------------------------------------------
 

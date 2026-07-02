@@ -501,8 +501,9 @@ namespace ck
                 });
         }
 
+        // Done-guard is our OWN marker only — FTag_Snapshot_JustRestored is a SHARED multi-consumer signal
+        // (SM redrive, BB rebind processors, other ReplicateOnRestore passes) and must not be removed here.
         InHandle.Add<FTag_RenderTarget_RestoreReplicated>();
-        InHandle.Remove<FTag_Snapshot_JustRestored>();
 
         render_target::Verbose(TEXT("RenderTarget [{}] restore-replication complete — [{}] batch(es) re-published, next seq [{}]"),
             RenderTargetEntity, InAuthoredLog.Get_Batches().Num(), InAuthoredLog.Get_NextBatchSeq());

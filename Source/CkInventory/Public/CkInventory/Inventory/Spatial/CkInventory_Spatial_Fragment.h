@@ -54,7 +54,7 @@ namespace ck
     // Per-feature restore-replication done marker (mirrors FTag_Inventory_DataOnly_RestoreReplicated).
     // ck::FTag_Snapshot_JustRestored is shared by every owner-resident feature, so no single feature
     // may remove it — each feature pairs it with its own done tag instead.
-    CK_DEFINE_ECS_TAG(FTag_Inventory_Spatial_RestoreReplicated);
+    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_Inventory_Spatial_RestoreReplicated);
 
     struct CKINVENTORY_API FFragment_Inventory_Spatial_SyncReplication
     {

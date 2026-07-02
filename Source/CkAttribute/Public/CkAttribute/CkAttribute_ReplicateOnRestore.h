@@ -11,6 +11,11 @@
 
 namespace ck
 {
+    // Per-load done marker for the attribute ReplicateOnRestore pass. TRANSIENT (never captured) and paired with the
+    // shared FTag_Snapshot_JustRestored, which this pass must NOT remove — the shared marker is a multi-consumer
+    // signal (SM redrive, BB rebind processors, other ReplicateOnRestore passes key on it too).
+    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_Attribute_RestoreReplicated);
+
     // ================================================================================================================
     // REPLICATE ON RESTORE — Re-drives replication of RESTORED attribute values to clients after a
     // snapshot load. One template for the whole attribute family (Float/Byte/Integer/Rotator/Vector);
@@ -64,23 +69,28 @@ namespace ck
             if (NOT InHandle.template Has<FTag_Snapshot_JustRestored>())
             { return; }
 
+            // Done-guard: our OWN transient marker, not removal of the shared JustRestored (which other restore
+            // consumers on this entity may still need to observe).
+            if (InHandle.template Has<FTag_Attribute_RestoreReplicated>())
+            { return; }
+
             auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
 
             // Re-arm only once the owner's replication driver is re-established by the snapshot respawn
             // pass — otherwise the downstream Replicate processor's container update would target a
-            // missing driver. Leaving the marker (no Remove) retries on the next tick until it exists.
+            // missing driver. Leaving both markers untouched retries on the next tick until it exists.
             if (NOT UCk_Utils_EntityReplicationDriver_UE::Has(LifetimeOwner))
             { return; }
 
             UCk_Utils_Net_UE::TryAddContainerFragment<T_RepDataStruct>(LifetimeOwner);
 
-            InHandle.template Add<typename FragmentType_Current::FTag_MayRequireReplication>();
+            InHandle.template AddOrGet<typename FragmentType_Current::FTag_MayRequireReplication>();
             if (InHandle.template Has<FragmentType_Min>())
             { InHandle.template AddOrGet<typename FragmentType_Min::FTag_MayRequireReplication>(); }
             if (InHandle.template Has<FragmentType_Max>())
             { InHandle.template AddOrGet<typename FragmentType_Max::FTag_MayRequireReplication>(); }
 
-            InHandle.template Remove<FTag_Snapshot_JustRestored>();
+            InHandle.template Add<FTag_Attribute_RestoreReplicated>();
         }
     };
 }

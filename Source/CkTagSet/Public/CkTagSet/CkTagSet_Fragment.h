@@ -108,7 +108,7 @@ namespace ck
     // entity and is shared by every owner-resident feature, so no single feature may remove it —
     // each feature pairs it with its own done tag instead. Never leaks across restores: a restore
     // rebuilds entities from snapshot bytes and this tag is not snapshotted.
-    CK_DEFINE_ECS_TAG(FTag_TagSet_RestoreReplicated);
+    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_TagSet_RestoreReplicated);
 
     // --------------------------------------------------------------------------------------------------------------------
 
