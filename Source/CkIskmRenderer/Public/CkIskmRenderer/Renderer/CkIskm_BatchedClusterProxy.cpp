@@ -70,15 +70,20 @@ namespace ck_iskm_proxy
             FMemory::Memcpy(&PreBits, &Inst.PrevFrame, sizeof(float));
             Out.CustomData[i * 4 + 0] = CurBits;
             Out.CustomData[i * 4 + 1] = PreBits;
+            Out.CustomData[i * 4 + 2] = Inst.CustomDataA;
+            Out.CustomData[i * 4 + 3] = Inst.CustomDataB;
         }
 
+        // Per-INSTANCE local bound = one mesh box (engine applies it per instance transform). PRIMITIVE bounds must
+        // cover the whole instance spread — take the component's unioned local bounds, not a single mesh box.
         const FBox MeshBox = (InMesh != nullptr) ? InMesh->GetBounds().GetBox() : FBox(FVector(-1.0), FVector(1.0));
         Out.LocalBounds = FRenderBounds(MeshBox);
 
         const FTransform CompXf = InComponent->GetComponentTransform();
         Out.LocalToWorld = CompXf.ToMatrixWithScale();
         Out.PrevLocalToWorld = Out.LocalToWorld;
-        Out.LocalBoundsSphere = FBoxSphereBounds(MeshBox);
+        const FBox& SpreadBounds = InComponent->Get_LocalBounds();
+        Out.LocalBoundsSphere = (SpreadBounds.IsValid != 0) ? FBoxSphereBounds(SpreadBounds) : FBoxSphereBounds(MeshBox);
         Out.WorldBounds = Out.LocalBoundsSphere.TransformBy(CompXf);
     }
 }
