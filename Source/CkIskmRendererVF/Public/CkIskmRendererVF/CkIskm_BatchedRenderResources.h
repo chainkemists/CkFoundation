@@ -49,7 +49,7 @@ public:
 
 // ----------------------------------------------------------------------------------------------------------------
 //  Per-mesh bone-index vertex stream — remaps each vertex's skin-weight bone slots into render-bone space.
-//  MVP: 8-bit indices, 4 influences.
+//  8- or 16-bit indices, 4 or 8 influences per vertex.
 // ----------------------------------------------------------------------------------------------------------------
 class CKISKMRENDERERVF_API FCk_Iskm_BoneIndexVertexBuffer : public FVertexBuffer
 {
@@ -64,6 +64,27 @@ public:
 
     virtual void InitRHI(FRHICommandListBase& RHICmdList) override;
     virtual FString GetFriendlyName() const override { return TEXT("FCk_Iskm_BoneIndexVertexBuffer"); }
+};
+
+// ----------------------------------------------------------------------------------------------------------------
+//  Per-mesh bone-weight vertex stream — OWNED (not borrowed from the source mesh): weights are renormalized to
+//  sum exactly 1 over the kept influences and quantized to 8-bit unorm, laid out at exactly MaxBoneInfluences
+//  per vertex. Owning the layout removes every assumption about the source buffer (variable vs constant
+//  influence layout, 16-bit weights, influence counts that aren't 4/8) — the failure modes of the previous
+//  borrowed-stream approach.
+// ----------------------------------------------------------------------------------------------------------------
+class CKISKMRENDERERVF_API FCk_Iskm_BoneWeightVertexBuffer : public FVertexBuffer
+{
+public:
+    TResourceArray<uint8> WeightData; // unorm, NumVertices * MaxBoneInfluences
+    int32 MaxBoneInfluences = 4;
+    int32 NumVertices = 0;
+
+    void Allocate();
+    void SetWeight(int32 InVertexIdx, int32 InInfluenceIdx, uint8 InWeight);
+
+    virtual void InitRHI(FRHICommandListBase& RHICmdList) override;
+    virtual FString GetFriendlyName() const override { return TEXT("FCk_Iskm_BoneWeightVertexBuffer"); }
 };
 
 // ----------------------------------------------------------------------------------------------------------------
@@ -88,7 +109,7 @@ public:
     FRHIUniformBuffer* AnimCollectionUB = nullptr;
 
     virtual void InitRHI(FRHICommandListBase& RHICmdList) override;
-    void FillData(const FCk_Iskm_BoneIndexVertexBuffer* InBoneIndexBuffer, const class FSkeletalMeshLODRenderData* InLODData);
+    void FillData(const FCk_Iskm_BoneIndexVertexBuffer* InBoneIndexBuffer, const FCk_Iskm_BoneWeightVertexBuffer* InBoneWeightBuffer, const class FSkeletalMeshLODRenderData* InLODData);
 };
 
 template<int MBI>
@@ -119,6 +140,7 @@ public:
     struct FLODData
     {
         FCk_Iskm_BoneIndexVertexBuffer BoneIndexBuffer;
+        FCk_Iskm_BoneWeightVertexBuffer BoneWeightBuffer;
         TUniquePtr<FCk_Iskm_BatchedVertexFactory> VertexFactory;
     };
 
