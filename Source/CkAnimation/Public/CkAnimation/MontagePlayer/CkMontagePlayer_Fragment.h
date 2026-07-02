@@ -43,6 +43,9 @@ namespace ck
         CK_GENERATED_BODY(FFragment_MontagePlayer_Params);
 
     public:
+        friend class ::UCk_Utils_MontagePlayer_UE; // Request_RebindSkeletalMeshComponent replaces _Params post-restore
+
+    public:
         using ParamsType = FCk_Fragment_MontagePlayer_ParamsData;
 
     public:
