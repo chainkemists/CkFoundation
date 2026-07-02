@@ -218,3 +218,30 @@ int32
     { return 0; }
     return InCrowd->Get_RenderedInstanceCount();
 }
+
+void
+    UCk_Utils_IskmBatched_UE::
+    Set_CrowdMemberTransform(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, const FTransform& InWorldTransform)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return; }
+    InCrowd->Set_MemberTransform(InIndex, InWorldTransform);
+}
+
+void
+    UCk_Utils_IskmBatched_UE::
+    Set_CrowdMemberAnimation(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, int32 InSequenceIndex, float InRate, bool bInResetTime)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return; }
+    InCrowd->Set_MemberAnimation(InIndex, InSequenceIndex, InRate, bInResetTime);
+}
+
+void
+    UCk_Utils_IskmBatched_UE::
+    Set_CrowdMemberCustomData(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, float InA, float InB)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return; }
+    InCrowd->Set_MemberCustomData(InIndex, InA, InB);
+}

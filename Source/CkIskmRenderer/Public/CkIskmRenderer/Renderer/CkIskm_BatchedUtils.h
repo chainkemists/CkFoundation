@@ -102,4 +102,24 @@ public:
         DisplayName = "[Ck][IskmBatched] Get Crowd Rendered Instance Count")
     static int32
     Get_CrowdRenderedInstanceCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd);
+
+    // ---- Movement + animation (game-facing: drive these from NPC/crowd systems) ----
+
+    // Move a member. In-tile moves ride the light per-frame push; crossing a tile border migrates the member.
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Set Crowd Member Transform")
+    static void
+    Set_CrowdMemberTransform(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, const FTransform& InWorldTransform);
+
+    // Switch a member's sequence/rate (e.g. idle -> walk when its NPC starts moving).
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Set Crowd Member Animation")
+    static void
+    Set_CrowdMemberAnimation(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, int32 InSequenceIndex, float InRate, bool bInResetTime = false);
+
+    // Per-member material custom data — shader instance custom-data floats [2] and [3] (tint/variety).
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Set Crowd Member Custom Data")
+    static void
+    Set_CrowdMemberCustomData(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, float InA, float InB);
 };
