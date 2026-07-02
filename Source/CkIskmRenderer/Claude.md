@@ -5,14 +5,14 @@
   submeshes, per-instance custom data, sockets, line traces, notify events. The fallback for anything the baked path can't express.
 - **Plan-2 (batched GPU-skinned instancing)** — N sequence-mode instances share one baked bone-matrix `Buffer<float4>` SRV,
   are skinned in a custom `FVertexFactory`, and draw through cluster `FPrimitiveSceneProxy`(es) via GPUScene instance data.
-  A Skelot port. Status: **Phases 0-5 landed** — baker; full GPU render pipeline; N-instance rendering; per-instance
-  independent animation; spatial tile clustering (`ACk_Iskm_BatchedCrowd_Actor` — one cluster proxy per spatial tile
-  with tight bounds) + per-instance GPU occlusion culling (`AllowInstanceCullingOcclusionQueries`); and the distance-LOD
-  SKMC flip (members closest to the player leave their batched tile — `Set_MemberVisible(false)` — for a real per-SKMC
-  Plan-1 proxy so they can ragdoll/montage, then return to batched when they move away). Compiles/loads/renders on GPU,
-  shader + tiling verified under `--no-nullrhi`. Pixel/skinning correctness + the flip behaviour need a human in the
-  `IskmRenderer Batched` gym (Crowd + GPU<->SKMC Flip stations). Remaining refinements: per-frame *animated* culling
-  bounds (currently static mesh bounds) and moving-crowd tile re-bucketing.
+  A Skelot port, production-hardened for open-world crowds (see **Plan-2 production guide** below). Status:
+  **feature-complete** — baker; GPU render pipeline; per-instance independent animation; spatial tile clustering with
+  fixed conservative bounds; per-instance GPU occlusion culling; **moving members** (in-tile light pushes + cross-tile
+  migration); manager-owned single-source-of-truth animation state; 4/8-bone-influence skinning with owned renormalized
+  weights; baked animated culling bounds; per-member material custom data; real motion vectors; dedicated-server tick
+  gates; and the distance-LOD SKMC flip (nearest members leave their batched tile for a real per-SKMC Plan-1 proxy —
+  ragdoll/montage — then return). Verified headlessly under `--no-nullrhi` (27 autotests incl. tiling/movement/flip
+  bookkeeping); visual verification lives in the `IskmRenderer Batched` gym + `Batched Stress (Moving 600)` gym.
 
 **Plan-2 module layout:** the vertex factory + render resources live in a separate engine-only module `CkIskmRendererVF`
 (LoadingPhase `PostConfigInit`) so the VF type registers before the engine seals its vertex-factory list; the rest
@@ -71,6 +71,52 @@ Streamable.RequestAsyncLoad(SoftPath, FStreamableDelegate::CreateLambda([Handle,
 ```
 
 `FTag_IskmRenderer_PendingAsyncLoad` is reserved for forward-compat. Plan-1 never sets it (the `Add` API takes a hard pointer), but the Setup processor clears it alongside `FTag_IskmRenderer_NeedsSetup` so a future `Request_AddAsync(...)` helper can mark entities as pending without needing to update Setup.
+
+---
+
+## Plan-2 production guide (BusterBlock crowds: 130 NPCs + hundreds ambient)
+
+**Architecture.** One `ACk_Iskm_BatchedCrowd_Actor` per (AnimCollection, world) owns the crowd: members are
+registered once (`AddInstance` … `Finalize`) and live in `_Members` — the **single source of truth** for transform,
+animation time/frames, visibility, and custom data. The manager ticks all members itself and pushes per-frame data
+into per-tile `UCk_Iskm_BatchedClusterComponent`s (self-tick disabled); each tile is one GPUScene proxy at the tile
+centre with **fixed conservative bounds** (tile extent + baked animated pose box), so member movement never
+recomputes bounds. Rendering is client-local: no replication, and all ticking is skipped on dedicated servers.
+
+**Driving members from game systems (the production API, all AS-exposed via `UCk_Utils_IskmBatched_UE`):**
+- `Set_CrowdMemberTransform(i, xf)` — every tick if the NPC moves. In-tile: rides the light `Push_LiveInstances`
+  path (no proxy recreate, no bounds work). Tile-border crossing: automatic migration (two `Set_Instances`
+  rebuilds; velocity zeroed for one frame to avoid cross-primitive TAA smear).
+- `Set_CrowdMemberAnimation(i, seq, rate, resetTime)` — idle→walk etc. Sequence switches are instant (no
+  crossfade — see *Scoped follow-up*). Time is preserved unless reset.
+- `Set_CrowdMemberCustomData(i, a, b)` — shader per-instance custom-data floats **[2]/[3]** ([0]/[1] carry the
+  frame indices). Material variety (tint/outfit masks) via the `PerInstanceCustomData` material node.
+- `Set_CrowdMemberVisible(i, false)` + spawn a Plan-1 `IskmProxy` at the member's transform — the distance-LOD /
+  gameplay flip (ragdoll, montage, sockets). Reverse to return to batched. Hidden members keep advancing time, so
+  they rejoin in phase. See the Flip gym station for the reference orbit (hysteresis + promote cap).
+- Mesh **variety**: one crowd actor per AnimCollection — use several collections (one per character mesh) for
+  visual variety; they batch independently.
+
+**Content requirements (ensure-guarded at `EnsureRenderResources`):**
+- ≤ 8 bone influences per section (4- and 8-influence vertex factories; weights renormalized into an owned 8-bit
+  buffer — >8 keeps the strongest 8).
+- Cooked builds: crowd meshes need **`bNeedsCPUAccess`** (the bake reads skin weights on the CPU).
+- Sequences are baked at `_SampleFrequency` (default 30Hz) into the shared SRV; memory =
+  `frames × renderBones × 48B`.
+
+**Culling.** Per-tile frustum culling (tight fixed bounds) + per-instance GPU frustum/HZB occlusion culling
+(`AllowInstanceCullingOcclusionQueries` — instances behind occluders are culled individually). Culling bounds use
+`Get_AnimatedMeshBounds()` (baked bone-union + ref-pose skin pad), not the raw mesh box.
+
+**Tuning knobs:** tile size (`Initialize(_, TileSize)`; ~2000-2500cm — smaller = better culling granularity, more
+draw batches), promote/demote distances + cap in the flip driver, `_SampleFrequency` on the AnimCollection.
+
+**Scoped follow-up (documented, not implemented):** per-member sequence **crossfade** (shader 2-frame lerp).
+Requires widening per-instance custom data (floats [0..3] are all taken: curFrame/prevFrame/userA/userB — a blend
+alpha + held source frame need `NumCustomDataFloats=8` or repacking), a blend-state advance in the manager tick,
+and a `Lerp(CalcBoneMatrix(a), CalcBoneMatrix(b))` path in `CkIskm_BatchedVertexFactory.ush`. Close-up transition
+quality is currently covered by the SKMC flip (promoted members blend natively); distant 30Hz sequence pops are
+the standard crowd tradeoff (Skelot's transitions are likewise opt-in).
 
 ---
 
