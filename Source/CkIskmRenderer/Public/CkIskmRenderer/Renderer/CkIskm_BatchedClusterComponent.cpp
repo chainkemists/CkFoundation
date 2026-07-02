@@ -36,10 +36,36 @@ void
     Set_Instances(const TArray<FInstance>& InInstances)
 {
     _Instances = InInstances;
+    for (FInstance& Inst : _Instances)
+    { Inst.PrevPushedTransform = Inst.Transform; } // no pre-history — first frame renders with zero velocity
     Recompute_LocalBounds();
-    Refresh_PerComponentFrame();
     UpdateBounds();
     MarkRenderStateDirty();
+}
+
+void
+    UCk_Iskm_BatchedClusterComponent::
+    Push_LiveInstances(TArray<FInstance>&& InInstances)
+{
+    _Instances = MoveTemp(InInstances);
+    MarkRenderDynamicDataDirty();
+}
+
+void
+    UCk_Iskm_BatchedClusterComponent::
+    Set_ManagedExternally(bool bInManaged)
+{
+    _ManagedExternally = bInManaged;
+    SetComponentTickEnabled(!bInManaged);
+}
+
+void
+    UCk_Iskm_BatchedClusterComponent::
+    Set_FixedLocalBounds(const FBox& InLocalBounds)
+{
+    _FixedLocalBounds = InLocalBounds;
+    Recompute_LocalBounds();
+    UpdateBounds();
 }
 
 FPrimitiveSceneProxy*
@@ -103,6 +129,13 @@ void
     UCk_Iskm_BatchedClusterComponent::
     Recompute_LocalBounds()
 {
+    // Fixed conservative bounds (tile extent + pad) trump the per-instance union — movement never recomputes.
+    if (_FixedLocalBounds.IsValid != 0)
+    {
+        _LocalBounds = _FixedLocalBounds;
+        return;
+    }
+
     _LocalBounds = FBox(ForceInit);
     if (_Mesh == nullptr)
     { return; }
@@ -121,27 +154,13 @@ void
 
 void
     UCk_Iskm_BatchedClusterComponent::
-    Refresh_PerComponentFrame()
-{
-    if (_Instances.Num() == 0)
-    { return; }
-
-    const int32 Cur = _Instances[0].CurFrame;
-    const int32 Pre = _Instances[0].PrevFrame;
-    float CurBits = 0.0f;
-    float PreBits = 0.0f;
-    FMemory::Memcpy(&CurBits, &Cur, sizeof(float));
-    FMemory::Memcpy(&PreBits, &Pre, sizeof(float));
-    SetCustomPrimitiveDataFloat(0, CurBits);
-    SetCustomPrimitiveDataFloat(1, PreBits);
-}
-
-void
-    UCk_Iskm_BatchedClusterComponent::
     TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+    // Rendering is client-local; a dedicated server has no proxy to feed — skip the animation advance entirely.
+    if (GetNetMode() == NM_DedicatedServer)
+    { return; }
     if (_AnimCollection == nullptr || _Instances.Num() == 0)
     { return; }
     const FCk_Iskm_BakedPose* Baked = _AnimCollection->Get_BakedPose();
@@ -178,15 +197,16 @@ void
     FCk_Iskm_CompDynData* DynData = new FCk_Iskm_CompDynData();
     DynData->Transforms.Reserve(N);
     DynData->PrevTransforms.Reserve(N);
-    DynData->NumCustomDataFloats = 4; // [Cur, Pre, 0, 0] per instance (must be % 4 == 0)
+    DynData->NumCustomDataFloats = 4; // [Cur, Pre, UserA, UserB] per instance (must be % 4 == 0)
     DynData->CustomData.SetNumZeroed(N * 4);
 
     for (int32 i = 0; i < N; ++i)
     {
-        const FInstance& Inst = _Instances[i];
-        const FMatrix M = Inst.Transform.ToMatrixWithScale();
-        DynData->Transforms.Add(FRenderTransform(M));
-        DynData->PrevTransforms.Add(FRenderTransform(M));
+        FInstance& Inst = _Instances[i];
+        DynData->Transforms.Add(FRenderTransform(Inst.Transform.ToMatrixWithScale()));
+        // Real motion vectors: previous = the transform we pushed LAST frame, then roll history forward.
+        DynData->PrevTransforms.Add(FRenderTransform(Inst.PrevPushedTransform.ToMatrixWithScale()));
+        Inst.PrevPushedTransform = Inst.Transform;
 
         float CurBits = 0.0f;
         float PreBits = 0.0f;
@@ -194,11 +214,18 @@ void
         FMemory::Memcpy(&PreBits, &Inst.PrevFrame, sizeof(float));
         DynData->CustomData[i * 4 + 0] = CurBits;
         DynData->CustomData[i * 4 + 1] = PreBits;
+        DynData->CustomData[i * 4 + 2] = Inst.CustomDataA;
+        DynData->CustomData[i * 4 + 3] = Inst.CustomDataB;
     }
 
+    // Per-INSTANCE local bound: one mesh box around each instance transform (shared, engine clamps 1-or-N).
     const FBox MeshBox = (_Mesh != nullptr) ? _Mesh->GetBounds().GetBox() : FBox(FVector(-1.0), FVector(1.0));
     DynData->LocalBounds = FRenderBounds(MeshBox);
-    DynData->LocalBoundsSphere = FBoxSphereBounds(MeshBox);
+    // PRIMITIVE bounds: must cover the WHOLE instance spread. Using the single mesh box here (the old code)
+    // collapsed the primitive's scene bounds to one mesh at the component origin every animated frame —
+    // FUpdateTransformCommand then replaced the registration bounds, so everything away from the tile centre
+    // was wrongly frustum/occlusion culled ("flickers unless looking at the spawn point").
+    DynData->LocalBoundsSphere = (_LocalBounds.IsValid != 0) ? FBoxSphereBounds(_LocalBounds) : FBoxSphereBounds(MeshBox);
     const FTransform CompXf = GetComponentTransform();
     DynData->LocalToWorld = CompXf.ToMatrixWithScale();
     DynData->PrevLocalToWorld = DynData->LocalToWorld;

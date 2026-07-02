@@ -13,15 +13,22 @@ class USceneComponent;
 //  CkIskmRenderer Plan-2 Phase 4b/5 — spatial tile manager for a batched GPU-skinned crowd.
 //
 //  Owns a crowd, spatially partitioned into tiles. Each occupied tile gets its own
-//  UCk_Iskm_BatchedClusterComponent (one FPrimitiveSceneProxy) placed at the tile centre with tight bounds, so
-//  frustum + per-instance occlusion culling operate per-tile instead of over one giant aggregate bound.
+//  UCk_Iskm_BatchedClusterComponent (one FPrimitiveSceneProxy) placed at the tile centre with FIXED conservative
+//  bounds (tile extent + mesh pad), so frustum + per-instance occlusion culling operate per-tile and member
+//  movement never recomputes bounds.
 //
-//  Phase 5 (distance-LOD flip): each member can be hidden from its batched tile (Set_MemberVisible) so a per-SKMC
-//  proxy (Plan-1) can stand in for it (ragdoll/montage), then shown again to return to batched. Members hold both
-//  their world transform (for distance queries) and the tile-relative FInstance (for rebuilds).
+//  SINGLE SOURCE OF TRUTH: the manager owns all member state (transform, animation time/frames, visibility,
+//  custom data) and ticks it itself — tile components are render-facing views with self-tick disabled. Tile
+//  rebuilds therefore always carry live animation time (no snap-back), and members can MOVE:
+//  Set_MemberTransform updates in-tile transforms via the light per-frame push path and migrates members
+//  across tile borders (two Set_Instances rebuilds).
 //
-//  Usage: Initialize() -> AddInstance() x N -> Finalize(). Tile components self-tick their instances' animation,
-//  so a static-transform crowd needs no per-frame manager flush.
+//  Phase 5 (distance-LOD flip): Set_MemberVisible hides a member from its batched tile so a per-SKMC proxy
+//  (Plan-1) can stand in for it (ragdoll/montage), then shows it again to return to batched. Hidden members
+//  keep advancing time so they rejoin in phase.
+//
+//  Usage: Initialize() -> AddInstance() x N -> Finalize(). Then drive members via Set_Member* as the game
+//  (e.g. NPC/crowd systems) moves them.
 // ====================================================================================================================
 UCLASS(NotBlueprintable)
 class CKISKMRENDERER_API ACk_Iskm_BatchedCrowd_Actor : public AActor
@@ -42,16 +49,30 @@ public:
     int32 Get_TileCount() const { return _Tiles.Num(); }
     int32 Get_InstanceCount() const { return _Members.Num(); }
 
-    // ---- LOD-facing (Phase 5) ----
+    // ---- Member API (game-facing: NPC/crowd systems drive these) ----
     int32      Get_MemberCount() const { return _Members.Num(); }
     FTransform Get_MemberWorldTransform(int32 InIndex) const;
     int32      Get_MemberSequenceIndex(int32 InIndex) const;
     bool       Get_MemberVisible(int32 InIndex) const;
+
+    // Move a member. In-tile moves ride the light per-frame push (no proxy recreate); crossing a tile border
+    // migrates the member (rebuilds both tiles). Velocity history is handled (no TAA smear on migration).
+    void       Set_MemberTransform(int32 InIndex, const FTransform& InWorldTransform);
+
+    // Switch a member's sequence/rate (e.g. idle -> walk when its NPC starts moving).
+    void       Set_MemberAnimation(int32 InIndex, int32 InSequenceIndex, float InRate, bool bInResetTime);
+
+    // Per-member material custom data — shader instance custom-data floats [2] and [3] (tint/variety).
+    void       Set_MemberCustomData(int32 InIndex, float InA, float InB);
+
     // Hide/show a member in its batched tile (rebuilds that one tile). Hidden members leave a gap for a per-SKMC stand-in.
     void       Set_MemberVisible(int32 InIndex, bool bInVisible);
 
     // Sum of each tile component's CURRENT instance count (i.e. only visible members) — drops when a member is hidden.
     int32      Get_RenderedInstanceCount() const;
+
+    //~ AActor
+    virtual void Tick(float InDeltaTime) override;
 
 private:
     struct FMember
@@ -65,7 +86,11 @@ private:
     FIntPoint TileCoordOf(const FVector& InWorldLocation) const;
     FVector   TileCentre(const FIntPoint& InTile) const;
     UCk_Iskm_BatchedClusterComponent* GetOrCreate_Tile(const FIntPoint& InTile);
+    // Full rebuild (Set_Instances — proxy recreate). Use for count changes: visibility flips + tile migration.
     void      RebuildTile(const FIntPoint& InTile);
+    // Light push (same instance count — transforms/frames/custom data only). Rolls members' velocity history.
+    void      PushTile(const FIntPoint& InTile);
+    FBox      TileLocalBounds() const;
 
     UPROPERTY(Transient)
     TObjectPtr<USceneComponent> _Root;
@@ -77,6 +102,11 @@ private:
 
     UPROPERTY(Transient)
     TMap<FIntPoint, TObjectPtr<UCk_Iskm_BatchedClusterComponent>> _Tiles;
+
+    // Member indices per tile (includes hidden — filtered when building the render arrays).
+    TMap<FIntPoint, TArray<int32>> _TileMembers;
+
+    TSet<FIntPoint> _DirtyTiles;
 
     TArray<FMember> _Members;
 };
