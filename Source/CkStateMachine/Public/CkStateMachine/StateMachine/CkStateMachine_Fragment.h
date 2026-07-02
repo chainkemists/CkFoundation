@@ -61,7 +61,7 @@ namespace ck
     // feature on the restored entity, so no single feature may remove it — FProcessor_Sm_RestoreRedrive
     // pairs it with this done tag instead. Never leaks across restores: a restore rebuilds entities
     // from snapshot bytes and this tag is not snapshotted.
-    CK_DEFINE_ECS_TAG(FTag_Sm_RestoreRedriven);
+    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_Sm_RestoreRedriven);
 
     // Marks an SM child entity (Task/Condition) whose user-authored EntityScript has been
     // deferred. A commit processor materializes the script before EntityScript processors
