@@ -53,6 +53,12 @@ struct FCk_Iskm_BakedPose
     // [FrameCountSequences] per-frame local-space AABB for culling (Phase 4). MVP: mesh static bound per frame.
     TArray<FBox3f> FrameBounds;
 
+    // Conservative ANIMATED bounds: union of component-space bone positions across every baked frame, expanded
+    // by the ref-pose skin pad (how far the mesh box extends beyond the ref-pose bones), unioned with the mesh
+    // box. Animated poses (walk/jog arm swings, jumps) can exceed the static mesh box — culling with the raw
+    // mesh box clips silhouettes at bound edges.
+    FBox AnimatedBounds = FBox(ForceInit);
+
     // render-bone index -> skeleton-bone index.
     TArray<uint16> RenderRequiredBones;
     // skeleton-bone index -> render-bone index (INDEX_NONE if that bone is unskinned / not rendered).

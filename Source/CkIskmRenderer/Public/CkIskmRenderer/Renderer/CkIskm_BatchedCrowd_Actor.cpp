@@ -22,6 +22,11 @@ void
 {
     _Collection = InCollection;
     _TileSize = FMath::Max(1.0f, InTileSize);
+
+    // Bake up front (CPU-only, headless-safe, idempotent): tile fixed bounds derive from the baked ANIMATED
+    // pose extent — tiles created pre-bake would otherwise freeze the smaller static mesh box.
+    if (_Collection != nullptr && _Collection->Get_IsBaked() == false)
+    { _Collection->Build_BakedPoseData(); }
 }
 
 FIntPoint
@@ -46,20 +51,15 @@ FBox
     TileLocalBounds() const
 {
     // Conservative fixed bounds, component-relative (component sits at the tile centre): the tile's XY extent
-    // padded by the mesh box (instances stand anywhere in the tile; the mesh sticks out at most its own box),
-    // Z from the mesh box padded by its own size (animation headroom until C4's baked animated bounds).
+    // padded by the ANIMATED pose box (instances stand anywhere in the tile; an animated mesh sticks out at
+    // most its baked animated bounds), Z straight from the animated box.
     const float Half = _TileSize * 0.5f;
-    FBox MeshBox(FVector(-50.0), FVector(50.0));
-    if (_Collection != nullptr)
-    {
-        if (USkeletalMesh* Mesh = _Collection->Get_DefaultMesh())
-        { MeshBox = Mesh->GetBounds().GetBox(); }
-    }
+    const FBox MeshBox = (_Collection != nullptr) ? _Collection->Get_AnimatedMeshBounds() : FBox(FVector(-50.0), FVector(50.0));
     const FVector MeshSize = MeshBox.GetSize();
-    const FVector Pad(FMath::Max(MeshSize.X, MeshSize.Y));
+    const float PadXY = FMath::Max(MeshSize.X, MeshSize.Y);
     return FBox(
-        FVector(-Half - Pad.X, -Half - Pad.Y, MeshBox.Min.Z - MeshSize.Z),
-        FVector(+Half + Pad.X, +Half + Pad.Y, MeshBox.Max.Z + MeshSize.Z));
+        FVector(-Half - PadXY, -Half - PadXY, MeshBox.Min.Z),
+        FVector(+Half + PadXY, +Half + PadXY, MeshBox.Max.Z));
 }
 
 UCk_Iskm_BatchedClusterComponent*

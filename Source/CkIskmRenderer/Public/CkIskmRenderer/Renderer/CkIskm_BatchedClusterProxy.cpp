@@ -74,9 +74,11 @@ namespace ck_iskm_proxy
             Out.CustomData[i * 4 + 3] = Inst.CustomDataB;
         }
 
-        // Per-INSTANCE local bound = one mesh box (engine applies it per instance transform). PRIMITIVE bounds must
-        // cover the whole instance spread — take the component's unioned local bounds, not a single mesh box.
-        const FBox MeshBox = (InMesh != nullptr) ? InMesh->GetBounds().GetBox() : FBox(FVector(-1.0), FVector(1.0));
+        // Per-INSTANCE local bound = one animated-pose box (engine applies it per instance transform). PRIMITIVE
+        // bounds must cover the whole instance spread — take the component's unioned local bounds.
+        UCk_IskmAnimCollection_Data* Collection = InComponent->Get_AnimCollection();
+        const FBox MeshBox = (Collection != nullptr) ? Collection->Get_AnimatedMeshBounds()
+                           : (InMesh != nullptr) ? InMesh->GetBounds().GetBox() : FBox(FVector(-1.0), FVector(1.0));
         Out.LocalBounds = FRenderBounds(MeshBox);
 
         const FTransform CompXf = InComponent->GetComponentTransform();

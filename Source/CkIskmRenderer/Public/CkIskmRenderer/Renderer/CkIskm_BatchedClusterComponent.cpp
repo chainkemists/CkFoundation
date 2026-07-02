@@ -140,7 +140,8 @@ void
     if (_Mesh == nullptr)
     { return; }
 
-    const FBox MeshBox = _Mesh->GetBounds().GetBox();
+    // Animated bounds (bone union + skin pad) once baked — the raw mesh box clips animated silhouettes.
+    const FBox MeshBox = (_AnimCollection != nullptr) ? _AnimCollection->Get_AnimatedMeshBounds() : _Mesh->GetBounds().GetBox();
     if (_Instances.Num() == 0)
     {
         _LocalBounds = MeshBox;
@@ -218,8 +219,9 @@ void
         DynData->CustomData[i * 4 + 3] = Inst.CustomDataB;
     }
 
-    // Per-INSTANCE local bound: one mesh box around each instance transform (shared, engine clamps 1-or-N).
-    const FBox MeshBox = (_Mesh != nullptr) ? _Mesh->GetBounds().GetBox() : FBox(FVector(-1.0), FVector(1.0));
+    // Per-INSTANCE local bound: one animated-pose box around each instance transform (shared, engine clamps 1-or-N).
+    const FBox MeshBox = (_AnimCollection != nullptr) ? _AnimCollection->Get_AnimatedMeshBounds()
+                       : (_Mesh != nullptr) ? _Mesh->GetBounds().GetBox() : FBox(FVector(-1.0), FVector(1.0));
     DynData->LocalBounds = FRenderBounds(MeshBox);
     // PRIMITIVE bounds: must cover the WHOLE instance spread. Using the single mesh box here (the old code)
     // collapsed the primitive's scene bounds to one mesh at the component origin every animated frame —
