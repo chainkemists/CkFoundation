@@ -147,13 +147,17 @@ auto
     const FBox3f MeshBound = static_cast<FBox3f>(_DefaultMesh->GetBounds().GetBox());
     Baked->FrameBounds.Init(MeshBound, Baked->FrameCountSequences);
 
+    // Union of component-space bone positions across all baked frames — feeds AnimatedBounds below.
+    FBox BoneBoundsAllFrames(ForceInit);
+
     // ShaderMatrix[bone] = RefPoseInverse[bone] * ComponentSpaceBoneMatrix[bone], stored transposed 3x4.
-    auto CalcRenderMatrices = [&Baked, RenderBoneCount](TArrayView<const FTransform> InPoseComponentSpace, int32 InFrameIndex)
+    auto CalcRenderMatrices = [&Baked, &BoneBoundsAllFrames, RenderBoneCount](TArrayView<const FTransform> InPoseComponentSpace, int32 InFrameIndex)
     {
         FCk_Iskm_BoneMatrix3x4* const Out = Baked->Matrices.GetData() + (InFrameIndex * RenderBoneCount);
         for (int32 i = 0; i < RenderBoneCount; ++i)
         {
             const int32 CompactBoneIdx = Baked->RenderRequiredBones[i];
+            BoneBoundsAllFrames += InPoseComponentSpace[CompactBoneIdx].GetTranslation();
             const FMatrix44f BoneMatrix = static_cast<FTransform3f>(InPoseComponentSpace[CompactBoneIdx]).ToMatrixWithScale();
             const FMatrix44f ShaderMatrix = Baked->RefPoseInverse[CompactBoneIdx] * BoneMatrix;
 
@@ -214,9 +218,38 @@ auto
         }
     }
 
+    // ---- 7. Conservative animated bounds ----
+    // Ref-pose skin pad: how far the mesh box extends beyond the ref-pose BONES — a measure of skin/cloth
+    // offset from the skeleton, without touching vertex data. AnimatedBounds = every baked frame's bone
+    // positions, expanded by that pad, unioned with the mesh box (never smaller than the static bound).
+    {
+        FBox RefBoneBounds(ForceInit);
+        for (int32 i = 0; i < RenderBoneCount; ++i)
+        {
+            RefBoneBounds += RefPoseComponentSpace[Baked->RenderRequiredBones[i]].GetTranslation();
+        }
+        const FBox MeshBox = _DefaultMesh->GetBounds().GetBox();
+        const FVector SkinPad = FVector::Max(
+            FVector::Max(RefBoneBounds.Min - MeshBox.Min, FVector::ZeroVector),
+            FVector::Max(MeshBox.Max - RefBoneBounds.Max, FVector::ZeroVector));
+        Baked->AnimatedBounds = BoneBoundsAllFrames.ExpandBy(SkinPad) + MeshBox;
+    }
+
     Baked->bIsBaked = true;
     _BakedPose = MoveTemp(Baked);
     return true;
+}
+
+auto
+    UCk_IskmAnimCollection_Data::
+    Get_AnimatedMeshBounds() const
+    -> FBox
+{
+    if (Get_IsBaked() && _BakedPose->AnimatedBounds.IsValid != 0)
+    { return _BakedPose->AnimatedBounds; }
+    if (ck::IsValid(_DefaultMesh))
+    { return _DefaultMesh->GetBounds().GetBox(); }
+    return FBox(FVector(-50.0), FVector(50.0));
 }
 
 auto
@@ -286,6 +319,14 @@ auto
                         Section.MaxBoneInfluences)
                     { }
                 }
+
+                // The bone-index/weight build reads skin weights on the CPU (FSkinWeightVertexBuffer accessors).
+                // Cooked builds discard that CPU copy unless the mesh keeps CPU access — the buffers would build
+                // from garbage. Flag the content so BusterBlock crowd meshes get bNeedsCPUAccess set.
+                CK_ENSURE_IF_NOT(GIsEditor || LODData.GetSkinWeightVertexBuffer()->GetNeedsCPUAccess(),
+                    TEXT("[CkIskm] Batched renderer requires CPU-accessible skin weights in cooked builds — set bNeedsCPUAccess on mesh [{}]"),
+                    _DefaultMesh)
+                { }
             }
         }
 

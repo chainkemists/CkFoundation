@@ -176,6 +176,12 @@ public:
     auto
     Get_IsBaked() const -> bool;
 
+    // Conservative culling bounds covering every baked pose (bone union + ref-pose skin pad, never smaller
+    // than the mesh box). Falls back to the mesh box pre-bake. Use this — not the raw mesh bounds — wherever
+    // batched instances are culled, or animated silhouettes clip at bound edges.
+    auto
+    Get_AnimatedMeshBounds() const -> FBox;
+
     // ---- Plan-2 GPU render resources ----
 
     // Idempotent: ensures the CPU bake exists, then builds + uploads the GPU SRV / uniform buffer / per-mesh
