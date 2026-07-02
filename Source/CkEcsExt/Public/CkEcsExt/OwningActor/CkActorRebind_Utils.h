@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Tag/CkTag.h"
 
 #include "CkCore/Macros/CkMacros.h"
 
@@ -8,6 +9,19 @@
 #include <Kismet/BlueprintFunctionLibrary.h>
 
 #include "CkActorRebind_Utils.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    // Stamped by Request_RebindActor on the restored entity the moment its fresh actor is re-bridged (M2b2a).
+    // The re-bridge deliberately does NOT re-run WithActor::Construct, so any ACTOR-SIDE wiring the original
+    // construction did (cached entity handles on the actor, NewObject components, camera directors, ...) is dead on
+    // the respawned actor. Game code keys a processor on this tag to run its own idempotent reattach against the
+    // re-bridged actor (resolve via UCk_Utils_OwningActor_UE), then REMOVES the tag as its done-guard.
+    // TRANSIENT: one-shot post-restore bookkeeping — must never be captured into a save.
+    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_ActorJustRebound);
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 

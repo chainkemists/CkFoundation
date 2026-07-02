@@ -34,6 +34,9 @@ auto
         UCk_Utils_Transform_UE::Add(InEntity, InActor->GetActorTransform());
     }
 
+    // Signal game code that actor-side wiring needs re-establishing (see the tag's declaration for the contract).
+    InEntity.AddOrGet<ck::FTag_ActorJustRebound>();
+
     ck::ecs::Display(TEXT("[M2b] Request_RebindActor: re-bridged Actor=[{}] to restored Entity=[{}]"),
         InActor->GetName(), InEntity);
 }
