@@ -28,6 +28,11 @@ using FSnap_Timer_Current = ck::FFragment_Timer_Current;
 CK_REGISTER_SNAPSHOTABLE(FSnap_Timer_Current);
 CK_REGISTER_SNAPSHOTABLE(FCk_Fragment_Timer_ParamsData); // Tier A USTRUCT (no `::` → no alias hoist needed)
 
+// The owner-side record of timer children. Must round-trip with the timers themselves — a transient record left
+// restored timers as orphaned, still-ticking entities invisible to their owner.
+using FSnap_RecordOfTimers = ck::FFragment_RecordOfTimers;
+CK_REGISTER_SNAPSHOTABLE(FSnap_RecordOfTimers);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
