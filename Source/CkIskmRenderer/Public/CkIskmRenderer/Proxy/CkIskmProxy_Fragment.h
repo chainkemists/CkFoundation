@@ -16,15 +16,15 @@ namespace ck
 {
     // ---- tags ----
 
-    CK_DEFINE_ECS_TAG(FTag_IskmProxy_NeedsSetup);
-    CK_DEFINE_ECS_TAG(FTag_IskmProxy_PendingAsyncLoad);
-    CK_DEFINE_ECS_TAG(FTag_IskmProxy_HasActiveMontage);
-    CK_DEFINE_ECS_TAG(FTag_IskmProxy_Ragdolling);
+    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_IskmProxy_NeedsSetup);
+    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_IskmProxy_PendingAsyncLoad);
+    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_IskmProxy_HasActiveMontage);
+    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_IskmProxy_Ragdolling);
     // A3: Movable proxies have this tag set at Setup based on ParamsData._IsMovable.
     // The UpdateTransform processor includes FTag_IskmProxy_Movable AND
     // FTag_Transform_Updated (a CkEcsExt convention set when the entity transform
     // changes); static proxies are skipped entirely each frame.
-    CK_DEFINE_ECS_TAG(FTag_IskmProxy_Movable);
+    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_IskmProxy_Movable);
 
     // ---- params (non-reflected ECS-side alias) ----
 
