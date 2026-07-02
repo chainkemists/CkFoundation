@@ -19,7 +19,7 @@ namespace ck
     // AnimPlan, Inventory, and any future replicated container fragment.
     //
     // Never present during a Run_Capture (only ever stamped post-restore), so it never round-trips through a snapshot.
-    CK_DEFINE_ECS_TAG(FTag_Snapshot_JustRestored);
+    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_Snapshot_JustRestored);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

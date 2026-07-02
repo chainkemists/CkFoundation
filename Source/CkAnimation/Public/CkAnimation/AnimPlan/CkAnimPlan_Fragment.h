@@ -30,7 +30,7 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_AnimPlan_MayRequireReplication);
 
     // Per-feature restore-replication done marker — see FTag_TagSet_RestoreReplicated for the pattern.
-    CK_DEFINE_ECS_TAG(FTag_AnimPlan_RestoreReplicated);
+    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_AnimPlan_RestoreReplicated);
 
     // --------------------------------------------------------------------------------------------------------------------
 
