@@ -181,14 +181,23 @@ namespace ck
             InAttributeHandle, ck::algo::MatchesAttributeModifierWithOperation<AttributeModifierFragmentType, typename AttributeModifierFragmentType::FTag_IsNotRevocableModification>{InModifierOperation});
             ck::IsValid(MaybeExistingModifier))
         {
-            // NotRevocable modifiers are permanent — Request_ClearAllModifiers never destroys them,
-            // so this coalesce target can never be queued for destruction. Tripwire: if a future
-            // code path starts removing NotRevocable modifiers, coalescing into a pending-destroy
-            // entity would silently lose the write when the destroy drains (the replicated-attribute
-            // alternating-override stick). Fail loudly instead of coalescing into a doomed modifier.
-            CK_ENSURE_IF_NOT(NOT UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(MaybeExistingModifier, ECk_EntityLifetime_DestructionPhase::BeginDestroy),
-                TEXT("Add_NotRevocable coalescing into NotRevocable modifier [{}] that is pending destroy."), MaybeExistingModifier)
-            { return; }
+            if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(MaybeExistingModifier, ECk_EntityLifetime_DestructionPhase::BeginDestroy))
+            {
+                // The coalesce target is queued for destruction. Two ways that happens:
+                //   1. Entity-lifetime cascade — the owning attribute (or ITS owner) is being destroyed
+                //      this frame, which stamps the attribute AND its child modifiers pending-destroy
+                //      synchronously. The write is moot (the whole attribute is going away); drop it.
+                //   2. A NotRevocable modifier removed out from under a LIVE attribute — the replicated-
+                //      attribute alternating-override stick. Request_ClearAllModifiers preserves
+                //      NotRevocable modifiers, so this should never happen; fail loudly if it does.
+                // Discriminate on whether the attribute itself is also pending-destroy: only case 2 is a bug.
+                CK_ENSURE_IF_NOT(UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InAttributeHandle, ECk_EntityLifetime_DestructionPhase::BeginDestroy),
+                    TEXT("Add_NotRevocable coalescing into NotRevocable modifier [{}] that is pending destroy while its attribute [{}] is alive."),
+                    MaybeExistingModifier, InAttributeHandle)
+                { return; }
+
+                return;
+            }
 
             const auto& CurrentModifierValue = MaybeExistingModifier.template Get<AttributeModifierFragmentType>().Get_ModifierDelta();
 
