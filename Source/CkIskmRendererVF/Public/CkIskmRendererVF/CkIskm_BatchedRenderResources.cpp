@@ -86,6 +86,38 @@ void
 }
 
 // ====================================================================================================================
+//  FCk_Iskm_BoneWeightVertexBuffer
+// ====================================================================================================================
+void
+    FCk_Iskm_BoneWeightVertexBuffer::
+    Allocate()
+{
+    WeightData.SetNumZeroed(NumVertices * MaxBoneInfluences);
+}
+
+void
+    FCk_Iskm_BoneWeightVertexBuffer::
+    SetWeight(int32 InVertexIdx, int32 InInfluenceIdx, uint8 InWeight)
+{
+    WeightData[InVertexIdx * MaxBoneInfluences + InInfluenceIdx] = InWeight;
+}
+
+void
+    FCk_Iskm_BoneWeightVertexBuffer::
+    InitRHI(FRHICommandListBase& RHICmdList)
+{
+    const uint32 ByteSize = WeightData.GetResourceDataSize();
+    if (ByteSize == 0)
+    { return; }
+
+    const FRHIBufferCreateDesc Desc = FRHIBufferCreateDesc::CreateVertex(TEXT("CkIskm_BoneWeightBuffer"), ByteSize)
+        .AddUsage(EBufferUsageFlags::Static)
+        .SetInitActionResourceArray(&WeightData)
+        .DetermineInitialState();
+    VertexBufferRHI = RHICmdList.CreateBuffer(Desc);
+}
+
+// ====================================================================================================================
 //  FCk_Iskm_BatchedVertexFactory
 // ====================================================================================================================
 void
@@ -130,7 +162,7 @@ void
 
 void
     FCk_Iskm_BatchedVertexFactory::
-    FillData(const FCk_Iskm_BoneIndexVertexBuffer* InBoneIndexBuffer, const FSkeletalMeshLODRenderData* InLODData)
+    FillData(const FCk_Iskm_BoneIndexVertexBuffer* InBoneIndexBuffer, const FCk_Iskm_BoneWeightVertexBuffer* InBoneWeightBuffer, const FSkeletalMeshLODRenderData* InLODData)
 {
     const FStaticMeshVertexBuffers& SMVB = InLODData->StaticVertexBuffers;
     SMVB.PositionVertexBuffer.BindPositionVertexBuffer(this, Data);
@@ -138,34 +170,34 @@ void
     SMVB.StaticMeshVertexBuffer.BindPackedTexCoordVertexBuffer(this, Data);
     SMVB.ColorVertexBuffer.BindColorVertexBuffer(this, Data);
 
-    const FSkinWeightDataVertexBuffer* SkinData = InLODData->GetSkinWeightVertexBuffer()->GetDataVertexBuffer();
     const bool bExtra = Data.MaxBoneInfluence > 4;
 
-    // Bone weights — borrowed unchanged from the source mesh skin-weight buffer.
+    // Bone weights — OUR renormalized 8-bit unorm buffer, exactly MaxBoneInfluence per vertex (no assumptions
+    // about the source mesh's skin-weight layout).
     {
-        const EVertexElementType ElemType = SkinData->Use16BitBoneWeight() ? VET_UShort4N : VET_UByte4N;
-        const uint32 Stride = SkinData->GetConstantInfluencesVertexStride();
-        Data.BoneWeights = FVertexStreamComponent(SkinData, SkinData->GetConstantInfluencesBoneWeightsOffset(), Stride, ElemType);
+        const uint32 Stride = InBoneWeightBuffer->MaxBoneInfluences;
+        Data.BoneWeights = FVertexStreamComponent(InBoneWeightBuffer, 0, Stride, VET_UByte4N);
         if (bExtra)
         {
             Data.ExtraBoneWeights = Data.BoneWeights;
-            Data.ExtraBoneWeights.Offset += (SkinData->GetBoneWeightByteSize() * 4);
+            Data.ExtraBoneWeights.Offset = 4;
         }
         else
         {
-            Data.ExtraBoneWeights = FVertexStreamComponent(&GNullVertexBuffer, 0, 0, ElemType);
+            Data.ExtraBoneWeights = FVertexStreamComponent(&GNullVertexBuffer, 0, 0, VET_UByte4N);
         }
     }
 
     // Bone indices — the custom remapped (render-bone space) buffer.
     {
-        const uint32 Stride = (InBoneIndexBuffer->bIs16BitBoneIndex ? 2 : 1) * InBoneIndexBuffer->MaxBoneInfluences;
+        const uint32 BytesPerIndex = InBoneIndexBuffer->bIs16BitBoneIndex ? 2 : 1;
+        const uint32 Stride = BytesPerIndex * InBoneIndexBuffer->MaxBoneInfluences;
         const EVertexElementType ElemType = InBoneIndexBuffer->bIs16BitBoneIndex ? VET_UShort4 : VET_UByte4;
         Data.BoneIndices = FVertexStreamComponent(InBoneIndexBuffer, 0, Stride, ElemType);
         if (bExtra)
         {
             Data.ExtraBoneIndices = Data.BoneIndices;
-            Data.ExtraBoneIndices.Offset = Stride / 2;
+            Data.ExtraBoneIndices.Offset = BytesPerIndex * 4; // influences 4..7 follow 0..3 per vertex
         }
         else
         {
@@ -246,8 +278,8 @@ namespace ck_iskm
     IMPLEMENT_VERTEX_FACTORY_PARAMETER_TYPE(CkIskmVF##MBI, SF_Vertex, FCk_Iskm_BatchedShaderParameters); \
     IMPLEMENT_VERTEX_FACTORY_PARAMETER_TYPE(CkIskmVF##MBI, SF_Pixel, FCk_Iskm_BatchedShaderParameters);
 
-// MVP: 4-influence permutation only (mannequin).
 IMPL_CKISKM_VF(4)
+IMPL_CKISKM_VF(8)
 
 // ====================================================================================================================
 //  FCk_Iskm_BatchedMeshData
@@ -271,18 +303,21 @@ void
         const FSkeletalMeshLODRenderData& LODData = RenderData->LODRenderData[LODIndex];
         const FSkinWeightVertexBuffer* SkinVB = LODData.GetSkinWeightVertexBuffer();
 
-        // The MVP >4-bone-influence guard (dropped weights are not renormalized) lives in the CkCore-linked caller
-        // UCk_IskmAnimCollection_Data::EnsureRenderResources as a CK_ENSURE_IF_NOT. This module is engine-only
-        // (PostConfigInit, no Ck deps) so it can't CK_ENSURE here.
-
         FLODData* OutPtr = new FLODData();
         LODs.Add(OutPtr);
         FLODData& Out = *OutPtr;
 
+        // 4 or 8 influences per vertex, matched to the source (>8 keeps the strongest 8; weights renormalize).
+        const int32 MBI = (static_cast<int32>(SkinVB->GetMaxBoneInfluences()) > 4) ? 8 : 4;
+
         Out.BoneIndexBuffer.bIs16BitBoneIndex = SkinVB->Use16BitBoneIndex() || InSkeletonBoneToRenderBone.Num() > 255;
-        Out.BoneIndexBuffer.MaxBoneInfluences = 4;
+        Out.BoneIndexBuffer.MaxBoneInfluences = MBI;
         Out.BoneIndexBuffer.NumVertices = SkinVB->GetNumVertices();
         Out.BoneIndexBuffer.Allocate();
+
+        Out.BoneWeightBuffer.MaxBoneInfluences = MBI;
+        Out.BoneWeightBuffer.NumVertices = SkinVB->GetNumVertices();
+        Out.BoneWeightBuffer.Allocate();
 
         for (uint32 VertexIndex = 0; VertexIndex < SkinVB->GetNumVertices(); ++VertexIndex)
         {
@@ -291,25 +326,59 @@ void
             LODData.GetSectionFromVertexIndex(VertexIndex, SectionIndex, SectionVertexIndex);
             const FSkelMeshRenderSection& Section = LODData.RenderSections[SectionIndex];
 
-            const int32 NumInf = FMath::Min(4, static_cast<int32>(Section.MaxBoneInfluences));
+            uint32 VertexWeightOffset = 0;
+            uint32 VertexInfluenceCount = 0;
+            SkinVB->GetVertexInfluenceOffsetCount(VertexIndex, VertexWeightOffset, VertexInfluenceCount);
+
+            const int32 NumInf = FMath::Min(MBI, static_cast<int32>(VertexInfluenceCount));
+
+            // Pass 1: gather raw 16-bit-scale weights of the kept influences for renormalization.
+            uint16 RawWeights[8] = { 0 };
+            uint32 WeightSum = 0;
+            for (int32 InfluenceIndex = 0; InfluenceIndex < NumInf; ++InfluenceIndex)
+            {
+                RawWeights[InfluenceIndex] = SkinVB->GetBoneWeight(VertexIndex, InfluenceIndex);
+                WeightSum += RawWeights[InfluenceIndex];
+            }
+
+            // Pass 2: write remapped indices + renormalized 8-bit weights that sum EXACTLY to 255 (residual goes
+            // to the strongest influence — avoids sub-unit weight sums that visibly shrink verts).
+            int32 StrongestSlot = 0;
+            int32 QuantizedSum = 0;
             for (int32 InfluenceIndex = 0; InfluenceIndex < NumInf; ++InfluenceIndex)
             {
                 const uint32 SectionBoneIndex = SkinVB->GetBoneIndex(VertexIndex, InfluenceIndex);
-                if (!Section.BoneMap.IsValidIndex(SectionBoneIndex))
-                { continue; }
-                const FBoneIndexType MeshBoneIndex = Section.BoneMap[SectionBoneIndex];
-                const int32 SkelBoneIndex = InSkeleton->GetSkeletonBoneIndexFromMeshBoneIndex(InMesh, MeshBoneIndex);
-                int32 RenderBoneIndex = 0;
-                if (SkelBoneIndex != INDEX_NONE && InSkeletonBoneToRenderBone.IsValidIndex(SkelBoneIndex))
+                if (Section.BoneMap.IsValidIndex(SectionBoneIndex))
                 {
-                    const int32 Mapped = InSkeletonBoneToRenderBone[SkelBoneIndex];
-                    RenderBoneIndex = Mapped != INDEX_NONE ? Mapped : 0;
+                    const FBoneIndexType MeshBoneIndex = Section.BoneMap[SectionBoneIndex];
+                    const int32 SkelBoneIndex = InSkeleton->GetSkeletonBoneIndexFromMeshBoneIndex(InMesh, MeshBoneIndex);
+                    int32 RenderBoneIndex = 0;
+                    if (SkelBoneIndex != INDEX_NONE && InSkeletonBoneToRenderBone.IsValidIndex(SkelBoneIndex))
+                    {
+                        const int32 Mapped = InSkeletonBoneToRenderBone[SkelBoneIndex];
+                        RenderBoneIndex = Mapped != INDEX_NONE ? Mapped : 0;
+                    }
+                    Out.BoneIndexBuffer.SetBoneIndex(VertexIndex, InfluenceIndex, static_cast<uint32>(RenderBoneIndex));
                 }
-                Out.BoneIndexBuffer.SetBoneIndex(VertexIndex, InfluenceIndex, static_cast<uint32>(RenderBoneIndex));
+
+                const uint8 Quantized = (WeightSum > 0)
+                    ? static_cast<uint8>(FMath::Clamp<uint32>((static_cast<uint32>(RawWeights[InfluenceIndex]) * 255 + WeightSum / 2) / WeightSum, 0, 255))
+                    : (InfluenceIndex == 0 ? 255 : 0); // degenerate source: rigid-bind to influence 0
+                Out.BoneWeightBuffer.SetWeight(VertexIndex, InfluenceIndex, Quantized);
+                QuantizedSum += Quantized;
+                if (RawWeights[InfluenceIndex] > RawWeights[StrongestSlot])
+                { StrongestSlot = InfluenceIndex; }
+            }
+            if (WeightSum > 0 && QuantizedSum != 255)
+            {
+                const int32 Fixed = static_cast<int32>(Out.BoneWeightBuffer.WeightData[VertexIndex * MBI + StrongestSlot]) + (255 - QuantizedSum);
+                Out.BoneWeightBuffer.SetWeight(VertexIndex, StrongestSlot, static_cast<uint8>(FMath::Clamp(Fixed, 0, 255)));
             }
         }
 
-        Out.VertexFactory = MakeUnique<TCk_Iskm_BatchedVertexFactory<4>>(InFeatureLevel);
+        Out.VertexFactory = (MBI == 8)
+            ? TUniquePtr<FCk_Iskm_BatchedVertexFactory>(MakeUnique<TCk_Iskm_BatchedVertexFactory<8>>(InFeatureLevel))
+            : TUniquePtr<FCk_Iskm_BatchedVertexFactory>(MakeUnique<TCk_Iskm_BatchedVertexFactory<4>>(InFeatureLevel));
     }
 }
 
@@ -332,10 +401,11 @@ void
 
         FLODData& LOD = LODs[i];
         LOD.BoneIndexBuffer.InitResource(RHICmdList);
+        LOD.BoneWeightBuffer.InitResource(RHICmdList);
         if (LOD.VertexFactory.IsValid())
         {
             LOD.VertexFactory->AnimCollectionUB = InAnimCollectionUB;
-            LOD.VertexFactory->FillData(&LOD.BoneIndexBuffer, &LODData);
+            LOD.VertexFactory->FillData(&LOD.BoneIndexBuffer, &LOD.BoneWeightBuffer, &LODData);
             LOD.VertexFactory->InitResource(RHICmdList);
         }
     }
@@ -348,6 +418,7 @@ void
     for (FLODData& LOD : LODs)
     {
         LOD.BoneIndexBuffer.ReleaseResource();
+        LOD.BoneWeightBuffer.ReleaseResource();
         if (LOD.VertexFactory.IsValid())
         {
             LOD.VertexFactory->ReleaseResource();

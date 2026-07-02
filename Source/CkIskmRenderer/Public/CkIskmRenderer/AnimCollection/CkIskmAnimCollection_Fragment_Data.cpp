@@ -271,17 +271,18 @@ auto
     // remap table directly so the engine-only VF module stays decoupled from this asset type.
     if (ck::IsValid(_DefaultMesh) && ck::IsValid(_Skeleton))
     {
-        // MVP bone-influence guard. Policy lives here — the CkCore-linked module — because the engine-only VF
-        // module (PostConfigInit, no Ck deps) can't CK_ENSURE. >4 influences skin incorrectly: the batched path
-        // keeps only the first 4 weights and does NOT renormalize the dropped ones.
+        // Bone-influence guard. Policy lives here — the CkCore-linked module — because the engine-only VF module
+        // (PostConfigInit, no Ck deps) can't CK_ENSURE. The batched path skins up to 8 influences (4- and
+        // 8-influence vertex factories, weights renormalized into an owned buffer); beyond 8 the strongest 8 are
+        // kept and renormalized — visually close, but flag the content.
         if (const FSkeletalMeshRenderData* RenderData = _DefaultMesh->GetResourceForRendering())
         {
             for (const FSkeletalMeshLODRenderData& LODData : RenderData->LODRenderData)
             {
                 for (const FSkelMeshRenderSection& Section : LODData.RenderSections)
                 {
-                    CK_ENSURE_IF_NOT(Section.MaxBoneInfluences <= 4,
-                        TEXT("[CkIskm] Batched renderer MVP supports <= 4 bone influences; a section has {} — extra influences dropped."),
+                    CK_ENSURE_IF_NOT(Section.MaxBoneInfluences <= 8,
+                        TEXT("[CkIskm] Batched renderer supports <= 8 bone influences; a section has {} — strongest 8 kept, weights renormalized."),
                         Section.MaxBoneInfluences)
                     { }
                 }
