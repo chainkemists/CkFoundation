@@ -45,8 +45,15 @@ struct CKSNAPSHOT_API FCk_Snapshot_Header
 public:
     CK_GENERATED_BODY(FCk_Snapshot_Header);
 
+public:
+    // Version history:
+    //   1 — initial format.
+    //   2 — dynamic-fragment handle remap covers TYPED handles (IsChildOf, not exact-match) + TSet/TMap containers,
+    //       so v2 streams carry handle ids a v1 reader would not expect (and vice versa) — no cross-compatibility.
+    static constexpr uint16 CurrentFormatVersion = 2;
+
 private:
-    UPROPERTY() uint16              _FormatVersion = 1;
+    UPROPERTY() uint16              _FormatVersion = CurrentFormatVersion;
     // Stored as string (FEngineVersion is not a USTRUCT and cannot be a UPROPERTY).
     // Populated via FEngineVersion::Current().ToString() on save.
     UPROPERTY() FString             _EngineVersion;

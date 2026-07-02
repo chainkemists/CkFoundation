@@ -45,7 +45,7 @@ namespace ck::snapshot
         // ---- Stamp header --------------------------------------------------------------------------------------
         // _WorldAssetPath is intentionally left untouched here — the registry core has no UWorld. The UWorld
         // wrapper stamps it before delegating.
-        InOutHeader.Set_FormatVersion(1);
+        InOutHeader.Set_FormatVersion(FCk_Snapshot_Header::CurrentFormatVersion);
         InOutHeader.Set_EngineVersion(FEngineVersion::Current().ToString());
         InOutHeader.Set_TimestampUTC(FDateTime::UtcNow());
 
