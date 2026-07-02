@@ -210,10 +210,10 @@ void
         return;
     }
 
-    if (SaveGame->_Header.Get_FormatVersion() != 1)
+    if (SaveGame->_Header.Get_FormatVersion() != FCk_Snapshot_Header::CurrentFormatVersion)
     {
-        ck::snapshot::Error(TEXT("Request_Load: incompatible format version [{}] in slot [{}]"),
-            SaveGame->_Header.Get_FormatVersion(), InSlotName);
+        ck::snapshot::Error(TEXT("Request_Load: incompatible format version [{}] (current [{}]) in slot [{}]"),
+            SaveGame->_Header.Get_FormatVersion(), FCk_Snapshot_Header::CurrentFormatVersion, InSlotName);
         InDelegate.ExecuteIfBound(MakeFailureReport(ECk_SnapshotResult::Failed_IncompatibleSave));
         return;
     }
@@ -576,6 +576,18 @@ auto
         case ELoadPhase::Restoring:
         {
             _PendingRestoreReport = DoRun_Restore();
+
+            // A failed/corrupt restore must NOT proceed to stamping/respawn — the registry state is not trustworthy.
+            // The world was already wiped (registry.clear()), so this is not recoverable in-place; finish the load
+            // with the failure report so the caller can decide (reload another slot, return to menu, ...).
+            if (_PendingRestoreReport.Get_Result() != ECk_SnapshotResult::Success)
+            {
+                ck::snapshot::Error(TEXT("Request_Load: restore FAILED with result [{}] — aborting load (world was wiped; "
+                    "the registry is empty/partial)"), _PendingRestoreReport.Get_Result());
+                DoFinish_Load(_PendingRestoreReport);
+                return false;
+            }
+
             ck::snapshot::Display(TEXT("DIAG: restored [{}] entities into post-travel world — stamping respawn markers"),
                 _PendingRestoreReport.Get_EntitiesRestored());
 
