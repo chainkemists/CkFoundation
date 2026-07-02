@@ -20,6 +20,7 @@
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h" // M2b-1 reconstitution-in-progress gate
 
+#include <Engine/BlueprintGeneratedClass.h>
 #include <UObject/ObjectPtr.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -310,8 +311,12 @@ auto
 
             if (ck::Is_NOT_Valid(EntityScriptProp, ck::IsValid_Policy_NullptrOnly{}))
             {
-                // BP must have all properties in struct, c++ classes may not
-                CK_ENSURE_IF_NOT(NOT InEntityScript->GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint),
+                // BP must have all properties in struct; code-authored (C++/AS) classes may
+                // legitimately receive a shared struct and ignore extra fields.
+                // NOTE: CLASS_CompiledFromBlueprint cannot be used here — the AS engine fork
+                // sets that flag on AngelScript classes too; only true BP assets are instances
+                // of UBlueprintGeneratedClass (see CkAngelscriptEntityScriptParamsGenerator).
+                CK_ENSURE_IF_NOT(ck::Is_NOT_Valid(::Cast<UBlueprintGeneratedClass>(InEntityScript->GetClass()), ck::IsValid_Policy_NullptrOnly{}),
                     TEXT("Failed to find ExposedOnSpawn Property [{}] on BP Entity Script [{}]. Cannot inject this SpawnParam"),
                     PropertyName,
                     InEntityScript)
