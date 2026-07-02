@@ -138,6 +138,13 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
+        // Registry-teardown window (snapshot load level transition): once the transient entity is destroyed,
+        // no handle can be built for ANY iterated entity (MakeHandle ensures per entity, DoTick bodies that
+        // walk _TransientEntity ensure too) — skip the tick entirely, matching FProcessor_ScriptHosted::Tick.
+        // Destruction-drain frames are unaffected: the transient is alive until the drain completes.
+        if (ck::Is_NOT_Valid(this->_TransientEntity, ck::IsValid_Policy_IncludePendingKill{}))
+        { return; }
+
         auto AdjustedTickRate = InDeltaT + _RemainingDeltaTFromLastFrame;
 
         if (_TickRate == TimeType::ZeroSecond())
@@ -166,6 +173,9 @@ namespace ck
         Pump()
         -> void
     {
+        if (ck::Is_NOT_Valid(this->_TransientEntity, ck::IsValid_Policy_IncludePendingKill{}))
+        { return; }
+
         ++_TotalTicks;
         This()->DoTick(TimeType::ZeroSecond());
     }

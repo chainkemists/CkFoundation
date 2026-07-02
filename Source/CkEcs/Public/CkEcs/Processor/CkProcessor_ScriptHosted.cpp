@@ -52,6 +52,13 @@ namespace ck
         if (ck::Is_NOT_Valid(_Instance.Get()))
         { return; }
 
+        // During registry teardown (e.g. a snapshot-load level transition) the scheduler keeps ticking for a
+        // few frames after the transient entity is destroyed. Every ForEach helper the script body could call
+        // would ensure on the dead handle — skip the dispatch entirely, matching how C++ processors see an
+        // empty view instead of erroring.
+        if (ck::Is_NOT_Valid(_Instance->Get_Handle()))
+        { return; }
+
         _Instance->Tick(InDeltaT);
     }
 

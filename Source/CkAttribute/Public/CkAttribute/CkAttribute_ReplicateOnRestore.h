@@ -66,6 +66,11 @@ namespace ck
             T_HandleType InHandle,
             const FragmentType_Current& /*InCurrent*/) const -> void
         {
+            // Registry-teardown window (snapshot load): the view can still yield tombstoned entries whose
+            // handles no longer reach a valid registry — every query below would ensure. Skip them.
+            if (ck::Is_NOT_Valid(InHandle, ck::IsValid_Policy_IncludePendingKill{}))
+            { return; }
+
             if (NOT InHandle.template Has<FTag_Snapshot_JustRestored>())
             { return; }
 
