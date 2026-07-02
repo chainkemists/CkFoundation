@@ -87,11 +87,26 @@ namespace ck::snapshot
                 ck::snapshot::Warning(TEXT("Run_Restore_Registry: skipped unknown fragment type [{}] (hash [{}], [{}] bytes)"),
                     Entry.Get_DisplayName(), Entry.Get_EnttTypeHash(), Entry.Get_ByteLength());
             }
+
+            // Truncated/corrupt stream → archive error flag. Stop rather than deserialize garbage as Success.
+            if (InByteReader.IsError())
+            {
+                ck::snapshot::Error(TEXT("Run_Restore_Registry: byte stream errored while restoring fragment [{}] — the "
+                    "save is corrupt/truncated. Aborting restore."), Entry.Get_DisplayName());
+                return Report; // Result is still Failed_IO
+            }
         }
 
         // ---- Tag section + defensive lifecycle strip (BEFORE orphans, so tag-only entities survive) -----------
         ck::snapshot::Restore_Tags(InRegistry, Loader, InByteReader, InHeader.Get_TagSectionByteOffset());
         ck::snapshot::Strip_LifecycleTags(InRegistry);
+
+        if (InByteReader.IsError())
+        {
+            ck::snapshot::Error(TEXT("Run_Restore_Registry: byte stream errored while restoring the tag section — the "
+                "save is corrupt/truncated. Aborting restore."));
+            return Report; // Result is still Failed_IO
+        }
 
         // ---- Finalize: release entities that ended up with no components ---------------------------------------
         Loader.orphans();
@@ -170,11 +185,30 @@ namespace ck::snapshot
                 ck::snapshot::Warning(TEXT("Run_Restore: skipped unknown fragment type [{}] (hash [{}], [{}] bytes)"),
                     Entry.Get_DisplayName(), Entry.Get_EnttTypeHash(), Entry.Get_ByteLength());
             }
+
+            // A truncated/corrupt stream sets the archive error flag (reads past the end return zeroes and mark
+            // error). Every subsequent fragment would deserialize garbage — stop HERE and report, rather than
+            // completing a garbage half-restore as Success.
+            if (InByteReader.IsError())
+            {
+                ck::snapshot::Error(TEXT("Run_Restore: byte stream errored while restoring fragment [{}] — the save is "
+                    "corrupt/truncated. Aborting restore."), Entry.Get_DisplayName());
+                Report.Set_Result(ECk_SnapshotResult::Failed_IO);
+                return Report;
+            }
         }
 
         // ---- Tag section + defensive lifecycle strip (BEFORE the transient adopt + orphans) ---------------------
         ck::snapshot::Restore_Tags(*RawRegistry, Loader, InByteReader, InHeader.Get_TagSectionByteOffset());
         ck::snapshot::Strip_LifecycleTags(*RawRegistry);
+
+        if (InByteReader.IsError())
+        {
+            ck::snapshot::Error(TEXT("Run_Restore: byte stream errored while restoring the tag section — the save is "
+                "corrupt/truncated. Aborting restore."));
+            Report.Set_Result(ECk_SnapshotResult::Failed_IO);
+            return Report;
+        }
 
         // ---- ADOPT the restored transient. Do this BEFORE orphans() so it is never released (it carries
         // LifetimeDependents, so orphans would keep it anyway, but the explicit adopt re-wires the world bookkeeping).
