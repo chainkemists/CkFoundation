@@ -2,13 +2,14 @@
 // ANGELSCRIPT GUIDELINES — CkFoundation framework reference
 //============================================================================
 //
-// For AngelScript (.as) development against CkFoundation. For C++ work, read
-// Plugins/CkFoundation/Source/CLAUDE.md. File is in code-comment format for
-// token-efficient loading into Claude context.
-//
-// CkFoundation is a custom ECS framework for UE 5.5+. Do NOT assume framework
-// behavior — verify against existing .as files, or ask. Prefer
-// Research → Plan → Implement over jumping to code.
+// AngelScript (.as) development against CkFoundation: language deltas from
+// C++, the utils_* layer, dynamic handles, generated-script hygiene. Style,
+// naming, macros, lingo, and the non-negotiables live in the root doctrine
+// (Plugins/CkFoundation/CLAUDE.md) and are NOT restated here. C++ module
+// topology: Source/CLAUDE.md. Engine: UnrealEngine-Angelscript 5.7.x
+// (Hazelight fork) — see root CLAUDE.md "Identity" (verified 2026-07-02).
+// Do NOT assume framework behavior — verify against existing .as files, or
+// ask. Research → Plan → Implement (root doctrine, Collaboration protocol).
 
 //============================================================================
 // 1. LANGUAGE DIFFERENCES FROM C++
@@ -26,7 +27,7 @@
 // - No pointers. UObject vars are automatic references. `UPROPERTY()` is NOT
 //   needed for GC protection (unlike C++).
 // - No constructors in classes. Use `default Prop = value;` and
-//   `UPROPERTY(DefaultComponent) ...` (see §9).
+//   `UPROPERTY(DefaultComponent) ...` (see §8). Structs MAY have constructors.
 // - No `ck::IsValid_Policy_NullptrOnly{}` — only basic `ck::IsValid(x)` and
 //   `ck::Is_NOT_Valid(x)`.
 // - `float` is 64-bit double (UE5 large-world coords). Use `float32` when you
@@ -47,10 +48,10 @@
 
 // auto everywhere except UPROPERTY
 auto MyVar = SomeFunction();
-auto Handle = ck::SelfEntity(this);
+auto Handle = ck::ToEntity(this);   // see §5 for the ToEntity overloads
 
 UPROPERTY()
-UCk_MusicLibrary_Base SomeLibrary;
+UCk_IsmRenderer_Data SomeRendererAsset;
 
 // Float precision
 float ValueDouble = 1.0;         // 64-bit
@@ -60,16 +61,14 @@ float64 ValueAlsoDouble = 1.0;   // explicit 64-bit
 // Type casting — direct, NOT static_cast
 auto ArmorValue = uint8(Math::Clamp(V * 2.0f, 0.0f, 255.0f));
 
-// String formatting — f"" interpolation; NO `+=` or `+` for strings
+// String formatting — f"" interpolation; NO `+=` or `+` for strings.
+// NEVER put a raw FCk_Handle in an f-string — runtime throw, see §22.1.
 auto DisplayText = "=== ATTRIBUTES ===\n";
 DisplayText = f"{DisplayText}Health: {HP} (Base: {Base})\n";
 
 // Advanced format specifiers
 auto Debug     = f"{DeltaSeconds =}";              // "DeltaSeconds = 0.01"
-auto Precise   = f"{Value :.3}";                   // 3 decimals
-auto Padded    = f"{400 :010d}";                   // "0000000400"
-auto Hex       = f"{20 :#x}";                      // "0x14"
-auto RightAln  = f"{GetName() :>40}";              // right-align 40
+auto Precise   = f"{Value :.3}";                   // 3 decimals ( :010d pad, :#x hex, :>40 right-align)
 auto EnumName  = f"{ESlateVisibility::Collapsed :n}";  // "Collapsed"
 
 //============================================================================
@@ -80,40 +79,49 @@ if (ck::IsValid(SomePointer)) { /* ... */ }
 if (ck::Is_NOT_Valid(SomePointer)) { return; }
 if (IsEnabled == false) { return; }   // preferred
 if (!IsEnabled) { return; }           // OK
-
-// Bool naming: NO `b` prefix
-bool IsAlive = true;   // not bIsAlive
+bool IsAlive = true;                  // NO `b` prefix (not bIsAlive)
 
 //============================================================================
 // 4. ENTITY SCRIPT LIFECYCLE
 //============================================================================
+//
+// C++ hooks are BlueprintImplementableEvents on UCk_GenericEntityScript_UE
+// (Source/CkEcs/Public/CkEcs/EntityScript/CkGenericEntityScript.h:48,55,62,69);
+// AS subclasses override them with UFUNCTION(BlueprintOverride).
 
 UFUNCTION(BlueprintOverride)
 ECk_EntityScript_ConstructionFlow DoConstruct(FCk_Handle& InHandle)
 {
     // Add fragments / child entities here.
     return ECk_EntityScript_ConstructionFlow::Finished;
+    // Return ::Continue instead to defer BeginPlay — you must then call
+    // DoFinishConstruction() when ready (enum: CkEntityScript.h), and
+    // DoContinueConstruction(FCk_Handle) is the hook for that deferred path.
 }
 
 UFUNCTION(BlueprintOverride)
-void DoBeginPlay(FCk_Handle InHandle)
-{
-    auto SelfEntity = InHandle;   // use the param, not ck::SelfEntity(this)
-}
+void DoBeginPlay(FCk_Handle InHandle) { /* use the param, not ck::ToEntity(this) */ }
 
 UFUNCTION(BlueprintOverride)
-void DoEndPlay(FCk_Handle InHandle)
-{
-    // Unbind signals (auto if PostFireBehavior::Unbind was used at bind time).
-}
+void DoEndPlay(FCk_Handle InHandle) { /* unbind signals (auto if bound with PostFireBehavior::Unbind) */ }
 
 //============================================================================
 // 5. FRAMEWORK API — UTILS SHORTCUTS
 //============================================================================
 //
 // ALWAYS use utils_* shortcuts. NEVER the full UCk_Utils_X_UE:: names.
+// Grounding: FCkAngelscriptWrapperGenerator emits 268 generated namespaces at
+// editor boot (Script/Generated/utils_<feature>.as, one per UCk_Utils_<Feature>_UE);
+// hand-written Script/CkUtils_*.as files merge extra sugar into the same
+// namespaces. Not just style: a function whose first param type matches its
+// class's ScriptMixin target binds as a HANDLE MEMBER only — the static form
+// does not even resolve for it; the utils_* wrapper works uniformly (it
+// forwards to the member form when needed, e.g. Generated/utils_timer.as:199).
 
-auto SelfEntity = ck::SelfEntity(this);
+auto SelfEntity = ck::ToEntity(this);
+// Two overloads (Script/CkUtils_Common.as:5,10): ck::ToEntity(const AActor) /
+// ck::ToEntity(const UCk_EntityScript_UE). Replaces the REMOVED ck::SelfEntity
+// — the old name fails to compile (§21).
 
 // Transform
 utils_transform::Add(Handle, Transform, ReplicationMode);
@@ -135,17 +143,16 @@ auto Typed  = Cast<UMyEntityScript>(Script);
 utils_i_o::LoadAssetByName(
     "/CkTests/CkAudio/SFX/Ambient_Edm_SFX.Ambient_Edm_SFX",
     ECk_AssetSearchScope::Plugins);
-// Scopes: Game, Plugins, Engine, All
+// Scopes: Game (default), Plugins, Engine, All. Optional 3rd param
+// ECk_AssetSearchStrategy (default ExactThenFuzzy) — Generated/utils_i_o.as:32.
 
-// BAD patterns (never use):
-//   UCk_Utils_Probe_UE::Add(...)
-//   UCk_Utils_AudioDirector_UE::Request_StartTrack(...)
+// BAD (never): UCk_Utils_Probe_UE::Add(...), UCk_Utils_AudioDirector_UE::Request_StartTrack(...)
 
 //============================================================================
 // 6. HANDLE CONVERSIONS
 //============================================================================
 
-auto SelfEntity         = ck::SelfEntity(this);
+auto SelfEntity         = ck::ToEntity(this);
 auto TransformHandle    = SelfEntity.To_FCk_Handle_Transform();
 auto ProbeHandle        = SelfEntity.To_FCk_Handle_Probe();
 auto AudioDirectorH     = SelfEntity.To_FCk_Handle_AudioDirector();
@@ -157,24 +164,30 @@ auto AudioDirectorH     = SelfEntity.To_FCk_Handle_AudioDirector();
 //   without an explicit As_Inventory(...). Parent-utility methods (Get_*, Request_*)
 //   are also propagated onto the derived handle in AS via the mixin pass.
 //
-// Validation note:
-//   Implicit parent conversion is UNCHECKED — it forwards the bytes as-is, no
-//   CastChecked / fragment-presence ensure runs at the call boundary. The downstream
-//   util ensures when it touches state. Use As_Parent() explicitly when you want the
-//   boundary diagnostic (e.g. when the source handle's fragment-presence is uncertain).
+// Validation note: implicit parent conversion is UNCHECKED — it forwards the
+// bytes as-is; no CastChecked / fragment-presence ensure runs at the call
+// boundary (the bound opImplConv is a pass-through:
+// CkHandle_TypeSafe_AngelScript.h:48-54). The downstream util ensures when it
+// touches state. Use As_Parent() explicitly when you want the boundary
+// diagnostic (e.g. when the source handle's fragment-presence is uncertain).
 
 //============================================================================
 // 7. DYNAMIC HANDLE REGISTRATION (CRITICAL GOTCHA)
 //============================================================================
 //
 // Declaring a typesafe handle via `asset <X>Handle of UCkDynamic_HandleDefinition`
-// is NOT sufficient on its own. A registry JSON at
-//   <Project>/Script/Generated/DynamicHandleTypes.json
-// (path from `UCk_Utils_Dynamic_Settings_UE::Get_DynamicHandleRegistryFilePath()`;
-// default `FPaths::ProjectConfigDir()`) must contain a matching entry, or AS
-// compilation fails at engine startup with:
+// is NOT sufficient on its own. A registry JSON — DynamicHandleTypes.json —
+// must contain a matching entry, or AS compilation fails at engine startup —
 //   Identifier 'FCk_Handle_<X>' is not a data type in global namespace
-// across every file that references the type (feature, utils, processor, HFSM).
+// — in every file referencing the type (feature, utils, processor, HFSM).
+//
+// Registry path: UCk_Utils_Dynamic_Settings_UE::Get_DynamicHandleRegistryFilePath()
+// (Source/CkDynamic/Public/CkDynamic/Settings/CkDynamic_Settings.cpp; default
+// dir = ProjectConfigDir). Superprojects usually override — BusterBlock,
+// Config/DefaultCkFoundation.ini:118:
+//   [/Script/CkDynamic.Ck_Dynamic_ProjectSettings_UE]
+//   _DynamicHandleRegistryDirectory=(Path="../../Script/Generated")
+// → <Project>/Script/Generated/DynamicHandleTypes.json.
 
 // Example declaration:
 //   asset CheckoutCounterHandle of UCkDynamic_HandleDefinition
@@ -183,90 +196,44 @@ auto AudioDirectorH     = SelfEntity.To_FCk_Handle_AudioDirector();
 //       RequiredFragments.Add(FBb_Feature_CheckoutCounter);
 //       Description = "...";
 //   }
-
 // Matching JSON entry:
-//   {
-//     "TypeName": "FCk_Handle_CheckoutCounter",
-//     "ShortName": "CheckoutCounter",
+//   { "TypeName": "FCk_Handle_CheckoutCounter", "ShortName": "CheckoutCounter",
 //     "Description": "...",
 //     "SourceAsset": "/Script/AngelscriptAssets.CheckoutCounterHandle",
-//     "RequiredFragments": ["Bb_Feature_CheckoutCounter"]
-//   }
+//     "RequiredFragments": ["Bb_Feature_CheckoutCounter"] }
+// Gotchas: RequiredFragments drops the `F` prefix (FBb_Feature_X → Bb_Feature_X);
+// SourceAsset follows `/Script/AngelscriptAssets.<Name>Handle`; the file is
+// UTF-16 LE — preserve the encoding if you ever touch it by hand.
 
-// Gotchas:
-// - RequiredFragments drops the `F` prefix — `FBb_Feature_X` → `Bb_Feature_X`.
-// - SourceAsset follows `/Script/AngelscriptAssets.<Name>Handle`.
-// - In the normal self-heal path (see "ADDING A NEW HANDLE" below) no restart
-//   is needed — the deferred regen rebinds the live AS types mid-session. The
-//   restart caveat below applies only to the EDGE-CASE manual recovery (when
-//   self-heal is disabled): a hand-regenerated registry is not picked up by
-//   hot reload, so restart the editor (or run ForceRefreshDynamicHandleBindings
-//   below, which attempts hot rebinding without restart).
+// ADDING A NEW HANDLE — ONE EDIT (self-heal is default-on): land declaration
+// + empty feature struct (FBb_Feature_<X> {}) + first consumer (e.g. a utils
+// Add returning As_<X>()) in ONE edit, then boot the editor. Observed cycle
+// (canonical: Source/CkAngelscriptGenerator/Claude.md, DynamicHandle row):
+//   1. First-pass compile FAILS: "not a data type" + consumer no-match +
+//      "Hot reload failed ... Keeping all old script code".
+//   2. Self-heal writes Script/Generated/_StubRecovery_DynamicHandleTypes.json
+//      + a permissive validator; logs "Self-heal recovered: FCk_Handle_<X>".
+//   3. Deferred regen (OnPostEngineInit) writes the REAL JSON entry (sorted by
+//      TypeName, UTF-16 LE, F-prefix stripped), removes the stub, goes strict.
+//   4. The recompile pass compiles the consumer clean. No restart needed.
+// The first-pass errors are EXPECTED TRANSIENTS of the cycle, not a failure.
+// Success gate = a clean reload AFTER the deferred regen + the entry present
+// in DynamicHandleTypes.json — NOT the absence of first-pass errors.
 
-// HOW TO REGENERATE (don't hand-edit unless you know why):
-// `UCkDynamicHandleSubsystem` (editor subsystem) exposes two CallInEditor
-// buttons:
-//   - GenerateHandleTypeRegistry()        — discovers all
-//     UCkDynamic_HandleDefinition assets, writes JSON sorted by TypeName.
-//   - ForceRefreshDynamicHandleBindings() — regenerates + resets registry
-//     flags + re-registers AS bindings without an editor restart (dev-only).
-// Locate under Editor Subsystems or call from a Blueprint. Source:
-//   Source/CkAngelscriptGenerator/DynamicHandles/CkDynamicHandleSubsystem.{h,cpp}
+// MANUAL REGEN: UCkDynamicHandleSubsystem (editor subsystem) CallInEditor buttons:
+//   GenerateHandleTypeRegistry()        — rewrite JSON from all definitions
+//   ForceRefreshDynamicHandleBindings() — regen + re-register live AS bindings
+//                                         without an editor restart (dev-only)
+// Source: Source/CkAngelscriptGenerator/DynamicHandles/CkDynamicHandleSubsystem.{h,cpp}
 
-// Runtime consumers:
-// - Path resolution:
-//   Source/CkDynamic/Public/CkDynamic/Settings/CkDynamic_Settings.cpp
-// - Registry load:
-//   Source/CkAngelscriptGenerator/DynamicHandles/CkDynamicHandleSubsystem.cpp
-
-// ADDING A NEW HANDLE TO A LIVE PROJECT — ONE EDIT (self-heal recovers)
-//
-// NORMAL PATH (self-heal enabled, which is the default): land the handle
-// declaration + the empty feature struct (FBb_Feature_<X> {}) + the first
-// consumer (e.g. a utils Add returning As_<X>()) all in ONE edit, then boot
-// the editor. The AS bootstrap self-heal dispatcher auto-recovers the
-// registration end-to-end in a single boot — no manual JSON edit, no two-phase
-// split, no editor restart. Observed cycle (see the canonical mechanism write-up
-// in Source/CkAngelscriptGenerator/Claude.md → "Recovery strategies" / the
-// DynamicHandle row):
-//
-//   1. First-pass compile fails: "Identifier 'FCk_Handle_<X>' is not a data
-//      type" + the consumer's no-matching-signature error + "Hot reload failed
-//      ... Keeping all old script code".
-//   2. Self-heal synthesizes a JSON stub
-//      (Script/Generated/_StubRecovery_DynamicHandleTypes.json) plus a
-//      permissive validator and logs "Self-heal recovered: FCk_Handle_<X>".
-//   3. On OnPostEngineInit a deferred regen writes the REAL entry into
-//      Script/Generated/DynamicHandleTypes.json (correctly sorted by TypeName,
-//      UTF-16 LE BOM preserved, `F`-prefix stripped in RequiredFragments:
-//      FBb_Feature_<X> -> Bb_Feature_<X>), bumps GeneratedAt, removes the stub,
-//      and upgrades the in-memory validator from permissive to strict.
-//   4. The recompile pass compiles the consumer clean.
-//
-// IMPORTANT — the first-pass "not a data type" / consumer-no-match /
-// hot-reload-failed errors are EXPECTED TRANSIENTS of the self-heal cycle, not
-// a real failure. Per the "never report an AS change done without reading the
-// log" rule, the success gate is a clean reload window AFTER the deferred regen
-// fires, plus the entry present in DynamicHandleTypes.json — NOT the absence of
-// first-pass errors.
-//
-// HISTORICAL — "ALWAYS TWO-PHASE / unrecoverable lockup" (pre-self-heal):
-// older revisions of this doc mandated a two-phase split (land the declaration
-// alone, manually regenerate the registry + restart, THEN add consumers) and
-// warned that landing everything in one commit caused an "unrecoverable
-// lockup." That lockup meant un-recoverable VIA IN-EDITOR HOT RELOAD — the AS
-// compile failed project-wide, so the GenerateHandleTypeRegistry() editor
-// button (which needs a healthy AS plugin) couldn't run. It was never
-// repo-bricking: closing the editor and hand-adding the JSON entry always
-// recovered. Self-heal now automates exactly that recovery on boot, so the
-// two-phase split is no longer required.
-//
-// EDGE-CASE MANUAL RECOVERY (only when self-heal is DISABLED — `-NoCkAsRegen`
-// per-session, or `_EnableAsBootstrapSelfHeal = false` in CkFoundation.ini):
-// fall back to the manual path. With the editor CLOSED, either hand-add the
-// JSON entry (preserve the UTF-16 LE encoding) or, once the AS plugin is
-// healthy again, run UCkDynamicHandleSubsystem::GenerateHandleTypeRegistry()
-// and restart the editor (or click ForceRefreshDynamicHandleBindings()).
+// EDGE CASE — self-heal DISABLED (`-NoCkAsRegen`, or
+// `_EnableAsBootstrapSelfHeal = false` in CkFoundation.ini): with the editor
+// CLOSED, hand-add the JSON entry (keep UTF-16 LE), or once AS is healthy run
+// GenerateHandleTypeRegistry() + restart (or ForceRefreshDynamicHandleBindings()).
+// HISTORY: the old "unrecoverable lockup" that mandated a two-phase split only
+// meant unrecoverable via in-editor hot reload — closing the editor and
+// hand-adding the JSON always recovered; self-heal now automates exactly that,
+// so the one-edit path is the normal path.
 
 //============================================================================
 // 8. ACTORS & COMPONENTS
@@ -279,11 +246,8 @@ class AMyActor : AActor
     UPROPERTY(DefaultComponent, RootComponent)
     USceneComponent SceneRoot;
 
-    UPROPERTY(DefaultComponent, Attach = SceneRoot)
+    UPROPERTY(DefaultComponent, Attach = SceneRoot)   // AttachSocket = <Name> also supported
     UStaticMeshComponent Mesh;
-
-    UPROPERTY(DefaultComponent, Attach = CharacterMesh, AttachSocket = RightHand)
-    UStaticMeshComponent WeaponMesh;
 
     // Defaults — NOT constructors
     default SceneRoot.bGenerateOverlapEvents = true;
@@ -306,26 +270,19 @@ auto Named   = USkeletalMeshComponent::Get(Actor, n"WeaponMesh");   // by name
 auto Interact= UInteractionComponent::GetOrCreate(Actor);
 auto New     = UStaticMeshComponent::Create(Character);             // always new
 
-// Spawn actors
+// Spawn actors — class literal or a TSubclassOf<...> UPROPERTY both work
 auto Spawned = SpawnActor(AMyActor, SpawnLocation, SpawnRotation);
-UPROPERTY() TSubclassOf<AMyActor> ActorClass;
-auto Spawned2 = SpawnActor(ActorClass, SpawnLocation, SpawnRotation);
 
 // Query
-TArray<UStaticMeshComponent> Meshes;
-Actor.GetComponentsByClass(Meshes);
-TArray<ANiagaraActor> Niagaras;
-GetAllActorsOfClass(Niagaras);
+TArray<UStaticMeshComponent> Meshes;   Actor.GetComponentsByClass(Meshes);
+TArray<ANiagaraActor> Niagaras;        GetAllActorsOfClass(Niagaras);
 
 // Construction script
 UFUNCTION(BlueprintOverride)
 void ConstructionScript()
 {
-    for (int i = 0; i < Count; ++i)
-    {
-        auto M = UStaticMeshComponent::Create(this);
-        M.SetStaticMesh(MeshAsset);
-    }
+    auto M = UStaticMeshComponent::Create(this);
+    M.SetStaticMesh(MeshAsset);
 }
 
 //============================================================================
@@ -351,8 +308,7 @@ UFUNCTION() void Build(FMyStruct&out O, bool&out bOK)  { O.Value = 42.0; bOK = t
 delegate void FMyDelegate(UObject Object, float Value);
 event    void FMyEvent(int Counter);
 
-StoredDelegate.BindUFunction(this, n"OnDelegateExecuted");
-StoredDelegate = FMyDelegate(this, n"OnDelegateExecuted");
+StoredDelegate = FMyDelegate(this, n"OnDelegateExecuted");  // or .BindUFunction(this, n"...")
 StoredDelegate.ExecuteIfBound(this, DeltaSeconds);
 
 UPROPERTY() FMyEvent OnSomethingHappened;
@@ -378,13 +334,10 @@ void Foo(FSomeParams InParams)
 void Foo(FSomeParams InParams)
 {
     auto ProbeParams = InParams.Probe;
-    if (ProbeParams.LocalOffset.Equals(FTransform::Identity))
-    { ProbeParams.LocalOffset = FTransform(FVector(0, -75, 0)); }
+    ProbeParams.LocalOffset = FTransform(FVector(0, -75, 0));
 
     auto Resolved = FSomeParams();
-    Resolved.Probe      = ProbeParams;
-    Resolved.OtherField = InParams.OtherField;   // copy anything else needed
-    // use Resolved from here on
+    Resolved.Probe = ProbeParams;   // copy anything else needed too
 }
 
 // ✓ Option B: take the param by reference — caller needs a mutable var
@@ -395,39 +348,30 @@ void Foo(FSomeParams& InParams) { InParams.Probe = SomeValue; }
 //============================================================================
 //
 // AS const-correctness is stricter than C++'s. Knowing the rules saves you
-// from chasing "I can't assign X to Y" / "no matching ctor signature" errors
-// down rabbit holes.
+// from chasing "I can't assign X to Y" / "no matching ctor signature" errors.
 //
 // (1) `Cast<T>()` PRESERVES const. Contrary to typical UE C++ where Cast<>
 //     returns a non-const pointer, AS's Cast<T> mirrors the input's const-ness.
 //     Use it for type narrowing, not for stripping const.
+//     const auto Frozen = Cast<UMyThing>(SomeConstValue);   // STILL const
 //
-//     auto NonConstObj  = Cast<UMyThing>(SomeNonConstValue);  // non-const
-//     const auto Frozen = Cast<UMyThing>(SomeConstValue);     // STILL const
-//
-// (2) `auto X = constSource` PRESERVES const. Declaring with `auto` does
-//     not strip const; you get a const local. There is no in-AS way to
-//     launder const away — no const_cast, no routing through a base type.
-//
-//     const auto Def1 = Item.Get_Definition();    // const (Get_Definition is const)
-//     auto       Def2 = Item.Get_Definition();    // STILL const
-//     auto       Def3 = Cast<UCk_InventoryItem_Definition>(Item.Get_Definition()); // STILL const
+// (2) `auto X = constSource` PRESERVES const — you get a const local. There
+//     is no in-AS way to launder const away: no const_cast, no routing
+//     through a base type, and Cast<> doesn't strip it either.
+//     auto Def2 = Item.Get_Definition();    // STILL const (getter is const)
+//     auto Def3 = Cast<UCk_InventoryItem_Definition>(Item.Get_Definition()); // STILL const
 //
 // (3) AS REJECTS const → non-const VALUE-PARAM conversion. C++ silently
-//     copies; AS treats it as a type mismatch. You cannot pass a const
-//     value into a non-const param even though it's a by-value copy.
-//
+//     copies; AS treats it as a type mismatch.
 //     void TakesNonConst(UMyThing X);
 //     const auto Frozen = Item.Get_Definition();
 //     TakesNonConst(Frozen);  // ❌ compile error
-//
 //     The fix is at the receiving function — declare the param `const`:
 //     void TakesConst(const UMyThing X);
 //
 // (4) USTRUCT FIELDS can be declared `const UObject` to receive const values.
-//     This is the load-bearing pattern when you need to thread a const
-//     pointer (e.g. `Item.Get_Definition()` result) through a struct.
-//
+//     Load-bearing when threading a const pointer (e.g. `Item.Get_Definition()`
+//     result) through a struct.
 //     USTRUCT()
 //     struct FMyEntry
 //     {
@@ -435,38 +379,36 @@ void Foo(FSomeParams& InParams) { InParams.Probe = SomeValue; }
 //         UPROPERTY() int32 Count = 1;
 //     }
 //
-// (5) `CK_DEFINE_CONSTRUCTORS` C++ macro: post the CkCore reflection fix,
-//     when a USTRUCT field is `const UObject*` on the C++ side, the
-//     AS-exposed ctor signature now also takes `const UObject` for that
-//     param. So building a request from a const Definition just works:
-//
+// (5) `CK_DEFINE_CONSTRUCTORS` C++ macro: when a USTRUCT field is
+//     `const UObject*` on the C++ side, the AS-exposed ctor also takes
+//     `const UObject` for that param (post the CkCore reflection fix), so
+//     building a request from a const Definition just works:
 //         const auto Def = Item.Get_Definition();
 //         auto Req = FCk_Request_Inventory_AddItemByDefinition(Def, 1); // ✓
-//
-//     (Before the fix, the AS-exposed ctor took non-const, creating a
-//     one-way street that blocked const-correct chains. If you spot
-//     similar asymmetry elsewhere — AS ctor takes non-const but the C++
-//     field is const — that's a `Get_RuntimeTypeToString_AngelScript`
-//     bug, not a workaround for the caller.)
+//     If you spot the old asymmetry elsewhere (AS ctor non-const, C++ field
+//     const), that's a `Get_RuntimeTypeToString_AngelScript` bug — fix it
+//     there, don't work around it at the caller.
 //
 // (6) TArray::Add of const elements is rejected — TArray<T>::Add takes a
-//     non-const ref. Workarounds for dedup are to store a projected key
-//     (e.g. `.GetName()` for FName, `.GetFullName()` for FString) rather
-//     than the value itself.
-//
+//     non-const ref (AddUnique too). For dedup, store a projected key:
 //     TArray<UCk_InventoryItem_Definition> Defs;
 //     const auto Def = Item.Get_Definition();
-//     Defs.Add(Def);              // ❌ const → non-const ref
-//     Defs.AddUnique(Def);        // ❌ same
+//     Defs.Add(Def);                        // ❌ const → non-const ref
 //     TArray<FName> SeenNames;
 //     SeenNames.AddUnique(Def.GetName());   // ✓
-//
+
 //============================================================================
 // 10. SPAWN PARAMS PATTERN
 //============================================================================
 //
-// Struct must match UPROPERTY(ExposeOnSpawn) names exactly on the target.
+// PREFERRED: the generated accessor. For every entity-script class the
+// post-compile generator emits `F<Script>_SpawnParams` + `U<Script>::Params()`
+// into Script/Generated/<Plugin>_EntitySpawnParams.as:
+auto SpawnParams = UCk_EntityScript_EntityScriptGym_Spawn::Params();
+// (set fields, then spawn — real call sites in Plugins/CkTests/Script/CkEntityScript/)
 
+// Hand-rolled alternative: struct field names must match the target script's
+// UPROPERTY(ExposeOnSpawn) names exactly. Structs may have constructors.
 USTRUCT()
 struct FMyEntitySpawnParams
 {
@@ -477,10 +419,14 @@ struct FMyEntitySpawnParams
 }
 
 auto Params  = FMyEntitySpawnParams(StationTransform);
-auto Spawned = utils_entity_script::Request_SpawnEntity(
-    ck::SelfEntity(this),
-    UMyEntityScript,
-    FInstancedStruct::Make(Params));
+auto Pending = utils_entity_script::Request_SpawnEntity(
+    ck::ToEntity(this), UMyEntityScript, Params);
+// Pass the struct directly — the hand-written overloads take
+// FAngelscriptAnyStructParameter (Script/CkUtils_EntityScript.as), implicitly
+// wrapping any AS struct. `FInstancedStruct::Make(Params)` also compiles
+// (in-tree: Plugins/CkTests/Script/Common/CkGym_Utils.as:133). Returns
+// FCk_Handle_PendingEntityScript — bind the constructed callback via:
+//   Pending.Promise_OnConstructed(FCk_Delegate_EntityScript_Constructed(this, n"OnConstructed"));
 
 //============================================================================
 // 11. TIMERS / TICK PATTERN
@@ -491,10 +437,13 @@ auto TimerParams = FCk_Fragment_Timer_ParamsData(FCk_Time(0.0f));
 TimerParams.Set_StartingState(ECk_Timer_State::Running)
            .Set_Behavior(ECk_Timer_Behavior::ResetOnDone);
 auto Timer = utils_timer::Add(InHandle, TimerParams);
-// Generated AS binding: BindTo_OnUpdate(Delegate, BindingPolicy?, PostFireBehavior?).
-// Delegate FIRST. Policy + PostFireBehavior have defaults
-// (FireIfPayloadInFlightThisFrame + DoNothing) — omit unless you need to override.
+// Binding: delegate FIRST; policy + postfire are optional trailing params with
+// defaults (FireIfPayloadInFlightThisFrame + DoNothing) — omit unless overriding.
+// Real signature: CkTimer_Utils.h:315-319 / Generated/utils_timer.as:196.
 Timer.BindTo_OnUpdate(FCk_Delegate_Timer(this, n"Tick"));
+
+// One-liner sugar for a running per-frame tick (Script/CkUtils_Timer.as):
+auto T = utils_timer::Create_Tick(InHandle, FCk_Delegate_Timer(this, n"Tick"));
 
 UFUNCTION()
 private void Tick(FCk_Handle_Timer InHandle, FCk_Chrono InChrono, FCk_Time InDeltaT)
@@ -520,38 +469,74 @@ for (auto E : utils_entity_tag::ForEach_Entity(SelfEntity, n"TAG_MyEntity"))
     if (ck::IsValid(Typed)) { Typed.SomeFunction(); }
 }
 
-// Request structs — use setter chains for optional params
+// Request structs — use fluent setter chains for optional params
 auto Req = FCk_Request_AudioDirector_StartTrack(TrackName);
-Req.Set_PriorityOverrideMode(ECk_PriorityOverride::Override);
-Req.Set_PriorityOverrideValue(75);
-Req.Set_FadeInTime(FCk_Time(2.0f));
+Req.Set_PriorityOverrideMode(ECk_PriorityOverride::Override)
+   .Set_PriorityOverrideValue(75)
+   .Set_FadeInTime(FCk_Time(2.0f));
 utils_audio_director::Request_StartTrack(AudioDirector, Req);
 
-// Signal binding
+// Signal binding — delegate FIRST, exactly as in §11 (a policy-first call does
+// NOT compile; no such overload exists). Override defaults via trailing params:
 FCk_Delegate_Timer TimerDelegate(this, n"Tick");
-Timer.BindTo_OnUpdate(ECk_Signal_BindingPolicy::FireIfPayloadInFlight, TimerDelegate);
-// Delegate function name uses n"FunctionName" (name literal).
+Timer.BindTo_OnUpdate(TimerDelegate);   // defaults: FireIfPayloadInFlightThisFrame + DoNothing
+Timer.BindTo_OnUpdate(TimerDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
 
 //============================================================================
-// 13. ASSET DEFINITIONS ('asset ... of ...')
+// 13. ASSET DEFINITIONS ('asset ... of ...') — canonical home of this topic
 //============================================================================
 //
-// Creates a UDataAsset instance from script, registered as if authored in the
-// editor. Preferred when the asset belongs to a specific .as file.
+// `asset <Name> of <UDataAssetSubclass>` creates a data-asset instance from
+// script, registered with the engine as if authored in the editor — no
+// .uasset to manage (object path: /Script/AngelscriptAssets.<Name>).
+// Preferred for data assets conceptually owned by a specific .as file: a
+// feature's gameplay tags, asset-registry configs, item/look definitions.
+// NOT for hand-authored content (meshes/textures/BPs), assets edited
+// frequently by non-programmers, or shared assets in engine Content folders.
+//
+// INITIALIZER RULES (it's an initializer block; statement order irrelevant):
+// - Assign public UPROPERTY fields directly: `Field = value;` (private
+//   BlueprintReadWrite fields work the same way). Call methods on fields
+//   (`GameplayTags.Add(n"Some.Tag");`); local struct variables are allowed.
+//   NO `default` keyword inside an asset block.
+// - Functions cannot be DEFINED inside an asset block — define a global /
+//   namespace function and call it from the initializer (real:
+//   CkTests_AutoTestMapConfig.as calls assets::AutoTests_CkTests_Level()).
 
-// Gameplay tags — declare where used (usually <Feature>_Shared.as or a gym
-// station file). Do NOT create a separate _Assets.as just for tags.
+// Real example (Script/CkUsf/CkUsf_Looks_Assets.as:3 — trimmed):
+namespace CkUsf
+{
+    asset Hologram of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/Hologram.ush";
+        _UshFunctionName = n"CkUsf_Look_Hologram";
+
+        FCk_Usf_ParamDesc Tint;          // locals + field method calls are fine
+        Tint._Name = n"TintColor";
+        _Parameters.Add(Tint);
+    }
+}
+
+// GAMEPLAY TAGS — DECLARE WHERE USED. Tag assets (UCk_GameplayTags) belong in
+// the file that primarily uses them — a feature's _Shared.as / _Common.as, or
+// directly in a station/test file if only used there. Do NOT create a
+// separate _Assets.as just for tags.
+//   GOOD: tags in CkEqs_Shared.as / CkProbeGym_Common.as (real in-tree examples)
+//   BAD:  tags in CkInteractionGym_Assets.as (separate file just for tags)
 namespace Ck
 {
     asset Asset_Tags of UCk_GameplayTags
     {
         GameplayTags.Add(n"MyFeature.Category.SomeTag");
-        GameplayTags.Add(n"MyFeature.Category.AnotherTag");
     }
 }
 
-// Editor-only types MUST be inside `#if EDITOR` or compilation fails with
-// "Cannot use editor-only type ... outside of an EDITOR block".
+// #if EDITOR IS REQUIRED for editor-only asset types — otherwise the script
+// fails to compile at engine startup with:
+//   "Cannot use editor-only type ... outside of an EDITOR block"
+// e.g. UCkAssetRegistryConfig (editor-only; scans a content folder and
+// generates a .as file of typed asset accessors). Real gated example:
+// Plugins/CkTests/Script/Common/CkTests_AutoTestMapConfig.as:27-28.
 #if EDITOR
     asset MyFeature_AssetRegistryConfig of UCkAssetRegistryConfig
     {
@@ -561,27 +546,12 @@ namespace Ck
     }
 #endif
 
-// Asset initializers: assign UPROPERTY fields directly, or call methods
-// (e.g. `Container.Add(...)`). NO `default` keyword inside an asset.
-// Functions cannot be members of assets — call global functions:
-TArray<FCk_MusicTrackEntry> Get_MusicTracks()
-{
-    auto Tracks = TArray<FCk_MusicTrackEntry>();
-    auto T = FCk_MusicTrackEntry();
-    T.Set_TrackName(utils_gameplay_tag::ResolveGameplayTag(n"Music.Track1"));
-    Tracks.Add(T);
-    return Tracks;
-}
-asset MyMusicLibrary of UCk_MusicLibrary_Base
-{
-    _LibraryName = utils_gameplay_tag::ResolveGameplayTag(n"My.Music.Library");
-    _Tracks      = Get_MusicTracks();
-}
-
-// File naming:
-// - Heavyweight `asset ... of ...` declarations (item defs, ability configs,
-//   etc.) go in `<Feature>_Assets.as`.
-// - Tags alone do NOT require a dedicated _Assets.as file.
+// FILE NAMING: files containing heavyweight `asset ... of ...` declarations
+// (item definitions, look definitions, ability configs — anything beyond
+// simple tags) must use the `_Assets.as` suffix (real: CkUsf_Looks_Assets.as).
+// Tags alone do NOT warrant a dedicated _Assets.as file.
+// Special case: `asset <X>Handle of UCkDynamic_HandleDefinition` also needs
+// the registry entry — see §7.
 
 //============================================================================
 // 14. NETWORKING
@@ -617,18 +587,15 @@ auto T = GameplayTags::UI_Action_Escape;
 //============================================================================
 
 // Mixins — add methods to existing types. First param is `self`.
-mixin void TeleportTo(AActor Self, FVector Loc) { Self.SetActorLocation(Loc); }
-// Usage: MyActor.TeleportTo(FVector(0,0,100));
-mixin void SetToZero(FVector& Self) { Self = FVector(0,0,0); }
-// Usage: MyVector.SetToZero();
+mixin void TeleportTo(AActor Self, FVector Loc) { Self.SetActorLocation(Loc); }  // MyActor.TeleportTo(Loc)
+mixin void SetToZero(FVector& Self) { Self = FVector(0,0,0); }                   // MyVector.SetToZero()
 
 // Subsystems
 auto LevelEditor = ULevelEditorSubsystem::Get();
 auto Player      = Gameplay::GetPlayerController(0).LocalPlayer;
 auto PSub        = UMyPlayerSubsystem::Get(Player);
-// Custom subsystems inherit from UScriptWorldSubsystem,
-// UScriptGameInstanceSubsystem, UScriptLocalPlayerSubsystem,
-// UScriptEditorSubsystem, UScriptEngineSubsystem.
+// Custom subsystems inherit UScriptWorldSubsystem, UScriptGameInstanceSubsystem,
+// UScriptLocalPlayerSubsystem, UScriptEditorSubsystem, UScriptEngineSubsystem.
 
 // BP Function Libraries are exposed as namespaces; common prefixes stripped:
 //   UGameplayStatics        → Gameplay::
@@ -642,30 +609,24 @@ Gameplay::GetPlayerController(0);
 // 16.1 NAMING YOUR OWN BFLs — AVOID SUFFIX-STRIP COLLISIONS (GOTCHA)
 //
 // The AS plugin auto-strips a default suffix list from UBlueprintFunctionLibrary
-// class names when building the AS namespace. Default suffixes (Hazelight fork,
-// AngelscriptSettings.h):
-//   "Statics", "Library", "BlueprintLibrary", "BlueprintFunctionLibrary",
-//   "FunctionLibrary"
-//   (and prefixes: "UKismet", "UBlueprint")
-//
-// If your BFL ends in any of these, AS rewrites the namespace silently and your
-// AS callsites using the C++ name will fail with the misleading error:
+// class names when building the AS namespace. Defaults (Hazelight fork,
+// AngelscriptSettings.h:126-139):
+//   suffixes: "Statics", "Library", "BlueprintLibrary",
+//             "BlueprintFunctionLibrary", "FunctionLibrary"
+//   prefixes: "UKismet", "UBlueprint"
+// If your BFL ends in any of these, AS silently rewrites the namespace and
+// callsites using the C++ name fail with the MISLEADING error:
 //   "No matching signatures to 'UMyClass_FunctionLibrary::Foo()'"
-// Right symptom, wrong root cause — it looks like a parameter mismatch but the
-// class name itself was rewritten.
+// — looks like a parameter mismatch; actually the class name was rewritten.
 //
-// ❌ class UMyFeature_FunctionLibrary : public UBlueprintFunctionLibrary
+// ❌ class UMyFeature_FunctionLibrary : UBlueprintFunctionLibrary
 //      → AS namespace becomes "UMyFeature_" (mangled, won't match callsites)
-// ❌ class UMyFeatureLibrary : public UBlueprintFunctionLibrary
-// ❌ class UMyFeatureStatics : public UBlueprintFunctionLibrary
-//
-// ✓ class UCk_Utils_MyFeature_UE : public UBlueprintFunctionLibrary
+// ✓ class UCk_Utils_MyFeature_UE : UBlueprintFunctionLibrary
 //      → "_UE" isn't on the strip list, namespace round-trips unchanged
 //
-// This is why every BFL in CkFoundation/CkTests follows the `UCk_Utils_X_UE`
-// convention. Stick to it for any new BFL you expose to AS. If you must use a
-// stripped suffix for a non-AS reason, override the AS namespace explicitly via
-// `UCLASS(meta = (ScriptName = "MyChosenName"))`.
+// This is why every Ck BFL ends `_UE` — stick to it for any new BFL exposed
+// to AS. If you must use a stripped suffix for a non-AS reason, override the
+// namespace explicitly via `UCLASS(meta = (ScriptName = "MyChosenName"))`.
 
 //============================================================================
 // 17. EDITOR-ONLY CODE & BP OVERRIDES
@@ -699,36 +660,31 @@ property void  SetHealth(float Value) { _Health = Value; }
 //============================================================================
 // 19. TESTING
 //============================================================================
-
-void Test_MyFeature(FUnitTest& T)
-{
-    T.AssertTrue(Condition);
-    T.AssertEquals(Expected, Actual);
-    T.AssertNotNull(SomePtr);
-}
-
-// Integration tests need a matching level: Content/Testing/IntegrationTest_X.umap
-void IntegrationTest_MyTest(FIntegrationTest& T) { /* latent cmds OK */ }
-
-// Convention: File_Test.as alongside File.as.
+// House testing goes through CkTests (gyms / AutoTests / Gauntlet) — see the
+// root CLAUDE.md skill index (`ck-tests-authoring-and-running`, CkTests) and
+// the specs in Plugins/CkTests/Script/Common/. The Hazelight fork also ships
+// a native harness (FUnitTest / FIntegrationTest); it has ZERO in-tree usage
+// in the Ck plugins (verified 2026-07-02) — do not reach for it by default.
 
 //============================================================================
 // 20. NAMING
 //============================================================================
-// Get_ prefix for getters, Request_ prefix for mutating functions.
-// No `b` prefix for bools. Descriptive names.
-auto Get_CurrentHealth() -> float;
-auto Request_TakeDamage(float Damage) -> void;
+// All naming rules (Get_/TryGet_/Request_ prefixes, no `b` bool prefix,
+// member/param conventions) live in root CLAUDE.md "Code style" and apply
+// unchanged in AS.
 
 //============================================================================
 // 21. COMMON MISTAKES — QUICK REFERENCE
 //============================================================================
 /*
+❌ ck::SelfEntity(this)                            → ck::ToEntity(this)     // renamed — old name no longer exists (§5)
+❌ Timer.BindTo_OnUpdate(Policy, Delegate)         → Timer.BindTo_OnUpdate(Delegate[, Policy][, PostFire])  // delegate first (§11)
 ❌ void BeginPlay()                                → void DoBeginPlay(FCk_Handle InHandle)
 ❌ FMath::Sin(x)                                   → Math::Sin(x)
 ❌ if (NOT Valid)                                  → if (Valid == false)
 ❌ static_cast<uint8>(x)                           → uint8(x)
 ❌ Text += "More"                                  → Text = f"{Text}More"
+❌ f"{SomeHandle}"                                 → f"{SomeHandle.ToString()}"   // runtime throw otherwise (§22.1)
 ❌ ck::IsValid(P, ck::IsValid_Policy_NullptrOnly{})→ ck::IsValid(P)
 ❌ UCk_Utils_Probe_UE::Add(...)                    → utils_probe::Add(...)
 ❌ utils_transform::Get_WorldTransform(...)        → utils_transform::Get_EntityCurrentTransform(...)
@@ -746,6 +702,50 @@ auto Request_TakeDamage(float Damage) -> void;
 */
 
 //============================================================================
-// REMINDER: This file is for AngelScript. For C++, see
-// Plugins/CkFoundation/Source/CLAUDE.md.
+// 22. WHAT BREAKS SILENTLY — TOP ITEMS
+//============================================================================
+// Full catalog (13 items) + recipes: `ck-angelscript-interop` skill (root CLAUDE.md skill index).
+//
+// 1. Raw FCk_Handle in an f-string → RUNTIME throw "Invalid type to append
+//    to string." (engine Bind_FString.cpp:597) at PIE-start/exec time, NOT
+//    compile time — invisible to `-skipcompile` headless boots. Every
+//    typesafe handle has .ToString() bound — use it.
+// 2. EntitySpawnParams phantom namespace: deleting an entity-script .as while
+//    its block in <Plugin>_EntitySpawnParams.as survives leaves a phantom AS
+//    namespace — re-adding a same-named class then SILENTLY fails to register
+//    as a live UClass (UObjectIterator misses it; the autotest populator drops
+//    the test). Recovery: revert ALL of Script/Generated/*.as atomically,
+//    never AutoTestActors.as alone (Source/CkAngelscriptGenerator/Claude.md:170-176).
+// 3. Stale/absent DynamicHandleTypes.json → project-wide "'FCk_Handle_X' is
+//    not a data type" cascade. Self-heal (default-on) recovers in ONE boot;
+//    the first-pass errors + "Hot reload failed ... Keeping all old script
+//    code" are EXPECTED transients — gate on the post-regen clean reload and
+//    the JSON entry, not first-pass silence (§7).
+// 4. NEVER blanket-delete Script/Generated/. The Hazelight hot-reload watcher
+//    is mtime-based: ANY mtime change there triggers a full AS reload sweep
+//    (editor-freezing at scale). Generator cleanup is manifest-based via
+//    _index.as for exactly this reason (generator Claude.md:216).
+// 5. Two editor/headless instances of one project: a cross-process
+//    single-writer lock (<Saved>/CkAngelscriptGenerator_RegenOwner.lock,
+//    Rev 12) makes the second instance a READ-ONLY secondary — it compiles
+//    against the owner's generated files and writes nothing to Generated
+//    (generator Claude.md:28-32).
+
+//============================================================================
+// 23. PROVENANCE AND MAINTENANCE
+//============================================================================
+// Facts above were verified against code on 2026-07-02 (citations inline).
+// Re-verify the volatile ones (run from the superproject root):
+//   rg --no-ignore -n 'ToEntity' Plugins/CkFoundation/Script/CkUtils_Common.as    → overloads at :5 (AActor), :10 (EntityScript)
+//   rg --no-ignore -n 'BindTo_OnUpdate' Plugins/CkFoundation/Script/Generated/utils_timer.as  → delegate first, policy/postfire defaulted
+//   ls Plugins/CkFoundation/Script/Generated/utils_*.as | wc -l                   → generated-wrapper count (268 on 2026-07-02)
+//   rg -n 'DynamicHandleRegistryDirectory' Config/DefaultCkFoundation.ini         → superproject registry-path override
+// TOOLING (same caveat as root CLAUDE.md provenance): the agent Grep/Glob
+// tools are silently blind under Script/ (superproject `.ignore`) — ALL .as
+// searches must use `rg --no-ignore` in Bash, or Read with exact paths;
+// re-check any zero-match with `rg --no-ignore --files`.
+
+//============================================================================
+// REMINDER: This file is for AngelScript. C++: Source/CLAUDE.md.
+// Style/macros/non-negotiables: root Plugins/CkFoundation/CLAUDE.md.
 //============================================================================

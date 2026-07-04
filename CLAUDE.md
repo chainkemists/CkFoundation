@@ -1,391 +1,311 @@
-# CLAUDE.md — CkFoundation
+# CLAUDE.md — CkFoundation (doctrine of record)
 
-CkFoundation is an ECS framework plugin for Unreal Engine 5.5, built on EnTT 3.15.0. It provides 80+ modules implementing gameplay systems (Abilities, Inventory, Grid, Attributes, Audio, etc.) through a composition-based Entity Component System architecture.
+CkFoundation is the Chainkemists ECS framework for Unreal Engine. This file is the always-loaded
+doctrine for the whole Ck plugin suite: **CkGameplayDebugger and CkTests defer to this file** for
+everything not plugin-specific. Style rules live HERE and only here; topology lives in
+[Source/CLAUDE.md](Source/CLAUDE.md); AngelScript language rules live in
+[Script/CLAUDE.md](Script/CLAUDE.md); depth (runbooks, rationale, incident history) lives in the
+skill library (index at the bottom). Facts below marked with a date were verified against
+code/disk on that date.
 
-## Companion Guidelines
+## Identity (verified 2026-07-02)
 
-- **C++ deep-dive:** `Source/CLAUDE.md` — extended C++ rules and examples beyond what's in this file.
-- **AngelScript (.as):** `Script/CLAUDE.md` — required reading before editing any `.as` file. Covers `utils_*` shortcuts, dynamic handle registration (`Script/Generated/DynamicHandleTypes.json`), spawn params, by-value struct param gotcha, and C++↔AS differences (no lambdas, no `static_cast`, no `NOT` macro, RPCs are reliable-by-default, `float` is 64-bit).
+- **Engine:** UnrealEngine-Angelscript **5.7.x** (Hazelight AngelScript fork; 5.7.4 on disk). NOT
+  stock UE — AngelScript is a first-class consumer of every public API.
+- **ECS backend:** EnTT **3.16.0**, vendored at `Source/CkThirdParty/Public/CkThirdParty/entt-3.16.0/`
+  (also vendored: JoltPhysics, fmt, cleantype, ctti, delegate, bitwise-enum). Note: `CkHandle.h:71-77`
+  globally specializes `entt::component_traits` with `in_place_delete = true` — every fragment pool
+  is tombstone-mode (pointer-stable, owning groups unavailable), inverting EnTT's swap-and-pop
+  default. This is deliberate design (`06938bba3`, "fragments are always pointer stable") — see
+  `.claude/reports/DECISIONS.md` §45. Details: `ckecs-domain-reference` skill; perf implications:
+  `ck-feature-frontier` candidate 5.
+- **Scale:** 99 modules in `CkFoundation.uplugin` (71 Runtime, 25 UncookedOnly, 3 Editor) + 3
+  unlisted support dirs (CkBuildConfig, CkSettings, CkScripts). C++20 via the shared `CkModuleRules`
+  base (`Source/CkBuildConfig/CkBuildConfig.Build.cs`).
+- **AngelScript is optional at build time:** the uplugin dependency is `Optional: true`;
+  `CkModuleRules` auto-detects the engine's Angelscript plugin and sets `WITH_ANGELSCRIPT_CK` 1/0.
+  Code that touches AS bindings must compile both ways.
 
-## Finding Modules
+## Non-negotiables
 
-Each gameplay system lives in `Source/Ck<Name>/`. Editor-only counterparts use `Ck<Name>Editor`. The full module set with load phases is enumerated in `CkFoundation.uplugin`.
+These are the rules the maintainer actively enforces in review. Violating them is the most common
+failure mode of incoming engineers and models — read them twice.
 
-## Architecture Principles
+1. **Research before writing.** Read the neighboring feature before authoring anything: for ECS work
+   that means one full feature quartet (`CkTimer` is the canonical small one) plus the target
+   module's `Claude.md`. Mimicry of adjacent code beats invention. If your change doesn't resemble
+   the code around it, you have not researched enough.
+2. **`CK_ENSURE_IF_NOT` — never stock `ensure`/`ensureMsgf`/`check` for recoverable validation.**
+   The Ck ensure logs with context, breaks at the call site, fires once, and stays active in
+   Shipping (checks are NOT compiled out by default — see `ck-macros-and-codegen` skill).
+3. **Never silently handle an error.** A `Warning`/`Error` log-and-continue where validation failed
+   is a review rejection: logs get ignored, ensures do not. Fire `CK_ENSURE_IF_NOT` with a
+   recovery block that is a *correct* silent-failure path, or let it be loud. No fallbacks that
+   hide problems, ever, unless explicitly requested.
+4. **Three environments.** Every public API must work — and be verified — in C++, Blueprint, AND
+   AngelScript. "Works in C++" is one third of done.
+5. **Requests are deferred.** Mutations to ECS state go through request fragments handled by
+   processors. Utility functions enqueue; processors mutate.
+6. **Unwritten-norm forks: ask the maintainer.** If code and docs are silent and two reasonable
+   conventions exist, do not invent policy — ask, or add the fork to
+   [.claude/reports/ADJUDICATIONS.md](.claude/reports/ADJUDICATIONS.md).
+7. **Measure before claiming.** No performance claims without a benchmark; no "fixed" without the
+   gate re-run. Agents cannot launch the editor or PIE — anything only verifiable there is labeled
+   `[EDITOR-VERIFY]` with exact manual steps for a human.
+8. **Clarity over cleverness.** If a reader needs a comment to follow the code, rename or restructure
+   instead (see comment rules below).
 
-- **Composition over inheritance.** Design new systems from first principles using ECS composition. Do not copy patterns from third-party plugins unless explicitly asked.
-- **Event-driven over timer-based.** Prefer delegate/signal callbacks. Never use timer deferrals as a workaround for ordering or race conditions.
-- **Requests are deferred.** Mutations to ECS state go through request fragments processed by processors. Never mutate entity state directly from utility functions — enqueue a request.
-- **Authority matters.** Always check `UCk_Utils_Net_UE::Get_HasAuthority` before enqueuing requests. Use `NetMulticast` for RPCs on unowned actors — `Client` RPCs require ownership.
+## Lingo
 
-## Module Structure
+| Term | Meaning here |
+|---|---|
+| Entity | EnTT entity, addressed only through handles |
+| Fragment | ECS component (UE already owns the word "Component") |
+| Processor | ECS system; iterates entities via `ForEachEntity` |
+| Handle | `FCk_Handle` — entity + registry ref; typesafe subtypes `FCk_Handle_[Feature]` |
+| Request | Deferred mutation struct, queued on a `_Requests` fragment |
+| Signal | Ck event (fragment-based), bound via `CK_SIGNAL_BIND` / `BindTo_On*` |
+| Probe | Spatial-query trigger volume (`CkSpatialQuery/Probe`, Jolt-backed) |
+| Record | Fragment holding child/related entity collections (`CkRecord`) |
+| Utils / BPFL / BFL | `UCk_Utils_[Feature]_UE` BlueprintFunctionLibrary — the ONLY public API surface of a feature (BPFL and BFL are the same thing) |
+| ParamsData | Reflected `FCk_Fragment_[Feature]_ParamsData` USTRUCT (BP/AS-facing config) |
+| Quartet | The four files every feature ships: `X_Fragment_Data.h`, `X_Fragment.h`, `X_Processor.h/.cpp`, `X_Utils.h/.cpp` |
+| CDO | Class Default Object — UE's per-class template instance; AS `default` statements write CDO values |
+| EntityScript | `UCk_EntityScript_UE` — data-driven entity logic unit (C++/BP/AS) |
+| ContextOwner | Entity's DI-style context root (`UCk_Utils_ContextOwner_UE`); CkProvider = data-asset value providers. There is no module named "DI" — these two are it |
+| UHT / UBT | UnrealHeaderTool / UnrealBuildTool |
+| AS | AngelScript (Hazelight fork dialect) |
+| Gym / AutoTest / Gauntlet | CkTests' interactive / headless-PIE / process-level test layers |
 
-Every module follows this layout:
+## Code style
 
-```
-CkModuleName/
-├── CkModuleName.Build.cs            # Inherits from CkModuleRules (C++20, explicit PCH)
-├── CkModuleName_Module.cpp/h        # Module init
-├── CkModuleName_Log.cpp/h           # Log category
-└── Public/CkModuleName/
-    └── Subsystem/
-        ├── CkSubsystem_Fragment.h        # Fragments, Tags, Records, Signals
-        ├── CkSubsystem_Fragment_Data.h   # USTRUCT data types (reflected)
-        ├── CkSubsystem_Fragment_Data.cpp # Constructors, gameplay tag definitions
-        ├── CkSubsystem_Processor.h       # Processor declarations
-        ├── CkSubsystem_Processor.cpp     # Processor implementations
-        ├── CkSubsystem_Utils.h           # UBlueprintFunctionLibrary (public API)
-        ├── CkSubsystem_Utils.cpp         # Utils implementation
-        └── ProcessorInjector/            # Processor registration
-```
+Runtime modules are machine-uniform on these rules (counts from the 2026-07-02 sweep; editor
+modules are visibly laxer — that is observed history, not license for new code).
 
-## Naming Conventions
+**Function shapes.** Trailing return types everywhere EXCEPT UFUNCTION declarations (UHT rejects
+them there — the concrete return type goes on its own line). Definitions split across lines:
 
-### Prefixes
-| Prefix | Meaning | Example |
-|--------|---------|---------|
-| `F` | Struct | `FCk_Handle_Inventory`, `FFragment_Inventory_Params` |
-| `U` | UObject | `UCk_Utils_Inventory_UE` |
-| `A` | Actor | `ACk_CueExecutor_UE` |
-| `T` | Template | `TProcessor`, `TFragment_ContainerEntryRef` |
-| `E` | Enum | `ECk_InventoryType` |
-| `I` | Interface | `ICk_CustomActorComponentVisualizer_Interface` |
-
-### Suffixes & Patterns
-| Pattern | Purpose | Example |
-|---------|---------|---------|
-| `_Fragment` | ECS fragment | `FFragment_Inventory_SyncReplication` |
-| `_Fragment_Data` | Reflected data struct | `FCk_Fragment_Inventory_ParamsData` |
-| `_Processor` | ECS system | `FProcessor_Inventory_HandleRequests` |
-| `_Utils` / `_Utils_UE` | Blueprint function library | `UCk_Utils_Inventory_UE` |
-| `_Tag` | ECS tag | `FTag_Inventory_Spatial` |
-| `FTag_` | ECS tag (no data) | `FTag_Inventory_MayRequireReplication` |
-| `FCk_Handle_` | Type-safe handle | `FCk_Handle_Inventory`, `FCk_Handle_Item` |
-| `MarkedDirtyBy` | Processor dirty-check type alias | `using MarkedDirtyBy = FFragment_Inventory_Requests;` |
-
-### Fragment Params Pattern
-Reflected data structs live in `_Fragment_Data.h`. The ECS fragment is a `using` alias:
 ```cpp
-// In _Fragment_Data.h (reflected, Blueprint-visible)
-USTRUCT(BlueprintType)
-struct FCk_Fragment_Inventory_ParamsData { ... };
+// UFUNCTION declaration (.h) — concrete type, own line, no trailing return:
+UFUNCTION(BlueprintCallable,
+          Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+          DisplayName="[Ck][Timer] Add New Timer")
+static FCk_Handle_Timer
+Add(
+    UPARAM(ref) FCk_Handle& InHandle,
+    const FCk_Fragment_Timer_ParamsData& InParams);
 
-// In _Fragment.h (ECS-side alias)
-using FFragment_Inventory_Params = FCk_Fragment_Inventory_ParamsData;
-```
-
-## ECS Patterns
-
-### Fragment Definition
-```cpp
-struct CKINVENTORY_API FFragment_Inventory_Requests
+// Any definition (.cpp) and any non-UFUNCTION declaration — trailing return:
+auto
+    FProcessor_Timer_Setup::
+    ForEachEntity(
+        TimeType InDeltaT,
+        HandleType InTimerEntity,
+        const FFragment_Timer_Params& InParams,
+        FFragment_Timer_Current& InCurrentComp)
+    -> void
 {
-    CK_GENERATED_BODY(FFragment_Inventory_Requests);
-    friend class FProcessor_Inventory_HandleRequests;
-
-    using AddItemRequestType    = FCk_Request_Inventory_AddItem;
-    using RemoveItemRequestType = FCk_Request_Inventory_RemoveItem;
-    using RequestType = std::variant<AddItemRequestType, RemoveItemRequestType>;
-
-private:
-    TArray<RequestType> _Requests;
-};
-```
-
-### Tag Definition
-```cpp
-namespace ck
-{
-    CK_DEFINE_ECS_TAG(FTag_Inventory_Spatial);
-    CK_DEFINE_ECS_TAG(FTag_Inventory_MayRequireReplication);
+    ...
 }
 ```
+(Exemplars: `CkTimer_Utils.h:50-56`, `CkTimer_Processor.cpp:19-27`.) Allman braces, 4-space
+indent, CRLF, `#pragma once`; includes ordered own-header → Ck module paths → engine → `*.generated.h` last.
+`// ----…----` separator lines between top-level declarations.
 
-### Handle Definition
+**Validation & flow.** Early-out with the ensure macro (it IS an inverted if), single-statement
+guards on one line:
+
 ```cpp
-USTRUCT()
-struct CKINVENTORY_API FCk_Handle_Inventory : public FCk_Handle_TypeSafe
+CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Timer Handle [{}]"), InHandle)
+{ return {}; }
+
+if (InParams.Get_CountDirection() == ECk_Timer_CountDirection::CountUp)
+{ TimerChrono.Reset(); }
+```
+
+`ck::IsValid` / `ck::Is_NOT_Valid` for all validity; `NOT` macro instead of `!`;
+`ck::IsValid_Policy_NullptrOnly{}` is for RAW pointers only (smart pointers have their own
+overloads — pass them bare).
+
+**`auto` aggressively**, including typed-nullptr casts: `auto Canvas = static_cast<UCanvas*>(nullptr);`.
+`{}` construction everywhere EXCEPT UFUNCTION parameter defaults, which use `()` (UHT limitation);
+no `= {}` default-init inside UFUNCTION signatures.
+
+**Naming.**
+- Members `_PascalCase` (no `m_`); params `In*` / `Out*`; locals PascalCase; no `b` prefix on bools
+  (engine-forced trait fields like Iris' `bHasSerialize` are the only exemption).
+- `Get_` getters (may-fail variants `TryGet_*` return invalid handles), `Request_` mutators,
+  `Do*` private helpers, `INTERNAL__` BP-internal plumbing.
+- No UFUNCTION overloads (UHT physics) — disambiguate with the house suffixes: `_ByName`, `_ByTag`,
+  `_Simple`, `AddOrReplace`. A plain C++ overload MAY share a UFUNCTION's name.
+- Enums over bool options (`ECk_EnableDisable`, `ECk_SucceededFailed` + `ExpandEnumAsExecs` for BP
+  exec pins). Optionality = enum-mode + value pair, not `TOptional`, in reflected surfaces
+  (newest modules diverge — see ADJUDICATIONS A1 before following them).
+- No anonymous namespaces and no file-local `static` helpers — unity builds concatenate TUs and
+  collide them. Use a filename-derived named namespace (`namespace ck_timer_processor`).
+- `MoveTemp`, never `std::move`; no `std::vector` intermediaries in TArray code.
+
+**ECS naming is two-tier** (the single most misunderstood convention):
+
+| Thing | Name | Lives in |
+|---|---|---|
+| Reflected config struct | `FCk_Fragment_[Feature]_ParamsData` (USTRUCT) | `X_Fragment_Data.h` |
+| Runtime fragment | `ck::FFragment_[Feature]_[Type]` (plain C++, `ck` namespace) | `X_Fragment.h` |
+| Bridge alias | `using FFragment_X_Params = FCk_Fragment_X_ParamsData;` | `X_Fragment.h` |
+| Tag | `ck::FTag_[Feature]_[Purpose]` via `CK_DEFINE_ECS_TAG` | `X_Fragment.h` |
+| Typesafe handle | `FCk_Handle_[Feature]` | `X_Fragment_Data.h` — NEVER `X_Fragment.h` (89/90 declarations comply; the 1 exception, `CkShape_Handle.h`, is infrastructure — the 91st grep hit is the macro definition itself) |
+| Request | `FCk_Request_[Feature]_[Action] : FCk_Request_Base` | `X_Fragment_Data.h` |
+| Processor | `ck::FProcessor_[Feature]_[Phase]` | `X_Processor.h/.cpp` |
+| Utils | `UCk_Utils_[Feature]_UE` | `X_Utils.h/.cpp` |
+
+Processor phase vocabulary (observed census): `Setup`, `HandleRequests`, `EndPlay`, `Replicate`,
+`Update`, `ReplicateOnRestore`, `FireSignals`, `SyncReplication`, `RecomputeAll`, `MinMaxClamp`,
+`ComputeAll`, `Exit`, `Destructor`. (`Teardown` is NOT house vocabulary — entity cleanup is
+`EndPlay`/`Destructor`.) Processors self-register in their .cpp:
+`CK_REGISTER_PROCESSOR(ck::FProcessor_Timer_Setup);` — the old ProcessorInjector mechanism is
+retired; any doc mentioning it is stale.
+
+**Encapsulation.** Private `_Members` + `CK_PROPERTY`/`CK_PROPERTY_GET` generated accessors.
+Reads always via `Get_*`; direct `_Member` writes ONLY inside classes the fragment declares as
+friends (its processors and Utils). Canonical fragment-data shape:
+
+```cpp
+USTRUCT(BlueprintType)
+struct CKTIMER_API FCk_Fragment_Timer_ParamsData
 {
     GENERATED_BODY()
-    CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Inventory);
-};
-```
-
-### Record Definition
-```cpp
-CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfInventoryItems, FCk_Handle_Item);
-```
-
-### Signal Definition
-```cpp
-CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
-    CKINVENTORY_API,
-    Inventory_OnItemsChanged,
-    FCk_Delegate_Inventory_OnItemsChanged,
-    FCk_Handle_Inventory,    // Signal source
-    TArray<FCk_Handle>,      // Items added
-    TArray<FCk_Handle>);     // Items removed
-```
-
-### Processor Definition
-```cpp
-class CKINVENTORY_API FProcessor_Inventory_HandleRequests : public ck_exp::TProcessor<
-    FProcessor_Inventory_HandleRequests,
-    FCk_Handle_Inventory,
-    FFragment_Inventory_Params,
-    FFragment_Inventory_Requests,
-    CK_IGNORE_PENDING_KILL>
-{
-public:
-    using MarkedDirtyBy = FFragment_Inventory_Requests;
-    using TProcessor::TProcessor;
 
 public:
-    auto ForEachEntity(
-        TimeType InDeltaT,
-        HandleType InHandle,
-        const FFragment_Inventory_Params& InParams,
-        FFragment_Inventory_Requests& InRequests) const -> void;
-};
-```
-
-### Request Pattern
-Requests inherit `FRequest_Base` and use `CK_REQUEST_DEFINE_DEBUG_NAME`:
-```cpp
-struct CKINVENTORY_API FCk_Request_Inventory_AddItem : FRequest_Base
-{
-    CK_GENERATED_BODY(FCk_Request_Inventory_AddItem);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_AddItem);
-    friend class FProcessor_Inventory_HandleRequests;
+    CK_GENERATED_BODY(FCk_Fragment_Timer_ParamsData);
 
 private:
-    FCk_Handle _ItemToAdd;
-public:
-    CK_PROPERTY_GET(_ItemToAdd);
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_AddItem, _ItemToAdd);
-};
-```
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Time _Duration;
 
-### Per-Request Completion Delegates
-Use `CK_SIGNAL_BIND_REQUEST_FULFILLED` for optional callbacks fired when a deferred request completes:
-```cpp
-CK_SIGNAL_BIND_REQUEST_FULFILLED(
-    ck::UUtils_Signal_Inventory_OnItemAddedOrNot,
-    InRequest.PopulateRequestHandle(InInventory),
-    InDelegate);
-```
-UFUNCTION parameters use `AutoCreateRefTerm` for the optional delegate.
-
-### Replication Handler Registration
-Client-side sync requires registering with `FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy`.
-Handlers speak the deferred `Apply` contract: invoked by `FProcessor_ReplicatedFragments_Dispatch`
-AFTER OnConstructed-driven composition (never inline during net receive). `Old` is unset on the
-first application. Return `NotReady` while the target feature is not composed yet — the dispatcher
-retries each tick and drops LOUDLY (ensure) after a timeout. Never compose the feature from Apply.
-```cpp
-FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
-    []() -> UScriptStruct* { return FCk_RepData_Team::StaticStruct(); },
-    {
-        .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
-        {
-            if (NOT UCk_Utils_Team_UE::Has(Entity))
-            { return ECk_RepFragment_ApplyResult::NotReady; }
-
-            auto TeamEntity = UCk_Utils_Team_UE::Cast(Entity);
-            UCk_Utils_Team_UE::Assign(TeamEntity, New.Get<FCk_RepData_Team>().Value);
-            return ECk_RepFragment_ApplyResult::Applied;
-        }
-    });
-```
-
-### Gameplay Tag Categories
-Features requiring tag categories define them with `UE_DEFINE_GAMEPLAY_TAG_STATIC` in a `_Fragment_Data.cpp`:
-```cpp
-UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Category_Inventory, TEXT("Inventory"));
-```
-
-## CK Macros Reference
-
-| Macro | Purpose |
-|-------|---------|
-| `CK_GENERATED_BODY(Class)` | Class metadata + validation |
-| `CK_DEFINE_CONSTRUCTORS(Class, vars...)` | Default + parametrized constructors |
-| `CK_DEFINE_CONSTRUCTOR(Class, vars...)` | Parametrized only (no default) |
-| `CK_PROPERTY(_Var)` | Get + Set + Update |
-| `CK_PROPERTY_GET(_Var)` | Const ref getter only |
-| `CK_PROPERTY_GET_BY_COPY(_Var)` | By-value getter only |
-| `CK_PROPERTY_SET(_Var)` | Setter only |
-| `CK_DEFINE_ECS_TAG(Name)` | Tag with no data |
-| `CK_DEFINE_ECS_TAG_COUNTED(Name)` | Counted tag |
-| `CK_DEFINE_RECORD_OF_ENTITIES(Fragment, Handle)` | Record fragment |
-| `CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(...)` | Signal + utils + delegate type |
-| `CK_IGNORE_PENDING_KILL` | Processor excludes pending-destroy entities |
-| `CK_ENSURE_IF_NOT(cond, fmt, args...)` | Conditional ensure with `{}` format |
-| `ON_SCOPE_EXIT { ... }` | Deferred scope-exit block |
-
-## Formatting & Validation
-
-- **`CK_ENSURE_IF_NOT`** uses `{}` format specifiers (libfmt-style), NOT `%s`:
-  ```cpp
-  CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
-      TEXT("Invalid handle [{}].{}"), InHandle, ck::Context(this))
-  { return {}; }
-  ```
-- **`ck::Context()`** provides caller context. Pass directly — do not dereference with `*`.
-- **`ck::IsValid()` / `ck::Is_NOT_Valid()`** for validity checks. Never use raw pointer null checks.
-
-## Utility Class Pattern
-
-```cpp
-UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Inventory"))
-class CKINVENTORY_API UCk_Utils_Inventory_UE : public UBlueprintFunctionLibrary
-{
-    GENERATED_BODY()
-    CK_GENERATED_BODY(UCk_Utils_Inventory_UE);
-    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Inventory);
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Timer_CountDirection _CountDirection = ECk_Timer_CountDirection::CountUp;
 
 public:
-    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Inventory",
-              DisplayName = "[Ck][Inventory] Add")
-    static FCk_Handle_Inventory Add(
-        UPARAM(ref) FCk_Handle& InOwnerEntity,
-        const FCk_Fragment_Inventory_ParamsData& InParams);
+    CK_PROPERTY_GET(_Duration);        // essential → getter only
+    CK_PROPERTY(_CountDirection);      // optional → getter + fluent setter
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Timer_ParamsData, _Duration);  // essentials only
 };
 ```
 
-## Algorithm Library (`ck::algo`)
+**Requests.** One struct per request type; essentials in the `CK_DEFINE_CONSTRUCTORS` ctor,
+optionals via the fluent `Set_*` setters; `CK_REQUEST_DEFINE_DEBUG_NAME` on every request.
+UFUNCTION surface takes `UPARAM(ref) FCk_Handle_X&` + the request struct and returns the handle
+(chainable). Trivial single-datum mutations may take the value directly (`Request_ChangeCountDirection`).
 
-Located in `CkCore/Algorithms/CkAlgorithms.h`. Key functions:
+**UObject refs in fragments — ownership split:** `TStrongObjectPtr` when the entity owns the
+object's lifetime (spawned components, render targets); `TWeakObjectPtr` for non-owning
+observation. Both are correct; pick by ownership. `TObjectPtr` only in UPROPERTY/reflected
+contexts. UE GC does NOT trace fragment members — an object only a fragment points at WILL be
+collected unless something roots it (see `ckecs-domain-reference` skill for the incident history).
+UObjects never use `CK_DEFINE_CONSTRUCTORS` (UHT owns their construction).
 
-| Function | Variants | Notes |
-|----------|----------|-------|
-| `Filter` | Copy (`const&` → new container) | Returns filtered copy via `FilterByPredicate` |
-| `FilterInPlace` | Mutating (`&` → `void`) | Removes non-matching via `RemoveAll` |
-| `Sort` | In-place (`&`), Copy (`const&`) | In-place is the default meaning |
-| `Except(A, B)` | Basic, Projection overload | Set difference: elements in A not in B |
-| `Intersect(A, B)` | Basic, Projection overload | Set intersection |
-| `Transform` | To new container, Into existing | Map operation |
-| `ForEach` | Container, Iterator, `IsValid` variants | Iteration |
-| `ForEachRequest` | `TArray`, `TOptional`, `DontResetContainer` | Request processing |
-| `AllOf` / `AnyOf` / `NoneOf` | Container, Iterator | Predicates |
-| `FindIf` | Iterator, `TOptional` return | Search |
-| `CountIf` / `FindIndex` | Container | Counting / indexing |
+**Signals.** Defined via `CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(...)`; bound via
+`CK_SIGNAL_BIND(ck::UUtils_Signal_OnX, Handle, Delegate, BindingPolicy, PostFireBehavior)` /
+`CK_SIGNAL_UNBIND(...)` or the generated `BindTo_OnX` / `UnbindFrom_OnX` UFUNCTIONs.
+Binding policies (verbatim — a past doc typo'd this and taught non-compiling code):
+`ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame` (replay same-frame payload),
+`FireIfPayloadInFlight` (replay last payload from any frame), `IgnorePayloadInFlight` (future
+fires only). PostFire: `DoNothing` | `Unbind`. Semantics and lifecycle: `ckecs-architecture-contract` skill.
 
-Projection overloads take a member function pointer for comparison by a projected key:
-```cpp
-const auto ByItemHandle = &FCk_InventoryItem_ReplicatedEntry::Get_ItemHandle;
-const auto Added   = ck::algo::Except(Current, Previous, ByItemHandle);
-const auto Removed = ck::algo::Except(Previous, Current, ByItemHandle);
-```
-
-## Variant Dispatch with `ck::Visitor`
-
-`ck::Visitor` wraps a **single** callable with `auto` parameter for `std::variant` dispatch. Do NOT pass multiple lambdas:
-```cpp
-// CORRECT — single generic lambda
-ck::algo::ForEachRequest(Requests, ck::Visitor(
-    [&](const auto& InRequest) -> void
-    {
-        DoHandleRequest(InHandle, InParams, InRequest, ItemsAdded, ItemsRemoved);
-    }), ck::policy::DontResetContainer{});
-
-// WRONG — multiple lambdas (ck::Visitor is not std::visit Overload)
-ck::Visitor([&](const AddRequest& r) { ... }, [&](const RemoveRequest& r) { ... })
-```
-Use function overloading on the handler side (e.g., `DoHandleRequest` overloads) instead of lambda overloads.
-
-## Technique Pipeline (`ck::Technique`)
-
-Located in `CkCore/Public/CkCore/Technique/CkTechnique.h`. A CRTP-based step pipeline for expressing multi-phase operations as named steps instead of comment-delimited code blocks.
-
-**When to use:** Processor logic with 3+ distinct phases (validate, transform, finalize) where phase comments like `// ---- Phase 1: ... ----` would otherwise be needed. The step function names replace the comments.
+**Logging.** Per-module `namespace ck::<feature>` free functions generated by
+`CK_DEFINE_LOG_FUNCTIONS` — `Fatal/Error/Warning/Display/Log/Verbose/VeryVerbose`, fmt-style `{}`
+(never `%s`), values bracketed:
 
 ```cpp
-// Context struct holds all mutable state shared across steps
-struct FContext_MyOperation
-{
-    // Inputs, outputs, cached state
-    int32 Remaining = 0;
-    ECk_Result Result = ECk_Result::Failed;
-};
-
-// Derive from Technique, register steps in constructor
-struct FTechnique_MyOperation
-    : ck::Technique<FTechnique_MyOperation, FContext_MyOperation&>
-{
-    FTechnique_MyOperation()
-    {
-        AddStep(&FTechnique_MyOperation::Validate);
-        AddStep(&FTechnique_MyOperation::ProcessItems);
-        AddStep(&FTechnique_MyOperation::DetermineResult);
-    }
-
-    // Optional: define ShouldAbort() to enable short-circuit between steps
-    auto ShouldAbort() const -> bool { return _Abort; }
-
-    static auto Validate(FTechnique_MyOperation& InSelf, FContext_MyOperation& Ctx) -> void;
-    static auto ProcessItems(FTechnique_MyOperation& InSelf, FContext_MyOperation& Ctx) -> void;
-    static auto DetermineResult(FTechnique_MyOperation& InSelf, FContext_MyOperation& Ctx) -> void;
-
-    bool _Abort = false;
-};
-
-// Usage in processor
-static auto Technique = FTechnique_MyOperation{};
-Technique._Abort = false;
-Technique.ProcessAllSteps(Context);
+timer::VeryVerbose(TEXT("Handling Reset Request for Timer with Entity [{}]"), InTimerEntity);
 ```
 
-**Key points:**
-- Steps run in registration order. If `ShouldAbort()` is defined on the derived type, it is checked between steps automatically (SFINAE-detected).
-- Context struct is a plain aggregate — no inheritance needed.
-- Technique instances can be `static` since they only hold the step list (state lives in Context).
-- Steps are `static` member functions taking `(DerivedType&, T_Params&&...)`.
+**Comments.** No *what*-comments — names, named lambdas, and `constexpr auto ResetOnActivate = true;`
+extractions carry meaning (every bool argument at a call site gets a named constexpr). *Why*-comments
+and `/** contract */` blocks on public Utils API and data shapes are house style, not a violation
+(e.g. the why-no-Remove rationale at `CkTimer_Utils.h:74-77`).
 
-## Code Style
+## Macro quick reference
 
-- **Trailing return types:** `auto Foo() -> void` / `auto Foo() -> int32`
-- **Member variables:** Prefixed with `_` (e.g., `_Requests`, `_Name`)
-- **Namespaces:** All ECS types in `namespace ck`. No anonymous namespaces — use `static` or internal classes.
-- **Constructor definitions:** In `.cpp` files, not headers.
-- **Include order:** Standard library → Unreal Engine → CkCore/CkEcs → Module-specific → `.generated.h` (always last)
-- **NOT macro:** Use `NOT` instead of `!` for boolean negation in conditionals.
-- **Section separators:** Use `// ----` comment lines between logical sections.
-- **`auto` everywhere:** Prefer `auto` for local variables. Use explicit types only when clarity demands it.
-- **`MoveTemp`:** Use UE's `MoveTemp` instead of `std::move`.
+Full expansions, constraints, and add-a-new-X checklists: `ck-macros-and-codegen` skill.
 
-## Common Pitfalls
+| Macro | Purpose | One constraint worth knowing |
+|---|---|---|
+| `CK_GENERATED_BODY(T)` | ThisType alias + formatter/AS plumbing | Must precede macros that need `ThisType` |
+| `CK_PROPERTY(_X)` / `CK_PROPERTY_GET(_X)` | Accessor generation (`Get`+`_X` by token-paste) | Member MUST start with `_` or names break |
+| `CK_DEFINE_CONSTRUCTORS(T, ...)` | Default + essential-param ctors | Structs only — never UObjects; max 9 params; 1-arg ctor is `explicit` |
+| `CK_ENSURE_IF_NOT(expr, fmt, ...)` | Ensure + inverted-if early-out | Active in Shipping by default; recovery block must be a correct silent path |
+| `CK_DEFINE_ECS_TAG(_COUNTED)` | Tag fragment | Counted variant tracks add/remove depth |
+| `CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE` | Signal + BP delegate + Bind/Unbind utils | PostFire `Unbind` is a distinct generated fragment type |
+| `CK_SIGNAL_BIND / CK_SIGNAL_UNBIND` | (Un)subscribe | Unbind + replay never connects — order matters |
+| `CK_REQUEST_DEFINE_DEBUG_NAME(T)` | Request debug identity | On every request struct |
+| `CK_GENERATED_BODY_HANDLE_TYPESAFE(T)` | Typesafe handle body | Declare in `_Fragment_Data.h`; pair with `CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE` |
+| `CK_REGISTER_PROCESSOR(T)` | Processor self-registration | Top of the processor .cpp |
+| `CK_REGISTER_SNAPSHOTABLE(T)` | Snapshot participation | Global registration — stale binaries lie; rebuild before trusting green tests (full trap: `ck-debugging-playbook`) |
+| `CK_DEFINE_CUSTOM_FORMATTER_ENUM(E)` | fmt support for enums | Expected on every UENUM |
 
-- **Missing replication handler:** If replicated container data never lands on clients, check that `FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy` is registered in the `_Fragment.cpp`. An entry whose `Apply` keeps returning `NotReady` fires a timeout ensure naming the type — that means the feature it targets is never composed on the client.
-- **Reading replicated values at OnConstructed time:** OnConstructed means "composed", not "values applied". Replicated container values are applied by the dispatcher AFTER OnConstructed (same frame), and `OnReplicationComplete` fires after that. Consumers needing replicated values must bind `Promise_OnReplicationComplete`, not read in the OnConstructed callback.
-- **Parameter shadowing:** Never use `Instigator`, `Controller`, or other AActor member names as parameters.
-- **`TObjectPtr` vs raw pointers:** Use `TObjectPtr` for `UPROPERTY` members. Raw pointers are fine for local variables and non-reflected code.
-- **Overload ambiguity with const/non-const:** When adding both mutating (`T&` → `void`) and copy (`const T&` → `T`) overloads, the mutating overload wins for non-const arguments. Use distinct names (e.g., `Filter` vs `FilterInPlace`) when callers might assign the return value.
-- **`std::vector` in TArray code:** Never use `std::vector` as an intermediary. Use `TArrayBackInserter` for STL algorithm output.
-- **Format specifiers:** `CK_ENSURE_IF_NOT` and `ck::Format` use `{}`, never `%s` or `%d`.
+## Where things live
 
-## Build System
+- [Source/CLAUDE.md](Source/CLAUDE.md) — module topology: decision tree ("I need to X → module Y"),
+  tier table, cross-module patterns, module-authoring rules.
+- [Script/CLAUDE.md](Script/CLAUDE.md) — AngelScript language deltas, `utils_*` layer, dynamic
+  handles, generated-script hygiene. Required before editing any `.as`.
+- `Source/<Module>/Claude.md` — 89 per-module docs (purpose, key API, anti-patterns). Read the
+  target module's before coding in it. Some are stale (see `.claude/reports/DECISIONS.md` §15);
+  trust code over doc on conflict and note the drift.
+- `Source/EDITOR_MODULES.md` — editor-module reference. Runtime code must never depend on Tier-5.
+- `CkEcs.natvis` (plugin root) — debugger visualizers for handles/registry.
+- `.claude/reports/DECISIONS.md` + `ADJUDICATIONS.md` — doctrine change-log and open forks.
+- `.claude/scripts/` — `sync-skills` junction script for consuming superprojects.
 
-CkFoundation is an Unreal plugin — there is no standalone build/test entry point in this directory. Compilation, cooking, and automation tests run via the host UE project that includes the plugin (UnrealBuildTool / RunUAT / `Engine\Binaries\Win64\UnrealEditor-Cmd.exe ... -ExecCmds="Automation RunTests ..."`).
+## Skill index — "for X, load Y"
 
-All modules inherit from `CkModuleRules` (defined in `CkBuildConfig`):
-- C++20 standard
-- Explicit/shared PCH
-- Key defines: `CK_FORMAT_FORCE_DETAILED`, `CK_BUILD_LOGGING`, `WITH_ANGELSCRIPT_CK` (conditional)
-- Core dependencies most modules need: `CkCore`, `CkEcs`, `CkLog`, `CkThirdParty`
+Skills live in `.claude/skills/` here, in CkTests, and in CkGameplayDebugger (sync into a
+superproject with `.claude/scripts/sync-skills.ps1`).
 
-### Editor-callable maintenance (AngelScript)
+| Task | Skill (home) |
+|---|---|
+| Use/compose an EXISTING feature (attributes, timers, …) | no skill needed — [Source/CLAUDE.md](Source/CLAUDE.md) decision tree (+ Script/CLAUDE.md §5 for AS) |
+| Classify/gate a change; what "done" requires | `ck-change-control` (CkFoundation) |
+| Any build/UHT/linker/AS-compile failure, packaged-only crash | `ck-debugging-playbook` (CkFoundation) |
+| "Has this been tried before?" — incidents, reverts, dead ends | `ck-failure-archaeology` (CkFoundation) |
+| Why the architecture is shaped this way; invariants | `ckecs-architecture-contract` (CkFoundation) |
+| ECS/EnTT theory, entity↔actor lifetime, GC interaction | `ckecs-domain-reference` (CkFoundation) |
+| Any `CK_` macro; add fragment/processor/handle/request | `ck-macros-and-codegen` (CkFoundation) |
+| Set up engine/plugins/build from scratch; env traps | `ck-build-and-env` (CkFoundation) |
+| Write or run tests (AutoTest/net/C++/Gauntlet/gym) | `ck-tests-authoring-and-running` (CkTests) |
+| Expose/verify anything in AngelScript; AS breaks silently | `ck-angelscript-interop` (CkFoundation) |
+| Add a debugger view/overlay/inspector | `ck-gameplaydebugger-extension` (CkGameplayDebugger) |
+| The teardown/unbind lifecycle campaign (live defect: teardown mid-interaction, signals never fire after destroy, unbind leaks) | `ck-lifecycle-teardown-campaign` (CkFoundation) |
+| Profile/benchmark processors; perf claims | `ck-performance-and-analysis` (CkFoundation) |
+| "What should we build next" — vetted frontier | `ck-feature-frontier` (CkFoundation) |
+| Long/multi-session task discipline; PROMPT/PHASE/PROGRESS docs | `ck-methodology` (CkFoundation) |
 
-`UCkDynamicHandleSubsystem` exposes two `CallInEditor` buttons (Editor Subsystems panel, or invoke from Blueprint):
-- `GenerateHandleTypeRegistry()` — discovers all `UCkDynamic_HandleDefinition` assets and writes `Script/Generated/DynamicHandleTypes.json` sorted by `TypeName`.
-- `ForceRefreshDynamicHandleBindings()` — regenerates + re-registers AS bindings without an editor restart (dev-only).
+## Collaboration protocol
 
-Editor restart is normally required after registry changes; hot reload does not pick them up.
+- **Research → Plan → Implement.** Never jump to code. Plans list files touched, approach, risks.
+- **Long tasks use the phase-gate system** (PROMPT.md / Gate_N.md / living PROGRESS.md) — templates
+  and triggers in `ck-methodology` (the owner of the doc-set naming). Reality checkpoints: after each feature, before each new
+  component, before declaring done.
+- **Stuck protocol:** STOP → delegate investigation → step back → simplify → ask "[A] vs [B]?".
+  Two failed attempts means stop and present options, not a third attempt.
+- **Editor-dependent verification** is a human step: label it `[EDITOR-VERIFY]` with exact clicks.
+- Edit source files in place with your file tools; never paste code into chat as the deliverable.
 
-## Third-Party Libraries (in CkThirdParty)
+## Provenance and maintenance
 
-- **EnTT 3.15.0** — ECS backend
-- **fmt** — String formatting
-- **cleantype** — Type name utilities
-- **ctti** — Compile-time type info
-- **JoltPhysics** — Physics
+Re-verify volatile facts before trusting them long after 2026-07-02:
+- Engine: `Get-Content D:/Repos/UnrealEngineAngelscript/Engine/Build/Build.version`
+- EnTT: `ls Source/CkThirdParty/Public/CkThirdParty/ | grep entt`
+- Module count: `(Get-Content CkFoundation.uplugin | Select-String '"Type"').Count` → 99 (one
+  `"Type"` per module entry; counting `"Name"` overcounts — the 10 plugin-dependency entries carry it too)
+- Binding policies: `rg -n 'enum class ECk_Signal_BindingPolicy' -A 10 Source/CkEcs`
+- Processor registration: `rg -c 'CK_REGISTER_PROCESSOR' Source` (0 hits for `ProcessorInjector` expected)
+- Tooling caveat: the Grep/Glob tools can silently miss files under this plugin (superproject
+  `.ignore` covers `Script/`, `docs/`, `Content/`; Glob has returned false-empties even in
+  `Source/`). Zero matches ⇒ re-check with `rg --no-ignore --files` or `Get-ChildItem` before
+  concluding absence.
