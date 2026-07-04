@@ -104,6 +104,9 @@ auto
         const FCk_Handle_CameraLayer& InLayer)
     -> FGameplayTag
 {
+    if (NOT InLayer.Has<ck::FFragment_EntityScript_Current>())
+    { return {}; }
+
     auto* Script = ::Cast<UCk_CameraLayer_EntityScript>(
         InLayer.Get<ck::FFragment_EntityScript_Current>().Get_Script().Get());
 
