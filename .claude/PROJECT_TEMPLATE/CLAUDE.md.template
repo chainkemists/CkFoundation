@@ -1,0 +1,124 @@
+<!--
+  CLAUDE.md.template — fill-in project CLAUDE.md for a NEW game built ON CkFoundation.
+  HOW TO USE: copy to <your-game-repo>/CLAUDE.md, replace every <angle-bracket> slot,
+  delete every guidance comment (like this one), commit. See README.md next to this file.
+
+  THE ONE RULE THAT KEEPS THIS FILE ALIVE: it holds ONLY per-project facts. Anything
+  generic (how to build a feature, test, debug, cook, replicate) lives in the ck-game-*
+  skills and the framework CLAUDE.md chain — link, never restate. Restated doctrine is
+  the #1 way project docs rot. Every volatile section carries a "(verified <date>)"
+  stamp; a stamp older than your last milestone means re-verify before trusting.
+-->
+
+# CLAUDE.md — <ProjectName>
+
+Guidance for Claude Code in this repository. Per-project facts ONLY — for how-to
+doctrine, see **The standard** below.
+
+## Identity (verified <YYYY-MM-DD>)
+
+<!-- Each line is a checkable fact. Re-stamp the date whenever you re-verify them. -->
+- **Project:** <ProjectName> — <one-line elevator pitch of the game>.
+- **Prefix:** `<Prefix>_` for classes/structs, `<prefix>::` for namespaces, `<PREFIX>.` for
+  gameplay-tag roots. <!-- Precedent: BusterBlock uses Bb_/bb::, Venus uses Vns_/vns::. -->
+- **Engine:** UnrealEngine-Angelscript fork, `<git-url>` branch `<branch>`, pinned at
+  `<commit-or-tag>` (UE <5.x>). Local checkout: `<path>`.
+  <!-- Corpus example (BusterBlock): github.com/chainkemists/UnrealEngine-internal (the
+       Chainkemists downstream of the Hazelight UnrealEngine-Angelscript fork), branch main-ck, UE 5.7. -->
+- **Framework submodules:** `Plugins/CkFoundation` @ `<sha>`, `Plugins/CkTests` @ `<sha>`,
+  `Plugins/CkGameplayDebugger` @ `<sha>`, `CkAuto` @ `<sha>`.
+  <!-- Stamp the pins at each milestone; drifted pins are the top cause of "works on my machine". -->
+- **Target platforms:** <Win64, ...>. **Distribution:** <Steam / EGS / ...>.
+- **Third-party SDKs in play:** <SDK + version, one line each; "none" is a valid answer>.
+
+## The standard (fixed — do not localize)
+
+How to build, test, debug, and ship on CkFoundation is defined by:
+
+1. The **ck-game-\* skill set** (junctioned into `.claude/skills/` by sync-skills):
+   ck-game-project-bootstrap, ck-game-feature-recipe, ck-game-angelscript-gameplay,
+   ck-game-entity-composition-patterns, ck-game-driver-architecture,
+   ck-game-replication-patterns, ck-game-debugging-playbook, ck-game-testing-discipline,
+   ck-game-build-and-cook, ck-game-framework-boundary.
+2. The **framework doc chain**: `Plugins/CkFoundation/CLAUDE.md` (doctrine + skill index),
+   `Plugins/CkFoundation/Source/CLAUDE.md` (module decision tree), `Plugins/CkFoundation/Script/CLAUDE.md`
+   (AngelScript language), `Plugins/CkTests/CLAUDE.md` (test pipelines + spec trust levels).
+
+Questions about skills, patterns, or doctrine are answered THERE, not here. If this file
+and a framework doc disagree, the framework doc wins for anything generic; this file wins
+only for the per-project facts it owns — and the conflict itself is a bug: fix whichever
+is stale, or record a dated entry under **Intentional divergences**.
+
+**sync-skills ritual:** after every framework-submodule update, run
+`Plugins/CkFoundation/.claude/scripts/sync-skills.ps1` from the repo root. The first-ever
+creation of `.claude/skills/` requires a Claude session restart to be picked up.
+
+## Living design tracker
+
+<!-- Convention (BusterBlock precedent): one canonical git-tracked open-questions file;
+     design-team answers land in a sibling dated answers file. Agents record ambiguities
+     THERE instead of guessing in code or burying them in comments. -->
+- **Open questions (canonical):** `<docs/notes/<area>-designer-questions.md>`
+- **Answers land in:** `<docs/notes/<date>-designer-answers.md>`
+
+When you hit a design ambiguity, a missing decision, or a system-level design issue:
+record it in the tracker — do not guess in code.
+
+## Project-specific gates — what "done" additionally requires here (verified <YYYY-MM-DD>)
+
+<!-- The generic definition of done is owned by ck-game-feature-recipe / ck-game-testing-discipline.
+     List ONLY what THIS project adds on top. Delete rows that don't apply. -->
+- <CI gate name(s) that must be green before merge, e.g. "Buildkite compile-game-development">
+- <per-platform check, e.g. "boots on Steam Deck", "cert checklist X for console platform Y">
+- <content gate, e.g. "no new assets outside /Game/<ProjectName>/ naming convention">
+
+## The hardest live problem (dated — rewrite at every milestone or delete)
+
+**<YYYY-MM-DD>:** <One paragraph: the thing the team currently fights hardest — the flaky
+system, the perf cliff, the design knot. Name the owning files/feature dirs. This section
+exists to force a refresh: if the date is stale, the whole file is suspect.>
+
+## Glossary — game-domain terms an agent won't infer
+
+<!-- Framework vocabulary (Fragment, Handle, EntityScript, Driver, ...) is owned by the
+     framework Lingo table — do NOT repeat it. List only YOUR game's domain nouns. -->
+| Term | Meaning |
+|---|---|
+| <Term> | <One line. What it is in THIS game, and the feature dir that owns it.> |
+
+## Maps and entry points (verified <YYYY-MM-DD>)
+
+| Purpose | Asset |
+|---|---|
+| Main menu map | `<path/MainMenu_MAP>` |
+| Primary gameplay map | `<path/...>` |
+| Editor startup map | `<path/...>` |
+| Gym base map | `<path/GYMs/...>` |
+| AutoTest map | `<path/AutoTests/AutoTests_<Prefix>_MAP>` |
+| Default GameMode | `<BP or AS class>` |
+
+## Intentional divergences from the ck-game-* standard
+
+<!-- The ONLY sanctioned place to deviate. Each row: dated, justified, with the standard
+     it deviates from. An undated/unjustified divergence found in code is a bug to fix or
+     a row to add — never silent accumulation. Empty table = fully conformant (good). -->
+| Date | Divergence | Standard it deviates from | Why (one line) |
+|---|---|---|---|
+| <YYYY-MM-DD> | <what we do instead> | <ck-game skill + section> | <reason> |
+
+## Provenance and maintenance
+
+- **Staleness rule:** re-stamp every "(verified <date>)" section at each milestone. A
+  section you can no longer verify gets tombstoned in place ("STALE as of <date>: <why>"),
+  not silently left standing. A dead section is deleted, not preserved.
+- **Update triggers:** engine/framework submodule bump → Identity; new SDK or platform →
+  Identity; new CI gate → Gates; milestone → Hardest live problem (rewrite) + all stamps;
+  any deviation from a ck-game skill → Divergences table, same commit as the deviation.
+- **Re-verify commands** (PowerShell, repo root):
+  - Submodule pins: `git submodule status Plugins/CkFoundation Plugins/CkTests Plugins/CkGameplayDebugger CkAuto`
+  - Engine pin: `Get-Content <engine-path>/Engine/Build/Build.version`
+  - Maps exist: `Test-Path Content/<ProjectName>/<...>.umap` per Maps table row
+  - Skill junctions live: `Get-ChildItem .claude/skills` (re-run sync-skills if empty)
+- **Tooling caveat:** if this repo adopts the standard `.ignore` (hiding `Script/`,
+  `Content/`, plugin `Script/` from ripgrep), the Grep/Glob tools silently return zero
+  there — re-check zero-matches with `rg --no-ignore` before concluding absence.
