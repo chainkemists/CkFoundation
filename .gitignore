@@ -48,6 +48,9 @@ sync.ffs_db
 # md files, they should be force added instead
 *.md
 
+# ...except the Claude skill library / reports / project template, which are tracked
+!.claude/**/*.md
+
 # Precompiled Assets
 SourceArt/**/*.png
 SourceArt/**/*.tga
