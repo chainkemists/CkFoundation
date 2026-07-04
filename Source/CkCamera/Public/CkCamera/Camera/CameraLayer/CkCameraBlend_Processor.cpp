@@ -157,7 +157,14 @@ namespace ck
         }
 
         // Hand the current alpha to the layer script for any custom per-frame logic (standard tuner blending above
-        // is automatic; this is the opt-in hook the layer can override).
+        // is automatic; this is the opt-in hook the layer can override). Guard the entity-script access the same way
+        // FProcessor_CameraLayer_Lifecycle does (CkCamera_Processor.cpp): a layer can be present with its blend +
+        // acquired-modifier fragments but momentarily/permanently without FFragment_EntityScript_Current (e.g. a
+        // husk layer orphaned by a destroyed camera owner), and a bare Get would ensure every frame. The tuner blend
+        // above is already applied; only the opt-in script hook is skipped.
+        if (NOT InLayer.Has<ck::FFragment_EntityScript_Current>())
+        { return; }
+
         if (auto* Script = ::Cast<UCk_CameraLayer_EntityScript>(
                 InLayer.Get<ck::FFragment_EntityScript_Current>().Get_Script().Get());
             ck::IsValid(Script))
