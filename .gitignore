@@ -43,7 +43,6 @@
 
 # misc
 sync.ffs_db
-.claude
 .git-credentials
 
 # md files, they should be force added instead

@@ -1,716 +1,291 @@
-// ============================================================================
-// COMPLETE DEVELOPMENT GUIDELINES - READ ALL BEFORE CODING
-// ============================================================================
-
-// CRITICAL: Read and understand ALL sections before writing any code.
-// This framework has specific patterns and conventions that must be followed.
-
-// ============================================================================
-// 1. DEVELOPMENT PARTNERSHIP
-// ============================================================================
-
-// We're building production-quality code together
-// Lead (Human) + Principal Programmer (Claude) partnership
-// Challenge directives if they don't make sense, are risky, or wrong
-// DO NOT be a sycophant - be as concise as possible while clear
-
-// CRITICAL WORKFLOW - ALWAYS FOLLOW THIS!
-// Research → Plan → Implement (NEVER JUMP STRAIGHT TO CODING!)
-// 1. Research: Explore codebase, understand existing patterns
-// 2. Plan: Create detailed implementation plan and verify with me
-// 3. Implement: Execute plan with validation checkpoints
-
-// CRITICAL ENVIRONMENT DETECTION:
-// - File paths present in conversation = Claude Desktop → Modify files directly
-// - No file paths = Web version → Use artifacts for ALL code, NEVER in chat
-// - Make iterative changes when possible to avoid message length limits
-// - Avoid full file rewrites unless absolutely necessary
-
-// CRITICAL: DO NOT ASSUME ANYTHING ABOUT CkFoundation FRAMEWORK
-// - This is a custom framework with specific patterns
-// - ASK for clarification rather than guessing
-// - Request examples of existing code when unsure
-// - Verify patterns before implementing
-
-// Reality Checkpoints - Stop and validate at these moments:
-// - After implementing complete feature
-// - Before starting new major component
-// - When something feels wrong
-// - Before declaring "done"
-// - If unsure of implementation
-
-// Working Memory Management:
-// Long context → Re-read guidelines, summarize progress, document current state
-// Maintain TODO.md with Current Task, Completed, Next Steps
-
-// ASK QUESTIONS if you are unsure at any point. Do NOT make assumptions, no matter how small.
-
-// ============================================================================
-// 2. OUR LINGO
-// ============================================================================
-
-// ECS = Entity Component System
-// BPFL = Blueprint Function Library
-// Entity = Entity from ECS
-// Fragment = Component from ECS (because Component is overloaded in UE)
-// Processor = System from ECS
-// UHT = Unreal Header Tool
-
-// ============================================================================
-// 3. MODULE ARCHITECTURE & INDEX
-// ============================================================================
-
-// DOCUMENTATION STRUCTURE
-// Before writing any code, navigate the documentation in this order:
-//   1. This file — project-wide patterns and constraints.
-//   2. The target module's Claude.md — module purpose, key API, anti-patterns.
-//   3. CkCore/Claude.md — use-case lookup table for utilities.
-//   4. Subfolder READMEs in CkCore/Public/CkCore/<folder>/README.md — API details.
-
-// FINDING THE RIGHT MODULE
-// Decision tree: "I need to..."
-//
-//   ...validate a handle or custom type      → CkCore/Validation + ck::IsValid
-//   ...assert a precondition with diagnostics → CkCore/Ensure   + CK_ENSURE_IF_NOT
-//   ...format a string                        → CkCore/Format   + ck::Format_UE
-//   ...get world time                         → CkCore/Time     + Get_WorldTime
-//   ...countdown/accumulate ticks (no entity) → CkCore/Chrono   + FCk_Chrono
-//   ...define a getter/setter macro           → CkCore/Macros   + CK_PROPERTY
-//   ...check/intersect gameplay tags          → CkCore/GameplayTag
-//   ...walk FProperty / reflection            → CkCore/Reflection
-//   ...bound range [min,max] + normalize      → CkCore/Math/ValueRange
-//   ...create/destroy entities                → CkEcs  + UCk_Utils_EntityLifetime_UE
-//   ...write a processor                      → CkEcs  + TProcessor<>
-//   ...bind/fire signals                      → CkEcs  + CK_SIGNAL_BIND / CK_SIGNAL_UNBIND
-//   ...store entity-role identity (1 tag)     → CkLabel
-//   ...store entity's child entities          → CkRecord
-//   ...add configurable typed data to entity  → CkProvider (data-asset driven)
-//   ...store multiple behavior tags           → CkTagSet
-//   ...actor ↔ entity bridge                  → CkActor + CkEcsExt/EntityHolder
-//   ...higher-level ECS (SceneNode, Meta)     → CkEcsExt
-//   ...ECS timers with signals/delegates      → CkTimer
-//   ...ECS interpolation                      → CkTween
-//   ...ECS typed attributes (health/mana)     → CkAttribute
-//   ...ECS audio tracks                       → CkAudio
-//   ...ECS Niagara VFX                        → CkVfx
-//   ...ECS camera shake                       → CkCamera
-//   ...ECS animation assets                   → CkAnimation
-//   ...ECS state machine                      → CkStateMachine
-//   ...ECS inventory + grid                   → CkInventory + CkGrid
-//   ...ECS physics acceleration               → CkPhysics
-//   ...ECS projectiles                        → CkProjectile
-//   ...ECS interaction system                 → CkInteraction
-//   ...ECS spatial overlap/collision          → CkOverlapBody + CkShapes
-//   ...ECS spatial volume query               → CkSpatialQuery
-//   ...spline path data / follow a spline     → CkSpline (+ CkTween for follow)
-//   ...ECS raycast sensing                    → CkRaySense
-//   ...replicate render target pixels / draw calls → CkRenderTarget
-//   ...ECS targeting / scoring                → CkTargeting
-//   ...ECS aggro / threat table               → CkAggro
-//   ...ECS entity relationships (ally/enemy)  → CkRelationship
-//   ...multi-source damage/buff resolution    → CkResolver
-//   ...ECS AI / EQS                           → CkAi + CkPerception
-//   ...grid-based pathfinding                 → CkAStar + CkGrid
-//   ...project settings exposed to editor     → CkSettings
-//   ...console variables / runtime tuning     → CkCVar
-//   ...log a message                          → CkLog (module namespace functions)
-//   ...profile a processor                    → CkProfile + SCOPE_CYCLE_COUNTER
-//   ...generate AngelScript accessors         → CkAngelscriptGenerator
-//   ...relay events to an actor               → CkActorRelay
-//   ...entity templates / data presets        → CkTemplate | CkEcsTemplate
-
-// MODULE TIER TABLE
-// Format: Module | Tier | Ck dependencies | Claude.md
-//
-// TIER 0 — No Ck deps (roots):
-//   CkBuildConfig   | T0 | —                     | CkBuildConfig/Claude.md
-//   CkSettings      | T0 | —                     | CkSettings/Claude.md
-//   CkThirdParty    | T0 | —                     | CkThirdParty/Claude.md
-//
-// TIER 1 — Foundation (deps = T0 only):
-//   CkLog           | T1 | Settings, ThirdParty   | CkLog/Claude.md
-//   CkCore          | T1 | BuildConfig,Log,Settings,ThirdParty | CkCore/Claude.md
-//   CkMemory        | T1 | Core, Log              | CkMemory/Claude.md
-//   CkProfile       | T1 | Core, Log              | CkProfile/Claude.md
-//   CkPerception    | T1 | Core, Log, ThirdParty  | CkPerception/Claude.md
-//   CkCVar          | T1 | Core, Log              | CkCVar/Claude.md
-//   CkInsightsAnalyzer | T1 | Core, Log           | CkInsightsAnalyzer/Claude.md
-//
-// TIER 2 — ECS core:
-//   CkEcs           | T2 | Core,Log,Memory,Profile,Settings,ThirdParty | CkEcs/Claude.md
-//   CkLabel         | T2 | Core,Ecs,Log           | CkLabel/Claude.md
-//   CkRecord        | T2 | Core,Ecs,Label,Log     | CkRecord/Claude.md
-//   CkProvider      | T2 | Core,Ecs,Log           | CkProvider/Claude.md
-//   CkVariables     | T2 | Core,Ecs,Log           | CkVariables/Claude.md
-//   CkTagSet        | T2 | Core,Ecs,Log           | CkTagSet/Claude.md
-//   CkAi            | T2 | Core,Ecs,Log           | CkAi/Claude.md
-//   CkInput         | T2 | Core,Ecs,Log,Settings  | CkInput/Claude.md
-//   CkResourceLoader | T2 | Core,Ecs,Log,Settings | CkResourceLoader/Claude.md
-//
-// TIER 3 — Actor bridge:
-//   CkActor         | T3 | Core,Ecs,Log,Variables | CkActor/Claude.md
-//   CkEcsExt        | T3 | Actor,Core,Ecs,Label,Log,Record,Settings | CkEcsExt/Claude.md
-//
-// TIER 4 — Feature modules (most depend on Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings):
-//   CkActorRelay       | T4 | Core,Ecs,EcsExt,Label,Log,Settings       | CkActorRelay/Claude.md
-//   CkAggro            | T4 | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkAggro/Claude.md
-//   CkAnimation        | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record | CkAnimation/Claude.md
-//   CkAStar            | T4 | Core,Ecs,EcsExt                         | CkAStar/Claude.md
-//   CkAssetExporter    | T4 | Ai,Core,Ecs,Log                         | CkAssetExporter/Claude.md
-//   CkAttribute        | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record | CkAttribute/Claude.md
-//   CkCamera           | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkCamera/Claude.md
-//   CkChaos            | T4 | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Targeting | CkChaos/Claude.md
-//   CkCompositeAlgos   | T4 | Core,Ecs,EcsExt                         | CkCompositeAlgos/Claude.md
-//   CkConsoleCommands  | T4 | Core,Ecs,Label,Log,Record,Settings      | CkConsoleCommands/Claude.md
-//   CkCue              | T4 | ActorRelay,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer | CkCue/Claude.md
-//   CkDataViewer       | T4 | Core,Ecs,EcsExt,Label,Log,Record,Settings | CkDataViewer/Claude.md
-//   CkDynamic          | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkDynamic/Claude.md
-//   CkEcsTemplate      | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkEcsTemplate/Claude.md
-//   CkEntityCollection | T4 | Core,Ecs,EcsExt,Label,Log,Record,Settings | CkEntityCollection/Claude.md
-//   CkEntityExtension  | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkEntityExtension/Claude.md
-//   CkEntityTag        | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkEntityTag/Claude.md
-//   CkFx               | T4 | Core,Ecs,EcsExt,Label,Log,Record,Settings | CkFx/Claude.md
-//   CkGameSession      | T4 | Core,Ecs,Label,Log,Record,Settings      | CkGameSession/Claude.md
-//   CkGraphics         | T4 | Core,Ecs,Log,Variables                  | CkGraphics/Claude.md
-//   CkGrid             | T4 | Core,Ecs,EcsExt,Label,Log,Record,Settings | CkGrid/Claude.md
-//   CkInteraction      | T4 | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkInteraction/Claude.md
-//   CkInventory        | T4 | Attribute,Core,Ecs,EcsExt,Grid,Label,Log,Record,Settings,TagSet | CkInventory/Claude.md
-//   CkIsmRenderer      | T4 | Core,Ecs,EcsExt,Graphics,Label,Log,Provider,Record,Settings | CkIsmRenderer/Claude.md
-//   CkIskmRenderer     | T4 | Animation,AnimGraphRuntime,Core,Ecs,EcsExt,Graphics,Label,Log,Physics,Provider,Record,Settings | CkIskmRenderer/Claude.md
-//   CkIskmRendererVF   | T4 | (engine-only Plan-2 vertex-factory module: Core,CoreUObject,Engine,RenderCore,RHI,Renderer,Projects — NO Ck deps; LoadingPhase PostConfigInit so the VF type registers before the engine seals its factory list) | CkIskmRenderer/Claude.md
-//   CkMessaging        | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkMessaging/Claude.md
-//   CkObjective        | T4 | ActorRelay,Attribute,Core,Cue,Ecs,EcsExt,EntityCollection,Label,Log,Provider,Record,Settings | CkObjective/Claude.md
-//   CkOverlapBody      | T4 | Actor,Core,Ecs,EcsExt,Graphics,Label,Log,Physics,Record,Settings | CkOverlapBody/Claude.md
-//   CkPmg              | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkPmg/Claude.md
-//   CkProjectile       | T4 | Core,Ecs,EcsExt,Log,Physics,Record,Variables | CkProjectile/Claude.md
-//   CkRaySense         | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Shapes | CkRaySense/Claude.md
-//   CkRenderTarget     | T4 | ActorRelay,Core,Ecs,EcsExt,Label,Log,Profile,Record,Settings,Timer | CkRenderTarget/CLAUDE.md
-//   CkRelationship     | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkRelationship/Claude.md
-//   CkResolver         | T4 | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Targeting | CkResolver/Claude.md
-//   CkScripts          | T4 | (varies)                                | CkScripts/Claude.md
-//   CkShapes           | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkShapes/Claude.md
-//   CkSpatialQuery     | T4 | Core,Ecs,EcsExt,Label,Log,Physics,Provider,Record,Settings,Shapes,ThirdParty | CkSpatialQuery/Claude.md
-//   CkSpline           | T4 | Core,Ecs,EcsExt,Log                     | CkSpline/Claude.md
-//   CkStateMachine     | T4 | Core,Dynamic,Ecs,Label,Log,Provider,Record,Settings,Timer | CkStateMachine/Claude.md
-//   CkSubstep          | T4 | Core,Ecs,EcsExt,Label,Log,Record,Settings | CkSubstep/Claude.md
-//   CkTargeting        | T4 | Actor,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkTargeting/Claude.md
-//   CkTemplate         | T4 | Core,Ecs,EcsExt,Label,Log,Record,Settings | CkTemplate/Claude.md
-//   CkTimer            | T4 | Core,Ecs,EcsExt,Label,Log,Profile,Record | CkTimer/Claude.md
-//   CkTween            | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer | CkTween/Claude.md
-//   CkUI               | T4 | Core,Ecs,EcsExt,GameSession,Log,Settings,ThirdParty | CkUI/Claude.md
-//   CkVfx              | T4 | ActorRelay,Core,Cue,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer | CkVfx/Claude.md
-//   CkWatermark        | T4 | Core,Ecs,Log,Memory,Settings,SpatialQuery,UI | CkWatermark/Claude.md
-//
-//   CkAudio            | T4+ | ActorRelay,Core,Cue,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer | CkAudio/Claude.md
-//   CkPhysics          | T4+ | Actor,Chaos,Core,Ecs,EcsExt,Label,Log,Record | CkPhysics/Claude.md
-//
-// TIER 5 — Editor modules (editor-only; do NOT depend from runtime):
-//   See EDITOR_MODULES.md for the full list and details.
-//   CkBuildConfig, CkEditorGraph, CkEditorStyle, CkEditorToolbar and all *Editor variants.
-//
-// KEY CROSS-MODULE PATTERNS
-//
-// "Add a feature to an entity":
-//   1. Call the feature module's UCk_Utils_X_UE::Add(InHandle, InParams)
-//   2. The Utils creates a child entity and adds it to the parent's Record
-//   3. Label the child entity with UCk_Utils_GameplayLabel_UE::Add(ChildHandle, Tag)
-//   4. Processors on the feature module drive the child entity's lifecycle
-//
-// "Entity game logic":
-//   UCk_EntityScript_UE (C++ / Blueprint / AS) → Construct → BeginPlay → EndPlay
-//   - Construct: spawn child entities, set up initial state
-//   - BeginPlay: bind signals, start timers
-//   - EndPlay: unbind signals (auto-unbind if PostFireBehavior::Unbind was used)
-//
-// "Signal (event) flow":
-//   Processor detects condition → UUtils_Signal_OnX::Broadcast(Handle, Payload)
-//   → EntityScript::DoBeginPlay-bound delegate fires → EntityScript acts
-//   → EntityScript calls Request_DestroyEntity or further CkUtils methods
-//
-// "Reading values from providers in a processor":
-//   const auto Val = ck::IsValid(InParams.Get_MyProvider())
-//       ? InParams.Get_MyProvider()->Get_Value(InHandle)
-//       : DefaultValue;
-//
-// "Component lifetime (Niagara, Audio, etc.)":
-//   Setup processor creates component → LifetimeMonitor fires signal on completion
-//   → EndPlay processor calls DestroyComponent()
-//   (Never call DestroyComponent() in LifetimeMonitor — see section 11 below)
-
-// ============================================================================
-// 3. TECHNICAL STANDARDS
-// ============================================================================
-
-// Unreal Engine 5.6 (ask if this has changed)
-// Do NOT create fallbacks that hide problems unless explicitly told
-// Feature branch - no backwards compatibility needed
-// Choose clarity over cleverness
-
-// ============================================================================
-// 4. FUNCTION FORMATTING STANDARDS
-// ============================================================================
-
-// UFUNCTION DECLARATIONS (headers):
-UFUNCTION()
-void
-OnLifetimeExpired(
-    FCk_Handle_Timer InTimer,
-    FCk_Chrono InChrono,
-    FCk_Time InDeltaT);
-
-// C++ FUNCTION DECLARATIONS (headers):
-auto
-GetAssetRegistryTags(
-    TArray<FAssetRegistryTag>& OutTags) const -> void override;
-
-// Functions without parameters (headers):
-auto
-Foo() -> bool;
-
-// FUNCTION DEFINITIONS (implementations):
-auto
-    UCk_CueBase_EntityScript::
-    GetAssetRegistryTags(
-        TArray<FAssetRegistryTag>& OutTags) const
-    -> void
-{
-    // Implementation...
-}
-
-// Parameterless function definitions:
-auto
-    UCk_CueBase_EntityScript::
-    Foo()
-    -> bool
-{
-    return false;
-}
-
-// ============================================================================
-// 5. C++ CODE STYLE & PATTERNS
-// ============================================================================
-
-// Use auto aggressively, even for nullptr pointers
-auto IntPtr = static_cast<int*>(nullptr);
-auto Handle = UCk_Utils_AudioTrack_UE::Cast(SomeHandle);
-
-// Invert if statements to early out and reduce nesting
-auto SomeFunction() -> void
-{
-    CK_ENSURE_IF_NOT(ck::IsValid(Handle), TEXT("Handle is invalid"))
-    { return; }
-
-    // Continue with main logic...
-}
-
-// Validity checks and operators
-if (ck::IsValid(Component)) { /* ... */ }
-if (ck::Is_NOT_Valid(Component)) { return; }
-if (NOT bSomeCondition) { /* ... */ }
-
-// `ck::IsValid_Policy_NullptrOnly{}` is for RAW POINTERS ONLY (UWorld*, UObject*,
-// dtNavMesh*, etc.) where you want a pure null-check without dereferencing.
-// Do NOT pass it for smart pointers — TSharedPtr / TWeakPtr / TWeakObjectPtr /
-// TStrongObjectPtr all have their own ck::IsValid overload that does the right
-// thing (.IsValid() on the smart-ptr, then validity on the pointee where applicable).
-if (ck::IsValid(RawPtr, ck::IsValid_Policy_NullptrOnly{})) { /* raw pointer */ }
-if (ck::IsValid(SharedPtr))                                 { /* TSharedPtr — bare */ }
-if (ck::IsValid(WeakObjectPtr))                             { /* TWeakObjectPtr — bare */ }
-
-// Naming conventions
-bool IsEnabled = true;        // Good - no 'b' prefix
-auto Get_TrackName() const -> FGameplayTag;   // Get_ prefix for getters
-auto Request_StartTrack() -> void;            // Request_ prefix for mutating functions
-
-// Function signatures
-// UFUNCTION declarations: NO trailing return type (UHT rejects them).
-// The return type goes on its own line, the function name + params on the next:
-UFUNCTION(BlueprintCallable,
-          Category = "Ck|Utils|AudioTrack",
-          DisplayName = "[Ck][AudioTrack] Some Function")
-static FCk_Handle_AudioTrack
-SomeFunction(
-    UPARAM(ref) FCk_Handle_AudioTrack& InTrack);
-
-// UFUNCTION definitions: USE trailing return type, broken across lines
-auto
-    UCk_Utils_AudioTrack_UE::
-    SomeFunction(
-        FCk_Handle_AudioTrack& InTrack)
-    -> FCk_Handle_AudioTrack
-{
-    /* ... */
-}
-
-// All other (non-UFUNCTION) C++ functions: USE trailing return type even in headers
-static auto
-DoSomething(
-    const FCk_Handle& InHandle) -> void;
-
-// Construction syntax
-auto MyStruct = MyStructType{};              // Use {} for construction
-UFUNCTION(BlueprintCallable)
-static void
-Func(float Value = 1.0f);                    // Use () for UFUNCTION defaults (UHT limitation)
-
-// Default initialization in UFUNCTIONs is DISALLOWED - remove = {}
-
-// Unreal UFUNCTION overloading: Add suffix (cannot overload)
-UFUNCTION(BlueprintCallable)
-static void
-DoAction();
-UFUNCTION(BlueprintCallable)
-static void
-DoAction_Advanced();
-
-// ============================================================================
-// CRITICAL: COMMENTS AND CODE CLARITY
-// ============================================================================
-
-// Do NOT have unnecessary comments. If the code is not clear, use other means:
-// - Better variable names
-// - Named lambdas to clarify intent
-// - Extract bool parameters into constexpr variables (see below)
-
-// BAD - Comment explains unclear code:
-NiagaraComponent->Activate(true);  // true = reset on activate
-
-// GOOD - Self-documenting code:
-constexpr auto ResetOnActivate = true;
-NiagaraComponent->Activate(ResetOnActivate);
-
-// Extract ALL bool parameters in function calls into constexpr variables:
-// BAD:
-auto Component = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-    World, Effect, Location, Rotation, Scale,
-    false,  // What does this mean?
-    true,   // What does this mean?
-    ENCPoolMethod::None,
-    true    // What does this mean?
-);
-
-// GOOD:
-constexpr auto AutoDestroy = false;
-constexpr auto AutoActivate = true;
-constexpr auto PreCullCheck = true;
-auto Component = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-    World, Effect, Location, Rotation, Scale,
-    AutoDestroy,
-    AutoActivate,
-    ENCPoolMethod::None,
-    PreCullCheck
-);
-
-// This pattern applies to ALL function calls with bool parameters
-// The variable name documents what the parameter does
-
-// ============================================================================
-// CK_PROPERTY MACRO USAGE & ENCAPSULATION PATTERNS
-// ============================================================================
-
-// CK_PROPERTY_GET(_PrivateMember) automatically generates:
-// - A public getter: Get_PrivateMember() that returns const reference
-// - NO setter
-
-// CK_PROPERTY(_PrivateMember) automatically generates:
-// - A public getter: Get_PrivateMember() that returns const reference
-// - A public setter: Set_PrivateMember(value)
-
-// ALWAYS use the generated getter/setter methods for read-only access:
-
-// CORRECT - Read-only access using generated getter:
-for (const auto& Intent : InCurrent.Get_ActiveIntents())
-{
-    // Process intent - this works from anywhere
-}
-
-// WRONG - Direct private member access from non-friend:
-for (const auto& Intent : InCurrent._ActiveIntents)  // Won't compile
-{
-    // This violates encapsulation
-}
-
-// Friend classes (Processors, Utils) can access private members directly for modification:
-// This is ONLY allowed for friend classes that need to modify state:
-
-// CORRECT - Friend class modifying state:
-InCurrent._ActiveIntents.Add(Intent);           // Direct modification by friend
-InCurrent._CachedBestTargets.Remove(Intent);    // Direct modification by friend
-
-// WRONG - Trying to modify through getter:
-InCurrent.Get_ActiveIntents().Add(Intent);      // Won't compile - getter returns const reference
-
-// Pattern Summary:
-// 1. Use getters (Get_XXX()) for ALL read-only access
-// 2. Use direct private access (_XXX) ONLY in friend classes for modification
-// 3. Declare friend relationships in Fragment headers when modification needed
-// 4. The macros handle const-correctness and proper access patterns automatically
-
-// Example Fragment with proper friend declarations:
-struct CKMODULE_API FFragment_Example_Current
-{
-    CK_GENERATED_BODY(FFragment_Example_Current);
-
-    friend class FProcessor_Example_HandleRequests;  // Needs to modify state
-    friend class UCk_Utils_Example_UE;               // Needs to modify state
-
-private:
-    TSet<FGameplayTag> _ActiveItems;
-
-public:
-    CK_PROPERTY_GET(_ActiveItems);  // Generates Get_ActiveItems() const
-}
-
-// ============================================================================
-// 6. INTERFACE DESIGN PRINCIPLES
-// ============================================================================
-
-// Avoid TOptional in UFUNCTION and UPROPERTY - doesn't work with Blueprints/Angelscript
-// BAD:
-UFUNCTION(BlueprintCallable)
-static void SomeFunction(TOptional<int32> InValue);
-
-UPROPERTY(EditAnywhere)
-TOptional<int32> _SomeValue;
-
-// GOOD: Use enum + value pattern
-UENUM(BlueprintType)
-enum class ECk_ValueMode : uint8
-{
-    UseDefault,
-    Override
-};
-
-// Prefer enums over bool options - more self-documenting and extensible
-// BAD:
-UPROPERTY(EditAnywhere)
-bool _AllowSomething = true;
-
-// GOOD:
-UENUM(BlueprintType)
-enum class ECk_SomethingBehavior : uint8
-{
-    Block,
-    Allow
-};
-
-// Design for THREE environments: C++, Blueprints, AND Angelscript
-
-// ============================================================================
-// 7. REQUEST STRUCT PATTERNS
-// ============================================================================
-
-// Use request structs following established pattern (like Probe system)
-// Single struct per request type - don't create separate variants
-
-USTRUCT(BlueprintType)
-struct MYMODULE_API FCk_Request_SomeAction : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_SomeAction);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_SomeAction);
-
-private:
-    // Essential parameters - cannot have meaningful defaults, go in constructor
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FGameplayTag _RequiredTag;
-
-    // Optional parameters - have meaningful defaults, use setters
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    ECk_SomeMode _Mode = ECk_SomeMode::Default;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true,
-                     EditCondition = "_Mode == ECk_SomeMode::Override"))
-    int32 _OverrideValue = 50;
-
-public:
-    // Essential parameters use CK_PROPERTY_GET (no setters)
-    CK_PROPERTY_GET(_RequiredTag);
-
-    // Optional parameters use CK_PROPERTY (with setters)
-    CK_PROPERTY(_Mode);
-    CK_PROPERTY(_OverrideValue);
-
-public:
-    // Constructor takes only essential parameters
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_SomeAction, _RequiredTag);
-};
-
-// UFUNCTION should take request struct
-UFUNCTION(BlueprintCallable, Category = "Ck|Utils|MyFeature")
-static FCk_Handle_MyFeature
-Request_SomeAction(
-    UPARAM(ref) FCk_Handle_MyFeature& InHandle,
-    const FCk_Request_SomeAction& InRequest);
-
-// ============================================================================
-// 8. ENUM + VALUE PATTERN FOR OPTIONAL OVERRIDES
-// ============================================================================
-
-// When replacing TOptional<T>, use enum mode + value:
-if (InRequest.Get_PriorityOverrideMode() == ECk_PriorityOverride::Override)
-{
-    auto Priority = InRequest.Get_PriorityOverrideValue();
-    // Use override value
-}
-
-// ============================================================================
-// 9. ECS FRAMEWORK PATTERNS
-// ============================================================================
-
-// Naming conventions:
-struct FCk_Fragment_AudioTrack_Params { /* ... */ };     // Fragment_[Feature]_[Type]
-struct FTag_AudioTrack_NeedsSetup { /* ... */ };         // Tag_[Feature]_[Purpose]
-struct FCk_Handle_AudioTrack : public FCk_Handle_TypeSafe { /* ... */ };  // Handle_[Feature]
-class UCk_Utils_AudioTrack_UE : public UBlueprintFunctionLibrary { /* ... */ };  // Utils_[Feature]_UE
-class FProcessor_AudioTrack_Setup { /* ... */ };         // Processor_[Feature]_[Purpose]
-
-// IMPORTANT: TypeSafe handles go in _Fragment_Data.h, never in _Fragment.h
-
-// Handle patterns:
-auto SelfHandle = ck::SelfEntity(this);
-auto OwnerHandle = ck::GetOwnerEntity(SelfHandle);
-
-// Probe/Signal binding patterns:
-UFUNCTION(BlueprintCallable,
-	Category = "Ck|Utils|Probe",
-	DisplayName = "[Ck][ProbeTrace] Bind To OnEndOverlap")
-static FCk_Handle_ProbeTrace
-BindTo_OnEndOverlap_ProbeTrace(
-	UPARAM(ref) FCk_Handle_ProbeTrace& InProbeTraceEntity,
-	const FCk_Delegate_ProbeTrace_OnEndOverlap& InDelegate,
-	ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightthisFrame,
-	ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
-
-UFUNCTION(BlueprintCallable,
-		  Category = "Ck|Utils|Probe",
-		  DisplayName = "[Ck][ProbeTrace] Unbind From OnEndOverlap")
-static FCk_Handle_ProbeTrace
-UnbindFrom_OnEndOverlap_ProbeTrace(
-	UPARAM(ref) FCk_Handle_ProbeTrace& InProbeTraceEntity,
-	const FCk_Delegate_ProbeTrace_OnEndOverlap& InDelegate);
-
-// definition of the bind
-auto
-    UCk_Utils_Probe_UE::
-    BindTo_OnEndOverlap_ProbeTrace(
-        FCk_Handle_ProbeTrace& InProbeTraceEntity,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_ProbeTrace_OnEndOverlap& InDelegate)
-        -> FCk_Handle_ProbeTrace
-{
-    CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeTraceEndOverlap, InProbeTraceEntity, InDelegate, InBindingPolicy, InPostFireBehavior);
-    return InProbeTraceEntity;
-}
-
-auto
-    UCk_Utils_Probe_UE::
-    UnbindFrom_OnEndOverlap_ProbeTrace(
-        FCk_Handle_ProbeTrace& InProbeTraceEntity,
-        const FCk_Delegate_ProbeTrace_OnEndOverlap& InDelegate)
-        -> FCk_Handle_ProbeTrace
-{
-    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeTraceEndOverlap, InProbeTraceEntity, InDelegate);
-    return InProbeTraceEntity;
-}
-
-// ============================================================================
-// 10. UNREAL ENGINE SPECIFICS
-// ============================================================================
-
-// Common operations:
-auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InEntity);
-auto Context = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InEntity);
-GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAssets(TArray<UObject*>);
-
-// World time retrieval pattern:
-const auto TimeParams = FCk_Utils_Time_GetWorldTime_Params{World};
-const auto TimeResult = UCk_Utils_Time_UE::Get_WorldTime(TimeParams);
-const auto CurrentTime = TimeResult.Get_WorldTime().Get_Time();
-
-// Common includes:
-#include "CkCore/Chrono/CkChrono.h"  // For FCk_Chrono
-#include "CkCore/Time/CkTime_Utils.h"  // For world time utilities
-
-// ============================================================================
-// STANDALONE COMPONENT REGISTRATION (NO ACTOR OWNER)
-// ============================================================================
-
-// When creating UActorComponent instances without an Actor owner (e.g., in ECS):
-// DO NOT use NewObject + manual RegisterComponent - this causes registration issues
-
-// BAD - Manual component creation and registration:
-auto NiagaraComponent = NewObject<UNiagaraComponent>(World);
-NiagaraComponent->SetWorldTransform(Transform);
-NiagaraComponent->RegisterComponent();  // ❌ Will fail or cause ensures
-
-// GOOD - Use factory functions that handle registration:
-constexpr auto AutoDestroy = false;
-constexpr auto AutoActivate = false;
-constexpr auto PreCullCheck = true;
-auto NiagaraComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-    World,
-    Effect,
-    Location,
-    Rotation,
-    Scale,
-    AutoDestroy,
-    AutoActivate,
-    ENCPoolMethod::None,
-    PreCullCheck
-);
-
-// Factory functions like SpawnSystemAtLocation properly register components with the world
-// Use similar factory patterns for other component types (Audio, etc.)
-
-// UObjects cannot use CK_DEFINE_CONSTRUCTORS - Unreal generates its own
-
-// UFUNCTION patterns (UFUNCTIONs CANNOT have trailing return types in headers — UHT rejects them):
-UFUNCTION(BlueprintCallable,
-          Category = "Ck|Utils|AudioTrack",
-          DisplayName = "[Ck][AudioTrack] Request Play")
-static FCk_Handle_AudioTrack
-Request_Play(
-    UPARAM(ref) FCk_Handle_AudioTrack& InTrack,
-    const FCk_Request_AudioTrack_Play& InRequest);
-
-// UPROPERTY patterns:
-UPROPERTY(EditAnywhere, BlueprintReadWrite,
-          Category = "Audio",
-          meta = (AllowPrivateAccess = true, Categories = "Audio.Track"))
-FGameplayTag _TrackName;
-
-// Private members with public accessors:
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    float _Volume = 1.0f;
-
-public:
-    CK_PROPERTY(_Volume); // Generates getter/setter
-
-// ============================================================================
-// 11. MEMORY MANAGEMENT
-// ============================================================================
-
-// Use TStrongObjectPtr for UObject references in ECS components
-TStrongObjectPtr<UAudioComponent> _AudioComponent;
-
-// Use TObjectPtr for UPROPERTY UObject references
-UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-TObjectPtr<USoundBase> _Sound;
-
-// ============================================================================
-// COMPONENT LIFETIME MANAGEMENT IN ECS
-// ============================================================================
-
-// Pattern: Components stored in fragments should be destroyed in EndPlay processor
-// Do NOT destroy components before the entity is destroyed
-
-// Fragment storage:
+# Source/CLAUDE.md — module topology & cross-module patterns
+
+This file owns the **module map** of CkFoundation/Source: which module solves which problem, the
+dependency tier table, and the patterns that span modules. It does NOT restate rules owned
+elsewhere: **style, naming, macros, signals, requests, error handling, non-negotiables,
+collaboration, engine/EnTT versions, skill index** → root [CLAUDE.md](../CLAUDE.md) (doctrine of
+record); **AngelScript** (language deltas, `utils_*`, dynamic handles, `asset ... of ...`
+definitions) → [Script/CLAUDE.md](../Script/CLAUDE.md); **editor-only modules** →
+[EDITOR_MODULES.md](EDITOR_MODULES.md).
+
+Facts below were verified against Build.cs files, headers, and git history on **2026-07-02**
+(re-verification commands at the bottom). Claims marked INFERRED are reasoned, not confirmed.
+
+## Documentation navigation order
+
+Before writing any code, navigate the documentation in this order:
+
+1. This file — project-wide topology; find the right module and cross-module pattern.
+2. The target module's `Claude.md` — purpose, key API, anti-patterns.
+3. [CkCore/Claude.md](CkCore/Claude.md) — use-case lookup table for utilities.
+4. Subfolder READMEs in `CkCore/Public/CkCore/<Folder>/README.md` — API details (48 files).
+
+## Finding the right module — "I need to..."
+
+| I need to... | Module / entry point |
+|---|---|
+| validate a handle or custom type | `CkCore/Validation` + `ck::IsValid` |
+| assert a precondition with diagnostics | `CkCore/Ensure` + `CK_ENSURE_IF_NOT` |
+| format a string | `CkCore/Format` + `ck::Format_UE` |
+| get world time | `CkCore/Time` + `Get_WorldTime` (pattern below) |
+| countdown/accumulate ticks (no entity) | `CkCore/Chrono` + `FCk_Chrono` |
+| define a getter/setter macro | `CkCore/Macros` + `CK_PROPERTY` (semantics: root CLAUDE.md) |
+| check/intersect gameplay tags | `CkCore/GameplayTag` |
+| walk FProperty / reflection | `CkCore/Reflection` |
+| bound range [min,max] + normalize | `CkCore/Math/ValueRange` |
+| create/destroy entities | `CkEcs` + `UCk_Utils_EntityLifetime_UE` |
+| write a processor | `CkEcs/Processor` (`TProcessor`, self-registered via `CK_REGISTER_PROCESSOR`) |
+| bind/fire signals | `CkEcs/Signal` + `CK_SIGNAL_BIND` / `CK_SIGNAL_UNBIND` |
+| actor ↔ entity bridge | `CkEcs/OwningActor` (`UCk_Utils_OwningActor_UE`) + `CkActor`; EntityHolder in `CkEcsExt` |
+| data-driven entity logic (spawnable unit) | `CkEcs/EntityScript` (`UCk_EntityScript_UE`) |
+| store entity-role identity (1 tag) | `CkLabel` (`UCk_Utils_GameplayLabel_UE`) |
+| store entity's child entities | `CkRecord` |
+| add configurable typed data via data assets | `CkProvider` |
+| replicated named variables on an entity | `CkVariables` |
+| store multiple behavior tags (replicated) | `CkTagSet` |
+| FName-flavored multi-tags + tag queries | `CkEntityTag` |
+| higher-level ECS (SceneNode, Meta, Transform) | `CkEcsExt` |
+| attach/manage UActorComponents on entities | `CkUnrealComponent` (no doc yet) |
+| place/spawn EntityScripts in a level | `CkEntitySpawner` (`AInfo`-derived spawner actor; no doc yet) |
+| entity presets / archetypes | EntityScript spawn params (`FInstancedStruct`, `CkEntityScript.h:65`) + `CkProvider`. CkTemplate/CkEcsTemplate were REMOVED (`ad045415b`); these are the successors (INFERRED) |
+| ECS timers with signals/delegates | `CkTimer` |
+| ECS interpolation / follow a spline | `CkTween` (+ `CkSpline` for path data) |
+| ECS typed attributes (health/mana) | `CkAttribute` |
+| ECS audio tracks | `CkAudio` |
+| ECS Niagara VFX | `CkVfx` |
+| one-shot gameplay cues (base framework) | `CkCue` |
+| ECS camera shake | `CkCamera` |
+| ECS animation assets | `CkAnimation` |
+| ECS state machine (data-asset conditions) | `CkStateMachine` |
+| ECS inventory + 2D grid | `CkInventory` + `CkGrid` |
+| ECS physics acceleration/forces | `CkPhysics` |
+| ECS projectiles / ballistics | `CkProjectile` |
+| ECS interaction channels | `CkInteraction` |
+| ECS spatial overlap/collision | `CkOverlapBody` + `CkShapes` |
+| ECS spatial volume query / probes (Jolt) | `CkSpatialQuery` |
+| native entity queries (rings/cones over entities) | `CkEqs` (no doc yet; NOT UE's EQS) |
+| UE EQS wrappers | `CkAi` |
+| AI perception → ECS | `CkPerception` |
+| navmesh integration (paths, projection) | `CkNavigation` |
+| crowd steering / avoidance | `CkCrowd` |
+| GOAP planner (A* over Action entities) | `CkGoap` |
+| grid-based pathfinding | `CkAStar` + `CkGrid` |
+| ECS raycast sensing | `CkRaySense` |
+| replicate render-target pixels / draw calls | `CkRenderTarget` (no doc yet) |
+| runtime shader Looks / outline rendering | `CkUsf` (no doc yet) |
+| ISM / skeletal-instance rendering | `CkIsmRenderer` / `CkIskmRenderer` |
+| ECS targeting / scoring | `CkTargeting` |
+| ECS aggro / threat table | `CkAggro` |
+| entity relationships (ally/enemy, teams) | `CkRelationship` |
+| multi-source damage/buff resolution | `CkResolver` |
+| entity-to-entity messages | `CkMessaging` |
+| runtime-composable behaviors / dynamic handles | `CkDynamic` |
+| tracked entity sets with change detection | `CkEntityCollection` |
+| post-construction opt-in fragments | `CkEntityExtension` |
+| quest-like objectives | `CkObjective` |
+| save/restore world state (snapshots) | `CkSnapshot` (no doc yet) + `CK_REGISTER_SNAPSHOTABLE` (`CkEcs/Snapshot`) |
+| session state machine | `CkGameSession` |
+| CommonUI-based UI layer | `CkUI` |
+| Enhanced Input IMC lifecycle | `CkInput` |
+| async asset loading → fragments | `CkResourceLoader` |
+| relay entity events to an actor (channels) | `CkActorRelay` |
+| debug shapes / procedural mesh text | `CkPmg` |
+| physics-substep ticking | `CkSubstep` |
+| project settings exposed to editor | `CkSettings` |
+| console variables / runtime tuning | `CkCVar` |
+| log a message | `CkLog` (per-module `ck::<feature>` functions — root CLAUDE.md) |
+| profile a processor | `CkProfile` + `SCOPE_CYCLE_COUNTER` |
+| generate AngelScript accessors | `CkAngelscriptGenerator` (Editor module) |
+
+## Module tier table
+
+All **73 non-editor modules**, regenerated from every `Source/<Module>/<Module>.Build.cs` on
+2026-07-02. **Deps column = Ck-only** (Public + Private combined, `Ck` prefix stripped); engine
+modules are not listed. Tiers are semantic bands; a module may sit higher than its minimal depth,
+but **deps must never point to a higher band**. Editor/UncookedOnly modules are excluded (see T5).
+
+### T0 — roots (no Ck deps)
+
+| Module | Ck deps | Notes |
+|---|---|---|
+| CkBuildConfig | — | Hosts the shared `CkModuleRules` base; not listed in the uplugin |
+| CkSettings | — | DeveloperSettings base; not listed in the uplugin |
+| CkThirdParty | — | Vendored: EnTT, JoltPhysics, fmt, cleantype, ctti, delegate, bitwise-enum |
+| CkIskmRendererVF | — | Engine-only vertex-factory shim for CkIskmRenderer (RenderCore/RHI/Renderer); `PostConfigInit` so the VF registers before the engine seals its factory list; plain ModuleRules |
+
+### T1 — foundation
+
+| Module | Ck deps |
+|---|---|
+| CkCVar | Core,Log |
+| CkCore | BuildConfig,Log,Settings,ThirdParty |
+| CkLog | Settings,ThirdParty |
+| CkMemory | Core,Log |
+| CkPerception | Core,Log,ThirdParty |
+| CkProfile | Core,Log |
+
+### T2 — ECS core + direct-attach primitives
+
+| Module | Ck deps |
+|---|---|
+| CkAi | Core,Ecs,Log |
+| CkEcs | Core,Log,Memory,Profile,Settings,ThirdParty |
+| CkInput | Core,Ecs,Log,Settings |
+| CkLabel | Core,Ecs,Log |
+| CkProvider | Core,Ecs,Log |
+| CkRecord | Core,Ecs,Label,Log |
+| CkResourceLoader | Core,Ecs,Log,Settings |
+| CkTagSet | Core,Ecs,Log |
+| CkVariables | Core,Ecs,Log |
+
+### T3 — actor bridge
+
+| Module | Ck deps |
+|---|---|
+| CkActor | Core,Ecs,Log,Variables |
+| CkEcsExt | Actor,Core,Ecs,Label,Log,Record,Settings |
+
+### T4 — feature modules
+
+| Module | Ck deps |
+|---|---|
+| CkAStar | Core,Ecs,EcsExt,Log |
+| CkActorRelay | Core,Ecs,EcsExt,Label,Log,Settings |
+| CkAggro | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
+| CkAnimation | Core,Ecs,EcsExt,Label,Log,Provider,Record |
+| CkAttribute | Core,Ecs,EcsExt,Label,Log,Provider,Record |
+| CkAudio | ActorRelay,Core,Cue,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer |
+| CkCamera | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
+| CkChaos | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Targeting |
+| CkCompositeAlgos | Core,Ecs,EcsExt |
+| CkConsoleCommands | Core,Ecs,Label,Log,Record,Settings |
+| CkCrowd | Core,Ecs,EcsExt,Label,Log,Navigation,Physics,Pmg,Projectile,Record,Settings,Shapes,SpatialQuery |
+| CkCue | ActorRelay,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer |
+| CkDynamic | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
+| CkEntityCollection | Core,Ecs,EcsExt,Label,Log,Record,Settings |
+| CkEntityExtension | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
+| CkEntitySpawner | ActorRelay,Core,Ecs,EcsExt,Log,Settings |
+| CkEntityTag | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
+| CkEqs | Core,Ecs,EcsExt,EntityTag,Label,Log,Record,Settings,Shapes,SpatialQuery,ThirdParty |
+| CkFx | Core,Ecs,EcsExt,Label,Log,Record,Settings |
+| CkGameSession | Core,Ecs,Label,Log,Record,Settings |
+| CkGoap | AStar,Core,Ecs,EcsExt,Label,Log,Record |
+| CkGraphics | Core,Ecs,Log,Variables |
+| CkGrid | Core,Ecs,EcsExt,Label,Log,Record,Settings (+EntitySpawner, editor-only) |
+| CkInteraction | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
+| CkInventory | Attribute,Core,Ecs,EcsExt,Grid,Label,Log,Record,Settings,TagSet |
+| CkIsmRenderer | Core,Ecs,EcsExt,Graphics,Label,Log,Provider,Record,Settings |
+| CkIskmRenderer | Animation,Core,Ecs,EcsExt,Graphics,IskmRendererVF,Label,Log,Physics,Provider,Record,Settings |
+| CkMessaging | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
+| CkNavigation | Core,Ecs,EcsExt,Label,Log,Record,Settings |
+| CkObjective | ActorRelay,Attribute,Core,Cue,Ecs,EcsExt,EntityCollection,Label,Log,Provider,Record,Settings |
+| CkOverlapBody | Actor,Core,Ecs,EcsExt,Graphics,Label,Log,Physics,Record,Settings |
+| CkPhysics | Actor,Chaos,Core,Ecs,EcsExt,Label,Log,Record |
+| CkPmg | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
+| CkProjectile | Core,Ecs,EcsExt,Log,Physics,Record,Variables |
+| CkRaySense | Core,Ecs,EcsExt,IsmRenderer,Label,Log,Provider,Record,Settings,Shapes |
+| CkRelationship | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
+| CkRenderTarget | ActorRelay,Core,Ecs,EcsExt,Label,Log,Profile,Record,Settings,Timer |
+| CkResolver | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Targeting |
+| CkShapes | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
+| CkSnapshot | Core,Ecs,EcsExt,Log,ThirdParty |
+| CkSpatialQuery | Core,Ecs,EcsExt,Label,Log,Physics,Provider,Record,Settings,Shapes,ThirdParty |
+| CkSpline | Core,Ecs,EcsExt,Log |
+| CkStateMachine | ActorRelay,Core,Dynamic,Ecs,Label,Log,Provider,Record,Settings,Timer |
+| CkSubstep | Core,Ecs,EcsExt,Label,Log,Record,Settings |
+| CkTargeting | Actor,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
+| CkTimer | Core,Ecs,EcsExt,Label,Log,Profile,Record |
+| CkTween | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Spline,Timer |
+| CkUI | Core,Ecs,EcsExt,GameSession,Graphics,Log,Settings,ThirdParty |
+| CkUnrealComponent | Core,Ecs,EcsExt,Label,Log,Record,Settings |
+| CkUsf | Core,Ecs,Graphics,Log |
+| CkVfx | ActorRelay,Core,Cue,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer |
+| CkWatermark | Core,Ecs,Log,Memory,Settings,SpatialQuery,UI |
+
+### T5 — editor modules (25 UncookedOnly + 3 Editor; runtime code must NEVER depend on these)
+
+Full reference: [EDITOR_MODULES.md](EDITOR_MODULES.md). 18 are `Ck<Feature>Editor` twins. The
+standalone ones: `CkEditorGraph` (graph/schema base), `CkEditorStyle` (shared style, PreDefault),
+`CkEditorToolbar`, `CkK2Nodes` (BP node customizations), `CkDataViewer` (entity state overlay),
+`CkInsightsAnalyzer` (Insights trace analysis), `CkAssetExporter` (asset data → JSON). Editor-type:
+`CkAngelscriptGenerator` (PreDefault; emits `Script/Generated/`), `CkPieLayoutEditor`, `CkUsfEditor`.
+
+### Table notes
+
+- **Per-module docs** live at `Source/<Module>/Claude.md` (CkGoap's is `CLAUDE.md`). **No doc yet:**
+  CkEqs, CkSnapshot, CkRenderTarget, CkSpline, CkUsf, CkEntitySpawner, CkUnrealComponent.
+  CkIskmRendererVF is covered by CkIskmRenderer's doc. CkCrowd's and CkNavigation's docs were
+  flagged stale on 2026-07-02 ("not yet created" / "skeleton only" — both modules are fully built);
+  trust code over doc and note the drift.
+- **`CkScripts/` is NOT a module** (no Build.cs) — a support dir holding maintenance scripts
+  (`CkLfsLocks`, `CkEcsTemplateReplacer.ps1`). The latter still references the deleted CkEcsTemplate
+  scaffold and is stale.
+- CkTemplate and CkEcsTemplate were removed in commit `ad045415b` (2026-06-09). Do not re-add rows
+  for them.
+
+## Module-authoring rules
+
+- **Scaffold by mimicry, not from the stale replacer script:** copy the smallest complete feature
+  quartet (`CkTimer` — the root doctrine's canonical exemplar) and rename.
+- Build.cs inherits `CkModuleRules` (`Source/CkBuildConfig/CkBuildConfig.Build.cs`): C++20, unity
+  build, per-config define matrix, auto-detected `WITH_ANGELSCRIPT_CK`. Only CkThirdParty and
+  CkIskmRendererVF use plain `ModuleRules` — don't add a third without cause.
+- Add the module to `CkFoundation.uplugin` with the standard Win64/Mac/Linux allowlist. LoadingPhase
+  is `Default` unless you can justify otherwise (only 3 modules deviate today).
+- Dependency discipline: depend only on same-or-lower tiers; runtime never on T5. Editor-only deps
+  go inside `if (Target.bBuildEditor)` (see CkGrid → CkEntitySpawner).
+- Ship a `Claude.md` with the module (purpose, key API, anti-patterns) and add its row here.
+
+## Key cross-module patterns
+
+### "Add a feature to an entity" (the composition ritual)
+
+Canonical implementation: `UCk_Utils_Timer_UE::Add` (`CkTimer/Public/CkTimer/CkTimer_Utils.cpp:40-81`):
+
+1. `UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, ...)` — create the feature's child
+   entity under the owner.
+2. `UCk_Utils_GameplayLabel_UE::Add(InNewEntity, InParams.Get_TimerName())` — label it.
+3. Add the Params/Current fragments and lifecycle tags (`FTag_Timer_NeedsSetup`, ...) on the child.
+4. Connect it to the owner's Record: `RecordOfTimers_Utils::AddIfMissing(InHandle, ...)` +
+   `Request_Connect(InHandle, NewTimerEntity, ...)`.
+5. The feature's processors drive the child entity from there.
+
+Simpler features add fragments directly on the target entity instead of creating a child — read the
+target module's `Add` before assuming which shape it uses.
+
+### Entity game logic — EntityScript
+
+`UCk_EntityScript_UE` (C++ / Blueprint / AS) lifecycle: `Construct → BeginPlay → EndPlay`.
+
+- `Construct(FCk_Handle&, const FInstancedStruct& InSpawnParams)` returns
+  `ECk_EntityScript_ConstructionFlow::Finished` (BeginPlay fires) or `::Continue` (you must call
+  `DoFinishConstruction()` when ready). Spawn params are the data-preset mechanism.
+- Construct: compose features, spawn child entities. BeginPlay: bind signals, start timers.
+  EndPlay: unbind signals (automatic for binds made with `PostFireBehavior::Unbind`).
+- Self-access: `Get_AssociatedEntity()` (C++) / `DoGet_ScriptEntity()` (BP/AS).
+- Full lifecycle, instancing policy, and replication contract: [CkEcs/Claude.md](CkEcs/Claude.md).
+
+### Signal (event) flow
+
+Processor detects condition → `UUtils_Signal_OnX::Broadcast(Handle, Payload)` → delegate bound in
+EntityScript BeginPlay fires → EntityScript acts (further `Request_*` calls, or
+`UCk_Utils_EntityLifetime_UE::Request_DestroyEntity`). Macros, binding policies, and lifecycle:
+root CLAUDE.md + `ckecs-architecture-contract` skill.
+
+### Reading values from providers in a processor
+
+```cpp
+const auto Val = ck::IsValid(InParams.Get_MyProvider())
+    ? InParams.Get_MyProvider()->Get_Value(InHandle)
+    : DefaultValue;
+```
+
+### Component lifetime (Niagara, Audio, any UObject the entity owns)
+
+Setup processor creates → monitor processor observes and fires signals, never destroys → EndPlay
+processor destroys during entity cleanup:
+
+```cpp
 struct FFragment_VfxCue_Current
 {
     friend class FProcessor_VfxCue_Setup;
@@ -723,237 +298,188 @@ public:
     CK_PROPERTY_GET(_NiagaraComponent);
 };
 
-// Setup processor - Create component:
-auto
-    FProcessor_VfxCue_Setup::
-    ForEachEntity(...)
-    -> void
-{
-    constexpr auto AutoDestroy = false;
-    constexpr auto AutoActivate = false;
-    auto Component = UNiagaraFunctionLibrary::SpawnSystemAtLocation(...);
-    InCurrent._NiagaraComponent = TStrongObjectPtr{Component};
-}
+// Setup — create + store (factory function, see below):
+InCurrent._NiagaraComponent = TStrongObjectPtr{Component};
 
-// Lifetime processor - Monitor state, fire signals, but DON'T destroy:
-auto
-    FProcessor_VfxCue_LifetimeMonitor::
-    ForEachEntity(...)
-    -> void
-{
-    auto Component = InCurrent._NiagaraComponent.Get();
-    if (Component->IsActive() == false)
+// LifetimeMonitor — observe, fire signals, DO NOT destroy:
+auto Component = InCurrent._NiagaraComponent.Get();
+if (ck::IsValid(Component) && NOT Component->IsActive())
+{ UUtils_Signal_OnFinished::Broadcast(InHandle, ...); }
+
+// EndPlay — destroy during entity cleanup:
+auto Component = InCurrent._NiagaraComponent.Get();
+if (ck::IsValid(Component))
+{ Component->DestroyComponent(); }
+InCurrent._NiagaraComponent.Reset();
+```
+
+Cleanup order this guarantees: signal fires → EntityScript reacts (destroys entity if that's the
+behavior) → EndPlay processor destroys the component. Component lifetime is tied to entity
+lifetime. Never call `DestroyComponent()` from a monitor/update processor.
+
+### Standalone components (no actor owner)
+
+`NewObject<UNiagaraComponent>(World)` + manual `RegisterComponent()` fails or fires ensures. Use
+the factory functions that register with the world, with every bool argument named:
+
+```cpp
+constexpr auto AutoDestroy = false;
+constexpr auto AutoActivate = false;
+constexpr auto PreCullCheck = true;
+auto Component = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+    World, Effect, Location, Rotation, Scale,
+    AutoDestroy, AutoActivate, ENCPoolMethod::None, PreCullCheck);
+```
+
+Same idea for audio (`UGameplayStatics::SpawnSoundAtLocation`) and other component types.
+
+### Replicated fragments — the `RegisterLazy` handler contract
+
+Client-side application of replicated container data is deferred: net receive only marks entries
+pending; `FProcessor_ReplicatedFragments_Dispatch` drains them each tick via handlers registered in
+the feature's `_Fragment.cpp` (`CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h`):
+
+```cpp
+FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
+    []() -> UScriptStruct* { return FCk_RepData_Team::StaticStruct(); },
     {
-        // Fire completion signals, remove tags
-        // But DON'T call DestroyComponent() here
-        UUtils_Signal_OnFinished::Broadcast(InHandle, ...);
-    }
-}
+        .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
+        {
+            if (NOT UCk_Utils_Team_UE::Has(Entity))
+            { return ECk_RepFragment_ApplyResult::NotReady; }
 
-// EndPlay processor - Destroy component when entity is destroyed:
-auto
-    FProcessor_VfxCue_EndPlay::
-    ForEachEntity(...)
-    -> void
-{
-    auto Component = InCurrent._NiagaraComponent.Get();
-    if (ck::IsValid(Component))
+            auto TeamEntity = UCk_Utils_Team_UE::Cast(Entity);
+            UCk_Utils_Team_UE::Assign(TeamEntity, New.Get<FCk_RepData_Team>().Value);
+            return ECk_RepFragment_ApplyResult::Applied;
+        }
+    });
+```
+
+- `Apply` runs AFTER OnConstructed-driven composition — never inline during net receive — and must
+  **never compose the feature itself**; composition belongs to construction.
+- Return `NotReady` while the target feature is not composed yet: the dispatcher retries each tick
+  and past a timeout drops the entry LOUDLY (ensure naming the type and entity). A perpetual
+  timeout means the feature is never composed on the client.
+- `Old` is unset on the first application; otherwise it holds the last APPLIED data.
+- Consumer consequence: **`OnConstructed` means composed, not values-applied** — read replicated
+  values only from `Promise_OnReplicationComplete`. Full contract: [CkEcs/Claude.md](CkEcs/Claude.md).
+
+### Variant dispatch — `ck::Visitor` takes ONE generic lambda
+
+Defined in `CkCore/TypeTraits/CkTypeTraits.h`; canonical use `CkTimer_Processor.cpp:51`:
+
+```cpp
+// CORRECT — single generic lambda; overload the handler instead:
+ck::algo::ForEachRequest(RequestsCopy, ck::Visitor(
+    [&](const auto& InRequest) -> void
     {
-        Component->DestroyComponent();  // ✓ Destroy here, during entity cleanup
+        DoHandleRequest(InHandle, InCurrent, InRequest);
+    }), ck::policy::DontResetContainer{});
+
+// WRONG — ck::Visitor is not a std::visit overload-set:
+ck::Visitor([&](const AddRequest&) { ... }, [&](const RemoveRequest&) { ... })
+```
+
+Disambiguate per-type via `DoHandleRequest` overloads on the handler side.
+
+### Algorithm library (`ck::algo`)
+
+`CkCore/Public/CkCore/Algorithms/CkAlgorithms.h`:
+
+| Function | Variants | Notes |
+|---|---|---|
+| `Filter` / `FilterInPlace` | copy / mutating | distinct names because return-value assignment differs |
+| `Sort` | in-place (`&`), copy (`const&`) | |
+| `Except(A, B)` / `Intersect(A, B)` | basic + projection overloads | set difference / intersection |
+| `Transform` | to new container, into existing | map |
+| `ForEach` | container, iterator, `IsValid` variants | |
+| `ForEachRequest` | `TArray`, `TOptional`, `DontResetContainer` policy | request draining |
+| `AllOf` / `AnyOf` / `NoneOf` | container, iterator | |
+| `FindIf` | iterator, `TOptional` return | |
+| `CountIf` / `FindIndex` | container | |
+
+Projection overloads take a member-function pointer as the projected key, e.g.
+`ck::algo::Except(Current, Previous, &FCk_InventoryItem_ReplicatedEntry::Get_ItemHandle)`.
+
+### Technique pipeline (`ck::Technique`)
+
+`CkCore/Public/CkCore/Technique/CkTechnique.h` — CRTP step pipeline for processor logic with 3+
+distinct phases; step names replace `// ---- Phase N ----` comments.
+
+```cpp
+struct FTechnique_MyOperation
+    : ck::Technique<FTechnique_MyOperation, FContext_MyOperation&>
+{
+    FTechnique_MyOperation()
+    {
+        AddStep(&FTechnique_MyOperation::Validate);
+        AddStep(&FTechnique_MyOperation::ProcessItems);
     }
-    InCurrent._NiagaraComponent.Reset();
-}
 
-// This ensures proper cleanup order:
-// 1. Signal fires → EntityScript receives OnFinished
-// 2. EntityScript destroys entity (if AutoDestroy behavior)
-// 3. EndPlay processor destroys component
-// Component lifetime is tied to entity lifetime
+    auto ShouldAbort() const -> bool { return _Abort; }   // optional, SFINAE-detected
 
-// ============================================================================
-// 12. ERROR HANDLING & LOGGING
-// ============================================================================
+    static auto Validate(FTechnique_MyOperation& InSelf, FContext_MyOperation& InCtx) -> void;
+    static auto ProcessItems(FTechnique_MyOperation& InSelf, FContext_MyOperation& InCtx) -> void;
 
-// Validation with early returns:
-CK_ENSURE_IF_NOT(ck::IsValid(Handle),
-    TEXT("Invalid handle in function [{}]"), __FUNCTION__)
-{ return; }
+    bool _Abort = false;
+};
 
-// Logging levels:
-ck::audio::Verbose(TEXT("Starting track [{}]"), TrackName);
-ck::audio::VeryVerbose(TEXT("Debug info: [{}]"), DebugValue);
-ck::audio::Warning(TEXT("Potential issue: [{}]"), Issue);
+// In the processor — instances hold only the step list, so static is fine:
+static auto Technique = FTechnique_MyOperation{};
+Technique._Abort = false;
+Technique.ProcessAllSteps(Context);
+```
 
-// ============================================================================
-// 13. ARTIFACT FORMATTING GUIDELINES
-// ============================================================================
+Steps run in registration order; `ShouldAbort()` (if defined) is checked between steps. State lives
+in the plain-aggregate Context, not the Technique.
 
-// When providing code artifacts:
+## UE specifics — verified helpers
 
-// 1. BE SPECIFIC ABOUT LOCATIONS
-//    ✅ "In CkAudioCue_Utils.cpp, in UCk_Utils_AudioCue_UE::Add() method, line ~25"
-//    ❌ "Update director params creation in Add() method"
+**Actor ↔ entity (C++).** There is no `ck::SelfEntity(this)` / `ck::GetOwnerEntity()` — older docs
+taught these but they exist nowhere in Source. The real API is `UCk_Utils_OwningActor_UE`
+(`CkEcs/Public/CkEcs/OwningActor/CkOwningActor_Utils.h`):
 
-// 2. USE CLEAR SECTION HEADERS for each file/section
+- Actor → entity: `Get_ActorEntityHandle(InActor)` (:101) / `TryGet_ActorEntityHandle(InActor)` (:110)
+- Entity → actor: `Get_EntityOwningActor(InHandle)` (:61) / `TryGet_EntityOwningActor(InHandle)` (:69)
+  / `TryGet_EntityOwningActor_Recursive(InHandle)` (:77)
+- Readiness: `Get_IsActorEcsReady(InActor)` (:117), `Promise_OnActorEcsReady(InActor, InDelegate)` (:125)
 
-// 3. INDICATE NON-SEQUENTIAL CODE:
-// ============================================================================
-// [ELSEWHERE IN SAME FILE] - CkSomeFile.cpp
-// ============================================================================
+Inside an EntityScript use `Get_AssociatedEntity()`; context owner via
+`UCk_Utils_ContextOwner_UE::Get_ContextOwner(InHandle)` (`CkEcs/ContextOwner/CkContextOwner_Utils.h:30`).
+The AngelScript equivalent is `ck::ToEntity(Actor)` / `ck::ToEntity(EntityScript)`
+(`Script/CkUtils_Common.as:5,10`) — see [Script/CLAUDE.md](../Script/CLAUDE.md).
 
-// 4. ALWAYS INCLUDE HEADERS - don't assume they'll be adjusted automatically
+**World from an entity:** `UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle)`
+(`CkEcs/EntityLifetime/CkEntityLifetime_Utils.h:128`).
 
-// 5. PROVIDE COMPLETE CONTEXT - show surrounding code for unambiguous location
+**World time** (`CkCore/Time/CkTime_Utils.h` — params struct constructs from `UWorld*` or `UObject*`):
 
-// EXAMPLE STRUCTURE:
+```cpp
+const auto TimeParams = FCk_Utils_Time_GetWorldTime_Params{World};
+const auto TimeResult = UCk_Utils_Time_UE::Get_WorldTime(TimeParams);
+const auto CurrentTime = TimeResult.Get_WorldTime().Get_Time();
+```
 
-// ============================================================================
-// CkAudioTrack_Fragment_Data.h - Add enum after ECk_AudioTrack_State (line ~45)
-// ============================================================================
+**Common includes:** `CkCore/Chrono/CkChrono.h` (`FCk_Chrono`), `CkCore/Time/CkTime_Utils.h`.
 
-// UENUM(BlueprintType)
-// enum class ECk_LoopBehavior : uint8
-// {
-//     PlayOnce,
-//     Loop
-// };
+## Owned elsewhere — do not look for it here
 
-// ============================================================================
-// [ELSEWHERE IN SAME FILE] - CkAudioTrack_Fragment_Data.h - Update struct (line ~120)
-// ============================================================================
+- Function formatting, code style, `CK_PROPERTY` encapsulation, interface design, request structs,
+  enum+value optionality, signal macros/binding policies, error handling & logging → root
+  [CLAUDE.md](../CLAUDE.md). "No fallbacks that hide problems" is root non-negotiable #3.
+- Collaboration workflow (Research → Plan → Implement, stuck protocol) → root "Collaboration protocol".
+- AngelScript compatibility + `asset ... of ...` asset definitions → [Script/CLAUDE.md](../Script/CLAUDE.md).
+- Testing layers (AutoTest / Gauntlet / gym) → `ck-tests-authoring-and-running` skill (CkTests).
 
-// // Replace _Loop property with:
-// UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-// ECk_LoopBehavior _LoopBehavior = ECk_LoopBehavior::Loop;
+## Provenance and maintenance
 
-// ============================================================================
-// 14. ANGELSCRIPT COMPATIBILITY
-// ============================================================================
+Verified 2026-07-02 against the working tree (submodule HEAD `7330c1bab`). Re-derivation:
 
-// Same patterns as C++ but ensure UFUNCTION compatibility:
-// - Use auto aggressively
-// - Invert if statements for early out
-// - No 'b' prefix for booleans
-// - Get_ prefix for getters, Request_ prefix for mutating functions
-// - Add suffix for function overloads (UFUNCTION limitation)
-
-// ============================================================================
-// 15. ANGELSCRIPT ASSET CREATION ('asset ... of ...' SYNTAX)
-// ============================================================================
-
-// Angelscript can create UDataAsset instances directly from script using the
-// 'asset' keyword. The resulting asset is registered with the engine as if it
-// were authored in the editor - no .uasset file to manage, no manual editor
-// steps required. This is the preferred way to define data assets that are
-// conceptually owned by a particular .as file (e.g. a gym's gameplay tags,
-// asset-registry configs, etc).
-//
-// SYNTAX:
-//   namespace Ck  // or any namespace, including none
-//   {
-//       asset <AssetName> of <UDataAssetSubclass>
-//       {
-//           // Initializer body - set public UPROPERTY fields directly,
-//           // or call methods on them (e.g. GameplayTags.Add(...))
-//           Field1 = "some value";
-//           Field2.Add(n"Some.Tag");
-//       }
-//   }
-//
-// EXAMPLE 1 - Gameplay tags asset (defines tags without editing .ini files):
-//   namespace Ck
-//   {
-//       asset Asset_Tags of UCk_GameplayTags
-//       {
-//           GameplayTags.Add(n"MyFeature.Category.SomeTag");
-//           GameplayTags.Add(n"MyFeature.Category.AnotherTag");
-//       }
-//   }
-//
-// EXAMPLE 2 - Asset registry config (scans a folder and auto-generates a .as
-// file with typesafe accessors for assets found there):
-//   #if EDITOR
-//       asset MyFeature_AssetRegistryConfig of UCkAssetRegistryConfig
-//       {
-//           AssetDiscoveryRoot = "/MyPlugin/MyFolder";
-//           OutputFileName     = "my_feature_assets.as";
-//           Namespace          = "my_feature_assets";
-//       }
-//   #endif
-//
-// #if EDITOR IS REQUIRED for editor-only types. UCkAssetRegistryConfig is
-// editor-only, so any 'asset ... of UCkAssetRegistryConfig' definition MUST be
-// wrapped in '#if EDITOR' / '#endif' - otherwise the script fails to compile
-// at engine startup with "Cannot use editor-only type ... outside of an EDITOR
-// block".
-//
-// PROPERTY ACCESS IN INITIALIZER:
-// - Public UPROPERTY fields are assigned directly: 'Field = value;'
-// - Can also call methods on fields: 'TagContainer.Add(n"Some.Tag");'
-// - Private UPROPERTY fields with BlueprintReadWrite are accessible the same way
-// - Order doesn't matter - it's just an initializer block
-//
-// WHEN TO USE:
-// - Feature-specific data assets that belong with the script that uses them
-// - Gameplay tags that are only relevant to one feature/gym
-// - Asset registry configs pointing at generated-code folders
-// - Any place you'd otherwise have to manually create a .uasset in the editor
-//
-// WHEN NOT TO USE:
-// - Assets that need hand-authored content (meshes, textures, blueprints)
-// - Assets that will be edited frequently by non-programmers
-// - Shared assets that live in engine Content folders
-//
-// GAMEPLAY TAGS — DECLARE WHERE USED:
-// Tags (UCk_GameplayTags assets) should be declared in the same file that
-// primarily uses them — typically the _Shared.as file for a feature, or
-// directly in a station file if the tags are only used there. Do NOT create
-// a separate _Assets.as file just for tags. Tags are lightweight metadata
-// that belong alongside the code that references them.
-//   GOOD: tags in CkInteractionGym_Shared.as (shared by all stations)
-//   GOOD: tags in CkInventoryGym_Spatial.as (only used by that station)
-//   BAD:  tags in CkInteractionGym_Assets.as (separate file just for tags)
-//
-// FILE NAMING CONVENTION FOR HEAVYWEIGHT ASSETS:
-// Files containing heavyweight `asset ... of ...` declarations (item
-// definitions, ability configs, etc. — anything beyond simple tags) must use
-// the `_Assets.as` suffix. This makes asset-containing files easy to find
-// and keeps them separate from logic files.
-//   GOOD: CkInventoryGym_Assets.as (item definitions with traits)
-//   BAD:  CkInventoryGym_Shared.as (item definitions mixed with helpers)
-
-// ============================================================================
-// 16. PROBLEM-SOLVING PROTOCOL
-// ============================================================================
-
-// When stuck or confused:
-// 1. STOP - Don't spiral into complex solutions
-// 2. Delegate - Consider spawning agents for parallel investigation
-// 3. Step back - Re-read requirements
-// 4. Simplify - Simple solution is usually correct
-// 5. Ask - "I see two approaches: [A] vs [B]. Which do you prefer?"
-
-// Communication: "The current approach works, but I notice [observation].
-//                 Would you like me to [specific improvement]?"
-
-// ============================================================================
-// 17. TESTING & VALIDATION
-// ============================================================================
-
-// Always test in all environments: C++, Blueprints, Angelscript
-// Measure first - no premature optimization
-// Benchmark before claiming performance improvements
-// Ask for benchmark runs when needed
-
-// Test request structs in all contexts:
-// 1. Pure C++ usage
-// 2. Blueprint node usage
-// 3. Angelscript usage
-
-// Ensure request structs work properly in Blueprint editors
-// Verify EditCondition metadata works correctly
-// Test enum dropdowns appear correctly in all editors
-
-// ============================================================================
-// REMINDER: If this file hasn't been referenced in 30+ minutes, RE-READ IT!
-// ============================================================================
+- **Tier table:** per module, collect `"Ck*"` literals from both dep lists:
+  `rg --no-ignore -A30 'DependencyModuleNames' Source/<M>/<M>.Build.cs` — watch for
+  editor-conditional blocks (`if (Target.bBuildEditor)`).
+- **Module types/phases:** `"Type"` / `"LoadingPhase"` entries in `CkFoundation.uplugin`.
+- **Doc coverage:** `Get-ChildItem Source -Recurse -Depth 2 -Filter Claude.md` (the Grep/Glob tools
+  can false-empty here — root CLAUDE.md provenance notes).
+- **Cited symbols:** all grepped/read 2026-07-02; if one goes missing, re-verify with
+  `rg -n '<symbol>' Source/<Module>` before editing this file.
