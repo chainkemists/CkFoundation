@@ -30,6 +30,7 @@ auto
         const FVector&       InEnd,
         bool                 InAllowPartial,
         float                InProjectionHalfExtent,
+        float                InProjectionVerticalHalfExtent,
         float                InAgentRadiusForFirstSkip,
         FCk_Nav_PathResult&  OutResult,
         TSubclassOf<UNavigationQueryFilter> InFilterClass)
@@ -55,7 +56,14 @@ auto
     // surface, that lookup misses and FindPath returns Error with an allocated-but-empty
     // path. Projecting up-front with a generous extent guarantees the path query receives
     // points that lie ON the navmesh surface.
-    const auto ProjectionExtent = FVector{InProjectionHalfExtent};
+    // Vertical (Z) reach is a separate opt-in knob: a negative InProjectionVerticalHalfExtent
+    // reproduces the uniform cube (today's behavior); a smaller value keeps the horizontal
+    // reach but stops Start/End from snapping onto a stray navmesh surface far above/below the
+    // intended floor (the checkout sink/float root cause).
+    const auto VerticalHalfExtent = (InProjectionVerticalHalfExtent < 0.0f)
+        ? InProjectionHalfExtent
+        : InProjectionVerticalHalfExtent;
+    const auto ProjectionExtent = FVector{InProjectionHalfExtent, InProjectionHalfExtent, VerticalHalfExtent};
     auto StartProj = FNavLocation{};
     auto EndProj   = FNavLocation{};
     auto bStartProjected = false;

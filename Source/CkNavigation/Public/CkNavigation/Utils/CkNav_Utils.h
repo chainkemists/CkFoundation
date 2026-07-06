@@ -94,7 +94,8 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         FVector InWorldPosition,
         float InHalfExtentUu,
-        FVector& OutSnappedPosition);
+        FVector& OutSnappedPosition,
+        float InVerticalHalfExtentUu = -1.0f);
 
 public:
     // Bind a delegate to fire whenever a FindPath request on this entity succeeds.

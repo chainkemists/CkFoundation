@@ -111,7 +111,9 @@ namespace ck
                 }
                 {
                     const auto StartLocation = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle);
-                    const auto Extent = FVector(UCk_Utils_Nav_Settings_UE::Get_NavQuerySearchHalfExtent());
+                    // Match the asymmetric projection box FindPathSync uses so the re-issue decision
+                    // agrees with what the real query will accept.
+                    const auto Extent = UCk_Utils_Nav_Settings_UE::Get_NavQueryProjectionExtentVec();
                     auto ProbeProj = FNavLocation{};
                     INC_DWORD_STAT(STAT_Nav_DeferredReprojections);
                     const auto bReady = NavSys->ProjectPointToNavigation(StartLocation, ProbeProj, Extent, NavData);
@@ -212,6 +214,7 @@ namespace ck
         const auto StartLocation = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle);
 
         const auto ProjectionExtent = UCk_Utils_Nav_Settings_UE::Get_NavQuerySearchHalfExtent();
+        const auto ProjectionVerticalExtent = UCk_Utils_Nav_Settings_UE::Get_NavQueryVerticalHalfExtent();
 
         // Per-point readiness check: defer only if this agent's start location does NOT yet
         // project onto baked navmesh. Same projection call FindPathSync uses internally — same
@@ -221,7 +224,10 @@ namespace ck
         // (incremental tile updates), and the queue never drained even when the agent's spot was
         // bakeable. The green "navmesh projection" overlay uses the same call, so when the dev
         // sees a green circle but path requests fail, this gate is what's wrong.
-        const auto ExtentVec = FVector(ProjectionExtent);
+        // Match the asymmetric box FindPathSync uses (below), or a start reachable only via a
+        // stray vertical surface would pass this gate yet fail the real query — spinning the
+        // deferred-requeue loop until the force-fail timeout.
+        const auto ExtentVec = UCk_Utils_Nav_Settings_UE::Get_NavQueryProjectionExtentVec();
         auto StartProbe = FNavLocation{};
         const auto bStartReady = (NavData != nullptr)
             && NavSys->ProjectPointToNavigation(StartLocation, StartProbe, ExtentVec, NavData);
@@ -265,6 +271,7 @@ namespace ck
                         InFindPath.Get_TargetLocation(),
                         InFindPath.Get_AllowPartialPath(),
                         ProjectionExtent,
+                        ProjectionVerticalExtent,
                         /*InAgentRadiusForFirstSkip*/ 0.0f,
                         InResult,
                         FilterClass);
