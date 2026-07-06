@@ -69,7 +69,9 @@ namespace ck
         // Without the NavData arg, ProjectPointToNavigation falls back to the default agent's
         // nav data which can disagree with the specific RecastNavMesh used by path queries.
         auto* NavData = Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate));
-        const auto Extent = FVector(UCk_Utils_Nav_Settings_UE::Get_NavQuerySearchHalfExtent());
+        // Mirror the asymmetric projection box the path-query gate uses so the overlay's verdict
+        // stays honest when a project opts into a tight vertical extent.
+        const auto Extent = UCk_Utils_Nav_Settings_UE::Get_NavQueryProjectionExtentVec();
         auto ProjectedLoc = FNavLocation{};
         const auto bProjected = (NavData != nullptr)
             && NavSys->ProjectPointToNavigation(AgentPos, ProjectedLoc, Extent, NavData);

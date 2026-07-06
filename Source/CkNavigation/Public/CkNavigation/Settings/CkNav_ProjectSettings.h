@@ -37,6 +37,17 @@ private:
             ToolTip = "Half-extent (cm) used to project Start/End onto the navmesh. Default 500cm covers the rental-store geometry; bump higher for steep slopes or thin navmesh."))
     float _NavQuerySearchHalfExtent = 500.0f;
 
+    // Vertical (Z) half-extent (cm) for the Start/End navmesh-projection box. -1 (default)
+    // means "use _NavQuerySearchHalfExtent for Z too" -> the box stays the uniform cube it is
+    // today. A non-negative value opts in to an ASYMMETRIC box FVector(XY, XY, Z), so a tight
+    // Z stops projection from snapping onto stray navmesh surfaces far above/below the intended
+    // floor (a multi-level nav overhang / gap under a counter) while horizontal reach is
+    // unchanged. Keep it comfortably larger than any legitimate step/ramp the agent must cross.
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Pathfinding",
+        meta = (AllowPrivateAccess = true, ClampMin = -1.0, UIMin = -1.0, ClampMax = 5000.0, UIMax = 5000.0,
+            ToolTip = "Vertical (Z) half-extent (cm) for the projection box. -1 (default) = use the horizontal extent (uniform cube, today's behavior). >= 0 opts in to an asymmetric XY/XY/Z box."))
+    float _NavQueryVerticalHalfExtent = -1.0f;
+
     // Maps FCk_Request_Nav_FindPath::_QueryFilter tags to UNavigationQueryFilter
     // classes (the "Phase 2" mapping the request field reserved). Unmapped/empty
     // tags fall back to NavData's default filter.
@@ -47,6 +58,7 @@ private:
 public:
     CK_PROPERTY_GET(_MaxPathQueriesPerFrame);
     CK_PROPERTY_GET(_NavQuerySearchHalfExtent);
+    CK_PROPERTY_GET(_NavQueryVerticalHalfExtent);
     CK_PROPERTY_GET(_QueryFilters);
 };
 
@@ -66,6 +78,18 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Nav|Settings")
     static float Get_NavQuerySearchHalfExtent();
+
+    // Vertical (Z) projection half-extent. Returns the raw setting value, which may be
+    // negative (the "unset" sentinel meaning "use the horizontal extent"). Call sites fold
+    // the sentinel into the horizontal value when building the projection box.
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Nav|Settings")
+    static float Get_NavQueryVerticalHalfExtent();
+
+    // The folded Start/End projection box — FVector(XY, XY, Z) with the vertical sentinel
+    // resolved. Every probe that must agree with FindPathSync's internal projection builds
+    // its box from THIS, so a new call site can't accidentally use the raw scalar cube.
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Nav|Settings")
+    static FVector Get_NavQueryProjectionExtentVec();
 
     // Resolves a request's QueryFilter tag through the settings map. Empty tag or
     // no mapping -> null class (callers fall back to NavData's default filter);
