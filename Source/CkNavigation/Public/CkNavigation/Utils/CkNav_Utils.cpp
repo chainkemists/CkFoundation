@@ -122,7 +122,8 @@ auto
         FCk_Handle& InHandle,
         FVector InWorldPosition,
         float InHalfExtentUu,
-        FVector& OutSnappedPosition)
+        FVector& OutSnappedPosition,
+        float InVerticalHalfExtentUu)
     -> bool
 {
     SCOPE_CYCLE_COUNTER(STAT_Nav_ProjectOntoNavmesh);
@@ -140,7 +141,10 @@ auto
     { return false; }
 
     const auto HalfExt = FMath::Max(InHalfExtentUu, 1.0f);
-    const auto ProjectionExtent = FVector{HalfExt, HalfExt, HalfExt};
+    // Negative vertical extent (the default) preserves the uniform cube; a caller with a known
+    // floor band passes a tight Z so the snap can't select a stray surface far above/below.
+    const auto VertHalfExt = (InVerticalHalfExtentUu < 0.0f) ? HalfExt : FMath::Max(InVerticalHalfExtentUu, 1.0f);
+    const auto ProjectionExtent = FVector{HalfExt, HalfExt, VertHalfExt};
 
     auto Projected = FNavLocation{};
     const auto bSuccess = NavSys->ProjectPointToNavigation(InWorldPosition, Projected, ProjectionExtent);
