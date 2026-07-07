@@ -14,6 +14,7 @@ struct FCkUsf_SurfaceInput
     float3 WorldPosition;  // world-space pixel position (surface)
     float3 CameraVector;   // world-space unit vector from pixel toward camera (surface)
     float3 VertexNormal;   // world-space interpolated normal (surface)
+    float3 VertexTangent;  // world-space interpolated tangent (surface) — with VertexNormal, spans the TBN
     float  PixelDepth;     // distance from camera to this pixel (surface)
     float3 VertexColor;    // interpolated vertex color RGB / per-instance via material (surface)
     float4 SceneColor;     // post-process input 0 (post-process)
@@ -31,6 +32,7 @@ FCkUsf_SurfaceInput CkUsf_DefaultInput()
     I.WorldPosition = float3(0.0, 0.0, 0.0);
     I.CameraVector = float3(0.0, 0.0, 1.0);
     I.VertexNormal = float3(0.0, 0.0, 1.0);
+    I.VertexTangent = float3(1.0, 0.0, 0.0);
     I.PixelDepth = 0.0;
     I.VertexColor = float3(1.0, 1.0, 1.0);
     I.SceneColor = float4(0.0, 0.0, 0.0, 1.0);
@@ -156,4 +158,280 @@ float CkUsf_Fbm(float2 P)
 float3 CkUsf_Palette(float T, float3 A, float3 B, float3 C, float3 D)
 {
     return A + B * cos(6.28318 * (C * T + D));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Frequency-safe texture sampling.
+// Sample() needs screen-space derivatives, which exist only in the pixel shader. A lit look ALSO
+// compiles ray-tracing hit-group permutations where Sample() is an illegal opcode, and this file is
+// compiled by the WPO Custom node in the VERTEX shader — everywhere outside the PS these fall back
+// to an explicit mip-0 fetch. Prefer these over raw .Sample() in any look that can be lit or has WPO.
+// --------------------------------------------------------------------------------------------------------------------
+
+float4 CkUsf_SampleTexture2D(Texture2D Tex, SamplerState Samp, float2 UV)
+{
+#if PIXELSHADER
+    return Tex.Sample(Samp, UV);
+#else
+    return Tex.SampleLevel(Samp, UV, 0);
+#endif
+}
+
+float4 CkUsf_SampleTextureCube(TextureCube Tex, SamplerState Samp, float3 Dir)
+{
+#if PIXELSHADER
+    return Tex.Sample(Samp, Dir);
+#else
+    return Tex.SampleLevel(Samp, Dir, 0);
+#endif
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Screen / scene-buffer UV helpers (post-process looks).
+// --------------------------------------------------------------------------------------------------------------------
+
+// ViewportUV (In.UV: 0..1 across the view) -> scene-texture BUFFER UV. The two differ whenever the
+// view rect does not fill the scene buffer (editor/PIE window resize, screen percentage, dynamic
+// resolution) — sampling scene textures at raw viewport UV then drifts off-object. Convert ONCE and
+// do every SceneTextureLookup(), including neighbour taps, in buffer space.
+float2 CkUsf_ViewportUVToBufferUV(float2 ViewportUV)
+{
+    return (ViewportUV * View.ViewSizeAndInvSize.xy + View.ViewRectMin.xy) * View.BufferSizeAndInvSize.zw;
+}
+
+// One scene-buffer texel in buffer-UV units — the step size for neighbour taps.
+float2 CkUsf_BufferTexelSize()
+{
+    return View.BufferSizeAndInvSize.zw;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Normal helpers.
+// The material's Normal pin expects TANGENT-space (the generator leaves the default tangent-space
+// basis on), so a sampled normal map feeds FCkUsf_SurfaceOutput.Normal directly. World-space
+// procedural normals must be transformed via CkUsf_WorldToTangentNormal first.
+// --------------------------------------------------------------------------------------------------------------------
+
+// Unpack a normal-map sample into a tangent-space normal with a strength control. Z is
+// reconstructed from XY, so this is correct for two-channel (BC5) maps and plain RGB maps alike.
+float3 CkUsf_UnpackNormal(float4 NormalSample, float Strength)
+{
+    float3 N;
+    N.xy = (NormalSample.rg * 2.0 - 1.0) * Strength;
+    N.z = sqrt(saturate(1.0 - dot(N.xy, N.xy)));
+    return normalize(N);
+}
+
+float3 CkUsf_SampleNormalMap(Texture2D Tex, SamplerState Samp, float2 UV, float Strength)
+{
+    return CkUsf_UnpackNormal(CkUsf_SampleTexture2D(Tex, Samp, UV), Strength);
+}
+
+// Blend two tangent-space normals (whiteout blend — cheap and stable for detail normals).
+float3 CkUsf_BlendNormals(float3 Base, float3 Detail)
+{
+    return normalize(float3(Base.xy + Detail.xy, Base.z * Detail.z));
+}
+
+// Tangent-space normal from a scalar height field via screen-space derivatives. Pixel shader only —
+// returns flat elsewhere. Cheap bump for procedural heights (noise, SDFs); no height texture needed.
+float3 CkUsf_NormalFromHeight(float Height, float Strength)
+{
+#if PIXELSHADER
+    return normalize(float3(-ddx(Height) * Strength, -ddy(Height) * Strength, 1.0));
+#else
+    return float3(0.0, 0.0, 1.0);
+#endif
+}
+
+// Transform a WORLD-space normal into TANGENT space for the Normal pin (procedural world-space
+// normals, triplanar normal maps). The bitangent is reconstructed as cross(N, T), which cannot see
+// UV-mirroring handedness — a mirrored island lighting inverted means flipping the Y term yourself.
+float3 CkUsf_WorldToTangentNormal(FCkUsf_SurfaceInput In, float3 WorldNormal)
+{
+    float3 N = normalize(In.VertexNormal);
+    float3 T = normalize(In.VertexTangent);
+    float3 B = cross(N, T);
+    return normalize(float3(dot(WorldNormal, T), dot(WorldNormal, B), dot(WorldNormal, N)));
+}
+
+// View direction (pixel toward camera) in TANGENT space — the input parallax mapping wants.
+float3 CkUsf_ViewDirTS(FCkUsf_SurfaceInput In)
+{
+    float3 N = normalize(In.VertexNormal);
+    float3 T = normalize(In.VertexTangent);
+    float3 B = cross(N, T);
+    return normalize(float3(dot(In.CameraVector, T), dot(In.CameraVector, B), dot(In.CameraVector, N)));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Parallax.
+// --------------------------------------------------------------------------------------------------------------------
+
+// Single-tap parallax offset: shifts UV along the tangent-space view direction by the height sample.
+// Height convention: 1 = surface, 0 = deepest; HeightScale in UV units (small — try 0.02-0.05).
+float2 CkUsf_ParallaxOffset(float2 UV, float3 ViewDirTS, float Height, float HeightScale)
+{
+    return UV - ViewDirTS.xy / max(ViewDirTS.z, 0.05) * ((1.0 - Height) * HeightScale);
+}
+
+// Bounded parallax-occlusion march over HeightTex.r (mip 0 inside the loop — required in a
+// divergent loop, and frequency-safe). NumSteps <= ~32 keeps it tame. Returns the displaced UV.
+float2 CkUsf_ParallaxOcclusion(Texture2D HeightTex, SamplerState HeightSamp, float2 UV,
+                               float3 ViewDirTS, float HeightScale, int NumSteps)
+{
+    float StepSize = 1.0 / max(NumSteps, 1);
+    float2 UVStep = ViewDirTS.xy / max(ViewDirTS.z, 0.05) * HeightScale * StepSize;
+    float CurLayer = 1.0;
+    float2 CurUV = UV;
+    float Sampled = HeightTex.SampleLevel(HeightSamp, CurUV, 0).r;
+    for (int I = 0; I < NumSteps; ++I)
+    {
+        if (CurLayer <= Sampled)
+        { break; }
+        CurUV -= UVStep;
+        CurLayer -= StepSize;
+        Sampled = HeightTex.SampleLevel(HeightSamp, CurUV, 0).r;
+    }
+    return CurUV;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Triplanar projection (world-space; frequency-safe). Tiling in 1/cm; BlendSharpness ~4-8.
+// --------------------------------------------------------------------------------------------------------------------
+
+float4 CkUsf_Triplanar(Texture2D Tex, SamplerState Samp, float3 WorldPosition, float3 WorldNormal,
+                       float Tiling, float BlendSharpness)
+{
+    float3 W = pow(abs(normalize(WorldNormal)), float3(BlendSharpness, BlendSharpness, BlendSharpness));
+    W /= max(W.x + W.y + W.z, 1e-5);
+    float4 X = CkUsf_SampleTexture2D(Tex, Samp, WorldPosition.yz * Tiling);
+    float4 Y = CkUsf_SampleTexture2D(Tex, Samp, WorldPosition.xz * Tiling);
+    float4 Z = CkUsf_SampleTexture2D(Tex, Samp, WorldPosition.xy * Tiling);
+    return X * W.x + Y * W.y + Z * W.z;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Flow maps: scroll UVs along a flow direction with two half-offset phases; the triangle-wave
+// weight crossfades them so the periodic reset never pops.
+// --------------------------------------------------------------------------------------------------------------------
+
+struct FCkUsf_FlowUV
+{
+    float2 UV0;
+    float2 UV1;
+    float  Weight;   // lerp(sample(UV0), sample(UV1), Weight)
+};
+
+FCkUsf_FlowUV CkUsf_FlowUV(float2 UV, float2 FlowDir, float Time, float Speed)
+{
+    float T = Time * Speed;
+    float P0 = frac(T);
+    float P1 = frac(T + 0.5);
+    FCkUsf_FlowUV R;
+    R.UV0 = UV - FlowDir * P0;
+    R.UV1 = UV - FlowDir * P1;
+    R.Weight = abs(1.0 - 2.0 * P0);
+    return R;
+}
+
+float4 CkUsf_SampleFlowMap(Texture2D Tex, SamplerState Samp, float2 UV, float2 FlowDir, float Time, float Speed)
+{
+    FCkUsf_FlowUV F = CkUsf_FlowUV(UV, FlowDir, Time, Speed);
+    return lerp(CkUsf_SampleTexture2D(Tex, Samp, F.UV0), CkUsf_SampleTexture2D(Tex, Samp, F.UV1), F.Weight);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// 2D signed distance fields + combinators (Inigo Quilez). Negative = inside.
+// --------------------------------------------------------------------------------------------------------------------
+
+float CkUsf_SdCircle(float2 P, float R)
+{
+    return length(P) - R;
+}
+
+float CkUsf_SdBox(float2 P, float2 HalfExtents)
+{
+    float2 D = abs(P) - HalfExtents;
+    return length(max(D, 0.0)) + min(max(D.x, D.y), 0.0);
+}
+
+float CkUsf_SdSegment(float2 P, float2 A, float2 B)
+{
+    float2 PA = P - A;
+    float2 BA = B - A;
+    float H = saturate(dot(PA, BA) / dot(BA, BA));
+    return length(PA - BA * H);
+}
+
+float CkUsf_OpUnion(float A, float B)     { return min(A, B); }
+float CkUsf_OpSubtract(float A, float B)  { return max(A, -B); }
+float CkUsf_OpIntersect(float A, float B) { return max(A, B); }
+
+float CkUsf_OpSmoothUnion(float A, float B, float K)
+{
+    float H = saturate(0.5 + 0.5 * (B - A) / K);
+    return lerp(B, A, H) - K * H * (1.0 - H);
+}
+
+// Screen-stable anti-aliased coverage from an SDF (1 inside, 0 outside, ~1px feather).
+// Pixel shader only — hard step elsewhere.
+float CkUsf_SdfEdgeAA(float Dist)
+{
+#if PIXELSHADER
+    return saturate(0.5 - Dist / max(fwidth(Dist), 1e-5));
+#else
+    return Dist < 0.0 ? 1.0 : 0.0;
+#endif
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Color ops.
+// --------------------------------------------------------------------------------------------------------------------
+
+float3 CkUsf_RGBtoHSV(float3 C)
+{
+    float4 K = float4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+    float4 P = lerp(float4(C.bg, K.wz), float4(C.gb, K.xy), step(C.b, C.g));
+    float4 Q = lerp(float4(P.xyw, C.r), float4(C.r, P.yzx), step(P.x, C.r));
+    float D = Q.x - min(Q.w, Q.y);
+    float E = 1.0e-10;
+    return float3(abs(Q.z + (Q.w - Q.y) / (6.0 * D + E)), D / (Q.x + E), Q.x);
+}
+
+float3 CkUsf_HSVtoRGB(float3 C)
+{
+    float4 K = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    float3 P = abs(frac(C.xxx + K.xyz) * 6.0 - K.www);
+    return C.z * lerp(K.xxx, saturate(P - K.xxx), C.y);
+}
+
+float3 CkUsf_HueShift(float3 Color, float Shift)
+{
+    float3 HSV = CkUsf_RGBtoHSV(Color);
+    HSV.x = frac(HSV.x + Shift);
+    return CkUsf_HSVtoRGB(HSV);
+}
+
+float3 CkUsf_Desaturate(float3 Color, float Amount)
+{
+    float Luma = dot(Color, float3(0.299, 0.587, 0.114));
+    return lerp(Color, float3(Luma, Luma, Luma), Amount);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Dithering / misc.
+// --------------------------------------------------------------------------------------------------------------------
+
+// Interleaved gradient noise — stable per-pixel dither (banding breakup, stochastic OpacityMask).
+// Feed pixel coordinates, e.g. In.UV * View.ViewSizeAndInvSize.xy.
+float CkUsf_IGN(float2 PixelPos)
+{
+    return frac(52.9829189 * frac(dot(PixelPos, float2(0.06711056, 0.00583715))));
+}
+
+// Remap V from [InMin, InMax] to [OutMin, OutMax], clamped.
+float CkUsf_Remap(float V, float InMin, float InMax, float OutMin, float OutMax)
+{
+    return OutMin + (OutMax - OutMin) * saturate((V - InMin) / max(InMax - InMin, 1e-6));
 }
