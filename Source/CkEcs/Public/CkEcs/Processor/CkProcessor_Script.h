@@ -102,7 +102,10 @@ public:
     // Optional query customization. On the generated driver, Configure adds the slots inferred from the dev class's
     // ForEachEntity signature and then forwards to the dev class's own Configure (if any) for Require/Exclude/
     // NoEntities. A class that overrides ForEachBatch directly declares its whole query here instead.
-    UFUNCTION(BlueprintImplementableEvent, Category = "Ck|Processor|Events",
+    // BlueprintCallable so the driver's guarded forward (Dev.Configure(Query)) compiles in AngelScript — a plain
+    // BIE can be overridden but not called from script; calling it on a dev with no override is a no-op, which is
+    // exactly the forward's intended semantics.
+    UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Ck|Processor|Events",
               meta = (DisplayName = "[Ck][ScriptProcessor] Configure"))
     void Configure(UPARAM(ref) FCk_ScriptProcessorQuery& Query);
 

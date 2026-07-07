@@ -504,13 +504,20 @@ auto
     }
     Candidates.Sort([](const UClass& A, const UClass& B) { return A.GetPathName() < B.GetPathName(); });
 
+    auto CandidateNames = TSet<FString>{};
+    for (const auto* Class : Candidates)
+    { CandidateNames.Add(Class->GetName()); }
+
     auto EmitClasses = TArray<UClass*>{};
     auto SignatureByClass = TMap<UClass*, FSignature>{};
 
     for (auto* Class : Candidates)
     {
-        // The drivers themselves are subclasses too — never generate a driver for a driver.
-        if (Class->GetName().EndsWith(GDriverSuffix))
+        // The drivers themselves are subclasses too — never generate a driver for a driver. Mirrors the host's
+        // routing guard: only a class whose dev sibling exists is a driver; an ordinary typed processor whose
+        // name merely ends in _Driver still gets a driver generated (named <Name>_Driver_Driver).
+        if (Class->GetName().EndsWith(GDriverSuffix) &&
+            CandidateNames.Contains(Class->GetName().LeftChop(GDriverSuffix.Len())))
         { continue; }
 
         auto HasForEachEntity = false;
@@ -522,7 +529,8 @@ auto
         { Signature._Error = TEXT("class declares both a ForEachEntity method and a ForEachBatch override — pick one"); }
 
         // Respect a hand-authored driver (e.g. an end-to-end test's driver before it is deleted in favour of codegen).
-        if (Has_HandAuthoredDriver(Get_SourceName(Class) + GDriverSuffix))
+        // OBJECT name, not Get_SourceName: FindFirstObject matches UClass names, which never carry the U prefix.
+        if (Has_HandAuthoredDriver(Class->GetName() + GDriverSuffix))
         { continue; }
 
         EmitClasses.Add(Class);

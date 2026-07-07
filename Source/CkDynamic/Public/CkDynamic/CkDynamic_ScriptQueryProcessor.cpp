@@ -100,6 +100,19 @@ namespace ck
             TEXT("Script processor [{}] declared an empty query and did not call NoEntities(). Disabling it."), InDevClass)
         { _Disabled = true; return; }
 
+        if (NOT _Query._NoEntities)
+        {
+            // An all-Exclude query has no pool to drive the join (DoResolveAndJoin would return false every tick),
+            // so the processor would construct fine and then silently never run. Fail loudly here instead.
+            const auto HasNonExcludeSlot = _Query._Slots.ContainsByPredicate(
+                [](const FCk_ScriptQuerySlot& InSlot) { return InSlot._Access != ECk_ScriptQueryAccess::Exclude; });
+
+            CK_ENSURE_IF_NOT(HasNonExcludeSlot,
+                TEXT("Script processor [{}] declared only Exclude slots — there is no pool to drive the join. "
+                     "Add a ReadOnly/ReadWrite/Require slot or call NoEntities(). Disabling it."), InDevClass)
+            { _Disabled = true; return; }
+        }
+
         _DevInstance->BeginPlay();
     }
 
