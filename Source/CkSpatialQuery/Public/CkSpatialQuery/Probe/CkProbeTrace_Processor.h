@@ -27,6 +27,11 @@ namespace ck
         // Order them HandleRequests -> RayCast -> ShapeCast; the trace views are FFragment_ProbeTrace_*
         // (the Requests fragment is a trigger only, not required), so running after HandleRequests is safe.
         using RunAfter = TDepList<FProcessor_Probe_HandleRequests>;
+        // SkipPump — sticky view (FFragment_ProbeTrace_* is never consumed) + non-idempotent body: every
+        // run that overlaps a probe enqueues Request_OverlapUpdated/BeginOverlap, re-adding the shared
+        // dirty marker. Pumping therefore never quiesces while any trace is overlapping (pump-limit
+        // saturation every frame) and re-casts against Jolt once per pump pass. Trace once per frame.
+        static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;
         static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
         FProcessor_ProbeTrace_RayCast(
@@ -56,6 +61,9 @@ namespace ck
         using MarkedDirtyBy = FFragment_Probe_Requests;
         // Shares MarkedDirtyBy with Probe_HandleRequests + RayCast; ordered last in that trio.
         using RunAfter = TDepList<FProcessor_Probe_HandleRequests, FProcessor_ProbeTrace_RayCast>;
+        // SkipPump for the same reason as RayCast above — overlapping shape traces re-dirty the shared
+        // marker every pump pass and never quiesce.
+        static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;
         static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
         FProcessor_ProbeTrace_ShapeCast(
