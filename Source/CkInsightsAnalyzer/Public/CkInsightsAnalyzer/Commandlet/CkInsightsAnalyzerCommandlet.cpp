@@ -3,8 +3,11 @@
 #include "CkInsightsAnalyzer/Core/CkTraceSession.h"
 #include "CkInsightsAnalyzer/Core/CkFrameAnalyzer.h"
 #include "CkInsightsAnalyzer/Report/CkFrameReport.h"
+#include "CkInsightsAnalyzer/Report/CkJsonReport.h"
 #include "CkInsightsAnalyzer/Report/CkMultiFrameReport.h"
 #include "CkInsightsAnalyzer_Log.h"
+
+#include "CkCore/Macros/CkMacros.h"
 
 #include "HAL/PlatformApplicationMisc.h"
 #include "Misc/FileHelper.h"
@@ -33,6 +36,9 @@ UCkInsightsAnalyzerCommandlet::UCkInsightsAnalyzerCommandlet()
     HelpParamNames.Add(TEXT("all"));
     HelpParamDescriptions.Add(TEXT("Analyze all frames (multi-frame report)"));
 
+    HelpParamNames.Add(TEXT("json"));
+    HelpParamDescriptions.Add(TEXT("Emit machine-readable JSON instead of Slack markdown"));
+
     HelpParamNames.Add(TEXT("output"));
     HelpParamDescriptions.Add(TEXT("Write report to file"));
 
@@ -54,31 +60,32 @@ int32
 
     // ---- Validate required params ----
 
-    const FString* TracePath = ParsedParams.Find(TEXT("trace"));
-    if (!TracePath || TracePath->IsEmpty())
+    const auto TracePath = ParsedParams.Find(TEXT("trace"));
+    if (NOT TracePath || TracePath->IsEmpty())
     {
-        UE_LOG(CkInsightsAnalyzer, Error, TEXT("Missing required parameter: -trace=<path>"));
+        ck::insights_analyzer::Error(TEXT("Missing required parameter: -trace=<path>"));
         PrintUsage();
         return 1;
     }
 
     // ---- Parse optional params ----
 
-    const bool bClipboard = Switches.Contains(TEXT("clipboard"));
-    const bool bAll = Switches.Contains(TEXT("all"));
-    const bool bRaw = Switches.Contains(TEXT("raw"));
+    const bool Clipboard = Switches.Contains(TEXT("clipboard"));
+    const bool AllFrames = Switches.Contains(TEXT("all"));
+    const bool Raw = Switches.Contains(TEXT("raw"));
+    const bool Json = Switches.Contains(TEXT("json"));
 
-    const FString* OutputPath = ParsedParams.Find(TEXT("output"));
+    const auto OutputPath = ParsedParams.Find(TEXT("output"));
 
     double Budget = 16.67;
-    if (const FString* BudgetStr = ParsedParams.Find(TEXT("budget")))
+    if (const auto BudgetStr = ParsedParams.Find(TEXT("budget")))
     {
         Budget = FCString::Atod(**BudgetStr);
         if (Budget <= 0.0) Budget = 16.67;
     }
 
     int32 RawTop = 50;
-    if (const FString* TopStr = ParsedParams.Find(TEXT("top")))
+    if (const auto TopStr = ParsedParams.Find(TEXT("top")))
     {
         RawTop = FCString::Atoi(**TopStr);
         if (RawTop <= 0) RawTop = 50;
@@ -86,23 +93,23 @@ int32
 
     // ---- Open trace ----
 
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT("Opening trace: %s"), **TracePath);
+    ck::insights_analyzer::Display(TEXT("Opening trace: {}"), *TracePath);
 
     FCk_TraceSession Session;
-    if (!Session.Open(*TracePath))
+    if (NOT Session.Open(*TracePath))
     {
-        UE_LOG(CkInsightsAnalyzer, Error, TEXT("Failed to open trace file: %s"), **TracePath);
+        ck::insights_analyzer::Error(TEXT("Failed to open trace file: {}"), *TracePath);
         return 1;
     }
 
-    const uint64 TotalFrames = Session.GetFrameCount();
-    UE_LOG(CkInsightsAnalyzer, Display,
-        TEXT("Trace loaded: %.1fs duration, %llu game frames"),
+    const auto TotalFrames = Session.GetFrameCount();
+    ck::insights_analyzer::Display(
+        TEXT("Trace loaded: {:.1f}s duration, {} game frames"),
         Session.GetDurationSeconds(), TotalFrames);
 
     if (TotalFrames == 0)
     {
-        UE_LOG(CkInsightsAnalyzer, Error, TEXT("No game frames found in trace"));
+        ck::insights_analyzer::Error(TEXT("No game frames found in trace"));
         return 1;
     }
 
@@ -110,42 +117,49 @@ int32
 
     FString Report;
 
-    if (const FString* FrameStr = ParsedParams.Find(TEXT("frame")))
+    if (const auto FrameStr = ParsedParams.Find(TEXT("frame")))
     {
         // Single frame mode
-        const uint64 FrameIndex = FCString::Strtoui64(**FrameStr, nullptr, 10);
+        const auto FrameIndex = FCString::Strtoui64(**FrameStr, nullptr, 10);
 
         if (FrameIndex >= TotalFrames)
         {
-            UE_LOG(CkInsightsAnalyzer, Error,
-                TEXT("Frame index %llu out of range (0-%llu)"), FrameIndex, TotalFrames - 1);
+            ck::insights_analyzer::Error(
+                TEXT("Frame index {} out of range (0-{})"), FrameIndex, TotalFrames - 1);
             return 1;
         }
 
-        UE_LOG(CkInsightsAnalyzer, Display, TEXT("Analyzing frame %llu..."), FrameIndex);
+        ck::insights_analyzer::Display(TEXT("Analyzing frame {}..."), FrameIndex);
 
         FCk_FrameAnalysisResult Result = FCk_FrameAnalyzer::AnalyzeFrame(Session, FrameIndex);
-        if (!Result.IsValid())
+        if (NOT Result.IsValid())
         {
-            UE_LOG(CkInsightsAnalyzer, Error, TEXT("Frame %llu produced no analysis data"), FrameIndex);
+            ck::insights_analyzer::Error(TEXT("Frame {} produced no analysis data"), FrameIndex);
             return 1;
         }
 
         FCk_FrameReportConfig ReportConfig;
         ReportConfig.TargetFrameMs = Budget;
-        ReportConfig.ShowRawTimerList = bRaw;
+        ReportConfig.ShowRawTimerList = Raw;
         ReportConfig.RawTimerCount = RawTop;
 
-        FCk_FrameReport FrameReport(ReportConfig);
-        Report = FrameReport.Generate(Session, Result);
+        if (Json)
+        {
+            Report = FCk_JsonReport::GenerateSingleFrame(Session, Result, ReportConfig);
+        }
+        else
+        {
+            FCk_FrameReport FrameReport(ReportConfig);
+            Report = FrameReport.Generate(Session, Result);
+        }
     }
-    else if (const FString* FramesStr = ParsedParams.Find(TEXT("frames")))
+    else if (const auto FramesStr = ParsedParams.Find(TEXT("frames")))
     {
         // Frame range mode (e.g., "100-200")
         FString StartStr, EndStr;
         if (FramesStr->Split(TEXT("-"), &StartStr, &EndStr))
         {
-            const uint64 StartFrame = FCString::Strtoui64(*StartStr, nullptr, 10);
+            const auto StartFrame = FCString::Strtoui64(*StartStr, nullptr, 10);
             uint64 EndFrame = FCString::Strtoui64(*EndStr, nullptr, 10);
 
             // EndFrame is inclusive in user input, exclusive in API
@@ -153,13 +167,13 @@ int32
 
             if (StartFrame >= EndFrame)
             {
-                UE_LOG(CkInsightsAnalyzer, Error,
-                    TEXT("Invalid frame range: %llu-%llu"), StartFrame, EndFrame - 1);
+                ck::insights_analyzer::Error(
+                    TEXT("Invalid frame range: {}-{}"), StartFrame, EndFrame - 1);
                 return 1;
             }
 
-            UE_LOG(CkInsightsAnalyzer, Display,
-                TEXT("Analyzing frames %llu-%llu (%llu frames)..."),
+            ck::insights_analyzer::Display(
+                TEXT("Analyzing frames {}-{} ({} frames)..."),
                 StartFrame, EndFrame - 1, EndFrame - StartFrame);
 
             FCk_MultiFrameReportConfig MultiConfig;
@@ -167,22 +181,29 @@ int32
 
             FCk_MultiFrameReport MultiReport(MultiConfig);
             Report = MultiReport.AnalyzeAndGenerate(Session, StartFrame, EndFrame);
+
+            if (Json)
+            {
+                Report = MultiReport.GetStats().FrameCount > 0
+                    ? FCk_JsonReport::GenerateMultiFrame(Session, MultiReport.GetStats(), MultiReport.GetConfig())
+                    : FString{};
+            }
         }
         else
         {
-            UE_LOG(CkInsightsAnalyzer, Error,
+            ck::insights_analyzer::Error(
                 TEXT("Invalid -frames format. Use: -frames=100-200"));
             return 1;
         }
     }
-    else if (const FString* WorstStr = ParsedParams.Find(TEXT("worst")))
+    else if (const auto WorstStr = ParsedParams.Find(TEXT("worst")))
     {
         // Worst N frames mode
         int32 WorstCount = FCString::Atoi(**WorstStr);
         if (WorstCount <= 0) WorstCount = 10;
 
-        UE_LOG(CkInsightsAnalyzer, Display,
-            TEXT("Finding %d worst frames across %llu total frames..."), WorstCount, TotalFrames);
+        ck::insights_analyzer::Display(
+            TEXT("Finding {} worst frames across {} total frames..."), WorstCount, TotalFrames);
 
         FCk_MultiFrameReportConfig MultiConfig;
         MultiConfig.TargetFrameMs = Budget;
@@ -190,23 +211,37 @@ int32
 
         FCk_MultiFrameReport MultiReport(MultiConfig);
         Report = MultiReport.AnalyzeWorstFrames(Session, WorstCount);
+
+        if (Json)
+        {
+            Report = MultiReport.GetStats().FrameCount > 0
+                ? FCk_JsonReport::GenerateMultiFrame(Session, MultiReport.GetStats(), MultiReport.GetConfig())
+                : FString{};
+        }
     }
-    else if (bAll)
+    else if (AllFrames)
     {
         // All frames mode
-        UE_LOG(CkInsightsAnalyzer, Display,
-            TEXT("Analyzing all %llu frames..."), TotalFrames);
+        ck::insights_analyzer::Display(
+            TEXT("Analyzing all {} frames..."), TotalFrames);
 
         FCk_MultiFrameReportConfig MultiConfig;
         MultiConfig.TargetFrameMs = Budget;
 
         FCk_MultiFrameReport MultiReport(MultiConfig);
         Report = MultiReport.AnalyzeAndGenerate(Session, 0, 0);
+
+        if (Json)
+        {
+            Report = MultiReport.GetStats().FrameCount > 0
+                ? FCk_JsonReport::GenerateMultiFrame(Session, MultiReport.GetStats(), MultiReport.GetConfig())
+                : FString{};
+        }
     }
     else
     {
         // Default: worst 10 frames
-        UE_LOG(CkInsightsAnalyzer, Display,
+        ck::insights_analyzer::Display(
             TEXT("No mode specified, defaulting to -worst=10..."));
 
         FCk_MultiFrameReportConfig MultiConfig;
@@ -214,48 +249,55 @@ int32
 
         FCk_MultiFrameReport MultiReport(MultiConfig);
         Report = MultiReport.AnalyzeWorstFrames(Session, 10);
+
+        if (Json)
+        {
+            Report = MultiReport.GetStats().FrameCount > 0
+                ? FCk_JsonReport::GenerateMultiFrame(Session, MultiReport.GetStats(), MultiReport.GetConfig())
+                : FString{};
+        }
     }
 
     // ---- Output ----
 
     if (Report.IsEmpty())
     {
-        UE_LOG(CkInsightsAnalyzer, Error, TEXT("Report generation produced no output"));
+        ck::insights_analyzer::Error(TEXT("Report generation produced no output"));
         return 1;
     }
 
-    // Print to stdout (via UE_LOG Display)
+    // Print to stdout (via Display log)
     // Split by line to avoid log truncation
     TArray<FString> ReportLines;
     Report.ParseIntoArrayLines(ReportLines);
     for (const FString& Line : ReportLines)
     {
-        UE_LOG(CkInsightsAnalyzer, Display, TEXT("%s"), *Line);
+        ck::insights_analyzer::Display(TEXT("{}"), Line);
     }
 
     // Write to file if requested
-    if (OutputPath && !OutputPath->IsEmpty())
+    if (OutputPath && NOT OutputPath->IsEmpty())
     {
         if (FFileHelper::SaveStringToFile(Report, **OutputPath, FFileHelper::EEncodingOptions::ForceUTF8))
         {
-            UE_LOG(CkInsightsAnalyzer, Display, TEXT("Report written to: %s"), **OutputPath);
+            ck::insights_analyzer::Display(TEXT("Report written to: {}"), *OutputPath);
         }
         else
         {
-            UE_LOG(CkInsightsAnalyzer, Error, TEXT("Failed to write report to: %s"), **OutputPath);
+            ck::insights_analyzer::Error(TEXT("Failed to write report to: {}"), *OutputPath);
         }
     }
 
     // Copy to clipboard if requested
-    if (bClipboard)
+    if (Clipboard)
     {
         if (CopyToClipboard(Report))
         {
-            UE_LOG(CkInsightsAnalyzer, Display, TEXT("Report copied to clipboard."));
+            ck::insights_analyzer::Display(TEXT("Report copied to clipboard."));
         }
         else
         {
-            UE_LOG(CkInsightsAnalyzer, Warning, TEXT("Failed to copy to clipboard."));
+            ck::insights_analyzer::Warning(TEXT("Failed to copy to clipboard."));
         }
     }
 
@@ -270,32 +312,34 @@ auto
     PrintUsage() const
     -> void
 {
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT(""));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT("CkInsightsAnalyzer - Unreal Insights Frame Analyzer"));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT(""));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT("Usage:"));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT("  UnrealEditor-Cmd.exe <Project.uproject> -run=CkInsightsAnalyzer -trace=<path> [options]"));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT(""));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT("Required:"));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT("  -trace=<path>       Path to .utrace file"));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT(""));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT("Analysis modes (pick one):"));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT("  -frame=<N>          Analyze a single frame by index"));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT("  -frames=<N-M>       Analyze a range of frames (e.g., 100-200)"));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT("  -worst=<N>          Find and report the N worst frames (default)"));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT("  -all                Analyze all frames"));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT(""));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT("Options:"));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT("  -budget=<ms>        Target frame budget in ms (default: 16.67)"));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT("  -raw                Include raw ranked timer list"));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT("  -top=<N>            Number of raw timers (default: 50)"));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT("  -output=<path>      Write report to file"));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT("  -clipboard          Copy report to Windows clipboard"));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT(""));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT("Examples:"));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT("  -run=CkInsightsAnalyzer -trace=C:/traces/session.utrace -worst=5"));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT("  -run=CkInsightsAnalyzer -trace=C:/traces/session.utrace -frame=347 -clipboard"));
-    UE_LOG(CkInsightsAnalyzer, Display, TEXT("  -run=CkInsightsAnalyzer -trace=C:/traces/session.utrace -all -output=report.md"));
+    ck::insights_analyzer::Display(TEXT(""));
+    ck::insights_analyzer::Display(TEXT("CkInsightsAnalyzer - Unreal Insights Frame Analyzer"));
+    ck::insights_analyzer::Display(TEXT(""));
+    ck::insights_analyzer::Display(TEXT("Usage:"));
+    ck::insights_analyzer::Display(TEXT("  UnrealEditor-Cmd.exe <Project.uproject> -run=CkInsightsAnalyzer -trace=<path> [options]"));
+    ck::insights_analyzer::Display(TEXT(""));
+    ck::insights_analyzer::Display(TEXT("Required:"));
+    ck::insights_analyzer::Display(TEXT("  -trace=<path>       Path to .utrace file"));
+    ck::insights_analyzer::Display(TEXT(""));
+    ck::insights_analyzer::Display(TEXT("Analysis modes (pick one):"));
+    ck::insights_analyzer::Display(TEXT("  -frame=<N>          Analyze a single frame by index"));
+    ck::insights_analyzer::Display(TEXT("  -frames=<N-M>       Analyze a range of frames (e.g., 100-200)"));
+    ck::insights_analyzer::Display(TEXT("  -worst=<N>          Find and report the N worst frames (default)"));
+    ck::insights_analyzer::Display(TEXT("  -all                Analyze all frames"));
+    ck::insights_analyzer::Display(TEXT(""));
+    ck::insights_analyzer::Display(TEXT("Options:"));
+    ck::insights_analyzer::Display(TEXT("  -budget=<ms>        Target frame budget in ms (default: 16.67)"));
+    ck::insights_analyzer::Display(TEXT("  -raw                Include raw ranked timer list"));
+    ck::insights_analyzer::Display(TEXT("  -top=<N>            Number of raw timers (default: 50)"));
+    ck::insights_analyzer::Display(TEXT("  -json               Emit machine-readable JSON instead of Slack markdown"));
+    ck::insights_analyzer::Display(TEXT("  -output=<path>      Write report to file"));
+    ck::insights_analyzer::Display(TEXT("  -clipboard          Copy report to Windows clipboard"));
+    ck::insights_analyzer::Display(TEXT(""));
+    ck::insights_analyzer::Display(TEXT("Examples:"));
+    ck::insights_analyzer::Display(TEXT("  -run=CkInsightsAnalyzer -trace=C:/traces/session.utrace -worst=5"));
+    ck::insights_analyzer::Display(TEXT("  -run=CkInsightsAnalyzer -trace=C:/traces/session.utrace -frame=347 -clipboard"));
+    ck::insights_analyzer::Display(TEXT("  -run=CkInsightsAnalyzer -trace=C:/traces/session.utrace -all -output=report.md"));
+    ck::insights_analyzer::Display(TEXT("  -run=CkInsightsAnalyzer -trace=C:/traces/session.utrace -all -json -output=report.json"));
 }
 
 // --------------------------------------------------------------------------------------------------------------------

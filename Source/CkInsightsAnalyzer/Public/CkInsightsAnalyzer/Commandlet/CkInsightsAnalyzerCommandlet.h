@@ -21,6 +21,7 @@
  *   -raw                Include raw ranked timer list
  *   -top=<N>            Number of raw timers to show (default: 50)
  *   -budget=<ms>        Target frame budget in ms (default: 16.67 for 60fps)
+ *   -json               Emit machine-readable JSON instead of Slack markdown
  *   -output=<path>      Write report to file (in addition to stdout)
  *   -clipboard          Copy report to Windows clipboard
  *
@@ -29,6 +30,7 @@
  *   -run=CkInsightsAnalyzer -trace=C:/traces/session.utrace -frame=347
  *   -run=CkInsightsAnalyzer -trace=C:/traces/session.utrace -frames=100-200
  *   -run=CkInsightsAnalyzer -trace=C:/traces/session.utrace -all -output=report.md
+ *   -run=CkInsightsAnalyzer -trace=C:/traces/session.utrace -all -json -output=report.json
  */
 UCLASS()
 class UCkInsightsAnalyzerCommandlet : public UCommandlet

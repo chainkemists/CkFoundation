@@ -2,29 +2,32 @@
 #include "CkInsightsAnalyzer/Core/CkTraceSession.h"
 #include "CkInsightsAnalyzer_Log.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Macros/CkMacros.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 // Tree-drawing characters (Unicode box-drawing)
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace CkTree
+namespace ck_frame_report
 {
-    static const FString Pipe  = TEXT("\u2502  ");    // │  (continuing branch)
-    static const FString Tee   = TEXT("\u251C\u2500 "); // ├─ (sibling)
-    static const FString Ell   = TEXT("\u2514\u2500 "); // └─ (last child)
-    static const FString Space = TEXT("   ");           //    (after last child)
-    static const FString HRule = TEXT("\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500");
-}
+    const FString Pipe  = TEXT("\u2502  ");    // │  (continuing branch)
+    const FString Tee   = TEXT("\u251C\u2500 "); // ├─ (sibling)
+    const FString Ell   = TEXT("\u2514\u2500 "); // └─ (last child)
+    const FString Space = TEXT("   ");           //    (after last child)
+    const FString HRule = TEXT("\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500");
 
-// Frame wrapper timer names to skip when finding root timers
-static const TSet<FString> FrameWrapperNames = {
-    TEXT("FEngineLoop::Tick"),
-    TEXT("FrameTime"),
-    TEXT("Frame"),
-    TEXT("BeginFrame"),
-    TEXT("STAT_EventLoop_TEventLoop_RunOnce"),
-    TEXT("FStats::AdvanceFrame"),
-    TEXT("FRHIBreadcrumbEvent_GameThread_Begin"),
-};
+    // Frame wrapper timer names to skip when finding root timers
+    const TSet<FString> FrameWrapperNames = {
+        TEXT("FEngineLoop::Tick"),
+        TEXT("FrameTime"),
+        TEXT("Frame"),
+        TEXT("BeginFrame"),
+        TEXT("STAT_EventLoop_TEventLoop_RunOnce"),
+        TEXT("FStats::AdvanceFrame"),
+        TEXT("FRHIBreadcrumbEvent_GameThread_Begin"),
+    };
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 // Construction
@@ -89,7 +92,7 @@ auto
              const FCk_FrameAnalysisResult& Result) const
     -> FString
 {
-    if (!Result.IsValid())
+    if (NOT Result.IsValid())
     {
         return TEXT("(No analysis data)");
     }
@@ -150,7 +153,7 @@ auto
     IsFrameWrapper(const FString& TimerName)
     -> bool
 {
-    return FrameWrapperNames.Contains(TimerName);
+    return ck_frame_report::FrameWrapperNames.Contains(TimerName);
 }
 
 auto
@@ -163,8 +166,8 @@ auto
 {
     TMap<uint32, double> Roots;
 
-    const TMap<uint32, double>* Children = Result.ChildrenOf.Find(ParentTimerIndex);
-    if (!Children) return Roots;
+    const auto Children = Result.ChildrenOf.Find(ParentTimerIndex);
+    if (NOT Children) return Roots;
 
     for (const auto& [ChildIndex, ChildInclSec] : *Children)
     {
@@ -205,8 +208,8 @@ auto
 {
     TArray<FChildInfo> Children;
 
-    const TMap<uint32, double>* ChildMap = Result.ChildrenOf.Find(ParentTimerIndex);
-    if (!ChildMap) return Children;
+    const auto ChildMap = Result.ChildrenOf.Find(ParentTimerIndex);
+    if (NOT ChildMap) return Children;
 
     for (const auto& [ChildIndex, ChildInclSec] : *ChildMap)
     {
@@ -222,7 +225,7 @@ auto
         }
     }
 
-    Children.Sort([](const FChildInfo& A, const FChildInfo& B)
+    ck::algo::Sort(Children, [](const FChildInfo& A, const FChildInfo& B)
     {
         return A.InclusiveMs > B.InclusiveMs;
     });
@@ -268,11 +271,11 @@ auto
 
         // Only collapse when there's essentially one path through.
         // Use 20% threshold so branches with meaningful secondary paths are preserved.
-        const bool bSinglePath =
+        const bool SinglePath =
             (Children.Num() == 1) ||
             (Children.Num() >= 2 && Children[1].InclusiveMs < CurrentIncl * 0.20);
 
-        if (bSinglePath && ChildIncl > CurrentIncl * 0.7)
+        if (SinglePath && ChildIncl > CurrentIncl * 0.7)
         {
             Collapsed.Breadcrumbs.Add(GetTimerName(TimerNames, CurrentIndex));
             CurrentIndex = TopChild.TimerIndex;
@@ -302,25 +305,25 @@ auto
     FString Prefix;
     for (int32 D = 1; D < Depth; ++D)
     {
-        const bool* bIsLast = IsLastAtDepth.Find(D);
-        if (bIsLast && *bIsLast)
+        const auto IsLast = IsLastAtDepth.Find(D);
+        if (IsLast && *IsLast)
         {
-            Prefix += CkTree::Space;
+            Prefix += ck_frame_report::Space;
         }
         else
         {
-            Prefix += CkTree::Pipe;
+            Prefix += ck_frame_report::Pipe;
         }
     }
 
-    const bool* bIsLast = IsLastAtDepth.Find(Depth);
-    if (bIsLast && *bIsLast)
+    const auto IsLast = IsLastAtDepth.Find(Depth);
+    if (IsLast && *IsLast)
     {
-        Prefix += CkTree::Ell;
+        Prefix += ck_frame_report::Ell;
     }
     else
     {
-        Prefix += CkTree::Tee;
+        Prefix += ck_frame_report::Tee;
     }
 
     return Prefix;
@@ -370,21 +373,21 @@ auto
     const FString Icon = FCk_TimerCategorizer::SeverityIcon(Collapsed.InclusiveMs);
 
     // Only show self-time when meaningfully different from inclusive
-    const bool bShowSelf = Collapsed.ExclusiveMs > 0.3
-                        && Collapsed.ExclusiveMs > Collapsed.InclusiveMs * 0.08;
+    const bool ShowSelf = Collapsed.ExclusiveMs > 0.3
+                       && Collapsed.ExclusiveMs > Collapsed.InclusiveMs * 0.08;
     // Only show count when it suggests per-actor work
-    const bool bShowCount = Collapsed.Count > 1;
+    const bool ShowCount = Collapsed.Count > 1;
 
     FString Line = FString::Printf(TEXT("%s%s `%s`  *%s*"),
         *Prefix, *Icon, *DisplayName,
         *FCk_TimerCategorizer::FormatMs(Collapsed.InclusiveMs));
 
-    if (bShowSelf)
+    if (ShowSelf)
     {
         Line += FString::Printf(TEXT("  _%s self_"),
             *FCk_TimerCategorizer::FormatMs(Collapsed.ExclusiveMs));
     }
-    if (bShowCount)
+    if (ShowCount)
     {
         Line += FString::Printf(TEXT("  %s"),
             *FCk_TimerCategorizer::FormatCount(Collapsed.Count));
@@ -451,8 +454,8 @@ auto
         const double GlobalExcl = Result.GetExclusiveMs(CC.TimerIndex);
         const uint32 GlobalCount = Result.GetCount(CC.TimerIndex);
 
-        FDedupedChild* Existing = Seen.Find(CC.TimerIndex);
-        if (!Existing || GlobalIncl > Existing->InclusiveMs)
+        const auto Existing = Seen.Find(CC.TimerIndex);
+        if (NOT Existing || GlobalIncl > Existing->InclusiveMs)
         {
             Seen.FindOrAdd(CC.TimerIndex) = FDedupedChild{
                 CC.TimerIndex, GlobalIncl, GlobalExcl, GlobalCount, MoveTemp(CC.Breadcrumbs)
@@ -466,7 +469,7 @@ auto
     {
         Deduped.Add(MoveTemp(Val));
     }
-    Deduped.Sort([](const FDedupedChild& A, const FDedupedChild& B)
+    ck::algo::Sort(Deduped, [](const FDedupedChild& A, const FDedupedChild& B)
     {
         return A.InclusiveMs > B.InclusiveMs;
     });
@@ -542,7 +545,7 @@ auto
         }
     }
 
-    RootList.Sort([](const FRootEntry& A, const FRootEntry& B)
+    ck::algo::Sort(RootList, [](const FRootEntry& A, const FRootEntry& B)
     {
         return A.InclusiveMs > B.InclusiveMs;
     });
@@ -614,14 +617,14 @@ auto
     }
 
     // Sort by exclusive time descending (matching Python behavior)
-    SortedCats.Sort([](const FCatEntry& A, const FCatEntry& B)
+    ck::algo::Sort(SortedCats, [](const FCatEntry& A, const FCatEntry& B)
     {
         return A.ExclMs > B.ExclMs;
     });
 
     if (SortedCats.Num() == 0) return;
 
-    Lines.Add(FString::Printf(TEXT("\n%s"), *CkTree::HRule));
+    Lines.Add(FString::Printf(TEXT("\n%s"), *ck_frame_report::HRule));
     Lines.Add(TEXT("*Category Summary (exclusive time)*\n"));
 
     const double FrameMs = Result.FrameDurationMs;
@@ -642,13 +645,15 @@ auto
 
 auto
     FCk_FrameReport::
-    GenerateWorkerThreads(const FCk_TraceSession& Session,
-                          const FCk_FrameAnalysisResult& GameThreadResult,
-                          TArray<FString>& Lines) const
-    -> void
+    ComputeWorkerThreadSummaries(const FCk_TraceSession& Session,
+                                 const FCk_FrameAnalysisResult& GameThreadResult,
+                                 double MinWorkerThreadMs)
+    -> TArray<FCk_WorkerThreadSummary>
 {
     const TArray<TraceServices::FThreadInfo> ThreadInfos = Session.GetThreadInfos();
     const uint32 GameThreadId = GameThreadResult.ThreadId;
+
+    const FTimerNameMap TimerNames = BuildTimerNameMap(Session);
 
     TArray<FCk_WorkerThreadSummary> Workers;
 
@@ -661,7 +666,7 @@ auto
             Session, Info.Id,
             GameThreadResult.FrameStartTime, GameThreadResult.FrameEndTime);
 
-        if (!ThreadResult.IsValid()) continue;
+        if (NOT ThreadResult.IsValid()) continue;
 
         // Compute wall time from depth-0 events
         double WallMs = 0.0;
@@ -678,7 +683,7 @@ auto
             }
         }
 
-        if (WallMs < _Config.MinWorkerThreadMs) continue;
+        if (WallMs < MinWorkerThreadMs) continue;
 
         FCk_WorkerThreadSummary Summary;
         Summary.ThreadId = Info.Id;
@@ -687,23 +692,20 @@ auto
         Summary.WallTimeMs = WallMs;
         Summary.EventCount = ThreadResult.Events.Num();
 
-        // Build timer name map for this thread
-        FTimerNameMap ThreadTimerNames = BuildTimerNameMap(Session);
-
         // Top 3 by exclusive time
         TArray<TPair<uint32, double>> ExclSorted;
         for (const auto& [TimerIndex, ExclSec] : ThreadResult.TimerExclusive)
         {
             ExclSorted.Emplace(TimerIndex, ExclSec * 1000.0);
         }
-        ExclSorted.Sort([](const TPair<uint32, double>& A, const TPair<uint32, double>& B)
+        ck::algo::Sort(ExclSorted, [](const TPair<uint32, double>& A, const TPair<uint32, double>& B)
         {
             return A.Value > B.Value;
         });
 
         for (int32 i = 0; i < FMath::Min(ExclSorted.Num(), 3); ++i)
         {
-            const FString Name = GetTimerName(ThreadTimerNames, ExclSorted[i].Key);
+            const FString Name = GetTimerName(TimerNames, ExclSorted[i].Key);
             Summary.TopTimers.Add(FCk_WorkerThreadSummary::FTopTimer{
                 FCk_TimerCategorizer::SimplifyName(Name),
                 ExclSorted[i].Value,
@@ -715,14 +717,27 @@ auto
     }
 
     // Sort by wall time descending
-    Workers.Sort([](const FCk_WorkerThreadSummary& A, const FCk_WorkerThreadSummary& B)
+    ck::algo::Sort(Workers, [](const FCk_WorkerThreadSummary& A, const FCk_WorkerThreadSummary& B)
     {
         return A.WallTimeMs > B.WallTimeMs;
     });
 
+    return Workers;
+}
+
+auto
+    FCk_FrameReport::
+    GenerateWorkerThreads(const FCk_TraceSession& Session,
+                          const FCk_FrameAnalysisResult& GameThreadResult,
+                          TArray<FString>& Lines) const
+    -> void
+{
+    const TArray<FCk_WorkerThreadSummary> Workers = ComputeWorkerThreadSummaries(
+        Session, GameThreadResult, _Config.MinWorkerThreadMs);
+
     if (Workers.Num() == 0) return;
 
-    Lines.Add(FString::Printf(TEXT("\n%s"), *CkTree::HRule));
+    Lines.Add(FString::Printf(TEXT("\n%s"), *ck_frame_report::HRule));
     Lines.Add(FString::Printf(TEXT("*Worker Threads (>%.0fms)*\n"), _Config.MinWorkerThreadMs));
 
     const int32 MaxWorkers = FMath::Min(Workers.Num(), _Config.MaxWorkerThreads);
@@ -731,7 +746,7 @@ auto
         const FCk_WorkerThreadSummary& W = Workers[i];
 
         FString Label = W.ThreadName;
-        if (!W.ThreadGroup.IsEmpty())
+        if (NOT W.ThreadGroup.IsEmpty())
         {
             Label += FString::Printf(TEXT(" (%s)"), *W.ThreadGroup);
         }
@@ -781,7 +796,7 @@ auto
     {
         Sorted.Emplace(TimerIndex, ExclSec * 1000.0);
     }
-    Sorted.Sort([](const TPair<uint32, double>& A, const TPair<uint32, double>& B)
+    ck::algo::Sort(Sorted, [](const TPair<uint32, double>& A, const TPair<uint32, double>& B)
     {
         return A.Value > B.Value;
     });
