@@ -5,6 +5,7 @@
 #include "CkCore/Time/CkTime.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Processor/CkProcessor_ScriptQuery_Data.h"
 
 #include "CkProcessor_Script.generated.h"
 
@@ -60,6 +61,27 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_Handle _Handle;
 
+    // Explicit scheduler ordering edges, resolved through DoResolveGroupName exactly like _Group. Reference other
+    // script processors by their dev-class path name (which is the descriptor's _Name). Sourced from the CDO by the
+    // host at descriptor-build time.
+    UPROPERTY(EditDefaultsOnly,
+              Category = "Ck|Processor|Scheduling",
+              meta = (AllowPrivateAccess = true))
+    TArray<FName> _RunAfter;
+
+    UPROPERTY(EditDefaultsOnly,
+              Category = "Ck|Processor|Scheduling",
+              meta = (AllowPrivateAccess = true))
+    TArray<FName> _RunBefore;
+
+    // Set by FProcessor_ScriptQueryHosted on the generated DRIVER instance: points at the dev-class instance whose
+    // ForEachEntity the driver forwards each batch element to. Null on a dev instance running in direct mode (the dev
+    // class overrides ForEachBatch itself). BlueprintReadOnly so the generated driver can Cast<> it in AngelScript.
+    UPROPERTY(BlueprintReadOnly, Transient,
+              Category = "Ck|Processor",
+              meta = (AllowPrivateAccess = true))
+    TObjectPtr<UCk_Processor_Script_Base_UE> _IterationTarget;
+
 public:
     // Called once per scheduler Tick (and once per Pump pass when _MarkedDirtyBy is clean-skipped).
     // Author calls UCk_Utils_DynamicFragment_UE::ForEach_EntityWith*Fragments from this body.
@@ -77,13 +99,32 @@ public:
               meta = (DisplayName = "[Ck][ScriptProcessor] EndPlay"))
     void EndPlay();
 
+    // Optional query customization. On the generated driver, Configure adds the slots inferred from the dev class's
+    // ForEachEntity signature and then forwards to the dev class's own Configure (if any) for Require/Exclude/
+    // NoEntities. A class that overrides ForEachBatch directly declares its whole query here instead.
+    UFUNCTION(BlueprintImplementableEvent, Category = "Ck|Processor|Events",
+              meta = (DisplayName = "[Ck][ScriptProcessor] Configure"))
+    void Configure(UPARAM(ref) FCk_ScriptProcessorQuery& Query);
+
+    // Invoked once per tick with the natively-joined entity batch. The generated driver overrides this to loop the
+    // batch and call the dev class's typed ForEachEntity; a genuinely cross-entity processor overrides it directly.
+    UFUNCTION(BlueprintImplementableEvent, Category = "Ck|Processor|Events",
+              meta = (DisplayName = "[Ck][ScriptProcessor] ForEachBatch"))
+    void ForEachBatch(FCk_ScriptQueryBatch Batch, FCk_Time InDeltaT);
+
 public:
     CK_PROPERTY_GET(_Group);
     CK_PROPERTY_GET(_MarkedDirtyBy);
     CK_PROPERTY_GET(_Handle);
+    CK_PROPERTY_GET(_RunAfter);
+    CK_PROPERTY_GET(_RunBefore);
+    CK_PROPERTY_GET(_IterationTarget);
 
-    // Called by FProcessor_ScriptHosted to inject the transient entity handle before BeginPlay.
+    // Called by the hosted wrapper to inject the transient entity handle before BeginPlay.
     auto Set_Handle(const FCk_Handle& InHandle) -> void;
+
+    // Called by FProcessor_ScriptQueryHosted on the generated driver instance to point it at the dev instance.
+    auto Set_IterationTarget(UCk_Processor_Script_Base_UE* InTarget) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
