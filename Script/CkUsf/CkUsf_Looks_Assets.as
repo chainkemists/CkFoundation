@@ -377,6 +377,9 @@ namespace CkUsf
         _UshFunctionName = n"CkUsf_Look_Glass";
         _Domain          = ECk_Usf_Domain::SurfaceLit;
         _BlendMode       = ECk_Usf_BlendMode::Translucent;
+        // Lit translucency defaults to volumetric non-directional, which reads flat on glass —
+        // forward per-pixel lighting is the mode glass-like surfaces want.
+        _TranslucencyLighting = ECk_Usf_TranslucencyLighting::SurfacePerPixel;
         _LookName        = n"Glass";
 
         FCk_Usf_ParamDesc Tint;
