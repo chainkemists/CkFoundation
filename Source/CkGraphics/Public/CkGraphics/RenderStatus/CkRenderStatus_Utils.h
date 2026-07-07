@@ -22,7 +22,7 @@ public:
               DisplayName="[Ck][RenderStatus] Add Feature")
     static void
     Add(
-        UPARAM(ref) FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_RenderStatus_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
@@ -30,14 +30,14 @@ public:
               DisplayName="[Ck][RenderStatus] Has Feature")
     static bool
     Has(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|RenderStatus",
               DisplayName="[Ck][RenderStatus] Ensure Has Feature")
     static bool
     Ensure(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -46,7 +46,7 @@ public:
               DisplayName="[Ck][RenderStatus] Request Query Rendered Actors")
     static void
     Request_QueryRenderedActors(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Request_RenderStatus_QueryRenderedActors& InRequest,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Delegate_RenderStatus_OnRenderedActorsQueried& InDelegate);
