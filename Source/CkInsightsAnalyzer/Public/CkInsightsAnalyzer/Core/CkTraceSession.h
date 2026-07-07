@@ -116,7 +116,7 @@ private:
 
     // Cached after Open()
     mutable uint32 _CachedGameThreadId = static_cast<uint32>(INDEX_NONE);
-    mutable bool   _bGameThreadIdCached = false;
+    mutable bool   _GameThreadIdCached = false;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
