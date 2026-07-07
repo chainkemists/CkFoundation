@@ -175,22 +175,32 @@ public:
     auto Generate(const FCk_TraceSession& Session,
                   const FCk_FrameAnalysisResult& Result) const -> FString;
 
+    /**
+     * Analyze all non-game threads within the frame's time window and summarize them.
+     * Returns summaries sorted by wall time descending, filtered to >= MinWorkerThreadMs.
+     * Shared by the markdown and JSON renderers.
+     */
+    static auto ComputeWorkerThreadSummaries(const FCk_TraceSession& Session,
+                                             const FCk_FrameAnalysisResult& GameThreadResult,
+                                             double MinWorkerThreadMs)
+        -> TArray<FCk_WorkerThreadSummary>;
+
     /** Get/set the report configuration. */
     auto GetConfig() const -> const FCk_FrameReportConfig& { return _Config; }
     auto SetConfig(const FCk_FrameReportConfig& Config) -> void { _Config = Config; }
-
-private:
 
     // ---- Timer name resolution ----
 
     /** Resolve a timer index to its name via the session's timer reader. */
     using FTimerNameMap = TMap<uint32, FString>;
 
-    /** Build a map of TimerIndex → Name from the session. */
+    /** Build a map of TimerIndex → Name from the session. Caller must hold a read scope. */
     static auto BuildTimerNameMap(const FCk_TraceSession& Session) -> FTimerNameMap;
 
     /** Get timer name, with fallback. */
     static auto GetTimerName(const FTimerNameMap& Names, uint32 TimerIndex) -> FString;
+
+private:
 
     // ---- Report sections ----
 
