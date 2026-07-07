@@ -1,12 +1,14 @@
 #include "CkDynamic/CkDynamic_ScriptQueryProcessor.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Format/CkFormat.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkDynamic/CkDynamic_Utils.h"        // Get_StorageId
 #include "CkDynamic/CkDynamic_Fragment.h"     // ck::FFragment_DynamicFragment_Data
 #include "CkDynamic/CkDynamic_Fragment_Data.h"// ECk_DestroyFilter
 
+#include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Processor/CkProcessor_Script.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
@@ -68,6 +70,9 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(_DevInstance.Get()),
             TEXT("FProcessor_ScriptQueryHosted failed to construct a dev instance for [{}]"), InDevClass)
         { _Disabled = true; return; }
+
+        _TickStatId = CK_CREATE_DYNAMIC_STAT_ID(STATGROUP_CkProcessors,
+            ck::Format_UE(TEXT("script::{}"), InDevClass->GetName()));
 
         const auto TransientHandle = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InRegistry);
 
@@ -139,6 +144,8 @@ namespace ck
     {
         if (_Disabled)
         { return; }
+
+        FScopeCycleCounter TickStatCounter{_TickStatId};
 
         if (ck::Is_NOT_Valid(_DevInstance.Get()) || ck::Is_NOT_Valid(_BatchInstance.Get()))
         { return; }
@@ -249,7 +256,10 @@ namespace ck
             _BatchState._Entities.Add(Entity);
         }
 
-        return true;
+        // A structurally valid join that matched nothing would still cost a VM call to
+        // dispatch a zero-iteration batch — skip it. NoEntities is the sanctioned route for
+        // processors that want to run without a join.
+        return _BatchState._Entities.Num() > 0;
     }
 
     // ----------------------------------------------------------------------------------------------------------------

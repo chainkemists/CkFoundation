@@ -5,6 +5,7 @@
 
 #include "CkEcs/Registry/CkRegistry.h"
 
+#include <Stats/Stats.h>
 #include <UObject/StrongObjectPtr.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -62,6 +63,11 @@ namespace ck
     private:
         RegistryType _Registry;
         TStrongObjectPtr<UCk_Processor_Script_Base_UE> _Instance;
+
+        // One stat row per script processor class in stat CkProcessors, alongside the C++
+        // TProcessor rows — without it the whole script Tick cost hides in the scheduler's
+        // Dispatch self-time. Cached-dynamic-id pattern, same as the EcsWorld actor tick.
+        TStatId _TickStatId;
     };
 }
 

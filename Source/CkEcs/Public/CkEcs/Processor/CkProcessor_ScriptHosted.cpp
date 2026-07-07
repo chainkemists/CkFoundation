@@ -2,9 +2,11 @@
 
 #include "CkProcessor_Script.h"
 
+#include "CkCore/Format/CkFormat.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/CkEcsLog.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -28,6 +30,9 @@ namespace ck
 
         if (ck::IsValid(_Instance.Get()))
         {
+            _TickStatId = CK_CREATE_DYNAMIC_STAT_ID(STATGROUP_CkProcessors,
+                ck::Format_UE(TEXT("script::{}"), InScriptClass->GetName()));
+
             const auto TransientHandle = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InRegistry);
             _Instance->Set_Handle(TransientHandle);
             _Instance->BeginPlay();
@@ -58,6 +63,8 @@ namespace ck
         // empty view instead of erroring.
         if (ck::Is_NOT_Valid(_Instance->Get_Handle()))
         { return; }
+
+        FScopeCycleCounter TickStatCounter{_TickStatId};
 
         _Instance->Tick(InDeltaT);
     }
