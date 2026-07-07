@@ -2,6 +2,9 @@
 #include "CkInsightsAnalyzer/Core/CkTraceSession.h"
 #include "CkInsightsAnalyzer_Log.h"
 
+#include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Validation/CkIsValid.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 // FCk_FrameAnalysisResult
 // --------------------------------------------------------------------------------------------------------------------
@@ -13,8 +16,8 @@ auto
 {
     TArray<TPair<uint32, double>> Result;
 
-    const TMap<uint32, double>* Children = ChildrenOf.Find(ParentTimerIndex);
-    if (!Children) return Result;
+    const auto Children = ChildrenOf.Find(ParentTimerIndex);
+    if (NOT Children) return Result;
 
     for (const auto& [ChildIndex, InclSeconds] : *Children)
     {
@@ -45,40 +48,47 @@ auto
 {
     FCk_FrameAnalysisResult Result;
 
-    if (!Session.IsOpen())
+    if (NOT Session.IsOpen())
     {
-        UE_LOG(CkInsightsAnalyzer, Error, TEXT("AnalyzeFrame: Session not open"));
+        ck::insights_analyzer::Error(TEXT("AnalyzeFrame: Session not open"));
         return Result;
     }
 
     TraceServices::FAnalysisSessionReadScope ReadScope = Session.CreateReadScope();
 
-    const TraceServices::IFrameProvider* FrameProvider = Session.GetFrameProvider();
-    if (!FrameProvider)
+    const auto FrameProvider = Session.GetFrameProvider();
+    if (ck::Is_NOT_Valid(FrameProvider, ck::IsValid_Policy_NullptrOnly{}))
     {
-        UE_LOG(CkInsightsAnalyzer, Error, TEXT("AnalyzeFrame: No frame provider"));
+        ck::insights_analyzer::Error(TEXT("AnalyzeFrame: No frame provider"));
         return Result;
     }
 
-    const TraceServices::FFrame* Frame =
-        FrameProvider->GetFrame(ETraceFrameType::TraceFrameType_Game, FrameIndex);
+    const auto Frame = FrameProvider->GetFrame(ETraceFrameType::TraceFrameType_Game, FrameIndex);
 
-    if (!Frame)
+    if (ck::Is_NOT_Valid(Frame, ck::IsValid_Policy_NullptrOnly{}))
     {
-        UE_LOG(CkInsightsAnalyzer, Error,
-            TEXT("AnalyzeFrame: Frame %llu not found"), FrameIndex);
+        ck::insights_analyzer::Error(
+            TEXT("AnalyzeFrame: Frame {} not found"), FrameIndex);
         return Result;
     }
 
-    const uint32 GameThreadId = Session.GetGameThreadId();
+    const auto GameThreadId = Session.GetGameThreadId();
     if (GameThreadId == static_cast<uint32>(INDEX_NONE))
     {
-        UE_LOG(CkInsightsAnalyzer, Error, TEXT("AnalyzeFrame: Could not identify game thread"));
+        ck::insights_analyzer::Error(TEXT("AnalyzeFrame: Could not identify game thread"));
         return Result;
+    }
+
+    // An unterminated tail frame (capture stopped mid-frame) reports EndTime = +inf;
+    // clamp to the capture end so the partial frame analyzes with finite times.
+    auto FrameEndTime = Frame->EndTime;
+    if (NOT FMath::IsFinite(FrameEndTime))
+    {
+        FrameEndTime = Session.GetDurationSeconds();
     }
 
     Result = AnalyzeTimeRange(Session, GameThreadId,
-                              Frame->StartTime, Frame->EndTime, FrameIndex);
+                              Frame->StartTime, FrameEndTime, FrameIndex);
     return Result;
 }
 
@@ -99,17 +109,17 @@ auto
     Result.FrameDurationMs = (EndTime - StartTime) * 1000.0;
     Result.ThreadId = ThreadId;
 
-    if (!Session.IsOpen())
+    if (NOT Session.IsOpen())
     {
-        UE_LOG(CkInsightsAnalyzer, Error, TEXT("AnalyzeTimeRange: Session not open"));
+        ck::insights_analyzer::Error(TEXT("AnalyzeTimeRange: Session not open"));
         return Result;
     }
 
-    const uint32 TimelineIndex = Session.GetTimelineIndex(ThreadId);
+    const auto TimelineIndex = Session.GetTimelineIndex(ThreadId);
     if (TimelineIndex == static_cast<uint32>(INDEX_NONE))
     {
-        UE_LOG(CkInsightsAnalyzer, Warning,
-            TEXT("AnalyzeTimeRange: No timeline for thread %u"), ThreadId);
+        ck::insights_analyzer::Warning(
+            TEXT("AnalyzeTimeRange: No timeline for thread {}"), ThreadId);
         return Result;
     }
 
@@ -118,8 +128,8 @@ auto
 
     if (Result.Events.Num() == 0)
     {
-        UE_LOG(CkInsightsAnalyzer, Warning,
-            TEXT("AnalyzeTimeRange: No events in [%.6f, %.6f] on thread %u"),
+        ck::insights_analyzer::Warning(
+            TEXT("AnalyzeTimeRange: No events in [{:.6f}, {:.6f}] on thread {}"),
             StartTime, EndTime, ThreadId);
         return Result;
     }
@@ -148,7 +158,7 @@ auto
     AnalyzeThread(const FCk_TraceSession& Session, uint32 ThreadId)
     -> FCk_FrameAnalysisResult
 {
-    if (!Session.IsOpen())
+    if (NOT Session.IsOpen())
     {
         return FCk_FrameAnalysisResult{};
     }
@@ -181,14 +191,16 @@ auto
         [&Events, StartTime, EndTime](const TraceServices::ITimingProfilerProvider::Timeline& Timeline)
         {
             Timeline.EnumerateEvents(StartTime, EndTime,
-                [&Events](double EvtStartTime, double EvtEndTime, uint32 EvtDepth,
+                [&Events, EndTime](double EvtStartTime, double EvtEndTime, uint32 EvtDepth,
                           const TraceServices::FTimingProfilerEvent& Event)
                     -> TraceServices::EEventEnumerate
                 {
+                    // Events still open when the capture stopped report EndTime = +inf;
+                    // clamp to the query window so durations stay finite.
                     Events.Add(FCk_TimingEvent{
                         Event.TimerIndex,
                         EvtStartTime,
-                        EvtEndTime,
+                        FMath::IsFinite(EvtEndTime) ? EvtEndTime : EndTime,
                         EvtDepth
                     });
                     return TraceServices::EEventEnumerate::Continue;
