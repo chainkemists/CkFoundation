@@ -73,6 +73,38 @@ public:
     static int32
     Get_CrowdInstanceCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd);
 
+    // ---- Production entry (Phase 5 flip drivers): build a crowd from game code ----
+
+    // Spawns an empty crowd manager for InCollection. Register members with Add_CrowdMember, then call
+    // Finalize_Crowd exactly once. Returns null on invalid input or when no world can be resolved.
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
+        meta = (WorldContext = "InWorldContextObject"),
+        DisplayName = "[Ck][IskmBatched] Create Crowd")
+    static ACk_Iskm_BatchedCrowd_Actor*
+    Create_Crowd(
+        UObject* InWorldContextObject,
+        UCk_IskmAnimCollection_Data* InCollection,
+        float InTileSize = 2000.0f);
+
+    // Buffer one member at a world transform; returns the new member's index (INDEX_NONE on invalid input).
+    // Only valid between Create_Crowd and Finalize_Crowd — members cannot be added to a finalized crowd.
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Add Crowd Member")
+    static int32
+    Add_CrowdMember(
+        ACk_Iskm_BatchedCrowd_Actor* InCrowd,
+        const FTransform& InWorldTransform,
+        int32 InSequenceIndex = 0,
+        float InRate = 1.0f,
+        float InTimeOffset = 0.0f);
+
+    // Flush all buffered members into their tile clusters. Call once after the Add_CrowdMember calls.
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Finalize Crowd")
+    static void
+    Finalize_Crowd(
+        ACk_Iskm_BatchedCrowd_Actor* InCrowd);
+
     // ---- LOD-facing (Phase 5): member queries + per-member visibility ----
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
