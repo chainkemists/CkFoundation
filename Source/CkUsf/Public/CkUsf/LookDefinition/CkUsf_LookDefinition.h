@@ -64,6 +64,19 @@ enum class ECk_Usf_SceneTexture : uint8
     CustomStencil   // PPI_CustomStencil      -> In.CustomStencil
 };
 
+// Translucency lighting for LIT translucent-family surface looks. `Inherit` keeps the engine default
+// (volumetric non-directional — cheap but flat). Glass-like surfaces usually want `SurfacePerPixel`
+// (forward per-pixel lighting). Ignored unless the look resolves to a lit, translucent-family blend.
+UENUM(BlueprintType)
+enum class ECk_Usf_TranslucencyLighting : uint8
+{
+    Inherit,
+    VolumetricNonDirectional,
+    VolumetricDirectional,
+    Surface,
+    SurfacePerPixel
+};
+
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
@@ -83,11 +96,12 @@ struct CKUSF_API FCk_Usf_ParamDesc
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     FLinearColor _DefaultVector = FLinearColor::Black;
 
-    // Scalar-only: source this param from per-instance custom data (ISM/CkIsmRenderer) instead of a uniform.
-    // The generator assigns each per-instance scalar param a 0-based slot in declaration order and wires a
-    // PerInstanceCustomData node (DataIndex=slot, ConstDefaultValue=_DefaultScalar). On a non-instanced mesh
-    // the node returns the const default, so the look is safe everywhere. The runtime writer must use the
-    // SAME slot index (CkIsmRenderer SetCustomDataValueById). Vector per-instance is a follow-up (3 slots).
+    // Scalar/Vector-only: source this param from per-instance custom data (ISM/CkIsmRenderer) instead of a
+    // uniform. Slots are assigned in declaration order — a Scalar takes 1 float, a Vector takes 3 (rgb) —
+    // and the generator wires a PerInstanceCustomData(3Vector) node (DataIndex=slot, ConstDefaultValue=the
+    // param default). On a non-instanced mesh the node returns the const default, so the look is safe
+    // everywhere. Runtime writers must NOT count slots by hand — query Get_PerInstanceSlotOf/
+    // Get_NumPerInstanceFloats on the LookDefinition (same walk the generator uses).
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     bool _PerInstance = false;
 
@@ -135,8 +149,19 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     ECk_Usf_ShadingModel _ShadingModel = ECk_Usf_ShadingModel::Inherit;
 
+    // Lit translucent-family surface looks only (see the enum). `Inherit` keeps the engine default.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    ECk_Usf_TranslucencyLighting _TranslucencyLighting = ECk_Usf_TranslucencyLighting::Inherit;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     bool _TwoSided = false;
+
+    // Preprocessor defines injected into the look's Custom nodes (pixel AND WPO), each "NAME" or
+    // "NAME=VALUE" — the static-switch/quality-knob equivalent, e.g. "CKUSF_OUTLINE_AA_RADIUS=2.5"
+    // to retune a #ifndef default in the .ush without editing it, or "MYLOOK_HIGH_QUALITY" gating
+    // an #ifdef block. A define change requires regenerating the master.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    TArray<FString> _Defines;
 
     // Usage flags baked into the generated master at generation time. Hand-set
     // flags on a generated master are wiped by the next regeneration, and a
@@ -163,4 +188,19 @@ public:
     UFUNCTION(BlueprintCallable, Category = "CkUsf",
               DisplayName = "[Ck][Usf] Get Effective Look Name")
     FName Get_EffectiveLookName() const;
+
+    // Per-instance custom-data slot layout — THE source of truth shared by the generator (node
+    // DataIndex) and runtime writers (CkIsmRenderer SetCustomDataValueById / NumCustomDataFloats).
+    // Slots accrue over _Parameters in declaration order: per-instance Scalar = 1 float,
+    // per-instance Vector = 3 floats (rgb). Never count slots by hand.
+
+    // First slot of InParamName's per-instance data, or -1 if the param is not per-instance.
+    UFUNCTION(BlueprintPure, Category = "CkUsf",
+              DisplayName = "[Ck][Usf] Get Per-Instance Slot Of")
+    int32 Get_PerInstanceSlotOf(FName InParamName) const;
+
+    // Total per-instance floats this look consumes (the NumCustomDataFloats an ISM must allocate).
+    UFUNCTION(BlueprintPure, Category = "CkUsf",
+              DisplayName = "[Ck][Usf] Get Num Per-Instance Floats")
+    int32 Get_NumPerInstanceFloats() const;
 };
