@@ -346,7 +346,20 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InStructType), TEXT("Invalid struct type"))
     { return entt::id_type{}; }
 
-    return entt::id_type{GetTypeHash(InStructType->GetPathName())};
+    // Hot path: called per-fragment-access from script and once per declared storage per tick from the
+    // script-processor join. The legacy computation allocated an FString (GetPathName) on every call.
+    // Keyed by weak pointer so an AS live-reload (which replaces UScriptStruct objects, potentially at a
+    // recycled address) re-computes instead of serving a stale id. Game-thread-only, matching every caller.
+    check(IsInGameThread());
+
+    static TMap<TWeakObjectPtr<const UScriptStruct>, entt::id_type> Cache;
+
+    if (const auto* Found = Cache.Find(InStructType))
+    { return *Found; }
+
+    const auto Id = entt::id_type{GetTypeHash(InStructType->GetPathName())};
+    Cache.Add(InStructType, Id);
+    return Id;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
