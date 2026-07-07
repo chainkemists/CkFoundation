@@ -59,7 +59,7 @@ namespace ck
 
     public:
         auto Tick(TimeType InDeltaT) -> void;
-        auto Pump() -> void;
+        auto Pump() -> int32;
 
     private:
         // Resolve the declared slots' storages into _BatchState and fill _BatchState._Entities via the join. Returns

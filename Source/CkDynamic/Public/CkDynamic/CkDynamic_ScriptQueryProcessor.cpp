@@ -177,9 +177,15 @@ namespace ck
     auto
         FProcessor_ScriptQueryHosted::
         Pump()
-        -> void
+        -> int32
     {
         Tick(TimeType::ZeroSecond());
+
+        // The batch dispatch runs script whose side effects we can't inspect — "unknown" tells the
+        // scheduler to conservatively treat the pump as having done work (see FTickable_Concept::
+        // Pump). Mirrors FProcessor_ScriptHosted; wiring the join count is a possible refinement.
+        constexpr auto VisitedCountUnknown = -1;
+        return VisitedCountUnknown;
     }
 
     // ----------------------------------------------------------------------------------------------------------------
