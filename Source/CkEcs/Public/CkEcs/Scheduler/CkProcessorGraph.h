@@ -16,6 +16,13 @@ namespace ck
 {
     // ----------------------------------------------------------------------------------------------------------------
 
+    // Sentinel for FProcessorGraphNode::_LastSeenDirtyVersion. Never equals a real version sum
+    // (per-hash counters start at 0 and only increment), so a node carrying it always runs the
+    // real dirty check on its next pump-pass visit.
+    inline constexpr uint64 kDirtyVersion_ForceEvaluate = MAX_uint64;
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     struct CKECS_API FProcessorGraphNode
     {
         CK_GENERATED_BODY(FProcessorGraphNode);
@@ -36,11 +43,19 @@ namespace ck
 
         // Per-node cache of the last observed dirty marker version SUM across all marker
         // hashes (each per-hash version is monotonic, so the sum is too), updated by the
-        // pump pass. Reset to 0 at the start of each scheduler Tick() so the first pass of
-        // the frame always re-evaluates _IsDirtyChecker. Subsequent pump passes compare
-        // against this value and skip the expensive Has_AnyEntityWith scan when nothing has
-        // changed.
-        mutable uint64 _LastSeenDirtyVersion = 0;
+        // pump pass. PERSISTENT across frames: the node re-runs _IsDirtyChecker only when some
+        // registry mutation has bumped one of its marker versions since the last observation.
+        // This is what keeps Has_AnyEntityWith's tombstone false-positives (an in_place_delete
+        // pool never reports empty() again after first use) from re-pumping idle processors
+        // every frame. Initialized to the force-evaluate sentinel so a fresh graph — including
+        // the rebuild after a snapshot restore, whose entt-loader writes bypass the version
+        // counters — always evaluates each node once.
+        //
+        // Dynamic (script-struct) markers participate via the SAME mechanism in an FName-derived
+        // hash domain: the CkDynamic mutation paths call FCk_Registry::BumpDirtyMarkerVersion with
+        // UCk_Utils_DynamicFragment_UE::Get_DirtyMarkerHash — the value the script-processor host
+        // registers here. (Historically they registered a hash nothing bumped and were pump-deaf.)
+        mutable uint64 _LastSeenDirtyVersion = kDirtyVersion_ForceEvaluate;
 
         TOptional<concepts::FTickableType> _Instance;
 

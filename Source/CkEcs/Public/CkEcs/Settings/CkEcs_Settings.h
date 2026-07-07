@@ -72,13 +72,14 @@ private:
     TArray<FString> _IgnoredSpawnParamsPropertyNames;
 
     // When enabled, the scheduler's pump pass short-circuits dirty-marker checks by comparing a per-fragment
-    // version counter (bumped on every registry mutation) against a per-node cache. Nodes whose marker has not
-    // changed since the last observation skip the Has_AnyEntityWith scan entirely.
+    // version counter (bumped on every registry mutation) against a per-node cache that persists across
+    // frames. Nodes whose marker has not changed since the last observation skip the Has_AnyEntityWith scan
+    // entirely — load-bearing because that scan reports a tombstone-only (in_place_delete) marker pool as
+    // non-empty forever after first use, which would otherwise phantom-pump every ever-used marker processor
+    // every frame.
     //
-    // This eliminates phantom pumps where a processor's dirty check fires (Has_AnyEntityWith returns true)
-    // but the processor's full query matches zero entities — without this, such processors re-pump every
-    // pass until the pump limit. With the short-circuit, they correctly skip on the next pass since no
-    // mutation occurred.
+    // Independent of this setting, a pump that provably visited zero entities does not count as work when
+    // scheduling further pump passes (see FProcessorScheduler::DoPump).
     //
     // Cached at FProcessorScheduler construction — changing this requires a graph rebuild (PIE restart) to
     // take effect.

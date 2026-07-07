@@ -24,6 +24,30 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Accumulates visited-entity counts across a composite processor's ORDERED sub-pumps (call Add
+    // in pipeline order — folding the sub Pump() calls into one argument pack would lose the
+    // required evaluation order), propagating the -1 "unknown" sentinel (see FTickable_Concept::
+    // Pump): once any sub-count is unknown the total stays unknown, so the scheduler keeps treating
+    // the composite's pump as having done work.
+    struct FPumpVisitedCountAccumulator
+    {
+        CK_GENERATED_BODY(FPumpVisitedCountAccumulator);
+
+    private:
+        int32 _Total = 0;
+
+    public:
+        auto Add(int32 InSubVisited) -> void
+        {
+            _Total = (_Total < 0 or InSubVisited < 0) ? -1 : _Total + InSubVisited;
+        }
+
+    public:
+        CK_PROPERTY_GET(_Total);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <typename T_DerivedProcessor>
     class TProcessorBase
     {
@@ -49,7 +73,7 @@ namespace ck
         Tick(TimeType InDeltaT) -> void;
 
         auto
-        Pump() -> void;
+        Pump() -> int32;
 
     private:
         RegistryType _Registry;
@@ -62,6 +86,12 @@ namespace ck
 
     protected:
         HandleType _TransientEntity;
+
+        // Entities visited by the most recent DoTick. The standard DoTick bodies (TProcessor,
+        // ck_exp::TProcessor, TParallelProcessor) write the exact count; a custom DoTick override
+        // that doesn't report leaves the -1 sentinel Pump() sets, which the scheduler treats as
+        // "did work" (see FTickable_Concept::Pump).
+        int32 _LastVisitedCount = -1;
 
     private:
         CK_ENABLE_SFINAE_THIS(DerivedType);
@@ -171,13 +201,18 @@ namespace ck
     auto
         TProcessorBase<T_DerivedProcessor>::
         Pump()
-        -> void
+        -> int32
     {
+        // Registry-teardown window: no handles can be built, DoTick is skipped entirely — report
+        // "no work" so the scheduler doesn't schedule further pump passes on a dying registry.
         if (ck::Is_NOT_Valid(this->_TransientEntity, ck::IsValid_Policy_IncludePendingKill{}))
-        { return; }
+        { return 0; }
 
         ++_TotalTicks;
+
+        _LastVisitedCount = -1;
         This()->DoTick(TimeType::ZeroSecond());
+        return _LastVisitedCount;
     }
 }
 
@@ -218,23 +253,21 @@ namespace ck
     {
         CK_STAT(STAT_Tick);
 
-#if !UE_BUILD_SHIPPING
         auto EntityCount = int32{0};
-#endif
 
         this->_TransientEntity.template View<detail::UnwrapAccessPolicy_T<T_Fragments>...>().ForEach(
             [&](EntityType InEntity, T_ComponentsOnly&... InComponents)
         {
             CK_STAT(STAT_ForEachEntity);
 
-#if !UE_BUILD_SHIPPING
             ++EntityCount;
-#endif
 
             auto Handle = ck::MakeHandle(InEntity, this->_TransientEntity);
             This()->ForEachEntity(InDeltaT, Handle,
                 static_cast<typename detail::TResolveConstness<T_PoliciesOnly, T_ComponentsOnly>::Type>(InComponents)...);
         });
+
+        this->_LastVisitedCount = EntityCount;
 
 #if !UE_BUILD_SHIPPING
         GDebug_LastProcessedEntityCount = EntityCount;
@@ -406,23 +439,21 @@ namespace ck_exp
     {
         CK_STAT(STAT_Tick);
 
-#if !UE_BUILD_SHIPPING
         auto EntityCount = int32{0};
-#endif
 
         this->_TransientEntity.template View<ck::detail::UnwrapAccessPolicy_T<T_Fragments>...>().ForEach(
             [&](EntityType InEntity, T_ComponentsOnly&... InComponents)
         {
             CK_STAT(STAT_ForEachEntity);
 
-#if !UE_BUILD_SHIPPING
             ++EntityCount;
-#endif
 
             auto TypeSafeHandle = ck::StaticCast<HandleType>(ck::MakeHandle(InEntity, this->_TransientEntity));
             This()->ForEachEntity(InDeltaT, TypeSafeHandle,
                 static_cast<typename ck::detail::TResolveConstness<T_PoliciesOnly, T_ComponentsOnly>::Type>(InComponents)...);
         });
+
+        this->_LastVisitedCount = EntityCount;
 
 #if !UE_BUILD_SHIPPING
         ck::GDebug_LastProcessedEntityCount = EntityCount;
@@ -463,23 +494,21 @@ namespace ck_exp
     {
         CK_STAT(STAT_Tick);
 
-#if !UE_BUILD_SHIPPING
         auto EntityCount = int32{0};
-#endif
 
         this->_TransientEntity.template View<ck::detail::UnwrapAccessPolicy_T<T_VariantFragments>...>().ForEach(
             [&](EntityType InEntity, T_ComponentsOnly&... InComponents)
         {
             CK_STAT(STAT_ForEachEntity);
 
-#if !UE_BUILD_SHIPPING
             ++EntityCount;
-#endif
 
             auto TypeSafeHandle = ck::StaticCast<HandleType>(ck::MakeHandle(InEntity, this->_TransientEntity));
             This()->ForEachEntity(InDeltaT, TypeSafeHandle,
                 static_cast<typename ck::detail::TResolveConstness<T_PoliciesOnly, T_ComponentsOnly>::Type>(InComponents)...);
         });
+
+        this->_LastVisitedCount = EntityCount;
 
 #if !UE_BUILD_SHIPPING
         ck::GDebug_LastProcessedEntityCount = EntityCount;
