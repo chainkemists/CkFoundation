@@ -12,6 +12,7 @@ public class CkUsfEditor : CkModuleRules
             "CoreUObject",
             "Engine",
             "RHI",
+            "RenderCore",   // GetShaderSourceFilePath (look validator resolves _UshIncludePath)
             "UnrealEd",
             "EditorSubsystem",
             "MaterialEditor",
