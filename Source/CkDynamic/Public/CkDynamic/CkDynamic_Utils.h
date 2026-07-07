@@ -169,6 +169,15 @@ public:
     Get_StorageId(
         const UScriptStruct* InStructType) -> entt::id_type;
 
+    // Hash key for the scheduler's dirty-marker VERSION domain (distinct from Get_StorageId's
+    // entt storage id — the two hash different representations of the struct path). The
+    // script-processor host registers this value for MarkedDirtyBy script structs, and every
+    // dynamic-fragment mutation path bumps the same key so the pump short-circuit observes
+    // dynamic-marker changes (see FCk_Registry::BumpDirtyMarkerVersion).
+    static auto
+    Get_DirtyMarkerHash(
+        const UScriptStruct* InStructType) -> uint32;
+
     // Registry-wide check: returns true if *any* entity in the registry reachable through InAnyHandle holds a
     // dynamic fragment of InStructType. Used by the script-processor scheduler wrapper to implement the
     // MarkedDirtyBy gate without CkEcs needing to depend on CkDynamic directly.

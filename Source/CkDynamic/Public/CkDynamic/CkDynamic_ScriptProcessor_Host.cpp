@@ -121,7 +121,12 @@ namespace ck
                 OutDescriptor._HasDirtyMarker = true;
                 const auto DirtyMarkerName = FName{*MarkedDirtyBy->GetPathName()};
                 OutDescriptor._DirtyMarkerNames.Add(DirtyMarkerName);
-                OutDescriptor._DirtyMarkerHashes.Add(static_cast<uint32>(GetTypeHash(DirtyMarkerName)));
+
+                // MUST be the hash the dynamic-fragment mutation paths bump (both sides share this
+                // helper) — the scheduler's persistent version short-circuit compares the two. A
+                // divergent hash domain here means Get_DirtyMarkerVersion never advances and the
+                // node goes pump-deaf after its first evaluation.
+                OutDescriptor._DirtyMarkerHashes.Add(UCk_Utils_DynamicFragment_UE::Get_DirtyMarkerHash(MarkedDirtyBy));
 
                 OutDescriptor._IsDirtyChecker =
                     [WeakStruct = TWeakObjectPtr<UScriptStruct>(MarkedDirtyBy)]

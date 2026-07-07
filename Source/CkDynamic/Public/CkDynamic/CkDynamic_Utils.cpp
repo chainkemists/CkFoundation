@@ -86,6 +86,7 @@ auto
     { return InHandle; }
 
     Storage.emplace(Entity, std::move(Fragment));
+    InHandle.Get_RegistryView().BumpDirtyMarkerVersion(Get_DirtyMarkerHash(InFragmentData.GetScriptStruct()));
 
     if (NOT InHandle.Has<ck::FFragment_DynamicFragment_Data>())
     {
@@ -111,6 +112,13 @@ auto
     if (NOT Has_Fragment(InHandle, InStructType))
     {
         Add_Fragment(InHandle, FInstancedStruct(InStructType), InReplication);
+    }
+    else
+    {
+        // Callers of AddOrGet intend to mutate the returned struct in place. Mirror
+        // FCk_Registry::AddOrGet's contract: bump so the scheduler's pump short-circuit sees the
+        // change even though membership didn't move.
+        InHandle.Get_RegistryView().BumpDirtyMarkerVersion(Get_DirtyMarkerHash(InStructType));
     }
 
     return Get_Fragment_TypeUnsafe(InHandle, InStructType);
@@ -156,6 +164,7 @@ auto
     }
 
     Storage.remove(Entity);
+    InHandle.Get_RegistryView().BumpDirtyMarkerVersion(Get_DirtyMarkerHash(InStructType));
 
     const auto HasOtherFragments = ck::algo::AnyOf(InHandle.Get_RegistryView().Storage(), [Entity](const auto& Pair)
     {
@@ -360,6 +369,20 @@ auto
     const auto Id = entt::id_type{GetTypeHash(InStructType->GetPathName())};
     Cache.Add(InStructType, Id);
     return Id;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_DynamicFragment_UE::
+    Get_DirtyMarkerHash(
+        const UScriptStruct* InStructType)
+    -> uint32
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InStructType), TEXT("Invalid struct type"))
+    { return uint32{}; }
+
+    return GetTypeHash(FName{*InStructType->GetPathName()});
 }
 
 // --------------------------------------------------------------------------------------------------------------------
