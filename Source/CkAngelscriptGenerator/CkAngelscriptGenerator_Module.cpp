@@ -4,6 +4,7 @@
 #include "CkAngelscriptGenerator/CkAngelscriptEntityScriptParamsGenerator.h"
 #include "CkAngelscriptGenerator/AutoTests/CkAutoTestNetStubGenerator.h"
 #include "CkAngelscriptGenerator/AutoTests/CkAutoTestWrapperGenerator.h"
+#include "CkAngelscriptGenerator/ScriptProcessors/CkScriptProcessorDriverGenerator.h"
 #include "CkAngelscriptGenerator/CkAngelscriptCompileGuard.h"
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_RegenOwnership.h"
@@ -66,6 +67,7 @@ namespace
         FCkAngelscriptEntityScriptParamsGenerator::GenerateAll();
         FCkAutoTestWrapperGenerator::GenerateAll();
         FCkAutoTestNetStubGenerator::GenerateAll();
+        FCkScriptProcessorDriverGenerator::GenerateAll();
     }
 
     auto Delete_StubRecoveryFiles_ForPatterns(
