@@ -72,7 +72,7 @@ Before writing any code, navigate the documentation in this order:
 | grid-based pathfinding | `CkAStar` + `CkGrid` |
 | ECS raycast sensing | `CkRaySense` |
 | replicate render-target pixels / draw calls | `CkRenderTarget` (no doc yet) |
-| runtime shader Looks / outline rendering | `CkUsf` (no doc yet) |
+| runtime shader Looks / outline rendering | `CkUsf` |
 | ISM / skeletal-instance rendering | `CkIsmRenderer` / `CkIskmRenderer` |
 | ECS targeting / scoring | `CkTargeting` |
 | ECS aggro / threat table | `CkAggro` |
@@ -213,7 +213,7 @@ standalone ones: `CkEditorGraph` (graph/schema base), `CkEditorStyle` (shared st
 ### Table notes
 
 - **Per-module docs** live at `Source/<Module>/Claude.md` (CkGoap's is `CLAUDE.md`). **No doc yet:**
-  CkEqs, CkSnapshot, CkRenderTarget, CkSpline, CkUsf, CkEntitySpawner, CkUnrealComponent.
+  CkEqs, CkSnapshot, CkRenderTarget, CkSpline, CkEntitySpawner, CkUnrealComponent.
   CkIskmRendererVF is covered by CkIskmRenderer's doc. CkCrowd's and CkNavigation's docs were
   flagged stale on 2026-07-02 ("not yet created" / "skeleton only" — both modules are fully built);
   trust code over doc and note the drift.
