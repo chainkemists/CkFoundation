@@ -29,13 +29,13 @@ FCkUsf_SurfaceOutput CkUsf_PP_SolidOutline(
     float3 Scene = In.SceneColor.rgb;
 
     // ViewportUV (In.UV) -> scene-texture BUFFER UV. Accounts for the view rect not filling the buffer.
-    float2 bufferUV = (In.UV * View.ViewSizeAndInvSize.xy + View.ViewRectMin.xy) * View.BufferSizeAndInvSize.zw;
+    float2 bufferUV = CkUsf_ViewportUVToBufferUV(In.UV);
 
     float sC = round(SceneTextureLookup(bufferUV, PPI_CustomStencil, false).r);
     bool centerMarked = (sC >= StencilMin && sC <= StencilMax);
 
     // Outline band radius in scene-texture (buffer) UV space.
-    float2 texel = View.BufferSizeAndInvSize.zw;
+    float2 texel = CkUsf_BufferTexelSize();
     float thickness = max(GlobalThickness, 1.0);
 
     // Ring scan (8 directions at the thickness radius). A pixel within `thickness` of a silhouette has at
