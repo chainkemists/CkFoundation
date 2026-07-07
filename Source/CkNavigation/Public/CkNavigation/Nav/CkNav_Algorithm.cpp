@@ -106,9 +106,9 @@ auto
         // clamp regression or a pre-existing content/nav defect.
         const auto LegacyCubeApplies = VerticalHalfExtent < InProjectionHalfExtent;
         auto LegacyProj = FNavLocation{};
-        const auto bLegacyOk = LegacyCubeApplies
+        const auto LegacyOk = LegacyCubeApplies
             && InNavSys.ProjectPointToNavigation(InPoint, LegacyProj, FVector{InProjectionHalfExtent}, &InNavData);
-        const auto LegacyCubeStr = FString{NOT LegacyCubeApplies ? TEXT("n/a") : bLegacyOk ? TEXT("OK") : TEXT("FAIL")};
+        const auto LegacyCubeStr = FString{NOT LegacyCubeApplies ? TEXT("n/a") : LegacyOk ? TEXT("OK") : TEXT("FAIL")};
 
         ck::nav::Warning(TEXT("FindPathSync: [{}] projection FAILED. "
             "Point=[{}] Extent=[{}]. NavBounds=[{} -> {}] (valid=[{}]). "
@@ -123,7 +123,7 @@ auto
             bBigOk ? BigProj.Location : FVector::ZeroVector,
             InProjectionHalfExtent,
             LegacyCubeStr,
-            bLegacyOk ? LegacyProj.Location : FVector::ZeroVector,
+            LegacyOk ? LegacyProj.Location : FVector::ZeroVector,
             static_cast<int32>(InNavData.GetDefaultQueryFilter().IsValid()),
             InNavData.GetConfig().AgentRadius, InNavData.GetConfig().AgentHeight, InNavData.GetConfig().AgentStepHeight);
     };
