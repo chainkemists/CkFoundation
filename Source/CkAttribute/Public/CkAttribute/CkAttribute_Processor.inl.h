@@ -599,13 +599,16 @@ namespace ck
     auto
         TProcessor_Attribute_FireSignals_CurrentMinMax<T_DerivedAttribute, T_MulticastType>::
         Pump()
-        -> void
+        -> int32
     {
-        _Min.Pump();
-        _Max.Pump();
-        _Current.Pump();
-        _MinClamped.Pump();
-        _MaxClamped.Pump();
+        auto Visited = FPumpVisitedCountAccumulator{};
+        Visited.Add(_Min.Pump());
+        Visited.Add(_Max.Pump());
+        Visited.Add(_Current.Pump());
+        Visited.Add(_MinClamped.Pump());
+        Visited.Add(_MaxClamped.Pump());
+
+        return Visited.Get_Total();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -637,11 +640,14 @@ namespace ck
     auto
         TProcessor_Attribute_Replicate_All<T_DerivedAttribute, T_Attribute_ReplicatedFragment>::
         Pump()
-        -> void
+        -> int32
     {
-        _Min.Pump();
-        _Max.Pump();
-        _Current.Pump();
+        auto Visited = FPumpVisitedCountAccumulator{};
+        Visited.Add(_Min.Pump());
+        Visited.Add(_Max.Pump());
+        Visited.Add(_Current.Pump());
+
+        return Visited.Get_Total();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -675,13 +681,16 @@ namespace ck
     auto
         TProcessor_Attribute_MinMaxClamp<T_DerivedAttribute>::
         Pump()
-        -> void
+        -> int32
     {
-        _MinClamp.Pump();
-        _MaxClamp.Pump();
+        auto Visited = FPumpVisitedCountAccumulator{};
+        Visited.Add(_MinClamp.Pump());
+        Visited.Add(_MaxClamp.Pump());
 
         using ClampMarkerType = TTag_Attribute_MayRequireClamping<typename T_DerivedAttribute<ECk_MinMaxCurrent::Current>::HandleType>;
         UCk_Utils_EntityLifetime_UE::Get_TransientEntity(_Registry).template Clear<ClampMarkerType>();
+
+        return Visited.Get_Total();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -720,15 +729,17 @@ namespace ck
     auto
         TProcessor_Attribute_RecomputeAll_CurrentMinMax<T_DerivedAttributeModifier>::
         Pump()
-        -> void
+        -> int32
     {
-        _Current_Previous.Pump();
-        _Min_Previous.Pump();
-        _Max_Previous.Pump();
+        auto Visited = FPumpVisitedCountAccumulator{};
+        Visited.Add(_Current_Previous.Pump());
+        Visited.Add(_Min_Previous.Pump());
+        Visited.Add(_Max_Previous.Pump());
+        Visited.Add(_Max.Pump());
+        Visited.Add(_Min.Pump());
+        Visited.Add(_Current.Pump());
 
-        _Max.Pump();
-        _Min.Pump();
-        _Current.Pump();
+        return Visited.Get_Total();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -760,11 +771,14 @@ namespace ck
     auto
         TProcessor_AttributeModifier_ComputeAll_CurrentMinMax<T_DerivedAttributeModifier>::
         Pump()
-        -> void
+        -> int32
     {
-        _Max.Pump();
-        _Min.Pump();
-        _Current.Pump();
+        auto Visited = FPumpVisitedCountAccumulator{};
+        Visited.Add(_Max.Pump());
+        Visited.Add(_Min.Pump());
+        Visited.Add(_Current.Pump());
+
+        return Visited.Get_Total();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -796,11 +810,14 @@ namespace ck
     auto
         TProcessor_AttributeModifier_EndPlayAll_CurrentMinMax<T_DerivedAttributeModifier>::
         Pump()
-        -> void
+        -> int32
     {
-        _Max.Pump();
-        _Min.Pump();
-        _Current.Pump();
+        auto Visited = FPumpVisitedCountAccumulator{};
+        Visited.Add(_Max.Pump());
+        Visited.Add(_Min.Pump());
+        Visited.Add(_Current.Pump());
+
+        return Visited.Get_Total();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -841,15 +858,17 @@ namespace ck
     auto
         TProcessor_Attribute_Refill<T_DerivedAttributeModifier>::
         Pump()
-        -> void
+        -> int32
     {
-        _Refill_Max.Pump();
-        _Refill_Min.Pump();
-        _Refill_Current.Pump();
+        auto Visited = FPumpVisitedCountAccumulator{};
+        Visited.Add(_Refill_Max.Pump());
+        Visited.Add(_Refill_Min.Pump());
+        Visited.Add(_Refill_Current.Pump());
+        Visited.Add(_Refill_AlwaysToZero_Max.Pump());
+        Visited.Add(_Refill_AlwaysToZero_Min.Pump());
+        Visited.Add(_Refill_AlwaysToZero_Current.Pump());
 
-        _Refill_AlwaysToZero_Max.Pump();
-        _Refill_AlwaysToZero_Min.Pump();
-        _Refill_AlwaysToZero_Current.Pump();
+        return Visited.Get_Total();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -893,15 +912,17 @@ namespace ck
     auto
         TProcessor_Attribute_AccumulatedRefill<T_TargetAttributeModifier, T_FloatAttribute>::
         Pump()
-        -> void
+        -> int32
     {
-        _Refill_Max.Pump();
-        _Refill_Min.Pump();
-        _Refill_Current.Pump();
+        auto Visited = FPumpVisitedCountAccumulator{};
+        Visited.Add(_Refill_Max.Pump());
+        Visited.Add(_Refill_Min.Pump());
+        Visited.Add(_Refill_Current.Pump());
+        Visited.Add(_Refill_AlwaysToZero_Max.Pump());
+        Visited.Add(_Refill_AlwaysToZero_Min.Pump());
+        Visited.Add(_Refill_AlwaysToZero_Current.Pump());
 
-        _Refill_AlwaysToZero_Max.Pump();
-        _Refill_AlwaysToZero_Min.Pump();
-        _Refill_AlwaysToZero_Current.Pump();
+        return Visited.Get_Total();
     }
 }
 

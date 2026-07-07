@@ -22,6 +22,15 @@ auto
 
 auto
     FCk_Registry::
+    BumpDirtyMarkerVersion(
+        uint32 InFragmentTypeHash)
+    -> void
+{
+    ck::registry_table::BumpDirtyMarkerVersion(_RegistryHandle, InFragmentTypeHash);
+}
+
+auto
+    FCk_Registry::
     CreateEntity()
     -> EntityType
 {

@@ -80,6 +80,7 @@ namespace ck
         // the system processes dirty tiles, so the queue never drained. Per-point projection
         // is what we actually care about anyway: "is THIS agent's start position on a baked
         // tile right now". Same call FindPathSync uses internally.
+        auto DrainActions = int32{0};
         if (GDeferredNavRequests.Num() > 0)
         {
             SCOPE_CYCLE_COUNTER(STAT_Nav_DeferredDrain);
@@ -125,6 +126,7 @@ namespace ck
                         auto Request = Entry.Request;
                         GDeferredNavRequests.RemoveAt(i, EAllowShrinking::No);
                         UCk_Utils_Nav_UE::Request_FindPath(Handle, Request);
+                        ++DrainActions;
                         continue;
                     }
                 }
@@ -150,11 +152,22 @@ namespace ck
                             Handle, MaxDeferralSec);
                     }
                     GDeferredNavRequests.RemoveAt(i, EAllowShrinking::No);
+                    ++DrainActions;
                 }
             }
         }
 
         TProcessor::DoTick(InDeltaT);
+
+        // The drain above does real work the base DoTick's view count can't see — a re-issue
+        // bumps our own Requests marker and a force-fail broadcasts OnPathFailed (listeners may
+        // enqueue follow-ups). Fold it into the visited count so a pump that only drained still
+        // reports work and the scheduler schedules the follow-up pump pass (see
+        // FTickable_Concept::Pump for the count contract).
+        if (DrainActions > 0 and this->_LastVisitedCount >= 0)
+        {
+            this->_LastVisitedCount += DrainActions;
+        }
     }
 
     // ----------------------------------------------------------------------------------------------------------------

@@ -243,6 +243,12 @@ public:
     // Returns 0 for any hash that has never been mutated (or for an unset/stale handle).
     auto Get_DirtyMarkerVersion(uint32 InFragmentTypeHash) const -> uint64;
 
+    // Runtime-hash counterpart of DoBumpDirtyMarkerVersion<T> for storages the typed mutation
+    // paths do not mediate (dynamic script-struct fragments). The hash domain is the caller's —
+    // it must match what the consumer registered with the scheduler (see
+    // UCk_Utils_DynamicFragment_UE::Get_DirtyMarkerHash for the CkDynamic pairing).
+    auto BumpDirtyMarkerVersion(uint32 InFragmentTypeHash) -> void;
+
     template <typename T_Context, typename... T_Args>
     auto SetContext(T_Args&&... InArgs) -> T_Context&;
 
@@ -652,12 +658,27 @@ auto
     Clear()
     -> void
 {
+    // entt's zero-arg registry::clear() wipes EVERY pool and destroys ALL entities — the per-type
+    // fold below would silently no-op instead. No caller wants either surprise from an empty pack.
+    static_assert(sizeof...(T_Fragments) > 0, "Clear requires at least one explicit fragment type");
+
 #if !UE_BUILD_SHIPPING
     ck::registry_table::AssertNotInParallelRegion(_RegistryHandle, TEXT("Registry::Clear"));
 #endif
 
-    Resolve()->clear<T_Fragments...>();
-    (DoBumpDirtyMarkerVersion<T_Fragments>(), ...);
+    // Per-type: skip pools with no packed entries (live OR tombstoned). End-of-frame cleanup
+    // processors call Clear unconditionally every frame, and bumping the version of a pool that
+    // provably had nothing to remove would re-dirty the scheduler's persistent pump short-circuit
+    // for that marker every frame. A tombstone-only pool still clears (and bumps one last time) so
+    // its packed array — and Has_AnyEntityWith's view of it — resets to truly empty.
+    ([&]
+    {
+        if (Has_AnyEntityWith<T_Fragments>())
+        {
+            Resolve()->clear<T_Fragments>();
+            DoBumpDirtyMarkerVersion<T_Fragments>();
+        }
+    }(), ...);
 }
 
 template <typename... T_Fragments>

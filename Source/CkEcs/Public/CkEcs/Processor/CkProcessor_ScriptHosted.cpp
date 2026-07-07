@@ -72,9 +72,14 @@ namespace ck
     auto
         FProcessor_ScriptHosted::
         Pump()
-        -> void
+        -> int32
     {
         Tick(TimeType::ZeroSecond());
+
+        // Script bodies don't report a visited-entity count — "unknown" tells the scheduler to
+        // conservatively treat the pump as having done work (see FTickable_Concept::Pump).
+        constexpr auto VisitedCountUnknown = -1;
+        return VisitedCountUnknown;
     }
 }
 

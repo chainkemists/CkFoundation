@@ -58,7 +58,7 @@ namespace ck
 
     public:
         auto Tick(TimeType InDeltaT) -> void;
-        auto Pump() -> void;
+        auto Pump() -> int32;
 
     private:
         RegistryType _Registry;

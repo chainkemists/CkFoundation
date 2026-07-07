@@ -37,7 +37,6 @@ static TAutoConsoleVariable<bool> CVar_SchedulerDebugTiming(
 // timing capture, the pump passes, and the per-pump dirty-marker rescans.
 DECLARE_STATS_GROUP(TEXT("CkScheduler"), STATGROUP_CkScheduler, STATCAT_Advanced);
 
-DECLARE_CYCLE_STAT(TEXT("Scheduler::ResetPumpVersions"), STAT_Scheduler_ResetPumpVersions, STATGROUP_CkScheduler);
 DECLARE_CYCLE_STAT(TEXT("Scheduler::MainPass"),          STAT_Scheduler_MainPass,          STATGROUP_CkScheduler);
 DECLARE_CYCLE_STAT(TEXT("Scheduler::Dispatch"),          STAT_Scheduler_Dispatch,          STATGROUP_CkScheduler);
 DECLARE_CYCLE_STAT(TEXT("Scheduler::Pump"),              STAT_Scheduler_Pump,              STATGROUP_CkScheduler);
@@ -67,6 +66,18 @@ ck::FProcessorScheduler::
     : _Partition(MoveTemp(InPartition))
     , _UseDirtyMarkerVersionShortCircuit(UCk_Utils_Ecs_Settings_UE::Get_EnableDirtyMarkerPumpShortCircuit())
 {
+    for (const auto NodeIndex : _Partition._ExecutionOrder)
+    {
+        const auto& Node = _Partition._Nodes[NodeIndex];
+
+        if (NOT Node._Instance.IsSet() or Node._IsGhost)
+        { continue; }
+
+        _MainPassOrder.Add(NodeIndex);
+
+        if (Node._HasDirtyMarker and Node._PumpPolicy != ECk_ProcessorPumpPolicy::SkipPump)
+        { _PumpOrder.Add(NodeIndex); }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -86,57 +97,41 @@ auto
     const auto FrameStartTime = FPlatformTime::Seconds();
 #endif
 
-    // Reset per-node pump version cache for this frame. Only meaningful when the short-circuit is
-    // enabled (see _UseDirtyMarkerVersionShortCircuit, cached at construction), but the reset is
-    // cheap enough that there's no point branching on the flag here.
-    {
-        SCOPE_CYCLE_COUNTER(STAT_Scheduler_ResetPumpVersions);
-        for (auto& Node : _Partition._Nodes)
-        {
-            if (Node._HasDirtyMarker)
-            {
-                Node._LastSeenDirtyVersion = 0;
-            }
-        }
-    }
-
-    // Main pass — every processor ticks once. Each processor's own STAT_Tick scope nests inside;
-    // STAT_Scheduler_MainPass self-time is the inter-processor dispatch + dev-build timing capture
-    // (the gaps between processor scopes on the scheduler track).
+    // Main pass — every dispatchable processor ticks once (_MainPassOrder pre-filters ghost and
+    // instance-less group nodes at construction). Each processor's own STAT_Tick scope nests
+    // inside; STAT_Scheduler_MainPass self-time is the inter-processor dispatch + dev-build
+    // timing capture (the gaps between processor scopes on the scheduler track).
     {
         SCOPE_CYCLE_COUNTER(STAT_Scheduler_MainPass);
-        for (const auto NodeIndex : _Partition._ExecutionOrder)
+        for (const auto NodeIndex : _MainPassOrder)
         {
-            // Per-node dispatch — covers EVERY node (incl. ghost/skipped ones that emit no processor box),
-            // so the inter-processor "gaps" on the scheduler track become labeled Dispatch self-time.
-            // In a dev build that self-time is dominated by the scheduler-debugger's own per-processor
-            // FPlatformTime timing below (redundant with STAT_Tick; compiled out in Test/Shipping).
+            // In a dev build this scope's self-time is dominated by the scheduler-debugger's own
+            // per-processor FPlatformTime timing below (redundant with STAT_Tick; compiled out in
+            // Test/Shipping).
             SCOPE_CYCLE_COUNTER(STAT_Scheduler_Dispatch);
 
             auto& Node = _Partition._Nodes[NodeIndex];
-            if (Node._Instance.IsSet() and not Node._IsGhost)
+
+#if !UE_BUILD_SHIPPING
+            auto ProcessorStartTime = 0.0;
+            if (DebugTimingEnabled)
             {
-#if !UE_BUILD_SHIPPING
-                auto ProcessorStartTime = 0.0;
-                if (DebugTimingEnabled)
-                {
-                    SCOPE_CYCLE_COUNTER(STAT_Scheduler_DebugRecord);
-                    ProcessorStartTime = FPlatformTime::Seconds();
-                    ck::GDebug_LastProcessedEntityCount = 0;
-                }
-#endif
-
-                (*Node._Instance)->Tick(InDeltaTime);
-
-#if !UE_BUILD_SHIPPING
-                if (DebugTimingEnabled)
-                {
-                    SCOPE_CYCLE_COUNTER(STAT_Scheduler_DebugRecord);
-                    const auto ProcessorElapsedMs = (FPlatformTime::Seconds() - ProcessorStartTime) * 1000.0;
-                    DoDebugRecordProcessorTick(NodeIndex, ProcessorElapsedMs, ck::GDebug_LastProcessedEntityCount);
-                }
-#endif
+                SCOPE_CYCLE_COUNTER(STAT_Scheduler_DebugRecord);
+                ProcessorStartTime = FPlatformTime::Seconds();
+                ck::GDebug_LastProcessedEntityCount = 0;
             }
+#endif
+
+            (*Node._Instance)->Tick(InDeltaTime);
+
+#if !UE_BUILD_SHIPPING
+            if (DebugTimingEnabled)
+            {
+                SCOPE_CYCLE_COUNTER(STAT_Scheduler_DebugRecord);
+                const auto ProcessorElapsedMs = (FPlatformTime::Seconds() - ProcessorStartTime) * 1000.0;
+                DoDebugRecordProcessorTick(NodeIndex, ProcessorElapsedMs, ck::GDebug_LastProcessedEntityCount);
+            }
+#endif
         }
     }
 
@@ -206,22 +201,18 @@ auto
     const auto DebugTimingEnabled = CVar_SchedulerDebugTiming.GetValueOnGameThread();
 #endif
 
-    for (const auto NodeIndex : _Partition._ExecutionOrder)
+    // _PumpOrder pre-filters at construction: dirty-marker nodes only, minus SkipPump opt-outs
+    // (time-stepping consumers — see ECk_ProcessorPumpPolicy doc in CkProcessorDescriptor.h),
+    // minus ghost/instance-less nodes.
+    for (const auto NodeIndex : _PumpOrder)
     {
         auto& Node = _Partition._Nodes[NodeIndex];
 
-        if (NOT Node._HasDirtyMarker)
-        { continue; }
-
-        // Explicit opt-out: time-stepping consumers (apply-offset, etc.) keep MarkedDirtyBy for skip-when-empty
-        // diagnostics + scheduler edges, but must not run with DeltaT=0 because they re-apply cached state.
-        // See ECk_ProcessorPumpPolicy doc in CkProcessorDescriptor.h.
-        if (Node._PumpPolicy == ECk_ProcessorPumpPolicy::SkipPump)
-        { continue; }
-
         // Short-circuit path (opt-in, cached at scheduler construction): if the registry's dirty-marker
-        // version hasn't changed since our last observation, neither the count nor the contents of
-        // the marker fragment could have moved. Skip the O(fragment-storage) Has_AnyEntityWith scan.
+        // version hasn't changed since our last observation — this frame or any prior one — neither the
+        // count nor the contents of the marker fragment could have moved. Skip the Has_AnyEntityWith
+        // scan, whose tombstone false-positives (an in_place_delete pool never reports empty() again
+        // after first use) would otherwise re-pump idle processors every frame.
         auto VersionBeforePump = uint64{0};
         if (_UseDirtyMarkerVersionShortCircuit)
         {
@@ -260,7 +251,6 @@ auto
             { continue; }
         }
 
-        if (Node._Instance.IsSet() and not Node._IsGhost)
         {
             SCOPE_CYCLE_COUNTER(STAT_Scheduler_PumpDispatch);
 
@@ -274,8 +264,16 @@ auto
             }
 #endif
 
-            (*Node._Instance)->Pump();
-            AnyProcessorTicked = true;
+            const auto VisitedCount = (*Node._Instance)->Pump();
+
+            // A pump that provably visited zero entities cannot have produced new work — letting it
+            // count as "ticked" would schedule a full extra pump pass for nothing (this is what a
+            // tombstone-satisfied dirty check used to cause every frame). -1 means the processor's
+            // custom DoTick body doesn't report a count; treat it conservatively as having done work.
+            if (VisitedCount != 0)
+            {
+                AnyProcessorTicked = true;
+            }
 
 #if !UE_BUILD_SHIPPING
             if (DebugTimingEnabled)
@@ -296,10 +294,6 @@ auto
                 // defer it until next frame's main Tick — that's exactly the cascade bug.
                 Node._LastSeenDirtyVersion = VersionBeforePump;
             }
-        }
-        else if (_UseDirtyMarkerVersionShortCircuit)
-        {
-            Node._LastSeenDirtyVersion = VersionBeforePump;
         }
     }
 

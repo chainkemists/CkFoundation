@@ -648,7 +648,7 @@ namespace ck
         auto Tick(
             TimeType InDeltaT) -> void;
 
-        auto Pump() -> void;
+        auto Pump() -> int32;
 
     private:
         TValueChangedProcessorType<ECk_MinMaxCurrent::Current> _Current;
@@ -683,7 +683,7 @@ namespace ck
         auto Tick(
             TimeType InDeltaT) -> void;
 
-        auto Pump() -> void;
+        auto Pump() -> int32;
 
     private:
         TInternalProcessorType<ECk_MinMaxCurrent::Current> _Current;
@@ -717,7 +717,7 @@ namespace ck
         auto Tick(
             TimeType InDeltaT) -> void;
 
-        auto Pump() -> void;
+        auto Pump() -> int32;
 
     private:
         detail::TProcessor_Attribute_MinClamp<TProcessor_Attribute_MinMaxClamp,
@@ -767,7 +767,7 @@ namespace ck
         auto Tick(
             TimeType InDeltaT) -> void;
 
-        auto Pump() -> void;
+        auto Pump() -> int32;
 
     private:
         TStorePreviousValueProcessorType<ECk_MinMaxCurrent::Current> _Current_Previous;
@@ -810,7 +810,7 @@ namespace ck
         auto Tick(
             TimeType InDeltaT) -> void;
 
-        auto Pump() -> void;
+        auto Pump() -> int32;
 
     private:
         TInternalProcessorType<ECk_MinMaxCurrent::Current> _Current;
@@ -844,7 +844,7 @@ namespace ck
         auto Tick(
             TimeType InDeltaT) -> void;
 
-        auto Pump() -> void;
+        auto Pump() -> int32;
 
     private:
         TInternalProcessorType<ECk_MinMaxCurrent::Current> _Current;
@@ -881,7 +881,7 @@ namespace ck
         auto Tick(
             TimeType InDeltaT) -> void;
 
-        auto Pump() -> void;
+        auto Pump() -> int32;
 
     private:
         TInternalProcessorType<ECk_MinMaxCurrent::Current> _Refill_Current;
@@ -923,7 +923,7 @@ namespace ck
         auto Tick(
             TimeType InDeltaT) -> void;
 
-        auto Pump() -> void;
+        auto Pump() -> int32;
 
     private:
         TInternalProcessorType<ECk_MinMaxCurrent::Current> _Refill_Current;
