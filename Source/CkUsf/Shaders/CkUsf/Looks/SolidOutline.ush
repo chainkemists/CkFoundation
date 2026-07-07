@@ -20,6 +20,13 @@
 #define CKUSF_OUTLINE_LUT_W 16.0
 #define CKUSF_OUTLINE_LUT_H 2.0
 
+// Ring anti-aliasing feather width, in scene-buffer texels. The outer edge is softened by averaging
+// ring-membership over 8 points on a circle of this radius — larger = softer / wider edge. THIS is the
+// knob to turn if the edge still looks hard (try 2.0-3.0). Cost is paid on outline-band pixels only.
+#ifndef CKUSF_OUTLINE_AA_RADIUS
+#define CKUSF_OUTLINE_AA_RADIUS 1.5
+#endif
+
 FCkUsf_SurfaceOutput CkUsf_PP_SolidOutline(
     FCkUsf_SurfaceInput In,
     Texture2D OutlineParams, SamplerState OutlineParamsSampler,
@@ -38,9 +45,7 @@ FCkUsf_SurfaceOutput CkUsf_PP_SolidOutline(
     float2 texel = CkUsf_BufferTexelSize();
     float thickness = max(GlobalThickness, 1.0);
 
-    // Ring scan (8 directions at the thickness radius). A pixel within `thickness` of a silhouette has at
-    // least one toward-object tap that lands on the marked region, so this fills a band of ~thickness width
-    // OUTSIDE the object. We capture the neighbour's stencil + depths for occlusion of the outline pixels.
+    // Ring directions (8) reused by the band scan below and the AA supersampler in the ring block.
     const float2 dirs[8] =
     {
         float2( 1.0,  0.0), float2(-1.0,  0.0), float2( 0.0,  1.0), float2( 0.0, -1.0),
@@ -48,6 +53,10 @@ FCkUsf_SurfaceOutput CkUsf_PP_SolidOutline(
         float2( 0.70711, -0.70711), float2(-0.70711, -0.70711)
     };
 
+    // Band scan: a pixel within `thickness` of a silhouette has at least one toward-object tap that lands
+    // on the marked region. The nearest marked neighbour gives the ring pixel its preset slot + occlusion
+    // depths. The radius is inflated past the band (by the feather radius + 1px) so pixels just BEYOND it
+    // are not culled before the AA pass can give them partial coverage (else the outer edge stays hard).
     bool  foundMarkedNeighbor = false;
     float ringStencil      = 0.0;
     float ringObjDepth     = 0.0;   // CustomDepth at the marked neighbour
@@ -56,7 +65,7 @@ FCkUsf_SurfaceOutput CkUsf_PP_SolidOutline(
     [unroll]
     for (int i = 0; i < 8; ++i)
     {
-        float2 nuv = bufferUV + dirs[i] * texel * thickness;
+        float2 nuv = bufferUV + dirs[i] * texel * (thickness + CKUSF_OUTLINE_AA_RADIUS + 1.0);
         float sN = round(SceneTextureLookup(nuv, PPI_CustomStencil, false).r);
         if (sN >= StencilMin && sN <= StencilMax)
         {
@@ -112,12 +121,41 @@ FCkUsf_SurfaceOutput CkUsf_PP_SolidOutline(
         }
     }
 
-    // ---- Outline ring (outside the object). Normal hides the ring where the neighbour object is occluded. ----
+    // ---- Outline ring (outside the object), anti-aliased. Normal hides the ring where the neighbour
+    //      object is occluded. Coverage = fraction of 8 sample points (on a CKUSF_OUTLINE_AA_RADIUS-texel
+    //      circle around the pixel) that classify as a ring pixel — unmarked there, with a marked object
+    //      within `thickness`. Averaging over the feather circle blurs the hard mask edge over ~2x the
+    //      radius, so the silhouette no longer stair-steps. CKUSF_OUTLINE_AA_RADIUS sets the feather width. ----
     if (centerMarked == false && foundMarkedNeighbor)
     {
         bool visible = seeThrough || (ringObjDepth <= ringSceneDepth + 1.0);
         if (visible)
-        { outColor = outlineColor; }
+        {
+            float coverage = 0.0;
+            [unroll]
+            for (int s = 0; s < 8; ++s)
+            {
+                float2 sampUV = bufferUV + dirs[s] * texel * CKUSF_OUTLINE_AA_RADIUS;
+
+                // A ring sample must be unmarked itself...
+                float ssC = round(SceneTextureLookup(sampUV, PPI_CustomStencil, false).r);
+                if (ssC >= StencilMin && ssC <= StencilMax)
+                { continue; }
+
+                // ...and have a marked object within `thickness` in some direction.
+                [unroll]
+                for (int d = 0; d < 8; ++d)
+                {
+                    float2 nuv = sampUV + dirs[d] * texel * thickness;
+                    float sN = round(SceneTextureLookup(nuv, PPI_CustomStencil, false).r);
+                    if (sN >= StencilMin && sN <= StencilMax)
+                    { coverage += 1.0; break; }
+                }
+            }
+            coverage *= (1.0 / 8.0);
+
+            outColor = lerp(outColor, outlineColor, coverage);
+        }
     }
 
     O.EmissiveColor = outColor;
