@@ -32,6 +32,7 @@
 #include "UObject/SavePackage.h"
 #include "UObject/UObjectGlobals.h"
 #include "UObject/Package.h"
+#include "Misc/App.h"
 #include "Misc/PackageName.h"
 #include "Modules/ModuleManager.h"
 
@@ -678,6 +679,11 @@ namespace ck::usf_editor
     static auto Validate_LookShaders(UMaterial* InMaterial, FName InLookName, TArray<FString>& OutErrors) -> bool
     {
         if (ck::Is_NOT_Valid(InMaterial, ck::IsValid_Policy_NullptrOnly{}))
+        { return true; }
+
+        // In a process that cannot render (-nullrhi CI) shader maps never build, so
+        // IsCompilingOrHadCompileError reads EVERY look as failed — the gate is meaningless there.
+        if (NOT FApp::CanEverRender())
         { return true; }
 
         if (GShaderCompilingManager != nullptr)
