@@ -95,7 +95,7 @@ the enum suffix, NOT the `TEXT("...")` display string. Infrastructure groups, al
 |---|---|---|
 | `stat CkProcessors` | `CkEcs/Processor/CkProcessor.h:19` | Per-processor whole-Tick cost (display header "Tick") |
 | `stat CkProcessors_Details` | `CkProcessor.h:18` | Per-processor ForEachEntity body + parallel phases |
-| `stat CkScheduler` | `CkEcs/Scheduler/CkProcessorScheduler.cpp:38-51` | Scheduler orchestration: `MainPass`, `Dispatch`, `Pump`, `PumpDispatch`, `PumpDirtyCheck`, `ResetPumpVersions`, `DebugRecord` — processor stats nest INSIDE these, so their self-time is pure scheduler overhead |
+| `stat CkScheduler` | `CkEcs/Scheduler/CkProcessorScheduler.cpp` | Scheduler orchestration: `MainPass`, `Dispatch`, `Pump`, `PumpDispatch`, `PumpDirtyCheck`, `DebugRecord` — processor stats nest INSIDE these, so their self-time is pure scheduler overhead (`ResetPumpVersions` removed 2026-07-06: the pump version cache now persists across frames) |
 | `stat CkEcsWorldActor_Tick` | `CkEcs/Subsystem/CkEcsWorld_Subsystem.cpp:22,65` | One dynamic stat per ECS world actor, named `[<TickGroup>] EcsScheduler_Actor` — the whole-ECS top-line per ticking group |
 | `stat CkEcs` | `CkEcs/CkEcs_Stats.h:7` + `CkEntityLifetime_Utils.cpp:17-22` | Entity destroy/world-lookup cycle stats + `Ecs Entities Spawned/Destroyed` frame counters |
 | `stat CkSignals` | `CkEcs/Signal/CkSignal_Utils.h:15` | Per-signal-TYPE broadcast cost — wraps the ENTIRE publish including every listener's execution |
@@ -375,7 +375,11 @@ Mechanics (`CkProcessorScheduler.cpp`, `CkProcessorDescriptor.h:60-115`):
   storage walk each frame; that floor scales with storage size, not live matches.
 - **Pump passes** (same-frame drain of cascading reactive work, DeltaT=0) re-invoke ONLY processors
   whose `MarkedDirtyBy` fragment currently has entities, with a version short-circuit to skip the
-  rescan (`:213-262`; default on via `_EnableDirtyMarkerPumpShortCircuit`, `CkEcs_Settings.h:86`).
+  rescan (default on via `_EnableDirtyMarkerPumpShortCircuit`, `CkEcs_Settings.h`). Since 2026-07-06
+  the per-node version cache PERSISTS across frames (no per-frame reset — idle marker processors
+  skip on the version compare alone), and a pump that provably visited zero entities does not count
+  as work when scheduling further passes (`Pump()` returns the visited count; -1 = custom DoTick,
+  treated as work).
 - Perf smell: `Pump limit [N] reached. Still dirty: [...]` warning (`:338`) — a processor that never
   drains its marker is being re-pumped to the per-frame limit, multiplying its measured cost. Fix
   the marker contract (consume it, or `PumpPolicy = SkipPump` for sticky-marker time-steppers), not
