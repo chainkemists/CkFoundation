@@ -1,5 +1,8 @@
 #include "CkInsightsAnalyzer/Tab/SCkFrameBarChart.h"
 
+#include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Validation/CkIsValid.h"
+
 #include "Fonts/SlateFontInfo.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Rendering/DrawElements.h"
@@ -527,7 +530,7 @@ auto
     const_cast<SCkFrameBarChart*>(this)->_HoveredFrame = NewHoveredFrame;
 
     // Update tooltip text
-    if (NewHoveredFrame >= 0 && NewHoveredFrame < _FrameDurationsMs.Num() && _TooltipTextBlock.IsValid())
+    if (NewHoveredFrame >= 0 && NewHoveredFrame < _FrameDurationsMs.Num() && ck::IsValid(_TooltipTextBlock))
     {
         const double Ms = _FrameDurationsMs[NewHoveredFrame];
         const double BudgetDelta = Ms - _TargetFrameMs;
@@ -599,7 +602,7 @@ auto
     SCompoundWidget::OnMouseEnter(MyGeometry, MouseEvent);
 
     // Take focus on hover so scroll wheel zoom works without clicking first
-    if (!HasKeyboardFocus())
+    if (NOT HasKeyboardFocus())
     {
         FSlateApplication::Get().SetKeyboardFocus(SharedThis(this), EFocusCause::Mouse);
     }
