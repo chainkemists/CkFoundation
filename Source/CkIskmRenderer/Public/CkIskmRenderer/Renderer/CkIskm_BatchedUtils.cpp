@@ -174,6 +174,63 @@ int32
     return InCrowd->Get_InstanceCount();
 }
 
+ACk_Iskm_BatchedCrowd_Actor*
+    UCk_Utils_IskmBatched_UE::
+    Create_Crowd(
+        UObject* InWorldContextObject,
+        UCk_IskmAnimCollection_Data* InCollection,
+        float InTileSize)
+{
+    if (ck::Is_NOT_Valid(InWorldContextObject) || ck::Is_NOT_Valid(InCollection))
+    { return nullptr; }
+
+    UWorld* World = GEngine != nullptr
+        ? GEngine->GetWorldFromContextObject(InWorldContextObject, EGetWorldErrorMode::LogAndReturnNull)
+        : nullptr;
+    if (World == nullptr)
+    { return nullptr; }
+
+    if (ck::Is_NOT_Valid(InCollection->Get_DefaultMesh()))
+    { return nullptr; }
+
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    ACk_Iskm_BatchedCrowd_Actor* Crowd = World->SpawnActor<ACk_Iskm_BatchedCrowd_Actor>(
+        ACk_Iskm_BatchedCrowd_Actor::StaticClass(), FTransform::Identity, SpawnParams);
+    if (Crowd == nullptr)
+    { return nullptr; }
+
+    Crowd->Initialize(InCollection, InTileSize);
+    return Crowd;
+}
+
+int32
+    UCk_Utils_IskmBatched_UE::
+    Add_CrowdMember(
+        ACk_Iskm_BatchedCrowd_Actor* InCrowd,
+        const FTransform& InWorldTransform,
+        int32 InSequenceIndex,
+        float InRate,
+        float InTimeOffset)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return INDEX_NONE; }
+
+    InCrowd->AddInstance(InWorldTransform, InSequenceIndex, InRate, InTimeOffset);
+    return InCrowd->Get_MemberCount() - 1;
+}
+
+void
+    UCk_Utils_IskmBatched_UE::
+    Finalize_Crowd(
+        ACk_Iskm_BatchedCrowd_Actor* InCrowd)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return; }
+
+    InCrowd->Finalize();
+}
+
 int32
     UCk_Utils_IskmBatched_UE::
     Get_CrowdMemberCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd)
