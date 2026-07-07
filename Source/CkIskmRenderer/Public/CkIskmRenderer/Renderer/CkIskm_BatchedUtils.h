@@ -11,9 +11,10 @@ class UCk_Iskm_BatchedClusterComponent;
 class ACk_Iskm_BatchedCrowd_Actor;
 
 // ====================================================================================================================
-//  CkIskmRenderer Plan-2 — debug/gym driver for the batched skeletal renderer.
-//  The batched path's production entry point is the same UCk_Utils_IskmProxy_UE::Add + PoseSource routing as Plan-1
-//  (wired in a later phase). This utility is a direct spawn helper for gyms/tests to stand up a cluster now.
+//  CkIskmRenderer Plan-2 — script-facing surface for the batched skeletal renderer.
+//  Debug_* helpers stand up ready-made clusters/crowds for gyms/tests. Game flip-drivers build crowds through the
+//  production entries (Create_Crowd -> Add_CrowdMember xN -> Finalize_Crowd) and drive members via Set_CrowdMember*.
+//  Auto-routing UCk_Utils_IskmProxy_UE::Add to batched via PoseSource remains a possible later phase.
 // ====================================================================================================================
 UCLASS(NotBlueprintable)
 class CKISKMRENDERER_API UCk_Utils_IskmBatched_UE : public UBlueprintFunctionLibrary
