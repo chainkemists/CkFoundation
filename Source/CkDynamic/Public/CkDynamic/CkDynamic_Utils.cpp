@@ -17,7 +17,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_dynamic_utils
 {
     auto PassesDestroyFilter(const FCk_Handle& InHandle, ECk_DestroyFilter InFilter) -> bool
     {
@@ -188,7 +188,7 @@ auto
 
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
         TEXT("Invalid Handle [{}] passed. Unable to get Dynamic Fragment [{}]"), InHandle, InStructType)
-    { return Get_InvalidSentinel_FragmentData(InStructType); }
+    { return ck_dynamic_utils::Get_InvalidSentinel_FragmentData(InStructType); }
 
     const auto StorageId = Get_StorageId(InStructType);
     auto Handle = InHandle;
@@ -197,7 +197,7 @@ auto
 
     CK_ENSURE_IF_NOT(Storage.contains(Entity),
         TEXT("Entity [{}] does NOT have the Dynamic Fragment [{}]! Cannot retrieve it"), InHandle, InStructType)
-    { return Get_InvalidSentinel_FragmentData(InStructType); }
+    { return ck_dynamic_utils::Get_InvalidSentinel_FragmentData(InStructType); }
 
     auto& Fragment = Storage.get(Entity);
     return Fragment.Get_StructData();
@@ -542,7 +542,7 @@ auto
 
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
         TEXT("Invalid Handle [{}] passed. Unable to get Dynamic Fragment [{}]"), InHandle, InStructType)
-    { return *(FScriptStructWildcard*)Get_InvalidSentinel_FragmentData(InStructType).GetMutableMemory(); }
+    { return *(FScriptStructWildcard*)ck_dynamic_utils::Get_InvalidSentinel_FragmentData(InStructType).GetMutableMemory(); }
 
     const auto StorageId = Get_StorageId(InStructType);
     auto Handle = InHandle;
@@ -551,7 +551,7 @@ auto
 
     CK_ENSURE_IF_NOT(Storage.contains(Entity),
         TEXT("Entity [{}] does NOT have the Dynamic Fragment [{}]! Cannot retrieve it"), InHandle, InStructType)
-    { return *(FScriptStructWildcard*)Get_InvalidSentinel_FragmentData(InStructType).GetMutableMemory(); }
+    { return *(FScriptStructWildcard*)ck_dynamic_utils::Get_InvalidSentinel_FragmentData(InStructType).GetMutableMemory(); }
 
     auto& Fragment = Storage.get(Entity);
     return *(FScriptStructWildcard*)Fragment.Get_StructData().GetMemory();
@@ -640,7 +640,7 @@ auto
 
         auto HandleWithFragments = InAnyHandle.Get_ValidHandle(Entity);
 
-        if (NOT PassesDestroyFilter(HandleWithFragments, InFilter))
+        if (NOT ck_dynamic_utils::PassesDestroyFilter(HandleWithFragments, InFilter))
         { continue; }
 
         const auto ExistsInAllStorages = ck::algo::AllOf(
