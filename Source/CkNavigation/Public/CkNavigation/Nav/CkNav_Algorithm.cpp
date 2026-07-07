@@ -100,9 +100,20 @@ auto
 
         const auto BigOkStr = FString{bBigOk ? TEXT("OK") : TEXT("FAIL")};
 
+        // Legacy-cube probe: when the vertical clamp is active, ALSO test the pre-clamp
+        // uniform cube so the log line itself answers "would the old behavior have snapped
+        // this point?" — the decisive datum when triaging whether a NO PATH report is a
+        // clamp regression or a pre-existing content/nav defect.
+        const auto LegacyCubeApplies = VerticalHalfExtent < InProjectionHalfExtent;
+        auto LegacyProj = FNavLocation{};
+        const auto bLegacyOk = LegacyCubeApplies
+            && InNavSys.ProjectPointToNavigation(InPoint, LegacyProj, FVector{InProjectionHalfExtent}, &InNavData);
+        const auto LegacyCubeStr = FString{NOT LegacyCubeApplies ? TEXT("n/a") : bLegacyOk ? TEXT("OK") : TEXT("FAIL")};
+
         ck::nav::Warning(TEXT("FindPathSync: [{}] projection FAILED. "
             "Point=[{}] Extent=[{}]. NavBounds=[{} -> {}] (valid=[{}]). "
             "Retry@[{}]uu=[{}] (snapped=[{}]). "
+            "LegacyCube@[{}]uu=[{}] (snapped=[{}]). "
             "DefaultFilterValid=[{}] AgentCfg=[r=[{}] h=[{}] step=[{}]]"),
             InWhich,
             InPoint, ProjectionExtent,
@@ -110,6 +121,9 @@ auto
             BigHalfExtentUu,
             BigOkStr,
             bBigOk ? BigProj.Location : FVector::ZeroVector,
+            InProjectionHalfExtent,
+            LegacyCubeStr,
+            bLegacyOk ? LegacyProj.Location : FVector::ZeroVector,
             static_cast<int32>(InNavData.GetDefaultQueryFilter().IsValid()),
             InNavData.GetConfig().AgentRadius, InNavData.GetConfig().AgentHeight, InNavData.GetConfig().AgentStepHeight);
     };
