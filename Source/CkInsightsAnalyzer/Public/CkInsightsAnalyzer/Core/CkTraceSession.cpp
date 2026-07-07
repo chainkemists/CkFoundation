@@ -1,6 +1,9 @@
 #include "CkInsightsAnalyzer/Core/CkTraceSession.h"
 #include "CkInsightsAnalyzer_Log.h"
 
+#include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Validation/CkIsValid.h"
+
 #include <TraceServices/ITraceServicesModule.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -15,9 +18,9 @@ FCk_TraceSession::FCk_TraceSession(FCk_TraceSession&& Other) noexcept
     , _AnalysisService(MoveTemp(Other._AnalysisService))
     , _Session(MoveTemp(Other._Session))
     , _CachedGameThreadId(Other._CachedGameThreadId)
-    , _bGameThreadIdCached(Other._bGameThreadIdCached)
+    , _GameThreadIdCached(Other._GameThreadIdCached)
 {
-    Other._bGameThreadIdCached = false;
+    Other._GameThreadIdCached = false;
 }
 
 FCk_TraceSession& FCk_TraceSession::operator=(FCk_TraceSession&& Other) noexcept
@@ -29,8 +32,8 @@ FCk_TraceSession& FCk_TraceSession::operator=(FCk_TraceSession&& Other) noexcept
         _AnalysisService = MoveTemp(Other._AnalysisService);
         _Session = MoveTemp(Other._Session);
         _CachedGameThreadId = Other._CachedGameThreadId;
-        _bGameThreadIdCached = Other._bGameThreadIdCached;
-        Other._bGameThreadIdCached = false;
+        _GameThreadIdCached = Other._GameThreadIdCached;
+        Other._GameThreadIdCached = false;
     }
     return *this;
 }
@@ -42,11 +45,11 @@ auto
     Open(const FString& FilePath)
     -> bool
 {
-    if (!PrepareAnalysisService())
+    if (NOT PrepareAnalysisService())
     {
         return false;
     }
-    if (!AnalyzeFile(FilePath))
+    if (NOT AnalyzeFile(FilePath))
     {
         return false;
     }
@@ -54,11 +57,11 @@ auto
     // Log basic info (need read scope for provider access)
     {
         TraceServices::FAnalysisSessionReadScope ReadScope(*_Session.Get());
-        const uint64 FrameCount = GetFrameProvider()
+        const auto FrameCount = GetFrameProvider()
             ? GetFrameProvider()->GetFrameCount(ETraceFrameType::TraceFrameType_Game) : 0;
-        const double Duration = _Session->GetDurationSeconds();
-        UE_LOG(CkInsightsAnalyzer, Log,
-            TEXT("Trace opened: %.1fs duration, %llu game frames"), Duration, FrameCount);
+        const auto Duration = _Session->GetDurationSeconds();
+        ck::insights_analyzer::Log(
+            TEXT("Trace opened: {:.1f}s duration, {} game frames"), Duration, FrameCount);
     }
 
     return true;
@@ -75,14 +78,14 @@ auto
         FModuleManager::LoadModuleChecked<ITraceServicesModule>(TEXT("TraceServices"));
     _AnalysisService = TraceServicesModule.GetAnalysisService();
 
-    if (!_AnalysisService.IsValid())
+    if (ck::Is_NOT_Valid(_AnalysisService))
     {
         _AnalysisService = TraceServicesModule.CreateAnalysisService();
     }
 
-    if (!_AnalysisService.IsValid())
+    if (ck::Is_NOT_Valid(_AnalysisService))
     {
-        UE_LOG(CkInsightsAnalyzer, Error, TEXT("Failed to create TraceServices analysis service"));
+        ck::insights_analyzer::Error(TEXT("Failed to create TraceServices analysis service"));
         return false;
     }
 
@@ -94,25 +97,25 @@ auto
     AnalyzeFile(const FString& FilePath)
     -> bool
 {
-    if (!_AnalysisService.IsValid())
+    if (ck::Is_NOT_Valid(_AnalysisService))
     {
-        UE_LOG(CkInsightsAnalyzer, Error, TEXT("AnalyzeFile called without PrepareAnalysisService"));
+        ck::insights_analyzer::Error(TEXT("AnalyzeFile called without PrepareAnalysisService"));
         return false;
     }
 
-    if (!FPaths::FileExists(FilePath))
+    if (NOT FPaths::FileExists(FilePath))
     {
-        UE_LOG(CkInsightsAnalyzer, Error, TEXT("Trace file not found: %s"), *FilePath);
+        ck::insights_analyzer::Error(TEXT("Trace file not found: {}"), FilePath);
         return false;
     }
 
-    UE_LOG(CkInsightsAnalyzer, Log, TEXT("Analyzing trace: %s"), *FilePath);
+    ck::insights_analyzer::Log(TEXT("Analyzing trace: {}"), FilePath);
 
     _Session = _AnalysisService->Analyze(*FilePath);
 
-    if (!_Session.IsValid())
+    if (ck::Is_NOT_Valid(_Session))
     {
-        UE_LOG(CkInsightsAnalyzer, Error, TEXT("Failed to analyze trace: %s"), *FilePath);
+        ck::insights_analyzer::Error(TEXT("Failed to analyze trace: {}"), FilePath);
         _AnalysisService.Reset();
         return false;
     }
@@ -133,7 +136,7 @@ auto
     }
     _AnalysisService.Reset();
     _FilePath.Empty();
-    _bGameThreadIdCached = false;
+    _GameThreadIdCached = false;
     _CachedGameThreadId = static_cast<uint32>(INDEX_NONE);
 }
 
@@ -142,7 +145,7 @@ auto
     IsOpen() const
     -> bool
 {
-    return _Session.IsValid() && _Session->IsAnalysisComplete();
+    return ck::IsValid(_Session) && _Session->IsAnalysisComplete();
 }
 
 auto
@@ -150,7 +153,7 @@ auto
     GetDurationSeconds() const
     -> double
 {
-    if (!_Session.IsValid()) return 0.0;
+    if (ck::Is_NOT_Valid(_Session)) return 0.0;
 
     TraceServices::FAnalysisSessionReadScope ReadScope(*_Session.Get());
     return _Session->GetDurationSeconds();
@@ -165,7 +168,7 @@ auto
     CreateReadScope() const
     -> TraceServices::FAnalysisSessionReadScope
 {
-    check(_Session.IsValid());
+    check(ck::IsValid(_Session));
     return TraceServices::FAnalysisSessionReadScope(*_Session.Get());
 }
 
@@ -182,7 +185,7 @@ auto
     GetTimingProvider() const
     -> const TraceServices::ITimingProfilerProvider*
 {
-    if (!_Session.IsValid()) return nullptr;
+    if (ck::Is_NOT_Valid(_Session)) return nullptr;
     return TraceServices::ReadTimingProfilerProvider(*_Session.Get());
 }
 
@@ -191,7 +194,7 @@ auto
     GetFrameProvider() const
     -> const TraceServices::IFrameProvider*
 {
-    if (!_Session.IsValid()) return nullptr;
+    if (ck::Is_NOT_Valid(_Session)) return nullptr;
     return &TraceServices::ReadFrameProvider(*_Session.Get());
 }
 
@@ -200,7 +203,7 @@ auto
     GetThreadProvider() const
     -> const TraceServices::IThreadProvider*
 {
-    if (!_Session.IsValid()) return nullptr;
+    if (ck::Is_NOT_Valid(_Session)) return nullptr;
     return &TraceServices::ReadThreadProvider(*_Session.Get());
 }
 
@@ -213,22 +216,23 @@ auto
     GetGameThreadId() const
     -> uint32
 {
-    if (_bGameThreadIdCached)
+    if (_GameThreadIdCached)
     {
         return _CachedGameThreadId;
     }
 
-    if (!IsOpen())
+    if (NOT IsOpen())
     {
         return static_cast<uint32>(INDEX_NONE);
     }
 
     TraceServices::FAnalysisSessionReadScope ReadScope(*_Session.Get());
 
-    const TraceServices::IThreadProvider* ThreadProvider = GetThreadProvider();
-    const TraceServices::ITimingProfilerProvider* TimingProvider = GetTimingProvider();
+    const auto ThreadProvider = GetThreadProvider();
+    const auto TimingProvider = GetTimingProvider();
 
-    if (!ThreadProvider || !TimingProvider)
+    if (ck::Is_NOT_Valid(ThreadProvider, ck::IsValid_Policy_NullptrOnly{}) ||
+        ck::Is_NOT_Valid(TimingProvider, ck::IsValid_Policy_NullptrOnly{}))
     {
         return static_cast<uint32>(INDEX_NONE);
     }
@@ -247,12 +251,12 @@ auto
     if (FoundId != static_cast<uint32>(INDEX_NONE))
     {
         _CachedGameThreadId = FoundId;
-        _bGameThreadIdCached = true;
+        _GameThreadIdCached = true;
         return _CachedGameThreadId;
     }
 
     // Strategy 2: Fallback — thread with most events
-    UE_LOG(CkInsightsAnalyzer, Warning,
+    ck::insights_analyzer::Warning(
         TEXT("GameThread not found by name, falling back to most-events heuristic"));
 
     uint64 MaxEvents = 0;
@@ -276,7 +280,7 @@ auto
         });
 
     _CachedGameThreadId = FoundId;
-    _bGameThreadIdCached = true;
+    _GameThreadIdCached = true;
     return _CachedGameThreadId;
 }
 
@@ -285,10 +289,11 @@ auto
     GetTimelineIndex(uint32 ThreadId) const
     -> uint32
 {
-    if (!IsOpen()) return static_cast<uint32>(INDEX_NONE);
+    if (NOT IsOpen()) return static_cast<uint32>(INDEX_NONE);
 
-    const TraceServices::ITimingProfilerProvider* TimingProvider = GetTimingProvider();
-    if (!TimingProvider) return static_cast<uint32>(INDEX_NONE);
+    const auto TimingProvider = GetTimingProvider();
+    if (ck::Is_NOT_Valid(TimingProvider, ck::IsValid_Policy_NullptrOnly{}))
+    { return static_cast<uint32>(INDEX_NONE); }
 
     uint32 TimelineIndex = 0;
     if (TimingProvider->GetCpuThreadTimelineIndex(ThreadId, TimelineIndex))
@@ -303,7 +308,7 @@ auto
     GetFrameCount() const
     -> uint64
 {
-    if (!IsOpen()) return 0;
+    if (NOT IsOpen()) return 0;
 
     TraceServices::FAnalysisSessionReadScope ReadScope(*_Session.Get());
     const TraceServices::IFrameProvider* FrameProvider = GetFrameProvider();
@@ -315,7 +320,7 @@ auto
     GetFrame(uint64 Index) const
     -> const TraceServices::FFrame*
 {
-    if (!IsOpen()) return nullptr;
+    if (NOT IsOpen()) return nullptr;
 
     const TraceServices::IFrameProvider* FrameProvider = GetFrameProvider();
     return FrameProvider ? FrameProvider->GetFrame(ETraceFrameType::TraceFrameType_Game, Index) : nullptr;
@@ -326,10 +331,10 @@ auto
     ReadTimers(TFunctionRef<void(const TraceServices::ITimingProfilerTimerReader&)> Callback) const
     -> void
 {
-    if (!IsOpen()) return;
+    if (NOT IsOpen()) return;
 
-    const TraceServices::ITimingProfilerProvider* TimingProvider = GetTimingProvider();
-    if (TimingProvider)
+    const auto TimingProvider = GetTimingProvider();
+    if (ck::IsValid(TimingProvider, ck::IsValid_Policy_NullptrOnly{}))
     {
         TimingProvider->ReadTimers(Callback);
     }
@@ -341,10 +346,11 @@ auto
                  TFunctionRef<void(const TraceServices::ITimingProfilerProvider::Timeline&)> Callback) const
     -> bool
 {
-    if (!IsOpen()) return false;
+    if (NOT IsOpen()) return false;
 
-    const TraceServices::ITimingProfilerProvider* TimingProvider = GetTimingProvider();
-    if (!TimingProvider) return false;
+    const auto TimingProvider = GetTimingProvider();
+    if (ck::Is_NOT_Valid(TimingProvider, ck::IsValid_Policy_NullptrOnly{}))
+    { return false; }
 
     return TimingProvider->ReadTimeline(TimelineIndex, Callback);
 }
@@ -355,11 +361,11 @@ auto
     -> TArray<TraceServices::FThreadInfo>
 {
     TArray<TraceServices::FThreadInfo> Result;
-    if (!IsOpen()) return Result;
+    if (NOT IsOpen()) return Result;
 
     TraceServices::FAnalysisSessionReadScope ReadScope(*_Session.Get());
-    const TraceServices::IThreadProvider* ThreadProvider = GetThreadProvider();
-    if (ThreadProvider)
+    const auto ThreadProvider = GetThreadProvider();
+    if (ck::IsValid(ThreadProvider, ck::IsValid_Policy_NullptrOnly{}))
     {
         ThreadProvider->EnumerateThreads(
             [&Result](const TraceServices::FThreadInfo& Info)

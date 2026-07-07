@@ -5,6 +5,9 @@
 #include "CkInsightsAnalyzer/Report/CkMultiFrameReport.h"
 #include "CkInsightsAnalyzer_Log.h"
 
+#include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Validation/CkIsValid.h"
+
 #include <Async/Async.h>
 #include <DesktopPlatformModule.h>
 #include <HAL/PlatformApplicationMisc.h>
@@ -226,15 +229,15 @@ auto
         return FReply::Handled();
     }
 
-    IDesktopPlatform* DesktopPlatform = FDesktopPlatformModule::Get();
-    if (!DesktopPlatform)
+    const auto DesktopPlatform = FDesktopPlatformModule::Get();
+    if (ck::Is_NOT_Valid(DesktopPlatform, ck::IsValid_Policy_NullptrOnly{}))
     {
         DoSetStatus(TEXT("Desktop platform not available."));
         return FReply::Handled();
     }
 
     TArray<FString> OutFiles;
-    const bool bOpened = DesktopPlatform->OpenFileDialog(
+    const bool Opened = DesktopPlatform->OpenFileDialog(
         FSlateApplication::Get().FindBestParentWindowHandleForDialogs(nullptr),
         TEXT("Open Unreal Insights Trace"),
         FPaths::ProjectSavedDir() / TEXT("TraceSessions"),
@@ -243,7 +246,7 @@ auto
         EFileDialogFlags::None,
         OutFiles);
 
-    if (!bOpened || OutFiles.Num() == 0)
+    if (NOT Opened || OutFiles.Num() == 0)
     {
         return FReply::Handled();
     }
@@ -262,7 +265,7 @@ auto
     DoOnAnalyzeWorstClicked()
     -> FReply
 {
-    if (!_Session.IsOpen() || DoIsLoading())
+    if (NOT _Session.IsOpen() || DoIsLoading())
     {
         DoSetStatus(TEXT("No trace loaded. Open a .utrace file first."));
         return FReply::Handled();
@@ -312,7 +315,7 @@ auto
     DoOnDepthSelectionChanged(TSharedPtr<FString> NewValue, ESelectInfo::Type SelectInfo)
     -> void
 {
-    if (!NewValue.IsValid()) return;
+    if (ck::Is_NOT_Valid(NewValue)) return;
 
     if (*NewValue == TEXT("Full"))           _ReportDepth = ECkReportDepth::Full;
     else if (*NewValue == TEXT("Standard"))  _ReportDepth = ECkReportDepth::Standard;
@@ -339,7 +342,7 @@ auto
 {
     // Allow frame selection during ReadingFrames (user can inspect already-loaded frames).
     // Only block during Opening when the session isn't ready yet.
-    if (!_Session.IsOpen() || _LoadingState == ELoadingState::Opening) return;
+    if (NOT _Session.IsOpen() || _LoadingState == ELoadingState::Opening) return;
 
     if (StartFrame == EndFrame)
     {
@@ -360,7 +363,7 @@ auto
     DoSetStatus(const FString& Text)
     -> void
 {
-    if (_StatusText.IsValid())
+    if (ck::IsValid(_StatusText))
     {
         _StatusText->SetText(FText::FromString(Text));
     }
@@ -372,7 +375,7 @@ auto
     -> void
 {
     _CurrentReport = ReportText;
-    if (_ReportText.IsValid())
+    if (ck::IsValid(_ReportText))
     {
         _ReportText->SetText(FText::FromString(ReportText));
     }
@@ -386,7 +389,7 @@ auto
     DoSetStatus(FString::Printf(TEXT("Analyzing frame %llu..."), FrameIndex));
 
     FCk_FrameAnalysisResult Result = FCk_FrameAnalyzer::AnalyzeFrame(_Session, FrameIndex);
-    if (!Result.IsValid())
+    if (NOT Result.IsValid())
     {
         DoSetStatus(FString::Printf(TEXT("Frame %llu produced no analysis data."), FrameIndex));
         DoSetReport(TEXT(""));
@@ -442,7 +445,7 @@ auto
 
     // Prepare analysis service on game thread (FModuleManager is not thread-safe)
     _PendingSession = MakeShared<FCk_TraceSession>();
-    if (!_PendingSession->PrepareAnalysisService())
+    if (NOT _PendingSession->PrepareAnalysisService())
     {
         DoSetStatus(TEXT("Failed to create analysis service."));
         _PendingSession.Reset();
@@ -475,13 +478,13 @@ auto
     {
     case ELoadingState::Opening:
     {
-        if (!_OpenFuture.IsReady())
+        if (NOT _OpenFuture.IsReady())
         {
             return true; // keep ticking
         }
 
-        const bool bSuccess = _OpenFuture.Get();
-        if (!bSuccess)
+        const bool Success = _OpenFuture.Get();
+        if (NOT Success)
         {
             DoSetStatus(FString::Printf(TEXT("Failed to open: %s"),
                 *FPaths::GetCleanFilename(_PendingTracePath)));
@@ -546,8 +549,8 @@ auto
 
     for (uint64 i = _LoadedFrameCount; i < EndFrame; ++i)
     {
-        const TraceServices::FFrame* Frame = _Session.GetFrame(i);
-        if (Frame)
+        const auto Frame = _Session.GetFrame(i);
+        if (ck::IsValid(Frame, ck::IsValid_Policy_NullptrOnly{}))
         {
             const double DurationMs = (Frame->EndTime - Frame->StartTime) * 1000.0;
             ChunkDurations.Add(DurationMs);
@@ -561,7 +564,7 @@ auto
     _PendingFrameDurations.Append(ChunkDurations);
 
     // Push to bar chart progressively — bars fill up as frames are read
-    if (_FrameBarChart.IsValid())
+    if (ck::IsValid(_FrameBarChart))
     {
         _FrameBarChart->AppendFrameData(ChunkDurations);
     }
@@ -583,7 +586,7 @@ auto
     // Chart already has all frame data from progressive AppendFrameData() calls.
     // Recalculate display max with proper P95 (outlier-resistant) now that all data is loaded.
     // This preserves the user's viewport/zoom unlike SetFrameData().
-    if (_FrameBarChart.IsValid())
+    if (ck::IsValid(_FrameBarChart))
     {
         _FrameBarChart->RecalculateDisplayMax();
     }

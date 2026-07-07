@@ -2,6 +2,9 @@
 #include "CkInsightsAnalyzer/Core/CkTraceSession.h"
 #include "CkInsightsAnalyzer_Log.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Macros/CkMacros.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 FCk_MultiFrameReport::FCk_MultiFrameReport() = default;
@@ -48,16 +51,16 @@ auto
 {
     _Stats = FCk_MultiFrameStats{};
 
-    if (!Session.IsOpen())
+    if (NOT Session.IsOpen())
     {
-        UE_LOG(CkInsightsAnalyzer, Error, TEXT("MultiFrameReport: Session not open"));
+        ck::insights_analyzer::Error(TEXT("MultiFrameReport: Session not open"));
         return false;
     }
 
-    const uint64 TotalFrames = Session.GetFrameCount();
+    const auto TotalFrames = Session.GetFrameCount();
     if (TotalFrames == 0)
     {
-        UE_LOG(CkInsightsAnalyzer, Warning, TEXT("MultiFrameReport: No frames in trace"));
+        ck::insights_analyzer::Warning(TEXT("MultiFrameReport: No frames in trace"));
         return false;
     }
 
@@ -73,34 +76,19 @@ auto
     TraceServices::FAnalysisSessionReadScope ReadScope = Session.CreateReadScope();
 
     // Build timer name map once
-    TMap<uint32, FString> TimerNames;
-    Session.ReadTimers(
-        [&TimerNames](const TraceServices::ITimingProfilerTimerReader& Reader)
-        {
-            const uint32 Count = Reader.GetTimerCount();
-            for (uint32 i = 0; i < Count; ++i)
-            {
-                if (const TraceServices::FTimingProfilerTimer* Timer = Reader.GetTimer(i))
-                {
-                    if (Timer->Name)
-                    {
-                        TimerNames.Add(Timer->Id, FString(Timer->Name));
-                    }
-                }
-            }
-        });
+    const auto TimerNames = FCk_FrameReport::BuildTimerNameMap(Session);
 
     // Per-category, per-frame exclusive time accumulation
     // CategoryName → array of per-frame exclusive ms
     TMap<FString, TArray<double>> CategoryPerFrame;
 
     // Analyze each frame
-    const uint64 FrameCount = EndFrame - StartFrame;
+    const auto FrameCount = EndFrame - StartFrame;
     _Stats.FrameCount = FrameCount;
     _Stats.FrameDurationsMs.Reserve(FrameCount);
 
-    UE_LOG(CkInsightsAnalyzer, Log,
-        TEXT("MultiFrameReport: Analyzing frames %llu-%llu (%llu frames)"),
+    ck::insights_analyzer::Log(
+        TEXT("MultiFrameReport: Analyzing frames {}-{} ({} frames)"),
         StartFrame, EndFrame - 1, FrameCount);
 
     // Track all frame summaries for worst-frame identification
@@ -110,7 +98,7 @@ auto
     for (uint64 FrameIdx = StartFrame; FrameIdx < EndFrame; ++FrameIdx)
     {
         FCk_FrameAnalysisResult Result = FCk_FrameAnalyzer::AnalyzeFrame(Session, FrameIdx);
-        if (!Result.IsValid()) continue;
+        if (NOT Result.IsValid()) continue;
 
         const double DurationMs = Result.FrameDurationMs;
         _Stats.FrameDurationsMs.Add(DurationMs);
@@ -152,7 +140,7 @@ auto
     }
 
     // Sort durations for percentile calculations
-    _Stats.FrameDurationsMs.Sort();
+    ck::algo::Sort(_Stats.FrameDurationsMs);
 
     _Stats.MinFrameMs = _Stats.FrameDurationsMs[0];
     _Stats.MaxFrameMs = _Stats.FrameDurationsMs.Last();
@@ -164,7 +152,7 @@ auto
     _Stats.AvgFrameMs = Sum / _Stats.FrameDurationsMs.Num();
 
     // Worst frames
-    AllSummaries.Sort([](const FCk_FrameSummary& A, const FCk_FrameSummary& B)
+    ck::algo::Sort(AllSummaries, [](const FCk_FrameSummary& A, const FCk_FrameSummary& B)
     {
         return A.DurationMs > B.DurationMs;
     });
@@ -190,7 +178,7 @@ auto
             PerFrame.Add(0.0);
         }
 
-        PerFrame.Sort();
+        ck::algo::Sort(PerFrame);
 
         double CatSum = 0.0;
         for (double V : PerFrame) CatSum += V;
@@ -207,7 +195,7 @@ auto
     }
 
     // Sort by average exclusive time descending
-    _Stats.CategoryAverages.Sort(
+    ck::algo::Sort(_Stats.CategoryAverages,
         [](const FCk_MultiFrameStats::FCategoryStats& A,
            const FCk_MultiFrameStats::FCategoryStats& B)
         {
@@ -260,7 +248,7 @@ auto
                        uint64 StartFrame, uint64 EndFrame)
     -> FString
 {
-    if (!DoAnalyzeFrameRange(Session, StartFrame, EndFrame))
+    if (NOT DoAnalyzeFrameRange(Session, StartFrame, EndFrame))
     {
         return TEXT("(No frame data to analyze)");
     }
@@ -275,7 +263,7 @@ auto
     _Config.WorstFrameCount = Count;
 
     // Analyze all frames to find the worst ones
-    if (!DoAnalyzeFrameRange(Session, 0, 0))
+    if (NOT DoAnalyzeFrameRange(Session, 0, 0))
     {
         return TEXT("(No frame data to analyze)");
     }
