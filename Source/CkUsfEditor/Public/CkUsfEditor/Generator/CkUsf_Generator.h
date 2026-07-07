@@ -11,7 +11,8 @@ namespace ck::usf_editor
     {
         int32 NumGenerated = 0;
         int32 NumSkipped = 0;
-        TArray<FString> Errors;
+        TArray<FString> Errors;     // validation + shader-compile failures (each names its look)
+        TArray<FString> Warnings;   // legal-but-drifting looks (e.g. HLSL param-name mismatch)
     };
 
     // Discovers all UCkUsf_LookDefinition assets and generates/refreshes a master per look.
