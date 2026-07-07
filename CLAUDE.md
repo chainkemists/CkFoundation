@@ -19,7 +19,7 @@ code/disk on that date.
   default. This is deliberate design (`06938bba3`, "fragments are always pointer stable") — see
   `.claude/reports/DECISIONS.md` §45. Details: `ckecs-domain-reference` skill; perf implications:
   `ck-feature-frontier` candidate 5.
-- **Scale:** 99 modules in `CkFoundation.uplugin` (71 Runtime, 25 UncookedOnly, 3 Editor) + 3
+- **Scale:** 100 modules in `CkFoundation.uplugin` (72 Runtime, 25 UncookedOnly, 3 Editor; CkPool added 2026-07-07) + 3
   unlisted support dirs (CkBuildConfig, CkSettings, CkScripts). C++20 via the shared `CkModuleRules`
   base (`Source/CkBuildConfig/CkBuildConfig.Build.cs`).
 - **AngelScript is optional at build time:** the uplugin dependency is `Optional: true`;
