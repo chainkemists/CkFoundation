@@ -33,6 +33,15 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
+        // DoTick gates: the poll walks every SM entity every frame but its output only feeds
+        // debugger UI. Skip the view iteration entirely unless a debugger consumed the data
+        // recently or the on-screen debug overlay (ck.DebugOverlay) is on — see
+        // UCk_Utils_StateMachineDebug_UE::Get_IsDebugDataDesired. The on→off transition still
+        // iterates one final time so consumers see a coherent last snapshot.
+        auto
+        DoTick(
+            FCk_Time InDeltaT) -> void;
+
         static auto
         ForEachEntity(
             TimeType InDeltaT,
@@ -46,6 +55,11 @@ namespace ck
             HandleType InHandle,
             FFragment_Sm_Debug& InDebug,
             const FFragment_Sm_Current& InCurrent) -> void;
+
+    private:
+        // Tracks the previous tick's toggle state so an on→off transition can fire one final
+        // pass, without iterating every subsequent tick while no debugger is watching.
+        bool _LastTickToggleOn = false;
     };
 
     // ================================================================================================================

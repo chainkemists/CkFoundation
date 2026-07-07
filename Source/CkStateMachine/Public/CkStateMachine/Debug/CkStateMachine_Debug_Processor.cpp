@@ -5,6 +5,7 @@
 #endif
 
 #include "CkStateMachine/CkStateMachine_Stats.h"
+#include "CkStateMachine/Debug/CkStateMachine_Debug_Utils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Object/CkObject_Utils.h"
@@ -36,6 +37,24 @@ DECLARE_CYCLE_STAT(TEXT("SmDebug::HandleRequests"), STAT_SmDebug_HandleRequests,
 
 namespace ck
 {
+    auto
+        FProcessor_Sm_Debug::
+        DoTick(
+            FCk_Time InDeltaT)
+        -> void
+    {
+        const auto CurrentToggleOn = UCk_Utils_StateMachineDebug_UE::Get_IsDebugDataDesired();
+
+        if (NOT CurrentToggleOn && NOT _LastTickToggleOn)
+        { return; }
+
+        _LastTickToggleOn = CurrentToggleOn;
+
+        TProcessor::DoTick(InDeltaT);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     auto
         FProcessor_Sm_Debug::
         ForEachEntity(
