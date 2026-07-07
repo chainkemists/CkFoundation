@@ -27,6 +27,16 @@ public:
         FCk_Handle_StateMachine& InStateMachine,
         const FCk_Request_SmDebug_RecordTransition& InRequest) -> FCk_Handle_StateMachine;
 
+    // Demand tracking for the Sm_Debug poll processor. Pull-based debugger consumers (SM
+    // Debugger window, ECS Debugger inspector) stamp each read of FFragment_Sm_Debug data
+    // here; the poll processor skips its whole view iteration when nothing consumed
+    // recently AND the on-screen debug overlay (ck.DebugOverlay) is off. Game thread only.
+    static auto
+    NotifyDebugDataConsumed() -> void;
+
+    static auto
+    Get_IsDebugDataDesired() -> bool;
+
 private:
     static auto
     DoAddRequest(
