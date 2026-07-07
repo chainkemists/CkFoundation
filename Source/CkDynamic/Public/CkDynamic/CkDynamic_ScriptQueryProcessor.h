@@ -8,6 +8,7 @@
 
 #include "CkDynamic/CkDynamic_ScriptQueryBatch.h"   // FCk_ScriptQueryBatchState
 
+#include <Stats/Stats.h>
 #include <UObject/StrongObjectPtr.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -77,5 +78,10 @@ namespace ck
         FCk_ScriptProcessorQuery                       _Query;          // resolved once at construction
         FCk_ScriptQueryBatchState                      _BatchState;     // per-tick native state handed to script
         bool                                           _Disabled = false;
+
+        // One stat row per script processor class in stat CkProcessors, alongside the C++
+        // TProcessor rows — covers the native join AND the ForEachBatch VM call; without it
+        // the whole cost hides in the scheduler's Dispatch self-time.
+        TStatId                                        _TickStatId;
     };
 }
