@@ -28,6 +28,7 @@ class UCk_Utils_DynamicFragment_UE;
 namespace ck
 {
     class FProcessor_EntityLifetime_DestroyEntity;
+    class FProcessor_ScriptQueryHosted;
 
     template <typename, typename, typename...>
     class TParallelProcessor;
@@ -289,6 +290,7 @@ private:
     // TODO: exposing the storage like this is temporary - see branch feature/registry-handle-storage-support for what we really want to do
     friend UCk_Utils_EntityTag_UE;
     friend UCk_Utils_DynamicFragment_UE;
+    friend class ck::FProcessor_ScriptQueryHosted;   // typed script-processor join needs the same storage access
 
     auto Storage()
     {
