@@ -94,7 +94,9 @@ namespace ck
         }
 
         // Fill the fields common to both hosting paths: name (always the DEV class path name so RunAfter references
-        // between processors keep working), group, and the MarkedDirtyBy pump gate.
+        // between processors keep working), group, RunAfter/RunBefore ordering edges, and the MarkedDirtyBy pump
+        // gate. Ordering lives here (not on the typed path only) so a processor keeps the same scheduler edges
+        // whether it routes legacy or typed — including the two-pass window where its driver is not generated yet.
         auto
         DoFillCommon(
             FProcessorDescriptor& OutDescriptor,
@@ -104,6 +106,15 @@ namespace ck
         {
             OutDescriptor._Name = FName{*InDevClass->GetPathName()};
             OutDescriptor._GroupName = DoResolveGroupName(InCDO->Get_Group());
+
+            for (const auto& RunAfterName : InCDO->Get_RunAfter())
+            {
+                OutDescriptor._RunAfter.Add(DoResolveGroupName(RunAfterName));
+            }
+            for (const auto& RunBeforeName : InCDO->Get_RunBefore())
+            {
+                OutDescriptor._RunBefore.Add(DoResolveGroupName(RunBeforeName));
+            }
 
             if (auto* MarkedDirtyBy = InCDO->Get_MarkedDirtyBy().Get())
             {
@@ -204,15 +215,6 @@ namespace ck
                 }
             }
 
-            for (const auto& RunAfterName : InDevCDO->Get_RunAfter())
-            {
-                Descriptor._RunAfter.Add(DoResolveGroupName(RunAfterName));
-            }
-            for (const auto& RunBeforeName : InDevCDO->Get_RunBefore())
-            {
-                Descriptor._RunBefore.Add(DoResolveGroupName(RunBeforeName));
-            }
-
             Descriptor._Factory =
                 [DevClass = InDevClass, DriverClass = InDriverClass](const FCk_Registry& InRegistry) -> concepts::FTickableType
                 {
@@ -258,8 +260,11 @@ namespace ck
                 if (Class->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists))
                 { continue; }
 
-                // Drivers are registered via their dev class, never standalone.
-                if (Class->GetName().EndsWith(DriverSuffix))
+                // Drivers are registered via their dev class, never standalone. Only a class whose dev sibling
+                // actually exists is a driver — an ordinary processor whose name merely ends in _Driver falls
+                // through and registers normally.
+                if (Class->GetName().EndsWith(DriverSuffix) &&
+                    ClassByName.Contains(Class->GetName().LeftChop(DriverSuffix.Len())))
                 { continue; }
 
                 const auto* CDO = Cast<UCk_Processor_Script_Base_UE>(Class->GetDefaultObject());
@@ -267,16 +272,19 @@ namespace ck
                 { continue; }
 
                 auto Descriptor = FProcessorDescriptor{};
+                auto RoutedTyped = false;
 
                 if (auto DriverEntry = ClassByName.Find(Class->GetName() + DriverSuffix))
                 {
                     // Typed processor with a generated (or hand-written) driver.
                     Descriptor = DoBuildQueryDescriptor(Class, CDO, *DriverEntry);
+                    RoutedTyped = true;
                 }
                 else if (DoOverridesEvent(Class, ForEachBatchName))
                 {
                     // Direct mode: the class overrides ForEachBatch itself.
                     Descriptor = DoBuildQueryDescriptor(Class, CDO, nullptr);
+                    RoutedTyped = true;
                 }
                 else
                 {
@@ -292,6 +300,15 @@ namespace ck
                             "no driver yet — registered as a legacy no-op (typed processor pending driver generation, "
                             "or lifecycle-only)."), Class->GetName());
                     }
+                }
+
+                // Half-migrated tripwire: on the typed path the hosted wrapper never invokes Tick, so a leftover
+                // Tick override is dead code that silently stopped running.
+                if (RoutedTyped && DoOverridesEvent(Class, TickName))
+                {
+                    ck::ecs::Warning(TEXT("Script processor [{}] routes through the typed path but still overrides "
+                        "Tick — the Tick body will never run. Remove the Tick override (half-migrated processor?)."),
+                        Class->GetName());
                 }
 
                 const auto DescriptorName = Descriptor._Name;
