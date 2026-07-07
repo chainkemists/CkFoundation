@@ -11,4 +11,12 @@ void
     ck::usf_editor::Generate_AllLookMaterials();
 }
 
+void
+    UCkUsf_GeneratorSubsystem::
+    Generate_LookMaterial_For(
+        UCkUsf_LookDefinition* InLook)
+{
+    ck::usf_editor::Generate_LookMaterial(InLook);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
