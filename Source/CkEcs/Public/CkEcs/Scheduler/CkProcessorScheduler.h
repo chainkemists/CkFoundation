@@ -34,6 +34,14 @@ namespace ck
 
     private:
         FProcessorGraphPartition _Partition;
+
+        // Precomputed at construction from _Partition._ExecutionOrder (which stays intact for
+        // diagnostics/debugger use): _MainPassOrder holds the instantiated, non-ghost nodes the
+        // main pass dispatches; _PumpOrder additionally requires a dirty marker and no SkipPump
+        // opt-out. Avoids re-scanning and branch-skipping the full node list every pass.
+        TArray<int32> _MainPassOrder;
+        TArray<int32> _PumpOrder;
+
         int32 _MaxPumpIterations = 30;
         bool _IsTickInProgress = false;
 

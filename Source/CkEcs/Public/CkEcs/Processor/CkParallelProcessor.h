@@ -123,6 +123,8 @@ namespace ck
             });
         }
 
+        this->_LastVisitedCount = _CachedEntities.Num();
+
         if (_CachedEntities.IsEmpty())
         { return; }
 

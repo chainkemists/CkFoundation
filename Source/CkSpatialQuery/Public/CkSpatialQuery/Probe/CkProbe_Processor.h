@@ -182,7 +182,7 @@ namespace ck
             TimeType InDeltaT) -> void;
 
         auto
-        Pump() -> void;
+        Pump() -> int32;
 
     private:
         details::FProcessor_BoxProbe_Setup _Processor_BoxProbe;
@@ -456,7 +456,7 @@ namespace ck
                 TimeType InDeltaT) -> void;
 
         auto
-            Pump() -> void;
+            Pump() -> int32;
 
     private:
         details::FProcessor_BoxProbe_UpdateShape _Processor_BoxProbe;

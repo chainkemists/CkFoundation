@@ -562,12 +562,15 @@ namespace ck
     auto
         FProcessor_Probe_Setup::
         Pump()
-        -> void
+        -> int32
     {
-        _Processor_BoxProbe.Pump();
-        _Processor_SphereProbe.Pump();
-        _Processor_CapsuleProbe.Pump();
-        _Processor_CylinderProbe.Pump();
+        auto Visited = FPumpVisitedCountAccumulator{};
+        Visited.Add(_Processor_BoxProbe.Pump());
+        Visited.Add(_Processor_SphereProbe.Pump());
+        Visited.Add(_Processor_CapsuleProbe.Pump());
+        Visited.Add(_Processor_CylinderProbe.Pump());
+
+        return Visited.Get_Total();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -1111,12 +1114,15 @@ namespace ck
     auto
         FProcessor_Probe_UpdateShape::
         Pump()
-        -> void
+        -> int32
     {
-        _Processor_BoxProbe.Pump();
-        _Processor_SphereProbe.Pump();
-        _Processor_CapsuleProbe.Pump();
-        _Processor_CylinderProbe.Pump();
+        auto Visited = FPumpVisitedCountAccumulator{};
+        Visited.Add(_Processor_BoxProbe.Pump());
+        Visited.Add(_Processor_SphereProbe.Pump());
+        Visited.Add(_Processor_CapsuleProbe.Pump());
+        Visited.Add(_Processor_CylinderProbe.Pump());
+
+        return Visited.Get_Total();
     }
 }
 
