@@ -2,6 +2,7 @@
 
 #include "CkUsf/LookDefinition/CkUsf_LookDefinition.h"
 #include "CkUsf/LookDefinition/CkUsf_LookDefinition_Naming.h"
+#include "CkUsfEditor/Generator/CkUsf_LookValidator.h"
 #include "CkUsfEditor_Log.h"
 
 #include "CkCore/Validation/CkIsValid.h"
@@ -22,6 +23,7 @@
 #include "Materials/MaterialExpressionWorldPosition.h"
 #include "Materials/MaterialExpressionCameraVectorWS.h"
 #include "Materials/MaterialExpressionVertexNormalWS.h"
+#include "Materials/MaterialExpressionVertexTangentWS.h"
 #include "Materials/MaterialExpressionPixelDepth.h"
 #include "Materials/MaterialExpressionVertexColor.h"
 #include "Materials/MaterialExpressionPerInstanceCustomData.h"
@@ -77,6 +79,42 @@ namespace ck::usf_editor
             case ECk_Usf_ShadingModel::Subsurface: return MSM_Subsurface;
             case ECk_Usf_ShadingModel::ClearCoat:  return MSM_ClearCoat;
             default:                               return InDomainUnlit ? MSM_Unlit : MSM_DefaultLit;
+        }
+    }
+
+    // Resolve the per-look translucency-lighting override. Unset optional = `Inherit` (keep the
+    // engine default, TLM_VolumetricNonDirectional — cheap but flat; glass usually wants
+    // SurfacePerPixel). Only consulted for LIT translucent-family surface looks.
+    static auto Resolve_TranslucencyLighting(ECk_Usf_TranslucencyLighting In) -> TOptional<ETranslucencyLightingMode>
+    {
+        switch (In)
+        {
+            case ECk_Usf_TranslucencyLighting::VolumetricNonDirectional: return TLM_VolumetricNonDirectional;
+            case ECk_Usf_TranslucencyLighting::VolumetricDirectional:    return TLM_VolumetricDirectional;
+            case ECk_Usf_TranslucencyLighting::Surface:                  return TLM_Surface;
+            case ECk_Usf_TranslucencyLighting::SurfacePerPixel:          return TLM_SurfacePerPixelLighting;
+            default:                                                     return {};
+        }
+    }
+
+    // Inject the look's _Defines ("NAME" or "NAME=VALUE") into a Custom node — the static-switch /
+    // quality-knob equivalent (e.g. retuning a #ifndef default in the .ush without editing it).
+    static auto Apply_LookDefines(UMaterialExpressionCustom* InNode, const UCkUsf_LookDefinition* InDef) -> void
+    {
+        for (const auto& Define : InDef->_Defines)
+        {
+            FString Name, Value;
+            if (NOT Define.Split(TEXT("="), &Name, &Value))
+            { Name = Define; }
+            Name.TrimStartAndEndInline();
+            Value.TrimStartAndEndInline();
+            if (Name.IsEmpty())
+            { continue; }
+
+            FCustomDefine NewDefine;
+            NewDefine.DefineName = Name;
+            NewDefine.DefineValue = Value;
+            InNode->AdditionalDefines.Add(NewDefine);
         }
     }
 
@@ -157,6 +195,7 @@ namespace ck::usf_editor
             Code += TEXT("In.WorldPosition = WorldPosition;\n");
             Code += TEXT("In.CameraVector = CameraVector;\n");
             Code += TEXT("In.VertexNormal = VertexNormal;\n");
+            Code += TEXT("In.VertexTangent = VertexTangent;\n");
             Code += TEXT("In.PixelDepth = PixelDepth;\n");
             Code += TEXT("In.VertexColor = VertexColor;\n");
         }
@@ -246,12 +285,14 @@ namespace ck::usf_editor
     }
 
     // Create the material expression that feeds a look param into a Custom node input.
-    // A per-instance scalar becomes a PerInstanceCustomData node (DataIndex = its 0-based slot among the
-    // look's per-instance scalars; ConstDefaultValue = the uniform fallback returned on non-instanced meshes).
-    // Everything else is a named parameter. InOutPerInstanceSlot advances on each per-instance scalar so the
-    // pixel and WPO nodes derive the SAME slot map (they iterate _Parameters in the same order).
+    // A per-instance Scalar/Vector becomes a PerInstanceCustomData(3Vector) node; its DataIndex comes
+    // from UCkUsf_LookDefinition::Get_PerInstanceSlotOf — the SAME layout runtime writers query, so the
+    // pixel node, the WPO node, and CkIsmRenderer writers can never disagree on slots.
+    // ConstDefaultValue is the uniform fallback returned on non-instanced meshes.
+    // Everything else is a named parameter.
     static auto Make_ParamExpression(
-        UMaterial* InMaterial, const FCk_Usf_ParamDesc& P, FName InLookName, int32 InRow, int32& InOutPerInstanceSlot)
+        UMaterial* InMaterial, const UCkUsf_LookDefinition* InDef, const FCk_Usf_ParamDesc& P,
+        FName InLookName, int32 InRow)
         -> UMaterialExpression*
     {
         if (P._Type == ECk_Usf_ParamType::Scalar && P._PerInstance)
@@ -259,8 +300,18 @@ namespace ck::usf_editor
             auto* PerInstanceExpr = Cast<UMaterialExpressionPerInstanceCustomData>(
                 UMaterialEditingLibrary::CreateMaterialExpression(
                     InMaterial, UMaterialExpressionPerInstanceCustomData::StaticClass(), -800, InRow));
-            PerInstanceExpr->DataIndex = InOutPerInstanceSlot++;
+            PerInstanceExpr->DataIndex = InDef->Get_PerInstanceSlotOf(P._Name);
             PerInstanceExpr->ConstDefaultValue = P._DefaultScalar;
+            return PerInstanceExpr;
+        }
+
+        if (P._Type == ECk_Usf_ParamType::Vector && P._PerInstance)
+        {
+            auto* PerInstanceExpr = Cast<UMaterialExpressionPerInstanceCustomData3Vector>(
+                UMaterialEditingLibrary::CreateMaterialExpression(
+                    InMaterial, UMaterialExpressionPerInstanceCustomData3Vector::StaticClass(), -800, InRow));
+            PerInstanceExpr->DataIndex = InDef->Get_PerInstanceSlotOf(P._Name);
+            PerInstanceExpr->ConstDefaultValue = P._DefaultVector;
             return PerInstanceExpr;
         }
 
@@ -299,21 +350,30 @@ namespace ck::usf_editor
         }
     }
 
-    auto Generate_LookMaterial(UCkUsf_LookDefinition* InDef) -> UMaterial*
+    // The worker behind both public entry points; validation/compile failures land in InOutResult
+    // (each entry names its look) AND the log.
+    static auto DoGenerate_LookMaterial(UCkUsf_LookDefinition* InDef, FGenerateResult& InOutResult) -> UMaterial*
     {
-        if (ck::Is_NOT_Valid(InDef, ck::IsValid_Policy_NullptrOnly{}))
+        // Gate on the asset-vs-.ush contract BEFORE creating any material object: the Custom node
+        // passes params positionally, so a mismatch either fails with an HLSL error naming nothing
+        // about the asset or silently renders wrong. The validator makes it fail HERE, by name.
+        const auto Validation = Validate_LookDefinition(InDef);
+        for (const auto& ValidationWarning : Validation.Warnings)
         {
-            ck::usf_editor::Warning(TEXT("Null LookDefinition"));
+            ck::usf_editor::Warning(TEXT("{}"), ValidationWarning);
+            InOutResult.Warnings.Add(ValidationWarning);
+        }
+        if (NOT Validation.Get_IsValid())
+        {
+            for (const auto& ValidationError : Validation.Errors)
+            {
+                ck::usf_editor::Error(TEXT("{}"), ValidationError);
+                InOutResult.Errors.Add(ValidationError);
+            }
             return nullptr;
         }
 
         const auto LookName = InDef->Get_EffectiveLookName();
-        if (InDef->_UshFunctionName.IsNone() || InDef->_UshIncludePath.IsEmpty())
-        {
-            ck::usf_editor::Warning(TEXT("Look [{}] missing ush function/include"), LookName);
-            return nullptr;
-        }
-
         const auto Config = Get_DomainConfig(InDef->_Domain);
         const auto IsSurface = Config.Domain == MD_Surface;
         // Surface domains honour the per-look blend/shading/two-sided overrides; other domains keep the domain config.
@@ -365,6 +425,15 @@ namespace ck::usf_editor
         // A look that wants no bend simply outputs Refraction == 1.0 (air) — identity, like Opacity == 1.0.
         if (WantsRefraction) { Material->RefractionMethod = RM_IndexOfRefraction; }
 
+        // Lit translucent looks may override the translucency lighting mode (the engine default,
+        // volumetric non-directional, reads flat on glass-like surfaces). Inherit = leave it alone.
+        if (IsSurface && IsTranslucent && EffectiveShadingModel != MSM_Unlit)
+        {
+            if (const auto TranslucencyLighting = Resolve_TranslucencyLighting(InDef->_TranslucencyLighting);
+                TranslucencyLighting.IsSet())
+            { Material->TranslucencyLightingMode = TranslucencyLighting.GetValue(); }
+        }
+
         if (Config.Domain == MD_PostProcess)
         {
             // A programmatically-created PP material does not reliably default to a compositing
@@ -415,6 +484,7 @@ namespace ck::usf_editor
             { FCustomInput In; In.InputName = TEXT("WorldPosition"); Custom->Inputs.Add(In); }
             { FCustomInput In; In.InputName = TEXT("CameraVector");  Custom->Inputs.Add(In); }
             { FCustomInput In; In.InputName = TEXT("VertexNormal");  Custom->Inputs.Add(In); }
+            { FCustomInput In; In.InputName = TEXT("VertexTangent"); Custom->Inputs.Add(In); }
             { FCustomInput In; In.InputName = TEXT("PixelDepth");    Custom->Inputs.Add(In); }
             { FCustomInput In; In.InputName = TEXT("VertexColor");   Custom->Inputs.Add(In); }
         }
@@ -426,6 +496,7 @@ namespace ck::usf_editor
         { FCustomInput U; U.InputName = TEXT("UV");   Custom->Inputs.Add(U); }
 
         Custom->Code = Build_CustomCode(InDef, IsPostProcess);
+        Apply_LookDefines(Custom, InDef);
         Custom->RebuildOutputs();
         Custom->PostEditChange();
 
@@ -457,19 +528,19 @@ namespace ck::usf_editor
                     Material, InClass, -1100, InRow * 160);
                 UMaterialEditingLibrary::ConnectMaterialExpressions(Expr, FString(), Custom, InInputName);
             };
-            AddInput(UMaterialExpressionWorldPosition::StaticClass(),  TEXT("WorldPosition"), 0);
-            AddInput(UMaterialExpressionCameraVectorWS::StaticClass(), TEXT("CameraVector"),  1);
-            AddInput(UMaterialExpressionVertexNormalWS::StaticClass(), TEXT("VertexNormal"),  2);
-            AddInput(UMaterialExpressionPixelDepth::StaticClass(),     TEXT("PixelDepth"),    3);
-            AddInput(UMaterialExpressionVertexColor::StaticClass(),    TEXT("VertexColor"),   4);
+            AddInput(UMaterialExpressionWorldPosition::StaticClass(),   TEXT("WorldPosition"), 0);
+            AddInput(UMaterialExpressionCameraVectorWS::StaticClass(),  TEXT("CameraVector"),  1);
+            AddInput(UMaterialExpressionVertexNormalWS::StaticClass(),  TEXT("VertexNormal"),  2);
+            AddInput(UMaterialExpressionVertexTangentWS::StaticClass(), TEXT("VertexTangent"), 3);
+            AddInput(UMaterialExpressionPixelDepth::StaticClass(),      TEXT("PixelDepth"),    4);
+            AddInput(UMaterialExpressionVertexColor::StaticClass(),     TEXT("VertexColor"),   5);
         }
 
-        // ---- Parameter nodes wired to Custom inputs by name (per-instance scalars → PerInstanceCustomData) ----
+        // ---- Parameter nodes wired to Custom inputs by name (per-instance params → PerInstanceCustomData) ----
         int32 ParamRow = 0;
-        int32 PerInstanceSlot = 0;
         for (const auto& P : InDef->_Parameters)
         {
-            auto* ParamExpr = Make_ParamExpression(Material, P, LookName, ParamRow * 120, PerInstanceSlot);
+            auto* ParamExpr = Make_ParamExpression(Material, InDef, P, LookName, ParamRow * 120);
             if (ck::IsValid(ParamExpr, ck::IsValid_Policy_NullptrOnly{}))
             {
                 UMaterialEditingLibrary::ConnectMaterialExpressions(
@@ -537,6 +608,7 @@ namespace ck::usf_editor
             { FCustomInput U; U.InputName = TEXT("UV");   Wpo->Inputs.Add(U); }
 
             Wpo->Code = Build_WpoCustomCode(InDef);
+            Apply_LookDefines(Wpo, InDef);
             Wpo->RebuildOutputs();
             Wpo->PostEditChange();
 
@@ -551,13 +623,13 @@ namespace ck::usf_editor
             AddWpoInput(UMaterialExpressionVertexNormalWS::StaticClass(), TEXT("VertexNormal"),  1);
             AddWpoInput(UMaterialExpressionVertexColor::StaticClass(),    TEXT("VertexColor"),   2);
 
-            // Param nodes — same helper as the pixel node, so per-instance scalars derive identical slot
-            // indices (PerInstanceCustomData here too: WPO runs in the VS where per-instance data is valid).
+            // Param nodes — same helper as the pixel node; per-instance slot indices come from the
+            // LookDefinition's layout, so the two nodes can never disagree (WPO runs in the VS where
+            // per-instance data is valid).
             int32 WpoParamRow = 0;
-            int32 WpoPerInstanceSlot = 0;
             for (const auto& P : InDef->_Parameters)
             {
-                auto* ParamExpr = Make_ParamExpression(Material, P, LookName, 800 + WpoParamRow * 120, WpoPerInstanceSlot);
+                auto* ParamExpr = Make_ParamExpression(Material, InDef, P, LookName, 800 + WpoParamRow * 120);
                 if (ck::IsValid(ParamExpr, ck::IsValid_Policy_NullptrOnly{}))
                 {
                     UMaterialEditingLibrary::ConnectMaterialExpressions(
@@ -591,6 +663,12 @@ namespace ck::usf_editor
 
         ck::usf_editor::Log(TEXT("Generated master for look [{}]"), LookName);
         return Material;
+    }
+
+    auto Generate_LookMaterial(UCkUsf_LookDefinition* InDef) -> UMaterial*
+    {
+        FGenerateResult DiscardedResult;   // failures are also logged inside the worker
+        return DoGenerate_LookMaterial(InDef, DiscardedResult);
     }
 
     // Forces the just-generated material's shaders to finish compiling and reports any compile
@@ -627,15 +705,15 @@ namespace ck::usf_editor
         for (const auto& A : Assets)
         {
             auto* Def = Cast<UCkUsf_LookDefinition>(A.GetAsset());
-            auto* Material = Generate_LookMaterial(Def);
+            auto* Material = DoGenerate_LookMaterial(Def, Result);
             if (ck::Is_NOT_Valid(Material, ck::IsValid_Policy_NullptrOnly{}))
             { ++Result.NumSkipped; continue; }
 
             ++Result.NumGenerated;
             Validate_LookShaders(Material, Def->Get_EffectiveLookName(), Result.Errors);
         }
-        ck::usf_editor::Log(TEXT("CkUsf generate: {} generated, {} skipped, {} shader error(s)"),
-            Result.NumGenerated, Result.NumSkipped, Result.Errors.Num());
+        ck::usf_editor::Log(TEXT("CkUsf generate: {} generated, {} skipped, {} error(s), {} warning(s)"),
+            Result.NumGenerated, Result.NumSkipped, Result.Errors.Num(), Result.Warnings.Num());
         return Result;
     }
 }
