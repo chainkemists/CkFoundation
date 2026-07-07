@@ -10,7 +10,7 @@
 auto
     UCk_Utils_RenderStatus_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_RenderStatus_ParamsData& InParams)
     -> void
 {
@@ -47,7 +47,7 @@ auto
 auto
     UCk_Utils_RenderStatus_UE::
     Has(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     return InHandle.Has<ck::FFragment_RenderStatus_Params>();
@@ -56,7 +56,7 @@ auto
 auto
     UCk_Utils_RenderStatus_UE::
     Ensure(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have RenderStatus"), InHandle)
@@ -68,7 +68,7 @@ auto
 auto
     UCk_Utils_RenderStatus_UE::
     Request_QueryRenderedActors(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Request_RenderStatus_QueryRenderedActors& InRequest,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Delegate_RenderStatus_OnRenderedActorsQueried& InDelegate)
