@@ -1,0 +1,24 @@
+// /CkParticles/Behaviors/Behavior_Galaxy.ush — BehaviorId 5.
+// Self-driving spiral disk: each particle is assigned to one of 3 arms by Seed and placed on a slowly-rotating
+// log-ish spiral that winds outward over its life, with a little Z jitter for thickness. Tint blue core -> warm
+// rim. Knobs below — keep the CPU mirror in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+FCkParticles_StageOutput CkParticles_Behavior_Galaxy(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    const float n       = CkParticles_NormalizedAge(In);
+    const int   arm     = int(CkParticles_Rand(In.Seed, 1) * 3.0);   // 0,1,2
+    const float armBase = float(arm) * 2.09439510239;                // 120 degrees
+    const float radius  = lerp(40.0, 260.0, n);                      // wind outward over life
+    const float spin    = In.Age * 0.6;                              // slow rotation
+    const float angle   = armBase + radius * 0.012 + spin;           // spiral winding
+    const float zJit    = (CkParticles_Rand(In.Seed, 2) - 0.5) * 30.0;
+
+    O.Position = float3(radius * cos(angle), radius * sin(angle), zJit);
+    O.Color    = lerp(float4(0.7, 0.8, 2.0, 1.0), float4(1.6, 1.2, 0.9, 1.0), n); // blue core -> warm rim
+
+    return O;
+}

@@ -1,0 +1,20 @@
+// /CkParticles/Behaviors/Behavior_Nova.ush — BehaviorId 8.
+// Expanding flat shockwave ring in the local XY plane; grows and fades over life, per-Seed angle + radius jitter.
+// Tint white-hot -> orange. Self-driving. Knobs below — keep the CPU mirror in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+FCkParticles_StageOutput CkParticles_Behavior_Nova(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    const float n      = CkParticles_NormalizedAge(In);
+    const float A      = CkParticles_Rand(In.Seed, 1) * 6.28318530718;
+    const float Rad    = lerp(10.0, 380.0, n);                 // expand outward
+    const float Jitter = (CkParticles_Rand(In.Seed, 2) - 0.5) * 16.0;
+
+    O.Position = float3(cos(A) * (Rad + Jitter), sin(A) * (Rad + Jitter), 0.0);
+    O.Color    = lerp(float4(3.0, 2.4, 1.0, 1.0), float4(1.2, 0.3, 0.0, 1.0), n) * (1.0 - n);
+
+    return O;
+}

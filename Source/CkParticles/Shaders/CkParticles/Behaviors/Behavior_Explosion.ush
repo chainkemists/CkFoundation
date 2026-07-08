@@ -1,0 +1,22 @@
+// /CkParticles/Behaviors/Behavior_Explosion.ush — BehaviorId 2.
+// Self-driving radial burst: each particle flies outward along a per-Seed random direction, eases to a stop, sags
+// slightly under gravity. Bounded by NormalizedAge so the burst radius is lifetime-independent. Tint white-hot ->
+// ember (HDR >1 so an additive/glow material blooms). Knobs below — keep the CPU mirror in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+FCkParticles_StageOutput CkParticles_Behavior_Explosion(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    const float n   = CkParticles_NormalizedAge(In);
+    const float3 Dir = CkParticles_RandDir(In.Seed);
+    const float MaxR = lerp(120.0, 300.0, CkParticles_Rand(In.Seed, 3)); // outward reach
+    const float ease = 1.0 - pow(1.0 - n, 2.0);                          // fast out, decelerate
+    const float3 Sag = float3(0.0, 0.0, -150.0 * n * n);                 // slight gravity droop
+
+    O.Position = Dir * (MaxR * ease) + Sag;
+    O.Color    = lerp(float4(3.0, 2.2, 0.8, 1.0), float4(1.0, 0.08, 0.0, 1.0), n);
+
+    return O;
+}
