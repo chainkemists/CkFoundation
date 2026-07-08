@@ -363,16 +363,52 @@ auto
     { return; }
 
     FMember& M = _Members[InIndex];
-    M.Inst.CustomDataA = InA;
-    M.Inst.CustomDataB = InB;
+    M.Inst.UserData[0] = InA;
+    M.Inst.UserData[1] = InB;
     if (M.Visible)
     { _DirtyTiles.Add(M.Tile); }
 }
 
 auto
     ACk_Iskm_BatchedCrowd_Actor::
-    Set_MemberVisible(int32 InIndex, bool InVisible)
+    Set_MemberCustomData(int32 InIndex, int32 InFirstFloat, const TArray<float>& InValues)
     -> void
+{
+    if (_Members.IsValidIndex(InIndex) == false)
+    { return; }
+
+    CK_ENSURE_IF_NOT(InFirstFloat >= 2 &&
+        InFirstFloat + InValues.Num() <= UCk_Iskm_BatchedClusterComponent::NumCustomDataFloats,
+        TEXT("[CkIskm] Member custom-data write [{}..{}) is outside the game floats [2..{}) — "
+             "floats [0]/[1] are the animation frame bits"),
+        InFirstFloat, InFirstFloat + InValues.Num(), UCk_Iskm_BatchedClusterComponent::NumCustomDataFloats)
+    { return; }
+
+    FMember& M = _Members[InIndex];
+    for (int32 K = 0; K < InValues.Num(); ++K)
+    { M.Inst.UserData[InFirstFloat - 2 + K] = InValues[K]; }
+    if (M.Visible)
+    { _DirtyTiles.Add(M.Tile); }
+}
+
+float
+    ACk_Iskm_BatchedCrowd_Actor::
+    Get_MemberCustomData(int32 InIndex, int32 InFloatIndex) const
+{
+    if (_Members.IsValidIndex(InIndex) == false)
+    { return 0.0f; }
+
+    CK_ENSURE_IF_NOT(InFloatIndex >= 2 && InFloatIndex < UCk_Iskm_BatchedClusterComponent::NumCustomDataFloats,
+        TEXT("[CkIskm] Member custom-data read [{}] is outside the game floats [2..{})"),
+        InFloatIndex, UCk_Iskm_BatchedClusterComponent::NumCustomDataFloats)
+    { return 0.0f; }
+
+    return _Members[InIndex].Inst.UserData[InFloatIndex - 2];
+}
+
+void
+    ACk_Iskm_BatchedCrowd_Actor::
+    Set_MemberVisible(int32 InIndex, bool InVisible)
 {
     if (_Members.IsValidIndex(InIndex) == false)
     { return; }

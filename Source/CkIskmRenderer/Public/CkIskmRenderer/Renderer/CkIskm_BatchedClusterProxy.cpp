@@ -55,11 +55,12 @@ namespace ck_iskm_proxy
 
         // Seed PER-INSTANCE custom data from the start (not per-component CustomPrimitiveData[0]) so a static cluster
         // with distinct per-instance frames renders correctly, and there's no per-component->per-instance pop on the
-        // first animated frame. [asfloat(Cur), asfloat(Pre), 0, 0] per instance, matching SendRenderDynamicData.
+        // first animated frame. [asfloat(Cur), asfloat(Pre), UserData[0..13]] per instance, matching SendRenderDynamicData.
+        constexpr int32 NumFloats = UCk_Iskm_BatchedClusterComponent::NumCustomDataFloats;
         Out.Transforms.Reserve(N);
         Out.PrevTransforms.Reserve(N);
-        Out.NumCustomDataFloats = 4;
-        Out.CustomData.SetNumZeroed(N * 4);
+        Out.NumCustomDataFloats = NumFloats;
+        Out.CustomData.SetNumZeroed(N * NumFloats);
         for (int32 i = 0; i < N; ++i)
         {
             const UCk_Iskm_BatchedClusterComponent::FInstance& Inst = Instances[i];
@@ -71,10 +72,10 @@ namespace ck_iskm_proxy
             float PreBits = 0.0f;
             FMemory::Memcpy(&CurBits, &Inst.CurFrame, sizeof(float));
             FMemory::Memcpy(&PreBits, &Inst.PrevFrame, sizeof(float));
-            Out.CustomData[i * 4 + 0] = CurBits;
-            Out.CustomData[i * 4 + 1] = PreBits;
-            Out.CustomData[i * 4 + 2] = Inst.CustomDataA;
-            Out.CustomData[i * 4 + 3] = Inst.CustomDataB;
+            float* const Dst = &Out.CustomData[i * NumFloats];
+            Dst[0] = CurBits;
+            Dst[1] = PreBits;
+            FMemory::Memcpy(Dst + 2, Inst.UserData, sizeof(Inst.UserData));
         }
 
         // Per-INSTANCE local bound = one animated-pose box (engine applies it per instance transform). PRIMITIVE

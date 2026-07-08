@@ -24,6 +24,13 @@ class CKISKMRENDERER_API UCk_Iskm_BatchedClusterComponent : public UPrimitiveCom
 public:
     UCk_Iskm_BatchedClusterComponent();
 
+    // GPU per-instance custom-data layout: [0]=CurFrame bits, [1]=PrevFrame bits,
+    // [2..15]=FInstance::UserData[0..13] (the material PerInstanceCustomData DataIndex space).
+    // Game layout of [2..15] is owned by the game (BB: DESIGN_IskmCosmeticParity.md —
+    // [2..9] slot indices, [10..12] skin RGB, [13..15] spare).
+    static constexpr int32 NumCustomDataFloats = 16; // must stay % 4 == 0
+    static constexpr int32 NumUserDataFloats   = 14; // NumCustomDataFloats - 2 frame floats
+
     struct FInstance
     {
         FTransform Transform = FTransform::Identity; // relative to the component
@@ -36,10 +43,10 @@ public:
         // Last transform pushed to the render thread — the motion-vector source. Without it, moving instances
         // upload Prev==Current (zero velocity) and ghost under TAA. Seeded to Transform on Set_Instances.
         FTransform PrevPushedTransform = FTransform::Identity;
-        // Per-instance material custom data, surfaced to the shader as instance custom-data floats [2] and [3]
-        // ([0]/[1] carry the animation frame indices). Drives per-instance material variety (tint etc.).
-        float CustomDataA = 0.0f;
-        float CustomDataB = 0.0f;
+        // Per-instance material custom data, surfaced to the shader as instance custom-data
+        // floats [2..15] ([0]/[1] carry the animation frame indices). Drives per-instance
+        // material variety (slot picks, skin tone, tint etc.).
+        float UserData[NumUserDataFloats] = {};
     };
 
     // Bind the AnimCollection (provides the baked SRV/UB + per-mesh render data) and the visible mesh to draw.

@@ -321,6 +321,24 @@ auto
 
 void
     UCk_Utils_IskmBatched_UE::
+    Set_CrowdMemberCustomDataFloats(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, int32 InFirstFloat, const TArray<float>& InValues)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return; }
+    InCrowd->Set_MemberCustomData(InIndex, InFirstFloat, InValues);
+}
+
+float
+    UCk_Utils_IskmBatched_UE::
+    Get_CrowdMemberCustomDataFloat(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, int32 InFloatIndex)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return 0.0f; }
+    return InCrowd->Get_MemberCustomData(InIndex, InFloatIndex);
+}
+
+void
+    UCk_Utils_IskmBatched_UE::
     Set_CrowdDefaultCustomPrimitiveData(ACk_Iskm_BatchedCrowd_Actor* InCrowd, const TArray<float>& InFloats)
 {
     if (ck::Is_NOT_Valid(InCrowd))

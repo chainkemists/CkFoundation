@@ -157,6 +157,19 @@ public:
     static void
     Set_CrowdMemberCustomData(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, float InA, float InB);
 
+    // Absolute-indexed per-member custom data. InFirstFloat is the material PerInstanceCustomData
+    // DataIndex (game floats: 2..15; [0]/[1] carry the animation frame bits). Game layout of [2..15]:
+    // BB DESIGN_IskmCosmeticParity.md — [2..9] slot indices, [10..12] skin RGB, [13..15] spare.
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Set Crowd Member Custom Data Floats")
+    static void
+    Set_CrowdMemberCustomDataFloats(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, int32 InFirstFloat, const TArray<float>& InValues);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Get Crowd Member Custom Data Float")
+    static float
+    Get_CrowdMemberCustomDataFloat(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, int32 InFloatIndex);
+
     // Default CustomPrimitiveData floats for every tile component (existing and future). CPD-parameterized
     // materials (e.g. CharacterMaster skin color at CPD 0/1/2) read zeros on batched tiles otherwise — the
     // whole crowd renders with unset (grey) parameters. One shared value per crowd.

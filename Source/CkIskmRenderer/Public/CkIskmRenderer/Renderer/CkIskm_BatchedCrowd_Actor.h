@@ -62,8 +62,14 @@ public:
     // Switch a member's sequence/rate (e.g. idle -> walk when its NPC starts moving).
     void       Set_MemberAnimation(int32 InIndex, int32 InSequenceIndex, float InRate, bool InResetTime);
 
-    // Per-member material custom data — shader instance custom-data floats [2] and [3] (tint/variety).
+    // Per-member material custom data, legacy 2-float form — writes UserData[0]/[1] (shader floats [2]/[3]).
     void       Set_MemberCustomData(int32 InIndex, float InA, float InB);
+
+    // Absolute-indexed writes into the per-instance custom-data floats. InFirstFloat is in the SAME index
+    // space as the material PerInstanceCustomData node's DataIndex (game data: 2..15; [0]/[1] are the
+    // animation frame bits and are rejected — writing them would corrupt pose lookup).
+    void       Set_MemberCustomData(int32 InIndex, int32 InFirstFloat, const TArray<float>& InValues);
+    float      Get_MemberCustomData(int32 InIndex, int32 InFloatIndex) const;
 
     // Hide/show a member in its batched tile (rebuilds that one tile). Hidden members leave a gap for a per-SKMC stand-in.
     void       Set_MemberVisible(int32 InIndex, bool InVisible);
