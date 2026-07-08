@@ -66,6 +66,18 @@ namespace ck::angelscriptgenerator::self_heal
         TMap<FString, FConvergenceTracker> sPerSignatureRecoveryCount;
         TSet<FString>                      sBlacklistedSignatures;
 
+        // Canonicals quarantined this session (absolute path). Quarantine is a
+        // one-shot per canonical: the delete+rebuild reduces a stale canonical
+        // to the proven fresh-clone path, so a second request for the SAME
+        // canonical in the same phase means either the first fixed it (no
+        // request arrives) or the source is genuinely broken (re-deleting would
+        // thrash with no MaxCycles cap mid-session). The guard is added on the
+        // ATTEMPT, not on success, so a failed quarantine also does not loop —
+        // the terminal banner tells the user to restart. Reset alongside the
+        // convergence trackers (cold launch + bootstrap->mid-session), so a
+        // genuinely-new staleness event in the next phase gets a fresh attempt.
+        TSet<FString> sQuarantinedEspCanonicals;
+
         // Cold-start deferral: file mutations applied inside OnReloadHadErrors
         // are invisible to Hazelight's AS hot-reload checker thread because that
         // thread hasn't started yet — its first scan establishes mtime baselines
@@ -138,6 +150,25 @@ namespace ck::angelscriptgenerator::self_heal
             { return NOT IFileManager::Get().FileExists(*Path); });
 
             return Candidates;
+        }
+
+        // A generated EntitySpawnParams canonical: `.../Script/Generated/<X>_
+        // EntitySpawnParams.as`. These are the ONLY generated files the
+        // dispatcher may delete (the sanctioned exception in Claude.md
+        // Anti-pattern #4) — gitignored, machine-local, byte-derivable from
+        // source. Tracked generated files (BusterBlockAssets.as,
+        // *_AutoTestActors.as) never carry this suffix, so they can never be
+        // quarantined. Pure string predicate (no IO) so classification stays
+        // deterministic and unit-testable, independent of what exists on disk.
+        auto Is_EntitySpawnParamsCanonicalPath(
+            const FString& InFilePath) -> bool
+        {
+            if (NOT InFilePath.EndsWith(TEXT("_EntitySpawnParams.as")))
+            { return false; }
+
+            auto Normalized = InFilePath;
+            FPaths::NormalizeFilename(Normalized);  // backslashes -> forward slashes
+            return Normalized.Contains(TEXT("/Script/Generated/"));
         }
 
         // ---- DynamicHandle strategy ------------------------------------------------
@@ -309,6 +340,58 @@ namespace ck::angelscriptgenerator::self_heal
                 || InError.Kind == ECk_AsParsedError_Kind::BareCtorNoMatchingSignatures;
 
             return IsStructShapedError ? InError.MissingIdentifier : FString{};
+        }
+
+        // Quarantine + full-shape rebuild for a stale EntitySpawnParams
+        // canonical that references a deleted type. The error's FilePath IS the
+        // canonical. Seedless: Quarantine_And_ResynthesizeFullShapes enumerates
+        // the class union from the canonical's own `namespace U<X>` blocks, so
+        // every entity-script shape it covered is rebuilt from CURRENT source in
+        // one pass — the retry compile then succeeds without burning a cycle per
+        // "every other class just lost its struct".
+        auto Apply_QuarantineStaleEspCanonical(
+            const FCk_AsParsedError& InError,
+            const TArray<FString>&   InScanRoots,
+            FCk_AsSourceScanCache*   InScanCache) -> bool
+        {
+            const auto& CanonicalPath = InError.FilePath;
+
+            // Defense in depth: only a gitignored ESP canonical may be deleted
+            // (Claude.md Anti-pattern #4's sole sanctioned canonical mutation).
+            // Classify already gated on this — re-check so a future caller can't
+            // route a tracked generated file into a delete.
+            if (NOT Is_EntitySpawnParamsCanonicalPath(CanonicalPath))
+            {
+                Warning(TEXT("[SelfHeal] Refusing quarantine — '{}' is not an EntitySpawnParams canonical."),
+                    CanonicalPath);
+                return false;
+            }
+
+            if (sQuarantinedEspCanonicals.Contains(CanonicalPath))
+            {
+                Log(TEXT("[SelfHeal] Canonical '{}' already quarantined this session — not retrying."),
+                    CanonicalPath);
+                return false;
+            }
+            sQuarantinedEspCanonicals.Add(CanonicalPath);
+
+            Log(TEXT("[SelfHeal] Stale canonical '{}' references a deleted type ('{}' @ {}:{}) — ")
+                TEXT("quarantining + rebuilding full shapes from source."),
+                CanonicalPath, InError.MissingIdentifier, InError.Line, InError.Column);
+
+            const auto Quarantined = FCkAsStubSynthesizer::Quarantine_And_ResynthesizeFullShapes(
+                CanonicalPath, /*InSeedClassNames=*/{}, InError, InScanRoots, InScanCache);
+
+            if (Quarantined.Success)
+            {
+                Log(TEXT("[SelfHeal] Quarantined stale canonical '{}' and rebuilt full-shape stubs -> {}. {}"),
+                    CanonicalPath, Quarantined.TargetFilePath, Quarantined.ErrorMessage);
+                return true;
+            }
+
+            Warning(TEXT("[SelfHeal] Quarantine of stale canonical '{}' FAILED: {}"),
+                CanonicalPath, Quarantined.ErrorMessage);
+            return false;
         }
 
         // InCandidates / InScanRoots / InScanCache are hoisted to ONCE PER DRAIN
@@ -485,6 +568,11 @@ namespace ck::angelscriptgenerator::self_heal
                     return false;
                 }
 
+                case ECk_RecoveryStrategy::Quarantine_StaleEspCanonical:
+                {
+                    return Apply_QuarantineStaleEspCanonical(InError, InScanRoots, InScanCache);
+                }
+
                 case ECk_RecoveryStrategy::Author_FixupRequired_AdjacentStringLiteral:
                 {
                     // No auto-fix — modifying user source is out of contract for
@@ -620,6 +708,11 @@ namespace ck::angelscriptgenerator::self_heal
                 case ECk_RecoveryStrategy::KickGenerator_DynamicHandle:
                 {
                     return InAction.Error.MissingIdentifier;
+                }
+                case ECk_RecoveryStrategy::Quarantine_StaleEspCanonical:
+                {
+                    return FString::Printf(TEXT("quarantine stale canonical %s (dead type '%s')"),
+                        *InAction.Error.FilePath, *InAction.Error.MissingIdentifier);
                 }
                 case ECk_RecoveryStrategy::Author_FixupRequired_AdjacentStringLiteral:
                 {
@@ -940,6 +1033,15 @@ namespace ck::angelscriptgenerator::self_heal
                 {
                     return FString::Printf(TEXT("DynamicHandle::%s"),
                         *InAction.Error.MissingIdentifier);
+                }
+                case ECk_RecoveryStrategy::Quarantine_StaleEspCanonical:
+                {
+                    // One-shot per canonical, gated by sQuarantinedEspCanonicals
+                    // in Apply — NOT the per-signature convergence counter,
+                    // whose cap of 3 would permit three deletes of the same
+                    // canonical. Untracked here (empty key => Try_ReserveSynthesis
+                    // passes through; the set does the real loop prevention).
+                    return FString{};
                 }
                 case ECk_RecoveryStrategy::Author_FixupRequired_AdjacentStringLiteral:
                 case ECk_RecoveryStrategy::Unrecognized:
@@ -1289,6 +1391,18 @@ namespace ck::angelscriptgenerator::self_heal
                 if (NOT FCkAsStubSynthesizer::Derive_ClassNameFromStructName(InError.MissingIdentifier).IsEmpty())
                 { return ECk_RecoveryStrategy::SynthesizeStub_EntitySpawnParams; }
 
+                // The identifier is neither a dynamic handle nor a generated
+                // SpawnParams struct — it's an ordinary type (enum/struct) that
+                // no longer exists. If the error is located INSIDE a generated
+                // EntitySpawnParams canonical, the canonical is stale: it
+                // references a type deleted/renamed out from under it (e.g. an
+                // ExposeOnSpawn field enum unified away). Quarantine + rebuild
+                // from source. Location-keyed, so the identical "not a data
+                // type" error in author source stays Unrecognized (a real
+                // authoring bug the dispatcher must not paper over).
+                if (Is_EntitySpawnParamsCanonicalPath(InError.FilePath))
+                { return ECk_RecoveryStrategy::Quarantine_StaleEspCanonical; }
+
                 return ECk_RecoveryStrategy::Unrecognized;
             }
 
@@ -1348,6 +1462,7 @@ namespace ck::angelscriptgenerator::self_heal
         sLastBanner = FLastBannerState{};
         sPerSignatureRecoveryCount.Reset();
         sBlacklistedSignatures.Reset();
+        sQuarantinedEspCanonicals.Reset();
         // sModalTickHandle left as-is; OnModalLoopTick self-cleans on empty queue.
     }
 
@@ -1412,6 +1527,7 @@ namespace ck::angelscriptgenerator::self_heal
         sCyclesRun = 0;
         sPerSignatureRecoveryCount.Reset();
         sBlacklistedSignatures.Reset();
+        sQuarantinedEspCanonicals.Reset();
     }
 
     // ----------------------------------------------------------------------------------------------------------------
