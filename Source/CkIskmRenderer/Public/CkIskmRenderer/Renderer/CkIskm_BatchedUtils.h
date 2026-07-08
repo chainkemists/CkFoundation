@@ -185,4 +185,17 @@ public:
         DisplayName = "[Ck][IskmBatched] Set Crowd Override Material")
     static void
     Set_CrowdOverrideMaterial(ACk_Iskm_BatchedCrowd_Actor* InCrowd, UMaterialInterface* InMaterial);
+
+    // Per-SLOT override materials (increment ③): index = mesh material slot. The whole-crowd
+    // Set_CrowdOverrideMaterial (debug) WINS over these; null/absent entries fall back to mesh
+    // defaults. Applied to existing and future tiles.
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Set Crowd Slot Override Materials")
+    static void
+    Set_CrowdSlotOverrideMaterials(ACk_Iskm_BatchedCrowd_Actor* InCrowd, const TArray<UMaterialInterface*>& InMaterials);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Get Crowd Slot Override Material")
+    static UMaterialInterface*
+    Get_CrowdSlotOverrideMaterial(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InSlotIndex);
 };

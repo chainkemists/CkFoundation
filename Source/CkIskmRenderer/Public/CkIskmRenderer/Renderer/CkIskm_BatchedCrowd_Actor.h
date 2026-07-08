@@ -85,6 +85,12 @@ public:
     // one cheap override (e.g. a skin-toned MID) gives coherent distant silhouettes. Null restores mesh materials.
     void       Set_OverrideMaterial(UMaterialInterface* InMaterial);
 
+    // Per-SLOT override materials (increment ③): element index = mesh material slot. The whole-body
+    // Set_OverrideMaterial above WINS over these (debug); null/absent entries fall back to mesh defaults.
+    // Applied to existing and future tiles.
+    void       Set_SlotOverrideMaterials(const TArray<UMaterialInterface*>& InMaterials);
+    UMaterialInterface* Get_SlotOverrideMaterial(int32 InSlotIndex) const;
+
     // Sum of each tile component's CURRENT instance count (i.e. only visible members) — drops when a member is hidden.
     int32      Get_RenderedInstanceCount() const;
 
@@ -121,6 +127,9 @@ private:
 
     UPROPERTY(Transient)
     TObjectPtr<UMaterialInterface> _OverrideMaterial;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UMaterialInterface>> _SlotOverrideMaterials;
 
     UPROPERTY(Transient)
     TMap<FIntPoint, TObjectPtr<UCk_Iskm_BatchedClusterComponent>> _Tiles;

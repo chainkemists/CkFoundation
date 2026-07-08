@@ -74,6 +74,12 @@ public:
     // Recreates the proxy. Null restores the mesh's own materials.
     void Set_OverrideMaterial(UMaterialInterface* InMaterial);
 
+    // Per-SLOT override materials (increment ③): element index = mesh material slot. The whole-body
+    // Set_OverrideMaterial above WINS over these (debug); null/absent entries fall back to mesh defaults.
+    // Recreates the proxy (materials are cached at construction).
+    void Set_SlotOverrideMaterials(const TArray<UMaterialInterface*>& InMaterials);
+    UMaterialInterface* Get_SlotOverrideMaterial(int32 InSlotIndex) const;
+
     UMaterialInterface* Get_OverrideMaterial() const { return _OverrideMaterial; }
     UCk_IskmAnimCollection_Data* Get_AnimCollection() const { return _AnimCollection; }
     USkeletalMesh* Get_Mesh() const { return _Mesh; }
@@ -94,6 +100,7 @@ private:
     UPROPERTY(Transient) TObjectPtr<UCk_IskmAnimCollection_Data> _AnimCollection;
     UPROPERTY(Transient) TObjectPtr<USkeletalMesh> _Mesh;
     UPROPERTY(Transient) TObjectPtr<UMaterialInterface> _OverrideMaterial;
+    UPROPERTY(Transient) TArray<TObjectPtr<UMaterialInterface>> _SlotOverrideMaterials;
 
     TArray<FInstance> _Instances;
     FBox _LocalBounds = FBox(ForceInit);
