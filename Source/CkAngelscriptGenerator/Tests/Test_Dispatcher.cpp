@@ -33,13 +33,14 @@ namespace
 
     auto Make_IdentifierNotADataType(
         const TCHAR* InMissingIdentifier,
-        const TCHAR* InLookupScope = TEXT("")) -> FCk_AsParsedError
+        const TCHAR* InLookupScope = TEXT(""),
+        const TCHAR* InFilePath    = TEXT("D:/Test/Caller.as")) -> FCk_AsParsedError
     {
         auto E = FCk_AsParsedError{};
         E.Kind              = ECk_AsParsedError_Kind::IdentifierNotADataType;
         E.MissingIdentifier = InMissingIdentifier;
         E.LookupScope       = InLookupScope;
-        E.FilePath          = TEXT("D:/Test/Caller.as");
+        E.FilePath          = InFilePath;
         E.Line              = 10;
         E.Column            = 5;
         return E;
@@ -232,6 +233,83 @@ bool FCkTest_Dispatcher_Classify_Unrecognized::RunTest(const FString&)
         static_cast<int32>(FCkAsRecoveryDispatcher::Classify(
             Make_IdentifierNotADataType(TEXT("FBb_SomeRandomStruct")))),
         static_cast<int32>(ECk_RecoveryStrategy::Unrecognized));
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Classify: a deleted type ('Identifier <X> is not a data type') that is
+// neither a dynamic handle nor a generated SpawnParams struct routes to
+// Quarantine_StaleEspCanonical when — and ONLY when — the error is located
+// inside a generated *_EntitySpawnParams.as canonical. The same error in author
+// source, or in a TRACKED generated file, stays Unrecognized: the LOCATION is
+// the discriminator, and only gitignored ESP canonicals are delete-safe.
+//
+// Regression for the 2026-07 stale-canonical boot-blocker: enums EBb_NamedNpc /
+// EBb_Employee were unified into EBb_Npc; a leftover local ESP canonical still
+// referenced the deleted enums and self-heal declined to act (the identifier
+// matched neither FCk_Handle_ nor F<X>_SpawnParams, so Classify returned
+// Unrecognized -> terminal banner -> editor wedged at the AS modal).
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_Dispatcher_Classify_StaleEspCanonical,
+    "CkAngelscriptGenerator.UnitTests.Dispatcher.Classify_StaleEspCanonical",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_Dispatcher_Classify_StaleEspCanonical::RunTest(const FString&)
+{
+    // The real incident: a deleted enum referenced inside the project ESP canonical.
+    TestEqual(TEXT("deleted enum inside project ESP canonical -> Quarantine"),
+        static_cast<int32>(FCkAsRecoveryDispatcher::Classify(
+            Make_IdentifierNotADataType(TEXT("EBb_NamedNpc"), TEXT(""),
+                TEXT("D:/Repos/BusterBlock/Script/Generated/BusterBlock_EntitySpawnParams.as")))),
+        static_cast<int32>(ECk_RecoveryStrategy::Quarantine_StaleEspCanonical));
+
+    // A plugin ESP canonical (backslashes + a namespaced lookup scope) also qualifies.
+    TestEqual(TEXT("deleted enum inside plugin ESP canonical (backslashes) -> Quarantine"),
+        static_cast<int32>(FCkAsRecoveryDispatcher::Classify(
+            Make_IdentifierNotADataType(TEXT("EBb_Employee"), TEXT("UBb_Npc_EntityScript"),
+                TEXT("D:\\Repos\\BusterBlock\\Plugins\\BusterBlockTests\\Script\\Generated\\BusterBlockTests_EntitySpawnParams.as")))),
+        static_cast<int32>(ECk_RecoveryStrategy::Quarantine_StaleEspCanonical));
+
+    // Discrimination 1: the identical error in AUTHOR source is a real authoring
+    // bug — stays Unrecognized (terminal banner), never quarantines user code.
+    TestEqual(TEXT("deleted type in author source -> Unrecognized"),
+        static_cast<int32>(FCkAsRecoveryDispatcher::Classify(
+            Make_IdentifierNotADataType(TEXT("EBb_NamedNpc"), TEXT(""),
+                TEXT("D:/Repos/BusterBlock/Script/Npc/BB_Npc_EntityScript.as")))),
+        static_cast<int32>(ECk_RecoveryStrategy::Unrecognized));
+
+    // Discrimination 2: TRACKED generated files (BusterBlockAssets.as,
+    // *_AutoTestActors.as) are not *_EntitySpawnParams.as canonicals — deleting
+    // them would destroy committed state, so they must never quarantine.
+    TestEqual(TEXT("deleted type in tracked generated Assets file -> Unrecognized"),
+        static_cast<int32>(FCkAsRecoveryDispatcher::Classify(
+            Make_IdentifierNotADataType(TEXT("EBb_NamedNpc"), TEXT(""),
+                TEXT("D:/Repos/BusterBlock/Script/Generated/BusterBlockAssets.as")))),
+        static_cast<int32>(ECk_RecoveryStrategy::Unrecognized));
+
+    TestEqual(TEXT("deleted type in tracked AutoTestActors file -> Unrecognized"),
+        static_cast<int32>(FCkAsRecoveryDispatcher::Classify(
+            Make_IdentifierNotADataType(TEXT("EBb_NamedNpc"), TEXT(""),
+                TEXT("D:/Repos/BusterBlock/Script/Generated/BusterBlock_AutoTestActors.as")))),
+        static_cast<int32>(ECk_RecoveryStrategy::Unrecognized));
+
+    // The new location check is a FALLBACK after the handle / SpawnParams
+    // checks — a real handle or SpawnParams identifier still wins even when the
+    // error is located inside the canonical (classification order preserved).
+    TestEqual(TEXT("FCk_Handle_ inside canonical still -> DynamicHandle (not Quarantine)"),
+        static_cast<int32>(FCkAsRecoveryDispatcher::Classify(
+            Make_IdentifierNotADataType(TEXT("FCk_Handle_CheckoutCounter"), TEXT(""),
+                TEXT("D:/Repos/BusterBlock/Script/Generated/BusterBlock_EntitySpawnParams.as")))),
+        static_cast<int32>(ECk_RecoveryStrategy::KickGenerator_DynamicHandle));
+
+    TestEqual(TEXT("F<X>_SpawnParams inside canonical still -> SynthesizeStub (not Quarantine)"),
+        static_cast<int32>(FCkAsRecoveryDispatcher::Classify(
+            Make_IdentifierNotADataType(TEXT("FBb_Npc_EntityScript_SpawnParams"), TEXT(""),
+                TEXT("D:/Repos/BusterBlock/Script/Generated/BusterBlock_EntitySpawnParams.as")))),
+        static_cast<int32>(ECk_RecoveryStrategy::SynthesizeStub_EntitySpawnParams));
 
     return true;
 }
