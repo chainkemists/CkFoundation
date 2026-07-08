@@ -4,6 +4,7 @@
 #include "CkAssetExporter/AssetAction/CkBlueprintExporter_AssetAction.h"
 #include "CkAssetExporter/AssetAction/CkDataAssetExporter_AssetAction.h"
 #include "CkAssetExporter/AssetAction/CkEQSExporter_AssetAction.h"
+#include "CkAssetExporter/AssetAction/CkNiagaraExporter_AssetAction.h"
 #include "CkAssetExporter/AssetAction/CkStateTreeExporter_AssetAction.h"
 #include "CkAssetExporter/AssetAction/CkUserDefinedEnumExporter_AssetAction.h"
 #include "CkAssetExporter/AssetAction/CkUserDefinedStructExporter_AssetAction.h"
@@ -47,6 +48,7 @@ auto
     ck::asset_exporter::RegisterBlueprintContextMenu();
     ck::asset_exporter::RegisterDataAssetContextMenu();
     ck::asset_exporter::RegisterEQSContextMenu();
+    ck::asset_exporter::RegisterNiagaraContextMenu();
     ck::asset_exporter::RegisterStateTreeContextMenu();
     ck::asset_exporter::RegisterUserDefinedEnumContextMenu();
     ck::asset_exporter::RegisterUserDefinedStructContextMenu();
