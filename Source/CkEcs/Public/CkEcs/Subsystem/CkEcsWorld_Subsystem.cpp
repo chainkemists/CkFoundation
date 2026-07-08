@@ -317,7 +317,7 @@ auto
 {
     ck::ecs::Verbose(TEXT("Rebuilding ECS processor graph..."));
 
-    // Reset schedulers first so FProcessor_ScriptHosted destructors fire EndPlay on script instances.
+    // Reset schedulers first so FProcessor_ScriptQueryHosted destructors fire EndPlay on script instances.
     for (auto& [TickGroup, Actor] : _WorldActors)
     {
          if (ck::IsValid(Actor))

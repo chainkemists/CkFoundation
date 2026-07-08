@@ -17,10 +17,12 @@ class UScriptStruct;
 // Base class for AngelScript- or Blueprint-authored processors that participate in the ECS scheduler pump.
 //
 // Unlike a C++ TProcessor (which encodes its fragment query as a template parameter list), a script processor
-// does not express a per-entity query at the type level. Instead, authors override Tick(DeltaT) and invoke the
-// existing ForEach_EntityWith*Fragments helpers themselves. The scheduler's only contribution is:
-//   - placing the processor into the correct execution group (_Group)
-//   - skipping Tick entirely during a pump pass when no entity carries the _MarkedDirtyBy fragment
+// declares its per-entity query via Configure(Query) and receives the natively-joined batch through ForEachBatch.
+// Authors typically write a plain `ForEachEntity(FCk_Time, [FCk_Handle,] <fragments>...)` method and let the
+// codegen emit a <Dev>_Driver subclass whose ForEachBatch loops the batch into it. The scheduler's contribution:
+//   - placing the processor into the correct execution group (_Group) + RunAfter/RunBefore ordering
+//   - conflict-ordering from the Configure query's read/write fragment sets
+//   - skipping the dispatch during a pump pass when no entity carries the _MarkedDirtyBy fragment
 //
 // Registration is automatic via class discovery (see UCk_EcsWorld_Subsystem_UE::DoBuildGraphAndSpawnActors).
 // Every concrete subclass contributes one FProcessorDescriptor at graph-build time.
@@ -54,8 +56,8 @@ private:
               meta = (AllowPrivateAccess = true))
     TObjectPtr<UScriptStruct> _MarkedDirtyBy;
 
-    // Transient entity handle pointing into the hosted registry. Set by FProcessor_ScriptHosted before
-    // BeginPlay is called. Script overrides use this to call ForEach_EntityWith*Fragments.
+    // Transient entity handle pointing into the hosted registry. Set by FProcessor_ScriptQueryHosted before
+    // BeginPlay is called. Used for registry access (e.g. resolving the world-context / transient entity).
     UPROPERTY(BlueprintReadOnly, Transient,
               Category = "Ck|Processor",
               meta = (AllowPrivateAccess = true))
@@ -74,21 +76,7 @@ private:
               meta = (AllowPrivateAccess = true))
     TArray<FName> _RunBefore;
 
-    // Set by FProcessor_ScriptQueryHosted on the generated DRIVER instance: points at the dev-class instance whose
-    // ForEachEntity the driver forwards each batch element to. Null on a dev instance running in direct mode (the dev
-    // class overrides ForEachBatch itself). BlueprintReadOnly so the generated driver can Cast<> it in AngelScript.
-    UPROPERTY(BlueprintReadOnly, Transient,
-              Category = "Ck|Processor",
-              meta = (AllowPrivateAccess = true))
-    TObjectPtr<UCk_Processor_Script_Base_UE> _IterationTarget;
-
 public:
-    // Called once per scheduler Tick (and once per Pump pass when _MarkedDirtyBy is clean-skipped).
-    // Author calls UCk_Utils_DynamicFragment_UE::ForEach_EntityWith*Fragments from this body.
-    UFUNCTION(BlueprintImplementableEvent, Category = "Ck|Processor|Events",
-              meta = (DisplayName = "[Ck][ScriptProcessor] Tick"))
-    void Tick(FCk_Time InDeltaT);
-
     // Called once when the hosted instance is first constructed during graph build.
     UFUNCTION(BlueprintImplementableEvent, Category = "Ck|Processor|Events",
               meta = (DisplayName = "[Ck][ScriptProcessor] BeginPlay"))
@@ -99,18 +87,18 @@ public:
               meta = (DisplayName = "[Ck][ScriptProcessor] EndPlay"))
     void EndPlay();
 
-    // Optional query customization. On the generated driver, Configure adds the slots inferred from the dev class's
-    // ForEachEntity signature and then forwards to the dev class's own Configure (if any) for Require/Exclude/
-    // NoEntities. A class that overrides ForEachBatch directly declares its whole query here instead.
-    // BlueprintCallable so the driver's guarded forward (Dev.Configure(Query)) compiles in AngelScript — a plain
-    // BIE can be overridden but not called from script; calling it on a dev with no override is a no-op, which is
-    // exactly the forward's intended semantics.
+    // Optional query customization. The generated driver (a SUBCLASS of the dev class) overrides this to add the
+    // slots inferred from the dev class's ForEachEntity signature, then calls Super::Configure when the dev class
+    // itself overrides Configure (for Require/Exclude/NoEntities). A class that overrides ForEachBatch directly
+    // declares its whole query here instead. BlueprintCallable so the C++ host can invoke it for the CDO query
+    // harvest and script Super:: calls dispatch cleanly.
     UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Ck|Processor|Events",
               meta = (DisplayName = "[Ck][ScriptProcessor] Configure"))
     void Configure(UPARAM(ref) FCk_ScriptProcessorQuery& Query);
 
-    // Invoked once per tick with the natively-joined entity batch. The generated driver overrides this to loop the
-    // batch and call the dev class's typed ForEachEntity; a genuinely cross-entity processor overrides it directly.
+    // Invoked once per tick with the natively-joined entity batch. The generated driver (subclass of the dev class)
+    // overrides this to loop the batch and call the inherited typed ForEachEntity; a genuinely cross-entity
+    // processor overrides it directly.
     UFUNCTION(BlueprintImplementableEvent, Category = "Ck|Processor|Events",
               meta = (DisplayName = "[Ck][ScriptProcessor] ForEachBatch"))
     void ForEachBatch(FCk_ScriptQueryBatch Batch, FCk_Time InDeltaT);
@@ -121,13 +109,9 @@ public:
     CK_PROPERTY_GET(_Handle);
     CK_PROPERTY_GET(_RunAfter);
     CK_PROPERTY_GET(_RunBefore);
-    CK_PROPERTY_GET(_IterationTarget);
 
     // Called by the hosted wrapper to inject the transient entity handle before BeginPlay.
     auto Set_Handle(const FCk_Handle& InHandle) -> void;
-
-    // Called by FProcessor_ScriptQueryHosted on the generated driver instance to point it at the dev instance.
-    auto Set_IterationTarget(UCk_Processor_Script_Base_UE* InTarget) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

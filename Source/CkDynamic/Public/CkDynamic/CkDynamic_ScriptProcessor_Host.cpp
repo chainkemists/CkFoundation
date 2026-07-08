@@ -7,7 +7,6 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Processor/CkProcessor_Script.h"
-#include "CkEcs/Processor/CkProcessor_ScriptHosted.h"
 #include "CkEcs/Processor/CkProcessor_ScriptQuery_Data.h"
 #include "CkEcs/Scheduler/CkProcessorDescriptor.h"
 #include "CkEcs/Scheduler/CkProcessorRegistry.h"
@@ -146,30 +145,12 @@ namespace ck
             }
         }
 
-        // Legacy hosting path (FProcessor_ScriptHosted): the class iterates via ForEach_EntityWith* inside its Tick
-        // override. Alive through migration (Task 12 removes it).
-        auto
-        DoBuildLegacyDescriptor(
-            UClass* InClass,
-            const UCk_Processor_Script_Base_UE* InCDO)
-            -> FProcessorDescriptor
-        {
-            auto Descriptor = FProcessorDescriptor{};
-            DoFillCommon(Descriptor, InClass, InCDO);
-
-            Descriptor._Factory = [ScriptClass = InClass](const FCk_Registry& InRegistry) -> concepts::FTickableType
-            {
-                return FProcessor_ScriptHosted{InRegistry, ScriptClass};
-            };
-
-            return Descriptor;
-        }
-
         // Typed hosting path (FProcessor_ScriptQueryHosted): a native join drives one ForEachBatch call. InDriverClass
-        // is the generated <Dev>_Driver, or nullptr for direct mode (the dev class overrides ForEachBatch itself). The
-        // read/write fragment sets that feed scheduler conflict-detection + auto-ordering come from the query, which we
-        // obtain by calling Configure on the batch class's CDO (the generated Configure guards its Dev.Configure
-        // forward on _IterationTarget == nullptr, which is true for a CDO, so we get the inferred slots only).
+        // is the generated <Dev>_Driver (a SUBCLASS of the dev class), or nullptr for direct mode (the dev class
+        // overrides ForEachBatch itself). The read/write fragment sets that feed scheduler conflict-detection +
+        // auto-ordering come from the query, obtained by calling Configure on the batch class's CDO — the generated
+        // override adds the inferred slots and (when the dev overrides Configure) Super::Configure contributes the
+        // dev's Require/Exclude, so the harvest sees the full query.
         auto
         DoBuildQueryDescriptor(
             UClass* InDevClass,
@@ -255,7 +236,6 @@ namespace ck
 
             const auto DriverSuffix = FString{TEXT("_Driver")};
             const auto ForEachBatchName = FName{TEXT("ForEachBatch")};
-            const auto TickName = FName{TEXT("Tick")};
 
             for (auto* Class : DiscoveredClasses)
             {
@@ -277,43 +257,30 @@ namespace ck
                 { continue; }
 
                 auto Descriptor = FProcessorDescriptor{};
-                auto RoutedTyped = false;
 
                 if (auto DriverEntry = ClassByName.Find(Class->GetName() + DriverSuffix))
                 {
                     // Typed processor with a generated (or hand-written) driver.
                     Descriptor = DoBuildQueryDescriptor(Class, CDO, *DriverEntry);
-                    RoutedTyped = true;
                 }
                 else if (DoOverridesEvent(Class, ForEachBatchName))
                 {
-                    // Direct mode: the class overrides ForEachBatch itself.
+                    // Direct mode: the class overrides ForEachBatch itself (no separate driver class).
                     Descriptor = DoBuildQueryDescriptor(Class, CDO, nullptr);
-                    RoutedTyped = true;
                 }
                 else
                 {
-                    // Legacy Tick processor, a lifecycle-only processor, or a typed processor whose driver has not
-                    // been generated yet (two-pass window). All register via the legacy hosted wrapper: existing Tick
-                    // bodies keep working, and a pending typed processor no-ops harmlessly until its driver appears on
-                    // the next compile and re-registration routes it to the typed path.
-                    Descriptor = DoBuildLegacyDescriptor(Class, CDO);
-
-                    if (NOT DoOverridesEvent(Class, TickName))
-                    {
-                        ck::ecs::Verbose(TEXT("Script processor [{}] overrides neither Tick nor ForEachBatch and has "
-                            "no driver yet — registered as a legacy no-op (typed processor pending driver generation, "
-                            "or lifecycle-only)."), Class->GetName());
-                    }
-                }
-
-                // Half-migrated tripwire: on the typed path the hosted wrapper never invokes Tick, so a leftover
-                // Tick override is dead code that silently stopped running.
-                if (RoutedTyped && DoOverridesEvent(Class, TickName))
-                {
-                    ck::ecs::Warning(TEXT("Script processor [{}] routes through the typed path but still overrides "
-                        "Tick — the Tick body will never run. Remove the Tick override (half-migrated processor?)."),
-                        Class->GetName());
+                    // Neither a generated <Dev>_Driver nor a ForEachBatch override exists yet. Two cases, both
+                    // "nothing to register now":
+                    //   - a typed processor authored THIS compile whose driver has not been generated yet — the
+                    //     driver generator runs in the same PostCompile and its file-write triggers a re-compile +
+                    //     re-registration, at which point the driver is found above (one-compile window).
+                    //   - a lifecycle-only processor that never declared a dispatch (no ForEachBatch / NoEntities) —
+                    //     there is no iteration surface to host.
+                    ck::ecs::Verbose(TEXT("Script processor [{}] has no generated driver and no ForEachBatch override "
+                        "yet — skipped (typed processor pending driver generation, or a lifecycle-only class with no "
+                        "dispatch)."), Class->GetName());
+                    continue;
                 }
 
                 const auto DescriptorName = Descriptor._Name;

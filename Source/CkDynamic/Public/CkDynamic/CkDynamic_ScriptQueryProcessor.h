@@ -18,17 +18,16 @@ class UCk_Processor_Script_Base_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 // Hosted wrapper for a typed script processor. Satisfies ck::concepts::FTickable_Concept (Tick + Pump) so the
-// scheduler drives it alongside C++ TProcessors, exactly like the legacy FProcessor_ScriptHosted it supersedes.
+// scheduler drives it alongside C++ TProcessors. This is the sole hosting path for script processors.
 //
 // Per tick it performs the native N-way join over the declared dynamic-fragment storages (driving the smallest pool,
 // contains()-probing the rest, honoring Require/Exclude + the destroy filter) into a persistent, reused entity list,
-// then makes ONE ForEachBatch call into the batch instance. That is the whole point: O(1) native->script crossings per
-// tick instead of one per visited entity.
+// then makes ONE ForEachBatch call into the hosted instance. That is the whole point: O(1) native->script crossings
+// per tick instead of one per visited entity.
 //
-// Two instances: the DEV instance (the author's UCk_Processor_Script_Base_UE subclass — owns BeginPlay/EndPlay and the
-// typed ForEachEntity) and the BATCH instance (the generated <Dev>_Driver whose ForEachBatch loops the batch and
-// forwards to the dev's ForEachEntity). In direct mode (InDriverClass == nullptr) the dev class overrides ForEachBatch
-// itself and the two instances are the same object.
+// ONE instance: the generated <Dev>_Driver is a SUBCLASS of the dev class, so a single object carries the author's
+// BeginPlay/EndPlay/ForEachEntity (inherited) plus the driver's Configure/ForEachBatch overrides. In direct mode
+// (InDriverClass == nullptr) the dev class overrides ForEachBatch itself and is instantiated directly.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -73,8 +72,7 @@ namespace ck
 
     private:
         RegistryType                                   _Registry;
-        TStrongObjectPtr<UCk_Processor_Script_Base_UE> _DevInstance;    // BeginPlay/EndPlay + ForEachEntity target
-        TStrongObjectPtr<UCk_Processor_Script_Base_UE> _BatchInstance;  // generated driver, or == dev in direct mode
+        TStrongObjectPtr<UCk_Processor_Script_Base_UE> _Instance;       // the driver (subclass of dev), or the dev itself in direct mode
         FCk_ScriptProcessorQuery                       _Query;          // resolved once at construction
         FCk_ScriptQueryBatchState                      _BatchState;     // per-tick native state handed to script
         bool                                           _Disabled = false;
