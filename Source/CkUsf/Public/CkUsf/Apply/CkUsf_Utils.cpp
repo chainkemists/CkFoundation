@@ -79,6 +79,7 @@ auto
                 break;
             case ECk_Usf_ParamType::Texture2D:
             case ECk_Usf_ParamType::TextureCube:
+            case ECk_Usf_ParamType::Texture2DArray:
                 if (P._DefaultTexturePath.IsEmpty() == false)
                 {
                     if (auto* T = LoadObject<UTexture>(nullptr, *P._DefaultTexturePath))
