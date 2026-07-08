@@ -234,6 +234,7 @@ namespace ck::usf_editor
                 // Texture object inputs expose both the texture and an auto <Name>Sampler in HLSL.
                 case ECk_Usf_ParamType::Texture2D:
                 case ECk_Usf_ParamType::TextureCube:
+                case ECk_Usf_ParamType::Texture2DArray:
                     Args += FString::Printf(TEXT(", %s, %sSampler"), *Name, *Name);
                     break;
                 default: // Scalar
@@ -300,6 +301,7 @@ namespace ck::usf_editor
                     break;
                 case ECk_Usf_ParamType::Texture2D:
                 case ECk_Usf_ParamType::TextureCube:
+                case ECk_Usf_ParamType::Texture2DArray:
                     Args += FString::Printf(TEXT(", %s, %sSampler"), *Name, *Name);
                     break;
                 default: // Scalar

@@ -47,7 +47,8 @@ enum class ECk_Usf_ParamType : uint8
     Scalar,
     Vector,
     Texture2D,
-    TextureCube
+    TextureCube,
+    Texture2DArray
 };
 
 // PostProcess-only: which scene textures a look's Custom node receives (and thereby declares usage for,
