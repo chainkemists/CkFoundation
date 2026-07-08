@@ -93,6 +93,10 @@ namespace ck_usf_look_validator
                     Expected.Add({TEXT("TextureCube"), Name});
                     Expected.Add({TEXT("SamplerState"), Name + TEXT("Sampler")});
                     break;
+                case ECk_Usf_ParamType::Texture2DArray:
+                    Expected.Add({TEXT("Texture2DArray"), Name});
+                    Expected.Add({TEXT("SamplerState"), Name + TEXT("Sampler")});
+                    break;
             }
         }
         return Expected;
