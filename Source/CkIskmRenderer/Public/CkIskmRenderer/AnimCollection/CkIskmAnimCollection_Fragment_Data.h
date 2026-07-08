@@ -142,6 +142,13 @@ private:
     FRenderCommandFence _ReleaseResourcesFence;
 
 public:
+    // _Skeleton with a fallback to the DefaultMesh's own skeleton. Script-authored collections
+    // (e.g. BusterBlock's BB_Npc_Iskm_Assets.as) cannot assign _Skeleton — AS only reflects the
+    // const USkeletalMesh::GetSkeleton() overload — and Plan-1 never needed it. Everything on the
+    // batched (Plan-2) path must resolve the skeleton through this, never read _Skeleton raw.
+    auto
+    Get_EffectiveSkeleton() const -> USkeleton*;
+
     CK_PROPERTY_GET(_Skeleton);
     CK_PROPERTY_GET(_DefaultMesh);
     CK_PROPERTY_GET(_Sequences);
