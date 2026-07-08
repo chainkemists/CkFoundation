@@ -43,9 +43,11 @@ auto
         { continue; }
 
         if (Param._Name == InParamName)
-        { return Slot; }
+        { return (Param._PerInstanceSlot >= 0) ? Param._PerInstanceSlot : Slot; }
 
-        Slot += NumFloats;
+        // Explicit slots live outside the auto layout — they do not advance the counter.
+        if (Param._PerInstanceSlot < 0)
+        { Slot += NumFloats; }
     }
     return INDEX_NONE;
 }
@@ -55,10 +57,22 @@ auto
     Get_NumPerInstanceFloats() const
     -> int32
 {
-    auto Total = 0;
+    // Allocation must cover the auto layout AND the end of the farthest explicit slot —
+    // an explicit-slot param (e.g. batched-crowd floats [10..12]) can sit past the auto total.
+    auto AutoTotal = 0;
+    auto MaxExplicitEnd = 0;
     for (const auto& Param : _Parameters)
-    { Total += ck_usf_look_definition::Get_PerInstanceFloatCount(Param); }
-    return Total;
+    {
+        const auto NumFloats = ck_usf_look_definition::Get_PerInstanceFloatCount(Param);
+        if (NumFloats == 0)
+        { continue; }
+
+        if (Param._PerInstanceSlot >= 0)
+        { MaxExplicitEnd = FMath::Max(MaxExplicitEnd, Param._PerInstanceSlot + NumFloats); }
+        else
+        { AutoTotal += NumFloats; }
+    }
+    return FMath::Max(AutoTotal, MaxExplicitEnd);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

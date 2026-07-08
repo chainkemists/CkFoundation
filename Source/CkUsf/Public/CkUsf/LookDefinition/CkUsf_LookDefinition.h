@@ -122,6 +122,14 @@ struct CKUSF_API FCk_Usf_ParamDesc
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     bool _PerInstance = false;
 
+    // Per-instance params only (Scalar = 1 float, Vector = 3): explicit first slot for this param's
+    // per-instance data. -1 keeps the auto layout (declaration order). Set explicitly when the instance
+    // custom-data layout is owned elsewhere (e.g. CkIskm batched crowds: [0]/[1] are frame bits, game
+    // data starts at [2] — see CkIskm_BatchedClusterComponent::SendRenderDynamicData_Concurrent).
+    // Explicit slots do NOT advance the auto counter; Get_PerInstanceSlotOf resolves both kinds.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    int32 _PerInstanceSlot = -1;
+
     // Object path for Texture2D / TextureCube params, e.g.
     // "/Engine/MapTemplates/Sky/DaylightAmbientCubemap.DaylightAmbientCubemap".
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
