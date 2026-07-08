@@ -231,8 +231,8 @@ auto
     FCk_Iskm_CompDynData* DynData = new FCk_Iskm_CompDynData();
     DynData->Transforms.Reserve(N);
     DynData->PrevTransforms.Reserve(N);
-    DynData->NumCustomDataFloats = 4; // [Cur, Pre, UserA, UserB] per instance (must be % 4 == 0)
-    DynData->CustomData.SetNumZeroed(N * 4);
+    DynData->NumCustomDataFloats = NumCustomDataFloats; // [Cur, Pre, UserData[0..13]] per instance (% 4 == 0)
+    DynData->CustomData.SetNumZeroed(N * NumCustomDataFloats);
 
     for (int32 i = 0; i < N; ++i)
     {
@@ -246,10 +246,10 @@ auto
         float PreBits = 0.0f;
         FMemory::Memcpy(&CurBits, &Inst.CurFrame, sizeof(float));
         FMemory::Memcpy(&PreBits, &Inst.PrevFrame, sizeof(float));
-        DynData->CustomData[i * 4 + 0] = CurBits;
-        DynData->CustomData[i * 4 + 1] = PreBits;
-        DynData->CustomData[i * 4 + 2] = Inst.CustomDataA;
-        DynData->CustomData[i * 4 + 3] = Inst.CustomDataB;
+        float* const Dst = &DynData->CustomData[i * NumCustomDataFloats];
+        Dst[0] = CurBits;
+        Dst[1] = PreBits;
+        FMemory::Memcpy(Dst + 2, Inst.UserData, sizeof(Inst.UserData));
     }
 
     // Per-INSTANCE local bound: one animated-pose box around each instance transform (shared, engine clamps 1-or-N).
