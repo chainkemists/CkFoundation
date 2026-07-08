@@ -354,3 +354,21 @@ void
     { return; }
     InCrowd->Set_OverrideMaterial(InMaterial);
 }
+
+void
+    UCk_Utils_IskmBatched_UE::
+    Set_CrowdSlotOverrideMaterials(ACk_Iskm_BatchedCrowd_Actor* InCrowd, const TArray<UMaterialInterface*>& InMaterials)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return; }
+    InCrowd->Set_SlotOverrideMaterials(InMaterials);
+}
+
+UMaterialInterface*
+    UCk_Utils_IskmBatched_UE::
+    Get_CrowdSlotOverrideMaterial(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InSlotIndex)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return nullptr; }
+    return InCrowd->Get_SlotOverrideMaterial(InSlotIndex);
+}
