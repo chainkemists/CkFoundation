@@ -254,6 +254,9 @@ namespace ck::scriptprocessor_driver_generator
         Out += TEXT("    UFUNCTION(BlueprintOverride)\n");
         Out += TEXT("    void ForEachBatch(FCk_ScriptQueryBatch Batch, FCk_Time InDeltaT)\n");
         Out += TEXT("    {\n");
+        // Perf scope lives at the batch level (once per tick) rather than per-entity inside
+        // ForEachEntity, so authored ForEachEntity bodies carry no ScopedStat boilerplate.
+        Out += TEXT("        auto _CkPerfScope = ck::ScopedStat();\n");
         Out += TEXT("        for (int32 i = 0; i < Batch.Num(); ++i)\n");
         Out += TEXT("        {\n");
 
