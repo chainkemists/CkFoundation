@@ -64,41 +64,27 @@ namespace ck
             TEXT("FProcessor_ScriptQueryHosted constructed with a null dev UClass"))
         { _Disabled = true; return; }
 
-        auto* DevInstance = NewObject<UCk_Processor_Script_Base_UE>(GetTransientPackage(), InDevClass);
-        _DevInstance = TStrongObjectPtr<UCk_Processor_Script_Base_UE>{DevInstance};
+        // The generated driver is a SUBCLASS of the dev class, so instantiating it yields one object carrying both
+        // the author's surface (BeginPlay/EndPlay/ForEachEntity) and the driver's Configure/ForEachBatch overrides.
+        // Direct mode (no driver class): the dev class overrides ForEachBatch itself.
+        auto* InstanceClass = ck::IsValid(InDriverClass) ? InDriverClass : InDevClass;
+        auto* Instance = NewObject<UCk_Processor_Script_Base_UE>(GetTransientPackage(), InstanceClass);
+        _Instance = TStrongObjectPtr<UCk_Processor_Script_Base_UE>{Instance};
 
-        CK_ENSURE_IF_NOT(ck::IsValid(_DevInstance.Get()),
-            TEXT("FProcessor_ScriptQueryHosted failed to construct a dev instance for [{}]"), InDevClass)
+        CK_ENSURE_IF_NOT(ck::IsValid(_Instance.Get()),
+            TEXT("FProcessor_ScriptQueryHosted failed to construct an instance for [{}]"), InstanceClass)
         { _Disabled = true; return; }
 
+        // Stat row keyed by the DEV class name — that is the name authors know and RunAfter references use.
         _TickStatId = CK_CREATE_DYNAMIC_STAT_ID(STATGROUP_CkProcessors,
             ck::Format_UE(TEXT("script::{}"), InDevClass->GetName()));
 
         const auto TransientHandle = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InRegistry);
+        _Instance->Set_Handle(TransientHandle);
 
-        if (ck::IsValid(InDriverClass))
-        {
-            auto* DriverInstance = NewObject<UCk_Processor_Script_Base_UE>(GetTransientPackage(), InDriverClass);
-            _BatchInstance = TStrongObjectPtr<UCk_Processor_Script_Base_UE>{DriverInstance};
-
-            CK_ENSURE_IF_NOT(ck::IsValid(_BatchInstance.Get()),
-                TEXT("FProcessor_ScriptQueryHosted failed to construct driver instance [{}]"), InDriverClass)
-            { _Disabled = true; return; }
-
-            _BatchInstance->Set_IterationTarget(_DevInstance.Get());
-        }
-        else
-        {
-            // Direct mode: the dev class overrides ForEachBatch itself; the two roles are the same object.
-            _BatchInstance = _DevInstance;
-        }
-
-        _DevInstance->Set_Handle(TransientHandle);
-        _BatchInstance->Set_Handle(TransientHandle);
-
-        // Resolve the query once. On a generated driver, Configure adds the inferred slots then forwards to the dev's
-        // Configure; a direct-mode dev fills the whole query here.
-        _BatchInstance->Configure(_Query);
+        // Resolve the query once. On a generated driver, Configure adds the inferred slots then calls Super::Configure
+        // when the dev class overrides it; a direct-mode dev fills the whole query here.
+        _Instance->Configure(_Query);
 
         const auto QueryIsValid = (NOT _Query._Slots.IsEmpty()) || _Query._NoEntities;
         CK_ENSURE_IF_NOT(QueryIsValid,
@@ -118,7 +104,7 @@ namespace ck
             { _Disabled = true; return; }
         }
 
-        _DevInstance->BeginPlay();
+        _Instance->BeginPlay();
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -128,9 +114,9 @@ namespace ck
     {
         // EndPlay only mirrors a BeginPlay that actually ran (BeginPlay is the last thing the ctor does, and only when
         // not disabled).
-        if (NOT _Disabled && ck::IsValid(_DevInstance.Get()))
+        if (NOT _Disabled && ck::IsValid(_Instance.Get()))
         {
-            _DevInstance->EndPlay();
+            _Instance->EndPlay();
         }
     }
 
@@ -147,13 +133,13 @@ namespace ck
 
         FScopeCycleCounter TickStatCounter{_TickStatId};
 
-        if (ck::Is_NOT_Valid(_DevInstance.Get()) || ck::Is_NOT_Valid(_BatchInstance.Get()))
+        if (ck::Is_NOT_Valid(_Instance.Get()))
         { return; }
 
         // Dead-transient-handle skip (mirrors FProcessor_ScriptHosted): during registry teardown the scheduler keeps
         // ticking for a few frames after the transient entity is destroyed. Every registry access below would ensure
         // on the dead handle — skip the dispatch entirely, matching how C++ processors see an empty view.
-        if (ck::Is_NOT_Valid(_DevInstance->Get_Handle()))
+        if (ck::Is_NOT_Valid(_Instance->Get_Handle()))
         { return; }
 
         if (_Query._NoEntities)
@@ -161,7 +147,7 @@ namespace ck
             // No join: run every tick with an empty batch.
             _BatchState._Slots.Reset();
             _BatchState._Entities.Reset();
-            _BatchState._AnyHandle = _DevInstance->Get_Handle();
+            _BatchState._AnyHandle = _Instance->Get_Handle();
             DoDispatchBatch(InDeltaT);
             return;
         }
@@ -198,7 +184,7 @@ namespace ck
         _BatchState._Slots.Reset();
         _BatchState._Entities.Reset();
 
-        auto AnyHandle = _DevInstance->Get_Handle();
+        auto AnyHandle = _Instance->Get_Handle();
         _BatchState._AnyHandle = AnyHandle;
         auto RegistryView = AnyHandle.Get_RegistryView();   // by value: a lightweight view over the shared registry
 
@@ -280,7 +266,7 @@ namespace ck
         Batch._State = &_BatchState;
         Batch._Generation = _BatchState._Generation;
 
-        _BatchInstance->ForEachBatch(Batch, InDeltaT);
+        _Instance->ForEachBatch(Batch, InDeltaT);
 
         // Invalidate any batch the script stashed past the call.
         ++_BatchState._Generation;
