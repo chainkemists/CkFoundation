@@ -262,7 +262,12 @@ namespace ck::scriptprocessor_driver_generator
 
         auto CallArgs = FString{TEXT("InDeltaT")};
         if (InSignature._HasHandleParam)
-        { CallArgs += TEXT(", Batch.GetHandle(i)"); }
+        {
+            // ForEachEntity takes FCk_Handle& — bind a named local so it is an lvalue
+            // (the GetHandle() result is a temporary and cannot bind to a reference param).
+            Out += TEXT("            auto Handle = Batch.GetHandle(i);\n");
+            CallArgs += TEXT(", Handle");
+        }
 
         for (auto Index = 0; Index < InSignature._FragmentParams.Num(); ++Index)
         {
