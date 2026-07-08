@@ -9,6 +9,19 @@
 
 #include "Serialization/Archive.h"
 
+#include "Components/SceneComponent.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+ck::FFragment_SceneNode_UnrealAnchor::
+    FFragment_SceneNode_UnrealAnchor(
+        const USceneComponent* InComponent,
+        FName InSocket)
+    : _Component(InComponent)
+    , _Socket(InSocket)
+{
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 // ck:: types hoisted to file-scope aliases because CK_REGISTER_SNAPSHOTABLE token-pastes the type name into a
 // generated identifier (the `::` cannot be pasted). Registering the SceneNode hierarchy makes a save/load
