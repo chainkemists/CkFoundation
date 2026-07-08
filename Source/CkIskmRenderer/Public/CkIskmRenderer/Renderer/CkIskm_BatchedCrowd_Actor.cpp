@@ -94,6 +94,14 @@ auto
     if (_OverrideMaterial != nullptr)
     { Comp->Set_OverrideMaterial(_OverrideMaterial); }
 
+    if (_SlotOverrideMaterials.Num() > 0)
+    {
+        TArray<UMaterialInterface*> Slots;
+        Slots.Reserve(_SlotOverrideMaterials.Num());
+        for (const auto& M : _SlotOverrideMaterials) { Slots.Add(M.Get()); }
+        Comp->Set_SlotOverrideMaterials(Slots);
+    }
+
     _Tiles.Add(InTile, Comp);
     return Comp;
 }
@@ -110,6 +118,29 @@ auto
         { continue; }
         Pair.Value->Set_OverrideMaterial(InMaterial);
     }
+}
+
+void
+    ACk_Iskm_BatchedCrowd_Actor::
+    Set_SlotOverrideMaterials(const TArray<UMaterialInterface*>& InMaterials)
+{
+    _SlotOverrideMaterials.Reset(InMaterials.Num());
+    for (UMaterialInterface* M : InMaterials)
+    { _SlotOverrideMaterials.Add(M); }
+
+    for (const auto& Pair : _Tiles)
+    {
+        if (Pair.Value == nullptr)
+        { continue; }
+        Pair.Value->Set_SlotOverrideMaterials(InMaterials);
+    }
+}
+
+UMaterialInterface*
+    ACk_Iskm_BatchedCrowd_Actor::
+    Get_SlotOverrideMaterial(int32 InSlotIndex) const
+{
+    return _SlotOverrideMaterials.IsValidIndex(InSlotIndex) ? _SlotOverrideMaterials[InSlotIndex].Get() : nullptr;
 }
 
 void

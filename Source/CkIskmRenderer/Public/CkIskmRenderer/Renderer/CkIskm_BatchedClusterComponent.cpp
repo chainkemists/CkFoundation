@@ -106,6 +106,25 @@ auto
 
 auto
     UCk_Iskm_BatchedClusterComponent::
+    Set_SlotOverrideMaterials(const TArray<UMaterialInterface*>& InMaterials)
+    -> void
+{
+    _SlotOverrideMaterials.Reset(InMaterials.Num());
+    for (UMaterialInterface* M : InMaterials)
+    { _SlotOverrideMaterials.Add(M); }
+    MarkRenderStateDirty(); // proxy caches materials at construction — recreate it
+}
+
+auto
+    UCk_Iskm_BatchedClusterComponent::
+    Get_SlotOverrideMaterial(int32 InSlotIndex) const
+    -> UMaterialInterface*
+{
+    return _SlotOverrideMaterials.IsValidIndex(InSlotIndex) ? _SlotOverrideMaterials[InSlotIndex].Get() : nullptr;
+}
+
+auto
+    UCk_Iskm_BatchedClusterComponent::
     GetUsedMaterials(TArray<UMaterialInterface*>& OutMaterials, bool InGetDebugMaterials) const
     -> void
 {
@@ -116,9 +135,11 @@ auto
         OutMaterials.Add(_OverrideMaterial);
         return;
     }
-    for (const FSkeletalMaterial& M : _Mesh->GetMaterials())
+    const TArray<FSkeletalMaterial>& Mats = _Mesh->GetMaterials();
+    for (int32 Idx = 0; Idx < Mats.Num(); ++Idx)
     {
-        OutMaterials.Add(M.MaterialInterface);
+        UMaterialInterface* const Slot = Get_SlotOverrideMaterial(Idx);
+        OutMaterials.Add(Slot != nullptr ? Slot : Mats[Idx].MaterialInterface.Get());
     }
 }
 
@@ -139,6 +160,8 @@ auto
     { return nullptr; }
     if (_OverrideMaterial != nullptr)
     { return _OverrideMaterial; }
+    if (UMaterialInterface* const Slot = Get_SlotOverrideMaterial(ElementIndex))
+    { return Slot; }
     const TArray<FSkeletalMaterial>& Mats = _Mesh->GetMaterials();
     return Mats.IsValidIndex(ElementIndex) ? Mats[ElementIndex].MaterialInterface : nullptr;
 }
