@@ -12,6 +12,7 @@ struct FCkParticles_StageInput
     float  Lifetime;     // particle lifetime in seconds (0 if unset)
     float3 Position;     // current particle position (sim space)
     float3 Velocity;     // current particle velocity
+    int    Seed;         // stable per-particle id (Particles.UniqueID) — hash for per-particle randomness
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -22,20 +23,50 @@ struct FCkParticles_StageOutput
     float3 Position;
     float3 Velocity;
     float4 Color;
+    float2 Size;     // sprite size (x,y in sim units) -> Particles.SpriteSize. x==y is round; x!=y stretches.
 };
 
-// Pass-through defaults (a behavior overrides only what it changes).
+// 0..1 over the particle's lifetime (0 when lifetime is unset).
+float CkParticles_NormalizedAge(FCkParticles_StageInput In)
+{
+    return In.Lifetime > 0.0 ? saturate(In.Age / In.Lifetime) : 0.0;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Per-particle randomness. CkParticles_Rand hashes (Seed, Salt) -> [0,1). Uses only the low 24 bits so float(n)/2^24
+// is exact, giving bit-identical results between this GPU code and its C++ CPU mirror (NDICkParticlesLocal::Rand).
+// Vary Salt to draw multiple independent randoms from one particle's Seed.
+// --------------------------------------------------------------------------------------------------------------------
+float CkParticles_Rand(int Seed, int Salt)
+{
+    uint n = uint(Seed) * 747796405u + uint(Salt) * 2891336453u + 1u;
+    n ^= n >> 16;
+    n *= 2246822519u;
+    n ^= n >> 13;
+    n *= 3266489917u;
+    n ^= n >> 16;
+    return float(n & 0x00FFFFFFu) / 16777216.0; // 24-bit -> [0,1), float-exact
+}
+
+// Uniformly distributed unit vector on the sphere, deterministic per Seed.
+float3 CkParticles_RandDir(int Seed)
+{
+    const float z = 2.0 * CkParticles_Rand(Seed, 1) - 1.0; // [-1,1]
+    const float t = 6.28318530718 * CkParticles_Rand(Seed, 2);
+    const float r = sqrt(saturate(1.0 - z * z));
+    return float3(r * cos(t), r * sin(t), z);
+}
+
+// Pass-through defaults (a behavior overrides only what it changes). Size defaults to a per-Seed-varied value that
+// shrinks over life, so even behaviors that never touch Size get non-uniform, animated sprites (salt 7 is reserved
+// for size so it stays independent of a behavior's direction/hue randoms).
 FCkParticles_StageOutput CkParticles_DefaultOutput(FCkParticles_StageInput In)
 {
     FCkParticles_StageOutput O;
     O.Position = In.Position;
     O.Velocity = In.Velocity;
     O.Color    = float4(1.0, 1.0, 1.0, 1.0);
+    const float SizeBase = lerp(18.0, 8.0, CkParticles_NormalizedAge(In)) * lerp(0.65, 1.35, CkParticles_Rand(In.Seed, 7));
+    O.Size     = float2(SizeBase, SizeBase);
     return O;
-}
-
-// 0..1 over the particle's lifetime (0 when lifetime is unset).
-float CkParticles_NormalizedAge(FCkParticles_StageInput In)
-{
-    return In.Lifetime > 0.0 ? saturate(In.Age / In.Lifetime) : 0.0;
 }

@@ -1,0 +1,23 @@
+// /CkParticles/Behaviors/Behavior_Fire.ush — BehaviorId 3.
+// Self-driving flame: each particle rises on a per-Seed column that tapers inward as it ages (wide base, narrow tip)
+// with a horizontal sine flicker. Tint white-hot -> dark red over life. HDR start for additive bloom. Knobs below —
+// keep the CPU mirror in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+FCkParticles_StageOutput CkParticles_Behavior_Fire(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    const float n     = CkParticles_NormalizedAge(In);
+    const float ang   = CkParticles_Rand(In.Seed, 1) * 6.28318530718;
+    const float baseR = lerp(8.0, 45.0, CkParticles_Rand(In.Seed, 2)); // spread at the base
+    const float taper = 1.0 - n;                                       // converge toward the tip
+    const float flick = sin(In.Age * 9.0 + float(In.Seed)) * 8.0 * taper;
+    const float rise  = lerp(180.0, 280.0, CkParticles_Rand(In.Seed, 3)) * n;
+
+    O.Position = float3(cos(ang) * baseR * taper + flick, sin(ang) * baseR * taper, rise);
+    O.Color    = lerp(float4(3.0, 1.8, 0.4, 1.0), float4(0.5, 0.03, 0.0, 1.0), n);
+
+    return O;
+}

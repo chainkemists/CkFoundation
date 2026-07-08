@@ -1,0 +1,26 @@
+// /CkParticles/Behaviors/Behavior_Fireworks.ush — BehaviorId 4.
+// Self-driving firework burst: per-Seed direction sphere bursts out with strong deceleration, arcs down under
+// gravity, and twinkles. Each particle gets a per-Seed rainbow hue. Bounded by NormalizedAge. HDR color for additive
+// bloom. Knobs below — keep the CPU mirror in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+FCkParticles_StageOutput CkParticles_Behavior_Fireworks(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    const float n    = CkParticles_NormalizedAge(In);
+    const float3 Dir = CkParticles_RandDir(In.Seed);
+    const float MaxR = lerp(180.0, 280.0, CkParticles_Rand(In.Seed, 4));
+    const float ease = 1.0 - pow(1.0 - n, 3.0);                  // fast burst, strong decel
+    const float3 Grav = float3(0.0, 0.0, -260.0 * n * n);        // arcs down
+
+    const float twink = 0.5 + 0.5 * sin(In.Age * 28.0 + float(In.Seed) * 1.7);
+    const float h     = CkParticles_Rand(In.Seed, 5);
+    const float3 hue  = 0.6 + 0.4 * cos(6.28318530718 * (h + float3(0.0, 0.33, 0.67))); // per-particle rainbow
+
+    O.Position = Dir * (MaxR * ease) + Grav;
+    O.Color    = float4(hue * (twink * (1.0 - n)) * 2.5, 1.0);
+
+    return O;
+}
