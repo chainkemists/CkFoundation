@@ -47,23 +47,23 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // This processor is tasked with keeping the RelativeTransform data inside the SceneNode fragment up-to-date as the MeshSocket
-    // that the SceneNode is attached to moves in the world. The transform processor takes care of the transformation updates
-    class CKECSEXT_API FProcessor_SceneNode_UpdateLocal_FromMeshSocket : public TParallelProcessor<
-            FProcessor_SceneNode_UpdateLocal_FromMeshSocket,
+    // Drives a scene-node that follows a foreign Unreal anchor (a USceneComponent or a mesh socket) at the
+    // authored FFragment_SceneNode_Current offset: entity.world = offset * anchor.world, every tick, so the node
+    // tracks the moving anchor. Read-only w.r.t. the anchor (never writes back — that's why these nodes do NOT
+    // carry the Transform module's FFragment_Transform_RootComponent / _MeshSocket, which would engage
+    // SyncFromActor/SyncToActor). Runs in the SyncFrom group so descendant TProcessor_SceneNode_Update layers
+    // (Transform group) see this node's updated world + FTag_Transform_Updated.
+    class CKECSEXT_API FProcessor_SceneNode_FollowUnrealAnchor : public TParallelProcessor<
+            FProcessor_SceneNode_FollowUnrealAnchor,
             FCk_Handle_SceneNode,
-            TReadOnly<SceneNodeParent>,
-            TReadWrite<FFragment_SceneNode_Current>,
-            TReadOnly<FFragment_Transform>,
-            TReadOnly<FFragment_Transform_MeshSocket>,
-            TExclude<FTag_Transform_ExternallyDriven>,
+            TReadOnly<FFragment_SceneNode_UnrealAnchor>,
+            TReadOnly<FFragment_SceneNode_Current>,
+            TReadWrite<FFragment_Transform>,
+            TReadWrite<FFragment_Transform_Previous>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Transform;
-        using RunAfter = TDepList<
-            FProcessor_SceneNode_HandleRequests,
-            FProcessor_Transform_HandleRequests>;
+        using Group = FGroup_Transform_SyncFrom;
 
     public:
         using TParallelProcessor::TParallelProcessor;
@@ -73,44 +73,10 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const SceneNodeParent& InParent,
-            FFragment_SceneNode_Current& InCurrent,
-            const FFragment_Transform& InSceneNodeTransformComp,
-            const FFragment_Transform_MeshSocket&) -> void;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    // This processor is tasked with keeping the RelativeTransform data inside the SceneNode fragment up-to-date as the RootComponent
-    // that the SceneNode is attached to moves in the world. The transform processor takes care of the transformation updates
-    class CKECSEXT_API FProcessor_SceneNode_UpdateLocal_FromRootComponent : public TParallelProcessor<
-            FProcessor_SceneNode_UpdateLocal_FromRootComponent,
-            FCk_Handle_SceneNode,
-            TReadOnly<SceneNodeParent>,
-            TReadWrite<FFragment_SceneNode_Current>,
-            TReadOnly<FFragment_Transform>,
-            TReadOnly<FFragment_Transform_RootComponent>,
-            TExclude<FTag_Transform_ExternallyDriven>,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using Group = FGroup_Transform;
-        using RunAfter = TDepList<
-            FProcessor_SceneNode_HandleRequests,
-            FProcessor_Transform_HandleRequests>;
-
-    public:
-        using TParallelProcessor::TParallelProcessor;
-
-    public:
-        static auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const SceneNodeParent& InParent,
-            FFragment_SceneNode_Current& InCurrent,
-            const FFragment_Transform& InSceneNodeTransformComp,
-            const FFragment_Transform_RootComponent&) -> void;
+            const FFragment_SceneNode_UnrealAnchor& InAnchor,
+            const FFragment_SceneNode_Current& InCurrent,
+            FFragment_Transform& InTransform,
+            FFragment_Transform_Previous& InPrevTransform) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -118,7 +84,7 @@ namespace ck
     template <typename T_Layer>
     class TProcessor_SceneNode_Update;
 
-    // Per-layer RunAfter list. Each layer depends on the UpdateLocal processors,
+    // Per-layer RunAfter list. Each layer depends on the anchor-follow processor,
     // FProcessor_Transform_HandleRequests, AND on the previous layer, so that
     // when a parent's transform changes (e.g. via a tween writing world on the
     // root) the FTag_Transform_Updated added by Transform_HandleRequests is
@@ -132,8 +98,7 @@ namespace ck
     struct TSceneNode_Update_RunAfter
     {
         using type = TDepList<
-            FProcessor_SceneNode_UpdateLocal_FromMeshSocket,
-            FProcessor_SceneNode_UpdateLocal_FromRootComponent,
+            FProcessor_SceneNode_FollowUnrealAnchor,
             FProcessor_Transform_HandleRequests>;
     };
 
@@ -141,8 +106,7 @@ namespace ck
     struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer1>
     {
         using type = TDepList<
-            FProcessor_SceneNode_UpdateLocal_FromMeshSocket,
-            FProcessor_SceneNode_UpdateLocal_FromRootComponent,
+            FProcessor_SceneNode_FollowUnrealAnchor,
             TProcessor_SceneNode_Update<FTag_SceneNode_Layer0>>;
     };
 
@@ -150,8 +114,7 @@ namespace ck
     struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer2>
     {
         using type = TDepList<
-            FProcessor_SceneNode_UpdateLocal_FromMeshSocket,
-            FProcessor_SceneNode_UpdateLocal_FromRootComponent,
+            FProcessor_SceneNode_FollowUnrealAnchor,
             TProcessor_SceneNode_Update<FTag_SceneNode_Layer1>>;
     };
 
@@ -159,8 +122,7 @@ namespace ck
     struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer3>
     {
         using type = TDepList<
-            FProcessor_SceneNode_UpdateLocal_FromMeshSocket,
-            FProcessor_SceneNode_UpdateLocal_FromRootComponent,
+            FProcessor_SceneNode_FollowUnrealAnchor,
             TProcessor_SceneNode_Update<FTag_SceneNode_Layer2>>;
     };
 
@@ -168,8 +130,7 @@ namespace ck
     struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer4>
     {
         using type = TDepList<
-            FProcessor_SceneNode_UpdateLocal_FromMeshSocket,
-            FProcessor_SceneNode_UpdateLocal_FromRootComponent,
+            FProcessor_SceneNode_FollowUnrealAnchor,
             TProcessor_SceneNode_Update<FTag_SceneNode_Layer3>>;
     };
 
@@ -177,8 +138,7 @@ namespace ck
     struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer5>
     {
         using type = TDepList<
-            FProcessor_SceneNode_UpdateLocal_FromMeshSocket,
-            FProcessor_SceneNode_UpdateLocal_FromRootComponent,
+            FProcessor_SceneNode_FollowUnrealAnchor,
             TProcessor_SceneNode_Update<FTag_SceneNode_Layer4>>;
     };
 
@@ -186,8 +146,7 @@ namespace ck
     struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer6>
     {
         using type = TDepList<
-            FProcessor_SceneNode_UpdateLocal_FromMeshSocket,
-            FProcessor_SceneNode_UpdateLocal_FromRootComponent,
+            FProcessor_SceneNode_FollowUnrealAnchor,
             TProcessor_SceneNode_Update<FTag_SceneNode_Layer5>>;
     };
 
@@ -195,8 +154,7 @@ namespace ck
     struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer7>
     {
         using type = TDepList<
-            FProcessor_SceneNode_UpdateLocal_FromMeshSocket,
-            FProcessor_SceneNode_UpdateLocal_FromRootComponent,
+            FProcessor_SceneNode_FollowUnrealAnchor,
             TProcessor_SceneNode_Update<FTag_SceneNode_Layer6>>;
     };
 
@@ -204,8 +162,7 @@ namespace ck
     struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer8>
     {
         using type = TDepList<
-            FProcessor_SceneNode_UpdateLocal_FromMeshSocket,
-            FProcessor_SceneNode_UpdateLocal_FromRootComponent,
+            FProcessor_SceneNode_FollowUnrealAnchor,
             TProcessor_SceneNode_Update<FTag_SceneNode_Layer7>>;
     };
 
@@ -213,8 +170,7 @@ namespace ck
     struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer9>
     {
         using type = TDepList<
-            FProcessor_SceneNode_UpdateLocal_FromMeshSocket,
-            FProcessor_SceneNode_UpdateLocal_FromRootComponent,
+            FProcessor_SceneNode_FollowUnrealAnchor,
             TProcessor_SceneNode_Update<FTag_SceneNode_Layer8>>;
     };
 
@@ -227,11 +183,13 @@ namespace ck
             TReadOnly<FFragment_SceneNode_Current>,
             TReadWrite<FFragment_Transform>,
             TReadWrite<FFragment_Transform_Previous>,
+            TExclude<FFragment_SceneNode_UnrealAnchor>,
             CK_IGNORE_PENDING_KILL>
     {
         using Super = TParallelProcessor<TProcessor_SceneNode_Update<T_Layer>, FCk_Handle_SceneNode, T_Layer,
             TReadOnly<SceneNodeParent>, TReadOnly<FFragment_SceneNode_Current>,
             TReadWrite<FFragment_Transform>, TReadWrite<FFragment_Transform_Previous>,
+            TExclude<FFragment_SceneNode_UnrealAnchor>,
             CK_IGNORE_PENDING_KILL>;
         using Super::TimeType;
         using Super::HandleType;

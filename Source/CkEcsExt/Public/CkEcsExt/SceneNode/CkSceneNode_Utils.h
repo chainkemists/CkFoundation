@@ -39,14 +39,22 @@ public:
         UPARAM(ref) FCk_Handle_Transform& InAttachTo,
         FTransform InLocalTransform);
 
+    // InLocalTransform is the offset from the anchor (KeepRelative semantics): the node's world becomes
+    // InLocalTransform * componentWorld and tracks the component as it moves. The node is a read-only
+    // follower — it never writes back onto the component (unlike an actor-bridge Transform). Identity ==
+    // glued exactly to the component. Offset is runtime-mutable via Request_UpdateOffset.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|SceneNode",
               DisplayName="[Ck][SceneNode] Create (AttachTo Unreal Component)")
     static FCk_Handle_SceneNode
     CreateAndAttachToUnrealComponent(
         UPARAM(ref) FCk_Handle_Transform& InAttachTo,
-        USceneComponent* InSceneComponent);
+        USceneComponent* InSceneComponent,
+        FTransform InLocalTransform);
 
+    // InLocalTransform is the offset from the socket (KeepRelative semantics): the node's world becomes
+    // InLocalTransform * socketWorld and tracks the socket as it moves. Read-only follower; identity ==
+    // glued exactly to the socket. Offset is runtime-mutable via Request_UpdateOffset.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|SceneNode",
               DisplayName="[Ck][SceneNode] Create (AttachTo Unreal Mesh Socket)")
@@ -54,7 +62,8 @@ public:
     CreateAndAttachToUnrealMesh(
         UPARAM(ref) FCk_Handle_Transform& InAttachTo,
         const UMeshComponent* InMeshComponent,
-        FName InSocketName);
+        FName InSocketName,
+        FTransform InLocalTransform);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|SceneNode",

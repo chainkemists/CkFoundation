@@ -7,11 +7,12 @@
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "Components/SceneComponent.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_SceneNode_HandleRequests);
-CK_REGISTER_PROCESSOR(ck::FProcessor_SceneNode_UpdateLocal_FromMeshSocket);
-CK_REGISTER_PROCESSOR(ck::FProcessor_SceneNode_UpdateLocal_FromRootComponent);
+CK_REGISTER_PROCESSOR(ck::FProcessor_SceneNode_FollowUnrealAnchor);
 CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer0>);
 CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer1>);
 CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer2>);
@@ -22,24 +23,6 @@ CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer6>
 CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer7>);
 CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer8>);
 CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer9>);
-
-namespace ck_scene_node
-{
-    template <typename T_Handle>
-    auto TryUpdateRelativeTransform(
-        T_Handle& InHandle,
-        ck::FFragment_SceneNode_Current& InCurrent,
-        const FTransform& InNewRelativeTransform)
-        -> void
-    {
-        if (InCurrent.Get_RelativeTransform().Equals(InNewRelativeTransform))
-        { return; }
-
-        InCurrent.Set_RelativeTransform(InNewRelativeTransform);
-
-        InHandle.template DeferAddOrGet<ck::FTag_SceneNode_RelativeTransformUpdated>();
-    }
-}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -89,45 +72,46 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_SceneNode_UpdateLocal_FromRootComponent::
+        FProcessor_SceneNode_FollowUnrealAnchor::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const SceneNodeParent& InParent,
-            FFragment_SceneNode_Current& InCurrent,
-            const FFragment_Transform& InSceneNodeTransformComp,
-            const FFragment_Transform_RootComponent&)
+            const FFragment_SceneNode_UnrealAnchor& InAnchor,
+            const FFragment_SceneNode_Current& InCurrent,
+            FFragment_Transform& InTransform,
+            FFragment_Transform_Previous& InPrevTransform)
         -> void
     {
-        const auto ParentEntity = InParent.Get_Entity().Get_Entity();
-        const auto& ParentTransform = InHandle.ReadEntity(ParentEntity).Get<FFragment_Transform>().Get_Transform();
-        const auto& MyTransform = InSceneNodeTransformComp.Get_Transform();
+        // This node is excluded from TProcessor_SceneNode_Update (which is where bare/parent nodes strip
+        // this tag), so clean it up here — a permanently-set tag would block downstream probe setup.
+        if (InHandle.template Has<FTag_SceneNode_RelativeTransformUpdated>())
+        { InHandle.template DeferRemove<FTag_SceneNode_RelativeTransformUpdated>(); }
 
-        const auto RelativeTransform = MyTransform.GetRelativeTransform(ParentTransform);
+        const auto& Component = InAnchor.Get_Component();
 
-        ck_scene_node::TryUpdateRelativeTransform(InHandle, InCurrent, RelativeTransform);
-    }
+        if (ck::Is_NOT_Valid(Component))
+        { return; }
 
-    // --------------------------------------------------------------------------------------------------------------------
+        const auto AnchorWorld = InAnchor.Get_Socket().IsNone()
+            ? Component->GetComponentTransform()
+            : Component->GetSocketTransform(InAnchor.Get_Socket());
 
-    auto
-        FProcessor_SceneNode_UpdateLocal_FromMeshSocket::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const SceneNodeParent& InParent,
-            FFragment_SceneNode_Current& InCurrent,
-            const FFragment_Transform& InSceneNodeTransformComp,
-            const FFragment_Transform_MeshSocket&)
-        -> void
-    {
-        const auto ParentEntity = InParent.Get_Entity().Get_Entity();
-        const auto& ParentTransform = InHandle.ReadEntity(ParentEntity).Get<FFragment_Transform>().Get_Transform();
-        const auto& MyTransform = InSceneNodeTransformComp.Get_Transform();
+        const auto NewTransform = InCurrent.Get_RelativeTransform() * AnchorWorld;
 
-        const auto RelativeTransform = MyTransform.GetRelativeTransform(ParentTransform);
+        if (InTransform.Get_Transform().Equals(NewTransform))
+        { return; }
 
-        ck_scene_node::TryUpdateRelativeTransform(InHandle, InCurrent, RelativeTransform);
+        // PARALLEL-SAFE: direct data write to owned fragments (no structural mutations)
+        const auto ComponentsModified = UCk_Utils_Transform_UE::Apply_SetTransform_DirectWrite(
+            InTransform, InPrevTransform, NewTransform);
+
+        if (EnumHasAnyFlags(ComponentsModified,
+            ECk_TransformComponents::Location |
+            ECk_TransformComponents::Rotation |
+            ECk_TransformComponents::Scale))
+        {
+            InHandle.template DeferAddOrGet<FTag_Transform_Updated>();
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------

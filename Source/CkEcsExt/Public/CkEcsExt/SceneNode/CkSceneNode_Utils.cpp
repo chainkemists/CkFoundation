@@ -5,6 +5,9 @@
 #include "CkEcsExt/SceneNode/CkSceneNode_Fragment.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "Components/SceneComponent.h"
+#include "Components/MeshComponent.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 // Compact label for scene-node debug names: the anchor's own debug name when set,
@@ -58,17 +61,25 @@ auto
     UCk_Utils_SceneNode_UE::
     CreateAndAttachToUnrealComponent(
         FCk_Handle_Transform& InAttachTo,
-        USceneComponent* InSceneComponent)
+        USceneComponent* InSceneComponent,
+        FTransform InLocalTransform)
     -> FCk_Handle_SceneNode
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InSceneComponent),
+        TEXT("Unable to attach SceneNode to [{}]: the Unreal SceneComponent is INVALID"), InAttachTo)
+    { return {}; }
+
     auto SceneNodeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttachTo);
     UCk_Utils_Handle_UE::Set_DebugName(SceneNodeEntity, *ck::Format_UE(TEXT("SceneNode({} > {})"), Get_SceneNodeAnchorLabel(InAttachTo), GetNameSafe(InSceneComponent)));
 
-    auto SceneNodeWithTransform = UCk_Utils_Transform_UE::AddAndAttachToUnrealComponent(SceneNodeEntity, InSceneComponent, ECk_Replication::DoesNotReplicate);
+    // Read-only follower: the node tracks the foreign component at InLocalTransform via
+    // FProcessor_SceneNode_FollowUnrealAnchor. It gets a plain Transform (seeded at the composed world) plus
+    // the SceneNode-owned anchor fragment — NOT the Transform module's FFragment_Transform_RootComponent, so
+    // SyncFromActor / SyncToActor never engage and a Movable component is never dragged.
+    auto SceneNodeWithTransform = UCk_Utils_Transform_UE::Add(SceneNodeEntity, InLocalTransform * InSceneComponent->GetComponentTransform(), ECk_Replication::DoesNotReplicate);
+    SceneNodeWithTransform.Add<ck::FFragment_SceneNode_UnrealAnchor>(InSceneComponent, NAME_None);
 
-    // Anchor-authoritative: the SceneNode entity is meant to track the foreign USceneComponent;
-    // skip the ExternallyDriven stamp so SyncFromActor / UpdateLocal_FromRootComponent keep running.
-    return DoAdd(SceneNodeWithTransform, InAttachTo, FTransform::Identity, ECk_SceneNode_DrivenBy::Anchor);
+    return DoAdd(SceneNodeWithTransform, InAttachTo, InLocalTransform, ECk_SceneNode_DrivenBy::Anchor);
 }
 
 auto
@@ -76,17 +87,30 @@ auto
     CreateAndAttachToUnrealMesh(
         FCk_Handle_Transform& InAttachTo,
         const UMeshComponent* InMeshComponent,
-        FName InSocketName)
+        FName InSocketName,
+        FTransform InLocalTransform)
     -> FCk_Handle_SceneNode
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InMeshComponent),
+        TEXT("Unable to attach SceneNode to [{}]: the Unreal MeshComponent is INVALID"), InAttachTo)
+    { return {}; }
+
+    // Loud-failure on missing socket (matching AddAndAttachToUnrealMesh): a typo silently anchoring to
+    // component-world is a QA-difficult bug. If you want component-world, use CreateAndAttachToUnrealComponent.
+    CK_ENSURE_IF_NOT(InMeshComponent->DoesSocketExist(InSocketName),
+        TEXT("Socket [{}] does NOT exist on MeshComponent [{}]. If you wanted the component's world transform "
+             "(no socket), use CreateAndAttachToUnrealComponent instead; otherwise check the name for typos."),
+        InSocketName, InMeshComponent)
+    { return {}; }
+
     auto SceneNodeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttachTo);
     UCk_Utils_Handle_UE::Set_DebugName(SceneNodeEntity, *ck::Format_UE(TEXT("SceneNode({} > {}:{})"), Get_SceneNodeAnchorLabel(InAttachTo), GetNameSafe(InMeshComponent), InSocketName));
 
-    auto SceneNodeWithTransform = UCk_Utils_Transform_UE::AddAndAttachToUnrealMesh(SceneNodeEntity, InMeshComponent, InSocketName, ECk_Replication::DoesNotReplicate);
+    // Read-only follower of the mesh socket (see CreateAndAttachToUnrealComponent for the fragment rationale).
+    auto SceneNodeWithTransform = UCk_Utils_Transform_UE::Add(SceneNodeEntity, InLocalTransform * InMeshComponent->GetSocketTransform(InSocketName), ECk_Replication::DoesNotReplicate);
+    SceneNodeWithTransform.Add<ck::FFragment_SceneNode_UnrealAnchor>(InMeshComponent, InSocketName);
 
-    // Anchor-authoritative: the SceneNode entity is meant to track the foreign mesh socket;
-    // skip the ExternallyDriven stamp so SyncFromMeshSocket / UpdateLocal_FromMeshSocket keep running.
-    return DoAdd(SceneNodeWithTransform, InAttachTo, FTransform::Identity, ECk_SceneNode_DrivenBy::Anchor);
+    return DoAdd(SceneNodeWithTransform, InAttachTo, InLocalTransform, ECk_SceneNode_DrivenBy::Anchor);
 }
 
 auto
