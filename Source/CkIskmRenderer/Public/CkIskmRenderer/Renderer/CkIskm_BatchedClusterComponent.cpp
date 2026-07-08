@@ -95,11 +95,27 @@ auto
 
 auto
     UCk_Iskm_BatchedClusterComponent::
+    Set_OverrideMaterial(UMaterialInterface* InMaterial)
+    -> void
+{
+    if (_OverrideMaterial == InMaterial)
+    { return; }
+    _OverrideMaterial = InMaterial;
+    MarkRenderStateDirty(); // proxy caches materials at construction — recreate it
+}
+
+auto
+    UCk_Iskm_BatchedClusterComponent::
     GetUsedMaterials(TArray<UMaterialInterface*>& OutMaterials, bool InGetDebugMaterials) const
     -> void
 {
     if (_Mesh == nullptr)
     { return; }
+    if (_OverrideMaterial != nullptr)
+    {
+        OutMaterials.Add(_OverrideMaterial);
+        return;
+    }
     for (const FSkeletalMaterial& M : _Mesh->GetMaterials())
     {
         OutMaterials.Add(M.MaterialInterface);
@@ -121,6 +137,8 @@ auto
 {
     if (_Mesh == nullptr)
     { return nullptr; }
+    if (_OverrideMaterial != nullptr)
+    { return _OverrideMaterial; }
     const TArray<FSkeletalMaterial>& Mats = _Mesh->GetMaterials();
     return Mats.IsValidIndex(ElementIndex) ? Mats[ElementIndex].MaterialInterface : nullptr;
 }

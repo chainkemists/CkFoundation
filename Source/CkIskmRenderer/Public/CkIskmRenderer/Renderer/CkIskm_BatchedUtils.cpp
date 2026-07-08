@@ -318,3 +318,21 @@ auto
     { return; }
     InCrowd->Set_MemberCustomData(InIndex, InA, InB);
 }
+
+void
+    UCk_Utils_IskmBatched_UE::
+    Set_CrowdDefaultCustomPrimitiveData(ACk_Iskm_BatchedCrowd_Actor* InCrowd, const TArray<float>& InFloats)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return; }
+    InCrowd->Set_DefaultTileCustomPrimitiveData(InFloats);
+}
+
+void
+    UCk_Utils_IskmBatched_UE::
+    Set_CrowdOverrideMaterial(ACk_Iskm_BatchedCrowd_Actor* InCrowd, UMaterialInterface* InMaterial)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return; }
+    InCrowd->Set_OverrideMaterial(InMaterial);
+}

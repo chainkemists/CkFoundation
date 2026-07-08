@@ -88,11 +88,46 @@ auto
     Comp->Set_ManagedExternally(true);        // the manager advances animation + pushes per-frame data
     Comp->Set_FixedLocalBounds(TileLocalBounds());
 
+    for (int32 Idx = 0; Idx < _DefaultTileCustomPrimitiveData.Num(); ++Idx)
+    { Comp->SetCustomPrimitiveDataFloat(Idx, _DefaultTileCustomPrimitiveData[Idx]); }
+
+    if (_OverrideMaterial != nullptr)
+    { Comp->Set_OverrideMaterial(_OverrideMaterial); }
+
     _Tiles.Add(InTile, Comp);
     return Comp;
 }
 
 auto
+    ACk_Iskm_BatchedCrowd_Actor::
+    Set_OverrideMaterial(UMaterialInterface* InMaterial)
+{
+    _OverrideMaterial = InMaterial;
+
+    for (const auto& Pair : _Tiles)
+    {
+        if (Pair.Value == nullptr)
+        { continue; }
+        Pair.Value->Set_OverrideMaterial(InMaterial);
+    }
+}
+
+void
+    ACk_Iskm_BatchedCrowd_Actor::
+    Set_DefaultTileCustomPrimitiveData(const TArray<float>& InFloats)
+{
+    _DefaultTileCustomPrimitiveData = InFloats;
+
+    for (const auto& Pair : _Tiles)
+    {
+        if (Pair.Value == nullptr)
+        { continue; }
+        for (int32 Idx = 0; Idx < _DefaultTileCustomPrimitiveData.Num(); ++Idx)
+        { Pair.Value->SetCustomPrimitiveDataFloat(Idx, _DefaultTileCustomPrimitiveData[Idx]); }
+    }
+}
+
+void
     ACk_Iskm_BatchedCrowd_Actor::
     AddInstance(const FTransform& InWorldTransform, int32 InSequenceIndex, float InRate, float InTimeOffset)
     -> void

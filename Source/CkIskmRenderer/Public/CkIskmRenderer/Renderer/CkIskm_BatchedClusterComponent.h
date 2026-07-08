@@ -61,6 +61,13 @@ public:
     // Fixed conservative local bounds (e.g. tile extent + mesh pad) — movement inside them never recomputes.
     void Set_FixedLocalBounds(const FBox& InLocalBounds);
 
+    // One material applied to EVERY slot of every instance (replaces the mesh's slot materials wholesale).
+    // Far-LOD look: mesh default slots are usually authored for per-SKMC customization (MIDs, per-slot picks)
+    // and render unset/grey when batched — a single cheap override gives the whole crowd a coherent look.
+    // Recreates the proxy. Null restores the mesh's own materials.
+    void Set_OverrideMaterial(UMaterialInterface* InMaterial);
+
+    UMaterialInterface* Get_OverrideMaterial() const { return _OverrideMaterial; }
     UCk_IskmAnimCollection_Data* Get_AnimCollection() const { return _AnimCollection; }
     USkeletalMesh* Get_Mesh() const { return _Mesh; }
     const FBox& Get_LocalBounds() const { return _LocalBounds; }
@@ -79,6 +86,7 @@ public:
 private:
     UPROPERTY(Transient) TObjectPtr<UCk_IskmAnimCollection_Data> _AnimCollection;
     UPROPERTY(Transient) TObjectPtr<USkeletalMesh> _Mesh;
+    UPROPERTY(Transient) TObjectPtr<UMaterialInterface> _OverrideMaterial;
 
     TArray<FInstance> _Instances;
     FBox _LocalBounds = FBox(ForceInit);

@@ -42,17 +42,33 @@ auto
 // ====================================================================================================================
 auto
     UCk_IskmAnimCollection_Data::
+    Get_EffectiveSkeleton() const
+    -> USkeleton*
+{
+    if (ck::IsValid(_Skeleton))
+    { return _Skeleton; }
+    if (ck::IsValid(_DefaultMesh))
+    { return _DefaultMesh->GetSkeleton(); }
+    return nullptr;
+}
+
+auto
+    UCk_IskmAnimCollection_Data::
     Build_BakedPoseData()
     -> bool
 {
-    if (ck::Is_NOT_Valid(_Skeleton) || ck::Is_NOT_Valid(_DefaultMesh))
+    USkeleton* const Skeleton = Get_EffectiveSkeleton();
+    CK_ENSURE_IF_NOT(ck::IsValid(Skeleton) && ck::IsValid(_DefaultMesh),
+        TEXT("[CkIskm] Batched bake needs a DefaultMesh and a Skeleton (own or the DefaultMesh's) on AnimCollection [{}] — "
+             "every batched cluster using it will render NOTHING"),
+        this)
     { return false; }
 
     FCk_AnimBake_SampleParams SampleParams;
     SampleParams.ExtractRootMotion = _ExtractRootMotion;
     SampleParams.DisableRetargeting = _DisableRetargeting;
 
-    const auto SkeletonData = ck::anim_bake::BuildSkeletonData(*_Skeleton, *_DefaultMesh, SampleParams);
+    const auto SkeletonData = ck::anim_bake::BuildSkeletonData(*Skeleton, *_DefaultMesh, SampleParams);
     if (NOT SkeletonData.IsSet())
     { return false; }
 
@@ -112,7 +128,7 @@ auto
     // Frame 0 (reference pose, yielding identity matrices) + every sequence frame; render-bone translations
     // accumulate inside the core and feed the conservative animated bounds.
     const FBox BoneBoundsAllFrames =
-        ck::anim_bake::SamplePoses(*_Skeleton, *SkeletonData, Layout, SampleParams, CalcRenderMatrices);
+        ck::anim_bake::SamplePoses(*Skeleton, *SkeletonData, Layout, SampleParams, CalcRenderMatrices);
 
     Baked->AnimatedBounds = ck::anim_bake::ComputeAnimatedBounds(*SkeletonData, BoneBoundsAllFrames, *_DefaultMesh);
 
@@ -183,7 +199,8 @@ auto
 
     // CPU: build the default mesh's render data (render-bone remap + vertex factories). Pass the skeleton +
     // remap table directly so the engine-only VF module stays decoupled from this asset type.
-    if (ck::IsValid(_DefaultMesh) && ck::IsValid(_Skeleton))
+    USkeleton* const EffectiveSkeleton = Get_EffectiveSkeleton();
+    if (ck::IsValid(_DefaultMesh) && ck::IsValid(EffectiveSkeleton))
     {
         // Bone-influence guard. Policy lives here — the CkCore-linked module — because the engine-only VF module
         // (PostConfigInit, no Ck deps) can't CK_ENSURE. The batched path skins up to 8 influences (4- and
@@ -211,7 +228,7 @@ auto
             }
         }
 
-        RD->DefaultMeshData.InitFromMesh(_DefaultMesh, _Skeleton, Baked->SkeletonBoneToRenderBone, GMaxRHIFeatureLevel);
+        RD->DefaultMeshData.InitFromMesh(_DefaultMesh, EffectiveSkeleton, Baked->SkeletonBoneToRenderBone, GMaxRHIFeatureLevel);
     }
 
     const uint32 BoneCount = static_cast<uint32>(Baked->RenderBoneCount);
@@ -287,13 +304,16 @@ auto
 {
     auto Result = Super::IsDataValid(InContext);
 
-    if (ck::Is_NOT_Valid(_Skeleton))
+    // _Skeleton may legitimately be unset when a DefaultMesh carries the skeleton (script-authored
+    // collections cannot assign _Skeleton) — validate against the effective skeleton.
+    const auto* EffectiveSkeleton = Get_EffectiveSkeleton();
+    if (ck::Is_NOT_Valid(EffectiveSkeleton))
     {
-        InContext.AddError(FText::FromString(TEXT("AnimCollection has no Skeleton.")));
+        InContext.AddError(FText::FromString(TEXT("AnimCollection has no Skeleton (own or via DefaultMesh).")));
         Result = EDataValidationResult::Invalid;
     }
 
-    if (ck::IsValid(_DefaultMesh) && _DefaultMesh->GetSkeleton() != _Skeleton)
+    if (ck::IsValid(_DefaultMesh) && ck::IsValid(_Skeleton) && _DefaultMesh->GetSkeleton() != _Skeleton)
     {
         InContext.AddError(FText::FromString(TEXT("DefaultMesh skeleton does not match the AnimCollection's Skeleton.")));
         Result = EDataValidationResult::Invalid;
@@ -309,7 +329,7 @@ auto
             Result = EDataValidationResult::Invalid;
             continue;
         }
-        if (Seq->GetSkeleton() != _Skeleton)
+        if (Seq->GetSkeleton() != EffectiveSkeleton)
         {
             InContext.AddError(FText::FromString(FString::Printf(TEXT("Sequence [%d] (%s) skeleton mismatch."), Index, *Def.Get_Name().ToString())));
             Result = EDataValidationResult::Invalid;

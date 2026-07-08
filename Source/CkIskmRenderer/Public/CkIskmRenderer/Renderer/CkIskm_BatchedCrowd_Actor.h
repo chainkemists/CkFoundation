@@ -68,6 +68,17 @@ public:
     // Hide/show a member in its batched tile (rebuilds that one tile). Hidden members leave a gap for a per-SKMC stand-in.
     void       Set_MemberVisible(int32 InIndex, bool InVisible);
 
+    // Default CustomPrimitiveData floats applied to EVERY tile component (existing and future). Materials whose
+    // parameters ride CPD (e.g. CharacterMaster skin color at CPD 0/1/2) read zeros on batched tiles otherwise —
+    // the whole crowd renders with unset (grey/black) parameters. One shared value set per crowd; per-member
+    // variation needs the per-instance floats ([2]/[3] via Set_MemberCustomData) and a material that reads them.
+    void       Set_DefaultTileCustomPrimitiveData(const TArray<float>& InFloats);
+
+    // One material applied to EVERY slot of EVERY tile (existing and future) — the far-LOD whole-body look.
+    // Mesh default slots are usually authored for per-SKMC customization and render unset/grey when batched;
+    // one cheap override (e.g. a skin-toned MID) gives coherent distant silhouettes. Null restores mesh materials.
+    void       Set_OverrideMaterial(UMaterialInterface* InMaterial);
+
     // Sum of each tile component's CURRENT instance count (i.e. only visible members) — drops when a member is hidden.
     int32      Get_RenderedInstanceCount() const;
 
@@ -99,6 +110,11 @@ private:
     TObjectPtr<UCk_IskmAnimCollection_Data> _Collection;
 
     float _TileSize = 2000.0f;
+
+    TArray<float> _DefaultTileCustomPrimitiveData;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UMaterialInterface> _OverrideMaterial;
 
     UPROPERTY(Transient)
     TMap<FIntPoint, TObjectPtr<UCk_Iskm_BatchedClusterComponent>> _Tiles;

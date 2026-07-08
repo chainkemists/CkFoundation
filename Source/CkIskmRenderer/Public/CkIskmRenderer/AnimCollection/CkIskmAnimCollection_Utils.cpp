@@ -22,7 +22,10 @@ auto
 {
     if (ck::Is_NOT_Valid(InAsset))
     { return nullptr; }
-    return InAsset->Get_Skeleton();
+    // Effective skeleton: falls back to the DefaultMesh's skeleton when _Skeleton is unset
+    // (script-authored collections can't assign it) — callers want "the skeleton this
+    // collection animates with", which is exactly that.
+    return InAsset->Get_EffectiveSkeleton();
 }
 
 // ---- Plan-2 CPU bake ----

@@ -109,17 +109,19 @@ FCk_Iskm_BatchedClusterProxy::FCk_Iskm_BatchedClusterProxy(UCk_Iskm_BatchedClust
     bHasWorldPositionOffsetVelocity = true;
     bVFRequiresPrimitiveUniformBuffer = false;
 
-    // Materials + relevance.
+    // Materials + relevance. A component override material replaces EVERY slot (far-LOD whole-body look).
     Materials.Reset();
     if (Mesh != nullptr)
     {
+        UMaterialInterface* const Override = InComponent->Get_OverrideMaterial();
         const TArray<FSkeletalMaterial>& Mats = Mesh->GetMaterials();
         Materials.Reserve(Mats.Num());
         const ERHIFeatureLevel::Type FeatureLevel = GetScene().GetFeatureLevel();
         const EShaderPlatform ShaderPlatform = GShaderPlatformForFeatureLevel[FeatureLevel];
         for (const FSkeletalMaterial& M : Mats)
         {
-            UMaterialInterface* MI = (M.MaterialInterface != nullptr) ? M.MaterialInterface.Get() : UMaterial::GetDefaultMaterial(MD_Surface);
+            UMaterialInterface* MI = (Override != nullptr) ? Override
+                : (M.MaterialInterface != nullptr) ? M.MaterialInterface.Get() : UMaterial::GetDefaultMaterial(MD_Surface);
             Materials.Add(MI);
             MaterialRelevance |= MI->GetRelevance_Concurrent(ShaderPlatform);
         }
