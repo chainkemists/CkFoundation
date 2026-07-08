@@ -1,0 +1,22 @@
+// /CkParticles/Behaviors/Behavior_Beam.ush — BehaviorId 6.
+// Directional beam / missile stream: particles travel along local +X (aim it with the spawn rotation, since the
+// emitter is local-space) with a per-Seed lateral spread that converges toward the tip. Tint hot-white -> blue.
+// Self-driving (Age + Seed). Knobs below — keep the CPU mirror in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+FCkParticles_StageOutput CkParticles_Behavior_Beam(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    const float n      = CkParticles_NormalizedAge(In);
+    const float Along  = lerp(0.0, 450.0, n);                  // distance down +X over life
+    const float Spread = lerp(28.0, 3.0, n);                   // converge toward the tip (focused beam)
+    const float A      = CkParticles_Rand(In.Seed, 1) * 6.28318530718;
+    const float R      = Spread * CkParticles_Rand(In.Seed, 2);
+
+    O.Position = float3(Along, cos(A) * R, sin(A) * R);
+    O.Color    = lerp(float4(3.0, 3.0, 2.2, 1.0), float4(0.2, 0.5, 2.0, 1.0), n);
+
+    return O;
+}
