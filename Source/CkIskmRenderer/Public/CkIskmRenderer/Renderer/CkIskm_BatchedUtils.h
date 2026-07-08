@@ -9,6 +9,7 @@
 class UCk_IskmAnimCollection_Data;
 class UCk_Iskm_BatchedClusterComponent;
 class ACk_Iskm_BatchedCrowd_Actor;
+class UMaterialInterface;
 
 // ====================================================================================================================
 //  CkIskmRenderer Plan-2 — script-facing surface for the batched skeletal renderer.
@@ -155,4 +156,20 @@ public:
         DisplayName = "[Ck][IskmBatched] Set Crowd Member Custom Data")
     static void
     Set_CrowdMemberCustomData(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, float InA, float InB);
+
+    // Default CustomPrimitiveData floats for every tile component (existing and future). CPD-parameterized
+    // materials (e.g. CharacterMaster skin color at CPD 0/1/2) read zeros on batched tiles otherwise — the
+    // whole crowd renders with unset (grey) parameters. One shared value per crowd.
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Set Crowd Default Custom Primitive Data")
+    static void
+    Set_CrowdDefaultCustomPrimitiveData(ACk_Iskm_BatchedCrowd_Actor* InCrowd, const TArray<float>& InFloats);
+
+    // One material applied to EVERY slot of every tile (existing and future) — the far-LOD whole-body look.
+    // Mesh default slots authored for per-SKMC customization render unset/grey when batched; one cheap
+    // override (e.g. a skin-toned MID) gives coherent distant silhouettes. Null restores mesh materials.
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Set Crowd Override Material")
+    static void
+    Set_CrowdOverrideMaterial(ACk_Iskm_BatchedCrowd_Actor* InCrowd, UMaterialInterface* InMaterial);
 };
