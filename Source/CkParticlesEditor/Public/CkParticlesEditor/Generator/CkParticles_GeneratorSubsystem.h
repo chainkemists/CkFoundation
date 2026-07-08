@@ -18,4 +18,10 @@ public:
     UFUNCTION(CallInEditor, Category = "CkParticles",
               DisplayName = "Generate Particle Systems")
     void Generate_ParticleSystems();
+
+    // Bakes the procedural VFX texture library (glow / flare / smoke / electric / streak / ring) as assets under
+    // /CkFoundation/CkParticles/Textures/. Building blocks for the VFX master materials.
+    UFUNCTION(CallInEditor, Category = "CkParticles",
+              DisplayName = "Generate VFX Textures")
+    void Generate_VfxTextures();
 };
