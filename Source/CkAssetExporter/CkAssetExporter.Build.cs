@@ -36,6 +36,9 @@ public class CkAssetExporter : CkModuleRules
             "StateTreeModule",
             "StateTreeEditorModule",
 
+            "Niagara",
+            "NiagaraEditor",
+
             "CkCore",
             "CkEcs",
             "CkAi",
