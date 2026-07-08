@@ -11,6 +11,7 @@
 
 class UCk_Utils_SceneNode_UE;
 class FArchive;
+class USceneComponent;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -43,8 +44,7 @@ namespace ck
         friend class FProcessor_SceneNode_Setup;
         friend class FProcessor_SceneNode_HandleRequests;
         friend class FProcessor_SceneNode_EndPlay;
-        friend class FProcessor_SceneNode_UpdateLocal_FromRootComponent;
-        friend class FProcessor_SceneNode_UpdateLocal_FromMeshSocket;
+        friend class FProcessor_SceneNode_FollowUnrealAnchor;
         friend class UCk_Utils_SceneNode_UE;
 
     private:
@@ -60,6 +60,41 @@ namespace ck
         // Body in the .cpp (just the FTransform). Registered alongside SceneNodeParent/RecordOfSceneNodes so a
         // restored SceneNode keeps its relative transform instead of resetting to identity.
         auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Foreign Unreal anchor for a scene-node that follows a USceneComponent (Socket == None) or a mesh
+    // socket (Socket set) at the authored FFragment_SceneNode_Current offset. FProcessor_SceneNode_FollowUnrealAnchor
+    // composes entity.world = offset * anchor.world every tick. Deliberately NOT the Transform module's
+    // FFragment_Transform_RootComponent / _MeshSocket: those pair with SyncFromActor/SyncToActor (a bidirectional
+    // actor bridge that would drag a Movable anchor). This keeps anchor-follow a read-only SceneNode concern and
+    // leaves the Transform feature untouched. Not snapshotable — the live component ref can't be remapped
+    // (parity with the Transform anchor fragments); the composed world pose is restored via FFragment_Transform.
+    struct CKECSEXT_API FFragment_SceneNode_UnrealAnchor
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_SceneNode_UnrealAnchor);
+
+    public:
+        friend class FProcessor_SceneNode_FollowUnrealAnchor;
+        friend class UCk_Utils_SceneNode_UE;
+
+    public:
+        FFragment_SceneNode_UnrealAnchor() = default;
+
+        explicit
+        FFragment_SceneNode_UnrealAnchor(
+            const USceneComponent* InComponent,
+            FName InSocket);
+
+    private:
+        TWeakObjectPtr<const USceneComponent> _Component;
+        FName _Socket = NAME_None;
+
+    public:
+        CK_PROPERTY_GET(_Component);
+        CK_PROPERTY_GET(_Socket);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
