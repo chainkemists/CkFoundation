@@ -31,6 +31,20 @@ namespace ck::angelscriptgenerator::self_heal
         SynthesizeStub_EntitySpawnParams,
         KickGenerator_DynamicHandle,
         KickGenerator_AssetRegistry,
+        // A generated EntitySpawnParams canonical references a type that no
+        // longer exists — e.g. an ExposeOnSpawn field enum/struct renamed or
+        // unified away out from under the stale, machine-local canonical after
+        // a pull. The compile error ('Identifier <X> is not a data type') is
+        // located INSIDE the canonical, names no entity-script class, and
+        // matches neither the FCk_Handle_ nor the F<X>_SpawnParams shape, so
+        // the per-class SynthesizeStub path can't reach it. Quarantine the
+        // whole canonical (forensic copy + delete — it is gitignored and
+        // rebuilt from source) and bulk-resynthesize full shapes for every
+        // class it covered. Keyed on the error's LOCATION (an ESP canonical
+        // path), so the same "not a data type" error in author source stays a
+        // terminal banner — that is a real authoring bug, not stale generated
+        // output.
+        Quarantine_StaleEspCanonical,
         // Author-side authoring bug — dispatcher recognizes the pattern and
         // emits an actionable banner, but does NOT mutate user source. Counted
         // as an "actionable" strategy so the dispatcher doesn't fall through
