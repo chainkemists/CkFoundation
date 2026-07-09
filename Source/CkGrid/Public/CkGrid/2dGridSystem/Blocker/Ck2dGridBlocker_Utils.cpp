@@ -59,6 +59,19 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+auto
+    UCk_Utils_2dGridBlocker_UE::
+    Create(
+        FCk_Handle& InOwner,
+        const FCk_Fragment_2dGridBlocker_ParamsData& InParams)
+    -> FCk_Handle_2dGridBlocker
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    return Add(NewEntity, InParams);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_2dGridBlocker_UE, FCk_Handle_2dGridBlocker,
     ck::FFragment_2dGridBlocker_Params, ck::FFragment_2dGridBlocker_Current)
 

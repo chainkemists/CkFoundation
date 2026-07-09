@@ -1,5 +1,6 @@
 #include "CkRaySense_Utils.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
 #include "CkRaySense/CkRaySense_Fragment.h"
@@ -18,6 +19,19 @@ auto
     InHandle.Add<ck::FFragment_RaySense_Current>();
 
     return Cast(InHandle);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_RaySense_UE::
+    Create(
+        FCk_Handle& InOwner,
+        const FCk_Fragment_RaySense_ParamsData& InParams)
+    -> FCk_Handle_RaySense
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    return Add(NewEntity, InParams);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

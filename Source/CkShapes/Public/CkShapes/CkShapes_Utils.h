@@ -35,6 +35,14 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_AnyShape& InParams);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Shapes",
+              DisplayName = "[Ck][Shapes] Create")
+    static FCk_Handle_Shape
+    Create(
+        UPARAM(ref) FCk_Handle& InOwner,
+        const FCk_AnyShape& InParams);
+
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck][Shapes] Get Type",
               Category = "Ck|Utils|Shapes")

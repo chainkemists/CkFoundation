@@ -28,6 +28,14 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_RaySense_ParamsData& InParams);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|RaySense",
+              DisplayName="[Ck][RaySense] Create")
+    static FCk_Handle_RaySense
+    Create(
+        UPARAM(ref) FCk_Handle& InOwner,
+        const FCk_Fragment_RaySense_ParamsData& InParams);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|RaySense",
               DisplayName="[Ck][RaySense] Has Feature")

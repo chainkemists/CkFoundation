@@ -1,5 +1,7 @@
 #include "CkSubstep_Utils.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+
 #include "CkSubstep/CkSubstep_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -23,6 +25,17 @@ auto
     }
 
     return SubstepHandle;
+}
+
+auto
+    UCk_Utils_Substep_UE::
+    Create(
+        FCk_Handle& InOwner,
+        const FCk_Substep_ParamsData& InParams)
+    -> FCk_Handle_Substep
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    return Add(NewEntity, InParams);
 }
 
 auto

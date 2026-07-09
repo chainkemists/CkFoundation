@@ -35,6 +35,14 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_ObjectiveOwner_ParamsData& InParams);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|ObjectiveOwner",
+              DisplayName = "[Ck][ObjectiveOwner] Create")
+    static FCk_Handle_ObjectiveOwner
+    Create(
+        UPARAM(ref) FCk_Handle& InOwner,
+        const FCk_ObjectiveOwner_ParamsData& InParams);
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ObjectiveOwner",
