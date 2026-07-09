@@ -27,9 +27,14 @@ public:
 	// CONSTRUCTION
 	// ================================================================================================================
 
-	// Add — spawn a child Planner entity off InOwner, label it with the Params
-	// tag, and register it in the Owner's record of Planners. In U11.0a the
-	// PlannerParams' tag is required (same identity as the old ActionSet tag).
+	// Add — stamp the Planner role directly onto InOwner. InOwner itself becomes
+	// the Planner (no child entity is created). Use this for the single-Planner-
+	// per-owner case where the owning entity IS the planner. Rejected (returns
+	// invalid) if InOwner already carries the Planner role — one entity holds at
+	// most one Planner role; use Create for multiple independent Planners on the
+	// same owner. The PlannerParams' tag is required (stored on the Params
+	// fragment as this Planner's identity). Mirrors PromoteActionToPlanner in
+	// that it stamps onto an existing entity without adding a GameplayLabel.
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
 		DisplayName = "[Ck][Goap|Planner] Add")
 	static FCk_Handle_Goap_Planner
@@ -37,8 +42,11 @@ public:
 		UPARAM(ref) FCk_Handle& InOwner,
 		const FCk_Fragment_Goap_PlannerParamsData& InParams);
 
-	// Create — convenience that takes the tag separately. Writes the tag into a
-	// copy of InParams then calls Add.
+	// Create — spawn a NEW child Planner entity off InOwner, label it with the
+	// tag, register it in the Owner's record of Planners, and stamp the Planner
+	// role onto the child. Use when one owner needs multiple independent
+	// Planners (e.g. combat + dialogue); look them up afterwards via Find_Planner.
+	// Writes InPlannerTag into a copy of InParams (tag = the entry's identity).
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
 		DisplayName = "[Ck][Goap|Planner] Create")
 	static FCk_Handle_Goap_Planner
@@ -375,4 +383,15 @@ public:
 	UnbindFrom_OnPlannerDeactivated(
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
 		const FCk_Delegate_Goap_OnPlannerDeactivated& InDelegate);
+
+private:
+	// Shared stamping core for Add (onto InOwner) and Create (onto a fresh child).
+	// Stamps the full top-level Planner-role fragment cluster onto InPlannerEntity,
+	// subscribes it to the Params' WorldStateSource, and arms the initial-plan tag.
+	// Not a UFUNCTION — a private static member so it retains the friend access to
+	// the Planner-role fragments that direct `_Member` writes require.
+	static auto
+	DoStampTopLevelPlannerRole(
+		FCk_Handle& InPlannerEntity,
+		const FCk_Fragment_Goap_PlannerParamsData& InParams) -> void;
 };
