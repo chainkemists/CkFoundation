@@ -56,16 +56,12 @@ namespace ck
         const auto NetContext = ck::statemachine::ComputeNetContext(SmHandle);
 
         // Authority gating (spec §5/§6): only the machine that owns this SM's transitions ticks
-        // tasks. Non-owning clients replay state-entry/exit via the replicated history; their
-        // tasks must not produce side effects locally. Standalone is always authority. Server is
-        // authority for ServerAuth SMs. OwningClient is authority only for OwningClientAuth SMs.
-        // NonOwningClient is never authority.
-        if (NetContext == ECk_Sm_NetContext::NonOwningClient)
-        { return; }
-
-        if (NetContext == ECk_Sm_NetContext::OwningClient
-            && UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel(SmHandle)
-                != ECk_Sm_AuthorityModel::OwningClientAuthoritative)
+        // tasks. Non-authority machines replay state-entry/exit via the replicated history; their
+        // tasks must not produce side effects locally. Uses the shared transition-authority
+        // predicate — the prior inline gate only skipped NonOwningClient and non-OwningClientAuth
+        // OwningClient, so the server of an OwningClientAuth SM (which must follow the relay,
+        // listen-host-owns-pawn excepted) still ticked tasks.
+        if (NOT ck::statemachine::Get_IsTransitionAuthority(SmHandle))
         { return; }
 
         INC_DWORD_STAT(STAT_SmTasksTicked);

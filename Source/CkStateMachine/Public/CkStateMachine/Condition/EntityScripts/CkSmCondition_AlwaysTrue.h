@@ -17,9 +17,11 @@ public:
 
     UCk_SmCondition_AlwaysTrue() = default;
 
-protected:
+public:
     auto
-    BeginPlay() -> void override;
+    EnterCondition(
+        FCk_Handle_SmCondition InHandle,
+        ECk_Sm_NetContext InNetContext) -> void override;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

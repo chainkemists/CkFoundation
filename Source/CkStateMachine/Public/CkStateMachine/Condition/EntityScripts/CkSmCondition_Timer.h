@@ -20,13 +20,21 @@ public:
 
     UCk_SmCondition_Timer() = default;
 
+public:
+    // Setup/teardown live in the condition lifecycle (not BeginPlay/EndPlay) so the base's
+    // transition-authority gate suppresses them on non-authority machines — a machine that
+    // follows the relay must not run this condition's timer.
+    auto
+    EnterCondition(
+        FCk_Handle_SmCondition InHandle,
+        ECk_Sm_NetContext InNetContext) -> void override;
+
+    auto
+    ExitCondition(
+        FCk_Handle_SmCondition InHandle,
+        ECk_Sm_NetContext InNetContext) -> void override;
+
 protected:
-    auto
-    BeginPlay() -> void override;
-
-    auto
-    EndPlay() -> void override;
-
     UFUNCTION()
     void
     OnTimerComplete(

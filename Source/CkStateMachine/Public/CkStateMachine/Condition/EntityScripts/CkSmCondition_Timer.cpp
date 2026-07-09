@@ -6,9 +6,13 @@
 
 auto
     UCk_SmCondition_Timer::
-    BeginPlay()
+    EnterCondition(
+        FCk_Handle_SmCondition InHandle,
+        ECk_Sm_NetContext InNetContext)
     -> void
 {
+    Super::EnterCondition(InHandle, InNetContext);
+
     auto ScriptEntity = DoGet_ScriptEntity();
 
     const auto TimerParams = FCk_Fragment_Timer_ParamsData{_Duration}
@@ -21,13 +25,13 @@ auto
     auto Delegate = FCk_Delegate_Timer{};
     Delegate.BindDynamic(this, &ThisType::OnTimerComplete);
     UCk_Utils_Timer_UE::BindTo_OnDone(_TimerHandle, Delegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame);
-
-    Super::BeginPlay();
 }
 
 auto
     UCk_SmCondition_Timer::
-    EndPlay()
+    ExitCondition(
+        FCk_Handle_SmCondition InHandle,
+        ECk_Sm_NetContext InNetContext)
     -> void
 {
     if (ck::IsValid(_TimerHandle))
@@ -38,7 +42,7 @@ auto
         _TimerHandle = {};
     }
 
-    Super::EndPlay();
+    Super::ExitCondition(InHandle, InNetContext);
 }
 
 void

@@ -56,18 +56,14 @@ namespace ck
         InHandle.Remove<MarkedDirtyBy>();
 
         // Authority gating (spec §5/§6): condition evaluation drives transitions. Non-authority
-        // machines must not evaluate — they receive transitions via replication. Keep the dirty
-        // marker removed (above) so we don't loop; the rep-driven replay path (Phase 7) will
-        // commit the transition on its own schedule.
+        // machines must not evaluate — they receive transitions via replication/relay. Keep the
+        // dirty marker removed (above) so we don't loop; the rep-driven replay path (Phase 7) will
+        // commit the transition on its own schedule. Uses the shared transition-authority
+        // predicate — the prior inline gate only skipped NonOwningClient and non-OwningClientAuth
+        // OwningClient, which left the server of a relayed OwningClientAuth sub-SM evaluating.
         const auto SmHandle = UCk_Utils_SmTransition_UE::Get_OwningStateMachine(InHandle);
-        const auto NetContext = ck::statemachine::ComputeNetContext(SmHandle);
 
-        if (NetContext == ECk_Sm_NetContext::NonOwningClient)
-        { return; }
-
-        if (NetContext == ECk_Sm_NetContext::OwningClient
-            && UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel(SmHandle)
-                != ECk_Sm_AuthorityModel::OwningClientAuthoritative)
+        if (NOT ck::statemachine::Get_IsTransitionAuthority(SmHandle))
         { return; }
 
         const auto Conditions = UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::Get_ValidEntries(InHandle);
@@ -85,6 +81,14 @@ namespace ck
             return;
         }
 
+        // Single-pass eager AND: arm every Undetermined condition now instead of one per
+        // evaluate cycle. All of them get evaluated in the same polled main-pass sweep, whose
+        // unconditional parent wake re-runs this evaluate in the pump — the whole decision
+        // resolves within one frame instead of one condition per frame. Fail still wins
+        // immediately. Polled Evaluate is const (pure predicate), so eager evaluation of a
+        // condition that a failing sibling would previously have short-circuited is safe.
+        auto AnyUndetermined = false;
+
         for (auto Condition : Conditions)
         {
             switch (UCk_Utils_SmCondition_UE::Get_EvaluationResult(Condition))
@@ -93,7 +97,8 @@ namespace ck
                 {
                     sm::VeryVerbose(TEXT("Transition [{}] — condition [{}] Undetermined, activating"), InHandle, Condition);
                     UCk_Utils_SmCondition_UE::Request_StartOrResumeEvaluating(Condition);
-                    return;
+                    AnyUndetermined = true;
+                    break;
                 }
                 case ECk_SmConditionResult::Pass:
                 {
@@ -117,6 +122,9 @@ namespace ck
                 }
             }
         }
+
+        if (AnyUndetermined)
+        { return; }
 
         sm::VeryVerbose(TEXT("Transition [{}] — all conditions Pass"), InHandle);
         UCk_Utils_SmTransition_UE::Request_UpdateTransitionResult(InHandle, ECk_SmTransitionResult::Pass);

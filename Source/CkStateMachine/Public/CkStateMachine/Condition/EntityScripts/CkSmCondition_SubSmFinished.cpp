@@ -8,23 +8,19 @@
 
 auto
     UCk_SmCondition_SubSmFinished::
-    BeginPlay()
+    EnterCondition(
+        FCk_Handle_SmCondition InHandle,
+        ECk_Sm_NetContext InNetContext)
     -> void
 {
-    auto ConditionHandle = DoGet_ScriptEntity();
+    Super::EnterCondition(InHandle, InNetContext);
 
     const auto ParentTransition = Get_ParentTransition();
     if (ck::Is_NOT_Valid(ParentTransition))
-    {
-        Super::BeginPlay();
-        return;
-    }
+    { return; }
 
     if (NOT ck::TUtils_Sm_ParentState::Has(ParentTransition))
-    {
-        Super::BeginPlay();
-        return;
-    }
+    { return; }
 
     const auto ParentState = ck::TUtils_Sm_ParentState::Get_StoredEntity(ParentTransition);
 
@@ -56,13 +52,13 @@ auto
             ECk_Signal_PostFireBehavior::Unbind);
         _PendingTasks.Add(InTask);
     });
-
-    Super::BeginPlay();
 }
 
 auto
     UCk_SmCondition_SubSmFinished::
-    EndPlay()
+    ExitCondition(
+        FCk_Handle_SmCondition InHandle,
+        ECk_Sm_NetContext InNetContext)
     -> void
 {
     for (auto& PendingTask : _PendingTasks)
@@ -87,7 +83,7 @@ auto
     }
     _BoundSubSms.Reset();
 
-    Super::EndPlay();
+    Super::ExitCondition(InHandle, InNetContext);
 }
 
 auto
