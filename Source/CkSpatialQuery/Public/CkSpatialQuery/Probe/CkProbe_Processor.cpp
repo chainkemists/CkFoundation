@@ -139,8 +139,20 @@ namespace ck::details
             if (_ProbeHandle.Get_Entity().Get_ID() == Entity)
             { return; }
 
+            // See CastRayCollector::AddHit — a body can briefly outlive its owning entity; skip a
+            // stale hit rather than ensuring inside Get_ValidHandle.
+            if (_ProbeHandle.Get_RegistryView().IsValid(FCk_Entity{Entity}) == false)
+            { return; }
+
             const auto OtherProbe = UCk_Utils_Probe_UE::Cast(_ProbeHandle.Get_ValidHandle(Entity));
 
+            if (ck::Is_NOT_Valid(OtherProbe))
+            { return; }
+
+            // Mirror the Jolt-contact path's per-direction gating (CkContactListener): the
+            // linear-cast reconcile must respect Silent policy, context, and tag filters, or a
+            // fast-moving probe fires overlap events into probes its filter excludes.
+            if (UCk_Utils_Probe_UE::Get_CanOverlapWith(_ProbeHandle, OtherProbe))
             {
                 auto ContactPoints = TArray<FVector>{};
                 ContactPoints.Emplace(ck::jolt::Conv(inResult.mContactPointOn1));
@@ -158,6 +170,8 @@ namespace ck::details
 
                 _BeginOverlaps.Emplace(OtherProbe);
             }
+
+            if (UCk_Utils_Probe_UE::Get_CanOverlapWith(OtherProbe, _ProbeHandle))
             {
                 auto ContactPoints = TArray<FVector>{};
                 ContactPoints.Emplace(ck::jolt::Conv(inResult.mContactPointOn2));
@@ -174,7 +188,6 @@ namespace ck::details
                 });
 
                 _BeginOverlaps.Emplace(_ProbeHandle);
-
             }
         }
 
@@ -684,7 +697,7 @@ namespace ck
 
             }
 
-            for (auto Overlap : InCurrent.Get_CurrentOverlaps())
+            for (const auto& Overlap : InCurrent.Get_CurrentOverlaps())
             {
                 auto OtherEntity = Overlap.Get_OtherEntity();
 
@@ -838,8 +851,6 @@ namespace ck
             TimeType InDeltaT)
             -> void
     {
-        _TransientEntity.Clear<FTag_Probe_Updated>();
-
         TProcessor::DoTick(InDeltaT);
     }
 
@@ -1056,35 +1067,36 @@ namespace ck
         };
 
         const auto& PhysicsSystem = _PhysicsSystem.Pin();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(PhysicsSystem),
+            TEXT("PhysicsSystem is INVALID during Probe [{}] teardown — subsystem already deinitialized?"), InHandle)
+        { return; }
+
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
         const auto& BodyId = InCurrent.Get_BodyId();
 
         if (UCk_Utils_Probe_UE::Get_IsEnabledDisabled(InHandle) == ECk_EnableDisable::Enable)
         {
             DoManuallyTriggerAllEndOverlaps();
-
-            if (NOT InHandle.Has<FTag_Probe_LinearCast>())
-            {
-                if (NOT BodyInterface.IsAdded(BodyId))
-                {
-                    ck::spatialquery::Log(TEXT("Teardown running on Probe [{}] that NEVER had its Jolt body added to the physics system. "
-                        "The Probe may be getting destroyed in the same frame. If not, then Did its Setup run correctly?"),
-                        InHandle);
-
-                    return;
-                }
-
-                BodyInterface.RemoveBody(BodyId);
-            }
         }
 
-        if (NOT InHandle.Has<FTag_Probe_LinearCast>())
+        if (BodyId.IsInvalid())
+        { return; }
+
+        // Always free the body SLOT, not just the broadphase membership. RemoveBody only detaches
+        // from the broadphase; the slot itself must be destroyed for every probe:
+        //   - a probe destroyed while Disabled was RemoveBody'd at Disable (IsAdded == false),
+        //   - a LinearCast probe's body is created in Setup and NEVER added to the broadphase,
+        //   - and an enabled probe's body stops being "added" the moment we RemoveBody it here.
+        // The old code gated DestroyBody on IsAdded AFTER RemoveBody (and skipped LinearCast
+        // entirely), so the destroy was unreachable on every path — each probe leaked a body slot
+        // until the pool (MaxBodies) exhausted under churn.
+        if (BodyInterface.IsAdded(BodyId))
         {
-            if (NOT BodyInterface.IsAdded(BodyId))
-            { return; }
-
-            BodyInterface.DestroyBody(BodyId);
+            BodyInterface.RemoveBody(BodyId);
         }
+
+        BodyInterface.DestroyBody(BodyId);
     }
 
     // --------------------------------------------------------------------------------------------------------------------

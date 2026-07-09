@@ -431,8 +431,13 @@ auto
     auto Collector = details::CastRayCollector{InAnyHandle, BodyInterface};
     InPhysicsSystem.GetNarrowPhaseQuery().CastRay(RayCast, RayCastSettings, Collector);
 
+    // Jolt collectors receive hits in broadphase-traversal order, NOT distance order — sort by
+    // fraction so Multi results are nearest-first and Single's Result[0] is the closest hit.
+    auto SortedHits = Collector.Get_Hits();
+    SortedHits.Sort([](const auto& InA, const auto& InB) { return InA.second < InB.second; });
+
     auto Result = TArray<FCk_Probe_RayCast_Result>{};
-    for (const auto& [HitProbe, Fraction] : Collector.Get_Hits())
+    for (const auto& [HitProbe, Fraction] : SortedHits)
     {
         const auto HitLocation = StartPos + Fraction * (EndPos - StartPos);
 
@@ -644,8 +649,8 @@ auto
         }
         case ECk_Shape_Type::Cylinder:
         {
-            const auto& Dimensions = Shape.Get_Capsule();
-            const auto Settings = JPH::CylinderShapeSettings{Dimensions.Get_HalfHeight(), Dimensions.Get_Radius()};
+            const auto& Dimensions = Shape.Get_Cylinder();
+            const auto Settings = JPH::CylinderShapeSettings{Dimensions.Get_HalfHeight(), Dimensions.Get_Radius(), Dimensions.Get_ConvexRadius()};
             Settings.SetEmbedded();
 
             JoltShape = Settings.Create().Get();
@@ -687,8 +692,13 @@ auto
     auto Collector = details::CastShapeCollector{InAnyHandle, BodyInterface};
     InPhysicsSystem.GetNarrowPhaseQuery().CastShape(ShapeCast, ShapeCastSettings, JPH::Vec3::sReplicate(0.0f), Collector);
 
+    // Jolt collectors receive hits in broadphase-traversal order, NOT distance order — sort by
+    // fraction so Multi results are nearest-first and Single's Result[0] is the closest hit.
+    auto SortedHits = Collector.Get_Hits();
+    SortedHits.Sort([](const auto& InA, const auto& InB) { return InA.second < InB.second; });
+
     auto Result = TArray<FCk_ShapeCast_Result>{};
-    for (const auto& [Probe, Fraction] : Collector.Get_Hits())
+    for (const auto& [Probe, Fraction] : SortedHits)
     {
         const auto HitLocation = StartPos + Fraction * Direction;
 
