@@ -15,7 +15,11 @@ class CKPOOL_API UCk_ObjectPool_Poolable : public UInterface
 // Optional per-object pooling hooks — mirrors the engine's IMassActorPoolableInterface contract.
 // The pool always does the generic freeze/thaw (actors: hidden + collision/tick off on release; visible +
 // CDO-default collision/tick on acquire). Deep per-use reset — physics velocities, AI state, bound
-// delegates, per-use timers — is the implementer's job in PrepareForPool/PrepareForUse
+// delegates, per-use timers — is the implementer's job in PrepareForPool/PrepareForUse.
+//
+// C++/BP only: AngelScript cannot implement UInterfaces. AS classes opt in by declaring an
+// FCk_Pool_PoolableReceiver property instead (CkPool/Poolable/CkPoolableReceiver.h) — same hooks,
+// same veto, detected by reflection. Both mechanisms may coexist; the interface fires first
 class CKPOOL_API ICk_ObjectPool_Poolable
 {
     GENERATED_BODY()

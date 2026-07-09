@@ -5,6 +5,7 @@
 
 #include "CkPool/ObjectPool/CkObjectPool_Data.h"
 
+#include <StructUtils/InstancedStruct.h>
 #include <Templates/SubclassOf.h>
 
 #include "CkObjectPool_Subsystem.generated.h"
@@ -80,7 +81,8 @@ private:
     DoAcquire(
         const TSubclassOf<UObject>& InObjectClass,
         const FTransform& InTransform,
-        bool InHasTransform) -> UObject*;
+        bool InHasTransform,
+        const FInstancedStruct& InPerUseParams) -> UObject*;
 
     auto
     DoRelease(

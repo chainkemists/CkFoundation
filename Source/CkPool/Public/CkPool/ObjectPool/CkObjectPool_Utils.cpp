@@ -48,11 +48,12 @@ auto
     UCk_Utils_ObjectPool_UE::
     Acquire(
         const UObject* InWorldContextObject,
-        TSubclassOf<UObject> InObjectClass)
+        TSubclassOf<UObject> InObjectClass,
+        const FInstancedStruct& InPerUseParams)
     -> UObject*
 {
     constexpr auto HasTransform = false;
-    return DoAcquire_Common(InWorldContextObject, InObjectClass, FTransform::Identity, HasTransform);
+    return DoAcquire_Common(InWorldContextObject, InObjectClass, FTransform::Identity, HasTransform, InPerUseParams);
 }
 
 auto
@@ -60,11 +61,12 @@ auto
     Acquire_Actor(
         const UObject* InWorldContextObject,
         TSubclassOf<AActor> InActorClass,
-        const FTransform& InTransform)
+        const FTransform& InTransform,
+        const FInstancedStruct& InPerUseParams)
     -> AActor*
 {
     constexpr auto HasTransform = true;
-    return Cast<AActor>(DoAcquire_Common(InWorldContextObject, InActorClass, InTransform, HasTransform));
+    return Cast<AActor>(DoAcquire_Common(InWorldContextObject, InActorClass, InTransform, HasTransform, InPerUseParams));
 }
 
 auto
@@ -165,7 +167,8 @@ auto
         const UObject* InWorldContextObject,
         const TSubclassOf<UObject>& InObjectClass,
         const FTransform& InTransform,
-        bool InHasTransform)
+        bool InHasTransform,
+        const FInstancedStruct& InPerUseParams)
     -> UObject*
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InObjectClass), TEXT("Cannot Acquire from an ObjectPool with an INVALID class"))
@@ -179,7 +182,7 @@ auto
     // auto-create with settings-or-default config; explicit Request_CreatePool earlier wins (GetOrCreate)
     PoolSubsystem->DoGetOrCreate_Pool(DoMake_AutoCreateParams(InObjectClass));
 
-    return PoolSubsystem->DoAcquire(InObjectClass, InTransform, InHasTransform);
+    return PoolSubsystem->DoAcquire(InObjectClass, InTransform, InHasTransform, InPerUseParams);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

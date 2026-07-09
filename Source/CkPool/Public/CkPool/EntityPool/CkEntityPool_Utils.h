@@ -35,6 +35,10 @@ namespace ck
  *   (at prewarm/grow) with the pool's ConstructionSpawnParams.
  * - Quiescence is the pooled script's job: on OnReleasedToPool deactivate visuals/audio, cancel per-use
  *   timers, unbind per-use signal bindings. The pool never touches feature state.
+ * - Hook surfaces (both fire; pick one per script): the entity signals below (BindTo_OnAcquiredFromPool /
+ *   BindTo_OnReleasedToPool), or an FCk_Pool_PoolableReceiver property on the EntityScript — auto-detected
+ *   by reflection, bind in Construct. The receiver also carries the _CanBePooled release-time veto
+ *   (false = the pool destroys the instance instead of parking it).
  * - The pool retains lifetime ownership across acquires. Consumers Release; destroying an in-use pooled
  *   entity instead is legal "steal" semantics (the pool forgets it).
  * - v1 supports DoesNotReplicate EntityScripts only (enforced at pool creation).

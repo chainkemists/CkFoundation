@@ -5,6 +5,7 @@
 
 #include "CkPool/CkPool_Log.h"
 #include "CkPool/ObjectPool/CkObjectPool_Poolable.h"
+#include "CkPool/Poolable/CkPoolableReceiver_Utils.h"
 
 #include <Engine/World.h>
 #include <GameFramework/Actor.h>
@@ -102,7 +103,8 @@ auto
     DoAcquire(
         const TSubclassOf<UObject>& InObjectClass,
         const FTransform& InTransform,
-        bool InHasTransform)
+        bool InHasTransform,
+        const FInstancedStruct& InPerUseParams)
     -> UObject*
 {
     auto* Pool = _Pools.Find(InObjectClass);
@@ -163,6 +165,8 @@ auto
         ICk_ObjectPool_Poolable::Execute_PrepareForUse(AcquiredObject);
     }
 
+    UCk_Utils_PoolableReceiver_UE::Broadcast_AcquiredFromPool_OnObject(AcquiredObject, InPerUseParams);
+
     return AcquiredObject;
 }
 
@@ -189,18 +193,24 @@ auto
         InObject)
     { return; }
 
+    const auto InterfaceVeto = ck_object_pool_subsystem::Get_ImplementsPoolable(InObject) &&
+        NOT ICk_ObjectPool_Poolable::Execute_Get_CanBePooled(InObject);
+    const auto ReceiverVeto = NOT UCk_Utils_PoolableReceiver_UE::Get_CanBePooled_OnObject(InObject);
+
+    if (InterfaceVeto || ReceiverVeto)
+    {
+        ck::pool::Verbose(TEXT("Object [{}] vetoed pooling (CanBePooled == false) — destroying instead"), InObject);
+        --Pool->_NumLiveInstances;
+        DoDestroy_Instance(InObject);
+        return;
+    }
+
     if (ck_object_pool_subsystem::Get_ImplementsPoolable(InObject))
     {
-        if (NOT ICk_ObjectPool_Poolable::Execute_Get_CanBePooled(InObject))
-        {
-            ck::pool::Verbose(TEXT("Object [{}] vetoed pooling (Get_CanBePooled == false) — destroying instead"), InObject);
-            --Pool->_NumLiveInstances;
-            DoDestroy_Instance(InObject);
-            return;
-        }
-
         ICk_ObjectPool_Poolable::Execute_PrepareForPool(InObject);
     }
+
+    UCk_Utils_PoolableReceiver_UE::Broadcast_ReleasedToPool_OnObject(InObject);
 
     DoFreeze(InObject);
     Pool->_FreeObjects.Emplace(InObject);

@@ -5,6 +5,7 @@
 #include "CkPool/ObjectPool/CkObjectPool_Data.h"
 
 #include <Kismet/BlueprintFunctionLibrary.h>
+#include <StructUtils/InstancedStruct.h>
 #include <Templates/SubclassOf.h>
 
 #include "CkObjectPool_Utils.generated.h"
@@ -25,8 +26,11 @@ class UCk_ObjectPool_Subsystem_UE;
  *   settings entry for the class, else built-in defaults; an explicit Request_CreatePool always wins.
  * - Actors are spawned hidden/frozen; acquire thaws them back to their CDO defaults (+ optional transform),
  *   release re-freezes (hidden, collision/tick off, timers cleared).
- * - Deep per-use reset is the implementer's job via ICk_ObjectPool_Poolable (PrepareForUse / PrepareForPool /
- *   Get_CanBePooled) — the pool only does the generic freeze/thaw.
+ * - Deep per-use reset is the implementer's job — via ICk_ObjectPool_Poolable (PrepareForUse / PrepareForPool /
+ *   Get_CanBePooled) in C++/BP, or an FCk_Pool_PoolableReceiver property in ANY class including AngelScript
+ *   (AS cannot implement UInterfaces). The pool only does the generic freeze/thaw.
+ * - Optional per-use params (FInstancedStruct) ride the receiver's OnAcquiredFromPool hook — same contract
+ *   as the EntityPool. The interface hooks stay parameterless (mirrors IMassActorPoolableInterface).
  * - Destroying an in-use instance externally is legal "steal" semantics (swept lazily); destroying a FREE
  *   (pool-owned) instance fires an ensure.
  * - v1 rejects replicated actor classes at pool creation.
@@ -65,21 +69,23 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ObjectPool",
               DisplayName="[Ck][ObjectPool] Acquire",
-              meta = (WorldContext = "InWorldContextObject", DeterminesOutputType = "InObjectClass"))
+              meta = (WorldContext = "InWorldContextObject", DeterminesOutputType = "InObjectClass", AutoCreateRefTerm = "InPerUseParams"))
     static UObject*
     Acquire(
         const UObject* InWorldContextObject,
-        TSubclassOf<UObject> InObjectClass);
+        TSubclassOf<UObject> InObjectClass,
+        const FInstancedStruct& InPerUseParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ObjectPool",
               DisplayName="[Ck][ObjectPool] Acquire Actor",
-              meta = (WorldContext = "InWorldContextObject", DeterminesOutputType = "InActorClass"))
+              meta = (WorldContext = "InWorldContextObject", DeterminesOutputType = "InActorClass", AutoCreateRefTerm = "InPerUseParams"))
     static AActor*
     Acquire_Actor(
         const UObject* InWorldContextObject,
         TSubclassOf<AActor> InActorClass,
-        const FTransform& InTransform);
+        const FTransform& InTransform,
+        const FInstancedStruct& InPerUseParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ObjectPool",
@@ -119,7 +125,8 @@ private:
         const UObject* InWorldContextObject,
         const TSubclassOf<UObject>& InObjectClass,
         const FTransform& InTransform,
-        bool InHasTransform) -> UObject*;
+        bool InHasTransform,
+        const FInstancedStruct& InPerUseParams) -> UObject*;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

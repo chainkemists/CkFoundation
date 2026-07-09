@@ -3,10 +3,12 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 
 #include "CkPool/CkPool_Log.h"
 #include "CkPool/EntityPool/CkEntityPool_Utils.h"
+#include "CkPool/Poolable/CkPoolableReceiver_Utils.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
@@ -15,6 +17,24 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_EntityPool_Prewarm);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityPool_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityPool_HandleDestroyedPooledEntity);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityPool_EndPlay);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_entity_pool_processor
+{
+    // Pooled entities are composed via EntityScript::Add — the script instance UObject is where
+    // FCk_Pool_PoolableReceiver properties live (the AS-reachable poolable opt-in)
+    auto
+        TryGet_ScriptInstance(
+            FCk_Handle InEntity)
+        -> UCk_EntityScript_UE*
+    {
+        if (NOT InEntity.Has<ck::FFragment_EntityScript_Current>())
+        { return {}; }
+
+        return InEntity.Get<ck::FFragment_EntityScript_Current>().Get_Script().Get();
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -234,10 +254,23 @@ namespace ck
             TEXT("Double-Release: Entity [{}] is already dormant in Pool [{}]"), EntityToRelease, InPool)
         { return; }
 
+        // per-instance veto (FCk_Pool_PoolableReceiver::_CanBePooled == false): destroy instead of parking.
+        // The InUse tag stays on — HandleDestroyed's steal-path reconciliation owns the counters
+        if (auto* ScriptInstance = ck_entity_pool_processor::TryGet_ScriptInstance(EntityToRelease);
+            ck::IsValid(ScriptInstance) && NOT UCk_Utils_PoolableReceiver_UE::Get_CanBePooled_OnObject(ScriptInstance))
+        {
+            pool::Verbose(TEXT("Pooled Entity [{}] vetoed pooling (CanBePooled == false) — destroying instead"), EntityToRelease);
+            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(EntityToRelease);
+            return;
+        }
+
         --InCurrent._NumInUse;
         EntityToRelease.Try_Remove<FTag_EntityPool_InUse>();
 
         UUtils_Signal_OnEntityPool_EntityReleased::Broadcast(EntityToRelease, MakePayload(EntityToRelease));
+
+        UCk_Utils_PoolableReceiver_UE::Broadcast_ReleasedToPool_OnObject(
+            ck_entity_pool_processor::TryGet_ScriptInstance(EntityToRelease));
 
         // hand the instance straight to a parked acquire if one is waiting — it never enters the dormant list
         if (DoTryDeliver_ToPendingAcquire(InPool, InCurrent, EntityToRelease))
@@ -322,6 +355,9 @@ namespace ck
         InCurrent._HighWaterMark = FMath::Max(InCurrent._HighWaterMark, InCurrent._NumInUse);
 
         UUtils_Signal_OnEntityPool_EntityAcquired::Broadcast(InEntity, MakePayload(InEntity, InPerUseParams));
+
+        UCk_Utils_PoolableReceiver_UE::Broadcast_AcquiredFromPool_OnObject(
+            ck_entity_pool_processor::TryGet_ScriptInstance(InEntity), InPerUseParams);
 
         if (ck::IsValid(InTicket))
         {
