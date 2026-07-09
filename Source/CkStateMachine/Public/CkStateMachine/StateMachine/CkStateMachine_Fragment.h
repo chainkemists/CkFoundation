@@ -374,6 +374,33 @@ namespace ck
         CK_DEFINE_CONSTRUCTORS(FFragment_Sm_NetIdentity, _EffectiveAuthority, _NetContext);
     };
 
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Per-frame memo of the live net-context / transition-authority resolution
+    // (ck::statemachine::ComputeNetContext / Get_IsTransitionAuthority). The live resolve walks
+    // owning-actor/PlayerState chains and is queried by the state, transition, condition, and task
+    // processors — several times per SM element per frame when uncached. GFrameCounter-stamped, so
+    // no invalidation hook is needed: a possession change is observed on the next frame, and all
+    // elements of one SM read a single consistent snapshot within a frame.
+    struct CKSTATEMACHINE_API FFragment_Sm_NetContextMemo
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Sm_NetContextMemo);
+
+    private:
+        uint64            _NetContextFrame = MAX_uint64;
+        ECk_Sm_NetContext _NetContext      = ECk_Sm_NetContext::Standalone;
+
+        uint64 _TransitionAuthorityFrame = MAX_uint64;
+        bool   _IsTransitionAuthority    = false;
+
+    public:
+        CK_PROPERTY(_NetContextFrame);
+        CK_PROPERTY(_NetContext);
+        CK_PROPERTY(_TransitionAuthorityFrame);
+        CK_PROPERTY(_IsTransitionAuthority);
+    };
+
     // ================================================================================================================
     // REPLICATION FRAGMENTS
     // ================================================================================================================
