@@ -57,6 +57,12 @@ auto
     else
     {
         CK_TRIGGER_ENSURE(TEXT("Attempting to create an HFSM Condition with class [{}] that is neither Polled or EventDriven"), InConditionClass);
+
+        // Do NOT fall through: a mode-less condition is never evaluated, its result stays
+        // Undetermined forever, and the owning state's evaluate walk waits on it — the SM
+        // silently deadlocks after this one-shot ensure. Abort the half-created entity.
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(ConditionEntity);
+        return {};
     }
 
     ConditionEntity.Add<ck::FFragment_SmCondition_Current>();
