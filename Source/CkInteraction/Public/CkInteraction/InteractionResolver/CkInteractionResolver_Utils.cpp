@@ -2,6 +2,7 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
@@ -37,6 +38,20 @@ auto
     {}
 
     return Cast(InInteractSource);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_InteractionResolver_UE::
+    Create(
+        FCk_Handle& InOwner,
+        const FCk_InteractionResolver_ParamsData& InParams,
+        ECk_Replication InReplicates)
+    -> FCk_Handle_InteractionResolver
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    return Add(NewEntity, InParams, InReplicates);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

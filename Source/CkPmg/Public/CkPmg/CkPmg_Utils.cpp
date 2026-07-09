@@ -6,6 +6,7 @@
 
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
@@ -47,6 +48,17 @@ auto
     UCk_Utils_Handle_UE::Set_DebugName(InHandle, TEXT("Pmg: Donut"));
 
     return Cast(InHandle);
+}
+
+auto
+    UCk_Utils_Pmg_Donut_UE::
+    Create(
+        FCk_Handle& InOwner,
+        const FCk_Fragment_Pmg_Donut_ParamsData& InParams)
+    -> FCk_Handle_Pmg_Donut
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    return Add(NewEntity, InParams);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

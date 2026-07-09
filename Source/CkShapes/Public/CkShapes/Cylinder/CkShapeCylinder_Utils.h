@@ -27,6 +27,14 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_ShapeCylinder_ParamsData& InParams);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|ShapeCylinder",
+              DisplayName="[Ck][Shapes][Cylinder] Create")
+    static FCk_Handle_ShapeCylinder
+    Create(
+        UPARAM(ref) FCk_Handle& InOwner,
+        const FCk_Fragment_ShapeCylinder_ParamsData& InParams);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ShapeCylinder",
               DisplayName="[Ck][Shapes][Cylinder] Has Feature")

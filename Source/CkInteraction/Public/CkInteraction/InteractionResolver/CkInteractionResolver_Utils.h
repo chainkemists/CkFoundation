@@ -40,6 +40,15 @@ public:
         const FCk_InteractionResolver_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|InteractionResolver",
+              DisplayName="[Ck][InteractionResolver] Create")
+    static FCk_Handle_InteractionResolver
+    Create(
+        UPARAM(ref) FCk_Handle& InOwner,
+        const FCk_InteractionResolver_ParamsData& InParams,
+        ECk_Replication InReplicates = ECk_Replication::Replicates);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|InteractionResolver",
               DisplayName="[Ck][InteractionResolver] Has Feature")

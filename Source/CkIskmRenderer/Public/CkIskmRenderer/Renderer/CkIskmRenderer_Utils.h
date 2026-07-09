@@ -26,6 +26,13 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         UCk_IskmRenderer_Data* InRendererData);
 
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmRenderer",
+        DisplayName="[Ck][IskmRenderer] Create")
+    static FCk_Handle_IskmRenderer
+    Create(
+        UPARAM(ref) FCk_Handle& InOwner,
+        UCk_IskmRenderer_Data* InRendererData);
+
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmRenderer",
         DisplayName="[Ck][IskmRenderer] Has")
     static bool

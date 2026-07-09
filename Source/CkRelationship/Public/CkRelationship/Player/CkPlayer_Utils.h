@@ -35,6 +35,15 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Relationship|Player",
+              DisplayName="[Ck][Player] Create")
+    static FCk_Handle_Player
+    Create(
+        UPARAM(ref) FCk_Handle& InOwner,
+        ECk_Player_ID InTeamID = ECk_Player_ID::Unassigned,
+        ECk_Replication InReplicates = ECk_Replication::Replicates);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Relationship|Player",
               meta = (Keywords = "add, feature"),
               DisplayName="[Ck][Player] Assign to Player")
     static FCk_Handle_Player

@@ -46,6 +46,15 @@ public:
         FGameplayTagContainer InInitialTags,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|TagSet",
+              DisplayName = "[Ck][TagSet] Create")
+    static FCk_Handle_TagSet
+    Create(
+        UPARAM(ref) FCk_Handle& InOwner,
+        FGameplayTagContainer InInitialTags,
+        ECk_Replication InReplicates = ECk_Replication::Replicates);
+
     // ---- Queries ----
 
 public:
