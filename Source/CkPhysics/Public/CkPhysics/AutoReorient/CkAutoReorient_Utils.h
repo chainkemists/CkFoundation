@@ -6,21 +6,30 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_AutoReorient"))
 class CKPHYSICS_API UCk_Utils_AutoReorient_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(UCk_Utils_AutoReorient_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_AutoReorient);
 
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AutoReorient",
               DisplayName="[Ck][AutoReorient] Add Feature")
-    static void
+    static FCk_Handle_AutoReorient
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Fragment_AutoReorient_ParamsData& InParams);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AutoReorient",
+              DisplayName="[Ck][AutoReorient] Create")
+    static FCk_Handle_AutoReorient
+    Create(
+        UPARAM(ref) FCk_Handle& InOwner,
         const FCk_Fragment_AutoReorient_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,

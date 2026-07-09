@@ -12,23 +12,41 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Projectile"))
 class CKPROJECTILE_API UCk_Utils_Projectile_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(UCk_Utils_Projectile_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Projectile);
 
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][Projectile] Add Feature")
-    static void
+    static FCk_Handle_Projectile
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_Projectile_ParamsData& InParams,
         ECk_Replication InReplicates);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              DisplayName="[Ck][Projectile] Create")
+    static FCk_Handle_Projectile
+    Create(
+        UPARAM(ref) FCk_Handle& InOwner,
+        const FCk_Fragment_Projectile_ParamsData& InParams,
+        ECk_Replication InReplicates);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              DisplayName="[Ck][Projectile] Has")
+    static bool
+    Has(
+        const FCk_Handle& InHandle);
 
 public:
     UFUNCTION(BlueprintCallable,

@@ -2,6 +2,9 @@
 
 #include "CkCore/Mesh/CkMesh_Utils.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
+
 #include "CkIsmRenderer/Proxy/CkIsmProxy_Fragment.h"
 #include "CkIsmRenderer/Renderer/CkIsmRenderer_Fragment_Data.h"
 
@@ -32,6 +35,19 @@ auto
     }
 
     return Cast(InHandle);
+}
+
+auto
+    UCk_Utils_IsmProxy_UE::
+    Create(
+        FCk_Handle& InOwner,
+        const FTransform& InInitialTransform,
+        const FCk_Fragment_IsmProxy_ParamsData& InParams)
+    -> FCk_Handle_IsmProxy
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    auto ChildTransform = UCk_Utils_Transform_UE::Add(NewEntity, InInitialTransform, ECk_Replication::DoesNotReplicate);
+    return Add(ChildTransform, InParams);
 }
 
 auto

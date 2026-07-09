@@ -12,7 +12,7 @@ auto
     Add(
         FCk_Handle& InHandle,
         const FCk_Fragment_RenderStatus_ParamsData& InParams)
-    -> void
+    -> FCk_Handle_RenderStatus
 {
     InHandle.Add<ck::FFragment_RenderStatus_Params>(InParams);
 
@@ -42,6 +42,19 @@ auto
             CK_INVALID_ENUM(RenderGroup);
         };
     }
+
+    return Cast(InHandle);
+}
+
+auto
+    UCk_Utils_RenderStatus_UE::
+    Create(
+        FCk_Handle& InOwner,
+        const FCk_Fragment_RenderStatus_ParamsData& InParams)
+    -> FCk_Handle_RenderStatus
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    return Add(NewEntity, InParams);
 }
 
 auto

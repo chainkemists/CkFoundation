@@ -7,10 +7,17 @@
 #include "CkPhysics/Velocity/CkVelocity_Fragment_Data.h"
 
 #include "CkProjectile/Homing/CkHoming_ProNav.h"
+#include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
 #include <StructUtils/InstancedStruct.h>
 
 #include "CkProjectile_Fragment_Data.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
+struct CKPROJECTILE_API FCk_Handle_Projectile : public FCk_Handle_TypeSafe { GENERATED_BODY()  CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Projectile); };
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Projectile);
 
 // --------------------------------------------------------------------------------------------------------------------
 
