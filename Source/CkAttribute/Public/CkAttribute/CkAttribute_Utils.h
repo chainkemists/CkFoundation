@@ -25,9 +25,6 @@ namespace ck
         template <concepts::ValidAttributeModifierFragment>
         friend class TUtils_AttributeModifier;
 
-        template <typename, concepts::ValidAttributeFragment, concepts::ValidAttributeFragment>
-        friend class detail::TProcessor_Attribute_OverrideBaseValue;
-
         template <typename, concepts::ValidAttributeModifierFragment>
         friend class detail::TProcessor_Attribute_RecomputeAll;
 
@@ -161,9 +158,11 @@ namespace ck
         Has(
             const FCk_Handle& InHandle) -> bool;
 
+        // By value: the delta is a TOptional that NotRevocable compute consumes (Reset), so a
+        // reference into it (or into the unset-case default temporary) dangles.
         static auto
         Get_ModifierDeltaValue(
-            const AttributeModifierHandleType& InHandle) -> const AttributeDataType&;
+            const AttributeModifierHandleType& InHandle) -> AttributeDataType;
 
         static auto
         Get_IsModifierUnique(

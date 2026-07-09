@@ -106,9 +106,6 @@ namespace ck::detail
     template <typename, concepts::ValidAttributeFragment, concepts::ValidAttributeFragment, ECk_AttributeClamp_Direction>
     class TProcessor_Attribute_Clamp;
 
-    template <typename, concepts::ValidAttributeFragment, concepts::ValidAttributeFragment>
-    class TProcessor_Attribute_OverrideBaseValue;
-
     template <typename T_DerivedProcessor, concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier>
     class TProcessor_Attribute_RecomputeAll;
 
@@ -210,9 +207,6 @@ namespace ck
 
         template <typename, concepts::ValidAttributeFragment, concepts::ValidAttributeFragment, ECk_AttributeClamp_Direction>
         friend class detail::TProcessor_Attribute_Clamp;
-
-        template <typename, concepts::ValidAttributeFragment, concepts::ValidAttributeFragment>
-        friend class detail::TProcessor_Attribute_OverrideBaseValue;
 
         template <typename, concepts::ValidAttributeModifierFragment>
         friend class detail::TProcessor_Attribute_RecomputeAll;
