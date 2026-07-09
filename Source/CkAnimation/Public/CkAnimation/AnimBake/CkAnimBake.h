@@ -59,6 +59,13 @@ struct CKANIMATION_API FCk_AnimBake_SampleParams
 {
     bool ExtractRootMotion = false;
     bool DisableRetargeting = false;
+
+    // Invert the DefaultMesh bind pose instead of the skeleton ref pose when building RefPoseInverse (port of
+    // Skelot's RefPoseOverrideMesh, defaulted to the mesh). The skeleton ref pose and the anims both carry the +X
+    // import reorientation while the mesh binds facing -Y — inverting the skeleton pose cancels the reorientation,
+    // so skinned output faces -Y while moving +X ("strafing"). Mesh-bind matches the engine SKMC contract
+    // (GetRefBasesInvMatrix() * pose). Off by default (skeleton ref pose) so existing bakers are unaffected.
+    bool UseMeshBindRefPose = false;
 };
 
 namespace ck::anim_bake
