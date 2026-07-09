@@ -19,13 +19,20 @@ public:
 
     UCk_SmCondition_SubSmFinished() = default;
 
+public:
+    // Setup/teardown live in the condition lifecycle (not BeginPlay/EndPlay) so the base's
+    // transition-authority gate suppresses them on non-authority machines.
+    auto
+    EnterCondition(
+        FCk_Handle_SmCondition InHandle,
+        ECk_Sm_NetContext InNetContext) -> void override;
+
+    auto
+    ExitCondition(
+        FCk_Handle_SmCondition InHandle,
+        ECk_Sm_NetContext InNetContext) -> void override;
+
 protected:
-    auto
-    BeginPlay() -> void override;
-
-    auto
-    EndPlay() -> void override;
-
     UFUNCTION()
     void
     OnSubSmStopped(
