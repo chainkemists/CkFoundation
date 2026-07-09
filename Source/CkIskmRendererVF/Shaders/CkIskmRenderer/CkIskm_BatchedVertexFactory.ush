@@ -220,15 +220,16 @@ FVertexFactoryIntermediates GetVertexFactoryIntermediates(FVertexFactoryInput In
     // Per-COMPONENT fixed frame (always available on the GPUScene path; no material usage flag needed).
     FrameIndices = asuint(GetPrimitiveData(Intermediates).CustomPrimitiveData[0]).xy;
 
-#if ENABLE_PER_INSTANCE_CUSTOM_DATA
-    // Per-INSTANCE override: independent frame per instance (requires the material's PerInstanceCustomData node
-    // + bUsedWithInstancedStaticMeshes). custom-data float[0]/[1] = current/previous frame as raw int bits.
+    // Per-INSTANCE override: independent frame per instance. custom-data float[0]/[1] = current/previous frame
+    // as raw int bits. NOT gated on ENABLE_PER_INSTANCE_CUSTOM_DATA: that define is per-MATERIAL-permutation
+    // (PerInstanceCustomData node present), but the payload offset is populated per-PRIMITIVE — sections whose
+    // material reads no custom data (hands/face MICs) would otherwise fall back to frame 0 and render the
+    // bind pose while the rest of the body animates.
     BRANCH
     if (Intermediates.SceneData.InstanceData.CustomDataOffset != INVALID_INSTANCE_PAYLOAD_OFFSET)
     {
         FrameIndices = asuint(LoadInstancePayloadDataElement(Intermediates.SceneData.InstanceData.CustomDataOffset).xy);
     }
-#endif
 
     Intermediates.BlendMatrix         = CalcBoneMatrix(Input, FrameIndices.x);
     Intermediates.PreviousBlendMatrix = CalcBoneMatrix(Input, FrameIndices.y);
