@@ -67,30 +67,33 @@ static auto
     UCk_Utils_ByteAttributeModifier_UE::Request_ClearAllModifiers(InAttributeEntity, InEntry.Get_Component());
     UCk_Utils_ByteAttribute_UE::Request_Override(InAttributeEntity, InEntry.Get_Base(), InEntry.Get_Component());
 
-    auto AttributeModifier = UCk_Utils_ByteAttributeModifier_UE::TryGet(InAttributeEntity,
-        ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), InEntry.Get_Component());
-
-    if (ck::Is_NOT_Valid(AttributeModifier))
+    // The Final modifier's Add/Subtract operation tag is frozen at creation and Override's delta
+    // parameter is unsigned (uint8), so a re-apply whose Final−Base difference changed sign
+    // cannot be expressed by mutating the existing modifier in place — the old else-branch
+    // wrapped the negative int difference through uint8 AND applied it with the stale operation,
+    // producing garbage client values. Recreate through the same sign-aware path as the first
+    // apply instead. (Float/Integer/Vector/Rotator keep their in-place Override: their deltas
+    // are signed, always applied with the Add operation.)
+    if (auto ExistingModifier = UCk_Utils_ByteAttributeModifier_UE::TryGet(InAttributeEntity,
+            ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), InEntry.Get_Component());
+        ck::IsValid(ExistingModifier))
     {
-        const auto Difference = InEntry.Get_Final() - InEntry.Get_Base();
+        UCk_Utils_ByteAttributeModifier_UE::Remove(ExistingModifier);
+    }
 
-        UCk_Utils_ByteAttributeModifier_UE::Add_Revocable
-        (
-            InAttributeEntity,
-            ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
-            Difference >= 0 ? ECk_AttributeModifier_Operation::Add : ECk_AttributeModifier_Operation::Subtract,
-            FCk_Fragment_ByteAttributeModifier_ParamsData
-            {
-                static_cast<uint8>(std::abs(Difference)),
-                InEntry.Get_Component()
-            }
-        );
-    }
-    else
-    {
-        UCk_Utils_ByteAttributeModifier_UE::Override(
-            AttributeModifier, InEntry.Get_Final() - InEntry.Get_Base());
-    }
+    const auto Difference = InEntry.Get_Final() - InEntry.Get_Base();
+
+    UCk_Utils_ByteAttributeModifier_UE::Add_Revocable
+    (
+        InAttributeEntity,
+        ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
+        Difference >= 0 ? ECk_AttributeModifier_Operation::Add : ECk_AttributeModifier_Operation::Subtract,
+        FCk_Fragment_ByteAttributeModifier_ParamsData
+        {
+            static_cast<uint8>(std::abs(Difference)),
+            InEntry.Get_Component()
+        }
+    );
 }
 
 // --------------------------------------------------------------------------------------------------------------------
