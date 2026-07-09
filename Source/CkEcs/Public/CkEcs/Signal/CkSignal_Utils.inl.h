@@ -74,8 +74,6 @@ namespace ck
         };
 
         std::apply(Invoker, InPayload.Payload);
-
-        InHandle.template AddOrGet<typename SignalType::FTag_PayloadInFlight, ck::IsValid_Policy_IncludePendingKill>();
     }
 
     template <typename T_DerivedSignal>
@@ -258,7 +256,7 @@ namespace ck
         Unbind(
             T_HandleType InHandle)
     {
-        auto& Signal = InHandle.template Get<SignalType, ck::IsValid_Policy_IncludePendingKill{}>();
+        auto& Signal = InHandle.template Get<SignalType, ck::IsValid_Policy_IncludePendingKill>();
         Signal._Invoke_Sink.template disconnect<T_Candidate>();
     }
 
@@ -270,7 +268,7 @@ namespace ck
             T_Instance&& InInstance,
             T_HandleType InHandle)
     {
-        auto& Signal = InHandle.template Get<SignalType, ck::IsValid_Policy_IncludePendingKill{}>();
+        auto& Signal = InHandle.template Get<SignalType, ck::IsValid_Policy_IncludePendingKill>();
         Signal._Invoke_Sink.template disconnect<T_Candidate>(InInstance);
     }
 
