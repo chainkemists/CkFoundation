@@ -67,6 +67,9 @@ auto
     FCk_AnimBake_SampleParams SampleParams;
     SampleParams.ExtractRootMotion = _ExtractRootMotion;
     SampleParams.DisableRetargeting = _DisableRetargeting;
+    // Batched crowd skins to match the promoted SKMC path — invert the mesh bind pose, not the skeleton ref pose
+    // (fixes members facing -Y while moving +X). See FCk_AnimBake_SampleParams::UseMeshBindRefPose.
+    SampleParams.UseMeshBindRefPose = true;
 
     const auto SkeletonData = ck::anim_bake::BuildSkeletonData(*Skeleton, *_DefaultMesh, SampleParams);
     if (NOT SkeletonData.IsSet())

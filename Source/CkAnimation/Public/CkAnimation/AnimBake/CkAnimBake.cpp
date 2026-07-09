@@ -97,16 +97,32 @@ auto
     ck_anim_bake::MakeFullSkeletonBoneContainer(InSkeleton, InParams, BoneContainer);
     const int32 NumContainerBones = BoneContainer.GetNumBones();
 
+    // Local ref transform per (full-skeleton) bone. With UseMeshBindRefPose, invert the mesh bind pose (by bone
+    // name, skeleton fallback) instead of the skeleton ref pose — see FCk_AnimBake_SampleParams::UseMeshBindRefPose.
+    // The full-skeleton container guarantees compact-pose-bone-index == skeleton-bone-index.
+    const FReferenceSkeleton& MeshRefSkel = InMesh.GetRefSkeleton();
+    const FReferenceSkeleton& SkelRefSkel = InSkeleton.GetReferenceSkeleton();
+    const auto Get_RefLocal = [&](FCompactPoseBoneIndex InBoneIdx) -> FTransform
+    {
+        if (InParams.UseMeshBindRefPose)
+        {
+            const int32 MeshBone = MeshRefSkel.FindBoneIndex(SkelRefSkel.GetBoneName(InBoneIdx.GetInt()));
+            if (MeshBone != INDEX_NONE)
+            { return MeshRefSkel.GetRefBonePose()[MeshBone]; }
+        }
+        return BoneContainer.GetRefPoseTransform(InBoneIdx);
+    };
+
     SkeletonData.RefPoseComponentSpace.SetNumUninitialized(NumContainerBones);
     SkeletonData.RefPoseInverse.SetNumUninitialized(NumContainerBones);
-    SkeletonData.RefPoseComponentSpace[0] = BoneContainer.GetRefPoseTransform(FCompactPoseBoneIndex(0));
+    SkeletonData.RefPoseComponentSpace[0] = Get_RefLocal(FCompactPoseBoneIndex(0));
     SkeletonData.RefPoseInverse[0] =
         static_cast<FTransform3f>(SkeletonData.RefPoseComponentSpace[0]).Inverse().ToMatrixWithScale();
     for (FCompactPoseBoneIndex BoneIdx(1); BoneIdx < NumContainerBones; ++BoneIdx)
     {
         const FCompactPoseBoneIndex ParentIdx = BoneContainer.GetParentBoneIndex(BoneIdx);
         SkeletonData.RefPoseComponentSpace[BoneIdx.GetInt()] =
-            BoneContainer.GetRefPoseTransform(BoneIdx) * SkeletonData.RefPoseComponentSpace[ParentIdx.GetInt()];
+            Get_RefLocal(BoneIdx) * SkeletonData.RefPoseComponentSpace[ParentIdx.GetInt()];
         SkeletonData.RefPoseInverse[BoneIdx.GetInt()] =
             static_cast<FTransform3f>(SkeletonData.RefPoseComponentSpace[BoneIdx.GetInt()]).Inverse().ToMatrixWithScale();
     }
