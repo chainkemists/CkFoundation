@@ -18,6 +18,11 @@ DECLARE_CYCLE_STAT(TEXT("Sm::ComputeNetContext"), STAT_Sm_ComputeNetContext, STA
 
 namespace ck::statemachine
 {
+    // .cpp-internal: the un-memoized resolution behind Get_IsTransitionAuthority.
+    auto
+    DoGet_IsTransitionAuthority_Live(
+        const FCk_Handle_StateMachine& InSm) -> bool;
+
     auto
         ComputeNetContext(
             const FCk_Handle_StateMachine& InSm)
@@ -30,37 +35,71 @@ namespace ck::statemachine
         if (InSm.Has<ck::FFragment_Sm_NetIdentity>())
         { return InSm.Get<ck::FFragment_Sm_NetIdentity>().Get_NetContext(); }
 
-        // DoesNotReplicate SMs are self-authoritative on EVERY machine — the same contract
-        // FProcessor_Sm_HandleRequests already honors (it exempts DoesNotReplicate from the
-        // single-authority gate). They have no replicated history to replay, so the lifecycle
-        // processors' NonOwningClient / OwningClient gates (FProcessor_SmTask_Tick,
-        // FProcessor_SmCondition, FProcessor_SmTransition) must NOT suppress them. A local-only SM
-        // hosted on a server-replicated, non-player-owned entity would otherwise resolve
-        // NonOwningClient on a client and go inert there while running fine on the host. Resolving
-        // to Standalone makes each machine run the full lifecycle locally, which IS the
-        // DoesNotReplicate semantic. (Sub-SMs short-circuit above via FFragment_Sm_NetIdentity, so
-        // their stamped identity is preserved either way.)
-        if (UCk_Utils_StateMachine_UE::Get_Replication(InSm) == ECk_Replication::DoesNotReplicate)
-        { return ECk_Sm_NetContext::Standalone; }
+        // Per-frame memo (FFragment_Sm_NetContextMemo): the live resolve below walks
+        // owning-actor/PlayerState chains and is called several times per SM element per frame
+        // by the lifecycle processors. Resolve once per SM per frame, hand back the snapshot.
+        auto Sm = InSm;
+        auto& Memo = Sm.AddOrGet<ck::FFragment_Sm_NetContextMemo>();
+        if (Memo.Get_NetContextFrame() == GFrameCounter)
+        { return Memo.Get_NetContext(); }
 
-        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InSm);
+        const auto LiveNetContext = [&]() -> ECk_Sm_NetContext
+        {
+            // DoesNotReplicate SMs are self-authoritative on EVERY machine — the same contract
+            // FProcessor_Sm_HandleRequests already honors (it exempts DoesNotReplicate from the
+            // single-authority gate). They have no replicated history to replay, so the lifecycle
+            // processors' NonOwningClient / OwningClient gates (FProcessor_SmTask_Tick,
+            // FProcessor_SmCondition, FProcessor_SmTransition) must NOT suppress them. A local-only SM
+            // hosted on a server-replicated, non-player-owned entity would otherwise resolve
+            // NonOwningClient on a client and go inert there while running fine on the host. Resolving
+            // to Standalone makes each machine run the full lifecycle locally, which IS the
+            // DoesNotReplicate semantic. (Sub-SMs short-circuit above via FFragment_Sm_NetIdentity, so
+            // their stamped identity is preserved either way.)
+            if (UCk_Utils_StateMachine_UE::Get_Replication(InSm) == ECk_Replication::DoesNotReplicate)
+            { return ECk_Sm_NetContext::Standalone; }
 
-        if (ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}) && World->IsNetMode(NM_Standalone))
-        { return ECk_Sm_NetContext::Standalone; }
+            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InSm);
 
-        if (UCk_Utils_Net_UE::Get_HasAuthority(InSm))
-        { return ECk_Sm_NetContext::Server; }
+            if (ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}) && World->IsNetMode(NM_Standalone))
+            { return ECk_Sm_NetContext::Standalone; }
 
-        const auto LocallyControlled = UCk_Utils_Net_UE::Get_IsEntityLocallyControlled_ByPlayer(InSm);
+            if (UCk_Utils_Net_UE::Get_HasAuthority(InSm))
+            { return ECk_Sm_NetContext::Server; }
 
-        if (LocallyControlled == ECk_Utils_Net_IsLocallyControlled_Result::IsLocallyControlled)
-        { return ECk_Sm_NetContext::OwningClient; }
+            const auto LocallyControlled = UCk_Utils_Net_UE::Get_IsEntityLocallyControlled_ByPlayer(InSm);
 
-        return ECk_Sm_NetContext::NonOwningClient;
+            if (LocallyControlled == ECk_Utils_Net_IsLocallyControlled_Result::IsLocallyControlled)
+            { return ECk_Sm_NetContext::OwningClient; }
+
+            return ECk_Sm_NetContext::NonOwningClient;
+        }();
+
+        Memo.Set_NetContextFrame(GFrameCounter);
+        Memo.Set_NetContext(LiveNetContext);
+        return LiveNetContext;
     }
 
     auto
         Get_IsTransitionAuthority(
+            const FCk_Handle_StateMachine& InSm)
+        -> bool
+    {
+        // Per-frame memo — same contract as ComputeNetContext's memo above: this predicate gates
+        // the state, transition, condition, and task processors and was resolved fresh per element
+        // per frame (including Get_EffectiveAuthorityModel's PlayerState walk for AutoDetect SMs).
+        auto Sm = InSm;
+        auto& Memo = Sm.AddOrGet<ck::FFragment_Sm_NetContextMemo>();
+        if (Memo.Get_TransitionAuthorityFrame() == GFrameCounter)
+        { return Memo.Get_IsTransitionAuthority(); }
+
+        const auto IsTransitionAuthority = DoGet_IsTransitionAuthority_Live(InSm);
+        Memo.Set_TransitionAuthorityFrame(GFrameCounter);
+        Memo.Set_IsTransitionAuthority(IsTransitionAuthority);
+        return IsTransitionAuthority;
+    }
+
+    auto
+        DoGet_IsTransitionAuthority_Live(
             const FCk_Handle_StateMachine& InSm)
         -> bool
     {
