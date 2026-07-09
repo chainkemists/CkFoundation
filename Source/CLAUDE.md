@@ -86,6 +86,7 @@ Before writing any code, navigate the documentation in this order:
 | save/restore world state (snapshots) | `CkSnapshot` (no doc yet) + `CK_REGISTER_SNAPSHOTABLE` (`CkEcs/Snapshot`) |
 | session state machine | `CkGameSession` |
 | CommonUI-based UI layer | `CkUI` |
+| dependency-gated loading screen | `CkLoadingScreen` (subsystem + `ICk_LoadingProcess` holders) |
 | Enhanced Input IMC lifecycle | `CkInput` |
 | async asset loading → fragments | `CkResourceLoader` |
 | relay entity events to an actor (channels) | `CkActorRelay` |
@@ -132,6 +133,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkEcs | Core,Log,Memory,Profile,Settings,ThirdParty |
 | CkInput | Core,Ecs,Log,Settings |
 | CkLabel | Core,Ecs,Log |
+| CkLoadingScreen | Core,Log,Settings |
 | CkProvider | Core,Ecs,Log |
 | CkRecord | Core,Ecs,Label,Log |
 | CkResourceLoader | Core,Ecs,Log,Settings |
