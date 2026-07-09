@@ -5,6 +5,8 @@
 #include "CkECS/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 
+#include "CkShapes/CkShapes_Common.h"   // FCk_AnyShape (Create's shape param)
+
 #include "CkProbe_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -33,6 +35,17 @@ public:
     static FCk_Handle_Probe
     Add(
         UPARAM(ref) FCk_Handle_Transform& InHandle,
+        const FCk_Fragment_Probe_ParamsData& InParams,
+        const FCk_Probe_DebugInfo& InDebugInfo);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              DisplayName="[Ck][Probe] Create")
+    static FCk_Handle_Probe
+    Create(
+        UPARAM(ref) FCk_Handle& InOwner,
+        const FTransform& InInitialTransform,
+        const FCk_AnyShape& InShape,
         const FCk_Fragment_Probe_ParamsData& InParams,
         const FCk_Probe_DebugInfo& InDebugInfo);
 

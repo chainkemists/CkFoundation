@@ -92,6 +92,21 @@ auto
 
 auto
     UCk_Utils_2dGridSystem_UE::
+    Create(
+        FCk_Handle& InOwner,
+        const FTransform& InInitialTransform,
+        const FCk_Fragment_2dGridSystem_ParamsData& InParams)
+    -> FCk_Handle_2dGridSystem
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    auto ChildTransform = UCk_Utils_Transform_UE::Add(NewEntity, InInitialTransform, ECk_Replication::DoesNotReplicate);
+    return Add(ChildTransform, InParams);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_2dGridSystem_UE::
     Request_RecomposeFromSnapshot(
         FCk_Handle_Transform& InHandle)
     -> FCk_Handle_2dGridSystem
