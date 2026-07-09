@@ -593,7 +593,7 @@ auto
     if (Has<T_FragmentType>(InEntity))
     { Remove<T_FragmentType>(InEntity); }
 
-    return Add<T_FragmentType>(std::forward<T_Args>(InArgs)...);
+    return Add<T_FragmentType>(InEntity, std::forward<T_Args>(InArgs)...);
 }
 
 template <typename T_Fragment>
