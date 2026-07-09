@@ -1200,6 +1200,10 @@ auto
     else if constexpr (std::is_same_v<ck::FFragment_ContextOwner, T_Fragment>)
     {
         _Context = &InHandle.Get<T_Fragment, ck::IsValid_Policy_IncludePendingKill>();
+
+        // The wrapper is not stored for ContextOwner (only the fragment pointer is) — free it,
+        // or it leaks once per context-owner assignment.
+        delete FragmentInfo;
     }
     else
     {

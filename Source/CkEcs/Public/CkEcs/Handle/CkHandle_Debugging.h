@@ -176,7 +176,12 @@ auto
     {
         _AllTags.RemoveAll([&](const DebugWrapperPtrType& InDebugWrapper)
         {
-            return InDebugWrapper->GetHash() == entt::type_id<T_Fragment>().hash();
+            if (InDebugWrapper->GetHash() == entt::type_id<T_Fragment>().hash())
+            {
+                delete InDebugWrapper;
+                return true;
+            }
+            return false;
         });
         _TagNames.RemoveAll([&](const FName InName)
         {
@@ -205,7 +210,12 @@ auto
     {
         _AllFragments.RemoveAll([&](const DebugWrapperPtrType& InDebugWrapper)
         {
-            return InDebugWrapper->GetHash() == entt::type_id<T_Fragment>().hash();
+            if (InDebugWrapper->GetHash() == entt::type_id<T_Fragment>().hash())
+            {
+                delete InDebugWrapper;
+                return true;
+            }
+            return false;
         });
         _FragmentNames.RemoveAll([&](const FName InName)
         {

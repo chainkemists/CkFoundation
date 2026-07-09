@@ -402,7 +402,12 @@ auto
     GetTypeHash(
         const FCk_Handle& InHandle) -> uint32
 {
-    if (ck::Is_NOT_Valid(InHandle, ck::IsValid_Policy_IncludePendingKill{}))
+    // Mirror operator== exactly, and never key on VALIDITY: a tombstone entity compares equal
+    // regardless of registry, so it must hash without it; every other handle hashes entity +
+    // registry-slot fields (pure data, no resolution — safe on stale handles). Keying on
+    // validity meant a live handle stored in a TSet/TMap changed hash when its entity died —
+    // find/remove then missed the bucket and the container silently stranded the stale entry.
+    if (InHandle.Get_Entity().Get_IsTombstone())
     { return GetTypeHash(InHandle.Get_Entity()); }
 
     return GetTypeHash(InHandle.Get_Entity()) + GetTypeHash(InHandle.Get_RegistryView());
@@ -537,7 +542,7 @@ CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(FCk_Handle, [](const FCk_Handle& InObj)
         { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Teardown>(); }
 
         if (InObj.Has<ck::FTag_DestroyEntity_EndPlay>())
-        { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Initiate>(); }
+        { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_EndPlay>(); }
 
         if (InObj.Has<ck::FTag_DestroyEntity_Initiate>())
         { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Initiate>(); }
@@ -572,7 +577,7 @@ CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(FCk_Handle, [](const FCk_Handle& InObj)
         { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Teardown>(); }
 
         if (InObj.Has<ck::FTag_DestroyEntity_EndPlay>())
-        { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Initiate>(); }
+        { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_EndPlay>(); }
 
         if (InObj.Has<ck::FTag_DestroyEntity_Initiate>())
         { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Initiate>(); }
