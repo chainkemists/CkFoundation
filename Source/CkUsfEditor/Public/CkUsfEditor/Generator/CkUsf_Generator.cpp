@@ -98,6 +98,19 @@ namespace ck::usf_editor
         }
     }
 
+    // Resolve the per-look post-process chain placement. Pre-TAA locations are the fix for
+    // Custom Depth/Stencil-derived looks shimmering under the TAA/TSR projection jitter.
+    static auto Resolve_BlendableLocation(ECk_Usf_BlendableLocation In) -> EBlendableLocation
+    {
+        switch (In)
+        {
+            case ECk_Usf_BlendableLocation::SceneColorAfterDOF:    return BL_SceneColorAfterDOF;
+            case ECk_Usf_BlendableLocation::SceneColorBeforeDOF:   return BL_SceneColorBeforeDOF;
+            case ECk_Usf_BlendableLocation::SceneColorBeforeBloom: return BL_SceneColorBeforeBloom;
+            default:                                               return BL_SceneColorAfterTonemapping;
+        }
+    }
+
     // Inject the look's _Defines ("NAME" or "NAME=VALUE") into a Custom node — the static-switch /
     // quality-knob equivalent (e.g. retuning a #ifndef default in the .ush without editing it).
     static auto Apply_LookDefines(UMaterialExpressionCustom* InNode, const UCkUsf_LookDefinition* InDef) -> void
@@ -439,7 +452,7 @@ namespace ck::usf_editor
         {
             // A programmatically-created PP material does not reliably default to a compositing
             // location; set it explicitly so the blendable actually draws over the final image.
-            Material->BlendableLocation = BL_SceneColorAfterTonemapping;
+            Material->BlendableLocation = Resolve_BlendableLocation(InDef->_BlendableLocation);
             Material->BlendablePriority = 0;
         }
 

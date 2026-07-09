@@ -64,6 +64,23 @@ enum class ECk_Usf_SceneTexture : uint8
     CustomStencil   // PPI_CustomStencil      -> In.CustomStencil
 };
 
+// PostProcess-only: where in the post-processing chain the generated blendable runs (maps to
+// EBlendableLocation). The pre-TAA locations (SceneColorAfterDOF/SceneColorBeforeDOF) run at rendering
+// resolution BEFORE TSR/TAA, so the look's output is temporally accumulated like ordinary geometry —
+// required for anything derived from Custom Depth/Stencil (those buffers are rendered with the
+// TAA-jittered projection every frame; a look placed after tonemapping thresholds that jittered mask
+// with no temporal resolve ever seeing it, so its edges shimmer even on a stationary camera).
+// Trade-off: pre-TAA locations are also pre-tonemap — output colors are scene-referred linear (the
+// tonemapper remaps them and bloom sees them), and TSR may slightly ghost the output behind fast movers.
+UENUM(BlueprintType)
+enum class ECk_Usf_BlendableLocation : uint8
+{
+    AfterTonemapping,      // BL_SceneColorAfterTonemapping — display res, post-TAA (historical default)
+    SceneColorAfterDOF,    // BL_SceneColorAfterDOF         — render res, pre-TSR/TAA
+    SceneColorBeforeDOF,   // BL_SceneColorBeforeDOF        — render res, pre-TSR/TAA, before DOF
+    SceneColorBeforeBloom  // BL_SceneColorBeforeBloom      — display res, post-TAA, pre-bloom/tonemap
+};
+
 // Translucency lighting for LIT translucent-family surface looks. `Inherit` keeps the engine default
 // (volumetric non-directional — cheap but flat). Glass-like surfaces usually want `SurfacePerPixel`
 // (forward per-pixel lighting). Ignored unless the look resolves to a lit, translucent-family blend.
@@ -141,6 +158,12 @@ public:
     // explicitly to opt into CustomDepth/CustomStencil (e.g. the SolidOutline look). Ignored for non-PostProcess domains.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     TArray<ECk_Usf_SceneTexture> _SceneTextures;
+
+    // PostProcess-only: chain placement of the generated blendable (see the enum for the pre- vs
+    // post-TAA trade-off). Looks reading Custom Depth/Stencil want a pre-TAA location
+    // (e.g. the SolidOutline look). Ignored for non-PostProcess domains.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    ECk_Usf_BlendableLocation _BlendableLocation = ECk_Usf_BlendableLocation::AfterTonemapping;
 
     // Surface-domain overrides (ignored for PostProcess/UI/Decal, which keep their domain config).
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")

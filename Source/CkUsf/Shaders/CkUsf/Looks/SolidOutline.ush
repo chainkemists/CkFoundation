@@ -9,6 +9,13 @@
 // is irrelevant. Declaring the SceneColor/SceneDepth/CustomDepth/CustomStencil inputs legalizes raw
 // SceneTextureLookup() below.
 //
+// IMPORTANT (chain placement): this look runs PRE-TSR/TAA (_BlendableLocation = SceneColorAfterDOF on
+// the look definition). Custom depth/stencil are rendered with the TAA-jittered projection every frame,
+// so an after-tonemapping placement thresholds a mask that shifts sub-pixel per frame with no temporal
+// resolve ever seeing the outline — the edges shimmer even on a stationary camera. Pre-TAA, the outline
+// is drawn in the same jittered space as the stencil and TSR/TAA accumulates it like geometry edges.
+// Consequence: output is scene-referred LINEAR (tonemapper remaps the LUT colors; bright outlines bloom).
+//
 // IMPORTANT (viewport vs buffer UV): the look's In.UV is the VIEWPORT UV (0..1 across the view), but
 // SceneTextureLookup() expects the scene-texture BUFFER UV. When the view rect does not fill the whole scene
 // buffer (editor/PIE window resize, screen percentage, dynamic resolution) those differ, and sampling at raw
