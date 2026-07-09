@@ -329,7 +329,7 @@ namespace ck
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Get_ModifierDeltaValue(
             const AttributeModifierHandleType& InHandle)
-        -> const AttributeDataType&
+        -> AttributeDataType
     {
         return InHandle.template Get<AttributeModifierFragmentType>().Get_ModifierDelta().Get(AttributeDataType{});
     }
