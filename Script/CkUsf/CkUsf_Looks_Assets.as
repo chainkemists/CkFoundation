@@ -608,6 +608,10 @@ namespace CkUsf
         _Domain          = ECk_Usf_Domain::PostProcess;
         _LookName        = n"SolidOutline";
 
+        // Pre-TSR/TAA so the stencil-derived outline is temporally accumulated like geometry edges —
+        // after-tonemapping placement shimmers under the TAA projection jitter (see SolidOutline.ush).
+        _BlendableLocation = ECk_Usf_BlendableLocation::SceneColorAfterDOF;
+
         // Custom stencil/depth + scene color/depth (no scene normal needed for a stencil silhouette).
         _SceneTextures.Add(ECk_Usf_SceneTexture::SceneColor);
         _SceneTextures.Add(ECk_Usf_SceneTexture::SceneDepth);
