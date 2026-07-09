@@ -12,10 +12,9 @@ namespace ck::statemachine
 {
     namespace fingerprint_detail
     {
-        // FNV-1a 32-bit constants. We mix the FName ComparisonIndex of each class into a
-        // running 32-bit accumulator. The ComparisonIndex is stable for engine-resolved
-        // names — same name string → same index on any machine — which is what determinism
-        // requires here.
+        // FNV-1a 32-bit constants. We mix the case-normalized NAME STRING of each class into
+        // a running 32-bit accumulator — the string is the only identity that is stable
+        // across processes, which is what cross-machine determinism requires here.
         constexpr uint32 FnvOffsetBasis = 0x811c9dc5u;
         constexpr uint32 FnvPrime       = 0x01000193u;
 
@@ -40,12 +39,26 @@ namespace ck::statemachine
         {
             const auto Name = ck::IsValid(InClass)
                 ? InClass->GetFName()
-                : NAME_None;
+                : FName{NAME_None};
 
-            const auto AsU32 = static_cast<uint32>(Name.GetComparisonIndex().ToUnstableInt());
+            // Hash the name STRING, case-normalized — never the FName ComparisonIndex.
+            // Comparison indices are process-local (assigned in name-table population order;
+            // the accessor is literally ToUnstableInt), and an FName's stored case is
+            // first-registration-wins, so neither survives a packaged-client vs
+            // dedicated-server comparison. A false mismatch trips FTag_Sm_DeterminismFault
+            // and permanently quiesces a healthy SM — and PIE (one shared name table) can
+            // never reproduce it.
+            const auto NameString = Name.ToString().ToLower();
 
             auto H = InAccumulator;
-            H ^= AsU32;
+            for (const auto& Char : NameString)
+            {
+                H ^= static_cast<uint32>(Char);
+                H *= FnvPrime;
+            }
+
+            // Per-name terminator so consecutive names can't smear ("AB"+"C" vs "A"+"BC").
+            H ^= 0xFFu;
             H *= FnvPrime;
             return H;
         }
