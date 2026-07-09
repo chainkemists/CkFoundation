@@ -612,6 +612,11 @@ namespace CkUsf
         // after-tonemapping placement shimmers under the TAA projection jitter (see SolidOutline.ush).
         _BlendableLocation = ECk_Usf_BlendableLocation::SceneColorAfterDOF;
 
+        // Square (Chebyshev) corners instead of the octagonal default — convex corners come to a sharp
+        // point at full edge thickness rather than pinching to 0.707x. Global to all outlined objects
+        // (one shared material); revert by removing this define. See SolidOutline.ush for the trade-off.
+        _Defines.Add("CKUSF_OUTLINE_SQUARE_CORNERS=1");
+
         // Custom stencil/depth + scene color/depth (no scene normal needed for a stencil silhouette).
         _SceneTextures.Add(ECk_Usf_SceneTexture::SceneColor);
         _SceneTextures.Add(ECk_Usf_SceneTexture::SceneDepth);

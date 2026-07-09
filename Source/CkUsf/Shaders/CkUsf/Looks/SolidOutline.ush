@@ -34,6 +34,16 @@
 #define CKUSF_OUTLINE_AA_RADIUS 1.5
 #endif
 
+// Corner shape of the outline dilation. 0 = octagonal reach: the 8 direction taps are unit-length, so a
+// diagonal only reaches 0.707*thickness toward a box corner — convex corners pinch to 0.707*thickness and
+// read as rounded/chamfered, while straight edges keep the full thickness. 1 = Chebyshev/box reach: the 4
+// diagonal taps extend to sqrt(2)*thickness (the actual box corner), so convex corners come to a SQUARE
+// point at full edge thickness. Cost: a silhouette edge running diagonally gets up to ~1.41x thicker.
+// Prefer 1 for hard-edged rectangular subjects (poster / UI frames), 0 for organic silhouettes.
+#ifndef CKUSF_OUTLINE_SQUARE_CORNERS
+#define CKUSF_OUTLINE_SQUARE_CORNERS 0
+#endif
+
 FCkUsf_SurfaceOutput CkUsf_PP_SolidOutline(
     FCkUsf_SurfaceInput In,
     Texture2D OutlineParams, SamplerState OutlineParamsSampler,
@@ -60,6 +70,15 @@ FCkUsf_SurfaceOutput CkUsf_PP_SolidOutline(
         float2( 0.70711, -0.70711), float2(-0.70711, -0.70711)
     };
 
+    // Per-direction reach multiplier for the two dilation scans below (NOT the AA circle, which stays
+    // unit so the feather stays circular). Diagonals extend to the box corner when square corners are on,
+    // converting the octagonal (rounded-corner) reach into a Chebyshev (square-corner) one.
+#if CKUSF_OUTLINE_SQUARE_CORNERS
+    const float reach[8] = { 1.0, 1.0, 1.0, 1.0, 1.41421356, 1.41421356, 1.41421356, 1.41421356 };
+#else
+    const float reach[8] = { 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
+#endif
+
     // Band scan: a pixel within `thickness` of a silhouette has at least one toward-object tap that lands
     // on the marked region. The nearest marked neighbour gives the ring pixel its preset slot + occlusion
     // depths. The radius is inflated past the band (by the feather radius + 1px) so pixels just BEYOND it
@@ -72,7 +91,7 @@ FCkUsf_SurfaceOutput CkUsf_PP_SolidOutline(
     [unroll]
     for (int i = 0; i < 8; ++i)
     {
-        float2 nuv = bufferUV + dirs[i] * texel * (thickness + CKUSF_OUTLINE_AA_RADIUS + 1.0);
+        float2 nuv = bufferUV + dirs[i] * texel * (thickness + CKUSF_OUTLINE_AA_RADIUS + 1.0) * reach[i];
         float sN = round(SceneTextureLookup(nuv, PPI_CustomStencil, false).r);
         if (sN >= StencilMin && sN <= StencilMax)
         {
@@ -153,7 +172,7 @@ FCkUsf_SurfaceOutput CkUsf_PP_SolidOutline(
                 [unroll]
                 for (int d = 0; d < 8; ++d)
                 {
-                    float2 nuv = sampUV + dirs[d] * texel * thickness;
+                    float2 nuv = sampUV + dirs[d] * texel * thickness * reach[d];
                     float sN = round(SceneTextureLookup(nuv, PPI_CustomStencil, false).r);
                     if (sN >= StencilMin && sN <= StencilMax)
                     { coverage += 1.0; break; }
