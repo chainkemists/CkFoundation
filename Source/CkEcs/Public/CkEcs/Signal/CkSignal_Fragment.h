@@ -48,9 +48,6 @@ namespace ck
         static_assert((std::is_pointer_v<T_Args> || ...) == false, "None of the T_Args of a Signal can be raw pointers");
 
     public:
-        CK_DEFINE_ECS_TAG(FTag_PayloadInFlight);
-
-    public:
         using ArgsType = std::tuple<T_Args...>;
         using PayloadType = TOptional<ArgsType>;
 
