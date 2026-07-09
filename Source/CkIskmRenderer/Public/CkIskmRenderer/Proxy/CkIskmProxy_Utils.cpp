@@ -4,6 +4,7 @@
 #include "Components/SkeletalMeshComponent.h"
 
 #include "CkCore/Validation/CkIsValid.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 #include "CkIskmRenderer/Proxy/CkIskmProxy_Fragment.h"
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Utils.h"
@@ -39,6 +40,20 @@ auto
     InHandle.Add<ck::FTag_IskmProxy_NeedsSetup>();
 
     return Cast(InHandle);
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Create(
+        FCk_Handle& InOwner,
+        const FTransform& InInitialTransform,
+        const FCk_Fragment_IskmProxy_ParamsData& InParams)
+    -> FCk_Handle_IskmProxy
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    auto ChildTransform = UCk_Utils_Transform_UE::Add(
+        NewEntity, InInitialTransform, ECk_Replication::DoesNotReplicate);
+    return Add(ChildTransform, InParams);
 }
 
 auto

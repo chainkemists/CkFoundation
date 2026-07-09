@@ -8,21 +8,30 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_RenderStatus"))
 class CKGRAPHICS_API UCk_Utils_RenderStatus_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(UCk_Utils_RenderStatus_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_RenderStatus);
 
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|RenderStatus",
               DisplayName="[Ck][RenderStatus] Add Feature")
-    static void
+    static FCk_Handle_RenderStatus
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Fragment_RenderStatus_ParamsData& InParams);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|RenderStatus",
+              DisplayName="[Ck][RenderStatus] Create")
+    static FCk_Handle_RenderStatus
+    Create(
+        UPARAM(ref) FCk_Handle& InOwner,
         const FCk_Fragment_RenderStatus_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,

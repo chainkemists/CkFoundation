@@ -4,12 +4,19 @@
 #include "CkCore/Time/CkTime.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/OwningActor/CkOwningActor_Fragment_Data.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
 #include <StructUtils/InstancedStruct.h>
 
 #include "CkRenderStatus_Fragment_Data.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
+struct CKGRAPHICS_API FCk_Handle_RenderStatus : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_RenderStatus); };
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_RenderStatus);
 
 // --------------------------------------------------------------------------------------------------------------------
 

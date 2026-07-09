@@ -1,6 +1,9 @@
 #include "CkProbe_Utils.h"
 
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkShapes/CkShapes_Utils.h"
 
@@ -44,6 +47,24 @@ auto
     Request_EnableDisable(ProbeHandle, FCk_Request_Probe_EnableDisable{InParams.Get_StartingState()});
 
     return ProbeHandle;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Probe_UE::
+    Create(
+        FCk_Handle& InOwner,
+        const FTransform& InInitialTransform,
+        const FCk_AnyShape& InShape,
+        const FCk_Fragment_Probe_ParamsData& InParams,
+        const FCk_Probe_DebugInfo& InDebugInfo)
+    -> FCk_Handle_Probe
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    auto ChildTransform = UCk_Utils_Transform_UE::Add(NewEntity, InInitialTransform, ECk_Replication::DoesNotReplicate);
+    UCk_Utils_Shapes_UE::Add(NewEntity, InShape);
+    return Add(ChildTransform, InParams, InDebugInfo);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
