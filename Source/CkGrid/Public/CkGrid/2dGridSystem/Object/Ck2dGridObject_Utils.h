@@ -29,6 +29,14 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_2dGridObject_ParamsData& InParams);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|2dGridObject",
+              DisplayName="[Ck][2dGridObject] Create")
+    static FCk_Handle_2dGridObject
+    Create(
+        UPARAM(ref) FCk_Handle& InOwner,
+        const FCk_Fragment_2dGridObject_ParamsData& InParams);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|2dGridObject",
               DisplayName="[Ck][2dGridObject] Has Feature")

@@ -27,6 +27,14 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_ShapeSphere_ParamsData& InParams);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|ShapeSphere",
+              DisplayName="[Ck][Shapes][Sphere] Create")
+    static FCk_Handle_ShapeSphere
+    Create(
+        UPARAM(ref) FCk_Handle& InOwner,
+        const FCk_Fragment_ShapeSphere_ParamsData& InParams);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ShapeSphere",
               DisplayName="[Ck][Shapes][Sphere] Has Feature")

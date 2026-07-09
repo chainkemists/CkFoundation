@@ -53,6 +53,15 @@ public:
         const FCk_Fragment_Velocity_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Velocity",
+              DisplayName="[Ck][Velocity] Create")
+    static FCk_Handle_Velocity
+    Create(
+        UPARAM(ref) FCk_Handle& InOwner,
+        const FCk_Fragment_Velocity_ParamsData& InParams,
+        ECk_Replication InReplicates = ECk_Replication::Replicates);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Velocity",
               DisplayName="[Ck][Velocity] Has Feature")

@@ -91,6 +91,17 @@ auto
     return Director;
 }
 
+auto
+    UCk_Utils_Camera_UE::
+    Create(
+        FCk_Handle& InOwner,
+        const FCk_Fragment_Camera_ParamsData& InParams)
+    -> FCk_Handle_Camera
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    return Add(NewEntity, InParams);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

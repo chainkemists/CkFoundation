@@ -4,6 +4,8 @@
 #include "CkShapes/CkShapes_Utils.h"
 #include "CkShapes/Cylinder/CkShapeCylinder_Fragment.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -21,6 +23,17 @@ auto
     InHandle.Add<ck::FFragment_ShapeCylinder_Current>(InParams.Get_InitialDimensions());
 
     return Cast(InHandle);
+}
+
+auto
+    UCk_Utils_ShapeCylinder_UE::
+    Create(
+        FCk_Handle& InOwner,
+        const FCk_Fragment_ShapeCylinder_ParamsData& InParams)
+    -> FCk_Handle_ShapeCylinder
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    return Add(NewEntity, InParams);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

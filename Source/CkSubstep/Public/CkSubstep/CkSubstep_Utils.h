@@ -31,6 +31,14 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Substep",
+              DisplayName="[Ck][Substep] Create")
+    static FCk_Handle_Substep
+    Create(
+        UPARAM(ref) FCk_Handle& InOwner,
+        const FCk_Substep_ParamsData& InParams);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Substep",
               DisplayName="[Ck][Substep] Add Or Replace Substep Feature")
     static FCk_Handle_Substep
     AddOrReplace(

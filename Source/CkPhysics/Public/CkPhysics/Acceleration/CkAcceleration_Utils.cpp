@@ -34,6 +34,20 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+auto
+    UCk_Utils_Acceleration_UE::
+    Create(
+        FCk_Handle& InOwner,
+        const FCk_Fragment_Acceleration_ParamsData& InParams,
+        ECk_Replication InReplicates)
+    -> FCk_Handle_Acceleration
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    return Add(NewEntity, InParams, InReplicates);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Acceleration_UE,
     FCk_Handle_Acceleration, ck::FFragment_Acceleration_Params, ck::FFragment_Acceleration_Current);
 

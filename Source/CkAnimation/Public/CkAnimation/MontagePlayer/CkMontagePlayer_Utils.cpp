@@ -3,6 +3,7 @@
 #include "CkAnimation/CkAnimation_Log.h"
 #include "CkAnimation/CkAnimation_Utils.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 
@@ -60,6 +61,18 @@ auto
     }
 
     return Cast(InHandle);
+}
+
+auto
+    UCk_Utils_MontagePlayer_UE::
+    Create(
+        FCk_Handle& InOwner,
+        const FCk_Fragment_MontagePlayer_ParamsData& InParams,
+        ECk_Replication InReplicates)
+    -> FCk_Handle_MontagePlayer
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    return Add(NewEntity, InParams, InReplicates);
 }
 
 auto

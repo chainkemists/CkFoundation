@@ -26,6 +26,14 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_Pmg_Donut_ParamsData& InParams);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|Donut",
+              DisplayName="[Ck][Pmg][Donut] Create")
+    static FCk_Handle_Pmg_Donut
+    Create(
+        UPARAM(ref) FCk_Handle& InOwner,
+        const FCk_Fragment_Pmg_Donut_ParamsData& InParams);
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Pmg|Donut",

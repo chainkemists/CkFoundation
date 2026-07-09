@@ -4,6 +4,8 @@
 #include "CkShapes/CkShapes_Utils.h"
 #include "CkShapes/Capsule/CkShapeCapsule_Fragment.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -21,6 +23,17 @@ auto
     InHandle.Add<ck::FFragment_ShapeCapsule_Current>(InParams.Get_InitialDimensions());
 
     return Cast(InHandle);
+}
+
+auto
+    UCk_Utils_ShapeCapsule_UE::
+    Create(
+        FCk_Handle& InOwner,
+        const FCk_Fragment_ShapeCapsule_ParamsData& InParams)
+    -> FCk_Handle_ShapeCapsule
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    return Add(NewEntity, InParams);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

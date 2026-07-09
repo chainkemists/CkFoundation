@@ -34,6 +34,14 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_AggroOwner_Params& InParams);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AggroOwner",
+              DisplayName="[Ck][AggroOwner] Create")
+    static FCk_Handle_AggroOwner
+    Create(
+        UPARAM(ref) FCk_Handle& InOwner,
+        const FCk_Fragment_AggroOwner_Params& InParams);
+
 public:
     // Has Feature
     static bool

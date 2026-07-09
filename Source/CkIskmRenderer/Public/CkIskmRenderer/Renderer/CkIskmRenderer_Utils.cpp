@@ -1,6 +1,7 @@
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Utils.h"
 
 #include "CkCore/Validation/CkIsValid.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_Fragment_Data.h"
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Fragment.h"
 
@@ -23,6 +24,17 @@ auto
     InHandle.Add<ck::FTag_IskmRenderer_NeedsSetup>();
 
     return Cast(InHandle);
+}
+
+auto
+    UCk_Utils_IskmRenderer_UE::
+    Create(
+        FCk_Handle& InOwner,
+        UCk_IskmRenderer_Data* InRendererData)
+    -> FCk_Handle_IskmRenderer
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    return Add(NewEntity, InRendererData);
 }
 
 auto

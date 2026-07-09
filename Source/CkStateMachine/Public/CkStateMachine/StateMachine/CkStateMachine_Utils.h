@@ -58,6 +58,14 @@ public:
         UPARAM(ref) FCk_Handle& InOwner,
         const FCk_Fragment_StateMachine_ParamsData& InParams);
 
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|StateMachine",
+        DisplayName = "[Ck][SM] Create")
+    static FCk_Handle_StateMachine
+    Create(
+        UPARAM(ref) FCk_Handle& InOwner,
+        const FCk_Fragment_StateMachine_ParamsData& InParams);
+
     // ================================================================================================================
     // CONTROL
     // ================================================================================================================

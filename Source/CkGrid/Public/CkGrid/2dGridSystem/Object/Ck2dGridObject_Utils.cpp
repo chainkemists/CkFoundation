@@ -4,6 +4,8 @@
 
 #include "CkGrid/CkGrid_Utils.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -15,6 +17,17 @@ auto
 {
     InHandle.Add<ck::FFragment_2dGridObject_Params>(InParams);
     return Cast(InHandle);
+}
+
+auto
+    UCk_Utils_2dGridObject_UE::
+    Create(
+        FCk_Handle& InOwner,
+        const FCk_Fragment_2dGridObject_ParamsData& InParams)
+    -> FCk_Handle_2dGridObject
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    return Add(NewEntity, InParams);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

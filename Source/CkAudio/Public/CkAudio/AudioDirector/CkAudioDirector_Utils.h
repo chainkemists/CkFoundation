@@ -28,6 +28,14 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_AudioDirector_ParamsData& InParams);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AudioDirector",
+              DisplayName="[Ck][AudioDirector] Create")
+    static FCk_Handle_AudioDirector
+    Create(
+        UPARAM(ref) FCk_Handle& InOwner,
+        const FCk_Fragment_AudioDirector_ParamsData& InParams);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AudioDirector",
               DisplayName="[Ck][AudioDirector] Has Feature")

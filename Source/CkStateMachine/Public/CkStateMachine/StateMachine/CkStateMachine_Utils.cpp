@@ -62,6 +62,19 @@ auto
 
 auto
     UCk_Utils_StateMachine_UE::
+    Create(
+        FCk_Handle& InOwner,
+        const FCk_Fragment_StateMachine_ParamsData& InParams)
+    -> FCk_Handle_StateMachine
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    return Add(NewEntity, InParams);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_StateMachine_UE::
     Request_Start(
         FCk_Handle_StateMachine& InStateMachine)
     -> FCk_Handle_StateMachine

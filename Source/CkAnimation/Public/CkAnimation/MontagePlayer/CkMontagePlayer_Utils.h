@@ -40,6 +40,15 @@ public:
         const FCk_Fragment_MontagePlayer_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|MontagePlayer",
+              DisplayName="[Ck][MontagePlayer] Create")
+    static FCk_Handle_MontagePlayer
+    Create(
+        UPARAM(ref) FCk_Handle& InOwner,
+        const FCk_Fragment_MontagePlayer_ParamsData& InParams,
+        ECk_Replication InReplicates = ECk_Replication::Replicates);
+
     // Re-binds the runtime SkeletalMeshComponent target — the ONE param that cannot round-trip a snapshot
     // (FFragment_MontagePlayer_Params::SerializeSnapshot is deliberately empty). A restored MontagePlayer
     // comes back composed but inert; call this with the re-created mesh (e.g. a rebuilt Iskm proxy's

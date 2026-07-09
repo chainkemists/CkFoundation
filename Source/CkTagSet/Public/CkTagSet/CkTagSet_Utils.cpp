@@ -48,6 +48,20 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_TagSet_UE::
+    Create(
+        FCk_Handle& InOwner,
+        FGameplayTagContainer InInitialTags,
+        ECk_Replication InReplicates)
+    -> FCk_Handle_TagSet
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    return Add(NewEntity, InInitialTags, InReplicates);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 // Queries
 // --------------------------------------------------------------------------------------------------------------------
 

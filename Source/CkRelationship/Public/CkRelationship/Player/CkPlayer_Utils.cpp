@@ -1,5 +1,7 @@
 #include "CkPlayer_Utils.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+
 #include "CkRelationship/CkRelationship_Log.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -50,6 +52,18 @@ auto
     }
 
     return Cast(InHandle);
+}
+
+auto
+    UCk_Utils_Player_UE::
+    Create(
+        FCk_Handle& InOwner,
+        ECk_Player_ID InTeamID,
+        ECk_Replication InReplicates)
+    -> FCk_Handle_Player
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    return Add(NewEntity, InTeamID, InReplicates);
 }
 
 auto

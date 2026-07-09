@@ -2,6 +2,7 @@
 #include "CkObjectiveOwner_Fragment.h"
 
 #include "CkCore/Validation/CkIsValid.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEntityCollection/CkEntityCollection_Utils.h"
 #include "CkObjective/Objective/CkObjective_Utils.h"
 
@@ -28,6 +29,17 @@ auto
     InHandle.Add<ck::FTag_ObjectiveOwner_NeedsSetup>();
 
     return Cast(InHandle);
+}
+
+auto
+    UCk_Utils_ObjectiveOwner_UE::
+    Create(
+        FCk_Handle& InOwner,
+        const FCk_ObjectiveOwner_ParamsData& InParams)
+    -> FCk_Handle_ObjectiveOwner
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    return Add(NewEntity, InParams);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

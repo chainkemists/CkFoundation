@@ -28,6 +28,14 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_ShapeBox_ParamsData& InParams);
 
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|ShapeBox",
+        DisplayName = "[Ck][Shapes][Box] Create")
+    static FCk_Handle_ShapeBox
+    Create(
+        UPARAM(ref) FCk_Handle& InOwner,
+        const FCk_Fragment_ShapeBox_ParamsData& InParams);
+
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ShapeBox",
         DisplayName = "[Ck][Shapes][Box] Has Feature")
