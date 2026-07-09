@@ -12,6 +12,7 @@
 #include <Engine/GameViewportClient.h>
 #include <Framework/Application/IInputProcessor.h>
 #include <Framework/Application/SlateApplication.h>
+#include <Engine/LevelStreaming.h>
 #include <GameFramework/GameStateBase.h>
 #include <GameFramework/WorldSettings.h>
 #include <HAL/ThreadHeartBeat.h>
@@ -378,6 +379,31 @@ auto
         // Show a loading screen during seamless travel
         _DebugReason = TEXT("We are in seamless travel");
         return true;
+    }
+
+    // Hold while streaming sublevels that should be loaded/visible are still pending — this is
+    // the "player falls through the floor on slow machines" guard. (Ck addition; not in Lyra.)
+    if (UCk_Utils_LoadingScreen_Settings_UE::Get_WaitForStreamingLevels())
+    {
+        auto NumPendingStreamingLevels = 0;
+        for (const auto StreamingLevel : World->GetStreamingLevels())
+        {
+            if (ck::Is_NOT_Valid(StreamingLevel))
+            { continue; }
+
+            const auto PendingLoad = StreamingLevel->ShouldBeLoaded() && NOT StreamingLevel->IsLevelLoaded();
+            const auto PendingVisibility = StreamingLevel->ShouldBeVisible() && NOT StreamingLevel->IsLevelVisible();
+
+            if (PendingLoad || PendingVisibility)
+            { ++NumPendingStreamingLevels; }
+        }
+
+        if (NumPendingStreamingLevels > 0)
+        {
+            _DebugReason = ck::Format_UE(TEXT("Waiting on [{}] streaming sublevel(s) to finish loading"),
+                NumPendingStreamingLevels);
+            return true;
+        }
     }
 
     // Ask the game state if it needs a loading screen

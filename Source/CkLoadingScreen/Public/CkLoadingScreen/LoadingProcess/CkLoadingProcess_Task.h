@@ -31,6 +31,10 @@ public:
     /**
      * Creates a task that holds the loading screen up until Request_Unregister is called.
      * Returns nullptr where no loading screen subsystem exists (e.g. dedicated servers).
+     *
+     * InTimeoutSeconds > 0 arms a watchdog: a task still holding past the timeout fires an
+     * ensure (loud in dev, silent in Test/Shipping) and STOPS holding — fail-open, so a leaked
+     * holder can never permanently black-screen a packaged build.
      */
     UFUNCTION(BlueprintCallable,
               Category = "Ck|LoadingScreen",
@@ -39,7 +43,8 @@ public:
     static UCk_LoadingProcess_Task_UE*
     Create(
         UObject* InWorldContextObject,
-        const FString& InShowLoadingScreenReason);
+        const FString& InShowLoadingScreenReason,
+        float InTimeoutSeconds = 0.0f);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -62,9 +67,14 @@ public:
 
 private:
     FString _Reason;
+    float _TimeoutSeconds = 0.0f;
+    double _TimeCreated = 0.0;
+    mutable bool _HasTimedOut = false;
 
 public:
     CK_PROPERTY_GET(_Reason);
+    CK_PROPERTY_GET(_TimeoutSeconds);
+    CK_PROPERTY_GET(_HasTimedOut);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
