@@ -123,10 +123,14 @@ namespace ck
                 : ECk_SmConditionResult::Fail;
         }
 
-        // Wake the parent transition so it re-checks condition results in the pump
-
+        // Wake the parent transition so it re-checks condition results in the pump. Unconditional,
+        // mirroring the event-driven path (Request_UpdateConditionResult): AddOrGet bumps the
+        // dirty-marker version even when the tag already exists. Gating this on the transition
+        // still holding FTag_SmTransition_Evaluating made the wake dead code — the transition
+        // evaluator removes that tag at the top of its own run earlier in the same frame, so a
+        // freshly-computed result sat unconsumed until the next frame's evaluate cycle.
         if (auto ParentTransition = ck::TUtils_Sm_ParentTransition::Get_StoredEntity(InHandle);
-            ck::IsValid(ParentTransition) && ParentTransition.Has<ck::FTag_SmTransition_Evaluating>())
+            ck::IsValid(ParentTransition) && NOT ParentTransition.Has<ck::FTag_SmTransition_PendingExit>())
         {
             ParentTransition.AddOrGet<ck::FTag_SmTransition_Evaluating>();
         }
