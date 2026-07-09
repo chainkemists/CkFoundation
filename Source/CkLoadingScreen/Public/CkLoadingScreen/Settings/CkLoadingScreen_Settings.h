@@ -55,6 +55,14 @@ private:
               meta = (AllowPrivateAccess = true))
     bool _ForceTickLoadingScreenEvenInEditor = true;
 
+    /**
+     * Keep the loading screen up while any streaming sublevel that should be loaded/visible is
+     * still pending. This is the "player falls through the floor on slow machines" guard.
+     */
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Configuration",
+              meta = (AllowPrivateAccess = true))
+    bool _WaitForStreamingLevels = true;
+
     /** When true, the reason the loading screen is shown or hidden is printed to the log every frame. */
     UPROPERTY(Transient, EditDefaultsOnly, Category = "Debugging",
               meta = (AllowPrivateAccess = true, ConsoleVariable = "ck.LoadingScreen.LogReasonEveryFrame"))
@@ -86,6 +94,7 @@ public:
     CK_PROPERTY_GET(_LoadingScreenHeartbeatHangDuration);
     CK_PROPERTY_GET(_LogLoadingScreenHeartbeatInterval);
     CK_PROPERTY_GET(_ForceTickLoadingScreenEvenInEditor);
+    CK_PROPERTY_GET(_WaitForStreamingLevels);
     CK_PROPERTY_GET(_LogLoadingScreenReasonEveryFrame);
     CK_PROPERTY_GET(_ForceLoadingScreenVisible);
     CK_PROPERTY_GET(_DisableLoadingScreen);
@@ -114,6 +123,9 @@ public:
 
     static auto
     Get_ForceTickLoadingScreenEvenInEditor() -> bool;
+
+    static auto
+    Get_WaitForStreamingLevels() -> bool;
 
     static auto
     Get_LogLoadingScreenReasonEveryFrame() -> bool;

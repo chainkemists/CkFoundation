@@ -28,8 +28,15 @@ ordering without re-reading the original. Lyra's `CommonStartupLoadingScreen` mo
 - `ICk_LoadingProcess` (`LoadingProcess/`) — one method:
   `Get_ShouldShowLoadingScreen(FString& OutReason)`. GameState + its components + local
   PlayerControllers + their components are polled automatically, no registration needed.
+- **Built-in streaming gate** (Ck addition, not in Lyra): the screen also holds while any
+  streaming sublevel that should be loaded/visible is still pending — the
+  "fall through the floor on slow machines" guard. Toggle: settings `_WaitForStreamingLevels`
+  (default true).
 - `UCk_LoadingProcess_Task_UE` (`LoadingProcess/`) — push-model holder for BP/AS:
-  `Create(WorldContext, Reason)` → screen held → `Request_Unregister()`.
+  `Create(WorldContext, Reason, TimeoutSeconds = 0)` → screen held → `Request_Unregister()`.
+  `TimeoutSeconds > 0` arms a fail-open watchdog: past the deadline the task fires an ensure
+  (loud in dev, silent in Test/Shipping) and stops holding — a leaked holder can never
+  permanently black-screen a packaged build.
 - `UCk_LoadingScreen_ProjectSettings_UE` (`Settings/`) — widget class, z-order, hold-secs,
   heartbeat/log intervals; debug toggles are CVar-backed.
 
@@ -64,9 +71,9 @@ line also suppresses (non-Shipping, Lyra parity).
 
 - Don't implement `ICk_LoadingProcess` from Blueprint/AngelScript — the interface is C++
   poll-model only; script holders use `UCk_LoadingProcess_Task_UE`.
-- Don't hold a Task without a release path — a leaked holder is a permanent black screen in
-  packaged builds. (A watchdog timeout is planned; until then, pair every `Create` with an owned
-  lifetime.)
+- Don't hold a Task without a release path — pair every `Create` with an owned lifetime, and
+  pass a `TimeoutSeconds` watchdog for any hold whose release depends on an external event
+  (net arrival, discovery) that might never come.
 - Don't gate game logic on `Get_IsLoadingScreenShowing()` in headless contexts — presentation is
   suppressed there; gate on `Get_NeedsLoadingScreen()` instead.
 
