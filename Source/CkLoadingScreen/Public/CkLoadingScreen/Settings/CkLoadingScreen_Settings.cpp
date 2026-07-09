@@ -52,6 +52,14 @@ auto
 
 auto
     UCk_Utils_LoadingScreen_Settings_UE::
+    Get_WaitForStreamingLevels()
+    -> bool
+{
+    return GetDefault<UCk_LoadingScreen_ProjectSettings_UE>()->Get_WaitForStreamingLevels();
+}
+
+auto
+    UCk_Utils_LoadingScreen_Settings_UE::
     Get_LogLoadingScreenReasonEveryFrame()
     -> bool
 {
