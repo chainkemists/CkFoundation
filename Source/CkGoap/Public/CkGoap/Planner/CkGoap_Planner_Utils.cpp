@@ -97,42 +97,18 @@ auto
 
 auto
 	UCk_Utils_Goap_Planner_UE::
-	Add(
-		FCk_Handle& InOwner,
+	DoStampTopLevelPlannerRole(
+		FCk_Handle& InPlannerEntity,
 		const FCk_Fragment_Goap_PlannerParamsData& InParams)
-	-> FCk_Handle_Goap_Planner
+	-> void
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InOwner),
-		TEXT("Invalid owner handle when adding Planner"))
-	{ return {}; }
+	InPlannerEntity.Add<ck::FFragment_Goap_Planner_Params>(InParams);
+	InPlannerEntity.Add<ck::FFragment_Goap_Planner_Current>();
 
-	CK_ENSURE_IF_NOT(InParams.Get_PlannerTag().IsValid(),
-		TEXT("Planner params has invalid _PlannerTag (owner [{}])"), InOwner)
-	{ return {}; }
-
-	// Diagnostic: Planner-tag uniqueness within owner.
-	if (auto Existing = Find_Planner(InOwner, InParams.Get_PlannerTag());
-		ck::IsValid(Existing))
-	{
-		ck::goap::Warning(
-			TEXT("Planner with tag [{}] already exists on owner [{}]; Add rejected."),
-			InParams.Get_PlannerTag(), InOwner);
-		return {};
-	}
-
-	auto PlannerEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_Goap_Planner>(InOwner);
-
-	// Records of Planners require GameplayLabels — label the Planner with its
-	// declared tag. Same for actions in AddAction.
-	UCk_Utils_GameplayLabel_UE::Add(PlannerEntity, InParams.Get_PlannerTag());
-
-	PlannerEntity.Add<ck::FFragment_Goap_Planner_Params>(InParams);
-	PlannerEntity.Add<ck::FFragment_Goap_Planner_Current>();
-
-	auto& Current = PlannerEntity.Get<ck::FFragment_Goap_Planner_Current>();
+	auto& Current = InPlannerEntity.Get<ck::FFragment_Goap_Planner_Current>();
 	Current._EnableToggle = InParams.Get_InitialToggle();
 
-	PlannerEntity.Add<ck::FFragment_Goap_Planner_ActionCatalogIndex>();
+	InPlannerEntity.Add<ck::FFragment_Goap_Planner_ActionCatalogIndex>();
 
 	// PR-A: stamp the Planner's WorldStateSource at construction. Was previously
 	// supplied via SetRootAction's separate WS argument; now read off the
@@ -149,12 +125,12 @@ auto
 		auto WSFrag = ck::FFragment_Goap_Planner_WorldStateSource{};
 		WSFrag._WorldStateSource = InParams.Get_WorldStateSource();
 		WSFrag._Resolved          = InParams.Get_WorldStateSource();
-		PlannerEntity.Add<ck::FFragment_Goap_Planner_WorldStateSource>(WSFrag);
+		InPlannerEntity.Add<ck::FFragment_Goap_Planner_WorldStateSource>(WSFrag);
 	}
 
 	// U11.0 split: top-level Planner is also dual-role; stamp PlanState + Goal
 	// alongside the existing Planner-role fragments.
-	PlannerEntity.Add<ck::FFragment_Goap_Planner_PlanState>();
+	InPlannerEntity.Add<ck::FFragment_Goap_Planner_PlanState>();
 	{
 		auto GoalFrag = ck::FFragment_Goap_Planner_Goal{};
 		// U11.1: PlannerParams._Goal is the source-of-truth at construction.
@@ -163,7 +139,7 @@ auto
 		// goal down to the implicit-root Action (the entity that actually runs
 		// A* in the transitional Path A model).
 		GoalFrag._GoalAuthored = InParams.Get_Goal();
-		PlannerEntity.Add<ck::FFragment_Goap_Planner_Goal>(GoalFrag);
+		InPlannerEntity.Add<ck::FFragment_Goap_Planner_Goal>(GoalFrag);
 	}
 
 	// U11.2: top-level Planners are always active by construction (no parent
@@ -172,7 +148,7 @@ auto
 	{
 		auto ActivationFrag = ck::FFragment_Goap_Planner_Activation{};
 		ActivationFrag._IsActive = true;
-		PlannerEntity.Add<ck::FFragment_Goap_Planner_Activation>(ActivationFrag);
+		InPlannerEntity.Add<ck::FFragment_Goap_Planner_Activation>(ActivationFrag);
 	}
 
 	// PR-B.1b Stage 2/3a — dual-stamp the full Planner-role A*-pipeline cluster
@@ -186,44 +162,73 @@ auto
 		auto AStarParams = ck::FFragment_AStar_Params{};
 		AStarParams.Set_BudgetMicroseconds(InParams.Get_SearchBudgetMicroseconds());
 		AStarParams.Set_CostThreshold(InParams.Get_CostThreshold());
-		PlannerEntity.Add<ck::FFragment_AStar_Params>(AStarParams);
+		InPlannerEntity.Add<ck::FFragment_AStar_Params>(AStarParams);
 	}
-	PlannerEntity.Add<ck::FFragment_AStar_Debug>();
+	InPlannerEntity.Add<ck::FFragment_AStar_Debug>();
 
 	// Planner-side A* pipeline fragments. The aliases (see CkGoap_Planner_Fragment.h)
 	// resolve to the Action-side types under the hood; Stage 5 promotes them to
 	// first-class types. EnTT treats Planner vs Action as distinct entities, so
 	// each carries its own copy of these fragments.
-	PlannerEntity.Add<ck::FFragment_Goap_Planner_SearchState>();
-	PlannerEntity.Add<ck::FFragment_Goap_Planner_Result>();
-	PlannerEntity.Add<ck::FFragment_Goap_Planner_PlanContext>();
-	PlannerEntity.Add<ck::FFragment_Goap_Planner_Requests>();
-	PlannerEntity.AddOrGet<ck::FFragment_Goap_Planner_ReplanThrottle>();
+	InPlannerEntity.Add<ck::FFragment_Goap_Planner_SearchState>();
+	InPlannerEntity.Add<ck::FFragment_Goap_Planner_Result>();
+	InPlannerEntity.Add<ck::FFragment_Goap_Planner_PlanContext>();
+	InPlannerEntity.Add<ck::FFragment_Goap_Planner_Requests>();
+	InPlannerEntity.AddOrGet<ck::FFragment_Goap_Planner_ReplanThrottle>();
 
-	PlannerEntity.AddOrGet<ck::FTag_Goap_Planner_RequiresSetup>();
+	InPlannerEntity.AddOrGet<ck::FTag_Goap_Planner_RequiresSetup>();
 
 	// PR-B.1b Stage 5: subscribe the top-level Planner to its WS source so
 	// WS-dirty tags land on the Planner for AutoReplan to pick up. Previously
 	// done by AddAction's implicit-root branch.
 	if (ck::IsValid(InParams.Get_WorldStateSource()))
 	{
-		auto PlannerAsGeneric = static_cast<FCk_Handle>(PlannerEntity);
 		auto WS = InParams.Get_WorldStateSource();
-		UCk_Utils_Goap_WorldState_UE::Request_AddSubscriber(WS, PlannerAsGeneric);
+		UCk_Utils_Goap_WorldState_UE::Request_AddSubscriber(WS, InPlannerEntity);
 	}
 
 	// PR-B.1b Stage 5: _PlanOnStart lifted to PlannerParams. Stamp the
 	// initial-plan tag so AutoReplan fires the first plan after Setup.
 	if (InParams.Get_PlanOnStart())
 	{
-		PlannerEntity.AddOrGet<ck::FTag_Goap_Planner_RequiresInitialPlan>();
+		InPlannerEntity.AddOrGet<ck::FTag_Goap_Planner_RequiresInitialPlan>();
+	}
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Add(
+		FCk_Handle& InOwner,
+		const FCk_Fragment_Goap_PlannerParamsData& InParams)
+	-> FCk_Handle_Goap_Planner
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InOwner),
+		TEXT("Invalid owner handle when adding Planner"))
+	{ return {}; }
+
+	CK_ENSURE_IF_NOT(InParams.Get_PlannerTag().IsValid(),
+		TEXT("Planner params has invalid _PlannerTag (owner [{}])"), InOwner)
+	{ return {}; }
+
+	// Add stamps the Planner role directly onto InOwner — the owning entity IS
+	// the Planner. One entity holds at most one Planner role, so reject if it
+	// already carries one (use Create for multiple independent Planners on the
+	// same owner). Unlike Create, Add does not create a child entity, does not
+	// add a GameplayLabel (InOwner keeps its own identity — mirrors
+	// PromoteActionToPlanner), and is not registered in a record-of-Planners
+	// (there is no separate owner to record it under; Find_Planner only resolves
+	// Create-spawned child Planners).
+	if (Has(InOwner))
+	{
+		ck::goap::Warning(
+			TEXT("Owner [{}] already carries the Planner role; Add rejected. Use Create for a second Planner on the same owner."),
+			InOwner);
+		return {};
 	}
 
-	// Register the Planner in the owner's record.
-	ck::goap::internal_planner_record::FRecordOfGoapPlanners_Utils::AddIfMissing(InOwner);
-	ck::goap::internal_planner_record::FRecordOfGoapPlanners_Utils::Request_Connect(InOwner, PlannerEntity);
+	DoStampTopLevelPlannerRole(InOwner, InParams);
 
-	return PlannerEntity;
+	return Cast(InOwner);
 }
 
 auto
@@ -234,9 +239,42 @@ auto
 		const FCk_Fragment_Goap_PlannerParamsData& InParams)
 	-> FCk_Handle_Goap_Planner
 {
+	CK_ENSURE_IF_NOT(ck::IsValid(InOwner),
+		TEXT("Invalid owner handle when creating Planner"))
+	{ return {}; }
+
+	CK_ENSURE_IF_NOT(InPlannerTag.IsValid(),
+		TEXT("Invalid _PlannerTag passed to Create (owner [{}])"), InOwner)
+	{ return {}; }
+
 	auto ParamsCopy = InParams;
 	ParamsCopy.Set_PlannerTag(InPlannerTag);
-	return Add(InOwner, ParamsCopy);
+
+	// Diagnostic: Planner-tag uniqueness within owner (record-based lookup).
+	if (auto Existing = Find_Planner(InOwner, InPlannerTag);
+		ck::IsValid(Existing))
+	{
+		ck::goap::Warning(
+			TEXT("Planner with tag [{}] already exists on owner [{}]; Create rejected."),
+			InPlannerTag, InOwner);
+		return {};
+	}
+
+	auto PlannerEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_Goap_Planner>(InOwner);
+
+	// Records of Planners require GameplayLabels — label the child Planner with
+	// its declared tag. (The Add path stamps onto InOwner directly and keeps the
+	// owner's existing label, so it does not label here.)
+	UCk_Utils_GameplayLabel_UE::Add(PlannerEntity, InPlannerTag);
+
+	auto PlannerAsGeneric = static_cast<FCk_Handle>(PlannerEntity);
+	DoStampTopLevelPlannerRole(PlannerAsGeneric, ParamsCopy);
+
+	// Register the child Planner in the owner's record so Find_Planner resolves it.
+	ck::goap::internal_planner_record::FRecordOfGoapPlanners_Utils::AddIfMissing(InOwner);
+	ck::goap::internal_planner_record::FRecordOfGoapPlanners_Utils::Request_Connect(InOwner, PlannerEntity);
+
+	return PlannerEntity;
 }
 
 auto
