@@ -9,27 +9,22 @@
 
 auto
     UCk_SmCondition_TaskResult::
-    BeginPlay()
+    EnterCondition(
+        FCk_Handle_SmCondition InHandle,
+        ECk_Sm_NetContext InNetContext)
     -> void
 {
+    Super::EnterCondition(InHandle, InNetContext);
+
     if (ck::Is_NOT_Valid(_TaskClass))
-    {
-        Super::BeginPlay();
-        return;
-    }
+    { return; }
 
     const auto ParentTransition = Get_ParentTransition();
     if (ck::Is_NOT_Valid(ParentTransition))
-    {
-        Super::BeginPlay();
-        return;
-    }
+    { return; }
 
     if (NOT ck::TUtils_Sm_ParentState::Has(ParentTransition))
-    {
-        Super::BeginPlay();
-        return;
-    }
+    { return; }
 
     const auto ParentState = ck::TUtils_Sm_ParentState::Get_StoredEntity(ParentTransition);
     UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::ForEach_ValidEntry(ParentState,
@@ -55,13 +50,13 @@ auto
             ECk_Signal_PostFireBehavior::DoNothing);
         _BoundTasks.Add(InTask);
     });
-
-    Super::BeginPlay();
 }
 
 auto
     UCk_SmCondition_TaskResult::
-    EndPlay()
+    ExitCondition(
+        FCk_Handle_SmCondition InHandle,
+        ECk_Sm_NetContext InNetContext)
     -> void
 {
     for (auto& BoundTask : _BoundTasks)
@@ -75,7 +70,7 @@ auto
     }
     _BoundTasks.Reset();
 
-    Super::EndPlay();
+    Super::ExitCondition(InHandle, InNetContext);
 }
 
 void
