@@ -34,6 +34,20 @@ public:
         const TArray<FCk_MeshMaterialOverride>& InMaterialOverrides,
         ECk_Mobility InMobility = ECk_Mobility::Static);
 
+    // As GetOrCreate_ForMeshWithMaterials, additionally allocating per-instance custom-data floats
+    // on the shared ISM component (NumCustomDataFloats). The count is part of the cache key — the
+    // same mesh+materials with a different float count is a different renderer. Consumers that
+    // write per-instance material data (e.g. CkVat playback state) need this overload; the plain
+    // ones allocate zero floats.
+    UFUNCTION(BlueprintCallable, Category = "Ck|IsmRenderer|Transient")
+    static UCk_IsmRenderer_Data*
+    GetOrCreate_ForMeshWithMaterialsAndCustomData(
+        const UWorld* InWorld,
+        UStaticMesh* InMesh,
+        const TArray<FCk_MeshMaterialOverride>& InMaterialOverrides,
+        int32 InNumCustomData,
+        ECk_Mobility InMobility = ECk_Mobility::Static);
+
     // Clears all cached transient renderer data. Called on world teardown.
     static auto
     ClearCache() -> void;
@@ -43,6 +57,7 @@ private:
     {
         TWeakObjectPtr<UStaticMesh> Mesh;
         TArray<TPair<int32, TWeakObjectPtr<UMaterialInterface>>> MaterialSlots;
+        int32 NumCustomData = 0;
 
         auto operator==(const FMeshMaterialKey& Other) const -> bool;
 
@@ -54,6 +69,7 @@ private:
                 Hash = HashCombine(Hash, ::GetTypeHash(Slot.Key));
                 Hash = HashCombine(Hash, ::GetTypeHash(Slot.Value));
             }
+            Hash = HashCombine(Hash, ::GetTypeHash(Key.NumCustomData));
             return Hash;
         }
     };
@@ -66,7 +82,8 @@ private:
         const UWorld* InWorld,
         UStaticMesh* InMesh,
         const TArray<FCk_MeshMaterialOverride>& InMaterialOverrides,
-        ECk_Mobility InMobility) -> UCk_IsmRenderer_Data*;
+        ECk_Mobility InMobility,
+        int32 InNumCustomData = 0) -> UCk_IsmRenderer_Data*;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
