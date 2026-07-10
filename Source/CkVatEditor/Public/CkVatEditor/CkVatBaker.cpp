@@ -29,9 +29,10 @@
 
 namespace ck_vat_baker
 {
+    // Hard slot count of the per-vertex carriers (4 indices + 4 weights). The KEPT count within
+    // these slots is the collection's _BoneInfluences (bone mode); texture-size budgets are the
+    // collection's _MaxTextureWidth/_MaxTextureRows.
     constexpr int32 MaxInfluences = 4;
-    constexpr int32 MaxTextureWidth = 4096;
-    constexpr int32 MaxTextureRows = 8192;
 
     // Where bake outputs live. SaveAssets: sibling packages of the collection, saved to disk
     // (shipped content). Transient: outered to the transient package, nothing written to disk —
@@ -140,7 +141,21 @@ namespace ck_vat_baker
 
         Texture->PreEditChange(nullptr);
 
-        if (InPrecision == ECk_Vat_Precision::High)
+        if (InPrecision == ECk_Vat_Precision::Ultra)
+        {
+            // Raw values, full-float source, RGBA32F compression (large VRAM; extreme ranges).
+            TArray<FLinearColor> Pixels;
+            Pixels.SetNumUninitialized(InPlane.Texels.Num());
+            for (int32 i = 0; i < InPlane.Texels.Num(); ++i)
+            {
+                const FVector4f& T = InPlane.Texels[i];
+                Pixels[i] = FLinearColor(T.X, T.Y, T.Z, T.W);
+            }
+            Texture->Source.Init(InPlane.Width, InPlane.Rows, /*Slices*/ 1, /*Mips*/ 1, TSF_RGBA32F,
+                reinterpret_cast<const uint8*>(Pixels.GetData()));
+            Texture->CompressionSettings = TC_HDR_F32;
+        }
+        else if (InPrecision == ECk_Vat_Precision::High)
         {
             // Raw values, half-float source, HDR (RGBA16F, no sRGB) compression.
             TArray<FFloat16Color> Pixels;
@@ -192,9 +207,11 @@ namespace ck_vat_baker
         USkeletalMesh& InMesh,
         const FCk_AnimBake_SkeletonData& InSkeletonData,
         const FSkeletalMeshLODModel& InLODModel,
+        int32 InKeptInfluences,
         TArray<FSourceVertex>& OutVertices)
         -> bool
     {
+        const int32 KeptInfluences = FMath::Clamp(InKeptInfluences, 1, MaxInfluences);
         OutVertices.Reserve(InLODModel.NumVertices);
 
         // Keep-strongest-4 is documented, expected behavior (standard Mannequin content carries
@@ -229,15 +246,14 @@ namespace ck_vat_baker
                 }
                 Influences.Sort([](const FInfluence& A, const FInfluence& B) { return A.Weight > B.Weight; });
 
-                if (NonZeroInfluences > MaxInfluences)
+                if (NonZeroInfluences > KeptInfluences)
                 {
                     ++OverInfluencedVertexCount;
                     MostInfluencesSeen = FMath::Max(MostInfluencesSeen, NonZeroInfluences);
                 }
 
-
                 float TotalWeight = 0.0f;
-                const int32 Kept = FMath::Min(Influences.Num(), MaxInfluences);
+                const int32 Kept = FMath::Min(Influences.Num(), KeptInfluences);
                 for (int32 i = 0; i < Kept; ++i)
                 { TotalWeight += static_cast<float>(Influences[i].Weight); }
 
@@ -284,7 +300,7 @@ namespace ck_vat_baker
         if (OverInfluencedVertexCount > 0)
         {
             ck::vat::Display(TEXT("VatBaker: mesh [{}] has [{}] vertices with more than [{}] bone influences (most seen: [{}]) — strongest [{}] kept per vertex, weights renormalized."),
-                &InMesh, OverInfluencedVertexCount, MaxInfluences, MostInfluencesSeen, MaxInfluences);
+                &InMesh, OverInfluencedVertexCount, KeptInfluences, MostInfluencesSeen, KeptInfluences);
         }
 
         return OutVertices.Num() > 0;
@@ -299,6 +315,8 @@ namespace ck_vat_baker
         const TArray<FSourceVertex>& InVertices,
         const FSkeletalMeshLODModel& InLODModel,
         USkeletalMesh& InSourceMesh,
+        int32 InWeightTexWidth,
+        int32 InWeightTexRows,
         EPersistence InPersistence)
         -> UStaticMesh*
     {
@@ -344,9 +362,16 @@ namespace ck_vat_baker
         FStaticMeshAttributes Attributes(*MeshDescription);
         Attributes.Register();
 
-        const auto BakeMode = InCollection.Get_BakeMode();
-        const int32 LookupCh = InCollection.Get_LookupUVChannel();
-        const int32 NumUVChannels = BakeMode == ECk_Vat_BakeMode::Vertex ? LookupCh + 1 : LookupCh + 2;
+        const auto BakeMode = InCollection.Get_BakeSettings().Get_BakeMode();
+        const auto WeightStorage = InCollection.Get_BakeSettings().Get_BoneWeightStorage();
+        const auto UsesWeightTexture = BakeMode == ECk_Vat_BakeMode::Bone &&
+            WeightStorage == ECk_Vat_BoneWeightStorage::WeightTexture;
+        const int32 LookupCh = InCollection.Get_BakeSettings().Get_LookupUVChannel();
+        // Vertex mode and weight-texture storage carry ONE lookup UV; mesh-channel bone storage
+        // carries two index channels.
+        const int32 NumUVChannels = BakeMode == ECk_Vat_BakeMode::Vertex || UsesWeightTexture
+            ? LookupCh + 1
+            : LookupCh + 2;
         CK_ENSURE_IF_NOT(NumUVChannels <= MAX_MESH_TEXTURE_COORDS_MD,
             TEXT("VatBaker: [{}] needs {} UV channels (lookup channel {}), max is {}"),
             InAssetName, NumUVChannels, LookupCh, static_cast<int32>(MAX_MESH_TEXTURE_COORDS_MD))
@@ -412,6 +437,15 @@ namespace ck_vat_baker
             {
                 // U addresses this vertex's texture column; the shader supplies the frame row V.
                 UVs.Set(InstanceID, LookupCh, FVector2f((InFlatVertexIndex + 0.5f) * InvTextureWidth, 0.0f));
+            }
+            else if (UsesWeightTexture)
+            {
+                // Full UV of this vertex's texel in the index/weight textures (row-major layout).
+                const int32 Col = InFlatVertexIndex % InWeightTexWidth;
+                const int32 Row = InFlatVertexIndex / InWeightTexWidth;
+                UVs.Set(InstanceID, LookupCh, FVector2f(
+                    (Col + 0.5f) / static_cast<float>(InWeightTexWidth),
+                    (Row + 0.5f) / static_cast<float>(InWeightTexRows)));
             }
             else
             {
@@ -499,8 +533,8 @@ auto
 
     // ---- shared sampling core (Gate 0) ----
     FCk_AnimBake_SampleParams SampleParams;
-    SampleParams.bExtractRootMotion = InCollection.Get_ExtractRootMotion();
-    SampleParams.bDisableRetargeting = InCollection.Get_DisableRetargeting();
+    SampleParams.ExtractRootMotion = InCollection.Get_BakeSettings().Get_ExtractRootMotion();
+    SampleParams.DisableRetargeting = InCollection.Get_BakeSettings().Get_DisableRetargeting();
     const auto SkeletonData = ck::anim_bake::BuildSkeletonData(*Skeleton, *SourceMesh, SampleParams);
     CK_ENSURE_IF_NOT(SkeletonData.IsSet(),
         TEXT("VatBaker: collection [{}] is not bakeable (no skeleton bones, render data, or skinned bones)"), &InCollection)
@@ -516,33 +550,50 @@ auto
     for (const FCk_VatCollection_ClipDef& Def : InCollection.Get_Clips())
     { SequenceAssets.Add(Def.Get_Sequence().Get()); }
 
-    const auto Layout = ck::anim_bake::BuildFrameLayout(SequenceAssets, InCollection.Get_SampleFrequency());
+    const int32 MaxTextureWidth = InCollection.Get_BakeSettings().Get_MaxTextureWidth();
+    const int32 MaxTextureRows = InCollection.Get_BakeSettings().Get_MaxTextureRows();
+
+    const auto Layout = ck::anim_bake::BuildFrameLayout(SequenceAssets, InCollection.Get_BakeSettings().Get_SampleFrequency());
     const int32 Rows = Layout.TotalFrameCount;
     CK_ENSURE_IF_NOT(Rows > 1 && Rows <= MaxTextureRows,
-        TEXT("VatBaker: collection [{}] bakes to {} frame rows (valid: 2..{}) — reduce clips or sample frequency"),
+        TEXT("VatBaker: collection [{}] bakes to {} frame rows (valid: 2..{}) — reduce clips or sample frequency, or raise _MaxTextureRows"),
         &InCollection, Rows, MaxTextureRows)
     { return false; }
 
     // ---- editor source model (always CPU-side, no bNeedsCPUAccess requirement) ----
     FSkeletalMeshModel* ImportedModel = SourceMesh->GetImportedModel();
-    CK_ENSURE_IF_NOT(ImportedModel != nullptr && ImportedModel->LODModels.Num() > 0,
-        TEXT("VatBaker: source mesh [{}] has no imported model data"), SourceMesh)
+    const int32 SourceLOD = InCollection.Get_BakeSettings().Get_SourceLOD();
+    CK_ENSURE_IF_NOT(ImportedModel != nullptr && ImportedModel->LODModels.IsValidIndex(SourceLOD),
+        TEXT("VatBaker: source mesh [{}] has no imported model data for _SourceLOD [{}] ([{}] LODs)"),
+        SourceMesh, SourceLOD, ImportedModel != nullptr ? ImportedModel->LODModels.Num() : 0)
     { return false; }
-    const FSkeletalMeshLODModel& LODModel = ImportedModel->LODModels[0];
+    const FSkeletalMeshLODModel& LODModel = ImportedModel->LODModels[SourceLOD];
+
+    const auto BakeMode = InCollection.Get_BakeSettings().Get_BakeMode();
+    const int32 KeptInfluences = [&]() -> int32
+    {
+        if (BakeMode != ECk_Vat_BakeMode::Bone)
+        { return MaxInfluences; }
+        switch (InCollection.Get_BakeSettings().Get_BoneInfluences())
+        {
+            case ECk_Vat_BoneInfluences::One: return 1;
+            case ECk_Vat_BoneInfluences::Two: return 2;
+            default: return 4;
+        }
+    }();
 
     TArray<FSourceVertex> SourceVertices;
-    CK_ENSURE_IF_NOT(GatherSourceVertices(*Skeleton, *SourceMesh, *SkeletonData, LODModel, SourceVertices),
+    CK_ENSURE_IF_NOT(GatherSourceVertices(*Skeleton, *SourceMesh, *SkeletonData, LODModel, KeptInfluences, SourceVertices),
         TEXT("VatBaker: source mesh [{}] yielded no vertices"), SourceMesh)
     { return false; }
 
-    const auto BakeMode = InCollection.Get_BakeMode();
     const int32 NumVertices = SourceVertices.Num();
     const int32 RenderBoneCount = SkeletonData->RenderBoneCount;
 
     if (BakeMode == ECk_Vat_BakeMode::Vertex)
     {
         CK_ENSURE_IF_NOT(NumVertices <= MaxTextureWidth,
-            TEXT("VatBaker: Vertex mode needs one texture column per vertex; [{}] has {} (max {}). Use Bone mode or a reduced mesh."),
+            TEXT("VatBaker: Vertex mode needs one texture column per vertex; [{}] has {} (max {}). Use Bone mode, a higher _SourceLOD, or a reduced mesh."),
             SourceMesh, NumVertices, MaxTextureWidth)
         { return false; }
     }
@@ -647,7 +698,7 @@ auto
         ck::anim_bake::SamplePoses(*Skeleton, *SkeletonData, Layout, SampleParams, PerFramePose);
 
     // ---- precision-normalize where the format requires it (layout contract: Gate_01_Bake.md) ----
-    if (InCollection.Get_Precision() == ECk_Vat_Precision::Low)
+    if (InCollection.Get_BakeSettings().Get_Precision() == ECk_Vat_Precision::Low)
     {
         const FVector3f Min = FVector3f(PositionBounds.Min);
         const FVector3f Extent = FVector3f(PositionBounds.Max) - Min;
@@ -678,18 +729,61 @@ auto
 
     UTexture2D* PositionTexture = SaveTexture(CollectionPkgDir,
         FString::Printf(TEXT("%s_%s"), *BaseName, BakeMode == ECk_Vat_BakeMode::Vertex ? TEXT("Pos") : TEXT("BonePos")),
-        PositionPlane, InCollection.Get_Precision(), InPersistence);
+        PositionPlane, InCollection.Get_BakeSettings().Get_Precision(), InPersistence);
     CK_ENSURE_IF_NOT(ck::IsValid(PositionTexture), TEXT("VatBaker: position texture bake failed for [{}]"), &InCollection)
     { return false; }
 
     UTexture2D* SecondaryTexture = SaveTexture(CollectionPkgDir,
         FString::Printf(TEXT("%s_%s"), *BaseName, BakeMode == ECk_Vat_BakeMode::Vertex ? TEXT("Nrm") : TEXT("BoneRot")),
-        SecondaryPlane, InCollection.Get_Precision(), InPersistence);
+        SecondaryPlane, InCollection.Get_BakeSettings().Get_Precision(), InPersistence);
     CK_ENSURE_IF_NOT(ck::IsValid(SecondaryTexture), TEXT("VatBaker: secondary texture bake failed for [{}]"), &InCollection)
     { return false; }
 
+    // ---- weight-texture storage (bone mode): per-vertex indices/weights as data textures ----
+    UTexture2D* BoneIndexTexture = nullptr;
+    UTexture2D* BoneWeightTexture = nullptr;
+    int32 WeightTexWidth = 0;
+    int32 WeightTexRows = 0;
+    if (BakeMode == ECk_Vat_BakeMode::Bone &&
+        InCollection.Get_BakeSettings().Get_BoneWeightStorage() == ECk_Vat_BoneWeightStorage::WeightTexture)
+    {
+        WeightTexWidth = FMath::Min(NumVertices, MaxTextureWidth);
+        WeightTexRows = FMath::DivideAndRoundUp(NumVertices, WeightTexWidth);
+        CK_ENSURE_IF_NOT(WeightTexRows <= MaxTextureRows,
+            TEXT("VatBaker: weight texture needs {} rows (max {}) for [{}] vertices — raise _MaxTextureRows or use a higher _SourceLOD"),
+            WeightTexRows, MaxTextureRows, NumVertices)
+        { return false; }
+
+        FTexelPlane IndexPlane;
+        FTexelPlane WeightPlane;
+        IndexPlane.Init(WeightTexWidth, WeightTexRows);
+        WeightPlane.Init(WeightTexWidth, WeightTexRows);
+        for (int32 V = 0; V < NumVertices; ++V)
+        {
+            const FSourceVertex& Sv = SourceVertices[V];
+            IndexPlane.Texels[V] = FVector4f(
+                static_cast<float>(Sv.RenderBones[0]), static_cast<float>(Sv.RenderBones[1]),
+                static_cast<float>(Sv.RenderBones[2]), static_cast<float>(Sv.RenderBones[3]));
+            WeightPlane.Texels[V] = FVector4f(Sv.Weights[0], Sv.Weights[1], Sv.Weights[2], Sv.Weights[3]);
+        }
+
+        // Indices are ALWAYS 16F raw (exact for index magnitudes; Low would quantize them);
+        // weights follow the collection precision (already [0,1] — Low's normalize expectation holds,
+        // and unlike vertex colors these textures are linear end-to-end: no sRGB pre-decode needed).
+        BoneIndexTexture = SaveTexture(CollectionPkgDir,
+            FString::Printf(TEXT("%s_BoneIdx"), *BaseName), IndexPlane, ECk_Vat_Precision::High, InPersistence);
+        CK_ENSURE_IF_NOT(ck::IsValid(BoneIndexTexture), TEXT("VatBaker: bone-index texture bake failed for [{}]"), &InCollection)
+        { return false; }
+
+        BoneWeightTexture = SaveTexture(CollectionPkgDir,
+            FString::Printf(TEXT("%s_BoneWeight"), *BaseName), WeightPlane, InCollection.Get_BakeSettings().Get_Precision(), InPersistence);
+        CK_ENSURE_IF_NOT(ck::IsValid(BoneWeightTexture), TEXT("VatBaker: bone-weight texture bake failed for [{}]"), &InCollection)
+        { return false; }
+    }
+
     UStaticMesh* BakedMesh = BuildBakedStaticMesh(InCollection, CollectionPkgDir,
-        FString::Printf(TEXT("%s_Mesh"), *BaseName), SourceVertices, LODModel, *SourceMesh, InPersistence);
+        FString::Printf(TEXT("%s_Mesh"), *BaseName), SourceVertices, LODModel, *SourceMesh,
+        WeightTexWidth, WeightTexRows, InPersistence);
     CK_ENSURE_IF_NOT(ck::IsValid(BakedMesh), TEXT("VatBaker: static-mesh build failed for [{}]"), &InCollection)
     { return false; }
 
@@ -705,6 +799,8 @@ auto
     {
         Results.BonePositionTexture = PositionTexture;
         Results.BoneRotationTexture = SecondaryTexture;
+        Results.BoneIndexTexture = BoneIndexTexture;
+        Results.BoneWeightTexture = BoneWeightTexture;
     }
 
     for (int32 ClipIndex = 0; ClipIndex < InCollection.Get_Clips().Num(); ++ClipIndex)

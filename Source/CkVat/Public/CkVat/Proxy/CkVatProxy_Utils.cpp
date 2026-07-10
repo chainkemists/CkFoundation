@@ -104,7 +104,7 @@ auto
     if (ck::Is_NOT_Valid(Collection))
     { return {}; }
 
-    const auto& BakedClips = Collection->Get_BakedClips();
+    const auto& BakedClips = Collection->Get_BakedData().Get_BakedClips();
     if (NOT BakedClips.IsValidIndex(Current.Get_ActiveClipIndex()))
     { return {}; }
 

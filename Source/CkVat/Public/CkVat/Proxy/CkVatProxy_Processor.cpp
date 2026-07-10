@@ -44,7 +44,7 @@ namespace ck_vat_proxy_processor
         const UCk_VatCollection_Data& InCollection)
         -> TArray<float>
     {
-        const auto& Clips = InCollection.Get_BakedClips();
+        const auto& Clips = InCollection.Get_BakedData().Get_BakedClips();
         const auto RowsOf = [&](int32 InClipIndex, float& OutRowStart, float& OutRowCount) -> void
         {
             if (Clips.IsValidIndex(InClipIndex))
@@ -116,7 +116,7 @@ namespace ck
             TEXT("Vat entity [{}] has an invalid VatCollection"), InHandle)
         { return; }
 
-        CK_ENSURE_IF_NOT(Collection->Get_IsBaked(),
+        CK_ENSURE_IF_NOT(Collection->Get_BakedData().Get_IsBaked(),
             TEXT("VatCollection [{}] on entity [{}] is not baked — bake it in-editor before composing Vat"),
             Collection, InHandle)
         { return; }
@@ -139,7 +139,7 @@ namespace ck
             {
                 // Crowd variety: rebase the start time by a random slice of the clip so identical
                 // clips don't tick in lock-step across instances.
-                const auto& Clips = Collection->Get_BakedClips();
+                const auto& Clips = Collection->Get_BakedData().Get_BakedClips();
                 const auto ClipSeconds = Clips[ClipIndex].Get_PlayLength().Get_Seconds();
                 InCurrent._PlaybackStartTime =
                     InCurrent._PlaybackStartTime - FCk_Time{FMath::FRandRange(0.0f, ClipSeconds)};
@@ -323,7 +323,7 @@ namespace ck
         if (ck::Is_NOT_Valid(Collection))
         { return; } // Setup already ensured loudly
 
-        const auto& Clips = Collection->Get_BakedClips();
+        const auto& Clips = Collection->Get_BakedData().Get_BakedClips();
         if (NOT Clips.IsValidIndex(InCurrent.Get_ActiveClipIndex()))
         { return; }
 
