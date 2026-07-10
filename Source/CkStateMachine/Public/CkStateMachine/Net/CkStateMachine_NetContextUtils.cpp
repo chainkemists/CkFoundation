@@ -215,4 +215,23 @@ namespace ck::statemachine
         ck::sm::VeryVerbose(TEXT("Mirrored RunStatus on [{}]: [{}] -> [{}]"),
             InEntity, OldStatus, InNewStatus);
     }
+
+    auto
+        MirrorRunStatus_OrDeferWhileReplaying(
+            FCk_Handle& InEntity,
+            ECk_SmRunStatus InNewStatus)
+        -> void
+    {
+        if (InNewStatus != ECk_SmRunStatus::Running
+            && UCk_Utils_StateMachine_UE::Get_HasReplayTransitionsInFlight(InEntity))
+        {
+            InEntity.AddOrGet<ck::FFragment_Sm_DeferredRunStatusMirror>().Set_Status(InNewStatus);
+            return;
+        }
+
+        // A Running mirror supersedes any parked non-Running status (collapse semantics: the
+        // authority's LAST status wins, and Running is always safe to apply ahead of events).
+        InEntity.Try_Remove<ck::FFragment_Sm_DeferredRunStatusMirror>();
+        MirrorRunStatus(InEntity, InNewStatus);
+    }
 }

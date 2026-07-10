@@ -113,6 +113,15 @@ public:
     Request_ExitStateMachine(
         FCk_Handle_StateMachine& InStateMachine) -> FCk_Handle_StateMachine;
 
+    // Discards an uncommitted pending transition: destroys the deliberately-kept-alive previous
+    // state entity the fragment stashes (see FProcessor_Sm_HandleRequests' transition handler),
+    // then removes the fragment. Every path that abandons a mid-flight transition (Stop,
+    // not-Running commit, SM teardown) must go through this — removing the fragment alone leaks
+    // the entity. No-op when nothing is pending. Internal, not BP-exposed.
+    static auto
+    Request_TryDiscardPendingTransition(
+        FCk_Handle& InEntity) -> void;
+
     UFUNCTION(BlueprintCallable,
         Category = "Ck|StateMachine",
         DisplayName = "[Ck][SM] Request Add Override State")
@@ -131,6 +140,14 @@ public:
     static bool
     Has(
         const FCk_Handle& InHandle);
+
+    // True while replicated/relayed transitions are still queued on this entity, or one is
+    // mid-commit (FFragment_Sm_PendingTransition present). Receive paths use this to defer
+    // non-Running run-status mirrors until the replay pipeline drains — see
+    // ck::statemachine::MirrorRunStatus_OrDeferWhileReplaying. Internal predicate, not BP-exposed.
+    static auto
+    Get_HasReplayTransitionsInFlight(
+        const FCk_Handle& InEntity) -> bool;
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|StateMachine",

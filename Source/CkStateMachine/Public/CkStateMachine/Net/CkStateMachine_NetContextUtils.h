@@ -40,10 +40,23 @@ namespace ck::statemachine
     // Client-side run-status mirror. Updates FFragment_Sm_Current._RunStatus to InNewStatus,
     // bookkeeps FTag_Sm_Running/FTag_Sm_Paused, and fires OnSmStarted/OnSmStopped signals so
     // non-authority machines see the same lifecycle pulses as authority. No-op when the
-    // entity lacks FFragment_Sm_Current or the status is already current. Used by Phase 11's
-    // OnChange/OnAdd handlers (direct path) and FlushPendingReplication_Drain (stashed path).
+    // entity lacks FFragment_Sm_Current or the status is already current. Applies IMMEDIATELY —
+    // receive paths that can race queued replayed transitions must use the deferring wrapper
+    // below instead; this raw form is for the commit-tail unpark and other queue-safe callers.
     CKSTATEMACHINE_API auto
     MirrorRunStatus(
+        FCk_Handle& InEntity,
+        ECk_SmRunStatus InNewStatus) -> void;
+
+    // Ordering-safe mirror for receive paths (rep OnChange, stash drain, relay RPC). A
+    // Paused/Stopped mirror that lands while replayed transitions are still queued (or one is
+    // mid-commit) is PARKED on FFragment_Sm_DeferredRunStatusMirror and applied by the commit
+    // tail once the queue drains — otherwise the commit's not-Running branch discards the queued
+    // transition and destroys the live state entity (status jumping the on-the-wire ordering).
+    // Running mirrors always apply immediately (transitions require Running) and clear any
+    // parked non-Running status (latest-wins collapse).
+    CKSTATEMACHINE_API auto
+    MirrorRunStatus_OrDeferWhileReplaying(
         FCk_Handle& InEntity,
         ECk_SmRunStatus InNewStatus) -> void;
 }

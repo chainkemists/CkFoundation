@@ -37,10 +37,9 @@ namespace ck
 {
     class FProcessor_SmState_Evaluate;
 
-    // Forward decls for replication-related processors (defined in later phases).
+    // Forward decls for replication-related processors.
     class FProcessor_Sm_PushOwningClientBatch;
     class FProcessor_Sm_FlushPendingReplication_Drain;
-    class FProcessor_Sm_FlushPendingReplication_InitialCheck;
     class FProcessor_Sm_ApplyReplicatedHistory;
 
     // ================================================================================================================
@@ -73,22 +72,12 @@ namespace ck
     // REPLICATION TAGS
     // ================================================================================================================
 
-    // Sticky fault tag set by FProcessor_Sm_FlushPendingReplication_InitialCheck when the
-    // initial-state fingerprint check (spec §9.5) detects local vs replicated divergence.
-    // Excluded by both Flush_InitialCheck and ApplyReplicatedHistory via TExclude, so the
-    // SM is permanently quiesced after the fault fires.
+    // Sticky fault tag set by UCk_SmState_EntityScript::DoVerifyFingerprintAgainstExpected when
+    // a replayed transition's replicated fingerprint diverges from the locally-computed one
+    // (spec §9). Excluded by ApplyReplicatedHistory via TExclude, so the SM is permanently
+    // quiesced after the fault fires. (The spec §9.5 initial-state Setup-time check was never
+    // implemented — only the transition-time verify sets this.)
     CK_DEFINE_ECS_TAG(FTag_Sm_DeterminismFault);
-
-    // One-shot trigger tag added by the RegisterLazy OnAdd handler when the RepData fragment
-    // first arrives on the entity. Consumed (removed) by FProcessor_Sm_FlushPendingReplication_InitialCheck
-    // before the fingerprint check evaluates.
-    CK_DEFINE_ECS_TAG(FTag_Sm_NeedsInitialFingerprintCheck);
-
-    // Sticky idempotence-guard tag added by FProcessor_Sm_FlushPendingReplication_InitialCheck
-    // after the initial-state fingerprint check runs (whether it passed or failed). Prevents
-    // FTag_Sm_NeedsInitialFingerprintCheck from re-arming on a subsequent OnAdd delivery
-    // (e.g., net-relevance flip).
-    CK_DEFINE_ECS_TAG(FTag_Sm_InitialFingerprintCheckCompleted);
 
     // One-shot trigger added by MirrorRunStatus when a NON-AUTHORITY machine first learns the SM
     // is Running but has no current state. The authority enters its initial state via DoStart;
@@ -447,13 +436,33 @@ namespace ck
 
         friend class FProcessor_Sm_ApplyReplicatedHistory;
         friend class FProcessor_Sm_FlushPendingReplication_Drain;
-        friend class FProcessor_Sm_FlushPendingReplication_InitialCheck;
 
     private:
         int32 _ClientLastAppliedSeq = 0;
 
     public:
         CK_PROPERTY(_ClientLastAppliedSeq);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Parks a Paused/Stopped run-status mirror that arrived while replayed transitions are still
+    // queued or mid-commit on this entity. Applying it immediately would jump the on-the-wire
+    // ordering: FProcessor_Sm_CommitPendingTransition's not-Running branch would then DISCARD the
+    // queued transition and destroy the client's live state entity. Applied (latest-wins) by the
+    // commit tail once the replay queue is empty and no transition is in flight. Running mirrors
+    // are never parked — transitions require Running, and authority only emits events while
+    // Running, so a Running mirror is always safe (and necessary) to apply first.
+    struct CKSTATEMACHINE_API FFragment_Sm_DeferredRunStatusMirror
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Sm_DeferredRunStatusMirror);
+
+    private:
+        ECk_SmRunStatus _Status = ECk_SmRunStatus::Stopped;
+
+    public:
+        CK_PROPERTY(_Status);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
