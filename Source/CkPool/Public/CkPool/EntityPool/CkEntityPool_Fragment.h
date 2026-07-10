@@ -9,6 +9,8 @@
 
 #include "CkPool/EntityPool/CkEntityPool_Fragment_Data.h"
 
+#include "CkRecord/Record/CkRecord_Fragment.h"
+
 #include <variant>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -27,6 +29,10 @@ namespace ck
     CK_DEFINE_ECS_TAG_TRANSIENT(FTag_EntityPool_PrewarmInProgress);
     CK_DEFINE_ECS_TAG_TRANSIENT(FTag_EntityPool_Dormant);
     CK_DEFINE_ECS_TAG_TRANSIENT(FTag_EntityPool_InUse);
+
+    // world-level pool registry: every EntityPool entity connects here at creation; the record lives on
+    // the world's transient entity (transient record — same no-snapshot rationale as the tags above)
+    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfEntityPools, FCk_Handle_EntityPool);
 
     // --------------------------------------------------------------------------------------------------------------------
 

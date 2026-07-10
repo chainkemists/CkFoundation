@@ -7,6 +7,8 @@
 #include "CkPool/EntityPool/CkEntityPool_Fragment.h"
 #include "CkPool/EntityPool/CkEntityPool_Fragment_Data.h"
 
+#include "CkRecord/Record/CkRecord_Utils.h"
+
 #include <Kismet/BlueprintFunctionLibrary.h>
 
 #include "CkEntityPool_Utils.generated.h"
@@ -21,6 +23,8 @@ namespace ck
     class FProcessor_EntityPool_Prewarm;
     class FProcessor_EntityPool_HandleRequests;
     class FProcessor_EntityPool_HandleDestroyedPooledEntity;
+
+    struct RecordOfEntityPools_Utils : public TUtils_RecordOfEntities<FFragment_RecordOfEntityPools> {};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -130,6 +134,15 @@ public:
     TryGet_Pool_ByName(
         const UObject* InWorldContextObject,
         UPARAM(meta = (Categories = "EntityPool")) FGameplayTag InPoolName);
+
+    // Every live EntityPool in the world — pools are Record entries on the world's transient entity
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|EntityPool",
+              DisplayName="[Ck][EntityPool] Get All Pools",
+              meta = (WorldContext = "InWorldContextObject"))
+    static TArray<FCk_Handle_EntityPool>
+    Get_AllPools(
+        const UObject* InWorldContextObject);
 
 public:
     // Has Feature

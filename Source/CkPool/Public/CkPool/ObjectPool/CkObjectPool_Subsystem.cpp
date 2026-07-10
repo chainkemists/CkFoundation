@@ -3,8 +3,14 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
+#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
+
 #include "CkPool/CkPool_Log.h"
+#include "CkPool/ObjectPool/CkObjectPool_Fragment.h"
 #include "CkPool/ObjectPool/CkObjectPool_Poolable.h"
+#include "CkPool/ObjectPool/CkObjectPool_Utils.h"
 #include "CkPool/Poolable/CkPoolableReceiver_Utils.h"
 
 #include <Engine/World.h>
@@ -93,7 +99,22 @@ auto
 
     NewPool._NumPrewarmRemaining = PrewarmCount;
 
-    ck::pool::Verbose(TEXT("Created ObjectPool for class [{}] (prewarm: [{}])"), ObjectClass, PrewarmCount);
+    // registry entity + record membership (synchronous) — mirrors this pool into ECS for
+    // enumeration/tooling; the acquire/release hot path never touches it
+    auto PoolEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_TransientOwner(this);
+    PoolEntity.Add<ck::FFragment_ObjectPool_PoolInfo>(ck::FFragment_ObjectPool_PoolInfo{ObjectClass});
+
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
+    UCk_Utils_Handle_UE::Set_DebugName(PoolEntity, *ck::Format_UE(TEXT("ObjectPool [{}]"), ObjectClass));
+#endif
+
+    auto TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(GetWorld());
+    ck::RecordOfObjectPools_Utils::AddIfMissing(TransientEntity);
+    ck::RecordOfObjectPools_Utils::Request_Connect(TransientEntity, PoolEntity, ECk_Record_LabelRequirementPolicy::Optional);
+
+    NewPool._PoolEntity = PoolEntity;
+
+    ck::pool::Verbose(TEXT("Created ObjectPool for class [{}] (prewarm: [{}], registry entity: [{}])"), ObjectClass, PrewarmCount, PoolEntity);
 
     return &NewPool;
 }
@@ -235,6 +256,9 @@ auto
             DoDestroy_Instance(Object);
         }
     }
+
+    if (ck::IsValid(Pool->_PoolEntity))
+    { UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(Pool->_PoolEntity); }
 
     // in-use instances are the consumers' to finish with — they simply stop being pooled
     ck::pool::Verbose(TEXT("Destroyed ObjectPool for class [{}] ([{}] in-use instances released from tracking)"),

@@ -5,6 +5,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
+#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include "CkLabel/CkLabel_Utils.h"
 
@@ -376,7 +377,32 @@ auto
     NewEntity.Add<ck::FFragment_EntityPool_Current>();
     NewEntity.Add<ck::FTag_EntityPool_NeedsSetup>();
 
-    return ck::StaticCast<FCk_Handle_EntityPool>(NewEntity);
+    auto NewPool = ck::StaticCast<FCk_Handle_EntityPool>(NewEntity);
+
+    // record membership (synchronous) — the world's transient entity carries the registry of all pools
+    auto TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(InSubsystem->GetWorld());
+    ck::RecordOfEntityPools_Utils::AddIfMissing(TransientEntity);
+    ck::RecordOfEntityPools_Utils::Request_Connect(TransientEntity, NewPool, ECk_Record_LabelRequirementPolicy::Optional);
+
+    return NewPool;
+}
+
+auto
+    UCk_Utils_EntityPool_UE::
+    Get_AllPools(
+        const UObject* InWorldContextObject)
+    -> TArray<FCk_Handle_EntityPool>
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InWorldContextObject, ck::IsValid_Policy_NullptrOnly{}) && ck::IsValid(InWorldContextObject->GetWorld()),
+        TEXT("Invalid WorldContextObject when enumerating EntityPools"))
+    { return {}; }
+
+    auto TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(InWorldContextObject->GetWorld());
+
+    if (NOT ck::RecordOfEntityPools_Utils::Has(TransientEntity))
+    { return {}; }
+
+    return ck::RecordOfEntityPools_Utils::Get_ValidEntries(TransientEntity);
 }
 
 auto

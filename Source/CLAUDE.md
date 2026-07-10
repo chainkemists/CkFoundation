@@ -138,7 +138,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkInput | Core,Ecs,Log,Settings |
 | CkLabel | Core,Ecs,Log |
 | CkLoadingScreen | Core,Log,Settings |
-| CkPool | Core,Ecs,Label,Log,Settings |
+| CkPool | Core,Ecs,Label,Log,Record,Settings |
 | CkProvider | Core,Ecs,Log |
 | CkRecord | Core,Ecs,Label,Log |
 | CkResourceLoader | Core,Ecs,Log,Settings |

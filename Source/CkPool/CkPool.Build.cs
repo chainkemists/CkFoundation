@@ -21,6 +21,7 @@ public class CkPool : CkModuleRules
             "CkEcs",
             "CkLabel",
             "CkLog",
+            "CkRecord",
             "CkSettings",
         });
     }

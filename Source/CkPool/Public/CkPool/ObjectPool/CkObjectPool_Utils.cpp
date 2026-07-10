@@ -3,6 +3,8 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
+
 #include "CkPool/CkPool_Log.h"
 #include "CkPool/ObjectPool/CkObjectPool_Subsystem.h"
 #include "CkPool/Settings/CkPool_Settings.h"
@@ -118,6 +120,40 @@ auto
     { return false; }
 
     return PoolSubsystem->DoGet_IsPooledObject(InObject);
+}
+
+auto
+    UCk_Utils_ObjectPool_UE::
+    Get_AllPools(
+        const UObject* InWorldContextObject)
+    -> TArray<FCk_Handle>
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InWorldContextObject, ck::IsValid_Policy_NullptrOnly{}) && ck::IsValid(InWorldContextObject->GetWorld()),
+        TEXT("Invalid WorldContextObject when enumerating ObjectPools"))
+    { return {}; }
+
+    auto TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(InWorldContextObject->GetWorld());
+
+    if (NOT ck::RecordOfObjectPools_Utils::Has(TransientEntity))
+    { return {}; }
+
+    return ck::RecordOfObjectPools_Utils::Get_ValidEntries(TransientEntity);
+}
+
+auto
+    UCk_Utils_ObjectPool_UE::
+    Get_PoolObjectClass(
+        const FCk_Handle& InPoolEntity)
+    -> TSubclassOf<UObject>
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InPoolEntity), TEXT("Invalid ObjectPool registry entity handle"))
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(InPoolEntity.Has<ck::FFragment_ObjectPool_PoolInfo>(),
+        TEXT("Entity [{}] is not an ObjectPool registry entity"), InPoolEntity)
+    { return {}; }
+
+    return InPoolEntity.Get<ck::FFragment_ObjectPool_PoolInfo>().Get_ObjectClass();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

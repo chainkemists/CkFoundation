@@ -6,7 +6,7 @@ Two flavors: **EntityPool** (EntityScript-spawned entities, deferred/promise-bas
 and a shared per-instance opt-in hook mechanism (interface for C++/BP, receiver property for everyone
 including AngelScript).
 
-**Depends on:** `CkCore`, `CkEcs`, `CkLabel`, `CkLog`, `CkSettings`.
+**Depends on:** `CkCore`, `CkEcs`, `CkLabel`, `CkLog`, `CkRecord`, `CkSettings`.
 **Used by:** gameplay code with high spawn churn (projectiles, VFX carriers, pickups, transient NPCs).
 
 ---
@@ -135,6 +135,21 @@ Consumers acquire/release via the `utils_entity_pool` / `utils_object_pool` name
 from the BPFLs); the pending-acquire promise is `Promise_OnAcquired` on the returned handle.
 
 ---
+
+## Pool registry — every pool is an entity in a Record
+
+Both pool flavors register into a transient Record on the world's transient entity, enumerable via
+`Get_AllPools` on the respective Utils:
+
+- **EntityPool**: the pool entity itself connects into `ck::FFragment_RecordOfEntityPools` at creation.
+- **ObjectPool**: each pool creates a lightweight *registry entity* (`ck::FFragment_ObjectPool_PoolInfo`
+  carrying the object class; `Get_PoolObjectClass` reads it) connected into
+  `ck::FFragment_RecordOfObjectPools`, destroyed with `Request_DestroyPool`. The synchronous pool state
+  (free/in-use arrays, counters) deliberately stays on the GC-rooted subsystem — the registry entity is
+  for enumeration and tooling visibility, never the acquire/release hot path.
+
+Record membership is synchronous (`Request_Connect` mutates the record fragment in place despite the
+`Request_` name), so this costs the ObjectPool none of its immediate-return contract.
 
 ## Snapshot / replication notes
 

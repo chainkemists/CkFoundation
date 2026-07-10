@@ -3,6 +3,8 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
 
+#include "CkEcs/Handle/CkHandle.h"
+
 #include "CkPool/ObjectPool/CkObjectPool_Data.h"
 
 #include <StructUtils/InstancedStruct.h>
@@ -50,8 +52,13 @@ private:
     UPROPERTY(Transient)
     int32 _NumMisses = 0;
 
+    // registry entity mirroring this pool into ck::FFragment_RecordOfObjectPools (enumeration/tooling only —
+    // the synchronous pool state above never moves to ECS)
+    FCk_Handle _PoolEntity;
+
 public:
     CK_PROPERTY_GET(_Params);
+    CK_PROPERTY_GET(_PoolEntity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -3,6 +3,9 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkPool/ObjectPool/CkObjectPool_Data.h"
+#include "CkPool/ObjectPool/CkObjectPool_Fragment.h"
+
+#include "CkRecord/Record/CkRecord_Utils.h"
 
 #include <Kismet/BlueprintFunctionLibrary.h>
 #include <StructUtils/InstancedStruct.h>
@@ -14,6 +17,11 @@
 
 class AActor;
 class UCk_ObjectPool_Subsystem_UE;
+
+namespace ck
+{
+    struct RecordOfObjectPools_Utils : public TUtils_RecordOfEntities<FFragment_RecordOfObjectPools> {};
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -110,6 +118,23 @@ public:
     static bool
     Get_IsPooledObject(
         const UObject* InObject);
+
+    // Every live ObjectPool's registry entity — pools mirror into a Record on the world's transient
+    // entity (enumeration/tooling only; the synchronous pool state stays on the subsystem)
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|ObjectPool",
+              DisplayName="[Ck][ObjectPool] Get All Pools",
+              meta = (WorldContext = "InWorldContextObject"))
+    static TArray<FCk_Handle>
+    Get_AllPools(
+        const UObject* InWorldContextObject);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|ObjectPool",
+              DisplayName="[Ck][ObjectPool] Get Pool Object Class")
+    static TSubclassOf<UObject>
+    Get_PoolObjectClass(
+        const FCk_Handle& InPoolEntity);
 
 private:
     static auto
