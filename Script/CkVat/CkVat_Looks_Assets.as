@@ -168,6 +168,18 @@ namespace CkVat
         BoneRotVat._Type = ECk_Usf_ParamType::Texture2D;
         _Parameters.Add(BoneRotVat);
 
+        // WeightTexture storage carriers (unbound for MeshChannels collections — the WeightStorage
+        // uniform branch never samples them there).
+        FCk_Usf_ParamDesc BoneIdxTex;
+        BoneIdxTex._Name = n"BoneIdxTex";
+        BoneIdxTex._Type = ECk_Usf_ParamType::Texture2D;
+        _Parameters.Add(BoneIdxTex);
+
+        FCk_Usf_ParamDesc BoneWeightTex;
+        BoneWeightTex._Name = n"BoneWeightTex";
+        BoneWeightTex._Type = ECk_Usf_ParamType::Texture2D;
+        _Parameters.Add(BoneWeightTex);
+
         FCk_Usf_ParamDesc SampleFrequency;
         SampleFrequency._Name = n"SampleFrequency";
         SampleFrequency._Type = ECk_Usf_ParamType::Scalar;
@@ -203,6 +215,13 @@ namespace CkVat
         DecodeNormalized._Type = ECk_Usf_ParamType::Scalar;
         DecodeNormalized._DefaultScalar = 0.0;
         _Parameters.Add(DecodeNormalized);
+
+        // 0 = mesh channels (UV1/UV2 indices + vertex-color weights), 1 = weight textures.
+        FCk_Usf_ParamDesc WeightStorage;
+        WeightStorage._Name = n"WeightStorage";
+        WeightStorage._Type = ECk_Usf_ParamType::Scalar;
+        WeightStorage._DefaultScalar = 0.0;
+        _Parameters.Add(WeightStorage);
 
         // ---- per-instance playback state (slots 0..11) ----
         FCk_Usf_ParamDesc RowStartA;

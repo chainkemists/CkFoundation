@@ -1,11 +1,11 @@
-// `Ck_Vat_DebugVerifyBake` — bakes a transient Mannequin collection and numerically verifies every
-// CPU-checkable link of the bone-mode pipeline. Born 2026-07-10 hunting the gym mangling (it
-// convicted the MID's platform-data-derived BoneCount/TotalRows — check [E]); kept as the standing
-// bake-data verifier: when VAT visuals look wrong, run this FIRST — a full PASS means the bug is
-// in the material/VF layer, not the data.
+// `Ck_Vat_DebugVerifyBake` — bakes transient Mannequin collections (BOTH bone-weight storages) and
+// numerically verifies every CPU-checkable link of the bone-mode pipeline. Born 2026-07-10 hunting
+// the gym mangling (it convicted the MID's platform-data-derived BoneCount/TotalRows — check [E]);
+// kept as the standing bake-data verifier: when VAT visuals look wrong, run this FIRST — a full
+// PASS means the bug is in the material/VF layer, not the data.
 //   [A] collection/texture shape        [B] texture texels vs freshly-sampled pose transforms
-//   [C] built-mesh buffers vs source    [D] full GPU-decode reconstruction vs direct CPU skinning
-//   [E] render-state MID uniforms vs the collection (dims, texture bindings)
+//   [C] per-vertex carriers vs source   [D] full GPU-decode reconstruction vs direct CPU skinning
+//   [E] render-state MID uniforms vs the collection (dims, storage, texture bindings)
 // Every line is prefixed [VAT-VERIFY]; each check ends PASS/FAIL.
 
 #include "CkVatEditor/CkVatBaker.h"
@@ -44,15 +44,17 @@ struct FExpectedSkin
     FVector3f Position = FVector3f::ZeroVector;
 };
 
-auto Run() -> void
+auto RunOne(ECk_Vat_BoneWeightStorage InStorage) -> void
 {
-    const auto Fail = [](const FString& InWhat) -> void
+    const auto StorageName = InStorage == ECk_Vat_BoneWeightStorage::WeightTexture
+        ? TEXT("WeightTexture") : TEXT("MeshChannels");
+    const auto Fail = [&](const FString& InWhat) -> void
     {
-        ck::vat::Error(TEXT("[VAT-VERIFY] FAIL: {}"), InWhat);
+        ck::vat::Error(TEXT("[VAT-VERIFY] ({}) FAIL: {}"), StorageName, InWhat);
     };
-    const auto Pass = [](const FString& InWhat) -> void
+    const auto Pass = [&](const FString& InWhat) -> void
     {
-        ck::vat::Display(TEXT("[VAT-VERIFY] PASS: {}"), InWhat);
+        ck::vat::Display(TEXT("[VAT-VERIFY] ({}) PASS: {}"), StorageName, InWhat);
     };
 
     // ---- load content ----
@@ -69,8 +71,9 @@ auto Run() -> void
 
     TArray<FCk_VatCollection_ClipDef> Clips;
     Clips.Add(FCk_VatCollection_ClipDef{Idle, FName{TEXT("Idle")}});
-    auto* Collection = Baker->CreateAndBake_TransientCollection(Skeleton, Mesh, Clips, 30, ECk_Vat_BakeMode::Bone, ECk_Vat_Precision::High);
-    if (Collection == nullptr || NOT Collection->Get_IsBaked())
+    auto* Collection = Baker->CreateAndBake_TransientCollection(Skeleton, Mesh, Clips,
+        30, ECk_Vat_BakeMode::Bone, ECk_Vat_Precision::High, InStorage);
+    if (Collection == nullptr || NOT Collection->Get_BakedData().Get_IsBaked())
     { Fail(TEXT("transient bake")); return; }
 
     // ---- recompute ground truth (same shared core the bake used) ----
@@ -106,17 +109,19 @@ auto Run() -> void
 
     // ---- [A] collection shape ----
     {
-        auto* PosTex = Collection->Get_BonePositionTexture().Get();
-        auto* RotTex = Collection->Get_BoneRotationTexture().Get();
+        auto* PosTex = Collection->Get_BakedData().Get_BonePositionTexture().Get();
+        auto* RotTex = Collection->Get_BakedData().Get_BoneRotationTexture().Get();
         if (PosTex == nullptr || RotTex == nullptr)
         { Fail(TEXT("[A] baked textures null")); return; }
         const auto Ok = PosTex->Source.GetSizeX() == BoneCount && PosTex->Source.GetSizeY() == TotalRows &&
-                        RotTex->Source.GetSizeX() == BoneCount && RotTex->Source.GetSizeY() == TotalRows;
-        if (Ok) { Pass(FString::Printf(TEXT("[A] texture shape %dx%d (bones x rows)"), BoneCount, TotalRows)); }
+                        RotTex->Source.GetSizeX() == BoneCount && RotTex->Source.GetSizeY() == TotalRows &&
+                        Collection->Get_BakedData().Get_TextureWidth() == BoneCount && Collection->Get_BakedData().Get_TextureRows() == TotalRows;
+        if (Ok) { Pass(FString::Printf(TEXT("[A] texture shape %dx%d (bones x rows) + serialized dims"), BoneCount, TotalRows)); }
         else
         {
-            Fail(FString::Printf(TEXT("[A] texture shape: got %dx%d / %dx%d, expected %dx%d"),
-                PosTex->Source.GetSizeX(), PosTex->Source.GetSizeY(), RotTex->Source.GetSizeX(), RotTex->Source.GetSizeY(), BoneCount, TotalRows));
+            Fail(FString::Printf(TEXT("[A] texture shape: got %dx%d / %dx%d (serialized %dx%d), expected %dx%d"),
+                PosTex->Source.GetSizeX(), PosTex->Source.GetSizeY(), RotTex->Source.GetSizeX(), RotTex->Source.GetSizeY(),
+                Collection->Get_BakedData().Get_TextureWidth(), Collection->Get_BakedData().Get_TextureRows(), BoneCount, TotalRows));
             return;
         }
     }
@@ -127,8 +132,8 @@ auto Run() -> void
     TexelT.SetNum(BoneCount);
     TexelQ.SetNum(BoneCount);
     {
-        auto* PosTex = Collection->Get_BonePositionTexture().Get();
-        auto* RotTex = Collection->Get_BoneRotationTexture().Get();
+        auto* PosTex = Collection->Get_BakedData().Get_BonePositionTexture().Get();
+        auto* RotTex = Collection->Get_BakedData().Get_BoneRotationTexture().Get();
         TArray64<uint8> PosData;
         TArray64<uint8> RotData;
         if (NOT PosTex->Source.GetMipData(PosData, 0) || NOT RotTex->Source.GetMipData(RotData, 0))
@@ -166,8 +171,7 @@ auto Run() -> void
         { Fail(FString::Printf(TEXT("[B] texel row %d: maxTErr %.4f cm (bone %d), maxQErr %.4f"), GlobalRow, MaxTErr, WorstBone, MaxQErr)); }
     }
 
-    // ---- expected per-vertex skinning from the SOURCE model (mirrors the baker incl. the
-    //      single-influence diagnostic if active) ----
+    // ---- expected per-vertex skinning from the SOURCE model (mirrors the baker) ----
     const FSkeletalMeshModel* ImportedModel = Mesh->GetImportedModel();
     if (ImportedModel == nullptr || ImportedModel->LODModels.Num() == 0)
     { Fail(TEXT("no imported model")); return; }
@@ -213,18 +217,39 @@ auto Run() -> void
         }
     }
 
-    // ---- [C] built-mesh render buffers vs expected ----
-    auto* BakedMesh = Collection->Get_BakedMesh().Get();
+    // ---- weight-texture mips (WeightTexture storage only) ----
+    const auto UsesWeightTexture = InStorage == ECk_Vat_BoneWeightStorage::WeightTexture;
+    TArray64<uint8> IdxData;
+    TArray64<uint8> WeightData;
+    int32 WeightTexW = 0;
+    int32 WeightTexH = 0;
+    if (UsesWeightTexture)
+    {
+        auto* IdxTex = Collection->Get_BakedData().Get_BoneIndexTexture().Get();
+        auto* WeightTex = Collection->Get_BakedData().Get_BoneWeightTexture().Get();
+        if (IdxTex == nullptr || WeightTex == nullptr)
+        { Fail(TEXT("[C] weight-texture storage baked no index/weight textures")); return; }
+        if (NOT IdxTex->Source.GetMipData(IdxData, 0) || NOT WeightTex->Source.GetMipData(WeightData, 0))
+        { Fail(TEXT("[C] index/weight texture mip read")); return; }
+        WeightTexW = IdxTex->Source.GetSizeX();
+        WeightTexH = IdxTex->Source.GetSizeY();
+    }
+
+    // ---- [C] built-mesh render buffers (+ weight textures) vs expected ----
+    auto* BakedMesh = Collection->Get_BakedData().Get_BakedMesh().Get();
     if (BakedMesh == nullptr || BakedMesh->GetRenderData() == nullptr || BakedMesh->GetRenderData()->LODResources.Num() == 0)
     { Fail(TEXT("[C] baked mesh render data missing")); return; }
     const FStaticMeshLODResources& LOD = BakedMesh->GetRenderData()->LODResources[0];
     const auto NumRenderVerts = static_cast<int32>(LOD.VertexBuffers.PositionVertexBuffer.GetNumVertices());
-    const auto NumUVs = LOD.VertexBuffers.StaticMeshVertexBuffer.GetNumTexCoords();
+    const auto NumUVs = static_cast<int32>(LOD.VertexBuffers.StaticMeshVertexBuffer.GetNumTexCoords());
     const auto NumColors = static_cast<int32>(LOD.VertexBuffers.ColorVertexBuffer.GetNumVertices());
 
-    ck::vat::Display(TEXT("[VAT-VERIFY] [C] render verts [{}] uv channels [{}] color verts [{}]"), NumRenderVerts, NumUVs, NumColors);
-    if (NumUVs < 3) { Fail(TEXT("[C] built mesh has fewer than 3 UV channels — lookup channels were dropped by the build")); return; }
-    if (NumColors != NumRenderVerts) { Fail(TEXT("[C] color buffer missing/short — weights are not reaching the GPU")); return; }
+    ck::vat::Display(TEXT("[VAT-VERIFY] ({}) [C] render verts [{}] uv channels [{}] color verts [{}]"),
+        StorageName, NumRenderVerts, NumUVs, NumColors);
+    const auto ExpectedUVs = UsesWeightTexture ? 2 : 3;
+    if (NumUVs < ExpectedUVs) { Fail(TEXT("[C] built mesh is missing lookup UV channels")); return; }
+    if (NOT UsesWeightTexture && NumColors != NumRenderVerts)
+    { Fail(TEXT("[C] color buffer missing/short — weights are not reaching the GPU")); return; }
 
     auto IndexMismatches = 0;
     auto WeightMismatches = 0;
@@ -243,15 +268,35 @@ auto Run() -> void
         if (Expected == nullptr) { ++PosMisses; continue; }
         ++Checked;
 
-        const auto UV1 = LOD.VertexBuffers.StaticMeshVertexBuffer.GetVertexUV(Vert, 1);
-        const auto UV2 = LOD.VertexBuffers.StaticMeshVertexBuffer.GetVertexUV(Vert, 2);
-        const float GpuIndices[4] = { UV1.X, UV1.Y, UV2.X, UV2.Y };
+        float GpuIndices[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+        float GpuWeights[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
-        const auto Color = LOD.VertexBuffers.ColorVertexBuffer.VertexColor(Vert);
-        // GPU sees raw bytes/255; the baker pre-decoded so this should equal the linear weight.
-        const float GpuWeights[4] = {
-            Color.R / 255.0f, Color.G / 255.0f, Color.B / 255.0f,
-            FMath::Clamp(1.0f - Color.R / 255.0f - Color.G / 255.0f - Color.B / 255.0f, 0.0f, 1.0f) };
+        if (UsesWeightTexture)
+        {
+            const auto TexelUV = LOD.VertexBuffers.StaticMeshVertexBuffer.GetVertexUV(Vert, 1);
+            const int32 Col = FMath::Clamp(FMath::FloorToInt(TexelUV.X * WeightTexW), 0, WeightTexW - 1);
+            const int32 Row = FMath::Clamp(FMath::FloorToInt(TexelUV.Y * WeightTexH), 0, WeightTexH - 1);
+            const int32 Texel = Row * WeightTexW + Col;
+            const auto& IdxPx = reinterpret_cast<const FFloat16Color*>(IdxData.GetData())[Texel];
+            const auto& WeightPx = reinterpret_cast<const FFloat16Color*>(WeightData.GetData())[Texel];
+            GpuIndices[0] = IdxPx.R.GetFloat(); GpuIndices[1] = IdxPx.G.GetFloat();
+            GpuIndices[2] = IdxPx.B.GetFloat(); GpuIndices[3] = IdxPx.A.GetFloat();
+            GpuWeights[0] = WeightPx.R.GetFloat(); GpuWeights[1] = WeightPx.G.GetFloat();
+            GpuWeights[2] = WeightPx.B.GetFloat(); GpuWeights[3] = WeightPx.A.GetFloat();
+        }
+        else
+        {
+            const auto UV1 = LOD.VertexBuffers.StaticMeshVertexBuffer.GetVertexUV(Vert, 1);
+            const auto UV2 = LOD.VertexBuffers.StaticMeshVertexBuffer.GetVertexUV(Vert, 2);
+            GpuIndices[0] = UV1.X; GpuIndices[1] = UV1.Y; GpuIndices[2] = UV2.X; GpuIndices[3] = UV2.Y;
+
+            const auto Color = LOD.VertexBuffers.ColorVertexBuffer.VertexColor(Vert);
+            // GPU sees raw bytes/255; the baker pre-decoded so this should equal the linear weight.
+            GpuWeights[0] = Color.R / 255.0f;
+            GpuWeights[1] = Color.G / 255.0f;
+            GpuWeights[2] = Color.B / 255.0f;
+            GpuWeights[3] = FMath::Clamp(1.0f - GpuWeights[0] - GpuWeights[1] - GpuWeights[2], 0.0f, 1.0f);
+        }
 
         for (int32 i = 0; i < 4; ++i)
         {
@@ -284,10 +329,10 @@ auto Run() -> void
         if (Err > MaxReconstructionErr) { MaxReconstructionErr = Err; WorstVert = Vert; }
     }
 
-    ck::vat::Display(TEXT("[VAT-VERIFY] [C] checked [{}] verts (posMisses [{}]): indexMismatches [{}] weightMismatches [{}]"),
-        Checked, PosMisses, IndexMismatches, WeightMismatches);
-    if (IndexMismatches == 0 && WeightMismatches == 0 && Checked > 100) { Pass(TEXT("[C] mesh data channels")); }
-    else { Fail(TEXT("[C] mesh data channels (see counts above)")); }
+    ck::vat::Display(TEXT("[VAT-VERIFY] ({}) [C] checked [{}] verts (posMisses [{}]): indexMismatches [{}] weightMismatches [{}]"),
+        StorageName, Checked, PosMisses, IndexMismatches, WeightMismatches);
+    if (IndexMismatches == 0 && WeightMismatches == 0 && Checked > 100) { Pass(TEXT("[C] per-vertex carriers")); }
+    else { Fail(TEXT("[C] per-vertex carriers (see counts above)")); }
 
     if (MaxReconstructionErr < 1.0f && Checked > 100)
     { Pass(FString::Printf(TEXT("[D] GPU-decode reconstruction matches CPU skinning (max %.4f cm)"), MaxReconstructionErr)); }
@@ -299,7 +344,7 @@ auto Run() -> void
         auto* World = GEditor != nullptr ? GEditor->GetEditorWorldContext().World() : nullptr;
         auto* Subsystem = World != nullptr ? World->GetSubsystem<UCk_Vat_Subsystem_UE>() : nullptr;
         if (Subsystem == nullptr)
-        { ck::vat::Display(TEXT("[VAT-VERIFY] [E] skipped — no Vat subsystem on the editor world")); return; }
+        { ck::vat::Display(TEXT("[VAT-VERIFY] ({}) [E] skipped — no Vat subsystem on the editor world"), StorageName); return; }
 
         const auto* RenderState = Subsystem->GetOrCreate_RenderState(Collection);
         if (RenderState == nullptr || NOT ck::IsValid(RenderState->_Mid))
@@ -308,28 +353,44 @@ auto Run() -> void
         auto* Mid = RenderState->_Mid.Get();
         float MidBoneCount = 0.0f;
         float MidTotalRows = 0.0f;
-        float MidFreq = 0.0f;
-        float MidDecode = -1.0f;
+        float MidStorage = -1.0f;
         Mid->GetScalarParameterValue(FName{TEXT("BoneCount")}, MidBoneCount);
         Mid->GetScalarParameterValue(FName{TEXT("TotalRows")}, MidTotalRows);
-        Mid->GetScalarParameterValue(FName{TEXT("SampleFrequency")}, MidFreq);
-        Mid->GetScalarParameterValue(FName{TEXT("DecodeNormalized")}, MidDecode);
+        Mid->GetScalarParameterValue(FName{TEXT("WeightStorage")}, MidStorage);
 
         UTexture* MidPosTex = nullptr;
-        UTexture* MidRotTex = nullptr;
         Mid->GetTextureParameterValue(FName{TEXT("BonePosVat")}, MidPosTex);
-        Mid->GetTextureParameterValue(FName{TEXT("BoneRotVat")}, MidRotTex);
+        UTexture* MidIdxTex = nullptr;
+        UTexture* MidWeightTex = nullptr;
+        Mid->GetTextureParameterValue(FName{TEXT("BoneIdxTex")}, MidIdxTex);
+        Mid->GetTextureParameterValue(FName{TEXT("BoneWeightTex")}, MidWeightTex);
 
-        ck::vat::Display(TEXT("[VAT-VERIFY] [E] MID: BoneCount [{}] TotalRows [{}] Freq [{}] Decode [{}] PosTex [{}] RotTex [{}] Master [{}]"),
-            MidBoneCount, MidTotalRows, MidFreq, MidDecode, MidPosTex, MidRotTex, Mid->Parent.Get());
+        ck::vat::Display(TEXT("[VAT-VERIFY] ({}) [E] MID: BoneCount [{}] TotalRows [{}] Storage [{}] PosTex [{}] IdxTex [{}] WeightTex [{}]"),
+            StorageName, MidBoneCount, MidTotalRows, MidStorage, MidPosTex, MidIdxTex, MidWeightTex);
 
-        const auto Ok = FMath::RoundToInt(MidBoneCount) == BoneCount &&
-                        FMath::RoundToInt(MidTotalRows) == TotalRows &&
-                        MidPosTex == Collection->Get_BonePositionTexture().Get() &&
-                        MidRotTex == Collection->Get_BoneRotationTexture().Get();
+        auto Ok = FMath::RoundToInt(MidBoneCount) == BoneCount &&
+                  FMath::RoundToInt(MidTotalRows) == TotalRows &&
+                  MidPosTex == Collection->Get_BakedData().Get_BonePositionTexture().Get();
+        if (UsesWeightTexture)
+        {
+            Ok = Ok && FMath::RoundToInt(MidStorage) == 1 &&
+                 MidIdxTex == Collection->Get_BakedData().Get_BoneIndexTexture().Get() &&
+                 MidWeightTex == Collection->Get_BakedData().Get_BoneWeightTexture().Get();
+        }
+        else
+        {
+            Ok = Ok && FMath::RoundToInt(MidStorage) == 0;
+        }
+
         if (Ok) { Pass(TEXT("[E] MID uniforms match the collection")); }
         else { Fail(TEXT("[E] MID uniforms DO NOT match (values above)")); }
     }
+}
+
+auto Run() -> void
+{
+    RunOne(ECk_Vat_BoneWeightStorage::MeshChannels);
+    RunOne(ECk_Vat_BoneWeightStorage::WeightTexture);
 }
 
 }
@@ -338,5 +399,5 @@ auto Run() -> void
 
 static FAutoConsoleCommand GCkVatDebugVerifyBake(
     TEXT("Ck_Vat_DebugVerifyBake"),
-    TEXT("TEMP: transient-bakes a Mannequin Bone-mode collection and numerically verifies every CPU-checkable link (texels, mesh channels, reconstruction, MID uniforms)."),
+    TEXT("Transient-bakes Mannequin Bone-mode collections (both weight storages) and numerically verifies every CPU-checkable link (texels, carriers, reconstruction, MID uniforms)."),
     FConsoleCommandDelegate::CreateStatic(&ck_vat_bake_verify::Run));

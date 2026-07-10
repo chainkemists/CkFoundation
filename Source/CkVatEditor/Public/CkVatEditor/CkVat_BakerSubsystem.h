@@ -33,5 +33,8 @@ public:
         const TArray<FCk_VatCollection_ClipDef>& InClips,
         int32 InSampleFrequency = 30,
         ECk_Vat_BakeMode InBakeMode = ECk_Vat_BakeMode::Bone,
-        ECk_Vat_Precision InPrecision = ECk_Vat_Precision::High);
+        ECk_Vat_Precision InPrecision = ECk_Vat_Precision::High,
+        ECk_Vat_BoneWeightStorage InBoneWeightStorage = ECk_Vat_BoneWeightStorage::MeshChannels,
+        ECk_Vat_BoneInfluences InBoneInfluences = ECk_Vat_BoneInfluences::Four,
+        int32 InSourceLOD = 0);
 };
