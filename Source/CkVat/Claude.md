@@ -8,13 +8,11 @@ weights; scales up, shareable across meshes on one skeleton). The in-editor bake
 `CkVatEditor`; the shared sampling core lives in `CkAnimation/AnimBake` (`ck::anim_bake`, extracted
 from CkIskmRenderer Plan-2's bake).
 
-> **Campaign status (2026-07-09):** Gate 0 — data shapes + playback state machine exist; the bake
-> (Gate 1), the CkUsf looks/shaders (Gate 2), and the CkIsmRenderer hookup + finish signals (Gate 3)
-> are chartered in [PLAN.md](PLAN.md). Until Gate 3, a Vat entity carries playback state without a
-> visual. This note dies with the campaign docs.
+> **Campaign status (2026-07-09):** Gates 0-3 code-complete (bake, looks/shaders, runtime hookup,
+> finish signals). Visual [EDITOR-VERIFY] passes pending — see [PROGRESS.md](PROGRESS.md). This
+> note dies with the campaign docs.
 
-**Depends on:** `Core,CoreUObject,Engine,GameplayTags,CkCore,CkEcs,CkEcsExt,CkLog`
-(Gate 2/3 add `CkIsmRenderer`, `CkUsf`, `CkGraphics`, `CkAnimation` as they are consumed).
+**Depends on:** `Core,CoreUObject,Engine,GameplayTags,Projects,RenderCore,CkCore,CkEcs,CkEcsExt,CkGraphics,CkIsmRenderer,CkLog,CkUsf`.
 **Used by:** crowds/props needing cheap animated instances below the CkIskmRenderer batched tier, and
 non-skeletal vertex animation (future).
 

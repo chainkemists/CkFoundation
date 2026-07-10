@@ -21,6 +21,31 @@ the generator, per-instance playback params), against the Gate_01 layout contrac
 
 ## Dated entries (append-only, newest first)
 
+### 2026-07-09 — Gates 2+3 code-complete (same session, continued)
+- Gate 2 landed: `FCkUsf_VertexInput` += UV1/UV2/LocalPosition + per-instance local→world basis
+  (filled via `TransformLocalVectorToWorld` — VERIFIED against MaterialTemplate.ush:1702-1709 that
+  the VS overload multiplies by InstanceLocalToWorld under instancing); generator wires the new
+  pins (TexCoord1/2 + PreSkinnedPosition nodes); validator reserves the new input names.
+  `Source/CkVat/Shaders/CkVat/Vat.ush` (VatVertex + VatBone pixel/WPO pairs: 2-row frame interp,
+  2-state crossfade, 4-influence quat skinning, weight3 = 1−r−g−b) + `/CkVat` shader mapping +
+  AS look assets (`Script/CkVat/CkVat_Looks_Assets.as`, param order == slot contract).
+- Ran: headless `Ck_Usf_GenerateLooks VatVertex/VatBone` via BusterBlockEditor-Cmd →
+  **both masters generated, validated, saved** (`Content/CkUsf/GeneratedLooks/M_CkUsf_Look_Vat*.uasset`,
+  gen_looks.log "Generated master for look [VatBone]"). Gotcha: `Quit` ExecCmd never fired (needs
+  `QUIT_EDITOR`) — the editor idled an hour in the EOS tick loop holding DLL locks (LNK1104 on the
+  next build) until killed after confirming the saves.
+- Gate 3 landed: `UCk_Vat_Subsystem_UE` (shared MID from the generated master via
+  `Get_GeneratedMasterObjectPath` — outline-subsystem precedent; uniforms seeded; transient ISM
+  renderer via NEW `GetOrCreate_ForMeshWithMaterialsAndCustomData`, count in the cache key, Movable
+  load-bearing); Setup composes IsmProxy + initial float push (+ RandomPerInstance phase offset);
+  HandleRequests pushes per drained batch; FireSignals fires OnClipFinished once (positive-rate
+  Once clips; negative-rate completion = recorded follow-up); crossfade source captures its own
+  rate/loop. Collection gains `_BaseColorTexture` (Rendering category).
+- Ran: toolbox --build → "Result: Succeeded" (build_gate3b.log; one fix round: TWeakObjectPtr needs
+  the DEFINING include of UCk_IsmRenderer_Data in the processor TU).
+- Ran: Iskm suite post-Gate-3 → **29 passed / 0 failed / 0 skipped** (tests_gate3.log) — fourth
+  consecutive green run; only the documented pre-existing FProInstance AS noise in the boot log.
+
 ### 2026-07-09 — Gate 0 committed; Gate 1 baker landed (code-complete)
 - Committed Gate 0 on `feature/vat-feature` (user-created): `f69f9095a` anim-bake core, `08940084c`
   Iskm refactor, `eb2087ee3` CkVat runtime, `07a437601` CkVatEditor+uplugin, `8649f328c` docs.
