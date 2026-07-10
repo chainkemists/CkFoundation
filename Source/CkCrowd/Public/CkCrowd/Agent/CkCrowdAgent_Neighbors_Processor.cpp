@@ -34,6 +34,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_ProbeRef& InProbeRef,
+            const FFragment_Transform& InTransform,
             FFragment_CrowdAgent_NeighborCache& InNeighborCache) const
         -> void
     {
@@ -49,12 +50,9 @@ namespace ck
         // the debug-info attach is region/thread-gated in FCk_Handle.
         const auto SelfHandle = ck::MakeHandle(InHandle.Get_Entity(), _TransientEntity);
 
-        // Self transform / velocity for delta computation. Agents created by the gym always have
-        // both features; if either is missing we skip rather than ensure-spam.
-        auto SelfTransform = UCk_Utils_Transform_UE::Cast(SelfHandle);
-        if (ck::Is_NOT_Valid(SelfTransform))
-        { return; }
-        const auto SelfLoc = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(SelfTransform);
+        // Self transform comes from the view (a de-facto requirement — steering is inert without
+        // it); velocity stays optional with a zero fallback, so it is deliberately NOT in the view.
+        const auto SelfLoc = InTransform.Get_Transform().GetLocation();
 
         auto SelfVelocity = UCk_Utils_Velocity_UE::Cast(SelfHandle);
         const auto SelfVel = ck::IsValid(SelfVelocity)
