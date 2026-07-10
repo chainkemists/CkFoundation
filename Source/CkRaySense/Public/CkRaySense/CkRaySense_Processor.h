@@ -23,7 +23,6 @@ namespace ck
             FProcessor_RaySense_LineTrace_Update,
             FCk_Handle_RaySense,
             ck::TReadOnly<FFragment_RaySense_Params>,
-            ck::TReadWrite<FFragment_RaySense_Current>,
             ck::TReadOnly<FFragment_Transform_Previous>,
             ck::TReadOnly<FFragment_Transform>,
             FTag_Transform_Updated,
@@ -54,7 +53,6 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_RaySense_Params& InParams,
-            FFragment_RaySense_Current& InCurrent,
             const FFragment_Transform_Previous& InTransform_Prev,
             const FFragment_Transform& InTransform) -> void;
     };
@@ -66,7 +64,6 @@ namespace ck
             FCk_Handle_RaySense,
             ck::TReadOnly<FFragment_ShapeBox_Current>,
             ck::TReadOnly<FFragment_RaySense_Params>,
-            ck::TReadWrite<FFragment_RaySense_Current>,
             ck::TReadOnly<FFragment_Transform_Previous>,
             ck::TReadOnly<FFragment_Transform>,
             FTag_Transform_Updated,
@@ -94,7 +91,6 @@ namespace ck
             HandleType InHandle,
             const FFragment_ShapeBox_Current& InShape,
             const FFragment_RaySense_Params& InParams,
-            FFragment_RaySense_Current& InCurrent,
             const FFragment_Transform_Previous& InTransform_Prev,
             const FFragment_Transform& InTransform) -> void;
     };
@@ -106,7 +102,6 @@ namespace ck
             FCk_Handle_RaySense,
             ck::TReadOnly<FFragment_ShapeSphere_Current>,
             ck::TReadOnly<FFragment_RaySense_Params>,
-            ck::TReadWrite<FFragment_RaySense_Current>,
             ck::TReadOnly<FFragment_Transform_Previous>,
             ck::TReadOnly<FFragment_Transform>,
             FTag_Transform_Updated,
@@ -134,7 +129,6 @@ namespace ck
             HandleType InHandle,
             const FFragment_ShapeSphere_Current& InShape,
             const FFragment_RaySense_Params& InParams,
-            FFragment_RaySense_Current& InCurrent,
             const FFragment_Transform_Previous& InTransform_Prev,
             const FFragment_Transform& InTransform) -> void;
     };
@@ -146,7 +140,6 @@ namespace ck
             FCk_Handle_RaySense,
             ck::TReadOnly<FFragment_ShapeCapsule_Current>,
             ck::TReadOnly<FFragment_RaySense_Params>,
-            ck::TReadWrite<FFragment_RaySense_Current>,
             ck::TReadOnly<FFragment_Transform_Previous>,
             ck::TReadOnly<FFragment_Transform>,
             FTag_Transform_Updated,
@@ -174,7 +167,6 @@ namespace ck
             HandleType InHandle,
             const FFragment_ShapeCapsule_Current& InShape,
             const FFragment_RaySense_Params& InParams,
-            FFragment_RaySense_Current& InCurrent,
             const FFragment_Transform_Previous& InTransform_Prev,
             const FFragment_Transform& InTransform) -> void;
     };
@@ -186,7 +178,6 @@ namespace ck
             FCk_Handle_RaySense,
             ck::TReadOnly<FFragment_ShapeCylinder_Current>,
             ck::TReadOnly<FFragment_RaySense_Params>,
-            ck::TReadWrite<FFragment_RaySense_Current>,
             ck::TReadOnly<FFragment_Transform_Previous>,
             ck::TReadOnly<FFragment_Transform>,
             FTag_Transform_Updated,
@@ -211,7 +202,6 @@ namespace ck
             HandleType InHandle,
             const FFragment_ShapeCylinder_Current& InShape,
             const FFragment_RaySense_Params& InParams,
-            FFragment_RaySense_Current& InCurrent,
             const FFragment_Transform_Previous& InTransform_Prev,
             const FFragment_Transform& InTransform) -> void;
     };
@@ -222,7 +212,6 @@ namespace ck
         FProcessor_RaySense_HandleRequests,
         FCk_Handle_RaySense,
         ck::TReadOnly<FFragment_RaySense_Params>,
-        ck::TReadWrite<FFragment_RaySense_Current>,
         ck::TReadOnly<FFragment_RaySense_Requests>,
         CK_IGNORE_PENDING_KILL>
 
@@ -230,9 +219,8 @@ namespace ck
     public:
         using Group = FGroup_PostTransform;
         using MarkedDirtyBy = FFragment_RaySense_Requests;
-        // Also writes FFragment_RaySense_Current (as do the 5 *_Update processors). Declaration order
-        // puts the Updates first; RunAfter the chain tail (Cylinder) makes that write-ordering explicit
-        // — transitively orders HandleRequests after all 5 Updates via their chain.
+        // RunAfter the chain tail (Cylinder) transitively orders HandleRequests after all 5 Updates,
+        // so an Enable/Disable request issued this frame never races the same frame's traces.
         using RunAfter = TDepList<FProcessor_RaySense_CylinderSweep_Update>;
 
     public:
@@ -244,14 +232,12 @@ namespace ck
                 TimeType InDeltaT,
                 HandleType InHandle,
                 const FFragment_RaySense_Params& InParams,
-                FFragment_RaySense_Current& InCurrent,
                 const FFragment_RaySense_Requests& InRaySenseComp) const -> void;
 
     private:
         static auto
             DoHandleRequest(
                 HandleType InHandle,
-                FFragment_RaySense_Current& InCurrent,
                 const FCk_Request_RaySense_EnableDisable& InRequestsComp) -> void;
     };
 
