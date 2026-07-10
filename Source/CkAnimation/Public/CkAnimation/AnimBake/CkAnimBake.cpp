@@ -12,6 +12,7 @@
 #include "BoneContainer.h"
 #include "BonePose.h"
 #include "Engine/SkeletalMesh.h"
+#include "Misc/MemStack.h"
 #include "Rendering/SkeletalMeshRenderData.h"
 #include "Rendering/SkeletalMeshLODRenderData.h"
 
@@ -189,6 +190,11 @@ auto
 #endif
 
         const double FrameTime = 1.0 / SeqLayout.SampleFrequency;
+
+        // FCompactPose/FStackAttributeContainer allocate on the mem stack — pose evaluation asserts
+        // (MemStack.h NumMarks > 0) without an enclosing mark. Engine-tick callers get one for free;
+        // standalone callers (bakers, automation tests) do not, so the core owns its own.
+        FMemMark Mark(FMemStack::Get());
 
         FCompactPose CompactPose;
         CompactPose.SetBoneContainer(&BoneContainer);
