@@ -20,13 +20,24 @@ non-skeletal vertex animation (future).
 
 ## Key API
 
-- `UCk_VatCollection_Data` — bake inputs (skeleton, source mesh, clip list, sample frequency, mode,
-  precision, root-motion/retargeting toggles) + bake outputs (baked static mesh, VAT textures,
-  **serialized** clip table, animated bounds, bake-inputs hash). Runtime-read-only; the CkVatEditor
-  baker writes it. Bake via the **details-panel Bake button** (or `UCkVat_BakerSubsystem`). Editing
-  inputs after a bake flips `Get_IsBakeStale()` — the button relabels and asset validation errors
-  until rebaked. Deliberately NO auto-bake: the bake saves packages, which must never be a
-  property-edit side effect.
+- `UCk_VatCollection_Data` — bake inputs (skeleton, source mesh, clip list, + all knobs grouped in
+  `FCk_Vat_BakeSettings _BakeSettings`: sample freq, mode, precision (High/Low/**Ultra** RGBA32F),
+  **bone influences 1/2/4**, **bone-weight storage MeshChannels/WeightTexture**, source LOD,
+  lookup-UV channel, max texture width/rows, root-motion/retargeting) + bake outputs (all grouped
+  in `FCk_Vat_BakedData _BakedData`: baked static mesh, VAT textures incl. bone index/weight
+  textures, **serialized** clip table + texel dims, animated bounds, bake-inputs hash, `IsBaked`).
+  Both structs `ShowOnlyInnerProperties` on the collection. Runtime-read-only; the CkVatEditor
+  baker writes `_BakedData` (friend). Bake via the **details-panel Bake button** (or
+  `UCkVat_BakerSubsystem`). Editing inputs after a bake flips `Get_IsBakeStale()` — the button
+  relabels and asset validation errors until rebaked. Deliberately NO auto-bake: the bake saves
+  packages, which must never be a property-edit side effect.
+  - Accessor shape: `Collection->Get_BakeSettings().Get_BakeMode()` /
+    `Collection->Get_BakedData().Get_IsBaked()` (was flat `Get_BakeMode()`/`Get_IsBaked()` pre-
+    2026-07-10 grouping).
+  - **Bone-weight storage**: `MeshChannels` (indices in UV1/UV2, weights in vertex color —
+    sRGB-pre-decoded) vs `WeightTexture` (indices+weights in two data textures by one lookup UV —
+    frees UV channels + color, linear end-to-end, the Nanite prerequisite). Verified bit-identical
+    by `Ck_Vat_DebugVerifyBake` (runs BOTH storages).
 - `UCk_Utils_VatProxy_UE::Add(InHandle, InParams)` — compose Vat on an entity (collection must be loaded
   AND baked; async-load soft refs yourself, mirroring CkIskmRenderer's contract).
 - `Request_PlayClip / Request_Stop / Request_SetPlayRate` — deferred playback control. Stop freezes
@@ -40,6 +51,12 @@ non-skeletal vertex animation (future).
 GPU-time-driven playback: `frame = f((WorldTime - PlaybackStartTime) * PlayRate)` evaluated in the
 material; per-instance custom data carries (clip row range, start time, rate, crossfade pair). All
 mutations go through the request queue — processors write `FFragment_VatProxy_Current`; nothing per-frame.
+
+**Modular characters** (one collection = one baked mesh + skeleton): compose several VatProxy
+entities as children of a parent entity (body + head + outfit, each its own collection), sharing
+the parent's transform. There is no single-VatProxy multi-mesh path — that's deliberate (each
+collection bakes exactly one mesh). Drive the pieces in lockstep by issuing the same `Request_*`
+to each child, or bind them to one owner's state. (Not yet exercised in a gym — future.)
 
 ---
 
