@@ -21,8 +21,12 @@ non-skeletal vertex animation (future).
 ## Key API
 
 - `UCk_VatCollection_Data` — bake inputs (skeleton, source mesh, clip list, sample frequency, mode,
-  precision) + bake outputs (baked static mesh, VAT textures, **serialized** clip table, animated
-  bounds). Runtime-read-only; the CkVatEditor baker writes it.
+  precision, root-motion/retargeting toggles) + bake outputs (baked static mesh, VAT textures,
+  **serialized** clip table, animated bounds, bake-inputs hash). Runtime-read-only; the CkVatEditor
+  baker writes it. Bake via the **details-panel Bake button** (or `UCkVat_BakerSubsystem`). Editing
+  inputs after a bake flips `Get_IsBakeStale()` — the button relabels and asset validation errors
+  until rebaked. Deliberately NO auto-bake: the bake saves packages, which must never be a
+  property-edit side effect.
 - `UCk_Utils_VatProxy_UE::Add(InHandle, InParams)` — compose Vat on an entity (collection must be loaded
   AND baked; async-load soft refs yourself, mirroring CkIskmRenderer's contract).
 - `Request_PlayClip / Request_Stop / Request_SetPlayRate` — deferred playback control. Stop freezes
