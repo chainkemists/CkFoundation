@@ -68,6 +68,16 @@ namespace ck::jolt
     CKSPATIALQUERY_API auto Get_ProbeBodyUserData(
         const JPH::BodyInterface& InBodyInterface,
         JPH::BodyID InBodyId) -> uint64;
+
+    /// Resolves the Probe entity a Jolt query hit refers to (via the body's UserData).
+    /// Returns an INVALID handle when the hit is InSelf itself, when the body's entity is no
+    /// longer alive (a body can briefly outlive its owning entity — deferred end-of-frame
+    /// destroy, or a snapshot restore that wipes the registry before physics tears the body
+    /// down), or when the entity is not a Probe. Callers treat all three as "skip this hit".
+    CKSPATIALQUERY_API auto TryGet_ProbeFromBodyHit(
+        const FCk_Handle& InSelf,
+        const JPH::BodyInterface& InBodyInterface,
+        JPH::BodyID InHitBodyId) -> FCk_Handle_Probe;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

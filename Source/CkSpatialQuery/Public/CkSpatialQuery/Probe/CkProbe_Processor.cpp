@@ -134,61 +134,45 @@ namespace ck::details
                 const JPH::ShapeCastResult& inResult)
             -> void override
         {
-            const auto Entity = static_cast<FCk_Entity::IdType>(_BodyInterface->GetUserData(inResult.mBodyID2));
-
-            if (_ProbeHandle.Get_Entity().Get_ID() == Entity)
-            { return; }
-
-            // See CastRayCollector::AddHit — a body can briefly outlive its owning entity; skip a
-            // stale hit rather than ensuring inside Get_ValidHandle.
-            if (_ProbeHandle.Get_RegistryView().IsValid(FCk_Entity{Entity}) == false)
-            { return; }
-
-            const auto OtherProbe = UCk_Utils_Probe_UE::Cast(_ProbeHandle.Get_ValidHandle(Entity));
+            const auto OtherProbe = jolt::TryGet_ProbeFromBodyHit(_ProbeHandle, *_BodyInterface, inResult.mBodyID2);
 
             if (ck::Is_NOT_Valid(OtherProbe))
             { return; }
 
-            // Mirror the Jolt-contact path's per-direction gating (CkContactListener): the
-            // linear-cast reconcile must respect Silent policy, context, and tag filters, or a
-            // fast-moving probe fires overlap events into probes its filter excludes.
-            if (UCk_Utils_Probe_UE::Get_CanOverlapWith(_ProbeHandle, OtherProbe))
-            {
-                auto ContactPoints = TArray<FVector>{};
-                ContactPoints.Emplace(ck::jolt::Conv(inResult.mContactPointOn1));
+            const auto ContactNormal = jolt::Conv(-inResult.mPenetrationAxis.Normalized());
 
-                _OverlappingProbes.Emplace(FCk_ProbeBeginOverlaps{
-                    _ProbeHandle,
-                    FCk_Request_Probe_BeginOverlap{
-                        OtherProbe,
-                        ContactPoints,
-                        jolt::Conv(-inResult.mPenetrationAxis.Normalized()),
-                        UCk_Utils_Probe_UE::Get_SurfaceInfo(OtherProbe).Get_PhysicalMaterial()
-                    },
-                    {}
-                });
+            DoCollect_BeginOverlap_IfAllowed(_ProbeHandle, OtherProbe, jolt::Conv(inResult.mContactPointOn1), ContactNormal);
+            DoCollect_BeginOverlap_IfAllowed(OtherProbe, _ProbeHandle, jolt::Conv(inResult.mContactPointOn2), ContactNormal);
+        }
 
-                _BeginOverlaps.Emplace(OtherProbe);
-            }
+    private:
+        // One direction of the mutual overlap: InReceiver collects a BeginOverlap naming InOther,
+        // but only when InReceiver's Silent policy, context, and tag filter allow it — mirroring
+        // the Jolt-contact path's per-direction gating (CkContactListener). Without the gate, a
+        // fast-moving probe fires overlap events into probes its filter excludes.
+        auto
+            DoCollect_BeginOverlap_IfAllowed(
+                const FCk_Handle_Probe& InReceiver,
+                const FCk_Handle_Probe& InOther,
+                const FVector& InContactPoint,
+                const FVector& InContactNormal)
+            -> void
+        {
+            if (NOT UCk_Utils_Probe_UE::Get_CanOverlapWith(InReceiver, InOther))
+            { return; }
 
-            if (UCk_Utils_Probe_UE::Get_CanOverlapWith(OtherProbe, _ProbeHandle))
-            {
-                auto ContactPoints = TArray<FVector>{};
-                ContactPoints.Emplace(ck::jolt::Conv(inResult.mContactPointOn2));
+            _OverlappingProbes.Emplace(FCk_ProbeBeginOverlaps{
+                InReceiver,
+                FCk_Request_Probe_BeginOverlap{
+                    InOther,
+                    TArray<FVector>{InContactPoint},
+                    InContactNormal,
+                    UCk_Utils_Probe_UE::Get_SurfaceInfo(InOther).Get_PhysicalMaterial()
+                },
+                {}
+            });
 
-                _OverlappingProbes.Emplace(FCk_ProbeBeginOverlaps{
-                    OtherProbe,
-                    FCk_Request_Probe_BeginOverlap{
-                        _ProbeHandle,
-                        ContactPoints,
-                        jolt::Conv(-inResult.mPenetrationAxis.Normalized()),
-                        UCk_Utils_Probe_UE::Get_SurfaceInfo(_ProbeHandle).Get_PhysicalMaterial()
-                    },
-                    {}
-                });
-
-                _BeginOverlaps.Emplace(_ProbeHandle);
-            }
+            _BeginOverlaps.Emplace(InOther);
         }
 
     private:
@@ -549,6 +533,64 @@ namespace ck::details
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_probe
+{
+    // Relay this frame's linear-cast contacts as Begin/Update overlap requests onto each affected
+    // probe. Probes that are themselves LinearCast run their own cast — skip them so a pair of
+    // fast-moving probes doesn't double-report the same contact.
+    auto
+        Request_BeginOrUpdateCollectedOverlaps(
+            const FCk_Handle_Probe& InCastingProbe,
+            const TArray<ck::details::ContactCastCollector::FCk_ProbeBeginOverlaps>& InCollectedOverlaps)
+        -> void
+    {
+        for (const auto& Overlap : InCollectedOverlaps)
+        {
+            auto Probe = Overlap.Get_Probe();
+
+            if (Probe != InCastingProbe && Probe.Has<ck::FTag_Probe_LinearCast>())
+            { continue; }
+
+            if (ck::IsValid(Overlap.Get_BeginOverlap()))
+            {
+                UCk_Utils_Probe_UE::Request_BeginOverlap(Probe, *Overlap.Get_BeginOverlap());
+            }
+            else
+            {
+                UCk_Utils_Probe_UE::Request_OverlapUpdated(Probe, *Overlap.Get_UpdateOverlap());
+            }
+        }
+    }
+
+    // End-overlap BOTH directions for every probe we were overlapping last frame but did NOT
+    // touch in this frame's cast.
+    auto
+        Request_EndOverlaps_ForLostContacts(
+            FCk_Handle_Probe InCastingProbe,
+            const ck::FFragment_Probe_Current& InCurrent,
+            const TSet<FCk_Handle>& InContactsThisCast)
+        -> void
+    {
+        for (const auto& Overlap : InCurrent.Get_CurrentOverlaps())
+        {
+            auto OtherEntity = Overlap.Get_OtherEntity();
+
+            if (InContactsThisCast.Contains(OtherEntity))
+            { continue; }
+
+            auto MaybeOtherProbe = UCk_Utils_Probe_UE::Cast(OtherEntity);
+
+            if (ck::Is_NOT_Valid(MaybeOtherProbe))
+            { continue; }
+
+            UCk_Utils_Probe_UE::Request_EndOverlap(InCastingProbe, FCk_Request_Probe_EndOverlap{OtherEntity});
+            UCk_Utils_Probe_UE::Request_EndOverlap(MaybeOtherProbe, FCk_Request_Probe_EndOverlap{InCastingProbe});
+        }
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     FProcessor_Probe_Setup::
@@ -672,46 +714,11 @@ namespace ck
             PhysicsSystem->GetNarrowPhaseQuery().CastShape(ShapeCast, Settings, Vec3::sReplicate(0.0f), Collector);
         }
 
-        const auto& OverlappingProbes = Collector.Get_OverlappingProbes();
-        const auto& BeginOverlaps = Collector.Get_BeginOverlaps();
-
         {
             SCOPE_CYCLE_COUNTER(STAT_CkSpatialQuery_OverlapReconcile);
 
-            for (const auto& Overlap : OverlappingProbes)
-            {
-                auto Probe = Overlap.Get_Probe();
-
-                // Other LinearCast Probes will do their own overlaps
-                if (Probe != InHandle && Probe.Has<FTag_Probe_LinearCast>())
-                { continue; }
-
-                if (ck::IsValid(Overlap.Get_BeginOverlap()))
-                {
-                    UCk_Utils_Probe_UE::Request_BeginOverlap(Probe, *Overlap.Get_BeginOverlap());
-                }
-                else
-                {
-                    UCk_Utils_Probe_UE::Request_OverlapUpdated(Probe, *Overlap.Get_UpdateOverlap());
-                }
-
-            }
-
-            for (const auto& Overlap : InCurrent.Get_CurrentOverlaps())
-            {
-                auto OtherEntity = Overlap.Get_OtherEntity();
-
-                if (BeginOverlaps.Contains(OtherEntity))
-                { continue; }
-
-                auto MaybeOtherProbe = UCk_Utils_Probe_UE::Cast(OtherEntity);
-
-                if (ck::Is_NOT_Valid(MaybeOtherProbe))
-                { continue; }
-
-                UCk_Utils_Probe_UE::Request_EndOverlap(InHandle, FCk_Request_Probe_EndOverlap{OtherEntity});
-                UCk_Utils_Probe_UE::Request_EndOverlap(MaybeOtherProbe, FCk_Request_Probe_EndOverlap{InHandle});
-            }
+            ck_probe::Request_BeginOrUpdateCollectedOverlaps(InHandle, Collector.Get_OverlappingProbes());
+            ck_probe::Request_EndOverlaps_ForLostContacts(InHandle, InCurrent, Collector.Get_BeginOverlaps());
         }
     }
 
