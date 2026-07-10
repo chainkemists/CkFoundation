@@ -53,6 +53,39 @@ DECLARE_DWORD_COUNTER_STAT(TEXT("RaySense Traces Issued"), STAT_RaySense_TracesI
 
 namespace ck_raysense
 {
+    // Shared tail for every RaySense trace/sweep: filter the hit through the entity's
+    // ignore-list, convert to FCk_RaySense_HitResult (resolving the hit actor's ECS handle),
+    // apply the configured collision response, then broadcast OnRaySenseTraceHit.
+    template<typename T_Handle>
+    auto Request_ProcessTraceHit(
+        T_Handle& InHandle,
+        const ck::FFragment_RaySense_Params& InParams,
+        const FHitResult& InHitResult) -> void
+    {
+        if (UCk_Utils_RaySense_UE::Get_ShouldIgnoreTraceHit(InHandle, InHitResult))
+        { return; }
+
+        auto Result = FCk_RaySense_HitResult{InHitResult.ImpactPoint, InHitResult.ImpactNormal}
+        .Set_ImpactPhysMat(InHitResult.PhysMaterial.Get())
+        .Set_MaybeHitActor(InHitResult.GetActor())
+        .Set_MaybeHitComponent(InHitResult.GetComponent())
+        .Set_MaybeHitHandle(UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(InHitResult.GetActor()) ?
+            UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(InHitResult.GetActor()) : FCk_Handle{});
+
+        switch (InParams.Get_CollisionResponse())
+        {
+            case ECk_RaySense_CollisionResponse_Policy::Overlap: break;
+            case ECk_RaySense_CollisionResponse_Policy::Collide:
+            {
+                UCk_Utils_Transform_TypeUnsafe_UE::Request_SetLocation(InHandle,
+                    FCk_Request_Transform_SetLocation{Result.Get_ImpactPoint()});
+                break;
+            }
+        }
+
+        ck::UUtils_Signal_OnRaySenseTraceHit::Broadcast(InHandle, ck::MakePayload(InHandle, Result));
+    }
+
     template<typename T_Handle, typename T_DiscreteOverlapFn, typename T_ContinuousSweepFn>
     auto DoSweepTrace(
         T_Handle& InHandle,
@@ -96,28 +129,10 @@ namespace ck_raysense
         if (NOT Hit)
         { return; }
 
-        if (UCk_Utils_RaySense_UE::Get_ShouldIgnoreTraceHit(InHandle, HitResult))
-        { return; }
-
-        auto Result = FCk_RaySense_HitResult{HitResult.ImpactPoint, HitResult.ImpactNormal}
-        .Set_ImpactPhysMat(HitResult.PhysMaterial.Get())
-        .Set_MaybeHitActor(HitResult.GetActor())
-        .Set_MaybeHitComponent(HitResult.GetComponent())
-        .Set_MaybeHitHandle(UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(HitResult.GetActor()) ?
-            UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(HitResult.GetActor()) : FCk_Handle{});
-
-        switch (InParams.Get_CollisionResponse())
-        {
-            case ECk_RaySense_CollisionResponse_Policy::Overlap: break;
-            case ECk_RaySense_CollisionResponse_Policy::Collide:
-            {
-                UCk_Utils_Transform_TypeUnsafe_UE::Request_SetLocation(InHandle,
-                    FCk_Request_Transform_SetLocation{Result.Get_ImpactPoint()});
-                break;
-            }
-        }
-
-        ck::UUtils_Signal_OnRaySenseTraceHit::Broadcast(InHandle, ck::MakePayload(InHandle, Result));
+        // NOTE (preserved behavior): the Discrete path's OverlapAnyTest does NOT fill HitResult —
+        // a discrete hit broadcasts a zeroed FCk_RaySense_HitResult (and Collide would snap to
+        // the origin). Pre-existing quirk, kept as-is.
+        Request_ProcessTraceHit(InHandle, InParams, HitResult);
     }
 }
 
@@ -131,7 +146,6 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_RaySense_Params& InParams,
-            FFragment_RaySense_Current& InCurrent,
             const FFragment_Transform_Previous& InTransform_Prev,
             const FFragment_Transform& InTransform)
             -> void
@@ -169,17 +183,10 @@ namespace ck
         if (NOT Hit)
         { return; }
 
-        if (UCk_Utils_RaySense_UE::Get_ShouldIgnoreTraceHit(InHandle, HitResult))
-        { return; }
-
-        auto Result = FCk_RaySense_HitResult{HitResult.ImpactPoint, HitResult.ImpactNormal}
-        .Set_ImpactPhysMat(HitResult.PhysMaterial.Get())
-        .Set_MaybeHitActor(HitResult.GetActor())
-        .Set_MaybeHitComponent(HitResult.GetComponent())
-        .Set_MaybeHitHandle(UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(HitResult.GetActor()) ?
-            UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(HitResult.GetActor()) : FCk_Handle{});
-
-        UUtils_Signal_OnRaySenseTraceHit::Broadcast(InHandle, MakePayload(InHandle, Result));
+        // Shared tail with the sweep processors — this also gives line traces the configured
+        // CollisionResponse (Collide previously only worked for sweeps; the params field was
+        // silently ignored on the line-trace path).
+        ck_raysense::Request_ProcessTraceHit(InHandle, InParams, HitResult);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -191,7 +198,6 @@ namespace ck
             HandleType InHandle,
             const FFragment_ShapeBox_Current& InShape,
             const FFragment_RaySense_Params& InParams,
-            FFragment_RaySense_Current& InCurrent,
             const FFragment_Transform_Previous& InTransform_Prev,
             const FFragment_Transform& InTransform)
             -> void
@@ -236,7 +242,6 @@ namespace ck
             HandleType InHandle,
             const FFragment_ShapeSphere_Current& InShape,
             const FFragment_RaySense_Params& InParams,
-            FFragment_RaySense_Current& InCurrent,
             const FFragment_Transform_Previous& InTransform_Prev,
             const FFragment_Transform& InTransform)
             -> void
@@ -280,7 +285,6 @@ namespace ck
             HandleType InHandle,
             const FFragment_ShapeCapsule_Current& InShape,
             const FFragment_RaySense_Params& InParams,
-            FFragment_RaySense_Current& InCurrent,
             const FFragment_Transform_Previous& InTransform_Prev,
             const FFragment_Transform& InTransform)
             -> void
@@ -325,7 +329,6 @@ namespace ck
             HandleType InHandle,
             const FFragment_ShapeCylinder_Current& InShape,
             const FFragment_RaySense_Params& InParams,
-            FFragment_RaySense_Current& InCurrent,
             const FFragment_Transform_Previous& InTransform_Prev,
             const FFragment_Transform& InTransform)
             -> void
@@ -342,7 +345,6 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_RaySense_Params& InParams,
-            FFragment_RaySense_Current& InCurrent,
             const FFragment_RaySense_Requests& InRequestsComp) const
         -> void
     {
@@ -352,7 +354,7 @@ namespace ck
             algo::ForEachRequest(InRequests._Requests, Visitor([&](
             const auto& InRequest)
             {
-                DoHandleRequest(InHandle, InCurrent, InRequest);
+                DoHandleRequest(InHandle, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -366,7 +368,6 @@ namespace ck
         FProcessor_RaySense_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_RaySense_Current& InCurrent,
             const FCk_Request_RaySense_EnableDisable& InRequest)
         -> void
     {
