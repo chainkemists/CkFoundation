@@ -8,8 +8,9 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 // Replication payload for SMs in WithHistory mode. Carries a rolling window of transition events
-// (size 64), the current run status, and the initial-state fingerprint for the spec §9.5
-// Setup-time check.
+// (size 64), the current run status, and the initial-state fingerprint. NOTE: the spec §9.5
+// Setup-time check that would consume _InitialStateFingerprint was never implemented — the field
+// is stamped by the publisher backfill and is currently informational (read only by test support).
 USTRUCT(BlueprintType)
 struct CKSTATEMACHINE_API FCk_RepData_StateMachine_WithHistory
 {
