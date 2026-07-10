@@ -58,6 +58,13 @@ auto
     if (ck::IsValid(InCollection->Get_BaseColorTexture()))
     { UCk_Utils_Usf_UE::Set_Texture(Mid, TEXT("BaseColorTex"), InCollection->Get_BaseColorTexture()); }
 
+    // Texture dims come from the SERIALIZED bake results, never GetSizeX/Y: those read platform
+    // data and return 0 while a freshly-baked texture is still async-compiling — which seeded
+    // BoneCount/TotalRows = 0 and collapsed every lookup onto one texel (Ck_Vat_DebugVerifyBake [E]).
+    CK_ENSURE_IF_NOT(InCollection->Get_TextureWidth() > 0 && InCollection->Get_TextureRows() > 0,
+        TEXT("VatCollection [{}] has no serialized texture dimensions — rebake with the current baker"), InCollection)
+    { return nullptr; }
+
     if (BakeMode == ECk_Vat_BakeMode::Vertex)
     {
         UTexture2D* NormalTexture = InCollection->Get_NormalTexture().Get();
@@ -67,7 +74,7 @@ auto
 
         UCk_Utils_Usf_UE::Set_Texture(Mid, TEXT("PosVat"), PositionTexture);
         UCk_Utils_Usf_UE::Set_Texture(Mid, TEXT("NrmVat"), NormalTexture);
-        UCk_Utils_Usf_UE::Set_Scalar(Mid, TEXT("TexelCount"), static_cast<float>(PositionTexture->GetSizeX()));
+        UCk_Utils_Usf_UE::Set_Scalar(Mid, TEXT("TexelCount"), static_cast<float>(InCollection->Get_TextureWidth()));
     }
     else
     {
@@ -78,11 +85,11 @@ auto
 
         UCk_Utils_Usf_UE::Set_Texture(Mid, TEXT("BonePosVat"), PositionTexture);
         UCk_Utils_Usf_UE::Set_Texture(Mid, TEXT("BoneRotVat"), RotationTexture);
-        UCk_Utils_Usf_UE::Set_Scalar(Mid, TEXT("BoneCount"), static_cast<float>(PositionTexture->GetSizeX()));
+        UCk_Utils_Usf_UE::Set_Scalar(Mid, TEXT("BoneCount"), static_cast<float>(InCollection->Get_TextureWidth()));
     }
 
     UCk_Utils_Usf_UE::Set_Scalar(Mid, TEXT("SampleFrequency"), static_cast<float>(InCollection->Get_SampleFrequency()));
-    UCk_Utils_Usf_UE::Set_Scalar(Mid, TEXT("TotalRows"), static_cast<float>(PositionTexture->GetSizeY()));
+    UCk_Utils_Usf_UE::Set_Scalar(Mid, TEXT("TotalRows"), static_cast<float>(InCollection->Get_TextureRows()));
     UCk_Utils_Usf_UE::Set_Scalar(Mid, TEXT("DecodeNormalized"),
         InCollection->Get_Precision() == ECk_Vat_Precision::Low ? 1.0f : 0.0f);
 

@@ -222,6 +222,19 @@ private:
               meta = (AllowPrivateAccess = true))
     TArray<FCk_Vat_BakedClip> _BakedClips;
 
+    // Texel dimensions of the VAT textures (width = vertex count / render-bone count by mode;
+    // rows = total frame rows). SERIALIZED because the runtime must never derive them from
+    // UTexture2D::GetSizeX/Y — those read PLATFORM data and return 0 while a freshly-baked
+    // texture is still async-compiling, which seeded zero BoneCount/TotalRows into the shared
+    // MID and collapsed every bone lookup onto one texel (found via Ck_Vat_DebugVerifyBake [E]).
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Baked",
+              meta = (AllowPrivateAccess = true))
+    int32 _TextureWidth = 0;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Baked",
+              meta = (AllowPrivateAccess = true))
+    int32 _TextureRows = 0;
+
     // Conservative culling bounds covering every baked pose (never smaller than the mesh box).
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Baked",
               meta = (AllowPrivateAccess = true))
@@ -266,6 +279,8 @@ public:
     CK_PROPERTY_GET(_BonePositionTexture);
     CK_PROPERTY_GET(_BoneRotationTexture);
     CK_PROPERTY_GET(_BakedClips);
+    CK_PROPERTY_GET(_TextureWidth);
+    CK_PROPERTY_GET(_TextureRows);
     CK_PROPERTY_GET(_AnimatedBounds);
     CK_PROPERTY_GET(_PositionBoundsMin);
     CK_PROPERTY_GET(_PositionBoundsMax);
@@ -298,6 +313,8 @@ public:
         TObjectPtr<UTexture2D> BonePositionTexture;
         TObjectPtr<UTexture2D> BoneRotationTexture;
         TArray<FCk_Vat_BakedClip> BakedClips;
+        int32 TextureWidth = 0;
+        int32 TextureRows = 0;
         FBox AnimatedBounds = FBox(ForceInit);
         FVector PositionBoundsMin = FVector::ZeroVector;
         FVector PositionBoundsMax = FVector::ZeroVector;

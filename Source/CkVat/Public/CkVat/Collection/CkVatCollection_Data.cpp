@@ -77,6 +77,8 @@ auto
     _BonePositionTexture = InResults.BonePositionTexture;
     _BoneRotationTexture = InResults.BoneRotationTexture;
     _BakedClips = InResults.BakedClips;
+    _TextureWidth = InResults.TextureWidth;
+    _TextureRows = InResults.TextureRows;
     _AnimatedBounds = InResults.AnimatedBounds;
     _PositionBoundsMin = InResults.PositionBoundsMin;
     _PositionBoundsMax = InResults.PositionBoundsMax;

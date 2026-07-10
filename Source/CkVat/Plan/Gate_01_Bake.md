@@ -61,9 +61,14 @@ clip table. Textures: `SRGB=false`, `TMGS_NoMipmaps`, `TF_Nearest`. Precision Hi
 - BoneRotation texture: RGBA = normalized quaternion of ShaderMatrix rotation; High raw f16, Low
   `q * 0.5 + 0.5`. Bone SCALE is not baked (v1 limitation — ensure fires if a sampled bone matrix
   carries non-unit scale beyond tolerance? NO — silent perf cost unacceptable; documented limitation only).
-- Mesh carries per-vertex skinning data: vertex COLOR = 4 weights (renormalized, strongest 4);
-  UV `_LookupUVChannel` = (renderBoneIdx0, renderBoneIdx1), UV `_LookupUVChannel + 1` =
-  (renderBoneIdx2, renderBoneIdx3) as raw float indices. Bone U = `(idx + 0.5) / width` in-shader.
+- Mesh carries per-vertex skinning data: vertex COLOR = 4 weights (renormalized, strongest 4),
+  **stored sRGB-PRE-DECODED**: the static-mesh build sRGB-encodes vertex-color RGB
+  (StaticMeshBuilder.cpp `ToFColor(true)`) and the shader reads raw bytes, so the baker authors
+  `srgb_decode(w)` and the round trip is identity (verified 2026-07-10 — un-decoded weights shred
+  every multi-influence region while 0/1 weights stay correct). Alpha is not encoded (passes raw;
+  shader derives w3 = 1−r−g−b). UV `_LookupUVChannel` = (renderBoneIdx0, renderBoneIdx1),
+  UV `_LookupUVChannel + 1` = (renderBoneIdx2, renderBoneIdx3) as raw float indices.
+  Bone U = `(idx + 0.5) / width` in-shader.
 - Influence chain: soft-vertex influence (BoneMap-relative) → `Section.BoneMap[i]` (mesh bone) →
   `GetSkeletonBoneIndexFromMeshBoneIndex` → `SkeletonBoneToRenderBone[]` (ensure ≠ INDEX_NONE).
 
