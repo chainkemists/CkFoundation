@@ -135,14 +135,10 @@ auto
     if (NOT ScriptEntity.Has<ck::FFragment_SmTask_Current>())
     { return; }
 
-    auto& Current = ScriptEntity.Get<ck::FFragment_SmTask_Current>();
-    const auto PrevResult = Current.Get_LastResult();
-    Current._LastResult = InResult;
-
-    if (PrevResult == ECk_SmTaskResult::Running && InResult != ECk_SmTaskResult::Running)
-    {
-        ScriptEntity.AddOrGet<ck::FTag_SmTask_ResultDirty>();
-    }
+    // Single write path: the util owns the unbroadcast-terminal-result latch and the
+    // Running→terminal dirty edge — duplicating that logic here is how the two once drifted.
+    auto TaskHandle = UCk_Utils_SmTask_UE::CastChecked(ScriptEntity);
+    UCk_Utils_SmTask_UE::Request_UpdateTaskResult(TaskHandle, InResult);
 }
 
 auto
