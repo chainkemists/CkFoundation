@@ -304,6 +304,20 @@ auto
     DoUpdate_FragmentDebugInfo_Blueprints()
     -> void
 {
+    // The debug-mapper attach below is a STRUCTURAL registry mutation (AddOrGet) and the
+    // Blueprint debugger GetOrAdd mutates a subsystem container — neither is thread-safe.
+    // Handles constructed on worker threads (parallel processors' read-only query paths,
+    // e.g. Jolt cast collectors) skip debug info entirely; any game-thread copy made from
+    // them re-attaches it here.
+    if (NOT IsInGameThread())
+    { return; }
+
+    // ParallelFor runs a share of its iterations on the CALLING thread, so being on the game
+    // thread does not prove the registry is outside a parallel region — attaching there would
+    // mutate storage mid-iteration (and trip the region assert).
+    if (ck::registry_table::Get_IsInParallelRegion(_RegistryHandle))
+    { return; }
+
     if (UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Disable)
     { return; }
 
