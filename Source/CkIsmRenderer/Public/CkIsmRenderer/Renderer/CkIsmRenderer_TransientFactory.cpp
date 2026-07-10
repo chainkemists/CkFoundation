@@ -22,6 +22,9 @@ auto
     if (Mesh != Other.Mesh)
     { return false; }
 
+    if (NumCustomData != Other.NumCustomData)
+    { return false; }
+
     if (MaterialSlots.Num() != Other.MaterialSlots.Num())
     { return false; }
 
@@ -115,11 +118,61 @@ auto
 
 auto
     UCk_Utils_IsmRenderer_TransientFactory_UE::
+    GetOrCreate_ForMeshWithMaterialsAndCustomData(
+        const UWorld* InWorld,
+        UStaticMesh* InMesh,
+        const TArray<FCk_MeshMaterialOverride>& InMaterialOverrides,
+        int32 InNumCustomData,
+        ECk_Mobility InMobility)
+    -> UCk_IsmRenderer_Data*
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InWorld),
+        TEXT("Trying to create transient IsmRenderer_Data with an INVALID World"))
+    { return nullptr; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InMesh),
+        TEXT("Trying to create transient IsmRenderer_Data with an INVALID Mesh"))
+    { return nullptr; }
+
+    CK_ENSURE_IF_NOT(InNumCustomData >= 0,
+        TEXT("Trying to create transient IsmRenderer_Data for Mesh [{}] with a NEGATIVE custom-data count [{}]"),
+        InMesh, InNumCustomData)
+    { return nullptr; }
+
+    FMeshMaterialKey CacheKey;
+    CacheKey.Mesh = InMesh;
+    CacheKey.NumCustomData = InNumCustomData;
+    CacheKey.MaterialSlots.Reserve(InMaterialOverrides.Num());
+
+    for (const auto& Override : InMaterialOverrides)
+    {
+        CacheKey.MaterialSlots.Emplace(Override.Get_MaterialSlot(), Override.Get_ReplacementMaterial());
+    }
+
+    CacheKey.MaterialSlots.Sort([](const auto& A, const auto& B) { return A.Key < B.Key; });
+
+    if (const auto Found = MeshMaterialCache.Find(CacheKey);
+        Found && ck::IsValid(*Found))
+    { return Found->Get(); }
+
+    auto* NewData = CreateTransient(InWorld, InMesh, InMaterialOverrides, InMobility, InNumCustomData);
+
+    if (ck::IsValid(NewData))
+    { MeshMaterialCache.Add(MoveTemp(CacheKey), NewData); }
+
+    return NewData;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_IsmRenderer_TransientFactory_UE::
     CreateTransient(
         const UWorld* InWorld,
         UStaticMesh* InMesh,
         const TArray<FCk_MeshMaterialOverride>& InMaterialOverrides,
-        ECk_Mobility InMobility)
+        ECk_Mobility InMobility,
+        int32 InNumCustomData)
     -> UCk_IsmRenderer_Data*
 {
     auto* NewData = UCk_Utils_Object_UE::Request_CreateNewObject_TransientPackage<UCk_IsmRenderer_Data>(
@@ -131,6 +184,7 @@ auto
             Data->_RenderPolicy = ECk_Ism_RenderPolicy::ISM;
 
             Data->_MaterialsInfo._MaterialOverrides = InMaterialOverrides;
+            Data->_NumCustomData = InNumCustomData;
         }
     );
 
