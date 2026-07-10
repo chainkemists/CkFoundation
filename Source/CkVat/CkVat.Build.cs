@@ -12,10 +12,17 @@ public class CkVat : CkModuleRules
             "Engine",
             "GameplayTags",
 
+            // Shader-directory mapping for /CkVat (module startup)
+            "Projects",
+            "RenderCore",
+
             "CkCore",
             "CkEcs",
             "CkEcsExt",
+            "CkGraphics",
+            "CkIsmRenderer",
             "CkLog",
+            "CkUsf",
         });
     }
 }
