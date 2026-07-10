@@ -10,12 +10,11 @@ landed 2026-07-10; gap 4-bone (bone-mode normals) DEFERRED — no per-instance b
 non-Nanite PS (evidence in Gate_02 Deferred).
 **Baseline on record:** Iskm autotests **30/30** + AnimBake 2/2 + VatProxy_ApiSurface 1/1 + Usf 4/4
 (2026-07-10 logs: Test-{Iskm,AnimBake,VatProxy,Usf}.log).
-**Next action:** the human [EDITOR-VERIFY] passes — now via the **Vat gym** (CkTests `8f2a2a9`,
-"Vat" in the Tab menu: ClipCycle / Turntable-normals / CrowdField stations; needs the one-time
-baked collection at `/CkTests/CkVat/DA_VatCollection_Gym` — stations display the how-to). Then
-gap 5 (bone-influence options + weight-texture storage).
-**Blocked on:** [EDITOR-VERIFY] (human) for all visual claims; Gate-4 end-to-end autotest needs one
-editor-baked collection committed as CkTests content (the gym collection can double as it).
+**Next action:** the human [EDITOR-VERIFY] passes — via the **Vat gym**, now ZERO-setup (PIE into
+the CkTests gym level → Tab → "Vat"; stations self-bake a Bone-mode Mannequin collection
+transiently). Then gap 5 (bone-influence options + weight-texture storage).
+**Blocked on:** [EDITOR-VERIFY] (human) for visual claims only — the Gate-4 end-to-end playback
+autotest LANDED content-free via the transient bake (`Ck_AutoTest_VatProxy_TransientBakePlayback`).
 
 ## Decision log
 | Date | Decision | Why | Revisit when |
@@ -26,6 +25,27 @@ editor-baked collection committed as CkTests content (the gym collection can dou
 | 2026-07-09 | Iskm refactor keeps dev semantics exactly (skeleton-chain ref pose) | perf-iskm-lod's mesh-bind-pose fix belongs to that branch; porting it early would change dev behavior untested here | When perf-iskm-lod merges — fold its two bake deltas into `ck::anim_bake` call args |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-07-10 — Transient bake + zero-setup gym + the Gate-4 end-to-end autotest (same day, later)
+- **Baker split compute/persist** (`b6f61d334`): `Bake_VatCollection_Transient` = identical compute,
+  outputs outered to the transient package, NOTHING saved (results die with the session). Asset
+  path byte-identical (same Source.Init/PostEditChange + SourceModel Build() — deliberately NOT
+  BuildFromMeshDescriptions, so no UV-precision risk). `UCkVat_BakerSubsystem::
+  CreateAndBake_TransientCollection` = script entry (friend fills inputs; ClipDef gained ctors).
+- **Gym is now zero-setup** (CkTests `ec3d53f`): "AUTO" sentinel self-bakes a Bone-mode Mannequin
+  collection at PIE start; `Ck_GymVat_SetCollection <path>`/`AUTO` swaps curated setups live.
+- **Gate-4 end-to-end autotest LANDED** (`Ck_AutoTest_VatProxy_TransientBakePlayback`): transient
+  bake → Add → PlayClip(Once, rate 4) → OnClipFinished exactly once, frozen clip stays active.
+  No committed baked content needed — the "one editor bake committed as content" plan is obsolete.
+- **Calibration fix the new test caught on first run:** the per-vertex >4-influence ensure fired
+  **4699 times** (stack dump each, ~80s bake) on `SKM_Manny_Simple` (5-8 influence verts are
+  NORMAL Mannequin content). Now ONE per-bake `Display` summary — Display not Warning because the
+  automation harness escalates warnings to failures. Missing-bone/unskinned-bone stay ensures.
+  Gate_01 contract + branch table updated.
+- Gates on final binaries: build green; **VatProxy 2/2** (ApiSurface + NEW e2e); **Iskm 30/30**;
+  **AnimBake 2/2**; AS clean (no errors/warnings naming CkVat files).
+- Unconfirmed: gym visuals (station rendering, self-bake UX) remain [EDITOR-VERIFY] — but the
+  e2e pipeline (bake→render-state→playback→signal) is now machine-verified headless.
 
 ### 2026-07-10 — VAMP gaps 2, 3, 4-vertex closed (editor never launched by the human yet)
 - **Gap 2 (root motion):** `_ExtractRootMotion` + `_DisableRetargeting` on the collection → both
