@@ -72,6 +72,27 @@ Bone-mode weights: shader reads `VertexColor.rgb` = weights 0-2, **weight3 = sat
   the PS has InstanceId. Until then VatBone lights with bind-pose normals.
 - WPO velocity/TAA behavior (`r.Velocity.EnableVertexDeformation`) — [EDITOR-VERIFY] observation.
 
+## Nanite findings (source-verified against the 5.7 fork, 2026-07-10)
+
+The gap-6 investigation gate. **Prerequisite BUILT:** `WeightTexture` bone-weight storage
+(indices/weights in data textures by a single lookup UV, not mesh UV channels/vertex color).
+
+- **Confirmed present in the fork:** `TSF_RGBA32F` + `TC_HDR_F32` (Ultra precision — done);
+  `GetPerInstanceCustomData(FMaterialPixelParameters, …)` and `Parameters.InstanceId` under
+  `IS_NANITE_PASS` (`MaterialTemplate.ush`) — so the bone-mode normals option (c) is real: a Nanite
+  pass CAN read per-instance data + instance id in the PS, unlike the standard ISM path.
+- **Still UNVERIFIED (do NOT promise):** whether WPO deformation on Nanite honors the custom-data
+  frame parameters at the required magnitude; whether the baked static-mesh build path produces
+  Nanite-enabled render data with the lookup UV surviving cluster reordering; whether
+  `PreSkinnedPosition` (used for the bone-mode bind position) resolves on the Nanite VS. These need
+  an actual Nanite-enabled bake + a visual [EDITOR-VERIFY].
+- **VAMP's shipped Nanite recipe (reference):** Bone mode + texture weights + a special bake +
+  tangent-space-normals OFF. We now have Bone mode + texture weights; the "special bake" (Nanite
+  static-mesh build settings) and the normals interaction are the open work.
+- **Next step when picked up:** add a `bEnableNanite` bake setting that flags the baked
+  `UStaticMesh` for Nanite, then verify via a WeightTexture collection through the harness [C]/[D]
+  (data unaffected) + a gym visual pass (the render path is what changes).
+
 ## Expected observations
 
 | I will run | I expect | If instead | Response |

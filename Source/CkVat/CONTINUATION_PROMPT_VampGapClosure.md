@@ -47,21 +47,25 @@ closes the audited VAMP-parity gaps listed below, in priority order.
    Gate_02 "Deferred" (quat in custom-data slots 12-15 / local-TBN mesh channels / Nanite
    InstanceId). Do not re-attempt the "rotate In.VertexNormal by the blended quat" idea — wrong
    under instance rotation.
-5. **Bone-influence options (1/2/4) + weight-TEXTURE storage** (VAMP parity; the storage option is
-   the Nanite prerequisite): collection fields + baker paths + look variants.
-6. **Nanite investigation gate** (unknowns — do NOT promise before verifying against the 5.7 fork
-   source): WPO-on-Nanite limits, `PreSkinnedPosition` on Nanite, per-instance custom data on
-   Nanite ISM, whether the lookup-UV survives Nanite clustering. VAMP's recipe: Bone mode +
-   texture weights + special bake + tangent-space-normals off.
-7. **Minor gaps** (each small, take opportunistically): Ultra 32-bit precision (check
-   `TSF_RGBA32F` exists in the fork); configurable max texture sizes (currently
-   `MaxTextureWidth=4096`, `MaxTextureRows=8192` constants in `CkVatBaker.cpp`); modular
-   characters pattern (one VatProxy per entity today — document child-entity composition);
-   morph-target baking (out unless BB needs it); explicit velocity data ONLY if verify shows
-   TAA ghosting.
-8. **End-to-end playback autotest** (chartered Gate 4): needs ONE editor-baked Mannequin
-   collection committed as CkTests content (bake saves packages → unsuitable per-test-run), then
-   a bake→play→OnClipFinished autotest + a CkVat gym.
+5. ~~**Bone-influence options (1/2/4) + weight-TEXTURE storage**~~ **DONE 2026-07-10**:
+   `_BoneInfluences` (One/Two/Four, strongest-N truncation) + `_BoneWeightStorage`
+   (MeshChannels / WeightTexture — indices+weights in two data textures by one lookup UV; frees
+   UV channels + vertex color, linear end-to-end). Shader has ONE `WeightStorage` uniform branch
+   (`CkVat_BoneVertexData`); baker emits `_BoneIndexTexture`/`_BoneWeightTexture`; look gained
+   `BoneIdxTex`/`BoneWeightTex`/`WeightStorage` params (master regenerated). `Ck_Vat_DebugVerifyBake`
+   now runs BOTH storages — both bit-identical PASS. Turntable gym station self-bakes WeightTexture
+   (must look identical to the MeshChannels stations).
+6. **Nanite investigation gate** — findings recorded 2026-07-10 in Gate_02 "Nanite findings";
+   WeightTexture storage (the prerequisite) is now BUILT. Actual Nanite-on enablement still
+   pending a mesh-build path + verify.
+7. ~~**Minor gaps**~~ Ultra 32-bit precision **DONE** (`ECk_Vat_Precision::Ultra` → TSF_RGBA32F /
+   TC_HDR_F32, verified in fork); configurable texture caps **DONE** (`_MaxTextureWidth/Rows` in
+   `_BakeSettings`, was constants); source-LOD selection **DONE** (`_SourceLOD` — Vertex mode under
+   its cap on dense meshes). Remaining: modular-characters doc (one VatProxy per entity today —
+   compose child entities; noted in Claude.md); morph-target baking (out unless BB needs it);
+   explicit velocity ONLY if verify shows TAA ghosting.
+8. ~~**End-to-end playback autotest**~~ **DONE** (`Ck_AutoTest_VatProxy_TransientBakePlayback`,
+   content-free via the transient bake) + CkVat gym landed.
 
 ## Branch table — [EDITOR-VERIFY] outcomes
 
