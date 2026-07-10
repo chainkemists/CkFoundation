@@ -1,4 +1,4 @@
-#include "CkVat_Processor.h"
+#include "CkVatProxy_Processor.h"
 
 #include "CkVat/CkVat_Log.h"
 #include "CkVat/CkVat_Subsystem.h"
@@ -18,13 +18,13 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_REGISTER_PROCESSOR(ck::FProcessor_Vat_Setup);
-CK_REGISTER_PROCESSOR(ck::FProcessor_Vat_HandleRequests);
-CK_REGISTER_PROCESSOR(ck::FProcessor_Vat_FireSignals);
+CK_REGISTER_PROCESSOR(ck::FProcessor_VatProxy_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_VatProxy_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_VatProxy_FireSignals);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck_vat_processor
+namespace ck_vat_proxy_processor
 {
     auto
     Get_CurrentWorldTime(
@@ -40,7 +40,7 @@ namespace ck_vat_processor
     // Source/CkVat/Plan/Gate_02_Material.md (slots [0..11], Rate==0 => Time holds frozen local time).
     auto
     Pack_CustomData(
-        const ck::FFragment_Vat_Current& InCurrent,
+        const ck::FFragment_VatProxy_Current& InCurrent,
         const UCk_VatCollection_Data& InCollection)
         -> TArray<float>
     {
@@ -74,15 +74,15 @@ namespace ck_vat_processor
 
         Floats[8] = InCurrent.Get_TransitionStartTime().Get_Seconds();
         Floats[9] = InCurrent.Get_TransitionDuration().Get_Seconds();
-        Floats[10] = InCurrent.Get_ActiveLoopMode() == ECk_Vat_LoopMode::Once ? 1.0f : 0.0f;
-        Floats[11] = InCurrent.Get_PrevLoopMode() == ECk_Vat_LoopMode::Once ? 1.0f : 0.0f;
+        Floats[10] = InCurrent.Get_ActiveLoopMode() == ECk_VatProxy_LoopMode::Once ? 1.0f : 0.0f;
+        Floats[11] = InCurrent.Get_PrevLoopMode() == ECk_VatProxy_LoopMode::Once ? 1.0f : 0.0f;
 
         return Floats;
     }
 
     auto
     Push_CustomData(
-        ck::FFragment_Vat_Current& InCurrent,
+        ck::FFragment_VatProxy_Current& InCurrent,
         const UCk_VatCollection_Data& InCollection)
         -> void
     {
@@ -100,15 +100,15 @@ namespace ck_vat_processor
 namespace ck
 {
     auto
-        FProcessor_Vat_Setup::
+        FProcessor_VatProxy_Setup::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Vat_Params& InParams,
-            FFragment_Vat_Current& InCurrent) const
+            const FFragment_VatProxy_Params& InParams,
+            FFragment_VatProxy_Current& InCurrent) const
         -> void
     {
-        InHandle.Remove<FTag_Vat_NeedsSetup>();
+        InHandle.Remove<FTag_VatProxy_NeedsSetup>();
 
         const auto& Collection = InParams.Get_Collection();
 
@@ -132,10 +132,10 @@ namespace ck
             InCurrent._ActiveClipIndex = ClipIndex;
             InCurrent._ActiveLoopMode = InParams.Get_InitialLoopMode();
             InCurrent._PlayRate = InParams.Get_InitialPlayRate();
-            InCurrent._PlaybackStartTime = ck_vat_processor::Get_CurrentWorldTime(InHandle);
+            InCurrent._PlaybackStartTime = ck_vat_proxy_processor::Get_CurrentWorldTime(InHandle);
             InCurrent._FinishedDispatched = false;
 
-            if (InParams.Get_PhaseOffset() == ECk_Vat_PhaseOffset::RandomPerInstance)
+            if (InParams.Get_PhaseOffset() == ECk_VatProxy_PhaseOffset::RandomPerInstance)
             {
                 // Crowd variety: rebase the start time by a random slice of the clip so identical
                 // clips don't tick in lock-step across instances.
@@ -166,22 +166,22 @@ namespace ck
             FCk_Fragment_IsmProxy_ParamsData{RenderState->_RendererData.Get()});
         InCurrent._IsmProxy = IsmProxy;
 
-        ck_vat_processor::Push_CustomData(InCurrent, *Collection);
+        ck_vat_proxy_processor::Push_CustomData(InCurrent, *Collection);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_Vat_HandleRequests::
+        FProcessor_VatProxy_HandleRequests::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Vat_Params& InParams,
-            FFragment_Vat_Current& InCurrent,
-            FFragment_Vat_Requests& InRequestsComp) const
+            const FFragment_VatProxy_Params& InParams,
+            FFragment_VatProxy_Current& InCurrent,
+            FFragment_VatProxy_Requests& InRequestsComp) const
         -> void
     {
-        InHandle.CopyAndRemove(InRequestsComp, [&](FFragment_Vat_Requests& InRequests)
+        InHandle.CopyAndRemove(InRequestsComp, [&](FFragment_VatProxy_Requests& InRequests)
         {
             algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](const auto& InRequest)
             {
@@ -196,16 +196,16 @@ namespace ck
 
         // One custom-data push per drained batch — playback state only reaches the GPU on change.
         if (ck::IsValid(InParams.Get_Collection()))
-        { ck_vat_processor::Push_CustomData(InCurrent, *InParams.Get_Collection()); }
+        { ck_vat_proxy_processor::Push_CustomData(InCurrent, *InParams.Get_Collection()); }
     }
 
     auto
-        FProcessor_Vat_HandleRequests::
+        FProcessor_VatProxy_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_Vat_Params& InParams,
-            FFragment_Vat_Current& InCurrent,
-            const FCk_Request_Vat_PlayClip& InRequest)
+            const FFragment_VatProxy_Params& InParams,
+            FFragment_VatProxy_Current& InCurrent,
+            const FCk_Request_VatProxy_PlayClip& InRequest)
         -> void
     {
         const auto& Collection = InParams.Get_Collection();
@@ -220,7 +220,7 @@ namespace ck
             InRequest.Get_ClipName(), Collection, InHandle)
         { return; }
 
-        const auto Now = ck_vat_processor::Get_CurrentWorldTime(InHandle);
+        const auto Now = ck_vat_proxy_processor::Get_CurrentWorldTime(InHandle);
 
         // Crossfade source = whatever was active; the shader's 2-state blend reads the pair (the
         // source keeps playing at ITS rate/loop-mode during the fade).
@@ -240,12 +240,12 @@ namespace ck
     }
 
     auto
-        FProcessor_Vat_HandleRequests::
+        FProcessor_VatProxy_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_Vat_Params& InParams,
-            FFragment_Vat_Current& InCurrent,
-            const FCk_Request_Vat_Stop& InRequest)
+            const FFragment_VatProxy_Params& InParams,
+            FFragment_VatProxy_Current& InCurrent,
+            const FCk_Request_VatProxy_Stop& InRequest)
         -> void
     {
         if (InCurrent._ActiveClipIndex == INDEX_NONE)
@@ -254,7 +254,7 @@ namespace ck
         if (InCurrent._PlayRate == 0.0f)
         { return; } // already frozen
 
-        const auto Now = ck_vat_processor::Get_CurrentWorldTime(InHandle);
+        const auto Now = ck_vat_proxy_processor::Get_CurrentWorldTime(InHandle);
         const auto ElapsedLocalSeconds =
             (Now - InCurrent._PlaybackStartTime).Get_Seconds() * InCurrent._PlayRate;
 
@@ -263,12 +263,12 @@ namespace ck
     }
 
     auto
-        FProcessor_Vat_HandleRequests::
+        FProcessor_VatProxy_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_Vat_Params& InParams,
-            FFragment_Vat_Current& InCurrent,
-            const FCk_Request_Vat_SetPlayRate& InRequest)
+            const FFragment_VatProxy_Params& InParams,
+            FFragment_VatProxy_Current& InCurrent,
+            const FCk_Request_VatProxy_SetPlayRate& InRequest)
         -> void
     {
         if (InCurrent._ActiveClipIndex == INDEX_NONE)
@@ -279,7 +279,7 @@ namespace ck
         if (NewRate == InCurrent._PlayRate)
         { return; }
 
-        const auto Now = ck_vat_processor::Get_CurrentWorldTime(InHandle);
+        const auto Now = ck_vat_proxy_processor::Get_CurrentWorldTime(InHandle);
 
         if (NewRate == 0.0f)
         {
@@ -305,16 +305,16 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_Vat_FireSignals::
+        FProcessor_VatProxy_FireSignals::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Vat_Params& InParams,
-            FFragment_Vat_Current& InCurrent) const
+            const FFragment_VatProxy_Params& InParams,
+            FFragment_VatProxy_Current& InCurrent) const
         -> void
     {
         if (InCurrent.Get_ActiveClipIndex() == INDEX_NONE ||
-            InCurrent.Get_ActiveLoopMode() != ECk_Vat_LoopMode::Once ||
+            InCurrent.Get_ActiveLoopMode() != ECk_VatProxy_LoopMode::Once ||
             InCurrent.Get_FinishedDispatched() ||
             InCurrent.Get_PlayRate() <= 0.0f)
         { return; }
@@ -327,7 +327,7 @@ namespace ck
         if (NOT Clips.IsValidIndex(InCurrent.Get_ActiveClipIndex()))
         { return; }
 
-        const auto Now = ck_vat_processor::Get_CurrentWorldTime(InHandle);
+        const auto Now = ck_vat_proxy_processor::Get_CurrentWorldTime(InHandle);
         const auto ElapsedLocalSeconds =
             (Now - InCurrent.Get_PlaybackStartTime()).Get_Seconds() * InCurrent.Get_PlayRate();
         const auto& Clip = Clips[InCurrent.Get_ActiveClipIndex()];
@@ -336,6 +336,6 @@ namespace ck
         { return; }
 
         InCurrent._FinishedDispatched = true;
-        UUtils_Signal_Vat_OnClipFinished::Broadcast(InHandle, ck::MakePayload(InHandle, Clip.Get_Name()));
+        UUtils_Signal_VatProxy_OnClipFinished::Broadcast(InHandle, ck::MakePayload(InHandle, Clip.Get_Name()));
     }
 }

@@ -23,7 +23,7 @@ non-skeletal vertex animation (future).
 - `UCk_VatCollection_Data` — bake inputs (skeleton, source mesh, clip list, sample frequency, mode,
   precision) + bake outputs (baked static mesh, VAT textures, **serialized** clip table, animated
   bounds). Runtime-read-only; the CkVatEditor baker writes it.
-- `UCk_Utils_Vat_UE::Add(InHandle, InParams)` — compose Vat on an entity (collection must be loaded
+- `UCk_Utils_VatProxy_UE::Add(InHandle, InParams)` — compose Vat on an entity (collection must be loaded
   AND baked; async-load soft refs yourself, mirroring CkIskmRenderer's contract).
 - `Request_PlayClip / Request_Stop / Request_SetPlayRate` — deferred playback control. Stop freezes
   the current frame; SetPlayRate preserves the playback position (start-time rebase); rate 0 == Stop.
@@ -35,7 +35,7 @@ non-skeletal vertex animation (future).
 
 GPU-time-driven playback: `frame = f((WorldTime - PlaybackStartTime) * PlayRate)` evaluated in the
 material; per-instance custom data carries (clip row range, start time, rate, crossfade pair). All
-mutations go through the request queue — processors write `FFragment_Vat_Current`; nothing per-frame.
+mutations go through the request queue — processors write `FFragment_VatProxy_Current`; nothing per-frame.
 
 ---
 

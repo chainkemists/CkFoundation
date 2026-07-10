@@ -9,7 +9,7 @@
 CkFoundation gains first-class VAT support: a `UCk_VatCollection_Data` asset baked **in-editor**
 from a skeletal mesh + animation list into a static mesh (lookup UVs) + vertex-animation textures
 (both **Vertex** and **Bone** modes) with a serialized clip table — and an ECS feature
-(`UCk_Utils_Vat_UE`) that plays those clips on instanced static meshes **tick-lessly** (playback
+(`UCk_Utils_VatProxy_UE`) that plays those clips on instanced static meshes **tick-lessly** (playback
 state travels as per-instance custom data; the GPU derives the frame from time). Informed by the
 VAMP plugin (docs studied; source unavailable), built from CkFoundation's own precedents.
 
@@ -19,7 +19,7 @@ VAMP plugin (docs studied; source unavailable), built from CkFoundation's own pr
    produces: a `UStaticMesh` with a generated lookup-UV channel, mode-appropriate textures
    (Vertex: position+normal atlas; Bone: bone-position+rotation atlas + weights/indices carrier),
    and a **serialized** clip table (name → frame range, sample rate, length). Re-bake overwrites.
-2. An entity composed via `UCk_Utils_Vat_UE::Add(...)` renders the baked mesh through
+2. An entity composed via `UCk_Utils_VatProxy_UE::Add(...)` renders the baked mesh through
    CkIsmRenderer and `Request_PlayClip(name)` plays it with **zero per-frame CPU writes per
    instance** (verified: custom data written only on state change; animation advances regardless).
 3. Clip switch mid-playback crossfades (shader 2-state blend) and frame interpolation smooths
