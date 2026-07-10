@@ -1,0 +1,236 @@
+// /CkVat/Vat.ush — CkVat playback decode (looks: VatVertex, VatBone).
+//
+// Decodes the CkVat baker's textures (layout contract: Source/CkVat/Plan/Gate_01_Bake.md) entirely
+// in the vertex shader as a WorldPositionOffset. Playback is GPU-time-driven: the 12 per-instance
+// scalars (contract: Source/CkVat/Plan/Gate_02_Material.md) are written on clip CHANGE only; the
+// frame is derived from In.Time each vertex. Frame interpolation (2-row lerp) and a 2-state
+// crossfade are always on. Pixel entries are a plain lit BaseColor surface — VAT normal-texture
+// consumption is a recorded follow-up (Gate_02 "Deferred").
+#pragma once
+#include "/CkUsf/Common.ush"
+
+// --------------------------------------------------------------------------------------------------------------------
+// Shared decode helpers
+// --------------------------------------------------------------------------------------------------------------------
+
+// Clip-local playback time. Contract: when Rate == 0 the Time float HOLDS the frozen local time.
+float CkVat_LocalTime(float Now, float Time, float Rate)
+{
+    return Rate != 0.0 ? (Now - Time) * Rate : Time;
+}
+
+// Fractional frame -> the two texture rows to blend and their blend factor. Loop wraps within the
+// clip's row range (row1 wraps to the clip start); Once clamps at the last frame.
+void CkVat_FrameRows(float LocalTime, float Freq, float RowStart, float RowCount, float LoopOnce,
+                     out float OutRow0, out float OutRow1, out float OutFrac)
+{
+    float MaxFrame = max(RowCount - 1.0, 0.0);
+    float F = max(LocalTime, 0.0) * Freq;
+    float FA;
+    float FB;
+    if (LoopOnce > 0.5)
+    {
+        F = clamp(F, 0.0, MaxFrame);
+        FA = floor(F);
+        FB = min(FA + 1.0, MaxFrame);
+    }
+    else
+    {
+        F = fmod(F, max(RowCount, 1.0));
+        FA = floor(F);
+        FB = FA + 1.0;
+        FB = FB >= RowCount ? 0.0 : FB;
+    }
+    OutRow0 = RowStart + FA;
+    OutRow1 = RowStart + FB;
+    OutFrac = F - FA;
+}
+
+float4 CkVat_SampleRow(Texture2D Tex, SamplerState Samp, float U, float Row, float TotalRows)
+{
+    return CkUsf_SampleTexture2D(Tex, Samp, float2(U, (Row + 0.5) / max(TotalRows, 1.0)));
+}
+
+// Position texel decode: High precision stores raw values, Low stores bounds-normalized.
+float3 CkVat_DecodePos(float4 Texel, float3 BoundsMin, float3 BoundsMax, float DecodeNormalized)
+{
+    return DecodeNormalized > 0.5 ? lerp(BoundsMin, BoundsMax, Texel.xyz) : Texel.xyz;
+}
+
+// Quaternion texel decode: High raw, Low = q * 0.5 + 0.5.
+float4 CkVat_DecodeQuat(float4 Texel, float DecodeNormalized)
+{
+    float4 Q = DecodeNormalized > 0.5 ? Texel * 2.0 - 1.0 : Texel;
+    return normalize(Q);
+}
+
+float3 CkVat_QuatRotate(float4 Q, float3 V)
+{
+    return V + 2.0 * cross(Q.xyz, cross(Q.xyz, V) + Q.w * V);
+}
+
+// Crossfade weight toward the ACTIVE clip. RowCountB == 0 => no fade source; Duration == 0 => instant.
+float CkVat_FadeWeight(float Now, float TransStart, float TransDuration, float RowCountB)
+{
+    if (RowCountB <= 0.0 || TransDuration <= 0.0)
+    { return 1.0; }
+    return saturate((Now - TransStart) / TransDuration);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// VatVertex — per-vertex offset texture. In.UV1.x = this vertex's texture column (baked lookup UV).
+// --------------------------------------------------------------------------------------------------------------------
+
+// One clip state's frame-interpolated local offset. RowCount <= 0 => reference pose (zero offset).
+float3 CkVat_VertexOffset(Texture2D PosVat, SamplerState PosVatSampler, float U,
+                          float Now, float Freq, float TotalRows,
+                          float3 BoundsMin, float3 BoundsMax, float DecodeNormalized,
+                          float RowStart, float RowCount, float Time, float Rate, float LoopOnce)
+{
+    if (RowCount <= 0.0)
+    { return float3(0.0, 0.0, 0.0); }
+
+    float Row0; float Row1; float Frac;
+    CkVat_FrameRows(CkVat_LocalTime(Now, Time, Rate), Freq, RowStart, RowCount, LoopOnce, Row0, Row1, Frac);
+
+    float3 P0 = CkVat_DecodePos(CkVat_SampleRow(PosVat, PosVatSampler, U, Row0, TotalRows), BoundsMin, BoundsMax, DecodeNormalized);
+    float3 P1 = CkVat_DecodePos(CkVat_SampleRow(PosVat, PosVatSampler, U, Row1, TotalRows), BoundsMin, BoundsMax, DecodeNormalized);
+    return lerp(P0, P1, Frac);
+}
+
+FCkUsf_SurfaceOutput CkUsf_Look_VatVertex(FCkUsf_SurfaceInput In,
+    Texture2D BaseColorTex, SamplerState BaseColorTexSampler,
+    Texture2D PosVat, SamplerState PosVatSampler,
+    float SampleFrequency, float TotalRows, float TexelCount,
+    float3 BoundsMin, float3 BoundsMax, float DecodeNormalized,
+    float RowStartA, float RowCountA, float TimeA, float RateA,
+    float RowStartB, float RowCountB, float TimeB, float RateB,
+    float TransStart, float TransDuration, float LoopA, float LoopB)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+    O.BaseColor = CkUsf_SampleTexture2D(BaseColorTex, BaseColorTexSampler, In.UV).rgb;
+    O.Roughness = 0.8;
+    O.Specular = 0.3;
+    return O;
+}
+
+float3 CkUsf_Look_VatVertex_WPO(FCkUsf_VertexInput In,
+    Texture2D BaseColorTex, SamplerState BaseColorTexSampler,
+    Texture2D PosVat, SamplerState PosVatSampler,
+    float SampleFrequency, float TotalRows, float TexelCount,
+    float3 BoundsMin, float3 BoundsMax, float DecodeNormalized,
+    float RowStartA, float RowCountA, float TimeA, float RateA,
+    float RowStartB, float RowCountB, float TimeB, float RateB,
+    float TransStart, float TransDuration, float LoopA, float LoopB)
+{
+    float U = In.UV1.x;
+
+    float3 OffA = CkVat_VertexOffset(PosVat, PosVatSampler, U, In.Time, SampleFrequency, TotalRows,
+        BoundsMin, BoundsMax, DecodeNormalized, RowStartA, RowCountA, TimeA, RateA, LoopA);
+
+    float W = CkVat_FadeWeight(In.Time, TransStart, TransDuration, RowCountB);
+    float3 OffLocal = OffA;
+    if (W < 1.0)
+    {
+        float3 OffB = CkVat_VertexOffset(PosVat, PosVatSampler, U, In.Time, SampleFrequency, TotalRows,
+            BoundsMin, BoundsMax, DecodeNormalized, RowStartB, RowCountB, TimeB, RateB, LoopB);
+        OffLocal = lerp(OffB, OffA, W);
+    }
+
+    return OffLocal.x * In.LocalAxisX + OffLocal.y * In.LocalAxisY + OffLocal.z * In.LocalAxisZ;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// VatBone — bone position/rotation textures. In.UV1 = render-bone indices 0-1, In.UV2 = indices 2-3,
+// In.VertexColor.rgb = weights 0-2 (weight3 = 1 - r - g - b). In.LocalPosition = bind-pose position.
+// --------------------------------------------------------------------------------------------------------------------
+
+// One clip state's frame-interpolated 4-influence skinned position (local space).
+// RowCount <= 0 => reference pose (bind position unchanged).
+float3 CkVat_BoneSkinnedPos(Texture2D BonePosVat, SamplerState BonePosVatSampler,
+                            Texture2D BoneRotVat, SamplerState BoneRotVatSampler,
+                            float4 BoneIndices, float4 BoneWeights, float3 BindPos,
+                            float Now, float Freq, float TotalRows, float BoneCount,
+                            float3 BoundsMin, float3 BoundsMax, float DecodeNormalized,
+                            float RowStart, float RowCount, float Time, float Rate, float LoopOnce)
+{
+    if (RowCount <= 0.0)
+    { return BindPos; }
+
+    float Row0; float Row1; float Frac;
+    CkVat_FrameRows(CkVat_LocalTime(Now, Time, Rate), Freq, RowStart, RowCount, LoopOnce, Row0, Row1, Frac);
+
+    float3 Result = float3(0.0, 0.0, 0.0);
+
+    [unroll]
+    for (int i = 0; i < 4; ++i)
+    {
+        float Weight = BoneWeights[i];
+        if (Weight <= 0.0001)
+        { continue; }
+
+        float U = (BoneIndices[i] + 0.5) / max(BoneCount, 1.0);
+
+        float3 T0 = CkVat_DecodePos(CkVat_SampleRow(BonePosVat, BonePosVatSampler, U, Row0, TotalRows), BoundsMin, BoundsMax, DecodeNormalized);
+        float3 T1 = CkVat_DecodePos(CkVat_SampleRow(BonePosVat, BonePosVatSampler, U, Row1, TotalRows), BoundsMin, BoundsMax, DecodeNormalized);
+        float4 Q0 = CkVat_DecodeQuat(CkVat_SampleRow(BoneRotVat, BoneRotVatSampler, U, Row0, TotalRows), DecodeNormalized);
+        float4 Q1 = CkVat_DecodeQuat(CkVat_SampleRow(BoneRotVat, BoneRotVatSampler, U, Row1, TotalRows), DecodeNormalized);
+
+        Q1 = dot(Q0, Q1) < 0.0 ? -Q1 : Q1; // shortest arc
+        float4 Q = normalize(lerp(Q0, Q1, Frac));
+        float3 T = lerp(T0, T1, Frac);
+
+        Result += Weight * (CkVat_QuatRotate(Q, BindPos) + T);
+    }
+
+    return Result;
+}
+
+FCkUsf_SurfaceOutput CkUsf_Look_VatBone(FCkUsf_SurfaceInput In,
+    Texture2D BaseColorTex, SamplerState BaseColorTexSampler,
+    Texture2D BonePosVat, SamplerState BonePosVatSampler,
+    Texture2D BoneRotVat, SamplerState BoneRotVatSampler,
+    float SampleFrequency, float TotalRows, float BoneCount,
+    float3 BoundsMin, float3 BoundsMax, float DecodeNormalized,
+    float RowStartA, float RowCountA, float TimeA, float RateA,
+    float RowStartB, float RowCountB, float TimeB, float RateB,
+    float TransStart, float TransDuration, float LoopA, float LoopB)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+    O.BaseColor = CkUsf_SampleTexture2D(BaseColorTex, BaseColorTexSampler, In.UV).rgb;
+    O.Roughness = 0.8;
+    O.Specular = 0.3;
+    return O;
+}
+
+float3 CkUsf_Look_VatBone_WPO(FCkUsf_VertexInput In,
+    Texture2D BaseColorTex, SamplerState BaseColorTexSampler,
+    Texture2D BonePosVat, SamplerState BonePosVatSampler,
+    Texture2D BoneRotVat, SamplerState BoneRotVatSampler,
+    float SampleFrequency, float TotalRows, float BoneCount,
+    float3 BoundsMin, float3 BoundsMax, float DecodeNormalized,
+    float RowStartA, float RowCountA, float TimeA, float RateA,
+    float RowStartB, float RowCountB, float TimeB, float RateB,
+    float TransStart, float TransDuration, float LoopA, float LoopB)
+{
+    float4 BoneIndices = float4(In.UV1.x, In.UV1.y, In.UV2.x, In.UV2.y);
+    float3 W3 = In.VertexColor;
+    float4 BoneWeights = float4(W3.r, W3.g, W3.b, saturate(1.0 - W3.r - W3.g - W3.b));
+
+    float3 SkinnedA = CkVat_BoneSkinnedPos(BonePosVat, BonePosVatSampler, BoneRotVat, BoneRotVatSampler,
+        BoneIndices, BoneWeights, In.LocalPosition, In.Time, SampleFrequency, TotalRows, BoneCount,
+        BoundsMin, BoundsMax, DecodeNormalized, RowStartA, RowCountA, TimeA, RateA, LoopA);
+
+    float W = CkVat_FadeWeight(In.Time, TransStart, TransDuration, RowCountB);
+    float3 Skinned = SkinnedA;
+    if (W < 1.0)
+    {
+        float3 SkinnedB = CkVat_BoneSkinnedPos(BonePosVat, BonePosVatSampler, BoneRotVat, BoneRotVatSampler,
+            BoneIndices, BoneWeights, In.LocalPosition, In.Time, SampleFrequency, TotalRows, BoneCount,
+            BoundsMin, BoundsMax, DecodeNormalized, RowStartB, RowCountB, TimeB, RateB, LoopB);
+        Skinned = lerp(SkinnedB, SkinnedA, W);
+    }
+
+    float3 OffLocal = Skinned - In.LocalPosition;
+    return OffLocal.x * In.LocalAxisX + OffLocal.y * In.LocalAxisY + OffLocal.z * In.LocalAxisZ;
+}
