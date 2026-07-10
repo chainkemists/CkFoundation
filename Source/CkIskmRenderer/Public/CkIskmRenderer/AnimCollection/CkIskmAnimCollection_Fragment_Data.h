@@ -91,6 +91,15 @@ private:
               meta = (AllowPrivateAccess = true, UIMin = 1, ClampMin = 1, UIMax = 120, ClampMax = 120))
     int32 _SampleFrequency = 30;
 
+    // Sockets (or bare bone names) whose component-space transforms are baked per-frame into the
+    // pose data (inc-4 far cosmetics) — queryable per member via
+    // ACk_Iskm_BatchedCrowd_Actor::TryGet_MemberSocketTransform. Script-authored collections
+    // configure this (BB adds head_attach), so it must stay BlueprintReadWrite like _Sequences
+    // (_BonesToCache above is BlueprintReadOnly and NOT script-assignable — do not reuse it).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation",
+              meta = (AllowPrivateAccess = true))
+    TArray<FName> _BakedSockets;
+
     // ---- Plan-2 reservations (declared now so we don't migrate .uassets later) ----
 
     // Bones whose CPU transforms are cached per-frame for socket attaching / cheap line
@@ -153,6 +162,7 @@ public:
     CK_PROPERTY_GET(_DefaultMesh);
     CK_PROPERTY_GET(_Sequences);
     CK_PROPERTY_GET(_SampleFrequency);
+    CK_PROPERTY_GET(_BakedSockets);
     // Plan-2 reservation accessors (read-only; nothing in Plan-1 reads these)
     CK_PROPERTY_GET(_BonesToCache);
     CK_PROPERTY_GET(_CurvesToCache);

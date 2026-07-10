@@ -171,6 +171,14 @@ public:
     static float
     Get_CrowdMemberCustomDataFloat(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, int32 InFloatIndex);
 
+    // World-space transform of a baked socket for one crowd member at its CURRENT animation frame
+    // (inc-4 far cosmetics). False when the collection bakes no such socket — leave the cosmetic
+    // hidden/parked. Socket names come from the AnimCollection's _BakedSockets (BB: head_attach).
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] TryGet Crowd Member Socket Transform")
+    static bool
+    TryGet_CrowdMemberSocketTransform(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, FName InSocket, FTransform& OutWorld);
+
     // Default CustomPrimitiveData floats for every tile component (existing and future). CPD-parameterized
     // materials (e.g. CharacterMaster skin color at CPD 0/1/2) read zeros on batched tiles otherwise — the
     // whole crowd renders with unset (grey) parameters. One shared value per crowd.

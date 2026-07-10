@@ -337,6 +337,16 @@ float
     return InCrowd->Get_MemberCustomData(InIndex, InFloatIndex);
 }
 
+bool
+    UCk_Utils_IskmBatched_UE::
+    TryGet_CrowdMemberSocketTransform(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, FName InSocket, FTransform& OutWorld)
+{
+    OutWorld = FTransform::Identity;
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return false; }
+    return InCrowd->TryGet_MemberSocketTransform(InIndex, InSocket, OutWorld);
+}
+
 void
     UCk_Utils_IskmBatched_UE::
     Set_CrowdDefaultCustomPrimitiveData(ACk_Iskm_BatchedCrowd_Actor* InCrowd, const TArray<float>& InFloats)

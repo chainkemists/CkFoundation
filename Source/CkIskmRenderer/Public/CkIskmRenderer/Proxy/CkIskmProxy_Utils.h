@@ -329,6 +329,15 @@ public:
         FName InSocketName,
         const FTransform& InOffset);
 
+    // Detach a follower previously attached with Add_SocketFollower (idempotent — no-op when no
+    // follower fragment is present). The follower entity keeps its last transform; whoever
+    // detaches owns driving it from then on (BB inc-4: the LOD flip driver's far socket loop).
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Remove Socket Follower")
+    static FCk_Handle_Transform
+    Remove_SocketFollower(
+        UPARAM(ref) FCk_Handle_Transform& InFollower);
+
     // ---- Binds ----
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",

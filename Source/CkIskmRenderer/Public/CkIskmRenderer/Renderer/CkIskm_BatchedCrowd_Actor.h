@@ -72,6 +72,11 @@ public:
     void       Set_MemberCustomData(int32 InIndex, int32 InFirstFloat, const TArray<float>& InValues);
     float      Get_MemberCustomData(int32 InIndex, int32 InFloatIndex) const;
 
+    // World-space transform of a baked socket for one member at the member's CURRENT animation
+    // frame (inc-4 far cosmetics — the crowd owns the clock). False when the collection bakes no
+    // such socket or the index is invalid; callers leave their cosmetics hidden/parked.
+    bool       TryGet_MemberSocketTransform(int32 InIndex, FName InSocket, FTransform& OutWorld) const;
+
     // Hide/show a member in its batched tile (rebuilds that one tile). Hidden members leave a gap for a per-SKMC stand-in.
     void       Set_MemberVisible(int32 InIndex, bool InVisible);
 
