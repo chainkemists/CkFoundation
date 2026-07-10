@@ -9,6 +9,8 @@
 #include "CkCrowd/Agent/CkCrowdAgent_Neighbors_Fragment.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Steering_Processor.h"
 
+#include "CkEcsExt/Transform/CkTransform_Fragment.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -30,6 +32,7 @@ namespace ck
             FTag_CrowdAgent_HasProbe,
             TReadOnly<FFragment_CrowdAgent_Params>,
             TReadOnly<FFragment_CrowdAgent_ProbeRef>,
+            TReadOnly<FFragment_Transform>,
             TReadWrite<FFragment_CrowdAgent_NeighborCache>,
             TExclude<FTag_CrowdAgent_Asleep>,
             CK_IGNORE_PENDING_KILL>
@@ -48,6 +51,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_ProbeRef& InProbeRef,
+            const FFragment_Transform& InTransform,
             FFragment_CrowdAgent_NeighborCache& InNeighborCache) const -> void;
     };
 }
