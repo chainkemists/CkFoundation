@@ -99,12 +99,23 @@ public:
         UPARAM(ref) FCk_Handle_StateMachine& InSm);
 
     // Returns true iff the SM has been faulted (FTag_Sm_DeterminismFault present). The
-    // fingerprint mismatch path stamps this tag inside the CK_ENSURE_IF_NOT body.
+    // fingerprint mismatch path stamps this tag via DoVerifyFingerprintAgainstExpected.
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|StateMachine|Test",
         DisplayName = "[Ck][SM][Test] Has Determinism Fault")
     static bool
     Test_Get_HasDeterminismFault(
+        UPARAM(ref) FCk_Handle_StateMachine& InSm);
+
+    // Directly stamps FTag_Sm_DeterminismFault on the SM, simulating a quarantine without needing
+    // the (multi-client, replication-dependent) verify path to produce it. Used to pin the
+    // Enter-despite-fault contract: a state entering while the owning SM is faulted must not run
+    // its EnterState side effects. No-op in non-test builds.
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|StateMachine|Test",
+        DisplayName = "[Ck][SM][Test] Force Determinism Fault")
+    static FCk_Handle_StateMachine
+    Test_ForceDeterminismFault(
         UPARAM(ref) FCk_Handle_StateMachine& InSm);
 };
 
