@@ -26,6 +26,7 @@ public class CkInsightsAnalyzer : CkModuleRules
 
             // CK dependencies
             "CkCore",
+            "CkEditorTools", // Shared CkStyle:: tokens for the analyzer tab UI
             "CkLog",
         });
 

@@ -146,6 +146,57 @@ struct FCk_WorkerThreadSummary
 // --------------------------------------------------------------------------------------------------------------------
 
 /**
+ * One node of the structured hot-path tree — same wrapper unwrapping/collapsing
+ * and per-root dedup logic as the markdown report, exposed as data so Slate
+ * views (SCkInsightsAnalyzerTab) can render a real tree instead of text.
+ */
+struct CKINSIGHTSANALYZER_API FCk_HotPathNode
+{
+    /** Raw timer name (post wrapper-collapse). */
+    FString RawName;
+
+    /** Simplified display name (FCk_TimerCategorizer::SimplifyName). */
+    FString DisplayName;
+
+    /** Collapsed wrapper chain leading into this timer (raw names). */
+    TArray<FString> Breadcrumbs;
+
+    double InclusiveMs = 0.0;
+    double ExclusiveMs = 0.0;
+    uint32 Count = 0;
+
+    TArray<TSharedPtr<FCk_HotPathNode>> Children;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/** Per-category exclusive-time entry for structured display. */
+struct CKINSIGHTSANALYZER_API FCk_CategorySummaryEntry
+{
+    FString Name;
+    double ExclusiveMs = 0.0;
+    double PctOfFrame = 0.0;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/** Ranked timer entry (by exclusive time) for structured display. */
+struct CKINSIGHTSANALYZER_API FCk_TopTimerEntry
+{
+    /** Simplified display name. */
+    FString Name;
+
+    double ExclusiveMs = 0.0;
+    double InclusiveMs = 0.0;
+    uint32 Count = 0;
+
+    /** Exclusive time as a percentage of the frame duration. */
+    double PctOfFrame = 0.0;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
  * Generates Slack-friendly markdown reports from frame analysis results.
  *
  * Ports the full report generation pipeline from analyze_frame.py:
@@ -199,6 +250,33 @@ public:
 
     /** Get timer name, with fallback. */
     static auto GetTimerName(const FTimerNameMap& Names, uint32 TimerIndex) -> FString;
+
+    // ---- Structured data (for Slate views) ----
+    // NOTE: declared after FTimerNameMap — member alias must precede its use in
+    // parameter types.
+
+    /**
+     * Build the structured hot-path tree: roots sorted by inclusive time
+     * (capped at MaxRootTimers), same wrapper collapsing and per-root dedup
+     * as the markdown report. Acquires its own read scope.
+     */
+    auto BuildHotPathTree(const FCk_TraceSession& Session,
+                          const FCk_FrameAnalysisResult& Result) const
+        -> TArray<TSharedPtr<FCk_HotPathNode>>;
+
+    /**
+     * Per-category exclusive time, sorted descending, filtered by MinCategoryMs.
+     * Same data the markdown category summary renders.
+     */
+    auto ComputeCategorySummary(const FCk_FrameAnalysisResult& Result,
+                                const FTimerNameMap& TimerNames) const
+        -> TArray<FCk_CategorySummaryEntry>;
+
+    /** Top MaxCount timers by exclusive time, with simplified names. */
+    auto ComputeTopTimers(const FCk_FrameAnalysisResult& Result,
+                          const FTimerNameMap& TimerNames,
+                          int32 MaxCount) const
+        -> TArray<FCk_TopTimerEntry>;
 
 private:
 
@@ -284,6 +362,15 @@ private:
 
     /** Build tree-drawing prefix (e.g., "│  ├─ "). */
     static auto MakeTreePrefix(int32 Depth, const TMap<int32, bool>& IsLastAtDepth) -> FString;
+
+    /** Node-producing analog of BuildTreeLines (shared collapse/dedup rules). */
+    auto DoBuildTreeNode(uint32 TimerIndex, int32 Depth,
+                         double InclMs, double ExclMs, uint32 Count,
+                         const FCk_FrameAnalysisResult& Result,
+                         const FTimerNameMap& TimerNames,
+                         TSet<uint32>& ShownTimers,
+                         const TArray<FString>* PreBreadcrumbs = nullptr) const
+        -> TSharedPtr<FCk_HotPathNode>;
 
 private:
     FCk_FrameReportConfig _Config;
