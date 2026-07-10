@@ -1,0 +1,226 @@
+#pragma once
+
+#include "CoreMinimal.h"
+
+#include "CkCore/Format/CkFormat.h"
+#include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Time/CkTime.h"
+#include "CkCore/Types/DataAsset/CkDataAsset.h"
+
+#include "CkVatCollection_Data.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class USkeleton;
+class USkeletalMesh;
+class UStaticMesh;
+class UTexture2D;
+class UAnimSequenceBase;
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Which VAT encoding the bake produces (a collection bakes exactly one).
+// Vertex: per-vertex position/normal texel per frame — cheapest playback, no bone data at runtime,
+//         vertex count bounded by the texture width; textures are per-mesh.
+// Bone:   per-bone position/rotation texel per frame + per-vertex indices/weights carried on the mesh —
+//         scales to high-vertex meshes; textures shareable across meshes that skin to the same skeleton.
+UENUM(BlueprintType)
+enum class ECk_Vat_BakeMode : uint8
+{
+    Vertex,
+    Bone
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Vat_BakeMode);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// High = PF_FloatRGBA (16f) textures; Low = RGBA8 with bounds-normalized values (cheaper VRAM, visible
+// quantization on large motions).
+UENUM(BlueprintType)
+enum class ECk_Vat_Precision : uint8
+{
+    High,
+    Low
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Vat_Precision);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKVAT_API FCk_VatCollection_ClipDef
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_VatCollection_ClipDef);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    TObjectPtr<UAnimSequenceBase> _Sequence;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FName _Name;
+
+public:
+    CK_PROPERTY_GET(_Sequence);
+    CK_PROPERTY_GET(_Name);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// One baked clip's slot in the texture frame layout. Written by the CkVatEditor baker, SERIALIZED on the
+// collection asset (unlike CkIskmRenderer's transient bake, the VAT bake IS the shipped asset — cooked
+// builds never re-sample sequences).
+USTRUCT(BlueprintType)
+struct CKVAT_API FCk_Vat_BakedClip
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Vat_BakedClip);
+
+private:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FName _Name;
+
+    // Texture row of this clip's local frame 0 (row 0 is the reference pose).
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    int32 _FrameIndex = 0;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    int32 _FrameCount = 0;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    int32 _SampleFrequency = 30;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FCk_Time _PlayLength;
+
+public:
+    CK_PROPERTY_GET(_Name);
+    CK_PROPERTY_GET(_FrameIndex);
+    CK_PROPERTY_GET(_FrameCount);
+    CK_PROPERTY_GET(_SampleFrequency);
+    CK_PROPERTY_GET(_PlayLength);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Vat_BakedClip, _Name, _FrameIndex, _FrameCount, _SampleFrequency, _PlayLength);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Vertex-animation-texture collection: bake INPUTS (skeleton + source skeletal mesh + clip list) and bake
+// OUTPUTS (static mesh with a generated lookup-UV channel, VAT textures, serialized clip table). The bake
+// itself lives in CkVatEditor (in-editor only); at runtime this asset is read-only.
+// Mirrors UCk_IskmAnimCollection_Data's shape where the concerns overlap.
+UCLASS(BlueprintType)
+class CKVAT_API UCk_VatCollection_Data : public UCk_DataAsset_PDA
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_VatCollection_Data);
+
+protected:
+#if WITH_EDITOR
+    auto
+    IsDataValid(class FDataValidationContext& InContext) const -> EDataValidationResult override;
+#endif
+
+private:
+    // ---- bake inputs ----
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bake",
+              meta = (AllowPrivateAccess = true))
+    TObjectPtr<USkeleton> _Skeleton;
+
+    // Source for the baked static mesh, the vertex data, and (Bone mode) the bone indices/weights.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bake",
+              meta = (AllowPrivateAccess = true))
+    TObjectPtr<USkeletalMesh> _SourceMesh;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bake",
+              meta = (AllowPrivateAccess = true, TitleProperty = "{_Name}"))
+    TArray<FCk_VatCollection_ClipDef> _Clips;
+
+    // Frames-per-second each clip is sampled at. Each frame = one texture row. Higher = smoother + more VRAM.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bake",
+              meta = (AllowPrivateAccess = true, UIMin = 1, ClampMin = 1, UIMax = 120, ClampMax = 120))
+    int32 _SampleFrequency = 30;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bake",
+              meta = (AllowPrivateAccess = true))
+    ECk_Vat_BakeMode _BakeMode = ECk_Vat_BakeMode::Vertex;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bake",
+              meta = (AllowPrivateAccess = true))
+    ECk_Vat_Precision _Precision = ECk_Vat_Precision::High;
+
+    // UV channel index on the baked static mesh that carries each vertex's texture-lookup coordinate.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bake",
+              meta = (AllowPrivateAccess = true, UIMin = 1, ClampMin = 1, UIMax = 7, ClampMax = 7))
+    int32 _LookupUVChannel = 1;
+
+    // ---- bake outputs (written by the CkVatEditor baker; read-only everywhere else) ----
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Baked",
+              meta = (AllowPrivateAccess = true))
+    TObjectPtr<UStaticMesh> _BakedMesh;
+
+    // Vertex mode: per-vertex component-space position offsets from the bind pose, one row per frame.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Baked",
+              meta = (AllowPrivateAccess = true))
+    TObjectPtr<UTexture2D> _PositionTexture;
+
+    // Vertex mode: playback-corrected normals, one row per frame.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Baked",
+              meta = (AllowPrivateAccess = true))
+    TObjectPtr<UTexture2D> _NormalTexture;
+
+    // Bone mode: per-bone component-space positions (relative to ref pose), one row per frame.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Baked",
+              meta = (AllowPrivateAccess = true))
+    TObjectPtr<UTexture2D> _BonePositionTexture;
+
+    // Bone mode: per-bone rotations (quaternions), one row per frame.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Baked",
+              meta = (AllowPrivateAccess = true))
+    TObjectPtr<UTexture2D> _BoneRotationTexture;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Baked",
+              meta = (AllowPrivateAccess = true))
+    TArray<FCk_Vat_BakedClip> _BakedClips;
+
+    // Conservative culling bounds covering every baked pose (never smaller than the mesh box).
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Baked",
+              meta = (AllowPrivateAccess = true))
+    FBox _AnimatedBounds = FBox(ForceInit);
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Baked",
+              meta = (AllowPrivateAccess = true))
+    bool _IsBaked = false;
+
+public:
+    CK_PROPERTY_GET(_Skeleton);
+    CK_PROPERTY_GET(_SourceMesh);
+    CK_PROPERTY_GET(_Clips);
+    CK_PROPERTY_GET(_SampleFrequency);
+    CK_PROPERTY_GET(_BakeMode);
+    CK_PROPERTY_GET(_Precision);
+    CK_PROPERTY_GET(_LookupUVChannel);
+    CK_PROPERTY_GET(_BakedMesh);
+    CK_PROPERTY_GET(_PositionTexture);
+    CK_PROPERTY_GET(_NormalTexture);
+    CK_PROPERTY_GET(_BonePositionTexture);
+    CK_PROPERTY_GET(_BoneRotationTexture);
+    CK_PROPERTY_GET(_BakedClips);
+    CK_PROPERTY_GET(_AnimatedBounds);
+    CK_PROPERTY_GET(_IsBaked);
+
+public:
+    // Index into the SERIALIZED baked clip table (the runtime source of truth), or INDEX_NONE.
+    auto
+    Find_BakedClipIndex_ByName(FName InClipName) const -> int32;
+};
