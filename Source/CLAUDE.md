@@ -74,6 +74,7 @@ Before writing any code, navigate the documentation in this order:
 | replicate render-target pixels / draw calls | `CkRenderTarget` (no doc yet) |
 | runtime shader Looks / outline rendering | `CkUsf` |
 | ISM / skeletal-instance rendering | `CkIsmRenderer` / `CkIskmRenderer` |
+| vertex-animation-texture playback (bake skeletal anims to textures, tick-less ISM instances) | `CkVat` (+ `CkVatEditor` baker) |
 | ECS targeting / scoring | `CkTargeting` |
 | ECS aggro / threat table | `CkAggro` |
 | entity relationships (ally/enemy, teams) | `CkRelationship` |
@@ -101,7 +102,7 @@ Before writing any code, navigate the documentation in this order:
 
 ## Module tier table
 
-All **73 non-editor modules**, regenerated from every `Source/<Module>/<Module>.Build.cs` on
+All **74 non-editor modules** (CkVat added 2026-07-09), regenerated from every `Source/<Module>/<Module>.Build.cs` on
 2026-07-02. **Deps column = Ck-only** (Public + Private combined, `Ck` prefix stripped); engine
 modules are not listed. Tiers are semantic bands; a module may sit higher than its minimal depth,
 but **deps must never point to a higher band**. Editor/UncookedOnly modules are excluded (see T5).
@@ -203,6 +204,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkUI | Core,Ecs,EcsExt,GameSession,Graphics,Log,Settings,ThirdParty |
 | CkUnrealComponent | Core,Ecs,EcsExt,Label,Log,Record,Settings |
 | CkUsf | Core,Ecs,Graphics,Log |
+| CkVat | Core,Ecs,EcsExt,Graphics,IsmRenderer,Log,Usf |
 | CkVfx | ActorRelay,Core,Cue,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer |
 | CkWatermark | Core,Ecs,Log,Memory,Settings,SpatialQuery,UI |
 
