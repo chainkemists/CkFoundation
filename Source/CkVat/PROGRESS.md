@@ -10,11 +10,14 @@ landed 2026-07-10; gap 4-bone (bone-mode normals) DEFERRED — no per-instance b
 non-Nanite PS (evidence in Gate_02 Deferred).
 **Baseline on record:** Iskm autotests **30/30** + AnimBake 2/2 + VatProxy_ApiSurface 1/1 + Usf 4/4
 (2026-07-10 logs: Test-{Iskm,AnimBake,VatProxy,Usf}.log).
-**Next action:** the human [EDITOR-VERIFY] passes — via the **Vat gym**, now ZERO-setup (PIE into
-the CkTests gym level → Tab → "Vat"; stations self-bake a Bone-mode Mannequin collection
-transiently). Then gap 5 (bone-influence options + weight-texture storage).
-**Blocked on:** [EDITOR-VERIFY] (human) for visual claims only — the Gate-4 end-to-end playback
-autotest LANDED content-free via the transient bake (`Ck_AutoTest_VatProxy_TransientBakePlayback`).
+**BONE-MODE VISUALS HUMAN-VERIFIED 2026-07-10** (gym: bake/playback/crossfade/rates/freeze/crowd
+all correct) after a debugging campaign that found two real data bugs (sRGB-warped vertex-color
+weights; MID dims seeded 0 from async-compiling textures — see the dated entry) and produced the
+standing `Ck_Vat_DebugVerifyBake` verifier.
+**Next action:** gap 5 (bone-influence options + weight-texture storage); Vertex-mode visual pass
+(needs a <4096-vert mesh collection — the normals check rides on it); Low-precision + root-motion
+spot checks.
+**Blocked on:** nothing hard — remaining verifies are opportunistic.
 
 ## Decision log
 | Date | Decision | Why | Revisit when |
@@ -25,6 +28,39 @@ autotest LANDED content-free via the transient bake (`Ck_AutoTest_VatProxy_Trans
 | 2026-07-09 | Iskm refactor keeps dev semantics exactly (skeleton-chain ref pose) | perf-iskm-lod's mesh-bind-pose fix belongs to that branch; porting it early would change dev behavior untested here | When perf-iskm-lod merges — fold its two bake deltas into `ck::anim_bake` call args |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-07-10 — VISUALS VERIFIED ✅ after the gym-mangling hunt (same day, latest)
+- **Human-confirmed in the gym: bone-mode bake → playback → crossfade → rates → freeze/resume →
+  100-instance crowd with random phases ALL render correctly** ("works like a charm").
+- The hunt found THREE real defects (each with its own evidence) + one lesson:
+  1. **Vertex-color weights sRGB-warped** — the static-mesh build `ToFColor(true)`-encodes color
+     RGB (StaticMeshBuilder.cpp:1692) and the GPU reads raw bytes; blended weights warped to sums
+     ~1.5 (0/1 weights are encode fixed points → "feet fine, torso shreds"). FIX: baker pre-decodes
+     weights (`SrgbToLinear`) so the build's encode cancels. Validated numerically (harness [C]
+     weightMismatches 0) and visually.
+  2. **MID seeded `BoneCount`/`TotalRows` = 0** — `UTexture2D::GetSizeX/Y()` reads PLATFORM data,
+     which is 0 while a freshly-baked texture is still ASYNC-COMPILING; the shader's
+     `U=(idx+0.5)/max(0,1)` then wraps every bone lookup onto one texel → whole mesh rigidly folded
+     onto one bone, per-run nondeterministic (a compile-vs-first-compose race — why one station
+     could look fine while its siblings mangled). FIX: texel dims are now SERIALIZED bake results
+     (`_TextureWidth/_TextureRows`) and the subsystem seeds the MID from those (+ ensure if absent).
+     Found by `Ck_Vat_DebugVerifyBake` check [E]: fail→pass across the fix.
+  3. **Per-vertex >4-influence ensure miscalibrated** (fixed earlier same day, commit b6f61d334) —
+     4699 legit Mannequin verts fired it per-bake.
+  - **Reverted**: a mesh-bind inverse override (GetRefBasesInvMatrix) — justified only by
+    Live-Coding-tainted observations; the batched renderer proves skeleton-chain inverse correct.
+  - **Lesson (cost us ~3 rounds): observations made on a Live-Coded editor are not evidence.**
+    Multiple stacked patches produced phantom regressions and phantom fixes; the bug only became
+    tractable after a clean rebuild. Fix hypotheses on clean binaries only.
+- **NEW standing tool: `Ck_Vat_DebugVerifyBake`** (CkVatEditor/CkVatBakeVerify.cpp) — transient-
+  bakes a Mannequin collection headless and numerically verifies texture shape [A], texel-vs-pose
+  [B], mesh data channels [C], full GPU-decode reconstruction [D] (0.6 cm max on real weights),
+  and MID uniforms [E]. For any future VAT visual bug: run this FIRST; all-PASS pins the fault to
+  the material/VF layer.
+- Gates on the final build: harness A-E ALL PASS · VatProxy 2/2 · Iskm suite re-run (see below) ·
+  visuals human-verified.
+- Remaining [EDITOR-VERIFY]: Vertex mode (incl. the tangent-frame normals check — needs a
+  <4096-vert mesh via `Ck_GymVat_SetCollection`), Low precision, root-motion toggle.
 
 ### 2026-07-10 — Transient bake + zero-setup gym + the Gate-4 end-to-end autotest (same day, later)
 - **Baker split compute/persist** (`b6f61d334`): `Bake_VatCollection_Transient` = identical compute,
