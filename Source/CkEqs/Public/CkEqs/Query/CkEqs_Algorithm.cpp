@@ -7,6 +7,7 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Registry/CkRegistry_SlotTable.h"
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
 #include "CkEntityTag/CkEntityTag_Utils.h"
@@ -16,6 +17,7 @@
 
 #include <Algo/MaxElement.h>
 #include <Algo/MinElement.h>
+#include <Async/ParallelFor.h>
 #include <Math/UnrealMathUtility.h>
 #include <NavigationSystem.h>
 
@@ -376,19 +378,35 @@ auto
     constexpr auto FireOverlaps = false;
     constexpr auto TryDrawDebug = false;
 
-    for (auto& Candidate : OutCandidates)
+    // PARALLEL: per-candidate ground-projection casts run on worker threads. Jolt narrow-phase
+    // queries are thread-safe and the trace path performs registry READS only (FireOverlaps is
+    // false, so nothing enqueues requests); each iteration writes only its own candidate.
+    // The Multi overload with TryDrawDebug=false issues zero debug-draw calls (the Single
+    // overload draws unconditionally — not worker-safe); its first result is the nearest hit.
+    const auto RegistryHandle = InAnyHandle.Get_RegistryView().Get_RegistryHandle();
+#if !UE_BUILD_SHIPPING
+    ck::registry_table::BeginParallelRegion(RegistryHandle);
+#endif
+
+    ParallelFor(OutCandidates.Num(), [&](int32 InIndex)
     {
+        auto& Candidate = OutCandidates[InIndex];
+
         const auto Start = Candidate._Location + FVector::UpVector * ProjectUp;
         const auto End = Candidate._Location - FVector::UpVector * ProjectDown;
 
         const auto Settings = FCk_Probe_RayCast_Settings{Start, End, Filter};
         INC_DWORD_STAT(STAT_Eqs_PhysicsCastsIssued);
-        const auto Result = UCk_Utils_ProbeTrace_UE::Request_SingleLineTrace(
+        const auto Hits = UCk_Utils_ProbeTrace_UE::Request_MultiLineTrace(
             InAnyHandle, Settings, FireOverlaps, TryDrawDebug, *PhysicsSystem);
 
-        if (ck::IsValid(Result))
-        { Candidate._Location = Result->Get_HitLocation(); }
-    }
+        if (Hits.Num() > 0)
+        { Candidate._Location = Hits[0].Get_HitLocation(); }
+    });
+
+#if !UE_BUILD_SHIPPING
+    ck::registry_table::EndParallelRegion(RegistryHandle);
+#endif
 }
 
 auto
@@ -832,17 +850,26 @@ auto
     constexpr auto TryDrawDebug = false;
 
     auto RawValues = TArray<float>{};
-    RawValues.Reserve(InOutCandidates.Num());
+    RawValues.SetNumZeroed(InOutCandidates.Num());
 
-    for (auto i = 0; i < InOutCandidates.Num(); ++i)
+    // PARALLEL: per-candidate LOS casts run on worker threads. Jolt narrow-phase queries are
+    // thread-safe and the trace path performs registry READS only (FireOverlaps is false);
+    // each iteration writes only its own RawValues/debug slot. The Multi overloads with
+    // TryDrawDebug=false issue zero debug-draw calls (the Single overloads draw
+    // unconditionally — not worker-safe); LOS-clear == no filtered hits.
+    const auto RegistryHandle = InAnyHandle.Get_RegistryView().Get_RegistryHandle();
+#if !UE_BUILD_SHIPPING
+    ck::registry_table::BeginParallelRegion(RegistryHandle);
+#endif
+
+    ParallelFor(InOutCandidates.Num(), [&](int32 InIndex)
     {
-        const auto& Candidate = InOutCandidates[i];
+        const auto& Candidate = InOutCandidates[InIndex];
         if (NOT Candidate.Get_Passed())
         {
-            RawValues.Add(0.0f);
-            // Leave debug slot at defaults — this candidate already failed an earlier test;
-            // we didn't actually run Trace on it.
-            continue;
+            // RawValues[InIndex] stays 0; leave the debug slot at defaults — this candidate
+            // already failed an earlier test; we didn't actually run Trace on it.
+            return;
         }
 
         auto LosClear = false;
@@ -852,26 +879,30 @@ auto
             {
                 const auto Settings = FCk_Probe_RayCast_Settings{QuerierLocation, Candidate.Get_Location(), TraceFilter};
                 INC_DWORD_STAT(STAT_Eqs_PhysicsCastsIssued);
-                const auto Result = UCk_Utils_ProbeTrace_UE::Request_SingleLineTrace(
+                const auto Hits = UCk_Utils_ProbeTrace_UE::Request_MultiLineTrace(
                     InAnyHandle, Settings, FireOverlaps, TryDrawDebug, *PhysicsSystem);
-                LosClear = ck::Is_NOT_Valid(Result);
+                LosClear = Hits.IsEmpty();
                 break;
             }
             case ECk_Eqs_TraceMode::ShapeTrace:
             {
                 const auto Settings = FCk_ShapeCast_Settings{QuerierLocation, Candidate.Get_Location(), InTest.Get_TraceShape(), TraceFilter};
                 INC_DWORD_STAT(STAT_Eqs_PhysicsCastsIssued);
-                const auto Result = UCk_Utils_ProbeTrace_UE::Request_SingleShapeTrace(
+                const auto Hits = UCk_Utils_ProbeTrace_UE::Request_MultiShapeTrace(
                     InAnyHandle, Settings, FireOverlaps, TryDrawDebug, *PhysicsSystem);
-                LosClear = ck::Is_NOT_Valid(Result);
+                LosClear = Hits.IsEmpty();
                 break;
             }
         }
 
         const auto Raw = LosClear ? 1.0f : 0.0f;
-        RawValues.Add(Raw);
-        InOutDebug._PerCandidate[i]._PerTest[InTestIndex]._RawValue = Raw;
-    }
+        RawValues[InIndex] = Raw;
+        InOutDebug._PerCandidate[InIndex]._PerTest[InTestIndex]._RawValue = Raw;
+    });
+
+#if !UE_BUILD_SHIPPING
+    ck::registry_table::EndParallelRegion(RegistryHandle);
+#endif
 
     FinishTest(InTest, InOutCandidates, RawValues, InOutDebug, InTestIndex);
 }
@@ -988,16 +1019,19 @@ auto
     constexpr auto TryDrawDebug = false;
 
     auto RawValues = TArray<float>{};
-    RawValues.Reserve(InOutCandidates.Num());
+    RawValues.SetNumZeroed(InOutCandidates.Num());
 
-    for (auto i = 0; i < InOutCandidates.Num(); ++i)
+    // PARALLEL: same contract as DoRunTest_Trace — read-only Jolt casts, per-index writes.
+    const auto RegistryHandle = InAnyHandle.Get_RegistryView().Get_RegistryHandle();
+#if !UE_BUILD_SHIPPING
+    ck::registry_table::BeginParallelRegion(RegistryHandle);
+#endif
+
+    ParallelFor(InOutCandidates.Num(), [&](int32 InIndex)
     {
-        const auto& Candidate = InOutCandidates[i];
+        const auto& Candidate = InOutCandidates[InIndex];
         if (NOT Candidate.Get_Passed())
-        {
-            RawValues.Add(0.0f);
-            continue;
-        }
+        { return; }
 
         const auto& Loc = Candidate.Get_Location();
         const auto Settings = FCk_ShapeCast_Settings{Loc, Loc, Sphere, OverlapFilter};
@@ -1006,9 +1040,13 @@ auto
             InAnyHandle, Settings, FireOverlaps, TryDrawDebug, *PhysicsSystem);
 
         const auto Raw = static_cast<float>(Hits.Num());
-        RawValues.Add(Raw);
-        InOutDebug._PerCandidate[i]._PerTest[InTestIndex]._RawValue = Raw;
-    }
+        RawValues[InIndex] = Raw;
+        InOutDebug._PerCandidate[InIndex]._PerTest[InTestIndex]._RawValue = Raw;
+    });
+
+#if !UE_BUILD_SHIPPING
+    ck::registry_table::EndParallelRegion(RegistryHandle);
+#endif
 
     FinishTest(InTest, InOutCandidates, RawValues, InOutDebug, InTestIndex);
 }

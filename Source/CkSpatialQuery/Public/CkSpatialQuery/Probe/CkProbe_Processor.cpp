@@ -566,11 +566,14 @@ namespace ck_probe
     // touch in this frame's cast.
     auto
         Request_EndOverlaps_ForLostContacts(
-            FCk_Handle_Probe InCastingProbe,
+            const FCk_Handle_Probe& InCastingProbe,
             const ck::FFragment_Probe_Current& InCurrent,
             const TSet<FCk_Handle>& InContactsThisCast)
         -> void
     {
+        // Request_* utils take a mutable handle — one local copy for the loop.
+        auto CastingProbe = InCastingProbe;
+
         for (const auto& Overlap : InCurrent.Get_CurrentOverlaps())
         {
             auto OtherEntity = Overlap.Get_OtherEntity();
@@ -583,8 +586,16 @@ namespace ck_probe
             if (ck::Is_NOT_Valid(MaybeOtherProbe))
             { continue; }
 
-            UCk_Utils_Probe_UE::Request_EndOverlap(InCastingProbe, FCk_Request_Probe_EndOverlap{OtherEntity});
-            UCk_Utils_Probe_UE::Request_EndOverlap(MaybeOtherProbe, FCk_Request_Probe_EndOverlap{InCastingProbe});
+            UCk_Utils_Probe_UE::Request_EndOverlap(CastingProbe, FCk_Request_Probe_EndOverlap{OtherEntity});
+
+            // Only end the reverse direction if the other probe actually tracks us — a Silent (or
+            // filtered-out) probe never received the Begin, and an unguarded EndOverlap trips the
+            // "was NOT overlapping" error in Probe_HandleRequests. Mirrors the EndPlay path's
+            // Get_IsOverlappingWith gate and the contact-listener path's per-direction gating.
+            if (UCk_Utils_Probe_UE::Get_IsOverlappingWith(MaybeOtherProbe, InCastingProbe))
+            {
+                UCk_Utils_Probe_UE::Request_EndOverlap(MaybeOtherProbe, FCk_Request_Probe_EndOverlap{InCastingProbe});
+            }
         }
     }
 }
@@ -663,14 +674,11 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // NOTE: Signal broadcasts (Request_BeginOverlap, Request_EndOverlap, etc.) are NOT thread-safe.
-    // This processor MUST remain sequential. If parallelized, signal broadcasting must be
-    // deferred to the flush phase via deferred commands.
     FProcessor_Probe_UpdateTransform_LinearCast::
     FProcessor_Probe_UpdateTransform_LinearCast(
         const RegistryType& InRegistry,
         const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
-        : TProcessor(InRegistry)
+        : TParallelProcessor(InRegistry)
         , _PhysicsSystem(InPhysicsSystem) { }
 
     auto
@@ -678,13 +686,19 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Probe_Current& InCurrent,
+            const FFragment_Probe_Current& InCurrent,
             const FFragment_Transform_Previous& InPreviousTransform,
             const FFragment_Transform& InTransform) const
         -> void
     {
         using namespace JPH;
 
+        // WORKER THREAD: everything in this body is read-only — Jolt narrow-phase queries and
+        // the locking BodyInterface are thread-safe, and the collector performs registry READS
+        // only. Handle construction is worker-safe because the debug-mapper attach is
+        // game-thread-gated (FCk_Handle::DoUpdate_FragmentDebugInfo_Blueprints). The overlap
+        // requests + their signal broadcasts happen in the deferred command below, which the
+        // flush phase runs single-threaded.
         auto Settings = ShapeCastSettings{};
         Settings.mBackFaceModeTriangles = EBackFaceMode::CollideWithBackFaces;
         Settings.mBackFaceModeConvex = EBackFaceMode::CollideWithBackFaces;
@@ -693,6 +707,10 @@ namespace ck
         Settings.mReturnDeepestPoint = false;
 
         const auto& PhysicsSystem = _PhysicsSystem.Pin();
+
+        if (ck::Is_NOT_Valid(PhysicsSystem))
+        { return; }
+
         const auto& BodyInterface = PhysicsSystem->GetBodyInterface();
         const auto& Shape = BodyInterface.GetShape(InCurrent.Get_BodyId());
 
@@ -707,19 +725,32 @@ namespace ck
             jolt::Conv(CurrLocation) - jolt::Conv(PrevLocation)
         };
 
-        auto Collector = details::ContactCastCollector{InHandle, &BodyInterface};
+        const auto CastingProbe = UCk_Utils_Probe_UE::Cast(ck::MakeHandle(InHandle.Get_Entity(), _TransientEntity));
+
+        auto Collector = details::ContactCastCollector{CastingProbe, &BodyInterface};
 
         {
             SCOPE_CYCLE_COUNTER(STAT_CkSpatialQuery_CastShape);
             PhysicsSystem->GetNarrowPhaseQuery().CastShape(ShapeCast, Settings, Vec3::sReplicate(0.0f), Collector);
         }
 
+        // Common case (no contacts this cast, none to end) defers nothing.
+        if (Collector.Get_OverlappingProbes().IsEmpty() && InCurrent.Get_CurrentOverlaps().IsEmpty())
+        { return; }
+
+        InHandle.DeferCustom(
+            [CastingProbe,
+             Overlapping = Collector.Get_OverlappingProbes(),
+             ContactsThisCast = Collector.Get_BeginOverlaps()]
+            (FCk_Handle& /*InTransientEntity*/)
         {
             SCOPE_CYCLE_COUNTER(STAT_CkSpatialQuery_OverlapReconcile);
 
-            ck_probe::Request_BeginOrUpdateCollectedOverlaps(InHandle, Collector.Get_OverlappingProbes());
-            ck_probe::Request_EndOverlaps_ForLostContacts(InHandle, InCurrent, Collector.Get_BeginOverlaps());
-        }
+            auto Probe = CastingProbe;
+            ck_probe::Request_BeginOrUpdateCollectedOverlaps(Probe, Overlapping);
+            ck_probe::Request_EndOverlaps_ForLostContacts(
+                Probe, Probe.Get<FFragment_Probe_Current>(), ContactsThisCast);
+        });
     }
 
     // --------------------------------------------------------------------------------------------------------------------
