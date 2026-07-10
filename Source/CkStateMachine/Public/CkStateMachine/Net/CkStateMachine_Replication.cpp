@@ -13,14 +13,17 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 //
-// Replication-handler registration for CkStateMachine's two payload shapes.
+// Replication-handler registration for CkStateMachine's two payload shapes — the full receive
+// engine for non-authority machines.
 //
 // Both RepData types are container-style replicated fragments (no per-entity UObject driver),
 // attached on authority by FProcessor_Sm_Setup and replicated via FCk_RepData_Container. The
-// handlers below are STUBS that log only — the actual replay-and-commit logic lives in Phase 7's
-// ApplyReplicatedHistory processor. Registering the handlers now (Phase 5.1) means the rep
-// driver doesn't silently drop changes on the client side once Phase 5.2 starts attaching the
-// payload.
+// handlers below implement: echo suppression for the owning client (§5.5), pre-Setup stashing
+// with arrival-order preservation (§5.4), lagged-out gap recovery (§5.7), per-target dispatch of
+// root vs relayed sub-SM events, seq dedup against both the applied watermark and the queue/stash
+// contents, and run-status mirroring (deferred while replayed transitions are in flight). The
+// actual replay-and-commit happens in FProcessor_Sm_ApplyReplicatedHistory →
+// FProcessor_Sm_CommitPendingTransition.
 //
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -42,7 +45,7 @@ namespace
         if (NOT Entity.Has<ck::FFragment_Sm_Params>())
         { return false; }
 
-        const auto SmHandle = ck::StaticCast<FCk_Handle_StateMachine>(Entity);
+        const auto SmHandle = UCk_Utils_StateMachine_UE::CastChecked(Entity);
         if (UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel(SmHandle) != ECk_Sm_AuthorityModel::OwningClientAuthoritative)
         { return false; }
 
@@ -73,9 +76,11 @@ namespace
         return false;
     }
 
-    // Phase 11 — receive-side handler for the RepData's run-status. Mirror immediately when the
-    // client has FFragment_Sm_Current; otherwise stash the value alongside the events for
-    // FlushPendingReplication_Drain to apply once Setup completes. Spec §5.4 ordering preserved.
+    // Receive-side handler for the RepData's run-status. Pre-Setup arrivals stash the value
+    // alongside the events for FlushPendingReplication_Drain (spec §5.4 ordering). Post-Setup
+    // arrivals go through the defer-while-replaying wrapper: a Paused/Stopped mirror must not
+    // jump ahead of transition events from the same delta that are still queued — the commit's
+    // not-Running branch would discard them and destroy the live state entity.
     auto
     Sm_HandleRunStatus(
         FCk_Handle& Entity,
@@ -89,7 +94,7 @@ namespace
             return;
         }
 
-        ck::statemachine::MirrorRunStatus(Entity, PayloadStatus);
+        ck::statemachine::MirrorRunStatus_OrDeferWhileReplaying(Entity, PayloadStatus);
     }
 
     // Spec §5.7 lagged-out gap recovery (WithHistory).
@@ -152,8 +157,31 @@ namespace
         return TArray<FCk_Sm_TransitionEvent>{SnapEvent};
     }
 
-    // Append events to either the stash (if Sm_ShouldStash) or directly to the replay queue.
-    // Filters by ClientLastAppliedSeq so duplicate or out-of-order arrivals are deduplicated.
+    // Appends only events newer than everything InTarget already carries (and the applied
+    // watermark). The watermark alone is not enough: the replay queue drains one event per tick,
+    // so a ring re-delivery during a long drain (late joiner working through a 64-event ring)
+    // re-carries every still-queued event — without the container check each re-delivery
+    // duplicated them, replaying double Enter/Exit lifecycles. Events within one delivery are
+    // seq-ascending per target, so a single threshold computed up front covers the whole batch.
+    auto
+    Sm_AppendNewerEvents(
+        TArray<FCk_Sm_TransitionEvent>& InTarget,
+        const TArray<FCk_Sm_TransitionEvent>& InEvents,
+        int32 InLastAppliedSeq) -> void
+    {
+        const auto MinAcceptSeq = InTarget.IsEmpty()
+            ? InLastAppliedSeq
+            : FMath::Max(InLastAppliedSeq, InTarget.Last().Get_Seq());
+
+        for (const auto& Event : InEvents)
+        {
+            if (Event.Get_Seq() > MinAcceptSeq)
+            { InTarget.Add(Event); }
+        }
+    }
+
+    // Append events to either the stash (if Sm_ShouldStash) or directly to the replay queue,
+    // deduplicated via Sm_AppendNewerEvents.
     auto
     Sm_EnqueueOrStash(
         FCk_Handle& Entity,
@@ -169,20 +197,12 @@ namespace
         if (Sm_ShouldStash(Entity))
         {
             auto& Stash = Entity.AddOrGet<ck::FFragment_Sm_PendingReplicationEntries>().Get_StashedEntries();
-            for (const auto& Event : Events)
-            {
-                if (Event.Get_Seq() > LastApplied)
-                { Stash.Add(Event); }
-            }
+            Sm_AppendNewerEvents(Stash, Events, LastApplied);
             return;
         }
 
         auto& Queue = Entity.AddOrGet<ck::FFragment_Sm_ReplayQueue>().Get_Queue();
-        for (const auto& Event : Events)
-        {
-            if (Event.Get_Seq() > LastApplied)
-            { Queue.Add(Event); }
-        }
+        Sm_AppendNewerEvents(Queue, Events, LastApplied);
     }
 
     // Leg-2 receive dispatch (P4 / "A"). The root's WithHistory container can carry a MIX of root-level

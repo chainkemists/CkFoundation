@@ -153,6 +153,11 @@ namespace ck
 
         if (NOT IsRequestAuthority)
         {
+            // Every branch below drops the whole batch. Dropped requests may include Transitions
+            // whose enqueue-side added FTag_Sm_TransitionQueued — clear it up front so the
+            // evaluator isn't blocked forever.
+            InHandle.Try_Remove<FTag_Sm_TransitionQueued>();
+
             // AutoStart (FProcessor_Sm_Setup) enqueues a Start on EVERY machine, including
             // non-authority ones. On a non-authority copy of a Replicates SM that Start is
             // expected to be dropped here — the SM reaches Running via the replicated run-status
@@ -282,8 +287,18 @@ namespace ck
             const FCk_Request_Sm_Start& InRequest)
         -> void
     {
-        if (InCurrent._RunStatus == ECk_SmRunStatus::Running)
-        { return; }
+        if (InCurrent._RunStatus != ECk_SmRunStatus::Stopped)
+        {
+            // Paused is rejected too, not just Running: falling through would Add a duplicate
+            // FTag_Sm_Running (ensure) and DoEnterState would stack a fresh initial state on top
+            // of the still-alive paused current state. Resume is the way back from Paused.
+            if (InCurrent._RunStatus == ECk_SmRunStatus::Paused)
+            {
+                ck::sm::Warning(
+                    TEXT("Request_Start on [{}] while Paused — ignored. Use Request_Resume."), InHandle);
+            }
+            return;
+        }
 
         InCurrent._RunStatus = ECk_SmRunStatus::Running;
         InHandle.Add<FTag_Sm_Running>();
@@ -363,7 +378,11 @@ namespace ck
         InHandle.Try_Remove<FTag_Sm_Running>();
         InHandle.Try_Remove<FTag_Sm_Paused>();
         InHandle.Try_Remove<FTag_Sm_TransitionQueued>();
-        InHandle.Try_Remove<FFragment_Sm_PendingTransition>();
+
+        // A transition can be mid-flight (exit cascade ran, commit hasn't) — discard it here, or
+        // its kept-alive previous state leaks: HandleRequests runs before CommitPendingTransition,
+        // so the commit's own not-Running cleanup never sees the fragment once Stop removes it.
+        UCk_Utils_StateMachine_UE::Request_TryDiscardPendingTransition(InHandle);
 
         DoPublishRunStatus(InHandle, InParams, ECk_SmRunStatus::Stopped);
 
@@ -417,7 +436,13 @@ namespace ck
         -> void
     {
         if (InCurrent._RunStatus != ECk_SmRunStatus::Running)
-        { return; }
+        {
+            // The enqueue side unconditionally added FTag_Sm_TransitionQueued; a dropped request
+            // must clear it or FProcessor_SmState_Evaluate blocks forever (Pause →
+            // Request_Transition → Resume left the SM permanently unable to evaluate).
+            InHandle.Try_Remove<FTag_Sm_TransitionQueued>();
+            return;
+        }
 
         const auto PreviousStateClass  = InCurrent._CurrentStateClass;
         const auto PreviousStateHandle = InCurrent._CurrentStateHandle;
@@ -435,10 +460,20 @@ namespace ck
 
         // The actual entry happens in FProcessor_Sm_CommitPendingTransition, after the
         // exit cascade (state -> task -> transition -> condition) has fully drained.
+        //
+        // A second Request_Transition can land before the first commits (same drain batch, or an
+        // exit cascade straddling frames). Coalesce: keep the ORIGINAL previous-state stash — it
+        // holds the only reference to the kept-alive exited state (overwriting it leaked the
+        // entity and published a null PreviousStateClass) — and only retarget. The never-entered
+        // intermediate target is skipped entirely (observers see one A→C transition).
+        const auto HadPendingTransition = InHandle.Has<FFragment_Sm_PendingTransition>();
         auto& Pending = InHandle.AddOrGet<FFragment_Sm_PendingTransition>();
-        Pending._PreviousStateHandle = PreviousStateHandle;
-        Pending._PreviousStateClass  = PreviousStateClass;
-        Pending._TargetStateClass    = InRequest.Get_TargetStateClass();
+        if (NOT HadPendingTransition)
+        {
+            Pending._PreviousStateHandle = PreviousStateHandle;
+            Pending._PreviousStateClass  = PreviousStateClass;
+        }
+        Pending._TargetStateClass = InRequest.Get_TargetStateClass();
 
         InHandle.Try_Remove<FTag_Sm_TransitionQueued>();
     }
@@ -539,14 +574,9 @@ namespace ck
 
         if (InCurrent._RunStatus != ECk_SmRunStatus::Running)
         {
-            // Still tear down the deferred-alive previous state so we don't leak it when the SM
-            // stopped mid-transition.
-            if (ck::IsValid(InPending._PreviousStateHandle))
-            {
-                auto PreviousToDestroy = FCk_Handle{InPending._PreviousStateHandle};
-                UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(PreviousToDestroy);
-            }
-            InHandle.Try_Remove<FFragment_Sm_PendingTransition>();
+            // Discard rather than just remove — the deferred-alive previous state must not leak
+            // when the SM stopped mid-transition.
+            UCk_Utils_StateMachine_UE::Request_TryDiscardPendingTransition(InHandle);
             return;
         }
 
@@ -799,6 +829,19 @@ namespace ck
         }
 
         InHandle.Try_Remove<FFragment_Sm_PendingTransition>();
+
+        // Apply a parked run-status mirror once the replay pipeline is drained — preserves the
+        // authority's transitions-then-status ordering. See FFragment_Sm_DeferredRunStatusMirror
+        // for why Paused/Stopped mirrors must not jump ahead of queued replayed transitions.
+        // (The pending-transition fragment was removed just above, so in-flight here means
+        // "replay queue still holds events".)
+        if (InHandle.Has<FFragment_Sm_DeferredRunStatusMirror>()
+            && NOT UCk_Utils_StateMachine_UE::Get_HasReplayTransitionsInFlight(InHandle))
+        {
+            const auto ParkedStatus = InHandle.Get<FFragment_Sm_DeferredRunStatusMirror>().Get_Status();
+            InHandle.Remove<FFragment_Sm_DeferredRunStatusMirror>();
+            ck::statemachine::MirrorRunStatus(InHandle, ParkedStatus);
+        }
     }
 
     // ================================================================================================================
@@ -855,7 +898,10 @@ namespace ck
 
         if (HasPendingRunStatus)
         {
-            ck::statemachine::MirrorRunStatus(InHandle, PendingRunStatus);
+            // The stashed events were only MOVED to the replay queue above — they haven't
+            // committed yet. A non-Running status must therefore park until the queue drains
+            // (defer-while-replaying), or it would make the commit discard every stashed event.
+            ck::statemachine::MirrorRunStatus_OrDeferWhileReplaying(InHandle, PendingRunStatus);
         }
     }
 
@@ -894,9 +940,12 @@ namespace ck
         Pending._NewStateFingerprint = Event.Get_NewStateFingerprint();
 
         // Watermark the highest seq we've applied. The OnChange handler uses this to filter
-        // future delta payloads down to only seqs we haven't yet processed.
+        // future delta payloads down to only seqs we haven't yet processed. Max-guarded: a
+        // duplicate or out-of-order event must never move the watermark BACKWARD — a regressed
+        // watermark re-admits already-applied seqs from the next ring delivery.
         auto& ReplayState = InHandle.AddOrGet<FFragment_Sm_ClientReplayState>();
-        ReplayState.Set_ClientLastAppliedSeq(Event.Get_Seq());
+        ReplayState.Set_ClientLastAppliedSeq(
+            FMath::Max(ReplayState.Get_ClientLastAppliedSeq(), Event.Get_Seq()));
     }
 
     // ================================================================================================================
@@ -1306,7 +1355,9 @@ namespace ck
             UCk_Utils_SmState_UE::Request_Exit(InCurrent._CurrentStateHandle);
         }
 
-        InHandle.Try_Remove<FFragment_Sm_PendingTransition>();
+        // The lifetime cascade destroys the kept-alive previous state with the SM anyway; the
+        // shared discard keeps the "abandoning a mid-flight transition" contract uniform.
+        UCk_Utils_StateMachine_UE::Request_TryDiscardPendingTransition(InHandle);
 
         InCurrent._RunStatus = ECk_SmRunStatus::Stopped;
         InCurrent._CurrentStateHandle = FCk_Handle_SmState{};
