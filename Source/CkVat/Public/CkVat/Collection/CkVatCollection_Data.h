@@ -198,6 +198,17 @@ private:
               meta = (AllowPrivateAccess = true))
     FBox _AnimatedBounds = FBox(ForceInit);
 
+    // Value range of the position texels (vertex-mode offsets / bone-mode translations). Low precision
+    // stores texels normalized into this range; the material decode needs it in BOTH precisions for a
+    // uniform shader path.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Baked",
+              meta = (AllowPrivateAccess = true))
+    FVector _PositionBoundsMin = FVector::ZeroVector;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Baked",
+              meta = (AllowPrivateAccess = true))
+    FVector _PositionBoundsMax = FVector::ZeroVector;
+
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Baked",
               meta = (AllowPrivateAccess = true))
     bool _IsBaked = false;
@@ -217,10 +228,32 @@ public:
     CK_PROPERTY_GET(_BoneRotationTexture);
     CK_PROPERTY_GET(_BakedClips);
     CK_PROPERTY_GET(_AnimatedBounds);
+    CK_PROPERTY_GET(_PositionBoundsMin);
+    CK_PROPERTY_GET(_PositionBoundsMax);
     CK_PROPERTY_GET(_IsBaked);
 
 public:
     // Index into the SERIALIZED baked clip table (the runtime source of truth), or INDEX_NONE.
     auto
     Find_BakedClipIndex_ByName(FName InClipName) const -> int32;
+
+#if WITH_EDITOR
+public:
+    // The CkVatEditor baker's write-back (the ONLY sanctioned mutation path for the Baked category).
+    struct FCk_Vat_BakeResults
+    {
+        TObjectPtr<UStaticMesh> BakedMesh;
+        TObjectPtr<UTexture2D> PositionTexture;
+        TObjectPtr<UTexture2D> NormalTexture;
+        TObjectPtr<UTexture2D> BonePositionTexture;
+        TObjectPtr<UTexture2D> BoneRotationTexture;
+        TArray<FCk_Vat_BakedClip> BakedClips;
+        FBox AnimatedBounds = FBox(ForceInit);
+        FVector PositionBoundsMin = FVector::ZeroVector;
+        FVector PositionBoundsMax = FVector::ZeroVector;
+    };
+
+    auto
+    ApplyBakeResults(const FCk_Vat_BakeResults& InResults) -> void;
+#endif
 };
