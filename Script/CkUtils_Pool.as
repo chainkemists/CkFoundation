@@ -16,6 +16,12 @@ namespace utils_entity_pool
         auto Pool = InPool;
         return Pool.Request_Acquire_OnPool(InPerUseParams.InstancedStruct);
     }
+
+    FCk_Handle_PendingEntityPoolAcquire
+    Request_Acquire_WithPoolParams(FCk_Fragment_EntityPool_ParamsData InPoolParams, FAngelscriptAnyStructParameter InPerUseParams)
+    {
+        return UCk_Utils_EntityPool_UE::Request_Acquire_WithPoolParams(InPoolParams, InPerUseParams.InstancedStruct);
+    }
 }
 
 namespace utils_object_pool

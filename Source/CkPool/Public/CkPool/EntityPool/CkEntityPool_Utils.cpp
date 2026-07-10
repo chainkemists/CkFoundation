@@ -89,6 +89,28 @@ auto
 
 auto
     UCk_Utils_EntityPool_UE::
+    Request_Acquire_WithPoolParams(
+        const UObject* InWorldContextObject,
+        const FCk_Fragment_EntityPool_ParamsData& InPoolParams,
+        const FInstancedStruct& InPerUseParams)
+    -> FCk_Handle_PendingEntityPoolAcquire
+{
+    auto PoolSubsystem = DoGet_Subsystem(InWorldContextObject);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(PoolSubsystem), TEXT("EntityPool subsystem is invalid when acquiring from the Pool of [{}]"),
+        InPoolParams.Get_EntityScriptClass())
+    { return {}; }
+
+    auto Pool = PoolSubsystem->DoGetOrCreate_Pool(InPoolParams);
+
+    if (ck::Is_NOT_Valid(Pool))
+    { return {}; }
+
+    return Request_Acquire_OnPool(Pool, InPerUseParams);
+}
+
+auto
+    UCk_Utils_EntityPool_UE::
     Request_Acquire_OnPool(
         FCk_Handle_EntityPool& InPool,
         const FInstancedStruct& InPerUseParams)
@@ -346,18 +368,48 @@ auto
         const FCk_Fragment_EntityPool_ParamsData& InParams)
     -> FCk_Handle_EntityPool
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_EntityScriptClass()),
+    auto EffectiveParams = InParams;
+    const auto& Archetype = InParams.Get_EntityScriptArchetype();
+
+    if (ck::IsValid(Archetype))
+    {
+        CK_ENSURE_IF_NOT(InParams.Get_PoolName().IsValid(),
+            TEXT("EntityPool with archetype [{}] requires a _PoolName — the class-keyed default pool "
+                 "cannot distinguish two archetypes of the same class"), Archetype)
+        { return {}; }
+
+        CK_ENSURE_IF_NOT(ck::Is_NOT_Valid(InParams.Get_EntityScriptClass()) || InParams.Get_EntityScriptClass() == Archetype->GetClass(),
+            TEXT("EntityPool params declare class [{}] but the archetype [{}] is of class [{}]"),
+            InParams.Get_EntityScriptClass(), Archetype, Archetype->GetClass())
+        { return {}; }
+
+        // essentials ride the ctor — rebuild the params with the class derived from the archetype
+        EffectiveParams = FCk_Fragment_EntityPool_ParamsData{Archetype->GetClass()}
+            .Set_EntityScriptArchetype(InParams.Get_EntityScriptArchetype())
+            .Set_PoolName(InParams.Get_PoolName())
+            .Set_ConstructionSpawnParams(InParams.Get_ConstructionSpawnParams())
+            .Set_PrewarmCount(InParams.Get_PrewarmCount())
+            .Set_PrewarmBudgetPerTick(InParams.Get_PrewarmBudgetPerTick())
+            .Set_CapacityPolicy(InParams.Get_CapacityPolicy())
+            .Set_MaxSize(InParams.Get_MaxSize())
+            .Set_ExhaustionPolicy(InParams.Get_ExhaustionPolicy());
+    }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(EffectiveParams.Get_EntityScriptClass()),
         TEXT("Cannot create an EntityPool with an INVALID EntityScript class"))
     { return {}; }
 
-    const auto CDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(InParams.Get_EntityScriptClass());
+    const auto CDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(EffectiveParams.Get_EntityScriptClass());
 
-    CK_ENSURE_IF_NOT(ck::IsValid(CDO), TEXT("Could not get the CDO of EntityScript class [{}]"), InParams.Get_EntityScriptClass())
+    CK_ENSURE_IF_NOT(ck::IsValid(CDO), TEXT("Could not get the CDO of EntityScript class [{}]"), EffectiveParams.Get_EntityScriptClass())
     { return {}; }
 
-    CK_ENSURE_IF_NOT(CDO->Get_EffectiveReplication() == ECk_Replication::DoesNotReplicate,
+    // for archetype pools the replication verdict must come from the authored instance, not the CDO
+    const auto* ReplicationSource = ck::IsValid(Archetype) ? Archetype.Get() : CDO;
+
+    CK_ENSURE_IF_NOT(ReplicationSource->Get_EffectiveReplication() == ECk_Replication::DoesNotReplicate,
         TEXT("EntityPool only supports DoesNotReplicate EntityScripts (v1). [{}] declares Replicates — "
-             "pooled entities bypass the spawn path replication relies on"), InParams.Get_EntityScriptClass())
+             "pooled entities bypass the spawn path replication relies on"), EffectiveParams.Get_EntityScriptClass())
     { return {}; }
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_TransientOwner(InSubsystem);
@@ -369,12 +421,14 @@ auto
 #if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
     else
     {
-        UCk_Utils_Handle_UE::Set_DebugName(NewEntity, *ck::Format_UE(TEXT("EntityPool [{}]"), InParams.Get_EntityScriptClass()));
+        UCk_Utils_Handle_UE::Set_DebugName(NewEntity, *ck::Format_UE(TEXT("EntityPool [{}]"), EffectiveParams.Get_EntityScriptClass()));
     }
 #endif
 
-    NewEntity.Add<ck::FFragment_EntityPool_Params>(InParams);
-    NewEntity.Add<ck::FFragment_EntityPool_Current>();
+    NewEntity.Add<ck::FFragment_EntityPool_Params>(EffectiveParams);
+    auto& Current = NewEntity.Add<ck::FFragment_EntityPool_Current>();
+    // pin synchronously — the pool may grow before its Setup processor runs, and fragments are not GC-traced
+    Current._PinnedArchetype = TStrongObjectPtr<UCk_EntityScript_UE>{EffectiveParams.Get_EntityScriptArchetype().Get()};
     NewEntity.Add<ck::FTag_EntityPool_NeedsSetup>();
 
     auto NewPool = ck::StaticCast<FCk_Handle_EntityPool>(NewEntity);

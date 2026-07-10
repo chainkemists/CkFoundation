@@ -107,6 +107,19 @@ public:
         UPARAM(ref) FCk_Handle_EntityPool& InPool,
         const FInstancedStruct& InPerUseParams);
 
+    // One-shot acquire that supplies the pool's FULL configuration for the lazy-create case (prewarm,
+    // capacity, archetype, name, ...). The params are consulted ONLY if THIS call creates the pool —
+    // an existing pool (matched by name, else class) wins outright, same rule as Project Settings
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|EntityPool",
+              DisplayName="[Ck][EntityPool] Request Acquire (With Pool Params)",
+              meta = (WorldContext = "InWorldContextObject", AutoCreateRefTerm = "InPerUseParams"))
+    static FCk_Handle_PendingEntityPoolAcquire
+    Request_Acquire_WithPoolParams(
+        const UObject* InWorldContextObject,
+        const FCk_Fragment_EntityPool_ParamsData& InPoolParams,
+        const FInstancedStruct& InPerUseParams);
+
     // Return a pooled entity to its owning pool. The pool broadcasts OnReleasedToPool on the entity
     // (quiescence hook), then either re-vends it to a parked acquire or parks it dormant
     UFUNCTION(BlueprintCallable,

@@ -40,6 +40,15 @@ private:
               meta = (AllowPrivateAccess = true))
     TSubclassOf<UCk_EntityScript_UE> _EntityScriptClass;
 
+    // Optional. When set, pooled instances are constructed from THIS instance's property values instead
+    // of the class CDO (same contract as Request_SpawnEntity_Archetype — e.g. an EntityScript instance
+    // authored on disk or configured on a placed spawner). Archetype pools MUST also set _PoolName —
+    // the class-keyed default pool cannot distinguish two archetypes of the same class. _EntityScriptClass
+    // may be left unset; it is derived from the archetype at pool creation
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TObjectPtr<UCk_EntityScript_UE> _EntityScriptArchetype;
+
     // Optional. Named pools allow multiple differently-configured pools of the same EntityScript class.
     // A pool with no name is the class's DEFAULT pool (the one Request_Acquire auto-creates/targets)
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -76,6 +85,7 @@ private:
 
 public:
     CK_PROPERTY_GET(_EntityScriptClass);
+    CK_PROPERTY(_EntityScriptArchetype);
     CK_PROPERTY(_PoolName);
     CK_PROPERTY(_ConstructionSpawnParams);
     CK_PROPERTY(_PrewarmCount);

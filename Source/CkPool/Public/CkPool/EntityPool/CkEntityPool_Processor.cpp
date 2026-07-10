@@ -109,11 +109,18 @@ namespace ck
         });
 
         auto PoolCopy = InPool;
-        const auto Pending = UCk_Utils_EntityScript_UE::Add(NewEntity, InParams.Get_EntityScriptClass(), InParams.Get_ConstructionSpawnParams(),
+        const auto PostConstruction = FCk_EntityScript_PostConstruction_Func{
         [PoolCopy](FCk_Handle InConstructedEntity) mutable
         {
             UCk_Utils_EntityPool_UE::DoRequest_HandleConstructed(PoolCopy, InConstructedEntity);
-        });
+        }};
+
+        // archetype pools construct from the pinned authored instance; class pools from the CDO
+        const auto Pending = ck::IsValid(InCurrent._PinnedArchetype.Get())
+            ? UCk_Utils_EntityScript_UE::Add(NewEntity, TWeakObjectPtr<UCk_EntityScript_UE>{InCurrent._PinnedArchetype.Get()},
+                InParams.Get_ConstructionSpawnParams(), PostConstruction)
+            : UCk_Utils_EntityScript_UE::Add(NewEntity, InParams.Get_EntityScriptClass(),
+                InParams.Get_ConstructionSpawnParams(), PostConstruction);
 
         if (ck::Is_NOT_Valid(Pending))
         {

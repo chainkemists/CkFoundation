@@ -11,6 +11,8 @@
 
 #include "CkRecord/Record/CkRecord_Fragment.h"
 
+#include <UObject/StrongObjectPtr.h>
+
 #include <variant>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -177,6 +179,9 @@ namespace ck
     private:
         TArray<FCk_Handle> _DormantEntities;
         TArray<FEntityPool_PendingAcquireEntry> _PendingAcquires;
+        // GC anchor for archetype pools — fragments are not GC-traced, so the construction template
+        // must be pinned for the pool's lifetime (set synchronously at pool creation)
+        TStrongObjectPtr<UCk_EntityScript_UE> _PinnedArchetype;
         int32 _NumInUse = 0;
         int32 _NumLiveInstances = 0;
         int32 _NumSpawnsInFlight = 0;

@@ -52,7 +52,16 @@ Pools are ECS entities (`FCk_Handle_EntityPool`), keyed by `TSubclassOf<UCk_Enti
 (amortized warm-up), `_CapacityPolicy` (Unbounded/Bounded+`_MaxSize`), `_ExhaustionPolicy`
 (Grow — parks the acquire at bounded capacity; Fail — fulfills the promise with Failed).
 Auto-created pools (bare `Request_Acquire`) read the class's entry in **Project Settings → Pool**,
-else built-in defaults; an explicit `Request_CreatePool` always wins.
+else built-in defaults; an explicit `Request_CreatePool` always wins. To supply full pool config at
+the acquire site instead, use `Request_Acquire_WithPoolParams` — its params are consulted only if
+that call creates the pool (an existing pool wins, same rule as settings).
+
+**Archetype pools** (`_EntityScriptArchetype`): when set, instances construct from THAT instance's
+property values instead of the class CDO — the pooling twin of `Request_SpawnEntity_Archetype`
+(e.g. an EntityScript instance authored on disk or configured on a placed spawner). Archetype pools
+MUST be named (`_PoolName`) — the class-keyed default pool cannot distinguish two archetypes of the
+same class; `_EntityScriptClass` may be left unset (derived from the archetype). The pool pins the
+archetype with a `TStrongObjectPtr` for its lifetime (fragments are not GC-traced).
 
 **Quiescence is the pooled script's job.** On release: deactivate visuals/audio, cancel per-use
 timers, unbind per-use signals. The pool never touches feature state.
