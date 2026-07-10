@@ -213,6 +213,7 @@ auto
         .Set_NumLiveInstances(Current.Get_NumLiveInstances())
         .Set_NumSpawnsInFlight(Current.Get_NumSpawnsInFlight())
         .Set_NumPendingAcquires(Current.Get_PendingAcquires().Num())
+        .Set_NumPrewarmRemaining(Current.Get_NumPrewarmRemaining())
         .Set_HighWaterMark(Current.Get_HighWaterMark())
         .Set_NumHits(Current.Get_NumHits())
         .Set_NumMisses(Current.Get_NumMisses());

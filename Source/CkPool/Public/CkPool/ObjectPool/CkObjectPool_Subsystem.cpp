@@ -175,9 +175,10 @@ auto
         if (ck::Is_NOT_Valid(AcquiredObject, ck::IsValid_Policy_NullptrOnly{}))
         { return {}; }
 
-        // batch growth: queue (GrowBatchCount - 1) EXTRA instances through the amortized prewarm
-        // tick — never synchronously in the acquire call; clamped to capacity
-        if (const auto ExtraGrow = Pool->_Params.Get_GrowBatchCount() - 1;
+        // batch growth: TOP UP the queued extras to (GrowBatchCount - 1) through the amortized
+        // prewarm tick — never synchronously in the acquire call, and a burst of misses provisions
+        // ONE batch (top-up, not add-per-miss); clamped to capacity
+        if (const auto ExtraGrow = Pool->_Params.Get_GrowBatchCount() - 1 - Pool->_NumPrewarmRemaining;
             ExtraGrow > 0)
         {
             auto AllowedExtra = ExtraGrow;

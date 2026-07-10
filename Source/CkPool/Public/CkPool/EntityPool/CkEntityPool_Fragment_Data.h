@@ -83,10 +83,10 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_Pool_ExhaustionPolicy _ExhaustionPolicy = ECk_Pool_ExhaustionPolicy::Grow;
 
-    // How many instances a growth event provisions: 1 = demand-exact (default). Higher values spawn
-    // (GrowBatchCount - 1) EXTRA dormant instances per miss, amortized through the prewarm budget
-    // (_PrewarmBudgetPerTick) so a batch never hitches the frame — subsequent misses become hits.
-    // Always clamped to Bounded capacity
+    // How many instances a growth event provisions: 1 = demand-exact (default). Higher values TOP UP
+    // the queued extras to (GrowBatchCount - 1) dormant instances, amortized through the prewarm budget
+    // (_PrewarmBudgetPerTick) so a batch never hitches the frame — subsequent misses become hits, and a
+    // burst of N misses provisions ONE batch, not N. Always clamped to Bounded capacity
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = "1", EditCondition = "_ExhaustionPolicy == ECk_Pool_ExhaustionPolicy::Grow"))
     int32 _GrowBatchCount = 1;
@@ -163,6 +163,9 @@ private:
     int32 _NumPendingAcquires = 0;
 
     UPROPERTY(Transient, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    int32 _NumPrewarmRemaining = 0;
+
+    UPROPERTY(Transient, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     int32 _HighWaterMark = 0;
 
     UPROPERTY(Transient, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
@@ -177,6 +180,7 @@ public:
     CK_PROPERTY(_NumLiveInstances);
     CK_PROPERTY(_NumSpawnsInFlight);
     CK_PROPERTY(_NumPendingAcquires);
+    CK_PROPERTY(_NumPrewarmRemaining);
     CK_PROPERTY(_HighWaterMark);
     CK_PROPERTY(_NumHits);
     CK_PROPERTY(_NumMisses);

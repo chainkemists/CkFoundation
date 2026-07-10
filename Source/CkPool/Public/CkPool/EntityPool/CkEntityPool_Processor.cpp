@@ -204,9 +204,10 @@ namespace ck
                 {
                     FProcessor_EntityPool_Prewarm::DoInitiate_InstanceSpawn(InPool, InParams, InCurrent);
 
-                    // batch growth: provision (GrowBatchCount - 1) EXTRA dormant instances through the
-                    // prewarm budget — amortized across ticks, never hitching the frame; clamped to capacity
-                    if (const auto ExtraGrow = InParams.Get_GrowBatchCount() - 1;
+                    // batch growth: TOP UP the queued extras to (GrowBatchCount - 1), amortized through the
+                    // prewarm budget — never hitching the frame. Top-up (not add-per-miss) so a burst of N
+                    // simultaneous misses provisions ONE batch of extras, not N of them; clamped to capacity
+                    if (const auto ExtraGrow = InParams.Get_GrowBatchCount() - 1 - InCurrent._NumPrewarmRemaining;
                         ExtraGrow > 0)
                     {
                         auto AllowedExtra = ExtraGrow;

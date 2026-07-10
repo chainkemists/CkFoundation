@@ -48,9 +48,10 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_Pool_ExhaustionPolicy _ExhaustionPolicy = ECk_Pool_ExhaustionPolicy::Grow;
 
-    // How many instances a growth event provisions: 1 = demand-exact (default). Higher values queue
-    // (GrowBatchCount - 1) EXTRA instances through the amortized prewarm tick so subsequent misses
-    // become hits without a synchronous spawn. Always clamped to Bounded capacity
+    // How many instances a growth event provisions: 1 = demand-exact (default). Higher values TOP UP
+    // the queued extras to (GrowBatchCount - 1) through the amortized prewarm tick so subsequent misses
+    // become hits without a synchronous spawn (a burst of misses provisions ONE batch, not one per miss).
+    // Always clamped to Bounded capacity
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = "1", EditCondition = "_ExhaustionPolicy == ECk_Pool_ExhaustionPolicy::Grow"))
     int32 _GrowBatchCount = 1;
