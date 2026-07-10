@@ -467,6 +467,26 @@ float
     return _Members[InIndex].Inst.UserData[InFloatIndex - 2];
 }
 
+auto
+    ACk_Iskm_BatchedCrowd_Actor::
+    TryGet_MemberSocketTransform(int32 InIndex, FName InSocket, FTransform& OutWorld) const
+    -> bool
+{
+    if (_Members.IsValidIndex(InIndex) == false || _Collection == nullptr)
+    { return false; }
+    const FCk_Iskm_BakedPose* Baked = _Collection->Get_BakedPose();
+    if (Baked == nullptr)
+    { return false; }
+    const FCk_Iskm_BakedSocket* Socket = Baked->Find_Socket(InSocket);
+    if (Socket == nullptr || Socket->FrameTransforms.Num() == 0)
+    { return false; }
+
+    const FMember& M = _Members[InIndex];
+    const int32 Frame = FMath::Clamp(M.Inst.CurFrame, 0, Socket->FrameTransforms.Num() - 1);
+    OutWorld = static_cast<FTransform>(Socket->FrameTransforms[Frame]) * M.WorldXf;
+    return true;
+}
+
 void
     ACk_Iskm_BatchedCrowd_Actor::
     Set_MemberVisible(int32 InIndex, bool InVisible)

@@ -45,3 +45,14 @@ auto
 {
     return Sequences.IsValidIndex(InSequenceIndex) ? Sequences[InSequenceIndex].SampleFrequency : 30;
 }
+
+auto
+    FCk_Iskm_BakedPose::
+    Find_Socket(FName InName) const
+    -> const FCk_Iskm_BakedSocket*
+{
+    return Sockets.FindByPredicate([&](const FCk_Iskm_BakedSocket& S)
+    {
+        return S.Name == InName;
+    });
+}

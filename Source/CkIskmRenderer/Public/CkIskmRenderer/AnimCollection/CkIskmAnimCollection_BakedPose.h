@@ -36,6 +36,18 @@ struct FCk_Iskm_BakedSequence
     TWeakObjectPtr<UAnimSequenceBase> Sequence;
 };
 
+// Per-frame component-space transforms for one baked socket (inc-4 far cosmetics).
+struct FCk_Iskm_BakedSocket
+{
+    FName Name;
+    // Skeleton-bone index the socket rides (unresolvable entries are skipped at bake, never stored).
+    int32 BoneIndex = INDEX_NONE;
+    // Socket local offset relative to its bone (identity when Name resolved to a bare bone).
+    FTransform3f LocalOffset = FTransform3f::Identity;
+    // [TotalFrameCount] component-space socket transform per baked frame (frame 0 = reference pose).
+    TArray<FTransform3f> FrameTransforms;
+};
+
 // Full CPU bake for one AnimCollection.
 struct FCk_Iskm_BakedPose
 {
@@ -68,6 +80,9 @@ struct FCk_Iskm_BakedPose
     // per-sequence offset table, parallel to the asset's _Sequences array.
     TArray<FCk_Iskm_BakedSequence> Sequences;
 
+    // Baked socket table (inc-4 far cosmetics) — one entry per resolvable _BakedSockets name.
+    TArray<FCk_Iskm_BakedSocket> Sockets;
+
     bool IsBaked = false;
 
     FORCEINLINE int32 Get_MatrixCount() const { return Matrices.Num(); }
@@ -84,4 +99,7 @@ struct FCk_Iskm_BakedPose
 
     auto
     Get_SequenceSampleFrequency(int32 InSequenceIndex) const -> int32;
+
+    auto
+    Find_Socket(FName InName) const -> const FCk_Iskm_BakedSocket*;
 };
