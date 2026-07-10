@@ -179,10 +179,24 @@ auto
 
         const FString ChildName = GetTimerName(TimerNames, ChildIndex);
 
-        if (IsFrameWrapper(ChildName) && Depth < 5)
+        // Unnamed timers (no entry in the trace's timer table) behave like frame
+        // wrappers: drill through so real work (UWorld_Tick, Slate) surfaces as
+        // roots instead of an opaque UNKNOWN_<id> node covering the whole frame.
+        const bool IsUnnamed = ChildName.StartsWith(TEXT("UNKNOWN_"));
+
+        if ((IsFrameWrapper(ChildName) || IsUnnamed) && Depth < 5)
         {
             // Drill deeper through wrapper
             TMap<uint32, double> Deeper = UnwrapRoots(ChildIndex, Result, TimerNames, Depth + 1);
+
+            if (Deeper.Num() == 0 && IsUnnamed)
+            {
+                // Unnamed LEAF — keep it rather than silently dropping its time
+                double& Existing = Roots.FindOrAdd(ChildIndex, 0.0);
+                Existing += ChildInclSec;
+                continue;
+            }
+
             for (const auto& [K, V] : Deeper)
             {
                 double& Existing = Roots.FindOrAdd(K, 0.0);
@@ -572,15 +586,200 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+// Structured Hot Path Tree
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_FrameReport::
+    DoBuildTreeNode(uint32 TimerIndex, int32 Depth,
+                    double InclMs, double ExclMs, uint32 Count,
+                    const FCk_FrameAnalysisResult& Result,
+                    const FTimerNameMap& TimerNames,
+                    TSet<uint32>& ShownTimers,
+                    const TArray<FString>* PreBreadcrumbs) const
+    -> TSharedPtr<FCk_HotPathNode>
+{
+    // Collapse wrapper chain for this node
+    FCollapsedTimer Collapsed = CollapseWrappers(
+        TimerIndex, InclMs, ExclMs, Count, Result, TimerNames);
+
+    // If already shown by a sibling's subtree, skip (prevents infinite recursion)
+    if (ShownTimers.Contains(Collapsed.TimerIndex))
+    {
+        return nullptr;
+    }
+    ShownTimers.Add(Collapsed.TimerIndex);
+
+    // Merge breadcrumbs from parent-level pre-collapse
+    TArray<FString> AllBreadcrumbs;
+    if (PreBreadcrumbs)
+    {
+        AllBreadcrumbs = *PreBreadcrumbs;
+    }
+    AllBreadcrumbs.Append(Collapsed.Breadcrumbs);
+
+    auto Node = MakeShared<FCk_HotPathNode>();
+    Node->RawName = GetTimerName(TimerNames, Collapsed.TimerIndex);
+    Node->DisplayName = FCk_TimerCategorizer::SimplifyName(Node->RawName);
+    Node->Breadcrumbs = MoveTemp(AllBreadcrumbs);
+    Node->InclusiveMs = Collapsed.InclusiveMs;
+    Node->ExclusiveMs = Collapsed.ExclusiveMs;
+    Node->Count = Collapsed.Count;
+
+    if (Depth >= _Config.MaxTreeDepth)
+    {
+        return Node;
+    }
+
+    // Get children with adaptive threshold (3% of parent, min 0.3ms)
+    const double MinChildMs = FMath::Max(0.3, Collapsed.InclusiveMs * 0.03);
+    TArray<FChildInfo> Children = GetSignificantChildren(
+        Collapsed.TimerIndex, Result, MinChildMs);
+
+    // Pre-collapse each child and deduplicate by collapsed timer_id
+    struct FDedupedChild
+    {
+        uint32 TimerIndex;
+        double InclusiveMs;
+        double ExclusiveMs;
+        uint32 Count;
+        TArray<FString> Breadcrumbs;
+    };
+    TMap<uint32, FDedupedChild> Seen;
+
+    for (const FChildInfo& Child : Children)
+    {
+        FCollapsedTimer CC = CollapseWrappers(
+            Child.TimerIndex, Child.InclusiveMs, Child.ExclusiveMs, Child.Count,
+            Result, TimerNames);
+
+        // Use global stats for display consistency
+        const double GlobalIncl = FMath::Min(
+            Result.GetInclusiveMs(CC.TimerIndex), Collapsed.InclusiveMs);
+        const double GlobalExcl = Result.GetExclusiveMs(CC.TimerIndex);
+        const uint32 GlobalCount = Result.GetCount(CC.TimerIndex);
+
+        const auto Existing = Seen.Find(CC.TimerIndex);
+        if (NOT Existing || GlobalIncl > Existing->InclusiveMs)
+        {
+            Seen.FindOrAdd(CC.TimerIndex) = FDedupedChild{
+                CC.TimerIndex, GlobalIncl, GlobalExcl, GlobalCount, MoveTemp(CC.Breadcrumbs)
+            };
+        }
+    }
+
+    // Sort deduped children by inclusive time, filter self-references, cap at 8
+    TArray<FDedupedChild> Deduped;
+    for (auto& [Key, Val] : Seen)
+    {
+        Deduped.Add(MoveTemp(Val));
+    }
+    ck::algo::Sort(Deduped, [](const FDedupedChild& A, const FDedupedChild& B)
+    {
+        return A.InclusiveMs > B.InclusiveMs;
+    });
+
+    TArray<FDedupedChild> Visible;
+    for (int32 i = 0; i < Deduped.Num() && Visible.Num() < 8; ++i)
+    {
+        if (Deduped[i].TimerIndex == Collapsed.TimerIndex) continue;
+        Visible.Add(MoveTemp(Deduped[i]));
+    }
+
+    for (FDedupedChild& Child : Visible)
+    {
+        TSharedPtr<FCk_HotPathNode> ChildNode = DoBuildTreeNode(
+            Child.TimerIndex, Depth + 1,
+            Child.InclusiveMs, Child.ExclusiveMs, Child.Count,
+            Result, TimerNames, ShownTimers,
+            &Child.Breadcrumbs);
+
+        if (ChildNode.IsValid())
+        {
+            Node->Children.Add(MoveTemp(ChildNode));
+        }
+    }
+
+    return Node;
+}
+
+auto
+    FCk_FrameReport::
+    BuildHotPathTree(const FCk_TraceSession& Session,
+                     const FCk_FrameAnalysisResult& Result) const
+    -> TArray<TSharedPtr<FCk_HotPathNode>>
+{
+    TArray<TSharedPtr<FCk_HotPathNode>> Roots;
+
+    if (NOT Result.IsValid() ||
+        Result.FrameRootTimerIndex == static_cast<uint32>(INDEX_NONE))
+    {
+        return Roots;
+    }
+
+    TraceServices::FAnalysisSessionReadScope ReadScope = Session.CreateReadScope();
+    const FTimerNameMap TimerNames = BuildTimerNameMap(Session);
+
+    TMap<uint32, double> RootChildren = UnwrapRoots(
+        Result.FrameRootTimerIndex, Result, TimerNames);
+
+    struct FRootEntry
+    {
+        uint32 TimerIndex;
+        double InclusiveMs;
+        double ExclusiveMs;
+        uint32 Count;
+    };
+    TArray<FRootEntry> RootList;
+
+    for (const auto& [TimerIndex, InclSeconds] : RootChildren)
+    {
+        const double InclMs = InclSeconds * 1000.0;
+        if (InclMs >= _Config.MinInclusiveMs)
+        {
+            RootList.Add(FRootEntry{
+                TimerIndex,
+                InclMs,
+                Result.GetExclusiveMs(TimerIndex),
+                Result.GetCount(TimerIndex)
+            });
+        }
+    }
+
+    ck::algo::Sort(RootList, [](const FRootEntry& A, const FRootEntry& B)
+    {
+        return A.InclusiveMs > B.InclusiveMs;
+    });
+
+    const int32 MaxRoots = FMath::Min(RootList.Num(), _Config.MaxRootTimers);
+    for (int32 i = 0; i < MaxRoots; ++i)
+    {
+        const FRootEntry& Root = RootList[i];
+        TSet<uint32> ShownTimers; // per-root dedup, same as the markdown tree
+
+        TSharedPtr<FCk_HotPathNode> Node = DoBuildTreeNode(
+            Root.TimerIndex, 0,
+            Root.InclusiveMs, Root.ExclusiveMs, Root.Count,
+            Result, TimerNames, ShownTimers);
+
+        if (Node.IsValid())
+        {
+            Roots.Add(MoveTemp(Node));
+        }
+    }
+
+    return Roots;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 // Category Summary
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_FrameReport::
-    GenerateCategorySummary(const FCk_FrameAnalysisResult& Result,
-                           const FTimerNameMap& TimerNames,
-                           TArray<FString>& Lines) const
-    -> void
+    ComputeCategorySummary(const FCk_FrameAnalysisResult& Result,
+                           const FTimerNameMap& TimerNames) const
+    -> TArray<FCk_CategorySummaryEntry>
 {
     // Accumulate exclusive time per category
     TMap<FString, double> CategoryExclMs;
@@ -597,45 +796,90 @@ auto
         Total += ExclMs;
     }
 
-    // Sort: known categories by exclusive time, then "Other" at end
-    struct FCatEntry
-    {
-        FString Name;
-        double ExclMs;
-        int32 Priority;
-    };
-    TArray<FCatEntry> SortedCats;
+    const double FrameMs = Result.FrameDurationMs;
 
+    TArray<FCk_CategorySummaryEntry> Entries;
     for (const auto& [CatName, ExclMs] : CategoryExclMs)
     {
         if (ExclMs >= _Config.MinCategoryMs)
         {
-            SortedCats.Add(FCatEntry{
-                CatName, ExclMs, _Categorizer.GetCategoryPriority(CatName)
+            Entries.Add(FCk_CategorySummaryEntry{
+                CatName, ExclMs,
+                (FrameMs > 0.0) ? (ExclMs / FrameMs) * 100.0 : 0.0
             });
         }
     }
 
     // Sort by exclusive time descending (matching Python behavior)
-    ck::algo::Sort(SortedCats, [](const FCatEntry& A, const FCatEntry& B)
+    ck::algo::Sort(Entries, [](const FCk_CategorySummaryEntry& A, const FCk_CategorySummaryEntry& B)
     {
-        return A.ExclMs > B.ExclMs;
+        return A.ExclusiveMs > B.ExclusiveMs;
     });
+
+    return Entries;
+}
+
+auto
+    FCk_FrameReport::
+    ComputeTopTimers(const FCk_FrameAnalysisResult& Result,
+                     const FTimerNameMap& TimerNames,
+                     int32 MaxCount) const
+    -> TArray<FCk_TopTimerEntry>
+{
+    TArray<TPair<uint32, double>> Sorted;
+    for (const auto& [TimerIndex, ExclSec] : Result.TimerExclusive)
+    {
+        Sorted.Emplace(TimerIndex, ExclSec * 1000.0);
+    }
+    ck::algo::Sort(Sorted, [](const TPair<uint32, double>& A, const TPair<uint32, double>& B)
+    {
+        return A.Value > B.Value;
+    });
+
+    const double FrameMs = Result.FrameDurationMs;
+    const int32 Count = FMath::Min(Sorted.Num(), MaxCount);
+
+    TArray<FCk_TopTimerEntry> Entries;
+    Entries.Reserve(Count);
+
+    for (int32 i = 0; i < Count; ++i)
+    {
+        const uint32 TimerIndex = Sorted[i].Key;
+        const double ExclMs = Sorted[i].Value;
+
+        Entries.Add(FCk_TopTimerEntry{
+            FCk_TimerCategorizer::SimplifyName(GetTimerName(TimerNames, TimerIndex)),
+            ExclMs,
+            Result.GetInclusiveMs(TimerIndex),
+            Result.GetCount(TimerIndex),
+            (FrameMs > 0.0) ? (ExclMs / FrameMs) * 100.0 : 0.0
+        });
+    }
+
+    return Entries;
+}
+
+auto
+    FCk_FrameReport::
+    GenerateCategorySummary(const FCk_FrameAnalysisResult& Result,
+                           const FTimerNameMap& TimerNames,
+                           TArray<FString>& Lines) const
+    -> void
+{
+    const TArray<FCk_CategorySummaryEntry> SortedCats = ComputeCategorySummary(Result, TimerNames);
 
     if (SortedCats.Num() == 0) return;
 
     Lines.Add(FString::Printf(TEXT("\n%s"), *ck_frame_report::HRule));
     Lines.Add(TEXT("*Category Summary (exclusive time)*\n"));
 
-    const double FrameMs = Result.FrameDurationMs;
-    for (const FCatEntry& Cat : SortedCats)
+    for (const FCk_CategorySummaryEntry& Cat : SortedCats)
     {
-        const double Pct = (FrameMs > 0.0) ? (Cat.ExclMs / FrameMs) * 100.0 : 0.0;
-        const FString Icon = FCk_TimerCategorizer::SeverityIcon(Cat.ExclMs);
-        const FString FormattedMs = FCk_TimerCategorizer::FormatMs(Cat.ExclMs);
+        const FString Icon = FCk_TimerCategorizer::SeverityIcon(Cat.ExclusiveMs);
+        const FString FormattedMs = FCk_TimerCategorizer::FormatMs(Cat.ExclusiveMs);
 
         Lines.Add(FString::Printf(TEXT("%s *%8s*  %4.0f%%  %s"),
-            *Icon, *FormattedMs, Pct, *Cat.Name));
+            *Icon, *FormattedMs, Cat.PctOfFrame, *Cat.Name));
     }
 }
 

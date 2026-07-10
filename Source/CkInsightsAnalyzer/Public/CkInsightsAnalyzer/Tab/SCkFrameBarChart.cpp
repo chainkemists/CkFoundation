@@ -3,6 +3,8 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "CkEditorTools/Style/CkStyle.h"
+
 #include "Fonts/SlateFontInfo.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Rendering/DrawElements.h"
@@ -26,17 +28,20 @@ namespace FrameBarChart
     // Fixed vertical ceiling — ensures threshold lines are always visible
     constexpr double MinDisplayMaxMs = 120.0;
 
-    const FLinearColor ColorGreen  = FLinearColor(0.2f, 0.8f, 0.2f, 0.9f);
-    const FLinearColor ColorYellow = FLinearColor(0.9f, 0.8f, 0.1f, 0.9f);
-    const FLinearColor ColorRed    = FLinearColor(0.9f, 0.15f, 0.15f, 0.9f);
-    const FLinearColor ColorHover  = FLinearColor(1.0f, 1.0f, 1.0f, 0.3f);
-    const FLinearColor ColorSelect = FLinearColor(0.3f, 0.5f, 1.0f, 0.25f);
-    const FLinearColor ColorThresholdGreen  = FLinearColor(0.2f, 0.6f, 0.2f, 0.4f);
-    const FLinearColor ColorThresholdYellow = FLinearColor(0.7f, 0.6f, 0.1f, 0.4f);
-    const FLinearColor ColorThresholdOrange = FLinearColor(0.8f, 0.5f, 0.1f, 0.4f);
-    const FLinearColor ColorThresholdRed    = FLinearColor(0.7f, 0.2f, 0.2f, 0.4f);
-    const FLinearColor ColorLabel  = FLinearColor(0.6f, 0.6f, 0.6f, 0.7f);
-    const FLinearColor ColorBackground = FLinearColor(0.02f, 0.02f, 0.02f, 1.0f);
+    // Style-token-backed colors, resolved lazily at paint time — CkStyle reads
+    // a settings CDO, so these must never be evaluated at static init.
+    auto ColorGreen()  -> FLinearColor { return CkStyle::OverlayOf(CkStyle::Ok(), 0.9f); }
+    auto ColorYellow() -> FLinearColor { return CkStyle::OverlayOf(CkStyle::Warn(), 0.9f); }
+    auto ColorRed()    -> FLinearColor { return CkStyle::OverlayOf(CkStyle::Err(), 0.9f); }
+    auto ColorHover()  -> FLinearColor { return CkStyle::OverlayOf(CkStyle::TextStrong(), 0.3f); }
+    auto ColorSelect() -> FLinearColor { return CkStyle::OverlayOf(CkStyle::Selection(), 0.25f); }
+    auto ColorThresholdGreen()  -> FLinearColor { return CkStyle::OverlayOf(CkStyle::Ok(), 0.4f); }
+    auto ColorThresholdYellow() -> FLinearColor { return CkStyle::OverlayOf(CkStyle::Warn(), 0.4f); }
+    auto ColorThresholdOrange() -> FLinearColor { return CkStyle::OverlayOf(FMath::Lerp(CkStyle::Warn(), CkStyle::Err(), 0.5f), 0.4f); }
+    auto ColorThresholdRed()    -> FLinearColor { return CkStyle::OverlayOf(CkStyle::Err(), 0.4f); }
+    auto ColorLabel()      -> FLinearColor { return CkStyle::OverlayOf(CkStyle::TextDim(), 0.7f); }
+    auto ColorBackground() -> FLinearColor { return CkStyle::BgRoot(); }
+    auto ColorGridLine()   -> FLinearColor { return CkStyle::OverlayOf(CkStyle::BorderStrong(), 0.25f); }
 
     /** Format an integer with comma separators (e.g. 4160 → "4,160"). */
     auto FormatWithCommas(int64 Value) -> FString
@@ -275,7 +280,7 @@ auto
         AllottedGeometry.ToPaintGeometry(),
         FAppStyle::GetBrush(TEXT("WhiteBrush")),
         ESlateDrawEffect::None,
-        FrameBarChart::ColorBackground);
+        FrameBarChart::ColorBackground());
 
     // Use P95-based display max so outlier frames don't squish normal bars.
     // Bars exceeding this value clamp to full height.
@@ -308,20 +313,20 @@ auto
                     FVector2D(FrameBarChart::LabelRightMargin, 14.0f),
                     FSlateLayoutTransform(FVector2D(BarAreaRight + 4.0f, Y - 7.0f))),
                 Label, LabelFont,
-                ESlateDrawEffect::None, FrameBarChart::ColorLabel);
+                ESlateDrawEffect::None, FrameBarChart::ColorLabel());
         }
     };
 
-    DrawThresholdLine(16.67,  FrameBarChart::ColorThresholdGreen,  TEXT("16.7 ms (60 fps)"));
-    DrawThresholdLine(33.33,  FrameBarChart::ColorThresholdYellow, TEXT("33.3 ms (30 fps)"));
-    DrawThresholdLine(50.0,   FrameBarChart::ColorThresholdOrange, TEXT("50 ms (20 fps)"));
-    DrawThresholdLine(66.67,  FrameBarChart::ColorThresholdRed,    TEXT("66.7 ms (15 fps)"));
-    DrawThresholdLine(100.0,  FrameBarChart::ColorThresholdRed,    TEXT("100 ms (10 fps)"));
+    DrawThresholdLine(16.67,  FrameBarChart::ColorThresholdGreen(),  TEXT("16.7 ms (60 fps)"));
+    DrawThresholdLine(33.33,  FrameBarChart::ColorThresholdYellow(), TEXT("33.3 ms (30 fps)"));
+    DrawThresholdLine(50.0,   FrameBarChart::ColorThresholdOrange(), TEXT("50 ms (20 fps)"));
+    DrawThresholdLine(66.67,  FrameBarChart::ColorThresholdRed(),    TEXT("66.7 ms (15 fps)"));
+    DrawThresholdLine(100.0,  FrameBarChart::ColorThresholdRed(),    TEXT("100 ms (10 fps)"));
 
     // Draw frame number axis along the top with vertical grid lines
     {
         const FSlateFontInfo AxisFont = FCoreStyle::GetDefaultFontStyle("Regular", 8);
-        const FLinearColor GridLineColor = FLinearColor(0.3f, 0.3f, 0.3f, 0.2f);
+        const FLinearColor GridLineColor = FrameBarChart::ColorGridLine();
 
         // Compute nice label interval so labels don't overlap (1-2-5 sequence)
         constexpr float MinLabelSpacing = 80.0f;
@@ -367,7 +372,7 @@ auto
                 FrameBarChart::FormatWithCommas(i),
                 AxisFont,
                 ESlateDrawEffect::None,
-                FrameBarChart::ColorLabel);
+                FrameBarChart::ColorLabel());
         }
     }
 
@@ -413,7 +418,7 @@ auto
                     FVector2D(ClampedX2 - ClampedX1, Height),
                     FSlateLayoutTransform(FVector2D(ClampedX1, 0.0f))),
                 FAppStyle::GetBrush(TEXT("WhiteBrush")),
-                ESlateDrawEffect::None, FrameBarChart::ColorSelect);
+                ESlateDrawEffect::None, FrameBarChart::ColorSelect());
         }
     }
 
@@ -429,7 +434,7 @@ auto
                     FVector2D(BarW, Height),
                     FSlateLayoutTransform(FVector2D(HoverX, 0.0f))),
                 FAppStyle::GetBrush(TEXT("WhiteBrush")),
-                ESlateDrawEffect::None, FrameBarChart::ColorHover);
+                ESlateDrawEffect::None, FrameBarChart::ColorHover());
         }
     }
 
@@ -648,13 +653,13 @@ auto
 {
     if (DurationMs > _TargetFrameMs * 2.0)
     {
-        return FrameBarChart::ColorRed;
+        return FrameBarChart::ColorRed();
     }
     if (DurationMs > _TargetFrameMs)
     {
-        return FrameBarChart::ColorYellow;
+        return FrameBarChart::ColorYellow();
     }
-    return FrameBarChart::ColorGreen;
+    return FrameBarChart::ColorGreen();
 }
 
 auto
