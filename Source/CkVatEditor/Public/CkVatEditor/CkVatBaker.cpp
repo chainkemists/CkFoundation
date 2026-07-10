@@ -235,6 +235,7 @@ namespace ck_vat_baker
                     MostInfluencesSeen = FMath::Max(MostInfluencesSeen, NonZeroInfluences);
                 }
 
+
                 float TotalWeight = 0.0f;
                 const int32 Kept = FMath::Min(Influences.Num(), MaxInfluences);
                 for (int32 i = 0; i < Kept; ++i)
@@ -419,7 +420,26 @@ namespace ck_vat_baker
                     FVector2f(static_cast<float>(Sv.RenderBones[0]), static_cast<float>(Sv.RenderBones[1])));
                 UVs.Set(InstanceID, LookupCh + 1,
                     FVector2f(static_cast<float>(Sv.RenderBones[2]), static_cast<float>(Sv.RenderBones[3])));
-                Colors[InstanceID] = FVector4f(Sv.Weights[0], Sv.Weights[1], Sv.Weights[2], Sv.Weights[3]);
+
+                // The static-mesh build sRGB-ENCODES vertex-color RGB (StaticMeshBuilder.cpp
+                // ToFColor(true)) and the GPU hands the shader the raw encoded bytes — so weights
+                // are pre-DECODED here: the build's encode cancels to identity and the shader reads
+                // the true linear weight. Without this, every BLENDED weight warps upward (0.5 ->
+                // ~0.74; weight sums reach ~1.5) and multi-influence regions shred, while pure 0/1
+                // weights — fixed points of the encode — stay correct (the "feet look fine, torso
+                // explodes" signature). Alpha is not sRGB-encoded by the build (and the shader
+                // derives weight3 = 1-r-g-b anyway), so it passes through raw.
+                const auto SrgbToLinear = [](float InEncoded) -> float
+                {
+                    return InEncoded <= 0.04045f
+                        ? InEncoded / 12.92f
+                        : FMath::Pow((InEncoded + 0.055f) / 1.055f, 2.4f);
+                };
+                Colors[InstanceID] = FVector4f(
+                    SrgbToLinear(Sv.Weights[0]),
+                    SrgbToLinear(Sv.Weights[1]),
+                    SrgbToLinear(Sv.Weights[2]),
+                    Sv.Weights[3]);
             }
 
             return InstanceID;
@@ -485,6 +505,11 @@ auto
     CK_ENSURE_IF_NOT(SkeletonData.IsSet(),
         TEXT("VatBaker: collection [{}] is not bakeable (no skeleton bones, render data, or skinned bones)"), &InCollection)
     { return false; }
+
+    // NOTE (2026-07-10): a mesh-bind inverse override (GetRefBasesInvMatrix) was tried here and
+    // REVERTED — it was justified by a Live-Coding-tainted observation, and the batched Iskm
+    // renderer proves the skeleton-chain inverse is correct for this content. Do not re-add
+    // without clean-build evidence; the perf-iskm-lod merge owns the mesh-bind question.
 
     TArray<UAnimSequenceBase*> SequenceAssets;
     SequenceAssets.Reserve(InCollection.Get_Clips().Num());
@@ -694,6 +719,8 @@ auto
             FCk_Time{ck::IsValid(Seq) ? Seq->GetPlayLength() : 0.0f});
     }
 
+    Results.TextureWidth = Width;
+    Results.TextureRows = Rows;
     Results.AnimatedBounds = ck::anim_bake::ComputeAnimatedBounds(*SkeletonData, BoneBoundsAllFrames, *SourceMesh);
     Results.PositionBoundsMin = PositionBounds.Min;
     Results.PositionBoundsMax = PositionBounds.Max;
