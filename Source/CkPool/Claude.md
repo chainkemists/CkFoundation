@@ -39,7 +39,10 @@ Pools are ECS entities (`FCk_Handle_EntityPool`), keyed by `TSubclassOf<UCk_Enti
 2. `Request_Acquire(WorldCtx, Class, PerUseParams)` returns `FCk_Handle_PendingEntityPoolAcquire` —
    bind `Promise_OnAcquired` **the same frame**. Fulfillment is deferred to the pool's
    HandleRequests processor.
-3. Per-use data (`FInstancedStruct`) arrives through the acquired-entity hooks, never Construct.
+3. Per-use data (`FInstancedStruct`) arrives through the acquired-entity hooks, never Construct —
+   AND is injected into MATCHING script properties on every acquire (same injector/semantics as
+   spawn params at spawn), before the hooks fire. BeginPlay is NOT re-run on acquire (it would
+   double-bind everything bound there) — `OnAcquiredFromPool` is the pooled per-use BeginPlay.
 4. `Request_ReleaseToPool(PooledEntity)` returns the instance; the pool parks it dormant (tags:
    `FTag_EntityPool_Dormant` / `FTag_EntityPool_InUse`) or re-vends it to a parked acquire.
 5. The pool owns instance lifetime (instances are its lifetime children). Destroying an in-use

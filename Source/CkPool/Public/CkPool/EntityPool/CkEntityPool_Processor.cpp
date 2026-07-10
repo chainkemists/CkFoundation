@@ -382,10 +382,16 @@ namespace ck
         ++InCurrent._NumInUse;
         InCurrent._HighWaterMark = FMath::Max(InCurrent._HighWaterMark, InCurrent._NumInUse);
 
+        auto* ScriptInstance = ck_entity_pool_processor::TryGet_ScriptInstance(InEntity);
+
+        // pooled "respawn" semantics: per-use params stomp matching script properties on EVERY acquire —
+        // the same injector (and BP/AS/C++ semantics) the spawn path uses for spawn params — BEFORE the
+        // acquire hooks fire, so the hooks (the pooled per-use BeginPlay) read correct property values
+        UCk_Utils_EntityScript_UE::TryInjectEntityScriptSpawnParams(ScriptInstance, InPerUseParams);
+
         UUtils_Signal_OnEntityPool_EntityAcquired::Broadcast(InEntity, MakePayload(InEntity, InPerUseParams));
 
-        UCk_Utils_PoolableReceiver_UE::Broadcast_AcquiredFromPool_OnObject(
-            ck_entity_pool_processor::TryGet_ScriptInstance(InEntity), InPerUseParams);
+        UCk_Utils_PoolableReceiver_UE::Broadcast_AcquiredFromPool_OnObject(ScriptInstance, InPerUseParams);
 
         if (ck::IsValid(InTicket))
         {

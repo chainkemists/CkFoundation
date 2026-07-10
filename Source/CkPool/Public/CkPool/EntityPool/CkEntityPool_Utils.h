@@ -36,7 +36,9 @@ namespace ck
  * - Acquire is deferred: Request_Acquire returns a pending handle; bind Promise_OnAcquired IMMEDIATELY
  *   (same frame) — the promise is fulfilled by the pool's HandleRequests processor.
  * - Per-use data rides the OnAcquiredFromPool signal payload, NEVER Construct — instances Construct ONCE
- *   (at prewarm/grow) with the pool's ConstructionSpawnParams.
+ *   (at prewarm/grow) with the pool's ConstructionSpawnParams. On every acquire, per-use params are ALSO
+ *   injected into matching script properties (spawn-param semantics) before the hooks fire; BeginPlay is
+ *   NOT re-run — OnAcquiredFromPool is the per-use begin.
  * - Quiescence is the pooled script's job: on OnReleasedToPool deactivate visuals/audio, cancel per-use
  *   timers, unbind per-use signal bindings. The pool never touches feature state.
  * - Hook surfaces (both fire; pick one per script): the entity signals below (BindTo_OnAcquiredFromPool /
