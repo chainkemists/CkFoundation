@@ -88,6 +88,35 @@ namespace ck
             FFragment_Vat_Current& InCurrent,
             const FCk_Request_Vat_SetPlayRate& InRequest) -> void;
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // CPU mirror of the GPU playback clock for play-once clips: fires OnClipFinished exactly once when
+    // the clip-local time passes the baked play length. Uses absolute world time (no dt accumulation),
+    // so re-execution within a tick is idempotent. Reverse (negative-rate) once-completion is not
+    // detected — recorded follow-up.
+    class CKVAT_API FProcessor_Vat_FireSignals : public ck_exp::TProcessor<
+            FProcessor_Vat_FireSignals,
+            FCk_Handle_Vat,
+            TReadOnly<FFragment_Vat_Params>,
+            TReadWrite<FFragment_Vat_Current>,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay_Rendering;
+        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Vat_Params& InParams,
+            FFragment_Vat_Current& InCurrent) const -> void;
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
