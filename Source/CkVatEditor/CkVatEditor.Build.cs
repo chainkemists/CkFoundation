@@ -11,7 +11,12 @@ public class CkVatEditor : CkModuleRules
             "CoreUObject",
             "Engine",
             "UnrealEd",
+            "EditorSubsystem",
+            "AssetRegistry",
+            "MeshDescription",
+            "StaticMeshDescription",
 
+            "CkAnimation",
             "CkCore",
             "CkEcs",
             "CkLog",
