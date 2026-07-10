@@ -54,9 +54,17 @@ struct FCkUsf_VertexInput
 {
     float  Time;
     float2 UV;             // mesh TexCoord0
+    float2 UV1;            // mesh TexCoord1 (data channel — e.g. CkVat lookup column / bone indices 0-1)
+    float2 UV2;            // mesh TexCoord2 (data channel — e.g. CkVat bone indices 2-3)
     float3 WorldPosition;  // world-space vertex position
+    float3 LocalPosition;  // LOCAL-space vertex position (pre-skinned; for static meshes = the bind-pose position)
     float3 VertexNormal;   // world-space vertex normal
     float3 VertexColor;    // interpolated vertex color RGB / per-instance via material
+    // World-space images of the local unit axes — the per-INSTANCE local->world basis (incl. scale),
+    // for looks whose math yields a LOCAL-space offset (e.g. CkVat): world = x*AxisX + y*AxisY + z*AxisZ.
+    float3 LocalAxisX;
+    float3 LocalAxisY;
+    float3 LocalAxisZ;
 };
 
 FCkUsf_VertexInput CkUsf_DefaultVertexInput()
@@ -64,9 +72,15 @@ FCkUsf_VertexInput CkUsf_DefaultVertexInput()
     FCkUsf_VertexInput I;
     I.Time = 0.0;
     I.UV = float2(0.0, 0.0);
+    I.UV1 = float2(0.0, 0.0);
+    I.UV2 = float2(0.0, 0.0);
     I.WorldPosition = float3(0.0, 0.0, 0.0);
+    I.LocalPosition = float3(0.0, 0.0, 0.0);
     I.VertexNormal = float3(0.0, 0.0, 1.0);
     I.VertexColor = float3(1.0, 1.0, 1.0);
+    I.LocalAxisX = float3(1.0, 0.0, 0.0);
+    I.LocalAxisY = float3(0.0, 1.0, 0.0);
+    I.LocalAxisZ = float3(0.0, 0.0, 1.0);
     return I;
 }
 
