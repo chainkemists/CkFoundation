@@ -504,31 +504,27 @@ namespace ck::registry_table
         return &Slot;
     }
 
-    auto BeginParallelRegion(FCk_RegistryHandle InHandle) -> void
+    auto BeginParallelRegion([[maybe_unused]] FCk_RegistryHandle InHandle) -> void
     {
 #if !UE_BUILD_SHIPPING
         if (auto* Slot = Get_LiveSlot(InHandle))
         {
             Slot->IsInParallelRegion = true;
         }
-#else
-        (void)InHandle;
 #endif
     }
 
-    auto EndParallelRegion(FCk_RegistryHandle InHandle) -> void
+    auto EndParallelRegion([[maybe_unused]] FCk_RegistryHandle InHandle) -> void
     {
 #if !UE_BUILD_SHIPPING
         if (auto* Slot = Get_LiveSlot(InHandle))
         {
             Slot->IsInParallelRegion = false;
         }
-#else
-        (void)InHandle;
 #endif
     }
 
-    auto AssertNotInParallelRegion(FCk_RegistryHandle InHandle, const TCHAR* InOperation) -> void
+    auto AssertNotInParallelRegion([[maybe_unused]] FCk_RegistryHandle InHandle, [[maybe_unused]] const TCHAR* InOperation) -> void
     {
 #if !UE_BUILD_SHIPPING
         auto* Slot = Get_LiveSlot(InHandle);
@@ -538,10 +534,17 @@ namespace ck::registry_table
             TEXT("THREAD-SAFETY VIOLATION: [{}] called during parallel processor execution. ")
             TEXT("Use InHandle.DeferAdd<>() / DeferRemove<>() instead."), InOperation)
         { return; }
-#else
-        (void)InHandle;
-        (void)InOperation;
 #endif
+    }
+
+    auto Get_IsInParallelRegion([[maybe_unused]] FCk_RegistryHandle InHandle) -> bool
+    {
+#if !UE_BUILD_SHIPPING
+        if (const auto* Slot = Get_LiveSlot(InHandle))
+        { return Slot->IsInParallelRegion; }
+#endif
+
+        return false;
     }
 
     auto BumpDirtyMarkerVersion(FCk_RegistryHandle InHandle, uint32 InFragmentTypeHash) -> void
