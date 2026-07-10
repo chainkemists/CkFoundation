@@ -9,7 +9,6 @@
 
 #include "CkEditorTools/Style/CkStyle.h"
 
-#include <Async/Future.h>
 #include <Containers/Ticker.h>
 #include <Widgets/SCompoundWidget.h>
 #include <Widgets/SBoxPanel.h>
@@ -83,6 +82,7 @@ private:
     auto DoOnOpenTraceClicked() -> FReply;
     auto DoOnAnalyzeWorstClicked() -> FReply;
     auto DoOnCopyToClipboardClicked() -> FReply;
+    auto DoOnExportJsonClicked() -> FReply;
     auto DoOnWorstFrameClicked(uint64 FrameIndex) -> FReply;
 
     // ---- Depth Selector ----
@@ -160,16 +160,21 @@ private:
     TArray<FCk_FrameSummary> _WorstFrames;          // persists across single-frame drills
     TArray<FCk_MultiFrameStats::FCategoryStats> _CategoryAverages;
 
+    // Last analysis, retained so Export JSON can regenerate without re-analyzing
+    TOptional<FCk_FrameAnalysisResult> _LastSingleResult;
+    TOptional<FCk_MultiFrameStats> _LastMultiStats;
+
     // Side panel row containers
     TSharedPtr<SVerticalBox> _CategoryRowsBox;
     TSharedPtr<SVerticalBox> _TopTimerRowsBox;
     TSharedPtr<SVerticalBox> _WorstFrameRowsBox;
     TSharedPtr<SVerticalBox> _CategoryAvgRowsBox;
 
-    // Async loading state
+    // Async loading state. Analysis is STARTED on the game thread (trace modules
+    // like ChaosVD ensure(IsInGameThread()) in OnAnalysisBegin) and processed on
+    // TraceServices' own analysis thread; the ticker polls for completion.
     ELoadingState _LoadingState = ELoadingState::Idle;
     FTSTicker::FDelegateHandle _LoadingTickerHandle;
-    TFuture<bool> _OpenFuture;
     FString _PendingTracePath;
     TSharedPtr<FCk_TraceSession> _PendingSession;
     uint64 _TotalFrameCount = 0;

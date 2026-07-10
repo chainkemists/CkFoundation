@@ -50,10 +50,24 @@ public:
     auto PrepareAnalysisService() -> bool;
 
     /**
-     * Run analysis on a prepared service. Can be called from any thread.
-     * Must call PrepareAnalysisService() first.
+     * Run analysis on a prepared service, blocking until complete. Must call
+     * PrepareAnalysisService() first. Game-thread callers only (registered trace
+     * modules, e.g. ChaosVD, assume OnAnalysisBegin runs on the game thread) —
+     * for non-blocking UI use, prefer StartAnalysis() + IsAnalysisComplete().
      */
     auto AnalyzeFile(const FString& FilePath) -> bool;
+
+    /**
+     * Begin analysis WITHOUT blocking. MUST be called on the game thread —
+     * registered trace modules (e.g. ChaosVD) ensure(IsInGameThread()) in their
+     * OnAnalysisBegin, which fires synchronously here. The heavy processing
+     * continues on TraceServices' own analysis thread; poll IsAnalysisComplete().
+     * Providers are readable (under a read scope) while analysis is running.
+     */
+    auto StartAnalysis(const FString& FilePath) -> bool;
+
+    /** Whether analysis started via StartAnalysis() has finished. */
+    auto IsAnalysisComplete() const -> bool;
 
     /** Close the session and release all resources. */
     auto Close() -> void;
