@@ -60,13 +60,13 @@ public:
     void       Set_MemberTransform(int32 InIndex, const FTransform& InWorldTransform);
 
     // Switch a member's sequence/rate (e.g. idle -> walk when its NPC starts moving).
-    void       Set_MemberAnimation(int32 InIndex, int32 InSequenceIndex, float InRate, bool bInResetTime);
+    void       Set_MemberAnimation(int32 InIndex, int32 InSequenceIndex, float InRate, bool InResetTime);
 
     // Per-member material custom data — shader instance custom-data floats [2] and [3] (tint/variety).
     void       Set_MemberCustomData(int32 InIndex, float InA, float InB);
 
     // Hide/show a member in its batched tile (rebuilds that one tile). Hidden members leave a gap for a per-SKMC stand-in.
-    void       Set_MemberVisible(int32 InIndex, bool bInVisible);
+    void       Set_MemberVisible(int32 InIndex, bool InVisible);
 
     // Sum of each tile component's CURRENT instance count (i.e. only visible members) — drops when a member is hidden.
     int32      Get_RenderedInstanceCount() const;
@@ -80,7 +80,7 @@ private:
         FTransform WorldXf = FTransform::Identity;
         FIntPoint  Tile = FIntPoint(0, 0);
         UCk_Iskm_BatchedClusterComponent::FInstance Inst;
-        bool       bVisible = true;
+        bool       Visible = true;
     };
 
     FIntPoint TileCoordOf(const FVector& InWorldLocation) const;

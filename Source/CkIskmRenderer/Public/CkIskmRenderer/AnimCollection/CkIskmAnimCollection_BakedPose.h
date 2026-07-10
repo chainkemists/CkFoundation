@@ -46,7 +46,7 @@ struct FCk_Iskm_BakedPose
     // MVP: == FrameCountSequences (no transition / dynamic-pose region yet).
     int32 TotalFrameCount = 0;
     // MVP: always high-precision float32. (Skelot defaults to float16; HP is strictly higher quality.)
-    bool bHighPrecision = true;
+    bool HighPrecision = true;
 
     // [TotalFrameCount * RenderBoneCount], index = frame * RenderBoneCount + bone.
     TArray<FCk_Iskm_BoneMatrix3x4> Matrices;
@@ -68,34 +68,20 @@ struct FCk_Iskm_BakedPose
     // per-sequence offset table, parallel to the asset's _Sequences array.
     TArray<FCk_Iskm_BakedSequence> Sequences;
 
-    bool bIsBaked = false;
+    bool IsBaked = false;
 
     FORCEINLINE int32 Get_MatrixCount() const { return Matrices.Num(); }
 
     // Resolve a sequence-local frame to a global buffer frame index (clamped to the sequence range).
-    int32 Get_GlobalFrame(int32 InSequenceIndex, int32 InLocalFrame) const
-    {
-        if (!Sequences.IsValidIndex(InSequenceIndex)) { return 0; }
-        const FCk_Iskm_BakedSequence& Seq = Sequences[InSequenceIndex];
-        const int32 Local = FMath::Clamp(InLocalFrame, 0, FMath::Max(0, Seq.AnimationFrameCount - 1));
-        return Seq.AnimationFrameIndex + Local;
-    }
+    auto
+    Get_GlobalFrame(int32 InSequenceIndex, int32 InLocalFrame) const -> int32;
 
     // Per-instance frame advance for a LOOPING sequence: GlobalFrame = AnimationFrameIndex + (trunc(time*rate) mod count).
     // This is the CPU-side of Skelot's UpdateAnimation (LocalFrame = trunc(time*SampleFrequency)); the batched sync
     // uploads the result as the per-instance frame index. Negative wrap handled for safety.
-    int32 Get_LoopedFrameAtTime(int32 InSequenceIndex, float InTimeSeconds) const
-    {
-        if (!Sequences.IsValidIndex(InSequenceIndex)) { return 0; }
-        const FCk_Iskm_BakedSequence& Seq = Sequences[InSequenceIndex];
-        if (Seq.AnimationFrameCount <= 0) { return Seq.AnimationFrameIndex; }
-        const int32 LocalFrame = FMath::TruncToInt32(InTimeSeconds * static_cast<float>(Seq.SampleFrequency));
-        const int32 Wrapped = ((LocalFrame % Seq.AnimationFrameCount) + Seq.AnimationFrameCount) % Seq.AnimationFrameCount;
-        return Seq.AnimationFrameIndex + Wrapped;
-    }
+    auto
+    Get_LoopedFrameAtTime(int32 InSequenceIndex, float InTimeSeconds) const -> int32;
 
-    int32 Get_SequenceSampleFrequency(int32 InSequenceIndex) const
-    {
-        return Sequences.IsValidIndex(InSequenceIndex) ? Sequences[InSequenceIndex].SampleFrequency : 30;
-    }
+    auto
+    Get_SequenceSampleFrequency(int32 InSequenceIndex) const -> int32;
 };
