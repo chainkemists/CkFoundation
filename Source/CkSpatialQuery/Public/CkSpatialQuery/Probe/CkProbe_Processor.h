@@ -4,6 +4,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 
+#include "CkEcs/Processor/CkParallelProcessor.h"
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 #include "CkEcsExt/SceneNode/CkSceneNode_Fragment.h"
@@ -231,12 +232,17 @@ namespace ck
 
     class FProcessor_Probe_EnsureStaticNotMoved_DEBUG;
 
-    class CKSPATIALQUERY_API FProcessor_Probe_UpdateTransform_LinearCast : public ck_exp::TProcessor<
+    // PARALLEL: the shape-cast phase runs on worker threads (Jolt narrow-phase queries are
+    // thread-safe via the locking broadphase; the collector performs registry READS only).
+    // All resulting Begin/Update/End overlap requests are deferred to the single-threaded
+    // flush phase via DeferCustom — signal broadcasts and request-fragment mutations never
+    // happen on workers.
+    class CKSPATIALQUERY_API FProcessor_Probe_UpdateTransform_LinearCast : public TParallelProcessor<
             FProcessor_Probe_UpdateTransform_LinearCast,
             FCk_Handle_Probe,
-            ck::TReadWrite<FFragment_Probe_Current>,
-            ck::TReadOnly<FFragment_Transform_Previous>,
-            ck::TReadOnly<FFragment_Transform>,
+            TReadOnly<FFragment_Probe_Current>,
+            TReadOnly<FFragment_Transform_Previous>,
+            TReadOnly<FFragment_Transform>,
             FTag_Probe_LinearCast,
             TExclude<FTag_Probe_Disabled>,
             TExclude<FTag_Probe_NeedsSetup>,
@@ -256,7 +262,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Probe_Current& InCurrent,
+            const FFragment_Probe_Current& InCurrent,
             const FFragment_Transform_Previous& InPreviousTransform,
             const FFragment_Transform& InTransform) const -> void;
 
