@@ -20,7 +20,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmRenderer",
-        DisplayName="[Ck][IskmRenderer] Add")
+        DisplayName="[Ck][IskmRenderer] Add Feature")
     static FCk_Handle_IskmRenderer
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -34,7 +34,7 @@ public:
         UCk_IskmRenderer_Data* InRendererData);
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmRenderer",
-        DisplayName="[Ck][IskmRenderer] Has")
+        DisplayName="[Ck][IskmRenderer] Has Feature")
     static bool
     Has(const FCk_Handle& InHandle);
 

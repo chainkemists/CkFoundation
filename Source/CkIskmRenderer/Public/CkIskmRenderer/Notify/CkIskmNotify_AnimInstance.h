@@ -32,12 +32,12 @@ protected:
     // via AddDynamic on OnMontageEndedHook). This method is a plain helper that
     // OnMontageEndedHook forwards to.
     void
-    NativeOnMontageBlendingOut(class UAnimMontage* Montage, bool bInterrupted);
+    NativeOnMontageBlendingOut(class UAnimMontage* InMontage, bool InInterrupted);
 
 private:
     UPROPERTY()
     FCk_Handle_IskmProxy _OwningHandle;
 
     UFUNCTION()
-    void OnMontageEndedHook(UAnimMontage* InMontage, bool bInterrupted);
+    void OnMontageEndedHook(UAnimMontage* InMontage, bool InInterrupted);
 };

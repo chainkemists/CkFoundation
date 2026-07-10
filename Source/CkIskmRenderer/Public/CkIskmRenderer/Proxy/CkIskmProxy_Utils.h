@@ -20,7 +20,7 @@ public:
     // ---- Add / Has ----
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
-        DisplayName="[Ck][IskmProxy] Add")
+        DisplayName="[Ck][IskmProxy] Add Feature")
     static FCk_Handle_IskmProxy
     Add(
         UPARAM(ref) FCk_Handle_Transform& InHandle,
@@ -35,7 +35,7 @@ public:
         const FCk_Fragment_IskmProxy_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
-        DisplayName="[Ck][IskmProxy] Has")
+        DisplayName="[Ck][IskmProxy] Has Feature")
     static bool
     Has(const FCk_Handle& InHandle);
 
