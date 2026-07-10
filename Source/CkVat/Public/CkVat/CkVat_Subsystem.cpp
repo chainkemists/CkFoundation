@@ -60,7 +60,13 @@ auto
 
     if (BakeMode == ECk_Vat_BakeMode::Vertex)
     {
+        UTexture2D* NormalTexture = InCollection->Get_NormalTexture().Get();
+        CK_ENSURE_IF_NOT(ck::IsValid(NormalTexture),
+            TEXT("VatCollection [{}] (Vertex mode) has no normal texture — rebake with the current baker"), InCollection)
+        { return nullptr; }
+
         UCk_Utils_Usf_UE::Set_Texture(Mid, TEXT("PosVat"), PositionTexture);
+        UCk_Utils_Usf_UE::Set_Texture(Mid, TEXT("NrmVat"), NormalTexture);
         UCk_Utils_Usf_UE::Set_Scalar(Mid, TEXT("TexelCount"), static_cast<float>(PositionTexture->GetSizeX()));
     }
     else

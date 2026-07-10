@@ -34,9 +34,10 @@ uniforms, with frame interpolation and 2-state crossfade. Master materials regen
 | 8-9 | `TransStart, TransDuration` | crossfade window (world-time); `TransDuration==0` ⇒ instant |
 | 10-11 | `LoopA, LoopB` | 0 = loop, 1 = play-once-clamp |
 
-MID uniforms per collection: `BaseColorTex`, `PosVat` (or `BonePosVat`+`BoneRotVat`),
+MID uniforms per collection: `BaseColorTex`, `PosVat`+`NrmVat` (or `BonePosVat`+`BoneRotVat`),
 `SampleFrequency`, `TotalRows`, `TexelCount` (width; bone mode: bone count), `BoundsMin`,
-`BoundsMax` (FVector), `DecodeNormalized` (0 = High/raw, 1 = Low/bounds-normalized).
+`BoundsMax` (FVector), `DecodeNormalized` (0 = High/raw, 1 = Low/bounds-normalized; the normal
+texture ignores it — always `n*0.5+0.5`).
 Bone-mode weights: shader reads `VertexColor.rgb` = weights 0-2, **weight3 = saturate(1 − r−g−b)**
 (VertexInput carries only RGB).
 
@@ -56,9 +57,19 @@ Bone-mode weights: shader reads `VertexColor.rgb` = weights 0-2, **weight3 = sat
 
 ## Deferred (recorded, not silent)
 
-- **VAT normal consumption in the pixel shader** — the baker already emits `_Nrm`; consuming it
-  raises the normal-space question (world-space Normal output / tangent basis under animation).
-  VAMP ships this as an advanced feature too. Follow-up gate item; v1 lights with bind-pose normals.
+- ~~**VAT normal consumption in the pixel shader**~~ **CLOSED for Vertex mode 2026-07-10**: the
+  baker now encodes `_Nrm` in the bind-pose TANGENT frame (invariant under the instance transform),
+  the pixel entry decodes it via `In.UV1.x` + the same 12-float frame math as the WPO, and feeds
+  the Normal pin directly — no basis transform. Generator gained the opt-in `_PixelDataChannels`
+  flag (wires TexCoord1/2 into the PIXEL Custom node; other looks pay no interpolator cost).
+- **Bone-mode normals remain deferred**: rotating the bind normal by the blended quat must happen
+  in a shared frame, and the non-Nanite PS exposes NO per-instance local→world basis
+  (`MaterialTemplate.ush`: PS `TransformLocalVectorToWorld` uses the PRIMITIVE transform;
+  `InstanceId` exists only under `IS_NANITE_PASS`). Options if it's ever needed: (a) widen the
+  per-instance floats 12→16 and pack the instance rotation quat (couples transform updates to
+  custom-data writes — breaks "write on clip change only" for movers), (b) carry the local bind
+  TBN in extra mesh UV channels (+3 channels of interpolators), (c) wait for the Nanite gate where
+  the PS has InstanceId. Until then VatBone lights with bind-pose normals.
 - WPO velocity/TAA behavior (`r.Velocity.EnableVertexDeformation`) — [EDITOR-VERIFY] observation.
 
 ## Expected observations

@@ -14,6 +14,9 @@ public class CkVatEditor : CkModuleRules
             "EditorSubsystem",
             "AssetRegistry",
             "MeshDescription",
+            "PropertyEditor",
+            "Slate",
+            "SlateCore",
             "StaticMeshDescription",
 
             "CkAnimation",

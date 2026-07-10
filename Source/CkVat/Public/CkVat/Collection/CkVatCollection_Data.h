@@ -163,6 +163,17 @@ private:
               meta = (AllowPrivateAccess = true, UIMin = 1, ClampMin = 1, UIMax = 7, ClampMax = 7))
     int32 _LookupUVChannel = 1;
 
+    // Extract root motion while sampling poses: root-motion clips bake in place instead of baking
+    // their travel into the texture (the gameplay owner moves the instance).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bake",
+              meta = (AllowPrivateAccess = true))
+    bool _ExtractRootMotion = false;
+
+    // Sample the raw authored tracks, skipping skeleton retargeting (mirrors the Iskm collection toggle).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bake",
+              meta = (AllowPrivateAccess = true))
+    bool _DisableRetargeting = false;
+
     // ---- rendering (not baked — designer-set) ----
 
     // Albedo the VAT look samples with UV0 (the runtime replaces the mesh materials with the shared
@@ -182,7 +193,10 @@ private:
               meta = (AllowPrivateAccess = true))
     TObjectPtr<UTexture2D> _PositionTexture;
 
-    // Vertex mode: playback-corrected normals, one row per frame.
+    // Vertex mode: skinned normals in each vertex's BIND-POSE TANGENT frame, one row per frame.
+    // Tangent-space is deliberate: it is invariant under the per-instance transform (the TBN
+    // co-rotates), so the pixel shader feeds the material's tangent-space Normal pin directly —
+    // no per-instance basis exists in the PS (only IS_NANITE_PASS exposes InstanceId there).
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Baked",
               meta = (AllowPrivateAccess = true))
     TObjectPtr<UTexture2D> _NormalTexture;
@@ -221,6 +235,13 @@ private:
               meta = (AllowPrivateAccess = true))
     bool _IsBaked = false;
 
+    // Digest of the bake INPUTS captured when the bake ran — Get_IsBakeStale compares it against the
+    // current inputs so edits after a bake surface loudly (details-panel Rebake + IsDataValid error)
+    // instead of silently playing stale textures.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Baked",
+              meta = (AllowPrivateAccess = true))
+    FString _BakedInputsHash;
+
 public:
     CK_PROPERTY_GET(_Skeleton);
     CK_PROPERTY_GET(_SourceMesh);
@@ -229,6 +250,8 @@ public:
     CK_PROPERTY_GET(_BakeMode);
     CK_PROPERTY_GET(_Precision);
     CK_PROPERTY_GET(_LookupUVChannel);
+    CK_PROPERTY_GET(_ExtractRootMotion);
+    CK_PROPERTY_GET(_DisableRetargeting);
     CK_PROPERTY_GET(_BaseColorTexture);
     CK_PROPERTY_GET(_BakedMesh);
     CK_PROPERTY_GET(_PositionTexture);
@@ -240,6 +263,7 @@ public:
     CK_PROPERTY_GET(_PositionBoundsMin);
     CK_PROPERTY_GET(_PositionBoundsMax);
     CK_PROPERTY_GET(_IsBaked);
+    CK_PROPERTY_GET(_BakedInputsHash);
 
 public:
     // Index into the SERIALIZED baked clip table (the runtime source of truth), or INDEX_NONE.
@@ -248,6 +272,16 @@ public:
 
 #if WITH_EDITOR
 public:
+    // Digest of the CURRENT bake inputs (skeleton/mesh/clips/sampling settings). ApplyBakeResults
+    // stamps it into _BakedInputsHash; a mismatch afterwards means the serialized bake no longer
+    // matches what the inputs would produce.
+    auto
+    Compute_BakeInputsHash() const -> FString;
+
+    // True when the collection is baked but its inputs changed since — the bake outputs are stale.
+    auto
+    Get_IsBakeStale() const -> bool;
+
     // The CkVatEditor baker's write-back (the ONLY sanctioned mutation path for the Baked category).
     struct FCk_Vat_BakeResults
     {

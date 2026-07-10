@@ -417,6 +417,8 @@ auto
 
     // ---- shared sampling core (Gate 0) ----
     FCk_AnimBake_SampleParams SampleParams;
+    SampleParams.bExtractRootMotion = InCollection.Get_ExtractRootMotion();
+    SampleParams.bDisableRetargeting = InCollection.Get_DisableRetargeting();
     const auto SkeletonData = ck::anim_bake::BuildSkeletonData(*Skeleton, *SourceMesh, SampleParams);
     CK_ENSURE_IF_NOT(SkeletonData.IsSet(),
         TEXT("VatBaker: collection [{}] is not bakeable (no skeleton bones, render data, or skinned bones)"), &InCollection)
@@ -514,7 +516,22 @@ auto
                 PositionBounds += FVector(Offset);
                 PositionPlane.Texels[InGlobalFrame * Width + V] = FVector4f(Offset.X, Offset.Y, Offset.Z, 1.0f);
 
-                const FVector3f N = SkinnedNormal.GetSafeNormal() * 0.5f + FVector3f(0.5f, 0.5f, 0.5f);
+                // Encode the skinned normal in the BIND-POSE TANGENT frame: tangent-space is invariant
+                // under the per-instance transform (the interpolated TBN co-rotates), so the pixel
+                // shader feeds the material's tangent-space Normal pin directly — the PS has no
+                // per-instance basis to do a local->world transform with (VS-only outside Nanite).
+                // Binormal is RECONSTRUCTED (cross * sign), matching how the engine rebuilds it from
+                // the baked static mesh's Normal/Tangent/BinormalSign at render time.
+                const FVector3f SkinnedN = SkinnedNormal.GetSafeNormal();
+                const FVector3f BindT = Sv.TangentX;
+                const FVector3f BindN = FVector3f(Sv.TangentZ.X, Sv.TangentZ.Y, Sv.TangentZ.Z);
+                const FVector3f BindB = FVector3f::CrossProduct(BindN, BindT) * (Sv.TangentZ.W < 0.0f ? -1.0f : 1.0f);
+                const FVector3f Nts = FVector3f(
+                    FVector3f::DotProduct(SkinnedN, BindT),
+                    FVector3f::DotProduct(SkinnedN, BindB),
+                    FVector3f::DotProduct(SkinnedN, BindN));
+
+                const FVector3f N = Nts * 0.5f + FVector3f(0.5f, 0.5f, 0.5f);
                 SecondaryPlane.Texels[InGlobalFrame * Width + V] = FVector4f(N.X, N.Y, N.Z, 1.0f);
             }
         }

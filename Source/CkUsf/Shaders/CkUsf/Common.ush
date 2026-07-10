@@ -11,6 +11,8 @@ struct FCkUsf_SurfaceInput
 {
     float  Time;
     float2 UV;             // mesh TexCoord0 (surface) or screen UV (post-process)
+    float2 UV1;            // mesh TexCoord1 (surface; wired only when the look sets _PixelDataChannels)
+    float2 UV2;            // mesh TexCoord2 (surface; wired only when the look sets _PixelDataChannels)
     float3 WorldPosition;  // world-space pixel position (surface)
     float3 CameraVector;   // world-space unit vector from pixel toward camera (surface)
     float3 VertexNormal;   // world-space interpolated normal (surface)
@@ -29,6 +31,8 @@ FCkUsf_SurfaceInput CkUsf_DefaultInput()
     FCkUsf_SurfaceInput I;
     I.Time = 0.0;
     I.UV = float2(0.0, 0.0);
+    I.UV1 = float2(0.0, 0.0);
+    I.UV2 = float2(0.0, 0.0);
     I.WorldPosition = float3(0.0, 0.0, 0.0);
     I.CameraVector = float3(0.0, 0.0, 1.0);
     I.VertexNormal = float3(0.0, 0.0, 1.0);

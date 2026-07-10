@@ -4,8 +4,13 @@
 // in the vertex shader as a WorldPositionOffset. Playback is GPU-time-driven: the 12 per-instance
 // scalars (contract: Source/CkVat/Plan/Gate_02_Material.md) are written on clip CHANGE only; the
 // frame is derived from In.Time each vertex. Frame interpolation (2-row lerp) and a 2-state
-// crossfade are always on. Pixel entries are a plain lit BaseColor surface — VAT normal-texture
-// consumption is a recorded follow-up (Gate_02 "Deferred").
+// crossfade are always on.
+//
+// Normals: VatVertex's PIXEL entry decodes the baked normal texture — texels are TANGENT-space
+// (bind-pose TBN frame; encoded n*0.5+0.5 in both precisions), so they feed the Normal pin
+// directly and stay correct under any per-instance transform (the interpolated TBN co-rotates;
+// the PS has no per-instance local->world basis outside Nanite). VatBone still lights with
+// bind-pose normals — quat-rotating them needs a basis the PS lacks (Gate_02 "Deferred").
 #pragma once
 #include "/CkUsf/Common.ush"
 
@@ -98,9 +103,29 @@ float3 CkVat_VertexOffset(Texture2D PosVat, SamplerState PosVatSampler, float U,
     return lerp(P0, P1, Frac);
 }
 
+// One clip state's frame-interpolated TANGENT-space normal. The bake encodes the skinned normal in
+// each vertex's bind-pose tangent frame (n*0.5+0.5, BOTH precisions — no DecodeNormalized split),
+// so the result feeds FCkUsf_SurfaceOutput.Normal with no basis transform.
+// RowCount <= 0 => bind-pose normal, which in its own tangent frame is exactly (0,0,1).
+float3 CkVat_VertexNormalTS(Texture2D NrmVat, SamplerState NrmVatSampler, float U,
+                            float Now, float Freq, float TotalRows,
+                            float RowStart, float RowCount, float Time, float Rate, float LoopOnce)
+{
+    if (RowCount <= 0.0)
+    { return float3(0.0, 0.0, 1.0); }
+
+    float Row0; float Row1; float Frac;
+    CkVat_FrameRows(CkVat_LocalTime(Now, Time, Rate), Freq, RowStart, RowCount, LoopOnce, Row0, Row1, Frac);
+
+    float3 N0 = CkVat_SampleRow(NrmVat, NrmVatSampler, U, Row0, TotalRows).xyz * 2.0 - 1.0;
+    float3 N1 = CkVat_SampleRow(NrmVat, NrmVatSampler, U, Row1, TotalRows).xyz * 2.0 - 1.0;
+    return normalize(lerp(N0, N1, Frac));
+}
+
 FCkUsf_SurfaceOutput CkUsf_Look_VatVertex(FCkUsf_SurfaceInput In,
     Texture2D BaseColorTex, SamplerState BaseColorTexSampler,
     Texture2D PosVat, SamplerState PosVatSampler,
+    Texture2D NrmVat, SamplerState NrmVatSampler,
     float SampleFrequency, float TotalRows, float TexelCount,
     float3 BoundsMin, float3 BoundsMax, float DecodeNormalized,
     float RowStartA, float RowCountA, float TimeA, float RateA,
@@ -111,12 +136,29 @@ FCkUsf_SurfaceOutput CkUsf_Look_VatVertex(FCkUsf_SurfaceInput In,
     O.BaseColor = CkUsf_SampleTexture2D(BaseColorTex, BaseColorTexSampler, In.UV).rgb;
     O.Roughness = 0.8;
     O.Specular = 0.3;
+
+    // Same frame/crossfade math as the WPO so the lighting normal tracks the deformed position.
+    float U = In.UV1.x;
+    float3 NA = CkVat_VertexNormalTS(NrmVat, NrmVatSampler, U, In.Time, SampleFrequency, TotalRows,
+        RowStartA, RowCountA, TimeA, RateA, LoopA);
+
+    float W = CkVat_FadeWeight(In.Time, TransStart, TransDuration, RowCountB);
+    float3 N = NA;
+    if (W < 1.0)
+    {
+        float3 NB = CkVat_VertexNormalTS(NrmVat, NrmVatSampler, U, In.Time, SampleFrequency, TotalRows,
+            RowStartB, RowCountB, TimeB, RateB, LoopB);
+        N = normalize(lerp(NB, NA, W));
+    }
+    O.Normal = N;
+
     return O;
 }
 
 float3 CkUsf_Look_VatVertex_WPO(FCkUsf_VertexInput In,
     Texture2D BaseColorTex, SamplerState BaseColorTexSampler,
     Texture2D PosVat, SamplerState PosVatSampler,
+    Texture2D NrmVat, SamplerState NrmVatSampler,
     float SampleFrequency, float TotalRows, float TexelCount,
     float3 BoundsMin, float3 BoundsMax, float DecodeNormalized,
     float RowStartA, float RowCountA, float TimeA, float RateA,

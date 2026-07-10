@@ -44,7 +44,11 @@ clip table. Textures: `SRGB=false`, `TMGS_NoMipmaps`, `TF_Nearest`. Precision Hi
 **Vertex mode** (texture width = LOD0 render-vertex count, ensure ≤ 4096):
 - Position texture: RGB = component-space offset from bind pose (`skinned - bind`); High raw f16,
   Low normalized `(offset - BoundsMin) / (BoundsMax - BoundsMin)`. A = unused (1).
-- Normal texture: RGB = skinned unit normal encoded `n * 0.5 + 0.5` (BOTH precisions). A = unused.
+- Normal texture: RGB = skinned unit normal in the vertex's BIND-POSE TANGENT frame
+  (`(dot(n,T), dot(n,B), dot(n,N))`, B reconstructed `cross(N,T) * sign` matching the engine's
+  GenerateYAxis), encoded `n * 0.5 + 0.5` (BOTH precisions). A = unused. Tangent-space is
+  load-bearing: it feeds the material Normal pin directly and is invariant under the per-instance
+  transform — the PS has no instance basis to transform a local/world normal with (2026-07-10).
 - Mesh lookup UV (`_LookupUVChannel`): `U = (vertexIndex + 0.5) / width`, `V = 0` (shader computes row V).
 - Skinning per vertex: strongest ≤ 4 influences from the editor model (uint16 weights / 65535,
   renormalized; > 4 influences fires an ensure and keeps the strongest 4).
