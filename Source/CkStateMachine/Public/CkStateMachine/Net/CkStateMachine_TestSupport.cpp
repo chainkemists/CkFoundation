@@ -70,3 +70,21 @@ bool
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+FCk_Handle_StateMachine
+    UCk_Utils_StateMachine_Test_UE::
+    Test_ForceDeterminismFault(
+        FCk_Handle_StateMachine& InSm)
+{
+#if WITH_DEV_AUTOMATION_TESTS
+    CK_ENSURE_IF_NOT(ck::IsValid(InSm),
+        TEXT("Test_ForceDeterminismFault called with invalid SM handle.{}"), ck::Context(nullptr))
+    { return InSm; }
+
+    InSm.AddOrGet<ck::FTag_Sm_DeterminismFault>();
+#endif
+
+    return InSm;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
