@@ -109,6 +109,7 @@ auto
 auto
     ACk_Iskm_BatchedCrowd_Actor::
     Set_OverrideMaterial(UMaterialInterface* InMaterial)
+    -> void
 {
     _OverrideMaterial = InMaterial;
 
@@ -158,7 +159,7 @@ void
     }
 }
 
-void
+auto
     ACk_Iskm_BatchedCrowd_Actor::
     AddInstance(const FTransform& InWorldTransform, int32 InSequenceIndex, float InRate, float InTimeOffset)
     -> void
