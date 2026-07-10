@@ -203,6 +203,26 @@ namespace ck
                 if (CanCreateMore)
                 {
                     FProcessor_EntityPool_Prewarm::DoInitiate_InstanceSpawn(InPool, InParams, InCurrent);
+
+                    // batch growth: provision (GrowBatchCount - 1) EXTRA dormant instances through the
+                    // prewarm budget — amortized across ticks, never hitching the frame; clamped to capacity
+                    if (const auto ExtraGrow = InParams.Get_GrowBatchCount() - 1;
+                        ExtraGrow > 0)
+                    {
+                        auto AllowedExtra = ExtraGrow;
+
+                        if (InParams.Get_CapacityPolicy() == ECk_Pool_CapacityPolicy::Bounded)
+                        {
+                            AllowedExtra = FMath::Min(AllowedExtra,
+                                InParams.Get_MaxSize() - InCurrent._NumLiveInstances - InCurrent._NumPrewarmRemaining);
+                        }
+
+                        if (AllowedExtra > 0)
+                        {
+                            InCurrent._NumPrewarmRemaining += AllowedExtra;
+                            InPool.AddOrGet<FTag_EntityPool_PrewarmInProgress>();
+                        }
+                    }
                 }
                 else
                 {

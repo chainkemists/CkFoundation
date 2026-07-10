@@ -43,6 +43,9 @@ private:
     UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
     ECk_Pool_ExhaustionPolicy _ExhaustionPolicy = ECk_Pool_ExhaustionPolicy::Grow;
 
+    UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true, ClampMin = "1", EditCondition = "_ExhaustionPolicy == ECk_Pool_ExhaustionPolicy::Grow"))
+    int32 _GrowBatchCount = 1;
+
 public:
     CK_PROPERTY_GET(_EntityScriptClass);
     CK_PROPERTY_GET(_PrewarmCount);
@@ -50,6 +53,7 @@ public:
     CK_PROPERTY_GET(_CapacityPolicy);
     CK_PROPERTY_GET(_MaxSize);
     CK_PROPERTY_GET(_ExhaustionPolicy);
+    CK_PROPERTY_GET(_GrowBatchCount);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -81,6 +85,9 @@ private:
     UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
     ECk_Pool_ExhaustionPolicy _ExhaustionPolicy = ECk_Pool_ExhaustionPolicy::Grow;
 
+    UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true, ClampMin = "1", EditCondition = "_ExhaustionPolicy == ECk_Pool_ExhaustionPolicy::Grow"))
+    int32 _GrowBatchCount = 1;
+
 public:
     CK_PROPERTY_GET(_ObjectClass);
     CK_PROPERTY_GET(_PrewarmCount);
@@ -88,6 +95,7 @@ public:
     CK_PROPERTY_GET(_CapacityPolicy);
     CK_PROPERTY_GET(_MaxSize);
     CK_PROPERTY_GET(_ExhaustionPolicy);
+    CK_PROPERTY_GET(_GrowBatchCount);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

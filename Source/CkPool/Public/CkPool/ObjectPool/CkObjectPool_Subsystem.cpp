@@ -174,6 +174,23 @@ auto
 
         if (ck::Is_NOT_Valid(AcquiredObject, ck::IsValid_Policy_NullptrOnly{}))
         { return {}; }
+
+        // batch growth: queue (GrowBatchCount - 1) EXTRA instances through the amortized prewarm
+        // tick — never synchronously in the acquire call; clamped to capacity
+        if (const auto ExtraGrow = Pool->_Params.Get_GrowBatchCount() - 1;
+            ExtraGrow > 0)
+        {
+            auto AllowedExtra = ExtraGrow;
+
+            if (Pool->_Params.Get_CapacityPolicy() == ECk_Pool_CapacityPolicy::Bounded)
+            {
+                AllowedExtra = FMath::Min(AllowedExtra,
+                    Pool->_Params.Get_MaxSize() - Pool->_NumLiveInstances - Pool->_NumPrewarmRemaining);
+            }
+
+            if (AllowedExtra > 0)
+            { Pool->_NumPrewarmRemaining += AllowedExtra; }
+        }
     }
 
     Pool->_InUseObjects.Emplace(AcquiredObject);

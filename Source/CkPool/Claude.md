@@ -50,7 +50,9 @@ Pools are ECS entities (`FCk_Handle_EntityPool`), keyed by `TSubclassOf<UCk_Enti
 
 **Policies** (`FCk_Fragment_EntityPool_ParamsData`): `_PrewarmCount` + `_PrewarmBudgetPerTick`
 (amortized warm-up), `_CapacityPolicy` (Unbounded/Bounded+`_MaxSize`), `_ExhaustionPolicy`
-(Grow — parks the acquire at bounded capacity; Fail — fulfills the promise with Failed).
+(Grow — parks the acquire at bounded capacity; Fail — fulfills the promise with Failed),
+`_GrowBatchCount` (1 = demand-exact growth; higher values provision the extras through the
+amortized prewarm budget so a batch never hitches the frame — subsequent misses become hits).
 Auto-created pools (bare `Request_Acquire`) read the class's entry in **Project Settings → Pool**,
 else built-in defaults; an explicit `Request_CreatePool` always wins. To supply full pool config at
 the acquire site instead, use `Request_Acquire_WithPoolParams` — its params are consulted only if

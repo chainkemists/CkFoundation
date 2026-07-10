@@ -76,7 +76,8 @@ auto
                         .Set_PrewarmBudgetPerTick(SettingsEntry->Get_PrewarmBudgetPerTick())
                         .Set_CapacityPolicy(SettingsEntry->Get_CapacityPolicy())
                         .Set_MaxSize(SettingsEntry->Get_MaxSize())
-                        .Set_ExhaustionPolicy(SettingsEntry->Get_ExhaustionPolicy());
+                        .Set_ExhaustionPolicy(SettingsEntry->Get_ExhaustionPolicy())
+                        .Set_GrowBatchCount(SettingsEntry->Get_GrowBatchCount());
     }
 
     auto Pool = PoolSubsystem->DoGetOrCreate_Pool(AutoCreateParams);
@@ -392,7 +393,8 @@ auto
             .Set_PrewarmBudgetPerTick(InParams.Get_PrewarmBudgetPerTick())
             .Set_CapacityPolicy(InParams.Get_CapacityPolicy())
             .Set_MaxSize(InParams.Get_MaxSize())
-            .Set_ExhaustionPolicy(InParams.Get_ExhaustionPolicy());
+            .Set_ExhaustionPolicy(InParams.Get_ExhaustionPolicy())
+            .Set_GrowBatchCount(InParams.Get_GrowBatchCount());
     }
 
     CK_ENSURE_IF_NOT(ck::IsValid(EffectiveParams.Get_EntityScriptClass()),

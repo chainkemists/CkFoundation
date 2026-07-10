@@ -83,6 +83,14 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_Pool_ExhaustionPolicy _ExhaustionPolicy = ECk_Pool_ExhaustionPolicy::Grow;
 
+    // How many instances a growth event provisions: 1 = demand-exact (default). Higher values spawn
+    // (GrowBatchCount - 1) EXTRA dormant instances per miss, amortized through the prewarm budget
+    // (_PrewarmBudgetPerTick) so a batch never hitches the frame — subsequent misses become hits.
+    // Always clamped to Bounded capacity
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = "1", EditCondition = "_ExhaustionPolicy == ECk_Pool_ExhaustionPolicy::Grow"))
+    int32 _GrowBatchCount = 1;
+
 public:
     CK_PROPERTY_GET(_EntityScriptClass);
     CK_PROPERTY(_EntityScriptArchetype);
@@ -93,6 +101,7 @@ public:
     CK_PROPERTY(_CapacityPolicy);
     CK_PROPERTY(_MaxSize);
     CK_PROPERTY(_ExhaustionPolicy);
+    CK_PROPERTY(_GrowBatchCount);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_EntityPool_ParamsData, _EntityScriptClass);

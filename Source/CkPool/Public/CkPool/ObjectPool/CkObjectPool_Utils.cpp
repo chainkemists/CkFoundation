@@ -191,7 +191,8 @@ auto
               .Set_PrewarmBudgetPerTick(SettingsEntry->Get_PrewarmBudgetPerTick())
               .Set_CapacityPolicy(SettingsEntry->Get_CapacityPolicy())
               .Set_MaxSize(SettingsEntry->Get_MaxSize())
-              .Set_ExhaustionPolicy(SettingsEntry->Get_ExhaustionPolicy());
+              .Set_ExhaustionPolicy(SettingsEntry->Get_ExhaustionPolicy())
+              .Set_GrowBatchCount(SettingsEntry->Get_GrowBatchCount());
     }
 
     return Params;
