@@ -9,7 +9,7 @@
 #include "CkEcs/Signal/CkSignal_Macros.h"
 #include "CkEcs/Signal/CkSignal_Utils.h"
 
-#include "CkVat/CkVat_Fragment_Data.h"
+#include "CkVat/Proxy/CkVatProxy_Fragment_Data.h"
 
 #include "CkIsmRenderer/Proxy/CkIsmProxy_Fragment_Data.h"
 
@@ -17,17 +17,17 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class UCk_Utils_Vat_UE;
+class UCk_Utils_VatProxy_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
-    CK_DEFINE_ECS_TAG(FTag_Vat_NeedsSetup);
+    CK_DEFINE_ECS_TAG(FTag_VatProxy_NeedsSetup);
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_Vat_Params = FCk_Fragment_Vat_ParamsData;
+    using FFragment_VatProxy_Params = FCk_Fragment_VatProxy_ParamsData;
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -35,20 +35,20 @@ namespace ck
     // (WorldTime - _PlaybackStartTime) * _PlayRate — state is written on CHANGE only, never per frame.
     // Gate 3 packs this into per-instance custom data; the crossfade pair (_PrevClip*) feeds the shader's
     // 2-state blend.
-    struct CKVAT_API FFragment_Vat_Current
+    struct CKVAT_API FFragment_VatProxy_Current
     {
     public:
-        CK_GENERATED_BODY(FFragment_Vat_Current);
+        CK_GENERATED_BODY(FFragment_VatProxy_Current);
 
     public:
-        friend class FProcessor_Vat_Setup;
-        friend class FProcessor_Vat_HandleRequests;
-        friend class FProcessor_Vat_FireSignals;
+        friend class FProcessor_VatProxy_Setup;
+        friend class FProcessor_VatProxy_HandleRequests;
+        friend class FProcessor_VatProxy_FireSignals;
 
     private:
         // Index into the collection's SERIALIZED baked clip table; INDEX_NONE = reference pose (row 0).
         int32 _ActiveClipIndex = INDEX_NONE;
-        ECk_Vat_LoopMode _ActiveLoopMode = ECk_Vat_LoopMode::Loop;
+        ECk_VatProxy_LoopMode _ActiveLoopMode = ECk_VatProxy_LoopMode::Loop;
         // A rate change rebases _PlaybackStartTime so the playback position is preserved (Gate 3 packing
         // contract) — consumers must not assume _PlaybackStartTime is the original play call's timestamp.
         float _PlayRate = 1.0f;
@@ -59,7 +59,7 @@ namespace ck
         int32 _PrevClipIndex = INDEX_NONE;
         FCk_Time _PrevClipStartTime;
         float _PrevPlayRate = 1.0f;
-        ECk_Vat_LoopMode _PrevLoopMode = ECk_Vat_LoopMode::Loop;
+        ECk_VatProxy_LoopMode _PrevLoopMode = ECk_VatProxy_LoopMode::Loop;
         FCk_Time _TransitionStartTime;
         FCk_Time _TransitionDuration;
 
@@ -92,19 +92,19 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKVAT_API FFragment_Vat_Requests
+    struct CKVAT_API FFragment_VatProxy_Requests
     {
     public:
-        CK_GENERATED_BODY(FFragment_Vat_Requests);
+        CK_GENERATED_BODY(FFragment_VatProxy_Requests);
 
     public:
-        friend class FProcessor_Vat_HandleRequests;
-        friend class UCk_Utils_Vat_UE;
+        friend class FProcessor_VatProxy_HandleRequests;
+        friend class UCk_Utils_VatProxy_UE;
 
     public:
-        using PlayClipRequestType = FCk_Request_Vat_PlayClip;
-        using StopRequestType = FCk_Request_Vat_Stop;
-        using SetPlayRateRequestType = FCk_Request_Vat_SetPlayRate;
+        using PlayClipRequestType = FCk_Request_VatProxy_PlayClip;
+        using StopRequestType = FCk_Request_VatProxy_Stop;
+        using SetPlayRateRequestType = FCk_Request_VatProxy_SetPlayRate;
 
         using RequestType = std::variant<PlayClipRequestType, StopRequestType, SetPlayRateRequestType>;
         using RequestList = TArray<RequestType>;
@@ -120,14 +120,14 @@ namespace ck
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKVAT_API,
-        Vat_OnClipFinished,
-        FCk_Delegate_Vat_OnClipFinished,
-        FCk_Handle_Vat,
+        VatProxy_OnClipFinished,
+        FCk_Delegate_VatProxy_OnClipFinished,
+        FCk_Handle_VatProxy,
         FName);
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_Vat_Requests);
+    CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_VatProxy_Requests);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
