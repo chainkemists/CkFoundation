@@ -57,8 +57,8 @@ struct CKANIMATION_API FCk_AnimBake_FrameLayout
 // retargeting affects both).
 struct CKANIMATION_API FCk_AnimBake_SampleParams
 {
-    bool bExtractRootMotion = false;
-    bool bDisableRetargeting = false;
+    bool ExtractRootMotion = false;
+    bool DisableRetargeting = false;
 };
 
 namespace ck::anim_bake

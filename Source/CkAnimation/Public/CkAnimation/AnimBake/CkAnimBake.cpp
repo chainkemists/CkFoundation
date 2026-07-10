@@ -38,7 +38,7 @@ namespace ck_anim_bake
 
         const UE::Anim::FCurveFilterSettings CurveFilter(UE::Anim::ECurveFilterMode::DisallowFiltered);
         OutBoneContainer.InitializeTo(MoveTemp(AnimationRequiredBones), CurveFilter, InSkeleton);
-        OutBoneContainer.SetDisableRetargeting(InParams.bDisableRetargeting);
+        OutBoneContainer.SetDisableRetargeting(InParams.DisableRetargeting);
         // Force RAW data in editor: at PostLoad some sequences may not have finished compression.
         OutBoneContainer.SetUseRAWData(static_cast<bool>(WITH_EDITOR));
     }
@@ -209,7 +209,7 @@ auto
             const int32 GlobalFrame = SeqLayout.FrameIndex + LocalFrame;
 
             CompactPose.ResetToRefPose();
-            Seq->GetAnimationPose(PoseData, FAnimExtractContext(SampleTime, InParams.bExtractRootMotion));
+            Seq->GetAnimationPose(PoseData, FAnimExtractContext(SampleTime, InParams.ExtractRootMotion));
 
             // local (parent-relative) -> component space
             PoseComponentSpace[0] = CompactPose[FCompactPoseBoneIndex(0)];
