@@ -11,6 +11,8 @@ namespace CkVat
         _UshIncludePath  = "/CkVat/Vat.ush";
         _UshFunctionName = n"CkUsf_Look_VatVertex";
         _WpoFunctionName = n"CkUsf_Look_VatVertex_WPO";
+        // The PIXEL entry reads In.UV1.x (the lookup column) to decode the tangent-space normal texture.
+        _PixelDataChannels = true;
         _Domain          = ECk_Usf_Domain::SurfaceLit;
         _LookName        = n"VatVertex";
 
@@ -24,6 +26,13 @@ namespace CkVat
         PosVat._Name = n"PosVat";
         PosVat._Type = ECk_Usf_ParamType::Texture2D;
         _Parameters.Add(PosVat);
+
+        // Tangent-space normal atlas (uniform, not per-instance — inserting it here does NOT shift
+        // the per-instance slots below: slots accrue over _PerInstance params only).
+        FCk_Usf_ParamDesc NrmVat;
+        NrmVat._Name = n"NrmVat";
+        NrmVat._Type = ECk_Usf_ParamType::Texture2D;
+        _Parameters.Add(NrmVat);
 
         FCk_Usf_ParamDesc SampleFrequency;
         SampleFrequency._Name = n"SampleFrequency";

@@ -150,6 +150,13 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     FName _WpoFunctionName = NAME_None;
 
+    // Surface-only: wire mesh TexCoord1/TexCoord2 into the PIXEL Custom node (In.UV1/In.UV2).
+    // Opt-in because every wired coordinate costs interpolators on the look's master — only looks
+    // whose PIXEL stage decodes mesh data channels need it (e.g. CkVat's normal-texture lookup).
+    // The WPO node receives UV1/UV2 unconditionally; this flag concerns the pixel node only.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    bool _PixelDataChannels = false;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     ECk_Usf_Domain _Domain = ECk_Usf_Domain::SurfaceLit;
 

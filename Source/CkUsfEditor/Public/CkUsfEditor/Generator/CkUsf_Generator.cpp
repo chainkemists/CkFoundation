@@ -213,6 +213,11 @@ namespace ck::usf_editor
             Code += TEXT("In.VertexTangent = VertexTangent;\n");
             Code += TEXT("In.PixelDepth = PixelDepth;\n");
             Code += TEXT("In.VertexColor = VertexColor;\n");
+            if (InDef->_PixelDataChannels)
+            {
+                Code += TEXT("In.UV1 = UV1;\n");
+                Code += TEXT("In.UV2 = UV2;\n");
+            }
         }
 
         // The look fn takes In first, then the LookDefinition params in order.
@@ -518,6 +523,11 @@ namespace ck::usf_editor
         }
         { FCustomInput T; T.InputName = TEXT("Time"); Custom->Inputs.Add(T); }
         { FCustomInput U; U.InputName = TEXT("UV");   Custom->Inputs.Add(U); }
+        if (NOT IsPostProcess && InDef->_PixelDataChannels)
+        {
+            { FCustomInput U; U.InputName = TEXT("UV1"); Custom->Inputs.Add(U); }
+            { FCustomInput U; U.InputName = TEXT("UV2"); Custom->Inputs.Add(U); }
+        }
 
         Custom->Code = Build_CustomCode(InDef, IsPostProcess);
         Apply_LookDefines(Custom, InDef);
@@ -558,6 +568,22 @@ namespace ck::usf_editor
             AddInput(UMaterialExpressionVertexTangentWS::StaticClass(), TEXT("VertexTangent"), 3);
             AddInput(UMaterialExpressionPixelDepth::StaticClass(),      TEXT("PixelDepth"),    4);
             AddInput(UMaterialExpressionVertexColor::StaticClass(),     TEXT("VertexColor"),   5);
+
+            // Data-channel UVs for the PIXEL node (opt-in; mirrors the WPO node's unconditional pair) —
+            // the pin forces the translator to allocate the coords, same as AddWpoUvChannel below.
+            if (InDef->_PixelDataChannels)
+            {
+                const auto AddUvChannel = [&](const TCHAR* InInputName, int32 InCoordinateIndex, int32 InRow) -> void
+                {
+                    auto* Expr = Cast<UMaterialExpressionTextureCoordinate>(
+                        UMaterialEditingLibrary::CreateMaterialExpression(
+                            Material, UMaterialExpressionTextureCoordinate::StaticClass(), -1100, InRow * 160));
+                    Expr->CoordinateIndex = InCoordinateIndex;
+                    UMaterialEditingLibrary::ConnectMaterialExpressions(Expr, FString(), Custom, InInputName);
+                };
+                AddUvChannel(TEXT("UV1"), 1, 6);
+                AddUvChannel(TEXT("UV2"), 2, 7);
+            }
         }
 
         // ---- Parameter nodes wired to Custom inputs by name (per-instance params → PerInstanceCustomData) ----
