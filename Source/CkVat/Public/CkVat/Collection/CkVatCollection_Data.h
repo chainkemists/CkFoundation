@@ -163,6 +163,14 @@ private:
               meta = (AllowPrivateAccess = true, UIMin = 1, ClampMin = 1, UIMax = 7, ClampMax = 7))
     int32 _LookupUVChannel = 1;
 
+    // ---- rendering (not baked — designer-set) ----
+
+    // Albedo the VAT look samples with UV0 (the runtime replaces the mesh materials with the shared
+    // VAT MID; source-material graphs do not carry over — v1 look = BaseColor + VAT deformation).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rendering",
+              meta = (AllowPrivateAccess = true))
+    TObjectPtr<UTexture2D> _BaseColorTexture;
+
     // ---- bake outputs (written by the CkVatEditor baker; read-only everywhere else) ----
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Baked",
@@ -221,6 +229,7 @@ public:
     CK_PROPERTY_GET(_BakeMode);
     CK_PROPERTY_GET(_Precision);
     CK_PROPERTY_GET(_LookupUVChannel);
+    CK_PROPERTY_GET(_BaseColorTexture);
     CK_PROPERTY_GET(_BakedMesh);
     CK_PROPERTY_GET(_PositionTexture);
     CK_PROPERTY_GET(_NormalTexture);

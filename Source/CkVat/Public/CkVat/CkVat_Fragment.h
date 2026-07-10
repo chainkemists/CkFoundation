@@ -11,6 +11,8 @@
 
 #include "CkVat/CkVat_Fragment_Data.h"
 
+#include "CkIsmRenderer/Proxy/CkIsmProxy_Fragment_Data.h"
+
 #include <variant>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -41,6 +43,7 @@ namespace ck
     public:
         friend class FProcessor_Vat_Setup;
         friend class FProcessor_Vat_HandleRequests;
+        friend class FProcessor_Vat_FireSignals;
 
     private:
         // Index into the collection's SERIALIZED baked clip table; INDEX_NONE = reference pose (row 0).
@@ -51,11 +54,18 @@ namespace ck
         float _PlayRate = 1.0f;
         FCk_Time _PlaybackStartTime;
 
-        // Crossfade source state (valid while a transition is in flight).
+        // Crossfade source state (valid while a transition is in flight). The source keeps playing
+        // at ITS rate/loop-mode during the fade, so those are captured alongside the start time.
         int32 _PrevClipIndex = INDEX_NONE;
         FCk_Time _PrevClipStartTime;
+        float _PrevPlayRate = 1.0f;
+        ECk_Vat_LoopMode _PrevLoopMode = ECk_Vat_LoopMode::Loop;
         FCk_Time _TransitionStartTime;
         FCk_Time _TransitionDuration;
+
+        // The ISM instance rendering this entity (composed by Setup; per-instance custom-data
+        // pushes go through it).
+        FCk_Handle_IsmProxy _IsmProxy;
 
         // Clip-local playback position captured by Stop (meaningful only while _PlayRate == 0); the GPU
         // packing holds the frame via this constant while the rate multiplier is zero.
@@ -71,8 +81,11 @@ namespace ck
         CK_PROPERTY_GET(_PlaybackStartTime);
         CK_PROPERTY_GET(_PrevClipIndex);
         CK_PROPERTY_GET(_PrevClipStartTime);
+        CK_PROPERTY_GET(_PrevPlayRate);
+        CK_PROPERTY_GET(_PrevLoopMode);
         CK_PROPERTY_GET(_TransitionStartTime);
         CK_PROPERTY_GET(_TransitionDuration);
+        CK_PROPERTY_GET(_IsmProxy);
         CK_PROPERTY_GET(_PausedLocalTime);
         CK_PROPERTY_GET(_FinishedDispatched);
     };

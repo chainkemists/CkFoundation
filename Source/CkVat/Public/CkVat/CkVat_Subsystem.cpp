@@ -1,0 +1,109 @@
+#include "CkVat_Subsystem.h"
+
+#include "CkVat/CkVat_Log.h"
+#include "CkVat/Collection/CkVatCollection_Data.h"
+
+#include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Validation/CkIsValid.h"
+
+#include "CkIsmRenderer/Renderer/CkIsmRenderer_TransientFactory.h"
+#include "CkUsf/Apply/CkUsf_Utils.h"
+#include "CkUsf/LookDefinition/CkUsf_LookDefinition_Naming.h"
+
+#include "Engine/StaticMesh.h"
+#include "Engine/Texture2D.h"
+#include "Materials/MaterialInstanceDynamic.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Vat_Subsystem_UE::
+    GetOrCreate_RenderState(
+        const UCk_VatCollection_Data* InCollection)
+    -> const FCk_Vat_RenderState*
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InCollection), TEXT("GetOrCreate_RenderState with an invalid collection"))
+    { return nullptr; }
+
+    if (const auto* Found = _RenderStates.Find(InCollection);
+        Found != nullptr && ck::IsValid(Found->_Mid) && ck::IsValid(Found->_RendererData))
+    { return Found; }
+
+    CK_ENSURE_IF_NOT(InCollection->Get_IsBaked() && ck::IsValid(InCollection->Get_BakedMesh()),
+        TEXT("VatCollection [{}] is not baked — bake it in-editor before rendering"), InCollection)
+    { return nullptr; }
+
+    const auto BakeMode = InCollection->Get_BakeMode();
+    const auto LookName = BakeMode == ECk_Vat_BakeMode::Vertex ? FName(TEXT("VatVertex")) : FName(TEXT("VatBone"));
+
+    const auto MasterPath = ck::usf::Get_GeneratedMasterObjectPath(LookName);
+    auto* Master = LoadObject<UMaterialInterface>(nullptr, *MasterPath);
+    CK_ENSURE_IF_NOT(ck::IsValid(Master),
+        TEXT("VAT look master [{}] not found — run `Ck_Usf_GenerateLooks {}` (collection [{}])"),
+        MasterPath, LookName, InCollection)
+    { return nullptr; }
+
+    auto* Mid = UMaterialInstanceDynamic::Create(Master, this);
+    CK_ENSURE_IF_NOT(ck::IsValid(Mid), TEXT("Could not create the VAT MID for collection [{}]"), InCollection)
+    { return nullptr; }
+
+    // ---- seed the per-collection uniforms (names: the CkVat look assets / Vat.ush param lists) ----
+    UTexture2D* PositionTexture = BakeMode == ECk_Vat_BakeMode::Vertex
+        ? InCollection->Get_PositionTexture().Get()
+        : InCollection->Get_BonePositionTexture().Get();
+    CK_ENSURE_IF_NOT(ck::IsValid(PositionTexture),
+        TEXT("VatCollection [{}] is marked baked but has no position texture for mode [{}]"), InCollection, BakeMode)
+    { return nullptr; }
+
+    if (ck::IsValid(InCollection->Get_BaseColorTexture()))
+    { UCk_Utils_Usf_UE::Set_Texture(Mid, TEXT("BaseColorTex"), InCollection->Get_BaseColorTexture()); }
+
+    if (BakeMode == ECk_Vat_BakeMode::Vertex)
+    {
+        UCk_Utils_Usf_UE::Set_Texture(Mid, TEXT("PosVat"), PositionTexture);
+        UCk_Utils_Usf_UE::Set_Scalar(Mid, TEXT("TexelCount"), static_cast<float>(PositionTexture->GetSizeX()));
+    }
+    else
+    {
+        UTexture2D* RotationTexture = InCollection->Get_BoneRotationTexture().Get();
+        CK_ENSURE_IF_NOT(ck::IsValid(RotationTexture),
+            TEXT("VatCollection [{}] (Bone mode) has no rotation texture"), InCollection)
+        { return nullptr; }
+
+        UCk_Utils_Usf_UE::Set_Texture(Mid, TEXT("BonePosVat"), PositionTexture);
+        UCk_Utils_Usf_UE::Set_Texture(Mid, TEXT("BoneRotVat"), RotationTexture);
+        UCk_Utils_Usf_UE::Set_Scalar(Mid, TEXT("BoneCount"), static_cast<float>(PositionTexture->GetSizeX()));
+    }
+
+    UCk_Utils_Usf_UE::Set_Scalar(Mid, TEXT("SampleFrequency"), static_cast<float>(InCollection->Get_SampleFrequency()));
+    UCk_Utils_Usf_UE::Set_Scalar(Mid, TEXT("TotalRows"), static_cast<float>(PositionTexture->GetSizeY()));
+    UCk_Utils_Usf_UE::Set_Scalar(Mid, TEXT("DecodeNormalized"),
+        InCollection->Get_Precision() == ECk_Vat_Precision::Low ? 1.0f : 0.0f);
+
+    const auto& BoundsMin = InCollection->Get_PositionBoundsMin();
+    const auto& BoundsMax = InCollection->Get_PositionBoundsMax();
+    UCk_Utils_Usf_UE::Set_Vector(Mid, TEXT("BoundsMin"), FLinearColor(BoundsMin.X, BoundsMin.Y, BoundsMin.Z));
+    UCk_Utils_Usf_UE::Set_Vector(Mid, TEXT("BoundsMax"), FLinearColor(BoundsMax.X, BoundsMax.Y, BoundsMax.Z));
+
+    // ---- one transient ISM renderer per collection: every material slot gets the shared MID ----
+    UStaticMesh* BakedMesh = InCollection->Get_BakedMesh().Get();
+
+    TArray<FCk_MeshMaterialOverride> Overrides;
+    const int32 NumSlots = BakedMesh->GetStaticMaterials().Num();
+    Overrides.Reserve(NumSlots);
+    for (int32 Slot = 0; Slot < NumSlots; ++Slot)
+    { Overrides.Emplace(Slot, Mid); }
+
+    // Movable is load-bearing: the ISM proxy pushes per-instance custom data to the GPU only on
+    // the Movable path — and VAT entities generally move anyway.
+    auto* RendererData = UCk_Utils_IsmRenderer_TransientFactory_UE::GetOrCreate_ForMeshWithMaterialsAndCustomData(
+        GetWorld(), BakedMesh, Overrides, NumPerInstanceFloats, ECk_Mobility::Movable);
+    CK_ENSURE_IF_NOT(ck::IsValid(RendererData),
+        TEXT("Could not create the transient ISM renderer for VatCollection [{}]"), InCollection)
+    { return nullptr; }
+
+    FCk_Vat_RenderState State;
+    State._Mid = Mid;
+    State._RendererData = RendererData;
+    return &_RenderStates.Add(InCollection, State);
+}
