@@ -5,6 +5,8 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CoreMinimal.h"
 
+#include <StructUtils/InstancedStruct.h>
+
 #include "CkEntityScript.generated.h"
 
 // -----------------------------------------------------------------------------------------------------------
@@ -12,6 +14,9 @@
 namespace ck
 {
     class FProcessor_EntityScript_SpawnEntity_HandleRequests;
+    class FProcessor_EntityScript_ContinueConstruction;
+    class FProcessor_EntityScript_BeginPlay;
+    class FProcessor_EntityScript_EndPlay;
 }
 
 // -----------------------------------------------------------------------------------------------------------
@@ -55,6 +60,11 @@ public:
 
 public:
     friend class ck::FProcessor_EntityScript_SpawnEntity_HandleRequests;
+    // Lifecycle processors re-stamp _AssociatedEntity before each deferred callback so that
+    // NotInstanced (CDO-shared) scripts resolve self-access against the entity being processed.
+    friend class ck::FProcessor_EntityScript_ContinueConstruction;
+    friend class ck::FProcessor_EntityScript_BeginPlay;
+    friend class ck::FProcessor_EntityScript_EndPlay;
     friend class UCk_Utils_EntityScript_UE;
 
 public:
@@ -99,6 +109,18 @@ protected:
         meta = (CompactNodeTitle="ScriptEntity", Keywords="this, associated", HideSelfPin = true))
     FCk_Handle
     DoGet_ScriptEntity() const;
+
+    // Per-entity spawn params, read from the script entity's fragment. This — not injected member
+    // properties — is the supported way for a NotInstanced (CDO-shared) script to read its params
+    // in BeginPlay/EndPlay: member injection is skipped for CDO-shared scripts since a later
+    // same-class spawn would overwrite the shared object's members before this script's deferred
+    // callbacks run. AS/BP extract the typed struct via FInstancedStruct.Get(StructType).
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|EntityScript",
+        DisplayName = "[Ck][EntityScript] Get Spawn Params",
+        meta = (CompactNodeTitle="SpawnParams", Keywords="this, params, exposed", HideSelfPin = true))
+    FInstancedStruct
+    DoGet_SpawnParams() const;
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|EntityScript",

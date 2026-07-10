@@ -128,13 +128,20 @@ namespace ck
         if (const auto& SpawnParams = InRequest.Get_SpawnParams();
             ck::IsValid(SpawnParams))
         {
-            UCk_Utils_EntityScript_UE::TryInjectEntityScriptSpawnParams(NewEntityScript, SpawnParams);
+            // NotInstanced scripts share one object (the CDO) across every spawned entity — member
+            // injection there both clobbers an earlier same-frame spawn's values (BeginPlay runs in a
+            // later processor) and permanently mutates class defaults. CDO-shared scripts read their
+            // params from the entity instead (FFragment_EntityScript_Current, populated below).
+            if (EntityScriptClassArchetype->Get_InstancingPolicy() == ECk_EntityScript_InstancingPolicy::InstancedPerEntity)
+            {
+                UCk_Utils_EntityScript_UE::TryInjectEntityScriptSpawnParams(NewEntityScript, SpawnParams);
+            }
         }
 
         auto NewEntity = InRequest.Get_NewEntity();
 
         NewEntityScript->_AssociatedEntity = NewEntity;
-        NewEntity.Add<FFragment_EntityScript_Current>(NewEntityScript);
+        NewEntity.Add<FFragment_EntityScript_Current>(NewEntityScript, InRequest.Get_SpawnParams());
 
         CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
             TEXT("EntityScript created: {}"), EntityScriptClassArchetype);
@@ -279,6 +286,12 @@ namespace ck
         { return; }
 
         CK_CALLSTACK_RECORD(ck::FFragment_EntityScript_Current, InHandle);
+
+        // Flyweight context switch: a NotInstanced (CDO-shared) script's back-pointer holds whichever
+        // entity was spawned LAST — re-stamp it for this callback so DoGet_ScriptEntity()/
+        // DoGet_SpawnParams() resolve against the entity actually being processed. No-op re-assign
+        // for InstancedPerEntity scripts.
+        EntityScript->_AssociatedEntity = InHandle;
         EntityScript->ContinueConstruction(InHandle);
     }
 
@@ -458,6 +471,9 @@ namespace ck
         { return; }
 
         CK_CALLSTACK_RECORD(ck::FFragment_EntityScript_Current, InHandle);
+
+        // Flyweight context switch — see FProcessor_EntityScript_ContinueConstruction.
+        EntityScript->_AssociatedEntity = InHandle;
         EntityScript->BeginPlay();
 
         InHandle.Add<FTag_EntityScript_HasBegunPlay>();
@@ -479,6 +495,9 @@ namespace ck
         { return; }
 
         CK_CALLSTACK_RECORD(ck::FFragment_EntityScript_Current, InHandle);
+
+        // Flyweight context switch — see FProcessor_EntityScript_ContinueConstruction.
+        EntityScript->_AssociatedEntity = InHandle;
         EntityScript->EndPlay();
         InHandle.Add<FTag_EntityScript_HasEndedPlay>();
     }

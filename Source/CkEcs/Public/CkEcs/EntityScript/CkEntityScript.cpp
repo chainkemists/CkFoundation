@@ -70,6 +70,29 @@ auto
 
 auto
     UCk_EntityScript_UE::
+    DoGet_SpawnParams() const
+    -> FInstancedStruct
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(_AssociatedEntity),
+        TEXT("Cannot read SpawnParams — ScriptEntity is [{}]. {}\n{}"),
+        _AssociatedEntity,
+        _AssociatedEntity.Has<ck::FTag_EntityScript_HasEndedPlay>()
+        ? TEXT("The Script has ALREADY EndedPlay. Ensure that no lingering Latent Actions are still being performed")
+        : TEXT("It's possible that this was not set correctly by the Processor that spawned the entity script"),
+        ck::Context(this))
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(_AssociatedEntity.Has<ck::FFragment_EntityScript_Current>(),
+        TEXT("ScriptEntity [{}] has no EntityScript fragment when reading SpawnParams.\n{}"),
+        _AssociatedEntity,
+        ck::Context(this))
+    { return {}; }
+
+    return _AssociatedEntity.Get<ck::FFragment_EntityScript_Current>().Get_SpawnParams();
+}
+
+auto
+    UCk_EntityScript_UE::
     DoFinishConstruction()
     -> void
 {
