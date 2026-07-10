@@ -49,8 +49,8 @@ auto
     { return false; }
 
     FCk_AnimBake_SampleParams SampleParams;
-    SampleParams.bExtractRootMotion = _bExtractRootMotion;
-    SampleParams.bDisableRetargeting = _bDisableRetargeting;
+    SampleParams.ExtractRootMotion = _ExtractRootMotion;
+    SampleParams.DisableRetargeting = _DisableRetargeting;
 
     const auto SkeletonData = ck::anim_bake::BuildSkeletonData(*_Skeleton, *_DefaultMesh, SampleParams);
     if (NOT SkeletonData.IsSet())
