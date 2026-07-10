@@ -75,6 +75,16 @@ auto
     { return; }
 
     const auto Self = UCk_Utils_SmState_UE::CastChecked(_AssociatedEntity);
+
+    // A fingerprint-mismatch verify (in Construct, before this BeginPlay) may have already
+    // faulted the SM and requested this state's exit. Its EnterState side effects must not fire —
+    // running a structurally-divergent state's gameplay logic is exactly what the determinism
+    // fence exists to prevent. Without this gate, DoEnterState ran once before the
+    // fault-requested exit landed.
+    if (UCk_Utils_SmState_UE::Get_IsPendingExit(Self)
+        || (ck::IsValid(_OwnerStateMachine) && _OwnerStateMachine.Has<ck::FTag_Sm_DeterminismFault>()))
+    { return; }
+
     const auto NetContext = ck::statemachine::ComputeNetContext(_OwnerStateMachine);
     EnterState(Self, NetContext);
 }
@@ -311,26 +321,20 @@ auto
     if (Expected == Local)
     { return; }
 
-    ck::sm::Warning(
-        TEXT("Determinism fingerprint mismatch on state [{}] of SM [{}]: expected [{}] from authority, local computed [{}]. ")
+    CK_TRIGGER_ENSURE(
+        TEXT("SM determinism fingerprint mismatch on state [{}] of SM [{}]: expected [{}] from authority, local computed [{}]. ")
         TEXT("Faulting the SM — no further transitions will land. This usually means DefineState diverges between authority and this machine."),
         GetClass(), _OwnerStateMachine, Expected, Local);
 
-    CK_ENSURE_IF_NOT(false,
-        TEXT("SM determinism fingerprint mismatch on state [{}] of SM [{}]: expected [{}], local [{}]"),
-        GetClass(), _OwnerStateMachine, Expected, Local)
+    if (ck::IsValid(_OwnerStateMachine))
     {
-        // Body always runs because cond is false. Mark the SM faulted and exit the state.
-        if (ck::IsValid(_OwnerStateMachine))
-        {
-            _OwnerStateMachine.AddOrGet<ck::FTag_Sm_DeterminismFault>();
-        }
+        _OwnerStateMachine.AddOrGet<ck::FTag_Sm_DeterminismFault>();
+    }
 
-        auto SelfState = UCk_Utils_SmState_UE::CastChecked(InStateHandle);
-        if (ck::IsValid(SelfState))
-        {
-            UCk_Utils_SmState_UE::Request_Exit(SelfState);
-        }
+    auto SelfState = UCk_Utils_SmState_UE::CastChecked(InStateHandle);
+    if (ck::IsValid(SelfState))
+    {
+        UCk_Utils_SmState_UE::Request_Exit(SelfState);
     }
 }
 
@@ -342,20 +346,18 @@ auto
         FCk_Handle_SmState_UnderConstruction& InStateHandle)
     -> void
 {
-    // The replicated payload is published by FProcessor_Sm_CommitPendingTransition (or by the
-    // initial-state path at Setup) with _NewStateFingerprint = 0, because at publication time
-    // the new state entity hasn't yet run DefineState — fingerprint isn't available.
-    // DoComputeFingerprint just ran above; the structural hash is now valid on this state.
-    // Patch it into the rep payload so subsequent rep deltas to non-authority clients carry
-    // a non-zero fingerprint (useful for inspection / debugger / future synchronous publication).
+    // The publication path reads the per-class fingerprint cache (Get_CachedFingerprint), which
+    // is warm for any class that has constructed at least once in this process — so events
+    // normally ship with the real hash synchronously. The residual gap is the FIRST-EVER
+    // instantiation of a class: at publication time the cache misses and the event ships with
+    // _NewStateFingerprint = 0 (clients treat 0 as "skip verify" for that one transition).
+    // DoComputeFingerprint just ran above, so this backfill patches the already-published payload
+    // after the fact — useful for inspection / the debugger / late joiners who receive the
+    // patched ring. Clients that already applied the zero-fingerprint event do NOT re-verify
+    // (Seq dedup); closing that fully would need a CDO graph-walk cache pre-warm at SM setup.
     //
     // Authority-only: clients receive the payload, they don't write it. Local-only SMs (no
     // Replicates intent) skip the whole branch via the gate below.
-    //
-    // Race note: clients that already applied a transition with fingerprint=0 won't replay
-    // when the backfilled rep delta arrives (Seq dedup). The full verify path requires
-    // synchronous fingerprint computation at publication time — that's a follow-up task
-    // requiring per-class fingerprint cache via the graph-walk pattern.
 
     if (NOT ck::IsValid(_OwnerStateMachine))
     { return; }
@@ -385,9 +387,10 @@ auto
     const auto SelfClass        = GetClass();
 
 #if WITH_DEV_AUTOMATION_TESTS
-    // Test-only fake-fingerprint injection for spec §13 test 9 (initial-state mismatch).
-    // The InitialState scope replaces the LocalFingerprint reaching the rep payload so the
-    // FlushPendingReplication_InitialCheck pass on the receive side observes a divergence.
+    // Test-only fake-fingerprint injection (spec §13 test 9 shape). The InitialState scope
+    // replaces the LocalFingerprint reaching the rep payload. NOTE: the receive-side initial-state
+    // check (spec §9.5) is not implemented, so today this only affects what test support reads
+    // back from the payload (Test_Get_LastPublishedFingerprint).
     if (_OwnerStateMachine.Has<ck::FFragment_Sm_TestFakeFingerprintInjection>())
     {
         auto& Injection = _OwnerStateMachine.Get<ck::FFragment_Sm_TestFakeFingerprintInjection>();
@@ -552,11 +555,13 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Static cache shared across the module. FName-keyed (not UClass*-keyed) so hot reload + PIE
-// restart cycles that recreate UClass objects don't leave dangling keys — a stale FName just
-// re-maps to the new class on next compute. Single-threaded: all CkFoundation processor work
-// runs on the main thread.
-static TMap<FName, int32> GSmStateFingerprintCache;
+// Static cache shared across the module. Keyed by CLASS PATH (not the short FName): two state
+// classes with the same short name in different packages must not share a slot — a collision
+// publishes the wrong fingerprint for one of them, and the verify side then false-faults a
+// healthy SM with FTag_Sm_DeterminismFault. Path keys survive hot reload + PIE-restart cycles
+// the same way name keys did (the path is stable; a recreated UClass re-maps on next compute).
+// Single-threaded: all CkFoundation processor work runs on the main thread.
+static TMap<FTopLevelAssetPath, int32> GSmStateFingerprintCache;
 
 auto
     UCk_SmState_EntityScript::
@@ -567,7 +572,7 @@ auto
     if (ck::Is_NOT_Valid(InClass))
     { return 0; }
 
-    const auto* Found = GSmStateFingerprintCache.Find(InClass->GetFName());
+    const auto* Found = GSmStateFingerprintCache.Find(InClass->GetClassPathName());
     return Found != nullptr ? *Found : 0;
 }
 
@@ -581,7 +586,7 @@ auto
     if (ck::Is_NOT_Valid(InClass))
     { return; }
 
-    GSmStateFingerprintCache.Add(InClass->GetFName(), InFingerprint);
+    GSmStateFingerprintCache.Add(InClass->GetClassPathName(), InFingerprint);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

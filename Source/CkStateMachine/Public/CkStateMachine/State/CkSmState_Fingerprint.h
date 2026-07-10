@@ -42,9 +42,11 @@ namespace ck::statemachine
     // because non-authority machines verify the replicated fingerprint against their locally
     // computed one before applying a transition.
     //
-    // Hash core: FNV-1a-style mix over each class's FName comparison index. FName comparison
-    // indices are stable across machines for engine-resolved names (the names are interned by
-    // string content), so two machines computing this for the same classes get the same int32.
+    // Hash core: FNV-1a mix over each class's case-normalized NAME STRING. The string is the
+    // only class identity that is stable across processes — FName comparison indices are
+    // process-local (assigned in name-table population order) and an FName's stored case is
+    // first-registration-wins, so neither survives a packaged-client vs dedicated-server
+    // comparison (see MixClass in the .cpp for the full rationale).
     //
     // Returned as int32 to match FFragment_SmState_Fingerprint._Hash and
     // FCk_Sm_TransitionEvent._NewStateFingerprint, both of which are int32 because UHT

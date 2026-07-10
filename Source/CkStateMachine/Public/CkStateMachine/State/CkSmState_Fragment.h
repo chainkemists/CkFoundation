@@ -27,7 +27,8 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_SmState_FullyEventDriven);
 
     // Marks the currently active state of a running SM.
-    // Added by UCk_Utils_SmState_UE::Create, removed when the state entity is destroyed on exit.
+    // Added by UCk_SmState_EntityScript::EnterState (BeginPlay), removed by ExitState — the
+    // Enter/Exit dedup and the graph-walk isolation chain both hinge on exactly this timing.
     CK_DEFINE_ECS_TAG(FTag_SmState_Active);
 
     // Signals that this state's transitions should be walked this pump cycle.
@@ -89,21 +90,19 @@ namespace ck
     // FINGERPRINT
     // ================================================================================================================
 
-    // Forward decls — defined in later phases of the replication implementation.
-    class FProcessor_Sm_FlushPendingReplication_InitialCheck;
     class FProcessor_Sm_CommitPendingTransition;
 
     // Structural fingerprint of the state's DefineState output (declaration-order for tasks,
     // transitions, and conditions; see spec §9). Computed locally on every machine after
     // DefineState completes. Compared to the replicated fingerprint at construction time on
-    // non-authority machines (transition-time path) and at flush time on first replication
-    // (Setup-time / OnAdd path, deferred to flush per spec §9.5).
+    // non-authority machines (transition-time path). NOTE: the spec §9.5 initial-state
+    // (Setup-time) check was never implemented — only transition-time verification exists;
+    // the rep payload's _InitialStateFingerprint is currently informational.
     struct CKSTATEMACHINE_API FFragment_SmState_Fingerprint
     {
     public:
         CK_GENERATED_BODY(FFragment_SmState_Fingerprint);
 
-        friend class FProcessor_Sm_FlushPendingReplication_InitialCheck;
         friend class FProcessor_Sm_CommitPendingTransition;
         friend class ::UCk_Utils_SmState_UE;
         friend class ::UCk_SmState_EntityScript;
