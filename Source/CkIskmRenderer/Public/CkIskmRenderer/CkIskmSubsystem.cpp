@@ -22,7 +22,8 @@ auto
     ACk_IskmRenderer_Actor_UE::
     DoInitialize(UCk_IskmRenderer_Data* InRendererData) -> void
 {
-    if (_Initialized) { return; }
+    if (_Initialized)
+    { return; }
     _RendererData = InRendererData;
     _Initialized = true;
 }
@@ -52,7 +53,8 @@ auto
     ACk_IskmRenderer_Actor_UE::
     Release_BaseSKMC(USkeletalMeshComponent* InComp) -> void
 {
-    if (ck::Is_NOT_Valid(InComp)) { return; }
+    if (ck::Is_NOT_Valid(InComp))
+    { return; }
     InComp->SetVisibility(false);
     // No Stop() here: on a component whose AnimScriptInstance is an AnimBP (or
     // the notify bridge), Stop() logs the "Currently in Animation Blueprint
@@ -72,7 +74,8 @@ auto
 {
     for (auto& Pair : _RendererActors)
     {
-        if (ck::IsValid(Pair.Value)) { Pair.Value->Destroy(); }
+        if (ck::IsValid(Pair.Value))
+        { Pair.Value->Destroy(); }
     }
     _RendererActors.Reset();
 
@@ -100,16 +103,16 @@ auto
     GetOrCreate_RendererActor(UCk_IskmRenderer_Data* InRendererData)
     -> ACk_IskmRenderer_Actor_UE*
 {
-    if (ck::Is_NOT_Valid(InRendererData)) { return nullptr; }
-
+    if (ck::Is_NOT_Valid(InRendererData))
+    { return nullptr; }
     if (auto* Existing = _RendererActors.Find(InRendererData))
     {
         return *Existing;
     }
 
     auto World = GetWorld();
-    if (ck::Is_NOT_Valid(World, ck::IsValid_Policy_NullptrOnly{})) { return nullptr; }
-
+    if (ck::Is_NOT_Valid(World, ck::IsValid_Policy_NullptrOnly{}))
+    { return nullptr; }
     auto SpawnInfo = FActorSpawnParameters{};
     SpawnInfo.ObjectFlags |= RF_Transient;
     SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -130,8 +133,10 @@ auto
     GetOrCreate_RendererActor(const UWorld* InWorld, UCk_IskmRenderer_Data* InRendererData)
     -> ACk_IskmRenderer_Actor_UE*
 {
-    if (ck::Is_NOT_Valid(InWorld, ck::IsValid_Policy_NullptrOnly{})) { return nullptr; }
+    if (ck::Is_NOT_Valid(InWorld, ck::IsValid_Policy_NullptrOnly{}))
+    { return nullptr; }
     auto* Sub = InWorld->GetSubsystem<UCk_IskmRenderer_Subsystem_UE>();
-    if (ck::Is_NOT_Valid(Sub)) { return nullptr; }
+    if (ck::Is_NOT_Valid(Sub))
+    { return nullptr; }
     return Sub->GetOrCreate_RendererActor(InRendererData);
 }

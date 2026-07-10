@@ -49,7 +49,8 @@ auto
     Get_RendererData(const FCk_Handle_IskmRenderer& InHandle)
     -> UCk_IskmRenderer_Data*
 {
-    if (ck::Is_NOT_Valid(InHandle)) { return nullptr; }
+    if (ck::Is_NOT_Valid(InHandle))
+    { return nullptr; }
     return InHandle.Get<ck::FFragment_IskmRenderer_Params>().Get_RendererData().Get();
 }
 

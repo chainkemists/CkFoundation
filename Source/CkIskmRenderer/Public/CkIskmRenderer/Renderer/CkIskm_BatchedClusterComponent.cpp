@@ -1,6 +1,8 @@
 #include "CkIskm_BatchedClusterComponent.h"
 
 #include "CkIskm_BatchedClusterProxy.h"
+
+#include "CkCore/Macros/CkMacros.h"
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_Fragment_Data.h"
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_BakedPose.h"
 
@@ -21,9 +23,10 @@ UCk_Iskm_BatchedClusterComponent::UCk_Iskm_BatchedClusterComponent()
     bUseAsOccluder = false;
 }
 
-void
+auto
     UCk_Iskm_BatchedClusterComponent::
     Setup(UCk_IskmAnimCollection_Data* InCollection, USkeletalMesh* InMesh)
+    -> void
 {
     _AnimCollection = InCollection;
     _Mesh = InMesh;
@@ -31,9 +34,10 @@ void
     UpdateBounds();
 }
 
-void
+auto
     UCk_Iskm_BatchedClusterComponent::
     Set_Instances(const TArray<FInstance>& InInstances)
+    -> void
 {
     _Instances = InInstances;
     for (FInstance& Inst : _Instances)
@@ -43,34 +47,38 @@ void
     MarkRenderStateDirty();
 }
 
-void
+auto
     UCk_Iskm_BatchedClusterComponent::
     Push_LiveInstances(TArray<FInstance>&& InInstances)
+    -> void
 {
     _Instances = MoveTemp(InInstances);
     MarkRenderDynamicDataDirty();
 }
 
-void
+auto
     UCk_Iskm_BatchedClusterComponent::
-    Set_ManagedExternally(bool bInManaged)
+    Set_ManagedExternally(bool InManaged)
+    -> void
 {
-    _ManagedExternally = bInManaged;
-    SetComponentTickEnabled(!bInManaged);
+    _ManagedExternally = InManaged;
+    SetComponentTickEnabled(NOT InManaged);
 }
 
-void
+auto
     UCk_Iskm_BatchedClusterComponent::
     Set_FixedLocalBounds(const FBox& InLocalBounds)
+    -> void
 {
     _FixedLocalBounds = InLocalBounds;
     Recompute_LocalBounds();
     UpdateBounds();
 }
 
-FPrimitiveSceneProxy*
+auto
     UCk_Iskm_BatchedClusterComponent::
     CreateSceneProxy()
+    -> FPrimitiveSceneProxy*
 {
     if (_AnimCollection == nullptr || _Mesh == nullptr || _Instances.Num() == 0)
     { return nullptr; }
@@ -85,9 +93,10 @@ FPrimitiveSceneProxy*
     return new FCk_Iskm_BatchedClusterProxy(this, GetFName());
 }
 
-void
+auto
     UCk_Iskm_BatchedClusterComponent::
-    GetUsedMaterials(TArray<UMaterialInterface*>& OutMaterials, bool bGetDebugMaterials) const
+    GetUsedMaterials(TArray<UMaterialInterface*>& OutMaterials, bool InGetDebugMaterials) const
+    -> void
 {
     if (_Mesh == nullptr)
     { return; }
@@ -97,16 +106,18 @@ void
     }
 }
 
-int32
+auto
     UCk_Iskm_BatchedClusterComponent::
     GetNumMaterials() const
+    -> int32
 {
     return _Mesh != nullptr ? _Mesh->GetNumMaterials() : 0;
 }
 
-UMaterialInterface*
+auto
     UCk_Iskm_BatchedClusterComponent::
     GetMaterial(int32 ElementIndex) const
+    -> UMaterialInterface*
 {
     if (_Mesh == nullptr)
     { return nullptr; }
@@ -114,9 +125,10 @@ UMaterialInterface*
     return Mats.IsValidIndex(ElementIndex) ? Mats[ElementIndex].MaterialInterface : nullptr;
 }
 
-FBoxSphereBounds
+auto
     UCk_Iskm_BatchedClusterComponent::
     CalcBounds(const FTransform& LocalToWorld) const
+    -> FBoxSphereBounds
 {
     if (_LocalBounds.IsValid == 0)
     {
@@ -125,9 +137,10 @@ FBoxSphereBounds
     return FBoxSphereBounds(_LocalBounds).TransformBy(LocalToWorld);
 }
 
-void
+auto
     UCk_Iskm_BatchedClusterComponent::
     Recompute_LocalBounds()
+    -> void
 {
     // Fixed conservative bounds (tile extent + pad) trump the per-instance union — movement never recomputes.
     if (_FixedLocalBounds.IsValid != 0)
@@ -153,9 +166,10 @@ void
     }
 }
 
-void
+auto
     UCk_Iskm_BatchedClusterComponent::
     TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+    -> void
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
@@ -168,7 +182,7 @@ void
     if (Baked == nullptr)
     { return; }
 
-    bool bAnyChanged = false;
+    bool AnyChanged = false;
     for (FInstance& Inst : _Instances)
     {
         if (Inst.Rate == 0.0f)
@@ -178,16 +192,17 @@ void
         Inst.PrevFrame = Inst.CurFrame;
         Inst.CurFrame = NewFrame;
         if (NewFrame != Inst.PrevFrame)
-        { bAnyChanged = true; }
+        { AnyChanged = true; }
     }
 
-    if (bAnyChanged)
+    if (AnyChanged)
     { MarkRenderDynamicDataDirty(); }
 }
 
-void
+auto
     UCk_Iskm_BatchedClusterComponent::
     SendRenderDynamicData_Concurrent()
+    -> void
 {
     Super::SendRenderDynamicData_Concurrent();
 

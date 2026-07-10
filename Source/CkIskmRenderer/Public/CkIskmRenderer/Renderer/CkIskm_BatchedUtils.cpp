@@ -11,7 +11,7 @@
 #include "GameFramework/Actor.h"
 #include "Components/SceneComponent.h"
 
-UCk_Iskm_BatchedClusterComponent*
+auto
     UCk_Utils_IskmBatched_UE::
     Debug_SpawnCluster(
         UObject* InWorldContextObject,
@@ -21,6 +21,7 @@ UCk_Iskm_BatchedClusterComponent*
         float InSpacing,
         int32 InSequenceIndex,
         float InRate)
+    -> UCk_Iskm_BatchedClusterComponent*
 {
     if (ck::Is_NOT_Valid(InWorldContextObject) || ck::Is_NOT_Valid(InCollection))
     { return nullptr; }
@@ -76,16 +77,17 @@ UCk_Iskm_BatchedClusterComponent*
     return Cluster;
 }
 
-int32
+auto
     UCk_Utils_IskmBatched_UE::
     Get_InstanceCount(const UCk_Iskm_BatchedClusterComponent* InCluster)
+    -> int32
 {
     if (ck::Is_NOT_Valid(InCluster))
     { return 0; }
     return InCluster->Get_Instances().Num();
 }
 
-ACk_Iskm_BatchedCrowd_Actor*
+auto
     UCk_Utils_IskmBatched_UE::
     Debug_SpawnScatteredCrowd(
         UObject* InWorldContextObject,
@@ -96,6 +98,7 @@ ACk_Iskm_BatchedCrowd_Actor*
         float InTileSize,
         int32 InSequenceIndex,
         float InRate)
+    -> ACk_Iskm_BatchedCrowd_Actor*
 {
     if (ck::Is_NOT_Valid(InWorldContextObject) || ck::Is_NOT_Valid(InCollection))
     { return nullptr; }
@@ -156,30 +159,33 @@ ACk_Iskm_BatchedCrowd_Actor*
     return Crowd;
 }
 
-int32
+auto
     UCk_Utils_IskmBatched_UE::
     Get_CrowdTileCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd)
+    -> int32
 {
     if (ck::Is_NOT_Valid(InCrowd))
     { return 0; }
     return InCrowd->Get_TileCount();
 }
 
-int32
+auto
     UCk_Utils_IskmBatched_UE::
     Get_CrowdInstanceCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd)
+    -> int32
 {
     if (ck::Is_NOT_Valid(InCrowd))
     { return 0; }
     return InCrowd->Get_InstanceCount();
 }
 
-ACk_Iskm_BatchedCrowd_Actor*
+auto
     UCk_Utils_IskmBatched_UE::
     Create_Crowd(
         UObject* InWorldContextObject,
         UCk_IskmAnimCollection_Data* InCollection,
         float InTileSize)
+    -> ACk_Iskm_BatchedCrowd_Actor*
 {
     if (ck::Is_NOT_Valid(InWorldContextObject) || ck::Is_NOT_Valid(InCollection))
     { return nullptr; }
@@ -204,7 +210,7 @@ ACk_Iskm_BatchedCrowd_Actor*
     return Crowd;
 }
 
-int32
+auto
     UCk_Utils_IskmBatched_UE::
     Add_CrowdMember(
         ACk_Iskm_BatchedCrowd_Actor* InCrowd,
@@ -212,6 +218,7 @@ int32
         int32 InSequenceIndex,
         float InRate,
         float InTimeOffset)
+    -> int32
 {
     if (ck::Is_NOT_Valid(InCrowd))
     { return INDEX_NONE; }
@@ -220,10 +227,11 @@ int32
     return InCrowd->Get_MemberCount() - 1;
 }
 
-void
+auto
     UCk_Utils_IskmBatched_UE::
     Finalize_Crowd(
         ACk_Iskm_BatchedCrowd_Actor* InCrowd)
+    -> void
 {
     if (ck::Is_NOT_Valid(InCrowd))
     { return; }
@@ -231,72 +239,80 @@ void
     InCrowd->Finalize();
 }
 
-int32
+auto
     UCk_Utils_IskmBatched_UE::
     Get_CrowdMemberCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd)
+    -> int32
 {
     if (ck::Is_NOT_Valid(InCrowd))
     { return 0; }
     return InCrowd->Get_MemberCount();
 }
 
-FTransform
+auto
     UCk_Utils_IskmBatched_UE::
     Get_CrowdMemberTransform(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex)
+    -> FTransform
 {
     if (ck::Is_NOT_Valid(InCrowd))
     { return FTransform::Identity; }
     return InCrowd->Get_MemberWorldTransform(InIndex);
 }
 
-int32
+auto
     UCk_Utils_IskmBatched_UE::
     Get_CrowdMemberSequenceIndex(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex)
+    -> int32
 {
     if (ck::Is_NOT_Valid(InCrowd))
     { return 0; }
     return InCrowd->Get_MemberSequenceIndex(InIndex);
 }
 
-void
+auto
     UCk_Utils_IskmBatched_UE::
-    Set_CrowdMemberVisible(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, bool bInVisible)
+    Set_CrowdMemberVisible(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, bool InVisible)
+    -> void
 {
     if (ck::Is_NOT_Valid(InCrowd))
     { return; }
-    InCrowd->Set_MemberVisible(InIndex, bInVisible);
+    InCrowd->Set_MemberVisible(InIndex, InVisible);
 }
 
-int32
+auto
     UCk_Utils_IskmBatched_UE::
     Get_CrowdRenderedInstanceCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd)
+    -> int32
 {
     if (ck::Is_NOT_Valid(InCrowd))
     { return 0; }
     return InCrowd->Get_RenderedInstanceCount();
 }
 
-void
+auto
     UCk_Utils_IskmBatched_UE::
     Set_CrowdMemberTransform(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, const FTransform& InWorldTransform)
+    -> void
 {
     if (ck::Is_NOT_Valid(InCrowd))
     { return; }
     InCrowd->Set_MemberTransform(InIndex, InWorldTransform);
 }
 
-void
+auto
     UCk_Utils_IskmBatched_UE::
-    Set_CrowdMemberAnimation(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, int32 InSequenceIndex, float InRate, bool bInResetTime)
+    Set_CrowdMemberAnimation(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, int32 InSequenceIndex, float InRate, bool InResetTime)
+    -> void
 {
     if (ck::Is_NOT_Valid(InCrowd))
     { return; }
-    InCrowd->Set_MemberAnimation(InIndex, InSequenceIndex, InRate, bInResetTime);
+    InCrowd->Set_MemberAnimation(InIndex, InSequenceIndex, InRate, InResetTime);
 }
 
-void
+auto
     UCk_Utils_IskmBatched_UE::
     Set_CrowdMemberCustomData(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, float InA, float InB)
+    -> void
 {
     if (ck::Is_NOT_Valid(InCrowd))
     { return; }

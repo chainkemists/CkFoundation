@@ -32,7 +32,7 @@ bool UCk_IskmNotify_AnimInstance::HandleNotify(const FAnimNotifyEvent& AnimNotif
     return Result;
 }
 
-void UCk_IskmNotify_AnimInstance::NativeOnMontageBlendingOut(UAnimMontage* Montage, bool bInterrupted)
+void UCk_IskmNotify_AnimInstance::NativeOnMontageBlendingOut(UAnimMontage* InMontage, bool InInterrupted)
 {
     if (ck::IsValid(_OwningHandle))
     {
@@ -41,7 +41,7 @@ void UCk_IskmNotify_AnimInstance::NativeOnMontageBlendingOut(UAnimMontage* Monta
         // keeps fragment state consistent with the SKMC-side state. Friend access to
         // FFragment_IskmProxy_AnimState was added in pre-M setup commit `411ac4e29`.
         if (auto& AnimState = _OwningHandle.Get<ck::FFragment_IskmProxy_AnimState>();
-            AnimState.Get_CurrentMontage().Get() == Montage)
+            AnimState.Get_CurrentMontage().Get() == InMontage)
         {
             AnimState._CurrentMontage.Reset();
         }
@@ -49,11 +49,11 @@ void UCk_IskmNotify_AnimInstance::NativeOnMontageBlendingOut(UAnimMontage* Monta
 
         ck::UUtils_Signal_IskmProxy_OnMontageFinished::Broadcast(
             _OwningHandle,
-            ck::MakePayload(_OwningHandle, FCk_IskmProxy_MontageRef{Montage}, bInterrupted));
+            ck::MakePayload(_OwningHandle, FCk_IskmProxy_MontageRef{InMontage}, InInterrupted));
     }
 }
 
-void UCk_IskmNotify_AnimInstance::OnMontageEndedHook(UAnimMontage* InMontage, bool bInterrupted)
+void UCk_IskmNotify_AnimInstance::OnMontageEndedHook(UAnimMontage* InMontage, bool InInterrupted)
 {
-    NativeOnMontageBlendingOut(InMontage, bInterrupted);
+    NativeOnMontageBlendingOut(InMontage, InInterrupted);
 }

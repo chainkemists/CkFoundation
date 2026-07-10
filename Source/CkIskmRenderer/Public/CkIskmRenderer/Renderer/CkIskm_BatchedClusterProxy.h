@@ -2,6 +2,8 @@
 
 #include "CoreMinimal.h"
 
+#include "CkCore/Macros/CkMacros.h"
+
 #include "PrimitiveSceneProxy.h"
 #include "InstanceDataSceneProxy.h"
 
@@ -50,7 +52,7 @@ struct FCk_Iskm_CompDynData
 struct FCk_Iskm_ClusterInstanceData : public FInstanceSceneDataBuffers
 {
     FCk_Iskm_ClusterInstanceData();
-    void Init(bool bWithPerInstanceLocalBounds);
+    void Init(bool InWithPerInstanceLocalBounds);
 };
 
 // ----------------------------------------------------------------------------------------------------------------
@@ -64,7 +66,7 @@ public:
     virtual SIZE_T GetTypeHash() const override;
     virtual uint32 GetMemoryFootprint() const override { return sizeof(*this) + GetAllocatedSize(); }
     virtual FPrimitiveViewRelevance GetViewRelevance(const FSceneView* View) const override;
-    virtual bool CanBeOccluded() const override { return !MaterialRelevance.bDisableDepthTest; }
+    virtual bool CanBeOccluded() const override { return NOT MaterialRelevance.bDisableDepthTest; }
     // Opt each instance into per-instance GPU occlusion (HZB) culling — the crowd-correct mechanism (Skelot parity):
     // instances behind occluders are culled individually on the GPU, rather than the whole cluster being one
     // occlusion unit. Feeds FPrimitiveSceneProxy scene-data flags (PrimitiveSceneProxy.cpp:792). The single shared
@@ -86,7 +88,7 @@ private:
     USkeletalMesh* Mesh = nullptr;
     int32 BaseLOD = 0;
     float GPULODRadius = 0.0f;
-    bool bWithPerInstanceLocalBound = false;
+    bool WithPerInstanceLocalBound = false;
 
     FMaterialRelevance MaterialRelevance;
     TArray<UMaterialInterface*> Materials;

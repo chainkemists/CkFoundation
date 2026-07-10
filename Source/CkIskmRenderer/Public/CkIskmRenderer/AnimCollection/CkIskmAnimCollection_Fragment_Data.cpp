@@ -64,7 +64,7 @@ auto
     const auto Layout = ck::anim_bake::BuildFrameLayout(SequenceAssets, _SampleFrequency);
 
     auto Baked = MakePimpl<FCk_Iskm_BakedPose>();
-    Baked->bHighPrecision = true;
+    Baked->HighPrecision = true;
     Baked->RenderBoneCount = SkeletonData->RenderBoneCount;
     Baked->RenderRequiredBones = SkeletonData->RenderRequiredBones;
     Baked->SkeletonBoneToRenderBone = SkeletonData->SkeletonBoneToRenderBone;
@@ -116,7 +116,7 @@ auto
 
     Baked->AnimatedBounds = ck::anim_bake::ComputeAnimatedBounds(*SkeletonData, BoneBoundsAllFrames, *_DefaultMesh);
 
-    Baked->bIsBaked = true;
+    Baked->IsBaked = true;
     _BakedPose = MoveTemp(Baked);
     return true;
 }
@@ -146,7 +146,7 @@ auto
     Get_IsBaked() const
     -> bool
 {
-    return _BakedPose.IsValid() && _BakedPose->bIsBaked;
+    return ck::IsValid(_BakedPose.Get(), ck::IsValid_Policy_NullptrOnly{}) && _BakedPose->IsBaked;
 }
 
 // ====================================================================================================================
@@ -166,7 +166,7 @@ auto
         { return; }
     }
 
-    if (_RenderData.IsValid())
+    if (ck::IsValid(_RenderData.Get(), ck::IsValid_Policy_NullptrOnly{}))
     { return; }
 
     const FCk_Iskm_BakedPose* Baked = Get_BakedPose();
@@ -235,7 +235,7 @@ auto
     Get_DefaultMeshData() const
     -> const FCk_Iskm_BatchedMeshData*
 {
-    return _RenderData.IsValid() ? &_RenderData->DefaultMeshData : nullptr;
+    return ck::IsValid(_RenderData.Get(), ck::IsValid_Policy_NullptrOnly{}) ? &_RenderData->DefaultMeshData : nullptr;
 }
 
 auto
@@ -243,7 +243,7 @@ auto
     ReleaseRenderResources()
     -> void
 {
-    if (_RenderData.IsValid() == false)
+    if (NOT ck::IsValid(_RenderData.Get(), ck::IsValid_Policy_NullptrOnly{}))
     { return; }
 
     // Game-thread ReleaseResource enqueues the render-thread ReleaseRHI; the _ReleaseResourcesFence (BeginDestroy)

@@ -5,6 +5,8 @@
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_Fragment_Data.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Validation/CkIsValid.h"
 
 #include "Engine/SkeletalMesh.h"
 #include "Materials/MaterialInterface.h"
@@ -32,9 +34,10 @@ FCk_Iskm_ClusterInstanceData::FCk_Iskm_ClusterInstanceData()
 {
 }
 
-void
+auto
     FCk_Iskm_ClusterInstanceData::
-    Init(bool bWithPerInstanceLocalBounds)
+    Init(bool InWithPerInstanceLocalBounds)
+    -> void
 {
     // No buffer-level init required on this fork — per-instance data flags are written through the FWriteView
     // (see FCk_Iskm_BatchedClusterProxy::WriteInstanceBuffer).
@@ -146,24 +149,26 @@ FCk_Iskm_BatchedClusterProxy::FCk_Iskm_BatchedClusterProxy(UCk_Iskm_BatchedClust
     }
 
     SetupInstanceSceneDataBuffers(&InstanceBuffer);
-    InstanceBuffer.Init(bWithPerInstanceLocalBound);
+    InstanceBuffer.Init(WithPerInstanceLocalBound);
 }
 
 FCk_Iskm_BatchedClusterProxy::~FCk_Iskm_BatchedClusterProxy()
 {
 }
 
-SIZE_T
+auto
     FCk_Iskm_BatchedClusterProxy::
     GetTypeHash() const
+    -> SIZE_T
 {
     static size_t UniquePointer;
     return reinterpret_cast<size_t>(&UniquePointer);
 }
 
-FPrimitiveViewRelevance
+auto
     FCk_Iskm_BatchedClusterProxy::
     GetViewRelevance(const FSceneView* View) const
+    -> FPrimitiveViewRelevance
 {
     FPrimitiveViewRelevance Result;
     Result.bDrawRelevance = IsShown(View);
@@ -177,19 +182,21 @@ FPrimitiveViewRelevance
     return Result;
 }
 
-void
+auto
     FCk_Iskm_BatchedClusterProxy::
     CreateRenderThreadResources(FRHICommandListBase& RHICmdList)
+    -> void
 {
     // Populate the GPUScene instance buffer once, before the scene first reads it.
     WriteInstanceBuffer();
 }
 
-void
+auto
     FCk_Iskm_BatchedClusterProxy::
     WriteInstanceBuffer()
+    -> void
 {
-    if (DynData.IsValid() == false)
+    if (NOT ck::IsValid(DynData.Get(), ck::IsValid_Policy_NullptrOnly{}))
     { return; }
 
     FInstanceSceneDataBuffers::FAccessTag AT(666);
@@ -214,9 +221,10 @@ void
     InstanceBuffer.EndWriteAccess(AT);
 }
 
-void
+auto
     FCk_Iskm_BatchedClusterProxy::
     UpdateInstanceBuffer(FCk_Iskm_CompDynData* InDynData)
+    -> void
 {
     CK_ENSURE_IF_NOT(IsInRenderingThread(), TEXT("UpdateInstanceBuffer must run on the render thread"))
     {
@@ -253,9 +261,10 @@ void
         .LocalBounds = LocalBounds_Snap });
 }
 
-void
+auto
     FCk_Iskm_BatchedClusterProxy::
     FillMeshBatch(FMeshBatch& OutMesh, int32 InLODIndex, int32 InSectionIndex, const FSkeletalMeshLODRenderData& InLODData) const
+    -> void
 {
     const FSkelMeshRenderSection& Section = InLODData.RenderSections[InSectionIndex];
     FMeshBatchElement& BatchElement = OutMesh.Elements[0];
@@ -283,11 +292,12 @@ void
     BatchElement.VertexFactoryUserData = nullptr;
 }
 
-void
+auto
     FCk_Iskm_BatchedClusterProxy::
     DrawStaticElements(FStaticPrimitiveDrawInterface* PDI)
+    -> void
 {
-    if (DynData.IsValid() == false || Mesh == nullptr || AnimCollection == nullptr)
+    if (NOT ck::IsValid(DynData.Get(), ck::IsValid_Policy_NullptrOnly{}) || Mesh == nullptr || AnimCollection == nullptr)
     { return; }
     if (StableInstanceRuns.Num() == 0)
     { return; }

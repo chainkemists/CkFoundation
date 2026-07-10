@@ -16,9 +16,10 @@ ACk_Iskm_BatchedCrowd_Actor::ACk_Iskm_BatchedCrowd_Actor()
     SetRootComponent(_Root);
 }
 
-void
+auto
     ACk_Iskm_BatchedCrowd_Actor::
     Initialize(UCk_IskmAnimCollection_Data* InCollection, float InTileSize)
+    -> void
 {
     _Collection = InCollection;
     _TileSize = FMath::Max(1.0f, InTileSize);
@@ -29,26 +30,29 @@ void
     { _Collection->Build_BakedPoseData(); }
 }
 
-FIntPoint
+auto
     ACk_Iskm_BatchedCrowd_Actor::
     TileCoordOf(const FVector& InWorldLocation) const
+    -> FIntPoint
 {
     return FIntPoint(FMath::FloorToInt(InWorldLocation.X / _TileSize),
                      FMath::FloorToInt(InWorldLocation.Y / _TileSize));
 }
 
-FVector
+auto
     ACk_Iskm_BatchedCrowd_Actor::
     TileCentre(const FIntPoint& InTile) const
+    -> FVector
 {
     return FVector((static_cast<double>(InTile.X) + 0.5) * _TileSize,
                    (static_cast<double>(InTile.Y) + 0.5) * _TileSize,
                    0.0);
 }
 
-FBox
+auto
     ACk_Iskm_BatchedCrowd_Actor::
     TileLocalBounds() const
+    -> FBox
 {
     // Conservative fixed bounds, component-relative (component sits at the tile centre): the tile's XY extent
     // padded by the ANIMATED pose box (instances stand anywhere in the tile; an animated mesh sticks out at
@@ -62,9 +66,10 @@ FBox
         FVector(+Half + PadXY, +Half + PadXY, MeshBox.Max.Z));
 }
 
-UCk_Iskm_BatchedClusterComponent*
+auto
     ACk_Iskm_BatchedCrowd_Actor::
     GetOrCreate_Tile(const FIntPoint& InTile)
+    -> UCk_Iskm_BatchedClusterComponent*
 {
     if (const TObjectPtr<UCk_Iskm_BatchedClusterComponent>* Found = _Tiles.Find(InTile))
     { return *Found; }
@@ -87,9 +92,10 @@ UCk_Iskm_BatchedClusterComponent*
     return Comp;
 }
 
-void
+auto
     ACk_Iskm_BatchedCrowd_Actor::
     AddInstance(const FTransform& InWorldTransform, int32 InSequenceIndex, float InRate, float InTimeOffset)
+    -> void
 {
     const FIntPoint Tile = TileCoordOf(InWorldTransform.GetLocation());
     if (GetOrCreate_Tile(Tile) == nullptr)
@@ -101,7 +107,7 @@ void
     FMember Member;
     Member.WorldXf = InWorldTransform;
     Member.Tile = Tile;
-    Member.bVisible = true;
+    Member.Visible = true;
     Member.Inst.Transform = InWorldTransform.GetRelativeTransform(TileXf);
     Member.Inst.PrevPushedTransform = Member.Inst.Transform;
     Member.Inst.SequenceIndex = InSequenceIndex;
@@ -114,9 +120,10 @@ void
     _TileMembers.FindOrAdd(Tile).Add(MemberIndex);
 }
 
-void
+auto
     ACk_Iskm_BatchedCrowd_Actor::
     RebuildTile(const FIntPoint& InTile)
+    -> void
 {
     UCk_Iskm_BatchedClusterComponent* Comp = _Tiles.FindRef(InTile);
     if (Comp == nullptr)
@@ -131,16 +138,17 @@ void
         for (const int32 MemberIndex : *MemberIndices)
         {
             const FMember& M = _Members[MemberIndex];
-            if (M.bVisible)
+            if (M.Visible)
             { Visible.Add(M.Inst); }
         }
     }
     Comp->Set_Instances(Visible);
 }
 
-void
+auto
     ACk_Iskm_BatchedCrowd_Actor::
     PushTile(const FIntPoint& InTile)
+    -> void
 {
     UCk_Iskm_BatchedClusterComponent* Comp = _Tiles.FindRef(InTile);
     if (Comp == nullptr)
@@ -154,7 +162,7 @@ void
     for (const int32 MemberIndex : *MemberIndices)
     {
         const FMember& M = _Members[MemberIndex];
-        if (M.bVisible)
+        if (M.Visible)
         { Visible.Add(M.Inst); }
     }
 
@@ -177,9 +185,10 @@ void
     }
 }
 
-void
+auto
     ACk_Iskm_BatchedCrowd_Actor::
     Finalize()
+    -> void
 {
     for (const auto& Pair : _Tiles)
     {
@@ -188,9 +197,10 @@ void
     _DirtyTiles.Reset();
 }
 
-void
+auto
     ACk_Iskm_BatchedCrowd_Actor::
     Tick(float InDeltaTime)
+    -> void
 {
     Super::Tick(InDeltaTime);
 
@@ -214,7 +224,7 @@ void
         {
             M.Inst.PrevFrame = M.Inst.CurFrame;
             M.Inst.CurFrame = NewFrame;
-            if (M.bVisible)
+            if (M.Visible)
             { _DirtyTiles.Add(M.Tile); }
         }
     }
@@ -226,30 +236,34 @@ void
     _DirtyTiles.Reset();
 }
 
-FTransform
+auto
     ACk_Iskm_BatchedCrowd_Actor::
     Get_MemberWorldTransform(int32 InIndex) const
+    -> FTransform
 {
     return _Members.IsValidIndex(InIndex) ? _Members[InIndex].WorldXf : FTransform::Identity;
 }
 
-int32
+auto
     ACk_Iskm_BatchedCrowd_Actor::
     Get_MemberSequenceIndex(int32 InIndex) const
+    -> int32
 {
     return _Members.IsValidIndex(InIndex) ? _Members[InIndex].Inst.SequenceIndex : 0;
 }
 
-bool
+auto
     ACk_Iskm_BatchedCrowd_Actor::
     Get_MemberVisible(int32 InIndex) const
+    -> bool
 {
-    return _Members.IsValidIndex(InIndex) ? _Members[InIndex].bVisible : false;
+    return _Members.IsValidIndex(InIndex) ? _Members[InIndex].Visible : false;
 }
 
-void
+auto
     ACk_Iskm_BatchedCrowd_Actor::
     Set_MemberTransform(int32 InIndex, const FTransform& InWorldTransform)
+    -> void
 {
     if (_Members.IsValidIndex(InIndex) == false)
     { return; }
@@ -263,7 +277,7 @@ void
         // In-tile move: transform flows through the light per-frame push. PrevPushedTransform still holds the
         // last pushed value, so this move produces a real motion vector.
         M.Inst.Transform = InWorldTransform.GetRelativeTransform(FTransform(TileCentre(M.Tile)));
-        if (M.bVisible)
+        if (M.Visible)
         { _DirtyTiles.Add(M.Tile); }
         return;
     }
@@ -288,9 +302,10 @@ void
     _DirtyTiles.Remove(NewTile);
 }
 
-void
+auto
     ACk_Iskm_BatchedCrowd_Actor::
-    Set_MemberAnimation(int32 InIndex, int32 InSequenceIndex, float InRate, bool bInResetTime)
+    Set_MemberAnimation(int32 InIndex, int32 InSequenceIndex, float InRate, bool InResetTime)
+    -> void
 {
     if (_Members.IsValidIndex(InIndex) == false)
     { return; }
@@ -298,15 +313,16 @@ void
     FMember& M = _Members[InIndex];
     M.Inst.SequenceIndex = InSequenceIndex;
     M.Inst.Rate = InRate;
-    if (bInResetTime)
+    if (InResetTime)
     { M.Inst.Time = 0.0f; }
-    if (M.bVisible)
+    if (M.Visible)
     { _DirtyTiles.Add(M.Tile); }
 }
 
-void
+auto
     ACk_Iskm_BatchedCrowd_Actor::
     Set_MemberCustomData(int32 InIndex, float InA, float InB)
+    -> void
 {
     if (_Members.IsValidIndex(InIndex) == false)
     { return; }
@@ -314,26 +330,28 @@ void
     FMember& M = _Members[InIndex];
     M.Inst.CustomDataA = InA;
     M.Inst.CustomDataB = InB;
-    if (M.bVisible)
+    if (M.Visible)
     { _DirtyTiles.Add(M.Tile); }
 }
 
-void
+auto
     ACk_Iskm_BatchedCrowd_Actor::
-    Set_MemberVisible(int32 InIndex, bool bInVisible)
+    Set_MemberVisible(int32 InIndex, bool InVisible)
+    -> void
 {
     if (_Members.IsValidIndex(InIndex) == false)
     { return; }
-    if (_Members[InIndex].bVisible == bInVisible)
+    if (_Members[InIndex].Visible == InVisible)
     { return; }
-    _Members[InIndex].bVisible = bInVisible;
+    _Members[InIndex].Visible = InVisible;
     RebuildTile(_Members[InIndex].Tile);
     _DirtyTiles.Remove(_Members[InIndex].Tile);
 }
 
-int32
+auto
     ACk_Iskm_BatchedCrowd_Actor::
     Get_RenderedInstanceCount() const
+    -> int32
 {
     int32 Total = 0;
     for (const auto& Pair : _Tiles)

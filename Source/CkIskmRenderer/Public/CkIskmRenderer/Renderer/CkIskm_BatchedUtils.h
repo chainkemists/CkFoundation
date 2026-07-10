@@ -128,7 +128,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
         DisplayName = "[Ck][IskmBatched] Set Crowd Member Visible")
     static void
-    Set_CrowdMemberVisible(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, bool bInVisible);
+    Set_CrowdMemberVisible(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, bool InVisible);
 
     // Total instances actually in the tile proxies right now (only visible members) — drops when a member is hidden.
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
@@ -148,7 +148,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
         DisplayName = "[Ck][IskmBatched] Set Crowd Member Animation")
     static void
-    Set_CrowdMemberAnimation(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, int32 InSequenceIndex, float InRate, bool bInResetTime = false);
+    Set_CrowdMemberAnimation(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, int32 InSequenceIndex, float InRate, bool InResetTime = false);
 
     // Per-member material custom data — shader instance custom-data floats [2] and [3] (tint/variety).
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",

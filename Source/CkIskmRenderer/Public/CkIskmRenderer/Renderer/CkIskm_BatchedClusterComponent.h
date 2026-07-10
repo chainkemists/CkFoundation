@@ -56,7 +56,7 @@ public:
 
     // Managed mode: an external owner (the crowd manager) advances animation and pushes per-frame data;
     // disable this component's self-tick.
-    void Set_ManagedExternally(bool bInManaged);
+    void Set_ManagedExternally(bool InManaged);
 
     // Fixed conservative local bounds (e.g. tile extent + mesh pad) — movement inside them never recomputes.
     void Set_FixedLocalBounds(const FBox& InLocalBounds);
@@ -71,7 +71,7 @@ public:
     //~ UPrimitiveComponent
     virtual FPrimitiveSceneProxy* CreateSceneProxy() override;
     virtual void SendRenderDynamicData_Concurrent() override;
-    virtual void GetUsedMaterials(TArray<UMaterialInterface*>& OutMaterials, bool bGetDebugMaterials) const override;
+    virtual void GetUsedMaterials(TArray<UMaterialInterface*>& OutMaterials, bool InGetDebugMaterials) const override;
     virtual int32 GetNumMaterials() const override;
     virtual UMaterialInterface* GetMaterial(int32 ElementIndex) const override;
     virtual FBoxSphereBounds CalcBounds(const FTransform& LocalToWorld) const override;

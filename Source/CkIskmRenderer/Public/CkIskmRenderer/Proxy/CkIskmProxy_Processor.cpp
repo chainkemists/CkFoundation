@@ -154,8 +154,8 @@ namespace ck
         for (auto Idx = 0; Idx < RendererData->Get_Submeshes().Num(); ++Idx)
         {
             const auto& Def = RendererData->Get_Submeshes()[Idx];
-            if (NOT Def.Get_AttachByDefault()) { continue; }
-
+            if (NOT Def.Get_AttachByDefault())
+            { continue; }
             auto* Child = NewObject<USkeletalMeshComponent>(RendererActor, USkeletalMeshComponent::StaticClass(), NAME_None, RF_Transient);
             Child->SetupAttachment(SKMC);
             Child->RegisterComponent();
@@ -185,7 +185,8 @@ namespace ck
             for (auto Offset = 0; Offset < FloatArray.Num(); ++Offset)
             {
                 const auto SlotIdx = StartIdx + Offset;
-                if (NOT InCustomData._Values.IsValidIndex(SlotIdx)) { continue; }
+                if (NOT InCustomData._Values.IsValidIndex(SlotIdx))
+                { continue; }
                 InCustomData._Values[SlotIdx] = FloatArray[Offset];
                 SKMC->SetCustomPrimitiveDataFloat(SlotIdx, FloatArray[Offset]);
             }
@@ -327,13 +328,13 @@ namespace ck
     {
         SCOPE_CYCLE_COUNTER(STAT_CkIskm_EmitFinishedEvents);
 
-        if (InAnimState._LastFinishedDispatched) { return; }
-
+        if (InAnimState._LastFinishedDispatched)
+        { return; }
         // Intentional silent return: no current sequence means there's no
         // Completed event to fire. This is the normal "nothing playing" state.
         auto* Cur = InAnimState._CurrentSequence.Get();
-        if (ck::Is_NOT_Valid(Cur)) { return; }
-
+        if (ck::Is_NOT_Valid(Cur))
+        { return; }
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
             TEXT("IskmProxy [{}]: BaseSKMC missing in EmitFinishedEvents processor"),
@@ -642,8 +643,8 @@ namespace ck
 
         // Intentional silent return: clearing with no recorded overrides is a
         // no-op (e.g. a randomizer that always clears before re-rolling).
-        if (Overrides._SlotToMaterial.IsEmpty()) { return; }
-
+        if (Overrides._SlotToMaterial.IsEmpty())
+        { return; }
         Overrides._SlotToMaterial.Reset();
         Overrides._Dirty = true;
 
@@ -703,8 +704,8 @@ namespace ck
         auto& Morphs = InHandle.Get<FFragment_IskmProxy_MorphTargets>();
 
         // Intentional silent return: clearing with no recorded morphs is a no-op.
-        if (Morphs._Values.IsEmpty()) { return; }
-
+        if (Morphs._Values.IsEmpty())
+        { return; }
         Morphs._Values.Reset();
         Morphs._Dirty = true;
 
@@ -792,8 +793,8 @@ namespace ck
         { return; }
 
         // Intentional dedup: re-attaching an already-attached submesh is a no-op.
-        if (InCurrent._AttachedSubmeshIndices.Contains(Idx)) { return; }
-
+        if (InCurrent._AttachedSubmeshIndices.Contains(Idx))
+        { return; }
         // B4: enforce GPU custom-data bitmask cap (Plan-2 packs mesh presence in 4 bits = 15
         // slots). Plan-1 game code that exceeds this would silently break under Plan-2.
         CK_ENSURE_IF_NOT(InCurrent._AttachedSubmeshIndices.Num() < RendererData->Get_MaxSubmeshPerInstance(),
@@ -858,8 +859,8 @@ namespace ck
         // attached is a no-op (e.g. cycle-detach driven by a state machine that
         // doesn't track attach state).
         const auto Slot = InCurrent._AttachedSubmeshIndices.IndexOfByKey(Idx);
-        if (Slot == INDEX_NONE) { return; }
-
+        if (Slot == INDEX_NONE)
+        { return; }
         if (auto* Child = InCurrent._SubmeshSKMCs[Slot].Get())
         {
             Child->DestroyComponent();
@@ -881,7 +882,8 @@ namespace ck
     {
         for (auto& Weak : InCurrent._SubmeshSKMCs)
         {
-            if (auto* C = Weak.Get()) { C->DestroyComponent(); }
+            if (auto* C = Weak.Get())
+            { C->DestroyComponent(); }
         }
         InCurrent._SubmeshSKMCs.Reset();
         InCurrent._AttachedSubmeshIndices.Reset();

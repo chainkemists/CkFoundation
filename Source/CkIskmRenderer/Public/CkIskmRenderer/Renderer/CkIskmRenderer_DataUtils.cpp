@@ -8,7 +8,8 @@ auto
     Find_SubmeshIndex_ByName(const UCk_IskmRenderer_Data* InAsset, FName InName)
     -> int32
 {
-    if (ck::Is_NOT_Valid(InAsset)) { return INDEX_NONE; }
+    if (ck::Is_NOT_Valid(InAsset))
+    { return INDEX_NONE; }
     return InAsset->Find_SubmeshIndex_ByName(InName);
 }
 
@@ -17,7 +18,8 @@ auto
     Get_AnimCollection(const UCk_IskmRenderer_Data* InAsset)
     -> UCk_IskmAnimCollection_Data*
 {
-    if (ck::Is_NOT_Valid(InAsset)) { return nullptr; }
+    if (ck::Is_NOT_Valid(InAsset))
+    { return nullptr; }
     return InAsset->Get_AnimCollection();
 }
 
@@ -26,6 +28,7 @@ auto
     Get_MaxSubmeshPerInstance(const UCk_IskmRenderer_Data* InAsset)
     -> int32
 {
-    if (ck::Is_NOT_Valid(InAsset)) { return 0; }
+    if (ck::Is_NOT_Valid(InAsset))
+    { return 0; }
     return InAsset->Get_MaxSubmeshPerInstance();
 }
