@@ -100,8 +100,20 @@ auto
         ECk_SmTaskResult InResult)
     -> FCk_Handle_SmTask
 {
-    const auto PrevResult = InTask.Get<ck::FFragment_SmTask_Current>().Get_LastResult();
-    InTask.Get<ck::FFragment_SmTask_Current>()._LastResult = InResult;
+    auto& Current = InTask.Get<ck::FFragment_SmTask_Current>();
+    const auto PrevResult = Current.Get_LastResult();
+
+    // A terminal result that hasn't been broadcast yet (ResultDirty still pending) must not be
+    // clobbered back to Running — the Tick processor runs before FireFinishedSignal, so a
+    // same-frame Tick returning Running (e.g. an unimplemented BP DoTick, whose default is the
+    // enum's zero value) would make OnSmTaskFinished broadcast "finished: Running" and lose the
+    // completion. Post-broadcast flips remain legal: tasks may oscillate Running <-> terminal.
+    if (InResult == ECk_SmTaskResult::Running
+        && PrevResult != ECk_SmTaskResult::Running
+        && InTask.Has<ck::FTag_SmTask_ResultDirty>())
+    { return InTask; }
+
+    Current._LastResult = InResult;
 
     if (PrevResult == ECk_SmTaskResult::Running && InResult != ECk_SmTaskResult::Running)
     {

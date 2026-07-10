@@ -113,6 +113,13 @@ namespace ck
         if (NOT ck::statemachine::Get_IsTransitionAuthority(SmHandle))
         { return; }
 
+        // Paused SM: the documented pause contract is "no ticking, no transitions" — user
+        // Evaluate predicates must not run while paused (they can have observable side effects),
+        // and a pause-time Pass must not latch a transition decision that commits on Resume.
+        // (FProcessor_SmCondition_ResetEveryFrame keeps running, so stale results wash out.)
+        if (UCk_Utils_StateMachine_UE::Get_RunStatus(SmHandle) == ECk_SmRunStatus::Paused)
+        { return; }
+
         INC_DWORD_STAT(STAT_SmConditionsEvaluated);
 
         {
