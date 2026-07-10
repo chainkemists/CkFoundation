@@ -68,7 +68,9 @@ namespace ck_loading_screen_cvars
 namespace ck_loading_screen_subsystem
 {
     // Input processor registered while the loading screen is shown.
-    // Captures all input so menus underneath the loading screen cannot be interacted with.
+    // Captures ALL input so menus underneath the loading screen cannot be interacted with:
+    // keyboard + gamepad buttons (FKeyEvent), gamepad sticks/triggers (FAnalogInputEvent),
+    // mouse, and motion — every IInputProcessor handler is overridden.
     class FLoadingScreenInputPreProcessor : public IInputProcessor
     {
     public:
@@ -325,7 +327,7 @@ auto
     }
 
     const auto Context = LocalGameInstance->GetWorldContext();
-    if (Context == nullptr)
+    if (ck::Is_NOT_Valid(Context, ck::IsValid_Policy_NullptrOnly{}))
     {
         // We don't have a world context right now... better show a loading screen
         _DebugReason = TEXT("The game instance has a null WorldContext");
@@ -361,7 +363,7 @@ auto
         return true;
     }
 
-    if (Context->PendingNetGame != nullptr)
+    if (ck::IsValid(Context->PendingNetGame))
     {
         // Connecting to another server
         _DebugReason = TEXT("We are connecting to another server (PendingNetGame != nullptr)");
@@ -554,7 +556,8 @@ auto
     -> bool
 {
     const auto PreLoadScreenManager = FPreLoadScreenManager::Get();
-    return PreLoadScreenManager != nullptr && PreLoadScreenManager->HasValidActivePreLoadScreen();
+    return ck::IsValid(PreLoadScreenManager, ck::IsValid_Policy_NullptrOnly{}) &&
+           PreLoadScreenManager->HasValidActivePreLoadScreen();
 }
 
 auto
@@ -566,8 +569,9 @@ auto
     { return; }
 
     // Unable to show loading screen if the engine is still loading with its loading screen.
-    if (FPreLoadScreenManager::Get() &&
-        FPreLoadScreenManager::Get()->HasActivePreLoadScreenType(EPreLoadScreenTypes::EngineLoadingScreen))
+    if (const auto PreLoadScreenManager = FPreLoadScreenManager::Get();
+        ck::IsValid(PreLoadScreenManager, ck::IsValid_Policy_NullptrOnly{}) &&
+        PreLoadScreenManager->HasActivePreLoadScreenType(EPreLoadScreenTypes::EngineLoadingScreen))
     { return; }
 
     _TimeLoadingScreenShown = FPlatformTime::Seconds();
@@ -739,7 +743,7 @@ auto
     {
         // Set a new hang detector timeout multiplier when the loading screen is visible.
         auto HangDurationMultiplier = double{};
-        if (NOT GConfig ||
+        if (ck::Is_NOT_Valid(GConfig, ck::IsValid_Policy_NullptrOnly{}) ||
             NOT GConfig->GetDouble(TEXT("Core.System"), TEXT("LoadingScreenHangDurationMultiplier"),
                 /*out*/ HangDurationMultiplier, GEngineIni))
         {
