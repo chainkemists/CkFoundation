@@ -93,6 +93,7 @@ Before writing any code, navigate the documentation in this order:
 | physics-substep ticking | `CkSubstep` |
 | project settings exposed to editor | `CkSettings` |
 | console variables / runtime tuning | `CkCVar` |
+| style tokens for editor-tool Slate UI (colors, fonts, tones) | `CkEditorTools` + `CkStyle::` |
 | log a message | `CkLog` (per-module `ck::<feature>` functions — root CLAUDE.md) |
 | profile a processor | `CkProfile` + `SCOPE_CYCLE_COUNTER` |
 | generate AngelScript accessors | `CkAngelscriptGenerator` (Editor module) |
@@ -119,6 +120,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 |---|---|
 | CkCVar | Core,Log |
 | CkCore | BuildConfig,Log,Settings,ThirdParty |
+| CkEditorTools | Settings (added 2026-07-09; Runtime on purpose — consumed by CkGameplayDebugger's Runtime modules; hosts the shared `CkStyle::` tokens + `UCk_Style_UserSettings_UE`) |
 | CkLog | Settings,ThirdParty |
 | CkMemory | Core,Log |
 | CkPerception | Core,Log,ThirdParty |
