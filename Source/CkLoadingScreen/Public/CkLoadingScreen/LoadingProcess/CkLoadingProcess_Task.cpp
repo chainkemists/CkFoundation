@@ -18,7 +18,7 @@ auto
     Create(
         UObject* InWorldContextObject,
         const FString& InShowLoadingScreenReason,
-        float InTimeoutSeconds)
+        FCk_Time InTimeout)
     -> UCk_LoadingProcess_Task_UE*
 {
     const auto World = GEngine->GetWorldFromContextObject(InWorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
@@ -38,7 +38,7 @@ auto
 
     const auto NewLoadingTask = NewObject<UCk_LoadingProcess_Task_UE>(LoadingScreenSubsystem);
     NewLoadingTask->Request_SetReason(InShowLoadingScreenReason);
-    NewLoadingTask->_TimeoutSeconds = InTimeoutSeconds;
+    NewLoadingTask->_Timeout = InTimeout;
     NewLoadingTask->_TimeCreated = FPlatformTime::Seconds();
 
     LoadingScreenSubsystem->Register_LoadingProcessor(NewLoadingTask);
@@ -78,16 +78,16 @@ auto
     if (_HasTimedOut)
     { return false; }
 
-    if (_TimeoutSeconds > 0.0f)
+    if (_Timeout.Get_Seconds() > 0.0f)
     {
         const auto ElapsedSeconds = FPlatformTime::Seconds() - _TimeCreated;
-        if (ElapsedSeconds > static_cast<double>(_TimeoutSeconds))
+        if (ElapsedSeconds > static_cast<double>(_Timeout.Get_Seconds()))
         {
             _HasTimedOut = true;
 
-            CK_TRIGGER_ENSURE(TEXT("LoadingProcess Task [{}] exceeded its [{}]s watchdog timeout — "
+            CK_TRIGGER_ENSURE(TEXT("LoadingProcess Task [{}] exceeded its [{}] watchdog timeout — "
                 "releasing the loading screen hold (fail-open). The owning system never called Request_Unregister."),
-                _Reason, _TimeoutSeconds);
+                _Reason, _Timeout);
 
             return false;
         }

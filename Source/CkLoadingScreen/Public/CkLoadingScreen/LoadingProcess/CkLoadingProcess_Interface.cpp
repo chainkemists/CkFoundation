@@ -17,7 +17,7 @@ auto
 
     const auto LoadObserver = Cast<ICk_LoadingProcess>(InTestObject);
 
-    if (LoadObserver == nullptr)
+    if (ck::Is_NOT_Valid(LoadObserver, ck::IsValid_Policy_NullptrOnly{}))
     { return false; }
 
     auto ObserverReason = FString{};
