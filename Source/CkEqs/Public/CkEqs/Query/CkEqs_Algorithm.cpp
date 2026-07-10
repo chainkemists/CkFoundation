@@ -357,7 +357,9 @@ auto
 {
     DoGenerate_SimpleGrid(InGen, InQuerierLocation, OutCandidates);
 
-    if (NOT InPhysicsSystem.IsValid())
+    const auto PhysicsSystem = InPhysicsSystem.Pin();
+
+    if (ck::Is_NOT_Valid(PhysicsSystem))
     {
         // No physics — fall back to flat grid (already populated). Log Verbose so we know.
         ck::eqs::Verbose(TEXT("DoGenerate_Grid: physics unavailable; using flat-grid fallback ({} candidates)."),
@@ -369,6 +371,11 @@ auto
     const auto ProjectDown = FMath::Max(InGen.Get_ProjectDown(), 0.0f);
     const auto& Filter = InGen.Get_ProjectionFilter();
 
+    // EQS scores the world — its casts must not fire overlap events into hit probes, and the
+    // per-candidate volume makes debug-draw noise (draw the query result instead, Pass-5.1).
+    constexpr auto FireOverlaps = false;
+    constexpr auto TryDrawDebug = false;
+
     for (auto& Candidate : OutCandidates)
     {
         const auto Start = Candidate._Location + FVector::UpVector * ProjectUp;
@@ -376,10 +383,11 @@ auto
 
         const auto Settings = FCk_Probe_RayCast_Settings{Start, End, Filter};
         INC_DWORD_STAT(STAT_Eqs_PhysicsCastsIssued);
-        const auto Result = UCk_Utils_ProbeTrace_UE::Request_SingleLineTrace(InAnyHandle, Settings);
+        const auto Result = UCk_Utils_ProbeTrace_UE::Request_SingleLineTrace(
+            InAnyHandle, Settings, FireOverlaps, TryDrawDebug, *PhysicsSystem);
 
-        if (ck::IsValid(Result.Get_Probe()))
-        { Candidate._Location = Result.Get_HitLocation(); }
+        if (ck::IsValid(Result))
+        { Candidate._Location = Result->Get_HitLocation(); }
     }
 }
 
@@ -673,6 +681,12 @@ auto
     for (auto i = 0; i < InOutCandidates.Num(); ++i)
     {
         auto& Candidate = InOutCandidates[i];
+
+        // Already failed an earlier test — it can never surface in Finalize, so scoring and
+        // filtering it is wasted work (its raw slot holds the caller's 0.0f placeholder).
+        if (NOT Candidate.Get_Passed())
+        { continue; }
+
         const auto Raw = InRawValues[i];
 
         // Pass-5.1: per-test debug slot for this (test, candidate). Raw was already
@@ -720,6 +734,12 @@ auto
 
     for (auto i = 0; i < InOutCandidates.Num(); ++i)
     {
+        if (NOT InOutCandidates[i].Get_Passed())
+        {
+            RawValues.Add(0.0f);
+            continue;
+        }
+
         const auto& Loc = InOutCandidates[i].Get_Location();
         auto Raw = 0.0f;
         switch (Mode)
@@ -756,6 +776,12 @@ auto
 
     for (auto i = 0; i < InOutCandidates.Num(); ++i)
     {
+        if (NOT InOutCandidates[i].Get_Passed())
+        {
+            RawValues.Add(0.0f);
+            continue;
+        }
+
         const auto Direction = (InOutCandidates[i].Get_Location() - FromLocation).GetSafeNormal();
         auto Raw = FVector::DotProduct(Forward, Direction);
         if (Mode == ECk_Eqs_DotMode::NormalizedDot)
@@ -781,7 +807,9 @@ auto
 {
     SCOPE_CYCLE_COUNTER(STAT_Eqs_Test_Trace);
 
-    if (NOT InPhysicsSystem.IsValid())
+    const auto PhysicsSystem = InPhysicsSystem.Pin();
+
+    if (ck::Is_NOT_Valid(PhysicsSystem))
     {
         ck::eqs::Warning(TEXT("DoRunTest_Trace: physics unavailable; failing every candidate for this test."));
         for (auto i = 0; i < InOutCandidates.Num(); ++i)
@@ -798,6 +826,10 @@ auto
 
     const auto& TraceFilter = InTest.Get_TraceFilter();
     const auto Mode = InTest.Get_TraceMode();
+
+    // EQS scores the world — its casts must not fire overlap events into hit probes.
+    constexpr auto FireOverlaps = false;
+    constexpr auto TryDrawDebug = false;
 
     auto RawValues = TArray<float>{};
     RawValues.Reserve(InOutCandidates.Num());
@@ -820,16 +852,18 @@ auto
             {
                 const auto Settings = FCk_Probe_RayCast_Settings{QuerierLocation, Candidate.Get_Location(), TraceFilter};
                 INC_DWORD_STAT(STAT_Eqs_PhysicsCastsIssued);
-                const auto Result = UCk_Utils_ProbeTrace_UE::Request_SingleLineTrace(InAnyHandle, Settings);
-                LosClear = ck::Is_NOT_Valid(Result.Get_Probe());
+                const auto Result = UCk_Utils_ProbeTrace_UE::Request_SingleLineTrace(
+                    InAnyHandle, Settings, FireOverlaps, TryDrawDebug, *PhysicsSystem);
+                LosClear = ck::Is_NOT_Valid(Result);
                 break;
             }
             case ECk_Eqs_TraceMode::ShapeTrace:
             {
                 const auto Settings = FCk_ShapeCast_Settings{QuerierLocation, Candidate.Get_Location(), InTest.Get_TraceShape(), TraceFilter};
                 INC_DWORD_STAT(STAT_Eqs_PhysicsCastsIssued);
-                const auto Result = UCk_Utils_ProbeTrace_UE::Request_SingleShapeTrace(InAnyHandle, Settings);
-                LosClear = ck::Is_NOT_Valid(Result.Get_Probe());
+                const auto Result = UCk_Utils_ProbeTrace_UE::Request_SingleShapeTrace(
+                    InAnyHandle, Settings, FireOverlaps, TryDrawDebug, *PhysicsSystem);
+                LosClear = ck::Is_NOT_Valid(Result);
                 break;
             }
         }
@@ -929,7 +963,9 @@ auto
 {
     SCOPE_CYCLE_COUNTER(STAT_Eqs_Test_Overlap);
 
-    if (NOT InPhysicsSystem.IsValid())
+    const auto PhysicsSystem = InPhysicsSystem.Pin();
+
+    if (ck::Is_NOT_Valid(PhysicsSystem))
     {
         ck::eqs::Warning(TEXT("DoRunTest_Overlap: physics unavailable; failing every candidate for this test."));
         for (auto i = 0; i < InOutCandidates.Num(); ++i)
@@ -947,6 +983,10 @@ auto
     const auto Sphere = FCk_AnyShape{FCk_ShapeSphere_Dimensions{Radius}};
     const auto& OverlapFilter = InTest.Get_OverlapFilter();
 
+    // EQS scores the world — its casts must not fire overlap events into hit probes.
+    constexpr auto FireOverlaps = false;
+    constexpr auto TryDrawDebug = false;
+
     auto RawValues = TArray<float>{};
     RawValues.Reserve(InOutCandidates.Num());
 
@@ -962,7 +1002,8 @@ auto
         const auto& Loc = Candidate.Get_Location();
         const auto Settings = FCk_ShapeCast_Settings{Loc, Loc, Sphere, OverlapFilter};
         INC_DWORD_STAT(STAT_Eqs_PhysicsCastsIssued);
-        const auto Hits = UCk_Utils_ProbeTrace_UE::Request_MultiShapeTrace(InAnyHandle, Settings);
+        const auto Hits = UCk_Utils_ProbeTrace_UE::Request_MultiShapeTrace(
+            InAnyHandle, Settings, FireOverlaps, TryDrawDebug, *PhysicsSystem);
 
         const auto Raw = static_cast<float>(Hits.Num());
         RawValues.Add(Raw);
