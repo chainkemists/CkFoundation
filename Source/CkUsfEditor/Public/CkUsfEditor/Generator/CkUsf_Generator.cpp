@@ -23,6 +23,7 @@
 #include "Materials/MaterialExpressionWorldPosition.h"
 #include "Materials/MaterialExpressionCameraVectorWS.h"
 #include "Materials/MaterialExpressionVertexNormalWS.h"
+#include "Materials/MaterialExpressionPreSkinnedPosition.h"
 #include "Materials/MaterialExpressionVertexTangentWS.h"
 #include "Materials/MaterialExpressionPixelDepth.h"
 #include "Materials/MaterialExpressionVertexColor.h"
@@ -269,9 +270,18 @@ namespace ck::usf_editor
         FString Code = TEXT("FCkUsf_VertexInput In = CkUsf_DefaultVertexInput();\n");
         Code += TEXT("In.Time = Time;\n");
         Code += TEXT("In.UV = UV;\n");
+        Code += TEXT("In.UV1 = UV1;\n");
+        Code += TEXT("In.UV2 = UV2;\n");
         Code += TEXT("In.WorldPosition = WorldPosition;\n");
+        Code += TEXT("In.LocalPosition = LocalPosition;\n");
         Code += TEXT("In.VertexNormal = VertexNormal;\n");
         Code += TEXT("In.VertexColor = VertexColor;\n");
+        // Per-INSTANCE local->world basis: TransformLocalVectorToWorld's VS overload multiplies by
+        // Parameters.InstanceLocalToWorld under USE_INSTANCING/USE_INSTANCE_CULLING (MaterialTemplate.ush)
+        // — Parameters is in scope inside Custom-node code, so no extra pins are needed.
+        Code += TEXT("In.LocalAxisX = TransformLocalVectorToWorld(Parameters, float3(1.0, 0.0, 0.0));\n");
+        Code += TEXT("In.LocalAxisY = TransformLocalVectorToWorld(Parameters, float3(0.0, 1.0, 0.0));\n");
+        Code += TEXT("In.LocalAxisZ = TransformLocalVectorToWorld(Parameters, float3(0.0, 0.0, 1.0));\n");
 
         // The WPO fn takes In first, then the same LookDefinition params in the same order as the pixel fn.
         FString Args = TEXT("In");
@@ -612,6 +622,7 @@ namespace ck::usf_editor
 
             Wpo->Inputs.Reset();
             { FCustomInput In; In.InputName = TEXT("WorldPosition"); Wpo->Inputs.Add(In); }
+            { FCustomInput In; In.InputName = TEXT("LocalPosition"); Wpo->Inputs.Add(In); }
             { FCustomInput In; In.InputName = TEXT("VertexNormal");  Wpo->Inputs.Add(In); }
             { FCustomInput In; In.InputName = TEXT("VertexColor");   Wpo->Inputs.Add(In); }
             for (const auto& P : InDef->_Parameters)
@@ -620,6 +631,8 @@ namespace ck::usf_editor
             }
             { FCustomInput T; T.InputName = TEXT("Time"); Wpo->Inputs.Add(T); }
             { FCustomInput U; U.InputName = TEXT("UV");   Wpo->Inputs.Add(U); }
+            { FCustomInput U; U.InputName = TEXT("UV1");  Wpo->Inputs.Add(U); }
+            { FCustomInput U; U.InputName = TEXT("UV2");  Wpo->Inputs.Add(U); }
 
             Wpo->Code = Build_WpoCustomCode(InDef);
             Apply_LookDefines(Wpo, InDef);
@@ -634,6 +647,9 @@ namespace ck::usf_editor
                 UMaterialEditingLibrary::ConnectMaterialExpressions(Expr, FString(), Wpo, InInputName);
             };
             AddWpoInput(UMaterialExpressionWorldPosition::StaticClass(), TEXT("WorldPosition"), 0);
+            // Pre-skinned position == the LOCAL bind-pose vertex position on static/instanced meshes
+            // (VS-only node) — data channel for local-space deformation looks (e.g. CkVat bone mode).
+            AddWpoInput(UMaterialExpressionPreSkinnedPosition::StaticClass(), TEXT("LocalPosition"), 3);
             AddWpoInput(UMaterialExpressionVertexNormalWS::StaticClass(), TEXT("VertexNormal"),  1);
             AddWpoInput(UMaterialExpressionVertexColor::StaticClass(),    TEXT("VertexColor"),   2);
 
@@ -659,6 +675,19 @@ namespace ck::usf_editor
             auto* WpoUv = UMaterialEditingLibrary::CreateMaterialExpression(
                 Material, UMaterialExpressionTextureCoordinate::StaticClass(), -800, 800 + (WpoParamRow + 2) * 120);
             UMaterialEditingLibrary::ConnectMaterialExpressions(WpoUv, FString(), Wpo, TEXT("UV"));
+
+            // Data-channel UVs (TexCoord1/2) — the pin forces the translator to allocate the coords;
+            // reading Parameters.TexCoords[n] directly in the include would not.
+            const auto AddWpoUvChannel = [&](const TCHAR* InInputName, int32 InCoordinateIndex, int32 InRow) -> void
+            {
+                auto* Expr = Cast<UMaterialExpressionTextureCoordinate>(
+                    UMaterialEditingLibrary::CreateMaterialExpression(
+                        Material, UMaterialExpressionTextureCoordinate::StaticClass(), -800, 800 + InRow * 120));
+                Expr->CoordinateIndex = InCoordinateIndex;
+                UMaterialEditingLibrary::ConnectMaterialExpressions(Expr, FString(), Wpo, InInputName);
+            };
+            AddWpoUvChannel(TEXT("UV1"), 1, WpoParamRow + 3);
+            AddWpoUvChannel(TEXT("UV2"), 2, WpoParamRow + 4);
 
             UMaterialEditingLibrary::ConnectMaterialProperty(Wpo, FString(), MP_WorldPositionOffset);
         }

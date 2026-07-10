@@ -22,7 +22,8 @@ namespace ck_usf_look_validator
         // generated locals
         TEXT("In"), TEXT("O"),
         // inputs
-        TEXT("Time"), TEXT("UV"), TEXT("WorldPosition"), TEXT("CameraVector"), TEXT("VertexNormal"),
+        TEXT("Time"), TEXT("UV"), TEXT("UV1"), TEXT("UV2"), TEXT("LocalPosition"),
+        TEXT("WorldPosition"), TEXT("CameraVector"), TEXT("VertexNormal"),
         TEXT("VertexTangent"), TEXT("PixelDepth"), TEXT("VertexColor"),
         TEXT("SceneColor"), TEXT("SceneDepth"), TEXT("SceneNormal"), TEXT("CustomDepth"), TEXT("CustomStencil"),
         // outputs
