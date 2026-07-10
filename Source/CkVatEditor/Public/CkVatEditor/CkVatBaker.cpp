@@ -1,5 +1,6 @@
 #include "CkVatBaker.h"
 
+#include "CkVat/CkVat_Log.h"
 #include "CkVat/Collection/CkVatCollection_Data.h"
 
 #include "CkAnimation/AnimBake/CkAnimBake.h"
@@ -31,6 +32,15 @@ namespace ck_vat_baker
     constexpr int32 MaxInfluences = 4;
     constexpr int32 MaxTextureWidth = 4096;
     constexpr int32 MaxTextureRows = 8192;
+
+    // Where bake outputs live. SaveAssets: sibling packages of the collection, saved to disk
+    // (shipped content). Transient: outered to the transient package, nothing written to disk —
+    // results die with the session (gym/test collections; the compute is identical).
+    enum class EPersistence
+    {
+        SaveAssets,
+        Transient
+    };
 
     // One source render-vertex, editor-model-sourced, with its influence chain fully resolved.
     struct FSourceVertex
@@ -101,15 +111,30 @@ namespace ck_vat_baker
         const FString& InCollectionPkgDir,
         const FString& InAssetName,
         const FTexelPlane& InPlane,
-        ECk_Vat_Precision InPrecision)
+        ECk_Vat_Precision InPrecision,
+        EPersistence InPersistence)
         -> UTexture2D*
     {
-        const FString PkgPath = FString::Printf(TEXT("%s/%s"), *InCollectionPkgDir, *InAssetName);
-        UPackage* Package = GetOrCreatePackageFor<UTexture2D>(PkgPath, InAssetName);
-        CK_ENSURE_IF_NOT(Package != nullptr, TEXT("VatBaker: could not create package [{}]"), PkgPath)
-        { return nullptr; }
+        auto Package = static_cast<UPackage*>(nullptr);
+        auto PkgPath = FString{};
+        auto TextureName = FName{*InAssetName};
+        auto ObjectFlags = RF_Public | RF_Standalone;
 
-        auto* Texture = NewObject<UTexture2D>(Package, *InAssetName, RF_Public | RF_Standalone);
+        if (InPersistence == EPersistence::SaveAssets)
+        {
+            PkgPath = FString::Printf(TEXT("%s/%s"), *InCollectionPkgDir, *InAssetName);
+            Package = GetOrCreatePackageFor<UTexture2D>(PkgPath, InAssetName);
+            CK_ENSURE_IF_NOT(Package != nullptr, TEXT("VatBaker: could not create package [{}]"), PkgPath)
+            { return nullptr; }
+        }
+        else
+        {
+            Package = GetTransientPackage();
+            TextureName = MakeUniqueObjectName(Package, UTexture2D::StaticClass(), FName{*InAssetName});
+            ObjectFlags = RF_Transient;
+        }
+
+        auto* Texture = NewObject<UTexture2D>(Package, TextureName, ObjectFlags);
         CK_ENSURE_IF_NOT(ck::IsValid(Texture), TEXT("VatBaker: could not create texture [{}]"), InAssetName)
         { return nullptr; }
 
@@ -152,8 +177,11 @@ namespace ck_vat_baker
         Texture->PostEditChange();
         Texture->UpdateResource();
 
-        if (NOT SaveAssetPackage(Package, Texture, PkgPath))
-        { return nullptr; }
+        if (InPersistence == EPersistence::SaveAssets)
+        {
+            if (NOT SaveAssetPackage(Package, Texture, PkgPath))
+            { return nullptr; }
+        }
         return Texture;
     }
 
@@ -168,6 +196,12 @@ namespace ck_vat_baker
         -> bool
     {
         OutVertices.Reserve(InLODModel.NumVertices);
+
+        // Keep-strongest-4 is documented, expected behavior (standard Mannequin content carries
+        // 5-influence vertices) — summarize ONCE per bake instead of ensure-per-vertex, which
+        // treats legitimate content as a defect and stack-dumps per offending vertex.
+        int32 OverInfluencedVertexCount = 0;
+        int32 MostInfluencesSeen = 0;
 
         for (int32 SectionIndex = 0; SectionIndex < InLODModel.Sections.Num(); ++SectionIndex)
         {
@@ -195,10 +229,11 @@ namespace ck_vat_baker
                 }
                 Influences.Sort([](const FInfluence& A, const FInfluence& B) { return A.Weight > B.Weight; });
 
-                CK_ENSURE_IF_NOT(NonZeroInfluences <= MaxInfluences,
-                    TEXT("VatBaker: mesh [{}] has a vertex with {} bone influences; VAT supports {} — strongest {} kept, weights renormalized."),
-                    &InMesh, NonZeroInfluences, MaxInfluences, MaxInfluences)
-                { } // fallthrough: keep the strongest 4 below
+                if (NonZeroInfluences > MaxInfluences)
+                {
+                    ++OverInfluencedVertexCount;
+                    MostInfluencesSeen = FMath::Max(MostInfluencesSeen, NonZeroInfluences);
+                }
 
                 float TotalWeight = 0.0f;
                 const int32 Kept = FMath::Min(Influences.Num(), MaxInfluences);
@@ -243,6 +278,14 @@ namespace ck_vat_baker
             }
         }
 
+        // Display, not Warning: expected content behavior (the automation harness escalates
+        // warnings to test failures, and standard meshes legitimately carry >4 influences).
+        if (OverInfluencedVertexCount > 0)
+        {
+            ck::vat::Display(TEXT("VatBaker: mesh [{}] has [{}] vertices with more than [{}] bone influences (most seen: [{}]) — strongest [{}] kept per vertex, weights renormalized."),
+                &InMesh, OverInfluencedVertexCount, MaxInfluences, MostInfluencesSeen, MaxInfluences);
+        }
+
         return OutVertices.Num() > 0;
     }
 
@@ -254,15 +297,30 @@ namespace ck_vat_baker
         const FString& InAssetName,
         const TArray<FSourceVertex>& InVertices,
         const FSkeletalMeshLODModel& InLODModel,
-        USkeletalMesh& InSourceMesh)
+        USkeletalMesh& InSourceMesh,
+        EPersistence InPersistence)
         -> UStaticMesh*
     {
-        const FString PkgPath = FString::Printf(TEXT("%s/%s"), *InCollectionPkgDir, *InAssetName);
-        UPackage* Package = GetOrCreatePackageFor<UStaticMesh>(PkgPath, InAssetName);
-        CK_ENSURE_IF_NOT(Package != nullptr, TEXT("VatBaker: could not create package [{}]"), PkgPath)
-        { return nullptr; }
+        auto Package = static_cast<UPackage*>(nullptr);
+        auto PkgPath = FString{};
+        auto MeshName = FName{*InAssetName};
+        auto ObjectFlags = RF_Public | RF_Standalone;
 
-        auto* StaticMesh = NewObject<UStaticMesh>(Package, *InAssetName, RF_Public | RF_Standalone);
+        if (InPersistence == EPersistence::SaveAssets)
+        {
+            PkgPath = FString::Printf(TEXT("%s/%s"), *InCollectionPkgDir, *InAssetName);
+            Package = GetOrCreatePackageFor<UStaticMesh>(PkgPath, InAssetName);
+            CK_ENSURE_IF_NOT(Package != nullptr, TEXT("VatBaker: could not create package [{}]"), PkgPath)
+            { return nullptr; }
+        }
+        else
+        {
+            Package = GetTransientPackage();
+            MeshName = MakeUniqueObjectName(Package, UStaticMesh::StaticClass(), FName{*InAssetName});
+            ObjectFlags = RF_Transient;
+        }
+
+        auto* StaticMesh = NewObject<UStaticMesh>(Package, MeshName, ObjectFlags);
         CK_ENSURE_IF_NOT(ck::IsValid(StaticMesh), TEXT("VatBaker: could not create static mesh [{}]"), InAssetName)
         { return nullptr; }
 
@@ -387,22 +445,26 @@ namespace ck_vat_baker
         StaticMesh->Build(/*bSilent*/ false);
         StaticMesh->PostEditChange();
 
-        if (NOT SaveAssetPackage(Package, StaticMesh, PkgPath))
-        { return nullptr; }
+        if (InPersistence == EPersistence::SaveAssets)
+        {
+            if (NOT SaveAssetPackage(Package, StaticMesh, PkgPath))
+            { return nullptr; }
+        }
         return StaticMesh;
     }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_vat_baker
+{
+
 auto
-    ck::vat_editor::
-    Bake_VatCollection(
-        UCk_VatCollection_Data& InCollection)
+    DoBake(
+        UCk_VatCollection_Data& InCollection,
+        EPersistence InPersistence)
     -> bool
 {
-    using namespace ck_vat_baker;
-
     // ---- validate inputs ----
     USkeleton* Skeleton = InCollection.Get_Skeleton().Get();
     USkeletalMesh* SourceMesh = InCollection.Get_SourceMesh().Get();
@@ -583,24 +645,26 @@ auto
         }
     }
 
-    // ---- write the assets, siblings of the collection ----
-    const FString CollectionPkgDir = FPackageName::GetLongPackagePath(InCollection.GetPackage()->GetName());
+    // ---- write the outputs (SaveAssets: siblings of the collection; Transient: transient package) ----
+    const FString CollectionPkgDir = InPersistence == EPersistence::SaveAssets
+        ? FPackageName::GetLongPackagePath(InCollection.GetPackage()->GetName())
+        : FString{};
     const FString BaseName = InCollection.GetName();
 
     UTexture2D* PositionTexture = SaveTexture(CollectionPkgDir,
         FString::Printf(TEXT("%s_%s"), *BaseName, BakeMode == ECk_Vat_BakeMode::Vertex ? TEXT("Pos") : TEXT("BonePos")),
-        PositionPlane, InCollection.Get_Precision());
+        PositionPlane, InCollection.Get_Precision(), InPersistence);
     CK_ENSURE_IF_NOT(ck::IsValid(PositionTexture), TEXT("VatBaker: position texture bake failed for [{}]"), &InCollection)
     { return false; }
 
     UTexture2D* SecondaryTexture = SaveTexture(CollectionPkgDir,
         FString::Printf(TEXT("%s_%s"), *BaseName, BakeMode == ECk_Vat_BakeMode::Vertex ? TEXT("Nrm") : TEXT("BoneRot")),
-        SecondaryPlane, InCollection.Get_Precision());
+        SecondaryPlane, InCollection.Get_Precision(), InPersistence);
     CK_ENSURE_IF_NOT(ck::IsValid(SecondaryTexture), TEXT("VatBaker: secondary texture bake failed for [{}]"), &InCollection)
     { return false; }
 
     UStaticMesh* BakedMesh = BuildBakedStaticMesh(InCollection, CollectionPkgDir,
-        FString::Printf(TEXT("%s_Mesh"), *BaseName), SourceVertices, LODModel, *SourceMesh);
+        FString::Printf(TEXT("%s_Mesh"), *BaseName), SourceVertices, LODModel, *SourceMesh, InPersistence);
     CK_ENSURE_IF_NOT(ck::IsValid(BakedMesh), TEXT("VatBaker: static-mesh build failed for [{}]"), &InCollection)
     { return false; }
 
@@ -636,6 +700,9 @@ auto
 
     InCollection.ApplyBakeResults(Results);
 
+    if (InPersistence == EPersistence::Transient)
+    { return true; }
+
     // The collection is a pre-existing asset (no AssetCreated) — just persist the bake write-back.
     const FString CollectionPkgPath = InCollection.GetPackage()->GetName();
     const FString CollectionFileName =
@@ -643,4 +710,26 @@ auto
     FSavePackageArgs SaveArgs;
     SaveArgs.TopLevelFlags = RF_Public | RF_Standalone;
     return UPackage::SavePackage(InCollection.GetPackage(), &InCollection, *CollectionFileName, SaveArgs);
+}
+
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ck::vat_editor::
+    Bake_VatCollection(
+        UCk_VatCollection_Data& InCollection)
+    -> bool
+{
+    return ck_vat_baker::DoBake(InCollection, ck_vat_baker::EPersistence::SaveAssets);
+}
+
+auto
+    ck::vat_editor::
+    Bake_VatCollection_Transient(
+        UCk_VatCollection_Data& InCollection)
+    -> bool
+{
+    return ck_vat_baker::DoBake(InCollection, ck_vat_baker::EPersistence::Transient);
 }

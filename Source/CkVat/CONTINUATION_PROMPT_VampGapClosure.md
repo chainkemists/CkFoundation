@@ -72,7 +72,7 @@ closes the audited VAMP-parity gaps listed below, in priority order.
 | Anim plays at wrong speed / completion doesn't match pose freeze | CPU (`Get_WorldTime`) vs GPU (`Time` material node) clock basis mismatch | `CkVatProxy_Processor.cpp` + material Time node semantics; both worst-case fixable by switching the packing to a shared basis |
 | Pose distorted on reoriented-import meshes | Mesh bind pose ≠ skeleton ref pose (dev semantics kept deliberately) | fold perf-iskm-lod's mesh-bind fix into `ck::anim_bake` call args (decision log in PROGRESS.md) |
 | Ghosting/smearing under TAA on fast clips | WPO velocity not applied (`r.Velocity.EnableVertexDeformation`) | if confirmed → explicit prev-frame velocity work (gap 7) |
-| Bake ensure fires | Read the ensure — they're specific (vert count > 4096 in Vertex mode, rows > 8192, >4 influences kept-strongest, missing skeleton bone) | `CkVatBaker.cpp` |
+| Bake ensure fires | Read the ensure — they're specific (vert count > 4096 in Vertex mode, rows > 8192, missing skeleton bone). NOTE: >4 influences is NO LONGER an ensure (2026-07-10) — it's a one-line Display summary (Mannequin content legitimately has 5-influence verts; the harness escalates warnings/ensures) | `CkVatBaker.cpp` |
 
 ## Critical files
 

@@ -18,3 +18,34 @@ bool
 
     return ck::vat_editor::Bake_VatCollection(*InCollection);
 }
+
+UCk_VatCollection_Data*
+    UCkVat_BakerSubsystem::
+    CreateAndBake_TransientCollection(
+        USkeleton* InSkeleton,
+        USkeletalMesh* InSourceMesh,
+        const TArray<FCk_VatCollection_ClipDef>& InClips,
+        int32 InSampleFrequency,
+        ECk_Vat_BakeMode InBakeMode,
+        ECk_Vat_Precision InPrecision)
+{
+    const auto CollectionName = MakeUniqueObjectName(
+        GetTransientPackage(), UCk_VatCollection_Data::StaticClass(), FName{TEXT("VatCollection_Transient")});
+    auto* Collection = NewObject<UCk_VatCollection_Data>(GetTransientPackage(), CollectionName, RF_Transient);
+    CK_ENSURE_IF_NOT(ck::IsValid(Collection), TEXT("CreateAndBake_TransientCollection: could not create the collection object"))
+    { return nullptr; }
+
+    // Friend access: the transient factory is a sanctioned input writer (serialized assets are
+    // authored in the details panel instead). Input validation stays in the baker's ensures.
+    Collection->_Skeleton = InSkeleton;
+    Collection->_SourceMesh = InSourceMesh;
+    Collection->_Clips = InClips;
+    Collection->_SampleFrequency = FMath::Clamp(InSampleFrequency, 1, 120);
+    Collection->_BakeMode = InBakeMode;
+    Collection->_Precision = InPrecision;
+
+    if (NOT ck::vat_editor::Bake_VatCollection_Transient(*Collection))
+    { return nullptr; }
+
+    return Collection;
+}

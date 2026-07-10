@@ -66,6 +66,9 @@ private:
 public:
     CK_PROPERTY_GET(_Sequence);
     CK_PROPERTY_GET(_Name);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_VatCollection_ClipDef, _Sequence, _Name);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -119,6 +122,10 @@ UCLASS(BlueprintType)
 class CKVAT_API UCk_VatCollection_Data : public UCk_DataAsset_PDA
 {
     GENERATED_BODY()
+
+    // The baker subsystem's transient-collection factory fills the bake INPUTS programmatically
+    // (gyms/tests); serialized assets are authored in the details panel instead.
+    friend class UCkVat_BakerSubsystem;
 
 public:
     CK_GENERATED_BODY(UCk_VatCollection_Data);

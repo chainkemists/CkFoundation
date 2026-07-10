@@ -51,7 +51,9 @@ clip table. Textures: `SRGB=false`, `TMGS_NoMipmaps`, `TF_Nearest`. Precision Hi
   transform — the PS has no instance basis to transform a local/world normal with (2026-07-10).
 - Mesh lookup UV (`_LookupUVChannel`): `U = (vertexIndex + 0.5) / width`, `V = 0` (shader computes row V).
 - Skinning per vertex: strongest ≤ 4 influences from the editor model (uint16 weights / 65535,
-  renormalized; > 4 influences fires an ensure and keeps the strongest 4).
+  renormalized; > 4 influences keeps the strongest 4 and logs ONE per-bake summary at Display —
+  not an ensure/warning: standard Mannequin content carries 5-influence vertices, and the
+  automation harness escalates warnings to failures. Changed 2026-07-10).
 
 **Bone mode** (texture width = render-bone count from `ck::anim_bake::BuildSkeletonData`):
 - BonePosition texture: RGB = translation of `ShaderMatrix = RefPoseInverse * ComponentSpace` (the
