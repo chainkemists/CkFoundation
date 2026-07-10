@@ -28,6 +28,25 @@ auto
 #if WITH_EDITOR
 auto
     UCk_VatCollection_Data::
+    ApplyBakeResults(const FCk_Vat_BakeResults& InResults)
+    -> void
+{
+    _BakedMesh = InResults.BakedMesh;
+    _PositionTexture = InResults.PositionTexture;
+    _NormalTexture = InResults.NormalTexture;
+    _BonePositionTexture = InResults.BonePositionTexture;
+    _BoneRotationTexture = InResults.BoneRotationTexture;
+    _BakedClips = InResults.BakedClips;
+    _AnimatedBounds = InResults.AnimatedBounds;
+    _PositionBoundsMin = InResults.PositionBoundsMin;
+    _PositionBoundsMax = InResults.PositionBoundsMax;
+    _IsBaked = true;
+
+    MarkPackageDirty();
+}
+
+auto
+    UCk_VatCollection_Data::
     IsDataValid(FDataValidationContext& InContext) const
     -> EDataValidationResult
 {
