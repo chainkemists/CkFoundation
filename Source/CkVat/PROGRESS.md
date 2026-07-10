@@ -10,11 +10,12 @@ landed 2026-07-10; gap 4-bone (bone-mode normals) DEFERRED — no per-instance b
 non-Nanite PS (evidence in Gate_02 Deferred).
 **Baseline on record:** Iskm autotests **30/30** + AnimBake 2/2 + VatProxy_ApiSurface 1/1 + Usf 4/4
 (2026-07-10 logs: Test-{Iskm,AnimBake,VatProxy,Usf}.log).
-**Next action:** the human [EDITOR-VERIFY] passes (bake a real collection via the NEW details-panel
-Bake button, spawn+play via `utils_vat_proxy`, check lighting responds to animation in Vertex mode),
-then gap 5 (bone-influence options + weight-texture storage).
+**Next action:** the human [EDITOR-VERIFY] passes — now via the **Vat gym** (CkTests `8f2a2a9`,
+"Vat" in the Tab menu: ClipCycle / Turntable-normals / CrowdField stations; needs the one-time
+baked collection at `/CkTests/CkVat/DA_VatCollection_Gym` — stations display the how-to). Then
+gap 5 (bone-influence options + weight-texture storage).
 **Blocked on:** [EDITOR-VERIFY] (human) for all visual claims; Gate-4 end-to-end autotest needs one
-editor-baked collection committed as CkTests content.
+editor-baked collection committed as CkTests content (the gym collection can double as it).
 
 ## Decision log
 | Date | Decision | Why | Revisit when |
@@ -64,6 +65,12 @@ editor-baked collection committed as CkTests content.
 - Adjacent smell (flagged, untouched): `CkResourceLoaderEditor_Module.cpp:34` unregisters its
   CLASS layout via `UnregisterCustomPropertyTypeLayout` — wrong unregister API, harmless at
   shutdown but a copy-paste trap.
+- **Vat gym landed** (same session, CkTests `8f2a2a9`): ClipCycle (auto clip/rate/freeze cycle +
+  OnClipFinished counter), Turntable (yaw rotation — the tangent-frame-normals check), CrowdField
+  (100 instances, RandomPerInstance phase; `Ck_GymVat_FieldCount`). Gym loads the baked collection
+  from `/CkTests/CkVat/DA_VatCollection_Gym` (or `Ck_GymVat_SetCollection <path>` — the curated-
+  setups hook); stations render the one-time bake how-to while it's missing. Headless AS compile
+  clean (no errors/warnings naming the files). Gate-4 "CkVat gym" item: done pending visuals.
 
 ### 2026-07-09/10 — Gate 4 opening: first CkVat/anim-bake tests + a real bug caught
 - Landed in CkTests (NEW branch `feature/vat-feature` there — the tests reference `utils_vat`,
