@@ -32,7 +32,7 @@ public:
     // entity carries playback state without a visual.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName="[Ck][VatProxy] Add New Vat")
+              DisplayName="[Ck][VatProxy] Add Feature")
     static FCk_Handle_VatProxy
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -41,7 +41,7 @@ public:
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|VatProxy",
-        DisplayName="[Ck][VatProxy] Has Vat")
+        DisplayName="[Ck][VatProxy] Has Feature")
     static bool
     Has(
         const FCk_Handle& InHandle);
@@ -58,14 +58,14 @@ private:
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|VatProxy",
-        DisplayName="[Ck][VatProxy] Handle -> Vat Handle",
+        DisplayName="[Ck][VatProxy] Handle -> VatProxy Handle",
         meta = (CompactNodeTitle = "<AsVatProxy>", BlueprintAutocast))
     static FCk_Handle_VatProxy
     DoCastChecked(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
-        DisplayName = "[Ck] Get Invalid Vat Handle",
+        DisplayName = "[Ck] Get Invalid VatProxy Handle",
         Category = "Ck|Utils|VatProxy",
         meta = (CompactNodeTitle = "INVALID_VatProxyHandle", Keywords = "make"))
     static FCk_Handle_VatProxy
