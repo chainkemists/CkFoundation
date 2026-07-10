@@ -1,6 +1,7 @@
 #include "CkVat_Processor.h"
 
 #include "CkVat/CkVat_Log.h"
+#include "CkVat/CkVat_Subsystem.h"
 #include "CkVat/Collection/CkVatCollection_Data.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
@@ -11,10 +12,15 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
+#include "CkIsmRenderer/Proxy/CkIsmProxy_Utils.h"
+#include "CkIsmRenderer/Renderer/CkIsmRenderer_Fragment_Data.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Vat_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Vat_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Vat_FireSignals);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -28,6 +34,64 @@ namespace ck_vat_processor
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
         const auto TimeResult = UCk_Utils_Time_UE::Get_WorldTime(FCk_Utils_Time_GetWorldTime_Params{World});
         return TimeResult.Get_WorldTime().Get_Time();
+    }
+
+    // The 12-scalar per-instance layout the VAT looks decode — contract:
+    // Source/CkVat/Plan/Gate_02_Material.md (slots [0..11], Rate==0 => Time holds frozen local time).
+    auto
+    Pack_CustomData(
+        const ck::FFragment_Vat_Current& InCurrent,
+        const UCk_VatCollection_Data& InCollection)
+        -> TArray<float>
+    {
+        const auto& Clips = InCollection.Get_BakedClips();
+        const auto RowsOf = [&](int32 InClipIndex, float& OutRowStart, float& OutRowCount) -> void
+        {
+            if (Clips.IsValidIndex(InClipIndex))
+            {
+                OutRowStart = static_cast<float>(Clips[InClipIndex].Get_FrameIndex());
+                OutRowCount = static_cast<float>(Clips[InClipIndex].Get_FrameCount());
+            }
+            else
+            {
+                OutRowStart = 0.0f;
+                OutRowCount = 0.0f;
+            }
+        };
+
+        TArray<float> Floats;
+        Floats.SetNumZeroed(UCk_Vat_Subsystem_UE::NumPerInstanceFloats);
+
+        RowsOf(InCurrent.Get_ActiveClipIndex(), Floats[0], Floats[1]);
+        Floats[2] = InCurrent.Get_PlayRate() == 0.0f
+            ? InCurrent.Get_PausedLocalTime().Get_Seconds()
+            : InCurrent.Get_PlaybackStartTime().Get_Seconds();
+        Floats[3] = InCurrent.Get_PlayRate();
+
+        RowsOf(InCurrent.Get_PrevClipIndex(), Floats[4], Floats[5]);
+        Floats[6] = InCurrent.Get_PrevClipStartTime().Get_Seconds();
+        Floats[7] = InCurrent.Get_PrevPlayRate();
+
+        Floats[8] = InCurrent.Get_TransitionStartTime().Get_Seconds();
+        Floats[9] = InCurrent.Get_TransitionDuration().Get_Seconds();
+        Floats[10] = InCurrent.Get_ActiveLoopMode() == ECk_Vat_LoopMode::Once ? 1.0f : 0.0f;
+        Floats[11] = InCurrent.Get_PrevLoopMode() == ECk_Vat_LoopMode::Once ? 1.0f : 0.0f;
+
+        return Floats;
+    }
+
+    auto
+    Push_CustomData(
+        ck::FFragment_Vat_Current& InCurrent,
+        const UCk_VatCollection_Data& InCollection)
+        -> void
+    {
+        if (ck::Is_NOT_Valid(InCurrent.Get_IsmProxy()))
+        { return; } // no visual composed (setup ensure fired) — playback state still advances
+
+        auto IsmProxy = InCurrent.Get_IsmProxy();
+        UCk_Utils_IsmProxy_UE::Request_SetCustomInstanceData(IsmProxy,
+            FCk_Request_IsmProxy_SetCustomInstanceData{Pack_CustomData(InCurrent, InCollection)});
     }
 }
 
@@ -57,20 +121,52 @@ namespace ck
             Collection, InHandle)
         { return; }
 
-        if (InParams.Get_InitialClipName().IsNone())
-        { return; } // reference pose (texture row 0)
+        if (NOT InParams.Get_InitialClipName().IsNone())
+        {
+            const auto ClipIndex = Collection->Find_BakedClipIndex_ByName(InParams.Get_InitialClipName());
+            CK_ENSURE_IF_NOT(ClipIndex != INDEX_NONE,
+                TEXT("Initial clip [{}] not found in the baked clip table of VatCollection [{}] (entity [{}])"),
+                InParams.Get_InitialClipName(), Collection, InHandle)
+            { return; }
 
-        const auto ClipIndex = Collection->Find_BakedClipIndex_ByName(InParams.Get_InitialClipName());
-        CK_ENSURE_IF_NOT(ClipIndex != INDEX_NONE,
-            TEXT("Initial clip [{}] not found in the baked clip table of VatCollection [{}] (entity [{}])"),
-            InParams.Get_InitialClipName(), Collection, InHandle)
+            InCurrent._ActiveClipIndex = ClipIndex;
+            InCurrent._ActiveLoopMode = InParams.Get_InitialLoopMode();
+            InCurrent._PlayRate = InParams.Get_InitialPlayRate();
+            InCurrent._PlaybackStartTime = ck_vat_processor::Get_CurrentWorldTime(InHandle);
+            InCurrent._FinishedDispatched = false;
+
+            if (InParams.Get_PhaseOffset() == ECk_Vat_PhaseOffset::RandomPerInstance)
+            {
+                // Crowd variety: rebase the start time by a random slice of the clip so identical
+                // clips don't tick in lock-step across instances.
+                const auto& Clips = Collection->Get_BakedClips();
+                const auto ClipSeconds = Clips[ClipIndex].Get_PlayLength().Get_Seconds();
+                InCurrent._PlaybackStartTime =
+                    InCurrent._PlaybackStartTime - FCk_Time{FMath::FRandRange(0.0f, ClipSeconds)};
+            }
+        }
+
+        // ---- rendering hookup: shared MID + transient ISM renderer + this entity's instance ----
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+        auto* Subsystem = World->GetSubsystem<UCk_Vat_Subsystem_UE>();
+        CK_ENSURE_IF_NOT(ck::IsValid(Subsystem, ck::IsValid_Policy_NullptrOnly{}),
+            TEXT("No UCk_Vat_Subsystem_UE for the world of entity [{}]"), InHandle)
         { return; }
 
-        InCurrent._ActiveClipIndex = ClipIndex;
-        InCurrent._ActiveLoopMode = InParams.Get_InitialLoopMode();
-        InCurrent._PlayRate = InParams.Get_InitialPlayRate();
-        InCurrent._PlaybackStartTime = ck_vat_processor::Get_CurrentWorldTime(InHandle);
-        InCurrent._FinishedDispatched = false;
+        const auto* RenderState = Subsystem->GetOrCreate_RenderState(Collection);
+        if (RenderState == nullptr)
+        { return; } // GetOrCreate already ensured loudly; entity keeps its playback state, no visual
+
+        CK_ENSURE_IF_NOT(UCk_Utils_Transform_UE::Has(InHandle),
+            TEXT("Vat entity [{}] has no Transform — compose a Transform before Vat"), InHandle)
+        { return; }
+
+        auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
+        auto IsmProxy = UCk_Utils_IsmProxy_UE::Add(TransformHandle,
+            FCk_Fragment_IsmProxy_ParamsData{RenderState->_RendererData.Get()});
+        InCurrent._IsmProxy = IsmProxy;
+
+        ck_vat_processor::Push_CustomData(InCurrent, *Collection);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -97,6 +193,10 @@ namespace ck
                 }
             }));
         });
+
+        // One custom-data push per drained batch — playback state only reaches the GPU on change.
+        if (ck::IsValid(InParams.Get_Collection()))
+        { ck_vat_processor::Push_CustomData(InCurrent, *InParams.Get_Collection()); }
     }
 
     auto
@@ -122,9 +222,12 @@ namespace ck
 
         const auto Now = ck_vat_processor::Get_CurrentWorldTime(InHandle);
 
-        // Crossfade source = whatever was active; the shader's 2-state blend (Gate 2/3) reads the pair.
+        // Crossfade source = whatever was active; the shader's 2-state blend reads the pair (the
+        // source keeps playing at ITS rate/loop-mode during the fade).
         InCurrent._PrevClipIndex = InCurrent._ActiveClipIndex;
         InCurrent._PrevClipStartTime = InCurrent._PlaybackStartTime;
+        InCurrent._PrevPlayRate = InCurrent._PlayRate;
+        InCurrent._PrevLoopMode = InCurrent._ActiveLoopMode;
         InCurrent._TransitionStartTime = Now;
         InCurrent._TransitionDuration = InRequest.Get_TransitionDuration();
 
@@ -197,5 +300,42 @@ namespace ck
         InCurrent._PlaybackStartTime = Now - FCk_Time{CurrentLocalSeconds / NewRate};
         InCurrent._PausedLocalTime = FCk_Time{};
         InCurrent._PlayRate = NewRate;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Vat_FireSignals::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Vat_Params& InParams,
+            FFragment_Vat_Current& InCurrent) const
+        -> void
+    {
+        if (InCurrent.Get_ActiveClipIndex() == INDEX_NONE ||
+            InCurrent.Get_ActiveLoopMode() != ECk_Vat_LoopMode::Once ||
+            InCurrent.Get_FinishedDispatched() ||
+            InCurrent.Get_PlayRate() <= 0.0f)
+        { return; }
+
+        const auto& Collection = InParams.Get_Collection();
+        if (ck::Is_NOT_Valid(Collection))
+        { return; } // Setup already ensured loudly
+
+        const auto& Clips = Collection->Get_BakedClips();
+        if (NOT Clips.IsValidIndex(InCurrent.Get_ActiveClipIndex()))
+        { return; }
+
+        const auto Now = ck_vat_processor::Get_CurrentWorldTime(InHandle);
+        const auto ElapsedLocalSeconds =
+            (Now - InCurrent.Get_PlaybackStartTime()).Get_Seconds() * InCurrent.Get_PlayRate();
+        const auto& Clip = Clips[InCurrent.Get_ActiveClipIndex()];
+
+        if (ElapsedLocalSeconds < Clip.Get_PlayLength().Get_Seconds())
+        { return; }
+
+        InCurrent._FinishedDispatched = true;
+        UUtils_Signal_Vat_OnClipFinished::Broadcast(InHandle, ck::MakePayload(InHandle, Clip.Get_Name()));
     }
 }
