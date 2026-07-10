@@ -1,15 +1,20 @@
 # CkVat — PROGRESS.md (living log)
 
 ## Current state  <!-- supersedes everything below; update at EVERY gate and session end -->
-**As of 2026-07-09 (branch `feature/vat-feature`, base `545be1a53`, NOT pushed):** Gate 0 ✅
-(commits `f69f9095a..8649f328c`). **Gate 1 code-complete** (commits `9e238e06c`, `6575ac566`):
-full baker for both modes, build green, Iskm suite **29/0/0 post-Gate-1** (zero delta, third
-consecutive green). Remaining for Gate 1 exit: the [EDITOR-VERIFY] bake on real content (human —
-steps in Plan/Gate_01_Bake.md expected-observations table).
-**Baseline on record:** Iskm autotests 29/0/0 (tests_baseline.log, 2026-07-09).
-**Next action:** Gate 2 entry — VAT decode looks in CkUsf (WPO entry per mode, second-UV wiring in
-the generator, per-instance playback params), against the Gate_01 layout contract.
-**Blocked on:** [EDITOR-VERIFY] bake (human) before Gate 1 flips to ✅; Gate 2 can start in parallel.
+**As of 2026-07-10 (branch `feature/vat-feature`, base `545be1a53`, NOT pushed):** Gates 0-3
+code-complete, Gate 4 open (first tests landed in CkTests `feature/vat-feature` — merge-order
+constraint: CkFoundation first). **VAMP gap closure in progress** (priority list in
+CONTINUATION_PROMPT_VampGapClosure.md): gaps 2 (root-motion/retargeting bake toggles), 3 (Bake
+button + bake-staleness detection), and 4-vertex (tangent-space VAT normals in the pixel shader)
+landed 2026-07-10; gap 4-bone (bone-mode normals) DEFERRED — no per-instance basis in the
+non-Nanite PS (evidence in Gate_02 Deferred).
+**Baseline on record:** Iskm autotests **30/30** + AnimBake 2/2 + VatProxy_ApiSurface 1/1 + Usf 4/4
+(2026-07-10 logs: Test-{Iskm,AnimBake,VatProxy,Usf}.log).
+**Next action:** the human [EDITOR-VERIFY] passes (bake a real collection via the NEW details-panel
+Bake button, spawn+play via `utils_vat_proxy`, check lighting responds to animation in Vertex mode),
+then gap 5 (bone-influence options + weight-texture storage).
+**Blocked on:** [EDITOR-VERIFY] (human) for all visual claims; Gate-4 end-to-end autotest needs one
+editor-baked collection committed as CkTests content.
 
 ## Decision log
 | Date | Decision | Why | Revisit when |
@@ -20,6 +25,45 @@ the generator, per-instance playback params), against the Gate_01 layout contrac
 | 2026-07-09 | Iskm refactor keeps dev semantics exactly (skeleton-chain ref pose) | perf-iskm-lod's mesh-bind-pose fix belongs to that branch; porting it early would change dev behavior untested here | When perf-iskm-lod merges — fold its two bake deltas into `ck::anim_bake` call args |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-07-10 — VAMP gaps 2, 3, 4-vertex closed (editor never launched by the human yet)
+- **Gap 2 (root motion):** `_ExtractRootMotion` + `_DisableRetargeting` on the collection → both
+  `FCk_AnimBake_SampleParams` fields in the baker. House naming (no `_b` prefix — the Iskm
+  collection's `_bExtractRootMotion` is pre-existing drift, not copied).
+- **Gap 3 (bake UX + staleness):** details-panel **Bake/Rebake button** on `UCk_VatCollection_Data`
+  (`CkVatEditor/CkVatCollection_Details.{h,cpp}`, ResourceLoaderEditor precedent; module registers
+  the class layout; Build.cs += PropertyEditor/Slate/SlateCore). Staleness: `_BakedInputsHash`
+  (MD5 of skeleton/mesh/clip names+paths+PlayLengths/freq/mode/precision/lookup-channel/toggles)
+  stamped by ApplyBakeResults; `Get_IsBakeStale()`; IsDataValid = **warning when unbaked, error
+  when stale**; button relabels "Rebake (inputs changed)". Decision: auto-bake-on-edit REJECTED
+  (bake saves packages to disk — hostile as a property-edit side effect); validation + one-click
+  is the chosen shape (discussion 2026-07-10 with maintainer).
+- **Gap 4 (VAT normals) — REDESIGNED, vertex mode only:** the continuation prompt's sketch
+  (PS-side instance basis + `CkUsf_WorldToTangentNormal`; bone mode "rotate In.VertexNormal by the
+  blended quat") is NOT implementable/correct: verified against the 5.7 fork that the non-Nanite
+  PS has no per-instance transform (PS `TransformLocalVectorToWorld` = PRIMITIVE transform,
+  MaterialTemplate.ush:1696; `InstanceId` only under `IS_NANITE_PASS`), and rotating a WORLD
+  normal by the LOCAL-space quat is wrong under instance rotation. Landed instead: baker encodes
+  `_Nrm` in the **bind-pose TANGENT frame** (B = cross(N,T)*sign, matching GenerateYAxis) —
+  instance-transform-invariant, feeds the Normal pin directly, zero PS basis math. Pixel entry
+  decodes via `In.UV1.x` + the same 12-float frame/crossfade math as the WPO. Generator gained
+  opt-in `_PixelDataChannels` (TexCoord1/2 → PIXEL Custom node; other looks' masters untouched).
+  `NrmVat` texture param inserted (uniform ⇒ per-instance slots 0-11 unchanged); subsystem seeds
+  it (ensure if missing). **Bone-mode normals deferred** with options recorded in Gate_02.
+- Ran: toolbox --build → Succeeded (one fix round: `GetPropertyUtilities()` returns TSharedRef —
+  `.ToWeakPtr()` + Pin for the button lambda). Headless master regen: **`-ExecCmds` splits on
+  COMMAS not semicolons** — `"Cmd X; QUIT_EDITOR"` = one command with arg `X;`, nothing runs,
+  editor idles holding DLL locks (killed it); comma form generated + saved
+  `M_CkUsf_Look_VatVertex.uasset` and exited cleanly (gen_looks_normals2.log "Generated master").
+- Gates on the final binaries: **Usf 4/4, Iskm 30/30 (zero delta), AnimBake 2/2, VatProxy 1/1**
+  (Test-{Usf,Iskm,AnimBake,VatProxy}.log); `CkVat_Looks_Assets.as` clean in every boot log.
+- Unconfirmed (needs [EDITOR-VERIFY]): everything visual — esp. that lighting now tracks the
+  animation in Vertex mode, and the tangent-frame encode's handedness on UV-mirrored islands
+  (`cross(N,T)*sign` matches GenerateYAxis by construction, but mirrored-island lighting is the
+  claim most likely wrong).
+- Adjacent smell (flagged, untouched): `CkResourceLoaderEditor_Module.cpp:34` unregisters its
+  CLASS layout via `UnregisterCustomPropertyTypeLayout` — wrong unregister API, harmless at
+  shutdown but a copy-paste trap.
 
 ### 2026-07-09/10 — Gate 4 opening: first CkVat/anim-bake tests + a real bug caught
 - Landed in CkTests (NEW branch `feature/vat-feature` there — the tests reference `utils_vat`,

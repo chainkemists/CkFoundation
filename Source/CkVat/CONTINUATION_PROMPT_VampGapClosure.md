@@ -36,17 +36,17 @@ closes the audited VAMP-parity gaps listed below, in priority order.
    bake a `UCk_VatCollection_Data` for a Mannequin/BB mesh via `UCkVat_BakerSubsystem::
    Bake_VatCollection`, then spawn+play via `utils_vat_proxy`. Match outcomes against the branch
    table below. Until this happens, all visual claims are unverified.
-2. **Root-motion bake toggle** (trivial): expose `_ExtractRootMotion` on `UCk_VatCollection_Data`
-   → pass into `FCk_AnimBake_SampleParams` in `CkVatBaker.cpp` (currently defaults; the shared
-   core already supports it).
-3. **Bake UX button** (small): a details-panel/asset-action "Bake" on the collection asset
-   (editor customization in CkVatEditor) so designers don't need the subsystem call.
-4. **VAT normals in the pixel shader** (medium, big visual win): vertex mode bakes `_Nrm` already
-   — decode needs UV1 + the 12 floats in the PIXEL entry (extend `FCkUsf_SurfaceInput` + pixel
-   Custom-node wiring in `CkUsf_Generator.cpp`, mirroring the WPO extension in `4b0c51bf5`), then
-   local→world via an instance basis (PS-side) → `CkUsf_WorldToTangentNormal(In, N)` (the Normal
-   pin is TANGENT-space — CkUsf/CLAUDE.md trap). Bone mode: rotate `In.VertexNormal` by the
-   blended quat instead. Regenerate masters after (`Ck_Usf_GenerateLooks VatVertex VatBone`).
+2. ~~**Root-motion bake toggle**~~ **DONE 2026-07-10** (+ `_DisableRetargeting` for Iskm parity).
+3. ~~**Bake UX button**~~ **DONE 2026-07-10** — details-panel Bake/Rebake button + bake-staleness
+   detection (`_BakedInputsHash` / `Get_IsBakeStale` / IsDataValid warn-unbaked, error-stale).
+4. ~~**VAT normals in the pixel shader**~~ **DONE for VERTEX mode 2026-07-10 — but NOT as sketched
+   here**: the PS has no per-instance basis outside Nanite (verified in MaterialTemplate.ush), so
+   the baker now encodes `_Nrm` in the bind-pose TANGENT frame (instance-invariant, feeds the
+   Normal pin directly); generator gained opt-in `_PixelDataChannels`. **Bone-mode normals
+   DEFERRED** — the quat rotation needs a shared frame the PS can't build; options recorded in
+   Gate_02 "Deferred" (quat in custom-data slots 12-15 / local-TBN mesh channels / Nanite
+   InstanceId). Do not re-attempt the "rotate In.VertexNormal by the blended quat" idea — wrong
+   under instance rotation.
 5. **Bone-influence options (1/2/4) + weight-TEXTURE storage** (VAMP parity; the storage option is
    the Nanite prerequisite): collection fields + baker paths + look variants.
 6. **Nanite investigation gate** (unknowns — do NOT promise before verifying against the 5.7 fork
@@ -117,7 +117,9 @@ design — cannot use `ck::IsValid`/`NOT`).
 - **Never run git ops touching `.as` while a test editor is live** — CRLF mtime churn triggers
   "AS Soft Reload during PIE", which the automation controller escalates to a test failure.
 - Headless editor-cmd: `Quit` in `-ExecCmds` does NOT exit — use `QUIT_EDITOR` (an idle editor
-  held DLL locks → LNK1104 for an hour).
+  held DLL locks → LNK1104 for an hour). AND: `-ExecCmds` splits on **commas, not semicolons** —
+  `-ExecCmds="Cmd A; QUIT_EDITOR"` is parsed as ONE command with a `A;` arg (nothing runs, editor
+  idles); `-ExecCmds="Cmd A, QUIT_EDITOR"` runs both and exits cleanly (verified 2026-07-10).
 - `CK_REGISTER_PROCESSOR` needs `CkEcs/Scheduler/CkProcessorRegistration.h`; editor-twin modules
   must list `CkEcs` in Build.cs (LNK2019 on SharedPCH otherwise); unnamed-enum constants are not
   fmt-formattable in `CK_ENSURE` (cast to int32); `TWeakObjectPtr` member init needs the DEFINING
