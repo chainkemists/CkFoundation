@@ -1,6 +1,7 @@
 #include "CkInsightsAnalyzer/Core/CkTraceSession.h"
 #include "CkInsightsAnalyzer_Log.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Validation/CkIsValid.h"
 
@@ -122,6 +123,52 @@ auto
 
     _FilePath = FilePath;
     return true;
+}
+
+auto
+    FCk_TraceSession::
+    StartAnalysis(const FString& FilePath)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(IsInGameThread(),
+        TEXT("StartAnalysis must be called on the game thread — registered trace modules "
+             "(e.g. ChaosVD) ensure(IsInGameThread()) inside OnAnalysisBegin, which fires "
+             "synchronously here"))
+    { return false; }
+
+    if (ck::Is_NOT_Valid(_AnalysisService))
+    {
+        ck::insights_analyzer::Error(TEXT("StartAnalysis called without PrepareAnalysisService"));
+        return false;
+    }
+
+    if (NOT FPaths::FileExists(FilePath))
+    {
+        ck::insights_analyzer::Error(TEXT("Trace file not found: {}"), FilePath);
+        return false;
+    }
+
+    ck::insights_analyzer::Log(TEXT("Starting trace analysis: {}"), FilePath);
+
+    _Session = _AnalysisService->StartAnalysis(*FilePath);
+
+    if (ck::Is_NOT_Valid(_Session))
+    {
+        ck::insights_analyzer::Error(TEXT("Failed to start analysis for trace: {}"), FilePath);
+        _AnalysisService.Reset();
+        return false;
+    }
+
+    _FilePath = FilePath;
+    return true;
+}
+
+auto
+    FCk_TraceSession::
+    IsAnalysisComplete() const
+    -> bool
+{
+    return _Session.IsValid() && _Session->IsAnalysisComplete();
 }
 
 auto

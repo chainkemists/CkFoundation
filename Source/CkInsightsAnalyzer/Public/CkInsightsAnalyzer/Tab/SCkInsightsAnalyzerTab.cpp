@@ -2,6 +2,7 @@
 
 #include "CkInsightsAnalyzer/Core/CkFrameAnalyzer.h"
 #include "CkInsightsAnalyzer/Core/CkTimerCategorizer.h"
+#include "CkInsightsAnalyzer/Report/CkJsonReport.h"
 #include "CkInsightsAnalyzer_Log.h"
 
 #include "CkCore/Macros/CkMacros.h"
@@ -9,9 +10,9 @@
 
 #include "CkEditorTools/Style/CkStyle.h"
 
-#include <Async/Async.h>
 #include <DesktopPlatformModule.h>
 #include <HAL/PlatformApplicationMisc.h>
+#include <Misc/FileHelper.h>
 #include <Styling/AppStyle.h>
 #include <Styling/CoreStyle.h>
 #include <Widgets/Images/SImage.h>
@@ -527,6 +528,18 @@ auto
             .Text(FText::FromString(TEXT("Copy Report")))
             .ToolTipText(FText::FromString(TEXT("Copy the current markdown report to the system clipboard")))
             .OnClicked(this, &SCkInsightsAnalyzerTab::DoOnCopyToClipboardClicked)
+            .HAlign(HAlign_Center)
+        ]
+
+        // Export JSON
+        + SHorizontalBox::Slot()
+        .AutoWidth()
+        .Padding(0.0f, 0.0f, SectionSpacing, 0.0f)
+        [
+            SNew(SButton)
+            .Text(FText::FromString(TEXT("Export JSON...")))
+            .ToolTipText(FText::FromString(TEXT("Save the current analysis as a machine-readable JSON report (same format as the commandlet's -json output)")))
+            .OnClicked(this, &SCkInsightsAnalyzerTab::DoOnExportJsonClicked)
             .HAlign(HAlign_Center)
         ]
 
@@ -1236,6 +1249,79 @@ auto
 
 auto
     SCkInsightsAnalyzerTab::
+    DoOnExportJsonClicked()
+    -> FReply
+{
+    using namespace ck_insights_analyzer_tab;
+
+    if (NOT _Session.IsOpen() ||
+        (NOT _LastSingleResult.IsSet() && NOT _LastMultiStats.IsSet()))
+    {
+        DoSetStatus(TEXT("No analysis to export. Analyze a frame or range first."), ECk_Tone::Warn);
+        return FReply::Handled();
+    }
+
+    const auto DesktopPlatform = FDesktopPlatformModule::Get();
+    if (ck::Is_NOT_Valid(DesktopPlatform, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        DoSetStatus(TEXT("Desktop platform not available."), ECk_Tone::Err);
+        return FReply::Handled();
+    }
+
+    const FString BaseName = FPaths::GetBaseFilename(_Session.GetFilePath());
+    const FString DefaultName = _LastSingleResult.IsSet()
+        ? FString::Printf(TEXT("%s_Frame%llu.json"), *BaseName, _LastSingleResult->FrameIndex)
+        : FString::Printf(TEXT("%s_Frames.json"), *BaseName);
+
+    TArray<FString> OutFiles;
+    const bool Saved = DesktopPlatform->SaveFileDialog(
+        FSlateApplication::Get().FindBestParentWindowHandleForDialogs(nullptr),
+        TEXT("Export JSON Report"),
+        FPaths::ProjectSavedDir() / TEXT("TraceSessions"),
+        DefaultName,
+        TEXT("JSON files (*.json)|*.json"),
+        EFileDialogFlags::None,
+        OutFiles);
+
+    if (NOT Saved || OutFiles.Num() == 0)
+    {
+        return FReply::Handled();
+    }
+
+    FString Json;
+    if (_LastSingleResult.IsSet())
+    {
+        FCk_FrameReportConfig Config;
+        Config.TargetFrameMs = TargetFrameMs;
+        Config.Depth = _ReportDepth;
+        Config.ApplyDepth();
+
+        Json = FCk_JsonReport::GenerateSingleFrame(_Session, *_LastSingleResult, Config);
+    }
+    else
+    {
+        FCk_MultiFrameReportConfig Config;
+        Config.TargetFrameMs = TargetFrameMs;
+        Config.Depth = _ReportDepth;
+        Config.ApplyDepth();
+
+        Json = FCk_JsonReport::GenerateMultiFrame(_Session, *_LastMultiStats, Config);
+    }
+
+    if (FFileHelper::SaveStringToFile(Json, *OutFiles[0]))
+    {
+        DoSetStatus(FString::Printf(TEXT("Exported JSON: %s"), *FPaths::GetCleanFilename(OutFiles[0])), ECk_Tone::Ok);
+    }
+    else
+    {
+        DoSetStatus(FString::Printf(TEXT("Failed to write: %s"), *OutFiles[0]), ECk_Tone::Err);
+    }
+
+    return FReply::Handled();
+}
+
+auto
+    SCkInsightsAnalyzerTab::
     DoOnWorstFrameClicked(uint64 FrameIndex)
     -> FReply
 {
@@ -1339,6 +1425,8 @@ auto
     _TopTimers.Reset();
     _WorstFrames.Reset();
     _CategoryAverages.Reset();
+    _LastSingleResult.Reset();
+    _LastMultiStats.Reset();
 
     if (ck::IsValid(_HotPathTree)) { _HotPathTree->RequestTreeRefresh(); }
     DoRebuildCategoryRows();
@@ -1368,6 +1456,7 @@ auto
         _HotPathRoots.Reset();
         _Categories.Reset();
         _TopTimers.Reset();
+        _LastSingleResult.Reset();
         if (ck::IsValid(_HotPathTree)) { _HotPathTree->RequestTreeRefresh(); }
         DoRebuildCategoryRows();
         DoRebuildTopTimerRows();
@@ -1386,6 +1475,8 @@ auto
     // Structured views
     _ResultsMode = EResultsMode::SingleFrame;
     _AnalyzedFrameMs = Result.FrameDurationMs;
+    _LastSingleResult = Result;   // retained for Export JSON
+    _LastMultiStats.Reset();
     _HotPathRoots = FrameReport.BuildHotPathTree(_Session, Result);
 
     {
@@ -1456,6 +1547,8 @@ auto
     _HotPathRoots.Reset();
     _Categories.Reset();
     _TopTimers.Reset();
+    _LastSingleResult.Reset();
+    _LastMultiStats = Stats;      // retained for Export JSON
 
     _WorstFrames = Stats.WorstFrames;
     _CategoryAverages = Stats.CategoryAverages;
@@ -1573,15 +1666,18 @@ auto
         return;
     }
 
-    // Launch heavy Analyze() on background thread
-    TSharedPtr<FCk_TraceSession> SessionForAsync = _PendingSession;
-    FString PathCopy = TracePath;
-
-    _OpenFuture = Async(EAsyncExecution::ThreadPool,
-        [SessionForAsync, PathCopy]() -> bool
-        {
-            return SessionForAsync->AnalyzeFile(PathCopy);
-        });
+    // START analysis here on the game thread — registered trace modules (e.g.
+    // ChaosVD) ensure(IsInGameThread()) inside OnAnalysisBegin, which fires
+    // synchronously in StartAnalysis. The heavy processing runs on
+    // TraceServices' own analysis thread; the ticker below polls completion.
+    if (NOT _PendingSession->StartAnalysis(TracePath))
+    {
+        DoSetStatus(FString::Printf(TEXT("Failed to open: %s"),
+            *FPaths::GetCleanFilename(TracePath)), ECk_Tone::Err);
+        _PendingSession.Reset();
+        _LoadingState = ELoadingState::Idle;
+        return;
+    }
 
     // Start polling ticker
     _LoadingTickerHandle = FTSTicker::GetCoreTicker().AddTicker(
@@ -1598,22 +1694,18 @@ auto
     {
     case ELoadingState::Opening:
     {
-        if (NOT _OpenFuture.IsReady())
+        if (ck::Is_NOT_Valid(_PendingSession))
         {
-            return true; // keep ticking
-        }
-
-        const bool Success = _OpenFuture.Get();
-        if (NOT Success)
-        {
-            DoSetStatus(FString::Printf(TEXT("Failed to open: %s"),
-                *FPaths::GetCleanFilename(_PendingTracePath)), ECk_Tone::Err);
-            _PendingSession.Reset();
             _LoadingState = ELoadingState::Idle;
             return false; // stop ticking
         }
 
-        // Move session from background to member
+        if (NOT _PendingSession->IsAnalysisComplete())
+        {
+            return true; // keep ticking
+        }
+
+        // Take ownership of the analyzed session
         _Session = MoveTemp(*_PendingSession);
         _PendingSession.Reset();
 
