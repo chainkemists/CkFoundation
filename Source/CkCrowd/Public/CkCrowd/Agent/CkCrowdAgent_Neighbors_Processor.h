@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
+#include "CkEcs/Processor/CkParallelProcessor.h"
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
@@ -20,13 +21,16 @@ namespace ck
     // frame's cache. The probe overlap set itself is updated by FProcessor_Probe_HandleRequests in
     // FGroup_Overlap (TG_PostPhysics); NeighborSync reads it from the *previous* frame's PostPhysics
     // pass — one frame of latency, well below the rate at which agents close on each other.
-    class CKCROWD_API FProcessor_CrowdAgent_NeighborSync : public ck_exp::TProcessor<
+    //
+    // PARALLEL: the per-agent body is registry READS (probe overlaps, neighbor transforms/velocities)
+    // plus a write to the agent's OWN NeighborCache — no structural mutations, no signals.
+    class CKCROWD_API FProcessor_CrowdAgent_NeighborSync : public TParallelProcessor<
             FProcessor_CrowdAgent_NeighborSync,
             FCk_Handle_CrowdAgent,
             FTag_CrowdAgent_HasProbe,
-            ck::TReadOnly<FFragment_CrowdAgent_Params>,
-            ck::TReadOnly<FFragment_CrowdAgent_ProbeRef>,
-            ck::TReadWrite<FFragment_CrowdAgent_NeighborCache>,
+            TReadOnly<FFragment_CrowdAgent_Params>,
+            TReadOnly<FFragment_CrowdAgent_ProbeRef>,
+            TReadWrite<FFragment_CrowdAgent_NeighborCache>,
             TExclude<FTag_CrowdAgent_Asleep>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -35,16 +39,16 @@ namespace ck
         using RunBefore = TDepList<FProcessor_CrowdAgent_Steering>;
 
     public:
-        using TProcessor::TProcessor;
+        using TParallelProcessor::TParallelProcessor;
 
     public:
-        static auto
+        auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_ProbeRef& InProbeRef,
-            FFragment_CrowdAgent_NeighborCache& InNeighborCache) -> void;
+            FFragment_CrowdAgent_NeighborCache& InNeighborCache) const -> void;
     };
 }
 

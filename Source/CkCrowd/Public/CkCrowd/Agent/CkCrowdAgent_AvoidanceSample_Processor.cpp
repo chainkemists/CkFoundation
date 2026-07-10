@@ -8,6 +8,7 @@
 #include "CkPhysics/Velocity/CkVelocity_Utils.h"
 
 #include "CkCrowd/Agent/CkCrowdAgent_Avoidance_Fragment.h"
+#include "CkCrowd/Agent/CkCrowdAgent_Utils.h"
 #include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
@@ -107,14 +108,19 @@ namespace ck
         // direction — without them the ring grid only covers off-axis approximations and the
         // sampler oscillates between similar-but-not-equal candidates as the desired direction
         // tilts frame-to-frame.
+        // Inline capacity covers the default 8×2 pattern + 3 anchors without heap traffic —
+        // this allocates per sampling agent per frame, and under parallel dispatch each task
+        // builds its own.
+        using FSamplePattern = TArray<FVector, TInlineAllocator<32>>;
+
         auto BuildSamplePattern(
             const FVector& InDesiredVelocity,
             const FVector& InCurrentVelocity,
             float InMaxSpeed,
             int32 InAngularDivs,
-            int32 InRings) -> TArray<FVector>
+            int32 InRings) -> FSamplePattern
         {
-            TArray<FVector> Samples;
+            FSamplePattern Samples;
             Samples.Reserve(InAngularDivs * InRings + 3);
 
             // Anchor 1: the do-nothing zero candidate. Always present so "stop" is on the table.
@@ -224,17 +230,24 @@ namespace ck
             HandleType InHandle,
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
-            FFragment_CrowdAgent_DesiredVelocity& InDesired)
+            FFragment_CrowdAgent_DesiredVelocity& InDesired) const
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_AvoidanceSampleProc);
 
-        // Trigger gate. Off-path leaves the force solver's _Velocity in place (which will then be
-        // ramped by AccelClamp downstream).
-        if (NOT ShouldSample(InHandle, InNeighborCache))
+        // WORKER THREAD: reconstruct the full typed handle for the gate reads below — reads only;
+        // the debug-info attach is region/thread-gated in FCk_Handle.
+        const auto SelfAgent = UCk_Utils_CrowdAgent_UE::Cast(ck::MakeHandle(InHandle.Get_Entity(), _TransientEntity));
+
+        // Round-robin gate FIRST — it's a modulo on the frame counter, while ShouldSample walks
+        // fragments and gameplay tags. On (Stride-1)/Stride of frames the cheap gate rejects
+        // before the expensive one runs. Both are pure predicates, so the order is behavior-neutral.
+        if (NOT IsSamplingFrame(SelfAgent))
         { return; }
 
-        if (NOT IsSamplingFrame(InHandle))
+        // Trigger gate. Off-path leaves the force solver's _Velocity in place (which will then be
+        // ramped by AccelClamp downstream).
+        if (NOT ShouldSample(SelfAgent, InNeighborCache))
         { return; }
 
         // Counted only past both gates — shows how many agents the round-robin stride actually let through.

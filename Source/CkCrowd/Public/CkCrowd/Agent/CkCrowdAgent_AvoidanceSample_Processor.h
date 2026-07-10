@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
+#include "CkEcs/Processor/CkParallelProcessor.h"
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
@@ -23,14 +24,18 @@ namespace ck
     // Group: FGroup_Physics. RunAfter Steering (we override its output) + NeighborSync (we read
     // the cache it just wrote). RunBefore AccelClamp + VelocityBridge (so the override gets ramped
     // and shipped). RunBefore is enforced by AccelClamp's RunAfter on this processor (Step 5.5).
-    class CKCROWD_API FProcessor_CrowdAgent_AvoidanceSample : public ck_exp::TProcessor<
+    //
+    // PARALLEL: the Samples × Neighbors scoring loop — the module's only nested-loop hot spot —
+    // is pure math over the agent's own cache; all cross-entity access is reads (zone-tag walk),
+    // the only write is the agent's OWN DesiredVelocity.
+    class CKCROWD_API FProcessor_CrowdAgent_AvoidanceSample : public TParallelProcessor<
             FProcessor_CrowdAgent_AvoidanceSample,
             FCk_Handle_CrowdAgent,
             FTag_CrowdAgent_Walking,
             FTag_CrowdAgent_HasProbe,
-            ck::TReadOnly<FFragment_CrowdAgent_Params>,
-            ck::TReadOnly<FFragment_CrowdAgent_NeighborCache>,
-            ck::TReadWrite<FFragment_CrowdAgent_DesiredVelocity>,
+            TReadOnly<FFragment_CrowdAgent_Params>,
+            TReadOnly<FFragment_CrowdAgent_NeighborCache>,
+            TReadWrite<FFragment_CrowdAgent_DesiredVelocity>,
             TExclude<FTag_CrowdAgent_Asleep>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -39,16 +44,16 @@ namespace ck
         using RunAfter = TDepList<FProcessor_CrowdAgent_Steering, FProcessor_CrowdAgent_NeighborSync>;
 
     public:
-        using TProcessor::TProcessor;
+        using TParallelProcessor::TParallelProcessor;
 
     public:
-        static auto
+        auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
-            FFragment_CrowdAgent_DesiredVelocity& InDesired) -> void;
+            FFragment_CrowdAgent_DesiredVelocity& InDesired) const -> void;
     };
 }
 
