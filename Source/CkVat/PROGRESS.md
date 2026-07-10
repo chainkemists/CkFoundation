@@ -1,15 +1,15 @@
 # CkVat — PROGRESS.md (living log)
 
 ## Current state  <!-- supersedes everything below; update at EVERY gate and session end -->
-**As of 2026-07-09 (dev `545be1a53` + UNCOMMITTED working tree):** **Gate 0 DONE.** Post-change Iskm
-suite **29 passed / 0 failed / 0 skipped** — zero delta vs the recorded baseline (tests_after.log,
-final binaries `BusterBlockEditor-CkVat.dll` 21:13). Modules load; AS wrapper generator emitted
-`Script/Generated/utils_vat.as` during the test boot (mixin forms well-formed). Nothing committed —
-awaiting maintainer's word on branch/commit.
+**As of 2026-07-09 (branch `feature/vat-feature`, base `545be1a53`, NOT pushed):** Gate 0 ✅
+(commits `f69f9095a..8649f328c`). **Gate 1 code-complete** (commits `9e238e06c`, `6575ac566`):
+full baker for both modes, build green, Iskm suite **29/0/0 post-Gate-1** (zero delta, third
+consecutive green). Remaining for Gate 1 exit: the [EDITOR-VERIFY] bake on real content (human —
+steps in Plan/Gate_01_Bake.md expected-observations table).
 **Baseline on record:** Iskm autotests 29/0/0 (tests_baseline.log, 2026-07-09).
-**Next action:** Gate 1 entry — author `Plan/Gate_01_Bake.md`, then the CkVatEditor baker
-(vertex+bone atlases via `ck::anim_bake::SamplePoses`, static-mesh build w/ lookup UVs, clip table).
-**Blocked on:** nothing (commit decision is the maintainer's).
+**Next action:** Gate 2 entry — VAT decode looks in CkUsf (WPO entry per mode, second-UV wiring in
+the generator, per-instance playback params), against the Gate_01 layout contract.
+**Blocked on:** [EDITOR-VERIFY] bake (human) before Gate 1 flips to ✅; Gate 2 can start in parallel.
 
 ## Decision log
 | Date | Decision | Why | Revisit when |
@@ -20,6 +20,29 @@ awaiting maintainer's word on branch/commit.
 | 2026-07-09 | Iskm refactor keeps dev semantics exactly (skeleton-chain ref pose) | perf-iskm-lod's mesh-bind-pose fix belongs to that branch; porting it early would change dev behavior untested here | When perf-iskm-lod merges — fold its two bake deltas into `ck::anim_bake` call args |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-07-09 — Gate 0 committed; Gate 1 baker landed (code-complete)
+- Committed Gate 0 on `feature/vat-feature` (user-created): `f69f9095a` anim-bake core, `08940084c`
+  Iskm refactor, `eb2087ee3` CkVat runtime, `07a437601` CkVatEditor+uplugin, `8649f328c` docs.
+  NOT pushed. Note: repo `.gitignore:49` blanket-ignores `*.md` — docs force-added (existing
+  tracked module docs prove the precedent).
+- Gate 1: engine APIs verified at file:line against the 5.7 fork by a research agent BEFORE coding
+  (FMeshDescription authoring, editor source model + FSoftSkinVertex **uint16** influences,
+  ConvertMeshesToStaticMesh ceremony, TSF_RGBA16F/TC_HDR). Contract + layout spec:
+  Plan/Gate_01_Bake.md.
+- Landed + committed (`9e238e06c` bounds/ApplyBakeResults, `6575ac566` baker): full bake flow for
+  BOTH modes; entry `UCkVat_BakerSubsystem::Bake_VatCollection`.
+- Ran: toolbox --build → "Result: Succeeded" (build_gate1c.log; two fix rounds: missing collection
+  include in the subsystem TU; unformattable unnamed-enum `MAX_MESH_TEXTURE_COORDS_MD` in an ensure).
+- Ran: Iskm suite regression post-Gate-1 → **29 passed / 0 failed / 0 skipped** (tests_gate1.log) —
+  zero delta vs baseline, third consecutive green run on this branch.
+- Confirmed: layout contract in Gate_01_Bake.md cross-checked against the shipped encoder code
+  (row-0 ref pose, lookup U formula, bone index/weight carriers, precision encodings) — consistent.
+- Inferred (unconfirmed, needs [EDITOR-VERIFY]): the bake produces visually-correct data on real
+  content. The one claim most likely wrong: **triangle winding** on the baked static mesh (kept
+  source index order; if meshes render inside-out, swap corners 0/2 in BuildBakedStaticMesh).
+  Also unconfirmed: mesh-bind-pose vs skeleton-ref-pose divergence on reoriented imports (dev
+  semantics kept; the perf-iskm-lod fix folds in at merge — decision log).
 
 ### 2026-07-09 — Gate 0 implementation (same session, later)
 - Ran: baseline Iskm tests → **29 ran, Failed: 0, Skipped: 0** (tests_baseline.log). The module doc
