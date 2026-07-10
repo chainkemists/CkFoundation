@@ -21,6 +21,31 @@ the generator, per-instance playback params), against the Gate_01 layout contrac
 
 ## Dated entries (append-only, newest first)
 
+### 2026-07-09/10 — Gate 4 opening: first CkVat/anim-bake tests + a real bug caught
+- Landed in CkTests (NEW branch `feature/vat-feature` there — the tests reference `utils_vat`,
+  merging CkTests dev before CkFoundation's branch would break everyone's AS compile; commit
+  `0b4a0fd`): `CkTests.UnitTests.CkAnimation.AnimBake.{LoopedLocalFrame,FrameLayoutAndSampling}`
+  (pins the Gate-0 extraction: looped-frame math, layout contract, frame-0 identity) +
+  `Ck_AutoTest_Vat_ApiSurface` (the no-baked-content surface, ProxyAdd-style scoping). Commit
+  includes the populator's OFPA re-key from the `--discover-fresh` registration.
+- **Real bug caught by the new unit test:** pose evaluation crashed (MemStack NumMarks assert) in
+  standalone callers — the extracted core relied on the engine tick's FMemMark. Fixed: the core
+  scopes a per-sequence `FMemMark` (`660b59b13`). This would have crashed the CkVatEditor baker in
+  production paths.
+- Results: AnimBake 2/2; Vat_ApiSurface 1/1; Iskm regression **30/30** — the fresh discovery
+  surfaced `Create_MakesDistinctChild` (on dev since yesterday, silently skipped by the stale
+  toolbox test cache in ALL earlier runs incl. the 29-test baseline) and it passes.
+- Flake post-mortem (not a regression): one BatchedVisual red was caused by MY CkTests git
+  branch/commit running while the test editor was live — git's CRLF rewrite touched .as mtimes →
+  "AS Soft Reload during PIE" escalated to a failure. Clean re-run green. Rule reinforced: NO git
+  ops touching .as while a test editor runs.
+- Pre-existing, surfaced, untouched: `AutoTests_BB_MAP` has orphaned OFPA actor refs
+  ("Failed to load Actor for External Actor Package .../AutoTests_BB_MAP/3/S6/...") — BB-side
+  content inconsistency, predates this campaign.
+- Remaining Gate 4: end-to-end bake→play→OnClipFinished autotest (needs one editor bake of a
+  Mannequin collection committed as CkTests content — bake saves packages, unsuitable per-run),
+  CkVat gym, AS/BP parity spot-check beyond wrapper regen.
+
 ### 2026-07-09 — Gates 2+3 code-complete (same session, continued)
 - Gate 2 landed: `FCkUsf_VertexInput` += UV1/UV2/LocalPosition + per-instance local→world basis
   (filled via `TransformLocalVectorToWorld` — VERIFIED against MaterialTemplate.ush:1702-1709 that
