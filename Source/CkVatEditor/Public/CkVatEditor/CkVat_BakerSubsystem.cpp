@@ -27,7 +27,10 @@ UCk_VatCollection_Data*
         const TArray<FCk_VatCollection_ClipDef>& InClips,
         int32 InSampleFrequency,
         ECk_Vat_BakeMode InBakeMode,
-        ECk_Vat_Precision InPrecision)
+        ECk_Vat_Precision InPrecision,
+        ECk_Vat_BoneWeightStorage InBoneWeightStorage,
+        ECk_Vat_BoneInfluences InBoneInfluences,
+        int32 InSourceLOD)
 {
     const auto CollectionName = MakeUniqueObjectName(
         GetTransientPackage(), UCk_VatCollection_Data::StaticClass(), FName{TEXT("VatCollection_Transient")});
@@ -40,9 +43,13 @@ UCk_VatCollection_Data*
     Collection->_Skeleton = InSkeleton;
     Collection->_SourceMesh = InSourceMesh;
     Collection->_Clips = InClips;
-    Collection->_SampleFrequency = FMath::Clamp(InSampleFrequency, 1, 120);
-    Collection->_BakeMode = InBakeMode;
-    Collection->_Precision = InPrecision;
+    Collection->_BakeSettings
+        .Set_SampleFrequency(FMath::Clamp(InSampleFrequency, 1, 120))
+        .Set_BakeMode(InBakeMode)
+        .Set_Precision(InPrecision)
+        .Set_BoneWeightStorage(InBoneWeightStorage)
+        .Set_BoneInfluences(InBoneInfluences)
+        .Set_SourceLOD(FMath::Clamp(InSourceLOD, 0, 7));
 
     if (NOT ck::vat_editor::Bake_VatCollection_Transient(*Collection))
     { return nullptr; }

@@ -18,7 +18,7 @@ auto
     Find_BakedClipIndex_ByName(FName InClipName) const
     -> int32
 {
-    return _BakedClips.IndexOfByPredicate([&](const FCk_Vat_BakedClip& InClip)
+    return _BakedData.Get_BakedClips().IndexOfByPredicate([&](const FCk_Vat_BakedClip& InClip)
     {
         return InClip.Get_Name() == InClipName;
     });
@@ -47,13 +47,18 @@ auto
             ck::IsValid(Seq) ? Seq->GetPlayLength() : 0.0f);
     }
 
-    Description += FString::Printf(TEXT("Freq:%d|Mode:%d|Precision:%d|LookupUV:%d|RootMotion:%d|NoRetarget:%d"),
-        _SampleFrequency,
-        static_cast<int32>(_BakeMode),
-        static_cast<int32>(_Precision),
-        _LookupUVChannel,
-        _ExtractRootMotion ? 1 : 0,
-        _DisableRetargeting ? 1 : 0);
+    Description += FString::Printf(TEXT("Freq:%d|Mode:%d|Precision:%d|Influences:%d|Storage:%d|SourceLOD:%d|LookupUV:%d|MaxW:%d|MaxRows:%d|RootMotion:%d|NoRetarget:%d"),
+        _BakeSettings.Get_SampleFrequency(),
+        static_cast<int32>(_BakeSettings.Get_BakeMode()),
+        static_cast<int32>(_BakeSettings.Get_Precision()),
+        static_cast<int32>(_BakeSettings.Get_BoneInfluences()),
+        static_cast<int32>(_BakeSettings.Get_BoneWeightStorage()),
+        _BakeSettings.Get_SourceLOD(),
+        _BakeSettings.Get_LookupUVChannel(),
+        _BakeSettings.Get_MaxTextureWidth(),
+        _BakeSettings.Get_MaxTextureRows(),
+        _BakeSettings.Get_ExtractRootMotion() ? 1 : 0,
+        _BakeSettings.Get_DisableRetargeting() ? 1 : 0);
 
     return FMD5::HashAnsiString(*Description);
 }
@@ -63,7 +68,7 @@ auto
     Get_IsBakeStale() const
     -> bool
 {
-    return _IsBaked && _BakedInputsHash != Compute_BakeInputsHash();
+    return _BakedData.Get_IsBaked() && _BakedData.Get_BakedInputsHash() != Compute_BakeInputsHash();
 }
 
 auto
@@ -71,19 +76,21 @@ auto
     ApplyBakeResults(const FCk_Vat_BakeResults& InResults)
     -> void
 {
-    _BakedMesh = InResults.BakedMesh;
-    _PositionTexture = InResults.PositionTexture;
-    _NormalTexture = InResults.NormalTexture;
-    _BonePositionTexture = InResults.BonePositionTexture;
-    _BoneRotationTexture = InResults.BoneRotationTexture;
-    _BakedClips = InResults.BakedClips;
-    _TextureWidth = InResults.TextureWidth;
-    _TextureRows = InResults.TextureRows;
-    _AnimatedBounds = InResults.AnimatedBounds;
-    _PositionBoundsMin = InResults.PositionBoundsMin;
-    _PositionBoundsMax = InResults.PositionBoundsMax;
-    _IsBaked = true;
-    _BakedInputsHash = Compute_BakeInputsHash();
+    _BakedData._BakedMesh = InResults.BakedMesh;
+    _BakedData._PositionTexture = InResults.PositionTexture;
+    _BakedData._NormalTexture = InResults.NormalTexture;
+    _BakedData._BonePositionTexture = InResults.BonePositionTexture;
+    _BakedData._BoneRotationTexture = InResults.BoneRotationTexture;
+    _BakedData._BoneIndexTexture = InResults.BoneIndexTexture;
+    _BakedData._BoneWeightTexture = InResults.BoneWeightTexture;
+    _BakedData._BakedClips = InResults.BakedClips;
+    _BakedData._TextureWidth = InResults.TextureWidth;
+    _BakedData._TextureRows = InResults.TextureRows;
+    _BakedData._AnimatedBounds = InResults.AnimatedBounds;
+    _BakedData._PositionBoundsMin = InResults.PositionBoundsMin;
+    _BakedData._PositionBoundsMax = InResults.PositionBoundsMax;
+    _BakedData._IsBaked = true;
+    _BakedData._BakedInputsHash = Compute_BakeInputsHash();
 
     MarkPackageDirty();
 }
@@ -145,7 +152,7 @@ auto
     }
 
     // Unbaked is a legitimate mid-authoring state (warn); a STALE bake ships wrong pixels silently (error).
-    if (NOT _IsBaked)
+    if (NOT _BakedData.Get_IsBaked())
     {
         InContext.AddWarning(FText::FromString(TEXT("VatCollection has not been baked — bake it (Bake button in the details panel) before it can render.")));
     }

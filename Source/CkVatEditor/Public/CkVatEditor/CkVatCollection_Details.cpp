@@ -58,7 +58,7 @@ namespace ck::layout
             }
             for (const auto& Collection : Collections)
             {
-                if (ck::IsValid(Collection.Get()) && Collection->Get_IsBaked())
+                if (ck::IsValid(Collection.Get()) && Collection->Get_BakedData().Get_IsBaked())
                 { return LOCTEXT("Rebake", "Rebake"); }
             }
             return LOCTEXT("Bake", "Bake");

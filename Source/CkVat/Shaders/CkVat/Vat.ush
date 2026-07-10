@@ -183,9 +183,34 @@ float3 CkUsf_Look_VatVertex_WPO(FCkUsf_VertexInput In,
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// VatBone — bone position/rotation textures. In.UV1 = render-bone indices 0-1, In.UV2 = indices 2-3,
-// In.VertexColor.rgb = weights 0-2 (weight3 = 1 - r - g - b). In.LocalPosition = bind-pose position.
+// VatBone — bone position/rotation textures. Two per-vertex carriers (WeightStorage uniform):
+//   0 = mesh channels: In.UV1 = render-bone indices 0-1, In.UV2 = indices 2-3,
+//       In.VertexColor.rgb = weights 0-2 (weight3 = 1 - r - g - b).
+//   1 = weight textures: In.UV1 = this vertex's texel UV into BoneIdxTex/BoneWeightTex
+//       (indices raw 16F; all four weights stored — renormalized here against quantization).
+// In.LocalPosition = bind-pose position either way.
 // --------------------------------------------------------------------------------------------------------------------
+
+// Per-vertex indices/weights for one vertex, from whichever carrier the collection baked.
+void CkVat_BoneVertexData(float2 UV1, float2 UV2, float3 VertexColor,
+                          Texture2D BoneIdxTex, SamplerState BoneIdxTexSampler,
+                          Texture2D BoneWeightTex, SamplerState BoneWeightTexSampler,
+                          float WeightStorage,
+                          out float4 OutBoneIndices, out float4 OutBoneWeights)
+{
+    if (WeightStorage > 0.5)
+    {
+        OutBoneIndices = CkUsf_SampleTexture2D(BoneIdxTex, BoneIdxTexSampler, UV1);
+        float4 W = CkUsf_SampleTexture2D(BoneWeightTex, BoneWeightTexSampler, UV1);
+        OutBoneWeights = W / max(dot(W, float4(1.0, 1.0, 1.0, 1.0)), 0.0001);
+    }
+    else
+    {
+        OutBoneIndices = float4(UV1.x, UV1.y, UV2.x, UV2.y);
+        OutBoneWeights = float4(VertexColor.r, VertexColor.g, VertexColor.b,
+            saturate(1.0 - VertexColor.r - VertexColor.g - VertexColor.b));
+    }
+}
 
 // One clip state's frame-interpolated 4-influence skinned position (local space).
 // RowCount <= 0 => reference pose (bind position unchanged).
@@ -232,8 +257,10 @@ FCkUsf_SurfaceOutput CkUsf_Look_VatBone(FCkUsf_SurfaceInput In,
     Texture2D BaseColorTex, SamplerState BaseColorTexSampler,
     Texture2D BonePosVat, SamplerState BonePosVatSampler,
     Texture2D BoneRotVat, SamplerState BoneRotVatSampler,
+    Texture2D BoneIdxTex, SamplerState BoneIdxTexSampler,
+    Texture2D BoneWeightTex, SamplerState BoneWeightTexSampler,
     float SampleFrequency, float TotalRows, float BoneCount,
-    float3 BoundsMin, float3 BoundsMax, float DecodeNormalized,
+    float3 BoundsMin, float3 BoundsMax, float DecodeNormalized, float WeightStorage,
     float RowStartA, float RowCountA, float TimeA, float RateA,
     float RowStartB, float RowCountB, float TimeB, float RateB,
     float TransStart, float TransDuration, float LoopA, float LoopB)
@@ -249,15 +276,19 @@ float3 CkUsf_Look_VatBone_WPO(FCkUsf_VertexInput In,
     Texture2D BaseColorTex, SamplerState BaseColorTexSampler,
     Texture2D BonePosVat, SamplerState BonePosVatSampler,
     Texture2D BoneRotVat, SamplerState BoneRotVatSampler,
+    Texture2D BoneIdxTex, SamplerState BoneIdxTexSampler,
+    Texture2D BoneWeightTex, SamplerState BoneWeightTexSampler,
     float SampleFrequency, float TotalRows, float BoneCount,
-    float3 BoundsMin, float3 BoundsMax, float DecodeNormalized,
+    float3 BoundsMin, float3 BoundsMax, float DecodeNormalized, float WeightStorage,
     float RowStartA, float RowCountA, float TimeA, float RateA,
     float RowStartB, float RowCountB, float TimeB, float RateB,
     float TransStart, float TransDuration, float LoopA, float LoopB)
 {
-    float4 BoneIndices = float4(In.UV1.x, In.UV1.y, In.UV2.x, In.UV2.y);
-    float3 W3 = In.VertexColor;
-    float4 BoneWeights = float4(W3.r, W3.g, W3.b, saturate(1.0 - W3.r - W3.g - W3.b));
+    float4 BoneIndices;
+    float4 BoneWeights;
+    CkVat_BoneVertexData(In.UV1, In.UV2, In.VertexColor,
+        BoneIdxTex, BoneIdxTexSampler, BoneWeightTex, BoneWeightTexSampler, WeightStorage,
+        BoneIndices, BoneWeights);
 
     float3 SkinnedA = CkVat_BoneSkinnedPos(BonePosVat, BonePosVatSampler, BoneRotVat, BoneRotVatSampler,
         BoneIndices, BoneWeights, In.LocalPosition, In.Time, SampleFrequency, TotalRows, BoneCount,
