@@ -14,12 +14,13 @@ struct FSlateBrush;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Lightweight, local mirror of the CkDebuggerCommon visual language (section headers, labeled-group cards,
-// key/value rows, count badges, color swatches) for the Grid Paint editor-mode toolkit. We CANNOT depend on
-// CkDebuggerCommon directly: it lives in the CkDebugger plugin which depends on CkFoundation, so a dependency
-// the other way would be a circular plugin dependency. These helpers reproduce the same look using only engine
-// FAppStyle / FCoreStyle brushes and the hardcoded palette below (copied from UCkDebuggerStyleSettings defaults
-// — FLinearColor(FColor(hex)) so the sRGB->linear conversion matches the debugger exactly).
+// Lightweight, local mirror of the shared Ck tooling visual language (section headers, labeled-group cards,
+// key/value rows, count badges, color swatches) for the Grid Paint editor-mode toolkit. Historically we could
+// not depend on the debugger plugin's style (circular plugin dependency), so these helpers reproduce the same
+// look using only engine FAppStyle / FCoreStyle brushes and the hardcoded palette below (copied from the style
+// settings defaults — FLinearColor(FColor(hex)) so the sRGB->linear conversion matches the debugger exactly).
+// NOTE: the canonical tokens now live in CkFoundation's CkEditorTools module (CkStyle:: +
+// UCk_Style_UserSettings_UE), so this mirror could be replaced by a direct CkEditorTools dependency.
 namespace ck::grid_paint_style
 {
     // ----- Palette (sRGB hex -> linear, matching the debugger) ------------------------------------------------
