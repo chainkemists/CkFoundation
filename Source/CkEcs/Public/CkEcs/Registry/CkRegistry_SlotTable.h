@@ -79,6 +79,13 @@ namespace ck::registry_table
     CKECS_API auto EndParallelRegion(FCk_RegistryHandle InHandle) -> void;
     CKECS_API auto AssertNotInParallelRegion(FCk_RegistryHandle InHandle, const TCHAR* InOperation) -> void;
 
+    // Query variant for callers that must SKIP optional work rather than assert — e.g. the
+    // handle debug-info attach, which is a structural mutation: ParallelFor runs a share of
+    // its iterations on the CALLING thread, so a game-thread check alone does not prove the
+    // registry is outside a parallel region. Always false in Shipping (flag compiled out) and
+    // for unset/stale handles.
+    CKECS_API auto Get_IsInParallelRegion(FCk_RegistryHandle InHandle) -> bool;
+
     // ---- Dirty-marker version tracking ----
     //
     // Per-fragment-type version counter used by the scheduler's pump pass.
