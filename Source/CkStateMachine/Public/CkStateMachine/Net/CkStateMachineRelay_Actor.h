@@ -19,8 +19,10 @@ class UCk_SmState_EntityScript;
 // FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy (wired in Phase 5).
 //
 // Acquired per owning actor by SMs that opt into OwningClientAuthoritative authority via
-// FCk_Fragment_StateMachine_ParamsData::_AuthorityModel. Phase 4 only provides the actor +
-// RPC stubs; Phase 10 wires the actor into the owning-client authoritative path.
+// FCk_Fragment_StateMachine_ParamsData::_AuthorityModel. The server-side handlers authorize
+// every push (SM is a replicated OwningClientAuth root owned by the pushing connection) before
+// routing it into the standard replay/commit pipeline — see DoGet_IsAuthorizedOwningClientPush
+// in the .cpp.
 UCLASS()
 class CKSTATEMACHINE_API ACk_StateMachineRelay_UE : public ACk_ActorRelay_UE
 {
@@ -30,9 +32,9 @@ public:
     CK_GENERATED_BODY(ACk_StateMachineRelay_UE);
 
 public:
-    // Owning client pushes a batched transition history for one SM.
-    // The server applies the batch in order if the seqs are contiguous past its watermark,
-    // otherwise rejects and snaps the client back (wired in Phase 10).
+    // Owning client pushes a batched transition history for one SM. The server enqueues the
+    // events onto the target SM's replay queue (seq dedup happens at drain via
+    // FFragment_Sm_ClientReplayState); there is no contiguity check or client snap-back.
     UFUNCTION(Server, Reliable)
     void Server_PushTransitionBatch(
         FCk_Handle InSMHandle,

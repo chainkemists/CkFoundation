@@ -8,6 +8,7 @@
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 //
@@ -25,10 +26,77 @@
 //                          target class, same pipeline
 //
 //   PushRunStatus        → MirrorRunStatus locally + republish RunStatus into RepData. Doesn't
-//                          go through HandleRequests because Phase 6.4's authority gate would
+//                          go through HandleRequests because the single-authority gate would
 //                          drop the request (server isn't the originator for OwningClientAuth SMs)
 //
+// Every handler is gated by DoGet_IsAuthorizedOwningClientPush below — the handle argument can
+// point at ANY replicated entity, so resolution alone is not authorization.
+//
 // --------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+    // Server-side authorization for owning-client relay pushes. UE only routes Server RPCs from
+    // the relay actor's OWNING connection, so the caller's identity is this relay's connection —
+    // but the SM-handle argument is attacker-controlled and can resolve to any replicated entity.
+    // A push is authorized only when ALL hold:
+    //   1. the handle is actually a StateMachine entity,
+    //   2. its root SM Replicates (the relay is the leg-1 transport of a replicated root),
+    //   3. its root's effective authority model is OwningClientAuthoritative (a client must never
+    //      drive a ServerAuthoritative SM — that bypasses FProcessor_Sm_HandleRequests' gate),
+    //   4. the root's owning actor belongs to this relay's connection (a client must not drive
+    //      another player's SM; a forged fingerprint would otherwise let one RPC stamp
+    //      FTag_Sm_DeterminismFault on a victim's SM and permanently quiesce it).
+    auto
+    DoGet_IsAuthorizedOwningClientPush(
+        const AActor* InRelay,
+        const FCk_Handle& InSMHandle,
+        const TCHAR* InContext) -> bool
+    {
+        if (NOT UCk_Utils_StateMachine_UE::Has(InSMHandle))
+        {
+            ck::sm::Warning(TEXT("{}: pushed handle [{}] is not a StateMachine entity. Dropping."),
+                InContext, InSMHandle);
+            return false;
+        }
+
+        const auto SmHandle = UCk_Utils_StateMachine_UE::CastChecked(InSMHandle);
+        const auto RootSm   = UCk_Utils_StateMachine_UE::Get_RootStateMachine(SmHandle);
+
+        if (UCk_Utils_StateMachine_UE::Get_Replication(RootSm) != ECk_Replication::Replicates)
+        {
+            ck::sm::Warning(TEXT("{}: SM [{}] root does not Replicate — relay pushes are only valid for replicated roots. Dropping."),
+                InContext, InSMHandle);
+            return false;
+        }
+
+        if (UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel(RootSm) != ECk_Sm_AuthorityModel::OwningClientAuthoritative)
+        {
+            ck::sm::Warning(TEXT("{}: SM [{}] root is not OwningClientAuthoritative — a client may not drive it. Dropping."),
+                InContext, InSMHandle);
+            return false;
+        }
+
+        const auto* OwningActor = UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor_Recursive(FCk_Handle{RootSm});
+        if (OwningActor == nullptr)
+        {
+            ck::sm::Warning(TEXT("{}: SM [{}] root has no owning actor — cannot verify connection ownership. Dropping."),
+                InContext, InSMHandle);
+            return false;
+        }
+
+        const auto* SmConnection    = OwningActor->GetNetConnection();
+        const auto* RelayConnection = InRelay->GetNetConnection();
+        if (SmConnection == nullptr || SmConnection != RelayConnection)
+        {
+            ck::sm::Warning(TEXT("{}: SM [{}] is not owned by the pushing connection. Dropping."),
+                InContext, InSMHandle);
+            return false;
+        }
+
+        return true;
+    }
+}
 
 auto
     ACk_StateMachineRelay_UE::
@@ -45,6 +113,9 @@ auto
     }
 
     if (InBatch.IsEmpty())
+    { return; }
+
+    if (NOT DoGet_IsAuthorizedOwningClientPush(this, InSMHandle, TEXT("Server_PushTransitionBatch")))
     { return; }
 
     ck::sm::Verbose(TEXT("Server_PushTransitionBatch: enqueuing [{}] events on SM [{}]"),
@@ -112,6 +183,9 @@ auto
         return;
     }
 
+    if (NOT DoGet_IsAuthorizedOwningClientPush(this, InSMHandle, TEXT("Server_PushCurrentState")))
+    { return; }
+
     // Synthesize a single transition event from the server's local current state → the
     // incoming target. The replay queue path then drives the transition through the standard
     // commit pipeline (which publishes a NoHistory rep delta to non-owning clients).
@@ -150,11 +224,16 @@ auto
         return;
     }
 
+    if (NOT DoGet_IsAuthorizedOwningClientPush(this, InSMHandle, TEXT("Server_PushRunStatus")))
+    { return; }
+
     // Apply the run-status to the server's local SM, mirroring the same lifecycle bookkeeping
     // and signal broadcast that authority's Start/Stop/Pause/Resume handlers do. We skip the
-    // request pipeline because Phase 6.4's HandleRequests gate would drop a server-originated
-    // request on an OwningClientAuth SM (owning client is the request authority, not the server).
-    ck::statemachine::MirrorRunStatus(InSMHandle, InRunStatus);
+    // request pipeline because the HandleRequests single-authority gate would drop a
+    // server-originated request on an OwningClientAuth SM (owning client is the request
+    // authority, not the server). Routed through the defer-while-replaying wrapper so a
+    // non-Running status cannot jump ahead of relayed transitions still in this SM's queue.
+    ck::statemachine::MirrorRunStatus_OrDeferWhileReplaying(InSMHandle, InRunStatus);
 
     // Republish into RepData so non-owning clients pick up the run-status change. Best-effort:
     // TryUpdateContainerFragment silently no-ops if the entity doesn't have a rep driver yet,
