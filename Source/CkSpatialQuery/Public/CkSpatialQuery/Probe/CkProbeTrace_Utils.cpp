@@ -40,18 +40,7 @@ namespace ck::details
                 const ResultType& InResult)
             -> void override
         {
-            const auto Entity = static_cast<FCk_Entity::IdType>(jolt::Get_ProbeBodyUserData(_BodyInterface, InResult.mBodyID));
-
-            if (_AnyHandle.Get_Entity().Get_ID() == Entity)
-            { return; }
-
-            // A Jolt body can briefly outlive its owning entity (deferred end-of-frame destroy, or a snapshot restore
-            // that wipes the registry before physics tears the body down). Skip a hit whose entity is no longer valid
-            // rather than ensuring inside Get_ValidHandle.
-            if (_AnyHandle.Get_RegistryView().IsValid(FCk_Entity{Entity}) == false)
-            { return; }
-
-            const auto OtherProbe = UCk_Utils_Probe_UE::Cast(_AnyHandle.Get_ValidHandle(Entity));
+            const auto OtherProbe = jolt::TryGet_ProbeFromBodyHit(_AnyHandle, _BodyInterface, InResult.mBodyID);
 
             if (ck::Is_NOT_Valid(OtherProbe))
             { return; }
@@ -84,16 +73,7 @@ namespace ck::details
                 const JPH::ShapeCastResult& InResult)
             -> void override
         {
-            const auto Entity = static_cast<FCk_Entity::IdType>(jolt::Get_ProbeBodyUserData(_BodyInterface, InResult.mBodyID2));
-
-            if (_AnyHandle.Get_Entity().Get_ID() == Entity)
-            { return; }
-
-            // See CastRayCollector::AddHit — a body can outlive its entity; skip a stale hit rather than ensuring.
-            if (_AnyHandle.Get_RegistryView().IsValid(FCk_Entity{Entity}) == false)
-            { return; }
-
-            const auto OtherProbe = UCk_Utils_Probe_UE::Cast(_AnyHandle.Get_ValidHandle(Entity));
+            const auto OtherProbe = jolt::TryGet_ProbeFromBodyHit(_AnyHandle, _BodyInterface, InResult.mBodyID2);
 
             if (ck::Is_NOT_Valid(OtherProbe))
             { return; }
@@ -155,12 +135,12 @@ auto
     constexpr auto FireOverlaps = true;
     constexpr auto TryDrawDebug = true;
 
+    // The internal Single overload already debug-draws its result — no extra draw here.
     const auto& Result = Request_SingleLineTrace(InAnyHandle, InSettings, FireOverlaps, TryDrawDebug, *PhysicsSystem);
 
     if (ck::Is_NOT_Valid(Result))
     { return {}; }
 
-    Request_DrawLineTrace(InAnyHandle, InSettings, *Result);
     return *Result;
 }
 
@@ -242,12 +222,12 @@ auto
     constexpr auto FireOverlaps = true;
     constexpr auto TryDrawDebug = true;
 
+    // The internal Single overload already debug-draws its result — no extra draw here.
     const auto& Result = Request_SingleShapeTrace(InAnyHandle, InSettings, FireOverlaps, TryDrawDebug, *PhysicsSystem);
 
     if (ck::Is_NOT_Valid(Result))
     { return {}; }
 
-    Request_DrawShapeTrace(InAnyHandle, InSettings, *Result);
     return *Result;
 }
 

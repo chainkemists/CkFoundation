@@ -2,6 +2,8 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include "CkSpatialQuery/Probe/CkProbe_Utils.h"
+
 #include <Jolt/Physics/Body/Body.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyInterface.h>
@@ -213,6 +215,24 @@ namespace ck::jolt
         -> uint64
     {
         return InBodyInterface.GetUserData(InBodyId);
+    }
+
+    auto
+        TryGet_ProbeFromBodyHit(
+            const FCk_Handle& InSelf,
+            const JPH::BodyInterface& InBodyInterface,
+            JPH::BodyID InHitBodyId)
+        -> FCk_Handle_Probe
+    {
+        const auto Entity = static_cast<FCk_Entity::IdType>(Get_ProbeBodyUserData(InBodyInterface, InHitBodyId));
+
+        if (InSelf.Get_Entity().Get_ID() == Entity)
+        { return {}; }
+
+        if (InSelf.Get_RegistryView().IsValid(FCk_Entity{Entity}) == false)
+        { return {}; }
+
+        return UCk_Utils_Probe_UE::Cast(InSelf.Get_ValidHandle(Entity));
     }
 }
 
