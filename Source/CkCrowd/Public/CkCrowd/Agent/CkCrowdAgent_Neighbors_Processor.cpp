@@ -34,7 +34,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_ProbeRef& InProbeRef,
-            FFragment_CrowdAgent_NeighborCache& InNeighborCache)
+            FFragment_CrowdAgent_NeighborCache& InNeighborCache) const
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_NeighborSyncProc);
@@ -45,14 +45,18 @@ namespace ck
         if (ck::Is_NOT_Valid(ProbeHandle) || NOT ProbeHandle.Has<FFragment_Probe_Current>())
         { return; }
 
+        // WORKER THREAD: reconstruct the full handle for the utils reads below — reads only;
+        // the debug-info attach is region/thread-gated in FCk_Handle.
+        const auto SelfHandle = ck::MakeHandle(InHandle.Get_Entity(), _TransientEntity);
+
         // Self transform / velocity for delta computation. Agents created by the gym always have
         // both features; if either is missing we skip rather than ensure-spam.
-        auto SelfTransform = UCk_Utils_Transform_UE::Cast(InHandle);
+        auto SelfTransform = UCk_Utils_Transform_UE::Cast(SelfHandle);
         if (ck::Is_NOT_Valid(SelfTransform))
         { return; }
         const auto SelfLoc = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(SelfTransform);
 
-        auto SelfVelocity = UCk_Utils_Velocity_UE::Cast(InHandle);
+        auto SelfVelocity = UCk_Utils_Velocity_UE::Cast(SelfHandle);
         const auto SelfVel = ck::IsValid(SelfVelocity)
             ? UCk_Utils_Velocity_UE::Get_CurrentVelocity(SelfVelocity)
             : FVector::ZeroVector;
@@ -84,7 +88,7 @@ namespace ck
 
                 // Defensive: in theory the probe's same-context filter prevents an agent from overlapping
                 // its own probe — but with policy Any, the agent's probe could conceivably show up.
-                if (OtherAgent == static_cast<const FCk_Handle&>(InHandle))
+                if (OtherAgent == SelfHandle)
                 { continue; }
 
                 auto OtherTransform = UCk_Utils_Transform_UE::Cast(OtherAgent);
