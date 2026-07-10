@@ -117,23 +117,23 @@ private:
     // Anim-bake flags consumed by Plan-2's GPU bake pass. Plan-1 ignores them.
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Plan-2 Reservations",
               meta = (AllowPrivateAccess = true))
-    bool _bExtractRootMotion = false;
+    bool _ExtractRootMotion = false;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Plan-2 Reservations",
               meta = (AllowPrivateAccess = true))
-    bool _bHighPrecision = false;
+    bool _HighPrecision = false;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Plan-2 Reservations",
               meta = (AllowPrivateAccess = true))
-    bool _bDisableRetargeting = false;
+    bool _DisableRetargeting = false;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Plan-2 Reservations",
               meta = (AllowPrivateAccess = true))
-    bool _bDontGenerateBounds = false;
+    bool _DontGenerateBounds = false;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Plan-2 Reservations",
               meta = (AllowPrivateAccess = true))
-    bool _bCachePhysicsAssetBones = false;
+    bool _CachePhysicsAssetBones = false;
 
     // ---- Plan-2 transient bake (not reflected, not serialized; rebuilt on demand) ----
     TPimplPtr<FCk_Iskm_BakedPose> _BakedPose;
@@ -151,11 +151,11 @@ public:
     CK_PROPERTY_GET(_CurvesToCache);
     CK_PROPERTY_GET(_MaxTransitionPose);
     CK_PROPERTY_GET(_MaxDynamicPose);
-    CK_PROPERTY_GET(_bExtractRootMotion);
-    CK_PROPERTY_GET(_bHighPrecision);
-    CK_PROPERTY_GET(_bDisableRetargeting);
-    CK_PROPERTY_GET(_bDontGenerateBounds);
-    CK_PROPERTY_GET(_bCachePhysicsAssetBones);
+    CK_PROPERTY_GET(_ExtractRootMotion);
+    CK_PROPERTY_GET(_HighPrecision);
+    CK_PROPERTY_GET(_DisableRetargeting);
+    CK_PROPERTY_GET(_DontGenerateBounds);
+    CK_PROPERTY_GET(_CachePhysicsAssetBones);
 
 public:
     auto
