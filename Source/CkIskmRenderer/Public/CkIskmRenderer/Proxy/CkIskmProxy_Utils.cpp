@@ -586,6 +586,19 @@ auto
     return InFollower;
 }
 
+auto
+    UCk_Utils_IskmProxy_UE::
+    Remove_SocketFollower(
+        FCk_Handle_Transform& InFollower)
+    -> FCk_Handle_Transform
+{
+    if (ck::Is_NOT_Valid(InFollower))
+    { return InFollower; }
+
+    InFollower.Try_Remove<ck::FFragment_IskmProxy_SocketFollower>();
+    return InFollower;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 // ---- Binds ----
 

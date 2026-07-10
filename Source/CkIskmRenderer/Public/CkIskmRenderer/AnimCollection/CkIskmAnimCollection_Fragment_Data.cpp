@@ -16,6 +16,8 @@
 #include "Animation/AnimSequenceBase.h"
 #include "Animation/AnimationAsset.h"
 #include "Engine/SkeletalMesh.h"
+#include "Engine/SkeletalMeshSocket.h"
+#include "ReferenceSkeleton.h"
 #include "Rendering/SkeletalMeshRenderData.h"
 #include "Rendering/SkeletalMeshLODRenderData.h"
 
@@ -109,6 +111,35 @@ auto
     const FBox3f MeshBound = static_cast<FBox3f>(_DefaultMesh->GetBounds().GetBox());
     Baked->FrameBounds.Init(MeshBound, Baked->FrameCountSequences);
 
+    // inc-4: resolve the configured socket list against the mesh/skeleton. Per-frame fill happens
+    // inside the sampling callback below. Misses are content errors — loud, then skipped (the
+    // design fallback for a missing table entry is "far cosmetics hidden", never a crash).
+    struct FSocketResolve { int32 SocketSlot = INDEX_NONE; int32 BoneIndex = INDEX_NONE; FTransform LocalOffset; };
+    TArray<FSocketResolve> ResolvedSockets;
+    const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
+    for (const FName SocketName : _BakedSockets)
+    {
+        FName BoneName = SocketName;
+        FTransform LocalOffset = FTransform::Identity;
+        if (const USkeletalMeshSocket* Socket = _DefaultMesh->FindSocket(SocketName))
+        {
+            BoneName = Socket->BoneName;
+            LocalOffset = Socket->GetSocketLocalTransform();
+        }
+        const int32 BoneIndex = RefSkeleton.FindBoneIndex(BoneName);
+        CK_ENSURE_IF_NOT(BoneIndex != INDEX_NONE,
+            TEXT("[CkIskm] _BakedSockets entry [{}] on [{}] resolves to no socket or bone — its far cosmetics will be hidden"),
+            SocketName, this)
+        { continue; }
+
+        FCk_Iskm_BakedSocket& Out = Baked->Sockets.Emplace_GetRef();
+        Out.Name = SocketName;
+        Out.BoneIndex = BoneIndex;
+        Out.LocalOffset = static_cast<FTransform3f>(LocalOffset);
+        Out.FrameTransforms.SetNum(Baked->TotalFrameCount);
+        ResolvedSockets.Add(FSocketResolve{ Baked->Sockets.Num() - 1, BoneIndex, LocalOffset });
+    }
+
     // ShaderMatrix[bone] = RefPoseInverse[bone] * ComponentSpaceBoneMatrix[bone], stored transposed 3x4.
     const auto CalcRenderMatrices = [&Baked, RenderBoneCount](TArrayView<const FTransform> InPoseComponentSpace, int32 InFrameIndex)
     {
@@ -129,9 +160,19 @@ auto
     };
 
     // Frame 0 (reference pose, yielding identity matrices) + every sequence frame; render-bone translations
-    // accumulate inside the core and feed the conservative animated bounds.
+    // accumulate inside the core and feed the conservative animated bounds. The pose view is indexed by
+    // SKELETON bone (CkAnimBake contract), so socket bones need no remap.
+    const auto PerFramePose = [&](TArrayView<const FTransform> InPoseComponentSpace, int32 InFrameIndex)
+    {
+        CalcRenderMatrices(InPoseComponentSpace, InFrameIndex);
+        for (const FSocketResolve& S : ResolvedSockets)
+        {
+            Baked->Sockets[S.SocketSlot].FrameTransforms[InFrameIndex] =
+                static_cast<FTransform3f>(S.LocalOffset * InPoseComponentSpace[S.BoneIndex]);
+        }
+    };
     const FBox BoneBoundsAllFrames =
-        ck::anim_bake::SamplePoses(*Skeleton, *SkeletonData, Layout, SampleParams, CalcRenderMatrices);
+        ck::anim_bake::SamplePoses(*Skeleton, *SkeletonData, Layout, SampleParams, PerFramePose);
 
     Baked->AnimatedBounds = ck::anim_bake::ComputeAnimatedBounds(*SkeletonData, BoneBoundsAllFrames, *_DefaultMesh);
 
