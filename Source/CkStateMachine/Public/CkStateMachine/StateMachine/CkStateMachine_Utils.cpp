@@ -111,11 +111,50 @@ auto
 
 auto
     UCk_Utils_StateMachine_UE::
+    Get_HasReplayTransitionsInFlight(
+        const FCk_Handle& InEntity)
+    -> bool
+{
+    if (InEntity.Has<ck::FFragment_Sm_ReplayQueue>()
+        && NOT InEntity.Get<ck::FFragment_Sm_ReplayQueue>().Get_Queue().IsEmpty())
+    { return true; }
+
+    return InEntity.Has<ck::FFragment_Sm_PendingTransition>();
+}
+
+auto
+    UCk_Utils_StateMachine_UE::
+    Request_TryDiscardPendingTransition(
+        FCk_Handle& InEntity)
+    -> void
+{
+    if (NOT InEntity.Has<ck::FFragment_Sm_PendingTransition>())
+    { return; }
+
+    const auto PreviousStateHandle =
+        InEntity.Get<ck::FFragment_Sm_PendingTransition>().Get_PreviousStateHandle();
+
+    if (ck::IsValid(PreviousStateHandle))
+    {
+        auto PreviousToDestroy = FCk_Handle{PreviousStateHandle};
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(PreviousToDestroy);
+    }
+
+    InEntity.Try_Remove<ck::FFragment_Sm_PendingTransition>();
+}
+
+auto
+    UCk_Utils_StateMachine_UE::
     Request_Transition(
         FCk_Handle_StateMachine& InStateMachine,
         TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass)
     -> FCk_Handle_StateMachine
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InTargetStateClass),
+        TEXT("Request_Transition on [{}] with an invalid target state class — request dropped"),
+        InStateMachine)
+    { return InStateMachine; }
+
     InStateMachine.AddOrGet<ck::FTag_Sm_TransitionQueued>();
     return DoAddRequest(InStateMachine, FCk_Request_Sm_Transition{InTargetStateClass});
 }
