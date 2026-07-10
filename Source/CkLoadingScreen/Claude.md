@@ -32,11 +32,12 @@ ordering without re-reading the original. Lyra's `CommonStartupLoadingScreen` mo
   streaming sublevel that should be loaded/visible is still pending — the
   "fall through the floor on slow machines" guard. Toggle: settings `_WaitForStreamingLevels`
   (default true).
-- `UCk_LoadingProcess_Task_UE` (`LoadingProcess/`) — push-model holder for BP/AS:
-  `Create(WorldContext, Reason, TimeoutSeconds = 0)` → screen held → `Request_Unregister()`.
-  `TimeoutSeconds > 0` arms a fail-open watchdog: past the deadline the task fires an ensure
+- `UCk_LoadingProcess_Task_UE` (`LoadingProcess/`) — push-model holder for BP/AS
+  (BlueprintCosmetic — no-op/null on dedicated servers):
+  `Create(WorldContext, Reason, FCk_Time InTimeout)` → screen held → `Request_Unregister()`.
+  `InTimeout > 0` arms a fail-open watchdog: past the deadline the task fires an ensure
   (loud in dev, silent in Test/Shipping) and stops holding — a leaked holder can never
-  permanently black-screen a packaged build.
+  permanently black-screen a packaged build. Zero = no watchdog.
 - `UCk_LoadingScreen_ProjectSettings_UE` (`Settings/`) — widget class, z-order, hold-secs,
   heartbeat/log intervals; debug toggles are CVar-backed.
 

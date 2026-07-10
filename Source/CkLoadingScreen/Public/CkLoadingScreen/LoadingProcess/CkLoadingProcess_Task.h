@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Time/CkTime.h"
 
 #include "CkLoadingScreen/LoadingProcess/CkLoadingProcess_Interface.h"
 
@@ -30,13 +31,14 @@ public:
 public:
     /**
      * Creates a task that holds the loading screen up until Request_Unregister is called.
-     * Returns nullptr where no loading screen subsystem exists (e.g. dedicated servers).
+     * Returns nullptr where no loading screen subsystem exists (e.g. dedicated servers) —
+     * hence BlueprintCosmetic.
      *
-     * InTimeoutSeconds > 0 arms a watchdog: a task still holding past the timeout fires an
+     * InTimeout > 0 arms a watchdog: a task still holding past the timeout fires an
      * ensure (loud in dev, silent in Test/Shipping) and STOPS holding — fail-open, so a leaked
-     * holder can never permanently black-screen a packaged build.
+     * holder can never permanently black-screen a packaged build. Zero = no watchdog.
      */
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable, BlueprintCosmetic,
               Category = "Ck|LoadingScreen",
               DisplayName = "[Ck][LoadingScreen] Create Loading Process Task",
               meta = (WorldContext = "InWorldContextObject"))
@@ -44,7 +46,7 @@ public:
     Create(
         UObject* InWorldContextObject,
         const FString& InShowLoadingScreenReason,
-        float InTimeoutSeconds = 0.0f);
+        FCk_Time InTimeout);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -67,13 +69,13 @@ public:
 
 private:
     FString _Reason;
-    float _TimeoutSeconds = 0.0f;
+    FCk_Time _Timeout;
     double _TimeCreated = 0.0;
     mutable bool _HasTimedOut = false;
 
 public:
     CK_PROPERTY_GET(_Reason);
-    CK_PROPERTY_GET(_TimeoutSeconds);
+    CK_PROPERTY_GET(_Timeout);
     CK_PROPERTY_GET(_HasTimedOut);
 };
 
