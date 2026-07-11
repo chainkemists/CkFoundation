@@ -81,6 +81,25 @@ auto
 
 auto
     FCk_ReplicatedFragmentHandlerRegistry::
+    Get_ProduceHandlerTypes()
+    -> TArray<const UScriptStruct*>
+{
+    if (_PendingHandlers.Num() > 0)
+    { ResolvePending(); }
+
+    auto Types = TArray<const UScriptStruct*>{};
+    for (const auto& Pair : _Handlers)
+    {
+        // Every Produce handler (the oracle superset) — capture-only handlers with no SeedContainer are included,
+        // unlike Get_ReDriveHandlerTypes().
+        if (Pair.Value.Produce)
+        { Types.Add(Pair.Key); }
+    }
+    return Types;
+}
+
+auto
+    FCk_ReplicatedFragmentHandlerRegistry::
     Find(
         const UScriptStruct* InType)
     -> const FHandler*

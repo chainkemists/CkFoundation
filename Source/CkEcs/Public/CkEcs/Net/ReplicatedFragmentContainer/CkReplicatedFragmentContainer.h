@@ -144,6 +144,15 @@ public:
     Get_ReDriveHandlerTypes() -> TArray<const UScriptStruct*>;
 
     /**
+     * Resolves pending registrations, then returns the payload types of EVERY handler that has a Produce — the
+     * superset of Get_ReDriveHandlerTypes() (which additionally requires SeedContainer). Used by the fidelity
+     * oracle Tier-2 (Produce-diff): capture-only handlers (Produce without SeedContainer, e.g. the deferred six at
+     * Phase 3A) are oracle-visible even though they are never re-seeded.
+     */
+    static auto
+    Get_ProduceHandlerTypes() -> TArray<const UScriptStruct*>;
+
+    /**
      * Register a single catch-all handler consulted by Resolve() when no per-type handler matches.
      * Used by runtime-typed features (e.g. dynamic fragments) whose payload UScriptStruct is not
      * known at compile time, so per-type registration is impossible. The fallback only ever sees
