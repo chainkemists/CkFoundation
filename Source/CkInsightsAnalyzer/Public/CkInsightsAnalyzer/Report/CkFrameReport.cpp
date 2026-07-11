@@ -449,8 +449,11 @@ auto
         return Lines;
     }
 
-    // Get children with adaptive threshold (3% of parent, min 0.3ms)
-    const double MinChildMs = FMath::Max(0.3, Collapsed.InclusiveMs * 0.03);
+    // Get children with adaptive threshold (config: pct of parent with an absolute floor);
+    // ShowAllChildren bypasses it entirely.
+    const double MinChildMs = _Config.ShowAllChildren
+        ? 0.0
+        : FMath::Max(_Config.MinChildMs, Collapsed.InclusiveMs * _Config.MinChildPctOfParent);
     TArray<FChildInfo> Children = GetSignificantChildren(
         Collapsed.TimerIndex, Result, MinChildMs);
 
@@ -500,12 +503,13 @@ auto
         return A.InclusiveMs > B.InclusiveMs;
     });
 
-    // Limit to 8 children, filter out self-references.
+    // Limit to the configured child cap, filter out self-references.
     // Don't filter by ShownTimers here — let each branch show its full subtree
     // even if the timer appeared in a sibling's subtree. The ShownTimers check
     // at the top of BuildTreeLines prevents infinite recursion.
+    const int32 MaxVisible = _Config.ShowAllChildren ? MAX_int32 : _Config.MaxVisibleChildren;
     TArray<FDedupedChild> Visible;
-    for (int32 i = 0; i < Deduped.Num() && Visible.Num() < 8; ++i)
+    for (int32 i = 0; i < Deduped.Num() && Visible.Num() < MaxVisible; ++i)
     {
         if (Deduped[i].TimerIndex == Collapsed.TimerIndex) continue;
         Visible.Add(MoveTemp(Deduped[i]));
@@ -668,8 +672,11 @@ auto
         return Node;
     }
 
-    // Get children with adaptive threshold (3% of parent, min 0.3ms)
-    const double MinChildMs = FMath::Max(0.3, Collapsed.InclusiveMs * 0.03);
+    // Get children with adaptive threshold (config: pct of parent with an absolute floor);
+    // ShowAllChildren bypasses it entirely.
+    const double MinChildMs = _Config.ShowAllChildren
+        ? 0.0
+        : FMath::Max(_Config.MinChildMs, Collapsed.InclusiveMs * _Config.MinChildPctOfParent);
     TArray<FChildInfo> Children = GetSignificantChildren(
         Collapsed.TimerIndex, Result, MinChildMs);
 
@@ -708,7 +715,7 @@ auto
         }
     }
 
-    // Sort deduped children by inclusive time, filter self-references, cap at 8
+    // Sort deduped children by inclusive time, filter self-references, cap at the configured limit
     TArray<FDedupedChild> Deduped;
     for (auto& [Key, Val] : Seen)
     {
@@ -719,8 +726,9 @@ auto
         return A.InclusiveMs > B.InclusiveMs;
     });
 
+    const int32 MaxVisible = _Config.ShowAllChildren ? MAX_int32 : _Config.MaxVisibleChildren;
     TArray<FDedupedChild> Visible;
-    for (int32 i = 0; i < Deduped.Num() && Visible.Num() < 8; ++i)
+    for (int32 i = 0; i < Deduped.Num() && Visible.Num() < MaxVisible; ++i)
     {
         if (Deduped[i].TimerIndex == Collapsed.TimerIndex) continue;
         Visible.Add(MoveTemp(Deduped[i]));

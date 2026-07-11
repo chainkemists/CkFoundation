@@ -10,6 +10,7 @@
 #include "CkEditorTools/Style/CkStyle.h"
 
 #include <Containers/Ticker.h>
+#include <Styling/SlateTypes.h>
 #include <Widgets/SCompoundWidget.h>
 #include <Widgets/SBoxPanel.h>
 #include <Widgets/Text/STextBlock.h>
@@ -88,6 +89,8 @@ private:
     // ---- Depth Selector ----
 
     auto DoOnDepthSelectionChanged(TSharedPtr<FString> NewValue, ESelectInfo::Type SelectInfo) -> void;
+    auto DoGet_ShowAllChildrenState() const -> ECheckBoxState;
+    auto DoOnShowAllChildrenChanged(ECheckBoxState NewState) -> void;
 
     // ---- Chart Delegate ----
 
@@ -140,6 +143,9 @@ private:
     TArray<TSharedPtr<FString>> _DepthOptions;
     TSharedPtr<STextComboBox> _DepthCombo;
     ECkReportDepth _ReportDepth = ECkReportDepth::Standard;
+
+    // "Show all" toggle — bypasses the hot-path tree's child threshold/cap (FCk_FrameReportConfig::ShowAllChildren)
+    bool _ShowAllChildren = false;
 
     FString _CurrentReport;
 
