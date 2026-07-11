@@ -1,5 +1,7 @@
 #include "CkPmg_Processor_TextShapes.h"
 
+#include "CkCore/Object/CkObject_Utils.h"
+
 #include "CkPmg/CkPmg_FontGlyphCache.h"
 #include "CkPmg/CkPmg_Log.h"
 #include "CkPmg/CkPmg_Utils_DebugLines.h"
@@ -95,11 +97,9 @@ namespace
         CK_ENSURE_IF_NOT(ck::IsValid(World), TEXT("Could not get valid World for text entity [{}]"), InHandle)
         { return nullptr; }
 
-        auto MeshComponent = NewObject<UProceduralMeshComponent>(
-            World,
-            UProceduralMeshComponent::StaticClass(),
-            NAME_None,
-            RF_Transient);
+        auto MeshComponent = UCk_Utils_Object_UE::Request_CreateNewObject<UProceduralMeshComponent>(
+            World, UProceduralMeshComponent::StaticClass(), nullptr,
+            FCk_ObjectPooling_PoolParams{}.Set_RecyclePolicy(ECk_ObjectPooling_RecyclePolicy::DestroyOnRelease), nullptr);
 
         CK_ENSURE_IF_NOT(ck::IsValid(MeshComponent), TEXT("Failed to create ProceduralMeshComponent for text entity [{}]"), InHandle)
         { return nullptr; }
@@ -161,7 +161,7 @@ namespace
         InMeshComponent->UpdateBounds();
         InMeshComponent->MarkRenderStateDirty();
 
-        InCurrent = ck::FFragment_Pmg_DebugShape_Current{TStrongObjectPtr{InMeshComponent}, FCk_Time{InDeltaT}};
+        InCurrent = ck::FFragment_Pmg_DebugShape_Current{InMeshComponent, FCk_Time{InDeltaT}};
         InHandle.Remove<ck::FTag_Pmg_DebugShape_NeedsSetup>();
 
         if (InHandle.Has<ck::FFragment_Transform>())

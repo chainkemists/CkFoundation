@@ -7,8 +7,6 @@
 
 #include "GameplayTagContainer.h"
 
-#include <StructUtils/InstancedStruct.h>
-
 #include "CkObject_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -168,8 +166,9 @@ public:
     // Recycle policy re-vends released instances with properties reset to InTemplateArchetype
     // (participant properties skipped); DestroyOnRelease pins until released, then lets GC collect.
     // Whether the instance is fresh or recycled is invisible to the caller. Release via
-    // TryReleaseToPool. Outer is used to resolve the world — vended instances are outered to that
-    // world, not to Outer itself. TransientPackage variants stay non-pooled (no world to resolve)
+    // TryReleaseToPool. DestroyOnRelease instances are outered to Outer; Recycle-pool instances are
+    // outered to Outer's world (a recycled instance survives its first caller, so it cannot borrow
+    // that caller's outer). TransientPackage variants stay non-pooled (no world to resolve)
     template<typename T>
     static auto
     Request_CreateNewObject(
@@ -177,7 +176,6 @@ public:
         TSubclassOf<T> InClass,
         T* InTemplateArchetype,
         const FCk_ObjectPooling_PoolParams& InPoolParams,
-        const FInstancedStruct& InPerUseParams,
         TFunction<void(T*)> InInitFunc) -> T*;
 
     template<typename T>
@@ -275,8 +273,7 @@ public:
         TSubclassOf<UObject> InObject);
 
     // Pooling-aware create (see the template overload above for the ownership contract).
-    // InTemplateArchetype may be null (class CDO is the archetype); InPerUseParams rides into the
-    // participant's OnAcquiredFromPool hook
+    // InTemplateArchetype may be null (class CDO is the archetype)
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Request Create New Object (Pooled)",
               Category = "Ck|Utils|Object",
@@ -286,8 +283,7 @@ public:
         UObject* InOuter,
         TSubclassOf<UObject> InClass,
         UObject* InTemplateArchetype,
-        const FCk_ObjectPooling_PoolParams& InPoolParams,
-        const FInstancedStruct& InPerUseParams);
+        const FCk_ObjectPooling_PoolParams& InPoolParams);
 
     // Release a pooling-subsystem-vended object: Recycle-policy instances park in their pool
     // (participant OnReleasedToPool fires, _CanBePooled == false vetoes into a destroy);
@@ -408,8 +404,7 @@ private:
         UObject* InOuter,
         TSubclassOf<UObject> InClass,
         UObject* InTemplateArchetype,
-        const FCk_ObjectPooling_PoolParams& InPoolParams,
-        const FInstancedStruct& InPerUseParams) -> UObject*;
+        const FCk_ObjectPooling_PoolParams& InPoolParams) -> UObject*;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -605,11 +600,10 @@ auto
         TSubclassOf<T> InClass,
         T* InTemplateArchetype,
         const FCk_ObjectPooling_PoolParams& InPoolParams,
-        const FInstancedStruct& InPerUseParams,
         TFunction<void(T*)> InInitFunc)
     -> T*
 {
-    auto* Vended = DoRequest_AcquirePooled(Outer, InClass, InTemplateArchetype, InPoolParams, InPerUseParams);
+    auto* Vended = DoRequest_AcquirePooled(Outer, InClass, InTemplateArchetype, InPoolParams);
 
     auto* TypedObj = Cast<T>(Vended);
 

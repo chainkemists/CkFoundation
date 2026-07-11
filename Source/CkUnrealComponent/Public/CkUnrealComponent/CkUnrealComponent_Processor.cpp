@@ -85,7 +85,13 @@ namespace ck
             { ComponentOuter = HostActor; }
         }
 
-        auto NewComponent = UCk_Utils_Object_UE::Request_CreateNewObject<UActorComponent>(ComponentOuter, ComponentClass, ComponentArchetype, nullptr);
+        // vended DestroyOnRelease: the ObjectPooling subsystem pins the component for its lifetime
+        // (the fragment holds a weak ptr); EndPlay releases it back after DestroyComponent
+        const auto PoolParams = FCk_ObjectPooling_PoolParams{}
+            .Set_RecyclePolicy(ECk_ObjectPooling_RecyclePolicy::DestroyOnRelease);
+
+        auto NewComponent = UCk_Utils_Object_UE::Request_CreateNewObject<UActorComponent>(ComponentOuter,
+            ComponentClass, ComponentArchetype, PoolParams, nullptr);
 
         CK_ENSURE_IF_NOT(ck::IsValid(NewComponent),
             TEXT("UnrealComponent [{}] failed to instantiate component of class [{}]"),
@@ -94,7 +100,7 @@ namespace ck
 
         NewComponent->RegisterComponentWithWorld(World);
 
-        InCurrent._Component = TStrongObjectPtr{NewComponent};
+        InCurrent._Component = NewComponent;
 
         if (IsSceneComponent)
         {
@@ -181,6 +187,12 @@ namespace ck
         {
             UCk_Utils_UnrealComponent_UE::DoUnregisterBridge(Component);
             Component->UnregisterComponent();
+
+            // unpin IMMEDIATELY before destroy: DestroyComponent may mark the object garbage
+            // (failing the release's validity gate), and no GC can run between these two calls
+            if (UCk_Utils_Object_UE::Get_IsPoolVendedObject(Component))
+            { UCk_Utils_Object_UE::TryReleaseToPool(Component); }
+
             Component->DestroyComponent();
         }
 
