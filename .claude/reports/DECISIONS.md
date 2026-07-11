@@ -213,6 +213,17 @@ bootstrap; discovery-timing = #1 failure mode) are cited as [MAINTAINER-RULED]. 
 96. **Local-skill policy** → consuming projects may author local skills ONLY for third-party SDK integration and packaging/distribution; everything else generalizable-or-gap → campaign charter (given) → high.
 97. **Consumer reports appended to framework-campaign files** → DECISIONS/ADJUDICATIONS continue here (stable append IDs); CONFORMANCE_BACKLOG.md new → medium (session decision, revert hook offered).
 
+## Object pooling (campaign 2026-07-11 — pivot from the `feature/pool-module` branch)
+
+98. **Object pooling is a CkCore intrinsic, not a module** → hoisted into `UCk_Utils_Object_UE::Request_CreateNewObject` (pooled overload); lives in `CkCore/ObjectPooling`, not a standalone `CkPool` module → [MAINTAINER-DIRECTED] whole-framework promotion. The `feature/pool-module` CkPool module (EntityPool + ObjectPool + Poolable interface) is the port source, never merged. Full campaign: `docs/campaigns/object-pooling-core/`.
+99. **Pin-everything ownership model** → the subsystem pins EVERY instance it hands out (poolable AND force-new); fragments go uniformly `TWeakObjectPtr`. Rationale: UE GC does not trace fragment members, so a weak-only ref to a force-new instance would be collected mid-life (outer does not root inner) → high. Killed the original spec's "outer keeps non-pooled alive" assumption.
+100. **EntityPool (construct-once) DROPPED** → object-level pooling re-runs Construct/BeginPlay per acquire; construct-once entity pooling contradicts the pivot → [MAINTAINER-RULED]. Revive from the branch only if profiling shows feature-composition cost dominates.
+101. **Actor pooling EXCLUDED** → the subsystem hands out plain UObjects only; actors go through SpawnActor. Actor-class acquire ensures → high (scoping call).
+102. **No per-instance recycle veto** → the branch's `_CanBePooled`/`ICk_ObjectPool_Poolable` are gone; "never recycle" = the `DestroyOnRelease`/`InstancedPerEntity` policy, per-use safety = the participant's `OnReleasedToPool` quiescence → [MAINTAINER-RULED redundant]. `TryReleaseToPool` is a benign no-op (returns Failed, no ensure) for untracked objects, so teardown paths call it ungated.
+103. **Participant opt-in mirrors ContextReceiver** → `FCk_Handle_ObjectPoolingParticipant` (reflection-scanned property, IncludeSuper), NOT a UInterface (AS can't implement one). Payload-free hooks; idempotent binds so re-running Construct on a recycled instance can't double-fire; the recycle reset SKIPS this property so binds survive → high.
+104. **Sweep of `TStrongObjectPtr` fragment holders → subsystem-pinned weak** → 6 members (CkUnrealComponent, CkPmg ×2, CkAudio, CkUI ×2) route through DestroyOnRelease vends; teardown = unpin (release) then the real UE teardown (DestroyComponent). Must-stay-strong: engine-factory objects (Niagara/render-target/transient-texture) and caller-supplied asset/archetype pins → high. Sweep audit + rationale in the campaign PROGRESS.md.
+105. **`Get_ScriptInstance` deliberately NOT exposed** → reaching the raw EntityScript instance is an encapsulation breach; the recycle contract is provable through pool stats + the direct plain-object API → [MAINTAINER-RULED]. Tests observe accordingly.
+
 ## Framework-side nominations surfaced (frontier-shaped candidates, not adjudications)
 
 N1. Generic acquire-ticket feature ("CkAcquire") — three near-identical driver implementations (StoreDriver/DayCycle/MissionDriver).
