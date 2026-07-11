@@ -285,6 +285,7 @@ superproject with `.claude/scripts/sync-skills.ps1`).
 | Profile/benchmark processors; perf claims | `ck-performance-and-analysis` (CkFoundation) |
 | "What should we build next" — vetted frontier | `ck-feature-frontier` (CkFoundation) |
 | Long/multi-session task discipline; PROMPT/PHASE/PROGRESS docs | `ck-methodology` (CkFoundation) |
+| Publish dev work — commit/fetch/rebase/regate/push across superproject + submodules | `ck-ship-dev` (CkFoundation) |
 
 ## Collaboration protocol
 
