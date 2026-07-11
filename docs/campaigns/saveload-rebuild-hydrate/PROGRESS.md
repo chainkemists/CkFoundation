@@ -9,7 +9,7 @@
 |---|---|---|---|---|---|
 | 0 | PHASE_0.md | DONE | 2026-07-11 | CkF: 68ba192dc (dt==0), 55521d493 (oracle), <docs> (this); CkTests: 14d65ac (harness) | GREEN: Ck.Snapshot 47/47/0 (46 baseline + Oracle.StructuralBaseline), Ck.Attribute.Net 17/17/0, Net 102/101/1 (baseline red only) |
 | 1 | PHASE_1.md | **DONE** (1.1–1.6 committed+GREEN) | 2026-07-11 | CkF: 23b982c0d (framework), fd288efdd (6 migrations), 5d262f52a; CkTests: b9e7f86 | GREEN: Ck.Snapshot **48/48/0** delta-zero (all 11 Parity_MPReload + both Oracle tests pass), framework Ck.*.Net green (kiosk trio env-red, see baseline) |
-| 2 | PHASE_2.md | NOT STARTED | | | |
+| 2 | PHASE_2.md | **IN PROGRESS** (impl on integrated base 951112723+§1.6; sub-step tracker under §Phase-2 progress) | 2026-07-11 | (uncommitted) | (pending gate) |
 | 3A | PHASE_3A.md | NOT STARTED | | | |
 | 3B | PHASE_3B.md | NOT STARTED | | | |
 | 4A | PHASE_4A.md | NOT STARTED | | | |
@@ -78,6 +78,40 @@ CkInventory, CkLabel, CkObjective, CkPhysics, CkRelationship, CkRenderTarget, Ck
 CkStateMachine, CkTagSet, CkTimer); FCk_RepData_* struct decls = **23**. (Spec §2's "119 / 18 modules / 24 RepData"
 reconciled to these in the same commit.)
 Load-time baseline (Phase 3B, representative fixture): ___ ms.
+
+## Phase-2 progress (sub-step tracker — for mid-phase continuation; Phase 2 is ONE atomic gate)
+
+Base: integrated `951112723` + §1.6 commits (`5d262f52a`/`4fb178824`/`df06b8394`). PumpPolicy mirror-map (current lines):
+`ECk_ProcessorPumpPolicy` enum `CkProcessorDescriptor.h:80`; `_PumpPolicy` field `:145`; BuildDescriptor slot
+`CkProcessorTraits.inl.h:216-218`; node field `CkProcessorGraph.h:79-81`; DoCreateNodes copy `CkProcessorGraph.cpp:223,261`;
+scheduler precompute `CkProcessorScheduler.cpp:70-81` (`_MainPassOrder`/`_PumpOrder`), main pass `:105-149`, pump `DoPump :205-325`;
+`.h` members `_MainPassOrder`/`_PumpOrder` `CkProcessorScheduler.h:42-43`, `Tick` sig `:22`, `DoPump` sig `:27-29`.
+
+- [x] 2.1 `ECk_ProcessorLoadPolicy` trait (mirror PumpPolicy) + scheduler `_LoadPassOrder`/`_LoadPumpOrder` + `ECk_SchedulerTickScope{Full,LoadKernel}` Tick/DoPump scope + subsystem `Get_/Set_IsLoadGateActive` + Actor::Tick threading (lazy weak-ptr `_OwningSubsystem`) + `Request_PumpToQuiescence` scope param — DONE
+- [x] 2.2 Mark the kernel RunsDuringLoad — DONE, verified 12 (grep 13 incl. the descriptor doc-comment; reworded so exit grep == 12)
+- [x] 2.3 `FGroup_Hydration` between PostTransform & Replication (fwd-decl + struct + re-point Replication RunAfter + chain comment + CK_REGISTER_GROUP) + BOTH dispatchers → `FGroup_Hydration`, deleted their `RunAfter FinishConstruction` (group order guarantees it) — DONE
+- [ ] 2.4 `FTag_EntityScript_ConstructedThisFrame` defer — **NOT STARTED. Design worked out (implement this):**
+   - Add `CK_DEFINE_ECS_TAG_TRANSIENT(FTag_EntityScript_ConstructedThisFrame);` in `CkEntityScript_Fragment.h:23-28` (beside the lifecycle tags).
+   - `FProcessor_EntityScript_FinishConstruction::ForEachEntity` (`CkEntityScript_Processor.cpp:~350-361`, where it `Add<FTag_EntityScript_BeginPlay>`) also `InHandle.AddOrGet<FTag_EntityScript_ConstructedThisFrame>();`.
+   - BOTH dispatchers (`CkReplicatedFragmentContainer_Processor.cpp`) skip at the TOP of ForEachEntity: `if (InHandle.Has<ck::FTag_EntityScript_ConstructedThisFrame>()) { return; }` (leaves the pending tag → re-dispatches later).
+   - **WHY it works (verified against the pump semantics — load-bearing):** feature Setups live in FGroup_Gameplay (BEFORE FGroup_Hydration). In the MAIN pass the entity is composed in FGroup_Gameplay_Script AFTER Setups already ran, so its Setup is still pending → applying now would be stomped by the pending Setup. Skipping in the main pass + clearing the tag after both dispatchers → in the PUMP, FGroup_Gameplay Setup drains FIRST, THEN FGroup_Hydration applies (post-Setup, no stomp). The clear-then-pump-reapply is INTENDED, not a bug.
+   - **[P2-D1] decision — which dispatcher clears + ordering (plan left ambiguous; resolved by the pump analysis):** the clear MUST run AFTER both dispatchers' skips in the main pass, else the earlier-cleared tag lets the later dispatcher apply too early. So: give `FProcessor_Hydration_Dispatch` `using RunAfter = TDepList<FProcessor_ReplicatedFragments_Dispatch>;` (runs last, dormant so it clears exactly once per main pass — it doesn't pump), and ONLY the hydration dispatcher clears. Forward-correct for Phase 3B when hydration activates.
+   - The clear is a `DoTick` override on `FProcessor_Hydration_Dispatch` (idiom: `CkIsmRenderer_Processor.cpp:23-32` — override `DoTick`, call the base's view-iterating DoTick, then `_TransientEntity.Clear<FTag_EntityScript_ConstructedThisFrame>();`). **ck_exp DoTick-override mechanics UNVERIFIED** — the base is `ck_exp::TProcessor<...>`; add `using Super = ck_exp::TProcessor<FProcessor_Hydration_Dispatch, FCk_Handle, ck::TReadWrite<FFragment_PendingHydration>, FTag_Hydration_PendingApply, CK_IGNORE_PENDING_KILL>;` (CkAttribute pattern, `CkAttribute_Processor.h:34`) and call `Super::DoTick(InDeltaT)`. CONFIRM ck_exp exposes a callable view-iterating `DoTick(TimeType)` before trusting this; if not, mirror how a CkAttribute composite drives its inner loop. The dispatcher's ForEachEntity is `const`; the DoTick override that clears must be non-const.
+- [ ] 2.5 Fire-gating: `Get_HasUndrainedReplicatedFragments_IncludingDependents` (Net utils, beside `Get_IsReplicationCompleteAllDependents` `CkEntityReplicationDriver_Utils.cpp:381-405`) traversing the dependent set the counters at `CkEntityReplicationDriver_Fragment.cpp:377-408` maintain (self + dependents: `FTag_RepFragments_PendingApply` / queued removals / `FFragment_PendingHydration`); gate `FProcessor_ReplicationDriver_FireOnDependentReplicationComplete` (`CkEntityReplicationDriver_Processor.cpp:19-32`) — if true, return WITHOUT consuming the fire tag (retry next tick).
+- [ ] 2.6 Retire `5eda3ac8a` `Has<FTag_*_NeedsSetup> → NotReady` guards in the Apply lambdas of `CkVelocity_Fragment.cpp` (the guard I READ at `:42-44`) + `CkAcceleration_Fragment.cpp`. Keep everything else. Verify `git show 5eda3ac8a --stat` remnants.
+- [ ] 2.7 Tests: `Ck.Snapshot.LoadGate.GatedSkipsKernelTicks` (two trivial test-only processors, one default + one RunsDuringLoad, count ForEachEntity hits; flip `Set_IsLoadGateActive(true)`, tick N frames, assert gated==0 AND kernel>0; flip off, gated resumes) + `Ck.Physics.Net.Velocity_ApplyAfterLateSetup` (MP stomp repro — copy `Test_Snapshot_AccelerationParity_MPReload_Gate.spec.cpp` plumbing).
+- [ ] 2.8 Gate (`Ck.Snapshot` --discover-fresh + `Ck.Attribute.Net` + `Net` + `Ck.Physics.Net`) — the three lifecycle pins green, both new tests green, snapshot+net delta-zero vs baseline (+kiosk env-red trio). Any HANG → over-gating (a kernel processor left gated) → recheck the §2.2 list. Commit (4 messages per PHASE_2 §2.8; CkTests behind CkFoundation).
+
+**Phase-2 CHECKPOINT (2026-07-11): 2.1–2.3 IMPLEMENTED + COMPILE-VERIFIED (editor build clean, 0 errors, log
+`CkAuto/logs/p2-compilecheck2.log`) + uncommitted on disk; 2.4–2.8 remaining.** Compile-check caught + fixed a dropped
+`namespace ck {` opening in `CkProcessorScheduler.h` (my enum-insert edit had swallowed it — now restored). Phase 2 is ATOMIC —
+2.1–2.3 alone are NOT gate-safe (they move BOTH dispatchers from FGroup_Gameplay_Script → FGroup_Hydration, which
+without 2.4's ConstructedThisFrame defer + 2.5's fire-gating can expose the late-setup stomp). DO NOT commit or gate
+until 2.4–2.7 land. The tree's committed tip is Phase-1-green (`df06b8394`); the uncommitted delta is Phase-2 2.1–2.3
+(files: `CkProcessorDescriptor.h`, `CkProcessorTraits.inl.h`, `CkProcessorGraph.h/.cpp`, `CkProcessorScheduler.h/.cpp`,
+`CkEcsWorld_Subsystem.h/.cpp`, `CkEntityScript_Processor.h`, `CkEntityLifetime_Processor.h`,
+`CkReplicatedFragmentContainer_Processor.h`, `CkPersistence_ReDrive_Processor.h`, `CkEntityReplicationDriver_Processor.h`,
+`CkActorRespawn_Processor.h`, `CkProcessorGroups.h/.cpp`). `git -C Plugins/CkFoundation diff --stat` shows the exact set.
 
 ## Campaign-added tests (protected inventory — grows as phases land)
 
@@ -235,3 +269,15 @@ Load-time baseline (Phase 3B, representative fixture): ___ ms.
   the object-pooling-core campaign (+3758 lines incl. CkEcs Scheduler/EntityScript) — see the baseline-section note;
   Phase-2 line refs shifted (re-locate by pattern). Commits: CkF 5d262f52a, CkTests b9e7f86.
   Nothing pushed. **Phase 1 DONE.** Proceeding to Phase 2.
+- 2026-07-11 — **Phase 2 execution (Opus, same run) — 2.1–2.3 DONE + compile-verified; CHECKPOINT before 2.4.**
+  Implemented the load-gate trait plumbing (2.1: `ECk_ProcessorLoadPolicy` mirroring PumpPolicy across descriptor/traits/
+  graph/scheduler + `ECk_SchedulerTickScope{Full,LoadKernel}` Tick/DoPump scope + subsystem `Get_/Set_IsLoadGateActive` +
+  lazy weak-ptr Actor→subsystem + `Request_PumpToQuiescence` scope param), the 12-processor kernel marking (2.2), and
+  `FGroup_Hydration` + moving BOTH dispatchers into it with their `RunAfter FinishConstruction` deleted (2.3). Ran an
+  editor compile-check: FOUND + FIXED a dropped `namespace ck {` in CkProcessorScheduler.h (enum-insert edit swallowed
+  it); re-built CLEAN (0 errors, 529s). **STOPPED at the 2.1–2.3/2.4 boundary** — context depletion + Phase 2 is atomic
+  high-blast scheduler core (2.4's ck_exp DoTick-override + dispatcher-ordering + 2.5 fire-gating want fresh context to
+  get right; a half-done atomic scheduler phase is worse than a clean checkpoint). 2.1–2.3 code is UNCOMMITTED (atomic
+  phase — not gate-safe alone) but compile-verified in the working tree; the sub-step tracker above carries the full
+  design for 2.4–2.8 (esp. [P2-D1] + the ConstructedThisFrame pump/ordering reasoning). Continuation: implement 2.4–2.7,
+  gate per §2.8, commit. Nothing pushed.
