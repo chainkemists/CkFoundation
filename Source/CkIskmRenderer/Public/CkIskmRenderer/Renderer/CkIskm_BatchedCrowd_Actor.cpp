@@ -2,6 +2,7 @@
 
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_Fragment_Data.h"
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_BakedPose.h"
+#include "CkIskmRenderer/Renderer/CkIskm_BatchedCrowd_Processor.h" // FFragment_IskmCrowd_Controller
 
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
@@ -9,14 +10,20 @@
 #include "CkUsf/Outline/CkUsf_OutlinePreset.h"
 #include "CkUsf/Outline/CkUsf_OutlineSubsystem.h"
 
+#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"        // Get_TransientEntity
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h" // Request_CreateEntity
+
+#include "CkEcsExt/Transform/CkTransform_Utils.h"         // Request_SetTransform (far cosmetic placement)
+
 #include "Components/SceneComponent.h"
 #include "Engine/SkeletalMesh.h"
 #include "Engine/World.h"
 
 ACk_Iskm_BatchedCrowd_Actor::ACk_Iskm_BatchedCrowd_Actor()
 {
-    PrimaryActorTick.bCanEverTick = true;
-    PrimaryActorTick.bStartWithTickEnabled = true;
+    // inc-4 §4: the actor no longer self-ticks — FProcessor_IskmCrowd_Advance drives AdvanceAnimation on
+    // the ECS clock so member render + far cosmetics resolve the same frame.
+    PrimaryActorTick.bCanEverTick = false;
     _Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
     SetRootComponent(_Root);
 }
@@ -33,6 +40,21 @@ auto
     // pose extent — tiles created pre-bake would otherwise freeze the smaller static mesh box.
     if (_Collection != nullptr && _Collection->Get_IsBaked() == false)
     { _Collection->Build_BakedPoseData(); }
+
+    // inc-4 §4: stand up this crowd's ECS presence so FProcessor_IskmCrowd_Advance can drive it on the
+    // ECS clock. Owned by the transient entity (session lifetime — the crowd is never destroyed mid-
+    // session; the world teardown clears it). No ECS world (edge case) => no controller; the crowd simply
+    // won't self-advance, and the ensure below flags it.
+    if (ck::Is_NOT_Valid(_ControllerEntity))
+    {
+        auto TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(GetWorld());
+        CK_ENSURE_IF_NOT(ck::IsValid(TransientEntity),
+            TEXT("Iskm crowd [{}]: no ECS transient entity — crowd will not advance (no controller)"), this)
+        { return; }
+
+        _ControllerEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity);
+        _ControllerEntity.Add<ck::FFragment_IskmCrowd_Controller>(this);
+    }
 }
 
 auto
@@ -271,11 +293,9 @@ auto
 
 auto
     ACk_Iskm_BatchedCrowd_Actor::
-    Tick(float InDeltaTime)
+    AdvanceAnimation(float InDeltaTime)
     -> void
 {
-    Super::Tick(InDeltaTime);
-
     // Rendering is client-local; a dedicated server has nothing to feed.
     if (GetNetMode() == NM_DedicatedServer)
     { return; }
@@ -313,6 +333,73 @@ auto
     {
         PushOutlineGroup(Pair.Value);
     }
+}
+
+auto
+    ACk_Iskm_BatchedCrowd_Actor::
+    DriveCosmetics()
+    -> void
+{
+    if (_MemberCosmetics.Num() == 0)
+    { return; }
+
+    // Runs right after AdvanceAnimation in the same FGroup_Transform_SyncFrom processor tick, reading the
+    // SAME _Members snapshot that PushTile just rendered — so each cosmetic is queued at the member's
+    // CURRENT frame/world. Request_SetTransform is the framework's deferred write (safe cross-entity — the
+    // same call the old flip driver used): HandleRequests applies + tags it later THIS tick, so the
+    // PostTransform render flush picks it up the same frame the member is PushTiled — lockstep, no trail.
+    for (auto It = _MemberCosmetics.CreateIterator(); It; ++It)
+    {
+        const int32              MemberIndex = It.Key();
+        TArray<FMemberCosmetic>& Cosmetics   = It.Value();
+
+        for (int32 Idx = Cosmetics.Num() - 1; Idx >= 0; --Idx)
+        {
+            FMemberCosmetic& C = Cosmetics[Idx];
+            if (ck::Is_NOT_Valid(C.Cosmetic))
+            { Cosmetics.RemoveAtSwap(Idx); continue; }   // cosmetic destroyed — prune
+
+            FTransform SocketWorld;
+            if (TryGet_MemberSocketTransform(MemberIndex, C.Socket, SocketWorld) == false)
+            { continue; }   // no baked socket / bad index — leave it parked
+
+            UCk_Utils_Transform_UE::Request_SetTransform(
+                C.Cosmetic, FCk_Request_Transform_SetTransform{C.RelOffset * SocketWorld});
+        }
+
+        if (Cosmetics.Num() == 0)
+        { It.RemoveCurrent(); }
+    }
+}
+
+auto
+    ACk_Iskm_BatchedCrowd_Actor::
+    Register_MemberCosmetic(int32 InIndex, const FCk_Handle_Transform& InCosmetic, FName InSocket, const FTransform& InRelOffset)
+    -> void
+{
+    if (_Members.IsValidIndex(InIndex) == false || ck::Is_NOT_Valid(InCosmetic))
+    { return; }
+
+    TArray<FMemberCosmetic>& List = _MemberCosmetics.FindOrAdd(InIndex);
+    for (FMemberCosmetic& C : List)
+    {
+        if (C.Cosmetic == InCosmetic)
+        { C.Socket = InSocket; C.RelOffset = InRelOffset; return; }   // replace-if-same-entity
+    }
+
+    FMemberCosmetic New;
+    New.Cosmetic  = InCosmetic;
+    New.Socket    = InSocket;
+    New.RelOffset = InRelOffset;
+    List.Add(New);
+}
+
+auto
+    ACk_Iskm_BatchedCrowd_Actor::
+    Clear_MemberCosmetics(int32 InIndex)
+    -> void
+{
+    _MemberCosmetics.Remove(InIndex);
 }
 
 auto

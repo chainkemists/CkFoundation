@@ -349,6 +349,24 @@ bool
 
 void
     UCk_Utils_IskmBatched_UE::
+    Register_CrowdMemberCosmetic(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, FCk_Handle_Transform InCosmetic, FName InSocket, const FTransform& InRelOffset)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return; }
+    InCrowd->Register_MemberCosmetic(InIndex, InCosmetic, InSocket, InRelOffset);
+}
+
+void
+    UCk_Utils_IskmBatched_UE::
+    Clear_CrowdMemberCosmetics(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return; }
+    InCrowd->Clear_MemberCosmetics(InIndex);
+}
+
+void
+    UCk_Utils_IskmBatched_UE::
     Set_CrowdDefaultCustomPrimitiveData(ACk_Iskm_BatchedCrowd_Actor* InCrowd, const TArray<float>& InFloats)
 {
     if (ck::Is_NOT_Valid(InCrowd))
