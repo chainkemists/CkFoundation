@@ -3,6 +3,7 @@
 #include "CkDynamic_Utils.h"
 #include "CkDynamic_ScriptQueryProcessor.h"
 
+#include "CkCore/Format/CkFormat.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -104,6 +105,11 @@ namespace ck
             -> void
         {
             OutDescriptor._Name = FName{*InDevClass->GetPathName()};
+
+            // Short identity for the per-processor trace scope — mirrors the `script::<DevClass>` stat
+            // row the hosted wrapper registers. _Name stays the full path so RunAfter references resolve.
+            OutDescriptor._DisplayName = FName{*ck::Format_UE(TEXT("script::{}"), InDevClass->GetName())};
+
             OutDescriptor._GroupName = DoResolveGroupName(InCDO->Get_Group());
 
             for (const auto& RunAfterName : InCDO->Get_RunAfter())

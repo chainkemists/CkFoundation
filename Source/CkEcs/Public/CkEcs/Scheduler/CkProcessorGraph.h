@@ -30,6 +30,13 @@ namespace ck
         int32 _Index = INDEX_NONE;
         FName _ProcessorName;
 
+        // Name emitted as the per-processor Insights CPU scope by the scheduler's dispatch loop
+        // (descriptor _DisplayName when set, else _ProcessorName), plus the lazily-created trace
+        // event spec id it caches (0 = not traced yet; created on first dispatch with the `cpu`
+        // trace channel enabled).
+        FName _TraceName;
+        uint32 _TraceSpecId = 0;
+
         bool _HasDirtyMarker = false;
         FDirtyChecker _IsDirtyChecker;
         FProcessorFactory _Factory;

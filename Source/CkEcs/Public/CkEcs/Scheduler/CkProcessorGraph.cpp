@@ -68,6 +68,23 @@ namespace ck::detail
         }
     }
 
+    // Trace-scope display name for a node: descriptor _DisplayName when set, else the canonical
+    // _Name with entt::type_name's "struct "/"class " prefix stripped — so per-processor trace rows
+    // read the same as the cleantype-derived `stat CkProcessors` rows.
+    static auto
+    Get_NodeTraceName(
+        const FProcessorDescriptor& InDescriptor) -> FName
+    {
+        if (NOT InDescriptor._DisplayName.IsNone())
+        { return InDescriptor._DisplayName; }
+
+        auto NameStr = InDescriptor._Name.ToString();
+        if (NameStr.RemoveFromStart(TEXT("struct ")) || NameStr.RemoveFromStart(TEXT("class ")))
+        { return FName{*NameStr}; }
+
+        return InDescriptor._Name;
+    }
+
     static auto
     ShouldCreateProcessorForWorldType(
         ECk_ProcessorWorldTypeRequirement InRequirement,
@@ -198,6 +215,7 @@ auto
             auto StartNode = FProcessorGraphNode{};
             StartNode._Index = _Nodes.Num();
             StartNode._ProcessorName = Descriptor._Name;
+            StartNode._TraceName = detail::Get_NodeTraceName(Descriptor);
             StartNode._HasDirtyMarker = Descriptor._HasDirtyMarker;
             StartNode._IsDirtyChecker = Descriptor._IsDirtyChecker;
             StartNode._DirtyMarkerHashes = Descriptor._DirtyMarkerHashes;
@@ -235,6 +253,7 @@ auto
             auto Node = FProcessorGraphNode{};
             Node._Index = _Nodes.Num();
             Node._ProcessorName = Descriptor._Name;
+            Node._TraceName = detail::Get_NodeTraceName(Descriptor);
             Node._HasDirtyMarker = Descriptor._HasDirtyMarker;
             Node._IsDirtyChecker = Descriptor._IsDirtyChecker;
             Node._DirtyMarkerHashes = Descriptor._DirtyMarkerHashes;

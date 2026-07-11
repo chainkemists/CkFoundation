@@ -98,6 +98,11 @@ namespace ck
 
         FName _Name;
 
+        // Optional short identity for human-facing surfaces (per-processor Insights trace scopes).
+        // _Name stays the canonical registry key (C++ type name / script class path name) that
+        // RunAfter/RunBefore references resolve against; surfaces fall back to _Name when this is unset.
+        FName _DisplayName;
+
         FProcessorFactory _Factory;
 
         FName _GroupName;
