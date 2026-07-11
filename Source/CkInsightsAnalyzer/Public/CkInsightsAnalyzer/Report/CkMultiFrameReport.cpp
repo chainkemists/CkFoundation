@@ -252,7 +252,7 @@ auto
     {
         return TEXT("(No frame data to analyze)");
     }
-    return GenerateReport();
+    return GenerateReport(Session);
 }
 
 auto
@@ -267,7 +267,7 @@ auto
     {
         return TEXT("(No frame data to analyze)");
     }
-    return GenerateReport();
+    return GenerateReport(Session);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -276,11 +276,13 @@ auto
 
 auto
     FCk_MultiFrameReport::
-    GenerateReport() const
+    GenerateReport(const FCk_TraceSession& Session) const
     -> FString
 {
     TArray<FString> Lines;
     Lines.Reserve(64);
+
+    FCk_FrameReport::GenerateTraceOverview(Session, Lines);
 
     const double OverBudget = _Stats.AvgFrameMs / _Config.TargetFrameMs;
     const FString Icon = FCk_TimerCategorizer::SeverityIcon(_Stats.AvgFrameMs);

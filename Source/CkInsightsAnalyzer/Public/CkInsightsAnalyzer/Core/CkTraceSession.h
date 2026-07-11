@@ -110,6 +110,9 @@ public:
     /** Get total number of game frames in the trace. */
     auto GetFrameCount() const -> uint64;
 
+    /** Get total number of render frames in the trace. 0 when the capture has no rendering frames (e.g. -nullrhi). */
+    auto GetRenderFrameCount() const -> uint64;
+
     /** Get a specific game frame by index. Returns nullptr if index is invalid. */
     auto GetFrame(uint64 Index) const -> const TraceServices::FFrame*;
 
