@@ -16,6 +16,24 @@
 | 4B | PHASE_4B.md | NOT STARTED | | | |
 | 5 | PHASE_5.md + VALIDATION.md | NOT STARTED | | | |
 
+## Unattended execution protocol (set 2026-07-11 by Adam — OVERRIDES the "STOP on divergence" default below)
+
+Run the campaign UNATTENDED through all remaining phases: finish §1.6, then Phases 2 → 3A → 3B → 4A → 4B → 5 in
+order. Per-phase loop: read PHASE_N.md (+ the spec and PHASE_1_RESEARCH.md), implement on Opus, gate via
+UnrealToolbox (editor CLOSED; read verdicts from the --output logs), and when the gate is GREEN + delta-zero vs the
+baselines, COMMIT that phase (never push; stage only files you changed by name) + update this file, then proceed to
+the next phase automatically. Do not stop between green phases.
+
+QUESTIONS / DIVERGENCES → delegate, don't halt. When a step is ambiguous, or reality diverges from the plan, and the
+answer is NOT already in the PHASE docs / spec / PHASE_1_RESEARCH.md: launch a **Fable-class agent** (Agent tool,
+`model: "fable"`) to research the codebase + decide the question (Fable has the reasoning depth for design/architecture
+forks), VERIFY its ruling against the cited code yourself, record it in §Decisions here, then RETURN TO OPUS to
+implement. Never improvise architecture on the Opus main loop — route every design fork through a Fable agent.
+Reserve a true STOP (→ §Blockers, end the run) ONLY for: (a) a red gate you cannot fix against the plan/research even
+after a Fable consult; (b) an irreversible/outward/destructive action (push, force-push, cross-repo merge, deleting
+another session's work); or (c) a genuine human-only product/risk/authority decision the Fable agent explicitly flags
+as needing Adam. Cross-repo/CkTests-ahead-of-CkFoundation discipline and "no push" still hold absolutely.
+
 ## Phase-0 baseline table (fill in Phase 0; every later phase diffs against THESE names)
 
 Captured 2026-07-11 on `feature/save-load-improvements` @ `bbde1a9dd` (clean tree, no edits), via UnrealToolbox
