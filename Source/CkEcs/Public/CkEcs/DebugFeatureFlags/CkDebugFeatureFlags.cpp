@@ -54,6 +54,8 @@ namespace ck_debug_feature_flags_impl
         {
             Impl->_Rows[Index] &= ~(uint64{1} << InBit);
         }
+
+        ++Impl->_Revision;
     }
 }
 
@@ -220,4 +222,18 @@ auto
 
     const auto Index = ck_debug_feature_flags_impl::Get_EntityIndex(InEntity.Get_ID());
     return Impl->_Rows.IsValidIndex(Index) ? Impl->_Rows[Index] : 0;
+}
+
+auto
+    ck::debug_feature_flags::
+    Get_Revision(
+        const FCk_Registry& InRegistry)
+    -> uint64
+{
+    auto Registry = registry_table::TryResolve(InRegistry.Get_RegistryHandle());
+    if (Registry == nullptr)
+    { return 0; }
+
+    const auto Impl = ck_debug_feature_flags_impl::Get_Impl(*Registry);
+    return Impl != nullptr ? Impl->_Revision : 0;
 }
