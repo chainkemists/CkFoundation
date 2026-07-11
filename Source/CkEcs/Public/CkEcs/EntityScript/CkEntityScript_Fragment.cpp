@@ -41,12 +41,17 @@ namespace ck
         if (InAr.IsLoading() && Class == nullptr)
         {
             _Script.Reset();
+            _SnapshotLoadPin.Reset();
             return;
         }
 
         if (InAr.IsLoading())
         {
-            _Script = TStrongObjectPtr<UCk_EntityScript_UE>(NewObject<UCk_EntityScript_UE>(GetTransientPackage(), Class));
+            // no world/subsystem is reachable here (registry-only restores exist), so the fragment
+            // pins this one mint itself — see _SnapshotLoadPin in the header
+            auto* MintedScript = NewObject<UCk_EntityScript_UE>(GetTransientPackage(), Class);
+            _SnapshotLoadPin = TStrongObjectPtr<UCk_EntityScript_UE>(MintedScript);
+            _Script = MintedScript;
         }
 
         if (_Script.IsValid())

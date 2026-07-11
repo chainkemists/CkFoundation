@@ -1,7 +1,16 @@
 # Phase 2 — EntityScript integration
 
-> **Status:** ⏳ Pending
+> **Status:** ✅ Done (2026-07-11) — poolable-path runtime observations [DEFERRED-TO-P5]
 > **Depends on:** Phase 1 ✅
+> **Drift notes (code wins):**
+> - Snapshot load path (`SerializeSnapshot`) has NO reachable world/subsystem (registry-only
+>   restores exist) — the fragment keeps a narrowly-scoped `_SnapshotLoadPin` TStrongObjectPtr for
+>   that one mint site. The save/load rebuild+hydrate campaign owns removing it.
+> - EndPlay release is gated on `Get_IsPoolVendedObject` (new BP-pure util) — NOT on instancing
+>   policy — so CDO/snapshot-minted/fallback-created scripts skip release without spurious ensures.
+> - EndPlay clears the fragment's weak `_Script` after release so a same-frame re-vend can never be
+>   observed through the dead entity's fragment (fragment now `ck::TReadWrite` in that processor;
+>   `FProcessor_EntityScript_EndPlay` is a fragment friend).
 
 ## Goal
 
@@ -52,7 +61,16 @@ subsystem-pinned; `FFragment_EntityScript_Current::_Script` is a `TWeakObjectPtr
 
 ## Exit criteria — same commit as last work item
 
-- [ ] All expected observations confirmed; evidence in PROGRESS.md.
-- [ ] Suite diff vs Phase-2-entry baseline recorded ("baseline N failing {names} → still N {names}").
-- [ ] [EDITOR-VERIFY] items listed with exact steps (pool-params property visibility).
-- [ ] PROGRESS.md dated entry.
+- [x] Suite diff vs Phase-2-entry baseline — VERIFIED 2026-07-11: baseline 1048/1040/8 failing
+      {Employee_IntentSelection, Employee_ShiftPresence, Employee_WageDeductsViaStoreDriver,
+      ItemOverflow_BelowCapNoEviction, ItemOverflow_CapEvictsIntoSink,
+      MissionDriver_StoreLevelUnlocksToys, SideHustleLeveling_LevelByVerb,
+      StoreDriver_GondolaWatcherBindsRuntimeGondola} → Phase-2 binary 1048/1040/8, IDENTICAL names.
+      All 8 are pre-existing BB game failures. Force-new vend path (every existing instanced script)
+      exercised by 1040 green tests incl. 13 min of GC activity — the subsystem pin holds.
+- [ ] Poolable-path observations (round-trip pointer identity, delegate preservation, forced-GC) —
+      [DEFERRED-TO-P5]: no asset uses the new policy yet; compile-verified only.
+- [x] [EDITOR-VERIFY] — open any EntityScript BP/AS asset defaults: `_PoolParams` appears ONLY when
+      Instancing Policy = "Instanced Per Entity (Poolable)"; prewarm/capacity/grow rows follow their
+      own EditConditions.
+- [x] PROGRESS.md dated entry.

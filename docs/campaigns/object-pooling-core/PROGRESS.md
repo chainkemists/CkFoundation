@@ -1,11 +1,13 @@
 # Object pooling core — PROGRESS.md (living log)
 
 ## Current state  <!-- supersedes everything below; update at EVERY phase and session end -->
-**As of 2026-07-11 (branch `feature/object-pooling-core`):** Phase 1 ✅ (compile gate verified;
-autotest deferred to Phase 5). Phase 2 (EntityScript integration) is next.
-**Baseline being diffed against:** not yet captured — Phase 2 entry MUST capture full CkTests suite
-counts on the Phase-1 binary before touching CkEcs.
-**Next action:** Phase 2 entry pre-flight (baseline capture), then work items 1-5.
+**As of 2026-07-11 (branch `feature/object-pooling-core`):** Phase 1 ✅ + Phase 2 ✅ (suite diff
+clean; poolable-path runtime observations deferred to Phase 5). Phase 3 (sweep conversions) next.
+**Baseline being diffed against:** 1048 total / 1040 pass / 8 fail, captured 2026-07-11 on the
+Phase-1 binary; the 8 failing names are recorded in PHASE_2.md exit criteria (all pre-existing BB
+game tests). Phase-2 binary reproduced the identical 8.
+**Next action:** Phase 3 entry pre-flight (re-read the six members' create/teardown sites on
+current HEAD), then per-module conversions.
 **Blocked on:** nothing.
 
 ## Decision log
@@ -14,6 +16,27 @@ counts on the Phase-1 binary before touching CkEcs.
 | 2026-07-11 | All 12 locked decisions — see PROMPT.md table (single source; not duplicated here) | user forks resolved via 4 questions + 2 flagged unilateral calls (enum additive, actors excluded) | per-row notes in PROMPT.md |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-07-11 — Phase 2 implemented and gate-verified (same session as Phase 1)
+- `CkEntityScript.h`: enum + `InstancedPerEntity_Poolable`; `_PoolParams` EditDefaultsOnly property
+  (EditCondition-gated, hidden otherwise) + getter.
+- Spawn switch (`_Processor.cpp`): both instanced policies vend via pooled
+  `Request_CreateNewObject` — Poolable uses CDO `_PoolParams` forced to Recycle; plain uses
+  DestroyOnRelease; spawn params double as the participant per-use payload.
+- `_Fragment.h/.cpp`: `_Script` → `TWeakObjectPtr`; `_SnapshotLoadPin` strong ptr covers the
+  SerializeSnapshot mint (no world reachable there — save/load campaign owns removal); EndPlay
+  processor now `TReadWrite` + fragment friend, releases via new
+  `UCk_Utils_Object_UE::Get_IsPoolVendedObject` gate + `TryReleaseToPool`, then clears the weak ptr.
+- Ran: baseline suite (Phase-1 binary) → 1048/1040/8; rebuild (2 iterations — the one error was the
+  ck_exp access-intent static_assert, fixed with `ck::TReadWrite<>`); suite on Phase-2 binary →
+  1048/1040/8 with IDENTICAL failing names. No regressions.
+- Confirmed: all ~16 external `Get_Script()` deref sites are weak-compatible (`.Get()`/`->`/
+  `ck::IsValid`) — audited by grep + proven by the green build.
+- Inferred (unconfirmed until Phase 5): poolable recycle semantics at runtime (no asset uses the
+  policy yet — the suite exercises only the force-new path).
+- Known semantic change accepted: after EndPlay, the fragment's `_Script` is cleared for vended
+  scripts — a late `Get_ScriptClass` on a dead entity now ensure-fails instead of returning the
+  dying script's class.
 
 ### 2026-07-11 — Phase 1 implemented and gate-verified
 - Wrote `Source/CkCore/Public/CkCore/ObjectPooling/`: `CkObjectPooling_Params.h` (3 enums incl.
@@ -70,6 +93,6 @@ counts on the Phase-1 binary before touching CkEcs.
 ## Open items
 | Item | Status | Next step |
 |---|---|---|
-| Phase 1 round-trip autotest | deferred | lands with Phase 5 CkTests branch |
-| Campaign-start test baseline | not captured | Phase 2 entry pre-flight (before any CkEcs edit) |
-| Phase 2 (EntityScript integration) | pending | entry pre-flight, then work items 1-5 |
+| Phase 1+2 pooling autotests (round-trip, delegates, GC, replicated-poolable) | deferred | Phase 4/5 CkTests branch (doc numbering: tests = PHASE_4.md, debugger = PHASE_5.md) |
+| Phase 3 (sweep conversions, 6 members / 4 modules) | pending | entry pre-flight |
+| `_SnapshotLoadPin` removal | owned by save/load campaign | coordinate at merge of feature/save-load-improvements |

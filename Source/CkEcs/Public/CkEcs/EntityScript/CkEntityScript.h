@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CkCore/Object/CkWorldContextObject.h"
+#include "CkCore/ObjectPooling/CkObjectPooling_Params.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CoreMinimal.h"
@@ -39,6 +40,13 @@ enum class ECk_EntityScript_InstancingPolicy : uint8
 
     // A new unique instance of the EntityScript created.
     InstancedPerEntity,
+
+    // A unique instance per entity, recycled through the CkCore ObjectPooling subsystem: EndPlay
+    // releases the instance to its pool; the next spawn of the same class+archetype re-vends it with
+    // all reflected properties reset to the archetype (FCk_Handle_ObjectPoolingParticipant properties
+    // are skipped so delegates bound on the instance survive). Construct/BeginPlay re-run per acquire.
+    // Pool configuration comes from _PoolParams (visible when this policy is selected)
+    InstancedPerEntity_Poolable UMETA(DisplayName = "Instanced Per Entity (Poolable)"),
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EntityScript_InstancingPolicy);
@@ -118,6 +126,16 @@ protected:
         meta=(AllowPrivateAccess, InvalidEnumValues = "NotInstanced"))
     ECk_EntityScript_InstancingPolicy _InstancingPolicy = ECk_EntityScript_InstancingPolicy::InstancedPerEntity;
 
+    // Pool configuration for InstancedPerEntity_Poolable — ignored under any other policy. The
+    // recycle policy is forced to Recycle at spawn; a project-settings entry for this class
+    // overrides these values at pool creation
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
+        Category = "Ck|EntityScript",
+        meta=(AllowPrivateAccess,
+            EditCondition="_InstancingPolicy == ECk_EntityScript_InstancingPolicy::InstancedPerEntity_Poolable",
+            EditConditionHides))
+    FCk_ObjectPooling_PoolParams _PoolParams;
+
     // Opt-in: when true, this EntityScript appears in the 'Ck Entity Scripts' tab of the editor's
     // Place Actors panel and can be dragged straight into a level (the drag spawns a configured
     // ACk_EntitySpawner_UE). AngelScript: 'default _ShowInPlaceActors = true;'.
@@ -137,6 +155,7 @@ protected:
 public:
     // CK_PROPERTY_GET(_Replication); // Use Get_EffectiveReplication
     CK_PROPERTY_GET(_InstancingPolicy);
+    CK_PROPERTY_GET(_PoolParams);
     CK_PROPERTY_GET(_AssociatedEntity);
     CK_PROPERTY_GET(_ShowInPlaceActors);
 };
