@@ -21,6 +21,12 @@ namespace ck
             HandleType InHandle,
             FFragment_PredictedVelocity_Current& InCurrent) const -> void
     {
+        // Zero-dt tick = settle pass: do no time-dependent work. Early-out BEFORE any read/write so the
+        // finite-difference divide is skipped AND _PreviousDeltaTime is not poisoned to 0 (which would trip the
+        // Host branch's divide next tick).
+        if (InDeltaT.Get_Seconds() <= 0.0f)
+        { return; }
+
         const auto PreviousDeltaTime = InCurrent._PreviousDeltaTime;
         const auto PreviousLocation = InCurrent._PreviousLocation;
 
