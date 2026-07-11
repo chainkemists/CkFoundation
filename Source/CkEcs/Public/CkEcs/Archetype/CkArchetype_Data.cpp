@@ -10,6 +10,7 @@ auto
     return FCk_ArchetypeDescriptor{Name}
         .Set_DisplayName(DisplayName)
         .Set_FeatureIds(FeatureIds)
+        .Set_Family(Family)
         .Set_RequiredLabel(RequiredLabel)
         .Set_NamePattern(NamePattern)
         .Set_IconSvgPath(IconSvgPath)
