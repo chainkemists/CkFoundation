@@ -62,8 +62,7 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(World), TEXT("Cannot setup AudioTrack [{}] - no valid world"), InHandle)
         { return; }
 
-        // handed out DestroyOnRelease: the ObjectPooling subsystem pins the component for its lifetime
-        // (the fragment holds a weak ptr); EndPlay releases it back before DestroyComponent
+        // DestroyOnRelease — the subsystem pins it so the fragment can hold a weak ptr
         const auto PoolParams = FCk_ObjectPooling_PoolParams{}
             .Set_RecyclePolicy(ECk_ObjectPooling_RecyclePolicy::DestroyOnRelease);
 
@@ -675,10 +674,7 @@ namespace ck
             InCurrent._AudioComponent->Stop();
             InCurrent._AudioComponent->SetSound(nullptr);
 
-            // The component was pinned DestroyOnRelease so the fragment could hold a weak ptr.
-            // Release UNPINS it (a no-op for the no-world fallback path); then DestroyComponent does
-            // the real UE teardown. Unpin BEFORE destroy — destroy may mark the object garbage,
-            // which would fail release's validity check
+            // unpin before DestroyComponent (destroy garbage-marks the object, failing release validity)
             UCk_Utils_Object_UE::TryReleaseToPool(InCurrent._AudioComponent.Get());
             InCurrent._AudioComponent->DestroyComponent();
             InCurrent._AudioComponent = nullptr;

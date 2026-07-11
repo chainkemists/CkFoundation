@@ -12,9 +12,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Pools are keyed by (class, archetype): recycled instances reset to the archetype they were created
-// against, so two archetypes of one class can never share a pool. The class CDO stands in when no
-// archetype is supplied
+// keyed by (class, archetype) — the CDO stands in when no archetype is supplied
 USTRUCT()
 struct CKCORE_API FCk_ObjectPooling_PoolKey
 {
@@ -50,9 +48,8 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Per-pool bookkeeping. Both instance arrays and the archetype are UPROPERTY so everything the pool
-// owns is GC-rooted (fragments and raw containers are NOT GC-visible). A slot that GC nulls out
-// (externally destroyed instance) is swept lazily and counts as a "steal"
+// UPROPERTY storage so the pool's instances + archetype are GC-rooted; GC-nulled slots (externally
+// destroyed = "steal") are swept lazily
 USTRUCT()
 struct CKCORE_API FCk_ObjectPooling_PoolState
 {
@@ -70,7 +67,7 @@ private:
     UPROPERTY(Transient)
     TObjectPtr<UClass> _Class;
 
-    // Pinned for the pool's lifetime — the reset source for every recycle
+    // reset source for every recycle
     UPROPERTY(Transient)
     TObjectPtr<UObject> _Archetype;
 
@@ -103,13 +100,9 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// The object-pooling core of the framework, usually reached through
-// UCk_Utils_Object_UE::Request_CreateNewObject (which resolves the world). The subsystem OWNS the
-// lifetime of every instance it hands out (pinned in UPROPERTY storage): Recycle-policy instances
-// park in a pool on release; DestroyOnRelease instances are pinned-unique and unpinned (GC-collected)
-// on release. Holders therefore keep TWeakObjectPtr, never TStrongObjectPtr. Tickable ONLY for the
-// amortized prewarm budget. Plain UObjects only — actors are excluded by design (SpawnActor, not
-// NewObject, owns actor creation)
+// Owns the lifetime of every instance it hands out (pinned in UPROPERTY storage) — so holders keep
+// TWeakObjectPtr, never TStrongObjectPtr. Plain UObjects only (actors go through SpawnActor).
+// Usually reached through UCk_Utils_Object_UE::Request_CreateNewObject. Full model: ObjectPooling/README.md
 UCLASS()
 class CKCORE_API UCk_ObjectPooling_Subsystem_UE : public UCk_Game_TickableWorldSubsystem_Base_UE
 {
@@ -122,13 +115,9 @@ public:
     auto Tick(float InDeltaTime) -> void override;
 
 public:
-    // Hand out an instance: recycled from the pool, freshly created on miss (Grow), or pinned-unique
-    // (DestroyOnRelease). DestroyOnRelease creates honor InOuter (a component may need an actor
-    // outer for GetOwner()-dependent systems like the nav octree); Recycle-pool creates are outered
-    // to the subsystem's world — a recycled instance survives its first caller, so it cannot borrow
-    // that caller's outer. Returns null only on Fail/at-capacity exhaustion or invalid inputs.
-    // Callers usually reach this through UCk_Utils_Object_UE::Request_CreateNewObject (which resolves
-    // the world) — this direct form is for code that already holds the subsystem
+    // DestroyOnRelease creates honor InOuter (a component may need an actor outer for GetOwner()-
+    // dependent systems like the nav octree); Recycle-pool creates are world-outered (a recycled
+    // instance outlives its first caller). Null only on Fail/at-capacity or invalid inputs
     auto
     AcquireFromPool(
         const TSubclassOf<UObject>& InClass,
@@ -136,10 +125,8 @@ public:
         const FCk_ObjectPooling_PoolParams& InPoolParams,
         UObject* InOuter) -> UObject*;
 
-    // Recycle-policy instances: OnReleasedToPool -> park in the free list (returns Succeeded).
-    // DestroyOnRelease instances: OnReleasedToPool -> unpin, so GC can collect (Succeeded).
-    // Objects the subsystem never handed out (CDOs, non-pooled creates): a benign no-op that
-    // returns Failed — safe to call unconditionally from any teardown path, no pre-gate needed
+    // Recycle -> park; DestroyOnRelease -> unpin. A benign no-op (returns Failed) for objects never
+    // handed out (CDOs, non-pooled creates) — safe to call unconditionally from any teardown path
     auto
     TryReleaseToPool(
         UObject* InObject) -> ECk_SucceededFailed;
@@ -174,15 +161,13 @@ private:
     DoSpawn_Instance(
         FCk_ObjectPooling_PoolState& InPool) -> UObject*;
 
-    // Reset every reflected property to the archetype's value, SKIPPING
-    // FCk_Handle_ObjectPoolingParticipant properties so bound delegates survive recycling
+    // reset to the archetype, skipping FCk_Handle_ObjectPoolingParticipant properties
     static auto
     DoReset_ToArchetype(
         UObject* InObject,
         const UObject* InArchetype) -> void;
 
-    // Remove GC-nulled slots (externally destroyed instances — "steal" semantics) and reconcile the
-    // live count. Called lazily from acquire/release/stats, not per-tick
+    // drop GC-nulled slots (steal) + reconcile the live count; lazy, not per-tick
     auto
     DoSweep_NullSlots(
         FCk_ObjectPooling_PoolState& InPool) -> void;
@@ -191,11 +176,11 @@ private:
     UPROPERTY(Transient)
     TMap<FCk_ObjectPooling_PoolKey, FCk_ObjectPooling_PoolState> _Pools;
 
-    // DestroyOnRelease instances: pinned here for their lifetime, removed (= GC-eligible) on release
+    // DestroyOnRelease instances pinned here until release
     UPROPERTY(Transient)
     TSet<TObjectPtr<UObject>> _PinnedUnique;
 
-    // Reverse lookup for release — instances pinned by the pool states, not by this map
+    // reverse lookup for release (instances pinned by the pool states, not this map)
     TMap<FObjectKey, FCk_ObjectPooling_PoolKey> _InstanceToPool;
 };
 

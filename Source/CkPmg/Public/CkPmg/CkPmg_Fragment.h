@@ -52,8 +52,7 @@ namespace ck
         friend class UCk_Utils_Pmg_Donut_UE;
 
     private:
-        // WEAK: the CkCore ObjectPooling subsystem owns the component's lifetime (created
-        // DestroyOnRelease through the pooling-aware Request_CreateNewObject; EndPlay releases it)
+        // WEAK — lifetime owned by the CkCore ObjectPooling subsystem (DestroyOnRelease)
         TWeakObjectPtr<UProceduralMeshComponent> _MeshComponent;
 
         float _InnerRadius = 50.0f;
@@ -246,7 +245,7 @@ namespace ck
         friend class FProcessor_Pmg_Text_Setup;
 
     private:
-        // WEAK: subsystem-owned — see FFragment_Pmg_Donut_Current::_MeshComponent
+        // WEAK — subsystem-owned (see FFragment_Pmg_Donut_Current::_MeshComponent)
         TWeakObjectPtr<UProceduralMeshComponent> _MeshComponent;
         FCk_Time _SpawnTime;
 

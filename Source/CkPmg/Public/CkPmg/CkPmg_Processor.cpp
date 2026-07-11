@@ -459,9 +459,7 @@ namespace ck
         auto MeshComponent = InCurrent._MeshComponent.Get();
         if (ck::IsValid(MeshComponent))
         {
-            // The mesh component was pinned DestroyOnRelease so the fragment could hold a weak ptr.
-            // Release UNPINS it; then DestroyComponent does the real UE teardown. Unpin BEFORE
-            // destroy - destroy may mark the object garbage, which would fail release's validity check
+            // unpin before DestroyComponent (destroy garbage-marks the object, failing release's validity check)
             UCk_Utils_Object_UE::TryReleaseToPool(MeshComponent);
             MeshComponent->DestroyComponent();
         }
@@ -728,9 +726,7 @@ namespace ck
         auto MeshComponent = InCurrent._MeshComponent.Get();
         if (ck::IsValid(MeshComponent))
         {
-            // The mesh component was pinned DestroyOnRelease so the fragment could hold a weak ptr.
-            // Release UNPINS it; then DestroyComponent does the real UE teardown. Unpin BEFORE
-            // destroy - destroy may mark the object garbage, which would fail release's validity check
+            // unpin before DestroyComponent (destroy garbage-marks the object, failing release's validity check)
             UCk_Utils_Object_UE::TryReleaseToPool(MeshComponent);
             MeshComponent->DestroyComponent();
         }
