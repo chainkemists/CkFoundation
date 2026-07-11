@@ -130,8 +130,10 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    // Marks an active layer (admitted to the compose loop). Stamped by EnterLayer, cleared by ExitLayer.
-    CK_DEFINE_ECS_TAG(FTag_CameraLayer_Active);
+    // Marks an active layer (admitted to the compose loop). Stamped by EnterLayer, cleared by ExitLayer. Pure runtime
+    // state — never persist it: tags round-trip by default (opt-OUT model), and a restored layer entity carrying only
+    // this tag would survive orphans() as an inert ghost while the fresh utils_camera::Add rebuilds the real layers.
+    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_CameraLayer_Active);
 
     // ----------------------------------------------------------------------------------------------------------------
 
