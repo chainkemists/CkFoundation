@@ -221,6 +221,7 @@ auto
             StartNode._DirtyMarkerHashes = Descriptor._DirtyMarkerHashes;
             StartNode._DirtyMarkerNames = Descriptor._DirtyMarkerNames;
             StartNode._PumpPolicy = Descriptor._PumpPolicy;
+            StartNode._LoadPolicy = Descriptor._LoadPolicy;
             StartNode._Factory = Descriptor._Factory;
             StartNode._IsGroupStart = true;
             StartNode._IsGhost = IsGhost;
@@ -259,6 +260,7 @@ auto
             Node._DirtyMarkerHashes = Descriptor._DirtyMarkerHashes;
             Node._DirtyMarkerNames = Descriptor._DirtyMarkerNames;
             Node._PumpPolicy = Descriptor._PumpPolicy;
+            Node._LoadPolicy = Descriptor._LoadPolicy;
             Node._Factory = Descriptor._Factory;
             Node._IsGhost = IsGhost;
 

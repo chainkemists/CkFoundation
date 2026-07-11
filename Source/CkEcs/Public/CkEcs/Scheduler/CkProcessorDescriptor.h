@@ -84,6 +84,18 @@ enum class ECk_ProcessorPumpPolicy : uint8
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+// Whether a processor ticks while a CkSnapshot load is rebuilding the world. Default = gated: feature processors do
+// nothing mid-load and need no knowledge of loads. Only the framework construction/lifecycle/hydration kernel opts in
+// (spec §4.3) — the scheduler's LoadKernel tick scope iterates only RunsDuringLoad nodes. Marking a feature processor
+// RunsDuringLoad is a bug (it would run against half-rebuilt state); leaving a kernel processor gated hangs the load.
+UENUM()
+enum class ECk_ProcessorLoadPolicy : uint8
+{
+    GatedDuringLoad,   // Default: skipped while the load gate is active.
+    RunsDuringLoad,    // Framework kernel only: ticks during the load rebuild.
+};
+
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
@@ -143,6 +155,10 @@ namespace ck
         // Default pumps; processors opt out via `static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;`.
         // See enum docs in this header for when SkipPump is required.
         ECk_ProcessorPumpPolicy _PumpPolicy = ECk_ProcessorPumpPolicy::Default;
+
+        // Default gated during a load; the kernel opts in with a `static constexpr auto LoadPolicy = RunsDuringLoad;`
+        // trait (spec §4.3 — see ECk_ProcessorLoadPolicy above).
+        ECk_ProcessorLoadPolicy _LoadPolicy = ECk_ProcessorLoadPolicy::GatedDuringLoad;
 
         FGameplayTag _SchedulerTag;
     };

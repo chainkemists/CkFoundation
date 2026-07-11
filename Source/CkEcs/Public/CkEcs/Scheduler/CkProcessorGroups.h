@@ -22,7 +22,8 @@
 //                         → FGroup_Transform_Finalize  (SyncToActor, FireSignals)
 //                           → FGroup_Gameplay_Camera (Camera compose/POV/apply — reads anchors AFTER they are synced this frame)
 //                             → FGroup_PostTransform (OverlapBody, RaySense, UI, etc.)
-//                             → FGroup_Replication
+//                               → FGroup_Hydration (replicated-fragment + save-load hydration dispatch — applies payloads after composition, before replication-complete fires)
+//                                 → FGroup_Replication
 //                               → FGroup_EntityLifecycle (entity create + DestructionPhase_Endplay — adds the EndPlay tag)
 //                                 → FGroup_EndPlay (all feature-level *_EndPlay processors + EntityScript_EndPlay — CK_IF_END_PLAY matches here because EndPlay tag is set but Teardown is not yet)
 //                                   → FGroup_Teardown (DestructionPhase_Teardown — adds the Teardown tag, which ends the EndPlay window)
@@ -61,6 +62,7 @@ namespace ck
     struct FGroup_Transform_Finalize;
     struct FGroup_Gameplay_Camera;
     struct FGroup_PostTransform;
+    struct FGroup_Hydration;
     struct FGroup_Replication;
     struct FGroup_EntityLifecycle;
     struct FGroup_EndPlay;
@@ -141,9 +143,17 @@ namespace ck
         using RunAfter = TDepList<FGroup_Gameplay_Camera>;
     };
 
-    struct FGroup_Replication
+    // Late hydration dispatch (spec §4.4): the replicated-fragment + local save-load dispatchers apply their
+    // payloads here, AFTER FGroup_PostTransform (so every feature composed this frame exists) and BEFORE
+    // FGroup_Replication (so applied values are visible before OnReplicationComplete broadcasts the same frame).
+    struct FGroup_Hydration
     {
         using RunAfter = TDepList<FGroup_PostTransform>;
+    };
+
+    struct FGroup_Replication
+    {
+        using RunAfter = TDepList<FGroup_Hydration>;
     };
 
     // FGroup_EntityLifecycle hosts the tag-add processors that START the EndPlay window:
