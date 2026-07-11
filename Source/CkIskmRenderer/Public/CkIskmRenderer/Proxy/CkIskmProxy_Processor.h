@@ -137,12 +137,16 @@ namespace ck
             FFragment_IskmProxy_Current& InCurrent) const -> void;
     };
 
-    // Runs AFTER the Transform request pass (same group, explicit dep) so the
-    // leader's current-frame movement is already applied when the follower's
-    // world transform is composed — see FFragment_IskmProxy_SocketFollower for
-    // why a SyncFrom-group processor would trail by one frame of velocity.
-    // Marks FTag_Transform_Updated so the renderer flushes (FGroup_PostTransform)
-    // pick the new transform up the same frame.
+    // Runs in FGroup_Transform_Finalize so the follower is ordered after the ENTIRE FGroup_Transform
+    // group — not only FProcessor_Transform_HandleRequests (leaders that move via their own transform
+    // Request) but also TProcessor_SceneNode_Update, which moves scene-node-CHILD leaders each frame
+    // (e.g. a promoted NPC's proxy inherits the agent's per-frame movement through the scene-node
+    // hierarchy). The follower reads the leader transform via a runtime lookup the scheduler cannot
+    // see, so it has NO view-dependency ordering on either mover; a plain RunAfter HandleRequests (the
+    // original lag-free fix) left it racing SceneNode_Update within the group, so a scene-node-driven
+    // leader was read one frame stale and the cosmetic trailed the moving body. Finalize still precedes
+    // FGroup_PostTransform, so the renderer flush still picks up FTag_Transform_Updated the same frame —
+    // see FFragment_IskmProxy_SocketFollower for the composition rationale.
     class CKISKMRENDERER_API FProcessor_IskmProxy_SocketFollower_SyncTransform : public ck_exp::TProcessor<
         FProcessor_IskmProxy_SocketFollower_SyncTransform,
         FCk_Handle_Transform,
@@ -152,8 +156,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Transform;
-        using RunAfter = TDepList<FProcessor_Transform_HandleRequests>;
+        using Group = FGroup_Transform_Finalize;
     public:
         using TProcessor::TProcessor;
         auto
