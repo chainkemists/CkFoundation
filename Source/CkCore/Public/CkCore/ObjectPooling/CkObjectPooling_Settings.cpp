@@ -20,7 +20,7 @@ auto
         if (Entry.Get_ObjectClass().IsNull())
         { continue; }
 
-        // pool creation is rare and settings entries are project-authored — a sync load here is fine
+        // sync load OK — pool creation is rare
         if (Entry.Get_ObjectClass().LoadSynchronous() == InObjectClass.Get())
         { return Entry; }
     }

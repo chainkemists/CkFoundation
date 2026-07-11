@@ -364,9 +364,7 @@ namespace ck
         if (const auto WidgetComponent = InCurrent.Get_WidgetComponent().Get();
             ck::IsValid(WidgetComponent))
         {
-            // The component was pinned DestroyOnRelease so the fragment could hold a weak ptr.
-            // Release UNPINS it; then DestroyComponent does the real UE teardown. Unpin BEFORE
-            // destroy — destroy may mark the object garbage, which would fail release's validity check
+            // unpin before DestroyComponent (destroy garbage-marks the object, failing release validity)
             UCk_Utils_Object_UE::TryReleaseToPool(WidgetComponent);
             WidgetComponent->DestroyComponent();
         }
@@ -380,8 +378,7 @@ namespace ck
         {
             WrapperWidget->RemoveFromParent();
 
-            // unpin the subsystem's DestroyOnRelease hold (no destroy needed — a UUserWidget is
-            // plain-GC-collected once RemoveFromParent drops the viewport ref)
+            // unpin the subsystem hold (no destroy needed — GC collects once RemoveFromParent drops the viewport ref)
             UCk_Utils_Object_UE::TryReleaseToPool(WrapperWidget);
         }
     }

@@ -195,9 +195,7 @@ auto
         if (ck::Is_NOT_Valid(AcquiredObject))
         { return {}; }
 
-        // batch growth: TOP UP the queued extras to (GrowBatchCount - 1) through the amortized
-        // prewarm tick — never synchronously in the acquire call, and a burst of misses provisions
-        // ONE batch (top-up, not add-per-miss); clamped to capacity
+        // top up queued extras to (GrowBatchCount-1) via the prewarm tick (never synchronous)
         if (const auto ExtraGrow = Pool->_Params.Get_GrowBatchCount() - 1 - Pool->_NumPrewarmRemaining;
             ExtraGrow > 0)
         {
@@ -218,8 +216,7 @@ auto
     Pool->_HighWaterMark = FMath::Max(Pool->_HighWaterMark, Pool->_InUseObjects.Num());
     _InstanceToPool.Add(FObjectKey{AcquiredObject}, FCk_ObjectPooling_PoolKey{Pool->Get_Class(), Pool->Get_Archetype()});
 
-    // fresh instances already carry the archetype's values (NewObject template) — only a RECYCLED
-    // instance needs the reset sweep (user contract: reset ONLY after it was recycled)
+    // a fresh instance already carries the archetype (NewObject template) — only a recycled one resets
     if (WasRecycled)
     {
         DoReset_ToArchetype(AcquiredObject, Pool->Get_Archetype());
@@ -249,10 +246,7 @@ auto
 
     const auto* PoolKey = _InstanceToPool.Find(FObjectKey{InObject});
 
-    // Not tracked by this subsystem — a BENIGN no-op, not a bug. Teardown paths (EntityScript
-    // EndPlay, the component/widget EndPlay processors) call this unconditionally on objects that
-    // may never have been pooled: CDO (NotInstanced) scripts, snapshot-minted scripts, and
-    // no-world fallback creates. Returning Failed lets those callers skip the reset without a gate
+    // not tracked (CDO / snapshot-minted / non-pooled create) — benign no-op so teardown can call ungated
     if (PoolKey == nullptr)
     {
         ck::core::Verbose(TEXT("TryReleaseToPool: [{}] is not managed by the pooling subsystem — nothing to release"), InObject);
@@ -298,8 +292,7 @@ auto
     if (auto* Existing = _Pools.Find(PoolKey))
     { return Existing; }
 
-    // a project-settings entry for the class overrides the acquire-site params — it exists precisely
-    // to let a project tune pools without touching call sites or assets. Read ONCE at pool creation
+    // a project-settings entry for the class overrides the acquire-site params (read once, at creation)
     const auto EffectiveParams = [&]
     {
         auto Params = InPoolParams;
