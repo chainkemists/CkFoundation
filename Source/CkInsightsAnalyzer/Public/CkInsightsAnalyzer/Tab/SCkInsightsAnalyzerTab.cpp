@@ -1649,8 +1649,16 @@ auto
     }
 
     DoAddSummaryTile(TEXT("Trace"), FPaths::GetCleanFilename(_Session.GetFilePath()), CkStyle::Text());
-    DoAddSummaryTile(TEXT("Frames"), FormatWithCommas(_Session.GetFrameCount()), CkStyle::Text());
     DoAddSummaryTile(TEXT("Duration"), FString::Printf(TEXT("%.1fs"), _Session.GetDurationSeconds()), CkStyle::Text());
+    DoAddSummaryTile(TEXT("Game Frames"), FormatWithCommas(_Session.GetFrameCount()), CkStyle::Text());
+
+    if (const uint64 RenderFrames = _Session.GetRenderFrameCount();
+        RenderFrames > 0)
+    {
+        DoAddSummaryTile(TEXT("Render Frames"), FormatWithCommas(RenderFrames), CkStyle::Text());
+    }
+
+    DoAddSummaryTile(TEXT("Threads"), FormatWithCommas(_Session.GetThreadInfos().Num()), CkStyle::TextDim());
     DoAddSummaryTile(TEXT("Budget"), FString::Printf(TEXT("%.1fms"), TargetFrameMs), CkStyle::TextDim());
 }
 
