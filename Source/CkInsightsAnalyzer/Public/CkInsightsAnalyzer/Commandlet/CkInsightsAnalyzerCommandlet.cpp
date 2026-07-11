@@ -11,6 +11,7 @@
 
 #include "HAL/PlatformApplicationMisc.h"
 #include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -275,16 +276,22 @@ int32
         ck::insights_analyzer::Display(TEXT("{}"), Line);
     }
 
-    // Write to file if requested
+    // Write to file if requested. Relative paths resolve against the project dir — the process
+    // CWD is Binaries/Win64 by the time a commandlet runs, which is where a raw relative path
+    // would otherwise silently land.
     if (OutputPath && NOT OutputPath->IsEmpty())
     {
-        if (FFileHelper::SaveStringToFile(Report, **OutputPath, FFileHelper::EEncodingOptions::ForceUTF8))
+        const auto ResolvedOutputPath = FPaths::IsRelative(**OutputPath)
+            ? FPaths::Combine(FPaths::ProjectDir(), **OutputPath)
+            : *OutputPath;
+
+        if (FFileHelper::SaveStringToFile(Report, *ResolvedOutputPath, FFileHelper::EEncodingOptions::ForceUTF8))
         {
-            ck::insights_analyzer::Display(TEXT("Report written to: {}"), *OutputPath);
+            ck::insights_analyzer::Display(TEXT("Report written to: {}"), ResolvedOutputPath);
         }
         else
         {
-            ck::insights_analyzer::Error(TEXT("Failed to write report to: {}"), *OutputPath);
+            ck::insights_analyzer::Error(TEXT("Failed to write report to: {}"), ResolvedOutputPath);
         }
     }
 

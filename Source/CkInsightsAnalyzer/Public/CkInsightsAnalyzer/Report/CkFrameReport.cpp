@@ -266,6 +266,15 @@ auto
 
     for (int32 Iter = 0; Iter < 10; ++Iter) // max collapse depth
     {
+        // Never collapse a script-processor scope into its dispatch child: `script::<Class>` IS
+        // the attribution the tree exists to show. Without this guard, every script processor
+        // (near-zero self-time, one dominant VM child) collapses into the same anonymous
+        // "ForEachBatch" timer and dedup merges them all into one unattributable row.
+        if (GetTimerName(TimerNames, CurrentIndex).StartsWith(TEXT("script::")))
+        {
+            break;
+        }
+
         // If this timer does significant self-work, stop collapsing
         if (CurrentExcl > CurrentIncl * 0.05 && CurrentExcl > 0.3)
         {
@@ -465,7 +474,10 @@ auto
         // Use global stats for display consistency
         const double GlobalIncl = FMath::Min(
             Result.GetInclusiveMs(CC.TimerIndex), Collapsed.InclusiveMs);
-        const double GlobalExcl = Result.GetExclusiveMs(CC.TimerIndex);
+        // Clamped to the (already parent-clamped) inclusive — global exclusive can exceed this
+        // parent's slice when the timer also runs under other parents, and "6.8ms self" inside a
+        // "5.4ms incl" row reads as nonsense.
+        const double GlobalExcl = FMath::Min(Result.GetExclusiveMs(CC.TimerIndex), GlobalIncl);
         const uint32 GlobalCount = Result.GetCount(CC.TimerIndex);
 
         const auto Existing = Seen.Find(CC.TimerIndex);
@@ -499,10 +511,25 @@ auto
         Visible.Add(MoveTemp(Deduped[i]));
     }
 
+    // Reconciliation row (mirrors DoBuildTreeNode): children dropped by the threshold, the 8-child
+    // cap, or dedup otherwise read as a silent gap under the parent. Computed before the recursion
+    // so the last real child keeps a "├" glyph when the synthetic row takes the "└".
+    double ShownChildrenMs = 0.0;
+    for (const FDedupedChild& Child : Visible)
+    {
+        ShownChildrenMs += Child.InclusiveMs;
+    }
+
+    const auto ChildMap = Result.ChildrenOf.Find(Collapsed.TimerIndex);
+    const double HiddenMs = Collapsed.InclusiveMs - Collapsed.ExclusiveMs - ShownChildrenMs;
+    const int32 HiddenChildCount = ChildMap ? ChildMap->Num() - Visible.Num() : 0;
+    const bool EmitHiddenRow = HiddenChildCount > 0
+                            && HiddenMs >= FMath::Max(0.1, Collapsed.InclusiveMs * 0.02);
+
     for (int32 i = 0; i < Visible.Num(); ++i)
     {
         TMap<int32, bool> ChildIsLast = IsLastAtDepth;
-        ChildIsLast.Add(Depth + 1, i == Visible.Num() - 1);
+        ChildIsLast.Add(Depth + 1, i == Visible.Num() - 1 && NOT EmitHiddenRow);
 
         TArray<FString> ChildLines = BuildTreeLines(
             Visible[i].TimerIndex, Depth + 1,
@@ -511,6 +538,16 @@ auto
             &Visible[i].Breadcrumbs);
 
         Lines.Append(MoveTemp(ChildLines));
+    }
+
+    if (EmitHiddenRow)
+    {
+        TMap<int32, bool> RowIsLast = IsLastAtDepth;
+        RowIsLast.Add(Depth + 1, true);
+
+        Lines.Add(FString::Printf(TEXT("%s(+%d below threshold)  *%s*"),
+            *MakeTreePrefix(Depth + 1, RowIsLast), HiddenChildCount,
+            *FCk_TimerCategorizer::FormatMs(HiddenMs)));
     }
 
     return Lines;
@@ -656,7 +693,10 @@ auto
         // Use global stats for display consistency
         const double GlobalIncl = FMath::Min(
             Result.GetInclusiveMs(CC.TimerIndex), Collapsed.InclusiveMs);
-        const double GlobalExcl = Result.GetExclusiveMs(CC.TimerIndex);
+        // Clamped to the (already parent-clamped) inclusive — global exclusive can exceed this
+        // parent's slice when the timer also runs under other parents, and "6.8ms self" inside a
+        // "5.4ms incl" row reads as nonsense.
+        const double GlobalExcl = FMath::Min(Result.GetExclusiveMs(CC.TimerIndex), GlobalIncl);
         const uint32 GlobalCount = Result.GetCount(CC.TimerIndex);
 
         const auto Existing = Seen.Find(CC.TimerIndex);
@@ -697,6 +737,37 @@ auto
         if (ChildNode.IsValid())
         {
             Node->Children.Add(MoveTemp(ChildNode));
+        }
+    }
+
+    // Reconciliation row — makes the sums visibly add up (self + shown children + this row ≈
+    // inclusive). Children are dropped by the 3%/0.3ms threshold, the 8-child cap, and the
+    // sibling-subtree dedup above; without this row the dropped mass reads as a mysterious gap
+    // under the parent. Deliberately also emitted when EVERY child was pruned (the node would
+    // otherwise render as a leaf whose self-time doesn't explain its inclusive time).
+    if (const auto ChildMap = Result.ChildrenOf.Find(Collapsed.TimerIndex))
+    {
+        double ShownChildrenMs = 0.0;
+        for (const TSharedPtr<FCk_HotPathNode>& Child : Node->Children)
+        {
+            ShownChildrenMs += Child->InclusiveMs;
+        }
+
+        // Displayed child values use global (frame-wide) stats, so this remainder can go slightly
+        // negative when a child also appears under another parent — clamp via the threshold below.
+        const double HiddenMs = Node->InclusiveMs - Node->ExclusiveMs - ShownChildrenMs;
+        const int32 HiddenChildCount = ChildMap->Num() - Node->Children.Num();
+
+        if (HiddenChildCount > 0 && HiddenMs >= FMath::Max(0.1, Node->InclusiveMs * 0.02))
+        {
+            auto HiddenNode = MakeShared<FCk_HotPathNode>();
+            HiddenNode->RawName = FString::Printf(TEXT("(+%d below threshold)"), HiddenChildCount);
+            HiddenNode->DisplayName = HiddenNode->RawName;
+            HiddenNode->InclusiveMs = HiddenMs;
+            HiddenNode->ExclusiveMs = 0.0;
+            HiddenNode->Count = static_cast<uint32>(HiddenChildCount);
+            HiddenNode->bIsAggregate = true;
+            Node->Children.Add(MoveTemp(HiddenNode));
         }
     }
 
