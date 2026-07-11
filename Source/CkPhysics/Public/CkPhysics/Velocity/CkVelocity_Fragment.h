@@ -30,9 +30,6 @@ namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_Velocity_NeedsSetup);
 
-    // Per-feature restore-replication done marker — see FTag_TagSet_RestoreReplicated for the pattern
-    // (the shared ck::FTag_Snapshot_JustRestored may not be removed by any single owner-resident feature).
-    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_Velocity_RestoreReplicated);
     CK_DEFINE_ECS_TAG(FTag_VelocityChannel);
     CK_DEFINE_ECS_TAG(FTag_VelocityModifier);
     CK_DEFINE_ECS_TAG(FTag_VelocityModifier_NeedsSetup);

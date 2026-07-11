@@ -29,12 +29,6 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_MontagePlayer_MayRequireReplication);
     CK_DEFINE_ECS_TAG(FTag_MontagePlayer_HasActiveMontage);
 
-    // Per-feature restore-replication done marker. ck::FTag_Snapshot_JustRestored lives on the OWNER
-    // entity and is shared by every owner-resident feature, so no single feature may remove it —
-    // each feature pairs it with its own done tag instead. Never leaks across restores: a restore
-    // rebuilds entities from snapshot bytes and this tag is not snapshotted.
-    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_MontagePlayer_RestoreReplicated);
-
     // --------------------------------------------------------------------------------------------------------------------
 
     struct CKANIMATION_API FFragment_MontagePlayer_Params
