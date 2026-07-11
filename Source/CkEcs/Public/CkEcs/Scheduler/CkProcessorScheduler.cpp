@@ -6,6 +6,7 @@
 #include "CkProfile/Stats/CkStats.h"
 
 #include "HAL/PlatformTime.h"
+#include "ProfilingDebugging/CpuProfilerTrace.h"
 
 #if !UE_BUILD_SHIPPING
 #include "HAL/IConsoleManager.h"
@@ -122,7 +123,20 @@ auto
             }
 #endif
 
-            (*Node._Instance)->Tick(InDeltaTime);
+            {
+#if CPUPROFILERTRACE_ENABLED
+                // Per-processor Insights scope, named by the node (C++ canonical type name, or the
+                // script host's `script::<DevClass>` display name). This is what decomposes the ECS
+                // world actor's tick on the trace timeline — the stat system's per-processor cycle
+                // counters emit no trace events unless -statnamedevents is on. Near-free when the
+                // `cpu` trace channel is off (one branch); the event spec is created lazily on first
+                // traced dispatch and cached on the node.
+                constexpr auto TraceUnconditionally = true;
+                FCpuProfilerTrace::FEventScope ProcessorTraceScope{
+                    Node._TraceSpecId, Node._TraceName, TraceUnconditionally, __FILE__, __LINE__};
+#endif
+                (*Node._Instance)->Tick(InDeltaTime);
+            }
 
 #if !UE_BUILD_SHIPPING
             if (DebugTimingEnabled)
@@ -264,7 +278,17 @@ auto
             }
 #endif
 
-            const auto VisitedCount = (*Node._Instance)->Pump();
+            auto VisitedCount = int32{};
+            {
+#if CPUPROFILERTRACE_ENABLED
+                // Same per-processor scope as the main pass (shared spec id) — pump invocations show
+                // as additional instances of the processor's timer rather than a separate row.
+                constexpr auto TraceUnconditionally = true;
+                FCpuProfilerTrace::FEventScope ProcessorTraceScope{
+                    Node._TraceSpecId, Node._TraceName, TraceUnconditionally, __FILE__, __LINE__};
+#endif
+                VisitedCount = (*Node._Instance)->Pump();
+            }
 
             // A pump that provably visited zero entities cannot have produced new work — letting it
             // count as "ticked" would schedule a full extra pump pass for nothing (this is what a

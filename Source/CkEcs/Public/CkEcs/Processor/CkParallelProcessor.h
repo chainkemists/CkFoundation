@@ -151,10 +151,15 @@ namespace ck
                         Registry.template Get<T_ComponentsOnly>(Entity))...);
             };
 
+            // Named per processor so the worker-thread task scopes in Unreal Insights are attributable
+            // (the unnamed overload labels every task "ParallelFor Task"). Reuses the ` [ForEachEntity]`
+            // phase stat identity; one FString conversion per template instantiation.
+            static const auto TaskDebugName = FString{FStat_STAT_ForEachEntity::GetStatName()};
+
             if constexpr (detail::THasMinBatchSize<DerivedType>::value)
             {
                 ParallelForWithTaskContext(
-                    TEXT("TParallelProcessor"),
+                    *TaskDebugName,
                     TaskCommandBuffers,
                     _CachedEntities.Num(),
                     DerivedType::MinBatchSize,
@@ -163,10 +168,15 @@ namespace ck
             }
             else
             {
+                // Matches the unnamed overload's implicit minimum batch size.
+                constexpr auto MinBatchSize = 1;
                 ParallelForWithTaskContext(
+                    *TaskDebugName,
                     TaskCommandBuffers,
                     _CachedEntities.Num(),
-                    ParallelBody);
+                    MinBatchSize,
+                    ParallelBody,
+                    EParallelForFlags::None);
             }
 
 #if !UE_BUILD_SHIPPING
