@@ -179,6 +179,33 @@ auto
     return FString::Printf(TEXT("%ux"), Count);
 }
 
+auto
+    FCk_TimerCategorizer::
+    IsWaitTimer(const FString& TimerName)
+    -> bool
+{
+    // Names observed in real captures plus the "Waiting/Blocking" category keywords.
+    // "WaitForTask" (singular) also covers WaitForTasks and GameThreadWaitForTask.
+    static const TArray<FString> WaitKeywords = {
+        TEXT("WaitForTask"),
+        TEXT("FTaskBase::Wait"),
+        TEXT("Game thread idle time"),
+        TEXT("FAsyncTask::SyncCompletion"),
+        TEXT("TaskWorkerIsLookingForWork"),
+        TEXT("WaitUntilTasksComplete"),
+        TEXT("ParallelFor.Wait"),
+    };
+
+    for (const FString& Keyword : WaitKeywords)
+    {
+        if (TimerName.Contains(Keyword, ESearchCase::IgnoreCase))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 // Category Initialization (ported from Python CATEGORY_KEYWORDS)
 // --------------------------------------------------------------------------------------------------------------------

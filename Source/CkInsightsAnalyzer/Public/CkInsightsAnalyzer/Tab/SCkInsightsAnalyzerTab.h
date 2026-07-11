@@ -173,6 +173,7 @@ private:
     TArray<FCk_TopTimerEntry> _TopTimers;
     TArray<FCk_FrameSummary> _WorstFrames;          // persists across single-frame drills
     TArray<FCk_MultiFrameStats::FCategoryStats> _CategoryAverages;
+    TArray<FCk_WaitThreadSummary> _WaitRows;        // single-frame only
 
     // Last analysis, retained so Export JSON can regenerate without re-analyzing
     TOptional<FCk_FrameAnalysisResult> _LastSingleResult;
@@ -183,6 +184,7 @@ private:
     TSharedPtr<SVerticalBox> _TopTimerRowsBox;
     TSharedPtr<SVerticalBox> _WorstFrameRowsBox;
     TSharedPtr<SVerticalBox> _CategoryAvgRowsBox;
+    TSharedPtr<SVerticalBox> _WaitRowsBox;
 
     // Async loading state. Analysis is STARTED on the game thread (trace modules
     // like ChaosVD ensure(IsInGameThread()) in OnAnalysisBegin) and processed on
