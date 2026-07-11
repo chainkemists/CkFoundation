@@ -66,6 +66,12 @@ namespace ck::debug_feature_flags
     // All-zero when disabled or the entity has no registered features.
     CKECS_API auto Get_Flags(const FCk_Registry& InRegistry, FCk_Entity InEntity) -> uint64;
 
+    // Monotonic change counter, bumped by every sink fire (marker fragment added or
+    // removed — which includes entity spawn/destroy for flagged features). Consumers
+    // poll it O(1) to detect churn without any O(n) scan: unchanged revision at steady
+    // state = provably no membership change since the last poll. 0 when disabled.
+    CKECS_API auto Get_Revision(const FCk_Registry& InRegistry) -> uint64;
+
     template <typename T_Fragment>
     auto RegisterFlag(FName InFeatureId) -> int32
     {
@@ -100,6 +106,7 @@ namespace ck
             TArray<uint64> _Rows;
             TArray<TUniquePtr<debug_feature_flags::FBitListener>> _Listeners;
             TArray<entt::scoped_connection> _Connections;
+            uint64 _Revision = 0;
         };
 
         TSharedPtr<FImpl> _Impl;
