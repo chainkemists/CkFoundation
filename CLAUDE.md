@@ -281,6 +281,7 @@ superproject with `.claude/scripts/sync-skills.ps1`).
 | Write or run tests (AutoTest/net/C++/Gauntlet/gym) | `ck-tests-authoring-and-running` (CkTests) |
 | Expose/verify anything in AngelScript; AS breaks silently | `ck-angelscript-interop` (CkFoundation) |
 | Add a debugger view/overlay/inspector | `ck-gameplaydebugger-extension` (CkGameplayDebugger) |
+| Write or modify any Slate UI (widgets, styles, list rows, editor-viewport interaction) | `ck-slate-tools` (CkGameplayDebugger) |
 | The teardown/unbind lifecycle campaign (live defect: teardown mid-interaction, signals never fire after destroy, unbind leaks) | `ck-lifecycle-teardown-campaign` (CkFoundation) |
 | Profile/benchmark processors; perf claims | `ck-performance-and-analysis` (CkFoundation) |
 | "What should we build next" — vetted frontier | `ck-feature-frontier` (CkFoundation) |
