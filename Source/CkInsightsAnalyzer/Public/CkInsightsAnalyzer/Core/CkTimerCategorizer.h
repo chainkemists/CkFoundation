@@ -66,6 +66,13 @@ public:
     /** Format call count with separator for large numbers (e.g., "1,234x"). */
     static auto FormatCount(uint32 Count) -> FString;
 
+    /**
+     * Whether a timer name is a wait/stall scope (task waits, idle time, sync completions).
+     * Broader than the "Waiting/Blocking" category keywords — also matches wait scopes that
+     * other categories claim first (e.g. WaitUntilTasksComplete under Tick Overhead).
+     */
+    static auto IsWaitTimer(const FString& TimerName) -> bool;
+
 private:
     auto InitializeCategories() -> void;
     auto InitializeNameReplacements() -> void;

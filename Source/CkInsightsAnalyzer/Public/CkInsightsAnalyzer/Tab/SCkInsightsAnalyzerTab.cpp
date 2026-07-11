@@ -766,6 +766,7 @@ auto
     SAssignNew(_TopTimerRowsBox, SVerticalBox);
     SAssignNew(_WorstFrameRowsBox, SVerticalBox);
     SAssignNew(_CategoryAvgRowsBox, SVerticalBox);
+    SAssignNew(_WaitRowsBox, SVerticalBox);
 
     const auto MakeGatedPanel =
         [this](const FString& InHeading, const TSharedRef<SWidget>& InRowsBox, TFunction<bool()> InHasData) -> TSharedRef<SWidget>
@@ -800,6 +801,12 @@ auto
         [
             MakeGatedPanel(TEXT("Categories (exclusive time)"), _CategoryRowsBox.ToSharedRef(),
                 [this]() { return _Categories.Num() > 0; })
+        ]
+
+        + SScrollBox::Slot()
+        [
+            MakeGatedPanel(TEXT("Waits/Stalls (per thread)"), _WaitRowsBox.ToSharedRef(),
+                [this]() { return _WaitRows.Num() > 0; })
         ]
 
         + SScrollBox::Slot()
@@ -965,6 +972,107 @@ auto
                 ]
             ]
         ];
+    }
+}
+
+auto
+    SCkInsightsAnalyzerTab::
+    DoRebuildWaitRows()
+    -> void
+{
+    using namespace ck_insights_analyzer_tab;
+
+    if (ck::Is_NOT_Valid(_WaitRowsBox))
+    {
+        return;
+    }
+    _WaitRowsBox->ClearChildren();
+
+    for (const FCk_WaitThreadSummary& Wait : _WaitRows)
+    {
+        const double PctOfWall = Wait.WallMs > 0.0 ? (Wait.WaitMs / Wait.WallMs) * 100.0 : 0.0;
+
+        _WaitRowsBox->AddSlot()
+        .AutoHeight()
+        .Padding(0.0f, 1.0f)
+        [
+            SNew(SHorizontalBox)
+            + SHorizontalBox::Slot()
+            .FillWidth(1.0f)
+            .VAlign(VAlign_Center)
+            [
+                SNew(STextBlock)
+                .Text(FText::FromString(Wait.ThreadName))
+                .Font(Wait.bIsGameThread ? BodyBoldFont() : BodyFont())
+                .ColorAndOpacity(CkStyle::Text())
+            ]
+            + SHorizontalBox::Slot()
+            .AutoWidth()
+            .VAlign(VAlign_Center)
+            .Padding(CkStyle::SpaceS, 0.0f)
+            [
+                MakeProportionBar(PctOfWall, CkStyle::OverlayOf(SeverityColor(Wait.WaitMs), 0.85f), SideBarWidth)
+            ]
+            + SHorizontalBox::Slot()
+            .AutoWidth()
+            .VAlign(VAlign_Center)
+            [
+                SNew(SBox)
+                .WidthOverride(60.0f)
+                .HAlign(HAlign_Right)
+                [
+                    SNew(STextBlock)
+                    .Text(FText::FromString(FCk_TimerCategorizer::FormatMs(Wait.WaitMs)))
+                    .Font(BodyBoldFont())
+                    .ColorAndOpacity(SeverityColor(Wait.WaitMs))
+                ]
+            ]
+            + SHorizontalBox::Slot()
+            .AutoWidth()
+            .VAlign(VAlign_Center)
+            [
+                SNew(SBox)
+                .WidthOverride(44.0f)
+                .HAlign(HAlign_Right)
+                [
+                    SNew(STextBlock)
+                    .Text(FText::FromString(FString::Printf(TEXT("%.0f%%"), PctOfWall)))
+                    .Font(SmallFont())
+                    .ColorAndOpacity(CkStyle::TextMute())
+                ]
+            ]
+        ];
+
+        for (const FCk_WaitThreadSummary::FWaitScope& Top : Wait.TopWaits)
+        {
+            _WaitRowsBox->AddSlot()
+            .AutoHeight()
+            .Padding(CkStyle::SpaceM, 0.0f, 0.0f, 1.0f)
+            [
+                SNew(SHorizontalBox)
+                + SHorizontalBox::Slot()
+                .FillWidth(1.0f)
+                .VAlign(VAlign_Center)
+                [
+                    SNew(STextBlock)
+                    .Text(FText::FromString(Top.Name))
+                    .Font(SmallFont())
+                    .ColorAndOpacity(CkStyle::TextDim())
+                ]
+                + SHorizontalBox::Slot()
+                .AutoWidth()
+                .VAlign(VAlign_Center)
+                .Padding(CkStyle::SpaceS, 0.0f, 0.0f, 0.0f)
+                [
+                    SNew(STextBlock)
+                    .Text(FText::FromString(FString::Printf(TEXT("%s  %s"),
+                        *FCk_TimerCategorizer::FormatMs(Top.ExclusiveMs),
+                        *FCk_TimerCategorizer::FormatCount(Top.Count))))
+                    .Font(SmallFont())
+                    .ColorAndOpacity(CkStyle::TextMute())
+                ]
+            ];
+        }
     }
 }
 
@@ -1574,6 +1682,7 @@ auto
     _TopTimers.Reset();
     _WorstFrames.Reset();
     _CategoryAverages.Reset();
+    _WaitRows.Reset();
     _LastSingleResult.Reset();
     _LastMultiStats.Reset();
 
@@ -1582,6 +1691,7 @@ auto
     DoRebuildTopTimerRows();
     DoRebuildWorstFrameRows();
     DoRebuildCategoryAvgRows();
+    DoRebuildWaitRows();
 
     if (ck::IsValid(_SummaryBox)) { _SummaryBox->ClearChildren(); }
 }
@@ -1605,10 +1715,12 @@ auto
         _HotPathRoots.Reset();
         _Categories.Reset();
         _TopTimers.Reset();
+        _WaitRows.Reset();
         _LastSingleResult.Reset();
         if (ck::IsValid(_HotPathTree)) { _HotPathTree->RequestTreeRefresh(); }
         DoRebuildCategoryRows();
         DoRebuildTopTimerRows();
+        DoRebuildWaitRows();
         DoSetReport(TEXT(""));
         return;
     }
@@ -1634,12 +1746,16 @@ auto
         const FCk_FrameReport::FTimerNameMap TimerNames = FCk_FrameReport::BuildTimerNameMap(_Session);
         _Categories = FrameReport.ComputeCategorySummary(Result, TimerNames);
         _TopTimers = FrameReport.ComputeTopTimers(Result, TimerNames, TopTimerCount);
+
+        // ComputeWaitSummaries reads timer names internally — needs the scope above
+        _WaitRows = FCk_FrameReport::ComputeWaitSummaries(_Session, Result, Config.MinWaitMs);
     }
 
     if (ck::IsValid(_HotPathTree)) { _HotPathTree->RequestTreeRefresh(); }
     DoExpandHotPathDefaults();
     DoRebuildCategoryRows();
     DoRebuildTopTimerRows();
+    DoRebuildWaitRows();
     DoRebuildSummaryStrip_SingleFrame(Result);
 
     DoSetStatus(FString::Printf(TEXT("Frame %llu: %.2fms"), FrameIndex, Result.FrameDurationMs),
@@ -1697,6 +1813,7 @@ auto
     _HotPathRoots.Reset();
     _Categories.Reset();
     _TopTimers.Reset();
+    _WaitRows.Reset();
     _LastSingleResult.Reset();
     _LastMultiStats = Stats;      // retained for Export JSON
 
@@ -1706,6 +1823,7 @@ auto
     if (ck::IsValid(_HotPathTree)) { _HotPathTree->RequestTreeRefresh(); }
     DoRebuildCategoryRows();
     DoRebuildTopTimerRows();
+    DoRebuildWaitRows();
     DoRebuildWorstFrameRows();
     DoRebuildCategoryAvgRows();
     DoRebuildSummaryStrip_MultiFrame(Stats);

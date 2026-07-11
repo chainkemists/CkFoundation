@@ -363,6 +363,42 @@ auto
         Frame->SetArrayField(TEXT("workerThreads"), WorkerValues);
     }
 
+    // ---- Wait/stall breakdown ----
+
+    const TArray<FCk_WaitThreadSummary> Waits = FCk_FrameReport::ComputeWaitSummaries(
+        Session, Result, Config.MinWaitMs);
+
+    TArray<TSharedPtr<FJsonValue>> WaitValues;
+    for (const FCk_WaitThreadSummary& Wait : Waits)
+    {
+        TSharedPtr<FJsonObject> WaitObj = MakeShared<FJsonObject>();
+        WaitObj->SetNumberField(TEXT("id"), Wait.ThreadId);
+        WaitObj->SetStringField(TEXT("name"), Wait.ThreadName);
+        WaitObj->SetBoolField(TEXT("isGameThread"), Wait.bIsGameThread);
+        WaitObj->SetNumberField(TEXT("waitMs"), Round3(Wait.WaitMs));
+        WaitObj->SetNumberField(TEXT("wallMs"), Round3(Wait.WallMs));
+
+        TArray<TSharedPtr<FJsonValue>> TopValues;
+        for (const FCk_WaitThreadSummary::FWaitScope& Top : Wait.TopWaits)
+        {
+            TSharedPtr<FJsonObject> TopObj = MakeShared<FJsonObject>();
+            TopObj->SetStringField(TEXT("name"), Top.Name);
+            TopObj->SetNumberField(TEXT("exclusiveMs"), Round3(Top.ExclusiveMs));
+            TopObj->SetNumberField(TEXT("count"), Top.Count);
+            TopValues.Add(MakeShared<FJsonValueObject>(TopObj));
+        }
+        if (TopValues.Num() > 0)
+        {
+            WaitObj->SetArrayField(TEXT("topWaits"), TopValues);
+        }
+
+        WaitValues.Add(MakeShared<FJsonValueObject>(WaitObj));
+    }
+    if (WaitValues.Num() > 0)
+    {
+        Frame->SetArrayField(TEXT("waitBreakdown"), WaitValues);
+    }
+
     Root->SetObjectField(TEXT("singleFrame"), Frame);
     return ToJsonString(Root);
 }
