@@ -60,8 +60,14 @@ park/fixup system; hydration payloads may reference anything, they apply after t
 Header v3: new `FCk_Snapshot_HeaderV3` beside the old (FormatVersion = 3), sections: entity table / payload table /
 (oracle-only deep captures under `CK_WITH_FIDELITY_ORACLE`).
 
-### 3A.4 Flip `Transport` to `NetAndSave` for the 12 migrated features
-One-line change per Phase-1 registrar. (SM excluded until 4A.)
+### 3A.4 Save-transport coverage for all 12 rep-features
+- The 6 Phase-1-migrated features: flip `Transport` to `NetAndSave` (one line per registrar).
+- The 6 Phase-1-DEFERRED features (Team, Player, Inventory×2, RenderTarget, 2dGridOccupancy): add `Produce`
+  **WITHOUT `SeedContainer`** + `Transport = NetAndSave`. Per the [B1] participation rule, Produce-only handlers
+  are capture/oracle-only — the Model-A generic re-drive skips them, so no double-seed against their still-alive
+  restore processors. Their `Produce` recipes: emit the same RepData their per-frame `*_Replicate` pass builds
+  from live state (NOT what their restore processors reconstitute — that work is dying with Model A).
+  (SM excluded until 4A.)
 
 ### 3A.5 Request_Save v3 switch
 `UCk_Snapshot_Subsystem_UE::Request_Save`: after the existing quiescence pump (unchanged, Full scope), write BOTH

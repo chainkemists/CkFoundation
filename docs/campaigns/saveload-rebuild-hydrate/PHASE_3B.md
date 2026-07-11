@@ -76,6 +76,13 @@ CkAuto\UnrealToolbox.exe --build --test --test-pattern "Ck.Snapshot" --discover-
 CkAuto\UnrealToolbox.exe --test --test-pattern "Net" --output CkAuto\logs\p3b-net.log
 CkAuto\UnrealToolbox.exe --test --test-pattern "Ck.Attribute.Net" --output CkAuto\logs\p3b-attrnet.log
 ```
+**Known interaction to expect (from the [B1] ruling):** the six Phase-1-deferred features' `Apply` handlers are
+client-shaped (stamp-a-sync-fragment idiom; their sync processors may be ClientOnly), and under v3 their
+authoritative state partially rebuilds from recipes anyway (items are first-class recipes). If a deferred feature's
+parity spec reds here with hydration applied-but-not-drained on the authority, that is THIS known shape: annotate
+it against the feature and record it in Blockers as a Phase-4B work item (RenderTarget already is one) — do not
+invent an authority-side sync drain ad hoc.
+
 **Decision gate:** every red must be either (a) an expected-casualty you rewrote, or (b) in the oracle allowlist.
 A red Parity spec = a hydration coverage/ordering bug — diagnose via the oracle diff lines for that feature before
 touching code; if the diff implicates a feature not in this phase's scope → allowlist ONLY if it matches N1's

@@ -21,11 +21,12 @@ Run VALIDATION.md's full protocol at the end of this phase — it is the campaig
 ### 5.2 Delete the dead shipping-path machinery
 In this order, compiling between clusters:
 1. `UCk_Snapshot_SaveGame::_SnapshotBytes` (Model-A section) + the dual-write in `Request_Save` (v3-only saves now).
-2. `FTag_Snapshot_JustRestored` + `CkSnapshot_RestoreMarker.h` + the `Persistence_ReDriveOnRestore` keying on it →
-   re-key the re-drive on the v3 load path's own marker: the Rebuilding phase stamps nothing anymore — the re-drive
-   became redundant the moment loads rebuild through normal spawn (normal Add seeds containers). DELETE
-   `FProcessor_Persistence_ReDriveOnRestore` + `FFragment_Persistence_ReDrivePending` entirely. (`Produce` stays —
-   save capture + oracle use it.)
+2. `FTag_Snapshot_JustRestored` + `CkSnapshot_RestoreMarker.h` + everything still keying on it — all inert since
+   Phase 3B (v3 loads never stamp it): DELETE `FProcessor_Persistence_ReDriveOnRestore` +
+   `FFragment_Persistence_ReDrivePending` AND the six Phase-1-deferred restore processors + their done-tags
+   (Team, Player, Inventory Spatial + DataOnly, RenderTarget, 2dGridOccupancy — the [B1] deferral lands here),
+   plus CkGrid's `FProcessor_2dGridSystem_RestoreRecompose` if nothing else references it (verify by grep first).
+   (`Produce` stays everywhere — save capture + oracle use it.)
 3. The Camera adopt-or-add blocks (`CkCamera_Utils.cpp:336-410` — restore `AddFloat/AddRange/AddVector/AddRotator/
    AddInt` to plain Adds; the restored-record collision they defended against cannot occur under v3), the Transform
    `_Previous` re-seed branch (`CkTransform_Utils.cpp:97-108` — revert to the pre-`15434d8ef` shape), and

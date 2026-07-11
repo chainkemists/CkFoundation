@@ -1,10 +1,28 @@
 # PHASE 1 — Unify the handler registry: `Produce`/`SeedContainer`, one re-drive processor, local hydration queue
 
-Behavior-neutral under Model A. The 12 per-feature `*_ReplicateOnRestore` processors (16 registrations) and their
-9 done-tags are deleted, replaced by ONE framework processor driven by the registry.
+> **REVISED 2026-07-11 after blocker [B1]** (see `PHASE_1_RESEARCH.md` + PROGRESS.md). Ruling: **migrate the 6
+> clean features only** (Velocity, Acceleration, Attribute×5, TagSet, MontagePlayer, AnimPlan — 10 of the 16
+> registrations); **DEFER 6** (Team, Player, Inventory Spatial, Inventory DataOnly, RenderTarget, 2dGridOccupancy)
+> whose restore processors also do non-container reconstitution (child re-replication, grid re-stamp, RT
+> re-create/repaint, unconditional tag re-derive). The deferred processors stay **VERBATIM — do not touch them**:
+> that work is Model-A repair which Model B retires structurally (items→recipes, grids→Construct, RT→Construct +
+> Phase-4B re-author, Team/Player tags→normal Assign in hydration Apply). They go inert at Phase 3B (v3 loads never
+> stamp `FTag_Snapshot_JustRestored`) and are deleted in Phase 5. Do NOT build a `Reconstitute` hook and do NOT
+> slim the deferred processors — both rejected (dead-end surface / churn without end-state value).
+> **Participation rule (encode in the FHandler comment):** `SeedContainer` present ⇒ handler participates in the
+> Model-A generic re-drive; `Produce` WITHOUT `SeedContainer` ⇒ capture/oracle-only (this is how the deferred 6
+> gain `Produce` at Phase 3A without double-seeding against their still-alive restore processors).
+
+Behavior-neutral under Model A: 10 of 16 `*_ReplicateOnRestore` registrations and the migrated features' done-tags
+are deleted, replaced by ONE framework processor driven by the registry.
+
+**Implementation source of truth for the migrations: the per-feature recipe table in `PHASE_1_RESEARCH.md`**
+(Produce reads, SeedContainer extras — owner-hosted containers, upsert-merge for attributes, `MayRequireReplication`
+re-arms, AnimPlan's SET-but-empty payload). Where this doc and the research table disagree on a feature detail,
+the research table wins (it is code-verified).
 
 ## Entry criteria
-- PROGRESS.md shows Phase 0 done; `git log --oneline -4` shows the Phase-0 commits.
+- PROGRESS.md shows Phase 0 done and [B1] RESOLVED; `git log --oneline -6` shows the Phase-0 commits + `5a6baf5a9`.
 - Baseline table exists in PROGRESS.md. Re-run `--test --test-pattern "Ck.Snapshot"` → matches it. Else STOP.
 
 ## Steps
@@ -41,31 +59,24 @@ static auto
 RegisterLazyTyped(
     FHandler InHandler) -> void;
 ```
-Implementation: wrap `InHandler`, set `SeedContainer = [](FCk_Handle& E, const FInstancedStruct& D) {
-return UCk_Utils_Net_UE::TryAddContainerFragment<T_RepData>(E, D.Get<T_RepData>()); }`, resolver
-`[]{ return T_RepData::StaticStruct(); }`, forward to `RegisterLazy`. (Captureless lambdas; fence 1/2 in PROMPT.)
-NOTE: `CkNet_Utils.h` is includable from this header's .cpp only — put the template body in an `.inl` or make it a
-thin declaration whose body lives where `TryAddContainerFragment` is visible; follow whichever the neighboring code
-supports with the LEAST new include surface, record the choice in PROGRESS.md.
+Implementation + include surface: **re-apply the reverted §1.1 design verbatim from `PHASE_1_RESEARCH.md`'s last
+section** (it is blessed): `RegisterLazyTyped<T>` body in a new `CkReplicatedFragmentContainer.inl.h` included at
+the very bottom of `CkNet_Utils.h` (both the registry class and `TryAddContainerFragment` complete there; feature
+registrars already include `CkNet_Utils.h` → zero new include surface). Body synthesizes the default captureless
+typed seed only when the registrar supplied no custom `SeedContainer`, then forwards to `RegisterLazy`.
 
-### 1.2 Migrate the 12 features' registrars to `RegisterLazyTyped` + add `Produce`
-For each feature below, in its `_Fragment.cpp` registrar: switch `RegisterLazy` → `RegisterLazyTyped<RepData>`,
-add a `Produce` that mirrors what its `*_ReplicateOnRestore` processor built (read that processor FIRST — it names
-exactly which Current state seeds the payload), leave `Apply` untouched.
+### 1.2 Migrate the SIX clean features' registrars to `RegisterLazyTyped` + add `Produce`
+For each, in its `_Fragment.cpp` registrar: switch `RegisterLazy` → `RegisterLazyTyped<RepData>`, add `Produce` +
+(where the research table says so) a custom `SeedContainer` lambda, leave `Apply` untouched. **Follow the
+`PHASE_1_RESEARCH.md` recipe table row-by-row** — it carries the code-verified details (owner-hosted containers
+for attributes/AnimPlan, upsert-merge keyed by (name,component), re-arm tags, AnimPlan's empty-payload seed).
 
-| Feature | Registrar file | ReplicateOnRestore to mirror-then-delete |
-|---|---|---|
-| Velocity | `CkPhysics/.../Velocity/CkVelocity_Fragment.cpp` | `CkVelocity_Processor.h:241` + `.cpp:337-372` |
-| Acceleration | `CkPhysics/.../Acceleration/CkAcceleration_Fragment.cpp` | `CkAcceleration_Processor.h:216` + `.cpp:~285` |
-| Team | `CkRelationship/.../Team/CkTeam_Fragment.cpp` | `CkTeam_...:71` |
-| Player | `CkRelationship/.../Player/CkPlayer_Fragment.cpp` | `...:25` |
-| Float/Integer/Byte/Vector/Rotator Attribute | `CkAttribute/.../<Kind>Attribute/Ck<Kind>Attribute_Fragment.cpp` | `CkAttribute_ReplicateOnRestore.h` (one template, 5 instantiations) |
-| TagSet | `CkTagSet/CkTagSet_Fragment.cpp` | `CkTagSet_Processor.cpp:137-160` |
-| MontagePlayer / AnimPlan | `CkAnimation/...` | headers `:121` / `:92` |
-| Inventory Spatial / DataOnly | `CkInventory/...` | `:89` / `:75` |
-| RenderTarget | `CkRenderTarget/Net/CkRenderTarget_Replication.cpp` | `:81` — **special: its payload is the authored batch ring; Produce emits the persisted AuthoredLog-derived RepData exactly as its restore pass builds it (`CkRenderTarget_Processor.cpp:459-503`)** |
-| 2dGridOccupancy | `CkGrid/.../Occupancy/Ck2dGridOccupancy_Fragment.cpp` | `:82` |
-| StateMachine | **SKIP** — `FProcessor_Sm_RestoreRedrive` is a control-flow replay, not a rep-seed. It stays until Phase 4A. Do not touch. |
+Migrate: **Velocity, Acceleration, FloatAttribute+IntegerAttribute+ByteAttribute+VectorAttribute+RotatorAttribute
+(5 registrar files, shared recipe), TagSet, MontagePlayer, AnimPlan** — 10 registrar files.
+
+Do NOT touch (deferred — see the header ruling): **Team, Player, Inventory Spatial, Inventory DataOnly,
+RenderTarget, 2dGridOccupancy** (their registrars keep plain `RegisterLazy`; their restore processors stay).
+StateMachine: **SKIP** as before (`FProcessor_Sm_RestoreRedrive` is control-flow replay; Phase 4A).
 
 ### 1.3 ONE framework re-drive processor
 New: `Source/CkEcs/Public/CkEcs/Net/ReplicatedFragmentContainer/CkPersistence_ReDrive_Processor.h/.cpp`.
@@ -81,17 +92,23 @@ class CKECS_API FProcessor_Persistence_ReDriveOnRestore : public ck::TProcessor<
 ```
 Fragment (same header): `struct FFragment_Persistence_ReDrivePending { TArray<TWeakObjectPtr<const UScriptStruct>> _Remaining; float _PendingForSeconds = 0; }`.
 Flow per entity: first sight of `FTag_Snapshot_JustRestored` + `UCk_Utils_EntityReplicationDriver_UE::Has` →
-populate `_Remaining` from all registered handlers with `Produce` → each tick: for each remaining type, `Produce`;
-unset → drop from remaining (feature absent on this entity); set → `SeedContainer`; `NotAdded` → keep, accumulate
-timeout (CK_ENSURE + drop when exceeded); on empty → remove fragment. Do NOT remove `FTag_Snapshot_JustRestored`
-(multi-consumer until Phase 4A; the pending-fragment IS this processor's done-marker).
-Registrar `CK_REGISTER_PROCESSOR` in the .cpp.
+populate `_Remaining` from all registered handlers having **BOTH `Produce` AND `SeedContainer`** (the participation
+rule — Produce-only handlers are capture/oracle-only and must never be re-driven) → each tick: for each remaining
+type, `Produce`; UNSET → drop from remaining (feature absent on this entity; note: a SET-but-empty payload — the
+AnimPlan case — is seeded, not dropped); SET → `SeedContainer`; `NotAdded` → keep, accumulate timeout (CK_ENSURE +
+drop when exceeded); on empty → remove fragment. Do NOT remove `FTag_Snapshot_JustRestored` (multi-consumer — the
+6 deferred restore processors and Phase-4A SM still key on it; the pending-fragment IS this processor's
+done-marker). Registrar `CK_REGISTER_PROCESSOR` in the .cpp.
 
-### 1.4 Delete the 12 features' restore machinery
-Delete each `*_ReplicateOnRestore` processor class + its `CK_REGISTER_PROCESSOR` + its `FTag_*_RestoreReplicated` /
-`FTag_*_RestoreRedriven` done-tag (StateMachine's excluded). Verification:
-`rg --no-ignore -n "ReplicateOnRestore|RestoreReplicated" Plugins/CkFoundation/Source` → expected remaining hits:
-StateMachine's redrive only + any comment references you consciously updated. Anything else → you missed one.
+### 1.4 Delete the SIX migrated features' restore machinery
+Delete each migrated feature's `*_ReplicateOnRestore` processor class + `CK_REGISTER_PROCESSOR` + done-tag, per the
+research table's Delete column (incl. the shared `CkAttribute_ReplicateOnRestore.h` template + its 5 registrations
++ shared `FTag_Attribute_RestoreReplicated`). **Relocation note:** nothing from the deleted 6 needs relocating
+(Team/Player's `DoRestore*IDTag` helpers belong to DEFERRED processors — untouched). Verification:
+`rg --no-ignore -l "ReplicateOnRestore|RestoreReplicated|RestoreRedriven" Plugins/CkFoundation/Source` → expected
+remaining files: CkStateMachine (redrive), CkTeam/CkPlayer (CkRelationship), CkInventory Spatial + DataOnly,
+CkRenderTarget, CkGrid Occupancy — and NOTHING from Velocity/Acceleration/Attribute/TagSet/Montage/AnimPlan.
+More or fewer files → you deleted the wrong set → STOP before committing.
 
 ### 1.5 Local hydration queue + its own dispatch processor (dormant until Phase 3B)
 New fragment beside the container types: `struct FFragment_PendingHydration { TArray<FInstancedStruct> _Entries;
@@ -118,24 +135,29 @@ mutate one attribute value between two captures → diff reports exactly one lin
 CkAuto\UnrealToolbox.exe --build --test --test-pattern "Ck.Snapshot" --discover-fresh --output CkAuto\logs\p1-snapshot.log
 CkAuto\UnrealToolbox.exe --test --test-pattern "Net" --output CkAuto\logs\p1-net.log
 ```
-**Decision gate:** the 11 `Ck.Snapshot.Parity.*_MPReload` specs are THE proof the generic re-drive equals the 12
-deleted processors (they assert restored values reach clients). Expected: all green, full delta-zero vs baseline,
-+2 new oracle tests green. One or more Parity specs red → your `Produce` for that feature diverges from what its
-old restore processor seeded — re-read that processor's body (it is still in git history), fix Produce ONLY. Red
-elsewhere → STOP → Blockers.
+**Decision gate:** all 11 `Ck.Snapshot.Parity.*_MPReload` specs green + full delta-zero vs baseline (incl. the one
+pre-existing `Net` red by name) + 2 new oracle tests green. Proof mapping: the MIGRATED features are proven by
+`Parity.Acceleration/AnimPlan/Attributes/TagSet_MPReload` plus `Ck.Snapshot.MontagePlayer.StateRoundTrip` and the
+velocity/physics round-trip coverage; the DEFERRED features' specs (`Parity.TeamPlayer/InventorySpatial/
+InventoryDataOnly/RenderTarget/GridPlacements_MPReload`) must be green via their UNTOUCHED processors — if one of
+those goes red you touched something the ruling said not to. A migrated feature's parity spec red → your `Produce`/
+`SeedContainer` diverges from the research recipe — fix against the recipe ONLY. Red elsewhere → STOP → Blockers.
 
 Commits: (CkFoundation) `feat(CkEcs): Produce/SeedContainer persistence contract + generic restore re-drive`;
-`refactor(12 modules): delete per-feature ReplicateOnRestore processors + done-tags` (may be one commit per module
-if cleaner); (CkTests) `test(CkSnapshot): oracle Produce-diff baseline`.
+`refactor(CkPhysics,CkAttribute,CkTagSet,CkAnimation): delete migrated ReplicateOnRestore processors + done-tags`;
+(CkTests) `test(CkSnapshot): oracle Produce-diff baseline`.
 
 ## Exit criteria
-- `rg -c "RegisterLazyTyped" Source` ≥ 12 registrar files (CkFoundation).
-- `rg --no-ignore -l "ReplicateOnRestore" Source` → only CkStateMachine (+ this campaign's docs).
-- All 11 Parity specs named green in the log; delta-zero; PROGRESS updated.
+- `rg --no-ignore -l "RegisterLazyTyped" Source` → exactly the 10 migrated registrar files (+ the registry
+  header/.inl.h).
+- `rg --no-ignore -l "ReplicateOnRestore|RestoreReplicated|RestoreRedriven" Source` → exactly the 7 deferred/SM
+  files named in §1.4 — no attribute/velocity/acceleration/tagset/montage/animplan hits.
+- All 11 Parity specs named green in the log; delta-zero; PROGRESS updated ([B1] marked resolved-and-executed).
 
 ## Fences
 - Do NOT flip any handler's `Transport` to Save yet.
-- Do NOT touch StateMachine's redrive (Phase 4A) or the dispatcher's GROUP (Phase 2).
+- Do NOT touch StateMachine's redrive (Phase 4A), the 6 deferred features' restore processors/registrars (Phase
+  3A adds their Produce; Phase 5 deletes their processors), or the dispatcher's GROUP (Phase 2).
 - **`Produce` is READ-ONLY by contract** (state it in the FHandler comment). Feature-side work that must accompany
   a re-seed — e.g. the attribute template's `FTag_MayRequireReplication` re-arms
   (`CkAttribute_ReplicateOnRestore.h:90-98`) — belongs in that feature's registrar-supplied `SeedContainer` lambda

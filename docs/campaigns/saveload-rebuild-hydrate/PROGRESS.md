@@ -8,7 +8,7 @@
 | Phase | Doc | Status | Session date | Commits (repo: hash) | Gate result |
 |---|---|---|---|---|---|
 | 0 | PHASE_0.md | DONE | 2026-07-11 | CkF: 68ba192dc (dt==0), 55521d493 (oracle), <docs> (this); CkTests: 14d65ac (harness) | GREEN: Ck.Snapshot 47/47/0 (46 baseline + Oracle.StructuralBaseline), Ck.Attribute.Net 17/17/0, Net 102/101/1 (baseline red only) |
-| 1 | PHASE_1.md | BLOCKED | 2026-07-11 | (none — 1.1 scaffolding reverted) | STOPPED on divergence [B1]; research committed (PHASE_1_RESEARCH.md) |
+| 1 | PHASE_1.md | READY ([B1] RESOLVED — see Decisions [P1-R1]; PHASE_1.md revised) | 2026-07-11 | (none — 1.1 scaffolding reverted, re-apply per research doc) | pending re-execution |
 | 2 | PHASE_2.md | NOT STARTED | | | |
 | 3A | PHASE_3A.md | NOT STARTED | | | |
 | 3B | PHASE_3B.md | NOT STARTED | | | |
@@ -68,8 +68,25 @@ Load-time baseline (Phase 3B, representative fixture): ___ ms.
   storage types are keyed by their entt type-hash (hex) to avoid the non-null-terminated `string_view`→`FString`
   hazard; registered types use their clean `_DisplayName`.
 
+## Decisions — planner rulings
+
+- **[P1-R1] (2026-07-11, planning session — resolves [B1]): option (c), refined to a 6/6 split.** Phase 1 migrates
+  ONLY the clean six (Velocity, Acceleration, Attribute×5, TagSet, MontagePlayer, AnimPlan — 10/16 registrations);
+  Team + Player join the DEFERRED set alongside Inventory×2, RenderTarget, 2dGridOccupancy (their unconditional
+  `FTag_TeamID/PlayerID` re-derive is the same non-container-reconstitution class, just smaller — the research
+  table's own "UNCONDITIONALLY, pre-driver-gate" note contradicts a driver-gated SeedContainer home). Deferred
+  processors stay VERBATIM: their repair work is Model-A-only and Model B retires it structurally (items→recipes,
+  grids→Construct, RT→Construct+Phase-4B re-author, Team/Player tags→normal Assign in hydration Apply); they go
+  inert at 3B (v3 never stamps JustRestored) and are deleted in Phase 5. Options (a) slimming and (b) a
+  `Reconstitute` hook are REJECTED: churn without end-state value / framework surface that Phase 3B makes dead.
+  New participation rule (encoded in PHASE_1.md + PHASE_3A.md §3A.4): `SeedContainer` present ⇒ handler joins the
+  Model-A re-drive; `Produce`-without-`SeedContainer` ⇒ capture/oracle-only (how the deferred six gain Produce at
+  3A with zero double-seed risk). The research doc's §1.1 `.inl.h`-at-bottom-of-CkNet_Utils.h include decision is
+  BLESSED — re-apply verbatim. PHASE_1/3A/3B/5 docs revised accordingly (same commit as this entry).
+
 ## Blockers
 
+- **[B1] — RESOLVED 2026-07-11 by [P1-R1] above.** Original text kept below for the record.
 - **[B1] (2026-07-11, Phase 1) — Plan's "12 ReplicateOnRestore = deletable container re-seeds" is false for 4
   features; where their non-container reconstitution goes is an unmade architecture decision.** REQUIRES a design
   ruling before Phase 1 can proceed (executor may not improvise architecture — PROMPT line 5).
