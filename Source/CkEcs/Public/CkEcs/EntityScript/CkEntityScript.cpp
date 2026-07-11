@@ -158,4 +158,12 @@ auto
     return _Replication;
 }
 
+auto
+    UCk_EntityScript_UE::
+    Get_IsSnapshotRespawnable() const
+    -> bool
+{
+    return false;
+}
+
 // -----------------------------------------------------------------------------------------------------------

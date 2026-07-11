@@ -138,19 +138,27 @@ auto
 
 auto
     UCk_EcsWorld_Subsystem_UE::
-    Get_IsReconstitutionInProgress() const
-    -> bool
+    Get_ReconstitutionPhase() const
+    -> ECk_ReconstitutionPhase
 {
-    return _ReconstitutionInProgress;
+    return _ReconstitutionPhase;
 }
 
 auto
     UCk_EcsWorld_Subsystem_UE::
-    Set_ReconstitutionInProgress(
-        bool InInProgress)
+    Set_ReconstitutionPhase(
+        ECk_ReconstitutionPhase InPhase)
     -> void
 {
-    _ReconstitutionInProgress = InInProgress;
+    _ReconstitutionPhase = InPhase;
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    Get_IsReconstitutionInProgress() const
+    -> bool
+{
+    return _ReconstitutionPhase != ECk_ReconstitutionPhase::None;
 }
 
 auto
