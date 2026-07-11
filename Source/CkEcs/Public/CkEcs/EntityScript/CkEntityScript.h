@@ -121,7 +121,7 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
         Category = "Ck|EntityScript",
         meta=(AllowPrivateAccess, InvalidEnumValues = "NotInstanced"))
-    ECk_EntityScript_InstancingPolicy _InstancingPolicy = ECk_EntityScript_InstancingPolicy::InstancedPerEntity;
+    ECk_EntityScript_InstancingPolicy _InstancingPolicy = ECk_EntityScript_InstancingPolicy::InstancedPerEntity_Poolable;
 
     // pool config for InstancedPerEntity_Poolable (ignored otherwise); a per-class project setting overrides it
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
