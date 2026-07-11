@@ -4,6 +4,8 @@
 
 #include "CkIskm_BatchedClusterComponent.h" // for UCk_Iskm_BatchedClusterComponent::FInstance
 
+#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h" // FCk_Handle_Transform / FCk_Handle (member cosmetics + controller entity)
+
 #include "CkIskm_BatchedCrowd_Actor.generated.h"
 
 class UCk_IskmAnimCollection_Data;
@@ -103,7 +105,7 @@ public:
     // ---- Entity outline (member-indexed — batched members are not entities; see CkUsf/DESIGN_EntityOutlines.md) ----
     //
     // Mechanism: one custom-depth-only "highlight cluster" per (crowd, preset) at the world origin, holding
-    // copies of the outlined members' instances; the manager tick pushes their live transforms/anim frames
+    // copies of the outlined members' instances; AdvanceAnimation pushes their live transforms/anim frames
     // so the outline tracks the GPU-skinned pose. Hidden members (Plan-1 flip stand-ins) are excluded —
     // outline the stand-in proxy via the entity API instead.
 
@@ -116,8 +118,26 @@ public:
     int32      Get_OutlineRenderedInstanceCount() const;
 
     //~ AActor
-    virtual void Tick(float InDeltaTime) override;
     virtual void EndPlay(const EEndPlayReason::Type InEndPlayReason) override;
+
+    // ---- inc-4 §4: ECS-clock advance (the actor no longer self-ticks) ----
+
+    // Advance every member's animation time/frame and push dirty tiles, then push the outline groups
+    // (AdvanceAnimation replaces AActor::Tick — see the constructor's bCanEverTick = false). Driven once
+    // per frame by FProcessor_IskmCrowd_Advance (FGroup_Transform_Finalize) so member render, far-cosmetic
+    // placement, and the entity-outline highlight clusters all resolve on the SAME ECS clock.
+    void       AdvanceAnimation(float InDeltaTime);
+
+    // Place every registered member cosmetic at its baked socket for the member's CURRENT frame, via an
+    // immediate transform write — lockstep with the member PushTile that AdvanceAnimation just did.
+    void       DriveCosmetics();
+
+    // A cosmetic ISM entity rides InIndex's baked socket while its member is far. Replace-if-same-entity
+    // (idempotent re-register). InRelOffset is the cosmetic's offset from the socket transform.
+    void       Register_MemberCosmetic(int32 InIndex, const FCk_Handle_Transform& InCosmetic, FName InSocket, const FTransform& InRelOffset);
+
+    // Drop all cosmetics registered to InIndex (promote / hide / slot release). Idempotent.
+    void       Clear_MemberCosmetics(int32 InIndex);
 
 private:
     struct FMember
@@ -126,6 +146,14 @@ private:
         FIntPoint  Tile = FIntPoint(0, 0);
         UCk_Iskm_BatchedClusterComponent::FInstance Inst;
         bool       Visible = true;
+    };
+
+    // inc-4 §4: a cosmetic ISM entity following a member's baked socket while the member is far.
+    struct FMemberCosmetic
+    {
+        FCk_Handle_Transform Cosmetic;
+        FName                Socket    = NAME_None;
+        FTransform           RelOffset = FTransform::Identity;
     };
 
     FIntPoint TileCoordOf(const FVector& InWorldLocation) const;
@@ -183,4 +211,12 @@ private:
 
     TMap<TWeakObjectPtr<UCkUsf_OutlinePreset>, FOutlineGroup> _OutlineGroups;
     TMap<int32, TWeakObjectPtr<UCkUsf_OutlinePreset>> _MemberOutlines;
+
+    // inc-4 §4: member index -> cosmetics riding its socket while far. Non-UPROPERTY (ECS handles are
+    // value handles into the registry, not GC-tracked — matches _Members).
+    TMap<int32, TArray<FMemberCosmetic>> _MemberCosmetics;
+
+    // This crowd's ECS presence — FProcessor_IskmCrowd_Advance iterates it to drive AdvanceAnimation +
+    // DriveCosmetics on the ECS clock. Created in Initialize(); cleared with the world.
+    FCk_Handle _ControllerEntity;
 };

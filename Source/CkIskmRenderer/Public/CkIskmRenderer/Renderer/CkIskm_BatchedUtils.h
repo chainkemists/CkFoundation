@@ -4,6 +4,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h" // FCk_Handle_Transform (cosmetic registration)
+
 #include "CkIskm_BatchedUtils.generated.h"
 
 class UCk_IskmAnimCollection_Data;
@@ -178,6 +180,21 @@ public:
         DisplayName = "[Ck][IskmBatched] TryGet Crowd Member Socket Transform")
     static bool
     TryGet_CrowdMemberSocketTransform(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, FName InSocket, FTransform& OutWorld);
+
+    // inc-4 §4: register a cosmetic entity to ride a member's baked socket while the member is far. The
+    // crowd places it every frame from its own FGroup_Transform_Finalize advance (lockstep with the
+    // member). Replace-if-same-entity. Call on the far transition; pair with Clear on promote/hide/release.
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Register Crowd Member Cosmetic")
+    static void
+    Register_CrowdMemberCosmetic(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, FCk_Handle_Transform InCosmetic, FName InSocket, const FTransform& InRelOffset);
+
+    // inc-4 §4: stop the crowd driving InIndex's cosmetics (promote hands them to the SKMC follower;
+    // hide parks them; slot release recycles the member). Idempotent.
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Clear Crowd Member Cosmetics")
+    static void
+    Clear_CrowdMemberCosmetics(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex);
 
     // Default CustomPrimitiveData floats for every tile component (existing and future). CPD-parameterized
     // materials (e.g. CharacterMaster skin color at CPD 0/1/2) read zeros on batched tiles otherwise — the
