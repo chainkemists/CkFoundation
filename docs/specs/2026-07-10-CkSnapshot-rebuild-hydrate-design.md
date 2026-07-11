@@ -52,8 +52,11 @@ implicit rule of the form *"if fragment X exists, then Y also happened"* (an act
 transient sibling fragment added, a record connected, a replication container seeded) becomes a restore bug that some
 feature author must discover and patch by hand. Measured surface today:
 
-- **119** `CK_REGISTER_SNAPSHOTABLE` sites across 18 modules (61 in CkAttribute alone), each with the file-scope
-  alias hoist and the Tier-A/B/C serialize choice.
+- **127** `CK_REGISTER_SNAPSHOTABLE` sites across 20 modules (61 in CkAttribute alone), each with the file-scope
+  alias hoist and the Tier-A/B/C serialize choice. *(Census re-derived invocation-only 2026-07-11, Phase 0 §0.2:
+  was "119 / 18 modules"; the 20 modules are CkAnimation, CkAttribute, CkDynamic, CkEcs, CkEcsExt,
+  CkEntityCollection, CkEntityTag, CkGrid, CkInteraction, CkInventory, CkLabel, CkObjective, CkPhysics,
+  CkRelationship, CkRenderTarget, CkSnapshot, CkSpatialQuery, CkStateMachine, CkTagSet, CkTimer.)*
 - **12 features × ~16 registered hand-copied `*_ReplicateOnRestore`/`*_RestoreRedrive` processors** + 9 per-feature
   transient done-tags, all instances of one skeleton — and
   [CkSnapshot_RestoreMarker.h:17-19](../../Source/CkEcs/Public/CkEcs/Snapshot/CkSnapshot_RestoreMarker.h) documents that **every future
@@ -289,7 +292,7 @@ frames; the Camera adopt-or-add blocks, the Transform `_Previous` re-seed, the p
 suppression machinery is unnecessary because under Model B the normal spawn path **is** the creator — there is no
 restored image for it to duplicate.
 
-**Params coverage** **[V4]**: no `*_Params` replicates via containers (confirmed census, 24 RepData structs — all
+**Params coverage** **[V4]**: no `*_Params` replicates via containers (confirmed census, 23 RepData structs — all
 state-shaped), and Params normally regenerate from the recipe. But **8 features mutate Params post-construction
 without replicating** (2dGridCell tags, Goap/AStar budgets, Timer re-Add, Substep, WorldSpaceWidget config,
 CameraLayer post-create config, Pmg text, MontagePlayer rebind). On a rebuilt **server** those mutations would
