@@ -333,13 +333,38 @@ namespace camera_materialize_detail
     static constexpr ECk_MinMaxCurrent Min     = ECk_MinMaxCurrent::Min;
     static constexpr ECk_MinMaxCurrent Max     = ECk_MinMaxCurrent::Max;
 
+    // ADOPT-OR-ADD. The tuner attributes are generic CkAttribute children on the owner — snapshotable, connected
+    // through the owner's ROUNDTRIP RecordOf*Attributes — so after a CkSnapshot restore they come back on the
+    // restored entity, and a fresh Add would collide with the restored record entry (DisallowDuplicateNames
+    // ensure, one per Camera.* label). Adopt the restored child instead, re-seating the PROFILE's base/bounds via
+    // Request_Override: the profile is the authored source of truth (a designer retune must beat a stale save),
+    // and any runtime deviation (e.g. the orientation-yaw fences) is re-established by whoever owns it after
+    // possession. On a fresh boot TryGet misses (or the owner has no record yet) and the Add path runs as before.
+    // Stale attribute MODIFIERS from layers active at save time do NOT reconnect — the record-of-modifiers is
+    // FSnapshotPolicy_Transient (CkAttribute_Fragment.h) — so an adopted attribute's final value is its base.
+
     static auto AddFloat(FCk_Handle& InOwner, const FGameplayTag& InTag, float InBase) -> FCk_Handle_FloatAttribute
     {
+        if (auto Existing = UCk_Utils_FloatAttribute_UE::TryGet(InOwner, InTag);
+            ck::IsValid(Existing))
+        {
+            UCk_Utils_FloatAttribute_UE::Request_Override(Existing, InBase, Current);
+            return Existing;
+        }
+
         return UCk_Utils_FloatAttribute_UE::Add(InOwner, FCk_Fragment_FloatAttribute_ParamsData{InTag, InBase}, NoRep);
     }
 
     static auto AddRange(FCk_Handle& InOwner, const FGameplayTag& InTag, const FCk_FloatRange& InRange) -> FCk_Handle_FloatAttribute
     {
+        if (auto Existing = UCk_Utils_FloatAttribute_UE::TryGet(InOwner, InTag);
+            ck::IsValid(Existing))
+        {
+            UCk_Utils_FloatAttribute_UE::Request_Override(Existing, static_cast<float>(InRange.Get_Min()), Min);
+            UCk_Utils_FloatAttribute_UE::Request_Override(Existing, static_cast<float>(InRange.Get_Max()), Max);
+            return Existing;
+        }
+
         auto Params = FCk_Fragment_FloatAttribute_ParamsData{InTag, 0.0f};
         Params.Set_MinMax(ECk_MinMax::MinMax);
         Params.Set_MinValue(static_cast<float>(InRange.Get_Min()));
@@ -349,16 +374,37 @@ namespace camera_materialize_detail
 
     static auto AddVector(FCk_Handle& InOwner, const FGameplayTag& InTag, const FVector& InBase) -> FCk_Handle_VectorAttribute
     {
+        if (auto Existing = UCk_Utils_VectorAttribute_UE::TryGet(InOwner, InTag);
+            ck::IsValid(Existing))
+        {
+            UCk_Utils_VectorAttribute_UE::Request_Override(Existing, InBase, Current);
+            return Existing;
+        }
+
         return UCk_Utils_VectorAttribute_UE::Add(InOwner, FCk_Fragment_VectorAttribute_ParamsData{InTag, InBase}, NoRep);
     }
 
     static auto AddRotator(FCk_Handle& InOwner, const FGameplayTag& InTag, const FRotator& InBase) -> FCk_Handle_RotatorAttribute
     {
+        if (auto Existing = UCk_Utils_RotatorAttribute_UE::TryGet(InOwner, InTag);
+            ck::IsValid(Existing))
+        {
+            UCk_Utils_RotatorAttribute_UE::Request_Override(Existing, InBase, Current);
+            return Existing;
+        }
+
         return UCk_Utils_RotatorAttribute_UE::Add(InOwner, FCk_Fragment_RotatorAttribute_ParamsData{InTag, InBase}, NoRep);
     }
 
     static auto AddInt(FCk_Handle& InOwner, const FGameplayTag& InTag, int32 InBase) -> FCk_Handle_IntegerAttribute
     {
+        if (auto Existing = UCk_Utils_IntegerAttribute_UE::TryGet(InOwner, InTag);
+            ck::IsValid(Existing))
+        {
+            UCk_Utils_IntegerAttribute_UE::Request_Override(Existing, InBase, Current);
+            return Existing;
+        }
+
         return UCk_Utils_IntegerAttribute_UE::Add(InOwner, FCk_Fragment_IntegerAttribute_ParamsData{InTag, InBase}, NoRep);
     }
 
