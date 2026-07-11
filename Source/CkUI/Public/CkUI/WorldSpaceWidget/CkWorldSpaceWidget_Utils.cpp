@@ -177,7 +177,7 @@ auto
     const auto ContentWidget = InParams.Get_Widget().Get();
     const auto& WorldComponentInfo = InParams.Get_WorldComponentInfo();
 
-    // vended DestroyOnRelease: the ObjectPooling subsystem pins the component for its lifetime
+    // handed out DestroyOnRelease: the ObjectPooling subsystem pins the component for its lifetime
     // (the fragment holds a weak ptr); EndPlay releases it back before DestroyComponent
     const auto PoolParams = FCk_ObjectPooling_PoolParams{}
         .Set_RecyclePolicy(ECk_ObjectPooling_RecyclePolicy::DestroyOnRelease);

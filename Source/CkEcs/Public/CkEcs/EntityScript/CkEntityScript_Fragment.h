@@ -69,7 +69,7 @@ namespace ck
 
     private:
         // WEAK: the CkCore ObjectPooling subsystem owns the instance's lifetime (every instanced
-        // script is vended through the pooling-aware Request_CreateNewObject — poolable ones recycle,
+        // script is created through the pooling-aware Request_CreateNewObject — poolable ones recycle,
         // plain InstancedPerEntity ones are pinned-unique). NotInstanced scripts point at the CDO
         TWeakObjectPtr<UCk_EntityScript_UE> _Script;
 

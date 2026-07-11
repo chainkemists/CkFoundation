@@ -20,7 +20,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InContentWidget->GetOwningPlayer()), TEXT("Invalid OwningPlayer"))
     { return nullptr; }
 
-    // vended DestroyOnRelease: the ObjectPooling subsystem pins the wrapper for its lifetime (the
+    // handed out DestroyOnRelease: the ObjectPooling subsystem pins the wrapper for its lifetime (the
     // fragment holds a weak ptr — the viewport's own reference vanishes on RemoveFromParent);
     // EndPlay releases it. Outer stays the OwningPlayer for GetOwningPlayer resolution
     const auto PoolParams = FCk_ObjectPooling_PoolParams{}

@@ -245,22 +245,50 @@ auto
     const auto& World = InObject->GetWorld();
 
     CK_ENSURE_IF_NOT(ck::IsValid(World),
-        TEXT("Could not resolve a World from [{}] — only ObjectPooling-vended objects (outered to their "
+        TEXT("Could not resolve a World from [{}] — only ObjectPooling-managed objects (outered to their "
              "world) can be released to a pool"), InObject)
     { return ECk_SucceededFailed::Failed; }
 
     auto* Subsystem = World->GetSubsystem<UCk_ObjectPooling_Subsystem_UE>();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(Subsystem, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(Subsystem),
         TEXT("World [{}] has no ObjectPooling subsystem — cannot release [{}]"), World, InObject)
     { return ECk_SucceededFailed::Failed; }
 
-    return Subsystem->DoTryReleaseToPool(InObject);
+    return Subsystem->TryReleaseToPool(InObject);
 }
 
 auto
     UCk_Utils_Object_UE::
-    Get_IsPoolVendedObject(
+    Get_ObjectPoolStats(
+        const UObject* InWorldContextObject,
+        TSubclassOf<UObject> InClass,
+        UObject* InArchetype)
+    -> FCk_ObjectPooling_PoolStats
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InClass), TEXT("Invalid Class supplied to Get_ObjectPoolStats"))
+    { return {}; }
+
+    const auto& World = ck::IsValid(InWorldContextObject) ? InWorldContextObject->GetWorld() : nullptr;
+
+    if (ck::Is_NOT_Valid(World))
+    { return {}; }
+
+    const auto* Subsystem = World->GetSubsystem<UCk_ObjectPooling_Subsystem_UE>();
+    
+    if (ck::Is_NOT_Valid(Subsystem))
+    { return {}; }
+
+    auto* Archetype = ck::IsValid(InArchetype)
+        ? InArchetype
+        : InClass->GetDefaultObject();
+
+    return Subsystem->Get_PoolStats(FCk_ObjectPooling_PoolKey{InClass.Get(), Archetype});
+}
+
+auto
+    UCk_Utils_Object_UE::
+    Get_IsPoolTrackedObject(
         const UObject* InObject)
     -> bool
 {
@@ -274,10 +302,10 @@ auto
 
     const auto* Subsystem = World->GetSubsystem<UCk_ObjectPooling_Subsystem_UE>();
 
-    if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Subsystem))
     { return false; }
 
-    return Subsystem->Get_IsVendedObject(InObject);
+    return Subsystem->Get_IsTrackedObject(InObject);
 }
 
 auto
@@ -298,13 +326,13 @@ auto
         ? World->GetSubsystem<UCk_ObjectPooling_Subsystem_UE>()
         : nullptr;
 
-    CK_ENSURE_IF_NOT(ck::IsValid(Subsystem, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(Subsystem),
         TEXT("Pooled Request_CreateNewObject for [{}] could not resolve an ObjectPooling subsystem from "
              "Outer [{}] — falling back to a plain (non-pooled, CALLER-owned) create. The caller must "
              "hold a strong reference in this case"), InClass, InOuter)
     { return NewObject<UObject>(InOuter, InClass, NAME_None, RF_NoFlags, InTemplateArchetype); }
 
-    return Subsystem->DoRequest_Acquire(InClass, InTemplateArchetype, InPoolParams, InOuter);
+    return Subsystem->AcquireFromPool(InClass, InTemplateArchetype, InPoolParams, InOuter);
 }
 
 auto
