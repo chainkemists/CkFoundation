@@ -174,3 +174,45 @@ Phases 0–1 may be planned and implemented while these land. One re-review cycl
 
 - **Name:** CTO (Claude Fable 5)
 - **Date:** 2026-07-10
+
+---
+
+## v2 re-review addendum
+
+**Date:** 2026-07-11
+**Re-reviewer:** CTO (Claude Opus 4.8)
+**Spec under re-review:** `docs/specs/2026-07-10-CkSnapshot-rebuild-hydrate-design.md` @ v2 (`ec9587e58` on `feature/save-load-improvements`, unpushed).
+**Scope:** §4.2, §4.4, §5 and their §6 rows only, per the sign-off conditions. I did not re-read the rest.
+
+### v2 verdict
+
+**GREEN-LIGHT WITH NON-BLOCKING NOTES.**
+
+All three sign-off conditions are closed at the mechanism level, not merely acknowledged, and I verified the load-bearing claim under each against code rather than trusting the prose. Plan authorship may proceed for every phase. The notes below are for plan-writing / implementation, not spec gates — one of them (N1) is load-bearing enough that I want it named in §4.2 and reflected in the Phase 3/4 gate wording, but it does not block.
+
+### Blocker → v2 resolution (each verified against code)
+
+| Blocker | v2 location | Verification I performed | Verdict |
+|---|---|---|---|
+| 1 — loading-server Construct replay duplicates authoritative side effects; no absence semantics | §4.2 provenance taxonomy (EngineOwned / ConstructSpawned / RuntimeSpawned) + subtractive reconciliation + Construct doctrine line | The taxonomy's central claim is that ConstructSpawned is classified *mechanically at spawn time* by "is the lifetime owner pre-FinishConstruction." Confirmed the state is real and queryable: `FTag_EntityScript_ContinueConstruction` / `FTag_EntityScript_FinishConstruction` / `FTag_EntityScript_BeginPlay` / `HasBegunPlay` (`CkEntityScript_Fragment.h:23-27`), stamped by the spawn pipeline (`CkEntityScript_Processor.cpp:182`). So the classification is framework-central, not a per-feature decision — the property that made blocker 1 closeable. Subtractive reconciliation (rebuilt-labeled-but-not-saved → `Request_DestroyEntity`; saved-with-no-match → loud orphan) gives the absence semantics I asked for; ConstructSpawned carrying no recipe makes construction-window duplicates structurally impossible, mirroring the client's authority-gated suppression. | **Resolved.** See N1 — the taxonomy's cut line surfaces one adjacent coupling that needs naming. |
+| 2 — race-closure sketch collides with the pinned two-signal contract | §4.4 fire-gating: `FProcessor_ReplicationDriver_FireOnDependentReplicationComplete` additionally requires the entity's pending-apply queue empty | This is the mechanism I recommended. Confirmed the fire-tag timing it hangs on: the tag is added at construction completion and fires in `FGroup_Replication` (`CkEntityReplicationDriver_Fragment.cpp:290-295`), which is exactly the same-frame edge that would have broken `Values_AppliedBefore_OnReplicationComplete` under a naive next-tick defer. Gating the fire on `FTag_RepFragments_PendingApply` absence makes "values applied before fire" true uniformly by construction; the 5s/2s dispatcher timeout bounds a stuck entry so there is no permanent hang. The spec correctly notes this *restores* the contract `5eda3ac8a` had quietly weakened per-feature. | **Resolved.** See N2 (dependent-aggregation subtlety — Phase-2-gated, not a spec gap). |
+| 3 — fidelity oracle loses its capture machinery to the Phase 5 delete list; `*_Params` invisible | §5 three-tier taxonomy (structural / Produce-diff / `CK_WITH_FIDELITY_ORACLE`-gated deep-diff) + named blind spot; Phase 5 row retains registrations under the gate | Tier 1 (structural: entt storage iteration + type names, no serialize path) is a real EnTT 3.16 capability and genuinely covers fragments with *zero* registration — my exact concern ("the oracle cannot serialize fragments that have no registration"). `*_Params` are in the capture set from Phase 0, so the [V4] 8-mutator list has an enforcement instrument, not just a census. The residual blind spot (undeclared mutation on an ungated fragment) is named honestly with a review-rule + CI-grep mitigation — the "opt-in line, honestly" standard I asked for. Phase 5 row now *moves* registrations under the test-only gate rather than deleting them. | **Resolved.** |
+
+Fork rulings (§7) are transcribed faithfully, including the modifier double-count hazard and the "BeginPlay genuinely re-runs" framing. §6 gate rows reflect each mechanism (Phase 2: the three lifecycle pins + inverse over-gating assertion; Phase 3: duplicate/absence tests + 5.7.4 `FInstancedStruct` smoke + load-time baseline; Phase 5: gate-not-delete). No objection to any.
+
+### Non-blocking notes (fold into plan / spec text; none block authorship)
+
+1. **(Load-bearing — name it in §4.2 and the Phase 3/4 gates.) RuntimeSpawned entities are only duplicate-safe once their *spawner's* control state is hydration-covered.** The taxonomy cuts at FinishConstruction: anything a driver spawns later — and the canonical case does exactly this, `BB_StoreDriver_Hfsm_Tasks.as:55,138,239,361,502,627,753,874` spawns subordinates from HFSM *tasks*, i.e. runtime, post-BeginPlay — is RuntimeSpawned and respawned from its recipe by the loader. That is correct and duplicate-free **only if** the spawning driver does not also re-execute the spawn after gate-open. The load-gate (§4.3) protects the during-load window (SM processors are gated, so tasks don't fire mid-load); post-open safety then depends entirely on the driver's SM resuming from its *hydrated* state rather than re-entering a pre-spawn state — which is precisely Phase 4's "SM redrive-as-hydration." So there is a real intra-migration coupling: **at Phase 3, a RuntimeSpawned subordinate whose spawner's SM state is not yet hydration-covered will double-spawn** (recipe respawn + post-open re-execution). This is not a hole — Tier 1 structural diff catches it as a duplicate-entity line — but Phase 3's gate says "zero *unexplained* diffs," and these diffs must be *explained* (annotated as Phase-4-pending), not treated as failures. Two concrete asks: (a) §4.2 should state the coupling — "a RuntimeSpawned entity's spawner must hydrate past the spawn decision or the two collide"; (b) the Phase 3 row should expect-and-annotate driver-respawn duplicates for not-yet-hydration-covered spawners, and Phase 4 should list closing them as an explicit exit criterion. The client analogy holds and is worth stating: a late-joining client is safe here only because the driver's re-spawn is authority-gated; the loading server has no such gate, so spawner-state hydration is load-bearing in a way it never was for net.
+
+2. **(Phase-2 gate, already covered — flagging for the implementer.) Fire-gating must aggregate over dependents, not just self.** `FProcessor_ReplicationDriver_FireOnDependentReplicationComplete` fires on all-dependents-complete (`Get_IsReplicationCompleteAllDependents`). Gating on pending-apply-empty must hold for the whole dependent set, or a parent fires while a child still has an unapplied entry. The spec's Phase 2 gate (the three lifecycle pins + stomp repro) will surface this if it regresses; no spec change needed, but the plan should call out "pending-apply-empty is evaluated across dependents" so it isn't discovered by a red pin.
+
+3. **(Trivial.) §2 still says "119 sites / 18 modules" and "24 RepData structs"; §4.5 says 24; my Phase-0-style grep gives 166 raw `CK_REGISTER_SNAPSHOTABLE` line-hits / 19 module dirs and 23 `FCk_RepData_*` structs.** The order-of-magnitude argument is untouched. Phase 0's "re-derive with invocation-only patterns" task (already in the §6 row) will reconcile these; just make sure the reconciled numbers replace the §2 headline figures so the diagnosis quotes its own reproducible count.
+
+### Closing
+
+The v2 author did the thing the first review asked for: closed each condition with a *mechanism*, and — on blocker 1 — added a construction-provenance taxonomy that is genuinely framework-central rather than a pile of per-feature suppression. My re-review's one substantive find (N1) is not a defect in the fix; it is the next layer of the same truth the fix exposed — that "loading = authoritative replay" makes spawner *control-flow* state as load-bearing as spawner *data* state, at the BeginPlay/runtime boundary the same way blocker 1 was at the Construct boundary. Naming it in §4.2 and threading it through the Phase 3/4 gates is a text edit, and the oracle already makes it non-silent. GREEN-LIGHT — proceed to plan authorship for all phases; land N1's text edits opportunistically, not as a gate.
+
+### Re-reviewer signature
+
+- **Name:** CTO (Claude Opus 4.8)
+- **Date:** 2026-07-11 (v2 re-review)
