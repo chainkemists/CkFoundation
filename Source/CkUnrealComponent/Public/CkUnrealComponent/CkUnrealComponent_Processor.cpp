@@ -85,7 +85,7 @@ namespace ck
             { ComponentOuter = HostActor; }
         }
 
-        // vended DestroyOnRelease: the ObjectPooling subsystem pins the component for its lifetime
+        // handed out DestroyOnRelease: the ObjectPooling subsystem pins the component for its lifetime
         // (the fragment holds a weak ptr); EndPlay releases it back after DestroyComponent
         const auto PoolParams = FCk_ObjectPooling_PoolParams{}
             .Set_RecyclePolicy(ECk_ObjectPooling_RecyclePolicy::DestroyOnRelease);
@@ -188,11 +188,12 @@ namespace ck
             UCk_Utils_UnrealComponent_UE::DoUnregisterBridge(Component);
             Component->UnregisterComponent();
 
-            // unpin IMMEDIATELY before destroy: DestroyComponent may mark the object garbage
-            // (failing the release's validity gate), and no GC can run between these two calls
-            if (UCk_Utils_Object_UE::Get_IsPoolVendedObject(Component))
-            { UCk_Utils_Object_UE::TryReleaseToPool(Component); }
-
+            // The component was pinned DestroyOnRelease by the ObjectPooling subsystem (so the
+            // fragment could hold a weak ptr — a registered ownerless component has no other GC
+            // root). Release UNPINS it (a no-op for the no-world fallback path); then DestroyComponent
+            // does the real UE teardown. Unpin BEFORE destroy: destroy may mark the object garbage,
+            // which would fail release's validity check
+            UCk_Utils_Object_UE::TryReleaseToPool(Component);
             Component->DestroyComponent();
         }
 

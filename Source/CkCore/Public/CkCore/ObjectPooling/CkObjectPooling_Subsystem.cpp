@@ -34,7 +34,7 @@ auto
         {
             auto NewInstance = DoSpawn_Instance(Pool);
 
-            if (ck::Is_NOT_Valid(NewInstance, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::Is_NOT_Valid(NewInstance))
             { break; }
 
             Pool._FreeObjects.Emplace(NewInstance);
@@ -81,22 +81,22 @@ auto
 
 auto
     UCk_ObjectPooling_Subsystem_UE::
-    Get_NumVendedUnique() const
+    Get_NumPinnedUnique() const
     -> int32
 {
-    return _VendedUnique.Num();
+    return _PinnedUnique.Num();
 }
 
 auto
     UCk_ObjectPooling_Subsystem_UE::
-    Get_IsVendedObject(
+    Get_IsTrackedObject(
         const UObject* InObject) const
     -> bool
 {
     if (ck::Is_NOT_Valid(InObject))
     { return false; }
 
-    if (_VendedUnique.Contains(const_cast<UObject*>(InObject)))
+    if (_PinnedUnique.Contains(const_cast<UObject*>(InObject)))
     { return true; }
 
     return _InstanceToPool.Contains(FObjectKey{InObject});
@@ -106,7 +106,7 @@ auto
 
 auto
     UCk_ObjectPooling_Subsystem_UE::
-    DoRequest_Acquire(
+    AcquireFromPool(
         const TSubclassOf<UObject>& InClass,
         UObject* InArchetype,
         const FCk_ObjectPooling_PoolParams& InPoolParams,
@@ -117,11 +117,11 @@ auto
     { return {}; }
 
     CK_ENSURE_IF_NOT(NOT InClass->IsChildOf<AActor>(),
-        TEXT("ObjectPooling vends plain UObjects only — [{}] is an Actor class. "
+        TEXT("ObjectPooling hands out plain UObjects only — [{}] is an Actor class. "
              "Actor creation/pooling goes through SpawnActor, not Request_CreateNewObject"), InClass)
     { return {}; }
 
-    if (ck::IsValid(InArchetype, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::IsValid(InArchetype))
     {
         CK_ENSURE_IF_NOT(InArchetype->GetClass() == InClass.Get(),
             TEXT("Archetype [{}] is not an instance of class [{}] — pools are keyed by (class, archetype) "
@@ -130,7 +130,7 @@ auto
         { return {}; }
     }
 
-    auto* Archetype = ck::IsValid(InArchetype, ck::IsValid_Policy_NullptrOnly{})
+    auto* Archetype = ck::IsValid(InArchetype)
         ? InArchetype
         : InClass->GetDefaultObject();
 
@@ -139,7 +139,7 @@ auto
         auto* EffectiveOuter = ck::IsValid(InOuter) ? InOuter : static_cast<UObject*>(GetWorld());
         auto* NewInstance = NewObject<UObject>(EffectiveOuter, InClass, NAME_None, RF_NoFlags, Archetype);
 
-        _VendedUnique.Emplace(NewInstance);
+        _PinnedUnique.Emplace(NewInstance);
 
         UCk_Utils_ObjectPoolingParticipant_UE::Broadcast_AcquiredFromPool_OnObject(NewInstance);
 
@@ -170,7 +170,7 @@ auto
         break;
     }
 
-    if (ck::Is_NOT_Valid(AcquiredObject, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(AcquiredObject))
     {
         ++Pool->_NumMisses;
 
@@ -192,7 +192,7 @@ auto
 
         AcquiredObject = DoSpawn_Instance(*Pool);
 
-        if (ck::Is_NOT_Valid(AcquiredObject, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(AcquiredObject))
         { return {}; }
 
         // batch growth: TOP UP the queued extras to (GrowBatchCount - 1) through the amortized
@@ -234,14 +234,14 @@ auto
 
 auto
     UCk_ObjectPooling_Subsystem_UE::
-    DoTryReleaseToPool(
+    TryReleaseToPool(
         UObject* InObject)
     -> ECk_SucceededFailed
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Cannot Release an INVALID object to its ObjectPool"))
     { return ECk_SucceededFailed::Failed; }
 
-    if (_VendedUnique.Remove(InObject) > 0)
+    if (_PinnedUnique.Remove(InObject) > 0)
     {
         UCk_Utils_ObjectPoolingParticipant_UE::Broadcast_ReleasedToPool_OnObject(InObject);
         return ECk_SucceededFailed::Succeeded;
@@ -249,11 +249,15 @@ auto
 
     const auto* PoolKey = _InstanceToPool.Find(FObjectKey{InObject});
 
-    CK_ENSURE_IF_NOT(PoolKey != nullptr,
-        TEXT("Object [{}] was never vended by the ObjectPooling subsystem (or was already released) — "
-             "double-Release or an object created outside the pooling-aware Request_CreateNewObject"),
-        InObject)
-    { return ECk_SucceededFailed::Failed; }
+    // Not tracked by this subsystem — a BENIGN no-op, not a bug. Teardown paths (EntityScript
+    // EndPlay, the component/widget EndPlay processors) call this unconditionally on objects that
+    // may never have been pooled: CDO (NotInstanced) scripts, snapshot-minted scripts, and
+    // no-world fallback creates. Returning Failed lets those callers skip the reset without a gate
+    if (PoolKey == nullptr)
+    {
+        ck::core::Verbose(TEXT("TryReleaseToPool: [{}] is not managed by the pooling subsystem — nothing to release"), InObject);
+        return ECk_SucceededFailed::Failed;
+    }
 
     auto* Pool = _Pools.Find(*PoolKey);
 
@@ -271,14 +275,6 @@ auto
         TEXT("Object [{}] is not in-use in its ObjectPool — double-Release or a stolen instance"),
         InObject)
     { return ECk_SucceededFailed::Failed; }
-
-    if (NOT UCk_Utils_ObjectPoolingParticipant_UE::Get_CanBePooled_OnObject(InObject))
-    {
-        ck::core::Verbose(TEXT("Object [{}] vetoed pooling (CanBePooled == false) — destroying instead"), InObject);
-        --Pool->_NumLiveInstances;
-        InObject->MarkAsGarbage();
-        return ECk_SucceededFailed::Succeeded;
-    }
 
     UCk_Utils_ObjectPoolingParticipant_UE::Broadcast_ReleasedToPool_OnObject(InObject);
 
@@ -367,7 +363,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Cannot reset an INVALID object to its archetype"))
     { return; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InArchetype, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(InArchetype),
         TEXT("Cannot reset [{}] — its creation archetype is INVALID (pool pin should have prevented this)"),
         InObject)
     { return; }

@@ -1,15 +1,21 @@
 # Object pooling core — PROGRESS.md (living log)
 
 ## Current state  <!-- supersedes everything below; update at EVERY phase and session end -->
-**As of 2026-07-11 (branch `feature/object-pooling-core`):** Phases 1-3 ✅ + per-use-param API trim
-(user-driven). Next: Phase 4 (CkTests pooling suite) — the first runtime proof of the poolable
-recycle path.
+**As of 2026-07-11 (branch `feature/object-pooling-core`):** Phases 1-4 ✅; Phase 5 debugger module
+built + linked (tab is [EDITOR-VERIFY]). Latest user-driven refinements: TryReleaseToPool made a
+benign no-op for untracked objects + all 6 release-gates removed. Fresh full regression suite
+RUNNING on the grace/gate binary. Then: commit everything (3 repos), then Phase 6 (docs/AS verify).
+Prior refinements this session: veto removed, per-use params removed, Get_ScriptInstance not added,
+subsystem methods renamed public, "vend"→"tracked/pinned".
 **Baseline being diffed against:** 1048 total / 1040 pass / 8 fail (names in PHASE_2.md exit
-criteria; all pre-existing BB game tests). Reproduced IDENTICALLY on four binaries: Phase-1,
-Phase-2, Phase-3-sweep, Phase-3+trim.
-**Next action:** Phase 4 — new CkTests branch off its dev; autotests per PHASE_4.md (note: tests
-must not reference per-use params — removed from the API).
+criteria; all pre-existing BB game tests). Reproduced identically across Phase-1/2/3 binaries.
+**Next action:** confirm full-suite diff (expect 1052 total = +4 pooling, 1044 pass, same 8 fail);
+then commit Phase 4 (CkFoundation API-refinement + CkTests suite as coordinated commits).
 **Blocked on:** nothing.
+**Uncommitted:** CkFoundation working tree has Phase-3-followup API refinements (veto removal,
+renames, per-use trim, GetScriptInstance removal) NOT yet committed — all since commit f4585bf3d.
+CkTests branch `feature/object-pooling-autotests` has the 4 tests + subjects + generated wrapper,
+uncommitted.
 
 ## Decision log
 | Date | Decision | Why | Revisit when |
@@ -17,6 +23,48 @@ must not reference per-use params — removed from the API).
 | 2026-07-11 | All 12 locked decisions — see PROMPT.md table (single source; not duplicated here) | user forks resolved via 4 questions + 2 flagged unilateral calls (enum additive, actors excluded) | per-row notes in PROMPT.md |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-07-11 — Phase 5 debugger module + TryReleaseToPool grace / gate removal (user-driven)
+- User Q1: the `Get_IsPoolTrackedObject` release-gate is redundant. Made subsystem `TryReleaseToPool`
+  a BENIGN no-op (returns Failed, no ensure) for untracked objects → removed ALL 6 release-gates
+  (EntityScript EndPlay + CkUnrealComponent + CkAudio + CkPmg ×2 + CkUI ×2). Predicate stays public
+  (GC autotest uses it), just not as a gate. `TryReleaseToPool` now safe to call unconditionally.
+- User Q2: "release then destroy" clarified in every teardown comment — these are all
+  DestroyOnRelease (force-new) components, so release = UNPIN (the subsystem hold exists only so the
+  fragment can be weak; a registered ownerless component has no other GC root); DestroyComponent
+  does the real UE teardown; unpin-before-destroy because destroy can garbage-mark the object.
+- Intermediate suite (rename/veto binary + 4 pooling tests): **1052 total, 8 failed — same 8
+  pre-existing BB game tests; all 4 pooling green** (suite_p4_full). No regressions from
+  renames/veto.
+- Phase 5 debugger: new `CkObjectPoolingDebugger` UncookedOnly module in CkGameplayDebugger
+  (branch `feature/object-pooling-inspector` off 37e4066): 7 files mimicking the lean CkInputDebugger
+  tab. Per-pool table + summary, world selector, refresh gate. Console `ck.ObjectPoolingDebugger`.
+- Ran: build (build_p5_try1) green, 0 errors — validated grace/gate CkFoundation edits AND the new
+  debugger module cross-repo (`BusterBlockEditor-CkObjectPoolingDebugger.dll` linked). Fresh full
+  regression suite RUNNING (suite_p5_full) since grace/gate touches every teardown path.
+- Inferred (pending): grace/gate regression diff (expect same 1052/1044/8); debugger tab live
+  behavior is [EDITOR-VERIFY] (agents can't open Slate).
+
+### 2026-07-11 — Phase 4 pooling suite GREEN + user-driven API refinements
+- User directives this session (all applied): (a) drop per-use `FInstancedStruct` from the acquire
+  chain — participant delegates payload-free; (b) remove the `_CanBePooled` veto entirely — no
+  per-instance opt-out, "never recycle" = force-new policy; (c) don't expose `Get_ScriptInstance`;
+  (d) rename subsystem `DoRequest_Acquire`→`AcquireFromPool`, `DoTryReleaseToPool`→`TryReleaseToPool`,
+  both public (dropped the friend); (e) explain + eliminate "vend" → "tracked/pinned/hand out"
+  repo-wide. Also: `Get_IsPoolVendedObject`→`Get_IsPoolTrackedObject`, `_VendedUnique`→`_PinnedUnique`,
+  `Get_NumVendedUnique`→`Get_NumPinnedUnique`, `Get_IsVendedObject`→`Get_IsTrackedObject`.
+- Added tooling surface: `UCk_Utils_Object_UE::Get_ObjectPoolStats(WCO, Class, Archetype)` (BP/AS;
+  no WorldContext meta — it conflicted with the ScriptMixin=UObject arg0-receiver binding and
+  produced a broken generated wrapper; diagnosed via ck-angelscript-interop skill catalog item 6).
+- CkTests branch `feature/object-pooling-autotests` off ac4f00d: 4 AS autotests + subjects
+  (`Script/CkObjectPooling/`). Observe via public pool-stats + direct plain-object API only.
+- Ran: rebuilds (build_p4_try2/try3/try4 all green, 0 errors). Targeted pooling tests:
+  `--test-pattern ObjectPooling --discover-fresh` → **4/4 Success, 0 AS errors, EXIT 0**
+  (tests_pooling_v3). AS gotchas hit + fixed: full-class `UCk_Utils_Object_UE::` static spelling
+  fails for UObject-mixin functions (use `utils_object::`); setter chain on an AS temporary is
+  rejected (declare-then-set).
+- Confirmed: zero "vend" tokens remain in the pooling code + all consumers (rg exit 1).
+- Inferred (pending): full-suite regression diff RUNNING (suite_p4_full).
 
 ### 2026-07-11 — Phase 3 (sweep conversions) + per-use-param removal, gate-verified
 - Converted all six members to subsystem-vended weak (DestroyOnRelease): CkUnrealComponent

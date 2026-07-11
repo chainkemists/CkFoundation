@@ -103,12 +103,13 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// The object-pooling core of the framework, hoisted into UCk_Utils_Object_UE::Request_CreateNewObject —
-// callers go through the Utils surface, never this subsystem directly. The subsystem OWNS the lifetime
-// of every instance it vends (pinned in UPROPERTY storage): Recycle-policy instances park in a pool on
-// release; DestroyOnRelease instances are pinned-unique and unpinned (GC-collected) on release. Holders
-// therefore keep TWeakObjectPtr, never TStrongObjectPtr. Tickable ONLY for the amortized prewarm budget.
-// Plain UObjects only — actors are excluded by design (SpawnActor, not NewObject, owns actor creation)
+// The object-pooling core of the framework, usually reached through
+// UCk_Utils_Object_UE::Request_CreateNewObject (which resolves the world). The subsystem OWNS the
+// lifetime of every instance it hands out (pinned in UPROPERTY storage): Recycle-policy instances
+// park in a pool on release; DestroyOnRelease instances are pinned-unique and unpinned (GC-collected)
+// on release. Holders therefore keep TWeakObjectPtr, never TStrongObjectPtr. Tickable ONLY for the
+// amortized prewarm budget. Plain UObjects only — actors are excluded by design (SpawnActor, not
+// NewObject, owns actor creation)
 UCLASS()
 class CKCORE_API UCk_ObjectPooling_Subsystem_UE : public UCk_Game_TickableWorldSubsystem_Base_UE
 {
@@ -117,13 +118,34 @@ class CKCORE_API UCk_ObjectPooling_Subsystem_UE : public UCk_Game_TickableWorldS
 public:
     CK_GENERATED_BODY(UCk_ObjectPooling_Subsystem_UE);
 
-    friend class UCk_Utils_Object_UE;
-
 public:
     auto Tick(float InDeltaTime) -> void override;
 
 public:
-    // Read-only surface for tooling (debugger inspector) — mutations go through UCk_Utils_Object_UE
+    // Hand out an instance: recycled from the pool, freshly created on miss (Grow), or pinned-unique
+    // (DestroyOnRelease). DestroyOnRelease creates honor InOuter (a component may need an actor
+    // outer for GetOwner()-dependent systems like the nav octree); Recycle-pool creates are outered
+    // to the subsystem's world — a recycled instance survives its first caller, so it cannot borrow
+    // that caller's outer. Returns null only on Fail/at-capacity exhaustion or invalid inputs.
+    // Callers usually reach this through UCk_Utils_Object_UE::Request_CreateNewObject (which resolves
+    // the world) — this direct form is for code that already holds the subsystem
+    auto
+    AcquireFromPool(
+        const TSubclassOf<UObject>& InClass,
+        UObject* InArchetype,
+        const FCk_ObjectPooling_PoolParams& InPoolParams,
+        UObject* InOuter) -> UObject*;
+
+    // Recycle-policy instances: OnReleasedToPool -> park in the free list (returns Succeeded).
+    // DestroyOnRelease instances: OnReleasedToPool -> unpin, so GC can collect (Succeeded).
+    // Objects the subsystem never handed out (CDOs, non-pooled creates): a benign no-op that
+    // returns Failed — safe to call unconditionally from any teardown path, no pre-gate needed
+    auto
+    TryReleaseToPool(
+        UObject* InObject) -> ECk_SucceededFailed;
+
+public:
+    // Read-only surface for tooling (debugger inspector)
 
     auto
     Get_PoolStats(
@@ -134,31 +156,12 @@ public:
         const TFunction<void(const FCk_ObjectPooling_PoolKey&, const FCk_ObjectPooling_PoolStats&)>& InFunc) const -> void;
 
     auto
-    Get_NumVendedUnique() const -> int32;
+    Get_NumPinnedUnique() const -> int32;
 
+    // True when this subsystem handed out (and still tracks) InObject — pooled in-use OR pinned-unique
     auto
-    Get_IsVendedObject(
+    Get_IsTrackedObject(
         const UObject* InObject) const -> bool;
-
-private:
-    // Vend an instance: recycled from the pool, freshly created on miss (Grow), or pinned-unique
-    // (DestroyOnRelease). DestroyOnRelease creates honor InOuter (a component may need an actor
-    // outer for GetOwner()-dependent systems like the nav octree); Recycle-pool creates are outered
-    // to the subsystem's world — a recycled instance survives its first caller, so it cannot borrow
-    // that caller's outer. Returns null only on Fail/at-capacity exhaustion or invalid inputs
-    auto
-    DoRequest_Acquire(
-        const TSubclassOf<UObject>& InClass,
-        UObject* InArchetype,
-        const FCk_ObjectPooling_PoolParams& InPoolParams,
-        UObject* InOuter) -> UObject*;
-
-    // Recycle-policy instances: veto-check -> OnReleasedToPool -> park in the free list (veto
-    // destroys instead). DestroyOnRelease instances: OnReleasedToPool -> unpin (GC collects).
-    // Objects the subsystem never vended fail loudly
-    auto
-    DoTryReleaseToPool(
-        UObject* InObject) -> ECk_SucceededFailed;
 
 private:
     auto
@@ -188,9 +191,9 @@ private:
     UPROPERTY(Transient)
     TMap<FCk_ObjectPooling_PoolKey, FCk_ObjectPooling_PoolState> _Pools;
 
-    // DestroyOnRelease vends: pinned here for their lifetime, removed (= GC-eligible) on release
+    // DestroyOnRelease instances: pinned here for their lifetime, removed (= GC-eligible) on release
     UPROPERTY(Transient)
-    TSet<TObjectPtr<UObject>> _VendedUnique;
+    TSet<TObjectPtr<UObject>> _PinnedUnique;
 
     // Reverse lookup for release — instances pinned by the pool states, not by this map
     TMap<FObjectKey, FCk_ObjectPooling_PoolKey> _InstanceToPool;

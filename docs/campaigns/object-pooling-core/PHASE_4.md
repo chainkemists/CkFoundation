@@ -1,7 +1,21 @@
 # Phase 4 — Test suite (CkTests companion branch)
 
-> **Status:** ⏳ Pending
+> **Status:** 🟡 Tests green; full-suite regression diff running (2026-07-11)
 > **Depends on:** Phase 2 ✅ (Phase 3 parallel-safe)
+> **Branch:** `feature/object-pooling-autotests` off CkTests dev (ac4f00d)
+> **Drift notes (design changes this session, code wins):**
+> - Per-use `FInstancedStruct` dropped from the whole acquire chain (user call) — participant
+>   delegates are payload-free; the veto test's subject method is gone.
+> - `_CanBePooled` veto REMOVED entirely (user call) — no per-instance opt-out; "never recycle" is
+>   the force-new policy. Veto autotest + subject deleted.
+> - `Get_ScriptInstance` NOT added (user call) — tests observe via public pool-stats + the direct
+>   plain-object API only. Instance-level proofs (identity/reset/participant/pin+GC) live on plain
+>   pooled objects; EntityScript tests prove policy wiring via `Get_ObjectPoolStats`.
+> - Subsystem methods renamed public: `AcquireFromPool`, `TryReleaseToPool`. Predicate renamed
+>   `Get_IsPoolTrackedObject`. "Vend" terminology eliminated repo-wide.
+> - Final suite = 4 tests (was 7 planned): recycle+reset+delegates (plain), pinned+GC+unpin (plain),
+>   poolable-script-recycles (stats), force-new-script-never-pools (stats). Grow-batch/capacity/perf
+>   ports and the net-replicated-poolable test deferred (see open items).
 
 ## Goal
 
@@ -34,6 +48,16 @@ suite; all tests green on the final CkFoundation binary. Old
 
 ## Exit criteria
 
-- [ ] All new tests green on final binaries (fresh build AFTER last source edit — stale-green trap).
-- [ ] Full CkTests suite diff vs campaign-start baseline recorded.
-- [ ] PROGRESS.md dated entry with counts.
+- [x] All new tests green on final binary — VERIFIED 2026-07-11: `--test-pattern ObjectPooling
+      --discover-fresh` → 4/4 Success, 0 AS errors, EXIT CODE 0. Build was fresh (build_p4_try4)
+      AFTER the last C++ edit; AS temporary-chain fix was AS-only (recompiles at boot).
+- [ ] Full CkTests suite diff vs campaign baseline — RUNNING (suite_p4_full).
+- [ ] Net-replicated poolable test (decision 3 safety net) — DEFERRED to a follow-up; needs a PIE
+      net harness. Logged in open items.
+- [x] PROGRESS.md dated entry.
+
+## Deferred (logged, not silently dropped)
+- Grow-batch / capacity / exhaustion-policy tests (portable from the old branch's logic).
+- Perf A/B (spawn-vs-recycle) — belongs with `ck-performance-and-analysis`, not correctness.
+- Replicated poolable EntityScript under a PIE net session (decision 3 ALLOWED replicated poolable;
+  this is its safety net — the current suite covers only DoesNotReplicate subjects).

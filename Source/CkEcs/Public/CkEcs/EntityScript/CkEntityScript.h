@@ -42,7 +42,7 @@ enum class ECk_EntityScript_InstancingPolicy : uint8
     InstancedPerEntity,
 
     // A unique instance per entity, recycled through the CkCore ObjectPooling subsystem: EndPlay
-    // releases the instance to its pool; the next spawn of the same class+archetype re-vends it with
+    // releases the instance to its pool; the next spawn of the same class+archetype re-issues it with
     // all reflected properties reset to the archetype (FCk_Handle_ObjectPoolingParticipant properties
     // are skipped so delegates bound on the instance survive). Construct/BeginPlay re-run per acquire.
     // Pool configuration comes from _PoolParams (visible when this policy is selected)

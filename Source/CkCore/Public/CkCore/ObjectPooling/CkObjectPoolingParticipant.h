@@ -29,15 +29,16 @@ DECLARE_MULTICAST_DELEGATE(
  * (Hazelight fork limitation) — this property route is the single opt-in surface for all three
  * environments.
  *
- * - OnAcquiredFromPool: per-use (re)initialization signal. Fires on EVERY vend (fresh instances
+ * - OnAcquiredFromPool: per-use (re)initialization signal. Fires on EVERY hand-out (fresh instances
  *   simply have no binds yet), BEFORE the caller's init runs. Carries no payload — per-use data
  *   flows through the caller (synchronous acquire) or, for EntityScripts, through the normal
  *   spawn-params injection + Construct.
  * - OnReleasedToPool: quiescence — reset per-use state. Fires when the owner releases the instance,
- *   before it is stored (Recycle) or unpinned (DestroyOnRelease). Not fired when _CanBePooled vetoed
- *   the release into a destroy.
- * - _CanBePooled: per-instance veto read at release time. False = the instance is destroyed instead
- *   of stored (flip back to true before the next release to re-enable pooling).
+ *   before it is stored (Recycle) or unpinned (DestroyOnRelease).
+ *
+ * There is no per-instance "can be pooled" veto: a class that must never recycle uses the force-new
+ * InstancedPerEntity (DestroyOnRelease) policy; per-use safety is the OnReleasedToPool quiescence
+ * contract's job, not a runtime toggle.
  *
  * Recycle contract: the reset-to-archetype sweep SKIPS properties of this type, so delegates bound
  * on the instance survive recycling. Because Construct/BeginPlay re-run on a recycled EntityScript,
@@ -56,9 +57,6 @@ public:
     friend class UCk_Utils_ObjectPoolingParticipant_UE;
 
 private:
-    UPROPERTY()
-    bool _CanBePooled = true;
-
     FCk_Delegate_ObjectPoolingParticipant_OnAcquired_MC _OnAcquiredFromPool;
     FCk_Delegate_ObjectPoolingParticipant_OnReleased_MC _OnReleasedToPool;
 
@@ -67,9 +65,6 @@ private:
     // bound (object, function) pair must be a no-op
     TSet<TPair<FObjectKey, FName>> _AcquiredBindKeys;
     TSet<TPair<FObjectKey, FName>> _ReleasedBindKeys;
-
-public:
-    CK_PROPERTY(_CanBePooled);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

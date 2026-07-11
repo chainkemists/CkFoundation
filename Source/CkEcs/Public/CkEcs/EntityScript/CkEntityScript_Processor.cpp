@@ -111,7 +111,7 @@ namespace ck
                         EntityScriptClassArchetype)
                     { return {}; }
 
-                    // both instanced policies vend through the CkCore ObjectPooling subsystem, which
+                    // both instanced policies go through the CkCore ObjectPooling subsystem, which
                     // owns the instance's lifetime (the fragment holds a weak ptr): Poolable recycles
                     // across spawns, plain InstancedPerEntity is pinned-unique and destroyed when
                     // EndPlay releases it. Per-use data needs no pool-side channel — the spawn params
@@ -498,15 +498,12 @@ namespace ck
         EntityScript->EndPlay();
         InHandle.Add<FTag_EntityScript_HasEndedPlay>();
 
-        // hand the instance back to the ObjectPooling subsystem (recycles Poolable, unpins
-        // force-new). CDO (NotInstanced) and snapshot-minted scripts were never vended — skip.
-        // The weak ptr is cleared so a same-frame re-vend of a recycled instance can never be
-        // observed through this dead entity's fragment
-        if (UCk_Utils_Object_UE::Get_IsPoolVendedObject(EntityScript))
-        {
-            UCk_Utils_Object_UE::TryReleaseToPool(EntityScript);
-            InCurrent._Script.Reset();
-        }
+        // Hand the instance back to the ObjectPooling subsystem: Poolable scripts recycle, force-new
+        // scripts unpin. CDO (NotInstanced) and snapshot-minted scripts were never handed out —
+        // TryReleaseToPool no-ops gracefully for them, so this is unconditional. Clear the weak ptr
+        // so a same-frame re-issue of a recycled instance can never be seen through this dead entity
+        UCk_Utils_Object_UE::TryReleaseToPool(EntityScript);
+        InCurrent._Script.Reset();
     }
 }
 
