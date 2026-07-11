@@ -8,7 +8,7 @@
 | Phase | Doc | Status | Session date | Commits (repo: hash) | Gate result |
 |---|---|---|---|---|---|
 | 0 | PHASE_0.md | DONE | 2026-07-11 | CkF: 68ba192dc (dt==0), 55521d493 (oracle), <docs> (this); CkTests: 14d65ac (harness) | GREEN: Ck.Snapshot 47/47/0 (46 baseline + Oracle.StructuralBaseline), Ck.Attribute.Net 17/17/0, Net 102/101/1 (baseline red only) |
-| 1 | PHASE_1.md | **DONE** (1.1–1.6 committed+GREEN) | 2026-07-11 | CkF: 23b982c0d (framework), fd288efdd (6 migrations), 5d262f52a; CkTests: <ProduceDiffBaseline this> | GREEN: Ck.Snapshot **48/48/0** delta-zero (all 11 Parity_MPReload + both Oracle tests pass), framework Ck.*.Net green (kiosk trio env-red, see baseline) |
+| 1 | PHASE_1.md | **DONE** (1.1–1.6 committed+GREEN) | 2026-07-11 | CkF: 23b982c0d (framework), fd288efdd (6 migrations), 5d262f52a; CkTests: b9e7f86 | GREEN: Ck.Snapshot **48/48/0** delta-zero (all 11 Parity_MPReload + both Oracle tests pass), framework Ck.*.Net green (kiosk trio env-red, see baseline) |
 | 2 | PHASE_2.md | NOT STARTED | | | |
 | 3A | PHASE_3A.md | NOT STARTED | | | |
 | 3B | PHASE_3B.md | NOT STARTED | | | |
@@ -233,5 +233,5 @@ Load-time baseline (Phase 3B, representative fixture): ___ ms.
   [BI-1]: 3 BB kiosk-destruction `Net` reds are pre-existing/environmental (DoesNotReplicate → severed from campaign),
   NOT §1.6 (proven inert, zero prod callers). **Also discovered:** the branch was rebased at 16:55 (one-time) to fold in
   the object-pooling-core campaign (+3758 lines incl. CkEcs Scheduler/EntityScript) — see the baseline-section note;
-  Phase-2 line refs shifted (re-locate by pattern). Commits: CkF 5d262f52a, CkTests `<ProduceDiffBaseline>` (this).
+  Phase-2 line refs shifted (re-locate by pattern). Commits: CkF 5d262f52a, CkTests b9e7f86.
   Nothing pushed. **Phase 1 DONE.** Proceeding to Phase 2.
