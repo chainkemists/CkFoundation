@@ -1,7 +1,20 @@
 # Phase 3 — TStrongObjectPtr sweep conversions (non-pooled vends)
 
-> **Status:** ⏳ Pending
+> **Status:** ✅ Done (2026-07-11)
 > **Depends on:** Phase 2 ✅
+> **Drift notes (code wins):**
+> - Subsystem gained an `InOuter` param: DestroyOnRelease vends honor the caller's Outer
+>   (CkUnrealComponent outers scene components to the ComponentHost ACTOR — nav octree needs
+>   `GetOwner()`); Recycle-pool vends stay world-outered (a recycled instance outlives its first
+>   caller).
+> - Unpin ordering everywhere: `TryReleaseToPool` runs IMMEDIATELY BEFORE `DestroyComponent`
+>   (destroy may mark the object garbage, failing the release's validity gate; no GC can run
+>   between the calls). CkUI wrapper releases after `RemoveFromParent` (no destroy involved).
+> - PMG components lost their `RF_Transient` flag (subsystem vends RF_NoFlags) — accepted:
+>   runtime-world objects are never level-serialized.
+> - Same-day API trim (user-driven): per-use `FInstancedStruct` removed from the entire acquire
+>   chain — OnAcquiredFromPool carries no payload; per-use data flows through the synchronous
+>   caller / EntityScript spawn-params injection + Construct.
 
 ## Goal
 
@@ -44,6 +57,13 @@ Rules:
 
 ## Exit criteria — same commit as last work item
 
-- [ ] Zero remaining `TStrongObjectPtr` on the six members (`rg --no-ignore` sweep re-run, output recorded).
-- [ ] Suite diff vs entry baseline recorded.
-- [ ] PROGRESS.md dated entry.
+- [x] Zero remaining `TStrongObjectPtr` on the six members — VERIFIED 2026-07-11: `rg --no-ignore`
+      over the 4 modules leaves only the intentional keeps (`_ContentWidgetHardRef`, PMG static
+      `BundledFont`, `_FontOverride` asset pin).
+- [x] Suite diff vs entry baseline — VERIFIED: 1048/1040/8 with IDENTICAL failing names on BOTH the
+      sweep-only binary and the final (sweep + per-use-param-removal) binary. Four consecutive
+      identical runs across the campaign.
+- [x] PROGRESS.md dated entry.
+- Forced-GC gym observation (expected-observations row 2) — [DEFERRED-TO-P4/P5 autotests]; the
+  13-min suite's natural GC over 1040 green tests (PMG/Audio/UI/UnrealComponent suites included)
+  stands as interim evidence.

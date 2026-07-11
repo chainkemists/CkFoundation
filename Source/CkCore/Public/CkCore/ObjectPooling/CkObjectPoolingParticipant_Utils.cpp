@@ -187,8 +187,7 @@ auto
 auto
     UCk_Utils_ObjectPoolingParticipant_UE::
     Broadcast_AcquiredFromPool_OnObject(
-        UObject* InObject,
-        const FInstancedStruct& InPerUseParams)
+        UObject* InObject)
     -> void
 {
     if (ck::Is_NOT_Valid(InObject))
@@ -197,7 +196,7 @@ auto
     ck_object_pooling_participant_utils::ForEach_Participant(InObject,
     [&](FCk_Handle_ObjectPoolingParticipant& InParticipant)
     {
-        InParticipant._OnAcquiredFromPool.Broadcast(InPerUseParams);
+        InParticipant._OnAcquiredFromPool.Broadcast();
     });
 }
 

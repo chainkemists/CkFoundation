@@ -89,8 +89,7 @@ public:
 
     static auto
     Broadcast_AcquiredFromPool_OnObject(
-        UObject* InObject,
-        const FInstancedStruct& InPerUseParams) -> void;
+        UObject* InObject) -> void;
 
     static auto
     Broadcast_ReleasedToPool_OnObject(

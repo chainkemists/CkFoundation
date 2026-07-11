@@ -5,7 +5,6 @@
 #include "CkCore/ObjectPooling/CkObjectPooling_Params.h"
 #include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
 
-#include <StructUtils/InstancedStruct.h>
 #include <Templates/SubclassOf.h>
 #include <UObject/ObjectKey.h>
 
@@ -143,14 +142,16 @@ public:
 
 private:
     // Vend an instance: recycled from the pool, freshly created on miss (Grow), or pinned-unique
-    // (DestroyOnRelease). Fresh creates are outered to the subsystem's world. Returns null only on
-    // Fail/at-capacity exhaustion or invalid inputs
+    // (DestroyOnRelease). DestroyOnRelease creates honor InOuter (a component may need an actor
+    // outer for GetOwner()-dependent systems like the nav octree); Recycle-pool creates are outered
+    // to the subsystem's world — a recycled instance survives its first caller, so it cannot borrow
+    // that caller's outer. Returns null only on Fail/at-capacity exhaustion or invalid inputs
     auto
     DoRequest_Acquire(
         const TSubclassOf<UObject>& InClass,
         UObject* InArchetype,
         const FCk_ObjectPooling_PoolParams& InPoolParams,
-        const FInstancedStruct& InPerUseParams) -> UObject*;
+        UObject* InOuter) -> UObject*;
 
     // Recycle-policy instances: veto-check -> OnReleasedToPool -> park in the free list (veto
     // destroys instead). DestroyOnRelease instances: OnReleasedToPool -> unpin (GC collects).

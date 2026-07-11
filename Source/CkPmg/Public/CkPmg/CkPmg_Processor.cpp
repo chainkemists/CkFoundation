@@ -1,4 +1,6 @@
 #include "CkPmg_Processor.h"
+
+#include "CkCore/Object/CkObject_Utils.h"
 #include "CkPmg_Processor_AngularShapes.h"
 #include "CkPmg_Processor_BasicShapes.h"
 #include "CkPmg_Processor_DirectionalShapes.h"
@@ -235,11 +237,9 @@ namespace ck
             TEXT("Pmg Donut [{}] could not get valid World"), InHandle)
         { return; }
 
-        auto MeshComponent = NewObject<UProceduralMeshComponent>(
-            World,
-            UProceduralMeshComponent::StaticClass(),
-            NAME_None,
-            RF_Transient);
+        auto MeshComponent = UCk_Utils_Object_UE::Request_CreateNewObject<UProceduralMeshComponent>(
+            World, UProceduralMeshComponent::StaticClass(), nullptr,
+            FCk_ObjectPooling_PoolParams{}.Set_RecyclePolicy(ECk_ObjectPooling_RecyclePolicy::DestroyOnRelease), nullptr);
 
         CK_ENSURE_IF_NOT(ck::IsValid(MeshComponent),
             TEXT("Pmg Donut [{}] failed to create ProceduralMeshComponent"), InHandle)
@@ -300,7 +300,7 @@ namespace ck
         MeshComponent->UpdateBounds();
         MeshComponent->MarkRenderStateDirty();
 
-        InCurrent._MeshComponent = TStrongObjectPtr{MeshComponent};
+        InCurrent._MeshComponent = MeshComponent;
 
         if (InHandle.Has<ck::FFragment_Transform>())
         {
@@ -459,6 +459,11 @@ namespace ck
         auto MeshComponent = InCurrent._MeshComponent.Get();
         if (ck::IsValid(MeshComponent))
         {
+            // unpin IMMEDIATELY before destroy: DestroyComponent may mark the object garbage
+            // (failing the release's validity gate), and no GC can run between these two calls
+            if (UCk_Utils_Object_UE::Get_IsPoolVendedObject(MeshComponent))
+            { UCk_Utils_Object_UE::TryReleaseToPool(MeshComponent); }
+
             MeshComponent->DestroyComponent();
         }
 
@@ -724,6 +729,11 @@ namespace ck
         auto MeshComponent = InCurrent._MeshComponent.Get();
         if (ck::IsValid(MeshComponent))
         {
+            // unpin IMMEDIATELY before destroy: DestroyComponent may mark the object garbage
+            // (failing the release's validity gate), and no GC can run between these two calls
+            if (UCk_Utils_Object_UE::Get_IsPoolVendedObject(MeshComponent))
+            { UCk_Utils_Object_UE::TryReleaseToPool(MeshComponent); }
+
             MeshComponent->DestroyComponent();
         }
 

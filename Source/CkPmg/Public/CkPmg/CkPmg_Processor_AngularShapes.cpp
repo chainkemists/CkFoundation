@@ -1,5 +1,7 @@
 #include "CkPmg_Processor_AngularShapes.h"
 
+#include "CkCore/Object/CkObject_Utils.h"
+
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
 #include "CkCore/Math/Vector/CkVector_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -29,8 +31,9 @@ namespace
         if (ck::Is_NOT_Valid(World))
         { return nullptr; }
 
-        auto MeshComponent = NewObject<UProceduralMeshComponent>(
-            World, UProceduralMeshComponent::StaticClass(), NAME_None, RF_Transient);
+        auto MeshComponent = UCk_Utils_Object_UE::Request_CreateNewObject<UProceduralMeshComponent>(
+            World, UProceduralMeshComponent::StaticClass(), nullptr,
+            FCk_ObjectPooling_PoolParams{}.Set_RecyclePolicy(ECk_ObjectPooling_RecyclePolicy::DestroyOnRelease), nullptr);
 
         if (ck::Is_NOT_Valid(MeshComponent))
         { return nullptr; }
