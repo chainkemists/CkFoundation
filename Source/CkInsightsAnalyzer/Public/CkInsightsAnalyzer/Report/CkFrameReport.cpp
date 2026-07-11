@@ -97,11 +97,15 @@ auto
         return TEXT("(No analysis data)");
     }
 
-    TraceServices::FAnalysisSessionReadScope ReadScope = Session.CreateReadScope();
-    const FTimerNameMap TimerNames = BuildTimerNameMap(Session);
-
     TArray<FString> Lines;
     Lines.Reserve(128);
+
+    // The overview accessors each take their own read scope — emit before the
+    // scope below so the session read lock is never acquired recursively.
+    GenerateTraceOverview(Session, Lines);
+
+    TraceServices::FAnalysisSessionReadScope ReadScope = Session.CreateReadScope();
+    const FTimerNameMap TimerNames = BuildTimerNameMap(Session);
 
     GenerateHeader(Result, Lines);
     GenerateHotPaths(Result, TimerNames, Lines);
@@ -127,6 +131,25 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 // Header
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_FrameReport::
+    GenerateTraceOverview(const FCk_TraceSession& Session,
+                          TArray<FString>& Lines)
+    -> void
+{
+    const uint64 RenderFrames = Session.GetRenderFrameCount();
+    const FString RenderFramesStr = RenderFrames > 0
+        ? FString::Printf(TEXT(", %llu render frames"), RenderFrames)
+        : FString{};
+
+    Lines.Add(FString::Printf(TEXT("_Trace: %s \u2014 %.1fs, %llu game frames%s, %d threads_"),
+        *FPaths::GetCleanFilename(Session.GetFilePath()),
+        Session.GetDurationSeconds(),
+        Session.GetFrameCount(),
+        *RenderFramesStr,
+        Session.GetThreadInfos().Num()));
+}
 
 auto
     FCk_FrameReport::

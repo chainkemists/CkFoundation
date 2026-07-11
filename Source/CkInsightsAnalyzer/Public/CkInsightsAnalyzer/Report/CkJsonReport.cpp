@@ -50,17 +50,10 @@ auto
     Obj->SetNumberField(TEXT("durationSeconds"), Round3(Session.GetDurationSeconds()));
     Obj->SetNumberField(TEXT("gameFrameCount"), static_cast<double>(Session.GetFrameCount()));
 
-    // Render frame count has no convenience accessor — query the frame provider directly
+    if (const uint64 RenderFrames = Session.GetRenderFrameCount();
+        RenderFrames > 0)
     {
-        TraceServices::FAnalysisSessionReadScope ReadScope = Session.CreateReadScope();
-        if (const TraceServices::IFrameProvider* FrameProvider = Session.GetFrameProvider())
-        {
-            const uint64 RenderFrames = FrameProvider->GetFrameCount(ETraceFrameType::TraceFrameType_Rendering);
-            if (RenderFrames > 0)
-            {
-                Obj->SetNumberField(TEXT("renderFrameCount"), static_cast<double>(RenderFrames));
-            }
-        }
+        Obj->SetNumberField(TEXT("renderFrameCount"), static_cast<double>(RenderFrames));
     }
 
     TArray<TSharedPtr<FJsonValue>> ThreadValues;

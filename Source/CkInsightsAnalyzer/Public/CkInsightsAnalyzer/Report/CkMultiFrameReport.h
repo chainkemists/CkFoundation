@@ -171,7 +171,7 @@ private:
         -> TPair<FString, double>;
 
     /** Generate the markdown report from populated _Stats. */
-    auto GenerateReport() const -> FString;
+    auto GenerateReport(const FCk_TraceSession& Session) const -> FString;
 
     /** Compute percentile from a sorted array. */
     static auto Percentile(const TArray<double>& SortedValues, double P) -> double;
