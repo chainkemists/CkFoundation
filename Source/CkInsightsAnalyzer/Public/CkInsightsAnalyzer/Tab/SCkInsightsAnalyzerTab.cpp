@@ -252,12 +252,14 @@ public:
                    .IndentAmount(12.0f)
                ];
 
+            // The synthetic "(+N below threshold)" reconciliation row renders muted — it is an
+            // aggregate of pruned children, not a timer of its own.
             Row->AddSlot()
                .AutoWidth()
                .VAlign(VAlign_Center)
                .Padding(0.0f, 0.0f, CkStyle::SpaceS, 0.0f)
                [
-                   MakeDot(SeverityColor(_Node->InclusiveMs))
+                   MakeDot(_Node->bIsAggregate ? CkStyle::TextMute() : SeverityColor(_Node->InclusiveMs))
                ];
 
             Row->AddSlot()
@@ -266,8 +268,8 @@ public:
                [
                    SNew(STextBlock)
                    .Text(FText::FromString(_Node->DisplayName))
-                   .Font(BodyFont())
-                   .ColorAndOpacity(CkStyle::Text())
+                   .Font(_Node->bIsAggregate ? ItalicFont() : BodyFont())
+                   .ColorAndOpacity(_Node->bIsAggregate ? CkStyle::TextDim() : CkStyle::Text())
                    .ToolTipText(FText::FromString(_Node->RawName))
                ];
 
@@ -292,7 +294,8 @@ public:
         {
             return DoMakeCell(
                 FCk_TimerCategorizer::FormatMs(_Node->InclusiveMs),
-                BodyBoldFont(), SeverityColor(_Node->InclusiveMs));
+                BodyBoldFont(),
+                _Node->bIsAggregate ? CkStyle::TextDim() : SeverityColor(_Node->InclusiveMs));
         }
 
         if (InColumnName == TEXT("Self"))
