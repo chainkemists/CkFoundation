@@ -1,12 +1,15 @@
 # Object pooling core — PROGRESS.md (living log)
 
 ## Current state  <!-- supersedes everything below; update at EVERY phase and session end -->
-**As of 2026-07-11 (branch `feature/object-pooling-core`):** Phases 1-4 ✅; Phase 5 debugger module
-built + linked (tab is [EDITOR-VERIFY]). Latest user-driven refinements: TryReleaseToPool made a
-benign no-op for untracked objects + all 6 release-gates removed. Fresh full regression suite
-RUNNING on the grace/gate binary. Then: commit everything (3 repos), then Phase 6 (docs/AS verify).
-Prior refinements this session: veto removed, per-use params removed, Get_ScriptInstance not added,
-subsystem methods renamed public, "vend"→"tracked/pinned".
+**As of 2026-07-11:** ALL 6 PHASES ✅ (Phase 5 tab + Phase 6 BP node-visibility are the only
+[EDITOR-VERIFY] items left; C++ ✅ and AS ✅ done). Everything committed locally across 3 repos,
+NONE pushed. **Merge order: CkFoundation FIRST** (CkTests + CkGameplayDebugger compile against its
+new API — pushing either first breaks `submodule update`).
+Committed tips:
+- CkFoundation `feature/object-pooling-core` @ `55f28552e` (Phase 4 refinement; on b682c7311 /
+  a40807415 / f4585bf3d / this Phase-6 docs commit next)
+- CkTests `feature/object-pooling-autotests` @ `8bf5a8b`
+- CkGameplayDebugger `feature/object-pooling-inspector` @ `5e5e31e`
 **Baseline being diffed against:** 1048 total / 1040 pass / 8 fail (names in PHASE_2.md exit
 criteria; all pre-existing BB game tests). Reproduced identically across Phase-1/2/3 binaries.
 **Next action:** confirm full-suite diff (expect 1052 total = +4 pooling, 1044 pass, same 8 fail);
@@ -23,6 +26,16 @@ uncommitted.
 | 2026-07-11 | All 12 locked decisions — see PROMPT.md table (single source; not duplicated here) | user forks resolved via 4 questions + 2 flagged unilateral calls (enum additive, actors excluded) | per-row notes in PROMPT.md |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-07-11 — Phase 6 docs + campaign wrap
+- Wrote `CkCore/Public/CkCore/ObjectPooling/README.md` (canonical mechanism doc). Added CkCore
+  CLAUDE.md use-case row (+ folder count 48→49), `Source/CLAUDE.md` "I need to..." row, DECISIONS.md
+  98-105. Root CLAUDE.md untouched (additive, no non-negotiable/macro change).
+- AS verification closed: the 4 autotests compile+run against generated `utils_object::` wrappers +
+  participant struct accessors, 4/4 green, 0 AS errors. Non-negotiable #4: C++ ✅ AS ✅, BP node
+  visibility is the one remaining [EDITOR-VERIFY] (PHASE_6.md).
+- Final gate recorded: 1052/1044/8 vs 1048/1040/8 campaign baseline (+4 pooling, 0 regressions).
+- Three repos committed (see current-state). Nothing pushed. Merge order CkFoundation first.
 
 ### 2026-07-11 — Phase 5 debugger module + TryReleaseToPool grace / gate removal (user-driven)
 - User Q1: the `Get_IsPoolTrackedObject` release-gate is redundant. Made subsystem `TryReleaseToPool`

@@ -5,7 +5,7 @@
 **Depends on:** `CkBuildConfig`, `CkLog`, `CkSettings`, `CkThirdParty` (nothing else Ck-related).
 **Used by:** effectively all ~85 other modules.
 
-**This file is the entry point.** If you don't know where a utility lives, read the use-case table below first. Each of the 48 subfolders has a `README.md` — full details for the non-trivial ones (15), or a short stub for the rest (33).
+**This file is the entry point.** If you don't know where a utility lives, read the use-case table below first. Each of the 49 subfolders has a `README.md` — full details for the non-trivial ones (16), or a short stub for the rest (33).
 
 ---
 
@@ -77,6 +77,7 @@ Scan the left column. Each row points at the folder that owns the utility and (w
 | `UActorComponent` helpers | `Component` | `CkActorComponent_Utils.h` | `UCk_Utils_ActorComponent_UE::…` |
 | Custom `UGameEngine`/`UGameInstance`/`AGameMode`/`AGameState` bases | `Engine` | `CkGameEngine.h`, `CkGameInstance.h`, `CkGameMode.h`, `CkGameState.h` | inherit in project settings |
 | `UObject` helpers, `UCk_WorldContextObject` base | `Object` | `CkObject_Utils.h`, `CkWorldContextObject.h` | world-aware UObject |
+| Pool/recycle UObjects; subsystem-own a UObject's lifetime (so a fragment can hold it weakly) | `ObjectPooling` | `CkObjectPooling_Subsystem.h`, `CkObject_Utils.h` | see `ObjectPooling/README.md` |
 | Iris-compatible replicated `UObject` base | `ObjectReplication` | `CkReplicatedObject.h` | `UCk_ReplicatedObject_UE` |
 | Scene / world helpers | `Scene`, `World` | `CkScene_Utils.h`, `CkWorld_Utils.h` | `UCk_Utils_World_UE::…` |
 | Level streaming helpers | `LevelStreaming` | `CkLevelStreaming_Utils.h` | load/unload level streaming |
