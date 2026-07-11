@@ -31,6 +31,7 @@ namespace ck
     {
     public:
         CK_GENERATED_BODY(FFragment_EntityCollection_Params);
+        using IsSnapshotable = void;
 
     public:
         using ParamsType = FCk_Fragment_EntityCollection_ParamsData;
@@ -43,6 +44,9 @@ namespace ck
 
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_EntityCollection_Params, _Params);
+
+    public:
+        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -87,8 +91,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfEntityCollections, FCk_Handle_EntityCollection);
-    CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_EntityCollections_RecordOfEntities, FCk_Handle);
+    // ROUNDTRIP: membership must survive load or restored collection entities orphan from their owner/contents.
+    CK_DEFINE_RECORD_OF_ENTITIES_ROUNDTRIP(FFragment_RecordOfEntityCollections, FCk_Handle_EntityCollection);
+    CK_DEFINE_RECORD_OF_ENTITIES_ROUNDTRIP(FFragment_EntityCollections_RecordOfEntities, FCk_Handle);
+    // TRANSIENT: previous-frame diffing scratch.
     CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_EntityCollections_RecordOfEntities_Previous, FCk_Handle);
 
     // --------------------------------------------------------------------------------------------------------------------

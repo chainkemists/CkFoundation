@@ -27,6 +27,8 @@ struct CKOBJECTIVE_API FCk_ObjectiveOwner_ParamsData
 public:
     CK_GENERATED_BODY(FCk_ObjectiveOwner_ParamsData);
 
+    using IsSnapshotable = void;
+
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, AllowAbstract = false))
     TArray<TSubclassOf<UCk_Objective_EntityScript>> _DefaultObjectives;
