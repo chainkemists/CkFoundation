@@ -33,6 +33,12 @@ static struct FAccelerationRepHandlerRegistrar
                     if (ck::Is_NOT_Valid(AccelerationHandle))
                     { return ECk_RepFragment_ApplyResult::NotReady; }
 
+                    // A pending Setup pass recomputes Current from Params AFTER this apply within the same frame,
+                    // stomping the replicated value (and the authority never re-sends an unchanged value). Defer
+                    // until the setup drain so the applied value is final.
+                    if (Entity.Has<ck::FTag_Acceleration_NeedsSetup>())
+                    { return ECk_RepFragment_ApplyResult::NotReady; }
+
                     UCk_Utils_Acceleration_UE::Request_OverrideAcceleration(AccelerationHandle, New.Get<FCk_RepData_Acceleration>().Value);
                     return ECk_RepFragment_ApplyResult::Applied;
                 }
