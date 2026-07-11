@@ -300,6 +300,16 @@ public:
     TryReleaseToPool(
         UObject* InObject);
 
+    // True when the ObjectPooling subsystem of the object's world vended (and still tracks) this
+    // instance — pooled in-use OR pinned-unique. CDOs and objects created outside the pooling-aware
+    // path return false. Use to gate TryReleaseToPool without tripping its never-vended ensure
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Pool-Vended Object",
+              Category = "Ck|Utils|Object")
+    static bool
+    Get_IsPoolVendedObject(
+        const UObject* InObject);
+
     // Unreal prefixes some classes with REINST_. This is because REINST_ is a newer version of a static class.
     // This function gets the most up to date default class.
     UFUNCTION(BlueprintPure,

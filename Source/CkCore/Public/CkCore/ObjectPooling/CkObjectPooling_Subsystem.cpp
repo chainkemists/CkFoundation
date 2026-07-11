@@ -96,7 +96,7 @@ auto
     if (ck::Is_NOT_Valid(InObject))
     { return false; }
 
-    if (_VendedUnique.Contains(InObject))
+    if (_VendedUnique.Contains(const_cast<UObject*>(InObject)))
     { return true; }
 
     return _InstanceToPool.Contains(FObjectKey{InObject});
@@ -175,7 +175,7 @@ auto
 
         if (Pool->_Params.Get_ExhaustionPolicy() == ECk_ObjectPooling_ExhaustionPolicy::Fail)
         {
-            ck::core::Verbose(TEXT("ObjectPool [{}] is empty and Fail policy is set — returning null"), Pool->Get_Class());
+            ck::core::Verbose(TEXT("ObjectPool [{}] is empty and Fail policy is set — returning null"), Pool->Get_Class().Get());
             return {};
         }
 
@@ -185,7 +185,7 @@ auto
         if (NOT CanCreateMore)
         {
             ck::core::Verbose(TEXT("ObjectPool [{}] is at capacity [{}] — returning null"),
-                Pool->Get_Class(), Pool->_Params.Get_MaxSize());
+                Pool->Get_Class().Get(), Pool->_Params.Get_MaxSize());
             return {};
         }
 

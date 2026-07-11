@@ -261,6 +261,28 @@ auto
 
 auto
     UCk_Utils_Object_UE::
+    Get_IsPoolVendedObject(
+        const UObject* InObject)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InObject))
+    { return false; }
+
+    const auto& World = InObject->GetWorld();
+
+    if (ck::Is_NOT_Valid(World))
+    { return false; }
+
+    const auto* Subsystem = World->GetSubsystem<UCk_ObjectPooling_Subsystem_UE>();
+
+    if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
+    { return false; }
+
+    return Subsystem->Get_IsVendedObject(InObject);
+}
+
+auto
+    UCk_Utils_Object_UE::
     DoRequest_AcquirePooled(
         UObject* InOuter,
         TSubclassOf<UObject> InClass,
