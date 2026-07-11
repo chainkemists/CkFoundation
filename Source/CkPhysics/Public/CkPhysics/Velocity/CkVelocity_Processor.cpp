@@ -8,6 +8,7 @@
 #include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "CkPhysics/CkPhysics_Log.h"
 #include "CkPhysics/CkPhysics_Stats.h"
 #include "CkPhysics/PredictedVelocity/CkPredictedVelocity_Utils.h"
 #include "CkPhysics/Velocity/CkVelocity_Utils.h"
@@ -351,8 +352,21 @@ namespace ck
         if (NOT UCk_Utils_EntityReplicationDriver_UE::Has(InHandle))
         { return; }
 
-        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Velocity>(
+        // The done-tag may only be consumed once a pushable container entry exists — the Replicate processor's
+        // view is keyed on the ContainerRef this call creates, so a missed seed with the done-tag stamped would
+        // silently never push the restored value. NotAdded = a net/driver precondition wasn't satisfied THIS
+        // tick -> retry next tick (both markers stay in place). AlreadyExists counts as success: the ContainerRef
+        // is present, so the Replicate processor pushes Current every frame.
+        const auto AddedOrNot = UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Velocity>(
             InHandle, FCk_RepData_Velocity{InCurrent.Get_CurrentVelocity()});
+
+        if (AddedOrNot == ECk_AddedOrNot::NotAdded)
+        {
+            ck::physics::Verbose(
+                TEXT("ReplicateOnRestore: Velocity restore-seed missed this tick for Entity [{}] "
+                     "(TryAddContainerFragment returned NotAdded) — retrying next tick"), InHandle);
+            return;
+        }
 
         InHandle.Add<FTag_Velocity_RestoreReplicated>();
     }

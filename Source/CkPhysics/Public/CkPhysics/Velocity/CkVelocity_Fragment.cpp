@@ -35,6 +35,12 @@ static struct FVelocityRepHandlerRegistrar
                     if (ck::Is_NOT_Valid(VelocityHandle))
                     { return ECk_RepFragment_ApplyResult::NotReady; }
 
+                    // A pending Setup pass recomputes Current from Params AFTER this apply within the same frame,
+                    // stomping the replicated value (and the authority never re-sends an unchanged value). Defer
+                    // until the setup drain so the applied value is final.
+                    if (Entity.Has<ck::FTag_Velocity_NeedsSetup>())
+                    { return ECk_RepFragment_ApplyResult::NotReady; }
+
                     UCk_Utils_Velocity_UE::Request_OverrideVelocity(VelocityHandle, New.Get<FCk_RepData_Velocity>().Value);
                     return ECk_RepFragment_ApplyResult::Applied;
                 }
