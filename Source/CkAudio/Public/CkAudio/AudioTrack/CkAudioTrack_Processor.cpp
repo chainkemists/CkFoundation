@@ -1,6 +1,7 @@
 #include "CkAudioTrack_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Object/CkObject_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
@@ -61,7 +62,13 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(World), TEXT("Cannot setup AudioTrack [{}] - no valid world"), InHandle)
         { return; }
 
-        auto AudioComponent = NewObject<UAudioComponent>(World);
+        // vended DestroyOnRelease: the ObjectPooling subsystem pins the component for its lifetime
+        // (the fragment holds a weak ptr); EndPlay releases it back before DestroyComponent
+        const auto PoolParams = FCk_ObjectPooling_PoolParams{}
+            .Set_RecyclePolicy(ECk_ObjectPooling_RecyclePolicy::DestroyOnRelease);
+
+        auto AudioComponent = UCk_Utils_Object_UE::Request_CreateNewObject<UAudioComponent>(World,
+            UAudioComponent::StaticClass(), nullptr, PoolParams, nullptr);
         CK_ENSURE_IF_NOT(ck::IsValid(AudioComponent), TEXT("Failed to create AudioComponent for AudioTrack [{}]"), InHandle)
         { return; }
 
@@ -228,7 +235,7 @@ namespace ck
             }
         }
 
-        InCurrent._AudioComponent = TStrongObjectPtr(AudioComponent);
+        InCurrent._AudioComponent = AudioComponent;
         InCurrent._State = ECk_AudioTrack_State::Stopped;
         InCurrent._CurrentVolume = 0.0f;
         InCurrent._TargetVolume = 0.0f;
@@ -667,6 +674,13 @@ namespace ck
 
             InCurrent._AudioComponent->Stop();
             InCurrent._AudioComponent->SetSound(nullptr);
+
+            // unpin IMMEDIATELY before destroy: DestroyComponent may mark the object garbage
+            // (failing the release's validity gate), and no GC can run between these two calls
+            if (auto* AudioComponent = InCurrent._AudioComponent.Get();
+                UCk_Utils_Object_UE::Get_IsPoolVendedObject(AudioComponent))
+            { UCk_Utils_Object_UE::TryReleaseToPool(AudioComponent); }
+
             InCurrent._AudioComponent->DestroyComponent();
             InCurrent._AudioComponent = nullptr;
         }

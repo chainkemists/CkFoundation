@@ -38,7 +38,9 @@ namespace ck
         friend class UCk_Utils_AudioTrack_UE;
 
     private:
-        TStrongObjectPtr<UAudioComponent> _AudioComponent;
+        // WEAK: the CkCore ObjectPooling subsystem owns the component's lifetime (vended
+        // DestroyOnRelease through the pooling-aware Request_CreateNewObject; EndPlay releases it)
+        TWeakObjectPtr<UAudioComponent> _AudioComponent;
         ECk_AudioTrack_State _State = ECk_AudioTrack_State::Stopped;
         float _CurrentVolume = 0.0f;
         float _TargetVolume = 0.0f;

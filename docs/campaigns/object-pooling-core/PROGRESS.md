@@ -1,13 +1,14 @@
 # Object pooling core — PROGRESS.md (living log)
 
 ## Current state  <!-- supersedes everything below; update at EVERY phase and session end -->
-**As of 2026-07-11 (branch `feature/object-pooling-core`):** Phase 1 ✅ + Phase 2 ✅ (suite diff
-clean; poolable-path runtime observations deferred to Phase 5). Phase 3 (sweep conversions) next.
-**Baseline being diffed against:** 1048 total / 1040 pass / 8 fail, captured 2026-07-11 on the
-Phase-1 binary; the 8 failing names are recorded in PHASE_2.md exit criteria (all pre-existing BB
-game tests). Phase-2 binary reproduced the identical 8.
-**Next action:** Phase 3 entry pre-flight (re-read the six members' create/teardown sites on
-current HEAD), then per-module conversions.
+**As of 2026-07-11 (branch `feature/object-pooling-core`):** Phases 1-3 ✅ + per-use-param API trim
+(user-driven). Next: Phase 4 (CkTests pooling suite) — the first runtime proof of the poolable
+recycle path.
+**Baseline being diffed against:** 1048 total / 1040 pass / 8 fail (names in PHASE_2.md exit
+criteria; all pre-existing BB game tests). Reproduced IDENTICALLY on four binaries: Phase-1,
+Phase-2, Phase-3-sweep, Phase-3+trim.
+**Next action:** Phase 4 — new CkTests branch off its dev; autotests per PHASE_4.md (note: tests
+must not reference per-use params — removed from the API).
 **Blocked on:** nothing.
 
 ## Decision log
@@ -16,6 +17,24 @@ current HEAD), then per-module conversions.
 | 2026-07-11 | All 12 locked decisions — see PROMPT.md table (single source; not duplicated here) | user forks resolved via 4 questions + 2 flagged unilateral calls (enum additive, actors excluded) | per-row notes in PROMPT.md |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-07-11 — Phase 3 (sweep conversions) + per-use-param removal, gate-verified
+- Converted all six members to subsystem-vended weak (DestroyOnRelease): CkUnrealComponent
+  `_Component`, CkAudio `_AudioComponent`, CkPmg `_MeshComponent` ×2 (7 create sites across 7 TUs),
+  CkUI `_WrapperWidget` + `_WidgetComponent`. Teardowns unpin immediately before DestroyComponent
+  (destroy may garbage-mark → release's validity gate would fail; no GC between the calls).
+- Subsystem: `DoRequest_Acquire` gained `InOuter` — DestroyOnRelease honors it (ComponentHost-actor
+  outer keeps nav-octree `GetOwner()` working); Recycle pools stay world-outered.
+- User correction accepted: per-use `FInstancedStruct` removed from the whole acquire chain
+  (delegates now payload-free; EntityScript per-use data flows via spawn-params injection +
+  Construct; synchronous callers configure directly). 11 call sites trimmed.
+- Ran: sweep-only binary suite → 1048/1040/8 identical; rebuild with trim (green, 0 errors);
+  final binary suite → 1048/1040/8 IDENTICAL names. Logs: scratchpad suite_p3_tests.log /
+  suite_p3b_tests.log (session-local).
+- Confirmed: only intentional TStrongObjectPtr keeps remain in the 4 modules
+  (`_ContentWidgetHardRef`, PMG `BundledFont` static, `_FontOverride`).
+- Accepted change: PMG components no longer RF_Transient (runtime-world objects, never
+  level-serialized).
 
 ### 2026-07-11 — Phase 2 implemented and gate-verified (same session as Phase 1)
 - `CkEntityScript.h`: enum + `InstancedPerEntity_Poolable`; `_PoolParams` EditDefaultsOnly property
@@ -93,6 +112,7 @@ current HEAD), then per-module conversions.
 ## Open items
 | Item | Status | Next step |
 |---|---|---|
-| Phase 1+2 pooling autotests (round-trip, delegates, GC, replicated-poolable) | deferred | Phase 4/5 CkTests branch (doc numbering: tests = PHASE_4.md, debugger = PHASE_5.md) |
-| Phase 3 (sweep conversions, 6 members / 4 modules) | pending | entry pre-flight |
+| Phase 4 — CkTests pooling suite (round-trip, delegates, GC, replicated-poolable) | pending | new CkTests branch; first runtime proof of the recycle path |
+| Phase 5 — CkGameplayDebugger pools inspector | pending | after Phase 4 |
+| Phase 6 — docs + AS verification | pending | after Phases 4-5 |
 | `_SnapshotLoadPin` removal | owned by save/load campaign | coordinate at merge of feature/save-load-improvements |

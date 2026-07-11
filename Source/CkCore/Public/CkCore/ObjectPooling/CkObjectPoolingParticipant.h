@@ -2,7 +2,6 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include <StructUtils/InstancedStruct.h>
 #include <UObject/ObjectKey.h>
 
 #include "CkObjectPoolingParticipant.generated.h"
@@ -12,9 +11,8 @@ class UCk_ObjectPooling_Subsystem_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_MULTICAST_DELEGATE_OneParam(
-    FCk_Delegate_ObjectPoolingParticipant_OnAcquired_MC,
-    FInstancedStruct);
+DECLARE_MULTICAST_DELEGATE(
+    FCk_Delegate_ObjectPoolingParticipant_OnAcquired_MC);
 
 DECLARE_MULTICAST_DELEGATE(
     FCk_Delegate_ObjectPoolingParticipant_OnReleased_MC);
@@ -31,8 +29,10 @@ DECLARE_MULTICAST_DELEGATE(
  * (Hazelight fork limitation) — this property route is the single opt-in surface for all three
  * environments.
  *
- * - OnAcquiredFromPool: per-use (re)initialization; carries the acquire's per-use FInstancedStruct.
- *   Fires on EVERY vend (fresh instances simply have no binds yet), BEFORE the caller's init runs.
+ * - OnAcquiredFromPool: per-use (re)initialization signal. Fires on EVERY vend (fresh instances
+ *   simply have no binds yet), BEFORE the caller's init runs. Carries no payload — per-use data
+ *   flows through the caller (synchronous acquire) or, for EntityScripts, through the normal
+ *   spawn-params injection + Construct.
  * - OnReleasedToPool: quiescence — reset per-use state. Fires when the owner releases the instance,
  *   before it is stored (Recycle) or unpinned (DestroyOnRelease). Not fired when _CanBePooled vetoed
  *   the release into a destroy.
@@ -74,9 +74,8 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_DELEGATE_OneParam(
-    FCk_Delegate_ObjectPoolingParticipant_OnAcquired,
-    FInstancedStruct, InPerUseParams);
+DECLARE_DYNAMIC_DELEGATE(
+    FCk_Delegate_ObjectPoolingParticipant_OnAcquired);
 
 DECLARE_DYNAMIC_DELEGATE(
     FCk_Delegate_ObjectPoolingParticipant_OnReleased);

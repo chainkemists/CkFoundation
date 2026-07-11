@@ -1,5 +1,7 @@
 #include "CkWorldSpaceWidget_Utils.h"
 
+#include "CkCore/Object/CkObject_Utils.h"
+
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
 #include "CkEcsExt/SceneNode/CkSceneNode_Utils.h"
@@ -175,7 +177,13 @@ auto
     const auto ContentWidget = InParams.Get_Widget().Get();
     const auto& WorldComponentInfo = InParams.Get_WorldComponentInfo();
 
-    auto WidgetComponent = NewObject<UWidgetComponent>(World);
+    // vended DestroyOnRelease: the ObjectPooling subsystem pins the component for its lifetime
+    // (the fragment holds a weak ptr); EndPlay releases it back before DestroyComponent
+    const auto PoolParams = FCk_ObjectPooling_PoolParams{}
+        .Set_RecyclePolicy(ECk_ObjectPooling_RecyclePolicy::DestroyOnRelease);
+
+    auto WidgetComponent = UCk_Utils_Object_UE::Request_CreateNewObject<UWidgetComponent>(World,
+        UWidgetComponent::StaticClass(), nullptr, PoolParams, nullptr);
 
     CK_ENSURE_IF_NOT(ck::IsValid(WidgetComponent),
         TEXT("Failed to create UWidgetComponent for WorldSpaceWidget"))

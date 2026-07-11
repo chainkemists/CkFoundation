@@ -1,5 +1,7 @@
 #include "CkWorldSpaceWidget_Fragment_Data.h"
 
+#include "CkCore/Object/CkObject_Utils.h"
+
 #include <Components/CanvasPanelSlot.h>
 #include <Blueprint/WidgetTree.h>
 
@@ -18,10 +20,16 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InContentWidget->GetOwningPlayer()), TEXT("Invalid OwningPlayer"))
     { return nullptr; }
 
-    auto NewWrapperWidget = NewObject<UCk_WorldSpaceWidget_Wrapper_UE>(
+    // vended DestroyOnRelease: the ObjectPooling subsystem pins the wrapper for its lifetime (the
+    // fragment holds a weak ptr — the viewport's own reference vanishes on RemoveFromParent);
+    // EndPlay releases it. Outer stays the OwningPlayer for GetOwningPlayer resolution
+    const auto PoolParams = FCk_ObjectPooling_PoolParams{}
+        .Set_RecyclePolicy(ECk_ObjectPooling_RecyclePolicy::DestroyOnRelease);
+
+    auto NewWrapperWidget = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_WorldSpaceWidget_Wrapper_UE>(
         InContentWidget->GetOwningPlayer(),
-        UCk_WorldSpaceWidget_Wrapper_UE::StaticClass()
-    );
+        UCk_WorldSpaceWidget_Wrapper_UE::StaticClass(),
+        nullptr, PoolParams, nullptr);
 
     CK_ENSURE_IF_NOT(ck::IsValid(NewWrapperWidget), TEXT("Failed to create wrapper widget"))
     { return nullptr; }

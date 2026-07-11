@@ -227,11 +227,10 @@ auto
         UObject* InOuter,
         TSubclassOf<UObject> InClass,
         UObject* InTemplateArchetype,
-        const FCk_ObjectPooling_PoolParams& InPoolParams,
-        const FInstancedStruct& InPerUseParams)
+        const FCk_ObjectPooling_PoolParams& InPoolParams)
     -> UObject*
 {
-    return DoRequest_AcquirePooled(InOuter, InClass, InTemplateArchetype, InPoolParams, InPerUseParams);
+    return DoRequest_AcquirePooled(InOuter, InClass, InTemplateArchetype, InPoolParams);
 }
 
 auto
@@ -287,8 +286,7 @@ auto
         UObject* InOuter,
         TSubclassOf<UObject> InClass,
         UObject* InTemplateArchetype,
-        const FCk_ObjectPooling_PoolParams& InPoolParams,
-        const FInstancedStruct& InPerUseParams)
+        const FCk_ObjectPooling_PoolParams& InPoolParams)
     -> UObject*
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InClass), TEXT("Invalid Class supplied to the pooled Request_CreateNewObject"))
@@ -306,7 +304,7 @@ auto
              "hold a strong reference in this case"), InClass, InOuter)
     { return NewObject<UObject>(InOuter, InClass, NAME_None, RF_NoFlags, InTemplateArchetype); }
 
-    return Subsystem->DoRequest_Acquire(InClass, InTemplateArchetype, InPoolParams, InPerUseParams);
+    return Subsystem->DoRequest_Acquire(InClass, InTemplateArchetype, InPoolParams, InOuter);
 }
 
 auto

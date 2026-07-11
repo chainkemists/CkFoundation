@@ -1,5 +1,7 @@
 #include "CkWorldSpaceWidget_Processor.h"
 
+#include "CkCore/Object/CkObject_Utils.h"
+
 #include "Components/CanvasPanelSlot.h"
 
 #include "CollisionQueryParams.h"
@@ -362,6 +364,11 @@ namespace ck
         if (const auto WidgetComponent = InCurrent.Get_WidgetComponent().Get();
             ck::IsValid(WidgetComponent))
         {
+            // unpin IMMEDIATELY before destroy: DestroyComponent may mark the object garbage
+            // (failing the release's validity gate), and no GC can run between these two calls
+            if (UCk_Utils_Object_UE::Get_IsPoolVendedObject(WidgetComponent))
+            { UCk_Utils_Object_UE::TryReleaseToPool(WidgetComponent); }
+
             WidgetComponent->DestroyComponent();
         }
 
@@ -373,6 +380,9 @@ namespace ck
             ck::IsValid(WrapperWidget))
         {
             WrapperWidget->RemoveFromParent();
+
+            if (UCk_Utils_Object_UE::Get_IsPoolVendedObject(WrapperWidget))
+            { UCk_Utils_Object_UE::TryReleaseToPool(WrapperWidget); }
         }
     }
 }

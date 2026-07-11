@@ -110,7 +110,7 @@ auto
         const TSubclassOf<UObject>& InClass,
         UObject* InArchetype,
         const FCk_ObjectPooling_PoolParams& InPoolParams,
-        const FInstancedStruct& InPerUseParams)
+        UObject* InOuter)
     -> UObject*
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InClass), TEXT("Cannot Acquire a pooled object with an INVALID class"))
@@ -136,11 +136,12 @@ auto
 
     if (InPoolParams.Get_RecyclePolicy() == ECk_ObjectPooling_RecyclePolicy::DestroyOnRelease)
     {
-        auto* NewInstance = NewObject<UObject>(GetWorld(), InClass, NAME_None, RF_NoFlags, Archetype);
+        auto* EffectiveOuter = ck::IsValid(InOuter) ? InOuter : static_cast<UObject*>(GetWorld());
+        auto* NewInstance = NewObject<UObject>(EffectiveOuter, InClass, NAME_None, RF_NoFlags, Archetype);
 
         _VendedUnique.Emplace(NewInstance);
 
-        UCk_Utils_ObjectPoolingParticipant_UE::Broadcast_AcquiredFromPool_OnObject(NewInstance, InPerUseParams);
+        UCk_Utils_ObjectPoolingParticipant_UE::Broadcast_AcquiredFromPool_OnObject(NewInstance);
 
         return NewInstance;
     }
@@ -224,7 +225,7 @@ auto
         DoReset_ToArchetype(AcquiredObject, Pool->Get_Archetype());
     }
 
-    UCk_Utils_ObjectPoolingParticipant_UE::Broadcast_AcquiredFromPool_OnObject(AcquiredObject, InPerUseParams);
+    UCk_Utils_ObjectPoolingParticipant_UE::Broadcast_AcquiredFromPool_OnObject(AcquiredObject);
 
     return AcquiredObject;
 }

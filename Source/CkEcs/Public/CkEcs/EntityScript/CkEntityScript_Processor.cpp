@@ -114,7 +114,8 @@ namespace ck
                     // both instanced policies vend through the CkCore ObjectPooling subsystem, which
                     // owns the instance's lifetime (the fragment holds a weak ptr): Poolable recycles
                     // across spawns, plain InstancedPerEntity is pinned-unique and destroyed when
-                    // EndPlay releases it. The spawn params double as the participant's per-use payload
+                    // EndPlay releases it. Per-use data needs no pool-side channel — the spawn params
+                    // are injected below and flow into Construct, recycled or fresh alike
                     const auto IsPoolable = EntityScriptClassArchetype->Get_InstancingPolicy() ==
                         ECk_EntityScript_InstancingPolicy::InstancedPerEntity_Poolable;
 
@@ -126,7 +127,7 @@ namespace ck
 
                     return UCk_Utils_Object_UE::Request_CreateNewObject<UCk_EntityScript_UE>(Outer,
                         EntityScriptClassArchetype->GetClass(), EntityScriptClassArchetype.Get(),
-                        PoolParams, InRequest.Get_SpawnParams(), nullptr);
+                        PoolParams, nullptr);
                 }
                 default:
                 {

@@ -49,7 +49,9 @@ namespace ck
         friend class ::UCk_Utils_UnrealComponent_UE;
 
     private:
-        TStrongObjectPtr<UActorComponent> _Component;
+        // WEAK: the CkCore ObjectPooling subsystem owns the component's lifetime (vended
+        // DestroyOnRelease through the pooling-aware Request_CreateNewObject; EndPlay releases it)
+        TWeakObjectPtr<UActorComponent> _Component;
         FCk_Handle _OwningEntity;
 
     public:
