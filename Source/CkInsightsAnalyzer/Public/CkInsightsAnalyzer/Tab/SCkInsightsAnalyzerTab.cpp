@@ -5,18 +5,21 @@
 #include "CkInsightsAnalyzer/Report/CkJsonReport.h"
 #include "CkInsightsAnalyzer_Log.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkEditorTools/Style/CkStyle.h"
 
 #include <DesktopPlatformModule.h>
+#include <Framework/MultiBox/MultiBoxBuilder.h>
 #include <HAL/PlatformApplicationMisc.h>
 #include <Misc/FileHelper.h>
 #include <Styling/AppStyle.h>
 #include <Styling/CoreStyle.h>
 #include <Widgets/Images/SImage.h>
 #include <Widgets/Input/SCheckBox.h>
+#include <Widgets/Input/SComboButton.h>
 #include <Widgets/Layout/SBorder.h>
 #include <Widgets/Layout/SBox.h>
 #include <Widgets/Layout/SExpandableArea.h>
@@ -478,6 +481,23 @@ auto
             .ToolTipText(FText::FromString(TEXT("Open an Unreal Insights trace file for analysis")))
             .OnClicked(this, &SCkInsightsAnalyzerTab::DoOnOpenTraceClicked)
             .HAlign(HAlign_Center)
+        ]
+
+        // Recent traces dropdown
+        + SHorizontalBox::Slot()
+        .AutoWidth()
+        .Padding(0.0f, 0.0f, SectionSpacing, 0.0f)
+        [
+            SNew(SComboButton)
+            .ToolTipText(FText::FromString(TEXT(
+                "Open a recent trace from Saved/Profiling or the local Unreal Trace Server store")))
+            .OnGetMenuContent(this, &SCkInsightsAnalyzerTab::DoMakeRecentTracesMenu)
+            .ButtonContent()
+            [
+                SNew(STextBlock)
+                .Text(FText::FromString(TEXT("Recent")))
+                .Font(BodyFont())
+            ]
         ]
 
         // Depth dropdown
@@ -1204,7 +1224,7 @@ auto
     const bool Opened = DesktopPlatform->OpenFileDialog(
         FSlateApplication::Get().FindBestParentWindowHandleForDialogs(nullptr),
         TEXT("Open Unreal Insights Trace"),
-        FPaths::ProjectSavedDir() / TEXT("TraceSessions"),
+        FPaths::ProfilingDir(),
         TEXT(""),
         TEXT("Unreal Trace Files (*.utrace)|*.utrace"),
         EFileDialogFlags::None,
@@ -1215,13 +1235,98 @@ auto
         return FReply::Handled();
     }
 
+    DoOpenTracePath(OutFiles[0]);
+    return FReply::Handled();
+}
+
+auto
+    SCkInsightsAnalyzerTab::
+    DoOpenTracePath(FString TracePath)
+    -> void
+{
+    if (DoIsLoading())
+    {
+        DoSetStatus(TEXT("Loading in progress..."), ECk_Tone::Warn);
+        return;
+    }
+
     // Close any existing session
     _Session.Close();
     _FrameBarChart->ClearFrameData();
     DoClearResults();
 
-    DoStartAsyncOpen(OutFiles[0]);
-    return FReply::Handled();
+    DoStartAsyncOpen(TracePath);
+}
+
+auto
+    SCkInsightsAnalyzerTab::
+    DoMakeRecentTracesMenu()
+    -> TSharedRef<SWidget>
+{
+    // (Path, ModificationTime, SizeBytes) for every .utrace in a candidate directory
+    struct FTraceFileInfo
+    {
+        FString Path;
+        FDateTime MTime;
+        int64 SizeBytes = 0;
+    };
+
+    // The default landing dir for -tracefile / Trace.File captures, plus the
+    // local Unreal Trace Server store (where traces without -tracefile go).
+    const FString TraceStoreDir = FString{FPlatformProcess::UserSettingsDir()} /
+        TEXT("UnrealEngine/Common/UnrealTrace/Store/001");
+    const TArray<FString> SearchDirs = { FPaths::ProfilingDir(), TraceStoreDir };
+
+    TArray<FTraceFileInfo> TraceFiles;
+    for (const FString& Dir : SearchDirs)
+    {
+        TArray<FString> Found;
+        IFileManager::Get().FindFiles(Found, *(Dir / TEXT("*.utrace")), true, false);
+        for (const FString& FileName : Found)
+        {
+            const FString FullPath = Dir / FileName;
+            TraceFiles.Add(FTraceFileInfo{
+                FullPath,
+                IFileManager::Get().GetTimeStamp(*FullPath),
+                IFileManager::Get().FileSize(*FullPath)});
+        }
+    }
+
+    ck::algo::Sort(TraceFiles, [](const FTraceFileInfo& A, const FTraceFileInfo& B)
+    {
+        return A.MTime > B.MTime;
+    });
+
+    constexpr auto MaxRecentTraces = 15;
+    constexpr auto CloseAfterSelection = true;
+    FMenuBuilder MenuBuilder(CloseAfterSelection, nullptr);
+
+    if (TraceFiles.IsEmpty())
+    {
+        MenuBuilder.AddWidget(
+            SNew(STextBlock)
+                .Text(FText::FromString(TEXT("No .utrace files found")))
+                .ColorAndOpacity(CkStyle::TextDim()),
+            FText::GetEmpty());
+        return MenuBuilder.MakeWidget();
+    }
+
+    for (int32 Index = 0; Index < FMath::Min(TraceFiles.Num(), MaxRecentTraces); ++Index)
+    {
+        const FTraceFileInfo& Info = TraceFiles[Index];
+        const FString Label = FString::Printf(TEXT("%s    %s    %.1f MB"),
+            *FPaths::GetCleanFilename(Info.Path),
+            *Info.MTime.ToString(TEXT("%Y-%m-%d %H:%M")),
+            static_cast<double>(Info.SizeBytes) / (1024.0 * 1024.0));
+
+        MenuBuilder.AddMenuEntry(
+            FText::FromString(Label),
+            FText::FromString(Info.Path),
+            FSlateIcon(),
+            FUIAction(FExecuteAction::CreateSP(this, &SCkInsightsAnalyzerTab::DoOpenTracePath, Info.Path)));
+    }
+
+    return MenuBuilder.MakeWidget();
 }
 
 auto

@@ -25,10 +25,10 @@
  * Main editor tab for the Insights Analyzer.
  *
  * Layout (top to bottom):
- *   1. Toolbar       — [Open .utrace...] [Depth ▾] [Analyze Worst 10] [Copy Report]  Status pill
+ *   1. Toolbar       — [Open .utrace...] [Recent ▾] [Depth ▾] [Analyze Worst 10] [Copy Report]  Status pill
  *   2. Summary strip — stat tiles (trace info; frame/aggregate numbers after analysis)
  *   3. Frame bar chart (SCkFrameBarChart, ~200px)
- *   4. Results       — splitter: hot-path tree (left) | categories / top timers /
+ *   4. Results       — splitter: hot-path tree (left) | categories / waits / top timers /
  *                      worst frames / category averages (right)
  *   5. Raw report    — collapsed expandable area with the markdown text (also what
  *                      "Copy Report" puts on the clipboard)
@@ -77,10 +77,18 @@ private:
     auto DoRebuildTopTimerRows() -> void;
     auto DoRebuildWorstFrameRows() -> void;
     auto DoRebuildCategoryAvgRows() -> void;
+    auto DoRebuildWaitRows() -> void;
 
     // ---- Button Handlers ----
 
     auto DoOnOpenTraceClicked() -> FReply;
+
+    /** Build the "Recent" dropdown menu — newest-first .utrace files from Saved/Profiling and the local trace store. */
+    auto DoMakeRecentTracesMenu() -> TSharedRef<SWidget>;
+
+    /** Close the current session and start async-opening the given trace. Shared by the file dialog
+     *  and the Recent menu. By-value: bound as a delegate payload, which decays reference types. */
+    auto DoOpenTracePath(FString TracePath) -> void;
     auto DoOnAnalyzeWorstClicked() -> FReply;
     auto DoOnCopyToClipboardClicked() -> FReply;
     auto DoOnExportJsonClicked() -> FReply;
