@@ -16,6 +16,7 @@
 #include <Styling/AppStyle.h>
 #include <Styling/CoreStyle.h>
 #include <Widgets/Images/SImage.h>
+#include <Widgets/Input/SCheckBox.h>
 #include <Widgets/Layout/SBorder.h>
 #include <Widgets/Layout/SBox.h>
 #include <Widgets/Layout/SExpandableArea.h>
@@ -507,6 +508,26 @@ auto
                     .InitiallySelectedItem(_DepthOptions[1]) // Standard
                     .OnSelectionChanged(this, &SCkInsightsAnalyzerTab::DoOnDepthSelectionChanged)
                 ]
+            ]
+        ]
+
+        // Show-all toggle — bypasses the hot-path tree's child threshold + cap
+        + SHorizontalBox::Slot()
+        .AutoWidth()
+        .VAlign(VAlign_Center)
+        .Padding(0.0f, 0.0f, SectionSpacing, 0.0f)
+        [
+            SNew(SCheckBox)
+            .IsChecked(this, &SCkInsightsAnalyzerTab::DoGet_ShowAllChildrenState)
+            .OnCheckStateChanged(this, &SCkInsightsAnalyzerTab::DoOnShowAllChildrenChanged)
+            .ToolTipText(FText::FromString(TEXT(
+                "Show every child in the hot-path tree instead of folding small ones into "
+                "'(+N below threshold)' rows. Tree depth still follows the Depth preset.")))
+            [
+                SNew(STextBlock)
+                .Text(FText::FromString(TEXT("Show all")))
+                .Font(BodyFont())
+                .ColorAndOpacity(CkStyle::TextDim())
             ]
         ]
 
@@ -1298,6 +1319,7 @@ auto
         Config.TargetFrameMs = TargetFrameMs;
         Config.Depth = _ReportDepth;
         Config.ApplyDepth();
+        Config.ShowAllChildren = _ShowAllChildren;
 
         Json = FCk_JsonReport::GenerateSingleFrame(_Session, *_LastSingleResult, Config);
     }
@@ -1359,6 +1381,25 @@ auto
     else                                    _ReportDepth = ECkReportDepth::HotPathsOnly;
 
     // Re-run the current selection so the depth change is immediately visible
+    DoRerunCurrentSelection();
+}
+
+auto
+    SCkInsightsAnalyzerTab::
+    DoGet_ShowAllChildrenState() const
+    -> ECheckBoxState
+{
+    return _ShowAllChildren ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+}
+
+auto
+    SCkInsightsAnalyzerTab::
+    DoOnShowAllChildrenChanged(ECheckBoxState NewState)
+    -> void
+{
+    _ShowAllChildren = NewState == ECheckBoxState::Checked;
+
+    // Re-run the current selection so the toggle is immediately visible
     DoRerunCurrentSelection();
 }
 
@@ -1471,6 +1512,7 @@ auto
     Config.TargetFrameMs = TargetFrameMs;
     Config.Depth = _ReportDepth;
     Config.ApplyDepth();
+    Config.ShowAllChildren = _ShowAllChildren;
 
     FCk_FrameReport FrameReport(Config);
     DoSetReport(FrameReport.Generate(_Session, Result));
