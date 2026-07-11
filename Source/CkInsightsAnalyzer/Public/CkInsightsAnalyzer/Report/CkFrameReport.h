@@ -250,6 +250,13 @@ public:
                   const FCk_FrameAnalysisResult& Result) const -> FString;
 
     /**
+     * One-line trace overview (file, duration, game/render frame counts, thread count).
+     * Shared by the single-frame and multi-frame markdown reports.
+     */
+    static auto GenerateTraceOverview(const FCk_TraceSession& Session,
+                                      TArray<FString>& Lines) -> void;
+
+    /**
      * Analyze all non-game threads within the frame's time window and summarize them.
      * Returns summaries sorted by wall time descending, filtered to >= MinWorkerThreadMs.
      * Shared by the markdown and JSON renderers.

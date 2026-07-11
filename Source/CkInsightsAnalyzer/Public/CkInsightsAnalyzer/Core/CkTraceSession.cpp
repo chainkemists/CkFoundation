@@ -364,6 +364,18 @@ auto
 
 auto
     FCk_TraceSession::
+    GetRenderFrameCount() const
+    -> uint64
+{
+    if (NOT IsOpen()) return 0;
+
+    TraceServices::FAnalysisSessionReadScope ReadScope(*_Session.Get());
+    const TraceServices::IFrameProvider* FrameProvider = GetFrameProvider();
+    return FrameProvider ? FrameProvider->GetFrameCount(ETraceFrameType::TraceFrameType_Rendering) : 0;
+}
+
+auto
+    FCk_TraceSession::
     GetFrame(uint64 Index) const
     -> const TraceServices::FFrame*
 {
