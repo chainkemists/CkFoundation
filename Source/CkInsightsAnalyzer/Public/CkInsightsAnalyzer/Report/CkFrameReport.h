@@ -165,6 +165,13 @@ struct CKINSIGHTSANALYZER_API FCk_HotPathNode
     double ExclusiveMs = 0.0;
     uint32 Count = 0;
 
+    /**
+     * True for the synthetic "(+N below threshold)" reconciliation row appended after the visible
+     * children — it carries the inclusive mass of children dropped by the 3%/0.3ms threshold, the
+     * child cap, or sibling-subtree dedup, so self + children + this row ≈ the parent's inclusive.
+     */
+    bool bIsAggregate = false;
+
     TArray<TSharedPtr<FCk_HotPathNode>> Children;
 };
 
