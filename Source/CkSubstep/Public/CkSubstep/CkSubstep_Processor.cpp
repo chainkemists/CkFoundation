@@ -23,6 +23,12 @@ namespace ck
             FFragment_Substep_Current& InCurrent) const
         -> void
     {
+        // Zero-dt tick = settle pass: do no time-dependent work and consume no one-shot markers. Early-out before
+        // the FirstUpdate consume and the Substep signal broadcasts so a settle pump neither advances substeps nor
+        // burns the FirstUpdate marker.
+        if (InDeltaT.Get_Seconds() <= 0.0f)
+        { return; }
+
         if (InHandle.Has<FTag_Substep_FirstUpdate>())
         {
             UUtils_Signal_OnSubstepFirstUpdate::Broadcast(InHandle, MakePayload(InHandle, InDeltaT));
