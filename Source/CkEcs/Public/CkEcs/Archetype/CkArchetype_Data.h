@@ -41,6 +41,12 @@ private:
               meta = (AllowPrivateAccess = true))
     TArray<FName> _FeatureIds;
 
+    // Population grouping for debugger dashboards (e.g. "NPCs", "World", "UI").
+    // None → consumers bucket the archetype under a generic "Game" family.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FName _Family;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FName _RequiredLabel;
@@ -68,6 +74,7 @@ public:
     CK_PROPERTY_GET(_Name);
     CK_PROPERTY(_DisplayName);
     CK_PROPERTY(_FeatureIds);
+    CK_PROPERTY(_Family);
     CK_PROPERTY(_RequiredLabel);
     CK_PROPERTY(_NamePattern);
     CK_PROPERTY(_IconSvgPath);
@@ -115,6 +122,9 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Archetype Definition")
     TArray<FName> FeatureIds;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Archetype Definition")
+    FName Family;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Archetype Definition")
     FName RequiredLabel;
