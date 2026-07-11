@@ -16,6 +16,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+enum class ECk_ReconstitutionPhase : uint8;
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable, BlueprintType, DisplayName="CkSubsystem_Snapshot")
 class CKSNAPSHOT_API UCk_Snapshot_Subsystem_UE : public UGameInstanceSubsystem
 {
@@ -112,7 +116,8 @@ private:
     auto DoIs_RespawnComplete() const -> bool;           // M2b-2a: true when no entity still carries the marker (processor drained them)
     auto DoTick_Load(float InDeltaSeconds) -> bool;      // FTSTicker callback; advances the machine
     auto DoFinish_Load(const FCk_Snapshot_LoadReport& InReport) -> void; // M2a: clear flag, fire delegate/signal, reset
-    auto DoSet_ReconstitutionFlag(bool InInProgress) -> void; // M2b: set flag on the CURRENT world's EcsWorld subsystem
+    auto DoSet_ReconstitutionFlag(ECk_ReconstitutionPhase InPhase) -> void; // M2b: set phase on the CURRENT world's EcsWorld subsystem
+    auto DoUnsubscribe_WorldInitWatch() -> void;         // drop the OnPostWorldInitialization subscription (idempotent)
 
 private:
     UPROPERTY(Transient)
@@ -130,6 +135,12 @@ private:
     TArray<FCk_Handle> _PendingTeardownRoots;
     FTSTicker::FDelegateHandle _LoadTickerHandle;
     int32 _LoadFrameCount = 0;
+
+    // Subscription to FWorldDelegates::OnPostWorldInitialization, live for the duration of a load. It stamps the
+    // EarlyWindow reconstitution phase on the fresh post-travel world's EcsWorld subsystem AT world-init — before the
+    // destination GameMode's default pawn BeginPlay can call Request_SpawnEntity and duplicate a restored (re-bridged)
+    // entity. EarlyWindow suppresses ONLY snapshot-respawnable classes; the AwaitingWorld tick escalates to Full.
+    FDelegateHandle _OnPostWorldInitHandle;
 
     // M2b travel state
     TWeakObjectPtr<UWorld> _PreTravelWorld;  // captured before OpenLevel; AwaitingWorld waits for a different world

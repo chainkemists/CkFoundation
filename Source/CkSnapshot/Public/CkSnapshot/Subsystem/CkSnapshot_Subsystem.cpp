@@ -84,7 +84,8 @@ auto
         FTSTicker::GetCoreTicker().RemoveTicker(_LoadTickerHandle);
         _LoadTickerHandle.Reset();
     }
-    DoSet_ReconstitutionFlag(false); // clear the world flag if we tear down mid-load
+    DoUnsubscribe_WorldInitWatch(); // drop the world-init watch if we tear down mid-load
+    DoSet_ReconstitutionFlag(ECk_ReconstitutionPhase::None); // clear the world phase if we tear down mid-load
     _LoadInProgress = false;
     _LoadPhase = ELoadPhase::Idle;
 
@@ -230,8 +231,41 @@ void
     _RespawnQuiescenceFramesRemaining = 0;
     _RespawnQuiescenceStarted = false;
 
-    // Mark THIS world as reconstituting so any bridged actor torn down + any straggler construct abstains.
-    DoSet_ReconstitutionFlag(true);
+    // Mark THIS world as fully reconstituting so any bridged actor torn down + any straggler construct abstains.
+    DoSet_ReconstitutionFlag(ECk_ReconstitutionPhase::Full);
+
+    // Suppression must also be live on the FRESH post-travel world BEFORE its GameMode spawns the default pawn —
+    // that pawn's bridged BeginPlay calls Request_SpawnEntity and, unguarded, constructs a DUPLICATE of the
+    // entity the restore re-bridges (the escapee is later wiped by Run_Restore's registry.clear() WITHOUT deferred
+    // teardown, leaking its world-side visuals — an ISKM ghost body). The in-tick set in DoTick_Load's AwaitingWorld
+    // phase lands too late (it runs after the post-travel GameMode BeginPlay has already fired). Subscribe to
+    // OnPostWorldInitialization, which fires during UWorld::InitWorld AFTER world subsystems are initialized but
+    // BEFORE any actor BeginPlay (verified against engine World.cpp: InitializeSubsystems @2361 precedes the
+    // OnPostWorldInitialization broadcast @2512; SetGameInstance @LoadMap:16126 precedes InitWorld @16152, so
+    // GetGameInstance() is already valid here) — and stamp only the EARLY-WINDOW phase: it abstains solely the
+    // snapshot-respawnable classes the restore re-bridges, so infrastructure spawns (e.g. ActorRelay warm channels
+    // at PostLogin) proceed and keep their actor↔entity link exactly as on a boot with no load in flight.
+    _OnPostWorldInitHandle = FWorldDelegates::OnPostWorldInitialization.AddWeakLambda(this,
+        [this](UWorld* InWorld, const UWorld::InitializationValues /*InValues*/) -> void
+        {
+            if (ck::Is_NOT_Valid(InWorld))
+            { return; }
+
+            // Only OUR GameInstance's game/PIE world — never an editor/preview/inactive world or another PIE client's.
+            if (InWorld->GetGameInstance() != GetGameInstance())
+            { return; }
+
+            if (InWorld->WorldType != EWorldType::Game && InWorld->WorldType != EWorldType::PIE)
+            { return; }
+
+            if (auto* EcsWorld = InWorld->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+                ck::IsValid(EcsWorld))
+            {
+                EcsWorld->Set_ReconstitutionPhase(ECk_ReconstitutionPhase::EarlyWindow);
+                ck::snapshot::Verbose(TEXT("Request_Load: stamped EarlyWindow reconstitution phase on freshly-initialized "
+                    "world [{}] (pre-BeginPlay)"), InWorld->GetName());
+            }
+        });
 
     auto Source = DoGet_SnapshotSource();
     ck::UUtils_Signal_Snapshot_OnPreLoad::Broadcast(Source, ck::MakePayload(Source));
@@ -296,7 +330,7 @@ auto
 auto
     UCk_Snapshot_Subsystem_UE::
     DoSet_ReconstitutionFlag(
-        bool InInProgress)
+        ECk_ReconstitutionPhase InPhase)
     -> void
 {
     const auto World = GetWorld();
@@ -306,7 +340,21 @@ auto
     if (auto* EcsWorld = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
         ck::IsValid(EcsWorld))
     {
-        EcsWorld->Set_ReconstitutionInProgress(InInProgress);
+        EcsWorld->Set_ReconstitutionPhase(InPhase);
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoUnsubscribe_WorldInitWatch()
+    -> void
+{
+    if (_OnPostWorldInitHandle.IsValid())
+    {
+        FWorldDelegates::OnPostWorldInitialization.Remove(_OnPostWorldInitHandle);
+        _OnPostWorldInitHandle.Reset();
     }
 }
 
@@ -566,9 +614,10 @@ auto
             }
 
             ck::snapshot::Display(TEXT("DIAG: post-travel world ready after [{}] frames — restoring"), _LoadFrameCount);
-            // The new world's EcsWorld subsystem started fresh (flag default false) — set it so the respawn pass's
-            // spawned actors abstain in their own (deferred) WithActor::Construct.
-            DoSet_ReconstitutionFlag(true);
+            // The new world has been in EarlyWindow since world-init (stamped by the OnPostWorldInitialization
+            // watch) — escalate to Full so ALL spawns abstain while the restore + respawn pass runs (the respawn
+            // pass's spawned actors abstain in their own deferred WithActor::Construct).
+            DoSet_ReconstitutionFlag(ECk_ReconstitutionPhase::Full);
             _LoadPhase = ELoadPhase::Restoring;
             return true;
         }
@@ -651,7 +700,7 @@ auto
             if (_RespawnQuiescenceFramesRemaining-- > 0)
             { return true; }
 
-            DoSet_ReconstitutionFlag(false);
+            DoSet_ReconstitutionFlag(ECk_ReconstitutionPhase::None);
             ck::snapshot::Display(TEXT("DIAG: respawn drained + quiescence complete — finishing load"));
             DoFinish_Load(_PendingRestoreReport);
             return false; // done — unregister
@@ -669,7 +718,8 @@ auto
     DoFinish_Load(const FCk_Snapshot_LoadReport& InReport)
     -> void
 {
-    DoSet_ReconstitutionFlag(false); // defensive: a teardown/travel abort must never leave a world reconstituting
+    DoUnsubscribe_WorldInitWatch(); // the load is over — stop stamping the phase on any newly-initialized world
+    DoSet_ReconstitutionFlag(ECk_ReconstitutionPhase::None); // defensive: a teardown/travel abort must never leave a world reconstituting
     _LoadTickerHandle.Reset(); // DoTick_Load returns false to unregister; just drop our copy of the handle
     _LoadPhase = ELoadPhase::Idle;
     _LoadInProgress = false;

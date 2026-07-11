@@ -29,21 +29,45 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_EntityScript_UE, FCk_Handle_En
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// M2b-1: while a CkSnapshot load is reconstituting the entity's world, the snapshot is the sole creator — a
-// respawned bridged actor's BeginPlay would call Request_SpawnEntity to make a DUPLICATE of the entity the snapshot
-// re-bridges. Suppress the spawn entirely (no entity created → no features added → no half-built entity reaches the
-// feature Setup processors). The respawn pass owns the real binding. The flag lives on the CkEcs EcsWorld subsystem
-// (reachable here, unlike the CkSnapshot subsystem which is a higher tier).
+// M2b-1: while a CkSnapshot load is reconstituting the entity's world, the snapshot is the sole creator of what it
+// restores — a respawned bridged actor's BeginPlay would call Request_SpawnEntity to make a DUPLICATE of the entity
+// the snapshot re-bridges. Suppress the spawn entirely (no entity created → no features added → no half-built entity
+// reaches the feature Setup processors). The respawn pass owns the real binding. Two-tier by phase (the phase lives
+// on the CkEcs EcsWorld subsystem — reachable here, unlike the CkSnapshot subsystem which is a higher tier):
+// - Full (pre-travel teardown + restore/respawn window): every spawn abstains.
+// - EarlyWindow (fresh post-travel world, world-init → world-ready): ONLY classes whose CDO opts into snapshot
+//   respawn abstain — those are the classes the restore re-bridges. Everything else (relay warm channels and other
+//   infrastructure spawned at PostLogin/BeginPlay) proceeds exactly as it would without a load in flight, keeping
+//   its actor↔entity link intact until the restore's registry clear wipes it like any other pre-restore entity.
 static auto
     DoIs_WorldReconstituting(
-        const FCk_Handle& InLifetimeOwner) -> bool
+        const FCk_Handle& InLifetimeOwner,
+        const TSubclassOf<UCk_EntityScript_UE>& InEntityScriptClass) -> bool
 {
     const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InLifetimeOwner);
     if (ck::Is_NOT_Valid(World))
     { return false; }
 
     auto* EcsWorld = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
-    return ck::IsValid(EcsWorld) && EcsWorld->Get_IsReconstitutionInProgress();
+    if (ck::Is_NOT_Valid(EcsWorld))
+    { return false; }
+
+    switch (EcsWorld->Get_ReconstitutionPhase())
+    {
+        case ECk_ReconstitutionPhase::None:
+        { return false; }
+
+        case ECk_ReconstitutionPhase::Full:
+        { return true; }
+
+        case ECk_ReconstitutionPhase::EarlyWindow:
+        {
+            const auto* DefaultObject = InEntityScriptClass->GetDefaultObject<UCk_EntityScript_UE>();
+            return ck::IsValid(DefaultObject) && DefaultObject->Get_IsSnapshotRespawnable();
+        }
+    }
+
+    return false;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -120,7 +144,7 @@ auto
         InEntityScriptClass)
     { return {}; }
 
-    if (DoIs_WorldReconstituting(InLifetimeOwner))
+    if (DoIs_WorldReconstituting(InLifetimeOwner, InEntityScriptClass))
     { return {}; }
 
     if (const auto DefaultObject = InEntityScriptClass->GetDefaultObject<UCk_EntityScript_UE>();
@@ -169,7 +193,7 @@ auto
         InEntityScriptClassArchetype)
     { return {}; }
 
-    if (DoIs_WorldReconstituting(InLifetimeOwner))
+    if (DoIs_WorldReconstituting(InLifetimeOwner, InEntityScriptClassArchetype->GetClass()))
     { return {}; }
 
     if (InEntityScriptClassArchetype->Get_EffectiveReplication() == ECk_Replication::Replicates &&
