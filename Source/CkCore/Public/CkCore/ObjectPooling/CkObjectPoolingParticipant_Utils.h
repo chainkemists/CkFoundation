@@ -63,25 +63,6 @@ public:
         UPARAM(ref) FCk_Handle_ObjectPoolingParticipant& InParticipant,
         UObject* InBoundObject);
 
-    // ----
-
-    // Per-instance veto read by the pooling subsystem at release time. False = the instance is
-    // destroyed instead of stored. Flip it back to true before the next release to re-enable pooling
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|ObjectPooling",
-              DisplayName = "[Ck][ObjectPooling] Set Can Be Pooled")
-    static FCk_Handle_ObjectPoolingParticipant
-    Set_CanBePooled(
-        UPARAM(ref) FCk_Handle_ObjectPoolingParticipant& InParticipant,
-        bool InCanBePooled);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|ObjectPooling",
-              DisplayName = "[Ck][ObjectPooling] Get Can Be Pooled")
-    static bool
-    Get_CanBePooled(
-        const FCk_Handle_ObjectPoolingParticipant& InParticipant);
-
 public:
     // Subsystem-side plumbing (not UFUNCTIONs): reflection-scan InObject for
     // FCk_Handle_ObjectPoolingParticipant properties (IncludeSuper) and fire the hook on each.
@@ -94,12 +75,6 @@ public:
     static auto
     Broadcast_ReleasedToPool_OnObject(
         UObject* InObject) -> void;
-
-    // True when the object has NO participant (opt-in only gates instances that declared one).
-    // With multiple participants, ANY _CanBePooled == false vetoes
-    static auto
-    Get_CanBePooled_OnObject(
-        const UObject* InObject) -> bool;
 
     static auto
     Has_Participant(

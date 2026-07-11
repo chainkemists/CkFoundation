@@ -10,8 +10,8 @@
 UENUM(BlueprintType)
 enum class ECk_ObjectPooling_RecyclePolicy : uint8
 {
-    // Released instances are stored and re-vended on the next acquire of the same class+archetype.
-    // On re-vend, all reflected properties are reset to the creation archetype (participant
+    // Released instances are stored and re-issued on the next acquire of the same class+archetype.
+    // On re-issue, all reflected properties are reset to the creation archetype (participant
     // properties are skipped so their bound delegates survive)
     Recycle,
 

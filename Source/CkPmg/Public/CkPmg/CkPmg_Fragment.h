@@ -52,7 +52,7 @@ namespace ck
         friend class UCk_Utils_Pmg_Donut_UE;
 
     private:
-        // WEAK: the CkCore ObjectPooling subsystem owns the component's lifetime (vended
+        // WEAK: the CkCore ObjectPooling subsystem owns the component's lifetime (created
         // DestroyOnRelease through the pooling-aware Request_CreateNewObject; EndPlay releases it)
         TWeakObjectPtr<UProceduralMeshComponent> _MeshComponent;
 

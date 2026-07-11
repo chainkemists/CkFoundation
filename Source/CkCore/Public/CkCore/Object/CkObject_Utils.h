@@ -163,7 +163,7 @@ public:
 
     // Pooling-aware create — the object-pooling hoist. The ObjectPooling subsystem of the Outer's
     // world OWNS the returned instance's lifetime (hold TWeakObjectPtr, never TStrongObjectPtr):
-    // Recycle policy re-vends released instances with properties reset to InTemplateArchetype
+    // Recycle policy re-issues released instances with properties reset to InTemplateArchetype
     // (participant properties skipped); DestroyOnRelease pins until released, then lets GC collect.
     // Whether the instance is fresh or recycled is invisible to the caller. Release via
     // TryReleaseToPool. DestroyOnRelease instances are outered to Outer; Recycle-pool instances are
@@ -285,10 +285,10 @@ public:
         UObject* InTemplateArchetype,
         const FCk_ObjectPooling_PoolParams& InPoolParams);
 
-    // Release a pooling-subsystem-vended object: Recycle-policy instances park in their pool
-    // (participant OnReleasedToPool fires, _CanBePooled == false vetoes into a destroy);
-    // DestroyOnRelease instances are unpinned and left to GC. Fails loudly on objects the
-    // subsystem never vended
+    // Release a pooling-subsystem-managed object: Recycle-policy instances park in their pool
+    // (participant OnReleasedToPool fires); DestroyOnRelease instances are unpinned and left to GC.
+    // A benign no-op (returns Failed) for objects the subsystem never handed out — safe to call
+    // unconditionally from any teardown path
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Try Release Object To Pool",
               Category = "Ck|Utils|Object")
@@ -296,15 +296,28 @@ public:
     TryReleaseToPool(
         UObject* InObject);
 
-    // True when the ObjectPooling subsystem of the object's world vended (and still tracks) this
+    // True when the ObjectPooling subsystem of the object's world handed out (and still tracks) this
     // instance — pooled in-use OR pinned-unique. CDOs and objects created outside the pooling-aware
-    // path return false. Use to gate TryReleaseToPool without tripping its never-vended ensure
+    // path return false. Use to gate TryReleaseToPool without tripping its never-handed-out ensure
     UFUNCTION(BlueprintPure,
-              DisplayName = "[Ck] Get Is Pool-Vended Object",
+              DisplayName = "[Ck] Get Is Pool-Tracked Object",
               Category = "Ck|Utils|Object")
     static bool
-    Get_IsPoolVendedObject(
+    Get_IsPoolTrackedObject(
         const UObject* InObject);
+
+    // Stats snapshot for the (class, archetype) pool — zeroed struct when no such pool exists.
+    // Null archetype resolves to the class CDO, mirroring the acquire path's pool keying.
+    // InWorldContextObject resolves the world (no WorldContext meta — it conflicts with the
+    // ScriptMixin=UObject arg0-receiver binding; pass the object explicitly in BP/AS)
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Object Pool Stats",
+              Category = "Ck|Utils|Object")
+    static FCk_ObjectPooling_PoolStats
+    Get_ObjectPoolStats(
+        const UObject* InWorldContextObject,
+        TSubclassOf<UObject> InClass,
+        UObject* InArchetype);
 
     // Unreal prefixes some classes with REINST_. This is because REINST_ is a newer version of a static class.
     // This function gets the most up to date default class.
@@ -603,11 +616,11 @@ auto
         TFunction<void(T*)> InInitFunc)
     -> T*
 {
-    auto* Vended = DoRequest_AcquirePooled(Outer, InClass, InTemplateArchetype, InPoolParams);
+    auto* Acquired = DoRequest_AcquirePooled(Outer, InClass, InTemplateArchetype, InPoolParams);
 
-    auto* TypedObj = Cast<T>(Vended);
+    auto* TypedObj = Cast<T>(Acquired);
 
-    if (InInitFunc && ck::IsValid(TypedObj, ck::IsValid_Policy_NullptrOnly{}))
+    if (InInitFunc && ck::IsValid(TypedObj))
     {
         InInitFunc(TypedObj);
     }

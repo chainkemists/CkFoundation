@@ -161,31 +161,6 @@ auto
 
 auto
     UCk_Utils_ObjectPoolingParticipant_UE::
-    Set_CanBePooled(
-        FCk_Handle_ObjectPoolingParticipant& InParticipant,
-        bool InCanBePooled)
-    -> FCk_Handle_ObjectPoolingParticipant
-{
-    InParticipant._CanBePooled = InCanBePooled;
-
-    return InParticipant;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_ObjectPoolingParticipant_UE::
-    Get_CanBePooled(
-        const FCk_Handle_ObjectPoolingParticipant& InParticipant)
-    -> bool
-{
-    return InParticipant.Get_CanBePooled();
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_ObjectPoolingParticipant_UE::
     Broadcast_AcquiredFromPool_OnObject(
         UObject* InObject)
     -> void
@@ -216,28 +191,6 @@ auto
     {
         InParticipant._OnReleasedToPool.Broadcast();
     });
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_ObjectPoolingParticipant_UE::
-    Get_CanBePooled_OnObject(
-        const UObject* InObject)
-    -> bool
-{
-    if (ck::Is_NOT_Valid(InObject))
-    { return true; }
-
-    auto CanBePooled = true;
-
-    ck_object_pooling_participant_utils::ForEach_Participant(InObject,
-    [&](const FCk_Handle_ObjectPoolingParticipant& InParticipant)
-    {
-        CanBePooled = CanBePooled && InParticipant.Get_CanBePooled();
-    });
-
-    return CanBePooled;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
