@@ -115,6 +115,11 @@ auto
         GenerateCategorySummary(Result, TimerNames, Lines);
     }
 
+    if (_Config.ShowWaitBreakdown)
+    {
+        GenerateWaitBreakdown(Session, Result, Lines);
+    }
+
     if (_Config.ShowWorkerThreads)
     {
         GenerateWorkerThreads(Session, Result, Lines);
@@ -1117,6 +1122,169 @@ auto
                 *FCk_TimerCategorizer::FormatMs(Top.ExclusiveMs),
                 *FCk_TimerCategorizer::FormatCount(Top.Count),
                 *ShortName));
+        }
+    }
+    Lines.Add(TEXT(""));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Wait/Stall Breakdown
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_FrameReport::
+    ComputeWaitSummaries(const FCk_TraceSession& Session,
+                         const FCk_FrameAnalysisResult& GameThreadResult,
+                         double MinWaitMs)
+    -> TArray<FCk_WaitThreadSummary>
+{
+    const FTimerNameMap TimerNames = BuildTimerNameMap(Session);
+    const uint32 GameThreadId = GameThreadResult.ThreadId;
+
+    // Aggregates a thread's wait scopes (exclusive time, so nested waits never double count)
+    auto MakeSummary = [&TimerNames, MinWaitMs](
+        const FCk_FrameAnalysisResult& ThreadResult, uint32 ThreadId, const FString& ThreadName,
+        bool bIsGameThread, double WallMs)
+        -> TOptional<FCk_WaitThreadSummary>
+    {
+        TArray<TPair<uint32, double>> WaitTimers;
+        double WaitMs = 0.0;
+        for (const auto& [TimerIndex, ExclSec] : ThreadResult.TimerExclusive)
+        {
+            if (NOT FCk_TimerCategorizer::IsWaitTimer(GetTimerName(TimerNames, TimerIndex)))
+            {
+                continue;
+            }
+            WaitMs += ExclSec * 1000.0;
+            WaitTimers.Emplace(TimerIndex, ExclSec * 1000.0);
+        }
+
+        if (WaitMs < MinWaitMs)
+        {
+            return {};
+        }
+
+        ck::algo::Sort(WaitTimers, [](const TPair<uint32, double>& A, const TPair<uint32, double>& B)
+        {
+            return A.Value > B.Value;
+        });
+
+        FCk_WaitThreadSummary Summary;
+        Summary.ThreadId = ThreadId;
+        Summary.ThreadName = ThreadName;
+        Summary.bIsGameThread = bIsGameThread;
+        Summary.WaitMs = WaitMs;
+        Summary.WallMs = WallMs;
+
+        for (int32 Index = 0; Index < FMath::Min(WaitTimers.Num(), 3); ++Index)
+        {
+            Summary.TopWaits.Add(FCk_WaitThreadSummary::FWaitScope{
+                FCk_TimerCategorizer::SimplifyName(GetTimerName(TimerNames, WaitTimers[Index].Key)),
+                WaitTimers[Index].Value,
+                ThreadResult.GetCount(WaitTimers[Index].Key)});
+        }
+
+        return Summary;
+    };
+
+    TArray<FCk_WaitThreadSummary> Waits;
+
+    for (const TraceServices::FThreadInfo& Info : Session.GetThreadInfos())
+    {
+        const FString ThreadName = Info.Name
+            ? FString(Info.Name)
+            : FString::Printf(TEXT("Thread %u"), Info.Id);
+
+        if (Info.Id == GameThreadId)
+        {
+            constexpr auto IsGameThread = true;
+            if (auto Summary = MakeSummary(GameThreadResult, Info.Id, ThreadName,
+                    IsGameThread, GameThreadResult.FrameDurationMs))
+            {
+                Waits.Add(MoveTemp(*Summary));
+            }
+            continue;
+        }
+
+        const FCk_FrameAnalysisResult ThreadResult = FCk_FrameAnalyzer::AnalyzeTimeRange(
+            Session, Info.Id,
+            GameThreadResult.FrameStartTime, GameThreadResult.FrameEndTime);
+
+        if (NOT ThreadResult.IsValid())
+        {
+            continue;
+        }
+
+        // Wall time from depth-0 events (same computation as ComputeWorkerThreadSummaries)
+        uint32 MinDepth = MAX_uint32;
+        for (const FCk_TimingEvent& Evt : ThreadResult.Events)
+        {
+            MinDepth = FMath::Min(MinDepth, Evt.Depth);
+        }
+        double WallMs = 0.0;
+        for (const FCk_TimingEvent& Evt : ThreadResult.Events)
+        {
+            if (Evt.Depth == MinDepth)
+            {
+                WallMs += (Evt.EndTime - Evt.StartTime) * 1000.0;
+            }
+        }
+
+        constexpr auto IsGameThread = false;
+        if (auto Summary = MakeSummary(ThreadResult, Info.Id, ThreadName, IsGameThread, WallMs))
+        {
+            Waits.Add(MoveTemp(*Summary));
+        }
+    }
+
+    // Game thread pinned first, then by wait time descending
+    ck::algo::Sort(Waits, [](const FCk_WaitThreadSummary& A, const FCk_WaitThreadSummary& B)
+    {
+        if (A.bIsGameThread != B.bIsGameThread)
+        {
+            return A.bIsGameThread;
+        }
+        return A.WaitMs > B.WaitMs;
+    });
+
+    return Waits;
+}
+
+auto
+    FCk_FrameReport::
+    GenerateWaitBreakdown(const FCk_TraceSession& Session,
+                          const FCk_FrameAnalysisResult& GameThreadResult,
+                          TArray<FString>& Lines) const
+    -> void
+{
+    const TArray<FCk_WaitThreadSummary> Waits = ComputeWaitSummaries(
+        Session, GameThreadResult, _Config.MinWaitMs);
+
+    if (Waits.Num() == 0) return;
+
+    Lines.Add(FString::Printf(TEXT("\n%s"), *ck_frame_report::HRule));
+    Lines.Add(FString::Printf(TEXT("*Wait/Stall Breakdown (>%.0fms)*\n"), _Config.MinWaitMs));
+
+    for (const FCk_WaitThreadSummary& W : Waits)
+    {
+        const double PctOfWall = W.WallMs > 0.0 ? (W.WaitMs / W.WallMs) * 100.0 : 0.0;
+
+        Lines.Add(FString::Printf(TEXT("*%s* %s *%s* waiting  _(%.0f%% of %s wall)_"),
+            *W.ThreadName,
+            *FCk_TimerCategorizer::SeverityIcon(W.WaitMs),
+            *FCk_TimerCategorizer::FormatMs(W.WaitMs),
+            PctOfWall,
+            *FCk_TimerCategorizer::FormatMs(W.WallMs)));
+
+        for (const auto& Top : W.TopWaits)
+        {
+            if (Top.ExclusiveMs < 0.5) break;
+
+            Lines.Add(FString::Printf(TEXT("    %s *%s*  %s  `%s`"),
+                *FCk_TimerCategorizer::SeverityIcon(Top.ExclusiveMs),
+                *FCk_TimerCategorizer::FormatMs(Top.ExclusiveMs),
+                *FCk_TimerCategorizer::FormatCount(Top.Count),
+                *Top.Name));
         }
     }
     Lines.Add(TEXT(""));

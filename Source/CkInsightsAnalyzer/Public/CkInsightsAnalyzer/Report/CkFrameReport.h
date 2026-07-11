@@ -87,6 +87,12 @@ struct CKINSIGHTSANALYZER_API FCk_FrameReportConfig
     /** Whether to include category summary. */
     bool ShowCategorySummary = true;
 
+    /** Whether to include the per-thread wait/stall breakdown. */
+    bool ShowWaitBreakdown = true;
+
+    /** Minimum aggregated wait time (ms) for a thread to appear in the wait breakdown. */
+    double MinWaitMs = 1.0;
+
     /** Set all individual fields from Depth. */
     auto ApplyDepth() -> void
     {
@@ -103,6 +109,7 @@ struct CKINSIGHTSANALYZER_API FCk_FrameReportConfig
             RawTimerCount = 50;
             ShowWorkerThreads = true;
             ShowCategorySummary = true;
+            ShowWaitBreakdown = true;
             break;
         case ECkReportDepth::Standard:
             MaxTreeDepth = 5;
@@ -114,6 +121,7 @@ struct CKINSIGHTSANALYZER_API FCk_FrameReportConfig
             ShowRawTimerList = false;
             ShowWorkerThreads = true;
             ShowCategorySummary = true;
+            ShowWaitBreakdown = true;
             break;
         case ECkReportDepth::Concise:
             MaxTreeDepth = 3;
@@ -123,6 +131,7 @@ struct CKINSIGHTSANALYZER_API FCk_FrameReportConfig
             ShowRawTimerList = false;
             ShowWorkerThreads = false;
             ShowCategorySummary = true;
+            ShowWaitBreakdown = false;
             break;
         case ECkReportDepth::HotPathsOnly:
             MaxTreeDepth = 4;
@@ -131,6 +140,7 @@ struct CKINSIGHTSANALYZER_API FCk_FrameReportConfig
             ShowRawTimerList = false;
             ShowWorkerThreads = false;
             ShowCategorySummary = false;
+            ShowWaitBreakdown = false;
             break;
         }
     }
@@ -189,6 +199,34 @@ struct CKINSIGHTSANALYZER_API FCk_HotPathNode
     bool bIsAggregate = false;
 
     TArray<TSharedPtr<FCk_HotPathNode>> Children;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Per-thread wait/stall summary for a single frame window — how much of the thread's
+ * time went to task waits, idle time, and sync completions (FCk_TimerCategorizer::IsWaitTimer).
+ */
+struct CKINSIGHTSANALYZER_API FCk_WaitThreadSummary
+{
+    uint32 ThreadId = 0;
+    FString ThreadName;
+    bool bIsGameThread = false;
+
+    /** Aggregated exclusive time (ms) of wait scopes on this thread within the frame window. */
+    double WaitMs = 0.0;
+
+    /** Thread wall time (ms) within the frame window (frame duration for the game thread). */
+    double WallMs = 0.0;
+
+    /** Top wait scopes by exclusive time: (SimplifiedName, ExclusiveMs, Count). */
+    struct FWaitScope
+    {
+        FString Name;
+        double ExclusiveMs = 0.0;
+        uint32 Count = 0;
+    };
+    TArray<FWaitScope> TopWaits;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -266,6 +304,17 @@ public:
                                              double MinWorkerThreadMs)
         -> TArray<FCk_WorkerThreadSummary>;
 
+    /**
+     * Aggregate wait/stall time per thread (game thread first, then workers) within the
+     * frame's time window. Sums EXCLUSIVE time of wait scopes so nested waits never double
+     * count. Returns threads with >= MinWaitMs of wait, sorted by wait time descending
+     * (game thread pinned first). Shared by the markdown, JSON, and Slate renderers.
+     */
+    static auto ComputeWaitSummaries(const FCk_TraceSession& Session,
+                                     const FCk_FrameAnalysisResult& GameThreadResult,
+                                     double MinWaitMs)
+        -> TArray<FCk_WaitThreadSummary>;
+
     /** Get/set the report configuration. */
     auto GetConfig() const -> const FCk_FrameReportConfig& { return _Config; }
     auto SetConfig(const FCk_FrameReportConfig& Config) -> void { _Config = Config; }
@@ -324,6 +373,10 @@ private:
                                 TArray<FString>& Lines) const -> void;
 
     auto GenerateWorkerThreads(const FCk_TraceSession& Session,
+                               const FCk_FrameAnalysisResult& GameThreadResult,
+                               TArray<FString>& Lines) const -> void;
+
+    auto GenerateWaitBreakdown(const FCk_TraceSession& Session,
                                const FCk_FrameAnalysisResult& GameThreadResult,
                                TArray<FString>& Lines) const -> void;
 
