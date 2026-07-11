@@ -274,6 +274,7 @@ auto
     AddCategory(TEXT("ECS (CK)"), {
         TEXT("ck::"), TEXT("Ck_"), TEXT("CkFoundation"),
         TEXT("AC_Fragment"), TEXT("ObjectReplicator"), TEXT("EcsWorld"),
+        TEXT("script::"),   // scheduler-emitted script-processor scopes (see CkProcessorScheduler.cpp)
     });
 
     AddCategory(TEXT("Networking"), {
