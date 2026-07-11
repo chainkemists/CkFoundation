@@ -62,6 +62,25 @@ auto
 
 auto
     FCk_ReplicatedFragmentHandlerRegistry::
+    Get_ReDriveHandlerTypes()
+    -> TArray<const UScriptStruct*>
+{
+    if (_PendingHandlers.Num() > 0)
+    { ResolvePending(); }
+
+    auto Types = TArray<const UScriptStruct*>{};
+    for (const auto& Pair : _Handlers)
+    {
+        // Participation rule: only handlers with BOTH Produce and SeedContainer are re-driven; Produce-only
+        // handlers are capture/oracle-only (Phase 3A) and must never be re-seeded.
+        if (Pair.Value.Produce && Pair.Value.SeedContainer)
+        { Types.Add(Pair.Key); }
+    }
+    return Types;
+}
+
+auto
+    FCk_ReplicatedFragmentHandlerRegistry::
     Find(
         const UScriptStruct* InType)
     -> const FHandler*

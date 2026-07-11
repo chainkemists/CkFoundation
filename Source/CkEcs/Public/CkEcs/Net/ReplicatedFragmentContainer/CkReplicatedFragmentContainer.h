@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Enums/CkEnums.h" // ECk_AddedOrNot (SeedContainer result)
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Tag/CkTag.h"
@@ -22,6 +23,23 @@ namespace ck
     // Set on the associated entity whenever its replication driver holds container entries (or
     // removals) that have not been applied yet. Drained by FProcessor_ReplicatedFragments_Dispatch.
     CK_DEFINE_ECS_TAG(FTag_RepFragments_PendingApply);
+
+    // Set on an entity that has local (save-load) hydration payloads queued for Apply — the load-path
+    // counterpart to net-received container entries. Drained by FProcessor_Hydration_Dispatch. DORMANT in
+    // Phase 1: nothing enqueues here yet; Phase 3B's load path fills the queue below.
+    CK_DEFINE_ECS_TAG(FTag_Hydration_PendingApply);
+
+    // Local hydration queue: payloads to apply on this entity via the SAME handler Apply the net dispatcher
+    // uses, but sourced from a save load rather than the wire. NOT snapshotable (transient bookkeeping — never
+    // registered). Dormant in Phase 1.
+    struct FFragment_PendingHydration
+    {
+        CK_GENERATED_BODY(FFragment_PendingHydration);
+
+    public:
+        TArray<FInstancedStruct> _Entries;
+        float _PendingForSeconds = 0.0f;
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -32,6 +50,17 @@ enum class ECk_RepFragment_ApplyResult : uint8
 {
     Applied,
     NotReady
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Which persistence pipelines consult a handler. Net-only is the default (Phase-1 behavior-neutral); features flip
+// Save on when their payload becomes save-file surface (Phase 3+). Bit flags so a handler can serve both.
+enum class ECk_PersistenceTransport : uint8
+{
+    Net        = 1 << 0,
+    Save       = 1 << 1,
+    NetAndSave = Net | Save
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -53,6 +82,29 @@ public:
 
         // Optional — dispatched (deferred) when the entry is removed by replication.
         TFunction<void(FCk_Handle& Entity)> Remove;
+
+        // Authority-side counterpart to Apply: emit this feature's current hydration payload for the
+        // entity, or unset when the feature is absent on it. Used by the restore re-drive (Phase 1),
+        // the fidelity oracle (Tier-2), and the save path (Phase 3A). READ-ONLY by contract — never
+        // mutate the entity from Produce. A SET-but-empty payload is meaningful (it seeds an empty
+        // container, e.g. AnimPlan); only an UNSET result means "feature absent, do not seed".
+        TFunction<TOptional<FInstancedStruct>(FCk_Handle& Entity)> Produce;
+
+        // Typed container seed bound at registration (RegisterLazyTyped) — re-establishes the FastArray
+        // entry + the entity-side TFragment_ContainerEntryRef<T> the feature's Replicate processor keys
+        // on. Type-erased callers cannot do this themselves (the ContainerRef fragment is typed). A
+        // registrar may supply its own to add re-arm/owner-resolution work beyond the plain typed add.
+        //
+        // PARTICIPATION RULE: a handler with BOTH Produce AND SeedContainer participates in the Model-A
+        // restore re-drive (FProcessor_Persistence_ReDriveOnRestore). A handler with Produce but NO
+        // SeedContainer is capture/oracle-only (Phase 3A) and is NEVER re-seeded — this is how the six
+        // deferred features gain Produce without double-seeding against their still-alive restore
+        // processors.
+        TFunction<ECk_AddedOrNot(FCk_Handle& Entity, const FInstancedStruct& Data)> SeedContainer;
+
+        // Which pipelines consult this handler. Net-only default keeps Phase 1 behavior-neutral;
+        // features flip Save on when their payload becomes save-file surface (Phase 3+).
+        ECk_PersistenceTransport Transport = ECk_PersistenceTransport::Net;
     };
 
     using FTypeResolver = TFunction<UScriptStruct*()>;
@@ -68,6 +120,28 @@ public:
     RegisterLazy(
         FTypeResolver InTypeResolver,
         FHandler InHandler) -> void;
+
+    /**
+     * Typed lazy registration. Synthesizes the default SeedContainer (typed TryAddContainerFragment) when the
+     * caller left InHandler.SeedContainer unset, resolves the payload type lazily via T_RepData::StaticStruct(),
+     * then forwards to RegisterLazy. Feature registrars migrate to this from RegisterLazy.
+     *
+     * Body lives in CkReplicatedFragmentContainer.inl.h, pulled in at the bottom of CkNet_Utils.h where
+     * UCk_Utils_Net_UE::TryAddContainerFragment is visible — this header MUST NOT include CkNet_Utils.h (that
+     * header includes THIS one; the reverse edge is a cycle).
+     */
+    template <typename T_RepData>
+    static auto
+    RegisterLazyTyped(
+        FHandler InHandler) -> void;
+
+    /**
+     * Resolves pending registrations, then returns the payload types of every handler that has BOTH Produce and
+     * SeedContainer — the handlers that participate in the Model-A restore re-drive (§1.3). Produce-only handlers
+     * (capture/oracle-only) are excluded so they are never re-seeded.
+     */
+    static auto
+    Get_ReDriveHandlerTypes() -> TArray<const UScriptStruct*>;
 
     /**
      * Register a single catch-all handler consulted by Resolve() when no per-type handler matches.
