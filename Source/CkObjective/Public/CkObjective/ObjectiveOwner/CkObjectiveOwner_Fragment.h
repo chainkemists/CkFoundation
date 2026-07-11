@@ -4,6 +4,8 @@
 #include "CkEcs/Signal/CkSignal_Macros.h"
 #include "CkEntityCollection/CkEntityCollection_Fragment_Data.h"
 
+#include "CkEcs/Concepts/CkSnapshot_Concepts.h" // FArchive + ck::FSnapshotContext fwd-decls
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_ObjectiveOwner_UE;
@@ -49,6 +51,7 @@ namespace ck
     {
     public:
         CK_GENERATED_BODY(FFragment_ObjectiveOwner_Current);
+        using IsSnapshotable = void;
 
     public:
         friend class FProcessor_ObjectiveOwner_Setup;
@@ -63,6 +66,9 @@ namespace ck
 
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_ObjectiveOwner_Current, _ObjectivesEntityCollection);
+
+    public:
+        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
