@@ -75,6 +75,7 @@ int32
     const bool AllFrames = Switches.Contains(TEXT("all"));
     const bool Raw = Switches.Contains(TEXT("raw"));
     const bool Json = Switches.Contains(TEXT("json"));
+    const bool ShowAll = Switches.Contains(TEXT("showall"));
 
     const auto OutputPath = ParsedParams.Find(TEXT("output"));
 
@@ -143,6 +144,7 @@ int32
         ReportConfig.TargetFrameMs = Budget;
         ReportConfig.ShowRawTimerList = Raw;
         ReportConfig.RawTimerCount = RawTop;
+        ReportConfig.ShowAllChildren = ShowAll;
 
         if (Json)
         {
