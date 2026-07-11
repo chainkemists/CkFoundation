@@ -53,8 +53,7 @@ namespace ck
     private:
         // STRONG: pins the caller-supplied content widget, which the pooling subsystem never handed out
         TStrongObjectPtr<UUserWidget> _ContentWidgetHardRef;
-        // WEAK (wrapper + component): the CkCore ObjectPooling subsystem owns their lifetime (created
-        // DestroyOnRelease through the pooling-aware Request_CreateNewObject; EndPlay releases them)
+        // WEAK — lifetimes owned by the CkCore ObjectPooling subsystem (DestroyOnRelease)
         TWeakObjectPtr<UCk_WorldSpaceWidget_Wrapper_UE> _WrapperWidget;
         TWeakObjectPtr<APlayerController> _WidgetOwningPlayer;
         TWeakObjectPtr<UWidgetComponent> _WidgetComponent;

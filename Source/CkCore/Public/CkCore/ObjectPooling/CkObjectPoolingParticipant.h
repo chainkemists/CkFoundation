@@ -20,31 +20,12 @@ DECLARE_MULTICAST_DELEGATE(
 // --------------------------------------------------------------------------------------------------------------------
 
 /**
- * Property-based pooling opt-in — the pooling sibling of FCk_Handle_ContextReceiver.
- *
- * ANY UObject-derived class (EntityScripts, plain objects) that declares a property of this type is
- * automatically opted in: the pooling subsystem reflection-scans the instance for
- * FCk_Handle_ObjectPoolingParticipant properties (same detection as FCk_Handle_ContextReceiver) and
- * fires the hooks on every acquire/release. AngelScript classes cannot implement UInterfaces
- * (Hazelight fork limitation) — this property route is the single opt-in surface for all three
- * environments.
- *
- * - OnAcquiredFromPool: per-use (re)initialization signal. Fires on EVERY hand-out (fresh instances
- *   simply have no binds yet), BEFORE the caller's init runs. Carries no payload — per-use data
- *   flows through the caller (synchronous acquire) or, for EntityScripts, through the normal
- *   spawn-params injection + Construct.
- * - OnReleasedToPool: quiescence — reset per-use state. Fires when the owner releases the instance,
- *   before it is stored (Recycle) or unpinned (DestroyOnRelease).
- *
- * There is no per-instance "can be pooled" veto: a class that must never recycle uses the force-new
- * InstancedPerEntity (DestroyOnRelease) policy; per-use safety is the OnReleasedToPool quiescence
- * contract's job, not a runtime toggle.
- *
- * Recycle contract: the reset-to-archetype sweep SKIPS properties of this type, so delegates bound
- * on the instance survive recycling. Because Construct/BeginPlay re-run on a recycled EntityScript,
- * the Bind utils are idempotent per (object, function) — re-binding is a no-op, never a double-fire.
- *
- * All mutation goes through UCk_Utils_ObjectPoolingParticipant_UE.
+ * Property-based pooling opt-in — the pooling sibling of FCk_Handle_ContextReceiver, reflection-scanned
+ * the same way (works from C++/BP/AS; a UInterface would be unreachable from AngelScript). Gives the
+ * instance payload-free OnAcquiredFromPool / OnReleasedToPool hooks. The recycle reset-to-archetype
+ * sweep SKIPS this property, so binds survive recycling; binds are idempotent per (object, function)
+ * because Construct re-runs per acquire. Full contract: ObjectPooling/README.md. Mutation goes through
+ * UCk_Utils_ObjectPoolingParticipant_UE.
  */
 USTRUCT(BlueprintType)
 struct CKCORE_API FCk_Handle_ObjectPoolingParticipant
@@ -60,9 +41,7 @@ private:
     FCk_Delegate_ObjectPoolingParticipant_OnAcquired_MC _OnAcquiredFromPool;
     FCk_Delegate_ObjectPoolingParticipant_OnReleased_MC _OnReleasedToPool;
 
-    // Idempotency ledgers: Construct re-runs on every acquire of a recycled instance while the
-    // delegates survive recycling (the reset sweep skips this property) — a re-bind of an already
-    // bound (object, function) pair must be a no-op
+    // idempotency ledgers — re-bind of an already-bound (object, function) is a no-op
     TSet<TPair<FObjectKey, FName>> _AcquiredBindKeys;
     TSet<TPair<FObjectKey, FName>> _ReleasedBindKeys;
 };

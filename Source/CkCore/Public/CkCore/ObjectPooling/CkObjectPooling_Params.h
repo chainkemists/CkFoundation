@@ -10,14 +10,10 @@
 UENUM(BlueprintType)
 enum class ECk_ObjectPooling_RecyclePolicy : uint8
 {
-    // Released instances are stored and re-issued on the next acquire of the same class+archetype.
-    // On re-issue, all reflected properties are reset to the creation archetype (participant
-    // properties are skipped so their bound delegates survive)
+    // Store on release; re-issue + reset-to-archetype on the next acquire. See ObjectPooling/README.md
     Recycle,
 
-    // The subsystem pins the instance for its lifetime but never recycles it — release unpins and
-    // lets GC collect. This is the "force create new every time" mode: callers still get subsystem
-    // ownership (safe to hold TWeakObjectPtr), just no pooling
+    // Pin for lifetime, unpin (GC-collect) on release — never recycled. Force-new + subsystem ownership
     DestroyOnRelease
 };
 
@@ -39,12 +35,10 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ObjectPooling_CapacityPolicy);
 UENUM(BlueprintType)
 enum class ECk_ObjectPooling_ExhaustionPolicy : uint8
 {
-    // When the pool has no free instance: create a new one (subject to the CapacityPolicy — at
-    // Bounded capacity the acquire returns null)
+    // On empty: create a new instance (bounded capacity returns null once full)
     Grow,
 
-    // When the pool has no free instance: return null immediately. The pool never creates
-    // instances on demand
+    // On empty: return null — never create on demand
     Fail
 };
 
@@ -70,7 +64,7 @@ private:
                   EditCondition = "_RecyclePolicy == ECk_ObjectPooling_RecyclePolicy::Recycle"))
     int32 _PrewarmCount = 0;
 
-    // Instances created per subsystem tick while prewarming — amortizes warm-up cost across frames
+    // instances prewarmed per subsystem tick (amortizes warm-up across frames)
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = "1",
                   EditCondition = "_RecyclePolicy == ECk_ObjectPooling_RecyclePolicy::Recycle"))
@@ -91,10 +85,7 @@ private:
                   EditCondition = "_RecyclePolicy == ECk_ObjectPooling_RecyclePolicy::Recycle"))
     ECk_ObjectPooling_ExhaustionPolicy _ExhaustionPolicy = ECk_ObjectPooling_ExhaustionPolicy::Grow;
 
-    // How many instances a growth event provisions: 1 = demand-exact (default). Higher values TOP UP
-    // the queued extras to (GrowBatchCount - 1) through the amortized prewarm tick so subsequent misses
-    // become hits without a synchronous spawn (a burst of misses provisions ONE batch, not one per miss).
-    // Always clamped to Bounded capacity
+    // 1 = demand-exact; higher tops up (GrowBatchCount-1) extras via the prewarm tick. See README
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = "1",
                   EditCondition = "_ExhaustionPolicy == ECk_ObjectPooling_ExhaustionPolicy::Grow"))

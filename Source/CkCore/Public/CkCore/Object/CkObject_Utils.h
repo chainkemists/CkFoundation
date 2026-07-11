@@ -161,14 +161,9 @@ public:
         TSubclassOf<T> InClass,
         TFunction<void(T*)> InInitFunc) -> T*;
 
-    // Pooling-aware create — the object-pooling hoist. The ObjectPooling subsystem of the Outer's
-    // world OWNS the returned instance's lifetime (hold TWeakObjectPtr, never TStrongObjectPtr):
-    // Recycle policy re-issues released instances with properties reset to InTemplateArchetype
-    // (participant properties skipped); DestroyOnRelease pins until released, then lets GC collect.
-    // Whether the instance is fresh or recycled is invisible to the caller. Release via
-    // TryReleaseToPool. DestroyOnRelease instances are outered to Outer; Recycle-pool instances are
-    // outered to Outer's world (a recycled instance survives its first caller, so it cannot borrow
-    // that caller's outer). TransientPackage variants stay non-pooled (no world to resolve)
+    // Pooling-aware create (the object-pooling hoist). The Outer world's subsystem owns the returned
+    // instance (hold it weakly); fresh-or-recycled is invisible to the caller. Release via
+    // TryReleaseToPool. TransientPackage variants stay non-pooled. See ObjectPooling/README.md
     template<typename T>
     static auto
     Request_CreateNewObject(
@@ -285,10 +280,8 @@ public:
         UObject* InTemplateArchetype,
         const FCk_ObjectPooling_PoolParams& InPoolParams);
 
-    // Release a pooling-subsystem-managed object: Recycle-policy instances park in their pool
-    // (participant OnReleasedToPool fires); DestroyOnRelease instances are unpinned and left to GC.
-    // A benign no-op (returns Failed) for objects the subsystem never handed out — safe to call
-    // unconditionally from any teardown path
+    // Recycle -> park; DestroyOnRelease -> unpin. A benign no-op (returns Failed) for objects the
+    // subsystem never handed out — safe to call unconditionally from any teardown path
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Try Release Object To Pool",
               Category = "Ck|Utils|Object")
@@ -296,9 +289,7 @@ public:
     TryReleaseToPool(
         UObject* InObject);
 
-    // True when the ObjectPooling subsystem of the object's world handed out (and still tracks) this
-    // instance — pooled in-use OR pinned-unique. CDOs and objects created outside the pooling-aware
-    // path return false. Use to gate TryReleaseToPool without tripping its never-handed-out ensure
+    // True when the subsystem handed out (and still tracks) this instance (query/tooling)
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Is Pool-Tracked Object",
               Category = "Ck|Utils|Object")
@@ -306,10 +297,8 @@ public:
     Get_IsPoolTrackedObject(
         const UObject* InObject);
 
-    // Stats snapshot for the (class, archetype) pool — zeroed struct when no such pool exists.
-    // Null archetype resolves to the class CDO, mirroring the acquire path's pool keying.
-    // InWorldContextObject resolves the world (no WorldContext meta — it conflicts with the
-    // ScriptMixin=UObject arg0-receiver binding; pass the object explicitly in BP/AS)
+    // Stats snapshot for the (class, archetype) pool — zeroed when none exists (null archetype = CDO).
+    // No WorldContext meta (conflicts with the ScriptMixin=UObject arg0-receiver bind) — pass WCO explicitly
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Object Pool Stats",
               Category = "Ck|Utils|Object")
@@ -409,9 +398,7 @@ private:
         bool InEnsureFunctionExists = true,
         void* InFunctionParams = nullptr) -> ECk_SucceededFailed;
 
-    // Non-template plumbing for the pooled create: resolves the Outer's world and forwards to its
-    // ObjectPooling subsystem. No resolvable world fires an ensure and falls back to a plain
-    // (non-pooled, caller-owned) create so gameplay continues
+    // resolves the Outer world -> subsystem; no-world ensures + falls back to a plain caller-owned create
     static auto
     DoRequest_AcquirePooled(
         UObject* InOuter,

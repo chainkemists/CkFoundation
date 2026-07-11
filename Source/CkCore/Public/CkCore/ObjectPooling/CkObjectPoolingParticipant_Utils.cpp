@@ -59,7 +59,6 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// NOTE: RemoveAll removes ALL bindings from the given UObject, not just a specific function
 auto
     UCk_Utils_ObjectPoolingParticipant_UE::
     UnbindFrom_OnAcquiredFromPool(
@@ -108,7 +107,6 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// NOTE: RemoveAll removes ALL bindings from the given UObject, not just a specific function
 auto
     UCk_Utils_ObjectPoolingParticipant_UE::
     UnbindFrom_OnReleasedToPool(
