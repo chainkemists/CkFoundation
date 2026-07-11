@@ -3,7 +3,10 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "CkCore/CkCoreLog.h"
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
+#include "CkCore/ObjectPooling/CkObjectPooling_Subsystem.h"
 #include "Interfaces/IPluginManager.h"
+
+#include <Engine/World.h>
 
 #include "HAL/IConsoleManager.h"
 #include "UObject/GarbageCollection.h"
@@ -216,6 +219,72 @@ auto
     { return {}; }
 
     return Request_CreateNewObject_TransientPackage<UObject>(InObject, [](auto InObj){});
+}
+
+auto
+    UCk_Utils_Object_UE::
+    Request_CreateNewObject_Pooled(
+        UObject* InOuter,
+        TSubclassOf<UObject> InClass,
+        UObject* InTemplateArchetype,
+        const FCk_ObjectPooling_PoolParams& InPoolParams,
+        const FInstancedStruct& InPerUseParams)
+    -> UObject*
+{
+    return DoRequest_AcquirePooled(InOuter, InClass, InTemplateArchetype, InPoolParams, InPerUseParams);
+}
+
+auto
+    UCk_Utils_Object_UE::
+    TryReleaseToPool(
+        UObject* InObject)
+    -> ECk_SucceededFailed
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Invalid Object supplied to TryReleaseToPool"))
+    { return ECk_SucceededFailed::Failed; }
+
+    const auto& World = InObject->GetWorld();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(World),
+        TEXT("Could not resolve a World from [{}] — only ObjectPooling-vended objects (outered to their "
+             "world) can be released to a pool"), InObject)
+    { return ECk_SucceededFailed::Failed; }
+
+    auto* Subsystem = World->GetSubsystem<UCk_ObjectPooling_Subsystem_UE>();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Subsystem, ck::IsValid_Policy_NullptrOnly{}),
+        TEXT("World [{}] has no ObjectPooling subsystem — cannot release [{}]"), World, InObject)
+    { return ECk_SucceededFailed::Failed; }
+
+    return Subsystem->DoTryReleaseToPool(InObject);
+}
+
+auto
+    UCk_Utils_Object_UE::
+    DoRequest_AcquirePooled(
+        UObject* InOuter,
+        TSubclassOf<UObject> InClass,
+        UObject* InTemplateArchetype,
+        const FCk_ObjectPooling_PoolParams& InPoolParams,
+        const FInstancedStruct& InPerUseParams)
+    -> UObject*
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InClass), TEXT("Invalid Class supplied to the pooled Request_CreateNewObject"))
+    { return {}; }
+
+    const auto& World = ck::IsValid(InOuter) ? InOuter->GetWorld() : nullptr;
+
+    auto* Subsystem = ck::IsValid(World)
+        ? World->GetSubsystem<UCk_ObjectPooling_Subsystem_UE>()
+        : nullptr;
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Subsystem, ck::IsValid_Policy_NullptrOnly{}),
+        TEXT("Pooled Request_CreateNewObject for [{}] could not resolve an ObjectPooling subsystem from "
+             "Outer [{}] — falling back to a plain (non-pooled, CALLER-owned) create. The caller must "
+             "hold a strong reference in this case"), InClass, InOuter)
+    { return NewObject<UObject>(InOuter, InClass, NAME_None, RF_NoFlags, InTemplateArchetype); }
+
+    return Subsystem->DoRequest_Acquire(InClass, InTemplateArchetype, InPoolParams, InPerUseParams);
 }
 
 auto

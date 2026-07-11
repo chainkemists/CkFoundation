@@ -3,8 +3,11 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/ObjectPooling/CkObjectPooling_Params.h"
 
 #include "GameplayTagContainer.h"
+
+#include <StructUtils/InstancedStruct.h>
 
 #include "CkObject_Utils.generated.h"
 
@@ -160,6 +163,23 @@ public:
         TSubclassOf<T> InClass,
         TFunction<void(T*)> InInitFunc) -> T*;
 
+    // Pooling-aware create — the object-pooling hoist. The ObjectPooling subsystem of the Outer's
+    // world OWNS the returned instance's lifetime (hold TWeakObjectPtr, never TStrongObjectPtr):
+    // Recycle policy re-vends released instances with properties reset to InTemplateArchetype
+    // (participant properties skipped); DestroyOnRelease pins until released, then lets GC collect.
+    // Whether the instance is fresh or recycled is invisible to the caller. Release via
+    // TryReleaseToPool. Outer is used to resolve the world — vended instances are outered to that
+    // world, not to Outer itself. TransientPackage variants stay non-pooled (no world to resolve)
+    template<typename T>
+    static auto
+    Request_CreateNewObject(
+        UObject* Outer,
+        TSubclassOf<T> InClass,
+        T* InTemplateArchetype,
+        const FCk_ObjectPooling_PoolParams& InPoolParams,
+        const FInstancedStruct& InPerUseParams,
+        TFunction<void(T*)> InInitFunc) -> T*;
+
     template<typename T>
     static auto
     Request_CreateNewObject_TransientPackage(
@@ -254,6 +274,32 @@ public:
     Request_CreateNewObject_TransientPackage_UE(
         TSubclassOf<UObject> InObject);
 
+    // Pooling-aware create (see the template overload above for the ownership contract).
+    // InTemplateArchetype may be null (class CDO is the archetype); InPerUseParams rides into the
+    // participant's OnAcquiredFromPool hook
+    UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck] Request Create New Object (Pooled)",
+              Category = "Ck|Utils|Object",
+              meta     = (DeterminesOutputType = "InClass"))
+    static UObject*
+    Request_CreateNewObject_Pooled(
+        UObject* InOuter,
+        TSubclassOf<UObject> InClass,
+        UObject* InTemplateArchetype,
+        const FCk_ObjectPooling_PoolParams& InPoolParams,
+        const FInstancedStruct& InPerUseParams);
+
+    // Release a pooling-subsystem-vended object: Recycle-policy instances park in their pool
+    // (participant OnReleasedToPool fires, _CanBePooled == false vetoes into a destroy);
+    // DestroyOnRelease instances are unpinned and left to GC. Fails loudly on objects the
+    // subsystem never vended
+    UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck] Try Release Object To Pool",
+              Category = "Ck|Utils|Object")
+    static ECk_SucceededFailed
+    TryReleaseToPool(
+        UObject* InObject);
+
     // Unreal prefixes some classes with REINST_. This is because REINST_ is a newer version of a static class.
     // This function gets the most up to date default class.
     UFUNCTION(BlueprintPure,
@@ -343,6 +389,17 @@ private:
         FName InFunctionName,
         bool InEnsureFunctionExists = true,
         void* InFunctionParams = nullptr) -> ECk_SucceededFailed;
+
+    // Non-template plumbing for the pooled create: resolves the Outer's world and forwards to its
+    // ObjectPooling subsystem. No resolvable world fires an ensure and falls back to a plain
+    // (non-pooled, caller-owned) create so gameplay continues
+    static auto
+    DoRequest_AcquirePooled(
+        UObject* InOuter,
+        TSubclassOf<UObject> InClass,
+        UObject* InTemplateArchetype,
+        const FCk_ObjectPooling_PoolParams& InPoolParams,
+        const FInstancedStruct& InPerUseParams) -> UObject*;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -528,6 +585,30 @@ auto
     -> T*
 {
     return Request_CreateNewObject<T>(Outer, InClass, nullptr, InInitFunc);
+}
+
+template <typename T>
+auto
+    UCk_Utils_Object_UE::
+    Request_CreateNewObject(
+        UObject* Outer,
+        TSubclassOf<T> InClass,
+        T* InTemplateArchetype,
+        const FCk_ObjectPooling_PoolParams& InPoolParams,
+        const FInstancedStruct& InPerUseParams,
+        TFunction<void(T*)> InInitFunc)
+    -> T*
+{
+    auto* Vended = DoRequest_AcquirePooled(Outer, InClass, InTemplateArchetype, InPoolParams, InPerUseParams);
+
+    auto* TypedObj = Cast<T>(Vended);
+
+    if (InInitFunc && ck::IsValid(TypedObj, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        InInitFunc(TypedObj);
+    }
+
+    return TypedObj;
 }
 
 template<typename T>
