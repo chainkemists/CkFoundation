@@ -50,6 +50,22 @@ struct CKINSIGHTSANALYZER_API FCk_FrameReportConfig
     /** Minimum inclusive time (ms) for a timer to appear in the tree. */
     double MinInclusiveMs = 1.0;
 
+    /** Floor (ms) below which a child folds into the "(+N below threshold)" aggregate row. */
+    double MinChildMs = 0.3;
+
+    /** Fraction of the parent's inclusive time below which a child folds into the aggregate row. */
+    double MinChildPctOfParent = 0.03;
+
+    /** Maximum visible children per node; the remainder folds into the aggregate row. */
+    int32 MaxVisibleChildren = 8;
+
+    /**
+     * Bypass the child threshold and cap entirely — every child renders and no aggregate rows are
+     * emitted for threshold-folding (dedup-dropped mass can still produce one). Orthogonal to
+     * Depth (ApplyDepth never touches it); MaxTreeDepth still bounds recursion.
+     */
+    bool ShowAllChildren = false;
+
     /** Minimum exclusive time (ms) for a timer to appear in the category summary. */
     double MinCategoryMs = 0.3;
 
