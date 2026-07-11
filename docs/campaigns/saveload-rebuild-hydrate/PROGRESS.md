@@ -9,7 +9,7 @@
 |---|---|---|---|---|---|
 | 0 | PHASE_0.md | DONE | 2026-07-11 | CkF: 68ba192dc (dt==0), 55521d493 (oracle), <docs> (this); CkTests: 14d65ac (harness) | GREEN: Ck.Snapshot 47/47/0 (46 baseline + Oracle.StructuralBaseline), Ck.Attribute.Net 17/17/0, Net 102/101/1 (baseline red only) |
 | 1 | PHASE_1.md | **DONE** (1.1–1.6 committed+GREEN) | 2026-07-11 | CkF: 23b982c0d (framework), fd288efdd (6 migrations), 5d262f52a; CkTests: b9e7f86 | GREEN: Ck.Snapshot **48/48/0** delta-zero (all 11 Parity_MPReload + both Oracle tests pass), framework Ck.*.Net green (kiosk trio env-red, see baseline) |
-| 2 | PHASE_2.md | **IN PROGRESS** (impl on integrated base 951112723+§1.6; sub-step tracker under §Phase-2 progress) | 2026-07-11 | (uncommitted) | (pending gate) |
+| 2 | PHASE_2.md | **DONE** (2.1–2.7 committed+GREEN; 2.7-Test2 subsumed per [P2-D3]) | 2026-07-11 | CkF: 91b96a177 (load gate core), 8c4fbce7a (fire-gating), af9fad239 (retire NeedsSetup guards); CkTests: 4522c8e (LoadGate) | GREEN: Ck.Snapshot **49/49/0** (LoadGate + AccelerationParity + 11 Parity, no over-gating hang); Net 102/98/4 framework delta-zero (3 Attribute.Net pins green; 4 fails = recorded kiosk-trio env-red + StateMachine.Net flake) |
 | 3A | PHASE_3A.md | NOT STARTED | | | |
 | 3B | PHASE_3B.md | NOT STARTED | | | |
 | 4A | PHASE_4A.md | NOT STARTED | | | |
@@ -90,7 +90,10 @@ scheduler precompute `CkProcessorScheduler.cpp:70-81` (`_MainPassOrder`/`_PumpOr
 - [x] 2.1 `ECk_ProcessorLoadPolicy` trait (mirror PumpPolicy) + scheduler `_LoadPassOrder`/`_LoadPumpOrder` + `ECk_SchedulerTickScope{Full,LoadKernel}` Tick/DoPump scope + subsystem `Get_/Set_IsLoadGateActive` + Actor::Tick threading (lazy weak-ptr `_OwningSubsystem`) + `Request_PumpToQuiescence` scope param — DONE
 - [x] 2.2 Mark the kernel RunsDuringLoad — DONE, verified 12 (grep 13 incl. the descriptor doc-comment; reworded so exit grep == 12)
 - [x] 2.3 `FGroup_Hydration` between PostTransform & Replication (fwd-decl + struct + re-point Replication RunAfter + chain comment + CK_REGISTER_GROUP) + BOTH dispatchers → `FGroup_Hydration`, deleted their `RunAfter FinishConstruction` (group order guarantees it) — DONE
-- [ ] 2.4 `FTag_EntityScript_ConstructedThisFrame` defer — **NOT STARTED. Design worked out (implement this):**
+- [x] 2.4 `FTag_EntityScript_ConstructedThisFrame` defer — **DONE.** Tag added (CkEntityScript_Fragment.h); FinishConstruction stamps it (.cpp:361 area); both dispatchers skip at top of ForEachEntity; hydration dispatcher `RunAfter net` + `DoTick` override clears it registry-wide (ck_exp pattern `TProcessor::DoTick(InDeltaT)` then `_TransientEntity.Clear<>()` — VERIFIED ck_exp::TProcessor exposes a public view-iterating DoTick, CkProcessor.h:350). [P2-D1] applied.
+- [x] 2.5 Fire-gating — **DONE, via Fable ruling [P2-D2].** `Get_HasUndrainedReplicatedFragments_IncludingDependents` recurses the LIFETIME-DEPENDENTS tree (`Get_LifetimeDependents`, the same traversal the expected-dependent count derives from — DoCount at CkEntityReplicationDriver_Utils.cpp:53-79 is the mirrored precedent), NOT a driver-side list (none exists). Per-entity predicate is TWO checks: `Has<FTag_RepFragments_PendingApply>() || Has<FFragment_PendingHydration>()` (the tag subsumes queued removals; `_Fragments` is private/Utils-not-friend). Gate placed BEFORE `Remove<MarkedDirtyBy>` in FireOnDependentReplicationComplete. Does NOT prune at non-driver entities (hydration is net-mode-agnostic). Original design.md note.
+- [x] 2.6 Retire `5eda3ac8a` guards — **DONE.** Removed the `Has<FTag_Velocity_NeedsSetup>→NotReady` / `Has<FTag_Acceleration_NeedsSetup>→NotReady` blocks from CkVelocity_Fragment.cpp + CkAcceleration_Fragment.cpp Apply lambdas (§2.4+§2.5+late group supersede them). Left a why-comment.
+- [ ] 2.4-OLD-NOTES (superseded by [x] above) `FTag_EntityScript_ConstructedThisFrame` defer — design ref kept:
    - Add `CK_DEFINE_ECS_TAG_TRANSIENT(FTag_EntityScript_ConstructedThisFrame);` in `CkEntityScript_Fragment.h:23-28` (beside the lifecycle tags).
    - `FProcessor_EntityScript_FinishConstruction::ForEachEntity` (`CkEntityScript_Processor.cpp:~350-361`, where it `Add<FTag_EntityScript_BeginPlay>`) also `InHandle.AddOrGet<FTag_EntityScript_ConstructedThisFrame>();`.
    - BOTH dispatchers (`CkReplicatedFragmentContainer_Processor.cpp`) skip at the TOP of ForEachEntity: `if (InHandle.Has<ck::FTag_EntityScript_ConstructedThisFrame>()) { return; }` (leaves the pending tag → re-dispatches later).
@@ -99,8 +102,8 @@ scheduler precompute `CkProcessorScheduler.cpp:70-81` (`_MainPassOrder`/`_PumpOr
    - The clear is a `DoTick` override on `FProcessor_Hydration_Dispatch` (idiom: `CkIsmRenderer_Processor.cpp:23-32` — override `DoTick`, call the base's view-iterating DoTick, then `_TransientEntity.Clear<FTag_EntityScript_ConstructedThisFrame>();`). **ck_exp DoTick-override mechanics UNVERIFIED** — the base is `ck_exp::TProcessor<...>`; add `using Super = ck_exp::TProcessor<FProcessor_Hydration_Dispatch, FCk_Handle, ck::TReadWrite<FFragment_PendingHydration>, FTag_Hydration_PendingApply, CK_IGNORE_PENDING_KILL>;` (CkAttribute pattern, `CkAttribute_Processor.h:34`) and call `Super::DoTick(InDeltaT)`. CONFIRM ck_exp exposes a callable view-iterating `DoTick(TimeType)` before trusting this; if not, mirror how a CkAttribute composite drives its inner loop. The dispatcher's ForEachEntity is `const`; the DoTick override that clears must be non-const.
 - [ ] 2.5 Fire-gating: `Get_HasUndrainedReplicatedFragments_IncludingDependents` (Net utils, beside `Get_IsReplicationCompleteAllDependents` `CkEntityReplicationDriver_Utils.cpp:381-405`) traversing the dependent set the counters at `CkEntityReplicationDriver_Fragment.cpp:377-408` maintain (self + dependents: `FTag_RepFragments_PendingApply` / queued removals / `FFragment_PendingHydration`); gate `FProcessor_ReplicationDriver_FireOnDependentReplicationComplete` (`CkEntityReplicationDriver_Processor.cpp:19-32`) — if true, return WITHOUT consuming the fire tag (retry next tick).
 - [ ] 2.6 Retire `5eda3ac8a` `Has<FTag_*_NeedsSetup> → NotReady` guards in the Apply lambdas of `CkVelocity_Fragment.cpp` (the guard I READ at `:42-44`) + `CkAcceleration_Fragment.cpp`. Keep everything else. Verify `git show 5eda3ac8a --stat` remnants.
-- [ ] 2.7 Tests: `Ck.Snapshot.LoadGate.GatedSkipsKernelTicks` (two trivial test-only processors, one default + one RunsDuringLoad, count ForEachEntity hits; flip `Set_IsLoadGateActive(true)`, tick N frames, assert gated==0 AND kernel>0; flip off, gated resumes) + `Ck.Physics.Net.Velocity_ApplyAfterLateSetup` (MP stomp repro — copy `Test_Snapshot_AccelerationParity_MPReload_Gate.spec.cpp` plumbing).
-- [ ] 2.8 Gate (`Ck.Snapshot` --discover-fresh + `Ck.Attribute.Net` + `Net` + `Ck.Physics.Net`) — the three lifecycle pins green, both new tests green, snapshot+net delta-zero vs baseline (+kiosk env-red trio). Any HANG → over-gating (a kernel processor left gated) → recheck the §2.2 list. Commit (4 messages per PHASE_2 §2.8; CkTests behind CkFoundation).
+- [x] 2.7 Tests — **Test 1 DONE; Test 2 subsumed per [P2-D3].** `Ck.Snapshot.LoadGate.GatedSkipsKernelTicks` written (hermetic scheduler à la Test_Scheduler_PumpGating: two test processors, one default + one RunsDuringLoad; `Tick(Full)`→both, `Tick(LoadKernel)`→only kernel [the inverse assert: over-gating hangs a real load], `Tick(Full)`→gated resumes). CkTests `Source/CkTests/Private/CkSnapshot/Test_Snapshot_LoadGate_Scope.cpp`. Compile-verified (p2-compilecheck3.log). **[P2-D3]** the standalone `Velocity_ApplyAfterLateSetup` MP repro is NOT written: the late-setup stomp (replicated value arrives while NeedsSetup pending) can only be forced ROBUSTLY via a reload (client re-constructs with the saved override as initial replicated data) — a non-reload override stomps server-side at spawn, or is a change-rep after the client already constructed. That exact scenario IS covered, robustly + in-gate, by `Ck.Snapshot.Parity.Acceleration_MPReload` (post-reload the client's Setup recomputes Current from Params{0} and the replicated override{3,4,5} must win) + the three `Ck.Attribute.Net` pins. A flaky standalone repro is worse than robust existing coverage.
+- [x] 2.8 Gate + commit — **DONE, GREEN.** `Ck.Snapshot` 49/49/0 (--discover-fresh; LoadGate + AccelerationParity + all Parity; NO over-gating hang → kernel list correct). `Net` 102/98/4: framework `Ck.*.Net` delta-zero incl. the 3 Attribute.Net pins (`Values_AppliedBefore_OnReplicationComplete`, `Float_InitialBakedValue_Replicates`, `Float_PreComposition_StashedValue_Applies`) all GREEN — the "real regression" filter (non-kiosk, non-StateMachine) was EMPTY; the 4 fails are the recorded kiosk env-red trio + the StateMachine.Net flake. `Ck.Attribute.Net`/`Ck.Physics.Net` covered by the `Net` substring run (all pins green, no physics-net red). Commits: CkF 91b96a177 / 8c4fbce7a / af9fad239, CkTests 4522c8e. Nothing pushed. (Split 3 CkF commits not 4 — the trait/group/defer sub-steps interleave within shared files; fire-gating + guard-retire live in independent files so they got their own commits.)
 
 **Phase-2 CHECKPOINT (2026-07-11): 2.1–2.3 IMPLEMENTED + COMPILE-VERIFIED (editor build clean, 0 errors, log
 `CkAuto/logs/p2-compilecheck2.log`) + uncommitted on disk; 2.4–2.8 remaining.** Compile-check caught + fixed a dropped
@@ -189,6 +192,19 @@ until 2.4–2.7 land. The tree's committed tip is Phase-1-green (`df06b8394`); t
   `Diff_Payloads` have ZERO production callers. Failure shape = hits 2–3 miss fixed 0.4s ScheduleSettle windows under
   machine load (a sibling save-load session was active on this box); the kiosk Setup file records prior settle-timer
   races. Recorded the trio as a known env-red in the baseline. Safe to commit §1.6 + proceed to Phase 2.
+
+- **[P2-D2] (2026-07-11, Phase 2 §2.5) — fire-gating aggregates over the LIFETIME-DEPENDENTS tree, not a driver list.**
+  Consulted a Fable agent when PHASE_2's "traverse the dependent set the counters maintain" didn't map to code (the
+  driver tracks dependents only by COUNT — `_NumSynced`/`_ExpectedNumberOfDependentReplicationDrivers`; no owner→dependents
+  collection). VERIFIED its ruling against code: the traversable set IS `UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents`
+  (`FFragment_LifetimeDependents`), populated on the client before the count bump, and it is the exact traversal
+  `DoCount_ReplicationDriversIncludingDependents` (Utils.cpp:53-79) derives the expected count from — so at fire-tag-set
+  time every synced dependent is reachable. Chose option (b) recurse-the-tree (mirror DoCount) over (a) self-only [leaves
+  `OnDependentsReplicationComplete` firing in the §2.4 ConstructedThisFrame window — a real hole with consumers like
+  CkEntityCollection_Processor.cpp:184] and (c) push-aggregation [new owner-side state, overkill]. Two-check predicate
+  (`FTag_RepFragments_PendingApply` subsumes removals + `FFragment_PendingHydration`); no non-driver prune (hydration is
+  net-mode-agnostic). Stall-bounded by the dispatcher 5s/2s timeout. Caveat (noted): cross-registry children are excluded
+  from LifetimeDependents (they carry no driver on-wire — acceptable).
 
 ## Decisions — planner rulings
 
@@ -281,3 +297,12 @@ until 2.4–2.7 land. The tree's committed tip is Phase-1-green (`df06b8394`); t
   phase — not gate-safe alone) but compile-verified in the working tree; the sub-step tracker above carries the full
   design for 2.4–2.8 (esp. [P2-D1] + the ConstructedThisFrame pump/ordering reasoning). Continuation: implement 2.4–2.7,
   gate per §2.8, commit. Nothing pushed.
+- 2026-07-11 — **Phase 2 COMPLETE (Opus continuation).** Implemented 2.4 (ConstructedThisFrame defer — verified the
+  ck_exp DoTick-override pattern; [P2-D1]), 2.5 (fire-gating — Fable consult [P2-D2] resolved the "no traversable
+  dependent set" divergence → recurse the lifetime-dependents tree), 2.6 (retire NeedsSetup guards), 2.7 Test 1
+  (LoadGate.GatedSkipsKernelTicks; Test 2 subsumed per [P2-D3] — the late-setup stomp is only robustly forced via
+  reload, already covered by AccelerationParity_MPReload + the Attribute.Net pins). Two compile-checks (the first caught
+  a dropped `namespace ck {` in 2.1-2.3; final clean). **Gate GREEN:** Ck.Snapshot 49/49/0 (LoadGate + all Parity, no
+  hang), Net 102/98/4 (framework delta-zero, 3 pins green, 4 fails = recorded kiosk env-red trio + StateMachine.Net
+  flake). Commits CkF 91b96a177 / 8c4fbce7a / af9fad239, CkTests 4522c8e. Decisions [P2-D1..D3] + Fable [P2-D2]
+  recorded. **Phase 2 DONE.** Nothing pushed. Next: Phase 3A.
