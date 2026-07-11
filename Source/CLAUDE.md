@@ -34,6 +34,7 @@ Before writing any code, navigate the documentation in this order:
 | walk FProperty / reflection | `CkCore/Reflection` |
 | bound range [min,max] + normalize | `CkCore/Math/ValueRange` |
 | create/destroy entities | `CkEcs` + `UCk_Utils_EntityLifetime_UE` |
+| pool/recycle a UObject (or subsystem-own its lifetime) | `CkCore/ObjectPooling` — `UCk_Utils_Object_UE::Request_CreateNewObject` with `FCk_ObjectPooling_PoolParams` (Recycle) or DestroyOnRelease to just pin; release via `TryReleaseToPool`. Poolable EntityScripts: the `InstancedPerEntity_Poolable` policy |
 | write a processor | `CkEcs/Processor` (`TProcessor`, self-registered via `CK_REGISTER_PROCESSOR`) |
 | bind/fire signals | `CkEcs/Signal` + `CK_SIGNAL_BIND` / `CK_SIGNAL_UNBIND` |
 | actor ↔ entity bridge | `CkEcs/OwningActor` (`UCk_Utils_OwningActor_UE`) + `CkActor`; EntityHolder in `CkEcsExt` |
