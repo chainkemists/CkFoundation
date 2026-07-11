@@ -47,14 +47,6 @@ protected:
     auto
     ShowReplicationInEditor() const -> bool override;
 
-    // Snapshot respawn opt-in. Only gameplay bridged actors that return true are stamped with
-    // FFragment_ActorSpawnIntent and re-spawned by the snapshot on load. Framework infrastructure actors
-    // (ActorRelay / CueRelay / StateMachineRelay, etc.) return false (the default) so they are NOT entity-
-    // respawned — the framework re-acquires them on demand; respawning them during a load crashes. A gameplay
-    // actor opts in by overriding this in its WithActor entity-script subclass (or, later, via data).
-    virtual auto
-    Get_IsSnapshotRespawnable() const -> bool;
-
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (ExposeOnSpawn = true, AllowPrivateAccess = true))

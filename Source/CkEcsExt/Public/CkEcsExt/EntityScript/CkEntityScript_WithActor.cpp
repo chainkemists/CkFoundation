@@ -127,12 +127,4 @@ auto
     return false;
 }
 
-auto
-    UCk_EntityScript_WithActor_UE::
-    Get_IsSnapshotRespawnable() const
-    -> bool
-{
-    return false;
-}
-
 // --------------------------------------------------------------------------------------------------------------------

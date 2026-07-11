@@ -28,6 +28,22 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ecs_WorldStatCollection_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Reconstitution phase while a CkSnapshot load spans this world (set by the load state machine across the
+// level-reload boundary; read by the Request_SpawnEntity guard in CkEntityScript_Utils).
+// - EarlyWindow: fresh post-travel world, world-init → world-ready. ONLY snapshot-respawnable entity scripts
+//   abstain (the restore re-bridges their entities; a spawn here would duplicate one). Everything else — relay
+//   channels and other framework infrastructure — spawns as normal and is wiped by the restore's registry
+//   clear like any other pre-restore entity, exactly as before the early window existed.
+// - Full: pre-travel teardown and the restore/respawn window. EVERY spawn abstains; the snapshot is the sole creator.
+enum class ECk_ReconstitutionPhase : uint8
+{
+    None,
+    EarlyWindow,
+    Full
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable, NotBlueprintType)
 class CKECS_API ACk_EcsWorld_Actor_UE final : public AInfo
 {
@@ -146,13 +162,16 @@ public:
     Request_AdoptRestoredTransient(
         FCk_Entity InRestoredTransient) -> void;
 
-    // True while a CkSnapshot load is reconstituting THIS world's ECS (set by the load state machine across the
-    // level-reload boundary). Bridged-actor construction (UCk_EntityScript_WithActor_UE::Construct) reads this and
-    // ABSTAINS — the snapshot is the sole creator, so a respawned actor must not duplicate the restored entity.
+    // Reconstitution phase of THIS world's ECS during a CkSnapshot load (see ECk_ReconstitutionPhase above for
+    // per-phase suppression semantics). The Request_SpawnEntity guard reads the phase and abstains accordingly —
+    // the snapshot is the sole creator of what it restores, so a spawn must not duplicate a restored entity.
     // Lives here (CkEcs, world-scoped, reachable by every module tier) because the CkSnapshot subsystem is above
-    // CkEcsExt/CkEcs and cannot be referenced from WithActor::Construct.
+    // CkEcsExt/CkEcs and cannot be referenced from the spawn path.
+    auto Get_ReconstitutionPhase() const -> ECk_ReconstitutionPhase;
+    auto Set_ReconstitutionPhase(ECk_ReconstitutionPhase InPhase) -> void;
+
+    // Convenience: any phase active. Prefer Get_ReconstitutionPhase where the tier matters.
     auto Get_IsReconstitutionInProgress() const -> bool;
-    auto Set_ReconstitutionInProgress(bool InInProgress) -> void;
 
 private:
     auto DoBuildGraphAndSpawnActors(
@@ -175,8 +194,8 @@ private:
     bool _PendingRebuildGraph = false;
     FDelegateHandle _OnEndFrameHandle;
 
-    // M2b-1: set by the CkSnapshot load state machine; read by WithActor::Construct to abstain during a load.
-    bool _ReconstitutionInProgress = false;
+    // M2b-1: set by the CkSnapshot load state machine; read by the Request_SpawnEntity guard to abstain during a load.
+    ECk_ReconstitutionPhase _ReconstitutionPhase = ECk_ReconstitutionPhase::None;
 
 private:
     // Owns the underlying entt registry. Slot is registered with

@@ -97,6 +97,17 @@ public:
     virtual auto
     Get_EffectiveReplication() const -> ECk_Replication;
 
+    // Snapshot respawn opt-in. Only entity scripts that return true are re-bridged/re-spawned by a CkSnapshot
+    // load (the WithActor script stamps FFragment_ActorSpawnIntent when true), and only those classes abstain
+    // from Request_SpawnEntity during the load's EARLY window on the fresh post-travel world (world-init →
+    // world-ready) — the restore owns their entities. Default false: framework infrastructure (ActorRelay /
+    // CueRelay / StateMachineRelay, etc.) and ordinary scripts spawn normally and are wiped by the restore's
+    // registry clear. Lives on this base (CkEcs) so the spawn guard in CkEntityScript_Utils can query the CDO
+    // without depending on CkEcsExt.
+    [[nodiscard]]
+    virtual auto
+    Get_IsSnapshotRespawnable() const -> bool;
+
 protected:
     UFUNCTION(BlueprintPure,
         Category = "Ck|EntityScript",
