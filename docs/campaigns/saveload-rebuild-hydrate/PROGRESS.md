@@ -8,7 +8,7 @@
 | Phase | Doc | Status | Session date | Commits (repo: hash) | Gate result |
 |---|---|---|---|---|---|
 | 0 | PHASE_0.md | DONE | 2026-07-11 | CkF: 68ba192dc (dt==0), 55521d493 (oracle), <docs> (this); CkTests: 14d65ac (harness) | GREEN: Ck.Snapshot 47/47/0 (46 baseline + Oracle.StructuralBaseline), Ck.Attribute.Net 17/17/0, Net 102/101/1 (baseline red only) |
-| 1 | PHASE_1.md | NOT STARTED | | | |
+| 1 | PHASE_1.md | BLOCKED | 2026-07-11 | (none — 1.1 scaffolding reverted) | STOPPED on divergence [B1]; research committed (PHASE_1_RESEARCH.md) |
 | 2 | PHASE_2.md | NOT STARTED | | | |
 | 3A | PHASE_3A.md | NOT STARTED | | | |
 | 3B | PHASE_3B.md | NOT STARTED | | | |
@@ -70,7 +70,27 @@ Load-time baseline (Phase 3B, representative fixture): ___ ms.
 
 ## Blockers
 
-- (none)
+- **[B1] (2026-07-11, Phase 1) — Plan's "12 ReplicateOnRestore = deletable container re-seeds" is false for 4
+  features; where their non-container reconstitution goes is an unmade architecture decision.** REQUIRES a design
+  ruling before Phase 1 can proceed (executor may not improvise architecture — PROMPT line 5).
+  - **What diverges:** PHASE_1.md §1.2/§1.4 assume every `*_ReplicateOnRestore` processor only re-seeds the
+    replication container from live state, so `Produce`/`SeedContainer` (§1.1) replaces them and §1.4 deletes them
+    behavior-neutrally under Model A. Verified against code, that holds for 8 features but **Inventory Spatial,
+    Inventory DataOnly, RenderTarget, and 2dGridOccupancy** restore processors ALSO do non-container reconstitution:
+    child-entity re-replication (`Request_TryReplicateExisting`), grid re-stamp (`Request_PlaceItemOnGrid`) gated on
+    CkGrid's `FProcessor_2dGridSystem_RestoreRecompose`, render-target re-create + repaint (`DoApplyBatch`), and an
+    unconditional derived-fragment re-seed for local-only grids. The generic re-drive (§1.3) and Produce/SeedContainer
+    cannot house this (cross-processor ordering; Produce-before-Seed circularity for Inventory; unset-Produce-skips-
+    Seed for local grids; once-only repaint vs per-retry SeedContainer). Deleting these 4 per §1.4 breaks restore
+    under Model A. HAND-VERIFIED: `CkInventory_Spatial_Processor.cpp:62-175`. Others agent-cited (consistent pattern).
+  - **Decision needed (maintainer/CTO — do NOT pick unilaterally):** (a) keep slimmed restore processors for these 4
+    doing only reconstitution + Produce for the payload; (b) add a `Reconstitute(Entity)` re-drive hook (unconditional,
+    retry, separate from the container path); or (c) migrate only the 8 clean features in Phase 1 and DEFER the 4 to
+    Phase 3/4 (Model B's Construct-rerun may moot most of it; interacts with CTO-addendum N1 + PHASE_4B RenderTarget).
+  - **Full analysis + the 8 ready-to-implement recipes + the (reverted, re-usable) §1.1 design:**
+    `PHASE_1_RESEARCH.md`. Once resolved, §1.1 re-applies verbatim; the 8 clean migrations follow the recipe table.
+  - **Repo state:** clean at the gated-green Phase-0 boundary (CkFoundation `e5ffe028d`). No Phase-1 code landed;
+    the §1.1 scaffolding was implemented then reverted (never build-verified) to keep the boundary clean.
 
 ## Session log
 
@@ -82,3 +102,10 @@ Load-time baseline (Phase 3B, representative fixture): ___ ms.
   Net 102/101/1 (same pre-existing red). Build clean; no AngelScript errors naming campaign files;
   `rg CK_WITH_FIDELITY_ORACLE Source | wc -l` = 8 (≥3). Commits: CkF `68ba192dc`,`55521d493`,`<docs-this>`;
   CkTests `14d65ac` (on `dev`, unpushed — where the sibling snapshot tests live). Nothing pushed. Phase 0 DONE.
+- 2026-07-11 — Phase 1 attempt (Opus, same session). Ran a 10-agent read-only census of all `*_ReplicateOnRestore`
+  processors (recipes in PHASE_1_RESEARCH.md); designed + implemented §1.1 registry extension (Produce/SeedContainer/
+  Transport/RegisterLazyTyped; include-surface decision made). **STOPPED on divergence [B1]** — 4 of the 12 restore
+  processors do non-container reconstitution the plan's model can't house; where it goes is an unmade architecture
+  decision (executor may not improvise). Reverted the unbuilt §1.1 scaffolding; tree back at gated-green Phase-0
+  boundary. No Phase-1 code committed. Awaiting a design ruling on [B1] (see Blockers). Session ends here per the
+  campaign's divergence rule.
