@@ -39,6 +39,8 @@ struct CKOBJECTIVE_API FCk_Objective_ParamsData
 public:
     CK_GENERATED_BODY(FCk_Objective_ParamsData);
 
+    using IsSnapshotable = void;
+
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "Objective"))
     FGameplayTag _ObjectiveName;
