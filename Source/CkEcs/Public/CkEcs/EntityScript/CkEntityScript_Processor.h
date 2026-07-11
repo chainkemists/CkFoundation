@@ -177,7 +177,7 @@ namespace ck
     class CKECS_API FProcessor_EntityScript_EndPlay : public ck_exp::TProcessor<
             FProcessor_EntityScript_EndPlay,
             FCk_Handle_EntityScript,
-            ck::TReadOnly<FFragment_EntityScript_Current>,
+            ck::TReadWrite<FFragment_EntityScript_Current>,
             FTag_EntityScript_HasBegunPlay,
             CK_IF_END_PLAY>
     {
@@ -195,7 +195,7 @@ namespace ck
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            const FFragment_EntityScript_Current& InCurrent) -> void;
+            FFragment_EntityScript_Current& InCurrent) -> void;
     };
 }
 

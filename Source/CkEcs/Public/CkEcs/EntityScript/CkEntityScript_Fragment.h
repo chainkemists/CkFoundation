@@ -58,6 +58,7 @@ namespace ck
 
     public:
         friend class UCk_Utils_EntityScript_UE;
+        friend class FProcessor_EntityScript_EndPlay;
 
     public:
         FFragment_EntityScript_Current() = default;
@@ -67,7 +68,16 @@ namespace ck
             UCk_EntityScript_UE* InScript);
 
     private:
-        TStrongObjectPtr<UCk_EntityScript_UE> _Script;
+        // WEAK: the CkCore ObjectPooling subsystem owns the instance's lifetime (every instanced
+        // script is vended through the pooling-aware Request_CreateNewObject — poolable ones recycle,
+        // plain InstancedPerEntity ones are pinned-unique). NotInstanced scripts point at the CDO
+        TWeakObjectPtr<UCk_EntityScript_UE> _Script;
+
+        // Snapshot-load-only pin: SerializeSnapshot mints the script with no world/subsystem in reach
+        // (registry-only restores exist), so the fragment keeps this one alive itself until the
+        // entity dies with it. Normal spawns never set this. The save/load rebuild+hydrate campaign
+        // owns removing it when Path #3 serialization of this fragment is replaced
+        TStrongObjectPtr<UCk_EntityScript_UE> _SnapshotLoadPin;
 
     public:
         CK_PROPERTY_GET(_Script);

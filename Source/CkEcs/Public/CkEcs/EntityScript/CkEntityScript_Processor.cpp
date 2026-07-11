@@ -100,6 +100,7 @@ namespace ck
                     return EntityScriptClassArchetype.Get();
                 }
                 case ECk_EntityScript_InstancingPolicy::InstancedPerEntity:
+                case ECk_EntityScript_InstancingPolicy::InstancedPerEntity_Poolable:
                 {
                     const auto& LifetimeOwner = InRequest.Get_Owner();
                     const auto& Outer = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(LifetimeOwner);
@@ -110,8 +111,22 @@ namespace ck
                         EntityScriptClassArchetype)
                     { return {}; }
 
+                    // both instanced policies vend through the CkCore ObjectPooling subsystem, which
+                    // owns the instance's lifetime (the fragment holds a weak ptr): Poolable recycles
+                    // across spawns, plain InstancedPerEntity is pinned-unique and destroyed when
+                    // EndPlay releases it. The spawn params double as the participant's per-use payload
+                    const auto IsPoolable = EntityScriptClassArchetype->Get_InstancingPolicy() ==
+                        ECk_EntityScript_InstancingPolicy::InstancedPerEntity_Poolable;
+
+                    const auto PoolParams = IsPoolable
+                        ? FCk_ObjectPooling_PoolParams{EntityScriptClassArchetype->Get_PoolParams()}
+                            .Set_RecyclePolicy(ECk_ObjectPooling_RecyclePolicy::Recycle)
+                        : FCk_ObjectPooling_PoolParams{}
+                            .Set_RecyclePolicy(ECk_ObjectPooling_RecyclePolicy::DestroyOnRelease);
+
                     return UCk_Utils_Object_UE::Request_CreateNewObject<UCk_EntityScript_UE>(Outer,
-                        EntityScriptClassArchetype->GetClass(), EntityScriptClassArchetype.Get(), nullptr);
+                        EntityScriptClassArchetype->GetClass(), EntityScriptClassArchetype.Get(),
+                        PoolParams, InRequest.Get_SpawnParams(), nullptr);
                 }
                 default:
                 {
@@ -470,10 +485,10 @@ namespace ck
         ForEachEntity(
             const TimeType&,
             HandleType InHandle,
-            const FFragment_EntityScript_Current& InCurrent)
+            FFragment_EntityScript_Current& InCurrent)
         -> void
     {
-        const auto& EntityScript = InCurrent.Get_Script().Get();
+        auto* EntityScript = InCurrent.Get_Script().Get();
 
         CK_ENSURE_IF_NOT(ck::IsValid(EntityScript), TEXT("EntityScript is INVALID for [{}] when attempting to invoke EndPlay on it"), InHandle)
         { return; }
@@ -481,6 +496,16 @@ namespace ck
         CK_CALLSTACK_RECORD(ck::FFragment_EntityScript_Current, InHandle);
         EntityScript->EndPlay();
         InHandle.Add<FTag_EntityScript_HasEndedPlay>();
+
+        // hand the instance back to the ObjectPooling subsystem (recycles Poolable, unpins
+        // force-new). CDO (NotInstanced) and snapshot-minted scripts were never vended — skip.
+        // The weak ptr is cleared so a same-frame re-vend of a recycled instance can never be
+        // observed through this dead entity's fragment
+        if (UCk_Utils_Object_UE::Get_IsPoolVendedObject(EntityScript))
+        {
+            UCk_Utils_Object_UE::TryReleaseToPool(EntityScript);
+            InCurrent._Script.Reset();
+        }
     }
 }
 
