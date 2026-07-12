@@ -14,7 +14,7 @@
 | 3B | PHASE_3B.md | **DONE** (v3 load pipeline live; M2a fixed) | 2026-07-12 | CkF: 78fcdaa8e (retire reconstitution), 36bcdec5d (v3 load pipeline), <docs-this>; CkTests: ce32c65 | GREEN mod casualties: Ck.Snapshot **52 / 43 pass / 9 fail** (--discover-fresh; M2a + V3.InstancedStructDiskSmoke green; all 9 fails are verified Phase-4 casualties — see §Phase-3B DONE) |
 | 4A.1 | PHASE_4A.md | **DONE** (SM redrive→hydration; committed). 4A.2 (N1 discriminator + SpawnerResumes test) DEFERRED ([N1-A]-blocked). | 2026-07-12 | CkF: 705e7d57e (SM hydration); CkTests: 773a4d2 (comment) | GREEN mod casualties+flake: Ck.Snapshot **52/45/7** (both Parity.StateMachine* GREEN, 9→7; 7 = 4B casualties); Ck.StateMachine 24/25 (lone red = documented OwningClientAuth_SubSm flake — passed alone + in Net run); Net 102/99/3 delta-zero (kiosk env-trio only, no new framework Ck.*.Net red) |
 | 4A.2 | PHASE_4A.md | DEFERRED ([N1-A] scope call) | | | |
-| 4B | PHASE_4B.md | **IN PROGRESS** — client-shaped-Apply pattern validated; **TagSet DONE**. Remaining: Grid + RenderTarget (Fable-designed [P4B-F1]), Attributes/AnimPlan (empty-seed Produce), Inventory×2 (**DEFERRED [INV-A]**), params-mutators, MontagePlayer, AS smoke. | 2026-07-12 | CkF: 5088f5336 (TagSet) | GREEN mod casualties: Ck.Snapshot **52/46/6** (Parity.TagSet_MPReload green, 7→6); Net 102/99/3 delta-zero (kiosk env-trio only) |
+| 4B | PHASE_4B.md | **IN PROGRESS** — client-shaped-Apply pattern validated; **TagSet + RenderTarget DONE**. **Grid DEFERRED → [INV-A]** ([P4B-D2]: occupant is Rule-5 anonymous, verified). Remaining actionable: Attributes/AnimPlan (empty-seed Produce, Fable-designed [P4B-F2]), params-mutators, MontagePlayer, AS smoke. Deferred [INV-A]: Inventory×2 + Grid. | 2026-07-12 | CkF: 5088f5336 (TagSet), ede66976f (RenderTarget) | GREEN mod casualties: Ck.Snapshot **52/47/5** (Parity.RenderTarget_MPReload green, 6→5; TagSet+RenderTarget done; remaining 5 = AnimPlan/Attributes actionable + GridPlacements/InventoryDataOnly/InventorySpatial [INV-A]-deferred); Net 102/99/3 delta-zero (kiosk env-trio only, no framework Ck.*.Net red) |
 | 5 | PHASE_5.md + VALIDATION.md | NOT STARTED | | | |
 
 ## Unattended execution protocol (set 2026-07-11 by Adam — OVERRIDES the "STOP on divergence" default below)
@@ -364,11 +364,72 @@ rendezvous — everything else compiled first pass). Gate GREEN (Ck.Snapshot 51/
   deviation from PHASE_4B §4B.2, same class as [P4A-D1]); ⚠️ verify the settle Full-pump runs RT Setup before the dispatcher
   timeout. **Inventory×2** = RECLASSIFIED, DEFER → [INV-A] (items are v3 Rule-5 anonymous; handles-only payload restores
   nothing; product/architecture fork for Adam). Full per-feature design map (verified anchors) in CONTINUATION_PROMPT_Phase4B.md §6.
+- **[P4B-F2] (2026-07-12, 4B) — Attributes (×5 kinds) + AnimPlan empty-seed → value-emitting Produce + authority-side hydration Apply.**
+  Consulted a read-only Fable agent; independently code-verified EVERY load-bearing anchor before implementing. Ruling + verification:
+  - **Keying (foundation):** the attribute/AnimPlan v3 Produce fires on the ATTRIBUTE/PLAN child entity (`Has<Current>` /
+    `Has<AnimPlan_Current>`), so the payload is keyed on the CHILD saved-id and hydration dispatches `Apply(ChildEntity, payload)` —
+    same owner-vs-child mismatch as RenderTarget/TagSet. VERIFIED against the v3 capture per-entity Produce loop + the OWNER-keyed net
+    Apply (`CkFloatAttribute_Fragment.cpp:125` TryGet(Entity-as-owner)).
+  - **Attributes design (per-attribute-entity, shared across 5 kinds):** make the shared `ck::attribute_restore::Produce`
+    (`CkAttribute_RestorePersistence.h`) value-emitting — emit THIS attribute's Base/Final per composed component (Current always;
+    Min/Max if present), byte-identical to the wire-builder `CkAttribute_Processor.inl.h:235-241` (VERIFIED: `Get_Base/Get_Final`,
+    entry ctor `{Name,Base,Final,Component}` `CkFloatAttribute_Fragment.h:184`, `ComponentTagType`/`HandleType`
+    `CkAttribute_Fragment.h:241-243`). Add a shared `TryHydrationApply` template helper (hydration-scope-gated FIRST statement of each
+    Apply) that writes AUTHORITY-side via each kind's existing `ApplyReplicated*Entry` (same path the client net drain uses) — one
+    3-line insertion per registrar (×5). Chosen over per-OWNER Produce (rejected: moves the trigger entity → ripples into 4 consumers +
+    breaks stale saves).
+  - **SeedContainer stays EMPTY-seed (decoupled from the now-value Produce):** seed `T_RepDataStruct{}` explicitly, NOT `InData`.
+    VERIFIED `TryAddContainerFragment` returns `AlreadyExists` WITHOUT writing when the container exists (`CkNet_Utils.h:461-462`) → a
+    value seed would land only the first sibling's data (the per-owner upsert-merge hazard the header comment flags). Empty-seed +
+    re-arm `MayRequireReplication` → `FProcessor_Attribute_Replicate` rebuilds → Model-A byte-neutral. v3 never calls SeedContainer.
+  - **Client convergence needs NO explicit owner-container refill (unlike RenderTarget):** the authority write via `Request_Override`
+    etc. defaults to `TrySyncToClients` → arms `FTag_MayRequireReplication` → `FProcessor_Attribute_Replicate` upserts the owner
+    container (which already exists on the freshly-Constructed owner) → post-load clients converge via the unchanged net path.
+  - **Exactly-once:** `Add_Revocable` mints a new modifier per call, so ALL NotReady exits precede any mutation (only the `Has<Current>`
+    guard; a component-drift entry is warn+skip, NOT NotReady). No attribute/AnimPlan `NeedsSetup` tag exists (composition is
+    synchronous in `Add`), and the child only maps AFTER the owner's replayed Construct ran `Add`, so the guard is near-vacuous; the Full
+    settle-pump (`CkSnapshot_Subsystem.cpp:983`) precedes hydration.
+  - **AnimPlan (hand-written, not templated — different payload shape):** value-emitting Produce emits
+    `FCk_AnimPlan_State{Params.Get_Params().Get_AnimGoal(), Current.Get_AnimCluster(), Current.Get_AnimState()}` (mirrors wire-builder
+    `CkAnimPlan_Processor.cpp:129-130`, VERIFIED); hydration branch = `Request_UpdateAnimState(Cast<FCk_Handle_AnimPlan>(Entity),{cluster,state})`
+    per saved plan; SeedContainer seeds `FCk_RepData_AnimPlans{}`.
+  - **Oracle safety (VERIFIED):** ProduceDiffBaseline uses Velocity (not attributes) so unaffected; StructuralBaseline/RepDataRestoreCoverage
+    don't consult attribute Produce. Land Produce + Apply together (a value Produce without the Apply fix would loud-fail the parity gate).
+  - **Executor-judgment calls (Fable flagged 3 for Adam; taken as executor judgment, consistent with the campaign's wire-fidelity restore
+    pattern — same class as [P4B-D1]/[SM-A]; recorded for veto):** (1) authority modifier-stack FLATTENING — `ApplyReplicated*Entry`
+    reconstitutes value as Base + one synthetic (Final-Base) replication modifier, losing per-modifier identity (already how the CLIENT
+    applies replicated attributes every frame; runtime modifier entities are unlabeled → save-transient anyway); (2) component-mismatch =
+    warn+skip (not loud-drop the whole payload); (3) DoesNotReplicate attributes now hydrate (mode-agnostic, mirrors RenderTarget). None
+    is a hard STOP: all are engineering-consistency calls with campaign precedent, not new product risk. Adam can veto any via PROGRESS.
+  - **CkTests:** NO change needed — the parity tests already exist (they ARE the gate). One stale doc comment in CkTests
+    `Test_Snapshot_Oracle_ProduceDiffBaseline.cpp:4-6` ([P1-D2] "attribute Produce is empty-seed") goes stale — deferred doc follow-up
+    (not gate-blocking; avoid a cross-repo CkTests commit for a comment).
 - **[P4B-D1] (executor, 2026-07-12) — TagSet authority write omits the OnTagsChanged broadcast.** Fable's pseudocode mirrored
   the client drain's diff+broadcast (`CkTagSet_Processor.cpp:156-168`) for symmetry. Omitted it: a save-load RESTORE is not a
   gameplay change, the parity test asserts tag presence + replication (not the signal), and clients still get the OnTagsChanged
   pulse via their own SyncReplication drain after the authority re-replicates. Kept the change minimal (Set_Tags REPLACE + arm,
   no new includes). If an authority-side OnTagsChanged consumer is later shown to need the restore pulse, add it then.
+
+- **[P4B-D3] (executor, 2026-07-12) — RenderTarget hydration helper lives as a static method of `FProcessor_RenderTarget_HandleRequests`, NOT a free function in `ck_render_target_processor` (minor refinement of [P4B-F1]).** [P4B-F1] specified `ck_render_target_processor::HydrateFromSavedChannel` (namespace free function). A free function needs friend access to `FFragment_RenderTarget_Current._NextBatchSeq` — which would force a dllexport-mismatched forward-declaration of the function into the widely-included `CkRenderTarget_Fragment.h` (the friend decl there would lack CKRENDERTARGET_API while the Processor.h decl carries it → MSVC linkage-attribute mismatch). Instead made it a public static of `FProcessor_RenderTarget_HandleRequests`, which is ALREADY a friend of `FFragment_RenderTarget_Current` (`CkRenderTarget_Fragment.h:69`) AND already owns `DoApplyBatch` (the shared repaint primitive it calls) — zero Fragment.h churn, no new friend decl. Same intent (transplant the Model-A `FProcessor_RenderTarget_ReplicateOnRestore` body onto the child-keyed hydration path). Signature `HydrateFromSavedChannel(FCk_Handle& InChild, const FCk_RenderTarget_ChannelState& InChannel) -> bool` (true=Applied, false=NotReady); the Apply lambda maps bool→`ECk_RepFragment_ApplyResult`. GATE GREEN (Ck.Snapshot 52/47/5, `Parity.RenderTarget_MPReload` flipped; delta-zero). Key facts driving the design (verified): payload is CHILD-keyed (`CkRenderTarget_Replication.cpp:120-140` Produce reads the sync child's own AuthoredLog) but the net Apply is OWNER-keyed (`:96-106` `TryGet_RenderTarget(Entity-as-owner)`) → gate-log confirmed the child `[63](RenderTarget.AutoTest.Net)` dropped after 5s NotReady on the owner-keyed lookup; `Get_LatestAppliedBatchSeq = max(Current._NextBatchSeq-1, ClientReplayState._LastAppliedSeq)` (`CkRenderTarget_Utils.cpp:120-127`) → server needs `Current._NextBatchSeq=LastSeq+1` (friend write) + Replicates half refills the owner container so the client's `_LastAppliedSeq` converges; settle pump is Full (`CkSnapshot_Subsystem.cpp:983`) so RT Setup precedes hydration. AuthoredLog refilled via public `Record_PublishedBatch` (`CkRenderTarget_RepData.cpp:23-34`, ring-caps 64) — no friend needed there.
+
+- **[P4B-D2] (executor, 2026-07-12) — Grid `Parity.GridPlacements_MPReload` FOLDS INTO [INV-A], DEFERRED (the design-map ⚠️
+  contingency fired).** [P4B-F1]'s Grid design was Apply-branch-only IFF the test's occupants v3-map. VERIFIED they do NOT:
+  the occupant is `Request_CreateEntity(InHandle)` + `Transform::Add` + `2dGridObject::Add`
+  (`CkAutoTest_NetSubject_GridEntityScript.cpp:77-82`); `2dGridObject::Add` adds ONLY `FFragment_2dGridObject_Params`, no label
+  (`Ck2dGridObject_Utils.cpp:11-20`); nothing else labels it → it is an **unlabeled ConstructSpawned child** → v3 capture Rule 3
+  unlabeled-skip (`CkSnapshot_CaptureV3.cpp:235-259`) → never captured, never in `_SavedIdMap`. EMPIRICAL confirmation
+  (`p4b-tagset.log` Grid window): `rebuild complete — [1] entities mapped` / `enqueued [1] payloads across [1] mapped entities
+  ([19] skipped boot-infra, [0] orphaned)` — only the bridged GRID maps; the occupant is absent. The single payload
+  (`FCk_RepData_2dGridPlacements`) carries the occupant HANDLE, which remaps to invalid on load → an all-or-nothing
+  `Request_AddPlacement` re-drive fails the occupant-valid gate → NotReady → 5s drop → red. Same class as [INV-A]: **grid
+  placement restore is DOWNSTREAM of occupant restore**, and production grid occupants ARE the Rule-5 anonymous inventory items
+  [INV-A] defers. A fixture-only fix (label the test occupant) would false-green — production occupants are anonymous, so it
+  would not reflect the real restore path. **Salvage alternative for Adam (recorded under [INV-A]):** because the grid subject's
+  `Construct` re-creates a fresh occupant on load, a bespoke Grid Apply could resolve the occupant by enumerating the
+  re-Constructed grid's GridObject child instead of remapping the payload handle — but that is a feature-specific
+  child-resolution path (single-occupant, direct-child assumptions) and is the same payload-enrichment-vs-rearchitecture scope
+  call as [INV-A]. NOT implemented; not a STOP (pre-authorized fold). **4B actionable casualties reduce to 3: RenderTarget,
+  Attributes, AnimPlan.**
 
 - **[P3B-M2a] (2026-07-12, gate-2→gate-3) — Fable ruling A: M2a red is a test-fixture gap, not a Phase-4 casualty.**
   Consulted a Fable agent (read-only) when gate-2's M2a red fell outside the user's expected-RED set. Ruling: the bridged
@@ -607,6 +668,13 @@ value is [N1-A]-blocked and it needs a new BB-style fixture world).
   rebuilds them (net implications). Fable explicitly flagged this for Adam (protocol STOP condition c); do NOT wire an Apply
   branch against invalid handles. Same class as [N1-A]. **Adam to scope where Inventory save-restore lands** (payload
   enrichment now vs item-spawn-recipe rearchitecture vs post-campaign).
+  **[UPDATE 2026-07-12, [P4B-D2]] Grid `Parity.GridPlacements_MPReload` JOINS this blocker.** Its occupant is the same
+  Rule-5 anonymous class (verified — unlabeled ConstructSpawned, not captured, gate-log shows only the grid maps). Grid
+  placement restore is downstream of occupant restore, so it cannot close until [INV-A] is scoped. Extra Grid-only salvage
+  fork Adam could weigh (cheaper than the Inventory forks, since the grid subject's Construct re-creates a fresh occupant):
+  a bespoke Grid Apply that resolves the occupant by enumerating the re-Constructed grid's GridObject child rather than
+  remapping the payload handle — feature-specific, single-occupant/direct-child assumptions. The deferred set is now
+  **Inventory×2 + Grid** (3 casualties), all gated on the same anonymous-entity restore decision.
 - **[B1] — RESOLVED 2026-07-11 by [P1-R1] above.** Original text kept below for the record.
 - **[B1] (2026-07-11, Phase 1) — Plan's "12 ReplicateOnRestore = deletable container re-seeds" is false for 4
   features; where their non-container reconstitution goes is an unmade architecture decision.** REQUIRES a design
