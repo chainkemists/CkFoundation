@@ -109,7 +109,36 @@ namespace
                             Entity, Payload.Get_Channels().Num());
 
                         return ECk_RepFragment_ApplyResult::Applied;
-                    }
+                    },
+                    // Produce-only capture (Phase 3A.4): the sync-child's persistent instruction ring lives in
+                    // FFragment_RenderTarget_AuthoredLog. Mirror the channel-slice build in
+                    // FProcessor_RenderTarget_ReplicateOnRestore — a single-channel FCk_RepData_RenderTarget keyed by
+                    // this child's SyncName. Keyed on the sync-child entity; NO SeedContainer (Model A still seeds).
+                    // Not gated on Replicates: the AuthoredLog persistence half is mode-agnostic (drawn state of a
+                    // DoesNotReplicate target is still save-worthy). 3B may add a Replicates gate if load routes only
+                    // replicated targets — that is the single line that would change.
+                    .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+                    {
+                        if (NOT Entity.Has<ck::FFragment_RenderTarget_Params>()
+                            || NOT Entity.Has<FFragment_RenderTarget_AuthoredLog>())
+                        { return {}; }
+
+                        const auto& Params      = Entity.Get<ck::FFragment_RenderTarget_Params>();
+                        const auto& AuthoredLog = Entity.Get<FFragment_RenderTarget_AuthoredLog>();
+                        const auto& Batches     = AuthoredLog.Get_Batches();
+
+                        auto Channel = FCk_RenderTarget_ChannelState{}
+                            .Set_SyncName(Params.Get_SyncName())
+                            .Set_Batches(Batches);
+
+                        if (NOT Batches.IsEmpty())
+                        { Channel.Set_LatestSeq(Batches.Last().Get_Seq()); }
+
+                        auto RepData = FCk_RepData_RenderTarget{};
+                        RepData.Get_Channels().Emplace(MoveTemp(Channel));
+                        return FInstancedStruct::Make(RepData);
+                    },
+                    .Transport = ECk_PersistenceTransport::NetAndSave
                 });
         }
     };

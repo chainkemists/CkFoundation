@@ -90,7 +90,8 @@ static struct FAnimPlanRepHandlerRegistrar
 
                     Entity.AddOrGet<ck::FTag_AnimPlan_MayRequireReplication>();
                     return AddedOrNot;
-                }
+                },
+                .Transport = ECk_PersistenceTransport::NetAndSave // v3 save capture (Phase 3A.4)
             });
     }
 } GAnimPlanRepHandlerRegistrar;
