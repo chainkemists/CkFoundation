@@ -67,8 +67,12 @@ Dev-behavior-neutral (machinery stays compiled in Dev) — the deletes land firs
   touched Utils.cpp — a doc typo, same class as [P0-D1]). VERIFIED `git diff 15434d8ef~1` empty for both files (exact pre-commit
   shape) + zero test/cross-repo deps on `_Previous` snapshot round-trip (v3 re-composes `_Previous` via Construct,
   `CkTransform_Utils.cpp:105`). Camera revert STAYS BLOCKED (OracleParity/BB-driver-world).
-- [ ] **Cluster 5 — 5.1 machinery gate** (Run_Capture/Run_Restore/archives/Model-A registry under CK_WITH_FIDELITY_ORACLE) +
-  **Shipping compile**. ⚠️ RECON (this session, before execution): V3 is INDEPENDENT of Model-A FragmentRegistry/Archive-W-R/
+- [x] **Cluster 5 — 5.1 machinery gate — DONE (CkF `<c5-this>`; Dev Ck.Snapshot 54/51/3 delta-zero + Model-A registry tests GREEN
+  under oracle-ON; **Shipping Game/Shipping compile SUCCEEDED — 2304s, zero real errors, zero snapshot symbols in link
+  diagnostics**). [P5-D4].** Gated the 5 Model-A entry/serialization `.cpp` bodies under `#if CK_WITH_FIDELITY_ORACLE`
+  (Capture/Restore/Archive_Writer/Archive_Reader/TagDriver); LEFT FragmentRegistry.cpp + Audit.cpp compiled (un-gated callers → gating
+  = Shipping LNK2019); added the TagDriver define-visibility include (Ruling 5); dropped the stale Capture.h include from the Subsystem.
+  ⚠️ RECON (pre-execution): V3 is INDEPENDENT of Model-A FragmentRegistry/Archive-W-R/
   TagRegistry (v3 uses MemoryWriter+proxy+Produce-registry+shared FSnapshotContext). BUT the Archive Writer/Reader + FragmentRegistry
   are `#include`d by **92 sites across ~48 production fragment `SerializeSnapshot` files** (all-config compiled) → CANNOT file-scope
   gate the archives/registry without a 48-file fan-out (PHASE_5.md §5.1's "no shipping refs survive" is FALSE). Realistic scope:
@@ -120,6 +124,27 @@ Dev-behavior-neutral (machinery stays compiled in Dev) — the deletes land firs
   `CkTag.h:5` unconditionally includes `CkSnapshot_TagRegistry.h` and `CK_DEFINE_ECS_TAG` calls `Register_SnapshotableTag` from
   EVERY tag — when cluster 5 oracle-gates TagRegistry/TagDriver, that header + Register function must STAY COMPILED in all configs
   (stub the BODY, not the declaration) or Shipping breaks globally.
+
+- **[P5-D4] (executor, 2026-07-12, cluster 5 — Fable-consulted + every anchor Opus-code-verified) — Model-A machinery gate is
+  ENTRY-POINTS-ONLY (5 `.cpp` bodies), NOT the archives/registry file-scope gate PHASE_5.md §5.1 assumed.** §5.1 expected "no shipping
+  ref survives" for the Archive Writer/Reader + FragmentRegistry — FALSE: they're `#include`d by 92 sites across ~48 production fragment
+  `SerializeSnapshot` `.cpp` (for the `CK_REGISTER_SNAPSHOTABLE` Archive-type refs), all-config compiled. Cluster 1a already gated the
+  REGISTRATION (macro → static_assert-only in Shipping → empty registry → `Do_RegisterSnapshotable`/`DoSerializeSnapshot_OneInstance`
+  templates never instantiated), so the archive/registry are already Shipping-inert. **GATED (namespace bodies under
+  `#if CK_WITH_FIDELITY_ORACLE`):** `CkSnapshot_Capture.cpp`, `CkSnapshot_Restore.cpp`, `CkSnapshot_Archive_Writer.cpp`,
+  `CkSnapshot_Archive_Reader.cpp`, `CkSnapshot_TagDriver.cpp` (ONLY callers = Dev CkTests, dev-guarded via `WITH_DEV_AUTOMATION_TESTS`=0
+  in Shipping — note CkTests' module is Runtime-type but its Model-A call sites are dev-guarded). **LEFT COMPILED (gating breaks
+  Shipping):** `CkSnapshot_FragmentRegistry.cpp` + `CkSnapshot_Audit.cpp` — un-gated callers (`Audit.cpp:40,52` call the registry
+  `Find_ByEnttHash`/`Get`; `Audit::Register_Expected` runs at static-init from the un-gated `CK_DEFINE_ENTITY_HOLDER_ROUNDTRIP` /
+  record-twin macros) → gating them → Shipping LNK2019; both inert in Shipping (empty registry). Also left: Context/HandleWalk (shared
+  with v3), TagRegistry (Flag-C registration path), LoadReport, RestoreInvariants, FidelityOracle (already gated). **Ruling-5 landmine
+  FIXED:** `CkSnapshot_TagDriver.cpp`'s include chain had NO source of the `CK_WITH_FIDELITY_ORACLE` define → a bare `#if` would
+  evaluate 0 in EVERY config → Capture/Restore.cpp LNK2019 in DEV (a Shipping-first build passes, Dev breaks later); pre-empted by
+  adding `#include CkSnapshot_FragmentRegistry.h` at TagDriver.cpp top. Headers NOT gated (`.cpp`-bodies-only) — the ~48 fragments
+  include them; nothing references the gated fns in Shipping. Dropped the stale `#include CkSnapshot_Capture.h` from
+  `CkSnapshot_Subsystem.cpp`. **VERIFIED:** Dev gate 54/51/3 delta-zero (registry tests run+pass under oracle-ON); **Shipping
+  Game/Shipping compile SUCCEEDED (2304s, zero real errors, zero snapshot symbols in link diagnostics — the 65 LNK4217 are pre-existing
+  Jolt import warnings).** Evidence-forced deviation from CTO-fixed §5.1 (same class as [P4A-D1]/[P4B-D3]); Adam ratifies at review.
 
 ## Unattended execution protocol (set 2026-07-11 by Adam — OVERRIDES the "STOP on divergence" default below)
 
@@ -1029,3 +1054,14 @@ value is [N1-A]-blocked and it needs a new BB-style fixture world).
   Gate: Ck.Snapshot 54/51/3 delta-zero. Nothing pushed. **Clusters 5 (machinery gate + Shipping compile) + 6 (docs + 5.3 grep +
   final Ck.Snapshot+Net gate) remain.** Cluster-5 recon done (see tracker ⚠️ — archives/registry pervasively included → gate only
   entry points; Fable consult at execution). Maintainer review of this Class-4 change is MANDATORY — branch stays unpushed.
+- 2026-07-12 — **Track B / Phase 5 partial — cluster 5 DONE + COMMITTED (Opus, unattended run).** Gated the Model-A machinery under
+  `#if CK_WITH_FIDELITY_ORACLE`. Second read-only Fable consult resolved the archives-gating-scope fork ([P5-D4]): the Archive
+  Writer/Reader + FragmentRegistry are pervasively `#include`d by ~48 production fragments, so gate ENTRY-POINTS only (Capture/Restore/
+  Archive_Writer/Archive_Reader/TagDriver `.cpp` bodies) + LEAVE FragmentRegistry.cpp + Audit.cpp compiled (un-gated static-init/Audit
+  callers → gating = Shipping LNK2019). Every anchor code-verified; the Ruling-5 TagDriver define-visibility landmine pre-empted with a
+  FragmentRegistry.h include; dropped the stale Subsystem Capture.h include. **Gate: Dev Ck.Snapshot 54/51/3 delta-zero (Model-A registry
+  tests still GREEN under oracle-ON); Shipping Game/Shipping compile SUCCEEDED (2304s, zero real errors, zero snapshot symbols in link
+  diagnostics).** Commit CkF `<c5-this>`. Nothing pushed. **Cluster 6 remains: docs (CkEcs/CLAUDE.md rep section, root CLAUDE.md
+  CK_REGISTER_SNAPSHOTABLE row) + the exit-grep comment sweep (34 stale ReplicateOnRestore/RestoreReplicated/JustRestored/Reconstitution
+  comment hits, minus the RestoreMarker.h carve-out) + amended PHASE_5.md §5.3 grep + final Ck.Snapshot + Net gate.** Then Phase-5 partial
+  is complete for maintainer review; Phase-5 FINAL (VALIDATION §2 OracleParity, camera revert, etc.) stays BB-driver-world-blocked.

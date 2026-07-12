@@ -19,6 +19,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#if CK_WITH_FIDELITY_ORACLE // Phase 5: Model-A restore is oracle/test-only (v3 rebuild+hydrate is the live load path)
+
 namespace ck::snapshot
 {
     auto
@@ -236,5 +238,7 @@ namespace ck::snapshot
         return Report;
     }
 }
+
+#endif // CK_WITH_FIDELITY_ORACLE
 
 // --------------------------------------------------------------------------------------------------------------------
