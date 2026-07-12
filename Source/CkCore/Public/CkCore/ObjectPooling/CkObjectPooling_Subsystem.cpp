@@ -104,6 +104,7 @@ auto
     { return {}; }
 
     return FCk_ObjectPooling_PoolStats{}
+        .Set_Params(Pool->_Params)
         .Set_NumFree(Pool->_FreeObjects.Num())
         .Set_NumInUse(Pool->_InUseObjects.Num())
         .Set_NumLiveInstances(Pool->_NumLiveInstances)
