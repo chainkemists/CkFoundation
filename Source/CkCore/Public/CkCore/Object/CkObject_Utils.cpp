@@ -322,6 +322,29 @@ auto
 
 auto
     UCk_Utils_Object_UE::
+    TryRegisterPoolReleaseQuiesceHook(
+        const UObject* InBoundObject,
+        TFunction<void()> InHook)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InBoundObject))
+    { return false; }
+
+    const auto& World = InBoundObject->GetWorld();
+
+    if (ck::Is_NOT_Valid(World))
+    { return false; }
+
+    auto* Subsystem = World->GetSubsystem<UCk_ObjectPooling_Subsystem_UE>();
+
+    if (ck::Is_NOT_Valid(Subsystem))
+    { return false; }
+
+    return Subsystem->TryRegisterReleaseQuiesceHook(InBoundObject, MoveTemp(InHook));
+}
+
+auto
+    UCk_Utils_Object_UE::
     DoRequest_AcquirePooled(
         UObject* InOuter,
         TSubclassOf<UObject> InClass,
