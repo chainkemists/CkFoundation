@@ -1,24 +1,30 @@
 # Continuation — CkSnapshot rebuild+hydrate, Phase 4B (then 4A.2 → 5)
 
-**One-line:** Phase 4A.1 DONE (SM Save-transport hydration). Phase 4B IN PROGRESS — the client-shaped
-hydration-scope authority-write pattern is validated: **TagSet DONE** (`Parity.TagSet_MPReload` green,
-Ck.Snapshot **52/46/6**, 7→6 casualties). Remaining: Grid + RenderTarget (client-shaped, Fable-designed
-below), Attributes + AnimPlan (empty-seed Produce), Inventory×2 (**DEFERRED — [INV-A] Adam fork**),
-params-mutators, MontagePlayer, AS smoke. You are **Opus**; stay Opus for implementation; route design
-forks through a **Fable** agent (`Agent`, `model:"fable"`, read-only) and VERIFY every ruling against cited
-code yourself before implementing.
+**One-line:** Phase 4A.1 DONE. Phase 4B — **ALL ACTIONABLE CASUALTIES CLOSED**: TagSet + RenderTarget +
+Attributes×5 + AnimPlan all green (the client-shaped-Apply / empty-seed-Produce hydration pattern, validated
+5×). **Grid + Inventory×2 DEFERRED → [INV-A]** (anonymous entities — an Adam product/architecture fork, protocol
+STOP-c). Ck.Snapshot **52/49/3** (the 3 = the [INV-A] trio). REMAINING 4B = ADDITIVE oracle-coverage only:
+params-mutators (4B.1), MontagePlayer rebind, AS smoke (4B.3), OracleParity wiring (4B.4). You are **Opus**;
+stay Opus for implementation; route design forks through a **Fable** agent (`Agent`, `model:"fable"`, read-only)
+and VERIFY every ruling against cited code yourself before implementing.
 
 ## 0. STATE (verify at start)
-- CkFoundation `feature/save-load-improvements` HEAD = the latest 4B docs commit, on top of (newest first):
-  - `5088f5336` feat(CkTagSet): hydration-scope authority write on save-load (Phase 4B)
-  - `2f0aa0a7f` docs(CkSnapshot): Phase 4A.1 DONE
-  - `705e7d57e` feat(CkStateMachine): SM redrive as Save-transport hydration; delete RestoreRedrive
-- CkTests HEAD = `773a4d2` docs(CkSnapshot): reword SM round-trip comment for HydrationResume rename.
+- CkFoundation `feature/save-load-improvements` HEAD = latest docs commit, on top of (newest first):
+  - `8d7150efb` docs(CkSnapshot): 4B — Attributes×5 + AnimPlan green; all actionable casualties closed
+  - `19613a1eb` fix(CkSnapshot): LifetimeDependents restore-invariant respects lazy-prune weak-ref contract ([P4B-D4])
+  - `5b7c1e077` feat(CkAttribute): value-emitting Produce + hydration-scope authority write (Attributes×5)
+  - `db83e687a` feat(CkAnimation): AnimPlan hydration-scope authority write
+  - `01b5530e1` docs(CkSnapshot): RenderTarget green; Grid→[INV-A]; Attributes/AnimPlan design
+  - `ede66976f` feat(CkRenderTarget): hydration-scope authority write (child-keyed transplant)
+  - `5088f5336` feat(CkTagSet) · `705e7d57e` feat(CkStateMachine) (prior sessions)
+- CkTests HEAD = `773a4d2` (UNCHANGED this session — the parity tests already existed; no CkTests commit needed for casualties).
 - Tree CLEAN. NOTHING pushed. Editor CLOSED.
-- Net baseline for 4B diffs = `CkAuto/logs/p4b-tagset-net.log` (102 total; 3 fails = the kiosk env-trio
-  `Bb_AutoTest_RentnetKiosk*`; no framework `Ck.*.Net` red). A NEW framework `Ck.*.Net` red = investigate.
-- Remaining Ck.Snapshot casualties (6): `Parity.{AnimPlan,Attributes,GridPlacements,InventoryDataOnly,
-  InventorySpatial,RenderTarget}_MPReload`.
+- Net baseline = `CkAuto/logs/p4b-attr-net.log` (102 total; fails = kiosk env-trio `Bb_AutoTest_RentnetKiosk*` +
+  the documented `Ck.StateMachine.Net.OwningClientAuth_SubSm` flake — both ignorable). A NEW framework `Ck.*.Net` red = investigate.
+- Remaining Ck.Snapshot casualties (3, ALL [INV-A]-deferred, do NOT attempt without an Adam scope call):
+  `Parity.{GridPlacements,InventoryDataOnly,InventorySpatial}_MPReload`.
+- The 4 actionable casualties this session's session closed (RenderTarget/Attributes×5/AnimPlan) + the invariant fix
+  are documented in PROGRESS §Decisions [P4B-D2/D3/F2/D4]. PROGRESS is canonical; trust it over this file.
 
 ## 1. READ FIRST (in order), in Plugins/CkFoundation/docs/campaigns/saveload-rebuild-hydrate/
 1. PROGRESS.md — §Status board (4A.1 DONE row), §"4A.1 IMPLEMENTATION STATE" (what shipped + the gate),
