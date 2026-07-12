@@ -9,7 +9,22 @@ FCkParticles_StageOutput CkParticles_Behavior_Beam(FCkParticles_StageInput In)
 {
     FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
 
-    const float n      = CkParticles_NormalizedAge(In);
+    const float n = CkParticles_NormalizedAge(In);
+    const float k = CkParticles_Rand(In.Seed, 3);
+
+    if (k < 0.18) // the beam body: Tube carrier mesh along +X, energy panning down its length
+    {
+        const float Pulse = 0.5 + 0.5 * sin(In.Age * 9.0 + 6.28318530718 * CkParticles_Rand(In.Seed, 4));
+        O.Position  = float3(0.0, 0.0, 0.0);
+        O.Velocity  = float3(0.0, 0.0, 0.0);
+        O.VisTag    = 3;
+        O.MeshIndex = 1;
+        O.Scale     = float3(4.5, lerp(0.55, 0.72, Pulse), lerp(0.55, 0.72, Pulse));
+        O.Dynamic   = float4(0.22, 0.35, -In.Age * 1.6, 1.5);
+        O.Color     = float4(0.4, 1.2, 3.2, 0.8);
+        return O;
+    }
+
     const float Along  = lerp(0.0, 450.0, n);                  // distance down +X over life
     const float Spread = lerp(28.0, 3.0, n);                   // converge toward the tip (focused beam)
     const float A      = CkParticles_Rand(In.Seed, 1) * 6.28318530718;

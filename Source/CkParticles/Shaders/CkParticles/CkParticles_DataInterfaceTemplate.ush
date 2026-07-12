@@ -7,7 +7,7 @@
 
 #include "/CkParticles/CkParticles_Behaviors.ush"
 
-void ExecuteStage_{ParameterName}(in int BehaviorId, in float DeltaTime, in float Age, in float Lifetime, in float3 InPosition, in float3 InVelocity, in int Seed, out float3 OutPosition, out float3 OutVelocity, out float4 OutColor, out float2 OutSize)
+void ExecuteStage_{ParameterName}(in int BehaviorId, in float DeltaTime, in float Age, in float Lifetime, in float3 InPosition, in float3 InVelocity, in int Seed, out float3 OutPosition, out float3 OutVelocity, out float4 OutColor, out float2 OutSize, out float3 OutScale, out float4 OutOrientation, out float4 OutDynamic, out float OutRotation, out int OutMeshIndex, out int OutVisTag)
 {
     FCkParticles_StageInput In;
     In.BehaviorId = BehaviorId;
@@ -20,8 +20,14 @@ void ExecuteStage_{ParameterName}(in int BehaviorId, in float DeltaTime, in floa
 
     FCkParticles_StageOutput Out = CkParticles_ExecuteStage(In);
 
-    OutPosition = Out.Position;
-    OutVelocity = Out.Velocity;
-    OutColor    = Out.Color;
-    OutSize     = Out.Size;
+    OutPosition    = Out.Position;
+    OutVelocity    = Out.Velocity;
+    OutColor       = Out.Color;
+    OutSize        = Out.Size;
+    OutScale       = Out.Scale;
+    OutOrientation = Out.Orientation;
+    OutDynamic     = Out.Dynamic;
+    OutRotation    = Out.Rotation;
+    OutMeshIndex   = Out.MeshIndex;
+    OutVisTag      = Out.VisTag;
 }

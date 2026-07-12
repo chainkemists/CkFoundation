@@ -1,0 +1,60 @@
+// /CkParticles/Behaviors/Behavior_LightningStrike.ush — BehaviorId 15.
+// Lightning strike recreated from sA NS_LightningStrike_1 / NS_Lightning_Strike (corpus translation sheet):
+// a strobing jagged bolt column (the recipes' bolt mesh approximated as z-banded, laterally-offset sprites),
+// electric-cyan crackle around the column top, and a dark dust ring at the base. Cycled continuous spawn —
+// each cycle is one re-strike (the recipes re-strike at ~0.09/0.22/0.47 s). Keep the CPU mirror in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+FCkParticles_StageOutput CkParticles_Behavior_LightningStrike(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    const float Cycle = 0.6;
+    const float t     = frac(In.Age / Cycle + CkParticles_Rand(In.Seed, 9)) * Cycle;
+    const float m     = t / Cycle;
+    const float k     = CkParticles_Rand(In.Seed, 0);
+
+    if (k < 0.25) // bolt column: jagged z-banded offsets, hard strobe (recipe: mesh bolt + flicker dyn-param)
+    {
+        const float zf   = CkParticles_Rand(In.Seed, 1);
+        const float Band = floor(zf * 6.0);
+        const float Jag  = (CkParticles_Rand(In.Seed, 4 + int(Band)) - 0.5) * (60.0 - 30.0 * zf);
+        const float Flick = step(0.35, frac(In.Age * 16.0 + CkParticles_Rand(In.Seed, 2)));
+        const float Vis   = Flick * saturate(1.0 - m);
+        O.Position = float3(Jag, (CkParticles_Rand(In.Seed, 5) - 0.5) * 18.0, zf * 380.0);
+        O.Velocity = float3(0.0, 0.0, 900.0); // renderer-facing only: velocity-aligns the segment vertically
+        O.VisTag   = 1;
+        O.Size     = float2(10.0, 58.0);
+        O.Color    = float4(0.7, 135.0, 150.0, 1.0) * (0.15 * Vis);
+    }
+    else if (k < 0.7) // crackle: sphere shell around the column top, jittering, electric cyan (recipe layer)
+    {
+        const float z  = 2.0 * CkParticles_Rand(In.Seed, 1) - 1.0;
+        const float a  = 6.28318530718 * CkParticles_Rand(In.Seed, 2);
+        const float rr = sqrt(saturate(1.0 - z * z));
+        const float3 d = float3(rr * cos(a), rr * sin(a), abs(z));
+        const float3 Jit = float3(
+            sin(In.Age * 31.0 + 6.28318530718 * CkParticles_Rand(In.Seed, 3)),
+            cos(In.Age * 27.0 + 6.28318530718 * CkParticles_Rand(In.Seed, 4)),
+            sin(In.Age * 23.0 + 6.28318530718 * CkParticles_Rand(In.Seed, 5))) * 9.0;
+        O.Position = float3(0.0, 0.0, 161.0) + d * lerp(47.0, 95.0, CkParticles_Rand(In.Seed, 6)) + Jit;
+        O.Velocity = float3(0.0, 0.0, 0.0);
+        O.Size     = float2(12.0, 12.0);
+        O.Color    = float4(0.14, 27.0, 30.0, 1.0) * (0.3 * saturate(1.0 - m));
+    }
+    else // base dust ring: r=100, slow outward drift, dark and large (recipe smoke ring layer)
+    {
+        const float a  = 6.28318530718 * CkParticles_Rand(In.Seed, 1);
+        const float3 d = float3(cos(a), sin(a), 0.0);
+        const float Vis = 0.35 * saturate(1.0 - m);
+        O.Position = d * (100.0 + 27.7 * t) + float3(0.0, 0.0, 20.0);
+        O.Velocity = d * 27.7;
+        O.VisTag   = 2;
+        O.Rotation = (CkParticles_Rand(In.Seed, 3) - 0.5) * 360.0;
+        O.Dynamic  = float4(m * 0.8, 0.0, 0.0, 0.0);
+        O.Size     = float2(1.0, 1.0) * lerp(120.0, 180.0, CkParticles_Rand(In.Seed, 2));
+        O.Color    = float4(0.35, 0.4, 0.45, 1.0) * Vis;
+    }
+    return O;
+}

@@ -28,11 +28,22 @@ major bump.
 ```
 UCkParticles_DataInterface (UNiagaraDataInterface, stateless)
   └─ ExecuteStage(BehaviorId, DeltaTime, Age, Lifetime, Position, Velocity, Seed)
-        -> OutPosition, OutVelocity, OutColor
+        -> OutPosition, OutVelocity, OutColor, OutSize, OutScale, OutOrientation (quat),
+           OutDynamic (float4 -> Particles.DynamicMaterialParameter), OutRotation (sprite degrees),
+           OutMeshIndex, OutVisTag
        GPU: GetParameterDefinitionHLSL -> AppendTemplateHLSL(CkParticles_DataInterfaceTemplate.ush)
             template #includes CkParticles_Behaviors.ush -> Behaviors/*.ush   (logic lives here)
        CPU: VMExecuteStage -> NDICkParticlesLocal::ExecuteStage_CPU            (mirror of the same switch)
 ```
+
+**Renderer selection (2026-07-12 fidelity evolution):** each behavior writes `VisTag` per particle and the
+template's renderers draw only their tagged particles — `0` camera sprite (per-effect texture via
+`User.SpriteMaterial`, the legacy default), `1` velocity-aligned sprite (streaks/tracers; stretch =
+`Size.y`), `2` smoke sprite (translucent `M_CkParticles_SoftSmoke`, `Rotation` applies), `3` carrier mesh
+(`MeshIndex` picks SM_CkParticles_ **Sweep/Tube/Shell/Disc**; `Scale` + `Orientation` apply; the meshes carry
+`M_CkParticles_SweepErode` / `M_CkParticles_FresnelShell`). `Dynamic` drives the mesh/smoke materials:
+x dissolve, y distortion, z UV-pan, w emissive boost — the exact idiom the marketplace "DissolveAdd"
+materials animate via curves (Vefects M_VFX_DisAdd_Slash01 et al).
 
 `Seed` is the particle's `Particles.UniqueID`. Hash it for per-particle randomness — `Common.ush` provides
 `CkParticles_Rand(Seed, Salt)` → [0,1) and `CkParticles_RandDir(Seed)` → unit vector (24-bit math, bit-identical
@@ -41,7 +52,14 @@ between the GPU `.ush` and the C++ CPU mirror).
 Shaders (`Source/CkParticles/Shaders/CkParticles/`, virtual path `/CkParticles`):
 - `Common.ush` — `FCkParticles_StageInput/Output`, `CkParticles_NormalizedAge`, `CkParticles_Rand`, `CkParticles_RandDir`.
 - `Behaviors/Behavior_*.ush` — Gravity (0), Swirl (1), Explosion (2), Fire (3), Fireworks (4), Galaxy (5),
-  Beam (6, directional — aim via spawn rotation), Slash (7, arc crescent), Nova (8, shockwave ring).
+  Beam (6, directional — aim via spawn rotation), Slash (7, arc crescent), Nova (8, shockwave ring),
+  and the **marketplace recreations** (2026-07-12, derived from the VFX corpus translation sheets —
+  `Saved/CkVfxCorpus/analysis/` in the dev host): MuzzleFlash (9, +X barrel), ImpactBurst (10, +Z normal),
+  Tracer (11, +X forward), SmokePlume (12), SparksBurst (13), GroundRing (14), LightningStrike (15),
+  AuraSwirl (16). Multi-layer marketplace effects compress into one behavior via Seed-branching
+  (`k = Rand(Seed, 0)` picks the layer), and one-shot archetypes replay their arc via
+  `frac(Age/Cycle + phase)` — continuous-spawn template today; a burst-spawn template variant would
+  make them true one-shots.
 - `CkParticles_Behaviors.ush` — `#include`s behaviors + `CkParticles_ExecuteStage` dispatch (the switch).
 - `CkParticles_DataInterfaceTemplate.ush` — the DI's generated GPU function wrapper.
 
@@ -57,7 +75,10 @@ Shaders (`Source/CkParticles/Shaders/CkParticles/`, virtual path `/CkParticles`)
 4. Add the new `.ush` to `NDICkParticlesLocal::DependentShaderFiles` so `AppendCompileHash` busts the shader cache.
 
 Then select it at runtime (`Spawn_BehaviorAtLocation(..., id, ...)`) or via a `UCkParticles_ScriptDefinition`'s
-`_BehaviorId` + regenerate. **Self-driving** behaviors (write an absolute `O.Position` from Age/Seed, like Swirl /
+`_BehaviorId` + regenerate. One-shot archetypes should also be added to
+`ck::particles::Get_BehaviorUsesBurstTemplate` (Naming header) so the spawn util routes them through
+`PS_CkParticles_Template_Burst` (one instantaneous 96-burst per ~1.2 s loop, real `Age`) instead of the
+continuous-rate seed; surplus burst particles a behavior doesn't use must be hidden (`Color/Size/Scale = 0`). **Self-driving** behaviors (write an absolute `O.Position` from Age/Seed, like Swirl /
 Explosion / Galaxy) rely on the emitter being in **local space** — the template sets this, so they render where the
 system is spawned. **Velocity-integrating** behaviors (Gravity) work in either space.
 
@@ -65,8 +86,11 @@ system is spawned. **Velocity-integrating** behaviors (Gravity) work in either s
 
 ## Create Template System (fully code-built — no manual step)
 
-**Editor → Editor Subsystems → `CkParticles_GeneratorSubsystem` → `Create Template System`.** With
-`CK_WITH_PARTICLES=1` this builds `/CkFoundation/CkParticles/Templates/PS_CkParticles_Template` entirely from C++
+**Editor → Editor Subsystems → `CkParticles_GeneratorSubsystem` → `Create Template System`** (or headless:
+env `CK_PARTICLES_REBUILD_TEMPLATES=1` + toolbox `--test --test-pattern RebuildTemplateAssets`). With
+`CK_WITH_PARTICLES=1` this runs the full asset pipeline — procedural textures → VFX master materials
+(`CkParticles_MaterialGenerator.cpp`) → carrier meshes (`CkParticles_MeshGenerator.cpp`, MeshDescription-built) →
+BOTH templates (`PS_CkParticles_Template` continuous + `PS_CkParticles_Template_Burst`) — entirely from C++
 (`CkParticles_TemplateBuilder.cpp`):
 
 - GPU emitter, **local space**, generous **fixed bounds** (`±3000`) so self-driving behaviors render at the spawn
@@ -113,9 +137,11 @@ a per-component override (`UNiagaraComponent::SetVariableMaterial`) bound to a `
 - `Spawn_SystemAtLocation(WorldContext, System, BehaviorId, ...)` — same for an explicit (e.g. generated) system.
 
 The **CkParticles gym** lives in CkTests (`Script/CkParticles/`, registered as "Particles" in `CkTests_GymRegistry.as`):
-one station per behavior plus a composite **Spell Cast** station that **layers** behaviors (Explosion + Beam) at one
-point — the composition pattern for richer VFX (spells/trails) is just multiple `Spawn_BehaviorAtLocation` calls at one
-transform. Cycle to it with `Ck_Gym_GoTo Particles`.
+one station per behavior (0–16), each spawning the seed template with a fitting procedural texture; the recreation
+stations (9–16) credit their marketplace exemplars in the station description. In-PIE exec:
+`Ck_GymParticles_RestartAll`. The composition pattern for richer VFX (spells/trails) is multiple
+`Spawn_BehaviorAtLocation` calls at one transform. Automated coverage: the PIE autotest
+`CkAutoTest_Particles_SpawnAllBehaviors.as` spawns every id 0–16 and asserts a live component.
 
 ---
 

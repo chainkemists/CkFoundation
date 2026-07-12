@@ -1,0 +1,54 @@
+// /CkParticles/Behaviors/Behavior_GroundRing.ush — BehaviorId 14.
+// Ground AoE recreated from sA NS_Ground_Crack + NS_AOE_Attack_1 (corpus translation sheet): an expanding
+// HDR ring band at ankle height plus a spark fountain launched from the ring radius in a wide up-cone with
+// gravity and drag. Ground plane = local XY. Cycled continuous spawn (see MuzzleFlash note).
+// Keep the CPU mirror in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+FCkParticles_StageOutput CkParticles_Behavior_GroundRing(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    // Burst template: real Age (one AoE per ~1.2 s loop) — the frac-cycle replay is retired.
+    const float t = In.Age;
+    const float m = saturate(t / 1.0);
+    const float k = CkParticles_Rand(In.Seed, 0);
+
+    const float  a   = 6.28318530718 * CkParticles_Rand(In.Seed, 1);
+    const float3 Rad = float3(cos(a), sin(a), 0.0);
+
+    if (k < 0.06) // expanding ring: the Disc carrier MESH grows flat on the ground (r = 178 * t/0.83, recipe numbers)
+    {
+        const float Vis = saturate(1.0 - t / 0.79);
+        O.Position  = float3(0.0, 0.0, 3.0);
+        O.Velocity  = float3(0.0, 0.0, 0.0);
+        O.VisTag    = 3;
+        O.MeshIndex = 3;
+        O.Scale     = float3(1.0, 1.0, 1.0) * (1.78 * (t / 0.83));
+        O.Dynamic   = float4(saturate(t / 0.79), 0.3, -0.5 * t, 1.6);
+        O.Color     = float4(12.5, 0.8, 0.0, 1.0) * Vis;
+    }
+    else // spark fountain from the ring: up-cone (53 deg half), 300-1100 cm/s, gravity -980, drag 0.75
+    {
+        const float u  = CkParticles_Rand(In.Seed, 2);
+        const float az = 6.28318530718 * CkParticles_Rand(In.Seed, 3);
+        const float th = 0.925 * sqrt(u);
+        const float3 d = float3(sin(th) * cos(az), sin(th) * sin(az), cos(th));
+        const float s  = lerp(300.0, 1100.0, CkParticles_Rand(In.Seed, 4));
+        const float kd = (1.0 - exp(-0.75 * t)) / 0.75;
+
+        O.Position = Rad * 178.0 + d * s * kd + float3(0.0, 0.0, -490.0 * t * t);
+        O.Velocity = d * s * exp(-0.75 * t) + float3(0.0, 0.0, -980.0 * t);
+        O.VisTag   = 1;
+
+        const float w = lerp(5.0, 10.0, CkParticles_Rand(In.Seed, 5));
+        O.Size = float2(w * 0.35, w * 1.8) * saturate(1.0 - m * 0.6);
+
+        // recipe: HDR white x10-20, holds to 52% then fades out by 78%
+        const float Hdr = lerp(10.0, 20.0, CkParticles_Rand(In.Seed, 6)) * 0.5;
+        const float Vis = m < 0.52 ? 1.0 : saturate(1.0 - (m - 0.52) / 0.26);
+        O.Color = float4(Hdr, Hdr, Hdr, 1.0) * Vis;
+    }
+    return O;
+}

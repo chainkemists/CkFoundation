@@ -26,7 +26,9 @@ UNiagaraComponent*
         FVector        InScale,
         FName          InTextureName)
 {
-    const auto TemplatePath = ck::particles::Get_DefaultTemplateSystemObjectPath();
+    const auto TemplatePath = ck::particles::Get_BehaviorUsesBurstTemplate(InBehaviorId)
+        ? ck::particles::Get_BurstTemplateSystemObjectPath()
+        : ck::particles::Get_DefaultTemplateSystemObjectPath();
     auto* System = LoadObject<UNiagaraSystem>(nullptr, *TemplatePath);
     return Spawn_SystemAtLocation(InWorldContextObject, System, InBehaviorId, InLocation, InRotation, InScale, InTextureName);
 }

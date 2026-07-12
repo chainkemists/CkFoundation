@@ -1,0 +1,50 @@
+// /CkParticles/Behaviors/Behavior_AuraSwirl.ush — BehaviorId 16.
+// Character buff aura recreated from sA NS_FlameAura_1 (corpus translation sheet; orbital rate cross-referenced
+// from NS_Aura_1's 0.677 rev/s mesh spin): a torus ring of flame sprites (R=68) rising in a 20 deg cone with
+// drag, orbiting the character, with a curl-noise-style lateral jitter. Flames replay a short 0.36-0.71 s arc
+// per cycle while the orbit angle advances with absolute Age, so the aura loops seamlessly.
+// Keep the CPU mirror in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+FCkParticles_StageOutput CkParticles_Behavior_AuraSwirl(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    if (CkParticles_Rand(In.Seed, 10) < 0.10) // breathing fresnel dome around the character (recipe aura shell)
+    {
+        const float Breathe = 1.15 + 0.1 * sin(In.Age * 2.0);
+        O.Position  = float3(0.0, 0.0, 70.0);
+        O.Velocity  = float3(0.0, 0.0, 0.0);
+        O.VisTag    = 3;
+        O.MeshIndex = 2;
+        O.Scale     = float3(Breathe, Breathe, Breathe * 1.25);
+        O.Dynamic   = float4(0.5 + 0.2 * sin(In.Age * 0.9), 0.4, -In.Age * 0.35, 1.2);
+        O.Color     = float4(1.0, 0.35, 0.08, 0.5);
+        return O;
+    }
+
+    const float ArcLen = lerp(0.36, 0.71, CkParticles_Rand(In.Seed, 1)); // per-flame arc (recipe lifetime)
+    const float t      = frac(In.Age / ArcLen + CkParticles_Rand(In.Seed, 9)) * ArcLen;
+    const float m      = t / ArcLen;
+
+    const float th = 6.28318530718 * CkParticles_Rand(In.Seed, 2) + 4.25 * In.Age; // orbit: 0.677 rev/s
+    const float r  = 68.0 + 16.0 * (2.0 * CkParticles_Rand(In.Seed, 3) - 1.0);     // torus R=68, tube 16
+    const float vz = lerp(65.0, 110.0, CkParticles_Rand(In.Seed, 4));
+    const float kd = (1.0 - exp(-0.25 * t)) / 0.25;                                 // drag 0.25 rise
+
+    const float JitPhase = 6.28318530718 * CkParticles_Rand(In.Seed, 6);
+    const float Jit      = 17.4 * sin(50.0 * m + JitPhase);
+
+    O.Position = float3(r * cos(th) + Jit, r * sin(th) + Jit * 0.5,
+                        16.0 * (2.0 * CkParticles_Rand(In.Seed, 5) - 1.0) + vz * kd);
+    O.Velocity = float3(-r * sin(th), r * cos(th), 0.0) * 4.25 * 0.2 + float3(0.0, 0.0, vz * exp(-0.25 * t));
+
+    const float Bright = lerp(0.69, 20.0, CkParticles_Rand(In.Seed, 7) * CkParticles_Rand(In.Seed, 7)) * 0.4;
+    const float3 Ramp  = lerp(float3(1.0, 0.6, 0.2), float3(1.0, 0.15, 0.02), m); // flame white->deep orange
+    const float  A     = pow(saturate(1.0 - m / 0.78), 2.0);                       // faded by 78% (recipe curve)
+
+    O.Color = float4(Ramp * Bright * A, A);
+    O.Size  = float2(1.0, 1.0) * lerp(22.6, 57.3, CkParticles_Rand(In.Seed, 8)) * (1.0 + m) * 0.55;
+    return O;
+}
