@@ -136,6 +136,12 @@ auto
     if (ck::Is_NOT_Valid(InPreset, ck::IsValid_Policy_NullptrOnly{}))
     { return 0; }
 
+    // External renderers (shadow ISM, ISKM SKMCs, batched highlight clusters) allocate directly without
+    // ever calling Apply_Outline_To_Component — bootstrap the view effect here too. Failure is non-fatal:
+    // allocation still proceeds (headless/tests); DoEnsure_ViewEffect re-writes all active rows on its
+    // first success so early allocations aren't left with zeroed LUT rows.
+    DoEnsure_ViewEffect();
+
     DoReap_DeadComponents();
 
     if (auto* Found = _ActivePresets.Find(InPreset))
@@ -249,6 +255,15 @@ auto
     _ViewPP->bUnbound = true;
     _ViewPP->RegisterComponent();
     _ViewPP->Settings.AddBlendable(_OutlineMID, 1.0f);
+
+    // Presets may have allocated stencils before the view effect existed (renderers call
+    // Get_OrAllocate_StencilFor directly) — their LUT rows were unwritable then; write them now.
+    for (const auto& Active : _ActivePresets)
+    {
+        if (auto* Preset = Active.Key.Get())
+        { DoWrite_PresetRow(static_cast<int32>(Active.Value.Value) - static_cast<int32>(_StencilMin), Preset); }
+    }
+    DoUpload_Lut();
 
     return true;
 }

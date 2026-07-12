@@ -23,6 +23,11 @@ subsystem.
   `Apply_PostProcess_ToCamera/Component`, `Set_Scalar/Vector/Texture`.
 - `UCkUsf_MultiPassRenderer` (`MultiPass/`) — BufferA-D + Image passes, double-buffered feedback.
 - `UCkUsf_OutlineSubsystem` (`Outline/`) — per-preset Custom-Stencil outlines + params LUT.
+- `UCk_Utils_Usf_Outline_UE` (`Outline/CkUsf_Outline_Utils.h`) — ENTITY-level outlines:
+  `Request_ApplyOutline(Handle, Preset, Scope)` / `Request_RemoveOutline`. Per-renderer sync processors
+  apply it (actor path here; shadow ISM in CkIsmRenderer; SKMC custom depth in CkIskmRenderer Plan-1;
+  batched Plan-2 members are not entities — use `UCk_Utils_IskmBatched_UE::Set_CrowdMemberOutline`).
+  Design + mechanisms: `DESIGN_EntityOutlines.md`.
 - `/CkUsf/Common.ush` — the input/output structs + the shader stdlib (sampling, normals, parallax,
   triplanar, flow maps, SDFs, color ops, dithering).
 - Generation (editor): `ck::usf_editor::Generate_AllLookMaterials()` / `Generate_LookMaterial(Def)`
