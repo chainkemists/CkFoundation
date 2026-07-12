@@ -13,6 +13,13 @@
 #include <TimerManager.h>
 #include <UObject/UObjectGlobals.h>
 
+#if WITH_ANGELSCRIPT_CK
+#include <AngelscriptManager.h>
+#include <ClassGenerator/ASClass.h>
+#include <angelscript.h>
+#include <as_context.h>
+#endif
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -491,6 +498,45 @@ auto
 
         Property->CopyCompleteValue_InContainer(InObject, InArchetype);
     }
+
+#if WITH_ANGELSCRIPT_CK
+    // AngelScript members declared WITHOUT UPROPERTY() exist only as script-object properties
+    // (byte offsets on the fused UObject) — the class generator creates FProperties solely for
+    // UPROPERTY-exported members, so the reflected sweep above cannot see them. A fresh instance
+    // gets their values from the class defaults function at construction; a recycled one must
+    // copy them back from the archetype or it resumes the previous life's state (e.g. a consumed
+    // one-shot cursor like UBb_DamageApplicator's NextResolution). The engine's script-registered
+    // UObject::CopyScriptPropertiesFrom does exactly this copy; it must be invoked through an
+    // execution context because the fork's asIScriptObject methods are non-virtual and not
+    // DLL-exported (a direct operator= call fails to link outside AngelscriptCode)
+    if (Cast<UASClass>(InObject->GetClass()) != nullptr)
+    {
+        static asIScriptFunction* CopyScriptPropertiesFunc = nullptr;
+
+        if (CopyScriptPropertiesFunc == nullptr)
+        {
+            if (const auto* TypeInfo = FAngelscriptManager::Get().GetScriptEngine()->GetTypeInfoByName("UObject");
+                TypeInfo != nullptr)
+            { CopyScriptPropertiesFunc = TypeInfo->GetMethodByName("CopyScriptPropertiesFrom"); }
+        }
+
+        CK_ENSURE_IF_NOT(CopyScriptPropertiesFunc != nullptr,
+            TEXT("Could not resolve UObject::CopyScriptPropertiesFrom from the script engine — "
+                 "recycled [{}] keeps its previous life's script-only members"), InObject)
+        { return; }
+
+        auto Context = FAngelscriptContext{InObject};
+        Context.PrepareExternal(CopyScriptPropertiesFunc);
+
+        // dispatch through the asIScriptContext interface — its methods are virtual, so the call
+        // resolves via vtable instead of importing asCContext symbols the module does not export
+        asIScriptContext* ScriptContext = static_cast<asCContext*>(Context);
+        ScriptContext->SetObject(InObject);
+        ScriptContext->SetArgObject(0, const_cast<UObject*>(InArchetype));
+
+        Context.ExecuteExternal();
+    }
+#endif
 
     // the sweep above copied instanced-subobject POINTERS from the archetype — re-instance them so
     // the recycled object owns fresh copies (a write through an aliased subobject would corrupt the
