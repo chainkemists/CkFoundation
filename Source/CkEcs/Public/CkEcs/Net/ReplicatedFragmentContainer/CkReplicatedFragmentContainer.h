@@ -153,6 +153,14 @@ public:
     Get_ProduceHandlerTypes() -> TArray<const UScriptStruct*>;
 
     /**
+     * Resolves pending registrations, then returns the payload types of every handler that has a Produce AND whose
+     * Transport opts into Save — the subset the v3 save capture writes payloads for (Phase 3A). A Net-only Produce
+     * handler is save-invisible; a NetAndSave one participates in both the wire and the save file.
+     */
+    static auto
+    Get_SaveHandlerTypes() -> TArray<const UScriptStruct*>;
+
+    /**
      * Register a single catch-all handler consulted by Resolve() when no per-type handler matches.
      * Used by runtime-typed features (e.g. dynamic fragments) whose payload UScriptStruct is not
      * known at compile time, so per-type registration is impossible. The fallback only ever sees

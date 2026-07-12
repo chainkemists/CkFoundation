@@ -7,6 +7,7 @@
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkEcs/Delegates/CkDelegates.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
+#include "CkEcs/EntityScript/CkEntityScript_Fragment.h" // FFragment_EntityScript_Current + FTag_EntityScript_HasBegunPlay (ConstructSpawned stamp)
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Net/CkNet_Fragment.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
@@ -461,6 +462,16 @@ auto
     }
 
     InNewEntity.Add<ck::FFragment_LifetimeOwner>(InLifetimeOwner);
+
+    // Provenance stamp (save/load rebuild+hydrate, spec §4.2). If the owner is an EntityScript still inside its
+    // construction window — it carries FFragment_EntityScript_Current but has not yet begun play — then this new
+    // entity is part of the owner's deterministic Construct/BeginPlay build and will be re-created by the owner's
+    // replayed construction on load. Mark it ConstructSpawned so the v3 capture adopts it by identity rather than
+    // respawning a recipe. Owner already begun-play (child spawned by later runtime logic, e.g. an SM task) or not
+    // a script entity → no stamp → RuntimeSpawned by default. See ck::FTag_ConstructSpawned.
+    if (InLifetimeOwner.Has<ck::FFragment_EntityScript_Current>() &&
+        NOT InLifetimeOwner.Has<ck::FTag_EntityScript_HasBegunPlay>())
+    { InNewEntity.Add<ck::FTag_ConstructSpawned>(); }
 
     // Inherit context owner from lifetime owner
     if (UCk_Utils_ContextOwner_UE::Has(InLifetimeOwner))
