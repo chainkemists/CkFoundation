@@ -50,8 +50,9 @@ namespace ck::lag_comp
     // --------------------------------------------------------------------------------------------------------------------
 
     // Snapshots of all hit shapes interpolated at InWorldTime, from the bracketing recorded frames.
-    // Empty if the buffer cannot bracket the time (fewer than 2 frames, or the time is outside the
-    // recorded window by more than one frame interval)
+    // Empty if the buffer cannot bracket the time (fewer than 2 frames, or the time predates the
+    // oldest recorded frame by more than one frame interval). Times after the newest frame clamp
+    // to the newest pose — recording lags the present by up to one record interval
     CKLAGCOMPENSATION_API auto
     Get_InterpolatedSnapshots(
         const FCk_LagComp_FrameBuffer& InFrames,

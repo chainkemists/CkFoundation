@@ -253,6 +253,16 @@ namespace ck::lag_comp
         if (InFrames.Get_Count() < 2)
         { return {}; }
 
+        // Reject times older than the recorded window (with one frame interval of slack for
+        // boundary queries) — clamping those would invent poses that were never recorded. Times
+        // past the newest frame clamp to the newest pose instead: recording always lags the
+        // present by up to one interval
+        const auto OldestTime = InFrames.Get_FrameAt(0).Get_WorldTime();
+        const auto OldestInterval = InFrames.Get_FrameAt(1).Get_WorldTime() - OldestTime;
+
+        if (InWorldTime < OldestTime - OldestInterval)
+        { return {}; }
+
         // Find the first frame at-or-after the requested time; clamp to the recorded window
         auto AfterIndex = InFrames.Get_Count() - 1;
 

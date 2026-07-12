@@ -1,6 +1,7 @@
 #include "CkLagCompProjectile_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Time/CkTime_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -72,7 +73,13 @@ namespace ck
 
         const auto FudgeFactor = FCk_Time{
             static_cast<double>(lag_comp_projectile_cvars::CVarRewindFudgeFactor.GetValueOnGameThread())};
-        const auto Window = InRequest.Get_CompensationWindow() + FudgeFactor;
+        auto Window = InRequest.Get_CompensationWindow() + FudgeFactor;
+
+        CK_ENSURE_IF_NOT(Window >= FCk_Time::ZeroSecond(),
+            TEXT("LaunchCompensated on [{}] resolved a NEGATIVE rewind window [{}] (request window [{}] + fudge [{}]) — launching uncompensated"),
+            InHandle, Window, InRequest.Get_CompensationWindow(), FudgeFactor)
+        { Window = FCk_Time::ZeroSecond(); }
+
         const auto LaunchTime = Now - Window;
 
         const auto TransformHandle = UCk_Utils_Transform_UE::CastChecked(InHandle);
@@ -103,7 +110,17 @@ namespace ck
             if (HistoryHandle == InHandle || HistoryHandle == InRequest.Get_IgnoredHistoryEntity())
             { return; }
 
-            for (auto SliceStart = LaunchTime.Get_Seconds(); SliceStart < Now.Get_Seconds(); SliceStart += SubstepSeconds)
+            const auto& Frames = InHistoryCurrent.Get_Frames();
+
+            if (Frames.Get_Count() < 2)
+            { return; }
+
+            // Sweep only the span this target's history actually covers — slices before its
+            // oldest recorded frame would validate against poses that were never recorded, and
+            // an oversized compensation window would otherwise make this loop unbounded
+            const auto SweepStart = FMath::Max(LaunchTime.Get_Seconds(), Frames.Get_FrameAt(0).Get_WorldTime().Get_Seconds());
+
+            for (auto SliceStart = SweepStart; SliceStart < Now.Get_Seconds(); SliceStart += SubstepSeconds)
             {
                 const auto SliceEnd = FMath::Min(SliceStart + SubstepSeconds, Now.Get_Seconds());
 
@@ -113,7 +130,7 @@ namespace ck
                     InitialConditions, TrajectoryParams, FCk_Time{SliceEnd} - LaunchTime);
 
                 const auto Hit = lag_comp::Sweep_SegmentVsHistory(
-                    InHistoryCurrent.Get_Frames(), SegmentStart, SegmentEnd,
+                    Frames, SegmentStart, SegmentEnd,
                     FCk_Time{SliceStart}, FCk_Time{SliceEnd}, InRequest.Get_ProjectileRadius());
 
                 if (NOT Hit.IsSet())
