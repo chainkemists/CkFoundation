@@ -101,6 +101,15 @@ static struct FRotatorAttributeRepHandlerRegistrar
             {
                 .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
                 {
+                    // Save-load hydration (authority-side, Phase 4B): the v3 payload is CHILD-keyed (per-attribute-entity
+                    // Produce), so under hydration Entity IS the attribute entity — write its value directly via
+                    // ApplyReplicatedRotatorAttributeEntry. The OWNER-keyed loop below never resolves it. Unset => not a
+                    // hydration apply => fall through (net receive path byte-identical, gated on FCk_HydrationApplyScope).
+                    if (const auto Hydrated = ck::attribute_restore::TryHydrationApply<ck::TFragment_RotatorAttribute, FCk_RepData_RotatorAttributes>(
+                            Entity, New, &ApplyReplicatedRotatorAttributeEntry);
+                        Hydrated.IsSet())
+                    { return *Hydrated; }
+
                     const auto& NewAttrs = New.Get<FCk_RepData_RotatorAttributes>().Attributes;
                     const auto* OldAttrs = Old.IsSet()
                         ? &Old.GetValue().Get<FCk_RepData_RotatorAttributes>().Attributes
