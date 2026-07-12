@@ -33,7 +33,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             FFragment_CrowdAgent_MoveRequests& InRequests) const
@@ -252,6 +252,23 @@ namespace ck
         BlockDetect._SampleAccumulatorSec = 0.0f;
         BlockDetect._RecheckAccumulatorSec = 0.0f;
         BlockDetect._BlockedSignalSent = false;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            FFragment_CrowdAgent_DesiredVelocity& InDesired,
+            const FCk_Request_CrowdAgent_SetMaxSpeed& InRequest)
+        -> void
+    {
+        InParams._MaxSpeed = InRequest.Get_MaxSpeed();
+
+        ck::crowd::Verbose(TEXT("CrowdAgent [{}] SetMaxSpeed {}"), InHandle, InRequest.Get_MaxSpeed());
     }
 }
 

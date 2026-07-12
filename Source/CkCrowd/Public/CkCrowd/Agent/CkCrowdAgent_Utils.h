@@ -121,6 +121,24 @@ public:
     Request_Stop(
         UPARAM(ref) FCk_Handle_CrowdAgent& InAgent);
 
+    // Override the agent's max speed at runtime (sprint/flee gaits). Applies from the next tick
+    // and persists until the next SetMaxSpeed; does not disturb the active path or goal.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Request Set Max Speed")
+    static FCk_Handle_CrowdAgent
+    Request_SetMaxSpeed(
+        UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
+        float InMaxSpeed);
+
+    // The params fragment's current max speed (post any runtime SetMaxSpeed override).
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Max Speed")
+    static float
+    Get_MaxSpeed(
+        const FCk_Handle_CrowdAgent& InAgent);
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CrowdAgent",
               DisplayName="[Ck][CrowdAgent] Bind To OnGoalReached")

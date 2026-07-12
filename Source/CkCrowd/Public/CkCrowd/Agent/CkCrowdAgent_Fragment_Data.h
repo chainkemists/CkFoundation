@@ -97,6 +97,7 @@ struct CKCROWD_API FCk_Fragment_CrowdAgent_ParamsData
     friend class ck::FProcessor_CrowdAgent_Steering;
     friend class ck::FProcessor_CrowdAgent_NeighborSync;
     friend class ck::FProcessor_CrowdAgent_Separation;
+    friend class ck::FProcessor_CrowdAgent_HandleRequests;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1.0"))
@@ -464,6 +465,32 @@ struct CKCROWD_API FCk_Request_CrowdAgent_Stop : public FCk_Request_Base
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_CrowdAgent_Stop);
 
     friend class ck::FProcessor_CrowdAgent_HandleRequests;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Public request — override the agent's max speed at runtime (sprint/flee gaits). Writes the
+// params fragment's _MaxSpeed, which every steering-chain processor reads per frame, so the new
+// speed applies from the next tick and persists until the next SetMaxSpeed. Does not disturb the
+// active path or goal.
+USTRUCT(BlueprintType)
+struct CKCROWD_API FCk_Request_CrowdAgent_SetMaxSpeed : public FCk_Request_Base
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_Request_CrowdAgent_SetMaxSpeed);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_CrowdAgent_SetMaxSpeed);
+
+    friend class ck::FProcessor_CrowdAgent_HandleRequests;
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1.0"))
+    float _MaxSpeed = 240.0f;
+
+public:
+    CK_PROPERTY_GET(_MaxSpeed);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_CrowdAgent_SetMaxSpeed, _MaxSpeed);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
