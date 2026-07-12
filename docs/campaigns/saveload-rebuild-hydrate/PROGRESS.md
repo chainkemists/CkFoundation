@@ -31,11 +31,34 @@ Dev-behavior-neutral (machinery stays compiled in Dev) — the deletes land firs
   `FCk_Snapshot_Header` return from `_HeaderV3` ([P5-D1]). **GATE GREEN: Ck.Snapshot 54/51/3** (the 3 = [INV-A] trio; Model-A
   registry-level tests Core.RoundTrip/FloatAttribute.Gate/SaveKey/LifecycleStrip + Meta + both AS tests all green; delta-zero).
   Commit: CkF `<this>`.
-- [ ] **Cluster 2 — FProcessor_ActorRespawn delete** (dormant; all external refs are comments, incl. 2 cross-repo BB comments
-  → flag for Adam). KEEP CkActorRebind_Utils + FTag_ActorJustRebound (live BB consumers).
-- [ ] **Cluster 3 — 5.2.2 delete** JustRestored + FProcessor_Persistence_ReDriveOnRestore + FFragment_Persistence_ReDrivePending
-  + the six deferred `*_ReplicateOnRestore` (Team/Player/Inventory×2/RenderTarget-processor-only/2dGridOccupancy) + CkGrid
-  FProcessor_2dGridSystem_RestoreRecompose + CkSnapshot_RestoreMarker.h. ⚠️ FloatAttribute.Gate pre/post check.
+- [x] **Cluster 2 — FProcessor_ActorRespawn delete (DONE).** Deleted CkActorRespawn_Fragment.h/_Processor.h/_Processor.cpp
+  (dormant since 3B — nothing stamps FTag_ActorRespawn_Pending; M2b2a exercises the fresh-Construct re-replicate). All external
+  refs were comments; refreshed the 3 CkF comments (CkEntityScript_Processor.cpp:351 / CkEntityScript_Utils.h:130 /
+  CaptureV3.cpp:359). KEPT CkActorRebind_Utils + FTag_ActorJustRebound. **GATE GREEN: Ck.Snapshot 54/51/3** (M2b2a/M2b/M2a + both
+  AS green, delta-zero). Commit CkF `8bdd08346`. **Cross-repo follow-ups for Adam (NOT a CkF-session edit):** 2 stale BB comments
+  name FProcessor_ActorRespawn (`Bb_PlayerSaveLoad.h:14`, `Bb_SaveLoadProbe.cpp:274`); 1 stale CkTests comment
+  (`CkAutoTest_NetSubject_M2bProbe_Replicated.cpp:11`).
+- [ ] **Cluster 3 — 5.2.2 delete the JustRestored re-drive machinery (NEXT — full surface mapped below; large/delicate, do with
+  fresh context).** ⚠️ SAFE ORDER: delete the CONSUMERS first (tree stays compilable — each keys on the still-present tag), then
+  the tag + marker + stamp + stale includes LAST. Surface (verified 2026-07-12):
+  - **Whole-file deletes:** `CkPersistence_ReDrive_Processor.h`+`.cpp` (FProcessor_Persistence_ReDriveOnRestore +
+    FFragment_Persistence_ReDrivePending, CkEcs); `CkSnapshot_RestoreMarker.h` (FTag_Snapshot_JustRestored, CkEcs) — DELETE LAST.
+  - **Section-excise from each feature's Processor.h/.cpp + its CK_REGISTER_PROCESSOR line** (each is a delimited
+    `// ---- ReplicateOnRestore ----` section beside LIVE processors — excise the section, NOT the file): Team
+    (`CkTeam_Processor.cpp:14`), Player (`CkPlayer_Processor.cpp:10`), Inventory DataOnly (`CkInventory_DataOnly_Processor.cpp:23`),
+    Inventory Spatial (`CkInventory_Spatial_Processor.cpp:28`), RenderTarget (`CkRenderTarget_Processor.cpp:60` — delete ONLY
+    FProcessor_RenderTarget_ReplicateOnRestore; its logic was transplanted to the LIVE HydrateFromSavedChannel [P4B-D3]),
+    2dGridOccupancy (`Ck2dGridOccupancy_Processor.cpp:23`), CkGrid 2dGridSystem RestoreRecompose (`Ck2dGridSystem_Processor.cpp:15`).
+  - **Stamp:** remove `Handle.Add<ck::FTag_Snapshot_JustRestored>();` at `CkSnapshot_Restore.cpp:243` (+ the include-comment :11).
+  - **Stale `#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"` cleanup** — MUST remove from every file that includes it when
+    the header is deleted. VERIFIED one non-obvious one NOT in the plan's delete list: `CkAttribute/CkAttribute_Processor.h:7`
+    (a stale include only — CkAttribute's ReplicateOnRestore was Phase-1-migrated to the generic re-drive; no live Attribute
+    consumer). Grep `rg -l 'CkSnapshot_RestoreMarker.h' Source` before deleting to find them all, plus the Fragment.h comment
+    refs in Team/Player/Inventory/RenderTarget/Grid.
+  - **⚠️ FloatAttribute.Gate:** GREEN pre-delete (cluster 1a/2). It's the only Model-A LIVE-world restore test (Run_Restore
+    stamps JustRestored). Re-run AFTER the delete; if it regresses it needs its documented rewrite (VALIDATION.md pre-authorizes),
+    NOT a delete rollback. My read (unverified): its single-world VALUE assert reads the restored Current from the image, not the
+    re-driven replication container, so it should hold — but confirm empirically.
 - [ ] **Cluster 4 — 5.2.3** Transform `_Previous` re-seed revert (Camera revert BLOCKED — OracleParity/BB-driver-world).
 - [ ] **Cluster 5 — 5.1 machinery gate** (Run_Capture/Run_Restore/archives/Model-A registry under CK_WITH_FIDELITY_ORACLE) +
   **Shipping compile**.
@@ -936,3 +959,18 @@ value is [N1-A]-blocked and it needs a new BB-style fixture world).
   3=3 vs baseline, no Angelscript errors naming the fixture). **Net 102/99/3** framework `Ck.*.Net` delta-zero (kiosk env-trio
   only; SM.Net flake passed). Commits: CkF `09ca84f41`, CkTests `a0c2f2d`. Decision [P4B-D5] recorded (post-BeginPlay timing).
   Nothing pushed. **Track A DONE** (closes 2 of the 7 VALIDATION-required tests). Next: Track B (Phase 5 partial).
+- 2026-07-12 — **Track B / Phase 5 partial — clusters 1a + 2 DONE + COMMITTED; checkpointed before the big 5.2.2 delete (Opus,
+  unattended run).** Loaded ck-change-control (Class-4 framework change; heeded the stale-binary trap — every gate ran a full
+  `--build` on the final binary). **Cluster 1a** (CkF `521e3834d`): oracle-gated the `CK_REGISTER_SNAPSHOTABLE` registration
+  (two `#define` forms under `CK_WITH_FIDELITY_ORACLE`, static_assert ungated), dropped the Model-A dual-write from Request_Save,
+  deleted `UCk_Snapshot_SaveGame::_Header`/`_SnapshotBytes`, and made Get_SaveSlotHeader synthesize its frozen
+  `FCk_Snapshot_Header` from `_HeaderV3` ([P5-D1] — a `_Header`-vs-VALIDATION-§3 fork routed to a read-only Fable agent, ruled C,
+  every field-mapping anchor code-verified). **Cluster 2** (CkF `8bdd08346`): deleted the dormant FProcessor_ActorRespawn (all
+  external refs comments; KEPT CkActorRebind). Both gates GREEN + delta-zero (Ck.Snapshot 54/51/3, Model-A registry tests +
+  FloatAttribute.Gate + M2b2a + both AS tests green). **CHECKPOINT rationale (not a blocker STOP):** cluster 3 (5.2.2) is a
+  large/delicate 9-processor delete across 8 modules + JustRestored tag/marker + scattered stale RestoreMarker.h includes (found
+  a non-plan one at CkAttribute_Processor.h:7) + a FloatAttribute.Gate regression risk that may force the pre-authorized test
+  rewrite — better done with fresh context than rushed. Full surface + safe delete order recorded in §Phase-5 progress cluster 3.
+  Clusters 1a+2 are clean committed increments; 3–6 remain. Nothing pushed. Net gate NOT re-run this session (clusters 1a/2 are
+  save-path / dormant-delete, provably net-inert; the Track-A Net run 102/99/3 is the last framework-Ck.*.Net delta-zero baseline
+  — cluster 3+ must re-run Net since it deletes replicated-feature restore processors).
