@@ -430,6 +430,28 @@ rendezvous — everything else compiled first pass). Gate GREEN (Ck.Snapshot 51/
   Inventory×2), delta-zero. Committed CkF `19613a1eb` (invariant fix), `5b7c1e077` (Attributes×5 value hydration), `db83e687a`
   (AnimPlan). Net delta-zero validated on the net-identical binary (p4b-attr-net.log 102/98/4 = kiosk env-trio + documented
   SM.Net flake; the invariant fix is test-only/net-irrelevant so the verdict holds).
+- **[P4B-N1] (executor, 2026-07-12) — 4B ADDITIVE-work scope assessment: 4B.1 params-mutators + MontagePlayer are
+  VERIFICATION-GATED (defer with OracleParity); 4B.3 AS smoke is the one verifiable-but-new-framework item.** After
+  closing all 4 actionable casualties (RenderTarget/Attributes×5/AnimPlan) + the invariant fix, the remaining PHASE_4B.md
+  steps were assessed for verifiability:
+  - **4B.1 (8 params-mutator sites: Timer/Substep/Goap/2dGridCell/WorldSpaceWidget payloads + Camera/Pmg annotations) and
+    the MontagePlayer rebind are UNVERIFIABLE right now.** Their verification mechanism is `Ck.Snapshot.Rebuild.OracleParity`
+    — VERIFIED NOT in the current 52-test gate (grep count 0 in p4b-attr2.log) and its `oracle-declared-transient.txt` /
+    `oracle-allowlist-p3.txt` have no active entries (the file doesn't even exist yet); PROGRESS §3B-follow-ups records
+    OracleParity as deferred until a BB driver world is oracle-diffed (a 3B/4A follow-up). MontagePlayer additionally has
+    ONLY a Model-A `Ck.Snapshot.MontagePlayer.StateRoundTrip` (registry-level) test — no v3-reload MP test exists, and the
+    rebind (`CkMontagePlayer_Utils.cpp:80-95`) needs the respawned actor's re-created SKMC resolved (non-trivial). Implementing
+    these payloads blind would add unverifiable persisted save-state, violating verify-before-claim. **DEFER 4B.1 + MontagePlayer
+    to when OracleParity is wired** (the same BB-driver-world prerequisite that blocks the 3B OracleParity follow-up and 4A.2).
+  - **4B.3 AS smoke** (`Ck.Snapshot.AS.SaveGameFields_RoundTrip` + `NonSaveGameField_Drops`) IS gate-verifiable, but requires a
+    NEW framework handler `FCk_SaveData_EntityScriptFields` in CkEcs (reflection-walk of the script instance's SaveGame-tagged
+    UPROPERTYs, Produce/Apply post-Construct-pre-BeginPlay) + 2 AS tests in CkTests (cross-repo, needs AS wrapper-gen + editor
+    recompile per `ck-angelscript-interop`). A distinct new-framework + AS effort — best served by a fresh context window after
+    this session's length, done carefully per the AS cautions (never write .as during a test run; grep the fresh log for
+    Angelscript errors).
+  - **Checkpoint rationale:** the core Phase-4B hydration-parity goal is COMPLETE + fully verified for every closeable feature.
+    The remaining work is human-decision-gated ([INV-A] trio → Adam), verification-prerequisite-gated (4B.1/MontagePlayer →
+    OracleParity/BB-driver-world), or a distinct fresh-context new-framework effort (4B.3 AS smoke). Not an arbitrary stop.
 - **[P4B-D1] (executor, 2026-07-12) — TagSet authority write omits the OnTagsChanged broadcast.** Fable's pseudocode mirrored
   the client drain's diff+broadcast (`CkTagSet_Processor.cpp:156-168`) for symmetry. Omitted it: a save-load RESTORE is not a
   gameplay change, the parity test asserts tag presence + replication (not the signal), and clients still get the OnTagsChanged
