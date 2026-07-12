@@ -112,6 +112,10 @@ public:
     CK_GENERATED_BODY(FCk_ObjectPooling_PoolStats);
 
 private:
+    // the params the pool was created with (config surface for tooling/debugger)
+    UPROPERTY(Transient, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FCk_ObjectPooling_PoolParams _Params;
+
     UPROPERTY(Transient, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     int32 _NumFree = 0;
 
@@ -134,6 +138,7 @@ private:
     int32 _NumMisses = 0;
 
 public:
+    CK_PROPERTY(_Params);
     CK_PROPERTY(_NumFree);
     CK_PROPERTY(_NumInUse);
     CK_PROPERTY(_NumLiveInstances);
