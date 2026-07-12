@@ -6,6 +6,7 @@
 #include "CkRenderTarget/CkRenderTarget_Log.h"
 #include "CkRenderTarget/Net/CkRenderTarget_RepData.h"
 #include "CkRenderTarget/RenderTarget/CkRenderTarget_Fragment.h"
+#include "CkRenderTarget/RenderTarget/CkRenderTarget_Processor.h" // FProcessor_RenderTarget_HandleRequests::HydrateFromSavedChannel (Phase 4B)
 #include "CkRenderTarget/RenderTarget/CkRenderTarget_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -89,6 +90,23 @@ namespace
                     .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
                     {
                         const auto& Payload = New.Get<FCk_RepData_RenderTarget>();
+
+                        // Save-load hydration (authority-side, Phase 4B): the v3 payload is CHILD-keyed (Produce
+                        // reads this sync child's own AuthoredLog), so Entity IS the sync child here — the
+                        // owner-keyed net path below (TryGet_RenderTarget on Entity-as-owner) never resolves it,
+                        // and the hydration entry is dropped after the 5s timeout. Route to the child-direct
+                        // restore instead (refill ring + repaint + re-publish to a fresh owner container). Only
+                        // entered under FProcessor_Hydration_Dispatch; the net receive path below is unchanged.
+                        if (FCk_HydrationApplyScope::Get_IsActive())
+                        {
+                            const auto& Channels = Payload.Get_Channels();
+                            if (Channels.IsEmpty())
+                            { return ECk_RepFragment_ApplyResult::Applied; }
+
+                            return ck::FProcessor_RenderTarget_HandleRequests::HydrateFromSavedChannel(Entity, Channels[0])
+                                ? ECk_RepFragment_ApplyResult::Applied
+                                : ECk_RepFragment_ApplyResult::NotReady;
+                        }
 
                         // All channels must resolve before ANY applies — otherwise a partial apply
                         // would advance some channels and starve the unresolved ones on the retry
