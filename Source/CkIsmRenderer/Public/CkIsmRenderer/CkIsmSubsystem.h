@@ -8,6 +8,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class UCkUsf_OutlinePreset;
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(Blueprintable, BlueprintType)
 class CKISMRENDERER_API ACk_IsmRenderer_Actor_UE final : public AActor
 {
@@ -81,12 +85,25 @@ public:
     FindOrCache_IsmComponent(
         const UCk_IsmRenderer_Data* InRendererData) -> TWeakObjectPtr<UInstancedStaticMeshComponent>;
 
+    // Finds or creates the "shadow ISM" for (renderer data, outline preset): a custom-depth-only twin of
+    // the renderer's ISM (same mesh/mobility/cull distances, no main pass, no shadows, no collision) whose
+    // Custom-Stencil value is the preset's allocated value. The outline processors mirror outlined proxies'
+    // instances into it — custom depth is per-component, so per-instance outlines need a second component.
+    auto
+    FindOrCreate_OutlineIsmComponent(
+        const UCk_IsmRenderer_Data* InRendererData,
+        const UCkUsf_OutlinePreset* InPreset,
+        uint8 InStencilValue) -> TWeakObjectPtr<UInstancedStaticMeshComponent>;
+
 private:
     UPROPERTY()
     TMap<const UCk_IsmRenderer_Data*, TObjectPtr<ACk_IsmRenderer_Actor_UE>> _IsmRenderers;
 
     UPROPERTY()
     TMap<const UCk_IsmRenderer_Data*, TWeakObjectPtr<UInstancedStaticMeshComponent>> _IsmComponentCache;
+
+    using FOutlineIsmKey = TPair<TWeakObjectPtr<const UCk_IsmRenderer_Data>, TWeakObjectPtr<const UCkUsf_OutlinePreset>>;
+    TMap<FOutlineIsmKey, TWeakObjectPtr<UInstancedStaticMeshComponent>> _OutlineIsmComponentCache;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
