@@ -9,6 +9,8 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_IsmProxy_UE;
+class UCkUsf_OutlinePreset;
+class UInstancedStaticMeshComponent;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -48,6 +50,29 @@ namespace ck
     public:
         CK_PROPERTY_GET(_IsmInstanceIndex);
         CK_PROPERTY_GET(_CustomInstanceDataValues);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Applied-state for the entity outline (ck::FFragment_Usf_OutlineTarget from CkUsf): records the shadow
+    // ISM (the custom-depth-only twin of the renderer's ISM, one per renderer+preset) and this proxy's
+    // instance inside it, so the outline processors can undo/move it without re-deriving anything.
+    struct CKISMRENDERER_API FFragment_IsmProxy_OutlineApplied
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_IsmProxy_OutlineApplied);
+
+    private:
+        TWeakObjectPtr<UCkUsf_OutlinePreset> _Preset;
+        TWeakObjectPtr<UInstancedStaticMeshComponent> _ShadowIsm;
+        FPrimitiveInstanceId _ShadowInstanceId;
+
+    public:
+        CK_PROPERTY_GET(_Preset);
+        CK_PROPERTY_GET(_ShadowIsm);
+        CK_PROPERTY_GET(_ShadowInstanceId);
+
+        CK_DEFINE_CONSTRUCTORS(FFragment_IsmProxy_OutlineApplied, _Preset, _ShadowIsm, _ShadowInstanceId);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

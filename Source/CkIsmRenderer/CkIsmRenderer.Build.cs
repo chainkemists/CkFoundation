@@ -26,6 +26,7 @@ public class CkIsmRenderer : CkModuleRules
             "CkProvider",
             "CkRecord",
             "CkSettings",
+            "CkUsf",
         });
     }
 }

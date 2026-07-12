@@ -11,6 +11,8 @@
 #include "CkIsmRenderer/Renderer/CkIsmRenderer_TransientFactory.h"
 #include "CkIsmRenderer/Renderer/CkIsmRenderer_Utils.h"
 
+#include "CkUsf/Outline/CkUsf_OutlinePreset.h"
+
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Engine/Level.h"
 #include "Engine/World.h"
@@ -221,6 +223,65 @@ auto
     { return {}; }
 
     return _IsmComponentCache.Add(InRendererData, StaticMeshComponent);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_IsmRenderer_Subsystem_UE::
+    FindOrCreate_OutlineIsmComponent(
+        const UCk_IsmRenderer_Data* InRendererData,
+        const UCkUsf_OutlinePreset* InPreset,
+        uint8 InStencilValue)
+    -> TWeakObjectPtr<UInstancedStaticMeshComponent>
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InRendererData) && ck::IsValid(InPreset, ck::IsValid_Policy_NullptrOnly{}),
+        TEXT("FindOrCreate_OutlineIsmComponent: INVALID renderer data [{}] or preset"), InRendererData)
+    { return {}; }
+
+    const auto Key = FOutlineIsmKey{InRendererData, InPreset};
+
+    if (const auto& MaybeFound = _OutlineIsmComponentCache.Find(Key);
+        ck::IsValid(MaybeFound, ck::IsValid_Policy_NullptrOnly{}) && ck::IsValid(*MaybeFound))
+    {
+        // The preset keeps its stencil while any refcount is live, but re-assert in case it was
+        // freed + re-allocated to a different value between outlines.
+        (*MaybeFound)->SetCustomDepthStencilValue(static_cast<int32>(InStencilValue));
+        return *MaybeFound;
+    }
+
+    const auto SourceIsm = FindOrCache_IsmComponent(InRendererData);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(SourceIsm),
+        TEXT("FindOrCreate_OutlineIsmComponent: could NOT resolve the source ISM component for [{}]"), InRendererData)
+    { return {}; }
+
+    auto* Owner = SourceIsm->GetOwner();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Owner),
+        TEXT("FindOrCreate_OutlineIsmComponent: source ISM component for [{}] has no owning actor"), InRendererData)
+    { return {}; }
+
+    auto* ShadowIsm = NewObject<UInstancedStaticMeshComponent>(Owner,
+        MakeUniqueObjectName(Owner, UInstancedStaticMeshComponent::StaticClass(), TEXT("IsmOutlineShadow")));
+
+    ShadowIsm->SetupAttachment(Owner->GetRootComponent());
+    ShadowIsm->SetMobility(SourceIsm->Mobility);
+    ShadowIsm->SetStaticMesh(SourceIsm->GetStaticMesh());
+    ShadowIsm->NumCustomDataFloats = 0;
+    ShadowIsm->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    ShadowIsm->CastShadow = false;
+    ShadowIsm->InstanceStartCullDistance = SourceIsm->InstanceStartCullDistance;
+    ShadowIsm->InstanceEndCullDistance = SourceIsm->InstanceEndCullDistance;
+
+    // Custom-depth-only: the silhouette source for the SolidOutline post-process, invisible everywhere else.
+    ShadowIsm->bRenderInMainPass = false;
+    ShadowIsm->SetRenderCustomDepth(true);
+    ShadowIsm->SetCustomDepthStencilValue(static_cast<int32>(InStencilValue));
+
+    ShadowIsm->RegisterComponent();
+
+    return _OutlineIsmComponentCache.Add(Key, ShadowIsm);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

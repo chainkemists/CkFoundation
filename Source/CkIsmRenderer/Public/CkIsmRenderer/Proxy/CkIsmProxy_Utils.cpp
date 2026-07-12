@@ -123,6 +123,35 @@ auto
 
 auto
     UCk_Utils_IsmProxy_UE::
+    Get_IsOutlineApplied(
+        const FCk_Handle_IsmProxy& InHandle)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InHandle))
+    { return false; }
+
+    return InHandle.Has<ck::FFragment_IsmProxy_OutlineApplied>();
+}
+
+auto
+    UCk_Utils_IsmProxy_UE::
+    Get_OutlineShadowInstanceCount(
+        const FCk_Handle_IsmProxy& InHandle)
+    -> int32
+{
+    if (ck::Is_NOT_Valid(InHandle) || NOT InHandle.Has<ck::FFragment_IsmProxy_OutlineApplied>())
+    { return INDEX_NONE; }
+
+    const auto& ShadowIsm = InHandle.Get<ck::FFragment_IsmProxy_OutlineApplied>().Get_ShadowIsm();
+
+    if (ck::Is_NOT_Valid(ShadowIsm))
+    { return INDEX_NONE; }
+
+    return ShadowIsm->GetInstanceCount();
+}
+
+auto
+    UCk_Utils_IsmProxy_UE::
     Get_Mobility(
         const FCk_Handle_IsmProxy& InHandle)
     -> ECk_Mobility
