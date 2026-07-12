@@ -10,6 +10,7 @@ class UCk_IskmAnimCollection_Data;
 class UCk_Iskm_BatchedClusterComponent;
 class ACk_Iskm_BatchedCrowd_Actor;
 class UMaterialInterface;
+class UCkUsf_OutlinePreset;
 
 // ====================================================================================================================
 //  CkIskmRenderer Plan-2 — script-facing surface for the batched skeletal renderer.
@@ -198,4 +199,35 @@ public:
         DisplayName = "[Ck][IskmBatched] Get Crowd Slot Override Material")
     static UMaterialInterface*
     Get_CrowdSlotOverrideMaterial(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InSlotIndex);
+
+    // ---- Entity outline (member-indexed — batched members are not entities; see CkUsf/DESIGN_EntityOutlines.md) ----
+
+    // Outline a member with a CkUsf outline preset (custom-depth highlight cluster mirrors its skinned
+    // pose). Null preset clears. Hidden members (Plan-1 flip stand-ins) are excluded while hidden —
+    // outline the stand-in proxy via UCk_Utils_Usf_Outline_UE instead.
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Set Crowd Member Outline")
+    static void
+    Set_CrowdMemberOutline(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, UCkUsf_OutlinePreset* InPreset);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Clear Crowd Member Outline")
+    static void
+    Clear_CrowdMemberOutline(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Get Crowd Member Outline Preset")
+    static UCkUsf_OutlinePreset*
+    Get_CrowdMemberOutlinePreset(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Get Crowd Outlined Member Count")
+    static int32
+    Get_CrowdOutlinedMemberCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd);
+
+    // Instances currently in the highlight clusters (visible outlined members only).
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Get Crowd Outline Rendered Instance Count")
+    static int32
+    Get_CrowdOutlineRenderedInstanceCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd);
 };

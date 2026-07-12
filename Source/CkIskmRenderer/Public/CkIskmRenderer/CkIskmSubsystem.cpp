@@ -64,6 +64,11 @@ auto
     InComp->SetAnimInstanceClass(nullptr);
     InComp->SetSkeletalMesh(nullptr);
     InComp->SetSimulatePhysics(false);
+    // Entity-outline state (CkUsf custom depth/stencil) is component-level and survives the mesh clear —
+    // strip it unconditionally so it never leaks to the next borrower, regardless of outline bookkeeping
+    // ordering at EndPlay (see CkUsf/DESIGN_EntityOutlines.md).
+    InComp->SetRenderCustomDepth(false);
+    InComp->SetCustomDepthStencilValue(0);
     _LiveSKMCs.RemoveSwap(InComp);
     _Pool_FreeSKMCs.Add(InComp);
 }

@@ -34,6 +34,7 @@ public class CkIskmRenderer : CkModuleRules
 
             "CkAnimation",
             "CkPhysics",
+            "CkUsf",
 
             // ---- Plan-2 (batched GPU-skinned instancing) render-thread deps ----
             // RenderCore: FRenderTransform/FRenderBounds + ENQUEUE_RENDER_COMMAND (proxy + AnimCollection upload).

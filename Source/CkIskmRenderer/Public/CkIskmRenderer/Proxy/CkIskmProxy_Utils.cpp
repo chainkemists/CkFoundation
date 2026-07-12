@@ -220,6 +220,16 @@ auto
 
 auto
     UCk_Utils_IskmProxy_UE::
+    Get_IsOutlineApplied(const FCk_Handle_IskmProxy& InHandle)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InHandle))
+    { return false; }
+    return InHandle.Has<ck::FFragment_IskmProxy_OutlineApplied>();
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
     Get_PoseSource(const FCk_Handle_IskmProxy& InHandle)
     -> ECk_IskmProxy_PoseSource
 {

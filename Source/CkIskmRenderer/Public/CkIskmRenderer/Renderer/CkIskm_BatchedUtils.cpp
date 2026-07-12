@@ -372,3 +372,48 @@ UMaterialInterface*
     { return nullptr; }
     return InCrowd->Get_SlotOverrideMaterial(InSlotIndex);
 }
+
+void
+    UCk_Utils_IskmBatched_UE::
+    Set_CrowdMemberOutline(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, UCkUsf_OutlinePreset* InPreset)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return; }
+    InCrowd->Set_MemberOutline(InIndex, InPreset);
+}
+
+void
+    UCk_Utils_IskmBatched_UE::
+    Clear_CrowdMemberOutline(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return; }
+    InCrowd->Clear_MemberOutline(InIndex);
+}
+
+UCkUsf_OutlinePreset*
+    UCk_Utils_IskmBatched_UE::
+    Get_CrowdMemberOutlinePreset(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return nullptr; }
+    return InCrowd->Get_MemberOutlinePreset(InIndex);
+}
+
+int32
+    UCk_Utils_IskmBatched_UE::
+    Get_CrowdOutlinedMemberCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return 0; }
+    return InCrowd->Get_OutlinedMemberCount();
+}
+
+int32
+    UCk_Utils_IskmBatched_UE::
+    Get_CrowdOutlineRenderedInstanceCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return 0; }
+    return InCrowd->Get_OutlineRenderedInstanceCount();
+}

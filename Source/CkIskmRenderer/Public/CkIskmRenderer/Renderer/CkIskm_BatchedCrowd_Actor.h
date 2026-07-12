@@ -8,6 +8,7 @@
 
 class UCk_IskmAnimCollection_Data;
 class USceneComponent;
+class UCkUsf_OutlinePreset;
 
 // ====================================================================================================================
 //  CkIskmRenderer Plan-2 Phase 4b/5 — spatial tile manager for a batched GPU-skinned crowd.
@@ -94,8 +95,24 @@ public:
     // Sum of each tile component's CURRENT instance count (i.e. only visible members) — drops when a member is hidden.
     int32      Get_RenderedInstanceCount() const;
 
+    // ---- Entity outline (member-indexed — batched members are not entities; see CkUsf/DESIGN_EntityOutlines.md) ----
+    //
+    // Mechanism: one custom-depth-only "highlight cluster" per (crowd, preset) at the world origin, holding
+    // copies of the outlined members' instances; the manager tick pushes their live transforms/anim frames
+    // so the outline tracks the GPU-skinned pose. Hidden members (Plan-1 flip stand-ins) are excluded —
+    // outline the stand-in proxy via the entity API instead.
+
+    // Outline a member with InPreset (replaces any previous preset). Null preset = Clear_MemberOutline.
+    void       Set_MemberOutline(int32 InIndex, UCkUsf_OutlinePreset* InPreset);
+    void       Clear_MemberOutline(int32 InIndex);
+    UCkUsf_OutlinePreset* Get_MemberOutlinePreset(int32 InIndex) const;
+    int32      Get_OutlinedMemberCount() const;
+    // Instances currently in the highlight clusters (visible outlined members only) — test/gym surface.
+    int32      Get_OutlineRenderedInstanceCount() const;
+
     //~ AActor
     virtual void Tick(float InDeltaTime) override;
+    virtual void EndPlay(const EEndPlayReason::Type InEndPlayReason) override;
 
 private:
     struct FMember
@@ -140,4 +157,25 @@ private:
     TSet<FIntPoint> _DirtyTiles;
 
     TArray<FMember> _Members;
+
+    // ---- entity-outline state ----
+
+    // Not reflected (nested plain struct): the cluster component is kept alive by the actor's
+    // OwnedComponents; presets are referenced by weak ptr (dead preset ⇒ group torn down lazily).
+    struct FOutlineGroup
+    {
+        TWeakObjectPtr<UCk_Iskm_BatchedClusterComponent> Comp;
+        TArray<int32> Members;                    // member indices (hidden ones filtered at build/push)
+        uint8 Stencil = 0;                        // preset's allocated Custom-Stencil (one refcount per group)
+        FBox PaddedBounds = FBox(ForceInit);      // world box the fixed bounds cover; exceed → rebuild
+    };
+
+    // Full rebuild of a group (Set_Instances + recomputed fixed bounds — proxy recreate). Membership /
+    // visibility changes and bounds-exceeding moves go through here.
+    void RebuildOutlineGroup(UCkUsf_OutlinePreset* InPreset);
+    // Light per-frame push of live member data into the group's cluster (no bounds work).
+    void PushOutlineGroup(FOutlineGroup& InGroup);
+
+    TMap<TWeakObjectPtr<UCkUsf_OutlinePreset>, FOutlineGroup> _OutlineGroups;
+    TMap<int32, TWeakObjectPtr<UCkUsf_OutlinePreset>> _MemberOutlines;
 };

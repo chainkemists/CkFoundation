@@ -12,6 +12,8 @@
 
 #include <variant>
 
+class UCkUsf_OutlinePreset;
+
 namespace ck
 {
     // ---- tags ----
@@ -77,6 +79,28 @@ namespace ck
         CK_PROPERTY_GET(_SubmeshSKMCs);
         CK_PROPERTY_GET(_AttachedSubmeshIndices);
         CK_PROPERTY_GET(_LocalLocationOffset);
+    };
+
+    // ---- entity outline (see CkUsf/DESIGN_EntityOutlines.md) ----
+    //
+    // Applied-state for ck::FFragment_Usf_OutlineTarget on Plan-1 proxies: the outline Sync processor set
+    // Custom Depth + the preset's stencil on the BaseSKMC (and outfit submeshes, re-asserted per frame so
+    // late-attached submeshes inherit it). Undo path clears the flags + releases the stencil refcount;
+    // Release_BaseSKMC additionally strips custom depth unconditionally (pool hygiene).
+    struct CKISKMRENDERER_API FFragment_IskmProxy_OutlineApplied
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_IskmProxy_OutlineApplied);
+
+    private:
+        TWeakObjectPtr<UCkUsf_OutlinePreset> _Preset;
+        uint8 _StencilValue = 0;
+
+    public:
+        CK_PROPERTY_GET(_Preset);
+        CK_PROPERTY_GET_BY_COPY(_StencilValue);
+
+        CK_DEFINE_CONSTRUCTORS(FFragment_IskmProxy_OutlineApplied, _Preset, _StencilValue);
     };
 
     // ---- anim state ----
