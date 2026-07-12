@@ -12,7 +12,7 @@ void
     UCkParticles_GeneratorSubsystem::
     Create_TemplateSystem()
 {
-    ck::particles_editor::Build_TemplateSystem();
+    ck::particles_editor::Build_AllTemplateSystems();
 }
 
 void
