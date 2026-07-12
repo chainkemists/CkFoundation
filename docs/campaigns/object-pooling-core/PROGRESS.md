@@ -1,24 +1,13 @@
 # Object pooling core — PROGRESS.md (living log)
 
 ## Current state  <!-- supersedes everything below; update at EVERY phase and session end -->
-**As of 2026-07-11:** ALL 6 PHASES ✅ (Phase 5 tab + Phase 6 BP node-visibility are the only
-[EDITOR-VERIFY] items left; C++ ✅ and AS ✅ done). Everything committed locally across 3 repos,
-NONE pushed. **Merge order: CkFoundation FIRST** (CkTests + CkGameplayDebugger compile against its
-new API — pushing either first breaks `submodule update`).
-Committed tips:
-- CkFoundation `feature/object-pooling-core` @ `55f28552e` (Phase 4 refinement; on b682c7311 /
-  a40807415 / f4585bf3d / this Phase-6 docs commit next)
-- CkTests `feature/object-pooling-autotests` @ `8bf5a8b`
-- CkGameplayDebugger `feature/object-pooling-inspector` @ `5e5e31e`
-**Baseline being diffed against:** 1048 total / 1040 pass / 8 fail (names in PHASE_2.md exit
-criteria; all pre-existing BB game tests). Reproduced identically across Phase-1/2/3 binaries.
-**Next action:** confirm full-suite diff (expect 1052 total = +4 pooling, 1044 pass, same 8 fail);
-then commit Phase 4 (CkFoundation API-refinement + CkTests suite as coordinated commits).
-**Blocked on:** nothing.
-**Uncommitted:** CkFoundation working tree has Phase-3-followup API refinements (veto removal,
-renames, per-use trim, GetScriptInstance removal) NOT yet committed — all since commit f4585bf3d.
-CkTests branch `feature/object-pooling-autotests` has the 4 tests + subjects + generated wrapper,
-uncommitted.
+**As of 2026-07-11 (hardening pass):** ALL 6 PHASES ✅ and MERGED to dev in all 3 repos (campaign
+wrap below is historical). A user-directed post-merge hardening audit ran in the CkPlugins host —
+see the dated hardening entry: 8 confirmed findings fixed on `feature/object-pooling-hardening`
+(CkFoundation + CkTests), 4 C++ unit tests + 6 AS autotests added.
+**Remaining open items:** replicated-poolable net autotest (decision 3 safety net); BP-authored
+poolable script recycle [EDITOR-VERIFY]; Phase 5 tab + Phase 6 BP node-visibility [EDITOR-VERIFY];
+adjacent CkDynamic registry-loader early-return bug (see hardening entry).
 
 ## Decision log
 | Date | Decision | Why | Revisit when |
@@ -27,7 +16,55 @@ uncommitted.
 
 ## Dated entries (append-only, newest first)
 
-### 2026-07-11 — Phase 6 docs + campaign wrap
+### 2026-07-11 — post-merge hardening audit (user-directed "make it bulletproof" pass, CkPlugins host)
+Adversarial audit of the shipped campaign against the transparency requirement ("dev does not care
+whether the object is pooled"). 8 confirmed findings, all fixed on `feature/object-pooling-hardening`:
+1. **Editor-world gap (HIGH):** subsystem existed only in Game/PIE; the editor ECS world
+   (UCk_EditorEcsWorld_Subsystem_UE) vends scripts/components through the pooled path → caller-owned
+   fallback + weak-only holders = editor GC collects preview instances. Fix: pooling subsystem now
+   supports EWorldType::Editor. [EDITOR-VERIFY: preview scripts survive editor GC; the fallback
+   ensure no longer fires on editor spawns.]
+2. **Reverse-map leak on steal:** `DoSweep_NullSlots` removed `FObjectKey{nullptr}` for GC-nulled
+   in-use slots — dead `_InstanceToPool` entries leaked forever. Fix: pending-kill-window removal
+   corrected + post-GC sweep prunes by dead-key resolve.
+3. **`_PinnedUnique` never swept:** externally-destroyed pinned instances left dead set entries;
+   `Get_NumPinnedUnique` overcounted (debugger lied). Fix: post-GC sweep prunes.
+4. **Destroy-then-release fired a loud ensure** — contradicted the "safe to call unconditionally"
+   contract. Fix: benign no-op (`Failed` + Verbose) that reconciles tracking immediately; only a
+   NULL argument still ensures. Utils-level release mirrors this.
+5. **Recycle reset aliased Instanced subobjects (CDO-corruption risk):** the property sweep copied
+   the ARCHETYPE's subobject pointers into the recycled instance; a write through one corrupts the
+   CDO for all future instances. Fix: `InstanceSubobjectTemplates()` after the sweep; reset renamed
+   public `Request_ResetToArchetype` for direct unit-testing.
+6. **Participant `UnbindFrom_*` removed ALL of an object's binds** instead of the one passed
+   (`RemoveAll` + full ledger wipe). Fix: ledgers store `FDelegateHandle` keyed (object, function);
+   unbind removes exactly one.
+7. **Zombie pools lingered** when class/archetype died (editor-preview instanced-archetype keys,
+   BP recompile). Fix: post-GC sweep drops dead pools once nothing is in use.
+8. **README config-precedence wording contradicted the implementation** (and PROMPT decision 11 —
+   settings OVERRIDE site params at pool creation; DestroyOnRelease acquires never consult
+   settings). README rewritten; steal semantics + native-state caveat + world coverage documented.
+9. **Lingering world timers fire post-release (found via gate, not code-reading):** pooling keeps
+   released instances alive, so a script's `System::SetTimer` fired after its entity died and hit
+   the `_AssociatedEntity` ensure — attributed to whatever test ran next in the shared PIE world
+   (seen: SM condition scripts, `Ck_AutoTest_StateMachine_*` flakes). Pre-pooling, GC of the dead
+   instance silenced pending timers for free. Fix: release of a TRACKED object now clears its
+   world timers + latent actions (the `UActorComponent::EndPlay` pair) before the OnReleased
+   broadcast — release quiesces exactly like death did.
+Post-GC reconciliation mechanism: `FCoreUObjectDelegates::GetPostGarbageCollect` → flag → next Tick
+sweeps (GC callbacks stay cheap).
+Tests added (CkTests `feature/object-pooling-hardening`): 4 C++ unit tests
+(`Ck.ObjectPooling.ResetToArchetype.*` — reflected reset, instanced-subobject non-aliasing,
+participant-bind survival+idempotency, precise unbind) + 6 AS autotests (release edge cases,
+bounded/Fail exhaustion, archetype-keyed reset, prewarm/grow-batch amortization, external-destroy
+steal via pooled UActorComponent + DestroyComponent, poolable-script recycle transparency observed
+from inside the script via entity variables).
+Known remaining gaps (flagged, not closed this session): replicated-poolable net autotest
+(decision 3's safety net — pipeline-b stub regen + rebuild lift); BP-authored poolable script
+recycle (uber-graph-frame path) is [EDITOR-VERIFY]; adjacent CkDynamic bug — registry loader
+early-returns when the canonical DynamicHandleTypes.json is missing, so plugin TESTONLY registries
+never merge (hit in the CkPlugins host; worked around by committing a canonical empty registry to
+the host's Config/).
 - Wrote `CkCore/Public/CkCore/ObjectPooling/README.md` (canonical mechanism doc). Added CkCore
   CLAUDE.md use-case row (+ folder count 48→49), `Source/CLAUDE.md` "I need to..." row, DECISIONS.md
   98-105. Root CLAUDE.md untouched (additive, no non-negotiable/macro change).
