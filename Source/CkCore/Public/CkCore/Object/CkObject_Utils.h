@@ -297,6 +297,15 @@ public:
     Get_IsPoolTrackedObject(
         const UObject* InObject);
 
+    // Registers a release-quiesce hook for InBoundObject with its world's pooling subsystem —
+    // the bind-site half of the pooled-object GC-equivalence contract (the subsystem runs the
+    // hook when the object is released, so no cross-object subscription outlives the logical
+    // life). Quiet no-op (false) when the object resolves no world/subsystem or is untracked
+    static auto
+    TryRegisterPoolReleaseQuiesceHook(
+        const UObject* InBoundObject,
+        TFunction<void()> InHook) -> bool;
+
     // Stats snapshot for the (class, archetype) pool — zeroed when none exists (null archetype = CDO).
     // No WorldContext meta (conflicts with the ScriptMixin=UObject arg0-receiver bind) — pass WCO explicitly
     UFUNCTION(BlueprintPure,

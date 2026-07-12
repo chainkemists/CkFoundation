@@ -2,6 +2,7 @@
 
 #include "CkSignal_Utils.h"
 
+#include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Time/CkTime_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -311,6 +312,24 @@ namespace ck
             InDelegate.GetFunctionName().ToString(),
             ck::Context(InHandle))
         { return; }
+
+        // GC-equivalence for pool-vended bind targets: pre-pooling, a delegate whose UObject died
+        // was inert (dead weak ptr, unequal to any live re-bind); a parked instance keeps its
+        // pointer identity, so a bind it made on an entity that outlives it would leak into its
+        // next vend — stale delivery plus duplicate-signature rejection of the re-bind. Register
+        // a disconnect hook the pool runs on release; quiet no-op for untracked bind targets
+        if (auto* BoundObject = InDelegate.GetUObject();
+            ck::IsValid(BoundObject))
+        {
+            UCk_Utils_Object_UE::TryRegisterPoolReleaseQuiesceHook(BoundObject,
+                [Handle = InHandle, Delegate = InDelegate]()
+                {
+                    if (ck::Is_NOT_Valid(Handle))
+                    { return; }
+
+                    Unbind(Handle, Delegate);
+                });
+        }
 
         // ReSharper disable once CppTooWideScope
         const auto EnsurePayloadInFlightIsOnlyFiredOnLatestDelegate = ck::IsValid(Signal.Get_Payload()) &&
