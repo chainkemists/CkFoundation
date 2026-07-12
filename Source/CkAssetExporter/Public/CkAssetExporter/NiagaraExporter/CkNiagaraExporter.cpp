@@ -15,20 +15,27 @@
 #include "NiagaraGraph.h"
 #include "NiagaraNodeOutput.h"
 #include "NiagaraNodeFunctionCall.h"
+#include "NiagaraNodeInput.h"
 #include "NiagaraRendererProperties.h"
 #include "NiagaraSpriteRendererProperties.h"
 #include "NiagaraRibbonRendererProperties.h"
 #include "NiagaraMeshRendererProperties.h"
 #include "NiagaraLightRendererProperties.h"
+#include "NiagaraDataInterface.h"
+#include "NiagaraDataInterfaceCurveBase.h"
 #include "NiagaraTypes.h"
 #include "NiagaraParameterStore.h"
 #include "EdGraphSchema_Niagara.h"
 
+#include "Curves/RichCurve.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphNode.h"
 #include "EdGraph/EdGraphPin.h"
 #include "Engine/StaticMesh.h"
+#include "HAL/FileManager.h"
 #include "Materials/MaterialInterface.h"
+#include "Misc/Paths.h"
+#include "UObject/UnrealType.h"
 
 #include <Dom/JsonObject.h>
 #include <Dom/JsonValue.h>
@@ -57,6 +64,17 @@ namespace ck::asset_exporter::niagara
     static auto SimTargetToString(ENiagaraSimTarget InTarget) -> FString
     { return InTarget == ENiagaraSimTarget::GPUComputeSim ? TEXT("GPU") : TEXT("CPU"); }
 
+    static auto InterpModeToLetter(ERichCurveInterpMode InMode) -> FString
+    {
+        switch (InMode)
+        {
+            case RCIM_Linear:   return TEXT("L");
+            case RCIM_Constant: return TEXT("S");
+            case RCIM_Cubic:    return TEXT("C");
+            default:            return TEXT("N");
+        }
+    }
+
     // Formats a single Rapid Iteration Parameter value (the authored constant a module input pin hides) for the
     // common POD/vector/color types. Returns unset for anything else (data interfaces, UObjects, structs we don't
     // decode) so the caller skips it without ever reading bytes at a non-ParameterData offset.
@@ -75,24 +93,70 @@ namespace ck::asset_exporter::niagara
         { return FString(*reinterpret_cast<const int32*>(InStore.GetParameterData(InVar.Offset, Type)) != 0 ? TEXT("true") : TEXT("false")); }
         if (Type == FNiagaraTypeDefinition::GetVec2Def())
         { const auto* V = reinterpret_cast<const FVector2f*>(InStore.GetParameterData(InVar.Offset, Type)); return FString::Printf(TEXT("(%g, %g)"), V->X, V->Y); }
-        if (Type == FNiagaraTypeDefinition::GetVec3Def())
+        if (Type == FNiagaraTypeDefinition::GetVec3Def() || Type == FNiagaraTypeDefinition::GetPositionDef())
         { const auto* V = reinterpret_cast<const FVector3f*>(InStore.GetParameterData(InVar.Offset, Type)); return FString::Printf(TEXT("(%g, %g, %g)"), V->X, V->Y, V->Z); }
         if (Type == FNiagaraTypeDefinition::GetVec4Def())
         { const auto* V = reinterpret_cast<const FVector4f*>(InStore.GetParameterData(InVar.Offset, Type)); return FString::Printf(TEXT("(%g, %g, %g, %g)"), V->X, V->Y, V->Z, V->W); }
+        if (Type == FNiagaraTypeDefinition::GetQuatDef())
+        { const auto* Q = reinterpret_cast<const FQuat4f*>(InStore.GetParameterData(InVar.Offset, Type)); return FString::Printf(TEXT("quat(%g, %g, %g, %g)"), Q->X, Q->Y, Q->Z, Q->W); }
         if (Type == FNiagaraTypeDefinition::GetColorDef())
         { const auto* C = reinterpret_cast<const FLinearColor*>(InStore.GetParameterData(InVar.Offset, Type)); return FString::Printf(TEXT("RGBA(%g, %g, %g, %g)"), C->R, C->G, C->B, C->A); }
 
         return {};
     }
+
+    // Enum static-switch pins carry internal enumerator names ("NewEnumerator3") that mean nothing in a recipe;
+    // append the authored display name when the pin's type is an enum and the two differ.
+    static auto FormatPinDefault(const UEdGraphPin* InPin) -> FString
+    {
+        if (InPin->DefaultObject != nullptr)
+        { return InPin->DefaultObject->GetPathName(); }
+
+        auto Value = InPin->DefaultValue;
+        const auto* Enum = Cast<UEnum>(InPin->PinType.PinSubCategoryObject.Get());
+        if (Enum == nullptr || Value.IsEmpty())
+        { return Value; }
+
+        const auto Index = Enum->GetIndexByNameString(Value);
+        if (Index == INDEX_NONE)
+        { return Value; }
+
+        const auto Display = Enum->GetDisplayNameTextByIndex(Index).ToString();
+        if (Display.IsEmpty() || Display == Value)
+        { return Value; }
+
+        return ck::Format_UE(TEXT("{} ({})"), Value, Display);
+    }
+
+    static auto IsParameterMapPin(const UEdGraphPin* InPin) -> bool
+    {
+        if (InPin == nullptr || InPin->GetOwningNode() == nullptr)
+        { return false; }
+        const auto* Schema = Cast<UEdGraphSchema_Niagara>(InPin->GetOwningNode()->GetSchema());
+        if (Schema == nullptr)
+        { return false; }
+        return Schema->PinToTypeDefinition(InPin) == FNiagaraTypeDefinition::GetParameterMapDef();
+    }
+
+    // UNiagaraNodeInput is UCLASS(MinimalAPI) — its GetDataInterface()/GetObjectAsset() accessors are NOT
+    // exported from NiagaraEditor and would fail to link from this module. Read the UPROPERTYs by reflection
+    // instead (MinimalAPI still exports StaticClass).
+    static auto Get_NodeObjectProperty(const UNiagaraNodeInput* InNode, const TCHAR* InPropertyName) -> UObject*
+    {
+        const auto* Property = FindFProperty<FObjectProperty>(UNiagaraNodeInput::StaticClass(), InPropertyName);
+        return Property != nullptr ? Property->GetObjectPropertyValue_InContainer(InNode) : nullptr;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Public API (mirrors the other CkAssetExporter exporters: JSON + text written next to the asset).
+// Public API (mirrors the other CkAssetExporter exporters: JSON + text written next to the asset, or into an
+// explicit output directory when the corpus orchestrator drives the export).
 
 auto
     FCk_NiagaraExporter::
     ExportNiagaraSystem(
-        UNiagaraSystem* InSystem)
+        UNiagaraSystem* InSystem,
+        const FString& InOutputDir)
     -> FCk_NiagaraExportResult
 {
     auto Result = FCk_NiagaraExportResult{};
@@ -103,6 +167,8 @@ auto
     }
 
     Result.AssetName = InSystem->GetName();
+    Result.ReferencedMaterials = DoCollectMaterials(InSystem);
+    Result.ReferencedMeshes = DoCollectMeshes(InSystem);
 
     const auto JsonObject = DoSerializeToJson(InSystem);
     auto JsonString = FString{};
@@ -114,12 +180,18 @@ auto
 
     const auto TextString = DoSerializeToText(InSystem);
 
-    const auto JsonPath = DoResolveOutputPath(InSystem, TEXT(".json"));
-    const auto TextPath = DoResolveOutputPath(InSystem, TEXT(".txt"));
+    const auto JsonPath = DoResolveOutputPath(InSystem, TEXT(".json"), InOutputDir);
+    const auto TextPath = DoResolveOutputPath(InSystem, TEXT(".txt"), InOutputDir);
     if (JsonPath.IsEmpty() || TextPath.IsEmpty())
     {
         Result.ErrorMessage = TEXT("Failed to resolve output file paths");
         return Result;
+    }
+
+    if (NOT InOutputDir.IsEmpty())
+    {
+        constexpr auto CreateTree = true;
+        IFileManager::Get().MakeDirectory(*InOutputDir, CreateTree);
     }
 
     const auto JsonWritten = FFileHelper::SaveStringToFile(JsonString, *JsonPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
@@ -154,9 +226,10 @@ auto
 
 auto
     FCk_NiagaraExporter::
-    DoGetOrderedModules(
+    DoWalkStack(
         UNiagaraScript* InScript,
-        TArray<UNiagaraNodeFunctionCall*>& OutModules)
+        TArray<UNiagaraNodeFunctionCall*>& OutModules,
+        TArray<UEdGraphNode*>& OutOverrideNodes)
     -> bool
 {
     if (ck::Is_NOT_Valid(InScript))
@@ -176,8 +249,8 @@ auto
 
     // Replicate FNiagaraStackGraphUtilities::GetOrderedModuleNodes (which isn't exported) with public symbols: the
     // stack threads a single parameter map Input -> module -> module -> Output; walk that chain backward from the
-    // Output node, collecting the function-call (module) nodes in order. (Override Map-Set nodes between modules are
-    // simply skipped — they aren't function calls.)
+    // Output node, collecting the function-call (module) nodes in order. The Override Map-Set nodes between modules
+    // carry the authored dynamic inputs / data interfaces / attribute links as dotted-path pins — collect those too.
     const UEdGraphNode* Current = OutputNode;
     auto Guard = int32{0};
     while (Current != nullptr && Guard++ < 512)
@@ -197,9 +270,234 @@ auto
         { break; }
         if (auto* Func = Cast<UNiagaraNodeFunctionCall>(Prev))
         { OutModules.Insert(Func, 0); }
+        else if (Prev->GetClass()->GetName() == TEXT("NiagaraNodeParameterMapSet"))
+        { OutOverrideNodes.Add(Prev); }
         Current = Prev;
     }
     return true;
+}
+
+auto
+    FCk_NiagaraExporter::
+    DoHarvestOverrides(
+        const TArray<UEdGraphNode*>& InOverrideNodes)
+    -> TMultiMap<FString, TSharedPtr<FJsonObject>>
+{
+    auto Overrides = TMultiMap<FString, TSharedPtr<FJsonObject>>{};
+
+    for (const auto* Node : InOverrideNodes)
+    {
+        if (Node == nullptr)
+        { continue; }
+
+        for (const UEdGraphPin* Pin : Node->Pins)
+        {
+            if (Pin == nullptr || Pin->Direction != EGPD_Input || Pin->PinName.IsNone())
+            { continue; }
+            if (ck::asset_exporter::niagara::IsParameterMapPin(Pin))
+            { continue; }
+
+            const auto PinName = Pin->PinName.ToString();
+            auto ModuleName = FString{};
+            auto InputPath = FString{};
+            if (NOT PinName.Split(TEXT("."), &ModuleName, &InputPath))
+            { continue; }
+
+            Overrides.Add(ModuleName, DoResolveOverridePin(Pin, InputPath));
+        }
+    }
+    return Overrides;
+}
+
+auto
+    FCk_NiagaraExporter::
+    DoResolveOverridePin(
+        const UEdGraphPin* InPin,
+        const FString& InInputPath)
+    -> TSharedPtr<FJsonObject>
+{
+    auto Obj = MakeShared<FJsonObject>();
+    Obj->SetStringField(TEXT("path"), InInputPath);
+
+    if (InPin->LinkedTo.Num() == 0)
+    {
+        Obj->SetStringField(TEXT("kind"), TEXT("value"));
+        Obj->SetStringField(TEXT("value"), ck::asset_exporter::niagara::FormatPinDefault(InPin));
+        return Obj;
+    }
+
+    const auto* SrcPin = InPin->LinkedTo[0];
+    auto* SrcNode = SrcPin != nullptr ? SrcPin->GetOwningNode() : nullptr;
+
+    if (const auto* InputNode = Cast<UNiagaraNodeInput>(SrcNode))
+    {
+        if (auto* DataInterface = Cast<UNiagaraDataInterface>(ck::asset_exporter::niagara::Get_NodeObjectProperty(InputNode, TEXT("DataInterface"))))
+        {
+            if (auto* CurveDI = Cast<UNiagaraDataInterfaceCurveBase>(DataInterface))
+            {
+                Obj->SetStringField(TEXT("kind"), TEXT("curve"));
+                Obj->SetStringField(TEXT("diClass"), DataInterface->GetClass()->GetName());
+                Obj->SetArrayField(TEXT("channels"), DoSerializeCurveChannels(CurveDI));
+            }
+            else
+            {
+                Obj->SetStringField(TEXT("kind"), TEXT("dataInterface"));
+                Obj->SetStringField(TEXT("value"), DataInterface->GetClass()->GetName());
+            }
+        }
+        else if (auto* ObjectAsset = ck::asset_exporter::niagara::Get_NodeObjectProperty(InputNode, TEXT("ObjectAsset")); ObjectAsset != nullptr)
+        {
+            Obj->SetStringField(TEXT("kind"), TEXT("asset"));
+            Obj->SetStringField(TEXT("value"), ObjectAsset->GetPathName());
+        }
+        else
+        {
+            Obj->SetStringField(TEXT("kind"), TEXT("input"));
+            Obj->SetStringField(TEXT("value"), InputNode->Input.GetName().ToString());
+        }
+        return Obj;
+    }
+
+    if (const auto* DynInput = Cast<UNiagaraNodeFunctionCall>(SrcNode))
+    {
+        // A dynamic input — its own authored parameters arrive separately: constants via the Rapid Iteration
+        // store, deeper overrides via longer dotted pins on the same override node.
+        Obj->SetStringField(TEXT("kind"), TEXT("dynamicInput"));
+        Obj->SetStringField(TEXT("value"), DynInput->GetNodeTitle(ENodeTitleType::ListView).ToString());
+        Obj->SetStringField(TEXT("id"), DynInput->GetFunctionName());
+        return Obj;
+    }
+
+    // Anything else is a linked parameter read (Map Get pin etc.) — the source pin name IS the parameter.
+    Obj->SetStringField(TEXT("kind"), TEXT("linked"));
+    Obj->SetStringField(TEXT("value"), SrcPin != nullptr ? SrcPin->PinName.ToString() : FString{TEXT("<unknown>")});
+    return Obj;
+}
+
+auto
+    FCk_NiagaraExporter::
+    DoExpandDynamicInputOverrides(
+        const TMultiMap<FString, TSharedPtr<FJsonObject>>& InOverrides,
+        const TArray<TSharedPtr<FJsonObject>>& InEntries,
+        TSet<FString>& InOutConsumedKeys)
+    -> void
+{
+    for (const auto& Entry : InEntries)
+    {
+        if (NOT Entry.IsValid() || Entry->GetStringField(TEXT("kind")) != TEXT("dynamicInput"))
+        { continue; }
+
+        auto DynId = FString{};
+        if (NOT Entry->TryGetStringField(TEXT("id"), DynId) || DynId.IsEmpty() || InOutConsumedKeys.Contains(DynId))
+        { continue; }
+        InOutConsumedKeys.Add(DynId);
+
+        auto Nested = TArray<TSharedPtr<FJsonObject>>{};
+        constexpr auto MaintainOrder = true;
+        InOverrides.MultiFind(DynId, Nested, MaintainOrder);
+        if (Nested.Num() == 0)
+        { continue; }
+
+        DoExpandDynamicInputOverrides(InOverrides, Nested, InOutConsumedKeys);
+
+        auto NestedArr = TArray<TSharedPtr<FJsonValue>>{};
+        for (const auto& NestedEntry : Nested)
+        { NestedArr.Add(MakeShared<FJsonValueObject>(NestedEntry)); }
+        Entry->SetArrayField(TEXT("overrides"), NestedArr);
+    }
+}
+
+auto
+    FCk_NiagaraExporter::
+    DoSerializeCurveChannels(
+        UNiagaraDataInterfaceCurveBase* InCurveDI)
+    -> TArray<TSharedPtr<FJsonValue>>
+{
+    auto Channels = TArray<TSharedPtr<FJsonValue>>{};
+
+    auto CurveData = TArray<UNiagaraDataInterfaceCurveBase::FCurveData>{};
+    InCurveDI->GetCurveData(CurveData);
+
+    for (const auto& Data : CurveData)
+    {
+        if (Data.Curve == nullptr)
+        { continue; }
+
+        auto Channel = MakeShared<FJsonObject>();
+        Channel->SetStringField(TEXT("name"), Data.Name.ToString());
+
+        auto Keys = TArray<TSharedPtr<FJsonValue>>{};
+        for (const auto& Key : Data.Curve->Keys)
+        {
+            auto KeyObj = MakeShared<FJsonObject>();
+            KeyObj->SetNumberField(TEXT("t"), Key.Time);
+            KeyObj->SetNumberField(TEXT("v"), Key.Value);
+            KeyObj->SetStringField(TEXT("i"), ck::asset_exporter::niagara::InterpModeToLetter(Key.InterpMode));
+            Keys.Add(MakeShared<FJsonValueObject>(KeyObj));
+        }
+        Channel->SetArrayField(TEXT("keys"), Keys);
+        Channels.Add(MakeShared<FJsonValueObject>(Channel));
+    }
+    return Channels;
+}
+
+auto
+    FCk_NiagaraExporter::
+    DoFormatOverride_Text(
+        const TSharedPtr<FJsonObject>& InOverride)
+    -> FString
+{
+    const auto Path = InOverride->GetStringField(TEXT("path"));
+    const auto Kind = InOverride->GetStringField(TEXT("kind"));
+
+    if (Kind == TEXT("curve"))
+    {
+        auto ChannelsText = TArray<FString>{};
+        const auto* Channels = static_cast<const TArray<TSharedPtr<FJsonValue>>*>(nullptr);
+        if (InOverride->TryGetArrayField(TEXT("channels"), Channels))
+        {
+            for (const auto& ChannelValue : *Channels)
+            {
+                const auto& Channel = ChannelValue->AsObject();
+                auto KeysText = TArray<FString>{};
+                for (const auto& KeyValue : Channel->GetArrayField(TEXT("keys")))
+                {
+                    const auto& Key = KeyValue->AsObject();
+                    KeysText.Add(FString::Printf(TEXT("(%g, %g)%s"),
+                        Key->GetNumberField(TEXT("t")), Key->GetNumberField(TEXT("v")), *Key->GetStringField(TEXT("i"))));
+                }
+                ChannelsText.Add(ck::Format_UE(TEXT("{}: {}"),
+                    Channel->GetStringField(TEXT("name")), FString::Join(KeysText, TEXT(" "))));
+            }
+        }
+        auto DiClass = InOverride->GetStringField(TEXT("diClass"));
+        DiClass.RemoveFromStart(TEXT("NiagaraDataInterface"));
+        return ck::Format_UE(TEXT("{} = curve<{}> {}"), Path, DiClass, FString::Join(ChannelsText, TEXT(" | ")));
+    }
+
+    const auto Value = InOverride->GetStringField(TEXT("value"));
+    if (Kind == TEXT("value"))
+    { return ck::Format_UE(TEXT("{} = {}"), Path, Value); }
+    if (Kind == TEXT("dynamicInput"))
+    {
+        auto Text = ck::Format_UE(TEXT("{} = dyn:{}"), Path, Value);
+        const auto* Nested = static_cast<const TArray<TSharedPtr<FJsonValue>>*>(nullptr);
+        if (InOverride->TryGetArrayField(TEXT("overrides"), Nested))
+        {
+            auto NestedText = TArray<FString>{};
+            for (const auto& NestedValue : *Nested)
+            { NestedText.Add(DoFormatOverride_Text(NestedValue->AsObject())); }
+            Text += TEXT(" { ") + FString::Join(NestedText, TEXT("; ")) + TEXT(" }");
+        }
+        return Text;
+    }
+    if (Kind == TEXT("linked"))
+    { return ck::Format_UE(TEXT("{} = linked:{}"), Path, Value); }
+    if (Kind == TEXT("asset"))
+    { return ck::Format_UE(TEXT("{} = asset:{}"), Path, Value); }
+    if (Kind == TEXT("dataInterface"))
+    { return ck::Format_UE(TEXT("{} = DI<{}>"), Path, Value); }
+    return ck::Format_UE(TEXT("{} = {}:{}"), Path, Kind, Value);
 }
 
 auto
@@ -217,7 +515,7 @@ auto
         if (Pin == nullptr || Pin->Direction != EGPD_Input)
         { continue; }
         // Skip the parameter-map plumbing pins (they carry the stack, not authored values).
-        if (Pin->PinName == NAME_None || Pin->PinType.PinCategory == TEXT("ParameterMap"))
+        if (Pin->PinName == NAME_None || ck::asset_exporter::niagara::IsParameterMapPin(Pin))
         { continue; }
 
         const auto Name = Pin->PinName.ToString();
@@ -236,10 +534,94 @@ auto
             { Value = TEXT("<linked>"); }
         }
         else
-        { Value = Pin->DefaultValue; }
+        { Value = ck::asset_exporter::niagara::FormatPinDefault(Pin); }
         Inputs.Add({ Name, Value });
     }
     return Inputs;
+}
+
+auto
+    FCk_NiagaraExporter::
+    DoCollectMaterials(
+        const UNiagaraSystem* InSystem)
+    -> TArray<FString>
+{
+    auto Materials = TSet<FString>{};
+    auto* System = const_cast<UNiagaraSystem*>(InSystem);
+
+    for (const auto& Handle : System->GetEmitterHandles())
+    {
+        const auto* Data = Handle.GetEmitterData();
+        if (Data == nullptr)
+        { continue; }
+
+        for (const auto* Renderer : Data->GetRenderers())
+        {
+            if (const auto* Sprite = Cast<UNiagaraSpriteRendererProperties>(Renderer))
+            {
+                if (Sprite->Material != nullptr)
+                { Materials.Add(Sprite->Material->GetPathName()); }
+            }
+            else if (const auto* Ribbon = Cast<UNiagaraRibbonRendererProperties>(Renderer))
+            {
+                if (Ribbon->Material != nullptr)
+                { Materials.Add(Ribbon->Material->GetPathName()); }
+            }
+            else if (const auto* Mesh = Cast<UNiagaraMeshRendererProperties>(Renderer))
+            {
+                if (Mesh->bOverrideMaterials)
+                {
+                    for (const auto& Override : Mesh->OverrideMaterials)
+                    {
+                        if (Override.ExplicitMat != nullptr)
+                        { Materials.Add(Override.ExplicitMat->GetPathName()); }
+                    }
+                }
+                for (const auto& MeshEntry : Mesh->Meshes)
+                {
+                    if (MeshEntry.Mesh == nullptr)
+                    { continue; }
+                    for (const auto& StaticMaterial : MeshEntry.Mesh->GetStaticMaterials())
+                    {
+                        if (StaticMaterial.MaterialInterface != nullptr)
+                        { Materials.Add(StaticMaterial.MaterialInterface->GetPathName()); }
+                    }
+                }
+            }
+        }
+    }
+    return Materials.Array();
+}
+
+auto
+    FCk_NiagaraExporter::
+    DoCollectMeshes(
+        const UNiagaraSystem* InSystem)
+    -> TArray<FString>
+{
+    auto Meshes = TSet<FString>{};
+    auto* System = const_cast<UNiagaraSystem*>(InSystem);
+
+    for (const auto& Handle : System->GetEmitterHandles())
+    {
+        const auto* Data = Handle.GetEmitterData();
+        if (Data == nullptr)
+        { continue; }
+
+        for (const auto* Renderer : Data->GetRenderers())
+        {
+            const auto* Mesh = Cast<UNiagaraMeshRendererProperties>(Renderer);
+            if (Mesh == nullptr)
+            { continue; }
+
+            for (const auto& MeshEntry : Mesh->Meshes)
+            {
+                if (MeshEntry.Mesh != nullptr)
+                { Meshes.Add(MeshEntry.Mesh->GetPathName()); }
+            }
+        }
+    }
+    return Meshes.Array();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -257,11 +639,24 @@ auto
     Out += ck::Format_UE(TEXT("NIAGARA SYSTEM: {}\n"), System->GetName());
     Out += TEXT("====================================================================\n\n");
 
-    // ---- System-level user parameters ----
+    // ---- System-level user parameters (with authored default values) ----
     Out += TEXT("USER PARAMETERS\n");
-    for (const auto& Var : System->GetExposedParameters().ReadParameterVariables())
+    const auto& Exposed = System->GetExposedParameters();
+    for (const auto& Var : Exposed.ReadParameterVariables())
     {
-        Out += ck::Format_UE(TEXT("  - {} : {}\n"), Var.GetName().ToString(), Var.GetType().GetName());
+        auto Value = FString{};
+        if (Var.IsDataInterface())
+        {
+            const auto* DataInterface = Exposed.GetDataInterface(Var.Offset);
+            Value = DataInterface != nullptr ? ck::Format_UE(TEXT("DI<{}>"), DataInterface->GetClass()->GetName()) : FString{};
+        }
+        else if (const auto Formatted = ck::asset_exporter::niagara::FormatStoreValue(Exposed, Var); Formatted.IsSet())
+        { Value = Formatted.GetValue(); }
+
+        if (Value.IsEmpty())
+        { Out += ck::Format_UE(TEXT("  - {} : {}\n"), Var.GetName().ToString(), Var.GetType().GetName()); }
+        else
+        { Out += ck::Format_UE(TEXT("  - {} : {} = {}\n"), Var.GetName().ToString(), Var.GetType().GetName(), Value); }
     }
     Out += TEXT("\n");
 
@@ -279,30 +674,67 @@ auto
         if (Data == nullptr)
         { Out += TEXT("  <no emitter data>\n"); continue; }
 
-        Out += ck::Format_UE(TEXT("  Sim: {}   LocalSpace: {}\n"),
+        Out += ck::Format_UE(TEXT("  Sim: {}   LocalSpace: {}   Determinism: {}{}\n"),
             ck::asset_exporter::niagara::SimTargetToString(Data->SimTarget),
-            Data->bLocalSpace ? TEXT("true") : TEXT("false"));
+            Data->bLocalSpace ? TEXT("true") : TEXT("false"),
+            Data->bDeterminism ? TEXT("true") : TEXT("false"),
+            Data->bDeterminism ? *FString::Printf(TEXT(" (seed %d)"), Data->RandomSeed) : TEXT(""));
+
+        Out += ck::Format_UE(TEXT("  Bounds: {}{}\n"),
+            StaticEnum<ENiagaraEmitterCalculateBoundMode>()->GetNameStringByValue(static_cast<int64>(Data->CalculateBoundsMode)),
+            Data->CalculateBoundsMode == ENiagaraEmitterCalculateBoundMode::Fixed
+                ? *ck::Format_UE(TEXT("  {} to {}"), Data->FixedBounds.Min.ToString(), Data->FixedBounds.Max.ToString())
+                : TEXT(""));
 
         // Module stacks (the layering recipe).
         for (const auto& Stage : ck::asset_exporter::niagara::Get_Stages())
         {
             UNiagaraScript* Script = (Data->*(Stage.Member)).Script;
             auto Modules = TArray<UNiagaraNodeFunctionCall*>{};
-            if (NOT DoGetOrderedModules(Script, Modules) || Modules.Num() == 0)
+            auto OverrideNodes = TArray<UEdGraphNode*>{};
+            if (NOT DoWalkStack(Script, Modules, OverrideNodes) || Modules.Num() == 0)
             { continue; }
+
+            const auto Overrides = DoHarvestOverrides(OverrideNodes);
+            auto ConsumedKeys = TSet<FString>{};
 
             Out += ck::Format_UE(TEXT("  {} ({} modules):\n"), FString(Stage.Name), FString::FromInt(Modules.Num()));
             auto Index = int32{0};
             for (const auto* Module : Modules)
             {
                 if (Module == nullptr) { continue; }
-                Out += ck::Format_UE(TEXT("    {}. {}\n"), FString::FromInt(++Index),
-                    Module->GetNodeTitle(ENodeTitleType::ListView).ToString());
+                Out += ck::Format_UE(TEXT("    {}. {}{}\n"), FString::FromInt(++Index),
+                    Module->GetNodeTitle(ENodeTitleType::ListView).ToString(),
+                    Module->IsNodeEnabled() ? TEXT("") : TEXT("  (DISABLED)"));
                 for (const auto& Input : DoGetModuleInputs(Module))
                 {
                     if (Input.Value.IsEmpty()) { continue; }
                     Out += ck::Format_UE(TEXT("         {} = {}\n"), Input.Key, Input.Value);
                 }
+
+                // The authored overrides for this module — dynamic inputs, curves, attribute links.
+                // Overrides authored on the module's dynamic inputs are keyed by the dyn node's call
+                // name; expansion re-attaches them (nested) so curve keys land in the recipe.
+                auto ModuleOverrides = TArray<TSharedPtr<FJsonObject>>{};
+                constexpr auto MaintainOrder = true;
+                Overrides.MultiFind(Module->GetFunctionName(), ModuleOverrides, MaintainOrder);
+                ConsumedKeys.Add(Module->GetFunctionName());
+                DoExpandDynamicInputOverrides(Overrides, ModuleOverrides, ConsumedKeys);
+                for (const auto& Override : ModuleOverrides)
+                {
+                    Out += ck::Format_UE(TEXT("         [override] {}\n"), DoFormatOverride_Text(Override));
+                }
+            }
+
+            // Never drop data silently: surface overrides keyed to a node no module (or reachable
+            // dynamic input) claimed.
+            auto bWroteUnattachedHeader = false;
+            for (auto It = Overrides.CreateConstIterator(); It; ++It)
+            {
+                if (ConsumedKeys.Contains(It.Key())) { continue; }
+                if (NOT bWroteUnattachedHeader)
+                { Out += TEXT("    [unattached overrides]\n"); bWroteUnattachedHeader = true; }
+                Out += ck::Format_UE(TEXT("       {}: {}\n"), It.Key(), DoFormatOverride_Text(It.Value()));
             }
 
             // The authored constant values for this stage's modules (sizes, colors, counts, lifetimes) live in the
@@ -333,35 +765,37 @@ auto
                 Out += ck::Format_UE(TEXT("    - {}"), Renderer->GetClass()->GetName());
                 if (const auto* Sprite = Cast<UNiagaraSpriteRendererProperties>(Renderer))
                 {
-                    Out += ck::Format_UE(TEXT("  Material: {}  Alignment: {}  Facing: {}"),
-                        Sprite->Material ? Sprite->Material->GetName() : FString(TEXT("<none>")),
+                    Out += ck::Format_UE(TEXT("  Material: {}  Alignment: {}  Facing: {}  Sort: {}"),
+                        Sprite->Material ? Sprite->Material->GetPathName() : FString(TEXT("<none>")),
                         StaticEnum<ENiagaraSpriteAlignment>()->GetNameStringByValue((int64)Sprite->Alignment),
-                        StaticEnum<ENiagaraSpriteFacingMode>()->GetNameStringByValue((int64)Sprite->FacingMode));
+                        StaticEnum<ENiagaraSpriteFacingMode>()->GetNameStringByValue((int64)Sprite->FacingMode),
+                        StaticEnum<ENiagaraSortMode>()->GetNameStringByValue((int64)Sprite->SortMode));
                     if (Sprite->SubImageSize != FVector2D(1.0, 1.0))
                     { Out += FString::Printf(TEXT("  SubUV: %dx%d"), (int32)Sprite->SubImageSize.X, (int32)Sprite->SubImageSize.Y); }
                 }
                 else if (const auto* Ribbon = Cast<UNiagaraRibbonRendererProperties>(Renderer))
                 {
-                    Out += ck::Format_UE(TEXT("  Material: {}"), Ribbon->Material ? Ribbon->Material->GetName() : FString(TEXT("<none>")));
+                    Out += ck::Format_UE(TEXT("  Material: {}"), Ribbon->Material ? Ribbon->Material->GetPathName() : FString(TEXT("<none>")));
                 }
                 else if (const auto* Mesh = Cast<UNiagaraMeshRendererProperties>(Renderer))
                 {
                     // The shaped elements (slashes, spikes, strips) are oriented stretched meshes — name the mesh(es),
                     // non-unit scale, facing, and override materials so the recipe is reproducible.
-                    Out += ck::Format_UE(TEXT("  Facing: {}"),
-                        StaticEnum<ENiagaraMeshFacingMode>()->GetNameStringByValue((int64)Mesh->FacingMode));
+                    Out += ck::Format_UE(TEXT("  Facing: {}  Sort: {}"),
+                        StaticEnum<ENiagaraMeshFacingMode>()->GetNameStringByValue((int64)Mesh->FacingMode),
+                        StaticEnum<ENiagaraSortMode>()->GetNameStringByValue((int64)Mesh->SortMode));
                     if (Mesh->SubImageSize != FVector2D(1.0, 1.0))
                     { Out += FString::Printf(TEXT("  SubUV: %dx%d"), (int32)Mesh->SubImageSize.X, (int32)Mesh->SubImageSize.Y); }
                     for (const auto& M : Mesh->Meshes)
                     {
-                        Out += ck::Format_UE(TEXT("\n        mesh: {}"), M.Mesh ? M.Mesh->GetName() : FString(TEXT("<none>")));
+                        Out += ck::Format_UE(TEXT("\n        mesh: {}"), M.Mesh ? M.Mesh->GetPathName() : FString(TEXT("<none>")));
                         if (NOT M.Scale.Equals(FVector::OneVector))
                         { Out += FString::Printf(TEXT("  scale: (%g, %g, %g)"), M.Scale.X, M.Scale.Y, M.Scale.Z); }
                     }
                     if (Mesh->bOverrideMaterials)
                     {
                         for (const auto& Ov : Mesh->OverrideMaterials)
-                        { Out += ck::Format_UE(TEXT("\n        material: {}"), Ov.ExplicitMat ? Ov.ExplicitMat->GetName() : FString(TEXT("<none>"))); }
+                        { Out += ck::Format_UE(TEXT("\n        material: {}"), Ov.ExplicitMat ? Ov.ExplicitMat->GetPathName() : FString(TEXT("<none>"))); }
                     }
                 }
                 else if (const auto* Light = Cast<UNiagaraLightRendererProperties>(Renderer))
@@ -383,11 +817,15 @@ auto
 auto
     FCk_NiagaraExporter::
     DoSerializeModule_Json(
-        const UNiagaraNodeFunctionCall* InModule)
+        const UNiagaraNodeFunctionCall* InModule,
+        const TArray<TSharedPtr<FJsonObject>>& InOverrides)
     -> TSharedPtr<FJsonObject>
 {
     auto Obj = MakeShared<FJsonObject>();
     Obj->SetStringField(TEXT("name"), InModule->GetNodeTitle(ENodeTitleType::ListView).ToString());
+    Obj->SetStringField(TEXT("id"), InModule->GetFunctionName());
+    if (NOT InModule->IsNodeEnabled())
+    { Obj->SetBoolField(TEXT("enabled"), false); }
 
     auto InputsArr = TArray<TSharedPtr<FJsonValue>>{};
     for (const auto& Input : DoGetModuleInputs(InModule))
@@ -398,6 +836,14 @@ auto
         InputsArr.Add(MakeShared<FJsonValueObject>(In));
     }
     Obj->SetArrayField(TEXT("inputs"), InputsArr);
+
+    if (InOverrides.Num() > 0)
+    {
+        auto OverridesArr = TArray<TSharedPtr<FJsonValue>>{};
+        for (const auto& Override : InOverrides)
+        { OverridesArr.Add(MakeShared<FJsonValueObject>(Override)); }
+        Obj->SetArrayField(TEXT("overrides"), OverridesArr);
+    }
     return Obj;
 }
 
@@ -409,8 +855,12 @@ auto
     -> TSharedPtr<FJsonObject>
 {
     auto Modules = TArray<UNiagaraNodeFunctionCall*>{};
-    if (NOT DoGetOrderedModules(InScript, Modules) || Modules.Num() == 0)
+    auto OverrideNodes = TArray<UEdGraphNode*>{};
+    if (NOT DoWalkStack(InScript, Modules, OverrideNodes) || Modules.Num() == 0)
     { return nullptr; }
+
+    const auto Overrides = DoHarvestOverrides(OverrideNodes);
+    auto ConsumedKeys = TSet<FString>{};
 
     auto Obj = MakeShared<FJsonObject>();
     Obj->SetStringField(TEXT("stage"), InStageName);
@@ -418,9 +868,28 @@ auto
     for (const auto* Module : Modules)
     {
         if (Module == nullptr) { continue; }
-        Arr.Add(MakeShared<FJsonValueObject>(DoSerializeModule_Json(Module)));
+        auto ModuleOverrides = TArray<TSharedPtr<FJsonObject>>{};
+        constexpr auto MaintainOrder = true;
+        Overrides.MultiFind(Module->GetFunctionName(), ModuleOverrides, MaintainOrder);
+        ConsumedKeys.Add(Module->GetFunctionName());
+        DoExpandDynamicInputOverrides(Overrides, ModuleOverrides, ConsumedKeys);
+        Arr.Add(MakeShared<FJsonValueObject>(DoSerializeModule_Json(Module, ModuleOverrides)));
     }
     Obj->SetArrayField(TEXT("modules"), Arr);
+
+    // Never drop data silently: overrides keyed to a node no module or dynamic input claimed.
+    auto Unattached = TArray<TSharedPtr<FJsonValue>>{};
+    for (auto It = Overrides.CreateConstIterator(); It; ++It)
+    {
+        if (ConsumedKeys.Contains(It.Key()))
+        { continue; }
+        auto Orphan = MakeShared<FJsonObject>();
+        Orphan->SetStringField(TEXT("owner"), It.Key());
+        Orphan->SetObjectField(TEXT("override"), It.Value());
+        Unattached.Add(MakeShared<FJsonValueObject>(Orphan));
+    }
+    if (Unattached.Num() > 0)
+    { Obj->SetArrayField(TEXT("unattachedOverrides"), Unattached); }
 
     // The authored constant values (sizes, colors, counts, lifetimes) from the script's Rapid Iteration store.
     auto ValuesArr = TArray<TSharedPtr<FJsonValue>>{};
@@ -450,24 +919,26 @@ auto
     Obj->SetStringField(TEXT("type"), InRenderer->GetClass()->GetName());
     if (const auto* Sprite = Cast<UNiagaraSpriteRendererProperties>(InRenderer))
     {
-        Obj->SetStringField(TEXT("material"), Sprite->Material ? Sprite->Material->GetName() : FString(TEXT("<none>")));
+        Obj->SetStringField(TEXT("material"), Sprite->Material ? Sprite->Material->GetPathName() : FString(TEXT("<none>")));
         Obj->SetStringField(TEXT("alignment"), StaticEnum<ENiagaraSpriteAlignment>()->GetNameStringByValue((int64)Sprite->Alignment));
         Obj->SetStringField(TEXT("facing"), StaticEnum<ENiagaraSpriteFacingMode>()->GetNameStringByValue((int64)Sprite->FacingMode));
+        Obj->SetStringField(TEXT("sortMode"), StaticEnum<ENiagaraSortMode>()->GetNameStringByValue((int64)Sprite->SortMode));
         if (Sprite->SubImageSize != FVector2D(1.0, 1.0))
         { Obj->SetStringField(TEXT("subImage"), FString::Printf(TEXT("%dx%d"), (int32)Sprite->SubImageSize.X, (int32)Sprite->SubImageSize.Y)); }
     }
     else if (const auto* Ribbon = Cast<UNiagaraRibbonRendererProperties>(InRenderer))
     {
-        Obj->SetStringField(TEXT("material"), Ribbon->Material ? Ribbon->Material->GetName() : FString(TEXT("<none>")));
+        Obj->SetStringField(TEXT("material"), Ribbon->Material ? Ribbon->Material->GetPathName() : FString(TEXT("<none>")));
     }
     else if (const auto* Mesh = Cast<UNiagaraMeshRendererProperties>(InRenderer))
     {
         Obj->SetStringField(TEXT("facingMode"), StaticEnum<ENiagaraMeshFacingMode>()->GetNameStringByValue((int64)Mesh->FacingMode));
+        Obj->SetStringField(TEXT("sortMode"), StaticEnum<ENiagaraSortMode>()->GetNameStringByValue((int64)Mesh->SortMode));
         auto MeshesArr = TArray<TSharedPtr<FJsonValue>>{};
         for (const auto& M : Mesh->Meshes)
         {
             auto MeshObj = MakeShared<FJsonObject>();
-            MeshObj->SetStringField(TEXT("mesh"), M.Mesh ? M.Mesh->GetName() : FString(TEXT("<none>")));
+            MeshObj->SetStringField(TEXT("mesh"), M.Mesh ? M.Mesh->GetPathName() : FString(TEXT("<none>")));
             MeshObj->SetStringField(TEXT("scale"), FString::Printf(TEXT("(%g, %g, %g)"), M.Scale.X, M.Scale.Y, M.Scale.Z));
             MeshesArr.Add(MakeShared<FJsonValueObject>(MeshObj));
         }
@@ -476,7 +947,7 @@ auto
         {
             auto MatsArr = TArray<TSharedPtr<FJsonValue>>{};
             for (const auto& Ov : Mesh->OverrideMaterials)
-            { MatsArr.Add(MakeShared<FJsonValueString>(Ov.ExplicitMat ? Ov.ExplicitMat->GetName() : FString(TEXT("<none>")))); }
+            { MatsArr.Add(MakeShared<FJsonValueString>(Ov.ExplicitMat ? Ov.ExplicitMat->GetPathName() : FString(TEXT("<none>")))); }
             Obj->SetArrayField(TEXT("overrideMaterials"), MatsArr);
         }
         if (Mesh->SubImageSize != FVector2D(1.0, 1.0))
@@ -506,6 +977,13 @@ auto
 
     Obj->SetStringField(TEXT("sim"), ck::asset_exporter::niagara::SimTargetToString(InData->SimTarget));
     Obj->SetBoolField(TEXT("localSpace"), InData->bLocalSpace);
+    Obj->SetBoolField(TEXT("determinism"), InData->bDeterminism);
+    if (InData->bDeterminism)
+    { Obj->SetNumberField(TEXT("randomSeed"), InData->RandomSeed); }
+    Obj->SetStringField(TEXT("boundsMode"),
+        StaticEnum<ENiagaraEmitterCalculateBoundMode>()->GetNameStringByValue(static_cast<int64>(InData->CalculateBoundsMode)));
+    if (InData->CalculateBoundsMode == ENiagaraEmitterCalculateBoundMode::Fixed)
+    { Obj->SetStringField(TEXT("fixedBounds"), ck::Format_UE(TEXT("{} to {}"), InData->FixedBounds.Min.ToString(), InData->FixedBounds.Max.ToString())); }
 
     auto Stacks = TArray<TSharedPtr<FJsonValue>>{};
     for (const auto& Stage : ck::asset_exporter::niagara::Get_Stages())
@@ -535,13 +1013,22 @@ auto
     auto* System = const_cast<UNiagaraSystem*>(InSystem);
     auto Root = MakeShared<FJsonObject>();
     Root->SetStringField(TEXT("system"), System->GetName());
+    Root->SetStringField(TEXT("packagePath"), System->GetOutermost()->GetName());
 
     auto Params = TArray<TSharedPtr<FJsonValue>>{};
-    for (const auto& Var : System->GetExposedParameters().ReadParameterVariables())
+    const auto& Exposed = System->GetExposedParameters();
+    for (const auto& Var : Exposed.ReadParameterVariables())
     {
         auto P = MakeShared<FJsonObject>();
         P->SetStringField(TEXT("name"), Var.GetName().ToString());
         P->SetStringField(TEXT("type"), Var.GetType().GetName());
+        if (Var.IsDataInterface())
+        {
+            if (const auto* DataInterface = Exposed.GetDataInterface(Var.Offset))
+            { P->SetStringField(TEXT("value"), ck::Format_UE(TEXT("DI<{}>"), DataInterface->GetClass()->GetName())); }
+        }
+        else if (const auto Formatted = ck::asset_exporter::niagara::FormatStoreValue(Exposed, Var); Formatted.IsSet())
+        { P->SetStringField(TEXT("value"), Formatted.GetValue()); }
         Params.Add(MakeShared<FJsonValueObject>(P));
     }
     Root->SetArrayField(TEXT("userParameters"), Params);
@@ -562,9 +1049,13 @@ auto
     FCk_NiagaraExporter::
     DoResolveOutputPath(
         const UNiagaraSystem* InSystem,
-        const FString& InExtension)
+        const FString& InExtension,
+        const FString& InOutputDir)
     -> FString
 {
+    if (NOT InOutputDir.IsEmpty())
+    { return FPaths::Combine(InOutputDir, InSystem->GetName() + InExtension); }
+
     const auto PackageName = InSystem->GetOutermost()->GetName();
     auto FilePath = FString{};
     if (NOT FPackageName::TryConvertLongPackageNameToFilename(PackageName, FilePath, InExtension))
