@@ -7,10 +7,50 @@
 #include "CkCore/ObjectPooling/CkObjectPooling_Settings.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include <Engine/LatentActionManager.h>
 #include <Engine/World.h>
 #include <GameFramework/Actor.h>
+#include <TimerManager.h>
+#include <UObject/UObjectGlobals.h>
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_ObjectPooling_Subsystem_UE::
+    Initialize(
+        FSubsystemCollectionBase& InCollection)
+    -> void
+{
+    Super::Initialize(InCollection);
+
+    _PostGarbageCollectHandle = FCoreUObjectDelegates::GetPostGarbageCollect().AddWeakLambda(this,
+    [this]
+    {
+        _StaleSweepPending = true;
+    });
+}
+
+auto
+    UCk_ObjectPooling_Subsystem_UE::
+    Deinitialize()
+    -> void
+{
+    FCoreUObjectDelegates::GetPostGarbageCollect().Remove(_PostGarbageCollectHandle);
+
+    Super::Deinitialize();
+}
+
+auto
+    UCk_ObjectPooling_Subsystem_UE::
+    DoesSupportWorldType(
+        const EWorldType::Type InWorldType) const
+    -> bool
+{
+    // the editor ECS world spawns EntityScripts/components through the pooled path too — without
+    // this subsystem there, those instances would be caller-owned with only weak holders (no GC
+    // root) and editor GC would collect them mid-preview
+    return Super::DoesSupportWorldType(InWorldType) || InWorldType == EWorldType::Editor;
+}
 
 auto
     UCk_ObjectPooling_Subsystem_UE::
@@ -19,6 +59,12 @@ auto
     -> void
 {
     Super::Tick(InDeltaTime);
+
+    if (_StaleSweepPending)
+    {
+        _StaleSweepPending = false;
+        DoSweep_StaleAfterGC();
+    }
 
     for (auto& Kvp : _Pools)
     {
@@ -219,7 +265,7 @@ auto
     // a fresh instance already carries the archetype (NewObject template) — only a recycled one resets
     if (WasRecycled)
     {
-        DoReset_ToArchetype(AcquiredObject, Pool->Get_Archetype());
+        Request_ResetToArchetype(AcquiredObject, Pool->Get_Archetype());
     }
 
     UCk_Utils_ObjectPoolingParticipant_UE::Broadcast_AcquiredFromPool_OnObject(AcquiredObject);
@@ -235,11 +281,33 @@ auto
         UObject* InObject)
     -> ECk_SucceededFailed
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Cannot Release an INVALID object to its ObjectPool"))
+    CK_ENSURE_IF_NOT(InObject != nullptr, TEXT("Cannot Release a NULL object to its ObjectPool"))
     { return ECk_SucceededFailed::Failed; }
+
+    // already destroyed externally (destroy-then-release ordering) — reconcile tracking now while
+    // the pointer still hashes to its entries, and stay benign: release is fire-and-forget
+    if (ck::Is_NOT_Valid(InObject))
+    {
+        _PinnedUnique.Remove(InObject);
+
+        if (const auto* PoolKey = _InstanceToPool.Find(FObjectKey{InObject}))
+        {
+            if (auto* Pool = _Pools.Find(*PoolKey))
+            {
+                if (Pool->_InUseObjects.Remove(InObject) > 0)
+                { --Pool->_NumLiveInstances; }
+            }
+
+            _InstanceToPool.Remove(FObjectKey{InObject});
+        }
+
+        ck::core::Verbose(TEXT("TryReleaseToPool: [{}] was already destroyed — tracking reconciled, nothing to release"), InObject);
+        return ECk_SucceededFailed::Failed;
+    }
 
     if (_PinnedUnique.Remove(InObject) > 0)
     {
+        DoQuiesce_ReleasedObject(InObject);
         UCk_Utils_ObjectPoolingParticipant_UE::Broadcast_ReleasedToPool_OnObject(InObject);
         return ECk_SucceededFailed::Succeeded;
     }
@@ -270,11 +338,35 @@ auto
         InObject)
     { return ECk_SucceededFailed::Failed; }
 
+    DoQuiesce_ReleasedObject(InObject);
     UCk_Utils_ObjectPoolingParticipant_UE::Broadcast_ReleasedToPool_OnObject(InObject);
 
     Pool->_FreeObjects.Emplace(InObject);
 
     return ECk_SucceededFailed::Succeeded;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_ObjectPooling_Subsystem_UE::
+    DoQuiesce_ReleasedObject(
+        UObject* InObject)
+    -> void
+{
+    // pre-pooling, an object whose entity died was GC'd and its pending world timers / latent
+    // actions silently never fired. Pooling keeps the instance alive (pinned or parked), so a
+    // lingering timer WOULD fire post-release against dead associations — loudly, in whatever
+    // test/gameplay runs next. Release therefore quiesces exactly like death did (the same pair
+    // UActorComponent::EndPlay clears). Only TRACKED objects get this — release on an untracked
+    // object is a no-op and must not side-effect timers we don't own
+    auto* World = GetWorld();
+
+    if (ck::Is_NOT_Valid(World))
+    { return; }
+
+    World->GetTimerManager().ClearAllTimersForObject(InObject);
+    World->GetLatentActionManager().RemoveActionsForObject(InObject);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -348,7 +440,7 @@ auto
 
 auto
     UCk_ObjectPooling_Subsystem_UE::
-    DoReset_ToArchetype(
+    Request_ResetToArchetype(
         UObject* InObject,
         const UObject* InArchetype)
     -> void
@@ -371,6 +463,77 @@ auto
 
         Property->CopyCompleteValue_InContainer(InObject, InArchetype);
     }
+
+    // the sweep above copied instanced-subobject POINTERS from the archetype — re-instance them so
+    // the recycled object owns fresh copies (a write through an aliased subobject would corrupt the
+    // archetype/CDO). Mirrors FObjectInitializer::InstanceSubobjects: the graph must map
+    // InArchetype -> InObject, so archetype-outered subobjects duplicate into the recycled object
+    // (parameterless UObject::InstanceSubobjectTemplates roots the graph at GetArchetype()/self and
+    // leaves the aliases untouched)
+    if (InObject->GetClass()->HasAnyClassFlags(CLASS_HasInstancedReference))
+    {
+        auto InstancingGraph = FObjectInstancingGraph{};
+        InstancingGraph.AddNewObject(InObject, const_cast<UObject*>(InArchetype));
+
+        InObject->GetClass()->InstanceSubobjectTemplates(
+            InObject, InArchetype, InArchetype->GetClass(), InObject, &InstancingGraph);
+
+        // the instancing graph REUSES an existing same-named per-instance subobject instead of
+        // re-creating it — its properties still hold the previous incarnation's values. Recurse the
+        // reset into each (instance, template) pair so the whole reflected tree matches a fresh
+        // create. (Instanced subobjects inside Set/Map containers are not walked — none exist in
+        // the framework; add the container walk if one ever does)
+        const auto ResetMatchedSubobject = [InObject](UObject* InSubobject, UObject* InTemplateSubobject) -> void
+        {
+            if (ck::Is_NOT_Valid(InSubobject) || ck::Is_NOT_Valid(InTemplateSubobject))
+            { return; }
+
+            if (InSubobject == InTemplateSubobject || InSubobject->GetClass() != InTemplateSubobject->GetClass())
+            { return; }
+
+            if (InSubobject->GetOuter() != InObject)
+            { return; }
+
+            Request_ResetToArchetype(InSubobject, InTemplateSubobject);
+        };
+
+        for (auto* Property = InObject->GetClass()->PropertyLink;
+             ck::IsValid(Property);
+             Property = Property->PropertyLinkNext)
+        {
+            if (const auto* ObjectProp = CastField<FObjectPropertyBase>(Property);
+                ObjectProp != nullptr && ObjectProp->HasAnyPropertyFlags(CPF_PersistentInstance))
+            {
+                for (auto ArrayIndex = 0; ArrayIndex < ObjectProp->ArrayDim; ++ArrayIndex)
+                {
+                    ResetMatchedSubobject(
+                        ObjectProp->GetObjectPropertyValue_InContainer(InObject, ArrayIndex),
+                        ObjectProp->GetObjectPropertyValue_InContainer(InArchetype, ArrayIndex));
+                }
+                continue;
+            }
+
+            if (const auto* ArrayProp = CastField<FArrayProperty>(Property))
+            {
+                const auto* InnerObjectProp = CastField<FObjectPropertyBase>(ArrayProp->Inner);
+
+                if (InnerObjectProp == nullptr || NOT InnerObjectProp->HasAnyPropertyFlags(CPF_PersistentInstance))
+                { continue; }
+
+                auto InstanceArray = FScriptArrayHelper{ArrayProp, ArrayProp->ContainerPtrToValuePtr<void>(InObject)};
+                auto TemplateArray = FScriptArrayHelper{ArrayProp, ArrayProp->ContainerPtrToValuePtr<void>(const_cast<UObject*>(InArchetype))};
+
+                const auto NumSharedElements = FMath::Min(InstanceArray.Num(), TemplateArray.Num());
+
+                for (auto Index = 0; Index < NumSharedElements; ++Index)
+                {
+                    ResetMatchedSubobject(
+                        InnerObjectProp->GetObjectPropertyValue(InstanceArray.GetRawPtr(Index)),
+                        InnerObjectProp->GetObjectPropertyValue(TemplateArray.GetRawPtr(Index)));
+                }
+            }
+        }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -385,11 +548,15 @@ auto
     {
         for (auto Index = InArray.Num() - 1; Index >= 0; --Index)
         {
-            if (ck::IsValid(InArray[Index].Get()))
+            auto* Slot = InArray[Index].Get();
+
+            if (ck::IsValid(Slot))
             { continue; }
 
-            if (InRemoveFromReverseMap)
-            { _InstanceToPool.Remove(FObjectKey{InArray[Index].Get()}); }
+            // once GC purges the slot to null the original key is unrecoverable here — the post-GC
+            // sweep (DoSweep_StaleAfterGC) prunes those reverse-map entries by dead-key resolve
+            if (InRemoveFromReverseMap && Slot != nullptr)
+            { _InstanceToPool.Remove(FObjectKey{Slot}); }
 
             InArray.RemoveAtSwap(Index, EAllowShrinking::No);
             --InPool._NumLiveInstances;
@@ -400,6 +567,44 @@ auto
     constexpr auto InUseSlotsHaveReverseEntry = true;
     SweepArray(InPool._FreeObjects, FreeSlotsHaveNoReverseEntry);
     SweepArray(InPool._InUseObjects, InUseSlotsHaveReverseEntry);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_ObjectPooling_Subsystem_UE::
+    DoSweep_StaleAfterGC()
+    -> void
+{
+    for (auto PoolIt = _Pools.CreateIterator(); PoolIt; ++PoolIt)
+    {
+        auto& Pool = PoolIt->Value;
+
+        DoSweep_NullSlots(Pool);
+
+        // zombie pool: its class or archetype died (BP recompile, editor-preview churn) — no future
+        // acquire can ever match its key again. Only drop it once nothing is in use: dropping the
+        // state would unpin in-use instances that holders still observe weakly
+        if ((ck::Is_NOT_Valid(Pool._Class.Get()) || ck::Is_NOT_Valid(Pool._Archetype.Get()))
+            && Pool._InUseObjects.IsEmpty())
+        {
+            ck::core::Verbose(TEXT("Dropping zombie ObjectPool (class [{}], archetype [{}] — key died)"),
+                Pool._Class.Get(), Pool._Archetype.Get());
+            PoolIt.RemoveCurrent();
+        }
+    }
+
+    for (auto It = _InstanceToPool.CreateIterator(); It; ++It)
+    {
+        if (It->Key.ResolveObjectPtr() == nullptr)
+        { It.RemoveCurrent(); }
+    }
+
+    for (auto It = _PinnedUnique.CreateIterator(); It; ++It)
+    {
+        if (ck::Is_NOT_Valid(It->Get()))
+        { It.RemoveCurrent(); }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -239,15 +239,27 @@ auto
         UObject* InObject)
     -> ECk_SucceededFailed
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Invalid Object supplied to TryReleaseToPool"))
+    CK_ENSURE_IF_NOT(InObject != nullptr, TEXT("Invalid (NULL) Object supplied to TryReleaseToPool"))
     { return ECk_SucceededFailed::Failed; }
 
     const auto& World = InObject->GetWorld();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(World),
-        TEXT("Could not resolve a World from [{}] — only ObjectPooling-managed objects (outered to their "
-             "world) can be released to a pool"), InObject)
-    { return ECk_SucceededFailed::Failed; }
+    if (ck::Is_NOT_Valid(World))
+    {
+        // an already-destroyed object may resolve no world (destroy-then-release ordering) —
+        // release is fire-and-forget, so this stays benign; the subsystem's post-GC sweep
+        // reconciles any tracking the dead object left behind
+        if (ck::Is_NOT_Valid(InObject))
+        {
+            ck::core::Verbose(TEXT("TryReleaseToPool: [{}] is already destroyed and resolves no World — nothing to release"), InObject);
+            return ECk_SucceededFailed::Failed;
+        }
+
+        CK_TRIGGER_ENSURE(
+            TEXT("Could not resolve a World from [{}] — only ObjectPooling-managed objects (outered to their "
+                 "world) can be released to a pool"), InObject);
+        return ECk_SucceededFailed::Failed;
+    }
 
     auto* Subsystem = World->GetSubsystem<UCk_ObjectPooling_Subsystem_UE>();
 

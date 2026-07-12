@@ -46,13 +46,13 @@ auto
 
     const auto BindKey = TPair<FObjectKey, FName>{InDelegate.GetUObject(), InDelegate.GetFunctionName()};
 
-    if (InParticipant._AcquiredBindKeys.Contains(BindKey))
+    if (InParticipant._AcquiredBindHandles.Contains(BindKey))
     { return InParticipant; }
 
-    InParticipant._AcquiredBindKeys.Add(BindKey);
-    InParticipant._OnAcquiredFromPool.AddUFunction(
+    const auto BindHandle = InParticipant._OnAcquiredFromPool.AddUFunction(
         const_cast<UObject*>(InDelegate.GetUObject()),
         InDelegate.GetFunctionName());
+    InParticipant._AcquiredBindHandles.Add(BindKey, BindHandle);
 
     return InParticipant;
 }
@@ -66,14 +66,12 @@ auto
         const FCk_Delegate_ObjectPoolingParticipant_OnAcquired& InDelegate)
     -> FCk_Handle_ObjectPoolingParticipant
 {
-    const auto* BoundObject = InDelegate.GetUObject();
+    const auto BindKey = TPair<FObjectKey, FName>{InDelegate.GetUObject(), InDelegate.GetFunctionName()};
 
-    InParticipant._OnAcquiredFromPool.RemoveAll(BoundObject);
-
-    for (auto It = InParticipant._AcquiredBindKeys.CreateIterator(); It; ++It)
+    if (auto BindHandle = FDelegateHandle{};
+        InParticipant._AcquiredBindHandles.RemoveAndCopyValue(BindKey, BindHandle))
     {
-        if (It->Key == FObjectKey{BoundObject})
-        { It.RemoveCurrent(); }
+        InParticipant._OnAcquiredFromPool.Remove(BindHandle);
     }
 
     return InParticipant;
@@ -94,13 +92,13 @@ auto
 
     const auto BindKey = TPair<FObjectKey, FName>{InDelegate.GetUObject(), InDelegate.GetFunctionName()};
 
-    if (InParticipant._ReleasedBindKeys.Contains(BindKey))
+    if (InParticipant._ReleasedBindHandles.Contains(BindKey))
     { return InParticipant; }
 
-    InParticipant._ReleasedBindKeys.Add(BindKey);
-    InParticipant._OnReleasedToPool.AddUFunction(
+    const auto BindHandle = InParticipant._OnReleasedToPool.AddUFunction(
         const_cast<UObject*>(InDelegate.GetUObject()),
         InDelegate.GetFunctionName());
+    InParticipant._ReleasedBindHandles.Add(BindKey, BindHandle);
 
     return InParticipant;
 }
@@ -114,14 +112,12 @@ auto
         const FCk_Delegate_ObjectPoolingParticipant_OnReleased& InDelegate)
     -> FCk_Handle_ObjectPoolingParticipant
 {
-    const auto* BoundObject = InDelegate.GetUObject();
+    const auto BindKey = TPair<FObjectKey, FName>{InDelegate.GetUObject(), InDelegate.GetFunctionName()};
 
-    InParticipant._OnReleasedToPool.RemoveAll(BoundObject);
-
-    for (auto It = InParticipant._ReleasedBindKeys.CreateIterator(); It; ++It)
+    if (auto BindHandle = FDelegateHandle{};
+        InParticipant._ReleasedBindHandles.RemoveAndCopyValue(BindKey, BindHandle))
     {
-        if (It->Key == FObjectKey{BoundObject})
-        { It.RemoveCurrent(); }
+        InParticipant._OnReleasedToPool.Remove(BindHandle);
     }
 
     return InParticipant;
@@ -142,15 +138,15 @@ auto
     InParticipant._OnAcquiredFromPool.RemoveAll(InBoundObject);
     InParticipant._OnReleasedToPool.RemoveAll(InBoundObject);
 
-    for (auto It = InParticipant._AcquiredBindKeys.CreateIterator(); It; ++It)
+    for (auto It = InParticipant._AcquiredBindHandles.CreateIterator(); It; ++It)
     {
-        if (It->Key == FObjectKey{InBoundObject})
+        if (It->Key.Key == FObjectKey{InBoundObject})
         { It.RemoveCurrent(); }
     }
 
-    for (auto It = InParticipant._ReleasedBindKeys.CreateIterator(); It; ++It)
+    for (auto It = InParticipant._ReleasedBindHandles.CreateIterator(); It; ++It)
     {
-        if (It->Key == FObjectKey{InBoundObject})
+        if (It->Key.Key == FObjectKey{InBoundObject})
         { It.RemoveCurrent(); }
     }
 }
