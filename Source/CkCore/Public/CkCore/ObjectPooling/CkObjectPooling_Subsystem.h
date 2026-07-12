@@ -158,6 +158,18 @@ public:
     Get_IsTrackedObject(
         const UObject* InObject) const -> bool;
 
+    // GC-equivalence for cross-object subscriptions: a bind site (e.g. the ECS signal Bind funnel)
+    // registers a disconnect closure keyed on the tracked object its delegate targets; release runs
+    // and drops the object's hooks so no subscription outlives the logical life — the same contract
+    // the timer/latent-action quiesce provides. Pre-pooling, GC gave this for free (a dead object's
+    // delegates compare unequal to any live re-bind); a parked instance keeps its pointer identity,
+    // so without this its bindings on longer-lived entities leak into the next vend (stale delivery
+    // + duplicate-signature rejection of the re-bind). False (and no-op) for untracked objects
+    auto
+    TryRegisterReleaseQuiesceHook(
+        const UObject* InBoundObject,
+        TFunction<void()> InHook) -> bool;
+
 public:
     // The recycle reset: copy every reflected property from the archetype, skipping
     // FCk_Handle_ObjectPoolingParticipant properties (bound delegates survive), then re-instance
@@ -206,6 +218,10 @@ private:
 
     // reverse lookup for release (instances pinned by the pool states, not this map)
     TMap<FObjectKey, FCk_ObjectPooling_PoolKey> _InstanceToPool;
+
+    // release-quiesce hooks keyed by tracked object; run + cleared by DoQuiesce_ReleasedObject,
+    // pruned for stolen (externally-destroyed) instances by DoSweep_StaleAfterGC
+    TMap<FObjectKey, TArray<TFunction<void()>>> _ReleaseQuiesceHooks;
 
     // set by the post-GC callback, consumed on the next Tick (GC callbacks must stay cheap)
     bool _StaleSweepPending = false;
