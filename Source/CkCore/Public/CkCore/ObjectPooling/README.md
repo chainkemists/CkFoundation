@@ -33,8 +33,10 @@ There is **no** per-instance "can be pooled" veto. A class that must never recyc
 - **Query/tooling:** `Get_IsPoolTrackedObject(Object)`, `Get_ObjectPoolStats(WCO, Class, Archetype)`;
   subsystem-direct `ForEach_Pool`, `Get_PoolStats`, `Get_NumPinnedUnique`, and the public
   `AcquireFromPool` / `TryReleaseToPool` for code that already holds the subsystem.
-- **Config precedence:** explicit acquire-site params → per-class Project Settings → built-in
-  defaults (read once at pool creation).
+- **Config precedence:** a per-class Project Settings entry OVERRIDES the acquire-site params when
+  that class's Recycle pool is created (read once, not live-reactive); no entry → the acquire-site
+  params apply as-is. `DestroyOnRelease` acquires never create a pool, so settings never touch them
+  — force-new is decided at the call site (for EntityScripts: by the asset's instancing policy).
 
 ## Participant opt-in — `FCk_Handle_ObjectPoolingParticipant`
 
@@ -55,6 +57,33 @@ spawn/destroy cycles (pool config in the CDO's `_PoolParams`); plain `InstancedP
 pinned-unique (DestroyOnRelease). Both vend through this subsystem; `EndPlay` releases.
 `Construct`/`BeginPlay` re-run per acquire — pooling saves the `NewObject` + property-init cost, not
 feature composition.
+
+## Steal semantics & lifecycle edges (everything stays benign)
+
+The subsystem never fights external destruction — "dev does not care whether the object is pooled"
+also means teardown code may destroy or release in any order:
+
+- **External destroy of a tracked instance ("steal")** — GC nulls the pinned slot; a post-GC sweep
+  (plus a lazy per-acquire sweep) drops dead slots, reverse-map entries, pinned-unique entries, and
+  zombie pools whose class/archetype died. Counts stay honest.
+- **Destroy-then-release** — `TryReleaseToPool` on an already-destroyed object is a benign no-op
+  (`Failed`, Verbose log) that reconciles tracking immediately. Only a NULL argument ensures.
+- **Double release** — the second call is a benign no-op (the instance is no longer tracked as
+  in-use).
+- **Release quiesces like death** — releasing a tracked instance clears its pending world timers
+  and latent actions (the `UActorComponent::EndPlay` pair). Pre-pooling, GC of the dead instance
+  silenced those for free; pooling keeps the instance alive, so without this a lingering
+  `SetTimer` would fire post-release against dead associations.
+- **Recycled ≠ leaked native state** — the recycle reset covers REFLECTED properties only (plus
+  re-instancing of `Instanced` subobjects so the recycled instance never aliases the archetype's).
+  Non-reflected native members survive recycling by design — the participant handle relies on
+  exactly this; any other native-state class must quiesce itself via `OnReleasedToPool`.
+
+## World coverage
+
+The subsystem exists in `Game`, `PIE`, **and `Editor`** worlds — the editor ECS world spawns
+EntityScripts/components through the same pooled path, and those instances need the subsystem pin
+as their GC root exactly like runtime ones.
 
 ## When NOT to pool
 
