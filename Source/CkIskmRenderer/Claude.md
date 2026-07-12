@@ -18,7 +18,7 @@
 (LoadingPhase `PostConfigInit`) so the VF type registers before the engine seals its vertex-factory list; the rest
 (proxy, component, AnimCollection GPU upload) stays in `CkIskmRenderer` (Default).
 
-**Depends on:** `Core,CoreUObject,Engine,GameplayTags,AnimGraphRuntime,CkCore,CkEcs,CkEcsExt,CkLabel,CkLog,CkGraphics,CkProvider,CkRecord,CkSettings,CkAnimation,CkPhysics`.
+**Depends on:** `Core,CoreUObject,Engine,GameplayTags,AnimGraphRuntime,CkCore,CkEcs,CkEcsExt,CkLabel,CkLog,CkGraphics,CkProvider,CkRecord,CkSettings,CkAnimation,CkPhysics,CkUsf`.
 
 **Used by:** Any feature that needs animated skeletal entities without per-actor overhead — NPCs, crowds, pawns spawned via ECS rather than `AActor`.
 
@@ -30,6 +30,12 @@
 - `UCk_Utils_IskmProxy_UE::Add(InOwner, InParams)` — add a per-entity proxy. Allocates a `USkeletalMeshComponent` ("BaseSKMC") on the manager actor.
 - `UCk_Utils_IskmProxy_UE::Request_*` — animation playback, montage, ragdoll, outfit, custom data.
 - `UCk_Utils_IskmProxy_UE::BindTo_OnAnimationFinished/OnAnimationNotify/OnMontageFinished` — ECS signals fired by the bridging `UCk_IskmNotify_AnimInstance`.
+- **Entity-level outline (Plan-1):** driven by `CkUsf`'s `UCk_Utils_Usf_Outline_UE::Request_ApplyOutline(Handle, Preset, Scope)`.
+  Sets Custom Depth/Stencil on the proxy's BaseSKMC **and** every outfit submesh, re-asserted per frame so submeshes
+  attached later inherit it. Test getter: `UCk_Utils_IskmProxy_UE::Get_IsOutlineApplied`.
+- **Member-level outline (Plan-2, batched):** `UCk_Utils_IskmBatched_UE::Set_CrowdMemberOutline/Clear_CrowdMemberOutline/
+  Get_CrowdMemberOutlinePreset/Get_CrowdOutlinedMemberCount/Get_CrowdOutlineRenderedInstanceCount` — index-based (batched
+  members aren't entities). See *Plan-2 production guide → Outline (highlight cluster)* below.
 
 ---
 
@@ -45,12 +51,17 @@ Mirror of `CkIsmRenderer` — Renderer (shared per-AnimCollection) + Proxy (per-
 2. Don't create your own SKMC — always use `Add(...)` to allocate one from the manager pool.
 3. Don't replicate animation state from this module — the caller (StateMachine, gameplay processor) replicates *its* state and re-issues `Request_*` on remotes. Recommended pattern: state machine replicates its current state enum, and on `OnRep_State` re-issues `Request_PlayAnimation` / `Request_PlayMontage`.
 4. AnimBP authors **must** derive their AnimInstance class from `UCk_IskmNotify_AnimInstance` for `OnAnimationNotify` / `OnMontageFinished` signals to fire on those entities. The Setup processor logs a warning when it detects a non-derived class.
+5. Don't skip the unconditional Custom Depth/Stencil clear in `Release_BaseSKMC` — a pooled SKMC must never carry
+   outline state to its next borrower, regardless of outline-processor bookkeeping order (see *Notes* below).
 
 ---
 
 ## Notes
 
 - `Add(InOwner, InRendererData)` calls `LoadSynchronous` on the Renderer PDA's `_DefaultAnimInstanceClass` (a soft class ref) on first use — this can cause a brief hitch the first time an entity is added against a fresh Renderer PDA. Pre-warm by issuing the first `Add` outside a hot path (e.g. during level setup).
+- `Release_BaseSKMC` unconditionally clears Custom Depth + stencil value before returning a SKMC to the pool. This is
+  pool hygiene, not outline bookkeeping — even if the outline EndPlay processor ran out of order or never ran, the
+  next borrower must never inherit a stale silhouette.
 
 ---
 
@@ -111,6 +122,19 @@ recomputes bounds. Rendering is client-local: no replication, and all ticking is
 **Tuning knobs:** tile size (`Initialize(_, TileSize)`; ~2000-2500cm — smaller = better culling granularity, more
 draw batches), promote/demote distances + cap in the flip driver, `_SampleFrequency` on the AnimCollection.
 
+**Outline (highlight cluster).** `Set_CrowdMemberOutline(i, preset)` stands up one custom-depth-only
+`UCk_Iskm_BatchedClusterComponent` ("highlight cluster") per (crowd, preset) — same flags as a tile, but it holds only
+the outlined members' mirrored `FInstance` data and is pushed every manager tick alongside the tile clusters, so the
+silhouette tracks the live skinned pose. Membership/visibility changes rebuild it (`RebuildOutlineGroup`); fixed bounds
+= union of outlined members' world positions padded by the animated mesh box + half a tile. Hidden (Plan-1-flipped)
+members are excluded — the flip driver outlines their Plan-1 SKMC via `CkUsf`'s entity API instead. **Gotcha:** unlike
+tile clusters (whose local bounds box is centered on the component, so component rotation is a no-op), the highlight
+cluster's bounds box is authored in *world* space from the members' actual positions. It **must** use absolute
+location/rotation/scale pinned to identity (`SetUsingAbsoluteLocation/Rotation/Scale(true)` +
+`SetWorldTransform(Identity)`) — if it inherits the crowd actor's transform (e.g. a spawn-time yaw), `CalcBounds`
+rotates the box away from where the instances actually render and the cluster frustum-culls out at some view angles
+even though the members are on screen.
+
 **Scoped follow-up (documented, not implemented):** per-member sequence **crossfade** (shader 2-frame lerp).
 Requires widening per-instance custom data (floats [0..3] are all taken: curFrame/prevFrame/userA/userB — a blend
 alpha + held source frame need `NumCustomDataFloats=8` or repacking), a blend-state advance in the manager tick,
@@ -125,3 +149,5 @@ the standard crowd tradeoff (Skelot's transitions are likewise opt-in).
 - `CkIsmRenderer/Claude.md` — sibling module for instanced static meshes; same shared/per-entity split.
 - `CkAnimation/Claude.md` — `FCk_Handle_AnimAsset` for per-entity anim asset records (orthogonal — IskmRenderer is the renderer; AnimAsset is per-entity anim metadata that may drive what gets played).
 - `CkStateMachine/Claude.md` — likely caller for `Request_PlayAnimation`.
+- `CkUsf/Claude.md` — entity-level outline request API + `DESIGN_EntityOutlines.md` (full outline architecture across
+  ISM/ISKM Plan-1/ISKM Plan-2).
