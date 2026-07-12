@@ -2,6 +2,7 @@
 
 #include "CkAssetExporter/AssetAction/CkBehaviorTreeExporter_AssetAction.h"
 #include "CkAssetExporter/AssetAction/CkBlueprintExporter_AssetAction.h"
+#include "CkAssetExporter/AssetAction/CkCascadeExporter_AssetAction.h"
 #include "CkAssetExporter/AssetAction/CkDataAssetExporter_AssetAction.h"
 #include "CkAssetExporter/AssetAction/CkEQSExporter_AssetAction.h"
 #include "CkAssetExporter/AssetAction/CkNiagaraExporter_AssetAction.h"
@@ -9,12 +10,28 @@
 #include "CkAssetExporter/AssetAction/CkUserDefinedEnumExporter_AssetAction.h"
 #include "CkAssetExporter/AssetAction/CkUserDefinedStructExporter_AssetAction.h"
 #include "CkAssetExporter/ExporterTab/SCkAssetExporterTab.h"
+#include "CkAssetExporter/VfxCorpusExporter/CkVfxCorpusExporter.h"
 
 #include <ToolMenus.h>
 #include <WorkspaceMenuStructure.h>
 #include <WorkspaceMenuStructureModule.h>
 
 #define LOCTEXT_NAMESPACE "FCkAssetExporterModule"
+
+// --------------------------------------------------------------------------------------------------------------------
+// Editor-console entry point for the corpus batch export (the automation test Ck.AssetExporter.ExportVfxCorpus is
+// the headless equivalent).
+
+namespace ck::asset_exporter
+{
+    static FAutoConsoleCommand ExportVfxCorpus_ConsoleCommand{
+        TEXT("Ck.AssetExporter.ExportVfxCorpus"),
+        TEXT("Exports every Niagara + Cascade particle system under /Game (recipes, materials, textures) into Saved/CkVfxCorpus"),
+        FConsoleCommandDelegate::CreateLambda([]() -> void
+        {
+            FCk_VfxCorpusExporter::ExportCorpus({ TEXT("/Game") }, FCk_VfxCorpusExporter::Get_DefaultCorpusRoot());
+        })};
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -46,6 +63,7 @@ auto
 {
     ck::asset_exporter::RegisterBehaviorTreeContextMenu();
     ck::asset_exporter::RegisterBlueprintContextMenu();
+    ck::asset_exporter::RegisterCascadeContextMenu();
     ck::asset_exporter::RegisterDataAssetContextMenu();
     ck::asset_exporter::RegisterEQSContextMenu();
     ck::asset_exporter::RegisterNiagaraContextMenu();

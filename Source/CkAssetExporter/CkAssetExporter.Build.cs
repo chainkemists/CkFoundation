@@ -38,6 +38,9 @@ public class CkAssetExporter : CkModuleRules
 
             "Niagara",
             "NiagaraEditor",
+            "ImageCore",
+            "RenderCore",
+            "RHI",
 
             "CkCore",
             "CkEcs",
