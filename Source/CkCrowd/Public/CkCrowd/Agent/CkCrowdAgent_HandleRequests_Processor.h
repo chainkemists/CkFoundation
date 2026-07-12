@@ -19,13 +19,15 @@ namespace ck
     //   CkNavigation lands the FFragment_Nav_PathResult.
     // - Stop: zero _DesiredVelocity, transition Walking/PathPending → Idle. Steering's view filter
     //   (which also requires Walking) stops firing; bridge writes zero velocity → agent halts.
+    // - SetMaxSpeed: write the params fragment's _MaxSpeed (read per-frame by the steering chain),
+    //   so gait changes (sprint/flee) apply from the next tick without disturbing the active path.
     //
     // Group: FGroup_Gameplay (early in the frame so the path request is enqueued before
     // FProcessor_Nav_HandleRequests runs in FGroup_Gameplay's downstream group).
     class CKCROWD_API FProcessor_CrowdAgent_HandleRequests : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_HandleRequests,
             FCk_Handle_CrowdAgent,
-            ck::TReadOnly<FFragment_CrowdAgent_Params>,
+            ck::TReadWrite<FFragment_CrowdAgent_Params>,
             ck::TReadWrite<FFragment_CrowdAgent_PathFollow>,
             ck::TReadWrite<FFragment_CrowdAgent_DesiredVelocity>,
             ck::TReadWrite<FFragment_CrowdAgent_MoveRequests>,
@@ -43,7 +45,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             FFragment_CrowdAgent_MoveRequests& InRequests) const -> void;
@@ -79,6 +81,14 @@ namespace ck
         static auto
         DoClearBlockedState(
             FCk_Handle_CrowdAgent& InAgent) -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            FFragment_CrowdAgent_DesiredVelocity& InDesired,
+            const FCk_Request_CrowdAgent_SetMaxSpeed& InRequest) -> void;
     };
 }
 
