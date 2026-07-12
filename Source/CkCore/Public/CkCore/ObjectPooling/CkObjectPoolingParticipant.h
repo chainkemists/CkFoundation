@@ -41,9 +41,10 @@ private:
     FCk_Delegate_ObjectPoolingParticipant_OnAcquired_MC _OnAcquiredFromPool;
     FCk_Delegate_ObjectPoolingParticipant_OnReleased_MC _OnReleasedToPool;
 
-    // idempotency ledgers — re-bind of an already-bound (object, function) is a no-op
-    TSet<TPair<FObjectKey, FName>> _AcquiredBindKeys;
-    TSet<TPair<FObjectKey, FName>> _ReleasedBindKeys;
+    // idempotency ledgers — re-bind of an already-bound (object, function) is a no-op; the stored
+    // handle lets Unbind remove exactly that bind (not every bind the object owns)
+    TMap<TPair<FObjectKey, FName>, FDelegateHandle> _AcquiredBindHandles;
+    TMap<TPair<FObjectKey, FName>, FDelegateHandle> _ReleasedBindHandles;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

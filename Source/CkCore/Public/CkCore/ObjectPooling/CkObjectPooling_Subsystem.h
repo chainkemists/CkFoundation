@@ -112,7 +112,15 @@ public:
     CK_GENERATED_BODY(UCk_ObjectPooling_Subsystem_UE);
 
 public:
+    auto Initialize(FSubsystemCollectionBase& InCollection) -> void override;
+    auto Deinitialize() -> void override;
     auto Tick(float InDeltaTime) -> void override;
+
+protected:
+    // the editor ECS world (UCk_EditorEcsWorld_Subsystem_UE) vends EntityScripts/components through
+    // the pooled path too — without this subsystem those instances would fall back to caller-owned
+    // creates with only weak holders (no GC root) and editor GC would collect them mid-preview
+    auto DoesSupportWorldType(const EWorldType::Type InWorldType) const -> bool override;
 
 public:
     // DestroyOnRelease creates honor InOuter (a component may need an actor outer for GetOwner()-
@@ -150,6 +158,17 @@ public:
     Get_IsTrackedObject(
         const UObject* InObject) const -> bool;
 
+public:
+    // The recycle reset: copy every reflected property from the archetype, skipping
+    // FCk_Handle_ObjectPoolingParticipant properties (bound delegates survive), then re-instance
+    // instanced subobjects so the recycled object owns fresh copies instead of aliasing the
+    // archetype's (a write through an aliased subobject would corrupt the CDO for every future
+    // instance). Public so the contract is directly testable; acquire calls it on every recycle
+    static auto
+    Request_ResetToArchetype(
+        UObject* InObject,
+        const UObject* InArchetype) -> void;
+
 private:
     auto
     DoGetOrCreate_Pool(
@@ -161,16 +180,21 @@ private:
     DoSpawn_Instance(
         FCk_ObjectPooling_PoolState& InPool) -> UObject*;
 
-    // reset to the archetype, skipping FCk_Handle_ObjectPoolingParticipant properties
-    static auto
-    DoReset_ToArchetype(
-        UObject* InObject,
-        const UObject* InArchetype) -> void;
-
     // drop GC-nulled slots (steal) + reconcile the live count; lazy, not per-tick
     auto
     DoSweep_NullSlots(
         FCk_ObjectPooling_PoolState& InPool) -> void;
+
+    // post-GC reconciliation for externally-destroyed (stolen) instances: prune dead reverse-map
+    // entries, dead pinned-unique entries, and zombie pools whose class/archetype died
+    auto
+    DoSweep_StaleAfterGC() -> void;
+
+    // released == dead as far as the world is concerned: clear the object's pending world timers +
+    // latent actions so nothing fires against its ended associations (pre-pooling GC gave this for free)
+    auto
+    DoQuiesce_ReleasedObject(
+        UObject* InObject) -> void;
 
 private:
     UPROPERTY(Transient)
@@ -182,6 +206,11 @@ private:
 
     // reverse lookup for release (instances pinned by the pool states, not this map)
     TMap<FObjectKey, FCk_ObjectPooling_PoolKey> _InstanceToPool;
+
+    // set by the post-GC callback, consumed on the next Tick (GC callbacks must stay cheap)
+    bool _StaleSweepPending = false;
+
+    FDelegateHandle _PostGarbageCollectHandle;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
