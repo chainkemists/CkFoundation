@@ -183,6 +183,49 @@ auto
 
 auto
     UCk_Utils_CrowdAgent_UE::
+    Request_SetMaxSpeed(
+        FCk_Handle_CrowdAgent& InAgent,
+        float InMaxSpeed)
+    -> FCk_Handle_CrowdAgent
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InAgent),
+        TEXT("Invalid CrowdAgent handle [{}] passed to Request_SetMaxSpeed"), InAgent)
+    { return InAgent; }
+
+    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InAgent),
+        TEXT("Request_SetMaxSpeed on CrowdAgent [{}] dropped — caller does not have authority. "
+             "Steering is server-only."), InAgent)
+    { return InAgent; }
+
+    CK_ENSURE_IF_NOT(InMaxSpeed >= 1.0f,
+        TEXT("Request_SetMaxSpeed on CrowdAgent [{}] dropped — MaxSpeed [{}] must be >= 1"),
+        InAgent, InMaxSpeed)
+    { return InAgent; }
+
+    InAgent.AddOrGet<ck::FFragment_CrowdAgent_MoveRequests>()._Requests.Emplace(
+        FCk_Request_CrowdAgent_SetMaxSpeed{InMaxSpeed});
+    return InAgent;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    Get_MaxSpeed(
+        const FCk_Handle_CrowdAgent& InAgent)
+    -> float
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InAgent),
+        TEXT("Invalid CrowdAgent handle [{}] passed to Get_MaxSpeed"), InAgent)
+    { return 0.0f; }
+
+    return InAgent.Get<ck::FFragment_CrowdAgent_Params>().Get_MaxSpeed();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
     BindTo_OnGoalReached(
         FCk_Handle_CrowdAgent& InAgent,
         const FCk_Delegate_CrowdAgent_OnGoalReached& InDelegate,

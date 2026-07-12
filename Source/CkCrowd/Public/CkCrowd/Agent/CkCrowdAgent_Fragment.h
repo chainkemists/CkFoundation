@@ -34,7 +34,8 @@ namespace ck
         using MoveToRequestType       = FCk_Request_CrowdAgent_MoveTo;
         using FollowTargetRequestType = FCk_Request_CrowdAgent_FollowTarget;
         using StopRequestType         = FCk_Request_CrowdAgent_Stop;
-        using RequestType             = std::variant<MoveToRequestType, FollowTargetRequestType, StopRequestType>;
+        using SetMaxSpeedRequestType  = FCk_Request_CrowdAgent_SetMaxSpeed;
+        using RequestType             = std::variant<MoveToRequestType, FollowTargetRequestType, StopRequestType, SetMaxSpeedRequestType>;
 
     private:
         TArray<RequestType> _Requests;
