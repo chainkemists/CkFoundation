@@ -361,6 +361,18 @@ auto
     // test/gameplay runs next. Release therefore quiesces exactly like death did (the same pair
     // UActorComponent::EndPlay clears). Only TRACKED objects get this — release on an untracked
     // object is a no-op and must not side-effect timers we don't own
+
+    if (auto* Hooks = _ReleaseQuiesceHooks.Find(FObjectKey{InObject}))
+    {
+        // move out first — a hook that re-enters (an unbind can drop a delegate fragment and
+        // cascade) must not mutate the array mid-iteration
+        const auto LocalHooks = MoveTemp(*Hooks);
+        _ReleaseQuiesceHooks.Remove(FObjectKey{InObject});
+
+        for (const auto& Hook : LocalHooks)
+        { Hook(); }
+    }
+
     auto* World = GetWorld();
 
     if (ck::Is_NOT_Valid(World))
@@ -368,6 +380,22 @@ auto
 
     World->GetTimerManager().ClearAllTimersForObject(InObject);
     World->GetLatentActionManager().RemoveActionsForObject(InObject);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_ObjectPooling_Subsystem_UE::
+    TryRegisterReleaseQuiesceHook(
+        const UObject* InBoundObject,
+        TFunction<void()> InHook)
+    -> bool
+{
+    if (NOT Get_IsTrackedObject(InBoundObject))
+    { return false; }
+
+    _ReleaseQuiesceHooks.FindOrAdd(FObjectKey{InBoundObject}).Emplace(MoveTemp(InHook));
+    return true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -604,6 +632,14 @@ auto
     for (auto It = _PinnedUnique.CreateIterator(); It; ++It)
     {
         if (ck::Is_NOT_Valid(It->Get()))
+        { It.RemoveCurrent(); }
+    }
+
+    // hooks of a stolen instance never ran (no release) — the dead object's bindings compare
+    // unequal to any live re-bind, which is exactly pre-pooling GC semantics, so just drop them
+    for (auto It = _ReleaseQuiesceHooks.CreateIterator(); It; ++It)
+    {
+        if (It->Key.ResolveObjectPtr() == nullptr)
         { It.RemoveCurrent(); }
     }
 }
