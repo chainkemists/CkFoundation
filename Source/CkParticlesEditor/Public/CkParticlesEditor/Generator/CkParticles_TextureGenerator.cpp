@@ -154,6 +154,29 @@ namespace ck::particles_editor::TexGenLocal
         return FLinearColor(I, I, I, I);
     }
 
+    // Sweep streak (grayscale): the anime-slash carrier texture — bright leading head near V=0, wispy turbulent
+    // body, fading tail (modeled on marketplace T_VFX_Slash_01). Panned along V over a sweep mesh by the
+    // SweepErode master material, the head appears to travel along the arc. RGB == A.
+    static auto Px_SweepStreak(float U, float V) -> FLinearColor
+    {
+        const float Hx   = FMath::Pow(Saturate(1.0f - FMath::Abs(U - 0.5f) * 1.9f), 1.1f);
+        const float Head = FMath::Pow(Saturate(1.0f - FMath::Abs(V - 0.10f) / 0.14f), 2.0f);
+        const float Body = Smooth(0.02f, 0.18f, V) * (1.0f - Smooth(0.40f, 0.85f, V));
+        const float Wisp = 0.55f + 0.45f * Fbm(U * 5.0f + 3.0f, V * 8.0f + 17.0f, 5, 5);
+        const float I = Saturate((Head * 1.25f + Body * 0.55f * Wisp) * Hx);
+        return FLinearColor(I, I, I, I);
+    }
+
+    // Tileable soft noise (grayscale): smooth billow/cell blend for dissolve thresholds and UV distortion
+    // (modeled on marketplace T_VFX_Noise_02). Wraps seamlessly. RGB == A.
+    static auto Px_TileNoise(float U, float V) -> FLinearColor
+    {
+        const float Billow = Fbm(U * 5.0f, V * 5.0f, 4, 5);
+        const float Cells  = Saturate(Voronoi(U * 5.0f, V * 5.0f, 5) * 0.85f);
+        const float I = Saturate((0.60f * Billow + 0.40f * Cells) * 1.20f - 0.06f);
+        return FLinearColor(I, I, I, I);
+    }
+
     // SDF magic ring (grayscale): crisp anti-aliased ring + faint inner glow. RGB == A.
     static auto Px_Ring(float U, float V) -> FLinearColor
     {
@@ -236,12 +259,14 @@ namespace ck::particles_editor
             else { Log(TEXT("Failed to bake VFX texture: {}"), FString(InName)); }
         };
 
-        BakeOne(TEXT("T_CkParticles_Glow"),     &Px_Glow);
-        BakeOne(TEXT("T_CkParticles_Flare"),    &Px_Flare);
-        BakeOne(TEXT("T_CkParticles_Smoke"),    &Px_Smoke);
-        BakeOne(TEXT("T_CkParticles_Electric"), &Px_Electric);
-        BakeOne(TEXT("T_CkParticles_Streak"),   &Px_Streak);
-        BakeOne(TEXT("T_CkParticles_Ring"),     &Px_Ring);
+        BakeOne(TEXT("T_CkParticles_Glow"),        &Px_Glow);
+        BakeOne(TEXT("T_CkParticles_Flare"),       &Px_Flare);
+        BakeOne(TEXT("T_CkParticles_Smoke"),       &Px_Smoke);
+        BakeOne(TEXT("T_CkParticles_Electric"),    &Px_Electric);
+        BakeOne(TEXT("T_CkParticles_Streak"),      &Px_Streak);
+        BakeOne(TEXT("T_CkParticles_Ring"),        &Px_Ring);
+        BakeOne(TEXT("T_CkParticles_SweepStreak"), &Px_SweepStreak);
+        BakeOne(TEXT("T_CkParticles_TileNoise"),   &Px_TileNoise);
 
         Log(TEXT("Generated {}/{} CkParticles VFX textures under {} (open them to judge — then I wire the master material)."),
             FString::FromInt(Ok), FString::FromInt(Total), FString(TexDir));

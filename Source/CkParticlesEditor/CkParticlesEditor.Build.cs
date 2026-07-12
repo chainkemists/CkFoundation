@@ -30,6 +30,9 @@ public class CkParticlesEditor : CkModuleRules
 
             "MaterialEditor",
 
+            "MeshDescription",
+            "StaticMeshDescription",
+
             "CkCore",
             "CkLog",
             "CkParticles",
