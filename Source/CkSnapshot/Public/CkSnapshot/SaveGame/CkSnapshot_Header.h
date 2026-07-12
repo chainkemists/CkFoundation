@@ -129,6 +129,10 @@ private:
     UPROPERTY() TArray<uint8>               _SpawnParamsBytes;      // FInstancedStruct::Serialize + handle-remap
     UPROPERTY() uint32                      _ContextOwnerSavedId = 0xFFFFFFFFu;
     UPROPERTY() FString                     _ActorClassPath;        // FFragment_ActorSpawnIntent, if present
+    // World transform captured for a bridged (_ActorClassPath set) RuntimeSpawned entity so the loader spawns the
+    // actor at its saved position ([P3B-F1a] option a — the entity Transform is seeded from the actor at Construct;
+    // hydrating it would be stomped by FProcessor_Transform_SyncFromActor). Identity for non-Transform entities.
+    UPROPERTY() FTransform                  _ActorSpawnTransform;
 
 public:
     CK_PROPERTY(_SavedId);
@@ -141,6 +145,7 @@ public:
     CK_PROPERTY(_SpawnParamsBytes);
     CK_PROPERTY(_ContextOwnerSavedId);
     CK_PROPERTY(_ActorClassPath);
+    CK_PROPERTY(_ActorSpawnTransform);
 };
 
 // One hydration payload: the byte image (tagged-property + handle-remap) a feature's Produce emitted for an entity.
