@@ -14,7 +14,7 @@
 | 3B | PHASE_3B.md | **DONE** (v3 load pipeline live; M2a fixed) | 2026-07-12 | CkF: 78fcdaa8e (retire reconstitution), 36bcdec5d (v3 load pipeline), <docs-this>; CkTests: ce32c65 | GREEN mod casualties: Ck.Snapshot **52 / 43 pass / 9 fail** (--discover-fresh; M2a + V3.InstancedStructDiskSmoke green; all 9 fails are verified Phase-4 casualties — see §Phase-3B DONE) |
 | 4A.1 | PHASE_4A.md | **DONE** (SM redrive→hydration; committed). 4A.2 (N1 discriminator + SpawnerResumes test) DEFERRED ([N1-A]-blocked). | 2026-07-12 | CkF: 705e7d57e (SM hydration); CkTests: 773a4d2 (comment) | GREEN mod casualties+flake: Ck.Snapshot **52/45/7** (both Parity.StateMachine* GREEN, 9→7; 7 = 4B casualties); Ck.StateMachine 24/25 (lone red = documented OwningClientAuth_SubSm flake — passed alone + in Net run); Net 102/99/3 delta-zero (kiosk env-trio only, no new framework Ck.*.Net red) |
 | 4A.2 | PHASE_4A.md | DEFERRED ([N1-A] scope call) | | | |
-| 4B | PHASE_4B.md | NOT STARTED | | | |
+| 4B | PHASE_4B.md | **IN PROGRESS** — client-shaped-Apply pattern validated; **TagSet DONE**. Remaining: Grid + RenderTarget (Fable-designed [P4B-F1]), Attributes/AnimPlan (empty-seed Produce), Inventory×2 (**DEFERRED [INV-A]**), params-mutators, MontagePlayer, AS smoke. | 2026-07-12 | CkF: 5088f5336 (TagSet) | GREEN mod casualties: Ck.Snapshot **52/46/6** (Parity.TagSet_MPReload green, 7→6); Net 102/99/3 delta-zero (kiosk env-trio only) |
 | 5 | PHASE_5.md + VALIDATION.md | NOT STARTED | | | |
 
 ## Unattended execution protocol (set 2026-07-11 by Adam — OVERRIDES the "STOP on divergence" default below)
@@ -345,6 +345,31 @@ rendezvous — everything else compiled first pass). Gate GREEN (Ck.Snapshot 51/
 
 ## Decisions — Fable-agent rulings (unattended-protocol consults)
 
+- **[P4A-D1-Fable] (2026-07-12, 4A.1) — SM registrar fork + full-plan review.** Consulted a read-only Fable agent on the
+  RegisterLazy-vs-RegisterLazyTyped fork (see [P4A-D1] under §Decisions—Phase-4A). Ruled Q1 YES (keep RegisterLazy/no
+  SeedContainer — SeedContainer's sole consumer is the Model-A `FProcessor_Persistence_ReDriveOnRestore` at
+  `CkPersistence_ReDrive_Processor.cpp:65`, JustRestored-gated; net+save use Apply only) + adversarial-reviewed the whole
+  4A.1 edit plan: zero blockers, 5 findings — F1 (echo-suppress-first is load-bearing) + F2 (friend-decl rename) already
+  correct in the diff, F3/F4 comment tightenings applied, F5 (sub-SM state drop) = pre-existing v1 bound. Every claim
+  independently code-verified. Gate green.
+- **[P4B-F1] (2026-07-12, 4B) — the 5 client-shaped-Apply casualties: uniform shell, per-feature body; Inventory×2 → Adam.**
+  Consulted a read-only Fable agent to design the client-shaped-Apply re-author (TagSet/Grid/Inventory×2/RenderTarget).
+  Ruling: uniform SHELL (hydration-scope branch first → authority write → Applied/NotReady, the 4A.1 shape) but per-feature
+  BODY. **TagSet** = direct `Set_Tags` REPLACE + arm `FTag_TagSet_MayRequireReplication` (`Request_AddTags` is UNFAITHFUL —
+  Construct re-seeds default tags → ADD resurrects a runtime-removed tag) — IMPLEMENTED + gate-green this session (`5088f5336`).
+  **Grid** = re-drive `Request_AddPlacement` per entry, ALL occupants resolve first (all-or-nothing NotReady) — but ⚠️ its
+  occupants must be v3-mapped; if the test's occupants are item-style anonymous, Grid folds into [INV-A] (verify the fixture
+  first). **RenderTarget** = transplant the Model-A `FProcessor_RenderTarget_ReplicateOnRestore` body (`CkRenderTarget_Processor.cpp:397-500`)
+  into a static helper, CHILD-keyed, exactly-once repaint (all gates before any mutation); NOT the request path (evidence-forced
+  deviation from PHASE_4B §4B.2, same class as [P4A-D1]); ⚠️ verify the settle Full-pump runs RT Setup before the dispatcher
+  timeout. **Inventory×2** = RECLASSIFIED, DEFER → [INV-A] (items are v3 Rule-5 anonymous; handles-only payload restores
+  nothing; product/architecture fork for Adam). Full per-feature design map (verified anchors) in CONTINUATION_PROMPT_Phase4B.md §6.
+- **[P4B-D1] (executor, 2026-07-12) — TagSet authority write omits the OnTagsChanged broadcast.** Fable's pseudocode mirrored
+  the client drain's diff+broadcast (`CkTagSet_Processor.cpp:156-168`) for symmetry. Omitted it: a save-load RESTORE is not a
+  gameplay change, the parity test asserts tag presence + replication (not the signal), and clients still get the OnTagsChanged
+  pulse via their own SyncReplication drain after the authority re-replicates. Kept the change minimal (Set_Tags REPLACE + arm,
+  no new includes). If an authority-side OnTagsChanged consumer is later shown to need the restore pulse, add it then.
+
 - **[P3B-M2a] (2026-07-12, gate-2→gate-3) — Fable ruling A: M2a red is a test-fixture gap, not a Phase-4 casualty.**
   Consulted a Fable agent (read-only) when gate-2's M2a red fell outside the user's expected-RED set. Ruling: the bridged
   actor-first respawn path does not depend on the N1 discriminator (`bBridged = NOT ActorClassPath.IsEmpty()`,
@@ -570,6 +595,18 @@ value is [N1-A]-blocked and it needs a new BB-style fixture world).
   (BB's `_SpawnStarted`/`WillSpawnCustomization` guards are this shape but must themselves be hydrated). Becomes a
   designer-facing contract line in spec §4.2. Same v1 scope as the old Model-A redrive (not a new limitation).
 
+- **[INV-A] (Adam decision, flagged by Fable [P4B-F1] 2026-07-12) — Inventory×2 save-restore needs a product/architecture
+  call; DEFERRED out of 4B.** `Parity.Inventory{DataOnly,Spatial}_MPReload` cannot be closed by a client-shaped-Apply
+  re-author (the TagSet/Grid pattern) because item entities are v3 provenance **Rule 5 (anonymous scratch, skipped)**: they
+  are built via `UCk_Utils_EntityReplicationDriver_UE::Request_BuildAndReplicate` with a `UCk_InventoryItem_Definition`
+  archetype (`CkItem_Utils.cpp` `Create`), NOT the EntityScript spawn path, so they carry no `FFragment_SpawnRecipe`
+  (`CkSnapshot_CaptureV3.cpp:261-271`) → not captured, not rebuilt. The inventory payload carries only item HANDLES, which
+  remap to nothing on the loading authority. Two forks, both Adam-level: (a) **payload enrichment** — Produce emits per-item
+  re-creation data (definition soft path / CoreInfo+traits + stack count, which is an IntegerAttribute → intersects the
+  Attributes empty-seed workstream); or (b) **item-architecture change** — make items SpawnRecipe-carrying so the loader
+  rebuilds them (net implications). Fable explicitly flagged this for Adam (protocol STOP condition c); do NOT wire an Apply
+  branch against invalid handles. Same class as [N1-A]. **Adam to scope where Inventory save-restore lands** (payload
+  enrichment now vs item-spawn-recipe rearchitecture vs post-campaign).
 - **[B1] — RESOLVED 2026-07-11 by [P1-R1] above.** Original text kept below for the record.
 - **[B1] (2026-07-11, Phase 1) — Plan's "12 ReplicateOnRestore = deletable container re-seeds" is false for 4
   features; where their non-container reconstitution goes is an unmade architecture decision.** REQUIRES a design
@@ -706,3 +743,15 @@ value is [N1-A]-blocked and it needs a new BB-style fixture world).
   ~4 frames (Display-log verified). Commits: CkF `705e7d57e` (SM hydration), `<docs-this>`; CkTests `773a4d2` (comment).
   Nothing pushed. **Phase 4A.1 DONE.** Next: Phase 4B (the 7 remaining casualties + PHASE_4B params-mutators/AS-smoke), then
   4A.2 (N1, [N1-A]-blocked) + Phase 5. See CONTINUATION_PROMPT_Phase4B.md.
+- 2026-07-12 — **Phase 4B STARTED (Opus, same unattended run) — client-shaped-Apply pattern validated; TagSet DONE.** Routed
+  the 5 client-shaped casualties' Apply re-author design to a read-only Fable agent ([P4B-F1]): uniform hydration-scope shell,
+  per-feature body; verified its rulings against code. Implemented + committed **TagSet** (`5088f5336`) — the first client-shaped
+  casualty — via the 4A.1 hydration-scope pattern (direct `Set_Tags` REPLACE + arm `FTag_TagSet_MayRequireReplication`; [P4B-D1]
+  omits the OnTagsChanged broadcast). Gate: Ck.Snapshot **52/46/6** (`Parity.TagSet_MPReload` green, 7→6 casualties, zero
+  regression); Net **102/99/3** delta-zero (kiosk env-trio only, no framework `Ck.*.Net` red — net path byte-identical, branch
+  gated by `FCk_HydrationApplyScope`). **Remaining 4B (handed off, all designed in CONTINUATION_PROMPT_Phase4B.md §6):** Grid
+  (Fable-designed; ⚠️ verify test occupants map first), RenderTarget (transplant ReplicateOnRestore; ⚠️ settle-pump ordering),
+  **Inventory×2 DEFERRED → [INV-A]** (items are v3 Rule-5 anonymous — Adam scope call), Attributes/AnimPlan empty-seed Produce,
+  params-mutators, MontagePlayer, AS smoke. Stopped here at a clean committed increment (TagSet green) with the rest fully
+  designed + handed off — the remaining per-feature work (esp. RenderTarget's transplant + the [INV-A] Adam fork) is better done
+  with fresh context. Nothing pushed.
