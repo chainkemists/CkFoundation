@@ -1,0 +1,50 @@
+// /CkParticles/Behaviors/Behavior_SmokePlume.ush — BehaviorId 12.
+// Rising smoke column recreated from M5VFXVOL2 0_6_smoke + sA NS_Smoke_White (corpus translation sheet):
+// puffs born in a ground disc rise buoyantly with sideways drift and wobble, grow ~7x, and fade through a
+// grey ramp with an ember-warm birth pop. Uses the particle's real lifetime (3-5 s class) — no cycling.
+// Additive material renders smoke as a dim grey glow (the recipes' lit-translucent look is out of scope).
+// Keep the CPU mirror in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+float CkParticles_SmokeSmooth(float e0, float e1, float x)
+{
+    const float s = saturate((x - e0) / (e1 - e0));
+    return s * s * (3.0 - 2.0 * s);
+}
+
+FCkParticles_StageOutput CkParticles_Behavior_SmokePlume(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    const float n = CkParticles_NormalizedAge(In);
+    const float t = In.Age;
+
+    const float r  = 50.0 * sqrt(CkParticles_Rand(In.Seed, 1));
+    const float th = 6.28318530718 * CkParticles_Rand(In.Seed, 2);
+    const float vx = lerp(-75.0, 75.0, CkParticles_Rand(In.Seed, 3)) * 0.35;
+    const float vy = lerp(-25.0, 25.0, CkParticles_Rand(In.Seed, 4)) * 0.35;
+    const float vz = lerp(100.0, 200.0, CkParticles_Rand(In.Seed, 5)) * 0.6;
+
+    const float WobX = 8.0 * sin(1.3 * t + 6.28318530718 * CkParticles_Rand(In.Seed, 6));
+    const float WobY = 8.0 * cos(1.1 * t + 6.28318530718 * CkParticles_Rand(In.Seed, 7));
+
+    O.Position = float3(r * cos(th) + vx * t + WobX, r * sin(th) + vy * t + WobY, 20.0 + vz * t + 6.0 * t * t);
+    O.Velocity = float3(vx, vy, vz + 12.0 * t);
+
+    const float Base = lerp(12.5, 17.5, CkParticles_Rand(In.Seed, 8));
+    O.Size = float2(1.0, 1.0) * Base * (10.0 + 5.0 * saturate(n / 0.1) + 35.0 * n) * 0.35;
+
+    const float g1 = lerp(0.3, 0.164, saturate(2.0 * n));
+    const float g  = lerp(g1, 0.43, saturate(2.0 * n - 1.0));
+    const float A  = 0.57 * CkParticles_SmokeSmooth(0.0, 0.122, n) * (1.0 - CkParticles_SmokeSmooth(0.122, 1.0, n));
+    const float3 Ember = float3(1.0, 0.55, 0.26) * 8.0 * saturate(1.0 - n / 0.15);
+
+    O.Color = float4((float3(g, g, 1.1 * g) + Ember) * A, A);
+
+    // Smoke renderer: translucent SoftSmoke material with per-particle rotation drift + late dissolve.
+    O.VisTag   = 2;
+    O.Rotation = (CkParticles_Rand(In.Seed, 10) - 0.5) * 360.0 + (CkParticles_Rand(In.Seed, 11) - 0.5) * 60.0 * t;
+    O.Dynamic  = float4(saturate(n - 0.35) * 1.3, 0.0, 0.0, 0.0);
+    return O;
+}

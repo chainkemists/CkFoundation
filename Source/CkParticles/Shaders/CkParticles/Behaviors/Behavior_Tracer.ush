@@ -1,0 +1,40 @@
+// /CkParticles/Behaviors/Behavior_Tracer.ush — BehaviorId 11.
+// Bullet tracer recreated from sA NS_BulletTrail_1/_3 + NS_Projectile_Trail_Ribbon (corpus translation sheet):
+// HDR orange trail quads dropping behind the mover plus a backward spark spray with drag and light gravity.
+// The template is LOCAL space, so the "world drop" ribbon technique is approximated by drifting trail quads
+// backward along -X (forward = +X, aim via spawn rotation; attach the component to the projectile).
+// Keep the CPU mirror in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+FCkParticles_StageOutput CkParticles_Behavior_Tracer(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    const float n = CkParticles_NormalizedAge(In);
+    const float k = CkParticles_Rand(In.Seed, 0);
+
+    if (k < 0.25) // trail quads: drift backward, shrink 20 -> 0, HDR orange x10 (ribbon-drop technique)
+    {
+        const float3 Jitter = float3(0.0, (CkParticles_Rand(In.Seed, 1) - 0.5) * 4.0, (CkParticles_Rand(In.Seed, 2) - 0.5) * 4.0);
+        O.Position = float3(-800.0 * In.Age, 0.0, 0.0) + Jitter;
+        O.Velocity = float3(-800.0, 0.0, 0.0);
+        O.VisTag   = 1;
+        O.Size     = float2(7.0, 34.0) * (1.0 - n);
+        O.Color    = float4(37.0, 13.85, 0.5, 1.0) * saturate((1.0 - n) / 0.82);
+    }
+    else // backward spark spray: cone (24 deg half) about -X, 150-500 cm/s, drag 1, gravity -118 (recipe numbers)
+    {
+        const float u  = CkParticles_Rand(In.Seed, 3);
+        const float az = 6.28318530718 * CkParticles_Rand(In.Seed, 4);
+        const float th = 0.4189 * sqrt(u);
+        const float3 d = float3(-cos(th), sin(th) * cos(az), sin(th) * sin(az));
+        const float s  = lerp(150.0, 500.0, CkParticles_Rand(In.Seed, 5));
+        O.Position = d * s * (1.0 - exp(-In.Age)) + float3(0.0, 0.0, -59.03 * In.Age * In.Age);
+        O.Velocity = d * s * exp(-In.Age) + float3(0.0, 0.0, -118.07 * In.Age);
+        O.VisTag   = 1;
+        O.Size     = float2(1.2, 8.0);
+        O.Color    = float4(37.0, 10.83, 0.5, 1.0) * saturate(1.0 - n / 0.44);
+    }
+    return O;
+}
