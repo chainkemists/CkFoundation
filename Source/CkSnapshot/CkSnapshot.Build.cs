@@ -9,12 +9,14 @@ public class CkSnapshot : CkModuleRules
         {
             "Core",
             "CoreUObject",
+            "CoreOnline", // FUniqueNetIdWrapper::ToString — v3 EngineOwned player rendezvous (spec §4.2)
             "Engine",
             "DeveloperSettings", // UCk_Snapshot_Settings : UDeveloperSettings
 
             "CkCore",
             "CkEcs",
             "CkEcsExt", // FFragment_ActorSpawnIntent + FTag_ActorRespawn_Pending for the respawn marker pass
+            "CkLabel",  // GameplayLabel — v3 ConstructSpawned identity (spec §4.2)
             "CkLog",
             "CkThirdParty",
         });
