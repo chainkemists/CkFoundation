@@ -166,12 +166,6 @@ namespace ck
     public:
         CK_GENERATED_BODY(FFragment_Transform_Previous);
 
-        // Persisted alongside FFragment_Transform: a re-bridged entity restored from a snapshot must carry Previous
-        // too, or FProcessor_Transform_SyncFromActor (which requires it) cannot match the entity and the actor's
-        // motion never propagates to the entity transform (and to anything pinned to it — Iskm proxies, cameras).
-        using IsSnapshotable = void;
-        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
-
     private:
         FTransform _Transform;
 
