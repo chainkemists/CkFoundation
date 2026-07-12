@@ -14,7 +14,7 @@
 | 3B | PHASE_3B.md | **DONE** (v3 load pipeline live; M2a fixed) | 2026-07-12 | CkF: 78fcdaa8e (retire reconstitution), 36bcdec5d (v3 load pipeline), <docs-this>; CkTests: ce32c65 | GREEN mod casualties: Ck.Snapshot **52 / 43 pass / 9 fail** (--discover-fresh; M2a + V3.InstancedStructDiskSmoke green; all 9 fails are verified Phase-4 casualties — see §Phase-3B DONE) |
 | 4A.1 | PHASE_4A.md | **DONE** (SM redrive→hydration; committed). 4A.2 (N1 discriminator + SpawnerResumes test) DEFERRED ([N1-A]-blocked). | 2026-07-12 | CkF: 705e7d57e (SM hydration); CkTests: 773a4d2 (comment) | GREEN mod casualties+flake: Ck.Snapshot **52/45/7** (both Parity.StateMachine* GREEN, 9→7; 7 = 4B casualties); Ck.StateMachine 24/25 (lone red = documented OwningClientAuth_SubSm flake — passed alone + in Net run); Net 102/99/3 delta-zero (kiosk env-trio only, no new framework Ck.*.Net red) |
 | 4A.2 | PHASE_4A.md | DEFERRED ([N1-A] scope call) | | | |
-| 4B | PHASE_4B.md | **IN PROGRESS** — client-shaped-Apply pattern validated; **TagSet + RenderTarget DONE**. **Grid DEFERRED → [INV-A]** ([P4B-D2]: occupant is Rule-5 anonymous, verified). Remaining actionable: Attributes/AnimPlan (empty-seed Produce, Fable-designed [P4B-F2]), params-mutators, MontagePlayer, AS smoke. Deferred [INV-A]: Inventory×2 + Grid. | 2026-07-12 | CkF: 5088f5336 (TagSet), ede66976f (RenderTarget) | GREEN mod casualties: Ck.Snapshot **52/47/5** (Parity.RenderTarget_MPReload green, 6→5; TagSet+RenderTarget done; remaining 5 = AnimPlan/Attributes actionable + GridPlacements/InventoryDataOnly/InventorySpatial [INV-A]-deferred); Net 102/99/3 delta-zero (kiosk env-trio only, no framework Ck.*.Net red) |
+| 4B | PHASE_4B.md | **IN PROGRESS** — **ALL ACTIONABLE CASUALTIES CLOSED**: TagSet + RenderTarget + Attributes×5 + AnimPlan DONE. **Grid + Inventory×2 DEFERRED → [INV-A]** (anonymous entities, Adam scope call). Attributes needed a companion invariant fix ([P4B-D4]: pre-existing LifetimeDependents false positive). Remaining 4B work is ADDITIVE oracle-coverage: params-mutators (4B.1), MontagePlayer rebind, AS smoke (4B.3). | 2026-07-12 | CkF: 5088f5336 (TagSet), ede66976f (RenderTarget), db83e687a (AnimPlan), 5b7c1e077 (Attributes×5), 19613a1eb (invariant fix) | GREEN mod casualties: Ck.Snapshot **52/49/3** (Parity.{RenderTarget,Attributes,AnimPlan}_MPReload all green, 0 dangling; the 3 remaining = GridPlacements/InventoryDataOnly/InventorySpatial, all [INV-A]-deferred); Net 102/98/4 delta-zero (kiosk env-trio + documented SM.Net flake) |
 | 5 | PHASE_5.md + VALIDATION.md | NOT STARTED | | | |
 
 ## Unattended execution protocol (set 2026-07-11 by Adam — OVERRIDES the "STOP on divergence" default below)
@@ -404,6 +404,32 @@ rendezvous — everything else compiled first pass). Gate GREEN (Ck.Snapshot 51/
   - **CkTests:** NO change needed — the parity tests already exist (they ARE the gate). One stale doc comment in CkTests
     `Test_Snapshot_Oracle_ProduceDiffBaseline.cpp:4-6` ([P1-D2] "attribute Produce is empty-seed") goes stale — deferred doc follow-up
     (not gate-blocking; avoid a cross-repo CkTests commit for a comment).
+- **[P4B-D4] (executor + Fable root-cause, 2026-07-12) — the Attributes parity RED after the value fix is a PRE-EXISTING
+  FALSE-POSITIVE in the test's `Verify_AllStoredHandlesResolve` invariant, NOT a value regression and NOT [INV-A]. Fixed the
+  invariant (CkSnapshot), not the loader/framework/test.** After the value-emitting Produce landed, `Parity.Attributes_MPReload`
+  still failed — but on the SERVER dangling-handle invariant (`server: no dangling stored handles ... to be 0, but it was 20`),
+  NOT the value asserts (Float/Byte/Integer/Vector/Rotator all round-trip — the value fix WORKS). ISOLATION: the identical 20
+  danglers appear in the pre-change gate log (`p4b-rt.log`), so pre-existing. Fable root-caused + I VERIFIED every anchor:
+  the 20 danglers are **EntityScript spawn-request scratch entities** — `UCk_Utils_EntityScript_UE::...Add()` creates a request
+  child (`CkEntityScript_Utils.cpp:244`) registered in the parent's `FFragment_LifetimeDependents`
+  (`CkEntityLifetime_Utils.cpp:549`), then destroys it (`CkEntityScript_Processor.cpp:53-54`), and the parent's dependents
+  array is DELIBERATELY NOT pruned (`CkEntityLifetime_Utils.cpp:153-155` — a documented perf choice; every consumer, incl.
+  `Get_LifetimeDependents:151-160`, filters via `ck::IsValid`). So `FFragment_LifetimeDependents` is a LAZILY-PRUNED WEAK-ref
+  list; the 19 odd-id parents are the fresh boot's re-created boot-infra EntityScripts (matching the DIAG's "19 skipped
+  boot-infra") + the bridged probe (60→61). A strict-resolve dependents check would false-positive on EVERY EntityScript world,
+  saved or not — sole caller is the Attributes test (`:299`), which only runs it post-reload so never noticed. FIX (Fable ruling
+  C, verified): in `Verify_AllStoredHandlesResolve` (`CkSnapshot_RestoreInvariants.cpp`, campaign-added `e669659d0`), the
+  dependents leg now SKIPS stale (destroyed) refs and instead asserts BACK-POINTER CONSISTENCY — a live dependent's
+  `FFragment_LifetimeOwner` must name this owner (`TransferLifetimeOwner` keeps it symmetric+EAGER, `:570`/`:583`, VERIFIED, so
+  no false positive) — the genuine registry-rehome corruption check. The strict `LifetimeOwner`/`ContextOwner` legs (hard refs)
+  are UNCHANGED. Rejected: (A) load-path prune of dependents = treats a documented framework-wide lazy contract as a load
+  defect + a CkEcs-core behavior change (ck-change-control territory), unjustified; (B) defer as [INV-A] = factually wrong (the
+  danglers are spawn-request scratch, not anonymous modifiers; pre-existing). Test-only invariant (no production caller), so no
+  net/wire/Model-A impact. **GATE GREEN (p4b-attr2.log):** build Succeeded; `Parity.Attributes_MPReload` +
+  `Parity.AnimPlan_MPReload` Success; ZERO dangling-handle errors; Ck.Snapshot 52/49/3 (the 3 = [INV-A]-deferred Grid +
+  Inventory×2), delta-zero. Committed CkF `19613a1eb` (invariant fix), `5b7c1e077` (Attributes×5 value hydration), `db83e687a`
+  (AnimPlan). Net delta-zero validated on the net-identical binary (p4b-attr-net.log 102/98/4 = kiosk env-trio + documented
+  SM.Net flake; the invariant fix is test-only/net-irrelevant so the verdict holds).
 - **[P4B-D1] (executor, 2026-07-12) — TagSet authority write omits the OnTagsChanged broadcast.** Fable's pseudocode mirrored
   the client drain's diff+broadcast (`CkTagSet_Processor.cpp:156-168`) for symmetry. Omitted it: a save-load RESTORE is not a
   gameplay change, the parity test asserts tag presence + replication (not the signal), and clients still get the OnTagsChanged
