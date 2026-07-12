@@ -116,6 +116,13 @@ public:
     static bool
     Get_IsRagdolling(const FCk_Handle_IskmProxy& InHandle);
 
+    // True once the entity outline (ck::FFragment_Usf_OutlineTarget) is applied to this proxy's SKMCs —
+    // see CkUsf/DESIGN_EntityOutlines.md. Used by autotests/gyms.
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
+        DisplayName = "[Ck][IskmProxy] Get Is Outline Applied")
+    static bool
+    Get_IsOutlineApplied(const FCk_Handle_IskmProxy& InHandle);
+
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
         DisplayName="[Ck][IskmProxy] Get Pose Source")
     static ECk_IskmProxy_PoseSource
