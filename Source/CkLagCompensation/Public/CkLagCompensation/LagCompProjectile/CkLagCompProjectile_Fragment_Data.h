@@ -38,7 +38,9 @@ private:
     FVector _StartVelocity = FVector::ZeroVector;
 
     // How far in the past the shot actually happened — typically the shooter's ping.
-    // The Ck.LagComp.RewindFudgeFactor CVar is added on top
+    // The Ck.LagComp.RewindFudgeFactor CVar is added on top. A negative resolved window is
+    // clamped to zero (loudly); rewind sweeps only cover each target's recorded history, so a
+    // window beyond the retention period gains nothing
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Time _CompensationWindow;
