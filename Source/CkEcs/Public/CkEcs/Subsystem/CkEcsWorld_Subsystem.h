@@ -28,22 +28,6 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ecs_WorldStatCollection_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Reconstitution phase while a CkSnapshot load spans this world (set by the load state machine across the
-// level-reload boundary; read by the Request_SpawnEntity guard in CkEntityScript_Utils).
-// - EarlyWindow: fresh post-travel world, world-init → world-ready. ONLY snapshot-respawnable entity scripts
-//   abstain (the restore re-bridges their entities; a spawn here would duplicate one). Everything else — relay
-//   channels and other framework infrastructure — spawns as normal and is wiped by the restore's registry
-//   clear like any other pre-restore entity, exactly as before the early window existed.
-// - Full: pre-travel teardown and the restore/respawn window. EVERY spawn abstains; the snapshot is the sole creator.
-enum class ECk_ReconstitutionPhase : uint8
-{
-    None,
-    EarlyWindow,
-    Full
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
 class UCk_EcsWorld_Subsystem_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -176,17 +160,6 @@ public:
     Request_AdoptRestoredTransient(
         FCk_Entity InRestoredTransient) -> void;
 
-    // Reconstitution phase of THIS world's ECS during a CkSnapshot load (see ECk_ReconstitutionPhase above for
-    // per-phase suppression semantics). The Request_SpawnEntity guard reads the phase and abstains accordingly —
-    // the snapshot is the sole creator of what it restores, so a spawn must not duplicate a restored entity.
-    // Lives here (CkEcs, world-scoped, reachable by every module tier) because the CkSnapshot subsystem is above
-    // CkEcsExt/CkEcs and cannot be referenced from the spawn path.
-    auto Get_ReconstitutionPhase() const -> ECk_ReconstitutionPhase;
-    auto Set_ReconstitutionPhase(ECk_ReconstitutionPhase InPhase) -> void;
-
-    // Convenience: any phase active. Prefer Get_ReconstitutionPhase where the tier matters.
-    auto Get_IsReconstitutionInProgress() const -> bool;
-
     // Load gate (spec §4.3): while active, every EcsWorld actor ticks its scheduler with LoadKernel scope, so only
     // RunsDuringLoad kernel processors run — feature processors are frozen against the half-rebuilt world. Set by the
     // CkSnapshot load orchestrator (Phase 3B) across the rebuild; cleared once reconciliation completes.
@@ -213,9 +186,6 @@ private:
 
     bool _PendingRebuildGraph = false;
     FDelegateHandle _OnEndFrameHandle;
-
-    // M2b-1: set by the CkSnapshot load state machine; read by the Request_SpawnEntity guard to abstain during a load.
-    ECk_ReconstitutionPhase _ReconstitutionPhase = ECk_ReconstitutionPhase::None;
 
     // Phase 2: set by the CkSnapshot load orchestrator; read per-frame by each EcsWorld actor to pick the scheduler
     // tick scope (LoadKernel while active). See Get_/Set_IsLoadGateActive.
