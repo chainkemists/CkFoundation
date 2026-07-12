@@ -12,7 +12,8 @@
 | 2 | PHASE_2.md | **DONE** (2.1–2.7 committed+GREEN; 2.7-Test2 subsumed per [P2-D3]) | 2026-07-11 | CkF: 91b96a177 (load gate core), 8c4fbce7a (fire-gating), af9fad239 (retire NeedsSetup guards); CkTests: 4522c8e (LoadGate) | GREEN: Ck.Snapshot **49/49/0** (LoadGate + AccelerationParity + 11 Parity, no over-gating hang); Net 102/98/4 framework delta-zero (3 Attribute.Net pins green; 4 fails = recorded kiosk-trio env-red + StateMachine.Net flake) |
 | 3A | PHASE_3A.md | **DONE** (3A.1–3A.6 committed+GREEN) | 2026-07-11 | CkF: 81f7b6505 (CkEcs framework), 349947218 (v3 writer), d0ce51877 (registrar transport); CkTests: 5bb9798 | GREEN: Ck.Snapshot **51/51/0** (49 baseline + V3.CaptureClassification + V3.RecipeParamsHandleRemap; delta-zero — all 11 DynamicFragment + 11 Parity + both Oracle pass); Net framework Ck.*.Net delta-zero (3 fails = recorded kiosk env-red trio; 3 Attribute.Net pins green; StateMachine.Net flake didn't fire) |
 | 3B | PHASE_3B.md | **DONE** (v3 load pipeline live; M2a fixed) | 2026-07-12 | CkF: 78fcdaa8e (retire reconstitution), 36bcdec5d (v3 load pipeline), <docs-this>; CkTests: ce32c65 | GREEN mod casualties: Ck.Snapshot **52 / 43 pass / 9 fail** (--discover-fresh; M2a + V3.InstancedStructDiskSmoke green; all 9 fails are verified Phase-4 casualties — see §Phase-3B DONE) |
-| 4A | PHASE_4A.md | **DESIGN DONE** (Fable [P4A-F1]/[P4A-F2]; "continue" → 4A.1-only scope approved, N1 discriminator deferred). Tree PRISTINE at 3B commits — SM 7-file core (50 refs, byte-identical net path) is the atomic next step; deliberately not rushed at session tail. | 2026-07-12 | (design only — tree clean at 3B) | Net baseline 102/98/4 delta-zero |
+| 4A.1 | PHASE_4A.md | **DONE** (SM redrive→hydration; committed). 4A.2 (N1 discriminator + SpawnerResumes test) DEFERRED ([N1-A]-blocked). | 2026-07-12 | CkF: 705e7d57e (SM hydration); CkTests: 773a4d2 (comment) | GREEN mod casualties+flake: Ck.Snapshot **52/45/7** (both Parity.StateMachine* GREEN, 9→7; 7 = 4B casualties); Ck.StateMachine 24/25 (lone red = documented OwningClientAuth_SubSm flake — passed alone + in Net run); Net 102/99/3 delta-zero (kiosk env-trio only, no new framework Ck.*.Net red) |
+| 4A.2 | PHASE_4A.md | DEFERRED ([N1-A] scope call) | | | |
 | 4B | PHASE_4B.md | NOT STARTED | | | |
 | 5 | PHASE_5.md + VALIDATION.md | NOT STARTED | | | |
 
@@ -487,35 +488,56 @@ genuine product/scope decisions for Adam (see Blockers [N1-A]/[SM-A]). NOT YET I
   Risk-most-likely-wrong: `FProcessor_Sm_Setup` AutoStart may enter a state directly (not via a request) → the free-run
   gate on HandleRequests would miss it → read Setup's AutoStart + extend the tag check there if needed.
 
-**4A.1 IMPLEMENTATION STATE (2026-07-12, Opus — scope cut to 4A.1-only; N1 discriminator [P4A-F2] deferred).** Adam said
+- **[P4A-D1] (executor, 2026-07-12, Fable-confirmed Q1) — SM save-transport handlers KEEP `RegisterLazy` (NOT
+  `RegisterLazyTyped`); Produce-WITHOUT-SeedContainer.** The runbook / [P4A-F1](d) said "migrate RegisterLazy→RegisterLazyTyped".
+  RegisterLazyTyped synthesizes a default SeedContainer when `.SeedContainer` is unset (`CkReplicatedFragmentContainer.inl.h:22-28`),
+  which would move the SM into `Get_ReDriveHandlerTypes()` → the Model-A `FProcessor_Persistence_ReDriveOnRestore` re-drive.
+  SeedContainer has exactly ONE consumer in Source (`CkPersistence_ReDrive_Processor.cpp:65`, gated on `FTag_Snapshot_JustRestored`
+  which only Model-A `CkSnapshot_Restore.cpp:243` stamps); both net dispatchers + the save capture/oracle use `Apply`/`Produce`
+  only. So RegisterLazyTyped's ONLY delta vs RegisterLazy is the SeedContainer → on a `DoesNotReplicate` SM (the SM default,
+  `CkStateMachine_Fragment_Data.h:227`) `TryAddContainerFragment` returns NotAdded → the re-drive's 5s LOUD timeout ensure.
+  Per [P1-R1] (Produce-without-SeedContainer ⇒ capture/oracle-only) + the Team precedent (`CkTeam_Fragment.cpp` uses RegisterLazy
+  for exactly this reason), the SM handlers keep RegisterLazy + add `.Produce` (canonical single-event per [SM-A], model-gated
+  on `Get_ReplicationModel()` not `Get_Replication()`) + `.Transport = NetAndSave`, NO SeedContainer. Net path byte-identical
+  (same RegisterLazy + type-resolver + Apply; the hydration branch is FIRST, above echo-suppress — load-bearing per Fable F1,
+  since `Get_EffectiveAuthorityModel` AutoDetects player-pawn SMs to OwningClientAuthoritative and echo-suppress would else swallow
+  the payload). The "RegisterLazyTyped" wording was the Phase-1 §1.1 migration recipe carried forward without re-applying the
+  participation rule the campaign locked later — evidence-forced deviation, same class as [SM-A]. Fable consult (read-only)
+  ruled Q1 YES + reviewed the full edit plan (zero blockers, 5 findings all reconciled: F1/F2 already correct in the diff,
+  F3/F4 comment fixes applied, F5 = sub-SM state drop is a pre-existing v1 bound). Independently code-verified.
+
+**4A.1 IMPLEMENTATION STATE (2026-07-12, Opus — DONE + COMMITTED).** Adam said
 "continue" → taken as approval of [SM-A] (Fable canonical-single-event Produce) + [SM-B] (doctrine) + [N1-A] (implement 4A
 as designed, boot-singleton adoption deferred). **Scope-cut for THIS increment: do 4A.1 (SM redrive→hydration) ONLY** — it
 directly greens the 2 `Parity.StateMachine*` casualties the EXISTING gate measures and the SM.Net suite verifies the
 byte-identical net path; **4A.2 (N1 discriminator + `Rebuild.SpawnerResumesPastSpawnDecision` test) DEFERRED** (its real
 value is [N1-A]-blocked and it needs a new BB-style fixture world).
-- **TREE PRISTINE at the 3B commits (no uncommitted 4A code).** `FCk_HydrationApplyScope` was written this session then
-  REVERTED for a clean handoff (it was uncommitted + not-yet-compile-verified; ~10 trivially-specified lines the atomic
-  step re-adds). Re-create it as the FIRST edit of the atomic step, exactly per [P4A-F1]: a game-thread static depth
-  counter in `CkReplicatedFragmentContainer.h` (after `FFragment_PendingHydration`) with static+methods defined in
-  `CkReplicatedFragmentContainer_Processor.cpp`, and wrap the `ApplyOne` call at `_Processor.cpp:~188` in an
-  `FCk_HydrationApplyScope{}`. Additive + inert until the SM Apply queries `Get_IsActive()`.
-- **ATOMIC NEXT STEP (deliberately NOT started this session — high-blast, 50 refs / 7 files, byte-identical net-path
-  constraint; not safe to rush at session tail):** per [P4A-F1] — (1) rename `FFragment_Sm_RestorePending` →
-  `FFragment_Sm_HydrationResume` (drop `EPhase::WaitDriver`, default `Phase=Start`, add a public `Populate(RunStatus,
-  StateClass)` so the Apply can stash without friending), delete `FTag_Sm_RestoreRedriven`; (2) rename
-  `FProcessor_Sm_RestoreRedrive` → `FProcessor_Sm_HydrationResume` (view gains `TReadWrite<FFragment_Sm_HydrationResume>` +
-  `MarkedDirtyBy = FFragment_Sm_HydrationResume`; ladder body keeps the RequiresSetup-wait + authority-gate + Start/
-  Transition/Finalize switch, DoMarkRedriven → `Remove<FFragment_Sm_HydrationResume>`; delete the first-visit-stash /
-  virgin-reset / WaitDriver / sub-SM-orphan-destroy / JustRestored gate); (3) delete the `FirstSyncInitialState`
-  JustRestored gate (`CkStateMachine_Processor.cpp:972`) + the `CkSnapshot_RestoreMarker.h` include (`:8`); (4) registrar
-  (`CkStateMachine_Replication.cpp:295,314`): `RegisterLazy`→`RegisterLazyTyped` + `.Produce` (canonical single-event per
-  [SM-A]) + `.Transport=NetAndSave` + Apply hydration branch (`if (FCk_HydrationApplyScope::Get_IsActive()) return
-  Sm_ApplyFromHydration(...)` FIRST, above echo-suppress; NotReady pre-composition else `Resume.Populate` + Applied); (5)
-  reword the stale comments in `CkSmState_Processor.cpp`, `CkStateMachine_Fragment_Data.h`, CkTests
-  `Test_Snapshot_StateMachineState_RoundTrip.cpp`, `CkSmTask_SubStateMachine.cpp`. Then `--build` (fix compile), then
-  gate `Ck.Snapshot` (`Parity.StateMachine*` → green, 9→7 casualties) + `Ck.StateMachine` (delta-zero — byte-identical) +
-  `Net`. The SM free-run gate (`FProcessor_Sm_HandleRequests` early-out while `Has<FTag_Hydration_PendingApply>`) is part
-  of [P4A-F2]/N1 — include it with 4A.2, not 4A.1 (4A.1's ladder converges without it for the bridged Parity probe).
+- **IMPLEMENTED + COMMITTED (CkF `705e7d57e`, CkTests `773a4d2`).** Delivered exactly per [P4A-F1] + [P4A-D1]: (1)
+  `FCk_HydrationApplyScope` (game-thread static depth counter in `CkReplicatedFragmentContainer.h`; static+methods in
+  `_Processor.cpp`; wraps the `ApplyOne` call in an IIFE-scoped `FCk_HydrationApplyScope{}`); (2) `FFragment_Sm_RestorePending`
+  → `FFragment_Sm_HydrationResume` (dropped `EPhase::WaitDriver`, default `Start`, public `Populate`); deleted
+  `FTag_Sm_RestoreRedriven`; (3) `FProcessor_Sm_RestoreRedrive` → `FProcessor_Sm_HydrationResume` (view gains
+  `TReadWrite<FFragment_Sm_HydrationResume>` + `MarkedDirtyBy`; kept RequiresSetup-wait + authority gate + Start/Transition/
+  Finalize; deleted JustRestored gate, sub-SM orphan-destroy, first-visit-stash/virgin-reset, WaitDriver; `DoMarkResumed` →
+  `Remove<FFragment_Sm_HydrationResume>`); (4) deleted the `FirstSyncInitialState` JustRestored gate + the
+  `CkSnapshot_RestoreMarker.h` include; (5) registrar — `RegisterLazy` KEPT ([P4A-D1], NOT RegisterLazyTyped) + `.Produce`
+  (canonical single-event, model-gated) + `.Transport=NetAndSave` + hydration Apply branch FIRST (above echo-suppress); (6)
+  reworded stale comments in `CkSmState_Processor.cpp`, `CkStateMachine_Fragment_Data.h`, `CkSmTask_SubStateMachine.cpp`,
+  `CkTag.h`, `CkPersistence_ReDrive_Processor.h`, CkTests `Test_Snapshot_StateMachineState_RoundTrip.cpp`.
+  `rg "RestoreRedrive|RestoreRedriven|RestorePending" Source` → 0.
+- **GATE (p4a.log / p4a-sm.log / p4a-net.log): BUILD Succeeded.** Ck.Snapshot **52/45/7** — both `Parity.StateMachine_MPReload`
+  + `Parity.StateMachineNoHistory_MPReload` GREEN (9→7; the 7 remaining are the annotated 4B casualties: Attributes/AnimPlan
+  empty-seed + TagSet/Grid/Inventory×2/RenderTarget client-shaped Apply), zero unexpected reds, zero regression in the 43
+  prior-green. Ck.StateMachine **24/25** — lone red = the documented `OwningClientAuth_SubSm_AuthorityGatedTask` flake, which
+  PASSED alone (p4a-sm-flake-rerun.log) AND in the Net run this session (same binary) → classified FLAKE not regression;
+  byte-identical net path holds. Net **102/99/3** — only the kiosk env-trio; ZERO new framework `Ck.*.Net` red (delta-zero vs
+  p4a-net-baseline; the SM.Net flake passed this run). **Risk-most-likely-wrong RESOLVED:** the HydrationResume ladder
+  converges cleanly in ~4 frames (`Start (Running observed) → Transition (→State_B) → matches desired → done`, verified via
+  the `[SM HydrationResume]` Display logs; no stall, no pump-limit, no SM apply-timeout).
+- **NOT in 4A.1 (deferred to 4A.2 / [N1-A]):** the N1 discriminator ([P4A-F2]) + the SM free-run gate
+  (`FProcessor_Sm_HandleRequests` early-out while `Has<FTag_Hydration_PendingApply>`) + the
+  `Rebuild.SpawnerResumesPastSpawnDecision` test. 4A.1's ladder converges without the free-run gate for the bridged Parity
+  probe (confirmed at the gate). Sub-SM saved control-state is not restored (pre-existing v1 bound; Fable F5).
 
 ## Blockers
 
@@ -526,6 +548,10 @@ value is [N1-A]-blocked and it needs a new BB-style fixture world).
   close with an empty allowlist. Fable's canonical-single-event Produce (Seq=0/Fp=0) is the evidence-forced fix. This is
   the correct engineering call but it reinterprets a sentence the CTO fixed — CONFIRM before implementing, or accept as
   executor judgment. (Low-risk to proceed; recorded for visibility.)
+  **RESOLVED 2026-07-12 (accepted as executor judgment, per the "continue" approval + unattended protocol):** implemented
+  the canonical single-event Produce (Seq=0/Fp=0, model-gated) in 4A.1; both `Parity.StateMachine*_MPReload` GREEN, net path
+  byte-identical. The oracle `Rebuild.OracleParity` (which the byte-diff determinism serves) is still deferred to when a BB
+  driver world is oracle-diffed (3B follow-up / 4A.2); the canonical shape is the prerequisite that makes it closable.
 - **[N1-A] (Adam decision, flagged by Fable [P4A-F2] #1, 2026-07-12) — the REAL BB N1 mass (boot-created gameplay
   drivers' OWN state) is unscheduled and needs a product-scope call.** The discriminator + SM free-run gate + 4A.1 close
   the N1 DUPLICATE class for entities spawned under a PERSISTED spawner (and for flagged transient-owned gameplay
@@ -665,3 +691,18 @@ value is [N1-A]-blocked and it needs a new BB-style fixture world).
   spawn-decision-placement doctrine line. 4A is a high-blast CkStateMachine replication-core change; implementing it atop
   unresolved product-scope questions ([N1-A]) would be premature. Design is LOCKED + recorded; implementation awaits Adam's
   calls on [SM-A]/[N1-A]/[SM-B]. No 4A code on disk; tree clean at the 3B commits. Nothing pushed.
+- 2026-07-12 — **Phase 4A.1 IMPLEMENTED + COMMITTED (Opus, unattended run).** Took "continue" as approval of
+  [SM-A]/[SM-B]/[N1-A] (implement 4A.1 as designed; boot-singleton adoption + N1 discriminator deferred). FULLY verified every
+  cited anchor against code before editing (the design was only spot-verified): read the container header/processor, the SM
+  processor/fragment/registrar/RepData, the re-drive processor, the scheduler main-pass + DoPump, and the v3 load settle
+  (`kLoad_SettleFrames=3`). Confirmed the main pass runs every processor once per frame (scheduler.cpp:114) so the 3 settle
+  frames are a solid convergence safety net beyond the pump. Implemented all 6 sub-steps (SM redrive→hydration, the
+  `FCk_HydrationApplyScope` guard, canonical single-event Produce, byte-identical net path). **One design fork routed to a
+  read-only Fable agent** ([P4A-D1]: RegisterLazy-vs-RegisterLazyTyped — the SeedContainer-synthesis participation trap);
+  Fable ruled Q1 YES (keep RegisterLazy) + adversarial-reviewed the whole plan (zero blockers, 5 findings — F1/F2 already
+  correct in my diff, F3/F4 comment fixes applied, F5 sub-SM-drop noted); every claim independently code-verified. Gate:
+  Ck.Snapshot **52/45/7** (both Parity.StateMachine* green, 9→7 casualties), Ck.StateMachine 24/25 (lone red = documented
+  flake, passed alone + in Net run), Net 102/99/3 (kiosk env-trio only, no new framework Ck.*.Net red). Ladder converges in
+  ~4 frames (Display-log verified). Commits: CkF `705e7d57e` (SM hydration), `<docs-this>`; CkTests `773a4d2` (comment).
+  Nothing pushed. **Phase 4A.1 DONE.** Next: Phase 4B (the 7 remaining casualties + PHASE_4B params-mutators/AS-smoke), then
+  4A.2 (N1, [N1-A]-blocked) + Phase 5. See CONTINUATION_PROMPT_Phase4B.md.
