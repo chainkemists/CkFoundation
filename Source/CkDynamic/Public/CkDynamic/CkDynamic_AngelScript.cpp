@@ -144,23 +144,31 @@ auto
 
     const auto FilePath = GetRegistryFilePath();
 
-    auto JsonString = FString{};
-    if (NOT FFileHelper::LoadFileToString(JsonString, *FilePath))
+    // A missing/unparsable canonical registry must NOT abort the load: the stub-recovery and
+    // plugin TESTONLY merges below are independent sources, and early-returning here deadlocked
+    // hosts that ship no canonical file (the self-heal wrote stubs that were then never merged, so
+    // AS compilation failed forever — hit in the CkPlugins host). Continue with an empty canonical set
+    auto HandleTypesArray = TArray<TSharedPtr<FJsonValue>>{};
+
+    if (auto JsonString = FString{};
+        FFileHelper::LoadFileToString(JsonString, *FilePath))
     {
-        ck::dynamic::Log(TEXT("[DynamicHandleTypes] No registry file found at: %s"), *FilePath);
-        return false;
+        auto JsonReader = TJsonReaderFactory<>::Create(JsonString);
+        auto RootObject = TSharedPtr<FJsonObject>{};
+
+        if (FJsonSerializer::Deserialize(JsonReader, RootObject) && RootObject.IsValid())
+        {
+            HandleTypesArray = RootObject->GetArrayField(TEXT("HandleTypes"));
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("[DynamicHandleTypes] Failed to parse registry file: %s — continuing with stub/test-only registries only"), *FilePath);
+        }
     }
-
-    auto JsonReader = TJsonReaderFactory<>::Create(JsonString);
-    auto RootObject = TSharedPtr<FJsonObject>{};
-
-    if (NOT FJsonSerializer::Deserialize(JsonReader, RootObject) || NOT RootObject.IsValid())
+    else
     {
-        UE_LOG(LogTemp, Error, TEXT("[DynamicHandleTypes] Failed to parse registry file: %s"), *FilePath);
-        return false;
+        ck::dynamic::Log(TEXT("[DynamicHandleTypes] No registry file found at: %s — continuing with stub/test-only registries only"), *FilePath);
     }
-
-    auto HandleTypesArray = RootObject->GetArrayField(TEXT("HandleTypes"));
 
     // Self-heal sibling stub merge — `_StubRecovery_DynamicHandleTypes.json` in
     // the same directory as the canonical registry. The dispatcher writes
