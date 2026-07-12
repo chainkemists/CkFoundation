@@ -153,6 +153,12 @@ auto
         const FCk_Handle_Timer& InTimerEntity)
     -> FGameplayTag
 {
+    // Unnamed timers are a designed state (Add only attaches the GameplayLabel when a
+    // name was supplied) — return an invalid tag for them instead of tripping the
+    // label ensure on every read.
+    if (NOT UCk_Utils_GameplayLabel_UE::Has(InTimerEntity))
+    { return {}; }
+
     return UCk_Utils_GameplayLabel_UE::Get_Label(InTimerEntity);
 }
 
