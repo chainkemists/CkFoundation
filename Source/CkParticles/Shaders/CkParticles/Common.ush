@@ -17,13 +17,28 @@ struct FCkParticles_StageInput
 
 // --------------------------------------------------------------------------------------------------------------------
 // Per-particle outputs a behavior writes. The caller assigns these back to particle attributes.
+//
+// Renderer selection (VisTag -> renderer visibility tags on the template):
+//   0 = camera-facing sprite (default; per-effect texture via User.SpriteMaterial)
+//   1 = velocity-aligned sprite (streaks/tracers; stretch = Size.y along motion)
+//   2 = smoke sprite (translucent soft material; Rotation applies)
+//   3 = mesh (MeshIndex picks the carrier: 0 Sweep, 1 Tube, 2 Shell, 3 Disc; Scale/Orientation apply)
+//
+// Dynamic -> Particles.DynamicMaterialParameter, read by the VFX master materials as
+//   x = dissolve/erosion threshold [0..1], y = distortion strength, z = UV pan offset, w = emissive boost.
 // --------------------------------------------------------------------------------------------------------------------
 struct FCkParticles_StageOutput
 {
     float3 Position;
     float3 Velocity;
     float4 Color;
-    float2 Size;     // sprite size (x,y in sim units) -> Particles.SpriteSize. x==y is round; x!=y stretches.
+    float2 Size;        // sprite size (x,y in sim units) -> Particles.SpriteSize. x==y is round; x!=y stretches.
+    float3 Scale;       // mesh scale -> Particles.Scale (VisTag 3 only)
+    float4 Orientation; // mesh orientation quat (x,y,z,w) -> Particles.MeshOrientation (VisTag 3 only)
+    float4 Dynamic;     // material dynamic params -> Particles.DynamicMaterialParameter (see header comment)
+    float  Rotation;    // sprite rotation in DEGREES -> Particles.SpriteRotation
+    int    MeshIndex;   // carrier mesh index -> Particles.MeshIndex (VisTag 3 only)
+    int    VisTag;      // renderer selection -> Particles.VisibilityTag (see header comment)
 };
 
 // 0..1 over the particle's lifetime (0 when lifetime is unset).
@@ -57,9 +72,29 @@ float3 CkParticles_RandDir(int Seed)
     return float3(r * cos(t), r * sin(t), z);
 }
 
+// Quaternion from a (normalized) axis and an angle in radians. Written out component-wise so the C++ CPU mirror
+// (NDICkParticlesLocal::QuatFromAxisAngle) stays bit-identical — do not swap in engine quat helpers on either side.
+float4 CkParticles_QuatFromAxisAngle(float3 Axis, float Angle)
+{
+    const float H = 0.5 * Angle;
+    const float S = sin(H);
+    return float4(Axis.x * S, Axis.y * S, Axis.z * S, cos(H));
+}
+
+// Hamilton product A*B: rotate by B first, then by A. Component-wise for CPU-mirror lockstep.
+float4 CkParticles_QuatMul(float4 A, float4 B)
+{
+    return float4(
+        A.w * B.x + A.x * B.w + A.y * B.z - A.z * B.y,
+        A.w * B.y - A.x * B.z + A.y * B.w + A.z * B.x,
+        A.w * B.z + A.x * B.y - A.y * B.x + A.z * B.w,
+        A.w * B.w - A.x * B.x - A.y * B.y - A.z * B.z);
+}
+
 // Pass-through defaults (a behavior overrides only what it changes). Size defaults to a per-Seed-varied value that
 // shrinks over life, so even behaviors that never touch Size get non-uniform, animated sprites (salt 7 is reserved
-// for size so it stays independent of a behavior's direction/hue randoms).
+// for size so it stays independent of a behavior's direction/hue randoms). New-contract fields default to the
+// camera-sprite renderer with inert material dynamics, so legacy behaviors render exactly as before.
 FCkParticles_StageOutput CkParticles_DefaultOutput(FCkParticles_StageInput In)
 {
     FCkParticles_StageOutput O;
@@ -67,6 +102,12 @@ FCkParticles_StageOutput CkParticles_DefaultOutput(FCkParticles_StageInput In)
     O.Velocity = In.Velocity;
     O.Color    = float4(1.0, 1.0, 1.0, 1.0);
     const float SizeBase = lerp(18.0, 8.0, CkParticles_NormalizedAge(In)) * lerp(0.65, 1.35, CkParticles_Rand(In.Seed, 7));
-    O.Size     = float2(SizeBase, SizeBase);
+    O.Size        = float2(SizeBase, SizeBase);
+    O.Scale       = float3(1.0, 1.0, 1.0);
+    O.Orientation = float4(0.0, 0.0, 0.0, 1.0);
+    O.Dynamic     = float4(0.0, 0.0, 0.0, 0.0);
+    O.Rotation    = 0.0;
+    O.MeshIndex   = 0;
+    O.VisTag      = 0;
     return O;
 }

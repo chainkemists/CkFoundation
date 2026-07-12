@@ -1,0 +1,61 @@
+// /CkParticles/Behaviors/Behavior_ImpactBurst.ush — BehaviorId 10.
+// Bullet/projectile impact recreated from sA NS_AR_Impact_1 + NS_Projectile_Hit_1 (corpus translation sheet):
+// a stationary flash pop, gravity-arced sparks in an up-cone, and a slow expanding smoke puff. Surface normal
+// = +Z (aim via spawn rotation for wall hits). Cycled continuous spawn (see MuzzleFlash note).
+// Keep the CPU mirror in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+FCkParticles_StageOutput CkParticles_Behavior_ImpactBurst(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    // Burst template: real Age (one impact per ~1.2 s loop) — the frac-cycle replay is retired.
+    const float t = In.Age;
+    const float m = saturate(t / 1.2);
+    const float k = CkParticles_Rand(In.Seed, 0);
+
+    if (k < 0.08) // flash pop: size curve (0,0)->(0.38,1)->(1,0) over 0.12 s (recipe curve)
+    {
+        const float s   = saturate(t / 0.12);
+        const float Pop = s < 0.38 ? s / 0.38 : 1.0 - (s - 0.38) / 0.62;
+        const float Vis = saturate(1.0 - t / 0.12);
+        O.Position = float3(0.0, 0.0, 6.0);
+        O.Velocity = float3(0.0, 0.0, 0.0);
+        O.Size     = float2(90.0, 90.0) * Pop;
+        O.Color    = float4(35.0, 0.645, 0.0, 1.0) * Vis;
+    }
+    else if (k < 0.55) // sparks: up-cone (45 deg half), 150-500 cm/s, gravity -980, linear drag 1
+    {
+        const float u  = CkParticles_Rand(In.Seed, 1);
+        const float az = 6.28318530718 * CkParticles_Rand(In.Seed, 2);
+        const float th = 0.7854 * sqrt(u);
+        const float3 d = float3(sin(th) * cos(az), sin(th) * sin(az), cos(th));
+        const float s  = lerp(150.0, 500.0, CkParticles_Rand(In.Seed, 3));
+        const float Vis = saturate(1.0 - t / 0.53); // recipe: alpha gone by 44% of a 1.2 s arc
+        O.Position = d * s * (1.0 - exp(-t)) + float3(0.0, 0.0, -490.0 * t * t);
+        O.Velocity = d * s * exp(-t) + float3(0.0, 0.0, -980.0 * t);
+        O.VisTag   = 1;
+        O.Size     = float2(1.6, 11.0);
+        O.Color    = float4(35.0, 2.6, 0.2, 1.0) * Vis;
+    }
+    else // smoke puff: wide cone (49 deg half), 100-300 cm/s with drag 0.25, grows 40 -> 95
+    {
+        const float u  = CkParticles_Rand(In.Seed, 4);
+        const float az = 6.28318530718 * CkParticles_Rand(In.Seed, 5);
+        const float th = 0.8552 * sqrt(u);
+        const float3 d = float3(sin(th) * cos(az), sin(th) * sin(az), cos(th));
+        const float s  = lerp(100.0, 300.0, CkParticles_Rand(In.Seed, 6));
+        const float kd = (1.0 - exp(-0.25 * t)) / 0.25;
+        const float Vis = saturate(t / 0.08) * saturate(1.0 - m);
+        const float g   = lerp(0.5, 0.12, m);
+        O.Position = d * s * kd * 0.25 + float3(0.0, 0.0, 8.0);
+        O.Velocity = d * s * exp(-0.25 * t) * 0.25;
+        O.VisTag   = 2;
+        O.Rotation = (CkParticles_Rand(In.Seed, 7) - 0.5) * 360.0 + (CkParticles_Rand(In.Seed, 8) - 0.5) * 80.0 * t;
+        O.Dynamic  = float4(m * 0.85, 0.0, 0.0, 0.0);
+        O.Size     = float2(1.0, 1.0) * lerp(40.0, 95.0, m);
+        O.Color    = float4(g, g, g * 1.05, 0.6) * Vis;
+    }
+    return O;
+}
