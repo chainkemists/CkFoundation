@@ -153,6 +153,25 @@ public:
     Get_Mesh(
         const FCk_Handle_IsmProxy& InHandle);
 
+    // ---- Entity-outline observability (see CkUsf/DESIGN_EntityOutlines.md; used by autotests/gyms) ----
+
+    // True once the outline Sync processor mirrored this proxy's instance into a shadow ISM.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IsmProxy",
+              DisplayName = "[Ck][IsmProxy] Get Is Outline Applied")
+    static bool
+    Get_IsOutlineApplied(
+        const FCk_Handle_IsmProxy& InHandle);
+
+    // Instance count of the shadow ISM this proxy's outline lives in (all outlined proxies sharing the
+    // same renderer+preset). INDEX_NONE when no outline is applied.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IsmProxy",
+              DisplayName = "[Ck][IsmProxy] Get Outline Shadow Instance Count")
+    static int32
+    Get_OutlineShadowInstanceCount(
+        const FCk_Handle_IsmProxy& InHandle);
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|IsmProxy",
               DisplayName = "[Ck][IsmProxy] Get Relative Socket Transform")
