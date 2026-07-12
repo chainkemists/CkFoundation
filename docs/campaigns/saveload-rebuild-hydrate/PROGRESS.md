@@ -14,8 +14,8 @@
 | 3B | PHASE_3B.md | **DONE** (v3 load pipeline live; M2a fixed) | 2026-07-12 | CkF: 78fcdaa8e (retire reconstitution), 36bcdec5d (v3 load pipeline), <docs-this>; CkTests: ce32c65 | GREEN mod casualties: Ck.Snapshot **52 / 43 pass / 9 fail** (--discover-fresh; M2a + V3.InstancedStructDiskSmoke green; all 9 fails are verified Phase-4 casualties — see §Phase-3B DONE) |
 | 4A.1 | PHASE_4A.md | **DONE** (SM redrive→hydration; committed). 4A.2 (N1 discriminator + SpawnerResumes test) DEFERRED ([N1-A]-blocked). | 2026-07-12 | CkF: 705e7d57e (SM hydration); CkTests: 773a4d2 (comment) | GREEN mod casualties+flake: Ck.Snapshot **52/45/7** (both Parity.StateMachine* GREEN, 9→7; 7 = 4B casualties); Ck.StateMachine 24/25 (lone red = documented OwningClientAuth_SubSm flake — passed alone + in Net run); Net 102/99/3 delta-zero (kiosk env-trio only, no new framework Ck.*.Net red) |
 | 4A.2 | PHASE_4A.md | DEFERRED ([N1-A] scope call) | | | |
-| 4B | PHASE_4B.md | **IN PROGRESS** — **ALL ACTIONABLE CASUALTIES CLOSED**: TagSet + RenderTarget + Attributes×5 + AnimPlan DONE. **Grid + Inventory×2 DEFERRED → [INV-A]** (anonymous entities, Adam scope call). Attributes needed a companion invariant fix ([P4B-D4]: pre-existing LifetimeDependents false positive). Remaining 4B work is ADDITIVE oracle-coverage: params-mutators (4B.1), MontagePlayer rebind, AS smoke (4B.3). | 2026-07-12 | CkF: 5088f5336 (TagSet), ede66976f (RenderTarget), db83e687a (AnimPlan), 5b7c1e077 (Attributes×5), 19613a1eb (invariant fix) | GREEN mod casualties: Ck.Snapshot **52/49/3** (Parity.{RenderTarget,Attributes,AnimPlan}_MPReload all green, 0 dangling; the 3 remaining = GridPlacements/InventoryDataOnly/InventorySpatial, all [INV-A]-deferred); Net 102/98/4 delta-zero (kiosk env-trio + documented SM.Net flake) |
-| 5 | PHASE_5.md + VALIDATION.md | NOT STARTED | | | |
+| 4B | PHASE_4B.md | **IN PROGRESS** — casualties closed (TagSet/RenderTarget/Attributes×5/AnimPlan) + **4B.3 AS smoke DONE** (framework FCk_SaveData_EntityScriptFields handler + 2 AS gates green). **Grid + Inventory×2 DEFERRED → [INV-A]**. Verification-gated leftovers (4B.1 params-mutators, MontagePlayer rebind) still blocked on OracleParity/BB-driver-world ([P4B-N1]). | 2026-07-12 | CkF: 5088f5336 (TagSet), ede66976f (RenderTarget), db83e687a (AnimPlan), 5b7c1e077 (Attributes×5), 19613a1eb (invariant fix), **09ca84f41 (4B.3 SaveGame-fields handler)**; CkTests: **a0c2f2d (4B.3 AS gates)** | GREEN: Ck.Snapshot **54/51/3** (both `AS.SaveGameFields_RoundTrip`+`AS.NonSaveGameField_Drops` green; the 3 = [INV-A] trio by name; Meta ratchet + v3 AUDIT delta-zero); Net **102/99/3** framework Ck.*.Net delta-zero (kiosk env-trio only; SM.Net flake passed) |
+| 5 | PHASE_5.md + VALIDATION.md | **IN PROGRESS — partial (Track B); final blocked** | 2026-07-12 | (in progress) | (see §Phase-5) |
 
 ## Unattended execution protocol (set 2026-07-11 by Adam — OVERRIDES the "STOP on divergence" default below)
 
@@ -452,6 +452,16 @@ rendezvous — everything else compiled first pass). Gate GREEN (Ck.Snapshot 51/
   - **Checkpoint rationale:** the core Phase-4B hydration-parity goal is COMPLETE + fully verified for every closeable feature.
     The remaining work is human-decision-gated ([INV-A] trio → Adam), verification-prerequisite-gated (4B.1/MontagePlayer →
     OracleParity/BB-driver-world), or a distinct fresh-context new-framework effort (4B.3 AS smoke). Not an arbitrary stop.
+- **[P4B-D5] (executor, 2026-07-12, 4B.3) — EntityScript SaveGame fields land POST-Construct/POST-BeginPlay (at hydration),
+  NOT pre-BeginPlay; recorded as the designer contract (the continuation's small human decision (a), taken as executor
+  judgment).** VERIFIED: `FProcessor_EntityScript_BeginPlay` is load-kernel (`RunsDuringLoad`, `CkEntityScript_Processor.h`),
+  so on a v3 load the fresh script re-Constructs AND BeginPlays under the load gate BEFORE the hydration payloads enqueue —
+  identical to every other v3-hydrated feature. So the framework `FCk_SaveData_EntityScriptFields` Apply restores SaveGame
+  fields after BeginPlay ran, contradicting PHASE_4B.md:37-38's "post-Construct/pre-BeginPlay" wording. **Contract line for
+  spec §3 AS surface:** *don't read a script's UPROPERTY(SaveGame) fields in its BeginPlay — they land at hydration, one gate
+  pass later.* Building a BeginPlay-defer would be a scheduler-core change, out of 4B scope; same class as [SM-A]/[P3B-D6]
+  (campaign-precedented executor call). Adam can veto via PROGRESS. Gate green with the fields restored (the AS RoundTrip test
+  never reads them in BeginPlay, so the contract holds in practice).
 - **[P4B-D1] (executor, 2026-07-12) — TagSet authority write omits the OnTagsChanged broadcast.** Fable's pseudocode mirrored
   the client drain's diff+broadcast (`CkTagSet_Processor.cpp:156-168`) for symmetry. Omitted it: a save-load RESTORE is not a
   gameplay change, the parity test asserts tag presence + replication (not the signal), and clients still get the OnTagsChanged
@@ -871,3 +881,19 @@ value is [N1-A]-blocked and it needs a new BB-style fixture world).
   params-mutators, MontagePlayer, AS smoke. Stopped here at a clean committed increment (TagSet green) with the rest fully
   designed + handed off — the remaining per-feature work (esp. RenderTarget's transplant + the [INV-A] Adam fork) is better done
   with fresh context. Nothing pushed.
+- 2026-07-12 — **Track A / 4B.3 AS SaveGame smoke DONE + COMMITTED (Opus, unattended run).** Built the framework Save-transport
+  handler `FCk_SaveData_EntityScriptFields` in CkEcs (`CkEntityScript_SaveFields.h/.cpp`) — `RegisterLazy` (no SeedContainer),
+  `Transport = Save`, Produce reflect-walks the script class's `CPF_SaveGame` FProperties + serializes via
+  `SerializeScriptProperties(ArIsSaveGame=true)`, Apply replays them onto the re-Constructed instance gated to
+  `FCk_HydrationApplyScope` (net path is a no-op early-return). Every load-bearing anchor verified against code before writing
+  (container registry contract, `Get_SaveHandlerTypes` filter `(Transport & Save)`, CaptureV3 Produce loop, generic-by-name
+  payload deserialize, the non-bridged-RuntimeSpawned respawn gates on the OWNER being persisted not the child's respawnable
+  flag — so a fixture child under the persisted M2a probe round-trips without the deferred N1 discriminator). CkTests: AS fixture
+  `Script/CkSnapshot/CkSnapshot_AsSaveFields_EntityScript.as` (`UCk_GenericEntityScript_UE` subclass, `UPROPERTY(SaveGame)`
+  int/FString/TArray + a non-SaveGame negation int, DoesNotReplicate) + C++ gate `Test_Snapshot_AS_SaveFields_Gate.spec.cpp`
+  (two IMPLEMENT_SIMPLE_AUTOMATION_TEST off the M2a single-PIE harness, reflection mutate/read + a CPF_SaveGame precondition
+  assert). **Gate: Ck.Snapshot 54/51/3** (both `AS.SaveGameFields_RoundTrip` + `AS.NonSaveGameField_Drops` GREEN, the 3 = [INV-A]
+  trio by name, Meta.RepDataRestoreCoverage green — `FCk_SaveData_` prefix keeps it off the RepData ratchet — v3 AUDIT delta-zero
+  3=3 vs baseline, no Angelscript errors naming the fixture). **Net 102/99/3** framework `Ck.*.Net` delta-zero (kiosk env-trio
+  only; SM.Net flake passed). Commits: CkF `09ca84f41`, CkTests `a0c2f2d`. Decision [P4B-D5] recorded (post-BeginPlay timing).
+  Nothing pushed. **Track A DONE** (closes 2 of the 7 VALIDATION-required tests). Next: Track B (Phase 5 partial).

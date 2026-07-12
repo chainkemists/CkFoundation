@@ -10,6 +10,13 @@ ruling against cited code before implementing. **No push. Stage only files you c
 The design below was scoped by a Fable agent and the two load-bearing linchpins were Opus-verified (see §Linchpins).
 Treat every OTHER file:line as "verify at implementation start" (campaign protocol) — anchors drift.
 
+## SESSION PROGRESS (2026-07-12, Opus unattended)
+- ✅ **TRACK A (4B.3 AS smoke) DONE + COMMITTED.** CkF `09ca84f41` (framework `FCk_SaveData_EntityScriptFields` handler),
+  CkTests `a0c2f2d` (AS fixture + 2 gates). Gate: Ck.Snapshot **54/51/3** (both AS tests green, the 3 = [INV-A] trio),
+  Net **102/99/3** framework delta-zero. Implemented exactly per §TRACK A below; [P4B-D5] recorded (post-BeginPlay timing).
+  Nothing pushed.
+- ⏳ **TRACK B (Phase 5 partial) IN PROGRESS** — see PROGRESS §Phase-5 for the live cluster state.
+
 ## 0. STATE (verify at start)
 - CkFoundation `feature/save-load-improvements` HEAD = `075caaa6f` (docs) on top of the 4B feature commits:
   `19613a1eb` (invariant fix) · `5b7c1e077` (Attributes×5) · `db83e687a` (AnimPlan) · `ede66976f` (RenderTarget) ·
