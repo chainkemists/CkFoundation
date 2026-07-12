@@ -4,7 +4,6 @@
 #include "CkEcs/Snapshot/CkSnapshot_Archive_Reader.h"
 #include "CkEcs/Snapshot/CkSnapshot_Context.h"
 #include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
-#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h" // ck::FTag_Snapshot_JustRestored
 #include "CkEcs/Snapshot/CkSnapshot_TagDriver.h"
 #include "CkSnapshot/SaveGame/CkSnapshot_Header.h"
 
@@ -226,23 +225,6 @@ namespace ck::snapshot
         }
 
         Loader.orphans();
-
-        // Stamp a generic "just restored" marker on every surviving restored entity so replicated features (e.g.
-        // CkAttribute) can RE-DRIVE replication of the restored VALUES to clients. The per-feature replication trigger
-        // tags are transient + consumed before a save, so they are NOT restored — without this, a client keeps its
-        // Construct-default values for restored entities. Collect first: Add mutates the entity storage being iterated.
-        {
-            auto RestoredEntities = TArray<FCk_Handle>{};
-            for (const auto Entity : RawRegistry->storage<ck::SnapshotEntityType>())
-            {
-                RestoredEntities.Add(ck::MakeHandle(FCk_Entity{Entity}, CkRegistry));
-            }
-            for (auto& Handle : RestoredEntities)
-            {
-                if (ck::IsValid(Handle))
-                { Handle.Add<ck::FTag_Snapshot_JustRestored>(); }
-            }
-        }
 
         Report.Set_SkippedFragmentTypes(MoveTemp(SkippedTypes));
         Report.Set_EntitiesRestored(static_cast<int32>(RawRegistry->storage<ck::SnapshotEntityType>().size()));

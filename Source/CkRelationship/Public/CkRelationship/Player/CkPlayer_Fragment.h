@@ -66,14 +66,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Per-feature restore-replication done marker. ck::FTag_Snapshot_JustRestored lives on the OWNER
-    // entity and is shared by every owner-resident feature, so no single feature may remove it —
-    // each feature pairs it with its own done tag instead. Never leaks across restores: a restore
-    // rebuilds entities from snapshot bytes and this tag is not snapshotted.
-    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_Player_RestoreReplicated);
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRELATIONSHIP_API, PlayerChanged, FCk_Delegate_PlayerChanged,
         FCk_Handle_Player, ECk_Player_ID, ECk_Player_ID);
 }

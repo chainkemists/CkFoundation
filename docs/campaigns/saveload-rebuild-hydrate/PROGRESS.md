@@ -79,6 +79,33 @@ Dev-behavior-neutral (machinery stays compiled in Dev) — the deletes land firs
   reports 3, Manifest empty, TransientEntityId sentinel.** Executor judgment per Fable (low-blast, reversible, signature
   byte-identical); Adam can veto via PROGRESS. FCk_Snapshot_Header the TYPE stays (frozen return type + oracle-test capture type).
 
+- **[P5-D3] (executor, 2026-07-12, cluster 3 — Fable-consulted + every claim Opus-code-verified) — KEEP `CkSnapshot_RestoreMarker.h`
+  + `FTag_Snapshot_JustRestored` (plan §5.2.2 said DELETE); the plan's delete surface OVERLOOKED live cross-repo BB consumers.**
+  The cluster-3 build FAILED: BB (superproject, must-not-edit) has live `Has<ck::FTag_Snapshot_JustRestored>()` in
+  `Bb_SnapshotRestore.cpp:35` + `Bb_CombatReceiverRestore.cpp:26` (+ their `#include` of the header + the BB AS restore-rebind
+  fleet via `Get_WasJustRestored`). SAME class as the plan's OWN `FTag_ActorJustRebound` KEEP — the same `Bb_SnapshotRestore.cpp`
+  consumes BOTH tags; the plan just didn't extend the ruling to `FTag_Snapshot_JustRestored`. Resolution (Fable ruling, verified):
+  restored the header, replaced its stale Model-A comment with a retirement comment. VERIFIED: (1) Model-A `Run_Restore(world)` —
+  the only stamper — has exactly ONE caller tree-wide (`Test_Snapshot_FloatAttribute_Gate.spec.cpp:215`, Dev CkTests), NOT the BB
+  runtime (which loads via v3 `UCk_Snapshot_Subsystem::Request_Load`, no stamp) → BB's `Has<>` was ALREADY always-false under v3
+  since Phase 3B → keeping the tag is COMPILE-ONLY, zero runtime-behavior change; (2) no compile path without the tag (BB includes
+  by path + needs the complete type; can't oracle-gate — BB compiles in Shipping); (3) `CK_DEFINE_ECS_TAG_TRANSIENT` has no
+  snapshot-registrar side effect, so retention is inert. **Cross-repo sweep (Fable-suggested, Opus-run) for EVERY deleted symbol
+  across BB `Source`/`BusterBlockTests`/`Script` + CkTests: the ONLY hits are the 2 BB files (the tag) + one stale COMMENT in
+  CkTests `Test_Snapshot_RenderTargetParity_MPReload_Gate.spec.cpp:10` (non-blocking) — no other deleted symbol has a cross-repo
+  code consumer.** Consequences (record loudly): (a) **exit-grep amendment** — PHASE_5.md §5.3's `...JustRestored...` grep now
+  carves out `CkSnapshot_RestoreMarker.h` (retained cross-repo symbol); executor-recorded per the plan's small-human-decision (c)
+  ("mechanical, edits CTO-fixed acceptance text — record loudly"), Adam ratifies at review. Carve-out only holds once cluster 6's
+  comment-sweep clears the OTHER `JustRestored` comment hits (`CkTag.h:29,32`, `CkSnapshot_Restore.cpp:10`,
+  `CkRenderTarget_RepData.h:41`). (b) **BB-repo follow-up EXPANDED** (Adam/BB, NOT a CkF session): the FTag_ActorJustRebound
+  cleanup now ALSO owns the whole `FTag_Snapshot_JustRestored`/`Get_WasJustRestored` surface (2 BB C++ BPFL pairs + ~28 AS
+  `*_Processor_RestoreRebind.as` + gate-spec comments). Delete `CkSnapshot_RestoreMarker.h` only WITH that BB cleanup. (c) **Flag A
+  (cluster-6 watch):** CkTests `Test_Snapshot_RepDataRestoreCoverage_MetaTest`'s premise is per-feature ReplicateOnRestore
+  coverage — watch the gate delta; retire/rewrite in cluster 6 if red (CkTests editable). (d) **Flag C (cluster-5 heads-up):**
+  `CkTag.h:5` unconditionally includes `CkSnapshot_TagRegistry.h` and `CK_DEFINE_ECS_TAG` calls `Register_SnapshotableTag` from
+  EVERY tag — when cluster 5 oracle-gates TagRegistry/TagDriver, that header + Register function must STAY COMPILED in all configs
+  (stub the BODY, not the declaration) or Shipping breaks globally.
+
 ## Unattended execution protocol (set 2026-07-11 by Adam — OVERRIDES the "STOP on divergence" default below)
 
 Run the campaign UNATTENDED through all remaining phases: finish §1.6, then Phases 2 → 3A → 3B → 4A → 4B → 5 in
