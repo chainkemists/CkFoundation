@@ -75,6 +75,11 @@ fix set below. Root-cause history retained under "ROOT-CAUSED" for the record.**
   inventory's Produce payload was dropped. The essential DataOnly fix (FINALIZE's "no fixture change needed" was falsified;
   the Spatial tag had already learned this lesson — it just was not applied to the DataOnly one).
 - **Commit order:** CkFoundation FIRST, then CkTests (CkTests must not lead CkFoundation). No push (Class-4 Adam review).
+- **COMMITTED 2026-07-13 (unpushed):** CkFoundation `ef8e057f2` (4 source + FINALIZE.md + PROGRESS.md), CkTests `d9ffa09`
+  (on `dev`, where the whole campaign's CkTests work lives). Gate at commit: Ck.Snapshot 53/1 (Grid engine-death only) +
+  Ck.*.Net 103/103/0. Superproject `Config/DefaultGameplayTags.ini` shows an unrelated object-pooling tag auto-write
+  (`AutoTest.ObjectPooling.NetConstructed`) — NOT touched/committed by this session (native tags need no .ini entry;
+  `Inventory.AutoTest_Net` is absent from the .ini, confirming the native registration suffices).
 
 Files (all under Source/): NEW `CkEcs/.../EntityReplicationDriver/CkEntityReplicationDriver_BuildRecipe.{h,cpp}`
 (`ck::FFragment_BuildRecipe` + holder, mirror of SpawnRecipe); `CkEntityReplicationDriver_Utils.cpp` (stamp in
