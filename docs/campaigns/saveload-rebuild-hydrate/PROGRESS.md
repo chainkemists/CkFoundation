@@ -17,6 +17,36 @@
 | 4B | PHASE_4B.md | **IN PROGRESS** — casualties closed (TagSet/RenderTarget/Attributes×5/AnimPlan) + **4B.3 AS smoke DONE** (framework FCk_SaveData_EntityScriptFields handler + 2 AS gates green). **Grid + Inventory×2 DEFERRED → [INV-A]**. Verification-gated leftovers (4B.1 params-mutators, MontagePlayer rebind) still blocked on OracleParity/BB-driver-world ([P4B-N1]). | 2026-07-12 | CkF: 5088f5336 (TagSet), ede66976f (RenderTarget), db83e687a (AnimPlan), 5b7c1e077 (Attributes×5), 19613a1eb (invariant fix), **09ca84f41 (4B.3 SaveGame-fields handler)**; CkTests: **a0c2f2d (4B.3 AS gates)** | GREEN: Ck.Snapshot **54/51/3** (both `AS.SaveGameFields_RoundTrip`+`AS.NonSaveGameField_Drops` green; the 3 = [INV-A] trio by name; Meta ratchet + v3 AUDIT delta-zero); Net **102/99/3** framework Ck.*.Net delta-zero (kiosk env-trio only; SM.Net flake passed) |
 | 5 | PHASE_5.md + VALIDATION.md | **Track B (decommission Model A) partial COMPLETE — clusters 1a–6 DONE + COMMITTED; Phase-5 FINAL blocked** | 2026-07-12 | see §Phase-5 progress | Ck.Snapshot 54/51/3 (3=[INV-A]); Net 102/98/4 framework delta-zero; Shipping compile OK |
 
+## Close-out session (2026-07-12, Opus unattended) — FINALIZE design-lock (Phase 0 of the close-out)
+
+Adam's new directive supersedes PHASE_5.md's "gate-don't-delete": **REMOVE Model A entirely; one pipeline; retire
+`CK_WITH_FIDELITY_ORACLE`.** The locked design + phased plan + decisions + Adam-decision list live in **FINALIZE.md**
+(canonical for the close-out; trust it over the raw audits). Produced via a 5-way read-only audit (4 Fable + 1 Opus-Plan
+for [INV-A] after the Fable usage cap), every load-bearing claim Opus-code-verified.
+
+- **Phased plan:** F1 (obj-1 [INV-A] fix) → F2 (obj-3 live-path footguns F1/F2/F3 + F4 SeedContainer dead-code) →
+  F3 (obj-2+4 legacy purge, 6-cluster order incl. CkTests HandleWalk/ProduceSensitivity/AttributeModifier migration) →
+  F4 (obj-5 comment sweep + ck::algo). obj-1 FIRST (fix reds while the oracle still cross-checks the new item Produce).
+- **[INV-A] LOCKED (Audit A, Opus-verified):** items are Rule-5 anonymous → add `ck::FFragment_BuildRecipe` (mirror
+  `FFragment_SpawnRecipe`) + `ECk_Snapshot_V3_Provenance::DefinitionBuilt` + capture rule + rebuild branch, so item state
+  rides each feature's own Produce/Apply; PLUS the authority-side hydration branch on DataOnly/Spatial/2dGridOccupancy
+  `Apply` (mirror `CkIntegerAttribute_Fragment.cpp:111-168`, gated on `FCk_HydrationApplyScope::Get_IsActive()`).
+  Pure CkFoundation, no BB edit. Outcome: **Inventory×2 → GREEN; `GridPlacements` STAYS RED** on an independent
+  engine-death (nested-`FEcsWorld` lifetime on a replicated bridged 2dGridSystem through seamless travel — its own
+  workstream; **STOP-and-flag for Adam**). Phase-F1 gate = Ck.Snapshot 52 pass / 2 red? → actually 51+2=green so
+  **~53 pass / 1 red (GridPlacements)**; Net delta-zero.
+- **Pivotal verified facts:** `SeedContainer` is DEAD (zero invocations) → contract is Produce/Apply(+Remove);
+  the whole `FidelityOracle` dies (`Oracle.StructuralBaseline` deleted, `Oracle.ProduceDiffBaseline` → oracle-free
+  `V3.ProduceSensitivity`); handle-remap coverage ports to a new `V3.HandleWalk.*` suite on the existing v3 harness;
+  TagRegistry landmine removal is purely subtractive (`CkTag.h`); 3 live v3 footguns to fix (F1 silent drop, F2
+  dead hydration-complete gate, F3 unused ContextOwner capture).
+- **Adam-decision list (do NOT resolve unilaterally):** GridPlacements engine-death; RestoreMarker/JustRestored
+  BB-coordinated removal; fidelity gaps G1 (transform incl. player pawn)/G2 (dynamic fragments)/G3-G5; F2 timing change;
+  Policy-macro Option A vs (c); LoadReport/Header vestigial prune; V3-identifier rename; Tier-D pre-existing comments;
+  Timer/MontagePlayer v3 payloads; transient item defs; v3 save-format bump. Full detail + rationale in FINALIZE.md.
+- **State:** no source touched; tree clean at `a15880b26` + the two new/edited docs (FINALIZE.md is git-ignored `*.md`
+  → force-add to commit). Design-lock is a clean Phase-0 boundary; F1 implementation follows from FINALIZE.md.
+
 ## Phase-5 progress (cluster tracker — Track B, decommission Model A "gate, don't delete")
 
 Class-4 framework change (CkEcs snapshot core + save format). Per-cluster Dev compile/gate; Shipping compile + final
