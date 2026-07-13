@@ -31,6 +31,8 @@ private:
     UPROPERTY() int32              _EntitiesRestored = 0;
     UPROPERTY() int32              _EntitiesOrphaned = 0;
     UPROPERTY() int32              _EntitiesPartiallyRestored = 0;
+    // Hydration payloads that failed to deserialize (empty bytes, or a type absent since the save — content drift).
+    UPROPERTY() int32              _PayloadsDropped = 0;
     UPROPERTY() TArray<FString>    _SkippedFragmentTypes;
     UPROPERTY() TArray<FString>    _SkippedDynamicTypes;
     UPROPERTY() TArray<FString>    _SkippedScriptClasses;
@@ -41,6 +43,7 @@ public:
     CK_PROPERTY(_EntitiesRestored);
     CK_PROPERTY(_EntitiesOrphaned);
     CK_PROPERTY(_EntitiesPartiallyRestored);
+    CK_PROPERTY(_PayloadsDropped);
     CK_PROPERTY(_SkippedFragmentTypes);
     CK_PROPERTY(_SkippedDynamicTypes);
     CK_PROPERTY(_SkippedScriptClasses);

@@ -825,15 +825,21 @@ auto
     _HydrationEnqueued = true;
 
     auto EnqueuedCount = 0;
+    auto PayloadsDropped = 0;
     for (const auto& Payload : _V3Tables.Get_Payloads())
     {
         auto* Owner = _SavedIdMap.Find(Payload.Get_OwnerSavedId());
         if (Owner == nullptr || ck::Is_NOT_Valid(*Owner))
         { continue; } // owner unmapped (orphan/skipped) — its payloads drop
 
+        // A payload that fails to deserialize is lost state, not a no-op — surface it loudly (silent in Test/Shipping,
+        // but counted in the load report either way) rather than dropping it invisibly.
         auto Data = DoDeserialize_V3Blob(Payload.Get_PayloadBytes());
-        if (NOT Data.IsValid())
-        { continue; }
+        CK_ENSURE_IF_NOT(Data.IsValid(),
+            TEXT("v3 load: hydration payload for type [{}] (owner saved-id [{}]) failed to deserialize — dropped "
+                 "(empty bytes, or the type is absent since the save)"),
+            Payload.Get_TypePath(), Payload.Get_OwnerSavedId())
+        { ++PayloadsDropped; continue; }
 
         auto Entity = *Owner;
         Entity.AddOrGet<ck::FFragment_PendingHydration>()._Entries.Add(MoveTemp(Data));
@@ -848,8 +854,9 @@ auto
     const auto Orphaned = _V3Tables.Get_Entities().Num() - _SavedIdMap.Num() - _SkippedIds.Num();
     _V3LoadReport.Set_EntitiesRestored(_SavedIdMap.Num());
     _V3LoadReport.Set_EntitiesOrphaned(Orphaned > 0 ? Orphaned : 0);
-    ck::snapshot::Display(TEXT("DIAG: v3 hydrate — enqueued [{}] payloads across [{}] mapped entities ([{}] skipped boot-infra, [{}] orphaned)"),
-        EnqueuedCount, _SavedIdMap.Num(), _SkippedIds.Num(), _V3LoadReport.Get_EntitiesOrphaned());
+    _V3LoadReport.Set_PayloadsDropped(PayloadsDropped);
+    ck::snapshot::Display(TEXT("DIAG: v3 hydrate — enqueued [{}] payloads across [{}] mapped entities ([{}] skipped boot-infra, [{}] orphaned, [{}] payloads dropped)"),
+        EnqueuedCount, _SavedIdMap.Num(), _SkippedIds.Num(), _V3LoadReport.Get_EntitiesOrphaned(), PayloadsDropped);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -1074,15 +1081,21 @@ auto
 
         case ELoadPhase::Settling:
         {
-            // Let the parked reconcile-destroys + any residual requests drain over a few real frames before finishing.
-            if (_SettleFramesRemaining-- > 0)
+            // Finish only once hydration has fully drained (no payloads pending apply) AND the parked reconcile-destroys
+            // + residual requests have had their minimum settle frames. Previously this finished on a bare frame
+            // countdown, so OnLoadComplete could fire with hydration still in flight. The frame-cap is now a LOUD abort
+            // backstop — reaching it with hydration still pending means some payloads never applied.
+            if (_SettleFramesRemaining > 0)
+            { --_SettleFramesRemaining; }
+
+            const auto HydrationPending = NOT DoIs_HydrationComplete();
+            if ((HydrationPending || _SettleFramesRemaining > 0) && _LoadFrameCount < kLoad_HydrateFrameCap)
+            { return true; }
+
+            if (HydrationPending)
             {
-                if (_LoadFrameCount >= kLoad_HydrateFrameCap)
-                {
-                    ck::snapshot::Warning(TEXT("Request_Load: settle exceeded [{}] frames — finishing anyway"), kLoad_HydrateFrameCap);
-                }
-                else
-                { return true; }
+                CK_TRIGGER_ENSURE(TEXT("Request_Load: settle hit the [{}]-frame cap with hydration still pending — "
+                    "finishing anyway (some payloads did not apply)"), kLoad_HydrateFrameCap);
             }
 
             ck::snapshot::Display(TEXT("DIAG: v3 load settled — finishing (restored [{}], orphaned [{}])"),
