@@ -113,18 +113,6 @@ public:
         // container, e.g. AnimPlan); only an UNSET result means "feature absent, do not seed".
         TFunction<TOptional<FInstancedStruct>(FCk_Handle& Entity)> Produce;
 
-        // Typed container seed bound at registration (RegisterLazyTyped) — re-establishes the FastArray
-        // entry + the entity-side TFragment_ContainerEntryRef<T> the feature's Replicate processor keys
-        // on. Type-erased callers cannot do this themselves (the ContainerRef fragment is typed). A
-        // registrar may supply its own to add re-arm/owner-resolution work beyond the plain typed add.
-        //
-        // PARTICIPATION RULE: a handler with BOTH Produce AND SeedContainer participates in the Model-A
-        // restore re-drive (FProcessor_Persistence_ReDriveOnRestore). A handler with Produce but NO
-        // SeedContainer is capture/oracle-only (Phase 3A) and is NEVER re-seeded — this is how the six
-        // deferred features gain Produce without double-seeding against their still-alive restore
-        // processors.
-        TFunction<ECk_AddedOrNot(FCk_Handle& Entity, const FInstancedStruct& Data)> SeedContainer;
-
         // Which pipelines consult this handler. Net-only default keeps Phase 1 behavior-neutral;
         // features flip Save on when their payload becomes save-file surface (Phase 3+).
         ECk_PersistenceTransport Transport = ECk_PersistenceTransport::Net;
@@ -145,13 +133,8 @@ public:
         FHandler InHandler) -> void;
 
     /**
-     * Typed lazy registration. Synthesizes the default SeedContainer (typed TryAddContainerFragment) when the
-     * caller left InHandler.SeedContainer unset, resolves the payload type lazily via T_RepData::StaticStruct(),
-     * then forwards to RegisterLazy. Feature registrars migrate to this from RegisterLazy.
-     *
-     * Body lives in CkReplicatedFragmentContainer.inl.h, pulled in at the bottom of CkNet_Utils.h where
-     * UCk_Utils_Net_UE::TryAddContainerFragment is visible — this header MUST NOT include CkNet_Utils.h (that
-     * header includes THIS one; the reverse edge is a cycle).
+     * Typed lazy registration. Resolves the payload type lazily via T_RepData::StaticStruct(), then forwards to
+     * RegisterLazy. Body lives in CkReplicatedFragmentContainer.inl.h so it instantiates where T_RepData is complete.
      */
     template <typename T_RepData>
     static auto
@@ -159,18 +142,8 @@ public:
         FHandler InHandler) -> void;
 
     /**
-     * Resolves pending registrations, then returns the payload types of every handler that has BOTH Produce and
-     * SeedContainer — the handlers that participate in the Model-A restore re-drive (§1.3). Produce-only handlers
-     * (capture/oracle-only) are excluded so they are never re-seeded.
-     */
-    static auto
-    Get_ReDriveHandlerTypes() -> TArray<const UScriptStruct*>;
-
-    /**
-     * Resolves pending registrations, then returns the payload types of EVERY handler that has a Produce — the
-     * superset of Get_ReDriveHandlerTypes() (which additionally requires SeedContainer). Used by the fidelity
-     * oracle Tier-2 (Produce-diff): capture-only handlers (Produce without SeedContainer, e.g. the deferred six at
-     * Phase 3A) are oracle-visible even though they are never re-seeded.
+     * Resolves pending registrations, then returns the payload types of EVERY handler that has a Produce. Used by the
+     * fidelity oracle Tier-2 (Produce-diff).
      */
     static auto
     Get_ProduceHandlerTypes() -> TArray<const UScriptStruct*>;
