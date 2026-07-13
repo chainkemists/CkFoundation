@@ -89,7 +89,7 @@ fix set below. Root-cause history retained under "ROOT-CAUSED" for the record.**
   registrar `.SeedContainer` assignments (5 attribute via a parallel Workflow + AnimPlan/MontagePlayer/TagSet). 12 files,
   −147 net lines. Gate: Ck.Snapshot 53/1, Net 103/102/1 (delta-zero — the one fail is the documented StateMachine.Net
   flake). Residual: ~13 include/other comments still mention SeedContainer → F4 comment sweep.
-- **F2b — live-path footguns (obj-3 F1/F2/F3). COMMITTED CkF `<f2b-hash>`** (unpushed). CkSnapshot_Subsystem.cpp +
+- **F2b — live-path footguns (obj-3 F1/F2/F3). COMMITTED CkF `bdba6a673`** (unpushed). CkSnapshot_Subsystem.cpp +
   CkSnapshot_LoadReport.h: (F1) `DoHydrate_Enqueue` fires `CK_ENSURE_IF_NOT(Data.IsValid())` on a deserialize-fail,
   counts into a new `_PayloadsDropped` LoadReport field (was a silent `continue`); (F2) `Settling` now finishes only once
   `DoIs_HydrationComplete()` (no payloads pending) AND the min settle frames elapsed, with the frame-cap as a loud
