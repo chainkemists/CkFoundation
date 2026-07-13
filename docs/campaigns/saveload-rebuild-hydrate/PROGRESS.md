@@ -146,6 +146,30 @@ rebuild-gate trace + Apply trace) disambiguated capture-vs-rebuild for BOTH test
   `Get_LifetimeOwner` UNGUARDED on a BuildRecipe entity with no lifetime owner (ensure fired). GUARDED now. NOT a WIP
   regression — the WIP baseline 54/51/3 holds. (The 2 `Bb.Snapshot.*` fails are pre-existing BusterBlock-project casualties.)
 
+## Phase F3 (obj-2 — full Model-A purge) — IN PROGRESS (Opus, 2026-07-13)
+
+Verified execution plan in FINALIZE.md "Fable F3 execution ruling" (Fable code-verified; corrects the cluster order —
+CkTests deletions co-commit with clusters 2/4, NOT a trailing cluster).
+
+- **F3 cluster 2 — Model-A Capture/Restore entry-points DELETED. COMMITTED CkF `1226006d8` + CkTests `ab33da2`** (unpushed;
+  CkF first). Deleted CkSnapshot_Capture.{h,cpp} + CkSnapshot_Restore.{h,cpp}; shrunk SaveKey_Fragment (dropped Model-A
+  registration; the fragment stays as a v3 rendezvous marker). Deleted the 19 coupled Model-A CkTests (they #include
+  Capture/Restore.h unconditionally). Gate: build clean, Ck.Snapshot green-except-GridPlacements (engine-death) + 2
+  pre-existing Bb.Snapshot. **[F3-D1 — ADAM coverage loss]:** the Adam-gated GridPlacements/TimerChrono/MontagePlayerState
+  RoundTrip tests were compile-coupled to Capture/Restore → deleted at cluster 2. Grid save/load now has NO passing
+  coverage (parity twin GridPlacements_MPReload is the engine-death red, registry twin deleted); Timer-resume + MP-state
+  round-trip coverage also dropped. Adam: accept, or land v3 Timer/MP payloads + resolve the grid engine-death.
+  **Net check deferred to cluster 4:** cluster 2 is a test-only Model-A deletion (cannot affect the live Net path), and the
+  Snapshot gate already runs the Parity.*_MPReload net tests green — full Ck.*.Net suite runs at the cluster-4 teardown.
+- **F3 cluster 3 (NEXT) — per-fragment SerializeSnapshot sweep.** 42 feature-module `.cpp` files (list captured this
+  session) + their `.h` counterparts, EXCLUDING the CkEcs-owned fragments (those go atomic with cluster 4). Per-fragment
+  recipe: delete the SerializeSnapshot decl(.h)+body(.cpp), `using IsSnapshotable = void;`, CK_REGISTER_SNAPSHOTABLE
+  line(s), FSnap_ aliases, the 3 snapshot includes (FragmentRegistry/Archive_Writer/Archive_Reader). Specials: sweep Timer
+  + `FCk_Chrono::SerializeSnapshot` (CkCore) same commit; delete CkLabel_Snapshot_Registration.cpp whole; CkDynamic delete
+  the method but KEEP the shared RemapHandles walker. Use a Workflow (one agent per fragment) + adversarial compile-review;
+  the build gate is the safety net. Then cluster 4 (CkEcs teardown atomic + Shipping proof + 2 CkTests co-delete),
+  cluster 5 (VALIDATION/PHASE_5 amend), cluster 6 (comment sweep + exit greps). See FINALIZE.md for the full ruling.
+
 ## Phase-5 progress (cluster tracker — Track B, decommission Model A "gate, don't delete")
 
 Class-4 framework change (CkEcs snapshot core + save format). Per-cluster Dev compile/gate; Shipping compile + final
