@@ -161,7 +161,10 @@ CkTests deletions co-commit with clusters 2/4, NOT a trailing cluster).
   round-trip coverage also dropped. Adam: accept, or land v3 Timer/MP payloads + resolve the grid engine-death.
   **Net check deferred to cluster 4:** cluster 2 is a test-only Model-A deletion (cannot affect the live Net path), and the
   Snapshot gate already runs the Parity.*_MPReload net tests green — full Ck.*.Net suite runs at the cluster-4 teardown.
-- **F3 cluster 3 (NEXT) — per-fragment SerializeSnapshot sweep.** 42 feature-module `.cpp` files (list captured this
+- **F3 cluster 3 — per-fragment SerializeSnapshot sweep. DONE+COMMITTED CkF `85b5d7319`** (unpushed; 85 files, CkLabel_Snapshot_Registration.cpp deleted). Removed the Model-A snapshot surface (SerializeSnapshot bodies/decls, `using IsSnapshotable`, CK_REGISTER_SNAPSHOTABLE, FSnap_ aliases, the 3 archive/registry includes) from 41 feature fragments (via a 41-agent Workflow with a delete + adversarial-review stage) + CkLabel + the CkAttribute template family + FCk_Chrono::SerializeSnapshot + 4 _Fragment_Data.h markers. LEFT for cluster 4 / Option A: the CkEcs-owned fragments, the machinery, and the holder/record T_Policy base ([F3-D2]). Gate: build clean, Ck.Snapshot green-except-Grid (the 2 oracle tests survived the announce mismatch), Net 103/102/1 (delta-zero). Minor: 2 files (CkInteractTarget/CkProbe _Fragment.cpp) got LF endings from the workflow — git autocrlf normalizes; cosmetic.
+- **F3 cluster 4 (NEXT) — CkEcs teardown (ATOMIC + Shipping proof).**
+
+- **(superseded) F3 cluster 3 sweep detail —** 42 feature-module `.cpp` files (list captured this
   session) + their `.h` counterparts, EXCLUDING the CkEcs-owned fragments (those go atomic with cluster 4). Per-fragment
   recipe: delete the SerializeSnapshot decl(.h)+body(.cpp), `using IsSnapshotable = void;`, CK_REGISTER_SNAPSHOTABLE
   line(s), FSnap_ aliases, the 3 snapshot includes (FragmentRegistry/Archive_Writer/Archive_Reader). Specials: sweep Timer
