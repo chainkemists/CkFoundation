@@ -150,6 +150,23 @@ GREEN; `Parity.GridPlacements_MPReload` → STILL RED (engine-death, flagged to 
   become incompatible. Acceptable (v3 not shipped), but an explicit on-disk decision worth Adam's sign-off. (Far less
   irreversible than fork (b)'s item net-model change — the reason A1 is preferred.)
 
+### F1 implementation & verification risks (adversarial-flagged — validate EMPIRICALLY, not by prediction)
+- **The green is a long multi-tick rendezvous cascade** (bridged actor respawn → label-rendezvous inventory →
+  `DefinitionBuilt` item rebuild under context owner → `Request_TransferLifetimeOwner` → hydration connect + placement
+  re-stamp). Each step is grounded, but the composite is ONLY provable by building + running `Ck.Snapshot` on the real
+  listen-server seamless-travel PIE. A code-read "green" is a prediction — the F1 gate must be a real run.
+- **`Request_BuildAndReplicate` under the load gate is untested** — existing rebuild branches use `Request_SpawnEntity`/
+  `SpawnActor`; the `DefinitionBuilt` branch drives the full build+replicate path (rep-driver setup +
+  `OnReplicationComplete`/dependents broadcasts, `CkEntityReplicationDriver_Utils.cpp:231-252`) while
+  `Set_IsLoadGateActive(true)`. Validate that firing replication-complete signals under the gate during `Rebuilding`
+  doesn't trip half-built-world assumptions. Budget for a debug loop, not a mechanical port.
+- **Single stamp choke point CONFIRMED**: all build overloads funnel into the 2-arg `Request_TryBuildAndReplicate`
+  (`CkEntityReplicationDriver_Utils.cpp:176-263`); stamp `FFragment_BuildRecipe` after `Construct` (`:215`), before the
+  `DoesNotReplicate` early-return (`:218`), so replicated AND non-replicated definition-built entities are captured.
+- **F3 edge (Concepts.h):** ~10 fragment headers include `CkSnapshot_Concepts.h` solely for the `SerializeSnapshot`
+  fwd-decl of `ck::FSnapshotContext`; the per-fragment sweep must drop the include AND the decl in lockstep per file, or
+  a dangling reference survives the Shipping compile.
+
 **Phase-F1 gate (revised):** `Ck.Snapshot` = 52/2 (Inventory×2 flip green), **1 remaining red = `GridPlacements`
 (engine-death, Adam-flagged)**, `Ck.*.Net` delta-zero. Do obj-1 FIRST — while the oracle still cross-checks the new
 item Produce — THEN purge (obj 2). Per Audit C, `GridPlacements.RoundTrip` (registry-level) is deleted only after the
