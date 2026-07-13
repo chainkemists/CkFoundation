@@ -60,18 +60,6 @@ namespace ck
     public:
         friend class ::UCk_Utils_2dGridOccupancy_UE;
 
-    public:
-        // Tier-C: single entity handle, remapped through FSnapshotContext (the complete context type
-        // comes in via the CkRecord fragment include above). NOTE: the death-watch DELEGATE binding
-        // that pairs with this back-ref is NOT restored (signal bindings never round-trip) — a
-        // restored occupant's destruction will not auto-destroy its placement.
-        using IsSnapshotable = void;
-
-        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void
-        {
-            InCtx.Snapshot_Handle(InAr, _Placement);
-        }
-
     private:
         FCk_Handle_2dGridPlacement _Placement;
 

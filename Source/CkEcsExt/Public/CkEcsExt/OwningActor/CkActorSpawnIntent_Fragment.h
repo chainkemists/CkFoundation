@@ -23,7 +23,6 @@ struct CKECSEXT_API FFragment_ActorSpawnIntent
 
 public:
     CK_GENERATED_BODY(FFragment_ActorSpawnIntent);
-    using IsSnapshotable = void;
 
 private:
     // NOTE: bare `SaveGame` specifier (sets CPF_SaveGame), NOT `meta=(SaveGame)`. The snapshot proxy archive runs

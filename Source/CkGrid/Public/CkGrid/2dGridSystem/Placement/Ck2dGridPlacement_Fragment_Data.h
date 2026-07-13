@@ -12,11 +12,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class FArchive;
-namespace ck { class FSnapshotContext; }
-
-// --------------------------------------------------------------------------------------------------------------------
-
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKGRID_API FCk_Handle_2dGridPlacement : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_2dGridPlacement); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_2dGridPlacement);
@@ -30,14 +25,6 @@ struct CKGRID_API FCk_Fragment_2dGridPlacement_ParamsData
 
 public:
     CK_GENERATED_BODY(FCk_Fragment_2dGridPlacement_ParamsData);
-
-    // Tier-B: _Occupant and _Grid are entity handles remapped through FSnapshotContext; the rest are
-    // plain values. A restored placement entity is fully self-describing — the StampCells reconcile
-    // re-derives the grid's _StampedCells from the restored record + these params, and the authority
-    // Replicate pass rebuilds the wire entries from them. Body in the .cpp.
-    using IsSnapshotable = void;
-
-    auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
 
 private:
     // The entity that occupies the grid (the thing being placed). Owns the placement's death.

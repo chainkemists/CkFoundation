@@ -135,12 +135,6 @@ struct CKGRID_API FCk_Fragment_2dGridSystem_ParamsData
 public:
     CK_GENERATED_BODY(FCk_Fragment_2dGridSystem_ParamsData);
 
-    // Tier-A snapshot opt-in: pure-value params, every field carries the SaveGame SPECIFIER
-    // (meta=(SaveGame) is inert — the ArIsSaveGame gate checks CPF_SaveGame). The LIVE half of a
-    // grid (FFragment_2dGridSystem_Current: the private cell registry + pivot SceneNode) can never
-    // round-trip; FProcessor_2dGridSystem_RestoreRecompose rebuilds it from these restored params.
-    using IsSnapshotable = void;
-
 private:
     UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))

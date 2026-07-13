@@ -31,11 +31,6 @@ struct CKENTITYTAG_API FCk_Fragment_EntityTag_ParamsData
 public:
     CK_GENERATED_BODY(FCk_Fragment_EntityTag_ParamsData);
 
-    // Tier-A snapshot opt-in: the per-tag NAMED storage (keyed by GetTypeHash(_Tag)) drives ForEach_Entity(tag).
-    // Registering it (CkEntityTag_Fragment.cpp) makes every per-tag storage round-trip so tag membership survives
-    // a save/load. Only _Tag is reflected (no handles) -> SerializeItem captures it with no hand-written code.
-    using IsSnapshotable = void;
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, Categories="EntityTag"))

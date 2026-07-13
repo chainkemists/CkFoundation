@@ -18,8 +18,6 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_Transform_UE;
-class FArchive;
-namespace ck { class FSnapshotContext; } // M2b position-restore: FFragment_Transform SerializeSnapshot
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -182,11 +180,6 @@ namespace ck
     {
     public:
         CK_GENERATED_BODY(FFragment_Transform);
-
-        // M2b position-restore: persist the world transform so a respawned bridged entity comes back at its saved
-        // position. Value-only (Tier-B mechanism, no handle refs) — body out-of-line in CkTransform_Fragment.cpp.
-        using IsSnapshotable = void;
-        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
 
     public:
         friend class FProcessor_Transform_HandleRequests;

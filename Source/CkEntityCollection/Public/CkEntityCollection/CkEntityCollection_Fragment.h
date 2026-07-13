@@ -31,7 +31,6 @@ namespace ck
     {
     public:
         CK_GENERATED_BODY(FFragment_EntityCollection_Params);
-        using IsSnapshotable = void;
 
     public:
         using ParamsType = FCk_Fragment_EntityCollection_ParamsData;
@@ -44,9 +43,6 @@ namespace ck
 
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_EntityCollection_Params, _Params);
-
-    public:
-        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

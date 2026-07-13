@@ -211,7 +211,6 @@ public:
     // _InitialStateClass by path string). Used directly as FFragment_Sm_Params; the post-load
     // hydration redrive (FProcessor_Sm_HydrationResume) drives the freshly-composed SM through
     // Start/Transition from these + FFragment_Sm_Current's persisted decision record.
-    using IsSnapshotable = void;
 
 private:
     UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite,
