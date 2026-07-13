@@ -142,13 +142,6 @@ public:
         FHandler InHandler) -> void;
 
     /**
-     * Resolves pending registrations, then returns the payload types of EVERY handler that has a Produce. Used by the
-     * fidelity oracle Tier-2 (Produce-diff).
-     */
-    static auto
-    Get_ProduceHandlerTypes() -> TArray<const UScriptStruct*>;
-
-    /**
      * Resolves pending registrations, then returns the payload types of every handler that has a Produce AND whose
      * Transport opts into Save — the subset the v3 save capture writes payloads for (Phase 3A). A Net-only Produce
      * handler is save-invisible; a NetAndSave one participates in both the wire and the save file.

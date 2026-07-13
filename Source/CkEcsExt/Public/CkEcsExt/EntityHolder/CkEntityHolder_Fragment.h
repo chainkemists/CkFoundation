@@ -9,8 +9,6 @@
 #include "CkEcs/Snapshot/CkSnapshot_Context.h"
 // Snapshot classification policy (RoundTrip vs Transient) + the IsSnapshotable marker base.
 #include "CkEcs/Snapshot/CkSnapshot_Policy.h"
-// CK_SNAPSHOT_ANNOUNCE_EXPECTED — the _ROUNDTRIP macros emit a static-init announce for the capture-time audit.
-#include "CkEcs/Snapshot/CkSnapshot_Audit.h"
 
 class FArchive;
 
@@ -72,8 +70,7 @@ struct _NameOfEntityHolder_ : public ck::TFragment_EntityHolder<_HandleType_, _P
 }
 
 #define CK_DEFINE_ENTITY_HOLDER_ROUNDTRIP(_NameOfEntityHolder_, _HandleType_)                                 \
-    CK_DEFINE_ENTITY_HOLDER_WITH_POLICY(_NameOfEntityHolder_, _HandleType_, ck::FSnapshotPolicy_RoundTrip);    \
-    CK_SNAPSHOT_ANNOUNCE_EXPECTED(_NameOfEntityHolder_)
+    CK_DEFINE_ENTITY_HOLDER_WITH_POLICY(_NameOfEntityHolder_, _HandleType_, ck::FSnapshotPolicy_RoundTrip)
 
 #define CK_DEFINE_ENTITY_HOLDER_TRANSIENT(_NameOfEntityHolder_, _HandleType_) \
     CK_DEFINE_ENTITY_HOLDER_WITH_POLICY(_NameOfEntityHolder_, _HandleType_, ck::FSnapshotPolicy_Transient)
