@@ -37,6 +37,12 @@
                         Entity, ItemHandle, ECk_Record_LabelRequirementPolicy::Optional);
                     UCk_Utils_EntityLifetime_UE::Request_TransferLifetimeOwner(ItemHandle, Entity);
                 }
+
+                // Re-arm replication so the authority pushes the rebuilt item list to clients: the load-path connect
+                // above is server-local, and without this the fresh post-travel client's container stays at the empty
+                // Construct-time initial value (it converges via the ordinary ClientOnly SyncReplication once pushed).
+                auto InventoryHandle = UCk_Utils_Inventory_UE::Cast(Entity);
+                UCk_Utils_Inventory_UE::Request_TryReplicateInventory(InventoryHandle);
                 return ECk_RepFragment_ApplyResult::Applied;
             }
 

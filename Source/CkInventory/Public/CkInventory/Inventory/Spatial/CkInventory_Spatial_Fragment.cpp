@@ -43,6 +43,13 @@
                             SpatialInventory, ItemHandle, NewEntry.Get_Coordinate(), NewEntry.Get_Rotation());
                     }
                 }
+
+                // Re-arm replication so the authority pushes the rebuilt item list + placements to clients: the
+                // load-path connect/place above is server-local, and without this the fresh post-travel client's
+                // container stays at the empty Construct-time initial value (it converges via the ordinary ClientOnly
+                // SyncReplication — which carries coordinate + rotation — once pushed).
+                auto InventoryHandle = UCk_Utils_Inventory_UE::Cast(Entity);
+                UCk_Utils_Inventory_UE::Request_TryReplicateInventory(InventoryHandle);
                 return ECk_RepFragment_ApplyResult::Applied;
             }
 

@@ -167,6 +167,66 @@ GREEN; `Parity.GridPlacements_MPReload` → STILL RED (engine-death, flagged to 
   fwd-decl of `ck::FSnapshotContext`; the per-fragment sweep must drop the include AND the decl in lockstep per file, or
   a dangling reference survives the Shipping compile.
 
+### Fable design-pass ruling (2026-07-13, unattended close-out; read-only agent, code-verified before recording)
+Fable validated the locked [INV-A] design against the WIP (ce454b823): **verdict SOUND** — stamp/classify/rebuild/Apply
+are a faithful structural mirror of SpawnRecipe/RuntimeSpawned (stamp after Construct before the DoesNotReplicate return;
+Rule 4.5 between Rule 4 and the anonymous else; rebuild defers-until-owner-mapped with a once-guard + synchronous
+`Request_BuildAndReplicate_Multiple`; Apply gated on `FCk_HydrationApplyScope::Get_IsActive()`, all-or-nothing NotReady).
+It surfaced **4 real flaws** (Opus to fold F-1/F-2/F-3 into the F1 fix; F-4 is a contract note):
+- **[F1-FABLE-F1] silent owner-unpersisted skip** — `Subsystem.cpp:719-723`: a DefinitionBuilt entry whose lifetime
+  owner is unpersisted is added to `_SkippedIds` with NO log (the sibling failure paths log Errors at :715/:752). A
+  definition-built ITEM under an unpersisted owner is data loss, not boot-infra → must log (≥Warning) loudly.
+- **[F1-FABLE-F2] triage blind spot** — the stall-dump provenance switch `Subsystem.cpp:992-997` (and the sibling at
+  ~1006-1011) has no `DefinitionBuilt` case → a stuck item is invisible in the stall Error. Add the case.
+- **[F1-FABLE-F3] orphan-on-failed-build** — `_SpawnedRuntimeIds.Add(SavedId)` at :757 runs BEFORE the build at :762;
+  if `Request_TryBuildAndReplicate` returns invalid (host gate / rep-driver ensure), the entry is never mapped, never
+  skipped, never retried (once-guard) → permanent log-less orphan. Re-order: add to the once-guard only on a valid build,
+  else leave unresolved (retry) or skip loudly.
+- **[F1-FABLE-F4] transfer moved to Apply (contract deviation, functionally covered)** — FINALIZE §obj-1 required the
+  REBUILD branch to `Request_TransferLifetimeOwner(item, mappedInventory)`; the impl moved it into the Apply hydration
+  branch (`CkInventory_DataOnly_Fragment.cpp:46`). Equivalent IF Apply reaches `Applied`; until then the rebuilt item's
+  lifetime owner is the subject (a save in that window captures the wrong owner). Document, or restore the rebuild-side transfer.
+
+Root-cause ranking (Fable, code-verified): **H1 capture-side miss** (item not among the captured entries; mechanism a
+runtime falsification — most plausibly the silent world-guard skipping the stamp at `CkEntityReplicationDriver_Utils.cpp:222`,
+or an earlier classify rule) > **H2 rebuild silent skip** (:719, owner ∉ `_PersistedIds` — contradicted by the immediate
+`Request_TransferLifetimeOwner` `Replace` at `CkEntityLifetime_Utils.cpp:572` + the inventory being Rule-3 persisted) >
+**H3 invalid build handle** (orphan via F-3 — contradicted by build4's zero-orphan arithmetic). Opus's F1-DIAG instrumentation
+is a superset of Fable's decisive probe (adds the stamp-lands check + classify trace + rebuild-gate trace), so one run disambiguates.
+
+### Fable 2nd ruling + instrumented-run root causes (2026-07-13, code-verified) — the ACTUAL [INV-A] fix
+The instrumented run (F1-diag/F1-fix1) + a 2nd Fable read-only pass pinned BOTH reds to concrete, in-repo causes:
+- **DataOnly root cause = an UNREGISTERED FIXTURE TAG.** The fixture requests `RequestGameplayTag("Inventory.AutoTest_Net")`
+  which is **not registered** (grep of all sources: only `TAG_Inventory_AutoTest_Net_Spatial` is `UE_DEFINE_GAMEPLAY_TAG`d,
+  `CkTests_Fragment_Data.cpp:48`). Unregistered ⇒ empty tag ⇒ `CreateInventory` labels the DataOnly inventory with `None`
+  ⇒ `Get_IsUnnamedLabel`=true ⇒ Rule 3 refuses to persist it ⇒ (a) the item's lifetime owner is unpersisted AND (b) the
+  inventory's Produce payload is **dropped** (`CaptureV3` runs Produce only for persisted entities; the exact
+  "unlabeled ConstructSpawned child … payload DROPPED" audit fires, suppressed by the spec's `bSuppressLogWarnings`). So
+  **ctx-owner-first rebuild ALONE is insufficient** — the instrumented run confirmed it DOES rebuild the item under the
+  subject (`BUILT resolved=[Shield]`), but with no inventory payload NOTHING connects it → NumItems=0. **The essential fix
+  is registering the tag** (CkTests fixture). The `.h` even documents this exact lesson for the Spatial tag — it just was
+  not applied to the DataOnly one. **FINALIZE's "no fixture change needed" (obj-1) is empirically FALSIFIED.**
+- **Spatial client root cause (Fable H1, ~90%, verified) = the hydration Apply never RE-ARMS replication.** The
+  authority push processor `FProcessor_Inventory_Spatial_Replicate` is `MarkedDirtyBy = FTag_Inventory_MayRequireReplication`,
+  armed only via FireSignals(record-delta)/Relocate/`Request_TryReplicateInventory`. The load-path Apply calls
+  Connect+Transfer+PlaceItemOnGrid (none arm the tag) → the Replicate processor never runs → the respawned owner's
+  replicated container keeps its EMPTY Construct-time value → the client receives an empty item list → count 0 →
+  Stage-6 timeout (server-local assertion passes). **Fix: call `UCk_Utils_Inventory_UE::Request_TryReplicateInventory`
+  at the end of BOTH hydration Apply branches** (DataOnly + Spatial). This also fixes the DataOnly client once the tag lands.
+  NOT the GridPlacements engine-death class (that is a replicated-bridged-grid + seamless-travel editor death; these grids
+  ride unreplicated child entities and the post-travel server is alive).
+- **Fable H2 (latent, recorded, NOT fixed):** the NET (non-load) Apply branch has no item-validity gate — if a container
+  entry arrives with an unresolved item handle (`FCk_Handle::NetSerialize` drops unresolved, no UE unmapped-object rescue),
+  it is silently lost with no second push. The live path self-heals via a later push; the single post-load re-arm push
+  MAY race the item's replication. If Spatial greens flakily, harden by mirroring the load branch's NotReady gate in the
+  net branch and/or re-arming once at OnLoadComplete. Deferred unless it manifests.
+
+**[F1-D6] Fix set (executor decision, Fable-endorsed, code-verified):** (1) CkTests: register + use
+`TAG_Inventory_AutoTest_Net` (fixture bug — the essential DataOnly fix). (2) CkFoundation: `Request_TryReplicateInventory`
+re-arm in both hydration Apply branches (Spatial + DataOnly client convergence). (3) Keep ctx-owner-first rebuild
+(design-compliant with obj-1; harmless with the tag fix — both forms compute the same build owner for persisted
+inventories) + F-1/F-2/F-3. CkTests must be committed WITH/AFTER CkFoundation, never leading.
+
 **Phase-F1 gate (revised):** `Ck.Snapshot` = 52/2 (Inventory×2 flip green), **1 remaining red = `GridPlacements`
 (engine-death, Adam-flagged)**, `Ck.*.Net` delta-zero. Do obj-1 FIRST — while the oracle still cross-checks the new
 item Produce — THEN purge (obj 2). Per Audit C, `GridPlacements.RoundTrip` (registry-level) is deleted only after the

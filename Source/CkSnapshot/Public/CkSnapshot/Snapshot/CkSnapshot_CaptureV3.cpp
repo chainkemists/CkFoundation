@@ -250,7 +250,11 @@ namespace ck::snapshot
                     if (DoAnyProduce(Handle))
                     {
                         ++UnlabeledWithPayloadAudit;
-                        const auto OwnerId = Get_SavedId(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Handle));
+                        // Guard Get_LifetimeOwner: a registry-rooted entity legitimately has no lifetime owner (else
+                        // Get_LifetimeOwner ensures). Mirrors the guarded reads at the LifetimeOwnerSavedId capture below.
+                        const auto OwnerId = Handle.Has<ck::FFragment_LifetimeOwner>()
+                            ? Get_SavedId(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Handle))
+                            : k_NoEntity;
                         ck::snapshot::Warning(
                             TEXT("v3 capture AUDIT: unlabeled ConstructSpawned child [{}] (owner saved-id [{}]) carries a "
                                  "hydration payload that will be DROPPED — it is save-transient. Give the child a "
