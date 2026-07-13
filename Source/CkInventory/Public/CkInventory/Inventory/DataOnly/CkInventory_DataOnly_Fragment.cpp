@@ -5,6 +5,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"                            // ck::algo::ForEachIsValid — Produce
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"              // Request_TransferLifetimeOwner — load hydration
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -16,6 +17,29 @@
         // the actual diff/apply). NotReady until at least one DataOnly inventory is composed.
         const auto DoApplyDataOnlyItems = [](FCk_Handle& Entity, const TArray<FCk_InventoryItem_DataOnly_ReplicatedEntry>& NewItems, const TArray<FCk_InventoryItem_DataOnly_ReplicatedEntry>& OldItems) -> ECk_RepFragment_ApplyResult
         {
+            // Load-path authority hydration: the payload is keyed on the INVENTORY entity, but the net Apply below is
+            // owner-keyed and never resolves it here. Connect each saved item into THIS inventory's item record so the
+            // authority rebuilds its inventory graph; clients still converge through the ordinary SyncReplication path.
+            // All-or-nothing: if any item handle is not yet rebuilt, retry next tick.
+            if (FCk_HydrationApplyScope::Get_IsActive())
+            {
+                if (NOT UCk_Utils_Inventory_DataOnly_UE::Has(Entity))
+                { return ECk_RepFragment_ApplyResult::NotReady; }
+
+                if (ck::algo::AnyOf(NewItems, [](const FCk_InventoryItem_DataOnly_ReplicatedEntry& InEntry)
+                    { return ck::Is_NOT_Valid(InEntry.Get_ItemHandle()); }))
+                { return ECk_RepFragment_ApplyResult::NotReady; }
+
+                for (const auto& NewEntry : NewItems)
+                {
+                    auto ItemHandle = NewEntry.Get_ItemHandle();
+                    UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils::Request_Connect(
+                        Entity, ItemHandle, ECk_Record_LabelRequirementPolicy::Optional);
+                    UCk_Utils_EntityLifetime_UE::Request_TransferLifetimeOwner(ItemHandle, Entity);
+                }
+                return ECk_RepFragment_ApplyResult::Applied;
+            }
+
             const auto Inventories = UCk_Utils_Inventory_UE::RecordOfInventories_Utils::Get_ValidEntries(Entity);
 
             auto Result = ECk_RepFragment_ApplyResult::NotReady;

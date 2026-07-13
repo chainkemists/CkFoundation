@@ -47,6 +47,42 @@ for [INV-A] after the Fable usage cap), every load-bearing claim Opus-code-verif
 - **State:** no source touched; tree clean at `a15880b26` + the two new/edited docs (FINALIZE.md is git-ignored `*.md`
   → force-add to commit). Design-lock is a clean Phase-0 boundary; F1 implementation follows from FINALIZE.md.
 
+## Phase F1 ([INV-A]) — IN PROGRESS (Opus, 2026-07-13) — implemented, compiles, NOT yet green
+
+**State: 7-file WIP implementing the locked [INV-A] design. Builds clean, ZERO regressions (Ck.Snapshot 54/51/3, same
+trio), NO crash. The `DefinitionBuilt` item is NOT yet restored → the 2 inventory reds are not yet green. Committed as
+a labeled WIP (NOT a green phase). 4 build+gate iterations done; systematic (each advanced the diagnosis).**
+
+Files (all under Source/): NEW `CkEcs/.../EntityReplicationDriver/CkEntityReplicationDriver_BuildRecipe.{h,cpp}`
+(`ck::FFragment_BuildRecipe` + holder, mirror of SpawnRecipe); `CkEntityReplicationDriver_Utils.cpp` (stamp in
+`Request_TryBuildAndReplicate` after Construct, before the DoesNotReplicate return); `CkSnapshot_Header.h`
+(`ECk_Snapshot_V3_Provenance::DefinitionBuilt` + `FCk_Snapshot_V3_BuildStep{_ScriptClassPath,_ArchetypePath}` FString
+paths + `_BuildRecipe` entry field + `_DefinitionBuiltCount` census); `CkSnapshot_CaptureV3.cpp` (Rule-4.5 classify +
+Pass-2 capture); `CkSnapshot_Subsystem.cpp` (`DefinitionBuilt` rebuild branch + mapped/total DIAG); `CkInventory_DataOnly_Fragment.cpp`
++ `CkInventory_Spatial_Fragment.cpp` (authority-side `FCk_HydrationApplyScope` hydration branch: connect + transfer
+[+ Spatial `Request_PlaceItemOnGrid`]).
+
+**Bugs found + fixed (real, gate-caught):**
+1. **`FSoftObjectPath` cannot serialize through a plain `FArchive`** (the v3 tables' `SerializeItem`) → hard crash
+   (`appError` Archive.cpp:499). FIX: store paths as FString (like `_ScriptClassPath`/`_ActorClassPath`), reconstruct
+   the soft path on load. **Durable framework gotcha.**
+2. **Both inventory Apply handlers are required for EITHER inventory test.** The fixture
+   (`CkAutoTest_NetSubject_InventoryEntityScript.cpp:15-36`) composes a DataOnly AND a Spatial inventory in one world;
+   an unfixed Apply NotReady-drops → fires a loud ensure → fails the test regardless of which inventory it asserts.
+3. Rebuild build-owner: switched from the item's own `_ContextOwnerSavedId` to `Get_ContextOwner(mapped_lifetime_owner)`
+   — reconstructs production's exact `Create(Get_ContextOwner(owner), def)`. (Applied; did not change the symptom.)
+
+**Remaining bug (NOT root-caused — needs 1 instrumented run): the item is not restored.** DIAG (build4):
+InventoryDataOnly load = `[3]/[22] entities mapped ([19] skipped)`; the item (added via `Request_AddItemByDefinition`
+→ `Create` → `Request_BuildAndReplicate` → the stamp choke point) is absent from the mapped set. By elimination the
+item is likely **not captured as `DefinitionBuilt`** (if it were captured, the rebuild fix would have mapped it under
+the persisted inventory owner → 4 mapped; it stayed 3). It is NOT Rule-3-skipped (verified `CkEntityLifetime_Utils.cpp:472-474`
+— the item is added post-BeginPlay so gets no `FTag_ConstructSpawned`). **Next diagnostic (do FIRST):** bump the
+CaptureV3 `DefinitionBuilt` census to Display AND log when an entity carrying `FFragment_BuildRecipe` is
+classified/skipped, re-run, to decide capture-vs-rebuild. Hypotheses: (a) the stamp isn't landing on the item's build
+path (verify `NewEntity.Has<FFragment_BuildRecipe>()` right after `Create`); (b) the item IS captured but its
+`_LifetimeOwnerSavedId` resolves to an unpersisted entity (transfer not drained by save) → rebuild skip.
+
 ## Phase-5 progress (cluster tracker — Track B, decommission Model A "gate, don't delete")
 
 Class-4 framework change (CkEcs snapshot core + save format). Per-cluster Dev compile/gate; Shipping compile + final

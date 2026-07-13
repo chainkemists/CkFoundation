@@ -15,6 +15,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"    // Get_LifetimeOwner
 #include "CkEcs/EntityScript/CkEntityScript.h"           // UCk_EntityScript_UE
 #include "CkEcs/EntityScript/CkEntityScript_SpawnRecipe.h" // FFragment_SpawnRecipe
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_BuildRecipe.h" // FFragment_BuildRecipe (DefinitionBuilt)
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h" // handler registry (Produce)
@@ -258,10 +259,16 @@ namespace ck::snapshot
                     }
                 }
             }
-            // Rule 4 — RuntimeSpawned: has a retained recipe.
+            // Rule 4 — RuntimeSpawned: has a retained EntityScript spawn recipe.
             else if (Handle.Has<ck::FFragment_SpawnRecipe>())
             {
                 Provenance = ECk_Snapshot_V3_Provenance::RuntimeSpawned;
+                bPersist = true;
+            }
+            // Rule 4.5 — DefinitionBuilt: built via Request_BuildAndReplicate with a retained construction recipe.
+            else if (Handle.Has<ck::FFragment_BuildRecipe>())
+            {
+                Provenance = ECk_Snapshot_V3_Provenance::DefinitionBuilt;
                 bPersist = true;
             }
             // Rule 5 — anonymous scratch: skip, count.
@@ -291,6 +298,7 @@ namespace ck::snapshot
         auto EngineOwnedCount = 0;
         auto ConstructSpawnedCount = 0;
         auto RuntimeSpawnedCount = 0;
+        auto DefinitionBuiltCount = 0;
 
         for (auto& Item : Classified)
         {
@@ -361,6 +369,32 @@ namespace ck::snapshot
                     { Entry.Set_ActorSpawnTransform(UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(Handle)); }
                     break;
                 }
+                case ECk_Snapshot_V3_Provenance::DefinitionBuilt:
+                {
+                    ++DefinitionBuiltCount;
+
+                    // Capture each construction step by path so the loader re-creates the entity via
+                    // Request_BuildAndReplicate. The entity's own fragment state (tags, spatial placement) rides its
+                    // per-feature Produce below; per-instance child-attribute state (e.g. an item stack count, held on
+                    // a separate anonymous attribute entity) does not persist.
+                    auto Steps = TArray<FCk_Snapshot_V3_BuildStep>{};
+                    for (const auto& Info : Handle.Get<ck::FFragment_BuildRecipe>().Get_ConstructionInfos())
+                    {
+                        auto Step = FCk_Snapshot_V3_BuildStep{};
+                        if (const auto ScriptClass = Info.Get_ConstructionScript(); ck::IsValid(ScriptClass.Get()))
+                        { Step.Set_ScriptClassPath(ScriptClass->GetPathName()); }
+                        if (const auto* Archetype = Info.Get_ConstructionScriptArchetype().Get();
+                            ck::IsValid(Archetype, ck::IsValid_Policy_NullptrOnly{}))
+                        { Step.Set_ArchetypePath(Archetype->GetPathName()); }
+                        Steps.Emplace(MoveTemp(Step));
+                    }
+                    Entry.Set_BuildRecipe(MoveTemp(Steps));
+
+                    // Built under its context owner (the driver-bearing subject) — the loader rebuilds under the same.
+                    if (UCk_Utils_ContextOwner_UE::Has(Handle))
+                    { Entry.Set_ContextOwnerSavedId(Get_SavedId(UCk_Utils_ContextOwner_UE::Get_ContextOwner(Handle))); }
+                    break;
+                }
             }
 
             Entities.Emplace(MoveTemp(Entry));
@@ -394,15 +428,16 @@ namespace ck::snapshot
         InOutHeader.Set_EngineOwnedCount(EngineOwnedCount);
         InOutHeader.Set_ConstructSpawnedCount(ConstructSpawnedCount);
         InOutHeader.Set_RuntimeSpawnedCount(RuntimeSpawnedCount);
+        InOutHeader.Set_DefinitionBuiltCount(DefinitionBuiltCount);
         InOutHeader.Set_PayloadCount(Payloads.Num());
         InOutHeader.Set_UnlabeledConstructSkippedCount(UnlabeledSkipped);
         InOutHeader.Set_AnonymousSkippedCount(AnonymousSkipped);
         InOutHeader.Set_UnlabeledWithPayloadAuditCount(UnlabeledWithPayloadAudit);
 
         ck::snapshot::Verbose(
-            TEXT("Run_CaptureV3: persisted [{}] entities (EngineOwned [{}], ConstructSpawned [{}], RuntimeSpawned [{}]), "
-                 "[{}] payloads; skipped [{}] unlabeled ConstructSpawned + [{}] anonymous scratch (audit [{}])"),
-            Entities.Num(), EngineOwnedCount, ConstructSpawnedCount, RuntimeSpawnedCount, Payloads.Num(),
+            TEXT("Run_CaptureV3: persisted [{}] entities (EngineOwned [{}], ConstructSpawned [{}], RuntimeSpawned [{}], "
+                 "DefinitionBuilt [{}]), [{}] payloads; skipped [{}] unlabeled ConstructSpawned + [{}] anonymous scratch (audit [{}])"),
+            Entities.Num(), EngineOwnedCount, ConstructSpawnedCount, RuntimeSpawnedCount, DefinitionBuiltCount, Payloads.Num(),
             UnlabeledSkipped, AnonymousSkipped, UnlabeledWithPayloadAudit);
 
         return ECk_SnapshotResult::Success;
