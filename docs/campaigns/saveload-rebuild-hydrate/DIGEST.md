@@ -25,14 +25,14 @@ The campaign replaced a two-pipeline design — a "serialize the world's bytes" 
 
 - **Coverage losses (Adam-gated):** `[F3-D1]` the Grid / Timer / MontagePlayer **registry round-trip** tests were compile-coupled to Model A → deleted with it; `[F3-D1b]` the planned *port-before-delete* migrate set (`V3.HandleWalk.*` handle-remap incl. the tombstone-incident case, `V3.ProduceSensitivity`, `Parity.AttributeModifier_MPReload` — the **only** modifier-across-save/load coverage) was never authored before the purge.
 - **Open fidelity gaps (obj-4):** G1 transform, G2 dynamic fragments, G17 item stack-count, … — features whose `Produce`/`Apply` does not yet round-trip full state. A living register, not closed.
-- **The one unresolved red — `GridPlacements_MPReload`:** a replicated bridged 2dGridSystem through seamless travel is an **engine death** (nested `FEcsWorld`), not a logic bug. Its own workstream; grid save/load currently has no passing coverage.
+- **`GridPlacements_MPReload` — since FIXED (2026-07-13, post-F4):** the long-assumed "engine death" was stale (the teardown-drain mitigated it). The real gap was a missing authority-side 2dGridOccupancy hydration branch (the same [INV-A]/[F1-D6] pattern); adding it made both the server + client asserts green, so grid save/load now HAS passing coverage. The remaining reds are the 2 pre-existing `Bb.Snapshot` project casualties (blocked on the unbuilt BB-driver-world prereq).
 - **The oracle's gap-detection retired.** Model A's oracle could flag "feature X's `Produce` disagrees with its captured bytes." v3 has no exhaustive structural cross-check; the per-feature `Parity.*_MPReload` gates + the `Meta.RepDataRestoreCoverage` ratchet (every RepData type must declare its restore disposition) are the replacement — targeted, not total.
 
 ## By the numbers
 
 - **Deleted:** 16 machinery files (CkEcs) · 21 Model-A-coupled tests (19 registry + 2 oracle) · the per-fragment `SerializeSnapshot` surface across 41 feature fragments · the `CK_REGISTER_SNAPSHOTABLE` registrar on all ~229 ECS tags · the fidelity oracle + `CK_WITH_FIDELITY_ORACLE` gate (now 0 references repo-wide).
-- **Snapshot suite:** 54 → **29** tests (the drop *is* the Model-A test deletions), **26 green + 3 documented reds** (GridPlacements engine-death + 2 pre-existing Bb.Snapshot casualties).
-- **Gates, held steady across the whole purge:** Dev delta-zero · Net **103/102/1** delta-zero (one documented `StateMachine.Net` flake) · **Shipping-Game compile Succeeded**, zero snapshot symbols in link diagnostics.
+- **Snapshot suite:** 54 → **29** tests (the drop *is* the Model-A test deletions), **27 green + 2 reds** (the 2 pre-existing `Bb.Snapshot` project casualties; GridPlacements was fixed post-F4).
+- **Gates:** Dev delta-zero · Net **103/103/0** (the `StateMachine.Net` flake was fixed post-F4) · **Shipping-Game compile Succeeded**, zero snapshot symbols in link diagnostics.
 
 ## Status for the reviewer
 
@@ -43,4 +43,4 @@ The campaign replaced a two-pipeline design — a "serialize the world's bytes" 
 - **F3** — the Model-A purge (clusters 2–6: entry points → per-fragment sweep → CkEcs teardown → docs/acceptance → comment sweep).
 - **F4** — hygiene: 2 `ck::algo` conversions + campaign-scaffolding comment sweep.
 
-Every deferral and gap is an **Adam-decision item in FINALIZE.md**, not a silent acceptance: the coverage losses (`[F3-D1]`/`[F3-D1b]`), the obj-4 fidelity gaps, the GridPlacements engine-death, the deferred `ck::algo` remainder (`[F4-D1]`, invalidated by F1's rewrite), and the policy-macro **Option A** retirement (`[F3-D2]`, the one remaining coherent Model-A-vocabulary surface left inert on purpose).
+Every deferral and gap is an **Adam-decision item in FINALIZE.md**, not a silent acceptance: the coverage losses (`[F3-D1]`/`[F3-D1b]`), the obj-4 fidelity gaps (incl. the grid occupant-handle fidelity surfaced by the GridPlacements fix — same [INV-A] provenance family), the deferred `ck::algo` remainder (`[F4-D1]`, invalidated by F1's rewrite), and the policy-macro **Option A** retirement (`[F3-D2]`, the one remaining coherent Model-A-vocabulary surface left inert on purpose). Post-F4, Adam asked to fix the reds: GridPlacements + the `StateMachine.Net` flake are now GREEN; the 2 `Bb.Snapshot` reds stay (BB-project, blocked on the unbuilt BB-driver-world).
