@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
-#include "CkCore/Enums/CkEnums.h" // ECk_AddedOrNot (SeedContainer result)
+#include "CkCore/Enums/CkEnums.h" // ECk_AddedOrNot
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Tag/CkTag.h"
@@ -30,8 +30,8 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_Hydration_PendingApply);
 
     // Local hydration queue: payloads to apply on this entity via the SAME handler Apply the net dispatcher
-    // uses, but sourced from a save load rather than the wire. NOT snapshotable (transient bookkeeping — never
-    // registered). Dormant in Phase 1.
+    // uses, but sourced from a save load rather than the wire. Transient bookkeeping — not persisted.
+    // Dormant in Phase 1.
     struct FFragment_PendingHydration
     {
         CK_GENERATED_BODY(FFragment_PendingHydration);

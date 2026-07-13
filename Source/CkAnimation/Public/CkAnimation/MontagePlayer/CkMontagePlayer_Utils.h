@@ -49,8 +49,8 @@ public:
         const FCk_Fragment_MontagePlayer_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
-    // Re-binds the runtime SkeletalMeshComponent target — the ONE param that cannot round-trip a snapshot
-    // (FFragment_MontagePlayer_Params::SerializeSnapshot is deliberately empty). A restored MontagePlayer
+    // Re-binds the runtime SkeletalMeshComponent target — the ONE param that cannot round-trip a save/load
+    // (a live component can't be captured or rebuilt from a snapshot payload). A restored MontagePlayer
     // comes back composed but inert; call this with the re-created mesh (e.g. a rebuilt Iskm proxy's
     // BaseSKMC) to revive server-side playback.
     UFUNCTION(BlueprintCallable,
