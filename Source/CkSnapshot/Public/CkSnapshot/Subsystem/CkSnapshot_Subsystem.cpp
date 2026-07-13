@@ -2,7 +2,7 @@
 
 #include "CkSnapshot/CkSnapshot_Log.h"
 #include "CkSnapshot/SaveGame/CkSnapshot_SaveGame.h"
-#include "CkSnapshot/Snapshot/CkSnapshot_CaptureV3.h" // v3 recipe+payload capture (the live save path; Model-A Capture.h dropped Phase 5)
+#include "CkSnapshot/Snapshot/CkSnapshot_CaptureV3.h" // v3 recipe+payload capture (the live save path)
 #include "CkSnapshot/SaveKey/CkSnapshot_SaveKey_Fragment.h"   // EngineOwned rendezvous resolver
 #include "CkSnapshot/Subsystem/CkSnapshot_Signals.h"
 
@@ -20,6 +20,8 @@
 #include "CkEcs/Snapshot/CkSnapshot_Context.h"                // ck::FSnapshotContext (v3 map-backed mode)
 #include "CkEcs/Snapshot/CkSnapshot_HandleWalk.h"             // ck::snapshot::RemapHandles
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h" // FFragment_PendingHydration, FTag_Hydration_PendingApply
+
+#include "CkCore/Algorithms/CkAlgorithms.h"                  // ck::algo::NoneOf
 
 #include "CkLabel/CkLabel_Utils.h"                            // ConstructSpawned adopt/reconcile by label
 
@@ -196,7 +198,7 @@ void
         ck::snapshot::Verbose(TEXT("Request_Save: pumped world to quiescence in [{}] pump passes"), _LastPumpCount);
     }
 
-    // v3 capture (rebuild+hydrate, spec §4.2). Model A is decommissioned in Phase 5 — v3 is the SOLE save format.
+    // v3 capture (rebuild+hydrate). v3 is the SOLE save format.
     auto ByteWriterV3 = FBufferArchive{};
     auto HeaderV3 = FCk_Snapshot_HeaderV3{};
     const auto CaptureResultV3 = ck::snapshot::Run_CaptureV3(*World, ByteWriterV3, HeaderV3);
@@ -277,9 +279,8 @@ void
         return;
     }
 
-    // v3-only HARD BREAK (fork ruling 5): the load path consumes v3 exclusively. A v2-only save (no v3 bytes /
-    // wrong version) is rejected. Model-A capture/restore stays compiled for the oracle + registry tests (Phase 5
-    // removes it), but the world load no longer falls back to it.
+    // v3-only HARD BREAK: the load path consumes v3 exclusively. A v2-only save (no v3 bytes /
+    // wrong version) is rejected.
     if (SaveGame->_HeaderV3.Get_FormatVersion() != FCk_Snapshot_HeaderV3::CurrentFormatVersion ||
         SaveGame->_SnapshotBytesV3.IsEmpty())
     {
@@ -346,10 +347,10 @@ void
             EngineOwned, ConstructSpawned, RuntimeSpawned, Bridged);
     }
 
-    // NOTE: v3 does NOT stamp any reconstitution phase. The Phase-2 LoadKernel gate is the isolation mechanism, and
+    // NOTE: v3 does NOT stamp any reconstitution phase. The LoadKernel gate is the isolation mechanism, and
     // the loader RELIES on the post-travel world's normal spawn path running (the GameMode rebuilds EngineOwned
     // entities; the loader spawns actors whose BeginPlay re-creates bridged entities). Stamping a reconstitution
-    // phase would suppress exactly those spawns (Request_SpawnEntity abstains while a phase is set) — see [P3B-D2].
+    // phase would suppress exactly those spawns (Request_SpawnEntity abstains while a phase is set).
 
     auto Source = DoGet_SnapshotSource();
     ck::UUtils_Signal_Snapshot_OnPreLoad::Broadcast(Source, ck::MakePayload(Source));
@@ -398,12 +399,8 @@ auto
 {
     // Complete when every gameplay root we requested destroyed has finalized (handle now invalid). The root
     // finalizes only AFTER its whole subtree's cascade — incl. EndPlay — has run, so this also covers children.
-    for (const auto& Root : _PendingTeardownRoots)
-    {
-        if (ck::IsValid(Root))
-        { return false; }
-    }
-    return true;
+    return ck::algo::NoneOf(_PendingTeardownRoots,
+        [](const auto& InRoot) { return ck::IsValid(InRoot); });
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -614,7 +611,7 @@ auto
 
                 if (bBridged)
                 {
-                    // Actor-first ([P3B-F1]): spawn the actor at its saved transform; its own BeginPlay re-creates the
+                    // Actor-first: spawn the actor at its saved transform; its own BeginPlay re-creates the
                     // WithActor entity (Construct composes features). Rendezvous-map via the actor once the bridge links.
                     if (NOT _SpawnedRuntimeIds.Contains(SavedId))
                     {
@@ -667,7 +664,7 @@ auto
                             // fresh world's NORMAL boot re-creates — the loader must NOT respawn it (that would duplicate
                             // against the boot's copy + dangle its handle refs). SKIP. NOTE: a gameplay top-level entity
                             // spawned under the transient at runtime would ALSO skip here — distinguishing it from boot
-                            // infrastructure is the CTO-N1 spawner-state problem, deferred to Phase 4A.
+                            // infrastructure is an unsolved spawner-state problem.
                             if (NOT _PersistedIds.Contains(OwnerSavedId))
                             {
                                 _SkippedIds.Add(SavedId);
@@ -927,9 +924,9 @@ auto
             const auto bSaved = SavedLabels != nullptr && SavedLabels->Contains(ChildLabel);
             if (NOT bSaved)
             {
-                // Subtractive reconciliation (spec §4.2): a labeled child rebuilt by Construct but ABSENT from the
+                // Subtractive reconciliation: a labeled child rebuilt by Construct but ABSENT from the
                 // save is a grant the player lost. Queue the normal deferred teardown — it PARKS under the gate and
-                // completes on the first post-gate frames ([P3B-F4]); we only queue here, never wait.
+                // completes on the first post-gate frames; we only queue here, never wait.
                 UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(Child);
                 ++DestroyedCount;
             }
@@ -992,7 +989,7 @@ auto
 
             ck::snapshot::Display(TEXT("DIAG: post-travel world ready after [{}] frames — activating load gate + rebuilding"), _LoadFrameCount);
 
-            // Freeze feature processors against the half-rebuilt world (spec §4.3). The kernel (EntityScript pipeline,
+            // Freeze feature processors against the half-rebuilt world. The kernel (EntityScript pipeline,
             // hydration dispatcher, ...) keeps running so the rebuild + construction can proceed.
             if (auto* EcsWorld = DoGet_LoadWorldEcs();
                 ck::IsValid(EcsWorld))
@@ -1059,7 +1056,7 @@ auto
 
         case ELoadPhase::Hydrating:
         {
-            // ATOMIC ([P3B-D4]): enqueue payloads + queue reconcile-destroys + OPEN THE GATE, all in this single
+            // ATOMIC: enqueue payloads + queue reconcile-destroys + OPEN THE GATE, all in this single
             // callback, so no gated world-tick ever applies a payload before its feature Setup. Then a FULL pump
             // drains Setup-then-hydration (late group) with no stomp; Settling lets the parked destroys finish.
             DoHydrate_Enqueue();
@@ -1161,10 +1158,10 @@ FCk_Snapshot_Header
     if (ck::Is_NOT_Valid(SaveGame) || SaveGame->_SnapshotBytesV3.Num() == 0)
     { return {}; } // invalid slot, or a pre-v3 slot with no v3 header of record
 
-    // Model A is decommissioned (Phase 5): the SaveGame stores only the v3 header now. This BP/subsystem accessor
-    // keeps its frozen FCk_Snapshot_Header return type ([EDITOR-VERIFY] signature per VALIDATION §3) by synthesizing
-    // the legacy-shaped view from the v3 metadata — the six overlapping fields; the Model-A-only stream fields
-    // (manifest, transient id, tag offset) have no v3 source and stay at their defaults. FormatVersion now reports 3.
+    // The SaveGame stores only the v3 header now. This BP/subsystem accessor keeps its frozen
+    // FCk_Snapshot_Header return type by synthesizing the legacy-shaped view from the v3 metadata —
+    // the six overlapping fields; the legacy-only stream fields (manifest, transient id, tag offset)
+    // have no v3 source and stay at their defaults. FormatVersion now reports 3.
     const auto& HeaderV3 = SaveGame->_HeaderV3;
     auto Header = FCk_Snapshot_Header{};
     Header.Set_FormatVersion(HeaderV3.Get_FormatVersion())

@@ -10,6 +10,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h" // Get_WorldForEntity (recipe holder outer)
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Algorithms/CkAlgorithms.h" // ck::algo::AnyOf (undrained-dependents recursion)
 
 #if UE_WITH_IRIS
 #include <Iris/ReplicationSystem/ReplicationSystem.h>
@@ -119,13 +120,8 @@ static auto
         InHandle.Has<ck::FFragment_PendingHydration>())
     { return true; }
 
-    for (const auto& Dependent : UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(InHandle))
-    {
-        if (DoGet_HasUndrainedReplicatedFragments_Recursive(Dependent, InOutVisited))
-        { return true; }
-    }
-
-    return false;
+    return ck::algo::AnyOf(UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(InHandle),
+        [&](const auto& InDependent) { return DoGet_HasUndrainedReplicatedFragments_Recursive(InDependent, InOutVisited); });
 }
 
 auto

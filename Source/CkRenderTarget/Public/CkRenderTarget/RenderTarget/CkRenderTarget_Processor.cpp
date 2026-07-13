@@ -389,7 +389,7 @@ namespace ck
     }
 
     // ================================================================================================================
-    // SAVE-LOAD HYDRATION (Phase 4B)
+    // SAVE-LOAD HYDRATION
     // ================================================================================================================
 
     auto
@@ -403,8 +403,7 @@ namespace ck
         // CkRenderTarget_Replication.cpp), so InChild IS the sync child — unlike the net Apply below it,
         // which is owner-keyed (TryGet_RenderTarget on the owner). On the loading AUTHORITY, refill the
         // child's instruction ring + repaint + (Replicates) re-publish into a fresh owner container so
-        // post-load clients reconverge through the ordinary ApplyReplicatedBatches path. This body is the
-        // Model-A restore re-drive (retired in Phase 5) transplanted onto the child-keyed hydration path.
+        // post-load clients reconverge through the ordinary ApplyReplicatedBatches path.
 
         // ---- Preconditions: evaluate ALL before any mutation (exactly-once repaint) ----
         // The fresh v3 Construct re-created this child; its Setup (FGroup_Gameplay_Rendering) runs in the

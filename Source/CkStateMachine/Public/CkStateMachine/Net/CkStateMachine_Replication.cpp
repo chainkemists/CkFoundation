@@ -18,8 +18,8 @@
 //
 // Both RepData types are container-style replicated fragments (no per-entity UObject driver),
 // attached on authority by FProcessor_Sm_Setup and replicated via FCk_RepData_Container. The
-// handlers below implement: echo suppression for the owning client (§5.5), pre-Setup stashing
-// with arrival-order preservation (§5.4), lagged-out gap recovery (§5.7), per-target dispatch of
+// handlers below implement: echo suppression for the owning client, pre-Setup stashing
+// with arrival-order preservation, lagged-out gap recovery, per-target dispatch of
 // root vs relayed sub-SM events, seq dedup against both the applied watermark and the queue/stash
 // contents, and run-status mirroring (deferred while replayed transitions are in flight). The
 // actual replay-and-commit happens in FProcessor_Sm_ApplyReplicatedHistory →
@@ -29,7 +29,7 @@
 
 namespace
 {
-    // Spec §5.5 echo suppression: the owning client of an OwningClientAuthoritative SM applies
+    // Echo suppression: the owning client of an OwningClientAuthoritative SM applies
     // transitions locally (zero-latency), batches them into FFragment_Sm_PendingClientBatch,
     // then pushes the batch over RPC. The server applies them and re-publishes via the rep
     // payload. That replicated payload makes a round trip back to the owning client as a
@@ -53,7 +53,7 @@ namespace
             == ECk_Utils_Net_IsLocallyControlled_Result::IsLocallyControlled;
     }
 
-    // Spec §5.4 stash-precedence: rep payloads that arrive before the client's Setup processor
+    // Stash-precedence: rep payloads that arrive before the client's Setup processor
     // has run (no FFragment_Sm_Current yet) must NOT bypass that setup — they're held in
     // FFragment_Sm_PendingReplicationEntries until FlushPendingReplication_Drain releases them
     // in arrival order. Additionally, while a stash is in-flight, all new arrivals also stash
@@ -77,7 +77,7 @@ namespace
     }
 
     // Receive-side handler for the RepData's run-status. Pre-Setup arrivals stash the value
-    // alongside the events for FlushPendingReplication_Drain (spec §5.4 ordering). Post-Setup
+    // alongside the events for FlushPendingReplication_Drain (arrival order). Post-Setup
     // arrivals go through the defer-while-replaying wrapper: a Paused/Stopped mirror must not
     // jump ahead of transition events from the same delta that are still queued — the commit's
     // not-Running branch would discard them and destroy the live state entity.
@@ -97,7 +97,7 @@ namespace
         ck::statemachine::MirrorRunStatus_OrDeferWhileReplaying(Entity, PayloadStatus);
     }
 
-    // Spec §5.7 lagged-out gap recovery (WithHistory).
+    // Lagged-out gap recovery (WithHistory).
     //
     // The replicated ring buffer holds the last RingSize events. If a client has been quiet long
     // enough for the authority to roll older events out of the ring, the client's LastApplied
@@ -205,12 +205,12 @@ namespace
         Sm_AppendNewerEvents(Queue, Events, LastApplied);
     }
 
-    // Leg-2 receive dispatch (P4 / "A"). The root's WithHistory container can carry a MIX of root-level
+    // Leg-2 receive dispatch. The root's WithHistory container can carry a MIX of root-level
     // transition events (empty _SubSmIdentity, the root's own seq space) and sub-SM events relayed through
     // the root on behalf of a non-replicated sub-SM (non-empty _SubSmIdentity, each sub-SM's OWN
     // server-assigned seq space — see FProcessor_Sm_CommitPendingTransition's IsServerRepublisher branch).
     //
-    // Partition by identity and run dedup (§5.5) + lagged-out recovery (§5.7) PER TARGET, each against its
+    // Partition by identity and run dedup + lagged-out recovery PER TARGET, each against its
     // own FFragment_Sm_ClientReplayState / FFragment_Sm_ReplayQueue. The existing helpers are already
     // per-entity, so passing the resolved sub-SM as the target makes the seq bookkeeping correct for free.
     // This partitioning is load-bearing: feeding a sub-SM's events through the ROOT's seq space would
@@ -269,9 +269,9 @@ namespace
             if (ck::Is_NOT_Valid(TargetSubSm))
             {
                 // The hosting parent state isn't active yet on this machine (the local sub-SM doesn't
-                // exist). The repro's 30-frame settle means the parent is long-entered by the time sub-SM
-                // events arrive; a true parent-then-child race (stash-and-defer) is deferred (roadmap), so
-                // log + drop rather than land the event on the wrong SM.
+                // exist). In practice the parent is long-entered by the time sub-SM events arrive, and a
+                // true parent-then-child race (stash-and-defer) is not handled, so log + drop rather than
+                // land the event on the wrong SM.
                 ck::sm::Warning(TEXT("WithHistory Apply: sub-SM for identity-path (depth [{}]) not active under root [{}]; dropping [{}] relayed event(s)"),
                     Bucket.Identity.Num(), RootEntity, Bucket.Events.Num());
                 continue;
@@ -283,7 +283,7 @@ namespace
         }
     }
 
-    // Save-load hydration branch (Phase 4A.1 [P4A-F1]). On a loading AUTHORITY the saved payload must drive the SM to
+    // Save-load hydration branch. On a loading AUTHORITY the saved payload must drive the SM to
     // its {RunStatus, CurrentStateClass} WITHOUT replaying entry effects inline through the net path — so instead of
     // Sm_DispatchWithHistory/Sm_EnqueueOrStash, stash the decision record for FProcessor_Sm_HydrationResume, which
     // steers the freshly-composed SM there through its own Start/Transition ladder. Returns NotReady until Setup has
@@ -306,10 +306,10 @@ namespace
     {
         FCk_StateMachineRepHandlerRegistrar()
         {
-            // Both shapes keep their own spec-governed receive machinery (§5.4 stash-and-flush,
-            // §5.5 echo suppression, §5.7 lagged-out recovery) and therefore always return Applied
-            // — pre-Setup arrivals stash via Sm_ShouldStash, never via dispatcher NotReady retries,
-            // preserving the arrival-order contract FlushPendingReplication_Drain relies on.
+            // Both shapes keep their own receive machinery (stash-and-flush, echo suppression,
+            // lagged-out recovery) and therefore always return Applied — pre-Setup arrivals stash
+            // via Sm_ShouldStash, never via dispatcher NotReady retries, preserving the arrival-order
+            // contract FlushPendingReplication_Drain relies on.
 
             FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
                 []() -> UScriptStruct* { return FCk_RepData_StateMachine_WithHistory::StaticStruct(); },
@@ -339,13 +339,12 @@ namespace
 
                         return ECk_RepFragment_ApplyResult::Applied;
                     },
-                    // Save capture ([SM-A]): emit the current run-state as a CANONICAL single event {null ->
+                    // Save capture: emit the current run-state as a CANONICAL single event {null ->
                     // CurrentStateClass, Seq 0, Fp 0} (or empty history if no current state). The live server seqs
                     // restart in the rebuilt world, so persisting the live ring would make the oracle byte-diff never
                     // match; the hydration Apply reads only the target state + status. Gated on the replication MODEL
                     // (not _Replication) so DoesNotReplicate SMs — default model WithHistory — persist too. NO
-                    // SeedContainer: capture/oracle-only, never re-seeded (the SM has no Model-A restore re-drive;
-                    // its restore is the hydration redrive) — [P1-R1] / [P4A-D1].
+                    // SeedContainer: capture/oracle-only, never re-seeded (its restore is the hydration redrive).
                     .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                     {
                         if (NOT Entity.Has<ck::FFragment_Sm_Current>() || NOT Entity.Has<ck::FFragment_Sm_Params>())
@@ -417,9 +416,9 @@ namespace
 
                         return ECk_RepFragment_ApplyResult::Applied;
                     },
-                    // Save capture ([SM-A]): latest state only, canonical Seq 0 / Fp 0. Gated on the replication
+                    // Save capture: latest state only, canonical Seq 0 / Fp 0. Gated on the replication
                     // MODEL (not _Replication) so DoesNotReplicate WithoutHistory SMs persist too. NO SeedContainer —
-                    // capture/oracle-only, never re-seeded (restore is the hydration redrive) — [P1-R1] / [P4A-D1].
+                    // capture/oracle-only, never re-seeded (restore is the hydration redrive).
                     .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                     {
                         if (NOT Entity.Has<ck::FFragment_Sm_Current>() || NOT Entity.Has<ck::FFragment_Sm_Params>())
@@ -429,7 +428,7 @@ namespace
 
                         const auto& Current = Entity.Get<ck::FFragment_Sm_Current>();
 
-                        auto Payload = FCk_RepData_StateMachine_NoHistory{}; // canonical Seq 0 / Fp 0 ([SM-A])
+                        auto Payload = FCk_RepData_StateMachine_NoHistory{}; // canonical Seq 0 / Fp 0
                         Payload.Set_CurrentStateClass(Current.Get_CurrentStateClass());
                         Payload.Set_RunStatus(Current.Get_RunStatus());
                         return FInstancedStruct::Make(Payload);
