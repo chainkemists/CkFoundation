@@ -38,8 +38,8 @@ static struct FMontagePlayerRepHandlerRegistrar
                         Handle, New.Get<FCk_RepData_MontagePlayer>().Value, IsFirstApplication);
                     return ECk_RepFragment_ApplyResult::Applied;
                 },
-                // Restore re-seed of the self-resident MontagePlayer container from live _State (mirrors the deleted
-                // FProcessor_MontagePlayer_ReplicateOnRestore).
+                // Produce is capture/oracle-only: builds the self-resident MontagePlayer container from live _State
+                // (the Model-A restore re-drive was retired in Phase 5).
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT Entity.Has<ck::FFragment_MontagePlayer_Current>())

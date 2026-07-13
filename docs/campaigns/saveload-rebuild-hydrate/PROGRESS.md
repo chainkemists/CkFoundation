@@ -15,7 +15,7 @@
 | 4A.1 | PHASE_4A.md | **DONE** (SM redrive→hydration; committed). 4A.2 (N1 discriminator + SpawnerResumes test) DEFERRED ([N1-A]-blocked). | 2026-07-12 | CkF: 705e7d57e (SM hydration); CkTests: 773a4d2 (comment) | GREEN mod casualties+flake: Ck.Snapshot **52/45/7** (both Parity.StateMachine* GREEN, 9→7; 7 = 4B casualties); Ck.StateMachine 24/25 (lone red = documented OwningClientAuth_SubSm flake — passed alone + in Net run); Net 102/99/3 delta-zero (kiosk env-trio only, no new framework Ck.*.Net red) |
 | 4A.2 | PHASE_4A.md | DEFERRED ([N1-A] scope call) | | | |
 | 4B | PHASE_4B.md | **IN PROGRESS** — casualties closed (TagSet/RenderTarget/Attributes×5/AnimPlan) + **4B.3 AS smoke DONE** (framework FCk_SaveData_EntityScriptFields handler + 2 AS gates green). **Grid + Inventory×2 DEFERRED → [INV-A]**. Verification-gated leftovers (4B.1 params-mutators, MontagePlayer rebind) still blocked on OracleParity/BB-driver-world ([P4B-N1]). | 2026-07-12 | CkF: 5088f5336 (TagSet), ede66976f (RenderTarget), db83e687a (AnimPlan), 5b7c1e077 (Attributes×5), 19613a1eb (invariant fix), **09ca84f41 (4B.3 SaveGame-fields handler)**; CkTests: **a0c2f2d (4B.3 AS gates)** | GREEN: Ck.Snapshot **54/51/3** (both `AS.SaveGameFields_RoundTrip`+`AS.NonSaveGameField_Drops` green; the 3 = [INV-A] trio by name; Meta ratchet + v3 AUDIT delta-zero); Net **102/99/3** framework Ck.*.Net delta-zero (kiosk env-trio only; SM.Net flake passed) |
-| 5 | PHASE_5.md + VALIDATION.md | **IN PROGRESS — partial (Track B); final blocked** | 2026-07-12 | see §Phase-5 progress | see §Phase-5 progress |
+| 5 | PHASE_5.md + VALIDATION.md | **Track B (decommission Model A) partial COMPLETE — clusters 1a–6 DONE + COMMITTED; Phase-5 FINAL blocked** | 2026-07-12 | see §Phase-5 progress | Ck.Snapshot 54/51/3 (3=[INV-A]); Net 102/98/4 framework delta-zero; Shipping compile OK |
 
 ## Phase-5 progress (cluster tracker — Track B, decommission Model A "gate, don't delete")
 
@@ -81,7 +81,15 @@ Dev-behavior-neutral (machinery stays compiled in Dev) — the deletes land firs
   Subsystem `#include`s CkSnapshot_Capture.h but only calls Run_CaptureV3 (likely stale include — verify). Flag C: Ck_DEFINE_ECS_TAG
   calls Register_SnapshotableTag from EVERY tag → keep TagRegistry registration compiled (stub body, don't gate decl). ROUTE the
   archives-gating-scope fork to Fable at execution; Shipping compile is the safety net.
-- [ ] **Cluster 6 — 5.2.4 docs + amended 5.3 grep** (drop IsSnapshotRespawnable per [P3B-D1]) + final Ck.Snapshot + Net gate.
+- [x] **Cluster 6 — 5.2.4 docs + amended 5.3 grep + exit-grep comment sweep — DONE (CkF `<c6-this>`).** Docs: root CLAUDE.md
+  `CK_REGISTER_SNAPSHOTABLE` row → "oracle-only since Phase 5"; CkEcs/CLAUDE.md rep section (dispatcher group
+  `FGroup_Gameplay_Script`→`FGroup_Hydration` + ConstructedThisFrame defer + fire-gating); PHASE_5.md §5.3 grep dropped
+  `IsSnapshotRespawnable` ([P3B-D1]) + added the `CkSnapshot_RestoreMarker.h` carve-out ([P5-D3]). Comment sweep: 34 stale
+  `ReplicateOnRestore|RestoreReplicated|JustRestored|Reconstitution` comment hits across 26 files reworded to the post-Phase-5
+  reality (v3 hydration Apply; RenderTarget→`HydrateFromSavedChannel`) via a 7-agent workflow — comments-only (build Succeeded,
+  no code change), **exit grep VERIFIED ZERO outside the RestoreMarker.h carve-out**. Gate: Ck.Snapshot **54/51/3** delta-zero;
+  Net **102/98/4** framework `Ck.*.Net` delta-zero (documented SM.Net flake + kiosk env-trio). Did NOT flip spec Status→IMPLEMENTED
+  (Phase-5 FINAL is BB-driver-world-blocked).
 
 - **[P5-D1] (executor, 2026-07-12, cluster 1a — Fable ruling C, code-verified) — deleting the Model-A SaveGame `_Header` field
   conflicted with VALIDATION §3 (Get_SaveSlotHeader signature frozen); resolved by SYNTHESIZING the legacy header from v3 at
@@ -1065,3 +1073,19 @@ value is [N1-A]-blocked and it needs a new BB-style fixture world).
   CK_REGISTER_SNAPSHOTABLE row) + the exit-grep comment sweep (34 stale ReplicateOnRestore/RestoreReplicated/JustRestored/Reconstitution
   comment hits, minus the RestoreMarker.h carve-out) + amended PHASE_5.md §5.3 grep + final Ck.Snapshot + Net gate.** Then Phase-5 partial
   is complete for maintainer review; Phase-5 FINAL (VALIDATION §2 OracleParity, camera revert, etc.) stays BB-driver-world-blocked.
+- 2026-07-12 — **Track B / Phase 5 partial COMPLETE — cluster 6 DONE + COMMITTED; clusters 1a–6 all done (Opus, unattended run).**
+  Docs updated (root CLAUDE.md macro row → oracle-only; CkEcs/CLAUDE.md rep section → FGroup_Hydration + fire-gating; PHASE_5.md §5.3
+  grep dropped IsSnapshotRespawnable + RestoreMarker.h carve-out). Exit-grep comment sweep: a 7-agent workflow reworded 34 stale
+  `ReplicateOnRestore|RestoreReplicated|JustRestored|Reconstitution` comment hits across 26 files to the post-Phase-5 reality
+  (v3 hydration; RenderTarget→HydrateFromSavedChannel) — comments-only (build Succeeded), **exit grep VERIFIED ZERO outside the
+  RestoreMarker.h carve-out**. Gate: Ck.Snapshot 54/51/3 delta-zero + Net 102/98/4 framework Ck.*.Net delta-zero. Commit CkF
+  `<c6-this>`. **PHASE-5 TRACK-B PARTIAL IS COMPLETE (clusters 1a/2/3/4/5/6): Model-A decommissioned (dead-path deleted, live
+  machinery oracle-gated, Shipping compile OK, docs + grep clean).** NOTHING PUSHED — branch `feature/save-load-improvements` handed
+  to Adam for MANDATORY Class-4 review. **DELIBERATELY NOT DONE (Adam/prereq-gated, per prompt DO-NOT-START):** the [INV-A] trio
+  (Grid+Inventory×2, the 3 standing reds), [N1-A] boot-singleton adoption + 4A.2, everything BB-driver-world/OracleParity-blocked
+  (Camera revert, VALIDATION §2, Phase-5-FINAL, 4B.1 params-mutators, MontagePlayer rebind), and the spec Status→IMPLEMENTED flip.
+  **CROSS-REPO FOLLOW-UPS for Adam/BB-repo (a CkF session must NOT touch BB):** delete `CkSnapshot_RestoreMarker.h` +
+  `FTag_Snapshot_JustRestored`/`Get_WasJustRestored` surface (Bb_SnapshotRestore/Bb_CombatReceiverRestore + ~28 AS
+  `*_Processor_RestoreRebind.as`) together with the `FTag_ActorJustRebound` cleanup ([P5-D3]); the 2 stale BB comments naming
+  FProcessor_ActorRespawn (Bb_PlayerSaveLoad.h:14, Bb_SaveLoadProbe.cpp:274) + 1 stale CkTests comment
+  (Test_Snapshot_RenderTargetParity_MPReload_Gate.spec.cpp:10).

@@ -205,9 +205,9 @@ namespace ck_render_target_processor
     }
 
     // Resolves (or creates) the drawable RGBA8 target for a sync entity from its params — the
-    // managed/provided switch shared by FProcessor_RenderTarget_Setup and the snapshot restore pass
-    // (FProcessor_RenderTarget_ReplicateOnRestore). Returns null after a loud ensure on
-    // misconfiguration; the caller pins the result into FFragment_RenderTarget_Current::_Target.
+    // managed/provided switch used by FProcessor_RenderTarget_Setup, which runs on both fresh spawns
+    // and snapshot loads (v3 rebuild+hydrate re-Constructs the entity, re-running Setup). Returns null
+    // after a loud ensure on misconfiguration; the caller pins the result into FFragment_RenderTarget_Current::_Target.
     auto
     ResolveDrawableTarget(
         const FCk_Handle_RenderTarget& InRenderTargetEntity,
@@ -335,7 +335,7 @@ namespace ck
 
         InCurrent._Target = TStrongObjectPtr{ResolvedTarget};
 
-        // Composition anchor for the snapshot restore pass: ReplicateOnRestore's view keys on
+        // Composition anchor for the snapshot restore pass: HydrateFromSavedChannel's view keys on
         // Params + AuthoredLog, so the log must exist on EVERY sync entity from setup — not lazily at
         // first publish — or a never-drawn (or non-publishing) target restores as a half-composed
         // zombie (Params only, no Current/label, unreachable). Empty until a covered author records.
@@ -403,8 +403,8 @@ namespace ck
         // CkRenderTarget_Replication.cpp), so InChild IS the sync child — unlike the net Apply below it,
         // which is owner-keyed (TryGet_RenderTarget on the owner). On the loading AUTHORITY, refill the
         // child's instruction ring + repaint + (Replicates) re-publish into a fresh owner container so
-        // post-load clients reconverge through the ordinary ApplyReplicatedBatches path. Transplant of the
-        // Model-A FProcessor_RenderTarget_ReplicateOnRestore body onto the child-keyed hydration path.
+        // post-load clients reconverge through the ordinary ApplyReplicatedBatches path. This body is the
+        // Model-A restore re-drive (retired in Phase 5) transplanted onto the child-keyed hydration path.
 
         // ---- Preconditions: evaluate ALL before any mutation (exactly-once repaint) ----
         // The fresh v3 Construct re-created this child; its Setup (FGroup_Gameplay_Rendering) runs in the

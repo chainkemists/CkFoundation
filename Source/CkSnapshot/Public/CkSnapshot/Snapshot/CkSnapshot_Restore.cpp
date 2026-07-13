@@ -7,7 +7,7 @@
 #include "CkEcs/Snapshot/CkSnapshot_TagDriver.h"
 #include "CkSnapshot/SaveGame/CkSnapshot_Header.h"
 
-#include "CkEcs/Handle/CkHandle.h"        // FCk_Handle + Add<ck::FTag_Snapshot_JustRestored>
+#include "CkEcs/Handle/CkHandle.h"        // FCk_Handle
 #include "CkEcs/Handle/CkHandle_Utils.h"  // ck::MakeHandle
 #include "CkEcs/Registry/CkRegistry_SlotTable.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"

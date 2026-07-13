@@ -14,7 +14,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 // Shared Produce / SeedContainer / hydration-apply for the attribute family (Float/Byte/Integer/Vector/Rotator), used
-// by each kind's registrar. Replaces the deleted TProcessor_Attribute_ReplicateOnRestore_All.
+// by each kind's registrar. The shared capture/oracle-only Produce + SeedContainer for attributes.
 //
 // v3 SAVE (Produce) is VALUE-EMITTING and keyed PER-ATTRIBUTE-ENTITY (Produce fires on the entity holding the Current
 // component). It emits this attribute's own Base/Final for each composed component (Current always; Min/Max if present)
@@ -30,7 +30,7 @@
 // data): the value comes from the restored fragment image + the re-armed Replicate pass, so an EMPTY seed + re-arm is
 // behaviour-neutral to Model A AND sidesteps the per-owner upsert-merge — a value seed would land only the first
 // attribute's data, since TryAddContainerFragment returns AlreadyExists WITHOUT writing for siblings (CkNet_Utils.h).
-// SeedContainer is Model-A-only (Produce-with-SeedContainer joins the JustRestored re-drive); v3 never calls it.
+// SeedContainer is Model-A/oracle-only (v3 never calls it; the Model-A re-drive was retired in Phase 5).
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::attribute_restore

@@ -46,7 +46,7 @@ namespace ck
 
         // Tier-C: the assigned ID is the whole persistent state. The per-ID FTag_PlayerID<> tag
         // (which Get_ID actually reads) and the replicated container entry are re-derived from
-        // this value on restore by FProcessor_Player_ReplicateOnRestore.
+        // this value on restore through the v3 hydration Apply path.
         auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& /*InCtx*/) -> void
         {
             auto IDByte = static_cast<uint8>(_PlayerID);
