@@ -476,6 +476,8 @@ which the optional v3-round-trip structural test (above) can restore later.
 
 ## Objective 5 — hygiene (comments + ck::algo), across the touched surface
 
+> **EXECUTED 2026-07-13 (F4, CkF `1773fc027`) — partial, by design.** Comment sweep: the 15 DENSE touched files done (workflow + review); the ≤4-hit long tail deferred ([F4-D2], mostly v3-format-vocab false positives). ck::algo: only 2 of the planned 6 landed (`NoneOf` in Subsystem `DoIs_TeardownComplete`, `AnyOf` in the ReplDriver undrained-check) — **[F4-D1]** the other 4 were INVALIDATED by F1's rebuild rewrite (the cited Subsystem loops became complex critical-path control flow / mutations; the Transform-into-TSet overload was already flagged uncertain) and are not worth refactoring the rebuild core for style. Both deferrals are Adam-optional follow-ups. Full record: PROGRESS.md §Phase F4. The specific line-numbers below are pre-F1 and STALE.
+
 Touched set: `git merge-base origin/dev HEAD` = `9fbf90c0feae` **[A — re-derive at exec]**; ~143 surviving source files.
 ~290 house-rule-violating comment lines across 84 files; ~120 die free with the obj-2 deletion.
 - **Comment sweep (comments-only commit; diff shows zero non-comment token changes except one ensure-string tag at

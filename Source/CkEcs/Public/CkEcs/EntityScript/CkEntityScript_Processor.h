@@ -24,7 +24,7 @@ namespace ck
     public:
         using Group = FGroup_Gameplay_Script;
         using MarkedDirtyBy = FFragment_EntityScript_RequestSpawnEntity;
-        static constexpr auto LoadPolicy = ECk_ProcessorLoadPolicy::RunsDuringLoad; // load-gate kernel (spec §4.3)
+        static constexpr auto LoadPolicy = ECk_ProcessorLoadPolicy::RunsDuringLoad; // load-gate kernel
 
     public:
         using TProcessor::TProcessor;
@@ -56,7 +56,7 @@ namespace ck
         using Group = FGroup_Gameplay_Script;
         using RunAfter = TDepList<FProcessor_EntityScript_SpawnEntity_HandleRequests>;
         using MarkedDirtyBy = FTag_EntityScript_ContinueConstruction;
-        static constexpr auto LoadPolicy = ECk_ProcessorLoadPolicy::RunsDuringLoad; // load-gate kernel (spec §4.3)
+        static constexpr auto LoadPolicy = ECk_ProcessorLoadPolicy::RunsDuringLoad; // load-gate kernel
 
     public:
         using TProcessor::TProcessor;
@@ -84,7 +84,7 @@ namespace ck
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::AuthorityOnly;
         static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
         using MarkedDirtyBy = FRequest_EntityScript_Replicate;
-        static constexpr auto LoadPolicy = ECk_ProcessorLoadPolicy::RunsDuringLoad; // load-gate kernel (spec §4.3)
+        static constexpr auto LoadPolicy = ECk_ProcessorLoadPolicy::RunsDuringLoad; // load-gate kernel
 
     public:
         using TProcessor::TProcessor;
@@ -110,7 +110,7 @@ namespace ck
         using Group = FGroup_Gameplay_Script;
         using RunAfter = TDepList<FProcessor_EntityScript_Replicate>;
         using MarkedDirtyBy = FTag_EntityScript_FinishConstruction;
-        static constexpr auto LoadPolicy = ECk_ProcessorLoadPolicy::RunsDuringLoad; // load-gate kernel (spec §4.3)
+        static constexpr auto LoadPolicy = ECk_ProcessorLoadPolicy::RunsDuringLoad; // load-gate kernel
 
     public:
         using TProcessor::TProcessor;
@@ -137,7 +137,7 @@ namespace ck
         using Group = FGroup_Gameplay_Script;
         using RunAfter = TDepList<FProcessor_EntityScript_FinishConstruction>;
         static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
-        static constexpr auto LoadPolicy = ECk_ProcessorLoadPolicy::RunsDuringLoad; // load-gate kernel (spec §4.3)
+        static constexpr auto LoadPolicy = ECk_ProcessorLoadPolicy::RunsDuringLoad; // load-gate kernel
 
     public:
         using TProcessor::TProcessor;
@@ -165,7 +165,7 @@ namespace ck
         using RunAfter = TDepList<FProcessor_EntityScript_FinishConstruction>;
         static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
         using MarkedDirtyBy = FTag_EntityScript_BeginPlay;
-        static constexpr auto LoadPolicy = ECk_ProcessorLoadPolicy::RunsDuringLoad; // load-gate kernel (spec §4.3)
+        static constexpr auto LoadPolicy = ECk_ProcessorLoadPolicy::RunsDuringLoad; // load-gate kernel
 
     public:
         using TProcessor::TProcessor;
