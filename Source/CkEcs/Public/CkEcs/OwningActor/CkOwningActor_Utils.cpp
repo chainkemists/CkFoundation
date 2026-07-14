@@ -5,6 +5,8 @@
 #include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
+#include "CkEcs/CkEcsLog.h"
+
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
@@ -256,14 +258,21 @@ auto
         if (InPolicy == ECk_ActorEcsReady_Policy::LinkEstablished ||
             NOT DoGet_ShouldDeferUntilReplicationComplete(Entity))
         {
+            ck::ecs::Verbose(TEXT("[EcsReadyPromise] Actor [{}] already ready — executing immediately (entity [{}])"),
+                InActor, Entity);
             InDelegate.ExecuteIfBound(InActor, Entity);
             return;
         }
 
+        ck::ecs::Verbose(TEXT("[EcsReadyPromise] Actor [{}] linked but replication incomplete — deferring on "
+            "trampoline (entity [{}])"), InActor, Entity);
         EntityOwningActorComp->_PendingEcsReadyDelegates_ValuesReplicated.Add(InDelegate);
         DoBind_ReplicationCompleteTrampoline(EntityOwningActorComp, Entity);
         return;
     }
+
+    ck::ecs::Verbose(TEXT("[EcsReadyPromise] Actor [{}] not ECS-ready yet — queueing delegate (policy [{}])"),
+        InActor, InPolicy == ECk_ActorEcsReady_Policy::ValuesReplicated ? TEXT("ValuesReplicated") : TEXT("LinkEstablished"));
 
     switch (InPolicy)
     {
@@ -389,6 +398,12 @@ auto
         InComp->_PendingEcsReadyCallbacks_ValuesReplicated.IsEmpty())
     { return; }
 
+    ck::ecs::Verbose(TEXT("[EcsReadyPromise] Flushing for actor [{}] (entity [{}]): [{}] ValuesReplicated "
+        "delegate(s) pending, defer-until-replication-complete [{}]"),
+        InActor, InEntity,
+        InComp->_PendingEcsReadyDelegates_ValuesReplicated.Num() + InComp->_PendingEcsReadyCallbacks_ValuesReplicated.Num(),
+        DoGet_ShouldDeferUntilReplicationComplete(InEntity));
+
     if (DoGet_ShouldDeferUntilReplicationComplete(InEntity))
     {
         DoBind_ReplicationCompleteTrampoline(InComp, InEntity);
@@ -463,6 +478,16 @@ auto
         const FCk_Handle& InEntity)
     -> bool
 {
+    // The documented ValuesReplicated collapse (ECk_ActorEcsReady_Policy): on the HOST, replicated values
+    // are locally written — there is nothing to await, and OnReplicationComplete timing is a client-
+    // convergence concern. Deferring here anyway coupled every authority-side consumer (e.g. the game
+    // HUD's context injection) to the fire processor's schedule, which a v3 load starves for the restored
+    // pawn (its OnReplicationComplete never re-fires in the loaded world) — the promise then hung forever
+    // awaiting a signal with nothing left to signal. Host-gate per the netmode gotcha: Get_HasAuthority
+    // admits clients, Get_IsEntityNetMode_Host does not.
+    if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InEntity))
+    { return false; }
+
     if (UCk_Utils_EntityReplicationDriver_UE::Has(InEntity))
     { return NOT UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationComplete(InEntity); }
 
