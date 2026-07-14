@@ -178,15 +178,15 @@ namespace ck
     // ---- Templated entity holders for attribute refill relationships ----
 
     template <concepts::ValidAttributeRefillHandleType T_RefillHandleType>
-    struct TFragment_RefillAttribute : public TFragment_EntityHolder<T_RefillHandleType, ck::FSnapshotPolicy_RoundTrip>
+    struct TFragment_RefillAttribute : public TFragment_EntityHolder<T_RefillHandleType>
     {
-        using TFragment_EntityHolder<T_RefillHandleType, ck::FSnapshotPolicy_RoundTrip>::TFragment_EntityHolder;
+        using TFragment_EntityHolder<T_RefillHandleType>::TFragment_EntityHolder;
     };
 
     template <concepts::ValidAttributeHandleType T_AttributeHandleType>
-    struct TFragment_RefillAttributeTarget : public TFragment_EntityHolder<T_AttributeHandleType, ck::FSnapshotPolicy_RoundTrip>
+    struct TFragment_RefillAttributeTarget : public TFragment_EntityHolder<T_AttributeHandleType>
     {
-        using TFragment_EntityHolder<T_AttributeHandleType, ck::FSnapshotPolicy_RoundTrip>::TFragment_EntityHolder;
+        using TFragment_EntityHolder<T_AttributeHandleType>::TFragment_EntityHolder;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -365,9 +365,9 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_Handle>
-    struct TFragment_RecordOfAttributeModifiers : public TFragment_RecordOfEntities<T_Handle, ck::FSnapshotPolicy_Transient>
+    struct TFragment_RecordOfAttributeModifiers : public TFragment_RecordOfEntities<T_Handle>
     {
-        using TFragment_RecordOfEntities<T_Handle, ck::FSnapshotPolicy_Transient>::TFragment_RecordOfEntities;
+        using TFragment_RecordOfEntities<T_Handle>::TFragment_RecordOfEntities;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -28,7 +28,7 @@ shippable; quick.** Nothing is pushed by the executor (Class-4 → Adam review).
 | Phase | Status | Commit(s) | Gate result vs baseline | Notes |
 |---|---|---|---|---|
 | 1 — harness + cast sweep + Jump absolute | DONE (2026-07-14) | CkF `3439ac756` (cast) + `f780dcf2d` (Timer Jump); CkTests `6237fa5` (harness+conversion); docs `2f45437fa` (pkg) | build exit 0; **Ck.Snapshot 35/35 (delta-0 by name), Ck.Net 90/90 (delta-0 by name), Ck.Timer 21/21** (planner expected 0 — see D4) | Timer_MPReload converted, both cycles green. Deviations D1–D6. |
-| 2 — rename bundle (absorbs parity PHASE_6) | NOT STARTED | | | parity PROGRESS 6A/6B rows annotated: Y/N |
+| 2 — rename bundle (absorbs parity PHASE_6) | DONE (2026-07-14) | CkF `a49969195` (rename bundle: 6A+slots+named+registrars, absorbs parity 6A) + `d0fd71e59` (6B T_Policy delete, absorbs parity 6B); CkTests `b29a8aa` (symbol-sync fix) | **build exit 0** (after a fix-rebuild — see [P2-D4]); **Ck.Snapshot 35/35 (delta-0 by name), Ck.Net 90/90 (delta-0 by name)** | parity 6A/6B rows annotated Y. All code gates 0 (6A / `.Apply=` / RegisterLazyTyped-outside-inl / policy-surface). Deviations P2-D1..D4. Site counts: 6A 229 hits/40 files; 24 registrars→29 named calls (NetOnly 4/SaveOnly 6/SharedApply 5/SplitApply 14); 6B ~84 aliased callers untouched. Docs → VALIDATION §5 [P2-D3]. |
 | 3 — symmetry class (a), 7 features | NOT STARTED | | | |
 | 4 — symmetry class (b), fold | NOT STARTED | | | |
 | 5 — CkEcs/Persistence header split | NOT STARTED | | | RunAfter seam outcome (fwd-decl vs include): ____ |
@@ -72,6 +72,37 @@ output) / what you did NOT do / question for the planner or Adam.
   pre-build review flagged that `FCk_Registry` completeness (for `Get_RegistryHandle()`/`ck::MakeHandle`) was only
   transitive via `CkEcsWorld_Subsystem.h`. Added the explicit include for IWYU robustness (matches the proven
   `CkEntityScript_Utils.cpp` mirror). Non-behavioral.
+- **[P2-D1] (Phase 2 / commit structure) — 2 commits, not 3.** Phase-doc commits 1 (vocab+slots) and 2 (named
+  entry points + registrars) both touch the registry core (`.h`/`.inl.h`) AND all registrar files, so a clean
+  1/2 split needs hunk-level staging (interactive `git add -p`, unavailable). Combined into ONE "rename bundle"
+  commit; 6B is the second commit. Each rename step is internally self-consistent.
+- **[P2-D2] (Phase 2 / 6B) — kept `_ROUNDTRIP`/`_TRANSIENT` macro family as policy-less ALIASES rather than
+  collapsing to a single plain form + migrating ~84 callers.** PHASE_6 §6B says "the plain
+  CK_DEFINE_ENTITY_HOLDER / CK_DEFINE_RECORD_OF_ENTITIES macros are the only form" (planner expected ~85 sites).
+  Reality: the ~85 sites are ~84 CALLERS of `_ROUNDTRIP`/`_TRANSIENT`/`_AND_UTILS_ROUNDTRIP`/`_TRANSIENT` across
+  ~44 feature files (my step-1 grep `FSnapshotPolicy_|TSnapshotMarker|_WITH_POLICY` undercounted at 22 — it
+  missed the suffix-macro callers). Two behavior-identical ways to reach the goal (delete the inert T_Policy
+  surface): (A) migrate all ~84 callers to plain `CK_DEFINE_*` and delete the suffix macros — wide churn on the
+  unpushed stack; (B) drop T_Policy from the templates + macro DEFINITIONS and keep the suffix macros as
+  policy-less aliases — ZERO caller churn. **Chose (B)** — parity PHASE_6 rule 3 explicitly kills wide unpushed
+  churn ("56 include lines / 47 files"), and (B) is far lower-risk. Deleted: `CkSnapshot_Policy.h`, `TSnapshotMarker`,
+  `FSnapshotPolicy_*`, the `_WITH_POLICY` macros, the `T_Policy` template param, and the policy arg on the 7 direct
+  template uses. Gate: `FSnapshotPolicy_|TSnapshotMarker|_WITH_POLICY` = 0. **For Adam:** if you want the full
+  collapse (plain-only, per the literal phase-doc), it's a mechanical suffix-drop perl over the ~84 callers — say
+  the word. Behavior is identical either way.
+- **[P2-D3] (Phase 2 / docs) — doc updates deferred to VALIDATION §5.** The Phase 2 rename GATES are code-scoped
+  (their purpose: verify code renames; all 0). `CkSnapshot/Claude.md`, `Source/CLAUDE.md`, `CkEcs/Claude.md` still
+  carry old vocab (`FCk_ReplicatedFragmentHandlerRegistry`, `.Apply`/`.Remove` slot names, `RegisterLazyTyped`
+  recipe) — updated at VALIDATION §5 (its intended "final session" doc pass), where the Register_* recipe rewrite
+  is done properly. If the campaign stops after Phase 2, this doc pass is the one outstanding item.
+- **[P2-D4] (Phase 2 / build) — first build failed; one missed cross-repo reference, fix-rebuilt.** The 6A/slot
+  rename swept `Plugins/CkFoundation/Source` only; one CkTests file
+  (`Test_Snapshot_DynamicFragment_HandleRemap_RoundTrip.cpp`) references the framework types
+  `FCk_ReplicatedFragmentHandlerRegistry::Find` + `ECk_RepFragment_ApplyResult` and failed to compile. CkFoundation
+  compiled clean (errors only in that one CkTests file); renamed the 2 symbols there, rebuilt (44s incremental) →
+  exit 0. This means Phase 2 used TWO builds (fail + fix), not one — unavoidable after a compile error. BB Source
+  had 0 stale refs (checked). Lesson for later phases: the 6A-style framework renames must sweep CkTests too, not
+  just CkFoundation Source.
 - **D6 (Phase 1 / skills) — `ck-tests-authoring-and-running` was NOT in this session's Skill registry.** PROMPT
   names it for session start; only `ck-change-control` was loadable. Relied on exemplar-mimicry per PHASE_1
   (M2b / TransformParity / TimerParity spec files + CkNetAutomation_Common) as the phase doc mandates anyway.
