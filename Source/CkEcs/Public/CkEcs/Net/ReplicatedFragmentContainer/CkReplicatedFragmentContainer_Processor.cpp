@@ -102,3 +102,84 @@ namespace ck
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_Hydration_Dispatch);
+
+namespace ck::persistence_apply
+{
+    auto
+        ApplyOne(
+            FCk_Handle& InEntity,
+            const FInstancedStruct& InData,
+            const TOptional<FInstancedStruct>& InOldData,
+            float& InOutPendingForSeconds,
+            FCk_Time InDeltaT)
+        -> EApplyOutcome
+    {
+        const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Resolve(InData.GetScriptStruct());
+        if (Handler == nullptr || NOT Handler->Apply)
+        {
+            // Registry churn — a payload whose handler lost Apply. Drop rather than retry forever.
+            return EApplyOutcome::DroppedTimeout;
+        }
+
+        if (Handler->Apply(InEntity, InData, InOldData) == ECk_RepFragment_ApplyResult::Applied)
+        { return EApplyOutcome::Applied; }
+
+        InOutPendingForSeconds += InDeltaT.Get_Seconds();
+
+        if (InOutPendingForSeconds >= ck::PendingApplyTimeoutSeconds)
+        {
+            const auto TypeName = ck::IsValid(InData.GetScriptStruct())
+                ? InData.GetScriptStruct()->GetName()
+                : FString{TEXT("<invalid type>")};
+
+            CK_TRIGGER_ENSURE(
+                TEXT("Hydration payload [{}] on entity [{}] was never applied: Apply kept returning NotReady for "
+                     "[{}]s — the feature it targets was never composed. Dropping the entry."),
+                TypeName, InEntity, InOutPendingForSeconds);
+
+            return EApplyOutcome::DroppedTimeout;
+        }
+
+        return EApplyOutcome::StillPending;
+    }
+}
+
+namespace ck
+{
+    auto
+        FProcessor_Hydration_Dispatch::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_PendingHydration& InPending) const
+        -> void
+    {
+        auto AnyStillPending = false;
+
+        // Iterate back-to-front so applied/dropped entries can be removed in place.
+        for (auto Index = InPending._Entries.Num() - 1; Index >= 0; --Index)
+        {
+            // Hydration has no per-entry coalescing (unlike the net FastArray) — the Old side is always unset.
+            const auto Outcome = ck::persistence_apply::ApplyOne(
+                InHandle, InPending._Entries[Index], TOptional<FInstancedStruct>{}, InPending._PendingForSeconds, InDeltaT);
+
+            if (Outcome == ck::persistence_apply::EApplyOutcome::StillPending)
+            { AnyStillPending = true; }
+            else
+            { InPending._Entries.RemoveAt(Index); } // Applied or dropped-past-timeout
+        }
+
+        if (NOT AnyStillPending)
+        { InPending._PendingForSeconds = 0.0f; }
+
+        if (InPending._Entries.IsEmpty())
+        {
+            InHandle.Remove<FTag_Hydration_PendingApply>();
+            InHandle.Remove<FFragment_PendingHydration>();
+        }
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------

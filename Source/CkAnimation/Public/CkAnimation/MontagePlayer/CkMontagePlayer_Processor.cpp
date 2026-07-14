@@ -22,7 +22,6 @@
 CK_REGISTER_PROCESSOR(ck::FProcessor_MontagePlayer_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_MontagePlayer_MonitorAnimInstance);
 CK_REGISTER_PROCESSOR(ck::FProcessor_MontagePlayer_Replicate);
-CK_REGISTER_PROCESSOR(ck::FProcessor_MontagePlayer_ReplicateOnRestore);
 
 const FCk_Time ck::FProcessor_MontagePlayer_HandleRequests::_SyncTargetTime{0.5};
 
@@ -403,34 +402,6 @@ namespace ck
                 }
             }
         }
-    }
-
-    // ---- ReplicateOnRestore (Server-side, post-snapshot-load) ----
-
-    auto
-        FProcessor_MontagePlayer_ReplicateOnRestore::
-        ForEachEntity(
-            TimeType /*InDeltaT*/,
-            HandleType InHandle,
-            const FFragment_MontagePlayer_Current& InCurrent) const
-        -> void
-    {
-        if (NOT InHandle.Has<FTag_Snapshot_JustRestored>())
-        { return; }
-
-        if (InHandle.Has<FTag_MontagePlayer_RestoreReplicated>())
-        { return; }
-
-        // Self-resident container: the driver rides this entity (see FProcessor_MontagePlayer_Replicate).
-        // Not re-established yet -> retry next tick (the shared marker stays in place).
-        if (NOT UCk_Utils_EntityReplicationDriver_UE::Has(InHandle))
-        { return; }
-
-        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_MontagePlayer>(
-            InHandle, FCk_RepData_MontagePlayer{InCurrent.Get_State()});
-
-        InHandle.AddOrGet<FTag_MontagePlayer_MayRequireReplication>();
-        InHandle.Add<FTag_MontagePlayer_RestoreReplicated>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------

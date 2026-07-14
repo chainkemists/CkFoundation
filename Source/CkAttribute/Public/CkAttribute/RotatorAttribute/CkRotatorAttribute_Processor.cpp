@@ -13,6 +13,5 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_RotatorAttribute_MinMaxClamp);
 CK_REGISTER_PROCESSOR(ck::FProcessor_RotatorAttribute_FireSignals);
 CK_REGISTER_PROCESSOR(ck::FProcessor_RotatorAttributeModifier_EndPlayAll);
 CK_REGISTER_PROCESSOR(ck::FProcessor_RotatorAttribute_Replicate);
-CK_REGISTER_PROCESSOR(ck::FProcessor_RotatorAttribute_ReplicateOnRestore);
 
 // --------------------------------------------------------------------------------------------------------------------

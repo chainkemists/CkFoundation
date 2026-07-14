@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CkAttribute/CkAttribute_Processor.h"
-#include "CkAttribute/CkAttribute_ReplicateOnRestore.h"
 
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment.h"
 #include "CkAttribute/IntegerAttribute/CkIntegerAttribute_Fragment.h"
@@ -69,8 +68,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FProcessor_IntegerAttribute_ReplicateOnRestore = TProcessor_Attribute_ReplicateOnRestore_All<
-        FCk_Handle_IntegerAttribute, TFragment_IntegerAttribute, FCk_RepData_IntegerAttributes>;
+    // (FProcessor_IntegerAttribute_ReplicateOnRestore removed — restore re-seed is now the generic
+    //  FProcessor_Persistence_ReDriveOnRestore + ck::attribute_restore Produce/SeedContainer.)
 
     // --------------------------------------------------------------------------------------------------------------------
 }

@@ -13,6 +13,5 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_ByteAttribute_MinMaxClamp);
 CK_REGISTER_PROCESSOR(ck::FProcessor_ByteAttribute_FireSignals);
 CK_REGISTER_PROCESSOR(ck::FProcessor_ByteAttributeModifier_EndPlayAll);
 CK_REGISTER_PROCESSOR(ck::FProcessor_ByteAttribute_Replicate);
-CK_REGISTER_PROCESSOR(ck::FProcessor_ByteAttribute_ReplicateOnRestore);
 
 // --------------------------------------------------------------------------------------------------------------------

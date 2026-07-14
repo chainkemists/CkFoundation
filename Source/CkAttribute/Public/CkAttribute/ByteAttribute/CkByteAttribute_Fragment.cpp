@@ -6,6 +6,7 @@
 #include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
+#include "CkAttribute/CkAttribute_RestorePersistence.h" // RegisterLazyTyped<T> + shared attribute Produce/SeedContainer
 
 #include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
 #include "CkEcs/Snapshot/CkSnapshot_Archive_Writer.h"
@@ -103,8 +104,7 @@ static struct FByteAttributeRepHandlerRegistrar
 {
     FByteAttributeRepHandlerRegistrar()
     {
-        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
-            []() -> UScriptStruct* { return FCk_RepData_ByteAttributes::StaticStruct(); },
+        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazyTyped<FCk_RepData_ByteAttributes>(
             {
                 .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
                 {
@@ -150,7 +150,9 @@ static struct FByteAttributeRepHandlerRegistrar
                     }
 
                     return Result;
-                }
+                },
+                .Produce       = &ck::attribute_restore::Produce<ck::TFragment_ByteAttribute, FCk_RepData_ByteAttributes>,
+                .SeedContainer = &ck::attribute_restore::SeedContainer<ck::TFragment_ByteAttribute, FCk_RepData_ByteAttributes>
             });
     }
 } GByteAttributeRepHandlerRegistrar;
