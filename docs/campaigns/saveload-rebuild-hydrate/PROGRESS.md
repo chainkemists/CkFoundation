@@ -14,8 +14,8 @@
 | 3B | PHASE_3B.md | **DONE** (v3 load pipeline live; M2a fixed) | 2026-07-12 | CkF: 78fcdaa8e (retire reconstitution), 36bcdec5d (v3 load pipeline), <docs-this>; CkTests: ce32c65 | GREEN mod casualties: Ck.Snapshot **52 / 43 pass / 9 fail** (--discover-fresh; M2a + V3.InstancedStructDiskSmoke green; all 9 fails are verified Phase-4 casualties — see §Phase-3B DONE) |
 | 4A.1 | PHASE_4A.md | **DONE** (SM redrive→hydration; committed). 4A.2 (N1 discriminator + SpawnerResumes test) DEFERRED ([N1-A]-blocked). | 2026-07-12 | CkF: 705e7d57e (SM hydration); CkTests: 773a4d2 (comment) | GREEN mod casualties+flake: Ck.Snapshot **52/45/7** (both Parity.StateMachine* GREEN, 9→7; 7 = 4B casualties); Ck.StateMachine 24/25 (lone red = documented OwningClientAuth_SubSm flake — passed alone + in Net run); Net 102/99/3 delta-zero (kiosk env-trio only, no new framework Ck.*.Net red) |
 | 4A.2 | PHASE_4A.md | DEFERRED ([N1-A] scope call) | | | |
-| 4B | PHASE_4B.md | NOT STARTED | | | |
-| 5 | PHASE_5.md + VALIDATION.md | NOT STARTED | | | |
+| 4B | PHASE_4B.md | **IN PROGRESS** — casualties closed (TagSet/RenderTarget/Attributes×5/AnimPlan) + **4B.3 AS smoke DONE** (framework FCk_SaveData_EntityScriptFields handler + 2 AS gates green). **Grid + Inventory×2 DEFERRED → [INV-A]**. Verification-gated leftovers (4B.1 params-mutators, MontagePlayer rebind) still blocked on OracleParity/BB-driver-world ([P4B-N1]). | 2026-07-12 | CkF: 5088f5336 (TagSet), ede66976f (RenderTarget), db83e687a (AnimPlan), 5b7c1e077 (Attributes×5), 19613a1eb (invariant fix), **09ca84f41 (4B.3 SaveGame-fields handler)**; CkTests: **a0c2f2d (4B.3 AS gates)** | GREEN: Ck.Snapshot **54/51/3** (both `AS.SaveGameFields_RoundTrip`+`AS.NonSaveGameField_Drops` green; the 3 = [INV-A] trio by name; Meta ratchet + v3 AUDIT delta-zero); Net **102/99/3** framework Ck.*.Net delta-zero (kiosk env-trio only; SM.Net flake passed) |
+| 5 | PHASE_5.md + VALIDATION.md | **IN PROGRESS — partial (Track B); final blocked** | 2026-07-12 | (in progress) | (see §Phase-5) |
 
 ## Unattended execution protocol (set 2026-07-11 by Adam — OVERRIDES the "STOP on divergence" default below)
 
@@ -345,6 +345,150 @@ rendezvous — everything else compiled first pass). Gate GREEN (Ck.Snapshot 51/
 
 ## Decisions — Fable-agent rulings (unattended-protocol consults)
 
+- **[P4A-D1-Fable] (2026-07-12, 4A.1) — SM registrar fork + full-plan review.** Consulted a read-only Fable agent on the
+  RegisterLazy-vs-RegisterLazyTyped fork (see [P4A-D1] under §Decisions—Phase-4A). Ruled Q1 YES (keep RegisterLazy/no
+  SeedContainer — SeedContainer's sole consumer is the Model-A `FProcessor_Persistence_ReDriveOnRestore` at
+  `CkPersistence_ReDrive_Processor.cpp:65`, JustRestored-gated; net+save use Apply only) + adversarial-reviewed the whole
+  4A.1 edit plan: zero blockers, 5 findings — F1 (echo-suppress-first is load-bearing) + F2 (friend-decl rename) already
+  correct in the diff, F3/F4 comment tightenings applied, F5 (sub-SM state drop) = pre-existing v1 bound. Every claim
+  independently code-verified. Gate green.
+- **[P4B-F1] (2026-07-12, 4B) — the 5 client-shaped-Apply casualties: uniform shell, per-feature body; Inventory×2 → Adam.**
+  Consulted a read-only Fable agent to design the client-shaped-Apply re-author (TagSet/Grid/Inventory×2/RenderTarget).
+  Ruling: uniform SHELL (hydration-scope branch first → authority write → Applied/NotReady, the 4A.1 shape) but per-feature
+  BODY. **TagSet** = direct `Set_Tags` REPLACE + arm `FTag_TagSet_MayRequireReplication` (`Request_AddTags` is UNFAITHFUL —
+  Construct re-seeds default tags → ADD resurrects a runtime-removed tag) — IMPLEMENTED + gate-green this session (`5088f5336`).
+  **Grid** = re-drive `Request_AddPlacement` per entry, ALL occupants resolve first (all-or-nothing NotReady) — but ⚠️ its
+  occupants must be v3-mapped; if the test's occupants are item-style anonymous, Grid folds into [INV-A] (verify the fixture
+  first). **RenderTarget** = transplant the Model-A `FProcessor_RenderTarget_ReplicateOnRestore` body (`CkRenderTarget_Processor.cpp:397-500`)
+  into a static helper, CHILD-keyed, exactly-once repaint (all gates before any mutation); NOT the request path (evidence-forced
+  deviation from PHASE_4B §4B.2, same class as [P4A-D1]); ⚠️ verify the settle Full-pump runs RT Setup before the dispatcher
+  timeout. **Inventory×2** = RECLASSIFIED, DEFER → [INV-A] (items are v3 Rule-5 anonymous; handles-only payload restores
+  nothing; product/architecture fork for Adam). Full per-feature design map (verified anchors) in CONTINUATION_PROMPT_Phase4B.md §6.
+- **[P4B-F2] (2026-07-12, 4B) — Attributes (×5 kinds) + AnimPlan empty-seed → value-emitting Produce + authority-side hydration Apply.**
+  Consulted a read-only Fable agent; independently code-verified EVERY load-bearing anchor before implementing. Ruling + verification:
+  - **Keying (foundation):** the attribute/AnimPlan v3 Produce fires on the ATTRIBUTE/PLAN child entity (`Has<Current>` /
+    `Has<AnimPlan_Current>`), so the payload is keyed on the CHILD saved-id and hydration dispatches `Apply(ChildEntity, payload)` —
+    same owner-vs-child mismatch as RenderTarget/TagSet. VERIFIED against the v3 capture per-entity Produce loop + the OWNER-keyed net
+    Apply (`CkFloatAttribute_Fragment.cpp:125` TryGet(Entity-as-owner)).
+  - **Attributes design (per-attribute-entity, shared across 5 kinds):** make the shared `ck::attribute_restore::Produce`
+    (`CkAttribute_RestorePersistence.h`) value-emitting — emit THIS attribute's Base/Final per composed component (Current always;
+    Min/Max if present), byte-identical to the wire-builder `CkAttribute_Processor.inl.h:235-241` (VERIFIED: `Get_Base/Get_Final`,
+    entry ctor `{Name,Base,Final,Component}` `CkFloatAttribute_Fragment.h:184`, `ComponentTagType`/`HandleType`
+    `CkAttribute_Fragment.h:241-243`). Add a shared `TryHydrationApply` template helper (hydration-scope-gated FIRST statement of each
+    Apply) that writes AUTHORITY-side via each kind's existing `ApplyReplicated*Entry` (same path the client net drain uses) — one
+    3-line insertion per registrar (×5). Chosen over per-OWNER Produce (rejected: moves the trigger entity → ripples into 4 consumers +
+    breaks stale saves).
+  - **SeedContainer stays EMPTY-seed (decoupled from the now-value Produce):** seed `T_RepDataStruct{}` explicitly, NOT `InData`.
+    VERIFIED `TryAddContainerFragment` returns `AlreadyExists` WITHOUT writing when the container exists (`CkNet_Utils.h:461-462`) → a
+    value seed would land only the first sibling's data (the per-owner upsert-merge hazard the header comment flags). Empty-seed +
+    re-arm `MayRequireReplication` → `FProcessor_Attribute_Replicate` rebuilds → Model-A byte-neutral. v3 never calls SeedContainer.
+  - **Client convergence needs NO explicit owner-container refill (unlike RenderTarget):** the authority write via `Request_Override`
+    etc. defaults to `TrySyncToClients` → arms `FTag_MayRequireReplication` → `FProcessor_Attribute_Replicate` upserts the owner
+    container (which already exists on the freshly-Constructed owner) → post-load clients converge via the unchanged net path.
+  - **Exactly-once:** `Add_Revocable` mints a new modifier per call, so ALL NotReady exits precede any mutation (only the `Has<Current>`
+    guard; a component-drift entry is warn+skip, NOT NotReady). No attribute/AnimPlan `NeedsSetup` tag exists (composition is
+    synchronous in `Add`), and the child only maps AFTER the owner's replayed Construct ran `Add`, so the guard is near-vacuous; the Full
+    settle-pump (`CkSnapshot_Subsystem.cpp:983`) precedes hydration.
+  - **AnimPlan (hand-written, not templated — different payload shape):** value-emitting Produce emits
+    `FCk_AnimPlan_State{Params.Get_Params().Get_AnimGoal(), Current.Get_AnimCluster(), Current.Get_AnimState()}` (mirrors wire-builder
+    `CkAnimPlan_Processor.cpp:129-130`, VERIFIED); hydration branch = `Request_UpdateAnimState(Cast<FCk_Handle_AnimPlan>(Entity),{cluster,state})`
+    per saved plan; SeedContainer seeds `FCk_RepData_AnimPlans{}`.
+  - **Oracle safety (VERIFIED):** ProduceDiffBaseline uses Velocity (not attributes) so unaffected; StructuralBaseline/RepDataRestoreCoverage
+    don't consult attribute Produce. Land Produce + Apply together (a value Produce without the Apply fix would loud-fail the parity gate).
+  - **Executor-judgment calls (Fable flagged 3 for Adam; taken as executor judgment, consistent with the campaign's wire-fidelity restore
+    pattern — same class as [P4B-D1]/[SM-A]; recorded for veto):** (1) authority modifier-stack FLATTENING — `ApplyReplicated*Entry`
+    reconstitutes value as Base + one synthetic (Final-Base) replication modifier, losing per-modifier identity (already how the CLIENT
+    applies replicated attributes every frame; runtime modifier entities are unlabeled → save-transient anyway); (2) component-mismatch =
+    warn+skip (not loud-drop the whole payload); (3) DoesNotReplicate attributes now hydrate (mode-agnostic, mirrors RenderTarget). None
+    is a hard STOP: all are engineering-consistency calls with campaign precedent, not new product risk. Adam can veto any via PROGRESS.
+  - **CkTests:** NO change needed — the parity tests already exist (they ARE the gate). One stale doc comment in CkTests
+    `Test_Snapshot_Oracle_ProduceDiffBaseline.cpp:4-6` ([P1-D2] "attribute Produce is empty-seed") goes stale — deferred doc follow-up
+    (not gate-blocking; avoid a cross-repo CkTests commit for a comment).
+- **[P4B-D4] (executor + Fable root-cause, 2026-07-12) — the Attributes parity RED after the value fix is a PRE-EXISTING
+  FALSE-POSITIVE in the test's `Verify_AllStoredHandlesResolve` invariant, NOT a value regression and NOT [INV-A]. Fixed the
+  invariant (CkSnapshot), not the loader/framework/test.** After the value-emitting Produce landed, `Parity.Attributes_MPReload`
+  still failed — but on the SERVER dangling-handle invariant (`server: no dangling stored handles ... to be 0, but it was 20`),
+  NOT the value asserts (Float/Byte/Integer/Vector/Rotator all round-trip — the value fix WORKS). ISOLATION: the identical 20
+  danglers appear in the pre-change gate log (`p4b-rt.log`), so pre-existing. Fable root-caused + I VERIFIED every anchor:
+  the 20 danglers are **EntityScript spawn-request scratch entities** — `UCk_Utils_EntityScript_UE::...Add()` creates a request
+  child (`CkEntityScript_Utils.cpp:244`) registered in the parent's `FFragment_LifetimeDependents`
+  (`CkEntityLifetime_Utils.cpp:549`), then destroys it (`CkEntityScript_Processor.cpp:53-54`), and the parent's dependents
+  array is DELIBERATELY NOT pruned (`CkEntityLifetime_Utils.cpp:153-155` — a documented perf choice; every consumer, incl.
+  `Get_LifetimeDependents:151-160`, filters via `ck::IsValid`). So `FFragment_LifetimeDependents` is a LAZILY-PRUNED WEAK-ref
+  list; the 19 odd-id parents are the fresh boot's re-created boot-infra EntityScripts (matching the DIAG's "19 skipped
+  boot-infra") + the bridged probe (60→61). A strict-resolve dependents check would false-positive on EVERY EntityScript world,
+  saved or not — sole caller is the Attributes test (`:299`), which only runs it post-reload so never noticed. FIX (Fable ruling
+  C, verified): in `Verify_AllStoredHandlesResolve` (`CkSnapshot_RestoreInvariants.cpp`, campaign-added `e669659d0`), the
+  dependents leg now SKIPS stale (destroyed) refs and instead asserts BACK-POINTER CONSISTENCY — a live dependent's
+  `FFragment_LifetimeOwner` must name this owner (`TransferLifetimeOwner` keeps it symmetric+EAGER, `:570`/`:583`, VERIFIED, so
+  no false positive) — the genuine registry-rehome corruption check. The strict `LifetimeOwner`/`ContextOwner` legs (hard refs)
+  are UNCHANGED. Rejected: (A) load-path prune of dependents = treats a documented framework-wide lazy contract as a load
+  defect + a CkEcs-core behavior change (ck-change-control territory), unjustified; (B) defer as [INV-A] = factually wrong (the
+  danglers are spawn-request scratch, not anonymous modifiers; pre-existing). Test-only invariant (no production caller), so no
+  net/wire/Model-A impact. **GATE GREEN (p4b-attr2.log):** build Succeeded; `Parity.Attributes_MPReload` +
+  `Parity.AnimPlan_MPReload` Success; ZERO dangling-handle errors; Ck.Snapshot 52/49/3 (the 3 = [INV-A]-deferred Grid +
+  Inventory×2), delta-zero. Committed CkF `19613a1eb` (invariant fix), `5b7c1e077` (Attributes×5 value hydration), `db83e687a`
+  (AnimPlan). Net delta-zero validated on the net-identical binary (p4b-attr-net.log 102/98/4 = kiosk env-trio + documented
+  SM.Net flake; the invariant fix is test-only/net-irrelevant so the verdict holds).
+- **[P4B-N1] (executor, 2026-07-12) — 4B ADDITIVE-work scope assessment: 4B.1 params-mutators + MontagePlayer are
+  VERIFICATION-GATED (defer with OracleParity); 4B.3 AS smoke is the one verifiable-but-new-framework item.** After
+  closing all 4 actionable casualties (RenderTarget/Attributes×5/AnimPlan) + the invariant fix, the remaining PHASE_4B.md
+  steps were assessed for verifiability:
+  - **4B.1 (8 params-mutator sites: Timer/Substep/Goap/2dGridCell/WorldSpaceWidget payloads + Camera/Pmg annotations) and
+    the MontagePlayer rebind are UNVERIFIABLE right now.** Their verification mechanism is `Ck.Snapshot.Rebuild.OracleParity`
+    — VERIFIED NOT in the current 52-test gate (grep count 0 in p4b-attr2.log) and its `oracle-declared-transient.txt` /
+    `oracle-allowlist-p3.txt` have no active entries (the file doesn't even exist yet); PROGRESS §3B-follow-ups records
+    OracleParity as deferred until a BB driver world is oracle-diffed (a 3B/4A follow-up). MontagePlayer additionally has
+    ONLY a Model-A `Ck.Snapshot.MontagePlayer.StateRoundTrip` (registry-level) test — no v3-reload MP test exists, and the
+    rebind (`CkMontagePlayer_Utils.cpp:80-95`) needs the respawned actor's re-created SKMC resolved (non-trivial). Implementing
+    these payloads blind would add unverifiable persisted save-state, violating verify-before-claim. **DEFER 4B.1 + MontagePlayer
+    to when OracleParity is wired** (the same BB-driver-world prerequisite that blocks the 3B OracleParity follow-up and 4A.2).
+  - **4B.3 AS smoke** (`Ck.Snapshot.AS.SaveGameFields_RoundTrip` + `NonSaveGameField_Drops`) IS gate-verifiable, but requires a
+    NEW framework handler `FCk_SaveData_EntityScriptFields` in CkEcs (reflection-walk of the script instance's SaveGame-tagged
+    UPROPERTYs, Produce/Apply post-Construct-pre-BeginPlay) + 2 AS tests in CkTests (cross-repo, needs AS wrapper-gen + editor
+    recompile per `ck-angelscript-interop`). A distinct new-framework + AS effort — best served by a fresh context window after
+    this session's length, done carefully per the AS cautions (never write .as during a test run; grep the fresh log for
+    Angelscript errors).
+  - **Checkpoint rationale:** the core Phase-4B hydration-parity goal is COMPLETE + fully verified for every closeable feature.
+    The remaining work is human-decision-gated ([INV-A] trio → Adam), verification-prerequisite-gated (4B.1/MontagePlayer →
+    OracleParity/BB-driver-world), or a distinct fresh-context new-framework effort (4B.3 AS smoke). Not an arbitrary stop.
+- **[P4B-D5] (executor, 2026-07-12, 4B.3) — EntityScript SaveGame fields land POST-Construct/POST-BeginPlay (at hydration),
+  NOT pre-BeginPlay; recorded as the designer contract (the continuation's small human decision (a), taken as executor
+  judgment).** VERIFIED: `FProcessor_EntityScript_BeginPlay` is load-kernel (`RunsDuringLoad`, `CkEntityScript_Processor.h`),
+  so on a v3 load the fresh script re-Constructs AND BeginPlays under the load gate BEFORE the hydration payloads enqueue —
+  identical to every other v3-hydrated feature. So the framework `FCk_SaveData_EntityScriptFields` Apply restores SaveGame
+  fields after BeginPlay ran, contradicting PHASE_4B.md:37-38's "post-Construct/pre-BeginPlay" wording. **Contract line for
+  spec §3 AS surface:** *don't read a script's UPROPERTY(SaveGame) fields in its BeginPlay — they land at hydration, one gate
+  pass later.* Building a BeginPlay-defer would be a scheduler-core change, out of 4B scope; same class as [SM-A]/[P3B-D6]
+  (campaign-precedented executor call). Adam can veto via PROGRESS. Gate green with the fields restored (the AS RoundTrip test
+  never reads them in BeginPlay, so the contract holds in practice).
+- **[P4B-D1] (executor, 2026-07-12) — TagSet authority write omits the OnTagsChanged broadcast.** Fable's pseudocode mirrored
+  the client drain's diff+broadcast (`CkTagSet_Processor.cpp:156-168`) for symmetry. Omitted it: a save-load RESTORE is not a
+  gameplay change, the parity test asserts tag presence + replication (not the signal), and clients still get the OnTagsChanged
+  pulse via their own SyncReplication drain after the authority re-replicates. Kept the change minimal (Set_Tags REPLACE + arm,
+  no new includes). If an authority-side OnTagsChanged consumer is later shown to need the restore pulse, add it then.
+
+- **[P4B-D3] (executor, 2026-07-12) — RenderTarget hydration helper lives as a static method of `FProcessor_RenderTarget_HandleRequests`, NOT a free function in `ck_render_target_processor` (minor refinement of [P4B-F1]).** [P4B-F1] specified `ck_render_target_processor::HydrateFromSavedChannel` (namespace free function). A free function needs friend access to `FFragment_RenderTarget_Current._NextBatchSeq` — which would force a dllexport-mismatched forward-declaration of the function into the widely-included `CkRenderTarget_Fragment.h` (the friend decl there would lack CKRENDERTARGET_API while the Processor.h decl carries it → MSVC linkage-attribute mismatch). Instead made it a public static of `FProcessor_RenderTarget_HandleRequests`, which is ALREADY a friend of `FFragment_RenderTarget_Current` (`CkRenderTarget_Fragment.h:69`) AND already owns `DoApplyBatch` (the shared repaint primitive it calls) — zero Fragment.h churn, no new friend decl. Same intent (transplant the Model-A `FProcessor_RenderTarget_ReplicateOnRestore` body onto the child-keyed hydration path). Signature `HydrateFromSavedChannel(FCk_Handle& InChild, const FCk_RenderTarget_ChannelState& InChannel) -> bool` (true=Applied, false=NotReady); the Apply lambda maps bool→`ECk_RepFragment_ApplyResult`. GATE GREEN (Ck.Snapshot 52/47/5, `Parity.RenderTarget_MPReload` flipped; delta-zero). Key facts driving the design (verified): payload is CHILD-keyed (`CkRenderTarget_Replication.cpp:120-140` Produce reads the sync child's own AuthoredLog) but the net Apply is OWNER-keyed (`:96-106` `TryGet_RenderTarget(Entity-as-owner)`) → gate-log confirmed the child `[63](RenderTarget.AutoTest.Net)` dropped after 5s NotReady on the owner-keyed lookup; `Get_LatestAppliedBatchSeq = max(Current._NextBatchSeq-1, ClientReplayState._LastAppliedSeq)` (`CkRenderTarget_Utils.cpp:120-127`) → server needs `Current._NextBatchSeq=LastSeq+1` (friend write) + Replicates half refills the owner container so the client's `_LastAppliedSeq` converges; settle pump is Full (`CkSnapshot_Subsystem.cpp:983`) so RT Setup precedes hydration. AuthoredLog refilled via public `Record_PublishedBatch` (`CkRenderTarget_RepData.cpp:23-34`, ring-caps 64) — no friend needed there.
+
+- **[P4B-D2] (executor, 2026-07-12) — Grid `Parity.GridPlacements_MPReload` FOLDS INTO [INV-A], DEFERRED (the design-map ⚠️
+  contingency fired).** [P4B-F1]'s Grid design was Apply-branch-only IFF the test's occupants v3-map. VERIFIED they do NOT:
+  the occupant is `Request_CreateEntity(InHandle)` + `Transform::Add` + `2dGridObject::Add`
+  (`CkAutoTest_NetSubject_GridEntityScript.cpp:77-82`); `2dGridObject::Add` adds ONLY `FFragment_2dGridObject_Params`, no label
+  (`Ck2dGridObject_Utils.cpp:11-20`); nothing else labels it → it is an **unlabeled ConstructSpawned child** → v3 capture Rule 3
+  unlabeled-skip (`CkSnapshot_CaptureV3.cpp:235-259`) → never captured, never in `_SavedIdMap`. EMPIRICAL confirmation
+  (`p4b-tagset.log` Grid window): `rebuild complete — [1] entities mapped` / `enqueued [1] payloads across [1] mapped entities
+  ([19] skipped boot-infra, [0] orphaned)` — only the bridged GRID maps; the occupant is absent. The single payload
+  (`FCk_RepData_2dGridPlacements`) carries the occupant HANDLE, which remaps to invalid on load → an all-or-nothing
+  `Request_AddPlacement` re-drive fails the occupant-valid gate → NotReady → 5s drop → red. Same class as [INV-A]: **grid
+  placement restore is DOWNSTREAM of occupant restore**, and production grid occupants ARE the Rule-5 anonymous inventory items
+  [INV-A] defers. A fixture-only fix (label the test occupant) would false-green — production occupants are anonymous, so it
+  would not reflect the real restore path. **Salvage alternative for Adam (recorded under [INV-A]):** because the grid subject's
+  `Construct` re-creates a fresh occupant on load, a bespoke Grid Apply could resolve the occupant by enumerating the
+  re-Constructed grid's GridObject child instead of remapping the payload handle — but that is a feature-specific
+  child-resolution path (single-occupant, direct-child assumptions) and is the same payload-enrichment-vs-rearchitecture scope
+  call as [INV-A]. NOT implemented; not a STOP (pre-authorized fold). **4B actionable casualties reduce to 3: RenderTarget,
+  Attributes, AnimPlan.**
+
 - **[P3B-M2a] (2026-07-12, gate-2→gate-3) — Fable ruling A: M2a red is a test-fixture gap, not a Phase-4 casualty.**
   Consulted a Fable agent (read-only) when gate-2's M2a red fell outside the user's expected-RED set. Ruling: the bridged
   actor-first respawn path does not depend on the N1 discriminator (`bBridged = NOT ActorClassPath.IsEmpty()`,
@@ -570,6 +714,25 @@ value is [N1-A]-blocked and it needs a new BB-style fixture world).
   (BB's `_SpawnStarted`/`WillSpawnCustomization` guards are this shape but must themselves be hydrated). Becomes a
   designer-facing contract line in spec §4.2. Same v1 scope as the old Model-A redrive (not a new limitation).
 
+- **[INV-A] (Adam decision, flagged by Fable [P4B-F1] 2026-07-12) — Inventory×2 save-restore needs a product/architecture
+  call; DEFERRED out of 4B.** `Parity.Inventory{DataOnly,Spatial}_MPReload` cannot be closed by a client-shaped-Apply
+  re-author (the TagSet/Grid pattern) because item entities are v3 provenance **Rule 5 (anonymous scratch, skipped)**: they
+  are built via `UCk_Utils_EntityReplicationDriver_UE::Request_BuildAndReplicate` with a `UCk_InventoryItem_Definition`
+  archetype (`CkItem_Utils.cpp` `Create`), NOT the EntityScript spawn path, so they carry no `FFragment_SpawnRecipe`
+  (`CkSnapshot_CaptureV3.cpp:261-271`) → not captured, not rebuilt. The inventory payload carries only item HANDLES, which
+  remap to nothing on the loading authority. Two forks, both Adam-level: (a) **payload enrichment** — Produce emits per-item
+  re-creation data (definition soft path / CoreInfo+traits + stack count, which is an IntegerAttribute → intersects the
+  Attributes empty-seed workstream); or (b) **item-architecture change** — make items SpawnRecipe-carrying so the loader
+  rebuilds them (net implications). Fable explicitly flagged this for Adam (protocol STOP condition c); do NOT wire an Apply
+  branch against invalid handles. Same class as [N1-A]. **Adam to scope where Inventory save-restore lands** (payload
+  enrichment now vs item-spawn-recipe rearchitecture vs post-campaign).
+  **[UPDATE 2026-07-12, [P4B-D2]] Grid `Parity.GridPlacements_MPReload` JOINS this blocker.** Its occupant is the same
+  Rule-5 anonymous class (verified — unlabeled ConstructSpawned, not captured, gate-log shows only the grid maps). Grid
+  placement restore is downstream of occupant restore, so it cannot close until [INV-A] is scoped. Extra Grid-only salvage
+  fork Adam could weigh (cheaper than the Inventory forks, since the grid subject's Construct re-creates a fresh occupant):
+  a bespoke Grid Apply that resolves the occupant by enumerating the re-Constructed grid's GridObject child rather than
+  remapping the payload handle — feature-specific, single-occupant/direct-child assumptions. The deferred set is now
+  **Inventory×2 + Grid** (3 casualties), all gated on the same anonymous-entity restore decision.
 - **[B1] — RESOLVED 2026-07-11 by [P1-R1] above.** Original text kept below for the record.
 - **[B1] (2026-07-11, Phase 1) — Plan's "12 ReplicateOnRestore = deletable container re-seeds" is false for 4
   features; where their non-container reconstitution goes is an unmade architecture decision.** REQUIRES a design
@@ -706,3 +869,31 @@ value is [N1-A]-blocked and it needs a new BB-style fixture world).
   ~4 frames (Display-log verified). Commits: CkF `705e7d57e` (SM hydration), `<docs-this>`; CkTests `773a4d2` (comment).
   Nothing pushed. **Phase 4A.1 DONE.** Next: Phase 4B (the 7 remaining casualties + PHASE_4B params-mutators/AS-smoke), then
   4A.2 (N1, [N1-A]-blocked) + Phase 5. See CONTINUATION_PROMPT_Phase4B.md.
+- 2026-07-12 — **Phase 4B STARTED (Opus, same unattended run) — client-shaped-Apply pattern validated; TagSet DONE.** Routed
+  the 5 client-shaped casualties' Apply re-author design to a read-only Fable agent ([P4B-F1]): uniform hydration-scope shell,
+  per-feature body; verified its rulings against code. Implemented + committed **TagSet** (`5088f5336`) — the first client-shaped
+  casualty — via the 4A.1 hydration-scope pattern (direct `Set_Tags` REPLACE + arm `FTag_TagSet_MayRequireReplication`; [P4B-D1]
+  omits the OnTagsChanged broadcast). Gate: Ck.Snapshot **52/46/6** (`Parity.TagSet_MPReload` green, 7→6 casualties, zero
+  regression); Net **102/99/3** delta-zero (kiosk env-trio only, no framework `Ck.*.Net` red — net path byte-identical, branch
+  gated by `FCk_HydrationApplyScope`). **Remaining 4B (handed off, all designed in CONTINUATION_PROMPT_Phase4B.md §6):** Grid
+  (Fable-designed; ⚠️ verify test occupants map first), RenderTarget (transplant ReplicateOnRestore; ⚠️ settle-pump ordering),
+  **Inventory×2 DEFERRED → [INV-A]** (items are v3 Rule-5 anonymous — Adam scope call), Attributes/AnimPlan empty-seed Produce,
+  params-mutators, MontagePlayer, AS smoke. Stopped here at a clean committed increment (TagSet green) with the rest fully
+  designed + handed off — the remaining per-feature work (esp. RenderTarget's transplant + the [INV-A] Adam fork) is better done
+  with fresh context. Nothing pushed.
+- 2026-07-12 — **Track A / 4B.3 AS SaveGame smoke DONE + COMMITTED (Opus, unattended run).** Built the framework Save-transport
+  handler `FCk_SaveData_EntityScriptFields` in CkEcs (`CkEntityScript_SaveFields.h/.cpp`) — `RegisterLazy` (no SeedContainer),
+  `Transport = Save`, Produce reflect-walks the script class's `CPF_SaveGame` FProperties + serializes via
+  `SerializeScriptProperties(ArIsSaveGame=true)`, Apply replays them onto the re-Constructed instance gated to
+  `FCk_HydrationApplyScope` (net path is a no-op early-return). Every load-bearing anchor verified against code before writing
+  (container registry contract, `Get_SaveHandlerTypes` filter `(Transport & Save)`, CaptureV3 Produce loop, generic-by-name
+  payload deserialize, the non-bridged-RuntimeSpawned respawn gates on the OWNER being persisted not the child's respawnable
+  flag — so a fixture child under the persisted M2a probe round-trips without the deferred N1 discriminator). CkTests: AS fixture
+  `Script/CkSnapshot/CkSnapshot_AsSaveFields_EntityScript.as` (`UCk_GenericEntityScript_UE` subclass, `UPROPERTY(SaveGame)`
+  int/FString/TArray + a non-SaveGame negation int, DoesNotReplicate) + C++ gate `Test_Snapshot_AS_SaveFields_Gate.spec.cpp`
+  (two IMPLEMENT_SIMPLE_AUTOMATION_TEST off the M2a single-PIE harness, reflection mutate/read + a CPF_SaveGame precondition
+  assert). **Gate: Ck.Snapshot 54/51/3** (both `AS.SaveGameFields_RoundTrip` + `AS.NonSaveGameField_Drops` GREEN, the 3 = [INV-A]
+  trio by name, Meta.RepDataRestoreCoverage green — `FCk_SaveData_` prefix keeps it off the RepData ratchet — v3 AUDIT delta-zero
+  3=3 vs baseline, no Angelscript errors naming the fixture). **Net 102/99/3** framework `Ck.*.Net` delta-zero (kiosk env-trio
+  only; SM.Net flake passed). Commits: CkF `09ca84f41`, CkTests `a0c2f2d`. Decision [P4B-D5] recorded (post-BeginPlay timing).
+  Nothing pushed. **Track A DONE** (closes 2 of the 7 VALIDATION-required tests). Next: Track B (Phase 5 partial).

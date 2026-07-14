@@ -391,6 +391,98 @@ namespace ck
     }
 
     // ================================================================================================================
+    // SAVE-LOAD HYDRATION (Phase 4B)
+    // ================================================================================================================
+
+    auto
+        FProcessor_RenderTarget_HandleRequests::
+        HydrateFromSavedChannel(
+            FCk_Handle& InChild,
+            const FCk_RenderTarget_ChannelState& InChannel)
+        -> bool
+    {
+        // The v3 hydration payload is CHILD-keyed (Produce reads this sync child's own AuthoredLog,
+        // CkRenderTarget_Replication.cpp), so InChild IS the sync child — unlike the net Apply below it,
+        // which is owner-keyed (TryGet_RenderTarget on the owner). On the loading AUTHORITY, refill the
+        // child's instruction ring + repaint + (Replicates) re-publish into a fresh owner container so
+        // post-load clients reconverge through the ordinary ApplyReplicatedBatches path. Transplant of the
+        // Model-A FProcessor_RenderTarget_ReplicateOnRestore body onto the child-keyed hydration path.
+
+        // ---- Preconditions: evaluate ALL before any mutation (exactly-once repaint) ----
+        // The fresh v3 Construct re-created this child; its Setup (FGroup_Gameplay_Rendering) runs in the
+        // load's Full settle-pump BEFORE FGroup_Hydration, adding Current + resolving the target + removing
+        // NeedsSetup. Return NotReady (retry) until it has composed.
+        if (NOT InChild.Has<FFragment_RenderTarget_Params>()
+            || NOT InChild.Has<FFragment_RenderTarget_Current>()
+            || NOT InChild.Has<FFragment_RenderTarget_AuthoredLog>())
+        { return false; }
+
+        if (InChild.Has<FTag_RenderTarget_NeedsSetup>())
+        { return false; }
+
+        const auto& Params = InChild.Get<FFragment_RenderTarget_Params>();
+
+        // Replicating targets re-publish into a fresh owner container (the owner-hosted FCk_RepData_RenderTarget
+        // lives in the replication driver's FastArray, which the snapshot never captures). Gate on the owner's
+        // driver — re-established by the snapshot respawn pass — retrying until it exists. DoesNotReplicate
+        // targets skip the container half but still restore their drawn state (mode-agnostic, per Produce).
+        const auto RepublishToOwner = Params.Get_Replication() == ECk_Replication::Replicates
+            && UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InChild);
+
+        auto OwnerEntity = FCk_Handle{};
+        if (RepublishToOwner)
+        {
+            OwnerEntity = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InChild);
+            if (ck::Is_NOT_Valid(OwnerEntity) || NOT UCk_Utils_EntityReplicationDriver_UE::Has(OwnerEntity))
+            { return false; }
+        }
+
+        // ---- Mutations: past every NotReady gate, so this runs exactly once per load ----
+        auto  RenderTargetEntity = ck::StaticCast<FCk_Handle_RenderTarget>(InChild);
+        auto& Current            = InChild.Get<FFragment_RenderTarget_Current>();
+        auto& AuthoredLog        = InChild.Get<FFragment_RenderTarget_AuthoredLog>();
+        const auto& Batches      = InChannel.Get_Batches();
+
+        // Refill the persisted ring the fresh Setup left empty: a re-save must re-capture the drawn state,
+        // and future local draws must continue monotonically past the restored watermark (Get_LatestAppliedBatchSeq
+        // reads Current._NextBatchSeq - 1 on the host).
+        for (const auto& Batch : Batches)
+        { AuthoredLog.Record_PublishedBatch(Batch, Batch.Get_Seq() + 1); }
+
+        if (NOT Batches.IsEmpty())
+        { Current._NextBatchSeq = Batches.Last().Get_Seq() + 1; }
+
+        // Repaint the restored target by replaying the ring (no-ops headless / on non-rendering processes).
+        for (const auto& Batch : Batches)
+        { DoApplyBatch(RenderTargetEntity, Current, Batch.Get_Cmds()); }
+
+        if (RepublishToOwner)
+        {
+            UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_RenderTarget>(OwnerEntity);
+
+            const auto SyncName = Params.Get_SyncName();
+            UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_RenderTarget>(
+                OwnerEntity,
+                [&](FCk_RepData_RenderTarget& InRepData) -> void
+                {
+                    if (InRepData.Find_Channel(SyncName) == nullptr)
+                    { InRepData.Get_Channels().Emplace(FCk_RenderTarget_ChannelState{}.Set_SyncName(SyncName)); }
+
+                    auto* Channel = InRepData.Find_Channel(SyncName);
+                    Channel->Set_Batches(Batches);
+
+                    if (NOT Batches.IsEmpty())
+                    { Channel->Set_LatestSeq(Batches.Last().Get_Seq()); }
+                });
+        }
+
+        render_target::Verbose(TEXT("RenderTarget [{}] hydrated from saved channel — [{}] batch(es) replayed, next seq [{}]"),
+            RenderTargetEntity, Batches.Num(), Current.Get_NextBatchSeq());
+
+        return true;
+    }
+
+    // ================================================================================================================
     // REPLICATE ON RESTORE
     // ================================================================================================================
 
