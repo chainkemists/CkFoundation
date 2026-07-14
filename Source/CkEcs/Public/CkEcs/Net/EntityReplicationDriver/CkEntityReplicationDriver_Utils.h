@@ -38,6 +38,13 @@ public:
     Get_HasUndrainedReplicatedFragments_IncludingDependents(
         const FCk_Handle& InHandle) -> bool;
 
+    // Diagnostic twin of the above: the FIRST entity in the tree still holding an undrained replicated
+    // fragment / hydration payload (invalid handle if none). Used by the fire processor's stall report
+    // to name the blocker instead of hanging silently. Framework-internal, not public API.
+    static auto
+    TryGet_FirstUndrainedReplicatedFragmentsEntity_IncludingDependents(
+        const FCk_Handle& InHandle) -> FCk_Handle;
+
 public:
     UFUNCTION(BlueprintCallable,
         BlueprintAuthorityOnly,
