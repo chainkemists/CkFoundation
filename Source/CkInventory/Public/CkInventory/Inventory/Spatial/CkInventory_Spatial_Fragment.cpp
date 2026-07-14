@@ -1,6 +1,8 @@
 #include "CkInventory_Spatial_Fragment.h"
 
 #include "CkInventory/Inventory/CkInventory_Utils.h"
+#include "CkInventory/Inventory/Spatial/CkInventory_Spatial_Utils.h" // UCk_Utils_Inventory_Spatial_UE (Has/Cast/Get_ItemPlacement*) — Produce
+#include "CkCore/Algorithms/CkAlgorithms.h"                          // ck::algo::ForEachIsValid — Produce
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
@@ -40,7 +42,37 @@
                         Old.IsSet()
                             ? Old.GetValue().Get<FCk_RepData_Inventory_Spatial_Items>().Items
                             : TArray<FCk_InventoryItem_Spatial_ReplicatedEntry>{});
-                }
+                },
+                // Produce-only capture (Phase 3A.4): mirror FProcessor_Inventory_Spatial_Replicate's live-state
+                // build. Keyed on the INVENTORY entity — emits THAT inventory's own items (the Replicate build reads
+                // the inventory's item record; the container's owner-hosted storage is irrelevant to the build). NO
+                // SeedContainer — the live ReplicateOnRestore still seeds under Model A.
+                .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+                {
+                    if (NOT UCk_Utils_Inventory_Spatial_UE::Has(Entity))
+                    { return {}; }
+
+                    auto Inventory = UCk_Utils_Inventory_Spatial_UE::Cast(Entity);
+                    const auto& Items = UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils::Get_ValidEntries(Inventory);
+
+                    auto Entries = TArray<FCk_InventoryItem_Spatial_ReplicatedEntry>{};
+                    Entries.Reserve(Items.Num());
+
+                    ck::algo::ForEachIsValid(Items, [&](const FCk_Handle_Item& InItemHandle)
+                    {
+                        const auto Coordinate = UCk_Utils_Inventory_Spatial_UE::Get_ItemPlacementCoordinate(Inventory, InItemHandle);
+                        const auto Rotation   = UCk_Utils_Inventory_Spatial_UE::Get_ItemPlacementRotation(InItemHandle);
+
+                        Entries.Emplace(FCk_InventoryItem_Spatial_ReplicatedEntry(InItemHandle)
+                            .Set_Coordinate(Coordinate)
+                            .Set_Rotation(Rotation));
+                    });
+
+                    auto Data = FCk_RepData_Inventory_Spatial_Items{};
+                    Data.Items = MoveTemp(Entries);
+                    return FInstancedStruct::Make(Data);
+                },
+                .Transport = ECk_PersistenceTransport::NetAndSave
             });
     }
 } GInventory_Spatial_RepHandlerRegistrar;
