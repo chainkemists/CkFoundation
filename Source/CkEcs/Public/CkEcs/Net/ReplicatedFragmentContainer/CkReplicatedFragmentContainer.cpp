@@ -1,5 +1,7 @@
 #include "CkReplicatedFragmentContainer.h"
 
+#include "CkCore/Ensure/CkEnsure.h" // registration-time Produce-without-HydrationApply enforcement
+
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -21,6 +23,12 @@ auto
         FHandler InHandler)
     -> void
 {
+    CK_ENSURE_IF_NOT(NOT InHandler.Produce || static_cast<bool>(InHandler.HydrationApply),
+        TEXT("Persistence handler for [{}] has Produce but no HydrationApply — its state would SAVE but never LOAD. "
+             "Assign HydrationApply (reuse the Apply lambda if the net path is authority-safe)."),
+        ck::IsValid(InType) ? InType->GetName() : FString{TEXT("<null type>")})
+    { /* register anyway; Get_SaveHandlerTypes excludes it, so the misconfig is loud, not corrupting */ }
+
     _Handlers.Add(InType, MoveTemp(InHandler));
 }
 
@@ -46,6 +54,12 @@ auto
     {
         if (const auto* Type = Entry.TypeResolver())
         {
+            CK_ENSURE_IF_NOT(NOT Entry.Handler.Produce || static_cast<bool>(Entry.Handler.HydrationApply),
+                TEXT("Persistence handler for [{}] has Produce but no HydrationApply — its state would SAVE but never "
+                     "LOAD. Assign HydrationApply (reuse the Apply lambda if the net path is authority-safe)."),
+                Type->GetName())
+            { /* register anyway; Get_SaveHandlerTypes excludes it, so the misconfig is loud, not corrupting */ }
+
             _Handlers.Add(Type, MoveTemp(Entry.Handler));
         }
     }
@@ -71,13 +85,19 @@ auto
     auto Types = TArray<const UScriptStruct*>{};
     for (const auto& Pair : _Handlers)
     {
-        // Save-participating handlers only: a Produce (the payload emitter) whose Transport opts into Save. The v3
-        // capture writes one payload per (entity, type) for these; Net-only Produce handlers are save-invisible.
-        const auto HasSaveTransport =
-            (static_cast<uint8>(Pair.Value.Transport) & static_cast<uint8>(ECk_PersistenceTransport::Save)) != 0;
-        if (Pair.Value.Produce && HasSaveTransport)
+        // Save-participating handlers only: a Produce (the payload emitter) paired with a HydrationApply (its
+        // load-path applier). The v3 capture writes one payload per (entity, type) for these. A Produce with no
+        // HydrationApply is excluded — the registration ensure already fired for it; excluding it keeps the save
+        // free of state that could never load back.
+        if (Pair.Value.Produce && Pair.Value.HydrationApply)
         { Types.Add(Pair.Key); }
     }
+
+    // Deterministic save files + deterministic per-entity hydration order (payload apply order follows the sorted
+    // type-path order). TArray::Sort dereferences the pointers before calling the predicate.
+    Types.Sort([](const UScriptStruct& InA, const UScriptStruct& InB)
+    { return InA.GetPathName() < InB.GetPathName(); });
+
     return Types;
 }
 

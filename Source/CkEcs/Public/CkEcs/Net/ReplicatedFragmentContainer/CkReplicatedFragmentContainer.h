@@ -43,29 +43,6 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// RAII scope that FProcessor_Hydration_Dispatch holds around each save-load Apply call, so a save-transport handler's
-// Apply can distinguish a LOAD-PATH hydration apply (authority-side — must re-drive local state, e.g. the SM redrive)
-// from an ordinary net receive (client-side). Game-thread only: the dispatchers run serially on the game thread, so a
-// plain static depth counter is race-free (no thread-local needed). Additive + inert until a handler queries
-// Get_IsActive() — the net Apply path never enters this scope, so net behavior is byte-identical.
-class CKECS_API FCk_HydrationApplyScope
-{
-public:
-    FCk_HydrationApplyScope();
-    ~FCk_HydrationApplyScope();
-
-    FCk_HydrationApplyScope(const FCk_HydrationApplyScope&) = delete;
-    auto operator=(const FCk_HydrationApplyScope&) -> FCk_HydrationApplyScope& = delete;
-
-    static auto
-    Get_IsActive() -> bool;
-
-private:
-    static int32 _Depth;
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
 // Result of FHandler::Apply. NotReady means the feature the data targets is not composed on this
 // entity yet — the entry stays pending and the dispatcher retries next tick.
 enum class ECk_RepFragment_ApplyResult : uint8
@@ -76,16 +53,6 @@ enum class ECk_RepFragment_ApplyResult : uint8
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Which persistence pipelines consult a handler. Net-only is the default (behavior-neutral); features flip
-// Save on when their payload becomes save-file surface. Bit flags so a handler can serve both.
-enum class ECk_PersistenceTransport : uint8
-{
-    Net        = 1 << 0,
-    Save       = 1 << 1,
-    NetAndSave = Net | Save
-};
-
-// --------------------------------------------------------------------------------------------------------------------
 // Handler Registry — generic callback dispatch by UScriptStruct* type
 
 class CKECS_API FCk_ReplicatedFragmentHandlerRegistry
@@ -93,11 +60,10 @@ class CKECS_API FCk_ReplicatedFragmentHandlerRegistry
 public:
     struct FHandler
     {
-        // Called by FProcessor_ReplicatedFragments_Dispatch after OnConstructed-driven composition,
-        // never inline during net receive. OldData is unset on the first application of this entry
-        // and otherwise holds the last APPLIED data (coalesced receives diff against it). Return
-        // NotReady to retry next tick (composition not done yet) — never compose the feature from
-        // inside Apply.
+        // NET-receive apply, dispatched deferred by FProcessor_ReplicatedFragments_Dispatch after
+        // OnConstructed-driven composition. OldData unset on first application, else the last APPLIED
+        // data. Return NotReady to retry next tick — never compose the feature from inside Apply.
+        // Absent on Save-only handlers (their type is never placed in a replicated container).
         TFunction<ECk_RepFragment_ApplyResult(FCk_Handle& Entity,
                         const FInstancedStruct& NewData,
                         const TOptional<FInstancedStruct>& OldData)> Apply;
@@ -105,16 +71,18 @@ public:
         // Optional — dispatched (deferred) when the entry is removed by replication.
         TFunction<void(FCk_Handle& Entity)> Remove;
 
-        // Authority-side counterpart to Apply: emit this feature's current hydration payload for the
-        // entity, or unset when the feature is absent on it. Used by the restore re-drive, the
-        // fidelity oracle, and the save path. READ-ONLY by contract — never mutate the entity from
-        // Produce. A SET-but-empty payload is meaningful (it seeds an empty container, e.g. AnimPlan);
-        // only an UNSET result means "feature absent, do not seed".
-        TFunction<TOptional<FInstancedStruct>(FCk_Handle& Entity)> Produce;
+        // LOAD-PATH apply (authority-side hydration), dispatched by FProcessor_Hydration_Dispatch.
+        // OldData is always unset (no per-entry coalescing on the load path). REQUIRED whenever
+        // Produce is set — assign the same lambda as Apply when the net path is authority-safe.
+        TFunction<ECk_RepFragment_ApplyResult(FCk_Handle& Entity,
+                        const FInstancedStruct& NewData,
+                        const TOptional<FInstancedStruct>& OldData)> HydrationApply;
 
-        // Which pipelines consult this handler. Net-only default keeps behavior neutral;
-        // features flip Save on when their payload becomes save-file surface.
-        ECk_PersistenceTransport Transport = ECk_PersistenceTransport::Net;
+        // Save-capture emitter: this feature's current payload for the entity, or unset when the
+        // feature is absent on it. A SET-but-empty payload is meaningful (seeds an empty container);
+        // only UNSET means "feature absent, do not emit". READ-ONLY by contract. Presence of Produce
+        // IS save participation — there is no separate opt-in flag.
+        TFunction<TOptional<FInstancedStruct>(FCk_Handle& Entity)> Produce;
     };
 
     using FTypeResolver = TFunction<UScriptStruct*()>;
@@ -141,9 +109,11 @@ public:
         FHandler InHandler) -> void;
 
     /**
-     * Resolves pending registrations, then returns the payload types of every handler that has a Produce AND whose
-     * Transport opts into Save — the subset the v3 save capture writes payloads for. A Net-only Produce
-     * handler is save-invisible; a NetAndSave one participates in both the wire and the save file.
+     * Resolves pending registrations, then returns the payload types of every save-participating handler — a
+     * Produce (the payload emitter) paired with a HydrationApply (the load-path applier) — SORTED by type path
+     * name for deterministic save files + deterministic per-entity hydration order. A Produce without a
+     * HydrationApply is a misconfig (caught by a registration-time ensure) and is excluded here, so it fails
+     * loud rather than silently corrupting the save.
      */
     static auto
     Get_SaveHandlerTypes() -> TArray<const UScriptStruct*>;

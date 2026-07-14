@@ -5,6 +5,7 @@
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // RegisterLazyTyped<T> body
 
 #include <Serialization/MemoryReader.h>
 #include <Serialization/MemoryWriter.h>
@@ -16,9 +17,9 @@
 // Framework Save-transport handler for EntityScript SaveGame-tagged UPROPERTYs (spec §4B.3).
 //
 // Registered once by CkEcs (this file's static registrar) rather than per-script — the reflect walk over the script
-// class's CPF_SaveGame FProperties is generic. Uses RegisterLazy (NOT RegisterLazyTyped: no SeedContainer — this is a
-// Save-only capture/hydrate payload, never a Model-A re-drive participant, [P1-R1]) with Transport = Save (the first
-// Save-only handler; stays off the wire).
+// class's CPF_SaveGame FProperties is generic. Save-only handler (HydrationApply + Produce, no Apply): the payload
+// type is never placed in a replicated container, so it stays off the wire and the load-path hydration dispatcher
+// (FProcessor_Hydration_Dispatch) is its sole caller.
 //
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -48,17 +49,12 @@ namespace ck_entity_script_save_fields
     {
         FRegistrar()
         {
-            FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
-                []() -> UScriptStruct* { return FCk_SaveData_EntityScriptFields::StaticStruct(); },
+            FCk_ReplicatedFragmentHandlerRegistry::RegisterLazyTyped<FCk_SaveData_EntityScriptFields>(
                 {
-                    // Save-only: the load-path hydration dispatcher is the sole caller. A defensive early-out keeps
-                    // this a no-op should the type ever be resolved off a net receive (it never is — Transport = Save
-                    // is never placed in a replicated container).
-                    .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
+                    // Save-only: HydrationApply is the load-path applier — the only path this type ever takes. It is
+                    // never placed in a replicated container, so it has no net Apply.
+                    .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
                     {
-                        if (NOT FCk_HydrationApplyScope::Get_IsActive())
-                        { return ECk_RepFragment_ApplyResult::Applied; }
-
                         if (NOT Entity.Has<ck::FFragment_EntityScript_Current>())
                         { return ECk_RepFragment_ApplyResult::NotReady; }
 
@@ -130,7 +126,6 @@ namespace ck_entity_script_save_fields
                         Payload.Set_FieldBytes(MoveTemp(Blob));
                         return FInstancedStruct::Make(Payload);
                     },
-                    .Transport = ECk_PersistenceTransport::Save
                 });
         }
     };

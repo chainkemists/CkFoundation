@@ -335,8 +335,8 @@ namespace ck
     //
     // Under the v3 rebuild+hydrate load the fresh world already re-created + Setup-composed the SM normally (when
     // AutoStart==OnSetup, Setup enqueues a Start that FProcessor_Sm_HandleRequests enters as InitialState). The SM's
-    // save-transport Apply handler (CkStateMachine_Replication.cpp), running under
-    // FCk_HydrationApplyScope, stashes FFragment_Sm_HydrationResume{DesiredRunStatus, DesiredStateClass} from the saved
+    // save-load HydrationApply handler (CkStateMachine_Replication.cpp) stashes
+    // FFragment_Sm_HydrationResume{DesiredRunStatus, DesiredStateClass} from the saved
     // payload. This processor then walks the phase ladder to converge Current onto that decision record: Start
     // (idempotent against AutoStart's own Start; or Stop if AutoStart resurrected a saved-Stopped machine) ->
     // Transition into the saved state -> re-Pause if saved Paused -> remove FFragment_Sm_HydrationResume (the done
