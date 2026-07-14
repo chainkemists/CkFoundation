@@ -55,6 +55,16 @@ namespace ck
     // provenance as entity-table metadata, so the tag itself must never round-trip through Model A's tag capture.
     CK_DEFINE_ECS_TAG_TRANSIENT(FTag_ConstructSpawned);
 
+    // Construction-window marker for a definition-built entity (Request_BuildAndReplicate). Unlike an EntityScript,
+    // such an entity carries NO FFragment_EntityScript_Current, so the ConstructSpawned stamp above would miss its
+    // labeled children — e.g. a Stackable item trait's stack-count IntegerAttribute — and those children would revert
+    // to their definition defaults on load. Request_TryBuildAndReplicate adds this tag on the built entity for the
+    // SYNCHRONOUS span of ConstructionInfo execution (before the first construction script runs, removed after the
+    // last completes), so children composed during that span classify as ConstructSpawned via
+    // Request_SetupEntityWithLifetimeOwner. TRANSIENT is mandatory: this is a live construction marker only and must
+    // never round-trip through a save — it is not a persistent property of the built entity.
+    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_DefinitionBuild_InProgress);
+
     // --------------------------------------------------------------------------------------------------------------------
 
     struct FFragment_LifetimeDependents
