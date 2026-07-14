@@ -74,6 +74,13 @@ auto
     if (_AssociatedEntity.Has<ck::FTag_Sm_Debug_GraphWalkEntity>())
     { return; }
 
+    // Has-guard mirror of EndPlay below: a snapshot-restored SM-graph entity keeps its EntityScript
+    // but not its SmState feature fragment (the redrive rebuilds the real graph fresh), so this
+    // BeginPlay runs on a husk with nothing to enter. Proceeding would CastChecked-ensure and then
+    // resolve NetContext through the stale _OwnerStateMachine captured from the saved world.
+    if (NOT UCk_Utils_SmState_UE::Has(_AssociatedEntity))
+    { return; }
+
     const auto Self = UCk_Utils_SmState_UE::CastChecked(_AssociatedEntity);
 
     // A fingerprint-mismatch verify (in Construct, before this BeginPlay) may have already
