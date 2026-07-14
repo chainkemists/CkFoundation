@@ -117,7 +117,7 @@ static struct FIntegerAttributeRepHandlerRegistrar
                 // The OWNER-keyed net Apply above never resolves it.
                 .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
                 {
-                    return ck::attribute_restore::HydrationApply<ck::TFragment_IntegerAttribute, FCk_RepData_IntegerAttributes>(
+                    return ck::attribute_restore::HydrationApply<ck::TFragment_IntegerAttribute, FCk_RepData_IntegerAttributes, UCk_Utils_IntegerAttribute_UE>(
                         Entity, New, &ApplyReplicatedIntegerAttributeEntry);
                 },
                 .Produce       = &ck::attribute_restore::Produce<ck::TFragment_IntegerAttribute, FCk_RepData_IntegerAttributes>,
