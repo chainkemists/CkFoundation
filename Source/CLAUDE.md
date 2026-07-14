@@ -348,24 +348,26 @@ save path (CkSnapshot) reuses it without a Net dependency. Client-side applicati
 deferred: net receive only marks entries pending; `FProcessor_ReplicatedFragments_Dispatch` drains them each tick;
 the load path uses the twin `FProcessor_Hydration_Dispatch`. Register in the feature's `_Fragment.cpp` — **prefer a
 named participation shape** (`Register_NetOnly` / `Register_SaveOnly` / `Register_NetAndSave_SharedApply` /
-`Register_NetAndSave_SplitApply`) over hand-building an `FHandler`; the name states the transport, and
-`Register_SaveOnly`'s signature makes a `Produce`-without-`HydrationApply` *uncompilable*:
+`Register_NetAndSave_SplitApply`) over hand-building an `FHandler`. Each takes a **designated-init args struct** so
+every lambda is labeled at the call site, and required slots are compile-enforced (an omitted `.Produce`/
+`.HydrationApply`/`.NetApply` does not compile — the `Produce`-without-`HydrationApply` misconfig is *uncompilable*):
 
 ```cpp
 // Team — both transports, one authority-safe applier (net receive + load hydration share the body):
-FCk_PersistenceHandlerRegistry::Register_NetAndSave_SharedApply<FCk_RepData_Team>(
-    [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>          // Produce (save capture; READ-ONLY)
+FCk_PersistenceHandlerRegistry::Register_NetAndSave_SharedApply<FCk_RepData_Team>({
+    .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>   // save capture; READ-ONLY
     {
         if (NOT UCk_Utils_Team_UE::Has(Entity)) { return {}; }
         return FInstancedStruct::Make(FCk_RepData_Team{Entity.Get<ck::FFragment_TeamInfo>().Get_TeamID()});
     },
-    [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
+    .SharedApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
     {
-        if (NOT UCk_Utils_Team_UE::Has(Entity))                     // NotReady BEFORE any mutation
+        if (NOT UCk_Utils_Team_UE::Has(Entity))                        // NotReady BEFORE any mutation
         { return ECk_Persistence_ApplyResult::NotReady; }
         UCk_Utils_Team_UE::Assign(UCk_Utils_Team_UE::Cast(Entity), New.Get<FCk_RepData_Team>().Value);
         return ECk_Persistence_ApplyResult::Applied;
-    });
+    },
+});
 ```
 
 - `NetApply` runs AFTER OnConstructed-driven composition — never inline during net receive — and must

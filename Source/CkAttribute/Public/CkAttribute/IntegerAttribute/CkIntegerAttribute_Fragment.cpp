@@ -65,9 +65,9 @@ static struct FIntegerAttributeRepHandlerRegistrar
 {
     FIntegerAttributeRepHandlerRegistrar()
     {
-        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_IntegerAttributes>(
-                &ck::attribute_restore::Produce<ck::TFragment_IntegerAttribute, FCk_RepData_IntegerAttributes>,
-                [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
+        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_IntegerAttributes>({
+                .Produce = &ck::attribute_restore::Produce<ck::TFragment_IntegerAttribute, FCk_RepData_IntegerAttributes>,
+                .NetApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
                 {
                     const auto& NewAttrs = New.Get<FCk_RepData_IntegerAttributes>().Attributes;
                     const auto* OldAttrs = Old.IsSet()
@@ -115,11 +115,11 @@ static struct FIntegerAttributeRepHandlerRegistrar
                 // Save-load hydration (authority-side, Phase 4B): the v3 payload is CHILD-keyed (per-attribute-entity
                 // Produce), so Entity IS the attribute entity — write its value directly via ApplyReplicatedIntegerAttributeEntry.
                 // The OWNER-keyed net Apply above never resolves it.
-                [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
+                .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                 {
                     return ck::attribute_restore::HydrationApply<ck::TFragment_IntegerAttribute, FCk_RepData_IntegerAttributes, UCk_Utils_IntegerAttribute_UE>(
                         Entity, New, &ApplyReplicatedIntegerAttributeEntry);
-                });
+                }});
     }
 } GIntegerAttributeRepHandlerRegistrar;
 
@@ -132,15 +132,15 @@ static struct FIntegerAttributeRefillRepHandlerRegistrar
 {
     FIntegerAttributeRefillRepHandlerRegistrar()
     {
-        FCk_PersistenceHandlerRegistry::Register_SaveOnly<FCk_SaveData_IntegerAttributeRefill>(
-                &ck::attribute_refill_restore::Produce<
+        FCk_PersistenceHandlerRegistry::Register_SaveOnly<FCk_SaveData_IntegerAttributeRefill>({
+                .Produce = &ck::attribute_refill_restore::Produce<
                     ck::TFragment_IntegerAttribute, FCk_Handle_IntegerAttributeRefill, UCk_Utils_IntegerAttributeRefill_UE, FCk_SaveData_IntegerAttributeRefill>,
-                [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
+                .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                 {
                     return ck::attribute_refill_restore::HydrationApply<
                         ck::TFragment_IntegerAttribute, FCk_Handle_IntegerAttributeRefill, UCk_Utils_IntegerAttributeRefill_UE, FCk_SaveData_IntegerAttributeRefill>(
                             Entity, New);
-                });
+                }});
     }
 } GIntegerAttributeRefillRepHandlerRegistrar;
 

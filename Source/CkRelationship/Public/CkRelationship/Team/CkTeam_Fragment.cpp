@@ -28,15 +28,15 @@ static struct FTeamRepHandlerRegistrar
             return ECk_Persistence_ApplyResult::Applied;
         };
 
-        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SharedApply<FCk_RepData_Team>(
+        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SharedApply<FCk_RepData_Team>({
             // Produce-only capture (Phase 3A.4, [P1-R1]): mirror FProcessor_Team_Replicate's live-state build.
-            [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+            .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
             {
                 if (NOT UCk_Utils_Team_UE::Has(Entity))
                 { return {}; }
                 return FInstancedStruct::Make(FCk_RepData_Team{Entity.Get<ck::FFragment_TeamInfo>().Get_TeamID()});
             },
-            ApplyFn);
+            .SharedApply = ApplyFn});
     }
 } GTeamRepHandlerRegistrar;
 

@@ -69,9 +69,9 @@ static struct FByteAttributeRepHandlerRegistrar
 {
     FByteAttributeRepHandlerRegistrar()
     {
-        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_ByteAttributes>(
-                &ck::attribute_restore::Produce<ck::TFragment_ByteAttribute, FCk_RepData_ByteAttributes>,
-                [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
+        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_ByteAttributes>({
+                .Produce = &ck::attribute_restore::Produce<ck::TFragment_ByteAttribute, FCk_RepData_ByteAttributes>,
+                .NetApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
                 {
                     const auto& NewAttrs = New.Get<FCk_RepData_ByteAttributes>().Attributes;
                     const auto* OldAttrs = Old.IsSet()
@@ -119,11 +119,11 @@ static struct FByteAttributeRepHandlerRegistrar
                 // Save-load hydration (authority-side, Phase 4B): the v3 payload is CHILD-keyed (per-attribute-entity
                 // Produce), so Entity IS the attribute entity — write its value directly via ApplyReplicatedByteAttributeEntry.
                 // The OWNER-keyed net Apply above never resolves it.
-                [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
+                .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                 {
                     return ck::attribute_restore::HydrationApply<ck::TFragment_ByteAttribute, FCk_RepData_ByteAttributes, UCk_Utils_ByteAttribute_UE>(
                         Entity, New, &ApplyReplicatedByteAttributeEntry);
-                });
+                }});
     }
 } GByteAttributeRepHandlerRegistrar;
 

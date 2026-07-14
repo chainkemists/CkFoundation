@@ -18,55 +18,57 @@ auto
         MoveTemp(InHandler));
 }
 
-// ---- Named participation shapes — each forwards a fully-formed FHandler to RegisterLazyTyped ------------------------
-// FHandler is an aggregate; designated initializers list members in declaration order (NetApply, NetRemove,
-// HydrationApply, Produce). Omitted slots value-initialize to an empty TFunction (== "not participating on that path").
+// ---- Named participation shapes — each unwraps its designated-init args and forwards a fully-formed FHandler to
+//      RegisterLazyTyped. FHandler is an aggregate; designated initializers list members in declaration order
+//      (NetApply, NetRemove, HydrationApply, Produce). Omitted slots value-initialize to an empty TFunction
+//      (== "not participating on that path").
 
 template <typename T_RepData>
 auto
     FCk_PersistenceHandlerRegistry::
-    Register_NetOnly(FApplyFn InNetApply, FRemoveFn InNetRemove)
+    Register_NetOnly(FArgs_NetOnly InArgs)
     -> void
 {
     RegisterLazyTyped<T_RepData>(FHandler{
-        .NetApply  = MoveTemp(InNetApply),
-        .NetRemove = MoveTemp(InNetRemove)});
+        .NetApply  = MoveTemp(InArgs.NetApply.Value),
+        .NetRemove = MoveTemp(InArgs.NetRemove)});
 }
 
 template <typename T_RepData>
 auto
     FCk_PersistenceHandlerRegistry::
-    Register_SaveOnly(FProduceFn InProduce, FApplyFn InHydrationApply)
+    Register_SaveOnly(FArgs_SaveOnly InArgs)
     -> void
 {
     RegisterLazyTyped<T_RepData>(FHandler{
-        .HydrationApply = MoveTemp(InHydrationApply),
-        .Produce        = MoveTemp(InProduce)});
+        .HydrationApply = MoveTemp(InArgs.HydrationApply.Value),
+        .Produce        = MoveTemp(InArgs.Produce.Value)});
 }
 
 template <typename T_RepData>
 auto
     FCk_PersistenceHandlerRegistry::
-    Register_NetAndSave_SharedApply(FProduceFn InProduce, FApplyFn InSharedApply, FRemoveFn InNetRemove)
+    Register_NetAndSave_SharedApply(FArgs_NetAndSave_SharedApply InArgs)
     -> void
 {
     // One authority-safe applier serves both the net-receive path and the load-path (Team/Player/Velocity shape).
+    // Copy the shared lambda into NetApply (evaluated first, declaration order), then move it into HydrationApply.
     RegisterLazyTyped<T_RepData>(FHandler{
-        .NetApply       = InSharedApply,
-        .NetRemove      = MoveTemp(InNetRemove),
-        .HydrationApply = MoveTemp(InSharedApply),
-        .Produce        = MoveTemp(InProduce)});
+        .NetApply       = InArgs.SharedApply.Value,
+        .NetRemove      = MoveTemp(InArgs.NetRemove),
+        .HydrationApply = MoveTemp(InArgs.SharedApply.Value),
+        .Produce        = MoveTemp(InArgs.Produce.Value)});
 }
 
 template <typename T_RepData>
 auto
     FCk_PersistenceHandlerRegistry::
-    Register_NetAndSave_SplitApply(FProduceFn InProduce, FApplyFn InNetApply, FApplyFn InHydrationApply, FRemoveFn InNetRemove)
+    Register_NetAndSave_SplitApply(FArgs_NetAndSave_SplitApply InArgs)
     -> void
 {
     RegisterLazyTyped<T_RepData>(FHandler{
-        .NetApply       = MoveTemp(InNetApply),
-        .NetRemove      = MoveTemp(InNetRemove),
-        .HydrationApply = MoveTemp(InHydrationApply),
-        .Produce        = MoveTemp(InProduce)});
+        .NetApply       = MoveTemp(InArgs.NetApply.Value),
+        .NetRemove      = MoveTemp(InArgs.NetRemove),
+        .HydrationApply = MoveTemp(InArgs.HydrationApply.Value),
+        .Produce        = MoveTemp(InArgs.Produce.Value)});
 }

@@ -85,7 +85,7 @@ namespace
     {
         FCk_RenderTargetRepHandlerRegistrar()
         {
-            FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_RenderTarget>(
+            FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_RenderTarget>({
                     // Produce-only capture: the sync-child's persistent instruction ring lives in
                     // FFragment_RenderTarget_AuthoredLog. Builds the channel-slice consumed on load by
                     // HydrateFromSavedChannel — a single-channel FCk_RepData_RenderTarget keyed by
@@ -93,7 +93,7 @@ namespace
                     // Not gated on Replicates: the AuthoredLog persistence half is mode-agnostic (drawn state of a
                     // DoesNotReplicate target is still save-worthy). A Replicates gate could be added here if load
                     // ever routes only replicated targets — that is the single line that would change.
-                    [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+                    .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                     {
                         if (NOT Entity.Has<ck::FFragment_RenderTarget_Params>()
                             || NOT Entity.Has<FFragment_RenderTarget_AuthoredLog>())
@@ -114,7 +114,7 @@ namespace
                         RepData.Get_Channels().Emplace(MoveTemp(Channel));
                         return FInstancedStruct::Make(RepData);
                     },
-                    [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
+                    .NetApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                     {
                         const auto& Payload = New.Get<FCk_RepData_RenderTarget>();
 
@@ -143,7 +143,7 @@ namespace
                     // owner-keyed net Apply (TryGet_RenderTarget on Entity-as-owner) never resolves it,
                     // and the hydration entry is dropped after the 5s timeout. Route to the child-direct
                     // restore instead (refill ring + repaint + re-publish to a fresh owner container).
-                    [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
+                    .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                     {
                         const auto& Payload  = New.Get<FCk_RepData_RenderTarget>();
                         const auto& Channels = Payload.Get_Channels();
@@ -153,7 +153,7 @@ namespace
                         return ck::FProcessor_RenderTarget_HandleRequests::HydrateFromSavedChannel(Entity, Channels[0])
                             ? ECk_Persistence_ApplyResult::Applied
                             : ECk_Persistence_ApplyResult::NotReady;
-                    });
+                    }});
         }
     };
 

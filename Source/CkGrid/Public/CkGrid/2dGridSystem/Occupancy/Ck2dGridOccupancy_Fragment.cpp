@@ -25,11 +25,11 @@
             Entity.AddOrGet<ck::FFragment_2dGridOccupancy_SyncReplication>(NewPlacements, OldPlacements);
         };
 
-        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_2dGridPlacements>(
+        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_2dGridPlacements>({
                 // Produce-only capture (Phase 3A.4): mirror FProcessor_2dGridOccupancy_Replicate's live-state build
                 // off the grid's placement record. Produce is capture-only. Keyed on the grid entity (which holds
                 // the placement record).
-                [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+                .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT Entity.Has<ck::FFragment_RecordOf_GridPlacements>())
                     { return {}; }
@@ -54,7 +54,7 @@
                 // Client net path stamps the sync fragment consumed by the ClientOnly Occupancy SyncReplication
                 // processor (which owns rebuild + reconcile). The authority load path takes HydrationApply instead —
                 // that processor never runs on the host, so nothing would rebuild the record.
-                [DoApplyPlacements](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
+                .NetApply = [DoApplyPlacements](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
                 {
                     const auto& NewPlacements = New.Get<FCk_RepData_2dGridPlacements>().Placements;
 
@@ -70,7 +70,7 @@
                 // the placement record directly. Request_AddPlacement re-arms MayRequireReplication, so the
                 // AuthorityOnly Replicate pass pushes the rebuilt set and clients converge via the ordinary
                 // SyncReplication path (no explicit re-arm needed).
-                [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
+                .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                 {
                     if (NOT UCk_Utils_2dGridSystem_UE::Has(Entity))
                     { return ECk_Persistence_ApplyResult::NotReady; }
@@ -88,7 +88,7 @@
                             Grid, Entry.Get_Occupant(), Entry.Get_Anchor(), Entry.Get_Rotation(), Entry.Get_Cells());
                     }
                     return ECk_Persistence_ApplyResult::Applied;
-                });
+                }});
     }
 } G2dGridOccupancy_RepHandlerRegistrar;
 
