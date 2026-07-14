@@ -23,6 +23,7 @@
 #include "CkLabel/CkLabel_Utils.h"
 
 #include "CkEcsExt/OwningActor/CkActorSpawnIntent_Fragment.h" // FFragment_ActorSpawnIntent
+#include "CkEcsExt/Transform/CkTransform_Utils.h"             // [P3B-F1a] bridged-actor spawn transform
 
 #include "Misc/EngineVersion.h"
 #include "Serialization/MemoryWriter.h"
@@ -352,6 +353,12 @@ namespace ck::snapshot
 
                     if (Handle.Has<FFragment_ActorSpawnIntent>())
                     { Entry.Set_ActorClassPath(Handle.Get<FFragment_ActorSpawnIntent>().Get_ActorClassPath()); }
+
+                    // Bridged actors respawn actor-first ([P3B-F1a]): capture the world transform so the loader
+                    // spawns the actor at its saved position (WithActor::Construct then seeds the entity Transform
+                    // from the actor). Mirrors FProcessor_ActorRespawn's Has/Get_EntityCurrentTransform.
+                    if (UCk_Utils_Transform_UE::Has(Handle))
+                    { Entry.Set_ActorSpawnTransform(UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(Handle)); }
                     break;
                 }
             }

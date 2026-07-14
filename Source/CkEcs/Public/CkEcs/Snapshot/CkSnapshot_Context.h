@@ -52,6 +52,16 @@ namespace ck
                                   FCk_RegistryHandle InLoadRegistryHandle = FCk_RegistryHandle::Unset())
             : _Loader(&InLoader), _LoadRegistryHandle(InLoadRegistryHandle) {}
 
+        // v3 rebuild+hydrate load mode (spec §4.2, Phase 3B). The v3 save wrote each handle's RAW saved id
+        // (packed entt id, the same value as FCk_Snapshot_V3_EntityEntry::_SavedId). On load, remap each raw id
+        // through the loader-built saved-id -> live-handle map instead of a continuous_loader. A raw id absent from
+        // the map (incl. the writer's 0xFFFFFFFF k_NoEntity sentinel, or a ref to a non-persisted entity) rewrites
+        // to entt::null so ck::IsValid fails -- correct dangling-ref semantics. InLoadRegistryHandle re-homes the
+        // handle onto the live world (Snapshot_Handle's tail).
+        explicit FSnapshotContext(const TMap<uint32, FCk_Handle>* InSavedIdMap,
+                                  FCk_RegistryHandle InLoadRegistryHandle)
+            : _SavedIdMap(InSavedIdMap), _LoadRegistryHandle(InLoadRegistryHandle) {}
+
     public:
         // Serialize a raw entt entity (used by archive writer/reader).
         auto Snapshot_EnttEntity(FArchive& InAr, entt::entity& InOutEntity) -> void;
@@ -81,12 +91,16 @@ namespace ck
             { InOutHandle.Set_Registry(_LoadRegistryHandle); }
         }
 
-        auto IsLoading() const -> bool { return _Loader != nullptr; }
+        auto IsLoading() const -> bool { return _Loader != nullptr || _SavedIdMap != nullptr; }
         auto IsSaving()  const -> bool { return _Saver  != nullptr; }
 
     private:
         entt::basic_snapshot<SnapshotRegistryType>*           _Saver  = nullptr;
         entt::basic_continuous_loader<SnapshotRegistryType>*  _Loader = nullptr;
+
+        // v3 load remap (set only by the map-backed ctor). Consulted by Snapshot_EnttEntity ahead of the raw-cast
+        // fallback. Not owning -- the loader owns the map for the duration of the restore.
+        const TMap<uint32, FCk_Handle>*                       _SavedIdMap = nullptr;
 
         // The live registry restored handles are re-homed onto (load path only). Unset on save and on the
         // registry-only restore path.

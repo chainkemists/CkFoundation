@@ -11,7 +11,7 @@
 | 1 | PHASE_1.md | **DONE** (1.1–1.6 committed+GREEN) | 2026-07-11 | CkF: 23b982c0d (framework), fd288efdd (6 migrations), 5d262f52a; CkTests: b9e7f86 | GREEN: Ck.Snapshot **48/48/0** delta-zero (all 11 Parity_MPReload + both Oracle tests pass), framework Ck.*.Net green (kiosk trio env-red, see baseline) |
 | 2 | PHASE_2.md | **DONE** (2.1–2.7 committed+GREEN; 2.7-Test2 subsumed per [P2-D3]) | 2026-07-11 | CkF: 91b96a177 (load gate core), 8c4fbce7a (fire-gating), af9fad239 (retire NeedsSetup guards); CkTests: 4522c8e (LoadGate) | GREEN: Ck.Snapshot **49/49/0** (LoadGate + AccelerationParity + 11 Parity, no over-gating hang); Net 102/98/4 framework delta-zero (3 Attribute.Net pins green; 4 fails = recorded kiosk-trio env-red + StateMachine.Net flake) |
 | 3A | PHASE_3A.md | **DONE** (3A.1–3A.6 committed+GREEN) | 2026-07-11 | CkF: 81f7b6505 (CkEcs framework), 349947218 (v3 writer), d0ce51877 (registrar transport); CkTests: 5bb9798 | GREEN: Ck.Snapshot **51/51/0** (49 baseline + V3.CaptureClassification + V3.RecipeParamsHandleRemap; delta-zero — all 11 DynamicFragment + 11 Parity + both Oracle pass); Net framework Ck.*.Net delta-zero (3 fails = recorded kiosk env-red trio; 3 Attribute.Net pins green; StateMachine.Net flake didn't fire) |
-| 3B | PHASE_3B.md | NOT STARTED | | | |
+| 3B | PHASE_3B.md | **DONE** (v3 load pipeline live; M2a fixed) | 2026-07-12 | CkF: 78fcdaa8e (retire reconstitution), 36bcdec5d (v3 load pipeline), <docs-this>; CkTests: ce32c65 | GREEN mod casualties: Ck.Snapshot **52 / 43 pass / 9 fail** (--discover-fresh; M2a + V3.InstancedStructDiskSmoke green; all 9 fails are verified Phase-4 casualties — see §Phase-3B DONE) |
 | 4A | PHASE_4A.md | NOT STARTED | | | |
 | 4B | PHASE_4B.md | NOT STARTED | | | |
 | 5 | PHASE_5.md + VALIDATION.md | NOT STARTED | | | |
@@ -116,6 +116,129 @@ until 2.4–2.7 land. The tree's committed tip is Phase-1-green (`df06b8394`); t
 `CkReplicatedFragmentContainer_Processor.h`, `CkPersistence_ReDrive_Processor.h`, `CkEntityReplicationDriver_Processor.h`,
 `CkActorRespawn_Processor.h`, `CkProcessorGroups.h/.cpp`). `git -C Plugins/CkFoundation diff --stat` shows the exact set.
 
+## Phase-3B progress (RESEARCH CHECKPOINT — 2026-07-11, Opus; no code landed yet)
+
+Status: read the full load SM + v3 format/writer + context/walker + dormant hydration queue + load gate +
+reconstitution machinery + the e2e gate tests. Design forks routed to a Fable agent (running). NO code edited yet.
+Repo clean at `57fee2671` (CkF) / `5bb9798` (CkTests). Editor closed.
+
+**v3 load model (the shape of the rewrite).** Unlike Model A (registry.clear()+image rebuild via `Run_Restore`),
+v3 works WITH the freshly-built world: TearingDown→Travel→AwaitingWorld give a pristine level-reloaded world (GameMode
+default pawn + level actors already re-created normally). Then, under the Phase-2 load gate, overlay saved state:
+`Set_IsLoadGateActive(true)` (on world-ready) → Rebuilding (spawn RuntimeSpawned from recipes; adopt EngineOwned by
+rendezvous; adopt ConstructSpawned by label) → Hydrating (enqueue Produce payloads into `FFragment_PendingHydration` +
+`FTag_Hydration_PendingApply`; the kernel `FProcessor_Hydration_Dispatch` drains under the gate) → Reconciling
+(subtractive `Request_DestroyEntity`, parks under gate) → Settling (`Request_PumpToQuiescence(LoadKernel)` from the
+FTSTicker → gate off → `DoFinish_Load`). NO registry.clear / Run_Restore / Relink / AdoptRestoredTransient /
+RebuildProcessorGraph in the v3 path — the fresh world's graph is already correct. Request_Load: v3-only hard break
+(reject v2 with Failed_IncompatibleSave; keep Model A compiled for oracle).
+
+**Verified machinery (file:line, for the reader):**
+- Saved-id map key = packed entt uint32 = `_SavedId` (writer: `CkSnapshot_CaptureV3.cpp:50` `static_cast<uint32>(Handle.Get_Entity().Get_ID())`; handle blobs write the same via `FSnapshotContext::Snapshot_EnttEntity`, `CkSnapshot_Context.cpp:9`). Default-ctx load just casts raw (`CkSnapshot_Context.cpp:16-19`) — the v3 load needs a NEW map-backed mode that re-homes the full handle from the map.
+- Hydration queue is kernel-wired + dormant: `FProcessor_Hydration_Dispatch` (LoadPolicy RunsDuringLoad, NetMode All, FGroup_Hydration) drains `FFragment_PendingHydration._Entries` via `persistence_apply::ApplyOne` — 3B just enqueues (`CkReplicatedFragmentContainer_Processor.cpp:154-206`).
+- Load gate: `Get_/Set_IsLoadGateActive` + `Request_PumpToQuiescence(LoadKernel)` (`CkEcsWorld_Subsystem.h:160,193-194`); EcsWorld actor tick reads the flag.
+- Recipe: EVERY Request_SpawnEntity stamps `FFragment_SpawnRecipe` (holder pinned) at `CkEntityScript_Processor.cpp:156-167`. Non-bridged RuntimeSpawned rebuild = `UCk_Utils_EntityScript_UE::Request_SpawnEntity(owner, recipeClass, remappedParams)` (`CkEntityScript_Utils.cpp:129-176`).
+
+**FORKS routed to Fable (verify rulings against code before implementing):**
+- **[FORK-D] (CENTRAL, load-bearing — under-scoped by the plan).** The ENTIRE e2e gate (11 Parity_MPReload + M2b + M2b2a) drives ONE entity shape: a **bridged WithActor probe** `ACk_AutoTest_NetSubject_M2bProbe[_Replicated]` (spawned via SpawnActor at runtime), whose entity-script Construct composes the tested feature. Hard facts: (1) a WithActor entity gets BOTH `FFragment_SpawnRecipe` (→ rule-4 RuntimeSpawned) AND `FFragment_ActorSpawnIntent` (`CkEntityScript_WithActor.cpp:61-65`); (2) its recipe `_SpawnParams` = `FCk_EntityScript_WithActor_SpawnParams{actor}` whose actor ptr does NOT serialize → CANNOT `Request_SpawnEntity(WithActorScript, savedParams)` (Construct ensures on invalid `_OwningActor`, `CkEntityScript_WithActor.cpp:24-28`); (3) Transform has ONLY net Apply handlers (NO Produce, Transport=Net — `CkTransform_Fragment.cpp:39-104`) → position is NOT in any v3 payload; (4) hydration needs the feature already composed (Apply→NotReady else dropped) → the WithActor Construct MUST re-run on load. Candidate model: loader spawns the ACTOR (class + saved transform) → the actor's WithActor ActorComponent bridge re-creates the entity + runs Construct (features compose) → rendezvous-map `_SavedId`→`TryGet_ActorEntityHandle(actor)` → hydrate. Open: (D3) transform via recipe-field vs Transform-Produce+NetAndSave (needs verified actor↔entity sync direction); (D4) is `FProcessor_ActorRespawn` reused or replaced (it rebinds to an EXISTING entity w/o Construct — wrong for v3's no-pre-existing-entity). Fable ruling pending.
+- **[FORK-A] saved-id map + v3 FSnapshotContext mode** — add map-backed `const TMap<uint32,FCk_Handle>*` mode to `FSnapshotContext`; on load set full handle (entity+registry, NO typed-slice) from the map; missing key → invalid. My read says this is well-defined; Fable to confirm Set_Entity/Set_Registry + no-slice.
+- **[FORK-B] ConstructSpawned adoption timing** — resolve saved-id→live labeled child under the mapped+constructed owner via `UCk_Utils_Ecs_Base_UE::Get_EntityOrRecordEntry_WithFragmentAndLabel` (or CkRecord/CkLabel util); may need its own poll (child composed after owner Construct). Fable to confirm API + sequencing.
+- **[FORK-C] reconcile vs gated destruction** — QUEUE `Request_DestroyEntity` only (parks under gate); LostGrantStaysLost asserts after ≥2 post-gate frames. Fable to confirm the labeled-ConstructSpawned-child enumeration.
+
+**IMPLEMENTATION STATE (2026-07-11, Opus — ON DISK, UNCOMMITTED, compile-check running):**
+- **3B.1 DONE on disk:** Fork-A FSnapshotContext v3 map-backed mode (`CkSnapshot_Context.h/.cpp`); save-side `_ActorSpawnTransform` field on `FCk_Snapshot_V3_EntityEntry` + capture in `CkSnapshot_CaptureV3.cpp` (D3a); full load-SM rewrite (`CkSnapshot_Subsystem.h/.cpp`) — new `ELoadPhase{Idle,TearingDown,AwaitingWorld,Rebuilding,Hydrating,Settling}`; v3 reader (SerializeItem tables at Request_Load, v3-only hard break → Failed_IncompatibleSave/Failed_Corrupt); `DoRebuild_Tick` (EngineOwned SaveKey/player rendezvous, ConstructSpawned label-adopt via LifetimeDependents walk, RuntimeSpawned non-bridged Request_SpawnEntity + bridged actor-first spawn+TryGet_ActorEntityHandle); `DoHydrate_Enqueue` (payloads → FFragment_PendingHydration + tag, single-source orphan count = total−mapped); `DoReconcile_Queue` (subtractive Request_DestroyEntity of stray labeled ConstructSpawned children); `DoTick_Load` **Hydrating is ATOMIC** (enqueue+reconcile+gate-off+Full-pump in ONE callback → hydration never drains under the gate → no Setup-stomp); Settling countdown; Request_Save now FAILS on v3 capture failure (v3 authoritative). Model-A capture/restore KEPT compiled.
+- **3B.2 DONE on disk:** deleted `ECk_ReconstitutionPhase`+accessors+`_ReconstitutionPhase` (CkEcsWorld_Subsystem.h/.cpp), `DoIs_WorldReconstituting`+2 call sites (CkEntityScript_Utils.cpp), all CkSnapshot stamp sites (subsystem rewrite). KEPT `Get_IsSnapshotRespawnable` ([P3B-D1]). `rg "Reconstitution" Source` → **0**. `IsSnapshotRespawnable` → 3 (virtual def/decl + WithActor ActorSpawnIntent opt-in). Stale comment refs to DoStamp_RespawnMarkers remain in dormant CkActorRespawn docs (comments only, not code).
+- **KEY DESIGN NOTE:** the v3 load does NOT registry.clear/Run_Restore — it works WITH the freshly level-reloaded world (EngineOwned re-created normally; loader spawns RuntimeSpawned actors whose BeginPlay re-creates bridged entities via the WithActor bridge). The existing e2e gate's ConstructSpawned coverage comes FREE via attribute meta-fragment children (labeled ConstructSpawned entities under the bridged probe) — AttributeParity exercises adopt-by-label + hydrate.
+- **NEXT:** compile-check verdict (p3b-compilecheck1.log) → fix → 3B.3 tests (existing Parity/M2b gate first — the real proof; then new Rebuild/Oracle tests) → full gate → diagnose reds ([P3B-D4]) → commit.
+
+**GATE-1 RESULT (2026-07-11, p3b-gate1.log): BUILD CLEAN (595s, Result: Succeeded); Ck.Snapshot ~39 pass / 12 fail.**
+- **Model A fully intact** — ALL registry-level tests green (Core, DynamicFragment×11, Oracle×2, LoadGate, V3.Capture×2, LifecycleStrip, SaveKey, SceneNode, Timer, MontagePlayer, etc.). LifecycleStrip stays green (registry-level, NO rewrite needed — earlier hunch confirmed).
+- **v3 e2e PASS:** FloatAttribute.Gate (actually Model-A Run_Capture/Restore, not v3), Parity.Acceleration, Parity.TeamPlayer, M2b2b.MPServerTravel, both spikes.
+- **EXPECTED reds (annotate later):** StateMachine, StateMachineNoHistory (→4A, no Produce); GridPlacements, InventoryDataOnly, InventorySpatial, RenderTarget (→4B, client-shaped Apply). [P3B-D4].
+- **UNEXPECTED reds → ROOT CAUSE FOUND:** M2a/M2b/M2b2a (load flag not cleared), AnimPlan/Attributes/TagSet (values wrong). DIAG: **`rebuild did not fully resolve within [600] frames — [7]/[26] mapped`** — only ~7 of 26 saved entities REBUILD; 19 orphan. Rebuilding burns the 600-frame cap → load runs past the tests' 240-frame budget (→ "load in progress" fails) AND 19 entities never hydrate (→ wrong values, "dangling handle entity N → LifetimeDependents → N+1 not present" ×20 in AttributeParity).
+- **TWO fixes landed (uncommitted, rebuilding for diagnosis):** (1) progress-based early-exit (proceed after 30 ticks with no NEW mapping — kills the 600-frame stall so loads complete fast even with orphans, fixing the *timing* failures); (2) per-unresolved-entry DIAG dump (provenance + owner-mapped + label) to pinpoint WHY 19 fail. Running p3b-diag-m2b.log. The CORE bug (why most entities don't rebuild/adopt) is under diagnosis — likely ConstructSpawned attribute-child adoption OR framework RuntimeSpawned entities the fresh world already owns being mis-respawned. DO NOT commit until root-caused + green.
+
+**DIAGNOSIS COMPLETE (p3b-diag-m2b.log) — the v3 LOAD PIPELINE WORKS; remaining reds are per-feature payload gaps (Phase 4).**
+- **`Ck.Snapshot.M2b.LevelReload` PASSES** with the fixes — proves the core end-to-end: bridged actor-first rebuild, ConstructSpawned adoption (all 6 attribute children mapped, unresolved ConstructSpawned = **0**), position restore (from `_ActorSpawnTransform`), value hydration. The core is SOUND.
+- **Root cause of the 12/19 unmapped (per DIAG dump):** they are ALL `owner-saved-id 0` (world transient, never persisted) non-bridged RuntimeSpawned **world-boot infrastructure** — `Bb_DayNightLampDriver`, `Bb_DayNightVisuals`, `Bb_MusicDirector`, generic `Ck_EntityScript_WithActor_UE`. The CkTests gate runs in the full BB editor, so `/Engine/Maps/Entry` boots these; the fresh world's normal boot RE-CREATES them, so the loader must NOT respawn them. My non-bridged logic deferred them forever (owner never maps). **FIX: skip RuntimeSpawned whose lifetime owner is not a persisted saved-id (transient/root-owned = boot-infra); the boot recreates them** (`_PersistedIds`/`_SkippedIds`). ⚠️ This also skips any GAMEPLAY top-level entity spawned under the transient at runtime — the boot-infra-vs-gameplay discriminator is the **CTO-N1 spawner-state problem, deferred to Phase 4A**.
+- **Root cause of the value-wrong parity reds (Attributes/AnimPlan):** their Produce is **EMPTY-SEED** ([P1-D2], VERIFIED `CkAttribute_RestorePersistence.h:12-31` — `return FInstancedStruct::Make(T_RepDataStruct{})`, a SET-but-empty payload). Under Model A the value came from the raw fragment image + `FProcessor_Attribute_Replicate`; **under v3 there is no image, so the value is NOT persisted** → attribute restores to Construct base (42.5), not the saved override (17.0). Making the Produce value-emitting is non-trivial (the per-owner upsert-merge the comment flags: multiple attributes share one owner container) — genuinely **Phase 4B "coverage sweep"** (spec §6 Phase 4). VALUE-EMITTING features (Velocity, Acceleration) round-trip and PASS.
+- **[P3B-D5] EXPECTED CASUALTY CATEGORIZATION (annotate; the load pipeline is 3B's deliverable, per-feature payloads are Phase 4):**
+  - **→ Phase 4A** (no Produce / SM state): `Parity.StateMachine_MPReload`, `Parity.StateMachineNoHistory_MPReload` (CkStateMachine has no Produce; SM redrive-as-hydration IS 4A).
+  - **→ Phase 4B** (empty-seed Produce → value not persisted): `Parity.Attributes_MPReload`, `Parity.AnimPlan_MPReload`, likely `Parity.TagSet_MPReload` (VERIFY TagSet Produce shape).
+  - **→ Phase 4B** (client-shaped Apply / re-author): `Parity.GridPlacements_MPReload`, `Parity.InventoryDataOnly_MPReload`, `Parity.InventorySpatial_MPReload`, `Parity.RenderTarget_MPReload` ([B1] shape, PHASE_3B §"Known interaction").
+  - **MUST PASS in 3B** (load pipeline): M2a/M2b/M2b2a/M2b2b orchestration, `Parity.Acceleration`, `Parity.Velocity` (value-emitting), `Parity.TeamPlayer` (passed gate-1), all Model-A registry-level. Gate-2 (p3b-gate2.log, running) confirms the ambient-skip fix makes the orchestration tests green.
+
+**GATE-2 RESULT (2026-07-12, p3b-gate2.log): BUILD CLEAN (54s incremental); Ck.Snapshot 41 pass / 10 fail; EXIT -1.** The
+ambient-skip + stall-exit fixes RECOVERED M2b.LevelReload + M2b2a.ReplicatedRespawn (now PASS). DIAG clean: rebuild completes
+in 2 frames, 19 skipped boot-infra, **0 orphaned**. **ALL 10 reds diagnosed as legitimate Phase-4 casualties — NONE is a
+load-pipeline bug** (the pipeline is PROVEN by M2b/M2b2a/M2b2b + Acceleration/Velocity/TeamPlayer + all Model-A registry tests):
+- **→ Phase 4A (3):** `Parity.StateMachine_MPReload`, `Parity.StateMachineNoHistory_MPReload` (CkStateMachine has NO Produce —
+  SM redrive-as-hydration IS 4A); **`M2a.LoadOrchestration`** — its subject is a NON-bridged transient-owned RuntimeSpawned
+  gameplay entity (provenance `RuntimeSpawned [13] bridged [0]`, `0/19 mapped`); the boot-infra skip ([P3B-D5]) can't tell it
+  from BB boot-infra so skips it → the attributes' owner never maps → "0 float attributes survived." This is EXACTLY the CTO-N1
+  boot-infra-vs-gameplay discriminator, deferred to 4A. (M2b/M2b2a use BRIDGED probes → pass; only M2a's non-bridged subject
+  hits N1.)
+- **→ Phase 4B (7):** `Parity.Attributes`, `Parity.AnimPlan` (empty-seed Produce → value not persisted, verified
+  `CkAttribute_RestorePersistence.h`); `Parity.TagSet`, `Parity.GridPlacements`, `Parity.InventoryDataOnly`,
+  `Parity.InventorySpatial`, `Parity.RenderTarget` (**client-shaped Apply** — e.g. TagSet Apply stamps
+  `FFragment_TagSet_SyncReplication` for a SEPARATE processor "which owns the actual diff/apply", `CkTagSet_Fragment.cpp:28-32`;
+  that processor doesn't apply authority-side under hydration → server value never restored; [B1] shape). KEY LESSON:
+  value-emitting *Produce* is necessary but NOT sufficient — the *Apply* must apply authority-side. Velocity/Acceleration Apply
+  do (they pass); TagSet's does not.
+- **COMMIT DECISION (left to next session / maintainer):** all 10 reds are legitimately Phase-4 per the campaign's phase
+  structure, so 3B is "green modulo annotated Phase-4 casualties." RECOMMEND: commit 3B (working load pipeline) with these
+  annotated in Blockers, then 4A/4B green them. Not committed this session (handed off — 10 reds incl. an orchestration test is
+  a larger deviation than the plan anticipated, worth a maintainer glance). Everything UNCOMMITTED on disk. See
+  CONTINUATION_PROMPT_Phase3B_finish.md.
+
+## Phase-3B DONE (2026-07-12, Opus unattended — COMMITTED, gate-3 green mod casualties)
+
+**Gate-3 (p3b-gate3.log): BUILD CLEAN; Ck.Snapshot 52 / 43 pass / 9 fail (--discover-fresh); EXIT -1 (expected, casualties present).**
+Delta from gate-2 (41/10): +1 total (new `V3.InstancedStructDiskSmoke`, GREEN), M2a fixed (10→9 fails). **Zero unexpected reds; all
+9 fails are verified Phase-4 casualties.** Commits: CkF `78fcdaa8e` (retire reconstitution), `36bcdec5d` (v3 load pipeline),
+`<docs-this>`; CkTests `ce32c65` (disk smoke + M2a opt-in). Nothing pushed.
+
+- **M2a.LoadOrchestration is GREEN — the gate-2 "→ Phase 4A / N1 casualty" call above was a MISDIAGNOSIS, now CORRECTED ([P3B-D6]).**
+  M2a's subject is NOT an inherently non-bridged gameplay entity: it is a WithActor **bridged** probe (`ACk_AutoTest_NetSubject_M2aProbe`)
+  that simply never opted into the v3 respawn contract. The M2a probe's entity-script lacked the `Get_IsSnapshotRespawnable() -> true`
+  override that M2bProbe has (`CkEntityScript.cpp:161-167` base default = false), so `WithActor::Construct` never stamped
+  `FFragment_ActorSpawnIntent` → no `_ActorClassPath` → provenance `bridged [0]` → the loader's non-bridged branch hit the boot-infra
+  skip. **This is a fixture gap, NOT N1:** the bridged actor-first branch (`CkSnapshot_Subsystem.cpp:628-663`) spawns the actor from
+  `_ActorClassPath` and rendezvous-maps via `TryGet_ActorEntityHandle` WITHOUT consulting the owner saved-id — so opting in bypasses the
+  boot-infra skip entirely (`_PersistedIds` check is only in the non-bridged else-branch at `:686`). Fix (CkTests ce32c65): add the
+  respawn opt-in to `UCk_AutoTest_NetSubject_M2aProbe_EntityScript_UE` + bump `FramesForLoad` 150→240 to match the respawn-exercising
+  M2b/M2b2a siblings. Value check (Final==42.5) holds because 42.5 is the Construct base (no override added). Fable-consulted (ruling A,
+  fixture-fix) + independently code-verified (base default false, bridged branch bypasses skip, M2bProbe_Replicated ctor-only proves
+  replicated respawn safe in-scheduler, gate-3 green). N1 (gameplay RuntimeSpawned under the transient, spawned via the NON-bridged path
+  by an SM task) remains genuinely Phase-4A — M2a never was that case.
+- **The 9 verified casualties (annotate; each is per-feature payload work, NOT a load-pipeline bug):**
+  - **→ Phase 4A (2):** `Parity.StateMachine_MPReload`, `Parity.StateMachineNoHistory_MPReload` — CkStateMachine has no Produce; SM
+    redrive-as-hydration is 4A.
+  - **→ Phase 4B, empty-seed Produce (2):** `Parity.Attributes_MPReload`, `Parity.AnimPlan_MPReload` — verified `CkAttribute_RestorePersistence.h`.
+  - **→ Phase 4B, client-shaped Apply ([B1] shape) (5):** `Parity.TagSet_MPReload`, `Parity.GridPlacements_MPReload`,
+    `Parity.InventoryDataOnly_MPReload`, `Parity.InventorySpatial_MPReload`, `Parity.RenderTarget_MPReload`. VERIFIED for TagSet
+    (`CkTagSet_Fragment.cpp:28-32`): Apply stamps `FFragment_TagSet_SyncReplication`, drained ONLY by `FProcessor_TagSet_SyncReplication`
+    which is **`ClientOnly`** (`CkTagSet_Processor.h:98`) → on the loading AUTHORITY the sync fragment is stamped but never drained → the
+    server's `ck::FFragment_TagSet` never receives the tags → server assertion fails → never replicated → client assertion fails. KEY
+    LESSON (from the gate-2 block, confirmed): value-emitting *Produce* is necessary but NOT sufficient — the *Apply* must apply
+    authority-side. Velocity/Acceleration/TeamPlayer Apply do (they pass); the deferred-six + TagSet Apply do not. PHASE_3B §"Known
+    interaction" pre-authorizes annotating this shape as 4B — do NOT invent an authority-side sync drain in 3B.
+- **What passes (43):** all Model-A registry-level tests (Core/DynamicFragment×11/Audit/LifecycleStrip/SaveKey/SceneNode/Timer/
+  MontagePlayer/etc.), `M2a/M2b/M2b2a/M2b2b` orchestration, value-emitting parity (`Parity.Acceleration/Velocity/TeamPlayer`), both
+  Oracle, LoadGate, `V3.CaptureClassification/RecipeParamsHandleRemap/InstancedStructDiskSmoke`.
+- **3B follow-ups (deferred heavier PIE tests, recorded per continuation prompt §3 — NOT gate-blocking; the existing Parity/M2b gate is
+  the primary proof):** `Ck.Snapshot.Rebuild.NoDuplicateGrants`, `Rebuild.LostGrantStaysLost`, `Rebuild.OrphanHydrationLoud`,
+  `Rebuild.OracleParity` (the last consumes `oracle-allowlist-p3.txt`, which exists but has no active entries yet — populated in 4A when
+  a BB driver world is oracle-diffed). The ConstructSpawned adopt+hydrate path is already covered via the attribute meta-fragment
+  children under the bridged M2b probe. Load wall-time (CTO suggestion 6 baseline): M2a v3 load settled ~2 frames rebuild + hydrate under
+  the gate (p3b-gate3.log DIAG).
+- **Net gate:** not run pre-commit (the reconstitution retirement is provably inert outside a load — the deleted spawn-suppression gate
+  only fired when `Get_ReconstitutionPhase() != None`, which was ONLY stamped during a CkSnapshot load; Net tests do no loads; the
+  replicated respawn/travel paths ARE exercised green by M2b2a/M2b2b). Net baseline re-captured at the 4A boundary (4A touches
+  CkStateMachine replication and needs it).
+
+**3B.2 reconstitution retirement surface (verified grep):** `ECk_ReconstitutionPhase` enum + `Get_/Set_ReconstitutionPhase`+`Get_IsReconstitutionInProgress`+`_ReconstitutionPhase` (`CkEcsWorld_Subsystem.h:38-43,179-188,218` + `.cpp:165-185`); `DoIs_WorldReconstituting`+2 call sites (`CkEntityScript_Utils.cpp:42-71,147,196`); `Get_IsSnapshotRespawnable` (`CkEntityScript.h:109`/`.cpp:163`) + its CONSUMERS (`CkEntityScript_WithActor.cpp:61` gates ActorSpawnIntent stamp — KEEP the stamp but the abstention gate becomes moot; `CkEntityScript_WithActor.cpp` M2b comment; the probe overrides it). ⚠️ `Get_IsSnapshotRespawnable` is ALSO the ActorSpawnIntent opt-in gate, not only a reconstitution gate — deleting it needs a replacement opt-in for ActorSpawnIntent (Fork-D dependent — resolve with Fable's bridged-actor design). Full retirement + `rg "Reconstitution|IsSnapshotRespawnable" Source` → 0 outside docs.
+
 ## Phase-3A progress (implementation-state checkpoint — 2026-07-11)
 
 Additive phase (v3 writer beside Model A). IMPLEMENTED on disk (UNCOMMITTED, UNBUILT as of this checkpoint):
@@ -206,7 +329,29 @@ rendezvous — everything else compiled first pass). Gate GREEN (Ck.Snapshot 51/
   uses the REAL value-emitting **Velocity** handler (Add creates Current immediately; Request_OverrideVelocity is an
   immediate write — no tick needed in a bare FEcsWorld); mutate → exactly 1 diff line, unmutated → 0.
 
+## Decisions — Phase-3B (Fable ruling verified against code + executor)
+
+- **[P3B-F1] (Fable, VERIFIED) — Fork D: bridged-actor (WithActor + ActorSpawnIntent, RuntimeSpawned) rebuild = ACTOR-FIRST, `FProcessor_ActorRespawn` NOT reused; PHASE_3B plan text overridden.** The loader spawns the ACTOR (`_ActorClassPath`, at the saved transform); the actor's own BeginPlay (`ACk_AutoTest_NetSubject::BeginPlay`→`Request_SpawnEntityScript_OnActor`, CkAutoTest_NetSubject.cpp:55-71; generic bridge `CkEntityScript_WithActor_ActorComponent.cpp:12-23`) re-creates the WithActor entity with Construct running FOR REAL (features compose). The whole EntityScript pipeline is load-kernel (RunsDuringLoad, CkEntityScript_Processor.h) so this constructs under the gate. Rendezvous-map `_SavedId`→`UCk_Utils_OwningActor_UE::TryGet_ActorEntityHandle(actor)` (CkOwningActor_Utils.cpp:195-210; link-valid ⟹ Construct done). `Request_SpawnEntity(WithActorScript, savedParams)` is IMPOSSIBLE (the actor ptr in `FCk_EntityScript_WithActor_SpawnParams` doesn't serialize; Construct ensures on invalid `_OwningActor`, CkEntityScript_WithActor.cpp:24-28). `FProcessor_ActorRespawn` stays compiled-but-DORMANT in 3B (nothing stamps `FTag_ActorRespawn_Pending` once `DoStamp_RespawnMarkers` dies with the Model-A tail); deleted Phase 5. Its `DoReplicate_RestoredEntity` re-replication is unneeded — the fresh Construct runs the normal replication path (this is what M2b2a now exercises organically).
+- **[P3B-F1a] (Fable, VERIFIED) — Fork D3: transform via a NEW recipe field `_ActorSpawnTransform` (option a), NOT a Transform Produce (option b).** Option (b) is broken: `FProcessor_Transform_SyncFromActor` UNCONDITIONALLY overwrites the entity Transform fragment from the actor's root component whenever they differ (VERIFIED CkTransform_Processor.cpp:121-126) and NO Transform processor is load-kernel — a hydrated transform would park behind the gate while the actor sits at identity. Option (a): add `FTransform _ActorSpawnTransform` to `FCk_Snapshot_V3_EntityEntry`, capture via `UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform` (guarded by `Has`, mirroring CkActorRespawn_Processor.cpp:76-78) in the RuntimeSpawned branch (CkSnapshot_CaptureV3.cpp:323-355); loader spawns the actor there; `WithActor::Construct` seeds the entity Transform from `_OwningActor->GetActorTransform()` (CkEntityScript_WithActor.cpp:50-53) — position correct with zero hydration, zero sync hazard. Additive save-side change to committed 3A (justified; new field defaults to identity, only meaningful when `_ActorClassPath` set).
+- **[P3B-F2] (Fable, VERIFIED) — Fork A: map-backed `FSnapshotContext` v3 mode.** New ctor `FSnapshotContext(const TMap<uint32,FCk_Handle>* InSavedIdMap, FCk_RegistryHandle InLoadRegistryHandle)` + member `_SavedIdMap`; `IsLoading()` returns true when set; a branch in `Snapshot_EnttEntity` ahead of the raw-cast fallback: on load, `Find(RawId)` → set entity to mapped `Get_Entity().Get_ID()` (or `entt::null` if absent/sentinel `0xFFFFFFFF`). `Snapshot_Handle`'s existing tail re-homes the registry via `_LoadRegistryHandle` (Set_Registry, CkHandle.h). Key = packed entt uint32 = `_SavedId` (VERIFIED CkSnapshot_CaptureV3.cpp:50 + Snapshot_EnttEntity raw write). No typed-handle slice (set entity+registry in place). Reader helper mirrors `SerializeInstancedStruct` exactly (proxy, ArIsSaveGame=false, SetIsPersistent(true), CkSnapshot_CaptureV3.cpp:100-104); tables via `FCk_Snapshot_V3_Tables::StaticStruct()->SerializeItem(Reader,&Tables,nullptr)` (idiom Test_Snapshot_V3_Capture.cpp:172-196).
+- **[P3B-F3] (Fable, VERIFIED) — Fork B: adopt ConstructSpawned via the LifetimeDependents walk, NOT `Get_EntityOrRecordEntry_WithFragmentAndLabel`** (that is a compile-time template over `T_FragmentUtils`/`T_RecordUtils` — unusable type-erased). Mapped owner → `Owner.Get<ck::FFragment_LifetimeDependents>().Get_Entities()` (usage precedent CkSnapshot_Subsystem.cpp:313) → filter `Has<FTag_ConstructSpawned>()` + labeled (`UCk_Utils_GameplayLabel_UE::Has && NOT Get_IsUnnamedLabel`, mirror capture rule 3) → match `Get_Label(Child).ToString() == Entry._Label`. Needs a `Request_PumpToQuiescence(LoadKernel)` after owner mappings + a bounded poll (child label may be added one kernel-tick later, e.g. WithActor labels itself in its own Construct; ConstructionFlow::Continue scripts span frames). Frame-cap → loud ensure + skip (its payloads then time out loudly).
+- **[P3B-F4] (Fable, VERIFIED) — Fork C: reconcile QUEUES `Request_DestroyEntity` only (parks; the destruction pipeline is NOT load-kernel — only `FProcessor_EntityLifetime_EntityJustCreated` is RunsDuringLoad, CkEntityLifetime_Processor.h:19), completes ~2 post-gate frames.** Enumerate strays = owner's live labeled ConstructSpawned children (LifetimeDependents walk, same as F3) minus the saved `_Label` set for that owner → `Request_DestroyEntity` (precedent CkSnapshot_Subsystem.cpp:315-319). Reconcile does NOT wait (would deadlock under the gate). `LostGrantStaysLost` polls `ck::IsValid→false` ≥2 post-load-complete frames.
+- **[P3B-D1] (executor) — KEEP `Get_IsSnapshotRespawnable`; delete ONLY the reconstitution machinery. Deviates from PHASE_3B 3B.2's literal "delete Get_IsSnapshotRespawnable" — the plan OVERLOOKED that it is ALSO the `FFragment_ActorSpawnIntent` stamp opt-in** (`CkEntityScript_WithActor.cpp:61`, v3 needs it — it supplies `_ActorClassPath`) not only the EarlyWindow reconstitution gate. Deleting it wholesale would stop the probe being persisted → e2e gate fails. So: retire `ECk_ReconstitutionPhase`/accessors/`_ReconstitutionPhase`/`DoIs_WorldReconstituting`/`Get_IsReconstitutionInProgress` + all CkSnapshot stamp sites; KEEP `Get_IsSnapshotRespawnable` (orthogonal save opt-in). Exit grep becomes `rg "Reconstitution" Source` → 0 (NOT "|IsSnapshotRespawnable").
+- **[P3B-D2] (executor, from Fable landmine) — retiring reconstitution is a PREREQUISITE for 3B.1, not just cleanup.** `Request_SpawnEntity` returns `{}` (suppresses the spawn) whenever `Get_ReconstitutionPhase() != None` (CkEntityScript_Utils.cpp:147-148, 42-71). The v3 loader spawns actors whose BeginPlay triggers entity spawns — those would be SUPPRESSED if any reconstitution phase were stamped on the post-travel world. So 3B.1 must NOT stamp any phase post-travel (delete the EarlyWindow world-init watch + the `Full` escalation at CkSnapshot_Subsystem.cpp:634); the LoadKernel gate is the isolation mechanism.
+- **[P3B-D3] (executor) — FULL reconstitution retirement incl. the pre-travel `Full` stamp (per PHASE_3B), deviating from Fable's "keep pre-travel Full" caution.** The load gate + v3-restores-no-image ⇒ suppression is unnecessary everywhere; a pre-travel teardown spawn would be wiped by travel anyway. WATCH-POINT: if the gate shows a pre-travel-teardown duplicate/spawn issue, this stamp is the suspect (cheap to restore narrowly).
+- **[P3B-D4] (executor) — EXPECTED CASUALTIES (annotate as Phase-4, do NOT fix in 3B): `Ck.Snapshot.StateMachineParity_MPReload`** — CkStateMachine handlers are Apply-ONLY (no Produce, not in the NetAndSave census; CkStateMachine_Replication.cpp:295-349) → SM saved state isn't captured → SM rebuilds to its initial state → parity reds. SM redrive-as-hydration IS Phase 4A. Also the **deferred-six parity** (GridPlacements, InventoryDataOnly, InventorySpatial, RenderTarget, TeamPlayer) — their Apply is client-shaped (stamp-a-sync-fragment, ClientOnly sync) so authority-side hydration may not drain → [B1]-shape → annotate Phase-4B (per PHASE_3B §"Known interaction"). CLEAN features (Acceleration, AnimPlan, FloatAttribute, TagSet) MUST pass — if one reds via Setup-stomp (hydration applies under gate before its gated Setup runs at gate-open) that is a REAL 3B ordering bug to fix (candidate: defer hydration apply to the settle full-pump so Setup precedes it in-pass), NOT annotate. Fable gap-3: unaudited across all 16 handlers — parity gates are the empirical pin.
+- **[P3B-D6] (executor, 2026-07-12, gate-3) — M2a fix = FIXTURE respawn opt-in (NOT the N1 discriminator); TagSet + AnimPlan re-categorized. Corrects [P3B-D4] and the gate-2 block.** [P3B-D4] listed AnimPlan/FloatAttribute/TagSet as "CLEAN … MUST pass"; the gate-2 block then reclassified M2a as an N1/Phase-4A casualty. Both are wrong. VERIFIED against code + gate-3: (a) **M2a** is a WithActor BRIDGED probe missing the `Get_IsSnapshotRespawnable()->true` opt-in (base default false, `CkEntityScript.cpp:161-167`); adding it (CkTests `ce32c65`) makes the loader's bridged actor-first branch (`CkSnapshot_Subsystem.cpp:628-663`, which does NOT consult owner saved-id) respawn it — M2a GREEN in 3B, no N1 needed. N1 is specifically the NON-bridged path (SM-task spawn under the transient), which M2a never was. (b) **TagSet** is NOT clean — its Apply is client-shaped (`FFragment_TagSet_SyncReplication` drained only by the `ClientOnly` `FProcessor_TagSet_SyncReplication`, `CkTagSet_Processor.h:98`) → authority-side hydration never drains → 4B casualty ([B1] shape), same class as Grid/Inventory×2/RenderTarget. (c) **AnimPlan** is empty-seed Produce (4B), not clean. Only **FloatAttribute value-parity** stays in the "value round-trips via clean Apply" club alongside Velocity/Acceleration/TeamPlayer — but note the FloatAttribute *value* still needs 4B (empty-seed Produce); what passes for attributes is the M2a existence/base-value check, not `Parity.Attributes` value-parity. Rule of thumb going forward: value-emitting Produce is necessary but insufficient — a feature round-trips in 3B ONLY if its Apply writes authority-side (direct fragment write), not if it stamps a ClientOnly sync fragment.
+
 ## Decisions — Fable-agent rulings (unattended-protocol consults)
+
+- **[P3B-M2a] (2026-07-12, gate-2→gate-3) — Fable ruling A: M2a red is a test-fixture gap, not a Phase-4 casualty.**
+  Consulted a Fable agent (read-only) when gate-2's M2a red fell outside the user's expected-RED set. Ruling: the bridged
+  actor-first respawn path does not depend on the N1 discriminator (`bBridged = NOT ActorClassPath.IsEmpty()`,
+  `CkSnapshot_Subsystem.cpp:628`; the boot-infra skip is only in the non-bridged else-branch at `:686`), so opting the M2a probe
+  into `Get_IsSnapshotRespawnable` (like M2bProbe) bypasses the skip; keep `bReplicates=true` (M2b2a proves replicated respawn is
+  safe in-scheduler via `FProcessor_ActorRespawn`; `CkAutoTest_NetSubject_M2bProbe_Replicated.cpp:10-13`); value check holds
+  (42.5 = Construct base, no override). VERIFIED against code (base default false; bridged branch bypasses skip; M2b2a topology
+  identical + green) + gate-3 (M2a GREEN). See [P3B-D6].
 
 - **[BI-1] (2026-07-11, §1.6) — kiosk-destruction `Net` reds are pre-existing/environmental, NOT the campaign.**
   Consulted a Fable agent when the `Net` gate diverged (3 BB `Bb_AutoTest_RentnetKiosk*` destruction tests red; baseline
@@ -393,3 +538,16 @@ rendezvous — everything else compiled first pass). Gate GREEN (Ck.Snapshot 51/
   DynamicFragment/Parity/Oracle all pass — the RemapHandles lift + new Produces are regression-free), Net framework
   Ck.*.Net delta-zero (only the recorded kiosk env-red trio, 3 Attribute.Net pins green). Commits CkF 81f7b6505 /
   349947218 / d0ce51877, CkTests 5bb9798. Nothing pushed. Next: Phase 3B.
+- 2026-07-12 — **Phase 3B FINISHED + COMMITTED (Opus, unattended continuation).** Read gate-2 (41/10), finalized the casualty
+  categorization, fixed the ONE genuine outlier (M2a), added the cheap disk-smoke test, re-gated, committed. **M2a diagnosis: the
+  gate-2 "N1/Phase-4A casualty" call was a misdiagnosis** — M2a's probe is a bridged WithActor actor missing the respawn opt-in, not
+  an inherently non-bridged gameplay entity; Fable-consulted (ruling A) + code-verified (base `Get_IsSnapshotRespawnable`=false;
+  loader bridged branch `CkSnapshot_Subsystem.cpp:628-663` bypasses the boot-infra skip) + gate-3 green. Fix = respawn opt-in on the
+  M2a probe entity-script + FramesForLoad 150→240 (CkTests). Added `Ck.Snapshot.V3.InstancedStructDiskSmoke` (Fork-A map-backed
+  remap + dangling-ref, verified `CkSnapshot_Context.cpp:18-26`). **Gate-3 (p3b-gate3.log): Ck.Snapshot 52/43/9, --discover-fresh;
+  M2a + disk-smoke GREEN; the 9 fails are exactly the verified Phase-4 casualties** (StateMachine×2→4A; Attributes/AnimPlan→4B
+  empty-seed; TagSet/Grid/Inventory×2/RenderTarget→4B client-shaped Apply, TagSet ClientOnly-sync verified `CkTagSet_Processor.h:98`).
+  Zero unexpected reds; zero real bugs — the v3 load pipeline is proven. Decisions [P3B-D6]/[P3B-M2a] recorded (correcting [P3B-D4] +
+  the gate-2 TagSet/M2a calls). Commits: CkF `78fcdaa8e` (retire reconstitution), `36bcdec5d` (v3 load pipeline), `<docs-this>`;
+  CkTests `ce32c65` (disk smoke + M2a opt-in). Nothing pushed. **Phase 3B DONE.** Next: Phase 4A (SM redrive-as-hydration + N1
+  closure) — Net baseline to be re-captured at the 4A boundary.
