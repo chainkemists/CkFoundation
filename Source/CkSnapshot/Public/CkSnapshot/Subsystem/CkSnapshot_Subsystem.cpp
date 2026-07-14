@@ -14,6 +14,8 @@
 #include "CkEcs/Registry/CkRegistry_SlotTable.h"
 #include "CkEcs/EntityScript/CkEntityScript.h"                // UCk_EntityScript_UE
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"          // Request_SpawnEntity
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h" // Request_BuildAndReplicate (DefinitionBuilt)
+#include "CkEcs/ContextOwner/CkContextOwner_Utils.h"          // Get_ContextOwner (DefinitionBuilt rebuild owner)
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"            // TryGet_ActorEntityHandle (bridged rendezvous)
 #include "CkEcs/Snapshot/CkSnapshot_Context.h"                // ck::FSnapshotContext (v3 map-backed mode)
 #include "CkEcs/Snapshot/CkSnapshot_HandleWalk.h"             // ck::snapshot::RemapHandles
@@ -700,6 +702,102 @@ auto
                 }
                 break;
             }
+            case ECk_Snapshot_V3_Provenance::DefinitionBuilt:
+            {
+                // Re-create via Request_BuildAndReplicate under the driver-bearing subject production built it under
+                // (Create(Get_ContextOwner(inventory), def)). The inventory/grid hydration Apply then connects it into
+                // the owner's record + transfers its lifetime owner.
+                if (NOT _SpawnedRuntimeIds.Contains(SavedId))
+                {
+                    // Resolve the rebuild owner. Prefer the captured CONTEXT owner — the driver-bearing subject that
+                    // production built the item under (Create(Get_ContextOwner(inventory), def)). It is a persisted +
+                    // mapped RuntimeSpawned entity even when the item's LIFETIME owner (its inventory) is an unnamed
+                    // (and therefore unpersisted) entity. Fall back to the lifetime owner for items with no persisted
+                    // context owner.
+                    auto bBuildViaContextOwner = false;
+                    auto OwnerSavedId = Entry.Get_ContextOwnerSavedId();
+                    if (OwnerSavedId != ck_snapshot_subsystem::k_NoEntity && _PersistedIds.Contains(OwnerSavedId))
+                    { bBuildViaContextOwner = true; }
+                    else
+                    { OwnerSavedId = Entry.Get_LifetimeOwnerSavedId(); }
+
+                    if (OwnerSavedId == ck_snapshot_subsystem::k_NoEntity)
+                    {
+                        ck::snapshot::Error(TEXT("v3 load: DefinitionBuilt entity [{}] carries no owner recipe — orphaned"), SavedId);
+                        _SkippedIds.Add(SavedId);
+                        break;
+                    }
+                    if (NOT _PersistedIds.Contains(OwnerSavedId))
+                    {
+                        // A definition-built entity under an unpersisted owner is data loss (the item is dropped), NOT
+                        // boot-infra — flag it loudly rather than silently skipping. Its owner must persist (a named
+                        // inventory, or a persisted context owner).
+                        ck::snapshot::Warning(
+                            TEXT("v3 load: DefinitionBuilt entity [{}] owner saved-id [{}] was not persisted — item dropped."),
+                            SavedId, OwnerSavedId);
+                        _SkippedIds.Add(SavedId);
+                        break;
+                    }
+                    const auto* MappedOwner = _SavedIdMap.Find(OwnerSavedId);
+                    if (MappedOwner == nullptr || ck::Is_NOT_Valid(*MappedOwner))
+                    {
+                        AnyUnresolved = true; // owner not mapped yet — retry next tick (owners precede dependents)
+                        break;
+                    }
+
+                    auto ConstructionInfos = TArray<FCk_EntityReplicationDriver_ConstructionInfo>{};
+                    for (const auto& Step : Entry.Get_BuildRecipe())
+                    {
+                        auto* ScriptClass = FSoftClassPath{Step.Get_ScriptClassPath()}.TryLoadClass<UCk_Entity_ConstructionScript_PDA>();
+                        if (ScriptClass == nullptr)
+                        {
+                            ck::snapshot::Error(TEXT("v3 load: DefinitionBuilt entity [{}] construction script [{}] unloadable — step dropped"),
+                                SavedId, Step.Get_ScriptClassPath());
+                            continue;
+                        }
+                        auto Info = FCk_EntityReplicationDriver_ConstructionInfo{ScriptClass};
+                        if (const auto& ArchetypePath = Step.Get_ArchetypePath(); NOT ArchetypePath.IsEmpty())
+                        {
+                            if (auto* Archetype = Cast<UCk_Entity_ConstructionScript_PDA>(FSoftObjectPath{ArchetypePath}.TryLoad()))
+                            { Info.Set_ConstructionScriptArchetype(Archetype); }
+                        }
+                        ConstructionInfos.Emplace(MoveTemp(Info));
+                    }
+                    if (ConstructionInfos.IsEmpty())
+                    {
+                        ck::snapshot::Error(TEXT("v3 load: DefinitionBuilt entity [{}] has no loadable construction steps — orphaned"), SavedId);
+                        _SkippedIds.Add(SavedId);
+                        break;
+                    }
+
+                    // Build under the resolved owner. Resolved via the context owner ⇒ that mapped entity IS the
+                    // driver-bearing subject; build directly under it. Resolved via the lifetime owner ⇒ mirror
+                    // production by building under the lifetime owner's context owner.
+                    auto BuildOwner = bBuildViaContextOwner
+                        ? *MappedOwner
+                        : UCk_Utils_ContextOwner_UE::Get_ContextOwner(*MappedOwner);
+                    if (ck::Is_NOT_Valid(BuildOwner))
+                    { BuildOwner = *MappedOwner; }
+
+                    const auto BuiltItem = UCk_Utils_EntityReplicationDriver_UE::Request_BuildAndReplicate_Multiple(BuildOwner, ConstructionInfos);
+
+                    // Claim the once-guard + map ONLY on a valid build. An invalid handle (host gate / rep-driver
+                    // ensure) must not leave the entry permanently orphaned with no diagnostic.
+                    if (ck::IsValid(BuiltItem))
+                    {
+                        _SpawnedRuntimeIds.Add(SavedId);
+                        Resolved = BuiltItem;
+                    }
+                    else
+                    {
+                        ck::snapshot::Error(
+                            TEXT("v3 load: DefinitionBuilt entity [{}] build under owner [{}] returned an invalid handle — orphaned"),
+                            SavedId, BuildOwner);
+                        _SkippedIds.Add(SavedId);
+                    }
+                }
+                break;
+            }
         }
 
         if (ck::IsValid(Resolved))
@@ -921,7 +1019,7 @@ auto
             if (NOT Complete)
             {
                 // DIAG: dump the still-unresolved entries by provenance so a stall is triage-able.
-                auto UnEngine = 0, UnConstruct = 0, UnRuntime = 0;
+                auto UnEngine = 0, UnConstruct = 0, UnRuntime = 0, UnDefinitionBuilt = 0;
                 for (const auto& Entry : _V3Tables.Get_Entities())
                 {
                     if (_SavedIdMap.Contains(Entry.Get_SavedId()))
@@ -931,6 +1029,7 @@ auto
                         case ECk_Snapshot_V3_Provenance::EngineOwned:      ++UnEngine; break;
                         case ECk_Snapshot_V3_Provenance::ConstructSpawned: ++UnConstruct; break;
                         case ECk_Snapshot_V3_Provenance::RuntimeSpawned:   ++UnRuntime; break;
+                        case ECk_Snapshot_V3_Provenance::DefinitionBuilt:  ++UnDefinitionBuilt; break;
                     }
                     ck::snapshot::Verbose(TEXT("DIAG: unresolved v3 entry saved-id [{}] provenance [{}] owner-saved-id [{}] "
                         "(owner mapped: [{}]) label [{}] scriptClass [{}] actorClass [{}]"),
@@ -939,13 +1038,13 @@ auto
                         Entry.Get_ScriptClassPath(), Entry.Get_ActorClassPath());
                 }
                 ck::snapshot::Error(TEXT("Request_Load: rebuild {} — [{}]/[{}] mapped; unresolved by provenance: "
-                    "EngineOwned [{}], ConstructSpawned [{}], RuntimeSpawned [{}]. Proceeding (partial load)."),
+                    "EngineOwned [{}], ConstructSpawned [{}], RuntimeSpawned [{}], DefinitionBuilt [{}]. Proceeding (partial load)."),
                     Stalled ? TEXT("stalled (no progress)") : TEXT("hit frame cap"),
-                    _SavedIdMap.Num(), _V3Tables.Get_Entities().Num(), UnEngine, UnConstruct, UnRuntime);
+                    _SavedIdMap.Num(), _V3Tables.Get_Entities().Num(), UnEngine, UnConstruct, UnRuntime, UnDefinitionBuilt);
             }
 
-            ck::snapshot::Display(TEXT("DIAG: rebuild complete after [{}] frames — [{}] entities mapped, hydrating"),
-                _LoadFrameCount, _SavedIdMap.Num());
+            ck::snapshot::Display(TEXT("DIAG: rebuild complete after [{}] frames — [{}]/[{}] entities mapped ([{}] skipped), hydrating"),
+                _LoadFrameCount, _SavedIdMap.Num(), _V3Tables.Get_Entities().Num(), _SkippedIds.Num());
             _LoadFrameCount = 0;
             _LoadPhase = ELoadPhase::Hydrating;
             return true;

@@ -88,13 +88,36 @@ public:
 
 // One provenance per persisted entity (spec §4.2). EngineOwned re-created by the level/engine flow (adopt by
 // rendezvous key); ConstructSpawned re-created by its owner's replayed Construct/BeginPlay (adopt by identity);
-// RuntimeSpawned re-created from a stored recipe.
+// RuntimeSpawned re-created from a stored EntityScript recipe; DefinitionBuilt re-created from a stored
+// construction-script/archetype recipe (entities built via Request_BuildAndReplicate, e.g. inventory items).
 UENUM()
 enum class ECk_Snapshot_V3_Provenance : uint8
 {
     EngineOwned,
     ConstructSpawned,
     RuntimeSpawned,
+    DefinitionBuilt,
+};
+
+// One step of a DefinitionBuilt entity's construction recipe: the construction-script class + optional archetype
+// asset (both captured by path). Reconstructed on load into a FCk_EntityReplicationDriver_ConstructionInfo.
+USTRUCT()
+struct CKSNAPSHOT_API FCk_Snapshot_V3_BuildStep
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Snapshot_V3_BuildStep);
+
+private:
+    // Paths are FStrings (not FSoftObjectPath) — the v3 tables serialize through a plain FArchive, which does not
+    // support FSoftObjectPath. Reconstructed into a soft path on load. Mirrors _ScriptClassPath / _ActorClassPath.
+    UPROPERTY() FString _ScriptClassPath;
+    UPROPERTY() FString _ArchetypePath; // asset path; empty when the step carries no archetype
+
+public:
+    CK_PROPERTY(_ScriptClassPath);
+    CK_PROPERTY(_ArchetypePath);
 };
 
 // One entry per persisted entity. Fields not relevant to the entry's provenance stay defaulted. Handle-bearing
@@ -134,6 +157,9 @@ private:
     // hydrating it would be stomped by FProcessor_Transform_SyncFromActor). Identity for non-Transform entities.
     UPROPERTY() FTransform                  _ActorSpawnTransform;
 
+    // ---- DefinitionBuilt recipe ----
+    UPROPERTY() TArray<FCk_Snapshot_V3_BuildStep> _BuildRecipe;
+
 public:
     CK_PROPERTY(_SavedId);
     CK_PROPERTY(_Provenance);
@@ -146,6 +172,7 @@ public:
     CK_PROPERTY(_ContextOwnerSavedId);
     CK_PROPERTY(_ActorClassPath);
     CK_PROPERTY(_ActorSpawnTransform);
+    CK_PROPERTY(_BuildRecipe);
 };
 
 // One hydration payload: the byte image (tagged-property + handle-remap) a feature's Produce emitted for an entity.
@@ -208,6 +235,7 @@ private:
     UPROPERTY() int32           _EngineOwnedCount = 0;
     UPROPERTY() int32           _ConstructSpawnedCount = 0;
     UPROPERTY() int32           _RuntimeSpawnedCount = 0;
+    UPROPERTY() int32           _DefinitionBuiltCount = 0;
     UPROPERTY() int32           _PayloadCount = 0;
     // Rule-3 unlabeled ConstructSpawned children (save-transient) and rule-5 anonymous scratch entities skipped
     // outright — reported in the save log line; the audit count flags unlabeled children that had a Produce payload.
@@ -225,6 +253,7 @@ public:
     CK_PROPERTY(_EngineOwnedCount);
     CK_PROPERTY(_ConstructSpawnedCount);
     CK_PROPERTY(_RuntimeSpawnedCount);
+    CK_PROPERTY(_DefinitionBuiltCount);
     CK_PROPERTY(_PayloadCount);
     CK_PROPERTY(_UnlabeledConstructSkippedCount);
     CK_PROPERTY(_AnonymousSkippedCount);
