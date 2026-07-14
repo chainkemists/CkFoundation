@@ -48,7 +48,11 @@ auto
     }
     else
     {
-        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Player>(InHandle, FCk_RepData_Player{InPlayerID});
+        // Seed the container with REAL data at construction (the switch above composed the Player fragment, so
+        // Produce reads InPlayerID). Consume the registered Produce — one projection for wire + save.
+        const auto Produced = UCk_Utils_Net_UE::TryProduce<FCk_RepData_Player>(InHandle);
+        if (Produced.IsSet())
+        { UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Player>(InHandle, *Produced); }
     }
 
     return Cast(InHandle);
@@ -104,8 +108,10 @@ auto
         }
     }
 
-    UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_Player>(
-        InHandle, FCk_RepData_Player{InPlayerID});
+    // The switch above updated the Player fragment (write-then-replicate); Produce reads the new InPlayerID.
+    const auto Produced = UCk_Utils_Net_UE::TryProduce<FCk_RepData_Player>(InHandle);
+    if (Produced.IsSet())
+    { UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_Player>(InHandle, *Produced); }
 
     ck::UUtils_Signal_PlayerChanged::Broadcast(InHandle, ck::MakePayload(TryGet_Entity_Player_InOwnershipChain(InHandle), OldID, InPlayerID));
 

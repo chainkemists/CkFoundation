@@ -122,12 +122,12 @@ namespace ck
         -> void
     {
         // Container lives on InHandle (co-located with FFragment_TagSet, which carries the
-        // replication driver) — see UCk_Utils_TagSet_UE::Add.
-        UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_TagSet>(
-            InHandle, [&](FCk_RepData_TagSet& Data)
-        {
-            Data.Tags = InTagSet.Get_Tags();
-        });
+        // replication driver) — see UCk_Utils_TagSet_UE::Add. Consume the registered Produce (the value
+        // overload's SetFragmentData find-or-adds the entry — same net effect as the mutator; the entry
+        // always exists post-Add). Byte-identical wire content.
+        const auto Produced = UCk_Utils_Net_UE::TryProduce<FCk_RepData_TagSet>(InHandle);
+        if (Produced.IsSet())
+        { UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_TagSet>(InHandle, *Produced); }
     }
 
     // ---- SyncReplication (Client-side) ----

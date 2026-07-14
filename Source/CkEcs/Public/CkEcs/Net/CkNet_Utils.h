@@ -338,6 +338,15 @@ public:
         FCk_Handle& InHandle,
         TFunc InMutator) -> bool;
 
+    // Resolve the feature's registered Produce and return the typed payload — the single projection consumed
+    // by BOTH the wire (Replicate processors) and the save file. UNSET when the feature is absent on this
+    // entity (Produce's own contract). Ensures loudly if no Produce is registered for TDataStruct — calling
+    // this for a type without a save/wire projection is a programmer error.
+    template <typename TDataStruct>
+    static auto
+    TryProduce(
+        FCk_Handle& InHandle) -> TOptional<TDataStruct>;
+
     template <typename TDataStruct>
     static auto
     TryGetContainerFragmentData(
@@ -504,6 +513,27 @@ auto
 
     Driver->SetFragmentData<TDataStruct>(InData);
     return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+template <typename TDataStruct>
+auto
+    UCk_Utils_Net_UE::
+    TryProduce(
+        FCk_Handle& InHandle)
+    -> TOptional<TDataStruct>
+{
+    const auto* Handler = FCk_PersistenceHandlerRegistry::Resolve(TDataStruct::StaticStruct());
+    CK_ENSURE_IF_NOT(Handler != nullptr && static_cast<bool>(Handler->Produce),
+        TEXT("No registered Produce for [{}]"), TDataStruct::StaticStruct()->GetName())
+    { return {}; }
+
+    const auto Produced = Handler->Produce(InHandle);
+    if (NOT Produced.IsSet())
+    { return {}; }
+
+    return Produced->template Get<TDataStruct>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
