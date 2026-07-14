@@ -46,17 +46,6 @@ static struct FMontagePlayerRepHandlerRegistrar
                     { return {}; }
                     return FInstancedStruct::Make(FCk_RepData_MontagePlayer{Entity.Get<ck::FFragment_MontagePlayer_Current>().Get_State()});
                 },
-                // Custom seed: typed add (self-gates on this entity's driver), then re-arm the Replicate trigger.
-                .SeedContainer = [](FCk_Handle& Entity, const FInstancedStruct& Data) -> ECk_AddedOrNot
-                {
-                    const auto AddedOrNot = UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_MontagePlayer>(
-                        Entity, Data.Get<FCk_RepData_MontagePlayer>());
-                    if (AddedOrNot == ECk_AddedOrNot::NotAdded)
-                    { return AddedOrNot; }
-
-                    Entity.AddOrGet<ck::FTag_MontagePlayer_MayRequireReplication>();
-                    return AddedOrNot;
-                },
                 .Transport = ECk_PersistenceTransport::NetAndSave // v3 save capture (Phase 3A.4)
             });
     }

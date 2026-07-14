@@ -163,7 +163,6 @@ static struct FIntegerAttributeRepHandlerRegistrar
                     return Result;
                 },
                 .Produce       = &ck::attribute_restore::Produce<ck::TFragment_IntegerAttribute, FCk_RepData_IntegerAttributes>,
-                .SeedContainer = &ck::attribute_restore::SeedContainer<ck::TFragment_IntegerAttribute, FCk_RepData_IntegerAttributes>,
                 .Transport     = ECk_PersistenceTransport::NetAndSave // v3 save capture (Phase 3A.4)
             });
     }

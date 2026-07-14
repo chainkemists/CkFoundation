@@ -486,6 +486,22 @@ then the residual hygiene. If context runs out, CHECKPOINT at a clean committed 
 - **[F-D3]** Keep the `V3` on-disk-format identifiers (not a comment); strip `v3`-as-campaign-shorthand from comments.
 - **[F-D4]** Policy-macro fork default = Option A (drop `T_Policy`, plain macros, ~85-site rename); Adam may pick (c).
 - **[F-D5]** obj-1 precedes the purge (oracle cross-check + `GridPlacements.RoundTrip` deletes only after its parity twin greens).
+- **[F2-D1] (executor, 2026-07-13) — obj-3 F2 Settling timing change (ADAM behavior-review).** `Settling` now finishes only
+  once `DoIs_HydrationComplete()` is true (no payloads pending apply) AND the minimum settle frames elapsed, with the
+  frame-cap as a LOUD `CK_TRIGGER_ENSURE` abort. Previously it finished on a bare frame countdown, so `OnLoadComplete`
+  could broadcast with hydration still in flight. **Behavior change: `OnLoadComplete` now fires later (after hydration
+  drains).** Gate held Ck.Snapshot 53/1 + Net delta-zero (load consumers poll state, not the signal), but any consumer
+  that assumed early `OnLoadComplete` semantics is affected — Adam to confirm the timing is acceptable.
+- **[F2-D2] (executor, 2026-07-13) — obj-3 F3 `_ContextOwnerSavedId` re-link NARROWED (was "captured but never read").**
+  The F1 ctx-owner-first rebuild now READS `_ContextOwnerSavedId` for DefinitionBuilt owner resolution, so the field is
+  no longer dead and the "delete field + capture line" fallback is off the table. The residual footgun — a RuntimeSpawned
+  entity whose context owner was `Request_Override`n POST-spawn silently reverting to the Construct default on load —
+  is NOT closed (it needs a re-link in the RuntimeSpawned rebuild branch after the mapped ctx owner resolves). Recorded
+  as a follow-up (edge case; no test exercises it). Adam: implement the RuntimeSpawned re-link or accept the narrowing.
+- **[F2-D3] (executor, 2026-07-13) — obj-3 F1 silent-payload-drop made loud.** `DoHydrate_Enqueue` now fires
+  `CK_ENSURE_IF_NOT(Data.IsValid())` naming the payload type + owner saved-id, recovery counts into a new
+  `_PayloadsDropped` LoadReport field. Doctrinally correct (non-negotiable #3): loud in Dev, silent-but-counted in
+  Test/Shipping. Content-drift (a fragment type removed since the save) legitimately trips it → surfaced, not hidden.
 
 ## Adam-decision / STOP-and-flag list (do NOT resolve unilaterally)
 1. **[INV-A] item-model** — only if AuditA concludes the honest fix needs an irreversible item-MODEL/save-format/net
