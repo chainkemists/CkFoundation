@@ -129,9 +129,10 @@ namespace
                         return ECk_RepFragment_ApplyResult::Applied;
                     },
                     // Produce-only capture (Phase 3A.4): the sync-child's persistent instruction ring lives in
-                    // FFragment_RenderTarget_AuthoredLog. Mirror the channel-slice build in
-                    // FProcessor_RenderTarget_ReplicateOnRestore — a single-channel FCk_RepData_RenderTarget keyed by
-                    // this child's SyncName. Keyed on the sync-child entity; NO SeedContainer (Model A still seeds).
+                    // FFragment_RenderTarget_AuthoredLog. Builds the channel-slice consumed on load by
+                    // HydrateFromSavedChannel — a single-channel FCk_RepData_RenderTarget keyed by
+                    // this child's SyncName. Keyed on the sync-child entity; NO SeedContainer — Produce is
+                    // capture/oracle-only (the Model-A re-drive was retired in Phase 5).
                     // Not gated on Replicates: the AuthoredLog persistence half is mode-agnostic (drawn state of a
                     // DoesNotReplicate target is still save-worthy). 3B may add a Replicates gate if load routes only
                     // replicated targets — that is the single line that would change.

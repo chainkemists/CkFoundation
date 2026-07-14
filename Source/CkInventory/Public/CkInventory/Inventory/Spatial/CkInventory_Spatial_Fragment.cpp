@@ -46,7 +46,7 @@
                 // Produce-only capture (Phase 3A.4): mirror FProcessor_Inventory_Spatial_Replicate's live-state
                 // build. Keyed on the INVENTORY entity — emits THAT inventory's own items (the Replicate build reads
                 // the inventory's item record; the container's owner-hosted storage is irrelevant to the build). NO
-                // SeedContainer — the live ReplicateOnRestore still seeds under Model A.
+                // SeedContainer — Produce is capture/oracle-only; the Model-A re-drive was retired in Phase 5.
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT UCk_Utils_Inventory_Spatial_UE::Has(Entity))

@@ -40,8 +40,8 @@ static struct FAccelerationRepHandlerRegistrar
                     UCk_Utils_Acceleration_UE::Request_OverrideAcceleration(AccelerationHandle, New.Get<FCk_RepData_Acceleration>().Value);
                     return ECk_RepFragment_ApplyResult::Applied;
                 },
-                // Restore re-seed of the self-resident Acceleration container from live Current (mirrors the deleted
-                // FProcessor_Acceleration_ReplicateOnRestore). Default typed SeedContainer (no re-arm tag).
+                // Capture/oracle-only Produce of the self-resident Acceleration container from live Current
+                // (the Model-A re-drive was retired in Phase 5). Default typed SeedContainer (no re-arm tag).
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT Entity.Has<ck::FFragment_Acceleration_Current>())

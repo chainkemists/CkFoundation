@@ -38,7 +38,7 @@ static struct FPlayerRepHandlerRegistrar
                 return ECk_RepFragment_ApplyResult::Applied;
             },
             // Produce-only capture (Phase 3A.4, [P1-R1]): mirror FProcessor_Player_Replicate's live-state build. NO
-            // SeedContainer — the live FProcessor_Player_ReplicateOnRestore still seeds under Model A (double-seed guard).
+            // SeedContainer — Produce is capture/oracle-only; the Model-A re-drive was retired in Phase 5.
             .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
             {
                 if (NOT UCk_Utils_Player_UE::Has(Entity))

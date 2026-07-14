@@ -120,18 +120,4 @@ auto
 using FSnap_Transform = ck::FFragment_Transform;
 CK_REGISTER_SNAPSHOTABLE(FSnap_Transform);
 
-// Persist Previous too — SyncFromActor's query requires it, so a restored bridged entity missing it would never
-// sync from its re-bridged actor (freezing anything pinned to the entity transform). Value-only, same as Transform.
-
-auto
-    ck::FFragment_Transform_Previous::
-    SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& /*InCtx*/)
-    -> void
-{
-    InAr << _Transform;
-}
-
-using FSnap_Transform_Previous = ck::FFragment_Transform_Previous;
-CK_REGISTER_SNAPSHOTABLE(FSnap_Transform_Previous);
-
 // --------------------------------------------------------------------------------------------------------------------

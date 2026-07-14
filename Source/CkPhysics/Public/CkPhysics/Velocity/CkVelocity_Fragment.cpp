@@ -42,8 +42,8 @@ static struct FVelocityRepHandlerRegistrar
                     UCk_Utils_Velocity_UE::Request_OverrideVelocity(VelocityHandle, New.Get<FCk_RepData_Velocity>().Value);
                     return ECk_RepFragment_ApplyResult::Applied;
                 },
-                // Restore re-seed of the self-resident Velocity container from live Current (mirrors the deleted
-                // FProcessor_Velocity_ReplicateOnRestore). Default typed SeedContainer (no re-arm tag).
+                // Capture/oracle-only Produce of the self-resident Velocity container from live Current
+                // (the Model-A re-drive was retired in Phase 5). Default typed SeedContainer (no re-arm tag).
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT Entity.Has<ck::FFragment_Velocity_Current>())

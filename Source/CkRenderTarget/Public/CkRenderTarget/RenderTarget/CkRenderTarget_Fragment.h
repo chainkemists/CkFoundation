@@ -47,12 +47,6 @@ namespace ck
     // NeedsBaseline) when a FullSync payload applies.
     CK_DEFINE_ECS_TAG(FTag_RenderTarget_BaselineRequested);
 
-    // Per-feature "done" marker for the snapshot restore-replication pass: once
-    // FProcessor_RenderTarget_ReplicateOnRestore has re-derived the target + re-published the
-    // restored instruction ring, it stamps this so the (idempotent) re-drive does not repeat.
-    // Pairs with ck::FTag_Snapshot_JustRestored (shared, removed by the same pass).
-    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_RenderTarget_RestoreReplicated);
-
     // --------------------------------------------------------------------------------------------------------------------
 
     using FFragment_RenderTarget_Params = FCk_Fragment_RenderTarget_ParamsData;
@@ -68,7 +62,6 @@ namespace ck
         friend class FProcessor_RenderTarget_Setup;
         friend class FProcessor_RenderTarget_HandleRequests;
         friend class FProcessor_RenderTarget_ApplyClientBatches;
-        friend class FProcessor_RenderTarget_ReplicateOnRestore;
         friend class UCk_Utils_RenderTarget_UE;
 
     private:
@@ -134,7 +127,6 @@ namespace ck
         friend class FProcessor_RenderTarget_PixelSyncPump;
         friend class FProcessor_RenderTarget_PaceStreams;
         friend class FProcessor_RenderTarget_ReceiveClientUploads;
-        friend class FProcessor_RenderTarget_ReplicateOnRestore;
         friend class UCk_Utils_RenderTarget_UE;
 
     private:

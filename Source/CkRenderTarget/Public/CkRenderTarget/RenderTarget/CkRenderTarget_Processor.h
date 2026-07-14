@@ -62,46 +62,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Snapshot restore-replication: re-drives a RESTORED RenderTarget sync child after a load.
-    // Setup/Construct is abstained during reconstitution, so the drawable target, the runtime
-    // fragments (Current / PixelSync / ClientStaging) and the owner-hosted replication container are
-    // all missing — only the snapshotted Params + FFragment_RenderTarget_AuthoredLog (the published
-    // instruction ring) survive. Once the owner's replication driver is re-established (snapshot
-    // respawn pass), re-derive the runtime fragments, re-create the target, repaint by replaying the
-    // restored batches, restore the author seq watermark, and re-publish into a fresh owner container
-    // so the post-travel client reconverges through the ordinary ApplyReplicatedBatches path.
-    // Keyed on ck::FTag_Snapshot_JustRestored (POINT-QUERIED — a view that lists the in_place marker
-    // yields tombstones), paired with the per-feature FTag_RenderTarget_RestoreReplicated done tag.
-    //
-    // HandleType is the GENERIC FCk_Handle, NOT FCk_Handle_RenderTarget: the typesafe handle requires
-    // FFragment_RenderTarget_Current (see CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE in the Utils), which
-    // is NOT snapshotted and so is absent on the restored entity. The view still filters to render
-    // targets via the render-target-specific Params + AuthoredLog fragments; the body re-derives
-    // Current, after which the entity satisfies the typesafe contract and is cast for the typed calls.
-    class CKRENDERTARGET_API FProcessor_RenderTarget_ReplicateOnRestore : public ck_exp::TProcessor<
-        FProcessor_RenderTarget_ReplicateOnRestore,
-        FCk_Handle,
-        ck::TReadOnly<FFragment_RenderTarget_Params>,
-        ck::TReadOnly<FFragment_RenderTarget_AuthoredLog>,
-        CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using Group = FGroup_Gameplay_Rendering;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const FFragment_RenderTarget_Params& InParams,
-            const FFragment_RenderTarget_AuthoredLog& InAuthoredLog) const -> void;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     // Drains the frame's draw requests, normalizes them into one FCk_RenderTarget_DrawCmd batch,
     // applies the batch to the local render target through a single canvas pass, and broadcasts
     // OnInstructionsApplied with the batch seq. Replication of the batch (channel A) attaches in

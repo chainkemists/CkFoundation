@@ -20,6 +20,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#if CK_WITH_FIDELITY_ORACLE // Phase 5: Model-A capture is oracle/test-only (v3 Run_CaptureV3 is the live save path)
+
 namespace ck::snapshot
 {
     auto
@@ -157,5 +159,7 @@ namespace ck::snapshot
         return Result;
     }
 }
+
+#endif // CK_WITH_FIDELITY_ORACLE
 
 // --------------------------------------------------------------------------------------------------------------------

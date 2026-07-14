@@ -246,7 +246,7 @@ Full expansions, constraints, and add-a-new-X checklists: `ck-macros-and-codegen
 | `CK_REQUEST_DEFINE_DEBUG_NAME(T)` | Request debug identity | On every request struct |
 | `CK_GENERATED_BODY_HANDLE_TYPESAFE(T)` | Typesafe handle body | Declare in `_Fragment_Data.h`; pair with `CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE` |
 | `CK_REGISTER_PROCESSOR(T)` | Processor self-registration | Top of the processor .cpp |
-| `CK_REGISTER_SNAPSHOTABLE(T)` | Snapshot participation | Global registration — stale binaries lie; rebuild before trusting green tests (full trap: `ck-debugging-playbook`) |
+| `CK_REGISTER_SNAPSHOTABLE(T)` | Snapshot participation — **oracle-only since Phase 5** | Registration is compiled only under `CK_WITH_FIDELITY_ORACLE` (= `!UE_BUILD_SHIPPING`); the v3 rebuild+hydrate load never consults the Model-A registry (fidelity oracle + registry-level round-trip tests are its only consumers). Global registration — stale binaries lie; rebuild before trusting green tests (full trap: `ck-debugging-playbook`) |
 | `CK_DEFINE_CUSTOM_FORMATTER_ENUM(E)` | fmt support for enums | Expected on every UENUM |
 
 ## Where things live

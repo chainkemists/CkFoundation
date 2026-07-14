@@ -48,8 +48,8 @@ static struct FTagSetRepHandlerRegistrar
                     Entity.AddOrGet<ck::FFragment_TagSet_SyncReplication>(SavedTags);
                     return ECk_RepFragment_ApplyResult::Applied;
                 },
-                // Restore re-seed of the self-resident TagSet container from live tags (mirrors the deleted
-                // FProcessor_TagSet_ReplicateOnRestore, whose payload shape came from FProcessor_TagSet_Replicate).
+                // Capture/oracle-only Produce of the self-resident TagSet container from live tags
+                // (the Model-A re-drive was retired in Phase 5; payload shape matches FProcessor_TagSet_Replicate).
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT Entity.Has<ck::FFragment_TagSet>())

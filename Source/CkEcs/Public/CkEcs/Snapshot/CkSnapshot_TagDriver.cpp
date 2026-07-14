@@ -1,5 +1,6 @@
 #include "CkSnapshot_TagDriver.h"
 
+#include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h" // CK_WITH_FIDELITY_ORACLE define (Phase 5 gate; this TU has no other source of it)
 #include "CkEcs/Snapshot/CkSnapshot_TagRegistry.h"
 #include "CkEcs/Handle/CkHandle.h" // ck::FTag_DestroyEntity_*, ck::FTag_EntityJustCreated
 #include "CkEcs/CkEcsLog.h"        // ck::ecs::Warning
@@ -7,6 +8,8 @@
 #include "Serialization/Archive.h"
 
 // --------------------------------------------------------------------------------------------------------------------
+
+#if CK_WITH_FIDELITY_ORACLE // Phase 5: Model-A tag capture/restore is oracle/test-only (the v3 load never stamps or captures these)
 
 namespace ck::snapshot
 {
@@ -111,5 +114,7 @@ namespace ck::snapshot
         InRegistry.clear<ck::FTag_DestroyEntity_Finalize>();
     }
 }
+
+#endif // CK_WITH_FIDELITY_ORACLE
 
 // --------------------------------------------------------------------------------------------------------------------

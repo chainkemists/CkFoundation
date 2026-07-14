@@ -66,41 +66,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // ---- ReplicateOnRestore (Server-side, post-snapshot-load) ----
-
-    // Re-drives a RESTORED occupancy grid after a snapshot load. The placement record + each
-    // placement's Params round-trip; everything else re-derives: this processor re-adds the
-    // (derived) FFragment_2dGridOccupancy_Current so the StampCells reconcile rebuilds the stamped
-    // cells from the restored record, re-creates the grid-resident replicated container (Construct
-    // is abstained during reconstitution), and re-arms FTag_2dGridOccupancy_MayRequireReplication so
-    // the authority Replicate pass rebuilds the wire entries — fresh post-travel clients then
-    // converge through the ordinary SyncReplication path. Waits for the grid's live half
-    // (FProcessor_2dGridSystem_RestoreRecompose) and, for replicated grids, the respawn pass's
-    // re-established driver. Restored placement ENTITIES need nothing else: they are server-local
-    // (clients rebuild their own from the wire entries). The view iterates the restored placement
-    // record and POINT-QUERIES the shared restored marker, paired with the per-feature done tag.
-    class CKGRID_API FProcessor_2dGridOccupancy_ReplicateOnRestore : public ck_exp::TProcessor<
-            FProcessor_2dGridOccupancy_ReplicateOnRestore,
-            FCk_Handle,
-            TReadOnly<FFragment_RecordOf_GridPlacements>,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using Group = FGroup_Gameplay;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const FFragment_RecordOf_GridPlacements& InRecord) const -> void;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     // ClientOnly. Gated on the SyncReplication fragment the RegisterLazy handler stamps. Diffs the
     // current vs previous replicated entries (by occupant identity) and rebuilds / tears down client
     // placement entities; the un-gated StampCells pass then mirrors the cells (mirrors
