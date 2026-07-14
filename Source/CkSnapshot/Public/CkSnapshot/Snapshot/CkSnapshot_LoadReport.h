@@ -18,6 +18,36 @@ enum class ECk_SnapshotResult : uint8
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SnapshotResult);
 
+// One record per orphaned entity: a saved entity that never mapped to a live handle AND was not deliberately
+// skipped (boot-infra / unloadable). Its payloads drop. Populated by DoHydrate_Enqueue's per-orphan walk so
+// tools/tests can inspect WHY a load lost state (the log line carries the same fields). Diagnostics only — the
+// loader does not act on these.
+USTRUCT(BlueprintType)
+struct CKSNAPSHOT_API FCk_Snapshot_OrphanRecord
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Snapshot_OrphanRecord);
+
+private:
+    UPROPERTY() uint32                     _SavedId = 0xFFFFFFFFu;
+    UPROPERTY() ECk_Snapshot_V3_Provenance _Provenance = ECk_Snapshot_V3_Provenance::RuntimeSpawned;
+    // label / script-or-actor class path / save-key / player id — whichever the provenance carries.
+    UPROPERTY() FString                    _Identity;
+    UPROPERTY() uint32                     _OwnerSavedId = 0xFFFFFFFFu;
+    // Reason bucket string (owner-orphaned / owner-mapped-label-miss / savekey-miss / player-miss /
+    // bridge-never-linked / unresolved-other) — see DoHydrate_Enqueue.
+    UPROPERTY() FString                    _Reason;
+
+public:
+    CK_PROPERTY(_SavedId);
+    CK_PROPERTY(_Provenance);
+    CK_PROPERTY(_Identity);
+    CK_PROPERTY(_OwnerSavedId);
+    CK_PROPERTY(_Reason);
+};
+
 USTRUCT(BlueprintType)
 struct CKSNAPSHOT_API FCk_Snapshot_LoadReport
 {
@@ -36,6 +66,8 @@ private:
     UPROPERTY() TArray<FString>    _SkippedFragmentTypes;
     UPROPERTY() TArray<FString>    _SkippedDynamicTypes;
     UPROPERTY() TArray<FString>    _SkippedScriptClasses;
+    // Per-orphan diagnostics (one entry per _EntitiesOrphaned). Filled by DoHydrate_Enqueue.
+    UPROPERTY() TArray<FCk_Snapshot_OrphanRecord> _Orphans;
     UPROPERTY() FCk_Snapshot_Header _LoadedHeader;
 
 public:
@@ -47,5 +79,6 @@ public:
     CK_PROPERTY(_SkippedFragmentTypes);
     CK_PROPERTY(_SkippedDynamicTypes);
     CK_PROPERTY(_SkippedScriptClasses);
+    CK_PROPERTY(_Orphans);
     CK_PROPERTY(_LoadedHeader);
 };
