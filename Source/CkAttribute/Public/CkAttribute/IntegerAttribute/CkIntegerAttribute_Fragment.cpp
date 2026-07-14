@@ -7,6 +7,7 @@
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 #include "CkAttribute/CkAttribute_RestorePersistence.h" // RegisterLazyTyped<T> + shared attribute Produce/HydrationApply
+#include "CkAttribute/CkAttribute_RefillPersistence.h"  // shared refill run-state Produce + HydrationApply helpers
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -123,5 +124,28 @@ static struct FIntegerAttributeRepHandlerRegistrar
             });
     }
 } GIntegerAttributeRepHandlerRegistrar;
+
+// --------------------------------------------------------------------------------------------------------------------
+// Save-only handler for the Integer attribute REFILL run-state (Running/Paused). Distinct from the VALUE handler above:
+// the run-state is never on the wire, so this handler has NO net Apply — Produce + HydrationApply only. Both fire on
+// the refill CHILD entity (per-attribute-entity keying). See CkAttribute_RefillPersistence.h.
+
+static struct FIntegerAttributeRefillRepHandlerRegistrar
+{
+    FIntegerAttributeRefillRepHandlerRegistrar()
+    {
+        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazyTyped<FCk_SaveData_IntegerAttributeRefill>(
+            {
+                .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
+                {
+                    return ck::attribute_refill_restore::HydrationApply<
+                        ck::TFragment_IntegerAttribute, FCk_Handle_IntegerAttributeRefill, UCk_Utils_IntegerAttributeRefill_UE, FCk_SaveData_IntegerAttributeRefill>(
+                            Entity, New);
+                },
+                .Produce = &ck::attribute_refill_restore::Produce<
+                    ck::TFragment_IntegerAttribute, FCk_Handle_IntegerAttributeRefill, UCk_Utils_IntegerAttributeRefill_UE, FCk_SaveData_IntegerAttributeRefill>,
+            });
+    }
+} GIntegerAttributeRefillRepHandlerRegistrar;
 
 // --------------------------------------------------------------------------------------------------------------------
