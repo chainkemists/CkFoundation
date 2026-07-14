@@ -12,7 +12,10 @@
 // _OverrideStateClass is the class swapped in, _CachedStatesToOverride are the state tags it overrides
 // (cached from the override class CDO's Get_StatesToOverride() at add time). Not on the wire — the net
 // receive path never reads it; only Produce fills it and only HydrationApply consumes it.
-USTRUCT()
+// BlueprintType is required even though nothing scripts this directly: the parent RepData shapes'
+// generated Set_/Get_SavedStateOverrides accessors are AS-registered and reference this type — a bare
+// USTRUCT left it unregistered and broke the whole AS compile at PIE start (asINVALID_DECLARATION).
+USTRUCT(BlueprintType)
 struct CKSTATEMACHINE_API FCk_Sm_SavedStateOverride
 {
     GENERATED_BODY()
