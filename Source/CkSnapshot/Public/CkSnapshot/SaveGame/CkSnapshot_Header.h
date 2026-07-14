@@ -157,6 +157,14 @@ private:
     // be stomped by FProcessor_Transform_SyncFromActor). Identity for non-Transform entities.
     UPROPERTY() FTransform                  _ActorSpawnTransform;
 
+    // ---- All-provenance world transform (G1 Transform parity) ----
+    // CURRENT world transform of EVERY persisted entity that carries a Transform fragment (all provenances), so the
+    // loader restores its post-settle world position. Distinct from _ActorSpawnTransform above: that is a spawn-time
+    // seed for BRIDGED actors only; this column corrects post-spawn drift for everyone else (the EngineOwned player
+    // pawn, EngineOwned SaveKey level actors, and pure-ECS movers). Identity when the entity has no Transform fragment
+    // (default; apply is a no-op). The loader skips bridged actors here — they already respawn at _ActorSpawnTransform.
+    UPROPERTY() FTransform                  _SavedWorldTransform;
+
     // ---- DefinitionBuilt recipe ----
     UPROPERTY() TArray<FCk_Snapshot_V3_BuildStep> _BuildRecipe;
 
@@ -172,6 +180,7 @@ public:
     CK_PROPERTY(_ContextOwnerSavedId);
     CK_PROPERTY(_ActorClassPath);
     CK_PROPERTY(_ActorSpawnTransform);
+    CK_PROPERTY(_SavedWorldTransform);
     CK_PROPERTY(_BuildRecipe);
 };
 
@@ -223,7 +232,12 @@ public:
     CK_GENERATED_BODY(FCk_Snapshot_HeaderV3);
 
 public:
-    static constexpr uint16 CurrentFormatVersion = 3;
+    // v3 rebuild+hydrate format version history:
+    //   3 — initial rebuild+hydrate format (per-entity recipe/identity table + minimal hydration payloads).
+    //   4 — added FCk_Snapshot_V3_EntityEntry::_SavedWorldTransform (G1 Transform parity): every persisted entity's
+    //       world transform round-trips, not just bridged RuntimeSpawned actors' spawn seed. No cross-version
+    //       compatibility — a v3 stream is rejected by Request_Load (loud, clean abort — see CkSnapshot_Subsystem.cpp).
+    static constexpr uint16 CurrentFormatVersion = 4;
 
 private:
     UPROPERTY() uint16          _FormatVersion = CurrentFormatVersion;
