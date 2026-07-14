@@ -63,11 +63,11 @@
             return Result;
         };
 
-        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_Inventory_DataOnly_Items>(
+        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_Inventory_DataOnly_Items>({
                 // Produce-only capture (Phase 3A.4): mirror FProcessor_Inventory_DataOnly_Replicate's live-state
                 // build. Keyed on the INVENTORY entity — emits THAT inventory's items (entries carry only the item
                 // handle). Produce is capture-only.
-                [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+                .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT UCk_Utils_Inventory_DataOnly_UE::Has(Entity))
                     { return {}; }
@@ -86,7 +86,7 @@
                     Data.Items = MoveTemp(Entries);
                     return FInstancedStruct::Make(Data);
                 },
-                [DoApplyDataOnlyItems](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
+                .NetApply = [DoApplyDataOnlyItems](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
                 {
                     return DoApplyDataOnlyItems(Entity,
                         New.Get<FCk_RepData_Inventory_DataOnly_Items>().Items,
@@ -94,9 +94,9 @@
                             ? Old.GetValue().Get<FCk_RepData_Inventory_DataOnly_Items>().Items
                             : TArray<FCk_InventoryItem_DataOnly_ReplicatedEntry>{});
                 },
-                [DoHydrateDataOnlyItems](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
+                .HydrationApply = [DoHydrateDataOnlyItems](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                 {
                     return DoHydrateDataOnlyItems(Entity, New.Get<FCk_RepData_Inventory_DataOnly_Items>().Items);
-                });
+                }});
     }
 } GInventory_DataOnly_RepHandlerRegistrar;

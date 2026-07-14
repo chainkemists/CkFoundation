@@ -31,7 +31,7 @@ static struct FTransformRepHandlerRegistrar
         // via the dispatcher's timeout ensure), not an expected wait. An unset Old means first
         // application: snap directly (an interpolation offset would glide the entity in from origin).
 
-        FCk_PersistenceHandlerRegistry::Register_NetOnly<FCk_RepData_Location>(
+        FCk_PersistenceHandlerRegistry::Register_NetOnly<FCk_RepData_Location>({ .NetApply =
                 [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
                 {
                     auto HandleTransform = UCk_Utils_Transform_UE::Cast(Entity);
@@ -51,9 +51,9 @@ static struct FTransformRepHandlerRegistrar
 
                     UCk_Utils_Transform_UE::Request_SetLocation(HandleTransform, FCk_Request_Transform_SetLocation{Location});
                     return ECk_Persistence_ApplyResult::Applied;
-                });
+                } });
 
-        FCk_PersistenceHandlerRegistry::Register_NetOnly<FCk_RepData_Rotation>(
+        FCk_PersistenceHandlerRegistry::Register_NetOnly<FCk_RepData_Rotation>({ .NetApply =
                 [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
                 {
                     auto HandleTransform = UCk_Utils_Transform_UE::Cast(Entity);
@@ -73,9 +73,9 @@ static struct FTransformRepHandlerRegistrar
 
                     UCk_Utils_Transform_UE::Request_SetRotation(HandleTransform, FCk_Request_Transform_SetRotation{Rotation.Rotator()});
                     return ECk_Persistence_ApplyResult::Applied;
-                });
+                } });
 
-        FCk_PersistenceHandlerRegistry::Register_NetOnly<FCk_RepData_Scale>(
+        FCk_PersistenceHandlerRegistry::Register_NetOnly<FCk_RepData_Scale>({ .NetApply =
                 [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                 {
                     auto HandleTransform = UCk_Utils_Transform_UE::Cast(Entity);
@@ -86,7 +86,7 @@ static struct FTransformRepHandlerRegistrar
                         FCk_Request_Transform_SetScale{New.Get<FCk_RepData_Scale>().Value}
                             .Set_LocalWorld(ECk_LocalWorld::World));
                     return ECk_Persistence_ApplyResult::Applied;
-                });
+                } });
     }
 } GTransformRepHandlerRegistrar;
 

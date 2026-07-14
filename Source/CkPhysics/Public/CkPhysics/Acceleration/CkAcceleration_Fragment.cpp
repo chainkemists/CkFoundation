@@ -28,16 +28,16 @@ static struct FAccelerationRepHandlerRegistrar
             return ECk_Persistence_ApplyResult::Applied;
         };
 
-        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SharedApply<FCk_RepData_Acceleration>(
+        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SharedApply<FCk_RepData_Acceleration>({
                 // Capture-only Produce of the self-resident Acceleration container from live Current.
                 // HydrationApply reuses the net Apply; no explicit replication re-arm tag is added.
-                [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+                .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT Entity.Has<ck::FFragment_Acceleration_Current>())
                     { return {}; }
                     return FInstancedStruct::Make(FCk_RepData_Acceleration{Entity.Get<ck::FFragment_Acceleration_Current>().Get_CurrentAcceleration()});
                 },
-                ApplyFn);
+                .SharedApply = ApplyFn});
     }
 } GAccelerationRepHandlerRegistrar;
 

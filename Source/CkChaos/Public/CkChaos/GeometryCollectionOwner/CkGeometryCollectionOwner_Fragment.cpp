@@ -66,11 +66,11 @@ static struct FGeometryCollectionOwnerRepHandlerRegistrar
             }
         };
 
-        FCk_PersistenceHandlerRegistry::Register_NetOnly<FCk_RepData_GeometryCollectionOwner>(
+        FCk_PersistenceHandlerRegistry::Register_NetOnly<FCk_RepData_GeometryCollectionOwner>({
                 // Event-edge semantics (crumble/anchor/strain requests fire on field deltas vs the
                 // last APPLIED data) — always Applied; a not-yet-populated GC record just means the
                 // events have no targets, same as the old inline path.
-                [DoApply](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
+                .NetApply = [DoApply](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
                 {
                     DoApply(Entity,
                         New.Get<FCk_RepData_GeometryCollectionOwner>(),
@@ -79,7 +79,7 @@ static struct FGeometryCollectionOwnerRepHandlerRegistrar
                             : FCk_RepData_GeometryCollectionOwner{});
                     return ECk_Persistence_ApplyResult::Applied;
                 }
-            );
+            });
     }
 } GGeometryCollectionOwnerRepHandlerRegistrar;
 

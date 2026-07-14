@@ -65,9 +65,9 @@ static struct FFloatAttributeRepHandlerRegistrar
 {
     FFloatAttributeRepHandlerRegistrar()
     {
-        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_FloatAttributes>(
-            &ck::attribute_restore::Produce<ck::TFragment_FloatAttribute, FCk_RepData_FloatAttributes>,
-                [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
+        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_FloatAttributes>({
+            .Produce = &ck::attribute_restore::Produce<ck::TFragment_FloatAttribute, FCk_RepData_FloatAttributes>,
+                .NetApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
                 {
                     const auto& NewAttrs = New.Get<FCk_RepData_FloatAttributes>().Attributes;
                     const auto* OldAttrs = Old.IsSet()
@@ -115,11 +115,11 @@ static struct FFloatAttributeRepHandlerRegistrar
                 // Save-load hydration (authority-side, Phase 4B): the v3 payload is CHILD-keyed (per-attribute-entity
                 // Produce), so Entity IS the attribute entity — write its value directly via ApplyReplicatedFloatAttributeEntry.
                 // The OWNER-keyed net Apply above never resolves it.
-                [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
+                .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                 {
                     return ck::attribute_restore::HydrationApply<ck::TFragment_FloatAttribute, FCk_RepData_FloatAttributes, UCk_Utils_FloatAttribute_UE>(
                         Entity, New, &ApplyReplicatedFloatAttributeEntry);
-                });
+                }});
     }
 } GFloatAttributeRepHandlerRegistrar;
 
@@ -132,15 +132,15 @@ static struct FFloatAttributeRefillRepHandlerRegistrar
 {
     FFloatAttributeRefillRepHandlerRegistrar()
     {
-        FCk_PersistenceHandlerRegistry::Register_SaveOnly<FCk_SaveData_FloatAttributeRefill>(
-            &ck::attribute_refill_restore::Produce<
+        FCk_PersistenceHandlerRegistry::Register_SaveOnly<FCk_SaveData_FloatAttributeRefill>({
+            .Produce = &ck::attribute_refill_restore::Produce<
                     ck::TFragment_FloatAttribute, FCk_Handle_FloatAttributeRefill, UCk_Utils_FloatAttributeRefill_UE, FCk_SaveData_FloatAttributeRefill>,
-                [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
+                .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                 {
                     return ck::attribute_refill_restore::HydrationApply<
                         ck::TFragment_FloatAttribute, FCk_Handle_FloatAttributeRefill, UCk_Utils_FloatAttributeRefill_UE, FCk_SaveData_FloatAttributeRefill>(
                             Entity, New);
-                });
+                }});
     }
 } GFloatAttributeRefillRepHandlerRegistrar;
 

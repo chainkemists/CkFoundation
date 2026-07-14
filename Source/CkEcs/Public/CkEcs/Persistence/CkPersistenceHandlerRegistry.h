@@ -10,6 +10,8 @@
 #include <InstancedStruct.h>
 #include <Misc/Optional.h>
 
+#include <type_traits>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 // Result of FHandler::NetApply / HydrationApply. NotReady means the feature the data targets is not composed on
@@ -80,34 +82,82 @@ public:
         FHandler InHandler) -> void;
 
     // ---- Named participation shapes (compile-visible intent) --------------------------------------------------------
-    // Prefer these over hand-building an FHandler: the name states the transport choice the author made, and
-    // Register_SaveOnly's signature makes the Produce-without-HydrationApply misconfig uncompilable (not just ensured).
-    // Two distinct names (SharedApply/SplitApply) rather than an overload set — the variants differ only by TFunction
-    // parameter shapes, which makes overload resolution fragile.
+    // Prefer these over hand-building an FHandler: the shape name states the transport choice the author made, and
+    // each shape takes a designated-init args struct so every lambda is LABELED at the call site (.Produce = ...,
+    // .NetApply = ..., .HydrationApply = ...) instead of being positional. Required slots are compile-enforced
+    // (see FRequired* below) — a Produce-without-HydrationApply, or a missing NetApply, does NOT compile.
+    // Two distinct names (SharedApply/SplitApply) rather than an overload set — the variants differ only by which
+    // lambdas they carry, which would make overload resolution on the args struct fragile.
 
     using FApplyFn   = TFunction<ECk_Persistence_ApplyResult(FCk_Handle& Entity,
                             const FInstancedStruct& NewData, const TOptional<FInstancedStruct>& OldData)>;
     using FRemoveFn  = TFunction<void(FCk_Handle& Entity)>;
     using FProduceFn = TFunction<TOptional<FInstancedStruct>(FCk_Handle& Entity)>;
 
+    // Required-slot wrappers: a designated-init field of one of these has NO default constructor, so OMITTING it in
+    // the braced args below is a COMPILE ERROR (not a runtime ensure) — the enforcement that makes these shapes worth
+    // preferring over a raw FHandler. Implicitly constructible from any compatible callable (raw lambda, FProduceFn/
+    // FApplyFn, or a named local) as a single user-defined conversion; the is_constructible constraint naturally
+    // excludes the wrapper type itself, so the implicit copy/move constructors still apply when the args struct is moved.
+    struct FRequiredProduce
+    {
+        FProduceFn Value;
+        FRequiredProduce() = delete;
+        template <typename T, typename = std::enable_if_t<std::is_constructible_v<FProduceFn, T&&>>>
+        FRequiredProduce(T&& InFn) : Value(Forward<T>(InFn)) {}
+    };
+    struct FRequiredApply
+    {
+        FApplyFn Value;
+        FRequiredApply() = delete;
+        template <typename T, typename = std::enable_if_t<std::is_constructible_v<FApplyFn, T&&>>>
+        FRequiredApply(T&& InFn) : Value(Forward<T>(InFn)) {}
+    };
+
+    // Per-shape designated-init args. Field order = the order designated initializers must be written (C++ requires
+    // aggregate designators in declaration order). Required fields use the wrappers above; optional NetRemove defaults
+    // to an empty TFunction. Each args struct exposes ONLY the slots its shape allows (a save-only handler cannot even
+    // name .NetApply).
+    struct FArgs_NetOnly
+    {
+        FRequiredApply NetApply;
+        FRemoveFn      NetRemove{};
+    };
+    struct FArgs_SaveOnly
+    {
+        FRequiredProduce Produce;
+        FRequiredApply   HydrationApply;
+    };
+    struct FArgs_NetAndSave_SharedApply
+    {
+        FRequiredProduce Produce;
+        FRequiredApply   SharedApply;
+        FRemoveFn        NetRemove{};
+    };
+    struct FArgs_NetAndSave_SplitApply
+    {
+        FRequiredProduce Produce;
+        FRequiredApply   NetApply;
+        FRequiredApply   HydrationApply;
+        FRemoveFn        NetRemove{};
+    };
+
     // Wire-only participation (never in the save file).
     template <typename T_RepData>
-    static auto Register_NetOnly(FApplyFn InNetApply, FRemoveFn InNetRemove = {}) -> void;
+    static auto Register_NetOnly(FArgs_NetOnly InArgs) -> void;
 
-    // Save-only participation (never rides a replicated container). Both params REQUIRED by signature —
-    // the Produce-without-HydrationApply invalid shape is now uncompilable, not just ensured.
+    // Save-only participation (never rides a replicated container). Produce AND HydrationApply are both required by
+    // the args struct — the Produce-without-HydrationApply invalid shape is uncompilable, not just ensured.
     template <typename T_RepData>
-    static auto Register_SaveOnly(FProduceFn InProduce, FApplyFn InHydrationApply) -> void;
+    static auto Register_SaveOnly(FArgs_SaveOnly InArgs) -> void;
 
     // Both transports, one authority-safe applier serving NetApply AND HydrationApply.
     template <typename T_RepData>
-    static auto Register_NetAndSave_SharedApply(FProduceFn InProduce, FApplyFn InSharedApply,
-                                                FRemoveFn InNetRemove = {}) -> void;
+    static auto Register_NetAndSave_SharedApply(FArgs_NetAndSave_SharedApply InArgs) -> void;
 
     // Both transports, distinct appliers (net Apply is client-coupled — the TagSet shape).
     template <typename T_RepData>
-    static auto Register_NetAndSave_SplitApply(FProduceFn InProduce, FApplyFn InNetApply,
-                                               FApplyFn InHydrationApply, FRemoveFn InNetRemove = {}) -> void;
+    static auto Register_NetAndSave_SplitApply(FArgs_NetAndSave_SplitApply InArgs) -> void;
 
     /**
      * Resolves pending registrations, then returns the payload types of every save-participating handler — a

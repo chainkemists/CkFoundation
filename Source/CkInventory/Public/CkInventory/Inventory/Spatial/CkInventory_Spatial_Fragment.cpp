@@ -70,12 +70,12 @@
             return Result;
         };
 
-        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_Inventory_Spatial_Items>(
+        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_Inventory_Spatial_Items>({
                 // Produce-only capture (Phase 3A.4): mirror FProcessor_Inventory_Spatial_Replicate's live-state
                 // build. Keyed on the INVENTORY entity — emits THAT inventory's own items (the Replicate build reads
                 // the inventory's item record; the container's owner-hosted storage is irrelevant to the build).
                 // Produce is capture-only.
-                [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+                .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT UCk_Utils_Inventory_Spatial_UE::Has(Entity))
                     { return {}; }
@@ -100,7 +100,7 @@
                     Data.Items = MoveTemp(Entries);
                     return FInstancedStruct::Make(Data);
                 },
-                [DoApplySpatialItems](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
+                .NetApply = [DoApplySpatialItems](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
                 {
                     return DoApplySpatialItems(Entity,
                         New.Get<FCk_RepData_Inventory_Spatial_Items>().Items,
@@ -108,9 +108,9 @@
                             ? Old.GetValue().Get<FCk_RepData_Inventory_Spatial_Items>().Items
                             : TArray<FCk_InventoryItem_Spatial_ReplicatedEntry>{});
                 },
-                [DoHydrateSpatialItems](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
+                .HydrationApply = [DoHydrateSpatialItems](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                 {
                     return DoHydrateSpatialItems(Entity, New.Get<FCk_RepData_Inventory_Spatial_Items>().Items);
-                });
+                }});
     }
 } GInventory_Spatial_RepHandlerRegistrar;

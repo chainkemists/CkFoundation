@@ -11,10 +11,10 @@ static struct FTagSetRepHandlerRegistrar
 {
     FTagSetRepHandlerRegistrar()
     {
-        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_TagSet>(
+        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_TagSet>({
                 // Capture-only Produce of the self-resident TagSet container from live tags
                 // (payload shape matches FProcessor_TagSet_Replicate).
-                [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+                .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT Entity.Has<ck::FFragment_TagSet>())
                     { return {}; }
@@ -22,7 +22,7 @@ static struct FTagSetRepHandlerRegistrar
                 },
                 // Stamps the sync fragment consumed by the TagSet SyncReplication processor (which
                 // owns the actual diff/apply) — always Applied, the processor has its own gating.
-                [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
+                .NetApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                 {
                     const auto& SavedTags = New.Get<FCk_RepData_TagSet>().Tags;
                     Entity.AddOrGet<ck::FFragment_TagSet_SyncReplication>(SavedTags);
@@ -34,7 +34,7 @@ static struct FTagSetRepHandlerRegistrar
                 // Request_AddTags — Construct re-seeds default tags, so ADD would resurrect a runtime-removed tag)
                 // and re-arm replication so post-load clients converge. Mirrors the client drain's Set_Tags
                 // (CkTagSet_Processor.cpp:160) + the MayRequireReplication arm.
-                [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
+                .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                 {
                     if (NOT Entity.Has<ck::FFragment_TagSet>())
                     { return ECk_Persistence_ApplyResult::NotReady; }
@@ -43,7 +43,7 @@ static struct FTagSetRepHandlerRegistrar
                     Entity.Get<ck::FFragment_TagSet>().Set_Tags(SavedTags);
                     Entity.AddOrGet<ck::FTag_TagSet_MayRequireReplication>();
                     return ECk_Persistence_ApplyResult::Applied;
-                });
+                }});
     }
 } GTagSetRepHandlerRegistrar;
 
