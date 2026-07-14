@@ -5,8 +5,8 @@
 #include "Net/UnrealNetwork.h"
 
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // RegisterLazyTyped
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h"
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.inl.h" // RegisterLazyTyped
 
 // --------------------------------------------------------------------------------------------------------------------
 
