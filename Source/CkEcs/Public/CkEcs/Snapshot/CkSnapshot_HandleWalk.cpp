@@ -4,6 +4,8 @@
 
 #include "UObject/UnrealType.h"    // FStructProperty / FArrayProperty / FScriptArrayHelper / TFieldIterator
 
+#include <StructUtils/InstancedStruct.h> // FInstancedStruct (nested-payload recursion)
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::snapshot
@@ -42,6 +44,20 @@ namespace ck::snapshot
 
             const auto VisitOrRecurse = [&](const FStructProperty* InStructProp, void* InElementMemory) -> void
             {
+                // An FInstancedStruct is opaque to TFieldIterator: its stored struct's properties (and any handle
+                // fields inside them) live behind GetScriptStruct()/GetMutableMemory(), not among the wrapper's own
+                // reflected fields (which carry none). Recurse into the payload so a handle nested in a dynamic
+                // fragment / spawn-params instanced struct is remapped on save and rehashed on load. Appended AHEAD
+                // of the handle-struct test — never reordering the existing checks — so every pre-existing handle is
+                // still visited in its original position (the save-file handle-id stream is positional).
+                if (InStructProp->Struct == FInstancedStruct::StaticStruct())
+                {
+                    auto& Instanced = *static_cast<FInstancedStruct*>(InElementMemory);
+                    if (Instanced.IsValid())
+                    { WalkHandles(Instanced.GetScriptStruct(), Instanced.GetMutableMemory(), InVisit, InRehashAfterKeyVisit); }
+                    return;
+                }
+
                 if (Get_IsHandleStruct(InStructProp->Struct))
                 { InVisit(*static_cast<FCk_Handle*>(InElementMemory)); }
                 else
