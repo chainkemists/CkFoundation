@@ -36,7 +36,8 @@ namespace ck
     // reconstitution abstains Construct, so the entry + the entity-side TFragment_ContainerEntryRef the feature's
     // Replicate processor keys on are missing. Retries per-entity until each SeedContainer accepts (owner/driver
     // preconditions live inside SeedContainer); drops LOUDLY past the same 5s/2s window the net dispatcher uses.
-    // Does NOT remove FTag_Snapshot_JustRestored (the 6 deferred restore processors + Phase-4A SM still key on it).
+    // Does NOT remove FTag_Snapshot_JustRestored (the deferred Model-A restore processors still key on it; the SM no
+    // longer does — its save-load restore is the FProcessor_Sm_HydrationResume redrive, not a JustRestored re-seed).
     class CKECS_API FProcessor_Persistence_ReDriveOnRestore : public ck_exp::TProcessor<
         FProcessor_Persistence_ReDriveOnRestore,
         FCk_Handle,

@@ -44,6 +44,29 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// RAII scope that FProcessor_Hydration_Dispatch holds around each save-load Apply call, so a save-transport handler's
+// Apply can distinguish a LOAD-PATH hydration apply (authority-side — must re-drive local state, e.g. the SM redrive)
+// from an ordinary net receive (client-side). Game-thread only: the dispatchers run serially on the game thread, so a
+// plain static depth counter is race-free (no thread-local needed). Additive + inert until a handler queries
+// Get_IsActive() — the net Apply path never enters this scope, so net behavior is byte-identical.
+class CKECS_API FCk_HydrationApplyScope
+{
+public:
+    FCk_HydrationApplyScope();
+    ~FCk_HydrationApplyScope();
+
+    FCk_HydrationApplyScope(const FCk_HydrationApplyScope&) = delete;
+    auto operator=(const FCk_HydrationApplyScope&) -> FCk_HydrationApplyScope& = delete;
+
+    static auto
+    Get_IsActive() -> bool;
+
+private:
+    static int32 _Depth;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // Result of FHandler::Apply. NotReady means the feature the data targets is not composed on this
 // entity yet — the entry stays pending and the dispatcher retries next tick.
 enum class ECk_RepFragment_ApplyResult : uint8

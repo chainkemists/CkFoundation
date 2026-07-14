@@ -330,44 +330,42 @@ namespace ck
     };
 
     // ================================================================================================================
-    // RESTORE REDRIVE — Server-side, post-snapshot-load. Re-drives a RESTORED StateMachine through its
-    // own lifecycle machinery instead of reconstituting the live state graph (design: docs/superpowers/
-    // specs/2026-06-10-CkSnapshot-StateMachine-restore-design.md, Option A replay-through).
+    // HYDRATION RESUME — Authority-side, save-load. Drives a freshly-composed StateMachine to its SAVED run-state
+    // through its own lifecycle machinery (design: PHASE_4A.md [P4A-F1], Option A replay-through).
     //
-    // The snapshot persists only the decision record: FFragment_Sm_Params (Tier-A) + FFragment_Sm_Current's
-    // {RunStatus, CurrentStateClass}. On first visit this processor stashes that record into
-    // FFragment_Sm_RestorePending, resets Current to virgin, and re-adds FTag_Sm_RequiresSetup —
-    // FProcessor_Sm_Setup then re-attaches the replicated container + relay exactly as on first
-    // composition (that re-attach IS the entire "ReplicateOnRestore" half; no new replication code).
-    // Subsequent visits walk the phase ladder: Start (idempotent against AutoStart's own Start; or Stop
-    // if AutoStart resurrected a saved-Stopped machine) -> Transition into the saved state -> re-Pause if
-    // saved Paused. Fresh post-travel clients converge through the completely ordinary replication path
-    // (run-status mirror + FirstSync initial entry + replay ring, or NoHistory snap-to-current).
+    // Under the v3 rebuild+hydrate load the fresh world already re-created + Setup-composed the SM normally (when
+    // AutoStart==OnSetup, Setup enqueues a Start that FProcessor_Sm_HandleRequests enters as InitialState). The SM's
+    // save-transport Apply handler (CkStateMachine_Replication.cpp), running under
+    // FCk_HydrationApplyScope, stashes FFragment_Sm_HydrationResume{DesiredRunStatus, DesiredStateClass} from the saved
+    // payload. This processor then walks the phase ladder to converge Current onto that decision record: Start
+    // (idempotent against AutoStart's own Start; or Stop if AutoStart resurrected a saved-Stopped machine) ->
+    // Transition into the saved state -> re-Pause if saved Paused -> remove FFragment_Sm_HydrationResume (the done
+    // marker). Because the SM is already composed there is NO virgin reset and NO WaitDriver phase — the fresh boot
+    // built the replication driver, and the redrive only steers the live SM. MarkedDirtyBy pumps the ladder inside the
+    // settle drain; each of the load's settle frames also main-passes it (the scheduler main pass runs every processor
+    // once), so convergence does not depend on pump re-run subtleties.
     //
-    // Option A cost (accepted v1): InitialState's Enter/Exit side effects re-run on every load before the
-    // restore transition lands. Option B (direct entry into the saved state) can later replace the ladder's
-    // Transition phase without touching the persisted format.
+    // Option A cost (accepted v1): InitialState's Enter/Exit side effects re-run on every load before the restore
+    // transition lands. Because the redrive re-fires Initial-state AND saved-state entry effects, a spawn decision on
+    // a re-entered state can duplicate a subordinate — the N1 never-double contract (Blocker [SM-B]) keeps spawn
+    // decisions off the InitialState / saved state, or idempotent behind hydrated guard flags.
     //
     // v1 scope: only machines where the LOCAL machine is the request authority re-drive (ServerAuth /
-    // DoesNotReplicate / Standalone — and the listen-host owning-client case). OwningClientAuthoritative
-    // SMs restored on a machine that is not their authority come back composed-but-Stopped (container +
-    // relay re-attached; the owning client may Start them again) — authority-side resume semantics are an
-    // explicit follow-up design (design doc §4).
-    //
-    // The view iterates the clean Params/Current fragments and POINT-QUERIES ck::FTag_Snapshot_JustRestored
-    // (listing an in_place marker in the view would surface tombstones). The shared marker is never removed
-    // here — FTag_Sm_RestoreRedriven is the per-feature done tag.
+    // DoesNotReplicate / Standalone — and the listen-host owning-client case). OwningClientAuthoritative SMs hydrated
+    // on a machine that is not their authority come back composed-but-Stopped — authority-side resume is a follow-up.
     // ================================================================================================================
 
-    class CKSTATEMACHINE_API FProcessor_Sm_RestoreRedrive : public ck_exp::TProcessor<
-        FProcessor_Sm_RestoreRedrive,
+    class CKSTATEMACHINE_API FProcessor_Sm_HydrationResume : public ck_exp::TProcessor<
+        FProcessor_Sm_HydrationResume,
         FCk_Handle_StateMachine,
         TReadOnly<FFragment_Sm_Params>,
         TReadWrite<FFragment_Sm_Current>,
+        TReadWrite<FFragment_Sm_HydrationResume>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group         = FGroup_Gameplay;
+        using MarkedDirtyBy = FFragment_Sm_HydrationResume;
 
     public:
         using TProcessor::TProcessor;
@@ -378,7 +376,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent) const -> void;
+            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm_HydrationResume& InResume) const -> void;
     };
 
     // ================================================================================================================
