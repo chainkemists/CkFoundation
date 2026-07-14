@@ -6,6 +6,7 @@
 
 #include "CkEcs/Snapshot/CkSnapshot_HandleWalk.h"
 #include "CkEcs/Snapshot/CkSnapshot_Context.h"
+#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h" // FTag_Snapshot_SaveTransient (rule 1.5)
 
 #include "CkEcs/Registry/CkRegistry.h"
 #include "CkEcs/Registry/CkRegistry_SlotTable.h"
@@ -209,6 +210,7 @@ namespace ck::snapshot
         auto AnonymousSkipped = 0;
         auto UnlabeledSkipped = 0;
         auto UnlabeledWithPayloadAudit = 0;
+        auto SaveTransientSkipped = 0;
 
         for (const auto RawId : CandidateIds)
         {
@@ -222,6 +224,25 @@ namespace ck::snapshot
             // Rule 1 — pending destruction ⇒ skip.
             if (IsMarkedForDestruction(Handle))
             { continue; }
+
+            // Rule 1.5 — save-transient: derived state the owner's construction/redrive recreates on load
+            // (canonical: SM graph elements — see FTag_Snapshot_SaveTransient). Respawning these as rows
+            // duplicates the redrive-owned graph and re-runs their lifecycle outside the owning feature's
+            // context. Skip; audit-warn if one carries a hydration payload (same contract as the
+            // unlabeled-ConstructSpawned audit below — a payload here would silently drop).
+            if (Handle.Has<ck::FTag_Snapshot_SaveTransient>())
+            {
+                ++SaveTransientSkipped;
+                if (DoAnyProduce(Handle))
+                {
+                    ck::snapshot::Warning(
+                        TEXT("v3 capture AUDIT: save-transient entity [{}] carries a hydration payload that will be "
+                             "DROPPED — either stop stamping FTag_Snapshot_SaveTransient on it or move the payload "
+                             "to its persisted owner."),
+                        Handle);
+                }
+                continue;
+            }
 
             auto Provenance = ECk_Snapshot_V3_Provenance::RuntimeSpawned;
             auto bPersist = false;
@@ -447,9 +468,10 @@ namespace ck::snapshot
 
         ck::snapshot::Verbose(
             TEXT("Run_CaptureV3: persisted [{}] entities (EngineOwned [{}], ConstructSpawned [{}], RuntimeSpawned [{}], "
-                 "DefinitionBuilt [{}]), [{}] payloads; skipped [{}] unlabeled ConstructSpawned + [{}] anonymous scratch (audit [{}])"),
+                 "DefinitionBuilt [{}]), [{}] payloads; skipped [{}] unlabeled ConstructSpawned + [{}] anonymous scratch "
+                 "+ [{}] save-transient (audit [{}])"),
             Entities.Num(), EngineOwnedCount, ConstructSpawnedCount, RuntimeSpawnedCount, DefinitionBuiltCount, Payloads.Num(),
-            UnlabeledSkipped, AnonymousSkipped, UnlabeledWithPayloadAudit);
+            UnlabeledSkipped, AnonymousSkipped, SaveTransientSkipped, UnlabeledWithPayloadAudit);
 
         return ECk_SnapshotResult::Success;
     }
