@@ -1,0 +1,20 @@
+# oracle-allowlist-p3.txt — fidelity-oracle diff allowlist for Phase 3B's Ck.Snapshot.Rebuild.OracleParity
+#
+# Each non-empty, non-comment line is a Tier-1/Tier-2 oracle diff line that is EXPECTED (not a defect) at Phase 3B
+# and must be annotated as future work rather than treated as a gate failure. Per CTO note N1 (spec §4.2): a
+# RuntimeSpawned entity whose SPAWNER re-executes its spawn post-gate (an HFSM-task spawn under a not-yet-
+# hydration-covered SM) will DOUBLE-SPAWN (recipe respawn + post-open re-execution) until Phase 4A hydration-covers
+# the spawner's control state. Tier-1 structural diff catches it as a duplicate-entity line — allowlist it here with
+# a `# Phase-4-pending:` tag, do NOT "fix" it by suppressing the spawner (that is Phase 4A's hydration job).
+#
+# Format: one substring per line that must appear in an oracle diff line for it to be allowlisted. Match is a
+# case-sensitive substring test against the oracle's rendered diff line.
+#
+# STATUS (2026-07-12, Phase 3B): the CkTests framework gate (probe worlds under /Engine/Maps/Entry) has NO
+# BB-style driver/HFSM spawner, so no N1 duplicate lines are expected here yet. The world-boot infrastructure
+# entities (Bb_DayNightLampDriver, Bb_MusicDirector, generic Ck_EntityScript_WithActor_UE) are SKIPPED by the
+# loader (transient/root-owned => the fresh world's boot re-creates them, see [P3B-D5]) — they are not respawned,
+# so they do not produce duplicate lines. This file is created per PHASE_3B and will gain lines when a BB driver
+# world is oracle-diffed in Phase 4A.
+#
+# Phase-4-pending: (none yet — populated when a driver-spawned-subordinate world is oracle-diffed)
