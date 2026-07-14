@@ -356,7 +356,7 @@ namespace ck::snapshot
 
                     // Bridged actors respawn actor-first ([P3B-F1a]): capture the world transform so the loader
                     // spawns the actor at its saved position (WithActor::Construct then seeds the entity Transform
-                    // from the actor). Mirrors FProcessor_ActorRespawn's Has/Get_EntityCurrentTransform.
+                    // from the actor). Same Has/Get_EntityCurrentTransform guard the retired FProcessor_ActorRespawn used.
                     if (UCk_Utils_Transform_UE::Has(Handle))
                     { Entry.Set_ActorSpawnTransform(UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(Handle)); }
                     break;

@@ -142,6 +142,14 @@ namespace ck
 // where multiple .cpp files may have registrations at the same line number.
 //
 // static_assert fires with a precise message if T satisfies neither tier.
+//
+// Phase 5 (decommission Model A): the Model-A fragment registry is now oracle-only — the v3
+// rebuild+hydrate load never consults it (the fidelity oracle + the registry-level round-trip tests
+// are its only consumers). So the REGISTRATION side of this macro is compiled only under
+// CK_WITH_FIDELITY_ORACLE (= !UE_BUILD_SHIPPING); a Shipping build carries no Model-A registrar at
+// any of its ~127 call sites (zero per-site churn). The static_assert stays UNGATED in both forms so
+// serialize-path authoring errors are still caught in every configuration.
+#if CK_WITH_FIDELITY_ORACLE
 #define CK_REGISTER_SNAPSHOTABLE(_FragmentType_) \
     static_assert( \
         ck::concepts::FragmentHasCustomSnapshotSerialize<_FragmentType_> || \
@@ -157,3 +165,12 @@ namespace ck
         }; \
         static CK_CONCAT(FCk_SnapshotAutoReg_, _FragmentType_) CK_CONCAT(_AutoReg_, _FragmentType_){}; \
     }
+#else
+#define CK_REGISTER_SNAPSHOTABLE(_FragmentType_) \
+    static_assert( \
+        ck::concepts::FragmentHasCustomSnapshotSerialize<_FragmentType_> || \
+        ck::concepts::FragmentIsUStructSnapshotable<_FragmentType_>, \
+        "Fragment " #_FragmentType_ " provides no serialization path: declare " \
+        "`auto SerializeSnapshot(FArchive&, ck::FSnapshotContext&) -> void;` as a member, " \
+        "OR make " #_FragmentType_ " a USTRUCT with GENERATED_BODY().")
+#endif
