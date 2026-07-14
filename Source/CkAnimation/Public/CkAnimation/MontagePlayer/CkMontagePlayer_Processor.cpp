@@ -429,7 +429,11 @@ namespace ck
         if (ck::Is_NOT_Valid(Driver))
         { return; }
 
-        Driver->SetFragmentData<FCk_RepData_MontagePlayer>(FCk_RepData_MontagePlayer{InCurrent.Get_State()});
+        // Keep the FFragment_ContainerRef_MontagePlayer driver resolution above; only the payload build is
+        // unified — consume the registered Produce (byte-identical to the old inline FCk_RepData_MontagePlayer).
+        const auto Produced = UCk_Utils_Net_UE::TryProduce<FCk_RepData_MontagePlayer>(InHandle);
+        if (Produced.IsSet())
+        { Driver->SetFragmentData<FCk_RepData_MontagePlayer>(*Produced); }
     }
 }
 

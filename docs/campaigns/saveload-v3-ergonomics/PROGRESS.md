@@ -29,7 +29,7 @@ shippable; quick.** Nothing is pushed by the executor (Class-4 → Adam review).
 |---|---|---|---|---|
 | 1 — harness + cast sweep + Jump absolute | DONE (2026-07-14) | CkF `3439ac756` (cast) + `f780dcf2d` (Timer Jump); CkTests `6237fa5` (harness+conversion); docs `2f45437fa` (pkg) | build exit 0; **Ck.Snapshot 35/35 (delta-0 by name), Ck.Net 90/90 (delta-0 by name), Ck.Timer 21/21** (planner expected 0 — see D4) | Timer_MPReload converted, both cycles green. Deviations D1–D6. |
 | 2 — rename bundle (absorbs parity PHASE_6) | DONE (2026-07-14) | CkF `a49969195` (rename bundle: 6A+slots+named+registrars, absorbs parity 6A) + `d0fd71e59` (6B T_Policy delete, absorbs parity 6B); CkTests `b29a8aa` (symbol-sync fix) | **build exit 0** (after a fix-rebuild — see [P2-D4]); **Ck.Snapshot 35/35 (delta-0 by name), Ck.Net 90/90 (delta-0 by name)** | parity 6A/6B rows annotated Y. All code gates 0 (6A / `.Apply=` / RegisterLazyTyped-outside-inl / policy-surface). Deviations P2-D1..D4. Site counts: 6A 229 hits/40 files; 24 registrars→29 named calls (NetOnly 4/SaveOnly 6/SharedApply 5/SplitApply 14); 6B ~84 aliased callers untouched. Docs → VALIDATION §5 [P2-D3]. |
-| 3 — symmetry class (a), 7 features | NOT STARTED | | | |
+| 3 — symmetry class (a), 7 features | DONE (2026-07-14) | CkF `3947af498` | build exit 0; **Ck.Net 90/90 (delta-0 by name — byte-identical-wire gate)**, **Ck.Snapshot 35/35 (delta-0)** | `TryProduce<T>` on `UCk_Utils_Net_UE`; 11 wire sites / 7 features consume it (Velocity ×2, Acceleration ×2, TagSet, MontagePlayer, GridOccupancy, Team ×2, Player ×2). All 7 Produce lambdas verified == old wire builders; write-then-replicate order verified for all seed sites. Exit grep 0. Deviation P3-D1. |
 | 4 — symmetry class (b), fold | NOT STARTED | | | |
 | 5 — CkEcs/Persistence header split | NOT STARTED | | | RunAfter seam outcome (fwd-decl vs include): ____ |
 | VALIDATION | NOT STARTED | | | |
@@ -95,6 +95,14 @@ output) / what you did NOT do / question for the planner or Adam.
   carry old vocab (`FCk_ReplicatedFragmentHandlerRegistry`, `.Apply`/`.Remove` slot names, `RegisterLazyTyped`
   recipe) — updated at VALIDATION §5 (its intended "final session" doc pass), where the Register_* recipe rewrite
   is done properly. If the campaign stops after Phase 2, this doc pass is the one outstanding item.
+- **[P3-D1] (Phase 3 / Step 2) — also converted the Velocity + Acceleration Add-time SEED sites.** PHASE_3
+  Step 2 named only the Velocity/Acceleration Replicate PROCESSOR sites, but the Step-4 exit grep demands 0
+  `FCk_RepData_Velocity{`/`FCk_RepData_Acceleration{` outside `*_Fragment.cpp`, and the Add-time seeds
+  (`CkVelocity_Utils.cpp:43`, `CkAcceleration_Utils.cpp:29`) also construct those payloads. Team/Player convert
+  BOTH their seed + update sites, so for symmetry + to satisfy the exit grep I converted the Velocity/Acceleration
+  seeds too. Order verified: `FFragment_Velocity_Current`/`_Acceleration_Current` are composed (Velocity_Utils:26,
+  Acceleration_Utils:24) BEFORE the seed, so `TryProduce` reads the starting value — byte-identical to the old
+  `FCk_RepData_X{InParams.Get_StartingX()}`. Exit grep now 0. Not a Blocker (routine completeness call).
 - **[P2-D4] (Phase 2 / build) — first build failed; one missed cross-repo reference, fix-rebuilt.** The 6A/slot
   rename swept `Plugins/CkFoundation/Source` only; one CkTests file
   (`Test_Snapshot_DynamicFragment_HandleRemap_RoundTrip.cpp`) references the framework types

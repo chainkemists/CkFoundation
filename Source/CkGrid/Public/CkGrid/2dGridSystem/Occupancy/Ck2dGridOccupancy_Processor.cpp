@@ -93,24 +93,11 @@ namespace ck
     {
         auto GridBase = FCk_Handle{InHandle};
 
-        auto Entries = TArray<FCk_2dGridPlacement_ReplicatedEntry>{};
-
-        RecordOf_GridPlacements_Utils::ForEach_ValidEntry(GridBase,
-        [&](FCk_Handle_2dGridPlacement InPlacement)
-        {
-            const auto& Params = InPlacement.Get<FFragment_2dGridPlacement_Params>();
-
-            Entries.Emplace(FCk_2dGridPlacement_ReplicatedEntry(Params.Get_Occupant())
-                .Set_Anchor(Params.Get_Anchor())
-                .Set_Rotation(Params.Get_Rotation())
-                .Set_Cells(Params.Get_Cells()));
-        });
-
-        UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_2dGridPlacements>(
-            GridBase, [&](FCk_RepData_2dGridPlacements& Data)
-        {
-            Data.Placements = MoveTemp(Entries);
-        });
+        // Consume the registered Produce (Ck2dGridOccupancy_Fragment.cpp) — it does the identical record walk.
+        // Byte-identical wire content; the container write + dirty-marker clear are unchanged.
+        const auto Produced = UCk_Utils_Net_UE::TryProduce<FCk_RepData_2dGridPlacements>(GridBase);
+        if (Produced.IsSet())
+        { UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_2dGridPlacements>(GridBase, *Produced); }
 
         InHandle.Remove<MarkedDirtyBy>();
     }
