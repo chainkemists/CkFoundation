@@ -372,7 +372,7 @@ namespace ck
             TEXT("Construction finished, ready for BeginPlay"));
         InHandle.Add<FTag_EntityScript_BeginPlay>();
 
-        // Mark "composed this frame" so the FGroup_Hydration dispatchers defer their apply until this frame's
+        // Mark "composed this frame" so the FGroup_DeferredApply dispatchers defer their apply until this frame's
         // pump / next frame — the feature Setups this construction just queued have not drained yet.
         InHandle.AddOrGet<FTag_EntityScript_ConstructedThisFrame>();
 

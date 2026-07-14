@@ -2,7 +2,7 @@
 
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // RegisterLazyTyped<T> body
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // Register_* entry-point bodies
 
 #include "CkRenderTarget/CkRenderTarget_Log.h"
 #include "CkRenderTarget/Net/CkRenderTarget_RepData.h"
@@ -85,48 +85,7 @@ namespace
     {
         FCk_RenderTargetRepHandlerRegistrar()
         {
-            FCk_ReplicatedFragmentHandlerRegistry::RegisterLazyTyped<FCk_RepData_RenderTarget>(
-                {
-                    .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
-                    {
-                        const auto& Payload = New.Get<FCk_RepData_RenderTarget>();
-
-                        // All channels must resolve before ANY applies — otherwise a partial apply
-                        // would advance some channels and starve the unresolved ones on the retry
-                        // (the dispatcher retries the whole entry).
-                        for (const auto& Channel : Payload.Get_Channels())
-                        {
-                            if (ck::Is_NOT_Valid(UCk_Utils_RenderTarget_UE::TryGet_RenderTarget(Entity, Channel.Get_SyncName())))
-                            { return ECk_RepFragment_ApplyResult::NotReady; }
-                        }
-
-                        for (const auto& Channel : Payload.Get_Channels())
-                        {
-                            auto SyncEntity = UCk_Utils_RenderTarget_UE::TryGet_RenderTarget(Entity, Channel.Get_SyncName());
-                            RenderTarget_EnqueueOrStash(Entity, SyncEntity, Channel);
-                        }
-
-                        ck::render_target::VeryVerbose(TEXT("RepData apply on [{}] — [{}] channel(s)"),
-                            Entity, Payload.Get_Channels().Num());
-
-                        return ECk_RepFragment_ApplyResult::Applied;
-                    },
-                    // Save-load hydration (authority-side): the v3 payload is CHILD-keyed (Produce
-                    // reads this sync child's own AuthoredLog), so Entity IS the sync child here — the
-                    // owner-keyed net Apply (TryGet_RenderTarget on Entity-as-owner) never resolves it,
-                    // and the hydration entry is dropped after the 5s timeout. Route to the child-direct
-                    // restore instead (refill ring + repaint + re-publish to a fresh owner container).
-                    .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
-                    {
-                        const auto& Payload  = New.Get<FCk_RepData_RenderTarget>();
-                        const auto& Channels = Payload.Get_Channels();
-                        if (Channels.IsEmpty())
-                        { return ECk_RepFragment_ApplyResult::Applied; }
-
-                        return ck::FProcessor_RenderTarget_HandleRequests::HydrateFromSavedChannel(Entity, Channels[0])
-                            ? ECk_RepFragment_ApplyResult::Applied
-                            : ECk_RepFragment_ApplyResult::NotReady;
-                    },
+            FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_RenderTarget>(
                     // Produce-only capture: the sync-child's persistent instruction ring lives in
                     // FFragment_RenderTarget_AuthoredLog. Builds the channel-slice consumed on load by
                     // HydrateFromSavedChannel — a single-channel FCk_RepData_RenderTarget keyed by
@@ -134,7 +93,7 @@ namespace
                     // Not gated on Replicates: the AuthoredLog persistence half is mode-agnostic (drawn state of a
                     // DoesNotReplicate target is still save-worthy). A Replicates gate could be added here if load
                     // ever routes only replicated targets — that is the single line that would change.
-                    .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+                    [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                     {
                         if (NOT Entity.Has<ck::FFragment_RenderTarget_Params>()
                             || NOT Entity.Has<FFragment_RenderTarget_AuthoredLog>())
@@ -155,7 +114,46 @@ namespace
                         RepData.Get_Channels().Emplace(MoveTemp(Channel));
                         return FInstancedStruct::Make(RepData);
                     },
-                });
+                    [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
+                    {
+                        const auto& Payload = New.Get<FCk_RepData_RenderTarget>();
+
+                        // All channels must resolve before ANY applies — otherwise a partial apply
+                        // would advance some channels and starve the unresolved ones on the retry
+                        // (the dispatcher retries the whole entry).
+                        for (const auto& Channel : Payload.Get_Channels())
+                        {
+                            if (ck::Is_NOT_Valid(UCk_Utils_RenderTarget_UE::TryGet_RenderTarget(Entity, Channel.Get_SyncName())))
+                            { return ECk_Persistence_ApplyResult::NotReady; }
+                        }
+
+                        for (const auto& Channel : Payload.Get_Channels())
+                        {
+                            auto SyncEntity = UCk_Utils_RenderTarget_UE::TryGet_RenderTarget(Entity, Channel.Get_SyncName());
+                            RenderTarget_EnqueueOrStash(Entity, SyncEntity, Channel);
+                        }
+
+                        ck::render_target::VeryVerbose(TEXT("RepData apply on [{}] — [{}] channel(s)"),
+                            Entity, Payload.Get_Channels().Num());
+
+                        return ECk_Persistence_ApplyResult::Applied;
+                    },
+                    // Save-load hydration (authority-side): the v3 payload is CHILD-keyed (Produce
+                    // reads this sync child's own AuthoredLog), so Entity IS the sync child here — the
+                    // owner-keyed net Apply (TryGet_RenderTarget on Entity-as-owner) never resolves it,
+                    // and the hydration entry is dropped after the 5s timeout. Route to the child-direct
+                    // restore instead (refill ring + repaint + re-publish to a fresh owner container).
+                    [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
+                    {
+                        const auto& Payload  = New.Get<FCk_RepData_RenderTarget>();
+                        const auto& Channels = Payload.Get_Channels();
+                        if (Channels.IsEmpty())
+                        { return ECk_Persistence_ApplyResult::Applied; }
+
+                        return ck::FProcessor_RenderTarget_HandleRequests::HydrateFromSavedChannel(Entity, Channels[0])
+                            ? ECk_Persistence_ApplyResult::Applied
+                            : ECk_Persistence_ApplyResult::NotReady;
+                    });
         }
     };
 

@@ -5,8 +5,7 @@
 #include "CkCore/Ensure/CkEnsure.h"
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // RegisterLazyTyped<T>
-
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // Register_* entry-point bodies
 #include <NativeGameplayTags.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -53,36 +52,10 @@ static struct FCkEntityTagSaveHandlerRegistrar
 {
     FCkEntityTagSaveHandlerRegistrar()
     {
-        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazyTyped<FCk_SaveData_EntityTags>(
-        {
-            // Load-path applier (no net Apply — EntityTag never rides the wire). REPLACE semantics achieved by a single
-            // composite restore-set request that diffs at DRAIN time, never a read-live-then-clear here (see the block
-            // comment above): reading the "current" set at HydrationApply time is a lie because GatedDuringLoad construct
-            // seeds are still enqueued-but-undrained. Enqueue one request, return Applied.
-            .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
-            {
-                CK_ENSURE_IF_NOT(ck::IsValid(Entity),
-                    TEXT("EntityTag hydration skipped — invalid entity [{}]"), Entity)
-                { return ECk_RepFragment_ApplyResult::Applied; }
-
-                const auto& Payload     = New.Get<FCk_SaveData_EntityTags>();
-                const auto& SavedNames  = Payload.Get_TagNames();
-                const auto& SavedCounts = Payload.Get_Counts();
-
-                CK_ENSURE_IF_NOT(SavedNames.Num() == SavedCounts.Num(),
-                    TEXT("EntityTag hydration payload malformed on [{}] — [{}] names vs [{}] counts; restoring the common prefix"),
-                    Entity, SavedNames.Num(), SavedCounts.Num())
-                { /* fall through: DoApply_RestoreSet clamps to FMath::Min(names, counts) rather than restoring nothing */ }
-
-                // ONE composite request — the drain-time handler (DoApply_RestoreSet) SETs the live set to EXACTLY the
-                // saved counted set, diffing against whatever construct-seeds have materialised by then. No live read here.
-                UCk_Utils_EntityTag_UE::Request_RestoreSet(Entity, SavedNames, SavedCounts);
-
-                return ECk_RepFragment_ApplyResult::Applied;
-            },
+        FCk_PersistenceHandlerRegistry::Register_SaveOnly<FCk_SaveData_EntityTags>(
             // Emit the entity's current FName tag set, or UNSET when EntityTag is absent (nothing to persist). UNSET is
             // ambiguous between "never had tags" and "all removed pre-save" — see the block comment's ABSENCE note.
-            .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+            [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
             {
                 if (NOT Entity.Has<ck::FFragment_EntityTag_Current>())
                 { return {}; }
@@ -101,7 +74,31 @@ static struct FCkEntityTagSaveHandlerRegistrar
                 }
                 return FInstancedStruct::Make(Payload);
             },
-        });
+            // Load-path applier (no net Apply — EntityTag never rides the wire). REPLACE semantics achieved by a single
+            // composite restore-set request that diffs at DRAIN time, never a read-live-then-clear here (see the block
+            // comment above): reading the "current" set at HydrationApply time is a lie because GatedDuringLoad construct
+            // seeds are still enqueued-but-undrained. Enqueue one request, return Applied.
+            [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
+            {
+                CK_ENSURE_IF_NOT(ck::IsValid(Entity),
+                    TEXT("EntityTag hydration skipped — invalid entity [{}]"), Entity)
+                { return ECk_Persistence_ApplyResult::Applied; }
+
+                const auto& Payload     = New.Get<FCk_SaveData_EntityTags>();
+                const auto& SavedNames  = Payload.Get_TagNames();
+                const auto& SavedCounts = Payload.Get_Counts();
+
+                CK_ENSURE_IF_NOT(SavedNames.Num() == SavedCounts.Num(),
+                    TEXT("EntityTag hydration payload malformed on [{}] — [{}] names vs [{}] counts; restoring the common prefix"),
+                    Entity, SavedNames.Num(), SavedCounts.Num())
+                { /* fall through: DoApply_RestoreSet clamps to FMath::Min(names, counts) rather than restoring nothing */ }
+
+                // ONE composite request — the drain-time handler (DoApply_RestoreSet) SETs the live set to EXACTLY the
+                // saved counted set, diffing against whatever construct-seeds have materialised by then. No live read here.
+                UCk_Utils_EntityTag_UE::Request_RestoreSet(Entity, SavedNames, SavedCounts);
+
+                return ECk_Persistence_ApplyResult::Applied;
+            });
     }
 } GCkEntityTagSaveHandlerRegistrar;
 
