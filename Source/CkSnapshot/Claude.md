@@ -19,15 +19,16 @@ on this module.
 
 - **Save** (`Snapshot/CkSnapshot_CaptureV3.*`): sweep the registry, classify every entity by **provenance**,
   capture its construction recipe + the payload of every save-participating handler —
-  `FCk_ReplicatedFragmentHandlerRegistry::Get_SaveHandlerTypes()` returns exactly the handlers that pair a
+  `FCk_PersistenceHandlerRegistry::Get_SaveHandlerTypes()` returns exactly the handlers that pair a
   `Produce` (emitter) with a `HydrationApply` (applier), sorted by type path for deterministic files.
 - **Load** (`Subsystem/CkSnapshot_Subsystem.cpp` `DoHydrate_Enqueue`): rebuild entities from their recipes, map
   saved-id → live handle, then queue each payload on the target entity's `FFragment_PendingHydration`.
   `FProcessor_Hydration_Dispatch` drains the queue by calling the handler's `HydrationApply` (authority-side),
   retrying while it returns `NotReady`.
 
-The handler registry, the `Apply`/`NotReady` contract, and the deferred-dispatch machinery are owned by `CkEcs`
-(`CkEcs/Net/ReplicatedFragmentContainer/`) — read [`../CkEcs/Claude.md`](../CkEcs/Claude.md) first.
+The handler registry, the `NetApply`/`HydrationApply`/`NotReady` contract, and the deferred-dispatch machinery are
+owned by `CkEcs` (`CkEcs/Persistence/CkPersistenceHandlerRegistry.h` + the net + hydration dispatchers) — read
+[`../CkEcs/Claude.md`](../CkEcs/Claude.md) first.
 
 ---
 
@@ -47,20 +48,35 @@ House style — private `_Members`, `CK_PROPERTY`, `CK_GENERATED_BODY` (see root
 
 Register inside a **named** registrar struct with a module-prefixed instance name — unity-build-safe, no anonymous
 namespace, no file-local `static` helper (Team: `FTeamRepHandlerRegistrar` / `GTeamRepHandlerRegistrar`;
-SaveFields: filename-derived namespace + `GCkEntityScriptSaveFieldsRegistrar`). Call `RegisterLazyTyped<T>` — it
-resolves the type lazily via `T::StaticStruct()`, so it is safe during static init. Slots on `FHandler`
-(`CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h`):
+SaveFields: filename-derived namespace + `GCkEntityScriptSaveFieldsRegistrar`). Include
+`CkEcs/Persistence/CkPersistenceHandlerRegistry.h` + `.inl.h` (the latter carries the templated bodies).
+
+**Prefer a named participation shape** over hand-building an `FHandler` — the name states the transport the author
+chose, and `Register_SaveOnly`'s signature makes the `Produce`-without-`HydrationApply` misconfig *uncompilable*
+(not merely ensured). Each is `template <typename T_RepData>` and resolves the type lazily via
+`T_RepData::StaticStruct()`, so it is static-init-safe:
+
+| Shape | Transports | Params |
+|---|---|---|
+| `Register_NetOnly<T>` | wire only, never saved | `(FApplyFn NetApply, FRemoveFn NetRemove = {})` |
+| `Register_SaveOnly<T>` | save only, never on the wire | `(FProduceFn Produce, FApplyFn HydrationApply)` — **both REQUIRED** |
+| `Register_NetAndSave_SharedApply<T>` | both; one authority-safe applier | `(FProduceFn Produce, FApplyFn SharedApply, FRemoveFn NetRemove = {})` |
+| `Register_NetAndSave_SplitApply<T>` | both; distinct net vs load appliers | `(FProduceFn Produce, FApplyFn NetApply, FApplyFn HydrationApply, FRemoveFn NetRemove = {})` |
+
+They forward to `RegisterLazyTyped<T>`, which fills the four `FHandler` slots
+(`CkEcs/Persistence/CkPersistenceHandlerRegistry.h`):
 
 | Slot | When | Rule |
 |---|---|---|
 | `Produce` | save capture | Mirror the feature's Replicate-processor live-state build. `return {}` (UNSET) = feature absent on this entity; a SET-but-empty payload = seed-empty (meaningful). **READ-ONLY — never mutate the entity.** Presence of `Produce` *is* save participation — there is no separate opt-in flag. |
-| `HydrationApply` | authority-side load | REQUIRED whenever `Produce` is set — a registration-time `CK_ENSURE_IF_NOT` fires otherwise, and `Get_SaveHandlerTypes` excludes a `Produce`-without-`HydrationApply` (fails loud, never silently corrupts the save). |
-| `Apply` / `Remove` | net receive | **Absent on save-only handlers** — the type never rides a replicated container. |
+| `HydrationApply` | authority-side load | REQUIRED whenever `Produce` is set — `Register_SaveOnly`/`_SharedApply`/`_SplitApply` all take it by-signature (a `Produce` without one is uncompilable), and `Get_SaveHandlerTypes` excludes any leftover `Produce`-without-`HydrationApply` (fails loud, never silently corrupts the save). |
+| `NetApply` / `NetRemove` | net receive | **Absent on save-only handlers** — the type never rides a replicated container (`Register_SaveOnly` leaves them unset). |
 
-If the net `Apply` is authority-safe (no ClientOnly sync processor in its loop), assign the **same lambda** to both
-`Apply` and `HydrationApply` (Team, MontagePlayer, Velocity/Acceleration, Player all do). When it isn't — e.g.
-TagSet's `Apply` only stamps a fragment that a **ClientOnly** SyncReplication processor drains, so on the loading
-authority it would never restore — write a distinct authority-side `HydrationApply` (TagSet: `Set_Tags` directly).
+Choosing between the two net-and-save shapes: if the net `NetApply` is authority-safe (no ClientOnly sync processor
+in its loop), use `Register_NetAndSave_SharedApply` — one lambda serves both `NetApply` and `HydrationApply` (Team,
+MontagePlayer, Velocity/Acceleration, Player all do). When it isn't — e.g. TagSet's `NetApply` only stamps a fragment
+that a **ClientOnly** SyncReplication processor drains, so on the loading authority it would never restore — use
+`Register_NetAndSave_SplitApply` with a distinct authority-side `HydrationApply` (TagSet: `Set_Tags` directly).
 
 ### 3. NotReady-before-any-mutation (non-negotiable)
 
@@ -90,7 +106,7 @@ An **unreplicated** feature re-arms nothing — e.g. a Timer persisted this way 
 Some features have no structural composition step: the fragment exists iff it holds data — composed lazily by the public `Add`, auto-removed at zero (EntityTag's `FFragment_EntityTag_Current`). For these, the §3 `Has<> → NotReady` gate never opens on a v3 load (Construct does not re-compose them) and the payload would drop at the hydration timeout. The sanctioned shape is **reconstitute via the feature's own public deferred requests** from `HydrationApply` (precedent: Grid Occupancy's `Request_AddPlacement` re-drive). ALL of the following must hold:
 
 1. **Data IS existence** — composed by `Add`, removed at zero; no composed-but-empty state exists.
-2. **HydrationApply-only** — never assign a reconstituting lambda to the net `Apply` slot. On clients it races construct-time composition — the exact race anti-pattern #1 exists to prevent.
+2. **HydrationApply-only** — never assign a reconstituting lambda to the net `NetApply` slot (use `Register_SaveOnly`, or a `_SplitApply` whose `NetApply` does NOT reconstitute). On clients it races construct-time composition — the exact race anti-pattern #1 exists to prevent.
 3. **REPLACE must ride the feature's request FIFO, never a read-live-then-clear.** Construct/BeginPlay run during the gated rebuild (`RunsDuringLoad`) and may seed the same feature through the same deferred requests, but feature request-drain processors are `GatedDuringLoad` — at `HydrationApply` time those seeds are enqueued and INVISIBLE to any `Has<>`/`Get_` read. Post-construction is not post-construction-effects. Enqueue a single composite restore-set request: FIFO order guarantees it lands after the seeds regardless of pump ordering.
 4. **Idempotent under double-apply** — re-applying the payload yields the saved set, not a stacked one.
 5. **Absence is ambiguous** — `Produce` returning UNSET cannot distinguish "never had data" from "all removed pre-save"; construct-seeded defaults therefore resurrect when the saved set is empty. Document and pin this.
@@ -105,7 +121,7 @@ Restored values are readable at `OnLoadComplete` (the settle phase pumps to quie
 | Direct authority write + re-arm (distinct `HydrationApply`) | `CkTagSet/Public/CkTagSet/CkTagSet_Fragment.cpp` |
 | Record re-drive + all-or-nothing `NotReady` retry | `CkInventory/Public/CkInventory/Inventory/Spatial/CkInventory_Spatial_Fragment.cpp` |
 | Shared template across a family | `CkAttribute/Public/CkAttribute/CkAttribute_RestorePersistence.h` |
-| Save-only (no `Apply`) | `CkEcs/Public/CkEcs/EntityScript/CkEntityScript_SaveFields.cpp` |
+| Save-only (`Register_SaveOnly`, no `NetApply`) | `CkEcs/Public/CkEcs/EntityScript/CkEntityScript_SaveFields.cpp` |
 
 ---
 
@@ -147,7 +163,7 @@ These are **diagnostics only** — the loader does not act on them.
 ## See also
 
 - [`../CkEcs/Claude.md`](../CkEcs/Claude.md) — the replicated-fragment registry
-  (`FCk_ReplicatedFragmentHandlerRegistry`), the `Apply`/`NotReady` contract, and the two-signal client lifecycle
+  (`FCk_PersistenceHandlerRegistry`), the `NetApply`/`HydrationApply`/`NotReady` contract, and the two-signal client lifecycle
   this reuses.
 - Root [`../../CLAUDE.md`](../../CLAUDE.md) — code style, macros, naming, and the `CK_ENSURE_IF_NOT` /
   no-silent-fallback non-negotiables (not restated here).
