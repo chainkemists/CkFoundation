@@ -463,14 +463,22 @@ auto
 
     InNewEntity.Add<ck::FFragment_LifetimeOwner>(InLifetimeOwner);
 
-    // Provenance stamp (save/load rebuild+hydrate, spec §4.2). If the owner is an EntityScript still inside its
-    // construction window — it carries FFragment_EntityScript_Current but has not yet begun play — then this new
-    // entity is part of the owner's deterministic Construct/BeginPlay build and will be re-created by the owner's
-    // replayed construction on load. Mark it ConstructSpawned so the v3 capture adopts it by identity rather than
-    // respawning a recipe. Owner already begun-play (child spawned by later runtime logic, e.g. an SM task) or not
-    // a script entity → no stamp → RuntimeSpawned by default. See ck::FTag_ConstructSpawned.
-    if (InLifetimeOwner.Has<ck::FFragment_EntityScript_Current>() &&
-        NOT InLifetimeOwner.Has<ck::FTag_EntityScript_HasBegunPlay>())
+    // Provenance stamp (save/load rebuild+hydrate, spec §4.2). If the owner is inside a construction window then this
+    // new entity is part of the owner's deterministic build and will be re-created by the owner's replayed
+    // construction on load — so the v3 capture adopts it by identity (owner + label) rather than respawning a recipe.
+    // Two construction windows qualify:
+    //   1. An EntityScript still constructing — it carries FFragment_EntityScript_Current but has not yet begun play.
+    //   2. A definition-built entity mid-Request_BuildAndReplicate — marked FTag_DefinitionBuild_InProgress for the
+    //      synchronous span of its ConstructionInfo execution. A definition-built entity has NO EntityScript fragment,
+    //      so window (1) never fires for it; window (2) is what lets a Stackable item's labeled stack-count attribute
+    //      child persist and re-hydrate instead of reverting to definition defaults on load.
+    // Owner already begun-play / build complete (child spawned by later runtime logic, e.g. an SM task) or not a
+    // construction owner → no stamp → RuntimeSpawned by default. See ck::FTag_ConstructSpawned.
+    const auto OwnerInConstructionWindow =
+        (InLifetimeOwner.Has<ck::FFragment_EntityScript_Current>() &&
+         NOT InLifetimeOwner.Has<ck::FTag_EntityScript_HasBegunPlay>()) ||
+        InLifetimeOwner.Has<ck::FTag_DefinitionBuild_InProgress>();
+    if (OwnerInConstructionWindow)
     { InNewEntity.Add<ck::FTag_ConstructSpawned>(); }
 
     // Inherit context owner from lifetime owner

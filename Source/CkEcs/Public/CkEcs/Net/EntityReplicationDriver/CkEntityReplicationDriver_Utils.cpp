@@ -8,9 +8,12 @@
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_BuildRecipe.h" // FFragment_BuildRecipe retention (definition-built entity recipe)
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h" // FTag_RepFragments_PendingApply, FFragment_PendingHydration
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h" // Get_WorldForEntity (recipe holder outer)
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h" // FTag_DefinitionBuild_InProgress (construction-window stamp for labeled children)
 
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Algorithms/CkAlgorithms.h" // ck::algo::AnyOf (undrained-dependents recursion)
+
+#include "Misc/ScopeExit.h" // ON_SCOPE_EXIT (DefinitionBuild construction-window tag removal)
 
 #if UE_WITH_IRIS
 #include <Iris/ReplicationSystem/ReplicationSystem.h>
@@ -199,16 +202,29 @@ auto
     UCk_Utils_Net_UE::Copy(InHandle, NewEntity);
     TryAdd(NewEntity);
 
-    for (const auto& ConstructionInfo : InConstructionInfos)
+    // Mark the built entity as its own construction window for the SYNCHRONOUS span of ConstructionInfo execution
+    // below. Construct -> DoConstruct runs user composition inline (BP/AS/C++), so every child a construction script
+    // composes onto NewEntity — a Stackable trait's stack-count IntegerAttribute, etc. — reaches
+    // Request_SetupEntityWithLifetimeOwner while this tag is live, and is stamped ConstructSpawned (persisted +
+    // adopted by (owner, label) on load). A definition-built entity has no EntityScript fragment, so without this
+    // tag those labeled children fall to rule-5 anonymous-skip and revert to definition defaults. The scope guard
+    // removes the tag at block exit — strictly AFTER the last construction script completes and before any later
+    // runtime child could be composed onto NewEntity (which must NOT be stamped) — and is early-return-safe.
     {
-        if (ck::IsValid(ConstructionInfo.Get_ConstructionScriptArchetype()))
+        NewEntity.Add<ck::FTag_DefinitionBuild_InProgress>();
+        ON_SCOPE_EXIT { NewEntity.Remove<ck::FTag_DefinitionBuild_InProgress>(); };
+
+        for (const auto& ConstructionInfo : InConstructionInfos)
         {
-            ConstructionInfo.Get_ConstructionScriptArchetype()->Construct(NewEntity);
-        }
-        else
-        {
-            ConstructionInfo.Get_ConstructionScript()->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(
-                NewEntity);
+            if (ck::IsValid(ConstructionInfo.Get_ConstructionScriptArchetype()))
+            {
+                ConstructionInfo.Get_ConstructionScriptArchetype()->Construct(NewEntity);
+            }
+            else
+            {
+                ConstructionInfo.Get_ConstructionScript()->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(
+                    NewEntity);
+            }
         }
     }
 
