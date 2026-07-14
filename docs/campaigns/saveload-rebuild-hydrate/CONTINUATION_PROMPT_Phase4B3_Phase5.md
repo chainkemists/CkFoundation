@@ -15,7 +15,13 @@ Treat every OTHER file:line as "verify at implementation start" (campaign protoc
   CkTests `a0c2f2d` (AS fixture + 2 gates). Gate: Ck.Snapshot **54/51/3** (both AS tests green, the 3 = [INV-A] trio),
   Net **102/99/3** framework delta-zero. Implemented exactly per §TRACK A below; [P4B-D5] recorded (post-BeginPlay timing).
   Nothing pushed.
-- ⏳ **TRACK B (Phase 5 partial) IN PROGRESS** — see PROGRESS §Phase-5 for the live cluster state.
+- ⏳ **TRACK B (Phase 5 partial) IN PROGRESS — clusters 1a + 2 DONE + COMMITTED, checkpointed before 5.2.2.**
+  Cluster 1a `521e3834d` (oracle-gate Model-A registration + drop dual-write + Get_SaveSlotHeader v3-synthesis, [P5-D1]);
+  cluster 2 `8bdd08346` (delete dormant FProcessor_ActorRespawn). Both GREEN (Ck.Snapshot 54/51/3, delta-zero). **NEXT SESSION:
+  execute cluster 3 (5.2.2 — the big 9-processor JustRestored/re-drive delete) per PROGRESS §Phase-5 progress cluster 3 (full
+  surface + safe order + the CkAttribute stale-include snag + the FloatAttribute.Gate check are all recorded there), then
+  clusters 4 (Transform _Previous revert), 5 (machinery gate + Shipping compile), 6 (docs + amended 5.3 grep + final
+  Ck.Snapshot+Net gate).** Re-run the Net gate after cluster 3 (it deletes replicated-feature restore processors). Nothing pushed.
 
 ## 0. STATE (verify at start)
 - CkFoundation `feature/save-load-improvements` HEAD = `075caaa6f` (docs) on top of the 4B feature commits:

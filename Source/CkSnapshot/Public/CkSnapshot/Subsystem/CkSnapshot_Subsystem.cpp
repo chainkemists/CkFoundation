@@ -195,13 +195,7 @@ void
         ck::snapshot::Verbose(TEXT("Request_Save: pumped world to quiescence in [{}] pump passes"), _LastPumpCount);
     }
 
-    auto ByteWriter = FBufferArchive{};
-    auto Header = FCk_Snapshot_Header{};
-
-    const auto CaptureResult = ck::snapshot::Run_Capture(*World, ByteWriter, Header);
-
-    // v3 capture (rebuild+hydrate, spec §4.2). The LOAD path now consumes v3; Model A is kept for the oracle +
-    // registry tests until Phase 5. A v3 failure DOES fail the save (v3 is now the authoritative load format).
+    // v3 capture (rebuild+hydrate, spec §4.2). Model A is decommissioned in Phase 5 — v3 is the SOLE save format.
     auto ByteWriterV3 = FBufferArchive{};
     auto HeaderV3 = FCk_Snapshot_HeaderV3{};
     const auto CaptureResultV3 = ck::snapshot::Run_CaptureV3(*World, ByteWriterV3, HeaderV3);
@@ -211,13 +205,6 @@ void
         ck::UUtils_Signal_Snapshot_OnSaveComplete::Broadcast(Source, ck::MakePayload(Source, InResult));
         InDelegate.ExecuteIfBound(InResult);
     };
-
-    if (CaptureResult != ECk_SnapshotResult::Success)
-    {
-        ck::snapshot::Error(TEXT("Request_Save: Model-A capture failed with result [{}]"), CaptureResult);
-        DoFinish(CaptureResult);
-        return;
-    }
 
     if (CaptureResultV3 != ECk_SnapshotResult::Success)
     {
@@ -234,9 +221,6 @@ void
         return;
     }
 
-    SaveGame->_Header = Header;
-    SaveGame->_SnapshotBytes = MoveTemp(static_cast<TArray<uint8>&>(ByteWriter));
-
     SaveGame->_HeaderV3 = HeaderV3;
     SaveGame->_SnapshotBytesV3 = MoveTemp(static_cast<TArray<uint8>&>(ByteWriterV3));
 
@@ -248,8 +232,8 @@ void
         return;
     }
 
-    ck::snapshot::Display(TEXT("Request_Save: saved [{}] Model-A bytes + [{}] v3 bytes to slot [{}]"),
-        SaveGame->_SnapshotBytes.Num(), SaveGame->_SnapshotBytesV3.Num(), InSlotName);
+    ck::snapshot::Display(TEXT("Request_Save: saved [{}] v3 bytes to slot [{}]"),
+        SaveGame->_SnapshotBytesV3.Num(), InSlotName);
     DoFinish(ECk_SnapshotResult::Success);
 }
 
@@ -1063,10 +1047,22 @@ FCk_Snapshot_Header
         FName InSlotName) const
 {
     auto* SaveGame = Cast<UCk_Snapshot_SaveGame>(UGameplayStatics::LoadGameFromSlot(InSlotName.ToString(), ck_snapshot_subsystem::UserIndex));
-    if (ck::Is_NOT_Valid(SaveGame))
-    { return {}; }
+    if (ck::Is_NOT_Valid(SaveGame) || SaveGame->_SnapshotBytesV3.Num() == 0)
+    { return {}; } // invalid slot, or a pre-v3 slot with no v3 header of record
 
-    return SaveGame->_Header;
+    // Model A is decommissioned (Phase 5): the SaveGame stores only the v3 header now. This BP/subsystem accessor
+    // keeps its frozen FCk_Snapshot_Header return type ([EDITOR-VERIFY] signature per VALIDATION §3) by synthesizing
+    // the legacy-shaped view from the v3 metadata — the six overlapping fields; the Model-A-only stream fields
+    // (manifest, transient id, tag offset) have no v3 source and stay at their defaults. FormatVersion now reports 3.
+    const auto& HeaderV3 = SaveGame->_HeaderV3;
+    auto Header = FCk_Snapshot_Header{};
+    Header.Set_FormatVersion(HeaderV3.Get_FormatVersion())
+          .Set_EngineVersion(HeaderV3.Get_EngineVersion())
+          .Set_PluginBuildHash(HeaderV3.Get_PluginBuildHash())
+          .Set_TimestampUTC(HeaderV3.Get_TimestampUTC())
+          .Set_WorldAssetPath(HeaderV3.Get_WorldAssetPath())
+          .Set_EntityCount(HeaderV3.Get_EntityCount());
+    return Header;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
