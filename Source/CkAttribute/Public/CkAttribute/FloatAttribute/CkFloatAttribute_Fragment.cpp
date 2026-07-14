@@ -117,7 +117,7 @@ static struct FFloatAttributeRepHandlerRegistrar
                 // The OWNER-keyed net Apply above never resolves it.
                 .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
                 {
-                    return ck::attribute_restore::HydrationApply<ck::TFragment_FloatAttribute, FCk_RepData_FloatAttributes>(
+                    return ck::attribute_restore::HydrationApply<ck::TFragment_FloatAttribute, FCk_RepData_FloatAttributes, UCk_Utils_FloatAttribute_UE>(
                         Entity, New, &ApplyReplicatedFloatAttributeEntry);
                 },
                 .Produce       = &ck::attribute_restore::Produce<ck::TFragment_FloatAttribute, FCk_RepData_FloatAttributes>,

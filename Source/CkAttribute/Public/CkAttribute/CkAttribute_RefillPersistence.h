@@ -2,7 +2,6 @@
 
 #include "CkCore/Enums/CkEnums.h"          // ECk_MinMaxCurrent
 #include "CkEcs/Handle/CkHandle.h"          // FCk_Handle
-#include "CkEcs/Handle/CkHandle_TypeSafe.h" // ck::StaticCast
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h" // ECk_RepFragment_ApplyResult
 
 #include "CkAttribute/CkAttribute_Fragment.h"      // ck::FTag_IsRefillAttribute
@@ -43,7 +42,7 @@ namespace ck::attribute_refill_restore
         if (NOT InEntity.Has<Current>() || NOT InEntity.Has<ck::FTag_IsRefillAttribute>())
         { return {}; }
 
-        auto RefillHandle = ck::StaticCast<T_RefillHandle>(InEntity);
+        auto RefillHandle = T_RefillUtils::Cast(InEntity);
 
         auto Data = T_SaveData{};
         Data.Set_State(T_RefillUtils::Get_RefillState(RefillHandle)); // READ-ONLY tag read
@@ -65,7 +64,7 @@ namespace ck::attribute_refill_restore
         if (NOT InEntity.Has<Current>() || NOT InEntity.Has<ck::FTag_IsRefillAttribute>())
         { return ECk_RepFragment_ApplyResult::NotReady; }
 
-        auto RefillHandle = ck::StaticCast<T_RefillHandle>(InEntity);
+        auto RefillHandle = T_RefillUtils::Cast(InEntity);
 
         const auto SavedState = InNew.Get<T_SaveData>().Get_State();
         if (SavedState == ECk_Attribute_RefillState::Paused)

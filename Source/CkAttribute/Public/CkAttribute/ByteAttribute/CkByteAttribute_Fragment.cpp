@@ -121,7 +121,7 @@ static struct FByteAttributeRepHandlerRegistrar
                 // The OWNER-keyed net Apply above never resolves it.
                 .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
                 {
-                    return ck::attribute_restore::HydrationApply<ck::TFragment_ByteAttribute, FCk_RepData_ByteAttributes>(
+                    return ck::attribute_restore::HydrationApply<ck::TFragment_ByteAttribute, FCk_RepData_ByteAttributes, UCk_Utils_ByteAttribute_UE>(
                         Entity, New, &ApplyReplicatedByteAttributeEntry);
                 },
                 .Produce       = &ck::attribute_restore::Produce<ck::TFragment_ByteAttribute, FCk_RepData_ByteAttributes>,
