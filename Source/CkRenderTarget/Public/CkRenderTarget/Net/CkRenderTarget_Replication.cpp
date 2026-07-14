@@ -6,7 +6,7 @@
 #include "CkRenderTarget/CkRenderTarget_Log.h"
 #include "CkRenderTarget/Net/CkRenderTarget_RepData.h"
 #include "CkRenderTarget/RenderTarget/CkRenderTarget_Fragment.h"
-#include "CkRenderTarget/RenderTarget/CkRenderTarget_Processor.h" // FProcessor_RenderTarget_HandleRequests::HydrateFromSavedChannel (Phase 4B)
+#include "CkRenderTarget/RenderTarget/CkRenderTarget_Processor.h" // FProcessor_RenderTarget_HandleRequests::HydrateFromSavedChannel
 #include "CkRenderTarget/RenderTarget/CkRenderTarget_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -17,7 +17,7 @@
 // carries one ChannelState per RenderTarget sync child. The handler resolves each channel's sync
 // child by sync name (NotReady until the symmetric client-side composition has created them all),
 // then routes new batches to either the child's stash (Setup not done / stash already in flight —
-// CkStateMachine spec §5.4 precedence) or its replay queue.
+// CkStateMachine precedence) or its replay queue.
 // FProcessor_RenderTarget_ApplyReplicatedBatches commits.
 //
 // --------------------------------------------------------------------------------------------------------------------
@@ -91,7 +91,7 @@ namespace
                     {
                         const auto& Payload = New.Get<FCk_RepData_RenderTarget>();
 
-                        // Save-load hydration (authority-side, Phase 4B): the v3 payload is CHILD-keyed (Produce
+                        // Save-load hydration (authority-side): the v3 payload is CHILD-keyed (Produce
                         // reads this sync child's own AuthoredLog), so Entity IS the sync child here — the
                         // owner-keyed net path below (TryGet_RenderTarget on Entity-as-owner) never resolves it,
                         // and the hydration entry is dropped after the 5s timeout. Route to the child-direct
@@ -128,14 +128,14 @@ namespace
 
                         return ECk_RepFragment_ApplyResult::Applied;
                     },
-                    // Produce-only capture (Phase 3A.4): the sync-child's persistent instruction ring lives in
+                    // Produce-only capture: the sync-child's persistent instruction ring lives in
                     // FFragment_RenderTarget_AuthoredLog. Builds the channel-slice consumed on load by
                     // HydrateFromSavedChannel — a single-channel FCk_RepData_RenderTarget keyed by
                     // this child's SyncName. Keyed on the sync-child entity; NO SeedContainer — Produce is
-                    // capture/oracle-only (the Model-A re-drive was retired in Phase 5).
+                    // capture/oracle-only.
                     // Not gated on Replicates: the AuthoredLog persistence half is mode-agnostic (drawn state of a
-                    // DoesNotReplicate target is still save-worthy). 3B may add a Replicates gate if load routes only
-                    // replicated targets — that is the single line that would change.
+                    // DoesNotReplicate target is still save-worthy). A Replicates gate could be added here if load
+                    // ever routes only replicated targets — that is the single line that would change.
                     .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                     {
                         if (NOT Entity.Has<ck::FFragment_RenderTarget_Params>()

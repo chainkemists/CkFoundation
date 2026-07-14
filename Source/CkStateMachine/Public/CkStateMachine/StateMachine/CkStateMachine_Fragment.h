@@ -50,7 +50,7 @@ namespace ck
     // Marks a sub-state-machine (created by UCk_SmTask_SubStateMachine, owned by a parent SM's task) vs
     // a top-level SM. Top-level SMs never carry this tag. A sub-SM is derived graph state — under the v3
     // rebuild+hydrate load its parent's task recreates it fresh when the parent redrives, so it is never
-    // image-restored as an orphan (the Model-A orphan-cleanup this tag once gated has been retired).
+    // image-restored as an orphan.
     CK_DEFINE_ECS_TAG(FTag_Sm_IsSubMachine);
 
     // Marks an SM child entity (Task/Condition) whose user-authored EntityScript has been
@@ -64,10 +64,10 @@ namespace ck
     // ================================================================================================================
 
     // Sticky fault tag set by UCk_SmState_EntityScript::DoVerifyFingerprintAgainstExpected when
-    // a replayed transition's replicated fingerprint diverges from the locally-computed one
-    // (spec §9). Excluded by ApplyReplicatedHistory via TExclude, so the SM is permanently
-    // quiesced after the fault fires. (The spec §9.5 initial-state Setup-time check was never
-    // implemented — only the transition-time verify sets this.)
+    // a replayed transition's replicated fingerprint diverges from the locally-computed one.
+    // Excluded by ApplyReplicatedHistory via TExclude, so the SM is permanently
+    // quiesced after the fault fires. Only the transition-time verify sets this — there is
+    // no initial-state Setup-time check.
     CK_DEFINE_ECS_TAG(FTag_Sm_DeterminismFault);
 
     // One-shot trigger added by MirrorRunStatus when a NON-AUTHORITY machine first learns the SM
@@ -164,7 +164,7 @@ namespace ck
 
         // Fingerprint carried from the replicated event (set by ApplyReplicatedHistory). The
         // commit processor uses it post-Construct to verify the non-authority machine's local
-        // DefineState produced the same structural hash as authority (spec §9). Server-originated
+        // DefineState produced the same structural hash as authority. Server-originated
         // transitions (HandleRequests path) leave this at 0 — that's the sentinel for "no
         // verification, this is the authoritative branch".
         int32 _NewStateFingerprint = 0;
@@ -256,7 +256,7 @@ namespace ck
     // SM's save-transport Apply handler (CkStateMachine_Replication.cpp) via Populate() with the saved
     // {RunStatus, CurrentStateClass}; the ladder then drives the freshly-composed SM to that state through its own
     // Start/Transition/Finalize machinery and REMOVES itself (the done marker) once it converges. The fresh world's
-    // normal boot already composed + Setup-drove the SM (no virgin reset needed — unlike the old Model-A re-drive).
+    // normal boot already composed + Setup-drove the SM (no virgin reset needed).
     // Never snapshotted (transient by construction — only exists between a load and the redrive's completion).
     struct CKSTATEMACHINE_API FFragment_Sm_HydrationResume
     {
@@ -268,7 +268,7 @@ namespace ck
         enum class EPhase : uint8
         {
             Start,        // drive RunStatus toward the desired value (Start, or Stop if AutoStart resurrected a saved-Stopped SM)
-            Transition,   // once Running: transition InitialState -> saved state (Option A replay-through)
+            Transition,   // once Running: transition InitialState -> saved state (replay-through)
             Finalize      // re-apply Paused if that's what was saved, then mark done
         };
 
@@ -464,7 +464,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     // Stash for rep payloads that arrive before local Setup completes OR while a prior stash
-    // is still draining (stash-precedence invariant, spec §5.4). Drained in arrival order by
+    // is still draining (stash-precedence invariant). Drained in arrival order by
     // FProcessor_Sm_FlushPendingReplication_Drain.
     struct CKSTATEMACHINE_API FFragment_Sm_PendingReplicationEntries
     {
