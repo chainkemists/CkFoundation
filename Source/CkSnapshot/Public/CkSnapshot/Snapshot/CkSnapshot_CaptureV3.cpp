@@ -189,13 +189,13 @@ namespace ck::snapshot
             int32                          _Depth = 0;
         };
 
-        const auto SaveTypes = FCk_ReplicatedFragmentHandlerRegistry::Get_SaveHandlerTypes();
+        const auto SaveTypes = FCk_PersistenceHandlerRegistry::Get_SaveHandlerTypes();
 
         const auto DoAnyProduce = [&](FCk_Handle& InEntity) -> bool
         {
             for (const auto* Type : SaveTypes)
             {
-                const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Resolve(Type);
+                const auto* Handler = FCk_PersistenceHandlerRegistry::Resolve(Type);
                 if (Handler == nullptr || NOT Handler->Produce)
                 { continue; }
                 if (Handler->Produce(InEntity).IsSet())
@@ -413,7 +413,7 @@ namespace ck::snapshot
             // ---- Payloads: every Save-flagged handler's Produce for this entity ----
             for (const auto* Type : SaveTypes)
             {
-                const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Resolve(Type);
+                const auto* Handler = FCk_PersistenceHandlerRegistry::Resolve(Type);
                 if (Handler == nullptr || NOT Handler->Produce)
                 { continue; }
 

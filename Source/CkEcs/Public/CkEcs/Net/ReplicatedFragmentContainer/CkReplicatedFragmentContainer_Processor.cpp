@@ -28,7 +28,7 @@ namespace ck
         -> void
     {
         // Defer entities composed this frame (Phase 2 §2.4): their feature Setups drain in the pump AFTER
-        // FGroup_Hydration, so applying now would be stomped. The pending tag stays; the pump (post-Setup) applies.
+        // FGroup_DeferredApply, so applying now would be stomped. The pending tag stays; the pump (post-Setup) applies.
         if (InHandle.Has<FTag_EntityScript_ConstructedThisFrame>())
         { return; }
 
@@ -42,11 +42,11 @@ namespace ck
 
         for (const auto& Removed : Fragments._PendingRemovals)
         {
-            const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Resolve(Removed.GetScriptStruct());
-            if (Handler == nullptr || NOT Handler->Remove)
+            const auto* Handler = FCk_PersistenceHandlerRegistry::Resolve(Removed.GetScriptStruct());
+            if (Handler == nullptr || NOT Handler->NetRemove)
             { continue; }
 
-            Handler->Remove(InHandle);
+            Handler->NetRemove(InHandle);
         }
         Fragments._PendingRemovals.Reset();
 
@@ -57,8 +57,8 @@ namespace ck
             if (NOT Entry._PendingApply)
             { continue; }
 
-            const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Resolve(Entry.Data.GetScriptStruct());
-            if (Handler == nullptr || NOT Handler->Apply)
+            const auto* Handler = FCk_PersistenceHandlerRegistry::Resolve(Entry.Data.GetScriptStruct());
+            if (Handler == nullptr || NOT Handler->NetApply)
             {
                 // Defensive: an entry can only become pending if its handler had Apply at marking
                 // time, so this indicates registry churn. Drop rather than retry forever.
@@ -70,7 +70,7 @@ namespace ck
                 ? TOptional<FInstancedStruct>{Entry._LastAppliedData}
                 : TOptional<FInstancedStruct>{};
 
-            if (Handler->Apply(InHandle, Entry.Data, OldData) == ECk_RepFragment_ApplyResult::Applied)
+            if (Handler->NetApply(InHandle, Entry.Data, OldData) == ECk_Persistence_ApplyResult::Applied)
             {
                 Entry._PendingApply = false;
                 Entry._PendingForSeconds = 0.0f;
@@ -121,7 +121,7 @@ namespace ck::persistence_apply
             FCk_Time InDeltaT)
         -> EApplyOutcome
     {
-        const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Resolve(InData.GetScriptStruct());
+        const auto* Handler = FCk_PersistenceHandlerRegistry::Resolve(InData.GetScriptStruct());
         if (Handler == nullptr || NOT Handler->HydrationApply)
         {
             // No HydrationApply — either registry churn or a handler that never declared its load path. Drop
@@ -129,7 +129,7 @@ namespace ck::persistence_apply
             return EApplyOutcome::DroppedTimeout;
         }
 
-        if (Handler->HydrationApply(InEntity, InData, InOldData) == ECk_RepFragment_ApplyResult::Applied)
+        if (Handler->HydrationApply(InEntity, InData, InOldData) == ECk_Persistence_ApplyResult::Applied)
         { return EApplyOutcome::Applied; }
 
         InOutPendingForSeconds += InDeltaT.Get_Seconds();
@@ -160,7 +160,7 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
-        // [P2-D1] This dispatcher runs LAST in FGroup_Hydration (RunAfter the net dispatcher). Iterate + apply, THEN
+        // [P2-D1] This dispatcher runs LAST in FGroup_DeferredApply (RunAfter the net dispatcher). Iterate + apply, THEN
         // clear FTag_EntityScript_ConstructedThisFrame registry-wide — by now BOTH dispatchers have skipped the
         // constructed-this-frame entities in this main pass, so clearing lets the pump (post-Setup) / next frame
         // re-dispatch them without a stomp. Idiom: CkIsmRenderer_Processor.cpp.

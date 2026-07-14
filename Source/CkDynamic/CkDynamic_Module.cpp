@@ -19,13 +19,13 @@ void FCkDynamicModule::StartupModule()
     // runtime, so no per-type handler can be registered. The dispatcher invokes Apply on the game
     // thread after composition — dynamic fragments need no composition, so write storage + broadcast
     // RepNotify directly and return Applied.
-    FCk_ReplicatedFragmentHandlerRegistry::RegisterFallback(
+    FCk_PersistenceHandlerRegistry::RegisterFallback(
     {
-        .Apply = [](FCk_Handle& InEntity, const FInstancedStruct& InNew, const TOptional<FInstancedStruct>& /*InOld*/) -> ECk_RepFragment_ApplyResult
+        .NetApply = [](FCk_Handle& InEntity, const FInstancedStruct& InNew, const TOptional<FInstancedStruct>& /*InOld*/) -> ECk_Persistence_ApplyResult
         {
             const auto* Type = InNew.GetScriptStruct();
             if (ck::Is_NOT_Valid(Type))
-            { return ECk_RepFragment_ApplyResult::Applied; }
+            { return ECk_Persistence_ApplyResult::Applied; }
 
             auto& Storage = UCk_Utils_DynamicFragment_UE::AddOrGet_Fragment_TypeUnsafe(InEntity, Type);
             Storage = InNew;
@@ -35,7 +35,7 @@ void FCkDynamicModule::StartupModule()
 
             ck::UUtils_Signal_DynamicFragment_OnRepNotify::Broadcast(InEntity, ck::MakePayload(InEntity, Info));
 
-            return ECk_RepFragment_ApplyResult::Applied;
+            return ECk_Persistence_ApplyResult::Applied;
         }
     });
 }

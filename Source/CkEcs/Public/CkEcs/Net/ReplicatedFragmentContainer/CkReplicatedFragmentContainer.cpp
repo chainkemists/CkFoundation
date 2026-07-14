@@ -7,17 +7,17 @@
 // --------------------------------------------------------------------------------------------------------------------
 // Handler Registry
 
-TMap<const UScriptStruct*, FCk_ReplicatedFragmentHandlerRegistry::FHandler>
-    FCk_ReplicatedFragmentHandlerRegistry::_Handlers;
+TMap<const UScriptStruct*, FCk_PersistenceHandlerRegistry::FHandler>
+    FCk_PersistenceHandlerRegistry::_Handlers;
 
-TArray<FCk_ReplicatedFragmentHandlerRegistry::FLazyEntry>
-    FCk_ReplicatedFragmentHandlerRegistry::_PendingHandlers;
+TArray<FCk_PersistenceHandlerRegistry::FLazyEntry>
+    FCk_PersistenceHandlerRegistry::_PendingHandlers;
 
-TOptional<FCk_ReplicatedFragmentHandlerRegistry::FHandler>
-    FCk_ReplicatedFragmentHandlerRegistry::_Fallback;
+TOptional<FCk_PersistenceHandlerRegistry::FHandler>
+    FCk_PersistenceHandlerRegistry::_Fallback;
 
 auto
-    FCk_ReplicatedFragmentHandlerRegistry::
+    FCk_PersistenceHandlerRegistry::
     Register(
         const UScriptStruct* InType,
         FHandler InHandler)
@@ -25,7 +25,7 @@ auto
 {
     CK_ENSURE_IF_NOT(NOT InHandler.Produce || static_cast<bool>(InHandler.HydrationApply),
         TEXT("Persistence handler for [{}] has Produce but no HydrationApply — its state would SAVE but never LOAD. "
-             "Assign HydrationApply (reuse the Apply lambda if the net path is authority-safe)."),
+             "Assign HydrationApply (reuse the NetApply lambda if the net path is authority-safe)."),
         ck::IsValid(InType) ? InType->GetName() : FString{TEXT("<null type>")})
     { /* register anyway; Get_SaveHandlerTypes excludes it, so the misconfig is loud, not corrupting */ }
 
@@ -33,7 +33,7 @@ auto
 }
 
 auto
-    FCk_ReplicatedFragmentHandlerRegistry::
+    FCk_PersistenceHandlerRegistry::
     RegisterLazy(
         FTypeResolver InTypeResolver,
         FHandler InHandler)
@@ -43,7 +43,7 @@ auto
 }
 
 auto
-    FCk_ReplicatedFragmentHandlerRegistry::
+    FCk_PersistenceHandlerRegistry::
     ResolvePending()
     -> void
 {
@@ -56,7 +56,7 @@ auto
         {
             CK_ENSURE_IF_NOT(NOT Entry.Handler.Produce || static_cast<bool>(Entry.Handler.HydrationApply),
                 TEXT("Persistence handler for [{}] has Produce but no HydrationApply — its state would SAVE but never "
-                     "LOAD. Assign HydrationApply (reuse the Apply lambda if the net path is authority-safe)."),
+                     "LOAD. Assign HydrationApply (reuse the NetApply lambda if the net path is authority-safe)."),
                 Type->GetName())
             { /* register anyway; Get_SaveHandlerTypes excludes it, so the misconfig is loud, not corrupting */ }
 
@@ -66,7 +66,7 @@ auto
 }
 
 auto
-    FCk_ReplicatedFragmentHandlerRegistry::
+    FCk_PersistenceHandlerRegistry::
     RegisterFallback(
         FHandler InHandler)
     -> void
@@ -75,7 +75,7 @@ auto
 }
 
 auto
-    FCk_ReplicatedFragmentHandlerRegistry::
+    FCk_PersistenceHandlerRegistry::
     Get_SaveHandlerTypes()
     -> TArray<const UScriptStruct*>
 {
@@ -102,7 +102,7 @@ auto
 }
 
 auto
-    FCk_ReplicatedFragmentHandlerRegistry::
+    FCk_PersistenceHandlerRegistry::
     Find(
         const UScriptStruct* InType)
     -> const FHandler*
@@ -116,7 +116,7 @@ auto
 }
 
 auto
-    FCk_ReplicatedFragmentHandlerRegistry::
+    FCk_PersistenceHandlerRegistry::
     Resolve(
         const UScriptStruct* InType)
     -> const FHandler*
@@ -159,8 +159,8 @@ auto
     {
         auto& Entry = _Items[Index];
 
-        const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Resolve(Entry.Data.GetScriptStruct());
-        if (Handler == nullptr || NOT Handler->Remove)
+        const auto* Handler = FCk_PersistenceHandlerRegistry::Resolve(Entry.Data.GetScriptStruct());
+        if (Handler == nullptr || NOT Handler->NetRemove)
         { continue; }
 
         // Removal dispatches from the deferred dispatcher, never inline during net receive.
@@ -189,8 +189,8 @@ auto
     {
         auto& Entry = _Items[Index];
 
-        const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Resolve(Entry.Data.GetScriptStruct());
-        if (Handler == nullptr || NOT Handler->Apply)
+        const auto* Handler = FCk_PersistenceHandlerRegistry::Resolve(Entry.Data.GetScriptStruct());
+        if (Handler == nullptr || NOT Handler->NetApply)
         { continue; }
 
         MarkEntryPendingApply(Entry, Entity);
@@ -215,8 +215,8 @@ auto
     {
         auto& Entry = _Items[Index];
 
-        const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Resolve(Entry.Data.GetScriptStruct());
-        if (Handler == nullptr || NOT Handler->Apply)
+        const auto* Handler = FCk_PersistenceHandlerRegistry::Resolve(Entry.Data.GetScriptStruct());
+        if (Handler == nullptr || NOT Handler->NetApply)
         { continue; }
 
         MarkEntryPendingApply(Entry, Entity);

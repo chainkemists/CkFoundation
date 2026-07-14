@@ -2,7 +2,7 @@
 
 #include "CkCore/Enums/CkEnums.h"          // ECk_MinMaxCurrent
 #include "CkEcs/Handle/CkHandle.h"          // FCk_Handle
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h" // ECk_RepFragment_ApplyResult
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h" // ECk_Persistence_ApplyResult
 
 #include "CkAttribute/CkAttribute_Fragment.h"      // ck::FTag_IsRefillAttribute
 #include "CkAttribute/CkAttribute_Fragment_Data.h" // ECk_Attribute_RefillState
@@ -57,12 +57,12 @@ namespace ck::attribute_refill_restore
     auto
         HydrationApply(
             FCk_Handle& InEntity,
-            const FInstancedStruct& InNew) -> ECk_RepFragment_ApplyResult
+            const FInstancedStruct& InNew) -> ECk_Persistence_ApplyResult
     {
         using Current = T_DerivedAttribute<ECk_MinMaxCurrent::Current>;
 
         if (NOT InEntity.Has<Current>() || NOT InEntity.Has<ck::FTag_IsRefillAttribute>())
-        { return ECk_RepFragment_ApplyResult::NotReady; }
+        { return ECk_Persistence_ApplyResult::NotReady; }
 
         auto RefillHandle = T_RefillUtils::Cast(InEntity);
 
@@ -72,6 +72,6 @@ namespace ck::attribute_refill_restore
         else
         { T_RefillUtils::Request_Resume(RefillHandle); }
 
-        return ECk_RepFragment_ApplyResult::Applied;
+        return ECk_Persistence_ApplyResult::Applied;
     }
 }

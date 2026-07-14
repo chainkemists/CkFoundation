@@ -114,7 +114,7 @@ private:
     // gated world-tick ever sees pending payloads. That is load-bearing — the hydration dispatcher is load-kernel, so
     // draining it UNDER the gate (kernel-only pump, feature Setups frozen) would let a gate-open Setup stomp a
     // recompute-from-Params value (Velocity/Acceleration). Enqueuing then opening the gate in one callback forces
-    // hydration to drain only in post-gate FULL passes, where each feature Setup precedes the late FGroup_Hydration
+    // hydration to drain only in post-gate FULL passes, where each feature Setup precedes the late FGroup_DeferredApply
     // dispatch. Settling then lets the parked reconcile-destroys + residual requests drain over frames.
     enum class ELoadPhase : uint8 { Idle, TearingDown, AwaitingWorld, Rebuilding, Hydrating, Settling };
 

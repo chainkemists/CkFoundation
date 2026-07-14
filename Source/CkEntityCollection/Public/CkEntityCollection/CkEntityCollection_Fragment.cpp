@@ -5,7 +5,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h" // ck::algo::AnyOf — HydrationApply member-validity gate
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // RegisterLazyTyped<T> body
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // Register_* entry-point bodies
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -29,16 +29,35 @@ static struct FEntityCollectionRepHandlerRegistrar
             Entity.AddOrGet<ck::FFragment_EntityCollection_SyncReplication>(NewCollections, OldCollections);
         };
 
-        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazyTyped<FCk_RepData_EntityCollections>(
-            {
-                .Apply = [DoApplyEntityCollections](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
+        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_EntityCollections>(
+                // Save capture: mirror FProcessor_EntityCollection_Replicate's live-state build. That processor runs
+                // per CHILD collection and writes each child's Get_EntitiesInCollection into the OWNER's shared
+                // FCk_RepData_EntityCollections container (find-or-emplace by CollectionName). Produce runs once on the
+                // OWNER and rebuilds the full array by enumerating the owner's collections — field-for-field identical
+                // per entry (CollectionName + member handles); array order is not load-bearing (hydration looks up by
+                // name). return {} (UNSET) on any entity that hosts no collections (Has_Any false — the child
+                // collection entities themselves, and every non-owner).
+                [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+                {
+                    if (NOT UCk_Utils_EntityCollection_UE::Has_Any(Entity))
+                    { return {}; }
+
+                    auto Data = FCk_RepData_EntityCollections{};
+                    UCk_Utils_EntityCollection_UE::ForEach_EntityCollection(Entity,
+                        [&](FCk_Handle_EntityCollection InCollection) -> void
+                        {
+                            Data.EntityCollections.Emplace(UCk_Utils_EntityCollection_UE::Get_EntitiesInCollection(InCollection));
+                        });
+                    return FInstancedStruct::Make(Data);
+                },
+                [DoApplyEntityCollections](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
                 {
                     DoApplyEntityCollections(Entity,
                         New.Get<FCk_RepData_EntityCollections>().EntityCollections,
                         Old.IsSet()
                             ? Old.GetValue().Get<FCk_RepData_EntityCollections>().EntityCollections
                             : TArray<FCk_EntityCollection_Content>{});
-                    return ECk_RepFragment_ApplyResult::Applied;
+                    return ECk_Persistence_ApplyResult::Applied;
                 },
                 // Save-load hydration (authority-side): the net Apply above only stamps the sync fragment that the
                 // ClientOnly FProcessor_EntityCollection_SyncReplication drains, so on the loading AUTHORITY it would
@@ -53,10 +72,10 @@ static struct FEntityCollectionRepHandlerRegistrar
                 // collections feature must be composed, AND every named child re-composed, AND every saved member
                 // handle re-resolved (rebuilt references settle over load-kernel ticks). All-or-nothing — mirrors the
                 // ClientOnly SyncReplication processor's two gates (child TryGet + member validity).
-                .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
+                [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                 {
                     if (NOT UCk_Utils_EntityCollection_UE::Has_Any(Entity))
-                    { return ECk_RepFragment_ApplyResult::NotReady; }
+                    { return ECk_Persistence_ApplyResult::NotReady; }
 
                     const auto& SavedCollections = New.Get<FCk_RepData_EntityCollections>().EntityCollections;
 
@@ -64,11 +83,11 @@ static struct FEntityCollectionRepHandlerRegistrar
                     {
                         const auto Child = UCk_Utils_EntityCollection_UE::TryGet_EntityCollection(Entity, SavedCollection.Get_CollectionName());
                         if (ck::Is_NOT_Valid(Child))
-                        { return ECk_RepFragment_ApplyResult::NotReady; }
+                        { return ECk_Persistence_ApplyResult::NotReady; }
 
                         if (ck::algo::AnyOf(SavedCollection.Get_EntitiesInCollection(), [](const FCk_Handle& InMember)
                             { return ck::Is_NOT_Valid(InMember); }))
-                        { return ECk_RepFragment_ApplyResult::NotReady; }
+                        { return ECk_Persistence_ApplyResult::NotReady; }
                     }
 
                     // Every gate passed — re-drive. The child was re-composed EMPTY by Construct, so ADD the saved
@@ -91,29 +110,8 @@ static struct FEntityCollectionRepHandlerRegistrar
                             FCk_Request_EntityCollection_AddEntities{SavedCollection.Get_EntitiesInCollection()});
                     }
 
-                    return ECk_RepFragment_ApplyResult::Applied;
-                },
-                // Save capture: mirror FProcessor_EntityCollection_Replicate's live-state build. That processor runs
-                // per CHILD collection and writes each child's Get_EntitiesInCollection into the OWNER's shared
-                // FCk_RepData_EntityCollections container (find-or-emplace by CollectionName). Produce runs once on the
-                // OWNER and rebuilds the full array by enumerating the owner's collections — field-for-field identical
-                // per entry (CollectionName + member handles); array order is not load-bearing (hydration looks up by
-                // name). return {} (UNSET) on any entity that hosts no collections (Has_Any false — the child
-                // collection entities themselves, and every non-owner).
-                .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
-                {
-                    if (NOT UCk_Utils_EntityCollection_UE::Has_Any(Entity))
-                    { return {}; }
-
-                    auto Data = FCk_RepData_EntityCollections{};
-                    UCk_Utils_EntityCollection_UE::ForEach_EntityCollection(Entity,
-                        [&](FCk_Handle_EntityCollection InCollection) -> void
-                        {
-                            Data.EntityCollections.Emplace(UCk_Utils_EntityCollection_UE::Get_EntitiesInCollection(InCollection));
-                        });
-                    return FInstancedStruct::Make(Data);
-                },
-            });
+                    return ECk_Persistence_ApplyResult::Applied;
+                });
     }
 } GEntityCollectionRepHandlerRegistrar;
 
