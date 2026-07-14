@@ -315,21 +315,12 @@ namespace ck
     {
         auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
 
-        UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_EntityCollections>(
-            LifetimeOwner, [&](FCk_RepData_EntityCollections& Data)
-        {
-            const auto Content = UCk_Utils_EntityCollection_UE::Get_EntitiesInCollection(InHandle);
-
-            const auto Found = Data.EntityCollections.FindByPredicate([&](const FCk_EntityCollection_Content& InElement)
-            {
-                return InElement.Get_CollectionName() == Content.Get_CollectionName();
-            });
-
-            if (ck::Is_NOT_Valid(Found, ck::IsValid_Policy_NullptrOnly{}))
-            { Data.EntityCollections.Emplace(Content); }
-            else
-            { *Found = Content; }
-        });
+        // One projection: the registered OWNER-keyed Produce rebuilds the full EntityCollections array via the
+        // same record walk. Full-replace the owner container with it — content-identical to today's per-child
+        // find-or-emplace (each collection's live members read the same way).
+        const auto Produced = UCk_Utils_Net_UE::TryProduce<FCk_RepData_EntityCollections>(LifetimeOwner);
+        if (Produced.IsSet())
+        { UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_EntityCollections>(LifetimeOwner, *Produced); }
     }
 }
 
