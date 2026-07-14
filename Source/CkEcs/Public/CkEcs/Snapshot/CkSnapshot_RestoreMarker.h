@@ -6,12 +6,12 @@
 
 namespace ck
 {
-    // Legacy restore marker, deleted with Model A. Nothing in CkFoundation stamps or reads it any longer — the load path
-    // (UCk_Snapshot_Subsystem::Request_Load) never stamps it, so Has<FTag_Snapshot_JustRestored> is always
-    // false at runtime. RETAINED so the BB superproject still compiles against this header + symbol
-    // (Bb_SnapshotRestore.cpp / Bb_CombatReceiverRestore.cpp, and the BB AS restore-rebind fleet that already
-    // early-outs on the always-false result); deleting this file is a BB-repo task, done together with that
-    // BB-side cleanup. Transient ⇒ no snapshot-registrar side effect, so retention is inert.
+    // Restore marker: stamped by the v3 load (UCk_Snapshot_Subsystem::DoHydrate_Enqueue) on every restored
+    // (saved-id-mapped) entity, before the load gate opens. Game-side rebind processors key off it to
+    // re-resolve handles their persisted fragments carry (e.g. BB's Bb_SnapshotRestore rebind fleet).
+    // The Model-A purge briefly deleted the stamp site (2026-07-13), silently no-op'ing every consumer —
+    // re-stamped under v3 on 2026-07-14. Transient ⇒ never captured; survives on the entity for its
+    // lifetime, so consumers pair it with their own once-per-feature dedup (Bb: Get_RebindDone).
     CK_DEFINE_ECS_TAG_TRANSIENT(FTag_Snapshot_JustRestored);
 
     // Save-transient marker: this entity is DERIVED state whose owner's construction/redrive recreates
