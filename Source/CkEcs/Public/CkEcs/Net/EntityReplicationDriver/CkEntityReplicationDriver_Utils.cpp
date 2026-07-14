@@ -5,6 +5,7 @@
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h" // FTag_RepFragments_PendingApply, FFragment_PendingHydration
 
 #include "CkCore/Ensure/CkEnsure.h"
 
@@ -86,6 +87,53 @@ auto
 {
     auto Visited = TSet<FCk_Entity>{};
     return DoCount_ReplicationDriversIncludingDependents(InHandle, Visited);
+}
+
+// Cycle-safe DFS mirroring DoCount above: does this entity — or any lifetime-dependent — still hold undrained
+// replicated fragments? FTag_RepFragments_PendingApply subsumes queued removals (PreReplicatedRemove sets it when
+// queueing — CkReplicatedFragmentContainer.cpp), so a direct _PendingRemovals probe (private on the Rep object,
+// Utils is not a friend) is unnecessary. FFragment_PendingHydration presence is checked directly — it is removed
+// only once its entry queue empties, so it is ground truth even during a Phase-3B load. Unlike DoCount this does
+// NOT prune at non-driver entities: hydration runs on every net mode, so a non-replicated dependent's queued
+// hydration should still block the aggregate fire during a restore. Bounded by the dispatcher's 5s/2s timeouts.
+static auto
+    DoGet_HasUndrainedReplicatedFragments_Recursive(
+        const FCk_Handle& InHandle,
+        TSet<FCk_Entity>& InOutVisited)
+    -> bool
+{
+    auto AlreadyVisited = false;
+    InOutVisited.Add(InHandle.Get_Entity(), &AlreadyVisited);
+
+    if (AlreadyVisited)
+    {
+        CK_TRIGGER_ENSURE(TEXT("Cyclic LifetimeDependents detected at Entity [{}] while checking for undrained "
+            "replicated fragments — the lifetime-ownership graph must be a tree. Truncating to avoid infinite recursion."),
+            InHandle);
+        return false;
+    }
+
+    if (InHandle.Has<ck::FTag_RepFragments_PendingApply>() ||
+        InHandle.Has<ck::FFragment_PendingHydration>())
+    { return true; }
+
+    for (const auto& Dependent : UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(InHandle))
+    {
+        if (DoGet_HasUndrainedReplicatedFragments_Recursive(Dependent, InOutVisited))
+        { return true; }
+    }
+
+    return false;
+}
+
+auto
+    UCk_Utils_EntityReplicationDriver_UE::
+    Get_HasUndrainedReplicatedFragments_IncludingDependents(
+        const FCk_Handle& InHandle)
+    -> bool
+{
+    auto Visited = TSet<FCk_Entity>{};
+    return DoGet_HasUndrainedReplicatedFragments_Recursive(InHandle, Visited);
 }
 
 auto

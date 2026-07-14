@@ -76,8 +76,17 @@ ck::FProcessorScheduler::
 
         _MainPassOrder.Add(NodeIndex);
 
+        // Load-kernel subset (spec §4.3): the RunsDuringLoad nodes, in the same execution order.
+        const auto RunsDuringLoad = Node._LoadPolicy == ECk_ProcessorLoadPolicy::RunsDuringLoad;
+        if (RunsDuringLoad)
+        { _LoadPassOrder.Add(NodeIndex); }
+
         if (Node._HasDirtyMarker and Node._PumpPolicy != ECk_ProcessorPumpPolicy::SkipPump)
-        { _PumpOrder.Add(NodeIndex); }
+        {
+            _PumpOrder.Add(NodeIndex);
+            if (RunsDuringLoad)
+            { _LoadPumpOrder.Add(NodeIndex); }
+        }
     }
 }
 
@@ -87,10 +96,14 @@ auto
     ck::FProcessorScheduler::
     Tick(
         FCk_Time InDeltaTime,
-        const FCk_Registry& InRegistry)
+        const FCk_Registry& InRegistry,
+        ECk_SchedulerTickScope InScope)
     -> void
 {
     _IsTickInProgress = true;
+
+    // LoadKernel scope iterates only the RunsDuringLoad subset (spec §4.3); Full is the whole graph.
+    const auto& MainOrder = InScope == ECk_SchedulerTickScope::LoadKernel ? _LoadPassOrder : _MainPassOrder;
 
 #if !UE_BUILD_SHIPPING
     const auto DebugTimingEnabled = CVar_SchedulerDebugTiming.GetValueOnGameThread();
@@ -104,7 +117,7 @@ auto
     // timing capture (the gaps between processor scopes on the scheduler track).
     {
         SCOPE_CYCLE_COUNTER(STAT_Scheduler_MainPass);
-        for (const auto NodeIndex : _MainPassOrder)
+        for (const auto NodeIndex : MainOrder)
         {
             // In a dev build this scope's self-time is dominated by the scheduler-debugger's own
             // per-processor FPlatformTime timing below (redundant with STAT_Tick; compiled out in
@@ -156,7 +169,7 @@ auto
         _LastFramePumpCount = 0;
         for (auto PumpIndex = 0; PumpIndex < _MaxPumpIterations; ++PumpIndex)
         {
-            const auto AnotherPumpNeeded = DoPump(InRegistry, PumpIndex);
+            const auto AnotherPumpNeeded = DoPump(InRegistry, PumpIndex, InScope);
             if (NOT AnotherPumpNeeded)
             { break; }
             ++_LastFramePumpCount;
@@ -206,10 +219,14 @@ auto
     ck::FProcessorScheduler::
     DoPump(
         const FCk_Registry& InRegistry,
-        int32 InPumpIndex)
+        int32 InPumpIndex,
+        ECk_SchedulerTickScope InScope)
     -> bool
 {
     auto AnyProcessorTicked = false;
+
+    // LoadKernel scope drains only the RunsDuringLoad pump subset (spec §4.3); Full is the whole pump order.
+    const auto& PumpOrder = InScope == ECk_SchedulerTickScope::LoadKernel ? _LoadPumpOrder : _PumpOrder;
 
 #if !UE_BUILD_SHIPPING
     const auto DebugTimingEnabled = CVar_SchedulerDebugTiming.GetValueOnGameThread();
@@ -218,7 +235,7 @@ auto
     // _PumpOrder pre-filters at construction: dirty-marker nodes only, minus SkipPump opt-outs
     // (time-stepping consumers — see ECk_ProcessorPumpPolicy doc in CkProcessorDescriptor.h),
     // minus ghost/instance-less nodes.
-    for (const auto NodeIndex : _PumpOrder)
+    for (const auto NodeIndex : PumpOrder)
     {
         auto& Node = _Partition._Nodes[NodeIndex];
 

@@ -79,6 +79,10 @@ namespace ck
         // Mirrors FProcessorDescriptor::_PumpPolicy. The scheduler's pump phase consults this
         // to skip processors that opt out of pumping (time-stepping consumers, etc.).
         ECk_ProcessorPumpPolicy _PumpPolicy = ECk_ProcessorPumpPolicy::Default;
+
+        // Mirrors FProcessorDescriptor::_LoadPolicy. The scheduler's LoadKernel tick scope dispatches
+        // only nodes marked RunsDuringLoad (the load-gate kernel).
+        ECk_ProcessorLoadPolicy _LoadPolicy = ECk_ProcessorLoadPolicy::GatedDuringLoad;
     };
 
     // ----------------------------------------------------------------------------------------------------------------

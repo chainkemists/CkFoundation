@@ -46,7 +46,31 @@ auto
 
     const auto TickStatCounter = FScopeCycleCounter{_TickStatId};
 
-    _Scheduler->Tick(FCk_Time{DeltaSeconds}, _Registry);
+    // While the load gate is active, tick only the RunsDuringLoad kernel (spec §4.3) so feature processors stay
+    // frozen against the half-rebuilt world; normal frames tick the whole graph.
+    auto Scope = ck::ECk_SchedulerTickScope::Full;
+    if (const auto* Subsystem = DoGet_OwningSubsystem();
+        Subsystem != nullptr and Subsystem->Get_IsLoadGateActive())
+    { Scope = ck::ECk_SchedulerTickScope::LoadKernel; }
+
+    _Scheduler->Tick(FCk_Time{DeltaSeconds}, _Registry, Scope);
+}
+
+auto
+    ACk_EcsWorld_Actor_UE::
+    DoGet_OwningSubsystem()
+    -> const UCk_EcsWorld_Subsystem_UE*
+{
+    if (_OwningSubsystem.IsValid())
+    { return _OwningSubsystem.Get(); }
+
+    const auto* World = GetWorld();
+    if (ck::Is_NOT_Valid(World))
+    { return nullptr; }
+
+    auto* Subsystem = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+    _OwningSubsystem = Subsystem;
+    return Subsystem;
 }
 
 auto
@@ -163,6 +187,23 @@ auto
 
 auto
     UCk_EcsWorld_Subsystem_UE::
+    Get_IsLoadGateActive() const
+    -> bool
+{
+    return _IsLoadGateActive;
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    Set_IsLoadGateActive(
+        bool InActive)
+    -> void
+{
+    _IsLoadGateActive = InActive;
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
     Deinitialize()
         -> void
 {
@@ -234,7 +275,8 @@ auto
 
 auto
     UCk_EcsWorld_Subsystem_UE::
-    Request_PumpToQuiescence()
+    Request_PumpToQuiescence(
+        ck::ECk_SchedulerTickScope InScope)
     -> int32
 {
     auto TotalPumpCount = int32{0};
@@ -254,7 +296,7 @@ auto
             continue;
         }
 
-        Actor->_Scheduler->Tick(FCk_Time{0.0}, _Registry);
+        Actor->_Scheduler->Tick(FCk_Time{0.0}, _Registry, InScope);
         TotalPumpCount += Actor->_Scheduler->Get_LastFramePumpCount();
     }
 

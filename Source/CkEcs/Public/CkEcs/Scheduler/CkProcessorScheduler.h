@@ -10,6 +10,16 @@
 
 namespace ck
 {
+    // Selects which precomputed order the scheduler iterates this tick. Full = the whole graph (normal frames);
+    // LoadKernel = only RunsDuringLoad nodes, for the frames a CkSnapshot load spends rebuilding the world (spec §4.3).
+    enum class ECk_SchedulerTickScope : uint8
+    {
+        Full,
+        LoadKernel,
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     class CKECS_API FProcessorScheduler
     {
     public:
@@ -19,14 +29,16 @@ namespace ck
             FProcessorGraphPartition&& InPartition);
 
     public:
-        auto Tick(FCk_Time InDeltaTime, const FCk_Registry& InRegistry) -> void;
+        auto Tick(FCk_Time InDeltaTime, const FCk_Registry& InRegistry,
+            ECk_SchedulerTickScope InScope = ECk_SchedulerTickScope::Full) -> void;
 
         auto Get_IsTickInProgress() const -> bool;
 
     private:
         auto DoPump(
             const FCk_Registry& InRegistry,
-            int32 InPumpIndex) -> bool;
+            int32 InPumpIndex,
+            ECk_SchedulerTickScope InScope) -> bool;
 
         auto DoLogPumpLimitReached(
             const FCk_Registry& InRegistry,
@@ -41,6 +53,11 @@ namespace ck
         // opt-out. Avoids re-scanning and branch-skipping the full node list every pass.
         TArray<int32> _MainPassOrder;
         TArray<int32> _PumpOrder;
+
+        // Load-kernel subsets of the two orders above: the RunsDuringLoad nodes only (spec §4.3). Iterated by
+        // Tick/DoPump when InScope == LoadKernel — the frames a CkSnapshot load spends rebuilding the world.
+        TArray<int32> _LoadPassOrder;
+        TArray<int32> _LoadPumpOrder;
 
         int32 _MaxPumpIterations = 30;
         bool _IsTickInProgress = false;

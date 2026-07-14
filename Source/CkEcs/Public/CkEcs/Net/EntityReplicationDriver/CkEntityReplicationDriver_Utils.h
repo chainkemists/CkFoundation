@@ -27,6 +27,17 @@ public:
     Get_NumOfReplicationDriversIncludingDependents(
         const FCk_Handle& InHandle) -> int32;
 
+    // Fire-gating (spec §4.4, CTO note N2): true while THIS entity OR any lifetime-dependent still has replicated
+    // fragments pending apply (FTag_RepFragments_PendingApply — which also covers queued removals) or a queued
+    // save-load hydration payload (FFragment_PendingHydration). Recurses the lifetime-dependents tree — the same
+    // traversal Get_NumOfReplicationDriversIncludingDependents derives the expected-dependent count from, so at
+    // gate-check time (fire tag set once all dependents are synced) every dependent is reachable. Cross-registry
+    // children are excluded from the lifetime-dependents set, so nested-registry entities are invisible here (they
+    // carry no driver on this wire — acceptable). Framework-internal processor plumbing, not public API.
+    static auto
+    Get_HasUndrainedReplicatedFragments_IncludingDependents(
+        const FCk_Handle& InHandle) -> bool;
+
 public:
     UFUNCTION(BlueprintCallable,
         BlueprintAuthorityOnly,
