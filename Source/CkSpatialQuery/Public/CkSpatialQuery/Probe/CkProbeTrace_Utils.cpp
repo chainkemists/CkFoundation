@@ -21,6 +21,7 @@
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
 #include <Jolt/Physics/Collision/Shape/CylinderShape.h>
+#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
 
 #include <Kismet/KismetMathLibrary.h>
@@ -618,10 +619,17 @@ auto
             JoltShape = Settings.Create().Get();
             break;
         }
+        // Jolt's Capsule/Cylinder are Y-AXIS ALIGNED, but this trace runs in Unreal's Z-up frame (and its
+        // own debug draw below assumes a Z-aligned capsule/cylinder) — stand the leaf shape up via a
+        // RotatedTranslatedShape. See jolt::Get_ShapeAxisCorrection_YToZ.
         case ECk_Shape_Type::Capsule:
         {
             const auto& Dimensions = Shape.Get_Capsule();
-            const auto Settings = JPH::CapsuleShapeSettings{Dimensions.Get_HalfHeight(), Dimensions.Get_Radius()};
+            const auto InnerSettings = JPH::CapsuleShapeSettings{Dimensions.Get_HalfHeight(), Dimensions.Get_Radius()};
+            InnerSettings.SetEmbedded();
+
+            const auto Settings = JPH::RotatedTranslatedShapeSettings{
+                JPH::Vec3::sZero(), jolt::Get_ShapeAxisCorrection_YToZ(), &InnerSettings};
             Settings.SetEmbedded();
 
             JoltShape = Settings.Create().Get();
@@ -630,7 +638,11 @@ auto
         case ECk_Shape_Type::Cylinder:
         {
             const auto& Dimensions = Shape.Get_Cylinder();
-            const auto Settings = JPH::CylinderShapeSettings{Dimensions.Get_HalfHeight(), Dimensions.Get_Radius(), Dimensions.Get_ConvexRadius()};
+            const auto InnerSettings = JPH::CylinderShapeSettings{Dimensions.Get_HalfHeight(), Dimensions.Get_Radius(), Dimensions.Get_ConvexRadius()};
+            InnerSettings.SetEmbedded();
+
+            const auto Settings = JPH::RotatedTranslatedShapeSettings{
+                JPH::Vec3::sZero(), jolt::Get_ShapeAxisCorrection_YToZ(), &InnerSettings};
             Settings.SetEmbedded();
 
             JoltShape = Settings.Create().Get();

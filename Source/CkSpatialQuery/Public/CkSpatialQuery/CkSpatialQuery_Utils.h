@@ -59,6 +59,20 @@ namespace ck::jolt
     auto Conv(ECk_BackFaceMode InBackFaceMode) -> JPH::EBackFaceMode;
 
     // ----------------------------------------------------------------------------------------------------------------
+    // Shape Axis Correction
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /// Jolt's Cylinder and Capsule shapes are Y-AXIS ALIGNED by convention — their caps sit at
+    /// (0, -HalfHeight, 0) and (0, +HalfHeight, 0) (see Jolt's CylinderShape.h / CapsuleShape.h).
+    /// CkSpatialQuery runs Jolt directly in Unreal's Z-up frame, however: Conv(FVector) is a straight
+    /// X->X, Y->Y, Z->Z passthrough with NO axis swap. Uncorrected, every Jolt cylinder/capsule we build
+    /// lies on its side with its axis along world Y — an anisotropic query volume, not just a bad visual.
+    /// This quat is a +90 degree rotation about X, mapping the shape's local +Y to +Z: the top cap moves
+    /// from (0, +HalfHeight, 0) to (0, 0, +HalfHeight), so the shape stands UP instead of upside-down.
+    /// Wrap the shape in a JPH::RotatedTranslatedShapeSettings with this rotation (and zero translation).
+    auto Get_ShapeAxisCorrection_YToZ() -> JoltQuat;
+
+    // ----------------------------------------------------------------------------------------------------------------
     // Probe Body User Data
     // ----------------------------------------------------------------------------------------------------------------
 
