@@ -13,8 +13,8 @@
 #include <Misc/Optional.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Shared Produce / SeedContainer / hydration-apply for the attribute family (Float/Byte/Integer/Vector/Rotator), used
-// by each kind's registrar. The shared capture/oracle-only Produce + SeedContainer for attributes.
+// Shared Produce / hydration-apply for the attribute family (Float/Byte/Integer/Vector/Rotator), used by each kind's
+// registrar.
 //
 // v3 SAVE (Produce) is VALUE-EMITTING and keyed PER-ATTRIBUTE-ENTITY (Produce fires on the entity holding the Current
 // component). It emits this attribute's own Base/Final for each composed component (Current always; Min/Max if present)
@@ -25,12 +25,6 @@
 // FProcessor_Attribute_Replicate re-publishes to post-load clients — no explicit owner-container refill needed (the
 // owner container already exists on the freshly-Constructed owner). The net Apply below the branch is OWNER-keyed and
 // untouched (byte-identical wire).
-//
-// Model-A SeedContainer stays EMPTY-seed BY CONSTRUCTION (seeds T_RepDataStruct{}, NOT the now-value-bearing Produce
-// data): the value comes from the restored fragment image + the re-armed Replicate pass, so an EMPTY seed + re-arm is
-// behaviour-neutral to Model A AND sidesteps the per-owner upsert-merge — a value seed would land only the first
-// attribute's data, since TryAddContainerFragment returns AlreadyExists WITHOUT writing for siblings (CkNet_Utils.h).
-// SeedContainer is Model-A/oracle-only (v3 never calls it; the Model-A re-drive was retired in Phase 5).
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::attribute_restore
@@ -67,38 +61,6 @@ namespace ck::attribute_restore
         }
 
         return FInstancedStruct::Make(MoveTemp(Data));
-    }
-
-    template <template <ECk_MinMaxCurrent> class T_DerivedAttribute, typename T_RepDataStruct>
-    auto
-        SeedContainer(
-            FCk_Handle& InEntity,
-            const FInstancedStruct& /*InData*/) -> ECk_AddedOrNot
-    {
-        using Current = T_DerivedAttribute<ECk_MinMaxCurrent::Current>;
-        using Min     = T_DerivedAttribute<ECk_MinMaxCurrent::Min>;
-        using Max     = T_DerivedAttribute<ECk_MinMaxCurrent::Max>;
-
-        auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InEntity);
-        if (ck::Is_NOT_Valid(LifetimeOwner))
-        { return ECk_AddedOrNot::NotAdded; }
-
-        // EMPTY seed on purpose (Model-A-only, see header note): value comes from the restored image + the re-armed
-        // Replicate pass. Seeding the value-bearing Produce data would leave the shared owner container holding only
-        // the first-seeding attribute (TryAddContainerFragment returns AlreadyExists without writing for siblings).
-        const auto AddedOrNot = UCk_Utils_Net_UE::TryAddContainerFragment<T_RepDataStruct>(
-            LifetimeOwner, T_RepDataStruct{});
-        if (AddedOrNot == ECk_AddedOrNot::NotAdded)
-        { return AddedOrNot; }
-
-        // Re-arm the per-component replication triggers (Current always present; Min/Max only if composed).
-        InEntity.AddOrGet<typename Current::FTag_MayRequireReplication>();
-        if (InEntity.Has<Min>())
-        { InEntity.AddOrGet<typename Min::FTag_MayRequireReplication>(); }
-        if (InEntity.Has<Max>())
-        { InEntity.AddOrGet<typename Max::FTag_MayRequireReplication>(); }
-
-        return AddedOrNot;
     }
 
     // Save-load hydration (Phase 4B) — shared authority-side branch for every attribute kind. Returns UNSET when NOT

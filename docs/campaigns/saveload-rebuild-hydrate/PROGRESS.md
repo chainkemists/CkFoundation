@@ -81,6 +81,22 @@ fix set below. Root-cause history retained under "ROOT-CAUSED" for the record.**
   (`AutoTest.ObjectPooling.NetConstructed`) — NOT touched/committed by this session (native tags need no .ini entry;
   `Inventory.AutoTest_Net` is absent from the .ini, confirming the native registration suffices).
 
+## Phase F2 (obj-3 footguns + SeedContainer dead-code) — GREEN + COMMITTED (Opus, 2026-07-13)
+
+- **F2a — delete dead SeedContainer machinery (obj-3 F4). COMMITTED CkF `9cfe3f3b4`** (unpushed). Purely subtractive:
+  the `FHandler::SeedContainer` field + `Get_ReDriveHandlerTypes` (dead, no callers) + the `RegisterLazyTyped`
+  default-seed synth (now a thin forwarder to `RegisterLazy`) + `ck::attribute_restore::SeedContainer` template + the 8
+  registrar `.SeedContainer` assignments (5 attribute via a parallel Workflow + AnimPlan/MontagePlayer/TagSet). 12 files,
+  −147 net lines. Gate: Ck.Snapshot 53/1, Net 103/102/1 (delta-zero — the one fail is the documented StateMachine.Net
+  flake). Residual: ~13 include/other comments still mention SeedContainer → F4 comment sweep.
+- **F2b — live-path footguns (obj-3 F1/F2/F3). COMMITTED CkF `bdba6a673`** (unpushed). CkSnapshot_Subsystem.cpp +
+  CkSnapshot_LoadReport.h: (F1) `DoHydrate_Enqueue` fires `CK_ENSURE_IF_NOT(Data.IsValid())` on a deserialize-fail,
+  counts into a new `_PayloadsDropped` LoadReport field (was a silent `continue`); (F2) `Settling` now finishes only once
+  `DoIs_HydrationComplete()` (no payloads pending) AND the min settle frames elapsed, with the frame-cap as a loud
+  `CK_TRIGGER_ENSURE` abort — **OnLoadComplete now fires later (behavior change, [F2-D1] Adam review)**; (F3) narrowed —
+  the F1 ctx-owner-first rebuild already READS `_ContextOwnerSavedId`, so the field is no longer dead; the RuntimeSpawned
+  post-spawn `Request_Override` re-link remains a documented follow-up ([F2-D2]). Gate: Ck.Snapshot 53/1 + Net delta-zero.
+
 Files (all under Source/): NEW `CkEcs/.../EntityReplicationDriver/CkEntityReplicationDriver_BuildRecipe.{h,cpp}`
 (`ck::FFragment_BuildRecipe` + holder, mirror of SpawnRecipe); `CkEntityReplicationDriver_Utils.cpp` (stamp in
 `Request_TryBuildAndReplicate` after Construct, before the DoesNotReplicate return); `CkSnapshot_Header.h`
