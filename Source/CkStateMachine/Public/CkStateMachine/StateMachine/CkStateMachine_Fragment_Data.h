@@ -209,8 +209,8 @@ public:
     // metadata and round-trips NOTHING (empirically: every field restored to its default). They
     // serialize through the reflected SerializeItem path (the proxy archive writes
     // _InitialStateClass by path string). Used directly as FFragment_Sm_Params; the post-load
-    // re-drive (FProcessor_Sm_RestoreRedrive) re-runs Setup/Start/Transition from these +
-    // FFragment_Sm_Current's persisted decision record.
+    // hydration redrive (FProcessor_Sm_HydrationResume) drives the freshly-composed SM through
+    // Start/Transition from these + FFragment_Sm_Current's persisted decision record.
     using IsSnapshotable = void;
 
 private:
