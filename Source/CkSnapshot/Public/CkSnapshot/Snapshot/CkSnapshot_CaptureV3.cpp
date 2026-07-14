@@ -401,6 +401,13 @@ namespace ck::snapshot
                 }
             }
 
+            // G1 Transform parity — capture the CURRENT world transform for EVERY persisted entity that carries a
+            // Transform fragment, regardless of provenance, so the loader restores its post-settle world position.
+            // Orthogonal to the RuntimeSpawned _ActorSpawnTransform seed above (which only positions the bridged actor
+            // spawn); this column corrects post-spawn drift for everyone. Identity (default) when no Transform fragment.
+            if (UCk_Utils_Transform_UE::Has(Handle))
+            { Entry.Set_SavedWorldTransform(UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(Handle)); }
+
             Entities.Emplace(MoveTemp(Entry));
 
             // ---- Payloads: every Save-flagged handler's Produce for this entity ----
