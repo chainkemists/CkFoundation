@@ -42,6 +42,28 @@ namespace ck
         CK_PROPERTY_GET(_Requests);
     };
 
+    // Identity of the last path-network corridor installed into this agent's nav-path slot, so the
+    // OnRouteResolved bridge can distinguish "fresh plan to consume" from "corridor I already
+    // installed" — the corridor fragment persists across MoveTos and network rebuilds. Goal pins
+    // which MoveTo the corridor answered; epoch pins which build of the network it was planned
+    // against (a rebuild replans the same goal at a new epoch → re-install). Cleared by
+    // HandleRequests on every network-routed MoveTo.
+    struct CKCROWD_API FFragment_CrowdAgent_InstalledRoute
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_CrowdAgent_InstalledRoute);
+
+        friend class FProcessor_CrowdAgent_OnRouteResolved;
+
+    private:
+        FVector _GoalLocation = FVector::ZeroVector;
+        int32 _NetworkEpoch = 0;
+
+    public:
+        CK_PROPERTY_GET(_GoalLocation);
+        CK_PROPERTY_GET(_NetworkEpoch);
+    };
+
     // Marks an agent as needing one-time setup (Gate 0: stamped by Add(), consumed by FProcessor_CrowdAgent_Setup
     // on the next tick). Gate 3+ uses the consumption to spawn the agent's probe child entity.
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_NeedsSetup);

@@ -35,6 +35,7 @@ public class CkCrowd : CkModuleRules
 			"CkSpatialQuery",
 
 			"CkNavigation",
+			"CkPathNetwork",   // follower agents route MoveTo through the path network (corridor → nav-path install seam)
 		});
 	}
 }

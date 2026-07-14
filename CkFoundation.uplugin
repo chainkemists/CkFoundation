@@ -737,6 +737,26 @@
       ]
     },
     {
+      "Name": "CkPathNetwork",
+      "Type": "Runtime",
+      "LoadingPhase": "Default",
+      "WhitelistPlatforms": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
+    },
+    {
+      "Name": "CkPathNetworkEditor",
+      "Type": "UncookedOnly",
+      "LoadingPhase": "Default",
+      "WhitelistPlatforms": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
+    },
+    {
       "Name": "CkObjective",
       "Type": "Runtime",
       "LoadingPhase": "Default",

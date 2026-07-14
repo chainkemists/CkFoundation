@@ -51,6 +51,24 @@ struct CKNAVIGATION_API FCk_Nav_Algorithm
         const FVector&            InAgentLocation,
         float                     InAgentRadius,
         FCk_Nav_PathResult&       OutResult) -> void;
+
+    // The external path-provider seam. Installs an externally-computed polyline (e.g. a
+    // CkPathNetwork corridor) onto InHandle's FFragment_Nav_PathResult exactly as if
+    // FindPathSync had produced it — status Ready, waypoints + destination populated,
+    // Nav_OnPathReady broadcast. Downstream consumers (CkCrowd's OnPathResolved poll,
+    // steering) are provider-agnostic by construction.
+    static auto InstallExternalPath(
+        FCk_Handle&     InHandle,
+        TArray<FVector> InWaypoints,
+        const FVector&  InDestination) -> void;
+
+    // Companion to InstallExternalPath: parks the entity's path result at Pending while an
+    // external provider computes. Without this, pollers (CkCrowd's OnPathResolved) would consume
+    // the PREVIOUS Ready result as if it answered the new request — the nav processor performs
+    // the equivalent stamp when it starts servicing a FindPath, but no nav request exists when
+    // an external provider owns the query. Creates the result fragment if absent.
+    static auto MarkPathPending(
+        FCk_Handle& InHandle) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
