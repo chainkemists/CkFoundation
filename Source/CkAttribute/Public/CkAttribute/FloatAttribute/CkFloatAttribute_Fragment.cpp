@@ -7,6 +7,7 @@
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 #include "CkAttribute/CkAttribute_RestorePersistence.h" // shared attribute Produce + HydrationApply helpers
+#include "CkAttribute/CkAttribute_RefillPersistence.h"  // shared refill run-state Produce + HydrationApply helpers
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -123,5 +124,28 @@ static struct FFloatAttributeRepHandlerRegistrar
             });
     }
 } GFloatAttributeRepHandlerRegistrar;
+
+// --------------------------------------------------------------------------------------------------------------------
+// Save-only handler for the Float attribute REFILL run-state (Running/Paused). Distinct from the VALUE handler above:
+// the run-state is never on the wire, so this handler has NO net Apply — Produce + HydrationApply only. Both fire on
+// the refill CHILD entity (per-attribute-entity keying). See CkAttribute_RefillPersistence.h.
+
+static struct FFloatAttributeRefillRepHandlerRegistrar
+{
+    FFloatAttributeRefillRepHandlerRegistrar()
+    {
+        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazyTyped<FCk_SaveData_FloatAttributeRefill>(
+            {
+                .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
+                {
+                    return ck::attribute_refill_restore::HydrationApply<
+                        ck::TFragment_FloatAttribute, FCk_Handle_FloatAttributeRefill, UCk_Utils_FloatAttributeRefill_UE, FCk_SaveData_FloatAttributeRefill>(
+                            Entity, New);
+                },
+                .Produce = &ck::attribute_refill_restore::Produce<
+                    ck::TFragment_FloatAttribute, FCk_Handle_FloatAttributeRefill, UCk_Utils_FloatAttributeRefill_UE, FCk_SaveData_FloatAttributeRefill>,
+            });
+    }
+} GFloatAttributeRefillRepHandlerRegistrar;
 
 // --------------------------------------------------------------------------------------------------------------------
