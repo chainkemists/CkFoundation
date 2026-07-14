@@ -130,6 +130,7 @@ private:
     auto DoRehydrate_SaveKeyResolver() -> void;          // repopulate _SaveKeyResolverMap from LIVE FFragment_SaveKey entities
     auto DoDeserialize_V3Blob(const TArray<uint8>& InBytes) const -> FInstancedStruct; // saved-id map-backed handle remap
     auto DoRebuild_Tick() -> bool;                       // resolve/spawn each entry into _SavedIdMap; true == complete
+    auto DoApply_SavedTransforms() -> void;              // restore each mapped entity's saved WORLD transform (G1)
     auto DoHydrate_Enqueue() -> void;                    // write payloads -> FFragment_PendingHydration + tag (once)
     auto DoIs_HydrationComplete() const -> bool;         // no live FTag_Hydration_PendingApply remains
     auto DoReconcile_Queue() -> void;                    // subtractive Request_DestroyEntity of stray labeled children

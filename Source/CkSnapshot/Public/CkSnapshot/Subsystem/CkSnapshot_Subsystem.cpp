@@ -21,6 +21,9 @@
 #include "CkEcs/Snapshot/CkSnapshot_HandleWalk.h"             // ck::snapshot::RemapHandles
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h" // FFragment_PendingHydration, FTag_Hydration_PendingApply
 
+#include "CkEcsExt/Transform/CkTransform_Utils.h"             // G1 saved-world-transform restore (actor + pure-ECS)
+#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"     // FCk_Request_Transform_SetTransform (pure-ECS mover)
+
 #include "CkCore/Algorithms/CkAlgorithms.h"                  // ck::algo::NoneOf
 
 #include "CkLabel/CkLabel_Utils.h"                            // ConstructSpawned adopt/reconcile by label
@@ -831,12 +834,68 @@ auto
 
 auto
     UCk_Snapshot_Subsystem_UE::
+    DoApply_SavedTransforms()
+    -> void
+{
+    // G1 Transform parity: restore each MAPPED entity's saved WORLD transform. The transform rides the entity table
+    // (not a Produce payload) by design — a Produce handler would race FProcessor_Transform_SyncFromActor's per-tick
+    // stomp on actor-backed entities. Called once from DoHydrate_Enqueue, BEFORE payloads are enqueued; the deferred
+    // Transform requests / actor SetActorTransform land in the load-kernel settle pumps.
+    for (const auto& Entry : _V3Tables.Get_Entities())
+    {
+        // Bridged RuntimeSpawned actors already respawn AT their saved transform (via _ActorSpawnTransform seeding the
+        // actor spawn). Re-applying would be redundant and could fight the spawn — skip. This is the ONLY guard that
+        // keeps bridged actors from being double-applied.
+        if (NOT Entry.Get_ActorClassPath().IsEmpty())
+        { continue; }
+
+        // Identity is the "no Transform fragment" default (capture only writes the column when the entity Has one).
+        // Identity -> Identity is a no-op, so skipping it also avoids stomping an actor whose entity carries no Transform.
+        const auto& Saved = Entry.Get_SavedWorldTransform();
+        if (Saved.Equals(FTransform::Identity))
+        { continue; }
+
+        const auto* Mapped = _SavedIdMap.Find(Entry.Get_SavedId());
+        if (Mapped == nullptr || ck::Is_NOT_Valid(*Mapped))
+        { continue; }
+        auto Entity = *Mapped;
+
+        // Actor-backed entity (EngineOwned player pawn, EngineOwned SaveKey level actor): drive the ACTOR only. NEVER
+        // the entity-side Transform — FProcessor_Transform_SyncFromActor stomps it back from the actor every tick.
+        if (auto* Actor = UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor(Entity);
+            ck::IsValid(Actor))
+        {
+            constexpr auto bSweep = false;
+            Actor->SetActorTransform(Saved, bSweep, nullptr, ETeleportType::TeleportPhysics);
+            continue;
+        }
+
+        // Pure-ECS mover (no owning actor): re-drive through the Transform request surface. Request_SetTransform is the
+        // atomic set — it decomposes into World location + rotation + scale requests internally — and drains in the
+        // load-kernel pumps AFTER any Construct-seeded transform requests (FIFO), so the saved value wins.
+        if (UCk_Utils_Transform_UE::Has(Entity))
+        {
+            UCk_Utils_Transform_TypeUnsafe_UE::Request_SetTransform(
+                Entity, FCk_Request_Transform_SetTransform{Saved});
+        }
+        // else: no owning actor and no Transform fragment — nothing to restore.
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
     DoHydrate_Enqueue()
     -> void
 {
     if (_HydrationEnqueued)
     { return; }
     _HydrationEnqueued = true;
+
+    // G1 Transform parity — restore saved world transforms BEFORE enqueuing payloads (and well before the Phase 0
+    // orphan walk below), so a restored entity is at its saved position by the time its payloads hydrate.
+    DoApply_SavedTransforms();
 
     auto EnqueuedCount = 0;
     auto PayloadsDropped = 0;
@@ -1252,7 +1311,7 @@ FCk_Snapshot_Header
     // The SaveGame stores only the v3 header now. This BP/subsystem accessor keeps its frozen
     // FCk_Snapshot_Header return type by synthesizing the legacy-shaped view from the v3 metadata —
     // the six overlapping fields; the legacy-only stream fields (manifest, transient id, tag offset)
-    // have no v3 source and stay at their defaults. FormatVersion now reports 3.
+    // have no v3 source and stay at their defaults. FormatVersion mirrors the v3 header (now 4).
     const auto& HeaderV3 = SaveGame->_HeaderV3;
     auto Header = FCk_Snapshot_Header{};
     Header.Set_FormatVersion(HeaderV3.Get_FormatVersion())
