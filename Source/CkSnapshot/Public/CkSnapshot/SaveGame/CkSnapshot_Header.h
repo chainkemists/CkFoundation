@@ -50,7 +50,9 @@ public:
     //   1 — initial format.
     //   2 — dynamic-fragment handle remap covers TYPED handles (IsChildOf, not exact-match) + TSet/TMap containers,
     //       so v2 streams carry handle ids a v1 reader would not expect (and vice versa) — no cross-compatibility.
-    static constexpr uint16 CurrentFormatVersion = 2;
+    //   3 — FFragment_EntityScript_Current now serializes _SpawnParams (FInstancedStruct) after the script object,
+    //       widening every entity-script entity's stream — a v2 reader would misparse it.
+    static constexpr uint16 CurrentFormatVersion = 3;
 
 private:
     UPROPERTY() uint16              _FormatVersion = CurrentFormatVersion;

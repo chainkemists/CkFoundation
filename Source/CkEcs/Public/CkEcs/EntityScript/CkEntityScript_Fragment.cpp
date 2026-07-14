@@ -18,8 +18,10 @@ namespace ck
 {
     FFragment_EntityScript_Current::
         FFragment_EntityScript_Current(
-            UCk_EntityScript_UE* InScript)
+            UCk_EntityScript_UE* InScript,
+            FInstancedStruct InSpawnParams)
         : _Script(InScript)
+        , _SpawnParams(MoveTemp(InSpawnParams))
     {
     }
 
@@ -56,6 +58,10 @@ namespace ck
 
         if (_Script.IsValid())
         { _Script->Serialize(InAr); }
+
+        // FInstancedStruct round-trips its own struct-type path + payload. NOTE: this widens the
+        // snapshot stream — snapshots captured before _SpawnParams existed cannot be restored.
+        _SpawnParams.Serialize(InAr);
     }
 
     FRequest_EntityScript_Replicate::

@@ -138,7 +138,17 @@ namespace ck_cue_subsystem_base
                     ck::IsValid(CueScript))
                 {
                     ck::cue::Verbose(TEXT("Restarting existing cue [{}] on entity [{}]"), InCueName, InOwnerEntity);
-                    UCk_Utils_EntityScript_UE::TryInjectEntityScriptSpawnParams(CueScript, InSpawnParams);
+                    if (ck::IsValid(InSpawnParams))
+                    {
+                        // Keep the entity's stored params (Get_SpawnParams) coherent with the restart's params.
+                        UCk_Utils_EntityScript_UE::Set_SpawnParams(ExistingCue, InSpawnParams);
+
+                        // CDO-shared scripts must never have members injected — see the spawn processor.
+                        if (CueScript->Get_InstancingPolicy() == ECk_EntityScript_InstancingPolicy::InstancedPerEntity)
+                        {
+                            UCk_Utils_EntityScript_UE::TryInjectEntityScriptSpawnParams(CueScript, InSpawnParams);
+                        }
+                    }
                     CueScript->Restart();
                     return FCk_Handle_PendingEntityScript{ExistingCue};
                 }

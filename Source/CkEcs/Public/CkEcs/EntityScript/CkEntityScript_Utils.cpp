@@ -65,6 +65,29 @@ auto
 
 auto
     UCk_Utils_EntityScript_UE::
+    Get_SpawnParams(
+        const FCk_Handle_EntityScript& InHandle)
+    -> FInstancedStruct
+{
+    return InHandle.Get<ck::FFragment_EntityScript_Current>().Get_SpawnParams();
+}
+
+auto
+    UCk_Utils_EntityScript_UE::
+    Set_SpawnParams(
+        FCk_Handle& InScriptEntity,
+        const FInstancedStruct& InSpawnParams)
+    -> void
+{
+    CK_ENSURE_IF_NOT(InScriptEntity.Has<ck::FFragment_EntityScript_Current>(),
+        TEXT("Entity [{}] has no EntityScript fragment — cannot set SpawnParams"), InScriptEntity)
+    { return; }
+
+    InScriptEntity.Get<ck::FFragment_EntityScript_Current>()._SpawnParams = InSpawnParams;
+}
+
+auto
+    UCk_Utils_EntityScript_UE::
     Relink_AssociatedEntities_AfterRestore(
         UWorld* InWorld)
     -> int32

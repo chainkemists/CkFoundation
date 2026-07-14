@@ -65,6 +65,25 @@ public:
     Get_ScriptClass(
         const FCk_Handle_EntityScript& InHandle);
 
+    // Per-entity copy of the params the entity was spawned with. Invalid (empty) when the spawn
+    // passed none. This — not injected member properties — is the supported read for NotInstanced
+    // (CDO-shared) scripts. BP/AS extract the typed struct via FInstancedStruct.Get(StructType);
+    // C++ prefers TryGet_SpawnParams<T> below (no payload copy).
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|EntityScript",
+              DisplayName="[Ck][EntityScript] Get_SpawnParams")
+    static FInstancedStruct
+    Get_SpawnParams(
+        const FCk_Handle_EntityScript& InHandle);
+
+public:
+    // C++-only typed access — nullptr when the entity carries no spawn params or they hold a
+    // different struct type.
+    template <typename T_ParamsStruct>
+    static auto
+    TryGet_SpawnParams(
+        const FCk_Handle_EntityScript& InHandle) -> const T_ParamsStruct*;
+
 public:
     // Re-establish every entity script's _AssociatedEntity back-pointer to its owning entity after a CkSnapshot
     // restore. The back-pointer is a Transient field set only at spawn (see FProcessor_EntityScript_SpawnEntity),
@@ -123,6 +142,14 @@ public:
         UCk_EntityScript_UE* InEntityScript,
         const FInstancedStruct& InSpawnParams) -> void;
 
+    // Replaces the entity's stored spawn params (FFragment_EntityScript_Current). For in-place
+    // re-parameterization flows where no new spawn request runs (e.g. cue RestartExisting) —
+    // keeps Get_SpawnParams/DoGet_SpawnParams coherent with what the script was last given.
+    static auto
+    Set_SpawnParams(
+        FCk_Handle& InScriptEntity,
+        const FInstancedStruct& InSpawnParams) -> void;
+
     // Establishes entity-script replication for an already-constructed, driver-bearing entity on the authority:
     // resolves the owning driver, accounts for a just-created owner's dependent count, calls Request_Replicate (which
     // sets the driver's ReplicationData_EntityScript — the payload Iris pushes so clients materialise + re-derive the
@@ -137,6 +164,21 @@ public:
         const FInstancedStruct& InSpawnParams,
         const TOptional<FCk_Handle>& InContextOwnerOverride = {}) -> void;
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+template <typename T_ParamsStruct>
+auto
+    UCk_Utils_EntityScript_UE::
+    TryGet_SpawnParams(
+        const FCk_Handle_EntityScript& InHandle)
+    -> const T_ParamsStruct*
+{
+    if (NOT InHandle.Has<ck::FFragment_EntityScript_Current>())
+    { return nullptr; }
+
+    return InHandle.Get<ck::FFragment_EntityScript_Current>().Get_SpawnParams().template GetPtr<T_ParamsStruct>();
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 

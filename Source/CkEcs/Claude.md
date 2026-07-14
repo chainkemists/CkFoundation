@@ -169,6 +169,17 @@ class UCk_EntityScript_UE : public UCk_GameWorldContextObject_UE
 - `Get_AssociatedEntity()` — the entity this script is attached to (from C++).
 - `DoGet_ScriptEntity()` — same, exposed as a Blueprint callable (use from BPs/AS).
 - Instancing policy: `InstancedPerEntity` (default) creates one instance per spawned entity; `NotInstanced` shares the CDO — use the CDO mode only for stateless scripts.
+- Spawn params live on the entity: `FFragment_EntityScript_Current` carries the spawn request's
+  `FInstancedStruct`, readable via `UCk_Utils_EntityScript_UE::Get_SpawnParams` /
+  `TryGet_SpawnParams<T>` (C++) or `DoGet_SpawnParams()` on the script (BP/AS; extract typed via
+  `FInstancedStruct.Get(StructType)` in AS).
+- `NotInstanced` contract: ExposeOnSpawn member injection is SKIPPED for CDO-shared scripts (a
+  later same-class spawn would clobber the shared object's members before the deferred BeginPlay
+  processor runs, and injection would permanently mutate class defaults). CDO-shared scripts read
+  per-entity data via `DoGet_SpawnParams()`; the lifecycle processors re-stamp `_AssociatedEntity`
+  before every deferred callback (ContinueConstruction/BeginPlay/EndPlay), so
+  `DoGet_ScriptEntity()` is per-callback-correct on the shared object. User-declared mutable
+  members remain shared state — keep CDO-mode scripts stateless.
 
 ---
 

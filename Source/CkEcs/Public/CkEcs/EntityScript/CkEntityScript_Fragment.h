@@ -10,6 +10,8 @@
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 #include "CkEcs/Concepts/CkSnapshot_Concepts.h" // forward-declares ck::FSnapshotContext for the SerializeSnapshot decl
 
+#include <StructUtils/InstancedStruct.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_EntityScript_UE;
@@ -65,7 +67,8 @@ namespace ck
 
         explicit
         FFragment_EntityScript_Current(
-            UCk_EntityScript_UE* InScript);
+            UCk_EntityScript_UE* InScript,
+            FInstancedStruct InSpawnParams = {});
 
     private:
         // WEAK — lifetime owned by the CkCore ObjectPooling subsystem (NotInstanced = the CDO)
@@ -75,8 +78,14 @@ namespace ck
         // so the fragment pins it itself (the save/load campaign owns removal)
         TStrongObjectPtr<UCk_EntityScript_UE> _SnapshotLoadPin;
 
+        // Per-entity copy of the spawn request's params. Authoritative for NotInstanced (CDO-shared)
+        // scripts, whose deferred callbacks (BeginPlay/EndPlay) cannot rely on member injection —
+        // a second same-class spawn before BeginPlay would have clobbered the shared object's members.
+        FInstancedStruct _SpawnParams;
+
     public:
         CK_PROPERTY_GET(_Script);
+        CK_PROPERTY_GET(_SpawnParams);
 
     public:
         // Path #3 (Section 1): round-trips the EntityScript instance via its class-path + UObject::Serialize.
