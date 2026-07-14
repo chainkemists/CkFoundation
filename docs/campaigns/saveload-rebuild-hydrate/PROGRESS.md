@@ -15,7 +15,7 @@
 | 4A.1 | PHASE_4A.md | **DONE** (SM redrive→hydration; committed). 4A.2 (N1 discriminator + SpawnerResumes test) DEFERRED ([N1-A]-blocked). | 2026-07-12 | CkF: 705e7d57e (SM hydration); CkTests: 773a4d2 (comment) | GREEN mod casualties+flake: Ck.Snapshot **52/45/7** (both Parity.StateMachine* GREEN, 9→7; 7 = 4B casualties); Ck.StateMachine 24/25 (lone red = documented OwningClientAuth_SubSm flake — passed alone + in Net run); Net 102/99/3 delta-zero (kiosk env-trio only, no new framework Ck.*.Net red) |
 | 4A.2 | PHASE_4A.md | DEFERRED ([N1-A] scope call) | | | |
 | 4B | PHASE_4B.md | **IN PROGRESS** — casualties closed (TagSet/RenderTarget/Attributes×5/AnimPlan) + **4B.3 AS smoke DONE** (framework FCk_SaveData_EntityScriptFields handler + 2 AS gates green). **Grid + Inventory×2 DEFERRED → [INV-A]**. Verification-gated leftovers (4B.1 params-mutators, MontagePlayer rebind) still blocked on OracleParity/BB-driver-world ([P4B-N1]). | 2026-07-12 | CkF: 5088f5336 (TagSet), ede66976f (RenderTarget), db83e687a (AnimPlan), 5b7c1e077 (Attributes×5), 19613a1eb (invariant fix), **09ca84f41 (4B.3 SaveGame-fields handler)**; CkTests: **a0c2f2d (4B.3 AS gates)** | GREEN: Ck.Snapshot **54/51/3** (both `AS.SaveGameFields_RoundTrip`+`AS.NonSaveGameField_Drops` green; the 3 = [INV-A] trio by name; Meta ratchet + v3 AUDIT delta-zero); Net **102/99/3** framework Ck.*.Net delta-zero (kiosk env-trio only; SM.Net flake passed) |
-| 5 | PHASE_5.md + VALIDATION.md | **IN PROGRESS — partial (Track B); final blocked** | 2026-07-12 | see §Phase-5 progress | see §Phase-5 progress |
+| 5 | PHASE_5.md + VALIDATION.md | **Track B (decommission Model A) partial COMPLETE — clusters 1a–6 DONE + COMMITTED; Phase-5 FINAL blocked** | 2026-07-12 | see §Phase-5 progress | Ck.Snapshot 54/51/3 (3=[INV-A]); Net 102/98/4 framework delta-zero; Shipping compile OK |
 
 ## Phase-5 progress (cluster tracker — Track B, decommission Model A "gate, don't delete")
 
@@ -38,8 +38,10 @@ Dev-behavior-neutral (machinery stays compiled in Dev) — the deletes land firs
   AS green, delta-zero). Commit CkF `8bdd08346`. **Cross-repo follow-ups for Adam (NOT a CkF-session edit):** 2 stale BB comments
   name FProcessor_ActorRespawn (`Bb_PlayerSaveLoad.h:14`, `Bb_SaveLoadProbe.cpp:274`); 1 stale CkTests comment
   (`CkAutoTest_NetSubject_M2bProbe_Replicated.cpp:11`).
-- [ ] **Cluster 3 — 5.2.2 delete the JustRestored re-drive machinery (NEXT — full surface mapped below; large/delicate, do with
-  fresh context).** ⚠️ SAFE ORDER: delete the CONSUMERS first (tree stays compilable — each keys on the still-present tag), then
+- [x] **Cluster 3 — 5.2.2 delete the JustRestored re-drive machinery — DONE (CkF `f4dd25992`; Ck.Snapshot 54/51/3 delta-zero,
+  FloatAttribute.Gate GREEN → no rewrite needed; Net framework Ck.*.Net delta-zero). KEPT `CkSnapshot_RestoreMarker.h` +
+  `FTag_Snapshot_JustRestored` for cross-repo BB consumers per [P5-D3] (plan overlooked them).** Original SAFE ORDER (executed):
+  delete the CONSUMERS first (tree stays compilable — each keys on the still-present tag), then
   the tag + marker + stamp + stale includes LAST. Surface (verified 2026-07-12):
   - **Whole-file deletes:** `CkPersistence_ReDrive_Processor.h`+`.cpp` (FProcessor_Persistence_ReDriveOnRestore +
     FFragment_Persistence_ReDrivePending, CkEcs); `CkSnapshot_RestoreMarker.h` (FTag_Snapshot_JustRestored, CkEcs) — DELETE LAST.
@@ -59,10 +61,35 @@ Dev-behavior-neutral (machinery stays compiled in Dev) — the deletes land firs
     stamps JustRestored). Re-run AFTER the delete; if it regresses it needs its documented rewrite (VALIDATION.md pre-authorizes),
     NOT a delete rollback. My read (unverified): its single-world VALUE assert reads the restored Current from the image, not the
     re-driven replication container, so it should hold — but confirm empirically.
-- [ ] **Cluster 4 — 5.2.3** Transform `_Previous` re-seed revert (Camera revert BLOCKED — OracleParity/BB-driver-world).
-- [ ] **Cluster 5 — 5.1 machinery gate** (Run_Capture/Run_Restore/archives/Model-A registry under CK_WITH_FIDELITY_ORACLE) +
-  **Shipping compile**.
-- [ ] **Cluster 6 — 5.2.4 docs + amended 5.3 grep** (drop IsSnapshotRespawnable per [P3B-D1]) + final Ck.Snapshot + Net gate.
+- [x] **Cluster 4 — 5.2.3 Transform `_Previous` re-seed revert — DONE (CkF `<c4-this>`; Ck.Snapshot 54/51/3 delta-zero).**
+  [P5-D2] doc-path fix: the revert target is `CkTransform_Fragment.cpp/.h` (undo 15434d8ef's IsSnapshotable+SerializeSnapshot+
+  CK_REGISTER_SNAPSHOTABLE(FSnap_Transform_Previous)), NOT the plan-cited `CkTransform_Utils.cpp:97-108` (15434d8ef never
+  touched Utils.cpp — a doc typo, same class as [P0-D1]). VERIFIED `git diff 15434d8ef~1` empty for both files (exact pre-commit
+  shape) + zero test/cross-repo deps on `_Previous` snapshot round-trip (v3 re-composes `_Previous` via Construct,
+  `CkTransform_Utils.cpp:105`). Camera revert STAYS BLOCKED (OracleParity/BB-driver-world).
+- [x] **Cluster 5 — 5.1 machinery gate — DONE (CkF `<c5-this>`; Dev Ck.Snapshot 54/51/3 delta-zero + Model-A registry tests GREEN
+  under oracle-ON; **Shipping Game/Shipping compile SUCCEEDED — 2304s, zero real errors, zero snapshot symbols in link
+  diagnostics**). [P5-D4].** Gated the 5 Model-A entry/serialization `.cpp` bodies under `#if CK_WITH_FIDELITY_ORACLE`
+  (Capture/Restore/Archive_Writer/Archive_Reader/TagDriver); LEFT FragmentRegistry.cpp + Audit.cpp compiled (un-gated callers → gating
+  = Shipping LNK2019); added the TagDriver define-visibility include (Ruling 5); dropped the stale Capture.h include from the Subsystem.
+  ⚠️ RECON (pre-execution): V3 is INDEPENDENT of Model-A FragmentRegistry/Archive-W-R/
+  TagRegistry (v3 uses MemoryWriter+proxy+Produce-registry+shared FSnapshotContext). BUT the Archive Writer/Reader + FragmentRegistry
+  are `#include`d by **92 sites across ~48 production fragment `SerializeSnapshot` files** (all-config compiled) → CANNOT file-scope
+  gate the archives/registry without a 48-file fan-out (PHASE_5.md §5.1's "no shipping refs survive" is FALSE). Realistic scope:
+  gate ONLY the Model-A entry points (Run_Capture/Run_Restore/_Registry in CkSnapshot_Capture.cpp/.h + CkSnapshot_Restore.cpp/.h —
+  Dev-CkTests-only callers); leave the pervasive infra compiled (inert in Shipping since cluster 1a emptied the registry). The
+  Subsystem `#include`s CkSnapshot_Capture.h but only calls Run_CaptureV3 (likely stale include — verify). Flag C: Ck_DEFINE_ECS_TAG
+  calls Register_SnapshotableTag from EVERY tag → keep TagRegistry registration compiled (stub body, don't gate decl). ROUTE the
+  archives-gating-scope fork to Fable at execution; Shipping compile is the safety net.
+- [x] **Cluster 6 — 5.2.4 docs + amended 5.3 grep + exit-grep comment sweep — DONE (CkF `<c6-this>`).** Docs: root CLAUDE.md
+  `CK_REGISTER_SNAPSHOTABLE` row → "oracle-only since Phase 5"; CkEcs/CLAUDE.md rep section (dispatcher group
+  `FGroup_Gameplay_Script`→`FGroup_Hydration` + ConstructedThisFrame defer + fire-gating); PHASE_5.md §5.3 grep dropped
+  `IsSnapshotRespawnable` ([P3B-D1]) + added the `CkSnapshot_RestoreMarker.h` carve-out ([P5-D3]). Comment sweep: 34 stale
+  `ReplicateOnRestore|RestoreReplicated|JustRestored|Reconstitution` comment hits across 26 files reworded to the post-Phase-5
+  reality (v3 hydration Apply; RenderTarget→`HydrateFromSavedChannel`) via a 7-agent workflow — comments-only (build Succeeded,
+  no code change), **exit grep VERIFIED ZERO outside the RestoreMarker.h carve-out**. Gate: Ck.Snapshot **54/51/3** delta-zero;
+  Net **102/98/4** framework `Ck.*.Net` delta-zero (documented SM.Net flake + kiosk env-trio). Did NOT flip spec Status→IMPLEMENTED
+  (Phase-5 FINAL is BB-driver-world-blocked).
 
 - **[P5-D1] (executor, 2026-07-12, cluster 1a — Fable ruling C, code-verified) — deleting the Model-A SaveGame `_Header` field
   conflicted with VALIDATION §3 (Get_SaveSlotHeader signature frozen); resolved by SYNTHESIZING the legacy header from v3 at
@@ -78,6 +105,54 @@ Dev-behavior-neutral (machinery stays compiled in Dev) — the deletes land firs
   product decision — zero code callers, BP sees an opaque non-BlueprintReadOnly struct): Get_SaveSlotHeader's FormatVersion now
   reports 3, Manifest empty, TransientEntityId sentinel.** Executor judgment per Fable (low-blast, reversible, signature
   byte-identical); Adam can veto via PROGRESS. FCk_Snapshot_Header the TYPE stays (frozen return type + oracle-test capture type).
+
+- **[P5-D3] (executor, 2026-07-12, cluster 3 — Fable-consulted + every claim Opus-code-verified) — KEEP `CkSnapshot_RestoreMarker.h`
+  + `FTag_Snapshot_JustRestored` (plan §5.2.2 said DELETE); the plan's delete surface OVERLOOKED live cross-repo BB consumers.**
+  The cluster-3 build FAILED: BB (superproject, must-not-edit) has live `Has<ck::FTag_Snapshot_JustRestored>()` in
+  `Bb_SnapshotRestore.cpp:35` + `Bb_CombatReceiverRestore.cpp:26` (+ their `#include` of the header + the BB AS restore-rebind
+  fleet via `Get_WasJustRestored`). SAME class as the plan's OWN `FTag_ActorJustRebound` KEEP — the same `Bb_SnapshotRestore.cpp`
+  consumes BOTH tags; the plan just didn't extend the ruling to `FTag_Snapshot_JustRestored`. Resolution (Fable ruling, verified):
+  restored the header, replaced its stale Model-A comment with a retirement comment. VERIFIED: (1) Model-A `Run_Restore(world)` —
+  the only stamper — has exactly ONE caller tree-wide (`Test_Snapshot_FloatAttribute_Gate.spec.cpp:215`, Dev CkTests), NOT the BB
+  runtime (which loads via v3 `UCk_Snapshot_Subsystem::Request_Load`, no stamp) → BB's `Has<>` was ALREADY always-false under v3
+  since Phase 3B → keeping the tag is COMPILE-ONLY, zero runtime-behavior change; (2) no compile path without the tag (BB includes
+  by path + needs the complete type; can't oracle-gate — BB compiles in Shipping); (3) `CK_DEFINE_ECS_TAG_TRANSIENT` has no
+  snapshot-registrar side effect, so retention is inert. **Cross-repo sweep (Fable-suggested, Opus-run) for EVERY deleted symbol
+  across BB `Source`/`BusterBlockTests`/`Script` + CkTests: the ONLY hits are the 2 BB files (the tag) + one stale COMMENT in
+  CkTests `Test_Snapshot_RenderTargetParity_MPReload_Gate.spec.cpp:10` (non-blocking) — no other deleted symbol has a cross-repo
+  code consumer.** Consequences (record loudly): (a) **exit-grep amendment** — PHASE_5.md §5.3's `...JustRestored...` grep now
+  carves out `CkSnapshot_RestoreMarker.h` (retained cross-repo symbol); executor-recorded per the plan's small-human-decision (c)
+  ("mechanical, edits CTO-fixed acceptance text — record loudly"), Adam ratifies at review. Carve-out only holds once cluster 6's
+  comment-sweep clears the OTHER `JustRestored` comment hits (`CkTag.h:29,32`, `CkSnapshot_Restore.cpp:10`,
+  `CkRenderTarget_RepData.h:41`). (b) **BB-repo follow-up EXPANDED** (Adam/BB, NOT a CkF session): the FTag_ActorJustRebound
+  cleanup now ALSO owns the whole `FTag_Snapshot_JustRestored`/`Get_WasJustRestored` surface (2 BB C++ BPFL pairs + ~28 AS
+  `*_Processor_RestoreRebind.as` + gate-spec comments). Delete `CkSnapshot_RestoreMarker.h` only WITH that BB cleanup. (c) **Flag A
+  (cluster-6 watch):** CkTests `Test_Snapshot_RepDataRestoreCoverage_MetaTest`'s premise is per-feature ReplicateOnRestore
+  coverage — watch the gate delta; retire/rewrite in cluster 6 if red (CkTests editable). (d) **Flag C (cluster-5 heads-up):**
+  `CkTag.h:5` unconditionally includes `CkSnapshot_TagRegistry.h` and `CK_DEFINE_ECS_TAG` calls `Register_SnapshotableTag` from
+  EVERY tag — when cluster 5 oracle-gates TagRegistry/TagDriver, that header + Register function must STAY COMPILED in all configs
+  (stub the BODY, not the declaration) or Shipping breaks globally.
+
+- **[P5-D4] (executor, 2026-07-12, cluster 5 — Fable-consulted + every anchor Opus-code-verified) — Model-A machinery gate is
+  ENTRY-POINTS-ONLY (5 `.cpp` bodies), NOT the archives/registry file-scope gate PHASE_5.md §5.1 assumed.** §5.1 expected "no shipping
+  ref survives" for the Archive Writer/Reader + FragmentRegistry — FALSE: they're `#include`d by 92 sites across ~48 production fragment
+  `SerializeSnapshot` `.cpp` (for the `CK_REGISTER_SNAPSHOTABLE` Archive-type refs), all-config compiled. Cluster 1a already gated the
+  REGISTRATION (macro → static_assert-only in Shipping → empty registry → `Do_RegisterSnapshotable`/`DoSerializeSnapshot_OneInstance`
+  templates never instantiated), so the archive/registry are already Shipping-inert. **GATED (namespace bodies under
+  `#if CK_WITH_FIDELITY_ORACLE`):** `CkSnapshot_Capture.cpp`, `CkSnapshot_Restore.cpp`, `CkSnapshot_Archive_Writer.cpp`,
+  `CkSnapshot_Archive_Reader.cpp`, `CkSnapshot_TagDriver.cpp` (ONLY callers = Dev CkTests, dev-guarded via `WITH_DEV_AUTOMATION_TESTS`=0
+  in Shipping — note CkTests' module is Runtime-type but its Model-A call sites are dev-guarded). **LEFT COMPILED (gating breaks
+  Shipping):** `CkSnapshot_FragmentRegistry.cpp` + `CkSnapshot_Audit.cpp` — un-gated callers (`Audit.cpp:40,52` call the registry
+  `Find_ByEnttHash`/`Get`; `Audit::Register_Expected` runs at static-init from the un-gated `CK_DEFINE_ENTITY_HOLDER_ROUNDTRIP` /
+  record-twin macros) → gating them → Shipping LNK2019; both inert in Shipping (empty registry). Also left: Context/HandleWalk (shared
+  with v3), TagRegistry (Flag-C registration path), LoadReport, RestoreInvariants, FidelityOracle (already gated). **Ruling-5 landmine
+  FIXED:** `CkSnapshot_TagDriver.cpp`'s include chain had NO source of the `CK_WITH_FIDELITY_ORACLE` define → a bare `#if` would
+  evaluate 0 in EVERY config → Capture/Restore.cpp LNK2019 in DEV (a Shipping-first build passes, Dev breaks later); pre-empted by
+  adding `#include CkSnapshot_FragmentRegistry.h` at TagDriver.cpp top. Headers NOT gated (`.cpp`-bodies-only) — the ~48 fragments
+  include them; nothing references the gated fns in Shipping. Dropped the stale `#include CkSnapshot_Capture.h` from
+  `CkSnapshot_Subsystem.cpp`. **VERIFIED:** Dev gate 54/51/3 delta-zero (registry tests run+pass under oracle-ON); **Shipping
+  Game/Shipping compile SUCCEEDED (2304s, zero real errors, zero snapshot symbols in link diagnostics — the 65 LNK4217 are pre-existing
+  Jolt import warnings).** Evidence-forced deviation from CTO-fixed §5.1 (same class as [P4A-D1]/[P4B-D3]); Adam ratifies at review.
 
 ## Unattended execution protocol (set 2026-07-11 by Adam — OVERRIDES the "STOP on divergence" default below)
 
@@ -974,3 +1049,43 @@ value is [N1-A]-blocked and it needs a new BB-style fixture world).
   Clusters 1a+2 are clean committed increments; 3–6 remain. Nothing pushed. Net gate NOT re-run this session (clusters 1a/2 are
   save-path / dormant-delete, provably net-inert; the Track-A Net run 102/99/3 is the last framework-Ck.*.Net delta-zero baseline
   — cluster 3+ must re-run Net since it deletes replicated-feature restore processors).
+- 2026-07-12 — **Track B / Phase 5 partial — clusters 3 + 4 DONE + COMMITTED (Opus, unattended run).** **Cluster 3** (CkF
+  `f4dd25992`): deleted the JustRestored re-drive machinery — FProcessor_Persistence_ReDriveOnRestore + 6 feature
+  *_ReplicateOnRestore processors (Team, Player[whole file], Inventory DataOnly/Spatial, RenderTarget[only ReplicateOnRestore, kept
+  the live HydrateFromSavedChannel], 2dGridOccupancy) + FProcessor_2dGridSystem_RestoreRecompose + the 6 FTag_*_RestoreReplicated
+  done tags + the JustRestored stamp. **Hit a cross-repo build break the plan MISSED** (BB `Bb_SnapshotRestore.cpp`/`Bb_CombatReceiverRestore.cpp`
+  consume `FTag_Snapshot_JustRestored`) → Fable-consulted + code-verified → KEPT the marker header (retirement comment) per the
+  FTag_ActorJustRebound precedent [P5-D3]; cross-repo sweep for ALL deleted symbols clean (only 1 stale CkTests comment). Gate:
+  Ck.Snapshot 54/51/3 (3 = [INV-A] trio; FloatAttribute.Gate GREEN — no rewrite), Net 102/98/4 framework Ck.*.Net delta-zero
+  (only the documented SM.Net flake + kiosk env-trio). **Cluster 4** (CkF `<c4-this>`): reverted 15434d8ef's Transform `_Previous`
+  persistence in CkTransform_Fragment.cpp/.h ([P5-D2] doc-path fix vs the plan's Utils.cpp cite; exact pre-commit shape verified).
+  Gate: Ck.Snapshot 54/51/3 delta-zero. Nothing pushed. **Clusters 5 (machinery gate + Shipping compile) + 6 (docs + 5.3 grep +
+  final Ck.Snapshot+Net gate) remain.** Cluster-5 recon done (see tracker ⚠️ — archives/registry pervasively included → gate only
+  entry points; Fable consult at execution). Maintainer review of this Class-4 change is MANDATORY — branch stays unpushed.
+- 2026-07-12 — **Track B / Phase 5 partial — cluster 5 DONE + COMMITTED (Opus, unattended run).** Gated the Model-A machinery under
+  `#if CK_WITH_FIDELITY_ORACLE`. Second read-only Fable consult resolved the archives-gating-scope fork ([P5-D4]): the Archive
+  Writer/Reader + FragmentRegistry are pervasively `#include`d by ~48 production fragments, so gate ENTRY-POINTS only (Capture/Restore/
+  Archive_Writer/Archive_Reader/TagDriver `.cpp` bodies) + LEAVE FragmentRegistry.cpp + Audit.cpp compiled (un-gated static-init/Audit
+  callers → gating = Shipping LNK2019). Every anchor code-verified; the Ruling-5 TagDriver define-visibility landmine pre-empted with a
+  FragmentRegistry.h include; dropped the stale Subsystem Capture.h include. **Gate: Dev Ck.Snapshot 54/51/3 delta-zero (Model-A registry
+  tests still GREEN under oracle-ON); Shipping Game/Shipping compile SUCCEEDED (2304s, zero real errors, zero snapshot symbols in link
+  diagnostics).** Commit CkF `<c5-this>`. Nothing pushed. **Cluster 6 remains: docs (CkEcs/CLAUDE.md rep section, root CLAUDE.md
+  CK_REGISTER_SNAPSHOTABLE row) + the exit-grep comment sweep (34 stale ReplicateOnRestore/RestoreReplicated/JustRestored/Reconstitution
+  comment hits, minus the RestoreMarker.h carve-out) + amended PHASE_5.md §5.3 grep + final Ck.Snapshot + Net gate.** Then Phase-5 partial
+  is complete for maintainer review; Phase-5 FINAL (VALIDATION §2 OracleParity, camera revert, etc.) stays BB-driver-world-blocked.
+- 2026-07-12 — **Track B / Phase 5 partial COMPLETE — cluster 6 DONE + COMMITTED; clusters 1a–6 all done (Opus, unattended run).**
+  Docs updated (root CLAUDE.md macro row → oracle-only; CkEcs/CLAUDE.md rep section → FGroup_Hydration + fire-gating; PHASE_5.md §5.3
+  grep dropped IsSnapshotRespawnable + RestoreMarker.h carve-out). Exit-grep comment sweep: a 7-agent workflow reworded 34 stale
+  `ReplicateOnRestore|RestoreReplicated|JustRestored|Reconstitution` comment hits across 26 files to the post-Phase-5 reality
+  (v3 hydration; RenderTarget→HydrateFromSavedChannel) — comments-only (build Succeeded), **exit grep VERIFIED ZERO outside the
+  RestoreMarker.h carve-out**. Gate: Ck.Snapshot 54/51/3 delta-zero + Net 102/98/4 framework Ck.*.Net delta-zero. Commit CkF
+  `<c6-this>`. **PHASE-5 TRACK-B PARTIAL IS COMPLETE (clusters 1a/2/3/4/5/6): Model-A decommissioned (dead-path deleted, live
+  machinery oracle-gated, Shipping compile OK, docs + grep clean).** NOTHING PUSHED — branch `feature/save-load-improvements` handed
+  to Adam for MANDATORY Class-4 review. **DELIBERATELY NOT DONE (Adam/prereq-gated, per prompt DO-NOT-START):** the [INV-A] trio
+  (Grid+Inventory×2, the 3 standing reds), [N1-A] boot-singleton adoption + 4A.2, everything BB-driver-world/OracleParity-blocked
+  (Camera revert, VALIDATION §2, Phase-5-FINAL, 4B.1 params-mutators, MontagePlayer rebind), and the spec Status→IMPLEMENTED flip.
+  **CROSS-REPO FOLLOW-UPS for Adam/BB-repo (a CkF session must NOT touch BB):** delete `CkSnapshot_RestoreMarker.h` +
+  `FTag_Snapshot_JustRestored`/`Get_WasJustRestored` surface (Bb_SnapshotRestore/Bb_CombatReceiverRestore + ~28 AS
+  `*_Processor_RestoreRebind.as`) together with the `FTag_ActorJustRebound` cleanup ([P5-D3]); the 2 stale BB comments naming
+  FProcessor_ActorRespawn (Bb_PlayerSaveLoad.h:14, Bb_SaveLoadProbe.cpp:274) + 1 stale CkTests comment
+  (Test_Snapshot_RenderTargetParity_MPReload_Gate.spec.cpp:10).

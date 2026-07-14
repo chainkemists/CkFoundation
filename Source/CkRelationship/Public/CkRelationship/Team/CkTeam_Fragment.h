@@ -29,12 +29,6 @@ namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_OnTeamAssigned_Setup);
 
-    // Per-feature restore-replication done marker. ck::FTag_Snapshot_JustRestored lives on the OWNER
-    // entity and is shared by every owner-resident feature, so no single feature may remove it —
-    // each feature pairs it with its own done tag instead. Never leaks across restores: a restore
-    // rebuilds entities from snapshot bytes and this tag is not snapshotted.
-    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_Team_RestoreReplicated);
-
     // --------------------------------------------------------------------------------------------------------------------
 
     /*
@@ -63,7 +57,7 @@ namespace ck
 
         // Tier-C: the assigned ID is the whole persistent state. The per-ID FTag_TeamID<> tag
         // (which Get_ID actually reads) and the replicated container entry are re-derived from
-        // this value on restore by FProcessor_Team_ReplicateOnRestore.
+        // this value on restore through the v3 hydration Apply path.
         auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& /*InCtx*/) -> void
         {
             auto IDByte = static_cast<uint8>(_TeamID);

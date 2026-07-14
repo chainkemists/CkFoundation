@@ -1,5 +1,7 @@
 #include "CkSnapshot_Archive_Writer.h"
 
+#if CK_WITH_FIDELITY_ORACLE // Phase 5: Model-A serialization archive is oracle/test-only (v3 uses MemoryWriter + proxy)
+
 namespace ck
 {
     auto FSnapshotArchive_Writer::operator()(entt::entity InEntity) -> void
@@ -13,3 +15,5 @@ namespace ck
         _Proxy << InSize;
     }
 }
+
+#endif // CK_WITH_FIDELITY_ORACLE

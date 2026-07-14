@@ -344,8 +344,8 @@ namespace
                     // restart in the rebuilt world, so persisting the live ring would make the oracle byte-diff never
                     // match; the hydration Apply reads only the target state + status. Gated on the replication MODEL
                     // (not _Replication) so DoesNotReplicate SMs — default model WithHistory — persist too. NO
-                    // SeedContainer: capture/oracle-only, never re-seeded (the SM has no *_ReplicateOnRestore; its
-                    // restore is the hydration redrive) — [P1-R1] / [P4A-D1].
+                    // SeedContainer: capture/oracle-only, never re-seeded (the SM has no Model-A restore re-drive;
+                    // its restore is the hydration redrive) — [P1-R1] / [P4A-D1].
                     .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                     {
                         if (NOT Entity.Has<ck::FFragment_Sm_Current>() || NOT Entity.Has<ck::FFragment_Sm_Params>())

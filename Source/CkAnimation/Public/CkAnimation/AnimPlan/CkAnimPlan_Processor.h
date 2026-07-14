@@ -83,8 +83,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // (FProcessor_AnimPlan_ReplicateOnRestore removed — restore re-seed is now the generic
-    //  FProcessor_Persistence_ReDriveOnRestore driven by this feature's Produce/SeedContainer.)
+    // (The per-feature restore-replicate processor was removed — restore re-application is now the
+    //  v3 hydration Apply path, which re-applies this feature's saved Produce payload.)
 }
 
 // --------------------------------------------------------------------------------------------------------------------

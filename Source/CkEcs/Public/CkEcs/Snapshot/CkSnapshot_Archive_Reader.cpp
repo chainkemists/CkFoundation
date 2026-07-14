@@ -1,5 +1,7 @@
 #include "CkSnapshot_Archive_Reader.h"
 
+#if CK_WITH_FIDELITY_ORACLE // Phase 5: Model-A serialization archive is oracle/test-only (v3 uses MemoryReader + proxy)
+
 namespace ck
 {
     auto FSnapshotArchive_Reader::operator()(entt::entity& OutEntity) -> void
@@ -14,3 +16,5 @@ namespace ck
         _Proxy << OutSize;
     }
 }
+
+#endif // CK_WITH_FIDELITY_ORACLE

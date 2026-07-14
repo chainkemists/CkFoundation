@@ -46,7 +46,7 @@ namespace ck
 
         // Tier-C: the assigned ID is the whole persistent state. The per-ID FTag_PlayerID<> tag
         // (which Get_ID actually reads) and the replicated container entry are re-derived from
-        // this value on restore by FProcessor_Player_ReplicateOnRestore.
+        // this value on restore through the v3 hydration Apply path.
         auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& /*InCtx*/) -> void
         {
             auto IDByte = static_cast<uint8>(_PlayerID);
@@ -63,14 +63,6 @@ namespace ck
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_PlayerInfo, _PlayerID);
     };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    // Per-feature restore-replication done marker. ck::FTag_Snapshot_JustRestored lives on the OWNER
-    // entity and is shared by every owner-resident feature, so no single feature may remove it —
-    // each feature pairs it with its own done tag instead. Never leaks across restores: a restore
-    // rebuilds entities from snapshot bytes and this tag is not snapshotted.
-    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_Player_RestoreReplicated);
 
     // --------------------------------------------------------------------------------------------------------------------
 

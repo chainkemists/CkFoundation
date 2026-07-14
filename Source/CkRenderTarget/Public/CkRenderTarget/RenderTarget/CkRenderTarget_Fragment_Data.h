@@ -243,7 +243,8 @@ public:
     CK_GENERATED_BODY(FCk_Fragment_RenderTarget_ParamsData);
 
     // Tier-A snapshotable: the restored host re-derives its target + container from these params
-    // (Setup/Construct is abstained on a snapshot load — see FProcessor_RenderTarget_ReplicateOnRestore).
+    // (on a snapshot load the entity re-Constructs and Setup re-derives them; HydrateFromSavedChannel
+    // then repaints the saved instruction ring).
     using IsSnapshotable = void;
 
 private:

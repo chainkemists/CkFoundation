@@ -4,11 +4,10 @@
 #include "CkEcs/Snapshot/CkSnapshot_Archive_Reader.h"
 #include "CkEcs/Snapshot/CkSnapshot_Context.h"
 #include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
-#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h" // ck::FTag_Snapshot_JustRestored
 #include "CkEcs/Snapshot/CkSnapshot_TagDriver.h"
 #include "CkSnapshot/SaveGame/CkSnapshot_Header.h"
 
-#include "CkEcs/Handle/CkHandle.h"        // FCk_Handle + Add<ck::FTag_Snapshot_JustRestored>
+#include "CkEcs/Handle/CkHandle.h"        // FCk_Handle
 #include "CkEcs/Handle/CkHandle_Utils.h"  // ck::MakeHandle
 #include "CkEcs/Registry/CkRegistry_SlotTable.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
@@ -19,6 +18,8 @@
 #include <Engine/World.h>
 
 // --------------------------------------------------------------------------------------------------------------------
+
+#if CK_WITH_FIDELITY_ORACLE // Phase 5: Model-A restore is oracle/test-only (v3 rebuild+hydrate is the live load path)
 
 namespace ck::snapshot
 {
@@ -227,23 +228,6 @@ namespace ck::snapshot
 
         Loader.orphans();
 
-        // Stamp a generic "just restored" marker on every surviving restored entity so replicated features (e.g.
-        // CkAttribute) can RE-DRIVE replication of the restored VALUES to clients. The per-feature replication trigger
-        // tags are transient + consumed before a save, so they are NOT restored — without this, a client keeps its
-        // Construct-default values for restored entities. Collect first: Add mutates the entity storage being iterated.
-        {
-            auto RestoredEntities = TArray<FCk_Handle>{};
-            for (const auto Entity : RawRegistry->storage<ck::SnapshotEntityType>())
-            {
-                RestoredEntities.Add(ck::MakeHandle(FCk_Entity{Entity}, CkRegistry));
-            }
-            for (auto& Handle : RestoredEntities)
-            {
-                if (ck::IsValid(Handle))
-                { Handle.Add<ck::FTag_Snapshot_JustRestored>(); }
-            }
-        }
-
         Report.Set_SkippedFragmentTypes(MoveTemp(SkippedTypes));
         Report.Set_EntitiesRestored(static_cast<int32>(RawRegistry->storage<ck::SnapshotEntityType>().size()));
         Report.Set_Result(ECk_SnapshotResult::Success);
@@ -254,5 +238,7 @@ namespace ck::snapshot
         return Report;
     }
 }
+
+#endif // CK_WITH_FIDELITY_ORACLE
 
 // --------------------------------------------------------------------------------------------------------------------
