@@ -52,6 +52,32 @@ public:
     Get_DesiredVelocity(
         const FCk_Handle_CrowdAgent& InHandle);
 
+    // Read the separation processor's per-frame output — the neighbor-avoidance force BEFORE
+    // steering damps it into the desired velocity. Unlike Get_DesiredVelocity, this is observable on
+    // an IDLE agent (the separation processor excludes only FTag_CrowdAgent_Asleep, not Idle), which
+    // makes it the only way to assert on the agent's neighbor-detection VOLUME in isolation from
+    // path-follow dynamics. That matters: the probe volume is Jolt-side geometry, and a defect in it
+    // (see the Y-axis cylinder incident) is invisible to every behavioral crowd test we own.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Separation Force")
+    static FVector
+    Get_SeparationForce(
+        const FCk_Handle_CrowdAgent& InHandle);
+
+    // Read the steering processor's waypoint cursor — the index into the active path's waypoint
+    // array that the agent is currently walking toward. Diagnostic: paired with the path's waypoint
+    // list (e.g. UCk_Utils_PathNetworkFollower_UE::Get_RouteResult's compiled waypoints, which
+    // InstallExternalPath copies verbatim into the nav path result) it says exactly WHICH point the
+    // agent is steering at — the only way to tell a legitimately-unreached waypoint apart from one
+    // the agent already passed but never retired.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Current Waypoint Index")
+    static int32
+    Get_CurrentWaypointIndex(
+        const FCk_Handle_CrowdAgent& InHandle);
+
     // Read the face-angle processor's current target yaw in DEGREES (converted from the radians
     // stored on the fragment for caller convenience). The agent's actual yaw — lerped toward this
     // target at _MaxTurnRate — is on its Transform's SceneNode rotation.

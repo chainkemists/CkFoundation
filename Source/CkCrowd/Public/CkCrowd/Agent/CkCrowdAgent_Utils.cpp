@@ -64,6 +64,36 @@ auto
 
 auto
     UCk_Utils_CrowdAgent_UE::
+    Get_SeparationForce(
+        const FCk_Handle_CrowdAgent& InHandle)
+    -> FVector
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+        TEXT("Invalid CrowdAgent handle [{}] passed to Get_SeparationForce"), InHandle)
+    { return FVector::ZeroVector; }
+
+    return InHandle.Get<ck::FFragment_CrowdAgent_SeparationForce>().Get_Force();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    Get_CurrentWaypointIndex(
+        const FCk_Handle_CrowdAgent& InHandle)
+    -> int32
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+        TEXT("Invalid CrowdAgent handle [{}] passed to Get_CurrentWaypointIndex"), InHandle)
+    { return INDEX_NONE; }
+
+    return InHandle.Get<ck::FFragment_CrowdAgent_PathFollow>().Get_WaypointIndex();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
     Get_TargetYawDegrees(
         const FCk_Handle_CrowdAgent& InHandle)
     -> float

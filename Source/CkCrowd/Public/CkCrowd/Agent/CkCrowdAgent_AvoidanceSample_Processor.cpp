@@ -166,7 +166,8 @@ namespace ck
 
         // Time-to-collision between self at velocity vCand and neighbor moving at its absolute
         // velocity. Returns FLT_MAX if no collision in the time horizon, else seconds until first
-        // contact.
+        // contact. When the pair ALREADY overlaps, returns an overlap-severity score in the same
+        // units (see below) rather than a true time.
         //
         // The neighbor cache stores relative velocity (NbrVel - SelfVel_at_sample). To get the
         // correct closing rate for self-at-CANDIDATE-velocity, we need:
@@ -179,6 +180,22 @@ namespace ck
         //
         // Math mirrors DetourObstacleAvoidance.cpp sweepCircleCircle: solves for t such that
         // |P + Dv*t| == combinedRadius, where P = -NbrRelPos.
+        //
+        // THE OVERLAP CASE (C < 0) IS NOT "TIME ZERO". Returning a flat 0.0 here — as this did — is
+        // the bug that made two touching agents refuse to avoid each other at all. C is a function of
+        // the relative POSITION and the combined radius ONLY; it does not depend on the candidate. So
+        // a constant return makes the caller's ToI penalty (wToi / (0.1 + tmin*invHorizon)) evaluate
+        // IDENTICALLY for every candidate in the pattern. The collision term stops discriminating,
+        // the score collapses to the desired/current/side terms, and the winner is always the
+        // path-follow anchor — i.e. the sampler's considered choice becomes "drive exactly into the
+        // neighbour I am meant to be avoiding". Two agents spawned co-located start inside this blind
+        // zone and never leave it under their own power.
+        //
+        // The quadratic still has real roots while overlapping (tmin < 0 < tmax), and tmin DOES vary
+        // with the candidate: one that separates fast enters deeply negative, one that drives deeper
+        // sits near zero. So mirror dtCrowd's overlap branch ("avoid more when overlapped") and
+        // return -tmin*0.5 — separating candidates score LARGER, hence a LOWER penalty, and the
+        // sampler steers out of the overlap instead of ignoring it.
         auto TimeToCollision(
             const FVector& InCandidateVel,
             const FVector& InCurrentSelfVel,
@@ -193,10 +210,23 @@ namespace ck
             const auto B = static_cast<float>(FVector2D::DotProduct(P, Dv));
             const auto C = static_cast<float>(FVector2D::DotProduct(P, P)) - InCombinedRadius * InCombinedRadius;
 
-            if (C < 0.0f) { return 0.0f; }
+            const auto Disc = B * B - A * C;
+
+            if (C < 0.0f)
+            {
+                // A ~ 0 means this candidate exactly matches the neighbour's velocity: the pair is
+                // locked in overlap and it never resolves. That is the worst available choice, so
+                // score it 0 — maximum ToI penalty.
+                if (A < KINDA_SMALL_NUMBER)
+                { return 0.0f; }
+
+                // C < 0 and A > 0 => Disc = B^2 + A*|C| > 0, and this root is always negative.
+                const auto TEnter = (-B - FMath::Sqrt(Disc)) / A;
+                return -TEnter * 0.5f;
+            }
+
             if (A < KINDA_SMALL_NUMBER || B >= 0.0f) { return FLT_MAX; }
 
-            const auto Disc = B * B - A * C;
             if (Disc < 0.0f) { return FLT_MAX; }
             const auto T = (-B - FMath::Sqrt(Disc)) / A;
             return T > InHorizon ? FLT_MAX : T;
