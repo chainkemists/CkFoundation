@@ -86,6 +86,44 @@ namespace ck
     // Set/cleared via UCk_Utils_CrowdAgent_UE::Request_SetDebugOverride; checked via Get_HasDebugOverride.
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_DebugOverride);
 
+    // The agent has a goal it CANNOT reach — something is standing on it, or the agent has made no
+    // progress for a while. Always co-resident with FTag_CrowdAgent_Idle: the agent has stopped
+    // (so the Idle/PathPending/Walking exclusivity above still holds, and AccelClamp's Idle branch
+    // ramps it to a halt), and GoalBlocked merely records WHY it stopped and that it still wants the
+    // goal. FProcessor_CrowdAgent_BlockedRecheck watches these agents and resumes them when the goal
+    // clears. Cleared by any external MoveTo or Stop.
+    CK_DEFINE_ECS_TAG(FTag_CrowdAgent_GoalBlocked);
+
+    // Per-agent state for block detection. The feet-sample ring mirrors UPathFollowingComponent's
+    // block detection (PathFollowingComponent.cpp:1556-1608): sample the agent's position on a fixed
+    // cadence into a small ring buffer, and if every sample sits within a small radius of their
+    // centroid, the agent is going nowhere.
+    struct CKCROWD_API FFragment_CrowdAgent_BlockDetect
+    {
+        friend class FProcessor_CrowdAgent_BlockDetect;
+        friend class FProcessor_CrowdAgent_BlockedRecheck;
+        friend class FProcessor_CrowdAgent_HandleRequests;
+        friend class ::UCk_Utils_CrowdAgent_UE;
+
+    public:
+        CK_GENERATED_BODY(FFragment_CrowdAgent_BlockDetect);
+
+    private:
+        TArray<FVector, TInlineAllocator<10>> _FeetSamples;
+        int32 _NextSampleIdx = 0;
+        float _SampleAccumulatorSec = 0.0f;
+        float _RecheckAccumulatorSec = 0.0f;
+
+        // OnGoalBlocked fires ONCE per blocked episode, not once per re-check. Without this an agent
+        // that holds, retries, and re-blocks would spam the signal every cadence.
+        bool _BlockedSignalSent = false;
+
+        FCk_Handle _BlockedBy;
+
+    public:
+        CK_PROPERTY_GET(_BlockedBy);
+    };
+
     // --------------------------------------------------------------------------------------------------------------------
     // Lifecycle signals fired by the steering chain. OnGoalReached fires once when the agent's
     // path-follow cursor crosses the final waypoint within _ActiveArrivalRadius (Walking → Idle).
@@ -102,6 +140,20 @@ namespace ck
         CrowdAgent_OnGoalFailed,
         FCk_Delegate_CrowdAgent_OnGoalFailed,
         FCk_Handle_CrowdAgent);
+
+    // OnGoalBlocked fires ONCE when the agent discovers its goal is unreachable — something is standing
+    // on it, or the agent has stopped making progress. It is NOT a failure: under the default
+    // HoldAndRetry policy the agent stops, waits, and resumes on its own when the goal clears. Under
+    // FailMove, OnGoalFailed follows immediately after and the caller owns recovery.
+    //
+    // The payload names the blocker, which is what a gameplay-side queue manager needs to reassign the
+    // NPC somewhere else rather than have it stand and wait.
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKCROWD_API,
+        CrowdAgent_OnGoalBlocked,
+        FCk_Delegate_CrowdAgent_OnGoalBlocked,
+        FCk_Handle_CrowdAgent,
+        FCk_CrowdAgent_GoalBlockedInfo);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
@@ -27,6 +27,8 @@ namespace ck
     class FProcessor_CrowdAgent_Separation;
     class FProcessor_CrowdAgent_AccelClamp;
     class FProcessor_CrowdAgent_AvoidanceSample;
+    class FProcessor_CrowdAgent_BlockDetect;
+    class FProcessor_CrowdAgent_BlockedRecheck;
 }
 
 class UCk_Utils_CrowdAgent_UE;
@@ -36,6 +38,45 @@ class UCk_Utils_CrowdAgent_UE;
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKCROWD_API FCk_Handle_CrowdAgent : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_CrowdAgent); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_CrowdAgent);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Why an agent could not reach its goal. GoalOccupied is the exact, immediate case: another agent is
+// standing on the destination, so the closest this agent can physically get is (SelfRadius +
+// BlockerRadius) from the blocker's centre — further out than its arrival radius. NoProgress is the
+// general safety net: the agent has been going nowhere for a while, for any reason (a plug of several
+// agents, a dynamic prop, a pathological corridor). Mirrors UPathFollowingComponent's split between a
+// geometric reach test and its feet-sample block detection.
+UENUM(BlueprintType)
+enum class ECk_CrowdAgent_BlockedReason : uint8
+{
+    GoalOccupied,
+    NoProgress
+};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CrowdAgent_BlockedReason);
+
+// What an agent does when it discovers its goal is unreachable.
+//
+// HoldAndRetry (default): stop, report OnGoalBlocked once, and wait — re-checking on a cadence, and
+// resuming automatically the moment the goal clears. The right default for a crowd sim: with ~130
+// NPCs, a policy that FAILED the move would force every gameplay call site to handle failure or the
+// NPC simply freezes. An NPC that waits a metre from a taken shelf and slides in when it frees is
+// correct shop behaviour and needs no gameplay changes at all.
+//
+// FailMove: report OnGoalBlocked, then OnGoalFailed, then go Idle — the caller owns recovery. This is
+// UE's semantics (block detection aborts the move and hands it to the behaviour tree).
+//
+// NOTE WHAT IS DELIBERATELY ABSENT: an option to silently widen the arrival radius and declare
+// "arrived". That would be a lie to the caller (who asked for "within _ArrivalRadius of X" and may
+// range-check against it), and it is TERMINAL — an agent that has "arrived" 100cm out is Idle and will
+// never walk the last metre when the blocker eventually leaves.
+UENUM(BlueprintType)
+enum class ECk_CrowdAgent_BlockedPolicy : uint8
+{
+    HoldAndRetry,
+    FailMove
+};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CrowdAgent_BlockedPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -112,6 +153,28 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1"))
     int32 _MaxNeighborsForSteering = 6;
 
+    // How much of a PushApart de-penetration displacement this agent absorbs while it is IDLE.
+    //
+    // 1.0 means an idle agent is shoved exactly as hard as a walking one — which is what let a
+    // newcomer body-check an agent that had ALREADY ARRIVED clean off its own goal (in the product:
+    // an NPC standing at a shelf, displaced by the next customer). An arrived agent has no restoring
+    // drive to walk back, so its eviction is a one-way random walk outward.
+    //
+    // MUST NOT BE ZERO. PushApart runs on idle agents deliberately — physical overlap has to resolve
+    // regardless of what an agent is doing — and idle-vs-idle de-overlap (a cluster settling at a
+    // shared goal) requires BOTH parties to yield. Zero would leave two idle agents interpenetrated
+    // forever. 0.25 means a walker pressing a stander absorbs ~4x more of the correction than the
+    // stander does, while idle-idle still separates, just over a few more frames.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta=(AllowPrivateAccess=true, ClampMin="0.05", ClampMax="1.0"))
+    float _PushApartIdleYield = 0.25f;
+
+    // What this agent does when it finds its goal unreachable. Per-agent on purpose: an employee who
+    // must get behind a counter may want FailMove so gameplay can re-route it, while a browsing
+    // customer should just wait for the shelf to free up. See ECk_CrowdAgent_BlockedPolicy.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    ECk_CrowdAgent_BlockedPolicy _BlockedPolicy = ECk_CrowdAgent_BlockedPolicy::HoldAndRetry;
+
     // Gate 4 will use these for piercing; declared here so the params struct's ABI stabilises.
     // Stored as int32 (UE UPROPERTY does not support uint32 except as bitfields). Default
     // 0xFFFFFFFF reinterprets to int32 = -1 = "every bit set" — i.e. the agent participates in
@@ -137,6 +200,8 @@ public:
     CK_PROPERTY(_SeparationInertia);
     CK_PROPERTY(_SeparationWeight);
     CK_PROPERTY(_MaxNeighborsForSteering);
+    CK_PROPERTY(_PushApartIdleYield);
+    CK_PROPERTY(_BlockedPolicy);
     CK_PROPERTY(_CollisionFlags);
     CK_PROPERTY(_IgnoreFlags);
 
@@ -196,6 +261,7 @@ struct CKCROWD_API FCk_Fragment_CrowdAgent_PathFollowData
     friend class ck::FProcessor_CrowdAgent_HandleRequests;
     friend class ck::FProcessor_CrowdAgent_OnPathResolved;
     friend class ck::FProcessor_CrowdAgent_OnRouteResolved;
+    friend class ck::FProcessor_CrowdAgent_BlockedRecheck;
     friend class ::UCk_Utils_CrowdAgent_UE;
 
 private:
@@ -340,6 +406,36 @@ struct CKCROWD_API FCk_Request_CrowdAgent_Stop : public FCk_Request_Base
 // it up. Single-param: the agent handle is the only payload (callers can derive everything else
 // from the handle).
 
+// Payload of OnGoalBlocked. _BlockedBy is the agent standing on the goal (invalid when the reason is
+// NoProgress — there is no single culprit); it is exactly the hook a gameplay-side queue manager needs
+// to say "he's got the shelf, go somewhere else".
+USTRUCT(BlueprintType)
+struct CKCROWD_API FCk_CrowdAgent_GoalBlockedInfo
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_CrowdAgent_GoalBlockedInfo);
+
+private:
+    UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    ECk_CrowdAgent_BlockedReason _Reason = ECk_CrowdAgent_BlockedReason::GoalOccupied;
+
+    UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FCk_Handle _BlockedBy;
+
+    UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    float _DistanceToGoal = 0.0f;
+
+public:
+    CK_PROPERTY_GET(_Reason);
+    CK_PROPERTY_GET(_BlockedBy);
+    CK_PROPERTY_GET(_DistanceToGoal);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_CrowdAgent_GoalBlockedInfo, _Reason, _BlockedBy, _DistanceToGoal);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 DECLARE_DYNAMIC_DELEGATE_OneParam(
     FCk_Delegate_CrowdAgent_OnGoalReached,
     FCk_Handle_CrowdAgent, InAgent);
@@ -347,5 +443,10 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(
 DECLARE_DYNAMIC_DELEGATE_OneParam(
     FCk_Delegate_CrowdAgent_OnGoalFailed,
     FCk_Handle_CrowdAgent, InAgent);
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_CrowdAgent_OnGoalBlocked,
+    FCk_Handle_CrowdAgent, InAgent,
+    FCk_CrowdAgent_GoalBlockedInfo, InInfo);
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -65,6 +65,7 @@ The handle `FCk_Handle_CrowdAgent` is a typesafe handle (`FCk_Handle_TypeSafe` d
        ▼
 [CkCrowd: per-frame steering loop]   (the REAL, registered processors)
   FProcessor_CrowdAgent_NeighborSync    ← reads probe overlaps → NeighborCache
+  FProcessor_CrowdAgent_BlockDetect     ← is the goal unreachable? → Idle + GoalBlocked + OnGoalBlocked
   FProcessor_CrowdAgent_Separation      ← reactive repulsion force (only within _SeparationRadius)
   FProcessor_CrowdAgent_Steering        ← path-follow + lateral-clamped separation → desired velocity
   FProcessor_CrowdAgent_AvoidanceSample ← THE avoidance layer: velocity-obstacle sampler,
@@ -90,13 +91,21 @@ The handle `FCk_Handle_CrowdAgent` is a typesafe handle (`FCk_Handle_TypeSafe` d
   Server transform → client smoothing  ← FProcessor_Transform_InterpolateToGoal_Location
 ```
 
+Plus `FProcessor_CrowdAgent_BlockedRecheck` (FGroup_Gameplay): resumes a held agent when its goal clears.
+
 **NOT BUILT** (documented here for years, never implemented — do not look for them):
-`SleepEvaluator`, `Piercing`, `ProgressEval`, `TriggerReplan`. There is **no stuck/no-progress
-detection anywhere in this module**. Note that stock UE doesn't solve deadlock in its solver either —
-dtCrowd has no impatience/stagnation/min-speed mechanism at all; UE detects a blocked agent one tier
-UP (`UPathFollowingComponent` block detection: 10 feet-samples at 0.5s intervals, all within 10cm of
-their centroid ⇒ `OnPathFinished(Blocked)`) and hands it to the behaviour tree. **We have no
-equivalent tier.** If an agent cannot make progress, nothing notices. That is a known gap.
+`SleepEvaluator`, `Piercing`. `ProgressEval`/`TriggerReplan` never existed either, but the capability
+they claimed — noticing an agent that cannot reach its goal — now DOES exist, as `BlockDetect` /
+`BlockedRecheck` (see "Blocked goals").
+
+Note that stock UE doesn't solve deadlock in its *solver* either — dtCrowd has no impatience,
+stagnation, min-speed or randomisation mechanism at all. UE detects a blocked agent one tier UP
+(`UPathFollowingComponent` block detection: 10 feet-samples at 0.5s intervals, all within 10cm of their
+centroid ⇒ `OnPathFinished(Blocked)`) and hands it to the behaviour tree. **We now have an equivalent
+tier**, with one addition UE lacks: a geometric occupied-goal test that answers immediately and names
+the blocker, rather than waiting out a stagnation window. **If you are tempted to fix a deadlock by
+adding an impatience timer or a minimum-speed floor to the cost function — don't.** That is the mistake
+this tier exists to make unnecessary.
 
 ---
 
@@ -135,6 +144,7 @@ FTag_CrowdAgent_Walking           # Has goal + path; Steering + AvoidanceSample 
 FTag_CrowdAgent_Idle              # No goal
 FTag_CrowdAgent_PathPending       # FindPath / FindRoute in flight
 FTag_CrowdAgent_DebugOverride     # Debugger "took control" — gameplay must not issue its own MoveTo
+FTag_CrowdAgent_GoalBlocked       # Goal is unreachable; agent is Idle but still WANTS it (resumable)
 FTag_CrowdAgent_Asleep            # DEFINED AND EXCLUDED, BUT NOTHING EVER STAMPS IT (see below)
 ```
 
@@ -223,6 +233,42 @@ for (const auto& Nbr : Cache.Get_Neighbors())
 
 ---
 
+## Blocked goals — when an agent CANNOT reach its destination
+
+Two agents sent to the same point cannot both stand on it. Before this tier existed, the second agent
+pressed against the first forever, vibrating, and eventually **shoved it off its own goal** until the
+point came within arrival radius. Nothing in the system was aware.
+
+**`FProcessor_CrowdAgent_BlockDetect`** runs two detectors, because neither alone is sufficient:
+
+| detector | how | catches | misses |
+|---|---|---|---|
+| **Geometric** (primary) | a *stationary* neighbour sits on the final waypoint such that `SelfRadius + NbrRadius` exceeds the arrival radius — so the closest the agent can physically get is further out than "arrived" | agent-occupied goals, **exactly and immediately**, naming the blocker | walls, props, multi-agent plugs |
+| **No-progress** (safety net) | UE's feet-sample ring: N samples on a cadence, all within a small radius of their centroid (`_BlockDetectionSampleCount`/`Interval`/`Distance`) | everything else | an agent that **orbits** the blocker — its samples smear round a ~168cm circle and the centroid test never trips |
+
+That last row is why both exist. Geometry catches the orbit; the ring catches the wall.
+
+**On block:** `Walking` → `Idle` + `FTag_CrowdAgent_GoalBlocked`, and `OnGoalBlocked` fires **once per
+episode** (not once per re-check) with a payload naming the blocker — exactly what a gameplay-side
+queue manager needs to send the NPC somewhere else instead of having it wait.
+
+**Policy is per-agent** (`_BlockedPolicy`):
+- **`HoldAndRetry`** (default) — stop, wait, re-check every `_BlockedRecheckInterval`, and **fully
+  re-path and resume the moment the goal clears**. Right default for a shop: an NPC that waits a metre
+  from a taken shelf and slides in when it frees needs no gameplay changes at all.
+- **`FailMove`** — `OnGoalBlocked`, then `OnGoalFailed`, then Idle. UE's semantics; the caller owns recovery.
+
+**What is deliberately NOT offered: silently widening the arrival radius to declare "arrived".** It
+lies to a caller who asked for "within `_ArrivalRadius` of X" and may range-check against it — and it
+is **terminal**: an agent that has "arrived" 100cm out is Idle and will never walk the last metre when
+the blocker leaves. `HoldAndRetry` exists precisely so blocked is a *hold*, not a dead end.
+
+An arrived (Idle) agent also now only absorbs `_PushApartIdleYield` (0.25) of a de-penetration shove,
+so a newcomer pressing it takes most of the correction. Not zero — idle-vs-idle overlap must still
+resolve, and the at-rest non-penetration assertion in `Crowd_Separation_Convergence` depends on it.
+
+---
+
 ## Avoidance — how agents actually avoid each other
 
 **`FProcessor_CrowdAgent_AvoidanceSample` is the avoidance layer.** It is a port of dtCrowd's
@@ -290,7 +336,7 @@ have.
 
 - **No queueing logic.** The contract is "move agent to a target." Queue managers (slot reservation, "you're 3rd in line", line-up at counter) are gameplay-side — typically implemented in GOAP or per-gym fragments that pick the target the agent steers toward. Counter clumping in this module's purview is the *expected* behavior of separation-force-only avoidance; lining up is a different concern.
 - **NPCs are non-blocking to the player.** They have no `UPrimitiveComponent`, so the player's `UCharacterMovementComponent` has nothing to collide with. The player can walk through any NPC that soft-push didn't displace in time. This is the design — the only mitigation in scope is the soft-push amplification when the player is a separation-neighbor. Hard pushback (an NPC-side collider that physically blocks the player) is a future-work item, not a bug.
-- **No stuck / block detection — the biggest gap.** Nothing in this module notices an agent that stops making progress. There is no `ProgressEval`, no `TriggerReplan`, no `OnGoalBlocked` signal (older versions of this doc claimed all three). If an agent cannot reach its goal it will keep trying forever, silently. UE's equivalent tier is `UPathFollowingComponent` block detection (10 samples × 0.5s within 10cm ⇒ abort the move as `Blocked` and hand it to the behaviour tree). Worth building.
+- ~~No stuck / block detection~~ — **BUILT (2026-07-14).** See "Blocked goals" below. Older copies of this doc claimed a `ProgressEval`/`TriggerReplan` tier existed when nothing did; a real one now does, under different names.
 - **PushApart does NOT guarantee zero interpenetration.** It is a faithful dtCrowd port: resolve factor 0.7, 4 iterations — deliberately under-relaxed, so it does not fully resolve overlap in a single frame. Under sustained inward pressure (e.g. N agents driving at one shared point) a small residual overlap is expected and is not a bug. Stock UE ships dtCrowd's version *disabled* entirely and relies on physics capsules instead.
 - **~~No ORCA~~ — the avoidance IS a velocity-obstacle sampler** (dtCrowd's, RVO-reciprocal). This line used to say "separation-force avoidance is good enough; ORCA is a planned upgrade", which misled readers into believing the crude repulsion force was the whole avoidance system. See the Avoidance section above.
 - **No flow-field follower.** Waypoint-only at 150 agents is fine; flow-field is overkill for our scale.

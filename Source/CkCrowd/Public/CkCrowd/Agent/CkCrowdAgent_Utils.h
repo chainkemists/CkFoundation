@@ -145,6 +145,38 @@ public:
         UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
         const FCk_Delegate_CrowdAgent_OnGoalFailed& InDelegate);
 
+    // Fires once when the agent discovers its goal is UNREACHABLE — a neighbour is standing on it, or
+    // the agent has stopped making progress. Not a failure: under the default HoldAndRetry policy the
+    // agent stops, waits, and resumes on its own when the goal clears. The payload names the blocker,
+    // which is what a gameplay-side queue manager needs in order to send the NPC somewhere else instead
+    // of having it stand and wait.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Bind To OnGoalBlocked")
+    static FCk_Handle_CrowdAgent
+    BindTo_OnGoalBlocked(
+        UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
+        const FCk_Delegate_CrowdAgent_OnGoalBlocked& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Unbind From OnGoalBlocked")
+    static FCk_Handle_CrowdAgent
+    UnbindFrom_OnGoalBlocked(
+        UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
+        const FCk_Delegate_CrowdAgent_OnGoalBlocked& InDelegate);
+
+    // True while the agent is holding at a goal it cannot reach. Such an agent is Idle (it has stopped)
+    // but still WANTS the goal, and will resume by itself the moment the goal clears.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Is Goal Blocked")
+    static bool
+    Get_IsGoalBlocked(
+        const FCk_Handle_CrowdAgent& InAgent);
+
     // ---- Identity colour ---------------------------------------------------------------------
     //
     // Per-agent identity colour shared by every visualisation (capsule, breadcrumb path,
