@@ -5,6 +5,8 @@
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
+
 #include "CkNavigation/Nav/CkNav_Algorithm.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -75,6 +77,17 @@ namespace ck
                 // Fresh polyline, fresh cursor — for the mid-walk swap the old index may point
                 // past (or into the wrong stretch of) the new waypoint array.
                 InPathFollow._WaypointIndex = 0;
+
+                // Anchor the FIRST corridor segment for Steering's plane-crossing retirement. The
+                // corridor's leading waypoint has no predecessor in the array, so the incoming
+                // direction comes from where the agent actually IS at install time. This covers the
+                // mid-walk rebuild swap too: the agent may be deep into the old corridor, and the
+                // new segment starts from there, not from some stale origin.
+                auto TransformHandle = UCk_Utils_Transform_UE::Cast(NonConstHandle);
+                const auto& CompiledWaypoints = Result.Get_CompiledWaypoints();
+                InPathFollow._CurrentSegmentStart = ck::IsValid(TransformHandle)
+                    ? UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle)
+                    : (CompiledWaypoints.Num() > 0 ? CompiledWaypoints[0] : FVector::ZeroVector);
 
                 auto& Installed = NonConstHandle.AddOrGet<FFragment_CrowdAgent_InstalledRoute>();
                 Installed._GoalLocation = Result.Get_GoalLocation();

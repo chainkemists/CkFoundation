@@ -86,6 +86,11 @@ private:
     int32 _AvoidanceSampleRings = 2;
 
     UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|Sampling",
+        meta = (AllowPrivateAccess = true, ClampMin = 0.0, UIMin = 0.0, ClampMax = 0.9, UIMax = 0.9,
+            ToolTip = "Velocity bias: the sample cloud is centred on DesiredVelocity * Bias with ring radius MaxSpeed * (1 - Bias), mirroring dtCrowd (DetourObstacleAvoidance.cpp:570-572). Detour ships 0.5 at every quality level (CrowdManager.cpp:182-208), which makes the most conservative candidate half-speed-FORWARD rather than a dead stop. 0 centres the cloud on the origin, putting a full stop at the centre of the search — that is freeze-prone, because a stopped pair predicts no collision and so pays no time-to-impact penalty. Values near 1 stop exploring alternatives."))
+    float _AvoidanceVelBias = 0.5f;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|Sampling",
         meta = (AllowPrivateAccess = true,
             ToolTip = "Side-preference behaviour. Disabled skips the wSide cross product entirely. PassLeft mirrors dtCrowd's default convention."))
     ECk_AvoidanceSidePreference _AvoidanceSidePreference = ECk_AvoidanceSidePreference::PassLeft;
@@ -97,7 +102,7 @@ private:
 
     UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|Sampling|Penalty",
         meta = (AllowPrivateAccess = true, ClampMin = 0.0, UIMin = 0.0))
-    float _AvoidanceWeightCurVel = 1.0f;
+    float _AvoidanceWeightCurVel = 0.75f;
 
     UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|Sampling|Penalty",
         meta = (AllowPrivateAccess = true, ClampMin = 0.0, UIMin = 0.0))
@@ -125,6 +130,7 @@ public:
     CK_PROPERTY_GET(_AvoidanceSampleStride);
     CK_PROPERTY_GET(_AvoidanceSampleAngularDivs);
     CK_PROPERTY_GET(_AvoidanceSampleRings);
+    CK_PROPERTY_GET(_AvoidanceVelBias);
     CK_PROPERTY_GET(_AvoidanceSidePreference);
     CK_PROPERTY_GET(_AvoidanceWeightDesVel);
     CK_PROPERTY_GET(_AvoidanceWeightCurVel);

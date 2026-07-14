@@ -100,49 +100,51 @@ namespace ck
             return ((FrameIdx + AgentIdx) % Stride) == 0;
         }
 
-        // Build the candidate-velocity set. Pattern mirrors DetourObstacleAvoidance.cpp:548-567
-        // stripped to a single depth iteration with N×R samples on concentric rings, plus three
-        // explicit "anchor" samples: zero, the path-follow desired velocity, and the agent's
-        // current velocity. The anchors guarantee that the most natural choices (stop / continue
-        // as planned / hold current motion) are always in the set with their exact magnitude and
-        // direction — without them the ring grid only covers off-axis approximations and the
-        // sampler oscillates between similar-but-not-equal candidates as the desired direction
-        // tilts frame-to-frame.
-        // Inline capacity covers the default 8×2 pattern + 3 anchors without heap traffic —
+        // Build the candidate-velocity cloud. Mirrors DetourObstacleAvoidance.cpp:538-572
+        // (sampleVelocityAdaptive, single depth iteration): ring samples of radius
+        // MaxSpeed * (1 - VelBias), centred on DesiredVelocity * VelBias — NOT on the origin, and
+        // NOT on the desired velocity itself.
+        //
+        // The bias centre IS Detour's "always add sample at zero" (:551-554): that is a zero
+        // PATTERN OFFSET, so the centre candidate is VelBias of the desired velocity ("slow down"),
+        // never a true stop. This port previously centred the rings on the ORIGIN and added an
+        // explicit zero-velocity anchor "so stop is on the table". That anchor is a freeze fixed
+        // point: two stopped agents predict no collision between them, so the stop candidate pays
+        // NO time-to-impact penalty while every forward candidate pays the full one — and once
+        // stopped, the inertia term makes staying stopped cheaper still. Both agents pick it and
+        // never move again. Detour has no such candidate, and neither do we now.
+        //
+        // The desired- and current-velocity anchors go with it: they predate the bias centre, and
+        // with the cloud centred on DesiredVelocity * VelBias the outer ring already contains the
+        // desired velocity whenever the agent is at full speed. Off-grid anchors also distort the
+        // uniform-coverage assumption the penalty comparison rests on. Detour has neither.
+        //
+        // Single depth iteration (no adaptiveDepth refinement) is deliberate and is a shipped
+        // engine configuration: UE's ECrowdAvoidanceQuality::Low is 5 divs x 2 rings + centre at
+        // VelBias 0.5 (CrowdManager.cpp:182-187). Our 8 x 2 + centre is denser than that.
+        //
+        // Inline capacity covers the default 8x2 pattern + the bias centre without heap traffic —
         // this allocates per sampling agent per frame, and under parallel dispatch each task
         // builds its own.
         using FSamplePattern = TArray<FVector, TInlineAllocator<32>>;
 
         auto BuildSamplePattern(
             const FVector& InDesiredVelocity,
-            const FVector& InCurrentVelocity,
             float InMaxSpeed,
+            float InVelBias,
             int32 InAngularDivs,
             int32 InRings) -> FSamplePattern
         {
             FSamplePattern Samples;
-            Samples.Reserve(InAngularDivs * InRings + 3);
+            Samples.Reserve(InAngularDivs * InRings + 1);
 
-            // Anchor 1: the do-nothing zero candidate. Always present so "stop" is on the table.
-            Samples.Add(FVector::ZeroVector);
+            const auto BiasCentre = InDesiredVelocity * InVelBias;
+            const auto CloudRadius = InMaxSpeed * (1.0f - InVelBias);
 
-            // Anchor 2: path-follow desired velocity exactly. Without this, the sampler can never
-            // pick "go where I planned at full speed" — only off-axis ring approximations of it.
-            if (NOT InDesiredVelocity.IsNearlyZero())
-            {
-                Samples.Add(InDesiredVelocity.GetClampedToMaxSize(InMaxSpeed));
-            }
+            Samples.Add(BiasCentre);
 
-            // Anchor 3: current velocity exactly. Supports the wCurVel inertia bias so the agent
-            // can "keep going as I am" without the ring grid forcing a CurPen tax.
-            if (NOT InCurrentVelocity.IsNearlyZero()
-                && NOT InCurrentVelocity.Equals(InDesiredVelocity, 1.0f))
-            {
-                Samples.Add(InCurrentVelocity.GetClampedToMaxSize(InMaxSpeed));
-            }
-
-            // Use the desired velocity's heading as the pattern center. If it's near-zero (agent
-            // braked at goal), use world +X as a fallback.
+            // Pattern heading follows the desired velocity. The world +X fallback matches Detour's
+            // dtAtan2(0, 0) == 0 when the agent has no desired direction.
             const auto DesiredDir = InDesiredVelocity.IsNearlyZero()
                 ? FVector::ForwardVector
                 : InDesiredVelocity.GetSafeNormal();
@@ -151,13 +153,22 @@ namespace ck
             const auto AngularStep = (2.0f * PI) / static_cast<float>(InAngularDivs);
             for (int32 Ring = 1; Ring <= InRings; ++Ring)
             {
-                const auto Radius = (static_cast<float>(Ring) / static_cast<float>(InRings)) * InMaxSpeed;
+                const auto Radius = (static_cast<float>(Ring) / static_cast<float>(InRings)) * CloudRadius;
                 // Stagger alternating rings by half-step for better angular coverage (mirrors dtCrowd).
                 const auto AngleOffset = (Ring % 2 == 0) ? 0.5f * AngularStep : 0.0f;
                 for (int32 Div = 0; Div < InAngularDivs; ++Div)
                 {
                     const auto Angle = BaseAngle + AngleOffset + AngularStep * static_cast<float>(Div);
-                    Samples.Emplace(FMath::Cos(Angle) * Radius, FMath::Sin(Angle) * Radius, 0.0);
+                    const auto Candidate = BiasCentre +
+                        FVector{FMath::Cos(Angle) * Radius, FMath::Sin(Angle) * Radius, 0.0};
+
+                    // Detour rejects candidates beyond vmax (DetourObstacleAvoidance.cpp:589). At
+                    // VelBias 0.5 nothing can exceed it (0.5*|dvel| + 0.5*vmax <= vmax); the guard
+                    // keeps tuned VelBias values well-formed.
+                    if (Candidate.SizeSquared2D() > FMath::Square(InMaxSpeed + KINDA_SMALL_NUMBER))
+                    { continue; }
+
+                    Samples.Emplace(Candidate);
                 }
             }
 
@@ -169,14 +180,18 @@ namespace ck
         // contact. When the pair ALREADY overlaps, returns an overlap-severity score in the same
         // units (see below) rather than a true time.
         //
-        // The neighbor cache stores relative velocity (NbrVel - SelfVel_at_sample). To get the
-        // correct closing rate for self-at-CANDIDATE-velocity, we need:
-        //   Dv = CandidateVel - NbrVel
-        //      = CandidateVel - (RelativeVelocity + SelfVel_at_sample)
-        //      = CandidateVel - RelativeVelocity - SelfVel_at_sample
+        // RVO RECIPROCITY, per DetourObstacleAvoidance.cpp:337-341 (vab = 2*vcand - vel - nei.vel).
+        // Every agent runs this same sampler, so each may assume the neighbour will shoulder HALF
+        // the avoidance. Doubling the candidate's weight in relative-velocity space means half the
+        // deviation resolves the same predicted collision, and mutual avoidance CONVERGES instead
+        // of both agents over-correcting into a reciprocal dance. This port previously used plain
+        // VO (Dv = Cand - NbrVel), i.e. each agent solved as if the other would not move at all.
         //
-        // Without subtracting SelfVel here, TOIs come out too short (forward candidates look more
-        // dangerous than they are) and the sampler over-corrects.
+        // The neighbour cache stores relative velocity (NbrVel - SelfVel_at_sample), so
+        // NbrVel = RelativeVelocity + SelfVel, and the RVO relative velocity expands to:
+        //   vab = 2*Cand - SelfVel - NbrVel
+        //       = 2*Cand - SelfVel - (RelativeVelocity + SelfVel)
+        //       = 2*(Cand - SelfVel) - RelativeVelocity
         //
         // Math mirrors DetourObstacleAvoidance.cpp sweepCircleCircle: solves for t such that
         // |P + Dv*t| == combinedRadius, where P = -NbrRelPos.
@@ -204,7 +219,7 @@ namespace ck
             float InCombinedRadius,
             float InHorizon) -> float
         {
-            const auto Dv = FVector2D(InCandidateVel - InNeighborRelVel - InCurrentSelfVel);
+            const auto Dv = FVector2D(2.0f * (InCandidateVel - InCurrentSelfVel) - InNeighborRelVel);
             const auto P  = FVector2D(-InNeighborRelPos.X, -InNeighborRelPos.Y);
             const auto A = static_cast<float>(FVector2D::DotProduct(Dv, Dv));
             const auto B = static_cast<float>(FVector2D::DotProduct(P, Dv));
@@ -304,6 +319,7 @@ namespace ck
         const auto SideSign   = (SidePref == ECk_AvoidanceSidePreference::PassRight) ? -1.0f : 1.0f;
         const auto AngularDivs = Settings->Get_AvoidanceSampleAngularDivs();
         const auto Rings       = Settings->Get_AvoidanceSampleRings();
+        const auto VelBias     = Settings->Get_AvoidanceVelBias();
         const auto InvVMax     = (MaxSpeed > KINDA_SMALL_NUMBER) ? 1.0f / MaxSpeed : 0.0f;
         const auto InvHorizon  = (Horizon  > KINDA_SMALL_NUMBER) ? 1.0f / Horizon  : 0.0f;
 
@@ -315,7 +331,7 @@ namespace ck
             ? DesiredVel
             : InDesired.Get_LastVelocity();
 
-        const auto Samples = BuildSamplePattern(DesiredVel, CurrentVel, MaxSpeed, AngularDivs, Rings);
+        const auto Samples = BuildSamplePattern(DesiredVel, MaxSpeed, VelBias, AngularDivs, Rings);
 
         // Motion direction for side preference. Falls back to desired direction if current is
         // near-zero (e.g. agent at start of motion).
@@ -338,18 +354,23 @@ namespace ck
                 // wCurVel: deviation from current velocity — the inertia bias.
                 const auto CurPen = WCur * static_cast<float>(FVector::Dist2D(Cand, CurrentVel)) * InvVMax;
 
-                // wToi: minimum time-to-collision across neighbors. Reciprocal-scaled so short TTCs
-                // dominate (the formula is tpen = wToi * 1/(0.1 + tmin*invHorizTime), per dtCrowd).
-                auto TMin = FLT_MAX;
+                // wToi: minimum time-to-collision across neighbors, FLOORED AT THE HORIZON.
+                // Detour initialises tmin to horizTime (DetourObstacleAvoidance.cpp:329) and only
+                // ever lowers it, so a collision-free candidate STILL pays wToi / (0.1 + 1) — the
+                // ToI term never reaches zero. This port previously special-cased "no predicted
+                // collision" to ToiPen = 0, which made stopping collision-free and therefore FREE.
+                // That is half of the freeze fixed point: a stationary pair predicts no collision
+                // between them, so "stop" paid nothing while every candidate that actually made
+                // progress paid the full reciprocal penalty for closing on the neighbour.
+                auto TMin = Horizon;
                 for (const auto& Nbr : Neighbors)
                 {
                     const auto NbrRad = AgentRad + AgentRad;  // approximation: neighbors share radius
                     const auto Ttc = TimeToCollision(Cand, CurrentVel, Nbr.Get_RelativeOffset(), Nbr.Get_RelativeVelocity(), NbrRad, Horizon);
                     if (Ttc < TMin) { TMin = Ttc; }
                 }
-                const auto ToiPen = (TMin >= FLT_MAX)
-                    ? 0.0f
-                    : (WToi * (1.0f / (0.1f + TMin * InvHorizon)));
+                constexpr auto ToiPenaltySoftening = 0.1f;  // per dtCrowd (DetourObstacleAvoidance.cpp:417)
+                const auto ToiPen = WToi * (1.0f / (ToiPenaltySoftening + TMin * InvHorizon));
 
                 // wSide: penalty for going against the chosen side preference. Normalised by MaxSpeed
                 // so it's comparable to the other weighted terms.
