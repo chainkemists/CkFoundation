@@ -6,24 +6,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-int32 FCk_HydrationApplyScope::_Depth = 0;
-
-FCk_HydrationApplyScope::FCk_HydrationApplyScope()
-{ ++_Depth; }
-
-FCk_HydrationApplyScope::~FCk_HydrationApplyScope()
-{ --_Depth; }
-
-auto
-    FCk_HydrationApplyScope::
-    Get_IsActive()
-    -> bool
-{
-    return _Depth > 0;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
 CK_REGISTER_PROCESSOR(ck::FProcessor_ReplicatedFragments_Dispatch);
 
 namespace ck
@@ -140,13 +122,14 @@ namespace ck::persistence_apply
         -> EApplyOutcome
     {
         const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Resolve(InData.GetScriptStruct());
-        if (Handler == nullptr || NOT Handler->Apply)
+        if (Handler == nullptr || NOT Handler->HydrationApply)
         {
-            // Registry churn — a payload whose handler lost Apply. Drop rather than retry forever.
+            // No HydrationApply — either registry churn or a handler that never declared its load path. Drop
+            // rather than retry forever.
             return EApplyOutcome::DroppedTimeout;
         }
 
-        if (Handler->Apply(InEntity, InData, InOldData) == ECk_RepFragment_ApplyResult::Applied)
+        if (Handler->HydrationApply(InEntity, InData, InOldData) == ECk_RepFragment_ApplyResult::Applied)
         { return EApplyOutcome::Applied; }
 
         InOutPendingForSeconds += InDeltaT.Get_Seconds();
@@ -203,14 +186,10 @@ namespace ck
         for (auto Index = InPending._Entries.Num() - 1; Index >= 0; --Index)
         {
             // Hydration has no per-entry coalescing (unlike the net FastArray) — the Old side is always unset.
-            // FCk_HydrationApplyScope marks this as a LOAD-PATH apply so save-transport handlers (e.g. the SM) can
-            // branch to their authority-side hydration path without changing the net Apply signature.
-            const auto Outcome = [&]() -> ck::persistence_apply::EApplyOutcome
-            {
-                const auto HydrationScope = FCk_HydrationApplyScope{};
-                return ck::persistence_apply::ApplyOne(
-                    InHandle, InPending._Entries[Index], TOptional<FInstancedStruct>{}, InPending._PendingForSeconds, InDeltaT);
-            }();
+            // ApplyOne dispatches through the handler's HydrationApply slot (the load-path applier); the choice of
+            // slot is now structural (which callback), not a runtime scope query.
+            const auto Outcome = ck::persistence_apply::ApplyOne(
+                InHandle, InPending._Entries[Index], TOptional<FInstancedStruct>{}, InPending._PendingForSeconds, InDeltaT);
 
             if (Outcome == ck::persistence_apply::EApplyOutcome::StillPending)
             { AnyStillPending = true; }

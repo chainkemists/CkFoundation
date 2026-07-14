@@ -45,28 +45,27 @@ static struct FAnimPlanRepHandlerRegistrar
             {
                 .Apply = [DoApplyAnimPlans](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
                 {
-                    // Save-load hydration (authority-side, Phase 4B): the v3 payload is CHILD-keyed (per-plan Produce),
-                    // so under hydration Entity IS the AnimPlan entity — write its saved state directly. The OWNER-keyed
-                    // DoApplyAnimPlans below never resolves it. Net receive path byte-identical (FCk_HydrationApplyScope).
-                    if (FCk_HydrationApplyScope::Get_IsActive())
-                    {
-                        if (NOT Entity.Has<ck::FFragment_AnimPlan_Current>())
-                        { return ECk_RepFragment_ApplyResult::NotReady; }
-
-                        auto Plan = ck::StaticCast<FCk_Handle_AnimPlan>(Entity);
-                        for (const auto& Saved : New.Get<FCk_RepData_AnimPlans>().AnimPlans)
-                        {
-                            UCk_Utils_AnimPlan_UE::Request_UpdateAnimState(Plan,
-                                FCk_Request_AnimPlan_UpdateAnimState{Saved.Get_AnimCluster(), Saved.Get_AnimState()});
-                        }
-                        return ECk_RepFragment_ApplyResult::Applied;
-                    }
-
                     return DoApplyAnimPlans(Entity,
                         New.Get<FCk_RepData_AnimPlans>().AnimPlans,
                         Old.IsSet()
                             ? Old.GetValue().Get<FCk_RepData_AnimPlans>().AnimPlans
                             : TArray<FCk_AnimPlan_State>{});
+                },
+                // Save-load hydration (authority-side, Phase 4B): the v3 payload is CHILD-keyed (per-plan Produce),
+                // so under hydration Entity IS the AnimPlan entity — write its saved state directly. The OWNER-keyed
+                // DoApplyAnimPlans (net Apply) never resolves it.
+                .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
+                {
+                    if (NOT Entity.Has<ck::FFragment_AnimPlan_Current>())
+                    { return ECk_RepFragment_ApplyResult::NotReady; }
+
+                    auto Plan = ck::StaticCast<FCk_Handle_AnimPlan>(Entity);
+                    for (const auto& Saved : New.Get<FCk_RepData_AnimPlans>().AnimPlans)
+                    {
+                        UCk_Utils_AnimPlan_UE::Request_UpdateAnimState(Plan,
+                            FCk_Request_AnimPlan_UpdateAnimState{Saved.Get_AnimCluster(), Saved.Get_AnimState()});
+                    }
+                    return ECk_RepFragment_ApplyResult::Applied;
                 },
                 // v3 save capture (Phase 4B) — VALUE-EMITTING, keyed per-AnimPlan-entity (Produce fires on the plan
                 // entity). Emit this plan's goal/cluster/state, byte-identical to the wire-builder
@@ -85,7 +84,6 @@ static struct FAnimPlanRepHandlerRegistrar
                         Params.Get_AnimGoal(), Current.Get_AnimCluster(), Current.Get_AnimState()});
                     return FInstancedStruct::Make(MoveTemp(Data));
                 },
-                .Transport = ECk_PersistenceTransport::NetAndSave // v3 save capture (Phase 3A.4)
             });
     }
 } GAnimPlanRepHandlerRegistrar;

@@ -3,6 +3,7 @@
 #include "CkEntityCollection/CkEntityCollection_Utils.h"
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // RegisterLazyTyped<T> body
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -26,8 +27,7 @@ static struct FEntityCollectionRepHandlerRegistrar
             Entity.AddOrGet<ck::FFragment_EntityCollection_SyncReplication>(NewCollections, OldCollections);
         };
 
-        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
-            []() -> UScriptStruct* { return FCk_RepData_EntityCollections::StaticStruct(); },
+        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazyTyped<FCk_RepData_EntityCollections>(
             {
                 .Apply = [DoApplyEntityCollections](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
                 {
