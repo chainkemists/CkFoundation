@@ -7,7 +7,10 @@
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkNavigation/Nav/CkNav_Algorithm.h"
 #include "CkNavigation/Utils/CkNav_Utils.h"
+
+#include "CkPathNetwork/Network/CkPathNetwork_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -94,12 +97,32 @@ namespace ck
         NonConstHandle.Try_Remove<FTag_CrowdAgent_Walking>();
         NonConstHandle.AddOrGet<FTag_CrowdAgent_PathPending>();
 
-        // Enqueue the path request on the agent's own entity. CkNavigation's processor drains it
-        // and writes FFragment_Nav_PathResult on the same entity; OnPathResolved sees the result
-        // and finalizes the state transition.
-        auto Request = FCk_Request_Nav_FindPath{InRequest.Get_Target()};
-        Request.Set_QueryFilter(InParams.Get_NavQueryFilter());
-        UCk_Utils_Nav_UE::Request_FindPath(NonConstHandle, Request);
+        // Followers route through the path network instead of straight CkNavigation: the corridor
+        // resolves via FProcessor_CrowdAgent_OnRouteResolved, which installs the compiled waypoints
+        // through the same FFragment_Nav_PathResult seam — everything downstream (OnPathResolved,
+        // steering) is provider-agnostic. Without the follower feature, behavior is exactly as before.
+        if (UCk_Utils_PathNetworkFollower_UE::Has(NonConstHandle))
+        {
+            // Park the nav-path slot at Pending and forget the previously-installed corridor:
+            // no nav request exists to do the former (OnPathResolved would otherwise consume the
+            // previous Ready path as if it answered THIS MoveTo), and the corridor fragment
+            // persists across MoveTos so the bridge needs the install-identity reset.
+            FCk_Nav_Algorithm::MarkPathPending(NonConstHandle);
+            NonConstHandle.Try_Remove<FFragment_CrowdAgent_InstalledRoute>();
+
+            auto Follower = UCk_Utils_PathNetworkFollower_UE::CastChecked(NonConstHandle);
+            UCk_Utils_PathNetworkFollower_UE::Request_FindRoute(Follower,
+                FCk_Request_PathNetworkFollower_FindRoute{InRequest.Get_Target()});
+        }
+        else
+        {
+            // Enqueue the path request on the agent's own entity. CkNavigation's processor drains it
+            // and writes FFragment_Nav_PathResult on the same entity; OnPathResolved sees the result
+            // and finalizes the state transition.
+            auto Request = FCk_Request_Nav_FindPath{InRequest.Get_Target()};
+            Request.Set_QueryFilter(InParams.Get_NavQueryFilter());
+            UCk_Utils_Nav_UE::Request_FindPath(NonConstHandle, Request);
+        }
 
         ck::crowd::Verbose(TEXT("CrowdAgent [{}] MoveTo {} (arrival={})"),
             InHandle, InRequest.Get_Target(), ArrivalRadius);

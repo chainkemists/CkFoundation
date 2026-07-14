@@ -279,11 +279,11 @@ auto
 {
 	return TSearchResult<T_NodeId>
 	{
-		._Path = _ResultPath,
-		._TotalCost = _ResultCost,
-		._Status = _Status,
-		._TotalIterations = _TotalIterations,
-		._TotalTimeMicroseconds = _TotalTimeMicroseconds
+		.Path = _ResultPath,
+		.TotalCost = _ResultCost,
+		.Status = _Status,
+		.TotalIterations = _TotalIterations,
+		.TotalTimeMicroseconds = _TotalTimeMicroseconds
 	};
 }
 

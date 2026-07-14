@@ -69,6 +69,7 @@ Before writing any code, navigate the documentation in this order:
 | AI perception → ECS | `CkPerception` |
 | navmesh integration (paths, projection) | `CkNavigation` |
 | crowd steering / avoidance | `CkCrowd` |
+| sidewalk/path preference + authoring (ZoneGraph-lite) | `CkPathNetwork` (+ `CkPathNetworkEditor` tooling) |
 | GOAP planner (A* over Action entities) | `CkGoap` |
 | grid-based pathfinding | `CkAStar` + `CkGrid` |
 | ECS raycast sensing | `CkRaySense` |
@@ -184,6 +185,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkIskmRenderer | Animation,Core,Ecs,EcsExt,Graphics,IskmRendererVF,Label,Log,Physics,Provider,Record,Settings |
 | CkMessaging | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkNavigation | Core,Ecs,EcsExt,Label,Log,Record,Settings |
+| CkPathNetwork | AStar,Core,Ecs,EcsExt,Label,Log,Navigation,Record,Settings |
 | CkObjective | ActorRelay,Attribute,Core,Cue,Ecs,EcsExt,EntityCollection,Label,Log,Provider,Record,Settings |
 | CkOverlapBody | Actor,Core,Ecs,EcsExt,Graphics,Label,Log,Physics,Record,Settings |
 | CkPhysics | Actor,Chaos,Core,Ecs,EcsExt,Label,Log,Record |

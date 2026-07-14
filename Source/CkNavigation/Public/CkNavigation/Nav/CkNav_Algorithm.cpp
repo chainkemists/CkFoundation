@@ -2,8 +2,12 @@
 
 #include "CkNavigation/CkNavigation_Log.h"
 #include "CkNavigation/CkNavigation_Stats.h"
+#include "CkNavigation/Nav/CkNav_Fragment.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
+
+#include "CkEcs/Signal/CkSignal_Utils.h"
 
 #include <NavigationSystem.h>
 #include <NavMesh/RecastNavMesh.h>
@@ -256,6 +260,59 @@ auto
 
     OutResult._Waypoints = MoveTemp(NewWaypoints);
     OutResult._Status    = InNavResult.IsPartial() ? ECk_Nav_PathStatus::Partial : ECk_Nav_PathStatus::Ready;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_Nav_Algorithm::
+    InstallExternalPath(
+        FCk_Handle&     InHandle,
+        TArray<FVector> InWaypoints,
+        const FVector&  InDestination)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+        TEXT("InstallExternalPath called with an invalid Handle"))
+    { return; }
+
+    CK_ENSURE_IF_NOT(NOT InWaypoints.IsEmpty(),
+        TEXT("InstallExternalPath on [{}] called with an empty waypoint list — refusing to install "
+             "(an empty Ready path would stall every consumer that walks it)"), InHandle)
+    { return; }
+
+    auto& Result = InHandle.AddOrGet<ck::FFragment_Nav_PathResult>();
+
+    Result._Waypoints           = MoveTemp(InWaypoints);
+    Result._DestinationLocation = InDestination;
+    Result._Status              = ECk_Nav_PathStatus::Ready;
+
+    // Keep the debugger's picture coherent: this result did not come from a navmesh query, so
+    // only the fields an external provider can honestly report are populated.
+    Result._Diagnostics                          = FCk_Nav_PathDiagnostics{};
+    Result._Diagnostics._LastTargetLocation      = InDestination;
+    Result._Diagnostics._ExtractedWaypointCount  = Result._Waypoints.Num();
+
+    ck::nav::Verbose(TEXT("External path installed on [{}] ([{}] waypoints, destination {})"),
+        InHandle, Result._Waypoints.Num(), InDestination);
+
+    ck::UUtils_Signal_Nav_OnPathReady::Broadcast(
+        InHandle, ck::MakePayload(InHandle, Result));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_Nav_Algorithm::
+    MarkPathPending(
+        FCk_Handle& InHandle)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+        TEXT("MarkPathPending called with an invalid Handle"))
+    { return; }
+
+    InHandle.AddOrGet<ck::FFragment_Nav_PathResult>()._Status = ECk_Nav_PathStatus::Pending;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
