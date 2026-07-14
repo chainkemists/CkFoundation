@@ -6,6 +6,7 @@
 #include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
+#include "CkAttribute/CkAttribute_RestorePersistence.h" // RegisterLazyTyped<T> + shared attribute Produce/SeedContainer
 
 #include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
 #include "CkEcs/Snapshot/CkSnapshot_Archive_Writer.h"
@@ -106,8 +107,7 @@ static struct FFloatAttributeRepHandlerRegistrar
 {
     FFloatAttributeRepHandlerRegistrar()
     {
-        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
-            []() -> UScriptStruct* { return FCk_RepData_FloatAttributes::StaticStruct(); },
+        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazyTyped<FCk_RepData_FloatAttributes>(
             {
                 .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
                 {
@@ -153,7 +153,9 @@ static struct FFloatAttributeRepHandlerRegistrar
                     }
 
                     return Result;
-                }
+                },
+                .Produce       = &ck::attribute_restore::Produce<ck::TFragment_FloatAttribute, FCk_RepData_FloatAttributes>,
+                .SeedContainer = &ck::attribute_restore::SeedContainer<ck::TFragment_FloatAttribute, FCk_RepData_FloatAttributes>
             });
     }
 } GFloatAttributeRepHandlerRegistrar;

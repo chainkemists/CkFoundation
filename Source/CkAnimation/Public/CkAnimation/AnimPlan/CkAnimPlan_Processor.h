@@ -83,33 +83,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Re-drives replication of a RESTORED AnimPlan to clients after a snapshot load: once the OWNER's
-    // replication driver is re-established (snapshot respawn pass), re-create the owner-resident
-    // container entry (Construct is abstained during reconstitution) and re-arm
-    // FTag_AnimPlan_MayRequireReplication so FProcessor_AnimPlan_Replicate re-pushes the restored
-    // cluster/state. Pairs the shared ck::FTag_Snapshot_JustRestored with the per-feature
-    // FTag_AnimPlan_RestoreReplicated done tag; POINT-QUERIES the in_place marker (tombstone trap).
-    class CKANIMATION_API FProcessor_AnimPlan_ReplicateOnRestore : public ck_exp::TProcessor<
-            FProcessor_AnimPlan_ReplicateOnRestore,
-            FCk_Handle_AnimPlan,
-            TReadOnly<FFragment_AnimPlan_Params>,
-            TReadOnly<FFragment_AnimPlan_Current>,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using Group = FGroup_Gameplay;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const FFragment_AnimPlan_Params& InParams,
-            const FFragment_AnimPlan_Current& InCurrent) const -> void;
-    };
+    // (FProcessor_AnimPlan_ReplicateOnRestore removed — restore re-seed is now the generic
+    //  FProcessor_Persistence_ReDriveOnRestore driven by this feature's Produce/SeedContainer.)
 }
 
 // --------------------------------------------------------------------------------------------------------------------

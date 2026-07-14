@@ -83,37 +83,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // ---- ReplicateOnRestore (Server-side, post-snapshot-load) ----
-
-    // Re-drives replication of a RESTORED TagSet to clients after a snapshot load: once this
-    // entity's replication driver is re-established (snapshot respawn pass), re-create the
-    // self-resident container entry (Construct is abstained during reconstitution) and re-arm
-    // FTag_TagSet_MayRequireReplication. Pairs ck::FTag_Snapshot_JustRestored (shared per-entity,
-    // never removed here) with the per-feature FTag_TagSet_RestoreReplicated done tag. The view
-    // iterates the clean FFragment_TagSet and POINT-QUERIES the in_place marker (listing it in the
-    // view would surface tombstones).
-    class CKTAGSET_API FProcessor_TagSet_ReplicateOnRestore : public ck_exp::TProcessor<
-            FProcessor_TagSet_ReplicateOnRestore,
-            FCk_Handle_TagSet,
-            ck::TReadOnly<FFragment_TagSet>,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using Group = FGroup_Gameplay;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const FFragment_TagSet& InTagSet) const -> void;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     // ---- SyncReplication (Client-side) ----
 
     class CKTAGSET_API FProcessor_TagSet_SyncReplication : public ck_exp::TProcessor<

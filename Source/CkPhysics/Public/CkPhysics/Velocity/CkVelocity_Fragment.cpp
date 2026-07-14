@@ -3,6 +3,8 @@
 #include "CkPhysics/Velocity/CkVelocity_Utils.h"
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
+#include "CkEcs/Net/CkNet_Utils.h" // TryAddContainerFragment (used by RegisterLazyTyped's default seed)
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // RegisterLazyTyped<T> body
 
 #include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
 #include "CkEcs/Snapshot/CkSnapshot_Archive_Writer.h"
@@ -26,8 +28,7 @@ static struct FVelocityRepHandlerRegistrar
 {
     FVelocityRepHandlerRegistrar()
     {
-        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
-            []() -> UScriptStruct* { return FCk_RepData_Velocity::StaticStruct(); },
+        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazyTyped<FCk_RepData_Velocity>(
             {
                 .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
                 {
@@ -43,6 +44,14 @@ static struct FVelocityRepHandlerRegistrar
 
                     UCk_Utils_Velocity_UE::Request_OverrideVelocity(VelocityHandle, New.Get<FCk_RepData_Velocity>().Value);
                     return ECk_RepFragment_ApplyResult::Applied;
+                },
+                // Restore re-seed of the self-resident Velocity container from live Current (mirrors the deleted
+                // FProcessor_Velocity_ReplicateOnRestore). Default typed SeedContainer (no re-arm tag).
+                .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+                {
+                    if (NOT Entity.Has<ck::FFragment_Velocity_Current>())
+                    { return {}; }
+                    return FInstancedStruct::Make(FCk_RepData_Velocity{Entity.Get<ck::FFragment_Velocity_Current>().Get_CurrentVelocity()});
                 }
             });
     }

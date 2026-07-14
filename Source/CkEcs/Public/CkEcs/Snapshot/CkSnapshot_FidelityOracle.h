@@ -2,8 +2,10 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkEcs/Snapshot/CkSnapshot_Context.h"          // ck::SnapshotRegistryType
+#include "CkEcs/Snapshot/CkSnapshot_Context.h"          // ck::SnapshotRegistryType, FCk_RegistryHandle
 #include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"  // CK_WITH_FIDELITY_ORACLE define
+
+#include <InstancedStruct.h> // FInstancedStruct (Tier-2 payload image)
 
 // --------------------------------------------------------------------------------------------------------------------
 // Fidelity oracle — Tier 1 (structural diff). Test-only: everything compiles only under CK_WITH_FIDELITY_ORACLE
@@ -58,6 +60,34 @@ namespace ck::snapshot_oracle
         const FCk_Oracle_StructuralImage& InAfter,
         const TArray<FString>& InAllowlist,
         TArray<FString>& OutAnnotated) -> TArray<FString>;
+
+    // --------------------------------------------------------------------------------------------------------------------
+    // Tier 2 — Produce-diff (spec §5). Runs every registered handler's Produce per entity (the hydration payload the
+    // feature would persist), keyed by the entity's Tier-1 structural signature so identity survives a rebuild
+    // (entity ids change across a rebuild; signatures do not). The diff is a per-(signature, payload-type) ExportText
+    // comparison: a changed VALUE is one line, an added/removed feature payload is one line. Produce is authority-only
+    // by contract, so this captures on the authority registry.
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // One captured image: entity signature -> the (payload-type-name, payload) pairs every Produce emitted for the
+    // entities carrying that signature. Multiple structurally-identical entities aggregate their payloads under one key.
+    using FCk_Oracle_PayloadImage = TMap<FString, TArray<TPair<FString, FInstancedStruct>>>;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Capture Produce payloads for every entity. InRegistryHandle mints the per-entity FCk_Handle the Produce handlers
+    // require (ck::MakeHandle). InRegisteredEnttHashes filters the SIGNATURE key the same way Capture_Structural does
+    // (nullptr = unfiltered); it never affects which Produce handlers run — every registered Produce runs on every entity.
+    CKECS_API auto Capture_Payloads(
+        ck::SnapshotRegistryType& InRegistry,
+        FCk_RegistryHandle InRegistryHandle,
+        const TSet<uint32>* InRegisteredEnttHashes = nullptr) -> FCk_Oracle_PayloadImage;
+
+    // Per-(signature, payload-type) comparison. Each line: "~ <sig> | <type>" (value changed), "+ <sig> | <type>"
+    // (after-only) or "- <sig> | <type>" (before-only). Empty when the two images are payload-identical.
+    CKECS_API auto Diff_Payloads(
+        const FCk_Oracle_PayloadImage& InBefore,
+        const FCk_Oracle_PayloadImage& InAfter) -> TArray<FString>;
 }
 
 #endif // CK_WITH_FIDELITY_ORACLE
