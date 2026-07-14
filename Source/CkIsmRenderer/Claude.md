@@ -16,7 +16,21 @@
   *component*, so a shared ISM can't express "outline just this instance" directly — outlined proxies' instances are
   mirrored into a custom-depth-only "shadow ISM", one per (renderer data, preset), created via
   `UCk_IsmRenderer_Subsystem_UE::FindOrCreate_OutlineIsmComponent`. Test getters:
-  `UCk_Utils_IsmProxy_UE::Get_IsOutlineApplied` / `Get_OutlineShadowInstanceCount`.
+  `UCk_Utils_IsmProxy_UE::Get_IsOutlineApplied` / `Get_OutlineShadowInstanceCount` /
+  `Get_CustomInstanceData` / `Get_OutlineShadowCustomData` / `Get_OutlineShadowMaterial`.
+- **The shadow ISM inherits the source's materials + `NumCustomDataFloats`, and its per-instance custom data is
+  kept mirrored** (seeded by `_Outline_Sync`, mirrored on every write by `FProcessor_IsmProxy_HandleRequests`).
+  This is what makes a **WPO-animated** ISM outline correctly: `CkVat` deforms its mesh entirely inside the
+  material's World Position Offset, keyed off the per-instance custom data, so a shadow rendering the default
+  material with zero custom-data floats would silhouette the *bind pose* while the mesh animates. The custom
+  depth pass runs the full material vertex shader whenever the material modifies mesh position, and substitutes
+  the position-only default material back in when it doesn't — so this costs ordinary (non-WPO) ISMs nothing.
+  Consequence: a masked material now silhouettes *mask-accurately* rather than as full geometry.
+  **Translucent-family source materials are deliberately NOT inherited**: the custom depth pass *drops* them
+  (`UseDefaultMaterial` → `bIgnoreThisMaterial` → no draw) unless they opt into translucent custom-depth writes,
+  which would silently delete the outline. Those slots keep the static mesh's own material, so a translucent
+  look (e.g. `M_CkUsf_Look_Glass`) still silhouettes — at bind pose if it also animates via WPO, which beats
+  no silhouette at all.
 
 ---
 

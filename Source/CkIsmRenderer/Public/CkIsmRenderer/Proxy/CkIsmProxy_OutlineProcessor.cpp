@@ -147,6 +147,13 @@ namespace ck
         const auto& InstanceTransform = Get_TransformWithLocalOffset(InParams, InTransform.Get_Transform());
         const auto& ShadowInstanceId = ShadowIsm->AddInstanceById(InstanceTransform, TransformAsWorldSpace);
 
+        // Seed the shadow from the proxy's CPU-authoritative cache: a WPO-animated material (CkVat) derives
+        // its pose from these floats, so an unseeded shadow silhouettes the bind pose until the next write.
+        // FProcessor_IsmProxy_HandleRequests mirrors every subsequent write.
+        if (const auto& CustomData = InCurrent.Get_CustomInstanceDataValues();
+            NOT CustomData.IsEmpty() && ShadowIsm->NumCustomDataFloats == CustomData.Num())
+        { ShadowIsm->SetCustomDataById(ShadowInstanceId, CustomData); }
+
         InHandle.AddOrGet<FFragment_IsmProxy_OutlineApplied>() =
             FFragment_IsmProxy_OutlineApplied{Preset, ShadowIsm.Get(), ShadowInstanceId};
 

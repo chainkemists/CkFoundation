@@ -152,6 +152,70 @@ auto
 
 auto
     UCk_Utils_IsmProxy_UE::
+    Get_CustomInstanceData(
+        const FCk_Handle_IsmProxy& InHandle)
+    -> TArray<float>
+{
+    if (ck::Is_NOT_Valid(InHandle))
+    { return {}; }
+
+    return InHandle.Get<ck::FFragment_IsmProxy_Current>().Get_CustomInstanceDataValues();
+}
+
+auto
+    UCk_Utils_IsmProxy_UE::
+    Get_OutlineShadowCustomData(
+        const FCk_Handle_IsmProxy& InHandle)
+    -> TArray<float>
+{
+    if (ck::Is_NOT_Valid(InHandle) || NOT InHandle.Has<ck::FFragment_IsmProxy_OutlineApplied>())
+    { return {}; }
+
+    const auto& Applied = InHandle.Get<ck::FFragment_IsmProxy_OutlineApplied>();
+    const auto& ShadowIsm = Applied.Get_ShadowIsm();
+
+    if (ck::Is_NOT_Valid(ShadowIsm) || NOT ShadowIsm->IsValidId(Applied.Get_ShadowInstanceId()))
+    { return {}; }
+
+    // PerInstanceSMCustomData is a flat NumCustomDataFloats-strided array in INSTANCE order, so the
+    // id has to be resolved to its current index (removals compact the array; ids do not).
+    const auto& NumFloats = ShadowIsm->NumCustomDataFloats;
+    const auto& InstanceIndex = ShadowIsm->GetInstanceIndexForId(Applied.Get_ShadowInstanceId());
+
+    if (NumFloats <= 0 || InstanceIndex == INDEX_NONE)
+    { return {}; }
+
+    const auto& Offset = InstanceIndex * NumFloats;
+
+    if (NOT ShadowIsm->PerInstanceSMCustomData.IsValidIndex(Offset + NumFloats - 1))
+    { return {}; }
+
+    auto OutCustomData = TArray<float>{};
+    OutCustomData.Append(&ShadowIsm->PerInstanceSMCustomData[Offset], NumFloats);
+
+    return OutCustomData;
+}
+
+auto
+    UCk_Utils_IsmProxy_UE::
+    Get_OutlineShadowMaterial(
+        const FCk_Handle_IsmProxy& InHandle,
+        int32 InSlot)
+    -> UMaterialInterface*
+{
+    if (ck::Is_NOT_Valid(InHandle) || NOT InHandle.Has<ck::FFragment_IsmProxy_OutlineApplied>())
+    { return nullptr; }
+
+    const auto& ShadowIsm = InHandle.Get<ck::FFragment_IsmProxy_OutlineApplied>().Get_ShadowIsm();
+
+    if (ck::Is_NOT_Valid(ShadowIsm) || InSlot >= ShadowIsm->GetNumMaterials())
+    { return nullptr; }
+
+    return ShadowIsm->GetMaterial(InSlot);
+}
+
+auto
+    UCk_Utils_IsmProxy_UE::
     Get_Mobility(
         const FCk_Handle_IsmProxy& InHandle)
     -> ECk_Mobility

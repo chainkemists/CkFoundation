@@ -104,6 +104,29 @@ namespace ck_ism_proxy_processor
             }
         }
     }
+
+    // An outlined proxy's shadow instance renders through the same material as its main instance, so it needs
+    // the same per-instance custom data: a WPO-animated material (CkVat) derives the pose it silhouettes from
+    // those floats. Returns nullptr when the proxy carries no outline, or its shadow instance is gone.
+    auto
+        TryGet_OutlineShadowInstance(
+            const FCk_Handle_IsmProxy& InHandle,
+            FPrimitiveInstanceId& OutShadowInstanceId)
+        -> UInstancedStaticMeshComponent*
+    {
+        if (NOT InHandle.Has<ck::FFragment_IsmProxy_OutlineApplied>())
+        { return nullptr; }
+
+        const auto& Applied = InHandle.Get<ck::FFragment_IsmProxy_OutlineApplied>();
+        auto* ShadowIsm = Applied.Get_ShadowIsm().Get();
+
+        if (ck::Is_NOT_Valid(ShadowIsm) || NOT ShadowIsm->IsValidId(Applied.Get_ShadowInstanceId()))
+        { return nullptr; }
+
+        OutShadowInstanceId = Applied.Get_ShadowInstanceId();
+
+        return ShadowIsm;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -472,6 +495,13 @@ namespace ck
             {
                 IsmComp->SetCustomDataById(InCurrent.Get_IsmInstanceIndex(), NewCustomData);
             }
+
+            auto ShadowInstanceId = FPrimitiveInstanceId{};
+            if (auto* ShadowIsm = TryGet_OutlineShadowInstance(InHandle, ShadowInstanceId);
+                ck::IsValid(ShadowIsm) && ShadowIsm->NumCustomDataFloats == NewCustomData.Num())
+            {
+                ShadowIsm->SetCustomDataById(ShadowInstanceId, NewCustomData);
+            }
         }
     }
 
@@ -516,6 +546,13 @@ namespace ck
             if (IsmComp->IsValidId(InCurrent.Get_IsmInstanceIndex()))
             {
                 IsmComp->SetCustomDataValueById(InCurrent.Get_IsmInstanceIndex(), NewCustomDataIndex, NewCustomDataValue);
+            }
+
+            auto ShadowInstanceId = FPrimitiveInstanceId{};
+            if (auto* ShadowIsm = TryGet_OutlineShadowInstance(InHandle, ShadowInstanceId);
+                ck::IsValid(ShadowIsm) && ShadowIsm->NumCustomDataFloats > NewCustomDataIndex)
+            {
+                ShadowIsm->SetCustomDataValueById(ShadowInstanceId, NewCustomDataIndex, NewCustomDataValue);
             }
         }
     }

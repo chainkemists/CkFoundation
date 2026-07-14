@@ -7,6 +7,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class UMaterialInterface;
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     class FProcessor_IsmProxy_Setup;
@@ -171,6 +175,34 @@ public:
     static int32
     Get_OutlineShadowInstanceCount(
         const FCk_Handle_IsmProxy& InHandle);
+
+    // The proxy's CPU-authoritative per-instance custom data (what was last pushed to the ISM).
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IsmProxy",
+              DisplayName = "[Ck][IsmProxy] Get Custom Instance Data")
+    static TArray<float>
+    Get_CustomInstanceData(
+        const FCk_Handle_IsmProxy& InHandle);
+
+    // The custom data actually resident on this proxy's SHADOW instance. Must match
+    // Get_CustomInstanceData for a WPO-animated material (CkVat) to silhouette the animated pose
+    // rather than the bind pose. Empty when no outline is applied.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IsmProxy",
+              DisplayName = "[Ck][IsmProxy] Get Outline Shadow Custom Data")
+    static TArray<float>
+    Get_OutlineShadowCustomData(
+        const FCk_Handle_IsmProxy& InHandle);
+
+    // The material on the shadow ISM at InSlot — it must be the source ISM's material, or the outline
+    // pass runs a different vertex shader than the mesh it is meant to trace.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IsmProxy",
+              DisplayName = "[Ck][IsmProxy] Get Outline Shadow Material")
+    static UMaterialInterface*
+    Get_OutlineShadowMaterial(
+        const FCk_Handle_IsmProxy& InHandle,
+        int32 InSlot = 0);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|IsmProxy",
