@@ -9,6 +9,7 @@
 
 #include "CkEcs/CkEcsLog.h"
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h" // FTag_DestroyEntity_* (owner-liveness cancel)
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_SpawnRecipe.h" // FFragment_SpawnRecipe retention (RuntimeSpawned)
 #include "CkEcs/Net/CkNet_Fragment.h"
@@ -42,6 +43,32 @@ namespace ck
             const FFragment_EntityScript_RequestSpawnEntity& InRequestFragment)
         -> void
     {
+        // A destroyed or dying owner means this spawn lost the race with its owner's destroy cascade —
+        // the cascade marks lifetime dependents that EXIST at destroy time, so a child materializing
+        // after it would be a zombie that outlives its owner (e.g. an SmTask ticking against a destroyed
+        // StateMachine, 2026-07-14). Cancel the spawn: this is the owner's cascade applied late, not an
+        // error — had the child materialized a tick earlier, the same cascade would have destroyed it.
+        // Checked BEFORE the mid-construction defer below, or a request whose owner dies while still
+        // constructing would defer forever. Is_NOT_Valid short-circuits first — a finalized owner is a
+        // tombstone handle and any Has query on it would itself ensure.
+        if (const auto& LifetimeOwner = InRequestFragment.Get_Owner();
+            ck::Is_NOT_Valid(LifetimeOwner) ||
+            LifetimeOwner.Has_Any<FTag_DestroyEntity_Initiate, FTag_DestroyEntity_EndPlay,
+                FTag_DestroyEntity_Teardown, FTag_DestroyEntity_Await, FTag_DestroyEntity_Finalize>())
+        {
+            ck::ecs::Verbose(TEXT("Cancelling EntityScript spawn of [{}] — lifetime owner [{}] is destroyed or "
+                "pending-destroy (owner cascade applied late)"),
+                InRequestFragment.Get_EntityScriptClassArchetype(), LifetimeOwner);
+
+            if (auto OrphanedEntity = InRequestFragment.Get_NewEntity();
+                ck::IsValid(OrphanedEntity))
+            { UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(OrphanedEntity); }
+
+            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
+            InHandle.Remove<MarkedDirtyBy>();
+            return;
+        }
+
         // Gate child spawns on the parent being fully constructed. ContinueConstruction and
         // FinishConstruction are true "construction in progress" markers — a child EntityScript
         // spawned from inside a parent's Construct callback must wait for the parent to finish
