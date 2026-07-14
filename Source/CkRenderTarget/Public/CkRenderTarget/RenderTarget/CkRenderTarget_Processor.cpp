@@ -407,7 +407,7 @@ namespace ck
 
         // ---- Preconditions: evaluate ALL before any mutation (exactly-once repaint) ----
         // The fresh v3 Construct re-created this child; its Setup (FGroup_Gameplay_Rendering) runs in the
-        // load's Full settle-pump BEFORE FGroup_Hydration, adding Current + resolving the target + removing
+        // load's Full settle-pump BEFORE FGroup_DeferredApply, adding Current + resolving the target + removing
         // NeedsSetup. Return NotReady (retry) until it has composed.
         if (NOT InChild.Has<FFragment_RenderTarget_Params>()
             || NOT InChild.Has<FFragment_RenderTarget_Current>()

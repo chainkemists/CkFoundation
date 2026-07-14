@@ -2,8 +2,8 @@
 
 #include "CkCore/Enums/CkEnums.h"          // ECk_MinMaxCurrent, ECk_AddedOrNot
 #include "CkEcs/Handle/CkHandle.h"          // FCk_Handle, ck::Is_NOT_Valid
-#include "CkEcs/Net/CkNet_Utils.h"          // TryAddContainerFragment, Get_LifetimeOwner; transitively ECk_RepFragment_ApplyResult
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // RegisterLazyTyped<T> body
+#include "CkEcs/Net/CkNet_Utils.h"          // TryAddContainerFragment, Get_LifetimeOwner; transitively ECk_Persistence_ApplyResult
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // Register_* entry-point bodies
 
 #include "CkAttribute/CkAttribute_Log.h"    // ck::attribute::Verbose (component-drift skip)
 #include "CkLabel/CkLabel_Utils.h"          // UCk_Utils_GameplayLabel_UE::Get_Label (value-emitting Produce)
@@ -73,14 +73,14 @@ namespace ck::attribute_restore
         HydrationApply(
             FCk_Handle& InEntity,
             const FInstancedStruct& InNew,
-            T_ApplyEntryFn InApplyEntry) -> ECk_RepFragment_ApplyResult
+            T_ApplyEntryFn InApplyEntry) -> ECk_Persistence_ApplyResult
     {
         using Current = T_DerivedAttribute<ECk_MinMaxCurrent::Current>;
         using Min     = T_DerivedAttribute<ECk_MinMaxCurrent::Min>;
         using Max     = T_DerivedAttribute<ECk_MinMaxCurrent::Max>;
 
         if (NOT InEntity.Has<Current>())
-        { return ECk_RepFragment_ApplyResult::NotReady; }
+        { return ECk_Persistence_ApplyResult::NotReady; }
 
         auto AttributeEntity = T_UtilsType::Cast(InEntity);
 
@@ -104,6 +104,6 @@ namespace ck::attribute_restore
             InApplyEntry(AttributeEntity, Entry);
         }
 
-        return ECk_RepFragment_ApplyResult::Applied;
+        return ECk_Persistence_ApplyResult::Applied;
     }
 }

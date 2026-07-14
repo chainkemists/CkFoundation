@@ -65,16 +65,16 @@ static struct FFloatAttributeRepHandlerRegistrar
 {
     FFloatAttributeRepHandlerRegistrar()
     {
-        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazyTyped<FCk_RepData_FloatAttributes>(
-            {
-                .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
+        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_FloatAttributes>(
+            &ck::attribute_restore::Produce<ck::TFragment_FloatAttribute, FCk_RepData_FloatAttributes>,
+                [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
                 {
                     const auto& NewAttrs = New.Get<FCk_RepData_FloatAttributes>().Attributes;
                     const auto* OldAttrs = Old.IsSet()
                         ? &Old.GetValue().Get<FCk_RepData_FloatAttributes>().Attributes
                         : nullptr;
 
-                    auto Result = ECk_RepFragment_ApplyResult::Applied;
+                    auto Result = ECk_Persistence_ApplyResult::Applied;
 
                     for (auto Index = 0; Index < NewAttrs.Num(); ++Index)
                     {
@@ -85,7 +85,7 @@ static struct FFloatAttributeRepHandlerRegistrar
                         {
                             // Not composed yet — keep the whole container entry pending. Siblings
                             // that did apply are skipped on the retry by the value check below.
-                            Result = ECk_RepFragment_ApplyResult::NotReady;
+                            Result = ECk_Persistence_ApplyResult::NotReady;
                             continue;
                         }
 
@@ -115,13 +115,11 @@ static struct FFloatAttributeRepHandlerRegistrar
                 // Save-load hydration (authority-side, Phase 4B): the v3 payload is CHILD-keyed (per-attribute-entity
                 // Produce), so Entity IS the attribute entity — write its value directly via ApplyReplicatedFloatAttributeEntry.
                 // The OWNER-keyed net Apply above never resolves it.
-                .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
+                [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                 {
                     return ck::attribute_restore::HydrationApply<ck::TFragment_FloatAttribute, FCk_RepData_FloatAttributes, UCk_Utils_FloatAttribute_UE>(
                         Entity, New, &ApplyReplicatedFloatAttributeEntry);
-                },
-                .Produce       = &ck::attribute_restore::Produce<ck::TFragment_FloatAttribute, FCk_RepData_FloatAttributes>,
-            });
+                });
     }
 } GFloatAttributeRepHandlerRegistrar;
 
@@ -134,17 +132,15 @@ static struct FFloatAttributeRefillRepHandlerRegistrar
 {
     FFloatAttributeRefillRepHandlerRegistrar()
     {
-        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazyTyped<FCk_SaveData_FloatAttributeRefill>(
-            {
-                .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
+        FCk_PersistenceHandlerRegistry::Register_SaveOnly<FCk_SaveData_FloatAttributeRefill>(
+            &ck::attribute_refill_restore::Produce<
+                    ck::TFragment_FloatAttribute, FCk_Handle_FloatAttributeRefill, UCk_Utils_FloatAttributeRefill_UE, FCk_SaveData_FloatAttributeRefill>,
+                [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                 {
                     return ck::attribute_refill_restore::HydrationApply<
                         ck::TFragment_FloatAttribute, FCk_Handle_FloatAttributeRefill, UCk_Utils_FloatAttributeRefill_UE, FCk_SaveData_FloatAttributeRefill>(
                             Entity, New);
-                },
-                .Produce = &ck::attribute_refill_restore::Produce<
-                    ck::TFragment_FloatAttribute, FCk_Handle_FloatAttributeRefill, UCk_Utils_FloatAttributeRefill_UE, FCk_SaveData_FloatAttributeRefill>,
-            });
+                });
     }
 } GFloatAttributeRefillRepHandlerRegistrar;
 

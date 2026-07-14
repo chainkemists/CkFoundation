@@ -16,10 +16,10 @@ namespace ck
     // (FTag_RepFragments_PendingApply on the associated entity); this processor applies them.
     //
     // Scheduling contract (the load-bearing part):
-    //   - lives in FGroup_Hydration, which runs after FGroup_Gameplay_Script (where
+    //   - lives in FGroup_DeferredApply, which runs after FGroup_Gameplay_Script (where
     //     FProcessor_EntityScript_FinishConstruction lives), so OnConstructed-driven composition
     //     exists before the first dispatch — no per-processor RunAfter needed, and
-    //   - FGroup_Hydration precedes FGroup_Replication globally, so applied values are visible
+    //   - FGroup_DeferredApply precedes FGroup_Replication globally, so applied values are visible
     //     before FProcessor_ReplicationDriver_FireOnDependentReplicationComplete broadcasts
     //     OnReplicationComplete in the same frame (fire-gating additionally waits on the drain).
     class CKECS_API FProcessor_ReplicatedFragments_Dispatch : public ck_exp::TProcessor<
@@ -30,7 +30,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Hydration;
+        using Group = FGroup_DeferredApply;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::ClientOnly;
         using MarkedDirtyBy = FTag_RepFragments_PendingApply;
         static constexpr auto LoadPolicy = ECk_ProcessorLoadPolicy::RunsDuringLoad; // load-gate kernel
@@ -50,7 +50,7 @@ namespace ck
 
     // Load-path sibling of FProcessor_ReplicatedFragments_Dispatch: drains an entity's FFragment_PendingHydration
     // queue through the SAME handler Apply, but runs on EVERY net mode (a loading standalone/authority world
-    // hydrates locally, not just clients). Same Group as the net dispatcher (FGroup_Hydration).
+    // hydrates locally, not just clients). Same Group as the net dispatcher (FGroup_DeferredApply).
     // The load path enqueues FFragment_PendingHydration entries; this processor drains them.
     class CKECS_API FProcessor_Hydration_Dispatch : public ck_exp::TProcessor<
         FProcessor_Hydration_Dispatch,
@@ -60,8 +60,8 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Hydration;
-        // Runs LAST among the FGroup_Hydration dispatchers so it can clear FTag_EntityScript_ConstructedThisFrame
+        using Group = FGroup_DeferredApply;
+        // Runs LAST among the FGroup_DeferredApply dispatchers so it can clear FTag_EntityScript_ConstructedThisFrame
         // after both have skipped this-frame-composed entities in the main pass.
         using RunAfter = TDepList<FProcessor_ReplicatedFragments_Dispatch>;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::All;

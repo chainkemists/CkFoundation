@@ -101,8 +101,8 @@ auto
     // FProcessor_EntityScript_FinishConstruction in the same frame).
     for (auto& Entry : _Fragments._Items)
     {
-        const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Resolve(Entry.Data.GetScriptStruct());
-        if (Handler == nullptr || NOT Handler->Apply)
+        const auto* Handler = FCk_PersistenceHandlerRegistry::Resolve(Entry.Data.GetScriptStruct());
+        if (Handler == nullptr || NOT Handler->NetApply)
         { continue; }
 
         Entry._PendingApply = true;

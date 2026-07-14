@@ -5,7 +5,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"                          // ck::algo::ForEachIsValid — Produce
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // RegisterLazyTyped<T> body
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // Register_* entry-point bodies
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"              // Request_TransferLifetimeOwner — load hydration
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -18,14 +18,14 @@
         // owner-keyed and never resolves it here. Connect each saved item into THIS inventory's item record and
         // re-place it on the grid; the authority rebuilds its inventory graph and clients converge via the
         // ordinary SyncReplication path. All-or-nothing: if any item handle is not yet rebuilt, retry.
-        const auto DoHydrateSpatialItems = [](FCk_Handle& Entity, const TArray<FCk_InventoryItem_Spatial_ReplicatedEntry>& NewItems) -> ECk_RepFragment_ApplyResult
+        const auto DoHydrateSpatialItems = [](FCk_Handle& Entity, const TArray<FCk_InventoryItem_Spatial_ReplicatedEntry>& NewItems) -> ECk_Persistence_ApplyResult
         {
             if (NOT UCk_Utils_Inventory_Spatial_UE::Has(Entity))
-            { return ECk_RepFragment_ApplyResult::NotReady; }
+            { return ECk_Persistence_ApplyResult::NotReady; }
 
             if (ck::algo::AnyOf(NewItems, [](const FCk_InventoryItem_Spatial_ReplicatedEntry& InEntry)
                 { return ck::Is_NOT_Valid(InEntry.Get_ItemHandle()); }))
-            { return ECk_RepFragment_ApplyResult::NotReady; }
+            { return ECk_Persistence_ApplyResult::NotReady; }
 
             auto SpatialInventory = UCk_Utils_Inventory_Spatial_UE::Cast(Entity);
             for (const auto& NewEntry : NewItems)
@@ -47,16 +47,16 @@
             // SyncReplication — which carries coordinate + rotation — once pushed).
             auto InventoryHandle = UCk_Utils_Inventory_UE::Cast(Entity);
             UCk_Utils_Inventory_UE::Request_TryReplicateInventory(InventoryHandle);
-            return ECk_RepFragment_ApplyResult::Applied;
+            return ECk_Persistence_ApplyResult::Applied;
         };
 
         // Stamps the sync fragment consumed by the Spatial SyncReplication processor (which owns
         // the actual diff/apply). NotReady until at least one Spatial inventory is composed.
-        const auto DoApplySpatialItems = [](FCk_Handle& Entity, const TArray<FCk_InventoryItem_Spatial_ReplicatedEntry>& NewItems, const TArray<FCk_InventoryItem_Spatial_ReplicatedEntry>& OldItems) -> ECk_RepFragment_ApplyResult
+        const auto DoApplySpatialItems = [](FCk_Handle& Entity, const TArray<FCk_InventoryItem_Spatial_ReplicatedEntry>& NewItems, const TArray<FCk_InventoryItem_Spatial_ReplicatedEntry>& OldItems) -> ECk_Persistence_ApplyResult
         {
             const auto Inventories = UCk_Utils_Inventory_UE::RecordOfInventories_Utils::Get_ValidEntries(Entity);
 
-            auto Result = ECk_RepFragment_ApplyResult::NotReady;
+            auto Result = ECk_Persistence_ApplyResult::NotReady;
 
             for (auto InventoryHandle : Inventories)
             {
@@ -64,31 +64,18 @@
                 { continue; }
 
                 InventoryHandle.AddOrGet<ck::FFragment_Inventory_Spatial_SyncReplication>(NewItems, OldItems);
-                Result = ECk_RepFragment_ApplyResult::Applied;
+                Result = ECk_Persistence_ApplyResult::Applied;
             }
 
             return Result;
         };
 
-        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazyTyped<FCk_RepData_Inventory_Spatial_Items>(
-            {
-                .Apply = [DoApplySpatialItems](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
-                {
-                    return DoApplySpatialItems(Entity,
-                        New.Get<FCk_RepData_Inventory_Spatial_Items>().Items,
-                        Old.IsSet()
-                            ? Old.GetValue().Get<FCk_RepData_Inventory_Spatial_Items>().Items
-                            : TArray<FCk_InventoryItem_Spatial_ReplicatedEntry>{});
-                },
-                .HydrationApply = [DoHydrateSpatialItems](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
-                {
-                    return DoHydrateSpatialItems(Entity, New.Get<FCk_RepData_Inventory_Spatial_Items>().Items);
-                },
+        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_Inventory_Spatial_Items>(
                 // Produce-only capture (Phase 3A.4): mirror FProcessor_Inventory_Spatial_Replicate's live-state
                 // build. Keyed on the INVENTORY entity — emits THAT inventory's own items (the Replicate build reads
                 // the inventory's item record; the container's owner-hosted storage is irrelevant to the build).
                 // Produce is capture-only.
-                .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+                [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT UCk_Utils_Inventory_Spatial_UE::Has(Entity))
                     { return {}; }
@@ -113,6 +100,17 @@
                     Data.Items = MoveTemp(Entries);
                     return FInstancedStruct::Make(Data);
                 },
-            });
+                [DoApplySpatialItems](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
+                {
+                    return DoApplySpatialItems(Entity,
+                        New.Get<FCk_RepData_Inventory_Spatial_Items>().Items,
+                        Old.IsSet()
+                            ? Old.GetValue().Get<FCk_RepData_Inventory_Spatial_Items>().Items
+                            : TArray<FCk_InventoryItem_Spatial_ReplicatedEntry>{});
+                },
+                [DoHydrateSpatialItems](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
+                {
+                    return DoHydrateSpatialItems(Entity, New.Get<FCk_RepData_Inventory_Spatial_Items>().Items);
+                });
     }
 } GInventory_Spatial_RepHandlerRegistrar;
