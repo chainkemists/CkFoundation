@@ -97,6 +97,10 @@ namespace ck
         NonConstHandle.Try_Remove<FTag_CrowdAgent_Walking>();
         NonConstHandle.AddOrGet<FTag_CrowdAgent_PathPending>();
 
+        // An external MoveTo starts a NEW episode: whatever was blocking the previous goal is no longer
+        // this agent's problem, and OnGoalBlocked must be allowed to fire again for the new one.
+        DoClearBlockedState(NonConstHandle);
+
         // Followers route through the path network instead of straight CkNavigation: the corridor
         // resolves via FProcessor_CrowdAgent_OnRouteResolved, which installs the compiled waypoints
         // through the same FFragment_Nav_PathResult seam — everything downstream (OnPathResolved,
@@ -148,7 +152,32 @@ namespace ck
         NonConstHandle.Try_Remove<FTag_CrowdAgent_PathPending>();
         NonConstHandle.AddOrGet<FTag_CrowdAgent_Idle>();
 
+        // Stop abandons the goal entirely — the agent must not be resumed by BlockedRecheck later.
+        DoClearBlockedState(NonConstHandle);
+
         ck::crowd::Verbose(TEXT("CrowdAgent [{}] Stop"), InHandle);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_HandleRequests::
+        DoClearBlockedState(
+            FCk_Handle_CrowdAgent& InAgent)
+        -> void
+    {
+        InAgent.Try_Remove<FTag_CrowdAgent_GoalBlocked>();
+
+        if (NOT InAgent.Has<FFragment_CrowdAgent_BlockDetect>())
+        { return; }
+
+        auto& BlockDetect = InAgent.AddOrGet<FFragment_CrowdAgent_BlockDetect>();
+        BlockDetect._BlockedBy = FCk_Handle{};
+        BlockDetect._FeetSamples.Reset();
+        BlockDetect._NextSampleIdx = 0;
+        BlockDetect._SampleAccumulatorSec = 0.0f;
+        BlockDetect._RecheckAccumulatorSec = 0.0f;
+        BlockDetect._BlockedSignalSent = false;
     }
 }
 

@@ -64,6 +64,13 @@ namespace ck
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             const FCk_Request_CrowdAgent_Stop& InRequest) -> void;
+
+        // A new order from gameplay ends any blocked episode: drop GoalBlocked and reset the detector,
+        // so OnGoalBlocked can fire again for the new goal and BlockedRecheck cannot resume a goal the
+        // caller has abandoned.
+        static auto
+        DoClearBlockedState(
+            FCk_Handle_CrowdAgent& InAgent) -> void;
     };
 }
 
