@@ -30,6 +30,7 @@
 #include "Jolt/Physics/Collision/Shape/BoxShape.h"
 #include "Jolt/Physics/Collision/Shape/CapsuleShape.h"
 #include "Jolt/Physics/Collision/Shape/CylinderShape.h"
+#include "Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h"
 #include "Jolt/Physics/Collision/Shape/SphereShape.h"
 
 #include <DrawDebugHelpers.h>
@@ -193,27 +194,40 @@ namespace ck::details
     // TProbeShapeFactory specializations
     // ================================================================================================================
 
+    // Jolt's Cylinder/Capsule are Y-AXIS ALIGNED while CkSpatialQuery runs Jolt in Unreal's Z-up frame
+    // (jolt::Conv is an axis passthrough) — those two factories therefore stand their leaf shape up via
+    // a JPH::RotatedTranslatedShape (see jolt::Get_ShapeAxisCorrection_YToZ). Because that makes the
+    // resulting shape type differ per fragment, the factories hand back a created shape rather than the
+    // concrete settings struct: JPH::ShapeSettings::ShapeResult is the one type all four have in common.
     template <>
     struct TProbeShapeFactory<FFragment_ShapeBox_Current>
     {
         static constexpr const TCHAR* ShapeName = TEXT("Box");
 
         static auto
-        CreateShapeSettings(
+        CreateShape(
             FCk_Handle_Probe InHandle)
-            -> JPH::BoxShapeSettings
+            -> JPH::ShapeSettings::ShapeResult
         {
             const auto BoxParams = UCk_Utils_ShapeBox_UE::Get_Dimensions(UCk_Utils_ShapeBox_UE::Cast(InHandle));
-            return JPH::BoxShapeSettings{jolt::Conv(BoxParams.Get_HalfExtents()), BoxParams.Get_ConvexRadius()};
+
+            const auto Settings = JPH::BoxShapeSettings{jolt::Conv(BoxParams.Get_HalfExtents()), BoxParams.Get_ConvexRadius()};
+            Settings.SetEmbedded();
+
+            return Settings.Create();
         }
 
         static auto
-        CreateUpdateShapeSettings(
+        CreateUpdateShape(
             const FFragment_ShapeBox_Current& InShape)
-            -> JPH::BoxShapeSettings
+            -> JPH::ShapeSettings::ShapeResult
         {
             const auto& Dimensions = InShape.Get_Dimensions();
-            return JPH::BoxShapeSettings{jolt::Conv(Dimensions.Get_HalfExtents()), Dimensions.Get_ConvexRadius()};
+
+            const auto Settings = JPH::BoxShapeSettings{jolt::Conv(Dimensions.Get_HalfExtents()), Dimensions.Get_ConvexRadius()};
+            Settings.SetEmbedded();
+
+            return Settings.Create();
         }
 
         static auto
@@ -234,21 +248,29 @@ namespace ck::details
         static constexpr const TCHAR* ShapeName = TEXT("Sphere");
 
         static auto
-        CreateShapeSettings(
+        CreateShape(
             FCk_Handle_Probe InHandle)
-            -> JPH::SphereShapeSettings
+            -> JPH::ShapeSettings::ShapeResult
         {
             const auto Params = UCk_Utils_ShapeSphere_UE::Get_Dimensions(UCk_Utils_ShapeSphere_UE::Cast(InHandle));
-            return JPH::SphereShapeSettings{Params.Get_Radius()};
+
+            const auto Settings = JPH::SphereShapeSettings{Params.Get_Radius()};
+            Settings.SetEmbedded();
+
+            return Settings.Create();
         }
 
         static auto
-        CreateUpdateShapeSettings(
+        CreateUpdateShape(
             const FFragment_ShapeSphere_Current& InShape)
-            -> JPH::SphereShapeSettings
+            -> JPH::ShapeSettings::ShapeResult
         {
             const auto& Dimensions = InShape.Get_Dimensions();
-            return JPH::SphereShapeSettings{Dimensions.Get_Radius()};
+
+            const auto Settings = JPH::SphereShapeSettings{Dimensions.Get_Radius()};
+            Settings.SetEmbedded();
+
+            return Settings.Create();
         }
 
         static auto
@@ -269,21 +291,37 @@ namespace ck::details
         static constexpr const TCHAR* ShapeName = TEXT("Capsule");
 
         static auto
-        CreateShapeSettings(
+        CreateShape(
             FCk_Handle_Probe InHandle)
-            -> JPH::CapsuleShapeSettings
+            -> JPH::ShapeSettings::ShapeResult
         {
             const auto Params = UCk_Utils_ShapeCapsule_UE::Get_Dimensions(UCk_Utils_ShapeCapsule_UE::Cast(InHandle));
-            return JPH::CapsuleShapeSettings{Params.Get_HalfHeight(), Params.Get_Radius()};
+
+            const auto InnerSettings = JPH::CapsuleShapeSettings{Params.Get_HalfHeight(), Params.Get_Radius()};
+            InnerSettings.SetEmbedded();
+
+            const auto Settings = JPH::RotatedTranslatedShapeSettings{
+                JPH::Vec3::sZero(), jolt::Get_ShapeAxisCorrection_YToZ(), &InnerSettings};
+            Settings.SetEmbedded();
+
+            return Settings.Create();
         }
 
         static auto
-        CreateUpdateShapeSettings(
+        CreateUpdateShape(
             const FFragment_ShapeCapsule_Current& InShape)
-            -> JPH::CapsuleShapeSettings
+            -> JPH::ShapeSettings::ShapeResult
         {
             const auto& Dimensions = InShape.Get_Dimensions();
-            return JPH::CapsuleShapeSettings{Dimensions.Get_HalfHeight(), Dimensions.Get_Radius()};
+
+            const auto InnerSettings = JPH::CapsuleShapeSettings{Dimensions.Get_HalfHeight(), Dimensions.Get_Radius()};
+            InnerSettings.SetEmbedded();
+
+            const auto Settings = JPH::RotatedTranslatedShapeSettings{
+                JPH::Vec3::sZero(), jolt::Get_ShapeAxisCorrection_YToZ(), &InnerSettings};
+            Settings.SetEmbedded();
+
+            return Settings.Create();
         }
 
         static auto
@@ -304,21 +342,37 @@ namespace ck::details
         static constexpr const TCHAR* ShapeName = TEXT("Cylinder");
 
         static auto
-        CreateShapeSettings(
+        CreateShape(
             FCk_Handle_Probe InHandle)
-            -> JPH::CylinderShapeSettings
+            -> JPH::ShapeSettings::ShapeResult
         {
             const auto Params = UCk_Utils_ShapeCylinder_UE::Get_Dimensions(UCk_Utils_ShapeCylinder_UE::Cast(InHandle));
-            return JPH::CylinderShapeSettings{Params.Get_HalfHeight(), Params.Get_Radius(), Params.Get_ConvexRadius()};
+
+            const auto InnerSettings = JPH::CylinderShapeSettings{Params.Get_HalfHeight(), Params.Get_Radius(), Params.Get_ConvexRadius()};
+            InnerSettings.SetEmbedded();
+
+            const auto Settings = JPH::RotatedTranslatedShapeSettings{
+                JPH::Vec3::sZero(), jolt::Get_ShapeAxisCorrection_YToZ(), &InnerSettings};
+            Settings.SetEmbedded();
+
+            return Settings.Create();
         }
 
         static auto
-        CreateUpdateShapeSettings(
+        CreateUpdateShape(
             const FFragment_ShapeCylinder_Current& InShape)
-            -> JPH::CylinderShapeSettings
+            -> JPH::ShapeSettings::ShapeResult
         {
             const auto& Dimensions = InShape.Get_Dimensions();
-            return JPH::CylinderShapeSettings{Dimensions.Get_HalfHeight(), Dimensions.Get_Radius(), Dimensions.Get_ConvexRadius()};
+
+            const auto InnerSettings = JPH::CylinderShapeSettings{Dimensions.Get_HalfHeight(), Dimensions.Get_Radius(), Dimensions.Get_ConvexRadius()};
+            InnerSettings.SetEmbedded();
+
+            const auto Settings = JPH::RotatedTranslatedShapeSettings{
+                JPH::Vec3::sZero(), jolt::Get_ShapeAxisCorrection_YToZ(), &InnerSettings};
+            Settings.SetEmbedded();
+
+            return Settings.Create();
         }
 
         static auto
@@ -365,10 +419,7 @@ namespace ck::details
         const auto& EntityPosition = InTransform.Get_Transform().GetLocation();
         const auto& EntityRotation = InTransform.Get_Transform().GetRotation();
 
-        const auto Settings = Factory::CreateShapeSettings(InHandle);
-        Settings.SetEmbedded();
-
-        auto ShapeResult = Settings.Create();
+        const auto ShapeResult = Factory::CreateShape(InHandle);
 
         if (NOT ShapeResult.IsValid())
         {
@@ -491,10 +542,7 @@ namespace ck::details
 
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
-        const auto Settings = Factory::CreateUpdateShapeSettings(InShape);
-        Settings.SetEmbedded();
-
-        auto ShapeResult = Settings.Create();
+        const auto ShapeResult = Factory::CreateUpdateShape(InShape);
 
         if (NOT ShapeResult.IsValid())
         {
@@ -800,19 +848,35 @@ namespace ck
                 return;
             }
 
+            // Cylinder/Capsule probes wrap their leaf shape in a RotatedTranslatedShape to turn Jolt's
+            // Y-axis convention into Unreal's Z-up (see jolt::Get_ShapeAxisCorrection_YToZ). GetTriangles*
+            // is a LEAF-only API — it asserts on decorated shapes — so unwrap to the leaf and fold the
+            // wrapper's rotation into the draw rotation. The wrapper's translation is always zero and the
+            // leaf's center of mass is the origin, so the draw POSITION is unaffected.
+            const JPH::Shape* DrawShape = Shape.GetPtr();
+            auto DrawRotation = jolt::Conv(EntityRotation);
+
+            if (DrawShape->GetSubType() == EShapeSubType::RotatedTranslated)
+            {
+                const auto* RotatedShape = static_cast<const RotatedTranslatedShape*>(DrawShape);
+
+                DrawRotation = DrawRotation * RotatedShape->GetRotation();
+                DrawShape = RotatedShape->GetInnerShape();
+            }
+
             Shape::GetTrianglesContext IoContext;
             auto Mat4 = Mat44::sIdentity();
             Mat4.SetTranslation(jolt::Conv(EntityPosition));
-            const auto& Bounds = Shape->GetWorldSpaceBounds(Mat4, Vec3{1.f, 1.f, 1.f});
+            const auto& Bounds = DrawShape->GetWorldSpaceBounds(Mat4, Vec3{1.f, 1.f, 1.f});
 
-            Shape->GetTrianglesStart(IoContext, Bounds, jolt::Conv(EntityPosition), jolt::Conv(EntityRotation),
+            DrawShape->GetTrianglesStart(IoContext, Bounds, jolt::Conv(EntityPosition), DrawRotation,
                 JPH::Vec3{1.f, 1.f, 1.f});
 
             const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
 
             Float3 Vertices[Shape::cGetTrianglesMinTrianglesRequested * 3];
 
-            for (auto NumTris = Shape->GetTrianglesNext(IoContext, Shape->cGetTrianglesMinTrianglesRequested,
+            for (auto NumTris = DrawShape->GetTrianglesNext(IoContext, Shape::cGetTrianglesMinTrianglesRequested,
                      Vertices);
                  NumTris != 0;)
             {
@@ -830,7 +894,7 @@ namespace ck
                         false, 0, 0, LineThickness);
                 }
 
-                NumTris = Shape->GetTrianglesNext(IoContext, Shape->cGetTrianglesMinTrianglesRequested, Vertices);
+                NumTris = DrawShape->GetTrianglesNext(IoContext, Shape::cGetTrianglesMinTrianglesRequested, Vertices);
             }
         }
     }
