@@ -41,10 +41,12 @@ In this order, compiling between clusters:
 ### 5.3 Final gate
 Run VALIDATION.md top to bottom. Then:
 ```bash
-rg --no-ignore -n "ReplicateOnRestore|RestoreReplicated|JustRestored|Reconstitution|IsSnapshotRespawnable" Plugins/CkFoundation/Source
+rg --no-ignore -n "ReplicateOnRestore|RestoreReplicated|JustRestored|Reconstitution" Plugins/CkFoundation/Source
 ```
-Expected: zero hits outside `#if CK_WITH_FIDELITY_ORACLE` regions and campaign docs. Anything else → unfinished
-deletion → fix before committing.
+(Amended: dropped `IsSnapshotRespawnable` per [P3B-D1] — it stays as the v3 `FFragment_ActorSpawnIntent` opt-in.)
+Expected: zero hits outside `#if CK_WITH_FIDELITY_ORACLE` regions, campaign docs, and
+`CkEcs/Snapshot/CkSnapshot_RestoreMarker.h` (the `FTag_Snapshot_JustRestored` symbol is retained there for cross-repo BB
+consumers per [P5-D3] — see its retirement comment). Anything else → unfinished deletion → fix before committing.
 
 Commits: one per 5.2 cluster + `docs: retire Model A from shipping path; snapshot doctrine update`.
 

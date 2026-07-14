@@ -2,8 +2,7 @@
 
 #include "CkSnapshot/CkSnapshot_Log.h"
 #include "CkSnapshot/SaveGame/CkSnapshot_SaveGame.h"
-#include "CkSnapshot/Snapshot/CkSnapshot_Capture.h"
-#include "CkSnapshot/Snapshot/CkSnapshot_CaptureV3.h" // Phase 3A: v3 recipe+payload capture alongside Model A
+#include "CkSnapshot/Snapshot/CkSnapshot_CaptureV3.h" // v3 recipe+payload capture (the live save path; Model-A Capture.h dropped Phase 5)
 #include "CkSnapshot/SaveKey/CkSnapshot_SaveKey_Fragment.h"   // EngineOwned rendezvous resolver
 #include "CkSnapshot/Subsystem/CkSnapshot_Signals.h"
 

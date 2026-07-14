@@ -38,7 +38,7 @@ public:
 
 private:
     // SaveGame: persisted by CkSnapshot (FFragment_RenderTarget_AuthoredLog snapshots the published
-    // batch ring; the restored host re-applies + re-publishes these on FTag_Snapshot_JustRestored).
+    // batch ring; the restored host re-applies + re-publishes these via HydrateFromSavedChannel on load).
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, SaveGame,
         meta = (AllowPrivateAccess = true))
     int32 _Seq = 0;
@@ -145,10 +145,10 @@ public:
 //     targets never publish but their drawn state must still persist.
 //   - Replicates + Pixels: NOT recorded — pixel-baseline persistence is the documented v1 deferral.
 //
-// Setup additionally AddOrGets an EMPTY log on every sync entity: it is the composition anchor for
-// FProcessor_RenderTarget_ReplicateOnRestore's view (Params + AuthoredLog), so a never-drawn target
-// still restores fully composed. ReplicateOnRestore reads the log back after a load to repaint the
-// restored target and (Replicates only) re-publish into a fresh owner container.
+// Setup additionally AddOrGets an EMPTY log on every sync entity: it is the composition anchor for the
+// snapshot-restore view (Params + AuthoredLog), so a never-drawn target still restores fully composed.
+// HydrateFromSavedChannel reads the log back after a load to repaint the restored target and
+// (Replicates only) re-publish into a fresh owner container.
 USTRUCT()
 struct CKRENDERTARGET_API FFragment_RenderTarget_AuthoredLog
 {

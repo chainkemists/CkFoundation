@@ -57,8 +57,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // (FProcessor_ByteAttribute_ReplicateOnRestore removed — restore re-seed is now the generic
-    //  FProcessor_Persistence_ReDriveOnRestore + ck::attribute_restore Produce/SeedContainer.)
+    // (Per-kind ByteAttribute restore-replication processor removed — restore re-application is now the
+    //  v3 hydration Apply path via ck::attribute_restore TryHydrationApply; Produce stays capture/oracle-only.)
 
     // --------------------------------------------------------------------------------------------------------------------
 }
