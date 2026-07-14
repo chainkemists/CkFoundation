@@ -2,8 +2,6 @@
 
 #include "CkAnimation/AnimPlan/CkAnimPlan_Utils.h"
 
-#include "CkEcs/Handle/CkHandle_TypeSafe.h" // ck::StaticCast (hydration apply)
-
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 #include "CkEcs/Net/CkNet_Utils.h" // TryAddContainerFragment + Get_LifetimeOwner (container-based replication for this feature)
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // RegisterLazyTyped<T> body
@@ -59,7 +57,7 @@ static struct FAnimPlanRepHandlerRegistrar
                     if (NOT Entity.Has<ck::FFragment_AnimPlan_Current>())
                     { return ECk_RepFragment_ApplyResult::NotReady; }
 
-                    auto Plan = ck::StaticCast<FCk_Handle_AnimPlan>(Entity);
+                    auto Plan = UCk_Utils_AnimPlan_UE::Cast(Entity);
                     for (const auto& Saved : New.Get<FCk_RepData_AnimPlans>().AnimPlans)
                     {
                         UCk_Utils_AnimPlan_UE::Request_UpdateAnimState(Plan,

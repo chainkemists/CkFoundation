@@ -2,7 +2,6 @@
 
 #include "CkCore/Enums/CkEnums.h"          // ECk_MinMaxCurrent, ECk_AddedOrNot
 #include "CkEcs/Handle/CkHandle.h"          // FCk_Handle, ck::Is_NOT_Valid
-#include "CkEcs/Handle/CkHandle_TypeSafe.h" // ck::StaticCast (hydration apply)
 #include "CkEcs/Net/CkNet_Utils.h"          // TryAddContainerFragment, Get_LifetimeOwner; transitively ECk_RepFragment_ApplyResult
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // RegisterLazyTyped<T> body
 
@@ -69,7 +68,7 @@ namespace ck::attribute_restore
     // so a mutate-then-NotReady retry would stack a second replication modifier. The only NotReady is the Has<Current>
     // guard before any write; a saved component the re-Constructed attribute no longer composes is warn+skip (its
     // Get_/Request_ would ensure on the missing component, and composition is synchronous so absence is final).
-    template <template <ECk_MinMaxCurrent> class T_DerivedAttribute, typename T_RepDataStruct, typename T_ApplyEntryFn>
+    template <template <ECk_MinMaxCurrent> class T_DerivedAttribute, typename T_RepDataStruct, typename T_UtilsType, typename T_ApplyEntryFn>
     auto
         HydrationApply(
             FCk_Handle& InEntity,
@@ -83,7 +82,7 @@ namespace ck::attribute_restore
         if (NOT InEntity.Has<Current>())
         { return ECk_RepFragment_ApplyResult::NotReady; }
 
-        auto AttributeEntity = ck::StaticCast<typename Current::HandleType>(InEntity);
+        auto AttributeEntity = T_UtilsType::Cast(InEntity);
 
         for (const auto& Entry : InNew.Get<T_RepDataStruct>().Attributes)
         {
