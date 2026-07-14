@@ -10,6 +10,13 @@
 
 #include <type_traits>
 
+// Test-only fidelity-oracle machinery (spec §5). Deep-diff fragment captures compile only under this flag;
+// shipping builds carry zero oracle cost. Phase 5 moves the per-fragment CK_REGISTER_SNAPSHOTABLE registrations
+// under it (gate-not-delete).
+#ifndef CK_WITH_FIDELITY_ORACLE
+#define CK_WITH_FIDELITY_ORACLE (!UE_BUILD_SHIPPING)
+#endif
+
 class UScriptStruct;
 class FArchive;
 
