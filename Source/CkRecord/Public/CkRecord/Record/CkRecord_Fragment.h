@@ -10,8 +10,6 @@
 // SerializeSnapshot routes each record-entry handle through FSnapshotContext::Snapshot_Handle, so the
 // complete FSnapshotContext type is required here (template body lives in the header).
 #include "CkEcs/Snapshot/CkSnapshot_Context.h"
-// Snapshot classification policy (RoundTrip vs Transient) + the IsSnapshotable marker base.
-#include "CkEcs/Snapshot/CkSnapshot_Policy.h"
 
 class FArchive;
 
@@ -23,16 +21,14 @@ class UCk_Utils_RecordOfEntities_UE;
 
 namespace ck
 {
-    // T_Policy classifies this record for snapshot: ck::FSnapshotPolicy_RoundTrip or ck::FSnapshotPolicy_Transient.
-    // INERT pending Option A (see docs/campaigns/saveload-v3-parity/PHASE_6.md): the classification feeds nothing;
-    // CK_REGISTER_SNAPSHOTABLE and the capture audit were deleted with Model A. T_Policy is still REQUIRED —
-    // omitting the classification is a compile error — so use the CK_DEFINE_RECORD_OF_ENTITIES_ROUNDTRIP /
-    // _TRANSIENT macros, which supply the policy.
-    template <concepts::ValidHandleType T_HandleType, typename T_Policy>
-    struct TFragment_RecordOfEntities : public detail::TSnapshotMarker<T_Policy>
+    // Holds this record's child-entity handles, each remapped through FSnapshotContext on save/load. The former
+    // T_Policy snapshot-classification parameter (RoundTrip/Transient) was removed with the Model-A purge (Option A,
+    // saveload-v3-ergonomics Phase 2) — it fed nothing; the IsSnapshotable marker had no consumer left.
+    template <concepts::ValidHandleType T_HandleType>
+    struct TFragment_RecordOfEntities
     {
     public:
-        CK_GENERATED_BODY(TFragment_RecordOfEntities<T_HandleType COMMA T_Policy>);
+        CK_GENERATED_BODY(TFragment_RecordOfEntities<T_HandleType>);
 
     public:
         friend class UCk_Utils_RecordOfEntities_UE;
@@ -97,25 +93,20 @@ namespace ck
     };
 }
 
-// Policy-blind define is removed — every record must classify its snapshot policy. Using it is now a hard error.
-#define CK_DEFINE_RECORD_OF_ENTITIES(_NameOfRecord_, _HandleType_)                                                  \
-    static_assert(false, "CK_DEFINE_RECORD_OF_ENTITIES is removed: choose CK_DEFINE_RECORD_OF_ENTITIES_ROUNDTRIP "  \
-        "(authoritative state that must survive save/load — also add CK_REGISTER_SNAPSHOTABLE in the .cpp) "        \
-        "or CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT (state reconstructed on restore).")
-
-// Explicit-policy defines. Pick _ROUNDTRIP or _TRANSIENT (both classifications are currently INERT — see the
-// T_Policy note above; CK_REGISTER_SNAPSHOTABLE was deleted with Model A).
-#define CK_DEFINE_RECORD_OF_ENTITIES_WITH_POLICY(_NameOfRecord_, _HandleType_, _Policy_)         \
-struct _NameOfRecord_ : public ck::TFragment_RecordOfEntities<_HandleType_, _Policy_>            \
-{                                                                                                \
-    using TFragment_RecordOfEntities::TFragment_RecordOfEntities;                                \
+// The single canonical define (the former policy-parameterized macro split is collapsed — the snapshot
+// policy was inert, deleted with Model A). _ROUNDTRIP / _TRANSIENT are retained as thin aliases so existing call
+// sites are untouched (Option A, saveload-v3-ergonomics Phase 2); they carry no meaning now.
+#define CK_DEFINE_RECORD_OF_ENTITIES(_NameOfRecord_, _HandleType_)                    \
+struct _NameOfRecord_ : public ck::TFragment_RecordOfEntities<_HandleType_>           \
+{                                                                                     \
+    using TFragment_RecordOfEntities::TFragment_RecordOfEntities;                     \
 }
 
-#define CK_DEFINE_RECORD_OF_ENTITIES_ROUNDTRIP(_NameOfRecord_, _HandleType_)                                \
-    CK_DEFINE_RECORD_OF_ENTITIES_WITH_POLICY(_NameOfRecord_, _HandleType_, ck::FSnapshotPolicy_RoundTrip)
+#define CK_DEFINE_RECORD_OF_ENTITIES_ROUNDTRIP(_NameOfRecord_, _HandleType_) \
+    CK_DEFINE_RECORD_OF_ENTITIES(_NameOfRecord_, _HandleType_)
 
 #define CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(_NameOfRecord_, _HandleType_) \
-    CK_DEFINE_RECORD_OF_ENTITIES_WITH_POLICY(_NameOfRecord_, _HandleType_, ck::FSnapshotPolicy_Transient)
+    CK_DEFINE_RECORD_OF_ENTITIES(_NameOfRecord_, _HandleType_)
 
 // --------------------------------------------------------------------------------------------------------------------
 

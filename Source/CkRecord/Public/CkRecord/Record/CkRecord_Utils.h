@@ -1065,11 +1065,11 @@ namespace ck
 #define CK_DEFINE_RECORD_OF_ENTITIES_UTILS(_NameOfUtils_, _NameOfRecord_) \
 using _NameOfUtils_ = ck::TUtils_RecordOfEntities<_NameOfRecord_>
 
-// Policy-blind define is removed — use the explicit-policy variant. Hard error if used.
-#define CK_DEFINE_RECORD_OF_ENTITIES_AND_UTILS(_NameOfUtils_, _NameOfRecord_, _HandleType_)                     \
-    static_assert(false, "CK_DEFINE_RECORD_OF_ENTITIES_AND_UTILS is removed: choose "                           \
-        "CK_DEFINE_RECORD_OF_ENTITIES_AND_UTILS_ROUNDTRIP (authoritative — also add CK_REGISTER_SNAPSHOTABLE) " \
-        "or CK_DEFINE_RECORD_OF_ENTITIES_AND_UTILS_TRANSIENT (reconstructed on restore).")
+// The single canonical record+utils define; _ROUNDTRIP / _TRANSIENT are retained as thin aliases (inert policy —
+// Option A, saveload-v3-ergonomics Phase 2).
+#define CK_DEFINE_RECORD_OF_ENTITIES_AND_UTILS(_NameOfUtils_, _NameOfRecord_, _HandleType_) \
+    CK_DEFINE_RECORD_OF_ENTITIES(_NameOfRecord_, _HandleType_);                             \
+    CK_DEFINE_RECORD_OF_ENTITIES_UTILS(_NameOfUtils_, _NameOfRecord_)
 
 #define CK_DEFINE_RECORD_OF_ENTITIES_AND_UTILS_ROUNDTRIP(_NameOfUtils_, _NameOfRecord_, _HandleType_) \
 CK_DEFINE_RECORD_OF_ENTITIES_ROUNDTRIP(_NameOfRecord_, _HandleType_);\
@@ -1092,7 +1092,7 @@ public:
     friend class UCk_Utils_RecordEntry_UE;
 
 public:
-    using UtilsType = ck::TUtils_RecordOfEntities<ck::TFragment_RecordOfEntities<FCk_Handle, ck::FSnapshotPolicy_Transient>>;
+    using UtilsType = ck::TUtils_RecordOfEntities<ck::TFragment_RecordOfEntities<FCk_Handle>>;
 
 public:
     UFUNCTION(BlueprintCallable,
