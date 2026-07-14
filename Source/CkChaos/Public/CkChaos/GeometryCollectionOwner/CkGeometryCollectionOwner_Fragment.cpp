@@ -3,8 +3,8 @@
 #include "CkChaos/GeometryCollection/CkGeometryCollection_Fragment.h"
 #include "CkChaos/GeometryCollection/CkGeometryCollection_Utils.h"
 
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // Register_* entry-point bodies
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h"
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.inl.h" // Register_* entry-point bodies
 
 #include "TargetPoint/CkTargetPoint_Utils.h"
 

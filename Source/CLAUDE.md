@@ -86,7 +86,7 @@ Before writing any code, navigate the documentation in this order:
 | tracked entity sets with change detection | `CkEntityCollection` |
 | post-construction opt-in fragments | `CkEntityExtension` |
 | quest-like objectives | `CkObjective` |
-| save/restore world state (snapshots) | `CkSnapshot` (v3 rebuild+hydrate — see `CkSnapshot/Claude.md`) — features persist via a Produce/HydrationApply handler on `FCk_ReplicatedFragmentHandlerRegistry` (`CkEcs/Net/ReplicatedFragmentContainer`, save subset `Get_SaveHandlerTypes`), NOT a per-fragment macro (`CK_REGISTER_SNAPSHOTABLE` removed 2026-07-13) |
+| save/restore world state (snapshots) | `CkSnapshot` (v3 rebuild+hydrate — see `CkSnapshot/Claude.md`) — features persist via a Produce/HydrationApply handler on `FCk_PersistenceHandlerRegistry` (`CkEcs/Persistence/`, save subset `Get_SaveHandlerTypes`), NOT a per-fragment macro (`CK_REGISTER_SNAPSHOTABLE` removed 2026-07-13) |
 | session state machine | `CkGameSession` |
 | CommonUI-based UI layer | `CkUI` |
 | dependency-gated loading screen | `CkLoadingScreen` (subsystem + `ICk_LoadingProcess` holders) |
@@ -342,36 +342,45 @@ auto Component = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
 
 Same idea for audio (`UGameplayStatics::SpawnSoundAtLocation`) and other component types.
 
-### Replicated fragments — the `RegisterLazy` handler contract
+### Replicated + persisted fragments — the persistence-handler contract
 
-Client-side application of replicated container data is deferred: net receive only marks entries
-pending; `FProcessor_ReplicatedFragments_Dispatch` drains them each tick via handlers registered in
-the feature's `_Fragment.cpp` (`CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h`):
+The SAME registered projection drives the net wire AND the save/load path. Registry:
+`FCk_PersistenceHandlerRegistry` (`CkEcs/Persistence/CkPersistenceHandlerRegistry.h`) — split out of Net/ so the
+save path (CkSnapshot) reuses it without a Net dependency. Client-side application of replicated container data is
+deferred: net receive only marks entries pending; `FProcessor_ReplicatedFragments_Dispatch` drains them each tick;
+the load path uses the twin `FProcessor_Hydration_Dispatch`. Register in the feature's `_Fragment.cpp` — **prefer a
+named participation shape** (`Register_NetOnly` / `Register_SaveOnly` / `Register_NetAndSave_SharedApply` /
+`Register_NetAndSave_SplitApply`) over hand-building an `FHandler`; the name states the transport, and
+`Register_SaveOnly`'s signature makes a `Produce`-without-`HydrationApply` *uncompilable*:
 
 ```cpp
-FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
-    []() -> UScriptStruct* { return FCk_RepData_Team::StaticStruct(); },
+// Team — both transports, one authority-safe applier (net receive + load hydration share the body):
+FCk_PersistenceHandlerRegistry::Register_NetAndSave_SharedApply<FCk_RepData_Team>(
+    [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>          // Produce (save capture; READ-ONLY)
     {
-        .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
-        {
-            if (NOT UCk_Utils_Team_UE::Has(Entity))
-            { return ECk_RepFragment_ApplyResult::NotReady; }
-
-            auto TeamEntity = UCk_Utils_Team_UE::Cast(Entity);
-            UCk_Utils_Team_UE::Assign(TeamEntity, New.Get<FCk_RepData_Team>().Value);
-            return ECk_RepFragment_ApplyResult::Applied;
-        }
+        if (NOT UCk_Utils_Team_UE::Has(Entity)) { return {}; }
+        return FInstancedStruct::Make(FCk_RepData_Team{Entity.Get<ck::FFragment_TeamInfo>().Get_TeamID()});
+    },
+    [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
+    {
+        if (NOT UCk_Utils_Team_UE::Has(Entity))                     // NotReady BEFORE any mutation
+        { return ECk_Persistence_ApplyResult::NotReady; }
+        UCk_Utils_Team_UE::Assign(UCk_Utils_Team_UE::Cast(Entity), New.Get<FCk_RepData_Team>().Value);
+        return ECk_Persistence_ApplyResult::Applied;
     });
 ```
 
-- `Apply` runs AFTER OnConstructed-driven composition — never inline during net receive — and must
-  **never compose the feature itself**; composition belongs to construction.
+- `NetApply` runs AFTER OnConstructed-driven composition — never inline during net receive — and must
+  **never compose the feature itself**; composition belongs to construction. `HydrationApply` (the load-path twin)
+  is authority-side and follows the same NotReady-before-mutation rule.
 - Return `NotReady` while the target feature is not composed yet: the dispatcher retries each tick
   and past a timeout drops the entry LOUDLY (ensure naming the type and entity). A perpetual
   timeout means the feature is never composed on the client.
-- `Old` is unset on the first application; otherwise it holds the last APPLIED data.
+- `Old` is unset on the first application; otherwise it holds the last APPLIED data (net path only —
+  the load path never coalesces, so `HydrationApply`'s `Old` is always unset).
 - Consumer consequence: **`OnConstructed` means composed, not values-applied** — read replicated
-  values only from `Promise_OnReplicationComplete`. Full contract: [CkEcs/Claude.md](CkEcs/Claude.md).
+  values only from `Promise_OnReplicationComplete`. Full contract: [CkEcs/Claude.md](CkEcs/Claude.md); the
+  save/load authoring recipe: [CkSnapshot/Claude.md](CkSnapshot/Claude.md).
 
 ### Variant dispatch — `ck::Visitor` takes ONE generic lambda
 

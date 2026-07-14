@@ -2,9 +2,9 @@
 
 #include "CkAnimation/MontagePlayer/CkMontagePlayer_Utils.h"
 
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h"
 #include "CkEcs/Net/CkNet_Utils.h" // TryAddContainerFragment (container-based replication for this feature)
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // Register_* entry-point bodies
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.inl.h" // Register_* entry-point bodies
 
 // --------------------------------------------------------------------------------------------------------------------
 // Container-based replication handler for MontagePlayer (single-row, fragment-on-entity).

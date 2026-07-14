@@ -31,8 +31,8 @@ shippable; quick.** Nothing is pushed by the executor (Class-4 → Adam review).
 | 2 — rename bundle (absorbs parity PHASE_6) | DONE (2026-07-14) | CkF `a49969195` (rename bundle: 6A+slots+named+registrars, absorbs parity 6A) + `d0fd71e59` (6B T_Policy delete, absorbs parity 6B); CkTests `b29a8aa` (symbol-sync fix) | **build exit 0** (after a fix-rebuild — see [P2-D4]); **Ck.Snapshot 35/35 (delta-0 by name), Ck.Net 90/90 (delta-0 by name)** | parity 6A/6B rows annotated Y. All code gates 0 (6A / `.Apply=` / RegisterLazyTyped-outside-inl / policy-surface). Deviations P2-D1..D4. Site counts: 6A 229 hits/40 files; 24 registrars→29 named calls (NetOnly 4/SaveOnly 6/SharedApply 5/SplitApply 14); 6B ~84 aliased callers untouched. Docs → VALIDATION §5 [P2-D3]. |
 | 3 — symmetry class (a), 7 features | DONE (2026-07-14) | CkF `3947af498` | build exit 0; **Ck.Net 90/90 (delta-0 by name — byte-identical-wire gate)**, **Ck.Snapshot 35/35 (delta-0)** | `TryProduce<T>` on `UCk_Utils_Net_UE`; 11 wire sites / 7 features consume it (Velocity ×2, Acceleration ×2, TagSet, MontagePlayer, GridOccupancy, Team ×2, Player ×2). All 7 Produce lambdas verified == old wire builders; write-then-replicate order verified for all seed sites. Exit grep 0. Deviation P3-D1. |
 | 4 — symmetry class (b), fold | DONE (2026-07-14) | CkF `96a224ab2` | build exit 0; **Ck.Net 90/90 (delta-0 by name — byte-parity oracle)**, **Ck.Snapshot 35/35 (delta-0)** | 4 files: attribute Replicate template (5 kinds) folds child-keyed TryProduce; EntityCollection + Inventory Spatial/DataOnly full-replace from TryProduce. Prescribed bodies. Attribute array-order concern did NOT materialize (Net clean). Exit grep 0. Multi-inventory clobber gap preserved (fence). No deviations. |
-| 5 — CkEcs/Persistence header split | NOT STARTED | | | RunAfter seam outcome (fwd-decl vs include): ____ |
-| VALIDATION | NOT STARTED | | | |
+| 5 — CkEcs/Persistence header split | DONE (2026-07-14) | CkF `2753e0053` | **build exit 0 FIRST TRY**; Ck.Snapshot 35/35 (delta-0), Ck.Net 90/90 (delta-0); grep gate 0 moved decls under Net/ | 6 new `CkEcs/Persistence/` files; wire plumbing + net dispatcher STAY in Net/; old container `.inl.h` deleted (git R085 rename→registry.inl.h). **RunAfter seam: FORWARD-DECL WORKED** (TDepList accepts the incomplete type — no Persistence→Net include). `PendingApplyTimeoutSeconds` in the shared hydration-processor header (unity-safe). 20 registrars swapped; 4 standalone save-only registrars now 0 Net/. CkTests untouched. No deviations. |
+| VALIDATION | DONE (2026-07-14) | CkF `a616427d6` (P5 docs) + `59bc41826` (§5 doc-debt) | **grep checklist all-phases PASS** (6A/`.Apply=`/RegisterLazyTyped-outside-registry/policy-surface/`Data.Attributes.Emplace(ToReplicate)`/`ReplicatedFragmentContainer.inl` all 0; EnqueueRoundTrip 5≥2). No re-build: final CODE commit is `2753e0053` (P5) — `a616427d6`+`59bc41826`+doc-debt are *.md only, don't touch the binary, so the P5 gate (Snapshot 35/35, Net 90/90) IS the final acceptance (no post-build code edit → no stale-green). | §5 doc debt cleared: CkSnapshot/CkEcs/Source `CLAUDE.md` + CkInventory refreshed (6A prose rename, `Apply/Remove`→`NetApply/NetRemove`, named `Register_*` recipe, `CkEcs/Persistence/` relocation). §6 handoff below. |
 
 ## Blockers (STOP-and-record; do not improvise past these)
 
@@ -131,3 +131,63 @@ beyond setting elapsed to `target` (Reset only writes `_CurrentValue=0`, verifie
 CountUp timer relied on Reset clearing some other state, or on monotonic elapsed, that assumption could bite — but
 no such coupling exists in the chrono today. Verified against source; the gate (Snapshot 35/35 incl. Timer_MPReload
 two-cycle) exercises the CountUp save/load path and stays green.
+
+## §6 — Handoff summary (for Adam)
+
+**Campaign COMPLETE. All 5 phases + VALIDATION done, committed, GREEN. NOTHING PUSHED — Class-4 (framework-invariant:
+CkEcs `Net/`+`Persistence/`, replication + save/load paths) review is mandatory before push.**
+
+### Final tree state
+- **CkFoundation** — tip `59bc41826`, tree CLEAN, **107 ahead of `origin/dev`**. This session's ergonomics commits
+  are the top 14 (from `2f45437fa` campaign-package down to `59bc41826`); everything below `993f6323c` is the prior
+  parity/rebuild stack (also unpushed, not this campaign).
+- **CkTests** — tip `b29a8aa`, tree CLEAN, **23 ahead of `origin/dev`**. This session's ergonomics commits: `6237fa5`
+  (round-trip harness `ck::auto_test::snapshot` + Timer_MPReload conversion) and `b29a8aa` (Phase-2 symbol-rename
+  follow in the DynamicFragment handle-remap test, [P2-D4]). The rest are the parity stack.
+- **Push order when approved:** CkFoundation FIRST, then CkTests (CkTests `b29a8aa` compiles against the CkEcs
+  persistence vocab that only exists at CkF `a49969195`+). Never push/merge CkTests ahead of CkFoundation.
+
+### This session's commits (ergonomics campaign only)
+CkFoundation (14): `2f45437fa` pkg · `3439ac756` P1 cast · `f780dcf2d` P1 Timer-Jump-absolute · `4c3213f60` P1 docs ·
+`a49969195` P2 rename-bundle(6A+slots+named+registrars) · `d0fd71e59` P2 6B T_Policy-delete · `93095ff35` P2 docs ·
+`3947af498` P3 class-(a) Produce-symmetry · `e94008e03` P3 docs · `96a224ab2` P4 class-(b) Produce-fold ·
+`4ca8fec49` P4 docs · `2753e0053` P5 CkEcs/Persistence header-split · `a616427d6` P5 docs · `59bc41826` §5 doc-debt.
+CkTests (2): `6237fa5` P1 harness · `b29a8aa` P2 rename-follow.
+
+### Gate results (all delta-0 by name vs Phase-1 baseline: Ck.Snapshot 35/35, Ck.Net 90/90)
+Every phase: build exit 0 + Ck.Snapshot 35/35 + Ck.Net 90/90, all delta-0 by name. **One build per phase** (per
+instruction). VALIDATION added no build: the final CODE commit is P5 `2753e0053`; the three commits after it are
+*.md only, so the P5 binary is the final binary — the P5 gate IS the acceptance gate (no post-build code edit, so
+no stale-green risk). Full VALIDATION grep checklist (all phases) passed — see the VALIDATION row.
+
+### Three-environment status
+- **C++** — verified: full Snapshot + Net suites green on the final binary.
+- **AngelScript** — boot-compile verified transitively (the toolbox gate boots the editor and compiles AS for the
+  PIE autotests; a broken binding would fail boot and error the gate — it didn't). The only AS-facing surface change
+  is `FCk_Request_Timer_Jump::_JumpMode` (reflected `ECk_RelativeAbsolute` + `CK_PROPERTY` setter). Its CODE PATH is
+  exercised by the C++ round-trip harness, but a `.as` runtime call of `Set_JumpMode` is NOT exercised (no AS test
+  authored). Everything else this campaign touched is internal C++ (persistence machinery, `TryProduce<>` template)
+  — not AS-callable.
+- **Blueprint** — `[EDITOR-VERIFY]` (human): the `Make FCk_Request_Timer_Jump` node should show a `_JumpMode`
+  enum dropdown. No other BP-facing surface changed.
+
+### Deviations / blockers
+No blockers fired. Deviations recorded above: D1–D6 (P1), P2-D1..D4 (P2), P3-D1 (P3), none (P4/P5). Load-bearing
+ones for review: **[P2-D2]** 6B left ~84 aliased T_Policy callers untouched (inert surface, Option-A retirement
+deferred — matches the parity campaign's standing [F3-D2]); **[P2-D4]** the framework rename had to sweep CkTests
+too (missed on first build → fix-rebuild); **[P1-D3]** the CountUp-absolute Jump-on-Done logic-bug fix (see below).
+
+### The one claim most likely to be wrong (campaign-wide)
+**Phase 4's attribute-array-order assumption.** The class-(b) fold rebuilds the attribute owner container by folding
+each attribute's child-keyed `TryProduce<T>` payload; I claim this reproduces the old wire builder byte-for-byte and
+the Ck.Net byte-parity oracle stayed green (delta-0). If some attribute family emits components in a
+registration-order that the fold doesn't preserve under a configuration the Net suite doesn't cover (e.g. a
+different attribute count/order than the test fixtures), a client could see a reordered container. The gate says
+clean, but the fixtures are the limit of that evidence. Secondary: the P1 CountUp-absolute chrono fix (§ above) and
+the benign `OnTimerJump(0)` on same-position restore (behavior note above).
+
+### What's left for you
+1. Review the Class-4 surface (CkEcs `Net/` + new `Persistence/`, replication + save/load handler contract).
+2. `[EDITOR-VERIFY]` the Timer Jump `_JumpMode` BP node + (optional) an AS `Set_JumpMode` runtime call.
+3. Decide the deferred **[P2-D2]/[F3-D2]** Option-A T_Policy retirement (still inert).
+4. Push CkFoundation → then CkTests, when satisfied.

@@ -6,8 +6,8 @@
 #include "CkCore/Payload/CkPayload.h"          // ck::MakePayload
 #include "CkCore/Validation/CkIsValid.h"       // ck::IsValid / ck::Is_NOT_Valid
 
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // RegisterLazyTyped
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h"
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.inl.h" // RegisterLazyTyped
 
 #include <NativeGameplayTags.h>
 

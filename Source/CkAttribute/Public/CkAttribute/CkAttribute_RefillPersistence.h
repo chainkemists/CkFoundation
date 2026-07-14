@@ -2,7 +2,7 @@
 
 #include "CkCore/Enums/CkEnums.h"          // ECk_MinMaxCurrent
 #include "CkEcs/Handle/CkHandle.h"          // FCk_Handle
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h" // ECk_Persistence_ApplyResult
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h" // ECk_Persistence_ApplyResult
 
 #include "CkAttribute/CkAttribute_Fragment.h"      // ck::FTag_IsRefillAttribute
 #include "CkAttribute/CkAttribute_Fragment_Data.h" // ECk_Attribute_RefillState
