@@ -29,7 +29,6 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_BulkVelocityModifier_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_BulkVelocityModifier_AddNewTargets);
 CK_REGISTER_PROCESSOR(ck::FProcessor_BulkVelocityModifier_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Velocity_Replicate);
-CK_REGISTER_PROCESSOR(ck::FProcessor_Velocity_ReplicateOnRestore);
 
 #include "GameFramework/Character.h"
 #include "GameFramework/PawnMovementComponent.h"
@@ -332,44 +331,6 @@ namespace ck
             InHandle, FCk_RepData_Velocity{InCurrent.Get_CurrentVelocity()});
     }
 
-    // --------------------------------------------------------------------------------------------------------------------
-
-    auto
-        FProcessor_Velocity_ReplicateOnRestore::
-        ForEachEntity(
-            TimeType /*InDeltaT*/,
-            HandleType InHandle,
-            const FFragment_Velocity_Current& InCurrent) const
-        -> void
-    {
-        if (NOT InHandle.Has<FTag_Snapshot_JustRestored>())
-        { return; }
-
-        if (InHandle.Has<FTag_Velocity_RestoreReplicated>())
-        { return; }
-
-        // Driver not re-established yet -> retry next tick (the shared marker stays in place).
-        if (NOT UCk_Utils_EntityReplicationDriver_UE::Has(InHandle))
-        { return; }
-
-        // The done-tag may only be consumed once a pushable container entry exists — the Replicate processor's
-        // view is keyed on the ContainerRef this call creates, so a missed seed with the done-tag stamped would
-        // silently never push the restored value. NotAdded = a net/driver precondition wasn't satisfied THIS
-        // tick -> retry next tick (both markers stay in place). AlreadyExists counts as success: the ContainerRef
-        // is present, so the Replicate processor pushes Current every frame.
-        const auto AddedOrNot = UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Velocity>(
-            InHandle, FCk_RepData_Velocity{InCurrent.Get_CurrentVelocity()});
-
-        if (AddedOrNot == ECk_AddedOrNot::NotAdded)
-        {
-            ck::physics::Verbose(
-                TEXT("ReplicateOnRestore: Velocity restore-seed missed this tick for Entity [{}] "
-                     "(TryAddContainerFragment returned NotAdded) — retrying next tick"), InHandle);
-            return;
-        }
-
-        InHandle.Add<FTag_Velocity_RestoreReplicated>();
-    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

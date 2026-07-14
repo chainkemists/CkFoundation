@@ -2,7 +2,6 @@
 
 #include "CkCore/Math/Vector/CkVector_Utils.h"
 #include "CkAttribute/CkAttribute_Processor.h"
-#include "CkAttribute/CkAttribute_ReplicateOnRestore.h"
 
 #include "CkAttribute/VectorAttribute/CkVectorAttribute_Fragment.h"
 
@@ -58,8 +57,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FProcessor_VectorAttribute_ReplicateOnRestore = TProcessor_Attribute_ReplicateOnRestore_All<
-        FCk_Handle_VectorAttribute, TFragment_VectorAttribute, FCk_RepData_VectorAttributes>;
+    // (FProcessor_VectorAttribute_ReplicateOnRestore removed — restore re-seed is now the generic
+    //  FProcessor_Persistence_ReDriveOnRestore + ck::attribute_restore Produce/SeedContainer.)
 
     // --------------------------------------------------------------------------------------------------------------------
 }

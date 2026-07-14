@@ -13,7 +13,6 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_FloatAttribute_MinMaxClamp);
 CK_REGISTER_PROCESSOR(ck::FProcessor_FloatAttribute_FireSignals);
 CK_REGISTER_PROCESSOR(ck::FProcessor_FloatAttributeModifier_EndPlayAll);
 CK_REGISTER_PROCESSOR(ck::FProcessor_FloatAttribute_Replicate);
-CK_REGISTER_PROCESSOR(ck::FProcessor_FloatAttribute_ReplicateOnRestore);
 CK_REGISTER_PROCESSOR(ck::FProcessor_FloatAttribute_Refill);
 
 // --------------------------------------------------------------------------------------------------------------------

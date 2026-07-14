@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CkAttribute/CkAttribute_Processor.h"
-#include "CkAttribute/CkAttribute_ReplicateOnRestore.h"
 
 #include "CkAttribute/ByteAttribute/CkByteAttribute_Fragment.h"
 
@@ -58,8 +57,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FProcessor_ByteAttribute_ReplicateOnRestore = TProcessor_Attribute_ReplicateOnRestore_All<
-        FCk_Handle_ByteAttribute, TFragment_ByteAttribute, FCk_RepData_ByteAttributes>;
+    // (FProcessor_ByteAttribute_ReplicateOnRestore removed — restore re-seed is now the generic
+    //  FProcessor_Persistence_ReDriveOnRestore + ck::attribute_restore Produce/SeedContainer.)
 
     // --------------------------------------------------------------------------------------------------------------------
 }

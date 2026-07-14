@@ -4,6 +4,7 @@
 #include "CkAttribute/RotatorAttribute/CkRotatorAttribute_Utils.h"
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
+#include "CkAttribute/CkAttribute_RestorePersistence.h" // RegisterLazyTyped<T> + shared attribute Produce/SeedContainer
 
 #include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
 #include "CkEcs/Snapshot/CkSnapshot_Archive_Writer.h"
@@ -96,8 +97,7 @@ static struct FRotatorAttributeRepHandlerRegistrar
 {
     FRotatorAttributeRepHandlerRegistrar()
     {
-        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
-            []() -> UScriptStruct* { return FCk_RepData_RotatorAttributes::StaticStruct(); },
+        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazyTyped<FCk_RepData_RotatorAttributes>(
             {
                 .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
                 {
@@ -143,7 +143,9 @@ static struct FRotatorAttributeRepHandlerRegistrar
                     }
 
                     return Result;
-                }
+                },
+                .Produce       = &ck::attribute_restore::Produce<ck::TFragment_RotatorAttribute, FCk_RepData_RotatorAttributes>,
+                .SeedContainer = &ck::attribute_restore::SeedContainer<ck::TFragment_RotatorAttribute, FCk_RepData_RotatorAttributes>
             });
     }
 } GRotatorAttributeRepHandlerRegistrar;
