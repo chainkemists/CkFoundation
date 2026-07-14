@@ -2,6 +2,8 @@
 
 #include "CkAnimation/AnimPlan/CkAnimPlan_Utils.h"
 
+#include "CkEcs/Handle/CkHandle_TypeSafe.h" // ck::StaticCast (hydration apply)
+
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 #include "CkEcs/Net/CkNet_Utils.h" // TryAddContainerFragment + Get_LifetimeOwner (RegisterLazyTyped + SeedContainer)
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // RegisterLazyTyped<T> body
@@ -59,32 +61,58 @@ static struct FAnimPlanRepHandlerRegistrar
             {
                 .Apply = [DoApplyAnimPlans](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
                 {
+                    // Save-load hydration (authority-side, Phase 4B): the v3 payload is CHILD-keyed (per-plan Produce),
+                    // so under hydration Entity IS the AnimPlan entity — write its saved state directly. The OWNER-keyed
+                    // DoApplyAnimPlans below never resolves it. Net receive path byte-identical (FCk_HydrationApplyScope).
+                    if (FCk_HydrationApplyScope::Get_IsActive())
+                    {
+                        if (NOT Entity.Has<ck::FFragment_AnimPlan_Current>())
+                        { return ECk_RepFragment_ApplyResult::NotReady; }
+
+                        auto Plan = ck::StaticCast<FCk_Handle_AnimPlan>(Entity);
+                        for (const auto& Saved : New.Get<FCk_RepData_AnimPlans>().AnimPlans)
+                        {
+                            UCk_Utils_AnimPlan_UE::Request_UpdateAnimState(Plan,
+                                FCk_Request_AnimPlan_UpdateAnimState{Saved.Get_AnimCluster(), Saved.Get_AnimState()});
+                        }
+                        return ECk_RepFragment_ApplyResult::Applied;
+                    }
+
                     return DoApplyAnimPlans(Entity,
                         New.Get<FCk_RepData_AnimPlans>().AnimPlans,
                         Old.IsSet()
                             ? Old.GetValue().Get<FCk_RepData_AnimPlans>().AnimPlans
                             : TArray<FCk_AnimPlan_State>{});
                 },
-                // Owner-resident empty-seed-and-defer (mirrors the deleted FProcessor_AnimPlan_ReplicateOnRestore):
-                // emit a SET-but-empty payload so the re-drive seeds the OWNER's container; the real per-owner
-                // payload is rebuilt by FProcessor_AnimPlan_Replicate via the re-arm below. UNSET only when this
-                // entity is not an AnimPlan.
+                // v3 save capture (Phase 4B) — VALUE-EMITTING, keyed per-AnimPlan-entity (Produce fires on the plan
+                // entity). Emit this plan's goal/cluster/state, byte-identical to the wire-builder
+                // FProcessor_AnimPlan_Replicate (CkAnimPlan_Processor.cpp). UNSET when this entity is not an AnimPlan.
+                // On load the hydration branch above writes it AUTHORITY-side; the re-armed Replicate pass re-publishes.
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT Entity.Has<ck::FFragment_AnimPlan_Current>())
                     { return {}; }
-                    return FInstancedStruct::Make(FCk_RepData_AnimPlans{});
+
+                    const auto& Params  = Entity.Get<ck::FFragment_AnimPlan_Params>().Get_Params();
+                    const auto& Current = Entity.Get<ck::FFragment_AnimPlan_Current>();
+
+                    auto Data = FCk_RepData_AnimPlans{};
+                    Data.AnimPlans.Emplace(FCk_AnimPlan_State{
+                        Params.Get_AnimGoal(), Current.Get_AnimCluster(), Current.Get_AnimState()});
+                    return FInstancedStruct::Make(MoveTemp(Data));
                 },
                 // Custom seed: the container lives on the LifetimeOwner; the typed add self-gates on the owner's
                 // driver (NotAdded => retry). Re-arm the ongoing trigger on the AnimPlan entity itself.
-                .SeedContainer = [](FCk_Handle& Entity, const FInstancedStruct& Data) -> ECk_AddedOrNot
+                .SeedContainer = [](FCk_Handle& Entity, const FInstancedStruct& /*Data*/) -> ECk_AddedOrNot
                 {
                     auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Entity);
                     if (ck::Is_NOT_Valid(LifetimeOwner))
                     { return ECk_AddedOrNot::NotAdded; }
 
+                    // EMPTY seed (Model-A-only): value comes from the restored image + the re-armed Replicate pass;
+                    // seeding the now-value-bearing Produce data risks the per-owner merge. v3 never calls SeedContainer.
                     const auto AddedOrNot = UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_AnimPlans>(
-                        LifetimeOwner, Data.Get<FCk_RepData_AnimPlans>());
+                        LifetimeOwner, FCk_RepData_AnimPlans{});
                     if (AddedOrNot == ECk_AddedOrNot::NotAdded)
                     { return AddedOrNot; }
 

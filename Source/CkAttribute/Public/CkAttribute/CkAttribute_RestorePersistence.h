@@ -2,19 +2,35 @@
 
 #include "CkCore/Enums/CkEnums.h"          // ECk_MinMaxCurrent, ECk_AddedOrNot
 #include "CkEcs/Handle/CkHandle.h"          // FCk_Handle, ck::Is_NOT_Valid
-#include "CkEcs/Net/CkNet_Utils.h"          // TryAddContainerFragment, Get_LifetimeOwner
+#include "CkEcs/Handle/CkHandle_TypeSafe.h" // ck::StaticCast (hydration apply)
+#include "CkEcs/Net/CkNet_Utils.h"          // TryAddContainerFragment, Get_LifetimeOwner; transitively FCk_HydrationApplyScope + ECk_RepFragment_ApplyResult
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // RegisterLazyTyped<T> body
+
+#include "CkAttribute/CkAttribute_Log.h"    // ck::attribute::Verbose (component-drift skip)
+#include "CkLabel/CkLabel_Utils.h"          // UCk_Utils_GameplayLabel_UE::Get_Label (value-emitting Produce)
 
 #include <InstancedStruct.h>
 #include <Misc/Optional.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Shared Produce/SeedContainer for the attribute family (Float/Byte/Integer/Vector/Rotator), used by each kind's
-// registrar. Replaces the deleted TProcessor_Attribute_ReplicateOnRestore_All. Empty-seed-and-defer, byte-for-byte
-// the old restore behavior: Produce emits a SET-but-empty per-owner RepData so the generic re-drive seeds the
-// owner's container; SeedContainer resolves the owner, adds the container, and re-arms the per-component
-// FTag_MayRequireReplication triggers so FProcessor_Attribute_Replicate rebuilds the real payload. This sidesteps
-// the per-owner upsert-merge that a live-payload Produce would need (multiple attributes share one owner container).
+// Shared Produce / SeedContainer / hydration-apply for the attribute family (Float/Byte/Integer/Vector/Rotator), used
+// by each kind's registrar. Replaces the deleted TProcessor_Attribute_ReplicateOnRestore_All.
+//
+// v3 SAVE (Produce) is VALUE-EMITTING and keyed PER-ATTRIBUTE-ENTITY (Produce fires on the entity holding the Current
+// component). It emits this attribute's own Base/Final for each composed component (Current always; Min/Max if present)
+// byte-identically to the wire-builder TProcessor_Attribute_Replicate (CkAttribute_Processor.inl.h). On load
+// FProcessor_Hydration_Dispatch calls Apply(ThisAttributeEntity, payload) under FCk_HydrationApplyScope; the shared
+// TryHydrationApply below writes the value AUTHORITY-side via the kind's ApplyReplicated*Entry (the same path the
+// client net drain uses). The resulting deferred Request_* re-arm FTag_MayRequireReplication, so
+// FProcessor_Attribute_Replicate re-publishes to post-load clients — no explicit owner-container refill needed (the
+// owner container already exists on the freshly-Constructed owner). The net Apply below the branch is OWNER-keyed and
+// untouched (byte-identical wire).
+//
+// Model-A SeedContainer stays EMPTY-seed BY CONSTRUCTION (seeds T_RepDataStruct{}, NOT the now-value-bearing Produce
+// data): the value comes from the restored fragment image + the re-armed Replicate pass, so an EMPTY seed + re-arm is
+// behaviour-neutral to Model A AND sidesteps the per-owner upsert-merge — a value seed would land only the first
+// attribute's data, since TryAddContainerFragment returns AlreadyExists WITHOUT writing for siblings (CkNet_Utils.h).
+// SeedContainer is Model-A-only (Produce-with-SeedContainer joins the JustRestored re-drive); v3 never calls it.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::attribute_restore
@@ -24,17 +40,40 @@ namespace ck::attribute_restore
         Produce(
             FCk_Handle& InEntity) -> TOptional<FInstancedStruct>
     {
-        if (NOT InEntity.Has<T_DerivedAttribute<ECk_MinMaxCurrent::Current>>())
+        using Current = T_DerivedAttribute<ECk_MinMaxCurrent::Current>;
+        using Min     = T_DerivedAttribute<ECk_MinMaxCurrent::Min>;
+        using Max     = T_DerivedAttribute<ECk_MinMaxCurrent::Max>;
+
+        if (NOT InEntity.Has<Current>())
         { return {}; }
 
-        return FInstancedStruct::Make(T_RepDataStruct{});
+        auto Data = T_RepDataStruct{};
+        using EntryType = typename decltype(Data.Attributes)::ElementType;
+
+        const auto& AttributeName = UCk_Utils_GameplayLabel_UE::Get_Label(InEntity);
+
+        const auto& Cur = InEntity.Get<Current>();
+        Data.Attributes.Emplace(EntryType{AttributeName, Cur.Get_Base(), Cur.Get_Final(), Current::ComponentTagType});
+
+        if (InEntity.Has<Min>())
+        {
+            const auto& MinFrag = InEntity.Get<Min>();
+            Data.Attributes.Emplace(EntryType{AttributeName, MinFrag.Get_Base(), MinFrag.Get_Final(), Min::ComponentTagType});
+        }
+        if (InEntity.Has<Max>())
+        {
+            const auto& MaxFrag = InEntity.Get<Max>();
+            Data.Attributes.Emplace(EntryType{AttributeName, MaxFrag.Get_Base(), MaxFrag.Get_Final(), Max::ComponentTagType});
+        }
+
+        return FInstancedStruct::Make(MoveTemp(Data));
     }
 
     template <template <ECk_MinMaxCurrent> class T_DerivedAttribute, typename T_RepDataStruct>
     auto
         SeedContainer(
             FCk_Handle& InEntity,
-            const FInstancedStruct& InData) -> ECk_AddedOrNot
+            const FInstancedStruct& /*InData*/) -> ECk_AddedOrNot
     {
         using Current = T_DerivedAttribute<ECk_MinMaxCurrent::Current>;
         using Min     = T_DerivedAttribute<ECk_MinMaxCurrent::Min>;
@@ -44,10 +83,11 @@ namespace ck::attribute_restore
         if (ck::Is_NOT_Valid(LifetimeOwner))
         { return ECk_AddedOrNot::NotAdded; }
 
-        // The container is OWNER-hosted; the typed add self-gates on the owner's driver (NotAdded => the re-drive
-        // retries next tick).
+        // EMPTY seed on purpose (Model-A-only, see header note): value comes from the restored image + the re-armed
+        // Replicate pass. Seeding the value-bearing Produce data would leave the shared owner container holding only
+        // the first-seeding attribute (TryAddContainerFragment returns AlreadyExists without writing for siblings).
         const auto AddedOrNot = UCk_Utils_Net_UE::TryAddContainerFragment<T_RepDataStruct>(
-            LifetimeOwner, InData.Get<T_RepDataStruct>());
+            LifetimeOwner, T_RepDataStruct{});
         if (AddedOrNot == ECk_AddedOrNot::NotAdded)
         { return AddedOrNot; }
 
@@ -59,5 +99,55 @@ namespace ck::attribute_restore
         { InEntity.AddOrGet<typename Max::FTag_MayRequireReplication>(); }
 
         return AddedOrNot;
+    }
+
+    // Save-load hydration (Phase 4B) — shared authority-side branch for every attribute kind. Returns UNSET when NOT
+    // under hydration scope: the caller falls through to the unchanged OWNER-keyed net Apply (byte-identical wire).
+    // Under hydration, InEntity IS the attribute entity (per-entity Produce keying), so write each saved component's
+    // value directly to it via the kind's ApplyReplicated*Entry (the same path the client net drain uses).
+    // ALL NotReady exits precede any mutation: ApplyReplicated*Entry's Add_Revocable creates a NEW modifier per call,
+    // so a mutate-then-NotReady retry would stack a second replication modifier. The only NotReady is the Has<Current>
+    // guard before any write; a saved component the re-Constructed attribute no longer composes is warn+skip (its
+    // Get_/Request_ would ensure on the missing component, and composition is synchronous so absence is final).
+    template <template <ECk_MinMaxCurrent> class T_DerivedAttribute, typename T_RepDataStruct, typename T_ApplyEntryFn>
+    auto
+        TryHydrationApply(
+            FCk_Handle& InEntity,
+            const FInstancedStruct& InNew,
+            T_ApplyEntryFn InApplyEntry) -> TOptional<ECk_RepFragment_ApplyResult>
+    {
+        if (NOT FCk_HydrationApplyScope::Get_IsActive())
+        { return {}; }
+
+        using Current = T_DerivedAttribute<ECk_MinMaxCurrent::Current>;
+        using Min     = T_DerivedAttribute<ECk_MinMaxCurrent::Min>;
+        using Max     = T_DerivedAttribute<ECk_MinMaxCurrent::Max>;
+
+        if (NOT InEntity.Has<Current>())
+        { return ECk_RepFragment_ApplyResult::NotReady; }
+
+        auto AttributeEntity = ck::StaticCast<typename Current::HandleType>(InEntity);
+
+        for (const auto& Entry : InNew.Get<T_RepDataStruct>().Attributes)
+        {
+            const auto Component = Entry.Get_Component();
+            const auto ComponentComposed =
+                   Component == ECk_MinMaxCurrent::Current
+                || (Component == ECk_MinMaxCurrent::Min && InEntity.Has<Min>())
+                || (Component == ECk_MinMaxCurrent::Max && InEntity.Has<Max>());
+
+            if (NOT ComponentComposed)
+            {
+                ck::attribute::Verbose(
+                    TEXT("Snapshot hydration: attribute [{}] carries a saved component absent post-Construct — ")
+                    TEXT("skipping that entry (content drifted since the save)."),
+                    InEntity);
+                continue;
+            }
+
+            InApplyEntry(AttributeEntity, Entry);
+        }
+
+        return ECk_RepFragment_ApplyResult::Applied;
     }
 }
