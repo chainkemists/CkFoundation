@@ -10,6 +10,7 @@
 #include <Engine/LatentActionManager.h>
 #include <Engine/World.h>
 #include <GameFramework/Actor.h>
+#include <Misc/ScopeExit.h>
 #include <TimerManager.h>
 #include <UObject/UObjectGlobals.h>
 
@@ -488,6 +489,30 @@ auto
         TEXT("Cannot reset [{}] — its creation archetype is INVALID (pool pin should have prevented this)"),
         InObject)
     { return; }
+
+    // The reflected sweep below CAN skip the participant, but the AngelScript script-property copy
+    // further down CANNOT: UObject::CopyScriptPropertiesFrom is a whole-object asIScriptObject
+    // assignment that copies EVERY member declared on the script class, participant included, which
+    // would stomp the delegates and bind ledgers back to the CDO's empty ones. Snapshot the
+    // participant(s) and restore them after every copy path, so binds survive recycling on
+    // AngelScript-declared poolables too -- the contract CkObjectPoolingParticipant.h promises.
+    // ON_SCOPE_EXIT (not a restore at the bottom) because the AngelScript block early-returns from
+    // its ensure recovery path.
+    auto SavedParticipants = TArray<TPair<const FStructProperty*, FCk_Handle_ObjectPoolingParticipant>>{};
+
+    for (TFieldIterator<FStructProperty> PropIt{InObject->GetClass(), EFieldIteratorFlags::IncludeSuper}; PropIt; ++PropIt)
+    {
+        if (PropIt->Struct != FCk_Handle_ObjectPoolingParticipant::StaticStruct())
+        { continue; }
+
+        SavedParticipants.Emplace(*PropIt, *PropIt->ContainerPtrToValuePtr<FCk_Handle_ObjectPoolingParticipant>(InObject));
+    }
+
+    ON_SCOPE_EXIT
+    {
+        for (auto& [Property, SavedParticipant] : SavedParticipants)
+        { *Property->ContainerPtrToValuePtr<FCk_Handle_ObjectPoolingParticipant>(InObject) = SavedParticipant; }
+    };
 
     for (auto* Property = InObject->GetClass()->PropertyLink;
          ck::IsValid(Property);
