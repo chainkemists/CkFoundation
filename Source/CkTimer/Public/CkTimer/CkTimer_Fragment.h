@@ -77,9 +77,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // ROUNDTRIP: timer child entities fully round-trip a snapshot (params/current are snapshotable), so the owner's
-    // record must too — a TRANSIENT record left restored timers as orphaned, still-ticking entities invisible to
-    // their owner (unfindable via TryGet, un-cancellable, duplicated by any owner-side re-Add after load).
+    // ROUNDTRIP: timer child entities round-trip a save under v3 (rebuilt via ConstructSpawned adoption + hydrated
+    // by the CkTimer save handler), so the owner's record must too — a TRANSIENT record left restored timers as
+    // orphaned, still-ticking entities invisible to their owner (unfindable via TryGet, un-cancellable, duplicated
+    // by any owner-side re-Add after load).
     CK_DEFINE_RECORD_OF_ENTITIES_ROUNDTRIP(FFragment_RecordOfTimers, FCk_Handle_Timer);
 
     // --------------------------------------------------------------------------------------------------------------------
