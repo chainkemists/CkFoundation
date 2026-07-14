@@ -899,6 +899,17 @@ auto
     // orphan walk below), so a restored entity is at its saved position by the time its payloads hydrate.
     DoApply_SavedTransforms();
 
+    // Mark every restored (saved-id-mapped) entity as just-restored. Game-side rebind processors key off this
+    // marker to re-resolve handles their persisted fragments carry (BB's Bb_SnapshotRestore rebind fleet) — the
+    // Model-A purge deleted the old stamp site and silently killed every consumer; v3 restores the semantic here,
+    // before the gate opens, so the full post-gate pump sees it.
+    for (const auto& Pair : _SavedIdMap)
+    {
+        if (auto Restored = Pair.Value;
+            ck::IsValid(Restored))
+        { Restored.AddOrGet<ck::FTag_Snapshot_JustRestored>(); }
+    }
+
     auto EnqueuedCount = 0;
     auto PayloadsDropped = 0;
     for (const auto& Payload : _V3Tables.Get_Payloads())
