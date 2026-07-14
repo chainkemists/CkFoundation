@@ -27,6 +27,11 @@ namespace ck
             const TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>& InDriver) const
         -> void
     {
+        // Defer entities composed this frame (Phase 2 §2.4): their feature Setups drain in the pump AFTER
+        // FGroup_Hydration, so applying now would be stomped. The pending tag stays; the pump (post-Setup) applies.
+        if (InHandle.Has<FTag_EntityScript_ConstructedThisFrame>())
+        { return; }
+
         if (ck::Is_NOT_Valid(InDriver))
         {
             InHandle.Remove<FTag_RepFragments_PendingApply>();
@@ -150,12 +155,30 @@ namespace ck
 {
     auto
         FProcessor_Hydration_Dispatch::
+        DoTick(
+            TimeType InDeltaT)
+        -> void
+    {
+        // [P2-D1] This dispatcher runs LAST in FGroup_Hydration (RunAfter the net dispatcher). Iterate + apply, THEN
+        // clear FTag_EntityScript_ConstructedThisFrame registry-wide — by now BOTH dispatchers have skipped the
+        // constructed-this-frame entities in this main pass, so clearing lets the pump (post-Setup) / next frame
+        // re-dispatch them without a stomp. Idiom: CkIsmRenderer_Processor.cpp.
+        TProcessor::DoTick(InDeltaT);
+        _TransientEntity.Clear<FTag_EntityScript_ConstructedThisFrame>();
+    }
+
+    auto
+        FProcessor_Hydration_Dispatch::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_PendingHydration& InPending) const
         -> void
     {
+        // Defer entities composed this frame (Phase 2 §2.4) — same rationale as the net dispatcher.
+        if (InHandle.Has<FTag_EntityScript_ConstructedThisFrame>())
+        { return; }
+
         auto AnyStillPending = false;
 
         // Iterate back-to-front so applied/dropped entries can be removed in place.

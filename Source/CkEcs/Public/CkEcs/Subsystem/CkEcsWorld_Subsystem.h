@@ -44,6 +44,10 @@ enum class ECk_ReconstitutionPhase : uint8
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class UCk_EcsWorld_Subsystem_UE;
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable, NotBlueprintType)
 class CKECS_API ACk_EcsWorld_Actor_UE final : public AInfo
 {
@@ -87,6 +91,12 @@ private:
     FGameplayTag _EcsWorldTickingGroup;
     ECk_Ecs_WorldStatCollection_Policy _StatCollectionPolicy = ECk_Ecs_WorldStatCollection_Policy::DoNotCollect;
     FName _EcsWorldDisplayName;
+
+    // Lazily resolved (first Tick) + cached back-reference to this world's ECS subsystem, so the per-frame tick can
+    // read the load gate and pick the scheduler scope without a per-tick GetSubsystem lookup.
+    TWeakObjectPtr<UCk_EcsWorld_Subsystem_UE> _OwningSubsystem;
+
+    auto DoGet_OwningSubsystem() -> const UCk_EcsWorld_Subsystem_UE*;
 
 public:
     CK_PROPERTY_GET(_Scheduler);
@@ -143,8 +153,12 @@ public:
     // Returns the total pump-pass count across all schedulers (0 == already quiescent;
     // a high count == lots of cascading work drained). Safe: skips any scheduler whose tick is
     // already in progress (re-entrancy guard).
+    //
+    // InScope: Full (default — pre-save/normal drain, every processor) or LoadKernel (the load orchestrator's
+    // rebuild drain — only RunsDuringLoad processors, spec §4.3).
     auto
-    Request_PumpToQuiescence() -> int32;
+    Request_PumpToQuiescence(
+        ck::ECk_SchedulerTickScope InScope = ck::ECk_SchedulerTickScope::Full) -> int32;
 
     // Worst-case (maximum) pump-pass count across all per-ticking-group schedulers for the most recent
     // frame. 0 when no schedulers exist (e.g. menu world). Surfaced live by CkWatermark to show pump
@@ -173,6 +187,12 @@ public:
     // Convenience: any phase active. Prefer Get_ReconstitutionPhase where the tier matters.
     auto Get_IsReconstitutionInProgress() const -> bool;
 
+    // Load gate (spec §4.3): while active, every EcsWorld actor ticks its scheduler with LoadKernel scope, so only
+    // RunsDuringLoad kernel processors run — feature processors are frozen against the half-rebuilt world. Set by the
+    // CkSnapshot load orchestrator (Phase 3B) across the rebuild; cleared once reconciliation completes.
+    auto Get_IsLoadGateActive() const -> bool;
+    auto Set_IsLoadGateActive(bool InActive) -> void;
+
 private:
     auto DoBuildGraphAndSpawnActors(
         UWorld& InWorld) -> void;
@@ -196,6 +216,10 @@ private:
 
     // M2b-1: set by the CkSnapshot load state machine; read by the Request_SpawnEntity guard to abstain during a load.
     ECk_ReconstitutionPhase _ReconstitutionPhase = ECk_ReconstitutionPhase::None;
+
+    // Phase 2: set by the CkSnapshot load orchestrator; read per-frame by each EcsWorld actor to pick the scheduler
+    // tick scope (LoadKernel while active). See Get_/Set_IsLoadGateActive.
+    bool _IsLoadGateActive = false;
 
 private:
     // Owns the underlying entt registry. Slot is registered with

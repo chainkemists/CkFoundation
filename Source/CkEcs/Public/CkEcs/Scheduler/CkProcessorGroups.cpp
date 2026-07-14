@@ -17,6 +17,7 @@ CK_REGISTER_GROUP(ck::FGroup_Transform);
 CK_REGISTER_GROUP(ck::FGroup_Transform_Finalize);
 CK_REGISTER_GROUP(ck::FGroup_Gameplay_Camera);
 CK_REGISTER_GROUP(ck::FGroup_PostTransform);
+CK_REGISTER_GROUP(ck::FGroup_Hydration);
 CK_REGISTER_GROUP(ck::FGroup_Replication);
 CK_REGISTER_GROUP(ck::FGroup_EntityLifecycle);
 CK_REGISTER_GROUP(ck::FGroup_EndPlay);

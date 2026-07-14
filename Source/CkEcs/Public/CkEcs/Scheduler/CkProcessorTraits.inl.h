@@ -218,6 +218,11 @@ namespace ck
             Descriptor._PumpPolicy = T_Processor::PumpPolicy;
         }
 
+        if constexpr (requires { T_Processor::LoadPolicy; })
+        {
+            Descriptor._LoadPolicy = T_Processor::LoadPolicy;
+        }
+
         return Descriptor;
     }
 
