@@ -224,32 +224,37 @@ namespace ck::detail
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            const T_DerivedAttribute& InAttribute) const
+            [[maybe_unused]] const T_DerivedAttribute& InAttribute) const
             -> void
     {
         auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
 
-        UCk_Utils_Net_UE::TryUpdateContainerFragment<T_RepDataStruct>(
-            LifetimeOwner, [&](T_RepDataStruct& Data)
+        // One projection: the registered child-keyed Produce emits ALL composed components (Current + Min/Max)
+        // of this attribute entity with the same EntryType shape the wire uses. Fold each into the owner
+        // container by (name, component) — identical content to the per-component hand-build this replaces;
+        // sibling components refresh with their identical live values (equality is nearly-equal, harmless).
+        const auto Produced = UCk_Utils_Net_UE::TryProduce<T_RepDataStruct>(InHandle);
+        if (Produced.IsSet())
         {
-            const auto& AttributeName = UCk_Utils_GameplayLabel_UE::Get_Label(InHandle);
-            const auto& BaseValue = InAttribute.Get_Base();
-            const auto& FinalValue = InAttribute.Get_Final();
-            const auto ComponentType = T_DerivedAttribute::ComponentTagType;
-
-            using EntryType = typename decltype(Data.Attributes)::ElementType;
-            const auto ToReplicate = EntryType{AttributeName, BaseValue, FinalValue, ComponentType};
-
-            const auto Found = Data.Attributes.FindByPredicate([&](const EntryType& InElement)
+            UCk_Utils_Net_UE::TryUpdateContainerFragment<T_RepDataStruct>(
+                LifetimeOwner, [&](T_RepDataStruct& Data)
             {
-                return InElement.Get_AttributeName() == AttributeName && InElement.Get_Component() == ComponentType;
-            });
+                using EntryType = typename decltype(Data.Attributes)::ElementType;
+                for (const auto& ProducedEntry : Produced->Attributes)
+                {
+                    const auto Found = Data.Attributes.FindByPredicate([&](const EntryType& InElement)
+                    {
+                        return InElement.Get_AttributeName() == ProducedEntry.Get_AttributeName() &&
+                               InElement.Get_Component() == ProducedEntry.Get_Component();
+                    });
 
-            if (ck::Is_NOT_Valid(Found, ck::IsValid_Policy_NullptrOnly{}))
-            { Data.Attributes.Emplace(ToReplicate); }
-            else
-            { *Found = ToReplicate; }
-        });
+                    if (ck::Is_NOT_Valid(Found, ck::IsValid_Policy_NullptrOnly{}))
+                    { Data.Attributes.Emplace(ProducedEntry); }
+                    else
+                    { *Found = ProducedEntry; }
+                }
+            });
+        }
 
         InHandle.template Remove<MarkedDirtyBy>();
     }
