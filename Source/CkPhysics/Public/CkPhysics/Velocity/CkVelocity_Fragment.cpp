@@ -13,20 +13,25 @@ static struct FVelocityRepHandlerRegistrar
 {
     FVelocityRepHandlerRegistrar()
     {
+        // Authority-safe applier: Request_OverrideVelocity from the payload is idempotent and host-safe, so the
+        // same body serves both the net receive (Apply) and the load-path hydration (HydrationApply).
+        const auto ApplyFn = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
+        {
+            auto VelocityHandle = UCk_Utils_Velocity_UE::Cast(Entity);
+            if (ck::Is_NOT_Valid(VelocityHandle))
+            { return ECk_RepFragment_ApplyResult::NotReady; }
+
+            // (Phase 2 §2.6) The per-feature NeedsSetup apply-guard from 5eda3ac8a is retired: the late
+            // FGroup_Hydration dispatch + the ConstructedThisFrame defer (§2.4) + fire-gating (§2.5) now
+            // guarantee this apply runs AFTER the setup drain, so the applied value is final.
+            UCk_Utils_Velocity_UE::Request_OverrideVelocity(VelocityHandle, New.Get<FCk_RepData_Velocity>().Value);
+            return ECk_RepFragment_ApplyResult::Applied;
+        };
+
         FCk_ReplicatedFragmentHandlerRegistry::RegisterLazyTyped<FCk_RepData_Velocity>(
             {
-                .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
-                {
-                    auto VelocityHandle = UCk_Utils_Velocity_UE::Cast(Entity);
-                    if (ck::Is_NOT_Valid(VelocityHandle))
-                    { return ECk_RepFragment_ApplyResult::NotReady; }
-
-                    // (Phase 2 §2.6) The per-feature NeedsSetup apply-guard from 5eda3ac8a is retired: the late
-                    // FGroup_Hydration dispatch + the ConstructedThisFrame defer (§2.4) + fire-gating (§2.5) now
-                    // guarantee this apply runs AFTER the setup drain, so the applied value is final.
-                    UCk_Utils_Velocity_UE::Request_OverrideVelocity(VelocityHandle, New.Get<FCk_RepData_Velocity>().Value);
-                    return ECk_RepFragment_ApplyResult::Applied;
-                },
+                .Apply = ApplyFn,
+                .HydrationApply = ApplyFn,
                 // Capture/oracle-only Produce of the self-resident Velocity container from live Current
                 // (the Model-A re-drive was retired in Phase 5). Default typed SeedContainer (no re-arm tag).
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
@@ -35,7 +40,6 @@ static struct FVelocityRepHandlerRegistrar
                     { return {}; }
                     return FInstancedStruct::Make(FCk_RepData_Velocity{Entity.Get<ck::FFragment_Velocity_Current>().Get_CurrentVelocity()});
                 },
-                .Transport = ECk_PersistenceTransport::NetAndSave // v3 save capture (Phase 3A.4)
             });
     }
 } GVelocityRepHandlerRegistrar;
