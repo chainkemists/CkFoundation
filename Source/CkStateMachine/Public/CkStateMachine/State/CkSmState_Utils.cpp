@@ -14,6 +14,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
+#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h" // FTag_Snapshot_SaveTransient
 #include "CkStateMachine/CkStateMachine_Log.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -99,6 +100,10 @@ auto
     const auto ResolvedClass = Get_ResolvedStateClass(InOwnerStateMachine, InStateClass);
 
     auto StateEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwnerStateMachine);
+
+    // SM graph elements are derived state — the SM's hydration redrive recreates them on load, so the
+    // v3 capture must never persist them as respawnable rows (see FTag_Snapshot_SaveTransient).
+    StateEntity.Add<ck::FTag_Snapshot_SaveTransient>();
 
     UCk_Utils_Handle_UE::Set_DebugName(StateEntity, ResolvedClass->GetFName());
 

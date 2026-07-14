@@ -8,6 +8,8 @@
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 
+#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h" // FTag_Snapshot_SaveTransient
+
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
@@ -36,6 +38,9 @@ auto
     { return {}; }
 
     auto TransitionEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwnerState);
+
+    // SM graph element — save-transient, the redrive recreates it (see CkSmState_Utils::Create).
+    TransitionEntity.Add<ck::FTag_Snapshot_SaveTransient>();
 
     UCk_Utils_Handle_UE::Set_DebugName(TransitionEntity,
         *ck::Format_UE(TEXT("Transition -> {}"), InTargetStateClass->GetFName()));

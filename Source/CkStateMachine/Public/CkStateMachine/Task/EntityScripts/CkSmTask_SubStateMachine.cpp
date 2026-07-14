@@ -1,6 +1,7 @@
 #include "CkSmTask_SubStateMachine.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h" // FTag_Snapshot_SaveTransient
 #include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
@@ -41,6 +42,10 @@ auto
 
     auto ScriptEntity = DoGet_ScriptEntity();
     auto TypeUnsafeSubSmHandle = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(ScriptEntity);
+
+    // Sub-SM — derived graph state, save-transient: the parent's task recreates it fresh when the
+    // parent redrives on load (see FTag_Sm_IsSubMachine + FTag_Snapshot_SaveTransient).
+    TypeUnsafeSubSmHandle.Add<ck::FTag_Snapshot_SaveTransient>();
     auto SubSmParams = FCk_Fragment_StateMachine_ParamsData{_InitialStateClass};
     SubSmParams.Set_AutoStart(ECk_SmAutoStart::Disabled);
     _SubSmHandle = UCk_Utils_StateMachine_UE::Add(TypeUnsafeSubSmHandle, SubSmParams);
