@@ -1,9 +1,11 @@
 #include "Ck2dGridOccupancy_Fragment.h"
 
 #include "CkGrid/2dGridSystem/Placement/Ck2dGridPlacement_Fragment.h" // FCk_Fragment_2dGridPlacement_ParamsData + entry/RepData types (Produce)
+#include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Utils.h"            // UCk_Utils_2dGridSystem_UE::Has/Cast (load hydration)
+#include "Ck2dGridOccupancy_Utils.h"                                  // UCk_Utils_2dGridOccupancy_UE::Request_AddPlacement (load hydration)
 #include "CkRecord/Record/CkRecord_Utils.h"                            // TUtils_RecordOfEntities::ForEach_ValidEntry (Produce)
 
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h" // FCk_HydrationApplyScope (load hydration) + RegisterLazy
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -25,12 +27,39 @@
         FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
             []() -> UScriptStruct* { return FCk_RepData_2dGridPlacements::StaticStruct(); },
             {
-                // Stamps the sync fragment consumed by the Occupancy SyncReplication processor
-                // (which owns rebuild + reconcile) — always Applied, the processor has its own gating.
+                // Client net path stamps the sync fragment consumed by the ClientOnly Occupancy SyncReplication
+                // processor (which owns rebuild + reconcile). The authority load path takes the hydration branch
+                // below instead — that processor never runs on the host, so nothing would rebuild the record.
                 .Apply = [DoApplyPlacements](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
                 {
+                    const auto& NewPlacements = New.Get<FCk_RepData_2dGridPlacements>().Placements;
+
+                    // Load-path authority hydration (mirrors CkInventory [F1-D6]): the payload is keyed on the GRID
+                    // entity; on the authority host the ClientOnly SyncReplication processor never runs, so re-drive
+                    // the placement record directly. Request_AddPlacement re-arms MayRequireReplication, so the
+                    // AuthorityOnly Replicate pass pushes the rebuilt set and clients converge via the ordinary
+                    // SyncReplication path (no explicit re-arm needed).
+                    if (FCk_HydrationApplyScope::Get_IsActive())
+                    {
+                        if (NOT UCk_Utils_2dGridSystem_UE::Has(Entity))
+                        { return ECk_RepFragment_ApplyResult::NotReady; }
+
+                        auto Grid = UCk_Utils_2dGridSystem_UE::Cast(Entity);
+                        for (const auto& Entry : NewPlacements)
+                        {
+                            // Do NOT gate on occupant validity: a restored placement's occupant is deterministically
+                            // invalid (unlabeled ConstructSpawned child → save-transient → entt::null on load), and
+                            // Request_AddPlacement adds the placement + Cells regardless (Cells are authoritative; an
+                            // invalid occupant only skips the death-watch). A NotReady gate would never flip and would
+                            // drop the whole payload past the dispatcher timeout.
+                            UCk_Utils_2dGridOccupancy_UE::Request_AddPlacement(
+                                Grid, Entry.Get_Occupant(), Entry.Get_Anchor(), Entry.Get_Rotation(), Entry.Get_Cells());
+                        }
+                        return ECk_RepFragment_ApplyResult::Applied;
+                    }
+
                     DoApplyPlacements(Entity,
-                        New.Get<FCk_RepData_2dGridPlacements>().Placements,
+                        NewPlacements,
                         Old.IsSet()
                             ? Old.GetValue().Get<FCk_RepData_2dGridPlacements>().Placements
                             : TArray<FCk_2dGridPlacement_ReplicatedEntry>{});

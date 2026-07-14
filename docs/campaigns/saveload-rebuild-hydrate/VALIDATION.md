@@ -34,16 +34,18 @@ Expected, against the re-baselined gate table in PROGRESS.md (§Phase F3 cluster
       [N1-A]-deferred); dropped Physics.Net.Velocity_ApplyAfterLateSetup — never written, subsumed per
       [P2-D3] by Parity.Acceleration_MPReload + the three Ck.Attribute.Net pins.)
 - [ ] Allowlisted reds — acceptable ONLY as exact name-matches; ANY other red = FAIL:
-      1. `Ck.Snapshot.Parity.GridPlacements_MPReload` — nested-FEcsWorld engine-death (replicated bridged
-         2dGridSystem through seamless travel); Adam-gated, own workstream. NOTE: grid save/load currently
-         has NO passing coverage — the registry twin was compile-coupled and deleted ([F3-D1]).
-      2. `Bb.Snapshot.FixtureReconstruct`  3. `Bb.Snapshot.PlayerRestore` — pre-existing BusterBlock-project
-         casualties (not CkFoundation; tracked BB-side).
+      1. `Bb.Snapshot.FixtureReconstruct`  2. `Bb.Snapshot.PlayerRestore` — pre-existing BusterBlock-project
+         casualties (not CkFoundation; the v3 rebuild finds 0 live entities to rendezvous against post-travel —
+         the unbuilt BB-driver-world / OracleParity prereq — needs a BB-project GameMode; tracked BB-side).
+      (FIXED 2026-07-13, no longer allowlisted: `Ck.Snapshot.Parity.GridPlacements_MPReload` — the "engine-death"
+       was stale; a missing authority-side 2dGridOccupancy hydration branch, fixed CkF `ecd6f4019` → GREEN, so
+       grid save/load now HAS passing coverage. See PROGRESS.md §Red/flake fixes.)
 - [ ] The three pins green: `Ck.Attribute.Net.Values_AppliedBefore_OnReplicationComplete`,
       `Float_InitialBakedValue_Replicates`, `Float_PreComposition_StashedValue_Applies`.
-- [ ] Full-suite run: failing set == the current re-baselined failing-name table in PROGRESS.md (§Phase F3
-      cluster 4) — i.e. the 3 allowlisted reds above + the documented
-      `Ck.StateMachine.Net.OwningClientAuth_SubSm_AuthorityGatedTask` flake + the kiosk env-trio.
+- [ ] Full-suite run: failing set == the current re-baselined failing-name table in PROGRESS.md (§Red/flake
+      fixes) — i.e. the 2 allowlisted `Bb.Snapshot` reds above (+ the kiosk env-trio in the wider BB suite).
+      `Ck.Snapshot` is now 27/2 and `Ck.*.Net` is delta-ZERO (103/103/0 — the SM.Net flake was fixed
+      2026-07-13, CkTests `3fdd6de`).
 - [ ] No `Angelscript: Error` naming campaign files in any log.
 
 ## 2. Fidelity acceptance (v3 — post-oracle)
