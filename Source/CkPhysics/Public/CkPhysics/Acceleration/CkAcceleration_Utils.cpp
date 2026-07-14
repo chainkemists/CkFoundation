@@ -26,7 +26,11 @@ auto
 
     if (InReplicates != ECk_Replication::DoesNotReplicate)
     {
-        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Acceleration>(InHandle, FCk_RepData_Acceleration{InParams.Get_StartingAcceleration()});
+        // Seed with REAL data at construction (FFragment_Acceleration_Current was composed above with the
+        // starting acceleration, so Produce reads it). Consume the registered Produce — one projection for wire + save.
+        const auto Produced = UCk_Utils_Net_UE::TryProduce<FCk_RepData_Acceleration>(InHandle);
+        if (Produced.IsSet())
+        { UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Acceleration>(InHandle, *Produced); }
     }
 
     return Cast(InHandle);
