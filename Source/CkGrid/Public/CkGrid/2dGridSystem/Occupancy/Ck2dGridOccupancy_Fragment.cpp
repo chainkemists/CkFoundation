@@ -5,8 +5,8 @@
 #include "Ck2dGridOccupancy_Utils.h"                                  // UCk_Utils_2dGridOccupancy_UE::Request_AddPlacement (load hydration)
 #include "CkRecord/Record/CkRecord_Utils.h"                            // TUtils_RecordOfEntities::ForEach_ValidEntry (Produce)
 
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"     // RegisterLazyTyped
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // Register_* entry-point bodies
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h"     // RegisterLazyTyped
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.inl.h" // Register_* entry-point bodies
 
 // --------------------------------------------------------------------------------------------------------------------
 

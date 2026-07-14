@@ -6,7 +6,8 @@
 
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_BuildRecipe.h" // FFragment_BuildRecipe retention (definition-built entity recipe)
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h" // FTag_RepFragments_PendingApply, FFragment_PendingHydration
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h" // FTag_RepFragments_PendingApply
+#include "CkEcs/Persistence/CkPersistenceHydration.h" // FFragment_PendingHydration (split Phase 5)
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h" // Get_WorldForEntity (recipe holder outer)
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h" // FTag_DefinitionBuild_InProgress (construction-window stamp for labeled children)
 
