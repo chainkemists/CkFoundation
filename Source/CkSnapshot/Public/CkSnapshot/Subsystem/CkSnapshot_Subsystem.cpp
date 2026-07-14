@@ -1077,6 +1077,9 @@ auto
                 // Subtractive reconciliation: a labeled child rebuilt by Construct but ABSENT from the
                 // save is a grant the player lost. Queue the normal deferred teardown — it PARKS under the gate and
                 // completes on the first post-gate frames; we only queue here, never wait.
+                ck::snapshot::Verbose(TEXT("v3 reconcile: destroying stray ConstructSpawned child [{}] label [{}] "
+                    "of owner [{}] (saved-id [{}]) — absent from the save"),
+                    Child, ChildLabel, Owner, OwnerSavedId);
                 UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(Child);
                 ++DestroyedCount;
             }
