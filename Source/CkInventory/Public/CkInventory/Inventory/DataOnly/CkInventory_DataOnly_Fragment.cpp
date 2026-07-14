@@ -79,7 +79,7 @@
                 },
                 // Produce-only capture (Phase 3A.4): mirror FProcessor_Inventory_DataOnly_Replicate's live-state
                 // build. Keyed on the INVENTORY entity — emits THAT inventory's items (entries carry only the item
-                // handle). NO SeedContainer — Produce is capture/oracle-only; the Model-A re-drive was retired in Phase 5.
+                // handle). Produce is capture-only.
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT UCk_Utils_Inventory_DataOnly_UE::Has(Entity))

@@ -161,7 +161,7 @@ namespace ck::snapshot
         auto CkRegistry = FCk_Registry{InRegistryHandle};
 
         // ---- Collect candidate entities (every entity carrying ≥1 fragment/tag) -----------------------------------
-        // Sweep the storages once and accumulate entity ids (mirrors the oracle's BuildEntitySignatures). Truly
+        // Sweep the storages once and accumulate entity ids. Truly
         // empty entities never appear — they are anonymous scratch (rule 5) and would be skipped anyway.
         const auto EntityStorageHash = static_cast<uint32>(entt::type_hash<ck::SnapshotEntityType>::value());
         auto CandidateIds = TSet<uint32>{};

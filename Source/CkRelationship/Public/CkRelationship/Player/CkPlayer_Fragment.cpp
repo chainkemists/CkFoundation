@@ -32,8 +32,8 @@ static struct FPlayerRepHandlerRegistrar
         {
             .Apply = ApplyFn,
             .HydrationApply = ApplyFn,
-            // Produce-only capture (Phase 3A.4, [P1-R1]): mirror FProcessor_Player_Replicate's live-state build. NO
-            // SeedContainer — Produce is capture/oracle-only; the Model-A re-drive was retired in Phase 5.
+            // Produce-only capture (Phase 3A.4, [P1-R1]): mirror FProcessor_Player_Replicate's live-state build.
+            // Produce is capture-only.
             .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
             {
                 if (NOT UCk_Utils_Player_UE::Has(Entity))

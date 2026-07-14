@@ -5,7 +5,7 @@
 #include "CkEcs/Handle/CkHandle_TypeSafe.h" // ck::StaticCast (hydration apply)
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
-#include "CkEcs/Net/CkNet_Utils.h" // TryAddContainerFragment + Get_LifetimeOwner (RegisterLazyTyped + SeedContainer)
+#include "CkEcs/Net/CkNet_Utils.h" // TryAddContainerFragment + Get_LifetimeOwner (container-based replication for this feature)
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // RegisterLazyTyped<T> body
 
 // --------------------------------------------------------------------------------------------------------------------

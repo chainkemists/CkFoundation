@@ -23,10 +23,11 @@ class UCk_Utils_RecordOfEntities_UE;
 
 namespace ck
 {
-    // T_Policy classifies this record for snapshot: ck::FSnapshotPolicy_RoundTrip (captured + must be registered
-    // via CK_REGISTER_SNAPSHOTABLE) or ck::FSnapshotPolicy_Transient (reconstructed on restore — not captured).
-    // T_Policy is REQUIRED — omitting the classification is a compile error. Use the
-    // CK_DEFINE_RECORD_OF_ENTITIES_ROUNDTRIP / _TRANSIENT macros, which supply the policy.
+    // T_Policy classifies this record for snapshot: ck::FSnapshotPolicy_RoundTrip or ck::FSnapshotPolicy_Transient.
+    // INERT pending Option A (see docs/campaigns/saveload-v3-parity/PHASE_6.md): the classification feeds nothing;
+    // CK_REGISTER_SNAPSHOTABLE and the capture audit were deleted with Model A. T_Policy is still REQUIRED —
+    // omitting the classification is a compile error — so use the CK_DEFINE_RECORD_OF_ENTITIES_ROUNDTRIP /
+    // _TRANSIENT macros, which supply the policy.
     template <concepts::ValidHandleType T_HandleType, typename T_Policy>
     struct TFragment_RecordOfEntities : public detail::TSnapshotMarker<T_Policy>
     {
@@ -102,8 +103,8 @@ namespace ck
         "(authoritative state that must survive save/load — also add CK_REGISTER_SNAPSHOTABLE in the .cpp) "        \
         "or CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT (state reconstructed on restore).")
 
-// Explicit-policy defines. Pick _ROUNDTRIP for authoritative state that must survive save/load (and add a
-// CK_REGISTER_SNAPSHOTABLE in the .cpp), or _TRANSIENT for state reconstructed on restore.
+// Explicit-policy defines. Pick _ROUNDTRIP or _TRANSIENT (both classifications are currently INERT — see the
+// T_Policy note above; CK_REGISTER_SNAPSHOTABLE was deleted with Model A).
 #define CK_DEFINE_RECORD_OF_ENTITIES_WITH_POLICY(_NameOfRecord_, _HandleType_, _Policy_)         \
 struct _NameOfRecord_ : public ck::TFragment_RecordOfEntities<_HandleType_, _Policy_>            \
 {                                                                                                \

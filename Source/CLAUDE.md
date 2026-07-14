@@ -85,7 +85,7 @@ Before writing any code, navigate the documentation in this order:
 | tracked entity sets with change detection | `CkEntityCollection` |
 | post-construction opt-in fragments | `CkEntityExtension` |
 | quest-like objectives | `CkObjective` |
-| save/restore world state (snapshots) | `CkSnapshot` (v3 rebuild+hydrate; no doc yet) — features persist via a Produce/Apply handler on `FCk_ReplicatedFragmentHandlerRegistry` (`CkEcs/Net/ReplicatedFragmentContainer`, save subset `Get_SaveHandlerTypes`), NOT a per-fragment macro (`CK_REGISTER_SNAPSHOTABLE` removed 2026-07-13) |
+| save/restore world state (snapshots) | `CkSnapshot` (v3 rebuild+hydrate — see `CkSnapshot/Claude.md`) — features persist via a Produce/HydrationApply handler on `FCk_ReplicatedFragmentHandlerRegistry` (`CkEcs/Net/ReplicatedFragmentContainer`, save subset `Get_SaveHandlerTypes`), NOT a per-fragment macro (`CK_REGISTER_SNAPSHOTABLE` removed 2026-07-13) |
 | session state machine | `CkGameSession` |
 | CommonUI-based UI layer | `CkUI` |
 | dependency-gated loading screen | `CkLoadingScreen` (subsystem + `ICk_LoadingProcess` holders) |
@@ -220,7 +220,7 @@ standalone ones: `CkEditorGraph` (graph/schema base), `CkEditorStyle` (shared st
 ### Table notes
 
 - **Per-module docs** live at `Source/<Module>/Claude.md` (CkGoap's is `CLAUDE.md`). **No doc yet:**
-  CkEqs, CkSnapshot, CkRenderTarget, CkSpline, CkEntitySpawner, CkUnrealComponent.
+  CkEqs, CkRenderTarget, CkSpline, CkEntitySpawner, CkUnrealComponent.
   CkIskmRendererVF is covered by CkIskmRenderer's doc. CkCrowd's and CkNavigation's docs were
   flagged stale on 2026-07-02 ("not yet created" / "skeleton only" — both modules are fully built);
   trust code over doc and note the drift.
