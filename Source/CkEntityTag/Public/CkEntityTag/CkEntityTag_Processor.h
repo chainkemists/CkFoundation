@@ -46,6 +46,11 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FCk_Request_EntityTag_TryRemoveGameplayTag& InRequest) -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FCk_Request_EntityTag_RestoreSet& InRequest) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
