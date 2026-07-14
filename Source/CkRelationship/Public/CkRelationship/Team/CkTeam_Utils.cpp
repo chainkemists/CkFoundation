@@ -52,7 +52,11 @@ auto
     }
     else
     {
-        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Team>(InHandle, FCk_RepData_Team{InTeamID});
+        // Seed the container with REAL data at construction (the switch above composed FFragment_TeamInfo, so
+        // Produce reads InTeamID). Consume the registered Produce — one projection for wire + save.
+        const auto Produced = UCk_Utils_Net_UE::TryProduce<FCk_RepData_Team>(InHandle);
+        if (Produced.IsSet())
+        { UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Team>(InHandle, *Produced); }
     }
 
     return Cast(InHandle);
@@ -99,8 +103,10 @@ auto
         }
     }
 
-    UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_Team>(
-        InHandle, FCk_RepData_Team{InTeamID});
+    // The switch above updated FFragment_TeamInfo (write-then-replicate); Produce reads the new InTeamID.
+    const auto Produced = UCk_Utils_Net_UE::TryProduce<FCk_RepData_Team>(InHandle);
+    if (Produced.IsSet())
+    { UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_Team>(InHandle, *Produced); }
 
     ck::UUtils_Signal_TeamChanged::Broadcast(InHandle, ck::MakePayload(TryGet_Entity_Team_InOwnershipChain(InHandle), OldID, InTeamID));
 

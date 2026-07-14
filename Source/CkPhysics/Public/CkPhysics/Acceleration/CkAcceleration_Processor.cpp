@@ -259,8 +259,11 @@ namespace ck
             const FFragment_ContainerRef_Acceleration& InContainerRef) const
         -> void
     {
-        UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_Acceleration>(
-            InHandle, FCk_RepData_Acceleration{InCurrent.Get_CurrentAcceleration()});
+        // One projection, shared by the wire and the save file: consume the registered Produce (byte-identical
+        // to the old inline build). Produced is always set here (the processor's view guarantees the fragment).
+        const auto Produced = UCk_Utils_Net_UE::TryProduce<FCk_RepData_Acceleration>(InHandle);
+        if (Produced.IsSet())
+        { UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_Acceleration>(InHandle, *Produced); }
     }
 
 }
