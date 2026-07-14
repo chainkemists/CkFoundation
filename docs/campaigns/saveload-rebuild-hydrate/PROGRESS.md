@@ -17,6 +17,119 @@
 | 4B | PHASE_4B.md | **IN PROGRESS** — casualties closed (TagSet/RenderTarget/Attributes×5/AnimPlan) + **4B.3 AS smoke DONE** (framework FCk_SaveData_EntityScriptFields handler + 2 AS gates green). **Grid + Inventory×2 DEFERRED → [INV-A]**. Verification-gated leftovers (4B.1 params-mutators, MontagePlayer rebind) still blocked on OracleParity/BB-driver-world ([P4B-N1]). | 2026-07-12 | CkF: 5088f5336 (TagSet), ede66976f (RenderTarget), db83e687a (AnimPlan), 5b7c1e077 (Attributes×5), 19613a1eb (invariant fix), **09ca84f41 (4B.3 SaveGame-fields handler)**; CkTests: **a0c2f2d (4B.3 AS gates)** | GREEN: Ck.Snapshot **54/51/3** (both `AS.SaveGameFields_RoundTrip`+`AS.NonSaveGameField_Drops` green; the 3 = [INV-A] trio by name; Meta ratchet + v3 AUDIT delta-zero); Net **102/99/3** framework Ck.*.Net delta-zero (kiosk env-trio only; SM.Net flake passed) |
 | 5 | PHASE_5.md + VALIDATION.md | **Track B (decommission Model A) partial COMPLETE — clusters 1a–6 DONE + COMMITTED; Phase-5 FINAL blocked** | 2026-07-12 | see §Phase-5 progress | Ck.Snapshot 54/51/3 (3=[INV-A]); Net 102/98/4 framework delta-zero; Shipping compile OK |
 
+## Close-out session (2026-07-12, Opus unattended) — FINALIZE design-lock (Phase 0 of the close-out)
+
+Adam's new directive supersedes PHASE_5.md's "gate-don't-delete": **REMOVE Model A entirely; one pipeline; retire
+`CK_WITH_FIDELITY_ORACLE`.** The locked design + phased plan + decisions + Adam-decision list live in **FINALIZE.md**
+(canonical for the close-out; trust it over the raw audits). Produced via a 5-way read-only audit (4 Fable + 1 Opus-Plan
+for [INV-A] after the Fable usage cap), every load-bearing claim Opus-code-verified.
+
+- **Phased plan:** F1 (obj-1 [INV-A] fix) → F2 (obj-3 live-path footguns F1/F2/F3 + F4 SeedContainer dead-code) →
+  F3 (obj-2+4 legacy purge, 6-cluster order incl. CkTests HandleWalk/ProduceSensitivity/AttributeModifier migration) →
+  F4 (obj-5 comment sweep + ck::algo). obj-1 FIRST (fix reds while the oracle still cross-checks the new item Produce).
+- **[INV-A] LOCKED (Audit A, Opus-verified):** items are Rule-5 anonymous → add `ck::FFragment_BuildRecipe` (mirror
+  `FFragment_SpawnRecipe`) + `ECk_Snapshot_V3_Provenance::DefinitionBuilt` + capture rule + rebuild branch, so item state
+  rides each feature's own Produce/Apply; PLUS the authority-side hydration branch on DataOnly/Spatial/2dGridOccupancy
+  `Apply` (mirror `CkIntegerAttribute_Fragment.cpp:111-168`, gated on `FCk_HydrationApplyScope::Get_IsActive()`).
+  Pure CkFoundation, no BB edit. Outcome: **Inventory×2 → GREEN; `GridPlacements` STAYS RED** on an independent
+  engine-death (nested-`FEcsWorld` lifetime on a replicated bridged 2dGridSystem through seamless travel — its own
+  workstream; **STOP-and-flag for Adam**). Phase-F1 gate = Ck.Snapshot 52 pass / 2 red? → actually 51+2=green so
+  **~53 pass / 1 red (GridPlacements)**; Net delta-zero.
+- **Pivotal verified facts:** `SeedContainer` is DEAD (zero invocations) → contract is Produce/Apply(+Remove);
+  the whole `FidelityOracle` dies (`Oracle.StructuralBaseline` deleted, `Oracle.ProduceDiffBaseline` → oracle-free
+  `V3.ProduceSensitivity`); handle-remap coverage ports to a new `V3.HandleWalk.*` suite on the existing v3 harness;
+  TagRegistry landmine removal is purely subtractive (`CkTag.h`); 3 live v3 footguns to fix (F1 silent drop, F2
+  dead hydration-complete gate, F3 unused ContextOwner capture).
+- **Adam-decision list (do NOT resolve unilaterally):** GridPlacements engine-death; RestoreMarker/JustRestored
+  BB-coordinated removal; fidelity gaps G1 (transform incl. player pawn)/G2 (dynamic fragments)/G3-G5; F2 timing change;
+  Policy-macro Option A vs (c); LoadReport/Header vestigial prune; V3-identifier rename; Tier-D pre-existing comments;
+  Timer/MontagePlayer v3 payloads; transient item defs; v3 save-format bump. Full detail + rationale in FINALIZE.md.
+- **State:** no source touched; tree clean at `a15880b26` + the two new/edited docs (FINALIZE.md is git-ignored `*.md`
+  → force-add to commit). Design-lock is a clean Phase-0 boundary; F1 implementation follows from FINALIZE.md.
+
+## Phase F1 ([INV-A]) — GREEN (Opus, 2026-07-13) — Inventory×2 round-trip; only Grid engine-death red
+
+**STATE: GREEN. Ck.Snapshot 53/1 (final clean gate F1-final-BuildTest.log: 59 total across the Snapshot pattern, 56
+pass, 3 fail = GridPlacements_MPReload [documented engine-death, Adam-flagged] + Bb.Snapshot.FixtureReconstruct +
+Bb.Snapshot.PlayerRestore [pre-existing BusterBlock-project casualties, NOT CkFoundation]). InventoryDataOnly_MPReload +
+InventorySpatial_MPReload + V3.CaptureClassification ALL GREEN. F1-DIAG instrumentation fully removed (grep ⇒ 0). Final
+fix set below. Root-cause history retained under "ROOT-CAUSED" for the record.**
+
+### F1 fix set (what actually landed) — see FINALIZE.md [F1-D6] + the two Fable rulings
+- **CkFoundation (4 source files):**
+  - `CkSnapshot_Subsystem.cpp` — DefinitionBuilt rebuild resolves the owner **context-owner-first** (`Get_ContextOwnerSavedId`
+    → the persisted+mapped driver-bearing subject, fallback `_LifetimeOwnerSavedId`), matching FINALIZE §obj-1's locked
+    design (the impl had deviated to lifetime-owner-only). Plus Fable's F-1 (loud Warning on unpersisted-owner skip),
+    F-2 (DefinitionBuilt case in the stall-dump switch), F-3 (claim the once-guard + map ONLY on a valid build handle).
+  - `CkInventory_DataOnly_Fragment.cpp` + `CkInventory_Spatial_Fragment.cpp` — the load-path (`FCk_HydrationApplyScope`)
+    Apply branch now calls `UCk_Utils_Inventory_UE::Request_TryReplicateInventory` after the connect/place loop, so the
+    authority re-arms replication and pushes the rebuilt item list (+ Spatial placements) → the fresh post-travel client
+    converges via the ordinary ClientOnly SyncReplication. This was the Spatial-client-non-convergence root cause (Fable H1)
+    AND the DataOnly-client fix.
+  - `CkSnapshot_CaptureV3.cpp` — guard the unlabeled-ConstructSpawned audit's `Get_LifetimeOwner` (a registry-rooted entity
+    legitimately has no lifetime owner). Fixes the pre-existing `V3.CaptureClassification` ensure (its fixture creates a
+    registry-rooted unlabeled entity; the :253 read was unguarded while :286/:325 were guarded). NOT [INV-A] logic — a
+    latent audit bug surfaced by the F1 gate (likely exposed by the object-pooling rebase changing lifetime-owner assignment).
+- **CkTests (3 files):** register `TAG_Inventory_AutoTest_Net` natively + use it in the fixture. The DataOnly tag was
+  UNREGISTERED → empty tag → unnamed inventory → Rule 3 refused to persist it → the item couldn't round-trip AND the
+  inventory's Produce payload was dropped. The essential DataOnly fix (FINALIZE's "no fixture change needed" was falsified;
+  the Spatial tag had already learned this lesson — it just was not applied to the DataOnly one).
+- **Commit order:** CkFoundation FIRST, then CkTests (CkTests must not lead CkFoundation). No push (Class-4 Adam review).
+- **COMMITTED 2026-07-13 (unpushed):** CkFoundation `ef8e057f2` (4 source + FINALIZE.md + PROGRESS.md), CkTests `d9ffa09`
+  (on `dev`, where the whole campaign's CkTests work lives). Gate at commit: Ck.Snapshot 53/1 (Grid engine-death only) +
+  Ck.*.Net 103/103/0. Superproject `Config/DefaultGameplayTags.ini` shows an unrelated object-pooling tag auto-write
+  (`AutoTest.ObjectPooling.NetConstructed`) — NOT touched/committed by this session (native tags need no .ini entry;
+  `Inventory.AutoTest_Net` is absent from the .ini, confirming the native registration suffices).
+
+Files (all under Source/): NEW `CkEcs/.../EntityReplicationDriver/CkEntityReplicationDriver_BuildRecipe.{h,cpp}`
+(`ck::FFragment_BuildRecipe` + holder, mirror of SpawnRecipe); `CkEntityReplicationDriver_Utils.cpp` (stamp in
+`Request_TryBuildAndReplicate` after Construct, before the DoesNotReplicate return); `CkSnapshot_Header.h`
+(`ECk_Snapshot_V3_Provenance::DefinitionBuilt` + `FCk_Snapshot_V3_BuildStep{_ScriptClassPath,_ArchetypePath}` FString
+paths + `_BuildRecipe` entry field + `_DefinitionBuiltCount` census); `CkSnapshot_CaptureV3.cpp` (Rule-4.5 classify +
+Pass-2 capture); `CkSnapshot_Subsystem.cpp` (`DefinitionBuilt` rebuild branch + mapped/total DIAG); `CkInventory_DataOnly_Fragment.cpp`
++ `CkInventory_Spatial_Fragment.cpp` (authority-side `FCk_HydrationApplyScope` hydration branch: connect + transfer
+[+ Spatial `Request_PlaceItemOnGrid`]).
+
+**Bugs found + fixed (real, gate-caught):**
+1. **`FSoftObjectPath` cannot serialize through a plain `FArchive`** (the v3 tables' `SerializeItem`) → hard crash
+   (`appError` Archive.cpp:499). FIX: store paths as FString (like `_ScriptClassPath`/`_ActorClassPath`), reconstruct
+   the soft path on load. **Durable framework gotcha.**
+2. **Both inventory Apply handlers are required for EITHER inventory test.** The fixture
+   (`CkAutoTest_NetSubject_InventoryEntityScript.cpp:15-36`) composes a DataOnly AND a Spatial inventory in one world;
+   an unfixed Apply NotReady-drops → fires a loud ensure → fails the test regardless of which inventory it asserts.
+3. Rebuild build-owner: switched from the item's own `_ContextOwnerSavedId` to `Get_ContextOwner(mapped_lifetime_owner)`
+   — reconstructs production's exact `Create(Get_ContextOwner(owner), def)`. (Applied; did not change the symptom.)
+
+### ROOT-CAUSED 2026-07-13 (instrumented diagnostic run, F1-diag-BuildTest.log) — two DISTINCT causes
+The F1-DIAG instrumentation (Create Has<BuildRecipe> check + CaptureV3 classify/census/DefinitionBuilt traces +
+rebuild-gate trace + Apply trace) disambiguated capture-vs-rebuild for BOTH tests in one run:
+
+- **Stamp lands + item IS captured DefinitionBuilt** (both tests): `F1-DIAG Create ... Has<BuildRecipe>=[true]`;
+  `classify ... provenance [3], persist [true]`; census `DefinitionBuilt [1]`. So hypothesis (a) (stamp) and the
+  "not captured" guess are BOTH REFUTED. The defect was rebuild/replication side, per test:
+
+- **[INV-A] DataOnly root cause = H2 CONFIRMED (rebuild silent skip).** The item's LIFETIME owner is the DataOnly
+  inventory entity, which is labeled **"(None)" (unnamed)** — so Rule 3 does NOT persist it (`CaptureV3` requires a
+  NAMED label; the fixture's DataOnly tag "Inventory.AutoTest_Net" resolves to an unnamed label, unlike the Spatial
+  inventory's registered native tag which IS persisted). Log: `capture DefinitionBuilt ... lifetimeOwnerPersisted=[false]
+  ctxOwnerPersisted=[true]`; `rebuild ... ownerPersisted=[false]` → silent skip (`Subsystem.cpp:719-723`) → item never
+  rebuilt → NumItems=0 (server+client both fail). **FIX APPLIED (verifying): context-owner-first rebuild owner
+  resolution** — `Subsystem.cpp` DefinitionBuilt branch now prefers `Entry.Get_ContextOwnerSavedId()` (the driver-bearing
+  subject, PERSISTED+mapped) over `_LifetimeOwnerSavedId`; matches FINALIZE §obj-1's locked design (the impl had
+  deviated). Folded in Fable's F-1 (loud Warning on unpersisted-owner skip), F-2 (DefinitionBuilt case in the stall
+  switch), F-3 (map/once-guard ONLY on a valid build handle).
+
+- **[INV-A] Spatial: server GREEN, client RED on placement.** The Spatial item's lifetime owner (Spatial inventory) IS
+  persisted → item rebuilds+places on the server (`apply Spatial ... numItems=[1]`, server assertion passes). But the
+  CLIENT assertion `client: Spatial item at {(1,2),Quarter}` times out (Stage 6) → fails. Under investigation (Fable
+  consult in flight): whether the client fails on item-count (item didn't replicate) or coordinate (placement didn't
+  propagate). The DataOnly-fix build result disambiguates: if DataOnly's CLIENT greens (count converges), Spatial's
+  issue is specifically coordinate-propagation; if DataOnly's client stays red, there's a shared client-replication issue.
+
+- **`Ck.Snapshot.V3.CaptureClassification` red was SELF-INFLICTED** by the F1-DIAG classify trace calling
+  `Get_LifetimeOwner` UNGUARDED on a BuildRecipe entity with no lifetime owner (ensure fired). GUARDED now. NOT a WIP
+  regression — the WIP baseline 54/51/3 holds. (The 2 `Bb.Snapshot.*` fails are pre-existing BusterBlock-project casualties.)
+
 ## Phase-5 progress (cluster tracker — Track B, decommission Model A "gate, don't delete")
 
 Class-4 framework change (CkEcs snapshot core + save format). Per-cluster Dev compile/gate; Shipping compile + final

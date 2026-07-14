@@ -5,7 +5,9 @@
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_BuildRecipe.h" // FFragment_BuildRecipe retention (definition-built entity recipe)
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h" // FTag_RepFragments_PendingApply, FFragment_PendingHydration
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h" // Get_WorldForEntity (recipe holder outer)
 
 #include "CkCore/Ensure/CkEnsure.h"
 
@@ -212,6 +214,17 @@ auto
             ConstructionInfo.Get_ConstructionScript()->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(
                 NewEntity);
         }
+    }
+
+    // Retain the construction recipe so a save capture can re-create this definition-built entity on load: the
+    // ConstructionInfo (class + archetype) is consumed by Construct above and not otherwise retained on the entity.
+    // Stamped before the DoesNotReplicate early-return so non-replicated definition-built entities are captured too.
+    if (const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(NewEntity);
+        ck::IsValid(World))
+    {
+        auto* Recipe = NewObject<UCk_BuildRecipe_UE>(World);
+        Recipe->Populate(InConstructionInfos);
+        NewEntity.Add<ck::FFragment_BuildRecipe>(TStrongObjectPtr<UCk_BuildRecipe_UE>{Recipe});
     }
 
     // Non-replicated owners: entity was built successfully, skip replication setup.

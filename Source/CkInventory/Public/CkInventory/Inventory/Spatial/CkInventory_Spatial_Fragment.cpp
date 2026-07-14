@@ -5,6 +5,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"                          // ck::algo::ForEachIsValid — Produce
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"              // Request_TransferLifetimeOwner — load hydration
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -16,6 +17,42 @@
         // the actual diff/apply). NotReady until at least one Spatial inventory is composed.
         const auto DoApplySpatialItems = [](FCk_Handle& Entity, const TArray<FCk_InventoryItem_Spatial_ReplicatedEntry>& NewItems, const TArray<FCk_InventoryItem_Spatial_ReplicatedEntry>& OldItems) -> ECk_RepFragment_ApplyResult
         {
+            // Load-path authority hydration: the payload is keyed on the INVENTORY entity, but the net Apply below is
+            // owner-keyed and never resolves it here. Connect each saved item into THIS inventory's item record and
+            // re-place it on the grid; the authority rebuilds its inventory graph and clients converge via the
+            // ordinary SyncReplication path. All-or-nothing: if any item handle is not yet rebuilt, retry.
+            if (FCk_HydrationApplyScope::Get_IsActive())
+            {
+                if (NOT UCk_Utils_Inventory_Spatial_UE::Has(Entity))
+                { return ECk_RepFragment_ApplyResult::NotReady; }
+
+                if (ck::algo::AnyOf(NewItems, [](const FCk_InventoryItem_Spatial_ReplicatedEntry& InEntry)
+                    { return ck::Is_NOT_Valid(InEntry.Get_ItemHandle()); }))
+                { return ECk_RepFragment_ApplyResult::NotReady; }
+
+                auto SpatialInventory = UCk_Utils_Inventory_Spatial_UE::Cast(Entity);
+                for (const auto& NewEntry : NewItems)
+                {
+                    auto ItemHandle = NewEntry.Get_ItemHandle();
+                    UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils::Request_Connect(
+                        Entity, ItemHandle, ECk_Record_LabelRequirementPolicy::Optional);
+                    UCk_Utils_EntityLifetime_UE::Request_TransferLifetimeOwner(ItemHandle, Entity);
+                    if (NewEntry.Get_Coordinate().X >= 0 && NewEntry.Get_Coordinate().Y >= 0)
+                    {
+                        UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(
+                            SpatialInventory, ItemHandle, NewEntry.Get_Coordinate(), NewEntry.Get_Rotation());
+                    }
+                }
+
+                // Re-arm replication so the authority pushes the rebuilt item list + placements to clients: the
+                // load-path connect/place above is server-local, and without this the fresh post-travel client's
+                // container stays at the empty Construct-time initial value (it converges via the ordinary ClientOnly
+                // SyncReplication — which carries coordinate + rotation — once pushed).
+                auto InventoryHandle = UCk_Utils_Inventory_UE::Cast(Entity);
+                UCk_Utils_Inventory_UE::Request_TryReplicateInventory(InventoryHandle);
+                return ECk_RepFragment_ApplyResult::Applied;
+            }
+
             const auto Inventories = UCk_Utils_Inventory_UE::RecordOfInventories_Utils::Get_ValidEntries(Entity);
 
             auto Result = ECk_RepFragment_ApplyResult::NotReady;
