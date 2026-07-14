@@ -62,12 +62,47 @@ namespace ck
         }
         const auto CurrentLoc = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle);
 
-        // Advance the waypoint cursor past every waypoint we've already crossed (handles cases where a
-        // single frame's offset crossed multiple closely-spaced waypoints — a rare-but-possible burst).
+        // Advance the waypoint cursor past every INTERMEDIATE waypoint that is either (a) inside the
+        // arrival radius, or (b) already BEHIND the agent relative to the incoming path segment.
+        //
+        // (b) mirrors UPathFollowingComponent::HasReachedCurrentTarget's primary retirement test
+        // (PathFollowingComponent.cpp:1293-1302): dot(target - feet, segmentDir) < 0 => passed it.
+        // Proximity ALONE cannot retire a waypoint the agent's turn-limited arc misses: the minimum
+        // turning radius is MaxSpeed / MaxTurnRate (60cm at defaults), which structurally EXCEEDS
+        // _WaypointArrivalRadius (25cm). Any deflection near a waypoint — an avoidance manoeuvre, a
+        // separation shove — could leave the cursor pinned on a waypoint the agent had physically
+        // driven past, whereupon path-follow aimed BACKWARD at it, straight through whoever pushed
+        // it there. UE's proximity leg is a mere 5% of agent radius; the plane test does the work.
+        //
+        // The FINAL waypoint is deliberately NOT retired here (note the Num() - 1 bound): goal
+        // arrival belongs exclusively to the final-stop branch below, which broadcasts OnGoalReached
+        // and flips Walking -> Idle. The old loop could silently consume a final waypoint that sat
+        // inside the arrival radius, leaving the cursor past the end with no signal ever fired — a
+        // latent liveness bug (agent stuck Walking at zero velocity, goal never reported).
         const auto WaypointArrivalRadius = InParams.Get_WaypointArrivalRadius();
-        while (InPathFollow._WaypointIndex < Waypoints.Num() &&
-               FVector::Dist(CurrentLoc, Waypoints[InPathFollow._WaypointIndex]) <= WaypointArrivalRadius)
+        while (InPathFollow._WaypointIndex < Waypoints.Num() - 1)
         {
+            const auto& Waypoint = Waypoints[InPathFollow._WaypointIndex];
+
+            const auto WithinArrivalRadius =
+                FVector::Dist(CurrentLoc, Waypoint) <= WaypointArrivalRadius;
+
+            const auto CrossedWaypointPlane = [&]() -> bool
+            {
+                const auto SegmentDir = (Waypoint - InPathFollow.Get_CurrentSegmentStart()).GetSafeNormal();
+
+                // Degenerate segment (duplicate waypoint, or an install that could not capture the
+                // agent's location): fall back to proximity alone rather than trust a zero normal.
+                if (SegmentDir.IsNearlyZero())
+                { return false; }
+
+                return FVector::DotProduct(Waypoint - CurrentLoc, SegmentDir) < 0.0;
+            }();
+
+            if (NOT (WithinArrivalRadius || CrossedWaypointPlane))
+            { break; }
+
+            InPathFollow._CurrentSegmentStart = Waypoint;
             ++InPathFollow._WaypointIndex;
         }
 
@@ -153,22 +188,56 @@ namespace ck
         // AccelClamp downstream brings it into the per-frame budget.
         const auto NewSpeed = FMath::Min3(MaxSpeed, BrakingSpeedCap, TurnRadiusSpeedCap);
 
-        // Gate 3C — combine path-follow with separation. Naive `path + separation` produces
-        // vibration on head-on encounters: both forces fire at full strength, the clamp eats both,
-        // agents wobble through each other while neither concedes. Damp path-follow by the
-        // separation intensity so the two forces cooperate — when neighbors are pressing hard,
-        // the agent gives way; as the neighbor recedes, path-follow ramps back to full.
+        // Gate 3C (revised) — combine path-follow with separation, dtCrowd-style.
         //
-        // Damping target is MaxSpeed (not the per-frame braking-ramp speed). Path-follow goes to
-        // zero exactly when separation magnitude reaches MaxSpeed, so the clamp never has to
-        // truncate. Above that, separation alone drives the velocity (clamped at the end as a
-        // safety net for many-neighbor pile-ups). At goal, path-follow has already braked to zero
-        // via the final-stop branch, so separation alone keeps doing its job for the cluster.
-        const auto& SeparationVec = InSeparationForce.Get_Force();
-        const auto SeparationMag = SeparationVec.Size();
-        const auto PathFollowDamp = FMath::Max(0.0, 1.0 - (SeparationMag / MaxSpeed));
-        const auto PathFollowVelocity = Direction * NewSpeed * PathFollowDamp;
-        const auto Combined = PathFollowVelocity + SeparationVec;
+        // The previous combination damped path-follow by separation intensity
+        // (PathFollowDamp = max(0, 1 - SepMag/MaxSpeed)). Head-on separation is ANTIPARALLEL to the
+        // path direction, so the two terms cancelled and the desired velocity collapsed toward zero
+        // exactly when neighbours pressed. That zero is a fixed point, and it is load-bearing for a
+        // freeze: FProcessor_CrowdAgent_AvoidanceSample runs after this and anchors its penalty
+        // scoring on the value written here, so a ~zero anchor makes "stay stopped" the cheapest
+        // candidate — two agents converging on a shared waypoint stop dead and never resolve.
+        //
+        // dtCrowd never yields the desired velocity: updateStepSteering rebuilds dvel at full
+        // maxSpeed every frame (DetourCrowd.cpp:1468-1469), and where a separation contribution
+        // opposes it, that contribution is clamped to PURE LATERAL (DetourCrowd.cpp:1499-1510).
+        // Separation may REDIRECT forward motion; it may never CANCEL it. Braking belongs to the
+        // goal ramps above, and stopping belongs to Request_Stop / the final-stop latch — not to a
+        // neighbour pressing on us.
+        //
+        // Aggregate form of that per-neighbour clamp: the component of the accumulated separation
+        // force pushing WITH the path passes through untouched; a component pushing AGAINST it is
+        // redirected to whichever side the force already leans toward (the Separation solver's
+        // deterministic per-agent jitter guarantees a lean in all but pathological cases). A
+        // perfectly mirrored head-on pair falls back to each agent's own LEFT — matching the
+        // sampler's PassLeft default — and two agents facing each other have opposite world lefts,
+        // so they diverge rather than mirror.
+        const auto& RawSeparation = InSeparationForce.Get_Force();
+        const auto SeparationAlongPath = FVector::DotProduct(RawSeparation, Direction);
+
+        auto SeparationVec = RawSeparation;
+        if (SeparationAlongPath < 0.0)
+        {
+            const auto LateralComponent = RawSeparation - (SeparationAlongPath * Direction);
+            const auto SideDir = LateralComponent.GetSafeNormal();
+
+            if (NOT SideDir.IsNearlyZero())
+            {
+                SeparationVec = LateralComponent + SideDir * (-SeparationAlongPath);
+            }
+            else
+            {
+                const auto LeftPerp = FVector{-Direction.Y, Direction.X, 0.0}.GetSafeNormal();
+                if (NOT LeftPerp.IsNearlyZero())
+                {
+                    SeparationVec = LeftPerp * (-SeparationAlongPath);
+                }
+                // else: Direction is near-vertical — degenerate for a walking agent. Leave the raw
+                // force untouched rather than invent an axis.
+            }
+        }
+
+        const auto Combined = Direction * NewSpeed + SeparationVec;
         InDesired._Velocity = Combined.GetClampedToMaxSize(MaxSpeed);
     }
 }
