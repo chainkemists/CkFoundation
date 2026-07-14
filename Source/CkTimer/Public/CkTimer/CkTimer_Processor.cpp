@@ -208,25 +208,50 @@ namespace ck
     {
         auto& TimerChrono = InCurrentComp._Chrono;
 
+        // Absolute mode: JumpDuration is the TARGET elapsed; the chrono moves by the direction-dependent delta that
+        // closes the gap. Relative mode (default): the delta IS the requested amount (legacy behavior). This is the
+        // single source of truth for jump math — the save/load HydrationApply drives an absolute jump through here.
+        const auto RequestedSeconds      = InRequest.Get_JumpDuration().Get_Seconds();
+        const auto IsAbsolute            = InRequest.Get_JumpMode() == ECk_RelativeAbsolute::Absolute;
+        const auto CurrentElapsedSeconds = TimerChrono.Get_TimeElapsed().Get_Seconds();
+
+        auto DeltaToApply = RequestedSeconds;
+
         switch(InParamsComp.Get_CountDirection())
         {
             case ECk_Timer_CountDirection::CountUp:
             {
-                TimerChrono.Tick(InRequest.Get_JumpDuration());
+                // DeltaToApply is the absolute net movement (Target - Current), used for the signal below.
+                DeltaToApply = IsAbsolute ? RequestedSeconds - CurrentElapsedSeconds : RequestedSeconds;
+                if (IsAbsolute)
+                {
+                    // Reach the target elapsed directly. Tick early-outs when the chrono is already Done
+                    // (_CurrentValue >= _GoalValue), so a BACKWARD absolute jump from GoalValue would silently
+                    // no-op — Reset to 0 first, then Tick to the (clamped) target so it lands from any prior
+                    // position. The chrono goes 0 -> Target atomically (no processor runs mid-handler).
+                    TimerChrono.Reset();
+                    TimerChrono.Tick(FCk_Time{RequestedSeconds});
+                }
+                else
+                {
+                    TimerChrono.Tick(FCk_Time{DeltaToApply});
+                }
                 break;
             }
             case ECk_Timer_CountDirection::CountDown:
             {
-                TimerChrono.Consume(InRequest.Get_JumpDuration());
+                // Consume moves elapsed the opposite way; the absolute delta is Current - Target.
+                DeltaToApply = IsAbsolute ? CurrentElapsedSeconds - RequestedSeconds : RequestedSeconds;
+                TimerChrono.Consume(FCk_Time{DeltaToApply});
                 break;
             }
         }
 
         {
-            const auto& JumpDirection = InRequest.Get_JumpDuration().Get_Seconds() >= 0.f
+            const auto& JumpDirection = DeltaToApply >= 0.f
                                         ? ECk_Timer_JumpDirection::Forwards
                                         : ECk_Timer_JumpDirection::Backwards;
-            const auto& JumpAmount = FCk_Time(FMath::Abs(InRequest.Get_JumpDuration().Get_Seconds()));
+            const auto& JumpAmount = FCk_Time(FMath::Abs(DeltaToApply));
 #if STATS
             auto TimerStatCounter = FScopeCycleCounter{MakeStatIdFromParams(InHandle.Get<FFragment_Timer_Params>())};
 #endif // STATS

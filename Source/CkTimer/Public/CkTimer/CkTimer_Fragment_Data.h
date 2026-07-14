@@ -4,6 +4,7 @@
 #include "CkEcs/Handle/CkHandle.h"
 
 #include "CkCore/Format/CkFormat.h"
+#include "CkCore/Enums/CkEnums.h"          // ECk_RelativeAbsolute (Timer Jump mode)
 
 #include "CkEcs/Handle/CkHandle_Typesafe.h"
 #include "CkEcs/Request/CkRequest_Data.h"
@@ -195,8 +196,16 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_Time _JumpDuration;
 
+    // Relative (default): _JumpDuration is a delta applied to the current elapsed. Absolute: _JumpDuration is the
+    // TARGET elapsed and the handler moves the chrono by the direction-dependent gap. Rides the request struct
+    // (addon-as-parameter) — no new UFUNCTION overload.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_RelativeAbsolute _JumpMode = ECk_RelativeAbsolute::Relative;
+
 public:
     CK_PROPERTY_GET(_JumpDuration);
+    CK_PROPERTY(_JumpMode);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Timer_Jump, _JumpDuration);

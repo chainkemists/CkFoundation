@@ -4,7 +4,6 @@
 #include "CkTimer/CkTimer_Utils.h"
 #include "Net/UnrealNetwork.h"
 
-#include "CkEcs/Handle/CkHandle_Typesafe.h"       // ck::StaticCast<FCk_Handle_Timer>
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // RegisterLazyTyped
@@ -52,7 +51,7 @@ namespace ck_timer_fragment
                     { return ECk_RepFragment_ApplyResult::NotReady; }
 
                     const auto& Payload = New.Get<FCk_SaveData_Timer>();
-                    auto TimerHandle = ck::StaticCast<FCk_Handle_Timer>(Entity);
+                    auto TimerHandle = UCk_Utils_Timer_UE::Cast(Entity);
 
                     // 1. Restore the RUNTIME direction if it drifted from the rebuilt (Params-derived) direction.
                     //    Request_ChangeCountDirection flips the FTag_Timer_Countdown tag immediately (it mutates the
@@ -60,24 +59,15 @@ namespace ck_timer_fragment
                     if (UCk_Utils_Timer_UE::Get_CountDirection(TimerHandle) != Payload.Get_CountDirection())
                     { UCk_Utils_Timer_UE::Request_ChangeCountDirection(TimerHandle, Payload.Get_CountDirection()); }
 
-                    // 2. Reposition the chrono to the saved _CurrentValue via a RELATIVE Jump. FCk_Request_Timer_Jump is
-                    //    relative: the handler Ticks (CountUp) or Consumes (CountDown) the chrono by JumpDuration, and
-                    //    picks Tick-vs-Consume off the PARAMS direction (immutable on the rebuilt entity). So the jump
-                    //    amount is computed against the CURRENT elapsed using that same Params direction — a stable
-                    //    baseline now that Setup has run (gated above): the post-Setup elapsed is GoalValue for CountDown
-                    //    and 0 for CountUp, and nothing else mutates a Paused chrono before the Jump drains. Jump
-                    //    broadcasts OnTimerJump/OnTimerUpdate — never OnTimerDone — so positioning a terminal timer at
-                    //    GoalValue does not re-fire completion.
-                    const auto ParamsDirection = Entity.Get<ck::FFragment_Timer_Params>().Get_CountDirection();
-                    const auto CurrentSeconds  = UCk_Utils_Timer_UE::Get_CurrentTimerValue(TimerHandle).Get_TimeElapsed().Get_Seconds();
-                    const auto TargetSeconds   = Payload.Get_Elapsed().Get_Seconds();
-
-                    const auto JumpSeconds = ParamsDirection == ECk_Timer_CountDirection::CountUp
-                        ? TargetSeconds - CurrentSeconds    // Jump -> Tick adds to elapsed
-                        : CurrentSeconds - TargetSeconds;   // Jump -> Consume subtracts from elapsed
-
-                    if (NOT FMath::IsNearlyZero(JumpSeconds))
-                    { UCk_Utils_Timer_UE::Request_Jump(TimerHandle, FCk_Request_Timer_Jump{FCk_Time{JumpSeconds}}); }
+                    // 2. Reposition the chrono to the saved elapsed via an ABSOLUTE Jump. The Jump handler owns the
+                    //    direction-dependent delta math (the single source of truth): in absolute mode JumpDuration is
+                    //    the TARGET elapsed and the handler Ticks (CountUp) / Consumes (CountDown) by the gap against the
+                    //    CURRENT elapsed. Setup has run (gated above), so that baseline is stable — post-Setup elapsed is
+                    //    GoalValue for CountDown and 0 for CountUp, and nothing else mutates a Paused chrono before the
+                    //    Jump drains. Jump broadcasts OnTimerJump/OnTimerUpdate — never OnTimerDone — so positioning a
+                    //    terminal timer at GoalValue does not re-fire completion.
+                    UCk_Utils_Timer_UE::Request_Jump(TimerHandle,
+                        FCk_Request_Timer_Jump{Payload.Get_Elapsed()}.Set_JumpMode(ECk_RelativeAbsolute::Absolute));
 
                     // 3. Restore run-state. NEVER Request_Complete — it is the only request that re-broadcasts
                     //    OnTimerDone. A restored terminal timer is already positioned at GoalValue by the Jump above,
@@ -102,7 +92,7 @@ namespace ck_timer_fragment
                     if (NOT UCk_Utils_Timer_UE::Has(Entity))
                     { return {}; }
 
-                    auto TimerHandle = ck::StaticCast<FCk_Handle_Timer>(Entity);
+                    auto TimerHandle = UCk_Utils_Timer_UE::Cast(Entity);
 
                     auto Payload = FCk_SaveData_Timer{};
                     Payload.Set_Elapsed(UCk_Utils_Timer_UE::Get_CurrentTimerValue(TimerHandle).Get_TimeElapsed());
