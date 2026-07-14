@@ -32,6 +32,7 @@ auto
     NewAgentEntity.Add<ck::FFragment_CrowdAgent_NeighborCache>();
     NewAgentEntity.Add<ck::FFragment_CrowdAgent_SeparationForce>();
     NewAgentEntity.Add<ck::FFragment_CrowdAgent_ProbeRef>();
+    NewAgentEntity.Add<ck::FFragment_CrowdAgent_BlockDetect>();
     NewAgentEntity.Add<ck::FTag_CrowdAgent_NeedsSetup>();
     NewAgentEntity.Add<ck::FTag_CrowdAgent_Idle>();
 
@@ -195,6 +196,49 @@ auto
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_CrowdAgent_OnGoalFailed, InAgent, InDelegate);
     return InAgent;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    BindTo_OnGoalBlocked(
+        FCk_Handle_CrowdAgent& InAgent,
+        const FCk_Delegate_CrowdAgent_OnGoalBlocked& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle_CrowdAgent
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_CrowdAgent_OnGoalBlocked, InAgent, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InAgent;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    UnbindFrom_OnGoalBlocked(
+        FCk_Handle_CrowdAgent& InAgent,
+        const FCk_Delegate_CrowdAgent_OnGoalBlocked& InDelegate)
+    -> FCk_Handle_CrowdAgent
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_CrowdAgent_OnGoalBlocked, InAgent, InDelegate);
+    return InAgent;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    Get_IsGoalBlocked(
+        const FCk_Handle_CrowdAgent& InAgent)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InAgent),
+        TEXT("Invalid CrowdAgent handle [{}] passed to Get_IsGoalBlocked"), InAgent)
+    { return false; }
+
+    return InAgent.Has<ck::FTag_CrowdAgent_GoalBlocked>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

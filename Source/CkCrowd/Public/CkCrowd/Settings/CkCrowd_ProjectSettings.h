@@ -44,6 +44,13 @@ enum class ECk_PushApartMode : uint8
     Standard,    // 4 iterations (dtCrowd default; resolves cascaded interactions in one frame)
 };
 
+UENUM(BlueprintType)
+enum class ECk_CrowdBlockDetectionMode : uint8
+{
+    Disabled,    // an agent that cannot reach its goal presses forever; nothing notices
+    Enabled,     // detect an unreachable goal, stop, and report OnGoalBlocked
+};
+
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(meta = (DisplayName = "Crowd"))
@@ -117,6 +124,41 @@ private:
             ToolTip = "Time horizon (seconds) for the time-to-collision penalty. Mirrors dtCrowd's horizTime default."))
     float _AvoidanceHorizonTime = 2.5f;
 
+    // ---- Block detection ----
+    // The tier CkCrowd was missing entirely: noticing that an agent cannot reach its goal. Without it
+    // an agent grinds against an obstruction forever and nothing in the system is aware. Stock UE puts
+    // this ABOVE the solver (UPathFollowingComponent block detection => abort the move => behaviour
+    // tree decides); we put it in the module so gameplay gets a signal instead of a frozen NPC.
+    UPROPERTY(Config, EditDefaultsOnly, Category = "BlockDetection",
+        meta = (AllowPrivateAccess = true,
+            ToolTip = "Master switch for goal-blocked detection. Disabled restores the old behaviour: an agent that cannot reach its goal presses against the obstruction indefinitely and nothing notices."))
+    ECk_CrowdBlockDetectionMode _BlockDetectionMode = ECk_CrowdBlockDetectionMode::Enabled;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "BlockDetection",
+        meta = (AllowPrivateAccess = true, ClampMin = 0.1, UIMin = 0.1,
+            ToolTip = "Seconds between position samples for the no-progress detector. Mirrors UE's BlockDetectionInterval (0.5s)."))
+    float _BlockDetectionInterval = 0.5f;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "BlockDetection",
+        meta = (AllowPrivateAccess = true, ClampMin = 3, UIMin = 3, ClampMax = 10, UIMax = 10,
+            ToolTip = "How many samples must all sit within BlockDetectionDistance of their centroid before the agent counts as going nowhere. 6 samples x 0.5s = a 3s window. UE uses 10 (5s); a crowd-tier detector can afford to be quicker."))
+    int32 _BlockDetectionSampleCount = 6;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "BlockDetection",
+        meta = (AllowPrivateAccess = true, ClampMin = 1.0, UIMin = 1.0,
+            ToolTip = "Radius (cm) around the sample centroid within which every sample must fall for the agent to count as making no progress. Mirrors UE's BlockDetectionDistance (10cm)."))
+    float _BlockDetectionDistance = 15.0f;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "BlockDetection",
+        meta = (AllowPrivateAccess = true, ClampMin = 0.0, UIMin = 0.0,
+            ToolTip = "Speed (cm/s) below which a neighbour counts as STATIONARY for the occupied-goal test. A neighbour merely passing through the goal is not blocking it — only one that has settled there is."))
+    float _BlockedStationarySpeedThreshold = 10.0f;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "BlockDetection",
+        meta = (AllowPrivateAccess = true, ClampMin = 0.1, UIMin = 0.1,
+            ToolTip = "Seconds between re-checks for a HoldAndRetry agent waiting on a blocked goal. When the goal clears it re-paths and resumes."))
+    float _BlockedRecheckInterval = 1.0f;
+
     // ---- Push-Apart (Phase 2) ----
     UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|PushApart",
         meta = (AllowPrivateAccess = true,
@@ -138,6 +180,12 @@ public:
     CK_PROPERTY_GET(_AvoidanceWeightToi);
     CK_PROPERTY_GET(_AvoidanceHorizonTime);
     CK_PROPERTY_GET(_PushApartMode);
+    CK_PROPERTY_GET(_BlockDetectionMode);
+    CK_PROPERTY_GET(_BlockDetectionInterval);
+    CK_PROPERTY_GET(_BlockDetectionSampleCount);
+    CK_PROPERTY_GET(_BlockDetectionDistance);
+    CK_PROPERTY_GET(_BlockedStationarySpeedThreshold);
+    CK_PROPERTY_GET(_BlockedRecheckInterval);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -165,6 +213,9 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
     static ECk_PushApartMode Get_PushApartMode();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
+    static ECk_CrowdBlockDetectionMode Get_BlockDetectionMode();
 
     // Internal C++ accessor avoiding repeated GetMutableDefault calls in hot paths.
     static const UCk_Crowd_ProjectSettings_UE* Get();
