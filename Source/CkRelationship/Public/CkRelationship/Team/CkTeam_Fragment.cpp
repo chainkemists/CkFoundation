@@ -2,8 +2,8 @@
 
 #include "CkRelationship/Team/CkTeam_Utils.h"
 
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // RegisterLazyTyped
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h"
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.inl.h" // RegisterLazyTyped
 
 // --------------------------------------------------------------------------------------------------------------------
 // Container-based replication handler for Team

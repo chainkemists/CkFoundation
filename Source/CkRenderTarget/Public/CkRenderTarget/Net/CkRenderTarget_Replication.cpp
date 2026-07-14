@@ -1,8 +1,8 @@
 #include "CkRenderTarget_Replication.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // Register_* entry-point bodies
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h"
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.inl.h" // Register_* entry-point bodies
 
 #include "CkRenderTarget/CkRenderTarget_Log.h"
 #include "CkRenderTarget/Net/CkRenderTarget_RepData.h"

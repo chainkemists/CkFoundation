@@ -1,8 +1,10 @@
 #pragma once
 
-// Out-of-line body for FCk_PersistenceHandlerRegistry::RegisterLazyTyped<T>. Kept out-of-line (rather than in
-// the registry header) so it instantiates in the feature registrar .cpp where T_RepData is a complete type. It only
-// resolves the payload type lazily via T_RepData::StaticStruct() and forwards to RegisterLazy.
+// Out-of-line bodies for FCk_PersistenceHandlerRegistry's template registration methods. Kept out-of-line (rather
+// than in the registry header) so they instantiate in the feature registrar .cpp where T_RepData is a complete type.
+// Include this alongside CkPersistenceHandlerRegistry.h from a feature's registrar .cpp.
+
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h"
 
 template <typename T_RepData>
 auto

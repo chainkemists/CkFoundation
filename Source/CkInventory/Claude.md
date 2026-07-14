@@ -184,7 +184,7 @@ Architectural reference: `TProcessor_AttributeModifier_Compute` + `TAttributeMin
 ## Replication
 
 - **Per-shape RepData**: `FCk_RepData_Inventory_Spatial_Items` carries `FIntPoint Coordinate` + `ECk_CardinalRotation Rotation` per entry; `FCk_RepData_Inventory_DataOnly_Items` skips both fields. The split exists so DataOnly entries don't pay for spatial-only data on the wire.
-- **Registration**: `FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy` is called from each shape's `*_Fragment.cpp`. If a `SyncReplication` processor never fires on clients, that registration is the first place to look.
+- **Registration**: each shape's `*_Fragment.cpp` registers on `FCk_PersistenceHandlerRegistry` via a named `Register_NetAndSave_*` shape (Spatial uses `Register_NetAndSave_SplitApply` — distinct net vs load appliers). If a `SyncReplication` processor never fires on clients, that registration is the first place to look.
 - **Containers** are added on the *outer* (lifetime-owner) entity by `CreateInventory`, not on the inventory entity itself. Items themselves replicate through standard entity replication.
 
 ## Known invariant — typed ParamsData duplication

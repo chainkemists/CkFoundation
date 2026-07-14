@@ -2,9 +2,9 @@
 
 #include "CkPhysics/Acceleration/CkAcceleration_Utils.h"
 
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h"
 #include "CkEcs/Net/CkNet_Utils.h" // TryAddContainerFragment (used by RegisterLazyTyped's default seed)
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // Register_* entry-point bodies
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.inl.h" // Register_* entry-point bodies
 
 // --------------------------------------------------------------------------------------------------------------------
 // Container-based replication handler for Acceleration

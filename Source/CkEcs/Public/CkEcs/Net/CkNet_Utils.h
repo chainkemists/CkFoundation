@@ -12,6 +12,7 @@
 #include "CkEcs/Net/CkNet_Fragment_Data.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h" // TryProduce resolves the registered Produce (split Phase 5)
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
 #include "CkNet_Utils.generated.h"

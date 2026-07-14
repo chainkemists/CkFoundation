@@ -4,8 +4,8 @@
 #include "CkInventory/Inventory/DataOnly/CkInventory_DataOnly_Utils.h" // UCk_Utils_Inventory_DataOnly_UE::Has — Produce
 #include "CkCore/Algorithms/CkAlgorithms.h"                            // ck::algo::ForEachIsValid — Produce
 
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // Register_* entry-point bodies
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h"
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.inl.h" // Register_* entry-point bodies
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"              // Request_TransferLifetimeOwner — load hydration
 
 // --------------------------------------------------------------------------------------------------------------------

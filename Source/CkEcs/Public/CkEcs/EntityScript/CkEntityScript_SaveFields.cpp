@@ -4,8 +4,8 @@
 #include "CkEcs/EntityScript/CkEntityScript.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/Handle/CkHandle.h"
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // Register_* entry-point bodies
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h"
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.inl.h" // Register_* entry-point bodies
 
 #include <Serialization/MemoryReader.h>
 #include <Serialization/MemoryWriter.h>
