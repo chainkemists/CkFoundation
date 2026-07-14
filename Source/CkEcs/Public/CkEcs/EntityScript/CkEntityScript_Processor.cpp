@@ -10,7 +10,7 @@
 #include "CkEcs/CkEcsLog.h"
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
-#include "CkEcs/EntityScript/CkEntityScript_SpawnRecipe.h" // FFragment_SpawnRecipe retention (spec §4.2 RuntimeSpawned)
+#include "CkEcs/EntityScript/CkEntityScript_SpawnRecipe.h" // FFragment_SpawnRecipe retention (RuntimeSpawned)
 #include "CkEcs/Net/CkNet_Fragment.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
@@ -153,9 +153,9 @@ namespace ck
         CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
             TEXT("EntityScript created: {}"), EntityScriptClassArchetype);
 
-        // ---- Retain the construction recipe (save/load rebuild+hydrate, spec §4.2 RuntimeSpawned) ----------
+        // ---- Retain the construction recipe (save/load rebuild+hydrate, RuntimeSpawned) ----------
         // The recipe (script class + spawn params) is kept on a GC-safe holder UObject pinned by a fragment
-        // (fragments are not GC-traced — see [P3A-F1]); the v3 save capture reads it to respawn RuntimeSpawned
+        // (fragments are not GC-traced); the v3 save capture reads it to respawn RuntimeSpawned
         // entities. Always stamped (cheap); the capture filters by provenance, so ConstructSpawned/EngineOwned
         // entities that also carry a recipe simply never consult it.
         if (const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(NewEntity);
@@ -349,9 +349,7 @@ namespace ck
         ck::ecs::VeryVerbose(TEXT("[REP_DEBUG] ReplicateProcessor — Calling Request_ReplicateEntityScript for [{}] with owner [{}]"), InHandle, ReplicatedOwner);
 
         // Single establishment path (validation, dependent-count accounting, Request_Replicate, and FireOnDependent tag
-        // all live in one place). Historically ALSO shared with the snapshot respawn re-replicate; that processor
-        // (FProcessor_ActorRespawn) was retired in Phase 5 — the v3 load re-replicates via the fresh Construct instead.
-        // The ContextOwnerOverride is threaded through so spawn-time context-owner preservation survives.
+        // all live in one place). The ContextOwnerOverride is threaded through so spawn-time context-owner preservation survives.
         UCk_Utils_EntityScript_UE::Request_ReplicateEntityScript(InHandle, ReplicatedOwner, EntityScript.Get(), SpawnParamsCopy,
             InRequest.Get_ContextOwnerOverride());
 
@@ -375,7 +373,7 @@ namespace ck
         InHandle.Add<FTag_EntityScript_BeginPlay>();
 
         // Mark "composed this frame" so the FGroup_Hydration dispatchers defer their apply until this frame's
-        // pump / next frame — the feature Setups this construction just queued have not drained yet (Phase 2 §2.4).
+        // pump / next frame — the feature Setups this construction just queued have not drained yet.
         InHandle.AddOrGet<FTag_EntityScript_ConstructedThisFrame>();
 
         UUtils_Signal_OnConstructed::Broadcast(InHandle, ck::MakePayload(InHandle));

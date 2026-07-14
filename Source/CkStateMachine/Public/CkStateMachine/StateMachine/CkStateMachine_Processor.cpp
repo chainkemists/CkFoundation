@@ -120,10 +120,10 @@ namespace ck
     {
         SCOPE_CYCLE_COUNTER(STAT_Sm_HandleRequests);
 
-        // Authority gating (spec §5.6/§6): mutating requests (Start/Stop/Pause/Resume/Transition/
+        // Authority gating: mutating requests (Start/Stop/Pause/Resume/Transition/
         // AddOverrideState) may only originate on the authority for this SM. Non-authority
         // machines receive state changes via replication and bypass this processor entirely
-        // through FProcessor_Sm_ApplyReplicatedHistory (Phase 7). DoesNotReplicate SMs are
+        // through FProcessor_Sm_ApplyReplicatedHistory. DoesNotReplicate SMs are
         // self-authoritative on every machine — no gating needed.
         //
         // OwningClientAuthoritative authority = "the machine that locally controls the owning
@@ -597,7 +597,7 @@ namespace ck
         }
 
         // Pass the replicated fingerprint expectation to the new state entity so that its
-        // Construct/DoComputeFingerprint cycle can verify against it (spec §9). Authority-
+        // Construct/DoComputeFingerprint cycle can verify against it. Authority-
         // driven commits (server's own transitions, owning client's own) leave
         // _NewStateFingerprint at 0 — no carrier, no verify on the local instance.
         // The fragment lives just long enough for Construct's deferred verify pass.
@@ -684,7 +684,7 @@ namespace ck
                     UCk_SmState_EntityScript::Get_CachedFingerprint(TargetStateClass);
 
 #if WITH_DEV_AUTOMATION_TESTS
-                // Test-only fake-fingerprint injection (spec §13 tests 8 + 9). When armed via
+                // Test-only fake-fingerprint injection. When armed via
                 // UCk_Utils_StateMachine_Test_UE::Test_InjectFakeFingerprint, replace the cached
                 // value with the test-supplied fake before it reaches the wire. Receive side
                 // runs the genuine verify path; tests assert the determinism fault response.
@@ -1011,7 +1011,7 @@ namespace ck
 
         // The SM's save-transport Apply (CkStateMachine_Replication.cpp) already stashed InResume with the saved
         // {RunStatus, CurrentStateClass}, and only did so once FFragment_Sm_Current existed — so the fresh SM is
-        // normal-boot-composed and there is NO virgin reset (unlike the old Model-A re-drive). Setup may still have
+        // normal-boot-composed and there is NO virgin reset. Setup may still have
         // AutoStart's Start enqueued behind FTag_Sm_RequiresSetup in the same pump — wait for it to drain first.
         if (InHandle.Has<FTag_Sm_RequiresSetup>())
         { return; }
@@ -1031,7 +1031,7 @@ namespace ck
             MutableHandle.Remove<FFragment_Sm_HydrationResume>();
         };
 
-        // v1 scope ([P4A-F1]): only re-drive where THIS machine passes the same request-authority gate
+        // Scope: only re-drive where THIS machine passes the same request-authority gate
         // FProcessor_Sm_HandleRequests enforces — otherwise every Request_* below would be ensure-dropped.
         // Non-authority hydrations (OwningClientAuth on a dedicated server / non-owning listen host) come back
         // composed-but-Stopped; authority-side resume is a follow-up design.
@@ -1054,8 +1054,7 @@ namespace ck
         if (NOT IsRequestAuthority)
         {
             ck::sm::Log(TEXT("HydrationResume: SM [{}] hydrated on a non-authority machine "
-                "(NetContext [{}], AuthorityModel [{}]) — the saved RunStatus [{}] / state are NOT re-driven "
-                "(v1 scope cut, [P4A-F1])"),
+                "(NetContext [{}], AuthorityModel [{}]) — the saved RunStatus [{}] / state are NOT re-driven"),
                 InHandle, NetContext, EffectiveAuth, Pending.Get_DesiredRunStatus());
             DoMarkResumed();
             return;
@@ -1070,7 +1069,7 @@ namespace ck
                 if (Pending.Get_DesiredRunStatus() == ECk_SmRunStatus::Stopped)
                 {
                     // Saved Stopped, but AutoStart=OnSetup started the fresh machine — converge back to Stopped
-                    // (re-runs InitialState's exit side effects; accepted Option A noise).
+                    // (re-runs InitialState's exit side effects; accepted noise).
                     if (InCurrent.Get_RunStatus() != ECk_SmRunStatus::Stopped)
                     {
                         if (NOT Pending.Get_StopEnqueued())
@@ -1113,7 +1112,7 @@ namespace ck
 
                 // A null desired class means the SM was saved mid-transition (an in-flight transition
                 // target is not persisted) or before any state entry; staying in InitialState is the
-                // v1 contract for both.
+                // contract for both.
                 if (ck::IsValid(DesiredClass) && InCurrent.Get_CurrentStateClass() != DesiredClass)
                 {
                     if (NOT Pending.Get_TransitionEnqueued())
@@ -1155,7 +1154,7 @@ namespace ck
     }
 
     // ================================================================================================================
-    // PUSH OWNING-CLIENT BATCH (Phase 10 — client→server RPC of locally-buffered transitions)
+    // PUSH OWNING-CLIENT BATCH (client→server RPC of locally-buffered transitions)
     // ================================================================================================================
 
     auto
@@ -1175,7 +1174,7 @@ namespace ck
         if (Events.IsEmpty() && NOT HasRunStatus)
         { return; }
 
-        // Spec §5.5 / §5.6: only owning-client-authoritative SMs route through this push, and
+        // Only owning-client-authoritative SMs route through this push, and
         // only on the machine that actually owns the SM's actor. Other machines never accumulate
         // into this batch (the commit + run-status publication paths gate the same way), but the
         // check here is defence in depth — if a misconfigured SM somehow seeded the batch on the

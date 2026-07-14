@@ -25,13 +25,12 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_RepFragments_PendingApply);
 
     // Set on an entity that has local (save-load) hydration payloads queued for Apply — the load-path
-    // counterpart to net-received container entries. Drained by FProcessor_Hydration_Dispatch. DORMANT in
-    // Phase 1: nothing enqueues here yet; Phase 3B's load path fills the queue below.
+    // counterpart to net-received container entries. Drained by FProcessor_Hydration_Dispatch. The
+    // load path fills the queue below.
     CK_DEFINE_ECS_TAG(FTag_Hydration_PendingApply);
 
     // Local hydration queue: payloads to apply on this entity via the SAME handler Apply the net dispatcher
     // uses, but sourced from a save load rather than the wire. Transient bookkeeping — not persisted.
-    // Dormant in Phase 1.
     struct FFragment_PendingHydration
     {
         CK_GENERATED_BODY(FFragment_PendingHydration);
@@ -77,8 +76,8 @@ enum class ECk_RepFragment_ApplyResult : uint8
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Which persistence pipelines consult a handler. Net-only is the default (Phase-1 behavior-neutral); features flip
-// Save on when their payload becomes save-file surface (Phase 3+). Bit flags so a handler can serve both.
+// Which persistence pipelines consult a handler. Net-only is the default (behavior-neutral); features flip
+// Save on when their payload becomes save-file surface. Bit flags so a handler can serve both.
 enum class ECk_PersistenceTransport : uint8
 {
     Net        = 1 << 0,
@@ -107,14 +106,14 @@ public:
         TFunction<void(FCk_Handle& Entity)> Remove;
 
         // Authority-side counterpart to Apply: emit this feature's current hydration payload for the
-        // entity, or unset when the feature is absent on it. Used by the restore re-drive (Phase 1),
-        // the fidelity oracle (Tier-2), and the save path (Phase 3A). READ-ONLY by contract — never
-        // mutate the entity from Produce. A SET-but-empty payload is meaningful (it seeds an empty
-        // container, e.g. AnimPlan); only an UNSET result means "feature absent, do not seed".
+        // entity, or unset when the feature is absent on it. Used by the restore re-drive, the
+        // fidelity oracle, and the save path. READ-ONLY by contract — never mutate the entity from
+        // Produce. A SET-but-empty payload is meaningful (it seeds an empty container, e.g. AnimPlan);
+        // only an UNSET result means "feature absent, do not seed".
         TFunction<TOptional<FInstancedStruct>(FCk_Handle& Entity)> Produce;
 
-        // Which pipelines consult this handler. Net-only default keeps Phase 1 behavior-neutral;
-        // features flip Save on when their payload becomes save-file surface (Phase 3+).
+        // Which pipelines consult this handler. Net-only default keeps behavior neutral;
+        // features flip Save on when their payload becomes save-file surface.
         ECk_PersistenceTransport Transport = ECk_PersistenceTransport::Net;
     };
 
@@ -143,7 +142,7 @@ public:
 
     /**
      * Resolves pending registrations, then returns the payload types of every handler that has a Produce AND whose
-     * Transport opts into Save — the subset the v3 save capture writes payloads for (Phase 3A). A Net-only Produce
+     * Transport opts into Save — the subset the v3 save capture writes payloads for. A Net-only Produce
      * handler is save-invisible; a NetAndSave one participates in both the wire and the save file.
      */
     static auto

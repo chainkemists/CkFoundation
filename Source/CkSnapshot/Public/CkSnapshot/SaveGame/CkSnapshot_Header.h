@@ -83,10 +83,10 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// Format v3 — rebuild+hydrate (spec §4.2). Written ALONGSIDE the v2 image (Model A) until Phase 5; v3 stores a
-// per-entity recipe/identity table + minimal hydration payloads instead of a raw fragment image.
+// Format v3 — rebuild+hydrate. v3 stores a per-entity recipe/identity table + minimal hydration payloads
+// instead of a raw fragment image.
 
-// One provenance per persisted entity (spec §4.2). EngineOwned re-created by the level/engine flow (adopt by
+// One provenance per persisted entity. EngineOwned re-created by the level/engine flow (adopt by
 // rendezvous key); ConstructSpawned re-created by its owner's replayed Construct/BeginPlay (adopt by identity);
 // RuntimeSpawned re-created from a stored EntityScript recipe; DefinitionBuilt re-created from a stored
 // construction-script/archetype recipe (entities built via Request_BuildAndReplicate, e.g. inventory items).
@@ -133,7 +133,7 @@ public:
 
 private:
     // Raw entt id (underlying uint32) of this entity in the saving world — the key every intra-save reference uses
-    // (lifetime/context owner, payload owner, handles inside params). The loader (Phase 3B) builds a saved→live map.
+    // (lifetime/context owner, payload owner, handles inside params). The loader builds a saved→live map.
     UPROPERTY() uint32                      _SavedId = 0xFFFFFFFFu;
     UPROPERTY() ECk_Snapshot_V3_Provenance  _Provenance = ECk_Snapshot_V3_Provenance::RuntimeSpawned;
 
@@ -153,8 +153,8 @@ private:
     UPROPERTY() uint32                      _ContextOwnerSavedId = 0xFFFFFFFFu;
     UPROPERTY() FString                     _ActorClassPath;        // FFragment_ActorSpawnIntent, if present
     // World transform captured for a bridged (_ActorClassPath set) RuntimeSpawned entity so the loader spawns the
-    // actor at its saved position ([P3B-F1a] option a — the entity Transform is seeded from the actor at Construct;
-    // hydrating it would be stomped by FProcessor_Transform_SyncFromActor). Identity for non-Transform entities.
+    // actor at its saved position (the entity Transform is seeded from the actor at Construct; hydrating it would
+    // be stomped by FProcessor_Transform_SyncFromActor). Identity for non-Transform entities.
     UPROPERTY() FTransform                  _ActorSpawnTransform;
 
     // ---- DefinitionBuilt recipe ----
