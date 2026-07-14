@@ -291,20 +291,40 @@ namespace ck
         if (ck::Is_NOT_Valid(Leader))
         { return; }
 
-        // Component-space socket = pure animation pose (the SKMC's world placement
-        // is deliberately NOT consulted — it is one frame stale by construction);
-        // the root term comes from the leader's live entity transform instead.
-        const auto SocketComponentSpace = ::UCk_Utils_IskmProxy_UE::Get_SocketTransform(
-            Leader, InFollower.Get_Socket(), ECk_IskmProxy_TransformSpace::Component);
+        auto NewTransform = FTransform::Identity;
 
-        auto LeaderTransform = ::UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(Leader);
-        // Compose the leader's render offset into the root so followers track the *offset* body
-        // rather than the entity origin — must match FProcessor_IskmProxy_UpdateTransform's SKMC
-        // placement (line ~258), or cosmetics float by the offset (e.g. a Character's capsule half-height).
-        const auto LeaderOffset = Leader.Get<FFragment_IskmProxy_Current>().Get_LocalLocationOffset();
-        LeaderTransform.AddToTranslation(LeaderTransform.GetRotation().RotateVector(LeaderOffset));
+        if (Leader.Has<FTag_IskmProxy_Ragdolling>())
+        {
+            // Ragdoll breaks the component-space composition below. Physics now owns the SKMC world
+            // pose, and FProcessor_IskmProxy_UpdateTransform (TExclude<FTag_IskmProxy_Ragdolling>)
+            // stops pushing the entity transform onto it — so the leader's ENTITY transform is frozen
+            // at the death pose while the SKMC drifts. Re-anchoring the live component-space socket
+            // onto that stale root sends the follower off on its own (the hair-detach bug). Read the
+            // physics-authoritative WORLD socket instead: it is the exact pose the leader body renders
+            // from, so the follower stays glued to it. It already carries ComponentToWorld, so the
+            // entity-space _LocalLocationOffset must NOT be re-added here (that would double-count it).
+            const auto SocketWorldSpace = ::UCk_Utils_IskmProxy_UE::Get_SocketTransform(
+                Leader, InFollower.Get_Socket(), ECk_IskmProxy_TransformSpace::World);
 
-        const auto NewTransform = InFollower.Get_Offset() * SocketComponentSpace * LeaderTransform;
+            NewTransform = InFollower.Get_Offset() * SocketWorldSpace;
+        }
+        else
+        {
+            // Component-space socket = pure animation pose (the SKMC's world placement
+            // is deliberately NOT consulted — it is one frame stale by construction);
+            // the root term comes from the leader's live entity transform instead.
+            const auto SocketComponentSpace = ::UCk_Utils_IskmProxy_UE::Get_SocketTransform(
+                Leader, InFollower.Get_Socket(), ECk_IskmProxy_TransformSpace::Component);
+
+            auto LeaderTransform = ::UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(Leader);
+            // Compose the leader's render offset into the root so followers track the *offset* body
+            // rather than the entity origin — must match FProcessor_IskmProxy_UpdateTransform's SKMC
+            // placement (line ~258), or cosmetics float by the offset (e.g. a Character's capsule half-height).
+            const auto LeaderOffset = Leader.Get<FFragment_IskmProxy_Current>().Get_LocalLocationOffset();
+            LeaderTransform.AddToTranslation(LeaderTransform.GetRotation().RotateVector(LeaderOffset));
+
+            NewTransform = InFollower.Get_Offset() * SocketComponentSpace * LeaderTransform;
+        }
 
         if (InTransform.Get_Transform().Equals(NewTransform))
         { return; }
