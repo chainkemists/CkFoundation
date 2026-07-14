@@ -162,31 +162,6 @@ auto
 
 auto
     UCk_EcsWorld_Subsystem_UE::
-    Get_ReconstitutionPhase() const
-    -> ECk_ReconstitutionPhase
-{
-    return _ReconstitutionPhase;
-}
-
-auto
-    UCk_EcsWorld_Subsystem_UE::
-    Set_ReconstitutionPhase(
-        ECk_ReconstitutionPhase InPhase)
-    -> void
-{
-    _ReconstitutionPhase = InPhase;
-}
-
-auto
-    UCk_EcsWorld_Subsystem_UE::
-    Get_IsReconstitutionInProgress() const
-    -> bool
-{
-    return _ReconstitutionPhase != ECk_ReconstitutionPhase::None;
-}
-
-auto
-    UCk_EcsWorld_Subsystem_UE::
     Get_IsLoadGateActive() const
     -> bool
 {

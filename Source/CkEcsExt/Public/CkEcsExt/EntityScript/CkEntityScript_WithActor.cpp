@@ -27,9 +27,10 @@ auto
         GetClass()->GetName())
     { return ECk_EntityScript_ConstructionFlow::Finished; }
 
-    // NOTE (M2b-1 abstention): a respawned bridged actor's self-spawn is suppressed at the Request_SpawnEntity
-    // chokepoint (CkEcs) while the world is reconstituting, so this Construct never runs during a load — no
-    // duplicate entity is created here. See UCk_Utils_EntityScript_UE::Request_SpawnEntity.
+    // NOTE (v3 rebuild+hydrate): under a save LOAD, the CkSnapshot loader spawns this bridged actor and this
+    // Construct RE-CREATES the entity (features compose) — that is the intended rebuild path, isolated by the
+    // Phase-2 LoadKernel gate rather than by spawn suppression. Get_IsSnapshotRespawnable() below opts the entity
+    // into the save (it supplies FFragment_ActorSpawnIntent, the _ActorClassPath the loader respawns from).
 
     ck::ecs::Display(TEXT("[REP_DEBUG] WithActor::Construct Actor=[{}] ActorReplicates=[{}] EffectiveReplication=[{}]"),
         _OwningActor->GetName(),
