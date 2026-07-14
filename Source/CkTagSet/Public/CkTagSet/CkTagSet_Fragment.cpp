@@ -56,18 +56,6 @@ static struct FTagSetRepHandlerRegistrar
                     { return {}; }
                     return FInstancedStruct::Make(FCk_RepData_TagSet{Entity.Get<ck::FFragment_TagSet>().Get_Tags()});
                 },
-                // Custom seed: the typed add, then re-arm the ongoing replication trigger the TagSet Replicate
-                // processor keys on (FProcessor_TagSet_Replicate MarkedDirtyBy FTag_TagSet_MayRequireReplication).
-                .SeedContainer = [](FCk_Handle& Entity, const FInstancedStruct& Data) -> ECk_AddedOrNot
-                {
-                    const auto AddedOrNot = UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_TagSet>(
-                        Entity, Data.Get<FCk_RepData_TagSet>());
-                    if (AddedOrNot == ECk_AddedOrNot::NotAdded)
-                    { return AddedOrNot; }
-
-                    Entity.AddOrGet<ck::FTag_TagSet_MayRequireReplication>();
-                    return AddedOrNot;
-                },
                 .Transport = ECk_PersistenceTransport::NetAndSave // v3 save capture (Phase 3A.4)
             });
     }

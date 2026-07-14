@@ -164,7 +164,6 @@ static struct FFloatAttributeRepHandlerRegistrar
                     return Result;
                 },
                 .Produce       = &ck::attribute_restore::Produce<ck::TFragment_FloatAttribute, FCk_RepData_FloatAttributes>,
-                .SeedContainer = &ck::attribute_restore::SeedContainer<ck::TFragment_FloatAttribute, FCk_RepData_FloatAttributes>,
                 .Transport     = ECk_PersistenceTransport::NetAndSave // v3 save capture (Phase 3A.4)
             });
     }

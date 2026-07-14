@@ -101,24 +101,6 @@ static struct FAnimPlanRepHandlerRegistrar
                         Params.Get_AnimGoal(), Current.Get_AnimCluster(), Current.Get_AnimState()});
                     return FInstancedStruct::Make(MoveTemp(Data));
                 },
-                // Custom seed: the container lives on the LifetimeOwner; the typed add self-gates on the owner's
-                // driver (NotAdded => retry). Re-arm the ongoing trigger on the AnimPlan entity itself.
-                .SeedContainer = [](FCk_Handle& Entity, const FInstancedStruct& /*Data*/) -> ECk_AddedOrNot
-                {
-                    auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Entity);
-                    if (ck::Is_NOT_Valid(LifetimeOwner))
-                    { return ECk_AddedOrNot::NotAdded; }
-
-                    // EMPTY seed (Model-A-only): value comes from the restored image + the re-armed Replicate pass;
-                    // seeding the now-value-bearing Produce data risks the per-owner merge. v3 never calls SeedContainer.
-                    const auto AddedOrNot = UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_AnimPlans>(
-                        LifetimeOwner, FCk_RepData_AnimPlans{});
-                    if (AddedOrNot == ECk_AddedOrNot::NotAdded)
-                    { return AddedOrNot; }
-
-                    Entity.AddOrGet<ck::FTag_AnimPlan_MayRequireReplication>();
-                    return AddedOrNot;
-                },
                 .Transport = ECk_PersistenceTransport::NetAndSave // v3 save capture (Phase 3A.4)
             });
     }
