@@ -158,6 +158,13 @@ namespace ck
     // only moved at PostTransform — and the follower trails by one frame of
     // velocity. Component-space sampling keeps only the animation pose a frame
     // stale (sub-cm) while the root-motion term is always current.
+    //
+    // EXCEPTION — ragdoll: the entity-transform root is only valid while UpdateTransform
+    // keeps the SKMC at the entity transform. During ragdoll physics owns the SKMC and
+    // UpdateTransform is excluded (TExclude<FTag_IskmProxy_Ragdolling>), so the entity
+    // transform is frozen at the death pose. SyncTransform then reads the WORLD-space
+    // socket directly (no entity root, no _LocalLocationOffset) so the follower stays on
+    // the physics pose. See FProcessor_IskmProxy_SocketFollower_SyncTransform.
     struct CKISKMRENDERER_API FFragment_IskmProxy_SocketFollower
     {
     public:
