@@ -46,11 +46,11 @@ namespace ck
 #define CK_DEFINE_ENTITY_HOLDER_UTILS(_UtilsName_, _NameOfEntityHolder_)\
     using _UtilsName_ = ck::TUtils_EntityHolder<_NameOfEntityHolder_>
 
-// Policy-blind define is removed — use the explicit-policy variant. Hard error if used.
-#define CK_DEFINE_ENTITY_HOLDER_AND_UTILS(_UtilsName_, _NameOfEntityHolder_, _HandleType_)                 \
-    static_assert(false, "CK_DEFINE_ENTITY_HOLDER_AND_UTILS is removed: choose "                           \
-        "CK_DEFINE_ENTITY_HOLDER_AND_UTILS_ROUNDTRIP (authoritative — also add CK_REGISTER_SNAPSHOTABLE) " \
-        "or CK_DEFINE_ENTITY_HOLDER_AND_UTILS_TRANSIENT (reconstructed on restore).")
+// The single canonical holder+utils define; _ROUNDTRIP / _TRANSIENT are retained as thin aliases (inert policy —
+// Option A, saveload-v3-ergonomics Phase 2).
+#define CK_DEFINE_ENTITY_HOLDER_AND_UTILS(_UtilsName_, _NameOfEntityHolder_, _HandleType_) \
+    CK_DEFINE_ENTITY_HOLDER(_NameOfEntityHolder_, _HandleType_);                           \
+    CK_DEFINE_ENTITY_HOLDER_UTILS(_UtilsName_, _NameOfEntityHolder_)
 
 #define CK_DEFINE_ENTITY_HOLDER_AND_UTILS_ROUNDTRIP(_UtilsName_, _NameOfEntityHolder_, _HandleType_)\
     CK_DEFINE_ENTITY_HOLDER_ROUNDTRIP(_NameOfEntityHolder_, _HandleType_);                          \
