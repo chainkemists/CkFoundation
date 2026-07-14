@@ -284,20 +284,85 @@ namespace
         }
     }
 
+    // Save capture (Produce side, READ-ONLY): mirror the entity's live runtime state-overrides into the reflected
+    // save-only form. Empty when the SM carries no overrides. Never mutates the entity (Produce contract).
+    auto
+    Sm_CaptureStateOverrides(
+        const FCk_Handle& Entity) -> TArray<FCk_Sm_SavedStateOverride>
+    {
+        auto Out = TArray<FCk_Sm_SavedStateOverride>{};
+        if (NOT Entity.Has<ck::FFragment_Sm_StateOverrides>())
+        { return Out; }
+
+        for (const auto& Entry : Entity.Get<ck::FFragment_Sm_StateOverrides>().Get_Overrides())
+        { Out.Add(FCk_Sm_SavedStateOverride{Entry._OverrideStateClass, Entry._CachedStatesToOverride}); }
+
+        return Out;
+    }
+
+    // Re-install runtime state-overrides captured by the save (Produce) onto a freshly-composed SM, via the SAME
+    // public deferred request the live path uses (UCk_Utils_StateMachine_UE::Request_AddOverrideState ->
+    // FProcessor_Sm_HandleRequests -> ck::FFragment_Sm_StateOverrides). Construct rebuilds the SM but never re-adds
+    // runtime overrides (they aren't part of the recipe), so this is the only thing that puts them back.
+    //
+    // ORDERING PROOF — why the DEFERRED add is guaranteed to land before the resume transition instantiates the
+    // (possibly overridden) saved state:
+    //  * The sole site that CONSUMES the override map is UCk_Utils_SmState_UE::Get_ResolvedStateClass, reached from
+    //    FProcessor_Sm_HandleRequests::DoEnterState when it drains a Request_Transition (CkStateMachine_Processor.cpp).
+    //  * FProcessor_Sm_HydrationResume enqueues its restore Request_Transition ONLY in its Transition phase, and only
+    //    reaches that phase after observing RunStatus==Running on a pump LATER than its Start phase (Request_Start is
+    //    itself deferred, so Running cannot be observed until a subsequent HandleRequests drain).
+    //  * These Request_AddOverrideState are enqueued HERE, during HydrationApply — strictly before the resume record
+    //    (FFragment_Sm_HydrationResume) that the ladder consumes even exists. They therefore sit ahead of the restore
+    //    Request_Transition in the SM's FFragment_Sm_Requests FIFO and are drained (writing FFragment_Sm_StateOverrides)
+    //    by FProcessor_Sm_HandleRequests before DoEnterState ever calls Get_ResolvedStateClass. Even in the degenerate
+    //    single-batch case (AutoStart already Running so the ladder's first tick enqueues Transition), FIFO order within
+    //    one HandleRequests drain applies the earlier-enqueued AddOverrideState first. Deferred is provably safe; no
+    //    synchronous :503-mirrored fragment write is needed.
+    //
+    // Only the class is needed for the re-add (the apply re-derives _CachedStatesToOverride from the override class
+    // CDO); the saved tags ride along for save-file fidelity / a synchronous fallback but are not consulted here.
+    auto
+    Sm_ReinstallSavedOverrides(
+        FCk_Handle&                              Entity,
+        const TArray<FCk_Sm_SavedStateOverride>& SavedOverrides) -> void
+    {
+        if (SavedOverrides.IsEmpty())
+        { return; }
+
+        auto SmHandle = UCk_Utils_StateMachine_UE::CastChecked(Entity);
+        for (const auto& Saved : SavedOverrides)
+        {
+            if (ck::Is_NOT_Valid(Saved.Get_OverrideStateClass()))
+            { continue; }
+
+            UCk_Utils_StateMachine_UE::Request_AddOverrideState(SmHandle, Saved.Get_OverrideStateClass());
+        }
+    }
+
     // Save-load hydration branch. On a loading AUTHORITY the saved payload must drive the SM to
     // its {RunStatus, CurrentStateClass} WITHOUT replaying entry effects inline through the net path — so instead of
     // Sm_DispatchWithHistory/Sm_EnqueueOrStash, stash the decision record for FProcessor_Sm_HydrationResume, which
     // steers the freshly-composed SM there through its own Start/Transition ladder. Returns NotReady until Setup has
     // composed FFragment_Sm_Current (the resume ladder + its view both require it); the hydration dispatcher retries.
     // Only ever reached via the handler's HydrationApply slot — the net Apply path never calls it (byte-identical net).
+    //
+    // NotReady-before-any-mutation (CkSnapshot §3): the Current guard MUST precede the override re-add. Both the
+    // override re-install (a deferred Request_AddOverrideState) and the resume stash are single-shot — enqueuing the
+    // override requests on a NotReady retry would stack duplicate overrides. Gate first, then overrides, then resume.
     auto
     Sm_StashHydrationResume(
-        FCk_Handle&                           Entity,
-        ECk_SmRunStatus                       DesiredRunStatus,
-        TSubclassOf<UCk_SmState_EntityScript> DesiredStateClass) -> ECk_RepFragment_ApplyResult
+        FCk_Handle&                              Entity,
+        ECk_SmRunStatus                          DesiredRunStatus,
+        TSubclassOf<UCk_SmState_EntityScript>    DesiredStateClass,
+        const TArray<FCk_Sm_SavedStateOverride>& SavedOverrides) -> ECk_RepFragment_ApplyResult
     {
         if (NOT Entity.Has<ck::FFragment_Sm_Current>())
         { return ECk_RepFragment_ApplyResult::NotReady; }
+
+        // Strict order: overrides re-added FIRST, then the resume record — so the override write precedes the
+        // restore transition (see Sm_ReinstallSavedOverrides' ordering proof).
+        Sm_ReinstallSavedOverrides(Entity, SavedOverrides);
 
         Entity.AddOrGet<ck::FFragment_Sm_HydrationResume>().Populate(DesiredRunStatus, DesiredStateClass);
         return ECk_RepFragment_ApplyResult::Applied;
@@ -338,7 +403,8 @@ namespace
                         const auto DesiredStateClass = Payload.Get_History().IsEmpty()
                             ? TSubclassOf<UCk_SmState_EntityScript>{}
                             : Payload.Get_History().Last().Get_NewStateClass();
-                        return Sm_StashHydrationResume(Entity, Payload.Get_RunStatus(), DesiredStateClass);
+                        return Sm_StashHydrationResume(Entity, Payload.Get_RunStatus(), DesiredStateClass,
+                            Payload.Get_SavedStateOverrides());
                     },
                     // Save capture: emit the current run-state as a CANONICAL single event {null ->
                     // CurrentStateClass, Seq 0, Fp 0} (or empty history if no current state). The live server seqs
@@ -361,6 +427,8 @@ namespace
                             Payload.Get_History().Add(FCk_Sm_TransitionEvent{
                                 TSubclassOf<UCk_SmState_EntityScript>{}, Current.Get_CurrentStateClass(), 0, 0});
                         }
+                        // Save-only: runtime state-overrides ride inside the RepData (never on the wire).
+                        Payload.Set_SavedStateOverrides(Sm_CaptureStateOverrides(Entity));
                         return FInstancedStruct::Make(Payload);
                     },
                 });
@@ -411,7 +479,8 @@ namespace
                     .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
                     {
                         const auto& Payload = New.Get<FCk_RepData_StateMachine_NoHistory>();
-                        return Sm_StashHydrationResume(Entity, Payload.Get_RunStatus(), Payload.Get_CurrentStateClass());
+                        return Sm_StashHydrationResume(Entity, Payload.Get_RunStatus(), Payload.Get_CurrentStateClass(),
+                            Payload.Get_SavedStateOverrides());
                     },
                     // Save capture: latest state only, canonical Seq 0 / Fp 0. Gated on the replication
                     // MODEL (not _Replication) so DoesNotReplicate WithoutHistory SMs persist too.
@@ -427,6 +496,8 @@ namespace
                         auto Payload = FCk_RepData_StateMachine_NoHistory{}; // canonical Seq 0 / Fp 0
                         Payload.Set_CurrentStateClass(Current.Get_CurrentStateClass());
                         Payload.Set_RunStatus(Current.Get_RunStatus());
+                        // Save-only: runtime state-overrides ride inside the RepData (never on the wire).
+                        Payload.Set_SavedStateOverrides(Sm_CaptureStateOverrides(Entity));
                         return FInstancedStruct::Make(Payload);
                     },
                 });
