@@ -348,10 +348,10 @@ namespace ck
 
         ck::ecs::VeryVerbose(TEXT("[REP_DEBUG] ReplicateProcessor — Calling Request_ReplicateEntityScript for [{}] with owner [{}]"), InHandle, ReplicatedOwner);
 
-        // Shared establishment path — also used by the snapshot respawn re-replicate (FProcessor_ActorRespawn) so the
-        // two cannot drift (the validation, dependent-count accounting, Request_Replicate, and FireOnDependent tag all
-        // live in one place). The ContextOwnerOverride is threaded through so spawn-time context-owner preservation
-        // survives the shared-helper refactor.
+        // Single establishment path (validation, dependent-count accounting, Request_Replicate, and FireOnDependent tag
+        // all live in one place). Historically ALSO shared with the snapshot respawn re-replicate; that processor
+        // (FProcessor_ActorRespawn) was retired in Phase 5 — the v3 load re-replicates via the fresh Construct instead.
+        // The ContextOwnerOverride is threaded through so spawn-time context-owner preservation survives.
         UCk_Utils_EntityScript_UE::Request_ReplicateEntityScript(InHandle, ReplicatedOwner, EntityScript.Get(), SpawnParamsCopy,
             InRequest.Get_ContextOwnerOverride());
 
