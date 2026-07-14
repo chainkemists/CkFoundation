@@ -16,7 +16,7 @@ class UCk_SmState_EntityScript;
 // Per-actor RPC relay for StateMachine replication.
 //
 // Carries client→server RPCs only — server→client traffic uses replicated fragments via
-// FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy (wired in Phase 5).
+// FCk_PersistenceHandlerRegistry::RegisterLazy (wired in Phase 5).
 //
 // Acquired per owning actor by SMs that opt into OwningClientAuthoritative authority via
 // FCk_Fragment_StateMachine_ParamsData::_AuthorityModel. The server-side handlers authorize

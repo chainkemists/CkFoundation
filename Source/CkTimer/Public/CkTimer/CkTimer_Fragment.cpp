@@ -29,17 +29,31 @@ namespace ck_timer_fragment
     {
         FRegistrar()
         {
-            FCk_ReplicatedFragmentHandlerRegistry::RegisterLazyTyped<FCk_SaveData_Timer>(
-            {
+            FCk_PersistenceHandlerRegistry::Register_SaveOnly<FCk_SaveData_Timer>(
+                // Save-capture: emit the chrono position + RUNTIME direction (tag) + run-state (tag). UNSET when the
+                // Timer feature is absent on the entity (nothing to persist).
+                [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+                {
+                    if (NOT UCk_Utils_Timer_UE::Has(Entity))
+                    { return {}; }
+
+                    auto TimerHandle = UCk_Utils_Timer_UE::Cast(Entity);
+
+                    auto Payload = FCk_SaveData_Timer{};
+                    Payload.Set_Elapsed(UCk_Utils_Timer_UE::Get_CurrentTimerValue(TimerHandle).Get_TimeElapsed());
+                    Payload.Set_CountDirection(UCk_Utils_Timer_UE::Get_CountDirection(TimerHandle));
+                    Payload.Set_RunState(UCk_Utils_Timer_UE::Get_CurrentState(TimerHandle));
+                    return FInstancedStruct::Make(Payload);
+                },
                 // Load-path applier (authority-side). NotReady until the rebuilt entity has composed its Timer
                 // fragments; then re-drive the runtime state through DEFERRED requests ONLY — the chrono's
                 // _CurrentValue is friend-gated, so it is never written directly. Because the timer is unreplicated,
                 // these requests re-arm nothing on any client; they are drained by FProcessor_Timer_HandleRequests on
                 // the authority. The NotReady gate precedes every request.
-                .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
+                [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                 {
                     if (NOT UCk_Utils_Timer_UE::Has(Entity))
-                    { return ECk_RepFragment_ApplyResult::NotReady; }
+                    { return ECk_Persistence_ApplyResult::NotReady; }
 
                     // Gate until Setup has run. FProcessor_Timer_Setup Completes a CountDown chrono to GoalValue when it
                     // consumes FTag_Timer_NeedsSetup. Re-driving the position BEFORE Setup would let Setup mutate the
@@ -48,7 +62,7 @@ namespace ck_timer_fragment
                     // Jump is not clobbered by a still-pending Setup (Setup runs at most once). NotReady is transient —
                     // Setup runs every authority tick.
                     if (Entity.Has<ck::FTag_Timer_NeedsSetup>())
-                    { return ECk_RepFragment_ApplyResult::NotReady; }
+                    { return ECk_Persistence_ApplyResult::NotReady; }
 
                     const auto& Payload = New.Get<FCk_SaveData_Timer>();
                     auto TimerHandle = UCk_Utils_Timer_UE::Cast(Entity);
@@ -83,24 +97,8 @@ namespace ck_timer_fragment
                         { UCk_Utils_Timer_UE::Request_Pause(TimerHandle); }
                     }
 
-                    return ECk_RepFragment_ApplyResult::Applied;
-                },
-                // Save-capture: emit the chrono position + RUNTIME direction (tag) + run-state (tag). UNSET when the
-                // Timer feature is absent on the entity (nothing to persist).
-                .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
-                {
-                    if (NOT UCk_Utils_Timer_UE::Has(Entity))
-                    { return {}; }
-
-                    auto TimerHandle = UCk_Utils_Timer_UE::Cast(Entity);
-
-                    auto Payload = FCk_SaveData_Timer{};
-                    Payload.Set_Elapsed(UCk_Utils_Timer_UE::Get_CurrentTimerValue(TimerHandle).Get_TimeElapsed());
-                    Payload.Set_CountDirection(UCk_Utils_Timer_UE::Get_CountDirection(TimerHandle));
-                    Payload.Set_RunState(UCk_Utils_Timer_UE::Get_CurrentState(TimerHandle));
-                    return FInstancedStruct::Make(Payload);
-                },
-            });
+                    return ECk_Persistence_ApplyResult::Applied;
+                });
         }
     };
 

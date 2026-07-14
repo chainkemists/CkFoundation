@@ -4,7 +4,7 @@
 #include "CkChaos/GeometryCollection/CkGeometryCollection_Utils.h"
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // RegisterLazyTyped<T> body
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // Register_* entry-point bodies
 
 #include "TargetPoint/CkTargetPoint_Utils.h"
 
@@ -66,21 +66,20 @@ static struct FGeometryCollectionOwnerRepHandlerRegistrar
             }
         };
 
-        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazyTyped<FCk_RepData_GeometryCollectionOwner>(
-            {
+        FCk_PersistenceHandlerRegistry::Register_NetOnly<FCk_RepData_GeometryCollectionOwner>(
                 // Event-edge semantics (crumble/anchor/strain requests fire on field deltas vs the
                 // last APPLIED data) — always Applied; a not-yet-populated GC record just means the
                 // events have no targets, same as the old inline path.
-                .Apply = [DoApply](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
+                [DoApply](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
                 {
                     DoApply(Entity,
                         New.Get<FCk_RepData_GeometryCollectionOwner>(),
                         Old.IsSet()
                             ? Old.GetValue().Get<FCk_RepData_GeometryCollectionOwner>()
                             : FCk_RepData_GeometryCollectionOwner{});
-                    return ECk_RepFragment_ApplyResult::Applied;
+                    return ECk_Persistence_ApplyResult::Applied;
                 }
-            });
+            );
     }
 } GGeometryCollectionOwnerRepHandlerRegistrar;
 

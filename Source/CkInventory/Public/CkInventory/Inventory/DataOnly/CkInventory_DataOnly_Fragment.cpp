@@ -5,7 +5,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"                            // ck::algo::ForEachIsValid — Produce
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // RegisterLazyTyped<T> body
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // Register_* entry-point bodies
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"              // Request_TransferLifetimeOwner — load hydration
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -18,14 +18,14 @@
         // owner-keyed and never resolves it here. Connect each saved item into THIS inventory's item record so the
         // authority rebuilds its inventory graph; clients still converge through the ordinary SyncReplication path.
         // All-or-nothing: if any item handle is not yet rebuilt, retry next tick.
-        const auto DoHydrateDataOnlyItems = [](FCk_Handle& Entity, const TArray<FCk_InventoryItem_DataOnly_ReplicatedEntry>& NewItems) -> ECk_RepFragment_ApplyResult
+        const auto DoHydrateDataOnlyItems = [](FCk_Handle& Entity, const TArray<FCk_InventoryItem_DataOnly_ReplicatedEntry>& NewItems) -> ECk_Persistence_ApplyResult
         {
             if (NOT UCk_Utils_Inventory_DataOnly_UE::Has(Entity))
-            { return ECk_RepFragment_ApplyResult::NotReady; }
+            { return ECk_Persistence_ApplyResult::NotReady; }
 
             if (ck::algo::AnyOf(NewItems, [](const FCk_InventoryItem_DataOnly_ReplicatedEntry& InEntry)
                 { return ck::Is_NOT_Valid(InEntry.Get_ItemHandle()); }))
-            { return ECk_RepFragment_ApplyResult::NotReady; }
+            { return ECk_Persistence_ApplyResult::NotReady; }
 
             for (const auto& NewEntry : NewItems)
             {
@@ -40,16 +40,16 @@
             // Construct-time initial value (it converges via the ordinary ClientOnly SyncReplication once pushed).
             auto InventoryHandle = UCk_Utils_Inventory_UE::Cast(Entity);
             UCk_Utils_Inventory_UE::Request_TryReplicateInventory(InventoryHandle);
-            return ECk_RepFragment_ApplyResult::Applied;
+            return ECk_Persistence_ApplyResult::Applied;
         };
 
         // Stamps the sync fragment consumed by the DataOnly SyncReplication processor (which owns
         // the actual diff/apply). NotReady until at least one DataOnly inventory is composed.
-        const auto DoApplyDataOnlyItems = [](FCk_Handle& Entity, const TArray<FCk_InventoryItem_DataOnly_ReplicatedEntry>& NewItems, const TArray<FCk_InventoryItem_DataOnly_ReplicatedEntry>& OldItems) -> ECk_RepFragment_ApplyResult
+        const auto DoApplyDataOnlyItems = [](FCk_Handle& Entity, const TArray<FCk_InventoryItem_DataOnly_ReplicatedEntry>& NewItems, const TArray<FCk_InventoryItem_DataOnly_ReplicatedEntry>& OldItems) -> ECk_Persistence_ApplyResult
         {
             const auto Inventories = UCk_Utils_Inventory_UE::RecordOfInventories_Utils::Get_ValidEntries(Entity);
 
-            auto Result = ECk_RepFragment_ApplyResult::NotReady;
+            auto Result = ECk_Persistence_ApplyResult::NotReady;
 
             for (auto InventoryHandle : Inventories)
             {
@@ -57,30 +57,17 @@
                 { continue; }
 
                 InventoryHandle.AddOrGet<ck::FFragment_Inventory_DataOnly_SyncReplication>(NewItems, OldItems);
-                Result = ECk_RepFragment_ApplyResult::Applied;
+                Result = ECk_Persistence_ApplyResult::Applied;
             }
 
             return Result;
         };
 
-        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazyTyped<FCk_RepData_Inventory_DataOnly_Items>(
-            {
-                .Apply = [DoApplyDataOnlyItems](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
-                {
-                    return DoApplyDataOnlyItems(Entity,
-                        New.Get<FCk_RepData_Inventory_DataOnly_Items>().Items,
-                        Old.IsSet()
-                            ? Old.GetValue().Get<FCk_RepData_Inventory_DataOnly_Items>().Items
-                            : TArray<FCk_InventoryItem_DataOnly_ReplicatedEntry>{});
-                },
-                .HydrationApply = [DoHydrateDataOnlyItems](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
-                {
-                    return DoHydrateDataOnlyItems(Entity, New.Get<FCk_RepData_Inventory_DataOnly_Items>().Items);
-                },
+        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_Inventory_DataOnly_Items>(
                 // Produce-only capture (Phase 3A.4): mirror FProcessor_Inventory_DataOnly_Replicate's live-state
                 // build. Keyed on the INVENTORY entity — emits THAT inventory's items (entries carry only the item
                 // handle). Produce is capture-only.
-                .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+                [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT UCk_Utils_Inventory_DataOnly_UE::Has(Entity))
                     { return {}; }
@@ -99,6 +86,17 @@
                     Data.Items = MoveTemp(Entries);
                     return FInstancedStruct::Make(Data);
                 },
-            });
+                [DoApplyDataOnlyItems](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
+                {
+                    return DoApplyDataOnlyItems(Entity,
+                        New.Get<FCk_RepData_Inventory_DataOnly_Items>().Items,
+                        Old.IsSet()
+                            ? Old.GetValue().Get<FCk_RepData_Inventory_DataOnly_Items>().Items
+                            : TArray<FCk_InventoryItem_DataOnly_ReplicatedEntry>{});
+                },
+                [DoHydrateDataOnlyItems](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
+                {
+                    return DoHydrateDataOnlyItems(Entity, New.Get<FCk_RepData_Inventory_DataOnly_Items>().Items);
+                });
     }
 } GInventory_DataOnly_RepHandlerRegistrar;
