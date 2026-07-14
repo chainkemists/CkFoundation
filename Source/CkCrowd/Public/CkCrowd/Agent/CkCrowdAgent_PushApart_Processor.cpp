@@ -64,6 +64,22 @@ namespace ck
 
         const auto SelfRadius = InParams.Get_Radius();
 
+        // An IDLE agent has ARRIVED. It has no restoring drive to walk back to where it was, so any
+        // displacement it absorbs is permanent — which is how a newcomer pressing into an agent that
+        // already reached its goal was body-checking it clean off the spot (an NPC standing at a shelf,
+        // evicted by the next customer). Idle agents therefore absorb only a fraction of the shared
+        // correction, and the still-walking party — which CAN steer and re-approach — takes the rest.
+        //
+        // This is a bound on the damage, not the cure. The real fix for a newcomer that presses forever
+        // is for it to notice its goal is unreachable and stop pressing; this only limits how far a
+        // stander is shoved in the meantime (and when a player barges through a crowd).
+        //
+        // Deliberately not zero: PushApart must still resolve idle-vs-idle overlap (a cluster settling
+        // at a shared goal), which requires both parties to yield something.
+        const auto SelfYield = InHandle.Has<FTag_CrowdAgent_Idle>()
+            ? InParams.Get_PushApartIdleYield()
+            : 1.0f;
+
         auto Displacement = FVector::ZeroVector;
 
         {
@@ -106,12 +122,12 @@ namespace ck
                         const auto PairAngle = static_cast<float>((SelfHash ^ NbrHash) % 3600) * (PI / 1800.0f);
                         const auto Axis      = FVector(FMath::Cos(PairAngle), FMath::Sin(PairAngle), 0.0f);
                         const auto Sign      = SelfHash > NbrHash ? 1.0f : -1.0f;
-                        Displacement += Axis * (Sign * 0.5f * CombinedRadius);
+                        Displacement += Axis * (Sign * 0.5f * CombinedRadius * SelfYield);
                         continue;
                     }
 
                     const auto Penetration = CombinedRadius - Dist;
-                    const auto Pen = (Penetration * 0.5f) * COLLISION_RESOLVE_FACTOR / Dist;
+                    const auto Pen = (Penetration * 0.5f) * COLLISION_RESOLVE_FACTOR * SelfYield / Dist;
                     Displacement += Diff * Pen;
                 }
             }
