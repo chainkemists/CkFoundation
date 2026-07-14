@@ -51,10 +51,11 @@ protected:
     // ================================================================================================================
     //
     // EnterState fires from BeginPlay() once the state's script is fully constructed.
-    // ExitState is invoked synchronously by the StateMachine processor — either by
+    // ExitState is invoked synchronously by the StateMachine processor — by
     // FProcessor_Sm_HandleRequests on a transition, or by FProcessor_Sm_EndPlay when the SM
-    // itself is destroyed mid-state. ExitState fires at most once per state instance, never
-    // from the EntityScript EndPlay pipeline.
+    // itself is destroyed mid-state — with an EntityScript-EndPlay fallback for cascade-destroyed
+    // states the processors never reach (see EndPlay in the .cpp). ExitState fires at most once
+    // per state instance (dedup'd via FTag_SmState_Active).
 
 public:
     virtual auto

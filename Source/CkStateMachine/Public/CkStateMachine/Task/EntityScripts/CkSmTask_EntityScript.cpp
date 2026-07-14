@@ -37,6 +37,12 @@ auto
     if (_AssociatedEntity.Has<ck::FTag_Sm_Debug_GraphWalkEntity>())
     { return; }
 
+    // Has-guard mirror of EndPlay below: a snapshot-restored SM-graph entity keeps its EntityScript
+    // but not its SmTask feature fragment (the redrive rebuilds the real graph fresh), so this
+    // BeginPlay runs on a husk with nothing to enter.
+    if (NOT UCk_Utils_SmTask_UE::Has(_AssociatedEntity))
+    { return; }
+
     auto Self = UCk_Utils_SmTask_UE::CastChecked(_AssociatedEntity);
     const auto SmHandle = UCk_Utils_SmTask_UE::Get_OwningStateMachine(Self);
     const auto NetContext = ck::statemachine::ComputeNetContext(SmHandle);
