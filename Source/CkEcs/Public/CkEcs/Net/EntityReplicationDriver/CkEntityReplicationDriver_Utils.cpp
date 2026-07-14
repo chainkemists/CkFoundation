@@ -138,6 +138,45 @@ auto
     return DoGet_HasUndrainedReplicatedFragments_Recursive(InHandle, Visited);
 }
 
+// Diagnostic twin of the DFS above — returns the FIRST offender instead of a bool, so the fire
+// processor's stall report can name the blocking entity. Cycle truncation is silent here (the bool
+// twin already ensures on cycles).
+static auto
+    DoGet_FirstUndrainedEntity_Recursive(
+        const FCk_Handle& InHandle,
+        TSet<FCk_Entity>& InOutVisited)
+    -> FCk_Handle
+{
+    auto AlreadyVisited = false;
+    InOutVisited.Add(InHandle.Get_Entity(), &AlreadyVisited);
+
+    if (AlreadyVisited)
+    { return {}; }
+
+    if (InHandle.Has<ck::FTag_RepFragments_PendingApply>() ||
+        InHandle.Has<ck::FFragment_PendingHydration>())
+    { return InHandle; }
+
+    for (const auto& Dependent : UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(InHandle))
+    {
+        if (const auto Found = DoGet_FirstUndrainedEntity_Recursive(Dependent, InOutVisited);
+            ck::IsValid(Found))
+        { return Found; }
+    }
+
+    return {};
+}
+
+auto
+    UCk_Utils_EntityReplicationDriver_UE::
+    TryGet_FirstUndrainedReplicatedFragmentsEntity_IncludingDependents(
+        const FCk_Handle& InHandle)
+    -> FCk_Handle
+{
+    auto Visited = TSet<FCk_Entity>{};
+    return DoGet_FirstUndrainedEntity_Recursive(InHandle, Visited);
+}
+
 auto
     UCk_Utils_EntityReplicationDriver_UE::
     Request_BuildAndReplicate(
