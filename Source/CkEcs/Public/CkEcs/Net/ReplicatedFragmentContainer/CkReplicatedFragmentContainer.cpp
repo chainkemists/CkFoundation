@@ -100,6 +100,27 @@ auto
 
 auto
     FCk_ReplicatedFragmentHandlerRegistry::
+    Get_SaveHandlerTypes()
+    -> TArray<const UScriptStruct*>
+{
+    if (_PendingHandlers.Num() > 0)
+    { ResolvePending(); }
+
+    auto Types = TArray<const UScriptStruct*>{};
+    for (const auto& Pair : _Handlers)
+    {
+        // Save-participating handlers only: a Produce (the payload emitter) whose Transport opts into Save. The v3
+        // capture writes one payload per (entity, type) for these; Net-only Produce handlers are save-invisible.
+        const auto HasSaveTransport =
+            (static_cast<uint8>(Pair.Value.Transport) & static_cast<uint8>(ECk_PersistenceTransport::Save)) != 0;
+        if (Pair.Value.Produce && HasSaveTransport)
+        { Types.Add(Pair.Key); }
+    }
+    return Types;
+}
+
+auto
+    FCk_ReplicatedFragmentHandlerRegistry::
     Find(
         const UScriptStruct* InType)
     -> const FHandler*

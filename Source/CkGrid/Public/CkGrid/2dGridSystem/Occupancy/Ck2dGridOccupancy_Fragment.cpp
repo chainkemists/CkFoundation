@@ -1,5 +1,8 @@
 #include "Ck2dGridOccupancy_Fragment.h"
 
+#include "CkGrid/2dGridSystem/Placement/Ck2dGridPlacement_Fragment.h" // FCk_Fragment_2dGridPlacement_ParamsData + entry/RepData types (Produce)
+#include "CkRecord/Record/CkRecord_Utils.h"                            // TUtils_RecordOfEntities::ForEach_ValidEntry (Produce)
+
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
 #include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
@@ -46,7 +49,33 @@ CK_REGISTER_SNAPSHOTABLE(FSnap_2dGridOccupant_PlacementRef);
                             ? Old.GetValue().Get<FCk_RepData_2dGridPlacements>().Placements
                             : TArray<FCk_2dGridPlacement_ReplicatedEntry>{});
                     return ECk_RepFragment_ApplyResult::Applied;
-                }
+                },
+                // Produce-only capture (Phase 3A.4): mirror FProcessor_2dGridOccupancy_Replicate's live-state build
+                // off the grid's placement record. NO SeedContainer — the live ReplicateOnRestore still seeds under
+                // Model A (double-seed guard). Keyed on the grid entity (which holds the placement record).
+                .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+                {
+                    if (NOT Entity.Has<ck::FFragment_RecordOf_GridPlacements>())
+                    { return {}; }
+
+                    auto Entries = TArray<FCk_2dGridPlacement_ReplicatedEntry>{};
+
+                    ck::RecordOf_GridPlacements_Utils::ForEach_ValidEntry(Entity,
+                    [&](FCk_Handle_2dGridPlacement InPlacement)
+                    {
+                        const auto& Params = InPlacement.Get<FCk_Fragment_2dGridPlacement_ParamsData>();
+
+                        Entries.Emplace(FCk_2dGridPlacement_ReplicatedEntry(Params.Get_Occupant())
+                            .Set_Anchor(Params.Get_Anchor())
+                            .Set_Rotation(Params.Get_Rotation())
+                            .Set_Cells(Params.Get_Cells()));
+                    });
+
+                    auto Data = FCk_RepData_2dGridPlacements{};
+                    Data.Placements = MoveTemp(Entries);
+                    return FInstancedStruct::Make(Data);
+                },
+                .Transport = ECk_PersistenceTransport::NetAndSave
             });
     }
 } G2dGridOccupancy_RepHandlerRegistrar;

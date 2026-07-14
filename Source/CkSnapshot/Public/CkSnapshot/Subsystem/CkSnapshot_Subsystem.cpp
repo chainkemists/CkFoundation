@@ -3,6 +3,7 @@
 #include "CkSnapshot/CkSnapshot_Log.h"
 #include "CkSnapshot/SaveGame/CkSnapshot_SaveGame.h"
 #include "CkSnapshot/Snapshot/CkSnapshot_Capture.h"
+#include "CkSnapshot/Snapshot/CkSnapshot_CaptureV3.h" // Phase 3A: v3 recipe+payload capture alongside Model A
 #include "CkSnapshot/Snapshot/CkSnapshot_Restore.h"
 #include "CkSnapshot/Subsystem/CkSnapshot_Signals.h"
 
@@ -136,6 +137,16 @@ void
 
     const auto CaptureResult = ck::snapshot::Run_Capture(*World, ByteWriter, Header);
 
+    // v3 capture (rebuild+hydrate, spec §4.2) alongside Model A. Loading still consumes the Model-A bytes until
+    // Phase 3B lands; v3 is inspectable now. A v3 failure does NOT fail the save — Model A remains authoritative.
+    auto ByteWriterV3 = FBufferArchive{};
+    auto HeaderV3 = FCk_Snapshot_HeaderV3{};
+    if (const auto CaptureResultV3 = ck::snapshot::Run_CaptureV3(*World, ByteWriterV3, HeaderV3);
+        CaptureResultV3 != ECk_SnapshotResult::Success)
+    {
+        ck::snapshot::Warning(TEXT("Request_Save: v3 capture failed with result [{}] (Model A save proceeds)"), CaptureResultV3);
+    }
+
     auto DoFinish = [&](ECk_SnapshotResult InResult) -> void
     {
         ck::UUtils_Signal_Snapshot_OnSaveComplete::Broadcast(Source, ck::MakePayload(Source, InResult));
@@ -159,6 +170,9 @@ void
 
     SaveGame->_Header = Header;
     SaveGame->_SnapshotBytes = MoveTemp(static_cast<TArray<uint8>&>(ByteWriter));
+
+    SaveGame->_HeaderV3 = HeaderV3;
+    SaveGame->_SnapshotBytesV3 = MoveTemp(static_cast<TArray<uint8>&>(ByteWriterV3));
 
     const auto Saved = UGameplayStatics::SaveGameToSlot(SaveGame, InSlotName.ToString(), ck_snapshot_subsystem::UserIndex);
     if (NOT Saved)

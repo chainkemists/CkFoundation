@@ -10,6 +10,7 @@
 #include "CkEcs/CkEcsLog.h"
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/EntityScript/CkEntityScript_SpawnRecipe.h" // FFragment_SpawnRecipe retention (spec §4.2 RuntimeSpawned)
 #include "CkEcs/Net/CkNet_Fragment.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
@@ -151,6 +152,19 @@ namespace ck
 
         CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
             TEXT("EntityScript created: {}"), EntityScriptClassArchetype);
+
+        // ---- Retain the construction recipe (save/load rebuild+hydrate, spec §4.2 RuntimeSpawned) ----------
+        // The recipe (script class + spawn params) is kept on a GC-safe holder UObject pinned by a fragment
+        // (fragments are not GC-traced — see [P3A-F1]); the v3 save capture reads it to respawn RuntimeSpawned
+        // entities. Always stamped (cheap); the capture filters by provenance, so ConstructSpawned/EngineOwned
+        // entities that also carry a recipe simply never consult it.
+        if (const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(NewEntity);
+            ck::IsValid(World))
+        {
+            auto* Recipe = NewObject<UCk_EntityScript_SpawnRecipe_UE>(World);
+            Recipe->Populate(EntityScriptClassArchetype->GetClass(), InRequest.Get_SpawnParams());
+            NewEntity.Add<ck::FFragment_SpawnRecipe>(TStrongObjectPtr<UCk_EntityScript_SpawnRecipe_UE>{Recipe});
+        }
 
         ck::ecs::VeryVerbose(TEXT("[REP_DEBUG] SpawnProcessor — Entity=[{}] Replication=[{}]"),
             NewEntity, NewEntityScript->Get_EffectiveReplication());

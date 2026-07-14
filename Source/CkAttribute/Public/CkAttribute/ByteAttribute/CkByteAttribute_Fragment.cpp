@@ -152,7 +152,8 @@ static struct FByteAttributeRepHandlerRegistrar
                     return Result;
                 },
                 .Produce       = &ck::attribute_restore::Produce<ck::TFragment_ByteAttribute, FCk_RepData_ByteAttributes>,
-                .SeedContainer = &ck::attribute_restore::SeedContainer<ck::TFragment_ByteAttribute, FCk_RepData_ByteAttributes>
+                .SeedContainer = &ck::attribute_restore::SeedContainer<ck::TFragment_ByteAttribute, FCk_RepData_ByteAttributes>,
+                .Transport     = ECk_PersistenceTransport::NetAndSave // v3 save capture (Phase 3A.4)
             });
     }
 } GByteAttributeRepHandlerRegistrar;

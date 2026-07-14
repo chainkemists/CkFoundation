@@ -51,6 +51,17 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Provenance marker (save/load rebuild+hydrate, spec §4.2). Stamped on an entity created while its lifetime
+    // owner is a still-constructing EntityScript (owner has FFragment_EntityScript_Current but has NOT begun play):
+    // such a child is re-created by the owner's replayed Construct/BeginPlay on load, so the save ADOPTS it by
+    // identity (owner + label) rather than respawning a recipe (RuntimeSpawned). Stamped at create time in
+    // Request_SetupEntityWithLifetimeOwner — the owner's live construction state is frozen here since it has long
+    // begun play by capture time. TRANSIENT is deliberate: the v3 writer reads the LIVE tag at capture and records
+    // provenance as entity-table metadata, so the tag itself must never round-trip through Model A's tag capture.
+    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_ConstructSpawned);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct FFragment_LifetimeDependents
     {
         CK_GENERATED_BODY(FFragment_LifetimeDependents);
