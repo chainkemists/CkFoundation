@@ -5,6 +5,8 @@
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_OnPathResolved);
@@ -45,6 +47,18 @@ namespace ck
                 // distance means the path wraps around an obstacle (e.g. a reservation point on the far
                 // face of a gondola) — the suspected orbit trigger.
                 const auto& Wps = InPathResult.Get_Waypoints();
+
+                // Anchor the FIRST path segment for Steering's plane-crossing waypoint retirement.
+                // ExtractWaypoints strips the path's start point, so Waypoints[-1] does not exist and
+                // the incoming direction for Waypoints[0] has to come from the agent's own location at
+                // install time. A missing Transform mirrors Steering's quiet-bail posture (gym/game
+                // code adds Transform before pathing); the Wps[0] fallback degenerates the index-0
+                // plane test to proximity-only, which is the old behaviour — never a mis-fire.
+                auto TransformHandle = UCk_Utils_Transform_UE::Cast(NonConstHandle);
+                InPathFollow._CurrentSegmentStart = ck::IsValid(TransformHandle)
+                    ? UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle)
+                    : (Wps.Num() > 0 ? Wps[0] : FVector::ZeroVector);
+
                 auto PolylineLen = 0.0;
                 for (auto i = 0; i < Wps.Num() - 1; ++i)
                 { PolylineLen += FVector::Dist(Wps[i], Wps[i + 1]); }

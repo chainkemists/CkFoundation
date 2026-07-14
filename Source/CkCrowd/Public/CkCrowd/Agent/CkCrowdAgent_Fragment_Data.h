@@ -211,10 +211,20 @@ private:
     UPROPERTY()
     FVector _ActiveGoal = FVector::ZeroVector;
 
+    // World-space start of the CURRENT path segment: the previously retired waypoint once the
+    // cursor has advanced, or the agent's location at path-install time for the very first segment.
+    // CkNavigation's ExtractWaypoints strips the path's start point, so Waypoints[_WaypointIndex - 1]
+    // does not exist for index 0 and the first segment's direction cannot be recovered from the
+    // waypoint array alone. Steering's plane-crossing retirement needs that incoming direction;
+    // this mirrors UPathFollowingComponent's MoveSegmentDirection (PathFollowingComponent.cpp:954).
+    UPROPERTY()
+    FVector _CurrentSegmentStart = FVector::ZeroVector;
+
 public:
     CK_PROPERTY_GET(_WaypointIndex);
     CK_PROPERTY_GET(_ActiveArrivalRadius);
     CK_PROPERTY_GET(_ActiveGoal);
+    CK_PROPERTY_GET(_CurrentSegmentStart);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
