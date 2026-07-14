@@ -3,6 +3,8 @@
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
+#include "CkEcsExt/SceneNode/CkSceneNode_Fragment.h"
+#include "CkEcsExt/SceneNode/CkSceneNode_Utils.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_Fragment_Data.h"
@@ -22,6 +24,7 @@
 
 DECLARE_CYCLE_STAT(TEXT("Iskm::UpdateTransform"),    STAT_CkIskm_UpdateTransform,    STATGROUP_CkIskmRenderer);
 DECLARE_CYCLE_STAT(TEXT("Iskm::SocketFollowerSync"), STAT_CkIskm_SocketFollowerSync, STATGROUP_CkIskmRenderer);
+DECLARE_CYCLE_STAT(TEXT("Iskm::SocketFollowerSyncDescendants"), STAT_CkIskm_SocketFollowerSyncDescendants, STATGROUP_CkIskmRenderer);
 DECLARE_CYCLE_STAT(TEXT("Iskm::EmitFinishedEvents"), STAT_CkIskm_EmitFinishedEvents, STATGROUP_CkIskmRenderer);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -316,6 +319,72 @@ namespace ck
         {
             InHandle.AddOrGet<FTag_Transform_Updated>();
         }
+    }
+
+    auto
+        FProcessor_IskmProxy_SocketFollower_SyncDescendants::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Transform& InTransform,
+            const FFragment_IskmProxy_SocketFollower& InFollower) const
+        -> void
+    {
+        SCOPE_CYCLE_COUNTER(STAT_CkIskm_SocketFollowerSyncDescendants);
+
+        // FTag_Transform_Updated is deliberately NOT a view requirement: this body ADDS that tag to
+        // descendant (non-follower) entities, and mutating a pool the view iterates would invalidate
+        // iteration. Gate on the follower's own tag here instead — it is set by SyncTransform (same
+        // group, RunAfter) the frames the follower actually moved, and only descendants inherit motion.
+        if (NOT InHandle.Has<FTag_Transform_Updated>())
+        { return; }
+
+        DoSync_Descendants(InHandle, InTransform.Get_Transform());
+    }
+
+    auto
+        FProcessor_IskmProxy_SocketFollower_SyncDescendants::
+        DoSync_Descendants(
+            FCk_Handle_Transform InParent,
+            const FTransform& InParentWorld)
+        -> void
+    {
+        UCk_Utils_SceneNode_UE::ForEach_SceneNode(InParent, [&](FCk_Handle_SceneNode InChild)
+        {
+            if (InChild.Has<FFragment_SceneNode_UnrealAnchor>())
+            { return; }
+
+            // A descendant that is itself a socket follower drives its own pose (and subtree) via
+            // SyncTransform + this same SyncDescendants pass; recomputing it here as relative*parentWorld
+            // would contest that. Followers must be scene-node leaves w.r.t. another follower.
+            if (InChild.Has<FFragment_IskmProxy_SocketFollower>())
+            { return; }
+
+            // Same skip contract as TProcessor_SceneNode_Update: anchor-authoritative children
+            // (RootComponent/MeshSocket without ExternallyDriven) are driven by their anchors.
+            if (InChild.Has_Any<FFragment_Transform_MeshSocket, FFragment_Transform_RootComponent>() &&
+                NOT InChild.Has<FTag_Transform_ExternallyDriven>())
+            { return; }
+
+            const auto NewTransform = InChild.Get<FFragment_SceneNode_Current>().Get_RelativeTransform() * InParentWorld;
+
+            auto ChildAsTransform = UCk_Utils_Transform_UE::Cast(InChild);
+            // Guaranteed-present Get (scene nodes always carry FFragment_Transform, added by
+            // SceneNode Add/Create), so this never structurally inserts into a view-member pool
+            // mid-iteration. Descendants are assumed non-replicating (held presentation); a replicating
+            // node parented under a follower would need OR-merged _ComponentsModified vs the canonical pass.
+            auto& ChildTransform = ChildAsTransform.AddOrGet<FFragment_Transform>();
+
+            // Unchanged parent-derived pose means the whole subtree below is unchanged too.
+            if (ChildTransform.Get_Transform().Equals(NewTransform))
+            { return; }
+
+            auto& ChildPrevTransform = ChildAsTransform.AddOrGet<FFragment_Transform_Previous>();
+            UCk_Utils_Transform_UE::Apply_SetTransform_DirectWrite(ChildTransform, ChildPrevTransform, NewTransform);
+            ChildAsTransform.AddOrGet<FTag_Transform_Updated>();
+
+            DoSync_Descendants(ChildAsTransform, NewTransform);
+        });
     }
 
     auto
@@ -1090,5 +1159,6 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_UpdateTransform);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_SocketFollower_SyncTransform);
+CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_SocketFollower_SyncDescendants);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_EmitFinishedEvents);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_EndPlay);

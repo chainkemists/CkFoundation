@@ -168,6 +168,42 @@ namespace ck
             const FFragment_IskmProxy_SocketFollower& InFollower) const -> void;
     };
 
+    // Companion to SyncTransform (above). That pass runs in Finalize so scene-node-driven LEADERS are
+    // fresh — but Finalize is after TProcessor_SceneNode_Update (FGroup_Transform), so scene-node
+    // CHILDREN parented under a follower's output (e.g. a held item under a hand attach-point, plus
+    // that item's own probe children) would read the follower's FTag_Transform_Updated one group too
+    // late: Transform_Cleanup wipes the tag before the next frame's gate check, so after their
+    // construct-time one-shot they freeze at the follower's equip-time pose. This pass recomputes the
+    // follower's scene-node descendant subtree in place (same composition + anchor-skip contract as
+    // TProcessor_SceneNode_Update) right after the follower writes, and runs before SyncToActor so
+    // the recomputed poses land on their actors the same frame.
+    class CKISKMRENDERER_API FProcessor_IskmProxy_SocketFollower_SyncDescendants : public ck_exp::TProcessor<
+        FProcessor_IskmProxy_SocketFollower_SyncDescendants,
+        FCk_Handle_Transform,
+        TReadOnly<FFragment_Transform>,
+        TReadOnly<FFragment_IskmProxy_SocketFollower>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Transform_Finalize;
+        using RunAfter = TDepList<FProcessor_IskmProxy_SocketFollower_SyncTransform>;
+        using RunBefore = TDepList<FProcessor_Transform_SyncToActor>;
+    public:
+        using TProcessor::TProcessor;
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Transform& InTransform,
+            const FFragment_IskmProxy_SocketFollower& InFollower) const -> void;
+
+    private:
+        static auto
+        DoSync_Descendants(
+            FCk_Handle_Transform InParent,
+            const FTransform& InParentWorld) -> void;
+    };
+
     class CKISKMRENDERER_API FProcessor_IskmProxy_EmitFinishedEvents : public ck_exp::TProcessor<
         FProcessor_IskmProxy_EmitFinishedEvents,
         FCk_Handle_IskmProxy,
