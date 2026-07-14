@@ -36,7 +36,16 @@ static struct FPlayerRepHandlerRegistrar
                 { UCk_Utils_Player_UE::Assign(PlayerEntity, PlayerID); }
 
                 return ECk_RepFragment_ApplyResult::Applied;
-            }
+            },
+            // Produce-only capture (Phase 3A.4, [P1-R1]): mirror FProcessor_Player_Replicate's live-state build. NO
+            // SeedContainer — the live FProcessor_Player_ReplicateOnRestore still seeds under Model A (double-seed guard).
+            .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+            {
+                if (NOT UCk_Utils_Player_UE::Has(Entity))
+                { return {}; }
+                return FInstancedStruct::Make(FCk_RepData_Player{Entity.Get<ck::FFragment_PlayerInfo>().Get_PlayerID()});
+            },
+            .Transport = ECk_PersistenceTransport::NetAndSave
         });
     }
 } GPlayerRepHandlerRegistrar;

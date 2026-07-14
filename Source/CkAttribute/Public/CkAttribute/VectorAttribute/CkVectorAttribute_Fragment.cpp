@@ -147,7 +147,8 @@ static struct FVectorAttributeRepHandlerRegistrar
                     return Result;
                 },
                 .Produce       = &ck::attribute_restore::Produce<ck::TFragment_VectorAttribute, FCk_RepData_VectorAttributes>,
-                .SeedContainer = &ck::attribute_restore::SeedContainer<ck::TFragment_VectorAttribute, FCk_RepData_VectorAttributes>
+                .SeedContainer = &ck::attribute_restore::SeedContainer<ck::TFragment_VectorAttribute, FCk_RepData_VectorAttributes>,
+                .Transport     = ECk_PersistenceTransport::NetAndSave // v3 save capture (Phase 3A.4)
             });
     }
 } GVectorAttributeRepHandlerRegistrar;

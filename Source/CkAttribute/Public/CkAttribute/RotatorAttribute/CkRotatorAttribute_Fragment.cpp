@@ -145,7 +145,8 @@ static struct FRotatorAttributeRepHandlerRegistrar
                     return Result;
                 },
                 .Produce       = &ck::attribute_restore::Produce<ck::TFragment_RotatorAttribute, FCk_RepData_RotatorAttributes>,
-                .SeedContainer = &ck::attribute_restore::SeedContainer<ck::TFragment_RotatorAttribute, FCk_RepData_RotatorAttributes>
+                .SeedContainer = &ck::attribute_restore::SeedContainer<ck::TFragment_RotatorAttribute, FCk_RepData_RotatorAttributes>,
+                .Transport     = ECk_PersistenceTransport::NetAndSave // v3 save capture (Phase 3A.4)
             });
     }
 } GRotatorAttributeRepHandlerRegistrar;

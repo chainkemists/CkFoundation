@@ -49,7 +49,8 @@ static struct FVelocityRepHandlerRegistrar
                     if (NOT Entity.Has<ck::FFragment_Velocity_Current>())
                     { return {}; }
                     return FInstancedStruct::Make(FCk_RepData_Velocity{Entity.Get<ck::FFragment_Velocity_Current>().Get_CurrentVelocity()});
-                }
+                },
+                .Transport = ECk_PersistenceTransport::NetAndSave // v3 save capture (Phase 3A.4)
             });
     }
 } GVelocityRepHandlerRegistrar;

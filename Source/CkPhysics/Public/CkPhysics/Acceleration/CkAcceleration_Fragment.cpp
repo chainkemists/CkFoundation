@@ -47,7 +47,8 @@ static struct FAccelerationRepHandlerRegistrar
                     if (NOT Entity.Has<ck::FFragment_Acceleration_Current>())
                     { return {}; }
                     return FInstancedStruct::Make(FCk_RepData_Acceleration{Entity.Get<ck::FFragment_Acceleration_Current>().Get_CurrentAcceleration()});
-                }
+                },
+                .Transport = ECk_PersistenceTransport::NetAndSave // v3 save capture (Phase 3A.4)
             });
     }
 } GAccelerationRepHandlerRegistrar;

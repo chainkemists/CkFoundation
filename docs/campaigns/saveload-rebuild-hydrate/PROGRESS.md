@@ -10,7 +10,7 @@
 | 0 | PHASE_0.md | DONE | 2026-07-11 | CkF: 68ba192dc (dt==0), 55521d493 (oracle), <docs> (this); CkTests: 14d65ac (harness) | GREEN: Ck.Snapshot 47/47/0 (46 baseline + Oracle.StructuralBaseline), Ck.Attribute.Net 17/17/0, Net 102/101/1 (baseline red only) |
 | 1 | PHASE_1.md | **DONE** (1.1–1.6 committed+GREEN) | 2026-07-11 | CkF: 23b982c0d (framework), fd288efdd (6 migrations), 5d262f52a; CkTests: b9e7f86 | GREEN: Ck.Snapshot **48/48/0** delta-zero (all 11 Parity_MPReload + both Oracle tests pass), framework Ck.*.Net green (kiosk trio env-red, see baseline) |
 | 2 | PHASE_2.md | **DONE** (2.1–2.7 committed+GREEN; 2.7-Test2 subsumed per [P2-D3]) | 2026-07-11 | CkF: 91b96a177 (load gate core), 8c4fbce7a (fire-gating), af9fad239 (retire NeedsSetup guards); CkTests: 4522c8e (LoadGate) | GREEN: Ck.Snapshot **49/49/0** (LoadGate + AccelerationParity + 11 Parity, no over-gating hang); Net 102/98/4 framework delta-zero (3 Attribute.Net pins green; 4 fails = recorded kiosk-trio env-red + StateMachine.Net flake) |
-| 3A | PHASE_3A.md | NOT STARTED | | | |
+| 3A | PHASE_3A.md | **DONE** (3A.1–3A.6 committed+GREEN) | 2026-07-11 | CkF: 81f7b6505 (CkEcs framework), 349947218 (v3 writer), d0ce51877 (registrar transport); CkTests: 5bb9798 | GREEN: Ck.Snapshot **51/51/0** (49 baseline + V3.CaptureClassification + V3.RecipeParamsHandleRemap; delta-zero — all 11 DynamicFragment + 11 Parity + both Oracle pass); Net framework Ck.*.Net delta-zero (3 fails = recorded kiosk env-red trio; 3 Attribute.Net pins green; StateMachine.Net flake didn't fire) |
 | 3B | PHASE_3B.md | NOT STARTED | | | |
 | 4A | PHASE_4A.md | NOT STARTED | | | |
 | 4B | PHASE_4B.md | NOT STARTED | | | |
@@ -116,12 +116,38 @@ until 2.4–2.7 land. The tree's committed tip is Phase-1-green (`df06b8394`); t
 `CkReplicatedFragmentContainer_Processor.h`, `CkPersistence_ReDrive_Processor.h`, `CkEntityReplicationDriver_Processor.h`,
 `CkActorRespawn_Processor.h`, `CkProcessorGroups.h/.cpp`). `git -C Plugins/CkFoundation diff --stat` shows the exact set.
 
+## Phase-3A progress (implementation-state checkpoint — 2026-07-11)
+
+Additive phase (v3 writer beside Model A). IMPLEMENTED on disk (UNCOMMITTED, UNBUILT as of this checkpoint):
+- **3A.1** `ck::FTag_ConstructSpawned` (TRANSIENT) in `CkEntityLifetime_Fragment.h` + stamp in
+  `Request_SetupEntityWithLifetimeOwner` (`CkEntityLifetime_Utils.cpp`) — [P3A-D1].
+- **3A.2** GC-safe recipe: new `UCk_EntityScript_SpawnRecipe_UE` holder UObject + `ck::FFragment_SpawnRecipe` (pins
+  it via TStrongObjectPtr) in new `CkEntityScript_SpawnRecipe.h/.cpp`; stamped in `FProcessor_EntityScript_
+  SpawnEntity_HandleRequests::DoHandleRequest` — [P3A-F1].
+- **RemapHandles lift** ([P3A-F2]): new `CkEcs/Snapshot/CkSnapshot_HandleWalk.h/.cpp` (`ck::snapshot::RemapHandles`
+  + `ForEachHandle`); CkDynamic_Fragment_Data.cpp re-pointed at the shared copy (−124 lines).
+- **3A.3** v3 writer: new `CkSnapshot_CaptureV3.h/.cpp` (`Run_CaptureV3` + `_Registry` core); v3 format structs +
+  `FCk_Snapshot_HeaderV3` (FormatVersion=3) in `CkSnapshot_Header.h`; `Get_SaveHandlerTypes()` accessor added to the
+  registry. CkSnapshot gains a `CkLabel` dep.
+- **3A.4** 10 migrated registrars flipped `Transport → NetAndSave`; Team + Player gained per-entity Produce (no
+  SeedContainer). **REMAINING: the 4 complex deferred Produces (2dGridOccupancy, Inventory Spatial, Inventory
+  DataOnly, RenderTarget)** — being drafted by an agent, then verify+apply — [P3A-D2].
+- **3A.5** `Request_Save` dual-writes Model A + v3 into `_SnapshotBytes(V3)` / `_Header(V3)` on the SaveGame.
+- **3A.6** `Test_Snapshot_V3_Capture.cpp` (CaptureClassification + RecipeParamsHandleRemap) authored.
+
+**DONE 2026-07-11.** All 16 registrars edited (10 flip + 6 per-entity Produce; the 4 complex Produces drafted by an
+agent then VERIFIED against code by Opus). One link fix (CoreOnline dep for FUniqueNetIdWrapper::ToString in the player
+rendezvous — everything else compiled first pass). Gate GREEN (Ck.Snapshot 51/51/0, Net framework delta-zero). Commits
+81f7b6505 / 349947218 / d0ce51877 (CkF) + 5bb9798 (CkTests). Nothing pushed. Next: Phase 3B (load side).
+
 ## Campaign-added tests (protected inventory — grows as phases land)
 
 | Test name | Added in | File |
 |---|---|---|
 | Ck.Snapshot.Oracle.StructuralBaseline | Phase 0 | CkTests `Source/CkTests/Private/CkSnapshot/Test_Snapshot_Oracle_StructuralBaseline.cpp` |
 | Ck.Snapshot.Oracle.ProduceDiffBaseline | Phase 1 §1.6 | CkTests `Source/CkTests/Private/CkSnapshot/Test_Snapshot_Oracle_ProduceDiffBaseline.cpp` |
+| Ck.Snapshot.V3.CaptureClassification | Phase 3A | CkTests `Source/CkTests/Private/CkSnapshot/Test_Snapshot_V3_Capture.cpp` |
+| Ck.Snapshot.V3.RecipeParamsHandleRemap | Phase 3A | CkTests `Source/CkTests/Private/CkSnapshot/Test_Snapshot_V3_Capture.cpp` |
 
 ## Decisions made by executors (anything the plan left as A-or-B, with which was taken and why)
 
@@ -205,6 +231,55 @@ until 2.4–2.7 land. The tree's committed tip is Phase-1-green (`df06b8394`); t
   (`FTag_RepFragments_PendingApply` subsumes removals + `FFragment_PendingHydration`); no non-driver prune (hydration is
   net-mode-agnostic). Stall-bounded by the dispatcher 5s/2s timeout. Caveat (noted): cross-registry children are excluded
   from LifetimeDependents (they carry no driver on-wire — acceptable).
+
+- **[P3A-F1] (2026-07-11, Phase 3A §3A.2) — FFragment_SpawnRecipe stores its recipe on a per-entity holder UObject,
+  pinned by the fragment (Fable ruling, VERIFIED against code).** PHASE_3A §3A.2's plain-fragment sketch is GC-UNSAFE:
+  fragments are not GC-traced, so a plain `FInstancedStruct`/`TSubclassOf` member dangles — worst for NotInstanced
+  scripts (DoHandleRequest returns the archetype CDO directly, `CkEntityScript_Processor.cpp:98-101` — no per-entity
+  object exists to lean on) and for AS-defined params structs (the `FInstancedStruct`'s UScriptStruct type ptr is
+  untraced across a script reload). §4.2's asset-only rule doesn't rescue it (a loaded asset with no traced referencer
+  is collectible; the spawn→save window is the entity's whole life). The fence PRE-AUTHORIZES the fix: mirror
+  `_ReplicationData_EntityScript` (USTRUCT UPROPERTY carrier, `CkEntityReplicationDriver_Fragment_Data.h:93-134`).
+  Chosen shape: a small `UCk_EntityScript_SpawnRecipe_UE` (`UPROPERTY TSubclassOf<UCk_EntityScript_UE> _ScriptClass` +
+  `UPROPERTY FInstancedStruct _SpawnParams` — FInstancedStruct traces its inner refs via AddStructReferencedObjects
+  when a UPROPERTY), created in DoHandleRequest, pinned by the fragment via one `TStrongObjectPtr` member (mirrors
+  `FFragment_EntityScript_Current._SnapshotLoadPin`, `CkEntityScript_Fragment.h:76-82`). Works for DoesNotReplicate
+  too (no driver needed). VERIFIED: NotInstanced CDO path, the two precedents, and fragments-untraced (root doctrine)
+  all confirmed against code by the Opus main loop. NOT a human-decision fork (fence authorized the mechanism).
+- **[P3A-F2] (2026-07-11, Phase 3A §3A.3) — lift `ck_dynamic_snapshot::RemapHandles` into CkEcs as shared
+  `ck::snapshot::RemapHandles` (Fable ruling, VERIFIED against code).** Serializing the recipe's `_SpawnParams`
+  (and the deferred-six payloads) through the plain tagged-property pass SKIPS nested `FCk_Handle` fields (they are
+  Transient). The generic handle-remap walker already exists — `RemapHandles` at `CkDynamic_Fragment_Data.cpp:16-146`,
+  a deterministic `TFieldIterator` walk routing every `FCk_Handle`-DERIVED field (IsChildOf, so typed handles too;
+  top-level + nested structs + TArray/TSet/TMap with load-side rehash) through `FSnapshotContext::Snapshot_Handle`,
+  used via the two-step pattern (`_StructData.Serialize` then `RemapHandles`, `:141-145`). VERIFIED by reading the full
+  body. Decision: lift it verbatim to `CkEcs/Snapshot/CkSnapshot_HandleWalk.h/.cpp` (`CKECS_API`), add a
+  `ForEachHandle(Struct, Memory, visitor)` overload (the §3A.3 forward-ref ensure: each params handle must reference
+  an already-written saved-id), and RE-POINT CkDynamic at the shared copy (single-source; the Ck.Snapshot gate incl.
+  DynamicFragment.* tests covers the re-point — fallback is duplicate-in-CkSnapshot if it reds). Touches one CkDynamic
+  file (out of §3A named scope) — flagged in the commit. NOT a STOP (~100-line mechanical move).
+
+## Decisions — executor (Phase 3A)
+
+- **[P3A-D1] ConstructSpawned stamp site = `Request_SetupEntityWithLifetimeOwner` (create time), condition =
+  owner Has FFragment_EntityScript_Current AND NOT Has FTag_EntityScript_HasBegunPlay.** VERIFIED the EntityScript
+  spawn path routes through `Request_CreateEntity(owner)` (`CkEntityScript_Utils.cpp:169,208`) → the single choke
+  `Request_SetupEntityWithLifetimeOwner` (`CkEntityLifetime_Utils.cpp:441`) where both new-entity + owner are in
+  hand; every owned-entity create passes here. A child spawned inside a parent's `Construct()` is created
+  SYNCHRONOUSLY there (the spawn request carries a pre-made NewEntity, `CkEntityScript_Processor.cpp:147`) while the
+  owner lacks HasBegunPlay → stamp frozen correctly at create time. HasBegunPlay is the discriminator (owner still
+  in its deterministic Construct/BeginPlay build ⇒ ConstructSpawned/adopt; owner begun-play + child spawned by later
+  runtime e.g. an SM task ⇒ RuntimeSpawned — this is the CTO-N1 StoreDriver case, correctly RuntimeSpawned). Spec
+  §4.2's condition text is satisfied; picked HasBegunPlay over the FinishConstruction-window nuance (definitive
+  marker). Transient tag ⇒ never round-trips Model A.
+- **[P3A-D2] Deferred-six Produce keyed PER-ENTITY, mirroring the feature's `*_Replicate` build (NOT aggregate).**
+  §3A.4 says "emit the same RepData the per-frame *_Replicate pass builds from live state." Each *_Replicate
+  iterates a specific entity (Team/Player: the feature entity; Inventory×2: the inventory entity, storing on the
+  owner container; RenderTarget: the sync-child; 2dGrid: the grid entity) and builds RepData from THAT entity's
+  live state. Produce keyed on the same entity emits the same RepData; the owner-hosted STORAGE location is a
+  Phase-3B/Apply concern, not the Produce build. Each Produce gets a robust presence check returning unset when the
+  feature is absent (so the oracle's per-entity sweep is safe). Produce-WITHOUT-SeedContainer per [P1-R1] — the
+  still-alive `*_ReplicateOnRestore` processors keep seeding under Model A; a SeedContainer would double-seed.
 
 ## Decisions — planner rulings
 
@@ -306,3 +381,15 @@ until 2.4–2.7 land. The tree's committed tip is Phase-1-green (`df06b8394`); t
   hang), Net 102/98/4 (framework delta-zero, 3 pins green, 4 fails = recorded kiosk env-red trio + StateMachine.Net
   flake). Commits CkF 91b96a177 / 8c4fbce7a / af9fad239, CkTests 4522c8e. Decisions [P2-D1..D3] + Fable [P2-D2]
   recorded. **Phase 2 DONE.** Nothing pushed. Next: Phase 3A.
+- 2026-07-11 — **Phase 3A COMPLETE (Opus, unattended run).** Save side (spec §4.2), additive v3 writer beside Model A.
+  Implemented: 3A.1 ConstructSpawned provenance ([P3A-D1]); 3A.2 GC-safe SpawnRecipe holder+fragment (Fable [P3A-F1],
+  verified); RemapHandles lifted to shared CkEcs walker + CkDynamic re-pointed (Fable [P3A-F2], verified); 3A.3 v3
+  writer (Run_CaptureV3 + FCk_Snapshot_HeaderV3 + entity/payload tables + Get_SaveHandlerTypes); 3A.4 16 registrars
+  (10 Transport flips + 6 per-entity Produces, [P3A-D2] — the 4 complex ones agent-drafted then Opus-verified against
+  the *_Replicate builds); 3A.5 Request_Save dual-write; 3A.6 two V3 tests. Two Fable consults (recipe GC-lifetime,
+  handle-in-params serialization) + one registrar-survey + one Produce-drafter agent; every ruling verified against
+  code before applying. One compile-check caught only a single link error (FUniqueNetIdWrapper::ToString → added
+  CoreOnline dep); all code compiled first pass otherwise. **Gate GREEN:** Ck.Snapshot 51/51/0 (delta-zero + 2 new;
+  DynamicFragment/Parity/Oracle all pass — the RemapHandles lift + new Produces are regression-free), Net framework
+  Ck.*.Net delta-zero (only the recorded kiosk env-red trio, 3 Attribute.Net pins green). Commits CkF 81f7b6505 /
+  349947218 / d0ce51877, CkTests 5bb9798. Nothing pushed. Next: Phase 3B.

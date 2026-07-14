@@ -81,3 +81,147 @@ public:
     CK_PROPERTY(_TransientEntityId);
     CK_PROPERTY(_TagSectionByteOffset);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+// Format v3 — rebuild+hydrate (spec §4.2). Written ALONGSIDE the v2 image (Model A) until Phase 5; v3 stores a
+// per-entity recipe/identity table + minimal hydration payloads instead of a raw fragment image.
+
+// One provenance per persisted entity (spec §4.2). EngineOwned re-created by the level/engine flow (adopt by
+// rendezvous key); ConstructSpawned re-created by its owner's replayed Construct/BeginPlay (adopt by identity);
+// RuntimeSpawned re-created from a stored recipe.
+UENUM()
+enum class ECk_Snapshot_V3_Provenance : uint8
+{
+    EngineOwned,
+    ConstructSpawned,
+    RuntimeSpawned,
+};
+
+// One entry per persisted entity. Fields not relevant to the entry's provenance stay defaulted. Handle-bearing
+// data (spawn params) is pre-serialized into _SpawnParamsBytes with FSnapshotContext handle-remap; the entry
+// itself carries only plain fields + byte blobs, so it SerializeItem's without a handle context.
+USTRUCT()
+struct CKSNAPSHOT_API FCk_Snapshot_V3_EntityEntry
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Snapshot_V3_EntityEntry);
+
+private:
+    // Raw entt id (underlying uint32) of this entity in the saving world — the key every intra-save reference uses
+    // (lifetime/context owner, payload owner, handles inside params). The loader (Phase 3B) builds a saved→live map.
+    UPROPERTY() uint32                      _SavedId = 0xFFFFFFFFu;
+    UPROPERTY() ECk_Snapshot_V3_Provenance  _Provenance = ECk_Snapshot_V3_Provenance::RuntimeSpawned;
+
+    // Saved-id of the lifetime owner (ConstructSpawned + RuntimeSpawned). 0xFFFFFFFF == none.
+    UPROPERTY() uint32                      _LifetimeOwnerSavedId = 0xFFFFFFFFu;
+
+    // ---- EngineOwned rendezvous (exactly one is set) ----
+    UPROPERTY() FGuid                       _SaveKey;    // level-actor SaveKey GUID (zero == unset)
+    UPROPERTY() FString                     _PlayerId;   // PlayerState unique-id string (empty == standalone player 0)
+
+    // ---- ConstructSpawned identity ----
+    UPROPERTY() FString                     _Label;      // GameplayLabel under the owner (unique by record contract)
+
+    // ---- RuntimeSpawned recipe ----
+    UPROPERTY() FString                     _ScriptClassPath;
+    UPROPERTY() TArray<uint8>               _SpawnParamsBytes;      // FInstancedStruct::Serialize + handle-remap
+    UPROPERTY() uint32                      _ContextOwnerSavedId = 0xFFFFFFFFu;
+    UPROPERTY() FString                     _ActorClassPath;        // FFragment_ActorSpawnIntent, if present
+
+public:
+    CK_PROPERTY(_SavedId);
+    CK_PROPERTY(_Provenance);
+    CK_PROPERTY(_LifetimeOwnerSavedId);
+    CK_PROPERTY(_SaveKey);
+    CK_PROPERTY(_PlayerId);
+    CK_PROPERTY(_Label);
+    CK_PROPERTY(_ScriptClassPath);
+    CK_PROPERTY(_SpawnParamsBytes);
+    CK_PROPERTY(_ContextOwnerSavedId);
+    CK_PROPERTY(_ActorClassPath);
+};
+
+// One hydration payload: the byte image (tagged-property + handle-remap) a feature's Produce emitted for an entity.
+USTRUCT()
+struct CKSNAPSHOT_API FCk_Snapshot_V3_PayloadEntry
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Snapshot_V3_PayloadEntry);
+
+private:
+    UPROPERTY() uint32          _OwnerSavedId = 0xFFFFFFFFu; // the entity this payload hydrates
+    UPROPERTY() FString         _TypePath;                   // the RepData UScriptStruct path
+    UPROPERTY() TArray<uint8>   _PayloadBytes;               // FInstancedStruct::Serialize + handle-remap
+
+public:
+    CK_PROPERTY(_OwnerSavedId);
+    CK_PROPERTY(_TypePath);
+    CK_PROPERTY(_PayloadBytes);
+};
+
+// The whole v3 stream content: the entity table + the payload table. SerializeItem'd into _SnapshotBytesV3.
+USTRUCT()
+struct CKSNAPSHOT_API FCk_Snapshot_V3_Tables
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Snapshot_V3_Tables);
+
+private:
+    UPROPERTY() TArray<FCk_Snapshot_V3_EntityEntry>  _Entities;
+    UPROPERTY() TArray<FCk_Snapshot_V3_PayloadEntry> _Payloads;
+
+public:
+    CK_PROPERTY(_Entities);
+    CK_PROPERTY(_Payloads);
+};
+
+// v3 header — metadata + provenance census (the inspectable counts the classification gate asserts on).
+USTRUCT(BlueprintType)
+struct CKSNAPSHOT_API FCk_Snapshot_HeaderV3
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Snapshot_HeaderV3);
+
+public:
+    static constexpr uint16 CurrentFormatVersion = 3;
+
+private:
+    UPROPERTY() uint16          _FormatVersion = CurrentFormatVersion;
+    UPROPERTY() FString         _EngineVersion;
+    UPROPERTY() FGuid           _PluginBuildHash;
+    UPROPERTY() FDateTime       _TimestampUTC;
+    UPROPERTY() FSoftObjectPath _WorldAssetPath;
+    UPROPERTY() int32           _EntityCount = 0;
+    UPROPERTY() int32           _EngineOwnedCount = 0;
+    UPROPERTY() int32           _ConstructSpawnedCount = 0;
+    UPROPERTY() int32           _RuntimeSpawnedCount = 0;
+    UPROPERTY() int32           _PayloadCount = 0;
+    // Rule-3 unlabeled ConstructSpawned children (save-transient) and rule-5 anonymous scratch entities skipped
+    // outright — reported in the save log line; the audit count flags unlabeled children that had a Produce payload.
+    UPROPERTY() int32           _UnlabeledConstructSkippedCount = 0;
+    UPROPERTY() int32           _AnonymousSkippedCount = 0;
+    UPROPERTY() int32           _UnlabeledWithPayloadAuditCount = 0;
+
+public:
+    CK_PROPERTY(_FormatVersion);
+    CK_PROPERTY(_EngineVersion);
+    CK_PROPERTY(_PluginBuildHash);
+    CK_PROPERTY(_TimestampUTC);
+    CK_PROPERTY(_WorldAssetPath);
+    CK_PROPERTY(_EntityCount);
+    CK_PROPERTY(_EngineOwnedCount);
+    CK_PROPERTY(_ConstructSpawnedCount);
+    CK_PROPERTY(_RuntimeSpawnedCount);
+    CK_PROPERTY(_PayloadCount);
+    CK_PROPERTY(_UnlabeledConstructSkippedCount);
+    CK_PROPERTY(_AnonymousSkippedCount);
+    CK_PROPERTY(_UnlabeledWithPayloadAuditCount);
+};
