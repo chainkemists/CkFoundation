@@ -6,50 +6,7 @@
 #include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
-#include "CkAttribute/CkAttribute_RestorePersistence.h" // RegisterLazyTyped<T> + shared attribute Produce/SeedContainer
-
-#include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
-#include "CkEcs/Snapshot/CkSnapshot_Archive_Writer.h"
-#include "CkEcs/Snapshot/CkSnapshot_Archive_Reader.h"
-
-// --------------------------------------------------------------------------------------------------------------------
-// Tier-C SerializeSnapshot registration for the Float attribute family (TFragment_Attribute / -Modifier / -PreviousValues).
-// CK_REGISTER_SNAPSHOTABLE pastes the type name into a generated identifier, so ck:: cannot be passed directly
-// (the `::` breaks token-pasting). Each ck:: type is first hoisted to an unqualified file-scope alias.
-
-using FSnap_FloatAttribute_Current = ck::FFragment_FloatAttribute_Current;
-using FSnap_FloatAttribute_Min     = ck::FFragment_FloatAttribute_Min;
-using FSnap_FloatAttribute_Max     = ck::FFragment_FloatAttribute_Max;
-
-CK_REGISTER_SNAPSHOTABLE(FSnap_FloatAttribute_Current);
-CK_REGISTER_SNAPSHOTABLE(FSnap_FloatAttribute_Min);
-CK_REGISTER_SNAPSHOTABLE(FSnap_FloatAttribute_Max);
-
-using FSnap_FloatAttributeModifier_Current = ck::FFragment_FloatAttributeModifier_Current;
-using FSnap_FloatAttributeModifier_Min     = ck::FFragment_FloatAttributeModifier_Min;
-using FSnap_FloatAttributeModifier_Max     = ck::FFragment_FloatAttributeModifier_Max;
-
-CK_REGISTER_SNAPSHOTABLE(FSnap_FloatAttributeModifier_Current);
-CK_REGISTER_SNAPSHOTABLE(FSnap_FloatAttributeModifier_Min);
-CK_REGISTER_SNAPSHOTABLE(FSnap_FloatAttributeModifier_Max);
-
-using FSnap_FloatAttribute_PreviousValues_Current = ck::TFragment_Attribute_PreviousValues<ck::FFragment_FloatAttribute_Current>;
-using FSnap_FloatAttribute_PreviousValues_Min     = ck::TFragment_Attribute_PreviousValues<ck::FFragment_FloatAttribute_Min>;
-using FSnap_FloatAttribute_PreviousValues_Max     = ck::TFragment_Attribute_PreviousValues<ck::FFragment_FloatAttribute_Max>;
-
-CK_REGISTER_SNAPSHOTABLE(FSnap_FloatAttribute_PreviousValues_Current);
-CK_REGISTER_SNAPSHOTABLE(FSnap_FloatAttribute_PreviousValues_Min);
-CK_REGISTER_SNAPSHOTABLE(FSnap_FloatAttribute_PreviousValues_Max);
-
-using FSnap_RecordOfFloatAttributes = ck::FFragment_RecordOfFloatAttributes;
-CK_REGISTER_SNAPSHOTABLE(FSnap_RecordOfFloatAttributes);
-
-// Tier-C TFragment_EntityHolder specializations for the float refill relationship.
-using FSnap_RefillAttribute_Float       = ck::TFragment_RefillAttribute<FCk_Handle_FloatAttributeRefill>;
-using FSnap_RefillAttributeTarget_Float = ck::TFragment_RefillAttributeTarget<FCk_Handle_FloatAttribute>;
-
-CK_REGISTER_SNAPSHOTABLE(FSnap_RefillAttribute_Float);
-CK_REGISTER_SNAPSHOTABLE(FSnap_RefillAttributeTarget_Float);
+#include "CkAttribute/CkAttribute_RestorePersistence.h" // shared attribute Produce + TryHydrationApply helpers
 
 // --------------------------------------------------------------------------------------------------------------------
 

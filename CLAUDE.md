@@ -246,7 +246,7 @@ Full expansions, constraints, and add-a-new-X checklists: `ck-macros-and-codegen
 | `CK_REQUEST_DEFINE_DEBUG_NAME(T)` | Request debug identity | On every request struct |
 | `CK_GENERATED_BODY_HANDLE_TYPESAFE(T)` | Typesafe handle body | Declare in `_Fragment_Data.h`; pair with `CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE` |
 | `CK_REGISTER_PROCESSOR(T)` | Processor self-registration | Top of the processor .cpp |
-| `CK_REGISTER_SNAPSHOTABLE(T)` | Snapshot participation — **oracle-only since Phase 5** | Registration is compiled only under `CK_WITH_FIDELITY_ORACLE` (= `!UE_BUILD_SHIPPING`); the v3 rebuild+hydrate load never consults the Model-A registry (fidelity oracle + registry-level round-trip tests are its only consumers). Global registration — stale binaries lie; rebuild before trusting green tests (full trap: `ck-debugging-playbook`) |
+| `CK_REGISTER_SNAPSHOTABLE(T)` | **REMOVED** (Model-A purge, 2026-07-13) | The Model-A snapshot registry + fidelity oracle were deleted whole. Save/load is now v3 rebuild+hydrate only: a feature persists by registering a Produce/Apply handler on `FCk_ReplicatedFragmentHandlerRegistry` (`CkEcs/Net/ReplicatedFragmentContainer`, save subset via `Get_SaveHandlerTypes`); entities rebuild from spawn recipes on load. There is no per-fragment registration macro. Holder/record `_ROUNDTRIP`/`_TRANSIENT` policy classes are retained inert pending the Option-A macro retirement. |
 | `CK_DEFINE_CUSTOM_FORMATTER_ENUM(E)` | fmt support for enums | Expected on every UENUM |
 
 ## Where things live

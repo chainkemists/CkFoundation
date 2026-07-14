@@ -6,41 +6,6 @@
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 #include "CkAttribute/CkAttribute_RestorePersistence.h" // RegisterLazyTyped<T> + shared attribute Produce/SeedContainer
 
-#include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
-#include "CkEcs/Snapshot/CkSnapshot_Archive_Writer.h"
-#include "CkEcs/Snapshot/CkSnapshot_Archive_Reader.h"
-
-// --------------------------------------------------------------------------------------------------------------------
-// Tier-C SerializeSnapshot registration for the Rotator attribute family — mirrors the Float family.
-// CK_REGISTER_SNAPSHOTABLE token-pastes the type name, so ck:: types are hoisted to file-scope aliases.
-
-using FSnap_RotatorAttribute_Current = ck::FFragment_RotatorAttribute_Current;
-using FSnap_RotatorAttribute_Min     = ck::FFragment_RotatorAttribute_Min;
-using FSnap_RotatorAttribute_Max     = ck::FFragment_RotatorAttribute_Max;
-
-CK_REGISTER_SNAPSHOTABLE(FSnap_RotatorAttribute_Current);
-CK_REGISTER_SNAPSHOTABLE(FSnap_RotatorAttribute_Min);
-CK_REGISTER_SNAPSHOTABLE(FSnap_RotatorAttribute_Max);
-
-using FSnap_RotatorAttributeModifier_Current = ck::FFragment_RotatorAttributeModifier_Current;
-using FSnap_RotatorAttributeModifier_Min     = ck::FFragment_RotatorAttributeModifier_Min;
-using FSnap_RotatorAttributeModifier_Max     = ck::FFragment_RotatorAttributeModifier_Max;
-
-CK_REGISTER_SNAPSHOTABLE(FSnap_RotatorAttributeModifier_Current);
-CK_REGISTER_SNAPSHOTABLE(FSnap_RotatorAttributeModifier_Min);
-CK_REGISTER_SNAPSHOTABLE(FSnap_RotatorAttributeModifier_Max);
-
-using FSnap_RotatorAttribute_PreviousValues_Current = ck::TFragment_Attribute_PreviousValues<ck::FFragment_RotatorAttribute_Current>;
-using FSnap_RotatorAttribute_PreviousValues_Min     = ck::TFragment_Attribute_PreviousValues<ck::FFragment_RotatorAttribute_Min>;
-using FSnap_RotatorAttribute_PreviousValues_Max     = ck::TFragment_Attribute_PreviousValues<ck::FFragment_RotatorAttribute_Max>;
-
-CK_REGISTER_SNAPSHOTABLE(FSnap_RotatorAttribute_PreviousValues_Current);
-CK_REGISTER_SNAPSHOTABLE(FSnap_RotatorAttribute_PreviousValues_Min);
-CK_REGISTER_SNAPSHOTABLE(FSnap_RotatorAttribute_PreviousValues_Max);
-
-using FSnap_RecordOfRotatorAttributes = ck::FFragment_RecordOfRotatorAttributes;
-CK_REGISTER_SNAPSHOTABLE(FSnap_RecordOfRotatorAttributes);
-
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

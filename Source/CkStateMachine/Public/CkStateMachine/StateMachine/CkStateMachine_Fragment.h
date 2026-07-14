@@ -27,9 +27,6 @@ class UCk_EntityScript_UE;
 class UCk_Utils_StateMachine_UE;
 class UCk_Utils_SmTask_UE;
 class UCk_Utils_SmCondition_UE;
-class FArchive;
-
-namespace ck { class FSnapshotContext; }
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -130,17 +127,6 @@ namespace ck
         friend class FProcessor_Sm_HydrationResume;
         friend class ::UCk_Utils_StateMachine_UE;
 
-    public:
-        using IsSnapshotable = void;
-
-        // Tier-C: the persisted DECISION RECORD only — {_RunStatus byte, _CurrentStateClass by soft
-        // class path (skip-if-missing on load)}. _CurrentStateHandle is deliberately NOT persisted:
-        // the live state graph (state entity + its tasks/conditions/timers/bound signals) is
-        // meaningless post-restore; FProcessor_Sm_HydrationResume re-drives the SM through its own
-        // Start/Transition machinery to recreate it. Body out-of-line in
-        // CkStateMachine_Fragment.cpp (needs the complete UCk_SmState_EntityScript for TryLoadClass).
-        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
-
     private:
         ECk_SmRunStatus _RunStatus = ECk_SmRunStatus::Stopped;
         FCk_Handle_SmState _CurrentStateHandle;
@@ -199,12 +185,6 @@ namespace ck
     public:
         CK_GENERATED_BODY(FFragment_Sm_ParentHierarchy);
 
-    public:
-        using IsSnapshotable = void;
-
-        // Tier-C: plain tag array by name. Body out-of-line in CkStateMachine_Fragment.cpp.
-        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
-
     private:
         TArray<FGameplayTag> _ParentHierarchy;
 
@@ -234,14 +214,6 @@ namespace ck
             TSubclassOf<UCk_SmState_EntityScript> _OverrideStateClass;
             TArray<FGameplayTag> _CachedStatesToOverride;
         };
-
-    public:
-        using IsSnapshotable = void;
-
-        // Tier-C: entries persist by class path + cached override tags by name, restored BEFORE any
-        // processor runs so the re-drive's Setup/Create sees the same override table the saving
-        // world had. Body out-of-line in CkStateMachine_Fragment.cpp.
-        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
 
     private:
         TArray<FEntry> _Overrides;

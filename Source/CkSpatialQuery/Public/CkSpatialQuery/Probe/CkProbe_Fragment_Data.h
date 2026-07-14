@@ -15,13 +15,7 @@
 #include <NativeGameplayTags.h>
 #include <PhysicalMaterials/PhysicalMaterial.h>
 
-#include "CkEcs/Snapshot/CkSnapshot_Context.h" // ck::FSnapshotContext (FCk_Probe_RayCastPersistent_Settings::SerializeSnapshot)
-
 #include "CkProbe_Fragment_Data.generated.h"
-
-// --------------------------------------------------------------------------------------------------------------------
-
-class FArchive;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -579,12 +573,6 @@ struct CKSPATIALQUERY_API FCk_Probe_RayCastPersistent_Settings
 
 public:
     CK_GENERATED_BODY(FCk_Probe_RayCastPersistent_Settings);
-    using IsSnapshotable = void;
-
-    // Tier-B: the persistent line-trace config (direction/filter/modes/policy) round-trips, and the _StartPos
-    // Transform handle is REMAPPED via FSnapshotContext::Snapshot_Handle (its raw entity id is meaningless across a
-    // load). Body in the .cpp. The per-tick overlap set is runtime (re-populated on the next cast) — not captured.
-    auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

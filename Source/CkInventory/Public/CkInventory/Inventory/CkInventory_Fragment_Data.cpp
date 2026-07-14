@@ -3,15 +3,7 @@
 #include "CkInventory/Inventory/DataOnly/CkInventory_DataOnly_Fragment_Data.h"
 #include "CkInventory/Inventory/Spatial/CkInventory_Spatial_Fragment_Data.h"
 
-#include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
-#include "CkEcs/Snapshot/CkSnapshot_Archive_Writer.h"
-#include "CkEcs/Snapshot/CkSnapshot_Archive_Reader.h"
-
 #include <NativeGameplayTags.h>
-
-// --------------------------------------------------------------------------------------------------------------------
-
-CK_REGISTER_SNAPSHOTABLE(FCk_Fragment_Inventory_ParamsData);
 
 // --------------------------------------------------------------------------------------------------------------------
 

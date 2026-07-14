@@ -11,11 +11,7 @@ namespace ck
         auto RawId = static_cast<std::underlying_type_t<entt::entity>>(InOutEntity);
         InAr << RawId;
 
-        if (InAr.IsLoading() && _Loader != nullptr)
-        {
-            InOutEntity = _Loader->map(static_cast<entt::entity>(RawId));
-        }
-        else if (InAr.IsLoading() && _SavedIdMap != nullptr)
+        if (InAr.IsLoading() && _SavedIdMap != nullptr)
         {
             // v3 rebuild+hydrate: remap the raw saved id through the loader-built saved-id -> live-handle map.
             // Absent (incl. the 0xFFFFFFFF k_NoEntity sentinel or a non-persisted ref) -> entt::null -> invalid handle.

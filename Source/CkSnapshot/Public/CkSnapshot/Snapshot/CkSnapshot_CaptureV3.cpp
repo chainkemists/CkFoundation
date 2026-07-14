@@ -87,9 +87,9 @@ namespace ck::snapshot
             return Depth;
         }
 
-        // Serialize an FInstancedStruct (spawn params or a Produce payload) to a byte blob: tagged-property data via
-        // a name-as-string proxy (object refs by path, Transient handle fields skipped), then the shared handle
-        // walker writes each FCk_Handle's raw saved entity id. Mirrors CkDynamic's two-step SerializeSnapshot.
+        // Serialize an FInstancedStruct (spawn params or a Produce payload) to a byte blob in two steps: first
+        // tagged-property data via a name-as-string proxy (object refs by path, Transient handle fields skipped),
+        // then the shared handle walker writes each FCk_Handle's raw saved entity id.
         auto
             SerializeInstancedStruct(
                 const FInstancedStruct& InStruct)
@@ -102,7 +102,7 @@ namespace ck::snapshot
             auto MemoryWriter = FMemoryWriter{Blob, /*bIsPersistent=*/true};
             constexpr auto LoadIfFindFails = true;
             auto Proxy = FObjectAndNameAsStringProxyArchive{MemoryWriter, LoadIfFindFails};
-            Proxy.ArIsSaveGame = false;      // capture all non-Transient fields (matches FSnapshotArchive_Writer)
+            Proxy.ArIsSaveGame = false;      // false ⇒ capture every non-Transient UPROPERTY, regardless of CPF_SaveGame
             Proxy.SetIsPersistent(true);
 
             auto Context = ck::FSnapshotContext{}; // save-mode handle write (raw id); no loader remap on save
