@@ -4,6 +4,7 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
+#include "../../../CkUI_Log.h" // module-root header (CkUI's log lives beside its Build.cs, not under Public/)
 #include "CkUI/Layout/CkUI_LayoutConfigAsset.h"
 #include "CkUI/Layout/CkUI_Layout_Subsystem.h"
 #include "CkUI/Layout/CkUI_PrimaryGameLayout.h"
@@ -125,7 +126,20 @@ auto
     { return; }
 
     if (Subsystem->Has_Layout())
-    { return; }
+    {
+        // A surviving layout means the previous world's HUD never tore it down (its DoShutdownUI ran
+        // after the PlayerController died — see the early-outs below). Returning silently here left the
+        // stale layout on screen with dead bindings AND suppressed OnLayoutReady, so game HUD subclasses
+        // never re-injected the fresh world's context ("UI not bound after a v3 load", 2026-07-14).
+        // Adopt-and-rebind is not safe (the surviving widgets hold dead entity handles) — destroy the
+        // stale layout and rebuild from this world's config, loudly.
+        ck::ui::Warning(TEXT("HUD [{}] found a surviving PrimaryGameLayout [{}] from a previous world — "
+            "destroying it and rebuilding so this world's HUD binds fresh"),
+            this, Subsystem->Get_Layout());
+        Subsystem->DestroyLayout();
+    }
+
+    ck::ui::Verbose(TEXT("HUD [{}] creating PrimaryGameLayout from config [{}]"), this, LayoutConfig);
 
     Subsystem->OnLayoutCreated.AddUObject(this, &ThisClass::HandlePrimaryGameLayoutCreated);
     Subsystem->OnLayoutDestroyed.AddUObject(this, &ThisClass::HandlePrimaryGameLayoutDestroyed);
@@ -146,12 +160,23 @@ auto
     const auto* PlayerController = GetOwningPlayerController();
 
     if (ck::Is_NOT_Valid(PlayerController))
-    { return; }
+    {
+        // World-teardown ordering can destroy the PC before the HUD's EndPlay — the layout then survives
+        // into the next world (its subsystem is LocalPlayer-scoped). The next world's HUD detects and
+        // destroys it in HandleLayoutConfigLoaded; log so the leak is attributable.
+        ck::ui::Verbose(TEXT("HUD [{}] shutdown: owning PlayerController already gone — layout teardown "
+            "deferred to the next world's HUD"), this);
+        return;
+    }
 
     const auto* LocalPlayer = PlayerController->GetLocalPlayer();
 
     if (ck::Is_NOT_Valid(LocalPlayer))
-    { return; }
+    {
+        ck::ui::Verbose(TEXT("HUD [{}] shutdown: no LocalPlayer — layout teardown deferred to the next "
+            "world's HUD"), this);
+        return;
+    }
 
     auto* Subsystem = LocalPlayer->GetSubsystem<UCk_UI_Layout_Subsystem_UE>();
 
@@ -160,6 +185,8 @@ auto
 
     Subsystem->OnLayoutCreated.RemoveAll(this);
     Subsystem->OnLayoutDestroyed.RemoveAll(this);
+
+    ck::ui::Verbose(TEXT("HUD [{}] shutdown: destroying PrimaryGameLayout [{}]"), this, Subsystem->Get_Layout());
     Subsystem->DestroyLayout();
 }
 
