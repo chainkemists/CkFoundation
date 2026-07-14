@@ -111,6 +111,15 @@ static struct FFloatAttributeRepHandlerRegistrar
             {
                 .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
                 {
+                    // Save-load hydration (authority-side, Phase 4B): the v3 payload is CHILD-keyed (per-attribute-entity
+                    // Produce), so under hydration Entity IS the attribute entity — write its value directly via
+                    // ApplyReplicatedFloatAttributeEntry. The OWNER-keyed loop below never resolves it. Unset => not a
+                    // hydration apply => fall through (net receive path byte-identical, gated on FCk_HydrationApplyScope).
+                    if (const auto Hydrated = ck::attribute_restore::TryHydrationApply<ck::TFragment_FloatAttribute, FCk_RepData_FloatAttributes>(
+                            Entity, New, &ApplyReplicatedFloatAttributeEntry);
+                        Hydrated.IsSet())
+                    { return *Hydrated; }
+
                     const auto& NewAttrs = New.Get<FCk_RepData_FloatAttributes>().Attributes;
                     const auto* OldAttrs = Old.IsSet()
                         ? &Old.GetValue().Get<FCk_RepData_FloatAttributes>().Attributes

@@ -211,6 +211,18 @@ namespace ck
             const FFragment_RenderTarget_Current& InCurrent,
             const TArray<FCk_RenderTarget_DrawCmd>& InCmds) -> void;
 
+        // Save-load hydration (Phase 4B): re-drives a v3-restored sync CHILD from its saved single-channel
+        // payload — refills the persisted ring, restores the author seq watermark, repaints, and (Replicates)
+        // re-publishes into a fresh owner container. Lives here because this class is already a friend of
+        // FFragment_RenderTarget_Current (for the _NextBatchSeq write) and owns DoApplyBatch (the repaint
+        // primitive). Returns false (NotReady, retry) until the child's Setup has composed Current; true
+        // (Applied) after exactly one repaint. Called from the hydration-scope branch of the
+        // FCk_RepData_RenderTarget Apply handler (CkRenderTarget_Replication.cpp).
+        static auto
+        HydrateFromSavedChannel(
+            FCk_Handle& InChild,
+            const FCk_RenderTarget_ChannelState& InChannel) -> bool;
+
     private:
         static auto
         DoApplyCmdToCanvas(

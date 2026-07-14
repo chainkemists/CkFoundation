@@ -1,19 +1,30 @@
 # Continuation — CkSnapshot rebuild+hydrate, Phase 4B (then 4A.2 → 5)
 
-**One-line:** Phase 4A.1 is DONE + COMMITTED — CkStateMachine now has a Save-transport hydration path
-(`FProcessor_Sm_HydrationResume`), so SM run-state restores across a v3 load. Gate `Ck.Snapshot` **52/45/7**
-(both `Parity.StateMachine*_MPReload` GREEN, 9→7 casualties; the 7 remaining are Phase-4B feature-payload
-casualties). You are **Opus**; stay Opus for implementation; route design forks through a **Fable** agent
-(`Agent`, `model:"fable"`, read-only) and VERIFY every ruling against cited code yourself before implementing.
+**One-line:** Phase 4A.1 DONE. Phase 4B — **ALL ACTIONABLE CASUALTIES CLOSED**: TagSet + RenderTarget +
+Attributes×5 + AnimPlan all green (the client-shaped-Apply / empty-seed-Produce hydration pattern, validated
+5×). **Grid + Inventory×2 DEFERRED → [INV-A]** (anonymous entities — an Adam product/architecture fork, protocol
+STOP-c). Ck.Snapshot **52/49/3** (the 3 = the [INV-A] trio). REMAINING 4B = ADDITIVE oracle-coverage only:
+params-mutators (4B.1), MontagePlayer rebind, AS smoke (4B.3), OracleParity wiring (4B.4). You are **Opus**;
+stay Opus for implementation; route design forks through a **Fable** agent (`Agent`, `model:"fable"`, read-only)
+and VERIFY every ruling against cited code yourself before implementing.
 
 ## 0. STATE (verify at start)
-- CkFoundation `feature/save-load-improvements` HEAD = the 4A.1 docs commit, on top of:
-  - `705e7d57e` feat(CkStateMachine): SM redrive as Save-transport hydration; delete RestoreRedrive
-- CkTests HEAD = `773a4d2` docs(CkSnapshot): reword SM round-trip comment for HydrationResume rename.
-- Tree CLEAN after the 4A.1 commits. NOTHING pushed. Editor CLOSED.
-- Net baseline for 4B diffs = `CkAuto/logs/p4a-net.log` (102 total; 3 fails = the kiosk env-trio
-  `Bb_AutoTest_RentnetKiosk*`; the SM.Net flake `OwningClientAuth_SubSm_AuthorityGatedTask` passed this run).
-  A NEW framework `Ck.*.Net` red = investigate before 4B code.
+- CkFoundation `feature/save-load-improvements` HEAD = latest docs commit, on top of (newest first):
+  - `8d7150efb` docs(CkSnapshot): 4B — Attributes×5 + AnimPlan green; all actionable casualties closed
+  - `19613a1eb` fix(CkSnapshot): LifetimeDependents restore-invariant respects lazy-prune weak-ref contract ([P4B-D4])
+  - `5b7c1e077` feat(CkAttribute): value-emitting Produce + hydration-scope authority write (Attributes×5)
+  - `db83e687a` feat(CkAnimation): AnimPlan hydration-scope authority write
+  - `01b5530e1` docs(CkSnapshot): RenderTarget green; Grid→[INV-A]; Attributes/AnimPlan design
+  - `ede66976f` feat(CkRenderTarget): hydration-scope authority write (child-keyed transplant)
+  - `5088f5336` feat(CkTagSet) · `705e7d57e` feat(CkStateMachine) (prior sessions)
+- CkTests HEAD = `773a4d2` (UNCHANGED this session — the parity tests already existed; no CkTests commit needed for casualties).
+- Tree CLEAN. NOTHING pushed. Editor CLOSED.
+- Net baseline = `CkAuto/logs/p4b-attr-net.log` (102 total; fails = kiosk env-trio `Bb_AutoTest_RentnetKiosk*` +
+  the documented `Ck.StateMachine.Net.OwningClientAuth_SubSm` flake — both ignorable). A NEW framework `Ck.*.Net` red = investigate.
+- Remaining Ck.Snapshot casualties (3, ALL [INV-A]-deferred, do NOT attempt without an Adam scope call):
+  `Parity.{GridPlacements,InventoryDataOnly,InventorySpatial}_MPReload`.
+- The 4 actionable casualties this session's session closed (RenderTarget/Attributes×5/AnimPlan) + the invariant fix
+  are documented in PROGRESS §Decisions [P4B-D2/D3/F2/D4]. PROGRESS is canonical; trust it over this file.
 
 ## 1. READ FIRST (in order), in Plugins/CkFoundation/docs/campaigns/saveload-rebuild-hydrate/
 1. PROGRESS.md — §Status board (4A.1 DONE row), §"4A.1 IMPLEMENTATION STATE" (what shipped + the gate),
@@ -81,3 +92,53 @@ criterion; fold PHASE_4B.md's params-mutator/AS-smoke steps in as additional ora
 - `FTag_Sm_IsSubMachine` is now write-only (its sole reader, the deleted orphan-destroy, is gone). Kept as the sub-SM
   discriminator for 4A.2/N1 sub-SM handling. Reuse or remove it there.
 - Cross-repo: CkTests never ahead of / merged before CkFoundation. No push.
+
+## 6. Fable 4B design map for the remaining client-shaped casualties (VERIFIED against code where noted; re-verify anchors)
+Uniform SHELL (hydration-scope branch FIRST → authority write → Applied/NotReady, the TagSet/4A.1 shape), per-feature BODY.
+**TagSet is the DONE reference** (`CkTagSet_Fragment.cpp` Apply: `Set_Tags(saved)` REPLACE + `AddOrGet<FTag_TagSet_MayRequireReplication>()` arm; NotReady until `Has<FFragment_TagSet>`).
+
+- **Grid — `Parity.GridPlacements_MPReload`** (Apply-branch-only IF occupants map). Registrar `Ck2dGridOccupancy_Fragment.cpp:39-79`;
+  Entity IS the grid (Has `FFragment_RecordOf_GridPlacements`). Under hydration scope: cast to `FCk_Handle_2dGridSystem`
+  (`UCk_Utils_2dGridSystem_UE::Cast`), then for each `FCk_2dGridPlacement_ReplicatedEntry` in
+  `New.Get<FCk_RepData_2dGridPlacements>().Placements` (accessors `Get_Occupant/Anchor/Rotation/Cells`,
+  `Ck2dGridPlacement_Fragment_Data.h:117-120`) call `UCk_Utils_2dGridOccupancy_UE::Request_AddPlacement(Grid, Occupant,
+  Anchor, Rotation, Cells)` (`Ck2dGridOccupancy_Utils.h:32-37` — immediate compose, self-arms replication, auto-replaces
+  a stale placement for that occupant). **ALL-OR-NOTHING:** resolve ALL occupants first (`ck::IsValid(Get_Occupant())`);
+  if ANY invalid → NotReady BEFORE placing any (else a partial placement duplicates on the dispatcher retry). ADD suffices
+  (nothing seeds placements at Construct). **⚠️ UNVERIFIED RISK (check first):** whether the `GridPlacements_MPReload`
+  test's OCCUPANTS are v3-captured (mapped). If they are inventory-item-style anonymous entities (see Inventory below),
+  the occupants never map → perpetual NotReady-timeout → Grid stays red and becomes the SAME [INV-A] class. Read the test
+  fixture before implementing; if occupants are anonymous, fold Grid into [INV-A].
+
+- **RenderTarget — `Parity.RenderTarget_MPReload`** (the special one; PHASE_4B §4B.2). NOT the request path — **transplant the
+  Model-A `FProcessor_RenderTarget_ReplicateOnRestore` body** (`CkRenderTarget_Processor.cpp:397-500`) into a static helper
+  `ck_render_target_processor::HydrateFromSavedChannel(Child, channel)` in `CkRenderTarget_Processor.cpp` (needs friend access
+  to `Current._NextBatchSeq`, `CkRenderTarget_Fragment.h:214,237`). The payload is **CHILD-keyed** (Produce reads the sync
+  child's Params+AuthoredLog, `CkRenderTarget_Replication.cpp:120-140`), NOT owner-keyed like the net Apply's `TryGet_RenderTarget`
+  loop — the hydration branch operates on the child directly. Helper: refill `FFragment_RenderTarget_AuthoredLog` from the
+  payload batches; `Current._NextBatchSeq = LatestSeq+1`; `FProcessor_RenderTarget_HandleRequests::DoApplyBatch(Child, Current,
+  Batch.Get_Cmds())` per batch in order; if `Get_Replication()==Replicates` && host → refill the owner container via
+  `TryAddContainerFragment`+`TryUpdateContainerFragment<FCk_RepData_RenderTarget>` (mirror `:470-500`). **EXACTLY-ONCE repaint:**
+  evaluate ALL NotReady preconditions (child composed + NOT `Has<FTag_RenderTarget_NeedsSetup>`; if Replicates → owner driver
+  present via `UCk_Utils_EntityReplicationDriver_UE::Has(Owner)`) BEFORE any mutation (replaying translucent draws per retry
+  accumulates alpha — Model-A warns at `:414-417`). Repaint runs unconditionally; only the container-refill half gates on
+  Replicates (DoesNotReplicate RTs are still save-worthy). **⚠️ RISK Fable flagged:** verify the load's Full settle-pump runs
+  RenderTarget Setup (`FGroup_Gameplay_Rendering`) before the hydration dispatcher's 5s timeout — check `DoTick_Load`'s pump scope.
+
+- **Inventory DataOnly + Spatial — `Parity.Inventory{DataOnly,Spatial}_MPReload` — [INV-A], DEFER to Adam.** Their payload
+  carries only ITEM HANDLES (`FCk_InventoryItem_{DataOnly,Spatial}_ReplicatedEntry`), but item entities are built via
+  `UCk_Utils_EntityReplicationDriver_UE::Request_BuildAndReplicate` with a `UCk_InventoryItem_Definition` archetype
+  (`CkItem_Utils.cpp` `Create`) — NOT the EntityScript spawn path, so **no `FFragment_SpawnRecipe`** → v3 provenance Rule 5
+  ("anonymous scratch", skipped `CkSnapshot_CaptureV3.cpp:267-271`) → items are not captured and not rebuilt. On the loading
+  authority the saved handles remap to nothing → an Apply branch would drain against invalid handles + assert-storm. **Real
+  fix is a product/architecture fork (Adam):** (a) payload ENRICHMENT — Produce emits per-item re-creation data (definition
+  soft path / `FCk_InventoryItem_CoreInfo`+traits + stack count, which is an IntegerAttribute → intersects the Attributes
+  empty-seed workstream; note `GetOrCreate_TransientItemDefinition` complicates asset-path-only), and the Apply re-creates via
+  `UCk_Utils_Item_UE::Create`/`Request_AddItemByDefinition` then places (Spatial); OR (b) make items SpawnRecipe-carrying so the
+  loader rebuilds them and the Apply stays a pure re-link (item-architecture change with net implications). Do NOT wire an Apply
+  branch that stamps the sync fragment authority-side — worse than the honest red.
+
+- **Attributes + AnimPlan — `Parity.{Attributes,AnimPlan}_MPReload`** (empty-seed Produce, [P1-D2]): SEPARATE workstream — make
+  their Produce value-emitting (the per-owner upsert-merge the comment flags: multiple attributes share one owner container)
+  AND ensure the Apply writes authority-side. Stack-count for Inventory is an IntegerAttribute → these two workstreams intersect;
+  consider sequencing Attributes before the Inventory [INV-A] decision.
