@@ -6,6 +6,21 @@ restores) AND closes CTO note N1 (the boot-infra-vs-gameplay spawner discriminat
 implementation; route design forks through a **Fable** agent (`Agent`, `model:"fable"`, read-only) and VERIFY every
 ruling against the cited code yourself before implementing.
 
+## ⚠️ STATE (2026-07-12): DESIGN LOCKED — implementation GATED on 3 Adam decisions
+The two 4A design forks are RESOLVED (Fable, recorded in PROGRESS §Decisions—Phase-4A as **[P4A-F1]** SM redrive→hydration
++ **[P4A-F2]** N1 discriminator; foundation spot-verified). NO 4A code is on disk. Before implementing, get Adam's call on
+the three flagged decisions in PROGRESS §Blockers:
+- **[SM-A]** the canonical-single-event Produce deviates from PHASE_4A's literal "emit as the replicate pass builds" (the
+  live ring's seqs restart in the rebuilt world → OracleParity byte-diff can't close). Low-risk; confirm or accept as judgment.
+- **[N1-A] (load-bearing)** 4A-as-designed makes the framework SpawnerResumes test green + kills N1 duplicates, but does NOT
+  restore a boot-created gameplay singleton's OWN state (BB `StoreDriver`) — that needs boot-singleton adopt-by-rendezvous,
+  a phase-worth of work + a scope call (4A-adjacent vs 4B vs post-campaign). Decide scope BEFORE building, or 4A ships partial N1.
+- **[SM-B]** designer-facing doctrine: spawn decisions must not live on the InitialState or the saved state (or be
+  idempotent with hydrated guards). Sign-off for spec §4.2.
+Once decided: implement per [P4A-F1]/[P4A-F2] (FULL-verify each cited anchor first — the design was spot-verified, not
+fully verified), then §2 below. [P4A-F1]/[P4A-F2] SUPERSEDE §2's paraphrase where they differ (esp. "delete
+FProcessor_Sm_RestoreRedrive" = RENAME to FProcessor_Sm_HydrationResume; Produce = canonical single-event, NOT the live ring).
+
 ## 0. READ FIRST (in order)
 1. `PROGRESS.md` — §Status board (3B DONE row), **§Phase-3B DONE** (gate-3 verdict + the 9-casualty categorization +
    the M2a misdiagnosis correction), §Decisions [P3B-D6]/[P3B-M2a], and the Unattended execution protocol.

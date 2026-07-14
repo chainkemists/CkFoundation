@@ -51,16 +51,10 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_Sm_Paused);
 
     // Marks a sub-state-machine (created by UCk_SmTask_SubStateMachine, owned by a parent SM's task) vs
-    // a top-level SM. Sub-SMs are derived graph state: a snapshot load captures them, but the parent's
-    // redrive recreates the live sub-SM fresh — so FProcessor_Sm_RestoreRedrive destroys the restored
-    // (orphan) copy on load. Top-level SMs never carry this tag.
+    // a top-level SM. Top-level SMs never carry this tag. A sub-SM is derived graph state — under the v3
+    // rebuild+hydrate load its parent's task recreates it fresh when the parent redrives, so it is never
+    // image-restored as an orphan (the Model-A orphan-cleanup this tag once gated has been retired).
     CK_DEFINE_ECS_TAG(FTag_Sm_IsSubMachine);
-
-    // Per-feature restore-redrive done marker. ck::FTag_Snapshot_JustRestored is shared by every
-    // feature on the restored entity, so no single feature may remove it — FProcessor_Sm_RestoreRedrive
-    // pairs it with this done tag instead. Never leaks across restores: a restore rebuilds entities
-    // from snapshot bytes and this tag is not snapshotted.
-    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_Sm_RestoreRedriven);
 
     // Marks an SM child entity (Task/Condition) whose user-authored EntityScript has been
     // deferred. A commit processor materializes the script before EntityScript processors
@@ -133,7 +127,7 @@ namespace ck
         friend class FProcessor_Sm_CommitPendingTransition;
         friend class FProcessor_Sm_Setup;
         friend class FProcessor_Sm_EndPlay;
-        friend class FProcessor_Sm_RestoreRedrive;
+        friend class FProcessor_Sm_HydrationResume;
         friend class ::UCk_Utils_StateMachine_UE;
 
     public:
@@ -142,8 +136,8 @@ namespace ck
         // Tier-C: the persisted DECISION RECORD only — {_RunStatus byte, _CurrentStateClass by soft
         // class path (skip-if-missing on load)}. _CurrentStateHandle is deliberately NOT persisted:
         // the live state graph (state entity + its tasks/conditions/timers/bound signals) is
-        // meaningless post-restore; FProcessor_Sm_RestoreRedrive re-drives the SM through its own
-        // Setup/Start/Transition machinery to recreate it. Body out-of-line in
+        // meaningless post-restore; FProcessor_Sm_HydrationResume re-drives the SM through its own
+        // Start/Transition machinery to recreate it. Body out-of-line in
         // CkStateMachine_Fragment.cpp (needs the complete UCk_SmState_EntityScript for TryLoadClass).
         auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
 
@@ -286,21 +280,21 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Transient phase ladder for the post-snapshot-load re-drive (FProcessor_Sm_RestoreRedrive).
-    // Created on first visit from the RESTORED FFragment_Sm_Current's decision record (which is then
-    // reset to virgin so the SM re-enters its lifecycle from scratch); removed when the re-drive
-    // converges on the desired {RunStatus, CurrentStateClass}. Never snapshotted (transient by
-    // construction — only exists between a load and the re-drive's completion).
-    struct CKSTATEMACHINE_API FFragment_Sm_RestorePending
+    // Transient phase ladder for the save-load SM hydration redrive (FProcessor_Sm_HydrationResume). Stashed by the
+    // SM's save-transport Apply handler (CkStateMachine_Replication.cpp) via Populate() with the saved
+    // {RunStatus, CurrentStateClass}; the ladder then drives the freshly-composed SM to that state through its own
+    // Start/Transition/Finalize machinery and REMOVES itself (the done marker) once it converges. The fresh world's
+    // normal boot already composed + Setup-drove the SM (no virgin reset needed — unlike the old Model-A re-drive).
+    // Never snapshotted (transient by construction — only exists between a load and the redrive's completion).
+    struct CKSTATEMACHINE_API FFragment_Sm_HydrationResume
     {
     public:
-        CK_GENERATED_BODY(FFragment_Sm_RestorePending);
+        CK_GENERATED_BODY(FFragment_Sm_HydrationResume);
 
-        friend class FProcessor_Sm_RestoreRedrive;
+        friend class FProcessor_Sm_HydrationResume;
 
         enum class EPhase : uint8
         {
-            WaitDriver,   // decision record stashed; wait for the respawn pass to re-establish the replication driver, then re-add RequiresSetup
             Start,        // drive RunStatus toward the desired value (Start, or Stop if AutoStart resurrected a saved-Stopped SM)
             Transition,   // once Running: transition InitialState -> saved state (Option A replay-through)
             Finalize      // re-apply Paused if that's what was saved, then mark done
@@ -310,7 +304,7 @@ namespace ck
         ECk_SmRunStatus _DesiredRunStatus = ECk_SmRunStatus::Stopped;
         TSubclassOf<UCk_SmState_EntityScript> _DesiredStateClass;
 
-        EPhase _Phase = EPhase::WaitDriver;
+        EPhase _Phase = EPhase::Start;
 
         // One-shot request guards — each Request_* is enqueued exactly once; the ladder then
         // observes FFragment_Sm_Current until the request's effect lands (requests are deferred).
@@ -318,6 +312,18 @@ namespace ck
         bool _StopEnqueued = false;
         bool _TransitionEnqueued = false;
         bool _PauseEnqueued = false;
+
+    public:
+        // Seed the desired end-state from the save-transport Apply handler (not a friend). The ladder reads
+        // these via the getters below and drives the composed SM to them.
+        auto
+        Populate(
+            ECk_SmRunStatus                       InDesiredRunStatus,
+            TSubclassOf<UCk_SmState_EntityScript> InDesiredStateClass) -> void
+        {
+            _DesiredRunStatus  = InDesiredRunStatus;
+            _DesiredStateClass = InDesiredStateClass;
+        }
 
     public:
         CK_PROPERTY_GET(_DesiredRunStatus);

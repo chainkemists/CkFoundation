@@ -283,6 +283,25 @@ namespace
         }
     }
 
+    // Save-load hydration branch (Phase 4A.1 [P4A-F1]). On a loading AUTHORITY the saved payload must drive the SM to
+    // its {RunStatus, CurrentStateClass} WITHOUT replaying entry effects inline through the net path — so instead of
+    // Sm_DispatchWithHistory/Sm_EnqueueOrStash, stash the decision record for FProcessor_Sm_HydrationResume, which
+    // steers the freshly-composed SM there through its own Start/Transition ladder. Returns NotReady until Setup has
+    // composed FFragment_Sm_Current (the resume ladder + its view both require it); the hydration dispatcher retries.
+    // Only ever reached under FCk_HydrationApplyScope — the net receive path never enters here (byte-identical net).
+    auto
+    Sm_StashHydrationResume(
+        FCk_Handle&                           Entity,
+        ECk_SmRunStatus                       DesiredRunStatus,
+        TSubclassOf<UCk_SmState_EntityScript> DesiredStateClass) -> ECk_RepFragment_ApplyResult
+    {
+        if (NOT Entity.Has<ck::FFragment_Sm_Current>())
+        { return ECk_RepFragment_ApplyResult::NotReady; }
+
+        Entity.AddOrGet<ck::FFragment_Sm_HydrationResume>().Populate(DesiredRunStatus, DesiredStateClass);
+        return ECk_RepFragment_ApplyResult::Applied;
+    }
+
     struct FCk_StateMachineRepHandlerRegistrar
     {
         FCk_StateMachineRepHandlerRegistrar()
@@ -297,6 +316,17 @@ namespace
                 {
                     .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_RepFragment_ApplyResult
                     {
+                        // Save-load hydration (authority-side) takes precedence over the net receive path — it never
+                        // runs under a net receive (FCk_HydrationApplyScope is set only by FProcessor_Hydration_Dispatch).
+                        if (FCk_HydrationApplyScope::Get_IsActive())
+                        {
+                            const auto& Payload = New.Get<FCk_RepData_StateMachine_WithHistory>();
+                            const auto DesiredStateClass = Payload.Get_History().IsEmpty()
+                                ? TSubclassOf<UCk_SmState_EntityScript>{}
+                                : Payload.Get_History().Last().Get_NewStateClass();
+                            return Sm_StashHydrationResume(Entity, Payload.Get_RunStatus(), DesiredStateClass);
+                        }
+
                         if (Sm_ShouldEchoSuppress(Entity))
                         { return ECk_RepFragment_ApplyResult::Applied; }
 
@@ -308,7 +338,33 @@ namespace
                             Entity, NewPayload.Get_History().Num(), NewPayload.Get_RunStatus());
 
                         return ECk_RepFragment_ApplyResult::Applied;
-                    }
+                    },
+                    // Save capture ([SM-A]): emit the current run-state as a CANONICAL single event {null ->
+                    // CurrentStateClass, Seq 0, Fp 0} (or empty history if no current state). The live server seqs
+                    // restart in the rebuilt world, so persisting the live ring would make the oracle byte-diff never
+                    // match; the hydration Apply reads only the target state + status. Gated on the replication MODEL
+                    // (not _Replication) so DoesNotReplicate SMs — default model WithHistory — persist too. NO
+                    // SeedContainer: capture/oracle-only, never re-seeded (the SM has no *_ReplicateOnRestore; its
+                    // restore is the hydration redrive) — [P1-R1] / [P4A-D1].
+                    .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+                    {
+                        if (NOT Entity.Has<ck::FFragment_Sm_Current>() || NOT Entity.Has<ck::FFragment_Sm_Params>())
+                        { return {}; }
+                        if (Entity.Get<ck::FFragment_Sm_Params>().Get_ReplicationModel() != ECk_Sm_ReplicationModel::WithHistory)
+                        { return {}; }
+
+                        const auto& Current = Entity.Get<ck::FFragment_Sm_Current>();
+
+                        auto Payload = FCk_RepData_StateMachine_WithHistory{};
+                        Payload.Set_RunStatus(Current.Get_RunStatus());
+                        if (ck::IsValid(Current.Get_CurrentStateClass()))
+                        {
+                            Payload.Get_History().Add(FCk_Sm_TransitionEvent{
+                                TSubclassOf<UCk_SmState_EntityScript>{}, Current.Get_CurrentStateClass(), 0, 0});
+                        }
+                        return FInstancedStruct::Make(Payload);
+                    },
+                    .Transport = ECk_PersistenceTransport::NetAndSave
                 });
 
             FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
@@ -316,6 +372,14 @@ namespace
                 {
                     .Apply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_RepFragment_ApplyResult
                     {
+                        // Save-load hydration (authority-side) takes precedence over the net receive path — it never
+                        // runs under a net receive (FCk_HydrationApplyScope is set only by FProcessor_Hydration_Dispatch).
+                        if (FCk_HydrationApplyScope::Get_IsActive())
+                        {
+                            const auto& Payload = New.Get<FCk_RepData_StateMachine_NoHistory>();
+                            return Sm_StashHydrationResume(Entity, Payload.Get_RunStatus(), Payload.Get_CurrentStateClass());
+                        }
+
                         if (Sm_ShouldEchoSuppress(Entity))
                         { return ECk_RepFragment_ApplyResult::Applied; }
 
@@ -352,7 +416,25 @@ namespace
                             Entity, NewSeq, NewPayload.Get_RunStatus());
 
                         return ECk_RepFragment_ApplyResult::Applied;
-                    }
+                    },
+                    // Save capture ([SM-A]): latest state only, canonical Seq 0 / Fp 0. Gated on the replication
+                    // MODEL (not _Replication) so DoesNotReplicate WithoutHistory SMs persist too. NO SeedContainer —
+                    // capture/oracle-only, never re-seeded (restore is the hydration redrive) — [P1-R1] / [P4A-D1].
+                    .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+                    {
+                        if (NOT Entity.Has<ck::FFragment_Sm_Current>() || NOT Entity.Has<ck::FFragment_Sm_Params>())
+                        { return {}; }
+                        if (Entity.Get<ck::FFragment_Sm_Params>().Get_ReplicationModel() != ECk_Sm_ReplicationModel::WithoutHistory)
+                        { return {}; }
+
+                        const auto& Current = Entity.Get<ck::FFragment_Sm_Current>();
+
+                        auto Payload = FCk_RepData_StateMachine_NoHistory{}; // canonical Seq 0 / Fp 0 ([SM-A])
+                        Payload.Set_CurrentStateClass(Current.Get_CurrentStateClass());
+                        Payload.Set_RunStatus(Current.Get_RunStatus());
+                        return FInstancedStruct::Make(Payload);
+                    },
+                    .Transport = ECk_PersistenceTransport::NetAndSave
                 });
         }
     };
