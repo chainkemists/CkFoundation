@@ -130,8 +130,7 @@ namespace
                     // Produce-only capture: the sync-child's persistent instruction ring lives in
                     // FFragment_RenderTarget_AuthoredLog. Builds the channel-slice consumed on load by
                     // HydrateFromSavedChannel — a single-channel FCk_RepData_RenderTarget keyed by
-                    // this child's SyncName. Keyed on the sync-child entity; NO SeedContainer — Produce is
-                    // capture/oracle-only.
+                    // this child's SyncName. Keyed on the sync-child entity; Produce is capture-only.
                     // Not gated on Replicates: the AuthoredLog persistence half is mode-agnostic (drawn state of a
                     // DoesNotReplicate target is still save-worthy). A Replicates gate could be added here if load
                     // ever routes only replicated targets — that is the single line that would change.

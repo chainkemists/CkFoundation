@@ -4,7 +4,7 @@
 #include "CkAttribute/RotatorAttribute/CkRotatorAttribute_Utils.h"
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
-#include "CkAttribute/CkAttribute_RestorePersistence.h" // RegisterLazyTyped<T> + shared attribute Produce/SeedContainer
+#include "CkAttribute/CkAttribute_RestorePersistence.h" // RegisterLazyTyped<T> + shared attribute Produce/HydrationApply
 
 // --------------------------------------------------------------------------------------------------------------------
 
