@@ -16,6 +16,8 @@
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Engine/Level.h"
 #include "Engine/World.h"
+#include "MaterialShared.h"
+#include "Materials/MaterialInterface.h"
 #include "EngineUtils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -268,7 +270,36 @@ auto
     ShadowIsm->SetupAttachment(Owner->GetRootComponent());
     ShadowIsm->SetMobility(SourceIsm->Mobility);
     ShadowIsm->SetStaticMesh(SourceIsm->GetStaticMesh());
-    ShadowIsm->NumCustomDataFloats = 0;
+
+    // The silhouette has to come out of the SAME vertex shader as the visible mesh. A material that
+    // animates through World Position Offset (CkVat samples its baked pose texture in WPO, keyed off
+    // the per-instance custom data) would otherwise silhouette its bind pose while the mesh animates.
+    // The custom depth pass runs the full material VS whenever the material modifies mesh position,
+    // so inheriting the source's materials + custom-data width is what makes an animated outline track
+    // its mesh. Free for ordinary ISMs: that pass swaps the position-only default material back in
+    // when the material does NOT modify mesh position.
+    //
+    // Translucent-family materials are the one slot we must NOT inherit: that same pass DROPS them
+    // outright unless they opt into translucent custom-depth writes (UseDefaultMaterial's final else ->
+    // bIgnoreThisMaterial -> no draw), which would silently delete the outline of anything rendering a
+    // translucent look. Those slots keep the static mesh's own material — the pre-change behaviour.
+    for (auto MaterialIndex = 0; MaterialIndex < SourceIsm->GetNumMaterials(); ++MaterialIndex)
+    {
+        const auto& SourceMaterial = SourceIsm->GetMaterial(MaterialIndex);
+
+        if (ck::Is_NOT_Valid(SourceMaterial, ck::IsValid_Policy_NullptrOnly{}))
+        { continue; }
+
+        if (IsTranslucentBlendMode(*SourceMaterial) && NOT SourceMaterial->IsTranslucencyWritingCustomDepth())
+        { continue; }
+
+        ShadowIsm->SetMaterial(MaterialIndex, SourceMaterial);
+    }
+
+    ShadowIsm->NumCustomDataFloats = SourceIsm->NumCustomDataFloats;
+    ShadowIsm->bEvaluateWorldPositionOffset = SourceIsm->bEvaluateWorldPositionOffset;
+    ShadowIsm->WorldPositionOffsetDisableDistance = SourceIsm->WorldPositionOffsetDisableDistance;
+
     ShadowIsm->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     ShadowIsm->CastShadow = false;
     ShadowIsm->InstanceStartCullDistance = SourceIsm->InstanceStartCullDistance;
