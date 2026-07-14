@@ -29,10 +29,10 @@ namespace ck_timer_fragment
     {
         FRegistrar()
         {
-            FCk_PersistenceHandlerRegistry::Register_SaveOnly<FCk_SaveData_Timer>(
+            FCk_PersistenceHandlerRegistry::Register_SaveOnly<FCk_SaveData_Timer>({
                 // Save-capture: emit the chrono position + RUNTIME direction (tag) + run-state (tag). UNSET when the
                 // Timer feature is absent on the entity (nothing to persist).
-                [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+                .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT UCk_Utils_Timer_UE::Has(Entity))
                     { return {}; }
@@ -50,7 +50,7 @@ namespace ck_timer_fragment
                 // _CurrentValue is friend-gated, so it is never written directly. Because the timer is unreplicated,
                 // these requests re-arm nothing on any client; they are drained by FProcessor_Timer_HandleRequests on
                 // the authority. The NotReady gate precedes every request.
-                [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
+                .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                 {
                     if (NOT UCk_Utils_Timer_UE::Has(Entity))
                     { return ECk_Persistence_ApplyResult::NotReady; }
@@ -98,7 +98,7 @@ namespace ck_timer_fragment
                     }
 
                     return ECk_Persistence_ApplyResult::Applied;
-                });
+                }});
         }
     };
 

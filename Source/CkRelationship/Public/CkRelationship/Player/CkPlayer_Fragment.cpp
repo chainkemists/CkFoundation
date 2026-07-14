@@ -28,16 +28,16 @@ static struct FPlayerRepHandlerRegistrar
             return ECk_Persistence_ApplyResult::Applied;
         };
 
-        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SharedApply<FCk_RepData_Player>(
+        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SharedApply<FCk_RepData_Player>({
             // Produce-only capture (Phase 3A.4, [P1-R1]): mirror FProcessor_Player_Replicate's live-state build.
             // Produce is capture-only.
-            [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+            .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
             {
                 if (NOT UCk_Utils_Player_UE::Has(Entity))
                 { return {}; }
                 return FInstancedStruct::Make(FCk_RepData_Player{Entity.Get<ck::FFragment_PlayerInfo>().Get_PlayerID()});
             },
-            ApplyFn);
+            .SharedApply = ApplyFn});
     }
 } GPlayerRepHandlerRegistrar;
 

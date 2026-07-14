@@ -51,17 +51,28 @@ namespace, no file-local `static` helper (Team: `FTeamRepHandlerRegistrar` / `GT
 SaveFields: filename-derived namespace + `GCkEntityScriptSaveFieldsRegistrar`). Include
 `CkEcs/Persistence/CkPersistenceHandlerRegistry.h` + `.inl.h` (the latter carries the templated bodies).
 
-**Prefer a named participation shape** over hand-building an `FHandler` — the name states the transport the author
-chose, and `Register_SaveOnly`'s signature makes the `Produce`-without-`HydrationApply` misconfig *uncompilable*
-(not merely ensured). Each is `template <typename T_RepData>` and resolves the type lazily via
-`T_RepData::StaticStruct()`, so it is static-init-safe:
+**Prefer a named participation shape** over hand-building an `FHandler` — the shape name states the transport the
+author chose, and each shape takes a **designated-init args struct** so every lambda is LABELED at the call site
+(`.Produce =`, `.NetApply =`, `.HydrationApply =`) instead of positional. Required slots are **compile-enforced**:
+the args struct's required fields are non-default-constructible wrappers, so an omitted `.Produce`/`.HydrationApply`/
+`.NetApply` does not compile (the `Produce`-without-`HydrationApply` misconfig is uncompilable, not merely ensured).
+`.NetRemove` is optional (defaults to empty). Each is `template <typename T_RepData>` and resolves the type lazily
+via `T_RepData::StaticStruct()`, so it is static-init-safe. Write designators in declaration order:
 
-| Shape | Transports | Params |
+| Shape | Transports | Args struct fields (declaration order) |
 |---|---|---|
-| `Register_NetOnly<T>` | wire only, never saved | `(FApplyFn NetApply, FRemoveFn NetRemove = {})` |
-| `Register_SaveOnly<T>` | save only, never on the wire | `(FProduceFn Produce, FApplyFn HydrationApply)` — **both REQUIRED** |
-| `Register_NetAndSave_SharedApply<T>` | both; one authority-safe applier | `(FProduceFn Produce, FApplyFn SharedApply, FRemoveFn NetRemove = {})` |
-| `Register_NetAndSave_SplitApply<T>` | both; distinct net vs load appliers | `(FProduceFn Produce, FApplyFn NetApply, FApplyFn HydrationApply, FRemoveFn NetRemove = {})` |
+| `Register_NetOnly<T>` | wire only, never saved | `.NetApply` (req), `.NetRemove` (opt) |
+| `Register_SaveOnly<T>` | save only, never on the wire | `.Produce` (req), `.HydrationApply` (req) |
+| `Register_NetAndSave_SharedApply<T>` | both; one authority-safe applier | `.Produce` (req), `.SharedApply` (req), `.NetRemove` (opt) |
+| `Register_NetAndSave_SplitApply<T>` | both; distinct net vs load appliers | `.Produce` (req), `.NetApply` (req), `.HydrationApply` (req), `.NetRemove` (opt) |
+
+```cpp
+FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_TagSet>({
+    .Produce        = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct> { ... },
+    .NetApply       = NetApplyFn,        // client-coupled net receive
+    .HydrationApply = HydrationApplyFn,  // authority-side load
+});
+```
 
 They forward to `RegisterLazyTyped<T>`, which fills the four `FHandler` slots
 (`CkEcs/Persistence/CkPersistenceHandlerRegistry.h`):
