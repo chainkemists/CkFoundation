@@ -81,7 +81,7 @@ public:
         // Save-capture emitter: this feature's current payload for the entity, or unset when the
         // feature is absent on it. A SET-but-empty payload is meaningful (seeds an empty container);
         // only UNSET means "feature absent, do not emit". READ-ONLY by contract. Presence of Produce
-        // IS save participation — there is no separate opt-in flag.
+        // IS save participation — there is no separate opt-in flag. Authoring recipe: CkSnapshot/Claude.md.
         TFunction<TOptional<FInstancedStruct>(FCk_Handle& Entity)> Produce;
     };
 

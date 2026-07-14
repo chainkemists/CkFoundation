@@ -66,8 +66,8 @@
                     return ECk_RepFragment_ApplyResult::Applied;
                 },
                 // Produce-only capture (Phase 3A.4): mirror FProcessor_2dGridOccupancy_Replicate's live-state build
-                // off the grid's placement record. NO SeedContainer — Produce is capture/oracle-only; the Model-A
-                // re-drive was retired in Phase 5. Keyed on the grid entity (which holds the placement record).
+                // off the grid's placement record. Produce is capture-only. Keyed on the grid entity (which holds
+                // the placement record).
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT Entity.Has<ck::FFragment_RecordOf_GridPlacements>())

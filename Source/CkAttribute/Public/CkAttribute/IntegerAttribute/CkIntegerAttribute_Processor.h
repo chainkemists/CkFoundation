@@ -69,7 +69,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     // (Per-kind IntegerAttribute restore-replication processor removed — restore re-application is now the
-    //  v3 hydration Apply path via ck::attribute_restore TryHydrationApply; Produce stays capture/oracle-only.)
+    //  v3 hydration Apply path via ck::attribute_restore HydrationApply; Produce stays capture-only.)
 
     // --------------------------------------------------------------------------------------------------------------------
 }

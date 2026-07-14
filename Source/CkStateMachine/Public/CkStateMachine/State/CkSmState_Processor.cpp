@@ -101,11 +101,11 @@ namespace ck
 
         InHandle.Try_Remove<FTag_SmState_NeedsEvaluation>();
 
-        // A CkSnapshot (Model-A) restore can bring SM state-entities back with their FTag_SmState_Active tag (the
-        // generic tag section restores every tag present at capture), but FFragment_Sm_OwningStateMachine (the
-        // owning-SM EntityHolder) is NOT snapshotable — so such a state is orphaned, and the SM's restore path
-        // rebuilds its live state graph fresh instead. Strip the Active tag up front so the orphan drops out of the
-        // loop, and avoid the Get_StoredEntity ensure on the missing holder.
+        // A state-entity that reaches this processor without its owning-SM holder (FFragment_Sm_OwningStateMachine)
+        // is orphaned — under the v3 rebuild+hydrate load the SM re-creates its live state graph fresh via Construct.
+        // Strip the Active tag up front so the orphan drops out of the loop, and avoid the Get_StoredEntity ensure on
+        // the missing holder. (The Model-A generic tag-section restore that could resurrect an Active-but-orphaned
+        // state was deleted with Model A; this stays as a cheap guard.)
         if (NOT TUtils_Sm_OwningStateMachine::Has(InHandle))
         {
             InHandle.Try_Remove<FTag_SmState_Active>();

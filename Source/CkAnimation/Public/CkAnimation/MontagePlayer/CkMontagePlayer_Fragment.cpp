@@ -3,7 +3,7 @@
 #include "CkAnimation/MontagePlayer/CkMontagePlayer_Utils.h"
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
-#include "CkEcs/Net/CkNet_Utils.h" // TryAddContainerFragment (RegisterLazyTyped default seed + custom SeedContainer)
+#include "CkEcs/Net/CkNet_Utils.h" // TryAddContainerFragment (container-based replication for this feature)
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // RegisterLazyTyped<T> body
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -32,8 +32,7 @@ static struct FMontagePlayerRepHandlerRegistrar
             {
                 .Apply = ApplyFn,
                 .HydrationApply = ApplyFn,
-                // Produce is capture/oracle-only: builds the self-resident MontagePlayer container from live _State
-                // (the Model-A restore re-drive was retired in Phase 5).
+                // Produce is capture-only: builds the self-resident MontagePlayer container from live _State.
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT Entity.Has<ck::FFragment_MontagePlayer_Current>())

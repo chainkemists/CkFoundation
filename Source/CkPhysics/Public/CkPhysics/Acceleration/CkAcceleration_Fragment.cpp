@@ -32,8 +32,8 @@ static struct FAccelerationRepHandlerRegistrar
             {
                 .Apply = ApplyFn,
                 .HydrationApply = ApplyFn,
-                // Capture/oracle-only Produce of the self-resident Acceleration container from live Current
-                // (the Model-A re-drive was retired in Phase 5). Default typed SeedContainer (no re-arm tag).
+                // Capture-only Produce of the self-resident Acceleration container from live Current.
+                // HydrationApply reuses the net Apply; no explicit replication re-arm tag is added.
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT Entity.Has<ck::FFragment_Acceleration_Current>())
