@@ -6,7 +6,7 @@
 
 namespace ck
 {
-    // Legacy restore re-drive marker. Nothing in CkFoundation stamps or reads it any longer — the load path
+    // Legacy restore marker, deleted with Model A. Nothing in CkFoundation stamps or reads it any longer — the load path
     // (UCk_Snapshot_Subsystem::Request_Load) never stamps it, so Has<FTag_Snapshot_JustRestored> is always
     // false at runtime. RETAINED so the BB superproject still compiles against this header + symbol
     // (Bb_SnapshotRestore.cpp / Bb_CombatReceiverRestore.cpp, and the BB AS restore-rebind fleet that already

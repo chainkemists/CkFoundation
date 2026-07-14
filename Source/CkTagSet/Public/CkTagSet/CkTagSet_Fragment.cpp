@@ -1,7 +1,7 @@
 #include "CkTagSet_Fragment.h"
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
-#include "CkEcs/Net/CkNet_Utils.h" // TryAddContainerFragment (RegisterLazyTyped default seed + custom SeedContainer)
+#include "CkEcs/Net/CkNet_Utils.h" // TryAddContainerFragment (container-based replication for this feature)
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // RegisterLazyTyped<T> body
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -37,8 +37,8 @@ static struct FTagSetRepHandlerRegistrar
                     Entity.AddOrGet<ck::FTag_TagSet_MayRequireReplication>();
                     return ECk_RepFragment_ApplyResult::Applied;
                 },
-                // Capture/oracle-only Produce of the self-resident TagSet container from live tags
-                // (the Model-A re-drive was retired in Phase 5; payload shape matches FProcessor_TagSet_Replicate).
+                // Capture-only Produce of the self-resident TagSet container from live tags
+                // (payload shape matches FProcessor_TagSet_Replicate).
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT Entity.Has<ck::FFragment_TagSet>())
