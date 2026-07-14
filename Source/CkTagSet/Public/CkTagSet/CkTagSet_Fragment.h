@@ -11,15 +11,12 @@
 
 #include <variant>
 #include <GameplayTagContainer.h>
-#include <Serialization/Archive.h>
 
 #include "CkTagSet_Fragment.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_TagSet_UE;
-
-namespace ck { class FSnapshotContext; }
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -32,37 +29,6 @@ namespace ck
         CK_GENERATED_BODY(FFragment_TagSet);
 
         friend class FProcessor_TagSet_HandleRequests;
-
-    public:
-        using IsSnapshotable = void;
-
-        // Tier-C: tags persist by NAME (stable across runs — net tag indices are not). A saved tag
-        // missing from the load-time tag registry is dropped instead of faulting the whole restore.
-        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& /*InCtx*/) -> void
-        {
-            auto TagNames = TArray<FName>{};
-
-            if (InAr.IsSaving())
-            {
-                for (const auto& Tag : _Tags)
-                { TagNames.Add(Tag.GetTagName()); }
-
-                InAr << TagNames;
-            }
-            else
-            {
-                InAr << TagNames;
-
-                _Tags.Reset();
-                constexpr auto ErrorIfNotFound = false;
-                for (const auto& Name : TagNames)
-                {
-                    if (const auto Tag = FGameplayTag::RequestGameplayTag(Name, ErrorIfNotFound);
-                        Tag.IsValid())
-                    { _Tags.AddTag(Tag); }
-                }
-            }
-        }
 
     private:
         FGameplayTagContainer _Tags;

@@ -6,13 +6,7 @@
 
 #include "CkEcs/Signal/CkSignal_Macros.h"
 
-#include <Serialization/Archive.h>
-
 #include "CkPlayer_Fragment.generated.h"
-
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace ck { class FSnapshotContext; }
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -40,19 +34,6 @@ namespace ck
     {
     public:
         CK_GENERATED_BODY(FFragment_PlayerInfo);
-
-    public:
-        using IsSnapshotable = void;
-
-        // Tier-C: the assigned ID is the whole persistent state. The per-ID FTag_PlayerID<> tag
-        // (which Get_ID actually reads) and the replicated container entry are re-derived from
-        // this value on restore through the v3 hydration Apply path.
-        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& /*InCtx*/) -> void
-        {
-            auto IDByte = static_cast<uint8>(_PlayerID);
-            InAr << IDByte;
-            _PlayerID = static_cast<ECk_Player_ID>(IDByte);
-        }
 
     private:
         ECk_Player_ID _PlayerID;

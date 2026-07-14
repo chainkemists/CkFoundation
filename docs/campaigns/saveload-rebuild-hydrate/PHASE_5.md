@@ -1,5 +1,14 @@
 # PHASE 5 — Decommission Model A (gate-not-delete), docs, final acceptance
 
+> **SUPERSEDED — 2026-07-13.** This doc encodes the retired "gate-not-delete" strategy
+> (`#if CK_WITH_FIDELITY_ORACLE`). Adam's close-out directive replaced it with FULL DELETION of Model A;
+> the locked design is **FINALIZE.md** (obj-2 + the "Fable F3 execution ruling"), executed as F3
+> clusters 2–4 (CkF `1226006d8`, `85b5d7319`, `1ddd20da6`). `CK_WITH_FIDELITY_ORACLE`,
+> `CK_REGISTER_SNAPSHOTABLE`, the fragment registry, archives, TagRegistry/TagDriver, the fidelity oracle,
+> and both Oracle.* tests NO LONGER EXIST (0 references in Source). The Track-B clusters 1a–6 logged in
+> PROGRESS.md §"Phase-5 progress" were executed against this doc pre-supersession and remain historically
+> accurate. Nothing below is executable; retained for history. Acceptance protocol: the amended VALIDATION.md.
+
 Run VALIDATION.md's full protocol at the end of this phase — it is the campaign's definition of done.
 
 ## Entry criteria

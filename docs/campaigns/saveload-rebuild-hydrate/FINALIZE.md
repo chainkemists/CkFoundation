@@ -331,6 +331,49 @@ files whose SerializeSnapshot surface we delete — so every include edge vanish
 Cross-repo: neither repo pushes until the whole sequence is green; CkTests must not lead CkFoundation; superproject
 pointer bumps move both submodules together.
 
+### Fable F3 execution ruling (2026-07-13, code-verified — SUPERSEDES the cluster order below where they conflict)
+A read-only Fable pass verified the purge against code and corrected the plan. **Load-bearing corrections:**
+- **CkTests deletions are NOT a trailing cluster.** 19 CkTests files `#include CkSnapshot_Capture.h`/`_Restore.h`
+  UNCONDITIONALLY (above any `#if`) → they must be co-deleted in the SAME commit pair as **cluster 2**; 2 more
+  (Audit_UnregisteredRoundTrip, Oracle_ProduceDiffBaseline) co-delete with **cluster 4**. "CkTests must not lead" still
+  holds — but it must also not LAG. The 19 (cluster 2): Core/SaveKey/EmptyTag/MultiTag_RoundTrip, LifecycleStrip,
+  SceneNode/StateMachineState/InteractTarget_RoundTrip, RestoreRobustness, Oracle_StructuralBaseline, GridPlacements/
+  TimerChrono/MontagePlayerState_RoundTrip, DynamicFragment_{TypedHandleRemap,HandleRemap,AsFragment,Coverage},
+  PropertyFuzz_RoundTrip, FloatAttribute_Gate.spec.
+- **[F3-D1 — ADAM] Adam-gated test deletions forced to pre-cluster-2.** TimerChrono/MontagePlayerState/GridPlacements_RoundTrip
+  are in the coupled-19 → they CANNOT survive past cluster 2. FINALIZE's "delete GridPlacements.RoundTrip only after its
+  parity twin greens" is UNACHIEVABLE (compile-coupled). Executor decision (mission pre-authorizes implement-and-record):
+  DELETE them at cluster 2; **record the coverage loss** — grid save/load then has NO passing coverage (parity twin is the
+  engine-death red, registry twin deleted); Timer-resume + MontagePlayer-state round-trip coverage also drop. Adam: accept,
+  or land v3 Timer/MP payloads + resolve the grid engine-death first.
+- **[F3-D1b — ADAM coverage loss, added cluster 5] This execution ruling SUPERSEDED "cluster 0 (port-before-delete)" — the port was never done.** By co-deleting the coupled-19 at cluster 2 (incl. `DynamicFragment_{TypedHandleRemap,…}`, `PropertyFuzz_RoundTrip`, `FloatAttribute_Gate.spec`, `Oracle_ProduceDiffBaseline`), the migrate targets FINALIZE's cluster 0 was to author FIRST — `V3.HandleWalk.*` (handle-remap incl. the tombstone-incident case), `V3.ProduceSensitivity`, and `Parity.AttributeModifier_MPReload` (**"the ONLY modifier-across-save/load coverage — migrate, don't delete"**) — lost their Model-A sources with no v3 replacement. Verified absent in CkTests (cluster 5). Recorded per FINALIZE's own purge-ahead-of-port permission. **Not Adam-approved.** Adam: accept, or schedule the 3-suite port (all build against the current v3 harness). Executor chose record-over-author-now (net-new risky test authoring beyond cluster-5 doc scope; matches [F3-D1] precedent + don't-block).
+- **[F3-D2] Policy-macro fork = DEFER Option A.** T_Policy's only reads are the `TSnapshotMarker<T_Policy>` base (sole
+  effect: the `IsSnapshotable` typedef) — Option A (drop T_Policy, 57 macro sites / 40 files + 4 raw-template lines +
+  resurrect the 4 tombstones + delete Policy.h) is mechanically SAFE and BB/AS-free, but it is NOT on the purge's critical
+  path. **Mandatory minimal cluster-4 edit:** drop the 2 `CkSnapshot_Audit.h` includes + the 2 `CK_SNAPSHOT_ANNOUNCE_EXPECTED`
+  lines from `CkEntityHolder_Fragment.h`(:13,:76) + `CkRecord_Fragment.h`(:16,:117); KEEP `CkSnapshot_Policy.h` inert (it
+  includes nothing). Option A runs as a standalone rename commit (this campaign or later). Under defer the `IsSnapshotable|
+  FSnapshotPolicy` exit greps carry a Policy.h carve-out until Option A lands. Option (c) = new design work, follow-up only.
+- **Scout corrections (verified):** 53 `CK_REGISTER_SNAPSHOTABLE` files (not 46) + 1 doc row; 74 `SerializeSnapshot`;
+  10 `CK_WITH_FIDELITY_ORACLE` (8 CkF + 2 CkTests, all in delete-whole files, zero landmines); `CK_DEFINE_ECS_TAG_TRANSIENT`
+  is **BB-FREE** (12 sites, safe to collapse into `CK_DEFINE_ECS_TAG`). `Get_ProduceHandlerTypes` needs an EXPLICIT 2-line
+  deletion in the KEEP files (`CkReplicatedFragmentContainer.h`/`.cpp`) — sole caller is `CkSnapshot_FidelityOracle.cpp:234`.
+- **Cluster 3 sweep scope:** feature modules only; the IsSnapshotable file census (54) ∪ SerializeSnapshot ∪ CK_REGISTER
+  is the checklist (SerializeSnapshot alone misses Tier-A marker-only registrants). EXCLUDE the CkEcs-owned fragments
+  (CkHandle.h, CkEntityLifetime_Fragment.h, CkEntityScript_Fragment.{h,cpp}+_SnapshotLoadPin, CkNet_Fragment.h) — their
+  bodies are centrally registered in CkSnapshot_CkEcsFragments_Registration.cpp → they go ATOMICALLY with cluster 4.
+  Sweep Timer + `FCk_Chrono::SerializeSnapshot` (CkCore, Timer's only caller `CkTimer_Fragment.cpp:46`) same commit.
+  Keep `Test_Snapshot_DynamicFragment_Fixtures.h` (included by the surviving `Test_Snapshot_V3_Capture.cpp`).
+- **Exit greps** word-bounded: `\bRun_Capture\(|Run_Capture_Registry` (survivor `Run_CaptureV3`), plus `TSnapshotMarker`,
+  `CK_SNAPSHOT_ANNOUNCE_EXPECTED`, `FCk_Snapshot_TagRegistry|Register_SnapshotableTag`, `Get_ProduceHandlerTypes`,
+  `_SnapshotLoadPin`, `FSnap_`. Carve-outs: `CkSnapshot_RestoreMarker.h`/`FTag_Snapshot_JustRestored` (BB consumers
+  `Bb_SnapshotRestore.cpp`/`Bb_CombatReceiverRestore.cpp` — live, do NOT delete), `docs/campaigns/*`, Policy.h (until Option A).
+- **Cluster 0 (port-before-delete)** builds vs CURRENT CkF: `Ck.Snapshot.V3.HandleWalk.*` (on the existing
+  `Test_Snapshot_V3_Capture.cpp` harness) + `V3.ProduceSensitivity` + `Parity.AttributeModifier_MPReload` (replaces
+  FloatAttribute.Gate — the only modifier-across-save/load coverage). Executor note: if context-limited, the purge may run
+  ahead of cluster-0 authoring with the coverage gap RECORDED (v3 path is already covered by the surviving Parity/V3/
+  LoadGate/Meta tests) — but prefer port-first.
+
 ### Model-A test fate (CkTests — Audit C) **[A]**
 29 Model-A-coupled tests across 21 files. **The must-survive handle-remap coverage** ports to a new
 `Ck.Snapshot.V3.HandleWalk.*` suite built on the ALREADY-EXISTING v3-native harness

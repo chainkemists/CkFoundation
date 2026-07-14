@@ -87,9 +87,6 @@ struct CKTIMER_API FCk_Fragment_Timer_ParamsData
 public:
     CK_GENERATED_BODY(FCk_Fragment_Timer_ParamsData);
 
-    // Tier-A snapshot opt-in: the timer's config (name/duration/direction/behavior/starting-state) round-trips so a
-    // restored timer is self-sufficient. All fields are non-Transient bare UPROPERTY → SerializeItem captures them.
-    using IsSnapshotable = void;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

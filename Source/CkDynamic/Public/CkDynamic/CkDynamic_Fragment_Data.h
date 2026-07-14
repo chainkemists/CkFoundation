@@ -11,11 +11,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class FArchive;
-namespace ck { class FSnapshotContext; }
-
-// --------------------------------------------------------------------------------------------------------------------
-
 UENUM(BlueprintType)
 enum class ECk_DestroyFilter : uint8
 {
@@ -34,7 +29,6 @@ struct CKDYNAMIC_API FCk_Fragment_DynamicFragment_Data
 
 public:
     CK_GENERATED_BODY(FCk_Fragment_DynamicFragment_Data);
-    using IsSnapshotable = void;
 
 private:
     UPROPERTY(meta=(SaveGame))
@@ -45,14 +39,6 @@ public:
     CK_PROPERTY_GET_NON_CONST(_StructData);
 
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_DynamicFragment_Data, _StructData);
-
-public:
-    // Tier-B snapshot serialize. Declaring this promotes the wrapper from the Tier-A USTRUCT path (which both
-    // drops _StructData -- it is meta=(SaveGame), a metadata string, not the real CPF_SaveGame flag -- and leaves
-    // any held FCk_Handle field as a stale id) to a custom path that: (1) serializes _StructData explicitly so the
-    // held struct's data round-trips, and (2) routes every FCk_Handle field through FSnapshotContext::Snapshot_Handle
-    // so cross-entity refs are remapped onto the restored entities. Defined in the .cpp.
-    auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

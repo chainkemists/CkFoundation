@@ -13,8 +13,6 @@
 
 #include "CkEcs/Signal/CkSignal_Macros.h"
 
-#include <Serialization/Archive.h>
-
 #include "CkAnimPlan_Fragment.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -23,32 +21,9 @@ class UCk_Utils_AnimPlan_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck { class FSnapshotContext; }
-
 namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_AnimPlan_MayRequireReplication);
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    namespace detail
-    {
-        // Tags persist by NAME (stable across runs — net tag indices are not). A saved tag missing
-        // from the load-time registry loads as an invalid tag instead of faulting the restore.
-        inline auto SerializeSnapshot_AnimPlanTagByName(FArchive& InAr, FGameplayTag& InOutTag) -> void
-        {
-            auto TagName = InOutTag.GetTagName();
-            InAr << TagName;
-
-            if (InAr.IsLoading())
-            {
-                constexpr auto ErrorIfNotFound = false;
-                InOutTag = TagName.IsNone()
-                    ? FGameplayTag{}
-                    : FGameplayTag::RequestGameplayTag(TagName, ErrorIfNotFound);
-            }
-        }
-    }
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -59,25 +34,6 @@ namespace ck
 
     public:
         using ParamsType = FCk_Fragment_AnimPlan_ParamsData;
-        using IsSnapshotable = void;
-
-        // Tier-C: hand-rolled — the wrapped reflected struct exposes its fields only through
-        // getters + the generated constructor, so round-trip through locals.
-        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& /*InCtx*/) -> void
-        {
-            auto Goal    = _Params.Get_AnimGoal();
-            auto Cluster = _Params.Get_StartingAnimCluster();
-            auto State   = _Params.Get_StartingAnimState();
-
-            detail::SerializeSnapshot_AnimPlanTagByName(InAr, Goal);
-            detail::SerializeSnapshot_AnimPlanTagByName(InAr, Cluster);
-            detail::SerializeSnapshot_AnimPlanTagByName(InAr, State);
-
-            if (InAr.IsLoading())
-            {
-                _Params = ParamsType{Goal}.Set_StartingAnimCluster(Cluster).Set_StartingAnimState(State);
-            }
-        }
 
     private:
         ParamsType _Params;
@@ -99,15 +55,6 @@ namespace ck
     public:
         friend class FProcessor_AnimPlan_HandleRequests;
         friend class UCk_Utils_AnimPlan_UE;
-
-    public:
-        using IsSnapshotable = void;
-
-        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& /*InCtx*/) -> void
-        {
-            detail::SerializeSnapshot_AnimPlanTagByName(InAr, _AnimCluster);
-            detail::SerializeSnapshot_AnimPlanTagByName(InAr, _AnimState);
-        }
 
     private:
         FGameplayTag _AnimCluster;

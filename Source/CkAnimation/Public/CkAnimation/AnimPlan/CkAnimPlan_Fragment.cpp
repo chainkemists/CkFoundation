@@ -8,22 +8,6 @@
 #include "CkEcs/Net/CkNet_Utils.h" // TryAddContainerFragment + Get_LifetimeOwner (RegisterLazyTyped + SeedContainer)
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.inl.h" // RegisterLazyTyped<T> body
 
-#include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
-#include "CkEcs/Snapshot/CkSnapshot_Archive_Writer.h"
-#include "CkEcs/Snapshot/CkSnapshot_Archive_Reader.h"
-
-// --------------------------------------------------------------------------------------------------------------------
-// Tier-C SerializeSnapshot registration (aliases because CK_REGISTER_SNAPSHOTABLE token-pastes the name).
-// The owner's RecordOfAnimPlans is registered too so restored owners re-link their anim-plan children.
-
-using FSnap_AnimPlan_Params  = ck::FFragment_AnimPlan_Params;
-using FSnap_AnimPlan_Current = ck::FFragment_AnimPlan_Current;
-using FSnap_RecordOfAnimPlans = ck::FFragment_RecordOfAnimPlans;
-
-CK_REGISTER_SNAPSHOTABLE(FSnap_AnimPlan_Params);
-CK_REGISTER_SNAPSHOTABLE(FSnap_AnimPlan_Current);
-CK_REGISTER_SNAPSHOTABLE(FSnap_RecordOfAnimPlans);
-
 // --------------------------------------------------------------------------------------------------------------------
 // Container-based replication handler for AnimPlan
 

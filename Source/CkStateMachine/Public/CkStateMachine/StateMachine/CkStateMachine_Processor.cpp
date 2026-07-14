@@ -1111,9 +1111,9 @@ namespace ck
 
                 const auto& DesiredClass = Pending.Get_DesiredStateClass();
 
-                // A null desired class means the SM was saved mid-transition (target not persisted —
-                // see FFragment_Sm_Current::SerializeSnapshot) or before any state entry; staying in
-                // InitialState is the v1 contract for both.
+                // A null desired class means the SM was saved mid-transition (an in-flight transition
+                // target is not persisted) or before any state entry; staying in InitialState is the
+                // v1 contract for both.
                 if (ck::IsValid(DesiredClass) && InCurrent.Get_CurrentStateClass() != DesiredClass)
                 {
                     if (NOT Pending.Get_TransitionEnqueued())

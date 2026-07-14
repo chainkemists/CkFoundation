@@ -8,13 +8,11 @@
 
 #include "CkEcs/Signal/CkSignal_Macros.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
-#include "CkEcs/Concepts/CkSnapshot_Concepts.h" // forward-declares ck::FSnapshotContext for the SerializeSnapshot decl
 
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_EntityScript_UE;
 class UCk_Utils_EntityScript_UE;
-class FArchive;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -60,7 +58,6 @@ namespace ck
     {
     public:
         CK_GENERATED_BODY(FFragment_EntityScript_Current);
-        using IsSnapshotable = void;
 
     public:
         friend class UCk_Utils_EntityScript_UE;
@@ -77,18 +74,8 @@ namespace ck
         // WEAK — lifetime owned by the CkCore ObjectPooling subsystem (NotInstanced = the CDO)
         TWeakObjectPtr<UCk_EntityScript_UE> _Script;
 
-        // STRONG, snapshot-load only: SerializeSnapshot mints the script with no subsystem in reach,
-        // so the fragment pins it itself (the save/load campaign owns removal)
-        TStrongObjectPtr<UCk_EntityScript_UE> _SnapshotLoadPin;
-
     public:
         CK_PROPERTY_GET(_Script);
-
-    public:
-        // Path #3 (Section 1): round-trips the EntityScript instance via its class-path + UObject::Serialize.
-        // Declared in CkEcs but does NOT use InCtx and includes NO CkSnapshot header (registration lives in
-        // CkSnapshot to avoid a CkEcs -> CkSnapshot dependency edge). Body in the .cpp.
-        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

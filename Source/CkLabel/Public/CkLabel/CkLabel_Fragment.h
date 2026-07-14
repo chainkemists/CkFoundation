@@ -11,9 +11,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class FArchive;
-namespace ck { class FSnapshotContext; }
-
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -21,7 +18,6 @@ namespace ck
     struct FFragment_GameplayLabel
     {
         CK_GENERATED_BODY(FFragment_GameplayLabel);
-        using IsSnapshotable = void;
 
     public:
         auto operator==(const ThisType& InOther) const -> bool;
@@ -38,9 +34,6 @@ namespace ck
 
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_GameplayLabel, _Label)
-
-        // Tier C — single FGameplayTag value; body defined out-of-line in CkSnapshot.
-        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
     };
 }
 

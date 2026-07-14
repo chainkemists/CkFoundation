@@ -70,14 +70,6 @@ public:
     auto Get_TimeElapsed(NormalizationPolicyType InNormalizationPolicy = NormalizationPolicyType::None) const -> FCk_Time;
 
 public:
-    // Whole-chrono snapshot serialize: writes BOTH the goal (duration) AND the current value (countdown progress).
-    // _CurrentValue is UPROPERTY(Transient) — it's deliberately dropped by replication and the reflected save path
-    // (which is correct for the net case), so a snapshot that needs to RESUME a mid-countdown must capture it
-    // explicitly. Body serializes the two raw doubles (FCk_Time has no native serializer). Additive: only the
-    // CkSnapshot path (FFragment_Timer_Current::SerializeSnapshot) calls this — Tick/Consume/Reset are untouched.
-    auto SerializeSnapshot(FArchive& InAr) -> void;
-
-public:
     static const FCk_Chrono Zero;
 
 private:

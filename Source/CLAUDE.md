@@ -86,7 +86,7 @@ Before writing any code, navigate the documentation in this order:
 | tracked entity sets with change detection | `CkEntityCollection` |
 | post-construction opt-in fragments | `CkEntityExtension` |
 | quest-like objectives | `CkObjective` |
-| save/restore world state (snapshots) | `CkSnapshot` (no doc yet) + `CK_REGISTER_SNAPSHOTABLE` (`CkEcs/Snapshot`) |
+| save/restore world state (snapshots) | `CkSnapshot` (v3 rebuild+hydrate; no doc yet) — features persist via a Produce/Apply handler on `FCk_ReplicatedFragmentHandlerRegistry` (`CkEcs/Net/ReplicatedFragmentContainer`, save subset `Get_SaveHandlerTypes`), NOT a per-fragment macro (`CK_REGISTER_SNAPSHOTABLE` removed 2026-07-13) |
 | session state machine | `CkGameSession` |
 | CommonUI-based UI layer | `CkUI` |
 | dependency-gated loading screen | `CkLoadingScreen` (subsystem + `ICk_LoadingProcess` holders) |
