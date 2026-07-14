@@ -9,6 +9,7 @@
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"   // FFragment_LifetimeDependents, FTag_ConstructSpawned
+#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"           // FTag_Snapshot_SaveTransient (reconcile skip)
 #include "CkEcs/Handle/CkHandle.h"                            // ck::FTag_DestroyEntity_*
 #include "CkEcs/Handle/CkHandle_Utils.h"                      // ck::MakeHandle
 #include "CkEcs/Registry/CkRegistry_SlotTable.h"
@@ -19,6 +20,7 @@
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"            // TryGet_ActorEntityHandle (bridged rendezvous)
 #include "CkEcs/Snapshot/CkSnapshot_Context.h"                // ck::FSnapshotContext (v3 map-backed mode)
 #include "CkEcs/Snapshot/CkSnapshot_HandleWalk.h"             // ck::snapshot::RemapHandles
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h" // Get_SaveHandlerTypes/Resolve (reconcile payload probe)
 #include "CkEcs/Persistence/CkPersistenceHydration.h" // FFragment_PendingHydration, FTag_Hydration_PendingApply (split Phase 5)
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"             // G1 saved-world-transform restore (actor + pure-ECS)
@@ -1051,6 +1053,21 @@ auto
         SavedChildLabels.FindOrAdd(Entry.Get_LifetimeOwnerSavedId()).Add(Entry.Get_Label());
     }
 
+    // Payload-bearing probe (mirrors CaptureV3's DoAnyProduce; Produce is READ-ONLY by contract).
+    const auto SaveTypes = FCk_PersistenceHandlerRegistry::Get_SaveHandlerTypes();
+    const auto DoAnyProduce = [&](FCk_Handle& InEntity) -> bool
+    {
+        for (const auto* Type : SaveTypes)
+        {
+            const auto* Handler = FCk_PersistenceHandlerRegistry::Resolve(Type);
+            if (Handler == nullptr || NOT Handler->Produce)
+            { continue; }
+            if (Handler->Produce(InEntity).IsSet())
+            { return true; }
+        }
+        return false;
+    };
+
     auto DestroyedCount = 0;
     for (const auto& Pair : _SavedIdMap)
     {
@@ -1067,6 +1084,14 @@ auto
         {
             if (ck::Is_NOT_Valid(Child) || NOT Child.Has<ck::FTag_ConstructSpawned>())
             { continue; }
+            // Save-transient children are payload-persisted derived state (attributes, SM graph, ...) —
+            // never captured as rows, so "absent from the save" is their NORMAL state, not a revoked
+            // grant. Without this skip, reconcile destroyed the loaded pawn's live intent/camera/movement
+            // attribute children every load (the ConstructSpawned stamp is timing-dependent: possession-
+            // driven composition lands inside the construct window only under the load gate's stretched
+            // construction, so the loaded world stamps children the save world never captured).
+            if (Child.Has<ck::FTag_Snapshot_SaveTransient>())
+            { continue; }
             if (NOT UCk_Utils_GameplayLabel_UE::Has(Child) || UCk_Utils_GameplayLabel_UE::Get_IsUnnamedLabel(Child))
             { continue; }
 
@@ -1074,6 +1099,18 @@ auto
             const auto bSaved = SavedLabels != nullptr && SavedLabels->Contains(ChildLabel);
             if (NOT bSaved)
             {
+                // Payload-bearing children are feature STATE, not grants — the capture may have skipped
+                // them (composed post-construct in the save world, so never ConstructSpawned there) even
+                // though this world composed them in-construct. Subtracting them destroys live feature
+                // state the save cannot even express (the QuickUse-containers-destroyed-on-load incident,
+                // 2026-07-14); leaving them keeps boot defaults, which is strictly better.
+                if (DoAnyProduce(Child))
+                {
+                    ck::snapshot::Verbose(TEXT("v3 reconcile: keeping payload-bearing ConstructSpawned child [{}] "
+                        "label [{}] of owner [{}] — absent from the save but carries feature state"),
+                        Child, ChildLabel, Owner);
+                    continue;
+                }
                 // Subtractive reconciliation: a labeled child rebuilt by Construct but ABSENT from the
                 // save is a grant the player lost. Queue the normal deferred teardown — it PARKS under the gate and
                 // completes on the first post-gate frames; we only queue here, never wait.
