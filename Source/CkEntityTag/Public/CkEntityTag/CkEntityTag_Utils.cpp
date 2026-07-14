@@ -469,6 +469,131 @@ auto
 
 auto
     UCk_Utils_EntityTag_UE::
+    Request_RestoreSet(
+        FCk_Handle& InHandle,
+        const TArray<FName>& InTagNames,
+        const TArray<int32>& InCounts)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+        TEXT("Invalid Handle passed. Unable to restore the EntityTag set on the Entity"))
+    { return; }
+
+    auto& Requests = InHandle.AddOrGet<ck::FFragment_EntityTag_Requests>();
+    Requests._Requests.Emplace(FCk_Request_EntityTag_RestoreSet{InTagNames, InCounts});
+}
+
+// ----
+
+auto
+    UCk_Utils_EntityTag_UE::
+    DoApply_RestoreSet(
+        FCk_Handle& InHandle,
+        const TArray<FName>& InTagNames,
+        const TArray<int32>& InCounts)
+    -> void
+{
+    // Compose Current on demand — RestoreSet is the one applier that may run on an entity whose Construct seeded no
+    // EntityTag, so Current can legitimately be absent. The trailing NowEmpty guard removes it again if the saved set
+    // turns out empty (only reachable via a degenerate double-apply; Produce never emits an empty payload).
+    auto& Current = InHandle.AddOrGet<ck::FFragment_EntityTag_Current>();
+
+    const auto Num = FMath::Min(InTagNames.Num(), InCounts.Num());
+
+    auto SavedPresent = TSet<FName>{};
+    SavedPresent.Reserve(Num);
+
+    // ---- Phase A: raise/add every saved tag to its EXACT count. Done BEFORE any removal so the live set never
+    //               transiently empties and trips the NowEmpty auto-remove mid-apply. ----
+    for (auto Index = 0; Index < Num; ++Index)
+    {
+        const auto SavedName  = InTagNames[Index];
+        const auto SavedCount = InCounts[Index];
+
+        // A None name or non-positive count means "not present" — skip (and it is excluded from SavedPresent, so
+        // Phase B strips any live copy). Produce never emits these; the guard is for a hand-built/corrupt payload.
+        if (SavedName.IsNone() || SavedCount <= 0)
+        { continue; }
+
+        SavedPresent.Add(SavedName);
+
+        const auto TagIndex = ck::algo::FindIndex(Current._Tags, [SavedName](const ck::FEntityTagCount& InPair)
+        {
+            return InPair._Name == SavedName;
+        });
+
+        const auto AddNew = TagIndex == INDEX_NONE;
+        if (AddNew)
+        {
+            Current._Tags.Emplace(SavedName, SavedCount);
+        }
+        else
+        {
+            // Already present (count >= 1) — set the count EXACTLY (raise or lower).
+            Current._Tags[TagIndex]._Count = SavedCount;
+        }
+
+        // Unconditional + idempotent, mirroring DoApply_Add: a present tag always carries its storage marker.
+        Set_StoragePresence(InHandle, SavedName, true);
+
+        // Signal only on the 0->1 presence flip (AddNew), like DoApply_Add — an exact-count set of an already-present
+        // tag is not a presence change.
+        if (AddNew)
+        {
+            ck::UUtils_Signal_EntityTag_OnTagUpdated::Broadcast(
+                InHandle,
+                ck::MakePayload(InHandle, SavedName, ECk_EntityTagUpdate::Added));
+
+            DoBroadcast_AnyEntityListeners(InHandle, SavedName, ECk_EntityTagUpdate::Added);
+        }
+    }
+
+    // ---- Phase B: remove every currently-present FName tag NOT in the saved set. Gather first (mutating _Tags while
+    //               iterating it is unsafe), then remove — one Removed signal per tag, on the 1->0 presence flip. ----
+    auto TagsToRemove = TArray<FName>{};
+    for (const auto& TagCount : Current._Tags)
+    {
+        if (NOT SavedPresent.Contains(TagCount._Name))
+        { TagsToRemove.Emplace(TagCount._Name); }
+    }
+
+    for (const auto& TagName : TagsToRemove)
+    {
+        const auto TagIndex = ck::algo::FindIndex(Current._Tags, [TagName](const ck::FEntityTagCount& InPair)
+        {
+            return InPair._Name == TagName;
+        });
+
+        if (TagIndex == INDEX_NONE)
+        { continue; }
+
+        Current._Tags.RemoveAtSwap(TagIndex);
+        Set_StoragePresence(InHandle, TagName, false);
+
+        ck::UUtils_Signal_EntityTag_OnTagUpdated::Broadcast(
+            InHandle,
+            ck::MakePayload(InHandle, TagName, ECk_EntityTagUpdate::Removed));
+
+        DoBroadcast_AnyEntityListeners(InHandle, TagName, ECk_EntityTagUpdate::Removed);
+    }
+
+    // ---- NowEmpty guard: only reachable when the saved set is empty (degenerate). Auto-remove Current to preserve
+    //      the "Current exists iff it holds >= 1 tag" invariant, mirroring DoApply_TryRemove. Current MUST NOT be
+    //      touched after this. ----
+    const auto NowEmpty =
+        Current._Tags.IsEmpty() &&
+        Current._GameplayTagCounts.IsEmpty();
+
+    if (NowEmpty)
+    {
+        InHandle.Try_Remove<ck::FFragment_EntityTag_Current>();
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_EntityTag_UE::
     ForEach_Entity(
         const FCk_Handle& InAnyHandle,
         FName InTag)

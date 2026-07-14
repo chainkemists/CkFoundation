@@ -78,6 +78,16 @@ namespace ck
         UCk_Utils_EntityTag_UE::DoApply_TryRemoveGameplayTag(InHandle, InRequest.Get_Tag());
     }
 
+    auto
+        FProcessor_EntityTag_HandleRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FCk_Request_EntityTag_RestoreSet& InRequest)
+        -> void
+    {
+        UCk_Utils_EntityTag_UE::DoApply_RestoreSet(InHandle, InRequest.Get_TagNames(), InRequest.Get_Counts());
+    }
+
     // --------------------------------------------------------------------------------------------------------------------
 
     auto

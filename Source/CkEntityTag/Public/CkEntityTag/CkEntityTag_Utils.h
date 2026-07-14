@@ -99,6 +99,17 @@ public:
         UPARAM(meta = (Categories = "EntityTag")) FGameplayTag InTag);
 
 public:
+    // Save/load reconstitution entry point — enqueues ONE composite FCk_Request_EntityTag_RestoreSet that, at drain,
+    // SETs the entity's FName tag set to EXACTLY the {name -> count} map supplied. Deliberately NOT a UFUNCTION: it is
+    // the v3 hydration path's private plumbing (called from the EntityTag persistence handler's HydrationApply), not a
+    // designer-facing "replace my whole tag set" verb. Deferred like the other requests — see Timing in the module doc.
+    static auto
+    Request_RestoreSet(
+        FCk_Handle& InHandle,
+        const TArray<FName>& InTagNames,
+        const TArray<int32>& InCounts) -> void;
+
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|EntityTag",
               DisplayName="[Ck][EntityTag] For Each (Using FName)",
@@ -235,6 +246,17 @@ private:
     DoApply_TryRemoveGameplayTag(
         FCk_Handle& InHandle,
         FGameplayTag InTag) -> void;
+
+    // Drain-time applier for FCk_Request_EntityTag_RestoreSet. SETs the entity's live FName tag set to EXACTLY the
+    // saved {name -> count} map, diffing against whatever is live at drain time: raises/adds every saved tag to its
+    // exact count FIRST (so the live set never transiently empties and trips the NowEmpty auto-remove mid-apply), then
+    // removes every present tag not in the saved set. Updates per-tag EnTT storage presence + fires the net Added/
+    // Removed signals only on 0<->1 presence flips, mirroring DoApply_Add / DoApply_TryRemove.
+    static auto
+    DoApply_RestoreSet(
+        FCk_Handle& InHandle,
+        const TArray<FName>& InTagNames,
+        const TArray<int32>& InCounts) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
