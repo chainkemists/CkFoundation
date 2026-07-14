@@ -109,11 +109,13 @@ namespace ck
         using TryRemoveType            = FCk_Request_EntityTag_TryRemove;
         using AddGameplayTagType       = FCk_Request_EntityTag_AddGameplayTag;
         using TryRemoveGameplayTagType = FCk_Request_EntityTag_TryRemoveGameplayTag;
+        using RestoreSetType           = FCk_Request_EntityTag_RestoreSet;
         using RequestType = std::variant<
             AddType,
             TryRemoveType,
             AddGameplayTagType,
-            TryRemoveGameplayTagType>;
+            TryRemoveGameplayTagType,
+            RestoreSetType>;
 
     private:
         TArray<RequestType> _Requests;
