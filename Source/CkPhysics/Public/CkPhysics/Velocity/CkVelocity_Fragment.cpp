@@ -28,16 +28,16 @@ static struct FVelocityRepHandlerRegistrar
             return ECk_Persistence_ApplyResult::Applied;
         };
 
-        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SharedApply<FCk_RepData_Velocity>(
+        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SharedApply<FCk_RepData_Velocity>({
                 // Capture-only Produce of the self-resident Velocity container from live Current.
                 // HydrationApply reuses the net Apply; no explicit replication re-arm tag is added.
-                [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+                .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT Entity.Has<ck::FFragment_Velocity_Current>())
                     { return {}; }
                     return FInstancedStruct::Make(FCk_RepData_Velocity{Entity.Get<ck::FFragment_Velocity_Current>().Get_CurrentVelocity()});
                 },
-                ApplyFn);
+                .SharedApply = ApplyFn});
     }
 } GVelocityRepHandlerRegistrar;
 

@@ -29,11 +29,11 @@ static struct FCkDynamicFragmentsSaveHandlerRegistrar
 {
     FCkDynamicFragmentsSaveHandlerRegistrar()
     {
-        FCk_PersistenceHandlerRegistry::Register_SaveOnly<FCk_SaveData_DynamicFragments>(
+        FCk_PersistenceHandlerRegistry::Register_SaveOnly<FCk_SaveData_DynamicFragments>({
             // Save capture: emit every dynamic fragment on the entity, or UNSET when it holds none. READ-ONLY —
             // Get_AllFragments only reads the per-type named storages (mirrors what the fallback would replicate,
             // extended to the non-replicated fragments too, for Model-A parity).
-            [](FCk_Handle& InEntity) -> TOptional<FInstancedStruct>
+            .Produce = [](FCk_Handle& InEntity) -> TOptional<FInstancedStruct>
             {
                 if (NOT InEntity.Has<ck::FFragment_DynamicFragment_Data>())
                 { return {}; }
@@ -46,7 +46,7 @@ static struct FCkDynamicFragmentsSaveHandlerRegistrar
             // fragments have no structural composition step — they exist iff they hold data — so nothing to wait on:
             // always Applied, no NotReady. HydrationApply-only (never the net Apply slot): applying on a client would
             // race construct-time composition.
-            [](FCk_Handle& InEntity, const FInstancedStruct& InNew, const TOptional<FInstancedStruct>& /*InOld*/) -> ECk_Persistence_ApplyResult
+            .HydrationApply = [](FCk_Handle& InEntity, const FInstancedStruct& InNew, const TOptional<FInstancedStruct>& /*InOld*/) -> ECk_Persistence_ApplyResult
             {
                 if (InNew.GetScriptStruct() != FCk_SaveData_DynamicFragments::StaticStruct())
                 { return ECk_Persistence_ApplyResult::Applied; }
@@ -89,7 +89,7 @@ static struct FCkDynamicFragmentsSaveHandlerRegistrar
                 { InEntity.AddOrGet<ck::FTag_DynamicFragment_MayRequireReplication>(); }
 
                 return ECk_Persistence_ApplyResult::Applied;
-            });
+            }});
     }
 } GCkDynamicFragmentsSaveHandlerRegistrar;
 

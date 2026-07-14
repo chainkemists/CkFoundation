@@ -52,10 +52,10 @@ static struct FCkEntityTagSaveHandlerRegistrar
 {
     FCkEntityTagSaveHandlerRegistrar()
     {
-        FCk_PersistenceHandlerRegistry::Register_SaveOnly<FCk_SaveData_EntityTags>(
+        FCk_PersistenceHandlerRegistry::Register_SaveOnly<FCk_SaveData_EntityTags>({
             // Emit the entity's current FName tag set, or UNSET when EntityTag is absent (nothing to persist). UNSET is
             // ambiguous between "never had tags" and "all removed pre-save" — see the block comment's ABSENCE note.
-            [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+            .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
             {
                 if (NOT Entity.Has<ck::FFragment_EntityTag_Current>())
                 { return {}; }
@@ -78,7 +78,7 @@ static struct FCkEntityTagSaveHandlerRegistrar
             // composite restore-set request that diffs at DRAIN time, never a read-live-then-clear here (see the block
             // comment above): reading the "current" set at HydrationApply time is a lie because GatedDuringLoad construct
             // seeds are still enqueued-but-undrained. Enqueue one request, return Applied.
-            [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
+            .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
             {
                 CK_ENSURE_IF_NOT(ck::IsValid(Entity),
                     TEXT("EntityTag hydration skipped — invalid entity [{}]"), Entity)
@@ -98,7 +98,7 @@ static struct FCkEntityTagSaveHandlerRegistrar
                 UCk_Utils_EntityTag_UE::Request_RestoreSet(Entity, SavedNames, SavedCounts);
 
                 return ECk_Persistence_ApplyResult::Applied;
-            });
+            }});
     }
 } GCkEntityTagSaveHandlerRegistrar;
 

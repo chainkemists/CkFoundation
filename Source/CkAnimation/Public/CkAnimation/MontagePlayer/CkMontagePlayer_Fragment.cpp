@@ -28,15 +28,15 @@ static struct FMontagePlayerRepHandlerRegistrar
             return ECk_Persistence_ApplyResult::Applied;
         };
 
-        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SharedApply<FCk_RepData_MontagePlayer>(
+        FCk_PersistenceHandlerRegistry::Register_NetAndSave_SharedApply<FCk_RepData_MontagePlayer>({
                 // Produce is capture-only: builds the self-resident MontagePlayer container from live _State.
-                [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+                .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT Entity.Has<ck::FFragment_MontagePlayer_Current>())
                     { return {}; }
                     return FInstancedStruct::Make(FCk_RepData_MontagePlayer{Entity.Get<ck::FFragment_MontagePlayer_Current>().Get_State()});
                 },
-                ApplyFn);
+                .SharedApply = ApplyFn});
     }
 } GMontagePlayerRepHandlerRegistrar;
 

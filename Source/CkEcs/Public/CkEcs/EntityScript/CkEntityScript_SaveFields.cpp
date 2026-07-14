@@ -49,11 +49,11 @@ namespace ck_entity_script_save_fields
     {
         FRegistrar()
         {
-            FCk_PersistenceHandlerRegistry::Register_SaveOnly<FCk_SaveData_EntityScriptFields>(
+            FCk_PersistenceHandlerRegistry::Register_SaveOnly<FCk_SaveData_EntityScriptFields>({
                     // Capture the script instance's CPF_SaveGame fields as a Save-only payload. UNSET when there is no
                     // script, it is a shared CDO (NotInstanced), or the class declares no SaveGame field — those cases
                     // have nothing to persist and must not emit a (misleading) empty payload.
-                    [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
+                    .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                     {
                         if (NOT Entity.Has<ck::FFragment_EntityScript_Current>())
                         { return {}; }
@@ -84,7 +84,7 @@ namespace ck_entity_script_save_fields
                     },
                     // Save-only: HydrationApply is the load-path applier — the only path this type ever takes. It is
                     // never placed in a replicated container, so it has no net Apply.
-                    [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
+                    .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                     {
                         if (NOT Entity.Has<ck::FFragment_EntityScript_Current>())
                         { return ECk_Persistence_ApplyResult::NotReady; }
@@ -124,7 +124,7 @@ namespace ck_entity_script_save_fields
                             Entity, Payload.Get_FieldBytes().Num());
 
                         return ECk_Persistence_ApplyResult::Applied;
-                    });
+                    }});
         }
     };
 
