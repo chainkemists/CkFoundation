@@ -8,13 +8,8 @@
 
 #include <GenericTeamAgentInterface.h>
 #include <NativeGameplayTags.h>
-#include <Serialization/Archive.h>
 
 #include "CkTeam_Fragment.generated.h"
-
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace ck { class FSnapshotContext; }
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -51,19 +46,6 @@ namespace ck
     {
     public:
         CK_GENERATED_BODY(FFragment_TeamInfo);
-
-    public:
-        using IsSnapshotable = void;
-
-        // Tier-C: the assigned ID is the whole persistent state. The per-ID FTag_TeamID<> tag
-        // (which Get_ID actually reads) and the replicated container entry are re-derived from
-        // this value on restore through the v3 hydration Apply path.
-        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& /*InCtx*/) -> void
-        {
-            auto IDByte = static_cast<uint8>(_TeamID);
-            InAr << IDByte;
-            _TeamID = static_cast<ECk_Team_ID>(IDByte);
-        }
 
     private:
         ECk_Team_ID _TeamID = ECk_Team_ID::Unassigned;

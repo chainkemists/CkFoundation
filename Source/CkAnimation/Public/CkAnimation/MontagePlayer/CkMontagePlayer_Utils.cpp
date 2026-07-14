@@ -86,8 +86,8 @@ auto
         TEXT("Rebinding MontagePlayer on Entity [{}] with an INVALID SkeletalMeshComponent!"), InMontagePlayer)
     { return InMontagePlayer; }
 
-    // The SKMC is the one param that cannot round-trip a snapshot (Params' SerializeSnapshot is deliberately
-    // empty) — replace the whole Params payload with one wrapping the re-created mesh.
+    // The SKMC is the one param that cannot round-trip a save/load — a live component can't be captured or
+    // rebuilt from a snapshot payload — so replace the whole Params payload with one wrapping the re-created mesh.
     auto& ParamsFragment = InMontagePlayer.Get<ck::FFragment_MontagePlayer_Params>();
     ParamsFragment._Params = FCk_Fragment_MontagePlayer_ParamsData{InSkeletalMeshComponent};
 

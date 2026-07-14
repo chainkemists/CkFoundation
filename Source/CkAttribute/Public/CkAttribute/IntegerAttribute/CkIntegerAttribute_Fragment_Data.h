@@ -48,7 +48,6 @@ struct CKATTRIBUTE_API FCk_Fragment_IntegerAttributeRefill_ParamsData
 
 public:
     CK_GENERATED_BODY(FCk_Fragment_IntegerAttributeRefill_ParamsData);
-    using IsSnapshotable = void;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -86,7 +85,6 @@ struct CKATTRIBUTE_API FCk_Fragment_IntegerAttribute_ParamsData
 
 public:
     CK_GENERATED_BODY(FCk_Fragment_IntegerAttribute_ParamsData);
-    using IsSnapshotable = void;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

@@ -5,36 +5,6 @@
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
-#include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
-#include "CkEcs/Snapshot/CkSnapshot_Archive_Writer.h"
-#include "CkEcs/Snapshot/CkSnapshot_Archive_Reader.h"
-
-#include "Serialization/Archive.h"
-#include "UObject/Class.h" // UScriptStruct::SerializeItem
-
-// --------------------------------------------------------------------------------------------------------------------
-
-using FSnap_RecordOfEntityCollections = ck::FFragment_RecordOfEntityCollections;
-CK_REGISTER_SNAPSHOTABLE(FSnap_RecordOfEntityCollections);
-
-using FSnap_EntityCollections_RecordOfEntities = ck::FFragment_EntityCollections_RecordOfEntities;
-CK_REGISTER_SNAPSHOTABLE(FSnap_EntityCollections_RecordOfEntities);
-
-using FSnap_EntityCollection_Params = ck::FFragment_EntityCollection_Params;
-CK_REGISTER_SNAPSHOTABLE(FSnap_EntityCollection_Params);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    ck::FFragment_EntityCollection_Params::
-    SerializeSnapshot(
-        FArchive& InAr,
-        ck::FSnapshotContext& /*InCtx*/)
-    -> void
-{
-    FCk_Fragment_EntityCollection_ParamsData::StaticStruct()->SerializeItem(InAr, &_Params, nullptr);
-}
-
 // --------------------------------------------------------------------------------------------------------------------
 // Container-based replication handler for EntityCollection
 

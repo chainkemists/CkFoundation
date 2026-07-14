@@ -35,10 +35,6 @@ struct CKGRID_API FCk_Fragment_2dGridObject_ParamsData
 public:
     CK_GENERATED_BODY(FCk_Fragment_2dGridObject_ParamsData);
 
-    // Tier-A snapshot opt-in: pure-value footprint params (SaveGame SPECIFIER — meta=(SaveGame) is
-    // inert). A restored occupant keeps its footprint so post-load (re)placements resolve correctly.
-    using IsSnapshotable = void;
-
 private:
     UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FIntPoint _FootprintExtent = FIntPoint(1, 1);

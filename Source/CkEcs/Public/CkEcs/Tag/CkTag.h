@@ -2,8 +2,6 @@
 
 #include <type_traits>
 
-#include "CkEcs/Snapshot/CkSnapshot_TagRegistry.h"
-
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -12,27 +10,15 @@ namespace ck
     struct TTag { };
 }
 
-// CK_DEFINE_ECS_TAG: defines an empty ECS tag AND auto-registers it as snapshotable (opt-OUT model — every tag
-// round-trips by default; the central lifecycle-strip removes markers that must not persist). The registrar is a
-// `static inline` variable emitted AFTER the (now-complete) struct — `static inline` is legal at BOTH namespace and
-// class scope (a plain `inline` variable is rejected inside a class body, C7524; tags like the signal's nested
-// FTag_PayloadInFlight live in class bodies). `[[maybe_unused]]` silences the unused-variable diagnostic; the
-// side-effecting initializer is never elided. FCk_Snapshot_TagRegistry::Register dedupes by type-hash, so per-TU /
-// per-DLL re-registration is idempotent. Register_SnapshotableTag uses only entt::type_hash + a captureless lambda
-// (storage<T> deferred to restore) → safe at static-init, and T is complete here so the lambda instantiates cleanly.
+// CK_DEFINE_ECS_TAG: defines an empty ECS tag. `static_assert` enforces the no-data invariant. A feature declares its
+// persisted state through its Produce/Apply handler, not through a tag — tags do not participate in save/load.
 #define CK_DEFINE_ECS_TAG(_TagName_)\
     struct _TagName_ : public ck::TTag<_TagName_> { };\
-    static_assert(std::is_empty_v<_TagName_>, "Tags must not carry any data");\
-    [[maybe_unused]] static inline const bool _TagAutoReg_##_TagName_ = ::ck::detail::Register_SnapshotableTag<_TagName_>()
-
-// CK_DEFINE_ECS_TAG_TRANSIENT: defines an empty ECS tag that is NEVER captured into a snapshot (the opt-out from the
-// opt-OUT model above). Use for one-shot restore-lifecycle bookkeeping — markers that track a single restore pass and
-// must not round-trip through a snapshot. Letting such a marker round-trip is a correctness trap: a save taken AFTER a
-// load captures the marker, so the NEXT load of that save restores it, and the stale marker mis-fires on that later
-// load (its restore-lifecycle step gets skipped, or re-stamped from state that no longer applies).
-#define CK_DEFINE_ECS_TAG_TRANSIENT(_TagName_)\
-    struct _TagName_ : public ck::TTag<_TagName_> { };\
     static_assert(std::is_empty_v<_TagName_>, "Tags must not carry any data")
+
+// CK_DEFINE_ECS_TAG_TRANSIENT: retained as an alias of CK_DEFINE_ECS_TAG for its existing call sites. The
+// transient-vs-round-trip distinction is moot now that no tag round-trips through a registry.
+#define CK_DEFINE_ECS_TAG_TRANSIENT(_TagName_) CK_DEFINE_ECS_TAG(_TagName_)
 
 #define CK_DEFINE_ECS_TAG_COUNTED(_TagName_)\
     struct _TagName_ : public ck::FTag_CountedTag { };\

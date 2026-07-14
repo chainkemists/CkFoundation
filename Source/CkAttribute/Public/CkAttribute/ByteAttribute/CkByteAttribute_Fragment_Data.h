@@ -40,7 +40,6 @@ struct CKATTRIBUTE_API FCk_Fragment_ByteAttribute_ParamsData
 
 public:
     CK_GENERATED_BODY(FCk_Fragment_ByteAttribute_ParamsData);
-    using IsSnapshotable = void;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

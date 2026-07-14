@@ -4,12 +4,6 @@
 
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
-#include "CkEcs/Snapshot/CkSnapshot_Context.h"          // M2b position-restore: snapshot registration
-#include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
-#include "CkEcs/Snapshot/CkSnapshot_Archive_Writer.h"
-#include "CkEcs/Snapshot/CkSnapshot_Archive_Reader.h"
-#include "Serialization/Archive.h"
-
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -103,21 +97,5 @@ static struct FTransformRepHandlerRegistrar
             });
     }
 } GTransformRepHandlerRegistrar;
-
-// --------------------------------------------------------------------------------------------------------------------
-// M2b position-restore: persist the world transform so a respawned bridged entity comes back at its saved position.
-// Value-only (no handle refs) — out-of-line body because FFragment_Transform is not CKECSEXT_API-exported and lives
-// in ck::. Only _Transform persists; _ComponentsModified is transient dirty-tracking, recomputed after restore.
-
-auto
-    ck::FFragment_Transform::
-    SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& /*InCtx*/)
-    -> void
-{
-    InAr << _Transform;
-}
-
-using FSnap_Transform = ck::FFragment_Transform;
-CK_REGISTER_SNAPSHOTABLE(FSnap_Transform);
 
 // --------------------------------------------------------------------------------------------------------------------

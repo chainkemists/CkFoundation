@@ -157,10 +157,6 @@ struct CKRENDERTARGET_API FFragment_RenderTarget_AuthoredLog
 public:
     CK_GENERATED_BODY(FFragment_RenderTarget_AuthoredLog);
 
-    // Tier-A snapshotable: pure value data (no entity-handle refs), captured via tagged-property
-    // serialization of the SaveGame fields below.
-    using IsSnapshotable = void;
-
 private:
     UPROPERTY(SaveGame)
     TArray<FCk_RenderTarget_InstructionBatch> _Batches;

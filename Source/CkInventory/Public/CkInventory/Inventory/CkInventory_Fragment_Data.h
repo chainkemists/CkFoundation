@@ -14,13 +14,8 @@
 #include <GameplayTagContainer.h>
 #include <NativeGameplayTags.h>
 #include <Engine/BlueprintGeneratedClass.h>
-#include <Serialization/Archive.h>
 
 #include "CkInventory_Fragment_Data.generated.h"
-
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace ck { class FSnapshotContext; }
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -445,55 +440,6 @@ struct CKINVENTORY_API FCk_Fragment_Inventory_ParamsData
 
 public:
     CK_GENERATED_BODY(FCk_Fragment_Inventory_ParamsData);
-    using IsSnapshotable = void;
-
-    // Tier-C (was an inert Tier-A: all fields are non-UPROPERTY so zero fields round-tripped —
-    // presence only, every value reset to defaults on restore). The serialized set is the VALUE
-    // params: name (by tag NAME, skip-if-missing), the shape discriminator (the restore processor
-    // re-derives the lost FTag_Inventory_Spatial/DataOnly shape tag from it), dimensions and
-    // bounds. The custom accept/stack delegates + FMemberReferences are CODE WIRING and do not
-    // persist — restored inventories fall back to the built-in acceptance rules.
-    auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& /*InCtx*/) -> void
-    {
-        auto NameTagName = FName{};
-        auto InventoryTypeByte = uint8{0};
-        auto Dimensions = FIntPoint{1, 1};
-        auto BoundModeByte = uint8{0};
-        auto BoundLimit = int32{1};
-        auto StackingPolicyByte = uint8{0};
-        auto MaxStackSizeClamp = int32{1};
-
-        if (InAr.IsSaving())
-        {
-            NameTagName = _Name.GetTagName();
-            InventoryTypeByte = static_cast<uint8>(_InventoryType);
-            Dimensions = _Dimensions;
-            BoundModeByte = static_cast<uint8>(_BoundMode);
-            BoundLimit = _BoundLimit;
-            StackingPolicyByte = static_cast<uint8>(_StackingPolicy);
-            MaxStackSizeClamp = _MaxStackSizeClamp;
-        }
-
-        InAr << NameTagName;
-        InAr << InventoryTypeByte;
-        InAr << Dimensions;
-        InAr << BoundModeByte;
-        InAr << BoundLimit;
-        InAr << StackingPolicyByte;
-        InAr << MaxStackSizeClamp;
-
-        if (InAr.IsLoading())
-        {
-            constexpr auto ErrorIfNotFound = false;
-            _Name = FGameplayTag::RequestGameplayTag(NameTagName, ErrorIfNotFound);
-            _InventoryType = static_cast<ECk_InventoryType>(InventoryTypeByte);
-            _Dimensions = Dimensions;
-            _BoundMode = static_cast<ECk_Inventory_DataOnly_BoundMode>(BoundModeByte);
-            _BoundLimit = BoundLimit;
-            _StackingPolicy = static_cast<ECk_Inventory_StackingPolicy>(StackingPolicyByte);
-            _MaxStackSizeClamp = MaxStackSizeClamp;
-        }
-    }
 
 public:
     FCk_Fragment_Inventory_ParamsData() = default;

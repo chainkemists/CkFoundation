@@ -23,13 +23,14 @@ struct CKECSEXT_API FFragment_ActorSpawnIntent
 
 public:
     CK_GENERATED_BODY(FFragment_ActorSpawnIntent);
-    using IsSnapshotable = void;
 
 private:
-    // NOTE: bare `SaveGame` specifier (sets CPF_SaveGame), NOT `meta=(SaveGame)`. The snapshot proxy archive runs
-    // with ArIsSaveGame=true (FSnapshotArchive_Writer), which gates SerializeItem on CPF_SaveGame — a meta tag does
-    // NOT set that flag, so meta=(SaveGame) fields are silently dropped (round-trip empty). FFragment_SaveKey has
-    // this latent bug but is currently unwired/untested.
+    // NOTE: bare `SaveGame` specifier (sets CPF_SaveGame), NOT `meta=(SaveGame)`. A reflection save archive with
+    // ArIsSaveGame=true (v3: CkEntityScript_SaveFields) gates SerializeItem on CPF_SaveGame — a meta tag does NOT
+    // set that flag, so meta=(SaveGame) fields are silently dropped (round-trip empty). This field is NOT
+    // reflection-serialized under v3 — CkSnapshot_CaptureV3 reads Get_ActorClassPath directly into the entity-table
+    // entry — so the specifier does not affect its capture. FFragment_SaveKey uses the same bare specifier —
+    // see CkSnapshot_SaveKey_Fragment.h.
     UPROPERTY(SaveGame)
     FString _ActorClassPath;
 

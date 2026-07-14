@@ -10,7 +10,6 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_SceneNode_UE;
-class FArchive;
 class USceneComponent;
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -38,7 +37,6 @@ namespace ck
     {
     public:
         CK_GENERATED_BODY(FFragment_SceneNode_Current);
-        using IsSnapshotable = void;
 
     public:
         friend class FProcessor_SceneNode_Setup;
@@ -54,12 +52,6 @@ namespace ck
         CK_PROPERTY(_RelativeTransform);
 
         CK_DEFINE_CONSTRUCTORS(FFragment_SceneNode_Current, _RelativeTransform);
-
-    public:
-        // Tier-C: the SceneNode's local offset is authoritative spatial state with no entity-handle ref.
-        // Body in the .cpp (just the FTransform). Registered alongside SceneNodeParent/RecordOfSceneNodes so a
-        // restored SceneNode keeps its relative transform instead of resetting to identity.
-        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -124,12 +116,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Snapshotable scene hierarchy: SceneNodeParent (the parent link) and FFragment_RecordOfSceneNodes (the
-    // child list) are registered in CkSceneNode_Fragment.cpp, where the snapshot Archive types are complete.
-    // Their stored FCk_Handle_Transform / FCk_Handle_SceneNode entries are remapped on restore via
-    // FSnapshotContext, so a re-loaded SceneNode stays attached to its (remapped) parent and the parent keeps
-    // its (remapped) children. (Authoritative state — nothing rebuilds SceneNodes on restore; Construct is not
-    // re-run for a re-bridged entity.)
+    // Scene hierarchy links: SceneNodeParent is the parent link (EntityHolder<FCk_Handle_Transform>) and
+    // FFragment_RecordOfSceneNodes is the child list (RecordOfEntities<FCk_Handle_SceneNode>). Declared with the
+    // RoundTrip snapshot classification (fork-deferred).
     CK_DEFINE_ENTITY_HOLDER_AND_UTILS_ROUNDTRIP(USceneNodeParent_Utils, SceneNodeParent, FCk_Handle_Transform);
 
     // --------------------------------------------------------------------------------------------------------------------

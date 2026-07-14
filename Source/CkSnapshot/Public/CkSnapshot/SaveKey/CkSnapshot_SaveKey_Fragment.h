@@ -11,7 +11,6 @@ struct CKSNAPSHOT_API FFragment_SaveKey
 
 public:
     CK_GENERATED_BODY(FFragment_SaveKey);
-    using IsSnapshotable = void;
 
 private:
     // UPROPERTY(SaveGame) sets the real CPF_SaveGame flag so Tier-A reflection serializes _Key under an

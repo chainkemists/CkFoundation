@@ -22,8 +22,8 @@ class UCk_EntityScript_UE;
 // FInstancedStruct member (and its UScriptStruct type ptr) would dangle — worst for NotInstanced scripts (no
 // per-entity object exists) and AS-defined params structs (reinstanced on script reload). A UObject's UPROPERTYs
 // ARE traced (FInstancedStruct traces its inner refs via AddStructReferencedObjects), so the fragment pins THIS
-// holder via a TStrongObjectPtr. Mirrors FCk_EntityReplicationDriver_ReplicationData_EntityScript (the UPROPERTY
-// carrier) + FFragment_EntityScript_Current._SnapshotLoadPin (the fragment-pins-a-UObject shape). See [P3A-F1].
+// holder via a TStrongObjectPtr. The UPROPERTY-carrier half mirrors FCk_EntityReplicationDriver_ReplicationData_EntityScript
+// (same TSubclassOf + FInstancedStruct traced-UPROPERTY shape). See [P3A-F1].
 UCLASS()
 class CKECS_API UCk_EntityScript_SpawnRecipe_UE : public UObject
 {

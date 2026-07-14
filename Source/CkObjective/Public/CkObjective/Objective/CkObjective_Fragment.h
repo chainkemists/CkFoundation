@@ -5,8 +5,6 @@
 #include "CkAttribute/ByteAttribute/CkByteAttribute_Fragment_Data.h"
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment_Data.h"
 
-#include "CkEcs/Concepts/CkSnapshot_Concepts.h" // FArchive + ck::FSnapshotContext fwd-decls
-
 #include <NativeGameplayTags.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -34,7 +32,6 @@ namespace ck
     {
     public:
         CK_GENERATED_BODY(FFragment_Objective_Current);
-        using IsSnapshotable = void;
 
     public:
         friend class FProcessor_Objective_Setup;
@@ -52,11 +49,6 @@ namespace ck
         CK_PROPERTY_GET(_StatusAttribute);
         CK_PROPERTY_GET(_CompletionTag);
         CK_PROPERTY_GET(_FailureTag);
-
-    public:
-        // Status is the value of the _StatusAttribute child (snapshotable via CkAttribute), not stored here — persist
-        // only the remapped handle to re-link to it, plus the two tags.
-        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

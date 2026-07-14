@@ -16,10 +16,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Forward declarations for DEBUG_NAME::SerializeSnapshot (snapshot persistence of the debug name). Cannot
-// include CkSnapshot_Context.h here — it includes CkHandle.h, so that would be circular.
 class FArchive;
-namespace ck { class FSnapshotContext; }
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -86,7 +83,6 @@ struct DEBUG_NAME
     friend struct FEntity_FragmentMapper;
 public:
     CK_GENERATED_BODY(DEBUG_NAME);
-    using IsSnapshotable = void; // opt into CkSnapshot capture (paired with SerializeSnapshot below)
 
 private:
     FName _Name;
@@ -97,12 +93,6 @@ private:
     DoSet_DebugName(FName InDebugName, ECk_Override InOverride = ECk_Override::Override) -> void;
 
 public:
-    // Persist the debug name through a CkSnapshot round-trip so restored entities keep readable handle
-    // names. No entity handles inside, so the context is unused. Registered (gated to debug builds) in
-    // CkSnapshot_CkEcsFragments_Registration.cpp.
-    auto
-    SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
-
     CK_PROPERTY_GET(_Name);
 
     CK_DEFINE_CONSTRUCTORS(DEBUG_NAME, _Name);
@@ -1143,15 +1133,11 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class FArchive;
-namespace ck { class FSnapshotContext; }
-
 namespace ck
 {
     struct FFragment_ContextOwner
     {
         CK_GENERATED_BODY(FFragment_ContextOwner);
-        using IsSnapshotable = void;
 
     public:
         using EntityType = FCk_Handle;
@@ -1163,9 +1149,6 @@ namespace ck
         CK_PROPERTY_GET(_Entity);
 
         CK_DEFINE_CONSTRUCTORS(FFragment_ContextOwner, _Entity);
-
-        // Tier B/C — single handle ref; body defined out-of-line in CkSnapshot (needs full FSnapshotContext).
-        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
     };
 }
 

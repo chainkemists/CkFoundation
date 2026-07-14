@@ -11,8 +11,6 @@
 #include "CkInventory/Inventory/CkInventory_Fragment_Data.h"
 #include "CkInventory/Item/CkItem_Fragment_Data.h"
 
-#include "CkEcs/Concepts/CkSnapshot_Concepts.h" // forward-declares ck::FSnapshotContext for the SerializeSnapshot decl
-
 #include <GameplayTags.h>
 
 #include "CkInventory_DataOnly_Fragment_Data.generated.h"
@@ -20,7 +18,6 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_InventoryItem_Definition;
-class FArchive;
 
 USTRUCT(BlueprintType, meta = (HasNativeMake))
 struct CKINVENTORY_API FCk_Fragment_Inventory_DataOnly_ParamsData
@@ -29,7 +26,6 @@ struct CKINVENTORY_API FCk_Fragment_Inventory_DataOnly_ParamsData
 
 public:
     CK_GENERATED_BODY(FCk_Fragment_Inventory_DataOnly_ParamsData);
-    using IsSnapshotable = void;
 
 public:
     FCk_Fragment_Inventory_DataOnly_ParamsData() = default;
@@ -190,14 +186,9 @@ struct CKINVENTORY_API FCk_InventoryItem_DataOnly_ReplicatedEntry
 
 public:
     CK_GENERATED_BODY(FCk_InventoryItem_DataOnly_ReplicatedEntry);
-    // Tier-B: carries FCk_Handle_Item (entity ref) — _ItemHandle is remapped via FSnapshotContext.
-    using IsSnapshotable = void;
 
     auto operator==(const ThisType& InOther) const -> bool;
     CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
-
-    // Tier-B: _ItemHandle remapped via FSnapshotContext. Body in the .cpp.
-    auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& InCtx) -> void;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

@@ -242,11 +242,6 @@ struct CKRENDERTARGET_API FCk_Fragment_RenderTarget_ParamsData
 public:
     CK_GENERATED_BODY(FCk_Fragment_RenderTarget_ParamsData);
 
-    // Tier-A snapshotable: the restored host re-derives its target + container from these params
-    // (on a snapshot load the entity re-Constructs and Setup re-derives them; HydrateFromSavedChannel
-    // then repaints the saved instruction ring).
-    using IsSnapshotable = void;
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true, Categories = "RenderTarget"))

@@ -136,7 +136,6 @@ struct CKATTRIBUTE_API FCk_Fragment_FloatAttributeRefill_ParamsData
 
 public:
     CK_GENERATED_BODY(FCk_Fragment_FloatAttributeRefill_ParamsData);
-    using IsSnapshotable = void;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -174,7 +173,6 @@ struct CKATTRIBUTE_API FCk_Fragment_FloatAttribute_ParamsData
 
 public:
     CK_GENERATED_BODY(FCk_Fragment_FloatAttribute_ParamsData);
-    using IsSnapshotable = void;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

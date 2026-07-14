@@ -1,7 +1,4 @@
 #include "CkSnapshot_SaveKey_Fragment.h"
 
-#include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
-#include "CkEcs/Snapshot/CkSnapshot_Archive_Writer.h"
-#include "CkEcs/Snapshot/CkSnapshot_Archive_Reader.h"
-
-CK_REGISTER_SNAPSHOTABLE(FFragment_SaveKey);
+// FFragment_SaveKey is a v3 rendezvous fragment (matched by Has<> during CaptureV3 classification); it carries no
+// Model-A snapshot surface. This TU exists to keep the header self-compiling.

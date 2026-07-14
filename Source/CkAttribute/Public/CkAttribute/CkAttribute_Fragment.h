@@ -9,7 +9,6 @@
 
 #include "CkRecord/Record/CkRecord_Fragment.h"
 #include "CkEcs/Signal/CkSignal_Fragment.h"
-#include "CkEcs/Concepts/CkSnapshot_Concepts.h"
 #include <GameplayTagContainer.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -219,15 +218,6 @@ namespace ck
 
     public:
         CK_GENERATED_BODY(TFragment_Attribute<T_HandleType COMMA T_AttributeType COMMA T_ComponentTag>);
-        using IsSnapshotable = void;
-
-        // Tier-C: _Base / _Final are plain attribute values (no entity-handle refs). Does NOT use InCtx.
-        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& /*InCtx*/) -> void
-        {
-            InAr << _Base;
-            InAr << _Final;
-        }
-
     public:
         CK_DEFINE_ECS_TAG(FTag_StorePreviousValue);
         CK_DEFINE_ECS_TAG(FTag_RecomputeFinalValue);
@@ -268,15 +258,6 @@ namespace ck
     {
     public:
         CK_GENERATED_BODY(TFragment_Attribute_PreviousValues<T_AttributeType>);
-        using IsSnapshotable = void;
-
-        // Tier-C: _Base / _Final are plain attribute values (no entity-handle refs). Does NOT use InCtx.
-        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& /*InCtx*/) -> void
-        {
-            InAr << _Base;
-            InAr << _Final;
-        }
-
     public:
         using AttributeType = T_AttributeType;
         using AttributeDataType = typename T_AttributeType::AttributeDataType;
@@ -365,42 +346,6 @@ namespace ck
         using HandleType            = T_HandleType;
 
     public:
-        using IsSnapshotable = void;
-
-        // Tier-C: _ModifierDelta (TOptional plain value) + _Operation (enum). No entity-handle refs.
-        // Does NOT use InCtx. TOptional has no FArchive operator<<, so persist a set-flag + value.
-        auto SerializeSnapshot(FArchive& InAr, ck::FSnapshotContext& /*InCtx*/) -> void
-        {
-            auto HasDelta = _ModifierDelta.IsSet();
-            InAr << HasDelta;
-
-            if (InAr.IsLoading())
-            {
-                if (HasDelta)
-                {
-                    AttributeDataType DeltaValue{};
-                    InAr << DeltaValue;
-                    _ModifierDelta = DeltaValue;
-                }
-                else
-                {
-                    _ModifierDelta.Reset();
-                }
-            }
-            else
-            {
-                if (HasDelta)
-                {
-                    auto DeltaValue = _ModifierDelta.GetValue();
-                    InAr << DeltaValue;
-                }
-            }
-
-            auto OperationRaw = static_cast<uint8>(_Operation);
-            InAr << OperationRaw;
-            _Operation = static_cast<ECk_AttributeModifier_Operation>(OperationRaw);
-        }
-
     public:
         TFragment_AttributeModifier();
         explicit

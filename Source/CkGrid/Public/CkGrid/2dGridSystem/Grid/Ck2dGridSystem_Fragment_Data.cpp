@@ -1,14 +1,5 @@
 #include "Ck2dGridSystem_Fragment_Data.h"
 
-#include "CkEcs/Snapshot/CkSnapshot_FragmentRegistry.h"
-#include "CkEcs/Snapshot/CkSnapshot_Archive_Writer.h"
-#include "CkEcs/Snapshot/CkSnapshot_Archive_Reader.h"
-
-// --------------------------------------------------------------------------------------------------------------------
-// Tier-A (used directly as ck::FFragment_2dGridSystem_Params).
-
-CK_REGISTER_SNAPSHOTABLE(FCk_Fragment_2dGridSystem_ParamsData);
-
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
