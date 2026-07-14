@@ -35,6 +35,29 @@ namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_EntityReplicationDriver_FireOnDependentReplicationComplete);
 
+    // Diagnostic bookkeeping for the FireOnDependentReplicationComplete gate: accumulates how long the fire has
+    // been held by undrained fragments. Past a threshold the fire processor ensures LOUDLY naming the blocking
+    // dependent — the gate's "cannot hang forever" contract otherwise fails silently when an entry exists that
+    // no dispatcher on this net mode drains, and every OnReplicationComplete consumer
+    // (Promise_OnActorEcsReady/ValuesReplicated — e.g. the game HUD's context injection) hangs with it
+    // (found via the post-v3-load HUD hang, 2026-07-14). Removed the moment the gate clears.
+    class FProcessor_ReplicationDriver_FireOnDependentReplicationComplete;
+
+    struct FFragment_RepDriver_FireGateStall
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_RepDriver_FireGateStall);
+
+        friend class FProcessor_ReplicationDriver_FireOnDependentReplicationComplete;
+
+    private:
+        float _Seconds = 0.0f;
+        bool  _Reported = false;
+
+    public:
+        CK_PROPERTY_GET(_Seconds);
+    };
+
     // --------------------------------------------------------------------------------------------------------------------
 
     struct FFragment_ReplicationDriver_Requests
