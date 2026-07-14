@@ -46,6 +46,7 @@ namespace ck
     public:
         using Group = FGroup_Replication;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::AuthorityOnly;
+        static constexpr auto LoadPolicy = ECk_ProcessorLoadPolicy::RunsDuringLoad; // load-gate kernel (spec §4.3)
 
     public:
         using TProcessor::TProcessor;

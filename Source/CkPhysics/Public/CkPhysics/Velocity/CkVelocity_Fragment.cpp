@@ -36,12 +36,9 @@ static struct FVelocityRepHandlerRegistrar
                     if (ck::Is_NOT_Valid(VelocityHandle))
                     { return ECk_RepFragment_ApplyResult::NotReady; }
 
-                    // A pending Setup pass recomputes Current from Params AFTER this apply within the same frame,
-                    // stomping the replicated value (and the authority never re-sends an unchanged value). Defer
-                    // until the setup drain so the applied value is final.
-                    if (Entity.Has<ck::FTag_Velocity_NeedsSetup>())
-                    { return ECk_RepFragment_ApplyResult::NotReady; }
-
+                    // (Phase 2 §2.6) The per-feature NeedsSetup apply-guard from 5eda3ac8a is retired: the late
+                    // FGroup_Hydration dispatch + the ConstructedThisFrame defer (§2.4) + fire-gating (§2.5) now
+                    // guarantee this apply runs AFTER the setup drain, so the applied value is final.
                     UCk_Utils_Velocity_UE::Request_OverrideVelocity(VelocityHandle, New.Get<FCk_RepData_Velocity>().Value);
                     return ECk_RepFragment_ApplyResult::Applied;
                 },

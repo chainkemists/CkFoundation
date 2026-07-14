@@ -33,6 +33,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_Script;
+        static constexpr auto LoadPolicy = ECk_ProcessorLoadPolicy::RunsDuringLoad; // load-gate kernel (spec §4.3)
 
     public:
         using Super = TProcessor;

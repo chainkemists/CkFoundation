@@ -16,11 +16,12 @@ namespace ck
     // (FTag_RepFragments_PendingApply on the associated entity); this processor applies them.
     //
     // Scheduling contract (the load-bearing part):
-    //   - runs AFTER FProcessor_EntityScript_FinishConstruction (same group), so OnConstructed-
-    //     driven composition exists before the first dispatch, and
-    //   - FGroup_Gameplay_Script precedes FGroup_Replication globally, so applied values are
-    //     visible before FProcessor_ReplicationDriver_FireOnDependentReplicationComplete
-    //     broadcasts OnReplicationComplete in the same frame.
+    //   - lives in FGroup_Hydration, which runs after FGroup_Gameplay_Script (where
+    //     FProcessor_EntityScript_FinishConstruction lives), so OnConstructed-driven composition
+    //     exists before the first dispatch — no per-processor RunAfter needed, and
+    //   - FGroup_Hydration precedes FGroup_Replication globally, so applied values are visible
+    //     before FProcessor_ReplicationDriver_FireOnDependentReplicationComplete broadcasts
+    //     OnReplicationComplete in the same frame (fire-gating additionally waits on the drain).
     class CKECS_API FProcessor_ReplicatedFragments_Dispatch : public ck_exp::TProcessor<
         FProcessor_ReplicatedFragments_Dispatch,
         FCk_Handle,
@@ -29,10 +30,10 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay_Script;
-        using RunAfter = TDepList<FProcessor_EntityScript_FinishConstruction>;
+        using Group = FGroup_Hydration;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::ClientOnly;
         using MarkedDirtyBy = FTag_RepFragments_PendingApply;
+        static constexpr auto LoadPolicy = ECk_ProcessorLoadPolicy::RunsDuringLoad; // load-gate kernel (spec §4.3)
 
     public:
         using TProcessor::TProcessor;
@@ -49,7 +50,7 @@ namespace ck
 
     // Load-path sibling of FProcessor_ReplicatedFragments_Dispatch: drains an entity's FFragment_PendingHydration
     // queue through the SAME handler Apply, but runs on EVERY net mode (a loading standalone/authority world
-    // hydrates locally, not just clients). Same Group as the net dispatcher (they move together in Phase 2).
+    // hydrates locally, not just clients). Same Group as the net dispatcher (FGroup_Hydration).
     // DORMANT in Phase 1: nothing enqueues FFragment_PendingHydration yet — Phase 3B's load path does.
     class CKECS_API FProcessor_Hydration_Dispatch : public ck_exp::TProcessor<
         FProcessor_Hydration_Dispatch,
@@ -59,15 +60,24 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay_Script;
-        using RunAfter = TDepList<FProcessor_EntityScript_FinishConstruction>;
+        using Group = FGroup_Hydration;
+        // Runs LAST among the FGroup_Hydration dispatchers so it can clear FTag_EntityScript_ConstructedThisFrame
+        // after both have skipped this-frame-composed entities in the main pass ([P2-D1], Phase 2 §2.4).
+        using RunAfter = TDepList<FProcessor_ReplicatedFragments_Dispatch>;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::All;
         using MarkedDirtyBy = FTag_Hydration_PendingApply;
+        static constexpr auto LoadPolicy = ECk_ProcessorLoadPolicy::RunsDuringLoad; // load-gate kernel (spec §4.3)
 
     public:
         using TProcessor::TProcessor;
 
     public:
+        // Overrides the base view-iterating tick to clear FTag_EntityScript_ConstructedThisFrame registry-wide
+        // AFTER the per-entity loop (Phase 2 §2.4). Non-const — it mutates the registry.
+        auto
+        DoTick(
+            TimeType InDeltaT) -> void;
+
         auto
         ForEachEntity(
             TimeType InDeltaT,
