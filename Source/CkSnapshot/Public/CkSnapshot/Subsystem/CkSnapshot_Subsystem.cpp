@@ -674,34 +674,12 @@ auto
                 }
                 else
                 {
-                    // Pure ECS RuntimeSpawned: Request_SpawnEntity under the mapped lifetime owner (or the transient).
+                    // Pure ECS RuntimeSpawned: Request_SpawnEntity under the mapped lifetime owner. A top-level
+                    // entity whose owner is the non-persisted transient is restored only when its script explicitly
+                    // opts into snapshot respawn; boot infrastructure keeps the default false and is recreated by
+                    // normal world startup.
                     if (NOT _SpawnedRuntimeIds.Contains(SavedId))
                     {
-                        const auto OwnerSavedId = Entry.Get_LifetimeOwnerSavedId();
-                        auto Owner = TransientEntity;
-                        if (OwnerSavedId != ck_snapshot_subsystem::k_NoEntity)
-                        {
-                            // The owner is NOT in the saved table => it is the world root/transient (never persisted).
-                            // This entity is world-boot infrastructure (day/night driver, music director, ...) that the
-                            // fresh world's NORMAL boot re-creates — the loader must NOT respawn it (that would duplicate
-                            // against the boot's copy + dangle its handle refs). SKIP. NOTE: a gameplay top-level entity
-                            // spawned under the transient at runtime would ALSO skip here — distinguishing it from boot
-                            // infrastructure is an unsolved spawner-state problem.
-                            if (NOT _PersistedIds.Contains(OwnerSavedId))
-                            {
-                                _SkippedIds.Add(SavedId);
-                                break;
-                            }
-                            const auto* MappedOwner = _SavedIdMap.Find(OwnerSavedId);
-                            if (MappedOwner == nullptr || ck::Is_NOT_Valid(*MappedOwner))
-                            {
-                                // Persisted owner not mapped yet — defer this entry to a later tick (owners precede dependents).
-                                AnyUnresolved = true;
-                                break;
-                            }
-                            Owner = *MappedOwner;
-                        }
-
                         auto* ScriptClass = FSoftClassPath{Entry.Get_ScriptClassPath()}.TryLoadClass<UCk_EntityScript_UE>();
                         if (ScriptClass == nullptr)
                         {
@@ -709,6 +687,38 @@ auto
                                 SavedId, Entry.Get_ScriptClassPath());
                             _SkippedIds.Add(SavedId);
                             break;
+                        }
+
+                        const auto* ScriptDefault = ScriptClass->GetDefaultObject<UCk_EntityScript_UE>();
+                        const auto bSnapshotRespawnable =
+                            ck::IsValid(ScriptDefault) && ScriptDefault->Get_IsSnapshotRespawnable();
+
+                        const auto OwnerSavedId = Entry.Get_LifetimeOwnerSavedId();
+                        auto Owner = TransientEntity;
+                        if (OwnerSavedId != ck_snapshot_subsystem::k_NoEntity)
+                        {
+                            // The owner is NOT in the saved table => it is normally the world root/transient (never
+                            // persisted). Opted-in gameplay entities respawn there; default-false boot infrastructure
+                            // is deliberately skipped to avoid duplicating the fresh world's copy.
+                            if (NOT _PersistedIds.Contains(OwnerSavedId))
+                            {
+                                if (NOT bSnapshotRespawnable)
+                                {
+                                    _SkippedIds.Add(SavedId);
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                const auto* MappedOwner = _SavedIdMap.Find(OwnerSavedId);
+                                if (MappedOwner == nullptr || ck::Is_NOT_Valid(*MappedOwner))
+                                {
+                                    // Persisted owner not mapped yet — defer this entry to a later tick.
+                                    AnyUnresolved = true;
+                                    break;
+                                }
+                                Owner = *MappedOwner;
+                            }
                         }
 
                         _SpawnedRuntimeIds.Add(SavedId);
