@@ -46,8 +46,7 @@
 //
 // Triggers: same as `FCkAutoTestWrapperGenerator` — `OnPostEngineInit` and every successful
 // AS PostCompile. Determinism guarantees match: stable sort, no timestamps, LF-normalized diff
-// skip, CRLF on Windows write. See `CkAngelscriptGenerator/CLAUDE.md` "Determinism + drift
-// safety" for the contract.
+// skip, CRLF on Windows write (see the module's Determinism + drift-safety contract).
 class CKANGELSCRIPTGENERATOR_API FCkAutoTestNetStubGenerator
 {
 public:

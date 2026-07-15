@@ -16,8 +16,8 @@
 
 namespace
 {
-    // Duplicated from the anonymous namespace of CkDynamic_Utils.cpp. Task 12 folds both copies into the shared
-    // internal header (CkDynamic_Sentinel.h); kept local here to avoid touching the hot Get_Fragment TU now.
+    // Duplicated from the anonymous namespace of CkDynamic_Utils.cpp; kept local to avoid touching the
+    // hot Get_Fragment TU. Consolidate into the shared internal header (CkDynamic_Sentinel.h).
     auto
         PassesDestroyFilter(
             const FCk_Handle& InHandle,

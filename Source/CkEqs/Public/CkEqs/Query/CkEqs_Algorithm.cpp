@@ -1008,8 +1008,6 @@ auto
     }
 
     // v1 overlap approach: zero-length sphere ShapeTrace (Start == End).
-    // PROGRESS.md "Overlap-test approach chosen" entry should reflect this once verified
-    // against Jolt's bundled shape-cast semantics for zero-vector casts.
     const auto Radius = FMath::Max(InTest.Get_OverlapRadius(), 1.0f);
     const auto Sphere = FCk_AnyShape{FCk_ShapeSphere_Dimensions{Radius}};
     const auto& OverlapFilter = InTest.Get_OverlapFilter();

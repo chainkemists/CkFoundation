@@ -21,8 +21,6 @@
 //     after the modal is open and the thread is running.
 //   * Mid-session (Issue #7, 2026-05-13): hot-reload failures don't open a
 //     modal, so use FTSTicker instead.
-//
-// See CkAngelscriptGenerator/Claude.md for the full architecture.
 
 namespace ck::angelscriptgenerator::self_heal
 {
@@ -99,9 +97,7 @@ namespace ck::angelscriptgenerator::self_heal
         // records and re-corrupt a healthy state (observed 2026-06-10 — the
         // re-corruption fired minutes after the user had hand-fixed the
         // wedge). The per-signature convergence trackers and blacklist
-        // intentionally survive — they exist precisely to span cleanup
-        // boundaries (see "Cleanup boundaries vs in-memory state" in the
-        // module CLAUDE.md).
+        // intentionally survive — they exist precisely to span cleanup boundaries.
         static auto Clear_PendingRecoveryState() -> void;
 
         // Routes OnAngelscriptReloadHadErrors to modal-tick vs FTSTicker.

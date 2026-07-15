@@ -8,7 +8,7 @@
 
 void FCkIskmRendererVFModule::StartupModule()
 {
-    // Map the Plan-2 batched-skinning shader directory. Virtual path kept as "/CkIskmRenderer".
+    // Map the batched-skinning shader directory. Virtual path kept as "/CkIskmRenderer".
     // Physical dir now lives in this (PostConfigInit) module: <CkFoundation>/Source/CkIskmRendererVF/Shaders/CkIskmRenderer.
     const auto Plugin = IPluginManager::Get().FindPlugin(TEXT("CkFoundation"));
     if (Plugin.IsValid())

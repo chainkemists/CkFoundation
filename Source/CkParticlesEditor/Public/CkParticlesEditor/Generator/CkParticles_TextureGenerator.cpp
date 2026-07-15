@@ -268,7 +268,7 @@ namespace ck::particles_editor
         BakeOne(TEXT("T_CkParticles_SweepStreak"), &Px_SweepStreak);
         BakeOne(TEXT("T_CkParticles_TileNoise"),   &Px_TileNoise);
 
-        Log(TEXT("Generated {}/{} CkParticles VFX textures under {} (open them to judge — then I wire the master material)."),
+        Log(TEXT("Generated {}/{} CkParticles VFX textures under {}."),
             FString::FromInt(Ok), FString::FromInt(Total), FString(TexDir));
     }
 }

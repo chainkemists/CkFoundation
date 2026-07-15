@@ -34,7 +34,7 @@ namespace ck
     // Sets an AnimInstance class on the SKMC and re-wires the notify-forwarder owning
     // handle on the resulting AnimInstance. Called from Setup (this phase), Phase I
     // (SetAnimInstanceClass handler), and Phase J's lazy-AnimInstance branch in
-    // PlayMontage. Per Source/CLAUDE.md: no anonymous namespaces — use `static`.
+    // PlayMontage. (unity builds concatenate TUs, so file-static rather than an anonymous namespace.)
     static auto DoApply_AnimInstanceClass(
         USkeletalMeshComponent* InSKMC,
         TSubclassOf<UAnimInstance> InClass,
@@ -126,7 +126,7 @@ namespace ck
         SpawnXf.AddToTranslation(SpawnXf.GetRotation().RotateVector(InCurrent._LocalLocationOffset));
         SKMC->SetWorldTransform(SpawnXf);
 
-        // Resolve the AnimBP class. Sync-load — see Claude.md note about hitch on first
+        // Resolve the AnimBP class. Sync-load — first use of an AnimCollection can hitch.
         // use of an AnimCollection. Fall back to the notify-bridging UAnimInstance subclass
         // so OnAnimationNotify and OnMontageFinished still fire in sequence mode.
         const auto SoftClass = RendererData->Get_DefaultAnimInstanceClass();

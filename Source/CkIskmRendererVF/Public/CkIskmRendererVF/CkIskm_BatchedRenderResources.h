@@ -12,12 +12,12 @@
 #include "CkIskmRendererVF/CkIskm_BoneMatrix.h"
 
 // ====================================================================================================================
-//  CkIskmRenderer Plan-2 — render-thread resources for batched GPU-skinned skeletal instancing.
+//  CkIskmRenderer — render-thread resources for batched GPU-skinned skeletal instancing.
 //  Port of Skelot v6 SkelotRenderResources.h, GPUScene desktop path only (HP float32, no manual-vertex-fetch,
 //  no legacy/non-GPUScene path, no curves). See Shaders/CkIskmRenderer/CkIskm_BatchedVertexFactory.ush.
 //
 //  Lives in the engine-only PostConfigInit module CkIskmRendererVF so the FVertexFactory type registers before
-//  the engine seals the vertex-factory list. API shapes are fork-verified (scratchpad PHASE1_ENGINE_API.md).
+//  the engine seals the vertex-factory list. API shapes are verified against the engine render headers.
 // ====================================================================================================================
 
 class USkeletalMesh;

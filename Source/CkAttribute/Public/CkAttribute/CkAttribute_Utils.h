@@ -58,7 +58,7 @@ namespace ck
         // Reads both direction's PreClamp fragments and returns the one that
         // captured the true raw pre-any-clamp value (i.e. the one whose value
         // differs from Current.Final). Returns Current.Final if nothing was
-        // clamped this frame. See CkAttribute/CLAUDE.md for the fragment-level
+        // clamped this frame. See the module notes on the Min/Max pre-clamp
         // asymmetry this accessor abstracts over.
         static auto
         Get_PreClampFinalValue(

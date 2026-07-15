@@ -51,7 +51,7 @@ namespace
     constexpr auto Cone_LineThickness       = 1.5f;
 
     // Persistent: live until the agent (parent) is destroyed. PMG's Duration sentinel is
-    // -1 = persist; 0 = single-tick (the gotcha — see CkPmg/CLAUDE.md).
+    // -1 = persist; 0 = single-tick (the PMG Duration-sentinel gotcha).
     constexpr auto Persist                  = -1.0f;
 
     // Color modulation per state. PathPending wins over Asleep visually — pending is transient

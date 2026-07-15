@@ -31,9 +31,8 @@ private:
     FDelegateHandle _EndFrameRebuildHandle;
 #if WITH_ANGELSCRIPT_CK
     // AS body-only changes (e.g. DoConstruct edits) don't go through OnObjectsReplaced because
-    // they're hot-patched into the same UClass*. Investigation B (plan:
-    // you-are-the-technical-imperative-teacup.md) confirmed empirically that
-    // FAngelscriptCodeModule::GetPostCompile is the only hook that fires for those. Coalesces
+    // they're hot-patched into the same UClass*. FAngelscriptCodeModule::GetPostCompile
+    // is the only hook that fires for those (confirmed empirically). Coalesces
     // into the same end-of-frame rebuild path as OnObjectsReplaced.
     FDelegateHandle _PostAngelscriptCompileHandle;
 #endif

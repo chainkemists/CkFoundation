@@ -39,8 +39,6 @@
 // CANONICAL (const-stripped) signature, with a declaration-level backstop
 // (the 2026-05-14 fix, extended 2026-06 after bulk synthesis let
 // const-aliased raw args duplicate the same emitted overload).
-//
-// See CkAngelscriptGenerator/Claude.md for the full sibling-file model.
 
 namespace ck::angelscriptgenerator::self_heal
 {

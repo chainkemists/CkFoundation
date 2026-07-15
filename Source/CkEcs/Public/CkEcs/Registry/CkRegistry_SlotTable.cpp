@@ -69,10 +69,8 @@ namespace ck::registry_table
 {
     namespace
     {
-        // (Sub-namespace intentionally elided per CkEcs CLAUDE.md: "No anonymous
-        // namespaces — use static or internal classes." Symbols below are
-        // file-scope `static` instead, with prefixed names to avoid unity
-        // collisions.)
+        // Sub-namespace intentionally elided: no anonymous namespaces — symbols
+        // below are file-scope statics with prefixed names to avoid unity collisions.
     }
 
     // ----

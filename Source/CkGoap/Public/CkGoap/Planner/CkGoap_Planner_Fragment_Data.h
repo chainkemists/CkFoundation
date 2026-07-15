@@ -112,7 +112,7 @@ private:
 	// Set to true ONLY when PlanFailed is the test/research subject (e.g.
 	// CkAutoTest_Goap_Planner_InvalidGoal, the MakeTea gym station that demos
 	// PlanFailed when ingredients are missing). Game-content Planners must
-	// leave this false — see CkGoap/CLAUDE.md § "Design tenets".
+	// leave this false — see the module design-tenets notes.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,
 		meta = (AllowPrivateAccess = true))
 	bool _AllowPlanFailed = false;

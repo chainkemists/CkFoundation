@@ -96,7 +96,7 @@ namespace ck
             {
                 ck::eqs::Warning(
                     TEXT("EqsQuery from querier [{}]: request has empty Tests array. Query will return generator output unscored. "
-                         "Pass-4 #4: tests are essential at the constructor level — passing {{}} for tests is almost certainly a bug."),
+                         "Tests are essential at the constructor level — passing {{}} for tests is almost certainly a bug."),
                     InHandle);
             }
 

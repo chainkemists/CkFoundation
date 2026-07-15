@@ -365,7 +365,7 @@ auto
 	// PlanFailed branches in HandleResult / HandleRequests to gate the runtime
 	// ensure.
 	//
-	// See CkGoap/CLAUDE.md § "Design tenets / Every Planner must always produce
+	// See the module design-tenets notes (Every Planner must always produce
 	// a valid plan" for the rationale and the canonical example
 	// (UCk_GoapFEARGym_WaitForEnemy).
 	// ----------------------------------------------------------------------
@@ -411,8 +411,7 @@ auto
 				 "PlannerParams._AllowPlanFailed=false. Add a fallback Action (no preconditions, "
 				 "effect=goal, cost ~999.0) such as WaitForEnemy / StandWatch / Idle, OR set "
 				 "_AllowPlanFailed=true if this Planner is intentionally allowed to PlanFail (tests, "
-				 "research catalogs, gyms that demonstrate PlanFailed). See CkGoap/CLAUDE.md § "
-				 "\"Design tenets\"."),
+				 "research catalogs, gyms that demonstrate PlanFailed)."),
 			InHandle, InParams.Get_PlannerTag())
 		{ /* still proceed; ensure surfaces but doesn't block setup */ }
 	}
