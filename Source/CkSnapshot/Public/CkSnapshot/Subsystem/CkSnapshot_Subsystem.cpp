@@ -836,6 +836,61 @@ auto
 
 auto
     UCk_Snapshot_Subsystem_UE::
+    DoRestore_SavedOwnership()
+    -> void
+{
+    // Rebuild APIs establish a valid temporary ownership chain so Construct can run, but that chain is not
+    // necessarily the one captured in the save:
+    //   - RuntimeSpawned scripts can override ContextOwner after spawn.
+    //   - DefinitionBuilt items are rebuilt under a driver-bearing context owner and historically waited for a
+    //     feature payload (for example Inventory) to transfer LifetimeOwner later.
+    // Restore every resolvable hard link now, after rebuild mapping has settled and before any hydration payload applies.
+    // Endpoints absent from _SavedIdMap retain their valid rebuild-time relationship.
+    for (const auto& Entry : _V3Tables.Get_Entities())
+    {
+        if (Entry.Get_Provenance() != ECk_Snapshot_V3_Provenance::RuntimeSpawned &&
+            Entry.Get_Provenance() != ECk_Snapshot_V3_Provenance::DefinitionBuilt)
+        { continue; }
+
+        const auto* Mapped = _SavedIdMap.Find(Entry.Get_SavedId());
+        if (Mapped == nullptr || ck::Is_NOT_Valid(*Mapped))
+        { continue; }
+        auto Entity = *Mapped;
+
+        if (const auto OwnerSavedId = Entry.Get_LifetimeOwnerSavedId();
+            OwnerSavedId != ck_snapshot_subsystem::k_NoEntity)
+        {
+            const auto* SavedOwner = _SavedIdMap.Find(OwnerSavedId);
+            if (SavedOwner != nullptr && ck::IsValid(*SavedOwner) &&
+                Entity.Has<ck::FFragment_LifetimeOwner>())
+            {
+                const auto CurrentOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Entity);
+                if (CurrentOwner != *SavedOwner)
+                { UCk_Utils_EntityLifetime_UE::Request_TransferLifetimeOwner(Entity, *SavedOwner); }
+            }
+        }
+
+        if (const auto ContextSavedId = Entry.Get_ContextOwnerSavedId();
+            ContextSavedId != ck_snapshot_subsystem::k_NoEntity)
+        {
+            const auto* SavedContext = _SavedIdMap.Find(ContextSavedId);
+            if (SavedContext != nullptr && ck::IsValid(*SavedContext))
+            {
+                const auto CurrentContext = UCk_Utils_ContextOwner_UE::Has(Entity)
+                    ? UCk_Utils_ContextOwner_UE::Get_ContextOwner(Entity)
+                    : FCk_Handle{};
+
+                if (CurrentContext != *SavedContext)
+                { UCk_Utils_ContextOwner_UE::Request_Override(Entity, *SavedContext); }
+            }
+        }
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
     DoApply_SavedTransforms()
     -> void
 {
@@ -894,6 +949,10 @@ auto
     if (_HydrationEnqueued)
     { return; }
     _HydrationEnqueued = true;
+
+    // Restore mapped hard ownership links before feature payloads run. This closes the DefinitionBuilt lifetime
+    // transfer window when both endpoints survived and preserves mapped RuntimeSpawned ContextOwner overrides.
+    DoRestore_SavedOwnership();
 
     // G1 Transform parity — restore saved world transforms BEFORE enqueuing payloads (and well before the Phase 0
     // orphan walk below), so a restored entity is at its saved position by the time its payloads hydrate.
