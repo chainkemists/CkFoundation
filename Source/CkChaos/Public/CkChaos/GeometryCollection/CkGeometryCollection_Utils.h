@@ -3,7 +3,7 @@
 #include "CkChaos/GeometryCollection/CkGeometryCollection_Fragment_Data.h"
 #include "CkChaos/GeometryCollectionOwner/CkGeometryCollectionOwner_Fragment_Data.h"
 
-#include "CkECS/Handle/CkHandle.h"
+#include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkGeometryCollection_Utils.generated.h"

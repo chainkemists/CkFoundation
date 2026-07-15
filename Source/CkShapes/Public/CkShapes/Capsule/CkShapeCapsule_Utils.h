@@ -2,7 +2,7 @@
 
 #include "CkShapes/Capsule/CkShapeCapsule_Fragment_Data.h"
 
-#include "CkECS/Handle/CkHandle.h"
+#include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkShapeCapsule_Utils.generated.h"
