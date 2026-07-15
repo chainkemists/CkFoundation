@@ -35,7 +35,7 @@ template <typename InterfaceType> class TScriptInterface;
  * commandlets, -unattended, and null-RHI runs, and via ck.LoadingScreen.Disable — the holder
  * bookkeeping still runs so tests can assert on Get_NeedsLoadingScreen().
  *
- * Restyled from Lyra's CommonLoadingScreen ULoadingScreenManager (see module Claude.md for the
+ * Restyled from Lyra's CommonLoadingScreen ULoadingScreenManager (see the module design notes for
  * port provenance and deliberate divergences).
  */
 UCLASS(NotBlueprintable, BlueprintType, DisplayName="CkSubsystem_LoadingScreen")

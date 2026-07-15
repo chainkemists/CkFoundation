@@ -454,7 +454,7 @@ auto
 							 "fallback Action AND _AllowPlanFailed=false. Set "
 							 "PlannerParams._WorldStateSource (top-level) or verify the activation walk "
 							 "resolved it (promoted), and add a fallback Action so PlanFailed is "
-							 "structurally impossible. See CkGoap/CLAUDE.md § \"Design tenets\"."),
+							 "structurally impossible."),
 						InHandle, InParams.Get_PlannerTag())
 					{ /* still proceed — broadcast and let consumers react */ }
 
@@ -785,7 +785,7 @@ auto
 			// the catalog is missing a fallback Action (preferred fix) or the
 			// author intentionally opted in to PlanFailed via _AllowPlanFailed
 			// (tests, research catalogs, gym stations that demonstrate
-			// PlanFailed). See CkGoap/CLAUDE.md § "Design tenets".
+			// PlanFailed). See the module design-tenets notes.
 			CK_ENSURE_IF_NOT(InCurrent.Get_HasUnconditionalFallback() || InParams.Get_AllowPlanFailed(),
 				TEXT("Planner [{}] (tag [{}]) reached PlanFailed but has no unconditional fallback "
 					 "Action and PlannerParams._AllowPlanFailed=false. Add a fallback Action "

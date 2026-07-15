@@ -92,7 +92,7 @@ auto
         // P3-E5: hard-cap candidate count for the Immediate path so a runaway generator
         // can't stall the main thread. Truncate-with-warning, do NOT silently drop —
         // include both numbers (configured count + cap) so the consumer can see the
-        // root cause, not just the symptom (CTO Pass-4 non-blocking #2).
+        // root cause, not just the symptom.
         const auto HardCap = UCk_Utils_Eqs_Settings_UE::Get_MaxCandidates_ImmediatePathHardCap();
         if (State.Get_Candidates().Num() > HardCap)
         {

@@ -76,7 +76,7 @@ enum class ECk_Eqs_TestType : uint8
     Random          // Assigns FMath::FRand() score; useful for random tie-breaking
     // v1.2: PathCost / Reachability — needs CkEqs<->CkNav async fan-out design (N candidates ->
     // N async Request_FindPath -> aggregate completions -> continue scoring). Do NOT add as
-    // direct FindPathSync calls; CkNavigation/Claude.md:133 flags that as an anti-pattern.
+    // direct FindPathSync calls; the CkNavigation module notes flag the synchronous shortcut as an anti-pattern.
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Eqs_TestType);
 
@@ -524,7 +524,7 @@ public:
     CK_PROPERTY(_Context);
 
 public:
-    // Pass-4 (CTO sign-off #4): _GeneratorParams and _Tests are essential. Single-arg
+    // _GeneratorParams and _Tests are essential. Single-arg
     // construction silently produced a default-SimpleGrid, zero-test query that returned
     // a candidate at index 0 with score 1.0 - silently-wrong consumer behavior. Tests is
     // mandatory at construction; pass {} only if you know you want a generator-only

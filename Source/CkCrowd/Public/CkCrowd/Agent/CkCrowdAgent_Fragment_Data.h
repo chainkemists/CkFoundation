@@ -85,7 +85,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CrowdAgent_BlockedPolicy);
 // (Radius, Height, Tags). Gate 2+ adds MaxSpeed/MaxAcceleration/MaxTurnRate/etc.
 // Gate 3+ adds SeparationRadius/SeparationWeight/Flags/IgnoreFlags. Gate 4+ adds
 // the piercing/sleep/replan tunables. See PLAN.md for the staged-rollout list and
-// CkCrowd/Claude.md for the final defaults table.
+// the module's Tunables Reference for the final defaults table.
 USTRUCT(BlueprintType)
 struct CKCROWD_API FCk_Fragment_CrowdAgent_ParamsData
 {
@@ -107,7 +107,7 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     FGameplayTagContainer _Tags;
 
-    // Gate 2 — locomotion tunables. Defaults match the Tunables Reference table in CkCrowd/Claude.md.
+    // Locomotion tunables.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1.0"))
     float _MaxSpeed = 240.0f;
 
@@ -129,7 +129,7 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1.0"))
     float _WaypointArrivalRadius = 25.0f;
 
-    // Gate 3 — separation tunables. Defaults match the Tunables Reference table in CkCrowd/Claude.md.
+    // Separation tunables.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1.0"))
     float _SeparationRadius = 100.0f;
 
