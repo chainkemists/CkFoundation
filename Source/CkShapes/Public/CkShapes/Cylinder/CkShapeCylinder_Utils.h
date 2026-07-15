@@ -2,7 +2,7 @@
 
 #include "CkShapes/Cylinder/CkShapeCylinder_Fragment_Data.h"
 
-#include "CkECS/Handle/CkHandle.h"
+#include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkShapeCylinder_Utils.generated.h"

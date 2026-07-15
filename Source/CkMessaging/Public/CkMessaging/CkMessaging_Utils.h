@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkECS/Handle/CkHandle.h"
+#include "CkEcs/Handle/CkHandle.h"
 
 #include "CkMessaging/CkMessaging_Fragment.h"
 #include "CkMessaging/CkMessaging_Fragment_Data.h"

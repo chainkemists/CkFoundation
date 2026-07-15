@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkECS/Handle/CkHandle.h"
+#include "CkEcs/Handle/CkHandle.h"
 
 #include "CkEntityExtension/CkEntityExtension_Fragment.h"
 

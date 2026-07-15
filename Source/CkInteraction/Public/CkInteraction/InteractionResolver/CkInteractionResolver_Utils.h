@@ -3,7 +3,7 @@
 #include "CkInteractionResolver_Fragment_Data.h"
 #include "CkInteractionResolver_Fragment.h"
 
-#include "CkECS/Handle/CkHandle.h"
+#include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
