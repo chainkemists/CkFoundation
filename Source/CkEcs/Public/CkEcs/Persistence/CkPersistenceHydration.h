@@ -9,6 +9,33 @@
 #include "CkEcs/Tag/CkTag.h"
 
 #include <InstancedStruct.h>
+#include "UObject/Object.h"
+#include "UObject/StrongObjectPtr.h"
+
+#include "CkPersistenceHydration.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// GC-traced carrier for deferred hydration payloads. FInstancedStruct traces its script type and nested UObject
+// references only when it lives in a reflected graph; an ECS fragment is not such a graph. The fragment below pins
+// this holder with TStrongObjectPtr for exactly as long as any payload can remain queued across frames.
+UCLASS()
+class CKECS_API UCk_PendingHydrationPayloads_UE : public UObject
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_PendingHydrationPayloads_UE);
+
+public:
+    auto Add(FInstancedStruct InEntry) -> void;
+    auto Get_Entries() -> TArray<FInstancedStruct>&;
+    auto Get_Entries() const -> const TArray<FInstancedStruct>&;
+
+private:
+    UPROPERTY()
+    TArray<FInstancedStruct> _Entries;
+};
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -21,13 +48,20 @@ namespace ck
 
     // Local hydration queue: payloads to apply on this entity via the SAME handler HydrationApply the net path's
     // sibling uses, but sourced from a save load rather than the wire. Transient bookkeeping — not persisted.
-    struct FFragment_PendingHydration
+    struct CKECS_API FFragment_PendingHydration
     {
         CK_GENERATED_BODY(FFragment_PendingHydration);
 
+    private:
+        TStrongObjectPtr<UCk_PendingHydrationPayloads_UE> _Payloads;
+
     public:
-        TArray<FInstancedStruct> _Entries;
         float _PendingForSeconds = 0.0f;
+
+    public:
+        auto Enqueue(UObject* InOuter, FInstancedStruct InEntry) -> void;
+        auto Get_Entries() -> TArray<FInstancedStruct>&;
+        auto Get_Entries() const -> const TArray<FInstancedStruct>&;
     };
 }
 

@@ -928,7 +928,7 @@ auto
         { ++PayloadsDropped; continue; }
 
         auto Entity = *Owner;
-        Entity.AddOrGet<ck::FFragment_PendingHydration>()._Entries.Add(MoveTemp(Data));
+        Entity.AddOrGet<ck::FFragment_PendingHydration>().Enqueue(GetWorld(), MoveTemp(Data));
         if (NOT Entity.Has<ck::FTag_Hydration_PendingApply>())
         { Entity.Add<ck::FTag_Hydration_PendingApply>(); }
         ++EnqueuedCount;

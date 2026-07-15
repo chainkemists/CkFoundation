@@ -80,26 +80,27 @@ namespace ck
         { return; }
 
         auto AnyStillPending = false;
+        auto& Entries = InPending.Get_Entries();
 
         // Iterate back-to-front so applied/dropped entries can be removed in place.
-        for (auto Index = InPending._Entries.Num() - 1; Index >= 0; --Index)
+        for (auto Index = Entries.Num() - 1; Index >= 0; --Index)
         {
             // Hydration has no per-entry coalescing (unlike the net FastArray) — the Old side is always unset.
             // ApplyOne dispatches through the handler's HydrationApply slot (the load-path applier); the choice of
             // slot is now structural (which callback), not a runtime scope query.
             const auto Outcome = ck::persistence_apply::ApplyOne(
-                InHandle, InPending._Entries[Index], TOptional<FInstancedStruct>{}, InPending._PendingForSeconds, InDeltaT);
+                InHandle, Entries[Index], TOptional<FInstancedStruct>{}, InPending._PendingForSeconds, InDeltaT);
 
             if (Outcome == ck::persistence_apply::EApplyOutcome::StillPending)
             { AnyStillPending = true; }
             else
-            { InPending._Entries.RemoveAt(Index); } // Applied or dropped-past-timeout
+            { Entries.RemoveAt(Index); } // Applied or dropped-past-timeout
         }
 
         if (NOT AnyStillPending)
         { InPending._PendingForSeconds = 0.0f; }
 
-        if (InPending._Entries.IsEmpty())
+        if (Entries.IsEmpty())
         {
             InHandle.Remove<FTag_Hydration_PendingApply>();
             InHandle.Remove<FFragment_PendingHydration>();
