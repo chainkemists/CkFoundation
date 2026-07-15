@@ -6,7 +6,7 @@
 //
 // GetHandle and the wildcard Get require a live entt registry + storage and exercise the ensure+sentinel error
 // paths (out-of-range, wrong-type, removed-mid-batch, stashed-batch). Those are covered end-to-end by the AS
-// AutoTests (Task 6 typed iteration + Task 9 mid-batch-remove / stashed-batch), which run against a real world.
+// AutoTests (typed iteration + mid-batch-remove / stashed-batch), which run against a real world.
 
 #include "CkDynamic/CkDynamic_ScriptQueryBatch.h"
 

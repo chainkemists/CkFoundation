@@ -97,7 +97,7 @@ namespace ck
 		// whose effects cover every goal condition. Read by HandleResult /
 		// HandleRequests at the PlanFailed branches to gate the runtime ensure
 		// (when combined with PlannerParams._AllowPlanFailed=false). See
-		// FProcessor_Goap_Planner_Setup for the static check and CkGoap/CLAUDE.md
+		// FProcessor_Goap_Planner_Setup for the static check and the module design-tenets notes
 		// § "Design tenets" for the rationale.
 		bool _HasUnconditionalFallback = false;
 

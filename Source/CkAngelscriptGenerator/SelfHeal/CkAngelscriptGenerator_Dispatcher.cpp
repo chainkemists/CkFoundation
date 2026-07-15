@@ -154,8 +154,8 @@ namespace ck::angelscriptgenerator::self_heal
 
         // A generated EntitySpawnParams canonical: `.../Script/Generated/<X>_
         // EntitySpawnParams.as`. These are the ONLY generated files the
-        // dispatcher may delete (the sanctioned exception in Claude.md
-        // Anti-pattern #4) — gitignored, machine-local, byte-derivable from
+        // dispatcher may delete (the one sanctioned canonical-mutation
+        // exception) — gitignored, machine-local, byte-derivable from
         // source. Tracked generated files (BusterBlockAssets.as,
         // *_AutoTestActors.as) never carry this suffix, so they can never be
         // quarantined. Pure string predicate (no IO) so classification stays
@@ -357,7 +357,7 @@ namespace ck::angelscriptgenerator::self_heal
             const auto& CanonicalPath = InError.FilePath;
 
             // Defense in depth: only a gitignored ESP canonical may be deleted
-            // (Claude.md Anti-pattern #4's sole sanctioned canonical mutation).
+            // (the sole sanctioned canonical mutation).
             // Classify already gated on this — re-check so a future caller can't
             // route a tracked generated file into a delete.
             if (NOT Is_EntitySpawnParamsCanonicalPath(CanonicalPath))

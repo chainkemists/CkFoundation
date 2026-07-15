@@ -51,7 +51,7 @@ public:
 	// Always-valid-plan tenet: also runs the static fallback check, caches the
 	// result on InCurrent._HasUnconditionalFallback, and fires CK_ENSURE_IF_NOT
 	// if no fallback exists and InParams._AllowPlanFailed == false. See
-	// CkGoap/CLAUDE.md § "Design tenets".
+	// the module design-tenets notes.
 	static auto
 	ForEachEntity(
 		TimeType InDeltaT,

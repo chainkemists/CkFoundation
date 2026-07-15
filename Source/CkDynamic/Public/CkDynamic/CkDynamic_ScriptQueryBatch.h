@@ -16,7 +16,7 @@
 struct FScriptStructWildcard;
 
 // --------------------------------------------------------------------------------------------------------------------
-// Native per-tick state owned by FProcessor_ScriptQueryHosted (Task 4). NOT a USTRUCT and NOT exposed to script: it
+// Native per-tick state owned by FProcessor_ScriptQueryHosted. NOT a USTRUCT and NOT exposed to script: it
 // holds raw entt-storage pointers. The script side sees only FCk_ScriptQueryBatch (CkEcs), which carries an opaque
 // pointer to one of these plus a captured generation. All lifetimes: _Storage pointers and _AnyHandle are re-resolved
 // each tick by the host before ForEachBatch; _Entities is snapshotted at join time; _Generation is bumped by the host

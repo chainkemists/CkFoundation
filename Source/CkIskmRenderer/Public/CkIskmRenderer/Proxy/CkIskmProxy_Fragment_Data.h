@@ -549,7 +549,7 @@ public:
 
 // ---- signals + delegates ----
 //
-// Per CkEcs/CLAUDE.md "Signals" section: CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE
+// The signal macro expects the dynamic delegate to already be declared via DECLARE_DYNAMIC_DELEGATE_* — declare each delegate inline before its signal macro.
 // expects the dynamic delegate to ALREADY be declared via DECLARE_DYNAMIC_DELEGATE_*
 // — the macro doesn't auto-generate it from the name argument. Declare each delegate
 // inline before the corresponding signal macro.

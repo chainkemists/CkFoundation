@@ -25,7 +25,7 @@
 // OS releases the handle on ANY process exit (clean, crash, kill), so stale locks are
 // impossible. PLATFORM CAVEAT: POSIX OpenWrite does not enforce write exclusivity — on
 // non-Windows this guard degrades to always-granting ownership. Acceptable: the editor workflow
-// this protects is Windows-only (documented in the module CLAUDE.md).
+// this protects is Windows-only.
 //
 // Ownership is LAZY: every gated site calls Try_AcquireOrGet_IsOwner, so a long-lived secondary
 // instance becomes the owner automatically at its next regen event after the prior owner exits.

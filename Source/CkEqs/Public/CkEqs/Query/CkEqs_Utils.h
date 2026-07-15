@@ -148,7 +148,7 @@ public:
     // Result accessors — all read from FFragment_EqsQuery_Results. Safe to call on
     // incomplete or invalid queries (return defaults / false / empty).
     //
-    // Pass-4 non-blocking #3: ALWAYS check Get_IsComplete + Get_HasResults first; reading
+    // ALWAYS check Get_IsComplete + Get_HasResults first; reading
     // Get_BestLocation on an incomplete query returns ZeroVector, which is a valid location
     // and easy to mistake for a real result.
     // ----------------------------------------------------------------------------------------------------------------
