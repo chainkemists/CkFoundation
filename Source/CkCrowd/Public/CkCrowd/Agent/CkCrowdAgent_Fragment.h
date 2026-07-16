@@ -31,15 +31,36 @@ namespace ck
         friend class ::UCk_Utils_CrowdAgent_UE;
 
     public:
-        using MoveToRequestType = FCk_Request_CrowdAgent_MoveTo;
-        using StopRequestType   = FCk_Request_CrowdAgent_Stop;
-        using RequestType       = std::variant<MoveToRequestType, StopRequestType>;
+        using MoveToRequestType       = FCk_Request_CrowdAgent_MoveTo;
+        using FollowTargetRequestType = FCk_Request_CrowdAgent_FollowTarget;
+        using StopRequestType         = FCk_Request_CrowdAgent_Stop;
+        using RequestType             = std::variant<MoveToRequestType, FollowTargetRequestType, StopRequestType>;
 
     private:
         TArray<RequestType> _Requests;
 
     public:
         CK_PROPERTY_GET(_Requests);
+    };
+
+    // Follow-mode state: present while the agent's active goal is a LIVE target point
+    // (FCk_Request_CrowdAgent_FollowTarget). Carries the originating request (target handle +
+    // tuners) and the repath-cadence accumulator. Added by HandleRequests when a FollowTarget
+    // request lands; removed by a plain MoveTo, by Stop, or when the target handle dies.
+    // Fragment presence IS the FollowTarget processor's view filter.
+    struct CKCROWD_API FFragment_CrowdAgent_FollowTarget
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_CrowdAgent_FollowTarget);
+        friend class FProcessor_CrowdAgent_HandleRequests;
+        friend class FProcessor_CrowdAgent_FollowTarget;
+
+    private:
+        FCk_Request_CrowdAgent_FollowTarget _Request;
+        float _RepathAccumulatorSec = 0.0f;
+
+    public:
+        CK_PROPERTY_GET(_Request);
     };
 
     // Identity of the last path-network corridor installed into this agent's nav-path slot, so the
