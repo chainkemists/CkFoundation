@@ -7,10 +7,15 @@
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include "CkIskmRenderer/Renderer/CkIskm_BatchedClusterComponent.h"
+
+#include "Algo/Compare.h"
 #include "RenderingThread.h"
 #include "RenderUtils.h"
 #include "RHIGlobals.h"
 #include "Misc/App.h"
+#include "ComponentRecreateRenderStateContext.h"
+#include "UObject/UObjectIterator.h"
 
 #include "Animation/Skeleton.h"
 #include "Animation/AnimSequenceBase.h"
@@ -58,6 +63,24 @@ auto
     Build_BakedPoseData()
     -> bool
 {
+    // A re-bake changes the frame layout, so previously materialized render data must not survive:
+    // tear down the proxies of every live cluster using this collection, drain the render thread,
+    // release the old buffers, and let the scoped contexts recreate the proxies on function exit —
+    // CreateSceneProxy re-enters EnsureRenderResources against the fresh bake.
+    TIndirectArray<FComponentRecreateRenderStateContext> RecreateContexts;
+    if (ck::IsValid(_RenderData.Get(), ck::IsValid_Policy_NullptrOnly{}))
+    {
+        for (TObjectIterator<UCk_Iskm_BatchedClusterComponent> It; It; ++It)
+        {
+            if (It->Get_AnimCollection() == this && It->IsRegistered())
+            { RecreateContexts.Add(new FComponentRecreateRenderStateContext(*It)); }
+        }
+        FlushRenderingCommands();
+        ReleaseRenderResources();
+        FlushRenderingCommands();
+        _RenderData = nullptr;
+    }
+
     USkeleton* const Skeleton = Get_EffectiveSkeleton();
     CK_ENSURE_IF_NOT(ck::IsValid(Skeleton) && ck::IsValid(_DefaultMesh),
         TEXT("[CkIskm] Batched bake needs a DefaultMesh and a Skeleton (own or the DefaultMesh's) on AnimCollection [{}] — "
@@ -208,6 +231,22 @@ auto
     return ck::IsValid(_BakedPose.Get(), ck::IsValid_Policy_NullptrOnly{}) && _BakedPose->IsBaked;
 }
 
+auto
+    UCk_IskmAnimCollection_Data::
+    Get_IsBakeStale() const
+    -> bool
+{
+    if (NOT Get_IsBaked())
+    { return false; }
+
+    return NOT Algo::Compare(_BakedPose->Sequences, _Sequences,
+        [this](const FCk_Iskm_BakedSequence& InBaked, const FCk_IskmAnimCollection_SequenceDef& InAuthored)
+        {
+            return InBaked.Sequence.Get() == InAuthored.Get_Sequence().Get() &&
+                   InBaked.SampleFrequency == _SampleFrequency;
+        });
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 // Plan-2 GPU render resources
 auto
@@ -218,9 +257,9 @@ auto
     if (FApp::CanEverRender() == false)
     { return; } // headless / -nullrhi: CPU bake only, no GPU resources
 
-    if (Get_IsBaked() == false)
+    if (NOT Get_IsBaked() || Get_IsBakeStale())
     {
-        if (Build_BakedPoseData() == false)
+        if (NOT Build_BakedPoseData())
         { return; }
     }
 
