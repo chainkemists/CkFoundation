@@ -26,7 +26,7 @@
 // so `_Arr.Add(...)` in asset bodies would accumulate across reloads.
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_deferred_asset_init_angelscript_registrar
 {
     struct FDeferredAssetInitRegistrar
     {
@@ -56,7 +56,7 @@ namespace
 
 #if WITH_ANGELSCRIPT_CK
 
-namespace
+namespace ck_deferred_asset_init_angelscript
 {
     // ----------------------------------------------------------------------------------------------------------------
     // Phase 2 instance reset — copy CDO defaults over the cached instance before re-running
@@ -577,7 +577,7 @@ auto
     -> void
 {
 #if WITH_ANGELSCRIPT_CK
-    CaptureDeferredAttribution();
+    ck_deferred_asset_init_angelscript::CaptureDeferredAttribution();
 #endif
 }
 
@@ -619,9 +619,9 @@ auto
     // not IO bound. So by default we re-run ONLY the CDOs that actually deferred a load during
     // first-pass (GDeferredLoadCDOs). Fall back to the full sweep if attribution was uncertain or the
     // CVar forces it — Phase 2 below is always full, and this never leaves a CDO asset null.
-    const auto UseFullHeal = GForceFullAssetHeal || GAttributionUncertain;
+    const auto UseFullHeal = ck_deferred_asset_init_angelscript::GForceFullAssetHeal || ck_deferred_asset_init_angelscript::GAttributionUncertain;
     const auto HealMode    = UseFullHeal ? FString(TEXT("full")) : FString(TEXT("surgical"));
-    const auto CdoCount    = UseFullHeal ? ReRunAllClassDefaults() : ReRunDeferredClassDefaults();
+    const auto CdoCount    = UseFullHeal ? ck_deferred_asset_init_angelscript::ReRunAllClassDefaults() : ck_deferred_asset_init_angelscript::ReRunDeferredClassDefaults();
 
 #if WITH_EDITOR
     ck::core::Display(TEXT("[DeferredAssetInit] Phase 1: re-initialized {} Angelscript CDO(s) [{}]"), CdoCount, HealMode);
@@ -631,7 +631,7 @@ auto
 
     // Phase 2: same surgical/full choice as Phase 1. Surgical re-runs only literals whose __Init
     // deferred during first-pass (GDeferredLiteralNames); full is the fallback.
-    const auto LiteralAssetStats = ReRunLiteralAssetInits(UseFullHeal);
+    const auto LiteralAssetStats = ck_deferred_asset_init_angelscript::ReRunLiteralAssetInits(UseFullHeal);
     if (LiteralAssetStats.Succeeded < LiteralAssetStats.Declared)
     {
         // Always Warning — a discrepancy here is a real signal worth surfacing in every config.
@@ -667,9 +667,9 @@ auto
     UCk_Utils_IO_UE::Reset_PrematureAssetLoadReport();
 
     // Attribution is single-use per boot sweep — clear so a later hot-reload starts clean.
-    GDeferredLoadCDOs.Reset();
-    GDeferredLiteralNames.Reset();
-    GAttributionUncertain = false;
+    ck_deferred_asset_init_angelscript::GDeferredLoadCDOs.Reset();
+    ck_deferred_asset_init_angelscript::GDeferredLiteralNames.Reset();
+    ck_deferred_asset_init_angelscript::GAttributionUncertain = false;
 
     // Rooting of the resulting disregard→normal-pool refs happens in OnPreGarbageCollect (pre-GC), which
     // also catches refs that resolve lazily later in the session.
@@ -710,7 +710,7 @@ auto
     // happens engine-safe, so accessors load directly and Note never fires), and the full re-run is
     // what fixes the `_Arr.Add(...)` doubling the reload would otherwise cause.
     constexpr auto FullHeal = true;
-    const auto Stats = ReRunLiteralAssetInits(FullHeal);
+    const auto Stats = ck_deferred_asset_init_angelscript::ReRunLiteralAssetInits(FullHeal);
     if (Stats.Succeeded < Stats.Declared)
     {
         ck::core::Warning(TEXT("[DeferredAssetInit] Post-reload: re-initialized {}/{} literal asset(s) — missing entries indicate AS preprocessor drift"),
@@ -741,7 +741,7 @@ auto
 {
 #if WITH_ANGELSCRIPT_CK
 #if !WITH_EDITOR
-    RootAngelscriptDisregardViolations();
+    ck_deferred_asset_init_angelscript::RootAngelscriptDisregardViolations();
 #endif
 #endif
 }

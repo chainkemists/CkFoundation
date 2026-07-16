@@ -811,7 +811,7 @@ namespace ck
             InParams.Get_MotionType());
     }
 
-    namespace
+    namespace ck_probe_processor
     {
         auto
             DoProbeDebugDraw(
@@ -900,7 +900,7 @@ namespace ck
             const FFragment_Transform& InTransform)
             -> void
     {
-        DoProbeDebugDraw(InHandle, InDebugInfo, InTransform);
+        ck_probe_processor::DoProbeDebugDraw(InHandle, InDebugInfo, InTransform);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -926,7 +926,7 @@ namespace ck
             const FFragment_Transform& InTransform)
         -> void
     {
-        DoProbeDebugDraw(InHandle, InDebugInfo, InTransform);
+        ck_probe_processor::DoProbeDebugDraw(InHandle, InDebugInfo, InTransform);
     }
 
     // --------------------------------------------------------------------------------------------------------------------

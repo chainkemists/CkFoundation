@@ -40,7 +40,7 @@ DECLARE_DWORD_COUNTER_STAT(TEXT("Eqs Physics Casts Issued"), STAT_Eqs_PhysicsCas
 // Anonymous-namespace helpers. All file-local. No state retained between calls.
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_eqs_algorithm
 {
     // Epsilon for degenerate Min ≈ Max detection. Larger than KINDA_SMALL_NUMBER so that
     // raw values clustered within ~1e-4 are treated as "all equal" (UE's own NormalizeItemScores
@@ -159,7 +159,7 @@ auto
     // The per-item normalization is mathematically undefined (divide-by-zero), so skip:
     // multiplicative-identity score (1.0) scaled by ScoringFactor matches UE's "skip the
     // per-item loop" behaviour. Caller is also expected to treat this as a no-op test.
-    if (FMath::Abs(InMax - InMin) < Eqs_DegenerateRangeEpsilon)
+    if (FMath::Abs(InMax - InMin) < ck_eqs_algorithm::Eqs_DegenerateRangeEpsilon)
     { return 1.0f * InConfig.Get_ScoringFactor(); }
 
     // Resolve effective range from clamp config.
@@ -170,8 +170,8 @@ auto
     // this if it wants filter-thresholded normalization). For v1, NormalizeAndScore consumers
     // should use ClampType::None or SpecifiedValue.
     const auto FilterStub = FCk_Eqs_FilterConfig{};
-    const auto EffectiveMin = Eqs_ResolveClampMin(InConfig, FilterStub, InMin);
-    const auto EffectiveMax = Eqs_ResolveClampMax(InConfig, FilterStub, InMax);
+    const auto EffectiveMin = ck_eqs_algorithm::Eqs_ResolveClampMin(InConfig, FilterStub, InMin);
+    const auto EffectiveMax = ck_eqs_algorithm::Eqs_ResolveClampMax(InConfig, FilterStub, InMax);
 
     // Clamp the raw value to the effective range.
     const auto ClampedValue = FMath::Clamp(InValue, EffectiveMin, EffectiveMax);
@@ -183,14 +183,14 @@ auto
         case ECk_Eqs_NormalizationType::Absolute:
         {
             // Baseline 0; range [0, EffectiveMax].
-            const auto AbsMax = FMath::Max(FMath::Abs(EffectiveMax), Eqs_DegenerateRangeEpsilon);
+            const auto AbsMax = FMath::Max(FMath::Abs(EffectiveMax), ck_eqs_algorithm::Eqs_DegenerateRangeEpsilon);
             Normalized = ClampedValue / AbsMax;
             break;
         }
         case ECk_Eqs_NormalizationType::RelativeToScores:
         default:
         {
-            const auto Span = FMath::Max(EffectiveMax - EffectiveMin, Eqs_DegenerateRangeEpsilon);
+            const auto Span = FMath::Max(EffectiveMax - EffectiveMin, ck_eqs_algorithm::Eqs_DegenerateRangeEpsilon);
             Normalized = (ClampedValue - EffectiveMin) / Span;
             break;
         }
@@ -723,7 +723,7 @@ auto
 
         if (IncludesFilter)
         {
-            if (NOT Eqs_PassesFilter(Raw, FilterConfig))
+            if (NOT ck_eqs_algorithm::Eqs_PassesFilter(Raw, FilterConfig))
             {
                 Candidate._Passed = false;
                 DebugSlot._PassedThisTest = false;
@@ -744,7 +744,7 @@ auto
 {
     SCOPE_CYCLE_COUNTER(STAT_Eqs_Test_Distance);
 
-    const auto RefLocation = Eqs_GetReferenceLocation(InParams, InTest.Get_DistanceTo());
+    const auto RefLocation = ck_eqs_algorithm::Eqs_GetReferenceLocation(InParams, InTest.Get_DistanceTo());
     const auto Mode = InTest.Get_DistanceMode();
 
     auto RawValues = TArray<float>{};
@@ -785,8 +785,8 @@ auto
 {
     SCOPE_CYCLE_COUNTER(STAT_Eqs_Test_Dot);
 
-    const auto FromLocation = Eqs_GetDotFromLocation(InParams, InTest.Get_DotFrom());
-    const auto Forward = Eqs_GetDotFromForward(InParams, InTest.Get_DotFrom()).GetSafeNormal();
+    const auto FromLocation = ck_eqs_algorithm::Eqs_GetDotFromLocation(InParams, InTest.Get_DotFrom());
+    const auto Forward = ck_eqs_algorithm::Eqs_GetDotFromForward(InParams, InTest.Get_DotFrom()).GetSafeNormal();
     const auto Mode = InTest.Get_DotMode();
 
     auto RawValues = TArray<float>{};

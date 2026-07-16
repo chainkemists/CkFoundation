@@ -17,7 +17,7 @@
 
 namespace ck::subsystem_browser
 {
-    namespace
+    namespace ck_subsystem_browser_collector
     {
         // Prefer a running PIE world; fall back to the editor world so World
         // subsystems are still browsable outside of play.
@@ -113,7 +113,7 @@ namespace ck::subsystem_browser
             }
             case ECk_SubsystemCategory::World:
             {
-                if (auto* World = Get_ActiveWorld())
+                if (auto* World = ck_subsystem_browser_collector::Get_ActiveWorld())
                 {
                     for (auto* Subsystem : World->GetSubsystemArrayCopy<UWorldSubsystem>())
                     { Out.Add(Subsystem); }
@@ -122,7 +122,7 @@ namespace ck::subsystem_browser
             }
             case ECk_SubsystemCategory::GameInstance:
             {
-                if (auto* GameInstance = Get_ActiveGameInstance())
+                if (auto* GameInstance = ck_subsystem_browser_collector::Get_ActiveGameInstance())
                 {
                     for (auto* Subsystem : GameInstance->GetSubsystemArrayCopy<UGameInstanceSubsystem>())
                     { Out.Add(Subsystem); }
@@ -131,7 +131,7 @@ namespace ck::subsystem_browser
             }
             case ECk_SubsystemCategory::LocalPlayer:
             {
-                if (auto* GameInstance = Get_ActiveGameInstance())
+                if (auto* GameInstance = ck_subsystem_browser_collector::Get_ActiveGameInstance())
                 {
                     for (auto* LocalPlayer : GameInstance->GetLocalPlayers())
                     {

@@ -23,7 +23,7 @@
 #include "CkInventory/ItemTrait/Stackable/CkItemTrait_Stackable_Utils.h"
 #include "CkInventory/ItemTrait/Tags/CkItemTrait_Tags_Utils.h"
 
-namespace
+namespace ck_inventory_utils
 {
     enum class EDispatchValidity
     {
@@ -181,7 +181,7 @@ auto
         const FCk_Delegate_Inventory_OnOperationResult_Add& InDelegate)
     -> FCk_Handle_Inventory
 {
-    if (NOT ValidateRequestForDispatch(InInventory, InRequest, TEXT("Request_AddItem"),
+    if (NOT ck_inventory_utils::ValidateRequestForDispatch(InInventory, InRequest, TEXT("Request_AddItem"),
         [&]{ InDelegate.ExecuteIfBound(InInventory, InRequest.Get_ItemToAdd(),
                 ECk_Inventory_OperationResult_Add::Failed_NotEnqueued); }))
     { return InInventory; }
@@ -189,7 +189,7 @@ auto
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Add,
         InRequest.PopulateRequestHandle(InInventory), InDelegate);
 
-    return DispatchEnqueue_Checked(
+    return ck_inventory_utils::DispatchEnqueue_Checked(
         InInventory,
         [&InRequest](auto& Typed)
         {
@@ -210,7 +210,7 @@ auto
         const FCk_Delegate_Inventory_OnOperationResult_Remove& InDelegate)
     -> FCk_Handle_Inventory
 {
-    if (NOT ValidateRequestForDispatch(InInventory, InRequest, TEXT("Request_RemoveItem"),
+    if (NOT ck_inventory_utils::ValidateRequestForDispatch(InInventory, InRequest, TEXT("Request_RemoveItem"),
         [&]{ InDelegate.ExecuteIfBound(InInventory, InRequest.Get_ItemToRemove(),
                 ECk_Inventory_OperationResult_Remove::Failed_NotEnqueued); }))
     { return InInventory; }
@@ -218,7 +218,7 @@ auto
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Remove,
         InRequest.PopulateRequestHandle(InInventory), InDelegate);
 
-    return DispatchEnqueue_Checked(
+    return ck_inventory_utils::DispatchEnqueue_Checked(
         InInventory,
         [&InRequest](auto& Typed)
         {
@@ -239,7 +239,7 @@ auto
         const FCk_Delegate_Inventory_OnOperationResult_Stack& InDelegate)
     -> FCk_Handle_Inventory
 {
-    if (NOT ValidateRequestForDispatch(InInventory, InRequest, TEXT("Request_StackItems"),
+    if (NOT ck_inventory_utils::ValidateRequestForDispatch(InInventory, InRequest, TEXT("Request_StackItems"),
         [&]{ InDelegate.ExecuteIfBound(InInventory, InRequest.Get_SourceItem(), InRequest.Get_TargetItem(),
                 ECk_Inventory_OperationResult_Stack::Failed_NotEnqueued); }))
     { return InInventory; }
@@ -247,7 +247,7 @@ auto
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Stack,
         InRequest.PopulateRequestHandle(InInventory), InDelegate);
 
-    return DispatchEnqueue_Checked(
+    return ck_inventory_utils::DispatchEnqueue_Checked(
         InInventory,
         [&InRequest](auto& Typed)
         {
@@ -268,7 +268,7 @@ auto
         const FCk_Delegate_Inventory_OnOperationResult_Split& InDelegate)
     -> FCk_Handle_Inventory
 {
-    if (NOT ValidateRequestForDispatch(InInventory, InRequest, TEXT("Request_SplitStack"),
+    if (NOT ck_inventory_utils::ValidateRequestForDispatch(InInventory, InRequest, TEXT("Request_SplitStack"),
         [&]{ InDelegate.ExecuteIfBound(InInventory, InRequest.Get_SourceItem(), FCk_Handle_Item{},
                 ECk_Inventory_OperationResult_Split::Failed_NotEnqueued); }))
     { return InInventory; }
@@ -276,7 +276,7 @@ auto
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Split,
         InRequest.PopulateRequestHandle(InInventory), InDelegate);
 
-    return DispatchEnqueue_Checked(
+    return ck_inventory_utils::DispatchEnqueue_Checked(
         InInventory,
         [&InRequest](auto& Typed)
         {
@@ -297,7 +297,7 @@ auto
         const FCk_Delegate_Inventory_OnOperationResult_AddByDefinition& InDelegate)
     -> FCk_Handle_Inventory
 {
-    if (NOT ValidateRequestForDispatch(InInventory, InRequest, TEXT("Request_AddItemByDefinition"),
+    if (NOT ck_inventory_utils::ValidateRequestForDispatch(InInventory, InRequest, TEXT("Request_AddItemByDefinition"),
         [&]{ InDelegate.ExecuteIfBound(InInventory,
                 ECk_Inventory_OperationResult_AddByDefinition::Failed_NotEnqueued, 0, TArray<FCk_Handle_Item>{}); }))
     { return InInventory; }
@@ -305,7 +305,7 @@ auto
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_AddByDefinition,
         InRequest.PopulateRequestHandle(InInventory), InDelegate);
 
-    return DispatchEnqueue_Checked(
+    return ck_inventory_utils::DispatchEnqueue_Checked(
         InInventory,
         [&InRequest](auto& Typed)
         {
@@ -326,7 +326,7 @@ auto
         const FCk_Delegate_Inventory_OnOperationResult_Sort& InDelegate)
     -> FCk_Handle_Inventory
 {
-    if (NOT ValidateRequestForDispatch(InInventory, InRequest, TEXT("Request_Sort"),
+    if (NOT ck_inventory_utils::ValidateRequestForDispatch(InInventory, InRequest, TEXT("Request_Sort"),
         [&]{ InDelegate.ExecuteIfBound(InInventory,
                 ECk_Inventory_OperationResult_Sort::Failed_NotEnqueued); }))
     { return InInventory; }
@@ -335,7 +335,7 @@ auto
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Sort,
         Request.PopulateRequestHandle(InInventory), InDelegate);
 
-    return DispatchEnqueue_Checked(
+    return ck_inventory_utils::DispatchEnqueue_Checked(
         InInventory,
         [&Request](auto& Typed)
         {
@@ -356,7 +356,7 @@ auto
         const FCk_Delegate_Inventory_OnOperationResult_Transfer& InDelegate)
     -> FCk_Handle_Inventory
 {
-    if (NOT ValidateRequestForDispatch(InSourceInventory, InRequest, TEXT("Request_TransferItem_ToSpatial"),
+    if (NOT ck_inventory_utils::ValidateRequestForDispatch(InSourceInventory, InRequest, TEXT("Request_TransferItem_ToSpatial"),
         [&]{ InDelegate.ExecuteIfBound(InSourceInventory, InRequest.Get_SourceItem(),
                 InRequest.Get_TargetInventory(), 0, FCk_Handle_Item{},
                 ECk_Inventory_OperationResult_Transfer::Failed_NotEnqueued); }))
@@ -365,7 +365,7 @@ auto
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Transfer,
         InRequest.PopulateRequestHandle(InSourceInventory), InDelegate);
 
-    return DispatchEnqueue_Checked(
+    return ck_inventory_utils::DispatchEnqueue_Checked(
         InSourceInventory,
         [&InRequest](auto& Typed)
         {
@@ -386,7 +386,7 @@ auto
         const FCk_Delegate_Inventory_OnOperationResult_Transfer& InDelegate)
     -> FCk_Handle_Inventory
 {
-    if (NOT ValidateRequestForDispatch(InSourceInventory, InRequest, TEXT("Request_TransferItem_ToDataOnly"),
+    if (NOT ck_inventory_utils::ValidateRequestForDispatch(InSourceInventory, InRequest, TEXT("Request_TransferItem_ToDataOnly"),
         [&]{ InDelegate.ExecuteIfBound(InSourceInventory, InRequest.Get_SourceItem(),
                 InRequest.Get_TargetInventory(), 0, FCk_Handle_Item{},
                 ECk_Inventory_OperationResult_Transfer::Failed_NotEnqueued); }))
@@ -395,7 +395,7 @@ auto
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Transfer,
         InRequest.PopulateRequestHandle(InSourceInventory), InDelegate);
 
-    return DispatchEnqueue_Checked(
+    return ck_inventory_utils::DispatchEnqueue_Checked(
         InSourceInventory,
         [&InRequest](auto& Typed)
         {

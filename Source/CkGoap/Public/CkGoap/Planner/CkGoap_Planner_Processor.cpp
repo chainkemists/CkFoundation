@@ -433,7 +433,7 @@ auto
 // A* planner. The processor walks Action entities (those with PlanState +
 // Activation), not the top-level Planner entity (which doesn't run A*).
 
-namespace
+namespace ck_goap_planner_processor
 {
 	// "Is a Planner" = has children. Atomic Actions terminate the
 	// activation walk and never get the per-sub-Planner activate/deactivate
@@ -656,7 +656,7 @@ auto
 	// activation tree at the previous tick.
 	{
 		auto LastDescendant = Activation._LastActivatedPlan0;
-		if (ck::IsValid(LastDescendant) && Is_Composite(LastDescendant))
+		if (ck::IsValid(LastDescendant) && ck_goap_planner_processor::Is_Composite(LastDescendant))
 		{
 			DoDeactivatePlanner(LastDescendant);
 		}
@@ -789,13 +789,13 @@ auto
 	}
 
 	// Deactivate the old Step0 if it changed AND it was a composite sub-Planner.
-	if (ck::IsValid(OldStep0) && Is_Composite(OldStep0))
+	if (ck::IsValid(OldStep0) && ck_goap_planner_processor::Is_Composite(OldStep0))
 	{
 		DoDeactivatePlanner(OldStep0);
 	}
 
 	// Activate the new Step0 if it's a composite sub-Planner.
-	if (ck::IsValid(NewStep0) && Is_Composite(NewStep0))
+	if (ck::IsValid(NewStep0) && ck_goap_planner_processor::Is_Composite(NewStep0))
 	{
 		auto& ChildActivation = NewStep0.template Get<FFragment_Goap_Planner_Activation>();
 		if (NOT ChildActivation._IsActive)

@@ -26,7 +26,7 @@ DECLARE_DWORD_COUNTER_STAT(TEXT("Crowd Agents Sampled"), STAT_CkCrowd_AgentsSamp
 
 namespace ck
 {
-    namespace
+    namespace ck_crowd_agent_avoidance_sample_processor
     {
         // Tag check — agent itself plus its lifetime owner (typical: gym station / zone volume).
         // Walks one hop only; designer puts the tag on the immediate parent that defines the zone.
@@ -287,12 +287,12 @@ namespace ck
         // Round-robin gate FIRST — it's a modulo on the frame counter, while ShouldSample walks
         // fragments and gameplay tags. On (Stride-1)/Stride of frames the cheap gate rejects
         // before the expensive one runs. Both are pure predicates, so the order is behavior-neutral.
-        if (NOT IsSamplingFrame(SelfAgent))
+        if (NOT ck_crowd_agent_avoidance_sample_processor::IsSamplingFrame(SelfAgent))
         { return; }
 
         // Trigger gate. Off-path leaves the force solver's _Velocity in place (which will then be
         // ramped by AccelClamp downstream).
-        if (NOT ShouldSample(SelfAgent, InNeighborCache))
+        if (NOT ck_crowd_agent_avoidance_sample_processor::ShouldSample(SelfAgent, InNeighborCache))
         { return; }
 
         // Counted only past both gates — shows how many agents the round-robin stride actually let through.
@@ -331,7 +331,7 @@ namespace ck
             ? DesiredVel
             : InDesired.Get_LastVelocity();
 
-        const auto Samples = BuildSamplePattern(DesiredVel, MaxSpeed, VelBias, AngularDivs, Rings);
+        const auto Samples = ck_crowd_agent_avoidance_sample_processor::BuildSamplePattern(DesiredVel, MaxSpeed, VelBias, AngularDivs, Rings);
 
         // Motion direction for side preference. Falls back to desired direction if current is
         // near-zero (e.g. agent at start of motion).
@@ -366,7 +366,7 @@ namespace ck
                 for (const auto& Nbr : Neighbors)
                 {
                     const auto NbrRad = AgentRad + AgentRad;  // approximation: neighbors share radius
-                    const auto Ttc = TimeToCollision(Cand, CurrentVel, Nbr.Get_RelativeOffset(), Nbr.Get_RelativeVelocity(), NbrRad, Horizon);
+                    const auto Ttc = ck_crowd_agent_avoidance_sample_processor::TimeToCollision(Cand, CurrentVel, Nbr.Get_RelativeOffset(), Nbr.Get_RelativeVelocity(), NbrRad, Horizon);
                     if (Ttc < TMin) { TMin = Ttc; }
                 }
                 constexpr auto ToiPenaltySoftening = 0.1f;  // per dtCrowd (DetourObstacleAvoidance.cpp:417)
@@ -377,7 +377,7 @@ namespace ck
                 auto SidePen = 0.0f;
                 if (SideEnabled)
                 {
-                    const auto Rightness = SideRightness(Cand, MotionDir) * InvVMax;
+                    const auto Rightness = ck_crowd_agent_avoidance_sample_processor::SideRightness(Cand, MotionDir) * InvVMax;
                     // SideSign = +1 (PassLeft) penalizes positive rightness; -1 (PassRight) penalizes
                     // negative rightness. Negative penalty would be a bonus — clamp to zero.
                     SidePen = WSide * FMath::Max(0.0f, Rightness * SideSign);

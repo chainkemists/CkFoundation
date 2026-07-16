@@ -5,7 +5,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_dynamic_script_query
 {
     auto
         DoAddSlot(
@@ -41,7 +41,7 @@ auto
         const UScriptStruct* InType)
     -> void
 {
-    DoAddSlot(InQuery, InType, ECk_ScriptQueryAccess::ReadWrite);
+    ck_dynamic_script_query::DoAddSlot(InQuery, InType, ECk_ScriptQueryAccess::ReadWrite);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -53,7 +53,7 @@ auto
         const UScriptStruct* InType)
     -> void
 {
-    DoAddSlot(InQuery, InType, ECk_ScriptQueryAccess::ReadOnly);
+    ck_dynamic_script_query::DoAddSlot(InQuery, InType, ECk_ScriptQueryAccess::ReadOnly);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -65,7 +65,7 @@ auto
         const UScriptStruct* InType)
     -> void
 {
-    DoAddSlot(InQuery, InType, ECk_ScriptQueryAccess::Require);
+    ck_dynamic_script_query::DoAddSlot(InQuery, InType, ECk_ScriptQueryAccess::Require);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -77,7 +77,7 @@ auto
         const UScriptStruct* InType)
     -> void
 {
-    DoAddSlot(InQuery, InType, ECk_ScriptQueryAccess::Exclude);
+    ck_dynamic_script_query::DoAddSlot(InQuery, InType, ECk_ScriptQueryAccess::Exclude);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

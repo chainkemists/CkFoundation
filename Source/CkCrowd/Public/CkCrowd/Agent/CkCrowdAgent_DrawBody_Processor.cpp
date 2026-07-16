@@ -27,7 +27,7 @@ DECLARE_CYCLE_STAT(TEXT("Crowd::DrawBody_Update"), STAT_CkCrowd_DrawBody_UpdateP
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_crowd_agent_draw_body_processor
 {
     // PathPending blend — visually communicates "agent is waiting on a path query, can't move
     // yet". Lerp factor picked for legibility against varied background colors.
@@ -108,13 +108,13 @@ namespace ck
             FTransform::Identity,
             Radius,
             HalfHeight,
-            Capsule_Segments,
-            Capsule_Rings,
+            ck_crowd_agent_draw_body_processor::Capsule_Segments,
+            ck_crowd_agent_draw_body_processor::Capsule_Rings,
             ECk_Plane_Axis::XY,
             BaseColor,
             true,             // draw wireframe overlay too
-            LineThickness,
-            Persist);
+            ck_crowd_agent_draw_body_processor::LineThickness,
+            ck_crowd_agent_draw_body_processor::Persist);
 
         auto CapsuleGeneric = static_cast<FCk_Handle>(CapsuleHandle);
         auto CapsuleTransform = UCk_Utils_Transform_UE::Cast(CapsuleGeneric);
@@ -127,21 +127,21 @@ namespace ck
         // ---- Forward-facing cone --------------------------------------------------
         // Use ECk_Pmg_ConeOrientation::Forward so the apex is baked along +X (agent's forward).
         // No more Pitch=-90 SceneNode workaround needed — the orientation is in the mesh.
-        const auto ConeRadius        = Radius * Cone_RadiusFraction;
-        const auto ConeLength        = HalfHeight * Cone_LengthFraction;
-        const auto ConeForwardOffset = Radius * Cone_ForwardLiftFraction;
+        const auto ConeRadius        = Radius * ck_crowd_agent_draw_body_processor::Cone_RadiusFraction;
+        const auto ConeLength        = HalfHeight * ck_crowd_agent_draw_body_processor::Cone_LengthFraction;
+        const auto ConeForwardOffset = Radius * ck_crowd_agent_draw_body_processor::Cone_ForwardLiftFraction;
 
         auto ConeHandle = UCk_Utils_Pmg_BasicShapes::Create_Cone(
             AgentGeneric,
             FTransform::Identity,
             ConeRadius,
             ConeLength,
-            Cone_Segments,
+            ck_crowd_agent_draw_body_processor::Cone_Segments,
             ECk_Plane_Axis::XY,
             BaseColor,
             true,
-            Cone_LineThickness,
-            Persist,
+            ck_crowd_agent_draw_body_processor::Cone_LineThickness,
+            ck_crowd_agent_draw_body_processor::Persist,
             ECk_Pmg_ConeOrientation::Forward);
 
         auto ConeGeneric = static_cast<FCk_Handle>(ConeHandle);
@@ -218,7 +218,7 @@ namespace ck
         { return; }
 
         const auto BaseColor    = UCk_Utils_CrowdAgent_UE::Get_DebugColor(InHandle);
-        const auto TintedColor  = ResolveTintedColor(InHandle, BaseColor);
+        const auto TintedColor  = ck_crowd_agent_draw_body_processor::ResolveTintedColor(InHandle, BaseColor);
 
         if (TintedColor != InDebugBody._LastAppliedColor)
         {

@@ -8,7 +8,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_cvar_utils
 {
     struct FCallbackEntry
     {
@@ -132,8 +132,8 @@ auto
         ECk_CVar_InitialCallbackPolicy InPolicy)
     -> FCk_CVarCallbackHandle
 {
-    FindOrRegisterCVar(InName, InDefaultValue, InHelp);
-    return BindCallbackInternal<int32>(InName, InCallback, InPolicy);
+    ck_cvar_utils::FindOrRegisterCVar(InName, InDefaultValue, InHelp);
+    return ck_cvar_utils::BindCallbackInternal<int32>(InName, InCallback, InPolicy);
 }
 
 auto
@@ -146,8 +146,8 @@ auto
         ECk_CVar_InitialCallbackPolicy InPolicy)
     -> FCk_CVarCallbackHandle
 {
-    FindOrRegisterCVar(InName, InDefaultValue, InHelp);
-    return BindCallbackInternal<float>(InName, InCallback, InPolicy);
+    ck_cvar_utils::FindOrRegisterCVar(InName, InDefaultValue, InHelp);
+    return ck_cvar_utils::BindCallbackInternal<float>(InName, InCallback, InPolicy);
 }
 
 auto
@@ -161,8 +161,8 @@ auto
     -> FCk_CVarCallbackHandle
 {
     constexpr auto BoolToInt = [](bool InValue) -> int32 { return InValue ? 1 : 0; };
-    FindOrRegisterCVar(InName, BoolToInt(InDefaultValue), InHelp);
-    return BindCallbackInternal<bool>(InName, InCallback, InPolicy);
+    ck_cvar_utils::FindOrRegisterCVar(InName, BoolToInt(InDefaultValue), InHelp);
+    return ck_cvar_utils::BindCallbackInternal<bool>(InName, InCallback, InPolicy);
 }
 
 auto
@@ -175,8 +175,8 @@ auto
         ECk_CVar_InitialCallbackPolicy InPolicy)
     -> FCk_CVarCallbackHandle
 {
-    FindOrRegisterCVar(InName, *InDefaultValue, InHelp);
-    return BindCallbackInternal<FString>(InName, InCallback, InPolicy);
+    ck_cvar_utils::FindOrRegisterCVar(InName, *InDefaultValue, InHelp);
+    return ck_cvar_utils::BindCallbackInternal<FString>(InName, InCallback, InPolicy);
 }
 
 auto
@@ -207,7 +207,7 @@ auto
         return FCk_CVarCallbackHandle{};
     }
 
-    const auto ID = GenerateCallbackID();
+    const auto ID = ck_cvar_utils::GenerateCallbackID();
 
     // For commands, we replace the console command's delegate to fire our callback
     auto* ConsoleObject = IConsoleManager::Get().FindConsoleObject(*InName.ToString());
@@ -240,8 +240,8 @@ auto
 
     // Store a placeholder handle (command callbacks don't use FDelegateHandle)
     {
-        FScopeLock Lock(&CallbackRegistryLock);
-        CallbackRegistry.Add(ID, FCallbackEntry{InName, FDelegateHandle{}});
+        FScopeLock Lock(&ck_cvar_utils::CallbackRegistryLock);
+        ck_cvar_utils::CallbackRegistry.Add(ID, ck_cvar_utils::FCallbackEntry{InName, FDelegateHandle{}});
     }
 
     return FCk_CVarCallbackHandle{ID};
@@ -259,7 +259,7 @@ auto
         ECk_CVar_InitialCallbackPolicy InPolicy)
     -> FCk_CVarCallbackHandle
 {
-    return BindCallbackInternal<int32>(InRef.Get_Name(), InCallback, InPolicy);
+    return ck_cvar_utils::BindCallbackInternal<int32>(InRef.Get_Name(), InCallback, InPolicy);
 }
 
 auto
@@ -270,7 +270,7 @@ auto
         ECk_CVar_InitialCallbackPolicy InPolicy)
     -> FCk_CVarCallbackHandle
 {
-    return BindCallbackInternal<float>(InRef.Get_Name(), InCallback, InPolicy);
+    return ck_cvar_utils::BindCallbackInternal<float>(InRef.Get_Name(), InCallback, InPolicy);
 }
 
 auto
@@ -281,7 +281,7 @@ auto
         ECk_CVar_InitialCallbackPolicy InPolicy)
     -> FCk_CVarCallbackHandle
 {
-    return BindCallbackInternal<bool>(InRef.Get_Name(), InCallback, InPolicy);
+    return ck_cvar_utils::BindCallbackInternal<bool>(InRef.Get_Name(), InCallback, InPolicy);
 }
 
 auto
@@ -292,7 +292,7 @@ auto
         ECk_CVar_InitialCallbackPolicy InPolicy)
     -> FCk_CVarCallbackHandle
 {
-    return BindCallbackInternal<FString>(InRef.Get_Name(), InCallback, InPolicy);
+    return ck_cvar_utils::BindCallbackInternal<FString>(InRef.Get_Name(), InCallback, InPolicy);
 }
 
 auto
@@ -316,7 +316,7 @@ auto
         return FCk_CVarCallbackHandle{};
     }
 
-    const auto ID = GenerateCallbackID();
+    const auto ID = ck_cvar_utils::GenerateCallbackID();
 
     auto CallbackCopy = InCallback;
     IConsoleManager::Get().RegisterConsoleCommand(
@@ -336,8 +336,8 @@ auto
         ECVF_Default);
 
     {
-        FScopeLock Lock(&CallbackRegistryLock);
-        CallbackRegistry.Add(ID, FCallbackEntry{Name, FDelegateHandle{}});
+        FScopeLock Lock(&ck_cvar_utils::CallbackRegistryLock);
+        ck_cvar_utils::CallbackRegistry.Add(ID, ck_cvar_utils::FCallbackEntry{Name, FDelegateHandle{}});
     }
 
     return FCk_CVarCallbackHandle{ID};
@@ -358,17 +358,17 @@ auto
         return;
     }
 
-    auto Entry = FCallbackEntry{};
+    auto Entry = ck_cvar_utils::FCallbackEntry{};
     {
-        FScopeLock Lock(&CallbackRegistryLock);
+        FScopeLock Lock(&ck_cvar_utils::CallbackRegistryLock);
 
-        if (NOT CallbackRegistry.Contains(InHandle.Get_ID()))
+        if (NOT ck_cvar_utils::CallbackRegistry.Contains(InHandle.Get_ID()))
         {
             ck::cvar::Warning(TEXT("Cannot unbind callback with ID [{}] - not found in registry"), InHandle.Get_ID());
             return;
         }
 
-        Entry = CallbackRegistry.FindAndRemoveChecked(InHandle.Get_ID());
+        Entry = ck_cvar_utils::CallbackRegistry.FindAndRemoveChecked(InHandle.Get_ID());
     }
 
     if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(*Entry.CVarName.ToString());

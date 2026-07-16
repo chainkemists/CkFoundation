@@ -9,7 +9,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_struct_type_selector_s_graph_node
 {
     auto GetPayloadMode(const TWeakObjectPtr<UEdGraphNode>& InNode) -> ECk_CompactExpanded
     {
@@ -73,13 +73,13 @@ auto SCk_GraphNode_WithPayloadBanner::CreateBelowPinControls(
                 SNew(STextBlock)
                 .Text_Lambda([this]()
                 {
-                    return GetPayloadMode(_OwningNode) == ECk_CompactExpanded::Compact
+                    return ck_struct_type_selector_s_graph_node::GetPayloadMode(_OwningNode) == ECk_CompactExpanded::Compact
                         ? FText::FromString(TEXT("📦"))
                         : FText::FromString(TEXT("📋"));
                 })
                 .ColorAndOpacity_Lambda([this]()
                 {
-                    return GetPayloadMode(_OwningNode) == ECk_CompactExpanded::Compact
+                    return ck_struct_type_selector_s_graph_node::GetPayloadMode(_OwningNode) == ECk_CompactExpanded::Compact
                         ? FSlateColor(FLinearColor(0.4f, 0.8f, 1.0f))
                         : FSlateColor(FLinearColor(1.0f, 0.8f, 0.4f));
                 })
@@ -91,7 +91,7 @@ auto SCk_GraphNode_WithPayloadBanner::CreateBelowPinControls(
                 SNew(STextBlock)
                 .Text_Lambda([this]()
                 {
-                    return GetPayloadMode(_OwningNode) == ECk_CompactExpanded::Compact
+                    return ck_struct_type_selector_s_graph_node::GetPayloadMode(_OwningNode) == ECk_CompactExpanded::Compact
                         ? FText::FromString(TEXT("Compact"))
                         : FText::FromString(TEXT("Expanded"));
                 })

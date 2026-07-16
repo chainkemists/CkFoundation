@@ -29,7 +29,7 @@
 
 namespace ck
 {
-    namespace
+    namespace ck_dynamic_script_processor_host
     {
         // Delegate handle returned by UCk_EcsWorld_Subsystem_UE::Get_OnPreBuildProcessorGraph().Add — retained so
         // ShutdownModule can remove the binding. Static because the registration happens at module scope.
@@ -325,16 +325,16 @@ namespace ck
         Startup()
         -> void
     {
-        GOnPreBuildHandle = UCk_EcsWorld_Subsystem_UE::Get_OnPreBuildProcessorGraph().AddLambda(
+        ck_dynamic_script_processor_host::GOnPreBuildHandle = UCk_EcsWorld_Subsystem_UE::Get_OnPreBuildProcessorGraph().AddLambda(
             [](UWorld& /*InWorld*/)
             {
-                DoRegisterAllScriptProcessors();
+                ck_dynamic_script_processor_host::DoRegisterAllScriptProcessors();
             });
 
 #if WITH_ANGELSCRIPT_CK
-        GPostCompileHandle = FAngelscriptCodeModule::GetPostCompile().AddLambda([]()
+        ck_dynamic_script_processor_host::GPostCompileHandle = FAngelscriptCodeModule::GetPostCompile().AddLambda([]()
         {
-            DoRequestRebuildOnAllWorlds();
+            ck_dynamic_script_processor_host::DoRequestRebuildOnAllWorlds();
         });
 #endif
     }
@@ -345,17 +345,17 @@ namespace ck
         -> void
     {
 #if WITH_ANGELSCRIPT_CK
-        FAngelscriptCodeModule::GetPostCompile().Remove(GPostCompileHandle);
-        GPostCompileHandle.Reset();
+        FAngelscriptCodeModule::GetPostCompile().Remove(ck_dynamic_script_processor_host::GPostCompileHandle);
+        ck_dynamic_script_processor_host::GPostCompileHandle.Reset();
 #endif
 
-        UCk_EcsWorld_Subsystem_UE::Get_OnPreBuildProcessorGraph().Remove(GOnPreBuildHandle);
-        GOnPreBuildHandle.Reset();
+        UCk_EcsWorld_Subsystem_UE::Get_OnPreBuildProcessorGraph().Remove(ck_dynamic_script_processor_host::GOnPreBuildHandle);
+        ck_dynamic_script_processor_host::GOnPreBuildHandle.Reset();
 
-        for (const auto& Name : GRegisteredDescriptorNames)
+        for (const auto& Name : ck_dynamic_script_processor_host::GRegisteredDescriptorNames)
         {
             FProcessorRegistry::Get().Deregister(Name);
         }
-        GRegisteredDescriptorNames.Reset();
+        ck_dynamic_script_processor_host::GRegisteredDescriptorNames.Reset();
     }
 }

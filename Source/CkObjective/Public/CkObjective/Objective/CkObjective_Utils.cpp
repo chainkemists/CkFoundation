@@ -9,7 +9,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_objective_utils
 {
     constexpr uint8 StatusEnumToByte(ECk_ObjectiveStatus InStatus)
     {
@@ -35,7 +35,7 @@ auto
     InHandle.Add<ck::FFragment_Objective_Params>(InParams);
     auto& Current = InHandle.Add<ck::FFragment_Objective_Current>();
 
-    const auto StatusAttributeParams = FCk_Fragment_ByteAttribute_ParamsData{TAG_ByteAttribute_Objective_Status, StatusEnumToByte(ECk_ObjectiveStatus::NotStarted)};
+    const auto StatusAttributeParams = FCk_Fragment_ByteAttribute_ParamsData{TAG_ByteAttribute_Objective_Status, ck_objective_utils::StatusEnumToByte(ECk_ObjectiveStatus::NotStarted)};
     Current._StatusAttribute = UCk_Utils_ByteAttribute_UE::Add(InHandle, StatusAttributeParams, ECk_Replication::Replicates);
 
     UCk_Utils_GameplayLabel_UE::Add(InHandle, InParams.Get_ObjectiveName());
@@ -97,7 +97,7 @@ auto
         Current.Get_StatusAttribute(),
         ECk_MinMaxCurrent::Current);
 
-    return ByteToStatusEnum(StatusValue);
+    return ck_objective_utils::ByteToStatusEnum(StatusValue);
 }
 
 auto

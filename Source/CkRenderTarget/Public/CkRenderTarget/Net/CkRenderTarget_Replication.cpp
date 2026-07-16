@@ -23,7 +23,7 @@
 //
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_render_target_replication
 {
     // NOTE on echo suppression: a client that authored a batch applied it locally at request
     // time, so the server's republication must not apply it a second time there. That filter

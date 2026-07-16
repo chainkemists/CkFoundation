@@ -41,7 +41,7 @@ namespace ck_watermark { namespace cvar {
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_watermark_panel_widget
 {
     auto GetHAlign(ECk_Watermark_GroupAnchor InAnchor) -> EHorizontalAlignment
     {
@@ -1463,8 +1463,8 @@ auto
 
         // ── Stats group (bottom-right by default) ───────────────────────────
         + SOverlay::Slot()
-        .HAlign(GetHAlign(_StatsGroupPlacement.Anchor))
-        .VAlign(GetVAlign(_StatsGroupPlacement.Anchor))
+        .HAlign(ck_watermark_panel_widget::GetHAlign(_StatsGroupPlacement.Anchor))
+        .VAlign(ck_watermark_panel_widget::GetVAlign(_StatsGroupPlacement.Anchor))
         .Padding(_StatsGroupPlacement.EdgePadding)
         [
             StatsGroupBox
@@ -1472,8 +1472,8 @@ auto
 
         // ── Info group (bottom-left by default, Minimal+) ─────────────────
         + SOverlay::Slot()
-        .HAlign(GetHAlign(_InfoGroupPlacement.Anchor))
-        .VAlign(GetVAlign(_InfoGroupPlacement.Anchor))
+        .HAlign(ck_watermark_panel_widget::GetHAlign(_InfoGroupPlacement.Anchor))
+        .VAlign(ck_watermark_panel_widget::GetVAlign(_InfoGroupPlacement.Anchor))
         .Padding(_InfoGroupPlacement.EdgePadding)
         [
             SNew(SBox)
@@ -1486,8 +1486,8 @@ auto
         // ── Center group (bottom-center by default) — pump pressure ─────────
         // Per-element visibility (MinPolicy + over-budget) is handled inside CenterGroupBox.
         + SOverlay::Slot()
-        .HAlign(GetHAlign(_CenterGroupPlacement.Anchor))
-        .VAlign(GetVAlign(_CenterGroupPlacement.Anchor))
+        .HAlign(ck_watermark_panel_widget::GetHAlign(_CenterGroupPlacement.Anchor))
+        .VAlign(ck_watermark_panel_widget::GetVAlign(_CenterGroupPlacement.Anchor))
         .Padding(_CenterGroupPlacement.EdgePadding)
         [
             CenterGroupBox
@@ -1495,8 +1495,8 @@ auto
 
         // ── ECS groups (top-right by default, Detailed only) ────────────────
         + SOverlay::Slot()
-        .HAlign(GetHAlign(_EcsGroupsPlacement.Anchor))
-        .VAlign(GetVAlign(_EcsGroupsPlacement.Anchor))
+        .HAlign(ck_watermark_panel_widget::GetHAlign(_EcsGroupsPlacement.Anchor))
+        .VAlign(ck_watermark_panel_widget::GetVAlign(_EcsGroupsPlacement.Anchor))
         .Padding(_EcsGroupsPlacement.EdgePadding)
         [
             SNew(SBox)

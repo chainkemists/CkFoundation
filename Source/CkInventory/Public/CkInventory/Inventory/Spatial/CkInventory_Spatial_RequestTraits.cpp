@@ -250,7 +250,7 @@ namespace ck::inventory_handlers
     }
 
     // ---- TSort<Spatial>: full body — clear grid, sort, re-place.
-    namespace
+    namespace ck_inventory_spatial_request_traits
     {
         auto BuildSpatialSortPredicate(const FCk_Request_Inventory_Sort& InRequest)
             -> TFunction<bool(const FCk_Handle_Item&, const FCk_Handle_Item&)>
@@ -287,7 +287,7 @@ namespace ck::inventory_handlers
         if (ck::Is_NOT_Valid(InHandle))
         { return R; }
 
-        const auto SortPredicate = BuildSpatialSortPredicate(InRequest);
+        const auto SortPredicate = ck_inventory_spatial_request_traits::BuildSpatialSortPredicate(InRequest);
         if (NOT SortPredicate)
         { return R; }
 

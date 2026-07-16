@@ -42,7 +42,7 @@
 
 namespace ck::angelscriptgenerator::self_heal
 {
-    namespace
+    namespace ck_angelscript_generator_asset_registry_stub
     {
         // UTF-16 LE atomic write for the sibling stub file. Matches the real
         // generator's encoding (`ForceUnicode` = UTF-16 LE + BOM) so the
@@ -518,7 +518,7 @@ namespace ck::angelscriptgenerator::self_heal
 
         // ---- Step 1: candidates matching the namespace ----
 
-        const auto Candidates = Collect_MatchingSites(Collect_GeneratedScriptDirs(), SoftNamespace);
+        const auto Candidates = Collect_MatchingSites(ck_angelscript_generator_asset_registry_stub::Collect_GeneratedScriptDirs(), SoftNamespace);
         if (Candidates.Num() == 0)
         {
             Result.ErrorMessage = FString::Printf(
@@ -546,7 +546,7 @@ namespace ck::angelscriptgenerator::self_heal
         auto Site             = FCk_AssetConfigSiteInfo{};
         for (const auto& Candidate : Candidates)
         {
-            const auto Found = Find_AssetPackagePath_OnDisk(Candidate.DiscoveryRoot, BaseFunctionName);
+            const auto Found = ck_angelscript_generator_asset_registry_stub::Find_AssetPackagePath_OnDisk(Candidate.DiscoveryRoot, BaseFunctionName);
             if (Found.IsEmpty())
             { continue; }
 
@@ -563,7 +563,7 @@ namespace ck::angelscriptgenerator::self_heal
             // Tier 3 refused — surface actionable banner. Hazelight's modal
             // keeps the original `No matching signatures` error visible to
             // the user, which is exactly what they need to see.
-            if (NOT Tier3_IsAllowed(Flavor))
+            if (NOT ck_angelscript_generator_asset_registry_stub::Tier3_IsAllowed(Flavor))
             {
                 Result.ErrorMessage = FString::Printf(
                     TEXT("Asset '%s.uasset' not found under disk-converted root for '%s'. ")
@@ -610,7 +610,7 @@ namespace ck::angelscriptgenerator::self_heal
 
         if (ClassName.IsEmpty())
         {
-            if (NOT Tier3_IsAllowed(Flavor))
+            if (NOT ck_angelscript_generator_asset_registry_stub::Tier3_IsAllowed(Flavor))
             {
                 Result.ResolvedAssetClass = TEXT("UObject");
                 Result.ErrorMessage = FString::Printf(
@@ -666,7 +666,7 @@ namespace ck::angelscriptgenerator::self_heal
             return Result;
         }
 
-        if (NOT Try_AtomicWriteOrAppend_StubFile_Utf16(StubPath, StubBlock))
+        if (NOT ck_angelscript_generator_asset_registry_stub::Try_AtomicWriteOrAppend_StubFile_Utf16(StubPath, StubBlock))
         {
             Result.ErrorMessage = FString::Printf(
                 TEXT("UTF-16 atomic write/append failed for stub file '%s'."), *StubPath);
