@@ -11,8 +11,7 @@
 CK_REGISTER_PROCESSOR(ck::FProcessor_TeamAssignedSignal_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_OnTeamAssigned_Setup);
 
-namespace
-ck
+namespace ck
 {
     auto
         FProcessor_TeamAssignedSignal_Setup::
