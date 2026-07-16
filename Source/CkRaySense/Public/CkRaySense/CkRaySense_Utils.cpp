@@ -3,6 +3,8 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
+#include "CkEcsExt/PhysicsOwnership/CkPhysicsOwnership_Utils.h"
+
 #include "CkRaySense/CkRaySense_Fragment.h"
 #include "CkRaySense/CkRaySense_Log.h"
 
@@ -15,6 +17,9 @@ auto
         const FCk_Fragment_RaySense_ParamsData& InParams)
     -> FCk_Handle_RaySense
 {
+    if (NOT ck::physics_ownership::TryClaim_Chaos(InHandle))
+    { return {}; }
+
     InHandle.Add<ck::FFragment_RaySense_Params>(InParams);
     InHandle.Add<ck::FFragment_RaySense_Current>();
 
