@@ -98,3 +98,4 @@ Source/CkScripts/.idea
 # Auto-generated build-id header (written by CkCore.Build.cs)
 Source/CkCore/Public/CkCore/Generated/CkCore_BuildId.h
 *.orig
+Source/CkWatermark/Public/CkWatermark/Generated/CkWatermark_BuildId.h
