@@ -2,13 +2,84 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include "CkJolt/CkJolt_Log.h"
+
+#include <Jolt/RegisterTypes.h>
+#include <Jolt/Core/Factory.h>
+#include <Jolt/Core/Memory.h>
 #include <Jolt/Physics/Body/Body.h>
 #include <Jolt/Physics/Body/BodyInterface.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_jolt_utils
+{
+    // Reference count for global Jolt initialization (RegisterDefaultAllocator, Factory,
+    // RegisterTypes). These are process-global and must only be called once, but multiple world
+    // subsystem instances (PIE with multiple clients) and standalone unit tests may
+    // init/deinit independently.
+    static int32 GJoltRefCount = 0;
+
+    auto
+        CustomTraceFunction(
+            const char* inFMT,
+            ...)
+        -> void
+    {
+        va_list List;
+        va_start(List, inFMT);
+        char Buffer[1024];
+        vsnprintf(Buffer, sizeof(Buffer), inFMT, List);
+        va_end(List);
+
+        ck::jolt::Verbose(TEXT("Jolt Trace: [{}]"), FString{Buffer});
+    }
+
+    auto
+        CustomAssertFunction(
+            const char* inExpression,
+            const char* inMessage,
+            const char* inFile,
+            JPH::uint inLine)
+        -> bool
+    {
+        CK_TRIGGER_ENSURE(TEXT("Jolt FAILED [{}] with Message [{}].\n{}:{}"), FString{inExpression}, FString{inMessage},
+            FString{inFile}, inLine);
+        return false;
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck::jolt
 {
+    auto
+        Request_GlobalJoltInit()
+        -> void
+    {
+        if (ck_jolt_utils::GJoltRefCount++ != 0)
+        { return; }
+
+        JPH::RegisterDefaultAllocator();
+        JPH::Factory::sInstance = new JPH::Factory{};
+        JPH::RegisterTypes();
+
+        JPH::Trace = ck_jolt_utils::CustomTraceFunction;
+        JPH::AssertFailed = ck_jolt_utils::CustomAssertFunction;
+    }
+
+    auto
+        Request_GlobalJoltShutdown()
+        -> void
+    {
+        if (--ck_jolt_utils::GJoltRefCount != 0)
+        { return; }
+
+        JPH::UnregisterTypes();
+        delete JPH::Factory::sInstance;
+        JPH::Factory::sInstance = nullptr;
+    }
+
     // ----------------------------------------------------------------------------------------------------------------
     // Conversion Utilities
     // ----------------------------------------------------------------------------------------------------------------

@@ -89,12 +89,25 @@ private:
     TPimplPtr<CkJoltDebugger> _Debugger;
 #endif
 
+    bool _OptimizeBroadPhaseRequested = false;
+
 public:
     auto
     Get_PhysicsSystem() const -> TWeakPtr<JPH::PhysicsSystem>;
 
     auto
     Get_OnContactEventsDrained() -> FCk_Jolt_OnContactEventsDrained&;
+
+    /// The ObjectLayer baked static-world bodies live on (raw uint16 to keep JPH out of this
+    /// header). Pairs with nothing until the Phase-2 layer table — query targets only.
+    static auto
+    Get_StaticWorldObjectLayer() -> uint16;
+
+    /// Runs PhysicsSystem::OptimizeBroadPhase on the game thread immediately before the next
+    /// Update (never while an async update is in flight). Callers batch: request once after
+    /// bulk add/remove, not per body.
+    auto
+    Request_OptimizeBroadPhaseBeforeNextUpdate() -> void;
 
     auto
     Set_DebugDrawGate(

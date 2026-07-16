@@ -152,4 +152,82 @@ auto
     return Settings->Get_EnableAsyncPhysicsUpdate();
 }
 
+auto
+    UCk_Utils_Jolt_ProjectSettings::
+    Get_PIEStaticWorldMode()
+    -> ECk_Jolt_PIEStaticWorldMode
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Jolt_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return ECk_Jolt_PIEStaticWorldMode::LiveExtract; }
+
+    return Settings->Get_PIEStaticWorldMode();
+}
+
+auto
+    UCk_Utils_Jolt_ProjectSettings::
+    Get_CookedDataRootPath()
+    -> FString
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Jolt_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return TEXT("/Game/CkJoltData"); }
+
+    return Settings->Get_CookedDataRootPath();
+}
+
+auto
+    UCk_Utils_Jolt_ProjectSettings::
+    Get_BakeGridCellSize()
+    -> float
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Jolt_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return 25600.0f; }
+
+    return Settings->Get_BakeGridCellSize();
+}
+
+auto
+    UCk_Utils_Jolt_ProjectSettings::
+    Get_CompoundShapeInstanceThreshold()
+    -> int32
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Jolt_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return 32; }
+
+    return Settings->Get_CompoundShapeInstanceThreshold();
+}
+
+auto
+    UCk_Utils_Jolt_ProjectSettings::
+    Get_BroadphaseOptimizeThreshold()
+    -> int32
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Jolt_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return 512; }
+
+    return Settings->Get_BroadphaseOptimizeThreshold();
+}
+
+auto
+    UCk_Utils_Jolt_ProjectSettings::
+    Get_CookExcludedMapPathPrefixes()
+    -> TArray<FString>
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Jolt_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return {}; }
+
+    return Settings->Get_CookExcludedMapPathPrefixes();
+}
+
 // --------------------------------------------------------------------------------------------------------------------

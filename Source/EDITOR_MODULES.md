@@ -89,6 +89,11 @@ Dynamic behavior editor — shows the behavior stack on a selected entity, lets 
 
 Inventory grid editor — visualizes item slot layout, lets designers configure grid sizes and item constraints.
 
+### `CkJoltEditor`
+**Runtime twin:** `CkJolt`. **Depends on:** `CkCore`, `CkEcs`, `CkJolt`, `CkLog`, `CkThirdParty` (+ UnrealEd, EditorSubsystem, AssetRegistry, ToolMenus, Landscape). Type: Editor.
+
+Jolt static-world cooker — `FCk_Jolt_WorldCooker` (shared with nothing else; the runtime uses the same `ck::jolt::bake` extraction), `UCk_JoltCook_EditorSubsystem_UE` (Cook/Validate current map, Tools-menu entry), `UCk_JoltCook_Commandlet` (`-run=CkJoltCook`).
+
 ### `CkOverlapBodyEditor`
 **Runtime twin:** `CkOverlapBody`. **Depends on:** `CkCore`, `CkLog`.
 
