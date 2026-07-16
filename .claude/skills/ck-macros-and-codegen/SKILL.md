@@ -1,6 +1,6 @@
 ---
 name: ck-macros-and-codegen
-description: Use when reading or writing any CK_ macro — CK_GENERATED_BODY, CK_PROPERTY/CK_PROPERTY_GET, CK_DEFINE_CONSTRUCTORS, CK_ENSURE_IF_NOT, CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE, CK_SIGNAL_BIND, CK_REQUEST_DEFINE_DEBUG_NAME, CK_GENERATED_BODY_HANDLE_TYPESAFE, CK_DEFINE_ECS_TAG, CK_REGISTER_PROCESSOR, CK_REGISTER_SNAPSHOTABLE — or adding a new fragment/processor/request/signal/typesafe-handle, or hitting "CK_DEFINE_RECORD_OF_ENTITIES is removed", "Tags must not carry any data", missing ThisType. Not for composing an EXISTING feature (attributes, timers, ...) — that needs no skill, use Source/CLAUDE.md's decision tree. Not for architecture rationale (ckecs-architecture-contract) or AS-binding internals (ck-angelscript-interop).
+description: "Use when reading or writing CK_ macros or adding Ck fragments, processors, requests, signals, tags, snapshot registration, or typesafe handles; not for architecture rationale."
 ---
 
 ## Overview

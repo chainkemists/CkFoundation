@@ -1,6 +1,6 @@
 ---
 name: ck-methodology
-description: Use when work spans >1 session, >~10 files, a new module, or an architectural change; when starting a campaign with unknowns; when writing or resuming PLAN.md, PROMPT.md, Gate/PHASE_N docs, PROGRESS.md, or a continuation prompt; when a campaign doc looks stale or contradicts code; when stuck after two failed attempts; when preparing or answering a CTO review. Not for gating a single change (ck-change-control) or diagnosing failures (ck-debugging-playbook).
+description: "Use when Ck work spans sessions, many files, a new module, or architecture; for campaign docs, phase gates, stuck pivots, resumptions, and CTO reviews; not for single-change gates."
 ---
 
 # ck-methodology — working discipline for long and multi-session tasks

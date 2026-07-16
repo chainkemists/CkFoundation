@@ -1,6 +1,6 @@
 ---
 name: ck-failure-archaeology
-description: Use when asking "has this been tried before?" — before resurrecting a stalled branch, re-attempting a rejected design (typed GOAP WorldState, dtCrowd steering, cue executor discovery, descriptor-driven AS regen), or removing a long-lived workaround (signal in_place_delete, FireIfPayloadInFlight policies). Also when a symptom smells historical: packaged-only 0xC0000005 GC crash, randomly disconnecting signals, SM replication flakes, generated-.as rewrite ping-pong. Not for live-bug triage (load ck-debugging-playbook first) or planning new work (load ck-feature-frontier).
+description: "Use when checking whether a Ck failure, workaround, rejected design, or stalled branch has prior history before retrying, removing, or resurrecting it."
 ---
 
 # ck-failure-archaeology — the chronicle of dead ends, reverts, and workarounds

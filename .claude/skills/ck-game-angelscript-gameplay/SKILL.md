@@ -1,14 +1,6 @@
 ---
 name: ck-game-angelscript-gameplay
-description: Use when writing day-to-day gameplay AngelScript against CkFoundation on the
-  UnrealEngine-Angelscript (Hazelight) fork — composing features via utils_* namespaces, binding
-  signals (BindTo_On*, Promise_OnConstructed), the deferred Request_* mutation idiom (read the
-  signal payload, not a same-frame Get), mixin call forms ("No matching signatures" on a utils_ call that
-  exists), the save→reload→read-log loop, "works after compile but throws at PIE-start", or asking
-  "should this be C++ instead". For BUILDING games ON CkFoundation. Not for AS binding/regen
-  breakage or generator internals (ck-angelscript-interop), AS language syntax
-  (Plugins/CkFoundation/Script/CLAUDE.md), feature file structure (ck-game-feature-recipe), or test
-  authoring (ck-game-testing-discipline); for modifying the framework itself, see ck-change-control.
+description: 'Use when writing CkFoundation gameplay AngelScript: utils and mixin idioms, deferred requests, signal binding, hot reload, or deciding between AS and C++.'
 ---
 
 # ck-game-angelscript-gameplay

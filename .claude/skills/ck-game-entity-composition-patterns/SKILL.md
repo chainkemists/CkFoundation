@@ -1,15 +1,6 @@
 ---
 name: ck-game-entity-composition-patterns
-description: Use when deciding HOW to structure a game entity on CkFoundation — which archetype
-  fits (driver, world object, pawn-less NPC, item, behavior micro-entity), who its lifetime owner
-  is, where its context root points, whether a feature needs its own child entity, and when an
-  Actor bridge is legitimate. Triggers — "should this be an EntityScript or an Actor",
-  "Request_OverrideToSelf stole my context", "AtStore never fires / wrong entity resolved from
-  overlap", "As_Interactable returns invalid", "my tag query grabbed another building's
-  entities", "who should own this spawned entity". For BUILDING games ON CkFoundation. Not for
-  the feature-file quartet itself (ck-game-feature-recipe), driver internals
-  (ck-game-driver-architecture), or replication mechanics (ck-game-replication-patterns); for
-  the framework's own ECS invariants, see ckecs-architecture-contract.
+description: 'Use when choosing a CkFoundation game entity archetype, lifetime owner, context root, child-entity topology, or the narrow cases that justify an Actor bridge.'
 ---
 
 # Entity composition patterns — archetypes, ownership, lifetime

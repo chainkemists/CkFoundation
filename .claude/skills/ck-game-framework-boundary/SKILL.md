@@ -1,14 +1,8 @@
 ---
 name: ck-game-framework-boundary
-description: Use when game code is about to touch framework internals or bend a framework rule —
-  "can I just write this fragment member directly", "can I mutate this outside a request",
-  "the framework doesn't support X, I'll copy the internals / add a friend / use a manager
-  singleton", "should I edit the Ck submodule from my game session", "this pattern we built
-  should live in the framework". States the contract between a consuming game and CkFoundation:
-  the may-never list, how to report a framework gap instead of working around it, and how to
-  nominate a game pattern for promotion. For BUILDING games ON CkFoundation. Not for composing
-  features within the contract (ck-game-feature-recipe) or modifying the framework itself
-  (ck-change-control); for deciding what the framework should build next, see ck-feature-frontier.
+description: >-
+  Use when game code would bypass CkFoundation public APIs, mutate fragments directly, add globals,
+  copy internals, or when a game pattern may belong upstream; not for normal feature composition.
 ---
 
 # ck-game-framework-boundary — the contract between a game and CkFoundation
