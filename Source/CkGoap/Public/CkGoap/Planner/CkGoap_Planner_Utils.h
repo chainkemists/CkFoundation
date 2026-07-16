@@ -11,7 +11,7 @@
 
 #include "CkGoap_Planner_Utils.generated.h"
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Goap_Planner"))
 class CKGOAP_API UCk_Utils_Goap_Planner_UE : public UBlueprintFunctionLibrary
@@ -23,9 +23,7 @@ public:
 	CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Goap_Planner);
 
 public:
-	// ================================================================================================================
-	// CONSTRUCTION
-	// ================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 	// Add — stamp the Planner role directly onto InOwner. InOwner itself becomes
 	// the Planner (no child entity is created). Use this for the single-Planner-
@@ -87,7 +85,7 @@ public:
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
 		const FCk_Fragment_Goap_ActionParamsData& InParams);
 
-	// U11.3: Promote an existing Action entity to be ALSO a Planner.
+	// Promote an existing Action entity to be ALSO a Planner.
 	//
 	// Path A (transitional): every Action entity already carries the planner-role
 	// fragment cluster (PlanState, Goal, WorldStateSource, Activation) — the
@@ -110,9 +108,7 @@ public:
 		UPARAM(ref) FCk_Handle_Goap_Action& InAction,
 		const FCk_Fragment_Goap_PlannerParamsData& InParams);
 
-	// ================================================================================================================
-	// QUERY
-	// ================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
 		DisplayName = "[Ck][Goap|Planner] Has")
@@ -183,9 +179,7 @@ public:
 	static TArray<FCk_GoapWS_Condition_Authored>
 	Get_InvalidGoal(const FCk_Handle_Goap_Planner& InPlanner);
 
-	// ================================================================================================================
-	// REQUESTS
-	// ================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
 		DisplayName = "[Ck][Goap|Planner] Request Set Enable Toggle")
@@ -200,11 +194,10 @@ public:
 	Request_ResetActiveChain(
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner);
 
-	// U11.1: set the Planner's goal at runtime. Triggers a replan. Per spec
-	// §3.3 — every Planner has its own goal, completely independent from any
-	// Action-role effects this entity may carry. The request is routed onto
-	// the Planner's root Action's request queue (the entity that runs A*
-	// today); the fragment rename to FFragment_Goap_Planner_Requests is U11.5.
+	// Set the Planner's goal at runtime. Triggers a replan. Every Planner has
+	// its own goal, completely independent from any Action-role effects this
+	// entity may carry. The request is routed onto the Planner's root Action's
+	// request queue (the entity that runs A* today).
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
 		DisplayName = "[Ck][Goap|Planner] Request Set Goal")
 	static FCk_Handle_Goap_Planner
@@ -293,9 +286,7 @@ public:
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
 		TSubclassOf<UCk_GoapAction_EntityScript> InChildActionClass);
 
-	// ================================================================================================================
-	// SIGNAL BINDING
-	// ================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
 		DisplayName = "[Ck][Goap|Planner] Bind To OnActiveChainChanged")
@@ -313,12 +304,10 @@ public:
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
 		const FCk_Delegate_Goap_OnActiveChainChanged& InDelegate);
 
-	// PR-B.1b Stage 0 — per-Planner signals (spec §3.5). Bind/Unbind resolve
-	// the Planner to the entity that actually broadcasts under Path A (the
-	// implicit-root Action for top-level Planners; the host entity itself for
-	// promoted mid-tier Planners) and bind delegates there. Stage 3 will move
-	// the broadcast onto the Planner entity itself and drop the resolution
-	// step.
+	// Per-Planner signals. Bind/Unbind resolve the Planner to the entity that
+	// actually broadcasts under Path A (the implicit-root Action for top-level
+	// Planners; the host entity itself for promoted mid-tier Planners) and bind
+	// delegates there.
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
 		DisplayName = "[Ck][Goap|Planner] Bind To OnPlanComplete")

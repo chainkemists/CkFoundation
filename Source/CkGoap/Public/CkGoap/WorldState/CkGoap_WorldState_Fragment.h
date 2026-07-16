@@ -9,7 +9,7 @@
 
 #include <variant>
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 // Forward decl in global scope so the `friend class UCk_Utils_Goap_WorldState_UE;` lines below resolve
 // to the real global class — without this, the friend lookup binds to ck::UCk_Utils_Goap_WorldState_UE
@@ -19,20 +19,17 @@ class UCk_Utils_Goap_WorldState_UE;
 
 namespace ck { class FProcessor_Goap_Planner_HandleRequests; }
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
 
-// ====================================================================================================================
-// PARAMS
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 using FFragment_Goap_WorldState_Params = FCk_Fragment_Goap_WorldState_ParamsData;
 
-// ====================================================================================================================
-// KEY REGISTRY FRAGMENT — Maps FGameplayTag ↔ FCk_GoapKey
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Maps FGameplayTag ↔ FCk_GoapKey
 //
 // One registry per WorldState entity. Every planner pointing at this WS shares
 // the same registry, so key indices are globally consistent across the layer
@@ -62,9 +59,8 @@ public:
 	auto Get_MutableRegistry() -> goap::FKeyRegistry& { return _Registry; }
 };
 
-// ====================================================================================================================
-// VALUES FRAGMENT — TStaticArray-backed boolean state, fixed-size for O(1) compare/hash
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// TStaticArray-backed boolean state, fixed-size for O(1) compare/hash
 
 struct CKGOAP_API FFragment_Goap_WorldState_Values
 {
@@ -89,9 +85,8 @@ public:
 	auto Get_MutableValues() -> goap::FWorldState& { return _Values; }
 };
 
-// ====================================================================================================================
-// REQUESTS FRAGMENT — Request queue drained by FProcessor_Goap_WorldState_HandleRequests
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Request queue drained by FProcessor_Goap_WorldState_HandleRequests
 
 struct CKGOAP_API FFragment_Goap_WorldState_Requests
 {
@@ -112,9 +107,8 @@ public:
 	CK_PROPERTY_GET(_Requests);
 };
 
-// ====================================================================================================================
-// OVERRIDE STACK FRAGMENT — Named layers shadowing base WorldState values
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Named layers shadowing base WorldState values
 //
 // Reads (Get_Value) walk this stack TOP-DOWN before falling through to the
 // base FFragment_Goap_WorldState_Values. Writes (Set_Value) always mutate the
@@ -153,9 +147,8 @@ public:
 	auto Get_Layers() const -> const TArray<FLayer>& { return _Layers; }
 };
 
-// ====================================================================================================================
-// SUBSCRIBERS FRAGMENT — Entity handles that should be tagged dirty on WS value change
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Entity handles that should be tagged dirty on WS value change
 //
 // In the unified ActionSet/Action model, subscribers are ACTION entities
 // (FCk_Handle_Goap_Action). The list is typed as generic FCk_Handle for two
@@ -186,9 +179,7 @@ public:
 	CK_PROPERTY_GET(_Subscribers);
 };
 
-// ====================================================================================================================
-// SIGNAL
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
 	CKGOAP_API,
@@ -197,6 +188,6 @@ CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
 	FCk_Handle_Goap_WorldState,
 	FCk_Goap_WorldState_Payload_OnValueChanged);
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 } // namespace ck

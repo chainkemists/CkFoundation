@@ -64,7 +64,7 @@ private:
         Category = "Ck|Utils|Interaction",
         meta = (CompactNodeTitle = "INVALID_InteractionHandle", Keywords = "make"))
     static FCk_Handle_Interaction
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintCallable,

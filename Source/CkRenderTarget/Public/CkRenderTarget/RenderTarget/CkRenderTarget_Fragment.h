@@ -239,7 +239,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     // Stash for batches that arrive before the sync child's Setup has run (CkStateMachine's
-    // stash-and-flush precedence, spec §5.4): route here while NeedsSetup is present OR the stash
+    // stash-and-flush precedence): route here while NeedsSetup is present OR the stash
     // is non-empty (preserves arrival order under back-to-back deliveries), then
     // FlushPendingReplication drains in order.
     struct CKRENDERTARGET_API FFragment_RenderTarget_PendingReplicationBatches

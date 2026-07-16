@@ -18,9 +18,8 @@ namespace ck
     class FProcessor_Sm_CommitPendingTransition;
     class FProcessor_SmCondition_Exit;
 
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
     // STATE UPDATE — Add NeedsEvaluation every frame for Ticking (non-EventDriven) states
-    // ================================================================================================================
 
     class CKSTATEMACHINE_API FProcessor_SmState_Update : public ck_exp::TProcessor<
         FProcessor_SmState_Update,
@@ -46,9 +45,8 @@ namespace ck
             HandleType InHandle) -> void;
     };
 
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
     // STATE EVALUATE — Walk the active state's transitions in priority order and fire the first that passes
-    // ================================================================================================================
 
     class CKSTATEMACHINE_API FProcessor_SmState_Evaluate : public ck_exp::TProcessor<
         FProcessor_SmState_Evaluate,
@@ -78,9 +76,8 @@ namespace ck
             HandleType InHandle) -> void;
     };
 
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
     // STATE EXIT — Cascade PendingExit to tasks + transitions, then call ExitState
-    // ================================================================================================================
 
     class CKSTATEMACHINE_API FProcessor_SmState_Exit : public ck_exp::TProcessor<
         FProcessor_SmState_Exit,

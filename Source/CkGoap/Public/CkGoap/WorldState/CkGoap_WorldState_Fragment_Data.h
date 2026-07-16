@@ -6,9 +6,7 @@
 
 #include "CkGoap_WorldState_Fragment_Data.generated.h"
 
-// ====================================================================================================================
-// HANDLE
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 //
 // A FCk_Handle_Goap_WorldState identifies an entity that holds a shared
 // boolean world state used by one or more GOAP planners. Planners reference
@@ -29,9 +27,7 @@ struct CKGOAP_API FCk_Handle_Goap_WorldState : public FCk_Handle_TypeSafe
 
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Goap_WorldState);
 
-// ====================================================================================================================
-// PARAMS
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 //
 // Placeholder for per-WorldState configuration. Empty today — added now so
 // the Create signature stays stable when future knobs land (e.g. max-keys
@@ -46,9 +42,7 @@ public:
 	CK_GENERATED_BODY(FCk_Fragment_Goap_WorldState_ParamsData);
 };
 
-// ====================================================================================================================
-// SIGNAL PAYLOAD
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 //
 // Fired by the WorldState's request processor whenever a Set request actually
 // changes a key's value. Same-value writes are coalesced and do not fire.
@@ -83,18 +77,14 @@ public:
 	CK_DEFINE_CONSTRUCTORS(FCk_Goap_WorldState_Payload_OnValueChanged, _Key, _OldValue, _NewValue);
 };
 
-// ====================================================================================================================
-// DELEGATE
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
 	FCk_Delegate_Goap_WorldState_OnValueChanged,
 	FCk_Handle_Goap_WorldState, InHandle,
 	FCk_Goap_WorldState_Payload_OnValueChanged, InPayload);
 
-// ====================================================================================================================
-// REQUESTS
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
 struct CKGOAP_API FCk_Request_Goap_WorldState_SetValue
@@ -147,4 +137,4 @@ public:
 	CK_DEFINE_CONSTRUCTORS(FCk_Request_Goap_WorldState_RegisterKey, _Key);
 };
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------

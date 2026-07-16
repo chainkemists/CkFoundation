@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkTagSet);
 
 namespace ck::tagset
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkTagSet);
+    CK_REGISTER_LOG_FUNCTIONS(CkTagSet);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

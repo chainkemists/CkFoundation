@@ -61,7 +61,7 @@ private:
         Category = "Ck|Utils|GeometryCollectionOwner",
         meta = (CompactNodeTitle = "INVALID_GeometryCollectionOwnerHandle", Keywords = "make"))
     static FCk_Handle_GeometryCollectionOwner
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintCallable,

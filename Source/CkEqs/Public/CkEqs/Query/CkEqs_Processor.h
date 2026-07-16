@@ -22,9 +22,9 @@ namespace JPH { class PhysicsSystem; }
 //       runs the chosen generator on Pending queries, transitions Pending → InProgress.
 //   ↓
 //   FProcessor_Eqs_Test             (FGroup_PostTransform, RunAfter Generate)
-//       runs tests with a per-frame budget cursor (P3-E2/E3/E4); test-boundary atomic
+//       runs tests with a per-frame budget cursor; test-boundary atomic
 //       yields. DoTick override resets _RemainingBudgetThisFrame. Re-validates the
-//       querier each tick (P3-E6) and honors FTag_EqsQuery_Cancelled (Pass-3.1 E3).
+//       querier each tick and honors FTag_EqsQuery_Cancelled.
 //   ↓
 //   FProcessor_Eqs_Finalize         (FGroup_PostTransform, RunAfter Test)
 //       finalises results, broadcasts OnEqsQueryComplete, transitions InProgress → Complete.
@@ -33,7 +33,7 @@ namespace JPH { class PhysicsSystem; }
 //       destroys Complete + AutoDestroy queries.
 //
 // All processors use the modern ck_exp::TProcessor pattern with explicit ck::TReadOnly /
-// ck::TReadWrite wrappers (P3-E1).
+// ck::TReadWrite wrappers.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -110,15 +110,14 @@ namespace ck
     //
     // Matches FCk_Handle_EqsQuery + InProgress tag. Captures physics weak ref via factory.
     //
-    // P3-E2 + P3-E3 + P3-E4 + Pass-3.1 anti-deadlock:
     // _RemainingBudgetThisFrame resets in DoTick (per-tick, NOT per-entity), tests are
     // atomic with respect to budget yields, anti-deadlock clause runs at least one test
     // per tick when the candidate set is larger than the budget.
     //
-    // P3-E6: re-validate querier at the top of ForEachEntity; broadcast OnComplete with
+    // Re-validate querier at the top of ForEachEntity; broadcast OnComplete with
     // empty results + Failed tag if the querier died mid-query.
     //
-    // Pass-3.1 E3: respect FTag_EqsQuery_Cancelled (caller-issued cancel); fail the query.
+    // Respect FTag_EqsQuery_Cancelled (caller-issued cancel); fail the query.
     // ----------------------------------------------------------------------------------------------------------------
 
     class CKEQS_API FProcessor_Eqs_Test : public ck_exp::TProcessor<
@@ -126,7 +125,7 @@ namespace ck
             FCk_Handle_EqsQuery,
             ck::TReadOnly<FFragment_EqsQuery_Params>,
             ck::TReadWrite<FFragment_EqsQuery_State>,
-            ck::TReadWrite<FFragment_EqsQuery_DebugInfo>,    // Pass-5.1
+            ck::TReadWrite<FFragment_EqsQuery_DebugInfo>,
             FTag_EqsQuery_InProgress,
             CK_IGNORE_PENDING_KILL>
     {
@@ -178,7 +177,7 @@ namespace ck
             FCk_Handle_EqsQuery,
             ck::TReadOnly<FFragment_EqsQuery_Params>,
             ck::TReadWrite<FFragment_EqsQuery_State>,
-            ck::TReadWrite<FFragment_EqsQuery_DebugInfo>,    // Pass-5.1: reorder in lockstep
+            ck::TReadWrite<FFragment_EqsQuery_DebugInfo>,    // reorder in lockstep
             FTag_EqsQuery_InProgress,
             CK_IGNORE_PENDING_KILL>
     {

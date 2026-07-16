@@ -12,9 +12,8 @@
 
 namespace ck
 {
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
     // GRAPH WALK (ONE-SHOT) — Kicks off the multi-frame graph walk
-    // ================================================================================================================
 
     class CKSTATEMACHINE_API FProcessor_Sm_Debug_GraphWalk : public ck_exp::TProcessor<
         FProcessor_Sm_Debug_GraphWalk,
@@ -41,9 +40,8 @@ namespace ck
             HandleType InSmHandle) -> void;
     };
 
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
     // GRAPH WALK ITERATE — Runs each frame while walk is in progress
-    // ================================================================================================================
 
     class CKSTATEMACHINE_API FProcessor_Sm_Debug_GraphWalk_Iterate : public ck_exp::TProcessor<
         FProcessor_Sm_Debug_GraphWalk_Iterate,

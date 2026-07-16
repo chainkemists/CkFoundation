@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkResourceLoader);
 
 namespace ck::resource_loader
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkResourceLoader);
+    CK_REGISTER_LOG_FUNCTIONS(CkResourceLoader);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

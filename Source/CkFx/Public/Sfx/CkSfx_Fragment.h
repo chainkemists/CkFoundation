@@ -44,7 +44,6 @@ namespace ck
         friend class UCk_Utils_Sfx_UE;
 
     private:
-        // Add your properties here
         int32 _DummyProperty = 0;
     };
 
@@ -60,7 +59,6 @@ namespace ck
         friend class UCk_Utils_Sfx_UE;
 
     private:
-        // Add your requests here
         int32 _DummyProperty = 0;
     };
 

@@ -131,8 +131,6 @@ namespace ck
 
             UCk_Utils_EntityCollection_UE::Request_AddEntities(CollectionHandle, FCk_Request_EntityCollection_AddEntities{{ObjectiveEntity}});
 
-            //UUtils_Signal_OnObjectiveOwner_ObjectiveAdded::Broadcast(ObjectiveOwner, MakePayload(ObjectiveOwner, ObjectiveEntity));
-
             if (AutoStartObjective)
             {
                 UCk_Utils_Objective_UE::Request_Start(ObjectiveEntity, FCk_Request_Objective_Start{});
@@ -159,8 +157,6 @@ namespace ck
         auto CollectionHandle = InCurrent.Get_ObjectivesEntityCollection();
 
         UCk_Utils_EntityCollection_UE::Request_RemoveEntities(CollectionHandle, FCk_Request_EntityCollection_RemoveEntities{ {ObjectiveHandle} });
-
-        //UUtils_Signal_OnObjectiveOwner_ObjectiveRemoved::Broadcast(InHandle, MakePayload(InHandle, ObjectiveHandle));
     }
 }
 

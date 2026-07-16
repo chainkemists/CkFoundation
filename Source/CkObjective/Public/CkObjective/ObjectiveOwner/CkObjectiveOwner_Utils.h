@@ -74,7 +74,7 @@ private:
         Category = "Ck|Utils|ObjectiveOwner",
         meta = (CompactNodeTitle = "INVALID_ObjectiveOwnerHandle", Keywords = "make"))
     static FCk_Handle_ObjectiveOwner
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintCallable,

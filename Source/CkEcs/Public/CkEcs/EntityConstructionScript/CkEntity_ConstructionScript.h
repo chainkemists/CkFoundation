@@ -78,7 +78,7 @@ protected:
     virtual bool ShowReplicationInEditor() const;
 
 private:
-    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess, EditCondition="ShowReplicationInEditor()", EditConditionHides))
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess = true, EditCondition="ShowReplicationInEditor()", EditConditionHides))
     ECk_Replication _Replication = ECk_Replication::Replicates;
 
 public:

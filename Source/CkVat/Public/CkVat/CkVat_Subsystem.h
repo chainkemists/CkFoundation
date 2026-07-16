@@ -37,7 +37,7 @@ class CKVAT_API UCk_Vat_Subsystem_UE : public UWorldSubsystem
     GENERATED_BODY()
 
 public:
-    // Per the per-instance float contract (Plan/Gate_02_Material.md): 12 scalars, slots [0..11].
+    // Per the per-instance float contract: 12 scalars, slots [0..11].
     // The CkVat look assets declare exactly these per-instance params in this order.
     static constexpr int32 NumPerInstanceFloats = 12;
 

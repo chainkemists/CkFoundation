@@ -87,7 +87,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta=(AllowPrivateAccess = true, EditCondition = "_AttachmentType == ECk_ActorComponent_AttachmentPolicy::Attach"))
+              meta = (AllowPrivateAccess = true, EditCondition = "_AttachmentType == ECk_ActorComponent_AttachmentPolicy::Attach"))
     TObjectPtr<USceneComponent> _Parent;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -107,7 +107,7 @@ private:
     ECk_ActorComponent_AttachmentPolicy _AttachmentType = ECk_ActorComponent_AttachmentPolicy::Attach;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta=(AllowPrivateAccess = true, EditCondition = "_AttachmentType == ECk_ActorComponent_AttachmentPolicy::Attach"))
+              meta = (AllowPrivateAccess = true, EditCondition = "_AttachmentType == ECk_ActorComponent_AttachmentPolicy::Attach"))
     FName _AttachmentSocket;
 
 public:

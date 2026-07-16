@@ -15,8 +15,7 @@
 
 #define LOCTEXT_NAMESPACE "FloatAttributeCustomization"
 
-/* FCk_Fragment_FloatAttribute_ParamsDataCustomization
- *****************************************************************************/
+// ----------------------------------------------------------------------------------------------------
 
 TSharedRef<IPropertyTypeCustomization> FCk_Fragment_FloatAttribute_ParamsDataCustomization::MakeInstance()
 {
@@ -491,8 +490,7 @@ FText FCk_Fragment_FloatAttribute_ParamsDataCustomization::GetNameTitleText() co
     return LOCTEXT("NoName", "(None)");
 }
 
-/* FCk_Fragment_FloatAttributeRefill_ParamsDataCustomization
- *****************************************************************************/
+// ----------------------------------------------------------------------------------------------------
 
 TSharedRef<IPropertyTypeCustomization> FCk_Fragment_FloatAttributeRefill_ParamsDataCustomization::MakeInstance()
 {

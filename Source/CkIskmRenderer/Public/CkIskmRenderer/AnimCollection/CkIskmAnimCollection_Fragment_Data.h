@@ -92,7 +92,7 @@ private:
     int32 _SampleFrequency = 30;
 
     // Sockets (or bare bone names) whose component-space transforms are baked per-frame into the
-    // pose data (inc-4 far cosmetics) — queryable per member via
+    // pose data (far cosmetics) — queryable per member via
     // ACk_Iskm_BatchedCrowd_Actor::TryGet_MemberSocketTransform. Script-authored collections
     // configure this (BB adds head_attach), so it must stay BlueprintReadWrite like _Sequences
     // (_BonesToCache above is BlueprintReadOnly and NOT script-assignable — do not reuse it).

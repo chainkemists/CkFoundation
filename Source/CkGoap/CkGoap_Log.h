@@ -10,7 +10,7 @@ CKGOAP_API DECLARE_LOG_CATEGORY_EXTERN(CkGoap, Log, All);
 
 namespace ck::goap
 {
-	CK_DEFINE_LOG_FUNCTIONS(CkGoap);
+    CK_DEFINE_LOG_FUNCTIONS(CkGoap);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

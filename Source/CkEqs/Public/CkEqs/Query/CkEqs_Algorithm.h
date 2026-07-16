@@ -40,12 +40,12 @@ struct CKEQS_API FCk_Eqs_Algorithm
     // completed in this call; false if it yielded at a test boundary because the budget
     // was exhausted (cursor preserved in InState for resume next frame).
     //
-    // Pass-3 P3-E3: tests are atomic — yields happen between tests, never mid-test.
-    // Pass-3 anti-deadlock: if no progress has been made this tick AND the next test
+    // Tests are atomic — yields happen between tests, never mid-test.
+    // Anti-deadlock: if no progress has been made this tick AND the next test
     // would exceed the remaining budget, run that one test anyway. Otherwise queries
     // larger than the per-frame budget never advance.
     //
-    // Pass-5.1: InOutDebug is sized lazily on first entry to match (NumCandidates × NumTests)
+    // InOutDebug is sized lazily on first entry to match (NumCandidates × NumTests)
     // and populated per candidate per test (raw / normalized / weighted / passed). Index
     // ordering matches InState._Candidates pre-Finalize; DoFinalize reorders in lockstep.
     static auto
@@ -60,7 +60,7 @@ struct CKEQS_API FCk_Eqs_Algorithm
     // Build the final FCk_Eqs_QueryResults from state: drop failed candidates, sort,
     // apply RunMode truncation, populate BestLocation / BestEntity / HasResults.
     //
-    // Pass-5.1: InOutDebug._PerCandidate is reordered/truncated in lockstep with the
+    // InOutDebug._PerCandidate is reordered/truncated in lockstep with the
     // results so post-Finalize debugger lookup by results-index is correct.
     static auto
     DoFinalize(
@@ -120,7 +120,7 @@ struct CKEQS_API FCk_Eqs_Algorithm
     // GameplayTag is the exception: it's filter-only with score contribution = 1.0f when passed.
     // ----------------------------------------------------------------------------------------------------------------
 
-    // Pass-5.1: each DoRunTest_* takes a debug fragment + test index so the per-test row
+    // Each DoRunTest_* takes a debug fragment + test index so the per-test row
     // for each candidate gets populated (raw value during the test's raw pass; normalized /
     // weighted / passed inside FinishTest). GameplayTag is filter-only and writes its own
     // debug rows directly (no FinishTest path).
@@ -193,12 +193,12 @@ struct CKEQS_API FCk_Eqs_Algorithm
 
     // ----------------------------------------------------------------------------------------------------------------
     // Scoring helper — port of UE EnvQueryTest.cpp::NormalizeItemScores, simplified branch
-    // (no reference-value path; that's F6 / v1.1 follow-up). Inputs:
+    // (no reference-value path; that's a v1.1 follow-up). Inputs:
     //   - InValue: this candidate's raw value for this test.
     //   - InMin / InMax: min and max raw values across all candidates that contributed.
     //   - InConfig: the test's ScoringConfig (equation, factor, normalization type, clamps).
     // Returns the normalized-and-equation-transformed score scaled by ScoringFactor.
-    // Degenerate case (Min ≈ Max, F7): returns 1.0f * ScoringFactor — scoring is neutral
+    // Degenerate case (Min ≈ Max): returns 1.0f * ScoringFactor — scoring is neutral
     // (multiplicative-identity skip on the per-item loop is applied by the caller).
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -214,7 +214,7 @@ private:
     // to a member so it inherits the FCk_Eqs_Candidate friend grant (anonymous-namespace
     // helpers don't get friend access through the struct's friend declaration).
     //
-    // Pass-5.1: writes per-candidate per-test debug entries (normalized score, weighted
+    // Writes per-candidate per-test debug entries (normalized score, weighted
     // contribution, passed-this-test flag). The raw-value field is written by each
     // DoRunTest_* during its raw pass before calling FinishTest.
     static auto

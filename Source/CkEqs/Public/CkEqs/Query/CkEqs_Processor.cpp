@@ -105,7 +105,7 @@ namespace ck
             auto QueryEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
             QueryEntity.Add<FFragment_EqsQuery_Params>(QueryParams);
             QueryEntity.Add<FFragment_EqsQuery_State>();
-            QueryEntity.Add<FFragment_EqsQuery_DebugInfo>();   // Pass-5.1; lazy-sized in DoRunTests
+            QueryEntity.Add<FFragment_EqsQuery_DebugInfo>();   // lazy-sized in DoRunTests
             QueryEntity.AddOrGet<FTag_EqsQuery_Pending>();
 
             if (Request.Get_AutoDestroy())
@@ -207,10 +207,10 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
-        // P3-E2: per-tick budget reset. Mirrors CkProbe_Processor.cpp:818-827 shape.
+        // Per-tick budget reset. Mirrors CkProbe_Processor.cpp:818-827 shape.
         _RemainingBudgetThisFrame = UCk_Utils_Eqs_Settings_UE::Get_MaxCandidatesPerFrame();
 
-        // P3-E2 / P3-E8: 0 == disabled-with-warn, NOT unbounded. Default to a non-zero
+        // 0 == disabled-with-warn, NOT unbounded. Default to a non-zero
         // floor so the query pipeline doesn't deadlock when configured at 0.
         if (_RemainingBudgetThisFrame <= 0)
         {
@@ -232,7 +232,7 @@ namespace ck
             FFragment_EqsQuery_DebugInfo& InDebug)
         -> void
     {
-        // Pass-3.1 E3: caller-issued cancel.
+        // Caller-issued cancel.
         if (InHandle.Has<FTag_EqsQuery_Cancelled>())
         {
             ck::eqs::Verbose(TEXT("EqsQuery [{}] cancelled by caller; failing query."), InHandle);
@@ -240,7 +240,7 @@ namespace ck
             return;
         }
 
-        // P3-E6: re-validate querier — multi-frame queries must tolerate the querier dying
+        // Re-validate querier — multi-frame queries must tolerate the querier dying
         // between Generate and Test (or between Test resumes).
         const auto& Querier = InParams.Get_Querier();
         if (ck::Is_NOT_Valid(Querier))

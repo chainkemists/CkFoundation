@@ -310,7 +310,7 @@ namespace ck
 
         if (InSyncPolicy == ECk_AttributeValueChange_SyncPolicy::TrySyncToClients)
         {
-            TUtils_Attribute<AttributeFragmentType>::Request_TryReplicateAttribute(LifetimeOwnerAsAttributeEntity);;
+            TUtils_Attribute<AttributeFragmentType>::Request_TryReplicateAttribute(LifetimeOwnerAsAttributeEntity);
         }
     }
 

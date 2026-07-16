@@ -7,9 +7,7 @@
 
 #include "CkSmCondition_EntityScript.generated.h"
 
-// ============================================================================
 // IMPORTANT NOTE:
-// ============================================================================
 // Conditions are split into two intermediate classes to minimize interface
 // pollution in the Blueprint/AngelScript editor and avoid polymorphic calls:
 //   - UCk_SmCondition_Polled        → Evaluate() / DoEvaluate()
@@ -18,7 +16,6 @@
 // EventDriven conditions don't use Evaluate(), so it won't appear in the
 // editor. Polled conditions don't use MarkSatisfied/MarkUnsatisfied.
 // Inherit from the appropriate intermediate class, not from this base.
-// ============================================================================
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -30,9 +27,8 @@ class CKSTATEMACHINE_API UCk_SmCondition_EntityScript : public UCk_EntityScript_
 public:
     CK_GENERATED_BODY(UCk_SmCondition_EntityScript);
 
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
     // LIFECYCLE (EntityScript overrides)
-    // ================================================================================================================
 
 protected:
     auto
@@ -51,9 +47,8 @@ protected:
     auto
     Get_EffectiveReplication() const -> ECk_Replication override;
 
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
     // CONDITION LIFECYCLE (Enter/Exit)
-    // ================================================================================================================
     //
     // EnterCondition fires from BeginPlay() once the condition entity is fully constructed.
     // EventDriven conditions typically bind external delegates here (and unbind in ExitCondition).
@@ -72,9 +67,7 @@ public:
         FCk_Handle_SmCondition InHandle,
         ECk_Sm_NetContext InNetContext) -> void;
 
-    // ================================================================================================================
-    // BLUEPRINT IMPLEMENTABLE EVENTS
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
 protected:
     UFUNCTION(BlueprintImplementableEvent,
@@ -93,9 +86,7 @@ protected:
         FCk_Handle_SmCondition InHandle,
         ECk_Sm_NetContext InNetContext);
 
-    // ================================================================================================================
-    // HELPERS
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
 public:
     UFUNCTION(BlueprintPure,
@@ -120,9 +111,7 @@ protected:
     FCk_Handle
     Get_StateMachineContext() const;
 
-    // ================================================================================================================
-    // TAG
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
 public:
     auto
@@ -132,9 +121,7 @@ public:
     Get_ConditionTagForClass(
         TSubclassOf<UCk_SmCondition_EntityScript> InClass) -> FGameplayTag;
 
-    // ================================================================================================================
-    // MEMBERS
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,

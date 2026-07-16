@@ -49,8 +49,7 @@ private:
     float _NavQueryVerticalHalfExtent = -1.0f;
 
     // Maps FCk_Request_Nav_FindPath::_QueryFilter tags to UNavigationQueryFilter
-    // classes (the "Phase 2" mapping the request field reserved). Unmapped/empty
-    // tags fall back to NavData's default filter.
+    // classes. Unmapped/empty tags fall back to NavData's default filter.
     UPROPERTY(Config, EditDefaultsOnly, Category = "Pathfinding",
         meta = (AllowPrivateAccess = true))
     TMap<FGameplayTag, TSoftClassPtr<UNavigationQueryFilter>> _QueryFilters;

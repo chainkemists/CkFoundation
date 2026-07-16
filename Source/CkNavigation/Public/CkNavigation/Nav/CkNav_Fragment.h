@@ -8,8 +8,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// --------------------------------------------------------------------------------------------------------------------
-
 class UCk_Utils_Nav_UE;
 
 namespace ck
@@ -42,11 +40,11 @@ namespace ck
     // on failure branches so the debugger has the full picture.
     using FFragment_Nav_PathResult = FCk_Nav_PathResult;
 
-    // ----------------------------------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------------------------
+
     // Signals — fired by the request handler on completion. CK_SIGNAL_BIND macros expect
     // the signal-utils types in namespace ck, matching the existing CkAggro / CkAttribute
     // pattern (e.g. CK_SIGNAL_BIND(ck::UUtils_Signal_OnAggroChanged, ...)).
-    // ----------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKNAVIGATION_API,

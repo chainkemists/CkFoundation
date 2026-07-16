@@ -9,7 +9,6 @@
 #include "TargetPoint/CkTargetPoint_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Container-based replication handler for GeometryCollectionOwner
 
 static struct FGeometryCollectionOwnerRepHandlerRegistrar
 {

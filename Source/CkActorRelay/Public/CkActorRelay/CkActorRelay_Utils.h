@@ -6,9 +6,7 @@
 
 #include "CkActorRelay_Utils.generated.h"
 
-/*-----------------------------------------------------------------------------
-                       PENDING ACTOR RELAY UTILS (MIXIN)
-------------------------------------------------------------------------------*/
+// --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_PendingActorRelay"))
 class CKACTORRELAY_API UCk_Utils_PendingActorRelay_UE : public UBlueprintFunctionLibrary
@@ -42,9 +40,7 @@ public:
         const FCk_Handle_PendingActorRelay& InHandle);
 };
 
-/*-----------------------------------------------------------------------------
-                          ACTOR RELAY UTILS
-------------------------------------------------------------------------------*/
+// --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
 class CKACTORRELAY_API UCk_Utils_ActorRelay_UE : public UBlueprintFunctionLibrary

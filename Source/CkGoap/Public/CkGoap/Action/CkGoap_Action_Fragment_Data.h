@@ -9,16 +9,15 @@
 
 #include "CkGoap_Action_Fragment_Data.generated.h"
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 class UCk_GoapAction_EntityScript;
 
-// ====================================================================================================================
-// TYPESAFE HANDLE — one entity per registered Action in an ActionSet's catalog.
+// --------------------------------------------------------------------------------------------------------------------
+// One entity per registered Action in an ActionSet's catalog.
 // Action entities carry the action's def (CDO-extracted), tree edges
 // (_ParentAction, _ChildActions), runtime planner state, and an active-parent
 // breadcrumb used by the ActionSet's ChainUpdate processor.
-// ====================================================================================================================
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKGOAP_API FCk_Handle_Goap_Action : public FCk_Handle_TypeSafe
@@ -29,12 +28,11 @@ struct CKGOAP_API FCk_Handle_Goap_Action : public FCk_Handle_TypeSafe
 
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Goap_Action);
 
-// ====================================================================================================================
-// ACTION PARAMS — BlueprintType data shape for an Action entity. Carries the
+// --------------------------------------------------------------------------------------------------------------------
+// BlueprintType data shape for an Action entity. Carries the
 // Action's class (CDO source), optional WS override, and per-Action planner
 // knobs. In the unified ActionSet/Action model, every Action has its own
 // planner state and can itself extend the active chain.
-// ====================================================================================================================
 
 USTRUCT(BlueprintType)
 struct CKGOAP_API FCk_Fragment_Goap_ActionParamsData
@@ -79,9 +77,7 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Goap_ActionParamsData, _ActionClass);
 };
 
-// ====================================================================================================================
-// PER-ACTION REQUESTS
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
 struct CKGOAP_API FCk_Request_Goap_Planner_Plan
@@ -213,14 +209,11 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Goap_Planner_SetCostThreshold, _CostThreshold);
 };
 
-// ====================================================================================================================
-// SIGNAL PAYLOADS — Action-scoped
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Action-scoped signal payloads.
 
-// U11.2: Action(De)Activated renamed to Planner(De)Activated. The broadcast
-// source is the sub-Planner (Action entity in transitional model) whose
-// _IsActive flips. Per-sub-Planner-activation, fired from the parent's
-// UpdateActivation when it flips its Plan[0].
+// Broadcast source is the sub-Planner whose _IsActive flips, fired from the
+// parent's UpdateActivation when it flips its Plan[0].
 USTRUCT(BlueprintType)
 struct CKGOAP_API FCk_Goap_Payload_OnPlannerActivated
 {
@@ -235,7 +228,6 @@ struct CKGOAP_API FCk_Goap_Payload_OnPlannerDeactivated
     CK_GENERATED_BODY(FCk_Goap_Payload_OnPlannerDeactivated);
 };
 
-// ====================================================================================================================
-// DELEGATES — moved to CkGoap_Planner_Fragment_Data.h in PR-B.1b Stage 0
-// (spec §3.5: per-Planner signals have FCk_Handle_Goap_Planner source).
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Delegates moved to CkGoap_Planner_Fragment_Data.h (per-Planner signals have
+// FCk_Handle_Goap_Planner source).

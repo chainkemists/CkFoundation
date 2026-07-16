@@ -6,7 +6,7 @@ public class CkIskmRenderer : CkModuleRules
     public CkIskmRenderer(ReadOnlyTargetRules Target) : base(Target)
     {
         PrivateIncludePaths.AddRange(new string[] {
-            // Plan-2 Phase 3: FScene::PrimitiveUpdates + FUpdate*Command live in these private renderer headers
+            // Plan-2: FScene::PrimitiveUpdates + FUpdate*Command live in these private renderer headers
             // (version-fragile — re-verify on engine bumps). Used by the batched cluster proxy's per-frame upload.
             System.IO.Path.Combine(GetModuleDirectory("Renderer"), "Private"),
             System.IO.Path.Combine(GetModuleDirectory("Renderer"), "Internal"),
@@ -43,7 +43,7 @@ public class CkIskmRenderer : CkModuleRules
             "RHI",
 
             // The engine-only PostConfigInit module holding the vertex factory + render resources (so the VF type
-            // registers before the engine seals the VF list). Phase 3 will add Renderer/Private here for PrimitiveUpdates.
+            // registers before the engine seals the VF list).
             "CkIskmRendererVF",
         });
 

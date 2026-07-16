@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkAStar);
 
 namespace ck::astar
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkAStar);
+    CK_REGISTER_LOG_FUNCTIONS(CkAStar);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

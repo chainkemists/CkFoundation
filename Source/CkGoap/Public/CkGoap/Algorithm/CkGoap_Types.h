@@ -3,18 +3,17 @@
 #include "CoreMinimal.h"
 #include "CkGoap_WorldState.h"
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 class UCk_GoapAction_EntityScript;
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::goap
 {
 
-// ====================================================================================================================
-// ACTION DEF — Lightweight action metadata extracted from EntityScript CDO
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Lightweight action metadata extracted from an EntityScript CDO.
 
 struct FActionDef
 {
@@ -24,13 +23,11 @@ struct FActionDef
 	float Cost = 1.0f;
 	TSubclassOf<UCk_GoapAction_EntityScript> ActionClass;
 
-	// Bundle/Tier era chain-update identity (legacy). In the unified
-	// ActionSet/Action model, chain extension reads Plan[0] handles directly
-	// rather than tag matching. Field retained for U1 compile-clean; U3 will
-	// remove it when the legacy resolver is fully replaced.
+	// Legacy chain-update identity. The unified model reads Plan[0] handles
+	// directly rather than tag-matching; retained only for compile compatibility.
 	FGameplayTag ActionTag;
 };
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 } // namespace ck::goap

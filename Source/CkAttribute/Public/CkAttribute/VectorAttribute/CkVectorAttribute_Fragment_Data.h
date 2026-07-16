@@ -51,7 +51,7 @@ private:
     FVector _BaseValue = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess, SaveGame))
+        meta = (AllowPrivateAccess = true, SaveGame))
     ECk_MinMax _MinMax = ECk_MinMax::None;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

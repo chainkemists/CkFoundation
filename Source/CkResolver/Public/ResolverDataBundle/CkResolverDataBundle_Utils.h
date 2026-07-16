@@ -81,7 +81,7 @@ private:
         Category = "Ck|Utils|ResolverDataBundle",
         meta = (CompactNodeTitle = "INVALID_ResolverDataBundleHandle", Keywords = "make"))
     static FCk_Handle_ResolverDataBundle
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintPure,

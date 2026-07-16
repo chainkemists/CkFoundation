@@ -40,7 +40,7 @@ auto
         default:
         {
             CK_INVALID_ENUM(RenderGroup);
-        };
+        }
     }
 
     return Cast(InHandle);

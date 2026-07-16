@@ -885,7 +885,7 @@ auto
         {
             CK_INVALID_ENUM(Shape.Get_ShapeType());
             break;
-        };
+        }
     }
 }
 

@@ -9,8 +9,7 @@
 
 #define LOCTEXT_NAMESPACE "VectorAttributeCustomization"
 
-/* FCk_Fragment_VectorAttribute_ParamsDataCustomization
- *****************************************************************************/
+// ----------------------------------------------------------------------------------------------------
 
 TSharedRef<IPropertyTypeCustomization> FCk_Fragment_VectorAttribute_ParamsDataCustomization::MakeInstance()
 {

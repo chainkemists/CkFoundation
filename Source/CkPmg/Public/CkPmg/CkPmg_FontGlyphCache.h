@@ -3,7 +3,6 @@
 
 namespace ck::pmg
 {
-    // Task 1 link smoke (kept).
     CKPMG_API auto FontGlyph_SelfTest_FreeTypeInitDone() -> bool;
 
     struct CKPMG_API FCachedGlyph

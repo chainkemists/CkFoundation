@@ -10,8 +10,7 @@
 #include "CkCrowdAgent_Avoidance_Fragment.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Per-agent avoidance-policy override + zone-tag opt-in/out for Phase 2 sampling.
-// See Gate_03_Separation_Addendum.md §5.7 for design rationale.
+// Per-agent avoidance-policy override + zone-tag opt-in/out for sampling.
 // --------------------------------------------------------------------------------------------------------------------
 
 // Designer-side opt-in: any agent (or any entity in the agent's lifetime-owner chain) carrying

@@ -76,7 +76,7 @@ auto
     auto QueryEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InQuerierEntity);
     QueryEntity.Add<FFragment_EqsQuery_Params>(InQueryParams);
     auto& State = QueryEntity.Add<FFragment_EqsQuery_State>();
-    auto& DebugInfo = QueryEntity.Add<FFragment_EqsQuery_DebugInfo>();   // Pass-5.1
+    auto& DebugInfo = QueryEntity.Add<FFragment_EqsQuery_DebugInfo>();
 
     auto TypedQuery = ck::StaticCast<FCk_Handle_EqsQuery>(QueryEntity);
     UCk_Utils_Handle_UE::Set_DebugName(QueryEntity,
@@ -89,7 +89,7 @@ auto
 
     if (FCk_Eqs_Algorithm::DoGenerate(TypedQuery, InQueryParams, State, PhysicsSystem))
     {
-        // P3-E5: hard-cap candidate count for the Immediate path so a runaway generator
+        // Hard-cap candidate count for the Immediate path so a runaway generator
         // can't stall the main thread. Truncate-with-warning, do NOT silently drop —
         // include both numbers (configured count + cap) so the consumer can see the
         // root cause, not just the symptom.
@@ -118,7 +118,7 @@ auto
     QueryEntity.Add<FFragment_EqsQuery_Results>(Results);
     QueryEntity.AddOrGet<ck::FTag_EqsQuery_Complete>();
 
-    // P3-E5: Immediate does NOT broadcast OnEqsQueryComplete. The signal would fire before
+    // Immediate does NOT broadcast OnEqsQueryComplete. The signal would fire before
     // the caller has the handle, making delegate binding impossible to time. Callers read
     // results via the returned handle's accessors. For delegate-driven completion, use
     // the deferred Request_RunQuery path.
@@ -127,7 +127,7 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Request_CancelQuery — Pass-3.1 E3
+// Request_CancelQuery
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkLabel);
 
 namespace ck::label
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkLabel);
+    CK_REGISTER_LOG_FUNCTIONS(CkLabel);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

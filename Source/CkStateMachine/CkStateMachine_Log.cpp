@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkStateMachine);
 
 namespace ck::sm
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkStateMachine);
+    CK_REGISTER_LOG_FUNCTIONS(CkStateMachine);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

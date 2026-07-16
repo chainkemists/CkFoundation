@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkGrid);
 
 namespace ck::grid
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkGrid);
+    CK_REGISTER_LOG_FUNCTIONS(CkGrid);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

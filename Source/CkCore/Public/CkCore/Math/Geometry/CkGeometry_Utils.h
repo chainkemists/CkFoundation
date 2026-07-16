@@ -668,21 +668,6 @@ public:
     Get_AllCorners(
         const FCk_OrientedBox2D& InBox);
 
-    // // Delegate-based corner enumeration
-    // UFUNCTION(BlueprintCallable, Category = "Ck|Utils|OrientedBox2D",
-    //     DisplayName="[Ck][OrientedBox2D] Enumerate Corners")
-    // static void
-    // Request_EnumerateCorners(
-    //     const FCk_OrientedBox2D& InBox,
-    //     const FCk_Delegate_Vector2D& InCornerDelegate);
-    //
-    // UFUNCTION(BlueprintCallable, Category = "Ck|Utils|OrientedBox2D",
-    //     DisplayName="[Ck][OrientedBox2D] Test Corners")
-    // static bool
-    // Get_TestCorners(
-    //     const FCk_OrientedBox2D& InBox,
-    //     const FCk_Delegate_Vector2D_Predicate& InCornerPredicate);
-
     // Coordinate transformations
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
         DisplayName="[Ck][OrientedBox2D] To Local Space")

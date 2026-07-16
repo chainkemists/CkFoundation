@@ -13,17 +13,13 @@ class ACk_ActorRelay_UE;
 class APlayerState;
 class UCk_ActorRelay_Group_Subsystem_Base_UE;
 
-/*-----------------------------------------------------------------------------
-                               HANDLE
-------------------------------------------------------------------------------*/
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKACTORRELAY_API FCk_Handle_ActorRelay : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_ActorRelay); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_ActorRelay);
 
-/*-----------------------------------------------------------------------------
-                            OWNERSHIP POLICY
-------------------------------------------------------------------------------*/
+// --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
 enum class ECk_ActorRelay_OwnershipPolicy : uint8
@@ -33,9 +29,7 @@ enum class ECk_ActorRelay_OwnershipPolicy : uint8
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ActorRelay_OwnershipPolicy);
 
-/*-----------------------------------------------------------------------------
-                           DISCONNECT POLICY
-------------------------------------------------------------------------------*/
+// --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
 enum class ECk_ActorRelay_DisconnectPolicy : uint8
@@ -45,9 +39,7 @@ enum class ECk_ActorRelay_DisconnectPolicy : uint8
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ActorRelay_DisconnectPolicy);
 
-/*-----------------------------------------------------------------------------
-                          SELECTION ALGORITHM
-------------------------------------------------------------------------------*/
+// --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
 enum class ECk_ActorRelay_SelectionAlgorithm : uint8
@@ -57,9 +49,7 @@ enum class ECk_ActorRelay_SelectionAlgorithm : uint8
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ActorRelay_SelectionAlgorithm);
 
-/*-----------------------------------------------------------------------------
-                           CHANNEL RESULT
-------------------------------------------------------------------------------*/
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
 struct CKACTORRELAY_API FCk_ActorRelay_ChannelResult
@@ -86,9 +76,7 @@ public:
 
 CK_DECLARE_CUSTOM_IS_VALID(CKACTORRELAY_API, FCk_ActorRelay_ChannelResult, IsValid_Policy_Default);
 
-/*-----------------------------------------------------------------------------
-                       ACQUIRE KIND
-------------------------------------------------------------------------------*/
+// --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
 enum class ECk_ActorRelay_AcquireKind : uint8
@@ -99,9 +87,7 @@ enum class ECk_ActorRelay_AcquireKind : uint8
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ActorRelay_AcquireKind);
 
-/*-----------------------------------------------------------------------------
-                       ACQUIRE DELEGATE
-------------------------------------------------------------------------------*/
+// --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(
     FCk_Delegate_ActorRelay_Acquired,
@@ -111,9 +97,7 @@ DECLARE_MULTICAST_DELEGATE_OneParam(
     FCk_Delegate_ActorRelay_Acquired_MC,
     FCk_ActorRelay_ChannelResult);
 
-/*-----------------------------------------------------------------------------
-                       PENDING ACTOR RELAY HANDLE
-------------------------------------------------------------------------------*/
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta = (HasNativeMake, HasNativeBreak))
 struct CKACTORRELAY_API FCk_Handle_PendingActorRelay
@@ -154,9 +138,7 @@ public:
 
 CK_DECLARE_CUSTOM_IS_VALID(CKACTORRELAY_API, FCk_Handle_PendingActorRelay, IsValid_Policy_Default);
 
-/*-----------------------------------------------------------------------------
-                       ACQUIRE CHANNEL REQUEST
-------------------------------------------------------------------------------*/
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
 struct CKACTORRELAY_API FCk_Request_ActorRelay_AcquireChannel : public FCk_Request_Base

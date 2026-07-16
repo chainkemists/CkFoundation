@@ -79,7 +79,7 @@ private:
         Category = "Ck|Utils|RenderTarget",
         meta = (CompactNodeTitle = "INVALID_RenderTargetHandle", Keywords = "make"))
     static FCk_Handle_RenderTarget
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintPure,

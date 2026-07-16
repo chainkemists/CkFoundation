@@ -11,9 +11,8 @@
 
 namespace ck
 {
-    // Validates the collection and resolves the initial clip into playback state. The rendering hookup
-    // (IsmProxy composition + look MID + per-instance custom data) lands in Gate 3 — until then a Vat
-    // entity carries playback state without a visual.
+    // Validates the collection, resolves the initial clip into playback state, and composes the
+    // rendering hookup (IsmProxy + look MID + per-instance custom data).
     class CKVAT_API FProcessor_VatProxy_Setup : public ck_exp::TProcessor<
             FProcessor_VatProxy_Setup,
             FCk_Handle_VatProxy,

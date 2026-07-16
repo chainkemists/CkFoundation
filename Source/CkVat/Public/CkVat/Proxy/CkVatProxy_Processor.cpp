@@ -36,8 +36,8 @@ namespace ck_vat_proxy_processor
         return TimeResult.Get_WorldTime().Get_Time();
     }
 
-    // The 12-scalar per-instance layout the VAT looks decode — contract:
-    // Source/CkVat/Plan/Gate_02_Material.md (slots [0..11], Rate==0 => Time holds frozen local time).
+    // The 12-scalar per-instance layout the VAT looks decode (slots [0..11], Rate==0 => Time holds
+    // frozen local time).
     auto
     Pack_CustomData(
         const ck::FFragment_VatProxy_Current& InCurrent,

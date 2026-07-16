@@ -29,7 +29,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     float _AggroRange = 100.0f;
 
 public:
@@ -59,19 +59,19 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     bool _FilterByDistance = true;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess, EditCondition="_FilterByDistance"))
+        meta = (AllowPrivateAccess = true, EditCondition="_FilterByDistance"))
     FCk_Aggro_Filter_Distance _AggroFilter_Distance;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     bool _FilterByLoS = true;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess, EditCondition="_FilterByLoS"))
+        meta = (AllowPrivateAccess = true, EditCondition="_FilterByLoS"))
     FCk_Aggro_Filter_LoS _AggroFilter_LoS;
 
 public:

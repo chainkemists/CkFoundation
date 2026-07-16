@@ -22,11 +22,11 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     FVector _Direction = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     float _Length = 0.0f;
 
 public:
@@ -48,11 +48,11 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     FVector _Result = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     FVector _ActorLocation = FVector::ZeroVector;
 
 public:

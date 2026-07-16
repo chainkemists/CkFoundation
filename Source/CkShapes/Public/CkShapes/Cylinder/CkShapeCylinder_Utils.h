@@ -65,7 +65,7 @@ private:
         Category = "Ck|Utils|ShapeCylinder",
         meta = (CompactNodeTitle = "INVALID_ShapeCylinderHandle", Keywords = "make"))
     static FCk_Handle_ShapeCylinder
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintCallable,

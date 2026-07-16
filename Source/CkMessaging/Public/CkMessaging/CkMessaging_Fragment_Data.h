@@ -34,13 +34,13 @@ public:
     CK_GENERATED_BODY(FCk_Handle_MessageListener);
 
 private:
-    UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess))
+    UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FCk_Handle _MessageListener;
 
-    UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess))
+    UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FGameplayTag _MessageName;
 
-    UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess))
+    UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FCk_Delegate_Messaging_OnBroadcast _MessageDelegate;
 
 public:

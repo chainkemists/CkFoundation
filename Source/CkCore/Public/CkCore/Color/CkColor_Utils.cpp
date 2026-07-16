@@ -1100,9 +1100,7 @@ FLinearColor UCk_Utils_LinearColor::Get_Transparent(float Alpha)
     return Transparent * FLinearColor(1.0f, 1.0f, 1.0f, Alpha);
 }
 
-// ========================================
-// UCk_Utils_Color (FColor) Implementation
-// ========================================
+// ----------------------------------------------------------------------------------------------------
 
 // UCk_Utils_Color Static Constants
 const FColor UCk_Utils_Color::White = FColor(255, 255, 255, 255);

@@ -57,7 +57,7 @@ namespace ck
 
         // Authority gating (spec §5/§6): condition evaluation drives transitions. Non-authority
         // machines must not evaluate — they receive transitions via replication/relay. Keep the
-        // dirty marker removed (above) so we don't loop; the rep-driven replay path (Phase 7) will
+        // dirty marker removed (above) so we don't loop; the rep-driven replay path will
         // commit the transition on its own schedule. Uses the shared transition-authority
         // predicate — the prior inline gate only skipped NonOwningClient and non-OwningClientAuth
         // OwningClient, which left the server of a relayed OwningClientAuth sub-SM evaluating.

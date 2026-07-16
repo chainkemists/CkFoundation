@@ -66,11 +66,11 @@ public:
     // Blueprint-bindable version of OnValidateCharacter.
     // Receives the character as a single-character FString; return true to allow it.
     // Called after the C++ delegate (if bound). Both must allow the character for it to pass.
-    UPROPERTY(BlueprintReadWrite, Category = "Filter", DisplayName = "On Validate Character", meta = (AllowPrivateAccess))
+    UPROPERTY(BlueprintReadWrite, Category = "Filter", DisplayName = "On Validate Character", meta = (AllowPrivateAccess = true))
     FCk_ValidateCharacterDelegate_BP OnValidateCharacter_BP;
 
     // Fires when one or more characters were rejected during filtering.
-    UPROPERTY(BlueprintAssignable, Category = "Filter", meta = (AllowPrivateAccess))
+    UPROPERTY(BlueprintAssignable, Category = "Filter", meta = (AllowPrivateAccess = true))
     FCk_TextFilteredEvent OnTextFiltered;
 
     // Returns the max length if enforced, or an empty optional if unlimited.
@@ -80,10 +80,10 @@ public:
     void Set_MaxLength(int32 InMaxLength);
 
 private:
-    UPROPERTY(EditAnywhere, Category = "Filter", meta = (AllowPrivateAccess))
+    UPROPERTY(EditAnywhere, Category = "Filter", meta = (AllowPrivateAccess = true))
     bool _EnforceMaxLength = false;
 
-    UPROPERTY(EditAnywhere, Category = "Filter", meta = (AllowPrivateAccess, EditCondition = "_EnforceMaxLength", ClampMin = "1"))
+    UPROPERTY(EditAnywhere, Category = "Filter", meta = (AllowPrivateAccess = true, EditCondition = "_EnforceMaxLength", ClampMin = "1"))
     int32 _MaxLength = 32;
 
     bool _IsFiltering = false;

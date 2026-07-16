@@ -182,13 +182,13 @@ namespace ck
             TurnRadiusSpeedCap = MaxTurnRate * DistanceToFinal;
         }
 
-        // Phase 1.2 — the per-frame scalar PreviousSpeed clamp that used to live here is gone;
+        // The per-frame scalar PreviousSpeed clamp that used to live here is gone;
         // FProcessor_CrowdAgent_AccelClamp now ramps the velocity in vector space (so direction
         // changes are bounded too, not just magnitude). Steering writes the raw target velocity;
         // AccelClamp downstream brings it into the per-frame budget.
         const auto NewSpeed = FMath::Min3(MaxSpeed, BrakingSpeedCap, TurnRadiusSpeedCap);
 
-        // Gate 3C (revised) — combine path-follow with separation, dtCrowd-style.
+        // Combine path-follow with separation, dtCrowd-style.
         //
         // The previous combination damped path-follow by separation intensity
         // (PathFollowDamp = max(0, 1 - SepMag/MaxSpeed)). Head-on separation is ANTIPARALLEL to the

@@ -3,29 +3,29 @@ using UnrealBuildTool;
 
 public class CkNavigation : CkModuleRules
 {
-	public CkNavigation(ReadOnlyTargetRules Target) : base(Target)
-	{
-		PrivateIncludePaths.AddRange(new string[] {
-		});
+    public CkNavigation(ReadOnlyTargetRules Target) : base(Target)
+    {
+        PrivateIncludePaths.AddRange(new string[] {
+        });
 
-		PublicDependencyModuleNames.AddRange(new string[]
-		{
-			"Core",
-			"CoreUObject",
-			"Engine",
+        PublicDependencyModuleNames.AddRange(new string[]
+        {
+            "Core",
+            "CoreUObject",
+            "Engine",
 
-			"NavigationSystem",
-			"AIModule",
-			"GameplayTags",
-			"DeveloperSettings",
+            "NavigationSystem",
+            "AIModule",
+            "GameplayTags",
+            "DeveloperSettings",
 
-			"CkCore",
-			"CkEcs",
-			"CkEcsExt",
-			"CkLabel",
-			"CkLog",
-			"CkRecord",
-			"CkSettings",
-		});
-	}
+            "CkCore",
+            "CkEcs",
+            "CkEcsExt",
+            "CkLabel",
+            "CkLog",
+            "CkRecord",
+            "CkSettings",
+        });
+    }
 }

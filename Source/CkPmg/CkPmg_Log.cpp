@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkPmg);
 
 namespace ck::pmg
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkPmg);
+    CK_REGISTER_LOG_FUNCTIONS(CkPmg);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkMemory);
 
 namespace ck::memory
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkMemory);
+    CK_REGISTER_LOG_FUNCTIONS(CkMemory);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

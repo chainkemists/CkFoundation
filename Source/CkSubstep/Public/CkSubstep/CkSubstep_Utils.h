@@ -76,7 +76,7 @@ private:
         Category = "Ck|Utils|Substep",
         meta = (CompactNodeTitle = "INVALID_SubstepHandle", Keywords = "make"))
     static FCk_Handle_Substep
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintPure,

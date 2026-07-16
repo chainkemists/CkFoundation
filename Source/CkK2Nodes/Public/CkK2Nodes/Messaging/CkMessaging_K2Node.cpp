@@ -195,8 +195,6 @@ auto UCk_K2Node_Message_Base::CreatePinsFromMessageDefinition() -> void
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// UCk_K2Node_Message_Broadcast
-// --------------------------------------------------------------------------------------------------------------------
 
 auto UCk_K2Node_Message_Broadcast::GetNodeTitle(ENodeTitleType::Type TitleType) const -> FText
 {
@@ -487,8 +485,6 @@ auto UCk_K2Node_Message_Broadcast::DoGet_MessageDefinitionPinsDirection() const 
     return ECk_EditorGraph_PinDirection::Input;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// UCk_K2Node_Message_Listen
 // --------------------------------------------------------------------------------------------------------------------
 
 auto UCk_K2Node_Message_Listen::GetNodeTitle(ENodeTitleType::Type TitleType) const -> FText
@@ -1079,8 +1075,6 @@ auto UCk_K2Node_Message_Listen::IsCompatibleWithGraph(UEdGraph const* InGraph) c
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// SCk_GraphNode_Message_Broadcast
-// --------------------------------------------------------------------------------------------------------------------
 
 auto SCk_GraphNode_Message_Broadcast::Construct(const FArguments& InArgs, UCk_K2Node_Message_Broadcast* InNode) -> void
 {
@@ -1179,8 +1173,6 @@ auto SCk_GraphNode_Message_Broadcast::CreateBelowPinControls(TSharedPtr<SVertica
         ];
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// SCk_GraphNode_Message_Listen
 // --------------------------------------------------------------------------------------------------------------------
 
 auto SCk_GraphNode_Message_Listen::Construct(const FArguments& InArgs, UCk_K2Node_Message_Listen* InNode) -> void

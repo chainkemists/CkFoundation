@@ -15,7 +15,7 @@
 
 namespace ck
 {
-    // Gate 2 — Sub-task 2C: copies the steering output into the physics velocity layer.
+    // Copies the steering output into the physics velocity layer.
     //
     // The pipeline beats: Steering writes _DesiredVelocity → Bridge writes _CurrentVelocity →
     // Velocity_Clamp trims by min/max → EulerIntegrator computes _DistanceOffset → ApplyOffset

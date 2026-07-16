@@ -13,9 +13,6 @@ class IPropertyHandle;
 class SWidget;
 class FString;
 
-/**
- * Customization for FCk_Fragment_FloatAttribute_ParamsData
- */
 class FCk_Fragment_FloatAttribute_ParamsDataCustomization : public IPropertyTypeCustomization
 {
 public:
@@ -65,9 +62,6 @@ private:
     TSharedPtr<IPropertyHandle> RefillParamsHandle;
 };
 
-/**
- * Customization for FCk_Fragment_FloatAttributeRefill_ParamsData
- */
 class FCk_Fragment_FloatAttributeRefill_ParamsDataCustomization : public IPropertyTypeCustomization
 {
 public:
