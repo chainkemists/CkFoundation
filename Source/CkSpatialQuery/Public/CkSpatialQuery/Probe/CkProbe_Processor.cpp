@@ -1047,11 +1047,27 @@ namespace ck
 
         const auto& NumRemovedItems = InCurrent._CurrentOverlaps.Remove(OverlapInfo);
 
-        CK_LOG_ERROR_IF_NOT(ck::spatialquery, NumRemovedItems > 0,
-            TEXT("Received EndOverlap Request for Probe [{}] with Other Entity [{}], but it was NOT overlapping with it."),
-            InHandle,
-            InRequest.Get_OtherEntity())
+        if (NumRemovedItems == 0)
         {
+            // A probe destroyed mid-overlap ends its pairs twice: FProcessor_Probe_EndPlay ends them
+            // eagerly during the EndPlay window, then its RemoveBody triggers Jolt's contact-removed
+            // for the same pair, which drains a frame later against the already-emptied bookkeeping.
+            // The late duplicate is expected while the other entity is tearing down (default IsValid
+            // rejects the Teardown/Destroyed phases) — only a missing pair between two live entities
+            // is a bookkeeping error.
+            if (ck::Is_NOT_Valid(InRequest.Get_OtherEntity()))
+            {
+                ck::spatialquery::Verbose(
+                    TEXT("Ignoring EndOverlap Request for Probe [{}] with Other Entity [{}] — pair already ended by the other entity's teardown."),
+                    InHandle,
+                    InRequest.Get_OtherEntity());
+                return;
+            }
+
+            ck::spatialquery::Error(
+                TEXT("Received EndOverlap Request for Probe [{}] with Other Entity [{}], but it was NOT overlapping with it."),
+                InHandle,
+                InRequest.Get_OtherEntity());
             return;
         }
 
