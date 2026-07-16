@@ -82,12 +82,18 @@ public:
     auto
     Get_NumUniqueShapes() const -> int32;
 
-    /// Ray against static-world bodies only (Static_World object layer). Test/introspection
-    /// surface until the Phase-2 channel-filtered query API.
+    /// Ray against static-world bodies only (Static body domain). Test/introspection surface;
+    /// the channel-filtered query API is UCk_Utils_JoltQuery_UE.
     auto
     Get_RayCastStaticWorld(
         const FVector& InStart,
         const FVector& InEnd) const -> ck::jolt::FCk_Jolt_StaticWorldRayHit;
+
+    /// Per-actor hit attribution for baked static bodies (empty name when the body id is not a
+    /// static-world body).
+    auto
+    TryGet_ActorNameForBody(
+        uint32 InBodyIndexAndSeq) const -> FName;
 
     /// Extracts and adds static bodies for a single actor at runtime (also the AS test surface).
     /// Returns the number of bodies added.
