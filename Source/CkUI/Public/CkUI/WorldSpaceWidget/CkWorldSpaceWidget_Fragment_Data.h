@@ -92,6 +92,13 @@ private:
         meta=(AllowPrivateAccess = true))
     FIntPoint _DrawSize = FIntPoint{512, 512};
 
+    // When true, the render target tracks the content widget's DESIRED size each
+    // frame and _DrawSize is only the pre-first-layout initial value (UWidgetComponent
+    // bDrawAtDesiredSize semantics — what legacy WidgetComponent callouts authored).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
+    bool _DrawAtDesiredSize = false;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess = true))
     FVector2D _Pivot = FVector2D{0.5f, 0.5f};
@@ -114,6 +121,7 @@ private:
 
 public:
     CK_PROPERTY(_DrawSize);
+    CK_PROPERTY(_DrawAtDesiredSize);
     CK_PROPERTY(_Pivot);
     CK_PROPERTY(_BlendMode);
     CK_PROPERTY(_GeometryMode);
