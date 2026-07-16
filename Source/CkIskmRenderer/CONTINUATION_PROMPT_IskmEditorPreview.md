@@ -8,8 +8,9 @@ before doing anything else; this prompt adds the session context those don't car
 
 ## 1. Repo state
 
-- **You are in** the CkPlugins2 host project (`D:/Repos/CkPlugins2`); the work lives in the
-  `Plugins/CkFoundation` submodule.
+- **You are in** a CkPlugins-style host project (any local checkout); the work lives in the
+  `Plugins/CkFoundation` submodule. All paths in this prompt are relative to the host project
+  root unless prefixed `Source/` (then relative to the CkFoundation submodule root).
 - **This branch:** `bugfix/iskm-editor-preview` in CkFoundation, based on `origin/dev` @
   `ac101e415`. It contains DOCUMENTATION ONLY (campaign docs + this prompt + a digest HTML).
   No code changes exist anywhere for this campaign yet.
