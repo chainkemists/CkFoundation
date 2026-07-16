@@ -190,6 +190,7 @@ auto
 
     WidgetComponent->SetWidgetSpace(EWidgetSpace::World);
     WidgetComponent->SetDrawSize(FVector2D{WorldComponentInfo.Get_DrawSize()});
+    WidgetComponent->SetDrawAtDesiredSize(WorldComponentInfo.Get_DrawAtDesiredSize());
     WidgetComponent->SetPivot(WorldComponentInfo.Get_Pivot());
     WidgetComponent->SetBlendMode(WorldComponentInfo.Get_BlendMode());
     WidgetComponent->SetGeometryMode(WorldComponentInfo.Get_GeometryMode());
