@@ -6,16 +6,16 @@
 
 #include <CoreMinimal.h>
 
-#include "CkSpatialQuery_ProjectSettings.generated.h"
+#include "CkJolt_ProjectSettings.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(meta = (DisplayName = "SpatialQuery"))
-class CKSPATIALQUERY_API UCk_SpatialQuery_ProjectSettings_UE : public UCk_Plugin_ProjectSettings_UE
+UCLASS(meta = (DisplayName = "Jolt"))
+class CKJOLT_API UCk_Jolt_ProjectSettings_UE : public UCk_Plugin_ProjectSettings_UE
 {
     GENERATED_BODY()
 
-    CK_GENERATED_BODY(UCk_SpatialQuery_ProjectSettings_UE);
+    CK_GENERATED_BODY(UCk_Jolt_ProjectSettings_UE);
 
 private:
     // Maximum number of physics bodies that can exist simultaneously
@@ -87,7 +87,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class CKSPATIALQUERY_API UCk_Utils_SpatialQuery_ProjectSettings
+class CKJOLT_API UCk_Utils_Jolt_ProjectSettings
 {
 public:
     static auto Get_MaxBodies() -> int32;

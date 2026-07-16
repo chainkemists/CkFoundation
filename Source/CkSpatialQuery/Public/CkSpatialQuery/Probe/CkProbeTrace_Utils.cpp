@@ -10,7 +10,7 @@
 #include "CkSpatialQuery/CkSpatialQuery_Utils.h"
 #include "CkSpatialQuery/Probe/CkProbe_Fragment.h"
 #include "CkSpatialQuery/Settings/CkSpatialQuery_Settings.h"
-#include "CkSpatialQuery/Subsystem/CkSpatialQuery_Subsystem.h"
+#include "CkJolt/Subsystem/CkJolt_Subsystem.h"
 
 #include <Jolt/Jolt.h>
 #include <Jolt/Physics/PhysicsSystem.h>
@@ -107,7 +107,7 @@ auto
         const FCk_Probe_RayCast_Settings& InSettings)
     -> TArray<FCk_Probe_RayCast_Result>
 {
-    const auto Subsystem = UCk_Utils_EcsWorld_Subsystem_UE::Get_WorldSubsystem<UCk_SpatialQuery_Subsystem>(InAnyHandle);
+    const auto Subsystem = UCk_Utils_EcsWorld_Subsystem_UE::Get_WorldSubsystem<UCk_Jolt_Subsystem>(InAnyHandle);
     const auto& PhysicsSystem = Subsystem->Get_PhysicsSystem().Pin();
 
     CK_ENSURE_IF_NOT(ck::IsValid(PhysicsSystem),
@@ -126,7 +126,7 @@ auto
         const FCk_Probe_RayCast_Settings& InSettings)
     -> FCk_Probe_RayCast_Result
 {
-    const auto Subsystem = UCk_Utils_EcsWorld_Subsystem_UE::Get_WorldSubsystem<UCk_SpatialQuery_Subsystem>(InAnyHandle);
+    const auto Subsystem = UCk_Utils_EcsWorld_Subsystem_UE::Get_WorldSubsystem<UCk_Jolt_Subsystem>(InAnyHandle);
     const auto& PhysicsSystem = Subsystem->Get_PhysicsSystem().Pin();
 
     CK_ENSURE_IF_NOT(ck::IsValid(PhysicsSystem),
@@ -194,7 +194,7 @@ auto
         const FCk_ShapeCast_Settings& InSettings)
     -> TArray<FCk_ShapeCast_Result>
 {
-    const auto Subsystem = UCk_Utils_EcsWorld_Subsystem_UE::Get_WorldSubsystem<UCk_SpatialQuery_Subsystem>(InAnyHandle);
+    const auto Subsystem = UCk_Utils_EcsWorld_Subsystem_UE::Get_WorldSubsystem<UCk_Jolt_Subsystem>(InAnyHandle);
     const auto& PhysicsSystem = Subsystem->Get_PhysicsSystem().Pin();
 
     CK_ENSURE_IF_NOT(ck::IsValid(PhysicsSystem),
@@ -213,7 +213,7 @@ auto
         const FCk_ShapeCast_Settings& InSettings)
     -> FCk_ShapeCast_Result
 {
-    const auto Subsystem = UCk_Utils_EcsWorld_Subsystem_UE::Get_WorldSubsystem<UCk_SpatialQuery_Subsystem>(InAnyHandle);
+    const auto Subsystem = UCk_Utils_EcsWorld_Subsystem_UE::Get_WorldSubsystem<UCk_Jolt_Subsystem>(InAnyHandle);
     const auto& PhysicsSystem = Subsystem->Get_PhysicsSystem().Pin();
 
     CK_ENSURE_IF_NOT(ck::IsValid(PhysicsSystem),

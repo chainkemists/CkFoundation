@@ -15,7 +15,7 @@
 #include "CkEcs/Subsystem/CkEcsWorldStats_Subsystem.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 #include "CkEcs/Settings/CkEcs_Settings.h"
-#include "CkSpatialQuery/Subsystem/CkSpatialQuery_Subsystem.h"
+#include "CkJolt/Subsystem/CkJolt_Subsystem.h"
 #include "CkWatermark/Stats/CkWatermarkStat_Base_Widget.h"
 #include "CkWatermark/CkWatermark_InfoBar_Widget.h"
 
@@ -432,7 +432,7 @@ auto
         {
             if (const UWorld* World = GetWorld())
             {
-                if (const auto* Sub = World->GetSubsystem<UCk_SpatialQuery_Subsystem>())
+                if (const auto* Sub = World->GetSubsystem<UCk_Jolt_Subsystem>())
                 {
                     FString Result = Sub->Get_ParallelPhysicsEnabled()
                         ? ck::Format_UE(TEXT("MT({}t)"), Sub->Get_PhysicsThreadCount())
@@ -450,7 +450,7 @@ auto
         {
             if (const UWorld* World = GetWorld())
             {
-                if (const auto* Sub = World->GetSubsystem<UCk_SpatialQuery_Subsystem>())
+                if (const auto* Sub = World->GetSubsystem<UCk_Jolt_Subsystem>())
                 {
                     if (Sub->Get_ParallelPhysicsEnabled() && Sub->Get_AsyncPhysicsUpdate())
                     { return FSlateColor(FLinearColor(0.2f, 1.0f, 0.4f, 1.f)); }
