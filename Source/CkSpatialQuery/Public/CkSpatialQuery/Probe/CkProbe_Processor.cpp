@@ -12,6 +12,8 @@
 #include "CkShapes/Public/CkShapes/Box/CkShapeBox_Utils.h"
 #include "CkShapes/Sphere/CkShapeSphere_Utils.h"
 
+#include "CkJolt/CollisionLayers/CkJoltCollisionLayerTable.h"
+
 #include "CkSpatialQuery/CkSpatialQuery_Log.h"
 #include "CkSpatialQuery/CkSpatialQuery_Stats.h"
 #include "CkSpatialQuery/CkSpatialQuery_Utils.h"
@@ -430,12 +432,17 @@ namespace ck::details
 
         InHandle.template Add<Ref<JPH::Shape>>(Shape);
 
+        // All probes live on CkJolt's dedicated probe layer (signature-driven table): pairs with
+        // dynamic-domain WorldDynamic bodies (i.e. other probes) and never with the static world —
+        // exactly the pre-table `ObjectLayer{1}` behavior.
+        const auto& LayerContext = InHandle.Get_RegistryView().template GetContext<ck::jolt::FCk_Jolt_LayerContext>();
+
         auto ShapeSettings = BodyCreationSettings{
             Shape,
             jolt::Conv(EntityPosition),
             jolt::Conv(EntityRotation),
             EMotionType::Kinematic,
-            ObjectLayer{1}
+            ObjectLayer{LayerContext._ProbeLayer}
         };
         ShapeSettings.mIsSensor = true;
         ShapeSettings.mCollideKinematicVsNonDynamic = true;

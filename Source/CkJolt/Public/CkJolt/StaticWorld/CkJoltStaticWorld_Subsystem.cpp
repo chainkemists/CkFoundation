@@ -181,8 +181,8 @@ auto
 
     auto RayResult = JPH::RayCastResult{};
 
-    const auto StaticWorldLayerFilter = JPH::SpecifiedObjectLayerFilter{
-        JPH::ObjectLayer{UCk_Jolt_Subsystem::Get_StaticWorldObjectLayer()}};
+    const auto StaticWorldLayerFilter = ck::jolt::FCk_Jolt_DomainQueryFilter{
+        _JoltSubsystem->Get_LayerTable(), ECk_Jolt_BodyDomain::Static};
 
     if (NOT PhysicsSystem->GetNarrowPhaseQuery().CastRay(Ray, RayResult,
         JPH::BroadPhaseLayerFilter{}, StaticWorldLayerFilter))
@@ -198,6 +198,18 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    TryGet_ActorNameForBody(
+        uint32 InBodyIndexAndSeq) const
+    -> FName
+{
+    if (const auto* ActorName = _BodyToActorName.Find(InBodyIndexAndSeq))
+    { return *ActorName; }
+
+    return {};
+}
 
 auto
     UCk_JoltStaticWorld_Subsystem_UE::
@@ -464,12 +476,18 @@ auto
 
             const auto& Shape = LoadedCell->_Shapes[Record.Get_ShapeIndex()];
 
+            // The stored signature resolves to a live layer id at load — layer indices are
+            // per-session and are never serialized.
+            const auto Layer = _JoltSubsystem->Get_LayerTable().Get_OrRegisterLayer(Record.Get_Signature());
+            if (Layer == JPH::cObjectLayerInvalid)
+            { continue; }
+
             auto BodySettings = JPH::BodyCreationSettings{
                 Shape.GetPtr(),
                 ck::jolt::Conv(Record.Get_Position()),
                 ck::jolt::Conv(Record.Get_Rotation()),
                 JPH::EMotionType::Static,
-                JPH::ObjectLayer{UCk_Jolt_Subsystem::Get_StaticWorldObjectLayer()}};
+                JPH::ObjectLayer{Layer}};
             BodySettings.mFriction = Record.Get_Friction();
             BodySettings.mRestitution = Record.Get_Restitution();
 
@@ -508,12 +526,16 @@ auto
         if (Extracted._Shape == nullptr)
         { continue; }
 
+        const auto Layer = _JoltSubsystem->Get_LayerTable().Get_OrRegisterLayer(Extracted._Signature);
+        if (Layer == JPH::cObjectLayerInvalid)
+        { continue; }
+
         auto BodySettings = JPH::BodyCreationSettings{
             Extracted._Shape.GetPtr(),
             ck::jolt::Conv(Extracted._Position),
             ck::jolt::Conv(Extracted._Rotation),
             JPH::EMotionType::Static,
-            JPH::ObjectLayer{UCk_Jolt_Subsystem::Get_StaticWorldObjectLayer()}};
+            JPH::ObjectLayer{Layer}};
         BodySettings.mFriction = Extracted._Friction;
         BodySettings.mRestitution = Extracted._Restitution;
 

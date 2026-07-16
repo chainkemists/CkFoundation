@@ -35,107 +35,6 @@ DECLARE_CYCLE_STAT(TEXT("JoltContacts_DrainQueue"), STAT_CkJolt_ContactsDrainQue
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace object_layers
-{
-    static constexpr JPH::ObjectLayer Non_Moving = 0;
-    static constexpr JPH::ObjectLayer Moving = 1;
-    // Baked static-world bodies (Phase 1). Pairs with NOTHING — statics are query targets only
-    // until the Phase-2 signature-driven layer table replaces this hardcoded world. This keeps
-    // probes (Moving, mCollideKinematicVsNonDynamic sensors) from generating contact events
-    // against every baked body, preserving pre-bake probe behavior exactly.
-    static constexpr JPH::ObjectLayer Static_World = 2;
-    static constexpr JPH::ObjectLayer Num_Layers = 3;
-};
-
-namespace broad_phase_layers
-{
-    static constexpr JPH::BroadPhaseLayer Non_Moving(0);
-    static constexpr JPH::BroadPhaseLayer Moving(1);
-    static constexpr JPH::uint Num_Layers(2);
-};
-
-class BPLayerInterfaceImpl final : public JPH::BroadPhaseLayerInterface
-{
-public:
-    BPLayerInterfaceImpl()
-    {
-        // Create a mapping table from object to broad phase layer
-        _ObjectToBroadPhase[object_layers::Non_Moving] = broad_phase_layers::Non_Moving;
-        _ObjectToBroadPhase[object_layers::Moving] = broad_phase_layers::Moving;
-        _ObjectToBroadPhase[object_layers::Static_World] = broad_phase_layers::Non_Moving;
-    }
-
-    auto
-        GetNumBroadPhaseLayers() const
-            -> JPH::uint override
-    {
-        return broad_phase_layers::Num_Layers;
-    }
-
-    auto
-        GetBroadPhaseLayer(
-            JPH::ObjectLayer inLayer) const
-            -> JPH::BroadPhaseLayer override
-    {
-        // Bound is the OBJECT layer count — the pre-split assert used the broadphase count,
-        // which was only coincidentally correct while the two counts were equal.
-        JPH_ASSERT(inLayer < object_layers::Num_Layers);
-        return _ObjectToBroadPhase[inLayer];
-    }
-
-private:
-    JPH::BroadPhaseLayer _ObjectToBroadPhase[object_layers::Num_Layers];
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-class ObjectVsBroadPhaseLayerFilterImpl : public JPH::ObjectVsBroadPhaseLayerFilter
-{
-public:
-    auto
-        ShouldCollide(
-            const JPH::ObjectLayer inLayer1,
-            const JPH::BroadPhaseLayer inLayer2) const
-            -> bool override
-    {
-        switch (inLayer1)
-        {
-            case object_layers::Non_Moving: return inLayer2 == broad_phase_layers::Moving;
-            case object_layers::Moving: return true;
-            case object_layers::Static_World: return false;
-            default:
-                JPH_ASSERT(false);
-                return false;
-        }
-    }
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-class CkObjectLayerPairFilterImpl : public JPH::ObjectLayerPairFilter
-{
-public:
-    virtual bool
-        ShouldCollide(
-            const JPH::ObjectLayer inObject1,
-            const JPH::ObjectLayer inObject2) const override
-    {
-        if (inObject1 == object_layers::Static_World || inObject2 == object_layers::Static_World)
-        { return false; }
-
-        switch (inObject1)
-        {
-            case object_layers::Non_Moving: return inObject2 == object_layers::Moving;
-            case object_layers::Moving: return true;
-            default:
-                JPH_ASSERT(false);
-                return false;
-        }
-    }
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
 // Thread-safe contact listener that queues events for deferred processing.
 // All ECS mutations happen on the game thread by consumers of the drained-events broadcast.
 class CkContactListener : public JPH::ContactListener
@@ -463,9 +362,16 @@ auto
         _JobSystem = new JPH::JobSystemSingleThreaded(MaxPhysicsJobs);
     }
 
-    _BroadPhaseLayerInterface = MakePimpl<BPLayerInterfaceImpl>();
-    _ObjectVsBroadPhaseLayerFilter = MakePimpl<ObjectVsBroadPhaseLayerFilterImpl>();
-    _ObjectVsObjectFilter = MakePimpl<CkObjectLayerPairFilterImpl>();
+    // Signature-driven layers, seeded from the project's own collision profiles — never
+    // hand-authored. The filter instances hold references to the table AND are referenced by
+    // the PhysicsSystem, so both must outlive it (they do: members reset in Deinitialize after
+    // the PhysicsSystem).
+    _LayerTable = MakeUnique<ck::jolt::FCk_Jolt_CollisionLayerTable>();
+    _LayerTable->Build_FromCollisionProfiles();
+
+    _BroadPhaseLayerInterface = MakeUnique<ck::jolt::FCk_Jolt_BroadPhaseLayerInterface_Table>(*_LayerTable);
+    _ObjectVsBroadPhaseLayerFilter = MakeUnique<ck::jolt::FCk_Jolt_ObjectVsBroadPhaseLayerFilter_Table>(*_LayerTable);
+    _ObjectVsObjectFilter = MakeUnique<ck::jolt::FCk_Jolt_ObjectLayerPairFilter_Table>(*_LayerTable);
 
     _PhysicsSystem = MakeShared<PhysicsSystem>();
     _PhysicsSystem->Init(MaxBodies, NumBodyMutexes, MaxBodyPairs, MaxContactConstraints, *_BroadPhaseLayerInterface,
@@ -478,6 +384,8 @@ auto
     _PhysicsSystem->SetContactListener(&*_ContactListener);
 
     _EcsWorldSubsystem->Get_Registry().SetContext<TWeakPtr<JPH::PhysicsSystem>>(_PhysicsSystem);
+    _EcsWorldSubsystem->Get_Registry().SetContext<ck::jolt::FCk_Jolt_LayerContext>(
+        ck::jolt::FCk_Jolt_LayerContext{_LayerTable.Get(), _LayerTable->Get_ProbeLayer()});
 
     _AsyncPhysicsUpdate = ck_jolt_subsystem::ResolveCVarOverride(
         TEXT("jolt.EnableAsyncPhysicsUpdate"),
@@ -639,6 +547,7 @@ auto
     _ObjectVsObjectFilter.Reset();
     _ObjectVsBroadPhaseLayerFilter.Reset();
     _BroadPhaseLayerInterface.Reset();
+    _LayerTable.Reset();
     delete _JobSystem;
     _JobSystem = nullptr;
     _TempAllocator.Reset();
@@ -675,10 +584,10 @@ auto
 
 auto
     UCk_Jolt_Subsystem::
-    Get_StaticWorldObjectLayer()
-        -> uint16
+    Get_LayerTable()
+        -> ck::jolt::FCk_Jolt_CollisionLayerTable&
 {
-    return object_layers::Static_World;
+    return *_LayerTable;
 }
 
 auto
