@@ -1,15 +1,6 @@
 ---
 name: ck-game-debugging-playbook
-description: Use when a gameplay feature built ON CkFoundation misbehaves at runtime — "my feature
-  doesn't fire", a signal callback never runs, a Request_* seems ignored, an entity/handle is
-  unexpectedly invalid, discovery/binding misses entities that spawned late, an interactable focuses
-  but never starts the interaction, a bound script is invoked after its entity died, "works in PIE
-  but not packaged" (behavior divergence, not a crash), or you need the debugger tooling
-  (ck.EcsDebugger, ck.DebugOverlay, ensure watermark, stat CkProcessors) to inspect live entities.
-  For BUILDING games ON CkFoundation. Not for build/UHT/linker/AS-compile errors or packaged
-  crashes (ck-debugging-playbook), perf claims (ck-performance-and-analysis), or writing tests to
-  pin a bug (ck-game-testing-discipline); for modifying the framework itself, see
-  ck-debugging-playbook + ckecs-architecture-contract.
+description: 'Use when CkFoundation gameplay compiles but misbehaves at runtime: missed discovery or signals, ignored requests, invalid handles, interaction stalls, or PIE divergence.'
 ---
 
 ## Overview

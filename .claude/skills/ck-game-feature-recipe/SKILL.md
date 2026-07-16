@@ -1,15 +1,6 @@
 ---
 name: ck-game-feature-recipe
-description: Use when adding a new gameplay feature to a game built ON CkFoundation — "add a
-  door/vendor/trashcan/turret the player or AI can use", creating a Script/ECS/<Feature>/ dir,
-  writing a utils_<feature>::Add composer, a feature processor, or an EntityScript spawn vehicle;
-  when deciding what files a feature needs and in what order to build them; or when hitting the
-  classic failure smells — "the driver never found my entity", "discovery bound a half-built
-  entity", "a value composed too early or was stale after Request_* while building the feature",
-  "test passed in PIE but the entity composed too late". For BUILDING games ON CkFoundation. Not for AS language syntax
-  (ck-game-angelscript-gameplay), archetype/lifetime choice detail (ck-game-entity-composition-patterns),
-  or test mechanics (ck-game-testing-discipline); for adding C++ fragments/processors to the
-  framework itself, see ck-macros-and-codegen.
+description: 'Use when adding a CkFoundation gameplay feature and need the standard AngelScript file set, composition order, discovery contract, processors, spawn vehicle, and tests.'
 ---
 
 # The gameplay-feature recipe — from idea to placed, tested feature

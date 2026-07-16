@@ -1,6 +1,6 @@
 ---
 name: ck-angelscript-interop
-description: Use when exposing or consuming CkFoundation API in AngelScript, or when AS breaks strangely — "No matching signatures", "Identifier 'FCk_Handle_X' is not a data type", "Invalid type to append to string", tests vanish from Session Frontend, editor frozen reloading Script/Generated, _StubRecovery_ files, DynamicHandleTypes.json, ScriptMixin vs utils_* call forms, self-heal banners, -NoCkAsRegen. Not for AS language syntax (Script/CLAUDE.md), test authoring (ck-tests-authoring-and-running), or build env (ck-build-and-env).
+description: "Use when exposing CkFoundation APIs to AngelScript, debugging ScriptMixin or generated bindings, or repairing AS codegen; not for AS syntax, tests, or build setup."
 ---
 
 # ck-angelscript-interop

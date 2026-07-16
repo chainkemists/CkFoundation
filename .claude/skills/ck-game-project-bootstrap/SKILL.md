@@ -1,13 +1,6 @@
 ---
 name: ck-game-project-bootstrap
-description: Use when standing up a NEW game project on CkFoundation from an empty repo — "first week"
-  runbook covering engine-fork registration (Select Unreal Engine Version prompt, HKCU Builds GUID),
-  git/LFS/.gitattributes/.gitignore skeleton, the minimal submodule set, .uproject shape, minimal
-  game C++ module + targets, DefaultCkFoundation.ini/DefaultEngine.ini wiring, Script/ root + first
-  boot, sync-skills, and the first entity on screen. For BUILDING games ON CkFoundation. Not for
-  writing features (ck-game-feature-recipe), cook/package problems (ck-game-build-and-cook), or
-  post-setup build breakage — for those and for modifying the framework's own environment, see
-  ck-build-and-env.
+description: 'Use when bootstrapping a new CkFoundation game repo: engine registration, Git and submodules, project targets, config, script generation, skills, and first entity.'
 ---
 
 # ck-game-project-bootstrap — empty repo to first entity on screen

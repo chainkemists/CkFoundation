@@ -1,6 +1,6 @@
 ---
 name: ck-debugging-playbook
-description: Use when a Ck build, editor boot, or packaged run fails — linker/UBT errors (LNK1104 cannot open .dll, LNK2019 unresolved external, LNK2005 duplicate symbol, "modules are missing or built with a different engine version", "failed to load because module ... could not be found"), UHT errors (GENERATED_BODY, .generated.h, 'ThisType' undeclared), AngelScript error walls ("is not a data type", "No matching signatures", "Invalid type to append to string"), packaged-only 0xC0000005 GC crashes, PIE-vs-packaged divergence, ensures silent in Test/Shipping/-unattended, DLL locks and multi-session build traps. Not for writing/running tests (ck-tests-authoring-and-running), profiling (ck-performance-and-analysis), or incident history / "has this been tried" (ck-failure-archaeology).
+description: "Use when triaging Ck build, UHT, linker, AngelScript, editor-boot, packaged-only, GC, DLL-lock, or PIE-versus-packaged failures; not for setup, profiling, or incident history."
 ---
 
 ## Overview

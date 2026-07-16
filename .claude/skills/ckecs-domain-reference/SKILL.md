@@ -1,6 +1,6 @@
 ---
 name: ckecs-domain-reference
-description: Use when reasoning about EnTT/CkEcs internals — registry/sparse-set/view/group mechanics, entity index+version staleness, in_place_delete vs swap-and-pop, why a stale FCk_Handle fails ck::IsValid, MarkedDirtyBy/pump passes, where processors tick from, Request_DestroyEntity teardown order, actor↔entity mapping (Get_ActorEntityHandle, ck::ToEntity), TransientEntity, or UE GC collecting UObjects held only by fragments. Not for architecture-why (ckecs-architecture-contract) or add-a-fragment how-to (ck-macros-and-codegen).
+description: "Use when reasoning about EnTT and CkEcs internals: registry storage, views, entity versions, processor pumps, destruction, actor bridges, transient roots, or fragment GC."
 ---
 
 # CkEcs Domain Reference — the ECS mental model

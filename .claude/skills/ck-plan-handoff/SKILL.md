@@ -1,12 +1,6 @@
 ---
 name: ck-plan-handoff
-description: >
-  Load when the user asks to PLAN a problem for execution by a cheaper/smaller
-  model (Opus- or Sonnet-class), asks for a "handoff package", invokes /plan,
-  or wants a PROMPT.md + phases prepared for later Claude Code sessions.
-  This skill is for PLANNING ONLY — the session using it must not implement.
-  For executing an existing plan, do not load this; read the target folder's
-  PROMPT.md and PROGRESS.md instead.
+description: "Use when /plan is invoked or when planning a Ck handoff package for a later lower-tier session. Planning only; do not implement or use to execute an existing plan."
 ---
 
 # Planning a problem for execution by a weaker model

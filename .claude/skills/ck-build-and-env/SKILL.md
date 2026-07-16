@@ -1,6 +1,6 @@
 ---
 name: ck-build-and-env
-description: Use when setting up the engine + Ck plugins from scratch or fixing environment breakage — "Select Unreal Engine Version" prompt, unregistered EngineAssociation GUID (HKCU registry Builds key), "The following modules are missing or built with a different engine version", LNK1104 DLL locks, stale plugin Binaries/Intermediate after a branch switch, WITH_ANGELSCRIPT_CK questions, CkModuleRules / new-module Build.cs, per-config CK_* defines, GenerateProjectFiles / Build.bat / headless -Cmd.exe -nullrhi boots, unity-build symbol collisions, CRLF rg mismatches. Not for running tests (ck-tests-authoring-and-running) or compile-error triage past the environment (ck-debugging-playbook).
+description: "Use when setting up a Ck engine/plugin workspace or fixing engine association, stale binaries, DLL locks, build config, module rules, or headless boot; not for failure triage."
 ---
 
 # ck-build-and-env — recreate the working environment from scratch

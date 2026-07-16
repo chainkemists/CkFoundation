@@ -1,6 +1,6 @@
 ---
 name: ck-change-control
-description: Use when gating a change to the Ck plugins — classifying the diff (docs-only, additive API, behavior change, framework-invariant touching CkEcs core/handles/signals/replication/snapshot) and picking its compile/test/review gates; when tempted by stock ensure/ensureMsgf/check or log-and-continue; before claiming done without Blueprint/AngelScript verification; when two conventions look equally plausible and nothing written decides. Not for diagnosing failures (ck-debugging-playbook) or multi-session planning (ck-methodology).
+description: "Use when classifying and gating a Ck change, selecting compile/test/review evidence, or enforcing ensure and cross-environment checks; not for diagnosis or campaign planning."
 ---
 
 # ck-change-control

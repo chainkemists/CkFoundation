@@ -1,6 +1,6 @@
 ---
 name: ck-feature-frontier
-description: Use when deciding what to build, harden, or optimize next in the Ck plugin suite — "what should we work on", roadmap/investment questions, picking a robustness/performance/tooling target, evaluating a proposed new framework feature, or judging whether an old branch is worth reviving. Not for fixing a live bug (ck-debugging-playbook), the in-flight teardown defect (ck-lifecycle-teardown-campaign), or process/multi-session discipline (ck-methodology).
+description: "Use when choosing what Ck framework work to build, harden, optimize, or prioritize next; not for live bug triage, campaign execution, or performance measurement."
 ---
 
 # ck-feature-frontier — where the framework could advance next

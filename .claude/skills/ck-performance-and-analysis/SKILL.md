@@ -1,6 +1,6 @@
 ---
 name: ck-performance-and-analysis
-description: Use when profiling or benchmarking Ck code, or before making ANY performance claim ("faster", "hot", "too slow"). Covers stat CkProcessors / CkScheduler / CkSignals / CkScript, Unreal Insights .utrace capture, the CkInsightsAnalyzer commandlet/tab, perf A/B autotests, "Pump limit reached. Still dirty" warnings, CK_ENABLE_MEMORY_TRACKING, "which processor/listener is expensive". Not for functional bugs (load ck-debugging-playbook) or "is this worth building" (load ck-feature-frontier).
+description: "Use when profiling, benchmarking, or making Ck performance claims with stats, Unreal Insights, A/B tests, scheduler pumps, signals, or memory; not for functional bugs."
 ---
 
 # ck-performance-and-analysis
