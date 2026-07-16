@@ -4,6 +4,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
+#include "CkEcsExt/PhysicsOwnership/CkPhysicsOwnership_Utils.h"
 #include "CkLabel/CkLabel_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkOverlapBody/CkOverlapBody_Log.h"
@@ -22,6 +23,9 @@ auto
 {
     CK_ENSURE_IF_NOT(UCk_Utils_OwningActor_UE::Has(InHandle),
         TEXT("Cannot Add a Marker to Entity [{}] because it does NOT have an Owning Actor"), InHandle)
+    { return {}; }
+
+    if (NOT ck::physics_ownership::TryClaim_Chaos(InHandle))
     { return {}; }
 
     const auto& MarkerName = InParams.Get_MarkerName();
