@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Digest · ISKM editor-preview root cause</title>
+<style>
+  /* Light by default, auto-dark via prefers-color-scheme. Copy this block VERBATIM. */
+  :root{
+    --bg:#f6f8fa; --panel:#ffffff; --panel2:#f6f8fa; --bd:#d0d7de;
+    --tx:#1f2328; --mut:#656d76; --hd:#1f2328;
+    --green:#1a7f37; --greenbg:rgba(26,127,55,.10); --greentx:#1a7f37;
+    --amber:#9a6700; --amberbg:rgba(154,103,0,.12); --ambertx:#9a6700;
+    --blue:#0969da;  --bluebg:rgba(9,105,218,.10);  --bluetx:#0969da;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0d1117; --panel:#161b22; --panel2:#0f141a; --bd:#30363d;
+      --tx:#c9d1d9; --mut:#8b949e; --hd:#e6edf3;
+      --green:#3fb950; --greenbg:rgba(46,160,67,.16); --greentx:#7ee787;
+      --amber:#d29922; --amberbg:rgba(210,153,34,.16); --ambertx:#e3b341;
+      --blue:#58a6ff;  --bluebg:rgba(56,139,253,.16);  --bluetx:#79c0ff;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);
+    font:15px/1.55 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;}
+  .wrap{max-width:1040px;margin:0 auto;padding:32px 24px 80px}
+  h1{font-size:22px;margin:0 0 4px;color:var(--hd);letter-spacing:.2px}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:1.2px;color:var(--mut);
+    margin:36px 0 14px;font-weight:600}
+  .sub{color:var(--mut);margin:0 0 2px}
+  .meta{color:var(--mut);font-size:13px;margin-top:8px}
+  .meta code{font-family:var(--mono);color:var(--tx)} .meta b{color:var(--greentx)}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+  .pill{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:20px;
+    border:1px solid var(--bd);background:var(--panel);font-size:13px}
+  .pill b{font-weight:600}
+  .dot{width:8px;height:8px;border-radius:50%}
+  .ok .dot{background:var(--green)} .ok{border-color:color-mix(in srgb,var(--green) 45%,transparent)}
+  .def .dot{background:var(--amber)} .def{border-color:color-mix(in srgb,var(--amber) 45%,transparent)}
+  .info .dot{background:var(--blue)} .info{border-color:color-mix(in srgb,var(--blue) 45%,transparent)}
+  .card{background:var(--panel);border:1px solid var(--bd);border-radius:12px;padding:18px}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--mut);margin-top:10px}
+  .legend span{display:inline-flex;align-items:center;gap:7px}
+  .sw{width:12px;height:12px;border-radius:3px;border:1px solid}
+  .sw.g{background:var(--greenbg);border-color:var(--green)}
+  .sw.a{background:var(--amberbg);border-color:var(--amber)}
+  .sw.b{background:var(--bluebg);border-color:var(--blue)}
+  /* CSS chip-flow — use for LINEAR flows (no coordinate math, always aligned) */
+  .flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:10px}
+  .chip{padding:9px 13px;border-radius:9px;border:1px solid;font-size:13px;line-height:1.3;display:flex;flex-direction:column;justify-content:center}
+  .chip .ct{font-weight:600;color:var(--hd)} .chip .cs{color:var(--mut);font:11px var(--mono)}
+  .chip.g{background:var(--greenbg);border-color:var(--green)}
+  .chip.a{background:var(--amberbg);border-color:var(--amber);border-style:dashed}
+  .chip.b{background:var(--bluebg);border-color:var(--blue)}
+  .arrow{display:flex;align-items:center;color:var(--mut);font-size:18px}
+  /* inline SVG — use for BRANCHY graphs; hand-place coords, <=14 nodes, labels <=24 chars */
+  svg{width:100%;height:auto;display:block}
+  .n-bd{stroke-width:1.4}
+  .g .n-bd{stroke:var(--green)} .g .n-bg{fill:var(--greenbg)}
+  .a .n-bd{stroke:var(--amber);stroke-dasharray:5 4} .a .n-bg{fill:var(--amberbg)}
+  .b .n-bd{stroke:var(--blue)} .b .n-bg{fill:var(--bluebg)}
+  .t{fill:var(--hd);font:600 13px sans-serif}
+  .st{fill:var(--mut);font:11px var(--mono)}
+  .edge{stroke:var(--mut);stroke-width:1.6;fill:none}
+  .edge.dash{stroke:var(--amber);stroke-dasharray:5 4}
+  .elabel{fill:var(--mut);font:11px sans-serif} .elabel.am{fill:var(--ambertx)}
+  #arrhead{fill:var(--mut)} #arrheadA{fill:var(--amber)}
+  /* file / item map */
+  .files{font-family:var(--mono);font-size:13px;line-height:1.85}
+  .files .row{display:flex;gap:10px;align-items:baseline;padding:3px 0;border-bottom:1px solid color-mix(in srgb,var(--bd) 60%,transparent)}
+  .files .row:last-child{border-bottom:0}
+  .files .path{color:var(--tx);flex:0 0 auto}
+  .files .note{color:var(--mut);font-family:sans-serif;font-size:12.5px}
+  .files code{font-family:var(--mono)}
+  .tag{font-family:sans-serif;font-size:11px;padding:1px 7px;border-radius:5px;white-space:nowrap;border:1px solid}
+  .tag.new{background:var(--greenbg);color:var(--greentx);border-color:color-mix(in srgb,var(--green) 40%,transparent)}
+  .tag.mod{background:var(--bluebg);color:var(--bluetx);border-color:color-mix(in srgb,var(--blue) 40%,transparent)}
+  .tag.del{background:var(--amberbg);color:var(--ambertx);border-color:color-mix(in srgb,var(--amber) 40%,transparent)}
+  details{background:var(--panel);border:1px solid var(--bd);border-radius:10px;margin:8px 0}
+  summary{cursor:pointer;padding:13px 16px;font-weight:600;color:var(--hd);list-style:none}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"▸";color:var(--mut);margin-right:10px;display:inline-block;transition:.15s}
+  details[open] summary::before{transform:rotate(90deg)}
+  details .body{padding:0 16px 14px 38px;color:var(--tx);font-size:14px}
+  details .body code,.sub code{font-family:var(--mono);background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:12.5px}
+  ul.next{list-style:none;padding:0;margin:0}
+  ul.next li{padding:9px 14px;background:var(--panel);border:1px solid var(--bd);
+    border-left:3px solid var(--amber);border-radius:7px;margin-bottom:8px;font-size:14px}
+  ul.next li code{font-family:var(--mono);font-size:12.5px;color:var(--mut)}
+  .footnote{color:var(--mut);font-size:12px;margin-top:30px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============ HEADER BAND ============ -->
+  <h1>ISKM editor-preview — why some features don't preview outside PIE</h1>
+  <p class="sub">Entity-spawner drag-drop builds a preview entity in a dedicated <b>editor ECS world</b> — but that world runs a <b>truncated lifecycle</b>, and ISKM never got the per-feature editor pass that ISM did.</p>
+  <p class="meta">CkFoundation @ <code>ac101e415</code> (dev) · 2026-07-16 · <b>read-only investigation</b> — zero repo changes · 12-agent workflow, claims adversarially verified</p>
+
+  <div class="pills">
+    <span class="pill ok"><span class="dot"></span><b>Root cause</b> confirmed (2 layers)</span>
+    <span class="pill ok"><span class="dot"></span><b>Verify pass</b> 4 CONFIRMED · 1 UNCLEAR</span>
+    <span class="pill def"><span class="dot"></span><b>Discriminator</b> needs [EDITOR-VERIFY]</span>
+    <span class="pill info"><span class="dot"></span><b>Coordination</b> sibling stash owns adjacent files</span>
+  </div>
+
+  <!-- ============ DIAGRAM ============ -->
+  <h2>Preview pipeline — where features fall off</h2>
+  <div class="card">
+    <svg viewBox="0 0 992 348" role="img" aria-label="Editor preview pipeline and lifecycle truncation">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path id="arrhead" d="M0,0 L10,5 L0,10 z"/></marker>
+        <marker id="arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path id="arrheadA" d="M0,0 L10,5 L0,10 z"/></marker>
+      </defs>
+
+      <!-- Row A: pipeline -->
+      <path class="edge" d="M224,53 L266,53" marker-end="url(#arr)"/>
+      <path class="edge" d="M472,53 L514,53" marker-end="url(#arr)"/>
+      <path class="edge" d="M720,53 L762,53" marker-end="url(#arr)"/>
+      <!-- A4 down to B1 -->
+      <path class="edge" d="M868,82 L868,110 L372,110 L372,135" marker-end="url(#arr)"/>
+      <!-- B1 to B2 (never reached) -->
+      <path class="edge dash" d="M472,170 L514,170" marker-end="url(#arrA)"/>
+      <path class="edge dash" d="M720,170 L762,170" marker-end="url(#arrA)"/>
+      <text class="elabel am" x="480" y="162">ghosted</text>
+      <!-- B1 down-fan to features -->
+      <path class="edge" d="M372,199 L372,252" marker-end="url(#arr)"/>
+      <path class="edge" d="M372,224 L124,224 L124,252" marker-end="url(#arr)"/>
+      <path class="edge dash" d="M372,224 L620,224 L620,252" marker-end="url(#arrA)"/>
+      <path class="edge dash" d="M372,224 L868,224 L868,252" marker-end="url(#arrA)"/>
+      <text class="elabel" x="380" y="240">Construct-time composition</text>
+
+      <g class="b"><rect class="n-bg" x="24" y="24" width="200" height="58" rx="9"/><rect class="n-bd" x="24" y="24" width="200" height="58" rx="9" fill="none"/>
+        <text class="t" x="124" y="49" text-anchor="middle">Drag-drop script</text>
+        <text class="st" x="124" y="67" text-anchor="middle">ActorFactory → spawner</text></g>
+      <g class="b"><rect class="n-bg" x="272" y="24" width="200" height="58" rx="9"/><rect class="n-bd" x="272" y="24" width="200" height="58" rx="9" fill="none"/>
+        <text class="t" x="372" y="49" text-anchor="middle">Rebuild (deferred)</text>
+        <text class="st" x="372" y="67" text-anchor="middle">end-of-frame · Editor only</text></g>
+      <g class="b"><rect class="n-bg" x="520" y="24" width="200" height="58" rx="9"/><rect class="n-bd" x="520" y="24" width="200" height="58" rx="9" fill="none"/>
+        <text class="t" x="620" y="49" text-anchor="middle">SpawnEditorEntity</text>
+        <text class="st" x="620" y="67" text-anchor="middle">EditorEcsWorld subsystem</text></g>
+      <g class="b"><rect class="n-bg" x="768" y="24" width="200" height="58" rx="9"/><rect class="n-bd" x="768" y="24" width="200" height="58" rx="9" fill="none"/>
+        <text class="t" x="868" y="49" text-anchor="middle">Editor ECS graph</text>
+        <text class="st" x="868" y="67" text-anchor="middle">own registry · ticks in editor</text></g>
+
+      <g class="g"><rect class="n-bg" x="272" y="141" width="200" height="58" rx="9"/><rect class="n-bd" x="272" y="141" width="200" height="58" rx="9" fill="none"/>
+        <text class="t" x="372" y="166" text-anchor="middle">Construct chain ✓</text>
+        <text class="st" x="372" y="184" text-anchor="middle">OnConstructed fires</text></g>
+      <g class="a"><rect class="n-bg" x="520" y="141" width="200" height="58" rx="9"/><rect class="n-bd" x="520" y="141" width="200" height="58" rx="9" fill="none"/>
+        <text class="t" x="620" y="166" text-anchor="middle">BeginPlay ✗</text>
+        <text class="st" x="620" y="184" text-anchor="middle">RuntimeOnly → never runs</text></g>
+      <g class="a"><rect class="n-bg" x="768" y="141" width="200" height="58" rx="9"/><rect class="n-bd" x="768" y="141" width="200" height="58" rx="9" fill="none"/>
+        <text class="t" x="868" y="166" text-anchor="middle">RepComplete ✗</text>
+        <text class="st" x="868" y="184" text-anchor="middle">never fires in editor</text></g>
+
+      <g class="g"><rect class="n-bg" x="24" y="258" width="200" height="58" rx="9"/><rect class="n-bd" x="24" y="258" width="200" height="58" rx="9" fill="none"/>
+        <text class="t" x="124" y="283" text-anchor="middle">ISM · Transform</text>
+        <text class="st" x="124" y="301" text-anchor="middle">deliberate editor pass</text></g>
+      <g class="g"><rect class="n-bg" x="272" y="258" width="200" height="58" rx="9"/><rect class="n-bd" x="272" y="258" width="200" height="58" rx="9" fill="none"/>
+        <text class="t" x="372" y="283" text-anchor="middle">Component host</text>
+        <text class="st" x="372" y="301" text-anchor="middle">per-owner transient actor</text></g>
+      <g class="a"><rect class="n-bg" x="520" y="258" width="200" height="58" rx="9"/><rect class="n-bd" x="520" y="258" width="200" height="58" rx="9" fill="none"/>
+        <text class="t" x="620" y="283" text-anchor="middle">ISKM — no pass</text>
+        <text class="st" x="620" y="301" text-anchor="middle">frozen pose · no selection</text></g>
+      <g class="a"><rect class="n-bg" x="768" y="258" width="200" height="58" rx="9"/><rect class="n-bd" x="768" y="258" width="200" height="58" rx="9" fill="none"/>
+        <text class="t" x="868" y="283" text-anchor="middle">Eqs · Probes …</text>
+        <text class="st" x="868" y="301" text-anchor="middle">processors RuntimeOnly</text></g>
+    </svg>
+    <div class="legend">
+      <span><span class="sw g"></span>runs / previews in editor world</span>
+      <span><span class="sw a"></span>never runs / no preview</span>
+      <span><span class="sw b"></span>preview infrastructure (works)</span>
+    </div>
+  </div>
+
+  <!-- ============ COVERAGE ============ -->
+  <h2>Feature preview coverage (verified against code)</h2>
+  <div class="card files">
+    <div class="row"><span class="tag new">yes</span><span class="path">Transform</span><span class="note">runtime processor is RuntimeOnly but has an EditorOnly twin (<code>CkTransform_EditorProcessor.h:25</code>) — spawner drag works</span></div>
+    <div class="row"><span class="tag new">yes</span><span class="path">ISM rendering</span><span class="note">deliberate pass <code>fb09f4ed7</code>: Editor world-type + init out of BeginPlay ("Editor worlds never fire BeginPlay") + per-owner selection proxy (in-flight)</span></div>
+    <div class="row"><span class="tag new">yes</span><span class="path">UnrealComponent host</span><span class="note">Setup gates on <code>WorldType==Editor</code> → hosts components on per-owner RF_Transient actor</span></div>
+    <div class="row"><span class="tag mod">partial</span><span class="path">Probe shapes</span><span class="note">13 runtime processors RuntimeOnly; an EditorOnly processor draws the volumes only (<code>CkProbe_EditorProcessor.h:47</code>)</span></div>
+    <div class="row"><span class="tag del">no</span><span class="path">ISKM Plan-1 (SKMC)</span><span class="note">module is world-type-clean — but zero editor affordances: no <code>SetUpdateAnimationInEditor</code>, no selection proxy, never given the ISM pass</span></div>
+    <div class="row"><span class="tag del">no</span><span class="path">Script BeginPlay / OnReplicationComplete</span><span class="note"><code>RuntimeOnly</code> ghosts (<code>CkEntityScript_Processor.h:85,139,166</code>) — anything composed there is silently absent from previews</span></div>
+    <div class="row"><span class="tag del">no</span><span class="path">CkEqs</span><span class="note">both processors RuntimeOnly, no editor twin</span></div>
+    <div class="row"><span class="tag mod">unknown</span><span class="path">ISKM Plan-2 (batched crowds)</span><span class="note">no world gates found; GPU/vertex-factory path never observed in an editor world</span></div>
+  </div>
+
+  <!-- ============ PLAN ============ -->
+  <h2>Fix plan (blocked until repo frees up)</h2>
+  <div class="card">
+    <div class="flow">
+      <span class="chip a"><span class="ct">0 · Discriminator</span><span class="cs">[EDITOR-VERIFY] drag-drop + log</span></span>
+      <span class="arrow">→</span>
+      <span class="chip a"><span class="ct">1 · Wait for stash</span><span class="cs">editor_selection_owner lands</span></span>
+      <span class="arrow">→</span>
+      <span class="chip a"><span class="ct">2 · ISKM editor pass</span><span class="cs">ISM-parity, 4 files</span></span>
+      <span class="arrow">→</span>
+      <span class="chip a"><span class="ct">3 · Loud truncation</span><span class="cs">warn on BeginPlay-only scripts</span></span>
+      <span class="arrow">→</span>
+      <span class="chip a"><span class="ct">4 · Doc the contract</span><span class="cs">Claude.md ×2</span></span>
+    </div>
+  </div>
+
+  <!-- ============ DECISIONS ============ -->
+  <h2>Key verified facts</h2>
+  <details><summary>The preview world runs Construct — never BeginPlay, never replication</summary><div class="body">
+    <code>UCk_EditorEcsWorld_Subsystem_UE</code> (Editor worlds only, own EnTT registry, <code>IsTickableInEditor</code>) builds the full processor graph with <code>ECk_ProcessorWorldTypeContext::Editor</code> (<code>CkEcsEditor_Subsystem.cpp:301-307</code>). Processors declaring <code>WorldTypeRequirement = RuntimeOnly</code> become <b>ghost nodes</b> — edges kept, <code>ForEachEntity</code> never fires. <code>FProcessor_EntityScript_BeginPlay</code>, <code>_Replicate</code>, <code>_PendingReplicationRetry</code> are all RuntimeOnly (<code>CkEntityScript_Processor.h:85,139,166</code>). So previews get Construct + OnConstructed only. CONFIRMED by verifier.
+  </div></details>
+  <details><summary>ISKM's own module is editor-clean — the gap is the missing hardening pass, not a gate</summary><div class="body">
+    Subsystem supports Editor/EditorPreview (<code>CkIskmSubsystem.cpp:92-104</code>), manager actor init is explicit (no BeginPlay reliance), no ISKM processor declares a world requirement, Utils <code>Add</code> has no world checks, and <code>96aeaf1dd</code> even added a <code>TIgnoreInEditor</code> accommodation — editor preview is clearly <i>intended</i>. What's missing vs ISM: per-owner editor renderer + <code>ck::editor_selection_owner</code> integration (0 hits module-wide) and <code>SetUpdateAnimationInEditor</code> (0 hits) — so even a working preview would render a frozen, unselectable pose. CONFIRMED.
+  </div></details>
+  <details><summary>A set-up SKMC in an editor world renders a frozen pose — NOT nothing</summary><div class="body">
+    Engine does a one-time <code>TickAnimation(0) + RefreshBoneTransforms</code> at registration in Editor worlds (<code>SkeletalMeshComponent.cpp:1070-1093</code>); ongoing ticking is gated on <code>bUpdateAnimationInEditor</code>. Consequence: if the co-worker sees <b>nothing at all</b>, ISKM composition likely never ran (BeginPlay-composed script, a loud ensure, or the gym's own "missing content" early-out). Which of those it is needs the editor open — the one claim in this digest we could not settle read-only (verifier: UNCLEAR).
+  </div></details>
+  <details><summary>Sibling session owns the adjacent files — coordinate before touching</summary><div class="body">
+    The per-owner selection-proxy layer lives in an <b>uncommitted stash</b> (<code>stash@{0}</code> = <code>03a32641f</code> + untracked companion <code>618ab0f13</code>, created today 05:22): 12 files across CkEntitySpawner, CkIsmRenderer, CkUnrealComponent + new <code>CkEcs/Public/CkEcs/EditorSelectionOwner/</code>. It touches <b>zero</b> ISKM files. The working tree flipped from dirty→clean mid-investigation (A/B stash testing) — any plan step 2 work must build on that layer <i>after</i> it lands, or it diverges.
+  </div></details>
+  <details><summary>History: the preview system is one 2026-04-23 burst; features are opt-in</summary><div class="body">
+    <code>e319881e5 → 43e189329 → fb09f4ed7 → df279b7d9 → 7ce2f978e</code> built the editor ECS world + spawner path and wired Transform, ISM ("render ISM meshes at editor time"), and Probe shape drawing. Editor preview is an <b>opt-in-per-feature</b> architecture: a feature previews only if its whole chain (composition site, subsystem world support, actor init without BeginPlay, tick-less rendering) was made editor-safe. ISKM is the highest-value feature still unwired.
+  </div></details>
+
+  <!-- ============ NEXT ============ -->
+  <h2>Deferred / next</h2>
+  <ul class="next">
+    <li><b>[EDITOR-VERIFY] discriminator</b> — drop an ISKM EntityScript via the spawner with the Output Log open: <i>silence</i> = composition never ran (check the script's composition site); <i>ensure fires</i> = Setup ran and failed (fix that break); <i>frozen mesh appears</i> = preview works, needs <code>SetUpdateAnimationInEditor</code> + selection wiring only.</li>
+    <li><b>Sequencing gate</b> — do not start step 2 until the sibling's <code>editor_selection_owner</code> stash lands; do not modify the 12 stash-owned files.</li>
+    <li><b>Maintainer fork (step 3)</b> — the "warn when a preview script composes only in BeginPlay" heuristic shape needs sign-off (unwritten-norm fork, non-negotiable #6).</li>
+  </ul>
+
+  <p class="footnote">generated by /digest · diagrams hand-laid-out · read-only session: no builds run, no files changed in tracked tree · line cites verified against committed state <code>ac101e415</code> except where marked in-flight</p>
+</div>
+</body>
+</html>
