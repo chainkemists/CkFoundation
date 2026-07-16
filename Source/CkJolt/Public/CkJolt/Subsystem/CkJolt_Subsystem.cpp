@@ -39,7 +39,12 @@ namespace object_layers
 {
     static constexpr JPH::ObjectLayer Non_Moving = 0;
     static constexpr JPH::ObjectLayer Moving = 1;
-    static constexpr JPH::ObjectLayer Num_Layers = 2;
+    // Baked static-world bodies (Phase 1). Pairs with NOTHING — statics are query targets only
+    // until the Phase-2 signature-driven layer table replaces this hardcoded world. This keeps
+    // probes (Moving, mCollideKinematicVsNonDynamic sensors) from generating contact events
+    // against every baked body, preserving pre-bake probe behavior exactly.
+    static constexpr JPH::ObjectLayer Static_World = 2;
+    static constexpr JPH::ObjectLayer Num_Layers = 3;
 };
 
 namespace broad_phase_layers
@@ -57,6 +62,7 @@ public:
         // Create a mapping table from object to broad phase layer
         _ObjectToBroadPhase[object_layers::Non_Moving] = broad_phase_layers::Non_Moving;
         _ObjectToBroadPhase[object_layers::Moving] = broad_phase_layers::Moving;
+        _ObjectToBroadPhase[object_layers::Static_World] = broad_phase_layers::Non_Moving;
     }
 
     auto
@@ -71,7 +77,9 @@ public:
             JPH::ObjectLayer inLayer) const
             -> JPH::BroadPhaseLayer override
     {
-        JPH_ASSERT(inLayer < broad_phase_layers::Num_Layers);
+        // Bound is the OBJECT layer count — the pre-split assert used the broadphase count,
+        // which was only coincidentally correct while the two counts were equal.
+        JPH_ASSERT(inLayer < object_layers::Num_Layers);
         return _ObjectToBroadPhase[inLayer];
     }
 
@@ -94,6 +102,7 @@ public:
         {
             case object_layers::Non_Moving: return inLayer2 == broad_phase_layers::Moving;
             case object_layers::Moving: return true;
+            case object_layers::Static_World: return false;
             default:
                 JPH_ASSERT(false);
                 return false;
@@ -111,6 +120,9 @@ public:
             const JPH::ObjectLayer inObject1,
             const JPH::ObjectLayer inObject2) const override
     {
+        if (inObject1 == object_layers::Static_World || inObject2 == object_layers::Static_World)
+        { return false; }
+
         switch (inObject1)
         {
             case object_layers::Non_Moving: return inObject2 == object_layers::Moving;
@@ -383,39 +395,6 @@ namespace ck_jolt_subsystem
         }
         return InProjectSettingValue;
     }
-
-    // Reference count for global Jolt initialization (RegisterDefaultAllocator, Factory, RegisterTypes).
-    // These are process-global and must only be called once, but multiple world subsystem instances
-    // may Initialize/Deinitialize (e.g. PIE with multiple clients).
-    static int32 GJoltRefCount = 0;
-
-    auto
-        CustomTraceFunction(
-            const char* inFMT,
-            ...)
-        -> void
-    {
-        va_list List;
-        va_start(List, inFMT);
-        char Buffer[1024];
-        vsnprintf(Buffer, sizeof(Buffer), inFMT, List);
-        va_end(List);
-
-        ck::jolt::Verbose(TEXT("Jolt Trace: [{}]"), FString{Buffer});
-    }
-
-    auto
-        CustomAssertFunction(
-            const char* inExpression,
-            const char* inMessage,
-            const char* inFile,
-            JPH::uint inLine)
-        -> bool
-    {
-        CK_TRIGGER_ENSURE(TEXT("Jolt FAILED [{}] with Message [{}].\n{}:{}"), FString{inExpression}, FString{inMessage},
-            FString{inFile}, inLine);
-        return false;
-    }
 }
 
 auto
@@ -429,15 +408,7 @@ auto
 
     using namespace JPH;
 
-    if (ck_jolt_subsystem::GJoltRefCount++ == 0)
-    {
-        RegisterDefaultAllocator();
-        Factory::sInstance = new Factory{};
-        RegisterTypes();
-
-        JPH::Trace = ck_jolt_subsystem::CustomTraceFunction;
-        JPH::AssertFailed = ck_jolt_subsystem::CustomAssertFunction;
-    }
+    ck::jolt::Request_GlobalJoltInit();
 
     const auto MaxBodies = static_cast<uint>(UCk_Utils_Jolt_ProjectSettings::Get_MaxBodies());
     constexpr uint NumBodyMutexes = 0;
@@ -563,6 +534,14 @@ auto
     if (GetWorld()->IsPaused())
     { return; }
 
+    // Safe here: the async future (if any) was consumed at the top of this Tick, so no update
+    // is in flight while the broadphase re-optimizes.
+    if (_OptimizeBroadPhaseRequested)
+    {
+        _OptimizeBroadPhaseRequested = false;
+        _PhysicsSystem->OptimizeBroadPhase();
+    }
+
     // Run physics update — either async (off game thread) or sync (blocking).
     if (_AsyncPhysicsUpdate)
     {
@@ -664,12 +643,7 @@ auto
     _JobSystem = nullptr;
     _TempAllocator.Reset();
 
-    if (--ck_jolt_subsystem::GJoltRefCount == 0)
-    {
-        JPH::UnregisterTypes();
-        delete JPH::Factory::sInstance;
-        JPH::Factory::sInstance = nullptr;
-    }
+    ck::jolt::Request_GlobalJoltShutdown();
 
     Super::Deinitialize();
 }
@@ -697,6 +671,22 @@ auto
         -> void
 {
     _DebugDrawGate = MoveTemp(InGate);
+}
+
+auto
+    UCk_Jolt_Subsystem::
+    Get_StaticWorldObjectLayer()
+        -> uint16
+{
+    return object_layers::Static_World;
+}
+
+auto
+    UCk_Jolt_Subsystem::
+    Request_OptimizeBroadPhaseBeforeNextUpdate()
+        -> void
+{
+    _OptimizeBroadPhaseRequested = true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

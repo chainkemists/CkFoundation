@@ -10,6 +10,23 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+/// Where the Jolt static world comes from in PIE. Packaged builds ALWAYS use cooked data.
+UENUM(BlueprintType)
+enum class ECk_Jolt_PIEStaticWorldMode : uint8
+{
+    // Extract collision live from level actors on load — designers never need to re-cook to
+    // iterate, and stale cooked data can never silently affect PIE. (Default)
+    LiveExtract,
+    // Load cooked Jolt data like a packaged build (for validating cooks in PIE).
+    Cooked,
+    // No static world in PIE.
+    Disabled
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Jolt_PIEStaticWorldMode);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(meta = (DisplayName = "Jolt"))
 class CKJOLT_API UCk_Jolt_ProjectSettings_UE : public UCk_Plugin_ProjectSettings_UE
 {
@@ -72,6 +89,39 @@ private:
               meta = (AllowPrivateAccess = true))
     bool _EnableAsyncPhysicsUpdate = false;
 
+    // Where the Jolt static world comes from in PIE (packaged builds always use cooked data).
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Static World",
+              meta = (AllowPrivateAccess = true))
+    ECk_Jolt_PIEStaticWorldMode _PIEStaticWorldMode = ECk_Jolt_PIEStaticWorldMode::LiveExtract;
+
+    // Content root for cooked Jolt data assets. Must be listed in DirectoriesToAlwaysCook
+    // (the cook commandlet ensures this loudly).
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Static World",
+              meta = (AllowPrivateAccess = true))
+    FString _CookedDataRootPath = TEXT("/Game/CkJoltData");
+
+    // Bake-grid cell size (uu) used to partition cooked bodies for streaming.
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Static World",
+              meta = (AllowPrivateAccess = true, ClampMin = 1600, UIMin = 1600))
+    float _BakeGridCellSize = 25600.0f;
+
+    // Instanced-mesh components with at least this many instances bake as ONE StaticCompoundShape
+    // body instead of per-instance bodies (dense kitbashed clusters would otherwise flood the
+    // broadphase with thousands of entries).
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Static World",
+              meta = (AllowPrivateAccess = true, ClampMin = 2, UIMin = 2))
+    int32 _CompoundShapeInstanceThreshold = 32;
+
+    // Body add/removes since the last broadphase optimize that trigger another optimize pass.
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Static World",
+              meta = (AllowPrivateAccess = true, ClampMin = 1, UIMin = 1))
+    int32 _BroadphaseOptimizeThreshold = 512;
+
+    // Map path prefixes excluded from Cook_AllMaps (e.g. /Game/Developers).
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Static World",
+              meta = (AllowPrivateAccess = true))
+    TArray<FString> _CookExcludedMapPathPrefixes;
+
 public:
     CK_PROPERTY_GET(_MaxBodies);
     CK_PROPERTY_GET(_MaxBodyPairs);
@@ -83,6 +133,12 @@ public:
     CK_PROPERTY_GET(_EnableParallelPhysics);
     CK_PROPERTY_GET(_NumPhysicsThreads);
     CK_PROPERTY_GET(_EnableAsyncPhysicsUpdate);
+    CK_PROPERTY_GET(_PIEStaticWorldMode);
+    CK_PROPERTY_GET(_CookedDataRootPath);
+    CK_PROPERTY_GET(_BakeGridCellSize);
+    CK_PROPERTY_GET(_CompoundShapeInstanceThreshold);
+    CK_PROPERTY_GET(_BroadphaseOptimizeThreshold);
+    CK_PROPERTY_GET(_CookExcludedMapPathPrefixes);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -100,6 +156,12 @@ public:
     static auto Get_EnableParallelPhysics() -> bool;
     static auto Get_NumPhysicsThreads() -> int32;
     static auto Get_EnableAsyncPhysicsUpdate() -> bool;
+    static auto Get_PIEStaticWorldMode() -> ECk_Jolt_PIEStaticWorldMode;
+    static auto Get_CookedDataRootPath() -> FString;
+    static auto Get_BakeGridCellSize() -> float;
+    static auto Get_CompoundShapeInstanceThreshold() -> int32;
+    static auto Get_BroadphaseOptimizeThreshold() -> int32;
+    static auto Get_CookExcludedMapPathPrefixes() -> TArray<FString>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
