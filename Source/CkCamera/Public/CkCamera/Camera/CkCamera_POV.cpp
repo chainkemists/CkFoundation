@@ -8,7 +8,7 @@
 
 namespace ck::camera
 {
-    namespace
+    namespace ck_camera_pov
     {
         auto SanitizeRotation(FRotator& InRotation) -> void
         {
@@ -171,7 +171,7 @@ namespace ck::camera
         InOutRotation.Yaw = FMath::FInterpConstantTo(
             CurrentYaw, Reorient.Yaw, InInput._DeltaSeconds, AutoReorient.Get_Yaw().Get_Speed());
 
-        SanitizeRotation(InOutRotation);
+        ck_camera_pov::SanitizeRotation(InOutRotation);
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -233,7 +233,7 @@ namespace ck::camera
         if (InProfile.Get_Rig().Get_UseFixedBoomRotation())
         {
             auto Fixed = InProfile.Get_Rig().Get_FixedBoomRotation();
-            SanitizeRotation(Fixed);
+            ck_camera_pov::SanitizeRotation(Fixed);
             InOutState._BoomArmRotation = Fixed;
             return;
         }
@@ -245,7 +245,7 @@ namespace ck::camera
         Apply_AutoReorient(InProfile, InInput, InOutState, NewRotation);
 
         auto OrientationDelta = Compute_OrientationControl(InProfile, InInput, InOutState);
-        SanitizeRotation(OrientationDelta);
+        ck_camera_pov::SanitizeRotation(OrientationDelta);
 
         const auto& OrientationControl = InProfile.Get_OrientationControl();
 
@@ -257,12 +257,12 @@ namespace ck::camera
             OrientationControl.Get_Pitch().Get_Limits().Get_Min(),
             OrientationControl.Get_Pitch().Get_Limits().Get_Max());
 
-        NewRotation.Yaw = ClampYawToWindow(
+        NewRotation.Yaw = ck_camera_pov::ClampYawToWindow(
             CurrentYaw + OrientationDelta.Yaw,
             OrientationControl.Get_Yaw().Get_Limits().Get_Min(),
             OrientationControl.Get_Yaw().Get_Limits().Get_Max());
 
-        SanitizeRotation(NewRotation);
+        ck_camera_pov::SanitizeRotation(NewRotation);
 
         InOutState._BoomArmRotation = NewRotation;
     }

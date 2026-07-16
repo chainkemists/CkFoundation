@@ -12,7 +12,7 @@ TArray<TWeakObjectPtr<UCk_DeferredConfig_UE>> UCk_DeferredConfig_UE::_PendingCon
 // Register the engine-init callback at static init time.
 // CkCore loads before Angelscript modules, so this is guaranteed to be
 // registered before __InitDefaults creates any deferred configs.
-namespace
+namespace ck_deferred_config
 {
     struct FDeferredConfigRegistrar
     {

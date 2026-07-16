@@ -12,7 +12,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 // Owning-Planner resolution helpers.
 
-namespace
+namespace ck_goap_action_utils
 {
 	// Resolve the owning Planner for an Action handle. Returns an invalid
 	// handle if the Action is orphaned (should not happen in well-formed
@@ -61,7 +61,7 @@ auto
 	// PlanState lives on the owning Planner now. Resolve and
 	// read from there. The Action-side stamp (still present from dual-stamp)
 	// is no longer authoritative.
-	auto Owning = ResolveOwningPlanner(InAction);
+	auto Owning = ck_goap_action_utils::ResolveOwningPlanner(InAction);
 	if (NOT ck::IsValid(Owning)) { return ECk_GoapPlanStatus::Idle; }
 	return Owning.Get<ck::FFragment_Goap_Planner_PlanState>().Get_PlanStatus();
 }
@@ -71,7 +71,7 @@ auto
 	Get_Plan(const FCk_Handle_Goap_Action& InAction) -> TArray<TSubclassOf<UCk_GoapAction_EntityScript>>
 {
 	if (NOT ck::IsValid(InAction)) { return {}; }
-	auto Owning = ResolveOwningPlanner(InAction);
+	auto Owning = ck_goap_action_utils::ResolveOwningPlanner(InAction);
 	if (NOT ck::IsValid(Owning)) { return {}; }
 	return Owning.Get<ck::FFragment_Goap_Planner_PlanState>().Get_PlanClasses();
 }
@@ -81,7 +81,7 @@ auto
 	Get_PlanCost(const FCk_Handle_Goap_Action& InAction) -> float
 {
 	if (NOT ck::IsValid(InAction)) { return 0.0f; }
-	auto Owning = ResolveOwningPlanner(InAction);
+	auto Owning = ck_goap_action_utils::ResolveOwningPlanner(InAction);
 	if (NOT ck::IsValid(Owning)) { return 0.0f; }
 	return Owning.Get<ck::FFragment_Goap_Planner_PlanState>().Get_PlanCost();
 }
@@ -109,7 +109,7 @@ auto
 	Get_InvalidGoal(const FCk_Handle_Goap_Action& InAction) -> TArray<FCk_GoapWS_Condition_Authored>
 {
 	if (NOT ck::IsValid(InAction)) { return {}; }
-	auto Owning = ResolveOwningPlanner(InAction);
+	auto Owning = ck_goap_action_utils::ResolveOwningPlanner(InAction);
 	if (NOT ck::IsValid(Owning)) { return {}; }
 	return Owning.Get<ck::FFragment_Goap_Planner_Goal>().Get_InvalidGoal();
 }
@@ -124,7 +124,7 @@ auto
 	Request_Plan(FCk_Handle_Goap_Action& InAction) -> FCk_Handle_Goap_Action
 {
 	if (NOT ck::IsValid(InAction)) { return InAction; }
-	auto Owning = ResolveOwningPlanner(InAction);
+	auto Owning = ck_goap_action_utils::ResolveOwningPlanner(InAction);
 	CK_ENSURE_IF_NOT(ck::IsValid(Owning),
 		TEXT("Action [{}] has no owning Planner; Request_Plan dropped."), InAction)
 	{ return InAction; }
@@ -138,7 +138,7 @@ auto
 	Request_CancelPlan(FCk_Handle_Goap_Action& InAction) -> FCk_Handle_Goap_Action
 {
 	if (NOT ck::IsValid(InAction)) { return InAction; }
-	auto Owning = ResolveOwningPlanner(InAction);
+	auto Owning = ck_goap_action_utils::ResolveOwningPlanner(InAction);
 	CK_ENSURE_IF_NOT(ck::IsValid(Owning),
 		TEXT("Action [{}] has no owning Planner; Request_CancelPlan dropped."), InAction)
 	{ return InAction; }
@@ -155,7 +155,7 @@ auto
 		float InCost) -> FCk_Handle_Goap_Action
 {
 	if (NOT ck::IsValid(InAction)) { return InAction; }
-	auto Owning = ResolveOwningPlanner(InAction);
+	auto Owning = ck_goap_action_utils::ResolveOwningPlanner(InAction);
 	CK_ENSURE_IF_NOT(ck::IsValid(Owning),
 		TEXT("Action [{}] has no owning Planner; Request_SetActionCost dropped."), InAction)
 	{ return InAction; }
@@ -169,7 +169,7 @@ auto
 	Request_SetReplanInterval(FCk_Handle_Goap_Action& InAction, float InSeconds) -> FCk_Handle_Goap_Action
 {
 	if (NOT ck::IsValid(InAction)) { return InAction; }
-	auto Owning = ResolveOwningPlanner(InAction);
+	auto Owning = ck_goap_action_utils::ResolveOwningPlanner(InAction);
 	CK_ENSURE_IF_NOT(ck::IsValid(Owning),
 		TEXT("Action [{}] has no owning Planner; Request_SetReplanInterval dropped."), InAction)
 	{ return InAction; }
@@ -183,7 +183,7 @@ auto
 	Request_SetReplanPolicy(FCk_Handle_Goap_Action& InAction, ECk_Goap_ReplanPolicy InPolicy) -> FCk_Handle_Goap_Action
 {
 	if (NOT ck::IsValid(InAction)) { return InAction; }
-	auto Owning = ResolveOwningPlanner(InAction);
+	auto Owning = ck_goap_action_utils::ResolveOwningPlanner(InAction);
 	CK_ENSURE_IF_NOT(ck::IsValid(Owning),
 		TEXT("Action [{}] has no owning Planner; Request_SetReplanPolicy dropped."), InAction)
 	{ return InAction; }
@@ -197,7 +197,7 @@ auto
 	Request_SetSearchBudget(FCk_Handle_Goap_Action& InAction, int64 InMicroseconds) -> FCk_Handle_Goap_Action
 {
 	if (NOT ck::IsValid(InAction)) { return InAction; }
-	auto Owning = ResolveOwningPlanner(InAction);
+	auto Owning = ck_goap_action_utils::ResolveOwningPlanner(InAction);
 	CK_ENSURE_IF_NOT(ck::IsValid(Owning),
 		TEXT("Action [{}] has no owning Planner; Request_SetSearchBudget dropped."), InAction)
 	{ return InAction; }
@@ -211,7 +211,7 @@ auto
 	Request_SetCostThreshold(FCk_Handle_Goap_Action& InAction, float InThreshold) -> FCk_Handle_Goap_Action
 {
 	if (NOT ck::IsValid(InAction)) { return InAction; }
-	auto Owning = ResolveOwningPlanner(InAction);
+	auto Owning = ck_goap_action_utils::ResolveOwningPlanner(InAction);
 	CK_ENSURE_IF_NOT(ck::IsValid(Owning),
 		TEXT("Action [{}] has no owning Planner; Request_SetCostThreshold dropped."), InAction)
 	{ return InAction; }

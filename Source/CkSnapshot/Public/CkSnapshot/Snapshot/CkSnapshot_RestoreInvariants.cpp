@@ -8,7 +8,7 @@
 
 namespace ck::snapshot
 {
-    namespace
+    namespace ck_snapshot_restore_invariants
     {
         auto
             DoCheck_Handle(
@@ -94,20 +94,20 @@ namespace ck::snapshot
         for (const auto Entity : InRegistry.view<ck::FFragment_LifetimeOwner>())
         {
             const auto& Fragment = InRegistry.get<ck::FFragment_LifetimeOwner>(Entity);
-            DoCheck_Handle(InRegistry, Fragment.Get_Entity(), TEXT("LifetimeOwner"), Entity, Dangling);
+            ck_snapshot_restore_invariants::DoCheck_Handle(InRegistry, Fragment.Get_Entity(), TEXT("LifetimeOwner"), Entity, Dangling);
         }
 
         for (const auto Entity : InRegistry.view<ck::FFragment_ContextOwner>())
         {
             const auto& Fragment = InRegistry.get<ck::FFragment_ContextOwner>(Entity);
-            DoCheck_Handle(InRegistry, Fragment.Get_Entity(), TEXT("ContextOwner"), Entity, Dangling);
+            ck_snapshot_restore_invariants::DoCheck_Handle(InRegistry, Fragment.Get_Entity(), TEXT("ContextOwner"), Entity, Dangling);
         }
 
         for (const auto Entity : InRegistry.view<ck::FFragment_LifetimeDependents>())
         {
             const auto& Fragment = InRegistry.get<ck::FFragment_LifetimeDependents>(Entity);
             for (const auto& Dependent : Fragment.Get_Entities())
-            { DoCheck_Dependent(InRegistry, Dependent, Entity, Dangling); }
+            { ck_snapshot_restore_invariants::DoCheck_Dependent(InRegistry, Dependent, Entity, Dangling); }
         }
 
         return Dangling;

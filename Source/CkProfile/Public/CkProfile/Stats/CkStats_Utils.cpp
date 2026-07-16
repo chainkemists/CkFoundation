@@ -19,7 +19,7 @@
 ENGINE_API extern float  GAverageFPS;
 extern ENGINE_API uint64 GFrameCounter;
 
-namespace
+namespace ck_stats_utils
 {
     constexpr double InvGB = 1.0 / (1024.0 * 1024.0 * 1024.0);
 }
@@ -133,7 +133,7 @@ auto
     -> float
 {
     const auto& Stats = FPlatformMemory::GetStats();
-    return static_cast<float>(Stats.UsedPhysical * InvGB);
+    return static_cast<float>(Stats.UsedPhysical * ck_stats_utils::InvGB);
 }
 
 auto
@@ -142,7 +142,7 @@ auto
     -> float
 {
     const auto& Stats = FPlatformMemory::GetStats();
-    return static_cast<float>(Stats.AvailablePhysical * InvGB);
+    return static_cast<float>(Stats.AvailablePhysical * ck_stats_utils::InvGB);
 }
 
 auto
@@ -151,7 +151,7 @@ auto
     -> float
 {
     const auto& Stats = FPlatformMemory::GetStats();
-    return static_cast<float>(Stats.TotalPhysical * InvGB);
+    return static_cast<float>(Stats.TotalPhysical * ck_stats_utils::InvGB);
 }
 
 auto
@@ -185,7 +185,7 @@ auto
             }
         }
 
-        CachedVRAM = static_cast<float>(TotalBytes * InvGB);
+        CachedVRAM = static_cast<float>(TotalBytes * ck_stats_utils::InvGB);
     }
 
     return CachedVRAM;

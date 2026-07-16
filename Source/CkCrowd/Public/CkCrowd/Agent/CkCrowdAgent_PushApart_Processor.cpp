@@ -18,7 +18,7 @@ DECLARE_CYCLE_STAT(TEXT("Crowd::PushApart (relax)"), STAT_CkCrowd_PushApart, STA
 
 namespace ck
 {
-    namespace
+    namespace ck_crowd_agent_push_apart_processor
     {
         // Per dtCrowd's COLLISION_RESOLVE_FACTOR (DetourCrowd.cpp:1599). Sub-1 so we don't
         // overshoot the resolution; iterations converge on the right answer.
@@ -48,7 +48,7 @@ namespace ck
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_PushApartProc);
 
-        const auto Iterations = Get_IterationCount(UCk_Utils_Crowd_Settings_UE::Get_PushApartMode());
+        const auto Iterations = ck_crowd_agent_push_apart_processor::Get_IterationCount(UCk_Utils_Crowd_Settings_UE::Get_PushApartMode());
         if (Iterations <= 0)
         { return; }
 
@@ -121,7 +121,7 @@ namespace ck
                     }
 
                     const auto Penetration = CombinedRadius - Dist;
-                    const auto Pen = (Penetration * 0.5f) * COLLISION_RESOLVE_FACTOR * SelfYield / Dist;
+                    const auto Pen = (Penetration * 0.5f) * ck_crowd_agent_push_apart_processor::COLLISION_RESOLVE_FACTOR * SelfYield / Dist;
                     Displacement += Diff * Pen;
                 }
             }

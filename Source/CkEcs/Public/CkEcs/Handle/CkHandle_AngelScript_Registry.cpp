@@ -20,7 +20,7 @@
 // Anonymous namespace for internal helpers
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_handle_angelscript_registry
 {
     auto GetTypeInfoFromGeneric(asIScriptGeneric* InGeneric) -> FCkAngelScript_HandleTypeInfo*
     {
@@ -665,7 +665,7 @@ auto
         [](asIScriptGeneric* InGeneric)
     {
         auto* Self = static_cast<FCk_Handle*>(InGeneric->GetObject());
-        auto* TypeInfo = GetTypeInfoFromGeneric(InGeneric);
+        auto* TypeInfo = ck_handle_angelscript_registry::GetTypeInfoFromGeneric(InGeneric);
 
         auto Result = false;
         if (TypeInfo != nullptr && TypeInfo->IsValidAsType)
@@ -679,7 +679,7 @@ auto
 
         InGeneric->SetReturnByte(Result ? 1 : 0);
     }, nullptr);
-    SetPreviousFunctionUserData(UserData);
+    ck_handle_angelscript_registry::SetPreviousFunctionUserData(UserData);
 
     // Utility methods
     Bind.Method("FString ToString() const", [](const FCk_Handle& Self) -> FString
@@ -735,7 +735,7 @@ auto
     {
         auto* Self = static_cast<const FCk_Handle*>(InGeneric->GetObject());
         auto Checked = *static_cast<ECk_SanityCheck*>(InGeneric->GetAddressOfArg(0));
-        auto* TypeInfo = GetTypeInfoFromGeneric(InGeneric);
+        auto* TypeInfo = ck_handle_angelscript_registry::GetTypeInfoFromGeneric(InGeneric);
 
         auto Result = FCk_Handle{};
 
@@ -748,7 +748,7 @@ auto
 
         new(InGeneric->GetAddressOfReturnLocation()) FCk_Handle(Result);
     }, nullptr);
-    SetPreviousFunctionUserData(UserData);
+    ck_handle_angelscript_registry::SetPreviousFunctionUserData(UserData);
 
     // Is_ShortName method
     auto IsMethodSig = ck::Format_ANSI(TEXT("bool Is_{}() const"), ShortName);
@@ -756,7 +756,7 @@ auto
         [](asIScriptGeneric* InGeneric)
     {
         auto* Self = static_cast<const FCk_Handle*>(InGeneric->GetObject());
-        auto* TypeInfo = GetTypeInfoFromGeneric(InGeneric);
+        auto* TypeInfo = ck_handle_angelscript_registry::GetTypeInfoFromGeneric(InGeneric);
 
         auto Result = false;
         if (TypeInfo != nullptr && TypeInfo->IsValidAsType)
@@ -766,7 +766,7 @@ auto
 
         InGeneric->SetReturnByte(Result ? 1 : 0);
     }, nullptr);
-    SetPreviousFunctionUserData(UserData);
+    ck_handle_angelscript_registry::SetPreviousFunctionUserData(UserData);
 
     // Equality with this type
     auto BaseEqualsSig = ck::Format_ANSI(TEXT("bool opEquals(const {}& in Other) const"), TypeName);
@@ -926,7 +926,7 @@ auto
 // Base Mixin Methods
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_handle_angelscript_registry_internal
 {
     struct FMixinMethodInfo
     {
@@ -1184,19 +1184,19 @@ auto
 
     // Cache for already-extracted source method lists, keyed by source type name. Avoids
     // re-walking the same parent's AS-type for every child that descends from it.
-    auto ExtractedMethodsByType = TMap<FString, TArray<FMixinMethodInfo>>{};
+    auto ExtractedMethodsByType = TMap<FString, TArray<ck_handle_angelscript_registry_internal::FMixinMethodInfo>>{};
 
-    auto GetOrExtractMethods = [&](const FString& InSourceTypeName) -> const TArray<FMixinMethodInfo>&
+    auto GetOrExtractMethods = [&](const FString& InSourceTypeName) -> const TArray<ck_handle_angelscript_registry_internal::FMixinMethodInfo>&
     {
         if (auto* Existing = ExtractedMethodsByType.Find(InSourceTypeName))
         { return *Existing; }
 
         auto* SourceTypeInfo = Engine->GetTypeInfoByName(TCHAR_TO_ANSI(*InSourceTypeName));
-        auto Methods = ExtractMixinMethodsFromTypeInfo(SourceTypeInfo, Engine, DerivedTypes);
+        auto Methods = ck_handle_angelscript_registry_internal::ExtractMixinMethodsFromTypeInfo(SourceTypeInfo, Engine, DerivedTypes);
         return ExtractedMethodsByType.Add(InSourceTypeName, MoveTemp(Methods));
     };
 
-    const auto Entries = BuildParentChainEntries(DerivedTypes, WarnedTypes);
+    const auto Entries = ck_handle_angelscript_registry_internal::BuildParentChainEntries(DerivedTypes, WarnedTypes);
 
     for (const auto& Entry : Entries)
     {
@@ -1283,7 +1283,7 @@ auto
     auto& BoundParentConversions = Get_BoundParentConversions();
     auto& WarnedTypes = Get_WarnedMixinTypes();
 
-    const auto Entries = BuildParentChainEntries(DerivedTypes, WarnedTypes);
+    const auto Entries = ck_handle_angelscript_registry_internal::BuildParentChainEntries(DerivedTypes, WarnedTypes);
 
     for (const auto& Entry : Entries)
     {

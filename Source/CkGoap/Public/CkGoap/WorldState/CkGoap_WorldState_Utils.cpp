@@ -33,7 +33,7 @@ namespace ck
 	CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfGoapWorldStates, FCk_Handle_Goap_WorldState);
 }
 
-namespace
+namespace ck_goap_world_state_utils
 {
 	struct FRecordOfGoapWorldStates_Utils
 		: public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfGoapWorldStates> {};
@@ -41,7 +41,7 @@ namespace
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_goap_world_state_utils_internal
 {
 	auto
 		DoStampWorldStateFragments(
@@ -77,7 +77,7 @@ auto
 		InOwner)
 	{ return CastChecked(InOwner); }
 
-	DoStampWorldStateFragments(InOwner, InParams);
+	ck_goap_world_state_utils_internal::DoStampWorldStateFragments(InOwner, InParams);
 
 	return CastChecked(InOwner);
 }
@@ -103,13 +103,13 @@ auto
 
 	UCk_Utils_Handle_UE::Set_DebugName(WSEntity, InName.GetTagName());
 
-	DoStampWorldStateFragments(WSEntity, InParams);
+	ck_goap_world_state_utils_internal::DoStampWorldStateFragments(WSEntity, InParams);
 
 	UCk_Utils_GameplayLabel_UE::Add(WSEntity, InName);
 
-	FRecordOfGoapWorldStates_Utils::AddIfMissing(InOwner,
+	ck_goap_world_state_utils::FRecordOfGoapWorldStates_Utils::AddIfMissing(InOwner,
 		ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
-	FRecordOfGoapWorldStates_Utils::Request_Connect(InOwner, WSEntity);
+	ck_goap_world_state_utils::FRecordOfGoapWorldStates_Utils::Request_Connect(InOwner, WSEntity);
 
 	return WSEntity;
 }
@@ -185,7 +185,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_goap_world_state_utils_impl
 {
 	// Compute the effective Get_Value(WS, Tag) without going through the public
 	// API — walks the override stack top-down, falls through to the base store.
@@ -263,7 +263,7 @@ auto
 		for (const auto& Kv : Stack._Layers[ExistingIdx].Values) { AffectedTags.AddUnique(Kv.Key); }
 	}
 
-	const auto Before = DoSnapshotEffective(InWorldState, AffectedTags);
+	const auto Before = ck_goap_world_state_utils_impl::DoSnapshotEffective(InWorldState, AffectedTags);
 
 	if (ExistingIdx != INDEX_NONE)
 	{
@@ -275,7 +275,7 @@ auto
 		Stack._Layers.Add({InLayerName, InOverrideValues});
 	}
 
-	const auto After = DoSnapshotEffective(InWorldState, AffectedTags);
+	const auto After = ck_goap_world_state_utils_impl::DoSnapshotEffective(InWorldState, AffectedTags);
 
 	auto AnyEffectiveChange = false;
 	for (const auto& Tag : AffectedTags)
@@ -314,7 +314,7 @@ auto
 
 	auto& Stack = InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>();
 
-	const auto BeforeEff = DoGetEffectiveValue(InWorldState, InKey);
+	const auto BeforeEff = ck_goap_world_state_utils_impl::DoGetEffectiveValue(InWorldState, InKey);
 
 	const auto ExistingIdx = Stack._Layers.IndexOfByPredicate(
 		[&](const ck::FFragment_Goap_WorldState_OverrideStack::FLayer& InLayer)
@@ -332,7 +332,7 @@ auto
 		Stack._Layers.Add(MoveTemp(NewLayer));
 	}
 
-	const auto AfterEff = DoGetEffectiveValue(InWorldState, InKey);
+	const auto AfterEff = ck_goap_world_state_utils_impl::DoGetEffectiveValue(InWorldState, InKey);
 	if (BeforeEff != AfterEff)
 	{
 		DoTagSubscribersDirty(InWorldState);
@@ -361,11 +361,11 @@ auto
 	AffectedTags.Reserve(Stack._Layers[ExistingIdx].Values.Num());
 	for (const auto& Kv : Stack._Layers[ExistingIdx].Values) { AffectedTags.AddUnique(Kv.Key); }
 
-	const auto Before = DoSnapshotEffective(InWorldState, AffectedTags);
+	const auto Before = ck_goap_world_state_utils_impl::DoSnapshotEffective(InWorldState, AffectedTags);
 
 	Stack._Layers.RemoveAt(ExistingIdx);
 
-	const auto After = DoSnapshotEffective(InWorldState, AffectedTags);
+	const auto After = ck_goap_world_state_utils_impl::DoSnapshotEffective(InWorldState, AffectedTags);
 
 	auto AnyEffectiveChange = false;
 	for (const auto& Tag : AffectedTags)
@@ -399,11 +399,11 @@ auto
 		for (const auto& Kv : Layer.Values) { AffectedTags.AddUnique(Kv.Key); }
 	}
 
-	const auto Before = DoSnapshotEffective(InWorldState, AffectedTags);
+	const auto Before = ck_goap_world_state_utils_impl::DoSnapshotEffective(InWorldState, AffectedTags);
 
 	Stack._Layers.Reset();
 
-	const auto After = DoSnapshotEffective(InWorldState, AffectedTags);
+	const auto After = ck_goap_world_state_utils_impl::DoSnapshotEffective(InWorldState, AffectedTags);
 
 	auto AnyEffectiveChange = false;
 	for (const auto& Tag : AffectedTags)
@@ -590,10 +590,10 @@ auto
 	if (InHandle.Has<ck::FFragment_Goap_WorldState_Values>())
 	{ return CastChecked(InHandle); }
 
-	if (NOT FRecordOfGoapWorldStates_Utils::Has(InHandle))
+	if (NOT ck_goap_world_state_utils::FRecordOfGoapWorldStates_Utils::Has(InHandle))
 	{ return {}; }
 
-	const auto Entries = FRecordOfGoapWorldStates_Utils::Get_ValidEntries(InHandle);
+	const auto Entries = ck_goap_world_state_utils::FRecordOfGoapWorldStates_Utils::Get_ValidEntries(InHandle);
 	if (Entries.IsEmpty())
 	{ return {}; }
 
@@ -608,10 +608,10 @@ auto
 	if (NOT ck::IsValid(InHandle))
 	{ return {}; }
 
-	if (NOT FRecordOfGoapWorldStates_Utils::Has(InHandle))
+	if (NOT ck_goap_world_state_utils::FRecordOfGoapWorldStates_Utils::Has(InHandle))
 	{ return {}; }
 
-	return FRecordOfGoapWorldStates_Utils::Get_ValidEntry_ByTag(InHandle, InName);
+	return ck_goap_world_state_utils::FRecordOfGoapWorldStates_Utils::Get_ValidEntry_ByTag(InHandle, InName);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

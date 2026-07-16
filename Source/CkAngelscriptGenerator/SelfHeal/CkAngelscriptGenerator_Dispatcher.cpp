@@ -38,7 +38,7 @@
 
 namespace ck::angelscriptgenerator::self_heal
 {
-    namespace
+    namespace ck_angelscript_generator_dispatcher
     {
         // OnReloadHadErrors broadcasts synchronously from CompileModules on the
         // main thread; all session state below is single-threaded.
@@ -1400,7 +1400,7 @@ namespace ck::angelscriptgenerator::self_heal
                 // from source. Location-keyed, so the identical "not a data
                 // type" error in author source stays Unrecognized (a real
                 // authoring bug the dispatcher must not paper over).
-                if (Is_EntitySpawnParamsCanonicalPath(InError.FilePath))
+                if (ck_angelscript_generator_dispatcher::Is_EntitySpawnParamsCanonicalPath(InError.FilePath))
                 { return ECk_RecoveryStrategy::Quarantine_StaleEspCanonical; }
 
                 return ECk_RecoveryStrategy::Unrecognized;
@@ -1449,85 +1449,85 @@ namespace ck::angelscriptgenerator::self_heal
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    auto FCkAsRecoveryDispatcher::Get_CyclesRun() -> int32 { return sCyclesRun; }
+    auto FCkAsRecoveryDispatcher::Get_CyclesRun() -> int32 { return ck_angelscript_generator_dispatcher::sCyclesRun; }
 
     auto FCkAsRecoveryDispatcher::Reset_CyclesRun() -> void
     {
-        sCyclesRun = 0;
-        sPendingActions.Reset();
-        sModalTicksWaited = 0;
-        sDidSynthesizeJsonStub = false;
-        sDidSynthesizeAssetRegistryStub = false;
-        sInProgressNotification.Reset();
-        sLastBanner = FLastBannerState{};
-        sPerSignatureRecoveryCount.Reset();
-        sBlacklistedSignatures.Reset();
-        sQuarantinedEspCanonicals.Reset();
+        ck_angelscript_generator_dispatcher::sCyclesRun = 0;
+        ck_angelscript_generator_dispatcher::sPendingActions.Reset();
+        ck_angelscript_generator_dispatcher::sModalTicksWaited = 0;
+        ck_angelscript_generator_dispatcher::sDidSynthesizeJsonStub = false;
+        ck_angelscript_generator_dispatcher::sDidSynthesizeAssetRegistryStub = false;
+        ck_angelscript_generator_dispatcher::sInProgressNotification.Reset();
+        ck_angelscript_generator_dispatcher::sLastBanner = ck_angelscript_generator_dispatcher::FLastBannerState{};
+        ck_angelscript_generator_dispatcher::sPerSignatureRecoveryCount.Reset();
+        ck_angelscript_generator_dispatcher::sBlacklistedSignatures.Reset();
+        ck_angelscript_generator_dispatcher::sQuarantinedEspCanonicals.Reset();
         // sModalTickHandle left as-is; OnModalLoopTick self-cleans on empty queue.
     }
 
     auto FCkAsRecoveryDispatcher::Clear_PendingRecoveryState() -> void
     {
-        if (sPendingActions.Num() > 0)
+        if (ck_angelscript_generator_dispatcher::sPendingActions.Num() > 0)
         {
             Log(TEXT("[SelfHeal] Compile succeeded with {} stale queued recovery action(s) — dropping them. ")
                 TEXT("(A deferred drain firing after a clean compile would re-synthesize stubs from stale ")
                 TEXT("error records and re-corrupt a healthy state.)"),
-                sPendingActions.Num());
+                ck_angelscript_generator_dispatcher::sPendingActions.Num());
         }
-        sPendingActions.Reset();
-        sModalTicksWaited = 0;
+        ck_angelscript_generator_dispatcher::sPendingActions.Reset();
+        ck_angelscript_generator_dispatcher::sModalTicksWaited = 0;
 
-        if (sTickerHandle.IsValid())
+        if (ck_angelscript_generator_dispatcher::sTickerHandle.IsValid())
         {
-            FTSTicker::GetCoreTicker().RemoveTicker(sTickerHandle);
-            sTickerHandle.Reset();
+            FTSTicker::GetCoreTicker().RemoveTicker(ck_angelscript_generator_dispatcher::sTickerHandle);
+            ck_angelscript_generator_dispatcher::sTickerHandle.Reset();
         }
 
-        if (sModalTickHandle.IsValid() && FSlateApplication::IsInitialized())
+        if (ck_angelscript_generator_dispatcher::sModalTickHandle.IsValid() && FSlateApplication::IsInitialized())
         {
-            FSlateApplication::Get().GetOnModalLoopTickEvent().Remove(sModalTickHandle);
+            FSlateApplication::Get().GetOnModalLoopTickEvent().Remove(ck_angelscript_generator_dispatcher::sModalTickHandle);
         }
-        sModalTickHandle.Reset();
+        ck_angelscript_generator_dispatcher::sModalTickHandle.Reset();
 
         // The in-progress toast is normally transitioned by the drain that
         // applied the recovery; if it's still pending here, the compile
         // succeeded without our intervention — fade it out.
-        if (auto Item = sInProgressNotification.Pin(); Item.IsValid())
+        if (auto Item = ck_angelscript_generator_dispatcher::sInProgressNotification.Pin(); Item.IsValid())
         {
             Item->SetCompletionState(SNotificationItem::CS_None);
             Item->ExpireAndFadeout();
         }
-        sInProgressNotification.Reset();
+        ck_angelscript_generator_dispatcher::sInProgressNotification.Reset();
     }
 
     auto FCkAsRecoveryDispatcher::Did_SynthesizeJsonStub_ThisSession() -> bool
-    { return sDidSynthesizeJsonStub; }
+    { return ck_angelscript_generator_dispatcher::sDidSynthesizeJsonStub; }
 
     auto FCkAsRecoveryDispatcher::Mark_JsonStubSynthesized() -> void
-    { sDidSynthesizeJsonStub = true; }
+    { ck_angelscript_generator_dispatcher::sDidSynthesizeJsonStub = true; }
 
     auto FCkAsRecoveryDispatcher::Did_SynthesizeAssetRegistryStub_ThisSession() -> bool
-    { return sDidSynthesizeAssetRegistryStub; }
+    { return ck_angelscript_generator_dispatcher::sDidSynthesizeAssetRegistryStub; }
 
     auto FCkAsRecoveryDispatcher::Mark_AssetRegistryStubSynthesized() -> void
-    { sDidSynthesizeAssetRegistryStub = true; }
+    { ck_angelscript_generator_dispatcher::sDidSynthesizeAssetRegistryStub = true; }
 
     auto FCkAsRecoveryDispatcher::Is_BootstrapMode() -> bool
-    { return NOT sBootstrapComplete; }
+    { return NOT ck_angelscript_generator_dispatcher::sBootstrapComplete; }
 
     auto FCkAsRecoveryDispatcher::Mark_BootstrapComplete() -> void
     {
-        sBootstrapComplete = true;
+        ck_angelscript_generator_dispatcher::sBootstrapComplete = true;
         // Reset cycle counter so bootstrap-consumed cycles don't count against
         // mid-session. (Cap is bootstrap-only anyway, but accurate counter
         // makes logs easier to read.) Same for the per-signature tracker —
         // bootstrap-mode counts shouldn't penalize mid-session attempts on
         // brand-new entity scripts authored after the editor reached main.
-        sCyclesRun = 0;
-        sPerSignatureRecoveryCount.Reset();
-        sBlacklistedSignatures.Reset();
-        sQuarantinedEspCanonicals.Reset();
+        ck_angelscript_generator_dispatcher::sCyclesRun = 0;
+        ck_angelscript_generator_dispatcher::sPerSignatureRecoveryCount.Reset();
+        ck_angelscript_generator_dispatcher::sBlacklistedSignatures.Reset();
+        ck_angelscript_generator_dispatcher::sQuarantinedEspCanonicals.Reset();
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -1542,10 +1542,10 @@ namespace ck::angelscriptgenerator::self_heal
 
         // Cycle cap is bootstrap-only (see MaxCycles docstring). Mid-session
         // is interactive — user can intervene.
-        if (BootstrapMode && sCyclesRun >= MaxCycles)
+        if (BootstrapMode && ck_angelscript_generator_dispatcher::sCyclesRun >= MaxCycles)
         {
-            Log_TerminalBanner_MaxCyclesExceeded();
-            Show_TerminalToast(FText::Format(
+            ck_angelscript_generator_dispatcher::Log_TerminalBanner_MaxCyclesExceeded();
+            ck_angelscript_generator_dispatcher::Show_TerminalToast(FText::Format(
                 LOCTEXT("CycleCapToast",
                     "AngelScript self-heal cycle cap ({0}) exceeded. Manual intervention required — "
                     "restart the editor after fixing the underlying AS issue."),
@@ -1560,36 +1560,36 @@ namespace ck::angelscriptgenerator::self_heal
         Log(TEXT("[SelfHeal] OnReloadHadErrors fired ({} mode, cycle {} of {}). ")
             TEXT("Parsed {} actionable roots from {} raw error records."),
             BootstrapMode ? TEXT("bootstrap") : TEXT("mid-session"),
-            sCyclesRun + 1, MaxCycles, Roots.Num(), Errors.Num());
+            ck_angelscript_generator_dispatcher::sCyclesRun + 1, MaxCycles, Roots.Num(), Errors.Num());
 
         if (Roots.Num() == 0)
         {
-            Log_TerminalBanner_NoRoots(Diagnostics);
+            ck_angelscript_generator_dispatcher::Log_TerminalBanner_NoRoots(Diagnostics);
             return;
         }
 
         const auto Plan = BuildActionPlan(Roots);
-        sPendingActions.Append(Plan);
+        ck_angelscript_generator_dispatcher::sPendingActions.Append(Plan);
 
         if (BootstrapMode)
         {
             Log(TEXT("[SelfHeal] Queued {} recovery action(s) for bootstrap modal-tick apply ")
-                TEXT("(queue depth now {})."), Plan.Num(), sPendingActions.Num());
+                TEXT("(queue depth now {})."), Plan.Num(), ck_angelscript_generator_dispatcher::sPendingActions.Num());
 
             // OnReloadHadErrors fires synchronously inside CompileModules —
             // i.e. before Hazelight's modal opens. The notification manager
             // queues the toast and renders it on the modal's tick, so the
             // user sees both at the same time.
-            Show_InProgressToast();
-            Ensure_ModalTickSubscribed();
+            ck_angelscript_generator_dispatcher::Show_InProgressToast();
+            ck_angelscript_generator_dispatcher::Ensure_ModalTickSubscribed();
         }
         else
         {
             Log(TEXT("[SelfHeal] Queued {} recovery action(s) for mid-session ticker apply ")
-                TEXT("(queue depth now {})."), Plan.Num(), sPendingActions.Num());
+                TEXT("(queue depth now {})."), Plan.Num(), ck_angelscript_generator_dispatcher::sPendingActions.Num());
 
             // Skip in-progress toast — see UI surfacing section header.
-            Ensure_TickerSubscribed();
+            ck_angelscript_generator_dispatcher::Ensure_TickerSubscribed();
         }
 #else
         Warning(TEXT("[SelfHeal] OnAngelscriptReloadHadErrors invoked without WITH_ANGELSCRIPT_CK — no-op."));

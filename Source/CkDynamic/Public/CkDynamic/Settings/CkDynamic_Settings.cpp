@@ -6,7 +6,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_dynamic_settings
 {
     constexpr auto RegistryFileName = TEXT("DynamicHandleTypes.json");
 }
@@ -30,10 +30,10 @@ auto
 {
     if (_DynamicHandleRegistryDirectory.Path.IsEmpty())
     {
-        return FPaths::ProjectConfigDir() / RegistryFileName;
+        return FPaths::ProjectConfigDir() / ck_dynamic_settings::RegistryFileName;
     }
 
-    return _DynamicHandleRegistryDirectory.Path / RegistryFileName;
+    return _DynamicHandleRegistryDirectory.Path / ck_dynamic_settings::RegistryFileName;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -47,7 +47,7 @@ auto
 
     if (ck::Is_NOT_Valid(Settings))
     {
-        return FPaths::ProjectConfigDir() / RegistryFileName;
+        return FPaths::ProjectConfigDir() / ck_dynamic_settings::RegistryFileName;
     }
 
     return Settings->Get_DynamicHandleRegistryFilePath();

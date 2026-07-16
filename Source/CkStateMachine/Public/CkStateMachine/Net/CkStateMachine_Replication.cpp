@@ -28,7 +28,7 @@
 //
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_state_machine_replication
 {
     // Echo suppression: the owning client of an OwningClientAuthoritative SM applies
     // transitions locally (zero-latency), batches them into FFragment_Sm_PendingClientBatch,

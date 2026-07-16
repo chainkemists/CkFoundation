@@ -15,7 +15,7 @@
 
 namespace ck::angelscriptgenerator
 {
-    namespace
+    namespace ck_angelscript_compile_guard
     {
         class FCk_AngelscriptErrorCapture : public FOutputDevice
         {
@@ -71,25 +71,25 @@ namespace ck::angelscriptgenerator
         Install()
         -> void
     {
-        if (_bInstalled)
+        if (ck_angelscript_compile_guard::_bInstalled)
         { return; }
 
         if (ck::IsValid(GLog, ck::IsValid_Policy_NullptrOnly{}))
         {
-            GLog->AddOutputDevice(&_LogCapture);
+            GLog->AddOutputDevice(&ck_angelscript_compile_guard::_LogCapture);
         }
 
-        _PreCompileHandle = FAngelscriptCodeModule::GetPreCompile().AddLambda([]()
+        ck_angelscript_compile_guard::_PreCompileHandle = FAngelscriptCodeModule::GetPreCompile().AddLambda([]()
         {
-            _LogCapture.Reset();
+            ck_angelscript_compile_guard::_LogCapture.Reset();
         });
 
-        _PreBeginPIEHandle = FEditorDelegates::PreBeginPIE.AddLambda([](const bool /*bIsSimulating*/)
+        ck_angelscript_compile_guard::_PreBeginPIEHandle = FEditorDelegates::PreBeginPIE.AddLambda([](const bool /*bIsSimulating*/)
         {
-            if (NOT _LogCapture.Has_Errors())
+            if (NOT ck_angelscript_compile_guard::_LogCapture.Has_Errors())
             { return; }
 
-            const auto& Lines = _LogCapture.Get_Lines();
+            const auto& Lines = ck_angelscript_compile_guard::_LogCapture.Get_Lines();
 
             auto Segments = TArray<FCk_TokenizedMessage>{};
             Segments.Reserve(Lines.Num() + 1);
@@ -112,7 +112,7 @@ namespace ck::angelscriptgenerator
             );
         });
 
-        _bInstalled = true;
+        ck_angelscript_compile_guard::_bInstalled = true;
     }
 
     auto
@@ -120,28 +120,28 @@ namespace ck::angelscriptgenerator
         Uninstall()
         -> void
     {
-        if (NOT _bInstalled)
+        if (NOT ck_angelscript_compile_guard::_bInstalled)
         { return; }
 
         if (FModuleManager::Get().IsModuleLoaded(TEXT("AngelscriptCode")))
         {
-            if (_PreCompileHandle.IsValid())
-            { FAngelscriptCodeModule::GetPreCompile().Remove(_PreCompileHandle); }
+            if (ck_angelscript_compile_guard::_PreCompileHandle.IsValid())
+            { FAngelscriptCodeModule::GetPreCompile().Remove(ck_angelscript_compile_guard::_PreCompileHandle); }
         }
-        _PreCompileHandle.Reset();
+        ck_angelscript_compile_guard::_PreCompileHandle.Reset();
 
-        if (_PreBeginPIEHandle.IsValid())
+        if (ck_angelscript_compile_guard::_PreBeginPIEHandle.IsValid())
         {
-            FEditorDelegates::PreBeginPIE.Remove(_PreBeginPIEHandle);
-            _PreBeginPIEHandle.Reset();
+            FEditorDelegates::PreBeginPIE.Remove(ck_angelscript_compile_guard::_PreBeginPIEHandle);
+            ck_angelscript_compile_guard::_PreBeginPIEHandle.Reset();
         }
 
         if (ck::IsValid(GLog, ck::IsValid_Policy_NullptrOnly{}))
         {
-            GLog->RemoveOutputDevice(&_LogCapture);
+            GLog->RemoveOutputDevice(&ck_angelscript_compile_guard::_LogCapture);
         }
-        _LogCapture.Reset();
-        _bInstalled = false;
+        ck_angelscript_compile_guard::_LogCapture.Reset();
+        ck_angelscript_compile_guard::_bInstalled = false;
     }
 }
 

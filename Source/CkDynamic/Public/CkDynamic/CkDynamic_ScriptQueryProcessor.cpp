@@ -14,7 +14,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_dynamic_script_query_processor
 {
     // Duplicated from the anonymous namespace of CkDynamic_Utils.cpp; kept local to avoid touching the
     // hot Get_Fragment TU. Consolidate into the shared internal header (CkDynamic_Sentinel.h).
@@ -230,7 +230,7 @@ namespace ck
             { continue; }
 
             auto EntityHandle = AnyHandle.Get_ValidHandle(Entity);
-            if (NOT PassesDestroyFilter(EntityHandle, ECk_DestroyFilter::IgnorePendingKill))
+            if (NOT ck_dynamic_script_query_processor::PassesDestroyFilter(EntityHandle, ECk_DestroyFilter::IgnorePendingKill))
             { continue; }
 
             auto PassesJoin = true;

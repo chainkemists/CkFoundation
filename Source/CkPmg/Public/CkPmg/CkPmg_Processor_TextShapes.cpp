@@ -54,7 +54,7 @@ namespace ck::pmg
         return RobotoBytes.Num() > 0 ? &RobotoBytes : nullptr;
     }
 
-    namespace
+    namespace ck_pmg_processor_text_shapes
     {
         // Loads raw font bytes from a file under the CkFoundation plugin's CkPmg Resources dir.
         // Tried once (the tried flag avoids re-hitting the filesystem every frame when absent).
@@ -80,16 +80,16 @@ namespace ck::pmg
         if (const auto* Primary = ResolveTextFontBytes(InOverride)) { OutChain.Add(Primary); }
 
         static TArray<uint8> EmojiBytes;   static bool EmojiTried = false;
-        if (const auto* Emoji = LoadResourceFontBytes_Cached(TEXT("NotoEmoji-Medium.ttf"), EmojiBytes, EmojiTried))
+        if (const auto* Emoji = ck_pmg_processor_text_shapes::LoadResourceFontBytes_Cached(TEXT("NotoEmoji-Medium.ttf"), EmojiBytes, EmojiTried))
         { OutChain.Add(Emoji); }
 
         static TArray<uint8> SymbolsBytes; static bool SymbolsTried = false;
-        if (const auto* Symbols = LoadResourceFontBytes_Cached(TEXT("NotoSansSymbols2-Regular.ttf"), SymbolsBytes, SymbolsTried))
+        if (const auto* Symbols = ck_pmg_processor_text_shapes::LoadResourceFontBytes_Cached(TEXT("NotoSansSymbols2-Regular.ttf"), SymbolsBytes, SymbolsTried))
         { OutChain.Add(Symbols); }
     }
 }
 
-namespace
+namespace ck_pmg_processor_text_shapes_impl
 {
     auto SetupMeshComponent_Text(FCk_Handle InHandle) -> UProceduralMeshComponent*
     {
@@ -251,7 +251,7 @@ namespace ck
         auto* Mesh = InCurrent._MeshComponent.Get();
         if (ck::Is_NOT_Valid(Mesh))
         {
-            Mesh = SetupMeshComponent_Text(InHandle);
+            Mesh = ck_pmg_processor_text_shapes_impl::SetupMeshComponent_Text(InHandle);
             if (ck::Is_NOT_Valid(Mesh)) { return; } // no world yet; keep NeedsSetup, retry next tick
         }
         Mesh->ClearAllMeshSections();
@@ -270,12 +270,12 @@ namespace ck
         if (FaceChain.Num() == 0)
         {
             // No usable font (e.g. dedicated server): leave the shape inert with a valid empty mesh.
-            FinalizeMeshComponent_Text(Mesh, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+            ck_pmg_processor_text_shapes_impl::FinalizeMeshComponent_Text(Mesh, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
             return;
         }
 
-        TArray<FPlacedGlyph_Text> Placed;
-        LayoutText(InParams.Get_Text(), FaceChain, InParams.Get_Size(), InParams.Get_LineSpacing(),
+        TArray<ck_pmg_processor_text_shapes_impl::FPlacedGlyph_Text> Placed;
+        ck_pmg_processor_text_shapes_impl::LayoutText(InParams.Get_Text(), FaceChain, InParams.Get_Size(), InParams.Get_LineSpacing(),
             InParams.Get_Align(), InParams.Get_MaxGlyphs(), Placed);
 
         // Orientation applied to BOTH the filled mesh and the wireframe so they stay aligned.
@@ -286,7 +286,7 @@ namespace ck
         if (InParams.Get_DrawFilled())
         {
             TArray<FVector> Vertices; TArray<int32> Triangles; TArray<FVector> Normals; TArray<FVector2D> UVs;
-            for (const FPlacedGlyph_Text& P : Placed)
+            for (const ck_pmg_processor_text_shapes_impl::FPlacedGlyph_Text& P : Placed)
             {
                 if (P.Glyph == nullptr || P.Glyph->TessTris.Num() == 0) { continue; }
                 const int32 Base = Vertices.Num();
@@ -325,7 +325,7 @@ namespace ck
             }
         }
 
-        FinalizeMeshComponent_Text(Mesh, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        ck_pmg_processor_text_shapes_impl::FinalizeMeshComponent_Text(Mesh, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         // ---- Wireframe tier ----
         if (InCommon.Get_DrawLines())
@@ -346,7 +346,7 @@ namespace ck
             auto LineColor = InCommon.Get_Color(); LineColor.A = 1.0f;
             const float Size = InParams.Get_Size();
 
-            for (const FPlacedGlyph_Text& P : Placed)
+            for (const ck_pmg_processor_text_shapes_impl::FPlacedGlyph_Text& P : Placed)
             {
                 if (P.Glyph == nullptr) { continue; }
                 for (const TArray<FVector2D>& Contour : P.Glyph->Contours)

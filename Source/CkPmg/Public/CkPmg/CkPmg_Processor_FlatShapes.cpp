@@ -16,7 +16,7 @@
 // Shape Generation Functions
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_pmg_processor_flat_shapes
 {
     auto GenerateDebugShape_Circle(
         UProceduralMeshComponent* InMeshComponent,
@@ -609,7 +609,7 @@ namespace
 // Common Setup Helper
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_pmg_processor_flat_shapes_impl
 {
     auto SetupMeshComponent_Flat(
         FCk_Handle_Pmg_DebugShape InHandle,
@@ -708,11 +708,11 @@ namespace ck
             FFragment_Pmg_DebugShape_Current& InCurrent)
         -> void
     {
-        auto MeshComponent = SetupMeshComponent_Flat(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = ck_pmg_processor_flat_shapes_impl::SetupMeshComponent_Flat(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
-        GenerateDebugShape_Circle(MeshComponent, InParams.Get_Radius(), InParams.Get_Segments(), InParams.Get_DrawDirectionLine(), InParams.Get_Axis());
-        FinalizeMeshComponent_Flat(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        ck_pmg_processor_flat_shapes::GenerateDebugShape_Circle(MeshComponent, InParams.Get_Radius(), InParams.Get_Segments(), InParams.Get_DrawDirectionLine(), InParams.Get_Axis());
+        ck_pmg_processor_flat_shapes_impl::FinalizeMeshComponent_Flat(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -753,11 +753,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent_Flat(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = ck_pmg_processor_flat_shapes_impl::SetupMeshComponent_Flat(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
-        GenerateDebugShape_Triangle(MeshComponent, InParams.Get_Size(), InParams.Get_Axis());
-        FinalizeMeshComponent_Flat(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        ck_pmg_processor_flat_shapes::GenerateDebugShape_Triangle(MeshComponent, InParams.Get_Size(), InParams.Get_Axis());
+        ck_pmg_processor_flat_shapes_impl::FinalizeMeshComponent_Flat(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -803,11 +803,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent_Flat(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = ck_pmg_processor_flat_shapes_impl::SetupMeshComponent_Flat(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
-        GenerateDebugShape_Plane(MeshComponent, InParams.Get_Width(), InParams.Get_Height(), InParams.Get_Axis());
-        FinalizeMeshComponent_Flat(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        ck_pmg_processor_flat_shapes::GenerateDebugShape_Plane(MeshComponent, InParams.Get_Width(), InParams.Get_Height(), InParams.Get_Axis());
+        ck_pmg_processor_flat_shapes_impl::FinalizeMeshComponent_Flat(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -849,11 +849,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent_Flat(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = ck_pmg_processor_flat_shapes_impl::SetupMeshComponent_Flat(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
-        GenerateDebugShape_Ring(MeshComponent, InParams.Get_InnerRadius(), InParams.Get_OuterRadius(), InParams.Get_Segments(), InParams.Get_Axis());
-        FinalizeMeshComponent_Flat(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        ck_pmg_processor_flat_shapes::GenerateDebugShape_Ring(MeshComponent, InParams.Get_InnerRadius(), InParams.Get_OuterRadius(), InParams.Get_Segments(), InParams.Get_Axis());
+        ck_pmg_processor_flat_shapes_impl::FinalizeMeshComponent_Flat(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -881,11 +881,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent_Flat(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = ck_pmg_processor_flat_shapes_impl::SetupMeshComponent_Flat(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
-        GenerateDebugShape_Cross(MeshComponent, InParams.Get_Size(), InParams.Get_Thickness(), InParams.Get_Axis());
-        FinalizeMeshComponent_Flat(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        ck_pmg_processor_flat_shapes::GenerateDebugShape_Cross(MeshComponent, InParams.Get_Size(), InParams.Get_Thickness(), InParams.Get_Axis());
+        ck_pmg_processor_flat_shapes_impl::FinalizeMeshComponent_Flat(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -942,11 +942,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent_Flat(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = ck_pmg_processor_flat_shapes_impl::SetupMeshComponent_Flat(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
-        GenerateDebugShape_Star(MeshComponent, InParams.Get_OuterRadius(), InParams.Get_Points(), InParams.Get_InnerRadiusRatio(), InParams.Get_Axis());
-        FinalizeMeshComponent_Flat(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        ck_pmg_processor_flat_shapes::GenerateDebugShape_Star(MeshComponent, InParams.Get_OuterRadius(), InParams.Get_Points(), InParams.Get_InnerRadiusRatio(), InParams.Get_Axis());
+        ck_pmg_processor_flat_shapes_impl::FinalizeMeshComponent_Flat(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -1001,11 +1001,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent_Flat(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = ck_pmg_processor_flat_shapes_impl::SetupMeshComponent_Flat(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
-        GenerateDebugShape_Checkmark(MeshComponent, InParams.Get_Size(), InParams.Get_Thickness(), InParams.Get_Axis());
-        FinalizeMeshComponent_Flat(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        ck_pmg_processor_flat_shapes::GenerateDebugShape_Checkmark(MeshComponent, InParams.Get_Size(), InParams.Get_Thickness(), InParams.Get_Axis());
+        ck_pmg_processor_flat_shapes_impl::FinalizeMeshComponent_Flat(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -1056,11 +1056,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent_Flat(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = ck_pmg_processor_flat_shapes_impl::SetupMeshComponent_Flat(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
-        GenerateDebugShape_Diamond(MeshComponent, InParams.Get_Width(), InParams.Get_Height(), InParams.Get_Axis());
-        FinalizeMeshComponent_Flat(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        ck_pmg_processor_flat_shapes::GenerateDebugShape_Diamond(MeshComponent, InParams.Get_Width(), InParams.Get_Height(), InParams.Get_Axis());
+        ck_pmg_processor_flat_shapes_impl::FinalizeMeshComponent_Flat(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {

@@ -4,7 +4,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_dynamic_handle_definition
 {
     auto ExtractShortNameFromTypeName(const FString& InTypeName) -> FString
     {
@@ -61,7 +61,7 @@ auto
         return ShortName;
     }
 
-    return ExtractShortNameFromTypeName(TypeName);
+    return ck_dynamic_handle_definition::ExtractShortNameFromTypeName(TypeName);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

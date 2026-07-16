@@ -47,7 +47,7 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 // Registry-driven resolution of raw (tag-keyed) conditions/effects
 
-namespace
+namespace ck_goap_action_processor
 {
 	auto ResolveCondition(const goap::FKeyRegistry& InRegistry, const goap::FWorldStateCondition_Raw& InRaw)
 		-> goap::FWorldStateCondition
@@ -219,14 +219,14 @@ auto
 		Def.Preconditions.Reserve(InActionDef._Preconditions.Num());
 		for (const auto& Pre : InActionDef._Preconditions)
 		{
-			const auto Resolved = ResolveCondition(SourceRegistry, Pre);
+			const auto Resolved = ck_goap_action_processor::ResolveCondition(SourceRegistry, Pre);
 			if (Resolved.IsValid()) { Def.Preconditions.Add(Resolved); }
 		}
 
 		Def.Effects.Reserve(InActionDef._Effects.Num());
 		for (const auto& Eff : InActionDef._Effects)
 		{
-			const auto Resolved = ResolveEffect(SourceRegistry, Eff);
+			const auto Resolved = ck_goap_action_processor::ResolveEffect(SourceRegistry, Eff);
 			if (Resolved.IsValid()) { Def.Effects.Add(Resolved); }
 		}
 	}
@@ -376,7 +376,7 @@ auto
 	// carry FFragment_Goap_Action_Tree with _ParentAction.
 	const auto IsParentPlanInFlight = [&]() -> bool
 	{
-		const auto Parent = Goap_Planner_GetParentPlanner(InHandle);
+		const auto Parent = ck_goap_action_processor::Goap_Planner_GetParentPlanner(InHandle);
 		if (NOT ck::IsValid(Parent)) { return false; }
 
 		if (Parent.template Has<FTag_Goap_Planner_PlanInFlight>()) { return true; }
@@ -528,7 +528,7 @@ auto
 				// Times candidate-copy + FGoapGraph build + A* search seed (the per-replan setup cost).
 				SCOPE_CYCLE_COUNTER(STAT_Goap_BuildGraphAndSeed);
 
-				const auto ChildHandles = Goap_Planner_GetCandidateChildren(InHandle);
+				const auto ChildHandles = ck_goap_action_processor::Goap_Planner_GetCandidateChildren(InHandle);
 				auto Candidates = TArray<goap::FActionDef>{};
 				Candidates.Reserve(ChildHandles.Num());
 				for (const auto& ChildHandle : ChildHandles)
@@ -540,7 +540,7 @@ auto
 					Candidates.Add(MoveTemp(Candidate));
 				}
 
-				const auto GoalConditions = BuildConstraintSet(InGoal._Goal);
+				const auto GoalConditions = ck_goap_action_processor::BuildConstraintSet(InGoal._Goal);
 				auto Graph = goap::FGoapGraph{SourceWorldState, Candidates, GoalConditions};
 				InPlanContext._Graph = Graph;
 
@@ -614,7 +614,7 @@ auto
 				const auto TargetClass = InTypedRequest.Get_ActionClass();
 				const auto NewCost = InTypedRequest.Get_Cost();
 
-				const auto Candidates = Goap_Planner_GetCandidateChildren(InHandle);
+				const auto Candidates = ck_goap_action_processor::Goap_Planner_GetCandidateChildren(InHandle);
 				for (auto ChildHandle : Candidates)
 				{
 					if (NOT ck::IsValid(ChildHandle)) { continue; }
@@ -637,7 +637,7 @@ auto
 				// the dynamic-cost contract first-class + introspectable.
 				const auto TargetClass = InTypedRequest.Get_ActionClass();
 
-				const auto Candidates = Goap_Planner_GetCandidateChildren(InHandle);
+				const auto Candidates = ck_goap_action_processor::Goap_Planner_GetCandidateChildren(InHandle);
 				for (auto ChildHandle : Candidates)
 				{
 					if (NOT ck::IsValid(ChildHandle)) { continue; }
@@ -717,7 +717,7 @@ auto
 			// The search is regressive, so the A* path runs goal -> current.
 			// To produce a forward execution plan we walk edges in order and
 			// reverse at the end.
-			const auto ChildHandles = Goap_Planner_GetCandidateChildren(InHandle);
+			const auto ChildHandles = ck_goap_action_processor::Goap_Planner_GetCandidateChildren(InHandle);
 			const auto& Graph = InPlanContext.Get_Graph();
 			const auto& Actions = Graph.Get_Actions();
 			const auto& Path = InResult._Path;

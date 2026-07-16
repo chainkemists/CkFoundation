@@ -19,7 +19,7 @@ DECLARE_CYCLE_STAT(TEXT("Crowd::DiagRecorder"), STAT_CkCrowd_DiagRecorderProc, S
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_crowd_agent_diag_processor
 {
     // Sample rate. Read once per ForEachEntity (cheap) so a console toggle is responsive without a
     // separate dirty path. 10Hz over a 9s diag-gym cycle = ~90 samples per agent.
@@ -60,7 +60,7 @@ namespace ck
         InRecorder._ElapsedSec += Dt;
         InRecorder._SecsSinceLastSample += Dt;
 
-        const auto SampleHz = FMath::Max(1, CVarSampleHz.GetValueOnGameThread());
+        const auto SampleHz = FMath::Max(1, ck_crowd_agent_diag_processor::CVarSampleHz.GetValueOnGameThread());
         const auto SampleIntervalSec = 1.0f / static_cast<float>(SampleHz);
         if (InRecorder._SecsSinceLastSample < SampleIntervalSec)
         { return; }
@@ -116,7 +116,7 @@ namespace ck
                 const auto DeltaDeg = FMath::Abs(FMath::RadiansToDegrees(DeltaRad));
                 if (DeltaDeg > InRecorder._MaxAngularDeltaDeg)
                 { InRecorder._MaxAngularDeltaDeg = DeltaDeg; }
-                if (DeltaDeg >= ReversalAngleDeg)
+                if (DeltaDeg >= ck_crowd_agent_diag_processor::ReversalAngleDeg)
                 { ++InRecorder._DirReversalCount; }
             }
         }
@@ -125,7 +125,7 @@ namespace ck
         if (NOT InRecorder._Reached)
         {
             const auto DistToGoal = static_cast<float>(FVector::Dist(Pos, InRecorder._GoalPos));
-            if (DistToGoal <= ArrivalWindowCm)
+            if (DistToGoal <= ck_crowd_agent_diag_processor::ArrivalWindowCm)
             {
                 InRecorder._Reached = true;
                 InRecorder._TimeToGoal = InRecorder._ElapsedSec;

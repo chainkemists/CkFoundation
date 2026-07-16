@@ -18,7 +18,7 @@
 // Shape Generation Functions
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_pmg_processor_directional_shapes
 {
     auto GenerateDebugShape_Arrow(
         UProceduralMeshComponent* InMeshComponent,
@@ -102,7 +102,7 @@ namespace
 // Common Setup Helpers
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_pmg_processor_directional_shapes_impl
 {
     auto SetupMeshComponent_Directional(
         FCk_Handle_Pmg_DebugShape InHandle,
@@ -197,12 +197,12 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent_Directional(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = ck_pmg_processor_directional_shapes_impl::SetupMeshComponent_Directional(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
-        GenerateDebugShape_Arrow(MeshComponent, InParams.Get_Length(), InParams.Get_ShaftWidth(),
+        ck_pmg_processor_directional_shapes::GenerateDebugShape_Arrow(MeshComponent, InParams.Get_Length(), InParams.Get_ShaftWidth(),
                                  InParams.Get_ArrowHeadRatio(), InParams.Get_ArrowHeadWidthMultiplier(), InParams.Get_Axis());
-        FinalizeMeshComponent_Directional(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        ck_pmg_processor_directional_shapes_impl::FinalizeMeshComponent_Directional(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {

@@ -18,7 +18,7 @@
 
 namespace ck::angelscriptgenerator::self_heal
 {
-    namespace
+    namespace ck_angelscript_generator_as_source_scanner
     {
         auto Is_IdentChar(
             TCHAR InChar) -> bool
@@ -397,11 +397,11 @@ namespace ck::angelscriptgenerator::self_heal
             return Result;
         }
 
-        const auto Blanked = Blank_CommentsAndStrings(InFileContents);
+        const auto Blanked = ck_angelscript_generator_as_source_scanner::Blank_CommentsAndStrings(InFileContents);
 
         auto BodyOpenBrace = int32{INDEX_NONE};
         auto BaseName      = FString{};
-        if (NOT Find_ClassDecl(Blanked, InClassName, BodyOpenBrace, BaseName))
+        if (NOT ck_angelscript_generator_as_source_scanner::Find_ClassDecl(Blanked, InClassName, BodyOpenBrace, BaseName))
         {
             Result.ErrorMessage = FString::Printf(
                 TEXT("No `class %s` declaration in '%s'."), *InClassName, *InSourcePathForDiagnostics);
@@ -409,7 +409,7 @@ namespace ck::angelscriptgenerator::self_heal
         }
 
         auto Props = TArray<FCk_AsExposedProperty>{};
-        if (NOT Parse_ExposedMembers(Blanked, BodyOpenBrace, Props))
+        if (NOT ck_angelscript_generator_as_source_scanner::Parse_ExposedMembers(Blanked, BodyOpenBrace, Props))
         {
             Result.ErrorMessage = FString::Printf(
                 TEXT("Unbalanced braces parsing `class %s` body in '%s'."), *InClassName, *InSourcePathForDiagnostics);
@@ -538,7 +538,7 @@ namespace ck::angelscriptgenerator::self_heal
             // Not declared in any scanned .as — the C++ boundary (its own
             // supers come flattened from reflection), or unresolvable.
             auto CppProps = TArray<FCk_AsExposedProperty>{};
-            if (Try_ResolveCppClassShape(Current, CppProps))
+            if (ck_angelscript_generator_as_source_scanner::Try_ResolveCppClassShape(Current, CppProps))
             {
                 PerClassLists.Add(MoveTemp(CppProps));
                 break;

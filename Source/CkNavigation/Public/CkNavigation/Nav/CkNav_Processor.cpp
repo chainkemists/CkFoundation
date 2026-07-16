@@ -28,7 +28,7 @@ DECLARE_DWORD_COUNTER_STAT(TEXT("Nav Deferred Reprojections"),  STAT_Nav_Deferre
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_nav_processor
 {
     // Process-wide queue of FindPath requests that landed while the nav system was rebuilding.
     // Drained from FProcessor_Nav_HandleRequests::DoTick once IsNavigationBuildInProgress flips
@@ -81,19 +81,19 @@ namespace ck
         // is what we actually care about anyway: "is THIS agent's start position on a baked
         // tile right now". Same call FindPathSync uses internally.
         auto DrainActions = int32{0};
-        if (GDeferredNavRequests.Num() > 0)
+        if (ck_nav_processor::GDeferredNavRequests.Num() > 0)
         {
             SCOPE_CYCLE_COUNTER(STAT_Nav_DeferredDrain);
-            SET_DWORD_STAT(STAT_Nav_DeferredQueueDepth, GDeferredNavRequests.Num());
+            SET_DWORD_STAT(STAT_Nav_DeferredQueueDepth, ck_nav_processor::GDeferredNavRequests.Num());
 
             const auto Now = FPlatformTime::Seconds();
-            const auto MaxDeferralSec = static_cast<double>(CVarMaxDeferralSeconds.GetValueOnGameThread());
+            const auto MaxDeferralSec = static_cast<double>(ck_nav_processor::CVarMaxDeferralSeconds.GetValueOnGameThread());
 
-            for (auto i = GDeferredNavRequests.Num() - 1; i >= 0; --i)
+            for (auto i = ck_nav_processor::GDeferredNavRequests.Num() - 1; i >= 0; --i)
             {
-                auto& Entry = GDeferredNavRequests[i];
+                auto& Entry = ck_nav_processor::GDeferredNavRequests[i];
                 if (NOT ck::IsValid(Entry.Handle))
-                { GDeferredNavRequests.RemoveAt(i, EAllowShrinking::No); continue; }
+                { ck_nav_processor::GDeferredNavRequests.RemoveAt(i, EAllowShrinking::No); continue; }
 
                 auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(Entry.Handle);
                 auto* NavSys = IsValid(World) ? UNavigationSystemV1::GetCurrent(World) : nullptr;
@@ -124,7 +124,7 @@ namespace ck
                         // the normal ForEachEntity path on the next tick.
                         auto Handle = Entry.Handle;
                         auto Request = Entry.Request;
-                        GDeferredNavRequests.RemoveAt(i, EAllowShrinking::No);
+                        ck_nav_processor::GDeferredNavRequests.RemoveAt(i, EAllowShrinking::No);
                         UCk_Utils_Nav_UE::Request_FindPath(Handle, Request);
                         ++DrainActions;
                         continue;
@@ -151,7 +151,7 @@ namespace ck
                             TEXT("that the level has static walkable geometry inside the volume."),
                             Handle, MaxDeferralSec);
                     }
-                    GDeferredNavRequests.RemoveAt(i, EAllowShrinking::No);
+                    ck_nav_processor::GDeferredNavRequests.RemoveAt(i, EAllowShrinking::No);
                     ++DrainActions;
                 }
             }
@@ -255,12 +255,12 @@ namespace ck
                 {
                     std::visit([&](const auto& InFindPath)
                     {
-                        GDeferredNavRequests.Add({InHandle, InFindPath, NowSec});
+                        ck_nav_processor::GDeferredNavRequests.Add({InHandle, InFindPath, NowSec});
                     }, Variant);
                 }
             });
             ck::nav::Verbose(TEXT("FindPath on [{}] deferred — start point not yet bakeable (queue depth now {})"),
-                InHandle, GDeferredNavRequests.Num());
+                InHandle, ck_nav_processor::GDeferredNavRequests.Num());
             return;
         }
 
