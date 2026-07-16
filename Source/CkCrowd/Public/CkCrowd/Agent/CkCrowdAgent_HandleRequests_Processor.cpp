@@ -63,6 +63,12 @@ namespace ck
             const FCk_Request_CrowdAgent_MoveTo& InRequest)
         -> void
     {
+        // A plain MoveTo takes over from any follow in flight — the caller gave a fixed goal.
+        // (The FollowTarget handler delegates here and re-adds its state after.)
+        InHandle.Try_Remove<FFragment_CrowdAgent_FollowTarget>();
+
+        const auto Goal = InRequest.Get_Target();
+
         // Same-goal no-op: if a fresh MoveTo lands on (nearly) the goal we're already walking to,
         // ignore it. Re-issuing the same goal resets the waypoint cursor to 0 and preserves stale
         // momentum; a noisy re-issuer (e.g. a state machine that re-fires MoveTo several times a
@@ -70,10 +76,10 @@ namespace ck
         // A genuinely different target (beyond the epsilon) re-paths as normal.
         constexpr auto SameGoalEpsilonCm = 20.0f;
         if (InHandle.Has<FTag_CrowdAgent_Walking>() &&
-            FVector::Dist(InRequest.Get_Target(), InPathFollow.Get_ActiveGoal()) <= SameGoalEpsilonCm)
+            FVector::Dist(Goal, InPathFollow.Get_ActiveGoal()) <= SameGoalEpsilonCm)
         {
             ck::crowd::Verbose(TEXT("CrowdAgent [{}] MoveTo {} ignored (same goal, already walking)"),
-                InHandle, InRequest.Get_Target());
+                InHandle, Goal);
             return;
         }
 
@@ -85,7 +91,7 @@ namespace ck
 
         InPathFollow._WaypointIndex = 0;
         InPathFollow._ActiveArrivalRadius = ArrivalRadius;
-        InPathFollow._ActiveGoal = InRequest.Get_Target();
+        InPathFollow._ActiveGoal = Goal;
 
         // Intentionally do NOT zero _DesiredVelocity here. Re-targeting mid-walk should preserve
         // the agent's current momentum; once the new path resolves and steering's view fires
@@ -96,48 +102,47 @@ namespace ck
 
         // State transition: Idle/Walking → PathPending. Use Try_Remove because the agent may not
         // currently hold either tag (e.g. PathPending re-fired before the previous resolved).
-        auto NonConstHandle = InHandle;
-        NonConstHandle.Try_Remove<FTag_CrowdAgent_Idle>();
-        NonConstHandle.Try_Remove<FTag_CrowdAgent_Walking>();
-        NonConstHandle.AddOrGet<FTag_CrowdAgent_PathPending>();
+        InHandle.Try_Remove<FTag_CrowdAgent_Idle>();
+        InHandle.Try_Remove<FTag_CrowdAgent_Walking>();
+        InHandle.AddOrGet<FTag_CrowdAgent_PathPending>();
 
         // An external MoveTo starts a NEW episode: whatever was blocking the previous goal is no longer
         // this agent's problem, and OnGoalBlocked must be allowed to fire again for the new one.
-        DoClearBlockedState(NonConstHandle);
+        DoClearBlockedState(InHandle);
 
         // Followers route through the path network instead of straight CkNavigation: the corridor
         // resolves via FProcessor_CrowdAgent_OnRouteResolved, which installs the compiled waypoints
         // through the same FFragment_Nav_PathResult seam — everything downstream (OnPathResolved,
         // steering) is provider-agnostic. Without the follower feature, behavior is exactly as before.
-        if (UCk_Utils_PathNetworkFollower_UE::Has(NonConstHandle))
+        if (UCk_Utils_PathNetworkFollower_UE::Has(InHandle))
         {
             // Park the nav-path slot at Pending and forget the previously-installed corridor:
             // no nav request exists to do the former (OnPathResolved would otherwise consume the
             // previous Ready path as if it answered THIS MoveTo), and the corridor fragment
             // persists across MoveTos so the bridge needs the install-identity reset.
-            FCk_Nav_Algorithm::MarkPathPending(NonConstHandle);
-            NonConstHandle.Try_Remove<FFragment_CrowdAgent_InstalledRoute>();
+            FCk_Nav_Algorithm::MarkPathPending(InHandle);
+            InHandle.Try_Remove<FFragment_CrowdAgent_InstalledRoute>();
 
-            auto Follower = UCk_Utils_PathNetworkFollower_UE::CastChecked(NonConstHandle);
+            auto Follower = UCk_Utils_PathNetworkFollower_UE::CastChecked(InHandle);
             UCk_Utils_PathNetworkFollower_UE::Request_FindRoute(Follower,
-                FCk_Request_PathNetworkFollower_FindRoute{InRequest.Get_Target()});
+                FCk_Request_PathNetworkFollower_FindRoute{Goal});
         }
         else
         {
             // Enqueue the path request on the agent's own entity. CkNavigation's processor drains it
             // and writes FFragment_Nav_PathResult on the same entity; OnPathResolved sees the result
             // and finalizes the state transition.
-            auto Request = FCk_Request_Nav_FindPath{InRequest.Get_Target()};
+            auto Request = FCk_Request_Nav_FindPath{Goal};
             Request.Set_QueryFilter(InParams.Get_NavQueryFilter());
 
             // Fresh plans are not exempt from the inside-a-cost-band trap: a MoveTo issued while
             // the agent stands inside painted stationary markup (e.g. a gameplay re-target as the
             // queue it pressed into shifts) would otherwise pick "through" — see Get_EscapedQueryStart.
-            auto TransformHandle = UCk_Utils_Transform_UE::Cast(NonConstHandle);
+            auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
             if (ck::IsValid(TransformHandle))
             {
                 const auto Escaped = FProcessor_CrowdAgent_PathRefresh::Get_EscapedQueryStart(
-                    NonConstHandle,
+                    InHandle,
                     InHandle.Get_Entity(),
                     UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle),
                     InRequest.Get_Target(),
@@ -149,11 +154,48 @@ namespace ck
                 }
             }
 
-            UCk_Utils_Nav_UE::Request_FindPath(NonConstHandle, Request);
+            UCk_Utils_Nav_UE::Request_FindPath(InHandle, Request);
         }
 
         ck::crowd::Verbose(TEXT("CrowdAgent [{}] MoveTo {} (arrival={})"),
-            InHandle, InRequest.Get_Target(), ArrivalRadius);
+            InHandle, Goal, ArrivalRadius);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            FFragment_CrowdAgent_DesiredVelocity& InDesired,
+            const FCk_Request_CrowdAgent_FollowTarget& InRequest)
+        -> void
+    {
+        const auto& TargetPoint = InRequest.Get_TargetPoint();
+        if (ck::Is_NOT_Valid(TargetPoint))
+        {
+            ck::crowd::Warning(TEXT("CrowdAgent [{}] FollowTarget ignored — the target point handle is invalid"),
+                InHandle);
+            return;
+        }
+        const auto LiveGoal = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TargetPoint);
+
+        // Delegate the path-begin to the MoveTo handler (same-goal epsilon, arrival override,
+        // state transition, blocked reset, path-network routing) with the goal resolved LIVE...
+        auto MoveTo = FCk_Request_CrowdAgent_MoveTo{LiveGoal};
+        MoveTo.Set_ArrivalRadiusOverrideMode(InRequest.Get_ArrivalRadiusOverrideMode());
+        MoveTo.Set_ArrivalRadiusOverrideValue(InRequest.Get_ArrivalRadiusOverrideValue());
+        DoHandleRequest(InHandle, InParams, InPathFollow, InDesired, MoveTo);
+
+        // ...then arm/refresh the follow AFTER the delegation (a plain MoveTo clears it). The
+        // FollowTarget processor re-paths toward the live point from here on.
+        auto& Follow = InHandle.AddOrGet<FFragment_CrowdAgent_FollowTarget>();
+        Follow._Request = InRequest;
+        Follow._RepathAccumulatorSec = 0.0f;
+
+        ck::crowd::Verbose(TEXT("CrowdAgent [{}] FollowTarget (goal={})"), InHandle, LiveGoal);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -171,13 +213,14 @@ namespace ck
         InDesired._Velocity = FVector::ZeroVector;
         InPathFollow._WaypointIndex = 0;
 
-        auto NonConstHandle = InHandle;
-        NonConstHandle.Try_Remove<FTag_CrowdAgent_Walking>();
-        NonConstHandle.Try_Remove<FTag_CrowdAgent_PathPending>();
-        NonConstHandle.AddOrGet<FTag_CrowdAgent_Idle>();
+        // Stop abandons any follow — the caller explicitly gave up the goal.
+        InHandle.Try_Remove<FFragment_CrowdAgent_FollowTarget>();
+        InHandle.Try_Remove<FTag_CrowdAgent_Walking>();
+        InHandle.Try_Remove<FTag_CrowdAgent_PathPending>();
+        InHandle.AddOrGet<FTag_CrowdAgent_Idle>();
 
         // Stop abandons the goal entirely — the agent must not be resumed by BlockedRecheck later.
-        DoClearBlockedState(NonConstHandle);
+        DoClearBlockedState(InHandle);
 
         ck::crowd::Verbose(TEXT("CrowdAgent [{}] Stop"), InHandle);
     }

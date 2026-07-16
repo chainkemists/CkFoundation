@@ -97,6 +97,19 @@ public:
         UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
         const FCk_Request_CrowdAgent_MoveTo& InRequest);
 
+    // Issue a FOLLOW request: the goal is a LIVE transform handle, and the agent keeps re-pathing
+    // toward it on the request's repath cadence as it moves — including re-engaging after an
+    // arrival when the target walks back out of reach. Ends on a plain MoveTo, a Stop, or the
+    // target handle dying (the agent then keeps its last resolved goal). All MoveTo semantics
+    // (arrival radius, OnGoalReached per arrival, blocked handling) apply to each leg.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Request Follow Target")
+    static FCk_Handle_CrowdAgent
+    Request_FollowTarget(
+        UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
+        const FCk_Request_CrowdAgent_FollowTarget& InRequest);
+
     // Cancel any active path. Agent transitions Walking/PathPending → Idle, _DesiredVelocity is
     // zeroed. Subsequent ticks see the bridge writing zero into _CurrentVelocity → agent halts.
     UFUNCTION(BlueprintCallable,
