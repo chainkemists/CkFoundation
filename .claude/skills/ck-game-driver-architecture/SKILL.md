@@ -1,15 +1,6 @@
 ---
 name: ck-game-driver-architecture
-description: Use when building the orchestration layer of a CkFoundation game — a world-singleton
-  or per-scope "driver"/director entity script that spawns subordinates, discovers world-placed
-  entities by tag, routes requests, and signals readiness. Triggers - "who spawns the managers",
-  "how do I find the <X> singleton", "my tag scan found entities from another building/test",
-  "discovery handler runs every frame", "consumer bound before the driver existed and nothing
-  fired", "EntityTagQuery re-delivers the full set", driver-ready gating, subordinate roster,
-  Acquire ticket / Promise_OnReady. For BUILDING games ON CkFoundation. Not for choosing an
-  entity archetype in general (ck-game-entity-composition-patterns), replication owner rules and
-  rep-notify ordering (ck-game-replication-patterns), or the per-feature file checklist
-  (ck-game-feature-recipe); for framework signal/query internals, see ckecs-architecture-contract.
+description: 'Use when designing a CkFoundation game driver or director that owns subordinates, scopes tag discovery, routes requests, and exposes readiness to consumers.'
 ---
 
 # Driver architecture — the Controller layer of a CkFoundation game

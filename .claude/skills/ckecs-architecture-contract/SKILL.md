@@ -1,6 +1,6 @@
 ---
 name: ckecs-architecture-contract
-description: Use when asking WHY CkFoundation's ECS is shaped this way, or which invariant a change must preserve — ParamsData vs ck::FFragment split, typesafe handle machinery and casting, deferred Request contract, signal binding policies (FireIfPayloadInFlight, stale payload, PostFire Unbind, signals "randomly disconnect"), friend-gated fragments, ContextOwner/CkProvider scoping, replicated fragment Apply/NotReady/OnReplicationComplete, in_place_delete, GC-untraced fragments. Not for add-a-fragment mechanics (ck-macros-and-codegen) or EnTT internals (ckecs-domain-reference).
+description: "Use when reasoning about why CkEcs is structured as it is or which invariants a change must preserve across handles, requests, signals, fragments, replication, and GC."
 ---
 
 # CkEcs architecture contract — why it is shaped this way

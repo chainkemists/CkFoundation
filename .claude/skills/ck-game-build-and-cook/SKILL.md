@@ -1,14 +1,6 @@
 ---
 name: ck-game-build-and-cook
-description: Use when building, cooking, staging, or packaging a CkFoundation game on Windows —
-  RunUAT BuildCookRun shapes, Development/Test/Shipping client builds; when a packaged build
-  won't boot behind a wall of AngelScript errors ("unknown super type", hundreds of AS compile
-  errors at boot), when the cook commandlet exits 3 with "Cannot run when angelscript has failed
-  to compile" on a fresh clone, when a packaged build serves stale assets or old behavior, when
-  test/gym content leaks into a Shipping build, or when a build dies with LNK1104. For BUILDING
-  games ON CkFoundation. Not for engine/env setup or build-environment breakage (ck-build-and-env),
-  packaged crash diagnosis (ck-debugging-playbook / ck-game-debugging-playbook), or day-1 project
-  wiring (ck-game-project-bootstrap); for modifying the framework itself, see ck-change-control.
+description: 'Use when building, cooking, staging, or packaging a CkFoundation game on Windows, including plugin script staging, fresh-workspace cooks, and stale outputs.'
 ---
 
 # ck-game-build-and-cook — the build → cook → stage → package pipeline for a CkFoundation game

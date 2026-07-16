@@ -1,13 +1,6 @@
 ---
 name: ck-game-replication-patterns
-description: Use when a CkFoundation game feature must work in multiplayer — "[REP_DEBUG]" log
-  flood, "Get_Replication" ensure on spawn, blank panels/values on MP clients that work on the
-  listen server, a client action that silently no-ops (authority-gated request dropped), an
-  entity that never appears on clients, choosing Replicates vs DoesNotReplicate for an entity
-  script, ActorRelay channel lifetime owners, rep-notify bind ordering, client→server routing
-  via cues, readiness gating on late-arriving net entities. For BUILDING games ON CkFoundation.
-  Not for general entity composition (ck-game-entity-composition-patterns) or replicated-fragment
-  framework internals; for modifying the framework itself, see ckecs-architecture-contract.
+description: 'Use when making CkFoundation gameplay multiplayer-safe: replication stance, ActorRelay ownership, rep-notify ordering, authority routing, or client readiness.'
 ---
 
 # Replication patterns for CkFoundation games

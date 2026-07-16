@@ -1,6 +1,6 @@
 ---
 name: ck-lifecycle-teardown-campaign
-description: Use when running the entity-teardown / signal-unbind lifecycle campaign — the CkInteraction "This processor doesn't get called, can cause issues if teardown is mid interaction!!!" TODOs, OnInteractionFinished never firing after Request_DestroyEntity mid-interaction, leaked interaction entities, stale FTag_TeamListener after UnbindFrom_OnTeamAssigned*, bind-vs-unbind coverage audits, *_EndPlay processor gaps. Not for general bug hunts (ck-debugging-playbook) or test-harness mechanics (ck-tests-authoring-and-running).
+description: "Use when executing Ck entity-teardown and signal-unbind work, especially mid-interaction destruction, leaked bindings, TeamListener cleanup, or EndPlay gaps; not for triage."
 ---
 
 # ck-lifecycle-teardown-campaign

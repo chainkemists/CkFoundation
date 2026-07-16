@@ -1,6 +1,6 @@
 ---
 name: ck-ship-dev
-description: Publish local dev work across a CK superproject + its plugin submodules — commit, fetch, rebase onto origin/dev, regate, push submodules, bump superproject pointers, push dev. Use when the user asks to "ship", "push dev", "bring dev up", or run the commit/fetch/rebase/push flow.
+description: "Use when publishing CK superproject and plugin work through commit, fetch, rebase, post-rebase gates, submodule pushes, pointer bumps, and dev delivery."
 ---
 
 # Ship dev — commit / fetch / rebase / regate / push / bring-dev-up / push-dev

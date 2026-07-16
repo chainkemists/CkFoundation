@@ -1,14 +1,6 @@
 ---
 name: ck-game-testing-discipline
-description: Use when deciding HOW MUCH and WHAT KIND of testing a game feature built on
-  CkFoundation needs — "does this feature need a test", "AutoTest or gym or Gauntlet",
-  "where do game tests live", "my test passes alone but fails in the full suite",
-  "test counted entities it didn't spawn", "warning failed my test", "packaged Shipping
-  build won't boot after adding tests", or before claiming "no regressions". For BUILDING
-  games ON CkFoundation. Not for per-layer authoring/running mechanics
-  (ck-tests-authoring-and-running + the CkTests spec chain), diagnosing a red test
-  (ck-game-debugging-playbook), or writing the feature itself (ck-game-feature-recipe);
-  for modifying the framework's own tests, see ck-change-control.
+description: 'Use when choosing coverage and test layers for CkFoundation gameplay, structuring AutoTests, preventing shared-world contamination, or defining proof of no regressions.'
 ---
 
 # ck-game-testing-discipline
