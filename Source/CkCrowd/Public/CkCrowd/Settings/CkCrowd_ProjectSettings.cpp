@@ -32,6 +32,21 @@ auto UCk_Utils_Crowd_Settings_UE::Get_PushApartMode() -> ECk_PushApartMode
     return Get()->Get_PushApartMode();
 }
 
+auto UCk_Utils_Crowd_Settings_UE::Get_NavmeshConstraintMode() -> ECk_CrowdNavmeshConstraintMode
+{
+    return Get()->Get_NavmeshConstraintMode();
+}
+
+auto UCk_Utils_Crowd_Settings_UE::Get_StationaryMarkupMode() -> ECk_CrowdStationaryMarkupMode
+{
+    return Get()->Get_StationaryMarkupMode();
+}
+
+auto UCk_Utils_Crowd_Settings_UE::Get_PathRefreshMode() -> ECk_CrowdPathRefreshMode
+{
+    return Get()->Get_PathRefreshMode();
+}
+
 auto UCk_Utils_Crowd_Settings_UE::Get_BlockDetectionMode() -> ECk_CrowdBlockDetectionMode
 {
     return Get()->Get_BlockDetectionMode();

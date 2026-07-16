@@ -5,6 +5,8 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Signal/CkSignal_Macros.h"
 
+#include "CkNavigation/NavAreaMarkup/CkNavAreaMarkup_Utils.h"
+
 #include <variant>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -64,6 +66,82 @@ namespace ck
         CK_PROPERTY_GET(_NetworkEpoch);
     };
 
+    // Per-frame displacement staging. The integrator delta (ApplyOffset) and the de-overlap shove
+    // (PushApart) both accumulate here instead of writing the Transform directly; the single
+    // consumer is FProcessor_CrowdAgent_ConstrainToNavmesh, which walks the accumulated
+    // displacement along the navmesh surface (dtCrowd's corridor movePosition — the stage the
+    // original port dropped) and enqueues ONE Transform offset. Nothing else may write the
+    // Transform of a crowd agent; a second writer would bypass the navmesh constraint.
+    struct CKCROWD_API FFragment_CrowdAgent_PendingDisplacement
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_CrowdAgent_PendingDisplacement);
+
+        friend class FProcessor_CrowdAgent_ApplyOffset;
+        friend class FProcessor_CrowdAgent_PushApart;
+        friend class FProcessor_CrowdAgent_ConstrainToNavmesh;
+
+    private:
+        FVector _Displacement = FVector::ZeroVector;
+
+    public:
+        CK_PROPERTY_GET(_Displacement);
+    };
+
+    // Stationary-agent nav markup: after an agent has held still for the configured delay, a
+    // cost-area disc (UCk_NavArea_CrowdAgent) is painted under it so pathfinding routes AROUND
+    // standing crowds instead of through them. The strong ptr owns the painter object's lifetime
+    // (UE GC does not trace fragment members); FProcessor_CrowdAgent_NavMarkup_EndPlay
+    // unregisters it on entity teardown.
+    struct CKCROWD_API FFragment_CrowdAgent_NavMarkup
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_CrowdAgent_NavMarkup);
+
+        friend class FProcessor_CrowdAgent_StationaryMarkup;
+        friend class FProcessor_CrowdAgent_NavMarkup_EndPlay;
+        friend class FProcessor_CrowdAgent_PathRefresh;
+
+    private:
+        float _StationarySeconds = 0.0f;
+        FVector _MarkupLocation = FVector::ZeroVector;
+        TStrongObjectPtr<UCk_NavAreaMarkup_UE> _Markup;
+
+        // Windowed-displacement stillness sampling. "Stationary" is PHYSICAL, not the Idle tag:
+        // a blocked/pressing WALKER plugs a corridor exactly like an idle agent, and mutual
+        // pressers never go Idle — they must become obstacles too or a congealed clump never
+        // dissolves. Windowed (not instantaneous) so a push-apart shove spike doesn't unpaint a
+        // standing queue.
+        FVector _StillnessSampleLoc = FVector::ZeroVector;
+        float _StillnessSampleAccumSec = 0.0f;
+
+        // PathRefresh trigger data: painted XY half-extent, a monotonic paint serial (compared
+        // against each walking agent's path serial — only a disc NEWER than the path triggers a
+        // refresh), and seconds since paint (dynamic navmesh tiles rebuild asynchronously; the
+        // disc must settle before a re-path would actually see it).
+        float _MarkupRadiusUu = 0.0f;
+        // Painted vertical half-extent — the confirm query below must reach the floor polys the
+        // box painted, and the disc centre rides at capsule height (same Z trap as the paint fix).
+        float _MarkupVerticalHalfExtentUu = 0.0f;
+        float _SecondsSincePaint = 0.0f;
+        uint64 _PaintSerial = 0;
+
+        // Set once the rebuilt navmesh actually REPORTS the cost area at the disc's location.
+        // Tile rebuild latency is unbounded under churn — a fixed settle timer alone let the
+        // one-shot re-path fire against the pre-rebuild mesh, return the same straight path,
+        // and burn the serial. Reset on every (re)paint.
+        bool _ConfirmedOnMesh = false;
+
+    public:
+        CK_PROPERTY_GET(_Markup);
+        CK_PROPERTY_GET(_MarkupLocation);
+        CK_PROPERTY_GET(_MarkupRadiusUu);
+        CK_PROPERTY_GET(_MarkupVerticalHalfExtentUu);
+        CK_PROPERTY_GET(_SecondsSincePaint);
+        CK_PROPERTY_GET(_PaintSerial);
+        CK_PROPERTY_GET(_ConfirmedOnMesh);
+    };
+
     // Marks an agent as needing one-time setup (Gate 0: stamped by Add(), consumed by FProcessor_CrowdAgent_Setup
     // on the next tick). Gate 3+ uses the consumption to spawn the agent's probe child entity.
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_NeedsSetup);
@@ -103,6 +181,7 @@ namespace ck
         friend class FProcessor_CrowdAgent_BlockDetect;
         friend class FProcessor_CrowdAgent_BlockedRecheck;
         friend class FProcessor_CrowdAgent_HandleRequests;
+        friend class FProcessor_CrowdAgent_PathRefresh;
         friend class ::UCk_Utils_CrowdAgent_UE;
 
     public:
