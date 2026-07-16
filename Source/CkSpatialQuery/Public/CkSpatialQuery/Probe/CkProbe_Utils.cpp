@@ -3,6 +3,7 @@
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
+#include "CkEcsExt/PhysicsOwnership/CkPhysicsOwnership_Utils.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkShapes/CkShapes_Utils.h"
@@ -25,6 +26,9 @@ auto
 
     CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_ProbeName()),
         TEXT("Cannot Add a Probe to Entity [{}] because it has INVALID Name"), InHandle)
+    { return {}; }
+
+    if (NOT ck::physics_ownership::TryClaim_Jolt(InHandle))
     { return {}; }
 
     InHandle.Add<ck::FFragment_Probe_Params>(InParams);

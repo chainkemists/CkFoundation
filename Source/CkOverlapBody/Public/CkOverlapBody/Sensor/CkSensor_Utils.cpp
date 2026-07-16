@@ -3,6 +3,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
+#include "CkEcsExt/PhysicsOwnership/CkPhysicsOwnership_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkOverlapBody/CkOverlapBody_Log.h"
 #include "CkOverlapBody/CkOverlapBody_Stats.h"
@@ -25,6 +26,9 @@ auto
 {
     CK_ENSURE_IF_NOT(UCk_Utils_OwningActor_UE::Has(InHandle),
         TEXT("Cannot Add a Sensor to Entity [{}] because it does NOT have an Owning Actor"), InHandle)
+    { return {}; }
+
+    if (NOT ck::physics_ownership::TryClaim_Chaos(InHandle))
     { return {}; }
 
     const auto& SensorName = InParams.Get_SensorName();
