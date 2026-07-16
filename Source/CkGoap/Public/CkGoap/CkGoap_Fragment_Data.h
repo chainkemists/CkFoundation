@@ -8,13 +8,11 @@
 
 #include "CkGoap_Fragment_Data.generated.h"
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 class UCk_GoapAction_EntityScript;
 
-// ====================================================================================================================
-// PLAN STATUS
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
 enum class ECk_GoapPlanStatus : uint8
@@ -28,9 +26,7 @@ enum class ECk_GoapPlanStatus : uint8
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_GoapPlanStatus);
 
-// ====================================================================================================================
-// REPLAN POLICY
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
 enum class ECk_Goap_ReplanPolicy : uint8
@@ -50,12 +46,11 @@ enum class ECk_Goap_ReplanPolicy : uint8
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Goap_ReplanPolicy);
 
-// ====================================================================================================================
-// AUTHORED CONDITION — BlueprintType-friendly (tag, bool) pair for declaring
+// --------------------------------------------------------------------------------------------------------------------
+// BlueprintType-friendly (tag, bool) pair for declaring
 // goal / initial-state entries from editor or AngelScript. The Setup processor
 // resolves these into the internal FCk_GoapKey-indexed form against the
 // WorldState registry.
-// ====================================================================================================================
 
 USTRUCT(BlueprintType)
 struct CKGOAP_API FCk_GoapWS_Condition_Authored
@@ -82,9 +77,8 @@ public:
 	CK_DEFINE_CONSTRUCTORS(FCk_GoapWS_Condition_Authored, _Key, _Value);
 };
 
-// ====================================================================================================================
-// SIGNAL PAYLOADS — reused by Action-scoped signals declared in Action/CkGoap_Action_Fragment_Data.h
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Reused by Action-scoped signals declared in Action/CkGoap_Action_Fragment_Data.h
 
 USTRUCT(BlueprintType)
 struct CKGOAP_API FCk_Goap_Payload_OnPlanComplete
@@ -120,9 +114,7 @@ public:
 	CK_GENERATED_BODY(FCk_Goap_Payload_OnPlanFailed);
 };
 
-// ====================================================================================================================
-// DIAGNOSTICS
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 // A (tag, required-value) pair — describes a goal condition or an unreachable
 // requirement in diagnostic output.

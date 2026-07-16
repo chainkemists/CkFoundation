@@ -7,9 +7,8 @@
 #include "CkCrowd_ProjectSettings.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Algorithm-mode enums for the Phase 1 + Phase 2 hybrid avoidance system. Every mode is an enum
+// Algorithm-mode enums for the hybrid (force + sampling) avoidance system. Every mode is an enum
 // (never a bool) so the per-game-mode customisation story stays consistent and extensible.
-// See Gate_03_Separation_Addendum.md for design rationale and dtCrowd / Ant citations.
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
@@ -83,13 +82,13 @@ public:
     CK_GENERATED_BODY(UCk_Crowd_ProjectSettings_UE);
 
 private:
-    // ---- AccelClamp (Phase 1.2) ----
+    // ---- AccelClamp ----
     UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|AccelClamp",
         meta = (AllowPrivateAccess = true,
-            ToolTip = "Velocity-delta clamp on FFragment_CrowdAgent_DesiredVelocity output. Disabling reverts to the Gate-2 scalar clamp; for A/B testing only — production should leave Enabled."))
+            ToolTip = "Velocity-delta clamp on FFragment_CrowdAgent_DesiredVelocity output. Disabling reverts to the scalar clamp; for A/B testing only — production should leave Enabled."))
     ECk_AccelClampMode _AccelClampMode = ECk_AccelClampMode::Enabled;
 
-    // ---- Sampling Avoidance (Phase 2) ----
+    // ---- Sampling Avoidance ----
     UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|Sampling",
         meta = (AllowPrivateAccess = true,
             ToolTip = "What gates the sampling override running for an agent. Tag-based modes consult TAG_CrowdAvoidance_AlwaysSample / NeverSample on the agent or its lifetime owner."))
@@ -221,7 +220,7 @@ private:
             ToolTip = "Seconds after a disc is painted before PathRefresh even checks it against the navmesh. A cheap pre-filter only — actual eligibility is ground truth (the rebuilt mesh must report the cost area at the disc's location), so this just keeps the poly query off discs that cannot possibly have rebaked yet."))
     float _PathRefreshMarkupSettleSeconds = 0.5f;
 
-    // ---- Push-Apart (Phase 2) ----
+    // ---- Push-Apart ----
     UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|PushApart",
         meta = (AllowPrivateAccess = true,
             ToolTip = "Post-integration physical resolution of overlapping agents. Standard = 4 iterations per dtCrowd. Disabled allows brief overlap during sampling latency."))

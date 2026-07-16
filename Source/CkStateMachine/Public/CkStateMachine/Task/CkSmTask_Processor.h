@@ -15,9 +15,8 @@ namespace ck
     class FProcessor_SmCondition_Polled;
     class FProcessor_SmState_Exit;
 
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
     // TASK TICK — Tick all tick-mode tasks
-    // ================================================================================================================
 
     class CKSTATEMACHINE_API FProcessor_SmTask_Tick : public ck_exp::TProcessor<
         FProcessor_SmTask_Tick,
@@ -45,9 +44,8 @@ namespace ck
             const FFragment_EntityScript_Current& InScriptFragment) -> void;
     };
 
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
     // TASK FIRE FINISHED SIGNAL — Broadcast OnSmTaskFinished for tasks that transitioned to a terminal result
-    // ================================================================================================================
 
     class CKSTATEMACHINE_API FProcessor_SmTask_FireFinishedSignal : public ck_exp::TProcessor<
         FProcessor_SmTask_FireFinishedSignal,
@@ -72,9 +70,8 @@ namespace ck
             const FFragment_SmTask_Current& InCurrent) -> void;
     };
 
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
     // TASK EXIT — Call ExitTask on each task tagged with FTag_SmTask_PendingExit
-    // ================================================================================================================
 
     class CKSTATEMACHINE_API FProcessor_SmTask_Exit : public ck_exp::TProcessor<
         FProcessor_SmTask_Exit,

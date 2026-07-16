@@ -5,8 +5,6 @@
 #include "CkLoadingProcess_Interface.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// ICk_LoadingProcess
-// --------------------------------------------------------------------------------------------------------------------
 
 /**
  * Interface for anything that might cause loading to happen which requires the loading screen to stay up.

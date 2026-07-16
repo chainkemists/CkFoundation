@@ -13,9 +13,6 @@ class IPropertyHandle;
 class SWidget;
 class FString;
 
-/**
- * Customization for FCk_Fragment_ByteAttribute_ParamsData
- */
 class FCk_Fragment_ByteAttribute_ParamsDataCustomization : public IPropertyTypeCustomization
 {
 public:

@@ -13,9 +13,7 @@
 
 #include "CkGoap_Planner_Fragment_Data.generated.h"
 
-// ====================================================================================================================
-// HANDLE
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKGOAP_API FCk_Handle_Goap_Planner : public FCk_Handle_TypeSafe
@@ -26,9 +24,7 @@ struct CKGOAP_API FCk_Handle_Goap_Planner : public FCk_Handle_TypeSafe
 
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Goap_Planner);
 
-// ====================================================================================================================
-// ACTIONSET PARAMS
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
 struct CKGOAP_API FCk_Fragment_Goap_PlannerParamsData
@@ -50,7 +46,7 @@ private:
 		meta = (AllowPrivateAccess = true))
 	ECk_EnableDisable _InitialToggle = ECk_EnableDisable::Enable;
 
-	// U11.1: the goal this Planner plans toward. Independent of any Action role
+	// the goal this Planner plans toward. Independent of any Action role
 	// effects this entity may carry. May be empty at construction and set later
 	// via Request_SetGoal. Stamped onto the Planner's FFragment_Goap_Planner_Goal
 	// at construction (and propagated to the implicit-root Action's planner-role
@@ -59,45 +55,40 @@ private:
 		meta = (AllowPrivateAccess = true))
 	TArray<FCk_GoapWS_Condition_Authored> _Goal;
 
-	// PR-A: the WorldState this Planner reads. Required for top-level Planners
+	// The WorldState this Planner reads. Required for top-level Planners
 	// (where the Planner entity itself doesn't carry an Action role to inherit
 	// from). Optional for promoted mid-tier Planners — if unset, the promoted
-	// Planner inherits its parent's resolved WS at activation time. Replaces
-	// the WS argument the old SetRootAction verb took.
+	// Planner inherits its parent's resolved WS at activation time.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,
 		meta = (AllowPrivateAccess = true))
 	FCk_Handle_Goap_WorldState _WorldStateSource;
 
 	// Per-tick A* time slice (microseconds). 0 = unbounded (finish in one tick).
-	// PR-B.1b: lifted from FCk_Fragment_Goap_ActionParamsData (spec §3.2 has always
-	// shown this as a Planner-level knob).
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,
 		meta = (AllowPrivateAccess = true))
 	int64 _SearchBudgetMicroseconds = 50000;
 
 	// Early-out threshold on best A* frontier FScore. If > 0, planner returns
 	// CostThresholdReached rather than committing to a plan exceeding it.
-	// PR-B.1b: lifted from FCk_Fragment_Goap_ActionParamsData.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,
 		meta = (AllowPrivateAccess = true))
 	float _CostThreshold = 0.0f;
 
-	// Replan trigger policy — when AutoReplan fires a Plan request.
-	// PR-B.1b Stage 5: lifted from FCk_Fragment_Goap_ActionParamsData; goal
-	// independence (spec §3.2) means policy is a Planner-tier concern.
+	// Replan trigger policy — when AutoReplan fires a Plan request. Policy is a
+	// Planner-tier concern because each Planner's goal is independent.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,
 		meta = (AllowPrivateAccess = true))
 	ECk_Goap_ReplanPolicy _ReplanPolicy = ECk_Goap_ReplanPolicy::OnWorldStateDirty;
 
 	// Throttle window for AutoReplan dirty triggers. Coalesces multiple dirty
-	// events within the window into one replan. PR-B.1b Stage 5: lifted.
+	// events within the window into one replan.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,
 		meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
 	float _MinReplanIntervalSeconds = 0.0f;
 
 	// If true, the Planner fires an initial Plan request after activation
 	// (top-level Planners: immediately; promoted mid-tier Planners: when their
-	// parent picks them as Plan[0]). PR-B.1b Stage 5: lifted from ActionParams.
+	// parent picks them as Plan[0]).
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,
 		meta = (AllowPrivateAccess = true))
 	bool _PlanOnStart = true;
@@ -133,9 +124,8 @@ public:
 	CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Goap_PlannerParamsData, _PlannerTag);
 };
 
-// ====================================================================================================================
-// SIGNAL PAYLOADS — ActionSet-scoped
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// ActionSet-scoped
 
 USTRUCT(BlueprintType)
 struct CKGOAP_API FCk_Goap_Payload_OnActiveChainChanged
@@ -159,18 +149,15 @@ public:
 	CK_DEFINE_CONSTRUCTORS(FCk_Goap_Payload_OnActiveChainChanged, _OldChain);
 };
 
-// ====================================================================================================================
-// DELEGATES — ActionSet-scoped
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// ActionSet-scoped
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
 	FCk_Delegate_Goap_OnActiveChainChanged,
 	FCk_Handle_Goap_Planner, InPlanner,
 	FCk_Goap_Payload_OnActiveChainChanged, InPayload);
 
-// PR-B.1b Stage 0 — per-Planner signal delegates (spec §3.5). Source type is
-// FCk_Handle_Goap_Planner. Moved from CkGoap_Action_Fragment_Data.h and
-// renamed (OnActionPlan* → OnPlan*) to align with the new signal class names.
+// Per-Planner signal delegates. Source type is FCk_Handle_Goap_Planner.
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
 	FCk_Delegate_Goap_OnPlanComplete,

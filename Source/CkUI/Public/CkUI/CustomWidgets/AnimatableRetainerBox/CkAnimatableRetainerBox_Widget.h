@@ -18,7 +18,7 @@ public:
     CK_GENERATED_BODY(UCk_AnimatableRetainerBox);
 
 private:
-    UPROPERTY(EditAnywhere, Category = "Appearance", meta = (AllowPrivateAccess))
+    UPROPERTY(EditAnywhere, Category = "Appearance", meta = (AllowPrivateAccess = true))
     FSlateBrush Brush;
 
     // Runtime-available designer-preview toggle. NOTE: distinct name from the parent's
@@ -27,7 +27,7 @@ private:
     // name "ShowEffectsInDesigner" collided with the parent's under AngelScript binding (the
     // binder strips the parent's `b`, so both produced Get/SetShowEffectsInDesigner ->
     // asALREADY_REGISTERED, failing the cook). A distinct name keeps both bindings unique.
-    UPROPERTY(EditAnywhere, Category = "Effect", meta = (AllowPrivateAccess))
+    UPROPERTY(EditAnywhere, Category = "Effect", meta = (AllowPrivateAccess = true))
     bool bShowEffectsPreview = true;
 
 protected:

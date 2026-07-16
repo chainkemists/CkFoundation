@@ -1093,32 +1093,6 @@ auto
     return InBox.Get_AllCorners();
 }
 
-// auto
-//     UCk_Utils_OrientedBox2D_UE::
-//     Request_EnumerateCorners(
-//         const FCk_OrientedBox2D& InBox,
-//         const FCk_Delegate_Vector2D& InCornerDelegate)
-//     -> void
-// {
-//     InBox.Get_InternalBox().EnumerateCorners([&](const FVector2D& Corner)
-//     {
-//         std::ignore = InCornerDelegate.ExecuteIfBound(Corner);
-//     });
-// }
-//
-// auto
-//     UCk_Utils_OrientedBox2D_UE::
-//     Get_TestCorners(
-//         const FCk_OrientedBox2D& InBox,
-//         const FCk_Delegate_Vector2D_Predicate& InCornerPredicate)
-//     -> bool
-// {
-//     return InBox.Get_InternalBox().TestCorners([&](const FVector2D& Corner)
-//     {
-//         return InCornerPredicate.Execute(Corner);
-//     });
-// }
-
 auto
     UCk_Utils_OrientedBox2D_UE::
     Get_ToLocalSpace(

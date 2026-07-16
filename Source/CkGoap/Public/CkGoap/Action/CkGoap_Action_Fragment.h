@@ -7,27 +7,26 @@
 
 #include "CkEcs/Signal/CkSignal_Macros.h"
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 // Forward decls in global scope so friend lookups bind correctly.
 class UCk_Utils_Goap_Action_UE;
 class UCk_Utils_Goap_Planner_UE;
 class UCk_GoapAction_EntityScript;
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
 	class FProcessor_Goap_Action_Setup;
 	class FProcessor_Goap_Planner_UpdateActivation;
-	// PR-B.1b Stage 3: Planner-side A*-pipeline processors.
+	// Planner-side A*-pipeline processors.
 	class FProcessor_Goap_Planner_AutoReplan;
 	class FProcessor_Goap_Planner_HandleRequests;
 	class FProcessor_Goap_Planner_HandleResult;
 
-// ====================================================================================================================
-// TAGS — action-scoped lifecycle
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Action-scoped lifecycle
 
 	CK_DEFINE_ECS_TAG(FTag_Goap_Action_RequiresSetup);
 
@@ -36,20 +35,18 @@ namespace ck
 	// introspection only — the planner still reads _Cost; this does not gate planning.
 	CK_DEFINE_ECS_TAG(FTag_Goap_Action_HasCostProvider);
 
-// ====================================================================================================================
-// PARAMS — alias to BlueprintType data
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Alias to BlueprintType data
 
 	using FFragment_Goap_Action_Params = FCk_Fragment_Goap_ActionParamsData;
 
-// ====================================================================================================================
-// CURRENT — residual Action-role state. Post-U11.0 split, _Plan / _PlanCost /
+// --------------------------------------------------------------------------------------------------------------------
+// Residual Action-role state. _Plan / _PlanCost /
 // _PlanStatus / _PlanAttemptCount moved to FFragment_Goap_Planner_PlanState;
 // _Goal / _InvalidGoal moved to FFragment_Goap_Planner_Goal;
 // _WorldStateSource_Resolved moved to FFragment_Goap_Planner_WorldStateSource
 // (as its new _Resolved field). What remains: the "active parent" record —
 // the class of the parent Action that injected this Action's current goal.
-// ====================================================================================================================
 
 	struct CKGOAP_API FFragment_Goap_Action_Current
 	{
@@ -69,12 +66,11 @@ namespace ck
 		CK_PROPERTY_GET(_ActiveParentAction);
 	};
 
-// ====================================================================================================================
-// DEFINITION — This Action's own def, CDO-extracted at Setup time.
+// --------------------------------------------------------------------------------------------------------------------
+// This Action's own def, CDO-extracted at Setup time.
 // In the unified model, every Action entity carries its OWN def (one def per
 // Action). The parent's planner consumes its children's defs as candidate
 // operators.
-// ====================================================================================================================
 
 	struct CKGOAP_API FFragment_Goap_Action_Definition
 	{
@@ -84,7 +80,7 @@ namespace ck
 		friend class ::UCk_Utils_Goap_Action_UE;
 		friend class FProcessor_Goap_Action_Setup;
 		friend class FProcessor_Goap_Planner_UpdateActivation;
-		// PR-B.1b Stage 3: SetActionCost mutates child Action's _CachedActionDef
+		// SetActionCost mutates child Action's _CachedActionDef
 		// from the Planner-on-Planner HandleRequests processor.
 		friend class FProcessor_Goap_Planner_HandleRequests;
 
@@ -116,10 +112,9 @@ namespace ck
 		auto AsActionDef() const -> const ck::goap::FActionDef& { return _CachedActionDef; }
 	};
 
-// ====================================================================================================================
-// TREE — Parent/child relationships between Action entities. Populated by
-// AddAction (PR-A unified construction verb) and ChainUpdate time.
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Parent/child relationships between Action entities. Populated by
+// AddAction and at ChainUpdate time.
 
 	struct CKGOAP_API FFragment_Goap_Action_Tree
 	{
@@ -141,6 +136,6 @@ namespace ck
 		CK_PROPERTY_GET(_ChildActions);
 	};
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 } // namespace ck

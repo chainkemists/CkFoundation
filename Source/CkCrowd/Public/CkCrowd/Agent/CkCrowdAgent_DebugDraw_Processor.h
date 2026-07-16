@@ -12,7 +12,7 @@
 
 namespace ck
 {
-    // Gate 3 — gym-side visual diagnostics. Draws three things per agent every frame, gated by
+    // Gym-side visual diagnostics. Draws three things per agent every frame, gated by
     // the `ck.Crowd.Debug` CVar:
     //   - Yellow circle on the ground at _SeparationRadius (the falloff cutoff)
     //   - Orange arrow from agent center along the separation force direction, scaled by magnitude

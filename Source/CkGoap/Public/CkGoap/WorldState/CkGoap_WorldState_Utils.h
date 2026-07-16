@@ -9,7 +9,7 @@
 
 #include "CkGoap_WorldState_Utils.generated.h"
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Goap_WorldState"))
 class CKGOAP_API UCk_Utils_Goap_WorldState_UE : public UBlueprintFunctionLibrary
@@ -21,9 +21,7 @@ public:
 	CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Goap_WorldState);
 
 public:
-	// ================================================================================================================
-	// CONSTRUCTION
-	// ================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 	//
 	// Add — stamps the GOAP WorldState fragments directly on InOwner. The owner
 	//       IS the WorldState; cast it with the typesafe accessor when handing
@@ -56,9 +54,7 @@ public:
 		FGameplayTag InName,
 		const FCk_Fragment_Goap_WorldState_ParamsData& InParams);
 
-	// ================================================================================================================
-	// VALUES
-	// ================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 	//
 	// Keys are auto-registered on first Set. Get returns false for both
 	// "key registered, current value false" and "key unregistered" — use
@@ -92,9 +88,7 @@ public:
 		UPARAM(ref) FCk_Handle_Goap_WorldState& InWorldState,
 		FGameplayTag InKey);
 
-	// ================================================================================================================
-	// OVERRIDE STACK
-	// ================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 	//
 	// Named override layers shadow the base store on read; writes via Set_Value
 	// always go to the base. Push / pop / clear fire FTag_Goap_Dirty_WorldState
@@ -176,9 +170,7 @@ public:
 	static int32
 	Get_LayerKeyCount(const FCk_Handle_Goap_WorldState& InWorldState, FName InLayerName);
 
-	// ================================================================================================================
-	// SUBSCRIBERS
-	// ================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 	//
 	// Registering an entity as a subscriber on a WorldState causes that entity
 	// to be tagged with FTag_Goap_Dirty_WorldState whenever a Set request on
@@ -204,9 +196,7 @@ public:
 		UPARAM(ref) FCk_Handle_Goap_WorldState& InWorldState,
 		UPARAM(ref) FCk_Handle& InSubscriber);
 
-	// ================================================================================================================
-	// SIGNAL BINDING
-	// ================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|WorldState",
 		DisplayName = "[Ck][GOAP|WS] Bind To OnValueChanged")
@@ -224,9 +214,7 @@ public:
 		UPARAM(ref) FCk_Handle_Goap_WorldState& InWorldState,
 		const FCk_Delegate_Goap_WorldState_OnValueChanged& InDelegate);
 
-	// ================================================================================================================
-	// QUERY
-	// ================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 	UFUNCTION(BlueprintPure, Category = "Ck|GOAP|WorldState",
 		DisplayName = "[Ck][GOAP|WS] Has Feature")
@@ -245,9 +233,7 @@ public:
 	static FCk_Handle_Goap_WorldState
 	Find_ByName(const FCk_Handle& InHandle, FGameplayTag InName);
 
-	// ================================================================================================================
-	// CAST
-	// ================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 private:
 	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|WorldState",
@@ -284,4 +270,4 @@ private:
 	DoTagSubscribersDirty(FCk_Handle_Goap_WorldState& InWorldState) -> void;
 };
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------

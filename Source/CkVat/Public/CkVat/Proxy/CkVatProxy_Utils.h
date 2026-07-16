@@ -28,8 +28,7 @@ public:
 
 public:
     // The collection must be loaded AND baked (soft references: async-load first, mirror
-    // CkIskmRenderer's contract). The rendering hookup lands in Gate 3 — until then a Vat
-    // entity carries playback state without a visual.
+    // CkIskmRenderer's contract).
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][VatProxy] Add Feature")
@@ -69,7 +68,7 @@ private:
         Category = "Ck|Utils|VatProxy",
         meta = (CompactNodeTitle = "INVALID_VatProxyHandle", Keywords = "make"))
     static FCk_Handle_VatProxy
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintCallable,

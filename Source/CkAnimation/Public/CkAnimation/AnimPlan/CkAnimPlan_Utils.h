@@ -89,7 +89,7 @@ private:
         Category = "Ck|Utils|AnimPlan",
         meta = (CompactNodeTitle = "INVALID_AnimPlanHandle", Keywords = "make"))
     static FCk_Handle_AnimPlan
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintPure,

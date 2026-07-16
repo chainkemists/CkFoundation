@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkActorRelay);
 
 namespace ck::actorrelay
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkActorRelay);
+    CK_REGISTER_LOG_FUNCTIONS(CkActorRelay);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

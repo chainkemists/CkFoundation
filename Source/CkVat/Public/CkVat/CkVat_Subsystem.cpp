@@ -60,7 +60,7 @@ auto
 
     // Texture dims come from the SERIALIZED bake results, never GetSizeX/Y: those read platform
     // data and return 0 while a freshly-baked texture is still async-compiling — which seeded
-    // BoneCount/TotalRows = 0 and collapsed every lookup onto one texel (Ck_Vat_DebugVerifyBake [E]).
+    // BoneCount/TotalRows = 0 and collapsed every lookup onto one texel (Ck_Vat_DebugVerifyBake).
     CK_ENSURE_IF_NOT(InCollection->Get_BakedData().Get_TextureWidth() > 0 && InCollection->Get_BakedData().Get_TextureRows() > 0,
         TEXT("VatCollection [{}] has no serialized texture dimensions — rebake with the current baker"), InCollection)
     { return nullptr; }

@@ -223,11 +223,8 @@ namespace ck
                 EntityCollectionToReplicate);
         }
 
-        // Successful apply: remove the SyncReplication fragment so the (now MarkedDirtyBy-less)
-        // processor stops re-firing on this entity until the next rep delivery puts a new fragment
-        // on it. The previous `Remove<MarkedDirtyBy>` was equivalent since MarkedDirtyBy was an alias
-        // for FFragment_EntityCollection_SyncReplication; switched to the explicit type after
-        // MarkedDirtyBy was removed from the processor's template parameters.
+        // Successful apply: remove the SyncReplication fragment so this MarkedDirtyBy-less
+        // processor stops re-firing on the entity until the next rep delivery puts a new fragment on it.
         InHandle.Remove<FFragment_EntityCollection_SyncReplication>();
     }
 

@@ -52,7 +52,6 @@ namespace ck
         friend class UCk_Utils_GeometryCollection_UE;
 
     private:
-        // Add your properties here
         int32 _DummyProperty = 0;
     };
 

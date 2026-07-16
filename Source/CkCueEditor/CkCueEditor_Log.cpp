@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkCueEditor);
 
 namespace ck::cue_editor
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkCueEditor);
+    CK_REGISTER_LOG_FUNCTIONS(CkCueEditor);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -23,24 +23,24 @@ public:
     CK_GENERATED_BODY(FCk_ScreenFade_Params);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     float _FadeTime = 1.0f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FLinearColor _FromColor = FLinearColor::Transparent;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FLinearColor _ToColor = FLinearColor::Transparent;
 
     FCk_Delegate_OnScreenFadeFinished _OnFinished;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "On Finished", meta = (AllowPrivateAccess))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "On Finished", meta = (AllowPrivateAccess = true))
     FCk_Delegate_OnScreenFadeFinished_Dynamic _OnFinishedDynamic;
 
-    UPROPERTY(AdvancedDisplay, EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess))
+    UPROPERTY(AdvancedDisplay, EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     bool _FadeAudio = false;
 
-    UPROPERTY(AdvancedDisplay, EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess))
+    UPROPERTY(AdvancedDisplay, EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     bool _FadeWhenPaused = false;
 
 public:

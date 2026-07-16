@@ -291,7 +291,7 @@ private:
     // rows = total frame rows). SERIALIZED because the runtime must never derive them from
     // UTexture2D::GetSizeX/Y — those read PLATFORM data and return 0 while a freshly-baked
     // texture is still async-compiling, which seeded zero BoneCount/TotalRows into the shared
-    // MID and collapsed every bone lookup onto one texel (found via Ck_Vat_DebugVerifyBake [E]).
+    // MID and collapsed every bone lookup onto one texel (found via Ck_Vat_DebugVerifyBake).
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
     int32 _TextureWidth = 0;

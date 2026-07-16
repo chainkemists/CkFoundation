@@ -66,7 +66,7 @@ public:
     Get_ActorToSpawn() -> TSubclassOf<AActor>;
 
 private:
-    UPROPERTY(Transient, BlueprintReadOnly, meta=(AllowPrivateAccess))
+    UPROPERTY(Transient, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     TObjectPtr<AActor> _Actor;
 
 public:

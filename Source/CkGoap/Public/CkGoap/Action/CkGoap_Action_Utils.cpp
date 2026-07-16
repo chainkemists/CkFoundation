@@ -2,16 +2,15 @@
 
 #include "CkGoap/CkGoap_Log.h"
 #include "CkGoap/Planner/CkGoap_Planner_Fragment.h"
-#include "CkGoap/Planner/CkGoap_Planner_Utils.h"  // PR-B.1b Stage 3: resolve owning Planner
+#include "CkGoap/Planner/CkGoap_Planner_Utils.h"  // resolve owning Planner
 #include "CkGoap/Action/CkGoap_Action_Fragment.h"
 #include "CkAStar/CkAStar_Fragment.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Signal/CkSignal_Utils.inl.h"
 
-// ====================================================================================================================
-// LOCAL HELPERS — PR-B.1b Stage 3 owning-Planner resolution.
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Owning-Planner resolution helpers.
 
 namespace
 {
@@ -37,9 +36,7 @@ namespace
 	}
 }
 
-// ====================================================================================================================
-// QUERY
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
 	UCk_Utils_Goap_Action_UE::
@@ -61,7 +58,7 @@ auto
 {
 	if (NOT ck::IsValid(InAction)) { return ECk_GoapPlanStatus::Idle; }
 
-	// PR-B.1b Stage 3: PlanState lives on the owning Planner now. Resolve and
+	// PlanState lives on the owning Planner now. Resolve and
 	// read from there. The Action-side stamp (still present from dual-stamp)
 	// is no longer authoritative.
 	auto Owning = ResolveOwningPlanner(InAction);
@@ -117,11 +114,10 @@ auto
 	return Owning.Get<ck::FFragment_Goap_Planner_Goal>().Get_InvalidGoal();
 }
 
-// ====================================================================================================================
-// REQUESTS — PR-B.1b Stage 3: resolve the owning Planner and enqueue on its
-// request queue (FFragment_Goap_Planner_Requests, alias to the same underlying
-// type). The Planner-on-Planner HandleRequests drains the queue.
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Request verbs resolve the owning Planner and enqueue on its request queue
+// (FFragment_Goap_Planner_Requests, alias to the same underlying type). The
+// Planner-on-Planner HandleRequests drains the queue.
 
 auto
 	UCk_Utils_Goap_Action_UE::
@@ -224,7 +220,6 @@ auto
 	return InAction;
 }
 
-// ====================================================================================================================
-// SIGNAL BINDING — moved to UCk_Utils_Goap_Planner_UE in PR-B.1b Stage 0
-// (spec §3.5: per-Planner signals have FCk_Handle_Goap_Planner source).
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Signal binding moved to UCk_Utils_Goap_Planner_UE (per-Planner signals have
+// FCk_Handle_Goap_Planner source).

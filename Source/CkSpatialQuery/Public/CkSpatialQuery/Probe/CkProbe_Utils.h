@@ -79,7 +79,7 @@ private:
         Category = "Ck|Utils|Probe",
         meta = (CompactNodeTitle = "INVALID_ProbeHandle", Keywords = "make"))
     static FCk_Handle_Probe
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintPure,

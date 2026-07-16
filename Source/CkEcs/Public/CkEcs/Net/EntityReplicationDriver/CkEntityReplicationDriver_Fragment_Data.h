@@ -22,11 +22,11 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess=true))
+        meta = (AllowPrivateAccess = true))
     TSubclassOf<UCk_Entity_ConstructionScript_PDA> _ConstructionScript;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess=true))
+        meta = (AllowPrivateAccess = true))
     TObjectPtr<const UCk_Entity_ConstructionScript_PDA> _ConstructionScriptArchetype;
 
 public:

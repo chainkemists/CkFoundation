@@ -81,11 +81,8 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CrowdAgent_BlockedPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Reflected ECS params for a crowd agent. Gate 0 carries only structural fields
-// (Radius, Height, Tags). Gate 2+ adds MaxSpeed/MaxAcceleration/MaxTurnRate/etc.
-// Gate 3+ adds SeparationRadius/SeparationWeight/Flags/IgnoreFlags. Gate 4+ adds
-// the piercing/sleep/replan tunables. See PLAN.md for the staged-rollout list and
-// the module's Tunables Reference for the final defaults table.
+// Reflected ECS params for a crowd agent (radius, height, tags, locomotion, separation, etc.).
+// See the module's Tunables Reference for the defaults table.
 USTRUCT(BlueprintType)
 struct CKCROWD_API FCk_Fragment_CrowdAgent_ParamsData
 {
@@ -146,7 +143,7 @@ private:
 
     // Inertia coefficient on separation force. 0=instant changes (vibrate-prone), 1=fully sticky
     // (force never changes). Mirrors dtCrowd's weightCurVel concept (DetourObstacleAvoidance.cpp:472)
-    // applied as a force-blend factor — see Gate_03_Separation_Addendum.md §4.1.
+    // applied as a force-blend factor.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess=true, ClampMin="0.0", ClampMax="1.0"))
     float _SeparationInertia = 0.5f;
@@ -176,7 +173,7 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     ECk_CrowdAgent_BlockedPolicy _BlockedPolicy = ECk_CrowdAgent_BlockedPolicy::HoldAndRetry;
 
-    // Gate 4 will use these for piercing; declared here so the params struct's ABI stabilises.
+    // Collision-channel flags; declared here so the params struct's ABI stabilises.
     // Stored as int32 (UE UPROPERTY does not support uint32 except as bitfields). Default
     // 0xFFFFFFFF reinterprets to int32 = -1 = "every bit set" — i.e. the agent participates in
     // every collision channel until per-feature code narrows it.
@@ -304,9 +301,9 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Output of the steering processor: the velocity the agent WANTS this frame (path-follow + future
-// separation/piercing combined). Sub-task 2C will copy this into FFragment_Velocity_Current via a
-// velocity-bridge processor; until then it's purely advisory and observable via Get_DesiredVelocity.
+// Output of the steering processor: the velocity the agent WANTS this frame (path-follow +
+// separation combined). The velocity-bridge processor copies this into FFragment_Velocity_Current;
+// also observable via Get_DesiredVelocity.
 USTRUCT(BlueprintType)
 struct CKCROWD_API FCk_Fragment_CrowdAgent_DesiredVelocityData
 {
@@ -323,7 +320,7 @@ private:
     UPROPERTY()
     FVector _Velocity = FVector::ZeroVector;
 
-    // Phase 1.2 — last frame's _Velocity AFTER the AccelClamp processor ramped it. Read by
+    // Last frame's _Velocity AFTER the AccelClamp processor ramped it. Read by
     // AccelClamp on the next tick as the baseline for the velocity-delta clamp. Independent of
     // FFragment_Velocity_Current (which lives in CkPhysics and has been through min/max trimming).
     UPROPERTY()

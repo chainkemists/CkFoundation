@@ -108,7 +108,7 @@ private:
               Category = "Ck|Utils|Shapes",
               meta = (CompactNodeTitle = "INVALID_ShapeHandle", Keywords = "make"))
     static FCk_Handle_Shape
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -8,9 +8,7 @@
 
 class UCk_ActorRelay_Group_Subsystem_Base_UE;
 
-/*-----------------------------------------------------------------------------
-                       ACTOR RELAY SUBSYSTEM (REGISTRY)
-------------------------------------------------------------------------------*/
+// --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
 class CKACTORRELAY_API UCk_ActorRelay_Subsystem_UE : public UCk_Game_WorldSubsystem_Base_UE

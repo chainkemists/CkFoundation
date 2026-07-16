@@ -25,8 +25,6 @@ public:
 public:
     // Add the crowd-agent feature to InOwner. Creates a new child entity carrying the
     // CrowdAgent fragments + FTag_CrowdAgent_NeedsSetup; returns the typesafe handle.
-    // Gate 0: structural setup only. Gate 2+ adds path / steering / velocity-bridge fragments
-    // through the same Add() call.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CrowdAgent",
               DisplayName="[Ck][CrowdAgent] Add Feature")
@@ -42,9 +40,8 @@ public:
     Has(
         const FCk_Handle& InHandle);
 
-    // Read the steering processor's per-frame output. Sub-task 2C will copy this into
-    // FFragment_Velocity_Current via the velocity-bridge processor; until then this getter is the
-    // primary way for tests/diagnostics to observe what the steering layer is producing.
+    // Read the steering processor's per-frame output — the primary way for tests/diagnostics to
+    // observe what the steering layer is producing.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|CrowdAgent",
               DisplayName="[Ck][CrowdAgent] Get Desired Velocity")
@@ -255,7 +252,7 @@ private:
         Category = "Ck|Utils|CrowdAgent",
         meta = (CompactNodeTitle = "INVALID_CrowdAgentHandle", Keywords = "make"))
     static FCk_Handle_CrowdAgent
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 };
 
 // --------------------------------------------------------------------------------------------------------------------

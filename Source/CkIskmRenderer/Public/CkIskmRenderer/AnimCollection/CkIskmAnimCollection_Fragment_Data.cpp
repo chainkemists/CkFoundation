@@ -36,12 +36,11 @@ auto
     });
 }
 
-// ====================================================================================================================
-//  Plan-2 CPU bone-matrix bake. Sampling/compaction/layout/bounds live in the shared ck::anim_bake core
-//  (CkAnimation/AnimBake — extracted from this function's original Skelot port, also consumed by CkVat);
-//  this function keeps only the Iskm-specific OUTPUT ENCODING: transposed 3x4 bone matrices in a flat
-//  Buffer<float4>-ready array. CPU-only, no RHI.
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Plan-2 CPU bone-matrix bake. Sampling/compaction/layout/bounds live in the shared ck::anim_bake core
+// (CkAnimation/AnimBake — extracted from this function's original Skelot port, also consumed by CkVat);
+// this function keeps only the Iskm-specific OUTPUT ENCODING: transposed 3x4 bone matrices in a flat
+// Buffer<float4>-ready array. CPU-only, no RHI.
 auto
     UCk_IskmAnimCollection_Data::
     Get_EffectiveSkeleton() const
@@ -107,11 +106,11 @@ auto
     const int32 RenderBoneCount = Baked->RenderBoneCount;
     Baked->Matrices.SetNumUninitialized(RenderBoneCount * Baked->TotalFrameCount);
 
-    // Per-frame culling bounds (Phase 4). MVP: the mesh's static bound, identical for every frame.
+    // Per-frame culling bounds. MVP: the mesh's static bound, identical for every frame.
     const FBox3f MeshBound = static_cast<FBox3f>(_DefaultMesh->GetBounds().GetBox());
     Baked->FrameBounds.Init(MeshBound, Baked->FrameCountSequences);
 
-    // inc-4: resolve the configured socket list against the mesh/skeleton. Per-frame fill happens
+    // resolve the configured socket list against the mesh/skeleton. Per-frame fill happens
     // inside the sampling callback below. Misses are content errors — loud, then skipped (the
     // design fallback for a missing table entry is "far cosmetics hidden", never a crash).
     struct FSocketResolve { int32 SocketSlot = INDEX_NONE; int32 BoneIndex = INDEX_NONE; FTransform LocalOffset; };
@@ -209,9 +208,8 @@ auto
     return ck::IsValid(_BakedPose.Get(), ck::IsValid_Policy_NullptrOnly{}) && _BakedPose->IsBaked;
 }
 
-// ====================================================================================================================
-//  Plan-2 GPU render resources
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Plan-2 GPU render resources
 auto
     UCk_IskmAnimCollection_Data::
     EnsureRenderResources()

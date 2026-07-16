@@ -74,12 +74,12 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FTransform _SpawnTransform = FTransform::Identity;
 
-    // A3: drives the FTag_IskmProxy_Movable tag at Setup. Static proxies skip
+    // drives the FTag_IskmProxy_Movable tag at Setup. Static proxies skip
     // FProcessor_IskmProxy_UpdateTransform every frame.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     ECk_EnableDisable _IsMovable = ECk_EnableDisable::Enable;
 
-    // B2: per-instance transform offsets relative to the entity transform. _LocalLocationOffset is
+    // per-instance transform offsets relative to the entity transform. _LocalLocationOffset is
     // HONORED in Plan-1 (composed into the SKMC world transform each frame — see Setup + UpdateTransform);
     // _LocalRotationOffset and _ScaleMultiplier remain reserved for the Plan-2 cluster proxy.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
@@ -91,7 +91,7 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FVector _ScaleMultiplier = FVector::OneVector;
 
-    // B3: seed values applied to the per-instance custom data at Setup time. Each entry
+    // seed values applied to the per-instance custom data at Setup time. Each entry
     // sets one slot; entries past the renderer's _NumCustomDataFloat are ignored.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true,
@@ -133,7 +133,7 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     float _PlayRate = 1.0f;
 
-    // B1: cross-fade transition fields. Plan-1 IGNORES them — `USkeletalMeshComponent::
+    // cross-fade transition fields. Plan-1 IGNORES them — `USkeletalMeshComponent::
     // PlayAnimation` uses `UAnimSingleNodeInstance` with no transition support. Plan-2's
     // GPU pose buffer generates transitions on demand and reads these. Reserved here so
     // callers don't rewrite every Request_PlayAnimation site when Plan-2 lands.
@@ -143,7 +143,7 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     EAlphaBlendOption _BlendOption = EAlphaBlendOption::Linear;
 
-    // B1: HONORED in Plan-1. When true, if the same UAnimSequenceBase is already the
+    // HONORED in Plan-1. When true, if the same UAnimSequenceBase is already the
     // active _CurrentSequence, the request is a no-op (avoids restarting from frame 0).
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     bool _Unique = false;
@@ -549,8 +549,7 @@ public:
 
 // ---- signals + delegates ----
 //
-// The signal macro expects the dynamic delegate to already be declared via DECLARE_DYNAMIC_DELEGATE_* — declare each delegate inline before its signal macro.
-// expects the dynamic delegate to ALREADY be declared via DECLARE_DYNAMIC_DELEGATE_*
+// The signal macro expects the dynamic delegate to ALREADY be declared via DECLARE_DYNAMIC_DELEGATE_*
 // — the macro doesn't auto-generate it from the name argument. Declare each delegate
 // inline before the corresponding signal macro.
 //

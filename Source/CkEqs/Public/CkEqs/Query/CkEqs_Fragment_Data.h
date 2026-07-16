@@ -21,7 +21,7 @@
 // fragments live in CkEqs_Fragment.h. Algorithm helpers in CkEqs_Algorithm.h.
 //
 // v1.1 ships: OnCircle generator, VolumeCheck + Random tests, _ProjectOntoNav generator flag.
-// PathCost and Reachability (async fan-out) remain deferred — see the plan's Pass 5 banner.
+// PathCost and Reachability (async fan-out) remain deferred.
 // --------------------------------------------------------------------------------------------------------------------
 
 struct FCk_Eqs_Algorithm;
@@ -92,8 +92,8 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Eqs_TestPurpose);
 UENUM(BlueprintType)
 enum class ECk_Eqs_ScoringEquation : uint8
 {
-    // F4 verified against UE EnvQueryTest.cpp:119-151. UE's "Sine" does NOT exist (review-level
-    // invention). Final set matches UE parity:
+    // Verified against UE EnvQueryTest.cpp:119-151. UE's "Sine" does NOT exist. Final set
+    // matches UE parity:
     Linear,         // y = x
     Square,         // y = x * x  (emphasises high values)
     SquareRoot,     // y = sqrt(x)  (diminishing-returns scoring)
@@ -102,7 +102,7 @@ enum class ECk_Eqs_ScoringEquation : uint8
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Eqs_ScoringEquation);
 
-// F5: ECk_Eqs_ClampType drives WHERE the clamp threshold comes from.
+// ECk_Eqs_ClampType drives WHERE the clamp threshold comes from.
 UENUM(BlueprintType)
 enum class ECk_Eqs_ClampType : uint8
 {
@@ -112,7 +112,7 @@ enum class ECk_Eqs_ClampType : uint8
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Eqs_ClampType);
 
-// F5: ECk_Eqs_NormalizationType drives the normalization baseline.
+// ECk_Eqs_NormalizationType drives the normalization baseline.
 UENUM(BlueprintType)
 enum class ECk_Eqs_NormalizationType : uint8
 {
@@ -207,7 +207,7 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     float _ScoringFactor = 1.0f;
 
-    // F5: split from prior monolithic _NormalizationMode/_ClampMode.
+    // Split from prior monolithic _NormalizationMode/_ClampMode.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     ECk_Eqs_NormalizationType _NormalizationType = ECk_Eqs_NormalizationType::Absolute;
 
@@ -225,7 +225,7 @@ private:
               EditCondition = "_ClampMaxType == ECk_Eqs_ClampType::SpecifiedValue"))
     float _ClampMax = 1.0f;
 
-    // F6 RESERVED for v1.1: reference-value scoring. v1 IGNORES this field.
+    // RESERVED for v1.1: reference-value scoring. v1 IGNORES this field.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true,
               ToolTip = "Reserved for v1.1 reference-value scoring. Ignored in v1."))
     float _ReferenceValue = 0.0f;
@@ -320,7 +320,7 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     bool _UseSpiralPattern = false;
 
-    // Cone (F3 — UE-parity parameterization).
+    // Cone (UE-parity parameterization).
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true,
               ClampMin = "0.0", ClampMax = "359.0"))
     float _ConeDegrees = 90.0f;
@@ -603,7 +603,7 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// Per-Test Debug Info (Pass-5.1) — captured per (test, candidate) during DoRunTests so the
+// Per-Test Debug Info — captured per (test, candidate) during DoRunTests so the
 // debugger can show why a candidate scored where it did. Always-on (no project-setting gate)
 // because EQS is server-only with bounded query counts; ~12 bytes/test/candidate is negligible.
 // Mirrors CkCrowd's FCk_Fragment_CrowdAgent_DiagRecorderData — additional-fragment-for-debug
@@ -628,18 +628,18 @@ private:
 
     // NormalizeAndScore output (post-equation, post-clamp, post-_ScoringFactor). Range
     // depends on _ScoringFactor; nominally [0, _ScoringFactor]. Zero for non-Score-purpose
-    // tests and for tests skipped via the F7 degenerate-min-equals-max path.
+    // tests and for tests skipped via the degenerate-min-equals-max path.
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     float _NormalizedScore = 0.0f;
 
     // What this test actually multiplied into _Score (= _NormalizedScore * _Weight). 1.0f
-    // for tests that didn't contribute to score (Filter-only purpose, or skipped under F7).
+    // for tests that didn't contribute to score (Filter-only purpose, or skipped).
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     float _WeightedContribution = 1.0f;
 
     // false if this test's filter rejected this candidate. Tests that are Score-only never
     // set this to false. Filter failure does NOT short-circuit later tests — the candidate
-    // continues to be tested and scored, and Finalize drops it. (Pass-3 contract.)
+    // continues to be tested and scored, and Finalize drops it.
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     bool _PassedThisTest = true;
 

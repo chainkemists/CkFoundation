@@ -54,7 +54,7 @@ private:
         Category = "Ck|Utils|Objective",
         meta = (CompactNodeTitle = "INVALID_ObjectiveHandle", Keywords = "make"))
     static FCk_Handle_Objective
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintCallable,

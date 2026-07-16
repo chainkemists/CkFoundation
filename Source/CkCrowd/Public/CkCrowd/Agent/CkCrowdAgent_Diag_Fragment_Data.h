@@ -21,8 +21,8 @@ class UCk_Utils_CrowdAgent_Diag_UE;
 //
 // Populated by FProcessor_CrowdAgent_DiagRecorder at the rate set by ck.Crowd.DiagSampleHz
 // (default 10Hz). Consumed by:
-//   - The diagnostic gym's EmitDigest at end of each cycle (Task E) → grep-friendly log lines.
-//   - The debugger's world-draw overlay (Phase 2) → in-viewport breadcrumb polyline so devs can
+//   - The diagnostic gym's EmitDigest at end of each cycle → grep-friendly log lines.
+//   - The debugger's world-draw overlay → in-viewport breadcrumb polyline so devs can
 //     see what an agent actually did on the path it tried to walk.
 // --------------------------------------------------------------------------------------------------------------------
 

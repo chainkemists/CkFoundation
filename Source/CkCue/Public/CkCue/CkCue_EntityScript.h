@@ -9,15 +9,11 @@
 
 #include "CkCue_EntityScript.generated.h"
 
-/*─────────────────────────────────────────────────────────────────────────────┐
-│                            GAMEPLAY TAGS                                     │
-└─────────────────────────────────────────────────────────────────────────────*/
+// --------------------------------------------------------------------------------------------------------------------
 
 CKCUE_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Cue_DoNotExecute);
 
-/*─────────────────────────────────────────────────────────────────────────────┐
-│                            LIFETIME BEHAVIOR                                 │
-└─────────────────────────────────────────────────────────────────────────────*/
+// --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
 enum class ECk_Cue_LifetimeBehavior : uint8
@@ -30,9 +26,7 @@ enum class ECk_Cue_LifetimeBehavior : uint8
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_LifetimeBehavior);
 
-/*─────────────────────────────────────────────────────────────────────────────┐
-│                          CONCURRENCY POLICY                                  │
-└─────────────────────────────────────────────────────────────────────────────*/
+// --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
 enum class ECk_Cue_ConcurrencyPolicy : uint8
@@ -43,9 +37,7 @@ enum class ECk_Cue_ConcurrencyPolicy : uint8
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_ConcurrencyPolicy);
 
-/*─────────────────────────────────────────────────────────────────────────────┐
-│                       OWNER VALIDATION POLICY                                │
-└─────────────────────────────────────────────────────────────────────────────*/
+// --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
 enum class ECk_Cue_OwnerValidationPolicy : uint8
@@ -56,9 +48,7 @@ enum class ECk_Cue_OwnerValidationPolicy : uint8
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_OwnerValidationPolicy);
 
-/*─────────────────────────────────────────────────────────────────────────────┐
-│                           CUE BASE ENTITY SCRIPT                             │
-└─────────────────────────────────────────────────────────────────────────────*/
+// --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, NotBlueprintable, BlueprintType)
 class CKCUE_API UCk_CueBase_EntityScript : public UCk_GenericEntityScript_UE
@@ -129,9 +119,7 @@ private:
         FCk_Time InDeltaT);
 };
 
-/*─────────────────────────────────────────────────────────────────────────────┐
-│                         GENERIC CUE ENTITY SCRIPT                           │
-└─────────────────────────────────────────────────────────────────────────────*/
+// --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, Blueprintable, BlueprintType)
 class CKCUE_API UCk_GenericCue_EntityScript : public UCk_CueBase_EntityScript

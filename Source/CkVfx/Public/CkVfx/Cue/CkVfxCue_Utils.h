@@ -57,7 +57,7 @@ private:
         Category = "Ck|Utils|VfxCue",
         meta = (CompactNodeTitle = "INVALID_VfxCueHandle", Keywords = "make"))
     static FCk_Handle_VfxCue
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintCallable,

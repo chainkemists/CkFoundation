@@ -9,7 +9,7 @@
 #include "CkEcs/Processor/CkProcessor_AccessPolicy.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
@@ -18,10 +18,9 @@ namespace ck
 	// here so the Planner-on-Planner processors order after it.
 	class FProcessor_Goap_Planner_Setup;
 
-// ====================================================================================================================
-// SETUP — Extract action CDOs into FActionDef list; resolve raw tags via the
+// --------------------------------------------------------------------------------------------------------------------
+// Extract action CDOs into FActionDef list; resolve raw tags via the
 //         tier's resolved WS-source registry; seed root tier's initial goal.
-// ====================================================================================================================
 
 class CKGOAP_API FProcessor_Goap_Action_Setup : public ck_exp::TProcessor<
 	FProcessor_Goap_Action_Setup,
@@ -39,7 +38,7 @@ public:
 	using TProcessor::TProcessor;
 
 public:
-	// PR-B.1b Stage 3: per-Action CDO extraction stays Action-side. Each Action
+	// per-Action CDO extraction stays Action-side. Each Action
 	// entity carries its own _Definition (CDO-extracted preconditions/effects/
 	// cost), used by the Planner-on-Planner HandleRequests as a candidate
 	// operator. Planner-side goal resolution (_GoalAuthored → _Goal) moved to
@@ -53,13 +52,12 @@ public:
 		FFragment_Goap_Planner_WorldStateSource& InWSSource) -> void;
 };
 
-// ====================================================================================================================
-// AUTO REPLAN — Throttle + policy + initial-plan dispatch
+// --------------------------------------------------------------------------------------------------------------------
+// Throttle + policy + initial-plan dispatch
 //
-// PR-B.1b Stage 3: matches Planner. Reads PlannerParams for replan policy/
+// matches Planner. Reads PlannerParams for replan policy/
 // interval; Planner-side ReplanThrottle. Disable gate reads Planner's own
 // FFragment_Goap_Planner_Current directly (no helper walk).
-// ====================================================================================================================
 
 class CKGOAP_API FProcessor_Goap_Planner_AutoReplan : public ck_exp::TProcessor<
 	FProcessor_Goap_Planner_AutoReplan,
@@ -88,17 +86,16 @@ public:
 		FFragment_Goap_Planner_ReplanThrottle& InThrottle) -> void;
 };
 
-// ====================================================================================================================
-// HANDLE REQUESTS — Drain Planner-side request queue
+// --------------------------------------------------------------------------------------------------------------------
+// Drain Planner-side request queue
 //
-// PR-B.1b Stage 3: matches Planner. Drains the Planner-side request queue,
+// matches Planner. Drains the Planner-side request queue,
 // reads Planner-side PlanState/Goal/WorldStateSource/SearchState/Result/
 // PlanContext. Candidate operators come from the implicit-root Action's
 // Tree.Get_ChildActions() (top-level Planner) or the Planner's own
 // Tree.Get_ChildActions() (promoted mid-tier Planner). Each child Action
 // still carries its own FFragment_Goap_Action_Definition (CDO-extracted by
 // the per-Action Setup processor below).
-// ====================================================================================================================
 
 class CKGOAP_API FProcessor_Goap_Planner_HandleRequests : public ck_exp::TProcessor<
 	FProcessor_Goap_Planner_HandleRequests,
@@ -144,11 +141,10 @@ public:
 		FFragment_Goap_Planner_PlanContext& InPlanContext) const -> void;
 };
 
-// ====================================================================================================================
-// EXECUTE — Time-sliced A* search (parallel; pure data)
+// --------------------------------------------------------------------------------------------------------------------
+// Time-sliced A* search (parallel; pure data)
 //
-// PR-B.1b Stage 3: instantiated on Planner entity.
-// ====================================================================================================================
+// instantiated on Planner entity.
 
 struct FProcessor_Goap_Planner_Execute
 	: TProcessor_AStar_Execute<FProcessor_Goap_Planner_Execute,
@@ -159,12 +155,11 @@ struct FProcessor_Goap_Planner_Execute
 	using RunAfter = TDepList<FProcessor_Goap_Planner_HandleRequests>;
 };
 
-// ====================================================================================================================
-// HANDLE RESULT — Convert A* path to action sequence, fire signals
+// --------------------------------------------------------------------------------------------------------------------
+// Convert A* path to action sequence, fire signals
 //
-// PR-B.1b Stage 3: matches Planner. Writes to Planner's PlanState. Broadcasts
+// matches Planner. Writes to Planner's PlanState. Broadcasts
 // per-Planner signals directly from the Planner handle (no resolver walk).
-// ====================================================================================================================
 
 class CKGOAP_API FProcessor_Goap_Planner_HandleResult : public ck_exp::TProcessor<
 	FProcessor_Goap_Planner_HandleResult,
@@ -196,9 +191,8 @@ public:
 		FFragment_Goap_Planner_PlanState& InPlanState) -> void;
 };
 
-// ====================================================================================================================
-// END PLAY — Clean up A* search state on entity destruction
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Clean up A* search state on entity destruction
 
 struct FProcessor_Goap_Planner_EndPlay
 	: TProcessor_AStar_EndPlay<FProcessor_Goap_Planner_EndPlay,
@@ -208,6 +202,6 @@ struct FProcessor_Goap_Planner_EndPlay
 	using Group = FGroup_EndPlay;
 };
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 } // namespace ck

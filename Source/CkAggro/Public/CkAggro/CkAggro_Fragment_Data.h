@@ -43,7 +43,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     TSubclassOf<UCk_Entity_ConstructionScript_PDA> _ConstructionScript;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -51,7 +51,7 @@ private:
     float _ScoreStartingValue = 0.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     ECk_MinMax _MinMax = ECk_MinMax::None;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

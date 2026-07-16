@@ -25,9 +25,8 @@ namespace ck::inventory_handlers
 {
     using FInventoryItemRecord = UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils;
 
-    // ============================================================================================
+    // ----------------------------------------------------------------------------------------------------
     // Spatial-specific Handle / divergence-helper specializations.
-    // ============================================================================================
 
     // ---- TAddItem<Spatial, FCk_SpatialPlacement>: validate + placement (auto or fixed) + place + bind.
     template <>

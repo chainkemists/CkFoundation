@@ -13,10 +13,10 @@
 
 namespace ck
 {
-    // Gate 3 — Sub-task 3B. Per-agent separation force solver. Reads the trimmed neighbor cache
+    // Per-agent separation force solver. Reads the trimmed neighbor cache
     // populated by NeighborSync; for each neighbor inside _SeparationRadius, contributes a
     // quadratic-falloff push directed away from the neighbor. The result lives in
-    // FFragment_CrowdAgent_SeparationForce, scaled by _SeparationWeight, ready for Gate 3C's
+    // FFragment_CrowdAgent_SeparationForce, scaled by _SeparationWeight, ready for the
     // steering-side combination with the path-follow direction.
     //
     // Group: FGroup_Physics. RunAfter NeighborSync (cache must be fresh), RunBefore Steering

@@ -42,7 +42,7 @@ DECLARE_DWORD_COUNTER_STAT(TEXT("Eqs Physics Casts Issued"), STAT_Eqs_PhysicsCas
 
 namespace
 {
-    // F7 epsilon for degenerate Min ≈ Max detection. Larger than KINDA_SMALL_NUMBER so that
+    // Epsilon for degenerate Min ≈ Max detection. Larger than KINDA_SMALL_NUMBER so that
     // raw values clustered within ~1e-4 are treated as "all equal" (UE's own NormalizeItemScores
     // uses a similar threshold to skip the per-item normalization loop).
     constexpr auto Eqs_DegenerateRangeEpsilon = 1.0e-4f;
@@ -110,7 +110,7 @@ namespace
         return true;
     }
 
-    // Resolve the clamp lower bound from F5's split enums. Returns the actual numeric clamp.
+    // Resolve the clamp lower bound from the split clamp enums. Returns the actual numeric clamp.
     auto
     Eqs_ResolveClampMin(
         const FCk_Eqs_ScoringConfig& InConfig,
@@ -143,7 +143,7 @@ namespace
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// NormalizeAndScore — F4 / F5 / F7 (verified against UE EnvQueryTest.cpp).
+// NormalizeAndScore (verified against UE EnvQueryTest.cpp).
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -155,14 +155,14 @@ auto
         const FCk_Eqs_ScoringConfig& InConfig)
     -> float
 {
-    // F7: degenerate case — every candidate's raw value is essentially equal.
+    // Degenerate case — every candidate's raw value is essentially equal.
     // The per-item normalization is mathematically undefined (divide-by-zero), so skip:
     // multiplicative-identity score (1.0) scaled by ScoringFactor matches UE's "skip the
     // per-item loop" behaviour. Caller is also expected to treat this as a no-op test.
     if (FMath::Abs(InMax - InMin) < Eqs_DegenerateRangeEpsilon)
     { return 1.0f * InConfig.Get_ScoringFactor(); }
 
-    // Resolve effective range from clamp config (F5 split).
+    // Resolve effective range from clamp config.
     // FilterConfig is required for FilterThreshold clamp resolution; pull from
     // FCk_Eqs_FilterConfig{} default since callers also pass us their TestParams' filter
     // separately — but we don't have it here. Conservatively, when ClampType is FilterThreshold
@@ -198,7 +198,7 @@ auto
 
     Normalized = FMath::Clamp(Normalized, 0.0f, 1.0f);
 
-    // Apply equation transform per F4.
+    // Apply equation transform.
     auto Transformed = 0.0f;
     switch (InConfig.Get_ScoringEquation())
     {
@@ -374,7 +374,7 @@ auto
     const auto& Filter = InGen.Get_ProjectionFilter();
 
     // EQS scores the world — its casts must not fire overlap events into hit probes, and the
-    // per-candidate volume makes debug-draw noise (draw the query result instead, Pass-5.1).
+    // per-candidate volume makes debug-draw noise (draw the query result instead).
     constexpr auto FireOverlaps = false;
     constexpr auto TryDrawDebug = false;
 
@@ -423,7 +423,7 @@ auto
     const auto OuterRadius = FMath::Max(InGen.Get_OuterRadius(), InnerRadius);
     const auto ArcAngle = FMath::Clamp(InGen.Get_ArcAngle(), 0.0f, 360.0f);
 
-    // F1: NumRings == 1 divide-by-zero guard. UE has a latent bug here; we explicitly guard.
+    // NumRings == 1 divide-by-zero guard. UE has a latent bug here; we explicitly guard.
     // Single-ring case sits at OuterRadius (matches designer intuition).
     const auto RadiusDelta = NumRings > 1
         ? (OuterRadius - InnerRadius) / static_cast<float>(NumRings - 1)
@@ -443,7 +443,7 @@ auto
     auto RingRadius = FirstRingRadius;
     for (auto r = 0; r < NumRings; ++r, RingRadius += RadiusDelta)
     {
-        // F2 spiral: stagger ring-r's start by AngleDelta / NumRings * r so spokes don't align.
+        // Spiral: stagger ring-r's start by AngleDelta / NumRings * r so spokes don't align.
         const auto SpiralOffsetDeg = InGen.Get_UseSpiralPattern()
             ? (AngleDeltaDeg / static_cast<float>(NumRings)) * static_cast<float>(r)
             : 0.0f;
@@ -476,7 +476,7 @@ auto
     const auto Up = InQuerierTransform.GetRotation().GetUpVector();
 
     const auto AngleStart = -ConeDegrees * 0.5f;
-    const auto AngleEnd = +ConeDegrees * 0.5f;  // exclusive on the upper end per F3
+    const auto AngleEnd = +ConeDegrees * 0.5f;  // exclusive on the upper end
 
     const auto NumDistanceSteps = FMath::FloorToInt32(Range / PointSpacing);
     OutCandidates.Reserve(static_cast<int32>(ConeDegrees / AngleStep + 1.0f) * NumDistanceSteps);
@@ -561,7 +561,7 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// DoRunTests — orchestrator with budget cursor (P3-E2 / P3-E3 / P3-E4 / anti-deadlock)
+// DoRunTests — orchestrator with budget cursor (anti-deadlock)
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -588,7 +588,7 @@ auto
 
     const auto NumCandidates = InState._Candidates.Num();
 
-    // Pass-5.1: lazy-size debug fragment on first entry. Idempotent on resume because
+    // Lazy-size debug fragment on first entry. Idempotent on resume because
     // size already matches.
     if (InOutDebug._PerCandidate.Num() != NumCandidates)
     {
@@ -603,7 +603,7 @@ auto
 
     while (InState._NextTestIndex < NumTests)
     {
-        // Budget gate. P3-E3 + anti-deadlock: yield only at test boundaries; if we haven't
+        // Budget gate. Anti-deadlock: yield only at test boundaries; if we haven't
         // made progress this tick AND no progress was made before entry, run one test anyway
         // (otherwise queries with very large candidate sets never advance).
         if (InOutRemainingBudget < NumCandidates)
@@ -707,7 +707,7 @@ auto
 
         const auto Raw = InRawValues[i];
 
-        // Pass-5.1: per-test debug slot for this (test, candidate). Raw was already
+        // Per-test debug slot for this (test, candidate). Raw was already
         // written by the caller's raw pass; we add normalized / weighted / passed here.
         auto& DebugSlot = InOutDebug._PerCandidate[i]._PerTest[InTestIndex];
 
@@ -1151,7 +1151,7 @@ auto
     auto Results = FCk_Eqs_QueryResults{};
     auto& Final = Results._Candidates;
 
-    // Pass-5.1: pair surviving candidates with their original index so we can mirror the
+    // Pair surviving candidates with their original index so we can mirror the
     // drop / sort / truncate operations onto InOutDebug._PerCandidate. After this function
     // returns, _PerCandidate[i] is the breakdown for Final[i].
     struct FSurvivor

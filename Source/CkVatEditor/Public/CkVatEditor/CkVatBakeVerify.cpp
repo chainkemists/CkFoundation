@@ -1,8 +1,7 @@
 // `Ck_Vat_DebugVerifyBake` — bakes transient Mannequin collections (BOTH bone-weight storages) and
-// numerically verifies every CPU-checkable link of the bone-mode pipeline. Born 2026-07-10 hunting
-// the gym mangling (it convicted the MID's platform-data-derived BoneCount/TotalRows — check [E]);
-// kept as the standing bake-data verifier: when VAT visuals look wrong, run this FIRST — a full
-// PASS means the bug is in the material/VF layer, not the data.
+// numerically verifies every CPU-checkable link of the bone-mode pipeline. The standing bake-data
+// verifier: when VAT visuals look wrong, run this FIRST — a full PASS means the bug is in the
+// material/VF layer, not the data.
 //   [A] collection/texture shape        [B] texture texels vs freshly-sampled pose transforms
 //   [C] per-vertex carriers vs source   [D] full GPU-decode reconstruction vs direct CPU skinning
 //   [E] render-state MID uniforms vs the collection (dims, storage, texture bindings)

@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkActor);
 
 namespace ck::actor
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkActor);
+    CK_REGISTER_LOG_FUNCTIONS(CkActor);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

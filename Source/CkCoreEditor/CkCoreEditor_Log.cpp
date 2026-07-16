@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkCoreEditor);
 
 namespace ck::core_editor
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkCoreEditor);
+    CK_REGISTER_LOG_FUNCTIONS(CkCoreEditor);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

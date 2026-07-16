@@ -10,21 +10,20 @@
 
 class ACk_Iskm_BatchedCrowd_Actor;
 
-// ====================================================================================================================
-//  inc-4 §4 — put the batched crowd on the ECS clock.
+// --------------------------------------------------------------------------------------------------------------------
+// Put the batched crowd on the ECS clock.
 //
-//  The crowd is a plain AActor that historically advanced its members in its OWN AActor::Tick — a second clock,
-//  unordered against the ECS world-actor tick. Far cosmetics are ECS entities synced by the transform pipeline, so
-//  that two-clock split left them ≤1 frame behind the member they follow.
+// The crowd is a plain AActor that historically advanced its members in its OWN AActor::Tick — a second clock,
+// unordered against the ECS world-actor tick. Far cosmetics are ECS entities synced by the transform pipeline, so
+// that two-clock split left them ≤1 frame behind the member they follow.
 //
-//  Fix: one controller entity per crowd carries FFragment_IskmCrowd_Controller; FProcessor_IskmCrowd_Advance ticks
-//  it in FGroup_Transform_SyncFrom — AFTER the flip driver's Gameplay_Script member-world writes (so the member is
-//  current, not agent-lagged) and BEFORE FGroup_Transform's HandleRequests (so a cosmetic Request_SetTransform lands
-//  the SAME tick). It advances member animation (AdvanceAnimation) and places far cosmetics (DriveCosmetics, via the
-//  deferred Request path — the same cross-entity write the old flip driver used, safe against the scheduler's
-//  write-ordering). Member PushTile + cosmetic both reach FGroup_PostTransform's render flush the same frame, in
-//  lockstep. The actor no longer self-ticks.
-// ====================================================================================================================
+// Fix: one controller entity per crowd carries FFragment_IskmCrowd_Controller; FProcessor_IskmCrowd_Advance ticks
+// it in FGroup_Transform_SyncFrom — AFTER the flip driver's Gameplay_Script member-world writes (so the member is
+// current, not agent-lagged) and BEFORE FGroup_Transform's HandleRequests (so a cosmetic Request_SetTransform lands
+// the SAME tick). It advances member animation (AdvanceAnimation) and places far cosmetics (DriveCosmetics, via the
+// deferred Request path — the same cross-entity write the old flip driver used, safe against the scheduler's
+// write-ordering). Member PushTile + cosmetic both reach FGroup_PostTransform's render flush the same frame, in
+// lockstep. The actor no longer self-ticks.
 namespace ck
 {
     struct CKISKMRENDERER_API FFragment_IskmCrowd_Controller

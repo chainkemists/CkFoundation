@@ -11,9 +11,7 @@
 
 #include "CkCueSubsystem_Base.generated.h"
 
-/*─────────────────────────────────────────────────────────────────────────────┐
-│                            RELIABILITY POLICY                                │
-└─────────────────────────────────────────────────────────────────────────────*/
+// --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
 enum class ECk_Cue_ReliabilityPolicy : uint8
@@ -24,9 +22,7 @@ enum class ECk_Cue_ReliabilityPolicy : uint8
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_ReliabilityPolicy);
 
-/*─────────────────────────────────────────────────────────────────────────────┐
-│                           MULTICAST POLICY                                   │
-└─────────────────────────────────────────────────────────────────────────────*/
+// --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
 enum class ECk_Cue_MulticastPolicy : uint8
@@ -41,9 +37,7 @@ enum class ECk_Cue_MulticastPolicy : uint8
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_MulticastPolicy);
 
-/*─────────────────────────────────────────────────────────────────────────────┐
-│                         DEDICATED SERVER POLICY                              │
-└─────────────────────────────────────────────────────────────────────────────*/
+// --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
 enum class ECk_Cue_DedicatedServerPolicy : uint8
@@ -54,9 +48,7 @@ enum class ECk_Cue_DedicatedServerPolicy : uint8
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_DedicatedServerPolicy);
 
-/*─────────────────────────────────────────────────────────────────────────────┐
-│                         CUE EXECUTOR SUBSYSTEM BASE                          │
-└─────────────────────────────────────────────────────────────────────────────*/
+// --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract)
 class CKCUE_API UCk_CueExecutor_Subsystem_Base_UE : public UCk_ActorRelay_Group_Subsystem_Base_UE
@@ -87,16 +79,12 @@ public:
         ECk_Cue_ReliabilityPolicy InReliability = ECk_Cue_ReliabilityPolicy::Unreliable,
         ECk_Cue_MulticastPolicy InMulticastPolicy = ECk_Cue_MulticastPolicy::ServerAndAllClients);
 
-    /*-------------------------------------------------------------------------
-                      ACTOR RELAY CONFIG OVERRIDES
-    --------------------------------------------------------------------------*/
+// --------------------------------------------------------------------------------------------------------------------
 
 public:
     auto Get_ActorClass() const -> TSubclassOf<ACk_ActorRelay_UE> override;
 
-    /*-------------------------------------------------------------------------
-                      CUE-SPECIFIC PURE VIRTUALS
-    --------------------------------------------------------------------------*/
+// --------------------------------------------------------------------------------------------------------------------
 
 public:
     virtual auto Get_CueSubsystemClass() const -> TSubclassOf<class UCk_CueSubsystem_Base_UE>
@@ -131,9 +119,7 @@ private:
     FTSTicker::FDelegateHandle _PendingCueTimeoutTickerHandle;
 };
 
-/*─────────────────────────────────────────────────────────────────────────────┐
-│                            CUE SUBSYSTEM BASE                                │
-└─────────────────────────────────────────────────────────────────────────────*/
+// --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract)
 class CKCUE_API UCk_CueSubsystem_Base_UE : public UEngineSubsystem
@@ -181,9 +167,7 @@ protected:
     TMap<FGameplayTag, TSubclassOf<UCk_CueBase_EntityScript>> _DiscoveredCues;
 };
 
-/*─────────────────────────────────────────────────────────────────────────────┐
-│                         GENERIC CUE IMPLEMENTATIONS                          │
-└─────────────────────────────────────────────────────────────────────────────*/
+// --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(DisplayName = "CkSubsystem_GenericCueExecutor", NotBlueprintable, BlueprintType)
 class CKCUE_API UCk_GenericCueExecutor_Subsystem_UE : public UCk_CueExecutor_Subsystem_Base_UE

@@ -44,7 +44,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     ECk_FieldShape _FieldShape = ECk_FieldShape::Box;
 
 public:

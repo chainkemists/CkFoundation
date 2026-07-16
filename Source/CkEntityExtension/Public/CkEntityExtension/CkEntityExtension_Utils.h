@@ -72,7 +72,7 @@ private:
         Category = "Ck|Utils|EntityExtension",
         meta = (CompactNodeTitle = "INVALID_EntityExtensionHandle", Keywords = "make"))
     static FCk_Handle_EntityExtension
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintPure,

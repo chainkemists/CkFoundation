@@ -29,7 +29,7 @@ namespace ck
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_AccelClampProc);
 
         // Project-wide enable. Disabled mode is for A/B comparison only — production should leave
-        // this on to kill snap-flips that drive Gate-3 vibration.
+        // this on to kill snap-flips that drive vibration.
         if (UCk_Utils_Crowd_Settings_UE::Get_AccelClampMode() == ECk_AccelClampMode::Disabled)
         {
             InDesired._LastVelocity = InDesired._Velocity;

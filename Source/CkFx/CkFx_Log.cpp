@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkFx);
 
 namespace ck::fx
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkFx);
+    CK_REGISTER_LOG_FUNCTIONS(CkFx);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

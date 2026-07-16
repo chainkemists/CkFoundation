@@ -392,7 +392,7 @@ namespace ck_vat_baker
         TPolygonGroupAttributesRef<FName> GroupSlotNames = Attributes.GetPolygonGroupMaterialSlotNames();
 
         // One material slot per source section, copied from the source skeletal mesh so the baked asset
-        // is viewable as-authored (Gate 3 swaps in the VAT look MID at runtime).
+        // is viewable as-authored (the VAT look MID swaps in at runtime).
         const TArray<FSkeletalMaterial>& SourceMaterials = InSourceMesh.GetMaterials();
         TArray<FPolygonGroupID> PolygonGroups;
         TArray<FStaticMaterial> StaticMaterials;
@@ -531,7 +531,7 @@ auto
         TEXT("VatBaker: collection [{}] has no clips"), &InCollection)
     { return false; }
 
-    // ---- shared sampling core (Gate 0) ----
+    // ---- shared sampling core ----
     FCk_AnimBake_SampleParams SampleParams;
     SampleParams.ExtractRootMotion = InCollection.Get_BakeSettings().Get_ExtractRootMotion();
     SampleParams.DisableRetargeting = InCollection.Get_BakeSettings().Get_DisableRetargeting();
@@ -540,10 +540,8 @@ auto
         TEXT("VatBaker: collection [{}] is not bakeable (no skeleton bones, render data, or skinned bones)"), &InCollection)
     { return false; }
 
-    // NOTE (2026-07-10): a mesh-bind inverse override (GetRefBasesInvMatrix) was tried here and
-    // REVERTED — it was justified by a Live-Coding-tainted observation, and the batched Iskm
-    // renderer proves the skeleton-chain inverse is correct for this content. Do not re-add
-    // without clean-build evidence; the perf-iskm-lod merge owns the mesh-bind question.
+    // A mesh-bind inverse override (GetRefBasesInvMatrix) does NOT belong here: the skeleton-chain
+    // inverse is correct for this content. Do not re-add without clean-build evidence.
 
     TArray<UAnimSequenceBase*> SequenceAssets;
     SequenceAssets.Reserve(InCollection.Get_Clips().Num());
@@ -697,7 +695,7 @@ auto
     const FBox BoneBoundsAllFrames =
         ck::anim_bake::SamplePoses(*Skeleton, *SkeletonData, Layout, SampleParams, PerFramePose);
 
-    // ---- precision-normalize where the format requires it (layout contract: Gate_01_Bake.md) ----
+    // ---- precision-normalize where the format requires it ----
     if (InCollection.Get_BakeSettings().Get_Precision() == ECk_Vat_Precision::Low)
     {
         const FVector3f Min = FVector3f(PositionBounds.Min);

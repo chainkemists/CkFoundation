@@ -82,7 +82,6 @@ public:
                 _CurrentSnapshot = NewSnapshot;
             }
 #endif
-            // Sleep for 1 second before next update
             FPlatformProcess::Sleep(1.0f);
         }
         return 0;

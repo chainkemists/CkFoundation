@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkLoadingScreen);
 
 namespace ck::loading_screen
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkLoadingScreen);
+    CK_REGISTER_LOG_FUNCTIONS(CkLoadingScreen);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

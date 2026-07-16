@@ -12,7 +12,7 @@
 
 namespace ck
 {
-    // Phase 2 — post-hoc physical-resolution pass. Direct port of DetourCrowd.cpp:updateStepMove
+    // Post-hoc physical-resolution pass. Direct port of DetourCrowd.cpp:updateStepMove
     // 1601-1662. Iterates 1 or 4 times (project-controlled) over each agent's neighbor cache,
     // accumulating a displacement vector, and stages it into
     // FFragment_CrowdAgent_PendingDisplacement. It does NOT write the Transform — the single

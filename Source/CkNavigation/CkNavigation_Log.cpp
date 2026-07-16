@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkNavigation);
 
 namespace ck::nav
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkNavigation);
+    CK_REGISTER_LOG_FUNCTIONS(CkNavigation);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

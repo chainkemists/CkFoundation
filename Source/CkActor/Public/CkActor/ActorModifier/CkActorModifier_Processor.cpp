@@ -121,17 +121,17 @@ namespace ck
             case ECk_SpawnActor_PostSpawnPolicy::None:
             {
                 break;
-            };
+            }
             case ECk_SpawnActor_PostSpawnPolicy::AttachImmediately:
             {
                 // TODO: get attachments to work
                 break;
-            };
+            }
             default:
             {
                 CK_INVALID_ENUM(PostSpawnPolicy);
                 break;
-            };
+            }
         }
 
         UUtils_Signal_OnActorSpawned::Broadcast(InHandle, MakePayload(SpawnedActor,

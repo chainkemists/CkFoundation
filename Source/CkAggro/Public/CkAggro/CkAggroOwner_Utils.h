@@ -71,7 +71,7 @@ private:
         Category = "Ck|Utils|AggroOwner",
         meta = (CompactNodeTitle = "INVALID_AggroOwnerHandle", Keywords = "make"))
     static FCk_Handle_AggroOwner
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintPure,

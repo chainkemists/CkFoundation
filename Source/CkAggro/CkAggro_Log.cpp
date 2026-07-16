@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkAggro);
 
 namespace ck::aggro
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkAggro);
+    CK_REGISTER_LOG_FUNCTIONS(CkAggro);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -53,7 +53,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     TWeakObjectPtr<UGeometryCollectionComponent> _GeometryCollection;
 
 public:

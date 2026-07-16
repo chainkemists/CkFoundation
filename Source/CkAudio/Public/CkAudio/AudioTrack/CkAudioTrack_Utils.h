@@ -56,7 +56,7 @@ private:
         Category = "Ck|Utils|AudioTrack",
         meta = (CompactNodeTitle = "INVALID_AudioTrackHandle", Keywords = "make"))
     static FCk_Handle_AudioTrack
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintPure,

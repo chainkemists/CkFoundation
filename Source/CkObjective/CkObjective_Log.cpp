@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkObjective);
 
 namespace ck::objective
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkObjective);
+    CK_REGISTER_LOG_FUNCTIONS(CkObjective);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

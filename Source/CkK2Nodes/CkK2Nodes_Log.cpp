@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkK2Nodes);
 
 namespace ck::k2_nodes
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkK2Nodes);
+    CK_REGISTER_LOG_FUNCTIONS(CkK2Nodes);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

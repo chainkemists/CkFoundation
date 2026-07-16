@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkAi);
 
 namespace ck::ai
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkAi);
+    CK_REGISTER_LOG_FUNCTIONS(CkAi);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

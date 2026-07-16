@@ -13,8 +13,7 @@
 
 #define LOCTEXT_NAMESPACE "IntegerAttributeCustomization"
 
-/* FCk_Fragment_IntegerAttribute_ParamsDataCustomization
- *****************************************************************************/
+// ----------------------------------------------------------------------------------------------------
 
 TSharedRef<IPropertyTypeCustomization> FCk_Fragment_IntegerAttribute_ParamsDataCustomization::MakeInstance()
 {
@@ -489,8 +488,7 @@ FText FCk_Fragment_IntegerAttribute_ParamsDataCustomization::GetNameTitleText() 
     return LOCTEXT("NoName", "(None)");
 }
 
-/* FCk_Fragment_IntegerAttributeRefill_ParamsDataCustomization
- *****************************************************************************/
+// ----------------------------------------------------------------------------------------------------
 
 TSharedRef<IPropertyTypeCustomization> FCk_Fragment_IntegerAttributeRefill_ParamsDataCustomization::MakeInstance()
 {

@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkGoap);
 
 namespace ck::goap
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkGoap);
+    CK_REGISTER_LOG_FUNCTIONS(CkGoap);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

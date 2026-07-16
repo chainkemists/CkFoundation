@@ -11,9 +11,7 @@
 
 DECLARE_MULTICAST_DELEGATE(FCk_Delegate_ActorRelay_ChannelReadyChanged_MC);
 
-/*-----------------------------------------------------------------------------
-                     ACTOR RELAY GROUP SUBSYSTEM BASE
-------------------------------------------------------------------------------*/
+// --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract)
 class CKACTORRELAY_API UCk_ActorRelay_Group_Subsystem_Base_UE : public UCk_Game_WorldSubsystem_Base_UE
@@ -31,9 +29,7 @@ public:
     auto Deinitialize() -> void override;
     auto OnWorldBeginPlay(UWorld& InWorld) -> void override;
 
-    /*-------------------------------------------------------------------------
-                          VIRTUAL CONFIG METHODS
-    --------------------------------------------------------------------------*/
+    // --------------------------------------------------------------------------------------------------------------------
 
 public:
     virtual auto Get_GroupTag() const -> FGameplayTag
@@ -57,9 +53,7 @@ public:
     virtual auto
     Get_DisconnectPolicy() const -> ECk_ActorRelay_DisconnectPolicy;
 
-    /*-------------------------------------------------------------------------
-                              CONSUMER API
-    --------------------------------------------------------------------------*/
+    // --------------------------------------------------------------------------------------------------------------------
 
 public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|ActorRelay",
@@ -93,9 +87,7 @@ public:
     // path; safe to use elsewhere with the same retry-vs-subscribe trade-off in mind.
     auto Try_ResolvePending(FCk_Handle_PendingActorRelay& InPending) -> FCk_ActorRelay_ChannelResult;
 
-    /*-------------------------------------------------------------------------
-                              INTERNALS
-    --------------------------------------------------------------------------*/
+    // --------------------------------------------------------------------------------------------------------------------
 
 private:
     auto DoTryResolve(FCk_Handle_PendingActorRelay& InPending) -> FCk_ActorRelay_ChannelResult;

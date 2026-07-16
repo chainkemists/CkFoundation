@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkDynamicEditor);
 
 namespace ck::dynamic_editor
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkDynamicEditor);
+    CK_REGISTER_LOG_FUNCTIONS(CkDynamicEditor);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -56,7 +56,7 @@ USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKRAYSENSE_API FCk_Handle_RaySense : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_RaySense); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_RaySense);
 
-//--------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
 struct CKRAYSENSE_API FCk_RaySense_DataToIgnore
@@ -68,15 +68,15 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     TArray<TObjectPtr<AActor>> _ActorsToIgnore;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     TArray<TObjectPtr<UPrimitiveComponent>> _ComponentsToIgnore;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     TArray<FCk_Handle> _EntitiesToIgnore;
 
 public:
@@ -85,7 +85,7 @@ public:
     CK_PROPERTY(_EntitiesToIgnore);
 };
 
-//--------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
 struct CKRAYSENSE_API FCk_Fragment_RaySense_ParamsData
@@ -98,23 +98,23 @@ public:
 private:
     // Discrete does NOT work for RaySense that do not have a shape
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     ECk_RaySense_CollisionQuality _CollisionQuality = ECk_RaySense_CollisionQuality::Sweep;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     TEnumAsByte<ECollisionChannel> _CollisionChannel = ECollisionChannel::ECC_Visibility;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     ECk_RaySense_CollisionResponse_Policy _CollisionResponse = ECk_RaySense_CollisionResponse_Policy::Overlap;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     ECk_RaySense_Async _Async = ECk_RaySense_Async::Synchronous;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     FCk_RaySense_DataToIgnore _DataToIgnore;
 
 public:
@@ -161,27 +161,27 @@ struct CKRAYSENSE_API FCk_RaySense_HitResult
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     FVector _ImpactPoint = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     FVector _ImpactNormal = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     TObjectPtr<UPhysicalMaterial> _ImpactPhysMat;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     TObjectPtr<AActor> _MaybeHitActor;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     TObjectPtr<UPrimitiveComponent> _MaybeHitComponent;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     FCk_Handle _MaybeHitHandle;
 
 public:

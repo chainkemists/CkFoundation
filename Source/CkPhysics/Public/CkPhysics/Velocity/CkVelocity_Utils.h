@@ -92,7 +92,7 @@ private:
         Category = "Ck|Utils|Velocity",
         meta = (CompactNodeTitle = "INVALID_VelocityHandle", Keywords = "make"))
     static FCk_Handle_Velocity
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintPure,

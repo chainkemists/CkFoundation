@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkAudio);
 
 namespace ck::audio
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkAudio);
+    CK_REGISTER_LOG_FUNCTIONS(CkAudio);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

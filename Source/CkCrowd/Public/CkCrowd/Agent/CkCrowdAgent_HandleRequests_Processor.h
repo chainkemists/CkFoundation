@@ -10,7 +10,7 @@
 
 namespace ck
 {
-    // Gate 2 — Sub-task 2E: drains move-related requests from FFragment_CrowdAgent_MoveRequests
+    // Drains move-related requests from FFragment_CrowdAgent_MoveRequests
     // and dispatches them.
     //
     // - MoveTo: cache the per-request _ActiveArrivalRadius on PathFollow (params default OR override),

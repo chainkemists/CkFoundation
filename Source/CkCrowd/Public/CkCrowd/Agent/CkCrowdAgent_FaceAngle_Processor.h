@@ -10,8 +10,6 @@
 
 namespace ck
 {
-    // Gate 2 — Sub-task 2D: face angle / turn rate.
-    //
     // Reads the steering processor's _DesiredVelocity, derives a target yaw from its XY heading,
     // and lerps the agent's SceneNode rotation toward it at _MaxTurnRate rad/sec (clamped per-frame
     // by InDeltaT). Decoupled from movement direction — the agent can briefly walk sideways while

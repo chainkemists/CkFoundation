@@ -14,9 +14,8 @@ namespace ck
     // Forward declaration for RunAfter dependency
     class FProcessor_SmTask_FireFinishedSignal;
 
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
     // DEBUG — Accumulate observed states/transitions, track history
-    // ================================================================================================================
 
     class CKSTATEMACHINE_API FProcessor_Sm_Debug : public ck_exp::TProcessor<
         FProcessor_Sm_Debug,
@@ -62,9 +61,8 @@ namespace ck
         bool _LastTickToggleOn = false;
     };
 
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
     // DEBUG HANDLE REQUESTS — Drains FFragment_SmDebug_Requests
-    // ================================================================================================================
 
     class CKSTATEMACHINE_API FProcessor_SmDebug_HandleRequests : public ck_exp::TProcessor<
         FProcessor_SmDebug_HandleRequests,

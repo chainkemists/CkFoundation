@@ -74,7 +74,7 @@ private:
         Category = "Ck|Utils|RaySense",
         meta = (CompactNodeTitle = "INVALID_RaySenseHandle", Keywords = "make"))
     static FCk_Handle_RaySense
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|RaySense",

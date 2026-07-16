@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkEcs);
 
 namespace ck::ecs
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkEcs);
+    CK_REGISTER_LOG_FUNCTIONS(CkEcs);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkShapes);
 
 namespace ck::shapes
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkShapes);
+    CK_REGISTER_LOG_FUNCTIONS(CkShapes);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

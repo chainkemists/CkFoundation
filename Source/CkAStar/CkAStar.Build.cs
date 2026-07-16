@@ -3,21 +3,20 @@ using UnrealBuildTool;
 
 public class CkAStar : CkModuleRules
 {
-	public CkAStar(ReadOnlyTargetRules Target) : base(Target)
-	{
-		PrivateIncludePaths.AddRange(new string[] {
-			// ... add other private include paths required here ...
-		});
+    public CkAStar(ReadOnlyTargetRules Target) : base(Target)
+    {
+        PrivateIncludePaths.AddRange(new string[] {
+        });
 
-		PublicDependencyModuleNames.AddRange(new string[]
-		{
-			"Core",
-			"CoreUObject",
+        PublicDependencyModuleNames.AddRange(new string[]
+        {
+            "Core",
+            "CoreUObject",
 
-			"CkCore",
-			"CkEcs",
-			"CkEcsExt",
-			"CkLog",
-		});
-	}
+            "CkCore",
+            "CkEcs",
+            "CkEcsExt",
+            "CkLog",
+        });
+    }
 }

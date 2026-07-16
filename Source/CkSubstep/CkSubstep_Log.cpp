@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkSubstep);
 
 namespace ck::substep
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkSubstep);
+    CK_REGISTER_LOG_FUNCTIONS(CkSubstep);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

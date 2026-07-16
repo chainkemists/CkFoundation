@@ -112,7 +112,7 @@ private:
         Category = "Ck|Utils|Marker",
         meta = (CompactNodeTitle = "INVALID_MarkerHandle", Keywords = "make"))
     static FCk_Handle_Marker
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintPure,

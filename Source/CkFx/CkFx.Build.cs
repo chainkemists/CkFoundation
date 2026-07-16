@@ -6,7 +6,6 @@ public class CkFx : CkModuleRules
     public CkFx(ReadOnlyTargetRules Target) : base(Target)
     {
         PrivateIncludePaths.AddRange(new string[] {
-            // ... add other private include paths required here ...
         });
 
         PublicDependencyModuleNames.AddRange(new string[]
@@ -14,7 +13,7 @@ public class CkFx : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-                        "GameplayTags",
+            "GameplayTags",
             "Niagara",
 
             "CkCore",

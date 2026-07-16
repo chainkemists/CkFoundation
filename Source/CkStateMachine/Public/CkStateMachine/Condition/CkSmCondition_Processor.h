@@ -16,9 +16,8 @@ namespace ck
     class FProcessor_SmTransition_Evaluate;
     class FProcessor_SmTransition_Exit;
 
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
     // CONDITION RESET — Reset non-latching conditions at the start of each frame
-    // ================================================================================================================
 
     class CKSTATEMACHINE_API FProcessor_SmCondition_ResetEveryFrame : public ck_exp::TProcessor<
         FProcessor_SmCondition_ResetEveryFrame,
@@ -44,9 +43,8 @@ namespace ck
             FFragment_SmCondition_Current& InCurrent) -> void;
     };
 
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
     // CONDITION POLLED — Evaluate polled conditions and write _Result (Pass/Fail)
-    // ================================================================================================================
 
     class CKSTATEMACHINE_API FProcessor_SmCondition_Polled : public ck_exp::TProcessor<
         FProcessor_SmCondition_Polled,
@@ -72,9 +70,8 @@ namespace ck
             FFragment_SmCondition_Current& InCurrent) -> void;
     };
 
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
     // CONDITION EXIT — Call ExitCondition on each condition tagged with FTag_SmCondition_PendingExit
-    // ================================================================================================================
 
     class CKSTATEMACHINE_API FProcessor_SmCondition_Exit : public ck_exp::TProcessor<
         FProcessor_SmCondition_Exit,

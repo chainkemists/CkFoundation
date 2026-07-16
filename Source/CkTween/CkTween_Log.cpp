@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkTween);
 
 namespace ck::tween
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkTween);
+    CK_REGISTER_LOG_FUNCTIONS(CkTween);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

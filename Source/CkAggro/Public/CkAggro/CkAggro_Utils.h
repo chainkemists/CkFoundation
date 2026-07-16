@@ -69,7 +69,7 @@ private:
         Category = "Ck|Utils|Aggro",
         meta = (CompactNodeTitle = "INVALID_AggroHandle", Keywords = "make"))
     static FCk_Handle_Aggro
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintPure,

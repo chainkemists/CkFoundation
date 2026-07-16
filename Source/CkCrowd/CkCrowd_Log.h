@@ -10,7 +10,7 @@ CKCROWD_API DECLARE_LOG_CATEGORY_EXTERN(CkCrowd, Log, All);
 
 namespace ck::crowd
 {
-	CK_DEFINE_LOG_FUNCTIONS(CkCrowd);
+    CK_DEFINE_LOG_FUNCTIONS(CkCrowd);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

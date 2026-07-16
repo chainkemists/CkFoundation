@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkCore);
 
 namespace ck::core
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkCore);
+    CK_REGISTER_LOG_FUNCTIONS(CkCore);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

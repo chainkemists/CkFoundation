@@ -11,18 +11,14 @@
 
 #include <NativeGameplayTags.h>
 
-/*─────────────────────────────────────────────────────────────────────────────┐
-│                            GAMEPLAY TAGS                                     │
-└─────────────────────────────────────────────────────────────────────────────*/
+// --------------------------------------------------------------------------------------------------------------------
 
 UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_Timer_CueLifetime, TEXT("Timer.Cue.Lifetime"));
 UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_Cue, TEXT("Cue"));
 
 UE_DEFINE_GAMEPLAY_TAG(TAG_Cue_DoNotExecute, TEXT("Cue.DoNotExecute"));
 
-/*─────────────────────────────────────────────────────────────────────────────┐
-│                           CUE BASE ENTITY SCRIPT                             │
-└─────────────────────────────────────────────────────────────────────────────*/
+// --------------------------------------------------------------------------------------------------------------------
 
 UCk_CueBase_EntityScript::
     UCk_CueBase_EntityScript(
@@ -95,7 +91,7 @@ auto
     ck::ActiveCues_Utils::AddIfMissing(CueOwner);
     ck::ActiveCues_Utils::Request_Connect(CueOwner, InHandle);
 
-    return Super::Construct(InHandle, InSpawnParams);;
+    return Super::Construct(InHandle, InSpawnParams);
 }
 
 auto
@@ -136,7 +132,7 @@ auto
         {
             CK_INVALID_ENUM(_LifetimeBehavior);
             break;
-        };
+        }
     }
 
     Super::BeginPlay();

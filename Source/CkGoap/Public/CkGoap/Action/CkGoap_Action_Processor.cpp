@@ -3,9 +3,9 @@
 #include "CkGoap/CkGoap_Log.h"
 #include "CkGoap/CkGoap_Stats.h"
 #include "CkGoap/CkGoap_Fragment.h"  // dirty tags FTag_Goap_Dirty_WorldState / _Cost
-#include "CkGoap/Action/CkGoap_Action_Utils.h"  // PR-B.1b Stage 3: CastChecked for Planner-as-Action
+#include "CkGoap/Action/CkGoap_Action_Utils.h"  // CastChecked for Planner-as-Action
 #include "CkGoap/EntityScripts/CkGoapAction_EntityScript.h"
-#include "CkGoap/Planner/CkGoap_Planner_Utils.h"  // PR-B.1b Stage 0: resolve owning Planner for signal payload
+#include "CkGoap/Planner/CkGoap_Planner_Utils.h"  // resolve owning Planner for signal payload
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -14,9 +14,9 @@
 
 #include "Algo/Reverse.h"
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
-// PR-B.1b Stage 3: per-Action Setup stays Action-tier (per-Action CDO
+// per-Action Setup stays Action-tier (per-Action CDO
 // extraction). The remaining A*-pipeline processors are now Planner-tier.
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Action_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Planner_AutoReplan);
@@ -25,9 +25,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Planner_Execute);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Planner_HandleResult);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Planner_EndPlay);
 
-// ====================================================================================================================
-// PERF STATS
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 // Body-level per-processor cycle scopes. STAT_Goap_HandleRequestsProc nests the
 // pre-existing STAT_Goap_BuildGraphAndSeed sub-scope inside it.
@@ -41,14 +39,13 @@ DECLARE_DWORD_COUNTER_STAT(TEXT("Goap Replans Requested"), STAT_Goap_ReplansRequ
 DECLARE_DWORD_COUNTER_STAT(TEXT("Goap Plans Completed"), STAT_Goap_PlansCompleted, STATGROUP_CkGoap);
 DECLARE_DWORD_COUNTER_STAT(TEXT("Goap Plans Failed"), STAT_Goap_PlansFailed, STATGROUP_CkGoap);
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
 
-// ====================================================================================================================
-// LOCAL HELPERS — registry-driven resolution of raw (tag-keyed) conditions/effects
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Registry-driven resolution of raw (tag-keyed) conditions/effects
 
 namespace
 {
@@ -79,7 +76,7 @@ namespace
 		return Set;
 	}
 
-	// PR-B.1b Stage 5 — A Planner's candidate operators are its own direct
+	// A Planner's candidate operators are its own direct
 	// children. No more implicit-root indirection; every AddAction adds a
 	// direct child of the Planner. Promoted mid-tier Planners read children
 	// from their own Tree fragment (the Planner-cast IS the Action that owns
@@ -105,7 +102,7 @@ namespace
 		return Result;
 	}
 
-	// PR-B.1b Stage 5 — resolve the "parent Planner" for parent-plan gating.
+	// resolve the "parent Planner" for parent-plan gating.
 	// The intent: defer THIS Planner's Plan request if the Planner whose A*
 	// search picks us as a candidate is still in-flight.
 	//
@@ -136,16 +133,15 @@ namespace
 	}
 }
 
-// ====================================================================================================================
-// SETUP — per-Action CDO extraction
+// --------------------------------------------------------------------------------------------------------------------
+// Per-Action CDO extraction.
 //
 // In the unified model, each Action entity holds ONE def (its own). The
-// Action's _ActionClass is the CDO source. Phase U1 keeps the old
-// _ActionClasses fragment populated by legacy paths so the unified AddAction
-// path can fan in here; the per-Action def is the FIRST element of the
+// Action's _ActionClass is the CDO source. The old _ActionClasses fragment is
+// kept populated by legacy paths so the unified AddAction path can fan in
+// here; the per-Action def is the FIRST element of the
 // resolved list. Effects' resolved form is staged into Action_Definition's
 // fields so the planner can consume them as the Action's goal at activation.
-// ====================================================================================================================
 
 auto
 	FProcessor_Goap_Action_Setup::
@@ -192,7 +188,7 @@ auto
 		}
 	}
 
-	// U11.1: deliberately do NOT auto-register keys from _GoalAuthored. Goal
+	// deliberately do NOT auto-register keys from _GoalAuthored. Goal
 	// keys that don't appear in any Action's preconditions or effects are a
 	// diagnostic condition (Get_InvalidGoal surfaces them) — registering them
 	// here would mask the diagnostic and let the planner search toward a key
@@ -272,15 +268,13 @@ auto
 			InHandle, InActionDef._InvalidGoal.Num());
 	}
 
-	// PR-B.1b Stage 3: per-Action Setup no longer touches the Planner-side _Goal
+	// per-Action Setup no longer touches the Planner-side _Goal
 	// fragment. The owning Planner's goal is resolved by
 	// FProcessor_Goap_Planner_Setup (Planner-tier) which runs after every direct
 	// child Action has completed its own Setup.
 }
 
-// ====================================================================================================================
-// AUTO REPLAN
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
 	FProcessor_Goap_Planner_AutoReplan::
@@ -294,10 +288,10 @@ auto
 {
 	SCOPE_CYCLE_COUNTER(STAT_Goap_Planner_AutoReplan);
 
-	// PR-B.1b Stage 3 — disable-toggle pipeline gate reads the Planner's own
-	// FFragment_Goap_Planner_Current directly. Disabled Planners don't replan
-	// (spec §3.3). Initial-plan / dirty tags remain set so re-enable resumes
-	// from the deferred state.
+	// disable-toggle pipeline gate reads the Planner's own
+	// FFragment_Goap_Planner_Current directly. Disabled Planners don't replan.
+	// Initial-plan / dirty tags remain set so re-enable resumes from the
+	// deferred state.
 	if (InCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable) { return; }
 
 	// Don't replan until the Planner-side Setup (cycle detection + goal
@@ -305,7 +299,7 @@ auto
 	// FProcessor_Goap_Planner_Setup removes it.
 	if (InHandle.Has<FTag_Goap_Planner_RequiresSetup>()) { return; }
 
-	// PR-B.1b Stage 3: defer if the Planner's WS isn't resolved yet. This
+	// defer if the Planner's WS isn't resolved yet. This
 	// happens for promoted mid-tier Planners before their first activation —
 	// the activation walk (DoActivatePlanner) sets _Resolved and re-issues
 	// RequiresInitialPlan. Without this gate, a premature plan request would
@@ -319,7 +313,7 @@ auto
 	const auto WSDirty   = InHandle.Has<FTag_Goap_Dirty_WorldState>();
 	const auto CostDirty = InHandle.Has<FTag_Goap_Dirty_Cost>();
 
-	// PR-B.1b Stage 5: replan-policy + interval live on PlannerParams.
+	// replan-policy + interval live on PlannerParams.
 	const auto PolicyAllowsReplan = [&]() -> bool
 	{
 		switch (InParams.Get_ReplanPolicy())
@@ -350,9 +344,8 @@ auto
 	InHandle.Try_Remove<FTag_Goap_Planner_RequiresInitialPlan>();
 }
 
-// ====================================================================================================================
-// HANDLE REQUESTS — variant dispatch
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Variant dispatch
 
 auto
 	FProcessor_Goap_Planner_HandleRequests::
@@ -373,15 +366,14 @@ auto
 	SCOPE_CYCLE_COUNTER(STAT_Goap_HandleRequestsProc);
 
 	(void)InParams;  // reserved (replan-policy reads moved to AutoReplan)
-	// PR-B.1b Stage 3 — disable-toggle pipeline gate reads InCurrent directly.
+	// disable-toggle pipeline gate reads InCurrent directly.
 	if (InCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable) { return; }
 
 	// Parent-plan gating: if THIS Planner has a parent whose plan is still in
 	// flight, defer Plan requests by re-arming the initial-plan tag for next
 	// frame. Top-level Planners (no parent) are never gated. The "parent" of
 	// a Planner is resolved via Path-A bridge: promoted mid-tier Planners
-	// carry FFragment_Goap_Action_Tree with _ParentAction. PR-B.1b Stage 5
-	// will simplify this when implicit-root + dual-stamp goes away.
+	// carry FFragment_Goap_Action_Tree with _ParentAction.
 	const auto IsParentPlanInFlight = [&]() -> bool
 	{
 		const auto Parent = Goap_Planner_GetParentPlanner(InHandle);
@@ -523,7 +515,7 @@ auto
 				// HandleResult / CancelPlan / early-out paths above.
 				InHandle.AddOrGet<FTag_Goap_Planner_PlanInFlight>();
 
-				// PR-B.1b Stage 5: candidate operators are this Planner's own
+				// candidate operators are this Planner's own
 				// direct children (no implicit-root indirection).
 				//
 				// IMPORTANT: each candidate's ActionIndex MUST be set to its
@@ -679,15 +671,14 @@ auto
 	});
 }
 
-// ====================================================================================================================
-// HANDLE RESULT — A* completion → plan / fire signals
+// --------------------------------------------------------------------------------------------------------------------
+// A* completion → plan / fire signals
 //
 // In the unified model, _Plan is TArray<FCk_Handle_Goap_Action> — each entry is
 // a child Action entity, found by mapping the A* path's edge ActionDef classes
 // back to this Action's _ChildActions. The PlanComplete payload still carries
 // the class array per the existing struct shape — we derive it via
 // Get_PlanClasses().
-// ====================================================================================================================
 
 auto
 	FProcessor_Goap_Planner_HandleResult::
@@ -702,7 +693,7 @@ auto
 {
 	SCOPE_CYCLE_COUNTER(STAT_Goap_Planner_HandleResult);
 
-	// PR-B.1b Stage 3 — disable-toggle pipeline gate reads InCurrent directly.
+	// disable-toggle pipeline gate reads InCurrent directly.
 	if (InCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable) { return; }
 
 	InHandle.Remove<FTag_AStar_SearchComplete>();
@@ -821,6 +812,6 @@ auto
 	}
 }
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 } // namespace ck

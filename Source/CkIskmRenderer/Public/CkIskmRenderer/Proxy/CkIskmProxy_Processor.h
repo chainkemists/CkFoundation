@@ -31,7 +31,7 @@ namespace ck
     public:
         using TProcessor::TProcessor;
 
-        // B7: cache the world pointer once per tick so ForEachEntity doesn't re-resolve
+        // cache the world pointer once per tick so ForEachEntity doesn't re-resolve
         // it 100× per frame. Refreshed at the top of each Setup pass.
         auto
         DoTick(TimeType InDeltaT) -> void;
@@ -86,8 +86,7 @@ namespace ck
             FFragment_IskmProxy_Requests& InRequests) const -> void;
 
     public:
-        // One DoHandleRequest overload per request type. Declarations added incrementally
-        // in Phases F–K alongside each request struct. C++ overload resolution dispatches
+        // One DoHandleRequest overload per request type. C++ overload resolution dispatches
         // from the visitor lambda in ForEachEntity. Mirrors CkIsmProxy_Processor.cpp:396-411.
         auto DoHandleRequest(HandleType& InHandle, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&, FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&, FFragment_IskmProxy_CustomData&, const FCk_Request_IskmProxy_PlayAnimation&) const -> void;
         auto DoHandleRequest(HandleType& InHandle, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&, FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&, FFragment_IskmProxy_CustomData&, const FCk_Request_IskmProxy_StopAnimation&) const -> void;
@@ -109,7 +108,7 @@ namespace ck
         auto DoHandleRequest(HandleType& InHandle, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&, FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&, FFragment_IskmProxy_CustomData&, const FCk_Request_IskmProxy_EndRagdoll&) const -> void;
     };
 
-    // A3: gated by FTag_IskmProxy_Movable AND FTag_Transform_Updated. Static proxies
+    // gated by FTag_IskmProxy_Movable AND FTag_Transform_Updated. Static proxies
     // (no _Movable tag) are skipped entirely at runtime. Movable proxies that didn't
     // change transform this frame (no _Transform_Updated tag set by CkEcsExt's transform
     // system) are also skipped. Plan-1's old per-frame Equals() guard is gone.

@@ -16,7 +16,7 @@
 #include "CkIskmRenderer/CkIskmRenderer_Stats.h"
 #include "CkIskmRenderer/Notify/CkIskmNotify_AnimInstance.h"
 
-// Phase K: ck::Is_NOT_Valid on UPhysicsAsset* needs the full class definition
+// ck::Is_NOT_Valid on UPhysicsAsset* needs the full class definition
 // for the validation trait's __is_base_of intrinsic.
 #include "PhysicsEngine/PhysicsAsset.h"
 
@@ -32,9 +32,9 @@ DECLARE_CYCLE_STAT(TEXT("Iskm::EmitFinishedEvents"), STAT_CkIskm_EmitFinishedEve
 namespace ck
 {
     // Sets an AnimInstance class on the SKMC and re-wires the notify-forwarder owning
-    // handle on the resulting AnimInstance. Called from Setup (this phase), Phase I
-    // (SetAnimInstanceClass handler), and Phase J's lazy-AnimInstance branch in
-    // PlayMontage. (unity builds concatenate TUs, so file-static rather than an anonymous namespace.)
+    // handle on the resulting AnimInstance. Called from Setup, the SetAnimInstanceClass
+    // handler, and the lazy-AnimInstance branch in PlayMontage. (unity builds concatenate
+    // TUs, so file-static rather than an anonymous namespace.)
     static auto DoApply_AnimInstanceClass(
         USkeletalMeshComponent* InSKMC,
         TSubclassOf<UAnimInstance> InClass,
@@ -62,7 +62,7 @@ namespace ck
         }
     }
 
-    // B7: refresh the world pointer once per tick. ForEachEntity then reads `_World`
+    // refresh the world pointer once per tick. ForEachEntity then reads `_World`
     // directly instead of paying the per-entity lookup cost. Sibling pattern from
     // CkIsmProxy_Processor.cpp lines 100-130.
     auto
@@ -100,7 +100,7 @@ namespace ck
             TEXT("IskmProxy Setup: AnimCollection invalid for [{}]"), InHandle)
         { return; }
 
-        // B7: cached world pointer; resolved once per tick in DoTick(). Asserts cheaply.
+        // cached world pointer; resolved once per tick in DoTick(). Asserts cheaply.
         auto* World = _World.Get();
         CK_ENSURE_IF_NOT(ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}),
             TEXT("IskmProxy Setup: cached world is invalid for [{}]"), InHandle)
@@ -127,7 +127,7 @@ namespace ck
         SKMC->SetWorldTransform(SpawnXf);
 
         // Resolve the AnimBP class. Sync-load — first use of an AnimCollection can hitch.
-        // use of an AnimCollection. Fall back to the notify-bridging UAnimInstance subclass
+        // Fall back to the notify-bridging UAnimInstance subclass
         // so OnAnimationNotify and OnMontageFinished still fire in sequence mode.
         const auto SoftClass = RendererData->Get_DefaultAnimInstanceClass();
         auto* AnimClass = SoftClass.IsNull() ? nullptr : SoftClass.LoadSynchronous();
@@ -176,7 +176,7 @@ namespace ck
             InCurrent._AttachedSubmeshIndices.Add(Idx);
         }
 
-        // B3: seed per-instance custom data from ParamsData defaults.
+        // seed per-instance custom data from ParamsData defaults.
         // FCk_CustomPrimitiveData uses _CustomDataIndex (not _DataIndex) and a
         // tagged-union FCk_CustomPrimitiveData_Value (Float/Vec2/Vec3/Vec4/Color).
         // Sibling CkIsmProxy_Setup converts via Value.ConvertToFloatArray() and
@@ -212,7 +212,7 @@ namespace ck
         }
         InMorphTargets._Dirty = false;
 
-        // A3: tag the entity as movable if requested. Static proxies (no tag) are skipped
+        // tag the entity as movable if requested. Static proxies (no tag) are skipped
         // by FProcessor_IskmProxy_UpdateTransform every frame.
         if (InParams.Get_IsMovable() == ECk_EnableDisable::Enable)
         {
@@ -262,7 +262,7 @@ namespace ck
             InHandle)
         { return; }
 
-        // Phase L: read the entity's current transform via the type-unsafe variant
+        // read the entity's current transform via the type-unsafe variant
         // (does the FCk_Handle → FCk_Handle_Transform cast internally) and push it
         // onto the SKMC. Gated by FTag_IskmProxy_Movable + FTag_Transform_Updated
         // (CkEcsExt's transform system sets the latter only when the transform
@@ -487,19 +487,10 @@ namespace ck
         InCurrent._BaseSKMC.Reset();
     }
 
-    // ---- DoHandleRequest stubs ----
+    // ---- DoHandleRequest handlers ----
     //
-    // The HandleRequests visitor instantiates DoHandleRequest(...) for every
-    // std::variant alternative in FFragment_IskmProxy_Requests::RequestType. At E3 we
-    // declare 5 overloads (matching the variant) but only F/J/K provide real bodies.
-    // To keep the linker happy from E3 onwards, we ship empty stubs here. Each later
-    // phase replaces its stub with a real implementation:
-    //   PlayAnimation / StopAnimation  → Phase F1
-    //   PlayMontage / StopMontage      → Phase J1
-    //   BeginRagdoll                   → Phase K1
-    // Until then, the variant is empty in practice (Add doesn't enqueue anything yet,
-    // and FFragment_IskmProxy_Requests has no API to push), so these are no-ops at
-    // runtime — they exist purely so the visitor template instantiates cleanly.
+    // The HandleRequests visitor instantiates DoHandleRequest(...) for every std::variant
+    // alternative in FFragment_IskmProxy_Requests::RequestType — one overload per request type.
 
     auto
         FProcessor_IskmProxy_HandleRequests::
@@ -868,7 +859,7 @@ namespace ck
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
             const FCk_Request_IskmProxy_AttachSubmesh& InRequest) const -> void
     {
-        // ::-qualified — see Phase F note re friend-class forward decl injection.
+        // ::-qualified — see the friend-class forward-decl injection note above.
         auto* RendererData = ::UCk_Utils_IskmRenderer_UE::Get_RendererData(InParams.Get_Renderer());
         CK_ENSURE_IF_NOT(ck::IsValid(RendererData),
             TEXT("IskmProxy [{}]: RendererData missing in AttachSubmesh handler — Renderer handle [{}] no longer resolves"),
@@ -884,7 +875,7 @@ namespace ck
         // Intentional dedup: re-attaching an already-attached submesh is a no-op.
         if (InCurrent._AttachedSubmeshIndices.Contains(Idx))
         { return; }
-        // B4: enforce GPU custom-data bitmask cap (Plan-2 packs mesh presence in 4 bits = 15
+        // enforce GPU custom-data bitmask cap (Plan-2 packs mesh presence in 4 bits = 15
         // slots). Plan-1 game code that exceeds this would silently break under Plan-2.
         CK_ENSURE_IF_NOT(InCurrent._AttachedSubmeshIndices.Num() < RendererData->Get_MaxSubmeshPerInstance(),
             TEXT("IskmProxy [{}]: cannot attach submesh [{}] — already at MaxSubmeshPerInstance ({})"),
@@ -1173,8 +1164,8 @@ namespace ck
 }
 
 // Inline processor registration — same pattern as CkIsmRenderer_Processor.cpp and the
-// renderer-side CkIskmRenderer_Processor.cpp at the end of D4. The 5 registrations land
-// at file scope, outside `namespace ck`.
+// renderer-side CkIskmRenderer_Processor.cpp. Registrations land at file scope, outside
+// `namespace ck`.
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_UpdateTransform);

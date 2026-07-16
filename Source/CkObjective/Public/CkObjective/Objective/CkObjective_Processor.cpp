@@ -26,7 +26,8 @@ namespace ck_objective
         return static_cast<ECk_ObjectiveStatus>(InStatus);
     }
 
-    // ----
+    // --------------------------------------------------------------------------------------------------------------------
+
     auto
         OnObjectiveStatusAttributeChanged(
             const FCk_Handle& InAttributeOwnerEntity,

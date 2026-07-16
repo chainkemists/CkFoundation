@@ -23,7 +23,7 @@ CKCROWD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Crowd_Agent);
 namespace ck
 {
     // Marks an agent that has had its probe child entity spawned + SceneNode-parented. Set by
-    // FProcessor_CrowdAgent_Setup once it has done the structural Gate 3 work; a TExclude on this
+    // FProcessor_CrowdAgent_Setup once it has done the structural setup work; a TExclude on this
     // tag prevents the Setup body from running twice on the same agent (the dirty-tag pump can fire
     // multiple times before the registry settles).
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_HasProbe);
@@ -50,7 +50,7 @@ namespace ck
 
     // Per-frame trimmed list of nearby agents, sorted by distance ascending. Capped at
     // _MaxNeighborsForSteering. Written by FProcessor_CrowdAgent_NeighborSync; read by Separation
-    // (Gate 3B) and any gameplay code that wants to know "is anyone near me".
+    // and any gameplay code that wants to know "is anyone near me".
     struct CKCROWD_API FFragment_CrowdAgent_NeighborCache
     {
     public:
@@ -66,9 +66,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Output of the separation force solver (Gate 3B). Declared in 3A so the steering view (Gate 3C)
-    // and gameplay code can ReadOnly-depend on it before 3B is wired up. Until 3B lands, _Force stays
-    // FVector::ZeroVector and steering's combination is a no-op.
+    // Output of the separation force solver. The steering view and gameplay code ReadOnly-depend on it.
     struct CKCROWD_API FFragment_CrowdAgent_SeparationForce
     {
     public:

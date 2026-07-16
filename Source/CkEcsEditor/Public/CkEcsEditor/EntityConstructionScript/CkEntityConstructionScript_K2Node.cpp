@@ -284,7 +284,7 @@ auto
             },
 
         }
-    ) == ECk_SucceededFailed::Failed) { return; };
+    ) == ECk_SucceededFailed::Failed) { return; }
 
     if (UCk_Utils_EditorGraph_UE::Request_LinkPins
     (

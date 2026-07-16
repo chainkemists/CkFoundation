@@ -49,7 +49,7 @@ private:
         Category = "Ck|Utils|Eqs",
         meta = (CompactNodeTitle = "INVALID_EqsQueryHandle", Keywords = "make"))
     static FCk_Handle_EqsQuery
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     // ----------------------------------------------------------------------------------------------------------------
@@ -77,7 +77,7 @@ public:
     // Spawns the query entity, runs Generate / RunTests / Finalize in-line, returns the
     // typed query handle with results already written. Bypasses the deferred processor pipeline.
     //
-    // P3-E5: does NOT broadcast OnEqsQueryComplete (the signal would fire before the caller
+    // Does NOT broadcast OnEqsQueryComplete (the signal would fire before the caller
     // can bind, so a delegate would never see it). Callers read accessors on the returned
     // handle. For delegate-driven completion, use Request_RunQuery (deferred).
     //
@@ -96,7 +96,7 @@ public:
         const FCk_Eqs_QueryParams& InQueryParams);
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Cancellation (Pass-3.1 E3)
+    // Cancellation
     //
     // Adds FTag_EqsQuery_Cancelled. FProcessor_Eqs_Test sees the tag at the top of its
     // ForEachEntity, fails the query with empty results + Failed tag, broadcasts OnComplete,

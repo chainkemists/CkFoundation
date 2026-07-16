@@ -190,9 +190,7 @@ namespace ck::details
         CK_DEFINE_CONSTRUCTOR(ContactCastCollector, _ProbeHandle, _BodyInterface);
     };
 
-    // ================================================================================================================
-    // TProbeShapeFactory specializations
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
     // Jolt's Cylinder/Capsule are Y-AXIS ALIGNED while CkSpatialQuery runs Jolt in Unreal's Z-up frame
     // (jolt::Conv is an axis passthrough) — those two factories therefore stand their leaf shape up via
@@ -387,9 +385,7 @@ namespace ck::details
         }
     };
 
-    // ================================================================================================================
-    // TProcessor_ProbeSetup
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_ShapeFragment>
     TProcessor_ProbeSetup<T_ShapeFragment>::
@@ -509,9 +505,7 @@ namespace ck::details
         BodyInterface.AddBody(Body->GetID(), EActivation::Activate);
     }
 
-    // ================================================================================================================
-    // TProcessor_ProbeUpdateShape
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_ShapeFragment>
     TProcessor_ProbeUpdateShape<T_ShapeFragment>::
@@ -564,9 +558,7 @@ namespace ck::details
             EActivation::Activate);
     }
 
-    // ================================================================================================================
-    // Explicit template instantiations
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
     template class TProcessor_ProbeSetup<FFragment_ShapeBox_Current>;
     template class TProcessor_ProbeSetup<FFragment_ShapeSphere_Current>;

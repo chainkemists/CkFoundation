@@ -3,10 +3,10 @@
 #include "CkGoap/CkGoap_Log.h"
 #include "CkGoap/CkGoap_Stats.h"
 #include "CkGoap/Action/CkGoap_Action_Fragment.h"
-#include "CkGoap/Action/CkGoap_Action_Utils.h"  // PR-B.1b Stage 3: CastChecked for Planner-as-Action
+#include "CkGoap/Action/CkGoap_Action_Utils.h"  // CastChecked for Planner-as-Action
 #include "CkGoap/Algorithm/CkGoap_WorldState.h"
 #include "CkGoap/EntityScripts/CkGoapAction_EntityScript.h"
-#include "CkGoap/Planner/CkGoap_Planner_Utils.h"  // U11.2: snapshot active chain for OnActiveChainChanged payload
+#include "CkGoap/Planner/CkGoap_Planner_Utils.h"  // snapshot active chain for OnActiveChainChanged payload
 #include "CkGoap/WorldState/CkGoap_WorldState_Fragment.h"
 #include "CkGoap/WorldState/CkGoap_WorldState_Utils.h"
 
@@ -14,17 +14,17 @@
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkEcs/Signal/CkSignal_Utils.h"
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Planner_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Planner_UpdateActivation);
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_CYCLE_STAT(TEXT("GoapPlanner::Setup"), STAT_Goap_Planner_Setup, STATGROUP_CkGoap);
 DECLARE_CYCLE_STAT(TEXT("GoapPlanner::UpdateActivation"), STAT_Goap_Planner_UpdateActivation, STATGROUP_CkGoap);
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_CkGoap_Planner_setup_internal
 {
@@ -117,10 +117,10 @@ namespace ck_CkGoap_Planner_setup_internal
 namespace ck
 {
 
-// ====================================================================================================================
-// SETUP — Per-Planner cycle detection over this Planner's direct children.
+// --------------------------------------------------------------------------------------------------------------------
+// Per-Planner cycle detection over this Planner's direct children.
 //
-// U11.4 — Spec §7.2: each Planner runs Tarjan SCC over its own direct children's
+// Each Planner runs Tarjan SCC over its own direct children's
 // PRECONDITION/EFFECT dependency graph. "Direct children" of a Planner are its
 // candidate operators — the Actions it considers when planning. In the unified
 // Action-as-Planner model:
@@ -150,7 +150,6 @@ namespace ck
 // Defers if any direct child still has `FTag_Goap_Action_RequiresSetup` so the
 // per-Action `_Definition` (used to compute precondition/effect overlap below)
 // has been populated.
-// ====================================================================================================================
 
 auto
 	FProcessor_Goap_Planner_Setup::
@@ -165,7 +164,7 @@ auto
 {
 	SCOPE_CYCLE_COUNTER(STAT_Goap_Planner_Setup);
 
-	// PR-B.1b Stage 5: cycle scan no longer reads InCurrent (the _RootAction
+	// cycle scan no longer reads InCurrent (the _RootAction
 	// field is gone). InCurrent is still passed as RW because the processor
 	// writes _DependencyCycles below.
 
@@ -317,7 +316,7 @@ auto
 			InHandle, InCurrent._DependencyCycles.Num());
 	}
 
-	// PR-B.1b Stage 3: Planner-side goal resolution. The Planner's _GoalAuthored
+	// Planner-side goal resolution. The Planner's _GoalAuthored
 	// resolves into _Goal via the Planner's own resolved WS source. Used by
 	// FProcessor_Goap_Planner_HandleRequests when seeding A*.
 	//
@@ -328,7 +327,7 @@ auto
 	// first time around.
 	//
 	// Note: keys not in the registry are silently dropped here — same semantics
-	// as the per-Action Setup did prior to Stage 3. _InvalidGoal is populated
+	// as the per-Action Setup did. _InvalidGoal is populated
 	// by Request_SetGoal (the canonical diagnostic surface).
 	if (NOT InGoal._GoalAuthored.IsEmpty() && InGoal._Goal.IsEmpty())
 	{
@@ -419,25 +418,24 @@ auto
 	InHandle.Remove<FTag_Goap_Planner_RequiresSetup>();
 }
 
-// ====================================================================================================================
-// UPDATE ACTIVATION — per-Planner activation transitions.
+// --------------------------------------------------------------------------------------------------------------------
+// Per-Planner activation transitions.
 //
-// Per spec §4.2: each Planner caches its previous Plan[0] in
+// Each Planner caches its previous Plan[0] in
 // FFragment_Goap_Planner_Activation; on each tick, compares with the current
 // Plan[0] and dispatches activate/deactivate transitions for composite sub-
 // Planners. The "active chain" is no longer stored anywhere — Get_ActiveChain
 // derives it from a Plan[0] walk starting at the top-level Planner's root
 // Action.
 //
-// In the U11.2 transitional model, sub-Planners ARE Action entities — every
+// In the transitional model, sub-Planners ARE Action entities — every
 // composite Action carries FFragment_Goap_Planner_PlanState and runs its own
 // A* planner. The processor walks Action entities (those with PlanState +
 // Activation), not the top-level Planner entity (which doesn't run A*).
-// ====================================================================================================================
 
 namespace
 {
-	// "Is a Planner" in U11.2 = has children. Atomic Actions terminate the
+	// "Is a Planner" = has children. Atomic Actions terminate the
 	// activation walk and never get the per-sub-Planner activate/deactivate
 	// treatment.
 	auto Is_Composite(const FCk_Handle_Goap_Action& InAction) -> bool
@@ -448,7 +446,7 @@ namespace
 	}
 }
 
-// U11.2: re-resolve a sub-Planner's goal from its OWN _GoalAuthored (the
+// re-resolve a sub-Planner's goal from its OWN _GoalAuthored (the
 // authored, tag-keyed source-of-truth set at construction via PlannerParams /
 // AddAction's first-call goal propagation or at runtime via Request_SetGoal).
 //
@@ -511,7 +509,7 @@ auto
 	}
 }
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
 	FProcessor_Goap_Planner_UpdateActivation::
@@ -552,7 +550,7 @@ auto
 	}
 }
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
 	FProcessor_Goap_Planner_UpdateActivation::
@@ -566,7 +564,7 @@ auto
 	Subscribers._Subscribers.AddUnique(FCk_Handle{InAction});
 }
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
 	FProcessor_Goap_Planner_UpdateActivation::
@@ -580,13 +578,12 @@ auto
 	Subscribers._Subscribers.RemoveSwap(FCk_Handle{InAction});
 }
 
-// ====================================================================================================================
-// ACTIVATE — turn a child sub-Planner on. Resolves WS, injects goal, subscribes
+// --------------------------------------------------------------------------------------------------------------------
+// Turn a child sub-Planner on. Resolves WS, injects goal, subscribes
 // to WS, sets RequiresInitialPlan, broadcasts OnPlannerActivated, flips
 // _IsActive=true. Caller is responsible for the parent-Action's _ActiveParent
 // bookkeeping (the FFragment_Goap_Action_Current field tracking which parent
 // activated this child).
-// ====================================================================================================================
 
 auto
 	FProcessor_Goap_Planner_UpdateActivation::
@@ -621,7 +618,7 @@ auto
 
 	Activation._IsActive = true;
 
-	// PR-B.1b Stage 0 — broadcast still happens on the Action entity (Path A);
+	// broadcast still happens on the Action entity (Path A);
 	// payload source-handle is the Planner-cast of the activated entity (sub-
 	// Planners are always promoted, so this cast is safe).
 	{
@@ -633,11 +630,10 @@ auto
 	}
 }
 
-// ====================================================================================================================
-// DEACTIVATE — turn a sub-Planner off. Recursively deactivates any active
+// --------------------------------------------------------------------------------------------------------------------
+// Turn a sub-Planner off. Recursively deactivates any active
 // descendants so their _IsActive flags don't go stale (otherwise re-activation
 // of the same sub-tree would silently no-op the descendant chain).
-// ====================================================================================================================
 
 auto
 	FProcessor_Goap_Planner_UpdateActivation::
@@ -690,7 +686,7 @@ auto
 	Activation._IsActive = false;
 	Activation._LastActivatedPlan0 = {};
 
-	// PR-B.1b Stage 0 — broadcast still happens on the Action entity (Path A);
+	// broadcast still happens on the Action entity (Path A);
 	// payload source-handle is the Planner-cast of the deactivated entity.
 	{
 		auto PlannerCast = UCk_Utils_Goap_Planner_UE::Has(InPlanner)
@@ -701,9 +697,8 @@ auto
 	}
 }
 
-// ====================================================================================================================
-// ForEachEntity — per-Planner activation transition rule (spec §4.2).
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// ForEachEntity — per-Planner activation transition rule.
 
 auto
 	FProcessor_Goap_Planner_UpdateActivation::
@@ -716,7 +711,7 @@ auto
 {
 	SCOPE_CYCLE_COUNTER(STAT_Goap_Planner_UpdateActivation);
 
-	// PR-B.1b Stage 3: matches Planner directly. Top-level Planners (created
+	// matches Planner directly. Top-level Planners (created
 	// via Add) have _IsActive=true at construction; promoted mid-tier
 	// Planners flip via parent's UpdateActivation pass.
 	if (NOT InActivation._IsActive) { return; }
@@ -748,7 +743,7 @@ auto
 	//
 	// Path-A bridge: for a top-level Planner, InHandle IS the top-level.
 	// For a promoted mid-tier Planner-Action, walk lifetime-owner up to
-	// reach the top-level Planner entity. PR-B.1b Stage 5 will simplify this.
+	// reach the top-level Planner entity.
 	auto TopLevelPlanner = FCk_Handle_Goap_Planner{};
 	auto OldChainSnapshot = TArray<FCk_Handle_Goap_Action>{};
 	{
@@ -819,6 +814,6 @@ auto
 	}
 }
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 } // namespace ck

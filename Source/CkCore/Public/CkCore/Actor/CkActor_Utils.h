@@ -91,19 +91,19 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     TWeakObjectPtr<AActor> _Actor = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     TWeakObjectPtr<UMeshComponent> _ComponentWithSocket = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     FTransform _Transform;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     FName _Name;
 
 public:

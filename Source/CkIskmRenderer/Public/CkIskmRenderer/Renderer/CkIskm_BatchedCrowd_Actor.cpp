@@ -21,7 +21,7 @@
 
 ACk_Iskm_BatchedCrowd_Actor::ACk_Iskm_BatchedCrowd_Actor()
 {
-    // inc-4 §4: the actor no longer self-ticks — FProcessor_IskmCrowd_Advance drives AdvanceAnimation on
+    // the actor no longer self-ticks — FProcessor_IskmCrowd_Advance drives AdvanceAnimation on
     // the ECS clock so member render + far cosmetics resolve the same frame.
     PrimaryActorTick.bCanEverTick = false;
     _Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
@@ -41,7 +41,7 @@ auto
     if (_Collection != nullptr && _Collection->Get_IsBaked() == false)
     { _Collection->Build_BakedPoseData(); }
 
-    // inc-4 §4: stand up this crowd's ECS presence so FProcessor_IskmCrowd_Advance can drive it on the
+    // stand up this crowd's ECS presence so FProcessor_IskmCrowd_Advance can drive it on the
     // ECS clock. Owned by the transient entity (session lifetime — the crowd is never destroyed mid-
     // session; the world teardown clears it). No ECS world (edge case) => no controller; the crowd simply
     // won't self-advance, and the ensure below flags it.

@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkAttribute);
 
 namespace ck::attribute
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkAttribute);
+    CK_REGISTER_LOG_FUNCTIONS(CkAttribute);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

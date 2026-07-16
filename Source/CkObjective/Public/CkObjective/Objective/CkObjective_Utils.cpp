@@ -11,13 +11,11 @@
 
 namespace
 {
-    // Helper function to convert status enum to byte value
     constexpr uint8 StatusEnumToByte(ECk_ObjectiveStatus InStatus)
     {
         return static_cast<uint8>(InStatus);
     }
 
-    // Helper function to convert byte value to status enum
     constexpr ECk_ObjectiveStatus ByteToStatusEnum(uint8 InValue)
     {
         return static_cast<ECk_ObjectiveStatus>(InValue);
@@ -95,7 +93,6 @@ auto
 {
     const auto& Current = InObjective.Get<ck::FFragment_Objective_Current>();
 
-    // Get the status from the byte attribute and convert to enum
     const uint8 StatusValue = UCk_Utils_ByteAttribute_UE::Get_FinalValue(
         Current.Get_StatusAttribute(),
         ECk_MinMaxCurrent::Current);

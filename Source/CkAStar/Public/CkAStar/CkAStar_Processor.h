@@ -7,7 +7,7 @@
 #include "CkEcs/Processor/CkParallelProcessor.h"
 #include "CkEcs/Processor/CkProcessor_AccessPolicy.h"
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 // PERF STATS — templated header: these create per-TU internal-linkage statics (acceptable; few TUs).
 //
 // These two cycle stats are the body-level scopes for the shared template ForEachEntity bodies below. A single
@@ -18,12 +18,12 @@
 //                                                                       FProcessor_AStarTest_EndPlay)
 // Both report under STATGROUP_CkAStar (the template's owning module). The GOAP aliases therefore surface under
 // CkAStar rather than CkGoap — intentional, since the executing code lives in CkAStar.
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_CYCLE_STAT(TEXT("AStar::Execute"), STAT_AStar_Execute, STATGROUP_CkAStar);
 DECLARE_CYCLE_STAT(TEXT("AStar::EndPlay"), STAT_AStar_EndPlay, STATGROUP_CkAStar);
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 //
 // BASE TEMPLATE PROCESSORS — Consumers inherit from these, add Group/RunAfter, and register.
 //
@@ -44,14 +44,12 @@ DECLARE_CYCLE_STAT(TEXT("AStar::EndPlay"), STAT_AStar_EndPlay, STATGROUP_CkAStar
 //     };
 //     CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Execute);
 //
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
 
-// ====================================================================================================================
-// EXECUTE PROCESSOR — Runs ContinueSearch on each active entity (parallel)
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 template <
 	typename T_DerivedProcessor,
@@ -157,9 +155,7 @@ public:
 	}
 };
 
-// ====================================================================================================================
-// CLEANUP PROCESSOR — Resets search state when SearchComplete tag is consumed
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 template <
 	typename T_DerivedProcessor,
@@ -192,6 +188,6 @@ public:
 	}
 };
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 } // namespace ck

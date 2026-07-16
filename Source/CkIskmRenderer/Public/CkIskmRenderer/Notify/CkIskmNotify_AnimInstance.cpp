@@ -38,8 +38,7 @@ void UCk_IskmNotify_AnimInstance::NativeOnMontageBlendingOut(UAnimMontage* InMon
     {
         // Clear ECS-side state for the entity. The OnMontageFinished signal is the source
         // of truth for listeners; clearing _CurrentMontage and the active-montage tag here
-        // keeps fragment state consistent with the SKMC-side state. Friend access to
-        // FFragment_IskmProxy_AnimState was added in pre-M setup commit `411ac4e29`.
+        // keeps fragment state consistent with the SKMC-side state.
         if (auto& AnimState = _OwningHandle.Get<ck::FFragment_IskmProxy_AnimState>();
             AnimState.Get_CurrentMontage().Get() == InMontage)
         {

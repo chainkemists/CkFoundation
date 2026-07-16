@@ -7,13 +7,11 @@ public class CkUI : CkModuleRules
     {
         PublicIncludePaths.AddRange(
             new string[] {
-                // ... add public include paths required here ...
             }
             );
 
         PrivateIncludePaths.AddRange(
             new string[] {
-                // ... add other private include paths required here ...
             }
             );
 
@@ -27,7 +25,6 @@ public class CkUI : CkModuleRules
                 "CkEcs",
                 "CkEcsExt",
                 "CkGraphics",
-                // ... add other public dependencies that you statically link with here ...
             }
             );
 
@@ -54,7 +51,6 @@ public class CkUI : CkModuleRules
                 "CkLog",
                 "CkSettings",
                 "CkGameSession"
-                // ... add private dependencies that you statically link with here ...
             }
             );
 

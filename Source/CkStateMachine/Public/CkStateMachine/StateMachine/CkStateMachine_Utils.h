@@ -42,9 +42,7 @@ public:
     struct RecordOfSmConditions_Utils  : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfSmConditions> {};
 
 public:
-    // ================================================================================================================
-    // CREATION
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
     // Adds a state machine to InOwner from a params struct. For a local-only SM, construct the
     // params from just the initial state class — FCk_Fragment_StateMachine_ParamsData(InitialState) —
@@ -66,9 +64,7 @@ public:
         UPARAM(ref) FCk_Handle& InOwner,
         const FCk_Fragment_StateMachine_ParamsData& InParams);
 
-    // ================================================================================================================
-    // CONTROL
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|StateMachine",
@@ -130,9 +126,7 @@ public:
         UPARAM(ref) FCk_Handle_StateMachine& InStateMachine,
         TSubclassOf<UCk_SmState_EntityScript> InOverrideStateClass);
 
-    // ================================================================================================================
-    // GETTERS
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|StateMachine",
@@ -213,14 +207,13 @@ public:
         const FCk_Handle_StateMachine& InStateMachine) -> ECk_Sm_AuthorityModel;
 
     // Immutable per-SM choice from FFragment_Sm_Params._ReplicationModel. WithHistory by default;
-    // WithoutHistory for snap-to-current SMs. Read by Phase 6+ to switch on payload shape.
+    // WithoutHistory for snap-to-current SMs. Read to switch on payload shape.
     static auto
     Get_ReplicationModel(
         const FCk_Handle_StateMachine& InStateMachine) -> ECk_Sm_ReplicationModel;
 
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
     // SUB-SM TRANSITION RELAY (identity + resolution)
-    // ================================================================================================================
     //
     // Sub-SMs are non-replicated local entities (created by UCk_SmTask_SubStateMachine), so they have
     // no transport of their own. To replicate an owning-client sub-SM's transitions to the server /
@@ -250,9 +243,7 @@ public:
         const FCk_Handle_StateMachine& InRoot,
         const TArray<FGameplayTag>& InParentHierarchy) -> FCk_Handle_StateMachine;
 
-    // ================================================================================================================
-    // SIGNAL BINDING
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|StateMachine",
@@ -326,9 +317,8 @@ public:
         UPARAM(ref) FCk_Handle_SmTask& InTask,
         const FCk_Delegate_SmTask_OnFinished& InDelegate);
 
-    // ================================================================================================================
-    // REPLICATION RELAY (Phase 4 — stub. Phase 10 wires consumption from OwningClient path.)
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
+    // REPLICATION RELAY (stub; consumption from the OwningClient path is wired later.)
 
     // Resolves the StateMachineRelay channel for an SM that opts into OwningClientAuthoritative.
     // Looks up UCk_StateMachineRelay_Subsystem_UE on the SM's World and acquires a channel via
@@ -336,16 +326,14 @@ public:
     // or no channel is available yet (the subsystem auto-spawns channels at PostLogin so callers
     // very early in the world's lifetime may transiently see no channel).
     //
-    // Phase 10 will refine this to prefer the channel owned by the SM's owning PlayerState; for
+    // A later refinement will prefer the channel owned by the SM's owning PlayerState; for
     // now it returns whichever channel the subsystem assigns via its selection algorithm, which
-    // is sufficient for Phase 4's compile-only goal.
+    // is sufficient for the current compile-only goal.
     static auto
     Acquire_RelayChannel(
         const FCk_Handle_StateMachine& InStateMachine) -> FCk_ActorRelay_ChannelResult;
 
-    // ================================================================================================================
-    // DEBUG
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
     static void
     TryCheckEntryBreakpoint(
@@ -357,9 +345,7 @@ public:
         FCk_Handle_StateMachine& InStateMachine,
         TSubclassOf<UCk_SmState_EntityScript> InStateClass);
 
-    // ================================================================================================================
-    // CAST
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
 private:
     UFUNCTION(BlueprintCallable,
@@ -386,9 +372,7 @@ private:
     static FCk_Handle_StateMachine
     Get_InvalidHandle() { return {}; }
 
-    // ================================================================================================================
-    // INTERNALS
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
 private:
     static auto

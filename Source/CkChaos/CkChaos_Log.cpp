@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkChaos);
 
 namespace ck::chaos
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkChaos);
+    CK_REGISTER_LOG_FUNCTIONS(CkChaos);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

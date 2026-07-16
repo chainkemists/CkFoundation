@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkAnimation);
 
 namespace ck::animation
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkAnimation);
+    CK_REGISTER_LOG_FUNCTIONS(CkAnimation);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

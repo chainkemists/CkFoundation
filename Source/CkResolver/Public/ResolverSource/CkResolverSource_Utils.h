@@ -91,7 +91,7 @@ private:
         Category = "Ck|Utils|ResolverSource",
         meta = (CompactNodeTitle = "INVALID_ResolverSourceHandle", Keywords = "make"))
     static FCk_Handle_ResolverSource
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintPure,

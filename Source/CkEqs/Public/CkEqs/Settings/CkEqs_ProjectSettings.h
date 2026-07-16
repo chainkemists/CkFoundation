@@ -17,7 +17,7 @@ public:
     CK_GENERATED_BODY(UCk_Eqs_ProjectSettings_UE);
 
 private:
-    // P3-E4: GLOBAL per-frame budget across ALL active queries in this registry.
+    // GLOBAL per-frame budget across ALL active queries in this registry.
     // 0 = disabled-with-warn (NOT unbounded — use Request_RunQuery_Immediate for synchronous work).
     // 256 keeps 60 fps comfortable: 256 candidates × 2-3 physics queries each fits the frame.
     UPROPERTY(Config, EditDefaultsOnly, Category = "Eqs",
@@ -25,7 +25,7 @@ private:
             ToolTip = "GLOBAL per-frame candidate-evaluation budget across all active queries. 0 disables the deferred path entirely (one Warning per query rejection). Provisional default 256; tune against the gym reference scene."))
     int32 _MaxCandidatesPerFrame = 256;
 
-    // P3-E5: hard-cap on Request_RunQuery_Immediate to prevent accidental main-thread DoS.
+    // Hard-cap on Request_RunQuery_Immediate to prevent accidental main-thread DoS.
     // Generators producing more than this number of candidates have the list truncated with a Warning.
     UPROPERTY(Config, EditDefaultsOnly, Category = "Eqs",
         meta = (AllowPrivateAccess = true, ClampMin = 1, UIMin = 1, ClampMax = 16384, UIMax = 16384,

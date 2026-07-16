@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkInventory);
 
 namespace ck::inventory
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkInventory);
+    CK_REGISTER_LOG_FUNCTIONS(CkInventory);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

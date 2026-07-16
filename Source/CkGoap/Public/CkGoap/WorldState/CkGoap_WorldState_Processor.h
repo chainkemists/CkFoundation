@@ -6,14 +6,13 @@
 #include "CkEcs/Processor/CkProcessor_AccessPolicy.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
 
-// ====================================================================================================================
-// HANDLE REQUESTS — drains Set / RegisterKey queue, mutates values, broadcasts OnValueChanged
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Drains Set / RegisterKey queue, mutates values, broadcasts OnValueChanged
 
 class CKGOAP_API FProcessor_Goap_WorldState_HandleRequests : public ck_exp::TProcessor<
 	FProcessor_Goap_WorldState_HandleRequests,
@@ -57,6 +56,6 @@ private:
 		const FCk_Request_Goap_WorldState_RegisterKey& InRequest) -> void;
 };
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 } // namespace ck

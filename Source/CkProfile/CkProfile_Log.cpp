@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkProfile);
 
 namespace ck::profile
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkProfile);
+    CK_REGISTER_LOG_FUNCTIONS(CkProfile);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -10,7 +10,7 @@ CKNAVIGATION_API DECLARE_LOG_CATEGORY_EXTERN(CkNavigation, Log, All);
 
 namespace ck::nav
 {
-	CK_DEFINE_LOG_FUNCTIONS(CkNavigation);
+    CK_DEFINE_LOG_FUNCTIONS(CkNavigation);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

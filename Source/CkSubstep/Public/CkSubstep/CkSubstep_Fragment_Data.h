@@ -36,11 +36,11 @@ struct CKSUBSTEP_API FCk_Substep_ParamsData
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     FCk_Time _TickRate = FCk_Time{0.01};
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     ECk_Substep_State _StartingState = ECk_Substep_State::Paused;
 
 public:

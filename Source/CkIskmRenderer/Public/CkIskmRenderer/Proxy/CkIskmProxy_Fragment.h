@@ -22,7 +22,7 @@ namespace ck
     CK_DEFINE_ECS_TAG_TRANSIENT(FTag_IskmProxy_PendingAsyncLoad);
     CK_DEFINE_ECS_TAG_TRANSIENT(FTag_IskmProxy_HasActiveMontage);
     CK_DEFINE_ECS_TAG_TRANSIENT(FTag_IskmProxy_Ragdolling);
-    // A3: Movable proxies have this tag set at Setup based on ParamsData._IsMovable.
+    // Movable proxies have this tag set at Setup based on ParamsData._IsMovable.
     // The UpdateTransform processor includes FTag_IskmProxy_Movable AND
     // FTag_Transform_Updated (a CkEcsExt convention set when the entity transform
     // changes); static proxies are skipped entirely each frame.
@@ -34,8 +34,7 @@ namespace ck
 
     // ---- current ----
 
-    // ============================================================================
-    // A2: Plan-1 → Plan-2 migration — load-bearing fragment.
+    // Plan-1 → Plan-2 migration — load-bearing fragment.
     //
     // Plan-1 stores a `TWeakObjectPtr<USkeletalMeshComponent>` per entity. Plan-2 will
     // replace this with `int32 _InstanceIndex + uint32 _InstanceVersion` — an SOA index
@@ -46,7 +45,6 @@ namespace ck
     // `Get_PlayingAnimation`, etc.) must be implementable from either shape. Reaching
     // into `_BaseSKMC` from a different module, fragment, or external processor would
     // multiply the Plan-2 migration cost.
-    // ============================================================================
     struct CKISKMRENDERER_API FFragment_IskmProxy_Current
     {
     public:
@@ -111,7 +109,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_IskmProxy_AnimState);
         friend class FProcessor_IskmProxy_HandleRequests;
         friend class FProcessor_IskmProxy_EmitFinishedEvents;
-        // Phase M: UCk_IskmNotify_AnimInstance::NativeOnMontageBlendingOut clears
+        // UCk_IskmNotify_AnimInstance::NativeOnMontageBlendingOut clears
         // _CurrentMontage when the bridged anim's montage ends, before broadcasting
         // OnMontageFinished. Friend access required for the private-member reset.
         friend class UCk_IskmNotify_AnimInstance;

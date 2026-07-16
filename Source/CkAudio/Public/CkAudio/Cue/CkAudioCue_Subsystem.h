@@ -1,4 +1,3 @@
-// CkAudioCueSubsystem.h
 #pragma once
 
 #include "CkCue/CkCueSubsystem_Base.h"

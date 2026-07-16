@@ -33,7 +33,7 @@ namespace ck
 
     // Playback state under the GPU-time-driven model: the GPU derives the frame from
     // (WorldTime - _PlaybackStartTime) * _PlayRate — state is written on CHANGE only, never per frame.
-    // Gate 3 packs this into per-instance custom data; the crossfade pair (_PrevClip*) feeds the shader's
+    // It is packed into per-instance custom data; the crossfade pair (_PrevClip*) feeds the shader's
     // 2-state blend.
     struct CKVAT_API FFragment_VatProxy_Current
     {
@@ -49,8 +49,8 @@ namespace ck
         // Index into the collection's SERIALIZED baked clip table; INDEX_NONE = reference pose (row 0).
         int32 _ActiveClipIndex = INDEX_NONE;
         ECk_VatProxy_LoopMode _ActiveLoopMode = ECk_VatProxy_LoopMode::Loop;
-        // A rate change rebases _PlaybackStartTime so the playback position is preserved (Gate 3 packing
-        // contract) — consumers must not assume _PlaybackStartTime is the original play call's timestamp.
+        // A rate change rebases _PlaybackStartTime so the playback position is preserved — consumers
+        // must not assume _PlaybackStartTime is the original play call's timestamp.
         float _PlayRate = 1.0f;
         FCk_Time _PlaybackStartTime;
 

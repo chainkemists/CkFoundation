@@ -51,7 +51,7 @@ private:
         Category = "Ck|Utils|ProbeTrace",
         meta = (CompactNodeTitle = "INVALID_ProbeTraceHandle", Keywords = "make"))
     static FCk_Handle_ProbeTrace
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintCallable,

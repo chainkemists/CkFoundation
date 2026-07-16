@@ -85,7 +85,7 @@ private:
               Category = "Ck|Utils|TagSet",
               meta = (CompactNodeTitle = "INVALID_TagSetHandle", Keywords = "make"))
     static FCk_Handle_TagSet
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintPure,

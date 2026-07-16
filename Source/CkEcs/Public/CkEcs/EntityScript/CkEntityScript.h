@@ -126,18 +126,18 @@ protected:
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
         Category = "Ck|EntityScript",
-        meta=(AllowPrivateAccess, EditCondition="ShowReplicationInEditor()", EditConditionHides))
+        meta=(AllowPrivateAccess = true, EditCondition="ShowReplicationInEditor()", EditConditionHides))
     ECk_Replication _Replication = ECk_Replication::Replicates;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
         Category = "Ck|EntityScript",
-        meta=(AllowPrivateAccess, InvalidEnumValues = "NotInstanced"))
+        meta=(AllowPrivateAccess = true, InvalidEnumValues = "NotInstanced"))
     ECk_EntityScript_InstancingPolicy _InstancingPolicy = ECk_EntityScript_InstancingPolicy::InstancedPerEntity_Poolable;
 
     // pool config for InstancedPerEntity_Poolable (ignored otherwise); a per-class project setting overrides it
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
         Category = "Ck|EntityScript",
-        meta=(AllowPrivateAccess,
+        meta=(AllowPrivateAccess = true,
             EditCondition="_InstancingPolicy == ECk_EntityScript_InstancingPolicy::InstancedPerEntity_Poolable",
             EditConditionHides))
     FCk_ObjectPooling_PoolParams _PoolParams;
