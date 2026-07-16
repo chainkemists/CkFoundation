@@ -23,7 +23,7 @@
 // Background thread continuously resolves unresolved addresses
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_debug_utils
 {
     struct FSymbolCacheEntry
     {
@@ -460,12 +460,12 @@ auto
 {
 #if !CK_DISABLE_STACK_TRACE
     // Ensure background resolver is running
-    StartBackgroundResolver();
+    ck_debug_utils::StartBackgroundResolver();
 
     // Try read-only access first (fast path - already in cache)
     {
-        FReadScopeLock ReadLock(GSymbolCacheLock);
-        if (const auto* Cached = GSymbolCache.Find(InAddress))
+        FReadScopeLock ReadLock(ck_debug_utils::GSymbolCacheLock);
+        if (const auto* Cached = ck_debug_utils::GSymbolCache.Find(InAddress))
         {
             return Cached->Symbol.Get();
         }
@@ -473,16 +473,16 @@ auto
 
     // Not cached - add placeholder entry (background thread will resolve it)
     {
-        FWriteScopeLock WriteLock(GSymbolCacheLock);
+        FWriteScopeLock WriteLock(ck_debug_utils::GSymbolCacheLock);
 
         // Double-check - another thread might have cached it while we waited
-        if (const auto* Cached = GSymbolCache.Find(InAddress))
+        if (const auto* Cached = ck_debug_utils::GSymbolCache.Find(InAddress))
         {
             return Cached->Symbol.Get();
         }
 
         // Add unresolved entry - background thread will resolve it
-        auto& NewEntry = GSymbolCache.Add(InAddress, FSymbolCacheEntry{});
+        auto& NewEntry = ck_debug_utils::GSymbolCache.Add(InAddress, ck_debug_utils::FSymbolCacheEntry{});
         return NewEntry.Symbol.Get();
     }
 #else

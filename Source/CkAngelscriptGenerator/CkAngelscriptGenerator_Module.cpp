@@ -38,7 +38,7 @@
 
 #define LOCTEXT_NAMESPACE "FCkAngelscriptGeneratorModule"
 
-namespace
+namespace ck_angelscript_generator_module
 {
 #if WITH_EDITOR
     constexpr auto* sSelfHealLogChannel = TEXT("CkAngelscriptGenerator");
@@ -584,7 +584,7 @@ void FCkAngelscriptGeneratorModule::StartupModule()
     // compile. Wipe them before AS hooks are wired; the dispatcher will
     // re-synthesize from scratch if drift is still present.
     {
-        const auto DeletedCount = Delete_AllStubRecoveryFiles();
+        const auto DeletedCount = ck_angelscript_generator_module::Delete_AllStubRecoveryFiles();
         if (DeletedCount > 0)
         {
             ck::angelscriptgenerator::Log(
@@ -600,16 +600,16 @@ void FCkAngelscriptGeneratorModule::StartupModule()
         InitOptions.bShowPages   = false;
         InitOptions.bAllowClear  = true;
         MessageLogModule.RegisterLogListing(
-            FName{sSelfHealLogChannel},
+            FName{ck_angelscript_generator_module::sSelfHealLogChannel},
             LOCTEXT("MessageLogTitle", "AngelScript Generator"),
             InitOptions);
     }
 
     _PostEngineInitHandle = FCoreDelegates::OnPostEngineInit.AddLambda([]()
     {
-        Run_AllGenerators();
-        Maybe_RegenDynamicHandleJson_OnPostInit();
-        Maybe_RegenAssetRegistry_OnPostInit();
+        ck_angelscript_generator_module::Run_AllGenerators();
+        ck_angelscript_generator_module::Maybe_RegenDynamicHandleJson_OnPostInit();
+        ck_angelscript_generator_module::Maybe_RegenAssetRegistry_OnPostInit();
     });
 
     // Engine-loop-init completion: PostCompile AssetRegistry cleanup gates on
@@ -617,7 +617,7 @@ void FCkAngelscriptGeneratorModule::StartupModule()
     _EngineLoopInitCompleteHandle = FCoreDelegates::OnFEngineLoopInitComplete.AddLambda(
         []()
         {
-            sg_EngineLoopInitComplete = true;
+            ck_angelscript_generator_module::sg_EngineLoopInitComplete = true;
             ck::angelscriptgenerator::self_heal::FCkAsRecoveryDispatcher::Mark_BootstrapComplete();
         });
 
@@ -632,18 +632,18 @@ void FCkAngelscriptGeneratorModule::StartupModule()
             // into the now-healthy state (the 2026-06-10 re-corruption).
             ck::angelscriptgenerator::self_heal::FCkAsRecoveryDispatcher::Clear_PendingRecoveryState();
 
-            Run_AllGenerators();
-            Maybe_RegenDynamicHandleJson_OnPostCompile();
-            Maybe_RegenAssetRegistry_OnPostCompile();
+            ck_angelscript_generator_module::Run_AllGenerators();
+            ck_angelscript_generator_module::Maybe_RegenDynamicHandleJson_OnPostCompile();
+            ck_angelscript_generator_module::Maybe_RegenAssetRegistry_OnPostCompile();
 
             // ESP + DH generators are sync above — safe to clean their siblings.
             // AR is INTENTIONALLY EXCLUDED: its ticker hasn't run yet. Deleting
             // the AR sibling here = the loop pinned by _probe_assetregistry_loop.
             const auto PostCompilePatterns = TArray<const TCHAR*>{
-                sStubPattern_EntitySpawnParams,
-                sStubPattern_DynamicHandle,
+                ck_angelscript_generator_module::sStubPattern_EntitySpawnParams,
+                ck_angelscript_generator_module::sStubPattern_DynamicHandle,
             };
-            const auto DeletedCount = Delete_StubRecoveryFiles_ForPatterns(PostCompilePatterns);
+            const auto DeletedCount = ck_angelscript_generator_module::Delete_StubRecoveryFiles_ForPatterns(PostCompilePatterns);
             if (DeletedCount > 0)
             {
                 ck::angelscriptgenerator::Log(
@@ -654,7 +654,7 @@ void FCkAngelscriptGeneratorModule::StartupModule()
 
     ck::angelscriptgenerator::FCk_AngelscriptCompileGuard::Install();
 
-    if (Is_SelfHealEnabled())
+    if (ck_angelscript_generator_module::Is_SelfHealEnabled())
     {
         ck::angelscriptgenerator::self_heal::FCkAsRecoveryDispatcher::Reset_CyclesRun();
 
@@ -725,7 +725,7 @@ void FCkAngelscriptGeneratorModule::ShutdownModule()
     if (FModuleManager::Get().IsModuleLoaded(TEXT("MessageLog")))
     {
         auto& MessageLogModule = FModuleManager::GetModuleChecked<FMessageLogModule>(TEXT("MessageLog"));
-        MessageLogModule.UnregisterLogListing(FName{sSelfHealLogChannel});
+        MessageLogModule.UnregisterLogListing(FName{ck_angelscript_generator_module::sSelfHealLogChannel});
     }
 
     // Single-writer ownership (G10): release the lock for symmetry and in-process module reload.

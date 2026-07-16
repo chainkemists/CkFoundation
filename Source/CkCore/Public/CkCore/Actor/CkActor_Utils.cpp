@@ -25,7 +25,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_actor_utils
 {
     auto
         ForEachGameOrPIEWorld(
@@ -92,7 +92,7 @@ namespace ck::actor_utils_net_dump
             const auto TopOwnerCount = FMath::Clamp(CVar_TopOwnerCount.GetValueOnGameThread(), 1, 1024);
             const auto bLogEachObject = CVar_LogEachObject.GetValueOnGameThread() != 0;
 
-            ForEachGameOrPIEWorld([&](UWorld* InWorld)
+            ck_actor_utils::ForEachGameOrPIEWorld([&](UWorld* InWorld)
             {
                 UCk_Utils_Actor_UE::Request_LogAllReplicatedObjects(InWorld, bLogEachObject, TopClassCount, TopOwnerCount);
             });
@@ -117,7 +117,7 @@ namespace ck::actor_utils_net_dump
             const auto TopClassCount = FMath::Clamp(CVar_TopClassCount.GetValueOnGameThread(), 1, 1024);
             const auto bLogEachActor = CVar_LogEachActor.GetValueOnGameThread() != 0;
 
-            ForEachGameOrPIEWorld([&](UWorld* InWorld)
+            ck_actor_utils::ForEachGameOrPIEWorld([&](UWorld* InWorld)
             {
                 UCk_Utils_Actor_UE::Request_LogAllReplicatedActors(InWorld, bLogEachActor, TopClassCount);
             });
@@ -143,7 +143,7 @@ namespace ck::actor_utils_net_dump
             const auto TopOwnerCount = FMath::Clamp(CVar_TopOwnerCount.GetValueOnGameThread(), 1, 1024);
             const auto bLogEachComponent = CVar_LogEachComponent.GetValueOnGameThread() != 0;
 
-            ForEachGameOrPIEWorld([&](UWorld* InWorld)
+            ck_actor_utils::ForEachGameOrPIEWorld([&](UWorld* InWorld)
             {
                 UCk_Utils_Actor_UE::Request_LogAllReplicatedComponents(InWorld, bLogEachComponent, TopClassCount, TopOwnerCount);
             });
@@ -168,7 +168,7 @@ namespace ck::actor_utils_net_dump
             const auto TopClassCount = FMath::Clamp(CVar_TopClassCount.GetValueOnGameThread(), 1, 1024);
             const auto TopOwnerCount = FMath::Clamp(CVar_TopOwnerCount.GetValueOnGameThread(), 1, 1024);
 
-            ForEachGameOrPIEWorld([&](UWorld* InWorld)
+            ck_actor_utils::ForEachGameOrPIEWorld([&](UWorld* InWorld)
             {
                 UCk_Utils_Actor_UE::Request_LogReplicationSummary(InWorld, TopClassCount, TopClassCount, TopOwnerCount);
             });
@@ -724,7 +724,7 @@ auto
     return ReplicatedComponents;
 }
 
-namespace
+namespace ck_actor_utils_impl
 {
     template <typename T_Key>
     auto DoSortedCounts(const TMap<T_Key, int32>& InMap) -> TArray<TPair<T_Key, int32>>
@@ -837,7 +837,7 @@ auto
         TEXT("Unable to log replicated objects because world is invalid for context [{}]."), InWorldContextObject)
     { return; }
 
-    DoLogReplicatedItemsWithOwnerGrouping(
+    ck_actor_utils_impl::DoLogReplicatedItemsWithOwnerGrouping(
         Get_AllReplicatedObjects(InWorldContextObject),
         TEXT("Object"), bInLogEachObject, InTopClassCount, InTopOwnerCount,
         [](const UCk_ReplicatedObject_UE* Item) { return Item->GetOwningActor(); },
@@ -872,7 +872,7 @@ auto
         }
     }
 
-    const auto ClassCounts = DoSortedCounts(ActorsByClass);
+    const auto ClassCounts = ck_actor_utils_impl::DoSortedCounts(ActorsByClass);
 
     ck::core::Warning(TEXT("----- [Ck Replication] Replicated Actor Dump BEGIN -----"));
     ck::core::Warning(TEXT("World=[{}] TotalReplicatedActors=[{}]"), World, ReplicatedActors.Num());
@@ -917,7 +917,7 @@ auto
         TEXT("Unable to log replicated components because world is invalid for context [{}]."), InWorldContextObject)
     { return; }
 
-    DoLogReplicatedItemsWithOwnerGrouping(
+    ck_actor_utils_impl::DoLogReplicatedItemsWithOwnerGrouping(
         Get_AllReplicatedComponents(InWorldContextObject),
         TEXT("Component"), bInLogEachComponent, InTopClassCount, InTopOwnerCount,
         [](const UActorComponent* Item) { return Item->GetOwner(); },

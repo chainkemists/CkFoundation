@@ -66,7 +66,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_crowd_agent_diag_utils
 {
     // RDP epsilon — perpendicular-distance tolerance in cm for path simplification. Lower =
     // more keypoints retained (more detail in the digest); higher = more aggressive collapse.
@@ -209,8 +209,8 @@ auto
 
     if (Samples.Num() >= 3)
     {
-        const auto Epsilon = FMath::Max(0.1f, CVarRDPEpsilon.GetValueOnGameThread());
-        RDP_Recursive(Samples, 0, Samples.Num() - 1, Epsilon, Keep);
+        const auto Epsilon = FMath::Max(0.1f, ck_crowd_agent_diag_utils::CVarRDPEpsilon.GetValueOnGameThread());
+        ck_crowd_agent_diag_utils::RDP_Recursive(Samples, 0, Samples.Num() - 1, Epsilon, Keep);
     }
 
     // Z is included so floor-clip bugs (agent's root drops below the floor surface) show up

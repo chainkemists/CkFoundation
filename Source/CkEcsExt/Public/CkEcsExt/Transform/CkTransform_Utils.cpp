@@ -7,7 +7,7 @@
 #include <Components/MeshComponent.h>
 #include <Components/PrimitiveComponent.h>
 
-namespace
+namespace ck_transform_utils
 {
     auto DetermineTeleportType(const USceneComponent* InComponent) -> ETeleportType
     {
@@ -87,7 +87,7 @@ auto
 
     InHandle.Add<ck::FFragment_Transform_RootComponent>(InAttachTo);
     InHandle.AddOrGet<ck::FFragment_Transform_RootComponentTeleportType>() =
-        ck::FFragment_Transform_RootComponentTeleportType{DetermineTeleportType(InAttachTo)};
+        ck::FFragment_Transform_RootComponentTeleportType{ck_transform_utils::DetermineTeleportType(InAttachTo)};
 
     if (InAttachTo->Mobility == EComponentMobility::Movable)
     {

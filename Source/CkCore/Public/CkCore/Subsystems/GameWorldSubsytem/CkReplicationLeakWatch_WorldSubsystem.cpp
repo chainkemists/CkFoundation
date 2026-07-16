@@ -12,7 +12,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_replication_leak_watch_world_subsystem
 {
     auto
         ForEachReplicationLeakWatchSubsystem(
@@ -93,7 +93,7 @@ namespace ck::replication_watch
             if (InVar->GetInt() <= 0)
             { return; }
 
-            ForEachReplicationLeakWatchSubsystem([](UCk_ReplicationLeakWatch_WorldSubsystem_UE* InSubsystem)
+            ck_replication_leak_watch_world_subsystem::ForEachReplicationLeakWatchSubsystem([](UCk_ReplicationLeakWatch_WorldSubsystem_UE* InSubsystem)
             {
                 InSubsystem->Request_StartMonitoring();
             });
@@ -115,7 +115,7 @@ namespace ck::replication_watch
             if (InVar->GetInt() <= 0)
             { return; }
 
-            ForEachReplicationLeakWatchSubsystem([](UCk_ReplicationLeakWatch_WorldSubsystem_UE* InSubsystem)
+            ck_replication_leak_watch_world_subsystem::ForEachReplicationLeakWatchSubsystem([](UCk_ReplicationLeakWatch_WorldSubsystem_UE* InSubsystem)
             {
                 InSubsystem->Request_StopMonitoring();
             });
@@ -137,7 +137,7 @@ namespace ck::replication_watch
             if (InVar->GetInt() <= 0)
             { return; }
 
-            ForEachReplicationLeakWatchSubsystem([](UCk_ReplicationLeakWatch_WorldSubsystem_UE* InSubsystem)
+            ck_replication_leak_watch_world_subsystem::ForEachReplicationLeakWatchSubsystem([](UCk_ReplicationLeakWatch_WorldSubsystem_UE* InSubsystem)
             {
                 InSubsystem->Request_SampleNow();
             });
@@ -159,7 +159,7 @@ namespace ck::replication_watch
             if (InVar->GetInt() <= 0)
             { return; }
 
-            ForEachReplicationLeakWatchSubsystem([](UCk_ReplicationLeakWatch_WorldSubsystem_UE* InSubsystem)
+            ck_replication_leak_watch_world_subsystem::ForEachReplicationLeakWatchSubsystem([](UCk_ReplicationLeakWatch_WorldSubsystem_UE* InSubsystem)
             {
                 InSubsystem->Request_DumpReport();
             });
@@ -181,7 +181,7 @@ namespace ck::replication_watch
             if (InVar->GetInt() <= 0)
             { return; }
 
-            ForEachReplicationLeakWatchSubsystem([](UCk_ReplicationLeakWatch_WorldSubsystem_UE* InSubsystem)
+            ck_replication_leak_watch_world_subsystem::ForEachReplicationLeakWatchSubsystem([](UCk_ReplicationLeakWatch_WorldSubsystem_UE* InSubsystem)
             {
                 InSubsystem->Request_ResetBaseline();
             });

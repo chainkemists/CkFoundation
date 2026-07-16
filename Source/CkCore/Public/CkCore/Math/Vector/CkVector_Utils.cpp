@@ -583,7 +583,7 @@ auto
     return InRotator.RotateVector(Direction);
 }
 
-namespace
+namespace ck_vector_utils
 {
     auto EmbedIn3D(const FVector2D& InVec2D, ECk_Plane_Axis InAxis) -> FVector
     {
@@ -615,7 +615,7 @@ auto
         ECk_Plane_Axis                  InAxis)
     -> FVector
 {
-    return EmbedIn3D(UCk_Utils_Vector2_UE::Get_CardinalAndOrdinalDirection(InDirection), InAxis);
+    return ck_vector_utils::EmbedIn3D(UCk_Utils_Vector2_UE::Get_CardinalAndOrdinalDirection(InDirection), InAxis);
 }
 
 auto
@@ -625,7 +625,7 @@ auto
         ECk_Plane_Axis       InAxis)
     -> FVector
 {
-    return EmbedIn3D(UCk_Utils_Vector2_UE::Get_OrdinalDirection(InDirection), InAxis);
+    return ck_vector_utils::EmbedIn3D(UCk_Utils_Vector2_UE::Get_OrdinalDirection(InDirection), InAxis);
 }
 
 auto
@@ -635,7 +635,7 @@ auto
         ECk_Plane_Axis        InAxis)
     -> FVector
 {
-    return EmbedIn3D(UCk_Utils_Vector2_UE::Get_CardinalDirection(InDirection), InAxis);
+    return ck_vector_utils::EmbedIn3D(UCk_Utils_Vector2_UE::Get_CardinalDirection(InDirection), InAxis);
 }
 
 auto
@@ -645,7 +645,7 @@ auto
         ECk_Plane_Axis InAxis)
     -> ECk_CardinalDirection
 {
-    return UCk_Utils_Vector2_UE::Get_ClosestCardinalDirection(ProjectTo2D(InVector, InAxis));
+    return UCk_Utils_Vector2_UE::Get_ClosestCardinalDirection(ck_vector_utils::ProjectTo2D(InVector, InAxis));
 }
 
 auto
@@ -655,7 +655,7 @@ auto
         ECk_Plane_Axis InAxis)
     -> ECk_OrdinalDirection
 {
-    return UCk_Utils_Vector2_UE::Get_ClosestOrdinalDirection(ProjectTo2D(InVector, InAxis));
+    return UCk_Utils_Vector2_UE::Get_ClosestOrdinalDirection(ck_vector_utils::ProjectTo2D(InVector, InAxis));
 }
 
 auto
@@ -665,7 +665,7 @@ auto
         ECk_Plane_Axis InAxis)
     -> ECk_CardinalAndOrdinalDirection
 {
-    return UCk_Utils_Vector2_UE::Get_ClosestCardinalAndOrdinalDirection(ProjectTo2D(InVector, InAxis));
+    return UCk_Utils_Vector2_UE::Get_ClosestCardinalAndOrdinalDirection(ck_vector_utils::ProjectTo2D(InVector, InAxis));
 }
 
 auto

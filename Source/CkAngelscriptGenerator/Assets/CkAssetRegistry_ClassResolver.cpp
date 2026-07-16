@@ -18,7 +18,7 @@
 
 namespace ck::angelscriptgenerator
 {
-    namespace
+    namespace ck_asset_registry_class_resolver
     {
         // Walks past Blueprint-generated classes in the parent chain — a BPGC
         // name is not an AS identifier and must never be emitted. Native and
@@ -135,7 +135,7 @@ namespace ck::angelscriptgenerator
         // generated class (not an AS identifier — must not be emitted).
         // Get_AsResolvableClass distinguishes the two: AS script classes
         // return unchanged, BPGCs walk up to the nearest native/AS ancestor.
-        TaggedParent = Get_AsResolvableClass(TaggedParent);
+        TaggedParent = ck_asset_registry_class_resolver::Get_AsResolvableClass(TaggedParent);
 
         Result.ResolvedClass = TaggedParent;
         Result.ClassName     = UCkAssetRegistrySubsystem::Get_CorrectClassNameWithPrefix(TaggedParent);
@@ -243,7 +243,7 @@ namespace ck::angelscriptgenerator
                 // The SuperIndex import can be another Blueprint's generated
                 // class (BP-of-BP chains) — walk to the nearest AS-resolvable
                 // ancestor before emitting.
-                ParentClass = Get_AsResolvableClass(ParentClass);
+                ParentClass = ck_asset_registry_class_resolver::Get_AsResolvableClass(ParentClass);
 
                 Result.ResolvedClass = ParentClass;
                 Result.ClassName     = UCkAssetRegistrySubsystem::Get_CorrectClassNameWithPrefix(ParentClass);

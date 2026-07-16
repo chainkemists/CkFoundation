@@ -31,7 +31,7 @@ namespace ck::pmg
     }
 
 #if CK_PMG_WITH_FREETYPE
-    namespace
+    namespace ck_pmg_font_glyph_cache
     {
         // Bezier flatten step counts — the tunable smoothness/vertex-count knob.
         constexpr int32 ck_pmg_ConicSteps = 8;
@@ -208,17 +208,17 @@ namespace ck::pmg
 
             // Decompose the outline in FONT UNITS (large, well-conditioned coords).
             FT_Outline& Outline = Entry.Face->glyph->outline;
-            FDecomposeCtx Ctx; Ctx.Contours = &Glyph.Contours;
+            ck_pmg_font_glyph_cache::FDecomposeCtx Ctx; Ctx.Contours = &Glyph.Contours;
             FT_Outline_Funcs Funcs{};
-            Funcs.move_to = &Decomp_MoveTo; Funcs.line_to = &Decomp_LineTo;
-            Funcs.conic_to = &Decomp_ConicTo; Funcs.cubic_to = &Decomp_CubicTo;
+            Funcs.move_to = &ck_pmg_font_glyph_cache::Decomp_MoveTo; Funcs.line_to = &ck_pmg_font_glyph_cache::Decomp_LineTo;
+            Funcs.conic_to = &ck_pmg_font_glyph_cache::Decomp_ConicTo; Funcs.cubic_to = &ck_pmg_font_glyph_cache::Decomp_CubicTo;
             FT_Outline_Decompose(&Outline, &Funcs, &Ctx);
 
             // Tessellate at font-unit scale (EM-normalized 0..1 input collapses under the
             // Delaunay tolerance and yields zero triangles).
             if (Glyph.Contours.Num() > 0)
             {
-                TessellateContours(Glyph.Contours, Glyph.TessVerts, Glyph.TessTris);
+                ck_pmg_font_glyph_cache::TessellateContours(Glyph.Contours, Glyph.TessVerts, Glyph.TessTris);
             }
 
             // Normalize contours AND tessellated verts to EM units (size-independent cache).

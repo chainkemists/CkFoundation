@@ -11,7 +11,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_key_binding_utils
 {
     auto Get_CurrentProfile(UEnhancedInputUserSettings* InSettings) -> UEnhancedPlayerMappableKeyProfile*
     {
@@ -57,7 +57,7 @@ auto
     if (ck::Is_NOT_Valid(Settings))
     { return {}; }
 
-    auto* Profile = Get_CurrentProfile(Settings);
+    auto* Profile = ck_key_binding_utils::Get_CurrentProfile(Settings);
     if (ck::Is_NOT_Valid(Profile))
     { return {}; }
 
@@ -89,7 +89,7 @@ auto
     if (ck::Is_NOT_Valid(Settings))
     { return {}; }
 
-    auto* Profile = Get_CurrentProfile(Settings);
+    auto* Profile = ck_key_binding_utils::Get_CurrentProfile(Settings);
     if (ck::Is_NOT_Valid(Profile, ck::IsValid_Policy_NullptrOnly{}))
     { return {}; }
 
@@ -135,7 +135,7 @@ auto
     if (ck::Is_NOT_Valid(Settings))
     { return {}; }
 
-    auto* Profile = Get_CurrentProfile(Settings);
+    auto* Profile = ck_key_binding_utils::Get_CurrentProfile(Settings);
     if (ck::Is_NOT_Valid(Profile, ck::IsValid_Policy_NullptrOnly{}))
     { return {}; }
 
@@ -349,7 +349,7 @@ auto
     if (ck::Is_NOT_Valid(Settings))
     { return; }
 
-    auto* Profile = Get_CurrentProfile(Settings);
+    auto* Profile = ck_key_binding_utils::Get_CurrentProfile(Settings);
     if (ck::Is_NOT_Valid(Profile))
     { return; }
 
@@ -401,7 +401,7 @@ auto
     if (ck::Is_NOT_Valid(Settings))
     { return {}; }
 
-    auto* Profile = Get_CurrentProfile(Settings);
+    auto* Profile = ck_key_binding_utils::Get_CurrentProfile(Settings);
     if (ck::Is_NOT_Valid(Profile, ck::IsValid_Policy_NullptrOnly{}))
     { return {}; }
 
@@ -470,7 +470,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(Settings), TEXT("Enhanced Input User Settings not found"))
     { return {}; }
 
-    auto* Profile = Get_CurrentProfile(Settings);
+    auto* Profile = ck_key_binding_utils::Get_CurrentProfile(Settings);
     CK_ENSURE_IF_NOT(ck::IsValid(Profile), TEXT("No active key profile found"))
     { return {}; }
 
@@ -558,7 +558,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(Settings), TEXT("Enhanced Input User Settings not found"))
     { return {}; }
 
-    auto* Profile = Get_CurrentProfile(Settings);
+    auto* Profile = ck_key_binding_utils::Get_CurrentProfile(Settings);
     CK_ENSURE_IF_NOT(ck::IsValid(Profile, ck::IsValid_Policy_NullptrOnly{}), TEXT("No active key profile found"))
     { return {}; }
 

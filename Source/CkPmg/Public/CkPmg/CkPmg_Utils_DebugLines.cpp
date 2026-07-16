@@ -7,7 +7,7 @@
 
 namespace ck::pmg
 {
-    namespace
+    namespace ck_pmg_utils_debug_lines
     {
         auto
             GetOrAddLinesFragment(
@@ -52,11 +52,11 @@ namespace ck::pmg
             float InThickness)
         -> void
     {
-        auto& Fragment = GetOrAddLinesFragment(InHandle);
+        auto& Fragment = ck_pmg_utils_debug_lines::GetOrAddLinesFragment(InHandle);
 
         Fragment._Lines.Add(ck::FCk_Pmg_DebugLine{
-            WorldToLocal(InHandle, InWorldStart),
-            WorldToLocal(InHandle, InWorldEnd),
+            ck_pmg_utils_debug_lines::WorldToLocal(InHandle, InWorldStart),
+            ck_pmg_utils_debug_lines::WorldToLocal(InHandle, InWorldEnd),
             InColor,
             InThickness});
     }

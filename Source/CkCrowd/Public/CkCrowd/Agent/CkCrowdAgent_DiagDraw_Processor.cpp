@@ -23,7 +23,7 @@ DECLARE_CYCLE_STAT(TEXT("Crowd::DiagDrawBreadcrumb"), STAT_CkCrowd_DiagDrawBread
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_crowd_agent_diag_draw_processor
 {
     // CVar `ck.Crowd.DrawBreadcrumbs` is now declared via UPROPERTY in
     // UCk_Crowd_DebugSettings_UE — read it through the settings BPFL so values persist
@@ -64,7 +64,7 @@ namespace ck
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_DiagDrawBreadcrumbProc);
 
         const auto bDrawAll = UCk_Utils_Crowd_DebugSettings_UE::Get_DrawBreadcrumbs();
-        const auto SelectedHash = CVarSelectedEntityId.GetValueOnGameThread();
+        const auto SelectedHash = ck_crowd_agent_diag_draw_processor::CVarSelectedEntityId.GetValueOnGameThread();
         const auto bIsSelected = SelectedHash >= 0
             && static_cast<int32>(GetTypeHash(InHandle)) == SelectedHash;
         if (NOT bDrawAll && NOT bIsSelected)
@@ -82,8 +82,8 @@ namespace ck
         // Get_DebugColor falls back to a hash-derived stable colour if no explicit Set_DebugColor
         // has been called (so untracked agents still get distinct colours).
         const auto BreadcrumbColor = UCk_Utils_CrowdAgent_UE::Get_DebugColor(InHandle);
-        const auto Thickness = bIsSelected ? Breadcrumb_Thickness_Selected : Breadcrumb_Thickness;
-        const auto Lift = FVector(0.0f, 0.0f, BreadcrumbLiftZ);
+        const auto Thickness = bIsSelected ? ck_crowd_agent_diag_draw_processor::Breadcrumb_Thickness_Selected : ck_crowd_agent_diag_draw_processor::Breadcrumb_Thickness;
+        const auto Lift = FVector(0.0f, 0.0f, ck_crowd_agent_diag_draw_processor::BreadcrumbLiftZ);
 
         // First segment connects the recorded start position to sample 0 so the trail begins at
         // spawn rather than at wherever the first sample landed (recorder takes its first sample
@@ -97,7 +97,7 @@ namespace ck
                 Prev,
                 Curr,
                 BreadcrumbColor,
-                Breadcrumb_DurationOneFrame,
+                ck_crowd_agent_diag_draw_processor::Breadcrumb_DurationOneFrame,
                 Thickness);
             Prev = Curr;
         }

@@ -12,7 +12,7 @@
 
 namespace ck::angelscriptgenerator::self_heal
 {
-    namespace
+    namespace ck_angelscript_generator_stub_synthesizer
     {
         // ---- Argument-list emission ------------------------------------------------
 
@@ -203,10 +203,10 @@ namespace ck::angelscriptgenerator::self_heal
             const FString& InArgsList)
         -> FString
     {
-        const auto Types = Split_ArgTypes(InArgsList);
+        const auto Types = ck_angelscript_generator_stub_synthesizer::Split_ArgTypes(InArgsList);
         auto Parts = TArray<FString>{};
         for (const auto& Type : Types)
-        { Parts.Add(Normalize_TypeToken(Type)); }
+        { Parts.Add(ck_angelscript_generator_stub_synthesizer::Normalize_TypeToken(Type)); }
         return FString::Join(Parts, TEXT(", "));
     }
 
@@ -356,7 +356,7 @@ namespace ck::angelscriptgenerator::self_heal
         if (StructName.IsEmpty())
         { return FString{}; }
 
-        const auto ParamList = Format_ParameterList(InError.ArgsList);
+        const auto ParamList = ck_angelscript_generator_stub_synthesizer::Format_ParameterList(InError.ArgsList);
         const auto Marker    = Get_MarkerComment();
 
         auto Out = FString{};
@@ -440,7 +440,7 @@ namespace ck::angelscriptgenerator::self_heal
         for (const auto& Path : InCandidateFilePaths)
         {
             auto Contents = FString{};
-            if (NOT Try_ReadFile(Path, Contents))
+            if (NOT ck_angelscript_generator_stub_synthesizer::Try_ReadFile(Path, Contents))
             { continue; }
 
             const auto HasNamespace = Contents.Contains(InNamespaceName);
@@ -512,14 +512,14 @@ namespace ck::angelscriptgenerator::self_heal
         // Read prior stub-file contents if any (accumulating-append). When no
         // stub file exists yet, we start with the recovery header banner.
         auto ExistingStub = FString{};
-        const auto StubFileExists = Try_ReadFile(StubPath, ExistingStub);
+        const auto StubFileExists = ck_angelscript_generator_stub_synthesizer::Try_ReadFile(StubPath, ExistingStub);
 
         const auto StructName = Derive_SpawnParamsStructName(InError.TargetNamespace);
         // Emit the struct only if neither the canonical nor the in-progress
         // stub file already defines it. Accumulating drift on the same plugin
         // must not redefine the struct multiple times.
         auto CanonicalContents = FString{};
-        Try_ReadFile(CanonicalPath, CanonicalContents);
+        ck_angelscript_generator_stub_synthesizer::Try_ReadFile(CanonicalPath, CanonicalContents);
         const auto CanonicalHasStruct = Has_SpawnParamsStruct(CanonicalContents, StructName);
         const auto StubHasStruct      = Has_SpawnParamsStruct(ExistingStub,      StructName);
         const auto EmitStruct         = NOT CanonicalHasStruct && NOT StubHasStruct;
@@ -570,7 +570,7 @@ namespace ck::angelscriptgenerator::self_heal
             // embeds the struct name, so it uniquely identifies
             // (namespace, signature) within the sibling.
             const auto DeclLine = FString::Printf(TEXT("%s %s(%s)"),
-                *StructName, *InError.FunctionName, *Format_ParameterList(InError.ArgsList));
+                *StructName, *InError.FunctionName, *ck_angelscript_generator_stub_synthesizer::Format_ParameterList(InError.ArgsList));
             if (ExistingStub.Contains(DeclLine))
             {
                 Result.Success        = true;
@@ -606,17 +606,17 @@ namespace ck::angelscriptgenerator::self_heal
         // reason to the canonical-quarantine path.
         if (StubFileExists)
         {
-            const auto NewArity       = Split_ArgTypes(InError.ArgsList).Num();
-            const auto NewHasFallback = Has_UninferableArg(InError.ArgsList);
+            const auto NewArity       = ck_angelscript_generator_stub_synthesizer::Split_ArgTypes(InError.ArgsList).Num();
+            const auto NewHasFallback = ck_angelscript_generator_stub_synthesizer::Has_UninferableArg(InError.ArgsList);
 
-            for (const auto& ExistingArgsList : Collect_ExistingStubArgsLists(
+            for (const auto& ExistingArgsList : ck_angelscript_generator_stub_synthesizer::Collect_ExistingStubArgsLists(
                 ExistingStub, InError.TargetNamespace, InError.FunctionName))
             {
-                const auto ExistingArgs = Split_ArgTypes(ExistingArgsList);
+                const auto ExistingArgs = ck_angelscript_generator_stub_synthesizer::Split_ArgTypes(ExistingArgsList);
                 if (ExistingArgs.Num() != NewArity)
                 { continue; }
 
-                const auto ExistingHasFallback = ExistingArgs.Contains(FString{kUninferableTypeFallback});
+                const auto ExistingHasFallback = ExistingArgs.Contains(FString{ck_angelscript_generator_stub_synthesizer::kUninferableTypeFallback});
                 if (NewHasFallback || ExistingHasFallback)
                 {
                     Result.FailReason     = ECk_StubInjectFailReason::SameArityAmbiguous;
@@ -641,7 +641,7 @@ namespace ck::angelscriptgenerator::self_heal
             NewContents = Get_StubFileHeader() + StubBlock;
         }
 
-        if (NOT Try_AtomicWrite(StubPath, NewContents))
+        if (NOT ck_angelscript_generator_stub_synthesizer::Try_AtomicWrite(StubPath, NewContents))
         {
             Result.FailReason   = ECk_StubInjectFailReason::WriteFailed;
             Result.ErrorMessage = FString::Printf(
@@ -828,7 +828,7 @@ namespace ck::angelscriptgenerator::self_heal
         }
 
         auto ExistingStub = FString{};
-        const auto StubFileExists = Try_ReadFile(StubPath, ExistingStub);
+        const auto StubFileExists = ck_angelscript_generator_stub_synthesizer::Try_ReadFile(StubPath, ExistingStub);
 
         // Re-fire for a class whose full shape already landed:
         //  - struct-shaped errors (missing type / bare ctor): the struct
@@ -852,7 +852,7 @@ namespace ck::angelscriptgenerator::self_heal
         if (StubFileExists && ExistingStub.Contains(Get_FullShapeMarkerLine(InClassName)))
         {
             if (InError.Kind != ECk_AsParsedError_Kind::NoMatchingSignatures
-                || sFullShapeClassesThisSession.Contains(InClassName))
+                || ck_angelscript_generator_stub_synthesizer::sFullShapeClassesThisSession.Contains(InClassName))
             {
                 Result.Success        = true;
                 Result.TargetFilePath = StubPath;
@@ -876,7 +876,7 @@ namespace ck::angelscriptgenerator::self_heal
         // struct defined only by an earlier error-text stub in the sibling
         // is in-session incremental drift — the per-signature path owns it.
         auto CanonicalContents = FString{};
-        Try_ReadFile(CanonicalPath, CanonicalContents);
+        ck_angelscript_generator_stub_synthesizer::Try_ReadFile(CanonicalPath, CanonicalContents);
         if (Has_SpawnParamsStruct(CanonicalContents, StructName))
         {
             Result.FailReason   = ECk_StubInjectFailReason::StructExistsInCanonical;
@@ -907,7 +907,7 @@ namespace ck::angelscriptgenerator::self_heal
             ? ExistingStub + StubBlock
             : Get_StubFileHeader() + StubBlock;
 
-        if (NOT Try_AtomicWrite(StubPath, NewContents))
+        if (NOT ck_angelscript_generator_stub_synthesizer::Try_AtomicWrite(StubPath, NewContents))
         {
             Result.FailReason   = ECk_StubInjectFailReason::WriteFailed;
             Result.ErrorMessage = FString::Printf(
@@ -915,7 +915,7 @@ namespace ck::angelscriptgenerator::self_heal
             return Result;
         }
 
-        sFullShapeClassesThisSession.Add(InClassName);
+        ck_angelscript_generator_stub_synthesizer::sFullShapeClassesThisSession.Add(InClassName);
 
         Result.Success        = true;
         Result.TargetFilePath = StubPath;
@@ -1004,7 +1004,7 @@ namespace ck::angelscriptgenerator::self_heal
         { AddClass(Name); }
 
         auto CanonicalContents = FString{};
-        const auto CanonicalExists = Try_ReadFile(InCanonicalPath, CanonicalContents);
+        const auto CanonicalExists = ck_angelscript_generator_stub_synthesizer::Try_ReadFile(InCanonicalPath, CanonicalContents);
         if (CanonicalExists)
         {
             for (const auto& Name : Enumerate_EntityScriptNamespaces(CanonicalContents))
@@ -1012,7 +1012,7 @@ namespace ck::angelscriptgenerator::self_heal
         }
 
         auto SiblingContents = FString{};
-        const auto SiblingExists = Try_ReadFile(StubPath, SiblingContents);
+        const auto SiblingExists = ck_angelscript_generator_stub_synthesizer::Try_ReadFile(StubPath, SiblingContents);
         if (SiblingExists)
         {
             // Classes already healed this session — full-shape markers
@@ -1138,7 +1138,7 @@ namespace ck::angelscriptgenerator::self_heal
         Reset_SessionState_ForTests()
         -> void
     {
-        sFullShapeClassesThisSession.Reset();
+        ck_angelscript_generator_stub_synthesizer::sFullShapeClassesThisSession.Reset();
     }
 }
 

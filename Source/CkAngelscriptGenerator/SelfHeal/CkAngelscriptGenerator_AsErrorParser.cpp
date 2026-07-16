@@ -27,7 +27,7 @@ namespace ck::angelscriptgenerator::self_heal
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    namespace
+    namespace ck_angelscript_generator_as_error_parser
     {
         // ---- Line classifiers ------------------------------------------------------
 
@@ -217,17 +217,17 @@ namespace ck::angelscriptgenerator::self_heal
         {
             // File-context first — affects every subsequent "(L:C) ..." line.
             auto NewFile = FString{};
-            if (Try_MatchFileHeader(Line, NewFile))
+            if (ck_angelscript_generator_as_error_parser::Try_MatchFileHeader(Line, NewFile))
             {
                 CurrentFile = NewFile;
                 continue;
             }
 
             auto Error = FCk_AsParsedError{};
-            if (Try_MatchNoMatchingSignatures(Line, CurrentFile, Error)
-                || Try_MatchBareCtorNoMatchingSignatures(Line, CurrentFile, Error)
-                || Try_MatchIdentifierNotADataType(Line, CurrentFile, Error)
-                || Try_MatchAdjacentStringLiteral(Line, CurrentFile, Error))
+            if (ck_angelscript_generator_as_error_parser::Try_MatchNoMatchingSignatures(Line, CurrentFile, Error)
+                || ck_angelscript_generator_as_error_parser::Try_MatchBareCtorNoMatchingSignatures(Line, CurrentFile, Error)
+                || ck_angelscript_generator_as_error_parser::Try_MatchIdentifierNotADataType(Line, CurrentFile, Error)
+                || ck_angelscript_generator_as_error_parser::Try_MatchAdjacentStringLiteral(Line, CurrentFile, Error))
             {
                 Results.Add(MoveTemp(Error));
             }

@@ -57,7 +57,7 @@ namespace ck_deferred_cmds_file
     }
 }
 
-namespace
+namespace ck_deferred_cmds_file_internal
 {
     struct FDeferredCmdsFileRegistrar
     {

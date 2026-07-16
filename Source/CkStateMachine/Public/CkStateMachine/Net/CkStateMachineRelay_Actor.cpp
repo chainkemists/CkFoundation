@@ -34,7 +34,7 @@
 //
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_state_machine_relay_actor
 {
     // Server-side authorization for owning-client relay pushes. UE only routes Server RPCs from
     // the relay actor's OWNING connection, so the caller's identity is this relay's connection —
@@ -115,7 +115,7 @@ auto
     if (InBatch.IsEmpty())
     { return; }
 
-    if (NOT DoGet_IsAuthorizedOwningClientPush(this, InSMHandle, TEXT("Server_PushTransitionBatch")))
+    if (NOT ck_state_machine_relay_actor::DoGet_IsAuthorizedOwningClientPush(this, InSMHandle, TEXT("Server_PushTransitionBatch")))
     { return; }
 
     ck::sm::Verbose(TEXT("Server_PushTransitionBatch: enqueuing [{}] events on SM [{}]"),
@@ -183,7 +183,7 @@ auto
         return;
     }
 
-    if (NOT DoGet_IsAuthorizedOwningClientPush(this, InSMHandle, TEXT("Server_PushCurrentState")))
+    if (NOT ck_state_machine_relay_actor::DoGet_IsAuthorizedOwningClientPush(this, InSMHandle, TEXT("Server_PushCurrentState")))
     { return; }
 
     // Synthesize a single transition event from the server's local current state → the
@@ -224,7 +224,7 @@ auto
         return;
     }
 
-    if (NOT DoGet_IsAuthorizedOwningClientPush(this, InSMHandle, TEXT("Server_PushRunStatus")))
+    if (NOT ck_state_machine_relay_actor::DoGet_IsAuthorizedOwningClientPush(this, InSMHandle, TEXT("Server_PushRunStatus")))
     { return; }
 
     // Apply the run-status to the server's local SM, mirroring the same lifecycle bookkeeping

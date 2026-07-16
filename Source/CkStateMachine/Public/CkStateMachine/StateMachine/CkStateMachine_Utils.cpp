@@ -326,7 +326,7 @@ auto
     return {};
 }
 
-namespace
+namespace ck_state_machine_utils
 {
     // Depth-first walk of the ACTIVE state tree under InSm: current state -> its hosted sub-SMs ->
     // (recurse). Returns the sub-SM whose stored ParentHierarchy equals InTarget, or an invalid handle
@@ -384,7 +384,7 @@ auto
     if (ck::Is_NOT_Valid(InRoot) || InParentHierarchy.IsEmpty())
     { return {}; }
 
-    return DoFind_ActiveSubSm(InRoot, InParentHierarchy);
+    return ck_state_machine_utils::DoFind_ActiveSubSm(InRoot, InParentHierarchy);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

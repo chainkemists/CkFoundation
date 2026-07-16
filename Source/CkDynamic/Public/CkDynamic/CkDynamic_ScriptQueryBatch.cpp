@@ -13,7 +13,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_dynamic_script_query_batch
 {
     auto
         Is_LiveBatch(
@@ -35,7 +35,7 @@ auto
     // A stashed (stale-generation) or default-constructed batch reports empty so a stray driver loop over it is a
     // no-op rather than a crash. Explicit accessors (Get/GetHandle) ensure loudly; Num stays quiet — it is called
     // once per loop iteration and would otherwise spam.
-    if (NOT Is_LiveBatch(InBatch))
+    if (NOT ck_dynamic_script_query_batch::Is_LiveBatch(InBatch))
     { return 0; }
 
     return InBatch._State->_Entities.Num();
@@ -50,7 +50,7 @@ auto
         int32 InIndex)
     -> FCk_Handle
 {
-    CK_ENSURE_IF_NOT(Is_LiveBatch(InBatch),
+    CK_ENSURE_IF_NOT(ck_dynamic_script_query_batch::Is_LiveBatch(InBatch),
         TEXT("Script query batch used past its ForEachBatch call (stale generation). Do not stash the batch."))
     { return FCk_Handle{}; }
 
@@ -78,7 +78,7 @@ auto
     static auto InvalidNoType = FScriptStructWildcard{};
 
     // (1) Generation guard — stashed batch.
-    CK_ENSURE_IF_NOT(Is_LiveBatch(InBatch),
+    CK_ENSURE_IF_NOT(ck_dynamic_script_query_batch::Is_LiveBatch(InBatch),
         TEXT("Script query batch used past its ForEachBatch call (stale generation). Do not stash the batch."))
     {
         return ck::IsValid(InType)

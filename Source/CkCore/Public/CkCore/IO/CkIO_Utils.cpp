@@ -20,7 +20,7 @@
 // crash when loading packages that contain UActorComponent exports.
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_io_utils
 {
     bool GIsEngineSafeForBlockingLoads          = false;
     bool GBlockingLoadWasQueriedWhileUnsafe     = false;
@@ -60,10 +60,10 @@ auto
     IsEngineSafeForBlockingLoads()
     -> bool
 {
-    if (NOT GIsEngineSafeForBlockingLoads)
-    { GBlockingLoadWasQueriedWhileUnsafe = true; }
+    if (NOT ck_io_utils::GIsEngineSafeForBlockingLoads)
+    { ck_io_utils::GBlockingLoadWasQueriedWhileUnsafe = true; }
 
-    return GIsEngineSafeForBlockingLoads;
+    return ck_io_utils::GIsEngineSafeForBlockingLoads;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -99,7 +99,7 @@ auto
     MarkEngineSafeForBlockingLoads()
     -> void
 {
-    GIsEngineSafeForBlockingLoads = true;
+    ck_io_utils::GIsEngineSafeForBlockingLoads = true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -109,7 +109,7 @@ auto
     WasBlockingLoadQueriedWhileUnsafe()
     -> bool
 {
-    return GBlockingLoadWasQueriedWhileUnsafe;
+    return ck_io_utils::GBlockingLoadWasQueriedWhileUnsafe;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -119,7 +119,7 @@ auto
     Get_IsEngineSafeForBlockingLoads_Peek()
     -> bool
 {
-    return GIsEngineSafeForBlockingLoads;
+    return ck_io_utils::GIsEngineSafeForBlockingLoads;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -130,10 +130,10 @@ auto
         const FString& InMessage)
     -> void
 {
-    if (GPrematureAssetLoadCount == 0)
-    { GFirstPrematureAssetLoadMessage = InMessage; }
+    if (ck_io_utils::GPrematureAssetLoadCount == 0)
+    { ck_io_utils::GFirstPrematureAssetLoadMessage = InMessage; }
 
-    ++GPrematureAssetLoadCount;
+    ++ck_io_utils::GPrematureAssetLoadCount;
 }
 
 auto
@@ -141,7 +141,7 @@ auto
     Get_PrematureAssetLoadCount()
     -> int32
 {
-    return GPrematureAssetLoadCount;
+    return ck_io_utils::GPrematureAssetLoadCount;
 }
 
 auto
@@ -149,7 +149,7 @@ auto
     Get_FirstPrematureAssetLoadMessage()
     -> FString
 {
-    return GFirstPrematureAssetLoadMessage;
+    return ck_io_utils::GFirstPrematureAssetLoadMessage;
 }
 
 auto
@@ -157,8 +157,8 @@ auto
     Reset_PrematureAssetLoadReport()
     -> void
 {
-    GPrematureAssetLoadCount = 0;
-    GFirstPrematureAssetLoadMessage.Reset();
+    ck_io_utils::GPrematureAssetLoadCount = 0;
+    ck_io_utils::GFirstPrematureAssetLoadMessage.Reset();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
