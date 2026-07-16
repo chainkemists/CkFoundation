@@ -2,7 +2,7 @@
 
 **Purpose:** Visual watermark overlay — draws a text/logo watermark on screen for demo/build identification. Entity-scoped; the watermark entity's fragment controls visibility and content.
 
-**Depends on:** `CkCore`, `CkEcs`, `CkLog`, `CkMemory`, `CkSettings`, `CkSpatialQuery`, `CkUI`.
+**Depends on:** `CkCore`, `CkEcs`, `CkJolt` (threading stats panel), `CkLog`, `CkMemory`, `CkSettings`, `CkUI`.
 **Used by:** Demo builds, playtest builds.
 
 ---

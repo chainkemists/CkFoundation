@@ -2,6 +2,11 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+// The generic UE<->Jolt conversion layer (Conv overloads, axis correction, body-UserData resolvers)
+// moved to CkJolt with the world-ownership split. Re-exported here so existing consumers of
+// ck::jolt::* through this header keep compiling unchanged.
+#include "CkJolt/CkJolt_Utils.h"
+
 #include "CkShapes/Box/CkShapeBox_Fragment_Data.h"
 #include "CkShapes/Sphere/CkShapeSphere_Fragment_Data.h"
 #include "CkShapes/Capsule/CkShapeCapsule_Fragment_Data.h"
@@ -10,72 +15,29 @@
 #include "CkSpatialQuery/Probe/CkProbe_Fragment_Data.h"
 
 #include <Jolt/Jolt.h>
-#include <Jolt/Core/Color.h>
-#include <Jolt/Core/Reference.h>
-#include <Jolt/Math/Vec3.h>
-#include <Jolt/Physics/Body/Body.h>
-#include <Jolt/Physics/Body/BodyID.h>
 #include <Jolt/Physics/Body/MotionType.h>
 #include <Jolt/Physics/Body/MotionQuality.h>
 #include <Jolt/Physics/Collision/BackFaceMode.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace JPH
-{
-    class Shape;
-    class PhysicsSystem;
-    class BodyInterface;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
 namespace ck::jolt
 {
-    // Type aliases for common Jolt types
-    using JoltMatrix = JPH::Mat44;
-    using JoltFloat3 = JPH::Float3;
-    using JoltVec3 = JPH::Vec3;
-    using JoltQuat = JPH::Quat;
-    using JoltColor = JPH::Color;
-
     // ----------------------------------------------------------------------------------------------------------------
-    // Conversion Utilities
+    // Probe Enum Conversions
+    // (The enums themselves still live in CkProbe_Fragment_Data.h — their migration to CkJolt is a
+    //  Phase 3 concern, gated on CoreRedirects for the BP assets that reference them.)
     // ----------------------------------------------------------------------------------------------------------------
 
-    auto Conv(const FTransform& InMatrix) -> JoltMatrix;
-    auto Conv(const FMatrix& InMatrix) -> JoltMatrix;
-    auto Conv(const JoltMatrix& InMatrix) -> FMatrix;
-    auto Conv(const FVector& InVector) -> JoltVec3;
-    auto Conv(Chaos::TVector<float, 3> InVector) -> JoltVec3;
-    auto Conv(JoltVec3 InVector) -> FVector;
-    auto Conv(JoltFloat3 InVector) -> FVector;
-    auto Conv(const FRotator& InRotator) -> JoltQuat;
-    auto Conv(const FQuat& InQuat) -> JoltQuat;
-    auto Conv(JoltQuat InQuad) -> FQuat;
-    auto Conv(JoltColor InColor) -> FLinearColor;
-    auto Conv(ECk_MotionType InMotionType) -> JPH::EMotionType;
-    auto Conv(ECk_MotionQuality InMotionQuality) -> JPH::EMotionQuality;
-    auto Conv(ECk_BackFaceMode InBackFaceMode) -> JPH::EBackFaceMode;
-
-    // ----------------------------------------------------------------------------------------------------------------
-    // Shape Axis Correction
-    // ----------------------------------------------------------------------------------------------------------------
-
-    /// Jolt's Cylinder and Capsule shapes are Y-AXIS ALIGNED by convention — their caps sit at
-    /// (0, -HalfHeight, 0) and (0, +HalfHeight, 0) (see Jolt's CylinderShape.h / CapsuleShape.h).
-    /// CkSpatialQuery runs Jolt directly in Unreal's Z-up frame, however: Conv(FVector) is a straight
-    /// X->X, Y->Y, Z->Z passthrough with NO axis swap. Uncorrected, every Jolt cylinder/capsule we build
-    /// lies on its side with its axis along world Y — an anisotropic query volume, not just a bad visual.
-    /// This quat is a +90 degree rotation about X, mapping the shape's local +Y to +Z: the top cap moves
-    /// from (0, +HalfHeight, 0) to (0, 0, +HalfHeight), so the shape stands UP instead of upside-down.
-    /// Wrap the shape in a JPH::RotatedTranslatedShapeSettings with this rotation (and zero translation).
-    auto Get_ShapeAxisCorrection_YToZ() -> JoltQuat;
+    CKSPATIALQUERY_API auto Conv(ECk_MotionType InMotionType) -> JPH::EMotionType;
+    CKSPATIALQUERY_API auto Conv(ECk_MotionQuality InMotionQuality) -> JPH::EMotionQuality;
+    CKSPATIALQUERY_API auto Conv(ECk_BackFaceMode InBackFaceMode) -> JPH::EBackFaceMode;
 
     // ----------------------------------------------------------------------------------------------------------------
     // Probe Body User Data
     // ----------------------------------------------------------------------------------------------------------------
 
+    /// Kept for API stability across the CkJolt split — thin wrappers over ck::jolt::Get_BodyUserData.
     CKSPATIALQUERY_API auto Get_ProbeBodyUserData(
         const JPH::Body& InBody) -> uint64;
 

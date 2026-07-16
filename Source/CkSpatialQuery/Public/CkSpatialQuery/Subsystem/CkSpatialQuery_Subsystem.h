@@ -3,38 +3,29 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
 
-#include "CkEcs/World/CkEcsWorld.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
-#include <Async/Future.h>
+#include "CkJolt/CkJolt_ContactEvent.h"
+#include "CkJolt/Subsystem/CkJolt_Subsystem.h"
 
 #include "CkSpatialQuery_Subsystem.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class CkJoltDebugger;
-class BPLayerInterfaceImpl;
-class ObjectVsBroadPhaseLayerFilterImpl;
-class CkObjectLayerPairFilterImpl;
-class CkContactListener;
-class CkBodyActivationListener;
-
-// ReSharper disable once CppInconsistentNaming
-namespace JPH
-{
-    class TempAllocatorImpl;
-    class JobSystem;
-    class ObjectLayerPairFilterImpl;
-    class PhysicsSystem;
-    class BodyInterface;
-
-    class Vec3;
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
+/*
+ * Bridge between the CkJolt-owned physics world and CkSpatialQuery's Probe feature.
+ *
+ * The Jolt world itself (PhysicsSystem, JobSystem, listeners, debug renderer, the per-tick Update)
+ * lives in UCk_Jolt_Subsystem (CkJolt module). This subsystem's job is the Probe-specific consumption:
+ *  - translating drained Jolt contact events into Probe Begin/Updated/EndOverlap requests
+ *  - gating CkJolt's debug draw on CkSpatialQuery's user settings (PreviewAllProbesUsingJolt)
+ *
+ * It is deliberately non-tickable: translation runs inside UCk_Jolt_Subsystem's Tick via the
+ * drained-events broadcast, preserving the pre-split timing (contacts processed on the game thread
+ * BEFORE this frame's physics update).
+ */
 UCLASS(DisplayName = "CkSubsystem_SpatialQuery")
-class CKSPATIALQUERY_API UCk_SpatialQuery_Subsystem : public UCk_Game_TickableWorldSubsystem_Base_UE
+class CKSPATIALQUERY_API UCk_SpatialQuery_Subsystem : public UCk_Game_WorldSubsystem_Base_UE
 {
     GENERATED_BODY()
 
@@ -47,49 +38,21 @@ public:
         FSubsystemCollectionBase& InCollection) -> void override;
 
     auto
-    Tick(
-        float InDeltaTime) -> void override;
-
-    auto
     Deinitialize() -> void override;
 
 private:
     auto
-    ProcessQueuedContacts() -> void;
+    ProcessQueuedContacts(
+        const TArray<FCk_Jolt_ContactEvent>& InEvents) -> void;
 
 private:
     UPROPERTY(Transient)
     TWeakObjectPtr<UCk_EcsWorld_Subsystem_UE> _EcsWorldSubsystem;
 
-private:
-    TPimplPtr<JPH::TempAllocatorImpl> _TempAllocator;
-    JPH::JobSystem* _JobSystem = nullptr;
-    TPimplPtr<BPLayerInterfaceImpl> _BroadPhaseLayerInterface;
-    TPimplPtr<ObjectVsBroadPhaseLayerFilterImpl> _ObjectVsBroadPhaseLayerFilter;
-    TPimplPtr<CkObjectLayerPairFilterImpl> _ObjectVsObjectFilter;
-    TSharedPtr<JPH::PhysicsSystem> _PhysicsSystem;
+    UPROPERTY(Transient)
+    TWeakObjectPtr<UCk_Jolt_Subsystem> _JoltSubsystem;
 
-    TPimplPtr<CkBodyActivationListener> _BodyActivationListener;
-    TPimplPtr<CkContactListener> _ContactListener;
-
-    int32 _CollisionSteps = 1;
-
-    TFuture<void> _PhysicsAsyncFuture;
-    bool _ParallelPhysicsEnabled = false;
-    int32 _PhysicsThreadCount = 0;
-    bool _AsyncPhysicsUpdate = false;
-
-#if JPH_DEBUG_RENDERER
-    TPimplPtr<CkJoltDebugger> _Debugger;
-#endif
-
-public:
-    auto
-    Get_PhysicsSystem() const -> TWeakPtr<JPH::PhysicsSystem>;
-
-    CK_PROPERTY_GET(_ParallelPhysicsEnabled);
-    CK_PROPERTY_GET(_PhysicsThreadCount);
-    CK_PROPERTY_GET(_AsyncPhysicsUpdate);
+    FDelegateHandle _ContactEventsHandle;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
