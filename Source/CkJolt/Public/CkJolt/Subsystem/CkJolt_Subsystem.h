@@ -7,6 +7,7 @@
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include "CkJolt/CkJolt_ContactEvent.h"
+#include "CkJolt/CollisionLayers/CkJoltCollisionLayerTable.h"
 
 #include <Async/Future.h>
 
@@ -15,9 +16,6 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class CkJoltDebugger;
-class BPLayerInterfaceImpl;
-class ObjectVsBroadPhaseLayerFilterImpl;
-class CkObjectLayerPairFilterImpl;
 class CkContactListener;
 class CkBodyActivationListener;
 
@@ -62,9 +60,10 @@ private:
 private:
     TPimplPtr<JPH::TempAllocatorImpl> _TempAllocator;
     JPH::JobSystem* _JobSystem = nullptr;
-    TPimplPtr<BPLayerInterfaceImpl> _BroadPhaseLayerInterface;
-    TPimplPtr<ObjectVsBroadPhaseLayerFilterImpl> _ObjectVsBroadPhaseLayerFilter;
-    TPimplPtr<CkObjectLayerPairFilterImpl> _ObjectVsObjectFilter;
+    TUniquePtr<ck::jolt::FCk_Jolt_CollisionLayerTable> _LayerTable;
+    TUniquePtr<ck::jolt::FCk_Jolt_BroadPhaseLayerInterface_Table> _BroadPhaseLayerInterface;
+    TUniquePtr<ck::jolt::FCk_Jolt_ObjectVsBroadPhaseLayerFilter_Table> _ObjectVsBroadPhaseLayerFilter;
+    TUniquePtr<ck::jolt::FCk_Jolt_ObjectLayerPairFilter_Table> _ObjectVsObjectFilter;
     TSharedPtr<JPH::PhysicsSystem> _PhysicsSystem;
 
     TPimplPtr<CkBodyActivationListener> _BodyActivationListener;
@@ -98,10 +97,10 @@ public:
     auto
     Get_OnContactEventsDrained() -> FCk_Jolt_OnContactEventsDrained&;
 
-    /// The ObjectLayer baked static-world bodies live on (raw uint16 to keep JPH out of this
-    /// header). Pairs with nothing until the Phase-2 layer table — query targets only.
-    static auto
-    Get_StaticWorldObjectLayer() -> uint16;
+    /// Signature-driven layer table (one JPH::ObjectLayer per unique collision signature).
+    /// Registration is game-thread only; Jolt filters read it lock-free from workers.
+    auto
+    Get_LayerTable() -> ck::jolt::FCk_Jolt_CollisionLayerTable&;
 
     /// Runs PhysicsSystem::OptimizeBroadPhase on the game thread immediately before the next
     /// Update (never while an async update is in flight). Callers batch: request once after
