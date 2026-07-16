@@ -78,6 +78,17 @@ namespace ck::jolt
         const JPH::BodyInterface& InBodyInterface,
         JPH::BodyID InBodyId) -> uint64;
 
+    // ----------------------------------------------------------------------------------------------------------------
+    // Global Jolt init (ref-counted)
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /// Process-global Jolt initialization (RegisterDefaultAllocator, Factory, RegisterTypes,
+    /// Trace/AssertFailed hooks) — ref-counted because multiple worlds (PIE clients) and
+    /// standalone unit tests may init/deinit independently. UCk_Jolt_Subsystem uses these;
+    /// tests that create JPH shapes WITHOUT a world must call them too.
+    CKJOLT_API auto Request_GlobalJoltInit() -> void;
+    CKJOLT_API auto Request_GlobalJoltShutdown() -> void;
+
     /// Resolves the entity a Jolt query hit refers to (via the body's UserData).
     /// Returns an INVALID handle when the hit is InSelf itself, or when the body's entity is no
     /// longer alive (a body can briefly outlive its owning entity — deferred end-of-frame

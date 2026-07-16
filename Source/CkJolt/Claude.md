@@ -34,6 +34,30 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
 - Debug draw: consumers install an opt-in via `Set_DebugDrawGate` (CkSpatialQuery gates on its
   `PreviewAllProbesUsingJolt` user setting). No gate = no draw.
 
+### Static world (Phase 1)
+
+- `ck::jolt::bake::ExtractActor/ExtractComponent` (CkJoltBakeExtraction.h) — extracts what Chaos
+  sees for a static actor: SplineMesh (per-instance deformed BodySetup) → ISM/HISM (per-instance
+  bodies sharing a cached shape below `_CompoundShapeInstanceThreshold`; ONE StaticCompoundShape
+  above) → StaticMesh (AggGeom per trace flag; `CTF_UseComplexAsSimple` → Chaos cooked tri-mesh
+  → `JPH::MeshShape`, winding-swapped) → Brush (convex elems) → Landscape (WITH_EDITOR:
+  heightfield per component, Y→Z wrap + row flip — pinned by Ck.Jolt.Bake.HeightField test).
+  No valid collision → CK_ENSURE + skip; NEVER a bounding-box substitute.
+- `UCk_JoltStaticWorld_Subsystem_UE` — per-ULevel body tracking in lockstep with
+  LevelAdded/RemovedFromWorld (WP cells stream as ULevels); live extraction in PIE (default) or
+  cooked data (`_PIEStaticWorldMode`; packaged = always cooked); batch
+  `AddBodiesPrepare/Finalize`; OptimizeBroadPhase requested after bulk changes. Static bodies
+  live on the `Static_World` object layer — pairs with NOTHING until the Phase-2 layer table
+  (query targets only; probes never see them).
+- Cooked data: `UCk_Jolt_CookedWorldIndex_UE` (per map, found by path convention under
+  `_CookedDataRootPath`) + `UCk_Jolt_CookedCell_UE` per bake-grid cell (`SaveWithChildren` blob,
+  shared-dedup). `CookVersion` + `JPH_VERSION_ID` + per-actor runtime hash — stale data ensures
+  loudly and is SKIPPED, never re-extracted silently.
+- `UCk_Utils_JoltStaticWorld_UE` — `Request_BakeActor/RemoveActor` (runtime-spawned statics;
+  ExplicitActor policy bakes Movable-mobility components), `Get_RayCastStaticWorld` (Phase-1
+  introspection; the channel-filtered query API is Phase 2).
+- Cooker lives in `CkJoltEditor` (editor subsystem + `-run=CkJoltCook` commandlet).
+
 ---
 
 ## Threading model
