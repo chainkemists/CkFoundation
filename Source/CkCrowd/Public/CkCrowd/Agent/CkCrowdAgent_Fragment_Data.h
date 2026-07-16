@@ -29,6 +29,7 @@ namespace ck
     class FProcessor_CrowdAgent_AvoidanceSample;
     class FProcessor_CrowdAgent_BlockDetect;
     class FProcessor_CrowdAgent_BlockedRecheck;
+    class FProcessor_CrowdAgent_PathRefresh;
 }
 
 class UCk_Utils_CrowdAgent_UE;
@@ -262,6 +263,7 @@ struct CKCROWD_API FCk_Fragment_CrowdAgent_PathFollowData
     friend class ck::FProcessor_CrowdAgent_OnPathResolved;
     friend class ck::FProcessor_CrowdAgent_OnRouteResolved;
     friend class ck::FProcessor_CrowdAgent_BlockedRecheck;
+    friend class ck::FProcessor_CrowdAgent_PathRefresh;
     friend class ::UCk_Utils_CrowdAgent_UE;
 
 private:
@@ -286,11 +288,18 @@ private:
     UPROPERTY()
     FVector _CurrentSegmentStart = FVector::ZeroVector;
 
+    // Stationary-markup paint serial current when this path was installed. PathRefresh compares
+    // it against each disc's paint serial: only a disc painted AFTER the path can trigger a
+    // re-path, so a path that already chose to pay a disc's cost is never re-planned for it.
+    UPROPERTY()
+    uint64 _PathSerial = 0;
+
 public:
     CK_PROPERTY_GET(_WaypointIndex);
     CK_PROPERTY_GET(_ActiveArrivalRadius);
     CK_PROPERTY_GET(_ActiveGoal);
     CK_PROPERTY_GET(_CurrentSegmentStart);
+    CK_PROPERTY_GET(_PathSerial);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Handle/CkHandle.h"
@@ -169,10 +170,22 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     FGameplayTag _QueryFilter;
 
+    // Plan from this location instead of the entity's transform. CkCrowd's inside-a-cost-band
+    // escape uses it: an agent standing INSIDE painted stationary-agent markup would otherwise
+    // find that finishing the crossing is cheaper than backing out plus detouring — planning
+    // from just outside the band restores the detour preference.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    ECk_EnableDisable _StartOverride = ECk_EnableDisable::Disable;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    FVector _StartOverrideLocation = FVector::ZeroVector;
+
 public:
     CK_PROPERTY_GET(_TargetLocation);
     CK_PROPERTY(_AllowPartialPath);
     CK_PROPERTY(_QueryFilter);
+    CK_PROPERTY(_StartOverride);
+    CK_PROPERTY(_StartOverrideLocation);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Nav_FindPath, _TargetLocation);

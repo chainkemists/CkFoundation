@@ -2,8 +2,6 @@
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
-#include "CkEcsExt/Transform/CkTransform_Utils.h"
-
 #include "CkCrowd/CkCrowd_Stats.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -23,7 +21,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_EulerIntegrator_Current& InIntegrator)
+            const FFragment_EulerIntegrator_Current& InIntegrator,
+            FFragment_CrowdAgent_PendingDisplacement& InPending)
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_ApplyOffsetProc);
@@ -31,14 +30,7 @@ namespace ck
         if (InIntegrator.Get_DistanceOffset().IsNearlyZero())
         { return; }
 
-        auto HandleTransform = UCk_Utils_Transform_UE::CastChecked(InHandle);
-
-        UCk_Utils_Transform_UE::Request_AddLocationOffset
-        (
-            HandleTransform,
-            FCk_Request_Transform_AddLocationOffset{InIntegrator.Get_DistanceOffset()}
-                .Set_LocalWorld(ECk_LocalWorld::World)
-        );
+        InPending._Displacement += InIntegrator.Get_DistanceOffset();
     }
 }
 

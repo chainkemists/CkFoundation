@@ -7,6 +7,10 @@
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
+
+#include "CkCrowd/Agent/CkCrowdAgent_PathRefresh_Processor.h"
+
 #include "CkNavigation/Nav/CkNav_Algorithm.h"
 #include "CkNavigation/Utils/CkNav_Utils.h"
 
@@ -125,6 +129,26 @@ namespace ck
             // and finalizes the state transition.
             auto Request = FCk_Request_Nav_FindPath{InRequest.Get_Target()};
             Request.Set_QueryFilter(InParams.Get_NavQueryFilter());
+
+            // Fresh plans are not exempt from the inside-a-cost-band trap: a MoveTo issued while
+            // the agent stands inside painted stationary markup (e.g. a gameplay re-target as the
+            // queue it pressed into shifts) would otherwise pick "through" — see Get_EscapedQueryStart.
+            auto TransformHandle = UCk_Utils_Transform_UE::Cast(NonConstHandle);
+            if (ck::IsValid(TransformHandle))
+            {
+                const auto Escaped = FProcessor_CrowdAgent_PathRefresh::Get_EscapedQueryStart(
+                    NonConstHandle,
+                    InHandle.Get_Entity(),
+                    UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle),
+                    InRequest.Get_Target(),
+                    InParams.Get_Radius());
+                if (Escaped.IsSet())
+                {
+                    Request.Set_StartOverride(ECk_EnableDisable::Enable)
+                           .Set_StartOverrideLocation(*Escaped);
+                }
+            }
+
             UCk_Utils_Nav_UE::Request_FindPath(NonConstHandle, Request);
         }
 

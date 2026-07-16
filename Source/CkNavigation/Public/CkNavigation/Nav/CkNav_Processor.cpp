@@ -277,10 +277,17 @@ namespace ck
                 {
                     const auto FilterClass = UCk_Utils_Nav_Settings_UE::Get_QueryFilterClass(InFindPath.Get_QueryFilter());
 
+                    // The pre-drain readiness gate above still probes the ENTITY location — an
+                    // override start sits within a band-width of the agent (same tiles for any
+                    // realistic markup size), so the gate's answer carries over.
+                    const auto QueryStart = InFindPath.Get_StartOverride() == ECk_EnableDisable::Enable
+                        ? InFindPath.Get_StartOverrideLocation()
+                        : StartLocation;
+
                     const auto bSucceeded = FCk_Nav_Algorithm::FindPathSync(
                         *NavSys,
                         *NavData,
-                        StartLocation,
+                        QueryStart,
                         InFindPath.Get_TargetLocation(),
                         InFindPath.Get_AllowPartialPath(),
                         ProjectionExtent,

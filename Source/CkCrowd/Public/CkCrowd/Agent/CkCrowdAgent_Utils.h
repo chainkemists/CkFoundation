@@ -177,6 +177,17 @@ public:
     Get_IsGoalBlocked(
         const FCk_Handle_CrowdAgent& InAgent);
 
+    // The goal of the agent's current/last MoveTo (ZeroVector if it never had one). Lets a caller
+    // that periodically re-anchors an agent distinguish "still the goal it is blocked on — leave
+    // HoldAndRetry alone" from "the goal moved — a fresh MoveTo is warranted", since any new
+    // MoveTo clears GoalBlocked and resets the no-progress sampler.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Active Goal")
+    static FVector
+    Get_ActiveGoal(
+        const FCk_Handle_CrowdAgent& InAgent);
+
     // ---- Identity colour ---------------------------------------------------------------------
     //
     // Per-agent identity colour shared by every visualisation (capsule, breadcrumb path,

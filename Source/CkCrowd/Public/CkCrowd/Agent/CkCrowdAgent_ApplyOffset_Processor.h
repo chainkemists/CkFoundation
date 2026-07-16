@@ -15,9 +15,10 @@
 namespace ck
 {
     // Gate 2 — pattern replication of FProcessor_Projectile_Update.
-    // Reads the post-integration FFragment_EulerIntegrator_Current::_DistanceOffset and enqueues a
-    // Request_AddLocationOffset on the agent's Transform handle. The CkEcsExt Transform processor
-    // (FGroup_Transform) drains the request next frame and updates the SceneNode.
+    // Reads the post-integration FFragment_EulerIntegrator_Current::_DistanceOffset and stages it
+    // into FFragment_CrowdAgent_PendingDisplacement. It does NOT write the Transform — the single
+    // Transform writer for a crowd agent is FProcessor_CrowdAgent_ConstrainToNavmesh, which walks
+    // the accumulated displacement along the navmesh surface before applying it.
     //
     // RunAfter = FProcessor_EulerIntegrator_Update so we observe the value the integrator just produced.
     // TExclude<FTag_CrowdAgent_Asleep> is forward-compatible (Gate 4): asleep agents skip the offset apply.
@@ -25,6 +26,7 @@ namespace ck
             FProcessor_CrowdAgent_ApplyOffset,
             FCk_Handle_CrowdAgent,
             ck::TReadOnly<FFragment_EulerIntegrator_Current>,
+            ck::TReadWrite<FFragment_CrowdAgent_PendingDisplacement>,
             FTag_EulerIntegrator_NeedsUpdate,
             TExclude<FTag_CrowdAgent_Asleep>,
             CK_IGNORE_PENDING_KILL>
@@ -49,7 +51,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_EulerIntegrator_Current& InIntegrator) -> void;
+            const FFragment_EulerIntegrator_Current& InIntegrator,
+            FFragment_CrowdAgent_PendingDisplacement& InPending) -> void;
     };
 }
 

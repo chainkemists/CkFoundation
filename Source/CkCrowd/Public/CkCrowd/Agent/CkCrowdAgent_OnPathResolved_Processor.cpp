@@ -2,6 +2,7 @@
 
 #include "CkCrowd/CkCrowd_Log.h"
 #include "CkCrowd/CkCrowd_Stats.h"
+#include "CkCrowd/Agent/CkCrowdAgent_StationaryMarkup_Processor.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
@@ -58,6 +59,10 @@ namespace ck
                 InPathFollow._CurrentSegmentStart = ck::IsValid(TransformHandle)
                     ? UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle)
                     : (Wps.Num() > 0 ? Wps[0] : FVector::ZeroVector);
+
+                // This path was planned against every disc painted up to now — only NEWER discs
+                // may trigger a PathRefresh re-path.
+                InPathFollow._PathSerial = FProcessor_CrowdAgent_StationaryMarkup::Get_CurrentPaintSerial();
 
                 auto PolylineLen = 0.0;
                 for (auto i = 0; i < Wps.Num() - 1; ++i)

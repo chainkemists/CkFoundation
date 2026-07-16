@@ -51,6 +51,27 @@ enum class ECk_CrowdBlockDetectionMode : uint8
     Enabled,     // detect an unreachable goal, stop, and report OnGoalBlocked
 };
 
+UENUM(BlueprintType)
+enum class ECk_CrowdNavmeshConstraintMode : uint8
+{
+    Disabled,    // agents integrate in free space; separation/avoidance/push-apart can displace them off the navmesh
+    Enabled,     // every per-frame displacement is walked along the navmesh surface (dtCrowd's corridor movePosition)
+};
+
+UENUM(BlueprintType)
+enum class ECk_CrowdStationaryMarkupMode : uint8
+{
+    Disabled,    // pathfinding is blind to standing agents; paths go straight through crowds
+    Enabled,     // stationary agents paint a cost area so fresh paths route AROUND standing crowds
+};
+
+UENUM(BlueprintType)
+enum class ECk_CrowdPathRefreshMode : uint8
+{
+    Disabled,    // a path computed before a crowd formed is followed forever — the agent presses into standing agents
+    Enabled,     // a walking agent whose remaining path crosses a freshly painted cost disc re-paths and detours
+};
+
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(meta = (DisplayName = "Crowd"))
@@ -159,6 +180,47 @@ private:
             ToolTip = "Seconds between re-checks for a HoldAndRetry agent waiting on a blocked goal. When the goal clears it re-paths and resumes."))
     float _BlockedRecheckInterval = 1.0f;
 
+    // ---- Navmesh constraint ----
+    // The stage the dtCrowd port originally dropped: Detour passes every integrated agent position
+    // through dtPathCorridor::movePosition (moveAlongSurface), so a dtCrowd agent CANNOT leave the
+    // navmesh — walls stop it and it slides. Without this, any lateral force (separation redirect,
+    // avoidance velocity, push-apart shove) moves the transform straight through a navmesh boundary.
+    UPROPERTY(Config, EditDefaultsOnly, Category = "NavmeshConstraint",
+        meta = (AllowPrivateAccess = true,
+            ToolTip = "Master switch for the navmesh movement constraint. Enabled walks every per-frame agent displacement along the navmesh surface (dtCrowd movePosition semantics) so no force can push an agent off the mesh. Disabled restores free-space integration — for A/B comparison only. Worlds without nav data are unaffected either way."))
+    ECk_CrowdNavmeshConstraintMode _NavmeshConstraintMode = ECk_CrowdNavmeshConstraintMode::Enabled;
+
+    // ---- Stationary markup ----
+    // The path planner only sees static geometry: without this, a path for an agent headed past a
+    // standing crowd goes straight THROUGH it, and the local avoidance sampler (short-horizon,
+    // greedy) cannot escape a line-shaped local minimum — the agent presses into the crowd
+    // forever. Stationary agents therefore paint a UCk_NavArea_CrowdAgent cost disc so fresh
+    // paths (including BlockedRecheck re-paths) genuinely route around.
+    UPROPERTY(Config, EditDefaultsOnly, Category = "StationaryMarkup",
+        meta = (AllowPrivateAccess = true,
+            ToolTip = "Master switch for stationary-agent nav markup. Enabled paints a cost area under agents that have held still past the delay, so pathfinding detours around standing crowds when a detour exists (a fully-plugged corridor still paths through — cost, not exclusion). Disabled restores agent-blind pathfinding."))
+    ECk_CrowdStationaryMarkupMode _StationaryMarkupMode = ECk_CrowdStationaryMarkupMode::Enabled;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "StationaryMarkup",
+        meta = (AllowPrivateAccess = true, ClampMin = 0.1, UIMin = 0.1,
+            ToolTip = "Seconds an agent must be PHYSICALLY stationary (windowed displacement, regardless of Idle/Walking state — a blocked walker plugs a corridor like anyone standing) before its cost disc is painted. Hysteresis against paint/unpaint churn from brief stops; the disc is removed the moment the agent genuinely moves again."))
+    float _StationaryMarkupDelaySeconds = 1.5f;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "StationaryMarkup",
+        meta = (AllowPrivateAccess = true, ClampMin = 1.0, UIMin = 1.0, ClampMax = 4.0, UIMax = 4.0,
+            ToolTip = "Painted half-extent as a multiple of the agent radius. Sized so neighbouring discs in a queue OVERLAP DEEPLY: the planner crosses a crowd at the cheapest seam between two agents, and shallow overlap (1.5x at 120uu queue pitch) made threading the seam cheaper than detouring around the line. 2x makes the seam ~120uu of marked ground, so 'around' wins at store scale."))
+    float _StationaryMarkupExtentMultiplier = 2.0f;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "StationaryMarkup",
+        meta = (AllowPrivateAccess = true,
+            ToolTip = "Master switch for mid-walk path refresh. StationaryMarkup only bends paths computed AFTER a disc is painted; this re-paths a WALKING agent whose remaining path crosses a disc newer than its path, so already-issued moves detour around a crowd that formed after they planned. No-op while StationaryMarkup is Disabled (no discs exist)."))
+    ECk_CrowdPathRefreshMode _PathRefreshMode = ECk_CrowdPathRefreshMode::Enabled;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "StationaryMarkup",
+        meta = (AllowPrivateAccess = true, ClampMin = 0.0, UIMin = 0.0,
+            ToolTip = "Seconds after a disc is painted before PathRefresh even checks it against the navmesh. A cheap pre-filter only — actual eligibility is ground truth (the rebuilt mesh must report the cost area at the disc's location), so this just keeps the poly query off discs that cannot possibly have rebaked yet."))
+    float _PathRefreshMarkupSettleSeconds = 0.5f;
+
     // ---- Push-Apart (Phase 2) ----
     UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|PushApart",
         meta = (AllowPrivateAccess = true,
@@ -180,6 +242,12 @@ public:
     CK_PROPERTY_GET(_AvoidanceWeightToi);
     CK_PROPERTY_GET(_AvoidanceHorizonTime);
     CK_PROPERTY_GET(_PushApartMode);
+    CK_PROPERTY_GET(_NavmeshConstraintMode);
+    CK_PROPERTY_GET(_StationaryMarkupMode);
+    CK_PROPERTY_GET(_StationaryMarkupDelaySeconds);
+    CK_PROPERTY_GET(_StationaryMarkupExtentMultiplier);
+    CK_PROPERTY_GET(_PathRefreshMode);
+    CK_PROPERTY_GET(_PathRefreshMarkupSettleSeconds);
     CK_PROPERTY_GET(_BlockDetectionMode);
     CK_PROPERTY_GET(_BlockDetectionInterval);
     CK_PROPERTY_GET(_BlockDetectionSampleCount);
@@ -213,6 +281,15 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
     static ECk_PushApartMode Get_PushApartMode();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
+    static ECk_CrowdNavmeshConstraintMode Get_NavmeshConstraintMode();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
+    static ECk_CrowdStationaryMarkupMode Get_StationaryMarkupMode();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
+    static ECk_CrowdPathRefreshMode Get_PathRefreshMode();
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
     static ECk_CrowdBlockDetectionMode Get_BlockDetectionMode();

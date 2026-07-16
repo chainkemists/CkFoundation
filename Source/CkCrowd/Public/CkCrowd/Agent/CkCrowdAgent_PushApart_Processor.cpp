@@ -2,9 +2,6 @@
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
-#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
-#include "CkEcsExt/Transform/CkTransform_Utils.h"
-
 #include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
@@ -45,7 +42,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_CrowdAgent_Params& InParams,
-            const FFragment_CrowdAgent_NeighborCache& InNeighborCache)
+            const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
+            FFragment_CrowdAgent_PendingDisplacement& InPending)
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_PushApartProc);
@@ -56,10 +54,6 @@ namespace ck
 
         const auto& Neighbors = InNeighborCache.Get_Neighbors();
         if (Neighbors.Num() == 0)
-        { return; }
-
-        auto SelfTransform = UCk_Utils_Transform_UE::Cast(InHandle);
-        if (ck::Is_NOT_Valid(SelfTransform))
         { return; }
 
         const auto SelfRadius = InParams.Get_Radius();
@@ -135,9 +129,7 @@ namespace ck
 
         if (NOT Displacement.IsNearlyZero())
         {
-            UCk_Utils_Transform_UE::Request_AddLocationOffset(
-                SelfTransform,
-                FCk_Request_Transform_AddLocationOffset{Displacement});
+            InPending._Displacement += Displacement;
         }
     }
 }

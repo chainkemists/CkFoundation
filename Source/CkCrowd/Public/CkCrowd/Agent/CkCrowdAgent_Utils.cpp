@@ -33,6 +33,8 @@ auto
     NewAgentEntity.Add<ck::FFragment_CrowdAgent_SeparationForce>();
     NewAgentEntity.Add<ck::FFragment_CrowdAgent_ProbeRef>();
     NewAgentEntity.Add<ck::FFragment_CrowdAgent_BlockDetect>();
+    NewAgentEntity.Add<ck::FFragment_CrowdAgent_PendingDisplacement>();
+    NewAgentEntity.Add<ck::FFragment_CrowdAgent_NavMarkup>();
     NewAgentEntity.Add<ck::FTag_CrowdAgent_NeedsSetup>();
     NewAgentEntity.Add<ck::FTag_CrowdAgent_Idle>();
 
@@ -239,6 +241,21 @@ auto
     { return false; }
 
     return InAgent.Has<ck::FTag_CrowdAgent_GoalBlocked>();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    Get_ActiveGoal(
+        const FCk_Handle_CrowdAgent& InAgent)
+    -> FVector
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InAgent),
+        TEXT("Invalid CrowdAgent handle [{}] passed to Get_ActiveGoal"), InAgent)
+    { return FVector::ZeroVector; }
+
+    return InAgent.Get<ck::FFragment_CrowdAgent_PathFollow>().Get_ActiveGoal();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
