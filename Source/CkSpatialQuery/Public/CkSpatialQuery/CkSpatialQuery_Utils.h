@@ -24,17 +24,8 @@
 namespace ck::jolt
 {
     // ----------------------------------------------------------------------------------------------------------------
-    // Probe Enum Conversions
-    // (The enums themselves still live in CkProbe_Fragment_Data.h — their migration to CkJolt is a
-    //  Phase 3 concern, gated on CoreRedirects for the BP assets that reference them.)
-    // ----------------------------------------------------------------------------------------------------------------
-
-    CKSPATIALQUERY_API auto Conv(ECk_MotionType InMotionType) -> JPH::EMotionType;
-    CKSPATIALQUERY_API auto Conv(ECk_MotionQuality InMotionQuality) -> JPH::EMotionQuality;
-    CKSPATIALQUERY_API auto Conv(ECk_BackFaceMode InBackFaceMode) -> JPH::EBackFaceMode;
-
-    // ----------------------------------------------------------------------------------------------------------------
     // Probe Body User Data
+    // (Enum Conv overloads migrated to CkJolt with the enums themselves — campaign Phase 3.)
     // ----------------------------------------------------------------------------------------------------------------
 
     /// Kept for API stability across the CkJolt split — thin wrappers over ck::jolt::Get_BodyUserData.

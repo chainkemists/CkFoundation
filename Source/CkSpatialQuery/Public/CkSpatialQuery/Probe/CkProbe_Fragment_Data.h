@@ -7,6 +7,8 @@
 
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 
+#include "CkJolt/CkJolt_Common.h"
+
 #include "CkPhysics/Public/CkPhysics/CkPhysics_Common.h"
 
 #include "CkShapes/CkShapes_Common.h"
@@ -23,39 +25,8 @@ CKSPATIALQUERY_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Probe);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UENUM(BlueprintType)
-enum class ECk_MotionType : uint8
-{
-    Static = 0,
-    Kinematic,
-    Dynamic,
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_MotionType);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UENUM(BlueprintType)
-enum class ECk_BackFaceMode : uint8
-{
-    IgnoreBackFaces,
-    CollideWithBackFaces,
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_BackFaceMode);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UENUM(BlueprintType)
-enum class ECk_MotionQuality : uint8
-{
-    // FAST - use this for most Probes
-    Discrete UMETA(DisplayName = "Discrete"),
-    // SLOWER - avoid using this unless continuous collision detection is needed
-    LinearCast UMETA(DisplayName = "LinearCast (CCD)")
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_MotionQuality);
+// ECk_MotionType / ECk_MotionQuality / ECk_BackFaceMode migrated to CkJolt/CkJolt_Common.h
+// (generic Jolt vocabulary; CoreRedirects cover serialized BP references).
 
 // --------------------------------------------------------------------------------------------------------------------
 
