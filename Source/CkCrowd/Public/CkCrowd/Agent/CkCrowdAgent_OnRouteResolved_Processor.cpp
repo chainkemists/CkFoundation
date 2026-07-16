@@ -2,6 +2,7 @@
 
 #include "CkCrowd/CkCrowd_Log.h"
 #include "CkCrowd/CkCrowd_Stats.h"
+#include "CkCrowd/Agent/CkCrowdAgent_StationaryMarkup_Processor.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
@@ -88,6 +89,10 @@ namespace ck
                 InPathFollow._CurrentSegmentStart = ck::IsValid(TransformHandle)
                     ? UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle)
                     : (CompiledWaypoints.Num() > 0 ? CompiledWaypoints[0] : FVector::ZeroVector);
+
+                // This corridor was planned against every disc painted up to now — only NEWER
+                // discs may trigger a PathRefresh re-path.
+                InPathFollow._PathSerial = FProcessor_CrowdAgent_StationaryMarkup::Get_CurrentPaintSerial();
 
                 auto& Installed = NonConstHandle.AddOrGet<FFragment_CrowdAgent_InstalledRoute>();
                 Installed._GoalLocation = Result.Get_GoalLocation();

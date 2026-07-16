@@ -15,6 +15,7 @@
 
 #include "CkCrowd/CkCrowd_Log.h"
 #include "CkCrowd/CkCrowd_Stats.h"
+#include "CkCrowd/Agent/CkCrowdAgent_PathRefresh_Processor.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -334,6 +335,17 @@ namespace ck
         {
             auto Request = FCk_Request_Nav_FindPath{Goal};
             Request.Set_QueryFilter(InParams.Get_NavQueryFilter());
+
+            // A held agent may have been shoved inside painted stationary markup while it waited;
+            // resuming from inside the band would pick "through" — see Get_EscapedQueryStart.
+            const auto Escaped = FProcessor_CrowdAgent_PathRefresh::Get_EscapedQueryStart(
+                NonConstHandle, InHandle.Get_Entity(), SelfLoc, Goal, InParams.Get_Radius());
+            if (Escaped.IsSet())
+            {
+                Request.Set_StartOverride(ECk_EnableDisable::Enable)
+                       .Set_StartOverrideLocation(*Escaped);
+            }
+
             UCk_Utils_Nav_UE::Request_FindPath(NonConstHandle, Request);
         }
 
