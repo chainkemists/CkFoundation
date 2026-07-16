@@ -7,6 +7,10 @@
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
+#include "CkCore/Time/CkTime.h"
+
+#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
+
 #include <CoreMinimal.h>
 #include <GameplayTagContainer.h>
 
@@ -389,6 +393,63 @@ public:
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_CrowdAgent_MoveTo, _Target);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Public request — "FOLLOW this live target point". The goal is a transform HANDLE, not a position
+// snapshot: the agent paths to the point's current position, and the FollowTarget processor keeps
+// re-pathing toward it on _RepathPeriod as it moves — including re-engaging after an arrival when
+// the target walks back out of reach. The follow persists until a plain MoveTo or Stop lands, or
+// the target handle dies (the agent then keeps its last resolved goal).
+//
+// Tuners:
+// - _RepathPeriod: how often the follow re-evaluates the target's position.
+// - _RepathThresholdCm: while walking, re-path only once the target drifted this far from the
+//   active goal (must exceed the MoveTo same-goal epsilon of 20cm or every check re-paths).
+// - _ResumeSlackCm: while idle-arrived, re-engage once the target is beyond the arrival radius
+//   plus this slack (hysteresis against arrive/leave flicker at the boundary).
+// - _ArrivalRadiusOverride: same semantics as MoveTo's.
+USTRUCT(BlueprintType)
+struct CKCROWD_API FCk_Request_CrowdAgent_FollowTarget : public FCk_Request_Base
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_Request_CrowdAgent_FollowTarget);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_CrowdAgent_FollowTarget);
+
+    friend class ck::FProcessor_CrowdAgent_HandleRequests;
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    FCk_Handle_Transform _TargetPoint;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    FCk_Time _RepathPeriod = FCk_Time{0.25f};
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="25.0"))
+    float _RepathThresholdCm = 60.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
+    float _ResumeSlackCm = 20.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    ECk_Override _ArrivalRadiusOverrideMode = ECk_Override::DoNotOverride;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta=(AllowPrivateAccess=true, ClampMin="1.0",
+                    EditCondition="_ArrivalRadiusOverrideMode == ECk_Override::Override"))
+    float _ArrivalRadiusOverrideValue = 30.0f;
+
+public:
+    CK_PROPERTY_GET(_TargetPoint);
+    CK_PROPERTY(_RepathPeriod);
+    CK_PROPERTY(_RepathThresholdCm);
+    CK_PROPERTY(_ResumeSlackCm);
+    CK_PROPERTY(_ArrivalRadiusOverrideMode);
+    CK_PROPERTY(_ArrivalRadiusOverrideValue);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_CrowdAgent_FollowTarget, _TargetPoint);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
