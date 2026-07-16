@@ -81,10 +81,20 @@ The handle `FCk_Handle_CrowdAgent` is a typesafe handle (`FCk_Handle_TypeSafe` d
   → FFragment_EulerIntegrator_Current
        │
        ▼
-  FProcessor_CrowdAgent_ApplyOffset    ← writes SceneNode
+  FProcessor_CrowdAgent_ApplyOffset    ← stages the integrator delta into PendingDisplacement
   FProcessor_CrowdAgent_PushApart      ← post-integration de-overlap (dtCrowd port: 0.7 factor,
                                          4 iterations — deliberately UNDER-RELAXED, so it does NOT
-                                         guarantee zero interpenetration in a single frame)
+                                         guarantee zero interpenetration in a single frame);
+                                         stages its shove into PendingDisplacement
+  FProcessor_CrowdAgent_ConstrainToNavmesh ← THE SINGLE TRANSFORM WRITER: walks the accumulated
+                                         displacement along the navmesh surface
+                                         (ANavigationData::FindMoveAlongSurface — dtCrowd's
+                                         corridor movePosition, which the original port dropped)
+                                         and enqueues ONE Request_AddLocationOffset. XY is
+                                         constrained to the mesh; Z stays owned by path-follow +
+                                         integrator. Worlds with no nav data pass through
+                                         untouched. Master switch: _NavmeshConstraintMode
+                                         (project settings), default Enabled.
        │
        ▼
 [Replication]
@@ -92,6 +102,36 @@ The handle `FCk_Handle_CrowdAgent` is a typesafe handle (`FCk_Handle_TypeSafe` d
 ```
 
 Plus `FProcessor_CrowdAgent_BlockedRecheck` (FGroup_Gameplay): resumes a held agent when its goal clears.
+
+Plus `FProcessor_CrowdAgent_StationaryMarkup` (FGroup_Gameplay) + `_NavMarkup_EndPlay`: an agent
+PHYSICALLY STATIONARY past `_StationaryMarkupDelaySeconds` (windowed displacement, NOT the Idle
+tag — a blocked/pressing walker plugs a corridor exactly like an idle agent) paints a
+`UCk_NavArea_CrowdAgent` COST disc (`UCk_NavAreaMarkup_UE`, actor-free) so fresh paths — a
+joiner's first FindPath, BlockedRecheck's re-path — route AROUND standing crowds; unpainted the
+moment it genuinely moves. Cost (64x — any finite toll has a break-even line length where
+detouring costs more than crossing; 64x with the 2x extent multiplier puts that at ~85 agents,
+beyond any plausible queue; 8x broke at ~2 agents, 16x at ~20), never a hole:
+a plugged corridor still paths through, and the mesh under the agent stays walkable for its own
+clamp/path starts. The path planner is otherwise agent-blind and the avoidance sampler is a
+short-horizon local optimizer — without this tier, an agent headed past a standing line presses
+into it forever. Master switch `_StationaryMarkupMode` (default Enabled). Server-only.
+
+Plus `FProcessor_CrowdAgent_PathRefresh` (FGroup_Gameplay, RunAfter StationaryMarkup): the discs
+only bend paths computed AFTER they paint — a path computed before a crowd formed is a frozen
+polyline the agent follows into the crowd (UE's own `UPathFollowingComponent` re-paths when the
+navmesh under its path rebuilds; the dtCrowd port dropped that half of the mechanism). Each tick,
+a Walking agent whose REMAINING path crosses a disc with a paint serial NEWER than its path's is
+re-pathed at its own goal (BlockedRecheck's resume dance). One-shot per (path, disc-set): the
+serial compare early-outs the common frame, a clean scan fast-forwards the path serial, and a
+path that legitimately paid a disc's cost is never re-planned for the same disc twice. Discs
+become trigger-eligible only once the rebuilt mesh actually REPORTS the cost area at their
+location (`_ConfirmedOnMesh`; the settle seconds are just a pre-filter for that poly query), and
+a disc adjacent to the agent's own goal is exempt (joining a queue legitimately ends beside
+standing agents). Because the toll is paid per distance crossed, an agent ALREADY INSIDE the
+band would find finishing the crossing cheaper than backing out plus detouring — so every
+re-path site (MoveTo, BlockedRecheck, PathRefresh) plans from just OUTSIDE the band via
+`Get_EscapedQueryStart` + the FindPath request's start override when the agent is inside and its
+goal is not. Master switch `_PathRefreshMode` (default Enabled).
 
 **NOT BUILT** (documented here for years, never implemented — do not look for them):
 `SleepEvaluator`, `Piercing`. `ProgressEval`/`TriggerReplan` never existed either, but the capability
@@ -122,6 +162,8 @@ this tier exists to make unnecessary.
 | `FFragment_CrowdAgent_FaceAngle` | Current/target yaw | Add() |
 | `FFragment_CrowdAgent_MoveRequests` | Variant of pending request types | Per-tick (drained) |
 | `FFragment_CrowdAgent_InstalledRoute` | Goal + network epoch of the installed corridor (PathNetwork) | OnRouteResolved |
+| `FFragment_CrowdAgent_PendingDisplacement` | Per-frame displacement staging (ApplyOffset + PushApart write; ConstrainToNavmesh consumes) | `Add()` |
+| `FFragment_CrowdAgent_NavMarkup` | Stationary timer + strong ref to the painted cost-area object + paint serial/age (PathRefresh trigger data) | `Add()` |
 
 `FFragment_CrowdAgent_PathFollow` also carries `_CurrentSegmentStart` — the world-space start of the
 current path segment. Steering's plane-crossing waypoint retirement needs the *incoming* segment
@@ -324,7 +366,8 @@ have.
 
 ## Anti-patterns
 
-- **Never write SceneNode position from a steering processor.** The pipeline is `Steering → DesiredVelocity → VelocityBridge → FFragment_Velocity_Current → EulerIntegrator → SceneNode`. Skipping any step is a bug.
+- **Never write SceneNode position from a steering processor.** The pipeline is `Steering → DesiredVelocity → VelocityBridge → FFragment_Velocity_Current → EulerIntegrator → PendingDisplacement → ConstrainToNavmesh → SceneNode`. Skipping any step is a bug.
+- **Never write a crowd agent's Transform from anywhere but ConstrainToNavmesh.** A second writer bypasses the navmesh constraint and re-opens the through-the-wall bug. New displacement sources accumulate into `FFragment_CrowdAgent_PendingDisplacement` instead.
 - **Never enqueue MoveTo from a client.** Server-authoritative. `Request_MoveTo` checks authority.
 - **Never bypass `_MaxNeighborsForSteering`.** It's the perf cliff — a careless "let me just look at all 30 neighbors" inside a custom processor will tank stress runs.
 - **Don't read `FFragment_Velocity_Current` to drive steering decisions.** Read `FFragment_CrowdAgent_DesiredVelocity` (the steering output) or compute fresh. The current velocity is a frame behind and includes the velocity clamp.
