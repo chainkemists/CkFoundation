@@ -1,9 +1,11 @@
 # CkSpatialQuery
 
-**Purpose:** Volume-based spatial queries — finds entities within a shape (box, sphere, capsule) each tick and writes results to a fragment. Uses JoltPhysics or UE's physics query system.
+**Purpose:** Volume-based spatial queries — finds entities within a shape (box, sphere, capsule) each tick and writes results to a fragment. Backed by the Jolt world owned by `CkJolt`; the Probe feature creates kinematic Jolt sensor bodies as its implementation detail.
 
-**Depends on:** `CkCore`, `CkEcs`, `CkEcsExt`, `CkLabel`, `CkLog`, `CkPhysics`, `CkProvider`, `CkRecord`, `CkSettings`, `CkShapes`, `CkThirdParty`.
-**Used by:** `CkAggro`, ability AoE detection, proximity checks.
+**Depends on:** `CkCore`, `CkEcs`, `CkEcsExt`, `CkJolt`, `CkLabel`, `CkLog`, `CkPhysics`, `CkProvider`, `CkRecord`, `CkSettings`, `CkShapes`, `CkThirdParty`.
+**Used by:** `CkCrowd` (neighbor overlaps), `CkEqs` (trace overloads), `CkProjectile` (LinearCast impacts), `CkEcsDebugger` (editor inspectors).
+
+**Jolt-world split (2026-07-16):** the `JPH::PhysicsSystem`, JobSystem, listeners, debug renderer, and per-tick update moved to `CkJolt` (`UCk_Jolt_Subsystem`). `UCk_SpatialQuery_Subsystem` remains as a non-tickable bridge that translates CkJolt's drained contact events into Probe overlap requests and gates CkJolt's debug draw on this module's user settings. Probe processors obtain the world via the `TWeakPtr<JPH::PhysicsSystem>` registry context, unchanged.
 
 ---
 

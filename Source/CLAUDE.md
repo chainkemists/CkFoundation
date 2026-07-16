@@ -64,6 +64,7 @@ Before writing any code, navigate the documentation in this order:
 | ECS interaction channels | `CkInteraction` |
 | ECS spatial overlap/collision | `CkOverlapBody` + `CkShapes` |
 | ECS spatial volume query / probes (Jolt) | `CkSpatialQuery` |
+| own/step/query the Jolt physics world | `CkJolt` |
 | native entity queries (rings/cones over entities) | `CkEqs` (no doc yet; NOT UE's EQS) |
 | UE EQS wrappers | `CkAi` |
 | AI perception → ECS | `CkPerception` |
@@ -181,6 +182,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkGrid | Core,Ecs,EcsExt,Label,Log,Record,Settings (+EntitySpawner, editor-only) |
 | CkInteraction | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkInventory | Attribute,Core,Ecs,EcsExt,Grid,Label,Log,Record,Settings,TagSet |
+| CkJolt | Core,Ecs,Log,Settings,ThirdParty (owns the Jolt world; extracted from CkSpatialQuery 2026-07-16) |
 | CkIsmRenderer | Core,Ecs,EcsExt,Graphics,Label,Log,Provider,Record,Settings |
 | CkIskmRenderer | Animation,Core,Ecs,EcsExt,Graphics,IskmRendererVF,Label,Log,Physics,Provider,Record,Settings |
 | CkMessaging | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
@@ -197,7 +199,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkResolver | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Targeting |
 | CkShapes | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkSnapshot | Core,Ecs,EcsExt,Log,ThirdParty |
-| CkSpatialQuery | Core,Ecs,EcsExt,Label,Log,Physics,Provider,Record,Settings,Shapes,ThirdParty |
+| CkSpatialQuery | Core,Ecs,EcsExt,Jolt,Label,Log,Physics,Provider,Record,Settings,Shapes,ThirdParty |
 | CkSpline | Core,Ecs,EcsExt,Log |
 | CkStateMachine | ActorRelay,Core,Dynamic,Ecs,Label,Log,Provider,Record,Settings,Timer |
 | CkSubstep | Core,Ecs,EcsExt,Label,Log,Record,Settings |
@@ -209,7 +211,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkUsf | Core,Ecs,Graphics,Log |
 | CkVat | Core,Ecs,EcsExt,Graphics,IsmRenderer,Log,Usf |
 | CkVfx | ActorRelay,Core,Cue,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer |
-| CkWatermark | Core,Ecs,Log,Memory,Settings,SpatialQuery,UI |
+| CkWatermark | Core,Ecs,Jolt,Log,Memory,Settings,UI |
 
 ### T5 — editor modules (25 UncookedOnly + 3 Editor; runtime code must NEVER depend on these)
 

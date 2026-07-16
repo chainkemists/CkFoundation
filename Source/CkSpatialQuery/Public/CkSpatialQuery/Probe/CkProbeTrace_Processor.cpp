@@ -6,7 +6,6 @@
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkSpatialQuery/CkSpatialQuery_Log.h"
-#include "CkSpatialQuery/Subsystem/CkSpatialQuery_Subsystem.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
