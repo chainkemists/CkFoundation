@@ -5,23 +5,22 @@
 // FCk_Iskm_BoneMatrix3x4 lives in the engine-only PostConfigInit VF module (shared by the baker + the GPU upload).
 #include "CkIskmRendererVF/CkIskm_BoneMatrix.h"
 
-// ====================================================================================================================
-//  CkIskmRenderer Plan-2 — CPU bone-matrix bake output
+// --------------------------------------------------------------------------------------------------------------------
+// CkIskmRenderer Plan-2 — CPU bone-matrix bake output
 //
-//  The bake (UCk_IskmAnimCollection_Data::Build_BakedPoseData) samples every sequence at a fixed frequency and
-//  stores, per (frame x render-bone), the transposed 3x4 component-space pose relative to the reference pose:
+// The bake (UCk_IskmAnimCollection_Data::Build_BakedPoseData) samples every sequence at a fixed frequency and
+// stores, per (frame x render-bone), the transposed 3x4 component-space pose relative to the reference pose:
 //
-//      ShaderMatrix[bone] = RefPoseInverse[bone] * ComponentSpaceBoneMatrix[bone]   (stored transposed, 3 rows of float4)
+//     ShaderMatrix[bone] = RefPoseInverse[bone] * ComponentSpaceBoneMatrix[bone]   (stored transposed, 3 rows of float4)
 //
-//  Flat layout, GPU-upload-ready as a Buffer<float4> SRV (Phase 1):
-//      matrixIndex = frameIndex * RenderBoneCount + boneIndex      (each entry = 3 x float4 = 12 floats)
+// Flat layout, GPU-upload-ready as a Buffer<float4> SRV:
+//     matrixIndex = frameIndex * RenderBoneCount + boneIndex      (each entry = 3 x float4 = 12 floats)
 //
-//  Frame 0 is the reference pose (identity matrices). Sequences occupy contiguous frame ranges starting at frame 1.
-//  This is a direct port of Skelot's FSkelotAnimationBuffer bake (SkelotAnimCollection.cpp CalcRenderMatrices).
+// Frame 0 is the reference pose (identity matrices). Sequences occupy contiguous frame ranges starting at frame 1.
+// This is a direct port of Skelot's FSkelotAnimationBuffer bake (SkelotAnimCollection.cpp CalcRenderMatrices).
 //
-//  This data is asset-intrinsic (world-independent), transient (rebuilt, never serialized), and CPU-only — the bake
-//  touches no RHI, so it runs headlessly under -nullrhi (the SRV upload is a separate Phase-1 step).
-// ====================================================================================================================
+// This data is asset-intrinsic (world-independent), transient (rebuilt, never serialized), and CPU-only — the bake
+// touches no RHI, so it runs headlessly under -nullrhi (the SRV upload is a separate step).
 
 class UAnimSequenceBase;
 
@@ -36,7 +35,7 @@ struct FCk_Iskm_BakedSequence
     TWeakObjectPtr<UAnimSequenceBase> Sequence;
 };
 
-// Per-frame component-space transforms for one baked socket (inc-4 far cosmetics).
+// Per-frame component-space transforms for one baked socket (far cosmetics).
 struct FCk_Iskm_BakedSocket
 {
     FName Name;
@@ -62,7 +61,7 @@ struct FCk_Iskm_BakedPose
 
     // [TotalFrameCount * RenderBoneCount], index = frame * RenderBoneCount + bone.
     TArray<FCk_Iskm_BoneMatrix3x4> Matrices;
-    // [FrameCountSequences] per-frame local-space AABB for culling (Phase 4). MVP: mesh static bound per frame.
+    // [FrameCountSequences] per-frame local-space AABB for culling. MVP: mesh static bound per frame.
     TArray<FBox3f> FrameBounds;
 
     // Conservative ANIMATED bounds: union of component-space bone positions across every baked frame, expanded
@@ -80,7 +79,7 @@ struct FCk_Iskm_BakedPose
     // per-sequence offset table, parallel to the asset's _Sequences array.
     TArray<FCk_Iskm_BakedSequence> Sequences;
 
-    // Baked socket table (inc-4 far cosmetics) — one entry per resolvable _BakedSockets name.
+    // Baked socket table (far cosmetics) — one entry per resolvable _BakedSockets name.
     TArray<FCk_Iskm_BakedSocket> Sockets;
 
     bool IsBaked = false;

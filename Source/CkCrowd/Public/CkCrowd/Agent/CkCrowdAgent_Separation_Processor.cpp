@@ -105,7 +105,7 @@ namespace ck
         // path-follow velocity directly in Steering's combination.
         const auto NewForce = (Force + Jitter * 0.05f) * SeparationWeight * MaxSpeed;
 
-        // Phase 1.1 — inertia lerp toward last frame's force kills frame-to-frame flicker that
+        // Inertia lerp toward last frame's force kills frame-to-frame flicker that
         // drove vibration in head-on encounters. Mirrors dtCrowd's weightCurVel penalty concept
         // (DetourObstacleAvoidance.cpp:472), applied here as a force-blend factor since this
         // solver doesn't sample-and-score. 0.5 default ≈ dtCrowd's wCurVel/wDesVel = 0.375 ratio.

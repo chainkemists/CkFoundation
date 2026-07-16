@@ -26,9 +26,7 @@ namespace JPH
 
 namespace ck::details
 {
-    // ================================================================================================================
-    // Traits: TProbeShapeFactory
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_ShapeFragment>
     struct TProbeShapeFactory;
@@ -38,9 +36,7 @@ namespace ck::details
     template <> struct TProbeShapeFactory<FFragment_ShapeCapsule_Current>;
     template <> struct TProbeShapeFactory<FFragment_ShapeCylinder_Current>;
 
-    // ================================================================================================================
-    // TProcessor_ProbeSetup
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_ShapeFragment>
     class TProcessor_ProbeSetup : public ck_exp::TProcessor<
@@ -95,9 +91,7 @@ namespace ck::details
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
     };
 
-    // ================================================================================================================
-    // TProcessor_ProbeUpdateShape
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_ShapeFragment>
     class TProcessor_ProbeUpdateShape : public ck_exp::TProcessor<
@@ -146,9 +140,7 @@ namespace ck::details
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
     };
 
-    // ================================================================================================================
-    // Backwards-compatible type aliases
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
     using FProcessor_BoxProbe_Setup = TProcessor_ProbeSetup<FFragment_ShapeBox_Current>;
     using FProcessor_SphereProbe_Setup = TProcessor_ProbeSetup<FFragment_ShapeSphere_Current>;

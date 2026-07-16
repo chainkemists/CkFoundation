@@ -300,7 +300,6 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// Delegates
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(
     FCk_Delegate_ResourceLoader_OnObjectLoaded,
@@ -313,7 +312,6 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(
     FCk_Payload_ResourceLoader_OnObjectBatchLoaded, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
-// IsValid and Formatters
 
 CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_ResourceLoader_ObjectReference_Soft, [](const FCk_ResourceLoader_ObjectReference_Soft& InObj)
 {

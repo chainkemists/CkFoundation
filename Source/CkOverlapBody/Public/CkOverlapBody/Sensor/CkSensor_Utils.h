@@ -111,7 +111,7 @@ private:
         Category = "Ck|Utils|Sensor",
         meta = (CompactNodeTitle = "INVALID_SensorHandle", Keywords = "make"))
     static FCk_Handle_Sensor
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintPure,

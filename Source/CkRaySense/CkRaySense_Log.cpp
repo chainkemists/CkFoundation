@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkRaySense);
 
 namespace ck::raysense
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkRaySense);
+    CK_REGISTER_LOG_FUNCTIONS(CkRaySense);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

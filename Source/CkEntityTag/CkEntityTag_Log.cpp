@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkEntityTag);
 
 namespace ck::entity_tag
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkEntityTag);
+    CK_REGISTER_LOG_FUNCTIONS(CkEntityTag);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

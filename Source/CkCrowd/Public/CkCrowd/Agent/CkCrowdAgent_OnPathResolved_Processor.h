@@ -13,7 +13,7 @@
 
 namespace ck
 {
-    // Gate 2 — Sub-task 2E: monitors PathPending agents for nav-result resolution.
+    // Monitors PathPending agents for nav-result resolution.
     //
     // Polls each agent's FFragment_Nav_PathResult while the agent is in the PathPending state. When
     // the status moves to Ready/Partial → transition to Walking (steering's view starts firing).

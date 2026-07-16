@@ -7,17 +7,13 @@
 #include "PrimitiveSceneProxy.h"
 #include "InstanceDataSceneProxy.h"
 
-// ====================================================================================================================
-//  CkIskmRenderer Plan-2 — cluster scene proxy for batched GPU-skinned skeletal instancing (GPUScene path).
-//  Port of Skelot v6 FSkelotClusterProxy, single-mesh, GPUScene desktop only.
+// --------------------------------------------------------------------------------------------------------------------
+// CkIskmRenderer Plan-2 — cluster scene proxy for batched GPU-skinned skeletal instancing (GPUScene path).
+// Port of Skelot v6 FSkelotClusterProxy, single-mesh, GPUScene desktop only.
 //
-//  Each instance is a GPUScene instance under this one FPrimitiveSceneProxy. The animation frame index travels via
-//  GPUScene custom data (per-component CustomPrimitiveData[0] for Phase 1-2, per-instance payload for Phase 3); the
-//  vertex factory reads it and skins to the matching baked frame. Per-frame transforms + custom data are uploaded
-//  into FInstanceSceneDataBuffers.
-//
-//  API shapes fork-verified — see scratchpad PHASE1_ENGINE_API.md.
-// ====================================================================================================================
+// Each instance is a GPUScene instance under this one FPrimitiveSceneProxy. The animation frame index travels via
+// GPUScene per-instance custom data; the vertex factory reads it and skins to the matching baked frame. Per-frame
+// transforms + custom data are uploaded into FInstanceSceneDataBuffers.
 
 class UCk_Iskm_BatchedClusterComponent;
 class UCk_IskmAnimCollection_Data;
@@ -40,7 +36,7 @@ struct FCk_Iskm_CompDynData
     TArray<FRenderTransform> PrevTransforms;       // PrevInstanceToPrimitiveRelative (velocity)
     TArray<float>            CustomData;            // [Cur(int bits), Pre(int bits), user...] per instance, padded to %4
     int32                    NumCustomDataFloats = 0;
-    TArray<FRenderBounds>    InstanceLocalBounds;   // per-instance (Phase 4) or a single shared bound
+    TArray<FRenderBounds>    InstanceLocalBounds;   // per-instance or a single shared bound
     FRenderBounds            LocalBounds;                                  // for the ISDB (FRenderBounds)
     FBoxSphereBounds         WorldBounds = FBoxSphereBounds(ForceInit);    // for the scene-update commands (FBoxSphereBounds)
     FBoxSphereBounds         LocalBoundsSphere = FBoxSphereBounds(ForceInit);

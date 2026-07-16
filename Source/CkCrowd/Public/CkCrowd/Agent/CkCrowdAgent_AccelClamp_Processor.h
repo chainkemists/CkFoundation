@@ -14,13 +14,13 @@
 
 namespace ck
 {
-    // Phase 1.2 — clamps the per-frame VELOCITY DELTA on FFragment_CrowdAgent_DesiredVelocity.
+    // Clamps the per-frame VELOCITY DELTA on FFragment_CrowdAgent_DesiredVelocity.
     // Mirrors DetourCrowd.cpp:integrate() 53-69. Critical because Steering writes a fresh
     // `Direction * TargetSpeed` each frame — direction can flip arbitrarily, which is the root
     // cause of the head-on vibration mode. Capping |dv| ≤ MaxAccel × dt forces direction changes
     // to ramp instead of snap.
     //
-    // Group: FGroup_Physics. RunAfter Steering (and, in Phase 2, AvoidanceSample) so this processor
+    // Group: FGroup_Physics. RunAfter Steering (and AvoidanceSample) so this processor
     // sees whichever solver wrote last. RunBefore VelocityBridge so the bridge ships the clamped
     // value into the physics layer.
     //

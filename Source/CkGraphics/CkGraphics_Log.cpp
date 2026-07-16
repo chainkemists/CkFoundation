@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkGraphics);
 
 namespace ck::graphics
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkGraphics);
+    CK_REGISTER_LOG_FUNCTIONS(CkGraphics);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

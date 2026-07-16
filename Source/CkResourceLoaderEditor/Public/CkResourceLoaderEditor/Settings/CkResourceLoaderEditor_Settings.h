@@ -15,10 +15,8 @@ namespace ck::layout
     class FResourceLoaderEditor_ProjectSettings_Details : public IDetailCustomization
 {
     public:
-        /** Makes a new instance of this detail layout class for a specific detail view requesting it */
         static auto MakeInstance() -> TSharedRef<IDetailCustomization>;
 
-        /** IDetailCustomization interface */
         auto CustomizeDetails(
             IDetailLayoutBuilder& DetailBuilder) -> void override;
     };

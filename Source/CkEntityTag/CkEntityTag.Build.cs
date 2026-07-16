@@ -6,7 +6,6 @@ public class CkEntityTag : CkModuleRules
     public CkEntityTag(ReadOnlyTargetRules Target) : base(Target)
     {
         PrivateIncludePaths.AddRange(new string[] {
-            // ... add other private include paths required here ...
         });
 
         PublicDependencyModuleNames.AddRange(new string[]
@@ -14,7 +13,7 @@ public class CkEntityTag : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-                        "GameplayTags",
+            "GameplayTags",
 
             "CkCore",
             "CkEcs",

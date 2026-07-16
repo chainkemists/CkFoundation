@@ -12,13 +12,11 @@ public class CkCore : CkModuleRules
 
         PublicIncludePaths.AddRange(
             new string[] {
-                // ... add public include paths required here ...
             }
             );
 
         PrivateIncludePaths.AddRange(
             new string[] {
-                // ... add other private include paths required here ...
             }
             );
 
@@ -36,7 +34,6 @@ public class CkCore : CkModuleRules
                 "CkLog",
                 "CkSettings",
                 "CkThirdParty",
-                // ... add other public dependencies that you statically link with here ...
             }
             );
 
@@ -77,14 +74,12 @@ public class CkCore : CkModuleRules
 
                 "CkLog",
                 "CkThirdParty",
-                // ... add private dependencies that you statically link with here ...
             }
             );
 
         DynamicallyLoadedModuleNames.AddRange(
             new string[]
             {
-                // ... add any modules that your module loads dynamically here ...
             }
             );
 

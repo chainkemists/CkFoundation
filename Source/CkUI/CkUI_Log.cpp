@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkUI);
 
 namespace ck::ui
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkUI);
+    CK_REGISTER_LOG_FUNCTIONS(CkUI);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

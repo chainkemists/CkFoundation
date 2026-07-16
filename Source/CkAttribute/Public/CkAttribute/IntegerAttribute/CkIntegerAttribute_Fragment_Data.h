@@ -55,15 +55,15 @@ private:
     FGameplayTag _RefillAttributeName;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess, SaveGame))
+        meta = (AllowPrivateAccess = true, SaveGame))
     ECk_Attribute_Refill_Policy _RefillBehavior = ECk_Attribute_Refill_Policy::Variable;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess, SaveGame))
+        meta = (AllowPrivateAccess = true, SaveGame))
     float _FillRate = 0.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess, SaveGame))
+        meta = (AllowPrivateAccess = true, SaveGame))
     ECk_Attribute_RefillState _StartingState = ECk_Attribute_RefillState::Paused;
 
 public:
@@ -118,7 +118,7 @@ private:
     int32 _BaseValue = 0;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess, SaveGame))
+        meta = (AllowPrivateAccess = true, SaveGame))
     ECk_MinMax _MinMax = ECk_MinMax::None;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -135,7 +135,7 @@ private:
 
     // Non-Replicated fill rate
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess, EditCondition = "_EnableRefill", SaveGame))
+        meta = (AllowPrivateAccess = true, EditCondition = "_EnableRefill", SaveGame))
     FCk_Fragment_IntegerAttributeRefill_ParamsData _RefillParams;
 
 public:

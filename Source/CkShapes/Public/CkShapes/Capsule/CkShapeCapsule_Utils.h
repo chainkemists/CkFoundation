@@ -65,7 +65,7 @@ private:
         Category = "Ck|Utils|ShapeCapsule",
         meta = (CompactNodeTitle = "INVALID_ShapeCapsuleHandle", Keywords = "make"))
     static FCk_Handle_ShapeCapsule
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintCallable,

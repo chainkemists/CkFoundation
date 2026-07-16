@@ -38,7 +38,7 @@ struct CKNAVIGATION_API FCk_Nav_Algorithm
         bool                 InAllowPartial,
         float                InProjectionHalfExtent,         // cm; from project setting (default 500)
         float                InProjectionVerticalHalfExtent, // cm; < 0 => use horizontal extent (uniform cube, today's behavior)
-        float                InAgentRadiusForFirstSkip, // cm; 0 disables the skip-first-waypoint pass (Gate 2+ wires this in)
+        float                InAgentRadiusForFirstSkip, // cm; 0 disables the skip-first-waypoint pass
         FCk_Nav_PathResult&  OutResult,
         TSubclassOf<UNavigationQueryFilter> InFilterClass = {}) -> bool; // null -> NavData's default filter
 

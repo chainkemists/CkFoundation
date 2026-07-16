@@ -22,7 +22,6 @@ namespace ck
             FFragment_Sfx_Requests& InRequestsComp) const
         -> void
     {
-        // Add request handling logic here
     }
 }
 

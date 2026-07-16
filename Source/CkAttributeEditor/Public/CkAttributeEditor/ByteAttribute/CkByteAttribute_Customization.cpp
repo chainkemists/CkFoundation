@@ -13,8 +13,7 @@
 
 #define LOCTEXT_NAMESPACE "ByteAttributeCustomization"
 
-/* FCk_Fragment_ByteAttribute_ParamsDataCustomization
- *****************************************************************************/
+// ----------------------------------------------------------------------------------------------------
 
 TSharedRef<IPropertyTypeCustomization> FCk_Fragment_ByteAttribute_ParamsDataCustomization::MakeInstance()
 {

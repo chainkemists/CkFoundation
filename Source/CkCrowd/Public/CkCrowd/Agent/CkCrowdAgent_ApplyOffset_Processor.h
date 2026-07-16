@@ -14,14 +14,14 @@
 
 namespace ck
 {
-    // Gate 2 — pattern replication of FProcessor_Projectile_Update.
+    // Pattern replication of FProcessor_Projectile_Update.
     // Reads the post-integration FFragment_EulerIntegrator_Current::_DistanceOffset and stages it
     // into FFragment_CrowdAgent_PendingDisplacement. It does NOT write the Transform — the single
     // Transform writer for a crowd agent is FProcessor_CrowdAgent_ConstrainToNavmesh, which walks
     // the accumulated displacement along the navmesh surface before applying it.
     //
     // RunAfter = FProcessor_EulerIntegrator_Update so we observe the value the integrator just produced.
-    // TExclude<FTag_CrowdAgent_Asleep> is forward-compatible (Gate 4): asleep agents skip the offset apply.
+    // TExclude<FTag_CrowdAgent_Asleep> is forward-compatible: asleep agents skip the offset apply.
     class CKCROWD_API FProcessor_CrowdAgent_ApplyOffset : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_ApplyOffset,
             FCk_Handle_CrowdAgent,

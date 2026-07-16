@@ -1,6 +1,6 @@
 #pragma once
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 // PRIVATE: shared internal helper for Planner/Action entity creation.
 //
 // Single entity-creation primitive used by AddAction. Stamps the per-entity
@@ -14,7 +14,6 @@
 //   - CkGoap_Planner_Utils.cpp
 //
 // Not a public header.
-// ====================================================================================================================
 
 #include "CkGoap/Action/CkGoap_Action_Fragment_Data.h"     // FCk_Handle_Goap_Action, FCk_Fragment_Goap_ActionParamsData
 #include "CkGoap/Planner/CkGoap_Planner_Fragment_Data.h"  // FCk_Handle_Goap_Planner
@@ -34,7 +33,7 @@ namespace ck::goap::internal_planner
         FCk_Handle_Goap_Planner& InPlanner,
         const FCk_Fragment_Goap_ActionParamsData& InParams) -> FCk_Handle_Goap_Action;
 
-    // PR-A: resolve a newly-created child Action's WorldStateSource by walking
+    // resolve a newly-created child Action's WorldStateSource by walking
     // override → parent's resolved → owning Planner's default. Used by
     // AddAction to eagerly resolve children's WS so their Setup processors can
     // run before any parent plan is requested. Defined in CkGoap_Planner_Utils.cpp.

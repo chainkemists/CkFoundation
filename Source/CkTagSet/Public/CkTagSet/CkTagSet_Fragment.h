@@ -22,8 +22,6 @@ class UCk_Utils_TagSet_UE;
 
 namespace ck
 {
-    // ---- Fragment ----
-
     struct CKTAGSET_API FFragment_TagSet
     {
         CK_GENERATED_BODY(FFragment_TagSet);
@@ -42,8 +40,6 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-
-    // ---- Requests ----
 
     struct CKTAGSET_API FFragment_TagSet_Requests
     {
@@ -65,8 +61,6 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-
-    // ---- Tags ----
 
     CK_DEFINE_ECS_TAG(FTag_TagSet_MayRequireReplication);
 
@@ -91,8 +85,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // ---- Signal ----
-
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKTAGSET_API,
         TagSet_OnTagsChanged,
@@ -103,8 +95,6 @@ namespace ck
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-
-// ---- Rep Data ----
 
 USTRUCT()
 struct CKTAGSET_API FCk_RepData_TagSet

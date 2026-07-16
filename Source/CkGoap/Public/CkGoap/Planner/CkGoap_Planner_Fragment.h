@@ -13,14 +13,14 @@
 
 #include <variant>
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 // Forward decls in global scope so friend lookups bind correctly.
 class UCk_Utils_Goap_Planner_UE;
 class UCk_Utils_Goap_Action_UE;
 class UCk_GoapAction_EntityScript;
 
-// Forward decl for the PR-A internal_planner helper befriended on
+// Forward decl for the internal_planner helper befriended on
 // FFragment_Goap_Planner_WorldStateSource below. Defined in
 // CkGoap_Planner_Internal.h / CkGoap_Planner_Utils.cpp.
 namespace ck::goap::internal_planner
@@ -30,21 +30,19 @@ namespace ck::goap::internal_planner
 		const FCk_Handle_Goap_Action& InParentAction) -> void;
 }
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
 	class FProcessor_Goap_Planner_Setup;
 	class FProcessor_Goap_Planner_UpdateActivation;
-	// PR-B.1b Stage 3: Planner-side A*-pipeline processors.
+	// Planner-side A*-pipeline processors.
 	class FProcessor_Goap_Planner_AutoReplan;
 	class FProcessor_Goap_Planner_HandleRequests;
 	class FProcessor_Goap_Planner_HandleResult;
 	class FProcessor_Goap_Action_Setup;
 
-// ====================================================================================================================
-// TAGS
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 	CK_DEFINE_ECS_TAG(FTag_Goap_Planner_RequiresSetup);
 
@@ -67,15 +65,13 @@ namespace ck
 	// is in flight.
 	CK_DEFINE_ECS_TAG(FTag_Goap_Planner_PlanInFlight);
 
-// ====================================================================================================================
-// PARAMS — alias to the BlueprintType data shape
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Alias to the BlueprintType data shape
 
 	using FFragment_Goap_Planner_Params = FCk_Fragment_Goap_PlannerParamsData;
 
-// ====================================================================================================================
-// CURRENT FRAGMENT — Runtime ActionSet state (enable toggle, diagnostics)
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Runtime ActionSet state (enable toggle, diagnostics)
 
 	struct CKGOAP_API FFragment_Goap_Planner_Current
 	{
@@ -97,8 +93,8 @@ namespace ck
 		// whose effects cover every goal condition. Read by HandleResult /
 		// HandleRequests at the PlanFailed branches to gate the runtime ensure
 		// (when combined with PlannerParams._AllowPlanFailed=false). See
-		// FProcessor_Goap_Planner_Setup for the static check and the module design-tenets notes
-		// § "Design tenets" for the rationale.
+		// FProcessor_Goap_Planner_Setup for the static check and the module's
+		// design tenets for the rationale.
 		bool _HasUnconditionalFallback = false;
 
 	public:
@@ -107,8 +103,8 @@ namespace ck
 		CK_PROPERTY_GET(_HasUnconditionalFallback);
 	};
 
-// ====================================================================================================================
-// ACTIVATION — Per-Planner activation state. Used by UpdateActivation to
+// --------------------------------------------------------------------------------------------------------------------
+// Per-Planner activation state. Used by UpdateActivation to
 // detect Plan[0] changes frame-over-frame and drive sub-Planner
 // activate/deactivate transitions.
 //
@@ -119,7 +115,6 @@ namespace ck
 // top-level Planners, by virtue of being top-level). Inactive Planners do not
 // participate in the activation walk; they are mid-tier Planners awaiting
 // their parent to select them as Plan[0].
-// ====================================================================================================================
 
 	struct CKGOAP_API FFragment_Goap_Planner_Activation
 	{
@@ -139,10 +134,9 @@ namespace ck
 		CK_PROPERTY_GET(_IsActive);
 	};
 
-// ====================================================================================================================
-// ACTION CATALOG INDEX — O(1) tag-to-action lookup. Populated at AddAction
+// --------------------------------------------------------------------------------------------------------------------
+// O(1) tag-to-action lookup. Populated at AddAction
 // time; read by lookup helpers (Find_Action, etc.).
-// ====================================================================================================================
 
 	struct CKGOAP_API FFragment_Goap_Planner_ActionCatalogIndex
 	{
@@ -176,10 +170,9 @@ namespace ck
 		}
 	};
 
-// ====================================================================================================================
-// WORLD STATE SOURCE — ActionSet-level default WS source. Used by the unified
+// --------------------------------------------------------------------------------------------------------------------
+// ActionSet-level default WS source. Used by the unified
 // ChainUpdate logic when an Action does not provide its own override.
-// ====================================================================================================================
 
 	struct CKGOAP_API FFragment_Goap_Planner_WorldStateSource
 	{
@@ -189,11 +182,11 @@ namespace ck
 		friend class ::UCk_Utils_Goap_Planner_UE;
 		friend class ::UCk_Utils_Goap_Action_UE;
 		friend class FProcessor_Goap_Planner_UpdateActivation;
-		friend class FProcessor_Goap_Planner_Setup;       // PR-B.1b Stage 3
-		friend class FProcessor_Goap_Planner_HandleRequests;  // PR-B.1b Stage 3
+		friend class FProcessor_Goap_Planner_Setup;
+		friend class FProcessor_Goap_Planner_HandleRequests;
 		friend class FProcessor_Goap_Action_Setup;
 
-		// PR-A: shared internal helper for AddAction's child-WS resolution.
+		// shared internal helper for AddAction's child-WS resolution.
 		friend auto goap::internal_planner::DoResolveChildWorldStateFromParent(
 			FCk_Handle_Goap_Action& InChild,
 			const FCk_Handle_Goap_Action& InParentAction) -> void;
@@ -218,12 +211,11 @@ namespace ck
 		CK_PROPERTY_GET(_Resolved);
 	};
 
-// ====================================================================================================================
-// PLAN STATE — Planner-role fragment: live plan + status + cost + attempt count
+// --------------------------------------------------------------------------------------------------------------------
+// Planner-role fragment: live plan + status + cost + attempt count
 // for the planner running on this entity. Lives on every Action entity (because
 // every Action runs its own planner in the unified model) and on the top-level
 // Planner entity.
-// ====================================================================================================================
 
 	struct CKGOAP_API FFragment_Goap_Planner_PlanState
 	{
@@ -233,8 +225,8 @@ namespace ck
 		friend class ::UCk_Utils_Goap_Planner_UE;
 		friend class ::UCk_Utils_Goap_Action_UE;
 		friend class FProcessor_Goap_Planner_UpdateActivation;
-		friend class FProcessor_Goap_Planner_HandleRequests;  // PR-B.1b Stage 3
-		friend class FProcessor_Goap_Planner_HandleResult;    // PR-B.1b Stage 3
+		friend class FProcessor_Goap_Planner_HandleRequests;
+		friend class FProcessor_Goap_Planner_HandleResult;
 		friend class FProcessor_Goap_Action_Setup;
 
 	private:
@@ -260,10 +252,10 @@ namespace ck
 		auto Get_PlanClasses() const -> TArray<TSubclassOf<UCk_GoapAction_EntityScript>>;
 	};
 
-// ====================================================================================================================
-// GOAL — Planner-role fragment: effective goal world state for this planner.
+// --------------------------------------------------------------------------------------------------------------------
+// Planner-role fragment: effective goal world state for this Planner.
 //
-// U11.1: every Planner has its own _Goal, set at construction via
+// Every Planner has its own _Goal, set at construction via
 // FCk_Fragment_Goap_PlannerParamsData._Goal and mutable via Request_SetGoal.
 // _GoalAuthored is the source-of-truth (authored, tag-keyed). _Goal is the
 // resolved form (registry-keyed) used by the A* planner. Setup resolves
@@ -271,7 +263,6 @@ namespace ck
 // source may differ. There is no longer any implicit "goal = effects" rule —
 // a Planner with an empty _GoalAuthored has an empty _Goal (planner emits an
 // empty plan / PlanFound immediately).
-// ====================================================================================================================
 
 	struct CKGOAP_API FFragment_Goap_Planner_Goal
 	{
@@ -281,8 +272,8 @@ namespace ck
 		friend class ::UCk_Utils_Goap_Planner_UE;
 		friend class ::UCk_Utils_Goap_Action_UE;
 		friend class FProcessor_Goap_Planner_UpdateActivation;
-		friend class FProcessor_Goap_Planner_Setup;           // PR-B.1b Stage 3
-		friend class FProcessor_Goap_Planner_HandleRequests;  // PR-B.1b Stage 3
+		friend class FProcessor_Goap_Planner_Setup;
+		friend class FProcessor_Goap_Planner_HandleRequests;
 		friend class FProcessor_Goap_Action_Setup;
 
 	private:
@@ -302,17 +293,15 @@ namespace ck
 		CK_PROPERTY_GET(_InvalidGoal);
 	};
 
-// ====================================================================================================================
-// SIGNALS — Planner-scoped
+// --------------------------------------------------------------------------------------------------------------------
+// Planner-scoped signals.
 //
-// PR-B.1b Stage 0 (spec §3.5): per-Planner signals have source type
-// FCk_Handle_Goap_Planner. Under Path A the broadcast still happens on the
-// underlying Action entity that runs A* (the implicit-root Action for top-
-// level Planners, or the promoted host for mid-tier Planners) — the Bind/
-// Unbind utilities resolve Planner → underlying entity so storage stays on
-// the broadcasting entity. The payload's source handle is the Planner.
-// Stage 3 will move broadcast onto the Planner entity itself.
-// ====================================================================================================================
+// Per-Planner signals have source type FCk_Handle_Goap_Planner. Under Path A
+// the broadcast still happens on the underlying Action entity that runs A*
+// (the implicit-root Action for top-level Planners, or the promoted host for
+// mid-tier Planners) — the Bind/Unbind utilities resolve Planner → underlying
+// entity so storage stays on the broadcasting entity. The payload's source
+// handle is the Planner.
 
 	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
 		CKGOAP_API,
@@ -349,9 +338,8 @@ namespace ck
 		FCk_Handle_Goap_Planner,
 		FCk_Goap_Payload_OnPlannerDeactivated);
 
-// ====================================================================================================================
-// REQUESTS — Planner-side request queue (Plan / CancelPlan / SetGoal / etc.)
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Planner-side request queue (Plan / CancelPlan / SetGoal / etc.)
 
 	struct CKGOAP_API FFragment_Goap_Planner_Requests
 	{
@@ -381,9 +369,8 @@ namespace ck
 		CK_PROPERTY_GET(_Requests);
 	};
 
-// ====================================================================================================================
-// REPLAN THROTTLE — accumulator for the Planner's replan-interval window.
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Accumulator for the Planner's replan-interval window.
 
 	struct CKGOAP_API FFragment_Goap_Planner_ReplanThrottle
 	{
@@ -400,9 +387,8 @@ namespace ck
 		CK_PROPERTY_GET(_SecondsSinceLastReplan);
 	};
 
-// ====================================================================================================================
-// PLAN CONTEXT — Graph reference kept alive between search + result phases.
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Graph reference kept alive between search + result phases.
 
 	struct CKGOAP_API FFragment_Goap_Planner_PlanContext
 	{
@@ -419,14 +405,13 @@ namespace ck
 		CK_PROPERTY_GET(_Graph);
 	};
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 // A* FRAGMENT ALIASES — concrete CkAStar SearchState / Result types parameterised
 // over goap::FGoapGraph. Each Planner entity carries one instance of each.
-// ====================================================================================================================
 
 	using FFragment_Goap_Planner_SearchState = TFragment_AStar_SearchState<int32, goap::FGoapGraph>;
 	using FFragment_Goap_Planner_Result      = TFragment_AStar_Result<int32>;
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 } // namespace ck

@@ -44,7 +44,6 @@ public:
         const FCk_Fragment_MultipleSfx_ParamsData& InParams);
 
 public:
-    // Has Feature
     static bool
     Has(
         const FCk_Handle& InHandle);
@@ -79,7 +78,7 @@ private:
         Category = "Ck|Utils|Sfx",
         meta = (CompactNodeTitle = "INVALID_SfxHandle", Keywords = "make"))
     static FCk_Handle_Sfx
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintPure,

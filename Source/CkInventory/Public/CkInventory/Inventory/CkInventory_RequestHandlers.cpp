@@ -55,13 +55,11 @@ namespace ck::inventory_handlers
 
     using FInventoryItemRecord = UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils;
 
-    // ============================================================================================
-    // DEFAULT IMPLEMENTATIONS
+    // ----------------------------------------------------------------------------------------------------
     // Each TXxx::Handle below is the default body. It works for the no-addon, no-shape-divergence
     // case — typically the DataOnly path. Per-shape behavior (Spatial in this codebase) is
     // expressed by full Handle specializations or static-helper specializations in the typed
     // inventory's RequestTraits.cpp.
-    // ============================================================================================
 
     // ---- TAddItem default: validate + bind. Used by addon-less entries (DataOnly).
     template <typename TInventoryHandle, typename TAddon>

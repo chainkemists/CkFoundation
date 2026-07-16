@@ -67,8 +67,8 @@ namespace ck
         DoTick(FCk_Time InDeltaT)
         -> void
     {
-        // Gate 1 drains every queued request; per-tick budget cap is wired in Gate 6
-        // alongside the stress-test scenario. Default reads kept here for future use.
+        // Every queued request is drained; the per-tick budget cap is not yet wired
+        // (planned alongside the stress-test scenario). Default reads kept here for future use.
         _BudgetRemainingThisTick = UCk_Utils_Nav_Settings_UE::Get_MaxPathQueriesPerFrame();
 
         // Drain deferred requests. Per-request readiness check: re-issue any request whose

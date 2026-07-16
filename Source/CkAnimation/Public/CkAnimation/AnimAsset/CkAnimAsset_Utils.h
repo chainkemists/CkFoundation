@@ -75,7 +75,7 @@ private:
         Category = "Ck|Utils|AnimAsset",
         meta = (CompactNodeTitle = "INVALID_AnimAssetHandle", Keywords = "make"))
     static FCk_Handle_AnimAsset
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintPure,

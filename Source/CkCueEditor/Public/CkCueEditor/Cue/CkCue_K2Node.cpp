@@ -30,8 +30,6 @@ namespace ck_k2node_cue
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// --------------------------------------------------------------------------------------------------------------------
-
 auto UCk_K2Node_Cue_Base::PostEditChangeProperty(
     FPropertyChangedEvent& PropertyChangedEvent) -> void
 {
@@ -679,18 +677,10 @@ auto UCk_K2Node_Cue_Base::DoGet_CueClass(TOptional<TArray<UEdGraphPin*>> InPinsT
         return nullptr;
     }
 
-    // If we have a cached class, verify it matches the current cue name
+    // If we have a valid cached class, use it without querying the subsystem
     if (ck::IsValid(_CachedCueClass))
     {
-        //if (const auto* CueCDO = Cast<UCk_CueBase_EntityScript>(_CachedCueClass->GetDefaultObject());
-        //    ck::IsValid(CueCDO))
-        //{
-        //    if (CueCDO->Get_CueName() == CueName)
-        //    {
-        //        // Cached class is valid and matches - use it without querying subsystem
-                return _CachedCueClass;
-    //        }
-    //    }
+        return _CachedCueClass;
     }
 
     // No valid cache - query the subsystem (only during editor operations, not during cook)

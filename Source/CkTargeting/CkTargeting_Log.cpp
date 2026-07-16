@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkTargeting);
 
 namespace ck::targeting
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkTargeting);
+    CK_REGISTER_LOG_FUNCTIONS(CkTargeting);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

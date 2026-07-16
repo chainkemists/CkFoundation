@@ -17,13 +17,13 @@
 // CkEqs_Fragment_Data.h; the alias keeps processor signatures referring to ECS-side names.
 using FFragment_EqsQuery_Params    = FCk_Eqs_QueryParams;
 using FFragment_EqsQuery_Results   = FCk_Eqs_QueryResults;
-using FFragment_EqsQuery_DebugInfo = FCk_Fragment_EqsQuery_DebugInfoData;  // Pass-5.1
+using FFragment_EqsQuery_DebugInfo = FCk_Fragment_EqsQuery_DebugInfoData;
 
 // --------------------------------------------------------------------------------------------------------------------
 // FFragment_EqsQuery_State — transient evaluation state. NOT reflected. Lives only on
 // the query entity between Generate and Finalize.
 //
-// Pass-3 P3-E3: tests are atomic with respect to budget yields. The cursor is _NextTestIndex
+// Tests are atomic with respect to budget yields. The cursor is _NextTestIndex
 // (test boundary), NOT a per-candidate cursor. Yielding mid-test would corrupt Min/Max
 // normalization across frames. Do not add `_NextCandidateIndexInTest`.
 // --------------------------------------------------------------------------------------------------------------------
@@ -68,8 +68,6 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// Tags
-// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
@@ -78,7 +76,7 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_EqsQuery_Complete);    // Finalize ran; results available
     CK_DEFINE_ECS_TAG(FTag_EqsQuery_Failed);      // Failed (terminal — pairs with Complete)
     CK_DEFINE_ECS_TAG(FTag_EqsQuery_AutoDestroy); // Cleanup processor destroys when Complete
-    CK_DEFINE_ECS_TAG(FTag_EqsQuery_Cancelled);   // Pass-3.1 E3: caller-issued cancel
+    CK_DEFINE_ECS_TAG(FTag_EqsQuery_Cancelled);   // caller-issued cancel
 }
 
 // --------------------------------------------------------------------------------------------------------------------

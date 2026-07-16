@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkMessaging);
 
 namespace ck::messaging
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkMessaging);
+    CK_REGISTER_LOG_FUNCTIONS(CkMessaging);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

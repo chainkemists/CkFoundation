@@ -65,7 +65,7 @@ auto
         FName InModuleName)
     -> void
 {
-    // TODO Phase 5: Requires module name tracking in FProcessorDescriptor.
+    // TODO: Requires module name tracking in FProcessorDescriptor.
     //   Individual FAutoProcessorRegistrar destructors handle per-processor deregistration.
     //   This bulk method is reserved for FModuleManager::OnModulesChanged() integration.
     ck::ecs::Warning(TEXT("DeregisterAllFromModule([{}]) not yet implemented — individual registrar destructors handle cleanup."),

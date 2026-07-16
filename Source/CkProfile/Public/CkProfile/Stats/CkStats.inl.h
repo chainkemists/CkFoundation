@@ -95,8 +95,6 @@ namespace ck
         return FPlatformMemory::MCR_Invalid;
     }
     // ----------------------------------------------------------------------------------------------------------------
-    // TStat_PhaseId — phase-aware stat identity for parallel processors
-    // ----------------------------------------------------------------------------------------------------------------
 
     template <> struct TStatPhase_Suffix<FStatPhase_ForEachEntity>
     {

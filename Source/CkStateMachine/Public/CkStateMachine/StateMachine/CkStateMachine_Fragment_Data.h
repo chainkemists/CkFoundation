@@ -16,9 +16,7 @@
 // the circular include with CkSmState_EntityScript.h (which itself includes us).
 class UCk_SmState_EntityScript;
 
-// ====================================================================================================================
-// HANDLES
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKSTATEMACHINE_API FCk_Handle_StateMachine : public FCk_Handle_TypeSafe
@@ -85,9 +83,7 @@ struct CKSTATEMACHINE_API FCk_Handle_SmCondition : public FCk_Handle_TypeSafe
 
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_SmCondition);
 
-// ====================================================================================================================
-// ENUMS
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
 enum class ECk_SmTaskResult : uint8
@@ -192,9 +188,7 @@ enum class ECk_SmTransitionResult : uint8
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SmTransitionResult);
 
-// ====================================================================================================================
-// PARAMS DATA
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
 struct CKSTATEMACHINE_API FCk_Fragment_StateMachine_ParamsData
@@ -246,9 +240,7 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_StateMachine_ParamsData, _InitialStateClass);
 };
 
-// ====================================================================================================================
-// REQUEST STRUCTS
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
 struct CKSTATEMACHINE_API FCk_Request_Sm_Start : public FCk_Request_Base
@@ -345,9 +337,7 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Sm_AddOverrideState, _OverrideStateClass);
 };
 
-// ====================================================================================================================
-// SIGNAL PAYLOADS
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
 struct CKSTATEMACHINE_API FCk_Sm_Payload_OnStateChanged
@@ -422,9 +412,7 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Sm_Payload_OnSubSmConstructed, _SubStateMachineHandle);
 };
 
-// ====================================================================================================================
-// DELEGATES
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_Sm_OnStateChanged,

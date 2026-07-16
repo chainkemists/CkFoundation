@@ -6,7 +6,6 @@ public class CkVfxEditor : CkModuleRules
     public CkVfxEditor(ReadOnlyTargetRules Target) : base(Target)
     {
         PrivateIncludePaths.AddRange(new string[] {
-            // ... add other private include paths required here ...
         });
 
         PublicDependencyModuleNames.AddRange(new string[]

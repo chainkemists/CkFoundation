@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkEcsEditor);
 
 namespace ck::ecs_editor
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkEcsEditor);
+    CK_REGISTER_LOG_FUNCTIONS(CkEcsEditor);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

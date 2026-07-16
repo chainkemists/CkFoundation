@@ -9,7 +9,7 @@
 
 #include "CkGoap_Action_Utils.generated.h"
 
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Goap_Action"))
 class CKGOAP_API UCk_Utils_Goap_Action_UE : public UBlueprintFunctionLibrary
@@ -21,9 +21,7 @@ public:
 	CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Goap_Action);
 
 public:
-	// ================================================================================================================
-	// QUERY
-	// ================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Action",
 		DisplayName = "[Ck][Goap|Action] Has")
@@ -65,9 +63,7 @@ public:
 	static bool
 	Get_HasCostProvider(const FCk_Handle_Goap_Action& InAction);
 
-	// ================================================================================================================
-	// REQUESTS
-	// ================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Action",
 		DisplayName = "[Ck][Goap|Action] Request Plan")

@@ -14,12 +14,11 @@ class ACk_Iskm_BatchedCrowd_Actor;
 class UMaterialInterface;
 class UCkUsf_OutlinePreset;
 
-// ====================================================================================================================
-//  CkIskmRenderer Plan-2 — script-facing surface for the batched skeletal renderer.
-//  Debug_* helpers stand up ready-made clusters/crowds for gyms/tests. Game flip-drivers build crowds through the
-//  production entries (Create_Crowd -> Add_CrowdMember xN -> Finalize_Crowd) and drive members via Set_CrowdMember*.
-//  Auto-routing UCk_Utils_IskmProxy_UE::Add to batched via PoseSource remains a possible later phase.
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// CkIskmRenderer Plan-2 — script-facing surface for the batched skeletal renderer.
+// Debug_* helpers stand up ready-made clusters/crowds for gyms/tests. Game flip-drivers build crowds through the
+// production entries (Create_Crowd -> Add_CrowdMember xN -> Finalize_Crowd) and drive members via Set_CrowdMember*.
+// Auto-routing UCk_Utils_IskmProxy_UE::Add to batched via PoseSource remains a possible later addition.
 UCLASS(NotBlueprintable)
 class CKISKMRENDERER_API UCk_Utils_IskmBatched_UE : public UBlueprintFunctionLibrary
 {
@@ -53,7 +52,7 @@ public:
 
     // Spawns a crowd of InNumInstances scattered (deterministic grid) over a 2*InAreaExtent square around
     // InBaseTransform, spatially partitioned into tile clusters of InTileSize so frustum + per-instance occlusion
-    // culling operate per-tile (Phase 4b). Returns the crowd manager actor (or null on failure).
+    // culling operate per-tile. Returns the crowd manager actor (or null on failure).
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
         meta = (WorldContext = "InWorldContextObject"),
         DisplayName = "[Ck][IskmBatched] Debug Spawn Scattered Crowd")
@@ -78,7 +77,7 @@ public:
     static int32
     Get_CrowdInstanceCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd);
 
-    // ---- Production entry (Phase 5 flip drivers): build a crowd from game code ----
+    // ---- Production entry (flip drivers): build a crowd from game code ----
 
     // Spawns an empty crowd manager for InCollection. Register members with Add_CrowdMember, then call
     // Finalize_Crowd exactly once. Returns null on invalid input or when no world can be resolved.
@@ -110,7 +109,7 @@ public:
     Finalize_Crowd(
         ACk_Iskm_BatchedCrowd_Actor* InCrowd);
 
-    // ---- LOD-facing (Phase 5): member queries + per-member visibility ----
+    // ---- LOD-facing: member queries + per-member visibility ----
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
         DisplayName = "[Ck][IskmBatched] Get Crowd Member Count")
@@ -174,14 +173,14 @@ public:
     Get_CrowdMemberCustomDataFloat(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, int32 InFloatIndex);
 
     // World-space transform of a baked socket for one crowd member at its CURRENT animation frame
-    // (inc-4 far cosmetics). False when the collection bakes no such socket — leave the cosmetic
+    // (far cosmetics). False when the collection bakes no such socket — leave the cosmetic
     // hidden/parked. Socket names come from the AnimCollection's _BakedSockets (BB: head_attach).
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
         DisplayName = "[Ck][IskmBatched] TryGet Crowd Member Socket Transform")
     static bool
     TryGet_CrowdMemberSocketTransform(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, FName InSocket, FTransform& OutWorld);
 
-    // inc-4 §4: register a cosmetic entity to ride a member's baked socket while the member is far. The
+    // register a cosmetic entity to ride a member's baked socket while the member is far. The
     // crowd places it every frame from its own FGroup_Transform_Finalize advance (lockstep with the
     // member). Replace-if-same-entity. Call on the far transition; pair with Clear on promote/hide/release.
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
@@ -189,7 +188,7 @@ public:
     static void
     Register_CrowdMemberCosmetic(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, FCk_Handle_Transform InCosmetic, FName InSocket, const FTransform& InRelOffset);
 
-    // inc-4 §4: stop the crowd driving InIndex's cosmetics (promote hands them to the SKMC follower;
+    // stop the crowd driving InIndex's cosmetics (promote hands them to the SKMC follower;
     // hide parks them; slot release recycles the member). Idempotent.
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
         DisplayName = "[Ck][IskmBatched] Clear Crowd Member Cosmetics")
@@ -212,7 +211,7 @@ public:
     static void
     Set_CrowdOverrideMaterial(ACk_Iskm_BatchedCrowd_Actor* InCrowd, UMaterialInterface* InMaterial);
 
-    // Per-SLOT override materials (increment ③): index = mesh material slot. The whole-crowd
+    // Per-SLOT override materials: index = mesh material slot. The whole-crowd
     // Set_CrowdOverrideMaterial (debug) WINS over these; null/absent entries fall back to mesh
     // defaults. Applied to existing and future tiles.
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",

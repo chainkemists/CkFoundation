@@ -79,7 +79,7 @@ private:
         Category = "Ck|Utils|InteractionResolver",
         meta = (CompactNodeTitle = "INVALID_InteractionResolverHandle", Keywords = "make"))
     static FCk_Handle_InteractionResolver
-    Get_InvalidHandle() { return {}; };
+    Get_InvalidHandle() { return {}; }
 
 public:
     UFUNCTION(BlueprintCallable,

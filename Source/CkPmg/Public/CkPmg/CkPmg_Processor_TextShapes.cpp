@@ -22,7 +22,7 @@
 
 namespace ck::pmg
 {
-    // Resolve raw font bytes: explicit override -> bundled Noto asset (Task 7 imports it) ->
+    // Resolve raw font bytes: explicit override -> bundled Noto asset ->
     // engine Roboto from disk (always present, keeps the feature working before the bundled
     // CJK font is imported). The returned pointer is only used synchronously by EnsureFace,
     // which copies the bytes immediately.

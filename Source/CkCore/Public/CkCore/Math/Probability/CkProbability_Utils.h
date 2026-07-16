@@ -19,11 +19,11 @@ struct CKCORE_API FCk_Utils_Probability_RandomIndexByWeight_Result
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     int32 _Index = INDEX_NONE;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     double _RandomNumber = -1.0f;
 
 public:

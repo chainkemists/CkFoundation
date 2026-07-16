@@ -5,13 +5,9 @@
 
 #include "CkIskm_BatchedClusterComponent.generated.h"
 
-// ====================================================================================================================
-//  CkIskmRenderer Plan-2 — cluster component owning a set of batched skeletal instances + creating the cluster proxy.
-//  Analogue of Skelot's USkelotClusterComponent. One per spatial cluster; lives on the per-world manager actor.
-//
-//  Phase 1-2: instances share one baked frame, carried in per-component CustomPrimitiveData[0] (no material flag).
-//  Phase 3+: per-instance frames via the proxy's GPUScene per-instance custom data.
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// CkIskmRenderer Plan-2 — cluster component owning a set of batched skeletal instances + creating the cluster proxy.
+// Analogue of Skelot's USkelotClusterComponent. One per spatial cluster; lives on the per-world manager actor.
 
 class UCk_IskmAnimCollection_Data;
 class USkeletalMesh;
@@ -36,7 +32,7 @@ public:
         FTransform Transform = FTransform::Identity; // relative to the component
         int32 CurFrame = 0;
         int32 PrevFrame = 0;
-        // Per-instance independent animation (Phase 3): advanced each tick to a looped baked frame.
+        // Per-instance independent animation: advanced each tick to a looped baked frame.
         float Time = 0.0f;
         float Rate = 0.0f;      // 0 = static (holds CurFrame); >0 = animate at this multiplier
         int32 SequenceIndex = 0;
@@ -74,7 +70,7 @@ public:
     // Recreates the proxy. Null restores the mesh's own materials.
     void Set_OverrideMaterial(UMaterialInterface* InMaterial);
 
-    // Per-SLOT override materials (increment ③): element index = mesh material slot. The whole-body
+    // Per-SLOT override materials: element index = mesh material slot. The whole-body
     // Set_OverrideMaterial above WINS over these (debug); null/absent entries fall back to mesh defaults.
     // Recreates the proxy (materials are cached at construction).
     void Set_SlotOverrideMaterials(const TArray<UMaterialInterface*>& InMaterials);

@@ -14,9 +14,8 @@ namespace ck
     class FProcessor_SmState_Evaluate;
     class FProcessor_SmTask_Exit;
 
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
     // TRANSITION EVALUATE — AND all condition results into the transition's _Result
-    // ================================================================================================================
 
     class CKSTATEMACHINE_API FProcessor_SmTransition_Evaluate : public ck_exp::TProcessor<
         FProcessor_SmTransition_Evaluate,
@@ -42,9 +41,8 @@ namespace ck
             FFragment_SmTransition_Current& InCurrent) -> void;
     };
 
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
     // TRANSITION EXIT — Cascade PendingExit to conditions (transitions have no entity script)
-    // ================================================================================================================
 
     class CKSTATEMACHINE_API FProcessor_SmTransition_Exit : public ck_exp::TProcessor<
         FProcessor_SmTransition_Exit,

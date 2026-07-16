@@ -12,7 +12,7 @@
 
 namespace ck
 {
-    // Gate 0+3: consumes FTag_CrowdAgent_NeedsSetup. Spawns the agent's probe child entity
+    // Consumes FTag_CrowdAgent_NeedsSetup. Spawns the agent's probe child entity
     // (Cylinder + Probe filtered on Crowd.Agent), SceneNode-parents it to the agent so it tracks
     // the agent's apply-offset moves, stores the probe handle on the agent via FFragment_CrowdAgent_ProbeRef,
     // and stamps FTag_CrowdAgent_HasProbe + clears the NeedsSetup tag so the body fires exactly once.

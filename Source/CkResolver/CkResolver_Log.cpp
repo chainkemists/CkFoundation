@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkResolver);
 
 namespace ck::resolver
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkResolver);
+    CK_REGISTER_LOG_FUNCTIONS(CkResolver);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

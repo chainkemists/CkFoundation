@@ -13,23 +13,23 @@ class CKECS_API UCk_Handle_FragmentsDebug : public UObject
 
 private:
     UPROPERTY(BlueprintReadOnly,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     bool _IsHost = false;
 
     UPROPERTY(BlueprintReadOnly,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     FName _DebugName;
 
     UPROPERTY(BlueprintReadOnly,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     FName _LifetimeTag;
 
     UPROPERTY(BlueprintReadOnly,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     TArray<FName> _Tags;
 
     UPROPERTY(BlueprintReadOnly,
-        meta=(AllowPrivateAccess))
+        meta = (AllowPrivateAccess = true))
     TArray<FName> _Names;
 };
 

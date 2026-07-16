@@ -39,9 +39,7 @@ namespace ck
     class FProcessor_Sm_FlushPendingReplication_Drain;
     class FProcessor_Sm_ApplyReplicatedHistory;
 
-    // ================================================================================================================
-    // TAGS
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_ECS_TAG(FTag_Sm_RequiresSetup);
     CK_DEFINE_ECS_TAG(FTag_Sm_Running);
@@ -59,9 +57,7 @@ namespace ck
     // attach (e.g. when the child is removed before commit runs).
     CK_DEFINE_ECS_TAG(FTag_SmScript_PendingAttach);
 
-    // ================================================================================================================
-    // REPLICATION TAGS
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
     // Sticky fault tag set by UCk_SmState_EntityScript::DoVerifyFingerprintAgainstExpected when
     // a replayed transition's replicated fingerprint diverges from the locally-computed one.
@@ -78,9 +74,7 @@ namespace ck
     // initial state so non-owning views reflect it immediately.
     CK_DEFINE_ECS_TAG(FTag_Sm_NeedsInitialStateEntry);
 
-    // ================================================================================================================
-    // FRAGMENTS
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
     // Carries the EntityScript class (and optional spawn params) to attach to an SM child
     // entity (Task/Condition) when the commit processor runs. Deferring the attach avoids
@@ -368,9 +362,7 @@ namespace ck
         CK_PROPERTY(_IsTransitionAuthority);
     };
 
-    // ================================================================================================================
-    // REPLICATION FRAGMENTS
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
     // Owning-client outbound buffer. Filled by FProcessor_Sm_CommitPendingTransition on the
     // owning client when it lands a transition on an OwningClientAuthoritative SM, and by
@@ -508,15 +500,11 @@ namespace ck
         CK_PROPERTY(_Queue);
     };
 
-    // ================================================================================================================
-    // ENTITY-HOLDER BACK-REFERENCES
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_ENTITY_HOLDER_AND_UTILS_TRANSIENT(TUtils_Sm_OwningStateMachine, FFragment_Sm_OwningStateMachine, FCk_Handle_StateMachine);
 
-    // ================================================================================================================
-    // SIGNALS
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKSTATEMACHINE_API,
@@ -546,7 +534,7 @@ namespace ck
         FCk_Handle_SmTask,
         ECk_SmTaskResult);
 
-    // ================================================================================================================
+    // --------------------------------------------------------------------------------------------------------------------
 
     CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_Sm_Requests);
 }

@@ -6,7 +6,6 @@ public class CkResolver : CkModuleRules
     public CkResolver(ReadOnlyTargetRules Target) : base(Target)
     {
         PrivateIncludePaths.AddRange(new string[] {
-            // ... add other private include paths required here ...
         });
 
         PublicDependencyModuleNames.AddRange(new string[]
@@ -14,7 +13,7 @@ public class CkResolver : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-                        "GameplayTags",
+            "GameplayTags",
             "GameplayAbilities",
 
             "CkAttribute",

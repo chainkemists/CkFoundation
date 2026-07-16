@@ -17,7 +17,7 @@
 #include "SceneManagement.h"
 #include "SceneInterface.h"
 
-// Plan-2 Phase 3: FScene::PrimitiveUpdates + the FUpdate*Command structs are in PRIVATE renderer headers.
+// Plan-2: FScene::PrimitiveUpdates + the FUpdate*Command structs are in PRIVATE renderer headers.
 // The #define private public hack exposes FScene internals (Skelot pattern; version-fragile — re-verify on bumps).
 #ifndef private
 #define private public
@@ -26,9 +26,7 @@
 #undef private
 #include "ScenePrimitiveUpdates.h"
 
-// ====================================================================================================================
-//  FCk_Iskm_ClusterInstanceData
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 FCk_Iskm_ClusterInstanceData::FCk_Iskm_ClusterInstanceData()
     : FInstanceSceneDataBuffers()
 {
@@ -43,9 +41,8 @@ auto
     // (see FCk_Iskm_BatchedClusterProxy::WriteInstanceBuffer).
 }
 
-// ====================================================================================================================
-//  Initial dynamic-data build (game thread).
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Initial dynamic-data build (game thread).
 namespace ck_iskm_proxy
 {
     static void BuildDynData(const UCk_Iskm_BatchedClusterComponent* InComponent, USkeletalMesh* InMesh, FCk_Iskm_CompDynData& Out)
@@ -94,9 +91,7 @@ namespace ck_iskm_proxy
     }
 }
 
-// ====================================================================================================================
-//  FCk_Iskm_BatchedClusterProxy
-// ====================================================================================================================
+// --------------------------------------------------------------------------------------------------------------------
 FCk_Iskm_BatchedClusterProxy::FCk_Iskm_BatchedClusterProxy(UCk_Iskm_BatchedClusterComponent* InComponent, FName InResourceName)
     : FPrimitiveSceneProxy(InComponent, InResourceName)
     , InstanceBuffer()
@@ -111,7 +106,7 @@ FCk_Iskm_BatchedClusterProxy::FCk_Iskm_BatchedClusterProxy(UCk_Iskm_BatchedClust
     bVFRequiresPrimitiveUniformBuffer = false;
 
     // Materials + relevance. A component override material replaces EVERY slot (far-LOD whole-body look).
-    // Per-slot overrides fill remaining slots (increment ③); mesh defaults last.
+    // Per-slot overrides fill remaining slots; mesh defaults last.
     Materials.Reset();
     if (Mesh != nullptr)
     {

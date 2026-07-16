@@ -12,27 +12,26 @@ class UCk_IskmAnimCollection_Data;
 class USceneComponent;
 class UCkUsf_OutlinePreset;
 
-// ====================================================================================================================
-//  CkIskmRenderer Plan-2 Phase 4b/5 — spatial tile manager for a batched GPU-skinned crowd.
+// --------------------------------------------------------------------------------------------------------------------
+// CkIskmRenderer Plan-2 — spatial tile manager for a batched GPU-skinned crowd.
 //
-//  Owns a crowd, spatially partitioned into tiles. Each occupied tile gets its own
-//  UCk_Iskm_BatchedClusterComponent (one FPrimitiveSceneProxy) placed at the tile centre with FIXED conservative
-//  bounds (tile extent + mesh pad), so frustum + per-instance occlusion culling operate per-tile and member
-//  movement never recomputes bounds.
+// Owns a crowd, spatially partitioned into tiles. Each occupied tile gets its own
+// UCk_Iskm_BatchedClusterComponent (one FPrimitiveSceneProxy) placed at the tile centre with FIXED conservative
+// bounds (tile extent + mesh pad), so frustum + per-instance occlusion culling operate per-tile and member
+// movement never recomputes bounds.
 //
-//  SINGLE SOURCE OF TRUTH: the manager owns all member state (transform, animation time/frames, visibility,
-//  custom data) and ticks it itself — tile components are render-facing views with self-tick disabled. Tile
-//  rebuilds therefore always carry live animation time (no snap-back), and members can MOVE:
-//  Set_MemberTransform updates in-tile transforms via the light per-frame push path and migrates members
-//  across tile borders (two Set_Instances rebuilds).
+// SINGLE SOURCE OF TRUTH: the manager owns all member state (transform, animation time/frames, visibility,
+// custom data) and ticks it itself — tile components are render-facing views with self-tick disabled. Tile
+// rebuilds therefore always carry live animation time (no snap-back), and members can MOVE:
+// Set_MemberTransform updates in-tile transforms via the light per-frame push path and migrates members
+// across tile borders (two Set_Instances rebuilds).
 //
-//  Phase 5 (distance-LOD flip): Set_MemberVisible hides a member from its batched tile so a per-SKMC proxy
-//  (Plan-1) can stand in for it (ragdoll/montage), then shows it again to return to batched. Hidden members
-//  keep advancing time so they rejoin in phase.
+// Distance-LOD flip: Set_MemberVisible hides a member from its batched tile so a per-SKMC proxy
+// (Plan-1) can stand in for it (ragdoll/montage), then shows it again to return to batched. Hidden members
+// keep advancing time so they rejoin in phase.
 //
-//  Usage: Initialize() -> AddInstance() x N -> Finalize(). Then drive members via Set_Member* as the game
-//  (e.g. NPC/crowd systems) moves them.
-// ====================================================================================================================
+// Usage: Initialize() -> AddInstance() x N -> Finalize(). Then drive members via Set_Member* as the game
+// (e.g. NPC/crowd systems) moves them.
 UCLASS(NotBlueprintable)
 class CKISKMRENDERER_API ACk_Iskm_BatchedCrowd_Actor : public AActor
 {
@@ -75,7 +74,7 @@ public:
     float      Get_MemberCustomData(int32 InIndex, int32 InFloatIndex) const;
 
     // World-space transform of a baked socket for one member at the member's CURRENT animation
-    // frame (inc-4 far cosmetics — the crowd owns the clock). False when the collection bakes no
+    // frame (far cosmetics — the crowd owns the clock). False when the collection bakes no
     // such socket or the index is invalid; callers leave their cosmetics hidden/parked.
     bool       TryGet_MemberSocketTransform(int32 InIndex, FName InSocket, FTransform& OutWorld) const;
 
@@ -93,7 +92,7 @@ public:
     // one cheap override (e.g. a skin-toned MID) gives coherent distant silhouettes. Null restores mesh materials.
     void       Set_OverrideMaterial(UMaterialInterface* InMaterial);
 
-    // Per-SLOT override materials (increment ③): element index = mesh material slot. The whole-body
+    // Per-SLOT override materials: element index = mesh material slot. The whole-body
     // Set_OverrideMaterial above WINS over these (debug); null/absent entries fall back to mesh defaults.
     // Applied to existing and future tiles.
     void       Set_SlotOverrideMaterials(const TArray<UMaterialInterface*>& InMaterials);
@@ -120,7 +119,7 @@ public:
     //~ AActor
     virtual void EndPlay(const EEndPlayReason::Type InEndPlayReason) override;
 
-    // ---- inc-4 §4: ECS-clock advance (the actor no longer self-ticks) ----
+    // ---- ECS-clock advance (the actor no longer self-ticks) ----
 
     // Advance every member's animation time/frame and push dirty tiles, then push the outline groups
     // (AdvanceAnimation replaces AActor::Tick — see the constructor's bCanEverTick = false). Driven once
@@ -148,7 +147,7 @@ private:
         bool       Visible = true;
     };
 
-    // inc-4 §4: a cosmetic ISM entity following a member's baked socket while the member is far.
+    // a cosmetic ISM entity following a member's baked socket while the member is far.
     struct FMemberCosmetic
     {
         FCk_Handle_Transform Cosmetic;
@@ -212,7 +211,7 @@ private:
     TMap<TWeakObjectPtr<UCkUsf_OutlinePreset>, FOutlineGroup> _OutlineGroups;
     TMap<int32, TWeakObjectPtr<UCkUsf_OutlinePreset>> _MemberOutlines;
 
-    // inc-4 §4: member index -> cosmetics riding its socket while far. Non-UPROPERTY (ECS handles are
+    // member index -> cosmetics riding its socket while far. Non-UPROPERTY (ECS handles are
     // value handles into the registry, not GC-tracked — matches _Members).
     TMap<int32, TArray<FMemberCosmetic>> _MemberCosmetics;
 
