@@ -161,4 +161,5 @@ unwritten-norm fork — get maintainer sign-off before implementing (non-negotia
 Read-only investigation, 2026-07-16, in the CkPlugins2 host project. Findings produced by a
 12-agent workflow (5 parallel readers → synthesis → 5 adversarial verifiers): 4 load-bearing
 claims CONFIRMED, 1 UNCLEAR (the Phase-0 discriminator — inherently needs the editor). Engine
-citations refer to the UnrealEngine-Angelscript 5.7 fork at `D:/Repos/UnrealEngine-Angelscript`.
+citations refer to the UnrealEngine-Angelscript 5.7 fork (resolve your local engine checkout via
+`CkAuto/Get-ProjectEnginePath.ps1` from the host project root).
