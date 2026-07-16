@@ -134,6 +134,32 @@ auto
 
 auto
     UCk_Utils_CrowdAgent_UE::
+    Request_FollowTarget(
+        FCk_Handle_CrowdAgent& InAgent,
+        const FCk_Request_CrowdAgent_FollowTarget& InRequest)
+    -> FCk_Handle_CrowdAgent
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InAgent),
+        TEXT("Invalid CrowdAgent handle [{}] passed to Request_FollowTarget"), InAgent)
+    { return InAgent; }
+
+    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InAgent),
+        TEXT("Request_FollowTarget on CrowdAgent [{}] dropped — caller does not have authority. "
+             "Pathfinding is server-only."), InAgent)
+    { return InAgent; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InRequest.Get_TargetPoint()),
+        TEXT("Request_FollowTarget on CrowdAgent [{}] dropped — the target point handle is invalid"), InAgent)
+    { return InAgent; }
+
+    InAgent.AddOrGet<ck::FFragment_CrowdAgent_MoveRequests>()._Requests.Emplace(InRequest);
+    return InAgent;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
     Request_Stop(
         FCk_Handle_CrowdAgent& InAgent)
     -> FCk_Handle_CrowdAgent
