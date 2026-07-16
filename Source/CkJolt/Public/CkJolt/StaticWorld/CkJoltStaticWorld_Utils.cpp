@@ -1,0 +1,113 @@
+#include "CkJoltStaticWorld_Utils.h"
+
+#include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Validation/CkIsValid.h"
+
+#include "CkJolt/StaticWorld/CkJoltStaticWorld_Subsystem.h"
+
+#include <Engine/World.h>
+#include <GameFramework/Actor.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_jolt_static_world_utils
+{
+    static auto Get_Subsystem(const UObject* InWorldContextObject) -> UCk_JoltStaticWorld_Subsystem_UE*
+    {
+        if (ck::Is_NOT_Valid(InWorldContextObject, ck::IsValid_Policy_NullptrOnly{}))
+        { return nullptr; }
+
+        const auto* World = InWorldContextObject->GetWorld();
+        if (ck::Is_NOT_Valid(World))
+        { return nullptr; }
+
+        return World->GetSubsystem<UCk_JoltStaticWorld_Subsystem_UE>();
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_JoltStaticWorld_UE::
+    Request_BakeActor(
+        AActor* InActor)
+    -> int32
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Request_BakeActor called with an INVALID Actor"))
+    { return 0; }
+
+    auto* Subsystem = ck_jolt_static_world_utils::Get_Subsystem(InActor);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Subsystem, ck::IsValid_Policy_NullptrOnly{}),
+        TEXT("No JoltStaticWorld subsystem for Actor [{}] — game worlds only"), InActor->GetName())
+    { return 0; }
+
+    return Subsystem->Request_BakeActor(*InActor);
+}
+
+auto
+    UCk_Utils_JoltStaticWorld_UE::
+    Request_RemoveActor(
+        AActor* InActor)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Request_RemoveActor called with an INVALID Actor"))
+    { return; }
+
+    auto* Subsystem = ck_jolt_static_world_utils::Get_Subsystem(InActor);
+    if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
+    { return; }
+
+    Subsystem->Request_RemoveActor(*InActor);
+}
+
+auto
+    UCk_Utils_JoltStaticWorld_UE::
+    Get_NumStaticBodies(
+        const UObject* InWorldContextObject)
+    -> int32
+{
+    const auto* Subsystem = ck_jolt_static_world_utils::Get_Subsystem(InWorldContextObject);
+    if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
+    { return 0; }
+
+    return Subsystem->Get_NumStaticBodies();
+}
+
+auto
+    UCk_Utils_JoltStaticWorld_UE::
+    Get_NumUniqueShapes(
+        const UObject* InWorldContextObject)
+    -> int32
+{
+    const auto* Subsystem = ck_jolt_static_world_utils::Get_Subsystem(InWorldContextObject);
+    if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
+    { return 0; }
+
+    return Subsystem->Get_NumUniqueShapes();
+}
+
+auto
+    UCk_Utils_JoltStaticWorld_UE::
+    Get_RayCastStaticWorld(
+        const UObject* InWorldContextObject,
+        FVector InStart,
+        FVector InEnd)
+    -> FCk_Jolt_StaticWorldRayHit_Result
+{
+    auto Result = FCk_Jolt_StaticWorldRayHit_Result{};
+
+    const auto* Subsystem = ck_jolt_static_world_utils::Get_Subsystem(InWorldContextObject);
+    if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
+    { return Result; }
+
+    const auto Hit = Subsystem->Get_RayCastStaticWorld(InStart, InEnd);
+
+    Result.Set_HasHit(Hit._HasHit);
+    Result.Set_Position(Hit._Position);
+    Result.Set_SourceActorName(Hit._SourceActorName);
+
+    return Result;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
