@@ -193,6 +193,12 @@ public:
     auto
     Get_IsBaked() const -> bool;
 
+    // True when a bake exists but no longer matches the authored _Sequences / _SampleFrequency
+    // (the asset can be mutated at runtime after a bake was cached — stale indices then sample
+    // frame 0, the reference pose). Check alongside Get_IsBaked() before standing up render state.
+    auto
+    Get_IsBakeStale() const -> bool;
+
     // Conservative culling bounds covering every baked pose (bone union + ref-pose skin pad, never smaller
     // than the mesh box). Falls back to the mesh box pre-bake. Use this — not the raw mesh bounds — wherever
     // batched instances are culled, or animated silhouettes clip at bound edges.

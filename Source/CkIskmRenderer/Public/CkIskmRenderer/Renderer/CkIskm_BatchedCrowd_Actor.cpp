@@ -37,8 +37,9 @@ auto
     _TileSize = FMath::Max(1.0f, InTileSize);
 
     // Bake up front (CPU-only, headless-safe, idempotent): tile fixed bounds derive from the baked ANIMATED
-    // pose extent — tiles created pre-bake would otherwise freeze the smaller static mesh box.
-    if (_Collection != nullptr && _Collection->Get_IsBaked() == false)
+    // pose extent — tiles created pre-bake would otherwise freeze the smaller static mesh box. A stale bake
+    // (sequences mutated after it was cached) rebuilds, releasing any stale render data along the way.
+    if (ck::IsValid(_Collection) && (NOT _Collection->Get_IsBaked() || _Collection->Get_IsBakeStale()))
     { _Collection->Build_BakedPoseData(); }
 
     // stand up this crowd's ECS presence so FProcessor_IskmCrowd_Advance can drive it on the
