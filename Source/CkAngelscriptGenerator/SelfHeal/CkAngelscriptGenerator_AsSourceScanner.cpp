@@ -381,6 +381,17 @@ namespace ck::angelscriptgenerator::self_heal
 
     auto
         FCkAsSourceScanner::
+        Blank_CommentsAndStrings(
+            const FString& InText)
+        -> FString
+    {
+        return ck_angelscript_generator_as_source_scanner::Blank_CommentsAndStrings(InText);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FCkAsSourceScanner::
         Parse_ClassDeclaration(
             const FString& InFileContents,
             const FString& InClassName,

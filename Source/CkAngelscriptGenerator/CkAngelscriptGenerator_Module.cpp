@@ -9,6 +9,7 @@
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_RegenOwnership.h"
 #include "CkAngelscriptGenerator/DynamicHandles/CkDynamicHandleSubsystem.h"
+#include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_DhPreSeed.h"
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_Dispatcher.h"
 #include "CkAngelscriptGenerator/Settings/CkAngelscriptGenerator_Settings.h"
 
@@ -657,6 +658,19 @@ void FCkAngelscriptGeneratorModule::StartupModule()
     if (ck_angelscript_generator_module::Is_SelfHealEnabled())
     {
         ck::angelscriptgenerator::self_heal::FCkAsRecoveryDispatcher::Reset_CyclesRun();
+
+        // Proactive DynamicHandle pre-seed — the boot-time preventer for the most
+        // common self-heal cycle (a pull adds a handle the machine-local JSON
+        // doesn't know). Same opt-out family as the heal path; ownership-gated
+        // inside (G12). Ordering is load-bearing twice over: AFTER the stub sweep
+        // above (which deletes _StubRecovery_*) and AFTER Reset_CyclesRun (which
+        // clears the Did_SynthesizeJsonStub flag the pre-seed sets to arm the
+        // OnPostEngineInit canonical regen + strict-validator upgrade — seeding
+        // before the reset wipes the flag and the canonical never converges).
+        // Still strictly before the first AS compile and before Hazelight's
+        // hot-reload thread exists; the sibling is a .json that thread doesn't
+        // watch anyway.
+        ck::angelscriptgenerator::self_heal::FCkAsDhPreSeed::PreSeed_MissingDynamicHandles();
 
         _ReloadHadErrorsHandle = FAngelscriptCodeModule::GetReloadHadErrors().AddStatic(
             &ck::angelscriptgenerator::self_heal::FCkAsRecoveryDispatcher::OnAngelscriptReloadHadErrors);

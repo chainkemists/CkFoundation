@@ -90,6 +90,13 @@ namespace ck::angelscriptgenerator::self_heal
         // subtrees and _StubRecovery_* files. Sorted.
         static auto Enumerate_AsSourceFiles(const TArray<FString>& InScanRoots) -> TArray<FString>;
 
+        // Comment and string CONTENTS blanked to spaces 1:1 (newlines and the
+        // quote characters themselves preserved), so structural scanning can't
+        // be fooled by braces/keywords inside comments or literals — and every
+        // offset maps back to the original text for value extraction. Exposed
+        // for the DH pre-seed's declaration scan (FCkAsDhPreSeed).
+        static auto Blank_CommentsAndStrings(const FString& InText) -> FString;
+
         // Pure-text parse of one file's contents for `class <InClassName>
         // [: Base]` and its depth-1 UPROPERTY(ExposeOnSpawn) members.
         // Comment- and string-literal-aware (contents are blanked before

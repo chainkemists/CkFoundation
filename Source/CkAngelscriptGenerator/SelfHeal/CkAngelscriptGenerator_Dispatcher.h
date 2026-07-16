@@ -58,6 +58,14 @@ namespace ck::angelscriptgenerator::self_heal
         FCk_AsParsedError    Error;
     };
 
+    // One DynamicHandle sibling-stub entry, as written into
+    // _StubRecovery_DynamicHandleTypes.json by Append_DynamicHandleStubEntries.
+    struct CKANGELSCRIPTGENERATOR_API FCk_DynamicHandleStubEntry
+    {
+        FString TypeName;
+        FString ShortName;
+    };
+
     class CKANGELSCRIPTGENERATOR_API FCkAsRecoveryDispatcher
     {
     public:
@@ -119,6 +127,24 @@ namespace ck::angelscriptgenerator::self_heal
         // call GenerateAllAssetRegistries deferred for reshuffle.
         static auto Did_SynthesizeAssetRegistryStub_ThisSession() -> bool;
         static auto Mark_AssetRegistryStubSynthesized          () -> void;
+
+        // Sibling stub path for the DynamicHandle registry: same dir as the
+        // canonical, `_StubRecovery_` filename prefix. Shared by the heal path
+        // and the boot-time pre-seed (FCkAsDhPreSeed).
+        static auto Derive_DynamicHandleStubPath(const FString& InCanonicalJsonPath) -> FString;
+
+        // Shared DynamicHandle sibling-stub entry writer — the SINGLE owner of
+        // the entry shape (TypeName/ShortName/Description/SourceAsset/empty
+        // RequiredFragments) so the heal path and the boot pre-seed cannot
+        // drift. Appends entries whose TypeName isn't already in the sibling
+        // at InStubJsonPath (file created when missing); atomic temp+move
+        // write; when nothing appends, no file is written. Returns the number
+        // appended; unset on parse/serialize/write failure. Callers own the
+        // ownership gate (G9 drains / G12 pre-seed) and any in-memory
+        // registry refresh.
+        static auto Append_DynamicHandleStubEntries(
+            const FString& InStubJsonPath,
+            TArrayView<const FCk_DynamicHandleStubEntry> InEntries) -> TOptional<int32>;
     };
 }
 
