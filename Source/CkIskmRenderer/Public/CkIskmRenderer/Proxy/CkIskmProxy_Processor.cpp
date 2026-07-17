@@ -187,6 +187,10 @@ namespace ck
             Child->SetSkeletalMesh(Def.Get_Mesh());
             Child->SetCollisionEnabled(ECollisionEnabled::NoCollision);
             Child->SetLeaderPoseComponent(SKMC);
+#if WITH_EDITOR
+            // Leader-pose followers still gate their bone refresh on bUpdateAnimationInEditor.
+            ACk_IskmRenderer_Actor_UE::EditorOnly_EnableAnimationTicking(Child);
+#endif
             for (auto MatIdx = 0; MatIdx < Def.Get_OverrideMaterials().Num(); ++MatIdx)
             {
                 if (auto* Mat = Def.Get_OverrideMaterials()[MatIdx].Get())
@@ -923,6 +927,10 @@ namespace ck
         Child->SetSkeletalMesh(Def.Get_Mesh());
         Child->SetCollisionEnabled(ECollisionEnabled::NoCollision);
         Child->SetLeaderPoseComponent(SKMC);
+#if WITH_EDITOR
+        // Leader-pose followers still gate their bone refresh on bUpdateAnimationInEditor.
+        ACk_IskmRenderer_Actor_UE::EditorOnly_EnableAnimationTicking(Child);
+#endif
         for (auto MatIdx = 0; MatIdx < Def.Get_OverrideMaterials().Num(); ++MatIdx)
         {
             if (auto* Mat = Def.Get_OverrideMaterials()[MatIdx].Get())
