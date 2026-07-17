@@ -204,11 +204,13 @@ namespace ck::jolt
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    /// Published into the ECS registry context alongside the PhysicsSystem so consumers
-    /// (CkSpatialQuery's probe setup) can place bodies on table layers without a subsystem ref.
+    /// Published into the ECS registry context alongside the PhysicsSystem so consumers can place
+    /// bodies on table layers without a subsystem ref. Non-const: registration is game-thread only
+    /// and body-spawn (JoltBody setup) is a sanctioned registration site — it resolves-or-registers
+    /// a body's profile-derived signature via Get_OrRegisterLayer. Probe setup only reads _ProbeLayer.
     struct CKJOLT_API FCk_Jolt_LayerContext
     {
-        const FCk_Jolt_CollisionLayerTable* _Table = nullptr;
+        FCk_Jolt_CollisionLayerTable* _Table = nullptr;
         uint16 _ProbeLayer = 0;
     };
 }

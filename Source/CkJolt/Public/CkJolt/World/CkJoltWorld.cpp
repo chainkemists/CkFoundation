@@ -17,6 +17,42 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck::jolt
+{
+    auto
+        ComputeStepPlan(
+            float InAccumulator,
+            float InDeltaTSeconds,
+            int32 InFixedTimestepHz,
+            int32 InMaxStepsPerFrame)
+        -> FCk_Jolt_StepPlan
+    {
+        const auto FixedHz = FMath::Max(1, InFixedTimestepHz);
+        const auto FixedDt = 1.0f / static_cast<float>(FixedHz);
+
+        auto Plan = FCk_Jolt_StepPlan{};
+        auto Accumulator = InAccumulator + InDeltaTSeconds;
+
+        // NO ensure in this clamp path — a spiral-of-death under load is expected; excess time is dropped.
+        const auto MaxAccum = static_cast<float>(InMaxStepsPerFrame) * FixedDt;
+        if (Accumulator > MaxAccum)
+        {
+            Plan.DroppedTime = Accumulator - MaxAccum;
+            Accumulator = MaxAccum;
+        }
+
+        Plan.NumSteps = FMath::FloorToInt(Accumulator / FixedDt);
+        Accumulator -= static_cast<float>(Plan.NumSteps) * FixedDt;
+        Plan.NewAccumulator = Accumulator;
+        Plan.Alpha = Accumulator / FixedDt;
+        Plan.PendingSimTime = static_cast<float>(Plan.NumSteps) * FixedDt;
+
+        return Plan;
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     FJoltWorld::
@@ -29,6 +65,7 @@ namespace ck
         , _CollisionSteps(InParams.CollisionSteps)
         , _AsyncMode(InParams.AsyncMode)
         , _DrainQueueFn(MoveTemp(InParams.DrainQueueFn))
+        , _DrainActivationQueueFn(MoveTemp(InParams.DrainActivationQueueFn))
     {
     }
 
@@ -47,6 +84,7 @@ namespace ck
         _TempAllocator = nullptr;
         _JobSystem = nullptr;
         _DrainQueueFn = {};
+        _DrainActivationQueueFn = {};
         _World = nullptr;
         _ContactRouters.Empty();
         _PoseBuffer.Empty();
@@ -101,6 +139,27 @@ namespace ck
 
         for (const auto& Router : _ContactRouters)
         { Router.Value(Events); }
+    }
+
+    auto
+        FJoltWorld::
+        DrainActivationEvents(
+            TArray<FCk_Jolt_ActivationEvent>& OutEvents)
+        -> void
+    {
+        if (NOT _DrainActivationQueueFn)
+        { return; }
+
+        _DrainActivationQueueFn(OutEvents);
+    }
+
+    auto
+        FJoltWorld::
+        Remove_PoseBufferEntry(
+            uint32 InBodyIndexAndSeq)
+        -> void
+    {
+        _PoseBuffer.Remove(InBodyIndexAndSeq);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -220,6 +279,16 @@ namespace ck
 
             auto Handle = InTransientEntity.Get_ValidHandle(Entity.Get_ID());
             if (ck::Is_NOT_Valid(Handle) || NOT Handle.Has<ck::FFragment_JoltBody_StepPose>())
+            {
+                Entry.DirtyThisFrame = false;
+                continue;
+            }
+
+            // An entity may own MORE Jolt bodies than its JoltBody (e.g. a Probe) — all share the entity id
+            // as UserData, and _PoseBuffer is keyed by body id. Only the JoltBody's own body may write the
+            // entity's StepPose; another body's entry (Probe) must not clobber the simulated pose.
+            if (NOT Handle.Has<ck::FFragment_JoltBody_Current>() ||
+                Handle.Get<ck::FFragment_JoltBody_Current>().Get_BodyId().GetIndexAndSequenceNumber() != Pair.Key)
             {
                 Entry.DirtyThisFrame = false;
                 continue;

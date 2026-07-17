@@ -17,6 +17,7 @@
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_JoltWorld_WaitForAsync);
 CK_REGISTER_PROCESSOR(ck::FProcessor_JoltWorld_DrainEvents);
+CK_REGISTER_PROCESSOR(ck::FProcessor_JoltWorld_PlanStep);
 CK_REGISTER_PROCESSOR(ck::FProcessor_JoltWorld_Step);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -102,6 +103,55 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    FProcessor_JoltWorld_PlanStep::
+        FProcessor_JoltWorld_PlanStep(
+            const RegistryType& InRegistry)
+        : Super(InRegistry)
+    {
+    }
+
+    auto
+        FProcessor_JoltWorld_PlanStep::
+        DoTick(
+            TimeType InDeltaT)
+        -> void
+    {
+        auto* JoltWorld = ck_jolt_world_processor::TryResolve_JoltWorld(_TransientEntity);
+        if (JoltWorld == nullptr)
+        { return; }
+
+        // World invalid or paused -> gate planning: freeze the accumulator and zero the plan so the executor
+        // runs no sub-steps and KinematicPush (PendingSimTime <= 0) early-outs. Matches the pre-split Step's
+        // IsPaused position (which returned before touching the accumulator or stepping).
+        const auto World = JoltWorld->Get_World();
+        if (ck::Is_NOT_Valid(World) || World->IsPaused())
+        {
+            JoltWorld->Set_NumStepsLastFrame(0);
+            JoltWorld->Set_PendingSimTime(0.0f);
+            return;
+        }
+
+        // Fixed-timestep accumulation — the math lives in ck::jolt::ComputeStepPlan (pure, test-pinned).
+        const auto Plan = ck::jolt::ComputeStepPlan(
+            JoltWorld->Get_Accumulator(),
+            static_cast<float>(InDeltaT.Get_Seconds()),
+            UCk_Utils_Jolt_ProjectSettings::Get_FixedTimestepHz(),
+            UCk_Utils_Jolt_ProjectSettings::Get_MaxPhysicsStepsPerFrame());
+
+        if (Plan.DroppedTime > 0.0f)
+        {
+            ck::jolt::Verbose(TEXT("Jolt fixed-step: dropping [{}]s of accumulated physics time (spiral-of-death clamp)"),
+                Plan.DroppedTime);
+        }
+
+        JoltWorld->Set_Accumulator(Plan.NewAccumulator);
+        JoltWorld->Set_Alpha(Plan.Alpha);
+        JoltWorld->Set_NumStepsLastFrame(Plan.NumSteps);
+        JoltWorld->Set_PendingSimTime(Plan.PendingSimTime);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     FProcessor_JoltWorld_Step::
         FProcessor_JoltWorld_Step(
             const RegistryType& InRegistry)
@@ -119,7 +169,8 @@ namespace ck
         if (JoltWorld == nullptr)
         { return; }
 
-        // 1. World invalid or paused -> return. Drain already ran this frame, matching the old Tick's IsPaused position.
+        // 1. World invalid or paused -> return, exactly as the pre-split Step did: no broadphase optimize and
+        //    no stepping while paused (PlanStep also zeroes the plan, but this guard preserves the optimize skip).
         const auto World = JoltWorld->Get_World();
         if (ck::Is_NOT_Valid(World) || World->IsPaused())
         { return; }
@@ -128,30 +179,16 @@ namespace ck
         if (JoltWorld->Get_OptimizeBroadPhaseRequested())
         { JoltWorld->DoOptimizeBroadPhase(); }
 
-        // 3. Fixed-timestep accumulation. NO ensure in this clamp path -- a spiral-of-death under load is expected.
-        const auto FixedHz = FMath::Max(1, UCk_Utils_Jolt_ProjectSettings::Get_FixedTimestepHz());
-        const auto FixedDt = 1.0f / static_cast<float>(FixedHz);
-        const auto MaxSteps = UCk_Utils_Jolt_ProjectSettings::Get_MaxPhysicsStepsPerFrame();
-
-        JoltWorld->Set_Accumulator(JoltWorld->Get_Accumulator() + static_cast<float>(InDeltaT.Get_Seconds()));
-
-        const auto MaxAccum = static_cast<float>(MaxSteps) * FixedDt;
-        if (JoltWorld->Get_Accumulator() > MaxAccum)
-        {
-            ck::jolt::Verbose(TEXT("Jolt fixed-step: dropping [{}]s of accumulated physics time (spiral-of-death clamp)"),
-                JoltWorld->Get_Accumulator() - MaxAccum);
-            JoltWorld->Set_Accumulator(MaxAccum);
-        }
-
-        const auto NumSteps = FMath::FloorToInt(JoltWorld->Get_Accumulator() / FixedDt);
-        JoltWorld->Set_Accumulator(JoltWorld->Get_Accumulator() - static_cast<float>(NumSteps) * FixedDt);
-        JoltWorld->Set_Alpha(JoltWorld->Get_Accumulator() / FixedDt);
-        JoltWorld->Set_NumStepsLastFrame(NumSteps);
-        JoltWorld->Set_PendingSimTime(static_cast<float>(NumSteps) * FixedDt);
+        // 3. Read the plan from the FJoltWorld (computed by FProcessor_JoltWorld_PlanStep this frame). FixedDt is
+        //    recomputed from the same project setting PlanStep used -- constant within the frame, so no drift.
+        const auto NumSteps = JoltWorld->Get_NumStepsLastFrame();
 
         // 4. Zero-step frame: alpha keeps growing; nothing else runs.
         if (NumSteps == 0)
         { return; }
+
+        const auto FixedHz = FMath::Max(1, UCk_Utils_Jolt_ProjectSettings::Get_FixedTimestepHz());
+        const auto FixedDt = 1.0f / static_cast<float>(FixedHz);
 
         // 5. Run the step batch: N fixed sub-steps, each an Update followed by a pose capture.
         const auto StepLoop = [JoltWorld, FixedDt, NumSteps]()

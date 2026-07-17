@@ -2,6 +2,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkJolt/CkJolt_ActivationEvent.h"
 #include "CkJolt/CkJolt_ContactEvent.h"
 
 #include <Async/Future.h>
@@ -19,6 +20,28 @@ namespace JPH
     class PhysicsSystem;
     class TempAllocatorImpl;
     class JobSystem;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck::jolt
+{
+    // One frame's fixed-timestep plan, derived purely from the accumulator + frame delta. Extracted from
+    // FProcessor_JoltWorld_PlanStep so the math is pinnable by tests without a physics world.
+    struct CKJOLT_API FCk_Jolt_StepPlan
+    {
+        float NewAccumulator = 0.0f;
+        int32 NumSteps = 0;
+        float Alpha = 0.0f;
+        float PendingSimTime = 0.0f;
+        float DroppedTime = 0.0f;
+    };
+
+    CKJOLT_API auto ComputeStepPlan(
+        float InAccumulator,
+        float InDeltaTSeconds,
+        int32 InFixedTimestepHz,
+        int32 InMaxStepsPerFrame) -> FCk_Jolt_StepPlan;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -71,6 +94,7 @@ namespace ck
             int32                                                  CollisionSteps = 1;
             bool                                                   AsyncMode = false;
             TFunction<void(TArray<FCk_Jolt_ContactEvent>&)>        DrainQueueFn;
+            TFunction<void(TArray<FCk_Jolt_ActivationEvent>&)>     DrainActivationQueueFn;
         };
 
     public:
@@ -86,6 +110,16 @@ namespace ck
         auto RegisterContactRouter(FName InName, FCk_Jolt_ContactEventRouter InRouter) -> void;
         auto UnregisterContactRouter(FName InName) -> void;
         auto DrainEventsAndRoute() -> void;
+
+        // ---- Activation events (game-thread only) ----
+        // Drains the body activation/deactivation queue produced by the last step. The JoltBody
+        // sleep-state mirror processor resolves entities and toggles FTag_JoltBody_Sleeping itself,
+        // so — unlike contacts — these are handed back rather than routed.
+        auto DrainActivationEvents(TArray<FCk_Jolt_ActivationEvent>& OutEvents) -> void;
+
+        // Reaps a pose-buffer entry when its body is torn down (JoltBody EndPlay), keyed by the
+        // body's index+sequence number (BodyID::GetIndexAndSequenceNumber).
+        auto Remove_PoseBufferEntry(uint32 InBodyIndexAndSeq) -> void;
 
         // ---- Broadphase (game-thread only; safe once the async future is consumed upstream) ----
         auto Request_OptimizeBroadPhaseBeforeNextUpdate() -> void;
@@ -113,7 +147,8 @@ namespace ck
         int32                                            _CollisionSteps = 1;
         bool                                             _AsyncMode = false;
 
-        TFunction<void(TArray<FCk_Jolt_ContactEvent>&)>  _DrainQueueFn;
+        TFunction<void(TArray<FCk_Jolt_ContactEvent>&)>     _DrainQueueFn;
+        TFunction<void(TArray<FCk_Jolt_ActivationEvent>&)>  _DrainActivationQueueFn;
 
         // ---- Step state ----
         float _Accumulator = 0.0f;
