@@ -87,12 +87,7 @@ namespace ck
 #if WITH_EDITOR
             // Editor-preview components host on a per-owner actor so a viewport click on the
             // mesh selects the placed actor that owns the preview (see FFragment_EditorSelectionOwner).
-            if (World->WorldType == EWorldType::Editor)
-            {
-                if (auto* SelectionOwner = ck::editor_selection_owner::TryGet(InHandle);
-                    ck::IsValid(SelectionOwner))
-                { HostActor = Host->Get_HostActor_ForEditorSelectionOwner(SelectionOwner); }
-            }
+            HostActor = ck::editor_selection_owner::TryGet_SelectionProxyHostActor(World, InHandle);
 #endif
 
             if (ck::Is_NOT_Valid(HostActor, ck::IsValid_Policy_NullptrOnly{}))
