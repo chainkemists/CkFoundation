@@ -4,8 +4,6 @@
 
 #include "CkIsmRenderer/Renderer/CkIsmRenderer_Fragment_Data.h"
 
-#include <UObject/ObjectKey.h>
-
 #include "CkIsmSubsystem.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -116,14 +114,15 @@ public:
 
     // Finds or caches the ISM component for a given renderer data asset.
     // Used by the ISM proxy processors to resolve data assets to their ISM components.
-    // InEditorSelectionOwnerKey (editor worlds only, invalid otherwise) selects the per-owner
-    // renderer's component; a stored FObjectKey keeps resolving the SAME component even after
-    // the owner actor is destroyed, so teardown removes instances from the component that
-    // actually holds them (never silently falls back to the shared component).
+    // InEditorSelectionOwner (editor previews only, explicitly-null otherwise) selects the
+    // per-owner renderer's component; TWeakObjectPtr keys compare by object index + serial, so
+    // the lookup keeps resolving the SAME component even after the owner actor is destroyed —
+    // teardown removes instances from the component that actually holds them (never silently
+    // falls back to the shared component).
     auto
     FindOrCache_IsmComponent(
         const UCk_IsmRenderer_Data* InRendererData,
-        const FObjectKey& InEditorSelectionOwnerKey = FObjectKey{}) -> TWeakObjectPtr<UInstancedStaticMeshComponent>;
+        const TWeakObjectPtr<AActor>& InEditorSelectionOwner = {}) -> TWeakObjectPtr<UInstancedStaticMeshComponent>;
 
     // Finds or creates the "shadow ISM" for (renderer data, outline preset): a custom-depth-only twin of
     // the renderer's ISM (same mesh/mobility/cull distances, no main pass, no shadows, no collision) whose
@@ -134,7 +133,7 @@ public:
         const UCk_IsmRenderer_Data* InRendererData,
         const UCkUsf_OutlinePreset* InPreset,
         uint8 InStencilValue,
-        const FObjectKey& InEditorSelectionOwnerKey = FObjectKey{}) -> TWeakObjectPtr<UInstancedStaticMeshComponent>;
+        const TWeakObjectPtr<AActor>& InEditorSelectionOwner = {}) -> TWeakObjectPtr<UInstancedStaticMeshComponent>;
 
 private:
     auto
@@ -154,15 +153,16 @@ private:
     UPROPERTY()
     TMap<const UCk_IsmRenderer_Data*, TWeakObjectPtr<UInstancedStaticMeshComponent>> _IsmComponentCache;
 
-    // {DataAsset, Preset, EditorSelectionOwner (invalid outside editor previews)}
-    using FOutlineIsmKey = TTuple<TWeakObjectPtr<const UCk_IsmRenderer_Data>, TWeakObjectPtr<const UCkUsf_OutlinePreset>, FObjectKey>;
+    // {DataAsset, Preset, EditorSelectionOwner (explicitly-null outside editor previews)}
+    using FOutlineIsmKey = TTuple<TWeakObjectPtr<const UCk_IsmRenderer_Data>, TWeakObjectPtr<const UCkUsf_OutlinePreset>, TWeakObjectPtr<AActor>>;
     TMap<FOutlineIsmKey, TWeakObjectPtr<UInstancedStaticMeshComponent>> _OutlineIsmComponentCache;
 
 #if WITH_EDITORONLY_DATA
 private:
-    // Weak values: the actors/components are owned by the world; entries self-heal via validity
-    // checks. Keyed by FObjectKey so lookups keep working after the owner actor is destroyed.
-    using FPerOwnerRendererKey = TPair<FObjectKey, FObjectKey>; // {DataAsset, SelectionOwner}
+    // Weak on both sides: the actors/components are owned by the world; entries self-heal via
+    // validity checks. TWeakObjectPtr keys compare by object index + serial, so lookups keep
+    // working after the owner actor is destroyed.
+    using FPerOwnerRendererKey = TPair<TWeakObjectPtr<const UCk_IsmRenderer_Data>, TWeakObjectPtr<AActor>>; // {DataAsset, SelectionOwner}
     TMap<FPerOwnerRendererKey, TWeakObjectPtr<ACk_IsmRenderer_Actor_UE>> _PerOwnerIsmRenderers;
     TMap<FPerOwnerRendererKey, TWeakObjectPtr<UInstancedStaticMeshComponent>> _PerOwnerIsmComponentCache;
 #endif

@@ -29,7 +29,7 @@ public:
     // NoCollision meshes remain harmless.
     //
     // Editor-preview components do NOT host here — they go to the per-selection-owner host
-    // (ck::editor_selection_owner::TryGet_SelectionProxyHostActor) so viewport clicks on them
+    // (UCk_Utils_EditorSelectionOwner_UE::TryGet_SelectionProxyHostActor) so viewport clicks on them
     // redirect selection to the placed actor that owns the preview.
     auto
     Get_HostActor() -> AActor*;
