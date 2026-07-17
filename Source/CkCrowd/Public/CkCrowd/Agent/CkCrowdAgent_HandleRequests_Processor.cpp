@@ -129,6 +129,13 @@ namespace ck
         }
         else
         {
+            // Park the nav-path slot at Pending BEFORE enqueueing: OnPathResolved runs after this
+            // processor in the same frame, and a previous move's Ready result would otherwise be
+            // consumed as if it answered THIS MoveTo — the agent walks the stale corridor to the
+            // OLD goal and the fresh result is never installed (same race the follower branch
+            // guards against above).
+            FCk_Nav_Algorithm::MarkPathPending(InHandle);
+
             // Enqueue the path request on the agent's own entity. CkNavigation's processor drains it
             // and writes FFragment_Nav_PathResult on the same entity; OnPathResolved sees the result
             // and finalizes the state transition.

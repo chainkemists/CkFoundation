@@ -333,6 +333,10 @@ namespace ck
         }
         else
         {
+            // Park the slot at Pending so OnPathResolved can't consume the PREVIOUS Ready corridor
+            // as this resume's answer — same stale-result race the MoveTo handler guards against.
+            FCk_Nav_Algorithm::MarkPathPending(NonConstHandle);
+
             auto Request = FCk_Request_Nav_FindPath{Goal};
             Request.Set_QueryFilter(InParams.Get_NavQueryFilter());
 
