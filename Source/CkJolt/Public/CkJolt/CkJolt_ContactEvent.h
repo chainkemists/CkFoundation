@@ -25,7 +25,14 @@ struct CKJOLT_API FCk_Jolt_ContactEvent
     TArray<FVector> ContactPointsOn2;
     FVector WorldSpaceNormal;
 
-    // Body ID index+sequence for BodyIdToUserData map management (only for Added/Removed)
+    // Contact detail (only meaningful for Added/Persisted; defaults left for Removed).
+    bool IsSensor1 = false;
+    bool IsSensor2 = false;
+    float PenetrationDepth = 0.0f;
+    float RelativeNormalVelocity = 0.0f;
+
+    // Body ID index+sequence — populated for ALL event types (consumers disambiguate multi-body entities
+    // by comparing against their own body id; also used for BodyIdToUserData map management on Added/Removed)
     uint32 Body1IndexAndSeq;
     uint32 Body2IndexAndSeq;
 };

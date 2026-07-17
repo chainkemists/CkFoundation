@@ -4,6 +4,7 @@
 
 #include "CkEcs/Tag/CkTag.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+#include "CkEcs/Signal/CkSignal_Macros.h"
 
 #include "CkJolt/Body/CkJoltBody_Fragment_Data.h"
 
@@ -115,7 +116,17 @@ namespace ck
         friend class ::UCk_Utils_JoltBody_UE;
 
     public:
-        using RequestType = std::variant<FCk_Request_JoltBody_SetSleepState>;
+        using RequestType = std::variant<
+            FCk_Request_JoltBody_SetSleepState,
+            FCk_Request_JoltBody_AddForce,
+            FCk_Request_JoltBody_AddForceAtLocation,
+            FCk_Request_JoltBody_AddTorque,
+            FCk_Request_JoltBody_AddImpulse,
+            FCk_Request_JoltBody_AddImpulseAtLocation,
+            FCk_Request_JoltBody_AddAngularImpulse,
+            FCk_Request_JoltBody_SetLinearVelocity,
+            FCk_Request_JoltBody_SetAngularVelocity,
+            FCk_Request_JoltBody_Teleport>;
         using RequestList = TArray<RequestType>;
 
     private:
@@ -128,6 +139,36 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_JoltBody_Requests);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKJOLT_API,
+        OnJoltBodyContactAdded,
+        FCk_Delegate_JoltBody_OnContact,
+        FCk_Handle_JoltBody,
+        FCk_JoltBody_Payload_OnContact);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKJOLT_API,
+        OnJoltBodyContactPersisted,
+        FCk_Delegate_JoltBody_OnContact,
+        FCk_Handle_JoltBody,
+        FCk_JoltBody_Payload_OnContact);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKJOLT_API,
+        OnJoltBodyContactRemoved,
+        FCk_Delegate_JoltBody_OnContactRemoved,
+        FCk_Handle_JoltBody,
+        FCk_JoltBody_Payload_OnContactRemoved);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKJOLT_API,
+        OnJoltBodySleepStateChanged,
+        FCk_Delegate_JoltBody_OnSleepStateChanged,
+        FCk_Handle_JoltBody,
+        ECk_Jolt_SleepState);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

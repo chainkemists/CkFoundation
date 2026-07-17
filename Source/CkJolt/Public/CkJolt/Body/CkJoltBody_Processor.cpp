@@ -1,8 +1,10 @@
 #include "CkJoltBody_Processor.h"
+#include "CkJoltBody_Utils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Format/CkFormat.h"
+#include "CkCore/Payload/CkPayload.h"
 
 #include "CkEcs/Entity/CkEntity.h"
 #include "CkEcs/Handle/CkHandle.h"
@@ -17,9 +19,9 @@
 #include "CkJolt/CkJolt_Utils.h"
 #include "CkJolt/CkJoltShapeFactory.h"
 #include "CkJolt/CollisionLayers/CkJoltCollisionLayerTable.h"
+#include "CkJolt/CollisionLayers/CkJoltCollisionLayer_Utils.h"
 #include "CkJolt/StaticWorld/CkJoltBakeExtraction.h"
 
-#include <Engine/CollisionProfile.h>
 #include <Engine/StaticMesh.h>
 #include <PhysicalMaterials/PhysicalMaterial.h>
 #include <PhysicsEngine/BodySetup.h>
@@ -72,42 +74,6 @@ namespace ck_jolt_body_processor
         { return {}; }
 
         return *Ctx;
-    }
-
-    // Derives a Jolt collision signature from a UCollisionProfile name for one body domain — the same
-    // per-profile derivation FCk_Jolt_CollisionLayerTable::Build_FromCollisionProfiles applies at seed time,
-    // resolved by name here. Unset when the profile does not exist / has collision disabled.
-    auto
-        TryDerive_SignatureFromProfile(
-            FName InProfileName,
-            ECk_Jolt_BodyDomain InDomain)
-        -> TOptional<FCk_Jolt_CollisionSignature>
-    {
-        const auto* CollisionProfiles = UCollisionProfile::Get();
-        if (CollisionProfiles == nullptr)
-        { return {}; }
-
-        auto ProfileTemplate = FCollisionResponseTemplate{};
-        if (NOT CollisionProfiles->GetProfileTemplate(InProfileName, ProfileTemplate))
-        { return {}; }
-
-        auto Signature = FCk_Jolt_CollisionSignature{};
-        Signature.Set_ObjectChannel(ProfileTemplate.ObjectType);
-        Signature.Set_CollisionEnabled(ProfileTemplate.CollisionEnabled);
-
-        for (auto ChannelIndex = 0; ChannelIndex < 32; ++ChannelIndex)
-        {
-            const auto Channel = static_cast<ECollisionChannel>(ChannelIndex);
-            const auto Response = ProfileTemplate.ResponseToChannels.GetResponse(Channel);
-
-            Signature.Set_ResponseToChannel(Channel,
-                Response == ECR_Block ? ECk_Jolt_PairInteraction::Block :
-                Response == ECR_Overlap ? ECk_Jolt_PairInteraction::Overlap :
-                ECk_Jolt_PairInteraction::Ignore);
-        }
-
-        Signature.Set_Domain(InDomain);
-        return Signature;
     }
 
     // Walks a shape through its decorator wrappers (RotatedTranslated / Scaled / OffsetCenterOfMass) to the
@@ -253,7 +219,7 @@ namespace ck
             ? ECk_Jolt_BodyDomain::Static
             : ECk_Jolt_BodyDomain::Dynamic;
 
-        const auto MaybeSignature = ck_jolt_body_processor::TryDerive_SignatureFromProfile(InParams.Get_CollisionProfileName(), Domain);
+        const auto MaybeSignature = ck::jolt::TryDerive_SignatureFromProfile(InParams.Get_CollisionProfileName(), Domain);
 
         CK_ENSURE_IF_NOT(MaybeSignature.IsSet(),
             TEXT("JoltBody on Entity [{}]: collision profile [{}] does not exist in UCollisionProfile (or has "
@@ -426,6 +392,7 @@ namespace ck
         -> void
     {
         _PhysicsSystem = ck_jolt_body_processor::TryResolve_PhysicsSystem(_TransientEntity);
+        _JoltWorld = ck_jolt_body_processor::TryResolve_JoltWorld(_TransientEntity);
         if (ck::Is_NOT_Valid(_PhysicsSystem.Pin()))
         { return; }
 
@@ -493,6 +460,252 @@ namespace ck
         }
     }
 
+    auto
+        FProcessor_JoltBody_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_JoltBody_Current& InCurrent,
+            const FCk_Request_JoltBody_AddForce& InRequest) const
+        -> void
+    {
+        if (NOT InCurrent.Get_BodyAdded())
+        { return; }
+
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+        if (ck::Is_NOT_Valid(PhysicsSystem))
+        { return; }
+
+        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+
+        // AddForce defaults to EActivation::Activate — a settled body wakes to receive the force.
+        BodyInterface.AddForce(InCurrent.Get_BodyId(), ck::jolt::Conv(InRequest.Get_Force()));
+    }
+
+    auto
+        FProcessor_JoltBody_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_JoltBody_Current& InCurrent,
+            const FCk_Request_JoltBody_AddForceAtLocation& InRequest) const
+        -> void
+    {
+        if (NOT InCurrent.Get_BodyAdded())
+        { return; }
+
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+        if (ck::Is_NOT_Valid(PhysicsSystem))
+        { return; }
+
+        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+
+        BodyInterface.AddForce(
+            InCurrent.Get_BodyId(),
+            ck::jolt::Conv(InRequest.Get_Force()),
+            ck::jolt::Conv(InRequest.Get_WorldLocation()));
+    }
+
+    auto
+        FProcessor_JoltBody_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_JoltBody_Current& InCurrent,
+            const FCk_Request_JoltBody_AddTorque& InRequest) const
+        -> void
+    {
+        if (NOT InCurrent.Get_BodyAdded())
+        { return; }
+
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+        if (ck::Is_NOT_Valid(PhysicsSystem))
+        { return; }
+
+        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+
+        // AddTorque defaults to EActivation::Activate.
+        BodyInterface.AddTorque(InCurrent.Get_BodyId(), ck::jolt::Conv(InRequest.Get_Torque()));
+    }
+
+    auto
+        FProcessor_JoltBody_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_JoltBody_Current& InCurrent,
+            const FCk_Request_JoltBody_AddImpulse& InRequest) const
+        -> void
+    {
+        if (NOT InCurrent.Get_BodyAdded())
+        { return; }
+
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+        if (ck::Is_NOT_Valid(PhysicsSystem))
+        { return; }
+
+        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+
+        // BodyInterface::AddImpulse activates the body internally if it is asleep.
+        BodyInterface.AddImpulse(InCurrent.Get_BodyId(), ck::jolt::Conv(InRequest.Get_Impulse()));
+    }
+
+    auto
+        FProcessor_JoltBody_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_JoltBody_Current& InCurrent,
+            const FCk_Request_JoltBody_AddImpulseAtLocation& InRequest) const
+        -> void
+    {
+        if (NOT InCurrent.Get_BodyAdded())
+        { return; }
+
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+        if (ck::Is_NOT_Valid(PhysicsSystem))
+        { return; }
+
+        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+
+        BodyInterface.AddImpulse(
+            InCurrent.Get_BodyId(),
+            ck::jolt::Conv(InRequest.Get_Impulse()),
+            ck::jolt::Conv(InRequest.Get_WorldLocation()));
+    }
+
+    auto
+        FProcessor_JoltBody_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_JoltBody_Current& InCurrent,
+            const FCk_Request_JoltBody_AddAngularImpulse& InRequest) const
+        -> void
+    {
+        if (NOT InCurrent.Get_BodyAdded())
+        { return; }
+
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+        if (ck::Is_NOT_Valid(PhysicsSystem))
+        { return; }
+
+        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+
+        BodyInterface.AddAngularImpulse(InCurrent.Get_BodyId(), ck::jolt::Conv(InRequest.Get_AngularImpulse()));
+    }
+
+    auto
+        FProcessor_JoltBody_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_JoltBody_Current& InCurrent,
+            const FCk_Request_JoltBody_SetLinearVelocity& InRequest) const
+        -> void
+    {
+        if (NOT InCurrent.Get_BodyAdded())
+        { return; }
+
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+        if (ck::Is_NOT_Valid(PhysicsSystem))
+        { return; }
+
+        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+
+        // Set*Velocity activates the body if needed (per Jolt's BodyInterface contract).
+        BodyInterface.SetLinearVelocity(InCurrent.Get_BodyId(), ck::jolt::Conv(InRequest.Get_LinearVelocity()));
+    }
+
+    auto
+        FProcessor_JoltBody_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_JoltBody_Current& InCurrent,
+            const FCk_Request_JoltBody_SetAngularVelocity& InRequest) const
+        -> void
+    {
+        if (NOT InCurrent.Get_BodyAdded())
+        { return; }
+
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+        if (ck::Is_NOT_Valid(PhysicsSystem))
+        { return; }
+
+        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+
+        BodyInterface.SetAngularVelocity(InCurrent.Get_BodyId(), ck::jolt::Conv(InRequest.Get_AngularVelocity()));
+    }
+
+    auto
+        FProcessor_JoltBody_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_JoltBody_Current& InCurrent,
+            const FCk_Request_JoltBody_Teleport& InRequest) const
+        -> void
+    {
+        if (NOT InCurrent.Get_BodyAdded())
+        { return; }
+
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+        if (ck::Is_NOT_Valid(PhysicsSystem))
+        { return; }
+
+        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+
+        const auto NewLocation = InRequest.Get_Location();
+        const auto NewRotation = InRequest.Get_Rotation().Quaternion();
+
+        // Snap the Jolt body to the target pose and re-activate it (a settled body must wake, else the
+        // teleport would be silently dropped on a sleeping body).
+        BodyInterface.SetPositionAndRotation(
+            InCurrent.Get_BodyId(),
+            ck::jolt::Conv(NewLocation),
+            ck::jolt::Conv(NewRotation),
+            JPH::EActivation::Activate);
+
+        switch (InRequest.Get_VelocityPolicy())
+        {
+            case ECk_Jolt_TeleportVelocityPolicy::ResetVelocity:
+            {
+                BodyInterface.SetLinearAndAngularVelocity(InCurrent.Get_BodyId(), JPH::Vec3::sZero(), JPH::Vec3::sZero());
+                break;
+            }
+            case ECk_Jolt_TeleportVelocityPolicy::KeepVelocity:
+            {
+                break;
+            }
+        }
+
+        // The entity teleports with its body: direct-write the ECS transform (preserving scale) so the pose
+        // is consistent this frame, and snap the step-pose prev==curr==target so the interpolator does not
+        // blend a path across the discontinuity.
+        auto& TransformFragment = InHandle.Get<ck::FFragment_Transform>();
+        auto& PrevTransformFragment = InHandle.Get<ck::FFragment_Transform_Previous>();
+
+        const auto ExistingScale = TransformFragment.Get_Transform().GetScale3D();
+
+        const auto ComponentsModified = UCk_Utils_Transform_UE::Apply_SetTransform_DirectWrite(
+            TransformFragment, PrevTransformFragment, FTransform{NewRotation, NewLocation, ExistingScale});
+
+        if (EnumHasAnyFlags(ComponentsModified,
+            ECk_TransformComponents::Location |
+            ECk_TransformComponents::Rotation |
+            ECk_TransformComponents::Scale))
+        {
+            InHandle.AddOrGet<ck::FTag_Transform_Updated>();
+        }
+
+        auto& StepPose = InHandle.Get<ck::FFragment_JoltBody_StepPose>();
+        StepPose.Set_PrevLocation(NewLocation)
+                .Set_PrevRotation(NewRotation)
+                .Set_CurrLocation(NewLocation)
+                .Set_CurrRotation(NewRotation);
+
+        // The fragment snap alone is not enough: the FJoltWorld pose buffer still holds the PRE-teleport
+        // Curr, so the next capture would roll it into Prev and the next apply would overwrite the snap —
+        // sweeping the entity across the map for a frame (and in async mode first REVERTING the teleport).
+        // Reap the entry; the next capture re-seeds it prev==curr at the target, like a freshly-added body.
+        if (_JoltWorld != nullptr)
+        {
+            _JoltWorld->Remove_PoseBufferEntry(InCurrent.Get_BodyId().GetIndexAndSequenceNumber());
+        }
+    }
+
     // --------------------------------------------------------------------------------------------------------------------
 
     FProcessor_JoltBody_SleepStateMirror::
@@ -542,6 +755,12 @@ namespace ck
                 case ECk_Jolt_SleepState::Asleep:
                 {
                     Handle.AddOrGet<ck::FTag_JoltBody_Sleeping>();
+
+                    // A sleeping body produces no new step poses — collapse prev onto curr so the interpolator
+                    // holds it steady instead of blending a stale prev toward curr for a frame.
+                    auto& StepPose = Handle.Get<ck::FFragment_JoltBody_StepPose>();
+                    StepPose.Set_PrevLocation(StepPose.Get_CurrLocation())
+                            .Set_PrevRotation(StepPose.Get_CurrRotation());
                     break;
                 }
                 case ECk_Jolt_SleepState::Awake:
@@ -550,6 +769,9 @@ namespace ck
                     break;
                 }
             }
+
+            auto JoltBodyHandle = UCk_Utils_JoltBody_UE::Cast(Handle);
+            UUtils_Signal_OnJoltBodySleepStateChanged::Broadcast(JoltBodyHandle, ck::MakePayload(JoltBodyHandle, Event.NewState));
         }
     }
 
@@ -677,6 +899,13 @@ namespace ck
             FFragment_JoltBody_Current& InCurrent) const
         -> void
     {
+        // ASYNC GUARD: FGroup_EndPlay runs later in the SAME tick that kicked this frame's async step —
+        // Remove_PoseBufferEntry below mutates the pose buffer the task-graph capture loop is writing, and
+        // RemoveBody/DestroyBody mutate the body the in-flight Update may touch. Wait the step out first;
+        // self-guarded on future validity, so this is free in sync mode and after the first dying entity.
+        if (_JoltWorld != nullptr && _JoltWorld->Get_AsyncFuture().IsValid())
+        { _JoltWorld->WaitForAsyncStep(); }
+
         // Ownership releases unconditionally — it was claimed at Add, before any body existed.
         auto ReleaseHandle = InHandle;
         ck::physics_ownership::Release_Jolt(ReleaseHandle);

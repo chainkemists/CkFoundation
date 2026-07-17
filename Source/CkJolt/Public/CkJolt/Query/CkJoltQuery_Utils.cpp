@@ -60,6 +60,12 @@ namespace ck_jolt_query_utils
         if (ck::Is_NOT_Valid(EcsWorldSubsystem, ck::IsValid_Policy_NullptrOnly{}))
         { return {}; }
 
+        // UserData 0 = NO entity. Baked static-world bodies never SetUserData (Jolt default 0), and raw
+        // entity id 0 is always the registry's live transient root — resolving it would attribute static
+        // geometry to a live handle (and Get_OverlapEntities would return the transient root as a result).
+        if (InUserData == 0)
+        { return {}; }
+
         const auto TransientEntity = EcsWorldSubsystem->Get_TransientEntity();
         const auto RegView = TransientEntity.Get_RegistryView();
 
@@ -236,6 +242,137 @@ auto
         Result.Set_Normal(ck::jolt::Conv(-Hit.mPenetrationAxis.Normalized()));
         Fill_HitAttribution(Context, Hit.mBodyID2, Result);
         Results.Emplace(MoveTemp(Result));
+    }
+
+    return Results;
+}
+
+auto
+    UCk_Utils_JoltQuery_UE::
+    Get_RayCastMulti(
+        const UObject* InWorldContextObject,
+        FVector InStart,
+        FVector InEnd,
+        FCk_Jolt_QueryFilter InFilter)
+    -> TArray<FCk_Jolt_HitResult>
+{
+    using namespace ck_jolt_query_utils;
+
+    auto Results = TArray<FCk_Jolt_HitResult>{};
+
+    const auto Context = Get_QueryContext(InWorldContextObject);
+    if (ck::Is_NOT_Valid(Context._PhysicsSystem))
+    { return Results; }
+
+    const auto Ray = JPH::RRayCast{ck::jolt::Conv(InStart), ck::jolt::Conv(InEnd - InStart)};
+
+    const auto ChannelFilter = ck::jolt::FCk_Jolt_ChannelQueryFilter{
+        Context._JoltSubsystem->Get_LayerTable(), InFilter.Get_Channel(), InFilter.Get_MinResponse()};
+
+    auto Collector = JPH::AllHitCollisionCollector<JPH::CastRayCollector>{};
+
+    Context._PhysicsSystem->GetNarrowPhaseQuery().CastRay(
+        Ray, JPH::RayCastSettings{}, Collector, JPH::BroadPhaseLayerFilter{}, ChannelFilter);
+
+    Collector.Sort();
+
+    Results.Reserve(Collector.mHits.size());
+
+    for (const auto& Hit : Collector.mHits)
+    {
+        const auto HitPosition = Ray.GetPointOnRay(Hit.mFraction);
+
+        auto Result = FCk_Jolt_HitResult{};
+        Result.Set_HasHit(true);
+        Result.Set_Position(ck::jolt::Conv(HitPosition));
+        Result.Set_Fraction(Hit.mFraction);
+        Result.Set_Normal(Get_SurfaceNormal(Context, Hit.mBodyID, Hit.mSubShapeID2, HitPosition));
+        Fill_HitAttribution(Context, Hit.mBodyID, Result);
+        Results.Emplace(MoveTemp(Result));
+    }
+
+    return Results;
+}
+
+auto
+    UCk_Utils_JoltQuery_UE::
+    Get_ShapeCastMulti(
+        const UObject* InWorldContextObject,
+        FVector InStart,
+        FVector InEnd,
+        FRotator InRotation,
+        FCk_Jolt_ShapeDimensions InShape,
+        FCk_Jolt_QueryFilter InFilter)
+    -> TArray<FCk_Jolt_HitResult>
+{
+    using namespace ck_jolt_query_utils;
+
+    auto Results = TArray<FCk_Jolt_HitResult>{};
+
+    const auto Context = Get_QueryContext(InWorldContextObject);
+    if (ck::Is_NOT_Valid(Context._PhysicsSystem))
+    { return Results; }
+
+    const auto Shape = ck::jolt::CreateShape_FromDimensions(InShape, TEXT("JoltQuery_ShapeCastMulti"));
+    if (Shape == nullptr)
+    { return Results; }
+
+    const auto StartTransform = JPH::RMat44::sRotationTranslation(
+        ck::jolt::Conv(InRotation.Quaternion()), ck::jolt::Conv(InStart));
+
+    const auto ShapeCast = JPH::RShapeCast{
+        Shape.GetPtr(), JPH::Vec3::sReplicate(1.0f), StartTransform, ck::jolt::Conv(InEnd - InStart)};
+
+    const auto ChannelFilter = ck::jolt::FCk_Jolt_ChannelQueryFilter{
+        Context._JoltSubsystem->Get_LayerTable(), InFilter.Get_Channel(), InFilter.Get_MinResponse()};
+
+    auto Collector = JPH::AllHitCollisionCollector<JPH::CastShapeCollector>{};
+
+    Context._PhysicsSystem->GetNarrowPhaseQuery().CastShape(
+        ShapeCast, JPH::ShapeCastSettings{}, JPH::RVec3::sZero(), Collector,
+        JPH::BroadPhaseLayerFilter{}, ChannelFilter);
+
+    Collector.Sort();
+
+    Results.Reserve(Collector.mHits.size());
+
+    for (const auto& Hit : Collector.mHits)
+    {
+        auto Result = FCk_Jolt_HitResult{};
+        Result.Set_HasHit(true);
+        Result.Set_Position(ck::jolt::Conv(Hit.mContactPointOn2));
+        Result.Set_Fraction(Hit.mFraction);
+        Result.Set_Normal(ck::jolt::Conv(-Hit.mPenetrationAxis.Normalized()));
+        Fill_HitAttribution(Context, Hit.mBodyID2, Result);
+        Results.Emplace(MoveTemp(Result));
+    }
+
+    return Results;
+}
+
+auto
+    UCk_Utils_JoltQuery_UE::
+    Get_OverlapEntities(
+        const UObject* InWorldContextObject,
+        FVector InLocation,
+        FRotator InRotation,
+        FCk_Jolt_ShapeDimensions InShape,
+        FCk_Jolt_QueryFilter InFilter)
+    -> TArray<FCk_Handle>
+{
+    auto Results = TArray<FCk_Handle>{};
+
+    // Reuse the overlap query (which already resolves each hit body's UserData into FCk_Jolt_HitResult's
+    // _Entity via the non-ensuring pattern), then keep the live, deduped entity handles.
+    const auto Hits = Get_Overlap(InWorldContextObject, InLocation, InRotation, InShape, InFilter);
+
+    for (const auto& Hit : Hits)
+    {
+        const auto Entity = Hit.Get_Entity();
+        if (ck::Is_NOT_Valid(Entity))
+        { continue; }
+
+        Results.AddUnique(Entity);
     }
 
     return Results;
