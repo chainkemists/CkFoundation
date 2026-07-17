@@ -51,8 +51,6 @@ private:
 
     UPROPERTY(Transient)
     TWeakObjectPtr<UCk_Jolt_Subsystem> _JoltSubsystem;
-
-    FDelegateHandle _ContactEventsHandle;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

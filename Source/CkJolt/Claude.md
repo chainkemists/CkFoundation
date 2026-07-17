@@ -15,9 +15,19 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
 
 ## Key API
 
-- `UCk_Jolt_Subsystem` (tickable, game worlds only) — owns the world. Tick order: wait on async
-  future → drain contact queue → broadcast `Get_OnContactEventsDrained()` → `PhysicsSystem::Update`
-  (sync, or one-frame-latent async when `_EnableAsyncPhysicsUpdate`) → debug draw (gated).
+- `UCk_Jolt_Subsystem` (tickable, game worlds only) — owns the world (PhysicsSystem, JobSystem,
+  listeners, filters, debug renderer). It no longer steps the simulation: the step lives in ECS
+  processors driving a `ck::FJoltWorld` (World/CkJoltWorld.h) published as a
+  `TSharedPtr<ck::FJoltWorld>` registry context. Subsystem Tick now does only `Super::Tick` + the
+  gated debug draw (skipped in async mode; may lag the step by one frame — group order is unpinned).
+- **Step processors** (World/CkJoltWorld_Processor.h), all in `FGroup_Transform`, chained after
+  `FProcessor_Transform_HandleRequests`: `FProcessor_JoltWorld_WaitForAsync` (consume prior async
+  step + apply pose buffer) → `FProcessor_JoltWorld_DrainEvents` (drain contact queue, route to
+  registered consumers; runs even when paused) → `FProcessor_JoltWorld_Step` (fixed-timestep pump:
+  accumulate real delta, run N fixed sub-steps of `Update` + pose capture, sync-apply or dispatch
+  async to the task graph). `_FixedTimestepHz` / `_MaxPhysicsStepsPerFrame` project settings tune the
+  pump; excess accumulated time past the max-steps budget is dropped (no ensure — spiral-of-death is
+  expected under load).
 - **Registry context handoff**: publishes `TWeakPtr<JPH::PhysicsSystem>` via
   `Get_Registry().SetContext<>` — processors/utils that need the world read this context
   (see `CK_PROBE_FACTORY` in CkSpatialQuery, CkEqs' query processors).
@@ -26,8 +36,11 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
   `RotatedTranslatedShape` wrapper.
 - `ck::jolt::TryGet_EntityFromBody(...)` — body UserData (versioned entity id) → live handle, with
   self-skip and non-ensuring registry-liveness check (snapshot-load safe).
-- `FCk_Jolt_ContactEvent` + `FCk_Jolt_OnContactEventsDrained` (CkJolt_ContactEvent.h) — the
-  contact-consumption contract. Events carry raw UserData; consumers resolve entities themselves.
+- `FCk_Jolt_ContactEvent` (CkJolt_ContactEvent.h) — the contact-consumption payload; events carry
+  raw UserData, consumers resolve entities themselves. Consumers register a
+  `ck::FCk_Jolt_ContactEventRouter` via `UCk_Jolt_Subsystem::RegisterContactRouter(Name, Router)` /
+  `UnregisterContactRouter(Name)` (routers fire on the game thread in registration order, inside
+  `FProcessor_JoltWorld_DrainEvents`) — this replaced the old `Get_OnContactEventsDrained()` multicast.
 - `UCk_Jolt_ProjectSettings_UE` (settings UI section "Jolt") — MaxBodies/pairs/constraints, temp
   allocator size, collision steps, threading knobs. CVar overrides `jolt.EnableParallelPhysics` /
   `jolt.EnableAsyncPhysicsUpdate` (startup-only, cmdline-first).
@@ -65,16 +78,20 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
 - Jolt's OWN JobSystem steps the simulation (`JobSystemThreadPool`, workers named `JoltWorker_{i}`,
   or `JobSystemSingleThreaded`) — NOT UE's task graph.
 - Contact/activation callbacks fire on Jolt worker threads → queued under `FCriticalSection`,
-  drained on the game thread. Never touch ECS from a Jolt callback.
-- `_EnableAsyncPhysicsUpdate` runs `Update` via UE `Async(TaskGraph)`; results are one frame latent
-  and debug draw is skipped in async frames.
+  drained on the game thread (in `FProcessor_JoltWorld_DrainEvents`). Never touch ECS from a Jolt callback.
+- `_EnableAsyncPhysicsUpdate` dispatches the whole fixed-step batch (`Update` + pose capture) to UE
+  `Async(TaskGraph)`; results are one frame latent and debug draw is skipped in async frames. The
+  async batch touches only Jolt objects + `FJoltWorld`'s pose buffer; the game thread never touches
+  those while the future is pending (`FProcessor_JoltWorld_WaitForAsync` consumes it first, then
+  applies the buffered poses onto entities — `FFragment_JoltBody_StepPose` + `FTag_JoltBody_TransformDirty`,
+  Body/CkJoltBody_Fragment.h). The pose apply and contact routing are game-thread only.
 
 ---
 
 ## Anti-patterns
 
 - Don't create a second `JPH::PhysicsSystem` — one world per game world, owned here.
-- Don't call `PhysicsSystem::Update` yourself; the subsystem owns the step.
+- Don't call `PhysicsSystem::Update` yourself; `FProcessor_JoltWorld_Step` owns the step.
 - Don't resolve entities inside Jolt callbacks — queue and resolve at the drain point.
 - Don't bypass `Conv`/axis-correction with hand-rolled conversions.
 

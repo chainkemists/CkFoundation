@@ -15,6 +15,8 @@ namespace ck_jolt_constants
     constexpr int32 Fallback_MaxPhysicsJobs = 2048;
     constexpr int32 Fallback_MaxPhysicsBarriers = 8;
     constexpr int32 Fallback_CollisionSteps = 1;
+    constexpr int32 Fallback_FixedTimestepHz = 60;
+    constexpr int32 Fallback_MaxPhysicsStepsPerFrame = 4;
     constexpr bool  Fallback_EnableParallelPhysics = false;
     constexpr int32 Fallback_NumPhysicsThreads = 0;
     constexpr bool  Fallback_EnableAsyncPhysicsUpdate = false;
@@ -111,6 +113,32 @@ auto
     { return ck_jolt_constants::Fallback_CollisionSteps; }
 
     return Settings->Get_CollisionSteps();
+}
+
+auto
+    UCk_Utils_Jolt_ProjectSettings::
+    Get_FixedTimestepHz()
+    -> int32
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Jolt_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return ck_jolt_constants::Fallback_FixedTimestepHz; }
+
+    return Settings->Get_FixedTimestepHz();
+}
+
+auto
+    UCk_Utils_Jolt_ProjectSettings::
+    Get_MaxPhysicsStepsPerFrame()
+    -> int32
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Jolt_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return ck_jolt_constants::Fallback_MaxPhysicsStepsPerFrame; }
+
+    return Settings->Get_MaxPhysicsStepsPerFrame();
 }
 
 auto
