@@ -18,6 +18,7 @@
 #include <HAL/FileManager.h>
 #include <Interfaces/IPluginManager.h>
 #include <Kismet2/BlueprintEditorUtils.h>
+#include <Misc/CoreDelegates.h>
 #include <Misc/FileHelper.h>
 #include <Misc/MessageDialog.h>
 #include <Misc/Paths.h>
@@ -381,6 +382,27 @@ auto
     GenerateAllAssetRegistries()
     -> void
 {
+    // Pre-init guard (single choke point for ALL regen triggers — OnAssetAdded timer,
+    // PostCompile/PostInit settle-tickers, editor buttons): the generation sweep resolves asset
+    // classes via LoadObject, and loading a package with UActorComponent exports before
+    // UEngine::Init registers the engine typed elements asserts fatally ("Element type
+    // 'Components' has not been registered!"). The settle-tickers gate on shader-compiler/AR
+    // idleness, which a fast headless boot (-unattended -nullrhi) satisfies PRE-init — a
+    // regen-vs-engine-init race that kills the editor. Defer to init-complete;
+    // IsEngineSafeForBlockingLoads() flips on exactly OnFEngineLoopInitComplete
+    // (see CkIO_Utils.cpp FBlockingLoadSafetyRegistrar).
+    if (NOT UCk_Utils_IO_UE::IsEngineSafeForBlockingLoads())
+    {
+        ck::angelscriptgenerator::Log(
+            TEXT("GenerateAllAssetRegistries requested pre-engine-init — deferring to OnFEngineLoopInitComplete."));
+
+        FCoreDelegates::OnFEngineLoopInitComplete.AddWeakLambda(this, [this]()
+        {
+            Request_ScheduleRegeneration();
+        });
+        return;
+    }
+
     // In-flight guard: generation now spans multiple frames (per-frame ticker), so a
     // re-trigger landing mid-run (config-asset change → 1s timer → ExecuteDelayedRegeneration,
     // or a PostCompile/PostInit ticker) must NOT reset the shared dedup/name state under the
