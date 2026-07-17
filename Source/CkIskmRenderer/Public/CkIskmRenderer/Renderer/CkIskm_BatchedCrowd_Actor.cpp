@@ -26,7 +26,30 @@ ACk_Iskm_BatchedCrowd_Actor::ACk_Iskm_BatchedCrowd_Actor()
     PrimaryActorTick.bCanEverTick = false;
     _Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
     SetRootComponent(_Root);
+
+#if WITH_EDITORONLY_DATA
+    // Runtime cache actor derived from an AnimCollection — never user-facing (renderer-actor parity).
+    bListedInSceneOutliner = false;
+#endif
 }
+
+#if WITH_EDITOR
+auto
+    ACk_Iskm_BatchedCrowd_Actor::
+    IsSelectionChild() const
+    -> bool
+{
+    return _EditorSelectionOwner.IsValid();
+}
+
+auto
+    ACk_Iskm_BatchedCrowd_Actor::
+    GetSelectionParent() const
+    -> AActor*
+{
+    return _EditorSelectionOwner.Get();
+}
+#endif
 
 auto
     ACk_Iskm_BatchedCrowd_Actor::
@@ -857,5 +880,33 @@ void
     _OutlineGroups.Reset();
     _MemberOutlines.Reset();
 
+    DoDestroy_ControllerEntity();
+
     Super::EndPlay(InEndPlayReason);
+}
+
+auto
+    ACk_Iskm_BatchedCrowd_Actor::
+    Destroyed()
+    -> void
+{
+    // Editor-world actors never BeginPlay, so EndPlay never fires for them — an editor preview
+    // crowd destroyed by the per-owner reclaim would otherwise leak its controller entity (a dead
+    // fragment FProcessor_IskmCrowd_Advance iterates forever). Runtime destroys hit EndPlay first;
+    // the cleanup is idempotent.
+    DoDestroy_ControllerEntity();
+
+    Super::Destroyed();
+}
+
+auto
+    ACk_Iskm_BatchedCrowd_Actor::
+    DoDestroy_ControllerEntity()
+    -> void
+{
+    if (ck::Is_NOT_Valid(_ControllerEntity))
+    { return; }
+
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(_ControllerEntity);
+    _ControllerEntity = FCk_Handle{};
 }

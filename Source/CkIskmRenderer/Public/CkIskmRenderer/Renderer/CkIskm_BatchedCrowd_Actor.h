@@ -38,6 +38,9 @@ class CKISKMRENDERER_API ACk_Iskm_BatchedCrowd_Actor : public AActor
     GENERATED_BODY()
 
 public:
+    friend class UCk_IskmRenderer_Subsystem_UE;
+
+public:
     ACk_Iskm_BatchedCrowd_Actor();
 
     void Initialize(UCk_IskmAnimCollection_Data* InCollection, float InTileSize);
@@ -118,6 +121,30 @@ public:
 
     //~ AActor
     virtual void EndPlay(const EEndPlayReason::Type InEndPlayReason) override;
+    // Editor-world actors never BeginPlay/EndPlay — controller-entity cleanup for the per-owner
+    // editor preview crowds happens here instead (idempotent with EndPlay for runtime destroys).
+    virtual void Destroyed() override;
+
+#if WITH_EDITOR
+public:
+    // Editor-world per-owner preview crowds redirect viewport clicks on their tile instances to
+    // the placed actor whose preview they render (see ck::FFragment_EditorSelectionOwner) —
+    // clicking the preview mesh then selects/moves/deletes that actor like clicking its billboard.
+    auto
+    IsSelectionChild() const -> bool override;
+
+    auto
+    GetSelectionParent() const -> AActor* override;
+#endif
+
+#if WITH_EDITORONLY_DATA
+private:
+    // Non-UPROPERTY on purpose: this actor is transient and must never round-trip through the
+    // transaction buffer; the owner is a level actor whose lifetime the weak ptr observes.
+    TWeakObjectPtr<AActor> _EditorSelectionOwner;
+#endif
+
+public:
 
     // ---- ECS-clock advance (the actor no longer self-ticks) ----
 
@@ -154,6 +181,10 @@ private:
         FName                Socket    = NAME_None;
         FTransform           RelOffset = FTransform::Identity;
     };
+
+    // Destroy this crowd's controller entity (see _ControllerEntity). Idempotent — called from
+    // both EndPlay (runtime) and Destroyed (editor).
+    void      DoDestroy_ControllerEntity();
 
     FIntPoint TileCoordOf(const FVector& InWorldLocation) const;
     FVector   TileCentre(const FIntPoint& InTile) const;
