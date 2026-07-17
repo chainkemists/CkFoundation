@@ -26,6 +26,7 @@ public class CkJolt : CkModuleRules
             "CkThirdParty",
             "CkCore",
             "CkEcs",
+            "CkEcsExt",
             "CkLog",
             "CkSettings",
         });

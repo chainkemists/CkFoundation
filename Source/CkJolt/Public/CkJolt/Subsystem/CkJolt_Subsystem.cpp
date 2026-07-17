@@ -11,7 +11,6 @@
 #include "CkJolt/CkJolt_Utils.h"
 #include "CkJolt/Settings/CkJolt_ProjectSettings.h"
 
-#include <Async/Async.h>
 #include <HAL/IConsoleManager.h>
 
 #include <Jolt/Jolt.h>
@@ -28,10 +27,6 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_CYCLE_STAT(TEXT("Jolt_Subsystem_Tick"), STAT_CkJolt_SubsystemTick, STATGROUP_CkJolt);
-DECLARE_CYCLE_STAT(TEXT("JoltPhysics_WaitForAsync"), STAT_CkJolt_WaitForAsync, STATGROUP_CkJolt);
-DECLARE_CYCLE_STAT(TEXT("JoltPhysics_Update_Async"), STAT_CkJolt_UpdateAsync, STATGROUP_CkJolt);
-DECLARE_CYCLE_STAT(TEXT("JoltPhysics_Update"), STAT_CkJolt_Update, STATGROUP_CkJolt);
-DECLARE_CYCLE_STAT(TEXT("JoltContacts_DrainQueue"), STAT_CkJolt_ContactsDrainQueue, STATGROUP_CkJolt);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -398,6 +393,24 @@ auto
         ck::jolt::Log(TEXT("Jolt: Async physics update ENABLED (one-frame latent)"));
     }
 
+    // The step engine. Holds non-owning pointers into the objects created above; the FGroup_Transform
+    // step processors read it from the registry context (published ALONGSIDE the two existing contexts).
+    _JoltWorld = MakeShared<ck::FJoltWorld>(ck::FJoltWorld::FInitParams
+    {
+        .PhysicsSystem = _PhysicsSystem,
+        .TempAllocator = _TempAllocator.Get(),
+        .JobSystem = _JobSystem,
+        .World = GetWorld(),
+        .CollisionSteps = _CollisionSteps,
+        .AsyncMode = _AsyncPhysicsUpdate,
+        .DrainQueueFn = [this](TArray<FCk_Jolt_ContactEvent>& OutEvents)
+        {
+            _ContactListener->DrainQueue(OutEvents);
+        },
+    });
+
+    _EcsWorldSubsystem->Get_Registry().SetContext<TSharedPtr<ck::FJoltWorld>>(_JoltWorld);
+
 #if JPH_DEBUG_RENDERER
     if (ck::Is_NOT_Valid(JPH::DebugRenderer::sInstance, ck::IsValid_Policy_NullptrOnly{}))
     {
@@ -416,60 +429,15 @@ auto
     SCOPE_CYCLE_COUNTER(STAT_CkJolt_SubsystemTick);
     Super::Tick(InDeltaTime);
 
-    // Always consume any in-flight async result first (even if paused).
-    // This ensures the previous frame's physics is complete before we process contacts.
-    if (_PhysicsAsyncFuture.IsValid())
-    {
-        SCOPE_CYCLE_COUNTER(STAT_CkJolt_WaitForAsync);
-        _PhysicsAsyncFuture.Wait();
-        _PhysicsAsyncFuture = {};
-    }
-
-    // Drain contacts from the completed physics update and hand them to consumers (e.g.
-    // CkSpatialQuery's probe-overlap translation) on the game thread.
-    // In async mode, these are from the previous frame's Update().
-    // In sync mode, these are from the current frame (processed right after Update below).
-    {
-        SCOPE_CYCLE_COUNTER(STAT_CkJolt_ContactsDrainQueue);
-
-        auto Events = TArray<FCk_Jolt_ContactEvent>{};
-        _ContactListener->DrainQueue(Events);
-
-        if (NOT Events.IsEmpty())
-        { _OnContactEventsDrained.Broadcast(Events); }
-    }
-
-    if (GetWorld()->IsPaused())
-    { return; }
-
-    // Safe here: the async future (if any) was consumed at the top of this Tick, so no update
-    // is in flight while the broadphase re-optimizes.
-    if (_OptimizeBroadPhaseRequested)
-    {
-        _OptimizeBroadPhaseRequested = false;
-        _PhysicsSystem->OptimizeBroadPhase();
-    }
-
-    // Run physics update — either async (off game thread) or sync (blocking).
-    if (_AsyncPhysicsUpdate)
-    {
-        _PhysicsAsyncFuture = Async(EAsyncExecution::TaskGraph,
-            [this, DeltaTime = InDeltaTime]()
-            {
-                SCOPE_CYCLE_COUNTER(STAT_CkJolt_UpdateAsync);
-                _PhysicsSystem->Update(DeltaTime, _CollisionSteps, &*_TempAllocator, _JobSystem);
-            });
-    }
-    else
-    {
-        SCOPE_CYCLE_COUNTER(STAT_CkJolt_Update);
-        _PhysicsSystem->Update(InDeltaTime, _CollisionSteps, &*_TempAllocator, _JobSystem);
-    }
+    // The physics step (wait-async → drain → optimize → update) now runs in ECS processors
+    // (FGroup_Transform, after Transform request handling). Only the debug draw remains here. The
+    // subsystem Tick and the ECS group order are unpinned, so this draw may lag the step by one
+    // frame; accepted.
 
 #if JPH_DEBUG_RENDERER
-    // Debug rendering requires physics state to be stable — only valid after sync update.
-    // In async mode, the Update is in-flight so we skip debug draw (results arrive next frame).
-    if (NOT _AsyncPhysicsUpdate)
+    // Debug rendering requires physics state to be stable — skip in async mode (the step is in flight;
+    // results arrive next frame), mirroring the pre-split "NOT _AsyncPhysicsUpdate" gate.
+    if (_JoltWorld.IsValid() && NOT _JoltWorld->Get_AsyncMode())
     {
         // Named constants for clear initialization
         constexpr auto DrawGetSupportFeatures = false;
@@ -531,14 +499,15 @@ auto
     Deinitialize()
         -> void
 {
-    // Wait for any in-flight async physics before destroying the system
-    if (_PhysicsAsyncFuture.IsValid())
-    {
-        _PhysicsAsyncFuture.Wait();
-        _PhysicsAsyncFuture = {};
-    }
+    // Wait any in-flight async step and null the Jolt world's non-owning pointers BEFORE destroying the
+    // objects they reference. The registry context still holds a TSharedPtr<ck::FJoltWorld>, but
+    // FCk_Registry::SetContext wraps entt ctx::emplace (CkRegistry.h) — try_emplace semantics that do NOT
+    // overwrite an existing entry, and there is no overwrite variant — so the context cannot be cleared
+    // here. That is safe: the shut-down world is inert (pointers nulled), and the registry (with its
+    // context) is destroyed alongside the world during teardown.
+    if (_JoltWorld.IsValid())
+    { _JoltWorld->Shutdown(); }
 
-    _OnContactEventsDrained.Clear();
     _DebugDrawGate = {};
 
     _ContactListener.Reset();
@@ -551,6 +520,8 @@ auto
     delete _JobSystem;
     _JobSystem = nullptr;
     _TempAllocator.Reset();
+
+    _JoltWorld.Reset();
 
     ck::jolt::Request_GlobalJoltShutdown();
 
@@ -567,10 +538,28 @@ auto
 
 auto
     UCk_Jolt_Subsystem::
-    Get_OnContactEventsDrained()
-        -> FCk_Jolt_OnContactEventsDrained&
+    RegisterContactRouter(
+        FName InName,
+        ck::FCk_Jolt_ContactEventRouter InRouter)
+        -> void
 {
-    return _OnContactEventsDrained;
+    CK_ENSURE_IF_NOT(_JoltWorld.IsValid(),
+        TEXT("Cannot register contact router [{}] — the Jolt world does not exist (called before Initialize or after Deinitialize?)"), InName)
+    { return; }
+
+    _JoltWorld->RegisterContactRouter(InName, MoveTemp(InRouter));
+}
+
+auto
+    UCk_Jolt_Subsystem::
+    UnregisterContactRouter(
+        FName InName)
+        -> void
+{
+    if (NOT _JoltWorld.IsValid())
+    { return; }
+
+    _JoltWorld->UnregisterContactRouter(InName);
 }
 
 auto
@@ -595,7 +584,10 @@ auto
     Request_OptimizeBroadPhaseBeforeNextUpdate()
         -> void
 {
-    _OptimizeBroadPhaseRequested = true;
+    if (NOT _JoltWorld.IsValid())
+    { return; }
+
+    _JoltWorld->Request_OptimizeBroadPhaseBeforeNextUpdate();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
