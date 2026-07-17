@@ -6,6 +6,8 @@
 #include "CkEcs/Registry/CkRegistry.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
+#include "CkJolt/Body/CkJoltBody_Fragment_Data.h"
+#include "CkJolt/CkJolt_ActivationEvent.h"
 #include "CkJolt/CkJolt_Log.h"
 #include "CkJolt/CkJolt_Stats.h"
 #include "CkJolt/CkJolt_Utils.h"
@@ -183,6 +185,9 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Thread-safe activation listener that queues activate/deactivate events for deferred processing.
+// Jolt fires these from worker threads during Update; ECS mutations happen on the game thread in
+// FProcessor_JoltBody_SleepStateMirror, which drains the queue. Mirrors CkContactListener.
 class CkBodyActivationListener : public JPH::BodyActivationListener
 {
 public:
@@ -193,6 +198,16 @@ public:
             -> void override
     {
         ck::jolt::Verbose(TEXT("Body [{}] just ACTIVATED"), inBodyID.GetIndex());
+
+        auto Event = FCk_Jolt_ActivationEvent{};
+        Event.BodyIndexAndSeq = inBodyID.GetIndexAndSequenceNumber();
+        Event.UserData = inBodyUserData;
+        Event.NewState = ECk_Jolt_SleepState::Awake;
+
+        {
+            FScopeLock Lock(&_QueueLock);
+            _ActivationEventQueue.Emplace(MoveTemp(Event));
+        }
     }
 
     auto
@@ -202,7 +217,29 @@ public:
             -> void override
     {
         ck::jolt::Verbose(TEXT("Body [{}] just DE-ACTIVATED"), inBodyID.GetIndex());
+
+        auto Event = FCk_Jolt_ActivationEvent{};
+        Event.BodyIndexAndSeq = inBodyID.GetIndexAndSequenceNumber();
+        Event.UserData = inBodyUserData;
+        Event.NewState = ECk_Jolt_SleepState::Asleep;
+
+        {
+            FScopeLock Lock(&_QueueLock);
+            _ActivationEventQueue.Emplace(MoveTemp(Event));
+        }
     }
+
+    // Drain the queued events. Must be called from the game thread after Update() returns.
+    auto DrainQueue(TArray<FCk_Jolt_ActivationEvent>& OutEvents) -> void
+    {
+        FScopeLock Lock(&_QueueLock);
+        OutEvents = MoveTemp(_ActivationEventQueue);
+        _ActivationEventQueue.Reset();
+    }
+
+private:
+    FCriticalSection _QueueLock;
+    TArray<FCk_Jolt_ActivationEvent> _ActivationEventQueue;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -372,6 +409,11 @@ auto
     _PhysicsSystem->Init(MaxBodies, NumBodyMutexes, MaxBodyPairs, MaxContactConstraints, *_BroadPhaseLayerInterface,
         *_ObjectVsBroadPhaseLayerFilter, *_ObjectVsObjectFilter);
 
+    // Jolt's default gravity is (0, -9.81, 0) — Y-down in METERS. This world is Z-up passthrough in UE
+    // centimeters, so take the UE world's own gravity (Chaos parity; respects per-world overrides).
+    // Latent until Phase 3: probes are gravity-less kinematic sensors, so nothing fell before dynamic bodies.
+    _PhysicsSystem->SetGravity(ck::jolt::Conv(FVector{0.0, 0.0, GetWorld()->GetGravityZ()}));
+
     _BodyActivationListener = MakePimpl<CkBodyActivationListener>();
     _PhysicsSystem->SetBodyActivationListener(_BodyActivationListener.Get());
 
@@ -406,6 +448,10 @@ auto
         .DrainQueueFn = [this](TArray<FCk_Jolt_ContactEvent>& OutEvents)
         {
             _ContactListener->DrainQueue(OutEvents);
+        },
+        .DrainActivationQueueFn = [this](TArray<FCk_Jolt_ActivationEvent>& OutEvents)
+        {
+            _BodyActivationListener->DrainQueue(OutEvents);
         },
     });
 
