@@ -238,7 +238,7 @@ namespace ck
         { return; }
 
         auto MeshComponent = UCk_Utils_Object_UE::Request_CreateNewObject<UProceduralMeshComponent>(
-            World, UProceduralMeshComponent::StaticClass(), nullptr,
+            ck::pmg::Get_MeshComponentOuter(World, InHandle), UProceduralMeshComponent::StaticClass(), nullptr,
             FCk_ObjectPooling_PoolParams{}.Set_RecyclePolicy(ECk_ObjectPooling_RecyclePolicy::DestroyOnRelease), nullptr);
 
         CK_ENSURE_IF_NOT(ck::IsValid(MeshComponent),
