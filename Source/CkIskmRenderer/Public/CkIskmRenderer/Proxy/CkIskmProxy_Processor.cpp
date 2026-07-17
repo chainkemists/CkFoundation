@@ -1,6 +1,7 @@
 #include "CkIskmRenderer/Proxy/CkIskmProxy_Processor.h"
 
 #include "CkCore/Validation/CkIsValid.h"
+#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkEcsExt/SceneNode/CkSceneNode_Fragment.h"
@@ -111,6 +112,27 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(RendererActor),
             TEXT("IskmProxy Setup: renderer actor missing for [{}]"), InHandle)
         { return; }
+
+#if WITH_EDITOR
+        // Editor previews acquire their SKMC from a per-owner renderer actor so a viewport click
+        // on the mesh redirects selection to the placed actor that owns the preview (see
+        // ck::FFragment_EditorSelectionOwner). Release stays owner-derived (SKMC->GetOwner()), so
+        // teardown needs no extra bookkeeping. Submesh SKMCs outer to the same actor and follow.
+        if (World->WorldType == EWorldType::Editor)
+        {
+            if (auto* SelectionOwner = ck::editor_selection_owner::TryGet(InHandle);
+                ck::IsValid(SelectionOwner))
+            {
+                if (auto* Subsystem = World->GetSubsystem<UCk_IskmRenderer_Subsystem_UE>();
+                    ck::IsValid(Subsystem))
+                {
+                    if (auto* PerOwnerRendererActor = Subsystem->GetOrCreate_RendererActor_ForEditorSelectionOwner(RendererData, SelectionOwner);
+                        ck::IsValid(PerOwnerRendererActor))
+                    { RendererActor = PerOwnerRendererActor; }
+                }
+            }
+        }
+#endif
 
         auto* SKMC = RendererActor->Acquire_BaseSKMC();
         CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
