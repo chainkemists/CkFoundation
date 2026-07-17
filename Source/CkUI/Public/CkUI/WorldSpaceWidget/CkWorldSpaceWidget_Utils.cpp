@@ -2,6 +2,7 @@
 
 #include "CkCore/Object/CkObject_Utils.h"
 
+#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
 #include "CkEcsExt/SceneNode/CkSceneNode_Utils.h"
@@ -181,7 +182,19 @@ auto
     const auto PoolParams = FCk_ObjectPooling_PoolParams{}
         .Set_RecyclePolicy(ECk_ObjectPooling_RecyclePolicy::DestroyOnRelease);
 
-    auto WidgetComponent = UCk_Utils_Object_UE::Request_CreateNewObject<UWidgetComponent>(World,
+    auto ComponentOuter = static_cast<UObject*>(World);
+
+#if WITH_EDITOR
+    // Editor-preview widgets host on the per-owner proxy actor so a viewport click on the widget
+    // redirects selection to the placed actor that owns the preview (see
+    // FFragment_EditorSelectionOwner). World-outered widgets have no owner and therefore no hit
+    // proxy — click-through — which stays the behavior outside previews.
+    if (auto* SelectionProxyHost = ck::editor_selection_owner::TryGet_SelectionProxyHostActor(World, InHandle);
+        ck::IsValid(SelectionProxyHost))
+    { ComponentOuter = SelectionProxyHost; }
+#endif
+
+    auto WidgetComponent = UCk_Utils_Object_UE::Request_CreateNewObject<UWidgetComponent>(ComponentOuter,
         UWidgetComponent::StaticClass(), nullptr, PoolParams, nullptr);
 
     CK_ENSURE_IF_NOT(ck::IsValid(WidgetComponent),
