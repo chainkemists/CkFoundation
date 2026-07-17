@@ -90,6 +90,22 @@ public:
         UCk_IskmAnimCollection_Data* InCollection,
         float InTileSize = 2000.0f);
 
+    // Editor-world entry for preview visuals (the batched-crowd sibling of the per-owner ISKM
+    // renderer): resolves the preview entity's world and editor-selection owner, and returns the
+    // per-(collection, owner) preview crowd — clicking any of its instances selects the owner.
+    // Returns null outside editor worlds, when the entity has no selection owner, or in
+    // non-editor builds — callers treat null as "no preview". The first caller per owner gets a
+    // freshly Initialize()d crowd (Get_CrowdMemberCount() == 0): AddInstance + Finalize it once;
+    // later calls (preview rebuilds re-running composition) get the same finalized crowd back —
+    // reuse its existing member(s) via Set_CrowdMember* instead of re-adding.
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] EditorOnly Get Or Create Preview Crowd")
+    static ACk_Iskm_BatchedCrowd_Actor*
+    EditorOnly_GetOrCreate_PreviewCrowd(
+        const FCk_Handle& InPreviewEntity,
+        UCk_IskmAnimCollection_Data* InCollection,
+        float InTileSize = 2000.0f);
+
     // Buffer one member at a world transform; returns the new member's index (INDEX_NONE on invalid input).
     // Only valid between Create_Crowd and Finalize_Crowd — members cannot be added to a finalized crowd.
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",

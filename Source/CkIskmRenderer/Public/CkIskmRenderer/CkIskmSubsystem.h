@@ -12,6 +12,7 @@
 
 class UCk_IskmAnimCollection_Data;
 class UCk_IskmRenderer_Data;
+class ACk_Iskm_BatchedCrowd_Actor;
 
 // ---- Manager Actor ----
 
@@ -133,6 +134,17 @@ public:
     GetOrCreate_RendererActor_ForEditorSelectionOwner(
         UCk_IskmRenderer_Data* InRendererData,
         AActor* InSelectionOwner) -> ACk_IskmRenderer_Actor_UE*;
+
+    // Batched-crowd sibling of the per-owner renderer above: one preview crowd per
+    // (anim collection, selection owner), so a viewport click on any of its tile instances
+    // redirects selection to the owner — the split IS the member-to-spawner mapping (a shared
+    // crowd cannot attribute instances to owners at actor level). The crowd is Initialize()d
+    // and ready for AddInstance/Finalize; reclaimed when the owner is deleted.
+    auto
+    GetOrCreate_PreviewCrowd_ForEditorSelectionOwner(
+        UCk_IskmAnimCollection_Data* InCollection,
+        float InTileSize,
+        AActor* InSelectionOwner) -> ACk_Iskm_BatchedCrowd_Actor*;
 #endif
 
 private:
@@ -151,6 +163,9 @@ private:
     // even while an owner is mid-undo or already destroyed.
     using FPerOwnerRendererKey = TPair<TWeakObjectPtr<const UCk_IskmRenderer_Data>, TWeakObjectPtr<AActor>>; // {DataAsset, SelectionOwner}
     TMap<FPerOwnerRendererKey, TWeakObjectPtr<ACk_IskmRenderer_Actor_UE>> _PerOwnerRendererActors;
+
+    using FPerOwnerCrowdKey = TPair<TWeakObjectPtr<const UCk_IskmAnimCollection_Data>, TWeakObjectPtr<AActor>>; // {AnimCollection, SelectionOwner}
+    TMap<FPerOwnerCrowdKey, TWeakObjectPtr<ACk_Iskm_BatchedCrowd_Actor>> _PerOwnerPreviewCrowds;
 
     FDelegateHandle _OnLevelActorDeletedHandle;
 #endif
