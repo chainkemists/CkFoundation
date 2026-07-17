@@ -2,6 +2,7 @@
 
 #include "CkIskm_BatchedClusterProxy.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Macros/CkMacros.h"
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_Fragment_Data.h"
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_BakedPose.h"
@@ -93,14 +94,36 @@ auto
     return new FCk_Iskm_BatchedClusterProxy(this, GetFName());
 }
 
+namespace ck_iskm_batched_cluster_component
+{
+    // Last type gate before the render path: a pointer arriving through the AS boundary can carry a
+    // wrong-typed object (LoadAsset_Blocking performs no runtime class check), and a non-material
+    // stored here AVs the base FPrimitiveSceneProxy ctor's material scan on the next proxy recreate.
+    // Cast checks the pointee's actual class; a wrong-typed pointee ensures loudly and stores null
+    // (mesh default materials take over downstream).
+    static auto
+        Get_ValidatedMaterialOrNull(UMaterialInterface* InMaterial)
+        -> UMaterialInterface*
+    {
+        UObject* const AsObject = InMaterial;
+        UMaterialInterface* const Material = Cast<UMaterialInterface>(AsObject);
+        CK_ENSURE_IF_NOT(AsObject == nullptr || Material != nullptr,
+            TEXT("Object [{}] passed as a cluster override material is not a UMaterialInterface — storing null instead"),
+            AsObject->GetFullName())
+        { return nullptr; }
+        return Material;
+    }
+}
+
 auto
     UCk_Iskm_BatchedClusterComponent::
     Set_OverrideMaterial(UMaterialInterface* InMaterial)
     -> void
 {
-    if (_OverrideMaterial == InMaterial)
+    UMaterialInterface* const Material = ck_iskm_batched_cluster_component::Get_ValidatedMaterialOrNull(InMaterial);
+    if (_OverrideMaterial == Material)
     { return; }
-    _OverrideMaterial = InMaterial;
+    _OverrideMaterial = Material;
     MarkRenderStateDirty(); // proxy caches materials at construction — recreate it
 }
 
@@ -111,7 +134,7 @@ auto
 {
     _SlotOverrideMaterials.Reset(InMaterials.Num());
     for (UMaterialInterface* M : InMaterials)
-    { _SlotOverrideMaterials.Add(M); }
+    { _SlotOverrideMaterials.Add(ck_iskm_batched_cluster_component::Get_ValidatedMaterialOrNull(M)); }
     MarkRenderStateDirty(); // proxy caches materials at construction — recreate it
 }
 
