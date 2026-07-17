@@ -3,7 +3,7 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 
-#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner.h"
+#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner_Utils.h"
 
 #include "CkIskmRenderer/CkIskmRenderer_Log.h"
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Fragment_Data.h"
@@ -131,7 +131,7 @@ auto
     -> ACk_IskmRenderer_Actor_UE*
 {
     auto World = GetWorld();
-    if (ck::Is_NOT_Valid(World, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(World))
     { return nullptr; }
     auto SpawnInfo = FActorSpawnParameters{};
     SpawnInfo.ObjectFlags |= RF_Transient;
@@ -183,7 +183,7 @@ auto
         TEXT("Trying to GetOrCreate a per-owner IskmRenderer for an INVALID SelectionOwner (Data Asset [{}])"), InRendererData)
     { return nullptr; }
 
-    const auto Key = FPerOwnerRendererKey{FObjectKey{InRendererData}, FObjectKey{InSelectionOwner}};
+    const auto Key = FPerOwnerRendererKey{InRendererData, InSelectionOwner};
 
     if (const auto* MaybeFound = _PerOwnerRendererActors.Find(Key);
         MaybeFound != nullptr && MaybeFound->IsValid())
@@ -196,7 +196,7 @@ auto
 
     NewActor->_EditorSelectionOwner = InSelectionOwner;
 
-    ck::editor_selection_owner::RegisterProxyActor(InSelectionOwner, NewActor);
+    UCk_Utils_EditorSelectionOwner_UE::RegisterProxyActor(InSelectionOwner, NewActor);
 
     _PerOwnerRendererActors.Add(Key, NewActor);
 
@@ -209,7 +209,7 @@ auto
     GetOrCreate_RendererActor(const UWorld* InWorld, UCk_IskmRenderer_Data* InRendererData)
     -> ACk_IskmRenderer_Actor_UE*
 {
-    if (ck::Is_NOT_Valid(InWorld, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(InWorld))
     { return nullptr; }
     auto* Sub = InWorld->GetSubsystem<UCk_IskmRenderer_Subsystem_UE>();
     if (ck::Is_NOT_Valid(Sub))
