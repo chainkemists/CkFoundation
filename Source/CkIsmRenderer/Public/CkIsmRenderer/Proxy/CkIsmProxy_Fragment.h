@@ -3,6 +3,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include <NativeGameplayTags.h>
+#include <UObject/ObjectKey.h>
 
 #include "CkIsmRenderer/Proxy/CkIsmProxy_Fragment_Data.h"
 
@@ -47,9 +48,21 @@ namespace ck
         FPrimitiveInstanceId _IsmInstanceIndex;
         TArray<float> _CustomInstanceDataValues;
 
+#if WITH_EDITORONLY_DATA
+        // Resolved ONCE at Setup from ck::FFragment_EditorSelectionOwner (editor worlds only,
+        // invalid otherwise). Cached as an FObjectKey — not re-walked — because teardown can run
+        // after the owner actor is destroyed, and the key must keep resolving the SAME per-owner
+        // ISM component so the instance is removed from the component that actually holds it.
+        FObjectKey _EditorSelectionOwnerKey;
+#endif
+
     public:
         CK_PROPERTY_GET(_IsmInstanceIndex);
         CK_PROPERTY_GET(_CustomInstanceDataValues);
+
+#if WITH_EDITORONLY_DATA
+        CK_PROPERTY_GET(_EditorSelectionOwnerKey);
+#endif
     };
 
     // --------------------------------------------------------------------------------------------------------------------

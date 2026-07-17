@@ -4,6 +4,8 @@
 #include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner.h"
+
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 #include "CkEcsExt/EntityScript/CkEntityScript_WithActor_Utils.h"
 
@@ -64,6 +66,24 @@ auto
     Super::BeginPlay();
     DoInitialize();
 }
+
+#if WITH_EDITOR
+auto
+    ACk_IsmRenderer_Actor_UE::
+    IsSelectionChild() const
+    -> bool
+{
+    return _EditorSelectionOwner.IsValid();
+}
+
+auto
+    ACk_IsmRenderer_Actor_UE::
+    GetSelectionParent() const
+    -> AActor*
+{
+    return _EditorSelectionOwner.Get();
+}
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -134,22 +154,11 @@ auto
 
 auto
     UCk_IsmRenderer_Subsystem_UE::
-    GetOrCreate_IsmRenderer(
-        const UCk_IsmRenderer_Data* InDataAsset)
+    DoSpawn_IsmRendererActor(
+        const UCk_IsmRenderer_Data* InDataAsset,
+        const FString& InNameSuffix)
     -> ACk_IsmRenderer_Actor_UE*
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InDataAsset),
-        TEXT("Trying to GetOrCreate an IsmRenderer from an INVALID Data Asset"))
-    { return nullptr; }
-
-    CK_ENSURE_IF_NOT(ck::IsValid(InDataAsset->Get_Mesh()),
-        TEXT("Trying to GetOrCreate an IsmRenderer with an INVALID Mesh on Data Asset [{}]"), InDataAsset)
-    { return nullptr; }
-
-    if (auto Found = _IsmRenderers.Find(InDataAsset);
-        Found != nullptr && ck::IsValid(*Found))
-    { return *Found; }
-
     // Identify the renderer via SpawnInfo.Name (passed through .Set_NonUniqueName) rather than
     // .Set_Label(). SetActorLabel calls AActor::Modify() → MarkPackageDirty() on the actor's
     // package; in editor worlds the only package is the persistent level, so every spawn would
@@ -158,14 +167,15 @@ auto
     // fired. SpawnInfo.Name is the construction-time identifier, doesn't call Modify(), and
     // surfaces as the actor's FName (visible in outliner when bListedInSceneOutliner is true,
     // and in `obj list class=Ck_IsmRenderer_Actor_UE` regardless).
-    const auto& DescriptiveName = FName{*ck::Format_UE(TEXT("IsmRenderer [{}][{}][Shadows:{}][{}][Collision:{}]"),
+    const auto& DescriptiveName = FName{*ck::Format_UE(TEXT("IsmRenderer [{}][{}][Shadows:{}][{}][Collision:{}]{}"),
         InDataAsset->Get_Mesh(),
         InDataAsset->Get_Mobility(),
         InDataAsset->Get_LightingInfo().Get_CastShadows(),
         InDataAsset->Get_RenderPolicy(),
-        InDataAsset->Get_PhysicsInfo().Get_Collision())};
+        InDataAsset->Get_PhysicsInfo().Get_Collision(),
+        InNameSuffix)};
 
-    const auto& SpawnedIsmRendererActor = Cast<ACk_IsmRenderer_Actor_UE>(UCk_Utils_Actor_UE::Request_SpawnActor
+    return Cast<ACk_IsmRenderer_Actor_UE>(UCk_Utils_Actor_UE::Request_SpawnActor
     (
         FCk_Utils_Actor_SpawnActor_Params{GetWorld(), ACk_IsmRenderer_Actor_UE::StaticClass()}
         .Set_NonUniqueName(DescriptiveName)
@@ -185,23 +195,132 @@ auto
             NewIsmRendererActor->DoInitialize();
         }
     ));
+}
+
+auto
+    UCk_IsmRenderer_Subsystem_UE::
+    GetOrCreate_IsmRenderer(
+        const UCk_IsmRenderer_Data* InDataAsset)
+    -> ACk_IsmRenderer_Actor_UE*
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InDataAsset),
+        TEXT("Trying to GetOrCreate an IsmRenderer from an INVALID Data Asset"))
+    { return nullptr; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InDataAsset->Get_Mesh()),
+        TEXT("Trying to GetOrCreate an IsmRenderer with an INVALID Mesh on Data Asset [{}]"), InDataAsset)
+    { return nullptr; }
+
+    if (auto Found = _IsmRenderers.Find(InDataAsset);
+        Found != nullptr && ck::IsValid(*Found))
+    { return *Found; }
+
+    const auto& SpawnedIsmRendererActor = DoSpawn_IsmRendererActor(InDataAsset, FString{});
 
     const auto IsmRenderer = _IsmRenderers.Add(InDataAsset, SpawnedIsmRendererActor);
 
     return IsmRenderer;
 }
 
+#if WITH_EDITOR
+auto
+    UCk_IsmRenderer_Subsystem_UE::
+    GetOrCreate_IsmRenderer_ForEditorSelectionOwner(
+        const UCk_IsmRenderer_Data* InDataAsset,
+        AActor* InSelectionOwner)
+    -> ACk_IsmRenderer_Actor_UE*
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InDataAsset),
+        TEXT("Trying to GetOrCreate a per-owner IsmRenderer from an INVALID Data Asset"))
+    { return nullptr; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InDataAsset->Get_Mesh()),
+        TEXT("Trying to GetOrCreate a per-owner IsmRenderer with an INVALID Mesh on Data Asset [{}]"), InDataAsset)
+    { return nullptr; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InSelectionOwner),
+        TEXT("Trying to GetOrCreate a per-owner IsmRenderer for an INVALID SelectionOwner (Data Asset [{}])"), InDataAsset)
+    { return nullptr; }
+
+    const auto Key = FPerOwnerRendererKey{FObjectKey{InDataAsset}, FObjectKey{InSelectionOwner}};
+
+    if (const auto* MaybeFound = _PerOwnerIsmRenderers.Find(Key);
+        MaybeFound != nullptr && MaybeFound->IsValid())
+    { return MaybeFound->Get(); }
+
+    const auto& NameSuffix = ck::Format_UE(TEXT("[Owner:{}]"), InSelectionOwner->GetActorNameOrLabel());
+    const auto& SpawnedIsmRendererActor = DoSpawn_IsmRendererActor(InDataAsset, NameSuffix);
+
+    if (ck::Is_NOT_Valid(SpawnedIsmRendererActor))
+    { return nullptr; }
+
+    SpawnedIsmRendererActor->_EditorSelectionOwner = InSelectionOwner;
+
+    ck::editor_selection_owner::RegisterProxyActor(InSelectionOwner, SpawnedIsmRendererActor);
+
+    _PerOwnerIsmRenderers.Add(Key, SpawnedIsmRendererActor);
+
+    return SpawnedIsmRendererActor;
+}
+#endif
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_IsmRenderer_Subsystem_UE::
-    FindOrCache_IsmComponent(
+    DoFind_IsmComponentOnRenderer(
+        const ACk_IsmRenderer_Actor_UE* InRenderer,
         const UCk_IsmRenderer_Data* InRendererData)
+    -> UInstancedStaticMeshComponent*
+{
+    if (InRendererData->Get_RenderPolicy() == ECk_Ism_RenderPolicy::ISM)
+    { return InRenderer->FindComponentByClass<UInstancedStaticMeshComponent>(); }
+
+    return InRenderer->FindComponentByClass<UHierarchicalInstancedStaticMeshComponent>();
+}
+
+auto
+    UCk_IsmRenderer_Subsystem_UE::
+    FindOrCache_IsmComponent(
+        const UCk_IsmRenderer_Data* InRendererData,
+        const FObjectKey& InEditorSelectionOwnerKey)
     -> TWeakObjectPtr<UInstancedStaticMeshComponent>
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InRendererData),
         TEXT("InRendererData [{}] is NOT valid"), InRendererData)
     { return {}; }
+
+#if WITH_EDITOR
+    if (InEditorSelectionOwnerKey != FObjectKey{})
+    {
+        const auto Key = FPerOwnerRendererKey{FObjectKey{InRendererData}, InEditorSelectionOwnerKey};
+
+        if (const auto& MaybeFound = _PerOwnerIsmComponentCache.Find(Key);
+            ck::IsValid(MaybeFound, ck::IsValid_Policy_NullptrOnly{}) && ck::IsValid(*MaybeFound))
+        { return *MaybeFound; }
+
+        // The per-owner renderer is only created while the owner actor is alive. Once the owner
+        // is gone the cached entry above is the only valid resolution — falling back to the
+        // shared component would apply instance indices to a component that never held them.
+        auto* SelectionOwner = Cast<AActor>(InEditorSelectionOwnerKey.ResolveObjectPtr());
+
+        if (ck::Is_NOT_Valid(SelectionOwner))
+        { return {}; }
+
+        const auto NewRenderer = GetOrCreate_IsmRenderer_ForEditorSelectionOwner(InRendererData, SelectionOwner);
+
+        CK_ENSURE_IF_NOT(ck::IsValid(NewRenderer),
+            TEXT("Failed to GetOrCreate per-owner ISM Renderer Actor for [{}]"), InRendererData)
+        { return {}; }
+
+        auto* StaticMeshComponent = DoFind_IsmComponentOnRenderer(NewRenderer, InRendererData);
+
+        if (ck::Is_NOT_Valid(StaticMeshComponent))
+        { return {}; }
+
+        return _PerOwnerIsmComponentCache.Add(Key, StaticMeshComponent);
+    }
+#endif
 
     if (const auto& MaybeFound = _IsmComponentCache.Find(InRendererData);
         ck::IsValid(MaybeFound, ck::IsValid_Policy_NullptrOnly{}) && ck::IsValid(*MaybeFound))
@@ -213,13 +332,7 @@ auto
         TEXT("Failed to GetOrCreate ISM Renderer Actor for [{}]"), InRendererData)
     { return {}; }
 
-    auto StaticMeshComponent = [&]() -> UInstancedStaticMeshComponent*
-    {
-        if (InRendererData->Get_RenderPolicy() == ECk_Ism_RenderPolicy::ISM)
-        { return NewRenderer->FindComponentByClass<UInstancedStaticMeshComponent>(); }
-
-        return NewRenderer->FindComponentByClass<UHierarchicalInstancedStaticMeshComponent>();
-    }();
+    auto* StaticMeshComponent = DoFind_IsmComponentOnRenderer(NewRenderer, InRendererData);
 
     if (ck::Is_NOT_Valid(StaticMeshComponent))
     { return {}; }
@@ -234,14 +347,15 @@ auto
     FindOrCreate_OutlineIsmComponent(
         const UCk_IsmRenderer_Data* InRendererData,
         const UCkUsf_OutlinePreset* InPreset,
-        uint8 InStencilValue)
+        uint8 InStencilValue,
+        const FObjectKey& InEditorSelectionOwnerKey)
     -> TWeakObjectPtr<UInstancedStaticMeshComponent>
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InRendererData) && ck::IsValid(InPreset, ck::IsValid_Policy_NullptrOnly{}),
         TEXT("FindOrCreate_OutlineIsmComponent: INVALID renderer data [{}] or preset"), InRendererData)
     { return {}; }
 
-    const auto Key = FOutlineIsmKey{InRendererData, InPreset};
+    const auto Key = FOutlineIsmKey{InRendererData, InPreset, InEditorSelectionOwnerKey};
 
     if (const auto& MaybeFound = _OutlineIsmComponentCache.Find(Key);
         ck::IsValid(MaybeFound, ck::IsValid_Policy_NullptrOnly{}) && ck::IsValid(*MaybeFound))
@@ -252,7 +366,9 @@ auto
         return *MaybeFound;
     }
 
-    const auto SourceIsm = FindOrCache_IsmComponent(InRendererData);
+    // Per-owner previews resolve their per-owner source ISM so the shadow lands on (and attaches
+    // to) the same renderer actor whose instances it mirrors.
+    const auto SourceIsm = FindOrCache_IsmComponent(InRendererData, InEditorSelectionOwnerKey);
 
     CK_ENSURE_IF_NOT(ck::IsValid(SourceIsm),
         TEXT("FindOrCreate_OutlineIsmComponent: could NOT resolve the source ISM component for [{}]"), InRendererData)
