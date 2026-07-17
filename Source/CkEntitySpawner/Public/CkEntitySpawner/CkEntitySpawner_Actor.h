@@ -85,6 +85,12 @@ protected:
 
     auto
     Destroyed() -> void override;
+
+    // Forwards the selection highlight to the editor-world proxy actors hosting this spawner's
+    // preview visuals (per-owner ISM renderer / component host). They are not attached to this
+    // actor, so the engine's attached-actor propagation cannot reach them.
+    auto
+    PushSelectionToProxies() -> void override;
 #endif
 
 public:
