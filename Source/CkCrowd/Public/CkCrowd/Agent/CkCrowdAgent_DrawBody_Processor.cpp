@@ -11,8 +11,8 @@
 #include "CkEcsExt/SceneNode/CkSceneNode_Utils.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
-#include "CkPmg/CkPmg_Fragment_Data.h"
-#include "CkPmg/CkPmg_Utils.h"
+#include "CkPmg/CkPmg_Fragment_Data_DebugShapes.h"
+#include "CkPmg/CkPmg_Utils_DebugShapes.h"
 #include "CkPmg/CkPmg_Utils_BasicShapes.h"
 
 // --------------------------------------------------------------------------------------------------------------------

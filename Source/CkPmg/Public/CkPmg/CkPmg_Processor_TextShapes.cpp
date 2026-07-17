@@ -5,6 +5,7 @@
 #include "CkPmg/CkPmg_FontGlyphCache.h"
 #include "CkPmg/CkPmg_Log.h"
 #include "CkPmg/CkPmg_Utils_DebugLines.h"
+#include "CkPmg/CkPmg_Utils_DebugShapes.h"
 
 #include "CkCore/Math/Vector/CkVector_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -16,6 +17,7 @@
 
 #include <Engine/FontFace.h>
 #include <MaterialDomain.h>
+#include <Materials/MaterialInstanceDynamic.h>
 #include <ProceduralMeshComponent.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -91,14 +93,14 @@ namespace ck::pmg
 
 namespace ck_pmg_processor_text_shapes_impl
 {
-    auto SetupMeshComponent_Text(FCk_Handle InHandle) -> UProceduralMeshComponent*
+    auto SetupMeshComponent_Text(const FCk_Handle_Pmg_DebugShape& InHandle) -> UProceduralMeshComponent*
     {
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
         CK_ENSURE_IF_NOT(ck::IsValid(World), TEXT("Could not get valid World for text entity [{}]"), InHandle)
         { return nullptr; }
 
         auto MeshComponent = UCk_Utils_Object_UE::Request_CreateNewObject<UProceduralMeshComponent>(
-            ck::pmg::Get_MeshComponentOuter(World, InHandle), UProceduralMeshComponent::StaticClass(), nullptr,
+            UCk_Utils_Pmg_DebugShape_UE::Get_MeshComponentOuter(World, InHandle), UProceduralMeshComponent::StaticClass(), nullptr,
             FCk_ObjectPooling_PoolParams{}.Set_RecyclePolicy(ECk_ObjectPooling_RecyclePolicy::DestroyOnRelease), nullptr);
 
         CK_ENSURE_IF_NOT(ck::IsValid(MeshComponent), TEXT("Failed to create ProceduralMeshComponent for text entity [{}]"), InHandle)
