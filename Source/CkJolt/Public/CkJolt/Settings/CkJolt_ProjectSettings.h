@@ -70,6 +70,18 @@ private:
               meta = (AllowPrivateAccess = true, ClampMin = 1, ClampMax = 4, UIMin = 1, UIMax = 4))
     int32 _CollisionSteps = 1;
 
+    // Fixed-timestep rate (Hz) the ECS step pump advances the simulation at. The pump accumulates real
+    // delta and runs whole fixed sub-steps, keeping physics deterministic regardless of frame rate.
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Simulation",
+              meta = (AllowPrivateAccess = true, ClampMin = 15, ClampMax = 240, UIMin = 15, UIMax = 240))
+    int32 _FixedTimestepHz = 60;
+
+    // Maximum fixed sub-steps run in a single frame. Caps accumulated time so a hitch cannot trigger a
+    // spiral of death; excess accumulated time beyond this budget is dropped.
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Simulation",
+              meta = (AllowPrivateAccess = true, ClampMin = 1, ClampMax = 16, UIMin = 1, UIMax = 16))
+    int32 _MaxPhysicsStepsPerFrame = 4;
+
     // Enable multi-threaded physics simulation using Jolt's JobSystemThreadPool.
     // When disabled, all physics runs on a single thread (JobSystemSingleThreaded).
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Threading",
@@ -130,6 +142,8 @@ public:
     CK_PROPERTY_GET(_MaxPhysicsJobs);
     CK_PROPERTY_GET(_MaxPhysicsBarriers);
     CK_PROPERTY_GET(_CollisionSteps);
+    CK_PROPERTY_GET(_FixedTimestepHz);
+    CK_PROPERTY_GET(_MaxPhysicsStepsPerFrame);
     CK_PROPERTY_GET(_EnableParallelPhysics);
     CK_PROPERTY_GET(_NumPhysicsThreads);
     CK_PROPERTY_GET(_EnableAsyncPhysicsUpdate);
@@ -153,6 +167,8 @@ public:
     static auto Get_MaxPhysicsJobs() -> int32;
     static auto Get_MaxPhysicsBarriers() -> int32;
     static auto Get_CollisionSteps() -> int32;
+    static auto Get_FixedTimestepHz() -> int32;
+    static auto Get_MaxPhysicsStepsPerFrame() -> int32;
     static auto Get_EnableParallelPhysics() -> bool;
     static auto Get_NumPhysicsThreads() -> int32;
     static auto Get_EnableAsyncPhysicsUpdate() -> bool;
