@@ -61,6 +61,16 @@ auto
     return Add(NewEntity, InParams);
 }
 
+auto
+    UCk_Utils_Pmg_Donut_UE::
+    Request_ActAsEditorSelectionHandle(
+        FCk_Handle_Pmg_Donut& InDonut)
+    -> FCk_Handle_Pmg_Donut
+{
+    InDonut.AddOrGet<ck::FTag_Pmg_EditorSelectionHandle>();
+    return InDonut;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Pmg_Donut_UE, FCk_Handle_Pmg_Donut,
@@ -250,6 +260,18 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 // Pmg DebugShape Utils - Generic Infrastructure
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Pmg_DebugShape_UE::
+    Request_ActAsEditorSelectionHandle(
+        FCk_Handle_Pmg_DebugShape& InDebugShape)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    InDebugShape.AddOrGet<ck::FTag_Pmg_EditorSelectionHandle>();
+    return InDebugShape;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Pmg_DebugShape_UE, FCk_Handle_Pmg_DebugShape,
