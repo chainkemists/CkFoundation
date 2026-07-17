@@ -7,6 +7,7 @@
 #include "CkCore/Reflection/CkReflection_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
+#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Data.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -195,6 +196,16 @@ auto
 
 auto
     ACk_EntitySpawner_UE::
+    PushSelectionToProxies()
+    -> void
+{
+    Super::PushSelectionToProxies();
+
+    ck::editor_selection_owner::PushOwnerSelectionToProxies(this);
+}
+
+auto
+    ACk_EntitySpawner_UE::
     EditorOnly_InitializeEntityScript(
         TSubclassOf<UCk_EntityScript_UE> InEntityScriptClass)
     -> void
@@ -292,6 +303,13 @@ auto
     DoInjectActorTransform();
 
     _EditorEntityHandle = EditorSubsystem->Request_SpawnEditorEntity(_EntityScript);
+
+    // Stamp this spawner as the preview entity's selection owner: editor-world visuals created for
+    // the entity (ISM instances, hosted scene components) host themselves on per-owner proxy actors
+    // whose viewport clicks redirect selection to this actor — clicking the preview mesh then
+    // selects/moves/deletes the spawner exactly like clicking its billboard.
+    if (ck::IsValid(_EditorEntityHandle))
+    { ck::editor_selection_owner::Set(_EditorEntityHandle, this); }
 }
 
 auto
