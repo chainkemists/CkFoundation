@@ -6,10 +6,8 @@
 #include "CkEcs/World/CkEcsWorld.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
-#include "CkJolt/CkJolt_ContactEvent.h"
 #include "CkJolt/CollisionLayers/CkJoltCollisionLayerTable.h"
-
-#include <Async/Future.h>
+#include "CkJolt/World/CkJoltWorld.h"
 
 #include "CkJolt_Subsystem.generated.h"
 
@@ -71,14 +69,14 @@ private:
 
     int32 _CollisionSteps = 1;
 
-    TFuture<void> _PhysicsAsyncFuture;
     bool _ParallelPhysicsEnabled = false;
     int32 _PhysicsThreadCount = 0;
     bool _AsyncPhysicsUpdate = false;
 
-    // Consumers of drained contact events (e.g. CkSpatialQuery's probe-overlap translation).
-    // Broadcast on the game thread in Tick, before this frame's physics update.
-    FCk_Jolt_OnContactEventsDrained _OnContactEventsDrained;
+    // The Jolt-world step engine. Owns the fixed-timestep pump, pose buffer, and contact-router
+    // registry; published to the ECS registry as a TSharedPtr<ck::FJoltWorld> context so the
+    // FGroup_Transform step processors drive it. Non-owning pointers into the members below.
+    TSharedPtr<ck::FJoltWorld> _JoltWorld;
 
     // Debug-draw opt-in installed by a consumer (the Jolt world itself has no user-facing debug
     // toggle — CkSpatialQuery's user settings own that today). No gate installed = no debug draw.
@@ -88,14 +86,20 @@ private:
     TPimplPtr<CkJoltDebugger> _Debugger;
 #endif
 
-    bool _OptimizeBroadPhaseRequested = false;
-
 public:
     auto
     Get_PhysicsSystem() const -> TWeakPtr<JPH::PhysicsSystem>;
 
+    /// Register a consumer of drained contact events (e.g. CkSpatialQuery's probe-overlap
+    /// translation). Routers fire on the game thread, in registration order. Names must be unique.
     auto
-    Get_OnContactEventsDrained() -> FCk_Jolt_OnContactEventsDrained&;
+    RegisterContactRouter(
+        FName InName,
+        ck::FCk_Jolt_ContactEventRouter InRouter) -> void;
+
+    auto
+    UnregisterContactRouter(
+        FName InName) -> void;
 
     /// Signature-driven layer table (one JPH::ObjectLayer per unique collision signature).
     /// Registration is game-thread only; Jolt filters read it lock-free from workers.

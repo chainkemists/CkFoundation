@@ -61,8 +61,15 @@ auto
     if (ck::Is_NOT_Valid(_JoltSubsystem))
     { return; }
 
-    _ContactEventsHandle = _JoltSubsystem->Get_OnContactEventsDrained().AddUObject(
-        this, &ThisType::ProcessQueuedContacts);
+    // Route CkJolt's drained contact events into Probe overlap requests. Weak capture so a dead
+    // subsystem is never invoked by the router registry.
+    const auto WeakThis = TWeakObjectPtr<UCk_SpatialQuery_Subsystem>{this};
+    _JoltSubsystem->RegisterContactRouter(TEXT("SpatialQuery.ProbeBridge"),
+        [WeakThis](const TArray<FCk_Jolt_ContactEvent>& InEvents)
+        {
+            if (auto* Self = WeakThis.Get())
+            { Self->ProcessQueuedContacts(InEvents); }
+        });
 
     _JoltSubsystem->Set_DebugDrawGate([]()
     {
@@ -75,10 +82,9 @@ auto
     Deinitialize()
         -> void
 {
-    if (_JoltSubsystem.IsValid() && _ContactEventsHandle.IsValid())
+    if (_JoltSubsystem.IsValid())
     {
-        _JoltSubsystem->Get_OnContactEventsDrained().Remove(_ContactEventsHandle);
-        _ContactEventsHandle.Reset();
+        _JoltSubsystem->UnregisterContactRouter(TEXT("SpatialQuery.ProbeBridge"));
         _JoltSubsystem->Set_DebugDrawGate({});
     }
 
