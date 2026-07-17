@@ -3,6 +3,7 @@
 #include "CkCore/Math/Vector/CkVector_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
@@ -137,8 +138,8 @@ namespace ck
         const auto ShadowIsm = IsmSubsystem->FindOrCreate_OutlineIsmComponent(
             InParams.Get_IsmRenderer().Get(), Preset, Stencil
 #if WITH_EDITOR
-            // Editor previews mirror into a shadow on their per-owner renderer (see the fragment note).
-            , InCurrent.Get_EditorSelectionOwnerKey()
+            // Editor previews mirror into a shadow on their per-owner renderer.
+            , ck::editor_selection_owner::TryGet_OwnerKey(InHandle)
 #endif
             );
 

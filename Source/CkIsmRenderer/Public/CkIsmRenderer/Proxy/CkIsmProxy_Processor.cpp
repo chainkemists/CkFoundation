@@ -37,7 +37,7 @@ namespace ck_ism_proxy_processor
         FindRendererIsmComp(
             const UWorld* InWorld,
             const UCk_IsmRenderer_Data* InRendererData,
-            const ck::FFragment_IsmProxy_Current& InCurrent)
+            const FCk_Handle& InProxyHandle)
         -> TWeakObjectPtr<UInstancedStaticMeshComponent>
     {
         SCOPE_CYCLE_COUNTER(STAT_CkIsm_FindRendererIsmComp);
@@ -56,8 +56,10 @@ namespace ck_ism_proxy_processor
         { return {}; }
 
 #if WITH_EDITOR
-        // Editor previews resolve their per-owner ISM component (see _EditorSelectionOwnerKey).
-        return IsmRendererSubsystem->FindOrCache_IsmComponent(InRendererData, InCurrent.Get_EditorSelectionOwnerKey());
+        // Editor previews resolve their per-owner ISM component. The fragment's FObjectKey stays
+        // a valid cache key after the owner actor is destroyed, so teardown removes the instance
+        // from the component that actually holds it (see FFragment_EditorSelectionOwner).
+        return IsmRendererSubsystem->FindOrCache_IsmComponent(InRendererData, ck::editor_selection_owner::TryGet_OwnerKey(InProxyHandle));
 #else
         return IsmRendererSubsystem->FindOrCache_IsmComponent(InRendererData);
 #endif
@@ -158,19 +160,7 @@ namespace ck
 
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(_TransientEntity);
 
-#if WITH_EDITOR
-        // Editor previews: resolve the selection owner ONCE and cache it on the fragment — later
-        // phases (teardown in particular) may run after the owner actor is destroyed, and the
-        // cached key must keep resolving the same per-owner ISM component (see the fragment note).
-        if (ck::IsValid(World) && World->WorldType == EWorldType::Editor)
-        {
-            if (auto* SelectionOwner = ck::editor_selection_owner::TryGet(InHandle);
-                ck::IsValid(SelectionOwner))
-            { InCurrent._EditorSelectionOwnerKey = FObjectKey{SelectionOwner}; }
-        }
-#endif
-
-        const auto& IsmComp = FindRendererIsmComp(World, RendererData, InCurrent);
+        const auto& IsmComp = FindRendererIsmComp(World, RendererData, InHandle);
 
         if (ck::Is_NOT_Valid(IsmComp))
         {
@@ -242,7 +232,7 @@ namespace ck
         using namespace ck_ism_proxy_processor;
 
         const auto& RendererData = InParams.Get_IsmRenderer().Get();
-        const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData, InCurrent);
+        const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData, InHandle);
 
         if (ck::Is_NOT_Valid(IsmComp))
         {
@@ -330,7 +320,7 @@ namespace ck
         using namespace ck_ism_proxy_processor;
 
         const auto& RendererData = InParams.Get_IsmRenderer().Get();
-        const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData, InCurrent);
+        const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData, InHandle);
         const auto InstanceId = InCurrent.Get_IsmInstanceIndex();
 
         if (NOT IsmComp->IsValidId(InstanceId))
@@ -419,7 +409,7 @@ namespace ck
         using namespace ck_ism_proxy_processor;
 
         const auto& RendererData = InParams.Get_IsmRenderer().Get();
-        const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData, InCurrent);
+        const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData, InHandle);
 
         if (ck::Is_NOT_Valid(IsmComp))
         { return; }
@@ -502,7 +492,7 @@ namespace ck
             using namespace ck_ism_proxy_processor;
 
             const auto& RendererData = InParams.Get_IsmRenderer().Get();
-            const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData, InCurrent);
+            const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData, InHandle);
 
             if (ck::Is_NOT_Valid(IsmComp))
             {
@@ -554,7 +544,7 @@ namespace ck
             using namespace ck_ism_proxy_processor;
 
             const auto& RendererData = InParams.Get_IsmRenderer().Get();
-            const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData, InCurrent);
+            const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData, InHandle);
 
             if (ck::Is_NOT_Valid(IsmComp))
             {
@@ -588,7 +578,7 @@ namespace ck
         using namespace ck_ism_proxy_processor;
 
         const auto& RendererData = InParams.Get_IsmRenderer().Get();
-        const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData, InCurrent);
+        const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData, InHandle);
 
         if (ck::Is_NOT_Valid(IsmComp))
         {
@@ -629,7 +619,7 @@ namespace ck
 
                 const auto& RendererData = InParams.Get_IsmRenderer().Get();
 
-                if (const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData, InCurrent); 
+                if (const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData, InHandle); 
                     IsmComp->IsValidId(InCurrent.Get_IsmInstanceIndex()))
                 {
                     IsmComp->RemoveInstanceById(InCurrent.Get_IsmInstanceIndex());
