@@ -7,6 +7,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class AActor;
+class UWorld;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -66,6 +67,16 @@ namespace ck::editor_selection_owner
     CKECS_API auto
     PushOwnerSelectionToProxies(
         const AActor* InOwnerActor) -> void;
+
+    // One-call convenience for loose-component creators (hosted UActorComponents, world-space
+    // widgets, ...): resolves the selection owner from the entity's lifetime chain and returns
+    // its per-owner host actor (UCk_EditorEcsWorld_Subsystem_UE::Get_SelectionProxyHostActor).
+    // Returns nullptr outside editor worlds or when no owner is stamped — callers then fall
+    // back to their non-preview hosting.
+    CKECS_API auto
+    TryGet_SelectionProxyHostActor(
+        const UWorld* InWorld,
+        const FCk_Handle& InHandle) -> AActor*;
 }
 #endif
 

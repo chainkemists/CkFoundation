@@ -9,12 +9,14 @@
 #include "CkEcs/Tag/CkTag.h"
 
 #include <Subsystems/WorldSubsystem.h>
+#include <UObject/ObjectKey.h>
 
 #include "CkEcsEditor_Subsystem.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_EntityScript_UE;
+class ACk_EditorSelectionProxyHost_Actor_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -72,6 +74,16 @@ public:
     auto
     Get_IsEditorEcsMutationSafe() const -> bool;
 
+#if WITH_EDITOR
+    // Lazily-spawned transient host actor for InSelectionOwner's editor-preview components (see
+    // ck::FFragment_EditorSelectionOwner). Loose scene components (hosted UActorComponents,
+    // world-space widgets, ...) outer here so a viewport click on them redirects selection to
+    // the owner — one host per owner, shared by every module that creates preview visuals.
+    auto
+    Get_SelectionProxyHostActor(
+        AActor* InSelectionOwner) -> AActor*;
+#endif
+
 public:
     CK_PROPERTY_GET(_Registry);
     CK_PROPERTY_GET_NON_CONST(_Registry);
@@ -103,6 +115,13 @@ private:
     FDelegateHandle _OnEndFrameHandle;
 
     bool _PendingRedraw = false;
+
+#if WITH_EDITORONLY_DATA
+private:
+    // Weak values: the actors are owned by the world; entries self-heal via validity checks.
+    // Keyed by FObjectKey so entries stay addressable even while an owner is mid-undo.
+    TMap<FObjectKey, TWeakObjectPtr<ACk_EditorSelectionProxyHost_Actor_UE>> _SelectionProxyHostActors;
+#endif
 };
 
 // --------------------------------------------------------------------------------------------------------------------
