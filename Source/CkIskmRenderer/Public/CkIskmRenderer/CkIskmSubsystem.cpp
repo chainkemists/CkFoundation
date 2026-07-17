@@ -8,11 +8,19 @@
 #include "CkIskmRenderer/CkIskmRenderer_Log.h"
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Fragment_Data.h"
 
+#include <Engine/Engine.h>
+#include <Engine/World.h>
+
 ACk_IskmRenderer_Actor_UE::ACk_IskmRenderer_Actor_UE()
 {
     PrimaryActorTick.bCanEverTick = false;
     _RootNode = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
     SetRootComponent(_RootNode);
+
+#if WITH_EDITORONLY_DATA
+    // Runtime cache actors derived from UCk_IskmRenderer_Data — never user-facing (ISM parity).
+    bListedInSceneOutliner = false;
+#endif
 }
 
 auto
@@ -50,6 +58,29 @@ auto
     _Initialized = true;
 }
 
+#if WITH_EDITOR
+auto
+    ACk_IskmRenderer_Actor_UE::
+    EditorOnly_EnableAnimationTicking(USkeletalMeshComponent* InComp) -> void
+{
+    if (ck::Is_NOT_Valid(InComp))
+    { return; }
+
+    const auto* World = InComp->GetWorld();
+    if (ck::Is_NOT_Valid(World))
+    { return; }
+
+    if (World->WorldType != EWorldType::Editor && World->WorldType != EWorldType::EditorPreview)
+    { return; }
+
+    // Editor worlds one-shot-tick a SKMC at registration then freeze it behind the editor-only
+    // bUpdateAnimationInEditor flag (engine SkeletalMeshComponent RefreshBoneTransforms gate) —
+    // VisibilityBasedAnimTickOption alone does nothing there. Without this, a preview renders a
+    // frozen pose. Runtime worlds ignore the flag entirely.
+    InComp->SetUpdateAnimationInEditor(true);
+}
+#endif
+
 auto
     ACk_IskmRenderer_Actor_UE::
     Acquire_BaseSKMC() -> USkeletalMeshComponent*
@@ -59,6 +90,9 @@ auto
         auto Pooled = _Pool_FreeSKMCs.Pop(EAllowShrinking::No).Get();
         Pooled->SetVisibility(true);
         _LiveSKMCs.Add(Pooled);
+#if WITH_EDITOR
+        EditorOnly_EnableAnimationTicking(Pooled);
+#endif
         return Pooled;
     }
 
@@ -68,6 +102,9 @@ auto
     NewComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     NewComp->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
     _LiveSKMCs.Add(NewComp);
+#if WITH_EDITOR
+    EditorOnly_EnableAnimationTicking(NewComp);
+#endif
     return NewComp;
 }
 
@@ -93,7 +130,72 @@ auto
     InComp->SetCustomDepthStencilValue(0);
     _LiveSKMCs.RemoveSwap(InComp);
     _Pool_FreeSKMCs.Add(InComp);
+
+#if WITH_EDITORONLY_DATA
+    // Per-owner editor renderers reclaim themselves once their selection owner is gone and the
+    // last live SKMC returns to the pool. Reclaiming any earlier would race the owner's entity-
+    // destroy cascade (~4 ticks) — FProcessor_IskmProxy_EndPlay fires a loud ensure if the SKMC
+    // vanished before it ran. IsExplicitlyNull distinguishes "never a per-owner renderer"
+    // (shared runtime renderer — must never self-destroy) from "owner set, then destroyed".
+    if (NOT _EditorSelectionOwner.IsExplicitlyNull() &&
+        NOT _EditorSelectionOwner.IsValid() &&
+        _LiveSKMCs.IsEmpty())
+    {
+        Destroy();
+    }
+#endif
 }
+
+#if WITH_EDITOR
+auto
+    UCk_IskmRenderer_Subsystem_UE::
+    Initialize(FSubsystemCollectionBase& Collection) -> void
+{
+    Super::Initialize(Collection);
+
+    // Owner-deletion backstop for per-owner editor renderers whose pool is ALREADY quiescent
+    // (no live SKMCs → no future Release_BaseSKMC will ever run the self-reclaim). The normal
+    // delete path (owner deleted → entity-destroy cascade → EndPlay releases each SKMC) is
+    // handled by the self-reclaim at the end of Release_BaseSKMC instead.
+    if (const auto* World = GetWorld();
+        ck::IsValid(World) && World->WorldType == EWorldType::Editor && GEngine != nullptr)
+    {
+        _OnLevelActorDeletedHandle = GEngine->OnLevelActorDeleted().AddUObject(
+            this, &UCk_IskmRenderer_Subsystem_UE::EditorOnly_OnLevelActorDeleted);
+    }
+}
+
+auto
+    UCk_IskmRenderer_Subsystem_UE::
+    EditorOnly_OnLevelActorDeleted(AActor* InActor) -> void
+{
+    if (_PerOwnerRendererActors.IsEmpty() || ck::Is_NOT_Valid(InActor, ck::IsValid_Policy_NullptrOnly{}))
+    { return; }
+
+    constexpr auto EvenIfPendingKill = true;
+
+    // Collect first, destroy after — Destroy() re-broadcasts OnLevelActorDeleted.
+    auto ToDestroy = TArray<ACk_IskmRenderer_Actor_UE*>{};
+
+    for (auto It = _PerOwnerRendererActors.CreateIterator(); It; ++It)
+    {
+        if (It->Key.Value.Get(EvenIfPendingKill) != InActor)
+        { continue; }
+
+        if (auto* Renderer = It->Value.Get();
+            ck::IsValid(Renderer) && Renderer->Get_LiveSKMCs().IsEmpty())
+        { ToDestroy.Add(Renderer); }
+
+        // Live SKMCs still out → the owner's entity-destroy cascade is in flight; the
+        // self-reclaim in Release_BaseSKMC finishes the job. Drop the map entry either way —
+        // the owner is gone, so this renderer can never be handed out again.
+        It.RemoveCurrent();
+    }
+
+    for (auto* Renderer : ToDestroy)
+    { Renderer->Destroy(); }
+}
+#endif
 
 auto
     UCk_IskmRenderer_Subsystem_UE::
@@ -105,6 +207,22 @@ auto
         { Pair.Value->Destroy(); }
     }
     _RendererActors.Reset();
+
+#if WITH_EDITOR
+    if (GEngine != nullptr && _OnLevelActorDeletedHandle.IsValid())
+    {
+        GEngine->OnLevelActorDeleted().Remove(_OnLevelActorDeletedHandle);
+        _OnLevelActorDeletedHandle.Reset();
+    }
+
+    for (auto& Pair : _PerOwnerRendererActors)
+    {
+        if (auto* Renderer = Pair.Value.Get();
+            ck::IsValid(Renderer))
+        { Renderer->Destroy(); }
+    }
+    _PerOwnerRendererActors.Reset();
+#endif
 
     Super::Deinitialize();
 }
