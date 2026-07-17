@@ -11,11 +11,13 @@
 
 namespace ck
 {
-    // Defined by the JoltBody feature quartet (Body/CkJoltBody_Processor.h). Forward-declared here for
-    // FProcessor_JoltWorld_Step's RunAfter edge only — the scheduler resolves the dependency by canonical
-    // type name (entt::type_name), which needs the declaration, not the definition. Including the Body
-    // header here would be circular (it depends on this one).
+    // Defined by the JoltBody / JoltCharacter feature quartets (Body/CkJoltBody_Processor.h,
+    // Character/CkJoltCharacter_Processor.h). Forward-declared here for FProcessor_JoltWorld_Step's RunAfter
+    // edge only — the scheduler resolves the dependency by canonical type name (entt::type_name), which needs
+    // the declaration, not the definition. Including those headers here would be circular (they depend on
+    // this one).
     class FProcessor_JoltBody_KinematicPush;
+    class FProcessor_JoltCharacter_PreStep;
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -94,7 +96,9 @@ namespace ck
     {
     public:
         using Group = FGroup_Transform;
-        using RunAfter = TDepList<FProcessor_JoltBody_KinematicPush>;
+        // After BOTH the JoltBody kinematic push AND the JoltCharacter pre-step, so this frame's ECS-driven
+        // kinematic targets and character intents are staged into the same step.
+        using RunAfter = TDepList<FProcessor_JoltBody_KinematicPush, FProcessor_JoltCharacter_PreStep>;
 
     private:
         using Super = TProcessorBase;
