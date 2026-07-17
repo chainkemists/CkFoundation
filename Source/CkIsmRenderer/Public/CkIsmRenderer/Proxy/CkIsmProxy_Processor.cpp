@@ -11,7 +11,7 @@
 
 #include "CkIsmRenderer/CkIsmSubsystem.h"
 
-#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner.h"
+#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -37,7 +37,7 @@ namespace ck_ism_proxy_processor
         FindRendererIsmComp(
             const UWorld* InWorld,
             const UCk_IsmRenderer_Data* InRendererData,
-            const FCk_Handle& InProxyHandle)
+            const FCk_Handle_IsmProxy& InProxyHandle)
         -> TWeakObjectPtr<UInstancedStaticMeshComponent>
     {
         SCOPE_CYCLE_COUNTER(STAT_CkIsm_FindRendererIsmComp);
@@ -56,10 +56,11 @@ namespace ck_ism_proxy_processor
         { return {}; }
 
 #if WITH_EDITOR
-        // Editor previews resolve their per-owner ISM component. The fragment's FObjectKey stays
-        // a valid cache key after the owner actor is destroyed, so teardown removes the instance
-        // from the component that actually holds it (see FFragment_EditorSelectionOwner).
-        return IsmRendererSubsystem->FindOrCache_IsmComponent(InRendererData, ck::editor_selection_owner::TryGet_OwnerKey(InProxyHandle));
+        // Editor previews resolve their per-owner ISM component. The fragment's weak owner stays
+        // a valid cache key after the owner actor is destroyed (index + serial comparison), so
+        // teardown removes the instance from the component that actually holds it (see
+        // FFragment_EditorSelectionOwner).
+        return IsmRendererSubsystem->FindOrCache_IsmComponent(InRendererData, UCk_Utils_EditorSelectionOwner_UE::TryGet_SelectionOwnerWeak(InProxyHandle));
 #else
         return IsmRendererSubsystem->FindOrCache_IsmComponent(InRendererData);
 #endif

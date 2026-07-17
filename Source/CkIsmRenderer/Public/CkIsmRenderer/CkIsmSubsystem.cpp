@@ -4,7 +4,7 @@
 #include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
-#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner.h"
+#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner_Utils.h"
 
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 #include "CkEcsExt/EntityScript/CkEntityScript_WithActor_Utils.h"
@@ -242,7 +242,7 @@ auto
         TEXT("Trying to GetOrCreate a per-owner IsmRenderer for an INVALID SelectionOwner (Data Asset [{}])"), InDataAsset)
     { return nullptr; }
 
-    const auto Key = FPerOwnerRendererKey{FObjectKey{InDataAsset}, FObjectKey{InSelectionOwner}};
+    const auto Key = FPerOwnerRendererKey{InDataAsset, InSelectionOwner};
 
     if (const auto* MaybeFound = _PerOwnerIsmRenderers.Find(Key);
         MaybeFound != nullptr && MaybeFound->IsValid())
@@ -256,7 +256,7 @@ auto
 
     SpawnedIsmRendererActor->_EditorSelectionOwner = InSelectionOwner;
 
-    ck::editor_selection_owner::RegisterProxyActor(InSelectionOwner, SpawnedIsmRendererActor);
+    UCk_Utils_EditorSelectionOwner_UE::RegisterProxyActor(InSelectionOwner, SpawnedIsmRendererActor);
 
     _PerOwnerIsmRenderers.Add(Key, SpawnedIsmRendererActor);
 
@@ -283,7 +283,7 @@ auto
     UCk_IsmRenderer_Subsystem_UE::
     FindOrCache_IsmComponent(
         const UCk_IsmRenderer_Data* InRendererData,
-        const FObjectKey& InEditorSelectionOwnerKey)
+        const TWeakObjectPtr<AActor>& InEditorSelectionOwner)
     -> TWeakObjectPtr<UInstancedStaticMeshComponent>
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InRendererData),
@@ -291,9 +291,9 @@ auto
     { return {}; }
 
 #if WITH_EDITOR
-    if (InEditorSelectionOwnerKey != FObjectKey{})
+    if (NOT InEditorSelectionOwner.IsExplicitlyNull())
     {
-        const auto Key = FPerOwnerRendererKey{FObjectKey{InRendererData}, InEditorSelectionOwnerKey};
+        const auto Key = FPerOwnerRendererKey{InRendererData, InEditorSelectionOwner};
 
         if (const auto& MaybeFound = _PerOwnerIsmComponentCache.Find(Key);
             ck::IsValid(MaybeFound, ck::IsValid_Policy_NullptrOnly{}) && ck::IsValid(*MaybeFound))
@@ -302,7 +302,7 @@ auto
         // The per-owner renderer is only created while the owner actor is alive. Once the owner
         // is gone the cached entry above is the only valid resolution — falling back to the
         // shared component would apply instance indices to a component that never held them.
-        auto* SelectionOwner = Cast<AActor>(InEditorSelectionOwnerKey.ResolveObjectPtr());
+        auto* SelectionOwner = InEditorSelectionOwner.Get();
 
         if (ck::Is_NOT_Valid(SelectionOwner))
         { return {}; }
@@ -348,14 +348,14 @@ auto
         const UCk_IsmRenderer_Data* InRendererData,
         const UCkUsf_OutlinePreset* InPreset,
         uint8 InStencilValue,
-        const FObjectKey& InEditorSelectionOwnerKey)
+        const TWeakObjectPtr<AActor>& InEditorSelectionOwner)
     -> TWeakObjectPtr<UInstancedStaticMeshComponent>
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InRendererData) && ck::IsValid(InPreset, ck::IsValid_Policy_NullptrOnly{}),
         TEXT("FindOrCreate_OutlineIsmComponent: INVALID renderer data [{}] or preset"), InRendererData)
     { return {}; }
 
-    const auto Key = FOutlineIsmKey{InRendererData, InPreset, InEditorSelectionOwnerKey};
+    const auto Key = FOutlineIsmKey{InRendererData, InPreset, InEditorSelectionOwner};
 
     if (const auto& MaybeFound = _OutlineIsmComponentCache.Find(Key);
         ck::IsValid(MaybeFound, ck::IsValid_Policy_NullptrOnly{}) && ck::IsValid(*MaybeFound))
@@ -368,7 +368,7 @@ auto
 
     // Per-owner previews resolve their per-owner source ISM so the shadow lands on (and attaches
     // to) the same renderer actor whose instances it mirrors.
-    const auto SourceIsm = FindOrCache_IsmComponent(InRendererData, InEditorSelectionOwnerKey);
+    const auto SourceIsm = FindOrCache_IsmComponent(InRendererData, InEditorSelectionOwner);
 
     CK_ENSURE_IF_NOT(ck::IsValid(SourceIsm),
         TEXT("FindOrCreate_OutlineIsmComponent: could NOT resolve the source ISM component for [{}]"), InRendererData)
