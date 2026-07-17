@@ -2,7 +2,7 @@
 
 #include "CkCore/Object/CkObject_Utils.h"
 
-#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner.h"
+#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
 #include "CkEcsExt/SceneNode/CkSceneNode_Utils.h"
@@ -189,7 +189,7 @@ auto
     // redirects selection to the placed actor that owns the preview (see
     // FFragment_EditorSelectionOwner). World-outered widgets have no owner and therefore no hit
     // proxy — click-through — which stays the behavior outside previews.
-    if (auto* SelectionProxyHost = ck::editor_selection_owner::TryGet_SelectionProxyHostActor(World, InHandle);
+    if (auto* SelectionProxyHost = UCk_Utils_EditorSelectionOwner_UE::TryGet_SelectionProxyHostActor(World, InHandle);
         ck::IsValid(SelectionProxyHost))
     { ComponentOuter = SelectionProxyHost; }
 #endif

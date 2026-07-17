@@ -3,7 +3,7 @@
 #include "CkCore/Math/Vector/CkVector_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
-#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner.h"
+#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
@@ -139,7 +139,7 @@ namespace ck
             InParams.Get_IsmRenderer().Get(), Preset, Stencil
 #if WITH_EDITOR
             // Editor previews mirror into a shadow on their per-owner renderer.
-            , ck::editor_selection_owner::TryGet_OwnerKey(InHandle)
+            , UCk_Utils_EditorSelectionOwner_UE::TryGet_SelectionOwnerWeak(InHandle)
 #endif
             );
 

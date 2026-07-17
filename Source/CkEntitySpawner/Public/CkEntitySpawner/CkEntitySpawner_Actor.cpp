@@ -7,7 +7,7 @@
 #include "CkCore/Reflection/CkReflection_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
-#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner.h"
+#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Data.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -201,7 +201,7 @@ auto
 {
     Super::PushSelectionToProxies();
 
-    ck::editor_selection_owner::PushOwnerSelectionToProxies(this);
+    UCk_Utils_EditorSelectionOwner_UE::PushOwnerSelectionToProxies(this);
 }
 
 auto
@@ -309,7 +309,7 @@ auto
     // whose viewport clicks redirect selection to this actor — clicking the preview mesh then
     // selects/moves/deletes the spawner exactly like clicking its billboard.
     if (ck::IsValid(_EditorEntityHandle))
-    { ck::editor_selection_owner::Set(_EditorEntityHandle, this); }
+    { UCk_Utils_EditorSelectionOwner_UE::Request_SetupEntityWithEditorSelectionOwner(_EditorEntityHandle, this); }
 }
 
 auto
