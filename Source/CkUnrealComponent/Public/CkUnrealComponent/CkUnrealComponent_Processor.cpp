@@ -8,6 +8,7 @@
 #include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
@@ -15,6 +16,7 @@
 
 #include "Components/ActorComponent.h"
 #include "Components/SceneComponent.h"
+#include "Engine/World.h"
 #include "GameFramework/Actor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -80,7 +82,22 @@ namespace ck
         UObject* ComponentOuter = World;
         if (IsSceneComponent)
         {
-            const auto HostActor = Host->Get_HostActor();
+            auto HostActor = static_cast<AActor*>(nullptr);
+
+#if WITH_EDITOR
+            // Editor-preview components host on a per-owner actor so a viewport click on the
+            // mesh selects the placed actor that owns the preview (see FFragment_EditorSelectionOwner).
+            if (World->WorldType == EWorldType::Editor)
+            {
+                if (auto* SelectionOwner = ck::editor_selection_owner::TryGet(InHandle);
+                    ck::IsValid(SelectionOwner))
+                { HostActor = Host->Get_HostActor_ForEditorSelectionOwner(SelectionOwner); }
+            }
+#endif
+
+            if (ck::Is_NOT_Valid(HostActor, ck::IsValid_Policy_NullptrOnly{}))
+            { HostActor = Host->Get_HostActor(); }
+
             if (ck::IsValid(HostActor))
             { ComponentOuter = HostActor; }
         }
