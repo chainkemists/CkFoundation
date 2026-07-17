@@ -4,7 +4,6 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Subsystem/CkEcsEditor_Subsystem.h"
 
 #include <Engine/World.h>
@@ -34,6 +33,7 @@ namespace ck
         FFragment_EditorSelectionOwner(
             AActor* InOwnerActor)
         : _OwnerActor(InOwnerActor)
+        , _OwnerKey(InOwnerActor)
     {
     }
 }
@@ -64,19 +64,21 @@ namespace ck::editor_selection_owner
             const FCk_Handle& InHandle)
         -> AActor*
     {
-        if (ck::Is_NOT_Valid(InHandle))
+        if (ck::Is_NOT_Valid(InHandle) || NOT InHandle.Has<ck::FFragment_EditorSelectionOwner>())
         { return nullptr; }
 
-        auto EntityWithOwner = UCk_Utils_EntityLifetime_UE::Get_EntityInOwnershipChain_If(InHandle,
-            [](const FCk_Handle& InEntityInChain)
-            {
-                return InEntityInChain.Has<ck::FFragment_EditorSelectionOwner>();
-            });
+        return InHandle.Get<ck::FFragment_EditorSelectionOwner>().Get_OwnerActor().Get();
+    }
 
-        if (ck::Is_NOT_Valid(EntityWithOwner))
-        { return nullptr; }
+    auto
+        TryGet_OwnerKey(
+            const FCk_Handle& InHandle)
+        -> FObjectKey
+    {
+        if (ck::Is_NOT_Valid(InHandle) || NOT InHandle.Has<ck::FFragment_EditorSelectionOwner>())
+        { return {}; }
 
-        return EntityWithOwner.Get<ck::FFragment_EditorSelectionOwner>().Get_OwnerActor().Get();
+        return InHandle.Get<ck::FFragment_EditorSelectionOwner>().Get_OwnerKey();
     }
 
     auto
