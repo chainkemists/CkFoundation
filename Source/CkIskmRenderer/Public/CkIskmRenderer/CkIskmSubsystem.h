@@ -36,6 +36,14 @@ public:
     auto
     Acquire_BaseSKMC() -> USkeletalMeshComponent*;
 
+#if WITH_EDITOR
+    // Editor worlds freeze SKMC poses behind the editor-only bUpdateAnimationInEditor flag —
+    // enable it so previews animate. No-op outside Editor/EditorPreview worlds. Applied to every
+    // acquired base SKMC and every submesh child created in editor worlds.
+    static auto
+    EditorOnly_EnableAnimationTicking(USkeletalMeshComponent* InComp) -> void;
+#endif
+
     // Release a SKMC back to the pool. SKMC is hidden, detached, anim cleared.
     auto
     Release_BaseSKMC(USkeletalMeshComponent* InComp) -> void;
@@ -93,10 +101,22 @@ public:
     CK_GENERATED_BODY(UCk_IskmRenderer_Subsystem_UE);
 
 public:
+#if WITH_EDITOR
+    auto Initialize(FSubsystemCollectionBase& Collection) -> void override;
+#endif
     auto Deinitialize() -> void override;
 
 protected:
     auto DoesSupportWorldType(const EWorldType::Type WorldType) const -> bool override;
+
+#if WITH_EDITOR
+private:
+    // Backstop reclaim for per-owner renderers whose SKMC pool is already quiescent when their
+    // selection owner is deleted (no future Release_BaseSKMC → the actor-side self-reclaim never
+    // runs). The in-flight case is left to that self-reclaim — see Release_BaseSKMC.
+    auto
+    EditorOnly_OnLevelActorDeleted(AActor* InActor) -> void;
+#endif
 
 public:
     UFUNCTION(BlueprintCallable, Category = "Ck|IskmRenderer")
@@ -131,6 +151,8 @@ private:
     // even while an owner is mid-undo or already destroyed.
     using FPerOwnerRendererKey = TPair<TWeakObjectPtr<const UCk_IskmRenderer_Data>, TWeakObjectPtr<AActor>>; // {DataAsset, SelectionOwner}
     TMap<FPerOwnerRendererKey, TWeakObjectPtr<ACk_IskmRenderer_Actor_UE>> _PerOwnerRendererActors;
+
+    FDelegateHandle _OnLevelActorDeletedHandle;
 #endif
 };
 
