@@ -93,6 +93,151 @@ public:
     Request_SetSleepState(
         UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
         const FCk_Request_JoltBody_SetSleepState& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|JoltBody",
+              DisplayName="[Ck][JoltBody] Request Add Force")
+    static FCk_Handle_JoltBody
+    Request_AddForce(
+        UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
+        const FCk_Request_JoltBody_AddForce& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|JoltBody",
+              DisplayName="[Ck][JoltBody] Request Add Force At Location")
+    static FCk_Handle_JoltBody
+    Request_AddForceAtLocation(
+        UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
+        const FCk_Request_JoltBody_AddForceAtLocation& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|JoltBody",
+              DisplayName="[Ck][JoltBody] Request Add Torque")
+    static FCk_Handle_JoltBody
+    Request_AddTorque(
+        UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
+        const FCk_Request_JoltBody_AddTorque& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|JoltBody",
+              DisplayName="[Ck][JoltBody] Request Add Impulse")
+    static FCk_Handle_JoltBody
+    Request_AddImpulse(
+        UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
+        const FCk_Request_JoltBody_AddImpulse& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|JoltBody",
+              DisplayName="[Ck][JoltBody] Request Add Impulse At Location")
+    static FCk_Handle_JoltBody
+    Request_AddImpulseAtLocation(
+        UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
+        const FCk_Request_JoltBody_AddImpulseAtLocation& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|JoltBody",
+              DisplayName="[Ck][JoltBody] Request Add Angular Impulse")
+    static FCk_Handle_JoltBody
+    Request_AddAngularImpulse(
+        UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
+        const FCk_Request_JoltBody_AddAngularImpulse& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|JoltBody",
+              DisplayName="[Ck][JoltBody] Request Set Linear Velocity")
+    static FCk_Handle_JoltBody
+    Request_SetLinearVelocity(
+        UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
+        const FCk_Request_JoltBody_SetLinearVelocity& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|JoltBody",
+              DisplayName="[Ck][JoltBody] Request Set Angular Velocity")
+    static FCk_Handle_JoltBody
+    Request_SetAngularVelocity(
+        UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
+        const FCk_Request_JoltBody_SetAngularVelocity& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|JoltBody",
+              DisplayName="[Ck][JoltBody] Request Teleport")
+    static FCk_Handle_JoltBody
+    Request_Teleport(
+        UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
+        const FCk_Request_JoltBody_Teleport& InRequest);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|JoltBody",
+              DisplayName = "[Ck][JoltBody] Bind To OnContactAdded")
+    static FCk_Handle_JoltBody
+    BindTo_OnJoltBodyContactAdded(
+        UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
+        const FCk_Delegate_JoltBody_OnContact& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|JoltBody",
+              DisplayName = "[Ck][JoltBody] Unbind From OnContactAdded")
+    static FCk_Handle_JoltBody
+    UnbindFrom_OnJoltBodyContactAdded(
+        UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
+        const FCk_Delegate_JoltBody_OnContact& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|JoltBody",
+              DisplayName = "[Ck][JoltBody] Bind To OnContactPersisted")
+    static FCk_Handle_JoltBody
+    BindTo_OnJoltBodyContactPersisted(
+        UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
+        const FCk_Delegate_JoltBody_OnContact& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|JoltBody",
+              DisplayName = "[Ck][JoltBody] Unbind From OnContactPersisted")
+    static FCk_Handle_JoltBody
+    UnbindFrom_OnJoltBodyContactPersisted(
+        UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
+        const FCk_Delegate_JoltBody_OnContact& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|JoltBody",
+              DisplayName = "[Ck][JoltBody] Bind To OnContactRemoved")
+    static FCk_Handle_JoltBody
+    BindTo_OnJoltBodyContactRemoved(
+        UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
+        const FCk_Delegate_JoltBody_OnContactRemoved& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|JoltBody",
+              DisplayName = "[Ck][JoltBody] Unbind From OnContactRemoved")
+    static FCk_Handle_JoltBody
+    UnbindFrom_OnJoltBodyContactRemoved(
+        UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
+        const FCk_Delegate_JoltBody_OnContactRemoved& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|JoltBody",
+              DisplayName = "[Ck][JoltBody] Bind To OnSleepStateChanged")
+    static FCk_Handle_JoltBody
+    BindTo_OnJoltBodySleepStateChanged(
+        UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
+        const FCk_Delegate_JoltBody_OnSleepStateChanged& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|JoltBody",
+              DisplayName = "[Ck][JoltBody] Unbind From OnSleepStateChanged")
+    static FCk_Handle_JoltBody
+    UnbindFrom_OnJoltBodySleepStateChanged(
+        UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
+        const FCk_Delegate_JoltBody_OnSleepStateChanged& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

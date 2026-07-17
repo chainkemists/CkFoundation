@@ -48,7 +48,9 @@ namespace ck
     {
     public:
         using Group = FGroup_Transform;
-        using RunAfter = TDepList<FProcessor_Transform_HandleRequests>;
+        // WaitForAsync edge: CreateBody must never race an in-flight async step (the scheduler's lexical
+        // tie-break would otherwise order this BEFORE the future is consumed).
+        using RunAfter = TDepList<FProcessor_Transform_HandleRequests, FProcessor_JoltWorld_WaitForAsync>;
         using MarkedDirtyBy = FTag_JoltBody_NeedsSetup;
 
     public:
@@ -91,8 +93,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Drains the JoltBody request queue (CkTimer ritual). Today only SetSleepState — activates/deactivates
-    // the body. Phase 4 adds the rest.
+    // Drains the JoltBody request queue (CkTimer ritual): sleep-state, forces/impulses/torque, linear/angular
+    // velocity, and teleport. Each request type has a DoHandleRequest overload.
     class CKJOLT_API FProcessor_JoltBody_HandleRequests : public ck_exp::TProcessor<
             FProcessor_JoltBody_HandleRequests,
             FCk_Handle_JoltBody,
@@ -103,7 +105,9 @@ namespace ck
     {
     public:
         using Group = FGroup_Transform;
-        using RunAfter = TDepList<FProcessor_JoltBody_Setup>;
+        // WaitForAsync edge: the handlers mutate Jolt bodies (pose/velocity/forces) and must never race an
+        // in-flight async step — without the explicit edge the scheduler's lexical tie-break runs this first.
+        using RunAfter = TDepList<FProcessor_JoltBody_Setup, FProcessor_JoltWorld_WaitForAsync>;
         using MarkedDirtyBy = FFragment_JoltBody_Requests;
 
     public:
@@ -126,14 +130,71 @@ namespace ck
             const FFragment_JoltBody_Current& InCurrent,
             const FCk_Request_JoltBody_SetSleepState& InRequest) const -> void;
 
+        auto
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_JoltBody_Current& InCurrent,
+            const FCk_Request_JoltBody_AddForce& InRequest) const -> void;
+
+        auto
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_JoltBody_Current& InCurrent,
+            const FCk_Request_JoltBody_AddForceAtLocation& InRequest) const -> void;
+
+        auto
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_JoltBody_Current& InCurrent,
+            const FCk_Request_JoltBody_AddTorque& InRequest) const -> void;
+
+        auto
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_JoltBody_Current& InCurrent,
+            const FCk_Request_JoltBody_AddImpulse& InRequest) const -> void;
+
+        auto
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_JoltBody_Current& InCurrent,
+            const FCk_Request_JoltBody_AddImpulseAtLocation& InRequest) const -> void;
+
+        auto
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_JoltBody_Current& InCurrent,
+            const FCk_Request_JoltBody_AddAngularImpulse& InRequest) const -> void;
+
+        auto
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_JoltBody_Current& InCurrent,
+            const FCk_Request_JoltBody_SetLinearVelocity& InRequest) const -> void;
+
+        auto
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_JoltBody_Current& InCurrent,
+            const FCk_Request_JoltBody_SetAngularVelocity& InRequest) const -> void;
+
+        auto
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_JoltBody_Current& InCurrent,
+            const FCk_Request_JoltBody_Teleport& InRequest) const -> void;
+
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
+        // Teleport must also reap the body's pose-buffer entry (see the handler) — resolved per tick.
+        FJoltWorld* _JoltWorld = nullptr;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Drains the Jolt activation-event queue (produced off worker threads, drained game-thread) and mirrors
-    // each body's awake/asleep state onto FTag_JoltBody_Sleeping. Tag-level only; signals are Phase 4.
+    // Drains the Jolt activation-event queue (produced off worker threads, drained game-thread), mirrors
+    // each body's awake/asleep state onto FTag_JoltBody_Sleeping, broadcasts OnJoltBodySleepStateChanged,
+    // and snaps the StepPose on the Asleep edge (a sleeping body stops interpolating).
     class CKJOLT_API FProcessor_JoltBody_SleepStateMirror : public TProcessorBase<FProcessor_JoltBody_SleepStateMirror>
     {
     public:
