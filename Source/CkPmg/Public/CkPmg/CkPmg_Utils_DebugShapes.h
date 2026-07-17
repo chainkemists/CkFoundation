@@ -1,184 +1,14 @@
 #pragma once
 
-#include "CkPmg_Fragment_Data.h"
+#include "CkPmg_Fragment_Data_DebugShapes.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 
-#include "CkPmg_Utils.generated.h"
+#include "CkPmg_Utils_DebugShapes.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Meta = (ScriptMixin = "FCk_Handle_Pmg_Donut"))
-class CKPMG_API UCk_Utils_Pmg_Donut_UE : public UBlueprintFunctionLibrary
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_Utils_Pmg_Donut_UE);
-    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Pmg_Donut);
-
-public:
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Pmg|Donut",
-              DisplayName="[Ck][Pmg][Donut] Add")
-    static FCk_Handle_Pmg_Donut
-    Add(
-        UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_Pmg_Donut_ParamsData& InParams);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Pmg|Donut",
-              DisplayName="[Ck][Pmg][Donut] Create")
-    static FCk_Handle_Pmg_Donut
-    Create(
-        UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_Fragment_Pmg_Donut_ParamsData& InParams);
-
-    // Opt this shape in as a click-selection handle for its editor preview's placed actor
-    // (see ck::FTag_Pmg_EditorSelectionHandle). Call right after Add/Create — the mesh
-    // component's outer is chosen once, when the shape's setup processor runs. No-op outside
-    // editor-preview worlds.
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Pmg|Donut",
-              DisplayName="[Ck][Pmg][Donut] Request Act As Editor Selection Handle")
-    static FCk_Handle_Pmg_Donut
-    Request_ActAsEditorSelectionHandle(
-        UPARAM(ref) FCk_Handle_Pmg_Donut& InDonut);
-
-public:
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Pmg|Donut",
-              DisplayName="[Ck][Pmg][Donut] Has Feature")
-    static bool
-    Has(
-        const FCk_Handle& InHandle);
-
-private:
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|Pmg|Donut",
-        DisplayName="[Ck][Pmg][Donut] Cast",
-        meta = (ExpandEnumAsExecs = "OutResult"))
-    static FCk_Handle_Pmg_Donut
-    DoCast(
-        UPARAM(ref) FCk_Handle& InHandle,
-        ECk_SucceededFailed& OutResult);
-
-    UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|Pmg|Donut",
-        DisplayName="[Ck][Pmg][Donut] Handle -> Pmg Donut Handle",
-        meta = (CompactNodeTitle = "<AsPmgDonut>", BlueprintAutocast))
-    static FCk_Handle_Pmg_Donut
-    DoCastChecked(
-        FCk_Handle InHandle);
-
-    UFUNCTION(BlueprintPure,
-        DisplayName = "[Ck] Get Invalid Pmg Donut Handle",
-        Category = "Ck|Utils|Pmg|Donut",
-        meta = (CompactNodeTitle = "INVALID_PmgDonutHandle", Keywords = "make"))
-    static FCk_Handle_Pmg_Donut
-    Get_InvalidHandle() { return {}; };
-
-public:
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Pmg|Donut",
-              DisplayName="[Ck][Pmg][Donut] Request Update Params")
-    static FCk_Handle_Pmg_Donut
-    Request_UpdateParams(
-        UPARAM(ref) FCk_Handle_Pmg_Donut& InDonut,
-        const FCk_Request_Pmg_Donut_UpdateParams& InRequest);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Pmg|Donut",
-              DisplayName="[Ck][Pmg][Donut] Request Set Inner Radius")
-    static FCk_Handle_Pmg_Donut
-    Request_SetInnerRadius(
-        UPARAM(ref) FCk_Handle_Pmg_Donut& InDonut,
-        float InValue);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Pmg|Donut",
-              DisplayName="[Ck][Pmg][Donut] Request Set Outer Radius")
-    static FCk_Handle_Pmg_Donut
-    Request_SetOuterRadius(
-        UPARAM(ref) FCk_Handle_Pmg_Donut& InDonut,
-        float InValue);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Pmg|Donut",
-              DisplayName="[Ck][Pmg][Donut] Request Set Segments")
-    static FCk_Handle_Pmg_Donut
-    Request_SetSegments(
-        UPARAM(ref) FCk_Handle_Pmg_Donut& InDonut,
-        int32 InValue);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Pmg|Donut",
-              DisplayName="[Ck][Pmg][Donut] Request Set Fill Angle")
-    static FCk_Handle_Pmg_Donut
-    Request_SetFillAngle(
-        UPARAM(ref) FCk_Handle_Pmg_Donut& InDonut,
-        float InValue);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Pmg|Donut",
-              DisplayName="[Ck][Pmg][Donut] Request Set Material")
-    static FCk_Handle_Pmg_Donut
-    Request_SetMaterial(
-        UPARAM(ref) FCk_Handle_Pmg_Donut& InDonut,
-        UMaterialInterface* InValue);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Pmg|Donut",
-              DisplayName="[Ck][Pmg][Donut] Request Set Enable Collision")
-    static FCk_Handle_Pmg_Donut
-    Request_SetEnableCollision(
-        UPARAM(ref) FCk_Handle_Pmg_Donut& InDonut,
-        bool InValue);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Pmg|Donut",
-              DisplayName="[Ck][Pmg][Donut] Request Set Render Mode")
-    static FCk_Handle_Pmg_Donut
-    Request_SetRenderMode(
-        UPARAM(ref) FCk_Handle_Pmg_Donut& InDonut,
-        ECk_Pmg_RenderMode InValue);
-
-public:
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Pmg|Donut",
-              DisplayName="[Ck][Pmg][Donut] Get Inner Radius")
-    static float
-    Get_InnerRadius(
-        const FCk_Handle_Pmg_Donut& InDonut);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Pmg|Donut",
-              DisplayName="[Ck][Pmg][Donut] Get Outer Radius")
-    static float
-    Get_OuterRadius(
-        const FCk_Handle_Pmg_Donut& InDonut);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Pmg|Donut",
-              DisplayName="[Ck][Pmg][Donut] Get Segments")
-    static int32
-    Get_Segments(
-        const FCk_Handle_Pmg_Donut& InDonut);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Pmg|Donut",
-              DisplayName="[Ck][Pmg][Donut] Get Fill Angle")
-    static float
-    Get_FillAngle(
-        const FCk_Handle_Pmg_Donut& InDonut);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Pmg|Donut",
-              DisplayName="[Ck][Pmg][Donut] Get Render Mode")
-    static ECk_Pmg_RenderMode
-    Get_RenderMode(
-        const FCk_Handle_Pmg_Donut& InDonut);
-};
+class UWorld;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -210,6 +40,16 @@ public:
     static FCk_Handle_Pmg_DebugShape
     Request_ActAsEditorSelectionHandle(
         UPARAM(ref) FCk_Handle_Pmg_DebugShape& InDebugShape);
+
+public:
+    // Component outer for a PMG shape's UProceduralMeshComponent: the per-owner selection-proxy
+    // host when the shape opted in via ck::FTag_Pmg_EditorSelectionHandle (stamped on the entity
+    // or any lifetime ancestor — composite shapes render through child entities; editor previews
+    // only), the World otherwise — owner-less and therefore click-through, the default.
+    static auto
+    Get_MeshComponentOuter(
+        UWorld* InWorld,
+        const FCk_Handle_Pmg_DebugShape& InShape) -> UObject*;
 
 private:
     UFUNCTION(BlueprintCallable,

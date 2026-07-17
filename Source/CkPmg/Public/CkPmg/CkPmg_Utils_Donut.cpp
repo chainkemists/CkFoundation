@@ -1,22 +1,14 @@
-#include "CkPmg_Utils.h"
+#include "CkPmg_Utils_Donut.h"
 
 #include "CkPmg/CkPmg_Log.h"
 #include "CkPmg_Fragment.h"
-#include "CkPmg/CkPmg_Fragment_TextShapes.h"
 
+#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
-#include "CkEcsExt/Transform/CkTransform_Utils.h"
-
-#if WITH_EDITOR
-#include "AssetUtils/CreateStaticMeshUtil.h"
-#include "Engine/StaticMesh.h"
-#include "MeshDescription.h"
-#include "StaticMeshAttributes.h"
-#include "ProceduralMeshConversion.h"
-#endif
+#include <Engine/World.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 // Pmg Donut Utils
@@ -69,6 +61,31 @@ auto
 {
     InDonut.AddOrGet<ck::FTag_Pmg_EditorSelectionHandle>();
     return InDonut;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Pmg_Donut_UE::
+    Get_MeshComponentOuter(
+        UWorld* InWorld,
+        const FCk_Handle_Pmg_Donut& InDonut)
+    -> UObject*
+{
+#if WITH_EDITOR
+    if (ck::IsValid(InWorld) && InWorld->WorldType == EWorldType::Editor)
+    {
+        // Donuts are standalone shapes (no composite children) — a direct tag check suffices.
+        if (InDonut.Has<ck::FTag_Pmg_EditorSelectionHandle>())
+        {
+            if (auto* SelectionProxyHost = UCk_Utils_EditorSelectionOwner_UE::TryGet_SelectionProxyHostActor(InWorld, InDonut);
+                ck::IsValid(SelectionProxyHost))
+            { return SelectionProxyHost; }
+        }
+    }
+#endif
+
+    return InWorld;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -256,127 +273,6 @@ auto
 
     const auto& Current = InDonut.Get<ck::FFragment_Pmg_Donut_Current>();
     return Current.Get_RenderMode();
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-// Pmg DebugShape Utils - Generic Infrastructure
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_Pmg_DebugShape_UE::
-    Request_ActAsEditorSelectionHandle(
-        FCk_Handle_Pmg_DebugShape& InDebugShape)
-    -> FCk_Handle_Pmg_DebugShape
-{
-    InDebugShape.AddOrGet<ck::FTag_Pmg_EditorSelectionHandle>();
-    return InDebugShape;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Pmg_DebugShape_UE, FCk_Handle_Pmg_DebugShape,
-    ck::FFragment_Pmg_DebugShape_Current)
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_Pmg_DebugShape_UE::
-    Request_SetColor(
-        FCk_Handle_Pmg_DebugShape& InHandle,
-        const FCk_Request_Pmg_DebugShape_SetColor& InRequest)
-    -> FCk_Handle_Pmg_DebugShape
-{
-    InHandle.AddOrGet<ck::FFragment_Pmg_DebugShape_Requests>()._Requests.Emplace(InRequest);
-    return InHandle;
-}
-
-auto
-    UCk_Utils_Pmg_DebugShape_UE::
-    Request_SetText(
-        FCk_Handle_Pmg_DebugShape& InHandle,
-        FString InNewText)
-    -> FCk_Handle_Pmg_DebugShape
-{
-    CK_ENSURE_IF_NOT(InHandle.Has<ck::FFragment_Pmg_Text_Params>(),
-        TEXT("Request_SetText called on a non-text PMG shape [{}]"), InHandle)
-    { return InHandle; }
-
-    InHandle.Get<ck::FFragment_Pmg_Text_Params>().Set_Text(InNewText);
-    InHandle.AddOrGet<ck::FTag_Pmg_DebugShape_NeedsSetup>();
-    return InHandle;
-}
-
-auto
-    UCk_Utils_Pmg_DebugShape_UE::
-    Request_SetLineThickness(
-        FCk_Handle_Pmg_DebugShape& InHandle,
-        const FCk_Request_Pmg_DebugShape_SetLineThickness& InRequest)
-    -> FCk_Handle_Pmg_DebugShape
-{
-    InHandle.AddOrGet<ck::FFragment_Pmg_DebugShape_Requests>()._Requests.Emplace(InRequest);
-    return InHandle;
-}
-
-auto
-    UCk_Utils_Pmg_DebugShape_UE::
-    Request_SetDrawLines(
-        FCk_Handle_Pmg_DebugShape& InHandle,
-        const FCk_Request_Pmg_DebugShape_SetDrawLines& InRequest)
-    -> FCk_Handle_Pmg_DebugShape
-{
-    InHandle.AddOrGet<ck::FFragment_Pmg_DebugShape_Requests>()._Requests.Emplace(InRequest);
-    return InHandle;
-}
-
-auto
-    UCk_Utils_Pmg_DebugShape_UE::
-    Request_SetDuration(
-        FCk_Handle_Pmg_DebugShape& InHandle,
-        const FCk_Request_Pmg_DebugShape_SetDuration& InRequest)
-    -> FCk_Handle_Pmg_DebugShape
-{
-    InHandle.AddOrGet<ck::FFragment_Pmg_DebugShape_Requests>()._Requests.Emplace(InRequest);
-    return InHandle;
-}
-
-auto
-    UCk_Utils_Pmg_DebugShape_UE::
-    Request_SetRenderMode(
-        FCk_Handle_Pmg_DebugShape& InHandle,
-        const FCk_Request_Pmg_DebugShape_SetRenderMode& InRequest)
-    -> FCk_Handle_Pmg_DebugShape
-{
-    InHandle.AddOrGet<ck::FFragment_Pmg_DebugShape_Requests>()._Requests.Emplace(InRequest);
-    return InHandle;
-}
-
-auto
-    UCk_Utils_Pmg_DebugShape_UE::
-    Request_SetVisible(
-        FCk_Handle_Pmg_DebugShape& InHandle,
-        bool InIsVisible)
-    -> FCk_Handle_Pmg_DebugShape
-{
-    // Routes through Request_SetRenderMode so the existing handler in
-    // FProcessor_Pmg_DebugShape_HandleRequests does the procmesh visibility flip; the
-    // DrawLines processor reads RenderMode == Hidden to skip wireframe re-emission.
-    // Visible callers fall back to DoubleSided (the framework's default visible mode); a
-    // caller that wants SingleSided specifically should use Request_SetRenderMode directly.
-    const auto NewMode = InIsVisible
-        ? ECk_Pmg_RenderMode::DoubleSided
-        : ECk_Pmg_RenderMode::Hidden;
-    return Request_SetRenderMode(InHandle, FCk_Request_Pmg_DebugShape_SetRenderMode{NewMode});
-}
-
-auto
-    UCk_Utils_Pmg_DebugShape_UE::
-    Request_SetEnableCollision(
-        FCk_Handle_Pmg_DebugShape& InHandle,
-        const FCk_Request_Pmg_DebugShape_SetEnableCollision& InRequest)
-    -> FCk_Handle_Pmg_DebugShape
-{
-    InHandle.AddOrGet<ck::FFragment_Pmg_DebugShape_Requests>()._Requests.Emplace(InRequest);
-    return InHandle;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
