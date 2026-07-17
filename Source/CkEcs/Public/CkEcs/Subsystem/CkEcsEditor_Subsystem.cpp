@@ -5,6 +5,8 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkEcs/CkEcsLog.h"
+#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner.h"
+#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner_HostActor.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
@@ -187,6 +189,48 @@ auto
 
     return true;
 }
+
+#if WITH_EDITOR
+auto
+    UCk_EditorEcsWorld_Subsystem_UE::
+    Get_SelectionProxyHostActor(
+        AActor* InSelectionOwner)
+    -> AActor*
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InSelectionOwner),
+        TEXT("Cannot get a SelectionProxyHost for an INVALID SelectionOwner"))
+    { return nullptr; }
+
+    const auto Key = FObjectKey{InSelectionOwner};
+
+    if (const auto* MaybeFound = _SelectionProxyHostActors.Find(Key);
+        MaybeFound != nullptr && MaybeFound->IsValid())
+    { return MaybeFound->Get(); }
+
+    auto* World = GetWorld();
+    if (ck::Is_NOT_Valid(World))
+    { return nullptr; }
+
+    auto SpawnParams = FActorSpawnParameters{};
+    SpawnParams.ObjectFlags = RF_Transient;
+    SpawnParams.bHideFromSceneOutliner = true;
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+    auto* HostActor = World->SpawnActor<ACk_EditorSelectionProxyHost_Actor_UE>(
+        ACk_EditorSelectionProxyHost_Actor_UE::StaticClass(), SpawnParams);
+
+    if (ck::Is_NOT_Valid(HostActor))
+    { return nullptr; }
+
+    HostActor->_EditorSelectionOwner = InSelectionOwner;
+
+    ck::editor_selection_owner::RegisterProxyActor(InSelectionOwner, HostActor);
+
+    _SelectionProxyHostActors.Add(Key, HostActor);
+
+    return HostActor;
+}
+#endif
 
 auto
     UCk_EditorEcsWorld_Subsystem_UE::
