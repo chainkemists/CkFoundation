@@ -118,7 +118,7 @@ namespace ck_pmg_processor_directional_shapes_impl
         { return nullptr; }
 
         auto MeshComponent = UCk_Utils_Object_UE::Request_CreateNewObject<UProceduralMeshComponent>(
-            World, UProceduralMeshComponent::StaticClass(), nullptr,
+            ck::pmg::Get_MeshComponentOuter(World, InHandle), UProceduralMeshComponent::StaticClass(), nullptr,
             FCk_ObjectPooling_PoolParams{}.Set_RecyclePolicy(ECk_ObjectPooling_RecyclePolicy::DestroyOnRelease), nullptr);
 
         if (ck::Is_NOT_Valid(MeshComponent))
