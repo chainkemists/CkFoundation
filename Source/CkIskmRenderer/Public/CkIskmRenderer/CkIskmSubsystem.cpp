@@ -7,6 +7,7 @@
 
 #include "CkIskmRenderer/CkIskmRenderer_Log.h"
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Fragment_Data.h"
+#include "CkIskmRenderer/Renderer/CkIskm_BatchedCrowd_Actor.h"
 
 #include <Engine/Engine.h>
 #include <Engine/World.h>
@@ -169,7 +170,8 @@ auto
     UCk_IskmRenderer_Subsystem_UE::
     EditorOnly_OnLevelActorDeleted(AActor* InActor) -> void
 {
-    if (_PerOwnerRendererActors.IsEmpty() || ck::Is_NOT_Valid(InActor, ck::IsValid_Policy_NullptrOnly{}))
+    if ((_PerOwnerRendererActors.IsEmpty() && _PerOwnerPreviewCrowds.IsEmpty()) ||
+        ck::Is_NOT_Valid(InActor, ck::IsValid_Policy_NullptrOnly{}))
     { return; }
 
     constexpr auto EvenIfPendingKill = true;
@@ -194,6 +196,26 @@ auto
 
     for (auto* Renderer : ToDestroy)
     { Renderer->Destroy(); }
+
+    // Preview crowds have no in-flight pool cascade to wait out (members are instances inside
+    // the crowd's own tile components, and the preview entity guards its crowd handle) —
+    // destroy immediately. Same collect-then-destroy discipline as above.
+    auto CrowdsToDestroy = TArray<ACk_Iskm_BatchedCrowd_Actor*>{};
+
+    for (auto It = _PerOwnerPreviewCrowds.CreateIterator(); It; ++It)
+    {
+        if (It->Key.Value.Get(EvenIfPendingKill) != InActor)
+        { continue; }
+
+        if (auto* Crowd = It->Value.Get();
+            ck::IsValid(Crowd))
+        { CrowdsToDestroy.Add(Crowd); }
+
+        It.RemoveCurrent();
+    }
+
+    for (auto* Crowd : CrowdsToDestroy)
+    { Crowd->Destroy(); }
 }
 #endif
 
@@ -222,6 +244,14 @@ auto
         { Renderer->Destroy(); }
     }
     _PerOwnerRendererActors.Reset();
+
+    for (auto& Pair : _PerOwnerPreviewCrowds)
+    {
+        if (auto* Crowd = Pair.Value.Get();
+            ck::IsValid(Crowd))
+        { Crowd->Destroy(); }
+    }
+    _PerOwnerPreviewCrowds.Reset();
 #endif
 
     Super::Deinitialize();
@@ -319,6 +349,51 @@ auto
     _PerOwnerRendererActors.Add(Key, NewActor);
 
     return NewActor;
+}
+
+auto
+    UCk_IskmRenderer_Subsystem_UE::
+    GetOrCreate_PreviewCrowd_ForEditorSelectionOwner(
+        UCk_IskmAnimCollection_Data* InCollection,
+        float InTileSize,
+        AActor* InSelectionOwner)
+    -> ACk_Iskm_BatchedCrowd_Actor*
+{
+    if (ck::Is_NOT_Valid(InCollection))
+    { return nullptr; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InSelectionOwner),
+        TEXT("Trying to GetOrCreate a per-owner preview crowd for an INVALID SelectionOwner (AnimCollection [{}])"), InCollection)
+    { return nullptr; }
+
+    const auto Key = FPerOwnerCrowdKey{InCollection, InSelectionOwner};
+
+    if (const auto* MaybeFound = _PerOwnerPreviewCrowds.Find(Key);
+        MaybeFound != nullptr && MaybeFound->IsValid())
+    { return MaybeFound->Get(); }
+
+    auto* World = GetWorld();
+    if (ck::Is_NOT_Valid(World))
+    { return nullptr; }
+
+    auto SpawnInfo = FActorSpawnParameters{};
+    SpawnInfo.ObjectFlags |= RF_Transient;
+    SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+    auto* Crowd = World->SpawnActor<ACk_Iskm_BatchedCrowd_Actor>(
+        ACk_Iskm_BatchedCrowd_Actor::StaticClass(), FTransform::Identity, SpawnInfo);
+
+    if (ck::Is_NOT_Valid(Crowd))
+    { return nullptr; }
+
+    Crowd->Initialize(InCollection, InTileSize);
+    Crowd->_EditorSelectionOwner = InSelectionOwner;
+
+    UCk_Utils_EditorSelectionOwner_UE::RegisterProxyActor(InSelectionOwner, Crowd);
+
+    _PerOwnerPreviewCrowds.Add(Key, Crowd);
+
+    return Crowd;
 }
 #endif
 

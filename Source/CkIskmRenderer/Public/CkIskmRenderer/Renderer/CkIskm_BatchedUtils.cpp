@@ -3,8 +3,12 @@
 #include "CkIskm_BatchedClusterComponent.h"
 #include "CkIskm_BatchedCrowd_Actor.h"
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_Fragment_Data.h"
+#include "CkIskmRenderer/CkIskmSubsystem.h"
 
 #include "CkCore/Validation/CkIsValid.h"
+
+#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 #include "Engine/World.h"
 #include "Engine/Engine.h"
@@ -208,6 +212,36 @@ auto
 
     Crowd->Initialize(InCollection, InTileSize);
     return Crowd;
+}
+
+auto
+    UCk_Utils_IskmBatched_UE::
+    EditorOnly_GetOrCreate_PreviewCrowd(
+        const FCk_Handle& InPreviewEntity,
+        UCk_IskmAnimCollection_Data* InCollection,
+        float InTileSize)
+    -> ACk_Iskm_BatchedCrowd_Actor*
+{
+#if WITH_EDITOR
+    if (ck::Is_NOT_Valid(InCollection))
+    { return nullptr; }
+
+    auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InPreviewEntity);
+    if (ck::Is_NOT_Valid(World) || World->WorldType != EWorldType::Editor)
+    { return nullptr; }
+
+    auto* SelectionOwner = UCk_Utils_EditorSelectionOwner_UE::TryGet_SelectionOwner(InPreviewEntity);
+    if (ck::Is_NOT_Valid(SelectionOwner))
+    { return nullptr; }
+
+    auto* Subsystem = World->GetSubsystem<UCk_IskmRenderer_Subsystem_UE>();
+    if (ck::Is_NOT_Valid(Subsystem))
+    { return nullptr; }
+
+    return Subsystem->GetOrCreate_PreviewCrowd_ForEditorSelectionOwner(InCollection, InTileSize, SelectionOwner);
+#else
+    return nullptr;
+#endif
 }
 
 auto
