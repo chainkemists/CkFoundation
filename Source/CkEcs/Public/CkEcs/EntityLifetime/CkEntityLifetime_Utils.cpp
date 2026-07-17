@@ -6,6 +6,7 @@
 #include "CkEcs/CkEcs_Stats.h"
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkEcs/Delegates/CkDelegates.h"
+#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h" // FFragment_EntityScript_Current + FTag_EntityScript_HasBegunPlay (ConstructSpawned stamp)
 #include "CkEcs/Handle/CkHandle_Utils.h"
@@ -493,6 +494,16 @@ auto
         // the new entity's context owner is itself
         UCk_Utils_ContextOwner_UE::Request_SetupEntityWithContextOwner(InNewEntity, InNewEntity);
     }
+
+#if WITH_EDITOR
+    // Inherit the editor-selection owner from the lifetime owner (same strategy as ContextOwner):
+    // every entity in a placed actor's preview tree carries the fragment directly, so consumers
+    // read it off their own entity — no ownership-chain walk (see FFragment_EditorSelectionOwner).
+    if (InLifetimeOwner.Has<ck::FFragment_EditorSelectionOwner>())
+    {
+        InNewEntity.Add<ck::FFragment_EditorSelectionOwner>(InLifetimeOwner.Get<ck::FFragment_EditorSelectionOwner>());
+    }
+#endif
 
 #if NOT CK_DISABLE_NET_PARAM_COPY_PER_ENTITY
     // If we copy NetParams from a TransientEntity, we give the wrong impression to the Entity that it can
