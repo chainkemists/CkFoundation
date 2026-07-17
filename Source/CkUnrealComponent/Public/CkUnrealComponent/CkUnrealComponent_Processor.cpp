@@ -8,7 +8,7 @@
 #include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
-#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner.h"
+#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
@@ -87,7 +87,7 @@ namespace ck
 #if WITH_EDITOR
             // Editor-preview components host on a per-owner actor so a viewport click on the
             // mesh selects the placed actor that owns the preview (see FFragment_EditorSelectionOwner).
-            HostActor = ck::editor_selection_owner::TryGet_SelectionProxyHostActor(World, InHandle);
+            HostActor = UCk_Utils_EditorSelectionOwner_UE::TryGet_SelectionProxyHostActor(World, InHandle);
 #endif
 
             if (ck::Is_NOT_Valid(HostActor, ck::IsValid_Policy_NullptrOnly{}))

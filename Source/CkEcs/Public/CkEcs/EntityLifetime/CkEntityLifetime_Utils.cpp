@@ -6,7 +6,7 @@
 #include "CkEcs/CkEcs_Stats.h"
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkEcs/Delegates/CkDelegates.h"
-#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner.h"
+#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h" // FFragment_EntityScript_Current + FTag_EntityScript_HasBegunPlay (ConstructSpawned stamp)
 #include "CkEcs/Handle/CkHandle_Utils.h"
@@ -499,9 +499,10 @@ auto
     // Inherit the editor-selection owner from the lifetime owner (same strategy as ContextOwner):
     // every entity in a placed actor's preview tree carries the fragment directly, so consumers
     // read it off their own entity — no ownership-chain walk (see FFragment_EditorSelectionOwner).
-    if (InLifetimeOwner.Has<ck::FFragment_EditorSelectionOwner>())
+    if (UCk_Utils_EditorSelectionOwner_UE::Has(InLifetimeOwner))
     {
-        InNewEntity.Add<ck::FFragment_EditorSelectionOwner>(InLifetimeOwner.Get<ck::FFragment_EditorSelectionOwner>());
+        UCk_Utils_EditorSelectionOwner_UE::Request_SetupEntityWithEditorSelectionOwner(InNewEntity,
+            UCk_Utils_EditorSelectionOwner_UE::TryGet_SelectionOwnerWeak(InLifetimeOwner));
     }
 #endif
 

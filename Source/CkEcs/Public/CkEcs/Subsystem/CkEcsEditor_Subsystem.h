@@ -9,7 +9,6 @@
 #include "CkEcs/Tag/CkTag.h"
 
 #include <Subsystems/WorldSubsystem.h>
-#include <UObject/ObjectKey.h>
 
 #include "CkEcsEditor_Subsystem.generated.h"
 
@@ -118,9 +117,10 @@ private:
 
 #if WITH_EDITORONLY_DATA
 private:
-    // Weak values: the actors are owned by the world; entries self-heal via validity checks.
-    // Keyed by FObjectKey so entries stay addressable even while an owner is mid-undo.
-    TMap<FObjectKey, TWeakObjectPtr<ACk_EditorSelectionProxyHost_Actor_UE>> _SelectionProxyHostActors;
+    // Weak on both sides: the actors are owned by the world; entries self-heal via validity
+    // checks. TWeakObjectPtr keys compare by object index + serial, so entries stay addressable
+    // even while an owner is mid-undo or already destroyed.
+    TMap<TWeakObjectPtr<const AActor>, TWeakObjectPtr<ACk_EditorSelectionProxyHost_Actor_UE>> _SelectionProxyHostActors;
 #endif
 };
 

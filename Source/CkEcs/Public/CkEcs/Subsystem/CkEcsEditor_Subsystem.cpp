@@ -5,7 +5,7 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkEcs/CkEcsLog.h"
-#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner.h"
+#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner_Utils.h"
 #include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner_HostActor.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript.h"
@@ -201,7 +201,7 @@ auto
         TEXT("Cannot get a SelectionProxyHost for an INVALID SelectionOwner"))
     { return nullptr; }
 
-    const auto Key = FObjectKey{InSelectionOwner};
+    const auto Key = TWeakObjectPtr<const AActor>{InSelectionOwner};
 
     if (const auto* MaybeFound = _SelectionProxyHostActors.Find(Key);
         MaybeFound != nullptr && MaybeFound->IsValid())
@@ -224,7 +224,7 @@ auto
 
     HostActor->_EditorSelectionOwner = InSelectionOwner;
 
-    ck::editor_selection_owner::RegisterProxyActor(InSelectionOwner, HostActor);
+    UCk_Utils_EditorSelectionOwner_UE::RegisterProxyActor(InSelectionOwner, HostActor);
 
     _SelectionProxyHostActors.Add(Key, HostActor);
 
