@@ -8,8 +8,10 @@
 
 #include "CkPmg/CkPmg_Log.h"
 #include "CkPmg/CkPmg_Utils_DebugLines.h"
+#include "CkPmg/CkPmg_Utils_DebugShapes.h"
 
 #include <MaterialDomain.h>
+#include <Materials/MaterialInstanceDynamic.h>
 #include <ProceduralMeshComponent.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -19,7 +21,7 @@
 namespace ck_pmg_processor_symbol_shapes
 {
     auto SetupMeshComponent_Symbol(
-        FCk_Handle InHandle,
+        const FCk_Handle_Pmg_DebugShape& InHandle,
         const ck::FFragment_Pmg_DebugShape_Common& InCommon,
         ck::FFragment_Pmg_DebugShape_Current& InCurrent,
         float InDeltaT)
@@ -30,7 +32,7 @@ namespace ck_pmg_processor_symbol_shapes
         { return nullptr; }
 
         auto MeshComponent = UCk_Utils_Object_UE::Request_CreateNewObject<UProceduralMeshComponent>(
-            ck::pmg::Get_MeshComponentOuter(World, InHandle), UProceduralMeshComponent::StaticClass(), nullptr,
+            UCk_Utils_Pmg_DebugShape_UE::Get_MeshComponentOuter(World, InHandle), UProceduralMeshComponent::StaticClass(), nullptr,
             FCk_ObjectPooling_PoolParams{}.Set_RecyclePolicy(ECk_ObjectPooling_RecyclePolicy::DestroyOnRelease), nullptr);
 
         CK_ENSURE_IF_NOT(ck::IsValid(MeshComponent), TEXT("Failed to create ProceduralMeshComponent for entity [{}]"), InHandle)

@@ -1,6 +1,7 @@
 #pragma once
 
-#include "CkPmg_Fragment_Data.h"
+#include "CkPmg_Fragment_Data_Donut.h"
+#include "CkPmg_Fragment_Data_DebugShapes.h"
 
 #include "CkCore/Chrono/CkChrono.h"
 
@@ -302,22 +303,6 @@ namespace ck
     public:
         CK_PROPERTY_GET(_Requests);
     };
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-class UWorld;
-
-namespace ck::pmg
-{
-    // Component outer for a PMG shape's UProceduralMeshComponent: the per-owner selection-proxy
-    // host when the shape opted in via FTag_Pmg_EditorSelectionHandle (stamped on the entity or
-    // any lifetime ancestor — composite shapes render through child entities; editor previews
-    // only), the World otherwise — owner-less and therefore click-through, the default.
-    CKPMG_API auto
-    Get_MeshComponentOuter(
-        UWorld* InWorld,
-        const FCk_Handle& InHandle) -> UObject*;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

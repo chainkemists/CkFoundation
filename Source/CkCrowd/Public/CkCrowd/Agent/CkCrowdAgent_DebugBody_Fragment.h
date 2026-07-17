@@ -2,13 +2,13 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkPmg/CkPmg_Fragment_Data.h"
+#include "CkPmg/CkPmg_Fragment_Data_DebugShapes.h"
 
 #include "CoreMinimal.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// FCk_Handle_Pmg_DebugShape comes from CkPmg/CkPmg_Fragment_Data.h (above) — it's a stored
+// FCk_Handle_Pmg_DebugShape comes from CkPmg/CkPmg_Fragment_Data_DebugShapes.h (above) — it's a stored
 // member, not a forward-declarable pointer.
 
 namespace ck

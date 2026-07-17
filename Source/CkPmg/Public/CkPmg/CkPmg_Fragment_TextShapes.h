@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkPmg_Fragment_Data.h"   // ECk_Pmg_TextAlign, ECk_Plane_Axis, and the CK_* macros (transitively)
+#include "CkPmg_Fragment_Data_DebugShapes.h"   // ECk_Pmg_TextAlign, ECk_Plane_Axis, and the CK_* macros (transitively)
 
 #include "UObject/StrongObjectPtr.h"
 

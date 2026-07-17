@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkPmg_Fragment_Data.h"
+#include "CkPmg_Fragment_Data_DebugShapes.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 
