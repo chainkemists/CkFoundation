@@ -6,6 +6,7 @@
 #include "CkEcs/Registry/CkRegistry.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
+#include "CkJolt/Body/CkJoltBody_ContactRouter.h"
 #include "CkJolt/Body/CkJoltBody_Fragment_Data.h"
 #include "CkJolt/CkJolt_ActivationEvent.h"
 #include "CkJolt/CkJolt_Log.h"
@@ -29,6 +30,42 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_CYCLE_STAT(TEXT("Jolt_Subsystem_Tick"), STAT_CkJolt_SubsystemTick, STATGROUP_CkJolt);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_jolt_contactlistener
+{
+    // Fills the contact-detail fields shared by Added and Persisted events: sensor flags, penetration depth,
+    // and the closing speed along the contact normal (UE units/s).
+    static auto Fill_ContactDetail(
+        FCk_Jolt_ContactEvent& InOutEvent,
+        const JPH::Body& InBody1,
+        const JPH::Body& InBody2,
+        const JPH::ContactManifold& InManifold)
+        -> void
+    {
+        InOutEvent.IsSensor1 = InBody1.IsSensor();
+        InOutEvent.IsSensor2 = InBody2.IsSensor();
+        InOutEvent.PenetrationDepth = InManifold.mPenetrationDepth;
+
+        // Closing velocity along the contact normal. Prefer the velocity at the actual contact point; when
+        // the manifold carries no contact points yet, fall back to the bodies' COM linear velocities.
+        const auto RelativeVelocity = [&]() -> JPH::Vec3
+        {
+            if (InManifold.mRelativeContactPointsOn1.size() > 0)
+            {
+                const auto ContactPoint = InManifold.GetWorldSpaceContactPointOn1(0);
+                return InBody2.GetPointVelocity(ContactPoint) - InBody1.GetPointVelocity(ContactPoint);
+            }
+            return InBody2.GetLinearVelocity() - InBody1.GetLinearVelocity();
+        }();
+
+        // ck::jolt::Conv is a Z-up passthrough with no unit scale (UE cm == Jolt units in this world), so the
+        // normal-projected speed is already in UE units/s; use the same vector Conv on both operands.
+        InOutEvent.RelativeNormalVelocity = static_cast<float>(
+            FVector::DotProduct(ck::jolt::Conv(RelativeVelocity), ck::jolt::Conv(InManifold.mWorldSpaceNormal)));
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -86,6 +123,8 @@ public:
 
         Event.WorldSpaceNormal = ck::jolt::Conv(inManifold.mWorldSpaceNormal);
 
+        ck_jolt_contactlistener::Fill_ContactDetail(Event, inBody1, inBody2, inManifold);
+
         {
             FScopeLock Lock(&_QueueLock);
             _BodyIdToUserData.Add(Event.Body1IndexAndSeq, Event.Body1UserData);
@@ -110,6 +149,10 @@ public:
         Event.Type = FCk_Jolt_ContactEvent::EType::Persisted;
         Event.Body1UserData = inBody1.GetUserData();
         Event.Body2UserData = inBody2.GetUserData();
+        // Populated for Persisted (not just Added/Removed) so the per-body signal routers can disambiguate
+        // which of an entity's bodies (JoltBody vs. Probe) this contact belongs to.
+        Event.Body1IndexAndSeq = inBody1.GetID().GetIndexAndSequenceNumber();
+        Event.Body2IndexAndSeq = inBody2.GetID().GetIndexAndSequenceNumber();
 
         Event.ContactPointsOn1 = ck::algo::Transform<TArray<FVector>>(
             inManifold.mRelativeContactPointsOn1.begin(),
@@ -128,6 +171,8 @@ public:
             });
 
         Event.WorldSpaceNormal = ck::jolt::Conv(inManifold.mWorldSpaceNormal);
+
+        ck_jolt_contactlistener::Fill_ContactDetail(Event, inBody1, inBody2, inManifold);
 
         {
             FScopeLock Lock(&_QueueLock);
@@ -456,6 +501,20 @@ auto
     });
 
     _EcsWorldSubsystem->Get_Registry().SetContext<TSharedPtr<ck::FJoltWorld>>(_JoltWorld);
+
+    // Route drained contact events into per-JoltBody contact signals. Weak self-capture so a torn-down
+    // subsystem is never invoked by the router registry; the transient entity is resolved at drain time
+    // (mirrors the SpatialQuery probe bridge). Runs game-thread inside FProcessor_JoltWorld_DrainEvents.
+    const auto WeakThis = TWeakObjectPtr<UCk_Jolt_Subsystem>{this};
+    RegisterContactRouter(TEXT("JoltBody.Signals"),
+        [WeakThis](const TArray<FCk_Jolt_ContactEvent>& InEvents)
+        {
+            auto* Self = WeakThis.Get();
+            if (Self == nullptr || ck::Is_NOT_Valid(Self->_EcsWorldSubsystem))
+            { return; }
+
+            ck::jolt_body::RouteContactEvents(Self->_EcsWorldSubsystem->Get_TransientEntity(), InEvents);
+        });
 
 #if JPH_DEBUG_RENDERER
     if (ck::Is_NOT_Valid(JPH::DebugRenderer::sInstance, ck::IsValid_Policy_NullptrOnly{}))

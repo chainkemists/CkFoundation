@@ -1,19 +1,48 @@
 #include "CkJoltWorld.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Payload/CkPayload.h"
 
 #include "CkEcs/Entity/CkEntity.h"
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Registry/CkRegistry.h"
 
 #include "CkJolt/Body/CkJoltBody_Fragment.h"
+#include "CkJolt/Character/CkJoltCharacter_Fragment.h"
+#include "CkJolt/Character/CkJoltCharacter_Utils.h"
+#include "CkJolt/Character/CkJoltCharacterContactListener.h"
 #include "CkJolt/CkJolt_Utils.h"
 
 #include <Jolt/Jolt.h>
 #include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/Body/BodyFilter.h>
 #include <Jolt/Physics/Body/BodyInterface.h>
 #include <Jolt/Physics/Body/BodyType.h>
+#include <Jolt/Physics/Collision/ObjectLayer.h>
+#include <Jolt/Physics/Collision/ShapeFilter.h>
+#include <Jolt/Physics/Character/CharacterVirtual.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_jolt_world
+{
+    // Jolt's ground-state enum ordering differs from the Ck mirror's — convert explicitly (never a cast).
+    auto
+        Conv_GroundState(
+            JPH::CharacterBase::EGroundState InState)
+        -> ECk_JoltCharacter_GroundState
+    {
+        switch (InState)
+        {
+            case JPH::CharacterBase::EGroundState::OnGround:      return ECk_JoltCharacter_GroundState::OnGround;
+            case JPH::CharacterBase::EGroundState::OnSteepGround: return ECk_JoltCharacter_GroundState::OnSteepSlope;
+            case JPH::CharacterBase::EGroundState::NotSupported:  return ECk_JoltCharacter_GroundState::NotSupported;
+            case JPH::CharacterBase::EGroundState::InAir:         return ECk_JoltCharacter_GroundState::InAir;
+        }
+        return ECk_JoltCharacter_GroundState::InAir;
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -67,7 +96,12 @@ namespace ck
         , _DrainQueueFn(MoveTemp(InParams.DrainQueueFn))
         , _DrainActivationQueueFn(MoveTemp(InParams.DrainActivationQueueFn))
     {
+        // The one shared CharacterContactListener; every CharacterVirtual is pointed at it via SetListener.
+        _CharacterContactListener = MakeUnique<CkJoltCharacterContactListener>(this);
     }
+
+    FJoltWorld::
+        ~FJoltWorld() = default;
 
     auto
         FJoltWorld::
@@ -88,6 +122,7 @@ namespace ck
         _World = nullptr;
         _ContactRouters.Empty();
         _PoseBuffer.Empty();
+        _CharacterRegistry.Empty();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -137,7 +172,10 @@ namespace ck
         if (Events.IsEmpty())
         { return; }
 
-        for (const auto& Router : _ContactRouters)
+        // Routers run user code inline (signal handlers) which may Register/Unregister routers — iterate a
+        // copy so a mid-broadcast registry mutation cannot dangle the loop.
+        const auto RoutersCopy = _ContactRouters;
+        for (const auto& Router : RoutersCopy)
         { Router.Value(Events); }
     }
 
@@ -308,6 +346,261 @@ namespace ck
 
         for (const auto Key : DeadKeys)
         { _PoseBuffer.Remove(Key); }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FJoltWorld::
+        Find_CharacterEntry(
+            uint64 InUserData)
+        -> FCk_Jolt_CharacterEntry*
+    {
+        return _CharacterRegistry.FindByPredicate([&](const FCk_Jolt_CharacterEntry& InEntry)
+        {
+            return InEntry.UserData == InUserData;
+        });
+    }
+
+    auto
+        FJoltWorld::
+        Register_Character(
+            const FCk_Jolt_CharacterEntry& InEntry)
+        -> void
+    {
+        _CharacterRegistry.Emplace(InEntry);
+    }
+
+    auto
+        FJoltWorld::
+        Unregister_Character(
+            uint64 InUserData)
+        -> void
+    {
+        _CharacterRegistry.RemoveAll([&](const FCk_Jolt_CharacterEntry& InEntry)
+        {
+            return InEntry.UserData == InUserData;
+        });
+    }
+
+    auto
+        FJoltWorld::
+        Push_CharacterIntent(
+            uint64 InUserData,
+            const FVector& InMoveVelocity,
+            ECk_JoltCharacter_PushPolicy InPushPolicy,
+            bool InArmJump,
+            float InJumpVelocity)
+        -> void
+    {
+        auto* Entry = Find_CharacterEntry(InUserData);
+        if (Entry == nullptr)
+        { return; }
+
+        Entry->MoveVelocity = InMoveVelocity;
+        Entry->PushPolicy = InPushPolicy;
+
+        // A jump is one-shot: only ARM here (the step loop consumes it). Never clear HasJump on a no-arm
+        // frame, else a jump landing on a zero-step frame would be dropped before the next step consumes it.
+        if (InArmJump)
+        {
+            Entry->HasJump = true;
+            Entry->JumpVelocity = InJumpVelocity;
+        }
+    }
+
+    auto
+        FJoltWorld::
+        Snap_CharacterOutPose(
+            uint64 InUserData,
+            const FVector& InLocation,
+            const FQuat& InRotation)
+        -> void
+    {
+        auto* Entry = Find_CharacterEntry(InUserData);
+        if (Entry == nullptr)
+        { return; }
+
+        Entry->OutLocation = InLocation;
+        Entry->OutRotation = InRotation;
+        Entry->DirtyThisFrame = false;
+    }
+
+    auto
+        FJoltWorld::
+        Get_CharacterPushPolicy(
+            const JPH::CharacterVirtual* InCharacter) const
+        -> ECk_JoltCharacter_PushPolicy
+    {
+        const auto* Entry = _CharacterRegistry.FindByPredicate([&](const FCk_Jolt_CharacterEntry& InEntry)
+        {
+            return InEntry.Character == InCharacter;
+        });
+
+        return Entry != nullptr ? Entry->PushPolicy : ECk_JoltCharacter_PushPolicy::PushAndBePushed;
+    }
+
+    auto
+        FJoltWorld::
+        Get_CharacterContactListener() const
+        -> JPH::CharacterContactListener*
+    {
+        return _CharacterContactListener.Get();
+    }
+
+    auto
+        FJoltWorld::
+        DoStepCharacters_AnyThread(
+            float InFixedDt)
+        -> void
+    {
+        if (_CharacterRegistry.IsEmpty())
+        { return; }
+
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+        if (NOT PhysicsSystem.IsValid() || _TempAllocator == nullptr)
+        { return; }
+
+        // Gravity is READ from the physics system — already Z-up cm since Phase 3's SetGravity fix (NOT
+        // hardcoded; respects per-world gravity overrides).
+        const auto Gravity = PhysicsSystem->GetGravity();
+
+        // ExtendedUpdateSettings converted from the Jolt-sample Y-up-METRES defaults to this world's
+        // Z-up-CENTIMETRES. Jolt defaults (CharacterVirtual.h ExtendedUpdateSettings):
+        //   mStickToFloorStepDown  { 0, -0.5, 0 } m Y-up  ->  ( 0, 0, -50 ) cm Z-up
+        //   mWalkStairsStepUp      { 0,  0.4, 0 } m Y-up  ->  ( 0, 0,  40 ) cm Z-up
+        //   mWalkStairsMinStepForward   0.02 m         ->  2 cm
+        //   mWalkStairsStepForwardTest  0.15 m         ->  15 cm
+        // Remaining scalar fields keep their (unit-agnostic / cos-angle) defaults.
+        auto ExtendedSettings = JPH::CharacterVirtual::ExtendedUpdateSettings{};
+        ExtendedSettings.mStickToFloorStepDown     = JPH::Vec3(0.0f, 0.0f, -50.0f);
+        ExtendedSettings.mWalkStairsStepUp         = JPH::Vec3(0.0f, 0.0f,  40.0f);
+        ExtendedSettings.mWalkStairsMinStepForward = 2.0f;
+        ExtendedSettings.mWalkStairsStepForwardTest = 15.0f;
+
+        for (auto& Entry : _CharacterRegistry)
+        {
+            auto* Character = Entry.Character;
+            if (Character == nullptr)
+            { continue; }
+
+            auto Velocity = Character->GetLinearVelocity();
+            const auto GroundState = Character->GetGroundState();
+
+            if (GroundState == JPH::CharacterBase::EGroundState::OnGround)
+            {
+                // Grounded: desired horizontal input + the ground's own velocity (moving platforms), no fall.
+                Velocity = ck::jolt::Conv(Entry.MoveVelocity) + Character->GetGroundVelocity();
+            }
+            else
+            {
+                // Airborne: retain horizontal momentum, integrate gravity into the vertical component.
+                Velocity = JPH::Vec3(Velocity.GetX(), Velocity.GetY(), Velocity.GetZ() + Gravity.GetZ() * InFixedDt);
+            }
+
+            if (Entry.HasJump && Character->IsSupported())
+            {
+                // JumpVelocity is uu/s (+Z); Conv is a Z-up passthrough so it adds straight onto the Z axis.
+                Velocity = JPH::Vec3(Velocity.GetX(), Velocity.GetY(), Velocity.GetZ() + Entry.JumpVelocity);
+                Entry.HasJump = false;
+            }
+
+            Character->SetLinearVelocity(Velocity);
+
+            const auto BroadPhaseFilter = PhysicsSystem->GetDefaultBroadPhaseLayerFilter(JPH::ObjectLayer{Entry.ObjectLayer});
+            const auto LayerFilter      = PhysicsSystem->GetDefaultLayerFilter(JPH::ObjectLayer{Entry.ObjectLayer});
+
+            Character->ExtendedUpdate(
+                InFixedDt,
+                Gravity,
+                ExtendedSettings,
+                BroadPhaseFilter,
+                LayerFilter,
+                JPH::BodyFilter{},
+                JPH::ShapeFilter{},
+                *_TempAllocator);
+
+            Entry.OutLocation       = ck::jolt::Conv(Character->GetPosition());
+            Entry.OutRotation       = ck::jolt::Conv(Character->GetRotation());
+            Entry.OutGroundState    = Character->GetGroundState();
+            Entry.OutGroundNormal   = ck::jolt::Conv(Character->GetGroundNormal());
+            Entry.OutGroundVelocity = ck::jolt::Conv(Character->GetGroundVelocity());
+            Entry.DirtyThisFrame    = true;
+        }
+    }
+
+    auto
+        FJoltWorld::
+        DoApplyCharacterPoses_GameThread(
+            const FCk_Handle& InTransientEntity)
+        -> void
+    {
+        if (_CharacterRegistry.IsEmpty())
+        { return; }
+
+        const auto RegView = InTransientEntity.Get_RegistryView();
+
+        for (auto& Entry : _CharacterRegistry)
+        {
+            if (NOT Entry.DirtyThisFrame)
+            { continue; }
+
+            // UserData 0 = NO entity. Raw entity id 0 (index 0, version 0) is ALWAYS the registry's transient
+            // root (a live entity), so resolving it would mis-attribute the pose — guard first (mirrors the
+            // contact-router / query resolve sites).
+            if (Entry.UserData == 0)
+            {
+                Entry.DirtyThisFrame = false;
+                continue;
+            }
+
+            // UserData is a raw (versioned) entity id; a snapshot load can leave a stale id — non-ensuring
+            // liveness check first (mirrors DoApplyPoseBuffer_GameThread).
+            const auto Entity = FCk_Entity{FCk_Entity::IdType{static_cast<FCk_Entity::IdType>(Entry.UserData)}};
+            if (NOT RegView.IsValid(Entity))
+            {
+                Entry.DirtyThisFrame = false;
+                continue;
+            }
+
+            auto Handle = InTransientEntity.Get_ValidHandle(Entity.Get_ID());
+            if (ck::Is_NOT_Valid(Handle) ||
+                NOT Handle.Has<ck::FFragment_JoltCharacter_Current>() ||
+                NOT Handle.Has<ck::FFragment_JoltBody_StepPose>())
+            {
+                Entry.DirtyThisFrame = false;
+                continue;
+            }
+
+            // Shared step-pose reuse: a character rides the JoltBody interpolation path
+            // (FProcessor_JoltBody_WritebackInterpolated), so write the SAME StepPose fragment + dirty tag.
+            // prev = old curr, curr = this frame's out pose.
+            auto& Pose = Handle.Get<ck::FFragment_JoltBody_StepPose>();
+            Pose.Set_PrevLocation(Pose.Get_CurrLocation())
+                .Set_PrevRotation(Pose.Get_CurrRotation())
+                .Set_CurrLocation(Entry.OutLocation)
+                .Set_CurrRotation(Entry.OutRotation);
+
+            Handle.AddOrGet<ck::FTag_JoltBody_TransformDirty>();
+
+            // Mirror ground normal/velocity onto Current every dirty frame (BP-safe reads via Get_*).
+            auto& Current = Handle.Get<ck::FFragment_JoltCharacter_Current>();
+            Current.Set_GroundNormalMirror(Entry.OutGroundNormal);
+            Current.Set_GroundVelocityMirror(Entry.OutGroundVelocity);
+
+            const auto NewGroundState = ck_jolt_world::Conv_GroundState(Entry.OutGroundState);
+            if (Current.Get_GroundStateMirror() != NewGroundState)
+            {
+                Current.Set_GroundStateMirror(NewGroundState);
+
+                // The game-thread apply pass is the deterministic broadcast point for the ground-state edge.
+                auto CharHandle = UCk_Utils_JoltCharacter_UE::Cast(Handle);
+                UUtils_Signal_OnJoltCharacterGroundStateChanged::Broadcast(
+                    CharHandle, ck::MakePayload(CharHandle, NewGroundState));
+            }
+
+            Entry.DirtyThisFrame = false;
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------

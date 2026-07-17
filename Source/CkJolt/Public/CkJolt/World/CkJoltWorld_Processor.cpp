@@ -76,6 +76,7 @@ namespace ck
 
         // Dirty-flag guarded: a no-op in sync mode because Step already applied + cleared this frame's poses.
         JoltWorld->DoApplyPoseBuffer_GameThread(_TransientEntity);
+        JoltWorld->DoApplyCharacterPoses_GameThread(_TransientEntity);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -190,11 +191,13 @@ namespace ck
         const auto FixedHz = FMath::Max(1, UCk_Utils_Jolt_ProjectSettings::Get_FixedTimestepHz());
         const auto FixedDt = 1.0f / static_cast<float>(FixedHz);
 
-        // 5. Run the step batch: N fixed sub-steps, each an Update followed by a pose capture.
+        // 5. Run the step batch: N fixed sub-steps. Each sub-step advances the characters (ExtendedUpdate)
+        //    BEFORE the rigid-body world Update, then captures the body poses.
         const auto StepLoop = [JoltWorld, FixedDt, NumSteps]()
         {
             for (auto Step = 0; Step < NumSteps; ++Step)
             {
+                JoltWorld->DoStepCharacters_AnyThread(FixedDt);
                 JoltWorld->DoPhysicsUpdate(FixedDt);
                 JoltWorld->DoCapturePoses_AnyThread();
             }
@@ -213,6 +216,7 @@ namespace ck
             SCOPE_CYCLE_COUNTER(STAT_CkJolt_Update);
             StepLoop();
             JoltWorld->DoApplyPoseBuffer_GameThread(_TransientEntity);
+            JoltWorld->DoApplyCharacterPoses_GameThread(_TransientEntity);
         }
     }
 }

@@ -61,6 +61,47 @@ public:
         FRotator InRotation,
         FCk_Jolt_ShapeDimensions InShape,
         FCk_Jolt_QueryFilter InFilter);
+
+    /// All passing hits along a ray, sorted near->far, honoring UE channel responses.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Jolt",
+              meta = (WorldContext = "InWorldContextObject"),
+              DisplayName="[Ck][Jolt] Ray Cast (Multi, By Channel)")
+    static TArray<FCk_Jolt_HitResult>
+    Get_RayCastMulti(
+        const UObject* InWorldContextObject,
+        FVector InStart,
+        FVector InEnd,
+        FCk_Jolt_QueryFilter InFilter);
+
+    /// All hits sweeping a shape from Start to End, sorted near->far, honoring UE channel responses.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Jolt",
+              meta = (WorldContext = "InWorldContextObject"),
+              DisplayName="[Ck][Jolt] Shape Cast (Multi, By Channel)")
+    static TArray<FCk_Jolt_HitResult>
+    Get_ShapeCastMulti(
+        const UObject* InWorldContextObject,
+        FVector InStart,
+        FVector InEnd,
+        FRotator InRotation,
+        FCk_Jolt_ShapeDimensions InShape,
+        FCk_Jolt_QueryFilter InFilter);
+
+    /// Live entities whose bodies overlap a shape placed at a location (deduped). Bodies with no live
+    /// entity (e.g. baked static-world bodies) are dropped. Pass MinResponse = Overlap in the filter for
+    /// UE overlap semantics (the default filter is Block = trace semantics).
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Jolt",
+              meta = (WorldContext = "InWorldContextObject"),
+              DisplayName="[Ck][Jolt] Overlap Entities (By Channel)")
+    static TArray<FCk_Handle>
+    Get_OverlapEntities(
+        const UObject* InWorldContextObject,
+        FVector InLocation,
+        FRotator InRotation,
+        FCk_Jolt_ShapeDimensions InShape,
+        FCk_Jolt_QueryFilter InFilter);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
