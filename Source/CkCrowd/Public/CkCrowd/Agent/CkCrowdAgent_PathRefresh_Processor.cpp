@@ -114,7 +114,10 @@ namespace ck
         if (NOT IsValid(Settings) ||
             Settings->Get_PathRefreshMode() != ECk_CrowdPathRefreshMode::Enabled ||
             Settings->Get_StationaryMarkupMode() != ECk_CrowdStationaryMarkupMode::Enabled)
-        { return {}; }
+        {
+            ck::crowd::Verbose(TEXT("EscapedQueryStart: disabled by settings (self at {})"), InSelfLocation);
+            return {};
+        }
 
         auto Centers = TArray<FVector, TInlineAllocator<32>>{};
         auto Radii = TArray<float, TInlineAllocator<32>>{};
@@ -123,7 +126,14 @@ namespace ck
         {
             if (InEntity == InSelfEntity)
             { return; }
-            if (NOT InMarkup.Get_Markup().IsValid() || NOT InMarkup.Get_ConfirmedOnMesh())
+            // PAINTED is enough here — unlike the re-path trigger (which must wait for the mesh
+            // to actually price a disc before spending its one-shot serial), the escape is pure
+            // geometry: planning from a pushed-out start is valid the moment the disc exists and
+            // merely arrives early when the rebake hasn't landed yet. Gating on ConfirmedOnMesh
+            // opened a paint→confirm window where a fresh MoveTo from inside the band planned
+            // "through" — and a repaint (e.g. push-apart drift) reopened that window by resetting
+            // the flag.
+            if (NOT InMarkup.Get_Markup().IsValid())
             { return; }
 
             Centers.Add(InMarkup.Get_MarkupLocation());
@@ -131,7 +141,10 @@ namespace ck
         });
 
         if (Centers.IsEmpty())
-        { return {}; }
+        {
+            ck::crowd::Verbose(TEXT("EscapedQueryStart: no painted discs in view (self at {})"), InSelfLocation);
+            return {};
+        }
 
         const auto IsInsideAny = [&](const FVector& InPoint) -> bool
         {
@@ -144,42 +157,81 @@ namespace ck
         };
 
         if (NOT IsInsideAny(InSelfLocation))
-        { return {}; }
+        {
+            ck::crowd::Verbose(TEXT("EscapedQueryStart: self at {} not inside any of {} discs (first disc centre {}, r={})"),
+                InSelfLocation, Centers.Num(), Centers[0], Radii[0]);
+            return {};
+        }
         if (IsInsideAny(InGoal))
-        { return {}; }
+        {
+            ck::crowd::Verbose(TEXT("EscapedQueryStart: goal {} is itself inside a disc — no escape"), InGoal);
+            return {};
+        }
 
-        // Iterative push-out of the disc union — the same shape push-apart uses for bodies. The
-        // escape lands on whichever side the agent already leans, i.e. the shortest way out.
+        // Ray-march out of the disc union along the direction the agent already leans (away from
+        // the nearest disc centre) — the shortest way out. NOT a fixed-point pairwise push: for a
+        // painted LINE the discs' push-out zones overlap (spacing < 2x required radius), so each
+        // pairwise push lands inside the neighbouring disc's zone and the iteration ping-pongs
+        // between neighbours until the cap — the escape then gave up on exactly the scenario the
+        // tier exists for. Along a fixed ray each disc (convex) is exited at most once, so the
+        // march provably terminates within one step per disc.
         constexpr auto MarginUu = 10.0f;
-        constexpr auto MaxIterations = 4;
-        auto Escape = InSelfLocation;
-        for (auto Iteration = 0; Iteration < MaxIterations; ++Iteration)
+
+        auto NearestIdx = 0;
+        auto NearestDistSq = TNumericLimits<double>::Max();
+        for (auto Idx = 0; Idx < Centers.Num(); ++Idx)
+        {
+            const auto DistSq = FVector::DistSquared2D(InSelfLocation, Centers[Idx]);
+            if (DistSq < NearestDistSq)
+            {
+                NearestDistSq = DistSq;
+                NearestIdx = Idx;
+            }
+        }
+
+        const auto LeanDir = FVector2D{InSelfLocation} - FVector2D{Centers[NearestIdx]};
+        const auto RayDir = LeanDir.SizeSquared() > UE_KINDA_SMALL_NUMBER
+            ? LeanDir.GetSafeNormal()
+            : FVector2D{1.0f, 0.0f};
+
+        auto Point = FVector2D{InSelfLocation};
+        for (auto Step = 0; Step <= Centers.Num(); ++Step)
         {
             auto Moved = false;
             for (auto Idx = 0; Idx < Centers.Num(); ++Idx)
             {
-                const auto& Center = Centers[Idx];
                 const auto Required = Radii[Idx] + InAgentRadius + MarginUu;
-                const auto ToEscape = FVector{Escape.X - Center.X, Escape.Y - Center.Y, 0.0};
-                const auto Dist = ToEscape.Size2D();
-                if (Dist >= Required)
+                const auto Centre2D = FVector2D{Centers[Idx]};
+                const auto ToCentre = Centre2D - Point;
+                if (ToCentre.SizeSquared() >= Required * Required)
                 { continue; }
 
-                const auto Dir = Dist > KINDA_SMALL_NUMBER
-                    ? ToEscape / Dist
-                    : FVector{1.0, 0.0, 0.0};
-                Escape = FVector{Center.X, Center.Y, Escape.Z} + Dir * Required;
+                // Inside this disc's push-out zone: advance to the ray's FAR intersection with
+                // the zone circle. |Point + t*Dir - C| = Required, larger root — guaranteed real
+                // because the point is inside.
+                const auto B = FVector2D::DotProduct(ToCentre, RayDir);
+                const auto Discriminant = B * B + (Required * Required - ToCentre.SizeSquared());
+                const auto ExitT = B + FMath::Sqrt(Discriminant);
+                Point += RayDir * (ExitT + UE_KINDA_SMALL_NUMBER);
                 Moved = true;
             }
             if (NOT Moved)
             { break; }
         }
 
-        // Deep inside a blob the push-out may not converge — planning from the real location is
-        // the status quo, not a failure.
-        if (IsInsideAny(Escape))
-        { return {}; }
+        const auto Escape = FVector{Point.X, Point.Y, InSelfLocation.Z};
 
+        // Unreachable by construction (forward marching exits each convex disc at most once),
+        // kept as a safety net: planning from the real location is the status quo, not a failure.
+        if (IsInsideAny(Escape))
+        {
+            ck::crowd::Verbose(TEXT("EscapedQueryStart: ray-march from {} did not exit the union (last try {})"),
+                InSelfLocation, Escape);
+            return {};
+        }
+
+        ck::crowd::Verbose(TEXT("EscapedQueryStart: self {} escapes to {} ({} discs)"),
+            InSelfLocation, Escape, Centers.Num());
         return Escape;
     }
 
@@ -287,6 +339,10 @@ namespace ck
         }
         else
         {
+            // Park the slot at Pending so OnPathResolved can't consume the stale Ready result —
+            // which is the exact path that crosses the fresh markup, defeating this re-path.
+            FCk_Nav_Algorithm::MarkPathPending(NonConstHandle);
+
             auto Request = FCk_Request_Nav_FindPath{Goal};
             Request.Set_QueryFilter(InParams.Get_NavQueryFilter());
 
