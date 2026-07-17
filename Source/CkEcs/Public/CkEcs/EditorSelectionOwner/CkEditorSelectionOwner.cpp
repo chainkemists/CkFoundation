@@ -5,7 +5,9 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Subsystem/CkEcsEditor_Subsystem.h"
 
+#include <Engine/World.h>
 #include <GameFramework/Actor.h>
 #include <UObject/ObjectKey.h>
 
@@ -129,6 +131,26 @@ namespace ck::editor_selection_owner
         {
             Proxy->PushSelectionToProxies();
         }
+    }
+
+    auto
+        TryGet_SelectionProxyHostActor(
+            const UWorld* InWorld,
+            const FCk_Handle& InHandle)
+        -> AActor*
+    {
+        if (ck::Is_NOT_Valid(InWorld) || InWorld->WorldType != EWorldType::Editor)
+        { return nullptr; }
+
+        auto* SelectionOwner = TryGet(InHandle);
+        if (ck::Is_NOT_Valid(SelectionOwner))
+        { return nullptr; }
+
+        auto* EditorSubsystem = InWorld->GetSubsystem<UCk_EditorEcsWorld_Subsystem_UE>();
+        if (ck::Is_NOT_Valid(EditorSubsystem))
+        { return nullptr; }
+
+        return EditorSubsystem->Get_SelectionProxyHostActor(SelectionOwner);
     }
 }
 #endif
