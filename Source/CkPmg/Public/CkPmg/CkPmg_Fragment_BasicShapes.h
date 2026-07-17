@@ -2,7 +2,7 @@
 
 #include "CkCore/Enums/CkEnums.h"
 
-#include "CkPmg/CkPmg_Fragment_Data.h"
+#include "CkPmg/CkPmg_Fragment_Data_DebugShapes.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 // Basic Shape Fragments (C++ only - not exposed to BP/AS)
