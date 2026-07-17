@@ -198,6 +198,19 @@ public:
     Get_ActiveGoal(
         const FCk_Handle_CrowdAgent& InAgent);
 
+    // True once the agent's stationary-markup cost disc is painted AND the rebuilt navmesh
+    // actually reports the crowd cost area at the disc's location (ground truth, not a timer —
+    // see FProcessor_CrowdAgent_PathRefresh). False while the agent is moving, before the
+    // stationary delay elapses, or while the async tile rebake is still in flight. Lets tests
+    // and gameplay gate on "this standing agent is genuinely priced into pathing right now"
+    // instead of guessing with settle timers.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Is Stationary Markup Confirmed")
+    static bool
+    Get_IsStationaryMarkupConfirmed(
+        const FCk_Handle_CrowdAgent& InAgent);
+
     // ---- Identity colour ---------------------------------------------------------------------
     //
     // Per-agent identity colour shared by every visualisation (capsule, breadcrumb path,

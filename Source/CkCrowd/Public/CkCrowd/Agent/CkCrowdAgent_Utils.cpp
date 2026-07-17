@@ -288,6 +288,25 @@ auto
 
 auto
     UCk_Utils_CrowdAgent_UE::
+    Get_IsStationaryMarkupConfirmed(
+        const FCk_Handle_CrowdAgent& InAgent)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InAgent),
+        TEXT("Invalid CrowdAgent handle [{}] passed to Get_IsStationaryMarkupConfirmed"), InAgent)
+    { return false; }
+
+    if (NOT InAgent.Has<ck::FFragment_CrowdAgent_NavMarkup>())
+    { return false; }
+
+    const auto& Markup = InAgent.Get<ck::FFragment_CrowdAgent_NavMarkup>();
+    return Markup.Get_Markup().IsValid() && Markup.Get_ConfirmedOnMesh();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
     Set_DebugColor(
         FCk_Handle_CrowdAgent& InAgent,
         FLinearColor InColor)
