@@ -105,6 +105,14 @@ namespace ck
     // TransientLineBatchComponent every frame via DrawDebugLine).
     CK_DEFINE_ECS_TAG(FTag_Pmg_DebugShape_LinesNeedBaking);
 
+    // Opt-in (Request_ActAsEditorSelectionHandle on the Donut/DebugShape utils): this shape's
+    // mesh component hosts on the per-owner selection-proxy actor in editor previews, so a
+    // viewport click on it selects the placed actor that owns the preview (see
+    // ck::FFragment_EditorSelectionOwner). Applies to any PMG shape entity — composite shapes
+    // honor a tag stamped anywhere up the lifetime chain. Default (no tag) stays owner-less and
+    // therefore click-through, so debug overlays never eat viewport clicks.
+    CK_DEFINE_ECS_TAG(FTag_Pmg_EditorSelectionHandle);
+
     // --------------------------------------------------------------------------------------------------------------------
 
     // Common properties shared by all debug shapes (C++ only - not exposed to BP/AS)
@@ -294,6 +302,22 @@ namespace ck
     public:
         CK_PROPERTY_GET(_Requests);
     };
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class UWorld;
+
+namespace ck::pmg
+{
+    // Component outer for a PMG shape's UProceduralMeshComponent: the per-owner selection-proxy
+    // host when the shape opted in via FTag_Pmg_EditorSelectionHandle (stamped on the entity or
+    // any lifetime ancestor — composite shapes render through child entities; editor previews
+    // only), the World otherwise — owner-less and therefore click-through, the default.
+    CKPMG_API auto
+    Get_MeshComponentOuter(
+        UWorld* InWorld,
+        const FCk_Handle& InHandle) -> UObject*;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

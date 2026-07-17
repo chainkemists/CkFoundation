@@ -34,6 +34,17 @@ public:
         UPARAM(ref) FCk_Handle& InOwner,
         const FCk_Fragment_Pmg_Donut_ParamsData& InParams);
 
+    // Opt this shape in as a click-selection handle for its editor preview's placed actor
+    // (see ck::FTag_Pmg_EditorSelectionHandle). Call right after Add/Create — the mesh
+    // component's outer is chosen once, when the shape's setup processor runs. No-op outside
+    // editor-preview worlds.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|Donut",
+              DisplayName="[Ck][Pmg][Donut] Request Act As Editor Selection Handle")
+    static FCk_Handle_Pmg_Donut
+    Request_ActAsEditorSelectionHandle(
+        UPARAM(ref) FCk_Handle_Pmg_Donut& InDonut);
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Pmg|Donut",
@@ -187,6 +198,18 @@ public:
     static bool
     Has(
         const FCk_Handle& InHandle);
+
+    // Opt this shape in as a click-selection handle for its editor preview's placed actor
+    // (see ck::FTag_Pmg_EditorSelectionHandle). Call right after the shape's Add/Create — the
+    // mesh component's outer is chosen once, when the shape's setup processor runs. Composite
+    // shapes propagate to their child entities' components automatically. No-op outside
+    // editor-preview worlds.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Request Act As Editor Selection Handle")
+    static FCk_Handle_Pmg_DebugShape
+    Request_ActAsEditorSelectionHandle(
+        UPARAM(ref) FCk_Handle_Pmg_DebugShape& InDebugShape);
 
 private:
     UFUNCTION(BlueprintCallable,
