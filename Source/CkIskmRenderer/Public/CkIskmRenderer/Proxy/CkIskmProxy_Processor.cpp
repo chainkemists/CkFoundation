@@ -1,7 +1,7 @@
 #include "CkIskmRenderer/Proxy/CkIskmProxy_Processor.h"
 
 #include "CkCore/Validation/CkIsValid.h"
-#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner.h"
+#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkEcsExt/SceneNode/CkSceneNode_Fragment.h"
@@ -120,7 +120,7 @@ namespace ck
         // teardown needs no extra bookkeeping. Submesh SKMCs outer to the same actor and follow.
         if (World->WorldType == EWorldType::Editor)
         {
-            if (auto* SelectionOwner = ck::editor_selection_owner::TryGet(InHandle);
+            if (auto* SelectionOwner = UCk_Utils_EditorSelectionOwner_UE::TryGet_SelectionOwner(InHandle);
                 ck::IsValid(SelectionOwner))
             {
                 if (auto* Subsystem = World->GetSubsystem<UCk_IskmRenderer_Subsystem_UE>();
