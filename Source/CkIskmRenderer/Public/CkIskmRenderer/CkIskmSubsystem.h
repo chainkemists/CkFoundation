@@ -8,8 +8,6 @@
 
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_Fragment_Data.h"
 
-#include <UObject/ObjectKey.h>
-
 #include "CkIskmSubsystem.generated.h"
 
 class UCk_IskmAnimCollection_Data;
@@ -128,8 +126,10 @@ private:
 
 #if WITH_EDITORONLY_DATA
 private:
-    // Weak values: the actors are owned by the world; entries self-heal via validity checks.
-    using FPerOwnerRendererKey = TPair<FObjectKey, FObjectKey>; // {DataAsset, SelectionOwner}
+    // Weak on both sides: the actors are owned by the world; entries self-heal via validity
+    // checks. TWeakObjectPtr keys compare by object index + serial, so entries stay addressable
+    // even while an owner is mid-undo or already destroyed.
+    using FPerOwnerRendererKey = TPair<TWeakObjectPtr<const UCk_IskmRenderer_Data>, TWeakObjectPtr<AActor>>; // {DataAsset, SelectionOwner}
     TMap<FPerOwnerRendererKey, TWeakObjectPtr<ACk_IskmRenderer_Actor_UE>> _PerOwnerRendererActors;
 #endif
 };
