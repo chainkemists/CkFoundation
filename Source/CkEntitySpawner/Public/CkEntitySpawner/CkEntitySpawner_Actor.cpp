@@ -54,7 +54,16 @@ namespace ck::entityspawner
         if (auto* Public = TryFind(FName{TEXT("SpawnTransform")}); ck::IsValid(Public, ck::IsValid_Policy_NullptrOnly{}))
         { return Public; }
 
-        return TryFind(FName{TEXT("_SpawnTransform")});
+        if (auto* Private = TryFind(FName{TEXT("_SpawnTransform")}); ck::IsValid(Private, ck::IsValid_Policy_NullptrOnly{}))
+        { return Private; }
+
+        // The CkIskmRenderer/CkTests gym scripts (and scripts authored from them) name the
+        // property InitialTransform — without resolving it, editor previews compose at world
+        // origin and rebuild-on-drop can't re-anchor them.
+        if (auto* PublicInitial = TryFind(FName{TEXT("InitialTransform")}); ck::IsValid(PublicInitial, ck::IsValid_Policy_NullptrOnly{}))
+        { return PublicInitial; }
+
+        return TryFind(FName{TEXT("_InitialTransform")});
     }
 }
 
@@ -125,10 +134,21 @@ auto
 {
     Super::PostEditMove(InIsFinished);
 
-    // Transform-only edit (drag in viewport): push the new transform onto the existing editor
-    // entity instead of rebuilding. Full rebuild is reserved for PostEditChangeProperty (non-
-    // transform field changes) and PostEditUndo. The in-drag (InIsFinished=false) and on-drop
-    // (InIsFinished=true) paths share the in-place writer.
+    if (InIsFinished)
+    {
+        // Drag-release / drop: full rebuild, not an in-place root write. Scripts that compose
+        // child entities with world-space transforms at construct time (the army/agent pattern —
+        // every CkIskmRenderer gym station) have no scene-node link to the root, so pushing the
+        // root transform can never reach them; only a re-construct at the new injected transform
+        // re-anchors the whole composition. Per-frame rebuilds during the drag are what corrupted
+        // registry pools historically — one rebuild on release is the safe middle.
+        EditorOnly_RebuildEntity();
+        return;
+    }
+
+    // Interactive drag (fires every frame): push the actor transform onto the existing editor
+    // entity in place. Root-attached previews track live; child-entity compositions snap on
+    // release via the rebuild above.
     EditorOnly_PushActorTransformToEntity();
 }
 
