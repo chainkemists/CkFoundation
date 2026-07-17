@@ -135,7 +135,12 @@ namespace ck
         { return; } // stencil range exhausted — already warned by the subsystem
 
         const auto ShadowIsm = IsmSubsystem->FindOrCreate_OutlineIsmComponent(
-            InParams.Get_IsmRenderer().Get(), Preset, Stencil);
+            InParams.Get_IsmRenderer().Get(), Preset, Stencil
+#if WITH_EDITOR
+            // Editor previews mirror into a shadow on their per-owner renderer (see the fragment note).
+            , InCurrent.Get_EditorSelectionOwnerKey()
+#endif
+            );
 
         if (ck::Is_NOT_Valid(ShadowIsm))
         {
