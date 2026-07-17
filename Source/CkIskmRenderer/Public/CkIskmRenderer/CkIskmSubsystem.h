@@ -8,6 +8,8 @@
 
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_Fragment_Data.h"
 
+#include <UObject/ObjectKey.h>
+
 #include "CkIskmSubsystem.generated.h"
 
 class UCk_IskmAnimCollection_Data;
@@ -42,6 +44,25 @@ public:
 
 protected:
     auto BeginPlay() -> void override;
+
+#if WITH_EDITOR
+public:
+    // Editor-world per-owner renderers redirect viewport clicks on their SKMCs to the placed
+    // actor whose preview they render (see ck::FFragment_EditorSelectionOwner) — clicking the
+    // preview mesh then selects/moves/deletes that actor like clicking its billboard.
+    auto
+    IsSelectionChild() const -> bool override;
+
+    auto
+    GetSelectionParent() const -> AActor* override;
+#endif
+
+#if WITH_EDITORONLY_DATA
+private:
+    // Non-UPROPERTY on purpose: this actor is transient and must never round-trip through the
+    // transaction buffer; the owner is a level actor whose lifetime the weak ptr observes.
+    TWeakObjectPtr<AActor> _EditorSelectionOwner;
+#endif
 
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = true))
@@ -84,9 +105,33 @@ public:
     ACk_IskmRenderer_Actor_UE*
     GetOrCreate_RendererActor(UCk_IskmRenderer_Data* InRendererData);
 
+#if WITH_EDITOR
+    // Editor-world variant: one renderer per (data asset, selection owner), so a viewport click
+    // on any of its SKMCs can redirect selection to the owner. Selection redirect is actor-level,
+    // so the split IS the instance-to-spawner mapping; editor previews are a handful of meshes,
+    // and runtime worlds always use the shared renderer above. SKMC release stays owner-derived
+    // (SKMC->GetOwner()), so proxies need no extra teardown bookkeeping.
+    auto
+    GetOrCreate_RendererActor_ForEditorSelectionOwner(
+        UCk_IskmRenderer_Data* InRendererData,
+        AActor* InSelectionOwner) -> ACk_IskmRenderer_Actor_UE*;
+#endif
+
+private:
+    auto
+    DoSpawn_RendererActor(
+        UCk_IskmRenderer_Data* InRendererData) -> ACk_IskmRenderer_Actor_UE*;
+
 private:
     UPROPERTY()
     TMap<TObjectPtr<UCk_IskmRenderer_Data>, TObjectPtr<ACk_IskmRenderer_Actor_UE>> _RendererActors;
+
+#if WITH_EDITORONLY_DATA
+private:
+    // Weak values: the actors are owned by the world; entries self-heal via validity checks.
+    using FPerOwnerRendererKey = TPair<FObjectKey, FObjectKey>; // {DataAsset, SelectionOwner}
+    TMap<FPerOwnerRendererKey, TWeakObjectPtr<ACk_IskmRenderer_Actor_UE>> _PerOwnerRendererActors;
+#endif
 };
 
 // ---- Subsystem accessor utility (matching ISM) ----

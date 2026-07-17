@@ -1,6 +1,10 @@
 #include "CkIskmSubsystem.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
+
+#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner.h"
+
 #include "CkIskmRenderer/CkIskmRenderer_Log.h"
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Fragment_Data.h"
 
@@ -17,6 +21,24 @@ auto
 {
     Super::BeginPlay();
 }
+
+#if WITH_EDITOR
+auto
+    ACk_IskmRenderer_Actor_UE::
+    IsSelectionChild() const
+    -> bool
+{
+    return _EditorSelectionOwner.IsValid();
+}
+
+auto
+    ACk_IskmRenderer_Actor_UE::
+    GetSelectionParent() const
+    -> AActor*
+{
+    return _EditorSelectionOwner.Get();
+}
+#endif
 
 auto
     ACk_IskmRenderer_Actor_UE::
@@ -105,16 +127,9 @@ auto
 
 auto
     UCk_IskmRenderer_Subsystem_UE::
-    GetOrCreate_RendererActor(UCk_IskmRenderer_Data* InRendererData)
+    DoSpawn_RendererActor(UCk_IskmRenderer_Data* InRendererData)
     -> ACk_IskmRenderer_Actor_UE*
 {
-    if (ck::Is_NOT_Valid(InRendererData))
-    { return nullptr; }
-    if (auto* Existing = _RendererActors.Find(InRendererData))
-    {
-        return *Existing;
-    }
-
     auto World = GetWorld();
     if (ck::Is_NOT_Valid(World, ck::IsValid_Policy_NullptrOnly{}))
     { return nullptr; }
@@ -128,10 +143,66 @@ auto
     if (ck::IsValid(NewActor))
     {
         NewActor->DoInitialize(InRendererData);
+    }
+    return NewActor;
+}
+
+auto
+    UCk_IskmRenderer_Subsystem_UE::
+    GetOrCreate_RendererActor(UCk_IskmRenderer_Data* InRendererData)
+    -> ACk_IskmRenderer_Actor_UE*
+{
+    if (ck::Is_NOT_Valid(InRendererData))
+    { return nullptr; }
+    if (auto* Existing = _RendererActors.Find(InRendererData))
+    {
+        return *Existing;
+    }
+
+    auto* NewActor = DoSpawn_RendererActor(InRendererData);
+
+    if (ck::IsValid(NewActor))
+    {
         _RendererActors.Add(InRendererData, NewActor);
     }
     return NewActor;
 }
+
+#if WITH_EDITOR
+auto
+    UCk_IskmRenderer_Subsystem_UE::
+    GetOrCreate_RendererActor_ForEditorSelectionOwner(
+        UCk_IskmRenderer_Data* InRendererData,
+        AActor* InSelectionOwner)
+    -> ACk_IskmRenderer_Actor_UE*
+{
+    if (ck::Is_NOT_Valid(InRendererData))
+    { return nullptr; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InSelectionOwner),
+        TEXT("Trying to GetOrCreate a per-owner IskmRenderer for an INVALID SelectionOwner (Data Asset [{}])"), InRendererData)
+    { return nullptr; }
+
+    const auto Key = FPerOwnerRendererKey{FObjectKey{InRendererData}, FObjectKey{InSelectionOwner}};
+
+    if (const auto* MaybeFound = _PerOwnerRendererActors.Find(Key);
+        MaybeFound != nullptr && MaybeFound->IsValid())
+    { return MaybeFound->Get(); }
+
+    auto* NewActor = DoSpawn_RendererActor(InRendererData);
+
+    if (ck::Is_NOT_Valid(NewActor))
+    { return nullptr; }
+
+    NewActor->_EditorSelectionOwner = InSelectionOwner;
+
+    ck::editor_selection_owner::RegisterProxyActor(InSelectionOwner, NewActor);
+
+    _PerOwnerRendererActors.Add(Key, NewActor);
+
+    return NewActor;
+}
+#endif
 
 auto
     UCk_Utils_IskmRenderer_Subsystem_UE::
