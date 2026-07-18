@@ -28,6 +28,10 @@ DECLARE_CYCLE_STAT(TEXT("JoltContacts_DrainQueue"), STAT_CkJolt_ContactsDrainQue
 DECLARE_CYCLE_STAT(TEXT("JoltPhysics_Update_Async"), STAT_CkJolt_UpdateAsync, STATGROUP_CkJolt);
 DECLARE_CYCLE_STAT(TEXT("JoltPhysics_Update"), STAT_CkJolt_Update, STATGROUP_CkJolt);
 
+// Benchmark stat (Phase 5): the whole fixed-step pump body — broadphase optimize + the N-sub-step batch
+// dispatch. Wraps the nested STAT_CkJolt_Update/_UpdateAsync (which time only the Update loop itself).
+DECLARE_CYCLE_STAT(TEXT("JoltWorld_Step"), STAT_CkJolt_WorldStep, STATGROUP_CkJolt);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_jolt_world_processor
@@ -175,6 +179,10 @@ namespace ck
         const auto World = JoltWorld->Get_World();
         if (ck::Is_NOT_Valid(World) || World->IsPaused())
         { return; }
+
+        // Times the fixed-step pump body: broadphase optimize + the sub-step batch dispatch (sync applies the
+        // poses here too; async only kicks the task). Zero-step frames return below without meaningful work.
+        SCOPE_CYCLE_COUNTER(STAT_CkJolt_WorldStep);
 
         // 2. Broadphase optimize if a bulk add/remove requested it. Safe: the async future was consumed upstream.
         if (JoltWorld->Get_OptimizeBroadPhaseRequested())
