@@ -2,6 +2,7 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
@@ -9,6 +10,11 @@
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkJolt/Body/CkJoltBody_Fragment.h"
+#include "CkJolt/CkJolt_Utils.h"
+#include "CkJolt/Subsystem/CkJolt_Subsystem.h"
+
+#include <Jolt/Jolt.h>
+#include <Jolt/Physics/PhysicsSystem.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -106,6 +112,37 @@ auto
     -> bool
 {
     return InJoltBody.Get<ck::FFragment_JoltBody_Current>().Get_BodyAdded();
+}
+
+auto
+    UCk_Utils_JoltBody_UE::
+    Get_LinearVelocity(
+        const FCk_Handle_JoltBody& InJoltBody)
+    -> FVector
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InJoltBody),
+        TEXT("Invalid JoltBody Handle passed to Get_LinearVelocity"))
+    { return FVector::ZeroVector; }
+
+    // Not-yet-added is a legitimate transient state (setup is deferred) — report zero, mirroring
+    // Get_SleepState's pre-setup behavior.
+    const auto& Current = InJoltBody.Get<ck::FFragment_JoltBody_Current>();
+    if (NOT Current.Get_BodyAdded())
+    { return FVector::ZeroVector; }
+
+    const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InJoltBody);
+    if (ck::Is_NOT_Valid(World))
+    { return FVector::ZeroVector; }
+
+    const auto JoltSubsystem = World->GetSubsystem<UCk_Jolt_Subsystem>();
+    if (ck::Is_NOT_Valid(JoltSubsystem, ck::IsValid_Policy_NullptrOnly{}))
+    { return FVector::ZeroVector; }
+
+    const auto PhysicsSystem = JoltSubsystem->Get_PhysicsSystem().Pin();
+    if (ck::Is_NOT_Valid(PhysicsSystem))
+    { return FVector::ZeroVector; }
+
+    return ck::jolt::Conv(PhysicsSystem->GetBodyInterface().GetLinearVelocity(Current.Get_BodyId()));
 }
 
 // --------------------------------------------------------------------------------------------------------------------

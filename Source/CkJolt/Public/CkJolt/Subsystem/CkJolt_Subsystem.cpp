@@ -350,6 +350,25 @@ static TAutoConsoleVariable<int32> CVarJoltEnableAsyncPhysicsUpdate(
 
 namespace ck_jolt_subsystem
 {
+    // Runtime debug-draw CVars. Mirrors the house C++ CVar pattern (FAutoConsoleVariableRef over a
+    // static in a filename-derived named namespace — see ck.SpatialQuery.PreviewAllProbesUsingJolt in
+    // CkSpatialQuery_Settings.cpp). Read game-thread in Tick; the subsystem draws when a consumer gate
+    // opts in OR Enabled is true. DrawBodies covers static AND dynamic bodies (no body filter).
+    namespace cvar
+    {
+        static bool DebugDrawEnabled = false;
+        static FAutoConsoleVariableRef CVar_DebugDrawEnabled(TEXT("ck.Jolt.DebugDraw.Enabled"),
+            DebugDrawEnabled,
+            TEXT("Draw the Jolt physics world (static AND dynamic bodies) via Jolt's debug renderer, "
+                 "independent of any consumer opt-in gate. Skipped during async physics frames."));
+
+        static bool DebugDrawSleepColoring = false;
+        static FAutoConsoleVariableRef CVar_DebugDrawSleepColoring(TEXT("ck.Jolt.DebugDraw.SleepColoring"),
+            DebugDrawSleepColoring,
+            TEXT("When drawing the Jolt world, color bodies by sleep state (JPH SleepColor: static grey, "
+                 "keyframed green, dynamic yellow, sleeping red) instead of motion type (MotionTypeColor)."));
+    }
+
     // Resolve a CVar override against a project setting default.
     // Checks the command line first (timing-independent), then the CVar value.
     // Returns the override if explicitly set (0 or 1), otherwise the project setting.
@@ -459,6 +478,23 @@ auto
     // Latent until Phase 3: probes are gravity-less kinematic sensors, so nothing fell before dynamic bodies.
     _PhysicsSystem->SetGravity(ck::jolt::Conv(FVector{0.0, 0.0, GetWorld()->GetGravityZ()}));
 
+    // Jolt's PhysicsSettings defaults are METERS-tuned; this world is CENTIMETERS. Convert every
+    // length/velocity-based field (x100; the squared manifold tolerance x100^2). Unconverted, the
+    // 0.02cm penetration slop keeps stacked bodies in permanent micro-jitter and the 0.03cm/s sleep
+    // threshold makes stacks effectively unable to sleep (exposed by BoxStackOfFiveSettlesAndStays
+    // once it gated on real velocity quiescence). Ratios (mBaumgarte, mLinearCast*), iteration
+    // counts, and times keep their defaults.
+    {
+        auto PhysicsSettings = _PhysicsSystem->GetPhysicsSettings();
+        PhysicsSettings.mSpeculativeContactDistance   = 2.0f;      // 0.02 m
+        PhysicsSettings.mPenetrationSlop              = 2.0f;      // 0.02 m
+        PhysicsSettings.mMaxPenetrationDistance       = 20.0f;     // 0.2 m
+        PhysicsSettings.mManifoldToleranceSq          = 1.0e-2f;   // 1.0e-6 m^2
+        PhysicsSettings.mPointVelocitySleepThreshold  = 3.0f;      // 0.03 m/s
+        PhysicsSettings.mMinVelocityForRestitution    = 100.0f;    // 1 m/s
+        _PhysicsSystem->SetPhysicsSettings(PhysicsSettings);
+    }
+
     _BodyActivationListener = MakePimpl<CkBodyActivationListener>();
     _PhysicsSystem->SetBodyActivationListener(_BodyActivationListener.Get());
 
@@ -550,7 +586,11 @@ auto
         constexpr auto DrawGetSupportingFace = false;
         constexpr auto DrawShape = true;
         constexpr auto DrawShapeWireframe = true;
-        constexpr auto DrawShapeColor = JPH::BodyManager::EShapeColor::MotionTypeColor;
+        // Sleep coloring switches the shape-color mode: SleepColor tints sleeping dynamic bodies red,
+        // MotionTypeColor tints by motion type. Runtime-selected, so DrawSettings below is const not constexpr.
+        const auto DrawShapeColor = ck_jolt_subsystem::cvar::DebugDrawSleepColoring
+            ? JPH::BodyManager::EShapeColor::SleepColor
+            : JPH::BodyManager::EShapeColor::MotionTypeColor;
         constexpr auto DrawBoundingBox = false;
         constexpr auto DrawCenterOfMassTransform = false;
         constexpr auto DrawWorldTransform = true;
@@ -567,7 +607,7 @@ auto
         constexpr auto DrawSoftBodyPredictedBounds = false;
         constexpr auto DrawSoftBodyConstraintColor = JPH::ESoftBodyConstraintColor::ConstraintType;
 
-        constexpr auto DrawSettings = JPH::BodyManager::DrawSettings
+        const auto DrawSettings = JPH::BodyManager::DrawSettings
         {
             DrawGetSupportFeatures,
             DrawSupportDirection,
@@ -592,8 +632,13 @@ auto
             DrawSoftBodyConstraintColor
         };
 
+        // Gate ORs: an installed consumer opt-in (CkSpatialQuery's PreviewAllProbesUsingJolt) OR the
+        // ck.Jolt.DebugDraw.Enabled CVar. The probe-only path keeps working unchanged when the CVar is off.
+        const auto ConsumerGateOpen = _DebugDrawGate && _DebugDrawGate();
+        const auto CVarDrawEnabled  = ck_jolt_subsystem::cvar::DebugDrawEnabled;
+
         if (ck::IsValid(_Debugger, ck::IsValid_Policy_NullptrOnly{}) &&
-            _DebugDrawGate && _DebugDrawGate())
+            (ConsumerGateOpen || CVarDrawEnabled))
         { _PhysicsSystem->DrawBodies(DrawSettings, _Debugger.Get()); }
     }
 #endif

@@ -182,7 +182,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkGrid | Core,Ecs,EcsExt,Label,Log,Record,Settings (+EntitySpawner, editor-only) |
 | CkInteraction | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkInventory | Attribute,Core,Ecs,EcsExt,Grid,Label,Log,Record,Settings,TagSet |
-| CkJolt | Core,Ecs,Log,Settings,ThirdParty (owns the Jolt world; extracted from CkSpatialQuery 2026-07-16) |
+| CkJolt | Core,Ecs,EcsExt,Log,Settings,ThirdParty (owns the Jolt world; extracted from CkSpatialQuery 2026-07-16; +EcsExt Phase 3, also engine PhysicsCore/Landscape) |
 | CkIsmRenderer | Core,Ecs,EcsExt,Graphics,Label,Log,Provider,Record,Settings |
 | CkIskmRenderer | Animation,Core,Ecs,EcsExt,Graphics,IskmRendererVF,Label,Log,Physics,Provider,Record,Settings |
 | CkMessaging | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
