@@ -1,6 +1,7 @@
 #include "CkEQSExporter.h"
 
 #include "CkAssetExporter_Log.h"
+#include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
 
 #include <EnvironmentQuery/EnvQuery.h>
 #include <EnvironmentQuery/EnvQueryOption.h>
@@ -154,7 +155,7 @@ auto
 
     RootObject->SetStringField(TEXT("assetName"), InQuery->GetName());
     RootObject->SetStringField(TEXT("assetPath"), InQuery->GetPathName());
-    RootObject->SetStringField(TEXT("exportTimestamp"), FDateTime::UtcNow().ToIso8601());
+    RootObject->SetObjectField(TEXT("_meta"), FCk_AssetExportMeta::MakeMetaObject(InQuery, ck::asset_exporter::version::EQS));
 
     // Options (accessed via reflection since UEnvQuery::Options is protected)
     auto OptionsArray = TArray<TSharedPtr<FJsonValue>>{};
@@ -308,7 +309,6 @@ auto
 
     Text += FString::Printf(TEXT("=== EQS Query: %s ===\n"), *InQuery->GetName());
     Text += FString::Printf(TEXT("Path: %s\n"), *InQuery->GetPathName());
-    Text += FString::Printf(TEXT("Exported: %s\n"), *FDateTime::UtcNow().ToString(TEXT("%Y-%m-%d %H:%M:%S UTC")));
     Text += TEXT("\n");
 
     const auto Options = DoGetQueryOptions(InQuery);
