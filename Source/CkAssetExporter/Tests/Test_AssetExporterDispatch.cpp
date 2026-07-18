@@ -1,8 +1,11 @@
 #include "CkAssetExporter/Dispatch/CkAssetExporter_Dispatch.h"
 #include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
+#include "CkAssetExporter/GraphDump/CkAssetExporter_GraphDump.h"
 
 #include <Dom/JsonObject.h>
+#include <Dom/JsonValue.h>
 #include <Engine/DataAsset.h>
+#include <Engine/DataTable.h>
 #include <HAL/FileManager.h>
 #include <Misc/AutomationTest.h>
 #include <Misc/FileHelper.h>
@@ -54,11 +57,17 @@ bool FCk_AssetExporter_Dispatch_FriendlyClassMap_Test::RunTest(const FString& In
     TestNotNull(TEXT("lowercase 'dataasset' resolves case-insensitively"), ResolvedLower);
     TestTrue(TEXT("'dataasset' resolves to UDataAsset"), ResolvedLower == UDataAsset::StaticClass());
 
+    auto ErrorDataTable = FString{};
+    auto* ResolvedDataTable = FCk_AssetExporter_Dispatch::TryResolve_FriendlyClassName(TEXT("datatable"), ErrorDataTable);
+    TestNotNull(TEXT("lowercase 'datatable' resolves case-insensitively"), ResolvedDataTable);
+    TestTrue(TEXT("'datatable' resolves to UDataTable"), ResolvedDataTable == UDataTable::StaticClass());
+
     auto ErrorUnknown = FString{};
     auto* ResolvedUnknown = FCk_AssetExporter_Dispatch::TryResolve_FriendlyClassName(TEXT("Bogus"), ErrorUnknown);
     TestNull(TEXT("unknown name returns null"), ResolvedUnknown);
     TestTrue(TEXT("error names the unknown input"), ErrorUnknown.Contains(TEXT("Bogus")));
     TestTrue(TEXT("error lists a valid name (DataAsset)"), ErrorUnknown.Contains(TEXT("DataAsset")));
+    TestTrue(TEXT("error lists a valid name (DataTable)"), ErrorUnknown.Contains(TEXT("DataTable")));
     TestTrue(TEXT("error lists a valid name (Niagara)"), ErrorUnknown.Contains(TEXT("Niagara")));
 
     return true;
@@ -134,6 +143,75 @@ bool FCk_AssetExporter_Dispatch_ExportMetaRoundTrip_Test::RunTest(const FString&
     constexpr auto RequireExists = false;
     IFileManager::Get().Delete(*GoodPath, RequireExists);
     IFileManager::Get().Delete(*NoMetaPath, RequireExists);
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Graph-dump shape check against a tiny real content dir. No env gating — MembershipBoard is small and always present.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCk_AssetExporter_Dispatch_GraphDumpShape_Test,
+    "Ck.AssetExporter.Dispatch.GraphDumpShape",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FCk_AssetExporter_Dispatch_GraphDumpShape_Test::RunTest(const FString& InParameters)
+{
+    const auto Graph = FCk_AssetExporter_GraphDump::DumpGraph(TEXT("/Game/BusterBlock/MembershipBoard"));
+    TestTrue(TEXT("graph object is valid"), Graph.IsValid());
+    if (NOT Graph.IsValid())
+    { return false; }
+
+    const TArray<TSharedPtr<FJsonValue>>* Assets = nullptr;
+    const auto HasAssets = Graph->TryGetArrayField(TEXT("assets"), Assets) && Assets != nullptr;
+    TestTrue(TEXT("graph has an 'assets' array"), HasAssets);
+    if (NOT HasAssets)
+    { return false; }
+
+    TestTrue(TEXT("assets array has at least one row"), Assets->Num() >= 1);
+
+    for (const auto& AssetValue : *Assets)
+    {
+        const auto Row = AssetValue.IsValid() ? AssetValue->AsObject() : nullptr;
+        TestTrue(TEXT("asset row is an object"), Row.IsValid());
+        if (NOT Row.IsValid())
+        { continue; }
+
+        auto AssetPath = FString{};
+        TestTrue(TEXT("row has non-empty assetPath"),
+            Row->TryGetStringField(TEXT("assetPath"), AssetPath) && NOT AssetPath.IsEmpty());
+
+        auto ClassName = FString{};
+        TestTrue(TEXT("row has non-empty class"),
+            Row->TryGetStringField(TEXT("class"), ClassName) && NOT ClassName.IsEmpty());
+
+        auto DiskPath = FString{};
+        const auto HasDisk = Row->TryGetStringField(TEXT("diskPath"), DiskPath);
+        TestTrue(TEXT("row has diskPath"), HasDisk);
+
+        // Absolute: a Windows drive-letter prefix (e.g. "D:/...").
+        const auto IsAbsolute = DiskPath.Len() >= 2 && FChar::IsAlpha(DiskPath[0]) && DiskPath[1] == TEXT(':');
+        TestTrue(TEXT("diskPath is absolute (drive-letter prefixed)"), IsAbsolute);
+
+        // hardDeps, when present, must be lexically sorted (re-sort a copy with the same FName::LexicalLess order the
+        // dumper uses and compare).
+        const TArray<TSharedPtr<FJsonValue>>* HardDeps = nullptr;
+        if (Row->TryGetArrayField(TEXT("hardDeps"), HardDeps) && HardDeps != nullptr)
+        {
+            auto AsStrings = TArray<FString>{};
+            for (const auto& Dep : *HardDeps)
+            {
+                auto DepString = FString{};
+                if (Dep.IsValid() && Dep->TryGetString(DepString))
+                { AsStrings.Add(DepString); }
+            }
+
+            auto Sorted = AsStrings;
+            Sorted.Sort([](const FString& A, const FString& B) { return FName(*A).LexicalLess(FName(*B)); });
+            TestTrue(TEXT("hardDeps array is lexically sorted"), AsStrings == Sorted);
+        }
+    }
 
     return true;
 }
