@@ -752,11 +752,16 @@ function Invoke-Main {
 
     Write-Output "Editor process exit code: $($proc.ExitCode)"
 
+    # A manifest/list/graph file OLDER than this process's start is a leftover from a previous
+    # run — a crashed commandlet writes nothing, and reporting stale rows as this run's result
+    # is worse than admitting the crash.
+    $runStartTime = $proc.StartTime
+
     # -DumpGraph one-shot: the commandlet writes graph.json, not LastRun.json.
     if ($DumpGraph) {
         $graphJsonPath = Join-Path $exporterSavedDir 'graph.json'
-        if (-not (Test-Path -LiteralPath $graphJsonPath)) {
-            [Console]::Error.WriteLine("graph.json not found at '$graphJsonPath' -- treating as failure.")
+        if (-not (Test-Path -LiteralPath $graphJsonPath) -or (Get-Item -LiteralPath $graphJsonPath).LastWriteTime -lt $runStartTime) {
+            [Console]::Error.WriteLine("graph.json at '$graphJsonPath' is missing or predates this run -- treating as failure.")
             exit 1
         }
         Write-Output "Graph written: $graphJsonPath"
@@ -767,8 +772,8 @@ function Invoke-Main {
     # reading the export manifest here would false-fail every discovery run.
     if ($List) {
         $lastListJsonPath = Join-Path $exporterSavedDir 'LastList.json'
-        if (-not (Test-Path -LiteralPath $lastListJsonPath)) {
-            [Console]::Error.WriteLine("LastList.json not found at '$lastListJsonPath' -- treating as failure.")
+        if (-not (Test-Path -LiteralPath $lastListJsonPath) -or (Get-Item -LiteralPath $lastListJsonPath).LastWriteTime -lt $runStartTime) {
+            [Console]::Error.WriteLine("LastList.json at '$lastListJsonPath' is missing or predates this run -- treating as failure.")
             exit 1
         }
         try {
@@ -786,6 +791,10 @@ function Invoke-Main {
 
     if (-not (Test-Path -LiteralPath $lastRunJsonPath)) {
         [Console]::Error.WriteLine("LastRun.json not found at '$lastRunJsonPath' -- treating as failure.")
+        exit 1
+    }
+    if ((Get-Item -LiteralPath $lastRunJsonPath).LastWriteTime -lt $runStartTime) {
+        [Console]::Error.WriteLine("LastRun.json at '$lastRunJsonPath' predates this run (process likely crashed before writing it) -- treating as failure.")
         exit 1
     }
 
