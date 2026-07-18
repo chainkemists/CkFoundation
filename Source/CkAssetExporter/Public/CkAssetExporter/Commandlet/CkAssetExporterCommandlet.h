@@ -15,12 +15,14 @@
  *   UnrealEditor-Cmd.exe <Project.uproject> -run=CkAssetExporter -Assets=/Game/A.A;/Game/B.B
  *   UnrealEditor-Cmd.exe <Project.uproject> -run=CkAssetExporter -Dir=/Game/Foo -Classes=DataAsset,Blueprint
  *   UnrealEditor-Cmd.exe <Project.uproject> -run=CkAssetExporter -Dir=/Game -List
+ *   UnrealEditor-Cmd.exe <Project.uproject> -run=CkAssetExporter -DumpGraph -Dir=/Game/Foo
  *   UnrealEditor-Cmd.exe <Project.uproject> -run=CkAssetExporter -ExportServer
  *
  * Flags: -Assets= (semicolon-separated tokens), -Dir= (+ optional -Classes= comma-separated), -List, -SkipFresh,
- * -Force (overrides -SkipFresh), -Out= (logged as unsupported in v1 — exporters always write sibling paths),
- * -ExportServer (runs the request-file server loop; "-Server" is a reserved engine switch). Exit 0 iff the run
- * completed and no asset failed.
+ * -Force (overrides -SkipFresh), -DumpGraph (dependency-graph dump of every class under -Dir, default /Game, to
+ * graph.json; composes with nothing else), -Out= (logged as unsupported in v1 — exporters always write sibling
+ * paths), -ExportServer (runs the request-file server loop; "-Server" is a reserved engine switch). Exit 0 iff the
+ * run completed and no asset failed.
  */
 UCLASS()
 class CKASSETEXPORTER_API UCkAssetExporterCommandlet : public UCommandlet
