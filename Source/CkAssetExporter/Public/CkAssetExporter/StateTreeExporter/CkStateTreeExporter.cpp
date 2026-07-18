@@ -1,6 +1,7 @@
 #include "CkStateTreeExporter.h"
 
 #include "CkAssetExporter_Log.h"
+#include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
 
 #include <StateTree.h>
 #include <StateTreeSchema.h>
@@ -126,7 +127,7 @@ auto
 
     RootObject->SetStringField(TEXT("assetName"), InStateTree->GetName());
     RootObject->SetStringField(TEXT("assetPath"), InStateTree->GetPathName());
-    RootObject->SetStringField(TEXT("exportTimestamp"), FDateTime::UtcNow().ToIso8601());
+    RootObject->SetObjectField(TEXT("_meta"), FCk_AssetExportMeta::MakeMetaObject(InStateTree, ck::asset_exporter::version::StateTree));
 
     const auto* Schema = InStateTree->GetSchema();
     if (IsValid(Schema))
@@ -393,7 +394,6 @@ auto
 
     Text += FString::Printf(TEXT("=== State Tree: %s ===\n"), *InStateTree->GetName());
     Text += FString::Printf(TEXT("Path: %s\n"), *InStateTree->GetPathName());
-    Text += FString::Printf(TEXT("Exported: %s\n"), *FDateTime::UtcNow().ToString(TEXT("%Y-%m-%d %H:%M:%S UTC")));
 
     const auto* Schema = InStateTree->GetSchema();
     const auto SchemaName = IsValid(Schema) ? Schema->GetClass()->GetName() : FString{TEXT("None")};
