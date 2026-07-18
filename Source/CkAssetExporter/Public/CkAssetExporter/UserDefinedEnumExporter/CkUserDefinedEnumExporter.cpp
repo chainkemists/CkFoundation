@@ -1,6 +1,7 @@
 #include "CkUserDefinedEnumExporter.h"
 
 #include "CkAssetExporter_Log.h"
+#include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Format/CkFormat.h"
@@ -135,7 +136,7 @@ auto
     RootObject->SetStringField(TEXT("assetName"), InEnum->GetName());
     RootObject->SetStringField(TEXT("assetPath"), InEnum->GetPathName());
     RootObject->SetStringField(TEXT("assetClass"), InEnum->GetClass()->GetName());
-    RootObject->SetStringField(TEXT("exportTimestamp"), FDateTime::UtcNow().ToIso8601());
+    RootObject->SetObjectField(TEXT("_meta"), FCk_AssetExportMeta::MakeMetaObject(InEnum, ck::asset_exporter::version::UserDefinedEnum));
 
     const auto EnumTooltip = InEnum->GetMetaData(TEXT("ToolTip"));
     if (NOT EnumTooltip.IsEmpty())
@@ -194,8 +195,6 @@ auto
     {
         Text += ck::Format_UE(TEXT("Tooltip: {}\n"), EnumTooltip);
     }
-
-    Text += ck::Format_UE(TEXT("Exported: {}\n\n"), FDateTime::UtcNow().ToString());
 
     const auto Count = DoGetAuthoredEnumeratorCount(InEnum);
 
