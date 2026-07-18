@@ -17,6 +17,7 @@ class UObject;
 namespace ck::asset_exporter::version
 {
     inline constexpr int32 DataAsset = 1;
+    inline constexpr int32 DataTable = 1;
     inline constexpr int32 Blueprint = 2;   // v2: WBP paste artifacts (hierarchy.copy.txt + animation t3d dumps)
     inline constexpr int32 BehaviorTree = 1;
     inline constexpr int32 EQS = 1;

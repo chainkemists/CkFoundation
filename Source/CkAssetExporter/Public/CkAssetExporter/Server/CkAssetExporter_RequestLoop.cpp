@@ -2,6 +2,7 @@
 
 #include "CkAssetExporter_Log.h"
 #include "CkAssetExporter/Dispatch/CkAssetExporter_Dispatch.h"
+#include "CkAssetExporter/GraphDump/CkAssetExporter_GraphDump.h"
 
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
@@ -202,6 +203,40 @@ namespace ck_asset_exporter_requestloop
         Write_Json(Result, InResultPath);
     }
 
+    static auto
+    Handle_DumpGraph(
+        const TSharedPtr<FJsonObject>& InRequest,
+        const FString& InResultPath)
+        -> void
+    {
+        auto Dir = FString{};
+        InRequest->TryGetStringField(TEXT("dir"), Dir);
+        if (Dir.IsEmpty())
+        { Dir = TEXT("/Game"); }
+
+        const auto Graph = FCk_AssetExporter_GraphDump::DumpGraph(Dir);
+        if (NOT Graph.IsValid())
+        {
+            Write_Error(InResultPath, ck::Format_UE(TEXT("Graph enumeration failed for [{}]"), Dir));
+            return;
+        }
+
+        // Same Saved location the commandlet writes to (Root already ends in /CkAssetExporter).
+        const auto GraphPath = FCk_AssetExporter_GraphDump::WriteGraph(Graph, TEXT("CkAssetExporter"));
+
+        auto Count = double{0.0};
+        Graph->TryGetNumberField(TEXT("count"), Count);
+
+        auto Result = MakeShared<FJsonObject>();
+        Result->SetBoolField(TEXT("ok"), true);
+        Result->SetStringField(TEXT("graphPath"), GraphPath);
+        Result->SetNumberField(TEXT("count"), Count);
+        Write_Json(Result, InResultPath);
+
+        ck::asset_exporter::Display(
+            TEXT("[Server] dumpGraph: [{}] -> {} ({} assets)"), Dir, GraphPath, static_cast<int32>(Count));
+    }
+
     // Returns true when the request asked the server to quit.
     static auto
     Process_Request(
@@ -248,7 +283,13 @@ namespace ck_asset_exporter_requestloop
             return false;
         }
 
-        Write_Error(InResultPath, ck::Format_UE(TEXT("Unknown op [{}] (expected export | list | quit)"), Op));
+        if (Op.Equals(TEXT("dumpGraph"), ESearchCase::IgnoreCase))
+        {
+            Handle_DumpGraph(Request, InResultPath);
+            return false;
+        }
+
+        Write_Error(InResultPath, ck::Format_UE(TEXT("Unknown op [{}] (expected export | list | dumpGraph | quit)"), Op));
         return false;
     }
 }

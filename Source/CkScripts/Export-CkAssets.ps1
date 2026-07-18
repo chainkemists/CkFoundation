@@ -34,6 +34,11 @@
 .PARAMETER List
     List discoverable assets instead of exporting them.
 
+.PARAMETER DumpGraph
+    Dump the asset dependency graph (every asset under -Dir, default /Game: class, disk path,
+    hard/soft package deps, hazard flags) to Saved/CkAssetExporter/graph.json. Migration-closure
+    planning input; mutually exclusive with -List.
+
 .PARAMETER Out
     Output directory override (defaults to the exporter's own sibling-file placement).
 
@@ -97,6 +102,7 @@ param(
     [string]$Dir,
     [string]$Classes,
     [switch]$List,
+    [switch]$DumpGraph,
     [string]$Out,
     [switch]$SkipFresh,
     [switch]$Force,
@@ -602,13 +608,24 @@ function Get-ServerResultExitCode {
     return 0
 }
 
-# (b) PRINT-ONLY + terminal -- prints a server result (export or list shape) and exits the
-# script. List results carry rows under `assets` with no per-row ok field, so they bypass the
-# ok-judgment entirely (see Write-ListRowLines).
+# (b) PRINT-ONLY + terminal -- prints a server result (export, list, or dumpGraph shape) and
+# exits the script. List results carry rows under `assets` with no per-row ok field, so they
+# bypass the ok-judgment entirely (see Write-ListRowLines).
 function Complete-ServerResultAndExit {
-    param($Result, [bool]$IsList)
+    param($Result, [bool]$IsList, [bool]$IsGraph = $false)
 
     $resultError = Get-PropertyValue $Result @('error', 'Error')
+
+    if ($IsGraph) {
+        $graphPath = Get-PropertyValue $Result @('graphPath', 'GraphPath')
+        $count = Get-PropertyValue $Result @('count', 'Count')
+        if ($graphPath) { Write-Output "Graph written: $graphPath ($count assets)" }
+        if ($resultError) { Write-Output "Result-level error: $resultError" }
+        $okValue = Get-PropertyValue $Result @('ok', 'Ok')
+        $ok = if ($null -ne $okValue) { [bool]$okValue } else { $true }
+        if ($resultError) { $ok = $false }
+        exit ($ok ? 0 : 1)
+    }
 
     if ($IsList) {
         $rowsRaw = Get-PropertyValue $Result @('assets', 'Assets')
@@ -637,6 +654,9 @@ function Invoke-Main {
     if ($StopServer -and $KeepAlive) {
         Fail '-StopServer and -KeepAlive are contradictory -- pass only one.'
     }
+    if ($DumpGraph -and $List) {
+        Fail '-DumpGraph and -List are mutually exclusive -- pass only one.'
+    }
 
     $uprojectPath = Resolve-UProjectPath $Project
     $projectDir   = Split-Path -Parent $uprojectPath
@@ -662,8 +682,8 @@ function Invoke-Main {
     # registry or requires a registered engine at all.
 
     $hasRequestArgs = $script:TopLevelBoundParameters.ContainsKey('Assets') -or $script:TopLevelBoundParameters.ContainsKey('Dir') -or
-                      $script:TopLevelBoundParameters.ContainsKey('Classes') -or $List -or $script:TopLevelBoundParameters.ContainsKey('Out') -or
-                      $SkipFresh -or $Force
+                      $script:TopLevelBoundParameters.ContainsKey('Classes') -or $List -or $DumpGraph -or
+                      $script:TopLevelBoundParameters.ContainsKey('Out') -or $SkipFresh -or $Force
 
     if ($KeepAlive) {
         $serverInfo = Get-LiveServerInfo $serverJsonPath
@@ -683,12 +703,12 @@ function Invoke-Main {
             exit 0
         }
 
-        $op = if ($List) { 'list' } else { 'export' }
+        $op = if ($DumpGraph) { 'dumpGraph' } elseif ($List) { 'list' } else { 'export' }
         $requestBody = New-RequestBody -Op $op -BoundParams $script:TopLevelBoundParameters `
             -AssetsValue $Assets -DirValue $Dir -ClassesValue $Classes -OutValue $Out `
             -SkipFreshValue ([bool]$SkipFresh) -ForceValue ([bool]$Force)
         $result = Submit-ExporterRequest -ServerInfo $serverInfo -RequestBody $requestBody -TimeoutSec $TimeoutSec
-        Complete-ServerResultAndExit -Result $result -IsList ([bool]$List)
+        Complete-ServerResultAndExit -Result $result -IsList ([bool]$List) -IsGraph ([bool]$DumpGraph)
     }
 
     # Not -KeepAlive: route through a live server if one already exists, else run one-shot.
@@ -696,12 +716,12 @@ function Invoke-Main {
     if ($serverInfo) {
         $pid_ = Get-PropertyValue $serverInfo @('pid')
         Write-Output "Routing through live CkAssetExporter server (pid $pid_)."
-        $op = if ($List) { 'list' } else { 'export' }
+        $op = if ($DumpGraph) { 'dumpGraph' } elseif ($List) { 'list' } else { 'export' }
         $requestBody = New-RequestBody -Op $op -BoundParams $script:TopLevelBoundParameters `
             -AssetsValue $Assets -DirValue $Dir -ClassesValue $Classes -OutValue $Out `
             -SkipFreshValue ([bool]$SkipFresh) -ForceValue ([bool]$Force)
         $result = Submit-ExporterRequest -ServerInfo $serverInfo -RequestBody $requestBody -TimeoutSec $TimeoutSec
-        Complete-ServerResultAndExit -Result $result -IsList ([bool]$List)
+        Complete-ServerResultAndExit -Result $result -IsList ([bool]$List) -IsGraph ([bool]$DumpGraph)
     }
 
     # One-shot commandlet run.
@@ -713,6 +733,7 @@ function Invoke-Main {
     if ($script:TopLevelBoundParameters.ContainsKey('Dir'))      { $passthroughArgs += "-Dir=$Dir" }
     if ($script:TopLevelBoundParameters.ContainsKey('Classes'))  { $passthroughArgs += "-Classes=$Classes" }
     if ($List)                                      { $passthroughArgs += '-List' }
+    if ($DumpGraph)                                 { $passthroughArgs += '-DumpGraph' }
     if ($script:TopLevelBoundParameters.ContainsKey('Out'))      { $passthroughArgs += "-Out=$Out" }
     if ($SkipFresh)                                 { $passthroughArgs += '-SkipFresh' }
     if ($Force)                                     { $passthroughArgs += '-Force' }
@@ -730,6 +751,17 @@ function Invoke-Main {
     }
 
     Write-Output "Editor process exit code: $($proc.ExitCode)"
+
+    # -DumpGraph one-shot: the commandlet writes graph.json, not LastRun.json.
+    if ($DumpGraph) {
+        $graphJsonPath = Join-Path $exporterSavedDir 'graph.json'
+        if (-not (Test-Path -LiteralPath $graphJsonPath)) {
+            [Console]::Error.WriteLine("graph.json not found at '$graphJsonPath' -- treating as failure.")
+            exit 1
+        }
+        Write-Output "Graph written: $graphJsonPath"
+        exit (($proc.ExitCode -eq 0) ? 0 : 1)
+    }
 
     # -List one-shot: the commandlet writes LastList.json (discovery rows), not LastRun.json --
     # reading the export manifest here would false-fail every discovery run.
