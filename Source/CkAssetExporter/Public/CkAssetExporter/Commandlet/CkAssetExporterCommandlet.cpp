@@ -2,6 +2,7 @@
 
 #include "CkAssetExporter_Log.h"
 #include "CkAssetExporter/Dispatch/CkAssetExporter_Dispatch.h"
+#include "CkAssetExporter/GraphDump/CkAssetExporter_GraphDump.h"
 #include "CkAssetExporter/Server/CkAssetExporter_RequestLoop.h"
 
 #include "CkCore/Format/CkFormat.h"
@@ -91,8 +92,10 @@ namespace ck_asset_exporter_commandlet
         ck::asset_exporter::Display(TEXT("  -Assets=<a;b;c>   Export specific assets. Each token is an object path (/Game/X/Y.Y),"));
         ck::asset_exporter::Display(TEXT("                    a package path (/Game/X/Y), or a Content disk path. Semicolon-separated."));
         ck::asset_exporter::Display(TEXT("  -Dir=<packagePath> Sweep a package dir recursively and export matching assets."));
-        ck::asset_exporter::Display(TEXT("  -Classes=<a,b>    (with -Dir) Restrict to friendly class names. Valid: DataAsset, Blueprint,"));
-        ck::asset_exporter::Display(TEXT("                    BehaviorTree, EQS, StateTree, Enum, Struct, Niagara, Cascade. Empty = all."));
+        ck::asset_exporter::Display(TEXT("  -Classes=<a,b>    (with -Dir) Restrict to friendly class names. Valid: DataAsset, DataTable,"));
+        ck::asset_exporter::Display(TEXT("                    Blueprint, BehaviorTree, EQS, StateTree, Enum, Struct, Niagara, Cascade. Empty = all."));
+        ck::asset_exporter::Display(TEXT("  -DumpGraph        Dump the dependency graph (every class) under -Dir (default /Game) to graph.json."));
+        ck::asset_exporter::Display(TEXT("                    Composes with nothing else — -Assets/-List are ignored when present."));
         ck::asset_exporter::Display(TEXT("  -List             (with -Dir) List matching assets to LastList.json + console; does not export."));
         ck::asset_exporter::Display(TEXT("  -SkipFresh        Skip assets whose sibling json is already up to date (7 versioned types only)."));
         ck::asset_exporter::Display(TEXT("  -Force            Export even fresh assets (overrides -SkipFresh)."));
@@ -137,6 +140,30 @@ int32 UCkAssetExporterCommandlet::Main(const FString& InParams)
     const auto HasDir = FParse::Value(*InParams, TEXT("Dir="), Dir) && NOT Dir.IsEmpty();
 
     const auto List = FParse::Param(*InParams, TEXT("List"));
+
+    // ---- Graph-dump mode (composes with nothing else; defaults to /Game when no -Dir) ----
+    if (FParse::Param(*InParams, TEXT("DumpGraph")))
+    {
+        if (HasAssets || List)
+        { ck::asset_exporter::Display(TEXT("[Commandlet] -DumpGraph ignores -Assets/-List (graph mode composes with nothing else)")); }
+
+        const auto GraphDir = HasDir ? Dir : FString{TEXT("/Game")};
+
+        const auto Graph = FCk_AssetExporter_GraphDump::DumpGraph(GraphDir);
+        if (NOT Graph.IsValid())
+        {
+            ck::asset_exporter::Error(TEXT("[Commandlet] Graph enumeration failed for [{}]"), GraphDir);
+            return 1;
+        }
+
+        const auto GraphPath = FCk_AssetExporter_GraphDump::WriteGraph(Graph, SavedSubdir);
+
+        auto Count = double{0.0};
+        Graph->TryGetNumberField(TEXT("count"), Count);
+        ck::asset_exporter::Display(
+            TEXT("[Commandlet] Graph written to [{}] ({} assets)"), GraphPath, static_cast<int32>(Count));
+        return 0;
+    }
 
     auto OutDir = FString{};
     if (FParse::Value(*InParams, TEXT("Out="), OutDir) && NOT OutDir.IsEmpty())

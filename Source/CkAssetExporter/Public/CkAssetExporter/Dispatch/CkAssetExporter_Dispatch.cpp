@@ -5,6 +5,8 @@
 #include "CkAssetExporter/BlueprintExporter/CkBlueprintExporter.h"
 #include "CkAssetExporter/CascadeExporter/CkCascadeExporter.h"
 #include "CkAssetExporter/DataAssetExporter/CkDataAssetExporter.h"
+#include "CkAssetExporter/DataTableExporter/CkDataTableExporter.h"
+#include "CkAssetExporter/Dispatch/CkAssetExporter_DispatchInternal.h"
 #include "CkAssetExporter/EQSExporter/CkEQSExporter.h"
 #include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
 #include "CkAssetExporter/NiagaraExporter/CkNiagaraExporter.h"
@@ -23,6 +25,7 @@
 #include <BehaviorTree/BehaviorTree.h>
 #include <Engine/Blueprint.h>
 #include <Engine/DataAsset.h>
+#include <Engine/DataTable.h>
 #include <Engine/UserDefinedEnum.h>
 #include <EnvironmentQuery/EnvQuery.h>
 #include <HAL/FileManager.h>
@@ -59,6 +62,7 @@ namespace ck_asset_exporter_dispatch
         return
         {
             { TEXT("DataAsset"),    UDataAsset::StaticClass() },
+            { TEXT("DataTable"),    UDataTable::StaticClass() },
             { TEXT("Blueprint"),    UBlueprint::StaticClass() },
             { TEXT("BehaviorTree"), UBehaviorTree::StaticClass() },
             { TEXT("EQS"),          UEnvQuery::StaticClass() },
@@ -81,6 +85,21 @@ namespace ck_asset_exporter_dispatch
         InOutEntry.Succeeded = InResult.Succeeded;
         InOutEntry.JsonFilePath = InResult.JsonFilePath;
         InOutEntry.TextFilePath = InResult.TextFilePath;
+        InOutEntry.ErrorMessage = InResult.ErrorMessage;
+    }
+
+    // DataTable result carries a CsvFilePath instead of a TextFilePath — a non-template overload (preferred over the
+    // template on exact match) maps the csv sibling into the entry's TextFilePath slot: the manifest 'txt' column
+    // carries the csv path for DataTables.
+    static auto
+    Fill_Entry(
+        FCk_AssetExportDispatchEntryResult& InOutEntry,
+        const FCk_DataTableExportResult& InResult)
+        -> void
+    {
+        InOutEntry.Succeeded = InResult.Succeeded;
+        InOutEntry.JsonFilePath = InResult.JsonFilePath;
+        InOutEntry.TextFilePath = InResult.CsvFilePath;
         InOutEntry.ErrorMessage = InResult.ErrorMessage;
     }
 
@@ -173,6 +192,13 @@ namespace ck_asset_exporter_dispatch
             Fill_Entry(InOutEntry, FCk_CascadeExporter::ExportParticleSystem(CascadeSystem));
             return;
         }
+        if (auto* DataTable = Cast<UDataTable>(InAsset)) // dedicated type — NOT a UDataAsset, but keep dedicated-first order
+        {
+            if (Is_FreshAndSkip(InAsset, InSkipFresh, ck::asset_exporter::version::DataTable, InOutEntry))
+            { return; }
+            Fill_Entry(InOutEntry, FCk_DataTableExporter::ExportDataTable(DataTable));
+            return;
+        }
         if (auto* DataAsset = Cast<UDataAsset>(InAsset)) // generic, LAST among the DataAsset family
         {
             if (Is_FreshAndSkip(InAsset, InSkipFresh, ck::asset_exporter::version::DataAsset, InOutEntry))
@@ -201,9 +227,10 @@ namespace ck_asset_exporter_dispatch
         InOutSummary.Entries.Add(MoveTemp(InEntry));
     }
 
-    // Best-effort on-disk file path for a package name (list display only — never loads). Prefers the .uasset, then
-    // .umap; falls back to the .uasset guess when neither exists.
-    static auto
+    // Definition of the shared helper declared in CkAssetExporter_DispatchInternal.h (external linkage — GraphDump
+    // reuses this one definition). Best-effort on-disk file path for a package name (list/graph display only — never
+    // loads). Prefers the .uasset, then .umap; falls back to the .uasset guess when neither exists.
+    auto
     Get_PackageDiskPath(
         const FString& InPackageName)
         -> FString
