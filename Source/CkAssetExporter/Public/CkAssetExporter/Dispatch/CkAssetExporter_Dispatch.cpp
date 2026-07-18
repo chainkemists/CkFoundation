@@ -351,6 +351,25 @@ auto
 
 auto
     FCk_AssetExporter_Dispatch::
+    Get_IsExportableClass(
+        const UClass* InClass)
+    -> bool
+{
+    if (InClass == nullptr)
+    { return false; }
+
+    for (const auto& Entry : ck_asset_exporter_dispatch::Get_FriendlyClassTable())
+    {
+        if (InClass->IsChildOf(Entry.Value))
+        { return true; }
+    }
+    return false;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_AssetExporter_Dispatch::
     Resolve_InputToObjectPaths(
         const FString& InRaw)
     -> TArray<FString>
