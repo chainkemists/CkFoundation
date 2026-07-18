@@ -71,6 +71,96 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
   introspection; the channel-filtered query API is Phase 2).
 - Cooker lives in `CkJoltEditor` (editor subsystem + `-run=CkJoltCook` commandlet).
 
+### Dynamic bodies + characters (Phases 3-4)
+
+- **JoltBody quartet** (`Body/`): `UCk_Utils_JoltBody_UE::Add` with
+  `FCk_Fragment_JoltBody_ParamsData` (shape source explicit/from-actor, motion type
+  Static/Kinematic/Dynamic, mass source, surface friction/restitution, collision profile →
+  object layer, CCD). Requests (deferred, drained by `FProcessor_JoltBody_HandleRequests`
+  BEFORE the step): SetSleepState, AddForce(/AtLocation), AddTorque, AddImpulse(/AtLocation),
+  AddAngularImpulse, SetLinearVelocity, SetAngularVelocity, Teleport
+  (`ECk_Jolt_TeleportVelocityPolicy`; snaps StepPose + reaps the pose-buffer entry — no
+  interpolation sweep). Kinematic bodies are NOT moved via requests: `KinematicPush` drives
+  every added kinematic body to its current ECS Transform each stepping frame.
+  Signals: `OnJoltBodyContactAdded` / `OnJoltBodyContactPersisted` (opt-in via
+  `FTag_JoltBody_PersistContacts`) / `OnJoltBodyContactRemoved` (payload OtherEntity +
+  points/normal + RelativeNormalSpeed POSITIVE-WHEN-CLOSING + OtherIsSensor) and
+  `OnJoltBodySleepStateChanged`. Contact routing: `"JoltBody.Signals"` router registered on
+  the subsystem; UserData==0 (baked statics) = NO entity — never resolve raw id 0 (it is the
+  registry's transient root).
+- **JoltCharacter quartet** (`Character/`): `JPH::CharacterVirtual`-backed (no broadphase
+  body, no BodyID). Params: capsule radius/half-height (CENTERED capsule — total half
+  height = HalfHeight + Radius), MassKg, MaxSlopeAngleDegrees, MaxStrengthNewtons
+  (converted ×100 to kg·uu/s²), `ECk_JoltCharacter_PushPolicy` (maps per-contact to
+  `CharacterContactSettings {mCanPushCharacter, mCanReceiveImpulses}` via the shared
+  `CkJoltCharacterContactListener`), collision profile. Requests: Move (CONTINUOUS desired
+  velocity), Jump (one-shot, armed until supported), Teleport. Ground state mirrored to
+  `ECk_JoltCharacter_GroundState` + `OnGroundStateChanged` signal. Characters step in
+  `DoStepCharacters_AnyThread` (velocity compose → `ExtendedUpdate`) BEFORE each
+  `PhysicsSystem::Update` sub-step; all CharacterVirtual scalars that are meters in Jolt
+  samples are centimeters here (mPredictiveContactDistance 10, mCharacterPadding 2,
+  mCollisionTolerance 0.1, mSupportingVolume Plane(+Z, +HalfHeight)).
+- **Ownership**: Chaos XOR Jolt per entity, enforced at composition time (Phase-3 slice 2).
+
+### Debug draw + stats (Phase 5)
+
+- CVars `ck.Jolt.DebugDraw.Enabled` (draw ALL bodies, static + dynamic, motion-type colors)
+  and `ck.Jolt.DebugDraw.SleepColoring` (SleepColor mode: awake dynamics yellow, sleeping
+  red). The subsystem draws when the consumer gate (`Set_DebugDrawGate`, e.g.
+  `ck.SpatialQuery.PreviewAllProbesUsingJolt`) OR the Enabled CVar says so. Skipped in
+  async frames.
+- Cycle stats under `STATGROUP_CkJolt` (`stat CkJolt` / Insights): `JoltWorld_Step` (whole
+  fixed-step pump), `JoltPhysics_Update(_Async)` (the Update loop), `JoltBody_
+  WritebackInterpolated`, `JoltBody_KinematicPush`, contact queue/drain stats.
+
+---
+
+## Processor order (FGroup_Transform, after FProcessor_Transform_HandleRequests)
+
+```
+WaitForAsync ──> DrainEvents ──> PlanStep ──> SleepStateMirror ─┐
+     │                                                          ├─> KinematicPush ─┐
+     ├──> JoltBody_Setup ──> JoltBody_HandleRequests ───────────┘                  ├─> Step ──> WritebackInterpolated
+     └──> JoltCharacter_Setup ──> JoltCharacter_HandleRequests ──> Character_PreStep ┘
+```
+
+- Every body/character Setup + HandleRequests carries an explicit `RunAfter
+  FProcessor_JoltWorld_WaitForAsync` edge: the scheduler's Kahn tie-break is LEXICAL by
+  processor name, so without the edge a mutation processor can run while the PREVIOUS
+  frame's async step is still in flight. Any new processor that touches Jolt state must
+  add the same edge.
+- EndPlay processors (body + character) live in `FGroup_EndPlay` and open with the ASYNC
+  GUARD (`WaitForAsyncStep()` iff a future is pending) — the async step kicked THIS frame
+  is only consumed next frame, so teardown would otherwise race the task-graph loop.
+
+## Determinism
+
+- The pump is fixed-timestep: `ck::jolt::ComputeStepPlan` (pure, unit-tested —
+  AccumulatorContinuity / SubStepAccumulation / MaxStepsClampDropsExcess / ZeroDeltaNoStep)
+  converts real delta + accumulator into N fixed sub-steps at `_FixedTimestepHz`; excess
+  past `_MaxPhysicsStepsPerFrame` is DROPPED by design (spiral-of-death guard, no ensure).
+  Sim time therefore lags real time under load — tests must accumulate tick delta, never
+  count frames.
+- Same binary + same step sequence ⇒ Jolt is deterministic; across platforms/compilers it
+  is NOT guaranteed. Async mode changes only LATENCY (poses apply one frame late), not the
+  step math.
+
+## Tunable knobs
+
+- **Project settings** (`UCk_Jolt_ProjectSettings_UE`, section "Jolt"): `_FixedTimestepHz`,
+  `_MaxPhysicsStepsPerFrame`, MaxBodies / MaxBodyPairs / MaxContactConstraints (a 10k-body
+  single pile EXCEEDS the defaults — the update returns an error and CkJolt ensures loudly),
+  temp allocator size, collision steps, threading (parallel on/off, thread count),
+  `_PIEStaticWorldMode`, `_CompoundShapeInstanceThreshold`, `_CookedDataRootPath`.
+- **Startup-only CVars/cmdline**: `jolt.EnableParallelPhysics`,
+  `jolt.EnableAsyncPhysicsUpdate` (cmdline-first).
+- **Runtime CVars**: `ck.Jolt.DebugDraw.Enabled`, `ck.Jolt.DebugDraw.SleepColoring`.
+- Character feel: `FCk_Fragment_JoltCharacter_ParamsData` knobs (MaxStrengthNewtons,
+  MaxSlopeAngleDegrees, mass) + the cm-converted ExtendedUpdate settings in
+  `DoStepCharacters_AnyThread` (stick-to-floor 50, step-up 40).
+- Benchmarks + engine comparison: `docs/campaigns/jolt-collision-world/VALIDATION.md`
+  (Jolt ≈2.8× cheaper than Chaos at 10k spread bodies; island size dominates cost).
+
 ---
 
 ## Threading model
