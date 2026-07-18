@@ -100,6 +100,12 @@ public:
     static auto
     Get_SiblingJsonPathForAsset(
         const UObject* InAsset) -> FString;
+
+    // True when Route would reach a dedicated exporter for this class (the on-save sidecar hook's cheap pre-filter —
+    // art saves must not spam export attempts).
+    static auto
+    Get_IsExportableClass(
+        const UClass* InClass) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

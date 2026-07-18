@@ -1,6 +1,7 @@
 #include "CkAssetExporter_Module.h"
 
 #include "CkAssetExporter/AssetAction/CkBehaviorTreeExporter_AssetAction.h"
+#include "CkAssetExporter/AutoSidecar/CkAssetExporter_OnSaveHook.h"
 #include "CkAssetExporter/AssetAction/CkBlueprintExporter_AssetAction.h"
 #include "CkAssetExporter/AssetAction/CkCascadeExporter_AssetAction.h"
 #include "CkAssetExporter/AssetAction/CkDataAssetExporter_AssetAction.h"
@@ -44,6 +45,8 @@ auto
         FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &FCkAssetExporterModule::DoRegisterContentBrowserExtension));
 
     DoRegisterTabSpawner();
+
+    FCk_AssetExporter_OnSaveHook::Register();
 }
 
 auto
@@ -51,6 +54,8 @@ auto
     ShutdownModule()
     -> void
 {
+    FCk_AssetExporter_OnSaveHook::Unregister();
+
     DoUnregisterTabSpawner();
 }
 
