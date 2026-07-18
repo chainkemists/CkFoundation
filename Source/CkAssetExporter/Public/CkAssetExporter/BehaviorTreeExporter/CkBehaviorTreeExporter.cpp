@@ -1,6 +1,7 @@
 #include "CkBehaviorTreeExporter.h"
 
 #include "CkAssetExporter_Log.h"
+#include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
 
 #include <BehaviorTree/BehaviorTree.h>
 #include <BehaviorTree/BTCompositeNode.h>
@@ -80,7 +81,7 @@ auto
         return Result;
     }
 
-    Result.bSuccess = true;
+    Result.Succeeded = true;
     Result.JsonFilePath = JsonPath;
     Result.TextFilePath = TextPath;
     return Result;
@@ -117,7 +118,7 @@ auto
 
     RootObject->SetStringField(TEXT("assetName"), InBehaviorTree->GetName());
     RootObject->SetStringField(TEXT("assetPath"), InBehaviorTree->GetPathName());
-    RootObject->SetStringField(TEXT("exportTimestamp"), FDateTime::UtcNow().ToIso8601());
+    RootObject->SetObjectField(TEXT("_meta"), FCk_AssetExportMeta::MakeMetaObject(InBehaviorTree, ck::asset_exporter::version::BehaviorTree));
 
     // Blackboard
     RootObject->SetObjectField(TEXT("blackboard"),
@@ -458,7 +459,6 @@ auto
 
     Text += FString::Printf(TEXT("=== Behavior Tree: %s ===\n"), *InBehaviorTree->GetName());
     Text += FString::Printf(TEXT("Path: %s\n"), *InBehaviorTree->GetPathName());
-    Text += FString::Printf(TEXT("Exported: %s\n"), *FDateTime::UtcNow().ToString(TEXT("%Y-%m-%d %H:%M:%S UTC")));
     Text += TEXT("\n");
 
     // Blackboard

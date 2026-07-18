@@ -219,7 +219,7 @@ auto
     auto FailCount = int32{0};
     for (const auto& R : Results)
     {
-        if (R.bSuccess) { ++SuccessCount; }
+        if (R.Succeeded) { ++SuccessCount; }
         else { ++FailCount; }
     }
 
@@ -249,7 +249,7 @@ auto
     {
         auto Entry = MakeShared<FCk_BehaviorTreeExporterTab_ResultEntry>();
         Entry->AssetName = Result.AssetName;
-        Entry->bSuccess = Result.bSuccess;
+        Entry->Succeeded = Result.Succeeded;
         Entry->JsonPath = Result.JsonFilePath;
         Entry->TextPath = Result.TextFilePath;
         Entry->ErrorMessage = Result.ErrorMessage;
@@ -294,7 +294,7 @@ auto
     auto FailCount = int32{0};
     for (const auto& R : Results)
     {
-        if (R.bSuccess) { ++SuccessCount; }
+        if (R.Succeeded) { ++SuccessCount; }
         else { ++FailCount; }
     }
 
@@ -324,7 +324,7 @@ auto
     {
         auto Entry = MakeShared<FCk_BehaviorTreeExporterTab_ResultEntry>();
         Entry->AssetName = Result.AssetName;
-        Entry->bSuccess = Result.bSuccess;
+        Entry->Succeeded = Result.Succeeded;
         Entry->JsonPath = Result.JsonFilePath;
         Entry->TextPath = Result.TextFilePath;
         Entry->ErrorMessage = Result.ErrorMessage;
@@ -399,7 +399,7 @@ auto
     {
         auto Entry = MakeShared<FCk_BehaviorTreeExporterTab_ResultEntry>();
         Entry->AssetName = Result.AssetName;
-        Entry->bSuccess = Result.Succeeded;
+        Entry->Succeeded = Result.Succeeded;
         Entry->JsonPath = Result.JsonFilePath;
         Entry->TextPath = Result.TextFilePath;
         Entry->ErrorMessage = Result.ErrorMessage;
@@ -444,7 +444,7 @@ auto
     auto FailCount = int32{0};
     for (const auto& R : Results)
     {
-        if (R.bSuccess) { ++SuccessCount; }
+        if (R.Succeeded) { ++SuccessCount; }
         else { ++FailCount; }
     }
 
@@ -474,7 +474,7 @@ auto
     {
         auto Entry = MakeShared<FCk_BehaviorTreeExporterTab_ResultEntry>();
         Entry->AssetName = Result.AssetName;
-        Entry->bSuccess = Result.bSuccess;
+        Entry->Succeeded = Result.Succeeded;
         Entry->JsonPath = Result.JsonFilePath;
         Entry->TextPath = Result.TextFilePath;
         Entry->ErrorMessage = Result.ErrorMessage;
@@ -549,7 +549,7 @@ auto
     {
         auto Entry = MakeShared<FCk_BehaviorTreeExporterTab_ResultEntry>();
         Entry->AssetName = Result.AssetName;
-        Entry->bSuccess = Result.Succeeded;
+        Entry->Succeeded = Result.Succeeded;
         Entry->JsonPath = Result.JsonFilePath;
         Entry->TextPath = Result.TextFilePath;
         Entry->ErrorMessage = Result.ErrorMessage;
@@ -569,13 +569,13 @@ auto
         const TSharedRef<STableViewBase>& InOwnerTable)
     -> TSharedRef<ITableRow>
 {
-    const auto StatusColor = InEntry->bSuccess
+    const auto StatusColor = InEntry->Succeeded
         ? BehaviorTreeExporterTab_Constants::Color_Success
         : BehaviorTreeExporterTab_Constants::Color_Error;
 
-    const auto StatusLabel = InEntry->bSuccess ? TEXT("OK") : TEXT("FAIL");
+    const auto StatusLabel = InEntry->Succeeded ? TEXT("OK") : TEXT("FAIL");
 
-    const auto OutputText = InEntry->bSuccess
+    const auto OutputText = InEntry->Succeeded
         ? FString::Printf(TEXT("%s\n%s"), *InEntry->JsonPath, *InEntry->TextPath)
         : InEntry->ErrorMessage;
 

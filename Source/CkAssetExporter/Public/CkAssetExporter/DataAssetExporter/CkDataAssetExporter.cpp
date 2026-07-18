@@ -1,6 +1,7 @@
 #include "CkDataAssetExporter.h"
 
 #include "CkAssetExporter_Log.h"
+#include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Format/CkFormat.h"
@@ -152,7 +153,7 @@ auto
     RootObject->SetStringField(TEXT("assetName"), InDataAsset->GetName());
     RootObject->SetStringField(TEXT("assetPath"), InDataAsset->GetPathName());
     RootObject->SetStringField(TEXT("assetClass"), InDataAsset->GetClass()->GetName());
-    RootObject->SetStringField(TEXT("exportTimestamp"), FDateTime::UtcNow().ToIso8601());
+    RootObject->SetObjectField(TEXT("_meta"), FCk_AssetExportMeta::MakeMetaObject(InDataAsset, ck::asset_exporter::version::DataAsset));
 
     // Parent class chain
     auto ParentChain = TArray<TSharedPtr<FJsonValue>>{};
@@ -572,8 +573,6 @@ auto
         ParentNames.Add(Class->GetName());
     }
     Text += ck::Format_UE(TEXT("Parent Classes: {}\n"), FString::Join(ParentNames, TEXT(" -> ")));
-
-    Text += ck::Format_UE(TEXT("Exported: {}\n\n"), FDateTime::UtcNow().ToString());
 
     // Properties
     DoSerializeProperties_Text(InDataAsset, UDataAsset::StaticClass(), Text, 0);

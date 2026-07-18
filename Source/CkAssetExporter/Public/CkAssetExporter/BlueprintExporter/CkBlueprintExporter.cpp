@@ -1,7 +1,9 @@
 #include "CkBlueprintExporter.h"
 
 #include "CkAssetExporter_Log.h"
+#include "CkAssetExporter/BlueprintExporter/CkWidgetPasteArtifacts.h"
 #include "CkAssetExporter/DataAssetExporter/CkDataAssetExporter.h"
+#include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Format/CkFormat.h"
@@ -104,7 +106,17 @@ auto
         return Result;
     }
 
-    Result.bSuccess = true;
+    // Widget Blueprints additionally emit the designer-clipboard paste artifacts (hierarchy + per-animation dumps);
+    // they are part of the WBP export contract, so a failure there fails the export loudly.
+    const auto BasePathNoExt = DoResolveOutputPath(InBlueprint, TEXT(""));
+    const auto ArtifactsResult = FCk_WidgetPasteArtifacts::ExportFor(InBlueprint, BasePathNoExt);
+    if (NOT ArtifactsResult.Succeeded)
+    {
+        Result.ErrorMessage = ck::Format_UE(TEXT("Widget paste artifacts failed: {}"), ArtifactsResult.ErrorMessage);
+        return Result;
+    }
+
+    Result.Succeeded = true;
     Result.JsonFilePath = JsonPath;
     Result.TextFilePath = TextPath;
     return Result;
@@ -141,7 +153,7 @@ auto
 
     RootObject->SetStringField(TEXT("assetName"), InBlueprint->GetName());
     RootObject->SetStringField(TEXT("assetPath"), InBlueprint->GetPathName());
-    RootObject->SetStringField(TEXT("exportTimestamp"), FDateTime::UtcNow().ToIso8601());
+    RootObject->SetObjectField(TEXT("_meta"), FCk_AssetExportMeta::MakeMetaObject(InBlueprint, ck::asset_exporter::version::Blueprint));
     RootObject->SetStringField(TEXT("blueprintType"), InBlueprint->GetClass()->GetName());
 
     // Parent class
@@ -1031,8 +1043,6 @@ auto
             InBlueprint->ParentClass->GetName(),
             InBlueprint->ParentClass->GetPathName());
     }
-
-    Text += ck::Format_UE(TEXT("Exported: {}\n\n"), FDateTime::UtcNow().ToString());
 
     DoSerializeImplementedInterfaces_Text(InBlueprint, Text);
 
