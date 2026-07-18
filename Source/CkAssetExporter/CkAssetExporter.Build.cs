@@ -19,6 +19,7 @@ public class CkAssetExporter : CkModuleRules
             "InputCore",
             "ToolMenus",
             "UnrealEd",
+            "EditorSubsystem",
             "AssetTools",
             "AssetRegistry",
             "ContentBrowser",
