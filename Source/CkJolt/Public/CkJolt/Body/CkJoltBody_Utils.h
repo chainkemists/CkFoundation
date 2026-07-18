@@ -85,6 +85,15 @@ public:
     Get_IsBodyAdded(
         const FCk_Handle_JoltBody& InJoltBody);
 
+    // The body's CURRENT simulation velocity (UE units/s), read straight from the Jolt body via the
+    // locking BodyInterface (safe against an in-flight async step). Zero until the body is added.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|JoltBody",
+              DisplayName="[Ck][JoltBody] Get Linear Velocity")
+    static FVector
+    Get_LinearVelocity(
+        const FCk_Handle_JoltBody& InJoltBody);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|JoltBody",

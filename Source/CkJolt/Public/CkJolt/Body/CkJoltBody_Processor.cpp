@@ -16,6 +16,7 @@
 
 #include "CkJolt/CkJolt_ActivationEvent.h"
 #include "CkJolt/CkJolt_Log.h"
+#include "CkJolt/CkJolt_Stats.h"
 #include "CkJolt/CkJolt_Utils.h"
 #include "CkJolt/CkJoltShapeFactory.h"
 #include "CkJolt/CollisionLayers/CkJoltCollisionLayerTable.h"
@@ -45,6 +46,13 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_JoltBody_SleepStateMirror);
 CK_REGISTER_PROCESSOR(ck::FProcessor_JoltBody_KinematicPush);
 CK_REGISTER_PROCESSOR(ck::FProcessor_JoltBody_WritebackInterpolated);
 CK_REGISTER_PROCESSOR(ck::FProcessor_JoltBody_EndPlay);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Benchmark stats (Phase 5): the per-frame cost of writing simulated poses back onto entity Transforms
+// (parallel) and of pushing ECS-driven kinematic bodies into the Jolt world.
+DECLARE_CYCLE_STAT(TEXT("JoltBody_WritebackInterpolated"), STAT_CkJolt_Writeback, STATGROUP_CkJolt);
+DECLARE_CYCLE_STAT(TEXT("JoltBody_KinematicPush"), STAT_CkJolt_KinematicPush, STATGROUP_CkJolt);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -797,6 +805,8 @@ namespace ck
         if (ck::Is_NOT_Valid(_PhysicsSystem.Pin()))
         { return; }
 
+        SCOPE_CYCLE_COUNTER(STAT_CkJolt_KinematicPush);
+
         _PendingSimTime = JoltWorld->Get_PendingSimTime();
 
         TProcessor::DoTick(InDeltaT);
@@ -840,6 +850,8 @@ namespace ck
         auto* JoltWorld = ck_jolt_body_processor::TryResolve_JoltWorld(_TransientEntity);
         if (JoltWorld == nullptr)
         { return; }
+
+        SCOPE_CYCLE_COUNTER(STAT_CkJolt_Writeback);
 
         _Alpha = JoltWorld->Get_Alpha();
 
