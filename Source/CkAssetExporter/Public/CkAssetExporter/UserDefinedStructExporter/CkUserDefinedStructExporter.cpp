@@ -2,6 +2,7 @@
 
 #include "CkAssetExporter_Log.h"
 #include "CkAssetExporter/DataAssetExporter/CkDataAssetExporter.h"
+#include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Format/CkFormat.h"
@@ -139,7 +140,7 @@ auto
     RootObject->SetStringField(TEXT("assetPath"), InStruct->GetPathName());
     RootObject->SetStringField(TEXT("assetClass"), InStruct->GetClass()->GetName());
     RootObject->SetStringField(TEXT("structGuid"), InStruct->GetCustomGuid().ToString());
-    RootObject->SetStringField(TEXT("exportTimestamp"), FDateTime::UtcNow().ToIso8601());
+    RootObject->SetObjectField(TEXT("_meta"), FCk_AssetExportMeta::MakeMetaObject(InStruct, ck::asset_exporter::version::UserDefinedStruct));
 
     // The shared serializer keeps thread-local dedup state across calls — reset it
     // so stale entries from a previous (DataAsset/Blueprint) export don't leak in.
@@ -215,7 +216,6 @@ auto
     Text += ck::Format_UE(TEXT("=== UserDefinedStruct: {} ===\n"), InStruct->GetName());
     Text += ck::Format_UE(TEXT("Path: {}\n"), InStruct->GetPathName());
     Text += ck::Format_UE(TEXT("GUID: {}\n"), InStruct->GetCustomGuid().ToString());
-    Text += ck::Format_UE(TEXT("Exported: {}\n\n"), FDateTime::UtcNow().ToString());
 
     const auto* DefaultInstance = InStruct->GetDefaultInstance();
     const auto HasDefaults = ck::IsValid(DefaultInstance, ck::IsValid_Policy_NullptrOnly{});
