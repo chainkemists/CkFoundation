@@ -83,8 +83,17 @@ auto
     }
 
 #if WITH_EDITOR
-    // Add compilation safety delegates - hook PreCompile and Compiled for deferred updates
-    if (ck::IsValid(GEditor))
+    // Add compilation safety delegates - hook PreCompile and Compiled for deferred updates.
+    //
+    // NOT under a commandlet (e.g. -run=CkAssetExporter, cook): during a headless sweep the
+    // compile-on-load of an EntityScript blueprint fires OnBlueprintPreCompile from inside
+    // FLinkerLoad::CreateExport (via ~FScopedClassDependencyGather flushing the compile queue).
+    // The hook below would then regenerate the associated EntitySpawnParams UserDefinedStruct
+    // mid-async-load, whose reinstancing re-enters the compiler and re-fires the hook -> runaway
+    // STRUCT_REINST churn until the BlueprintCompilationManager ensures trip and the process dies.
+    // Spawn-params struct maintenance is an interactive-authoring convenience only; a commandlet
+    // that merely loads assets to read/export/cook them never needs it.
+    if (ck::IsValid(GEditor) && NOT IsRunningCommandlet())
     {
         // Instead of updating immediately, defer the updates to avoid compilation conflicts
         const auto RequestDeferredUpdate = [this]()
@@ -354,6 +363,16 @@ auto
     {
         SpawnParamsStructForEntity = *FoundExistingStruct;
 
+        // Under a commandlet (e.g. -run=CkAssetExporter, cook) never MUTATE the struct. Regeneration runs
+        // FStructureEditorUtils::OnStructureChanged -> CompileStructure, which re-enters the blueprint
+        // compiler. During a headless sweep that re-entry lands inside FlushCompilationQueue while a package
+        // is still async-loading (a Cue K2Node expands during compile-on-load and calls back here through
+        // DoGet_CueSpawnParamsStruct), tripping the bGeneratedClassLayoutReady ensure and hanging the
+        // process. A read-only export/cook needs the struct only for lookup, never regeneration — return the
+        // on-disk struct as-is.
+        if (IsRunningCommandlet())
+        { return SpawnParamsStructForEntity; }
+
         auto ExistingProperties = TArray<FProperty*>{};
         for (auto PropIt = TFieldIterator<FProperty>(SpawnParamsStructForEntity); PropIt; ++PropIt)
         {
@@ -373,6 +392,12 @@ auto
 
     if (ck::Is_NOT_Valid(SpawnParamsStructForEntity))
     {
+        // See note above: creating + compiling a brand-new struct also re-enters the compiler. A commandlet
+        // that merely loads assets to read/export/cook them can live without it (the Cue K2Node logs a
+        // benign compile message and moves on); never create/compile one mid-sweep.
+        if (IsRunningCommandlet())
+        { return {}; }
+
         const auto StructPackageName = Get_StructPathForEntityScriptPath(InEntityScriptClass->GetPackage()->GetName()) / StructName.ToString();
         auto* StructPackage = CreatePackage(*StructPackageName);
 
