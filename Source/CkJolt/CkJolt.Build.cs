@@ -23,6 +23,10 @@ public class CkJolt : CkModuleRules
             "ChaosCore",
             "Landscape",
 
+            // The batched debug renderer builds transient UStaticMeshes from Jolt triangle batches.
+            "MeshDescription",
+            "StaticMeshDescription",
+
             "CkThirdParty",
             "CkCore",
             "CkEcs",
