@@ -2,10 +2,15 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include "CkEcs/Entity/CkEntity.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
+
 #include "CkJolt/CkJolt_Log.h"
 #include "CkJolt/CkJolt_Stats.h"
 #include "CkJolt/CkJolt_Utils.h"
 #include "CkJolt/Settings/CkJolt_ProjectSettings.h"
+#include "CkJolt/StaticWorld/CkJoltStaticActor_Fragment.h"
 
 #include <Engine/Level.h>
 #include <Engine/World.h>
@@ -72,6 +77,10 @@ auto
 
     _JoltSubsystem = InCollection.InitializeDependency<UCk_Jolt_Subsystem>();
 
+    // The attribution entities live in the ECS registry — depend on the ECS world subsystem so it outlives us
+    // and Deinitialize can still read their fragments while we free the Jolt bodies.
+    _EcsWorldSubsystem = InCollection.InitializeDependency<UCk_EcsWorld_Subsystem_UE>();
+
     _LevelAddedHandle = FWorldDelegates::LevelAddedToWorld.AddUObject(
         this, &ThisType::DoHandle_LevelAdded);
     _LevelRemovedHandle = FWorldDelegates::LevelRemovedFromWorld.AddUObject(
@@ -86,36 +95,38 @@ auto
     FWorldDelegates::LevelAddedToWorld.Remove(_LevelAddedHandle);
     FWorldDelegates::LevelRemovedFromWorld.Remove(_LevelRemovedHandle);
 
-    // Levels do not reliably fire LevelRemovedFromWorld during world teardown — free every
-    // remaining body slot while the Jolt world (which we InitializeDependency on, so it outlives
-    // us) is still alive.
-    if (auto* BodyInterface = Get_BodyInterface())
+    // Levels do not reliably fire LevelRemovedFromWorld during world teardown — free every remaining source
+    // actor's bodies (and destroy its attribution entity) while both the Jolt world and the ECS registry
+    // (which we InitializeDependency on, so they outlive us) are still alive. Dead handles are tolerated (an
+    // entity destroyed first already routed through the funnel via its EndPlay processor).
+    for (auto& [Level, LevelBodies] : _LevelBodies)
     {
-        auto AllBodyIds = TArray<JPH::BodyID>{};
-
-        for (const auto& [Level, LevelBodies] : _LevelBodies)
+        for (auto& ActorEntity : LevelBodies._ActorEntities)
         {
-            for (const auto& RawBodyId : LevelBodies._BodyIds)
-            { AllBodyIds.Emplace(JPH::BodyID{RawBodyId}); }
-        }
+            if (ck::Is_NOT_Valid(ActorEntity))
+            { continue; }
 
-        for (const auto& [Actor, BodyIds] : _ManualActorBodies)
-        {
-            for (const auto& RawBodyId : BodyIds)
-            { AllBodyIds.Emplace(JPH::BodyID{RawBodyId}); }
-        }
+            Request_RemoveBodiesForEntity(ActorEntity);
 
-        if (AllBodyIds.Num() > 0)
-        {
-            BodyInterface->RemoveBodies(AllBodyIds.GetData(), AllBodyIds.Num());
-            BodyInterface->DestroyBodies(AllBodyIds.GetData(), AllBodyIds.Num());
+            auto GenericHandle = FCk_Handle{ActorEntity};
+            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(GenericHandle);
         }
     }
 
+    for (auto& [Actor, ActorEntity] : _ManualActorEntities)
+    {
+        if (ck::Is_NOT_Valid(ActorEntity))
+        { continue; }
+
+        Request_RemoveBodiesForEntity(ActorEntity);
+
+        auto GenericHandle = FCk_Handle{ActorEntity};
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(GenericHandle);
+    }
+
     _LevelBodies.Empty();
-    _ManualActorBodies.Empty();
+    _ManualActorEntities.Empty();
     _LoadedCells.Empty();
-    _BodyToActorName.Empty();
     _NumStaticBodies = 0;
 
     Super::Deinitialize();
@@ -191,25 +202,15 @@ auto
     Result._HasHit = true;
     Result._Position = ck::jolt::Conv(Ray.GetPointOnRay(RayResult.mFraction));
 
-    if (const auto* ActorName = _BodyToActorName.Find(RayResult.mBodyID.GetIndexAndSequenceNumber()))
-    { Result._SourceActorName = *ActorName; }
+    // Attribution now flows through the body's Jolt user-data (the source actor's entity id), exactly like a
+    // dynamic JoltBody hit — no separate FName table.
+    const auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+    Result._Entity = DoResolve_EntityFromUserData(BodyInterface.GetUserData(RayResult.mBodyID));
 
     return Result;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_JoltStaticWorld_Subsystem_UE::
-    TryGet_ActorNameForBody(
-        uint32 InBodyIndexAndSeq) const
-    -> FName
-{
-    if (const auto* ActorName = _BodyToActorName.Find(InBodyIndexAndSeq))
-    { return *ActorName; }
-
-    return {};
-}
 
 auto
     UCk_JoltStaticWorld_Subsystem_UE::
@@ -224,11 +225,38 @@ auto
     if (Extracted.IsEmpty())
     { return 0; }
 
+    const auto TransientEntity = DoGet_TransientEntity();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(TransientEntity),
+        TEXT("Request_BakeActor for [{}] has no live ECS transient entity to attribute bodies to — the ECS "
+             "world is not ready."), InActor.GetFName())
+    { return 0; }
+
+    // Re-baking an already-baked actor REPLACES its attribution: free the previous bake's bodies and
+    // entity first — overwriting the map entry would orphan them (unreachable by Request_RemoveActor
+    // AND by Deinitialize).
+    if (auto* ExistingEntity = _ManualActorEntities.Find(&InActor))
+    {
+        if (ck::IsValid(*ExistingEntity))
+        {
+            Request_RemoveBodiesForEntity(*ExistingEntity);
+
+            auto GenericHandle = FCk_Handle{*ExistingEntity};
+            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(GenericHandle);
+        }
+
+        _ManualActorEntities.Remove(&InActor);
+    }
+
+    auto ActorEntity = DoCreate_ActorEntity(TransientEntity, InActor);
+    if (ck::Is_NOT_Valid(ActorEntity))
+    { return 0; }
+
     auto BodyIds = TArray<uint32>{};
-    DoCreate_BodiesFromExtracted(Extracted, InActor.GetFName(), BodyIds);
+    DoCreate_BodiesFromExtracted(Extracted, ActorEntity, BodyIds);
     DoBatchAdd_Bodies(BodyIds);
 
-    _ManualActorBodies.FindOrAdd(&InActor).Append(BodyIds);
+    _ManualActorEntities.Add(&InActor, ActorEntity);
     DoNote_BodiesChanged(BodyIds.Num());
 
     return BodyIds.Num();
@@ -240,21 +268,52 @@ auto
         const AActor& InActor)
         -> void
 {
-    auto RemovedBodyIds = TArray<uint32>{};
-    if (NOT _ManualActorBodies.RemoveAndCopyValue(&InActor, RemovedBodyIds))
+    auto ActorEntity = FCk_Handle_JoltStaticActor{};
+    if (NOT _ManualActorEntities.RemoveAndCopyValue(&InActor, ActorEntity))
+    { return; }
+
+    if (ck::Is_NOT_Valid(ActorEntity))
+    { return; }
+
+    Request_RemoveBodiesForEntity(ActorEntity);
+
+    auto GenericHandle = FCk_Handle{ActorEntity};
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(GenericHandle);
+}
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    Request_RemoveBodiesForEntity(
+        FCk_Handle_JoltStaticActor& InActorEntity)
+        -> void
+{
+    // IncludePendingKill so this works from FProcessor_JoltStaticActor_EndPlay (the entity is pending-destroy
+    // there) as well as the fully-alive subsystem-driven paths.
+    if (ck::Is_NOT_Valid(InActorEntity, ck::IsValid_Policy_IncludePendingKill{}))
+    { return; }
+
+    if (NOT InActorEntity.Has<ck::FFragment_JoltStaticActor_Current>())
+    { return; }
+
+    auto& Fragment = InActorEntity.Get<ck::FFragment_JoltStaticActor_Current>();
+
+    // Empty body-id array = already freed. This is the idempotence guard that makes the bidirectional
+    // lifecycle safe (whichever removal path runs first empties it; the other no-ops here).
+    if (Fragment.Get_BodyIds().IsEmpty())
     { return; }
 
     auto* BodyInterface = Get_BodyInterface();
     if (BodyInterface == nullptr)
-    { return; }
+    {
+        // Jolt world already gone (teardown) — nothing to free; still empty the array so a later pass no-ops.
+        Fragment._BodyIds.Empty();
+        return;
+    }
 
     auto BodyIds = TArray<JPH::BodyID>{};
-    BodyIds.Reserve(RemovedBodyIds.Num());
-    for (const auto& RawBodyId : RemovedBodyIds)
-    {
-        BodyIds.Emplace(JPH::BodyID{RawBodyId});
-        _BodyToActorName.Remove(RawBodyId);
-    }
+    BodyIds.Reserve(Fragment.Get_BodyIds().Num());
+    for (const auto& RawBodyId : Fragment.Get_BodyIds())
+    { BodyIds.Emplace(JPH::BodyID{RawBodyId}); }
 
     BodyInterface->RemoveBodies(BodyIds.GetData(), BodyIds.Num());
     BodyInterface->DestroyBodies(BodyIds.GetData(), BodyIds.Num());
@@ -264,6 +323,8 @@ auto
 
     if (ck::IsValid(_JoltSubsystem))
     { _JoltSubsystem->Request_OptimizeBroadPhaseBeforeNextUpdate(); }
+
+    Fragment._BodyIds.Empty();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -310,15 +371,27 @@ auto
     if (_LevelBodies.Contains(&InLevel))
     { return; }
 
+    // Every contributing actor needs a live transient entity to parent its attribution entity. If the ECS
+    // world is not ready yet (a level can be added before BeginPlay), SKIP — the OnWorldBeginPlay sweep
+    // re-attempts (this level is not recorded, so the _LevelBodies.Contains guard above lets it retry).
+    const auto TransientEntity = DoGet_TransientEntity();
+    if (ck::Is_NOT_Valid(TransientEntity))
+    {
+        ck::jolt::Verbose(TEXT("JoltStaticWorld: level [{}] added before the ECS world was ready — deferring "
+            "to the BeginPlay sweep"), InLevel.GetOutermost()->GetName());
+        return;
+    }
+
+    auto ActorEntities = TArray<FCk_Handle_JoltStaticActor>{};
     auto BodyIds = TArray<uint32>{};
     auto CellIndices = TArray<int32>{};
 
     if (Get_UsesCookedData())
-    { DoAdd_BodiesForLevel_Cooked(InLevel, BodyIds, CellIndices); }
+    { DoAdd_BodiesForLevel_Cooked(InLevel, TransientEntity, ActorEntities, BodyIds, CellIndices); }
     else
-    { DoAdd_BodiesForLevel_LiveExtract(InLevel, BodyIds); }
+    { DoAdd_BodiesForLevel_LiveExtract(InLevel, TransientEntity, ActorEntities, BodyIds); }
 
-    if (BodyIds.IsEmpty())
+    if (ActorEntities.IsEmpty())
     {
         // Cells may have been loaded even when every actor's bodies were skipped (stale hashes) —
         // release them so the assets can GC.
@@ -329,14 +402,17 @@ auto
 
     DoBatchAdd_Bodies(BodyIds);
 
+    const auto NumBodies = BodyIds.Num();
+    const auto NumEntities = ActorEntities.Num();
+
     auto& LevelBodies = _LevelBodies.Add(&InLevel);
-    LevelBodies._BodyIds = MoveTemp(BodyIds);
+    LevelBodies._ActorEntities = MoveTemp(ActorEntities);
     LevelBodies._CellIndices = MoveTemp(CellIndices);
 
-    DoNote_BodiesChanged(LevelBodies._BodyIds.Num());
+    DoNote_BodiesChanged(NumBodies);
 
-    ck::jolt::Verbose(TEXT("JoltStaticWorld: level [{}] added [{}] static bodies (total [{}])"),
-        InLevel.GetOutermost()->GetName(), LevelBodies._BodyIds.Num(), _NumStaticBodies);
+    ck::jolt::Verbose(TEXT("JoltStaticWorld: level [{}] added [{}] static bodies across [{}] source entities "
+        "(total [{}])"), InLevel.GetOutermost()->GetName(), NumBodies, NumEntities, _NumStaticBodies);
 }
 
 auto
@@ -351,32 +427,26 @@ auto
     if (NOT _LevelBodies.RemoveAndCopyValue(&InLevel, LevelBodies))
     { return; }
 
-    auto* BodyInterface = Get_BodyInterface();
-    if (BodyInterface == nullptr)
-    { return; }
-
-    auto BodyIds = TArray<JPH::BodyID>{};
-    BodyIds.Reserve(LevelBodies._BodyIds.Num());
-    for (const auto& RawBodyId : LevelBodies._BodyIds)
+    for (auto& ActorEntity : LevelBodies._ActorEntities)
     {
-        BodyIds.Emplace(JPH::BodyID{RawBodyId});
-        _BodyToActorName.Remove(RawBodyId);
+        // Tolerate dead handles: an attribution entity destroyed first already freed its bodies through the
+        // funnel (its EndPlay processor).
+        if (ck::Is_NOT_Valid(ActorEntity))
+        { continue; }
+
+        Request_RemoveBodiesForEntity(ActorEntity);
+
+        auto GenericHandle = FCk_Handle{ActorEntity};
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(GenericHandle);
     }
 
-    BodyInterface->RemoveBodies(BodyIds.GetData(), BodyIds.Num());
-    BodyInterface->DestroyBodies(BodyIds.GetData(), BodyIds.Num());
-
+    // Cooked-cell refcounts stay level-scoped: releasing here (not on an early entity destroy) keeps a cell
+    // pinned for as long as its level is loaded.
     for (const auto& CellIndex : LevelBodies._CellIndices)
     { DoRelease_Cell(CellIndex); }
 
-    _NumStaticBodies -= BodyIds.Num();
-    _BodyChurnSinceOptimize += BodyIds.Num();
-
-    if (ck::IsValid(_JoltSubsystem))
-    { _JoltSubsystem->Request_OptimizeBroadPhaseBeforeNextUpdate(); }
-
-    ck::jolt::Verbose(TEXT("JoltStaticWorld: level [{}] removed [{}] static bodies (total [{}])"),
-        InLevel.GetOutermost()->GetName(), BodyIds.Num(), _NumStaticBodies);
+    ck::jolt::Verbose(TEXT("JoltStaticWorld: level [{}] removed [{}] source entities (total bodies now [{}])"),
+        InLevel.GetOutermost()->GetName(), LevelBodies._ActorEntities.Num(), _NumStaticBodies);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -385,7 +455,9 @@ auto
     UCk_JoltStaticWorld_Subsystem_UE::
     DoAdd_BodiesForLevel_LiveExtract(
         ULevel& InLevel,
-        TArray<uint32>& OutBodyIds)
+        const FCk_Handle& InTransientEntity,
+        TArray<FCk_Handle_JoltStaticActor>& OutActorEntities,
+        TArray<uint32>& OutBodyIdsForBatch)
         -> void
 {
     for (const auto& Actor : InLevel.Actors)
@@ -396,10 +468,16 @@ auto
         auto Extracted = TArray<ck::jolt::bake::FCk_Jolt_ExtractedBody>{};
         ck::jolt::bake::ExtractActor(*Actor, _LiveShapeCache, Extracted);
 
+        // No contribution => no attribution entity (D1).
         if (Extracted.IsEmpty())
         { continue; }
 
-        DoCreate_BodiesFromExtracted(Extracted, Actor->GetFName(), OutBodyIds);
+        auto ActorEntity = DoCreate_ActorEntity(InTransientEntity, *Actor);
+        if (ck::Is_NOT_Valid(ActorEntity))
+        { continue; }
+
+        DoCreate_BodiesFromExtracted(Extracted, ActorEntity, OutBodyIdsForBatch);
+        OutActorEntities.Emplace(ActorEntity);
     }
 }
 
@@ -407,7 +485,9 @@ auto
     UCk_JoltStaticWorld_Subsystem_UE::
     DoAdd_BodiesForLevel_Cooked(
         ULevel& InLevel,
-        TArray<uint32>& OutBodyIds,
+        const FCk_Handle& InTransientEntity,
+        TArray<FCk_Handle_JoltStaticActor>& OutActorEntities,
+        TArray<uint32>& OutBodyIdsForBatch,
         TArray<int32>& OutCellIndices)
         -> void
 {
@@ -457,6 +537,10 @@ auto
             Actor->GetFName(), CurrentHash, Group.Get_RuntimeCheckHash())
         { continue; }
 
+        // No cooked bodies => no attribution entity (D1) and no cell ref.
+        if (Group.Get_Bodies().IsEmpty())
+        { continue; }
+
         // Ref the cell ONCE per level (not per actor) — DoEnsure_CellLoaded loads at refcount 0;
         // the +1 happens here on first use by this level.
         auto AlreadyUsed = false;
@@ -466,6 +550,13 @@ auto
             if (auto* Cell = _LoadedCells.Find(ActorRef->Get_CellIndex()))
             { ++Cell->_RefCount; }
         }
+
+        auto ActorEntity = DoCreate_ActorEntity(InTransientEntity, *Actor);
+        if (ck::Is_NOT_Valid(ActorEntity))
+        { continue; }
+
+        auto& Fragment = ActorEntity.Get<ck::FFragment_JoltStaticActor_Current>();
+        const auto EntityUserData = static_cast<uint64>(ActorEntity.Get_Entity().Get_ID());
 
         for (const auto& Record : Group.Get_Bodies())
         {
@@ -490,6 +581,8 @@ auto
                 JPH::ObjectLayer{Layer}};
             BodySettings.mFriction = Record.Get_Friction();
             BodySettings.mRestitution = Record.Get_Restitution();
+            // Stamp the source actor's entity id so a static hit resolves back to its attribution entity.
+            BodySettings.mUserData = EntityUserData;
 
             const auto* Body = BodyInterface->CreateBody(BodySettings);
 
@@ -499,9 +592,11 @@ auto
             { break; }
 
             const auto RawBodyId = Body->GetID().GetIndexAndSequenceNumber();
-            OutBodyIds.Emplace(RawBodyId);
-            _BodyToActorName.Add(RawBodyId, Actor->GetFName());
+            OutBodyIdsForBatch.Emplace(RawBodyId);
+            Fragment._BodyIds.Emplace(RawBodyId);
         }
+
+        OutActorEntities.Emplace(ActorEntity);
     }
 
     OutCellIndices = UsedCellIndices.Array();
@@ -511,15 +606,40 @@ auto
 
 auto
     UCk_JoltStaticWorld_Subsystem_UE::
+    DoCreate_ActorEntity(
+        const FCk_Handle& InTransientEntity,
+        const AActor& InSourceActor)
+        -> FCk_Handle_JoltStaticActor
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InTransientEntity);
+    if (ck::Is_NOT_Valid(NewEntity))
+    { return {}; }
+
+    NewEntity.Add<ck::FFragment_JoltStaticActor_Current>();
+
+    auto& Fragment = NewEntity.Get<ck::FFragment_JoltStaticActor_Current>();
+    Fragment._SourceActor = &InSourceActor;
+    Fragment._SourceActorName = InSourceActor.GetFName();
+
+    UCk_Utils_Handle_UE::Set_DebugName(NewEntity, InSourceActor.GetFName());
+
+    return ck::StaticCast<FCk_Handle_JoltStaticActor>(NewEntity);
+}
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
     DoCreate_BodiesFromExtracted(
         const TArray<ck::jolt::bake::FCk_Jolt_ExtractedBody>& InExtracted,
-        FName InSourceActorName,
-        TArray<uint32>& OutBodyIds)
+        FCk_Handle_JoltStaticActor& InActorEntity,
+        TArray<uint32>& OutBodyIdsForBatch)
         -> void
 {
     auto* BodyInterface = Get_BodyInterface();
     if (BodyInterface == nullptr)
     { return; }
+
+    auto& Fragment = InActorEntity.Get<ck::FFragment_JoltStaticActor_Current>();
+    const auto EntityUserData = static_cast<uint64>(InActorEntity.Get_Entity().Get_ID());
 
     for (const auto& Extracted : InExtracted)
     {
@@ -538,16 +658,18 @@ auto
             JPH::ObjectLayer{Layer}};
         BodySettings.mFriction = Extracted._Friction;
         BodySettings.mRestitution = Extracted._Restitution;
+        // Stamp the source actor's entity id so a static hit resolves back to its attribution entity.
+        BodySettings.mUserData = EntityUserData;
 
         const auto* Body = BodyInterface->CreateBody(BodySettings);
 
         CK_ENSURE_IF_NOT(Body != nullptr,
-            TEXT("Jolt body slot exhaustion while baking [{}] — raise MaxBodies"), InSourceActorName)
+            TEXT("Jolt body slot exhaustion while baking [{}] — raise MaxBodies"), Fragment.Get_SourceActorName())
         { return; }
 
         const auto RawBodyId = Body->GetID().GetIndexAndSequenceNumber();
-        OutBodyIds.Emplace(RawBodyId);
-        _BodyToActorName.Add(RawBodyId, InSourceActorName);
+        OutBodyIdsForBatch.Emplace(RawBodyId);
+        Fragment._BodyIds.Emplace(RawBodyId);
     }
 }
 
@@ -617,6 +739,46 @@ auto
 #else
     return true;
 #endif
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    DoGet_TransientEntity() const
+    -> FCk_Handle
+{
+    if (ck::Is_NOT_Valid(_EcsWorldSubsystem))
+    { return {}; }
+
+    return _EcsWorldSubsystem->Get_TransientEntity();
+}
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    DoResolve_EntityFromUserData(
+        uint64 InUserData) const
+    -> FCk_Handle
+{
+    // UserData 0 = NO entity: baked bodies always carry a non-zero source-actor entity id now, and raw entity
+    // id 0 is always the registry's live transient root (resolving it would mis-attribute).
+    if (InUserData == 0)
+    { return {}; }
+
+    if (ck::Is_NOT_Valid(_EcsWorldSubsystem))
+    { return {}; }
+
+    const auto TransientEntity = _EcsWorldSubsystem->Get_TransientEntity();
+    if (ck::Is_NOT_Valid(TransientEntity))
+    { return {}; }
+
+    // Registry-liveness check FIRST — no ensure on a dead id (mirrors CkJoltQuery_Utils::TryResolve_Entity).
+    const auto RegView = TransientEntity.Get_RegistryView();
+    const auto Entity = FCk_Entity{static_cast<FCk_Entity::IdType>(InUserData)};
+    if (NOT RegView.IsValid(Entity))
+    { return {}; }
+
+    return TransientEntity.Get_ValidHandle(Entity.Get_ID());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

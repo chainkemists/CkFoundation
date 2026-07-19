@@ -7,7 +7,6 @@
 #include "CkJolt/CkJoltShapeFactory.h"
 #include "CkJolt/CkJolt_Log.h"
 #include "CkJolt/CkJolt_Utils.h"
-#include "CkJolt/StaticWorld/CkJoltStaticWorld_Subsystem.h"
 #include "CkJolt/Subsystem/CkJolt_Subsystem.h"
 
 #include <Engine/World.h>
@@ -60,9 +59,9 @@ namespace ck_jolt_query_utils
         if (ck::Is_NOT_Valid(EcsWorldSubsystem, ck::IsValid_Policy_NullptrOnly{}))
         { return {}; }
 
-        // UserData 0 = NO entity. Baked static-world bodies never SetUserData (Jolt default 0), and raw
-        // entity id 0 is always the registry's live transient root — resolving it would attribute static
-        // geometry to a live handle (and Get_OverlapEntities would return the transient root as a result).
+        // UserData 0 = NO entity. Raw entity id 0 is always the registry's live transient root — resolving it
+        // would return the transient root as a spurious result. (Baked static-world bodies now carry their
+        // source actor's attribution entity id, so a static hit resolves through this same path.)
         if (InUserData == 0)
         { return {}; }
 
@@ -84,10 +83,9 @@ namespace ck_jolt_query_utils
     {
         const auto& BodyInterface = InContext._PhysicsSystem->GetBodyInterface();
 
+        // One resolution path for every hit body: the user-data-stamped entity id. Baked static-world bodies
+        // now carry their source actor's attribution entity, so they resolve here with no special-casing.
         InOutResult.Set_Entity(TryResolve_Entity(InContext, BodyInterface.GetUserData(InBodyId)));
-
-        if (const auto* StaticWorld = InContext._World->GetSubsystem<UCk_JoltStaticWorld_Subsystem_UE>())
-        { InOutResult.Set_SourceActorName(StaticWorld->TryGet_ActorNameForBody(InBodyId.GetIndexAndSequenceNumber())); }
     }
 
     static auto Get_SurfaceNormal(
@@ -363,7 +361,9 @@ auto
     auto Results = TArray<FCk_Handle>{};
 
     // Reuse the overlap query (which already resolves each hit body's UserData into FCk_Jolt_HitResult's
-    // _Entity via the non-ensuring pattern), then keep the live, deduped entity handles.
+    // _Entity via the non-ensuring pattern), then keep the live, deduped entity handles. Baked static-world
+    // bodies now resolve to their source actor's attribution entity, so they appear here alongside dynamic
+    // bodies (only the transient-root id 0 is dropped).
     const auto Hits = Get_Overlap(InWorldContextObject, InLocation, InRotation, InShape, InFilter);
 
     for (const auto& Hit : Hits)

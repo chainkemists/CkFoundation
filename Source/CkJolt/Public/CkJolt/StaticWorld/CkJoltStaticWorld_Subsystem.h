@@ -3,7 +3,11 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
 
+#include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
+
 #include "CkJolt/StaticWorld/CkJoltBakeExtraction.h"
+#include "CkJolt/StaticWorld/CkJoltStaticActor_Fragment_Data.h"
 #include "CkJolt/StaticWorld/CkJoltStaticWorld_Data.h"
 #include "CkJolt/Subsystem/CkJolt_Subsystem.h"
 
@@ -28,7 +32,9 @@ namespace ck::jolt
     {
         bool _HasHit = false;
         FVector _Position = FVector::ZeroVector;
-        FName _SourceActorName;
+        // The hit body's source-actor attribution entity (FCk_Handle_JoltStaticActor), resolved from the
+        // body's Jolt user-data; INVALID when the body has no live entity.
+        FCk_Handle _Entity;
     };
 
     /// Resolves the cooked-index asset path for a map by convention:
@@ -46,9 +52,17 @@ namespace ck::jolt
 // --------------------------------------------------------------------------------------------------------------------
 
 /*
- * Owns the baked static-world bodies: thousands of Jolt bodies with NO ECS entities, tracked
- * per-ULevel so they add/remove in exact lockstep with level streaming (World Partition runtime
- * cells stream as ULevels, so one delegate pair covers WP and legacy sublevels uniformly).
+ * Owns the baked static-world bodies with ECS-first attribution: ONE entity per source actor that
+ * contributes at least one baked body (ck::FFragment_JoltStaticActor_Current), tracked per-ULevel so bodies
+ * add/remove in exact lockstep with level streaming (World Partition runtime cells stream as ULevels, so one
+ * delegate pair covers WP and legacy sublevels uniformly). Each body is stamped with its source actor's
+ * entity id as Jolt user-data, so a static-world hit resolves back to the entity through the same path a
+ * dynamic JoltBody hit uses — there is no separate FName attribution table.
+ *
+ * Lifecycle is bidirectional: the level-streaming / Request_RemoveActor / Deinitialize paths remove bodies
+ * AND destroy the attribution entities; and if an attribution entity is destroyed first,
+ * FProcessor_JoltStaticActor_EndPlay removes its bodies through the same idempotent funnel
+ * (Request_RemoveBodiesForEntity).
  *
  * Sources: live extraction from level actors (PIE default — stale cooked data can never silently
  * affect PIE) or cooked per-cell data assets (packaged builds always; PIE opt-in via settings).
@@ -89,12 +103,6 @@ public:
         const FVector& InStart,
         const FVector& InEnd) const -> ck::jolt::FCk_Jolt_StaticWorldRayHit;
 
-    /// Per-actor hit attribution for baked static bodies (empty name when the body id is not a
-    /// static-world body).
-    auto
-    TryGet_ActorNameForBody(
-        uint32 InBodyIndexAndSeq) const -> FName;
-
     /// Extracts and adds static bodies for a single actor at runtime (also the AS test surface).
     /// Returns the number of bodies added.
     auto
@@ -105,6 +113,15 @@ public:
     auto
     Request_RemoveActor(
         const AActor& InActor) -> void;
+
+    /// The single idempotent funnel for freeing a source actor's bodies: reads the entity's fragment body
+    /// ids, removes/destroys them via the BodyInterface, decrements the body count + broadphase churn, then
+    /// EMPTIES the fragment's body-id array (that emptiness is the idempotence guard). Called by every
+    /// removal path AND by FProcessor_JoltStaticActor_EndPlay when the entity is destroyed first — whichever
+    /// runs first frees the bodies; the other sees an empty array and no-ops. Does NOT destroy the entity.
+    auto
+    Request_RemoveBodiesForEntity(
+        FCk_Handle_JoltStaticActor& InActorEntity) -> void;
 
 private:
     auto
@@ -128,19 +145,32 @@ private:
     auto
     DoAdd_BodiesForLevel_LiveExtract(
         ULevel& InLevel,
-        TArray<uint32>& OutBodyIds) -> void;
+        const FCk_Handle& InTransientEntity,
+        TArray<FCk_Handle_JoltStaticActor>& OutActorEntities,
+        TArray<uint32>& OutBodyIdsForBatch) -> void;
 
     auto
     DoAdd_BodiesForLevel_Cooked(
         ULevel& InLevel,
-        TArray<uint32>& OutBodyIds,
+        const FCk_Handle& InTransientEntity,
+        TArray<FCk_Handle_JoltStaticActor>& OutActorEntities,
+        TArray<uint32>& OutBodyIdsForBatch,
         TArray<int32>& OutCellIndices) -> void;
 
+    // Creates the attribution entity for a contributing actor (transient-owned), adds the fragment, caches
+    // the source actor + name, and stamps its DebugName. Invalid return = the transient entity was not ready.
+    auto
+    DoCreate_ActorEntity(
+        const FCk_Handle& InTransientEntity,
+        const AActor& InSourceActor) -> FCk_Handle_JoltStaticActor;
+
+    // Creates the extracted bodies, stamps each with InActorEntity's id as Jolt user-data, and appends the
+    // raw body ids to BOTH the entity's fragment and the batch-add accumulator.
     auto
     DoCreate_BodiesFromExtracted(
         const TArray<ck::jolt::bake::FCk_Jolt_ExtractedBody>& InExtracted,
-        FName InSourceActorName,
-        TArray<uint32>& OutBodyIds) -> void;
+        FCk_Handle_JoltStaticActor& InActorEntity,
+        TArray<uint32>& OutBodyIdsForBatch) -> void;
 
     auto
     DoBatchAdd_Bodies(
@@ -158,6 +188,17 @@ private:
 
     auto
     DoEnsure_IndexLoaded() -> bool;
+
+    // The registry's transient entity (attribution entities are parented under it). Invalid until the ECS
+    // world is ready — the caller SKIPS the level and the OnWorldBeginPlay sweep re-attempts it.
+    auto
+    DoGet_TransientEntity() const -> FCk_Handle;
+
+    // Resolves a body's Jolt user-data into a live handle, registry-liveness-check FIRST (no ensure on dead
+    // ids) — mirrors CkJoltQuery_Utils::TryResolve_Entity. Invalid when the id is 0 or dead.
+    auto
+    DoResolve_EntityFromUserData(
+        uint64 InUserData) const -> FCk_Handle;
 
     struct FLoadedCell
     {
@@ -178,6 +219,9 @@ private:
     TWeakObjectPtr<UCk_Jolt_Subsystem> _JoltSubsystem;
 
     UPROPERTY(Transient)
+    TWeakObjectPtr<UCk_EcsWorld_Subsystem_UE> _EcsWorldSubsystem;
+
+    UPROPERTY(Transient)
     TObjectPtr<UCk_Jolt_CookedWorldIndex_UE> _CookedIndex;
 
     FDelegateHandle _LevelAddedHandle;
@@ -187,16 +231,13 @@ private:
 
     struct FLevelBodies
     {
-        TArray<uint32> _BodyIds;
+        TArray<FCk_Handle_JoltStaticActor> _ActorEntities;
         TArray<int32> _CellIndices;
     };
 
     TMap<TWeakObjectPtr<ULevel>, FLevelBodies> _LevelBodies;
-    TMap<TWeakObjectPtr<const AActor>, TArray<uint32>> _ManualActorBodies;
+    TMap<TWeakObjectPtr<const AActor>, FCk_Handle_JoltStaticActor> _ManualActorEntities;
     TMap<int32, FLoadedCell> _LoadedCells;
-
-    // Maps BodyID (index+sequence) -> source actor name, for hit attribution and tests.
-    TMap<uint32, FName> _BodyToActorName;
 
     int32 _NumStaticBodies = 0;
     int32 _BodyChurnSinceOptimize = 0;

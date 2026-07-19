@@ -2,6 +2,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Handle/CkHandle.h"
+
 #include <Kismet/BlueprintFunctionLibrary.h>
 
 #include "CkJoltStaticWorld_Utils.generated.h"
@@ -29,13 +31,15 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FVector _Position = FVector::ZeroVector;
 
+    // The hit body's source-actor attribution entity (FCk_Handle_JoltStaticActor), resolved from the body's
+    // Jolt user-data; INVALID when the body has no live entity. Cast it via UCk_Utils_JoltStaticActor_UE.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FName _SourceActorName;
+    FCk_Handle _Entity;
 
 public:
     CK_PROPERTY(_HasHit);
     CK_PROPERTY(_Position);
-    CK_PROPERTY(_SourceActorName);
+    CK_PROPERTY(_Entity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
