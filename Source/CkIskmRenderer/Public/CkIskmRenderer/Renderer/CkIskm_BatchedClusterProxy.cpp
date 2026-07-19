@@ -54,6 +54,13 @@ namespace ck_iskm_proxy
         // with distinct per-instance frames renders correctly, and there's no per-component->per-instance pop on the
         // first animated frame. [asfloat(Cur), asfloat(Pre), UserData[0..13]] per instance, matching SendRenderDynamicData.
         constexpr int32 NumFloats = UCk_Iskm_BatchedClusterComponent::NumCustomDataFloats;
+        // Pin the custom-data layout invariant at compile time: the frame fields are bit-cast into one
+        // float each, and [Cur, Pre, UserData[0..N]] must fit the per-instance slot.
+        static_assert(sizeof(UCk_Iskm_BatchedClusterComponent::FInstance::CurFrame) == sizeof(float) &&
+                      sizeof(UCk_Iskm_BatchedClusterComponent::FInstance::PrevFrame) == sizeof(float),
+            "CurFrame/PrevFrame are bit-cast into single custom-data floats");
+        static_assert(static_cast<int32>(2 + sizeof(UCk_Iskm_BatchedClusterComponent::FInstance::UserData) / sizeof(float)) <= NumFloats,
+            "Per-instance custom-data layout [Cur, Pre, UserData...] exceeds NumCustomDataFloats");
         Out.Transforms.Reserve(N);
         Out.PrevTransforms.Reserve(N);
         Out.NumCustomDataFloats = NumFloats;
@@ -78,8 +85,8 @@ namespace ck_iskm_proxy
         // Per-INSTANCE local bound = one animated-pose box (engine applies it per instance transform). PRIMITIVE
         // bounds must cover the whole instance spread — take the component's unioned local bounds.
         UCk_IskmAnimCollection_Data* Collection = InComponent->Get_AnimCollection();
-        const FBox MeshBox = (Collection != nullptr) ? Collection->Get_AnimatedMeshBounds()
-                           : (InMesh != nullptr) ? InMesh->GetBounds().GetBox() : FBox(FVector(-1.0), FVector(1.0));
+        const FBox MeshBox = ck::IsValid(Collection) ? Collection->Get_AnimatedMeshBounds()
+                           : ck::IsValid(InMesh) ? InMesh->GetBounds().GetBox() : FBox(FVector(-1.0), FVector(1.0));
         Out.LocalBounds = FRenderBounds(MeshBox);
 
         const FTransform CompXf = InComponent->GetComponentTransform();
@@ -99,6 +106,13 @@ FCk_Iskm_BatchedClusterProxy::FCk_Iskm_BatchedClusterProxy(UCk_Iskm_BatchedClust
     AnimCollection = InComponent->Get_AnimCollection();
     Mesh = InComponent->Get_Mesh();
 
+    // A cluster proxy without its collection/mesh is a composition bug. Recovery: leave the proxy half-built
+    // (no DynData, no materials) — the DrawStaticElements/WriteInstanceBuffer early-outs are the silent path.
+    CK_ENSURE_IF_NOT(ck::IsValid(AnimCollection) && ck::IsValid(Mesh),
+        TEXT("[CkIskm] Batched cluster proxy created without AnimCollection [{}] / Mesh [{}] — cluster will render NOTHING"),
+        AnimCollection, Mesh)
+    { return; }
+
     bSupportsGPUScene = true;
     bAlwaysHasVelocity = true;
     bHasDeformableMesh = true;
@@ -108,7 +122,7 @@ FCk_Iskm_BatchedClusterProxy::FCk_Iskm_BatchedClusterProxy(UCk_Iskm_BatchedClust
     // Materials + relevance. A component override material replaces EVERY slot (far-LOD whole-body look).
     // Per-slot overrides fill remaining slots; mesh defaults last.
     Materials.Reset();
-    if (Mesh != nullptr)
+    if (ck::IsValid(Mesh))
     {
         UMaterialInterface* const Override = InComponent->Get_OverrideMaterial();
         const TArray<FSkeletalMaterial>& Mats = Mesh->GetMaterials();
@@ -127,14 +141,14 @@ FCk_Iskm_BatchedClusterProxy::FCk_Iskm_BatchedClusterProxy(UCk_Iskm_BatchedClust
         }
     }
 
-    if (AnimCollection != nullptr)
+    if (ck::IsValid(AnimCollection))
     {
         const FCk_Iskm_BatchedMeshData* MeshData = AnimCollection->Get_DefaultMeshData();
-        if (MeshData != nullptr)
+        if (ck::IsValid(MeshData, ck::IsValid_Policy_NullptrOnly{}))
         { BaseLOD = MeshData->BaseLOD; }
     }
 
-    GPULODRadius = (Mesh != nullptr) ? static_cast<float>(Mesh->GetBounds().SphereRadius) : 1.0f;
+    GPULODRadius = ck::IsValid(Mesh) ? static_cast<float>(Mesh->GetBounds().SphereRadius) : 1.0f;
 
     // Initial instance payload (consumed by CreateRenderThreadResources / DrawStaticElements).
     DynData = MakeUnique<FCk_Iskm_CompDynData>();
@@ -235,6 +249,10 @@ auto
         return;
     }
 
+    CK_ENSURE_IF_NOT(ck::IsValid(InDynData, ck::IsValid_Policy_NullptrOnly{}),
+        TEXT("UpdateInstanceBuffer received null DynData"))
+    { return; }
+
     // Snapshot bounds/transforms before WriteInstanceBuffer MoveTemps the per-instance arrays out of DynData.
     // (Locals suffixed _Snap to avoid shadowing FPrimitiveSceneProxy members LocalToWorld/Scene/LocalBounds.)
     const FBoxSphereBounds WorldBounds_Snap = InDynData->WorldBounds;
@@ -305,7 +323,9 @@ auto
     { return; }
 
     const FSkeletalMeshRenderData* RenderData = Mesh->GetResourceForRendering();
-    if (RenderData == nullptr)
+    CK_ENSURE_IF_NOT(ck::IsValid(RenderData, ck::IsValid_Policy_NullptrOnly{}),
+        TEXT("Mesh [{}] has no RenderData in DrawStaticElements — batched cluster will stop drawing"),
+        Mesh->GetFName())
     { return; }
     const FCk_Iskm_BatchedMeshData* MeshData = AnimCollection->Get_DefaultMeshData();
     if (MeshData == nullptr)

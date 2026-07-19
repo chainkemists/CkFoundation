@@ -80,6 +80,13 @@ private:
     void WriteInstanceBuffer();
     void FillMeshBatch(FMeshBatch& OutMesh, int32 InLODIndex, int32 InSectionIndex, const class FSkeletalMeshLODRenderData& InLODData) const;
 
+    // LIFETIME: raw UObject pointers on a non-UObject proxy — GC does NOT trace these, and they are
+    // dereferenced on the render thread (DrawStaticElements: GetResourceForRendering/GetLODInfo/
+    // Get_DefaultMeshData). Safe ONLY because the owning UCk_Iskm_BatchedClusterComponent holds hard
+    // UPROPERTY refs to the same objects and the proxy's lifetime is bracketed by the component's
+    // render state (recreate fence) — the engine's own FSkeletalMeshSceneProxy pattern. TWeak/TStrong
+    // ObjectPtr are not render-thread-safe, so do NOT "fix" these with smart pointers; if the
+    // component-roots invariant ever weakens, snapshot the render data at proxy construction instead.
     UCk_IskmAnimCollection_Data* AnimCollection = nullptr;
     USkeletalMesh* Mesh = nullptr;
     int32 BaseLOD = 0;

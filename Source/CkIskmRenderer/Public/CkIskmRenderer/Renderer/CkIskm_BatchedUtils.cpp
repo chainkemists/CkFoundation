@@ -5,6 +5,7 @@
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_Fragment_Data.h"
 #include "CkIskmRenderer/CkIskmSubsystem.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner_Utils.h"
@@ -37,13 +38,18 @@ auto
     { return nullptr; }
 
     USkeletalMesh* Mesh = InCollection->Get_DefaultMesh();
-    if (ck::Is_NOT_Valid(Mesh))
+    CK_ENSURE_IF_NOT(ck::IsValid(Mesh),
+        TEXT("AnimCollection [{}] has no DefaultMesh — cannot spawn a debug cluster"), InCollection)
     { return nullptr; }
 
     FActorSpawnParameters SpawnParams;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
     AActor* Actor = World->SpawnActor<AActor>(AActor::StaticClass(), InBaseTransform, SpawnParams);
-    if (Actor == nullptr)
+    if (ck::Is_NOT_Valid(Actor) && World->bIsTearingDown)
+    { return nullptr; } // world teardown — SpawnActor legitimately returns null here
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Actor),
+        TEXT("SpawnActor failed for debug cluster in world [{}]"), World)
     { return nullptr; }
 
     USceneComponent* Root = NewObject<USceneComponent>(Actor, TEXT("Root"));
@@ -113,14 +119,19 @@ auto
     if (World == nullptr)
     { return nullptr; }
 
-    if (ck::Is_NOT_Valid(InCollection->Get_DefaultMesh()))
+    CK_ENSURE_IF_NOT(ck::IsValid(InCollection->Get_DefaultMesh()),
+        TEXT("AnimCollection [{}] has no DefaultMesh — cannot spawn a debug scattered crowd"), InCollection)
     { return nullptr; }
 
     FActorSpawnParameters SpawnParams;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
     ACk_Iskm_BatchedCrowd_Actor* Crowd = World->SpawnActor<ACk_Iskm_BatchedCrowd_Actor>(
         ACk_Iskm_BatchedCrowd_Actor::StaticClass(), InBaseTransform, SpawnParams);
-    if (Crowd == nullptr)
+    if (ck::Is_NOT_Valid(Crowd) && World->bIsTearingDown)
+    { return nullptr; } // world teardown — SpawnActor legitimately returns null here
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Crowd),
+        TEXT("SpawnActor failed for debug scattered crowd in world [{}]"), World)
     { return nullptr; }
 
     Crowd->Initialize(InCollection, InTileSize);
@@ -191,7 +202,9 @@ auto
         float InTileSize)
     -> ACk_Iskm_BatchedCrowd_Actor*
 {
-    if (ck::Is_NOT_Valid(InWorldContextObject) || ck::Is_NOT_Valid(InCollection))
+    CK_ENSURE_IF_NOT(ck::IsValid(InWorldContextObject) && ck::IsValid(InCollection),
+        TEXT("Create_Crowd called with invalid WorldContextObject [{}] or Collection [{}]"),
+        InWorldContextObject, InCollection)
     { return nullptr; }
 
     UWorld* World = GEngine != nullptr
@@ -200,14 +213,19 @@ auto
     if (World == nullptr)
     { return nullptr; }
 
-    if (ck::Is_NOT_Valid(InCollection->Get_DefaultMesh()))
+    CK_ENSURE_IF_NOT(ck::IsValid(InCollection->Get_DefaultMesh()),
+        TEXT("AnimCollection [{}] has no DefaultMesh — cannot create a batched crowd"), InCollection)
     { return nullptr; }
 
     FActorSpawnParameters SpawnParams;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
     ACk_Iskm_BatchedCrowd_Actor* Crowd = World->SpawnActor<ACk_Iskm_BatchedCrowd_Actor>(
         ACk_Iskm_BatchedCrowd_Actor::StaticClass(), FTransform::Identity, SpawnParams);
-    if (Crowd == nullptr)
+    if (ck::Is_NOT_Valid(Crowd) && World->bIsTearingDown)
+    { return nullptr; } // world teardown — SpawnActor legitimately returns null here
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Crowd),
+        TEXT("SpawnActor failed for batched crowd in world [{}]"), World)
     { return nullptr; }
 
     Crowd->Initialize(InCollection, InTileSize);
@@ -257,8 +275,14 @@ auto
     if (ck::Is_NOT_Valid(InCrowd))
     { return INDEX_NONE; }
 
+    const auto CountBefore = InCrowd->Get_MemberCount();
     InCrowd->AddInstance(InWorldTransform, InSequenceIndex, InRate, InTimeOffset);
-    return InCrowd->Get_MemberCount() - 1;
+
+    CK_ENSURE_IF_NOT(InCrowd->Get_MemberCount() == CountBefore + 1,
+        TEXT("AddInstance failed on crowd [{}] — returning INDEX_NONE"), InCrowd)
+    { return INDEX_NONE; }
+
+    return CountBefore;
 }
 
 auto
