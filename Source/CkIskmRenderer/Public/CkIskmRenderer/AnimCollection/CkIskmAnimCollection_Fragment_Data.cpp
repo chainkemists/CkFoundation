@@ -63,6 +63,9 @@ auto
     Build_BakedPoseData()
     -> bool
 {
+    if (FApp::CanEverRender() == false)
+    { return false; } // dedicated server / -nullrhi: mesh render data is stripped, so the bake is impossible AND unneeded — not a content error
+
     // A re-bake changes the frame layout, so previously materialized render data must not survive:
     // tear down the proxies of every live cluster using this collection, drain the render thread,
     // release the old buffers, and let the scoped contexts recreate the proxies on function exit —
@@ -96,7 +99,10 @@ auto
     SampleParams.UseMeshBindRefPose = true;
 
     const auto SkeletonData = ck::anim_bake::BuildSkeletonData(*Skeleton, *_DefaultMesh, SampleParams);
-    if (NOT SkeletonData.IsSet())
+    CK_ENSURE_IF_NOT(SkeletonData.IsSet(),
+        TEXT("[CkIskm] AnimCollection [{}] is not bakeable — DefaultMesh [{}] has no skeleton bones, no render data, or no skinned bones — "
+             "batched clusters will render NOTHING"),
+        this, _DefaultMesh)
     { return false; }
 
     TArray<UAnimSequenceBase*> SequenceAssets;
@@ -267,8 +273,49 @@ auto
     { return; }
 
     const FCk_Iskm_BakedPose* Baked = Get_BakedPose();
-    if (Baked == nullptr || Baked->Matrices.Num() == 0)
+    CK_ENSURE_IF_NOT(ck::IsValid(Baked, ck::IsValid_Policy_NullptrOnly{}) && Baked->Matrices.Num() > 0,
+        TEXT("[CkIskm] AnimCollection [{}] reports baked but has no baked matrices — bake pipeline bug"),
+        this)
     { return; }
+
+    // Pre-flight the default mesh BEFORE standing up render resources. The bake can be cached from an earlier
+    // call and _DefaultMesh is script-mutable, so the mesh/skeleton can go missing after a successful bake.
+    // Validation policy lives here — the CkCore-linked module — because the engine-only VF module
+    // (PostConfigInit, no Ck deps) can't CK_ENSURE and silently no-ops on bad input.
+    USkeleton* const EffectiveSkeleton = Get_EffectiveSkeleton();
+    CK_ENSURE_IF_NOT(ck::IsValid(_DefaultMesh) && ck::IsValid(EffectiveSkeleton),
+        TEXT("[CkIskm] AnimCollection [{}] lost its DefaultMesh/Skeleton after bake — batched clusters will render NOTHING"),
+        this)
+    { return; }
+
+    const FSkeletalMeshRenderData* MeshRenderData = _DefaultMesh->GetResourceForRendering();
+    CK_ENSURE_IF_NOT(ck::IsValid(MeshRenderData, ck::IsValid_Policy_NullptrOnly{}),
+        TEXT("[CkIskm] DefaultMesh [{}] has no render data — batched clusters will render NOTHING"),
+        _DefaultMesh)
+    { return; }
+
+    // Bone-influence guard. The batched path skins up to 8 influences (4- and 8-influence vertex factories,
+    // weights renormalized into an owned buffer); beyond 8 the strongest 8 are kept and renormalized —
+    // visually close, but flag the content.
+    for (const FSkeletalMeshLODRenderData& LODData : MeshRenderData->LODRenderData)
+    {
+        for (const FSkelMeshRenderSection& Section : LODData.RenderSections)
+        {
+            CK_ENSURE_IF_NOT(Section.MaxBoneInfluences <= 8,
+                TEXT("[CkIskm] Batched renderer supports <= 8 bone influences; a section has {} — strongest 8 kept, weights renormalized."),
+                Section.MaxBoneInfluences)
+            { }
+        }
+
+        // The bone-index/weight build reads skin weights on the CPU (FSkinWeightVertexBuffer accessors).
+        // Cooked builds discard that CPU copy unless the mesh keeps CPU access — those reads would hit
+        // freed/garbage data. Flag the content so BusterBlock crowd meshes get bNeedsCPUAccess set, and skip
+        // the resource build entirely: no render resources beats reading a discarded buffer.
+        CK_ENSURE_IF_NOT(GIsEditor || LODData.GetSkinWeightVertexBuffer()->GetNeedsCPUAccess(),
+            TEXT("[CkIskm] Batched renderer requires CPU-accessible skin weights in cooked builds — set bNeedsCPUAccess on mesh [{}]"),
+            _DefaultMesh)
+        { return; }
+    }
 
     _RenderData = MakePimpl<FCk_Iskm_BatchedRenderData>();
     FCk_Iskm_BatchedRenderData* RD = _RenderData.Get();
@@ -280,37 +327,12 @@ auto
 
     // CPU: build the default mesh's render data (render-bone remap + vertex factories). Pass the skeleton +
     // remap table directly so the engine-only VF module stays decoupled from this asset type.
-    USkeleton* const EffectiveSkeleton = Get_EffectiveSkeleton();
-    if (ck::IsValid(_DefaultMesh) && ck::IsValid(EffectiveSkeleton))
-    {
-        // Bone-influence guard. Policy lives here — the CkCore-linked module — because the engine-only VF module
-        // (PostConfigInit, no Ck deps) can't CK_ENSURE. The batched path skins up to 8 influences (4- and
-        // 8-influence vertex factories, weights renormalized into an owned buffer); beyond 8 the strongest 8 are
-        // kept and renormalized — visually close, but flag the content.
-        if (const FSkeletalMeshRenderData* RenderData = _DefaultMesh->GetResourceForRendering())
-        {
-            for (const FSkeletalMeshLODRenderData& LODData : RenderData->LODRenderData)
-            {
-                for (const FSkelMeshRenderSection& Section : LODData.RenderSections)
-                {
-                    CK_ENSURE_IF_NOT(Section.MaxBoneInfluences <= 8,
-                        TEXT("[CkIskm] Batched renderer supports <= 8 bone influences; a section has {} — strongest 8 kept, weights renormalized."),
-                        Section.MaxBoneInfluences)
-                    { }
-                }
+    RD->DefaultMeshData.InitFromMesh(_DefaultMesh, EffectiveSkeleton, Baked->SkeletonBoneToRenderBone, GMaxRHIFeatureLevel);
 
-                // The bone-index/weight build reads skin weights on the CPU (FSkinWeightVertexBuffer accessors).
-                // Cooked builds discard that CPU copy unless the mesh keeps CPU access — the buffers would build
-                // from garbage. Flag the content so BusterBlock crowd meshes get bNeedsCPUAccess set.
-                CK_ENSURE_IF_NOT(GIsEditor || LODData.GetSkinWeightVertexBuffer()->GetNeedsCPUAccess(),
-                    TEXT("[CkIskm] Batched renderer requires CPU-accessible skin weights in cooked builds — set bNeedsCPUAccess on mesh [{}]"),
-                    _DefaultMesh)
-                { }
-            }
-        }
-
-        RD->DefaultMeshData.InitFromMesh(_DefaultMesh, EffectiveSkeleton, Baked->SkeletonBoneToRenderBone, GMaxRHIFeatureLevel);
-    }
+    CK_ENSURE_IF_NOT(RD->DefaultMeshData.NumBoneRemapMisses == 0,
+        TEXT("[CkIskm] [{}] vertex influences on mesh [{}] reference bones outside the bake's render-bone set — they rigid-bind to root (weight dropped)"),
+        RD->DefaultMeshData.NumBoneRemapMisses, _DefaultMesh)
+    { }
 
     const uint32 BoneCount = static_cast<uint32>(Baked->RenderBoneCount);
 
