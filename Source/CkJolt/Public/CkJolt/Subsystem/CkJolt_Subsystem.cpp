@@ -13,6 +13,7 @@
 #include "CkJolt/CkJolt_Stats.h"
 #include "CkJolt/CkJolt_Utils.h"
 #include "CkJolt/Settings/CkJolt_ProjectSettings.h"
+#include "CkJolt/Subsystem/CkJolt_DebugRenderer.h"
 
 #include <HAL/IConsoleManager.h>
 
@@ -25,7 +26,6 @@
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/Physics/Body/BodyActivationListener.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
-#include <Jolt/Renderer/DebugRendererSimple.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -289,43 +289,6 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class CkJoltDebugger : public JPH::DebugRendererSimple
-{
-    auto
-    DrawLine(
-        JPH::RVec3Arg inFrom,
-        JPH::RVec3Arg inTo,
-        JPH::ColorArg inColor)
-    -> void override
-    {
-        if (ck::Is_NOT_Valid(_World))
-        { return; }
-
-        UCk_Utils_DebugDraw_UE::DrawDebugLine(_World.Get(), ck::jolt::Conv(inFrom), ck::jolt::Conv(inTo),
-            ck::jolt::Conv(inColor));
-    }
-
-    auto
-    DrawText3D(
-        JPH::RVec3Arg inPosition,
-        const JPH::string_view& inString,
-        JPH::ColorArg inColor = JPH::Color::sWhite,
-        float inHeight = 0.5f)
-    -> void
-    {
-        if (ck::Is_NOT_Valid(_World))
-        { return; }
-
-        UCk_Utils_DebugDraw_UE::DrawDebugString(_World.Get(), ck::jolt::Conv(inPosition),
-            FString{static_cast<int32>(inString.length()), inString.data()}, ck::jolt::Conv(inColor));
-    }
-
-public:
-    TWeakObjectPtr<UWorld> _World;
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
 // Console variables for command-line override of Jolt threading settings.
 // Values: -1 = use project setting (default), 0 = disable, 1 = enable.
 // These are read-only (startup only) because the JobSystem is created once during Initialize().
@@ -367,6 +330,19 @@ namespace ck_jolt_subsystem
             DebugDrawSleepColoring,
             TEXT("When drawing the Jolt world, color bodies by sleep state (JPH SleepColor: static grey, "
                  "keyframed green, dynamic yellow, sleeping red) instead of motion type (MotionTypeColor)."));
+
+        static bool DebugDrawVelocity = true;
+        static FAutoConsoleVariableRef CVar_DebugDrawVelocity(TEXT("ck.Jolt.DebugDraw.Velocity"),
+            DebugDrawVelocity,
+            TEXT("When drawing the Jolt world, draw each active body's linear-velocity vector "
+                 "(immediate-mode lines; one per moving body)."));
+
+        static bool DebugDrawWorldTransform = false;
+        static FAutoConsoleVariableRef CVar_DebugDrawWorldTransform(TEXT("ck.Jolt.DebugDraw.WorldTransform"),
+            DebugDrawWorldTransform,
+            TEXT("When drawing the Jolt world, draw each body's world-transform axes. Off by default: "
+                 "the per-body arrow lines are immediate-mode and dominate the line batcher at "
+                 "stress-gym body counts."));
     }
 
     // Resolve a CVar override against a project setting default.
@@ -585,7 +561,9 @@ auto
         constexpr auto DrawSupportDirection = false;
         constexpr auto DrawGetSupportingFace = false;
         constexpr auto DrawShape = true;
-        constexpr auto DrawShapeWireframe = true;
+        // The batched renderer draws real instanced meshes; wireframe mode is meaningless there and
+        // stays off (it only changed the EDrawMode hint, which the batch path ignores).
+        constexpr auto DrawShapeWireframe = false;
         // Sleep coloring switches the shape-color mode: SleepColor tints sleeping dynamic bodies red,
         // MotionTypeColor tints by motion type. Runtime-selected, so DrawSettings below is const not constexpr.
         const auto DrawShapeColor = ck_jolt_subsystem::cvar::DebugDrawSleepColoring
@@ -593,8 +571,8 @@ auto
             : JPH::BodyManager::EShapeColor::MotionTypeColor;
         constexpr auto DrawBoundingBox = false;
         constexpr auto DrawCenterOfMassTransform = false;
-        constexpr auto DrawWorldTransform = true;
-        constexpr auto DrawVelocity = true;
+        const auto DrawWorldTransform = ck_jolt_subsystem::cvar::DebugDrawWorldTransform;
+        const auto DrawVelocity = ck_jolt_subsystem::cvar::DebugDrawVelocity;
         constexpr auto DrawMassAndInertia = false;
         constexpr auto DrawSleepStats = false;
         constexpr auto DrawSoftBodyVertices = false;
@@ -637,9 +615,22 @@ auto
         const auto ConsumerGateOpen = _DebugDrawGate && _DebugDrawGate();
         const auto CVarDrawEnabled  = ck_jolt_subsystem::cvar::DebugDrawEnabled;
 
-        if (ck::IsValid(_Debugger, ck::IsValid_Policy_NullptrOnly{}) &&
-            (ConsumerGateOpen || CVarDrawEnabled))
-        { _PhysicsSystem->DrawBodies(DrawSettings, _Debugger.Get()); }
+        if (ck::IsValid(_Debugger, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            if (ConsumerGateOpen || CVarDrawEnabled)
+            {
+                _Debugger->BeginFrame();
+                _PhysicsSystem->DrawBodies(DrawSettings, _Debugger.Get());
+                _Debugger->EndFrame();
+                _Debugger->NextFrame();
+            }
+            else
+            {
+                // One-shot when the gate closes: without this, the last frame's instanced meshes
+                // linger frozen in the world. Idempotent and free once cleared.
+                _Debugger->HideAll();
+            }
+        }
     }
 #endif
 }
@@ -659,6 +650,11 @@ auto
     { _JoltWorld->Shutdown(); }
 
     _DebugDrawGate = {};
+
+#if JPH_DEBUG_RENDERER
+    // Destroyed while the world is still valid so the renderer can release its instanced components.
+    _Debugger.Reset();
+#endif
 
     _ContactListener.Reset();
     _BodyActivationListener.Reset();
