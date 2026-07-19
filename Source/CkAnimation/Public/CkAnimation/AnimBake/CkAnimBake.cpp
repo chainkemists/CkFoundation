@@ -1,5 +1,6 @@
 #include "CkAnimBake.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "Animation/Skeleton.h"
@@ -60,8 +61,13 @@ auto
     if (NumSkelBones == 0)
     { return {}; }
 
+    CK_ENSURE_IF_NOT(NumSkelBones <= static_cast<int32>(MAX_uint16) + 1,
+        TEXT("Skeleton [{}] has [{}] bones — exceeds the uint16 render-bone index space"),
+        InSkeleton.GetName(), NumSkelBones)
+    { return {}; }
+
     const FSkeletalMeshRenderData* RenderData = InMesh.GetResourceForRendering();
-    if (RenderData == nullptr || RenderData->LODRenderData.Num() == 0)
+    if (ck::Is_NOT_Valid(RenderData, ck::IsValid_Policy_NullptrOnly{}) || RenderData->LODRenderData.Num() == 0)
     { return {}; }
 
     TArray<bool> RequiredBones;
@@ -177,6 +183,11 @@ auto
     // Union of component-space render-bone positions across all sampled frames — feeds ComputeAnimatedBounds.
     FBox BoneBoundsAllFrames(ForceInit);
 
+    CK_ENSURE_IF_NOT(InSkeletonData.RefPoseComponentSpace.Num() > 0,
+        TEXT("Empty FCk_AnimBake_SkeletonData passed to SamplePoses for Skeleton [{}]"),
+        InSkeleton.GetName())
+    { return BoneBoundsAllFrames; }
+
     const auto AccumulateBoneBounds = [&BoneBoundsAllFrames, &InSkeletonData](TArrayView<const FTransform> InPoseComponentSpace)
     {
         for (int32 i = 0; i < InSkeletonData.RenderBoneCount; ++i)
@@ -191,13 +202,25 @@ auto
     FBoneContainer BoneContainer;
     ck_anim_bake::MakeFullSkeletonBoneContainer(InSkeleton, InParams, BoneContainer);
 
+    // One hoisted consistency check bounds every RenderRequiredBones index against both pose arrays
+    // (entries are < RefPoseComponentSpace.Num() by construction in BuildSkeletonData).
+    CK_ENSURE_IF_NOT(BoneContainer.GetCompactPoseNumBones() == InSkeletonData.RefPoseComponentSpace.Num(),
+        TEXT("Skeleton [{}] does not match the FCk_AnimBake_SkeletonData it is being sampled with (container bones [{}] vs skeleton-data bones [{}])"),
+        InSkeleton.GetName(), BoneContainer.GetCompactPoseNumBones(), InSkeletonData.RefPoseComponentSpace.Num())
+    { return BoneBoundsAllFrames; }
+
     TArray<FTransform> PoseComponentSpace;
     PoseComponentSpace.SetNumUninitialized(BoneContainer.GetCompactPoseNumBones());
 
     for (const FCk_AnimBake_SequenceLayout& SeqLayout : InLayout.Sequences)
     {
+        if (SeqLayout.FrameCount == 0)
+        { continue; } // sequence was already invalid when the layout was built — the slot is empty by design
+
         UAnimSequenceBase* const Seq = SeqLayout.Sequence.Get();
-        if (ck::Is_NOT_Valid(Seq))
+        CK_ENSURE_IF_NOT(ck::IsValid(Seq),
+            TEXT("Anim sequence for baked frame range [{} .. {}] was destroyed between BuildFrameLayout and SamplePoses — those frames will be left unwritten"),
+            SeqLayout.FrameIndex, SeqLayout.FrameIndex + SeqLayout.FrameCount - 1)
         { continue; }
 
 #if WITH_EDITOR
