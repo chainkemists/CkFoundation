@@ -22,6 +22,7 @@
 
 class USkeletalMesh;
 class USkeleton;
+class FSkeletalMeshRenderData;
 
 // Per-AnimCollection uniform buffer: binds the baked bone-matrix SRV + bone stride. Shader name "CkIskmAC".
 BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FCk_Iskm_AnimCollectionUniformParams, CKISKMRENDERERVF_API)
@@ -106,7 +107,9 @@ public:
         : FVertexFactory(InFeatureLevel) {}
 
     FDataType Data;
-    FRHIUniformBuffer* AnimCollectionUB = nullptr;
+    // Real reference, not a raw pointer: the VF's copy keeps the uniform buffer alive on its own,
+    // so it can never dangle if the owning FCk_Iskm_BatchedRenderData releases its ref first.
+    FUniformBufferRHIRef AnimCollectionUB;
 
     virtual void InitRHI(FRHICommandListBase& RHICmdList) override;
     void FillData(const FCk_Iskm_BoneIndexVertexBuffer* InBoneIndexBuffer, const FCk_Iskm_BoneWeightVertexBuffer* InBoneWeightBuffer, const class FSkeletalMeshLODRenderData* InLODData);
@@ -146,7 +149,17 @@ public:
 
     TIndirectArray<FLODData> LODs;
     int32 BaseLOD = 0;
-    USkeletalMesh* SourceMesh = nullptr;
+
+    // Vertex influences whose bone couldn't be remapped into the bake's render-bone set (they rigid-bind
+    // to root / have their weight dropped). Reset by InitFromMesh; the boundary (EnsureRenderResources)
+    // ensures loudly when non-zero — this module can't ensure.
+    int32 NumBoneRemapMisses = 0;
+
+    // Snapshot of the mesh's render data, captured on the GAME THREAD in InitFromMesh so InitResources
+    // (render thread) never dereferences a UObject. Lifetime contract: the owning asset
+    // (UCk_IskmAnimCollection_Data::_DefaultMesh, a UPROPERTY) keeps the mesh — and therefore its render
+    // data — alive for the life of this struct, enforced boundary-side in EnsureRenderResources.
+    const FSkeletalMeshRenderData* SourceRenderData = nullptr;
 
     // CPU build of the per-LOD remapped bone indices. InSkeletonBoneToRenderBone maps skeleton-bone -> render-bone
     // (from the baker); it decouples this engine-only module from the AnimCollection asset.
