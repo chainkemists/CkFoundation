@@ -69,10 +69,7 @@ auto
     // Reset per-export bookkeeping. Thread-locals persist for the thread's lifetime,
     // so stale entries from a previous export would otherwise leak in and mark
     // everything as "already exported" on the second call.
-    GObjectRecursionDepth   = 0;
-    GPropertyRecursionDepth = 0;
-    GObjectsAlreadyExported.Reset();
-    GStructMemoryAlreadyExported.Reset();
+    ResetSharedRecursionState();
 
     Result.AssetName = InDataAsset->GetName();
 
@@ -702,6 +699,19 @@ auto
     { return true; }
 
     return false;
+}
+
+auto
+    FCk_DataAssetExporter::
+    ResetSharedRecursionState()
+    -> void
+{
+    using namespace ck_data_asset_exporter_internal;
+
+    GObjectRecursionDepth   = 0;
+    GPropertyRecursionDepth = 0;
+    GObjectsAlreadyExported.Reset();
+    GStructMemoryAlreadyExported.Reset();
 }
 
 auto

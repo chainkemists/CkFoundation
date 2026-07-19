@@ -6,6 +6,7 @@
 #include <Dom/JsonValue.h>
 #include <Engine/DataAsset.h>
 #include <Engine/DataTable.h>
+#include <Engine/UserDefinedEnum.h>
 #include <HAL/FileManager.h>
 #include <Misc/AutomationTest.h>
 #include <Misc/FileHelper.h>
@@ -62,6 +63,11 @@ bool FCk_AssetExporter_Dispatch_FriendlyClassMap_Test::RunTest(const FString& In
     TestNotNull(TEXT("lowercase 'datatable' resolves case-insensitively"), ResolvedDataTable);
     TestTrue(TEXT("'datatable' resolves to UDataTable"), ResolvedDataTable == UDataTable::StaticClass());
 
+    auto ErrorEnum = FString{};
+    auto* ResolvedEnum = FCk_AssetExporter_Dispatch::TryResolve_FriendlyClassName(TEXT("enum"), ErrorEnum);
+    TestNotNull(TEXT("lowercase 'enum' resolves case-insensitively"), ResolvedEnum);
+    TestTrue(TEXT("'enum' resolves to UUserDefinedEnum"), ResolvedEnum == UUserDefinedEnum::StaticClass());
+
     auto ErrorUnknown = FString{};
     auto* ResolvedUnknown = FCk_AssetExporter_Dispatch::TryResolve_FriendlyClassName(TEXT("Bogus"), ErrorUnknown);
     TestNull(TEXT("unknown name returns null"), ResolvedUnknown);
@@ -69,6 +75,7 @@ bool FCk_AssetExporter_Dispatch_FriendlyClassMap_Test::RunTest(const FString& In
     TestTrue(TEXT("error lists a valid name (DataAsset)"), ErrorUnknown.Contains(TEXT("DataAsset")));
     TestTrue(TEXT("error lists a valid name (DataTable)"), ErrorUnknown.Contains(TEXT("DataTable")));
     TestTrue(TEXT("error lists a valid name (StateTree)"), ErrorUnknown.Contains(TEXT("StateTree")));
+    TestTrue(TEXT("error lists a valid name (Enum)"), ErrorUnknown.Contains(TEXT("Enum")));
 
     return true;
 }

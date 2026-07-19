@@ -9,6 +9,8 @@
 #include "CkAssetExporter/EQSExporter/CkEQSExporter.h"
 #include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
 #include "CkAssetExporter/StateTreeExporter/CkStateTreeExporter.h"
+#include "CkAssetExporter/UserDefinedEnumExporter/CkUserDefinedEnumExporter.h"
+#include "CkAssetExporter/UserDefinedStructExporter/CkUserDefinedStructExporter.h"
 
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
@@ -22,12 +24,14 @@
 #include <Engine/Blueprint.h>
 #include <Engine/DataAsset.h>
 #include <Engine/DataTable.h>
+#include <Engine/UserDefinedEnum.h>
 #include <EnvironmentQuery/EnvQuery.h>
 #include <HAL/FileManager.h>
 #include <Misc/FileHelper.h>
 #include <Misc/PackageName.h>
 #include <Misc/Paths.h>
 #include <StateTree.h>
+#include <StructUtils/UserDefinedStruct.h>
 #include <UObject/Object.h>
 #include <UObject/Package.h>
 #include <UObject/UObjectGlobals.h>
@@ -59,6 +63,8 @@ namespace ck_asset_exporter_dispatch
             { TEXT("BehaviorTree"), UBehaviorTree::StaticClass() },
             { TEXT("EQS"),          UEnvQuery::StaticClass() },
             { TEXT("StateTree"),    UStateTree::StaticClass() },
+            { TEXT("Enum"),         UUserDefinedEnum::StaticClass() },
+            { TEXT("Struct"),       UUserDefinedStruct::StaticClass() },
         };
     }
 
@@ -147,6 +153,20 @@ namespace ck_asset_exporter_dispatch
             if (Is_FreshAndSkip(InAsset, InSkipFresh, ck::asset_exporter::version::StateTree, InOutEntry))
             { return; }
             Fill_Entry(InOutEntry, FCk_StateTreeExporter::ExportStateTree(StateTree));
+            return;
+        }
+        if (auto* Enum = Cast<UUserDefinedEnum>(InAsset))
+        {
+            if (Is_FreshAndSkip(InAsset, InSkipFresh, ck::asset_exporter::version::UserDefinedEnum, InOutEntry))
+            { return; }
+            Fill_Entry(InOutEntry, FCk_UserDefinedEnumExporter::ExportUserDefinedEnum(Enum));
+            return;
+        }
+        if (auto* Struct = Cast<UUserDefinedStruct>(InAsset))
+        {
+            if (Is_FreshAndSkip(InAsset, InSkipFresh, ck::asset_exporter::version::UserDefinedStruct, InOutEntry))
+            { return; }
+            Fill_Entry(InOutEntry, FCk_UserDefinedStructExporter::ExportUserDefinedStruct(Struct));
             return;
         }
         if (auto* Blueprint = Cast<UBlueprint>(InAsset)) // covers UWidgetBlueprint
