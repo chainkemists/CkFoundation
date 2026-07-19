@@ -479,9 +479,21 @@ namespace ck_vat_baker
             return InstanceID;
         };
 
+        // Hoisted index-buffer validation (no per-triangle ensures): the gathered vertices must mirror the
+        // LODModel's section-concatenated vertex order, and each section's index range must fit the merged
+        // buffer — a well-formed model bounds its indices by NumVertices, so these cover the inner loop.
+        CK_ENSURE_IF_NOT(InLODModel.NumVertices == static_cast<uint32>(InVertices.Num()),
+            TEXT("VatBaker: [{}] LODModel NumVertices [{}] != gathered vertices [{}]"),
+            &InSourceMesh, InLODModel.NumVertices, InVertices.Num())
+        { return nullptr; }
+
         for (int32 SectionIndex = 0; SectionIndex < InLODModel.Sections.Num(); ++SectionIndex)
         {
             const FSkelMeshSection& Section = InLODModel.Sections[SectionIndex];
+            CK_ENSURE_IF_NOT(Section.BaseIndex + Section.NumTriangles * 3 <= static_cast<uint32>(InLODModel.IndexBuffer.Num()),
+                TEXT("VatBaker: [{}] section [{}] index range exceeds index buffer [{}]"),
+                &InSourceMesh, SectionIndex, InLODModel.IndexBuffer.Num())
+            { return nullptr; }
             for (uint32 Tri = 0; Tri < Section.NumTriangles; ++Tri)
             {
                 TArray<FVertexInstanceID, TInlineAllocator<3>> Corners;
@@ -546,7 +558,13 @@ auto
     TArray<UAnimSequenceBase*> SequenceAssets;
     SequenceAssets.Reserve(InCollection.Get_Clips().Num());
     for (const FCk_VatCollection_ClipDef& Def : InCollection.Get_Clips())
-    { SequenceAssets.Add(Def.Get_Sequence().Get()); }
+    {
+        CK_ENSURE_IF_NOT(ck::IsValid(Def.Get_Sequence().Get()),
+            TEXT("VatBaker: collection [{}] clip [{}] has no Sequence set — the bake would serialize a dead clip"),
+            &InCollection, Def.Get_Name())
+        { return false; }
+        SequenceAssets.Add(Def.Get_Sequence().Get());
+    }
 
     const int32 MaxTextureWidth = InCollection.Get_BakeSettings().Get_MaxTextureWidth();
     const int32 MaxTextureRows = InCollection.Get_BakeSettings().Get_MaxTextureRows();
@@ -787,18 +805,18 @@ auto
 
     // ---- write back the serialized bake results ----
     UCk_VatCollection_Data::FCk_Vat_BakeResults Results;
-    Results.BakedMesh = BakedMesh;
+    Results.BakedMesh = TStrongObjectPtr{BakedMesh};
     if (BakeMode == ECk_Vat_BakeMode::Vertex)
     {
-        Results.PositionTexture = PositionTexture;
-        Results.NormalTexture = SecondaryTexture;
+        Results.PositionTexture = TStrongObjectPtr{PositionTexture};
+        Results.NormalTexture = TStrongObjectPtr{SecondaryTexture};
     }
     else
     {
-        Results.BonePositionTexture = PositionTexture;
-        Results.BoneRotationTexture = SecondaryTexture;
-        Results.BoneIndexTexture = BoneIndexTexture;
-        Results.BoneWeightTexture = BoneWeightTexture;
+        Results.BonePositionTexture = TStrongObjectPtr{PositionTexture};
+        Results.BoneRotationTexture = TStrongObjectPtr{SecondaryTexture};
+        Results.BoneIndexTexture = TStrongObjectPtr{BoneIndexTexture};
+        Results.BoneWeightTexture = TStrongObjectPtr{BoneWeightTexture};
     }
 
     for (int32 ClipIndex = 0; ClipIndex < InCollection.Get_Clips().Num(); ++ClipIndex)
@@ -819,7 +837,8 @@ auto
     Results.PositionBoundsMin = PositionBounds.Min;
     Results.PositionBoundsMax = PositionBounds.Max;
 
-    InCollection.ApplyBakeResults(Results);
+    if (NOT InCollection.ApplyBakeResults(Results))
+    { return false; } // ApplyBakeResults already ensured loudly; nothing was stamped — do NOT save the package
 
     if (InPersistence == EPersistence::Transient)
     { return true; }
@@ -830,7 +849,12 @@ auto
         FPackageName::LongPackageNameToFilename(CollectionPkgPath, FPackageName::GetAssetPackageExtension());
     FSavePackageArgs SaveArgs;
     SaveArgs.TopLevelFlags = RF_Public | RF_Standalone;
-    return UPackage::SavePackage(InCollection.GetPackage(), &InCollection, *CollectionFileName, SaveArgs);
+    const auto Saved = UPackage::SavePackage(InCollection.GetPackage(), &InCollection, *CollectionFileName, SaveArgs);
+    CK_ENSURE_IF_NOT(Saved,
+        TEXT("VatBaker: could not save collection package [{}] — bake applied in memory but NOT persisted (file read-only / locked?)"),
+        CollectionPkgPath)
+    { return false; }
+    return true;
 }
 
 }

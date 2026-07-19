@@ -105,7 +105,9 @@ auto
     { return {}; }
 
     const auto& BakedClips = Collection->Get_BakedData().Get_BakedClips();
-    if (NOT BakedClips.IsValidIndex(Current.Get_ActiveClipIndex()))
+    CK_ENSURE_IF_NOT(BakedClips.IsValidIndex(Current.Get_ActiveClipIndex()),
+        TEXT("Vat entity [{}]: active clip index [{}] is out of range of the collection's baked clip table (Num [{}])"),
+        InHandle, Current.Get_ActiveClipIndex(), BakedClips.Num())
     { return {}; }
 
     return BakedClips[Current.Get_ActiveClipIndex()].Get_Name();

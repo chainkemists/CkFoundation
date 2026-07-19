@@ -2,6 +2,7 @@
 
 #include "CkVatEditor/CkVatBaker.h"
 
+#include "CkVat/CkVat_Log.h"
 #include "CkVat/Collection/CkVatCollection_Data.h"
 
 #include "CkCore/Validation/CkIsValid.h"
@@ -86,7 +87,12 @@ namespace ck::layout
                         {
                             if (auto* Resolved = Collection.Get();
                                 ck::IsValid(Resolved))
-                            { ck::vat_editor::Bake_VatCollection(*Resolved); }
+                            {
+                                // Ensures inside the baker fire once per site — a repeat failure would
+                                // otherwise leave the button click with zero feedback.
+                                if (NOT ck::vat_editor::Bake_VatCollection(*Resolved))
+                                { ck::vat::Error(TEXT("Bake failed for [{}] — see prior ensure/log for the reason"), Resolved); }
+                            }
                         }
 
                         // The Baked category is VisibleAnywhere data the bake just rewrote — refresh so
