@@ -128,6 +128,12 @@ namespace ck
         using DerivedType = T_DerivedProcessor;
         using FragmentList = entt::type_list<T_Fragments...>;
 
+        // The class that declares the template-generated DoTick. The scheduler's trait harvest
+        // compares &Derived::DoTick against this type to detect a custom (shadowing) DoTick —
+        // only unshadowed processors are eligible for the main pass' empty-view skip (see
+        // ECk_ProcessorEmptyViewPolicy in CkProcessorDescriptor.h).
+        using GeneratedDoTickHost = TProcessor;
+
     public:
         explicit TProcessor(
             const RegistryType& InRegistry);
@@ -320,6 +326,12 @@ namespace ck_exp
         using RegistryType = FCk_Registry;
         using DerivedType = T_DerivedProcessor;
         using FragmentList = entt::type_list<T_Fragments...>;
+
+        // The class that declares the template-generated DoTick. The scheduler's trait harvest
+        // compares &Derived::DoTick against this type to detect a custom (shadowing) DoTick —
+        // only unshadowed processors are eligible for the main pass' empty-view skip (see
+        // ECk_ProcessorEmptyViewPolicy in CkProcessorDescriptor.h).
+        using GeneratedDoTickHost = TProcessor;
 
         // ----- TIgnoreInEditor dual-view fragment lists -----
         // Editor variant: drop TIgnoreInEditor<...> entries entirely (criteria not applied for

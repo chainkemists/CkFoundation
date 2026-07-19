@@ -66,6 +66,10 @@ namespace ck
         // to change at runtime, so reading it per-Tick (let alone per-pump) would be wasteful.
         bool _UseDirtyMarkerVersionShortCircuit = false;
 
+        // Cached like the above. Gates the main pass' empty-view skip (see ECk_ProcessorEmptyViewPolicy
+        // in CkProcessorDescriptor.h): eligible nodes whose view is provably empty are not dispatched.
+        bool _UseEmptyViewMainPassSkip = false;
+
     private:
         int32 _LastFramePumpCount = 0;
         double _LastGraphBuildTimeMs = 0.0;
@@ -83,6 +87,7 @@ namespace ck
         auto DoDebugBeginFrame() -> void;
         auto DoDebugRecordProcessorTick(int32 InNodeIndex, double InElapsedMs, int32 InEntityCount) -> void;
         auto DoDebugRecordProcessorPump(int32 InNodeIndex, int32 InPumpPass, double InElapsedMs, int32 InEntityCount) -> void;
+        auto DoDebugRecordProcessorSkippedEmptyView(int32 InNodeIndex) -> void;
         auto DoDebugEndFrame() -> void;
 #endif
 

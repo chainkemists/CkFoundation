@@ -64,6 +64,19 @@ namespace ck
         // registers here. (Historically they registered a hash nothing bumped and were pump-deaf.)
         mutable uint64 _LastSeenDirtyVersion = kDirtyVersion_ForceEvaluate;
 
+        // Main-pass empty-view skip (mirrors FProcessorDescriptor — see ECk_ProcessorEmptyViewPolicy).
+        // _LastSeenIncludeVersionSum caches the include types' summed mutation counters exactly like
+        // _LastSeenDirtyVersion does for pump markers: the (tombstone-aware) _IsViewProvablyEmpty scan
+        // re-runs only when some include type mutated since the last observation. Initialized to the
+        // force-evaluate sentinel so a fresh graph — including the rebuild after a snapshot restore,
+        // whose loader writes bypass the version counters — always evaluates each node once.
+        bool _CanSkipWhenViewEmpty = false;
+        FEmptyViewChecker _IsViewProvablyEmpty;
+        TArray<uint32> _ViewIncludeHashes;
+        TArray<FName> _ViewIncludeNames;
+        mutable uint64 _LastSeenIncludeVersionSum = kDirtyVersion_ForceEvaluate;
+        mutable bool _LastKnownViewProvablyEmpty = false;
+
         TOptional<concepts::FTickableType> _Instance;
 
         TArray<int32> _InEdges;
