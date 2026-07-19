@@ -4,6 +4,7 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Validation/CkIsValid.h"
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_Fragment_Data.h"
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_BakedPose.h"
 
@@ -53,6 +54,15 @@ auto
     Push_LiveInstances(TArray<FInstance>&& InInstances)
     -> void
 {
+    // Public-boundary guard for the documented invariant (count changes must go through
+    // Set_Instances) — a count change without a proxy recreate desyncs the GPUScene allocation.
+    CK_ENSURE_IF_NOT(InInstances.Num() == _Instances.Num(),
+        TEXT("Push_LiveInstances count changed [{} -> {}] — count changes must go through Set_Instances"),
+        _Instances.Num(), InInstances.Num())
+    {
+        Set_Instances(InInstances);
+        return;
+    }
     _Instances = MoveTemp(InInstances);
     MarkRenderDynamicDataDirty();
 }
@@ -81,7 +91,7 @@ auto
     CreateSceneProxy()
     -> FPrimitiveSceneProxy*
 {
-    if (_AnimCollection == nullptr || _Mesh == nullptr || _Instances.Num() == 0)
+    if (ck::Is_NOT_Valid(_AnimCollection) || ck::Is_NOT_Valid(_Mesh) || _Instances.Num() == 0)
     { return nullptr; }
     if (_Mesh->GetResourceForRendering() == nullptr)
     { return nullptr; }
@@ -151,9 +161,9 @@ auto
     GetUsedMaterials(TArray<UMaterialInterface*>& OutMaterials, bool InGetDebugMaterials) const
     -> void
 {
-    if (_Mesh == nullptr)
+    if (ck::Is_NOT_Valid(_Mesh))
     { return; }
-    if (_OverrideMaterial != nullptr)
+    if (ck::IsValid(_OverrideMaterial))
     {
         OutMaterials.Add(_OverrideMaterial);
         return;
@@ -171,7 +181,7 @@ auto
     GetNumMaterials() const
     -> int32
 {
-    return _Mesh != nullptr ? _Mesh->GetNumMaterials() : 0;
+    return ck::IsValid(_Mesh) ? _Mesh->GetNumMaterials() : 0;
 }
 
 auto
@@ -179,9 +189,9 @@ auto
     GetMaterial(int32 ElementIndex) const
     -> UMaterialInterface*
 {
-    if (_Mesh == nullptr)
+    if (ck::Is_NOT_Valid(_Mesh))
     { return nullptr; }
-    if (_OverrideMaterial != nullptr)
+    if (ck::IsValid(_OverrideMaterial))
     { return _OverrideMaterial; }
     if (UMaterialInterface* const Slot = Get_SlotOverrideMaterial(ElementIndex))
     { return Slot; }
@@ -214,11 +224,11 @@ auto
     }
 
     _LocalBounds = FBox(ForceInit);
-    if (_Mesh == nullptr)
+    if (ck::Is_NOT_Valid(_Mesh))
     { return; }
 
     // Animated bounds (bone union + skin pad) once baked — the raw mesh box clips animated silhouettes.
-    const FBox MeshBox = (_AnimCollection != nullptr) ? _AnimCollection->Get_AnimatedMeshBounds() : _Mesh->GetBounds().GetBox();
+    const FBox MeshBox = ck::IsValid(_AnimCollection) ? _AnimCollection->Get_AnimatedMeshBounds() : _Mesh->GetBounds().GetBox();
     if (_Instances.Num() == 0)
     {
         _LocalBounds = MeshBox;
@@ -240,7 +250,7 @@ auto
     // Rendering is client-local; a dedicated server has no proxy to feed — skip the animation advance entirely.
     if (GetNetMode() == NM_DedicatedServer)
     { return; }
-    if (_AnimCollection == nullptr || _Instances.Num() == 0)
+    if (ck::Is_NOT_Valid(_AnimCollection) || _Instances.Num() == 0)
     { return; }
     const FCk_Iskm_BakedPose* Baked = _AnimCollection->Get_BakedPose();
     if (Baked == nullptr)
@@ -299,8 +309,8 @@ auto
     }
 
     // Per-INSTANCE local bound: one animated-pose box around each instance transform (shared, engine clamps 1-or-N).
-    const FBox MeshBox = (_AnimCollection != nullptr) ? _AnimCollection->Get_AnimatedMeshBounds()
-                       : (_Mesh != nullptr) ? _Mesh->GetBounds().GetBox() : FBox(FVector(-1.0), FVector(1.0));
+    const FBox MeshBox = ck::IsValid(_AnimCollection) ? _AnimCollection->Get_AnimatedMeshBounds()
+                       : ck::IsValid(_Mesh) ? _Mesh->GetBounds().GetBox() : FBox(FVector(-1.0), FVector(1.0));
     DynData->LocalBounds = FRenderBounds(MeshBox);
     // PRIMITIVE bounds: must cover the WHOLE instance spread. Using the single mesh box here (the old code)
     // collapsed the primitive's scene bounds to one mesh at the component origin every animated frame —
