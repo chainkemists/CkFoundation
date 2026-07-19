@@ -141,3 +141,19 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_AssetExportMeta::
+    Get_SummaryTextBanner(
+        const FString& InAssetName)
+    -> FString
+{
+    return FString::Printf(
+        TEXT("// [CkAssetExporter] Human-readable companion - carries NO freshness metadata.\n")
+        TEXT("// Freshness oracle: sibling %s.json \"_meta\" (source-asset MD5 + exporter version);\n")
+        TEXT("// its verdict covers this file (all siblings are written in the same export call).\n")
+        TEXT("\n"),
+        *InAssetName);
+}
+
+// --------------------------------------------------------------------------------------------------------------------

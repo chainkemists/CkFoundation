@@ -305,7 +305,7 @@ auto
         const UEnvQuery* InQuery)
     -> FString
 {
-    auto Text = FString{};
+    auto Text = FCk_AssetExportMeta::Get_SummaryTextBanner(InQuery->GetName());
 
     Text += FString::Printf(TEXT("=== EQS Query: %s ===\n"), *InQuery->GetName());
     Text += FString::Printf(TEXT("Path: %s\n"), *InQuery->GetPathName());
