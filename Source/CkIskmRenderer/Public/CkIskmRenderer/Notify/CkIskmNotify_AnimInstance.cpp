@@ -38,11 +38,17 @@ void UCk_IskmNotify_AnimInstance::NativeOnMontageBlendingOut(UAnimMontage* InMon
     {
         // Clear ECS-side state for the entity. The OnMontageFinished signal is the source
         // of truth for listeners; clearing _CurrentMontage and the active-montage tag here
-        // keeps fragment state consistent with the SKMC-side state.
-        if (auto& AnimState = _OwningHandle.Get<ck::FFragment_IskmProxy_AnimState>();
-            AnimState.Get_CurrentMontage().Get() == InMontage)
+        // keeps fragment state consistent with the SKMC-side state. Fragment presence is
+        // guarded (not just handle liveness): this callback fires on engine anim timing —
+        // e.g. Release_BaseSKMC's SetAnimInstanceClass(nullptr) blending out a live montage
+        // mid-teardown — so it can run after the proxy fragments were already stripped.
+        if (_OwningHandle.Has<ck::FFragment_IskmProxy_AnimState>())
         {
-            AnimState._CurrentMontage.Reset();
+            if (auto& AnimState = _OwningHandle.Get<ck::FFragment_IskmProxy_AnimState>();
+                AnimState.Get_CurrentMontage().Get() == InMontage)
+            {
+                AnimState._CurrentMontage.Reset();
+            }
         }
         _OwningHandle.Try_Remove<ck::FTag_IskmProxy_HasActiveMontage>();
 

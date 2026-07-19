@@ -86,9 +86,14 @@ auto
     ACk_IskmRenderer_Actor_UE::
     Acquire_BaseSKMC() -> USkeletalMeshComponent*
 {
-    if (_Pool_FreeSKMCs.Num() > 0)
+    // A pooled component destroyed externally (editor level cleanup, owner teardown ordering) is
+    // nulled in this UPROPERTY array after the next GC — skip stale entries and fall through to a
+    // fresh allocation when no valid pooled entry remains.
+    while (_Pool_FreeSKMCs.Num() > 0)
     {
         auto Pooled = _Pool_FreeSKMCs.Pop(EAllowShrinking::No).Get();
+        if (ck::Is_NOT_Valid(Pooled))
+        { continue; }
         Pooled->SetVisibility(true);
         _LiveSKMCs.Add(Pooled);
 #if WITH_EDITOR
@@ -129,7 +134,10 @@ auto
     // ordering at EndPlay (see CkUsf/DESIGN_EntityOutlines.md).
     InComp->SetRenderCustomDepth(false);
     InComp->SetCustomDepthStencilValue(0);
-    _LiveSKMCs.RemoveSwap(InComp);
+    const auto NumRemoved = _LiveSKMCs.RemoveSwap(InComp);
+    CK_ENSURE_IF_NOT(NumRemoved > 0,
+        TEXT("Release_BaseSKMC: SKMC [{}] is not live on renderer [{}] (double release or foreign component)"), InComp, this)
+    { return; }
     _Pool_FreeSKMCs.Add(InComp);
 
 #if WITH_EDITORONLY_DATA
@@ -159,7 +167,7 @@ auto
     // delete path (owner deleted → entity-destroy cascade → EndPlay releases each SKMC) is
     // handled by the self-reclaim at the end of Release_BaseSKMC instead.
     if (const auto* World = GetWorld();
-        ck::IsValid(World) && World->WorldType == EWorldType::Editor && GEngine != nullptr)
+        ck::IsValid(World) && World->WorldType == EWorldType::Editor && ck::IsValid(GEngine))
     {
         _OnLevelActorDeletedHandle = GEngine->OnLevelActorDeleted().AddUObject(
             this, &UCk_IskmRenderer_Subsystem_UE::EditorOnly_OnLevelActorDeleted);
@@ -231,7 +239,7 @@ auto
     _RendererActors.Reset();
 
 #if WITH_EDITOR
-    if (GEngine != nullptr && _OnLevelActorDeletedHandle.IsValid())
+    if (ck::IsValid(GEngine) && _OnLevelActorDeletedHandle.IsValid())
     {
         GEngine->OnLevelActorDeleted().Remove(_OnLevelActorDeletedHandle);
         _OnLevelActorDeletedHandle.Reset();
