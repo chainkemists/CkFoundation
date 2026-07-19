@@ -235,6 +235,14 @@ public:
     template <typename T_Fragment>
     auto Has_AnyEntityWith() const -> bool;
 
+    // Tombstone-aware variant: true only if some LIVE entity currently has the fragment. Every Ck
+    // fragment pool is in_place_delete (CkHandle.h's component_traits), so after churn the packed
+    // array retains tombstones and Has_AnyEntityWith (storage empty()) reports non-empty forever.
+    // This walks past tombstones via a single-storage view — O(leading holes) worst case, so prefer
+    // it for change-gated checks (the scheduler's empty-view skip), not per-entity hot paths.
+    template <typename T_Fragment>
+    auto Has_AnyLiveEntityWith() const -> bool;
+
     // Per-fragment-type version counter used by the scheduler's pump pass to short-circuit
     // dirty-marker checks when nothing has changed since the last read. The counter is
     // incremented by every Add/Replace/AddOrReplace/Remove/Try_Remove/Clear for that type.
@@ -375,6 +383,22 @@ auto
     if (Storage == nullptr)
     { return false; }
     return NOT Storage->empty();
+}
+
+template <typename T_Fragment>
+auto
+    FCk_Registry::
+    Has_AnyLiveEntityWith() const
+    -> bool
+{
+    const auto* Reg = Resolve();
+    if (Reg == nullptr) { return false; }
+
+    // The const view overload does not create a missing pool — a never-touched type iterates empty.
+    // Single-storage views skip in_place tombstones during iteration, so begin() == end() means
+    // zero LIVE entities regardless of tombstone residue in the packed array.
+    const auto View = Reg->template view<T_Fragment>();
+    return View.begin() != View.end();
 }
 
 template <typename T_Fragment>

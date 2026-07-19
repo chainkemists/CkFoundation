@@ -96,11 +96,37 @@ enum class ECk_ProcessorLoadPolicy : uint8
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+// Controls whether the scheduler's main pass may skip a processor whose view is PROVABLY empty — i.e. some required
+// (include) fragment/tag type of its view has zero LIVE entities in the registry, so the generated DoTick would
+// visit nothing. Skipping bypasses the entire dispatch: no Tick call, no view construction, no tombstone walk, no
+// per-processor trace/stat/debug-timing overhead.
+//
+// Eligibility is automatic and conservative: only processors whose DoTick IS the template-generated view iteration
+// (ck::TProcessor / ck_exp::TProcessor, not shadowed by a custom DoTick) qualify — a custom DoTick body may do work
+// that is not gated on the view (drain external queues, poll UE state), which a skip would silently drop. Hand-built
+// descriptors (script processors) and TParallelProcessor never qualify. AlwaysTick is the escape hatch for a
+// template processor with unusual expectations:
+//
+//     static constexpr auto EmptyViewPolicy = ECk_ProcessorEmptyViewPolicy::AlwaysTick;
+//
+// Emptiness tracking mirrors the pump's dirty short-circuit: the include types' mutation version counters are
+// summed and compared against a per-node cache; the (tombstone-aware) storage scan re-runs only when some counter
+// moved. The check runs at the node's dispatch position, so an include added by an earlier processor in the same
+// frame wakes the node the same frame — zero latency vs. the always-tick path.
+UENUM()
+enum class ECk_ProcessorEmptyViewPolicy : uint8
+{
+    SkipWhenProvablyEmpty,   // Default for eligible processors: skip dispatch while the view is provably empty.
+    AlwaysTick,              // Opt out: dispatch every frame even when the view is provably empty.
+};
+
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
     using FProcessorFactory = TFunction<concepts::FTickableType(const FCk_Registry&)>;
     using FDirtyChecker = TFunction<bool(const FCk_Registry&)>;
+    using FEmptyViewChecker = TFunction<bool(const FCk_Registry&)>;
 
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -143,6 +169,19 @@ namespace ck
         TArray<uint32> _RW_FragmentHashes;
         TArray<FName>  _RO_FragmentNames;
         TArray<FName>  _RW_FragmentNames;
+
+        // Main-pass empty-view skip metadata (see ECk_ProcessorEmptyViewPolicy above). The include
+        // hashes are the view's REQUIRED types — access-wrapped data fragments AND filter tags —
+        // with TExclude<...> entries stripped (an exclude only shrinks a view; it cannot make an
+        // empty intersection non-empty) and TIgnoreInEditor<...> entries stripped (their
+        // participation is world-variant-dependent, so they are conservatively not part of the
+        // provable-empty set). _IsViewProvablyEmpty returns true when ANY include type has zero
+        // LIVE entities (tombstone-aware Has_AnyLiveEntityWith, not the pump's Has_AnyEntityWith).
+        // The name array is index-aligned with the hashes, diagnostics only.
+        bool _CanSkipWhenViewEmpty = false;
+        FEmptyViewChecker _IsViewProvablyEmpty;
+        TArray<uint32> _ViewIncludeHashes;
+        TArray<FName> _ViewIncludeNames;
 
         ECk_ProcessorNetMode _NetModeRequirement = ECk_ProcessorNetMode::AllNetModes;
         ECk_ProcessorNetModeRequirement _NetModeRequirementValue = ECk_ProcessorNetModeRequirement::All;

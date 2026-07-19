@@ -66,6 +66,19 @@ auto
 
 auto
     UCk_Utils_Ecs_Settings_UE::
+    Get_EnableEmptyViewMainPassSkip()
+    -> bool
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return false; }
+
+    return Settings->Get_EnableEmptyViewMainPassSkip();
+}
+
+auto
+    UCk_Utils_Ecs_Settings_UE::
     Get_RegistrySlot_WarnThreshold()
     -> int32
 {

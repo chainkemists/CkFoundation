@@ -141,6 +141,18 @@ public:
 
 `SkipPump` keeps the dirty-marker metadata for diagnostics + scheduler edges, but the pump phase is bypassed.
 
+### Empty-view skip (`EmptyViewPolicy`)
+
+The scheduler's main pass skips dispatching any eligible processor whose view is **provably empty** — some required fragment/tag type of its view has zero live entities — bypassing the Tick call, view construction, tombstone walk, and per-processor trace/stat overhead. Tracking mirrors the pump short-circuit: per-include-type mutation version counters + a per-node cached verdict; the tombstone-aware storage scan re-runs only on change. The check runs at the node's dispatch position, so an include added earlier in the same frame wakes the processor the same frame.
+
+Eligibility is automatic and conservative: only processors whose `DoTick` is the template-generated view iteration participate (detected at registration — a custom `DoTick` body may do non-view work a skip would drop). `TParallelProcessor`, composites, and script processors never qualify. Opt out per-processor:
+
+```cpp
+static constexpr auto EmptyViewPolicy = ECk_ProcessorEmptyViewPolicy::AlwaysTick;
+```
+
+Toggle: `_EnableEmptyViewMainPassSkip` (ECS project settings, default on, cached at scheduler construction). Dev tripwire: `ck.Scheduler.VerifyEmptyViewSkip 1` re-scans every skipped node and ensures the verdict still holds (catches registry writes that bypass the mutation counters).
+
 Processor scripts (`CkProcessorScript_UE`) are a Blueprint/AS-scriptable wrapper around a processor. Use them when artists or designers need to author behaviour without writing C++.
 
 ---

@@ -86,6 +86,22 @@ private:
     UPROPERTY(Config, EditDefaultsOnly, Category = "Scheduler")
     bool _EnableDirtyMarkerPumpShortCircuit = true;
 
+    // When enabled, the scheduler's MAIN pass skips dispatching any eligible processor whose view is provably
+    // empty — some required (include) fragment/tag type of its view has zero live entities — bypassing the
+    // Tick call, view construction, tombstone walk, and per-processor trace/stat/debug overhead entirely.
+    // Emptiness is tracked with the same per-fragment version counters the pump short-circuit uses: the
+    // (tombstone-aware) storage scan re-runs only when some include type mutated since the last observation.
+    //
+    // Eligibility is conservative and automatic — only processors whose DoTick is the template-generated view
+    // iteration participate; custom-DoTick processors, composites, parallel processors, and script processors
+    // always tick. Per-processor opt-out: ECk_ProcessorEmptyViewPolicy::AlwaysTick. Dev-build cross-check:
+    // `ck.Scheduler.VerifyEmptyViewSkip 1` re-scans every skipped node and ensures the verdict still holds.
+    //
+    // Cached at FProcessorScheduler construction — changing this requires a graph rebuild (PIE restart) to
+    // take effect.
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Scheduler")
+    bool _EnableEmptyViewMainPassSkip = true;
+
     // Active-registry count at which the slot table fires a soft-warning. Fires once at this threshold,
     // then again at each new ascending multiple (2x, 3x, ...). Never re-fires for a multiple already
     // reported in this process lifetime. 0 disables the soft-warning entirely (hard cap still applies).
@@ -112,6 +128,7 @@ public:
     CK_PROPERTY_GET(_EntityScriptSpawnParamsFolderName);
     CK_PROPERTY_GET(_IgnoredSpawnParamsPropertyNames);
     CK_PROPERTY_GET(_EnableDirtyMarkerPumpShortCircuit);
+    CK_PROPERTY_GET(_EnableEmptyViewMainPassSkip);
     CK_PROPERTY_GET(_RegistrySlot_WarnThreshold);
     CK_PROPERTY_GET(_RegistrySlot_WarnReporting);
     CK_PROPERTY_GET(_RegistrySlot_HardCap);
@@ -215,6 +232,11 @@ public:
               Category = "Ck|Utils|Ecs|Settings")
     static bool
     Get_EnableDirtyMarkerPumpShortCircuit();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ecs|Settings")
+    static bool
+    Get_EnableEmptyViewMainPassSkip();
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ecs|Settings")
