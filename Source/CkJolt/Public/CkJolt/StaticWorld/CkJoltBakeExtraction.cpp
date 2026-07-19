@@ -595,9 +595,17 @@ namespace ck::jolt::bake
         {
             const auto* BodySetup = Brush->BrushBodySetup.Get();
 
-            CK_ENSURE_IF_NOT(ck::IsValid(BodySetup, ck::IsValid_Policy_NullptrOnly{}),
-                TEXT("BrushComponent [{}] has collision enabled but no BrushBodySetup"), InComponent.GetName())
-            { return 0; }
+            // A brush with no BrushBodySetup has NO physics representation in Chaos either (a
+            // null body setup never creates a physics state), so emitting nothing IS parity —
+            // not an error. Every level's default/builder brush ships in exactly this state
+            // (collision-enabled component, no built body setup), so an ensure here would greet
+            // every PIE session on legitimate content.
+            if (NOT ck::IsValid(BodySetup, ck::IsValid_Policy_NullptrOnly{}))
+            {
+                ck::jolt::Verbose(TEXT("Static bake skipping BrushComponent [{}] on [{}] — no BrushBodySetup (Chaos creates no physics state for it either)"),
+                    InComponent.GetName(), GetNameSafe(InComponent.GetOwner()));
+                return 0;
+            }
 
             // Brush geometry is already convex-decomposed into the BodySetup's ConvexElems.
             const auto Shape = BuildShape_FromBodySetup(*BodySetup, ComponentTransform.GetScale3D(),
@@ -630,6 +638,17 @@ namespace ck::jolt::bake
                 if (ck::Is_NOT_Valid(LandscapeComponent))
                 { continue; }
 
+                // The RENDER component carries no collision config — Chaos collides through the
+                // paired heightfield COLLISION component (BodyInstance stamped from the proxy's
+                // collision profile). A signature read from the render component is
+                // ignore-everything: the body exists (debug draw shows it — it draws unfiltered)
+                // but every channel-filtered query drops it.
+                const auto* CollisionComponent = LandscapeComponent->GetCollisionComponent();
+                CK_ENSURE_IF_NOT(ck::IsValid(CollisionComponent, ck::IsValid_Policy_NullptrOnly{}),
+                    TEXT("Landscape component [{}] has no heightfield collision component — skipping (Chaos would have no physics state for it either)"),
+                    LandscapeComponent->GetName())
+                { continue; }
+
                 auto DataInterface = FLandscapeComponentDataInterface{LandscapeComponent};
 
                 const auto SampleCount = LandscapeComponent->ComponentSizeQuads + 1;
@@ -656,7 +675,7 @@ namespace ck::jolt::bake
                 Body._Shape = Shape;
                 Body._Position = ComponentTransform.GetLocation();
                 Body._Rotation = ComponentTransform.GetRotation();
-                Body._Signature = FCk_Jolt_CollisionSignature::Make_FromComponent(*LandscapeComponent,
+                Body._Signature = FCk_Jolt_CollisionSignature::Make_FromComponent(*CollisionComponent,
                     ECk_Jolt_BodyDomain::Static);
                 Body._SourceComponent = LandscapeComponent;
 

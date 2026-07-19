@@ -15,9 +15,10 @@ namespace ck::jolt_body
 {
     // Fires the contact signal for ONE side (the "self" body) of a contact event, if self is a JoltBody whose
     // OWN body id matches this side's index+seq. An entity can own more than one Jolt body (e.g. a JoltBody
-    // AND a Probe), all sharing the entity id as UserData — the index+seq check is the disambiguation.
-    // InOtherEntity may be an invalid handle (the other body has no live entity, e.g. a baked static-world
-    // body); it is carried into the payload verbatim.
+    // AND a Probe), all sharing the entity id as UserData — the index+seq check is the disambiguation. A
+    // baked static-world body's entity (a JoltStaticActor) flowing in as self is benign: it lacks
+    // FFragment_JoltBody_Current, so the guard below drops it. InOtherEntity is carried into the payload
+    // verbatim and may be invalid (the other body's entity is dead) or a non-JoltBody attribution entity.
     auto
         DoRouteForSide(
             const FCk_Handle& InSelfEntity,
@@ -92,10 +93,11 @@ namespace ck::jolt_body
         // guards below already tolerate.
         const auto ResolveBodyEntity = [&](uint64 InUserData) -> FCk_Handle
         {
-            // UserData 0 = NO entity. Bodies that never SetUserData (baked static-world bodies) carry Jolt's
-            // default 0 — and raw entity id 0 (index 0, version 0) is ALWAYS the registry's transient root
-            // (first create()), a live entity. Without this guard every dynamic-vs-baked-floor contact would
-            // resolve _OtherEntity to the transient root instead of an invalid handle.
+            // UserData 0 = NO entity. Raw entity id 0 (index 0, version 0) is ALWAYS the registry's transient
+            // root (first create()), a live entity — without this guard any body that never got a UserData
+            // stamp would resolve _OtherEntity to the transient root. (Baked static-world bodies now carry
+            // their source actor's attribution entity id, so a dynamic-vs-baked-floor contact resolves
+            // _OtherEntity to that JoltStaticActor entity rather than to an invalid handle.)
             if (InUserData == 0)
             { return {}; }
 
