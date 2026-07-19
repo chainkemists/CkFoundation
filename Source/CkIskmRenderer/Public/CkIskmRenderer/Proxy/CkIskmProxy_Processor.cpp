@@ -30,13 +30,14 @@ DECLARE_CYCLE_STAT(TEXT("Iskm::EmitFinishedEvents"), STAT_CkIskm_EmitFinishedEve
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck
+namespace ck_iskmproxy_processor
 {
     // Sets an AnimInstance class on the SKMC and re-wires the notify-forwarder owning
     // handle on the resulting AnimInstance. Called from Setup, the SetAnimInstanceClass
     // handler, and the lazy-AnimInstance branch in PlayMontage. (unity builds concatenate
-    // TUs, so file-static rather than an anonymous namespace.)
-    static auto DoApply_AnimInstanceClass(
+    // TUs, so a filename-derived named namespace — a file-local static or an anonymous
+    // namespace would collide with same-named internal-linkage helpers in the unity blob.)
+    auto DoApply_AnimInstanceClass(
         USkeletalMeshComponent* InSKMC,
         TSubclassOf<UAnimInstance> InClass,
         FCk_Handle_IskmProxy InOwningHandle) -> void
@@ -47,10 +48,10 @@ namespace ck
         { return; }
         InSKMC->SetAnimInstanceClass(InClass);
 
-        // ::-qualified — the friend-class declarations in Fragment.h inject forward
-        // decls into ck::, so unqualified lookup inside `namespace ck { }` resolves
-        // to the incomplete forward decl instead of the file-scope UCLASS. This only
-        // bites when the .cpp falls out of unity-build aggregation (Adaptive Build).
+        // The `::` qualification is a holdover from when this helper lived inside
+        // `namespace ck` (where Fragment.h's friend-class declarations inject a
+        // shadowing forward decl). In this namespace unqualified lookup resolves
+        // correctly; the qualifier is kept as harmless.
         if (auto* IskmAI = Cast<::UCk_IskmNotify_AnimInstance>(InSKMC->GetAnimInstance()))
         {
             IskmAI->Set_OwningProxyHandle(InOwningHandle);
@@ -62,7 +63,12 @@ namespace ck
                 InClass, InOwningHandle);
         }
     }
+}
 
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
     // refresh the world pointer once per tick. ForEachEntity then reads `_World`
     // directly instead of paying the per-entity lookup cost. Sibling pattern from
     // CkIsmProxy_Processor.cpp lines 100-130.
@@ -99,6 +105,13 @@ namespace ck
         auto* AnimCollection = RendererData->Get_AnimCollection().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(AnimCollection),
             TEXT("IskmProxy Setup: AnimCollection invalid for [{}]"), InHandle)
+        { return; }
+
+        // Validated before Acquire_BaseSKMC so there is nothing to unwind — a null
+        // DefaultMesh would leave every later request handler operating on a meshless SKMC.
+        CK_ENSURE_IF_NOT(ck::IsValid(AnimCollection->Get_DefaultMesh()),
+            TEXT("IskmProxy Setup: AnimCollection [{}] has no DefaultMesh for [{}]"),
+            GetNameSafe(AnimCollection), InHandle)
         { return; }
 
         // cached world pointer; resolved once per tick in DoTick(). Asserts cheaply.
@@ -153,12 +166,19 @@ namespace ck
         // so OnAnimationNotify and OnMontageFinished still fire in sequence mode.
         const auto SoftClass = RendererData->Get_DefaultAnimInstanceClass();
         auto* AnimClass = SoftClass.IsNull() ? nullptr : SoftClass.LoadSynchronous();
+        // A deliberately-unset soft ref (IsNull) is normal flow — sequence mode. A SET
+        // ref that fails to load is broken content (deleted/renamed AnimBP asset) and
+        // must be loud: the proxy would otherwise silently T-pose in sequence mode.
+        CK_ENSURE_IF_NOT(SoftClass.IsNull() || ck::IsValid(AnimClass),
+            TEXT("IskmProxy Setup: _DefaultAnimInstanceClass [{}] failed to load for [{}] — falling back to sequence mode"),
+            SoftClass.ToString(), InHandle)
+        { /* fall through: the sequence-mode fallback below is the recovery */ }
         const auto IsAnimBpMode = ck::IsValid(AnimClass);
         const auto ClassToApply = IsAnimBpMode
             ? TSubclassOf<UAnimInstance>{AnimClass}
             : TSubclassOf<UAnimInstance>{::UCk_IskmNotify_AnimInstance::StaticClass()};
 
-        DoApply_AnimInstanceClass(SKMC, ClassToApply, FCk_Handle_IskmProxy{InHandle});
+        ck_iskmproxy_processor::DoApply_AnimInstanceClass(SKMC, ClassToApply, FCk_Handle_IskmProxy{InHandle});
         InPoseSource._PoseSource = IsAnimBpMode
             ? ECk_IskmProxy_PoseSource::AnimBP
             : ECk_IskmProxy_PoseSource::Sequence;
@@ -180,6 +200,10 @@ namespace ck
         {
             const auto& Def = RendererData->Get_Submeshes()[Idx];
             if (NOT Def.Get_AttachByDefault())
+            { continue; }
+            CK_ENSURE_IF_NOT(ck::IsValid(Def.Get_Mesh()),
+                TEXT("IskmProxy [{}]: default-attach submesh [{}] in RendererData [{}] has no Mesh set"),
+                InHandle, Def.Get_Name(), GetNameSafe(RendererData))
             { continue; }
             auto* Child = NewObject<USkeletalMeshComponent>(RendererActor, USkeletalMeshComponent::StaticClass(), NAME_None, RF_Transient);
             Child->SetupAttachment(SKMC);
@@ -214,7 +238,9 @@ namespace ck
             for (auto Offset = 0; Offset < FloatArray.Num(); ++Offset)
             {
                 const auto SlotIdx = StartIdx + Offset;
-                if (NOT InCustomData._Values.IsValidIndex(SlotIdx))
+                CK_ENSURE_IF_NOT(InCustomData._Values.IsValidIndex(SlotIdx),
+                    TEXT("IskmProxy [{}]: CustomInstanceDataDefaults writes slot [{}] but only [{}] slots are allocated. RendererData._NumCustomDataFloat must cover the requested offset"),
+                    InHandle, SlotIdx, InCustomData._Values.Num())
                 { continue; }
                 InCustomData._Values[SlotIdx] = FloatArray[Offset];
                 SKMC->SetCustomPrimitiveDataFloat(SlotIdx, FloatArray[Offset]);
@@ -264,13 +290,20 @@ namespace ck
         // lambda dispatching to the overloaded DoHandleRequest member functions per request
         // type. New request types only need a new DoHandleRequest overload (decl in the
         // header, def below) — the visitor body never changes.
-        ck::algo::ForEachRequest(InRequests._Requests, ck::Visitor(
+        // Drain a COPY (canonical pattern, CkTimer_Processor.cpp): handlers broadcast
+        // signals synchronously (OnAnimationFinished), and a listener may enqueue new
+        // Request_IskmProxy_* on this same entity mid-drain — appending to the live
+        // array would dangle the loop's iterators on realloc, and a trailing Reset
+        // would silently discard the new requests. Re-entrant requests survive in the
+        // fragment instead and are re-pumped next tick (MarkedDirtyBy).
+        auto RequestsCopy = MoveTemp(InRequests._Requests);
+        InRequests._Requests.Reset();
+
+        ck::algo::ForEachRequest(RequestsCopy, ck::Visitor(
             [&](const auto& InRequest) -> void
             {
                 DoHandleRequest(InHandle, InParams, InCurrent, InAnimState, InPoseSource, InCustomData, InRequest);
             }), ck::policy::DontResetContainer{});
-
-        InRequests._Requests.Reset();
     }
 
     auto
@@ -314,6 +347,9 @@ namespace ck
 
         auto Leader = InFollower.Get_Leader();
 
+        // Intentional silent return: teardown ordering can destroy the leader entity a
+        // frame before the follower's own destruction/cleanup processes — one silent
+        // skip (follower holds its last pose) during that window is correct.
         if (ck::Is_NOT_Valid(Leader))
         { return; }
 
@@ -503,13 +539,17 @@ namespace ck
         // Release_BaseSKMC, so per-proxy morphs would leak to the next borrower.
         SKMC->ClearMorphTargets();
 
-        if (auto* Owner = SKMC->GetOwner())
+        // Same invariant as the AttachSubmesh handler: BaseSKMC is always acquired from
+        // a renderer actor, so a missing/mismatched owner here means the pooled SKMC leaks.
+        auto* RendererActor = Cast<ACk_IskmRenderer_Actor_UE>(SKMC->GetOwner());
+        CK_ENSURE_IF_NOT(ck::IsValid(RendererActor),
+            TEXT("IskmProxy [{}]: BaseSKMC has no ACk_IskmRenderer_Actor_UE owner in EndPlay — pooled SKMC leaked"),
+            InHandle)
         {
-            if (auto* RendererActor = Cast<ACk_IskmRenderer_Actor_UE>(Owner))
-            {
-                RendererActor->Release_BaseSKMC(SKMC);
-            }
+            InCurrent._BaseSKMC.Reset();
+            return;
         }
+        RendererActor->Release_BaseSKMC(SKMC);
         InCurrent._BaseSKMC.Reset();
     }
 
@@ -921,6 +961,12 @@ namespace ck
         { return; }
 
         const auto& Def = RendererData->Get_Submeshes()[Idx];
+        // Validated before creating the child SKMC — a null Mesh would produce an
+        // invisible submesh that still consumes one of the capped MaxSubmeshPerInstance slots.
+        CK_ENSURE_IF_NOT(ck::IsValid(Def.Get_Mesh()),
+            TEXT("IskmProxy [{}]: submesh [{}] in RendererData [{}] has no Mesh set"),
+            InHandle, InRequest.Get_SubmeshName(), GetNameSafe(RendererData))
+        { return; }
         auto* Child = NewObject<USkeletalMeshComponent>(Owner, USkeletalMeshComponent::StaticClass(), NAME_None, RF_Transient);
         Child->SetupAttachment(SKMC);
         Child->RegisterComponent();
@@ -970,6 +1016,12 @@ namespace ck
         // doesn't track attach state).
         const auto Slot = InCurrent._AttachedSubmeshIndices.IndexOfByKey(Idx);
         if (Slot == INDEX_NONE)
+        { return; }
+        // Invariant tripwire: _AttachedSubmeshIndices and _SubmeshSKMCs are parallel
+        // arrays maintained by this file's Add/RemoveAt/Reset pairs.
+        CK_ENSURE_IF_NOT(InCurrent._SubmeshSKMCs.IsValidIndex(Slot),
+            TEXT("IskmProxy [{}]: _AttachedSubmeshIndices/_SubmeshSKMCs desynced (slot [{}] vs [{}] SKMCs)"),
+            InHandle, Slot, InCurrent._SubmeshSKMCs.Num())
         { return; }
         if (auto* Child = InCurrent._SubmeshSKMCs[Slot].Get())
         {
@@ -1024,7 +1076,7 @@ namespace ck
             ? InRequest.Get_AnimInstanceClass()
             : TSubclassOf<UAnimInstance>{::UCk_IskmNotify_AnimInstance::StaticClass()};
 
-        DoApply_AnimInstanceClass(SKMC, ClassToApply, FCk_Handle_IskmProxy{InHandle});
+        ck_iskmproxy_processor::DoApply_AnimInstanceClass(SKMC, ClassToApply, FCk_Handle_IskmProxy{InHandle});
         InPoseSource._PoseSource = IsAnimBpMode
             ? ECk_IskmProxy_PoseSource::AnimBP
             : ECk_IskmProxy_PoseSource::Sequence;
@@ -1064,7 +1116,7 @@ namespace ck
         // signals still fire from this entity.
         if (ck::Is_NOT_Valid(SKMC->GetAnimInstance()))
         {
-            DoApply_AnimInstanceClass(
+            ck_iskmproxy_processor::DoApply_AnimInstanceClass(
                 SKMC,
                 TSubclassOf<UAnimInstance>{::UCk_IskmNotify_AnimInstance::StaticClass()},
                 FCk_Handle_IskmProxy{InHandle});
@@ -1075,7 +1127,14 @@ namespace ck
             InHandle)
         { return; }
 
-        AI->Montage_Play(InRequest.Get_Montage(), InRequest.Get_PlayRate());
+        // Montage_Play returns 0 on failure (skeleton/slot mismatch — bad content).
+        // Bail BEFORE mutating state: otherwise the entity is permanently marked
+        // montage-active with nothing playing and OnMontageFinished never fires.
+        const auto MontageLength = AI->Montage_Play(InRequest.Get_Montage(), InRequest.Get_PlayRate());
+        CK_ENSURE_IF_NOT(MontageLength > 0.0f,
+            TEXT("IskmProxy [{}]: Montage_Play failed for Montage [{}] — montage/skeleton/slot mismatch with the current SkeletalMesh"),
+            InHandle, GetNameSafe(InRequest.Get_Montage()))
+        { return; }
         if (InRequest.Get_StartSection() != NAME_None)
         {
             AI->Montage_JumpToSection(InRequest.Get_StartSection(), InRequest.Get_Montage());
@@ -1119,9 +1178,14 @@ namespace ck
         }
 
         // Clear the active-montage tag and current-montage ref so future processors
-        // filtering on FTag_IskmProxy_HasActiveMontage see correct state.
+        // filtering on FTag_IskmProxy_HasActiveMontage see correct state. Guarded
+        // symmetrically with the PlayMontage add: a redundant StopMontage (nothing
+        // playing) is normal flow and must not fire the registry's absent-tag ensure.
         InAnimState._CurrentMontage.Reset();
-        InHandle.Remove<FTag_IskmProxy_HasActiveMontage>();
+        if (InHandle.Has<FTag_IskmProxy_HasActiveMontage>())
+        {
+            InHandle.Remove<FTag_IskmProxy_HasActiveMontage>();
+        }
     }
 
     auto
@@ -1157,7 +1221,14 @@ namespace ck
             SKMC->AddImpulse(InRequest.Get_Impulse(), InRequest.Get_ImpulseBoneName(), VelChange);
         }
         InPoseSource._PoseSource = ECk_IskmProxy_PoseSource::Ragdoll;
-        InHandle.Add<FTag_IskmProxy_Ragdolling>();
+        // Re-triggering BeginRagdoll while already ragdolling is plausible normal flow
+        // (e.g. overlapping death impulses) — the physics setters above are idempotent
+        // and a repeat impulse on an active ragdoll is meaningful. Guard the tag add
+        // against the "tag already exists" ensure (mirrors the PlayMontage guard).
+        if (NOT InHandle.Has<FTag_IskmProxy_Ragdolling>())
+        {
+            InHandle.Add<FTag_IskmProxy_Ragdolling>();
+        }
 
         // Switching to ragdoll halts SKMC anim playback. If a sequence was active,
         // EmitFinishedEvents would otherwise see IsPlaying() == false next tick and
@@ -1183,6 +1254,15 @@ namespace ck
             TEXT("IskmProxy [{}]: BaseSKMC missing in EndRagdoll handler"),
             InHandle)
         { return; }
+
+        // Rejected at entry, BEFORE any physics mutation: end-without-begin would
+        // silently disable collision and rewrite _PoseSource on a proxy that was
+        // never ragdolling (caller-logic error).
+        CK_ENSURE_IF_NOT(InHandle.Has<FTag_IskmProxy_Ragdolling>(),
+            TEXT("IskmProxy [{}]: EndRagdoll without an active ragdoll"),
+            InHandle)
+        { return; }
+
         SKMC->SetSimulatePhysics(false);
         SKMC->SetAllBodiesSimulatePhysics(false);
         SKMC->SetCollisionEnabled(ECollisionEnabled::NoCollision);

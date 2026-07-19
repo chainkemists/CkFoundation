@@ -10,9 +10,9 @@
 
 #include "CkIskmRenderer/Proxy/CkIskmProxy_Fragment_Data.h"
 
-#include <variant>
+#include "CkUsf/Outline/CkUsf_OutlinePreset.h"
 
-class UCkUsf_OutlinePreset;
+#include <variant>
 
 namespace ck
 {
@@ -91,7 +91,11 @@ namespace ck
         CK_GENERATED_BODY(FFragment_IskmProxy_OutlineApplied);
 
     private:
-        TWeakObjectPtr<UCkUsf_OutlinePreset> _Preset;
+        // Strong: this fragment holds a live stencil refcount keyed by the preset in the outline
+        // subsystem's weak-keyed _ActivePresets map. If the preset died while claimed, the stale
+        // weak key could never be found again and the stencil slot would leak until world teardown —
+        // pin the preset for exactly as long as the claim is held (fragment removal releases both).
+        TStrongObjectPtr<UCkUsf_OutlinePreset> _Preset;
         uint8 _StencilValue = 0;
 
     public:
