@@ -54,21 +54,42 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
   bodies sharing a cached shape below `_CompoundShapeInstanceThreshold`; ONE StaticCompoundShape
   above) → StaticMesh (AggGeom per trace flag; `CTF_UseComplexAsSimple` → Chaos cooked tri-mesh
   → `JPH::MeshShape`, winding-swapped) → Brush (convex elems) → Landscape (WITH_EDITOR:
-  heightfield per component, Y→Z wrap + row flip — pinned by Ck.Jolt.Bake.HeightField test).
-  No valid collision → CK_ENSURE + skip; NEVER a bounding-box substitute.
+  heightfield per component, Y→Z wrap + row flip — pinned by Ck.Jolt.Bake.HeightField test;
+  collision SIGNATURE comes from the paired `GetCollisionComponent()` heightfield collision
+  component — the render component's is ignore-everything, which yields a body debug draw
+  shows but every channel query drops).
+  No valid collision → CK_ENSURE + skip; NEVER a bounding-box substitute. One carve-out:
+  a BrushComponent with a null BrushBodySetup is a Verbose skip, not an ensure — Chaos also
+  creates no physics state for it, and every level's default/builder brush is one.
 - `UCk_JoltStaticWorld_Subsystem_UE` — per-ULevel body tracking in lockstep with
   LevelAdded/RemovedFromWorld (WP cells stream as ULevels); live extraction in PIE (default) or
   cooked data (`_PIEStaticWorldMode`; packaged = always cooked); batch
   `AddBodiesPrepare/Finalize`; OptimizeBroadPhase requested after bulk changes. Static bodies
   live on the `Static_World` object layer — pairs with NOTHING until the Phase-2 layer table
   (query targets only; probes never see them).
+- **ECS-first attribution (JoltStaticActor feature):** ONE entity per source actor that contributes
+  ≥1 baked body (`ck::FFragment_JoltStaticActor_Current`, transient-owned, DebugName = actor FName).
+  Each baked body is stamped with its source actor's entity id as Jolt user-data, so a static-world
+  hit resolves back to the entity through the SAME `TryResolve_Entity` path a dynamic JoltBody hit
+  uses — there is no FName attribution table. Lifecycle is bidirectional: level-streaming /
+  `Request_RemoveActor` / `Deinitialize` remove bodies AND destroy the attribution entities;
+  destroying an attribution entity first routes its bodies through the same idempotent funnel via
+  `FProcessor_JoltStaticActor_EndPlay` (`Request_RemoveBodiesForEntity` empties the fragment's
+  body-id array — the emptiness is the idempotence guard). The subsystem `InitializeDependency`s on
+  `UCk_EcsWorld_Subsystem_UE` so the registry outlives it. A level added before the ECS world is
+  ready is SKIPPED (Verbose) and re-attempted by the `OnWorldBeginPlay` sweep — bodies are never
+  baked without an entity.
 - Cooked data: `UCk_Jolt_CookedWorldIndex_UE` (per map, found by path convention under
   `_CookedDataRootPath`) + `UCk_Jolt_CookedCell_UE` per bake-grid cell (`SaveWithChildren` blob,
   shared-dedup). `CookVersion` + `JPH_VERSION_ID` + per-actor runtime hash — stale data ensures
   loudly and is SKIPPED, never re-extracted silently.
 - `UCk_Utils_JoltStaticWorld_UE` — `Request_BakeActor/RemoveActor` (runtime-spawned statics;
   ExplicitActor policy bakes Movable-mobility components), `Get_RayCastStaticWorld` (Phase-1
-  introspection; the channel-filtered query API is Phase 2).
+  introspection; the channel-filtered query API is Phase 2; the hit carries a `_Entity` handle,
+  not an actor name).
+- `UCk_Utils_JoltStaticActor_UE` — typesafe-handle BPFL over the attribution entity: `Has`,
+  `Cast`/`DoCast`/`DoCastChecked`, `Get_SourceActor` (may be null after the actor dies),
+  `Get_SourceActorName` (cached, survives actor death), `Get_NumBodies`.
 - Cooker lives in `CkJoltEditor` (editor subsystem + `-run=CkJoltCook` commandlet).
 
 ### Dynamic bodies + characters (Phases 3-4)
@@ -86,8 +107,9 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
   `FTag_JoltBody_PersistContacts`) / `OnJoltBodyContactRemoved` (payload OtherEntity +
   points/normal + RelativeNormalSpeed POSITIVE-WHEN-CLOSING + OtherIsSensor) and
   `OnJoltBodySleepStateChanged`. Contact routing: `"JoltBody.Signals"` router registered on
-  the subsystem; UserData==0 (baked statics) = NO entity — never resolve raw id 0 (it is the
-  registry's transient root).
+  the subsystem; UserData==0 = NO entity — never resolve raw id 0 (it is the registry's transient
+  root). Baked statics now carry their source actor's JoltStaticActor entity id (not 0), so a
+  dynamic-vs-baked-floor contact resolves `_OtherEntity` to that attribution entity.
 - **JoltCharacter quartet** (`Character/`): `JPH::CharacterVirtual`-backed (no broadphase
   body, no BodyID). Params: capsule radius/half-height (CENTERED capsule — total half
   height = HalfHeight + Radius), MassKg, MaxSlopeAngleDegrees, MaxStrengthNewtons
@@ -109,6 +131,15 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
   red). The subsystem draws when the consumer gate (`Set_DebugDrawGate`, e.g.
   `ck.SpatialQuery.PreviewAllProbesUsingJolt`) OR the Enabled CVar says so. Skipped in
   async frames.
+- The renderer (`CkJoltDebugger`, CkJolt_DebugRenderer.h) is a BATCHED `JPH::DebugRenderer`,
+  not `DebugRendererSimple`: triangle batches become transient UStaticMeshes (built once per
+  unique geometry — Jolt shapes cache their GeometryRef), instanced per (geometry, color)
+  bucket into `UInstancedStaticMeshComponent`s and reconciled per frame; unchanged buckets
+  (static + sleeping bodies) cost nothing. Translucent unlit tint via
+  `ck.Jolt.DebugDraw.Opacity` (live). `ck.Jolt.DebugDraw.Velocity` (default on) and
+  `ck.Jolt.DebugDraw.WorldTransform` (default OFF — line-heavy at stress counts) gate the
+  remaining immediate-mode lines. Both windings are emitted per triangle (Conv is a
+  handedness passthrough, so one winding renders inside-out).
 - Cycle stats under `STATGROUP_CkJolt` (`stat CkJolt` / Insights): `JoltWorld_Step` (whole
   fixed-step pump), `JoltPhysics_Update(_Async)` (the Update loop), `JoltBody_
   WritebackInterpolated`, `JoltBody_KinematicPush`, contact queue/drain stats.
@@ -154,7 +185,8 @@ WaitForAsync ──> DrainEvents ──> PlanStep ──> SleepStateMirror ─�
   `_PIEStaticWorldMode`, `_CompoundShapeInstanceThreshold`, `_CookedDataRootPath`.
 - **Startup-only CVars/cmdline**: `jolt.EnableParallelPhysics`,
   `jolt.EnableAsyncPhysicsUpdate` (cmdline-first).
-- **Runtime CVars**: `ck.Jolt.DebugDraw.Enabled`, `ck.Jolt.DebugDraw.SleepColoring`.
+- **Runtime CVars**: `ck.Jolt.DebugDraw.Enabled`, `ck.Jolt.DebugDraw.SleepColoring`,
+  `ck.Jolt.DebugDraw.Opacity`, `ck.Jolt.DebugDraw.Velocity`, `ck.Jolt.DebugDraw.WorldTransform`.
 - Character feel: `FCk_Fragment_JoltCharacter_ParamsData` knobs (MaxStrengthNewtons,
   MaxSlopeAngleDegrees, mass) + the cm-converted ExtendedUpdate settings in
   `DoStepCharacters_AnyThread` (stick-to-floor 50, step-up 40).
