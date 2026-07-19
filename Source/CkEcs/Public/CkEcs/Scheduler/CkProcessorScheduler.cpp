@@ -1,5 +1,7 @@
 #include "CkProcessorScheduler.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
+
 #include "CkEcs/CkEcsLog.h"
 #include "CkEcs/Settings/CkEcs_Settings.h"
 
@@ -28,6 +30,17 @@ static TAutoConsoleVariable<bool> CVar_SchedulerDebugTiming(
     TEXT("Collect per-processor wall-clock timings for the Scheduler Debugger (default on). Set 0 to skip ")
     TEXT("the 2x QueryPerformanceCounter-per-processor cost that otherwise shows as Scheduler::Dispatch self-time."),
     ECVF_Default);
+
+// Tripwire for write paths that bypass FCk_Registry's per-type mutation counters (the empty-view skip's
+// change signal). When on, every node the main pass is about to skip is re-scanned; a verdict that no
+// longer holds fires an ensure naming the processor instead of silently never ticking it. Costly — the
+// re-scan is exactly the work the skip exists to avoid — so this is a dev diagnosis tool, default off.
+static TAutoConsoleVariable<bool> CVar_SchedulerVerifyEmptyViewSkip(
+    TEXT("ck.Scheduler.VerifyEmptyViewSkip"),
+    false,
+    TEXT("Re-scan every empty-view-skipped processor each frame and ensure the cached verdict still holds. ")
+    TEXT("Catches registry write paths that bypass the mutation version counters. Dev diagnosis only."),
+    ECVF_Default);
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -43,6 +56,11 @@ DECLARE_CYCLE_STAT(TEXT("Scheduler::Dispatch"),          STAT_Scheduler_Dispatch
 DECLARE_CYCLE_STAT(TEXT("Scheduler::Pump"),              STAT_Scheduler_Pump,              STATGROUP_CkScheduler);
 DECLARE_CYCLE_STAT(TEXT("Scheduler::PumpDispatch"),      STAT_Scheduler_PumpDispatch,      STATGROUP_CkScheduler);
 DECLARE_CYCLE_STAT(TEXT("Scheduler::PumpDirtyCheck"),    STAT_Scheduler_PumpDirtyCheck,    STATGROUP_CkScheduler);
+
+// The main pass' empty-view short-circuit: version-sum reads + (on change) the tombstone-aware storage
+// scan. Self-time here is the total cost of DECIDING to skip — weigh it against the Dispatch time the
+// skipped processors no longer spend.
+DECLARE_CYCLE_STAT(TEXT("Scheduler::EmptyViewCheck"),    STAT_Scheduler_EmptyViewCheck,    STATGROUP_CkScheduler);
 
 // Dev-only: the Scheduler Debugger's per-processor QueryPerformanceCounter timing. Carved out of
 // Scheduler::Dispatch self-time so you can SEE how much of the inter-processor "gap" is this redundant
@@ -66,6 +84,7 @@ ck::FProcessorScheduler::
         FProcessorGraphPartition&& InPartition)
     : _Partition(MoveTemp(InPartition))
     , _UseDirtyMarkerVersionShortCircuit(UCk_Utils_Ecs_Settings_UE::Get_EnableDirtyMarkerPumpShortCircuit())
+    , _UseEmptyViewMainPassSkip(UCk_Utils_Ecs_Settings_UE::Get_EnableEmptyViewMainPassSkip())
 {
     for (const auto NodeIndex : _Partition._ExecutionOrder)
     {
@@ -125,6 +144,49 @@ auto
             SCOPE_CYCLE_COUNTER(STAT_Scheduler_Dispatch);
 
             auto& Node = _Partition._Nodes[NodeIndex];
+
+            // Empty-view short-circuit (see ECk_ProcessorEmptyViewPolicy): when some include type of the
+            // node's view has zero live entities, the generated DoTick would visit nothing — skip the
+            // whole dispatch (poly Tick, view construction, tombstone walk, trace/debug overhead).
+            // Version sum + cached verdict mirror the pump's dirty short-circuit: the storage scan
+            // re-runs only when an include type mutated since the last observation. Running the check
+            // at the node's dispatch position means an include added by an EARLIER processor this frame
+            // is observed this frame — no wake latency vs. the always-tick path.
+            if (_UseEmptyViewMainPassSkip and Node._CanSkipWhenViewEmpty)
+            {
+                SCOPE_CYCLE_COUNTER(STAT_Scheduler_EmptyViewCheck);
+
+                auto IncludeVersionSum = uint64{0};
+                for (const auto IncludeHash : Node._ViewIncludeHashes)
+                {
+                    IncludeVersionSum += InRegistry.Get_DirtyMarkerVersion(IncludeHash);
+                }
+
+                if (IncludeVersionSum != Node._LastSeenIncludeVersionSum)
+                {
+                    Node._LastSeenIncludeVersionSum = IncludeVersionSum;
+                    Node._LastKnownViewProvablyEmpty = Node._IsViewProvablyEmpty(InRegistry);
+                }
+
+#if !UE_BUILD_SHIPPING
+                if (Node._LastKnownViewProvablyEmpty and CVar_SchedulerVerifyEmptyViewSkip.GetValueOnGameThread())
+                {
+                    CK_ENSURE_IF_NOT(Node._IsViewProvablyEmpty(InRegistry),
+                        TEXT("Empty-view skip verdict for processor [{}] is STALE — its view gained entities without any "
+                             "include-type version bump. Some registry write path bypasses the mutation counters."),
+                        Node._ProcessorName)
+                    { Node._LastKnownViewProvablyEmpty = false; }
+                }
+#endif
+
+                if (Node._LastKnownViewProvablyEmpty)
+                {
+#if !UE_BUILD_SHIPPING
+                    DoDebugRecordProcessorSkippedEmptyView(NodeIndex);
+#endif
+                    continue;
+                }
+            }
 
 #if !UE_BUILD_SHIPPING
             auto ProcessorStartTime = 0.0;
@@ -411,6 +473,19 @@ auto
 
     _DebugCurrentFrame.ProcessorTimings[InNodeIndex].MainPassTimeMs = InElapsedMs;
     _DebugCurrentFrame.ProcessorTimings[InNodeIndex].MainPassEntityCount = InEntityCount;
+}
+
+auto
+    ck::FProcessorScheduler::
+    DoDebugRecordProcessorSkippedEmptyView(
+        int32 InNodeIndex)
+    -> void
+{
+    if (NOT _DebugCurrentFrame.ProcessorTimings.IsValidIndex(InNodeIndex))
+    { return; }
+
+    _DebugCurrentFrame.ProcessorTimings[InNodeIndex].WasSkippedEmptyViewThisFrame = true;
+    ++_DebugCurrentFrame.SkippedEmptyViewCount;
 }
 
 auto

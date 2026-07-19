@@ -2,6 +2,8 @@
 
 #include "CkProcessorDescriptor.h"
 
+#include "CkCore/Time/CkTime.h"
+
 #include "CkEcs/Processor/CkProcessor_AccessPolicy.h"
 
 #include <entt/core/type_info.hpp>
@@ -118,6 +120,88 @@ namespace ck
             (ExtractSingleFragmentAccess<T_Fragments>(
                 OutRO_Hashes, OutRW_Hashes, OutRO_Names, OutRW_Names), ...);
         }
+
+        // ----------------------------------------------------------------------------------------------------------------
+        // Empty-view skip metadata — the view's INCLUDE types: access-wrapped data fragments (unwrapped) and filter
+        // tags. TExclude<...> entries are stripped (an exclude only shrinks a view; it cannot make an empty
+        // intersection non-empty, so it never participates in proving emptiness). TIgnoreInEditor<...> entries are
+        // stripped too: their participation depends on which world variant the view runs in, so they are
+        // conservatively not part of the provable-empty set — a skip may only fire when BOTH variants' views are
+        // guaranteed empty. See ECk_ProcessorEmptyViewPolicy in CkProcessorDescriptor.h.
+        // ----------------------------------------------------------------------------------------------------------------
+
+        template <typename T_Fragment>
+        using ViewIncludeOf = std::conditional_t<
+            TIsExcludedPolicy<T_Fragment>::value || TIsIgnoreInEditor<T_Fragment>::value,
+            entt::type_list<>,
+            entt::type_list<UnwrapAccessPolicy_T<T_Fragment>>>;
+
+        template <typename T_FragmentList>
+        struct TViewIncludesOf;
+
+        template <typename... T_Fragments>
+        struct TViewIncludesOf<entt::type_list<T_Fragments...>>
+        {
+            using Type = entt::type_list_cat_t<ViewIncludeOf<T_Fragments>...>;
+        };
+
+        template <typename... T_Includes>
+        auto
+        ExtractViewIncludeMetadata(
+            entt::type_list<T_Includes...>,
+            FProcessorDescriptor& OutDescriptor) -> void
+        {
+            if constexpr (sizeof...(T_Includes) > 0)
+            {
+                (OutDescriptor._ViewIncludeHashes.Add(static_cast<uint32>(entt::type_hash<T_Includes>::value())), ...);
+                (OutDescriptor._ViewIncludeNames.Add(Get_ProcessorCanonicalName<T_Includes>()), ...);
+                OutDescriptor._IsViewProvablyEmpty = [](const FCk_Registry& InRegistry) -> bool
+                {
+                    // "Some include has zero live entities" — expressed as !(all non-empty) because
+                    // MSVC mis-parses a parenthesized unary operand inside a pack fold in a lambda
+                    // (the bare-operand fold shape below matches the dirty checker above, which
+                    // compiles everywhere).
+                    return NOT (InRegistry.Has_AnyLiveEntityWith<T_Includes>() && ...);
+                };
+                OutDescriptor._CanSkipWhenViewEmpty = true;
+            }
+        }
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // True when T_Processor's DoTick is the template-generated view iteration inherited from its CRTP base
+    // (ck::TProcessor / ck_exp::TProcessor) rather than a custom body. Only unshadowed processors are eligible
+    // for the main pass' empty-view skip — a custom DoTick may do work that is not gated on the view (drain
+    // external queues, poll UE state), which a skip would silently drop.
+    //
+    // Mechanism: name lookup on &T_Processor::DoTick resolves to the DERIVED declaration when one exists (name
+    // hiding), and a pointer-to-member-of-derived does not IMPLICITLY convert to pointer-to-member-of-base — so
+    // target-typed direct-initialization against the base's member-pointer type compiles only when the name still
+    // means the inherited (generated) DoTick. TProcessorBase types without the GeneratedDoTickHost alias
+    // (TParallelProcessor, fully custom processors) are ineligible outright.
+
+    template <typename T_Processor>
+    constexpr auto
+    Get_HasGeneratedViewDoTick() -> bool
+    {
+        if constexpr (requires { typename T_Processor::GeneratedDoTickHost; })
+        {
+            using HostType = typename T_Processor::GeneratedDoTickHost;
+            using GeneratedDoTickPtrType = auto (HostType::*)(FCk_Time) -> void;
+            return requires { GeneratedDoTickPtrType{&T_Processor::DoTick}; };
+        }
+        else
+        { return false; }
+    }
+
+    template <typename T_Processor>
+    constexpr auto
+    Get_EmptyViewPolicyAllowsSkip() -> bool
+    {
+        if constexpr (requires { T_Processor::EmptyViewPolicy; })
+        { return T_Processor::EmptyViewPolicy == ECk_ProcessorEmptyViewPolicy::SkipWhenProvablyEmpty; }
+        else
+        { return true; }
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -194,6 +278,17 @@ namespace ck
                 Descriptor._RW_FragmentHashes,
                 Descriptor._RO_FragmentNames,
                 Descriptor._RW_FragmentNames);
+        }
+
+        // ---- Empty-view skip metadata (main pass) ----
+        // Eligible only when the processor's DoTick is the template-generated view iteration (see
+        // Get_HasGeneratedViewDoTick above) and the processor doesn't opt out via
+        // `static constexpr auto EmptyViewPolicy = ECk_ProcessorEmptyViewPolicy::AlwaysTick;`.
+        if constexpr (Get_HasGeneratedViewDoTick<T_Processor>() && Get_EmptyViewPolicyAllowsSkip<T_Processor>())
+        {
+            detail::ExtractViewIncludeMetadata(
+                typename detail::TViewIncludesOf<typename T_Processor::FragmentList>::Type{},
+                Descriptor);
         }
 
         if constexpr (requires { T_Processor::NetModeRequirement; })

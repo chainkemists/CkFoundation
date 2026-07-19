@@ -259,6 +259,10 @@ auto
             Node._IsDirtyChecker = Descriptor._IsDirtyChecker;
             Node._DirtyMarkerHashes = Descriptor._DirtyMarkerHashes;
             Node._DirtyMarkerNames = Descriptor._DirtyMarkerNames;
+            Node._CanSkipWhenViewEmpty = Descriptor._CanSkipWhenViewEmpty;
+            Node._IsViewProvablyEmpty = Descriptor._IsViewProvablyEmpty;
+            Node._ViewIncludeHashes = Descriptor._ViewIncludeHashes;
+            Node._ViewIncludeNames = Descriptor._ViewIncludeNames;
             Node._PumpPolicy = Descriptor._PumpPolicy;
             Node._LoadPolicy = Descriptor._LoadPolicy;
             Node._Factory = Descriptor._Factory;
