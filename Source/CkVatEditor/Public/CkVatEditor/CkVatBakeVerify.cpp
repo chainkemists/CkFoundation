@@ -64,6 +64,8 @@ auto RunOne(ECk_Vat_BoneWeightStorage InStorage) -> void
     { Fail(TEXT("content load (skeleton/mesh/idle)")); return; }
 
     // ---- bake ----
+    if (ck::Is_NOT_Valid(GEditor))
+    { Fail(TEXT("no GEditor")); return; }
     auto* Baker = GEditor->GetEditorSubsystem<UCkVat_BakerSubsystem>();
     if (Baker == nullptr)
     { Fail(TEXT("no baker subsystem")); return; }
@@ -137,6 +139,12 @@ auto RunOne(ECk_Vat_BoneWeightStorage InStorage) -> void
         TArray64<uint8> RotData;
         if (NOT PosTex->Source.GetMipData(PosData, 0) || NOT RotTex->Source.GetMipData(RotData, 0))
         { Fail(TEXT("[B] texture source mip read")); return; }
+
+        // The reinterpret to 8-byte RGBA16F texels below is only valid for High-precision bakes —
+        // validate the actual byte size so a format change can never index out of bounds.
+        const auto ExpectedPoseBytes = static_cast<int64>(BoneCount) * TotalRows * static_cast<int64>(sizeof(FFloat16Color));
+        if (PosData.Num() != ExpectedPoseBytes || RotData.Num() != ExpectedPoseBytes)
+        { Fail(TEXT("[B] unexpected mip byte size — texel format is not RGBA16F")); return; }
 
         const auto* PosPixels = reinterpret_cast<const FFloat16Color*>(PosData.GetData());
         const auto* RotPixels = reinterpret_cast<const FFloat16Color*>(RotData.GetData());
@@ -232,6 +240,11 @@ auto RunOne(ECk_Vat_BoneWeightStorage InStorage) -> void
         { Fail(TEXT("[C] index/weight texture mip read")); return; }
         WeightTexW = IdxTex->Source.GetSizeX();
         WeightTexH = IdxTex->Source.GetSizeY();
+
+        // Same RGBA16F-texel assumption as [B] — validate before the per-vertex loop indexes these buffers.
+        const auto ExpectedWeightBytes = static_cast<int64>(WeightTexW) * WeightTexH * static_cast<int64>(sizeof(FFloat16Color));
+        if (IdxData.Num() != ExpectedWeightBytes || WeightData.Num() != ExpectedWeightBytes)
+        { Fail(TEXT("[C] unexpected index/weight mip byte size — texel format is not RGBA16F")); return; }
     }
 
     // ---- [C] built-mesh render buffers (+ weight textures) vs expected ----
@@ -340,13 +353,13 @@ auto RunOne(ECk_Vat_BoneWeightStorage InStorage) -> void
 
     // ---- [E] render-state MID uniforms ----
     {
-        auto* World = GEditor != nullptr ? GEditor->GetEditorWorldContext().World() : nullptr;
+        auto* World = GEditor->GetEditorWorldContext().World();
         auto* Subsystem = World != nullptr ? World->GetSubsystem<UCk_Vat_Subsystem_UE>() : nullptr;
         if (Subsystem == nullptr)
         { ck::vat::Display(TEXT("[VAT-VERIFY] ({}) [E] skipped — no Vat subsystem on the editor world"), StorageName); return; }
 
-        const auto* RenderState = Subsystem->GetOrCreate_RenderState(Collection);
-        if (RenderState == nullptr || NOT ck::IsValid(RenderState->_Mid))
+        const auto RenderState = Subsystem->GetOrCreate_RenderState(Collection);
+        if (NOT RenderState.IsSet() || NOT ck::IsValid(RenderState->_Mid))
         { Fail(TEXT("[E] no render state / MID")); return; }
 
         auto* Mid = RenderState->_Mid.Get();

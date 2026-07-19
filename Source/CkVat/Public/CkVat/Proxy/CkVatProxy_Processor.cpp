@@ -148,13 +148,17 @@ namespace ck
 
         // ---- rendering hookup: shared MID + transient ISM renderer + this entity's instance ----
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+        CK_ENSURE_IF_NOT(ck::IsValid(World),
+            TEXT("No World for Vat entity [{}] — cannot compose the Vat rendering hookup"), InHandle)
+        { return; }
+
         auto* Subsystem = World->GetSubsystem<UCk_Vat_Subsystem_UE>();
         CK_ENSURE_IF_NOT(ck::IsValid(Subsystem, ck::IsValid_Policy_NullptrOnly{}),
             TEXT("No UCk_Vat_Subsystem_UE for the world of entity [{}]"), InHandle)
         { return; }
 
-        const auto* RenderState = Subsystem->GetOrCreate_RenderState(Collection);
-        if (RenderState == nullptr)
+        const auto RenderState = Subsystem->GetOrCreate_RenderState(Collection);
+        if (NOT RenderState.IsSet())
         { return; } // GetOrCreate already ensured loudly; entity keeps its playback state, no visual
 
         CK_ENSURE_IF_NOT(UCk_Utils_Transform_UE::Has(InHandle),
@@ -324,7 +328,9 @@ namespace ck
         { return; } // Setup already ensured loudly
 
         const auto& Clips = Collection->Get_BakedData().Get_BakedClips();
-        if (NOT Clips.IsValidIndex(InCurrent.Get_ActiveClipIndex()))
+        CK_ENSURE_IF_NOT(Clips.IsValidIndex(InCurrent.Get_ActiveClipIndex()),
+            TEXT("Vat entity [{}]: active clip index [{}] is out of range of VatCollection [{}]'s baked clip table ([{}] clips) — stale index after a rebake?"),
+            InHandle, InCurrent.Get_ActiveClipIndex(), Collection, Clips.Num())
         { return; }
 
         const auto Now = ck_vat_proxy_processor::Get_CurrentWorldTime(InHandle);

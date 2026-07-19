@@ -20,18 +20,18 @@ auto
     UCk_Vat_Subsystem_UE::
     GetOrCreate_RenderState(
         const UCk_VatCollection_Data* InCollection)
-    -> const FCk_Vat_RenderState*
+    -> TOptional<FCk_Vat_RenderState>
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InCollection), TEXT("GetOrCreate_RenderState with an invalid collection"))
-    { return nullptr; }
+    { return {}; }
 
     if (const auto* Found = _RenderStates.Find(InCollection);
         Found != nullptr && ck::IsValid(Found->_Mid) && ck::IsValid(Found->_RendererData))
-    { return Found; }
+    { return *Found; }
 
     CK_ENSURE_IF_NOT(InCollection->Get_BakedData().Get_IsBaked() && ck::IsValid(InCollection->Get_BakedData().Get_BakedMesh()),
         TEXT("VatCollection [{}] is not baked — bake it in-editor before rendering"), InCollection)
-    { return nullptr; }
+    { return {}; }
 
     const auto BakeMode = InCollection->Get_BakeSettings().Get_BakeMode();
     const auto LookName = BakeMode == ECk_Vat_BakeMode::Vertex ? FName(TEXT("VatVertex")) : FName(TEXT("VatBone"));
@@ -41,11 +41,11 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(Master),
         TEXT("VAT look master [{}] not found — run `Ck_Usf_GenerateLooks {}` (collection [{}])"),
         MasterPath, LookName, InCollection)
-    { return nullptr; }
+    { return {}; }
 
     auto* Mid = UMaterialInstanceDynamic::Create(Master, this);
     CK_ENSURE_IF_NOT(ck::IsValid(Mid), TEXT("Could not create the VAT MID for collection [{}]"), InCollection)
-    { return nullptr; }
+    { return {}; }
 
     // ---- seed the per-collection uniforms (names: the CkVat look assets / Vat.ush param lists) ----
     UTexture2D* PositionTexture = BakeMode == ECk_Vat_BakeMode::Vertex
@@ -53,7 +53,7 @@ auto
         : InCollection->Get_BakedData().Get_BonePositionTexture().Get();
     CK_ENSURE_IF_NOT(ck::IsValid(PositionTexture),
         TEXT("VatCollection [{}] is marked baked but has no position texture for mode [{}]"), InCollection, BakeMode)
-    { return nullptr; }
+    { return {}; }
 
     if (ck::IsValid(InCollection->Get_BaseColorTexture()))
     { UCk_Utils_Usf_UE::Set_Texture(Mid, TEXT("BaseColorTex"), InCollection->Get_BaseColorTexture()); }
@@ -63,14 +63,14 @@ auto
     // BoneCount/TotalRows = 0 and collapsed every lookup onto one texel (Ck_Vat_DebugVerifyBake).
     CK_ENSURE_IF_NOT(InCollection->Get_BakedData().Get_TextureWidth() > 0 && InCollection->Get_BakedData().Get_TextureRows() > 0,
         TEXT("VatCollection [{}] has no serialized texture dimensions — rebake with the current baker"), InCollection)
-    { return nullptr; }
+    { return {}; }
 
     if (BakeMode == ECk_Vat_BakeMode::Vertex)
     {
         UTexture2D* NormalTexture = InCollection->Get_BakedData().Get_NormalTexture().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(NormalTexture),
             TEXT("VatCollection [{}] (Vertex mode) has no normal texture — rebake with the current baker"), InCollection)
-        { return nullptr; }
+        { return {}; }
 
         UCk_Utils_Usf_UE::Set_Texture(Mid, TEXT("PosVat"), PositionTexture);
         UCk_Utils_Usf_UE::Set_Texture(Mid, TEXT("NrmVat"), NormalTexture);
@@ -81,7 +81,7 @@ auto
         UTexture2D* RotationTexture = InCollection->Get_BakedData().Get_BoneRotationTexture().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(RotationTexture),
             TEXT("VatCollection [{}] (Bone mode) has no rotation texture"), InCollection)
-        { return nullptr; }
+        { return {}; }
 
         UCk_Utils_Usf_UE::Set_Texture(Mid, TEXT("BonePosVat"), PositionTexture);
         UCk_Utils_Usf_UE::Set_Texture(Mid, TEXT("BoneRotVat"), RotationTexture);
@@ -93,7 +93,7 @@ auto
             UTexture2D* WeightTexture = InCollection->Get_BakedData().Get_BoneWeightTexture().Get();
             CK_ENSURE_IF_NOT(ck::IsValid(IndexTexture) && ck::IsValid(WeightTexture),
                 TEXT("VatCollection [{}] (WeightTexture storage) is missing its index/weight textures — rebake"), InCollection)
-            { return nullptr; }
+            { return {}; }
 
             UCk_Utils_Usf_UE::Set_Texture(Mid, TEXT("BoneIdxTex"), IndexTexture);
             UCk_Utils_Usf_UE::Set_Texture(Mid, TEXT("BoneWeightTex"), WeightTexture);
@@ -130,10 +130,11 @@ auto
         GetWorld(), BakedMesh, Overrides, NumPerInstanceFloats, ECk_Mobility::Movable);
     CK_ENSURE_IF_NOT(ck::IsValid(RendererData),
         TEXT("Could not create the transient ISM renderer for VatCollection [{}]"), InCollection)
-    { return nullptr; }
+    { return {}; }
 
     FCk_Vat_RenderState State;
     State._Mid = Mid;
     State._RendererData = RendererData;
-    return &_RenderStates.Add(InCollection, State);
+    _RenderStates.Add(InCollection, State);
+    return State;
 }
