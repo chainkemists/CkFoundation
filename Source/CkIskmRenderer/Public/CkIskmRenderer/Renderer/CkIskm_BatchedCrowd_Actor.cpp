@@ -56,8 +56,16 @@ auto
     Initialize(UCk_IskmAnimCollection_Data* InCollection, float InTileSize)
     -> void
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InCollection),
+        TEXT("[CkIskm] Crowd [{}] Initialize with invalid AnimCollection — crowd will render nothing"), this)
+    { return; }
+
     _Collection = InCollection;
-    _TileSize = FMath::Max(1.0f, InTileSize);
+    _TileSize = InTileSize;
+
+    CK_ENSURE_IF_NOT(InTileSize >= 1.0f,
+        TEXT("[CkIskm] Crowd [{}] Initialize with TileSize [{}] — sub-1cm (and non-positive) tile sizes are rejected; falling back to the default tile size"), this, InTileSize)
+    { _TileSize = 2000.0f; }
 
     // Bake up front (CPU-only, headless-safe, idempotent): tile fixed bounds derive from the baked ANIMATED
     // pose extent — tiles created pre-bake would otherwise freeze the smaller static mesh box. A stale bake
@@ -109,7 +117,11 @@ auto
     // padded by the ANIMATED pose box (instances stand anywhere in the tile; an animated mesh sticks out at
     // most its baked animated bounds), Z straight from the animated box.
     const float Half = _TileSize * 0.5f;
-    const FBox MeshBox = (_Collection != nullptr) ? _Collection->Get_AnimatedMeshBounds() : FBox(FVector(-50.0), FVector(50.0));
+    FBox MeshBox = FBox(FVector(-50.0), FVector(50.0));
+    if (ck::IsValid(_Collection))
+    { MeshBox = _Collection->Get_AnimatedMeshBounds(); }
+    else
+    { CK_TRIGGER_ENSURE(TEXT("[CkIskm] TileLocalBounds on crowd [{}] with no AnimCollection — using a placeholder mesh box"), this); }
     const FVector MeshSize = MeshBox.GetSize();
     const float PadXY = FMath::Max(MeshSize.X, MeshSize.Y);
     return FBox(
@@ -125,10 +137,13 @@ auto
     if (const TObjectPtr<UCk_Iskm_BatchedClusterComponent>* Found = _Tiles.Find(InTile))
     { return *Found; }
 
-    if (_Collection == nullptr)
+    CK_ENSURE_IF_NOT(ck::IsValid(_Collection),
+        TEXT("[CkIskm] Crowd [{}] has no AnimCollection — was Initialize called?"), this)
     { return nullptr; }
+
     USkeletalMesh* Mesh = _Collection->Get_DefaultMesh();
-    if (Mesh == nullptr)
+    CK_ENSURE_IF_NOT(ck::IsValid(Mesh),
+        TEXT("[CkIskm] AnimCollection [{}] has no DefaultMesh"), _Collection)
     { return nullptr; }
 
     UCk_Iskm_BatchedClusterComponent* Comp = NewObject<UCk_Iskm_BatchedClusterComponent>(this);
@@ -142,7 +157,7 @@ auto
     for (int32 Idx = 0; Idx < _DefaultTileCustomPrimitiveData.Num(); ++Idx)
     { Comp->SetCustomPrimitiveDataFloat(Idx, _DefaultTileCustomPrimitiveData[Idx]); }
 
-    if (_OverrideMaterial != nullptr)
+    if (ck::IsValid(_OverrideMaterial))
     { Comp->Set_OverrideMaterial(_OverrideMaterial); }
 
     if (_SlotOverrideMaterials.Num() > 0)
@@ -166,7 +181,7 @@ auto
 
     for (const auto& Pair : _Tiles)
     {
-        if (Pair.Value == nullptr)
+        if (ck::Is_NOT_Valid(Pair.Value))
         { continue; }
         Pair.Value->Set_OverrideMaterial(InMaterial);
     }
@@ -182,7 +197,7 @@ void
 
     for (const auto& Pair : _Tiles)
     {
-        if (Pair.Value == nullptr)
+        if (ck::Is_NOT_Valid(Pair.Value))
         { continue; }
         Pair.Value->Set_SlotOverrideMaterials(InMaterials);
     }
@@ -203,7 +218,7 @@ void
 
     for (const auto& Pair : _Tiles)
     {
-        if (Pair.Value == nullptr)
+        if (ck::Is_NOT_Valid(Pair.Value))
         { continue; }
         for (int32 Idx = 0; Idx < _DefaultTileCustomPrimitiveData.Num(); ++Idx)
         { Pair.Value->SetCustomPrimitiveDataFloat(Idx, _DefaultTileCustomPrimitiveData[Idx]); }
@@ -216,8 +231,22 @@ auto
     -> void
 {
     const FIntPoint Tile = TileCoordOf(InWorldTransform.GetLocation());
-    if (GetOrCreate_Tile(Tile) == nullptr)
+    auto* TileComp = GetOrCreate_Tile(Tile);
+    CK_ENSURE_IF_NOT(ck::IsValid(TileComp),
+        TEXT("[CkIskm] AddInstance on crowd [{}]: tile creation failed (no collection/default mesh) — member dropped, index space desyncs"), this)
     { return; }
+
+    const FCk_Iskm_BakedPose* Baked = ck::IsValid(_Collection) ? _Collection->Get_BakedPose() : nullptr;
+    const int32 BakedSequenceCount = ck::IsValid(Baked, ck::IsValid_Policy_NullptrOnly{}) ? Baked->Sequences.Num() : 0;
+
+    // Recovery clamps rather than drops: AddInstance's contract is call-order == member index, so dropping
+    // the member would shift every subsequent index. Sequence 0 matches the downstream bounds-guard
+    // (Get_LoopedFrameAtTime falls back to frame 0 for an out-of-range sequence).
+    int32 SequenceIndex = InSequenceIndex;
+    CK_ENSURE_IF_NOT(ck::IsValid(Baked, ck::IsValid_Policy_NullptrOnly{}) && Baked->Sequences.IsValidIndex(InSequenceIndex),
+        TEXT("[CkIskm] AddInstance on crowd [{}]: sequence index [{}] is outside the baked range [0..{}) — clamping to sequence 0 to preserve the member index space"),
+        this, InSequenceIndex, BakedSequenceCount)
+    { SequenceIndex = 0; }
 
     // Component-relative transform: the tile component sits at the tile centre with identity rotation/scale.
     const FTransform TileXf(TileCentre(Tile));
@@ -228,7 +257,7 @@ auto
     Member.Visible = true;
     Member.Inst.Transform = InWorldTransform.GetRelativeTransform(TileXf);
     Member.Inst.PrevPushedTransform = Member.Inst.Transform;
-    Member.Inst.SequenceIndex = InSequenceIndex;
+    Member.Inst.SequenceIndex = SequenceIndex;
     Member.Inst.Rate = InRate;
     Member.Inst.Time = InTimeOffset;
     Member.Inst.CurFrame = 0;
@@ -244,7 +273,7 @@ auto
     -> void
 {
     UCk_Iskm_BatchedClusterComponent* Comp = _Tiles.FindRef(InTile);
-    if (Comp == nullptr)
+    if (ck::Is_NOT_Valid(Comp))
     { return; }
 
     // Members carry LIVE animation state (the manager is the single source of truth), so a rebuild never
@@ -269,7 +298,7 @@ auto
     -> void
 {
     UCk_Iskm_BatchedClusterComponent* Comp = _Tiles.FindRef(InTile);
-    if (Comp == nullptr)
+    if (ck::Is_NOT_Valid(Comp))
     { return; }
     const TArray<int32>* MemberIndices = _TileMembers.Find(InTile);
     if (MemberIndices == nullptr)
@@ -323,10 +352,11 @@ auto
     // Rendering is client-local; a dedicated server has nothing to feed.
     if (GetNetMode() == NM_DedicatedServer)
     { return; }
-    if (_Collection == nullptr || _Members.Num() == 0)
+    if (ck::Is_NOT_Valid(_Collection) || _Members.Num() == 0)
     { return; }
     const FCk_Iskm_BakedPose* Baked = _Collection->Get_BakedPose();
-    if (Baked == nullptr)
+    CK_ENSURE_IF_NOT(ck::IsValid(Baked, ck::IsValid_Policy_NullptrOnly{}),
+        TEXT("[CkIskm] Crowd [{}]: AnimCollection [{}] has no baked pose — crowd animation frozen"), this, _Collection)
     { return; }
 
     // Advance ALL members (hidden ones too, so they rejoin in phase after a flip-demote).
@@ -401,7 +431,8 @@ auto
     Register_MemberCosmetic(int32 InIndex, const FCk_Handle_Transform& InCosmetic, FName InSocket, const FTransform& InRelOffset)
     -> void
 {
-    if (_Members.IsValidIndex(InIndex) == false || ck::Is_NOT_Valid(InCosmetic))
+    CK_ENSURE_IF_NOT(_Members.IsValidIndex(InIndex) && ck::IsValid(InCosmetic),
+        TEXT("[CkIskm] Register_MemberCosmetic: invalid member index [{}] or cosmetic handle [{}]"), InIndex, InCosmetic)
     { return; }
 
     TArray<FMemberCosmetic>& List = _MemberCosmetics.FindOrAdd(InIndex);
@@ -431,7 +462,11 @@ auto
     Get_MemberWorldTransform(int32 InIndex) const
     -> FTransform
 {
-    return _Members.IsValidIndex(InIndex) ? _Members[InIndex].WorldXf : FTransform::Identity;
+    CK_ENSURE_IF_NOT(_Members.IsValidIndex(InIndex),
+        TEXT("[CkIskm] Member index [{}] out of range [0..{})"), InIndex, _Members.Num())
+    { return FTransform::Identity; }
+
+    return _Members[InIndex].WorldXf;
 }
 
 auto
@@ -439,7 +474,11 @@ auto
     Get_MemberSequenceIndex(int32 InIndex) const
     -> int32
 {
-    return _Members.IsValidIndex(InIndex) ? _Members[InIndex].Inst.SequenceIndex : 0;
+    CK_ENSURE_IF_NOT(_Members.IsValidIndex(InIndex),
+        TEXT("[CkIskm] Member index [{}] out of range [0..{})"), InIndex, _Members.Num())
+    { return 0; }
+
+    return _Members[InIndex].Inst.SequenceIndex;
 }
 
 auto
@@ -447,7 +486,11 @@ auto
     Get_MemberVisible(int32 InIndex) const
     -> bool
 {
-    return _Members.IsValidIndex(InIndex) ? _Members[InIndex].Visible : false;
+    CK_ENSURE_IF_NOT(_Members.IsValidIndex(InIndex),
+        TEXT("[CkIskm] Member index [{}] out of range [0..{})"), InIndex, _Members.Num())
+    { return false; }
+
+    return _Members[InIndex].Visible;
 }
 
 auto
@@ -455,7 +498,8 @@ auto
     Set_MemberTransform(int32 InIndex, const FTransform& InWorldTransform)
     -> void
 {
-    if (_Members.IsValidIndex(InIndex) == false)
+    CK_ENSURE_IF_NOT(_Members.IsValidIndex(InIndex),
+        TEXT("[CkIskm] Member index [{}] out of range [0..{})"), InIndex, _Members.Num())
     { return; }
 
     FMember& M = _Members[InIndex];
@@ -476,7 +520,7 @@ auto
         {
             if (const auto* Group = _OutlineGroups.Find(*OutlinePreset);
                 Group != nullptr && NOT Group->PaddedBounds.IsInsideOrOn(InWorldTransform.GetLocation()))
-            { RebuildOutlineGroup(OutlinePreset->Get()); }
+            { RebuildOutlineGroup(*OutlinePreset); }
         }
         return;
     }
@@ -505,7 +549,7 @@ auto
     {
         if (const auto* Group = _OutlineGroups.Find(*OutlinePreset);
             Group != nullptr && NOT Group->PaddedBounds.IsInsideOrOn(InWorldTransform.GetLocation()))
-        { RebuildOutlineGroup(OutlinePreset->Get()); }
+        { RebuildOutlineGroup(*OutlinePreset); }
     }
 }
 
@@ -514,7 +558,15 @@ auto
     Set_MemberAnimation(int32 InIndex, int32 InSequenceIndex, float InRate, bool InResetTime)
     -> void
 {
-    if (_Members.IsValidIndex(InIndex) == false)
+    CK_ENSURE_IF_NOT(_Members.IsValidIndex(InIndex),
+        TEXT("[CkIskm] Member index [{}] out of range [0..{})"), InIndex, _Members.Num())
+    { return; }
+
+    const FCk_Iskm_BakedPose* Baked = ck::IsValid(_Collection) ? _Collection->Get_BakedPose() : nullptr;
+    const int32 BakedSequenceCount = ck::IsValid(Baked, ck::IsValid_Policy_NullptrOnly{}) ? Baked->Sequences.Num() : 0;
+    CK_ENSURE_IF_NOT(ck::IsValid(Baked, ck::IsValid_Policy_NullptrOnly{}) && Baked->Sequences.IsValidIndex(InSequenceIndex),
+        TEXT("[CkIskm] Set_MemberAnimation: sequence index [{}] is outside the baked range [0..{})"),
+        InSequenceIndex, BakedSequenceCount)
     { return; }
 
     FMember& M = _Members[InIndex];
@@ -531,7 +583,8 @@ auto
     Set_MemberCustomData(int32 InIndex, float InA, float InB)
     -> void
 {
-    if (_Members.IsValidIndex(InIndex) == false)
+    CK_ENSURE_IF_NOT(_Members.IsValidIndex(InIndex),
+        TEXT("[CkIskm] Member index [{}] out of range [0..{})"), InIndex, _Members.Num())
     { return; }
 
     FMember& M = _Members[InIndex];
@@ -546,7 +599,8 @@ auto
     Set_MemberCustomData(int32 InIndex, int32 InFirstFloat, const TArray<float>& InValues)
     -> void
 {
-    if (_Members.IsValidIndex(InIndex) == false)
+    CK_ENSURE_IF_NOT(_Members.IsValidIndex(InIndex),
+        TEXT("[CkIskm] Member index [{}] out of range [0..{})"), InIndex, _Members.Num())
     { return; }
 
     CK_ENSURE_IF_NOT(InFirstFloat >= 2 &&
@@ -567,7 +621,8 @@ float
     ACk_Iskm_BatchedCrowd_Actor::
     Get_MemberCustomData(int32 InIndex, int32 InFloatIndex) const
 {
-    if (_Members.IsValidIndex(InIndex) == false)
+    CK_ENSURE_IF_NOT(_Members.IsValidIndex(InIndex),
+        TEXT("[CkIskm] Member index [{}] out of range [0..{})"), InIndex, _Members.Num())
     { return 0.0f; }
 
     CK_ENSURE_IF_NOT(InFloatIndex >= 2 && InFloatIndex < UCk_Iskm_BatchedClusterComponent::NumCustomDataFloats,
@@ -583,13 +638,13 @@ auto
     TryGet_MemberSocketTransform(int32 InIndex, FName InSocket, FTransform& OutWorld) const
     -> bool
 {
-    if (_Members.IsValidIndex(InIndex) == false || _Collection == nullptr)
+    if (_Members.IsValidIndex(InIndex) == false || ck::Is_NOT_Valid(_Collection))
     { return false; }
     const FCk_Iskm_BakedPose* Baked = _Collection->Get_BakedPose();
-    if (Baked == nullptr)
+    if (ck::Is_NOT_Valid(Baked, ck::IsValid_Policy_NullptrOnly{}))
     { return false; }
     const FCk_Iskm_BakedSocket* Socket = Baked->Find_Socket(InSocket);
-    if (Socket == nullptr || Socket->FrameTransforms.Num() == 0)
+    if (ck::Is_NOT_Valid(Socket, ck::IsValid_Policy_NullptrOnly{}) || Socket->FrameTransforms.Num() == 0)
     { return false; }
 
     const FMember& M = _Members[InIndex];
@@ -602,7 +657,8 @@ void
     ACk_Iskm_BatchedCrowd_Actor::
     Set_MemberVisible(int32 InIndex, bool InVisible)
 {
-    if (_Members.IsValidIndex(InIndex) == false)
+    CK_ENSURE_IF_NOT(_Members.IsValidIndex(InIndex),
+        TEXT("[CkIskm] Member index [{}] out of range [0..{})"), InIndex, _Members.Num())
     { return; }
     if (_Members[InIndex].Visible == InVisible)
     { return; }
@@ -614,7 +670,7 @@ void
     // entity API); re-shown members rejoin.
     if (const auto* OutlinePreset = _MemberOutlines.Find(InIndex);
         OutlinePreset != nullptr)
-    { RebuildOutlineGroup(OutlinePreset->Get()); }
+    { RebuildOutlineGroup(*OutlinePreset); }
 }
 
 auto
@@ -638,7 +694,8 @@ void
     ACk_Iskm_BatchedCrowd_Actor::
     Set_MemberOutline(int32 InIndex, UCkUsf_OutlinePreset* InPreset)
 {
-    if (_Members.IsValidIndex(InIndex) == false)
+    CK_ENSURE_IF_NOT(_Members.IsValidIndex(InIndex),
+        TEXT("[CkIskm] Member index [{}] out of range [0..{})"), InIndex, _Members.Num())
     { return; }
 
     if (InPreset == nullptr)
@@ -665,17 +722,18 @@ void
             ? World->GetSubsystem<UCkUsf_OutlineSubsystem>()
             : nullptr;
 
-        CK_ENSURE_IF_NOT(OutlineSubsystem != nullptr,
+        CK_ENSURE_IF_NOT(ck::IsValid(OutlineSubsystem),
             TEXT("[CkIskm] Set_MemberOutline: no CkUsf outline subsystem available"))
         { return; }
 
         const auto Stencil = OutlineSubsystem->Get_OrAllocate_StencilFor(InPreset);
-        if (Stencil == 0)
-        { return; } // stencil range exhausted — already warned by the subsystem
+        CK_ENSURE_IF_NOT(Stencil != 0,
+            TEXT("[CkIskm] Set_MemberOutline: stencil range exhausted for preset [{}] — outline dropped"), InPreset)
+        { return; }
 
-        USkeletalMesh* Mesh = (_Collection != nullptr) ? _Collection->Get_DefaultMesh() : nullptr;
+        USkeletalMesh* Mesh = ck::IsValid(_Collection) ? _Collection->Get_DefaultMesh() : nullptr;
 
-        CK_ENSURE_IF_NOT(Mesh != nullptr,
+        CK_ENSURE_IF_NOT(ck::IsValid(Mesh),
             TEXT("[CkIskm] Set_MemberOutline: crowd has no collection/mesh"))
         {
             OutlineSubsystem->Release_StencilFor(InPreset);
@@ -723,10 +781,14 @@ void
     if (PresetPtr == nullptr)
     { return; }
 
-    auto* Preset = PresetPtr->Get();
+    // Look the group up by the WEAK key itself, never a raw round-trip: once the preset UObject dies,
+    // Get() returns null and a null-constructed weak never matches the stale map key (dead weaks keep
+    // their index/serial) — the group, its cluster component, and its stencil refcount would leak.
+    const TWeakObjectPtr<UCkUsf_OutlinePreset> PresetKey = *PresetPtr;
+    auto* Preset = PresetKey.Get();
     _MemberOutlines.Remove(InIndex);
 
-    auto* Group = _OutlineGroups.Find(Preset);
+    auto* Group = _OutlineGroups.Find(PresetKey);
     if (Group == nullptr)
     { return; }
 
@@ -734,7 +796,7 @@ void
 
     if (Group->Members.Num() > 0)
     {
-        RebuildOutlineGroup(Preset);
+        RebuildOutlineGroup(PresetKey);
         return;
     }
 
@@ -746,10 +808,15 @@ void
         ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}))
     {
         if (auto* OutlineSubsystem = World->GetSubsystem<UCkUsf_OutlineSubsystem>())
-        { OutlineSubsystem->Release_StencilFor(Preset); }
+        {
+            // A dead preset cannot be released against the subsystem (its allocation is keyed by the
+            // live preset); the refcount gap is accepted for the editor-only force-delete case.
+            if (ck::IsValid(Preset))
+            { OutlineSubsystem->Release_StencilFor(Preset); }
+        }
     }
 
-    _OutlineGroups.Remove(Preset);
+    _OutlineGroups.Remove(PresetKey);
 }
 
 UCkUsf_OutlinePreset*
@@ -782,13 +849,13 @@ int32
 
 void
     ACk_Iskm_BatchedCrowd_Actor::
-    RebuildOutlineGroup(UCkUsf_OutlinePreset* InPreset)
+    RebuildOutlineGroup(const TWeakObjectPtr<UCkUsf_OutlinePreset>& InPreset)
 {
     auto* Group = _OutlineGroups.Find(InPreset);
-    if (Group == nullptr)
+    if (ck::Is_NOT_Valid(Group, ck::IsValid_Policy_NullptrOnly{}))
     { return; }
     auto* Comp = Group->Comp.Get();
-    if (Comp == nullptr)
+    if (ck::Is_NOT_Valid(Comp))
     { return; }
 
     // Component sits at the world origin with identity rotation/scale → instance transforms are the
@@ -813,7 +880,11 @@ void
     // out at most that much) + half a tile of walk-slack so ordinary movement doesn't churn rebuilds.
     if (PositionBounds.IsValid)
     {
-        const FBox MeshBox = (_Collection != nullptr) ? _Collection->Get_AnimatedMeshBounds() : FBox(FVector(-50.0), FVector(50.0));
+        FBox MeshBox = FBox(FVector(-50.0), FVector(50.0));
+        if (ck::IsValid(_Collection))
+        { MeshBox = _Collection->Get_AnimatedMeshBounds(); }
+        else
+        { CK_TRIGGER_ENSURE(TEXT("[CkIskm] RebuildOutlineGroup on crowd [{}] with no AnimCollection — using a placeholder mesh box"), this); }
         const FVector MeshSize = MeshBox.GetSize();
         const float Pad = FMath::Max(MeshSize.X, MeshSize.Y) + _TileSize * 0.5f;
 
@@ -831,7 +902,7 @@ void
     PushOutlineGroup(FOutlineGroup& InGroup)
 {
     auto* Comp = InGroup.Comp.Get();
-    if (Comp == nullptr)
+    if (ck::Is_NOT_Valid(Comp))
     { return; }
 
     TArray<UCk_Iskm_BatchedClusterComponent::FInstance> Visible;
