@@ -25,7 +25,15 @@ commandlet command line. Components:
 - `ExportMeta/` — deterministic `_meta` (source .uasset MD5 + per-exporter version constant)
   stamped in every sibling `.json`; powers `-SkipFresh` (hash AND version must match). Bump the
   version constant whenever an exporter's output shape changes. NO timestamps in any export
-  output (write-if-changed sweeps + clean diffs depend on it).
+  output (write-if-changed sweeps + clean diffs depend on it). The json is the ONLY sibling
+  carrying `_meta` — `.txt`/`.csv`/WBP paste-artifact siblings carry none of their own, but all
+  siblings of an asset are written in the SAME export call, so the json's `_meta` verdict covers
+  every sibling. **Freshness banner (2026-07-19):** every human-readable summary `.txt` from the
+  seven exporters (DataAsset/Blueprint/BehaviorTree/EQS/StateTree/UserDefinedEnum/
+  UserDefinedStruct) now opens with a deterministic 3-line banner pointing at the sibling json's
+  `_meta` as the freshness oracle. Deliberately NO version bump for this change — the banner is
+  txt-only, txt was never freshness-gated (`-SkipFresh` only ever checked the json's `_meta`),
+  and the committed json corpus is byte-unchanged.
 - `Server/` — `FCk_AssetExporter_RequestProcessor` (shared core) + the `-ExportServer` loop:
   polls `Saved/CkAssetExporter/Requests/*.json` (`op: export | list | dumpGraph | quit`), writes
   `Results/<basename>.json`, advertises via `server.json` (pid, dirs, `busy`/`currentOp`/
@@ -42,7 +50,11 @@ commandlet command line. Components:
 - `BlueprintExporter/CkWidgetPasteArtifacts` — WBP exports also emit `<Base>.hierarchy.copy.txt`
   (byte-identical to the UMG Designer's Ctrl+C clipboard text — paste-ready into another WBP;
   format stable 5.5↔5.7) and per-animation `.t3d.txt` reference dumps (NOT pasteable — the
-  Designer has no paste-animation path).
+  Designer has no paste-animation path). Neither carries the freshness banner by design — byte
+  identity to the clipboard format forbids any prepended text; the sibling json's `_meta` is
+  their freshness oracle instead (same all-siblings-one-export-call rule as `ExportMeta/` above).
+  Committed under `Content/BusterBlock` in the legacy superproject (`BusterBlock_5-5`) as the WBP
+  porting source of truth; stay machine-local/gitignored in current-repo consumers.
 
 **Depends on:** `CkAi`, `CkCore`, `CkEcs`, `CkLog` (+ engine editor modules incl. UMGEditor).
 **Used by:** Agent/pipeline tooling; superprojects via `Export-CkAssets.ps1` + their
