@@ -343,6 +343,11 @@ namespace ck_jolt_subsystem
             TEXT("When drawing the Jolt world, draw each body's world-transform axes. Off by default: "
                  "the per-body arrow lines are immediate-mode and dominate the line batcher at "
                  "stress-gym body counts."));
+
+        static bool DebugDrawConstraints = true;
+        static FAutoConsoleVariableRef CVar_DebugDrawConstraints(TEXT("ck.Jolt.DebugDraw.Constraints"),
+            DebugDrawConstraints,
+            TEXT("When drawing the Jolt world, also draw constraints (anchors, hinge axes, limits)."));
     }
 
     // Resolve a CVar override against a project setting default.
@@ -621,6 +626,10 @@ auto
             {
                 _Debugger->BeginFrame();
                 _PhysicsSystem->DrawBodies(DrawSettings, _Debugger.Get());
+
+                if (ck_jolt_subsystem::cvar::DebugDrawConstraints)
+                { _PhysicsSystem->DrawConstraints(_Debugger.Get()); }
+
                 _Debugger->EndFrame();
                 _Debugger->NextFrame();
             }
