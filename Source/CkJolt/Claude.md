@@ -123,6 +123,29 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
   samples are centimeters here (mPredictiveContactDistance 10, mCharacterPadding 2,
   mCollisionTolerance 0.1, mSupportingVolume Plane(+Z, +HalfHeight)).
 - **Ownership**: Chaos XOR Jolt per entity, enforced at composition time (Phase-3 slice 2).
+- **JoltConstraint quartet** (`Constraint/`): `UCk_Utils_JoltConstraint_UE::Create(BodyA, Params)`
+  spawns a CHILD entity of body A hosting a `JPH::TwoBodyConstraint`. Types
+  (`ECk_JoltConstraint_Type`): Distance (optional soft-limit SPRING —
+  `ECk_JoltConstraint_SpringMode` Frequency/Stiffness + damping; min/max -1 = auto from creation
+  separation), Point (the rope/chain link), Hinge (axis + degree limits [-180,0]/[0,180], friction
+  torque, motor via `Request_Hinge_SetMotor` — Off/Velocity/Position,
+  `Get_Hinge_CurrentAngleDegrees`). Anchors/axes are WORLD-space at creation (Jolt converts to
+  body-local internally, so they track moving bodies). `Params._OtherBody` INVALID = anchored to
+  the WORLD (`_BodyBIsWorldAnchor` distinguishes this from a dead body). Setup runs after
+  JoltBody_Setup and retries while a referenced body exists but is not batch-added yet.
+  **Lifecycle invariant**: a JPH constraint must be gone BEFORE either of its bodies —
+  `FProcessor_JoltConstraint_LivenessReap` (FGroup_EndPlay, `RunBefore` JoltBody_EndPlay) removes
+  the constraint the same frame EITHER body entity begins destruction and queues the inert
+  constraint entity for destroy; plain EndPlay handles the cascade case (constraint child dies
+  with body A). Requests: SetEnabled (a disabled link is a heal-able rope cut),
+  Distance_SetRange, Hinge_SetMotor.
+- **Rope builder** (`Constraint/CkJoltRope_Utils.h`): `UCk_Utils_JoltRope_UE::Create_Rope(Owner,
+  FCk_JoltRope_ParamsData)` — N Dynamic sphere segments (children of Owner) linked Rigid (point
+  constraints at boundaries) or Springy (auto-distance + spring between centers), anchored to the
+  world or an `_AnchorBody` (e.g. a kinematic head — the "hair" pattern is many short Springy
+  strands on a moving anchor). Returns `FCk_JoltRope_Result` (segment bodies + links; cutting =
+  destroy a link entity). Keep `_SegmentRadius < _SegmentLength / 2` — neighboring segments share
+  the collision profile and are NOT filtered against each other.
 
 ### Debug draw + stats (Phase 5)
 
@@ -186,7 +209,8 @@ WaitForAsync ──> DrainEvents ──> PlanStep ──> SleepStateMirror ─�
 - **Startup-only CVars/cmdline**: `jolt.EnableParallelPhysics`,
   `jolt.EnableAsyncPhysicsUpdate` (cmdline-first).
 - **Runtime CVars**: `ck.Jolt.DebugDraw.Enabled`, `ck.Jolt.DebugDraw.SleepColoring`,
-  `ck.Jolt.DebugDraw.Opacity`, `ck.Jolt.DebugDraw.Velocity`, `ck.Jolt.DebugDraw.WorldTransform`.
+  `ck.Jolt.DebugDraw.Opacity`, `ck.Jolt.DebugDraw.Velocity`, `ck.Jolt.DebugDraw.WorldTransform`,
+  `ck.Jolt.DebugDraw.Constraints` (default on — anchors/axes/limits via `DrawConstraints`).
 - Character feel: `FCk_Fragment_JoltCharacter_ParamsData` knobs (MaxStrengthNewtons,
   MaxSlopeAngleDegrees, mass) + the cm-converted ExtendedUpdate settings in
   `DoStepCharacters_AnyThread` (stick-to-floor 50, step-up 40).
