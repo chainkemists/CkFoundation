@@ -66,8 +66,23 @@
     project's editor/server appears to be holding its log open. Does not touch the engine or run
     anything else.
 
+.PARAMETER Detach
+    Submit the request to a live server and return IMMEDIATELY, printing the request guid and the
+    result path instead of waiting. For long operations (full-corpus sweeps) that outlive any
+    sane foreground wait. Requires a live server (compose with -KeepAlive to boot one). Pair with
+    -AwaitResult to get a tracked completion signal.
+
+.PARAMETER AwaitResult
+    Block until Results/<guid>.json for the given detached-request guid appears, then print its
+    per-asset summary and exit with its verdict. Runs as a normal tracked process, so launching it
+    in the background yields a completion notification. Exit codes: 0/1 = result verdict; 2 =
+    still pending at timeout (server alive and working -- relaunch to keep waiting); 1 with an
+    'orphaned' message = no live server and no result (nobody left to write it). Default wait 540s
+    (override with -TimeoutSec).
+
 .PARAMETER TimeoutSec
-    Seconds to wait for a result when routing a request through a live server. Default 120.
+    Seconds to wait for a result when routing a request through a live server (default 120), or
+    for -AwaitResult (default 540).
 
 .EXAMPLE
     ./Export-CkAssets.ps1 -Assets "/Game/Data/DT_Foo.DT_Foo"
@@ -111,6 +126,8 @@ param(
     [switch]$KeepAlive,
     [switch]$StopServer,
     [switch]$Status,
+    [switch]$Detach,
+    [string]$AwaitResult,
     [int]$TimeoutSec = 120
 )
 
@@ -327,6 +344,28 @@ function New-RequestBody {
     if ($SkipFreshValue) { $body.skipFresh = $true }
     if ($ForceValue) { $body.force = $true }
     return $body
+}
+
+# (b) PRINT-ONLY + terminal -- submits the request WITHOUT waiting and prints the ticket
+# (guid + result path + the await command). The tracked-completion half is -AwaitResult.
+function Submit-DetachedRequest {
+    param(
+        [Parameter(Mandatory)] $ServerInfo,
+        [Parameter(Mandatory)] [System.Collections.IDictionary]$RequestBody
+    )
+
+    $requestsDir = Get-PropertyValue $ServerInfo @('requestsDir')
+    $resultsDir  = Get-PropertyValue $ServerInfo @('resultsDir')
+    if (-not $requestsDir -or -not (Test-Path -LiteralPath $requestsDir)) {
+        Fail "Live server's requestsDir '$requestsDir' is missing or unreadable."
+    }
+
+    $guid = [Guid]::NewGuid().ToString()
+    ($RequestBody | ConvertTo-Json -Depth 10) | Set-Content -LiteralPath (Join-Path $requestsDir "$guid.json") -Encoding utf8NoBOM
+    Write-Output "Detached request submitted: $guid"
+    Write-Output "Result will appear at: $(Join-Path $resultsDir "$guid.json")"
+    Write-Output "Await it (tracked, notifiable) with: -AwaitResult $guid"
+    exit 0
 }
 
 # Writes <requestsDir>\<guid>.json, polls <resultsDir>\<guid>.json until it appears (or times
@@ -699,6 +738,39 @@ function Invoke-Main {
         exit 0
     }
 
+    # ---- Tracked waiter for a detached request (pure file ops; never touches the engine) ----
+    if ($AwaitResult) {
+        $resultsDir = Join-Path $exporterSavedDir 'Results'
+        $liveInfo = Get-LiveServerInfo $serverJsonPath
+        if ($liveInfo) {
+            $rd = Get-PropertyValue $liveInfo @('resultsDir')
+            if ($rd) { $resultsDir = $rd }
+        }
+        $resultPath = Join-Path $resultsDir "$AwaitResult.json"
+        $awaitTimeout = if ($script:TopLevelBoundParameters.ContainsKey('TimeoutSec')) { $TimeoutSec } else { 540 }
+
+        $deadline = (Get-Date).AddSeconds($awaitTimeout)
+        while ((Get-Date) -lt $deadline) {
+            if (Test-Path -LiteralPath $resultPath) {
+                Start-Sleep -Milliseconds 200   # writer flush margin
+                $result = $null
+                try { $result = Get-Content -LiteralPath $resultPath -Raw | ConvertFrom-Json } catch { Start-Sleep -Milliseconds 500; continue }
+                $isGraph = $null -ne (Get-PropertyValue $result @('graphPath', 'GraphPath'))
+                $isList  = (-not $isGraph) -and ($null -ne (Get-PropertyValue $result @('assets', 'Assets'))) -and ($null -eq (Get-PropertyValue $result @('perAsset', 'PerAsset')))
+                Complete-ServerResultAndExit -Result $result -IsList $isList -IsGraph $isGraph
+            }
+            if (-not (Get-LiveServerInfo $serverJsonPath)) {
+                if (Test-Path -LiteralPath $resultPath) { continue }   # server wrote it and exited between checks
+                [Console]::Error.WriteLine("No live server and no result at '$resultPath' -- the request is orphaned (server died or was stopped before completing it).")
+                exit 1
+            }
+            Start-Sleep -Seconds 2
+        }
+
+        [Console]::Error.WriteLine("Result '$AwaitResult' still pending after ${awaitTimeout}s -- the server is alive and working; relaunch -AwaitResult to keep waiting.")
+        exit 2
+    }
+
     # Engine/editor-binary resolution is deliberately LAZY -- only the two branches that might
     # actually launch UnrealEditor-Cmd.exe (starting a fresh -KeepAlive server, or the one-shot
     # fallback) call Resolve-EditorCmd. Routing through an already-live server never touches the
@@ -730,6 +802,7 @@ function Invoke-Main {
         $requestBody = New-RequestBody -Op $op -BoundParams $script:TopLevelBoundParameters `
             -AssetsValue $Assets -DirValue $Dir -ClassesValue $Classes -OutValue $Out `
             -SkipFreshValue ([bool]$SkipFresh) -ForceValue ([bool]$Force)
+        if ($Detach) { Submit-DetachedRequest -ServerInfo $serverInfo -RequestBody $requestBody }
         $result = Submit-ExporterRequest -ServerInfo $serverInfo -RequestBody $requestBody -TimeoutSec $TimeoutSec
         Complete-ServerResultAndExit -Result $result -IsList ([bool]$List) -IsGraph ([bool]$DumpGraph)
     }
@@ -743,11 +816,16 @@ function Invoke-Main {
         $requestBody = New-RequestBody -Op $op -BoundParams $script:TopLevelBoundParameters `
             -AssetsValue $Assets -DirValue $Dir -ClassesValue $Classes -OutValue $Out `
             -SkipFreshValue ([bool]$SkipFresh) -ForceValue ([bool]$Force)
+        if ($Detach) { Submit-DetachedRequest -ServerInfo $serverInfo -RequestBody $requestBody }
         $result = Submit-ExporterRequest -ServerInfo $serverInfo -RequestBody $requestBody -TimeoutSec $TimeoutSec
         Complete-ServerResultAndExit -Result $result -IsList ([bool]$List) -IsGraph ([bool]$DumpGraph)
     }
 
     # One-shot commandlet run.
+    if ($Detach) {
+        Fail ('-Detach requires a live server (compose with -KeepAlive to boot one). A one-shot run IS its own ' +
+              'tracked process -- launch it in the background instead of detaching.')
+    }
     $editorCmd = Resolve-EditorCmd $uprojectPath
     # UE commandlet args are single-token -Key=Value form (FParse::Value scans for "Key=") — a
     # separate "-Key" "Value" pair is invisible to it and the commandlet falls through to usage.
