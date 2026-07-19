@@ -17,6 +17,10 @@ namespace ck
         int32 PumpCountThisFrame = 0;
         int32 MainPassEntityCount = 0;
         TArray<int32> PumpPassEntityCounts;
+
+        // Main pass skipped this processor because its view was provably empty (see
+        // ECk_ProcessorEmptyViewPolicy). MainPassTimeMs/MainPassEntityCount stay 0.
+        bool WasSkippedEmptyViewThisFrame = false;
     };
 
 #if !UE_BUILD_SHIPPING
@@ -33,6 +37,7 @@ namespace ck
         int32 PumpIterationCount = 0;
         double TotalFrameTimeMs = 0.0;
         uint64 FrameNumber = 0;
+        int32 SkippedEmptyViewCount = 0;
     };
 }
 
