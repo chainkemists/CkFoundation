@@ -100,9 +100,17 @@ private:
     CreateMultiFragmentValidator(
         const TArray<FString>& InFragmentNames) -> TFunction<bool(const FCk_Handle&)>;
 
+    // Memoized. Cleared on AS pre-compile — see InvalidateScriptStructCache.
     static auto
     FindScriptStructByName(
         const FString& InStructName) -> const UScriptStruct*;
+
+    static auto
+    ResolveScriptStructByName(
+        const FString& InStructName) -> const UScriptStruct*;
+
+    static auto
+    InvalidateScriptStructCache() -> void;
 
 private:
     static inline FDelegateHandle _PreCompileDelegateHandle;
