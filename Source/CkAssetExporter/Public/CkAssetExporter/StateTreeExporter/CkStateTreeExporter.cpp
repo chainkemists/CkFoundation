@@ -390,7 +390,7 @@ auto
         const UStateTree* InStateTree)
     -> FString
 {
-    auto Text = FString{};
+    auto Text = FCk_AssetExportMeta::Get_SummaryTextBanner(InStateTree->GetName());
 
     Text += FString::Printf(TEXT("=== State Tree: %s ===\n"), *InStateTree->GetName());
     Text += FString::Printf(TEXT("Path: %s\n"), *InStateTree->GetPathName());

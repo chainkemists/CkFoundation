@@ -185,7 +185,7 @@ auto
 {
     using namespace ck_user_defined_enum_exporter_internal;
 
-    auto Text = FString{};
+    auto Text = FCk_AssetExportMeta::Get_SummaryTextBanner(InEnum->GetName());
 
     Text += ck::Format_UE(TEXT("=== UserDefinedEnum: {} ===\n"), InEnum->GetName());
     Text += ck::Format_UE(TEXT("Path: {}\n"), InEnum->GetPathName());
