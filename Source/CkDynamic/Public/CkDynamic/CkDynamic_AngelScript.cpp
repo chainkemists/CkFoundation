@@ -57,9 +57,18 @@ auto
     return InTypeName;
 }
 
+namespace ck_dynamic_angelscript
+{
+    // Weak, not raw: a file-static map is invisible to the GC, so an entry must go STALE rather
+    // than dangle if a struct is collected. Additionally cleared on AS pre-compile, because a hot
+    // reload REPLACES AngelScript-declared structs while the outgoing ones may still be alive —
+    // a live-but-stale pointer would silently type-test against the wrong struct.
+    static TMap<FString, TWeakObjectPtr<const UScriptStruct>> ResolvedScriptStructCache;
+}
+
 auto
     FCkDynamic_HandleTypeRegistry::
-    FindScriptStructByName(
+    ResolveScriptStructByName(
         const FString& InStructName)
     -> const UScriptStruct*
 {
@@ -69,9 +78,19 @@ auto
         return FoundStruct;
     }
 
-    const auto AngelscriptType = FAngelscriptType::GetByAngelscriptTypeName(InStructName);
-    if (AngelscriptType.IsValid())
+    // The registry stores the F-STRIPPED UScriptStruct name ("Bb_Feature_Customer") while the
+    // AngelScript type database is keyed on the F-PREFIXED script name ("FBb_Feature_Customer"),
+    // so the bare lookup misses by construction for every AS-declared fragment. Trying both keeps
+    // a cold miss at a TMap lookup instead of falling through to the O(all UScriptStructs) scan.
+    const FString CandidateNames[] = { InStructName, FString{TEXT("F")} + InStructName };
+    for (const auto& CandidateName : CandidateNames)
     {
+        const auto AngelscriptType = FAngelscriptType::GetByAngelscriptTypeName(CandidateName);
+        if (NOT AngelscriptType.IsValid())
+        {
+            continue;
+        }
+
         const auto TypeUsage = FAngelscriptTypeUsage(AngelscriptType);
         const auto* UnrealStruct = TypeUsage.GetUnrealStruct();
         if (UnrealStruct != nullptr)
@@ -89,6 +108,44 @@ auto
     }
 
     return nullptr;
+}
+
+auto
+    FCkDynamic_HandleTypeRegistry::
+    FindScriptStructByName(
+        const FString& InStructName)
+    -> const UScriptStruct*
+{
+    // Memoized because this sits on one of the hottest paths in the codebase: EVERY dynamic-handle
+    // Is_X() / As_X() / typed IsValid() runs the fragment validator, and CreateMultiFragmentValidator
+    // captures fragment NAMES rather than resolved types, so it re-resolves on every invocation.
+    // Uncached, an AS-declared fragment misses both fast tiers and pays a full
+    // TObjectIterator<UScriptStruct> scan (plus an FString heap alloc per struct) every call.
+    if (const auto* const CachedStruct = ck_dynamic_angelscript::ResolvedScriptStructCache.Find(InStructName))
+    {
+        if (const auto* const ResolvedStruct = CachedStruct->Get())
+        {
+            return ResolvedStruct;
+        }
+
+        ck_dynamic_angelscript::ResolvedScriptStructCache.Remove(InStructName);
+    }
+
+    const auto* const StructType = ResolveScriptStructByName(InStructName);
+    if (StructType != nullptr)
+    {
+        ck_dynamic_angelscript::ResolvedScriptStructCache.Add(InStructName, StructType);
+    }
+
+    return StructType;
+}
+
+auto
+    FCkDynamic_HandleTypeRegistry::
+    InvalidateScriptStructCache()
+    -> void
+{
+    ck_dynamic_angelscript::ResolvedScriptStructCache.Reset();
 }
 
 auto
@@ -585,6 +642,10 @@ auto
 
     _PreCompileDelegateHandle = FAngelscriptCodeModule::GetPreCompile().AddStatic([]
     {
+        // A hot reload replaces the AngelScript-declared UScriptStructs the cache points at, and the
+        // outgoing ones can outlive the swap — so drop the memo before anything re-resolves.
+        InvalidateScriptStructCache();
+
         LoadFromJsonRegistry();
 
         // AS pre-compile runs on a worker thread in packaged (non-editor) builds. The asset-registry
