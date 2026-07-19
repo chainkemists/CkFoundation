@@ -96,7 +96,10 @@ namespace ck::jolt::bake
     /// physics representation Chaos would see for a STATIC actor. Returns the number of bodies
     /// appended. Skip rules: unregistered, editor-only/visualization, NoCollision, simulating
     /// physics, Movable mobility. A component with collision enabled but NO valid collision
-    /// geometry fires CK_ENSURE and is skipped — never approximated.
+    /// geometry fires CK_ENSURE and is skipped — never approximated. Exception: a
+    /// BrushComponent with a null BrushBodySetup is skipped with only a Verbose log — Chaos
+    /// creates no physics state for those either (every level's default/builder brush is one),
+    /// so silence IS parity there.
     CKJOLT_API auto ExtractActor(
         const AActor& InActor,
         FCk_Jolt_ShapeCache& InShapeCache,

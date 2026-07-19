@@ -107,13 +107,10 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     float _Fraction = 0.0f;
 
-    // Valid when the hit body belongs to a live entity (probes today; JoltBodies in Phase 3).
+    // Valid when the hit body belongs to a live entity — probes, dynamic JoltBodies, AND baked-static source
+    // actors (each baked body carries its source actor's attribution entity id as Jolt user-data).
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FCk_Handle _Entity;
-
-    // Set when the hit body is a baked static-world body (per-actor hit attribution).
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FName _SourceActorName;
 
 public:
     CK_PROPERTY(_HasHit);
@@ -121,7 +118,6 @@ public:
     CK_PROPERTY(_Normal);
     CK_PROPERTY(_Fraction);
     CK_PROPERTY(_Entity);
-    CK_PROPERTY(_SourceActorName);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
