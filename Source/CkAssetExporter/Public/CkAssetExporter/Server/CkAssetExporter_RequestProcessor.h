@@ -69,10 +69,20 @@ public:
     auto Get_ServerStatusPath() const -> const FString& { return _ServerStatusPath; }
 
 private:
+    // Rewrites server.json with the current serving state (pid/startedAt/dirs + busy/currentOp/lastActivityAt) so a
+    // FOREIGN session's -Status can tell an actively-working server from a forgotten idle one before deciding to
+    // stop it. Written at Startup, before each request (busy=true + the request name), and after each (busy=false).
+    auto
+    Do_WriteStatusFile(
+        bool InBusy,
+        const FString& InCurrentOp) -> void;
+
+private:
     FString _Root;
     FString _RequestsDir;
     FString _ResultsDir;
     FString _ServerStatusPath;
+    FString _StartedAtIso;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

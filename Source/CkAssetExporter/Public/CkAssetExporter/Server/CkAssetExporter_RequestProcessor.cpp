@@ -334,17 +334,34 @@ auto
         AssetRegistry.WaitForCompletion();
     }
 
-    {
-        auto Status = MakeShared<FJsonObject>();
-        Status->SetNumberField(TEXT("pid"), static_cast<double>(FPlatformProcess::GetCurrentProcessId()));
-        Status->SetStringField(TEXT("startedAt"), FDateTime::UtcNow().ToIso8601());
-        Status->SetStringField(TEXT("project"), FPaths::ConvertRelativePathToFull(FPaths::GetProjectFilePath()));
-        Status->SetStringField(TEXT("requestsDir"), _RequestsDir);
-        Status->SetStringField(TEXT("resultsDir"), _ResultsDir);
-        Write_Json(Status, _ServerStatusPath);
-    }
+    _StartedAtIso = FDateTime::UtcNow().ToIso8601();
+    Do_WriteStatusFile(false, {});
 
     return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_AssetExporter_RequestProcessor::
+    Do_WriteStatusFile(
+        bool InBusy,
+        const FString& InCurrentOp)
+    -> void
+{
+    using namespace ck_asset_exporter_requestprocessor;
+
+    auto Status = MakeShared<FJsonObject>();
+    Status->SetNumberField(TEXT("pid"), static_cast<double>(FPlatformProcess::GetCurrentProcessId()));
+    Status->SetStringField(TEXT("startedAt"), _StartedAtIso);
+    Status->SetStringField(TEXT("project"), FPaths::ConvertRelativePathToFull(FPaths::GetProjectFilePath()));
+    Status->SetStringField(TEXT("requestsDir"), _RequestsDir);
+    Status->SetStringField(TEXT("resultsDir"), _ResultsDir);
+    Status->SetBoolField(TEXT("busy"), InBusy);
+    if (NOT InCurrentOp.IsEmpty())
+    { Status->SetStringField(TEXT("currentOp"), InCurrentOp); }
+    Status->SetStringField(TEXT("lastActivityAt"), FDateTime::UtcNow().ToIso8601());
+    Write_Json(Status, _ServerStatusPath);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -378,6 +395,8 @@ auto
         if (FileAge < FTimespan::FromSeconds(1.0))
         { continue; }
 
+        Do_WriteStatusFile(true, RequestFileName);
+
         const auto ShouldQuit = Process_Request(RequestPath, ResultPath);
 
         // Delete the request only AFTER the result is written, so an external watcher never sees a consumed
@@ -386,6 +405,7 @@ auto
         FileManager.Delete(*RequestPath, RequireExists);
 
         CollectGarbage(RF_NoFlags);
+        Do_WriteStatusFile(false, {});
         Outcome.AnyProcessed = true;
 
         if (ShouldQuit)
