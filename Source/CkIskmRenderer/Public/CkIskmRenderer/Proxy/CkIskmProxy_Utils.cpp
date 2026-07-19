@@ -247,7 +247,7 @@ auto
     { return nullptr; }
 
     auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_BaseSKMC().Get();
-    if (ck::Is_NOT_Valid(SKMC, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(SKMC))
     { return nullptr; }
 
     // Returning null here is legitimate: the SKMC may be in single-node mode
