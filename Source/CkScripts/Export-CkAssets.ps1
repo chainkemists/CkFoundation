@@ -46,7 +46,9 @@
     Skip assets whose sibling export already appears up to date.
 
 .PARAMETER Force
-    Force re-export even if the sibling export looks up to date.
+    Force re-export even if the sibling export looks up to date. With -StopServer: permit killing
+    a BUSY server whose quit is queued behind an in-flight request (default is to leave it to
+    finish -- killing destroys another session's work).
 
 .PARAMETER KeepAlive
     If no CkAssetExporter server is currently live for this project, start one and wait for it
@@ -395,7 +397,7 @@ function Start-ExporterServer {
 }
 
 function Invoke-StopServer {
-    param([string]$ServerJsonPath, [int]$TimeoutSec)
+    param([string]$ServerJsonPath, [int]$TimeoutSec, [bool]$ForceKill = $false)
 
     $serverInfo = Get-LiveServerInfo $ServerJsonPath
     if (-not $serverInfo) {
@@ -425,6 +427,22 @@ function Invoke-StopServer {
     if ($exited) {
         Write-Output "Server pid $pid_ exited cleanly."
     } else {
+        # Re-read the status file: a server that is BUSY (mid-request — possibly another session's
+        # long sweep) has the quit QUEUED and will honor it when the current op completes. Killing
+        # it would destroy in-flight work, so that requires an explicit -Force.
+        $freshInfo = $null
+        if (Test-Path -LiteralPath $ServerJsonPath) {
+            try { $freshInfo = Get-Content -LiteralPath $ServerJsonPath -Raw | ConvertFrom-Json } catch {}
+        }
+        $busy      = [bool](Get-PropertyValue $freshInfo @('busy', 'Busy'))
+        $currentOp = Get-PropertyValue $freshInfo @('currentOp', 'CurrentOp')
+
+        if ($busy -and -not $ForceKill) {
+            $opNote = if ($currentOp) { " (processing '$currentOp')" } else { '' }
+            Write-Output "Server pid $pid_ is BUSY$opNote -- the quit request is queued and will be honored when the current op completes. NOT force-killing in-flight work; re-run '-StopServer -Force' to kill anyway."
+            return
+        }
+
         Write-Output "Server pid $pid_ did not exit within ${TimeoutSec}s after the quit request; force-stopping."
         Stop-Process -Id $pid_ -Force -ErrorAction SilentlyContinue
     }
@@ -468,6 +486,11 @@ function Show-ExporterStatus {
             Write-Output "  project:     $(Get-PropertyValue $info @('project'))"
             Write-Output "  requestsDir: $(Get-PropertyValue $info @('requestsDir'))"
             Write-Output "  resultsDir:  $(Get-PropertyValue $info @('resultsDir'))"
+
+            Write-Output "  busy:        $(Get-PropertyValue $info @('busy'))"
+            $statusOp = Get-PropertyValue $info @('currentOp')
+            if ($statusOp) { Write-Output "  currentOp:   $statusOp" }
+            Write-Output "  lastActivity:$(Get-PropertyValue $info @('lastActivityAt'))"
 
             $pid_ = Get-PropertyValue $info @('pid')
             $proc = if ($pid_) { Get-Process -Id $pid_ -ErrorAction SilentlyContinue } else { $null }
@@ -672,7 +695,7 @@ function Invoke-Main {
     }
 
     if ($StopServer) {
-        Invoke-StopServer -ServerJsonPath $serverJsonPath -TimeoutSec $script:StopServerTimeoutSec
+        Invoke-StopServer -ServerJsonPath $serverJsonPath -TimeoutSec $script:StopServerTimeoutSec -ForceKill ([bool]$Force)
         exit 0
     }
 
