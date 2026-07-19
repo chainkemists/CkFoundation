@@ -1,5 +1,6 @@
 #include "CkVatCollection_Data.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "Animation/AnimSequenceBase.h"
@@ -74,15 +75,22 @@ auto
 auto
     UCk_VatCollection_Data::
     ApplyBakeResults(const FCk_Vat_BakeResults& InResults)
-    -> void
+    -> bool
 {
-    _BakedData._BakedMesh = InResults.BakedMesh;
-    _BakedData._PositionTexture = InResults.PositionTexture;
-    _BakedData._NormalTexture = InResults.NormalTexture;
-    _BakedData._BonePositionTexture = InResults.BonePositionTexture;
-    _BakedData._BoneRotationTexture = InResults.BoneRotationTexture;
-    _BakedData._BoneIndexTexture = InResults.BoneIndexTexture;
-    _BakedData._BoneWeightTexture = InResults.BoneWeightTexture;
+    // The ONLY write path that flips the serialized _IsBaked bit — never stamp a collection as baked
+    // from results a partially-failed baker produced (the corruption would persist to disk and only
+    // surface at first render, far from the cause).
+    CK_ENSURE_IF_NOT(ck::IsValid(InResults.BakedMesh) && InResults.TextureWidth > 0 && InResults.TextureRows > 0,
+        TEXT("ApplyBakeResults received invalid bake results on collection [{}] — refusing to mark it baked"), this)
+    { return false; }
+
+    _BakedData._BakedMesh = InResults.BakedMesh.Get();
+    _BakedData._PositionTexture = InResults.PositionTexture.Get();
+    _BakedData._NormalTexture = InResults.NormalTexture.Get();
+    _BakedData._BonePositionTexture = InResults.BonePositionTexture.Get();
+    _BakedData._BoneRotationTexture = InResults.BoneRotationTexture.Get();
+    _BakedData._BoneIndexTexture = InResults.BoneIndexTexture.Get();
+    _BakedData._BoneWeightTexture = InResults.BoneWeightTexture.Get();
     _BakedData._BakedClips = InResults.BakedClips;
     _BakedData._TextureWidth = InResults.TextureWidth;
     _BakedData._TextureRows = InResults.TextureRows;
@@ -93,6 +101,7 @@ auto
     _BakedData._BakedInputsHash = Compute_BakeInputsHash();
 
     MarkPackageDirty();
+    return true;
 }
 
 auto
