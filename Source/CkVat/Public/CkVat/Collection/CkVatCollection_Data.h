@@ -7,6 +7,8 @@
 #include "CkCore/Time/CkTime.h"
 #include "CkCore/Types/DataAsset/CkDataAsset.h"
 
+#include "UObject/StrongObjectPtr.h"
+
 #include "CkVatCollection_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -429,15 +431,19 @@ public:
     Get_IsBakeStale() const -> bool;
 
     // The CkVatEditor baker's write-back (the ONLY sanctioned mutation path for the Baked category).
+    // TStrongObjectPtr, not TObjectPtr: this is a plain (non-USTRUCT) struct, so GC would NOT trace
+    // TObjectPtr members — the freshly-baked mesh/textures could be collected between bake and
+    // apply. The strong ptrs root them for the struct's lifetime (the baker owns them until the
+    // collection's UPROPERTY _BakedData takes over).
     struct FCk_Vat_BakeResults
     {
-        TObjectPtr<UStaticMesh> BakedMesh;
-        TObjectPtr<UTexture2D> PositionTexture;
-        TObjectPtr<UTexture2D> NormalTexture;
-        TObjectPtr<UTexture2D> BonePositionTexture;
-        TObjectPtr<UTexture2D> BoneRotationTexture;
-        TObjectPtr<UTexture2D> BoneIndexTexture;
-        TObjectPtr<UTexture2D> BoneWeightTexture;
+        TStrongObjectPtr<UStaticMesh> BakedMesh;
+        TStrongObjectPtr<UTexture2D> PositionTexture;
+        TStrongObjectPtr<UTexture2D> NormalTexture;
+        TStrongObjectPtr<UTexture2D> BonePositionTexture;
+        TStrongObjectPtr<UTexture2D> BoneRotationTexture;
+        TStrongObjectPtr<UTexture2D> BoneIndexTexture;
+        TStrongObjectPtr<UTexture2D> BoneWeightTexture;
         TArray<FCk_Vat_BakedClip> BakedClips;
         int32 TextureWidth = 0;
         int32 TextureRows = 0;
@@ -446,7 +452,9 @@ public:
         FVector PositionBoundsMax = FVector::ZeroVector;
     };
 
+    // Returns false (after a loud ensure) when the results are invalid and the collection was
+    // NOT stamped as baked — the caller must treat the bake as failed (no package save).
     auto
-    ApplyBakeResults(const FCk_Vat_BakeResults& InResults) -> void;
+    ApplyBakeResults(const FCk_Vat_BakeResults& InResults) -> bool;
 #endif
 };
