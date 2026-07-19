@@ -455,7 +455,7 @@ auto
         const UBehaviorTree* InBehaviorTree)
     -> FString
 {
-    auto Text = FString{};
+    auto Text = FCk_AssetExportMeta::Get_SummaryTextBanner(InBehaviorTree->GetName());
 
     Text += FString::Printf(TEXT("=== Behavior Tree: %s ===\n"), *InBehaviorTree->GetName());
     Text += FString::Printf(TEXT("Path: %s\n"), *InBehaviorTree->GetPathName());

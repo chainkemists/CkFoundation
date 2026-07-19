@@ -211,7 +211,7 @@ auto
 {
     using namespace ck_user_defined_struct_exporter_internal;
 
-    auto Text = FString{};
+    auto Text = FCk_AssetExportMeta::Get_SummaryTextBanner(InStruct->GetName());
 
     Text += ck::Format_UE(TEXT("=== UserDefinedStruct: {} ===\n"), InStruct->GetName());
     Text += ck::Format_UE(TEXT("Path: {}\n"), InStruct->GetPathName());

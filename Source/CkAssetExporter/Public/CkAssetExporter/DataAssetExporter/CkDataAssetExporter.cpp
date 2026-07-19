@@ -555,7 +555,7 @@ auto
         const UDataAsset* InDataAsset)
     -> FString
 {
-    auto Text = FString{};
+    auto Text = FCk_AssetExportMeta::Get_SummaryTextBanner(InDataAsset->GetName());
 
     Text += ck::Format_UE(TEXT("=== DataAsset: {} ===\n"), InDataAsset->GetName());
     Text += ck::Format_UE(TEXT("Path: {}\n"), InDataAsset->GetPathName());

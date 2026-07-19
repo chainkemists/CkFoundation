@@ -155,6 +155,28 @@ bool FCk_AssetExporter_Dispatch_ExportMetaRoundTrip_Test::RunTest(const FString&
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCk_AssetExporter_Dispatch_SummaryTextBanner_Test,
+    "Ck.AssetExporter.Dispatch.SummaryTextBanner",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FCk_AssetExporter_Dispatch_SummaryTextBanner_Test::RunTest(const FString& InParameters)
+{
+    const auto Banner = FCk_AssetExportMeta::Get_SummaryTextBanner(TEXT("MyAsset"));
+
+    TestTrue(TEXT("banner opens with the module tag"), Banner.StartsWith(TEXT("// [CkAssetExporter]")));
+    TestTrue(TEXT("banner names the sibling json"), Banner.Contains(TEXT("MyAsset.json")));
+    TestTrue(TEXT("banner points at _meta"), Banner.Contains(TEXT("\"_meta\"")));
+    TestTrue(TEXT("banner ends with a blank separator line"), Banner.EndsWith(TEXT("\n\n")));
+
+    // Deterministic — same input, byte-identical output (no timestamps), like every other export output.
+    TestEqual(TEXT("banner is deterministic"), Banner, FCk_AssetExportMeta::Get_SummaryTextBanner(TEXT("MyAsset")));
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 // Graph-dump shape check against a tiny real content dir. No env gating — StoreLeveling is small and always present.
 // --------------------------------------------------------------------------------------------------------------------
 
