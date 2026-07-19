@@ -6,29 +6,70 @@
 
 **VFX corpus pipeline (2026-07-12):** `FCk_NiagaraExporter` deconstructs a system into a JSON+text recipe — emitter module stacks with Rapid-Iteration constants, **override-pin harvesting** (dynamic inputs, curve DIs rasterized to keys via `UNiagaraDataInterfaceCurveBase::GetCurveData`, attribute links; nested dynamic-input overrides re-associated via `DoExpandDynamicInputOverrides`, orphans surfaced as `unattachedOverrides` — never silently dropped), enum display names, user-param values, determinism/bounds, renderer detail with material paths. `FCk_CascadeExporter` dumps legacy `UParticleSystem` LOD-0 modules generically via reflection with `UDistribution*` rasterization. `FCk_MaterialExporter` (blend/shading/params + expression histogram + `GetUsedTextures`) and `FCk_TextureExporter` (editor source → PNG capped at 1024 + metadata) chain off renderer material references; `FCk_MeshExporter` (LOD-0 render geometry → Wavefront OBJ + stats JSON with bounds/UV-ranges/sections; UE V-down UV convention noted in the OBJ header) chains off mesh-renderer `Meshes` references into `meshes/` — the carrier geometry (slash sweeps, shells, trails) VFX recreation needs. `FCk_VfxCorpusExporter` orchestrates a batch over asset-registry class sweeps into `Saved/CkVfxCorpus/` (`index.json` manifest; per-asset failures recorded, never skipped; output dirs mirror package folder chains so same-named assets can't collide). Entry points: automation test `Ck.AssetExporter.ExportVfxCorpus` (**gated on env `CK_VFX_CORPUS_EXPORT=1`** — instant skip otherwise; StressFilter is unusable because the automation commandline's "Standard" filter excludes it) and console command `Ck.AssetExporter.ExportVfxCorpus`. Gotchas that cost time once: `UNiagaraNodeParameterMapSet`/`NiagaraNodeParameterMapBase.h` are Private NiagaraEditor headers (detect override nodes by class name on `UEdGraphNode`); `UNiagaraNodeInput`'s accessors are MinimalAPI-unexported (read `DataInterface`/`ObjectAsset` UPROPERTYs via `FindFProperty`); the 5-arg `GetUsedTextures` overload is a UE_DEPRECATED(5.7) final no-op (use the TOptional overload).
 
-**Depends on:** `CkAi`, `CkCore`, `CkEcs`, `CkLog`.
-**Used by:** Pipeline tooling only.
+**Headless export stack (2026-07-18):** the module is agent-drivable without the editor UI. Entry
+point for humans/agents is `Source/CkScripts/Export-CkAssets.ps1` (standalone; resolves the
+project's own editor binary; identical on the legacy 5.5 branch) — never hand-build the
+commandlet command line. Components:
+
+- `Commandlet/` — `UCkAssetExporterCommandlet` (`-run=CkAssetExporter`): `-Assets=` (object /
+  package / disk paths, `;`-separated), `-Dir=` + `-Classes=` registry sweeps, `-List`
+  (discovery → `LastList.json`), `-DumpGraph` (dependency graph → `graph.json`), `-SkipFresh` /
+  `-Force`, `-ExportServer`. Exit code = manifest-backed Main return
+  (`UseCommandletResultAsExitCode` — LaunchEngineLoop otherwise promotes any logged boot Error to
+  exit 1). **`-Server` is a reserved engine switch** — never name a commandlet flag that.
+- `Dispatch/` — class→exporter routing (most-derived-first; generic `UDataAsset` LAST so
+  EQS/StateTree hit their structure-aware exporters), per-asset failure ROWS (never aborts),
+  `Saved/CkAssetExporter/LastRun.json` manifest (`entries` array). All externally-consumed paths
+  are `ConvertRelativePathToFull` — relative `ProjectSavedDir` forms don't resolve from a
+  submitter's cwd.
+- `ExportMeta/` — deterministic `_meta` (source .uasset MD5 + per-exporter version constant)
+  stamped in every sibling `.json`; powers `-SkipFresh` (hash AND version must match). Bump the
+  version constant whenever an exporter's output shape changes. NO timestamps in any export
+  output (write-if-changed sweeps + clean diffs depend on it).
+- `Server/` — `FCk_AssetExporter_RequestProcessor` (shared core) + the `-ExportServer` loop:
+  polls `Saved/CkAssetExporter/Requests/*.json` (`op: export | list | dumpGraph | quit`), writes
+  `Results/<basename>.json`, advertises via `server.json` (pid, dirs, `busy`/`currentOp`/
+  `lastActivityAt`). Idle self-quit 10min, wall cap 2h. Sub-second-old request files are deferred
+  one poll (mid-write settle guard).
+- `Bridge/` — `UCkAssetExporter_BridgeSubsystem`: the OPEN editor claims the same protocol
+  (zero boots). Never activates under commandlets; defers to a live editor-named owner pid;
+  `PreserveExisting` startup so a re-claim can't eat the triggering request.
+- `AutoSidecar/` — on-save sidecar refresh for logic-bearing classes (toggle
+  `ck.AssetExporter.AutoSidecarOnSave`); inert for commandlets/procedural saves/non-canonical
+  save targets (autosaves must not stamp sidecars with unsaved states).
+- `DataTableExporter/`, `GraphDump/` — sibling `.csv` + rows-json; full dependency graph with
+  hard/soft deps and cascade/redirector hazard flags.
+- `BlueprintExporter/CkWidgetPasteArtifacts` — WBP exports also emit `<Base>.hierarchy.copy.txt`
+  (byte-identical to the UMG Designer's Ctrl+C clipboard text — paste-ready into another WBP;
+  format stable 5.5↔5.7) and per-animation `.t3d.txt` reference dumps (NOT pasteable — the
+  Designer has no paste-animation path).
+
+**Depends on:** `CkAi`, `CkCore`, `CkEcs`, `CkLog` (+ engine editor modules incl. UMGEditor).
+**Used by:** Agent/pipeline tooling; superprojects via `Export-CkAssets.ps1` + their
+`/export-assets` skill.
 
 ---
 
 ## Key API
 
-- No `_Utils.h`. Invoked via editor commands.
-
----
-
-## Pattern
-
-Run via editor utility or commandlet.
+- No `_Utils.h`. Drive via `Export-CkAssets.ps1` (preferred) or `-run=CkAssetExporter` directly;
+  in-editor via Content Browser right-click / the Exporter Tab.
 
 ---
 
 ## Anti-patterns
 
-Don't invoke from game runtime — editor-only.
+- Don't invoke from game runtime — editor-only.
+- Don't add timestamps or machine-relative paths to any export output (breaks determinism /
+  external consumers).
+- Don't force-kill a `busy` server (`server.json`) — its quit is queued; killing destroys
+  another session's in-flight work.
+- Don't name commandlet flags after reserved engine switches (`-Server`, `-Client`, ...).
 
 ---
 
 ## See also
 
 - `CkAngelscriptGenerator/Claude.md` — related code generation tooling.
+- Superproject digest `docs/digests/2026-07-18-agent-driven-uasset-export.html` (BusterBlock) —
+  architecture, gates, and the porting workflow this stack serves.
