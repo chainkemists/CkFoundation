@@ -1030,7 +1030,7 @@ auto
         const UBlueprint* InBlueprint)
     -> FString
 {
-    auto Text = FString{};
+    auto Text = FCk_AssetExportMeta::Get_SummaryTextBanner(InBlueprint->GetName());
 
     // Header
     Text += ck::Format_UE(TEXT("=== Blueprint: {} ===\n"), InBlueprint->GetName());

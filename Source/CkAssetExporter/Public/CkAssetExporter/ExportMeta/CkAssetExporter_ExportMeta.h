@@ -68,6 +68,13 @@ public:
         const UObject* InAsset,
         const FString& InSiblingJsonPath,
         int32 InCurrentExporterVersion) -> bool;
+
+    // Header prepended to every human-readable summary .txt sibling. The txt carries no "_meta" of its own — this
+    // banner points readers at the sibling json, whose freshness verdict covers the txt because both are written in
+    // the same export call. Deterministic (no timestamp) like every other export output.
+    static auto
+    Get_SummaryTextBanner(
+        const FString& InAssetName) -> FString;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
