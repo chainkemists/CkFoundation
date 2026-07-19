@@ -234,8 +234,10 @@ private:
     };
 
     // Full rebuild of a group (Set_Instances + recomputed fixed bounds — proxy recreate). Membership /
-    // visibility changes and bounds-exceeding moves go through here.
-    void RebuildOutlineGroup(UCkUsf_OutlinePreset* InPreset);
+    // visibility changes and bounds-exceeding moves go through here. Takes the WEAK map key (a live
+    // raw preset converts implicitly) so a dead preset's group still resolves and rebuilds — a
+    // null-constructed weak would never match the stale key.
+    void RebuildOutlineGroup(const TWeakObjectPtr<UCkUsf_OutlinePreset>& InPreset);
     // Light per-frame push of live member data into the group's cluster (no bounds work).
     void PushOutlineGroup(FOutlineGroup& InGroup);
 
