@@ -100,7 +100,7 @@ namespace ck
         {
             const auto& Applied = InHandle.Get<FFragment_IskmProxy_OutlineApplied>();
 
-            if (Applied.Get_Preset() == InTarget.Get_Preset())
+            if (Applied.Get_Preset().Get() == Preset)
             {
                 // Re-assert every frame: the setters early-out when unchanged, and this is what makes
                 // late-attached outfit submeshes (and mesh swaps) inherit the outline automatically.
@@ -127,7 +127,7 @@ namespace ck
 
         DoSetCustomDepthOnProxySkmcs(InCurrent, true, Stencil);
         InHandle.AddOrGet<FFragment_IskmProxy_OutlineApplied>() =
-            FFragment_IskmProxy_OutlineApplied{Preset, Stencil};
+            FFragment_IskmProxy_OutlineApplied{TStrongObjectPtr{Preset}, Stencil};
 
         ck::iskm::VeryVerbose(TEXT("Applied outline (custom depth) for ISKM Proxy [{}]"), InHandle);
     }
