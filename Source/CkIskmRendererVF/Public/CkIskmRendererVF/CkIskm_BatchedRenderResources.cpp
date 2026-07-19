@@ -220,7 +220,7 @@ public:
         FVertexInputStreamArray& VertexStreams) const
     {
         const FCk_Iskm_BatchedVertexFactory* VF = static_cast<const FCk_Iskm_BatchedVertexFactory*>(VertexFactory);
-        ShaderBindings.Add(Shader->GetUniformBufferParameter<FCk_Iskm_AnimCollectionUniformParams>(), VF->AnimCollectionUB);
+        ShaderBindings.Add(Shader->GetUniformBufferParameter<FCk_Iskm_AnimCollectionUniformParams>(), VF->AnimCollectionUB.GetReference());
     }
 };
 
@@ -285,8 +285,9 @@ void
     if (RenderData == nullptr)
     { return; }
 
-    SourceMesh = InMesh;
+    SourceRenderData = RenderData;
     BaseLOD = 0;
+    NumBoneRemapMisses = 0;
 
     for (int32 LODIndex = BaseLOD; LODIndex < RenderData->LODRenderData.Num(); ++LODIndex)
     {
@@ -332,8 +333,10 @@ void
             }
 
             // Pass 2: write remapped indices + renormalized 8-bit weights that sum EXACTLY to 255 (residual goes
-            // to the strongest influence — avoids sub-unit weight sums that visibly shrink verts).
-            int32 StrongestSlot = 0;
+            // to the strongest influence — avoids sub-unit weight sums that visibly shrink verts). Remap misses
+            // are aggregated into NumBoneRemapMisses (no per-vertex logging — hot loop, and this engine-only
+            // module can't ensure); the boundary (EnsureRenderResources) ensures loudly when non-zero.
+            int32 StrongestSlot = INDEX_NONE;
             int32 QuantizedSum = 0;
             for (int32 InfluenceIndex = 0; InfluenceIndex < NumInf; ++InfluenceIndex)
             {
@@ -347,19 +350,31 @@ void
                     {
                         const int32 Mapped = InSkeletonBoneToRenderBone[SkelBoneIndex];
                         RenderBoneIndex = Mapped != INDEX_NONE ? Mapped : 0;
+                        if (Mapped == INDEX_NONE)
+                        { ++NumBoneRemapMisses; } // bone outside the bake's render-bone set: rigid-bind to root
                     }
+                    else
+                    { ++NumBoneRemapMisses; } // mesh bone missing from the skeleton/remap table: rigid-bind to root
                     Out.BoneIndexBuffer.SetBoneIndex(VertexIndex, InfluenceIndex, static_cast<uint32>(RenderBoneIndex));
-                }
 
-                const uint8 Quantized = (WeightSum > 0)
-                    ? static_cast<uint8>(FMath::Clamp<uint32>((static_cast<uint32>(RawWeights[InfluenceIndex]) * 255 + WeightSum / 2) / WeightSum, 0, 255))
-                    : (InfluenceIndex == 0 ? 255 : 0); // degenerate source: rigid-bind to influence 0
-                Out.BoneWeightBuffer.SetWeight(VertexIndex, InfluenceIndex, Quantized);
-                QuantizedSum += Quantized;
-                if (RawWeights[InfluenceIndex] > RawWeights[StrongestSlot])
-                { StrongestSlot = InfluenceIndex; }
+                    const uint8 Quantized = (WeightSum > 0)
+                        ? static_cast<uint8>(FMath::Clamp<uint32>((static_cast<uint32>(RawWeights[InfluenceIndex]) * 255 + WeightSum / 2) / WeightSum, 0, 255))
+                        : (InfluenceIndex == 0 ? 255 : 0); // degenerate source: rigid-bind to influence 0
+                    Out.BoneWeightBuffer.SetWeight(VertexIndex, InfluenceIndex, Quantized);
+                    QuantizedSum += Quantized;
+                    if (StrongestSlot == INDEX_NONE || RawWeights[InfluenceIndex] > RawWeights[StrongestSlot])
+                    { StrongestSlot = InfluenceIndex; }
+                }
+                else
+                {
+                    // Corrupt source: section-local bone index outside the section's BoneMap. Drop the influence
+                    // entirely — zero its weight so the index (root) and weight streams stay consistent; the
+                    // residual fix below redistributes its mass to the strongest VALID influence.
+                    ++NumBoneRemapMisses;
+                    Out.BoneWeightBuffer.SetWeight(VertexIndex, InfluenceIndex, 0);
+                }
             }
-            if (WeightSum > 0 && QuantizedSum != 255)
+            if (StrongestSlot != INDEX_NONE && WeightSum > 0 && QuantizedSum != 255)
             {
                 const int32 Fixed = static_cast<int32>(Out.BoneWeightBuffer.WeightData[VertexIndex * MBI + StrongestSlot]) + (255 - QuantizedSum);
                 Out.BoneWeightBuffer.SetWeight(VertexIndex, StrongestSlot, static_cast<uint8>(FMath::Clamp(Fixed, 0, 255)));
@@ -376,9 +391,9 @@ void
     FCk_Iskm_BatchedMeshData::
     InitResources(FRHICommandListBase& RHICmdList, FRHIUniformBuffer* InAnimCollectionUB)
 {
-    if (SourceMesh == nullptr)
-    { return; }
-    const FSkeletalMeshRenderData* RenderData = SourceMesh->GetResourceForRendering();
+    // Game-thread snapshot from InitFromMesh — no UObject deref on the render thread (see the member's
+    // lifetime contract in the header).
+    const FSkeletalMeshRenderData* RenderData = SourceRenderData;
     if (RenderData == nullptr)
     { return; }
 
