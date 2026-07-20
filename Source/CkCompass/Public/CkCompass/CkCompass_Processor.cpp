@@ -1,13 +1,12 @@
 #include "CkCompass_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Math/Bearing/CkBearing_Utils.h"
 
 #include "CkCamera/Camera/CkCamera_Utils.h"
 
 #include "CkCompass/CkCompass_Log.h"
-#include "CkCompass/CkCompass_Math.h"
 
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
@@ -52,7 +51,7 @@ namespace ck
         }
 
         // Force the first projection pass to run immediately regardless of the update interval
-        InCurrent._TimeSinceUpdate = TNumericLimits<float>::Max();
+        InCurrent._TimeSinceUpdate = FCk_Time{TNumericLimits<double>::Max()};
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -101,7 +100,7 @@ namespace ck
         InParams.Set_CategoryFilter(InRequest.Get_CategoryFilter());
 
         // Filter changes must reflect immediately, not at the next throttled interval
-        InCurrent._TimeSinceUpdate = TNumericLimits<float>::Max();
+        InCurrent._TimeSinceUpdate = FCk_Time{TNumericLimits<double>::Max()};
     }
 
     auto
@@ -133,7 +132,7 @@ namespace ck
             ? InRequest.Get_Observer()
             : static_cast<const FCk_Handle&>(InCompassEntity);
 
-        InCurrent._TimeSinceUpdate = TNumericLimits<float>::Max();
+        InCurrent._TimeSinceUpdate = FCk_Time{TNumericLimits<double>::Max()};
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -174,14 +173,14 @@ namespace ck
             InCurrent._HeadingDegrees = FRotator::ClampAxis(DoResolveHeading(InCompassEntity, InParams, InCurrent, Observer));
         }
 
-        InCurrent._TimeSinceUpdate += InDeltaT.Get_Seconds();
+        InCurrent._TimeSinceUpdate += InDeltaT;
 
         const auto UpdateInterval = InParams.Get_UpdateInterval();
 
-        if (UpdateInterval > 0.0f && InCurrent._TimeSinceUpdate < UpdateInterval)
+        if (UpdateInterval > FCk_Time::ZeroSecond() && InCurrent._TimeSinceUpdate < UpdateInterval)
         { return; }
 
-        InCurrent._TimeSinceUpdate = 0.0f;
+        InCurrent._TimeSinceUpdate = FCk_Time::ZeroSecond();
 
         {
             SCOPE_CYCLE_COUNTER(STAT_CkCompass_Projection);
@@ -269,8 +268,8 @@ namespace ck
         // (same policy as CK_IGNORE_PENDING_KILL).
         //
         // The POI set is GATHERED first, then projected data-parallel: the per-POI body is pure registry
-        // READS (poi fragments, lifetime owner, transforms, fog) whose writers all ran in earlier groups,
-        // and each worker writes only its own index slot. Signals/sort/diff stay on the calling thread.
+        // READS (poi fragments, own transforms) whose writers all ran in earlier groups, and each worker
+        // writes only its own index slot. Signals/sort/diff stay on the calling thread.
         auto& PoiEntities = InCurrent._ScratchPoiEntities;
         PoiEntities.Reset();
 
@@ -308,19 +307,14 @@ namespace ck
             if (NOT FilterIsEmpty && NOT CategoryFilter.Matches(FGameplayTagContainer{PoiParams.Get_Category()}))
             { return; }
 
-            // POI position = its lifetime owner's Transform + the POI's relative offset (a POI is a child
-            // entity; the owner hosts the Transform — see CkPoi's composition contract)
-            const auto PoiOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(PoiGenericHandle);
+            // POI position = the POI entity's own Transform + its relative offset (direct-attach: the POI
+            // entity carries the Transform — see CkPoi's composition contract)
+            const auto PoiTransform = UCk_Utils_Transform_UE::Cast(PoiGenericHandle);
 
-            if (ck::Is_NOT_Valid(PoiOwner))
+            if (ck::Is_NOT_Valid(PoiTransform))
             { return; }
 
-            const auto PoiOwnerTransform = UCk_Utils_Transform_UE::Cast(PoiOwner);
-
-            if (ck::Is_NOT_Valid(PoiOwnerTransform))
-            { return; }
-
-            const auto PoiLocation = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(PoiOwnerTransform).TransformPosition(PoiParams.Get_RelativeLocation());
+            const auto PoiLocation = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(PoiTransform).TransformPosition(PoiParams.Get_RelativeLocation());
 
             const auto Distance = static_cast<float>(FVector::Dist(InObserverLocation, PoiLocation));
             const auto MaxVisibleRange = PoiParams.Get_MaxVisibleRange();
@@ -328,8 +322,8 @@ namespace ck
             if (MaxVisibleRange > 0.0f && Distance > MaxVisibleRange)
             { return; }
 
-            const auto SignedBearing = compass::Get_SignedBearingDegrees(InObserverLocation, PoiLocation, HeadingDegrees);
-            const auto IsOutsideArc = compass::Get_IsOutsideArc(SignedBearing, ArcDegrees);
+            const auto SignedBearing = bearing::Get_SignedBearingDegrees(InObserverLocation, PoiLocation, HeadingDegrees);
+            const auto IsOutsideArc = bearing::Get_IsOutsideArc(SignedBearing, ArcDegrees);
 
             if (IsOutsideArc && PoiParams.Get_OffscreenPolicy() == ECk_Poi_OffscreenPolicy::Hide)
             { return; }
@@ -343,7 +337,7 @@ namespace ck
                 ck::StaticCast<FCk_Handle_Poi>(PoiGenericHandle),
                 PoiParams.Get_Category(),
                 SignedBearing,
-                compass::Get_NormalizedArcOffset(SignedBearing, ArcDegrees),
+                bearing::Get_NormalizedArcOffset(SignedBearing, ArcDegrees),
                 ArcState,
                 Distance,
                 static_cast<float>(PoiLocation.Z - InObserverLocation.Z),

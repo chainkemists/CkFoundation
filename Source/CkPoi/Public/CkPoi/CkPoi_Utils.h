@@ -2,8 +2,9 @@
 #include "CkEcsExt/CkEcsExt_Utils.h"
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkRecord/Record/CkRecord_Utils.h"
+
+#include "CkCore/Time/CkTime.h"
 
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 #include "CkPoi/CkPoi_Fragment.h"
@@ -38,45 +39,31 @@ public:
     friend class UCk_Utils_Ecs_Base_UE;
 
 public:
-    // Compose a POI onto InHandle as a child entity. The OWNER must already have the Transform feature — the POI's
-    // world position is OwnerTransform.TransformPosition(Params._RelativeLocation). An entity may host MULTIPLE
-    // POIs (e.g. a vendor that is both a Shop and a QuestTarget).
+    // Compose the POI feature DIRECTLY onto InHandle (no child entity). InHandle must already have the Transform
+    // feature — the POI's world position is its OWN Transform.TransformPosition(Params._RelativeLocation). An
+    // entity hosts at most ONE direct POI; compose additional POIs as child entities via Create.
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName="[Ck][Poi] Add New Poi")
+              Category = "Ck|Utils|Poi",
+              DisplayName="[Ck][Poi] Add Feature")
     static FCk_Handle_Poi
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_Poi_ParamsData& InParams);
 
-    // Spawn a standalone TRANSIENT POI at a world location (the ping/temporary-marker primitive). The host entity
-    // is created under the world's TransientEntity with its own Transform. InTtlSeconds > 0 composes a CkTimer that
-    // destroys the host on completion. NOT rebuilt on a v3 load (no spawn recipe) — use Create_Durable for POIs
-    // that must survive save/load. Replication defaults LOCAL: pings are per-player until the phase-4 net pass.
+    // Create a NEW POI child entity under InLifetimeOwner at a world location, connected to the owner's RecordOfPois
+    // (the standalone / ping / temporary-marker primitive). The child carries its own Transform and the POI feature.
+    // InTtl > 0 composes a CkTimer that destroys the child on completion (zero = no TTL). Replication defaults LOCAL:
+    // pings are per-player until the phase-4 net pass.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Poi",
-              DisplayName="[Ck][Poi] Create Transient Poi At Location",
-              meta = (WorldContext = "InWorldContextObject"))
+              DisplayName="[Ck][Poi] Create")
     static FCk_Handle_Poi
     Create(
-        const UObject* InWorldContextObject,
+        UPARAM(ref) FCk_Handle& InLifetimeOwner,
         const FTransform& InTransform,
         const FCk_Fragment_Poi_ParamsData& InParams,
-        float InTtlSeconds = 0.0f,
+        FCk_Time InTtl,
         ECk_Replication InReplication = ECk_Replication::DoesNotReplicate);
-
-    // Spawn a standalone DURABLE POI at a world location through the shipped UCk_Poi_EntityScript recipe —
-    // RuntimeSpawned provenance under the v3 rebuild+hydrate save model, so it round-trips saves (player-placed
-    // waypoints). The POI composes when the spawned script's Construct runs (deferred).
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Poi",
-              DisplayName="[Ck][Poi] Create Durable Poi At Location",
-              meta = (WorldContext = "InWorldContextObject"))
-    static FCk_Handle_PendingEntityScript
-    Create_Durable(
-        const UObject* InWorldContextObject,
-        const FTransform& InTransform,
-        const FCk_Fragment_Poi_ParamsData& InParams);
 
 public:
     // Has Feature

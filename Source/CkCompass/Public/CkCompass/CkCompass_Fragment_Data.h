@@ -2,6 +2,7 @@
 
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Time/CkTime.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_Typesafe.h"
@@ -140,11 +141,11 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_Compass_HeadingSource _HeadingSource = ECk_Compass_HeadingSource::Auto;
 
-    // Seconds between projection updates. 0 = every frame. The heading itself is ALWAYS refreshed every
+    // Time between projection updates. Zero = every frame. The heading itself is ALWAYS refreshed every
     // frame regardless of this interval (a throttled heading visibly stutters during camera pans).
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
-    float _UpdateInterval = 0.0f;
+              meta = (AllowPrivateAccess = true))
+    FCk_Time _UpdateInterval = FCk_Time{0.0f};
 
 public:
     CK_PROPERTY_GET(_ArcDegrees);

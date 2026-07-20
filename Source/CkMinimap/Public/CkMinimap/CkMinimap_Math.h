@@ -6,7 +6,7 @@
 #include <CoreMinimal.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Pure minimap math — no entities, no world. Unit-tested in isolation (Tests/Test_CkMinimap_Math.cpp).
+// Pure minimap math — no entities, no world. Unit-tested in isolation (Tests/CkMinimap_Math.spec.cpp).
 //
 // Conventions (documented contract, shared with CkCompass): world yaw degrees, 0 = North = +X world,
 // 90 = East = +Y world. FRAME space is center-origin with +X = screen right and +Y = screen DOWN (UMG),

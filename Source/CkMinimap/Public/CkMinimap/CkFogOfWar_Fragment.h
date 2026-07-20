@@ -54,7 +54,7 @@ namespace ck
         // OnCellsRevealed broadcast, then reset
         TArray<int32> _NewlyRevealedScratch;
 
-        float _TimeSinceUpdate = 0.0f;
+        FCk_Time _TimeSinceUpdate;
 
     public:
         CK_PROPERTY_GET(_Explored);
