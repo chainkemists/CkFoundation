@@ -7,11 +7,9 @@
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 #include "CkEcs/Processor/CkProcessor.h"
-#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
-#include "CkPoi/CkPoi_EntityScript.h"
 #include "CkPoi/CkPoi_Fragment.h"
 #include "CkPoi/CkPoi_Log.h"
 
@@ -45,84 +43,58 @@ auto
         TEXT("Poi Add on Entity [{}] requires a valid Category tag (Poi.Category.*)"), InHandle)
     { return {}; }
 
-    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InNewEntity)
-    {
-        UCk_Utils_GameplayLabel_UE::Add(InNewEntity, InParams.Get_Category());
+    CK_ENSURE_IF_NOT(NOT Has(InHandle),
+        TEXT("Handle [{}] already has the Poi feature. Compose additional POIs as child entities via Create"), InHandle)
+    { return Cast(InHandle); }
 
-        InNewEntity.Add<ck::FFragment_Poi_Params>(InParams);
-        InNewEntity.Add<ck::FFragment_Poi_Current>();
+    InHandle.Add<ck::FFragment_Poi_Params>(InParams);
+    InHandle.Add<ck::FFragment_Poi_Current>();
+    InHandle.Add<ck::FTag_Poi_NeedsSetup>();
 
-        InNewEntity.Add<ck::FTag_Poi_NeedsSetup>();
-    });
-
-    auto NewPoiEntity = ck::StaticCast<FCk_Handle_Poi>(NewEntity);
-
-    RecordOfPois_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::Default);
-    RecordOfPois_Utils::Request_Connect(InHandle, NewPoiEntity, ECk_Record_LabelRequirementPolicy::Optional);
-
-    return NewPoiEntity;
+    return ck::StaticCast<FCk_Handle_Poi>(InHandle);
 }
 
 auto
     UCk_Utils_Poi_UE::
     Create(
-        const UObject* InWorldContextObject,
+        FCk_Handle& InLifetimeOwner,
         const FTransform& InTransform,
         const FCk_Fragment_Poi_ParamsData& InParams,
-        float InTtlSeconds,
+        FCk_Time InTtl,
         ECk_Replication InReplication)
     -> FCk_Handle_Poi
 {
-    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(InWorldContextObject)
+    CK_ENSURE_IF_NOT(ck::IsValid(InLifetimeOwner), TEXT("Invalid Lifetime Owner supplied to Poi Create"))
     { return {}; }
 
-    auto HostEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_TransientOwner(InWorldContextObject);
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
 
-    UCk_Utils_Transform_UE::Add(HostEntity, InTransform, InReplication);
+    UCk_Utils_Transform_UE::Add(NewEntity, InTransform, InReplication);
+    UCk_Utils_GameplayLabel_UE::Add(NewEntity, InParams.Get_Category());
 
-    auto NewPoiEntity = Add(HostEntity, InParams);
+    auto NewPoiEntity = Add(NewEntity, InParams);
 
     if (ck::Is_NOT_Valid(NewPoiEntity))
     { return {}; }
 
-    if (InTtlSeconds > 0.0f)
+    RecordOfPois_Utils::AddIfMissing(InLifetimeOwner, ECk_Record_EntryHandlingPolicy::Default);
+    RecordOfPois_Utils::Request_Connect(InLifetimeOwner, NewPoiEntity, ECk_Record_LabelRequirementPolicy::Optional);
+
+    if (InTtl.Get_Seconds() > 0.0)
     {
         NewPoiEntity.Add<ck::FTag_Poi_TransientTtl>();
 
-        const auto TimerParams = FCk_Fragment_Timer_ParamsData{FCk_Time{InTtlSeconds}}
+        const auto TimerParams = FCk_Fragment_Timer_ParamsData{InTtl}
             .Set_Behavior(ECk_Timer_Behavior::StopOnDone)
             .Set_StartingState(ECk_Timer_State::Running);
 
-        auto TtlTimer = UCk_Utils_Timer_UE::Add(HostEntity, TimerParams);
+        auto TtlTimer = UCk_Utils_Timer_UE::Add(NewPoiEntity, TimerParams);
 
         ck::UUtils_Signal_OnTimerDone::Bind<&ThisType::OnTtlTimerDone>(
             TtlTimer, ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame, ECk_Signal_PostFireBehavior::Unbind);
     }
 
     return NewPoiEntity;
-}
-
-auto
-    UCk_Utils_Poi_UE::
-    Create_Durable(
-        const UObject* InWorldContextObject,
-        const FTransform& InTransform,
-        const FCk_Fragment_Poi_ParamsData& InParams)
-    -> FCk_Handle_PendingEntityScript
-{
-    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(InWorldContextObject)
-    { return {}; }
-
-    auto TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity_FromContextObject(InWorldContextObject);
-
-    CK_ENSURE_IF_NOT(ck::IsValid(TransientEntity),
-        TEXT("Create_Durable could not resolve the TransientEntity for the current world"))
-    { return {}; }
-
-    const auto SpawnParams = FCk_Poi_SpawnParams{InParams, InTransform};
-
-    return UCk_Utils_EntityScript_UE::Request_SpawnEntity(
-        TransientEntity, UCk_Poi_EntityScript::StaticClass(), FInstancedStruct::Make(SpawnParams));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -263,14 +235,13 @@ auto
         const FCk_Handle_Poi& InPoi)
     -> FVector
 {
-    const auto& Owner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InPoi);
-
-    CK_ENSURE_IF_NOT(ck::IsValid(Owner), TEXT("Poi [{}] has no valid lifetime owner to derive a world location from"), InPoi)
+    CK_ENSURE_IF_NOT(UCk_Utils_Transform_UE::Has(InPoi),
+        TEXT("Poi [{}] has no Transform feature to derive a world location from"), InPoi)
     { return FVector::ZeroVector; }
 
-    const auto& OwnerTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(Owner);
+    const auto& PoiTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InPoi);
 
-    return OwnerTransform.TransformPosition(InPoi.Get<ck::FFragment_Poi_Params>().Get_RelativeLocation());
+    return PoiTransform.TransformPosition(InPoi.Get<ck::FFragment_Poi_Params>().Get_RelativeLocation());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -391,14 +362,14 @@ auto
         FCk_Time InDeltaT)
     -> void
 {
-    // The TTL timer is a child of the transient POI's HOST entity — destroying the host tears down the POI child
-    // (and this timer) through the standard entity-lifetime pipeline.
-    auto HostEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InTimer);
+    // The TTL timer is a child of the POI entity — destroying the POI tears down this timer child through the
+    // standard entity-lifetime pipeline, and drops the POI's RecordOfPois entry on its lifetime owner.
+    auto PoiEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InTimer);
 
-    if (ck::Is_NOT_Valid(HostEntity))
+    if (ck::Is_NOT_Valid(PoiEntity))
     { return; }
 
-    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(HostEntity);
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(PoiEntity);
 }
 
 //--------------------------------------------------------------------------------------------------------------------

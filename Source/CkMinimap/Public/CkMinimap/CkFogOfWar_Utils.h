@@ -29,8 +29,8 @@ public:
     // the v3 save pipeline (only when the entity is recipe-rebuildable) and is projector-agnostic — the Minimap
     // culls unexplored POIs through Request_SetFogOfWar, painters seed from Get_ExploredData + CellsRevealed.
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName="[Ck][FogOfWar] Add New Fog Of War")
+              Category = "Ck|Utils|FogOfWar",
+              DisplayName="[Ck][FogOfWar] Add Feature")
     static FCk_Handle_FogOfWar
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
