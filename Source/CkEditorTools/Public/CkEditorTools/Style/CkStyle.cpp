@@ -2,7 +2,9 @@
 
 #include "CkEditorTools/Settings/CkStyleSettings.h"
 
+#include "Brushes/SlateRoundedBoxBrush.h"
 #include "Styling/AppStyle.h"
+#include "Styling/CoreStyle.h"
 
 // ====================================================================================================================
 
@@ -37,6 +39,12 @@ CK_STYLE_GETTER(Ok)
 CK_STYLE_GETTER(Err)
 CK_STYLE_GETTER(Warn)
 CK_STYLE_GETTER(Info)
+CK_STYLE_GETTER(AccentDim)
+CK_STYLE_GETTER(OkDim)
+CK_STYLE_GETTER(ErrDim)
+CK_STYLE_GETTER(WarnDim)
+CK_STYLE_GETTER(InfoDim)
+CK_STYLE_GETTER(NeutralDim)
 
 CK_STYLE_GETTER(Selection)
 CK_STYLE_GETTER(SelectionInactive)
@@ -141,15 +149,66 @@ auto
 	return FAppStyle::GetBrush(TEXT("GenericWhiteBox"));
 }
 
+// Procedural WHITE rounded boxes (no texture — the rounded-box shader), tinted
+// at the use site. Function-local statics so pointers stay stable for OnPaint.
 auto
 	CkStyle::
 	GetRoundedBrush()
 	-> const FSlateBrush*
 {
-	// RoundedSelection_16x is not reliably registered across UE builds — when
-	// missing, Slate falls back to the "missing texture" checkerboard. Square
-	// corners with GenericWhiteBox render reliably everywhere.
-	return FAppStyle::GetBrush(TEXT("GenericWhiteBox"));
+	static const FSlateRoundedBoxBrush Brush{FLinearColor::White, 6.0f};
+	return &Brush;
+}
+
+auto
+	CkStyle::
+	GetRoundedBrush_Small()
+	-> const FSlateBrush*
+{
+	static const FSlateRoundedBoxBrush Brush{FLinearColor::White, 3.0f};
+	return &Brush;
+}
+
+auto
+	CkStyle::
+	GetRoundedBrush_Large()
+	-> const FSlateBrush*
+{
+	static const FSlateRoundedBoxBrush Brush{FLinearColor::White, 8.0f};
+	return &Brush;
+}
+
+auto
+	CkStyle::
+	GetRoundedBrush_Pill()
+	-> const FSlateBrush*
+{
+	static const FSlateRoundedBoxBrush Brush{FLinearColor::White, 99.0f};
+	return &Brush;
+}
+
+auto
+	CkStyle::
+	RegularFont(int32 InSize)
+	-> FSlateFontInfo
+{
+	return FCoreStyle::GetDefaultFontStyle("Regular", InSize);
+}
+
+auto
+	CkStyle::
+	BoldFont(int32 InSize)
+	-> FSlateFontInfo
+{
+	return FCoreStyle::GetDefaultFontStyle("Bold", InSize);
+}
+
+auto
+	CkStyle::
+	MonoFont(int32 InSize)
+	-> FSlateFontInfo
+{
+	return FCoreStyle::GetDefaultFontStyle("Mono", InSize);
 }
 
 auto
@@ -165,6 +224,22 @@ auto
 		case ECk_Tone::Err:    return Err();
 		case ECk_Tone::Accent: return Accent();
 		default:               return TextDim();
+	}
+}
+
+auto
+	CkStyle::
+	GetToneDimColor(ECk_Tone InTone)
+	-> FLinearColor
+{
+	switch (InTone)
+	{
+		case ECk_Tone::Info:   return InfoDim();
+		case ECk_Tone::Ok:     return OkDim();
+		case ECk_Tone::Warn:   return WarnDim();
+		case ECk_Tone::Err:    return ErrDim();
+		case ECk_Tone::Accent: return AccentDim();
+		default:               return NeutralDim();
 	}
 }
 
