@@ -1,0 +1,147 @@
+#pragma once
+
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
+#include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
+
+#include "CkMinimap/CkFogOfWar_Fragment.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    // ALL FogOfWar processors run in FGroup_Gameplay, which provably PRECEDES FGroup_PostTransform
+    // (CkProcessorGroups.h: FGroup_Gameplay RunAfters Gameplay_TimeDelta; PostTransform RunAfters
+    // Gameplay_Camera, whose RunAfter chain descends through Transform/Physics/Script back to FGroup_Gameplay).
+    // The Minimap projector (FGroup_PostTransform) reads fog state cross-feature the SAME frame — same-group
+    // registration order is not a safe ordering guarantee, the group split is. Consequence: revealer transforms
+    // are sampled one frame stale (finalized later in FGroup_Transform*) — irrelevant at reveal-radius scale.
+    //
+    // NetModeRequirement is EXPLICITLY All: exploration is gameplay state — the authority accumulates it for
+    // save (and phase-4 co-op sharing); clients accumulate locally with the same code.
+
+    class CKMINIMAP_API FProcessor_FogOfWar_Setup : public ck_exp::TProcessor<
+        FProcessor_FogOfWar_Setup,
+        FCk_Handle_FogOfWar,
+        ck::TReadOnly<FFragment_FogOfWar_Params>,
+        ck::TReadWrite<FFragment_FogOfWar_Current>,
+        FTag_FogOfWar_NeedsSetup,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay_TimeDelta;
+        using MarkedDirtyBy = FTag_FogOfWar_NeedsSetup;
+        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::All;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InFogEntity,
+            const FFragment_FogOfWar_Params& InParams,
+            FFragment_FogOfWar_Current& InCurrent)
+            -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKMINIMAP_API FProcessor_FogOfWar_HandleRequests
+        : public ck_exp::TProcessor<FProcessor_FogOfWar_HandleRequests, FCk_Handle_FogOfWar,
+            ck::TReadWrite<FFragment_FogOfWar_Current>, ck::TReadOnly<FFragment_FogOfWar_Params>, ck::TReadWrite<FFragment_FogOfWar_Requests>,
+            TExclude<FTag_FogOfWar_NeedsSetup>, CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay_TimeDelta;
+        using RunAfter = TDepList<FProcessor_FogOfWar_Setup>;
+        using MarkedDirtyBy = FFragment_FogOfWar_Requests;
+        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::All;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InFogEntity,
+            FFragment_FogOfWar_Current& InCurrent,
+            const FFragment_FogOfWar_Params& InParams,
+            FFragment_FogOfWar_Requests& InRequests) const -> void;
+
+    private:
+        static auto
+        DoHandleRequest(
+            HandleType InFogEntity,
+            FFragment_FogOfWar_Current& InCurrent,
+            const FFragment_FogOfWar_Params& InParams,
+            const FCk_Request_FogOfWar_AddRevealer& InRequest) -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType InFogEntity,
+            FFragment_FogOfWar_Current& InCurrent,
+            const FFragment_FogOfWar_Params& InParams,
+            const FCk_Request_FogOfWar_RemoveRevealer& InRequest) -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType InFogEntity,
+            FFragment_FogOfWar_Current& InCurrent,
+            const FFragment_FogOfWar_Params& InParams,
+            const FCk_Request_FogOfWar_RevealLocation& InRequest) -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType InFogEntity,
+            FFragment_FogOfWar_Current& InCurrent,
+            const FFragment_FogOfWar_Params& InParams,
+            const FCk_Request_FogOfWar_RevealAll& InRequest) -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType InFogEntity,
+            FFragment_FogOfWar_Current& InCurrent,
+            const FFragment_FogOfWar_Params& InParams,
+            const FCk_Request_FogOfWar_Reset& InRequest) -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType InFogEntity,
+            FFragment_FogOfWar_Current& InCurrent,
+            const FFragment_FogOfWar_Params& InParams,
+            const FCk_Request_FogOfWar_SetExplored& InRequest) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKMINIMAP_API FProcessor_FogOfWar_Update : public ck_exp::TProcessor<
+        FProcessor_FogOfWar_Update,
+        FCk_Handle_FogOfWar,
+        ck::TReadOnly<FFragment_FogOfWar_Params>,
+        ck::TReadWrite<FFragment_FogOfWar_Current>,
+        TExclude<FTag_FogOfWar_NeedsSetup>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay_TimeDelta;
+        using RunAfter = TDepList<FProcessor_FogOfWar_Setup, FProcessor_FogOfWar_HandleRequests>;
+        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::All;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InFogEntity,
+            const FFragment_FogOfWar_Params& InParams,
+            FFragment_FogOfWar_Current& InCurrent) const -> void;
+    };
+}
+
+// --------------------------------------------------------------------------------------------------------------------
