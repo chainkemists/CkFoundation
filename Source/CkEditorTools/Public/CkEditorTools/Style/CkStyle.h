@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Fonts/SlateFontInfo.h"
 
 // ====================================================================================================================
 // Color, font-size, and node-visual tokens shared by Ck editor tooling UIs
@@ -62,6 +63,14 @@ namespace CkStyle
 	CKEDITORTOOLS_API auto Err()          -> FLinearColor;
 	CKEDITORTOOLS_API auto Warn()         -> FLinearColor;
 	CKEDITORTOOLS_API auto Info()         -> FLinearColor;
+
+	// Per-tone dim surfaces (chip/pill fills).
+	CKEDITORTOOLS_API auto AccentDim()    -> FLinearColor;
+	CKEDITORTOOLS_API auto OkDim()        -> FLinearColor;
+	CKEDITORTOOLS_API auto ErrDim()       -> FLinearColor;
+	CKEDITORTOOLS_API auto WarnDim()      -> FLinearColor;
+	CKEDITORTOOLS_API auto InfoDim()      -> FLinearColor;
+	CKEDITORTOOLS_API auto NeutralDim()   -> FLinearColor;
 
 	// ----- Selection & Hover --------------------------------------------------
 	CKEDITORTOOLS_API auto Selection()         -> FLinearColor;
@@ -172,10 +181,25 @@ namespace CkStyle
 	constexpr auto SpaceXL  = 16.0f;
 	constexpr auto SpaceXXL = 24.0f;
 
+	// ----- Typography helpers -------------------------------------------------
+	// Single authority for font families so every debugger surface agrees:
+	// data/ids/costs render Mono, headers Bold, prose Regular.
+	CKEDITORTOOLS_API auto RegularFont(int32 InSize) -> FSlateFontInfo;
+	CKEDITORTOOLS_API auto BoldFont(int32 InSize)    -> FSlateFontInfo;
+	CKEDITORTOOLS_API auto MonoFont(int32 InSize)    -> FSlateFontInfo;
+
 	// ----- Brushes / helpers --------------------------------------------------
-	CKEDITORTOOLS_API auto GetFilledBrush()  -> const FSlateBrush*;
-	CKEDITORTOOLS_API auto GetRoundedBrush() -> const FSlateBrush*;
-	CKEDITORTOOLS_API auto GetToneColor(ECk_Tone InTone) -> FLinearColor;
+	// The rounded brushes are WHITE procedural rounded boxes — tint at the use
+	// site (SBorder::BorderBackgroundColor / SImage::ColorAndOpacity). Nest an
+	// outer (border tint, 1px padding) around an inner (fill tint) for the
+	// bordered-chip look.
+	CKEDITORTOOLS_API auto GetFilledBrush()        -> const FSlateBrush*;
+	CKEDITORTOOLS_API auto GetRoundedBrush()       -> const FSlateBrush*;   // 6px — chips, buttons, value pills
+	CKEDITORTOOLS_API auto GetRoundedBrush_Small() -> const FSlateBrush*;   // 3px — badges, meters, count chips
+	CKEDITORTOOLS_API auto GetRoundedBrush_Large() -> const FSlateBrush*;   // 8px — cards, panels, graph nodes
+	CKEDITORTOOLS_API auto GetRoundedBrush_Pill()  -> const FSlateBrush*;   // fully-rounded — dots, switches, pills
+	CKEDITORTOOLS_API auto GetToneColor(ECk_Tone InTone)    -> FLinearColor;
+	CKEDITORTOOLS_API auto GetToneDimColor(ECk_Tone InTone) -> FLinearColor;
 }
 
 // ====================================================================================================================
