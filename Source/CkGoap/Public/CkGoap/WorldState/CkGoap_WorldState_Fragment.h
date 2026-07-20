@@ -180,6 +180,35 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+// Bounded ring of effective-value changes (base writes AND override
+// push/pop/clear deltas). Feeds the debugger's timeline WS lane and the
+// Planner's replan-cause attribution. Oldest entries drop first.
+
+struct CKGOAP_API FFragment_Goap_WorldState_ChangeLog
+{
+public:
+	CK_GENERATED_BODY(FFragment_Goap_WorldState_ChangeLog);
+
+	friend class ::UCk_Utils_Goap_WorldState_UE;
+	friend class FProcessor_Goap_WorldState_HandleRequests;
+
+	static constexpr int32 Capacity = 32;
+
+private:
+	TArray<FCk_Goap_WorldStateChange> _Entries;
+
+public:
+	CK_PROPERTY_GET(_Entries);
+
+	auto Record(FCk_Goap_WorldStateChange InChange) -> void
+	{
+		_Entries.Add(MoveTemp(InChange));
+		if (_Entries.Num() > Capacity)
+		{ _Entries.RemoveAt(0, _Entries.Num() - Capacity); }
+	}
+};
+
+// --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
 	CKGOAP_API,

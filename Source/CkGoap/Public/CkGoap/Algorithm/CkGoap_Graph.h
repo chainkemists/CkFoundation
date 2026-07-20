@@ -108,6 +108,15 @@ public:
 		return _Shared.IsValid() ? _Shared->StatePool.Num() : 0;
 	}
 
+	// Edge map (PackEdgeKey(from,to) → action index) — read by the debugger to
+	// reconstruct which action's reverse application discovered each node.
+	auto
+	Get_EdgeActions() const -> const TMap<int64, int32>&
+	{
+		check(_Shared.IsValid());
+		return _Shared->EdgeActions;
+	}
+
 private:
 	// ----------------------------------------------------------------------------------------------------------------
 	// ----------------------------------------------------------------------------------------------------------------

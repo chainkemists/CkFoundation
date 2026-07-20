@@ -370,6 +370,27 @@ namespace ck
 	};
 
 // --------------------------------------------------------------------------------------------------------------------
+// Why the last replan fired — stamped by HandleRequests when it consumes a
+// Plan request; read by the debugger via Get_LastReplanCause.
+
+	struct CKGOAP_API FFragment_Goap_Planner_ReplanCause
+	{
+	public:
+		CK_GENERATED_BODY(FFragment_Goap_Planner_ReplanCause);
+
+		friend class ::UCk_Utils_Goap_Planner_UE;
+		friend class FProcessor_Goap_Planner_HandleRequests;
+
+	private:
+		FCk_Goap_ReplanCauseInfo _Info;
+		int64 _LastReplanFrame = 0;
+
+	public:
+		CK_PROPERTY_GET(_Info);
+		CK_PROPERTY_GET(_LastReplanFrame);
+	};
+
+// --------------------------------------------------------------------------------------------------------------------
 // Accumulator for the Planner's replan-interval window.
 
 	struct CKGOAP_API FFragment_Goap_Planner_ReplanThrottle

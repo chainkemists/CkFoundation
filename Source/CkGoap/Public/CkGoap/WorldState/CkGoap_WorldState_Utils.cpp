@@ -229,6 +229,34 @@ namespace ck_goap_world_state_utils_impl
 
 }
 
+namespace ck_goap_world_state_utils_changelog
+{
+	// Record every key whose EFFECTIVE value differs between the two snapshots
+	// into the WS entity's change-log ring. Returns whether anything changed —
+	// the callers reuse that as their dirty-fire decision.
+	auto DoRecordEffectiveDeltas(
+		FCk_Handle_Goap_WorldState& InWorldState,
+		const TArray<FGameplayTag>& InAffectedTags,
+		const TMap<FGameplayTag, bool>& InBefore,
+		const TMap<FGameplayTag, bool>& InAfter,
+		ECk_Goap_WorldStateMutator InMutator) -> bool
+	{
+		auto AnyEffectiveChange = false;
+		for (const auto& Tag : InAffectedTags)
+		{
+			const auto Before = InBefore.FindRef(Tag);
+			const auto After = InAfter.FindRef(Tag);
+			if (Before == After) { continue; }
+
+			AnyEffectiveChange = true;
+			InWorldState.AddOrGet<ck::FFragment_Goap_WorldState_ChangeLog>().Record(
+				FCk_Goap_WorldStateChange{Tag, Before, After,
+					static_cast<int64>(GFrameCounter), InMutator});
+		}
+		return AnyEffectiveChange;
+	}
+}
+
 auto
 	UCk_Utils_Goap_WorldState_UE::
 	Push_Override(
@@ -277,13 +305,8 @@ auto
 
 	const auto After = ck_goap_world_state_utils_impl::DoSnapshotEffective(InWorldState, AffectedTags);
 
-	auto AnyEffectiveChange = false;
-	for (const auto& Tag : AffectedTags)
-	{
-		if (Before.FindRef(Tag) != After.FindRef(Tag)) { AnyEffectiveChange = true; break; }
-	}
-
-	if (AnyEffectiveChange)
+	if (ck_goap_world_state_utils_changelog::DoRecordEffectiveDeltas(
+		InWorldState, AffectedTags, Before, After, ECk_Goap_WorldStateMutator::OverridePush))
 	{
 		DoTagSubscribersDirty(InWorldState);
 	}
@@ -335,6 +358,10 @@ auto
 	const auto AfterEff = ck_goap_world_state_utils_impl::DoGetEffectiveValue(InWorldState, InKey);
 	if (BeforeEff != AfterEff)
 	{
+		InWorldState.AddOrGet<ck::FFragment_Goap_WorldState_ChangeLog>().Record(
+			FCk_Goap_WorldStateChange{InKey, BeforeEff, AfterEff,
+				static_cast<int64>(GFrameCounter), ECk_Goap_WorldStateMutator::OverridePush});
+
 		DoTagSubscribersDirty(InWorldState);
 	}
 
@@ -367,13 +394,8 @@ auto
 
 	const auto After = ck_goap_world_state_utils_impl::DoSnapshotEffective(InWorldState, AffectedTags);
 
-	auto AnyEffectiveChange = false;
-	for (const auto& Tag : AffectedTags)
-	{
-		if (Before.FindRef(Tag) != After.FindRef(Tag)) { AnyEffectiveChange = true; break; }
-	}
-
-	if (AnyEffectiveChange)
+	if (ck_goap_world_state_utils_changelog::DoRecordEffectiveDeltas(
+		InWorldState, AffectedTags, Before, After, ECk_Goap_WorldStateMutator::OverridePop))
 	{
 		DoTagSubscribersDirty(InWorldState);
 	}
@@ -405,13 +427,8 @@ auto
 
 	const auto After = ck_goap_world_state_utils_impl::DoSnapshotEffective(InWorldState, AffectedTags);
 
-	auto AnyEffectiveChange = false;
-	for (const auto& Tag : AffectedTags)
-	{
-		if (Before.FindRef(Tag) != After.FindRef(Tag)) { AnyEffectiveChange = true; break; }
-	}
-
-	if (AnyEffectiveChange)
+	if (ck_goap_world_state_utils_changelog::DoRecordEffectiveDeltas(
+		InWorldState, AffectedTags, Before, After, ECk_Goap_WorldStateMutator::OverrideClear))
 	{
 		DoTagSubscribersDirty(InWorldState);
 	}
@@ -513,6 +530,19 @@ auto
 
 auto
 	UCk_Utils_Goap_WorldState_UE::
+	Get_RecentChanges(const FCk_Handle_Goap_WorldState& InWorldState)
+	-> TArray<FCk_Goap_WorldStateChange>
+{
+	if (NOT ck::IsValid(InWorldState)) { return {}; }
+	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_ChangeLog>()) { return {}; }
+
+	return InWorldState.Get<ck::FFragment_Goap_WorldState_ChangeLog>().Get_Entries();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+	UCk_Utils_Goap_WorldState_UE::
 	Request_AddSubscriber(
 		FCk_Handle_Goap_WorldState& InWorldState,
 		FCk_Handle& InSubscriber)
@@ -541,6 +571,24 @@ auto
 	auto& Subscribers = InWorldState.Get<ck::FFragment_Goap_WorldState_Subscribers>();
 	Subscribers._Subscribers.RemoveSwap(InSubscriber);
 	return InWorldState;
+}
+
+auto
+	UCk_Utils_Goap_WorldState_UE::
+	Get_SubscriberCount(const FCk_Handle_Goap_WorldState& InWorldState)
+	-> int32
+{
+	if (NOT ck::IsValid(InWorldState)) { return 0; }
+	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_Subscribers>()) { return 0; }
+
+	// Count only live handles — stale subscribers don't replan, so they don't
+	// belong in the blast-radius number.
+	auto Count = int32{0};
+	for (const auto& Subscriber : InWorldState.Get<ck::FFragment_Goap_WorldState_Subscribers>().Get_Subscribers())
+	{
+		if (ck::IsValid(Subscriber)) { ++Count; }
+	}
+	return Count;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

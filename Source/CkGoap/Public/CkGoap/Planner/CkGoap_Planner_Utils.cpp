@@ -8,6 +8,7 @@
 #include "CkGoap/Action/CkGoap_Action_Fragment.h"
 #include "CkGoap/Action/CkGoap_Action_Utils.h"             // Action Has() for promotion validation
 #include "CkGoap/Action/CkGoap_Action_Record_Internal.h"        // FFragment_RecordOfGoapActions + utils struct
+#include "CkGoap/WorldState/CkGoap_WorldState_Fragment.h"       // KeyRegistry — Get_LastSearchDebug tag resolution
 #include "CkGoap/WorldState/CkGoap_WorldState_Utils.h"          // Request_AddSubscriber
 #include "CkAStar/CkAStar_Fragment.h"
 
@@ -493,6 +494,199 @@ auto
 	{ return {}; }
 
 	return InPlanner.Get<ck::FFragment_Goap_Planner_Goal>().Get_InvalidGoal();
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Get_PlannerTag(const FCk_Handle_Goap_Planner& InPlanner) -> FGameplayTag
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Get_PlannerTag"))
+	{ return {}; }
+
+	return InPlanner.Get<ck::FFragment_Goap_Planner_Params>().Get_PlannerTag();
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Get_ReplanPolicy(const FCk_Handle_Goap_Planner& InPlanner) -> ECk_Goap_ReplanPolicy
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Get_ReplanPolicy"))
+	{ return ECk_Goap_ReplanPolicy::Explicit; }
+
+	return InPlanner.Get<ck::FFragment_Goap_Planner_Params>().Get_ReplanPolicy();
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Get_MinReplanInterval(const FCk_Handle_Goap_Planner& InPlanner) -> float
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Get_MinReplanInterval"))
+	{ return 0.0f; }
+
+	return InPlanner.Get<ck::FFragment_Goap_Planner_Params>().Get_MinReplanIntervalSeconds();
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Get_SearchBudgetMicroseconds(const FCk_Handle_Goap_Planner& InPlanner) -> int64
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Get_SearchBudgetMicroseconds"))
+	{ return 0; }
+
+	return InPlanner.Get<ck::FFragment_Goap_Planner_Params>().Get_SearchBudgetMicroseconds();
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Get_CostThreshold(const FCk_Handle_Goap_Planner& InPlanner) -> float
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Get_CostThreshold"))
+	{ return 0.0f; }
+
+	return InPlanner.Get<ck::FFragment_Goap_Planner_Params>().Get_CostThreshold();
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Get_PlanOnStart(const FCk_Handle_Goap_Planner& InPlanner) -> bool
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Get_PlanOnStart"))
+	{ return false; }
+
+	return InPlanner.Get<ck::FFragment_Goap_Planner_Params>().Get_PlanOnStart();
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Get_AllowPlanFailed(const FCk_Handle_Goap_Planner& InPlanner) -> bool
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Get_AllowPlanFailed"))
+	{ return false; }
+
+	return InPlanner.Get<ck::FFragment_Goap_Planner_Params>().Get_AllowPlanFailed();
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Get_HasUnconditionalFallback(const FCk_Handle_Goap_Planner& InPlanner) -> bool
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Get_HasUnconditionalFallback"))
+	{ return false; }
+
+	return InPlanner.Get<ck::FFragment_Goap_Planner_Current>().Get_HasUnconditionalFallback();
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Get_LastReplanCause(const FCk_Handle_Goap_Planner& InPlanner) -> FCk_Goap_ReplanCauseInfo
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Get_LastReplanCause"))
+	{ return {}; }
+
+	if (NOT InPlanner.Has<ck::FFragment_Goap_Planner_ReplanCause>()) { return {}; }
+
+	return InPlanner.Get<ck::FFragment_Goap_Planner_ReplanCause>().Get_Info();
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Get_LastSearchStats(const FCk_Handle_Goap_Planner& InPlanner) -> FCk_Goap_SearchStats
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Get_LastSearchStats"))
+	{ return {}; }
+
+	const auto& PlanState = InPlanner.Get<ck::FFragment_Goap_Planner_PlanState>();
+	const auto& Result = InPlanner.Get<ck::FFragment_Goap_Planner_Result>();
+
+	const auto StatePoolSize = InPlanner.Has<ck::FFragment_Goap_Planner_PlanContext>()
+		? InPlanner.Get<ck::FFragment_Goap_Planner_PlanContext>().Get_Graph().Get_StatePoolSize()
+		: 0;
+
+	return FCk_Goap_SearchStats{
+		PlanState.Get_PlanStatus(),
+		Result._TotalIterations,
+		Result._TotalTimeMicroseconds,
+		StatePoolSize,
+		PlanState.Get_Plan().Num(),
+		PlanState.Get_PlanCost()};
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
+	Get_LastSearchDebug(const FCk_Handle_Goap_Planner& InPlanner) -> TArray<FCk_Goap_SearchDebugRow>
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Get_LastSearchDebug"))
+	{ return {}; }
+
+	if (NOT InPlanner.Has<ck::FFragment_Goap_Planner_PlanContext>()) { return {}; }
+
+	const auto& Graph = InPlanner.Get<ck::FFragment_Goap_Planner_PlanContext>().Get_Graph();
+	const auto PoolSize = Graph.Get_StatePoolSize();
+	if (PoolSize <= 0) { return {}; }
+
+	// Tag names come from the resolved WS source's key registry.
+	const auto WSSource = Get_WorldStateSource(InPlanner);
+	CK_ENSURE_IF_NOT(ck::IsValid(WSSource),
+		TEXT("Planner [{}] has search state but no resolved WorldState source"), InPlanner)
+	{ return {}; }
+
+	const auto& Registry = WSSource.Get<ck::FFragment_Goap_WorldState_KeyRegistry>().Get_Registry();
+
+	// First edge that discovered each node: unpack (from<<32|to) → to.
+	auto ViaActionByNode = TMap<int32, int32>{};
+	for (const auto& [EdgeKey, ActionIndex] : Graph.Get_EdgeActions())
+	{
+		const auto ToNode = static_cast<int32>(static_cast<uint32>(EdgeKey & 0xFFFFFFFF));
+		if (NOT ViaActionByNode.Contains(ToNode))
+		{ ViaActionByNode.Add(ToNode, ActionIndex); }
+	}
+
+	const auto& Actions = Graph.Get_Actions();
+	const auto& SeedWorldState = Graph.Get_CurrentWorldState();
+	const auto& StatePool = Graph.Get_StatePool();
+
+	auto Rows = TArray<FCk_Goap_SearchDebugRow>{};
+	Rows.Reserve(PoolSize);
+
+	for (auto NodeIndex = 0; NodeIndex < PoolSize; ++NodeIndex)
+	{
+		const auto& ConstraintSet = StatePool[NodeIndex];
+
+		auto Row = FCk_Goap_SearchDebugRow{};
+
+		for (auto Key = 0; Key < Registry.Num(); ++Key)
+		{
+			const auto Constraint = ConstraintSet.Get(Key);
+			if (Constraint == ck::goap::EConstraint::None) { continue; }
+
+			Row._Conditions.Add(FCk_GoapWS_Condition_Authored{
+				Registry.GetTag(Key), Constraint == ck::goap::EConstraint::MustBeTrue});
+		}
+
+		if (const auto* ViaAction = ViaActionByNode.Find(NodeIndex);
+			ViaAction != nullptr && Actions.IsValidIndex(*ViaAction))
+		{
+			Row._ViaActionClass = Actions[*ViaAction].ActionClass;
+		}
+
+		Row._UnsatisfiedCount = ConstraintSet.CountUnsatisfied(SeedWorldState);
+		Row._SatisfiedByWorldState = ConstraintSet.IsSatisfiedBy(SeedWorldState);
+
+		Rows.Add(MoveTemp(Row));
+	}
+
+	return Rows;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
