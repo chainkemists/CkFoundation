@@ -1,8 +1,10 @@
 #include "CkCompass_Utils.h"
 
 #include "CkCompass/CkCompass_Log.h"
-#include "CkCompass/CkCompass_Math.h"
 
+#include "CkCore/Math/Bearing/CkBearing_Utils.h"
+
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -27,6 +29,29 @@ auto
     InHandle.Add<ck::FTag_Compass_NeedsSetup>();
 
     return ck::StaticCast<FCk_Handle_Compass>(InHandle);
+}
+
+auto
+    UCk_Utils_Compass_UE::
+    Create(
+        FCk_Handle& InLifetimeOwner,
+        const FCk_Fragment_Compass_ParamsData& InParams)
+    -> FCk_Handle_Compass
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InLifetimeOwner), TEXT("Invalid Lifetime Owner supplied to Compass Create"))
+    { return {}; }
+
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
+
+    auto NewCompassEntity = Add(NewEntity, InParams);
+
+    if (ck::Is_NOT_Valid(NewCompassEntity))
+    { return {}; }
+
+    // Standalone child: the lifetime owner is the observer (the entity whose position/view drives the heading)
+    Request_SetObserver(NewCompassEntity, InLifetimeOwner);
+
+    return NewCompassEntity;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -77,7 +102,7 @@ auto
         float InHeadingDegrees)
     -> ECk_CardinalAndOrdinalDirection
 {
-    return ck::compass::Get_CardinalAndOrdinalDirection(InHeadingDegrees);
+    return ck::bearing::Get_CardinalAndOrdinalDirection(InHeadingDegrees);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

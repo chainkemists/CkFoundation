@@ -2,6 +2,7 @@
 
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Time/CkTime.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_Typesafe.h"
@@ -107,10 +108,10 @@ private:
               meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
     float _RevealRadius = 2000.0f;
 
-    // Seconds between revealer sampling passes. 0 = every frame.
+    // Time between revealer sampling passes. Zero = every frame.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
-    float _UpdateInterval = 0.25f;
+              meta = (AllowPrivateAccess = true))
+    FCk_Time _UpdateInterval = FCk_Time{0.25f};
 
 public:
     CK_PROPERTY_GET(_Bounds);

@@ -29,10 +29,20 @@ public:
     // redirect it via Request_SetObserver (e.g. onto a camera-rig entity).
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Compass",
-              DisplayName="[Ck][Compass] Add")
+              DisplayName="[Ck][Compass] Add Feature")
     static FCk_Handle_Compass
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Fragment_Compass_ParamsData& InParams);
+
+    // Create a NEW Compass child entity under InLifetimeOwner (Compass has no record — no record wiring). The
+    // observer defaults to the created child; redirect it via Request_SetObserver.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Compass",
+              DisplayName="[Ck][Compass] Create")
+    static FCk_Handle_Compass
+    Create(
+        UPARAM(ref) FCk_Handle& InLifetimeOwner,
         const FCk_Fragment_Compass_ParamsData& InParams);
 
 public:

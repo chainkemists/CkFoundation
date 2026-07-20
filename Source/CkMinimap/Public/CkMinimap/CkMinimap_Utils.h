@@ -30,16 +30,26 @@ public:
     friend class UCk_Utils_Ecs_Base_UE;
 
 public:
-    // Compose a Minimap onto InHandle as a child entity. An entity may host MULTIPLE minimaps (a HUD
-    // minimap AND a fullscreen world map are two children with different projection modes). The observer
-    // defaults to InHandle (the child's lifetime owner); redirect it via Request_SetObserver. The owner
-    // does NOT need a Transform — only the observer does.
+    // Compose the Minimap feature DIRECTLY onto InHandle (no child entity). An entity hosts at most ONE direct
+    // minimap; compose additional minimaps (a HUD minimap AND a fullscreen world map) as child entities via Create.
+    // The observer defaults to InHandle's lifetime owner; redirect it via Request_SetObserver. InHandle does NOT
+    // need a Transform — only the observer does.
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName="[Ck][Minimap] Add New Minimap")
+              Category = "Ck|Utils|Minimap",
+              DisplayName="[Ck][Minimap] Add Feature")
     static FCk_Handle_Minimap
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Fragment_Minimap_ParamsData& InParams);
+
+    // Create a NEW Minimap child entity under InLifetimeOwner, connected to the owner's RecordOfMinimaps. The
+    // observer defaults to InLifetimeOwner; redirect it via Request_SetObserver.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Minimap",
+              DisplayName="[Ck][Minimap] Create")
+    static FCk_Handle_Minimap
+    Create(
+        UPARAM(ref) FCk_Handle& InLifetimeOwner,
         const FCk_Fragment_Minimap_ParamsData& InParams);
 
 public:

@@ -20,23 +20,44 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Handle supplied to Minimap Add"))
     { return {}; }
 
-    // NO owner-Transform requirement (unlike Poi Add) — a FixedBounds world map on a transform-less HUD
-    // entity is legal; only the OBSERVER needs a Transform, and the Update processor ensures that
+    // NO owner-Transform requirement — a FixedBounds world map on a transform-less HUD entity is legal;
+    // only the OBSERVER needs a Transform, and the Update processor ensures that
 
-    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InNewEntity)
-    {
-        InNewEntity.Add<ck::FFragment_Minimap_Params>(InParams);
-        InNewEntity.Add<ck::FFragment_Minimap_Current>();
+    CK_ENSURE_IF_NOT(NOT Has(InHandle),
+        TEXT("Handle [{}] already has the Minimap feature. Compose additional minimaps as child entities via Create"), InHandle)
+    { return Cast(InHandle); }
 
-        InNewEntity.Add<ck::FTag_Minimap_NeedsSetup>();
-    });
+    InHandle.Add<ck::FFragment_Minimap_Params>(InParams);
+    InHandle.Add<ck::FFragment_Minimap_Current>();
+    InHandle.Add<ck::FTag_Minimap_NeedsSetup>();
 
-    auto NewMinimapEntity = ck::StaticCast<FCk_Handle_Minimap>(NewEntity);
+    return ck::StaticCast<FCk_Handle_Minimap>(InHandle);
+}
+
+auto
+    UCk_Utils_Minimap_UE::
+    Create(
+        FCk_Handle& InLifetimeOwner,
+        const FCk_Fragment_Minimap_ParamsData& InParams)
+    -> FCk_Handle_Minimap
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InLifetimeOwner), TEXT("Invalid Lifetime Owner supplied to Minimap Create"))
+    { return {}; }
+
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
+
+    auto NewMinimapEntity = Add(NewEntity, InParams);
+
+    if (ck::Is_NOT_Valid(NewMinimapEntity))
+    { return {}; }
 
     // Minimap children carry NO GameplayLabel (there is no category) — record ByTag lookups are unusable,
     // enumeration is ForEach_ValidEntry only
-    RecordOfMinimaps_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::Default);
-    RecordOfMinimaps_Utils::Request_Connect(InHandle, NewMinimapEntity, ECk_Record_LabelRequirementPolicy::Optional);
+    RecordOfMinimaps_Utils::AddIfMissing(InLifetimeOwner, ECk_Record_EntryHandlingPolicy::Default);
+    RecordOfMinimaps_Utils::Request_Connect(InLifetimeOwner, NewMinimapEntity, ECk_Record_LabelRequirementPolicy::Optional);
+
+    // Standalone child: the lifetime owner is the observer (the entity whose position/view drives the projection)
+    Request_SetObserver(NewMinimapEntity, InLifetimeOwner);
 
     return NewMinimapEntity;
 }

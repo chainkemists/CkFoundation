@@ -136,7 +136,7 @@ namespace ck
         InCurrent._CellCounts = CellCounts;
 
         // Force the first revealer-sampling pass to run immediately regardless of the update interval
-        InCurrent._TimeSinceUpdate = TNumericLimits<float>::Max();
+        InCurrent._TimeSinceUpdate = FCk_Time{TNumericLimits<double>::Max()};
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -330,14 +330,14 @@ namespace ck
         if (InCurrent._Explored.IsEmpty())
         { return; }
 
-        InCurrent._TimeSinceUpdate += InDeltaT.Get_Seconds();
+        InCurrent._TimeSinceUpdate += InDeltaT;
 
         const auto UpdateInterval = InParams.Get_UpdateInterval();
 
-        if (UpdateInterval > 0.0f && InCurrent._TimeSinceUpdate < UpdateInterval)
+        if (UpdateInterval > FCk_Time::ZeroSecond() && InCurrent._TimeSinceUpdate < UpdateInterval)
         { return; }
 
-        InCurrent._TimeSinceUpdate = 0.0f;
+        InCurrent._TimeSinceUpdate = FCk_Time::ZeroSecond();
 
         {
             SCOPE_CYCLE_COUNTER(STAT_CkFogOfWar_Reveal);
