@@ -24,34 +24,37 @@ public:
 	virtual auto GetSectionName()  const -> FName override { return TEXT("Style"); }
 
 	// ----- Palette: Backgrounds — each tier slightly lighter than the last --
+	// Defaults follow the Mission Control mockup family
+	// (CkGoapDebugger/Mockups/mockup_d_mission_control.html): inset → bg →
+	// panel2 → panel.
 	UPROPERTY(Config, EditAnywhere, Category = "Palette|Backgrounds")
-	FLinearColor BgRoot = FLinearColor(FColor(0x0b, 0x0e, 0x13, 255));
+	FLinearColor BgRoot = FLinearColor(FColor(0x10, 0x14, 0x1b, 255));
 
 	UPROPERTY(Config, EditAnywhere, Category = "Palette|Backgrounds")
-	FLinearColor Bg1 = FLinearColor(FColor(0x11, 0x15, 0x1c, 255));
+	FLinearColor Bg1 = FLinearColor(FColor(0x14, 0x18, 0x1f, 255));
 
 	UPROPERTY(Config, EditAnywhere, Category = "Palette|Backgrounds")
-	FLinearColor Bg2 = FLinearColor(FColor(0x16, 0x1b, 0x24, 255));
+	FLinearColor Bg2 = FLinearColor(FColor(0x17, 0x1c, 0x25, 255));
 
 	UPROPERTY(Config, EditAnywhere, Category = "Palette|Backgrounds")
-	FLinearColor Bg3 = FLinearColor(FColor(0x1b, 0x22, 0x30, 255));
+	FLinearColor Bg3 = FLinearColor(FColor(0x1b, 0x21, 0x2b, 255));
 
 	// ----- Palette: Borders --------------------------------------------------
 	UPROPERTY(Config, EditAnywhere, Category = "Palette|Borders")
-	FLinearColor Border = FLinearColor(FColor(0x23, 0x2a, 0x38, 255));
+	FLinearColor Border = FLinearColor(FColor(0x22, 0x29, 0x37, 255));
 
 	UPROPERTY(Config, EditAnywhere, Category = "Palette|Borders")
-	FLinearColor BorderStrong = FLinearColor(FColor(0x32, 0x39, 0x4a, 255));
+	FLinearColor BorderStrong = FLinearColor(FColor(0x2a, 0x32, 0x40, 255));
 
 	// ----- Palette: Text -----------------------------------------------------
 	UPROPERTY(Config, EditAnywhere, Category = "Palette|Text")
-	FLinearColor Text = FLinearColor(FColor(0xe5, 0xe7, 0xed, 255));
+	FLinearColor Text = FLinearColor(FColor(0xe9, 0xed, 0xf4, 255));
 
 	UPROPERTY(Config, EditAnywhere, Category = "Palette|Text")
-	FLinearColor TextDim = FLinearColor(FColor(0x8a, 0x92, 0xa4, 255));
+	FLinearColor TextDim = FLinearColor(FColor(0x94, 0xa0, 0xb3, 255));
 
 	UPROPERTY(Config, EditAnywhere, Category = "Palette|Text")
-	FLinearColor TextMute = FLinearColor(FColor(0x5a, 0x62, 0x77, 255));
+	FLinearColor TextMute = FLinearColor(FColor(0x5d, 0x69, 0x80, 255));
 
 	UPROPERTY(Config, EditAnywhere, Category = "Palette|Text")
 	FLinearColor TextStrong = FLinearColor(0.95f, 0.95f, 0.95f);
@@ -168,20 +171,43 @@ public:
 	FLinearColor Graph_Node_Border_Center = FLinearColor(FColor(0x4C, 0xAF, 0x50));
 
 	// ----- Palette: Semantic -------------------------------------------------
+	// Mission Control accent: telemetry cyan. Warn stays amber-family so
+	// fallback/warning surfaces keep their meaning next to the accent.
 	UPROPERTY(Config, EditAnywhere, Category = "Palette|Semantic")
-	FLinearColor Accent = FLinearColor(FColor(0xf5, 0xc8, 0x42, 255));
+	FLinearColor Accent = FLinearColor(FColor(0x54, 0xc6, 0xff, 255));
 
 	UPROPERTY(Config, EditAnywhere, Category = "Palette|Semantic")
-	FLinearColor Ok = FLinearColor(FColor(0x55, 0xc4, 0x7a, 255));
+	FLinearColor Ok = FLinearColor(FColor(0x46, 0xd0, 0x8d, 255));
 
 	UPROPERTY(Config, EditAnywhere, Category = "Palette|Semantic")
-	FLinearColor Err = FLinearColor(FColor(0xd6, 0x5a, 0x5a, 255));
+	FLinearColor Err = FLinearColor(FColor(0xf0, 0x63, 0x7a, 255));
 
 	UPROPERTY(Config, EditAnywhere, Category = "Palette|Semantic")
-	FLinearColor Warn = FLinearColor(FColor(0xe6, 0xa5, 0x45, 255));
+	FLinearColor Warn = FLinearColor(FColor(0xf2, 0xb3, 0x3d, 255));
 
 	UPROPERTY(Config, EditAnywhere, Category = "Palette|Semantic")
 	FLinearColor Info = FLinearColor(FColor(0x5f, 0xb3, 0xd4, 255));
+
+	// ----- Palette: Semantic dim backgrounds ---------------------------------
+	// Chip/pill fills — the tone's "dim" surface (mockup: *-dim tokens). Keep
+	// them dark enough that tone-colored text on top passes contrast.
+	UPROPERTY(Config, EditAnywhere, Category = "Palette|Semantic Dim")
+	FLinearColor AccentDim = FLinearColor(FColor(0x1b, 0x34, 0x48, 255));
+
+	UPROPERTY(Config, EditAnywhere, Category = "Palette|Semantic Dim")
+	FLinearColor OkDim = FLinearColor(FColor(0x12, 0x36, 0x2a, 255));
+
+	UPROPERTY(Config, EditAnywhere, Category = "Palette|Semantic Dim")
+	FLinearColor ErrDim = FLinearColor(FColor(0x3b, 0x1b, 0x24, 255));
+
+	UPROPERTY(Config, EditAnywhere, Category = "Palette|Semantic Dim")
+	FLinearColor WarnDim = FLinearColor(FColor(0x3a, 0x2e, 0x12, 255));
+
+	UPROPERTY(Config, EditAnywhere, Category = "Palette|Semantic Dim")
+	FLinearColor InfoDim = FLinearColor(FColor(0x14, 0x30, 0x3c, 255));
+
+	UPROPERTY(Config, EditAnywhere, Category = "Palette|Semantic Dim")
+	FLinearColor NeutralDim = FLinearColor(FColor(0x10, 0x14, 0x1b, 255));
 
 	// ----- Palette: Action Categories ---------------------------------------
 	UPROPERTY(Config, EditAnywhere, Category = "Palette|Categories")
