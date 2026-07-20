@@ -432,13 +432,23 @@ auto
     _LastPumpWarningTime = InNow;
     _LastWarnedStillDirtyNames = StillDirtyNames;
 
-    ck::ecs::Warning(TEXT("Pump limit [{}] reached. Still dirty: [{}]"),
-        _MaxPumpIterations, StillDirtyNames.Num());
-
+    // The per-processor breakdown rides INSIDE the header's message rather than as N
+    // follow-up Warnings. Consumers that suppress this advisory (CkTests' AutoTest runner
+    // default-suppression list) match one Contains pattern against a whole log entry — a
+    // separate "  - [Name]" line is its own entry, slips the pattern, and fails otherwise-
+    // passing tests. One entry also collapses N+1 trips through the log pipeline into one.
+    auto Breakdown = FString{};
+    constexpr auto ApproxCharsPerEntry = 48;
+    Breakdown.Reserve(StillDirtyNames.Num() * ApproxCharsPerEntry);
     for (const auto& Name : StillDirtyNames)
     {
-        ck::ecs::Warning(TEXT("  - [{}]"), Name);
+        Breakdown += TEXT("\n  - [");
+        Breakdown += Name.ToString();
+        Breakdown += TEXT("]");
     }
+
+    ck::ecs::Warning(TEXT("Pump limit [{}] reached. Still dirty: [{}]{}"),
+        _MaxPumpIterations, StillDirtyNames.Num(), Breakdown);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
