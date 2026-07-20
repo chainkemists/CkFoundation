@@ -82,6 +82,10 @@ auto
 
 	if (PreviousValue == InRequest.Get_Value()) { return; }
 
+	InHandle.AddOrGet<FFragment_Goap_WorldState_ChangeLog>().Record(
+		FCk_Goap_WorldStateChange{InRequest.Get_Key(), PreviousValue, InRequest.Get_Value(),
+			static_cast<int64>(GFrameCounter), ECk_Goap_WorldStateMutator::SetValue});
+
 	UUtils_Signal_OnGoapWorldStateValueChanged::Broadcast(InHandle,
 		MakePayload(InHandle, FCk_Goap_WorldState_Payload_OnValueChanged{
 			InRequest.Get_Key(), PreviousValue, InRequest.Get_Value()}));

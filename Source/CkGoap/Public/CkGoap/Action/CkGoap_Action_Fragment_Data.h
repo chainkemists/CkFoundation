@@ -84,6 +84,16 @@ struct CKGOAP_API FCk_Request_Goap_Planner_Plan
 {
     GENERATED_BODY()
     CK_GENERATED_BODY(FCk_Request_Goap_Planner_Plan);
+
+private:
+    // Who asked for this plan — recorded onto the Planner's ReplanCause when
+    // the request is consumed. Defaults to Explicit so existing callers keep
+    // their meaning; AutoReplan stamps its dirty-derived origin.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    ECk_Goap_ReplanOrigin _Origin = ECk_Goap_ReplanOrigin::Explicit;
+
+public:
+    CK_PROPERTY(_Origin);
 };
 
 USTRUCT(BlueprintType)
