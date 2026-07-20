@@ -335,8 +335,16 @@ auto
 	// Replan frequency across all Planners — #1 scaling risk (default replan throttle is 0).
 	INC_DWORD_STAT(STAT_Goap_ReplansRequested);
 
+	const auto Origin = [&]
+	{
+		if (IsInitialPlanPending)  { return ECk_Goap_ReplanOrigin::PlanOnStart; }
+		if (WSDirty && CostDirty)  { return ECk_Goap_ReplanOrigin::WorldStateAndCostDirty; }
+		if (CostDirty)             { return ECk_Goap_ReplanOrigin::CostDirty; }
+		return ECk_Goap_ReplanOrigin::WorldStateDirty;
+	}();
+
 	auto& Requests = InHandle.AddOrGet<FFragment_Goap_Planner_Requests>();
-	Requests._Requests.Add(FCk_Request_Goap_Planner_Plan{});
+	Requests._Requests.Add(FCk_Request_Goap_Planner_Plan{}.Set_Origin(Origin));
 
 	InThrottle._SecondsSinceLastReplan = 0.0f;
 	InHandle.Try_Remove<FTag_Goap_Dirty_WorldState>();
@@ -425,6 +433,32 @@ auto
 				InHandle.Try_Remove<FTag_AStar_SearchComplete>();
 
 				++InPlanState._PlanAttemptCount;
+
+				// Record why this replan fired + the world-state changes since
+				// the previous one (the debugger's coalescing evidence).
+				{
+					auto& Cause = InHandle.AddOrGet<FFragment_Goap_Planner_ReplanCause>();
+					auto NewInfo = FCk_Goap_ReplanCauseInfo{};
+					NewInfo._Origin = InTypedRequest.Get_Origin();
+					NewInfo._AttemptNumber = InPlanState.Get_PlanAttemptCount();
+					NewInfo._FrameNumber = static_cast<int64>(GFrameCounter);
+
+					if (const auto CauseWS = InWSSource.Get_Resolved(); ck::IsValid(CauseWS))
+					{
+						if (CauseWS.Has<FFragment_Goap_WorldState_ChangeLog>())
+						{
+							const auto& ChangeLog = CauseWS.Get<FFragment_Goap_WorldState_ChangeLog>();
+							for (const auto& Change : ChangeLog.Get_Entries())
+							{
+								if (Change.Get_FrameNumber() > Cause._LastReplanFrame)
+								{ NewInfo._ChangedKeys.Add(Change); }
+							}
+						}
+					}
+
+					Cause._Info = MoveTemp(NewInfo);
+					Cause._LastReplanFrame = static_cast<int64>(GFrameCounter);
+				}
 
 				const auto Source = InWSSource.Get_Resolved();
 				if (NOT ck::IsValid(Source))

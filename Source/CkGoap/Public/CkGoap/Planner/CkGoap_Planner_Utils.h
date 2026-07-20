@@ -179,6 +179,78 @@ public:
 	static TArray<FCk_GoapWS_Condition_Authored>
 	Get_InvalidGoal(const FCk_Handle_Goap_Planner& InPlanner);
 
+	// ---- Planner-params reads (the debugger's Settings drawer) ---------------
+
+	UFUNCTION(BlueprintPure, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Get Planner Tag")
+	static FGameplayTag
+	Get_PlannerTag(const FCk_Handle_Goap_Planner& InPlanner);
+
+	UFUNCTION(BlueprintPure, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Get Replan Policy")
+	static ECk_Goap_ReplanPolicy
+	Get_ReplanPolicy(const FCk_Handle_Goap_Planner& InPlanner);
+
+	UFUNCTION(BlueprintPure, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Get Min Replan Interval")
+	static float
+	Get_MinReplanInterval(const FCk_Handle_Goap_Planner& InPlanner);
+
+	UFUNCTION(BlueprintPure, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Get Search Budget Microseconds")
+	static int64
+	Get_SearchBudgetMicroseconds(const FCk_Handle_Goap_Planner& InPlanner);
+
+	UFUNCTION(BlueprintPure, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Get Cost Threshold")
+	static float
+	Get_CostThreshold(const FCk_Handle_Goap_Planner& InPlanner);
+
+	UFUNCTION(BlueprintPure, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Get Plan On Start")
+	static bool
+	Get_PlanOnStart(const FCk_Handle_Goap_Planner& InPlanner);
+
+	UFUNCTION(BlueprintPure, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Get Allow Plan Failed")
+	static bool
+	Get_AllowPlanFailed(const FCk_Handle_Goap_Planner& InPlanner);
+
+	// Cached result of the Setup-time fallback-guarantee check ("always-valid-
+	// plan" tenet): true iff some registered Action has no preconditions and
+	// effects covering every goal condition.
+	UFUNCTION(BlueprintPure, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Get Has Unconditional Fallback")
+	static bool
+	Get_HasUnconditionalFallback(const FCk_Handle_Goap_Planner& InPlanner);
+
+	// ---- Last-replan diagnostics (the debugger's timeline + diff card) -------
+
+	// Why the last replan fired: origin, the world-state changes recorded since
+	// the previous replan (ChangedKeys.Num() > 1 ⇒ the throttle window
+	// coalesced), attempt number, frame. Default-constructed if never planned.
+	UFUNCTION(BlueprintPure, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Get Last Replan Cause")
+	static FCk_Goap_ReplanCauseInfo
+	Get_LastReplanCause(const FCk_Handle_Goap_Planner& InPlanner);
+
+	// Post-search statistics of the most recent A* run: status, expanded
+	// iterations, elapsed active-time µs, discovered-constraint-set pool size,
+	// plan length + cost.
+	UFUNCTION(BlueprintPure, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Get Last Search Stats")
+	static FCk_Goap_SearchStats
+	Get_LastSearchStats(const FCk_Handle_Goap_Planner& InPlanner);
+
+	// The last completed regressive search, one row per discovered constraint
+	// set (discovery order; row 0 = the goal). Each row: the constraints, the
+	// action whose reverse application produced it, and how the seed-time world
+	// state scored it. Empty before the first search.
+	UFUNCTION(BlueprintPure, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Get Last Search Debug")
+	static TArray<FCk_Goap_SearchDebugRow>
+	Get_LastSearchDebug(const FCk_Handle_Goap_Planner& InPlanner);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",

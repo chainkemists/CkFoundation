@@ -170,6 +170,15 @@ public:
 	static int32
 	Get_LayerKeyCount(const FCk_Handle_Goap_WorldState& InWorldState, FName InLayerName);
 
+	// The most recent effective-value changes on this WorldState (bounded ring,
+	// oldest first): base Set_Value writes AND override push/pop/clear deltas,
+	// each stamped with the mutator and frame number. Feeds debugger timelines
+	// and replan-cause displays.
+	UFUNCTION(BlueprintPure, Category = "Ck|GOAP|WorldState",
+		DisplayName = "[Ck][GOAP|WS] Get Recent Changes")
+	static TArray<FCk_Goap_WorldStateChange>
+	Get_RecentChanges(const FCk_Handle_Goap_WorldState& InWorldState);
+
 // --------------------------------------------------------------------------------------------------------------------
 	//
 	// Registering an entity as a subscriber on a WorldState causes that entity
@@ -195,6 +204,14 @@ public:
 	Request_RemoveSubscriber(
 		UPARAM(ref) FCk_Handle_Goap_WorldState& InWorldState,
 		UPARAM(ref) FCk_Handle& InSubscriber);
+
+	// Number of currently-valid subscribers on this WorldState. Feeds the
+	// debugger's blast-radius display — a shared WS means every subscribed
+	// entity replans when a key flips (e.g. under a sandbox override layer).
+	UFUNCTION(BlueprintPure, Category = "Ck|GOAP|WorldState",
+		DisplayName = "[Ck][GOAP|WS] Get Subscriber Count")
+	static int32
+	Get_SubscriberCount(const FCk_Handle_Goap_WorldState& InWorldState);
 
 // --------------------------------------------------------------------------------------------------------------------
 
