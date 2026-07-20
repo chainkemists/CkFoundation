@@ -60,7 +60,7 @@ namespace ck
         TArray<FCk_Entity> _ScratchPoiEntities;
         TArray<TOptional<FCk_Compass_Entry>> _ScratchParallelSlots;
 
-        float _TimeSinceUpdate = 0.0f;
+        FCk_Time _TimeSinceUpdate;
 
     public:
         CK_PROPERTY_GET(_Observer);

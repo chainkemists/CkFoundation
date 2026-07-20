@@ -2,6 +2,7 @@
 
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Time/CkTime.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_Typesafe.h"
@@ -183,12 +184,12 @@ private:
               meta = (AllowPrivateAccess = true))
     FGameplayTagQuery _CategoryFilter;
 
-    // Seconds between projection updates. 0 = every frame. UNLIKE the compass there is no unthrottled
+    // Time between projection updates. Zero = every frame. UNLIKE the compass there is no unthrottled
     // channel: view origin/yaw AND all entry positions go stale together between updates (> 0 trades
     // blip smoothness for cost)
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
-    float _UpdateInterval = 0.0f;
+              meta = (AllowPrivateAccess = true))
+    FCk_Time _UpdateInterval = FCk_Time{0.0f};
 
 public:
     CK_PROPERTY_GET(_ViewExtent);

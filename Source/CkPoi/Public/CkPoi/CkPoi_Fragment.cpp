@@ -20,7 +20,7 @@ namespace ck_poi_fragment
     //
     // COVERAGE (rebuild-model contract, not a bug): only recipe-rebuildable POIs persist —
     //   - POIs composed during their owner's Construct (game EntityScripts, UCk_Poi_EntityScript via level
-    //     spawners or Create_Durable) are rebuilt on load and hydrated here.
+    //     spawners or Request_SpawnEntity) are rebuilt on load and hydrated here.
     //   - Bare Create()'d hosts have no rebuild recipe: their payloads would orphan on load, so Produce
     //     additionally returns UNSET for TTL pings (FTag_Poi_TransientTtl) — transient BY DESIGN.
     struct FRegistrar

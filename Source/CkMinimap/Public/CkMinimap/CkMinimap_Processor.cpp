@@ -4,7 +4,6 @@
 
 #include "CkCamera/Camera/CkCamera_Utils.h"
 
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
@@ -46,9 +45,11 @@ namespace ck
     {
         InMinimapEntity.Remove<MarkedDirtyBy>();
 
+        // Direct-attach default: the minimap entity IS the observer (mirrors the compass). A standalone
+        // minimap composed via Create points its observer at the lifetime owner through a SetObserver request.
         if (ck::Is_NOT_Valid(InCurrent._Observer))
         {
-            InCurrent._Observer = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InMinimapEntity);
+            InCurrent._Observer = InMinimapEntity;
         }
 
         InCurrent._ViewExtent = InParams.Get_ViewExtent();
@@ -72,7 +73,7 @@ namespace ck
         InCurrent._RotationMode = InParams.Get_RotationMode();
 
         // Force the first projection pass to run immediately regardless of the update interval
-        InCurrent._TimeSinceUpdate = TNumericLimits<float>::Max();
+        InCurrent._TimeSinceUpdate = FCk_Time{TNumericLimits<double>::Max()};
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -126,7 +127,7 @@ namespace ck
         InCurrent._ViewExtent = InRequest.Get_ViewExtent();
 
         // Zoom changes must reflect immediately, not at the next throttled interval
-        InCurrent._TimeSinceUpdate = TNumericLimits<float>::Max();
+        InCurrent._TimeSinceUpdate = FCk_Time{TNumericLimits<double>::Max()};
     }
 
     auto
@@ -142,7 +143,7 @@ namespace ck
 
         InParams.Set_CategoryFilter(InRequest.Get_CategoryFilter());
 
-        InCurrent._TimeSinceUpdate = TNumericLimits<float>::Max();
+        InCurrent._TimeSinceUpdate = FCk_Time{TNumericLimits<double>::Max()};
     }
 
     auto
@@ -158,9 +159,9 @@ namespace ck
 
         InCurrent._Observer = ck::IsValid(InRequest.Get_Observer())
             ? InRequest.Get_Observer()
-            : UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InMinimapEntity);
+            : static_cast<const FCk_Handle&>(InMinimapEntity);
 
-        InCurrent._TimeSinceUpdate = TNumericLimits<float>::Max();
+        InCurrent._TimeSinceUpdate = FCk_Time{TNumericLimits<double>::Max()};
     }
 
     auto
@@ -176,7 +177,7 @@ namespace ck
 
         InCurrent._RotationMode = InRequest.Get_RotationMode();
 
-        InCurrent._TimeSinceUpdate = TNumericLimits<float>::Max();
+        InCurrent._TimeSinceUpdate = FCk_Time{TNumericLimits<double>::Max()};
     }
 
     auto
@@ -192,7 +193,7 @@ namespace ck
 
         InCurrent._FogOfWar = InRequest.Get_FogOfWar();
 
-        InCurrent._TimeSinceUpdate = TNumericLimits<float>::Max();
+        InCurrent._TimeSinceUpdate = FCk_Time{TNumericLimits<double>::Max()};
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -227,16 +228,16 @@ namespace ck
             return;
         }
 
-        InCurrent._TimeSinceUpdate += InDeltaT.Get_Seconds();
+        InCurrent._TimeSinceUpdate += InDeltaT;
 
         const auto UpdateInterval = InParams.Get_UpdateInterval();
 
         // UNLIKE the compass there is no unthrottled channel — view origin/yaw and every entry position
         // go stale together between updates (delivery contract point; default interval is 0)
-        if (UpdateInterval > 0.0f && InCurrent._TimeSinceUpdate < UpdateInterval)
+        if (UpdateInterval > FCk_Time::ZeroSecond() && InCurrent._TimeSinceUpdate < UpdateInterval)
         { return; }
 
-        InCurrent._TimeSinceUpdate = 0.0f;
+        InCurrent._TimeSinceUpdate = FCk_Time::ZeroSecond();
 
         InCurrent._ViewOrigin = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(ObserverTransform);
         InCurrent._ViewYawDegrees = FRotator::ClampAxis(DoResolveViewYaw(Observer, InCurrent));
@@ -304,9 +305,8 @@ namespace ck
         // (same policy as CK_IGNORE_PENDING_KILL).
         //
         // The POI set is GATHERED first, then projected data-parallel: the per-POI body is pure registry
-        // READS (poi fragments, lifetime owner, transforms, fog grid) whose writers all ran in earlier
-        // groups, and each worker writes only its own index slot. Signals/sort/diff stay on the calling
-        // thread.
+        // READS (poi fragments, own transforms, fog grid) whose writers all ran in earlier groups, and
+        // each worker writes only its own index slot. Signals/sort/diff stay on the calling thread.
         auto& PoiEntities = InCurrent._ScratchPoiEntities;
         PoiEntities.Reset();
 
@@ -344,20 +344,15 @@ namespace ck
             if (NOT FilterIsEmpty && NOT CategoryFilter.Matches(FGameplayTagContainer{PoiParams.Get_Category()}))
             { return; }
 
-            // POI position = its lifetime owner's Transform + the POI's relative offset (a POI is a child
-            // entity; the owner hosts the Transform — see CkPoi's composition contract)
-            const auto PoiOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(PoiGenericHandle);
+            // POI position = the POI entity's own Transform + its relative offset (direct-attach: the POI
+            // entity carries the Transform — see CkPoi's composition contract)
+            const auto PoiTransformHandle = UCk_Utils_Transform_UE::Cast(PoiGenericHandle);
 
-            if (ck::Is_NOT_Valid(PoiOwner))
+            if (ck::Is_NOT_Valid(PoiTransformHandle))
             { return; }
 
-            const auto PoiOwnerTransform = UCk_Utils_Transform_UE::Cast(PoiOwner);
-
-            if (ck::Is_NOT_Valid(PoiOwnerTransform))
-            { return; }
-
-            const auto PoiOwnerWorldTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(PoiOwnerTransform);
-            const auto PoiLocation = PoiOwnerWorldTransform.TransformPosition(PoiParams.Get_RelativeLocation());
+            const auto PoiWorldTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(PoiTransformHandle);
+            const auto PoiLocation = PoiWorldTransform.TransformPosition(PoiParams.Get_RelativeLocation());
 
             const auto Distance = static_cast<float>(FVector::Dist(ViewOrigin, PoiLocation));
             const auto MaxVisibleRange = PoiParams.Get_MaxVisibleRange();
@@ -387,7 +382,7 @@ namespace ck
                 PoiParams.Get_Category(),
                 IsOutsideFrame ? minimap::Get_ClampToFrame(FramePos, FrameShape) : FramePos,
                 EdgeState,
-                static_cast<float>(PoiOwnerWorldTransform.Rotator().Yaw),
+                static_cast<float>(PoiWorldTransform.Rotator().Yaw),
                 Distance,
                 static_cast<float>(PoiLocation.Z - ViewOrigin.Z),
                 PoiParams.Get_Priority()
