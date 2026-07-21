@@ -124,7 +124,9 @@ auto
         const FCk_Handle_Poi& InPoi)
     -> ECk_EnableDisable
 {
-    return InPoi.Get<ck::FFragment_Poi_Current>().Get_EnableDisable();
+    return InPoi.Has<ck::FTag_Poi_Disabled>()
+        ? ECk_EnableDisable::Disable
+        : ECk_EnableDisable::Enable;
 }
 
 auto
