@@ -20,6 +20,10 @@ namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_Poi_NeedsSetup);
 
+    // Enable state lives as a tag (not a Current member) so projectors (compass/minimap) can
+    // exclude disabled POIs directly in their view instead of branching per-POI.
+    CK_DEFINE_ECS_TAG(FTag_Poi_Disabled);
+
     // --------------------------------------------------------------------------------------------------------------------
 
     using FFragment_Poi_Params = FCk_Fragment_Poi_ParamsData;
@@ -37,11 +41,9 @@ namespace ck
         friend class ::UCk_Utils_Poi_UE;
 
     private:
-        ECk_EnableDisable _EnableDisable = ECk_EnableDisable::Enable;
         FGameplayTagContainer _StateTags;
 
     public:
-        CK_PROPERTY_GET(_EnableDisable);
         CK_PROPERTY_GET(_StateTags);
     };
 

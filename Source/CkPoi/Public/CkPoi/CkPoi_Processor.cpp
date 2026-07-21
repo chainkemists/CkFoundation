@@ -68,17 +68,33 @@ namespace ck
             const FCk_Request_Poi_EnableDisable& InRequest)
         -> void
     {
+        const auto CurrentState = InHandle.Has<FTag_Poi_Disabled>()
+            ? ECk_EnableDisable::Disable
+            : ECk_EnableDisable::Enable;
+
         // No-op requests must NOT broadcast.
-        if (InCurrentComp._EnableDisable == InRequest.Get_EnableDisable())
+        if (CurrentState == InRequest.Get_EnableDisable())
         { return; }
 
         poi::VeryVerbose(TEXT("Handling EnableDisable [{}] Request for Poi with Entity [{}]"),
             InRequest.Get_EnableDisable(), InHandle);
 
-        InCurrentComp._EnableDisable = InRequest.Get_EnableDisable();
+        switch (InRequest.Get_EnableDisable())
+        {
+            case ECk_EnableDisable::Enable:
+            {
+                InHandle.Remove<FTag_Poi_Disabled>();
+                break;
+            }
+            case ECk_EnableDisable::Disable:
+            {
+                InHandle.Add<FTag_Poi_Disabled>();
+                break;
+            }
+        }
 
         UUtils_Signal_OnPoiEnableDisable::Broadcast(InHandle,
-            MakePayload(InHandle, InCurrentComp._EnableDisable));
+            MakePayload(InHandle, InRequest.Get_EnableDisable()));
     }
 
     auto

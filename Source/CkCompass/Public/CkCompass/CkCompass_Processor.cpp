@@ -278,6 +278,7 @@ namespace ck
         InCompassEntity.View<
             ck::FFragment_Poi_Params,
             ck::FFragment_Poi_Current,
+            ck::TExclude<ck::FTag_Poi_Disabled>,
             ck::TExclude<ck::FTag_DestroyEntity_EndPlay>,
             ck::TExclude<ck::FTag_DestroyEntity_Teardown>,
             ck::TExclude<ck::FTag_DestroyEntity_Await>,
@@ -301,10 +302,6 @@ namespace ck
             const auto PoiGenericHandle = InCompassEntity.Get_ValidHandle(PoiEntities[InIndex].Get_ID());
 
             const auto& PoiParams = PoiGenericHandle.Get<ck::FFragment_Poi_Params>();
-            const auto& PoiCurrent = PoiGenericHandle.Get<ck::FFragment_Poi_Current>();
-
-            if (PoiCurrent.Get_EnableDisable() == ECk_EnableDisable::Disable)
-            { return; }
 
             if (NOT FilterIsEmpty && NOT CategoryFilter.Matches(FGameplayTagContainer{PoiParams.Get_Category()}))
             { return; }
