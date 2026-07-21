@@ -41,9 +41,10 @@ public:
 
 // The rebuild recipe for durable standalone POIs. Under the v3 rebuild+hydrate save model, entities only
 // round-trip a save when they have a spawn recipe — this script IS that recipe: level spawners
-// (ACk_EntitySpawner_UE) reference it for designer-placed POIs, and Request_SpawnEntity spawns it for
-// runtime-placed durable POIs (player waypoints). Its replayed Construct re-composes Transform + Poi on load;
-// the CkPoi persistence handler then hydrates enable-state and state tags.
+// (ACk_EntitySpawner_UE) reference it for designer-placed POIs, and runtime code spawns it via
+// UCk_Utils_EntityScript_UE::Request_SpawnEntity with FCk_Poi_SpawnParams for runtime-placed durable POIs
+// (player waypoints). Its replayed Construct re-composes Transform + Poi on load; the CkPoi persistence
+// handler then hydrates enable-state and state tags.
 UCLASS(Blueprintable, BlueprintType)
 class CKPOI_API UCk_Poi_EntityScript : public UCk_GenericEntityScript_UE
 {
@@ -58,7 +59,7 @@ private:
     FCk_Fragment_Poi_ParamsData _PoiParams;
 
     // Injected by ACk_EntitySpawner_UE with the spawner actor's world transform (level-placed path); overridden by
-    // FCk_Poi_SpawnParams when spawned through Request_SpawnEntity.
+    // FCk_Poi_SpawnParams when spawned at runtime.
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Poi",
               meta = (AllowPrivateAccess = true))
     FTransform _SpawnTransform;
