@@ -2,7 +2,7 @@
 
 #include "CkCompass/CkCompass_Log.h"
 
-#include "CkCore/Math/Bearing/CkBearing_Utils.h"
+#include "CkCore/Math/Vector/CkVector_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
@@ -102,7 +102,32 @@ auto
         float InHeadingDegrees)
     -> ECk_CardinalAndOrdinalDirection
 {
-    return ck::bearing::Get_CardinalAndOrdinalDirection(InHeadingDegrees);
+    return UCk_Utils_Vector2_UE::Get_ClosestCardinalAndOrdinalDirection_ByHeading(InHeadingDegrees);
+}
+
+auto
+    UCk_Utils_Compass_UE::
+    Get_NormalizedArcOffset(
+        float InSignedBearingDegrees,
+        float InArcDegrees)
+    -> float
+{
+    const auto HalfArc = InArcDegrees * 0.5f;
+
+    if (HalfArc <= 0.0f)
+    { return 0.0f; }
+
+    return FMath::Clamp(InSignedBearingDegrees / HalfArc, -1.0f, 1.0f);
+}
+
+auto
+    UCk_Utils_Compass_UE::
+    Get_IsOutsideArc(
+        float InSignedBearingDegrees,
+        float InArcDegrees)
+    -> bool
+{
+    return FMath::Abs(InSignedBearingDegrees) > InArcDegrees * 0.5f;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
