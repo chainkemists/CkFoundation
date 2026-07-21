@@ -2,16 +2,10 @@
 #include "CkEcsExt/CkEcsExt_Utils.h"
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkRecord/Record/CkRecord_Utils.h"
-
-#include "CkCore/Time/CkTime.h"
-
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 #include "CkPoi/CkPoi_Fragment.h"
 
 #include "CkPoi/CkPoi_Fragment_Data.h"
-
-#include "CkTimer/CkTimer_Fragment_Data.h"
 
 #include <NativeGameplayTags.h>
 
@@ -32,16 +26,13 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Poi_UE);
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Poi);
 
-private:
-    struct RecordOfPois_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfPois> {};
-
 public:
     friend class UCk_Utils_Ecs_Base_UE;
 
 public:
-    // Compose the POI feature DIRECTLY onto InHandle (no child entity). InHandle must already have the Transform
-    // feature — the POI's world position is its OWN Transform.TransformPosition(Params._RelativeLocation). An
-    // entity hosts at most ONE direct POI; compose additional POIs as child entities via Create.
+    // Compose the POI feature DIRECTLY onto InHandle (no child entity). The entity must already have the
+    // Transform feature — the POI's world position is EntityTransform.TransformPosition(Params._RelativeLocation).
+    // An entity hosts at most ONE POI; spawn one entity per POI (UCk_Poi_EntityScript is the standalone recipe).
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Poi",
               DisplayName="[Ck][Poi] Add Feature")
@@ -50,32 +41,12 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_Poi_ParamsData& InParams);
 
-    // Create a NEW POI child entity under InLifetimeOwner at a world location, connected to the owner's RecordOfPois
-    // (the standalone / ping / temporary-marker primitive). The child carries its own Transform and the POI feature.
-    // InTtl > 0 composes a CkTimer that destroys the child on completion (zero = no TTL). Replication defaults LOCAL:
-    // pings are per-player until the phase-4 net pass.
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Poi",
-              DisplayName="[Ck][Poi] Create")
-    static FCk_Handle_Poi
-    Create(
-        UPARAM(ref) FCk_Handle& InLifetimeOwner,
-        const FTransform& InTransform,
-        const FCk_Fragment_Poi_ParamsData& InParams,
-        FCk_Time InTtl,
-        ECk_Replication InReplication = ECk_Replication::DoesNotReplicate);
-
 public:
-    // Has Feature
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Poi",
+              DisplayName="[Ck][Poi] Has Feature")
     static bool
     Has(
-        const FCk_Handle& InHandle);
-
-    UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|Poi",
-        DisplayName="[Ck][Poi] Has Any Poi")
-    static bool
-    Has_Any(
         const FCk_Handle& InHandle);
 
 private:
@@ -102,31 +73,6 @@ private:
         meta = (CompactNodeTitle = "INVALID_PoiHandle", Keywords = "make"))
     static FCk_Handle_Poi
     Get_InvalidHandle() { return {}; };
-
-public:
-    // Returns the FIRST POI on the owner whose category matches (multiple POIs may share a category).
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Poi",
-              DisplayName="[Ck][Poi] Try Get Poi By Category")
-    static FCk_Handle_Poi
-    TryGet_Poi_ByCategory(
-        const FCk_Handle& InPoiOwnerEntity,
-        UPARAM(meta = (Categories = "Poi.Category")) FGameplayTag InCategory);
-
-public:
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Poi",
-              DisplayName="[Ck][Poi] For Each",
-              meta=(AutoCreateRefTerm="InDelegate, InOptionalPayload"))
-    static TArray<FCk_Handle_Poi>
-    ForEach_Poi(
-        const FCk_Handle& InPoiOwnerEntity,
-        const FInstancedStruct& InOptionalPayload,
-        const FCk_Lambda_InHandle& InDelegate);
-    static auto
-    ForEach_Poi(
-        const FCk_Handle& InPoiOwnerEntity,
-        const TFunction<void(FCk_Handle_Poi)>& InFunc) -> void;
 
 public:
     UFUNCTION(BlueprintPure,
@@ -185,8 +131,8 @@ public:
     Get_StateTags(
         const FCk_Handle_Poi& InPoi);
 
-    // OwnerTransform.TransformPosition(_RelativeLocation) — the position every projector (compass/minimap/world
-    // indicator) reads. The owner is the POI child's lifetime owner (the entity Add was called on).
+    // EntityTransform.TransformPosition(_RelativeLocation) — the position every projector (compass/minimap/world
+    // indicator) reads. The transform is the POI entity's own (the entity Add was called on).
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Poi",
               DisplayName="[Ck][Poi] Get World Location")
@@ -264,12 +210,6 @@ public:
     UnbindFrom_OnEnableDisable(
         UPARAM(ref) FCk_Handle_Poi& InPoi,
         const FCk_Delegate_Poi_EnableDisable& InDelegate);
-
-public:
-    static auto OnTtlTimerDone(
-        FCk_Handle_Timer InTimer,
-        FCk_Chrono InChrono,
-        FCk_Time InDeltaT) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

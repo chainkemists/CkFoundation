@@ -1,20 +1,14 @@
 #include "CkPoi_Utils.h"
 
-#include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Validation/CkIsValid.h"
 
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
-#include "CkEcs/Processor/CkProcessor.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkPoi/CkPoi_Fragment.h"
 #include "CkPoi/CkPoi_Log.h"
-
-#include "CkTimer/CkTimer_Fragment.h"
-#include "CkTimer/CkTimer_Utils.h"
 
 #include <NativeGameplayTags.h>
 
@@ -34,126 +28,30 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Handle supplied to Poi Add"))
     { return {}; }
 
+    CK_ENSURE_IF_NOT(NOT Has(InHandle),
+        TEXT("Handle [{}] already has the Poi feature. An entity hosts at most ONE POI — spawn one entity per POI"),
+        InHandle)
+    { return Cast(InHandle); }
+
     CK_ENSURE_IF_NOT(UCk_Utils_Transform_UE::Has(InHandle),
-        TEXT("Poi Add requires the OWNER Entity [{}] to have the Transform feature — the POI's world position is "
-             "derived from the owner's transform"), InHandle)
+        TEXT("Poi Add requires the Entity [{}] to have the Transform feature — the POI's world position is "
+             "derived from the entity's transform"), InHandle)
     { return {}; }
 
     CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_Category()),
         TEXT("Poi Add on Entity [{}] requires a valid Category tag (Poi.Category.*)"), InHandle)
     { return {}; }
 
-    CK_ENSURE_IF_NOT(NOT Has(InHandle),
-        TEXT("Handle [{}] already has the Poi feature. Compose additional POIs as child entities via Create"), InHandle)
-    { return Cast(InHandle); }
-
     InHandle.Add<ck::FFragment_Poi_Params>(InParams);
     InHandle.Add<ck::FFragment_Poi_Current>();
     InHandle.Add<ck::FTag_Poi_NeedsSetup>();
 
-    return ck::StaticCast<FCk_Handle_Poi>(InHandle);
-}
-
-auto
-    UCk_Utils_Poi_UE::
-    Create(
-        FCk_Handle& InLifetimeOwner,
-        const FTransform& InTransform,
-        const FCk_Fragment_Poi_ParamsData& InParams,
-        FCk_Time InTtl,
-        ECk_Replication InReplication)
-    -> FCk_Handle_Poi
-{
-    CK_ENSURE_IF_NOT(ck::IsValid(InLifetimeOwner), TEXT("Invalid Lifetime Owner supplied to Poi Create"))
-    { return {}; }
-
-    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
-
-    UCk_Utils_Transform_UE::Add(NewEntity, InTransform, InReplication);
-    UCk_Utils_GameplayLabel_UE::Add(NewEntity, InParams.Get_Category());
-
-    auto NewPoiEntity = Add(NewEntity, InParams);
-
-    if (ck::Is_NOT_Valid(NewPoiEntity))
-    { return {}; }
-
-    RecordOfPois_Utils::AddIfMissing(InLifetimeOwner, ECk_Record_EntryHandlingPolicy::Default);
-    RecordOfPois_Utils::Request_Connect(InLifetimeOwner, NewPoiEntity, ECk_Record_LabelRequirementPolicy::Optional);
-
-    if (InTtl.Get_Seconds() > 0.0)
-    {
-        NewPoiEntity.Add<ck::FTag_Poi_TransientTtl>();
-
-        const auto TimerParams = FCk_Fragment_Timer_ParamsData{InTtl}
-            .Set_Behavior(ECk_Timer_Behavior::StopOnDone)
-            .Set_StartingState(ECk_Timer_State::Running);
-
-        auto TtlTimer = UCk_Utils_Timer_UE::Add(NewPoiEntity, TimerParams);
-
-        ck::UUtils_Signal_OnTimerDone::Bind<&ThisType::OnTtlTimerDone>(
-            TtlTimer, ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame, ECk_Signal_PostFireBehavior::Unbind);
-    }
-
-    return NewPoiEntity;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_Poi_UE::
-    Has_Any(
-        const FCk_Handle& InPoiOwnerEntity)
-    -> bool
-{
-    return RecordOfPois_Utils::Has(InPoiOwnerEntity);
+    return Cast(InHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Poi_UE, FCk_Handle_Poi, ck::FFragment_Poi_Current, ck::FFragment_Poi_Params);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_Poi_UE::
-    TryGet_Poi_ByCategory(
-        const FCk_Handle& InPoiOwnerEntity,
-        FGameplayTag InCategory)
-    -> FCk_Handle_Poi
-{
-    return RecordOfPois_Utils::Get_ValidEntry_ByTag(InPoiOwnerEntity, InCategory);
-}
-
-auto
-    UCk_Utils_Poi_UE::
-    ForEach_Poi(
-        const FCk_Handle& InPoiOwnerEntity,
-        const FInstancedStruct& InOptionalPayload,
-        const FCk_Lambda_InHandle& InDelegate)
-    -> TArray<FCk_Handle_Poi>
-{
-    auto Pois = TArray<FCk_Handle_Poi>{};
-
-    ForEach_Poi(InPoiOwnerEntity, [&](FCk_Handle_Poi InPoi)
-    {
-        if (InDelegate.IsBound())
-        { InDelegate.Execute(InPoi, InOptionalPayload); }
-        else
-        { Pois.Emplace(InPoi); }
-    });
-
-    return Pois;
-}
-
-auto
-    UCk_Utils_Poi_UE::
-    ForEach_Poi(
-        const FCk_Handle& InPoiOwnerEntity,
-        const TFunction<void(FCk_Handle_Poi)>& InFunc)
-    -> void
-{
-    RecordOfPois_Utils::ForEach_ValidEntry(InPoiOwnerEntity, InFunc);
-}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -235,13 +133,9 @@ auto
         const FCk_Handle_Poi& InPoi)
     -> FVector
 {
-    CK_ENSURE_IF_NOT(UCk_Utils_Transform_UE::Has(InPoi),
-        TEXT("Poi [{}] has no Transform feature to derive a world location from"), InPoi)
-    { return FVector::ZeroVector; }
+    const auto& EntityTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InPoi);
 
-    const auto& PoiTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InPoi);
-
-    return PoiTransform.TransformPosition(InPoi.Get<ck::FFragment_Poi_Params>().Get_RelativeLocation());
+    return EntityTransform.TransformPosition(InPoi.Get<ck::FFragment_Poi_Params>().Get_RelativeLocation());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -350,26 +244,6 @@ auto
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnPoiEnableDisable, InPoi, InDelegate);
     return InPoi;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_Poi_UE::
-    OnTtlTimerDone(
-        FCk_Handle_Timer InTimer,
-        FCk_Chrono InChrono,
-        FCk_Time InDeltaT)
-    -> void
-{
-    // The TTL timer is a child of the POI entity — destroying the POI tears down this timer child through the
-    // standard entity-lifetime pipeline, and drops the POI's RecordOfPois entry on its lifetime owner.
-    auto PoiEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InTimer);
-
-    if (ck::Is_NOT_Valid(PoiEntity))
-    { return; }
-
-    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(PoiEntity);
 }
 
 //--------------------------------------------------------------------------------------------------------------------

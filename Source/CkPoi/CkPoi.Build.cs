@@ -19,12 +19,9 @@ public class CkPoi : CkModuleRules
             "CkCore",
             "CkEcs",
             "CkEcsExt",
-            "CkLabel",
             "CkLog",
 
-            "CkRecord",
             "CkSettings",
-            "CkTimer",
         });
     }
 }

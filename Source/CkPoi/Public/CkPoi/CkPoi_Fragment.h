@@ -4,8 +4,6 @@
 
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
-#include "CkRecord/Record/CkRecord_Fragment.h"
-
 #include "CkEcs/Signal/CkSignal_Macros.h"
 #include "CkEcs/Signal/CkSignal_Utils.h"
 #include "CkEcs/Signal/CkSignal_Fragment.h"
@@ -21,11 +19,6 @@ class UCk_Utils_Poi_UE;
 namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_Poi_NeedsSetup);
-
-    // Marks a TTL ping created via UCk_Utils_Poi_UE::Create with a lifetime. Transient BY DESIGN: the persistence
-    // handler's Produce returns UNSET for entities carrying this tag (and bare Create()'d hosts have no rebuild
-    // recipe under v3 anyway — see CkPoi_Fragment.cpp).
-    CK_DEFINE_ECS_TAG(FTag_Poi_TransientTtl);
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -74,13 +67,6 @@ namespace ck
     public:
         CK_PROPERTY_GET(_Requests);
     };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    // ROUNDTRIP: Poi child entities that were composed during their owner's Construct are rebuilt on a v3 load
-    // (recipe replay) and hydrated by the CkPoi persistence handler — the owner's record must round-trip with them
-    // (a TRANSIENT record would orphan restored POIs from their owner, same failure CkTimer documents).
-    CK_DEFINE_RECORD_OF_ENTITIES_ROUNDTRIP(FFragment_RecordOfPois, FCk_Handle_Poi);
 
     // --------------------------------------------------------------------------------------------------------------------
 
