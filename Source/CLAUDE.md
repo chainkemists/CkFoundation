@@ -50,6 +50,7 @@ Before writing any code, navigate the documentation in this order:
 | place/spawn EntityScripts in a level | `CkEntitySpawner` (`AInfo`-derived spawner actor; no doc yet) |
 | entity presets / archetypes | EntityScript spawn params (`FInstancedStruct`, `CkEntityScript.h:65`) + `CkProvider`. CkTemplate/CkEcsTemplate were REMOVED (`ad045415b`); these are the successors (INFERRED) |
 | ECS timers with signals/delegates | `CkTimer` |
+| distance-based range culling + fade, with an independent explicit show/hide override | `CkVisibleRange` (composable onto any entity; zero knowledge of Poi/consumers) |
 | ECS interpolation / follow a spline | `CkTween` (+ `CkSpline` for path data) |
 | ECS typed attributes (health/mana) | `CkAttribute` |
 | ECS audio tracks | `CkAudio` |
@@ -214,6 +215,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkUsf | Core,Ecs,Graphics,Log |
 | CkVat | Core,Ecs,EcsExt,Graphics,IsmRenderer,Log,Usf |
 | CkVfx | ActorRelay,Core,Cue,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer |
+| CkVisibleRange | Core,Ecs,EcsExt,Log (deliberately minimal — no Poi/consumer knowledge; see its Claude.md) |
 | CkWatermark | Core,Ecs,Jolt,Log,Memory,Settings,UI |
 
 ### T5 — editor modules (25 UncookedOnly + 3 Editor; runtime code must NEVER depend on these)
