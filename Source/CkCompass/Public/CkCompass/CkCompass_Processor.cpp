@@ -320,8 +320,12 @@ namespace ck
 
             const auto Distance = static_cast<float>(FVector::Dist(InObserverLocation, PoiLocation));
             const auto MaxVisibleRange = PoiParams.Get_MaxVisibleRange();
+            const auto MinVisibleRange = PoiParams.Get_MinVisibleRange();
 
             if (MaxVisibleRange > 0.0f && Distance > MaxVisibleRange)
+            { return; }
+
+            if (MinVisibleRange > 0.0f && Distance < MinVisibleRange)
             { return; }
 
             const auto WorldYawToPoi = UCk_Utils_Vector3_UE::Get_HeadingAngleBetweenLocations(InObserverLocation, PoiLocation);
@@ -335,6 +339,9 @@ namespace ck
                 ? ECk_Compass_EntryArcState::ClampedToEdge
                 : ECk_Compass_EntryArcState::InsideArc;
 
+            const auto FadeAlpha = UCk_Utils_Compass_UE::Get_RangeFadeAlpha(
+                Distance, MinVisibleRange, MaxVisibleRange, PoiParams.Get_RangeFadeBandCm());
+
             Slots[InIndex].Emplace(FCk_Compass_Entry
             {
                 ck::StaticCast<FCk_Handle_Poi>(PoiGenericHandle),
@@ -344,7 +351,8 @@ namespace ck
                 ArcState,
                 Distance,
                 static_cast<float>(PoiLocation.Z - InObserverLocation.Z),
-                PoiParams.Get_Priority()
+                PoiParams.Get_Priority(),
+                FadeAlpha
             });
         }, ForceSingleThread);
 

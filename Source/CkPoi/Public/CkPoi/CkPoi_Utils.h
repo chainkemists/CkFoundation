@@ -105,6 +105,13 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Poi",
+              DisplayName="[Ck][Poi] Get Min Visible Range")
+    static float
+    Get_MinVisibleRange(
+        const FCk_Handle_Poi& InPoi);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Poi",
               DisplayName="[Ck][Poi] Get Offscreen Policy")
     static ECk_Poi_OffscreenPolicy
     Get_OffscreenPolicy(

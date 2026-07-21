@@ -87,6 +87,20 @@ private:
               meta = (AllowPrivateAccess = true, ClampMin = 0))
     float _MaxVisibleRange = 0.0f;
 
+    // 0 = none. World units (cm). Projectors cull POIs NEARER than this range — the legacy
+    // "ShowAfterDistance" behavior (e.g. a tracked NPC that only appears once it is 10m+ away).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0))
+    float _MinVisibleRange = 0.0f;
+
+    // 0 = hard cut at the range boundaries. Width (cm) of the fade band INSIDE each active
+    // visible-range boundary: projectors ramp the entry's FadeAlpha 0→1 across it (fade-in just
+    // past MinVisibleRange, fade-out approaching MaxVisibleRange). Boundaries that are 0/off
+    // never fade.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0))
+    float _RangeFadeBandCm = 0.0f;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     ECk_Poi_OffscreenPolicy _OffscreenPolicy = ECk_Poi_OffscreenPolicy::Hide;
@@ -107,6 +121,8 @@ public:
     CK_PROPERTY(_DisplayName);
     CK_PROPERTY(_Priority);
     CK_PROPERTY(_MaxVisibleRange);
+    CK_PROPERTY(_MinVisibleRange);
+    CK_PROPERTY(_RangeFadeBandCm);
     CK_PROPERTY(_OffscreenPolicy);
     CK_PROPERTY(_RelativeLocation);
     CK_PROPERTY(_DisplayAsset);

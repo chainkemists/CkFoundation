@@ -47,4 +47,50 @@ bool FCkTest_Compass_NormalizedArcOffset_ClampEdges::RunTest(const FString&)
 
 // --------------------------------------------------------------------------------------------------------------------
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_Compass_RangeFadeAlpha,
+    "Ck.CkCompass.Math.RangeFadeAlpha",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_Compass_RangeFadeAlpha::RunTest(const FString&)
+{
+    // No band -> hard 1 everywhere, regardless of ranges
+    TestTrue(TEXT("zero band -> 1"),
+        FMath::IsNearlyEqual(UCk_Utils_Compass_UE::Get_RangeFadeAlpha(1000.0f, 900.0f, 1100.0f, 0.0f), 1.0f, 0.001f));
+
+    // Fade-in past the min boundary: min=1000, band=500
+    TestTrue(TEXT("at min boundary -> 0"),
+        FMath::IsNearlyEqual(UCk_Utils_Compass_UE::Get_RangeFadeAlpha(1000.0f, 1000.0f, 0.0f, 500.0f), 0.0f, 0.001f));
+    TestTrue(TEXT("halfway through min band -> 0.5"),
+        FMath::IsNearlyEqual(UCk_Utils_Compass_UE::Get_RangeFadeAlpha(1250.0f, 1000.0f, 0.0f, 500.0f), 0.5f, 0.001f));
+    TestTrue(TEXT("past min band -> 1"),
+        FMath::IsNearlyEqual(UCk_Utils_Compass_UE::Get_RangeFadeAlpha(2000.0f, 1000.0f, 0.0f, 500.0f), 1.0f, 0.001f));
+
+    // Fade-out approaching the max boundary: max=5000, band=500
+    TestTrue(TEXT("well inside max -> 1"),
+        FMath::IsNearlyEqual(UCk_Utils_Compass_UE::Get_RangeFadeAlpha(4000.0f, 0.0f, 5000.0f, 500.0f), 1.0f, 0.001f));
+    TestTrue(TEXT("halfway through max band -> 0.5"),
+        FMath::IsNearlyEqual(UCk_Utils_Compass_UE::Get_RangeFadeAlpha(4750.0f, 0.0f, 5000.0f, 500.0f), 0.5f, 0.001f));
+    TestTrue(TEXT("at max boundary -> 0"),
+        FMath::IsNearlyEqual(UCk_Utils_Compass_UE::Get_RangeFadeAlpha(5000.0f, 0.0f, 5000.0f, 500.0f), 0.0f, 0.001f));
+
+    // Both boundaries active — the nearer fade wins (min of the two ramps)
+    TestTrue(TEXT("both active, equidistant narrow band -> min of ramps"),
+        FMath::IsNearlyEqual(UCk_Utils_Compass_UE::Get_RangeFadeAlpha(1500.0f, 1000.0f, 2000.0f, 800.0f), 0.625f, 0.001f));
+
+    // Out-of-band distances clamp instead of going negative / above 1
+    TestTrue(TEXT("below min clamps to 0"),
+        FMath::IsNearlyEqual(UCk_Utils_Compass_UE::Get_RangeFadeAlpha(500.0f, 1000.0f, 0.0f, 500.0f), 0.0f, 0.001f));
+    TestTrue(TEXT("beyond max clamps to 0"),
+        FMath::IsNearlyEqual(UCk_Utils_Compass_UE::Get_RangeFadeAlpha(6000.0f, 0.0f, 5000.0f, 500.0f), 0.0f, 0.001f));
+
+    // Off boundaries (range 0) never fade
+    TestTrue(TEXT("no ranges -> 1 even with a band"),
+        FMath::IsNearlyEqual(UCk_Utils_Compass_UE::Get_RangeFadeAlpha(100.0f, 0.0f, 0.0f, 500.0f), 1.0f, 0.001f));
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 #endif // WITH_DEV_AUTOMATION_TESTS

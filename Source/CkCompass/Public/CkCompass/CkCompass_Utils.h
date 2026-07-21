@@ -137,6 +137,17 @@ public:
         float InSignedBearingDegrees,
         float InArcDegrees) -> bool;
 
+    // Distance-based opacity for a projected POI: 1 inside the visible band, ramping to 0 across
+    // InFadeBandCm INSIDE each active boundary (a range of 0 = that boundary is off; a band of
+    // 0 = hard 1 everywhere). Callers cull out-of-range distances before calling — values outside
+    // the band clamp to [0, 1].
+    static auto
+    Get_RangeFadeAlpha(
+        float InDistance,
+        float InMinVisibleRange,
+        float InMaxVisibleRange,
+        float InFadeBandCm) -> float;
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Compass",
