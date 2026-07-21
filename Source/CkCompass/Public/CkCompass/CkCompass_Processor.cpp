@@ -1,11 +1,13 @@
 #include "CkCompass_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
-#include "CkCore/Math/Bearing/CkBearing_Utils.h"
+#include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
+#include "CkCore/Math/Vector/CkVector_Utils.h"
 
 #include "CkCamera/Camera/CkCamera_Utils.h"
 
 #include "CkCompass/CkCompass_Log.h"
+#include "CkCompass/CkCompass_Utils.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
@@ -322,8 +324,9 @@ namespace ck
             if (MaxVisibleRange > 0.0f && Distance > MaxVisibleRange)
             { return; }
 
-            const auto SignedBearing = bearing::Get_SignedBearingDegrees(InObserverLocation, PoiLocation, HeadingDegrees);
-            const auto IsOutsideArc = bearing::Get_IsOutsideArc(SignedBearing, ArcDegrees);
+            const auto WorldYawToPoi = UCk_Utils_Vector3_UE::Get_HeadingAngleBetweenLocations(InObserverLocation, PoiLocation);
+            const auto SignedBearing = FMath::FindDeltaAngleDegrees(HeadingDegrees, WorldYawToPoi);
+            const auto IsOutsideArc = UCk_Utils_Compass_UE::Get_IsOutsideArc(SignedBearing, ArcDegrees);
 
             if (IsOutsideArc && PoiParams.Get_OffscreenPolicy() == ECk_Poi_OffscreenPolicy::Hide)
             { return; }
@@ -337,7 +340,7 @@ namespace ck
                 ck::StaticCast<FCk_Handle_Poi>(PoiGenericHandle),
                 PoiParams.Get_Category(),
                 SignedBearing,
-                bearing::Get_NormalizedArcOffset(SignedBearing, ArcDegrees),
+                UCk_Utils_Compass_UE::Get_NormalizedArcOffset(SignedBearing, ArcDegrees),
                 ArcState,
                 Distance,
                 static_cast<float>(PoiLocation.Z - InObserverLocation.Z),

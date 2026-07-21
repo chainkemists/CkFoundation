@@ -27,7 +27,6 @@ public class CkCompass : CkModuleRules
             "CkEcsExt",
             "CkLog",
             "CkPoi",
-            "CkRecord",
             "CkUI",
         });
     }
