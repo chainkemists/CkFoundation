@@ -31,7 +31,10 @@ struct CKASSETEXPORTER_API FCk_MaterialExportResult
 class CKASSETEXPORTER_API FCk_MaterialExporter
 {
 public:
-    static auto ExportMaterial(UMaterialInterface* InMaterial, const FString& InOutputDir) -> FCk_MaterialExportResult;
+    // InOutputDir: when set, writes <AssetName>.json into that directory (VFX corpus mode); when empty, writes the
+    // sibling <Asset>.json next to the source .uasset (the dispatch / right-click / tab mode).
+    static auto ExportMaterial (UMaterialInterface* InMaterial, const FString& InOutputDir = FString{}) -> FCk_MaterialExportResult;
+    static auto ExportMaterials(const TArray<UMaterialInterface*>& InMaterials) -> TArray<FCk_MaterialExportResult>;
 
 private:
     static auto DoSerializeToJson(UMaterialInterface* InMaterial, TSet<FString>& OutTextures) -> TSharedPtr<FJsonObject>;
