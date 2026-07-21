@@ -61,7 +61,7 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_FogOfWar);
 
 // Batched payload for the OnCellsRevealed signal — one broadcast per fog entity per update, never per cell.
 // A USTRUCT wrapper (not a bare TArray delegate param) because struct payloads are the proven delegate shape.
-// Cell index = CellY * CellCountX + CellX; painters map indices to UVs via ck::minimap::Get_CellUVRect.
+// Cell index = CellY * CellCountX + CellX; painters map indices to UVs via UCk_Utils_FogOfWar_UE::Get_CellUVRect.
 USTRUCT(BlueprintType)
 struct CKMINIMAP_API FCk_FogOfWar_RevealedCells
 {

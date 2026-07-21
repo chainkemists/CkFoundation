@@ -10,7 +10,7 @@
 
 #include "CkMinimap/CkFogOfWar_Utils.h"
 #include "CkMinimap/CkMinimap_Log.h"
-#include "CkMinimap/CkMinimap_Math.h"
+#include "CkMinimap/CkMinimap_Utils.h"
 
 #include "CkPoi/CkPoi_Fragment.h"
 
@@ -364,10 +364,10 @@ namespace ck
             { return; }
 
             const auto FramePos = ProjectionMode == ECk_Minimap_ProjectionMode::FixedBounds
-                ? minimap::Get_BoundsToFrame(PoiLocation, FixedBounds)
-                : minimap::Get_WorldToFrame(PoiLocation, ViewOrigin, ViewYawDegrees, ViewExtent, RotationMode);
+                ? UCk_Utils_Minimap_UE::Get_BoundsToFrame(PoiLocation, FixedBounds)
+                : UCk_Utils_Minimap_UE::Get_WorldToFrame(PoiLocation, ViewOrigin, ViewYawDegrees, ViewExtent, RotationMode);
 
-            const auto IsOutsideFrame = NOT minimap::Get_IsInsideFrame(FramePos, FrameShape);
+            const auto IsOutsideFrame = NOT UCk_Utils_Minimap_UE::Get_IsInsideFrame(FramePos, FrameShape);
 
             if (IsOutsideFrame && PoiParams.Get_OffscreenPolicy() == ECk_Poi_OffscreenPolicy::Hide)
             { return; }
@@ -380,7 +380,7 @@ namespace ck
             {
                 ck::StaticCast<FCk_Handle_Poi>(PoiGenericHandle),
                 PoiParams.Get_Category(),
-                IsOutsideFrame ? minimap::Get_ClampToFrame(FramePos, FrameShape) : FramePos,
+                IsOutsideFrame ? UCk_Utils_Minimap_UE::Get_ClampToFrame(FramePos, FrameShape) : FramePos,
                 EdgeState,
                 static_cast<float>(PoiWorldTransform.Rotator().Yaw),
                 Distance,

@@ -4,8 +4,9 @@
 
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
+
 #include "CkMinimap/CkMinimap_Log.h"
-#include "CkMinimap/CkMinimap_Math.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -60,7 +61,7 @@ auto
 
     const auto& Params = InFogOfWar.Get<ck::FFragment_FogOfWar_Params>();
 
-    const auto CellIndex = ck::minimap::Get_CellIndex(
+    const auto CellIndex = Get_CellIndex(
         InWorldLocation, Params.Get_Bounds(), Params.Get_CellSize(), Current.Get_CellCounts());
 
     if (CellIndex == INDEX_NONE)
@@ -261,6 +262,106 @@ auto
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnFogOfWarReset, InFogOfWar, InDelegate);
 
     return InFogOfWar;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_FogOfWar_UE::
+    Get_CellCounts(
+        const FCk_Minimap_WorldBounds& InBounds,
+        float InCellSize)
+    -> FIntPoint
+{
+    if (ck::Is_NOT_Valid(InBounds) || InCellSize <= 0.0f)
+    { return FIntPoint{1, 1}; }
+
+    const auto& HalfExtents = InBounds.Get_HalfExtents();
+
+    return FIntPoint
+    {
+        FMath::Max(1, FMath::CeilToInt32(2.0 * HalfExtents.X / InCellSize)),
+        FMath::Max(1, FMath::CeilToInt32(2.0 * HalfExtents.Y / InCellSize))
+    };
+}
+
+auto
+    UCk_Utils_FogOfWar_UE::
+    Get_CellIndex(
+        const FVector& InWorldPos,
+        const FCk_Minimap_WorldBounds& InBounds,
+        float InCellSize,
+        const FIntPoint& InCellCounts)
+    -> int32
+{
+    if (ck::Is_NOT_Valid(InBounds) || InCellSize <= 0.0f || InCellCounts.X < 1 || InCellCounts.Y < 1)
+    { return INDEX_NONE; }
+
+    const auto& Center = InBounds.Get_Center();
+    const auto& HalfExtents = InBounds.Get_HalfExtents();
+
+    const auto MinX = Center.X - HalfExtents.X;
+    const auto MinY = Center.Y - HalfExtents.Y;
+
+    // Inclusive on BOTH edges — max-edge positions belong to the last cell (clamped floor below)
+    if (InWorldPos.X < MinX || InWorldPos.X > Center.X + HalfExtents.X ||
+        InWorldPos.Y < MinY || InWorldPos.Y > Center.Y + HalfExtents.Y)
+    { return INDEX_NONE; }
+
+    const auto CellX = FMath::Clamp(FMath::FloorToInt32((InWorldPos.X - MinX) / InCellSize), 0, InCellCounts.X - 1);
+    const auto CellY = FMath::Clamp(FMath::FloorToInt32((InWorldPos.Y - MinY) / InCellSize), 0, InCellCounts.Y - 1);
+
+    return CellY * InCellCounts.X + CellX;
+}
+
+auto
+    UCk_Utils_FogOfWar_UE::
+    Get_CellCenter(
+        int32 InCellX,
+        int32 InCellY,
+        const FCk_Minimap_WorldBounds& InBounds,
+        float InCellSize)
+    -> FVector2D
+{
+    const auto& Center = InBounds.Get_Center();
+    const auto& HalfExtents = InBounds.Get_HalfExtents();
+
+    return FVector2D
+    {
+        Center.X - HalfExtents.X + (InCellX + 0.5) * InCellSize,
+        Center.Y - HalfExtents.Y + (InCellY + 0.5) * InCellSize
+    };
+}
+
+auto
+    UCk_Utils_FogOfWar_UE::
+    Get_CellUVRect(
+        int32 InCellIndex,
+        const FCk_Minimap_WorldBounds& InBounds,
+        float InCellSize)
+    -> FBox2D
+{
+    const auto CellCounts = Get_CellCounts(InBounds, InCellSize);
+
+    if (ck::Is_NOT_Valid(InBounds) || InCellSize <= 0.0f ||
+        InCellIndex < 0 || InCellIndex >= CellCounts.X * CellCounts.Y)
+    { return FBox2D{FVector2D::ZeroVector, FVector2D::ZeroVector}; }
+
+    const auto CellX = InCellIndex % CellCounts.X;
+    const auto CellY = InCellIndex / CellCounts.X;
+
+    const auto& HalfExtents = InBounds.Get_HalfExtents();
+    const auto ExtentX = 2.0 * HalfExtents.X;
+    const auto ExtentY = 2.0 * HalfExtents.Y;
+
+    // U spans world +Y (map right), V spans world -X (map down) — UV = (Frame + 1) / 2 of Get_BoundsToFrame.
+    // Normalized over the BOUNDS extent and clamped so overshooting edge cells never seam past the texture
+    const auto UMin = FMath::Clamp(CellY * InCellSize / ExtentY, 0.0, 1.0);
+    const auto UMax = FMath::Clamp((CellY + 1) * InCellSize / ExtentY, 0.0, 1.0);
+    const auto VMin = FMath::Clamp(1.0 - ((CellX + 1) * InCellSize / ExtentX), 0.0, 1.0);
+    const auto VMax = FMath::Clamp(1.0 - (CellX * InCellSize / ExtentX), 0.0, 1.0);
+
+    return FBox2D{FVector2D{UMin, VMin}, FVector2D{UMax, VMax}};
 }
 
 // --------------------------------------------------------------------------------------------------------------------

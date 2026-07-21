@@ -185,6 +185,41 @@ public:
     UnbindFrom_OnReset(
         UPARAM(ref) FCk_Handle_FogOfWar& InFogOfWar,
         const FCk_Delegate_FogOfWar_Reset& InDelegate);
+
+public:
+    // Pure fog-grid math — no entities, no world (unit-tested in CkFogOfWar_Utils.spec.cpp).
+
+    // ceil(extent / cell size) per axis, min 1x1, anchored at the bounds min corner. The last row/column
+    // may overshoot the bounds (partial cells).
+    static auto
+    Get_CellCounts(
+        const FCk_Minimap_WorldBounds& InBounds,
+        float InCellSize) -> FIntPoint;
+
+    // Row-major cell index (CellY * Counts.X + CellX), or INDEX_NONE outside the bounds. Inclusive on
+    // BOTH edges; in-bounds coords are clamped-floor into [0, Counts-1].
+    static auto
+    Get_CellIndex(
+        const FVector& InWorldPos,
+        const FCk_Minimap_WorldBounds& InBounds,
+        float InCellSize,
+        const FIntPoint& InCellCounts) -> int32;
+
+    // World-XY center of a cell (reveal stamps test THIS point against the reveal radius).
+    static auto
+    Get_CellCenter(
+        int32 InCellX,
+        int32 InCellY,
+        const FCk_Minimap_WorldBounds& InBounds,
+        float InCellSize) -> FVector2D;
+
+    // UV rect for painters, normalized over the BOUNDS extent and clamped — partial edge cells never seam
+    // past the texture. UV = (Frame + 1) / 2 of Get_BoundsToFrame (U right = world +Y, V down = world -X).
+    static auto
+    Get_CellUVRect(
+        int32 InCellIndex,
+        const FCk_Minimap_WorldBounds& InBounds,
+        float InCellSize) -> FBox2D;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
