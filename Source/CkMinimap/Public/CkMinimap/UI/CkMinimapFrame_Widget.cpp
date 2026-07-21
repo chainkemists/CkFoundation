@@ -1,7 +1,7 @@
 #include "CkMinimapFrame_Widget.h"
 
 #include "CkMinimap/CkMinimap_Log.h"
-#include "CkMinimap/CkMinimap_Math.h"
+#include "CkMinimap/CkMinimap_Utils.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/CanvasPanel.h"
@@ -363,7 +363,7 @@ auto
     };
 
     const auto ViewOrigin = UCk_Utils_Minimap_UE::Get_ViewOrigin(_Minimap);
-    const auto ObserverInBoundsFrame = ck::minimap::Get_BoundsToFrame(ViewOrigin, _MapBounds);
+    const auto ObserverInBoundsFrame = UCk_Utils_Minimap_UE::Get_BoundsToFrame(ViewOrigin, _MapBounds);
     const auto ObserverPx = FVector2D
     {
         ObserverInBoundsFrame.X * ImageSize.X * 0.5,

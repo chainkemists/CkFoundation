@@ -46,7 +46,7 @@ public:
     // observer defaults to InLifetimeOwner; redirect it via Request_SetObserver.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Minimap",
-              DisplayName="[Ck][Minimap] Create")
+              DisplayName="[Ck][Minimap] Create Feature")
     static FCk_Handle_Minimap
     Create(
         UPARAM(ref) FCk_Handle& InLifetimeOwner,
@@ -268,6 +268,56 @@ public:
     UnbindFrom_OnEntryDisappeared(
         UPARAM(ref) FCk_Handle_Minimap& InMinimap,
         const FCk_Delegate_Minimap_EntryDisappeared& InDelegate);
+
+public:
+    // Pure projection math — no entities, no world (unit-tested in CkMinimap_Utils.spec.cpp).
+    // FRAME space is center-origin, +X = screen right, +Y = screen DOWN (UMG), visible frame [-1, 1]².
+    // North-up mapping: Frame = (WorldDelta.Y / Extent, -WorldDelta.X / Extent) — North projects to
+    // (0, -1) (screen up), East to (1, 0) (screen right).
+
+    // NorthLocked ignores InViewYawDegrees; RotateWithObserver rotates by -InViewYawDegrees first.
+    // Non-positive InViewExtent returns (0, 0).
+    static auto
+    Get_WorldToFrame(
+        const FVector& InWorldPos,
+        const FVector& InViewOrigin,
+        float InViewYawDegrees,
+        float InViewExtent,
+        ECk_Minimap_RotationMode InRotationMode) -> FVector2D;
+
+    // Inverse of Get_WorldToFrame. Returns world XY only — callers pick their own Z.
+    static auto
+    Get_FrameToWorld(
+        const FVector2D& InFramePos,
+        const FVector& InViewOrigin,
+        float InViewYawDegrees,
+        float InViewExtent,
+        ECk_Minimap_RotationMode InRotationMode) -> FVector2D;
+
+    // Projection over a fixed world rectangle, always north-up (the world-map). Invalid bounds return (0, 0).
+    static auto
+    Get_BoundsToFrame(
+        const FVector& InWorldPos,
+        const FCk_Minimap_WorldBounds& InBounds) -> FVector2D;
+
+    // Inverse of Get_BoundsToFrame.
+    static auto
+    Get_FrameToWorld_Bounds(
+        const FVector2D& InFramePos,
+        const FCk_Minimap_WorldBounds& InBounds) -> FVector2D;
+
+    // Edge-inclusive: |1| is INSIDE.
+    static auto
+    Get_IsInsideFrame(
+        const FVector2D& InFramePos,
+        ECk_Minimap_FrameShape InFrameShape) -> bool;
+
+    // TOTAL: inside positions (and zero) return unchanged; outside positions pin onto the boundary
+    // preserving direction (rect: / max(|x|, |y|); circle: / length).
+    static auto
+    Get_ClampToFrame(
+        const FVector2D& InFramePos,
+        ECk_Minimap_FrameShape InFrameShape) -> FVector2D;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

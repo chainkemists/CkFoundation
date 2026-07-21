@@ -7,7 +7,7 @@
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkMinimap/CkMinimap_Log.h"
-#include "CkMinimap/CkMinimap_Math.h"
+#include "CkMinimap/CkFogOfWar_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -47,7 +47,7 @@ namespace ck_fog_of_war_processor
         if (InCellCounts.X <= 0 || InCellCounts.Y <= 0)
         { return; }
 
-        const auto ContainingCell = ck::minimap::Get_CellIndex(InCenter, InBounds, InCellSize, InCellCounts);
+        const auto ContainingCell = UCk_Utils_FogOfWar_UE::Get_CellIndex(InCenter, InBounds, InCellSize, InCellCounts);
 
         if (ContainingCell != INDEX_NONE && NOT InOutExplored[ContainingCell])
         {
@@ -69,7 +69,7 @@ namespace ck_fog_of_war_processor
         {
             for (auto CellX = CoordMinX; CellX <= CoordMaxX; ++CellX)
             {
-                const auto CellCenter = ck::minimap::Get_CellCenter(CellX, CellY, InBounds, InCellSize);
+                const auto CellCenter = UCk_Utils_FogOfWar_UE::Get_CellCenter(CellX, CellY, InBounds, InCellSize);
 
                 if (FVector2D::DistSquared(CellCenter, CenterXY) > RadiusSquared)
                 { continue; }
@@ -123,7 +123,7 @@ namespace ck
                  "every location will query as explored (unfogged)"), InFogEntity)
         { return; }
 
-        const auto CellCounts = minimap::Get_CellCounts(InParams.Get_Bounds(), InParams.Get_CellSize());
+        const auto CellCounts = UCk_Utils_FogOfWar_UE::Get_CellCounts(InParams.Get_Bounds(), InParams.Get_CellSize());
         const auto TotalCells = static_cast<int64>(CellCounts.X) * static_cast<int64>(CellCounts.Y);
 
         CK_ENSURE_IF_NOT(TotalCells <= ck_fog_of_war_processor::MaxTotalCells,
