@@ -39,7 +39,7 @@ public:
     // observer defaults to the created child; redirect it via Request_SetObserver.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Compass",
-              DisplayName="[Ck][Compass] Create")
+              DisplayName="[Ck][Compass] Create Feature")
     static FCk_Handle_Compass
     Create(
         UPARAM(ref) FCk_Handle& InLifetimeOwner,
@@ -121,6 +121,21 @@ public:
     static ECk_CardinalAndOrdinalDirection
     Get_CardinalDirection(
         float InHeadingDegrees);
+
+public:
+    // Pure arc math — no entities, no world (unit-tested in CkCompass_Utils.spec.cpp).
+
+    // bearing / (arc/2), clamped to [-1, 1]. An unclamped |result| > 1 means the bearing is outside the arc.
+    static auto
+    Get_NormalizedArcOffset(
+        float InSignedBearingDegrees,
+        float InArcDegrees) -> float;
+
+    // |bearing| > arc/2
+    static auto
+    Get_IsOutsideArc(
+        float InSignedBearingDegrees,
+        float InArcDegrees) -> bool;
 
 public:
     UFUNCTION(BlueprintCallable,
