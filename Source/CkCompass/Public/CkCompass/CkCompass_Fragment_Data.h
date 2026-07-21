@@ -98,6 +98,12 @@ private:
               meta = (AllowPrivateAccess = true))
     int32 _Priority = 0;
 
+    // Distance-based opacity [0..1] from the POI's RangeFadeBandCm (1 when no fade is configured).
+    // Consumers multiply this into their marker's render opacity.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    float _FadeAlpha = 1.0f;
+
 public:
     CK_PROPERTY_GET(_Poi);
     CK_PROPERTY_GET(_Category);
@@ -107,9 +113,10 @@ public:
     CK_PROPERTY_GET(_Distance);
     CK_PROPERTY_GET(_ElevationDelta);
     CK_PROPERTY_GET(_Priority);
+    CK_PROPERTY_GET(_FadeAlpha);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Compass_Entry, _Poi, _Category, _BearingDegrees, _NormalizedOffset, _ArcState, _Distance, _ElevationDelta, _Priority);
+    CK_DEFINE_CONSTRUCTORS(FCk_Compass_Entry, _Poi, _Category, _BearingDegrees, _NormalizedOffset, _ArcState, _Distance, _ElevationDelta, _Priority, _FadeAlpha);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
