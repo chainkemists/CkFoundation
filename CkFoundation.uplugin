@@ -1077,6 +1077,16 @@
       ]
     },
     {
+      "Name": "CkVisibleRange",
+      "Type": "Runtime",
+      "LoadingPhase": "Default",
+      "WhitelistPlatforms": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
+    },
+    {
       "Name": "CkThirdParty",
       "Type": "Runtime",
       "LoadingPhase": "Default",
