@@ -5,8 +5,9 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
+
 #include "CkMinimap/CkMinimap_Log.h"
-#include "CkMinimap/CkMinimap_Math.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -31,7 +32,7 @@ auto
     InHandle.Add<ck::FFragment_Minimap_Current>();
     InHandle.Add<ck::FTag_Minimap_NeedsSetup>();
 
-    return ck::StaticCast<FCk_Handle_Minimap>(InHandle);
+    return Cast(InHandle);
 }
 
 auto
@@ -205,10 +206,10 @@ auto
 
     if (Params.Get_ProjectionMode() == ECk_Minimap_ProjectionMode::FixedBounds)
     {
-        return ck::minimap::Get_FrameToWorld_Bounds(InFramePosition, Params.Get_FixedBounds());
+        return Get_FrameToWorld_Bounds(InFramePosition, Params.Get_FixedBounds());
     }
 
-    return ck::minimap::Get_FrameToWorld(InFramePosition, Current.Get_ViewOrigin(),
+    return Get_FrameToWorld(InFramePosition, Current.Get_ViewOrigin(),
         Current.Get_ViewYawDegrees(), Current.Get_ViewExtent(), Current.Get_RotationMode());
 }
 
@@ -340,6 +341,155 @@ auto
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnMinimapEntryDisappeared, InMinimap, InDelegate);
 
     return InMinimap;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Minimap_UE::
+    Get_WorldToFrame(
+        const FVector& InWorldPos,
+        const FVector& InViewOrigin,
+        float InViewYawDegrees,
+        float InViewExtent,
+        ECk_Minimap_RotationMode InRotationMode)
+    -> FVector2D
+{
+    if (InViewExtent <= 0.0f)
+    { return FVector2D::ZeroVector; }
+
+    auto Delta = FVector2D{InWorldPos.X - InViewOrigin.X, InWorldPos.Y - InViewOrigin.Y};
+
+    if (InRotationMode == ECk_Minimap_RotationMode::RotateWithObserver)
+    {
+        Delta = Delta.GetRotated(-InViewYawDegrees);
+    }
+
+    return FVector2D{Delta.Y / InViewExtent, -Delta.X / InViewExtent};
+}
+
+auto
+    UCk_Utils_Minimap_UE::
+    Get_FrameToWorld(
+        const FVector2D& InFramePos,
+        const FVector& InViewOrigin,
+        float InViewYawDegrees,
+        float InViewExtent,
+        ECk_Minimap_RotationMode InRotationMode)
+    -> FVector2D
+{
+    // Invert the axis swap first (dX = -Frame.Y*E, dY = Frame.X*E), then undo the view rotation
+    auto Delta = FVector2D{-InFramePos.Y * InViewExtent, InFramePos.X * InViewExtent};
+
+    if (InRotationMode == ECk_Minimap_RotationMode::RotateWithObserver)
+    {
+        Delta = Delta.GetRotated(InViewYawDegrees);
+    }
+
+    return FVector2D{InViewOrigin.X + Delta.X, InViewOrigin.Y + Delta.Y};
+}
+
+auto
+    UCk_Utils_Minimap_UE::
+    Get_BoundsToFrame(
+        const FVector& InWorldPos,
+        const FCk_Minimap_WorldBounds& InBounds)
+    -> FVector2D
+{
+    if (ck::Is_NOT_Valid(InBounds))
+    { return FVector2D::ZeroVector; }
+
+    const auto& Center = InBounds.Get_Center();
+    const auto& HalfExtents = InBounds.Get_HalfExtents();
+
+    return FVector2D
+    {
+        static_cast<float>((InWorldPos.Y - Center.Y) / HalfExtents.Y),
+        static_cast<float>(-(InWorldPos.X - Center.X) / HalfExtents.X)
+    };
+}
+
+auto
+    UCk_Utils_Minimap_UE::
+    Get_FrameToWorld_Bounds(
+        const FVector2D& InFramePos,
+        const FCk_Minimap_WorldBounds& InBounds)
+    -> FVector2D
+{
+    if (ck::Is_NOT_Valid(InBounds))
+    { return FVector2D::ZeroVector; }
+
+    const auto& Center = InBounds.Get_Center();
+    const auto& HalfExtents = InBounds.Get_HalfExtents();
+
+    return FVector2D
+    {
+        Center.X - InFramePos.Y * HalfExtents.X,
+        Center.Y + InFramePos.X * HalfExtents.Y
+    };
+}
+
+auto
+    UCk_Utils_Minimap_UE::
+    Get_IsInsideFrame(
+        const FVector2D& InFramePos,
+        ECk_Minimap_FrameShape InFrameShape)
+    -> bool
+{
+    switch (InFrameShape)
+    {
+        case ECk_Minimap_FrameShape::Rectangle:
+        {
+            return FMath::Abs(InFramePos.X) <= 1.0 && FMath::Abs(InFramePos.Y) <= 1.0;
+        }
+        case ECk_Minimap_FrameShape::Circle:
+        {
+            return InFramePos.SizeSquared() <= 1.0;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InFrameShape);
+            return true;
+        }
+    }
+}
+
+auto
+    UCk_Utils_Minimap_UE::
+    Get_ClampToFrame(
+        const FVector2D& InFramePos,
+        ECk_Minimap_FrameShape InFrameShape)
+    -> FVector2D
+{
+    if (Get_IsInsideFrame(InFramePos, InFrameShape))
+    { return InFramePos; }
+
+    switch (InFrameShape)
+    {
+        case ECk_Minimap_FrameShape::Rectangle:
+        {
+            const auto MaxComponent = FMath::Max(FMath::Abs(InFramePos.X), FMath::Abs(InFramePos.Y));
+
+            if (MaxComponent <= 0.0)
+            { return FVector2D::ZeroVector; }
+
+            return InFramePos / MaxComponent;
+        }
+        case ECk_Minimap_FrameShape::Circle:
+        {
+            const auto Length = InFramePos.Size();
+
+            if (Length <= 0.0)
+            { return FVector2D::ZeroVector; }
+
+            return InFramePos / Length;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InFrameShape);
+            return InFramePos;
+        }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
