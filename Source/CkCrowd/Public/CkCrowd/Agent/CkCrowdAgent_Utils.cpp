@@ -15,7 +15,7 @@
 auto
     UCk_Utils_CrowdAgent_UE::
     Add(
-        FCk_Handle& InOwner,
+        FCk_Handle_Transform& InOwner,
         const FCk_Fragment_CrowdAgent_ParamsData& InParams)
     -> FCk_Handle_CrowdAgent
 {
@@ -23,29 +23,32 @@ auto
         TEXT("Invalid owner handle [{}] passed to UCk_Utils_CrowdAgent_UE::Add"), InOwner)
     { return {}; }
 
-    auto NewAgentEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_CrowdAgent>(InOwner);
+    CK_ENSURE_IF_NOT(NOT Has(InOwner),
+        TEXT("Handle [{}] already has the CrowdAgent feature. An entity hosts at most ONE crowd agent"),
+        InOwner)
+    { return Cast(InOwner); }
 
-    NewAgentEntity.Add<ck::FFragment_CrowdAgent_Params>(InParams);
-    NewAgentEntity.Add<ck::FFragment_CrowdAgent_PathFollow>();
-    NewAgentEntity.Add<ck::FFragment_CrowdAgent_DesiredVelocity>();
-    NewAgentEntity.Add<ck::FFragment_CrowdAgent_FaceAngle>();
-    NewAgentEntity.Add<ck::FFragment_CrowdAgent_NeighborCache>();
-    NewAgentEntity.Add<ck::FFragment_CrowdAgent_SeparationForce>();
-    NewAgentEntity.Add<ck::FFragment_CrowdAgent_ProbeRef>();
-    NewAgentEntity.Add<ck::FFragment_CrowdAgent_BlockDetect>();
-    NewAgentEntity.Add<ck::FFragment_CrowdAgent_PendingDisplacement>();
-    NewAgentEntity.Add<ck::FFragment_CrowdAgent_NavMarkup>();
-    NewAgentEntity.Add<ck::FTag_CrowdAgent_NeedsSetup>();
-    NewAgentEntity.Add<ck::FTag_CrowdAgent_Idle>();
+    InOwner.Add<ck::FFragment_CrowdAgent_Params>(InParams);
+    InOwner.Add<ck::FFragment_CrowdAgent_PathFollow>();
+    InOwner.Add<ck::FFragment_CrowdAgent_DesiredVelocity>();
+    InOwner.Add<ck::FFragment_CrowdAgent_FaceAngle>();
+    InOwner.Add<ck::FFragment_CrowdAgent_NeighborCache>();
+    InOwner.Add<ck::FFragment_CrowdAgent_SeparationForce>();
+    InOwner.Add<ck::FFragment_CrowdAgent_ProbeRef>();
+    InOwner.Add<ck::FFragment_CrowdAgent_BlockDetect>();
+    InOwner.Add<ck::FFragment_CrowdAgent_PendingDisplacement>();
+    InOwner.Add<ck::FFragment_CrowdAgent_NavMarkup>();
+    InOwner.Add<ck::FTag_CrowdAgent_NeedsSetup>();
+    InOwner.Add<ck::FTag_CrowdAgent_Idle>();
 
     // Seed _ActiveArrivalRadius from the agent's params default. Updated per-MoveTo if the request
     // overrides it; otherwise this is what Steering's final-stop branch uses.
-    NewAgentEntity.Get<ck::FFragment_CrowdAgent_PathFollow>()._ActiveArrivalRadius = InParams.Get_ArrivalRadius();
+    InOwner.Get<ck::FFragment_CrowdAgent_PathFollow>()._ActiveArrivalRadius = InParams.Get_ArrivalRadius();
 
-    ck::crowd::Verbose(TEXT("CrowdAgent added to [{}] -> [{}] (radius={}, height={})"),
-        InOwner, NewAgentEntity, InParams.Get_Radius(), InParams.Get_Height());
+    ck::crowd::Verbose(TEXT("CrowdAgent added to [{}] (radius={}, height={})"),
+        InOwner, InParams.Get_Radius(), InParams.Get_Height());
 
-    return NewAgentEntity;
+    return Cast(InOwner);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

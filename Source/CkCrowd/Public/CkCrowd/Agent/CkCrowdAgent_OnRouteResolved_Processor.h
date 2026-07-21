@@ -4,6 +4,8 @@
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
+#include "CkEcsExt/Transform/CkTransform_Fragment.h"
+
 #include "CkPathNetwork/Network/CkPathNetwork_Fragment.h"
 
 #include "CkCrowd/Agent/CkCrowdAgent_Fragment.h"
@@ -35,6 +37,7 @@ namespace ck
     class CKCROWD_API FProcessor_CrowdAgent_OnRouteResolved : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_OnRouteResolved,
             FCk_Handle_CrowdAgent,
+            ck::TReadOnly<FFragment_Transform>,
             ck::TReadOnly<FFragment_PathNetworkFollower_Corridor>,
             ck::TReadWrite<FFragment_CrowdAgent_PathFollow>,
             CK_IGNORE_PENDING_KILL>
@@ -55,6 +58,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Transform& InTransform,
             const FFragment_PathNetworkFollower_Corridor& InCorridor,
             FFragment_CrowdAgent_PathFollow& InPathFollow) -> void;
     };

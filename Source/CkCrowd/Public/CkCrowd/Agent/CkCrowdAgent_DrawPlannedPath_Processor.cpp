@@ -56,6 +56,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Transform& InTransform,
             const FFragment_Nav_PathResult& InPathResult,
             const FFragment_CrowdAgent_PathFollow& InPathFollow)
         -> void
@@ -97,13 +98,8 @@ namespace ck
         const auto PathThickness = bIsSelected ? draw::Thickness_Selected : draw::Thickness;
         const auto Lift = FVector(0.0f, 0.0f, draw::LiftZ);
 
-        // Start segment connects the agent's current position to its NEXT waypoint. Fall back to
-        // the next waypoint itself if the transform feature isn't on the agent.
-        auto Prev = Waypoints[FirstIndex] + Lift;
-        if (auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle); ck::IsValid(TransformHandle))
-        {
-            Prev = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle) + Lift;
-        }
+        // Start segment connects the agent's current position to its NEXT waypoint.
+        auto Prev = InTransform.Get_Transform().GetLocation() + Lift;
 
         for (auto i = FirstIndex; i < Waypoints.Num(); ++i)
         {

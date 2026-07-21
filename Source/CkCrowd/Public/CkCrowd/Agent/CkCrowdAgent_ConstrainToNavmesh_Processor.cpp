@@ -38,6 +38,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_PendingDisplacement& InPending)
         -> void
@@ -51,8 +52,6 @@ namespace ck
         InPending._Displacement = FVector::ZeroVector;
 
         auto SelfTransform = UCk_Utils_Transform_UE::Cast(InHandle);
-        if (ck::Is_NOT_Valid(SelfTransform))
-        { return; }
 
         const auto EnqueueOffset = [&](const FVector& InOffset) -> void
         {
@@ -87,7 +86,7 @@ namespace ck
             return;
         }
 
-        const auto From = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(SelfTransform);
+        const auto From = InTransform.Get_Transform().GetLocation();
 
         const auto HorizontalExtent = InParams.Get_Radius();
         const auto VerticalExtent = InParams.Get_Height();

@@ -50,6 +50,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
             FFragment_CrowdAgent_DiagRecorder& InRecorder)
         -> void
@@ -68,10 +69,7 @@ namespace ck
 
         // Sample fields ------------------------------------------------------------------------
 
-        auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
-        if (ck::Is_NOT_Valid(TransformHandle))
-        { return; }
-        const auto Pos = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle);
+        const auto Pos = InTransform.Get_Transform().GetLocation();
 
         const auto Vel = UCk_Utils_CrowdAgent_UE::Get_DesiredVelocity(InHandle);
         const auto Speed = static_cast<float>(Vel.Size());

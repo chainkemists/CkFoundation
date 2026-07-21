@@ -23,6 +23,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_DesiredVelocity& InDesired,
             FFragment_CrowdAgent_FaceAngle& InFaceAngle)
@@ -45,10 +46,8 @@ namespace ck
         InFaceAngle._TargetYaw = TargetYawRad;
 
         auto TransformHandle = UCk_Utils_Transform_UE::CastChecked(InHandle);
-        if (ck::Is_NOT_Valid(TransformHandle))
-        { return; }
 
-        const auto CurrentRot = UCk_Utils_Transform_UE::Get_EntityCurrentRotation(TransformHandle);
+        const auto CurrentRot = InTransform.Get_Transform().Rotator();
         const auto CurrentYawRad = FMath::DegreesToRadians(CurrentRot.Yaw);
 
         // Shortest-arc delta in (-pi, pi]. FindDeltaAngleRadians handles the wrap so we always pick

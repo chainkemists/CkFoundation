@@ -23,6 +23,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             const FFragment_Nav_PathResult& InPathResult,
@@ -51,16 +52,7 @@ namespace ck
             return;
         }
 
-        // Reading the current world location requires the agent to have a Transform feature; the gym /
-        // game code is responsible for adding it before issuing a path. If absent, just zero the desired
-        // velocity rather than ensure-spamming — the steering loop is per-frame.
-        auto TransformHandle = UCk_Utils_Transform_UE::CastChecked(InHandle);
-        if (ck::Is_NOT_Valid(TransformHandle))
-        {
-            Bail();
-            return;
-        }
-        const auto CurrentLoc = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle);
+        const auto CurrentLoc = InTransform.Get_Transform().GetLocation();
 
         // Advance the waypoint cursor past every INTERMEDIATE waypoint that is either (a) inside the
         // arrival radius, or (b) already BEHIND the agent relative to the incoming path segment.

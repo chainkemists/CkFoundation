@@ -27,6 +27,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Transform& InTransform,
             const FFragment_PathNetworkFollower_Corridor& InCorridor,
             FFragment_CrowdAgent_PathFollow& InPathFollow)
         -> void
@@ -81,14 +82,11 @@ namespace ck
 
                 // Anchor the FIRST corridor segment for Steering's plane-crossing retirement. The
                 // corridor's leading waypoint has no predecessor in the array, so the incoming
-                // direction comes from where the agent actually IS at install time. This covers the
-                // mid-walk rebuild swap too: the agent may be deep into the old corridor, and the
-                // new segment starts from there, not from some stale origin.
-                auto TransformHandle = UCk_Utils_Transform_UE::Cast(NonConstHandle);
-                const auto& CompiledWaypoints = Result.Get_CompiledWaypoints();
-                InPathFollow._CurrentSegmentStart = ck::IsValid(TransformHandle)
-                    ? UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle)
-                    : (CompiledWaypoints.Num() > 0 ? CompiledWaypoints[0] : FVector::ZeroVector);
+                // direction comes from where the agent actually IS at install time (the view
+                // guarantees the Transform fragment). This covers the mid-walk rebuild swap too:
+                // the agent may be deep into the old corridor, and the new segment starts from
+                // there, not from some stale origin.
+                InPathFollow._CurrentSegmentStart = InTransform.Get_Transform().GetLocation();
 
                 // This corridor was planned against every disc painted up to now — only NEWER
                 // discs may trigger a PathRefresh re-path.

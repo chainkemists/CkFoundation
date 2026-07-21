@@ -39,6 +39,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams)
         -> void
     {
@@ -55,10 +56,7 @@ namespace ck
         if (NOT IsValid(World))
         { return; }
 
-        auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
-        if (ck::Is_NOT_Valid(TransformHandle))
-        { return; }
-        const auto AgentPos = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle);
+        const auto AgentPos = InTransform.Get_Transform().GetLocation();
 
         auto* NavSys = UNavigationSystemV1::GetCurrent(World);
         if (NavSys == nullptr)

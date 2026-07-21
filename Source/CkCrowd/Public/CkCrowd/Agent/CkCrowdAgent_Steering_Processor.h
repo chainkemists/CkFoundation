@@ -4,6 +4,8 @@
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
+#include "CkEcsExt/Transform/CkTransform_Fragment.h"
+
 #include "CkPhysics/EulerIntegrator/CkEulerIntegrator_Processor.h"
 
 #include "CkNavigation/Nav/CkNav_Fragment.h"
@@ -30,6 +32,7 @@ namespace ck
     class CKCROWD_API FProcessor_CrowdAgent_Steering : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_Steering,
             FCk_Handle_CrowdAgent,
+            ck::TReadOnly<FFragment_Transform>,
             FTag_CrowdAgent_Walking,
             ck::TReadOnly<FFragment_CrowdAgent_Params>,
             ck::TReadWrite<FFragment_CrowdAgent_PathFollow>,
@@ -51,6 +54,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             const FFragment_Nav_PathResult& InPathResult,

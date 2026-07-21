@@ -242,6 +242,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_Nav_PathResult& InPathResult,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
@@ -257,15 +258,11 @@ namespace ck
         if (NOT UCk_Utils_Net_UE::Get_HasAuthority(InHandle))
         { return; }
 
-        auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
-        if (ck::Is_NOT_Valid(TransformHandle))
-        { return; }
-
         const auto& Waypoints = InPathResult.Get_Waypoints();
         if (Waypoints.Num() == 0)
         { return; }
 
-        const auto SelfLoc = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle);
+        const auto SelfLoc = InTransform.Get_Transform().GetLocation();
         const auto Goal = InPathFollow.Get_ActiveGoal();
         const auto GoalExemptionPad = InPathFollow.Get_ActiveArrivalRadius() + InParams.Get_Radius();
         const auto PathSerial = InPathFollow.Get_PathSerial();

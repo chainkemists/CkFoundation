@@ -83,6 +83,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_PathFollow& InPathFollow,
             const FFragment_Nav_PathResult& InPathResult,
@@ -99,11 +100,7 @@ namespace ck
         if (Waypoints.IsEmpty())
         { return; }
 
-        auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
-        if (ck::Is_NOT_Valid(TransformHandle))
-        { return; }
-
-        const auto SelfLoc = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle);
+        const auto SelfLoc = InTransform.Get_Transform().GetLocation();
 
         // The point Steering actually latches on. NOT _ActiveGoal: for a Partial path the two differ,
         // and it is the path's end the agent is really trying to stand on.
@@ -259,6 +256,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
@@ -277,11 +275,7 @@ namespace ck
 
         InBlockDetect._RecheckAccumulatorSec = 0.0f;
 
-        auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
-        if (ck::Is_NOT_Valid(TransformHandle))
-        { return; }
-
-        const auto SelfLoc = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle);
+        const auto SelfLoc = InTransform.Get_Transform().GetLocation();
 
         // Is the goal still taken? A held agent is stationary, so its own velocity is ~zero and the
         // neighbour's relative velocity IS its absolute velocity.

@@ -4,6 +4,8 @@
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
+#include "CkEcsExt/Transform/CkTransform_Fragment.h"
+
 #include "CkCrowd/Agent/CkCrowdAgent_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -28,6 +30,7 @@ namespace ck
     class CKCROWD_API FProcessor_CrowdAgent_StationaryMarkup : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_StationaryMarkup,
             FCk_Handle_CrowdAgent,
+            ck::TReadOnly<FFragment_Transform>,
             ck::TReadOnly<FFragment_CrowdAgent_Params>,
             ck::TReadWrite<FFragment_CrowdAgent_NavMarkup>,
             TExclude<FTag_CrowdAgent_Asleep>,
@@ -44,6 +47,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_NavMarkup& InMarkup) -> void;
 

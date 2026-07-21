@@ -4,6 +4,8 @@
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
+#include "CkEcsExt/Transform/CkTransform_Fragment.h"
+
 #include "CkCrowd/Agent/CkCrowdAgent_Fragment.h"
 #include "CkCrowd/Agent/CkCrowdAgent_StationaryMarkup_Processor.h"
 
@@ -34,6 +36,7 @@ namespace ck
     class CKCROWD_API FProcessor_CrowdAgent_PathRefresh : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_PathRefresh,
             FCk_Handle_CrowdAgent,
+            ck::TReadOnly<FFragment_Transform>,
             FTag_CrowdAgent_Walking,
             ck::TReadOnly<FFragment_CrowdAgent_Params>,
             ck::TReadOnly<FFragment_Nav_PathResult>,
@@ -55,6 +58,7 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_Nav_PathResult& InPathResult,
             FFragment_CrowdAgent_PathFollow& InPathFollow,

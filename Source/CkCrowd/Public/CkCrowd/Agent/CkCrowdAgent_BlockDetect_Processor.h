@@ -4,6 +4,8 @@
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
+#include "CkEcsExt/Transform/CkTransform_Fragment.h"
+
 #include "CkNavigation/Nav/CkNav_Fragment.h"
 
 #include "CkCrowd/Agent/CkCrowdAgent_Fragment.h"
@@ -47,6 +49,7 @@ namespace ck
     class CKCROWD_API FProcessor_CrowdAgent_BlockDetect : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_BlockDetect,
             FCk_Handle_CrowdAgent,
+            ck::TReadOnly<FFragment_Transform>,
             FTag_CrowdAgent_Walking,
             FTag_CrowdAgent_HasProbe,
             ck::TReadOnly<FFragment_CrowdAgent_Params>,
@@ -70,6 +73,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_PathFollow& InPathFollow,
             const FFragment_Nav_PathResult& InPathResult,
@@ -96,6 +100,7 @@ namespace ck
     class CKCROWD_API FProcessor_CrowdAgent_BlockedRecheck : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_BlockedRecheck,
             FCk_Handle_CrowdAgent,
+            ck::TReadOnly<FFragment_Transform>,
             FTag_CrowdAgent_GoalBlocked,
             ck::TReadOnly<FFragment_CrowdAgent_Params>,
             ck::TReadOnly<FFragment_CrowdAgent_NeighborCache>,
@@ -115,6 +120,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
