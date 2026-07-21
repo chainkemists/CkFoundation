@@ -90,8 +90,13 @@ namespace ck_jolt_bake_extraction
         if (NOT InComponent.IsRegistered())
         { return true; }
 
-        if (InComponent.IsEditorOnly() || InComponent.IsVisualizationComponent())
+        if (InComponent.IsEditorOnly())
         { return true; }
+
+#if WITH_EDITORONLY_DATA
+        if (InComponent.IsVisualizationComponent())
+        { return true; }
+#endif
 
         if (InComponent.GetCollisionEnabled() == ECollisionEnabled::NoCollision)
         { return true; }
