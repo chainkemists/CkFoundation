@@ -63,8 +63,15 @@ auto
     Build_BakedPoseData()
     -> bool
 {
-    if (FApp::CanEverRender() == false)
-    { return false; } // dedicated server / -nullrhi: mesh render data is stripped, so the bake is impossible AND unneeded — not a content error
+    // The bake itself is CPU-only (no RHI — see the file-level comment above). Only a REAL dedicated
+    // server legitimately lacks the mesh render data it reads (cook-stripped there, and unneeded:
+    // AdvanceAnimation already skips NM_DedicatedServer). -nullrhi/headless test runs are NOT dedicated
+    // servers — mesh data is present and the bake still succeeds — but FApp::CanEverRender() is false
+    // in both cases; gating on it here silently starved non-dedicated-server callers (listen server /
+    // standalone / client under -nullrhi) of a bake AdvanceAnimation still requires every tick, so its
+    // "no baked pose" ensure fired continuously for the rest of the run.
+    if (IsRunningDedicatedServer())
+    { return false; }
 
     // A re-bake changes the frame layout, so previously materialized render data must not survive:
     // tear down the proxies of every live cluster using this collection, drain the render thread,
