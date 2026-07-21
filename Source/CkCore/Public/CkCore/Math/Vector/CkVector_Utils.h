@@ -152,6 +152,15 @@ public:
     Get_HeadingAngle(
         const FVector& InVector);
 
+    // World yaw (degrees) of the direction from InFrom to InTo, Z ignored. 0 = +X, 90 = +Y.
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Heading Angle Between Locations",
+              Category = "Ck|Utils|Math|Vector3")
+    static float
+    Get_HeadingAngleBetweenLocations(
+        const FVector& InFrom,
+        const FVector& InTo);
+
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Clamped Length (Vec3)",
               Category = "Ck|Utils|Math|Vector3")
@@ -749,6 +758,16 @@ public:
     static ECk_CardinalAndOrdinalDirection
     Get_ClosestCardinalAndOrdinalDirection(
         const FVector2D& InVector);
+
+    // 8-way cardinal/ordinal for an absolute heading (degrees, any range — normalized internally).
+    // Assumes 0 = North = +X, 90 = East = +Y. Buckets are 45 degrees wide, centered on each
+    // direction (North covers [-22.5, 22.5)).
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Closest Cardinal & Ordinal Direction (By Heading)",
+              Category = "Ck|Utils|Math|Vector2")
+    static ECk_CardinalAndOrdinalDirection
+    Get_ClosestCardinalAndOrdinalDirection_ByHeading(
+        float InHeadingDegrees);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Is Point in Radius",

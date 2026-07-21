@@ -272,6 +272,16 @@ auto
 
 auto
     UCk_Utils_Vector3_UE::
+    Get_HeadingAngleBetweenLocations(
+        const FVector& InFrom,
+        const FVector& InTo)
+    -> float
+{
+    return Get_HeadingAngle(InTo - InFrom);
+}
+
+auto
+    UCk_Utils_Vector3_UE::
     Get_ClampedLength(
         const FVector&        InVector,
         const FCk_FloatRange& InClampRange)
@@ -1505,6 +1515,18 @@ auto
     { return ECk_CardinalAndOrdinalDirection::North; }
 
     return FoundDirection->first;
+}
+
+auto
+    UCk_Utils_Vector2_UE::
+    Get_ClosestCardinalAndOrdinalDirection_ByHeading(
+        float InHeadingDegrees)
+    -> ECk_CardinalAndOrdinalDirection
+{
+    const auto NormalizedHeading = FRotator::ClampAxis(InHeadingDegrees);
+    const auto BucketIndex = FMath::FloorToInt32(FRotator::ClampAxis(NormalizedHeading + 22.5f) / 45.0f) % 8;
+
+    return static_cast<ECk_CardinalAndOrdinalDirection>(BucketIndex);
 }
 
 auto
