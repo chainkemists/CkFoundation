@@ -4,6 +4,8 @@
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
+#include "CkEcsExt/Transform/CkTransform_Fragment.h"
+
 #include "CkCrowd/Agent/CkCrowdAgent_Fragment.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PushApart_Processor.h"
 
@@ -33,6 +35,7 @@ namespace ck
     class CKCROWD_API FProcessor_CrowdAgent_ConstrainToNavmesh : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_ConstrainToNavmesh,
             FCk_Handle_CrowdAgent,
+            ck::TReadOnly<FFragment_Transform>,
             ck::TReadOnly<FFragment_CrowdAgent_Params>,
             ck::TReadWrite<FFragment_CrowdAgent_PendingDisplacement>,
             TExclude<FTag_CrowdAgent_Asleep>,
@@ -50,6 +53,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_PendingDisplacement& InPending) -> void;
     };

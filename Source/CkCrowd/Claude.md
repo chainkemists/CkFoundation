@@ -24,9 +24,9 @@
 ## Public API at a glance
 
 ```cpp
-// Add the crowd-agent feature to any entity.
+// Compose the crowd-agent feature DIRECTLY onto a transform-bearing entity (no child entity).
 static FCk_Handle_CrowdAgent Add(
-    UPARAM(ref) FCk_Handle& InOwner,
+    UPARAM(ref) FCk_Handle_Transform& InOwner,
     const FCk_Fragment_CrowdAgent_ParamsData& InParams);
 
 // Move it.
@@ -246,10 +246,13 @@ Avoidance-sampler tuning (velBias, penalty weights, sample density, trigger/stri
 ### Spawn an agent
 
 ```cpp
+auto AgentEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(ParentEntity);
+auto AgentTransform = UCk_Utils_Transform_UE::Add(AgentEntity, SpawnTransform, ECk_Replication::DoesNotReplicate);
+
 auto Params = FCk_Fragment_CrowdAgent_ParamsData{42.f, 192.f};
 Params.Set_MaxSpeed(240.f);
 Params.Get_Tags().AddTag(FGameplayTag::RequestGameplayTag(TEXT("Crowd.Agent")));
-auto Agent = UCk_Utils_CrowdAgent_UE::Add(OwnerEntity, Params);
+auto Agent = UCk_Utils_CrowdAgent_UE::Add(AgentTransform, Params);
 ```
 
 ### Move it somewhere

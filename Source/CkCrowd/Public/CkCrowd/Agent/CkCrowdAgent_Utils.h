@@ -8,6 +8,7 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 #include "CkEcsExt/CkEcsExt_Utils.h"
+#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 
 #include "CkCrowdAgent_Utils.generated.h"
 
@@ -23,14 +24,15 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_CrowdAgent);
 
 public:
-    // Add the crowd-agent feature to InOwner. Creates a new child entity carrying the
-    // CrowdAgent fragments + FTag_CrowdAgent_NeedsSetup; returns the typesafe handle.
+    // Compose the crowd-agent feature DIRECTLY onto InOwner (no child entity). The owner must already
+    // have the Transform feature (enforced at the type level) — every agent processor reads and drives
+    // that transform. An entity hosts at most ONE crowd agent.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CrowdAgent",
               DisplayName="[Ck][CrowdAgent] Add Feature")
     static FCk_Handle_CrowdAgent
     Add(
-        UPARAM(ref) FCk_Handle& InOwner,
+        UPARAM(ref) FCk_Handle_Transform& InOwner,
         const FCk_Fragment_CrowdAgent_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
