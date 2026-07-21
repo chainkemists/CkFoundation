@@ -165,7 +165,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkAudio | ActorRelay,Core,Cue,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer |
 | CkCamera | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkChaos | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Targeting |
-| CkCompass | Camera,Core,Ecs,EcsExt,Log,Poi,Record,UI |
+| CkCompass | Camera,Core,Ecs,EcsExt,Log,Poi,UI |
 | CkCompositeAlgos | Core,Ecs,EcsExt |
 | CkConsoleCommands | Core,Ecs,Label,Log,Record,Settings |
 | CkCrowd | Core,Ecs,EcsExt,Label,Log,Navigation,Physics,Pmg,Projectile,Record,Settings,Shapes,SpatialQuery |
@@ -194,7 +194,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkOverlapBody | Actor,Core,Ecs,EcsExt,Graphics,Label,Log,Physics,Record,Settings |
 | CkPhysics | Actor,Chaos,Core,Ecs,EcsExt,Label,Log,Record |
 | CkPmg | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
-| CkPoi | Core,Ecs,EcsExt,Label,Log,Record,Settings,Timer |
+| CkPoi | Core,Ecs,EcsExt,Log,Settings |
 | CkProjectile | Core,Ecs,EcsExt,Log,Physics,Record,Variables |
 | CkRaySense | Core,Ecs,EcsExt,IsmRenderer,Label,Log,Provider,Record,Settings,Shapes |
 | CkRelationship | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
