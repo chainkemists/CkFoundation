@@ -9,6 +9,7 @@
 #include "CkAssetExporter/Dispatch/CkAssetExporter_DispatchInternal.h"
 #include "CkAssetExporter/EQSExporter/CkEQSExporter.h"
 #include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
+#include "CkAssetExporter/MaterialExporter/CkMaterialExporter.h"
 #include "CkAssetExporter/NiagaraExporter/CkNiagaraExporter.h"
 #include "CkAssetExporter/StateTreeExporter/CkStateTreeExporter.h"
 #include "CkAssetExporter/UserDefinedEnumExporter/CkUserDefinedEnumExporter.h"
@@ -30,6 +31,7 @@
 #include <EnvironmentQuery/EnvQuery.h>
 #include <HAL/FileManager.h>
 #include <Misc/FileHelper.h>
+#include <Materials/MaterialInterface.h>
 #include <Misc/PackageName.h>
 #include <Misc/Paths.h>
 #include <NiagaraSystem.h>
@@ -71,6 +73,7 @@ namespace ck_asset_exporter_dispatch
             { TEXT("Struct"),       UUserDefinedStruct::StaticClass() },
             { TEXT("Niagara"),      UNiagaraSystem::StaticClass() },
             { TEXT("Cascade"),      UParticleSystem::StaticClass() },
+            { TEXT("Material"),     UMaterialInterface::StaticClass() }, // covers UMaterial + UMaterialInstance(Constant)
         };
     }
 
@@ -100,6 +103,19 @@ namespace ck_asset_exporter_dispatch
         InOutEntry.Succeeded = InResult.Succeeded;
         InOutEntry.JsonFilePath = InResult.JsonFilePath;
         InOutEntry.TextFilePath = InResult.CsvFilePath;
+        InOutEntry.ErrorMessage = InResult.ErrorMessage;
+    }
+
+    // Material export is json-only (no .txt / .csv sibling) — a non-template overload maps the json and leaves the
+    // entry's txt slot empty.
+    static auto
+    Fill_Entry(
+        FCk_AssetExportDispatchEntryResult& InOutEntry,
+        const FCk_MaterialExportResult& InResult)
+        -> void
+    {
+        InOutEntry.Succeeded = InResult.Succeeded;
+        InOutEntry.JsonFilePath = InResult.JsonFilePath;
         InOutEntry.ErrorMessage = InResult.ErrorMessage;
     }
 
@@ -190,6 +206,13 @@ namespace ck_asset_exporter_dispatch
         if (auto* CascadeSystem = Cast<UParticleSystem>(InAsset)) // no versioned meta — never skips
         {
             Fill_Entry(InOutEntry, FCk_CascadeExporter::ExportParticleSystem(CascadeSystem));
+            return;
+        }
+        if (auto* Material = Cast<UMaterialInterface>(InAsset)) // covers UMaterial + UMaterialInstance(Constant)
+        {
+            if (Is_FreshAndSkip(InAsset, InSkipFresh, ck::asset_exporter::version::Material, InOutEntry))
+            { return; }
+            Fill_Entry(InOutEntry, FCk_MaterialExporter::ExportMaterial(Material));
             return;
         }
         if (auto* DataTable = Cast<UDataTable>(InAsset)) // dedicated type — NOT a UDataAsset, but keep dedicated-first order

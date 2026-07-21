@@ -1,6 +1,7 @@
 #include "CkMaterialExporter.h"
 
 #include "CkAssetExporter_Log.h"
+#include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
 
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
@@ -12,6 +13,7 @@
 #include "Materials/MaterialInstance.h"
 #include "Materials/MaterialExpression.h"
 #include "Materials/MaterialExpressionDynamicParameter.h"
+#include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 
 #include <Dom/JsonObject.h>
@@ -46,10 +48,22 @@ auto
     const auto JsonWriter = TJsonWriterFactory<>::Create(&JsonString);
     FJsonSerializer::Serialize(JsonObject.ToSharedRef(), JsonWriter);
 
-    constexpr auto CreateTree = true;
-    IFileManager::Get().MakeDirectory(*InOutputDir, CreateTree);
+    // Corpus mode writes into a passed directory; dispatch / right-click / tab mode writes the sibling json next to
+    // the source .uasset (empty InOutputDir).
+    auto JsonPath = FString{};
+    if (NOT InOutputDir.IsEmpty())
+    {
+        constexpr auto CreateTree = true;
+        IFileManager::Get().MakeDirectory(*InOutputDir, CreateTree);
+        JsonPath = FPaths::Combine(InOutputDir, InMaterial->GetName() + TEXT(".json"));
+    }
+    else if (NOT FPackageName::TryConvertLongPackageNameToFilename(
+        InMaterial->GetOutermost()->GetName(), JsonPath, TEXT(".json")))
+    {
+        Result.ErrorMessage = ck::Format_UE(TEXT("Failed to resolve sibling json path for [{}]"), InMaterial->GetName());
+        return Result;
+    }
 
-    const auto JsonPath = FPaths::Combine(InOutputDir, InMaterial->GetName() + TEXT(".json"));
     if (NOT FFileHelper::SaveStringToFile(JsonString, *JsonPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
     {
         Result.ErrorMessage = ck::Format_UE(TEXT("Failed to write [{}]"), JsonPath);
@@ -65,6 +79,23 @@ auto
 
 auto
     FCk_MaterialExporter::
+    ExportMaterials(
+        const TArray<UMaterialInterface*>& InMaterials)
+    -> TArray<FCk_MaterialExportResult>
+{
+    auto Results = TArray<FCk_MaterialExportResult>{};
+    Results.Reserve(InMaterials.Num());
+
+    for (auto* Material : InMaterials)
+    { Results.Add(ExportMaterial(Material)); }
+
+    return Results;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_MaterialExporter::
     DoSerializeToJson(
         UMaterialInterface* InMaterial,
         TSet<FString>& OutTextures)
@@ -73,6 +104,7 @@ auto
     auto Root = MakeShared<FJsonObject>();
     Root->SetStringField(TEXT("material"), InMaterial->GetName());
     Root->SetStringField(TEXT("packagePath"), InMaterial->GetOutermost()->GetName());
+    Root->SetObjectField(TEXT("_meta"), FCk_AssetExportMeta::MakeMetaObject(InMaterial, ck::asset_exporter::version::Material));
 
     // ---- Instance chain down to the base material ----
     auto ParentChain = TArray<TSharedPtr<FJsonValue>>{};

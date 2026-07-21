@@ -24,6 +24,7 @@ namespace ck::asset_exporter::version
     inline constexpr int32 StateTree = 1;
     inline constexpr int32 UserDefinedEnum = 1;
     inline constexpr int32 UserDefinedStruct = 1;
+    inline constexpr int32 Material = 1;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

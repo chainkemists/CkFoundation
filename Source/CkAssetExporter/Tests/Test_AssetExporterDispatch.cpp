@@ -7,6 +7,7 @@
 #include <Engine/DataAsset.h>
 #include <Engine/DataTable.h>
 #include <HAL/FileManager.h>
+#include <Materials/MaterialInterface.h>
 #include <Misc/AutomationTest.h>
 #include <Misc/FileHelper.h>
 #include <Misc/Paths.h>
@@ -61,6 +62,11 @@ bool FCk_AssetExporter_Dispatch_FriendlyClassMap_Test::RunTest(const FString& In
     auto* ResolvedDataTable = FCk_AssetExporter_Dispatch::TryResolve_FriendlyClassName(TEXT("datatable"), ErrorDataTable);
     TestNotNull(TEXT("lowercase 'datatable' resolves case-insensitively"), ResolvedDataTable);
     TestTrue(TEXT("'datatable' resolves to UDataTable"), ResolvedDataTable == UDataTable::StaticClass());
+
+    auto ErrorMaterial = FString{};
+    auto* ResolvedMaterial = FCk_AssetExporter_Dispatch::TryResolve_FriendlyClassName(TEXT("material"), ErrorMaterial);
+    TestNotNull(TEXT("lowercase 'material' resolves case-insensitively"), ResolvedMaterial);
+    TestTrue(TEXT("'material' resolves to UMaterialInterface"), ResolvedMaterial == UMaterialInterface::StaticClass());
 
     auto ErrorUnknown = FString{};
     auto* ResolvedUnknown = FCk_AssetExporter_Dispatch::TryResolve_FriendlyClassName(TEXT("Bogus"), ErrorUnknown);
