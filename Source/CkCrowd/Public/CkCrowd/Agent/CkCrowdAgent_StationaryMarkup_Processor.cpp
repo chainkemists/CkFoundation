@@ -74,6 +74,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_NavMarkup& InMarkup)
         -> void
@@ -89,11 +90,7 @@ namespace ck
             return;
         }
 
-        auto SelfTransform = UCk_Utils_Transform_UE::Cast(InHandle);
-        if (ck::Is_NOT_Valid(SelfTransform))
-        { return; }
-
-        const auto Location = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(SelfTransform);
+        const auto Location = InTransform.Get_Transform().GetLocation();
 
         // Stationary means PHYSICALLY stationary, not the Idle tag: a blocked/pressing WALKER
         // plugs a corridor exactly like an idle agent does (mutual pressers never go Idle at

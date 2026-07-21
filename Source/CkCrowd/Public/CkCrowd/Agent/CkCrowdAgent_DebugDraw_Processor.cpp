@@ -33,6 +33,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
             const FFragment_CrowdAgent_SeparationForce& InSeparationForce)
@@ -43,15 +44,11 @@ namespace ck
         if (NOT UCk_Utils_Crowd_DebugSettings_UE::Get_DrawSeparation())
         { return; }
 
-        auto SelfTransform = UCk_Utils_Transform_UE::Cast(InHandle);
-        if (ck::Is_NOT_Valid(SelfTransform))
-        { return; }
-
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
         if (NOT IsValid(World))
         { return; }
 
-        const auto Feet = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(SelfTransform);
+        const auto Feet = InTransform.Get_Transform().GetLocation();
         const auto Center = Feet + FVector{0.0, 0.0, InParams.Get_Height() * 0.5};
 
         // --- Separation radius circle (yellow, on the ground at agent feet) -------------------

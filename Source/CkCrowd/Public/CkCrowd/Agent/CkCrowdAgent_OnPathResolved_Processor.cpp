@@ -25,6 +25,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Transform& InTransform,
             const FFragment_Nav_PathResult& InPathResult,
             FFragment_CrowdAgent_PathFollow& InPathFollow)
         -> void
@@ -51,13 +52,8 @@ namespace ck
                 // Anchor the FIRST path segment for Steering's plane-crossing waypoint retirement.
                 // ExtractWaypoints strips the path's start point, so Waypoints[-1] does not exist and
                 // the incoming direction for Waypoints[0] has to come from the agent's own location at
-                // install time. A missing Transform mirrors Steering's quiet-bail posture (gym/game
-                // code adds Transform before pathing); the Wps[0] fallback degenerates the index-0
-                // plane test to proximity-only, which is the old behaviour — never a mis-fire.
-                auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
-                InPathFollow._CurrentSegmentStart = ck::IsValid(TransformHandle)
-                    ? UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle)
-                    : (Wps.Num() > 0 ? Wps[0] : FVector::ZeroVector);
+                // install time (the view guarantees the Transform fragment).
+                InPathFollow._CurrentSegmentStart = InTransform.Get_Transform().GetLocation();
 
                 // This path was planned against every disc painted up to now — only NEWER discs
                 // may trigger a PathRefresh re-path.
@@ -73,28 +69,25 @@ namespace ck
                 // install location, so "crossed" never fires) and the agent visibly walks BACKWARD to
                 // the corner before turning around — the "360 at path start" bug. The FINAL waypoint
                 // is never skipped (loop bound), matching Steering's retirement rule.
-                if (ck::IsValid(TransformHandle))
+                const auto AgentLoc = InPathFollow.Get_CurrentSegmentStart();
+                while (InPathFollow._WaypointIndex < Wps.Num() - 1)
                 {
-                    const auto AgentLoc = InPathFollow.Get_CurrentSegmentStart();
-                    while (InPathFollow._WaypointIndex < Wps.Num() - 1)
-                    {
-                        const auto& Corner = Wps[InPathFollow._WaypointIndex];
-                        const auto OnwardDir = (Wps[InPathFollow._WaypointIndex + 1] - Corner).GetSafeNormal();
-                        if (OnwardDir.IsNearlyZero())
-                        { break; }
-                        if (FVector::DotProduct(Corner - AgentLoc, OnwardDir) >= 0.0)
-                        { break; }
+                    const auto& Corner = Wps[InPathFollow._WaypointIndex];
+                    const auto OnwardDir = (Wps[InPathFollow._WaypointIndex + 1] - Corner).GetSafeNormal();
+                    if (OnwardDir.IsNearlyZero())
+                    { break; }
+                    if (FVector::DotProduct(Corner - AgentLoc, OnwardDir) >= 0.0)
+                    { break; }
 
-                        InPathFollow._CurrentSegmentStart = Corner;
-                        ++InPathFollow._WaypointIndex;
-                    }
+                    InPathFollow._CurrentSegmentStart = Corner;
+                    ++InPathFollow._WaypointIndex;
+                }
 
-                    if (InPathFollow._WaypointIndex > 0)
-                    {
-                        ck::crowd::Verbose(
-                            TEXT("CrowdAgent [{}] path install skipped {} already-passed leading corner(s)"),
-                            InHandle, InPathFollow._WaypointIndex);
-                    }
+                if (InPathFollow._WaypointIndex > 0)
+                {
+                    ck::crowd::Verbose(
+                        TEXT("CrowdAgent [{}] path install skipped {} already-passed leading corner(s)"),
+                        InHandle, InPathFollow._WaypointIndex);
                 }
 
                 auto PolylineLen = 0.0;

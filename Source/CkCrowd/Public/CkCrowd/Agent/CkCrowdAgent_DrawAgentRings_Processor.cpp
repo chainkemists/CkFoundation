@@ -55,6 +55,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_PathFollow& InPathFollow,
             const FFragment_CrowdAgent_DesiredVelocity& InDesiredVelocity)
@@ -71,16 +72,12 @@ namespace ck
         if (NOT DrawAll && NOT IsSelected)
         { return; }
 
-        auto SelfTransform = UCk_Utils_Transform_UE::Cast(InHandle);
-        if (ck::Is_NOT_Valid(SelfTransform))
-        { return; }
-
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
         if (NOT IsValid(World))
         { return; }
 
         const auto Lift     = FVector{0.0, 0.0, draw::LiftZ};
-        const auto Feet     = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(SelfTransform) + Lift;
+        const auto Feet     = InTransform.Get_Transform().GetLocation() + Lift;
         const auto Velocity = InDesiredVelocity.Get_Velocity();
         const auto Speed    = Velocity.Size();
 

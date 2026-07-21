@@ -47,6 +47,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Transform& InTransform,
             const FFragment_Nav_PathResult& InPathResult)
         -> void
     {
@@ -62,10 +63,7 @@ namespace ck
         if (NOT IsValid(World))
         { return; }
 
-        auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
-        if (ck::Is_NOT_Valid(TransformHandle))
-        { return; }
-        const auto Pos = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle);
+        const auto Pos = InTransform.Get_Transform().GetLocation();
         const auto MarkerCentre = Pos + FVector(0.0f, 0.0f, ck_crowd_agent_draw_nav_status_processor::NavStatus_MarkerHeightAbove);
 
         const auto MarkerColor   = bIsFailed ? ck_crowd_agent_draw_nav_status_processor::NavStatus_FailedColor     : ck_crowd_agent_draw_nav_status_processor::NavStatus_PendingColor;
