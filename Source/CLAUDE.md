@@ -48,6 +48,7 @@ Before writing any code, navigate the documentation in this order:
 | higher-level ECS (SceneNode, Meta, Transform) | `CkEcsExt` |
 | attach/manage UActorComponents on entities | `CkUnrealComponent` (no doc yet) |
 | place/spawn EntityScripts in a level | `CkEntitySpawner` (`AInfo`-derived spawner actor; no doc yet) |
+| pool/recycle EntityScript-spawned entities, UObjects, or actors | `CkPool` (`UCk_Utils_EntityPool_UE` promise-based / `UCk_Utils_ObjectPool_UE` synchronous; budgeted prewarm, per-class project settings) |
 | entity presets / archetypes | EntityScript spawn params (`FInstancedStruct`, `CkEntityScript.h:65`) + `CkProvider`. CkTemplate/CkEcsTemplate were REMOVED (`ad045415b`); these are the successors (INFERRED) |
 | ECS timers with signals/delegates | `CkTimer` |
 | ECS interpolation / follow a spline | `CkTween` (+ `CkSpline` for path data) |
@@ -105,7 +106,7 @@ Before writing any code, navigate the documentation in this order:
 
 ## Module tier table
 
-All **74 non-editor modules** (CkVat added 2026-07-09), regenerated from every `Source/<Module>/<Module>.Build.cs` on
+All **75 non-editor modules** (CkVat added 2026-07-09; CkPool added 2026-07-07), regenerated from every `Source/<Module>/<Module>.Build.cs` on
 2026-07-02. **Deps column = Ck-only** (Public + Private combined, `Ck` prefix stripped); engine
 modules are not listed. Tiers are semantic bands; a module may sit higher than its minimal depth,
 but **deps must never point to a higher band**. Editor/UncookedOnly modules are excluded (see T5).
@@ -140,6 +141,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkInput | Core,Ecs,Log,Settings |
 | CkLabel | Core,Ecs,Log |
 | CkLoadingScreen | Core,Log,Settings |
+| CkPool | Core,Ecs,Label,Log,Record,Settings |
 | CkProvider | Core,Ecs,Log |
 | CkRecord | Core,Ecs,Label,Log |
 | CkResourceLoader | Core,Ecs,Log,Settings |
