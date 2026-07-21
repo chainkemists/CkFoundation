@@ -6,6 +6,7 @@
 #include <Engine/Blueprint.h>
 #include <Engine/DataAsset.h>
 #include <EnvironmentQuery/EnvQuery.h>
+#include <Materials/MaterialInterface.h>
 #include <StateTree.h>
 #include <Engine/UserDefinedEnum.h>
 #include <StructUtils/UserDefinedStruct.h>
@@ -144,6 +145,21 @@ auto
                 .Text(FText::FromString(TEXT("Export Selected EQS")))
                 .ToolTipText(FText::FromString(TEXT("Export EQS Queries currently selected in the Content Browser to JSON and Text files")))
                 .OnClicked(this, &SCkAssetExporterTab::DoOnExportSelectedEQSClicked)
+                .HAlign(HAlign_Center)
+            ]
+        ]
+
+        + SHorizontalBox::Slot()
+        .AutoWidth()
+        .Padding(0, 0, AssetExporterTab_Constants::SectionSpacing, 0)
+        [
+            SNew(SBox)
+            .WidthOverride(200.0f)
+            [
+                SNew(SButton)
+                .Text(FText::FromString(TEXT("Export Selected Materials")))
+                .ToolTipText(FText::FromString(TEXT("Export Materials / Material Instances currently selected in the Content Browser to JSON files")))
+                .OnClicked(this, &SCkAssetExporterTab::DoOnExportSelectedMaterialsClicked)
                 .HAlign(HAlign_Center)
             ]
         ]
@@ -509,6 +525,81 @@ auto
         Entry->Succeeded = Result.Succeeded;
         Entry->JsonPath = Result.JsonFilePath;
         Entry->TextPath = Result.TextFilePath;
+        Entry->ErrorMessage = Result.ErrorMessage;
+        _ResultEntries.Add(Entry);
+    }
+
+    if (_ResultsListView.IsValid())
+    {
+        _ResultsListView->RequestListRefresh();
+    }
+}
+
+auto
+    SCkAssetExporterTab::
+    DoOnExportSelectedMaterialsClicked()
+    -> FReply
+{
+    // Get selected Materials / Material Instances from Content Browser
+    auto& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+    auto SelectedAssets = TArray<FAssetData>{};
+    ContentBrowserModule.Get().GetSelectedAssets(SelectedAssets);
+
+    auto Materials = TArray<UMaterialInterface*>{};
+    for (const auto& AssetData : SelectedAssets)
+    {
+        if (auto* Mat = Cast<UMaterialInterface>(AssetData.GetAsset()))
+        {
+            Materials.Add(Mat);
+        }
+    }
+
+    if (Materials.Num() == 0)
+    {
+        _StatusText->SetText(FText::FromString(TEXT("No Material assets selected in the Content Browser.")));
+        return FReply::Handled();
+    }
+
+    const auto Results = FCk_MaterialExporter::ExportMaterials(Materials);
+    DoRefreshResultsListFromMaterialResults(Results);
+
+    auto SuccessCount = int32{0};
+    auto FailCount = int32{0};
+    for (const auto& R : Results)
+    {
+        if (R.Succeeded) { ++SuccessCount; }
+        else { ++FailCount; }
+    }
+
+    if (FailCount == 0)
+    {
+        _StatusText->SetText(FText::FromString(
+            FString::Printf(TEXT("Successfully exported %d Material(s)."), SuccessCount)));
+    }
+    else
+    {
+        _StatusText->SetText(FText::FromString(
+            FString::Printf(TEXT("Exported %d, failed %d Material(s)."), SuccessCount, FailCount)));
+    }
+
+    return FReply::Handled();
+}
+
+auto
+    SCkAssetExporterTab::
+    DoRefreshResultsListFromMaterialResults(
+        const TArray<FCk_MaterialExportResult>& InResults)
+    -> void
+{
+    _ResultEntries.Empty();
+
+    for (const auto& Result : InResults)
+    {
+        auto Entry = MakeShared<FCk_AssetExporterTab_ResultEntry>();
+        Entry->AssetName = Result.AssetName;
+        Entry->Succeeded = Result.Succeeded;
+        Entry->JsonPath = Result.JsonFilePath;
+        Entry->TextPath = FString{};   // material export is json-only
         Entry->ErrorMessage = Result.ErrorMessage;
         _ResultEntries.Add(Entry);
     }

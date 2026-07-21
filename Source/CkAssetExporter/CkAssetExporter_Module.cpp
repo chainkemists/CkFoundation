@@ -6,6 +6,7 @@
 #include "CkAssetExporter/AssetAction/CkCascadeExporter_AssetAction.h"
 #include "CkAssetExporter/AssetAction/CkDataAssetExporter_AssetAction.h"
 #include "CkAssetExporter/AssetAction/CkEQSExporter_AssetAction.h"
+#include "CkAssetExporter/AssetAction/CkMaterialExporter_AssetAction.h"
 #include "CkAssetExporter/AssetAction/CkNiagaraExporter_AssetAction.h"
 #include "CkAssetExporter/AssetAction/CkStateTreeExporter_AssetAction.h"
 #include "CkAssetExporter/AssetAction/CkUserDefinedEnumExporter_AssetAction.h"
@@ -71,6 +72,7 @@ auto
     ck::asset_exporter::RegisterCascadeContextMenu();
     ck::asset_exporter::RegisterDataAssetContextMenu();
     ck::asset_exporter::RegisterEQSContextMenu();
+    ck::asset_exporter::RegisterMaterialContextMenu();
     ck::asset_exporter::RegisterNiagaraContextMenu();
     ck::asset_exporter::RegisterStateTreeContextMenu();
     ck::asset_exporter::RegisterUserDefinedEnumContextMenu();
@@ -91,7 +93,7 @@ auto
         FOnSpawnTab::CreateRaw(this, &FCkAssetExporterModule::DoOnSpawnTab)
     )
     .SetDisplayName(FText::FromString(ExporterTab_TabDisplayName))
-    .SetTooltipText(FText::FromString(TEXT("Export assets (Behavior Trees, Blueprints, DataAssets, EQS, State Trees, Structs, Enums) to JSON and plain-text formats")))
+    .SetTooltipText(FText::FromString(TEXT("Export assets (Behavior Trees, Blueprints, DataAssets, EQS, State Trees, Structs, Enums, Materials) to JSON and plain-text formats")))
     .SetGroup(WorkspaceMenu::GetMenuStructure().GetDeveloperToolsDebugCategory());
 }
 
