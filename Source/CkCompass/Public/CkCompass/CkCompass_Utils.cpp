@@ -130,6 +130,29 @@ auto
     return FMath::Abs(InSignedBearingDegrees) > InArcDegrees * 0.5f;
 }
 
+auto
+    UCk_Utils_Compass_UE::
+    Get_RangeFadeAlpha(
+        float InDistance,
+        float InMinVisibleRange,
+        float InMaxVisibleRange,
+        float InFadeBandCm)
+    -> float
+{
+    if (InFadeBandCm <= 0.0f)
+    { return 1.0f; }
+
+    auto Alpha = 1.0f;
+
+    if (InMinVisibleRange > 0.0f)
+    { Alpha = FMath::Min(Alpha, (InDistance - InMinVisibleRange) / InFadeBandCm); }
+
+    if (InMaxVisibleRange > 0.0f)
+    { Alpha = FMath::Min(Alpha, (InMaxVisibleRange - InDistance) / InFadeBandCm); }
+
+    return FMath::Clamp(Alpha, 0.0f, 1.0f);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

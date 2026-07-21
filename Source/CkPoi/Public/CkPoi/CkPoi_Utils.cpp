@@ -93,6 +93,15 @@ auto
 
 auto
     UCk_Utils_Poi_UE::
+    Get_MinVisibleRange(
+        const FCk_Handle_Poi& InPoi)
+    -> float
+{
+    return InPoi.Get<ck::FFragment_Poi_Params>().Get_MinVisibleRange();
+}
+
+auto
+    UCk_Utils_Poi_UE::
     Get_OffscreenPolicy(
         const FCk_Handle_Poi& InPoi)
     -> ECk_Poi_OffscreenPolicy
