@@ -9,6 +9,7 @@
 #include <HAL/PlatformFileManager.h>
 #include <HAL/PlatformProcess.h>
 #include <Misc/CommandLine.h>
+#include <Misc/Parse.h>
 #include <Misc/Paths.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -20,6 +21,7 @@ namespace ck_angelscript_generator_regen_ownership
     TUniquePtr<IFileHandle> sLockHandle;
     bool sWarnedSecondaryOnce = false;
     bool sWasSecondary        = false;
+    bool sWarnedDeclineOnce   = false;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -33,6 +35,28 @@ auto
     CK_ENSURE_IF_NOT(IsInGameThread(),
         TEXT("RegenOwnership gate [{}] called off the game thread"), FString{InGateSite})
     { return false; }
+
+    // Read-only boots (the toolbox's `Automation List; Quit` inline-discovery editor) pass
+    // -CkAsDeclineRegenOwnership: they only enumerate tests, so they must NEVER take the regen
+    // lock. If they did, a REAL test editor booting concurrently (the `--build --test`
+    // inline-discovery race) loses the lock, runs as SECONDARY with self-heal DISABLED, and can
+    // silently run stale bytecode ("Keeping all old script code") — the toolbox false-green.
+    // Declining here leaves the lock free for the test editor to own and self-heal as PRIMARY.
+    static const auto DeclineRegenOwnership =
+        FParse::Param(FCommandLine::Get(), TEXT("CkAsDeclineRegenOwnership"));
+    if (DeclineRegenOwnership)
+    {
+        if (NOT ck_angelscript_generator_regen_ownership::sWarnedDeclineOnce)
+        {
+            ck_angelscript_generator_regen_ownership::sWarnedDeclineOnce = true;
+            ck::angelscriptgenerator::Log(
+                TEXT("[RegenOwnership] -CkAsDeclineRegenOwnership set — this read-only boot declines ")
+                TEXT("Script/Generated ownership at every gate (first: [{}]); the lock is left free ")
+                TEXT("for a concurrent test editor. Generator writes + self-heal are inert here."),
+                FString{InGateSite});
+        }
+        return false;
+    }
 
     if (ck_angelscript_generator_regen_ownership::sLockHandle.IsValid())
     { return true; }
