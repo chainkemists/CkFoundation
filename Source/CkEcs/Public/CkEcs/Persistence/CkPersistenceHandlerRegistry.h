@@ -15,11 +15,13 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 // Result of FHandler::NetApply / HydrationApply. NotReady means the feature the data targets is not composed on
-// this entity yet — the entry stays pending and the dispatcher retries next tick.
+// this entity yet — the entry stays pending and the dispatcher retries next tick. Rejected means the payload is
+// permanently invalid and must be dropped immediately; it is never a retry state.
 enum class ECk_Persistence_ApplyResult : uint8
 {
     Applied,
-    NotReady
+    NotReady,
+    Rejected
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -34,7 +36,8 @@ public:
         // NET-receive apply, dispatched deferred by FProcessor_ReplicatedFragments_Dispatch after
         // OnConstructed-driven composition — NEVER runs on the loading authority (that path uses
         // HydrationApply). OldData unset on first application, else the last APPLIED data. Return
-        // NotReady to retry next tick — never compose the feature from inside NetApply. Absent on
+        // NotReady to retry next tick; return Rejected for permanent payload/schema invalidity. Never compose the feature
+        // from inside NetApply. Absent on
         // Save-only handlers (their type is never placed in a replicated container).
         TFunction<ECk_Persistence_ApplyResult(FCk_Handle& Entity,
                         const FInstancedStruct& NewData,

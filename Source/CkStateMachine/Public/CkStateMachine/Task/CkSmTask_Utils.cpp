@@ -73,7 +73,7 @@ auto
     // Defer the EntityScript attach — see FProcessor_SmScript_CommitPendingAttach.
     // This keeps the task handle usable for chaining while making a same-frame
     // RemoveTask race-free (no script ever Construct/BeginPlay's on a torn-down task).
-    TaskEntity.Add<ck::FFragment_SmScript_PendingAttach>(InTaskClass, FInstancedStruct{});
+    TaskEntity.Add<ck::FFragment_SmScript_PendingAttach>(InTaskClass);
     TaskEntity.Add<ck::FTag_SmScript_PendingAttach>();
 
     return TaskEntityTyped;

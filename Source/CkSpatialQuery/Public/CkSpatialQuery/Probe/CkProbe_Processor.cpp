@@ -170,7 +170,7 @@ namespace ck::details
                     InOther,
                     TArray<FVector>{InContactPoint},
                     InContactNormal,
-                    UCk_Utils_Probe_UE::Get_SurfaceInfo(InOther).Get_PhysicalMaterial()
+                    UCk_Utils_Probe_UE::Get_SurfaceInfo(InOther).Get_PhysicalMaterial().Get()
                 },
                 {}
             });
@@ -1006,7 +1006,7 @@ namespace ck
             InRequest.Get_OtherEntity(),
             InRequest.Get_ContactPoints(),
             InRequest.Get_ContactNormal(),
-            InRequest.Get_PhysicalMaterial()
+            InRequest.Get_PhysicalMaterial().Get()
         };
 
         UUtils_Signal_OnProbeBeginOverlap::Broadcast(InHandle, MakePayload(InHandle, Payload));
@@ -1034,7 +1034,7 @@ namespace ck
             InRequest.Get_OtherEntity(),
             InRequest.Get_ContactPoints(),
             InRequest.Get_ContactNormal(),
-            InRequest.Get_PhysicalMaterial()
+            InRequest.Get_PhysicalMaterial().Get()
         };
 
         InCurrent._CurrentOverlaps.Add(OverlapInfo);

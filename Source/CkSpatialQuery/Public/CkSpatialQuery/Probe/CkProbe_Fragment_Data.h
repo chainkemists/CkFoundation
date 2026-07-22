@@ -116,7 +116,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true, EditCondition = "_PhysicalMaterialSource == ECk_PhysicalMaterialSource::Direct"))
-    TObjectPtr<UPhysicalMaterial> _PhysicalMaterial;
+    TWeakObjectPtr<UPhysicalMaterial> _PhysicalMaterial;
 
 public:
     CK_PROPERTY(_PhysicalMaterialSource);
@@ -284,7 +284,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    TObjectPtr<UPhysicalMaterial> _PhysicalMaterial;
+    TWeakObjectPtr<UPhysicalMaterial> _PhysicalMaterial;
 
 public:
     CK_PROPERTY_GET(_OtherEntity);
@@ -659,7 +659,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    TObjectPtr<UPhysicalMaterial> _PhysicalMaterial;
+    TWeakObjectPtr<UPhysicalMaterial> _PhysicalMaterial;
 
 public:
     CK_PROPERTY_GET(_OtherEntity);
@@ -708,7 +708,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    TObjectPtr<UPhysicalMaterial> _PhysicalMaterial;
+    TWeakObjectPtr<UPhysicalMaterial> _PhysicalMaterial;
 
 public:
     CK_PROPERTY_GET(_OtherEntity);

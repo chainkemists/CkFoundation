@@ -66,12 +66,20 @@ namespace ck
                 ? TOptional<FInstancedStruct>{Entry._LastAppliedData}
                 : TOptional<FInstancedStruct>{};
 
-            if (Handler->NetApply(InHandle, Entry.Data, OldData) == ECk_Persistence_ApplyResult::Applied)
+            const auto ApplyResult = Handler->NetApply(InHandle, Entry.Data, OldData);
+            if (ApplyResult == ECk_Persistence_ApplyResult::Applied)
             {
                 Entry._PendingApply = false;
                 Entry._PendingForSeconds = 0.0f;
                 Entry._LastAppliedData = Entry.Data;
                 Entry._WasEverApplied = true;
+                continue;
+            }
+
+            if (ApplyResult == ECk_Persistence_ApplyResult::Rejected)
+            {
+                Entry._PendingApply = false;
+                Entry._PendingForSeconds = 0.0f;
                 continue;
             }
 
