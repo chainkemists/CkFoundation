@@ -1,9 +1,14 @@
 # CkPoi Refactor v2 — Design Doc
 
-**Status:** design only, not implemented. Supersedes `6c98baeb2` (2026-07-20), most of which was
-reverted same-day by `159983575` and `7e8347b75`. This doc exists so a future implementation
-session doesn't repeat the same undo. Updated after a follow-up discussion on `CkVisibleRange`
-cadence/scale — see that section; it corrects the original "no processor" call.
+**Status:** SHIPPED (CkPoi v2, dev). This is now the historical design record; the live homes are the
+per-module `CLAUDE.md`s (`CkPoi`, `CkVisibleRange`, `CkPoiDisplayDefinition`, `CkCompass`, `CkMinimap`).
+Below, references to the proposed `ck::cadence::ShouldRun` free function are historical — it shipped as
+the `ECk_Chrono_OverflowPolicy::Wrap` policy on `FCk_Chrono::Tick` (`CkCore/Chrono`). The
+bucketed-cadence "sub-instanced processors" follow-up is fleshed out as its own architecture &
+implementation plan in `CkEcs/DESIGN_SubInstancedCadenceProcessors.md`.
+
+Originally superseded `6c98baeb2` (2026-07-20), most of which was reverted same-day by `159983575`
+and `7e8347b75`. This doc exists so a future implementation session doesn't repeat the same undo.
 
 ## Motivation
 
