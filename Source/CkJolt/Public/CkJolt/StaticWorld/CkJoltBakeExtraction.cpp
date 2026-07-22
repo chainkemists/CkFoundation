@@ -183,7 +183,7 @@ namespace ck_jolt_bake_extraction
         const FVector& InScale,
         const FString& InDebugName,
         TArray<FLeafShape>& OutLeaves)
-        -> void
+        -> bool
     {
         const auto& AggGeom = InBodySetup.AggGeom;
         const auto AbsScale = InScale.GetAbs();
@@ -191,11 +191,32 @@ namespace ck_jolt_bake_extraction
         for (const auto& BoxElem : AggGeom.BoxElems)
         {
             const auto HalfExtents = FVector{BoxElem.X * AbsScale.X, BoxElem.Y * AbsScale.Y, BoxElem.Z * AbsScale.Z} * 0.5;
+            const auto JoltHalfExtents = jolt::Conv(HalfExtents);
+            const auto HalfExtentsArePositive = FMath::IsFinite(JoltHalfExtents.GetX())
+                && FMath::IsFinite(JoltHalfExtents.GetY())
+                && FMath::IsFinite(JoltHalfExtents.GetZ())
+                && JoltHalfExtents.GetX() > 0.0f
+                && JoltHalfExtents.GetY() > 0.0f
+                && JoltHalfExtents.GetZ() > 0.0f;
 
-            const auto Settings = JPH::BoxShapeSettings{jolt::Conv(HalfExtents)};
+            CK_ENSURE_IF_NOT(HalfExtentsArePositive,
+                TEXT("Jolt box collision is INVALID for [{}]: raw dimensions [{}, {}, {}], "
+                     "component scale [{}], scaled half extents [{}], Jolt half extents [{}, {}, {}]. "
+                     "Every Jolt half extent must be finite and positive."),
+                InDebugName, BoxElem.X, BoxElem.Y, BoxElem.Z, InScale, HalfExtents,
+                JoltHalfExtents.GetX(), JoltHalfExtents.GetY(), JoltHalfExtents.GetZ())
+            {}
+            if (NOT HalfExtentsArePositive)
+            { return false; }
+
+            constexpr auto MaximumConvexRadiusFraction = 0.5f;
+            const auto MinimumHalfExtent = JoltHalfExtents.ReduceMin();
+            const auto ConvexRadius = FMath::Min(
+                JPH::cDefaultConvexRadius, MinimumHalfExtent * MaximumConvexRadiusFraction);
+            const auto Settings = JPH::BoxShapeSettings{JoltHalfExtents, ConvexRadius};
             auto Shape = Create_ShapeFromSettings(Settings, InDebugName);
             if (Shape == nullptr)
-            { continue; }
+            { return false; }
 
             OutLeaves.Emplace(FLeafShape{Shape, BoxElem.Center * InScale, BoxElem.Rotation.Quaternion()});
         }
@@ -255,6 +276,8 @@ namespace ck_jolt_bake_extraction
 
             OutLeaves.Emplace(FLeafShape{Shape, FVector::ZeroVector, FQuat::Identity});
         }
+
+        return true;
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -373,7 +396,9 @@ namespace ck::jolt::bake
         { return Build_TriMeshShape(InBodySetup, InScale, InDebugName); }
 
         auto Leaves = TArray<FLeafShape>{};
-        Build_AggGeomLeaves(InBodySetup, InScale, InDebugName, Leaves);
+        const auto AggGeomIsValid = Build_AggGeomLeaves(InBodySetup, InScale, InDebugName, Leaves);
+        if (NOT AggGeomIsValid)
+        { return {}; }
 
         if (Leaves.IsEmpty())
         {
@@ -492,13 +517,15 @@ namespace ck::jolt::bake
             // Deformed geometry — the BodySetup is per-instance (RecreateCollision cooks the
             // deformed shape), so it bypasses the shared cache deliberately.
             const auto* BodySetup = SplineMesh->GetBodySetup();
+            const auto DebugName = ck::Format_UE(TEXT("{} on {}"),
+                GetNameSafe(SplineMesh->GetStaticMesh()), InComponent.GetPathName());
 
             CK_ENSURE_IF_NOT(ck::IsValid(BodySetup, ck::IsValid_Policy_NullptrOnly{}),
-                TEXT("SplineMeshComponent [{}] has collision enabled but no BodySetup"), InComponent.GetName())
+                TEXT("SplineMeshComponent [{}] has collision enabled but no BodySetup"), DebugName)
             { return 0; }
 
             const auto Shape = BuildShape_FromBodySetup(*BodySetup, ComponentTransform.GetScale3D(),
-                InComponent.GetName());
+                DebugName);
             EmitBody(Shape, ComponentTransform.GetLocation(), ComponentTransform.GetRotation(), BodySetup);
         }
         else if (const auto* Instanced = Cast<UInstancedStaticMeshComponent>(&InComponent))
@@ -508,10 +535,10 @@ namespace ck::jolt::bake
             { return 0; }
 
             const auto* BodySetup = Mesh->GetBodySetup();
+            const auto DebugName = ck::Format_UE(TEXT("{} on {}"), Mesh->GetName(), InComponent.GetPathName());
 
             CK_ENSURE_IF_NOT(ck::IsValid(BodySetup, ck::IsValid_Policy_NullptrOnly{}),
-                TEXT("Instanced mesh [{}] on [{}] has collision enabled but no BodySetup"),
-                Mesh->GetName(), InComponent.GetName())
+                TEXT("Instanced mesh [{}] has collision enabled but no BodySetup"), DebugName)
             { return 0; }
 
             const auto InstanceCount = Instanced->GetInstanceCount();
@@ -543,7 +570,7 @@ namespace ck::jolt::bake
                 for (const auto& InstanceTransform : InstanceTransforms)
                 {
                     const auto Shape = InShapeCache.GetOrCreate_Shape(*BodySetup,
-                        InstanceTransform.GetScale3D(), Mesh->GetName());
+                        InstanceTransform.GetScale3D(), DebugName);
                     if (Shape == nullptr)
                     { continue; }
 
@@ -555,7 +582,7 @@ namespace ck::jolt::bake
 
                 if (ChildCount >= 2)
                 {
-                    const auto CompoundShape = Create_ShapeFromSettings(CompoundSettings, Mesh->GetName());
+                    const auto CompoundShape = Create_ShapeFromSettings(CompoundSettings, DebugName);
                     EmitBody(CompoundShape, BodyPosition, BodyRotation, BodySetup);
                 }
                 else if (ChildCount == 1)
@@ -564,7 +591,7 @@ namespace ck::jolt::bake
                     // through to a single plain body.
                     const auto& InstanceTransform = InstanceTransforms[0];
                     const auto Shape = InShapeCache.GetOrCreate_Shape(*BodySetup,
-                        InstanceTransform.GetScale3D(), Mesh->GetName());
+                        InstanceTransform.GetScale3D(), DebugName);
                     EmitBody(Shape, InstanceTransform.GetLocation(), InstanceTransform.GetRotation(), BodySetup);
                 }
             }
@@ -574,7 +601,7 @@ namespace ck::jolt::bake
                 for (const auto& InstanceTransform : InstanceTransforms)
                 {
                     const auto Shape = InShapeCache.GetOrCreate_Shape(*BodySetup,
-                        InstanceTransform.GetScale3D(), Mesh->GetName());
+                        InstanceTransform.GetScale3D(), DebugName);
                     EmitBody(Shape, InstanceTransform.GetLocation(), InstanceTransform.GetRotation(), BodySetup);
                 }
             }
@@ -586,14 +613,14 @@ namespace ck::jolt::bake
             { return 0; }
 
             const auto* BodySetup = Mesh->GetBodySetup();
+            const auto DebugName = ck::Format_UE(TEXT("{} on {}"), Mesh->GetName(), InComponent.GetPathName());
 
             CK_ENSURE_IF_NOT(ck::IsValid(BodySetup, ck::IsValid_Policy_NullptrOnly{}),
-                TEXT("StaticMesh [{}] on [{}] has collision enabled but no BodySetup"),
-                Mesh->GetName(), InComponent.GetName())
+                TEXT("StaticMesh [{}] has collision enabled but no BodySetup"), DebugName)
             { return 0; }
 
             const auto Shape = InShapeCache.GetOrCreate_Shape(*BodySetup,
-                ComponentTransform.GetScale3D(), Mesh->GetName());
+                ComponentTransform.GetScale3D(), DebugName);
             EmitBody(Shape, ComponentTransform.GetLocation(), ComponentTransform.GetRotation(), BodySetup);
         }
         else if (const auto* Brush = Cast<UBrushComponent>(&InComponent))
@@ -613,8 +640,9 @@ namespace ck::jolt::bake
             }
 
             // Brush geometry is already convex-decomposed into the BodySetup's ConvexElems.
+            const auto DebugName = ck::Format_UE(TEXT("Brush on {}"), InComponent.GetPathName());
             const auto Shape = BuildShape_FromBodySetup(*BodySetup, ComponentTransform.GetScale3D(),
-                InComponent.GetName());
+                DebugName);
             EmitBody(Shape, ComponentTransform.GetLocation(), ComponentTransform.GetRotation(), BodySetup);
         }
 
