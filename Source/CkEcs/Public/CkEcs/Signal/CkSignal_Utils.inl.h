@@ -2,8 +2,100 @@
 
 #include "CkSignal_Utils.h"
 
+#include "CkCore/Format/CkFormat.h"
 #include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Time/CkTime_Utils.h"
+#include "CkCore/Validation/CkUntracedStructSafety.h"
+
+#include <StructUtils/InstancedStruct.h>
+
+#include <type_traits>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_signal_utils
+{
+    template <typename T_SignalType, typename T_HandleType, typename T_ValidityPolicy>
+    auto
+        ValidateSignalHandle(
+            const T_HandleType& InHandle,
+            const TCHAR* InOperation,
+            T_ValidityPolicy InValidityPolicy)
+        -> bool
+    {
+        const auto IsHandleValid = ck::IsValid(InHandle, InValidityPolicy);
+        CK_ENSURE_IF_NOT(IsHandleValid,
+            TEXT("Signal [{}] operation [{}] rejected invalid/tombstone handle"),
+            ck::Get_RuntimeTypeToString<T_SignalType>(),
+            InOperation)
+        { }
+        if (NOT IsHandleValid)
+        { return false; }
+
+        return true;
+    }
+
+    inline auto
+        ValidateRetainedInstancedStruct(
+            const FInstancedStruct& InPayload,
+            const FString& InSignalType)
+        -> bool
+    {
+        if (NOT InPayload.IsValid())
+        { return true; }
+
+        const auto* PayloadStruct = InPayload.GetScriptStruct();
+        const auto HasPayloadStruct = PayloadStruct != nullptr;
+        CK_ENSURE_IF_NOT(HasPayloadStruct,
+            TEXT("Signal [{}] rejected an InstancedStruct payload without a reflected struct type"),
+            InSignalType)
+        { }
+        if (NOT HasPayloadStruct)
+        { return false; }
+
+        const auto Safety = ck::Analyze_UntracedStructSafety(PayloadStruct);
+        const auto IsPayloadSafe = Safety.IsGcIndependent();
+        CK_ENSURE_IF_NOT(IsPayloadSafe,
+            TEXT("Signal [{}] rejected unsafe InstancedStruct payload [{}]; [{}]: {}"),
+            InSignalType,
+            PayloadStruct->GetName(),
+            Safety.FailurePath,
+            Safety.FailureReason)
+        { }
+        if (NOT IsPayloadSafe)
+        { return false; }
+
+        return true;
+    }
+
+    inline auto
+        ValidateRetainedPayloadArg(
+            const FInstancedStruct& InArg,
+            const FString& InSignalType)
+        -> bool
+    { return ValidateRetainedInstancedStruct(InArg, InSignalType); }
+
+    template <typename T_Arg>
+    auto
+        ValidateRetainedPayloadArg(
+            const T_Arg&,
+            const FString&)
+        -> bool
+    { return true; }
+
+    template <typename... T_Args>
+    auto
+        ValidateRetainedPayload(
+            const ck::TPayload<T_Args...>& InPayload,
+            const FString& InSignalType)
+        -> bool
+    {
+        return std::apply([&](const auto&... InArgs) -> bool
+        {
+            return (true && ... && ValidateRetainedPayloadArg(InArgs, InSignalType));
+        }, InPayload.Payload);
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -19,6 +111,9 @@ namespace ck
             const T_HandleType& InHandle)
         -> bool
     {
+        if (ck::Is_NOT_Valid(InHandle, ck::IsValid_Policy_IncludePendingKill{}))
+        { return false; }
+
         return InHandle.template Has<SignalType>();
     }
 
@@ -30,6 +125,9 @@ namespace ck
             const T_HandleType& InHandle)
         -> bool
     {
+        if (ck::Is_NOT_Valid(InHandle, ck::IsValid_Policy_IncludePendingKill{}))
+        { return false; }
+
         if (InHandle.template Has<SignalType>())
         {
             const auto& Signal  = InHandle.template Get<SignalType, ck::IsValid_Policy_IncludePendingKill>();
@@ -47,6 +145,17 @@ namespace ck
             T_HandleType InHandle,
             TPayload<T_Args...>&& InPayload)
     {
+        if (NOT ck_signal_utils::ValidateSignalHandle<SignalType>(
+                InHandle, TEXT("Broadcast"), ck::IsValid_Policy_IncludePendingKill{}))
+        { return; }
+
+        if constexpr ((false || ... || std::is_same_v<std::remove_cvref_t<T_Args>, FInstancedStruct>))
+        {
+            const auto SignalTypeName = ck::Get_RuntimeTypeToString<SignalType>();
+            if (NOT ck_signal_utils::ValidateRetainedPayload(InPayload, SignalTypeName))
+            { return; }
+        }
+
         auto& Signal  = InHandle.template AddOrGet<SignalType, ck::IsValid_Policy_IncludePendingKill>();
 
         CK_STAT(STAT_SignalBroadcast);
@@ -85,8 +194,12 @@ namespace ck
         Bind(
             T_HandleType InHandle)
     {
+        using ReturnType = typename SignalType::ConnectionType;
+        if (NOT ck_signal_utils::ValidateSignalHandle<SignalType>(
+                InHandle, TEXT("Bind"), ck::IsValid_Policy_Default{}))
+        { return ReturnType{}; }
+
         auto& Signal = InHandle.template AddOrGet<SignalType>();
-        using ReturnType = decltype(Signal._InvokeAndUnbind_Sink.template connect<T_Candidate>());
 
         const auto ShouldFirePayloadInFlight = ck::IsValid(Signal._Payload) &&
             (Signal._PayloadFrameNumber == UCk_Utils_Time_UE::Get_FrameCounter() ||
@@ -121,8 +234,12 @@ namespace ck
             T_Instance&& InInstance,
             T_HandleType InHandle)
     {
+        using ReturnType = typename SignalType::ConnectionType;
+        if (NOT ck_signal_utils::ValidateSignalHandle<SignalType>(
+                InHandle, TEXT("Bind"), ck::IsValid_Policy_Default{}))
+        { return ReturnType{}; }
+
         auto& Signal = InHandle.template AddOrGet<SignalType>();
-        using ReturnType = decltype(Signal._InvokeAndUnbind_Sink.template connect<T_Candidate>(InInstance));
 
         const auto ShouldFirePayloadInFlight = ck::IsValid(Signal._Payload) &&
             (Signal._PayloadFrameNumber == UCk_Utils_Time_UE::Get_FrameCounter() ||
@@ -158,6 +275,9 @@ namespace ck
             ECk_Signal_PostFireBehavior InPostFireBehavior)
     {
         using ReturnType = decltype(Bind<T_Candidate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight, ECk_Signal_PostFireBehavior::DoNothing>(InHandle));
+        if (NOT ck_signal_utils::ValidateSignalHandle<SignalType>(
+                InHandle, TEXT("Bind"), ck::IsValid_Policy_Default{}))
+        { return ReturnType{}; }
 
         switch(InPayloadInFlightBehavior)
         {
@@ -204,6 +324,9 @@ namespace ck
     {
         using ReturnType = decltype(Bind<T_Candidate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight, ECk_Signal_PostFireBehavior::DoNothing>(
             std::forward<T_Instance>(InInstance), InHandle));
+        if (NOT ck_signal_utils::ValidateSignalHandle<SignalType>(
+                InHandle, TEXT("Bind"), ck::IsValid_Policy_Default{}))
+        { return ReturnType{}; }
 
         switch(InPayloadInFlightBehavior)
         {
@@ -257,6 +380,18 @@ namespace ck
         Unbind(
             T_HandleType InHandle)
     {
+        if (NOT ck_signal_utils::ValidateSignalHandle<SignalType>(
+                InHandle, TEXT("Unbind"), ck::IsValid_Policy_IncludePendingKill{}))
+        { return; }
+
+        const auto HasSignalState = InHandle.template Has<SignalType>();
+        CK_ENSURE_IF_NOT(HasSignalState,
+            TEXT("Signal [{}] Unbind rejected a handle without signal state"),
+            ck::Get_RuntimeTypeToString<SignalType>())
+        { }
+        if (NOT HasSignalState)
+        { return; }
+
         auto& Signal = InHandle.template Get<SignalType, ck::IsValid_Policy_IncludePendingKill>();
         Signal._Invoke_Sink.template disconnect<T_Candidate>();
     }
@@ -269,6 +404,18 @@ namespace ck
             T_Instance&& InInstance,
             T_HandleType InHandle)
     {
+        if (NOT ck_signal_utils::ValidateSignalHandle<SignalType>(
+                InHandle, TEXT("Unbind"), ck::IsValid_Policy_IncludePendingKill{}))
+        { return; }
+
+        const auto HasSignalState = InHandle.template Has<SignalType>();
+        CK_ENSURE_IF_NOT(HasSignalState,
+            TEXT("Signal [{}] Unbind rejected a handle without signal state"),
+            ck::Get_RuntimeTypeToString<SignalType>())
+        { }
+        if (NOT HasSignalState)
+        { return; }
+
         auto& Signal = InHandle.template Get<SignalType, ck::IsValid_Policy_IncludePendingKill>();
         Signal._Invoke_Sink.template disconnect<T_Candidate>(InInstance);
     }
@@ -289,6 +436,10 @@ namespace ck
             DynamicDelegateType InDelegate,
             ConditionalDynamicDelegatePredicateFunc InInvocationPredicate)
     {
+        if (NOT ck_signal_utils::ValidateSignalHandle<SignalType>(
+                InHandle, TEXT("Delegate Bind"), ck::IsValid_Policy_Default{}))
+        { return; }
+
         if (NOT InDelegate.IsBound())
         { return; }
 
@@ -398,6 +549,10 @@ namespace ck
             ECk_Signal_BindingPolicy InPayloadInFlightBehavior,
             ConditionalDynamicDelegatePredicateFunc InInvocationPredicate)
     {
+        if (NOT ck_signal_utils::ValidateSignalHandle<SignalType>(
+                InHandle, TEXT("Delegate Bind"), ck::IsValid_Policy_Default{}))
+        { return; }
+
         if (NOT InDelegate.IsBound())
         { return; }
 
@@ -434,6 +589,10 @@ namespace ck
             T_HandleType InHandle,
             DynamicDelegateType InDelegate)
     {
+        if (NOT ck_signal_utils::ValidateSignalHandle<SignalType>(
+                InHandle, TEXT("Delegate Unbind"), ck::IsValid_Policy_IncludePendingKill{}))
+        { return; }
+
         if (NOT InDelegate.IsBound())
         { return; }
 
@@ -458,6 +617,9 @@ namespace ck
             T_HandleType InHandle)
         -> bool
     {
+        if (ck::Is_NOT_Valid(InHandle, ck::IsValid_Policy_IncludePendingKill{}))
+        { return false; }
+
         if (NOT InHandle.template Has<T_DerivedSignal_Delegate>())
         { return {}; }
 

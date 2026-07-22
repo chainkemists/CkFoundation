@@ -101,7 +101,7 @@ auto
     // Defer the EntityScript attach — see FProcessor_SmScript_CommitPendingAttach.
     // Lets a condition added during DefineState be safely removed in the same frame
     // without its script ever reaching Construct/BeginPlay.
-    ConditionEntity.Add<ck::FFragment_SmScript_PendingAttach>(InConditionClass, FInstancedStruct{});
+    ConditionEntity.Add<ck::FFragment_SmScript_PendingAttach>(InConditionClass);
     ConditionEntity.Add<ck::FTag_SmScript_PendingAttach>();
 
     return ConditionEntityTyped;

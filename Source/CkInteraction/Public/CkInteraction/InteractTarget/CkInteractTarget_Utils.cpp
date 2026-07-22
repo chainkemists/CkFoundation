@@ -16,6 +16,19 @@ DECLARE_CYCLE_STAT(TEXT("InteractTarget::TryGet"), STAT_Interaction_InteractTarg
 
 auto
     UCk_Utils_InteractTarget_UE::
+    ResolveSetupData(
+        const FCk_InteractTarget_SetupData& InSetupData,
+        const UObject* InWorldContextObject)
+    -> FCk_Fragment_InteractTarget_ParamsData
+{
+    auto Params = InSetupData.Params;
+    Params._CanInteractWithReference = Make_CanInteractWithReference(
+        InSetupData.CanInteractWithRef, InWorldContextObject);
+    return Params;
+}
+
+auto
+    UCk_Utils_InteractTarget_UE::
     Add(
         FCk_Handle& InInteractTargetOwner,
         const FCk_Fragment_InteractTarget_ParamsData& InParams,
@@ -25,20 +38,7 @@ auto
 {
     auto NewInteractTargetEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_InteractTarget>(InInteractTargetOwner);
 
-    auto FixedParams = InParams;
-
-    if (ck::IsValid(InWorldContextObject))
-    {
-        auto* const ContextClass = InWorldContextObject->GetClass();
-
-        if (auto& InteractRef = FixedParams.Get_CanInteractWithRef();
-            InteractRef.IsSelfContext())
-        {
-            InteractRef.SetExternalMember(InteractRef.GetMemberName(), ContextClass);
-        }
-    }
-
-    NewInteractTargetEntity.Add<ck::FFragment_InteractTarget_Params>(FixedParams);
+    NewInteractTargetEntity.Add<ck::FFragment_InteractTarget_Params>(InParams);
     NewInteractTargetEntity.Add<ck::FFragment_InteractTarget_Current>();
     NewInteractTargetEntity.Add<ck::FTag_InteractTarget_RequiresSetup>();
 
@@ -48,6 +48,19 @@ auto
     RecordOfInteractTargets_Utils::Request_Connect(InInteractTargetOwner, NewInteractTargetEntity);
 
     return NewInteractTargetEntity;
+}
+
+auto
+    UCk_Utils_InteractTarget_UE::
+    AddFromSetupData(
+        FCk_Handle& InInteractTargetOwner,
+        const FCk_InteractTarget_SetupData& InSetupData,
+        const ECk_Replication InReplicates,
+        const UObject* InWorldContextObject)
+    -> FCk_Handle_InteractTarget
+{
+    auto Params = ResolveSetupData(InSetupData, InWorldContextObject);
+    return Add(InInteractTargetOwner, Params, InReplicates, InWorldContextObject);
 }
 
 auto
@@ -64,6 +77,37 @@ auto
     {
         return Add(InInteractTargetOwner, InParam, InReplicates, InWorldContextObject);
     });
+}
+
+auto
+    UCk_Utils_InteractTarget_UE::
+    ResolveMultipleSetupData(
+        const FCk_MultipleInteractTarget_SetupData& InSetupData,
+        const UObject* InWorldContextObject)
+    -> FCk_Fragment_MultipleInteractTarget_ParamsData
+{
+    auto Params = TArray<FCk_Fragment_InteractTarget_ParamsData>{};
+    Params.Reserve(InSetupData.InteractTargets.Num());
+
+    for (const auto& Entry : InSetupData.InteractTargets)
+    {
+        Params.Emplace(ResolveSetupData(Entry, InWorldContextObject));
+    }
+
+    return FCk_Fragment_MultipleInteractTarget_ParamsData{MoveTemp(Params)};
+}
+
+auto
+    UCk_Utils_InteractTarget_UE::
+    AddMultipleFromSetupData(
+        FCk_Handle& InInteractTargetOwner,
+        const FCk_MultipleInteractTarget_SetupData& InSetupData,
+        const ECk_Replication InReplicates,
+        const UObject* InWorldContextObject)
+    -> TArray<FCk_Handle_InteractTarget>
+{
+    auto Params = ResolveMultipleSetupData(InSetupData, InWorldContextObject);
+    return AddMultiple(InInteractTargetOwner, Params, InReplicates, InWorldContextObject);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -325,7 +369,7 @@ auto
     }
 
     if (const auto MemberRefResult = Resolve_CanInteractWith(
-            Params.Get_CanInteractWithRef(), InTarget, InInteractSource, InInteractInstigator);
+            Params.Get_CanInteractWithReference(), InTarget, InInteractSource, InInteractInstigator);
         MemberRefResult.IsSet())
     {
         if (NOT MemberRefResult.GetValue())
@@ -338,7 +382,7 @@ auto
 auto
     UCk_Utils_InteractTarget_UE::
     Resolve_CanInteractWith(
-        const FMemberReference& InRef,
+        const FCk_InteractTarget_CanInteractWithReference& InRef,
         FCk_Handle_InteractTarget InTarget,
         FCk_Handle InInteractSource,
         FCk_Handle InInteractInstigator)
@@ -346,12 +390,15 @@ auto
 {
     SCOPE_CYCLE_COUNTER(STAT_Interaction_CustomCanInteract_ProcessEvent);
 
-    auto* const MemberClass = InRef.GetMemberParentClass();
+    auto* const MemberClass = InRef.Resolve_MemberClass();
 
     if (ck::Is_NOT_Valid(MemberClass))
     { return {}; }
 
-    auto* const Function = InRef.ResolveMember<UFunction>(MemberClass);
+    auto RuntimeReference = FMemberReference{};
+    RuntimeReference.SetExternalMember(InRef.Get_MemberName(), MemberClass, InRef.Get_MemberGuid());
+
+    auto* const Function = RuntimeReference.ResolveMember<UFunction>(MemberClass);
 
     if (ck::Is_NOT_Valid(Function))
     { return {}; }
@@ -368,6 +415,26 @@ auto
     Context->ProcessEvent(Function, &Args);
 
     return Args.ReturnValue;
+}
+
+auto
+    UCk_Utils_InteractTarget_UE::
+    Make_CanInteractWithReference(
+        const FMemberReference& InRef,
+        const UObject* InWorldContextObject)
+    -> FCk_InteractTarget_CanInteractWithReference
+{
+    auto* MemberClass = InRef.GetMemberParentClass();
+    if (InRef.IsSelfContext() && ck::IsValid(InWorldContextObject))
+    {
+        MemberClass = InWorldContextObject->GetClass();
+    }
+
+    if (ck::Is_NOT_Valid(MemberClass))
+    { return {}; }
+
+    const auto MemberGuid = InRef.IsSelfContext() ? FGuid{} : InRef.GetMemberGuid();
+    return {InRef.GetMemberName(), MemberGuid, MemberClass};
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -11,6 +11,7 @@
 #include "CkActorRelay/CkActorRelay_Utils.h"
 
 #include "CkCore/Debug/CkDebug_Utils.h"
+#include "CkCore/Validation/CkUntracedStructSafety.h"
 
 #include "CkCue/CkCue_Fragment.h"
 #include "CkCue/CkCue_Log.h"
@@ -100,6 +101,35 @@ auto
 
 namespace ck_cue_subsystem_base
 {
+    auto ValidateRetainedSpawnParams(const FGameplayTag& InCueName, const FInstancedStruct& InSpawnParams) -> bool
+    {
+        if (NOT InSpawnParams.IsValid())
+        { return true; }
+
+        const auto* ScriptStruct = InSpawnParams.GetScriptStruct();
+        const auto HasScriptStruct = ScriptStruct != nullptr;
+        CK_ENSURE_IF_NOT(HasScriptStruct,
+            TEXT("Cue [{}] rejected spawn params without a reflected struct type"), InCueName)
+        { }
+        if (NOT HasScriptStruct)
+        { return false; }
+
+        const auto Safety = ck::Analyze_UntracedStructSafety(ScriptStruct);
+        const auto IsSpawnParamsSafe = Safety.IsGcIndependent();
+        CK_ENSURE_IF_NOT(IsSpawnParamsSafe,
+            TEXT("Cue [{}] rejected unsafe spawn params [{}]; [{}]: {}"),
+            InCueName,
+            ScriptStruct->GetName(),
+            Safety.FailurePath,
+            Safety.FailureReason)
+        { }
+
+        if (NOT IsSpawnParamsSafe)
+        { return false; }
+
+        return true;
+    }
+
     auto DoExecuteLocal(
         UCk_CueExecutor_Subsystem_Base_UE* InExecutor,
         const FCk_Handle& InOwnerEntity,
@@ -127,6 +157,9 @@ auto
         ECk_Cue_MulticastPolicy InMulticastPolicy)
     -> FCk_Handle_PendingEntityScript
 {
+    if (NOT ck_cue_subsystem_base::ValidateRetainedSpawnParams(InCueName, InSpawnParams))
+    { return {}; }
+
     if (InMulticastPolicy == ECk_Cue_MulticastPolicy::LocalOnly)
     {
         FCk_Handle InvalidHandle{};
@@ -178,6 +211,9 @@ auto
         ECk_Cue_MulticastPolicy InMulticastPolicy)
     -> FCk_Handle_PendingEntityScript
 {
+    if (NOT ck_cue_subsystem_base::ValidateRetainedSpawnParams(InCueName, InSpawnParams))
+    { return {}; }
+
     if (InMulticastPolicy == ECk_Cue_MulticastPolicy::LocalOnly)
     {
         return ck_cue_subsystem_base::DoExecuteLocal(this, InOwnerEntity, InCueName, InSpawnParams);

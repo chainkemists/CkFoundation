@@ -76,8 +76,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Carries the EntityScript class (and optional spawn params) to attach to an SM child
-    // entity (Task/Condition) when the commit processor runs. Deferring the attach avoids
+    // Carries the EntityScript class to attach to an SM child entity (Task/Condition) when
+    // the commit processor runs. Deferring the attach avoids
     // a same-frame race with FProcessor_EntityScript_ContinueConstruction when the child
     // is removed before BeginPlay runs — see CkEntityLifetime_Fragment.cpp destruction
     // pipeline, where CK_IGNORE_PENDING_KILL does NOT exclude FTag_DestroyEntity_Initiate.
@@ -92,14 +92,12 @@ namespace ck
 
     private:
         TSubclassOf<UCk_EntityScript_UE> _ScriptClass;
-        FInstancedStruct                 _SpawnParams;
 
     public:
         CK_PROPERTY_GET(_ScriptClass);
-        CK_PROPERTY_GET(_SpawnParams);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_SmScript_PendingAttach, _ScriptClass, _SpawnParams);
+        CK_DEFINE_CONSTRUCTORS(FFragment_SmScript_PendingAttach, _ScriptClass);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

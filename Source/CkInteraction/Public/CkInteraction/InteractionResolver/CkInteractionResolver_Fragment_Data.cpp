@@ -4,4 +4,4 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_InteractionChannel, TEXT("InteractionChannel"));
+UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_InteractionResolverChannel, TEXT("InteractionChannel"));

@@ -163,7 +163,7 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true,
                       EditCondition = "_SurfaceSource == ECk_JoltBody_SurfaceSource::PhysicalMaterial"))
-    TObjectPtr<UPhysicalMaterial> _PhysicalMaterial;
+    TWeakObjectPtr<UPhysicalMaterial> _PhysicalMaterial;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = 0.0,

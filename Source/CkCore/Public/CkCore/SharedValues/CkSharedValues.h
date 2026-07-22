@@ -296,10 +296,14 @@ public:
     FCk_SharedInstancedStruct(ValueType InValue);
 
 public:
-    auto operator*() const -> ValueType&;
-    auto operator->() const -> ValueType*;
+    auto operator*() const -> const ValueType&;
+    auto operator->() const -> const ValueType*;
 
 private:
+    friend class UCk_Utils_SharedInstancedStruct_UE;
+
+    auto TrySet(ValueType InValue) -> bool;
+
     PtrType _Ptr;
 };
 

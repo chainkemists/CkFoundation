@@ -318,7 +318,7 @@ auto
         const FInstancedStruct& InValue)
     -> void
 {
-    *InShared = InValue;
+    InShared.TrySet(InValue);
 }
 
 auto

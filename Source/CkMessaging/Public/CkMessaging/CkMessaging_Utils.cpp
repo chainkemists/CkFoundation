@@ -1,5 +1,6 @@
 #include "CkMessaging_Utils.h"
 
+#include "CkCore/Validation/CkUntracedStructSafety.h"
 #include "CkMessaging/CkMessaging_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -16,6 +17,30 @@ auto
         FInstancedStruct InPayload)
     -> void
 {
+    if (InPayload.IsValid())
+    {
+        const auto* ScriptStruct = InPayload.GetScriptStruct();
+        const auto HasScriptStruct = ScriptStruct != nullptr;
+        CK_ENSURE_IF_NOT(HasScriptStruct,
+            TEXT("Message [{}] rejected an InstancedStruct payload without a reflected struct type"), InMessageName)
+        { }
+        if (NOT HasScriptStruct)
+        { return; }
+
+        const auto Safety = ck::Analyze_UntracedStructSafety(ScriptStruct);
+        const auto IsPayloadSafe = Safety.IsGcIndependent();
+        CK_ENSURE_IF_NOT(IsPayloadSafe,
+            TEXT("Message [{}] rejected unsafe InstancedStruct payload [{}]; [{}]: {}"),
+            InMessageName,
+            ScriptStruct->GetName(),
+            Safety.FailurePath,
+            Safety.FailureReason)
+        { }
+
+        if (NOT IsPayloadSafe)
+        { return; }
+    }
+
     RecordOfMessengers_Utils::AddIfMissing(InHandle);
     const auto MessengerEntity = DoGet_MessengerEntity(InHandle, InMessageName);
 

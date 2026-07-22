@@ -302,7 +302,7 @@ namespace ck
         {
             case ECk_JoltBody_SurfaceSource::PhysicalMaterial:
             {
-                const UPhysicalMaterial* PhysMat = InParams.Get_PhysicalMaterial();
+                const UPhysicalMaterial* PhysMat = InParams.Get_PhysicalMaterial().Get();
                 if (ck::IsValid(PhysMat, ck::IsValid_Policy_NullptrOnly{}))
                 {
                     Settings.mFriction = PhysMat->Friction;

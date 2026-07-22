@@ -28,8 +28,12 @@ namespace ck::persistence_apply
             return EApplyOutcome::DroppedTimeout;
         }
 
-        if (Handler->HydrationApply(InEntity, InData, InOldData) == ECk_Persistence_ApplyResult::Applied)
+        const auto ApplyResult = Handler->HydrationApply(InEntity, InData, InOldData);
+        if (ApplyResult == ECk_Persistence_ApplyResult::Applied)
         { return EApplyOutcome::Applied; }
+
+        if (ApplyResult == ECk_Persistence_ApplyResult::Rejected)
+        { return EApplyOutcome::DroppedRejected; }
 
         InOutPendingForSeconds += InDeltaT.Get_Seconds();
 
@@ -94,7 +98,7 @@ namespace ck
             if (Outcome == ck::persistence_apply::EApplyOutcome::StillPending)
             { AnyStillPending = true; }
             else
-            { Entries.RemoveAt(Index); } // Applied or dropped-past-timeout
+            { Entries.RemoveAt(Index); } // Applied or terminally dropped
         }
 
         if (NOT AnyStillPending)

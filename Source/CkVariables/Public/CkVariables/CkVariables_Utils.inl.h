@@ -2,6 +2,10 @@
 
 #include "CkVariables_Utils.h"
 
+#include "CkCore/Validation/CkUntracedStructSafety.h"
+
+#include <StructUtils/InstancedStruct.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -113,6 +117,36 @@ namespace ck
             ArgType InValue)
         -> void
     {
+        if constexpr (std::is_same_v<ValueType, FInstancedStruct>)
+        {
+            if (InValue.IsValid())
+            {
+                const auto* ScriptStruct = InValue.GetScriptStruct();
+                const auto HasScriptStruct = ScriptStruct != nullptr;
+                CK_ENSURE_IF_NOT(HasScriptStruct,
+                    TEXT("Variable [{}] on Handle [{}] rejected an InstancedStruct without a reflected struct type"),
+                    InVariableName,
+                    InHandle)
+                { }
+                if (NOT HasScriptStruct)
+                { return; }
+
+                const auto Safety = ck::Analyze_UntracedStructSafety(ScriptStruct);
+                const auto IsValueSafe = Safety.IsGcIndependent();
+                CK_ENSURE_IF_NOT(IsValueSafe,
+                    TEXT("Variable [{}] on Handle [{}] rejected unsafe InstancedStruct [{}]; [{}]: {}"),
+                    InVariableName,
+                    InHandle,
+                    ScriptStruct->GetName(),
+                    Safety.FailurePath,
+                    Safety.FailureReason)
+                { }
+
+                if (NOT IsValueSafe)
+                { return; }
+            }
+        }
+
         auto& VariablesComp = InHandle.AddOrGet<FragmentType>();
         auto& FoundVariableWithName = VariablesComp.Get_Variables().FindOrAdd(InVariableName);
         FoundVariableWithName = InValue;

@@ -55,6 +55,7 @@ public:
 
     // Last data successfully applied on this client — the Old side of the next Apply. Coalesced
     // receives diff against what was actually applied, not the last received snapshot.
+    UPROPERTY(Transient, NotReplicated)
     FInstancedStruct _LastAppliedData;
     bool _WasEverApplied = false;
 };
