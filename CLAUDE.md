@@ -67,6 +67,16 @@ failure mode of incoming engineers and models — read them twice.
    `[EDITOR-VERIFY]` with exact manual steps for a human.
 8. **Clarity over cleverness.** If a reader needs a comment to follow the code, rename or restructure
    instead (see comment rules below).
+9. **Reuse existing modular features before building a bespoke one.** If a piece of data or behavior
+   would be useful outside the one feature currently asking for it (a range/fade calculation, a
+   display/config blob, anything that isn't intrinsic to that feature's own identity), extract it as
+   its own small composable module instead of adding it as a field on the feature that happens to
+   need it first. Before adding a field, ask "does an existing module already own this, or should
+   this become its own module?" — check the [Source/CLAUDE.md](Source/CLAUDE.md) decision tree first.
+   Case study: `CkPoi` v2 refactor (`Source/CkPoi/REFACTOR_MultiProjectorPoi.md`) — a Poi fragment
+   that grew Category/Priority/VisibleRange/DisplayAsset fields directly couldn't express "one Poi,
+   multiple projector-specific presentations"; those fields belonged in `CkLabel`, `CkEntityTag`, a
+   new `CkVisibleRange`, and a new `CkPoiDisplayDefinition` all along.
 
 ## Lingo
 
