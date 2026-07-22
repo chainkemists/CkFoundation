@@ -132,6 +132,7 @@ namespace ck
         FCk_Handle_IsmProxy,
         TReadOnly<FFragment_IsmProxy_Params>,
         TReadOnly<FFragment_IsmProxy_Current>,
+        TReadOnly<FFragment_Transform>,
         TExclude<FTag_IsmProxy_Disabled>,
         TExclude<FTag_IsmProxy_NeedsSetup>,
         TExclude<FTag_IsmProxy_NeedsInstanceAdded>,
@@ -153,11 +154,26 @@ namespace ck
 
     public:
         static auto
+        DidTransformChange(
+            const FFragment_Transform& InTransform,
+            const FFragment_IsmProxy_Params& InParams,
+            const FTransform& InInstanceTransform) -> bool;
+
+        auto
+        DoTick(
+            TimeType InDeltaT) -> void;
+
+        auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            const FFragment_IsmProxy_Current& InCurrent) -> void;
+            const FFragment_IsmProxy_Current& InCurrent,
+            const FFragment_Transform& InTransform) -> void;
+
+    private:
+        // Refreshed every frame
+        TWeakObjectPtr<UWorld> _World;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
