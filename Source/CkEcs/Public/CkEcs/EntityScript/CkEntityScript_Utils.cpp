@@ -2,6 +2,7 @@
 
 #include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Reflection/CkReflection_Utils.h"
+#include "CkCore/Validation/CkUntracedStructSafety.h"
 
 #include "Misc/MTAccessDetector.h"
 
@@ -26,6 +27,40 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_EntityScript_UE, FCk_Handle_EntityScript, ck::FFragment_EntityScript_Current);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_entity_script_utils
+{
+    auto ValidateRetainedSpawnParams(const TCHAR* InOperation, const FInstancedStruct& InSpawnParams) -> bool
+    {
+        if (NOT InSpawnParams.IsValid())
+        { return true; }
+
+        const auto* ScriptStruct = InSpawnParams.GetScriptStruct();
+        const auto HasScriptStruct = ScriptStruct != nullptr;
+        CK_ENSURE_IF_NOT(HasScriptStruct,
+            TEXT("{} rejected EntityScript spawn params without a reflected struct type"), InOperation)
+        { }
+        if (NOT HasScriptStruct)
+        { return false; }
+
+        const auto Safety = ck::Analyze_UntracedStructSafety(ScriptStruct);
+        const auto IsSpawnParamsSafe = Safety.IsGcIndependent();
+        CK_ENSURE_IF_NOT(IsSpawnParamsSafe,
+            TEXT("{} rejected unsafe EntityScript spawn params [{}]; [{}]: {}"),
+            InOperation,
+            ScriptStruct->GetName(),
+            Safety.FailurePath,
+            Safety.FailureReason)
+        { }
+
+        if (NOT IsSpawnParamsSafe)
+        { return false; }
+
+        return true;
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -91,6 +126,9 @@ auto
         FInstancedStruct InSpawnParams)
     -> FCk_Handle_PendingEntityScript
 {
+    if (NOT ck_entity_script_utils::ValidateRetainedSpawnParams(TEXT("Request_SpawnEntity"), InSpawnParams))
+    { return {}; }
+
     CK_ENSURE_IF_NOT(ck::IsValid(InEntityScriptClass),
         TEXT("EntityScriptClass [{}] is INVALID. Unable to SpawnEntity using LifetimeOwner [{}]."),
         InEntityScriptClass, InLifetimeOwner)
@@ -137,6 +175,9 @@ auto
         FInstancedStruct InSpawnParams)
     -> FCk_Handle_PendingEntityScript
 {
+    if (NOT ck_entity_script_utils::ValidateRetainedSpawnParams(TEXT("Request_SpawnEntity_Archetype"), InSpawnParams))
+    { return {}; }
+
     CK_ENSURE_IF_NOT(ck::IsValid(InEntityScriptClassArchetype),
         TEXT("EntityScriptClass [{}] is INVALID. Unable to SpawnEntity using LifetimeOwner [{}]."),
         InEntityScriptClassArchetype, InLifetimeOwner)
@@ -198,6 +239,9 @@ auto
         const FCk_EntityScript_PostConstruction_Func& InOptionalFunc)
     -> FCk_Handle_PendingEntityScript
 {
+    if (NOT ck_entity_script_utils::ValidateRetainedSpawnParams(TEXT("Add EntityScript"), InSpawnParams))
+    { return {}; }
+
     CK_ENSURE_IF_NOT(ck::IsValid(InScriptEntity),
         TEXT("Cannot Add EntityScript [{}] to an INVALID Entity. Aborting to avoid operating on a dead Registry handle."),
         InEntityScriptClassArchetype)
@@ -302,6 +346,21 @@ auto
             auto* EntityScriptPropAddr = EntityScriptProp->ContainerPtrToValuePtr<uint8>(InEntityScript);
             const auto* SpawnParamsPropAddr = SpawnParamsProp->ContainerPtrToValuePtr<uint8>(SpawnParamsData);
 
+            // A request may safely retain a weak UObject reference even when the constructed script intentionally
+            // owns the object strongly. Resolve that weak identity only at injection time, while writing into the
+            // GC-traced EntityScript UObject. This is used by WithActor spawn params and avoids retaining a bare
+            // actor address in the EnTT request queue.
+            if (const auto* SpawnWeakObjectProp = CastField<FWeakObjectProperty>(SpawnParamsProp))
+            {
+                if (const auto* ScriptObjectProp = CastField<FObjectPropertyBase>(EntityScriptProp))
+                {
+                    ScriptObjectProp->SetObjectPropertyValue(
+                        EntityScriptPropAddr,
+                        SpawnWeakObjectProp->GetObjectPropertyValue(SpawnParamsPropAddr));
+                    continue;
+                }
+            }
+
 #if ENABLE_MT_DETECTOR
             // ---- Delegate MRSW bypass ----
             // Delegates contain an FMRSWRecursiveAccessDetector at the start of their base class
@@ -343,6 +402,9 @@ auto
         const TOptional<FCk_Handle>& InContextOwnerOverride)
     -> void
 {
+    if (NOT ck_entity_script_utils::ValidateRetainedSpawnParams(TEXT("Request_ReplicateEntityScript"), InSpawnParams))
+    { return; }
+
     CK_ENSURE_IF_NOT(ck::IsValid(InEntityScript, ck::IsValid_Policy_NullptrOnly{}),
         TEXT("Cannot replicate EntityScript for [{}]: the EntityScript instance is invalid"), InHandle)
     { return; }

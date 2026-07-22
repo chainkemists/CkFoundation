@@ -17,7 +17,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TObjectPtr<AActor> _OwningActor;
+    TWeakObjectPtr<AActor> _OwningActor;
 
 public:
     CK_PROPERTY_GET(_OwningActor);

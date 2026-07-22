@@ -14,6 +14,67 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace
+{
+    struct FReflectedObjectWrapperType
+    {
+        FString WrapperName;
+        FString Declaration;
+    };
+
+    auto Make_ReflectedObjectWrapperType(
+        const TCHAR* InWrapperName,
+        const UClass* InObjectClass) -> TOptional<FReflectedObjectWrapperType>
+    {
+        if (InObjectClass == nullptr)
+        { return {}; }
+
+        return FReflectedObjectWrapperType
+        {
+            InWrapperName,
+            ck::Format_UE(
+                TEXT("{}<{}{}>"),
+                InWrapperName,
+                InObjectClass->GetPrefixCPP(),
+                InObjectClass->GetName())
+        };
+    }
+
+    // FSoftClassProperty derives from FSoftObjectProperty, so the class case
+    // must be checked first or it collapses to TSoftObjectPtr<UClass>.
+    auto Get_ReflectedObjectWrapperType(
+        FProperty* InProperty) -> TOptional<FReflectedObjectWrapperType>
+    {
+        if (const auto* SoftClassProperty = CastField<FSoftClassProperty>(InProperty))
+        {
+            return Make_ReflectedObjectWrapperType(
+                TEXT("TSoftClassPtr"),
+                SoftClassProperty->MetaClass.Get());
+        }
+
+        if (const auto* WeakObjectProperty = CastField<FWeakObjectProperty>(InProperty))
+        {
+            const auto* WrapperName = WeakObjectProperty->HasAnyPropertyFlags(CPF_AutoWeak)
+                ? TEXT("TAutoWeakObjectPtr")
+                : TEXT("TWeakObjectPtr");
+            return Make_ReflectedObjectWrapperType(
+                WrapperName,
+                WeakObjectProperty->PropertyClass.Get());
+        }
+
+        if (const auto* SoftObjectProperty = CastField<FSoftObjectProperty>(InProperty))
+        {
+            return Make_ReflectedObjectWrapperType(
+                TEXT("TSoftObjectPtr"),
+                SoftObjectProperty->PropertyClass.Get());
+        }
+
+        return {};
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     FCkAngelscriptGenerator_SharedUtils::
     Get_ConvertedToAngelscriptType(
@@ -110,6 +171,13 @@ auto
     if (ck::Is_NOT_Valid(InProperty, ck::IsValid_Policy_NullptrOnly{}))
     { return TEXT("void"); }
 
+    // Weak/soft UObject wrappers carry lifetime semantics that must survive
+    // code generation. Keep the reflected property class as an independent
+    // source of truth: runtime-generated AS properties have historically
+    // reported a raw UObject or TObjectPtr declaration in some reinstancing
+    // states even though their FProperty subclass still records the wrapper.
+    const auto ReflectedObjectWrapperType = Get_ReflectedObjectWrapperType(InProperty);
+
 #if WITH_ANGELSCRIPT_CK
     // AngelScript-declared UPROPERTYs carry their narrow type (including dynamic typesafe
     // handles like FCk_Handle_Trigger) only in AS's asITypeInfo — the FProperty itself
@@ -138,6 +206,17 @@ auto
                                 auto Decl = Usage.GetAngelscriptDeclaration();
                                 if (NOT Decl.IsEmpty())
                                 {
+                                    if (ReflectedObjectWrapperType.IsSet())
+                                    {
+                                        const auto WrapperPrefix = ReflectedObjectWrapperType->WrapperName + TEXT("<");
+                                        const auto ConstWrapperPrefix = TEXT("const ") + WrapperPrefix;
+                                        if (NOT Decl.StartsWith(WrapperPrefix)
+                                            && NOT Decl.StartsWith(ConstWrapperPrefix))
+                                        {
+                                            return ReflectedObjectWrapperType->Declaration;
+                                        }
+                                    }
+
                                     // FAngelscriptTypeUsage::FromProperty(asITypeInfo*, int)
                                     // only forwards the TypeId through FromTypeId and never
                                     // populates bIsConst — so `const UFoo` member properties
@@ -160,6 +239,9 @@ auto
         }
     }
 #endif
+
+    if (ReflectedObjectWrapperType.IsSet())
+    { return ReflectedObjectWrapperType->Declaration; }
 
     if (auto ArrayProp = CastField<FArrayProperty>(InProperty))
     {
