@@ -18,11 +18,15 @@
 #include "CkAngelscriptGenerator/Tests/Test_EntityScriptParamsGenerator_Fixtures.h"
 
 #include "CkAngelscriptGenerator/CkAngelscriptEntityScriptParamsGenerator.h"
+#include "CkAngelscriptGenerator/CkAngelscriptGenerator_SharedUtils.h"
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Reflection/CkReflection_Utils.h"
 
+#include "CkEcs/EntityScript/CkEntityScript_Utils.h"
+
 #include "Engine/BlueprintGeneratedClass.h"
 #include "Misc/AutomationTest.h"
+#include "Misc/ScopeExit.h"
 #include "UObject/Class.h"
 #include "UObject/UnrealType.h"
 
@@ -36,6 +40,105 @@ namespace
     {
         return CastField<FStructProperty>(InOwner->FindPropertyByName(FName{InPropName}));
     }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Get_DetailedPropertyType: weak/soft UObject wrappers are lifetime semantics,
+// not presentation detail. They must survive reflection-driven regeneration of
+// EntitySpawnParams fields and both Params() signatures.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_ParamsGen_PreservesWeakAndSoftObjectWrappers,
+    "CkAngelscriptGenerator.UnitTests.ParamsGenerator.PreservesWeakAndSoftObjectWrappers",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_ParamsGen_PreservesWeakAndSoftObjectWrappers::RunTest(const FString&)
+{
+    const auto* HostClass = UCkTest_ParamsGenerator_Host::StaticClass();
+
+    auto CheckPropertyType = [this, HostClass](
+        const TCHAR* InPropertyName,
+        const FString& InExpectedType,
+        const FFieldClass* InExpectedPropertyClass) -> bool
+    {
+        auto* Property = HostClass->FindPropertyByName(FName{InPropertyName});
+        if (NOT TestNotNull(
+                *FString::Printf(TEXT("%s property reflected"), InPropertyName),
+                Property))
+        { return false; }
+
+        TestTrue(
+            *FString::Printf(TEXT("%s retains reflected property kind"), InPropertyName),
+            Property->IsA(InExpectedPropertyClass));
+        TestEqual(
+            *FString::Printf(TEXT("%s retains AngelScript wrapper type"), InPropertyName),
+            FCkAngelscriptGenerator_SharedUtils::Get_DetailedPropertyType(Property),
+            InExpectedType);
+        return true;
+    };
+
+    auto Result = true;
+    auto* StrongProperty = HostClass->FindPropertyByName(TEXT("StrongSound"));
+    Result &= TestNotNull(TEXT("StrongSound property reflected"), StrongProperty);
+    if (StrongProperty != nullptr)
+    {
+        Result &= TestEqual(
+            TEXT("Params call keeps the source strong UObject type"),
+            FCkAngelscriptGenerator_SharedUtils::Get_DetailedPropertyType(StrongProperty),
+            FString{TEXT("TObjectPtr<USoundBase>")});
+        Result &= TestEqual(
+            TEXT("EntitySpawnParams weakens direct strong UObject retention"),
+            FCkAngelscriptEntityScriptParamsGenerator::Get_RetainedPropertyType(StrongProperty),
+            FString{TEXT("TWeakObjectPtr<USoundBase>")});
+    }
+    Result &= CheckPropertyType(
+        TEXT("WeakSound"),
+        TEXT("TWeakObjectPtr<USoundBase>"),
+        FWeakObjectProperty::StaticClass());
+    Result &= CheckPropertyType(
+        TEXT("SoftSound"),
+        TEXT("TSoftObjectPtr<USoundBase>"),
+        FSoftObjectProperty::StaticClass());
+    Result &= CheckPropertyType(
+        TEXT("SoftSoundClass"),
+        TEXT("TSoftClassPtr<USoundBase>"),
+        FSoftClassProperty::StaticClass());
+    Result &= CheckPropertyType(
+        TEXT("WeakSounds"),
+        TEXT("TArray<TWeakObjectPtr<USoundBase>>"),
+        FArrayProperty::StaticClass());
+    return Result;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_ParamsGen_InjectsWeakMirrorIntoStrongOwner,
+    "CkAngelscriptGenerator.UnitTests.ParamsGenerator.InjectsWeakMirrorIntoStrongOwner",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_ParamsGen_InjectsWeakMirrorIntoStrongOwner::RunTest(const FString&)
+{
+    // The production base is intentionally UCLASS(Abstract). Its CDO is still a fully initialized reflected object,
+    // which is all this property-injection test needs; avoid manufacturing an instance of an abstract fixture.
+    auto* Target = GetMutableDefault<UCkTest_ParamsGenerator_WeakInjectionTarget>();
+    auto* Value = NewObject<UCkTest_ParamsGenerator_Host>(GetTransientPackage());
+    if (NOT TestNotNull(TEXT("target allocated"), Target)
+        || NOT TestNotNull(TEXT("value allocated"), Value))
+    { return false; }
+
+    const auto PreviousValue = Target->InjectedObject;
+    Target->InjectedObject = nullptr;
+    ON_SCOPE_EXIT
+    {
+        Target->InjectedObject = PreviousValue;
+    };
+
+    auto Params = FCkTest_ParamsGenerator_WeakInjectionParams{};
+    Params.InjectedObject = Value;
+    UCk_Utils_EntityScript_UE::TryInjectEntityScriptSpawnParams(Target, FInstancedStruct::Make(Params));
+
+    TestTrue(TEXT("weak retained identity resolves into the traced strong owner"), Target->InjectedObject.Get() == Value);
+    return true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -29,6 +29,13 @@ public:
     static auto
     Is_IncludedEntityScriptClass(
         UClass* InClass) -> bool;
+
+    // EntitySpawnParams are retained in untraced FInstancedStruct storage before injection into the traced
+    // EntityScript UObject. Direct strong UObject properties therefore become weak references in the generated
+    // mirror; already-weak/soft wrappers and non-object types retain their reflected AngelScript spelling.
+    static auto
+    Get_RetainedPropertyType(
+        FProperty* InProperty) -> FString;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

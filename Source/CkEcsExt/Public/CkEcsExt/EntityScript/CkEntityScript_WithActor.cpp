@@ -103,7 +103,7 @@ auto
     if (ck::Is_NOT_Valid(SpawnParams, ck::IsValid_Policy_NullptrOnly{}))
     { return Super::Get_AreSpawnParamsMatching(InClientSpawnParams, InConstructedScript); }
 
-    return SpawnParams->Get_OwningActor() == WithActorScript->Get_OwningActor();
+    return SpawnParams->Get_OwningActor().Get() == WithActorScript->Get_OwningActor();
 }
 
 auto

@@ -43,12 +43,34 @@ class UCkTest_ParamsGenerator_Host : public UObject
     GENERATED_BODY()
 public:
     UPROPERTY() FCkTest_ParamsGenerator_MixedFields Params;
+
+    UPROPERTY() TObjectPtr<USoundBase> StrongSound;
+    UPROPERTY() TWeakObjectPtr<USoundBase> WeakSound;
+    UPROPERTY() TSoftObjectPtr<USoundBase> SoftSound;
+    UPROPERTY() TSoftClassPtr<USoundBase> SoftSoundClass;
+    UPROPERTY() TArray<TWeakObjectPtr<USoundBase>> WeakSounds;
 };
 
 // Concrete native entity-script subclass — the "included" shape for the class-filter test
 // (the UCk_EntityScript_UE base itself is UCLASS(Abstract) and therefore excluded).
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, BlueprintType)
 class UCkTest_ParamsGenerator_NativeEntityScript : public UCk_EntityScript_UE
 {
     GENERATED_BODY()
+};
+
+USTRUCT()
+struct FCkTest_ParamsGenerator_WeakInjectionParams
+{
+    GENERATED_BODY()
+
+    UPROPERTY() TWeakObjectPtr<UObject> InjectedObject;
+};
+
+UCLASS(NotBlueprintable, BlueprintType)
+class UCkTest_ParamsGenerator_WeakInjectionTarget : public UCk_EntityScript_UE
+{
+    GENERATED_BODY()
+public:
+    UPROPERTY() TObjectPtr<UObject> InjectedObject;
 };

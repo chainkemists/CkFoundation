@@ -21,7 +21,8 @@ public:
         const FString& UnrealType) -> FString;
 
     // Resolves an FProperty to the AngelScript type string to emit. Handles TArray / TMap / TSet /
-    // TOptional via recursion, returns enum names for FEnumProperty / FByteProperty-with-enum,
+    // TOptional via recursion, preserves reflected TWeakObjectPtr / TSoftObjectPtr /
+    // TSoftClassPtr wrappers, returns enum names for FEnumProperty / FByteProperty-with-enum,
     // converts floats to float32 and doubles to float64. Falls back to GetCPPType + conversion.
     static auto
     Get_DetailedPropertyType(

@@ -1,5 +1,6 @@
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_AsSourceScanner.h"
 
+#include "CkAngelscriptGenerator/CkAngelscriptEntityScriptParamsGenerator.h"
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_SharedUtils.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
@@ -316,7 +317,7 @@ namespace ck::angelscriptgenerator::self_heal
                 if (ck::Is_NOT_Valid(Prop, ck::IsValid_Policy_NullptrOnly{}))
                 { continue; }
 
-                auto TypeText = FCkAngelscriptGenerator_SharedUtils::Get_DetailedPropertyType(Prop);
+                auto TypeText = FCkAngelscriptEntityScriptParamsGenerator::Get_RetainedPropertyType(Prop);
                 // Mirror the real generator's const handling (Format_PropertyLine).
                 if (Prop->HasAnyPropertyFlags(CPF_ConstParm | CPF_BlueprintReadOnly)
                     && NOT TypeText.StartsWith(TEXT("const ")))
