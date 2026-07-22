@@ -1,5 +1,6 @@
 #include "CkDynamic_Module.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Payload/CkPayload.h"
 #include "CkCore/Validation/CkIsValid.h"
 
@@ -24,11 +25,25 @@ void FCkDynamicModule::StartupModule()
         .NetApply = [](FCk_Handle& InEntity, const FInstancedStruct& InNew, const TOptional<FInstancedStruct>& /*InOld*/) -> ECk_Persistence_ApplyResult
         {
             const auto* Type = InNew.GetScriptStruct();
-            if (ck::Is_NOT_Valid(Type))
-            { return ECk_Persistence_ApplyResult::Applied; }
+            const auto TypeIsValid = ck::IsValid(Type);
+            CK_ENSURE_IF_NOT(TypeIsValid,
+                TEXT("Dynamic Fragment net hydration received payload without a valid struct type"))
+            {}
+            if (NOT TypeIsValid)
+            { return ECk_Persistence_ApplyResult::Rejected; }
 
-            auto& Storage = UCk_Utils_DynamicFragment_UE::AddOrGet_Fragment_TypeUnsafe(InEntity, Type);
-            Storage = InNew;
+            const auto EntityIsValid = ck::IsValid(InEntity);
+            CK_ENSURE_IF_NOT(EntityIsValid,
+                TEXT("Dynamic Fragment net hydration received an invalid entity [{}]"), InEntity)
+            {}
+            if (NOT EntityIsValid)
+            { return ECk_Persistence_ApplyResult::Rejected; }
+
+            auto* Storage = UCk_Utils_DynamicFragment_UE::TryAddOrGet_Fragment_TypeUnsafe(InEntity, Type);
+            if (Storage == nullptr)
+            { return ECk_Persistence_ApplyResult::Rejected; }
+
+            *Storage = InNew;
 
             auto Info = FCk_DynamicFragment_RepNotifyInfo{};
             Info.ChangedType = const_cast<UScriptStruct*>(Type);
