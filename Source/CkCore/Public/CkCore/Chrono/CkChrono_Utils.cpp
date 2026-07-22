@@ -67,10 +67,11 @@ auto
     UCk_Utils_Chrono_UE::
     Tick(
         FCk_Chrono& InChrono,
-        const FCk_Time& InDeltaT)
+        const FCk_Time& InDeltaT,
+        ECk_Chrono_OverflowPolicy InOverflow)
     -> ECk_Chrono_TickState
 {
-    return InChrono.Tick(InDeltaT);
+    return InChrono.Tick(InDeltaT, InOverflow);
 }
 
 auto

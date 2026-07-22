@@ -10,9 +10,8 @@
 
 namespace ck
 {
-    // Per-entity cadence means this cannot use TProcessorBase's own _TickRate (that throttles the WHOLE processor
-    // to one uniform rate) — it must run every tick and let ck::cadence::ShouldRun decide, per entity, whether this
-    // is the tick that re-evaluates range/fade.
+    // Runs every tick: per-entity cadence cannot use TProcessorBase's _TickRate (that throttles the whole
+    // processor to one uniform rate), so each entity gates its own re-evaluation via its Chrono ticked Wrap.
     class CKVISIBLERANGE_API FProcessor_VisibleRange_Update : public ck_exp::TProcessor<
         FProcessor_VisibleRange_Update,
         FCk_Handle_VisibleRange,

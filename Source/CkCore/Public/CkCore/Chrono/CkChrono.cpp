@@ -28,9 +28,24 @@ auto
 auto
     FCk_Chrono::
     Tick(
-        const TimeType& InDeltaT)
+        const TimeType& InDeltaT,
+        ECk_Chrono_OverflowPolicy InOverflow)
     -> TickStateType
 {
+    if (InOverflow == ECk_Chrono_OverflowPolicy::Wrap)
+    {
+        if (_GoalValue <= TimeType::ZeroSecond())
+        { return TickStateType::Done; }
+
+        _CurrentValue = _CurrentValue + InDeltaT;
+
+        if (_CurrentValue < _GoalValue)
+        { return TickStateType::Ticking; }
+
+        _CurrentValue = TimeType{FMath::Fmod(_CurrentValue.Get_Seconds(), _GoalValue.Get_Seconds())};
+        return TickStateType::Done;
+    }
+
     if (Get_IsDone())
     { return TickStateType::Done; }
 
