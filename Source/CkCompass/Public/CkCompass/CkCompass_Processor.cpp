@@ -33,6 +33,20 @@ DECLARE_CYCLE_STAT(TEXT("Compass::DiffSignals"), STAT_CkCompass_DiffSignals, STA
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_compass_processor
+{
+    // Per-index distance-feed record written by a worker into its own slot, consumed post-parallel on the
+    // calling thread. Distance is always set once computed (before any range cull early-return); the
+    // DisplayDefinition is the resolved consumer child (invalid when this POI has none for this consumer).
+    struct FCk_Compass_PoiFeed
+    {
+        float Distance = 0.0f;
+        FCk_Handle DisplayDefinition;
+    };
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 CK_REGISTER_PROCESSOR(ck::FProcessor_Compass_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Compass_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Compass_Update);
@@ -273,13 +287,18 @@ namespace ck
         // Manual view over every POI in this world's registry, keyed on the FTag_Poi identity. The four
         // pending-kill excludes matter: fragments survive until destruction Finalize (~2 ticks after
         // Destroy) — without them, dying POIs would linger on the compass. Initiate-frame POIs are
-        // deliberately still projected (same policy as CK_IGNORE_PENDING_KILL). Disabled POIs are NOT
-        // excluded here (the EntityTag disable tag can't be an entt exclude) — they're skipped per-worker.
+        // deliberately still projected (same policy as CK_IGNORE_PENDING_KILL).
+        //
+        // Base-entity FTag_VisibleRange_Hidden is consumed as a WORKER skip (below, after the distance
+        // record), deliberately NOT a view exclude — an excluded hidden POI would stop receiving the
+        // distance feed and could never re-evaluate back to visible. This is the state-consumption upgrade
+        // over Gate 3's config-only read; the inline cull/fade math further down still runs for blip-free
+        // same-frame membership. The EntityTag disable convention stays a per-worker skip too.
         //
         // The POI set is GATHERED first, then projected data-parallel: the per-POI body is pure registry
         // READS (EntityTag/VisibleRange/DisplayDefinition state, own transforms) whose writers all ran in
-        // earlier groups, and each worker writes only its own index slot. Signals/sort/diff stay on the
-        // calling thread.
+        // earlier groups, and each worker writes only its own index slot. Signals/sort/diff and every
+        // Update_Distance feed stay on the calling thread.
         auto& PoiEntities = InCurrent._ScratchPoiEntities;
         PoiEntities.Reset();
 
@@ -297,6 +316,13 @@ namespace ck
         auto& Slots = InCurrent._ScratchParallelSlots;
         Slots.Reset();
         Slots.SetNum(PoiEntities.Num());
+
+        // Per-index feed scratch, mirroring Slots: a worker records its POI's distance (+ resolved consumer
+        // DisplayDefinition) into its own slot; the calling-thread loop after the ParallelFor drives every
+        // Update_Distance. Kept a local (not a fragment member) — the record type is a filename-namespace
+        // struct, and the feed set is consumed and discarded within this one pass.
+        TArray<TOptional<ck_compass_processor::FCk_Compass_PoiFeed>> FeedSlots;
+        FeedSlots.SetNum(PoiEntities.Num());
 
         // Below this the fan-out overhead exceeds the projection math — same body runs inline
         constexpr auto MinPoisForParallel = 64;
@@ -326,6 +352,18 @@ namespace ck
 
             const auto Distance = static_cast<float>(FVector::Dist(InObserverLocation, PoiLocation));
 
+            // Record the distance for the post-parallel feed BEFORE any subsequent early-return (the range
+            // cull below can bail). A base-range-culled entry still feeds its base VR its distance — fine;
+            // its DisplayDefinition stays unresolved (invalid), so only the base VR is fed for it.
+            FeedSlots[InIndex].Emplace(ck_compass_processor::FCk_Compass_PoiFeed{Distance});
+
+            // Base-entity hidden state (explicit Request_SetVisibility, or its own range vote once fed) is a
+            // WORKER skip, deliberately NOT a view exclude: a view-excluded hidden POI would stop receiving
+            // the distance feed above and could never re-evaluate back to visible when the observer returns
+            // into range. Skips here, keeps feeding.
+            if (PoiGenericHandle.Has<ck::FTag_VisibleRange_Hidden>())
+            { return; }
+
             // Range/fade CONFIG now lives in CkVisibleRange (composed onto the POI). Absent -> unlimited
             // (Min/Max/Band 0 = no cull, alpha 1); the inline cull/fade math below is unchanged.
             auto MinVisibleRange = 0.0f;
@@ -351,6 +389,21 @@ namespace ck
             const auto DisplayDefinition = UCk_Utils_PoiDisplayDefinition_UE::TryGet_PoiDisplayDefinition_ByConsumer(
                 PoiGenericHandle, Tag_PoiConsumer_Compass);
             const auto HasDisplayDefinition = ck::IsValid(DisplayDefinition);
+
+            // Record the resolved consumer DisplayDefinition for the post-parallel feed (invalid = none).
+            FeedSlots[InIndex].GetValue().DisplayDefinition = DisplayDefinition;
+
+            // Per-consumer restriction: a VisibleRange composed on THIS consumer's DisplayDefinition child
+            // (own hidden state, or ParentHidden cascaded from the base) culls only this projector's entry —
+            // the other projectors are unaffected. Pure Has reads; one-frame latency accepted (new
+            // capability, no existing assertion depends on its timing). Direct-attach DDs alias the base
+            // entity, where both checks are harmless: base Hidden is already view-excluded, and ParentHidden
+            // only ever lands on record children.
+            if (HasDisplayDefinition
+                && (DisplayDefinition.Has<ck::FTag_VisibleRange_Hidden>()
+                    || DisplayDefinition.Has<ck::FTag_PoiDisplayDefinition_ParentHidden>()))
+            { return; }
+
             const auto OffscreenPolicy = HasDisplayDefinition
                 ? UCk_Utils_PoiDisplayDefinition_UE::Get_OffscreenPolicy(DisplayDefinition)
                 : ECk_Poi_OffscreenPolicy::Hide;
@@ -387,6 +440,39 @@ namespace ck
                 FadeAlpha
             });
         }, ForceSingleThread);
+
+        // Distance feed — calling thread only. Worker purity holds: workers only WROTE their own FeedSlots
+        // index (same contract as Slots); every Update_Distance runs here, post-parallel. Feed the base
+        // entity's VisibleRange (if composed) and the resolved consumer DisplayDefinition's VisibleRange (if
+        // composed and not aliasing the base — a direct-attach DD IS the base entity, already fed above; the
+        // guard avoids a double-feed). Update_Distance is a plain setter; the VisibleRange processor
+        // evaluates on its own cadence, so this is what turns the view-exclude above into real state.
+        for (auto FeedIndex = 0; FeedIndex < FeedSlots.Num(); ++FeedIndex)
+        {
+            const auto& FeedSlot = FeedSlots[FeedIndex];
+
+            if (NOT FeedSlot.IsSet())
+            { continue; }
+
+            const auto FeedDistance = FeedSlot->Distance;
+            const auto BaseHandle = InCompassEntity.Get_ValidHandle(PoiEntities[FeedIndex].Get_ID());
+
+            if (UCk_Utils_VisibleRange_UE::Has(BaseHandle))
+            {
+                auto BaseVisibleRange = UCk_Utils_VisibleRange_UE::Cast(BaseHandle);
+                UCk_Utils_VisibleRange_UE::Update_Distance(BaseVisibleRange, FeedDistance);
+            }
+
+            const auto& DisplayDefinition = FeedSlot->DisplayDefinition;
+
+            if (ck::IsValid(DisplayDefinition)
+                && DisplayDefinition != BaseHandle
+                && UCk_Utils_VisibleRange_UE::Has(DisplayDefinition))
+            {
+                auto DisplayDefinitionVisibleRange = UCk_Utils_VisibleRange_UE::Cast(DisplayDefinition);
+                UCk_Utils_VisibleRange_UE::Update_Distance(DisplayDefinitionVisibleRange, FeedDistance);
+            }
+        }
 
         for (auto& Slot : Slots)
         {
