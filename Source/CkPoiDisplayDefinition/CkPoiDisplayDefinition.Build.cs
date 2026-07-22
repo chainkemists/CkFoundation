@@ -1,9 +1,9 @@
 using System.IO;
 using UnrealBuildTool;
 
-public class CkPoi : CkModuleRules
+public class CkPoiDisplayDefinition : CkModuleRules
 {
-    public CkPoi(ReadOnlyTargetRules Target) : base(Target)
+    public CkPoiDisplayDefinition(ReadOnlyTargetRules Target) : base(Target)
     {
         PrivateIncludePaths.AddRange(new string[] {
             // ... add other private include paths required here ...
@@ -19,13 +19,11 @@ public class CkPoi : CkModuleRules
             "CkCore",
             "CkEcs",
             "CkEcsExt",
+            "CkLabel",
             "CkLog",
-
-            // TEMPORARY (CkPoi v2 refactor Gate 2): ECk_Poi_OffscreenPolicy + the DisplayDefinition PDA moved
-            // there but CkPoi's fragment still carries fields of those types until the Gate 3 rewrite.
-            "CkPoiDisplayDefinition",
-
+            "CkRecord",
             "CkSettings",
+            "CkVisibleRange",
         });
     }
 }
