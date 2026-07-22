@@ -55,6 +55,14 @@ public:
         const UScriptStruct* InStructType,
         ECk_Replication InReplication = ECk_Replication::DoesNotReplicate);
 
+    // Failure-representable C++ boundary for replication/hydration and other untrusted transports. Returns nullptr
+    // when the entity/type is invalid or the reflected schema cannot safely live outside Unreal's GC owner graph.
+    static auto
+    TryAddOrGet_Fragment_TypeUnsafe(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const UScriptStruct* InStructType,
+        ECk_Replication InReplication = ECk_Replication::DoesNotReplicate) -> FInstancedStruct*;
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
@@ -80,6 +88,13 @@ public:
     Get_Fragment_TypeUnsafe(
         const FCk_Handle& InHandle,
         const UScriptStruct* InStructType);
+
+    // Failure-representable read boundary. Unlike the legacy reflected reference API, this cannot expose mutable
+    // fallback storage after a rejected handle, type, schema, or missing-fragment lookup.
+    static auto
+    TryGet_Fragment_TypeUnsafe(
+        const FCk_Handle& InHandle,
+        const UScriptStruct* InStructType) -> FInstancedStruct*;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -240,6 +255,11 @@ public:
         const FCk_DynamicFragment_OnRepNotify& InDelegate);
 
 private:
+    static auto
+    CanSetupReplication(
+        const FCk_Handle& InHandle,
+        const FInstancedStruct& InStructData) -> bool;
+
     static auto
     DoSetupReplication(
         FCk_Handle& InHandle,

@@ -176,11 +176,30 @@ namespace ck
                 BatchCDO->Configure(Query);
             }
 
+            // Keep the factory present even when descriptor admission fails. The hosted processor repeats validation
+            // and disables itself, while this descriptor advertises no partial read/write contract.
+            Descriptor._Factory =
+                [DevClass = InDevClass, DriverClass = InDriverClass](const FCk_Registry& InRegistry) -> concepts::FTickableType
+                {
+                    return FProcessor_ScriptQueryHosted{InRegistry, DevClass, DriverClass};
+                };
+
+            // Configure is an imperative sequence. If any call failed, none of the surviving slots describe the
+            // author's intended query, so publishing their hashes would advertise a weakened scheduler contract.
+            const auto AdmissionSucceeded = NOT Query._AdmissionFailed;
+            CK_ENSURE_IF_NOT(AdmissionSucceeded,
+                TEXT("Script processor descriptor [{}] rejected a partially admitted query"), InDevClass)
+            {}
+            if (NOT AdmissionSucceeded)
+            { return Descriptor; }
+
+            const auto QueryContext = BatchClass->GetPathName();
+            if (NOT ck::dynamic::Validate_ScriptQuerySlots(Query, *QueryContext))
+            { return Descriptor; }
+
             for (const auto& Slot : Query._Slots)
             {
                 const auto* Type = Slot._StructType.Get();
-                if (ck::Is_NOT_Valid(Type))
-                { continue; }
 
                 const auto FragmentName = FName{*Type->GetPathName()};
                 const auto FragmentHash = static_cast<uint32>(GetTypeHash(FragmentName));
@@ -206,12 +225,6 @@ namespace ck
                     }
                 }
             }
-
-            Descriptor._Factory =
-                [DevClass = InDevClass, DriverClass = InDriverClass](const FCk_Registry& InRegistry) -> concepts::FTickableType
-                {
-                    return FProcessor_ScriptQueryHosted{InRegistry, DevClass, DriverClass};
-                };
 
             return Descriptor;
         }

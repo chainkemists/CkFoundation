@@ -12,6 +12,8 @@
 #include "CkEcs/Processor/CkProcessor_Script.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
+#include <Misc/ScopeExit.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_dynamic_script_query_processor
@@ -85,6 +87,18 @@ namespace ck
         // Resolve the query once. On a generated driver, Configure adds the inferred slots then calls Super::Configure
         // when the dev class overrides it; a direct-mode dev fills the whole query here.
         _Instance->Configure(_Query);
+
+        const auto AdmissionSucceeded = NOT _Query._AdmissionFailed;
+        CK_ENSURE_IF_NOT(AdmissionSucceeded,
+            TEXT("Script processor [{}] query admission failed. Disabling it instead of dispatching a partial query."),
+            InDevClass)
+        {}
+        if (NOT AdmissionSucceeded)
+        { _Disabled = true; return; }
+
+        const auto QueryContext = InDevClass->GetPathName();
+        if (NOT ck::dynamic::Validate_ScriptQuerySlots(_Query, *QueryContext))
+        { _Disabled = true; return; }
 
         const auto QueryIsValid = (NOT _Query._Slots.IsEmpty()) || _Query._NoEntities;
         CK_ENSURE_IF_NOT(QueryIsValid,
@@ -181,6 +195,13 @@ namespace ck
         DoResolveAndJoin()
         -> bool
     {
+        const auto QueryContext = _Instance->GetClass()->GetPathName();
+        if (NOT ck::dynamic::Validate_ScriptQuerySlots(_Query, *QueryContext))
+        {
+            _Disabled = true;
+            return false;
+        }
+
         _BatchState._Slots.Reset();
         _BatchState._Entities.Reset();
 
@@ -194,8 +215,6 @@ namespace ck
         for (const auto& Slot : _Query._Slots)
         {
             const auto* Type = Slot._StructType.Get();
-            if (ck::Is_NOT_Valid(Type))
-            { continue; }
 
             const auto StorageId = UCk_Utils_DynamicFragment_UE::Get_StorageId(Type);
             auto& Storage = RegistryView.Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
@@ -262,13 +281,21 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
+        const auto Generation = ck::dynamic::Open_ScriptQueryBatchState(_BatchState);
+        if (Generation == 0)
+        { return; }
+
         auto Batch = FCk_ScriptQueryBatch{};
         Batch._State = &_BatchState;
-        Batch._Generation = _BatchState._Generation;
+        Batch._Generation = Generation;
+
+        ON_SCOPE_EXIT
+        {
+            // Always remove the resolver entry before this dispatch scope exits. A script exception or other
+            // abnormal return must not leave the host address registered after its access window has closed.
+            ck::dynamic::Close_ScriptQueryBatchState(_BatchState, Generation);
+        };
 
         _Instance->ForEachBatch(Batch, InDeltaT);
-
-        // Invalidate any batch the script stashed past the call.
-        ++_BatchState._Generation;
     }
 }

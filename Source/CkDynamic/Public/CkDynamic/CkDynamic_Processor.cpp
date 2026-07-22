@@ -39,8 +39,11 @@ namespace ck
             if (NOT UCk_Utils_DynamicFragment_UE::Has_Fragment(InHandle, Type))
             { continue; }
 
-            const auto& Payload = UCk_Utils_DynamicFragment_UE::Get_Fragment_TypeUnsafe(InHandle, Type);
-            Driver->SetFragmentData_Runtime(Payload);
+            const auto* Payload = UCk_Utils_DynamicFragment_UE::TryGet_Fragment_TypeUnsafe(InHandle, Type);
+            if (Payload == nullptr)
+            { return; }
+
+            Driver->SetFragmentData_Runtime(*Payload);
         }
 
         InHandle.Remove<FTag_DynamicFragment_MayRequireReplication>();

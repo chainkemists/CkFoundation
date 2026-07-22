@@ -58,6 +58,11 @@ struct CKECS_API FCk_ScriptProcessorQuery
 
     UPROPERTY()
     bool _NoEntities = false;
+
+    // Sticky fail-closed state. Configure is an imperative sequence of calls, so rejecting one slot must invalidate
+    // the complete query rather than silently leaving the successfully-added subset eligible for descriptor harvest
+    // or runtime dispatch. Internal host plumbing only; authors receive the specific ensure at the rejected call.
+    bool _AdmissionFailed = false;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

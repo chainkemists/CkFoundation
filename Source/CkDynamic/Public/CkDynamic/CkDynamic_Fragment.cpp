@@ -1,8 +1,10 @@
 #include "CkDynamic_Fragment.h"
 
 #include "CkDynamic/CkDynamic_Log.h"
+#include "CkDynamic/CkDynamic_FragmentSchema.h"
 #include "CkDynamic/CkDynamic_Utils.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Payload/CkPayload.h"          // ck::MakePayload
 #include "CkCore/Validation/CkIsValid.h"       // ck::IsValid / ck::Is_NOT_Valid
 
@@ -38,8 +40,20 @@ static struct FCkDynamicFragmentsSaveHandlerRegistrar
                 if (NOT InEntity.Has<ck::FFragment_DynamicFragment_Data>())
                 { return {}; }
 
+                auto Fragments = UCk_Utils_DynamicFragment_UE::Get_AllFragments(InEntity);
+                for (const auto& Entry : Fragments)
+                {
+                    const auto Schema = ck::dynamic::Validate_FragmentSchema(Entry.GetScriptStruct());
+                    CK_ENSURE_IF_NOT(Schema.IsSafe,
+                        TEXT("Refusing to save unsafe legacy Dynamic Fragment schema [{}] at [{}]: {}"),
+                        Entry.GetScriptStruct(), Schema.FailurePath, Schema.FailureReason)
+                    {}
+                    if (NOT Schema.IsSafe)
+                    { return {}; }
+                }
+
                 auto SaveData = FCk_SaveData_DynamicFragments{};
-                SaveData.Set_Fragments(UCk_Utils_DynamicFragment_UE::Get_AllFragments(InEntity));
+                SaveData.Set_Fragments(MoveTemp(Fragments));
                 return FInstancedStruct::Make(SaveData);
             },
             // Authority-side load: rebuild every saved dynamic fragment on the (already re-created) entity. Dynamic
@@ -48,10 +62,41 @@ static struct FCkDynamicFragmentsSaveHandlerRegistrar
             // race construct-time composition.
             .HydrationApply = [](FCk_Handle& InEntity, const FInstancedStruct& InNew, const TOptional<FInstancedStruct>& /*InOld*/) -> ECk_Persistence_ApplyResult
             {
-                if (InNew.GetScriptStruct() != FCk_SaveData_DynamicFragments::StaticStruct())
-                { return ECk_Persistence_ApplyResult::Applied; }
+                const auto WrapperTypeIsValid = InNew.GetScriptStruct() == FCk_SaveData_DynamicFragments::StaticStruct();
+                CK_ENSURE_IF_NOT(WrapperTypeIsValid,
+                    TEXT("Dynamic Fragment hydration received the wrong wrapper type [{}]"),
+                    InNew.GetScriptStruct())
+                {}
+                if (NOT WrapperTypeIsValid)
+                { return ECk_Persistence_ApplyResult::Rejected; }
+
+                const auto EntityIsValid = ck::IsValid(InEntity);
+                CK_ENSURE_IF_NOT(EntityIsValid,
+                    TEXT("Dynamic Fragment hydration received an invalid entity [{}]"), InEntity)
+                {}
+                if (NOT EntityIsValid)
+                { return ECk_Persistence_ApplyResult::Rejected; }
 
                 const auto& SaveData = InNew.Get<FCk_SaveData_DynamicFragments>();
+
+                // Validate the complete wrapper before the first write. A save containing one resolved unsafe schema
+                // is rejected atomically instead of partially hydrating preceding entries.
+                auto ResolvedEntries = TArray<TPair<const FInstancedStruct*, FInstancedStruct*>>{};
+                ResolvedEntries.Reserve(SaveData.Get_Fragments().Num());
+                for (const auto& Entry : SaveData.Get_Fragments())
+                {
+                    const auto* Type = Entry.GetScriptStruct();
+                    if (ck::Is_NOT_Valid(Type))
+                    { continue; } // unresolved content drift retains the warning-and-skip behavior below
+
+                    const auto Schema = ck::dynamic::Validate_FragmentSchema(Type);
+                    CK_ENSURE_IF_NOT(Schema.IsSafe,
+                        TEXT("Refusing to hydrate unsafe Dynamic Fragment schema [{}] at [{}]: {}"),
+                        Type, Schema.FailurePath, Schema.FailureReason)
+                    {}
+                    if (NOT Schema.IsSafe)
+                    { return ECk_Persistence_ApplyResult::Rejected; }
+                }
 
                 for (const auto& Entry : SaveData.Get_Fragments())
                 {
@@ -70,9 +115,21 @@ static struct FCkDynamicFragmentsSaveHandlerRegistrar
 
                     // AddOrGet re-creates the named storage if the rebuild did not compose it, else overwrites it in
                     // place. Idempotent under a double-apply — re-applying yields the saved value, never a stacked one.
-                    auto& Storage = UCk_Utils_DynamicFragment_UE::AddOrGet_Fragment_TypeUnsafe(InEntity, Type);
-                    Storage = Entry;
+                    auto* Storage = UCk_Utils_DynamicFragment_UE::TryAddOrGet_Fragment_TypeUnsafe(InEntity, Type);
+                    if (Storage == nullptr)
+                    { return ECk_Persistence_ApplyResult::Rejected; }
 
+                    ResolvedEntries.Emplace(&Entry, Storage);
+                }
+
+                // Resolve every destination before the first value write, then commit every value before the first
+                // notification. A listener may destroy the entity, but it can no longer observe a half-hydrated set.
+                for (const auto& Resolved : ResolvedEntries)
+                { *Resolved.Value = *Resolved.Key; }
+
+                for (const auto& Resolved : ResolvedEntries)
+                {
+                    const auto* Type = Resolved.Key->GetScriptStruct();
                     // Mirror the net fallback's RepNotify (CkDynamic_Module.cpp) so any bound OnRepNotify handler
                     // re-runs against the restored value. The payload carries only WHICH type changed — handlers read
                     // the new value via Get_Fragment(ChangedType), avoiding the ProcessEvent frame-buffer staleness.

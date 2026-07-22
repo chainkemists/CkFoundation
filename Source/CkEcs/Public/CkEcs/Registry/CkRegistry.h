@@ -145,7 +145,7 @@ public:
         using OnlyFragments = FragmentsOnly<T_Fragments...>;
 
     public:
-        explicit TView(RegistryType& InRegistry)
+        explicit TView(RegistryType* InRegistry)
             : _Registry(InRegistry)
         {
         }
@@ -153,6 +153,11 @@ public:
         template <typename T_Func>
         auto ForEach(T_Func InFunc)
         {
+            // A registry view is allowed to represent an unset or stale registry handle. The pointer check is the
+            // load-bearing guard; any diagnostic emitted while constructing the view remains supplementary.
+            if (_Registry == nullptr)
+            { return; }
+
             DoForEach(InFunc, FragmentsAndTags{}, OnlyExcludes{}, OnlyFragments{});
         }
 
@@ -160,8 +165,8 @@ public:
         template <typename T_Func, typename... T_FragmentsAndTags, typename... T_OnlyExcludes, typename... T_OnlyFragments>
         auto DoForEach(T_Func InFunc, entt::type_list<T_FragmentsAndTags...>, entt::type_list<T_OnlyExcludes...>, entt::type_list<T_OnlyFragments...>)
         {
-            _Registry.template view<T_FragmentsAndTags...>(entt::exclude<T_OnlyExcludes...>).each(
-            [InFunc](const EntityType::IdType InEntityId, T_OnlyFragments&... InFragments)
+            _Registry->template view<T_FragmentsAndTags...>(entt::exclude<T_OnlyExcludes...>).each(
+            [InFunc](const EntityType::IdType InEntityId, auto&... InFragments)
             {
                 const auto TypeSafeEntity = FCk_Entity{InEntityId};
                 InFunc(TypeSafeEntity, InFragments...);
@@ -169,7 +174,7 @@ public:
         }
 
     private:
-        RegistryType& _Registry;
+        RegistryType* _Registry;
     };
 
     template <typename... T_Fragments>
@@ -711,7 +716,14 @@ auto
     View()
     -> RegistryViewType<T_Fragments...>
 {
-    return TView<InternalRegistryType, T_Fragments...>{*Resolve()};
+    auto* Registry = ck::registry_table::TryResolve(_RegistryHandle);
+#if CK_DISABLE_ENSURE_CHECKS == 0
+    // Preserve the strict Resolve diagnostic in configurations that retain it. The silent probe is the
+    // load-bearing validity check in every configuration.
+    if (Registry == nullptr)
+    { Registry = Resolve(); }
+#endif
+    return TView<InternalRegistryType, T_Fragments...>{Registry};
 }
 
 template <typename... T_Fragments>
@@ -720,7 +732,12 @@ auto
     View() const
     -> ConstRegistryViewType<T_Fragments...>
 {
-    return TView<const InternalRegistryType, T_Fragments...>{*Resolve()};
+    const auto* Registry = ck::registry_table::TryResolve(_RegistryHandle);
+#if CK_DISABLE_ENSURE_CHECKS == 0
+    if (Registry == nullptr)
+    { Registry = Resolve(); }
+#endif
+    return TView<const InternalRegistryType, T_Fragments...>{Registry};
 }
 
 template <typename T_Fragment, typename T_Compare>
