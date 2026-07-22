@@ -2,7 +2,21 @@
 
 ## Current state
 
-**As of 2026-07-22:** Gates 1–3 ✅. Gate 3 (`CkPoi` meta-feature rewrite) complete: CkPoi owns no
+**As of 2026-07-22 (later):** Gates 1–4 ✅. Gate 4 (projector semantic rewire) complete: projectors
+consume VisibleRange STATE (explicit hide works projector-wide with recovery; per-consumer DD-child
+ranges cull one projector; distance fed post-parallel), the campaign-long Minimap red is FIXED
+(suite 15/15 for the first time), MapDebugger Priority column dropped. Full sweep: Poi 46/46,
+Compass 13/13, Minimap 15/15, VisibleRange 4/4 (`Exit_Gate4_*.log`). Committed locally; NOTHING
+pushed. Gate 5 (gyms + cleanup + full gate) not started.
+**Baseline for Gate 5:** the Gate 4 exit numbers above.
+**Next action:** Start Gate 5 — write `Plan/Gate_05_GymsAndCleanup.md` first (Player-as-Poi gym is
+PROMPT success criterion 5; campaign doc tombstoning per PLAN.md's post-ship cleanup).
+**Outstanding human items:** BP-node `[EDITOR-VERIFY]` checklists from Gates 2 AND 3.
+**Blocked on:** nothing.
+
+---
+
+**Superseded state (Gate 3 close, same day):** Gates 1–3 ✅. Gate 3 (`CkPoi` meta-feature rewrite) complete: CkPoi owns no
 fragment machinery (FTag_Poi + EntityTag/Label composition), all consumers rewired
 (Compass/Minimap/EcsDebugger inspector/MapDebugger), 25 AS test/gym files rewritten, full sweep
 green vs baseline (Poi 44/44, Compass 13/13, Minimap 14/15 same pre-existing red, VisibleRange 4/4).
@@ -22,6 +36,25 @@ items: BP-node `[EDITOR-VERIFY]` checklists from Gates 2 AND 3 (see each gate's 
 | 2026-07-21 | Forks executing a build/test cycle must run the toolbox invocation SYNCHRONOUSLY (no `run_in_background` inside the fork's own tool call) | A fork's background process isn't reliably tracked once the fork's own turn ends — twice in Gate 1 a fork reported "waiting for the background build" and then its task showed `completed` with nothing actually verified. The toolbox process itself does keep running (confirmed via `--build-status`), but the fork can't observe or report on it after its turn ends, and the dispatcher gets no notification for it either | Apply to every future gate's fork prompts |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-07-22 (later) — Gate 4 closed: projectors consume VisibleRange state; Minimap 15/15
+
+- **Session shape:** Fable wrote the gate contract, audited, ran the pipeline; one Opus agent did
+  the C++ (both projectors + MapDebugger), one did the AS (delegate fix + 2 new integration tests).
+- **Fable audit caught a REAL design bug in the gate contract itself:** the planned view-exclude of
+  base `FTag_VisibleRange_Hidden` would have permanently locked range-hidden Pois out of the
+  distance feed (no recovery on observer approach). Corrected to a worker skip AFTER the distance
+  record — hidden Pois keep feeding, stop projecting. The ExplicitHide test's Show-recovery phase
+  pins this.
+- **Confirmed (fresh toolbox runs):** build green first attempt (`Build_Gate4_ProjectorRewire.log`);
+  Poi 46/46 (+2 new integration tests, both green first run), Compass 13/13 (=), Minimap 15/15
+  (red FIXED), VisibleRange 4/4 (=) — `Exit_Gate4_{Poi,Compass,Minimap_3,VisibleRange}.log`.
+- **The Minimap red was FOUR stacked defects, not one** (full list in Gate_04 doc): delegate arity,
+  stale Add-vs-Create split usage (the `! Has` ensure — found INDEPENDENT of the delegate by the AS
+  agent), same-tick read of the deferred record connect, and an either/or ForEach contract asserted
+  as both-at-once. The AS agent's refusal to mask the second defect was the load-bearing move.
+- **Inferred (unconfirmed):** none outstanding for this gate — no reflected-surface change, so no
+  new `[EDITOR-VERIFY]` items.
 
 ### 2026-07-22 — Gate 3 closed: CkPoi is a meta-feature; consumers rewired; zero regressions
 
