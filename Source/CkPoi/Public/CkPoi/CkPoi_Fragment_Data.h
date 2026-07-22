@@ -20,7 +20,7 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Poi);
 
 // Config for the POI meta-feature. Category is the entity's CkEntityTag identity (Poi.Category.*); Label (optional)
 // composes a CkLabel role tag. Presentation (icon/priority/offscreen), range/fade, and state all live in their own
-// modules now (CkPoiDisplayDefinition / CkVisibleRange / CkEntityTag) — see the CkPoi v2 refactor.
+// modules now (CkPoiDisplayDefinition / CkVisibleRange / CkEntityTag).
 USTRUCT(BlueprintType)
 struct CKPOI_API FCk_Fragment_Poi_ParamsData
 {

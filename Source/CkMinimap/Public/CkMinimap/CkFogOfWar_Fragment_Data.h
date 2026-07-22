@@ -16,8 +16,8 @@
 
 // Persistence payload for a FogOfWar grid (v3 rebuild+hydrate: Produce on save, HydrationApply on load).
 // NAMING DEVIATION (deliberate): save-only payloads are normally FCk_SaveData_<Feature>, but persistence handlers
-// key payloads by type path — renaming the struct later breaks old saves' payload mapping. Phase 4 commits this
-// type to the net wire as well (co-op shared exploration via Register_NetAndSave_*), so it carries the
+// key payloads by type path — renaming the struct later breaks old saves' payload mapping. This type is intended to
+// also go on the net wire later (co-op shared exploration via Register_NetAndSave_*), so it carries the
 // FCk_RepData_ name from day one.
 //
 // BlueprintType (unusual for a persistence payload): this payload doubles as the PULL-SEED for fog painters

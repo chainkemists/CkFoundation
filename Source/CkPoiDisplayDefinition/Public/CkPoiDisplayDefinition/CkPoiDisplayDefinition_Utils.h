@@ -117,8 +117,8 @@ public:
     Get_IsParentHidden(
         const FCk_Handle_PoiDisplayDefinition& InHandle);
 
-    // Parent-cascade hidden OR the definition's own VisibleRange (if composed) reporting hidden. The read every
-    // Gate-4 projector uses to decide whether to draw this definition at all.
+    // Parent-cascade hidden OR the definition's own VisibleRange (if composed) reporting hidden. The read a
+    // projector uses to decide whether to draw this definition at all.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|PoiDisplayDefinition",
               DisplayName="[Ck][PoiDisplayDefinition] Get Is Effectively Hidden")

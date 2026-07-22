@@ -253,7 +253,10 @@ timer::VeryVerbose(TEXT("Handling Reset Request for Timer with Entity [{}]"), In
 **Comments.** No *what*-comments — names, named lambdas, and `constexpr auto ResetOnActivate = true;`
 extractions carry meaning (every bool argument at a call site gets a named constexpr). *Why*-comments
 and `/** contract */` blocks on public Utils API and data shapes are house style, not a violation
-(e.g. the why-no-Remove rationale at `CkTimer_Utils.h:74-77`).
+(e.g. the why-no-Remove rationale at `CkTimer_Utils.h:74-77`). **Never leave a process breadcrumb in
+shipped code** — a comment naming a Gate, Phase, PROMPT, campaign, or "the refactor" is always noise;
+that history belongs in the campaign docs, not the source. Default to *no* comment: add one only when
+it carries a *why* a good name cannot. Every implementation closes with the comment audit below.
 
 ## Macro quick reference
 
@@ -322,6 +325,10 @@ superproject with `.claude/scripts/sync-skills.ps1`).
 - **Stuck protocol:** STOP → delegate investigation → step back → simplify → ask "[A] vs [B]?".
   Two failed attempts means stop and present options, not a third attempt.
 - **Editor-dependent verification** is a human step: label it `[EDITOR-VERIFY]` with exact clicks.
+- **Comment audit before done (mandatory closing step).** Re-read your own diff and delete every
+  comment a good name would carry: gate/phase/campaign/PROMPT breadcrumbs, restatements of the code,
+  and any *what*-comment. Keep only load-bearing *why*-comments and `/** contract */` blocks (Code
+  style → Comments). If the diff added a comment you cannot justify as a *why*, remove it.
 - Edit source files in place with your file tools; never paste code into chat as the deliverable.
 
 ## Provenance and maintenance
