@@ -284,7 +284,8 @@ namespace ck
             FFragment_IskmProxy_AnimState& InAnimState,
             FFragment_IskmProxy_PoseSource& InPoseSource,
             FFragment_IskmProxy_CustomData& InCustomData,
-            FFragment_IskmProxy_Requests& InRequests) const -> void
+            FFragment_IskmProxy_Requests& InRequests,
+            const FFragment_Transform& InTransform) const -> void
     {
         // Canonical visitor pattern from CkIsmProxy_Processor.cpp:396-411 — single generic
         // lambda dispatching to the overloaded DoHandleRequest member functions per request
@@ -302,7 +303,7 @@ namespace ck
         ck::algo::ForEachRequest(RequestsCopy, ck::Visitor(
             [&](const auto& InRequest) -> void
             {
-                DoHandleRequest(InHandle, InParams, InCurrent, InAnimState, InPoseSource, InCustomData, InRequest);
+                DoHandleRequest(InHandle, InParams, InCurrent, InAnimState, InPoseSource, InCustomData, InTransform, InRequest);
             }), ck::policy::DontResetContainer{});
     }
 
@@ -311,7 +312,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_IskmProxy_Current& InCurrent) const -> void
+            FFragment_IskmProxy_Current& InCurrent,
+            const FFragment_Transform& InTransform) const -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_CkIskm_UpdateTransform);
 
@@ -321,12 +323,14 @@ namespace ck
             InHandle)
         { return; }
 
-        // read the entity's current transform via the type-unsafe variant
-        // (does the FCk_Handle → FCk_Handle_Transform cast internally) and push it
-        // onto the SKMC. Gated by FTag_IskmProxy_Movable + FTag_Transform_Updated
-        // (CkEcsExt's transform system sets the latter only when the transform
-        // changed) and TExclude<FTag_IskmProxy_Ragdolling> (physics drives ragdolls).
-        auto NewTransform = ::UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InHandle);
+        // Entity transform comes from the VIEW (Add's FCk_Handle_Transform contract
+        // guarantees the fragment) — no per-entity handle cast. A plain fragment
+        // read is exact even for actor-backed owners: this runs in
+        // FGroup_PostTransform, AFTER FGroup_Transform_SyncFrom mirrored the live
+        // root component into the fragment this tick. Gated by
+        // FTag_IskmProxy_Movable + FTag_Transform_Updated (set only when the
+        // transform changed) and TExclude<FTag_IskmProxy_Ragdolling>.
+        auto NewTransform = InTransform.Get_Transform();
         // Compose the cached per-instance render offset (entity-space) into the world transform so the
         // body renders off the entity origin (e.g. drop a Character-actor proxy by the capsule half-height).
         NewTransform.AddToTranslation(NewTransform.GetRotation().RotateVector(InCurrent.Get_LocalLocationOffset()));
@@ -567,6 +571,7 @@ namespace ck
             FFragment_IskmProxy_AnimState& InAnimState,
             FFragment_IskmProxy_PoseSource& InPoseSource,
             FFragment_IskmProxy_CustomData& InCustomData,
+            const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_PlayAnimation& InRequest) const -> void
     {
         if (InPoseSource._PoseSource == ECk_IskmProxy_PoseSource::AnimBP)
@@ -628,6 +633,7 @@ namespace ck
             FFragment_IskmProxy_AnimState& InAnimState,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_StopAnimation& /*InRequest*/) const -> void
     {
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
@@ -656,6 +662,7 @@ namespace ck
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_SetPlayRate& InRequest) const -> void
     {
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
@@ -675,6 +682,7 @@ namespace ck
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_SetVisibility& InRequest) const -> void
     {
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
@@ -704,6 +712,7 @@ namespace ck
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& InCustomData,
+            const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_SetCustomDataFloat& InRequest) const -> void
     {
         CK_ENSURE_IF_NOT(InCustomData._Values.IsValidIndex(InRequest.Get_Offset()),
@@ -738,6 +747,7 @@ namespace ck
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_SetMaterialOverride& InRequest) const -> void
     {
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
@@ -777,6 +787,7 @@ namespace ck
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_ClearMaterialOverrides& /*InRequest*/) const -> void
     {
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
@@ -808,6 +819,7 @@ namespace ck
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_SetMorphTarget& InRequest) const -> void
     {
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
@@ -839,6 +851,7 @@ namespace ck
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_ClearMorphTargets& /*InRequest*/) const -> void
     {
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
@@ -867,6 +880,7 @@ namespace ck
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& InCustomData,
+            const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_SetSkeletalMesh& InRequest) const -> void
     {
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
@@ -923,6 +937,7 @@ namespace ck
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_AttachSubmesh& InRequest) const -> void
     {
         // ::-qualified — see the friend-class forward-decl injection note above.
@@ -997,6 +1012,7 @@ namespace ck
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_DetachSubmesh& InRequest) const -> void
     {
         auto* RendererData = ::UCk_Utils_IskmRenderer_UE::Get_RendererData(InParams.Get_Renderer());
@@ -1040,6 +1056,7 @@ namespace ck
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_DetachAllSubmeshes& /*InRequest*/) const -> void
     {
         for (auto& Weak : InCurrent._SubmeshSKMCs)
@@ -1060,6 +1077,7 @@ namespace ck
             FFragment_IskmProxy_AnimState& InAnimState,
             FFragment_IskmProxy_PoseSource& InPoseSource,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_SetAnimInstanceClass& InRequest) const -> void
     {
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
@@ -1097,6 +1115,7 @@ namespace ck
             FFragment_IskmProxy_AnimState& InAnimState,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_PlayMontage& InRequest) const -> void
     {
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
@@ -1158,6 +1177,7 @@ namespace ck
             FFragment_IskmProxy_AnimState& InAnimState,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_StopMontage& InRequest) const -> void
     {
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
@@ -1197,6 +1217,7 @@ namespace ck
             FFragment_IskmProxy_AnimState& InAnimState,
             FFragment_IskmProxy_PoseSource& InPoseSource,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_BeginRagdoll& InRequest) const -> void
     {
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
@@ -1247,6 +1268,7 @@ namespace ck
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& InPoseSource,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FFragment_Transform& InTransform,
             const FCk_Request_IskmProxy_EndRagdoll& /*InRequest*/) const -> void
     {
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
@@ -1265,7 +1287,32 @@ namespace ck
 
         SKMC->SetSimulatePhysics(false);
         SKMC->SetAllBodiesSimulatePhysics(false);
+        // Stopping simulation does NOT clear the per-body physics blend weights —
+        // they stay at 1.0, so the (now frozen) simulated pose keeps winning over
+        // the resumed animation and the mesh lies flat forever while sockets/anim
+        // report a standing pose. Zero the weights and force one re-evaluation so
+        // the get-up is visible this frame.
+        SKMC->SetAllBodiesPhysicsBlendWeight(0.0f);
         SKMC->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+        // Physics owned the SKMC world pose while ragdolling (UpdateTransform
+        // excludes Ragdolling), so the component is stranded at the fallen
+        // root-body pose. UpdateTransform only re-anchors on the next ENTITY
+        // transform CHANGE (FTag_Transform_Updated) — which never comes for an
+        // NPC that recovers standing still (e.g. locked at a kiosk), leaving it
+        // rendering its idle animation sideways on the ground forever. Re-push
+        // the entity transform here so the get-up is upright immediately.
+        // Unlike UpdateTransform (FGroup_PostTransform), request handlers run in
+        // FGroup_Gameplay_Rendering — BEFORE this tick's Transform_SyncFrom — so
+        // the fragment mirror is a tick stale for actor-backed owners; prefer the
+        // live root component there (e.g. a same-frame teleport before the sync).
+        auto NewTransform = InHandle.Has<FFragment_Transform_RootComponent>()
+            ? ::UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InHandle)
+            : InTransform.Get_Transform();
+        NewTransform.AddToTranslation(NewTransform.GetRotation().RotateVector(InCurrent.Get_LocalLocationOffset()));
+        SKMC->SetWorldTransform(NewTransform);
+
+        SKMC->RefreshBoneTransforms();
         InPoseSource._PoseSource = ck::IsValid(SKMC->GetAnimInstance())
             ? ECk_IskmProxy_PoseSource::AnimBP
             : ECk_IskmProxy_PoseSource::Sequence;
