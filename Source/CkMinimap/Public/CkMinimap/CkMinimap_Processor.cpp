@@ -326,9 +326,9 @@ namespace ck
         //
         // Base-entity FTag_VisibleRange_Hidden is consumed as a WORKER skip (below, after the distance
         // record), deliberately NOT a view exclude — an excluded hidden POI would stop receiving the
-        // distance feed and could never re-evaluate back to visible. This is the state-consumption upgrade
-        // over Gate 3's config-only read; the inline max-range cull further down still runs for blip-free
-        // same-frame membership. The EntityTag disable convention stays a per-worker skip too.
+        // distance feed and could never re-evaluate back to visible. The inline max-range cull further
+        // down still runs for blip-free same-frame membership. The EntityTag disable convention stays a
+        // per-worker skip too.
         //
         // The POI set is GATHERED first, then projected data-parallel: the per-POI body is pure registry
         // READS (EntityTag/VisibleRange/DisplayDefinition state, own transforms, fog grid) whose writers all

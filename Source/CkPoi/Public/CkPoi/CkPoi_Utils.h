@@ -37,7 +37,7 @@ public:
     // when Params._Label is set, a CkLabel. The entity must already carry the Transform feature — a POI's world
     // position is its own entity transform location (Get_WorldLocation). No child entity is created; one POI per
     // entity. Category / label / presentation / range all live in their own modules now (CkEntityTag / CkLabel /
-    // CkPoiDisplayDefinition / CkVisibleRange) — see the CkPoi v2 refactor.
+    // CkPoiDisplayDefinition / CkVisibleRange).
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Poi",
               DisplayName="[Ck][Poi] Add Feature")
