@@ -101,6 +101,16 @@ namespace ck_entity_script_params_generator
         return InProperty->HasAnyPropertyFlags(CPF_ConstParm | CPF_BlueprintReadOnly);
     }
 
+    auto Format_RetainedValueExpression(FProperty* InProperty, const FString& InSourceExpression) -> FString
+    {
+        const auto SourceType = FCkAngelscriptGenerator_SharedUtils::Get_DetailedPropertyType(InProperty);
+        const auto RetainedType = FCkAngelscriptEntityScriptParamsGenerator::Get_RetainedPropertyType(InProperty);
+        if (SourceType == RetainedType || InSourceExpression == TEXT("nullptr"))
+        { return InSourceExpression; }
+
+        return ck::Format_UE(TEXT("{}({})"), RetainedType, InSourceExpression);
+    }
+
     // A property's emission can produce two outputs:
     //   - DeclLine: the `UPROPERTY()\n    <Type> <Name>[ = <expr>];` field declaration.
     //   - OverrideStatements: `<Name>.<Path> = <Value>;` lines emitted into the SpawnParams
@@ -115,7 +125,7 @@ namespace ck_entity_script_params_generator
 
     auto Format_PropertyLine(FProperty* InProperty, const UClass* InClass) -> FPropertyEmission
     {
-        auto AsType = FCkAngelscriptGenerator_SharedUtils::Get_DetailedPropertyType(InProperty);
+        auto AsType = FCkAngelscriptEntityScriptParamsGenerator::Get_RetainedPropertyType(InProperty);
         if (Is_ConstProperty(InProperty) && NOT AsType.StartsWith(TEXT("const ")))
         {
             AsType = TEXT("const ") + AsType;
@@ -170,7 +180,9 @@ namespace ck_entity_script_params_generator
             const auto DefaultExpr = UCk_Utils_Reflection_UE::Get_AngelscriptDefaultExpression(*Literal);
             if (NOT DefaultExpr.IsEmpty())
             {
-                Emission.DeclLine += ck::Format_UE(TEXT(" = {}"), DefaultExpr);
+                Emission.DeclLine += ck::Format_UE(
+                    TEXT(" = {}"),
+                    Format_RetainedValueExpression(InProperty, DefaultExpr));
             }
         }
 
@@ -185,6 +197,8 @@ namespace ck_entity_script_params_generator
         auto Out = FString{};
         for (auto Index = int32{0}; Index < InProps.Num(); ++Index)
         {
+            // Keep the public Params(...) call shape source-compatible. Only the generated mirror field is weak;
+            // callers continue passing the original object type and the constructor converts it at admission.
             auto AsType = FCkAngelscriptGenerator_SharedUtils::Get_DetailedPropertyType(InProps[Index]);
             if (Is_ConstProperty(InProps[Index]) && NOT AsType.StartsWith(TEXT("const ")))
             {
@@ -266,10 +280,13 @@ namespace ck_entity_script_params_generator
             Block += TEXT("\n");
             Block += ck::Format_UE(TEXT("    {}({})\n"), StructName, Format_ParameterList(ValidProps));
             Block += TEXT("    {\n");
-            for (const auto* Prop : ValidProps)
+            for (auto* Prop : ValidProps)
             {
                 const auto& PropName = Prop->GetName();
-                Block += ck::Format_UE(TEXT("        {} = In{};\n"), PropName, PropName);
+                const auto ValueExpression = Format_RetainedValueExpression(
+                    Prop,
+                    ck::Format_UE(TEXT("In{}"), PropName));
+                Block += ck::Format_UE(TEXT("        {} = {};\n"), PropName, ValueExpression);
             }
             Block += TEXT("    }\n");
         }
@@ -614,6 +631,41 @@ auto
 #else
     return false;
 #endif
+}
+
+auto
+    FCkAngelscriptEntityScriptParamsGenerator::
+    Get_RetainedPropertyType(
+        FProperty* InProperty)
+    -> FString
+{
+    const auto ReflectedType = FCkAngelscriptGenerator_SharedUtils::Get_DetailedPropertyType(InProperty);
+    if (ck::Is_NOT_Valid(InProperty, ck::IsValid_Policy_NullptrOnly{}))
+    { return ReflectedType; }
+
+    // Weak and soft properties already carry an explicit retention policy. FSoftClassProperty derives from
+    // FSoftObjectProperty, and both soft and weak properties ultimately share object-property ancestry, so reject
+    // those cases before handling a direct strong object property.
+    if (CastField<FWeakObjectProperty>(InProperty) != nullptr
+        || CastField<FSoftObjectProperty>(InProperty) != nullptr)
+    { return ReflectedType; }
+
+    const auto* ObjectProperty = CastField<FObjectPropertyBase>(InProperty);
+    const auto* ObjectClass = ObjectProperty != nullptr ? ObjectProperty->PropertyClass.Get() : nullptr;
+    if (ObjectClass == nullptr)
+    { return ReflectedType; }
+
+    const auto DirectObjectType = ck::Format_UE(
+        TEXT("{}{}"),
+        ObjectClass->GetPrefixCPP(),
+        ObjectClass->GetName());
+    // A const AngelScript object handle must remain const through the weak wrapper. TWeakObjectPtr<const T> accepts
+    // the source handle without widening the engine's weak-pointer binding or exposing a mutable Get() result.
+    const auto RetainedObjectType = ReflectedType == TEXT("const ") + DirectObjectType
+        ? TEXT("const ") + DirectObjectType
+        : DirectObjectType;
+
+    return ck::Format_UE(TEXT("TWeakObjectPtr<{}>"), RetainedObjectType);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
