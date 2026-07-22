@@ -25,10 +25,15 @@ public class CkMinimap : CkModuleRules
             "CkCore",
             "CkEcs",
             "CkEcsExt",
+            "CkEntityTag",
             "CkLabel",
             "CkLog",
             "CkPoi",
+            // Permanent, designed dependency (CkPoi v2 Gate 3): the projector reads per-consumer presentation
+            // (priority/offscreen) from CkPoiDisplayDefinition, keyed by the Minimap consumer tag.
+            "CkPoiDisplayDefinition",
             "CkRecord",
+            "CkVisibleRange",
             "CkUI",
         });
     }

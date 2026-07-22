@@ -10,7 +10,14 @@
 #include "CkMinimap/CkMinimap_Fragment.h"
 #include "CkMinimap/CkMinimap_Fragment_Data.h"
 
+#include <NativeGameplayTags.h>
+
 #include "CkMinimap_Utils.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// The PoiDisplayDefinition consumer tag the minimap projector resolves presentation (priority/offscreen) with.
+CKMINIMAP_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Tag_PoiConsumer_Minimap);
 
 // --------------------------------------------------------------------------------------------------------------------
 

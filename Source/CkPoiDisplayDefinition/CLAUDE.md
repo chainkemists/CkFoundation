@@ -14,8 +14,17 @@ show) — the cascade this module owns.
 substrate those consumers read, not a POI itself. The `UCk_Poi_DisplayDefinition_PDA` asset and
 `ECk_Poi_OffscreenPolicy` enum live HERE (moved out of `CkPoi` — see root `CLAUDE.md` non-negotiable #9).
 
-**Used by:** Gate-4 projectors (compass/minimap presentation layers) via
-`TryGet_PoiDisplayDefinition_ByConsumer` + the `Get_IsEffectivelyHidden` read.
+**Used by (as of CkPoi v2 Gate 3):** `CkCompass` + `CkMinimap` — each projector resolves
+`TryGet_PoiDisplayDefinition_ByConsumer(PoiEntity, <its native consumer tag>)` per update
+(`Tag_PoiConsumer_Compass` = "Poi.Consumer.Compass" in CkCompass_Utils, `Tag_PoiConsumer_Minimap` =
+"Poi.Consumer.Minimap" in CkMinimap_Utils; absent definition ⇒ defaults Priority 0 / OffscreenPolicy
+Hide). The compass marker widget resolves `Get_DisplayAsset` the same way. Note: consumers linking
+against this module's headers also need a direct `CkRecord` Build.cs dep (the record-of-children
+machinery in our fragment header instantiates `FCk_Handle_EntityExtension`'s CKRECORD_API ctors in
+consumer TUs — LNK2019 otherwise).
+
+Gate 4 additionally wires the projectors to the `Get_IsEffectivelyHidden` /
+`FTag_PoiDisplayDefinition_ParentHidden` exclusion read (Gate 3 reads config only).
 
 ---
 

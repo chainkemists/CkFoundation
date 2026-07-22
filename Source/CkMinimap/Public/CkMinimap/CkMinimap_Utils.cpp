@@ -9,6 +9,12 @@
 
 #include "CkMinimap/CkMinimap_Log.h"
 
+#include <NativeGameplayTags.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UE_DEFINE_GAMEPLAY_TAG(Tag_PoiConsumer_Minimap, TEXT("Poi.Consumer.Minimap"))
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

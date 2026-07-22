@@ -11,7 +11,9 @@ reference-counted `FTag_VisibleRange_Hidden` so consumers get a fast filtered en
 non-negotiable #9.
 
 **Used by:** `CkPoiDisplayDefinition` (parent→child visibility cascade — see that module's
-`Claude.md` once it exists). Not yet wired into `CkCompass`/`CkMinimap`.
+`CLAUDE.md`); `CkCompass`/`CkMinimap` (CkPoi v2 Gate 3: projectors read the range/fade CONFIG via
+`Get_MinRange`/`Get_MaxRange`/`Get_FadeBandCm` and keep their own distance math — the
+`Update_Distance` + hidden-tag-exclusion flow is the Gate 4 upgrade); `CkMapDebugger` (max-range row).
 
 ---
 
