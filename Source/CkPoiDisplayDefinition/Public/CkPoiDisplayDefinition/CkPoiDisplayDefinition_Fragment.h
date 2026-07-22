@@ -19,7 +19,7 @@ namespace ck
     // Plain (NOT counted): a display-definition child has exactly ONE parent, so "parent is hidden" has a single
     // source — there is nothing to reference-count. The counted-tag complexity lives in CkVisibleRange's own
     // FTag_VisibleRange_Hidden (two independent vote sources); this cascade tag is deliberately simpler. Consumers
-    // (Gate 4 projectors) exclude BOTH FTag_VisibleRange_Hidden and this tag.
+    // exclude BOTH FTag_VisibleRange_Hidden and this tag.
     CK_DEFINE_ECS_TAG(FTag_PoiDisplayDefinition_ParentHidden);
 
     // Bind-once guard on the OWNER entity: set the first time Create wires the owner's OnHiddenChanged cascade so a
