@@ -27,6 +27,15 @@ public:
     using RecordOfInteractTargets_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfInteractTargets>;
 
 public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|InteractTarget",
+              DisplayName="[Ck][InteractTarget] Resolve Setup Data",
+              meta = (DefaultToSelf = "InWorldContextObject", HidePin = "InWorldContextObject", NotInAngelscript))
+    static FCk_Fragment_InteractTarget_ParamsData
+    ResolveSetupData(
+        const FCk_InteractTarget_SetupData& InSetupData,
+        const UObject* InWorldContextObject = nullptr);
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|InteractTarget",
               DisplayName="[Ck][InteractTarget] Add Interaction Target",
@@ -40,6 +49,17 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|InteractTarget",
+              DisplayName="[Ck][InteractTarget] Add Interaction Target From Setup Data",
+              meta = (DefaultToSelf = "InWorldContextObject", HidePin = "InWorldContextObject", NotInAngelscript))
+    static FCk_Handle_InteractTarget
+    AddFromSetupData(
+        UPARAM(ref) FCk_Handle& InInteractTargetOwner,
+        const FCk_InteractTarget_SetupData& InSetupData,
+        ECk_Replication InReplicates = ECk_Replication::Replicates,
+        const UObject* InWorldContextObject = nullptr);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|InteractTarget",
               DisplayName="[Ck][InteractTarget] Add Multiple New Interaction Targets",
               meta = (DefaultToSelf = "InWorldContextObject", HidePin = "InWorldContextObject"))
     static TArray<FCk_Handle_InteractTarget>
@@ -47,6 +67,26 @@ public:
         UPARAM(ref) FCk_Handle& InInteractTargetOwner,
         const FCk_Fragment_MultipleInteractTarget_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates,
+        const UObject* InWorldContextObject = nullptr);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|InteractTarget",
+              DisplayName="[Ck][InteractTarget] Add Multiple Interaction Targets From Setup Data",
+              meta = (DefaultToSelf = "InWorldContextObject", HidePin = "InWorldContextObject", NotInAngelscript))
+    static TArray<FCk_Handle_InteractTarget>
+    AddMultipleFromSetupData(
+        UPARAM(ref) FCk_Handle& InInteractTargetOwner,
+        const FCk_MultipleInteractTarget_SetupData& InSetupData,
+        ECk_Replication InReplicates = ECk_Replication::Replicates,
+        const UObject* InWorldContextObject = nullptr);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|InteractTarget",
+              DisplayName="[Ck][InteractTarget] Resolve Multiple Setup Data",
+              meta = (DefaultToSelf = "InWorldContextObject", HidePin = "InWorldContextObject", NotInAngelscript))
+    static FCk_Fragment_MultipleInteractTarget_ParamsData
+    ResolveMultipleSetupData(
+        const FCk_MultipleInteractTarget_SetupData& InSetupData,
         const UObject* InWorldContextObject = nullptr);
 
     UFUNCTION(BlueprintPure,
@@ -240,10 +280,15 @@ public:
 private:
     static auto
     Resolve_CanInteractWith(
-        const FMemberReference& InRef,
+        const FCk_InteractTarget_CanInteractWithReference& InRef,
         FCk_Handle_InteractTarget InTarget,
         FCk_Handle InInteractSource,
         FCk_Handle InInteractInstigator) -> TOptional<bool>;
+
+    static auto
+    Make_CanInteractWithReference(
+        const FMemberReference& InRef,
+        const UObject* InWorldContextObject) -> FCk_InteractTarget_CanInteractWithReference;
 
 #if WITH_EDITOR
 private:

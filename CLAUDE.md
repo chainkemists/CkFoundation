@@ -41,8 +41,20 @@ failure mode of incoming engineers and models — read them twice.
    Shipping (checks are NOT compiled out by default — see `ck-macros-and-codegen` skill).
 3. **Never silently handle an error.** A `Warning`/`Error` log-and-continue where validation failed
    is a review rejection: logs get ignored, ensures do not. Fire `CK_ENSURE_IF_NOT` with a
-   recovery block that is a *correct* silent-failure path, or let it be loud. No fallbacks that
-   hide problems, ever, unless explicitly requested.
+   diagnostic, then use a separate ordinary `if` as the *correct* silent-failure path. No
+   fallbacks that hide problems, ever, unless explicitly requested.
+   The ensure condition itself must be safe for malformed, default, stale, and partially
+   initialized input: validate outer prerequisites first, then deeper invariants in separate
+   guards. The separate ordinary failure branch may record an explicit failure/result state, but
+   must immediately terminate the operation. Never touch the rejected value, continue through a mutable sentinel,
+   or leave accepted partial state runnable. Registration, admission, composition, and
+   configuration are atomic: one rejected required declaration invalidates the whole sequence.
+   Compute a side-effect-safe validity value once and reuse it for the ensure and the explicit
+   failure branch. `CK_DISABLE_ENSURE_CHECKS` can compile the entire ensure condition and body out;
+   therefore load-bearing validation and recovery control flow must never live only in the macro.
+   Every new validation boundary requires a focused invalid-input test proving rejection, zero
+   downstream callbacks or mutation, no partial state, and no crash; also inspect a fresh startup
+   log for ensures and script errors instead of relying only on process completion.
 4. **Three environments.** Every public API must work — and be verified — in C++, Blueprint, AND
    AngelScript. "Works in C++" is one third of done.
 5. **Requests are deferred.** Mutations to ECS state go through request fragments handled by
@@ -113,11 +125,14 @@ auto
 indent, CRLF, `#pragma once`; includes ordered own-header → Ck module paths → engine → `*.generated.h` last.
 `// ----…----` separator lines between top-level declarations.
 
-**Validation & flow.** Early-out with the ensure macro (it IS an inverted if), single-statement
-guards on one line:
+**Validation & flow.** Compute a side-effect-safe condition once, diagnose it with the ensure macro,
+then early-out through a separate ordinary branch:
 
 ```cpp
-CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Timer Handle [{}]"), InHandle)
+const auto HandleIsValid = ck::IsValid(InHandle);
+CK_ENSURE_IF_NOT(HandleIsValid, TEXT("Invalid Timer Handle [{}]"), InHandle)
+{}
+if (NOT HandleIsValid)
 { return {}; }
 
 if (InParams.Get_CountDirection() == ECk_Timer_CountDirection::CountUp)
@@ -239,7 +254,7 @@ Full expansions, constraints, and add-a-new-X checklists: `ck-macros-and-codegen
 | `CK_GENERATED_BODY(T)` | ThisType alias + formatter/AS plumbing | Must precede macros that need `ThisType` |
 | `CK_PROPERTY(_X)` / `CK_PROPERTY_GET(_X)` | Accessor generation (`Get`+`_X` by token-paste) | Member MUST start with `_` or names break |
 | `CK_DEFINE_CONSTRUCTORS(T, ...)` | Default + essential-param ctors | Structs only — never UObjects; max 9 params; 1-arg ctor is `explicit` |
-| `CK_ENSURE_IF_NOT(expr, fmt, ...)` | Ensure + inverted-if early-out | Active in Shipping by default; recovery block must be a correct silent path |
+| `CK_ENSURE_IF_NOT(expr, fmt, ...)` | Diagnostic inverted-if syntax | May compile out; use a separate ordinary branch for validation and recovery |
 | `CK_DEFINE_ECS_TAG(_COUNTED)` | Tag fragment | Counted variant tracks add/remove depth |
 | `CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE` | Signal + BP delegate + Bind/Unbind utils | PostFire `Unbind` is a distinct generated fragment type |
 | `CK_SIGNAL_BIND / CK_SIGNAL_UNBIND` | (Un)subscribe | Unbind + replay never connects — order matters |

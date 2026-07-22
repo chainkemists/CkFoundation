@@ -76,11 +76,12 @@ namespace ck
 namespace ck::persistence_apply
 {
     // Result of applying one payload this tick.
-    enum class EApplyOutcome : uint8 { Applied, StillPending, DroppedTimeout };
+    enum class EApplyOutcome : uint8 { Applied, StillPending, DroppedRejected, DroppedTimeout };
 
     // Shared handler-resolve + Apply + NotReady/timeout core used by FProcessor_Hydration_Dispatch (the net
     // dispatcher predates it and keeps its own inline copy — see CkReplicatedFragmentContainer_Processor.cpp).
-    // Resolves InData's handler and calls HydrationApply. On NotReady, accumulates InOutPendingForSeconds; past the
+    // Resolves InData's handler and calls HydrationApply. Rejected is terminal immediately. On NotReady, accumulates
+    // InOutPendingForSeconds; past the
     // shared 5s/2s window fires the loud ensure and reports DroppedTimeout. A missing/HydrationApply-less handler
     // (registry churn) reports DroppedTimeout. InOldData is the last-applied payload (unset on first apply).
     CKECS_API auto

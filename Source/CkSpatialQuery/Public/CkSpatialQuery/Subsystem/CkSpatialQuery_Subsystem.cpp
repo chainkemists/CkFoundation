@@ -29,7 +29,7 @@ namespace contact_surface
         {
             case ECk_PhysicalMaterialSource::Direct:
             {
-                return SurfaceInfo.Get_PhysicalMaterial();
+                return SurfaceInfo.Get_PhysicalMaterial().Get();
             }
             case ECk_PhysicalMaterialSource::Trace:
             {

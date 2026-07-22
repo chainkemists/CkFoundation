@@ -1278,7 +1278,6 @@ namespace ck
         SCOPE_CYCLE_COUNTER(STAT_SmScript_CommitPendingAttach);
 
         const auto ScriptClass = InPending.Get_ScriptClass();
-        const auto SpawnParams = InPending.Get_SpawnParams();
 
         InHandle.Remove<FTag_SmScript_PendingAttach>();
         InHandle.Remove<FFragment_SmScript_PendingAttach>();
@@ -1287,7 +1286,7 @@ namespace ck
         { return; }
 
         auto MutableHandle = InHandle;
-        UCk_Utils_EntityScript_UE::Add(MutableHandle, ScriptClass, SpawnParams);
+        UCk_Utils_EntityScript_UE::Add(MutableHandle, ScriptClass, FInstancedStruct{});
     }
 }
 

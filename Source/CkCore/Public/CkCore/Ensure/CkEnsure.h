@@ -41,6 +41,9 @@ namespace ck::ensure
             ? (PLATFORM_BREAK(), false)                                                                                                    \
             : false))
 
+// CK_ENSURE_IF_NOT is diagnostic syntax, not load-bearing recovery control flow. Callers handling invalid external
+// input must evaluate a side-effect-safe condition once and branch explicitly outside this macro; ensure checks may
+// compile out, but recovery must not.
 #if CK_DISABLE_ENSURE_CHECKS
 #define CK_ENSURE_IF_NOT(InExpression, InFormat, ...)\
 if constexpr(false)

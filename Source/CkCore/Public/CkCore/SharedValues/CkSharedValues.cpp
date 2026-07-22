@@ -1,6 +1,8 @@
 #include "CkSharedValues.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/TypeTraits/CkTypeTraits.h"
+#include "CkCore/Validation/CkUntracedStructSafety.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -302,13 +304,47 @@ FCk_SharedInstancedStruct::
 FCk_SharedInstancedStruct::
     FCk_SharedInstancedStruct(
         ValueType InValue)
-    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}(InValue))
-{ }
+    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}(ValueType{}))
+{
+    TrySet(MoveTemp(InValue));
+}
+
+auto
+    FCk_SharedInstancedStruct::
+    TrySet(
+        ValueType InValue)
+    -> bool
+{
+    if (InValue.IsValid())
+    {
+        const auto* ScriptStruct = InValue.GetScriptStruct();
+        const auto HasScriptStruct = ScriptStruct != nullptr;
+        CK_ENSURE_IF_NOT(HasScriptStruct,
+            TEXT("SharedInstancedStruct rejected a value without a reflected struct type"))
+        { }
+        if (NOT HasScriptStruct)
+        { return false; }
+
+        const auto Safety = ck::Analyze_UntracedStructSafety(ScriptStruct);
+        const auto IsValueSafe = Safety.IsGcIndependent();
+        CK_ENSURE_IF_NOT(IsValueSafe,
+            TEXT("SharedInstancedStruct rejected unsafe value [{}]; [{}]: {}"),
+            ScriptStruct->GetName(),
+            Safety.FailurePath,
+            Safety.FailureReason)
+        { }
+        if (NOT IsValueSafe)
+        { return false; }
+    }
+
+    *_Ptr = MoveTemp(InValue);
+    return true;
+}
 
 auto
     FCk_SharedInstancedStruct::
     operator*() const
-    -> ValueType&
+    -> const ValueType&
 {
     return *_Ptr;
 }
@@ -316,7 +352,7 @@ auto
 auto
     FCk_SharedInstancedStruct::
     operator->() const
-    -> ValueType*
+    -> const ValueType*
 {
     return _Ptr.Get();
 }
