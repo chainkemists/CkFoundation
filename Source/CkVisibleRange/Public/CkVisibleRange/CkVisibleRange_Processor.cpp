@@ -1,7 +1,7 @@
 #include "CkVisibleRange_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
-#include "CkCore/Chrono/CkCadence_Utils.h"
+#include "CkCore/Chrono/CkChrono.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
@@ -24,7 +24,7 @@ namespace ck
             FFragment_VisibleRange_Current& InCurrent)
         -> void
     {
-        if (NOT ck::cadence::ShouldRun(InCurrent._CadenceChrono, InDeltaT))
+        if (InCurrent._CadenceChrono.Tick(InDeltaT, ECk_Chrono_OverflowPolicy::Wrap) != ECk_Chrono_TickState::Done)
         { return; }
 
         InCurrent._FadeAlpha = UCk_Utils_VisibleRange_UE::Compute_FadeAlpha(

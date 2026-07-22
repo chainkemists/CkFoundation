@@ -73,7 +73,8 @@ public:
     static ECk_Chrono_TickState
     Tick(
         UPARAM(ref) FCk_Chrono& InChrono,
-        const FCk_Time& InDeltaT);
+        const FCk_Time& InDeltaT,
+        ECk_Chrono_OverflowPolicy InOverflow = ECk_Chrono_OverflowPolicy::Clamp);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Chrono",
