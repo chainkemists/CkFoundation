@@ -239,19 +239,48 @@ auto
     if (NOT Request_IsClassInCkFoundationPlugin(Class))
     { return false; }
 
-    // Check if this class has any static UFUNCTIONs
-    auto HasStaticUFunctions = false;
+    // Check if this class has any static UFUNCTIONs eligible for generated wrappers.
+    auto HasIncludedStaticUFunctions = false;
     for (TFieldIterator<UFunction> FunctionIterator(Class); FunctionIterator; ++FunctionIterator)
     {
         auto Function = *FunctionIterator;
-        if (Function->HasAnyFunctionFlags(FUNC_Static))
+        if (Request_ShouldGenerateWrapperForFunction(Function))
         {
-            HasStaticUFunctions = true;
+            HasIncludedStaticUFunctions = true;
             break;
         }
     }
 
-    return HasStaticUFunctions;
+    return HasIncludedStaticUFunctions;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkAngelscriptWrapperGenerator::
+    Request_ShouldGenerateWrapperForFunction(
+        UFunction* Function)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(Function))
+    { return false; }
+
+    if (NOT Function->HasAnyFunctionFlags(FUNC_Static))
+    { return false; }
+
+    if (Function->HasMetaData(TEXT("DeprecatedFunction")))
+    { return false; }
+
+    if (Function->HasMetaData(TEXT("BlueprintInternalUseOnly")))
+    { return false; }
+
+    if (Function->HasMetaData(TEXT("NotInAngelscript")))
+    { return false; }
+
+    if (Has_InterfaceTypes(Function))
+    { return false; }
+
+    return true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -433,30 +462,9 @@ auto
     {
         auto Function = *FunctionIterator;
 
-        // Only process static functions with UFUNCTION meta
-        if (NOT Function->HasAnyFunctionFlags(FUNC_Static))
-        { continue; }
-
-        // Skip deprecated functions
-        if (Function->HasMetaData(TEXT("DeprecatedFunction")))
+        if (NOT Request_ShouldGenerateWrapperForFunction(Function))
         {
-            ck::angelscriptgenerator::Log(TEXT("    Skipping deprecated function: {}"), Function->GetName());
-            SkippedFunctionCount++;
-            continue;
-        }
-
-        // Skip Blueprint internal use only functions
-        if (Function->HasMetaData(TEXT("BlueprintInternalUseOnly")))
-        {
-            ck::angelscriptgenerator::Log(TEXT("    Skipping internal function: {}"), Function->GetName());
-            SkippedFunctionCount++;
-            continue;
-        }
-
-        // Skip functions with interface parameters or return types
-        if (Has_InterfaceTypes(Function))
-        {
-            ck::angelscriptgenerator::Log(TEXT("    Skipping function with interface types: {}"), Function->GetName());
+            ck::angelscriptgenerator::Log(TEXT("    Skipping function excluded from wrapper generation: {}"), Function->GetName());
             SkippedFunctionCount++;
             continue;
         }
@@ -511,7 +519,7 @@ auto
         bool IsMixin)
     -> FString
 {
-    if (ck::Is_NOT_Valid(Function))
+    if (NOT Request_ShouldGenerateWrapperForFunction(Function))
     { return FString{}; }
 
     auto FunctionName = Function->GetName();

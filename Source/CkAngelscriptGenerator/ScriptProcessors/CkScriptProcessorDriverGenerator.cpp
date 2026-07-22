@@ -274,7 +274,9 @@ namespace ck::scriptprocessor_driver_generator
             const auto& Param     = InSignature._FragmentParams[Index];
             const auto  FragName  = Get_SourceName(Param._Struct);
             const auto* Qualifier = Param._IsConst ? TEXT("const ") : TEXT("");
-            Out += FString::Printf(TEXT("            %s%s& P%d = Batch.Get(i, %s);\n"), Qualifier, *FragName, Index, *FragName);
+            const auto* Accessor  = Param._IsConst ? TEXT("GetReadOnly") : TEXT("Get");
+            Out += FString::Printf(TEXT("            %s%s& P%d = Batch.%s(i, %s);\n"),
+                Qualifier, *FragName, Index, Accessor, *FragName);
             CallArgs += FString::Printf(TEXT(", P%d"), Index);
         }
 
