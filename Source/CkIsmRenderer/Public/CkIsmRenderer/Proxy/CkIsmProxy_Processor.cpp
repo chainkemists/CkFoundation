@@ -368,14 +368,66 @@ namespace ck
 
     auto
         FProcessor_IsmProxy_EnsureStaticNotMoved_DEBUG::
+        DidTransformChange(
+            const FFragment_Transform& InTransform,
+            const FFragment_IsmProxy_Params& InParams,
+            const FTransform& InInstanceTransform)
+        -> bool
+    {
+        const auto& Transform = InTransform.Get_Transform();
+        const auto& ExpectedLocation = Transform.GetLocation() + InParams.Get_LocalLocationOffset();
+        const auto& ExpectedRotation = Transform.GetRotation() * InParams.Get_LocalRotationOffset().Quaternion();
+        const auto& ExpectedScale = Transform.GetScale3D() * InParams.Get_ScaleMultiplier();
+        const auto ExpectedTransform = FTransform{ExpectedRotation.Rotator(), ExpectedLocation, ExpectedScale};
+
+        return NOT ExpectedTransform.Equals(InInstanceTransform);
+    }
+
+    auto
+        FProcessor_IsmProxy_EnsureStaticNotMoved_DEBUG::
+        DoTick(
+            TimeType InDeltaT)
+        -> void
+    {
+        _World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(_TransientEntity);
+
+        TProcessor::DoTick(InDeltaT);
+    }
+
+    auto
+        FProcessor_IsmProxy_EnsureStaticNotMoved_DEBUG::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            const FFragment_IsmProxy_Current& InCurrent)
+            const FFragment_IsmProxy_Current& InCurrent,
+            const FFragment_Transform& InTransform)
         -> void
     {
-        const auto& Mobility = InParams.Get_IsmRenderer()->Get_Mobility();
+        using namespace ck_ism_proxy_processor;
+
+        const auto& RendererData = InParams.Get_IsmRenderer().Get();
+        const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData, InHandle);
+        const auto InstanceId = InCurrent.Get_IsmInstanceIndex();
+
+        if (NOT IsmComp.IsValid() || NOT IsmComp->IsValidId(InstanceId))
+        { return; }
+
+        const auto InstanceIndex = IsmComp->GetInstanceIndexForId(InstanceId);
+        auto InstanceTransform = FTransform{};
+        constexpr auto TransformAsWorldSpace = true;
+
+        if (InstanceIndex == INDEX_NONE ||
+            NOT IsmComp->GetInstanceTransform(InstanceIndex, InstanceTransform, TransformAsWorldSpace))
+        { return; }
+
+        // FTag_Transform_Updated also represents force-refreshes used to initialize and
+        // rebroadcast transforms. Compare against the rendered static instance itself so
+        // the diagnostic is independent of transient dirty-flag ordering.
+        if (NOT DidTransformChange(InTransform, InParams, InstanceTransform))
+        { return; }
+
+        const auto& Mobility = RendererData->Get_Mobility();
         CK_TRIGGER_ENSURE(TEXT("ISM Proxy [{}] with Mobility [{}] had its Transform changed.\n"
                 "If this ISM Proxy is meant to move its Mobility shouldn't be [{}]"),
             InHandle,
