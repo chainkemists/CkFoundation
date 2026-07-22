@@ -3,6 +3,8 @@
 #include "CkCore/Ensure/CkEnsure.h"
 
 #include "CkDynamic/CkDynamic_Fragment.h"
+#include "CkDynamic/CkDynamic_FragmentSchema.h"
+#include "CkDynamic/CkDynamic_Sentinel.h"
 
 #include <UObject/UnrealType.h>
 
@@ -45,16 +47,6 @@ namespace ck_dynamic_utils
         }
     }
 
-    auto Get_InvalidSentinel_FragmentData(const UScriptStruct* InStructType) -> FInstancedStruct&
-    {
-        static TMap<const UScriptStruct*, FInstancedStruct> Sentinels;
-        auto& Instance = Sentinels.FindOrAdd(InStructType);
-        if (NOT Instance.IsValid() || Instance.GetScriptStruct() != InStructType)
-        {
-            Instance.InitializeAs(InStructType);
-        }
-        return Instance;
-    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -67,23 +59,44 @@ auto
         ECk_Replication InReplication)
     -> FCk_Handle
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Handle passed. Unable to add Fragment"))
-    { return InHandle; }
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid, TEXT("Invalid Handle passed. Unable to add Fragment"))
+    {}
+    if (NOT HandleIsValid)
+    { return {}; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InFragmentData), TEXT("Invalid struct data in FInstancedStruct"))
-    { return InHandle; }
+    const auto FragmentDataIsValid = ck::IsValid(InFragmentData);
+    CK_ENSURE_IF_NOT(FragmentDataIsValid, TEXT("Invalid struct data in FInstancedStruct"))
+    {}
+    if (NOT FragmentDataIsValid)
+    { return {}; }
+
+    const auto Schema = ck::dynamic::Validate_FragmentSchema(InFragmentData.GetScriptStruct());
+    CK_ENSURE_IF_NOT(Schema.IsSafe,
+        TEXT("Dynamic Fragment schema [{}] is unsafe at [{}]: {}. Strong UObject references in named EnTT storage "
+             "are not GC-traced; use weak/soft references or a stable CK handle."),
+        InFragmentData.GetScriptStruct(), Schema.FailurePath, Schema.FailureReason)
+    {}
+    if (NOT Schema.IsSafe)
+    { return {}; }
+
+    if (InReplication == ECk_Replication::Replicates && NOT CanSetupReplication(InHandle, InFragmentData))
+    { return {}; }
 
     auto Fragment = ck::FFragment_DynamicFragment_Data{InFragmentData};
     const auto StorageId = Get_StorageId(InFragmentData.GetScriptStruct());
     auto&& Storage = InHandle.Get_RegistryView().Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
     const auto Entity = InHandle.Get_Entity().Get_ID();
 
-    CK_ENSURE_IF_NOT(NOT Storage.contains(Entity),
+    const auto FragmentDoesNotExist = NOT Storage.contains(Entity);
+    CK_ENSURE_IF_NOT(FragmentDoesNotExist,
         TEXT("Fragment [{}] already exists in Entity [{}]. ")
         TEXT("Call AddOrGet_Fragment if you want replace-on-duplicate semantics, ")
         TEXT("or compose this feature on a child entity instead."),
         InFragmentData.GetScriptStruct(), InHandle)
-    { return InHandle; }
+    {}
+    if (NOT FragmentDoesNotExist)
+    { return {}; }
 
     Storage.emplace(Entity, MoveTemp(Fragment));
     InHandle.Get_RegistryView().BumpDirtyMarkerVersion(Get_DirtyMarkerHash(InFragmentData.GetScriptStruct()));
@@ -111,19 +124,59 @@ auto
         ECk_Replication InReplication)
     -> FInstancedStruct&
 {
+    if (auto* Fragment = TryAddOrGet_Fragment_TypeUnsafe(InHandle, InStructType, InReplication))
+    { return *Fragment; }
+
+    return ck::dynamic::Get_InvalidSentinel_FragmentData(InStructType);
+}
+
+auto
+    UCk_Utils_DynamicFragment_UE::
+    TryAddOrGet_Fragment_TypeUnsafe(
+        FCk_Handle& InHandle,
+        const UScriptStruct* InStructType,
+        ECk_Replication InReplication)
+    -> FInstancedStruct*
+{
+    const auto TypeIsValid = ck::IsValid(InStructType);
+    CK_ENSURE_IF_NOT(TypeIsValid, TEXT("Invalid Dynamic Fragment type passed to AddOrGet"))
+    {}
+    if (NOT TypeIsValid)
+    { return nullptr; }
+
+    const auto Schema = ck::dynamic::Validate_FragmentSchema(InStructType);
+    CK_ENSURE_IF_NOT(Schema.IsSafe,
+        TEXT("Dynamic Fragment schema [{}] is unsafe at [{}]: {}. Strong UObject references in named EnTT storage "
+             "are not GC-traced; use weak/soft references or a stable CK handle."),
+        InStructType, Schema.FailurePath, Schema.FailureReason)
+    {}
+    if (NOT Schema.IsSafe)
+    { return nullptr; }
+
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid, TEXT("Invalid Handle passed to AddOrGet Dynamic Fragment [{}]"), InStructType)
+    {}
+    if (NOT HandleIsValid)
+    { return nullptr; }
+
     if (NOT Has_Fragment(InHandle, InStructType))
     {
         Add_Fragment(InHandle, FInstancedStruct(InStructType), InReplication);
+        const auto AddSucceeded = Has_Fragment(InHandle, InStructType);
+        CK_ENSURE_IF_NOT(AddSucceeded,
+            TEXT("AddOrGet Dynamic Fragment [{}] failed to create storage on [{}]"), InStructType, InHandle)
+        {}
+        if (NOT AddSucceeded)
+        { return nullptr; }
     }
     else
     {
-        // Callers of AddOrGet intend to mutate the returned struct in place. Mirror
-        // FCk_Registry::AddOrGet's contract: bump so the scheduler's pump short-circuit sees the
-        // change even though membership didn't move.
+        // Callers of AddOrGet intend to mutate the returned struct in place. Mirror FCk_Registry::AddOrGet's contract:
+        // bump so the scheduler's pump short-circuit sees the change even though membership didn't move.
         InHandle.Get_RegistryView().BumpDirtyMarkerVersion(Get_DirtyMarkerHash(InStructType));
     }
 
-    return Get_Fragment_TypeUnsafe(InHandle, InStructType);
+    return TryGet_Fragment_TypeUnsafe(InHandle, InStructType);
 }
 
 auto
@@ -191,27 +244,56 @@ auto
         const UScriptStruct* InStructType)
     -> FInstancedStruct&
 {
-    static auto InvalidNoType = FInstancedStruct{};
+    if (auto* Fragment = TryGet_Fragment_TypeUnsafe(InHandle, InStructType))
+    { return *Fragment; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InStructType),
+    return ck::dynamic::Get_InvalidSentinel_FragmentData(InStructType);
+}
+
+auto
+    UCk_Utils_DynamicFragment_UE::
+    TryGet_Fragment_TypeUnsafe(
+        const FCk_Handle& InHandle,
+        const UScriptStruct* InStructType)
+    -> FInstancedStruct*
+{
+
+    const auto TypeIsValid = ck::IsValid(InStructType);
+    CK_ENSURE_IF_NOT(TypeIsValid,
         TEXT("Invalid Dynamic Fragment type passed. Unable to get Dynamic Fragment from [{}]"), InHandle)
-    { return InvalidNoType; }
+    {}
+    if (NOT TypeIsValid)
+    { return nullptr; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+    const auto Schema = ck::dynamic::Validate_FragmentSchema(InStructType);
+    CK_ENSURE_IF_NOT(Schema.IsSafe,
+        TEXT("Refusing to expose unsafe Dynamic Fragment schema [{}] at [{}]: {}"),
+        InStructType, Schema.FailurePath, Schema.FailureReason)
+    {}
+    if (NOT Schema.IsSafe)
+    { return nullptr; }
+
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Invalid Handle [{}] passed. Unable to get Dynamic Fragment [{}]"), InHandle, InStructType)
-    { return ck_dynamic_utils::Get_InvalidSentinel_FragmentData(InStructType); }
+    {}
+    if (NOT HandleIsValid)
+    { return nullptr; }
 
     const auto StorageId = Get_StorageId(InStructType);
     auto Handle = InHandle;
     auto& Storage = Handle.Get_RegistryView().Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
     const auto Entity = InHandle.Get_Entity().Get_ID();
 
-    CK_ENSURE_IF_NOT(Storage.contains(Entity),
+    const auto FragmentExists = Storage.contains(Entity);
+    CK_ENSURE_IF_NOT(FragmentExists,
         TEXT("Entity [{}] does NOT have the Dynamic Fragment [{}]! Cannot retrieve it"), InHandle, InStructType)
-    { return ck_dynamic_utils::Get_InvalidSentinel_FragmentData(InStructType); }
+    {}
+    if (NOT FragmentExists)
+    { return nullptr; }
 
     auto& Fragment = Storage.get(Entity);
-    return Fragment.Get_StructData();
+    return &Fragment.Get_StructData();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -445,23 +527,36 @@ auto
 
 auto
     UCk_Utils_DynamicFragment_UE::
+    CanSetupReplication(
+        const FCk_Handle& InHandle,
+        const FInstancedStruct& InStructData)
+    -> bool
+{
+    const auto* StructType = InStructData.GetScriptStruct();
+
+    // Validate replication eligibility before Add_Fragment performs its first mutation. A rejected replicated tag
+    // must not leave local-only named storage or the default-storage presence marker behind.
+    const auto HasReplicableData = static_cast<bool>(TFieldIterator<FProperty>{StructType});
+    CK_ENSURE_IF_NOT(HasReplicableData,
+        TEXT("Dynamic Fragment [{}] on Entity [{}] was requested to replicate, but the struct has no ")
+        TEXT("properties (tag / size-0). Replicating it carries no data and is meaningless. Add it without ")
+        TEXT("ECk_Replication::Replicates, or give the struct a replicated property."),
+        StructType, InHandle)
+    {}
+    if (NOT HasReplicableData)
+    { return false; }
+
+    return HasReplicableData;
+}
+
+auto
+    UCk_Utils_DynamicFragment_UE::
     DoSetupReplication(
         FCk_Handle& InHandle,
         const FInstancedStruct& InStructData)
     -> void
 {
     const auto* StructType = InStructData.GetScriptStruct();
-
-    // A struct with no reflected properties (tag / size-0) carries no replicable data. The iterator's
-    // operator bool is true iff there is at least one FProperty — no loop body, so no C4702.
-    const auto HasReplicableData = static_cast<bool>(TFieldIterator<FProperty>{StructType});
-
-    CK_ENSURE_IF_NOT(HasReplicableData,
-        TEXT("Dynamic Fragment [{}] on Entity [{}] was requested to replicate, but the struct has no ")
-        TEXT("properties (tag / size-0). Replicating it carries no data and is meaningless. Add it without ")
-        TEXT("ECk_Replication::Replicates, or give the struct a replicated property."),
-        StructType, InHandle)
-    { return; }
 
     InHandle.AddOrGet<ck::FFragment_DynamicFragment_ReplicatedTypes>().Get_Types().Add(StructType);
     InHandle.AddOrGet<ck::FTag_DynamicFragment_MayRequireReplication>();
@@ -544,12 +639,14 @@ auto
         ECk_Replication InReplication)
     -> FScriptStructWildcard&
 {
-    if (NOT Has_Fragment(InHandle, InStructType))
-    {
-        Add_Fragment(InHandle, FInstancedStruct{InStructType}, InReplication);
-    }
+    if (auto* Fragment = TryAddOrGet_Fragment_TypeUnsafe(InHandle, InStructType, InReplication))
+    { return *(FScriptStructWildcard*)Fragment->GetMutableMemory(); }
 
-    return Get_Fragment(InHandle, InStructType);
+    FAngelscriptManager::Throw("Dynamic Fragment AddOrGet rejected invalid input");
+    static auto InvalidNoType = FScriptStructWildcard{};
+    return ck::IsValid(InStructType)
+        ? *(FScriptStructWildcard*)ck::dynamic::Get_InvalidSentinel_FragmentData(InStructType).GetMutableMemory()
+        : InvalidNoType;
 }
 
 auto
@@ -559,27 +656,14 @@ auto
         const UScriptStruct* InStructType)
     -> FScriptStructWildcard&
 {
+    if (auto* Fragment = TryGet_Fragment_TypeUnsafe(InHandle, InStructType))
+    { return *(FScriptStructWildcard*)Fragment->GetMutableMemory(); }
+
+    FAngelscriptManager::Throw("Dynamic Fragment Get rejected invalid input");
     static auto InvalidNoType = FScriptStructWildcard{};
-
-    CK_ENSURE_IF_NOT(ck::IsValid(InStructType),
-        TEXT("Invalid Dynamic Fragment type passed. Unable to get Dynamic Fragment from [{}]"), InHandle)
-    { return InvalidNoType; }
-
-    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
-        TEXT("Invalid Handle [{}] passed. Unable to get Dynamic Fragment [{}]"), InHandle, InStructType)
-    { return *(FScriptStructWildcard*)ck_dynamic_utils::Get_InvalidSentinel_FragmentData(InStructType).GetMutableMemory(); }
-
-    const auto StorageId = Get_StorageId(InStructType);
-    auto Handle = InHandle;
-    auto& Storage = Handle.Get_RegistryView().Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
-    const auto Entity = InHandle.Get_Entity().Get_ID();
-
-    CK_ENSURE_IF_NOT(Storage.contains(Entity),
-        TEXT("Entity [{}] does NOT have the Dynamic Fragment [{}]! Cannot retrieve it"), InHandle, InStructType)
-    { return *(FScriptStructWildcard*)ck_dynamic_utils::Get_InvalidSentinel_FragmentData(InStructType).GetMutableMemory(); }
-
-    auto& Fragment = Storage.get(Entity);
-    return *(FScriptStructWildcard*)Fragment.Get_StructData().GetMemory();
+    return ck::IsValid(InStructType)
+        ? *(FScriptStructWildcard*)ck::dynamic::Get_InvalidSentinel_FragmentData(InStructType).GetMutableMemory()
+        : InvalidNoType;
 }
 
 AS_FORCE_LINK const FAngelscriptBinds::FBind Bind_CkDynamicFragment(static_cast<int32>(FAngelscriptBinds::EOrder::Late), []
@@ -590,14 +674,20 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind Bind_CkDynamicFragment(static_cast<
         "FCk_Handle Add_Fragment(const FInstancedStruct& InFragmentData, ECk_Replication InReplication = ECk_Replication::DoesNotReplicate)",
         [](FCk_Handle& Self, const FInstancedStruct& InFragmentData, ECk_Replication InReplication) -> FCk_Handle
         {
-            return UCk_Utils_DynamicFragment_UE::Add_Fragment(Self, InFragmentData, InReplication);
+            const auto Result = UCk_Utils_DynamicFragment_UE::Add_Fragment(Self, InFragmentData, InReplication);
+            if (ck::Is_NOT_Valid(Result))
+            { FAngelscriptManager::Throw("Dynamic Fragment Add rejected invalid input"); }
+            return Result;
         });
 
     ExistingClass.Method(
         "FCk_Handle Add_Fragment(const FAngelscriptAnyStructParameter& InFragmentData, ECk_Replication InReplication = ECk_Replication::DoesNotReplicate)",
         [](FCk_Handle& Self, const FAngelscriptAnyStructParameter& InFragmentData, ECk_Replication InReplication) -> FCk_Handle
         {
-            return UCk_Utils_DynamicFragment_UE::Add_Fragment(Self, InFragmentData, InReplication);
+            const auto Result = UCk_Utils_DynamicFragment_UE::Add_Fragment(Self, InFragmentData, InReplication);
+            if (ck::Is_NOT_Valid(Result))
+            { FAngelscriptManager::Throw("Dynamic Fragment Add rejected invalid input"); }
+            return Result;
         });
 
     ExistingClass.Method(
