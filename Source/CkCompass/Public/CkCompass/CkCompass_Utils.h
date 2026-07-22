@@ -7,7 +7,14 @@
 #include "CkCompass/CkCompass_Fragment.h"
 #include "CkCompass/CkCompass_Fragment_Data.h"
 
+#include <NativeGameplayTags.h>
+
 #include "CkCompass_Utils.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// The PoiDisplayDefinition consumer tag the compass projector resolves presentation (priority/offscreen) with.
+CKCOMPASS_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Tag_PoiConsumer_Compass);
 
 // --------------------------------------------------------------------------------------------------------------------
 

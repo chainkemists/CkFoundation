@@ -19,13 +19,9 @@ public class CkPoi : CkModuleRules
             "CkCore",
             "CkEcs",
             "CkEcsExt",
+            "CkEntityTag",
+            "CkLabel",
             "CkLog",
-
-            // TEMPORARY (CkPoi v2 refactor Gate 2): ECk_Poi_OffscreenPolicy + the DisplayDefinition PDA moved
-            // there but CkPoi's fragment still carries fields of those types until the Gate 3 rewrite.
-            "CkPoiDisplayDefinition",
-
-            "CkSettings",
         });
     }
 }
