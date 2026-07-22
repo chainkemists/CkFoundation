@@ -20,7 +20,7 @@
 // type to the net wire as well (co-op shared exploration via Register_NetAndSave_*), so it carries the
 // FCk_RepData_ name from day one.
 //
-// BlueprintType (unlike FCk_RepData_Poi): this payload doubles as the PULL-SEED for fog painters
+// BlueprintType (unusual for a persistence payload): this payload doubles as the PULL-SEED for fog painters
 // (Get_ExploredData) and as the FCk_Request_FogOfWar_SetExplored payload, so BP/AS must be able to hold it.
 USTRUCT(BlueprintType)
 struct CKMINIMAP_API FCk_RepData_FogOfWar

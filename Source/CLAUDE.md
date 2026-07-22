@@ -167,7 +167,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkAudio | ActorRelay,Core,Cue,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer |
 | CkCamera | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkChaos | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Targeting |
-| CkCompass | Camera,Core,Ecs,EcsExt,Log,Poi,PoiDisplayDefinition,UI |
+| CkCompass | Camera,Core,Ecs,EcsExt,EntityTag,Log,Poi,PoiDisplayDefinition,Record,UI,VisibleRange |
 | CkCompositeAlgos | Core,Ecs,EcsExt |
 | CkConsoleCommands | Core,Ecs,Label,Log,Record,Settings |
 | CkCrowd | Core,Ecs,EcsExt,Label,Log,Navigation,Physics,Pmg,Projectile,Record,Settings,Shapes,SpatialQuery |
@@ -189,14 +189,14 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkIsmRenderer | Core,Ecs,EcsExt,Graphics,Label,Log,Provider,Record,Settings |
 | CkIskmRenderer | Animation,Core,Ecs,EcsExt,Graphics,IskmRendererVF,Label,Log,Physics,Provider,Record,Settings |
 | CkMessaging | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
-| CkMinimap | Camera,Core,Ecs,EcsExt,Label,Log,Poi,Record,UI |
+| CkMinimap | Camera,Core,Ecs,EcsExt,EntityTag,Label,Log,Poi,PoiDisplayDefinition,Record,UI,VisibleRange |
 | CkNavigation | Core,Ecs,EcsExt,Label,Log,Record,Settings |
 | CkPathNetwork | AStar,Core,Ecs,EcsExt,Label,Log,Navigation,Record,Settings |
 | CkObjective | ActorRelay,Attribute,Core,Cue,Ecs,EcsExt,EntityCollection,Label,Log,Provider,Record,Settings |
 | CkOverlapBody | Actor,Core,Ecs,EcsExt,Graphics,Label,Log,Physics,Record,Settings |
 | CkPhysics | Actor,Chaos,Core,Ecs,EcsExt,Label,Log,Record |
 | CkPmg | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
-| CkPoi | Core,Ecs,EcsExt,Log,PoiDisplayDefinition (temporary — Gate 3 of the CkPoi v2 refactor removes it),Settings |
+| CkPoi | Core,Ecs,EcsExt,EntityTag,Label,Log |
 | CkPoiDisplayDefinition | Core,Ecs,EcsExt,Label,Log,Record,Settings,VisibleRange |
 | CkProjectile | Core,Ecs,EcsExt,Log,Physics,Record,Variables |
 | CkRaySense | Core,Ecs,EcsExt,IsmRenderer,Label,Log,Provider,Record,Settings,Shapes |

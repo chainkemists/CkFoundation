@@ -7,6 +7,12 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
+#include <NativeGameplayTags.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UE_DEFINE_GAMEPLAY_TAG(Tag_PoiConsumer_Compass, TEXT("Poi.Consumer.Compass"))
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

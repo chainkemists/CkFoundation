@@ -1,6 +1,8 @@
 #include "CkCompassUI_MarkerWidget.h"
 
-#include "CkPoi/CkPoi_Utils.h"
+#include "CkCompass/CkCompass_Utils.h"
+
+#include "CkPoiDisplayDefinition/CkPoiDisplayDefinition_Utils.h"
 
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
@@ -73,7 +75,14 @@ auto
     if (ck::Is_NOT_Valid(_AssignedPoi))
     { return; }
 
-    const auto DisplaySoft = UCk_Utils_Poi_UE::Get_DisplayAsset(_AssignedPoi);
+    // Resolve the compass-consumer display definition for this POI; unset (no definition for this consumer)
+    // -> null soft ptr, the same "keep authored icon" path as an invalid POI above.
+    const auto DisplayDefinition = UCk_Utils_PoiDisplayDefinition_UE::TryGet_PoiDisplayDefinition_ByConsumer(
+        _AssignedPoi, Tag_PoiConsumer_Compass);
+
+    const auto DisplaySoft = ck::IsValid(DisplayDefinition)
+        ? UCk_Utils_PoiDisplayDefinition_UE::Get_DisplayAsset(DisplayDefinition)
+        : TSoftObjectPtr<UCk_Poi_DisplayDefinition_PDA>{};
 
     if (DisplaySoft.IsNull())
     { return; }

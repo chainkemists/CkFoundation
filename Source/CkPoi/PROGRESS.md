@@ -2,16 +2,14 @@
 
 ## Current state
 
-**As of 2026-07-21 (evening session):** Gate 1 ✅ (Fable-audited, no blockers) and Gate 2 ✅ —
-`CkPoiDisplayDefinition` module complete, 4/4 new AutoTests green, exit sweep clean vs the entry
-baseline. Committed locally across CkFoundation + CkTests + CkGameplayDebugger + root pointer
-bumps; NOTHING pushed. Gate 3 (`CkPoi` meta-feature rewrite) not started.
-**Baseline being diffed against (captured at Gate 2 entry, reusable for Gate 3):** Poi 40/40
-(now 44/44 with the 4 new tests), Compass 13/13, Minimap 14/15; the 1 red
-(`Ck_AutoTest_Minimap_Add_CreatesChild`) is pre-existing (evidence in Gate_02 entry criteria),
-excluded from diffs.
-**Next action:** Start Gate 3 — write `Plan/Gate_03_PoiRewrite.md` first. One outstanding human
-item from Gate 2: the BP-node `[EDITOR-VERIFY]` checklist (see Gate_02 exit criteria).
+**As of 2026-07-22:** Gates 1–3 ✅. Gate 3 (`CkPoi` meta-feature rewrite) complete: CkPoi owns no
+fragment machinery (FTag_Poi + EntityTag/Label composition), all consumers rewired
+(Compass/Minimap/EcsDebugger inspector/MapDebugger), 25 AS test/gym files rewritten, full sweep
+green vs baseline (Poi 44/44, Compass 13/13, Minimap 14/15 same pre-existing red, VisibleRange 4/4).
+Committed locally; NOTHING pushed. Gate 4 (Compass+Minimap semantic rewire) not started.
+**Baseline for Gate 4:** the Gate 3 exit numbers above (`Exit_Gate3_*.log`).
+**Next action:** Start Gate 4 — write `Plan/Gate_04_CompassMinimap.md` first. Outstanding human
+items: BP-node `[EDITOR-VERIFY]` checklists from Gates 2 AND 3 (see each gate's exit criteria).
 **Blocked on:** nothing.
 
 ## Decision log
@@ -24,6 +22,34 @@ item from Gate 2: the BP-node `[EDITOR-VERIFY]` checklist (see Gate_02 exit crit
 | 2026-07-21 | Forks executing a build/test cycle must run the toolbox invocation SYNCHRONOUSLY (no `run_in_background` inside the fork's own tool call) | A fork's background process isn't reliably tracked once the fork's own turn ends — twice in Gate 1 a fork reported "waiting for the background build" and then its task showed `completed` with nothing actually verified. The toolbox process itself does keep running (confirmed via `--build-status`), but the fork can't observe or report on it after its turn ends, and the dispatcher gets no notification for it either | Apply to every future gate's fork prompts |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-07-22 — Gate 3 closed: CkPoi is a meta-feature; consumers rewired; zero regressions
+
+- **Session shape:** Fable wrote the gate contract + delegation prompts, line-audited all agent
+  output, ran the build/test pipeline, fixed the two pipeline incidents below, and closed the docs.
+  Three Opus agents implemented: (1) CkPoi rewrite + Compass/Minimap rewire, (2) debugger rewires,
+  (3) 25 AS test/gym rewrites. All three outputs were high quality; Fable's audit fixes were
+  cosmetic (CRLF, em-dash literals, map-row name fallback, one dangling comment).
+- **Confirmed (fresh toolbox runs, `Exit_Gate3_*.log`):** build green (attempt 3); Poi 44/44 vs
+  baseline 44/44 — the suite reshaped 1:1 (7 CkPoi tests: 5 rewritten in place, 1 renamed
+  `SetStateTags_ReplacesAll`→`StateTags_ViaEntityTag` (no replace-all verb on EntityTag; re-scoped
+  to multi-tag independence), 1 untouched pair already new-API-clean); Compass 13/13 (=);
+  Minimap 14/15 (= same pre-existing `Minimap_Add_CreatesChild` red — Gate 4 fix);
+  VisibleRange 4/4 (=). Residue + stock-ensure greps zero.
+- **FogOfWar open item RESOLVED:** NOT a CkPoi consumer (comment-only reference, now reworded) —
+  confirmed by accessor-level sweep; the Open-items row below is closed.
+- **LNK lesson (extends the Gate 2 accessor-sweep lesson):** consumers of a module whose PUBLIC
+  headers embed record-of-children machinery need a direct `CkRecord` dep —
+  `FCk_Handle_EntityExtension` is DECLARED in CkRecord (`CkRecord_Fragment_Data.h:14`), not in
+  CkEntityExtension (first fix attempt targeted the wrong module). CkGoap's Build.cs comment
+  documents the same trap from the other side (keep CkRecord private).
+- **AS test-rename wedge (new failure mode, recorded in Gate_03 doc):** renaming an AutoTest class
+  deadlocks the AS compile via the committed generated `CkTestsAssets.as` + the orphaned placed map
+  actor (populator can't remove an actor whose class won't load; the row then passes VACUOUSLY from
+  cached discovery). Recovery: prune stale generated blocks + `git rm` the orphan external-actor
+  package + `--discover-fresh`. This is the sharp edge behind CkTests CLAUDE's "prefer stable names".
+- **Inferred (unconfirmed, human-only):** BP node rendering for the reshaped `[Ck][Poi]` surface —
+  `[EDITOR-VERIFY]` checklist in Gate_03 exit criteria.
 
 ### 2026-07-21 (evening) — Gate 2 closed: CkPoiDisplayDefinition complete; Gate 1 Fable-audited
 
@@ -90,4 +116,4 @@ item from Gate 2: the BP-node `[EDITOR-VERIFY]` checklist (see Gate_02 exit crit
 | Item | Status | Next step |
 |---|---|---|
 | Baseline test counts for CkPoi/CkCompass/CkMinimap | Not captured | Capture via toolbox at Gate 3 entry |
-| Whether `CkFogOfWar` touches `CkPoi`'s old fragment directly | Unconfirmed | Check during Gate 4 |
+| Whether `CkFogOfWar` touches `CkPoi`'s old fragment directly | RESOLVED 2026-07-22: NO (comment-only reference) | n/a — closed at Gate 3 entry sweep |

@@ -25,11 +25,17 @@ public class CkCompass : CkModuleRules
             "CkCore",
             "CkEcs",
             "CkEcsExt",
+            "CkEntityTag",
             "CkLog",
             "CkPoi",
-            // Direct consumer of UCk_Poi_DisplayDefinition_PDA symbols (moved there in CkPoi v2 Gate 2);
-            // Gate 4 formalizes the full Poi -> EntityTag+PoiDisplayDefinition dependency swap.
+            // Link-level dep (CkPoi v2 Gate 3 LNK2019): including CkPoiDisplayDefinition_Utils.h pulls
+            // CkRecord_Fragment.h, whose FFragment_RecordOfEntityExtensions instantiates the CKRECORD_API
+            // FCk_Handle_EntityExtension copy ctor in this module's TUs.
+            "CkRecord",
+            // Permanent, designed dependency (CkPoi v2 Gate 3): the projector reads per-consumer presentation
+            // (priority/offscreen/display asset) from CkPoiDisplayDefinition, keyed by the Compass consumer tag.
             "CkPoiDisplayDefinition",
+            "CkVisibleRange",
             "CkUI",
         });
     }

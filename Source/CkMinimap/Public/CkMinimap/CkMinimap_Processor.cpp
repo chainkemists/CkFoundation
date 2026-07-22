@@ -8,11 +8,17 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "CkEntityTag/CkEntityTag_Utils.h"
+
 #include "CkMinimap/CkFogOfWar_Utils.h"
 #include "CkMinimap/CkMinimap_Log.h"
 #include "CkMinimap/CkMinimap_Utils.h"
 
-#include "CkPoi/CkPoi_Fragment.h"
+#include "CkPoi/CkPoi_Utils.h"
+
+#include "CkPoiDisplayDefinition/CkPoiDisplayDefinition_Utils.h"
+
+#include "CkVisibleRange/CkVisibleRange_Utils.h"
 
 #include "Async/ParallelFor.h"
 
@@ -299,26 +305,26 @@ namespace ck
         const auto RotationMode = InCurrent._RotationMode;
         const auto& FogOfWar = InCurrent._FogOfWar;
 
-        // Manual view over every POI in this world's registry. The four pending-kill excludes matter:
-        // fragments survive until destruction Finalize (~2 ticks after Destroy) — without them, dying
-        // POIs would linger on the minimap. Initiate-frame POIs are deliberately still projected
-        // (same policy as CK_IGNORE_PENDING_KILL).
+        // Manual view over every POI in this world's registry, keyed on the FTag_Poi identity. The four
+        // pending-kill excludes matter: fragments survive until destruction Finalize (~2 ticks after
+        // Destroy) — without them, dying POIs would linger on the minimap. Initiate-frame POIs are
+        // deliberately still projected (same policy as CK_IGNORE_PENDING_KILL). Disabled POIs are NOT
+        // excluded here (the EntityTag disable tag can't be an entt exclude) — they're skipped per-worker.
         //
         // The POI set is GATHERED first, then projected data-parallel: the per-POI body is pure registry
-        // READS (poi fragments, own transforms, fog grid) whose writers all ran in earlier groups, and
-        // each worker writes only its own index slot. Signals/sort/diff stay on the calling thread.
+        // READS (EntityTag/VisibleRange/DisplayDefinition state, own transforms, fog grid) whose writers all
+        // ran in earlier groups, and each worker writes only its own index slot. Signals/sort/diff stay on
+        // the calling thread.
         auto& PoiEntities = InCurrent._ScratchPoiEntities;
         PoiEntities.Reset();
 
         InMinimapEntity.View<
-            ck::FFragment_Poi_Params,
-            ck::FFragment_Poi_Current,
-            ck::TExclude<ck::FTag_Poi_Disabled>,
+            ck::FTag_Poi,
             ck::TExclude<ck::FTag_DestroyEntity_EndPlay>,
             ck::TExclude<ck::FTag_DestroyEntity_Teardown>,
             ck::TExclude<ck::FTag_DestroyEntity_Await>,
             ck::TExclude<ck::FTag_DestroyEntity_Finalize>>().ForEach(
-        [&](const auto InPoiEntity, const ck::FFragment_Poi_Params&, const ck::FFragment_Poi_Current&) -> void
+        [&](const auto InPoiEntity) -> void
         {
             PoiEntities.Add(InPoiEntity);
         });
@@ -336,23 +342,34 @@ namespace ck
         {
             const auto PoiGenericHandle = InMinimapEntity.Get_ValidHandle(PoiEntities[InIndex].Get_ID());
 
-            const auto& PoiParams = PoiGenericHandle.Get<ck::FFragment_Poi_Params>();
-
-            if (NOT FilterIsEmpty && NOT CategoryFilter.Matches(FGameplayTagContainer{PoiParams.Get_Category()}))
+            // Disabled POIs are excluded via the EntityTag convention tag (absence-safe: Has returns false
+            // when the store isn't present yet — the disable add is deferred one pump).
+            if (UCk_Utils_EntityTag_UE::Has_UsingGameplayTag(PoiGenericHandle, Tag_Poi_DisabledName))
             { return; }
 
-            // POI position = the POI entity's own Transform + its relative offset (direct-attach: the POI
-            // entity carries the Transform — see CkPoi's composition contract)
+            if (NOT FilterIsEmpty && NOT CategoryFilter.Matches(UCk_Utils_EntityTag_UE::Get_AllTagsAsContainer(PoiGenericHandle)))
+            { return; }
+
+            // POI position = the POI entity's own Transform location (direct-attach: the POI entity carries
+            // the Transform — see CkPoi's composition contract)
             const auto PoiTransformHandle = UCk_Utils_Transform_UE::Cast(PoiGenericHandle);
 
             if (ck::Is_NOT_Valid(PoiTransformHandle))
             { return; }
 
             const auto PoiWorldTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(PoiTransformHandle);
-            const auto PoiLocation = PoiWorldTransform.TransformPosition(PoiParams.Get_RelativeLocation());
+            const auto PoiLocation = PoiWorldTransform.GetLocation();
 
             const auto Distance = static_cast<float>(FVector::Dist(ViewOrigin, PoiLocation));
-            const auto MaxVisibleRange = PoiParams.Get_MaxVisibleRange();
+
+            // MaxVisibleRange CONFIG now lives in CkVisibleRange (composed onto the POI). Absent -> 0 = unlimited
+            // (no cull). Same single-boundary cull as before, fed from the new home.
+            auto MaxVisibleRange = 0.0f;
+
+            if (UCk_Utils_VisibleRange_UE::Has(PoiGenericHandle))
+            {
+                MaxVisibleRange = UCk_Utils_VisibleRange_UE::Get_MaxRange(UCk_Utils_VisibleRange_UE::Cast(PoiGenericHandle));
+            }
 
             if (MaxVisibleRange > 0.0f && Distance > MaxVisibleRange)
             { return; }
@@ -366,23 +383,37 @@ namespace ck
 
             const auto IsOutsideFrame = NOT UCk_Utils_Minimap_UE::Get_IsInsideFrame(FramePos, FrameShape);
 
-            if (IsOutsideFrame && PoiParams.Get_OffscreenPolicy() == ECk_Poi_OffscreenPolicy::Hide)
+            // Presentation (priority/offscreen) resolves per-consumer via CkPoiDisplayDefinition. No
+            // definition -> the old field defaults (Hide / 0), so category-only POIs keep prior behavior.
+            const auto DisplayDefinition = UCk_Utils_PoiDisplayDefinition_UE::TryGet_PoiDisplayDefinition_ByConsumer(
+                PoiGenericHandle, Tag_PoiConsumer_Minimap);
+            const auto HasDisplayDefinition = ck::IsValid(DisplayDefinition);
+            const auto OffscreenPolicy = HasDisplayDefinition
+                ? UCk_Utils_PoiDisplayDefinition_UE::Get_OffscreenPolicy(DisplayDefinition)
+                : ECk_Poi_OffscreenPolicy::Hide;
+            const auto Priority = HasDisplayDefinition
+                ? UCk_Utils_PoiDisplayDefinition_UE::Get_Priority(DisplayDefinition)
+                : 0;
+
+            if (IsOutsideFrame && OffscreenPolicy == ECk_Poi_OffscreenPolicy::Hide)
             { return; }
 
             const auto EdgeState = IsOutsideFrame
                 ? ECk_Minimap_EntryEdgeState::ClampedToEdge
                 : ECk_Minimap_EntryEdgeState::InsideFrame;
 
+            const auto PoiHandle = ck::StaticCast<FCk_Handle_Poi>(PoiGenericHandle);
+
             Slots[InIndex].Emplace(FCk_Minimap_Entry
             {
-                ck::StaticCast<FCk_Handle_Poi>(PoiGenericHandle),
-                PoiParams.Get_Category(),
+                PoiHandle,
+                UCk_Utils_Poi_UE::Get_CategoryTags(PoiHandle).First(),
                 IsOutsideFrame ? UCk_Utils_Minimap_UE::Get_ClampToFrame(FramePos, FrameShape) : FramePos,
                 EdgeState,
                 static_cast<float>(PoiWorldTransform.Rotator().Yaw),
                 Distance,
                 static_cast<float>(PoiLocation.Z - ViewOrigin.Z),
-                PoiParams.Get_Priority()
+                Priority
             });
         }, ForceSingleThread);
 
