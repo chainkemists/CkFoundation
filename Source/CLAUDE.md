@@ -51,6 +51,7 @@ Before writing any code, navigate the documentation in this order:
 | entity presets / archetypes | EntityScript spawn params (`FInstancedStruct`, `CkEntityScript.h:65`) + `CkProvider`. CkTemplate/CkEcsTemplate were REMOVED (`ad045415b`); these are the successors (INFERRED) |
 | ECS timers with signals/delegates | `CkTimer` |
 | distance-based range culling + fade, with an independent explicit show/hide override | `CkVisibleRange` (composable onto any entity; zero knowledge of Poi/consumers) |
+| per-consumer presentation config (icon/priority/offscreen policy per projector) + parent→child visibility cascade | `CkPoiDisplayDefinition` |
 | ECS interpolation / follow a spline | `CkTween` (+ `CkSpline` for path data) |
 | ECS typed attributes (health/mana) | `CkAttribute` |
 | ECS audio tracks | `CkAudio` |
@@ -166,7 +167,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkAudio | ActorRelay,Core,Cue,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer |
 | CkCamera | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkChaos | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Targeting |
-| CkCompass | Camera,Core,Ecs,EcsExt,Log,Poi,UI |
+| CkCompass | Camera,Core,Ecs,EcsExt,Log,Poi,PoiDisplayDefinition,UI |
 | CkCompositeAlgos | Core,Ecs,EcsExt |
 | CkConsoleCommands | Core,Ecs,Label,Log,Record,Settings |
 | CkCrowd | Core,Ecs,EcsExt,Label,Log,Navigation,Physics,Pmg,Projectile,Record,Settings,Shapes,SpatialQuery |
@@ -195,7 +196,8 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkOverlapBody | Actor,Core,Ecs,EcsExt,Graphics,Label,Log,Physics,Record,Settings |
 | CkPhysics | Actor,Chaos,Core,Ecs,EcsExt,Label,Log,Record |
 | CkPmg | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
-| CkPoi | Core,Ecs,EcsExt,Log,Settings |
+| CkPoi | Core,Ecs,EcsExt,Log,PoiDisplayDefinition (temporary — Gate 3 of the CkPoi v2 refactor removes it),Settings |
+| CkPoiDisplayDefinition | Core,Ecs,EcsExt,Label,Log,Record,Settings,VisibleRange |
 | CkProjectile | Core,Ecs,EcsExt,Log,Physics,Record,Variables |
 | CkRaySense | Core,Ecs,EcsExt,IsmRenderer,Label,Log,Provider,Record,Settings,Shapes |
 | CkRelationship | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |

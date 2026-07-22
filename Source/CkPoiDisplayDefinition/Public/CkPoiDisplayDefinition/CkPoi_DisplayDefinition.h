@@ -14,7 +14,7 @@
 // future minimap, world-space indicators) resolve and interpret it. Keeping visuals here (and out of the Params
 // fragment) is what keeps the data layer UI-agnostic.
 UCLASS(BlueprintType)
-class CKPOI_API UCk_Poi_DisplayDefinition_PDA : public UPrimaryDataAsset
+class CKPOIDISPLAYDEFINITION_API UCk_Poi_DisplayDefinition_PDA : public UPrimaryDataAsset
 {
     GENERATED_BODY()
 

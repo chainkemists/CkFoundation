@@ -8,24 +8,13 @@
 #include "CkEcs/Handle/CkHandle_Typesafe.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
-#include "CkPoi/CkPoi_DisplayDefinition.h"
+// ECk_Poi_OffscreenPolicy + UCk_Poi_DisplayDefinition_PDA moved to CkPoiDisplayDefinition (CkPoi v2 refactor,
+// Gate 2). This include (and CkPoi's dep on that module) is temporary — Gate 3 deletes the fields that need it.
+#include "CkPoiDisplayDefinition/CkPoiDisplayDefinition_Fragment_Data.h"
 
 #include <GameplayTagContainer.h>
 
 #include "CkPoi_Fragment_Data.generated.h"
-
-// --------------------------------------------------------------------------------------------------------------------
-
-// Projector-agnostic off-screen behavior: the compass clamps to its arc edge, a future minimap clamps to its
-// border, a world-space indicator clamps to the viewport — all reading this one policy.
-UENUM(BlueprintType)
-enum class ECk_Poi_OffscreenPolicy : uint8
-{
-    Hide,
-    ClampToEdge
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Poi_OffscreenPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 

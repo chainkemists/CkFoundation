@@ -27,6 +27,9 @@ public class CkCompass : CkModuleRules
             "CkEcsExt",
             "CkLog",
             "CkPoi",
+            // Direct consumer of UCk_Poi_DisplayDefinition_PDA symbols (moved there in CkPoi v2 Gate 2);
+            // Gate 4 formalizes the full Poi -> EntityTag+PoiDisplayDefinition dependency swap.
+            "CkPoiDisplayDefinition",
             "CkUI",
         });
     }
