@@ -15,7 +15,7 @@ Mission brief: [PROMPT.md](PROMPT.md). Living log: [PROGRESS.md](PROGRESS.md). D
 | 2 | [CkPoiDisplayDefinition](Plan/Gate_02_PoiDisplayDefinition.md) | ✅ Done (2026-07-21) | Gate 1 |
 | 3 | [CkPoi meta-feature rewrite](Plan/Gate_03_PoiRewrite.md) | ✅ Done (2026-07-22) | Gate 2 |
 | 4 | [CkCompass + CkMinimap rewire](Plan/Gate_04_CompassMinimap.md) | ✅ Done (2026-07-22) | Gate 3 |
-| 5 | [Gyms + cleanup + full gate](Plan/Gate_05_GymsAndCleanup.md) | ⏳ Pending | Gate 4 |
+| 5 | [Gyms + cleanup + full gate](Plan/Gate_05_GymsAndCleanup.md) | ✅ Done (2026-07-22) | Gate 4 |
 
 ## Post-ship cleanup
 

@@ -2,7 +2,29 @@
 
 ## Current state
 
-**As of 2026-07-22 (later):** Gates 1–4 ✅. Gate 4 (projector semantic rewire) complete: projectors
+**As of 2026-07-22 (final):** ALL FIVE GATES ✅ — **CAMPAIGN COMPLETE** (unshipped). Full-gate
+run: 855/844/11 (`Exit_Gate5_FullGate.log`); all 11 reds are the pre-existing Crowd/PathNetwork
+regression (evidence-backed exclusion in Gate_05 exit criteria — foreign workstream, campaign diff
+over crowd paths is empty). PROMPT success criteria walk:
+1. CkPoi owns no fragment machinery — ✅ commit `ab8e82389`, residue greps zero (Gate 3).
+2. PDD + VisibleRange independent modules w/ own green AutoTests — ✅ Gates 1-2 (+Gate 4: VR 4/4, PDD 4/4 standing).
+3. Base+child VR independent; parent-wins cascade OBSERVED in AutoTests — ✅ `ParentHiddenCascades`,
+   `CreateUnderHiddenParentSeedsVote` (Gate 2), `PerConsumerRange_CullsOneProjector` (Gate 4).
+4. Compass/Minimap green with zero old-fragment dependency — ✅ Gates 3-4 (13/13, 15/15; residue zero).
+5. Gym demonstrates Player-as-Poi direct-attach — ✅ code (`CkMinimapGym.as DoComposePlayerAsPoi`,
+   Gate 5); visual = `[EDITOR-VERIFY]` (steps in Gate_05).
+6. Full gate diffed vs campaign-start reference — ✅ FOR CAMPAIGN SCOPE: zero campaign-attributable
+   reds, zero removed tests, +79 additions fully reconciled; the crowd exclusion recorded honestly.
+**Ship-time instructions (user-gated):** push via ck-ship-dev; delete PROMPT/PLAN/PROGRESS/Gate_0*
+in the ship change per PLAN.md post-ship cleanup (KEEP REFACTOR_MultiProjectorPoi.md — live
+Follow-ups); commit the one-line `Poi.Category.Player` DefaultGameplayTags.ini append after the
+gym's first run; run the Gates 2-3 BP `[EDITOR-VERIFY]` checklists.
+**Outstanding foreign follow-up:** the 10/18 deterministic crowd suite regression (see Gate_05).
+**Blocked on:** nothing (campaign work done).
+
+---
+
+**Superseded state (Gate 4 close, same day):** Gates 1–4 ✅. Gate 4 (projector semantic rewire) complete: projectors
 consume VisibleRange STATE (explicit hide works projector-wide with recovery; per-consumer DD-child
 ranges cull one projector; distance fed post-parallel), the campaign-long Minimap red is FIXED
 (suite 15/15 for the first time), MapDebugger Priority column dropped. Full sweep: Poi 46/46,
@@ -36,6 +58,24 @@ items: BP-node `[EDITOR-VERIFY]` checklists from Gates 2 AND 3 (see each gate's 
 | 2026-07-21 | Forks executing a build/test cycle must run the toolbox invocation SYNCHRONOUSLY (no `run_in_background` inside the fork's own tool call) | A fork's background process isn't reliably tracked once the fork's own turn ends — twice in Gate 1 a fork reported "waiting for the background build" and then its task showed `completed` with nothing actually verified. The toolbox process itself does keep running (confirmed via `--build-status`), but the fork can't observe or report on it after its turn ends, and the dispatcher gets no notification for it either | Apply to every future gate's fork prompts |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-07-22 (final) — Gate 5 closed: CAMPAIGN COMPLETE; crowd regression surfaced (foreign)
+
+- **Confirmed:** gym Player-as-Poi composed on `_PawnEntity` (the minimap observer's own entity —
+  direct-attach on an entity CkPoi didn't create, the design's acceptance case); AS compiled clean
+  in the full-gate boot. Full gate 855/844/11 (`Exit_Gate5_FullGate.log`); name-set diff vs the
+  07-14 reference: zero removed, +79 fully attributed (37 campaign-family, all green).
+- **Crowd regression surfaced (NOT ours):** 10/18 crowd tests fail deterministically in isolation
+  (`Exit_Gate5_CrowdIsolation.log`). Attribution evidence in Gate_05 exit criteria: campaign diff
+  over crowd paths empty; all crowd churn (incl. `a24c5a2d2` reshape) pre-dates campaign entry;
+  5 of 10 regressed in the pre-campaign window, 5 authored after the reference. Handed to the
+  crowd workstream; NOT chased here (surgical discipline).
+- **Cleanup decisions:** campaign docs retained until ship (review trail for unpushed work —
+  deletion rides the ship change per PLAN.md); REFACTOR doc kept permanently (live Follow-ups);
+  the stale user-created CONTINUATION_PROMPT_Gate2 file flagged for the user (untracked deletion
+  is irreversible — not this session's call).
+- **Inferred (unconfirmed, human-only):** the gym's visual (blip pinned at frame center) —
+  `[EDITOR-VERIFY]` steps in Gate_05; plus the standing Gates 2-3 BP checklists.
 
 ### 2026-07-22 (later) — Gate 4 closed: projectors consume VisibleRange state; Minimap 15/15
 
