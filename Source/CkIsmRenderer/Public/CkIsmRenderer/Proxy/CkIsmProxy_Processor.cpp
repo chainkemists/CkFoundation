@@ -410,7 +410,7 @@ namespace ck
         const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData, InHandle);
         const auto InstanceId = InCurrent.Get_IsmInstanceIndex();
 
-        if (NOT IsmComp.IsValid() || NOT IsmComp->IsValidId(InstanceId))
+        if (ck::Is_NOT_Valid(IsmComp) || NOT IsmComp->IsValidId(InstanceId))
         { return; }
 
         const auto InstanceIndex = IsmComp->GetInstanceIndexForId(InstanceId);
