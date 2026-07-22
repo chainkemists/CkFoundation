@@ -50,7 +50,7 @@ namespace ck
         // which local player) is entirely the caller's concern — this fragment only ever sees a plain float.
         float _Distance = 0.0f;
 
-        // Cadence accumulator — its GoalValue IS the configured _UpdateInterval (see ck::cadence::ShouldRun).
+        // Cadence accumulator — its GoalValue IS the configured _UpdateInterval, ticked with ECk_Chrono_OverflowPolicy::Wrap.
         FCk_Chrono _CadenceChrono;
 
         float _FadeAlpha = 1.0f;

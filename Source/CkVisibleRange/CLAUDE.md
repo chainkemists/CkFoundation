@@ -57,9 +57,9 @@ vote onto this tag from outside the module. See `REFACTOR_MultiProjectorPoi.md` 
 `FFragment_VisibleRange_Current::_CadenceChrono`'s goal value IS the configured `_UpdateInterval`
 (0 = every tick). `FProcessor_VisibleRange_Update` runs every scheduler tick regardless (per-entity
 cadence can't be expressed as `TProcessorBase::_TickRate`, which throttles the whole processor
-uniformly) and gates its own work per entity via `ck::cadence::ShouldRun`
-(`CkCore/Chrono/CkCadence_Utils.h`) — a new shared primitive wrapping `FCk_Chrono::Tick()` with the
-Reset a repeating cadence needs (`FCk_Chrono::Tick()` does NOT auto-reset on Done — it latches).
+uniformly) and gates its own work per entity via `FCk_Chrono::Tick(DeltaT, ECk_Chrono_OverflowPolicy::Wrap)`
+(`CkCore/Chrono/CkChrono.h`) — `Wrap` rolls the accumulator over on completion (carrying the remainder)
+and returns `Done` on the firing tick, whereas the default `Clamp` policy latches at Done for a one-shot.
 `Add` seeds the Chrono via `.Complete()` (already-Done) rather than fresh/zero, so the very first
 `Update` tick after composition always evaluates the just-supplied distance immediately — otherwise
 the entity would show the default (visible) state for up to one full `_UpdateInterval` before its

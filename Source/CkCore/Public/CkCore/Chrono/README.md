@@ -19,7 +19,7 @@ struct CKCORE_API FCk_Chrono
 
     explicit FCk_Chrono(TimeType InGoalValue);
 
-    auto Tick    (const TimeType& InDeltaT) -> TickStateType;
+    auto Tick    (const TimeType& InDeltaT, ECk_Chrono_OverflowPolicy InOverflow = Clamp) -> TickStateType;
     auto Consume (const TimeType& InDeltaT) -> ConsumeStateType;
     auto Complete() -> ThisType&;
     auto Reset   () -> ThisType&;
@@ -29,7 +29,9 @@ struct CKCORE_API FCk_Chrono
 
 ## Semantics
 
-- `Tick(DeltaT)` — advance toward goal. Returns `Ticking` until goal is reached, then `Done` on the tick that crosses it, then `Done` on every subsequent tick (you must `Reset` to start over).
+- `Tick(DeltaT, Overflow)` — advance toward goal. Returns `Ticking` until the goal is reached, then `Done` on the tick that crosses it. `InOverflow` picks the boundary behavior:
+  - `Clamp` (default) — clamp at the goal and latch `Done` on every subsequent tick until you `Reset`. The one-shot countdown.
+  - `Wrap` — on reaching the goal, roll the accumulator over carrying the remainder (drift-free) and report `Done` that tick. `Tick(DeltaT, Wrap) == Done` is the shared recurring-cadence gate for per-entity throttled processor work. Goal `<= 0` reports `Done` every tick.
 - `Consume(DeltaT)` — try to "spend" `DeltaT` against the remaining. `CouldNotConsume` (not enough time left), `Consumed` (partial), `FullyConsumed` (exactly hit goal).
 - `Complete()` — snap to goal, subsequent `Tick` returns `Done`.
 - `Reset()` — back to zero progress.
