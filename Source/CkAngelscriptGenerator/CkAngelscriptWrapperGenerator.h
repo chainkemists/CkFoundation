@@ -13,10 +13,17 @@ public:
         -> void;
 
 private:
+    friend class FCkTest_AngelscriptWrapperGenerator_FunctionFilter;
+
     static auto
         Request_GenerateWrapperForClass(
             UClass* Class)
         -> void;
+
+    static auto
+        Request_ShouldGenerateWrapperForFunction(
+            UFunction* Function)
+        -> bool;
 
     static auto
         Get_GeneratedWrapperFunction(
