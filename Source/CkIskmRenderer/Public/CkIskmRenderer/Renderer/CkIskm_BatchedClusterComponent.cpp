@@ -116,6 +116,16 @@ namespace ck_iskm_batched_cluster_component
         -> UMaterialInterface*
     {
         UObject* const AsObject = InMaterial;
+
+        // Validate liveness BEFORE Cast<>. A dangling/GC-collected pointer is non-null but its class
+        // pointer is null; Cast<> dereferences the class to test the type and access-violates (observed:
+        // the crowd LOD-flip passing a GC'd override material). ck::IsValid inspects only the object's
+        // flags/registry slot — safe on pooled memory — so a stale reference degrades to null instead of
+        // crashing the render path.
+        CK_ENSURE_IF_NOT(AsObject == nullptr || ck::IsValid(AsObject),
+            TEXT("Dangling/invalid UObject passed as a cluster override material — storing null instead"))
+        { return nullptr; }
+
         UMaterialInterface* const Material = Cast<UMaterialInterface>(AsObject);
         CK_ENSURE_IF_NOT(AsObject == nullptr || Material != nullptr,
             TEXT("Object [{}] passed as a cluster override material is not a UMaterialInterface — storing null instead"),
