@@ -1,12 +1,13 @@
-// Pure coverage for the cadence-bucket quantization and the compile-time tick-rate literals — no world,
-// no entities, no scheduler. The RUNTIME semantics (a rated processor firing at its declared rate, the
+// Pure coverage for the cadence-bucket quantization and the per-bucket TickRate traits — no world, no
+// entities, no scheduler. The RUNTIME semantics (a rated processor firing at its declared rate, the
 // immediate first eval, the empty-view accumulator freeze) are pinned hermetically in CkTests
 // (Test_Processor_TickRateTrait.cpp) and at the PIE level by Ck_AutoTest_VisibleRange_CadenceGatesUpdates.
+// The ck::time factories themselves are covered in CkCore (CkTime.spec.cpp).
 //
 // The MISUSE surface is compile-time by design and therefore self-testing — each of these fails the BUILD,
 // so no runtime spec can (or needs to) exercise them:
-//   - ck::Seconds(0) / ck::Seconds(-1) / ck::Hz(0) / ck::Hz(-4)  -> consteval factory poisons constant
-//     evaluation via ck::detail::TickRate_MustBePositive (declared, never defined, not constexpr).
+//   - ck::time::Seconds(0) / Seconds(-1) / Hz(0) / Hz(-4)        -> consteval factory rejects a non-positive
+//     interval via ck::time::detail::Interval_MustBePositive (declared, never defined, not constexpr).
 //   - TickRate as a raw double or any non-FCk_Time type          -> static_assert in
 //     TProcessorBase::Get_TickRate ("must be an FCk_Time").
 //   - TickRate as a non-static (instance) member                 -> static_assert ("instance member").
@@ -33,8 +34,6 @@ namespace ck_cadence_buckets_spec
 // Compile-time facts — a broken one fails the build of this TU. (Interval VALUES are checked at runtime below:
 // FCk_Time::Get_Seconds is not constexpr, so a literal's value can't be static_assert'd.)
 
-static_assert(std::is_same_v<std::remove_const_t<decltype(ck::Hz(4))>, FCk_Time>,
-    "ck::Hz / ck::Seconds produce an FCk_Time — the type a processor's TickRate trait carries");
 static_assert(std::is_same_v<std::remove_const_t<decltype(ck::detail::TCadenceBucketRateTraits<1>::TickRate)>, FCk_Time>,
     "a nonzero bucket's TickRate trait is an FCk_Time");
 static_assert(NOT ck_cadence_buckets_spec::HasTickRateMember<ck::detail::TCadenceBucketRateTraits<0>>,
@@ -81,20 +80,14 @@ bool FCkTest_CadenceBuckets_QuantizeTowardFaster::RunTest(const FString&)
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-    FCkTest_CadenceBuckets_TickRateLiterals,
-    "Ck.CkEcs.CadenceBuckets.TickRateLiterals",
+    FCkTest_CadenceBuckets_BucketTraitMatchesIntervalTable,
+    "Ck.CkEcs.CadenceBuckets.BucketTraitMatchesIntervalTable",
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
-bool FCkTest_CadenceBuckets_TickRateLiterals::RunTest(const FString&)
+bool FCkTest_CadenceBuckets_BucketTraitMatchesIntervalTable::RunTest(const FString&)
 {
-    // ck::Hz / ck::Seconds produce the FCk_Time interval a rated processor's Get_TickRate returns directly.
-    TestTrue(TEXT("Hz(4) == FCk_Time{0.25}"),         ck::Hz(4) == FCk_Time{0.25});
-    TestTrue(TEXT("Seconds(0.25) == FCk_Time{0.25}"), ck::Seconds(0.25) == FCk_Time{0.25});
-    TestTrue(TEXT("Hz(2) == FCk_Time{0.5}"),          ck::Hz(2) == FCk_Time{0.5});
-    TestTrue(TEXT("Hz(1) == FCk_Time{1.0}"),          ck::Hz(1) == FCk_Time{1.0});
-    TestTrue(TEXT("Hz(4) == Seconds(0.25)"),          ck::Hz(4) == ck::Seconds(0.25));
-
-    // Every nonzero bucket's trait is exactly its interval-table FCk_Time.
+    // Every nonzero bucket's TickRate trait is exactly its interval-table FCk_Time (value check — the type is
+    // pinned at compile time by the static_assert above; FCk_Time::Get_Seconds is not constexpr).
     TestTrue(TEXT("bucket 3 trait == interval table"),
         ck::detail::TCadenceBucketRateTraits<3>::TickRate == FCk_Time{ck::cadence::BucketIntervalsSeconds[3]});
 
