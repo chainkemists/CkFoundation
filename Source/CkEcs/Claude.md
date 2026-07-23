@@ -128,15 +128,15 @@ A processor with a per-type fixed cadence declares ONE line; the base derives ev
 class FProcessor_X : public ck::TProcessor<FProcessor_X, /* fragments */>
 {
 public:
-    static constexpr auto TickRate = ck::Hz{4};          // or ck::Seconds{0.25}
+    static constexpr FCk_Time TickRate = ck::Hz(4);      // or ck::Seconds(0.25)
 };
 ```
 
 - Declaring nothing = every tick (the default; byte-identical to before the trait existed).
-- Misuse is a compile error: zero/negative rates, raw-number/`FCk_Time`/non-static/non-constexpr
-  spellings, and calling `Set_TickRate` on a trait-declaring processor all fail to build.
-- `Set_TickRate(FCk_Time)` remains for trait-LESS processors configured at runtime (e.g. via a
-  registration factory); `Set_TickPhaseOffset` seeds the accumulator to stagger same-rate processors.
+- `ck::Hz` / `ck::Seconds` (`CkCore/TickRate/CkTickRate.h`) are consteval factories producing an
+  `FCk_Time`. Misuse is a compile error: a zero/negative rate, a raw number or any non-`FCk_Time`
+  type, and non-static/non-constexpr spellings all fail to build.
+- Cadence is fully compile-time — there is no runtime `Set_TickRate` / `Set_TickPhaseOffset`.
 - Optional: `static constexpr auto TickCatchUpPolicy = ECk_ProcessorTickCatchUp::SampleLatestOnly;`
   fires DoTick once with summed elapsed intervals after a hitch instead of replaying per interval
   (default `ReplayMissedTicks` = fixed-timestep replay, the original behavior).

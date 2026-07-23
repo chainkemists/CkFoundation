@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Time/CkTime.h"
+#include "CkCore/TickRate/CkTickRate.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Processor/CkProcessor.h"
@@ -17,7 +18,7 @@
 // A feature whose entities re-evaluate on a per-entity interval quantizes that interval at Add into a fixed
 // bucket set (toward FASTER — an entity never updates slower than requested), tags the entity with its
 // bucket, and runs ONE sub-processor per bucket carrying the bucket's interval as its compile-time
-// `TickRate` trait (see the ck::FTickRate literals in CkProcessor.h). "Due-ness" is membership in a rated
+// `TickRate` trait (see ck::Hz / ck::Seconds in CkCore/TickRate/CkTickRate.h). "Due-ness" is membership in a rated
 // sub-processor's view — no per-entity chrono poll. Vacant buckets are near-free via the scheduler's
 // empty-view skip. Bucket 0 (every tick) declares NO TickRate trait at all, so it is byte-identical to an
 // ordinary every-tick processor.
@@ -28,8 +29,8 @@
 //
 // Phase contract (load-bearing for cadence-sensitive tests): a bucket processor's accumulator FREEZES while
 // its view is provably empty (the scheduler skips the whole dispatch, Tick included), so a bucket's phase
-// aligns to the moment its view last became non-empty. Cadence buckets therefore ship with NO
-// _TickPhaseOffset — an offset would break that wake-alignment.
+// aligns to the moment its view last became non-empty. Cadence buckets therefore use no phase offset —
+// one would break that wake-alignment.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::cadence
@@ -178,7 +179,7 @@ namespace ck
         template <int32 T_BucketIndex>
         struct TCadenceBucketRateTraits
         {
-            static constexpr auto TickRate = Seconds{cadence::BucketIntervalsSeconds[T_BucketIndex]};
+            static constexpr FCk_Time TickRate = ck::Seconds(cadence::BucketIntervalsSeconds[T_BucketIndex]);
         };
 
         template <>
