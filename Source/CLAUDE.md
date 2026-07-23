@@ -89,6 +89,7 @@ Before writing any code, navigate the documentation in this order:
 | tracked entity sets with change detection | `CkEntityCollection` |
 | post-construction opt-in fragments | `CkEntityExtension` |
 | quest-like objectives | `CkObjective` |
+| data-driven dialogue / bark lines (event-tag-queried, condition-gated, per-emitter cooldowns; returns ALL matches with states) | `CkDialog` |
 | save/restore world state (snapshots) | `CkSnapshot` (v3 rebuild+hydrate — see `CkSnapshot/Claude.md`) — features persist via a Produce/HydrationApply handler on `FCk_PersistenceHandlerRegistry` (`CkEcs/Persistence/`, save subset `Get_SaveHandlerTypes`), NOT a per-fragment macro (`CK_REGISTER_SNAPSHOTABLE` removed 2026-07-13) |
 | session state machine | `CkGameSession` |
 | CommonUI-based UI layer | `CkUI` |
@@ -107,7 +108,7 @@ Before writing any code, navigate the documentation in this order:
 
 ## Module tier table
 
-All **74 non-editor modules** (CkVat added 2026-07-09), regenerated from every `Source/<Module>/<Module>.Build.cs` on
+All **75 non-editor modules** (CkVat added 2026-07-09; CkDialog added 2026-07-23), regenerated from every `Source/<Module>/<Module>.Build.cs` on
 2026-07-02. **Deps column = Ck-only** (Public + Private combined, `Ck` prefix stripped); engine
 modules are not listed. Tiers are semantic bands; a module may sit higher than its minimal depth,
 but **deps must never point to a higher band**. Editor/UncookedOnly modules are excluded (see T5).
@@ -172,6 +173,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkConsoleCommands | Core,Ecs,Label,Log,Record,Settings |
 | CkCrowd | Core,Ecs,EcsExt,Label,Log,Navigation,Physics,Pmg,Projectile,Record,Settings,Shapes,SpatialQuery |
 | CkCue | ActorRelay,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer |
+| CkDialog | Core,Ecs,EcsExt,EntityTag,Label,Log,Profile,Record,Settings |
 | CkDynamic | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkEntityCollection | Core,Ecs,EcsExt,Label,Log,Record,Settings |
 | CkEntityExtension | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
