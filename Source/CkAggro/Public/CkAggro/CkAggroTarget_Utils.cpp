@@ -2,6 +2,7 @@
 
 #include "CkAggro/CkAggro_Fragment.h"
 #include "CkAggro/CkAggro_Scoring.h"
+#include "CkAggro/CkAggro_Utils.h"
 
 #include "CkCore/Time/CkTime_Utils.h"
 
@@ -61,7 +62,7 @@ auto
         InNewEntity.Add<ck::FFragment_AggroTarget_Score>();
     });
 
-    return ck::StaticCast<FCk_Handle_AggroTarget>(NewEntity);
+    return UCk_Utils_AggroTarget_UE::CastChecked(NewEntity);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -103,7 +104,7 @@ auto
         const FCk_Handle_AggroTarget& InTarget)
     -> FCk_Handle_Aggro
 {
-    return ck::StaticCast<FCk_Handle_Aggro>(InTarget.Get<ck::FFragment_AggroTarget_TargetInfo>().Get_AggroOwner());
+    return UCk_Utils_Aggro_UE::Cast(InTarget.Get<ck::FFragment_AggroTarget_TargetInfo>().Get_AggroOwner());
 }
 
 auto
