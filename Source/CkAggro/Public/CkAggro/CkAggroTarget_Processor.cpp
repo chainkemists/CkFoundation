@@ -2,6 +2,7 @@
 
 #include "CkAggro/CkAggro_Fragment.h"
 #include "CkAggro/CkAggro_Scoring.h"
+#include "CkAggro/CkAggro_Utils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Time/CkTime_Utils.h"
@@ -54,7 +55,7 @@ namespace ck
         InTarget.Remove<MarkedDirtyBy>();
 
         const auto Now   = ck_aggro_target_processor::Get_Now(InTarget);
-        auto       Owner = ck::StaticCast<FCk_Handle_Aggro>(InTargetInfo.Get_AggroOwner());
+        auto       Owner = UCk_Utils_Aggro_UE::Cast(InTargetInfo.Get_AggroOwner());
         const auto OwnerHasThreatParams = ck::IsValid(Owner) && Owner.Has<ck::FFragment_Aggro_ThreatParams>();
 
         // Resolve the seed threat: per-target override, else the owner default.
@@ -127,7 +128,7 @@ namespace ck
         -> void
     {
         const auto Now      = ck_aggro_target_processor::Get_Now(InTarget);
-        auto       Owner    = ck::StaticCast<FCk_Handle_Aggro>(InTargetInfo.Get_AggroOwner());
+        auto       Owner    = UCk_Utils_Aggro_UE::Cast(InTargetInfo.Get_AggroOwner());
         const auto OldThreat = InThreat._Threat;
 
         const auto OwnerReady = ck::IsValid(Owner)
@@ -190,7 +191,7 @@ namespace ck
         -> void
     {
         const auto Now       = ck_aggro_target_processor::Get_Now(InTarget);
-        auto       Owner     = ck::StaticCast<FCk_Handle_Aggro>(InTargetInfo.Get_AggroOwner());
+        auto       Owner     = UCk_Utils_Aggro_UE::Cast(InTargetInfo.Get_AggroOwner());
         const auto OldThreat = InThreat._Threat;
 
         if (ck::IsValid(Owner) && Owner.Has<ck::FFragment_Aggro_ThreatParams>())
@@ -336,7 +337,7 @@ namespace ck
         // debug-info attach self-skips inside the parallel region). Owner reads/validity go through the stored
         // owner handle; every structural mutation is DEFERRED through InTarget's per-task command buffer.
         const auto SelfHandle = ck::MakeHandle(InTarget.Get_Entity(), _TransientEntity);
-        auto       Owner      = ck::StaticCast<FCk_Handle_Aggro>(InTargetInfo.Get_AggroOwner());
+        auto       Owner      = UCk_Utils_Aggro_UE::Cast(InTargetInfo.Get_AggroOwner());
         const auto Tracked    = ck::UAggroTarget_TrackedEntity_Utils::Get_StoredEntity(SelfHandle);
 
         const auto OwnerReady = ck::IsValid(Owner)
@@ -436,7 +437,7 @@ namespace ck
             const FFragment_AggroTarget_Threat& InThreat)
         -> void
     {
-        auto       Owner       = ck::StaticCast<FCk_Handle_Aggro>(InTargetInfo.Get_AggroOwner());
+        auto       Owner       = UCk_Utils_Aggro_UE::Cast(InTargetInfo.Get_AggroOwner());
         const auto Tracked     = ck::UAggroTarget_TrackedEntity_Utils::Get_StoredEntity(InTarget);
         const auto Now         = ck_aggro_target_processor::Get_Now(InTarget);
         const auto FinalThreat = InThreat.Get_Threat();
@@ -498,7 +499,7 @@ namespace ck
             const FFragment_AggroTarget_TargetInfo& InTargetInfo)
         -> void
     {
-        auto Owner = ck::StaticCast<FCk_Handle_Aggro>(InTargetInfo.Get_AggroOwner());
+        auto Owner = UCk_Utils_Aggro_UE::Cast(InTargetInfo.Get_AggroOwner());
 
         if (ck::Is_NOT_Valid(Owner) || NOT Owner.Has<ck::FFragment_Aggro_TargetMap>())
         { return; }
