@@ -266,6 +266,128 @@ public:
     UnbindFrom_OnTargetForgotten(
         UPARAM(ref) FCk_Handle_Aggro& InAggro,
         const FCk_Delegate_Aggro_OnTargetForgotten& InDelegate);
+
+public:
+    // ---- Pure scoring + analytic-decay model ----
+    // Primitive-in / primitive-out — no ECS/registry access, so trivially unit-testable (incl. Elapsed == 0) and
+    // safe to call from the parallel Evaluate worker body. The processors compose these from fragment/tag state.
+    // Defined inline below the class so the hot per-target path keeps its inlining. Model of record: CkAggro/Claude.md.
+
+    static auto
+    Compute_PerceptionDecayMultiplier(bool InIsPerceived, double InSecondsSinceLastPerceived, double InLostSightGraceSeconds, float InUnperceivedMultiplier) -> float;
+
+    static auto
+    Compute_RangeDecayMultiplier(bool InIsWithinRetention, float InOutOfRangeMultiplier) -> float;
+
+    static auto
+    Compute_DecayedThreat(float InCurrentThreat, double InElapsedSeconds, double InDecayRatePerSecond, float InPerceptionMultiplier, float InRangeMultiplier, double InClampMin, double InClampMax) -> float;
+
+    static auto
+    Compute_DistanceFactor(double InDistance, double InHalfDistance, double InExponent) -> double;
+
+    static auto
+    Compute_NearbyFactor(bool InNearbyEnabled, double InDistance, double InNearbyDistance, double InNearbyMultiplier) -> double;
+
+    static auto
+    Compute_Score(float InThreat, double InDistanceFactor, double InNearbyFactor, double InScoreMultiplier, double InScoreBias) -> double;
+
+    static auto
+    Is_EligibleTarget(bool InCannotBecomeActive, bool InPendingForget, bool InTrackedIsValid, double InScore, double InMinimumScore, bool InIsWithinRetention, double InDistance, double InAcquisitionDistance) -> bool;
+
+    static auto
+    Should_SwitchTarget(double InChallengerScore, double InIncumbentScore, double InCurrentTargetBias, double InSwitchThreshold, double InSecondsSinceLastSwitch, double InSwitchCooldownSeconds, double InSecondsSinceActiveStart, double InMinimumAggroDurationSeconds) -> bool;
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+// Scoring model — inline definitions (see the declarations above).
+
+inline auto
+    UCk_Utils_Aggro_UE::
+    Compute_PerceptionDecayMultiplier(bool InIsPerceived, double InSecondsSinceLastPerceived, double InLostSightGraceSeconds, float InUnperceivedMultiplier)
+    -> float
+{
+    // Full-rate (1.0) while perceived OR still inside the lost-sight grace window; otherwise the unperceived multiplier (>= 1).
+    const auto WithinGrace = InSecondsSinceLastPerceived <= InLostSightGraceSeconds;
+    return (InIsPerceived || WithinGrace) ? 1.0f : InUnperceivedMultiplier;
+}
+
+inline auto
+    UCk_Utils_Aggro_UE::
+    Compute_RangeDecayMultiplier(bool InIsWithinRetention, float InOutOfRangeMultiplier)
+    -> float
+{
+    // Full-rate (1.0) while within retention; otherwise the out-of-range multiplier.
+    return InIsWithinRetention ? 1.0f : InOutOfRangeMultiplier;
+}
+
+inline auto
+    UCk_Utils_Aggro_UE::
+    Compute_DecayedThreat(float InCurrentThreat, double InElapsedSeconds, double InDecayRatePerSecond, float InPerceptionMultiplier, float InRangeMultiplier, double InClampMin, double InClampMax)
+    -> float
+{
+    // Threat lost over Elapsed at (rate * perception * range), clamped. Elapsed == 0 is a no-op. Never integrated per tick.
+    const auto Loss    = InDecayRatePerSecond * InPerceptionMultiplier * InRangeMultiplier * FMath::Max(InElapsedSeconds, 0.0);
+    const auto Decayed = static_cast<double>(InCurrentThreat) - Loss;
+    return static_cast<float>(FMath::Clamp(Decayed, InClampMin, InClampMax));
+}
+
+inline auto
+    UCk_Utils_Aggro_UE::
+    Compute_DistanceFactor(double InDistance, double InHalfDistance, double InExponent)
+    -> double
+{
+    // Continuous falloff in [0, 1]: 1 at zero distance, 0.5 at the half-distance, -> 0 far out. HalfDistance <= 0 disables.
+    if (InHalfDistance <= 0.0)
+    { return 1.0; }
+
+    const auto Ratio = FMath::Max(InDistance, 0.0) / InHalfDistance;
+    return 1.0 / (1.0 + FMath::Pow(Ratio, InExponent));
+}
+
+inline auto
+    UCk_Utils_Aggro_UE::
+    Compute_NearbyFactor(bool InNearbyEnabled, double InDistance, double InNearbyDistance, double InNearbyMultiplier)
+    -> double
+{
+    // Bounded "prefer whoever is in my face" multiplier (>= 1) when enabled and inside the nearby band, else 1.0.
+    const auto InBand = InNearbyEnabled && InDistance <= InNearbyDistance;
+    return InBand ? InNearbyMultiplier : 1.0;
+}
+
+inline auto
+    UCk_Utils_Aggro_UE::
+    Compute_Score(float InThreat, double InDistanceFactor, double InNearbyFactor, double InScoreMultiplier, double InScoreBias)
+    -> double
+{
+    // Final raw score (no incumbent bias baked in — selection applies that).
+    return static_cast<double>(InThreat) * InDistanceFactor * InNearbyFactor * InScoreMultiplier + InScoreBias;
+}
+
+inline auto
+    UCk_Utils_Aggro_UE::
+    Is_EligibleTarget(bool InCannotBecomeActive, bool InPendingForget, bool InTrackedIsValid, double InScore, double InMinimumScore, bool InIsWithinRetention, double InDistance, double InAcquisitionDistance)
+    -> bool
+{
+    if (InCannotBecomeActive || InPendingForget || (NOT InTrackedIsValid))
+    { return false; }
+
+    if (InScore < InMinimumScore)
+    { return false; }
+
+    // Spatial hysteresis: already-retained targets stay eligible; new ones must be inside acquisition.
+    return InIsWithinRetention || InDistance <= InAcquisitionDistance;
+}
+
+inline auto
+    UCk_Utils_Aggro_UE::
+    Should_SwitchTarget(double InChallengerScore, double InIncumbentScore, double InCurrentTargetBias, double InSwitchThreshold, double InSecondsSinceLastSwitch, double InSwitchCooldownSeconds, double InSecondsSinceActiveStart, double InMinimumAggroDurationSeconds)
+    -> bool
+{
+    // Switch AWAY from a valid incumbent only when all four hysteresis gates pass.
+    const auto ScoreGate    = InChallengerScore > InIncumbentScore * InCurrentTargetBias * InSwitchThreshold;
+    const auto CooldownGate = InSecondsSinceLastSwitch >= InSwitchCooldownSeconds;
+    const auto DurationGate = InSecondsSinceActiveStart >= InMinimumAggroDurationSeconds;
+    return ScoreGate && CooldownGate && DurationGate;
+}
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -1,7 +1,6 @@
 #include "CkAggroTarget_Processor.h"
 
 #include "CkAggro/CkAggro_Fragment.h"
-#include "CkAggro/CkAggro_Scoring.h"
 #include "CkAggro/CkAggro_Utils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
@@ -151,13 +150,13 @@ namespace ck
             // Advance the analytic decay anchor up to Now before adding the delta.
             const auto Elapsed      = (Now - InThreat._LastDecayTime).Get_Seconds();
             const auto SecsSincePer = (Now - InPerception._LastPerceivedTime).Get_Seconds();
-            const auto PerceptK     = ck_aggro::Compute_PerceptionDecayMultiplier(
+            const auto PerceptK     = UCk_Utils_Aggro_UE::Compute_PerceptionDecayMultiplier(
                 InTarget.Has<ck::FTag_AggroTarget_Perceived>(), SecsSincePer,
                 OwnerForget.Get_LostSightGraceDuration().Get_Seconds(), OwnerThreat.Get_UnperceivedThreatDecayMultiplier());
-            const auto RangeK       = ck_aggro::Compute_RangeDecayMultiplier(
+            const auto RangeK       = UCk_Utils_Aggro_UE::Compute_RangeDecayMultiplier(
                 InTarget.Has<ck::FTag_AggroTarget_WithinRetention>(), OwnerSpatial.Get_OutOfRangeDecayMultiplier());
 
-            InThreat._Threat = ck_aggro::Compute_DecayedThreat(
+            InThreat._Threat = UCk_Utils_Aggro_UE::Compute_DecayedThreat(
                 InThreat._Threat, Elapsed, OwnerThreat.Get_ThreatDecayRate(), PerceptK, RangeK, ClampMin, ClampMax);
 
             const auto Delta = InRequest.Get_ThreatDelta() * InThreatParams.Get_ThreatMultiplier();
@@ -380,23 +379,23 @@ namespace ck
 
         const auto Elapsed      = (Now - InThreat.Get_LastDecayTime()).Get_Seconds();
         const auto SecsSincePer = (Now - InPerception.Get_LastPerceivedTime()).Get_Seconds();
-        const auto PerceptK     = ck_aggro::Compute_PerceptionDecayMultiplier(
+        const auto PerceptK     = UCk_Utils_Aggro_UE::Compute_PerceptionDecayMultiplier(
             InTarget.Has<ck::FTag_AggroTarget_Perceived>(), SecsSincePer,
             OwnerForget.Get_LostSightGraceDuration().Get_Seconds(), OwnerThreat.Get_UnperceivedThreatDecayMultiplier());
-        const auto RangeK       = ck_aggro::Compute_RangeDecayMultiplier(IsWithinRetention, OwnerSpatial.Get_OutOfRangeDecayMultiplier());
+        const auto RangeK       = UCk_Utils_Aggro_UE::Compute_RangeDecayMultiplier(IsWithinRetention, OwnerSpatial.Get_OutOfRangeDecayMultiplier());
 
-        InThreat._Threat = ck_aggro::Compute_DecayedThreat(
+        InThreat._Threat = UCk_Utils_Aggro_UE::Compute_DecayedThreat(
             InThreat._Threat, Elapsed, OwnerThreat.Get_ThreatDecayRate(), PerceptK, RangeK, ClampMin, ClampMax);
         InThreat._LastDecayTime = Now;
 
         // Score (raw; no incumbent bias baked in).
-        const auto DistFactor   = ck_aggro::Compute_DistanceFactor(
+        const auto DistFactor   = UCk_Utils_Aggro_UE::Compute_DistanceFactor(
             Distance, OwnerSpatial.Get_DistanceFalloffHalfDistance(), OwnerSpatial.Get_DistanceFalloffExponent());
-        const auto NearbyFactor = ck_aggro::Compute_NearbyFactor(
+        const auto NearbyFactor = UCk_Utils_Aggro_UE::Compute_NearbyFactor(
             OwnerSpatial.Get_NearbyPreference() == ECk_EnableDisable::Enable, Distance,
             OwnerSpatial.Get_NearbyPreferenceDistance(), OwnerSpatial.Get_NearbyPreferenceMultiplier());
 
-        InScore._Score    = static_cast<float>(ck_aggro::Compute_Score(
+        InScore._Score    = static_cast<float>(UCk_Utils_Aggro_UE::Compute_Score(
             InThreat._Threat, DistFactor, NearbyFactor, InScoreParams.Get_ScoreMultiplier(), InScoreParams.Get_ScoreBias()));
         InScore._Distance = static_cast<float>(Distance);
 
