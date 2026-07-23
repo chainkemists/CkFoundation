@@ -185,25 +185,23 @@ File: `CkEcs/Processor/CkProcessor.h` only.
    preserved, time conserved, no replay). Guarded: non-static or wrongly-typed declarations are
    static_assert failures, not silent fallbacks.
 2. Compile-time tick rate — REFINED during implementation from the originally-planned
-   `static constexpr double CadenceIntervalSeconds` to a typed literal (a raw double neither
+   `static constexpr double CadenceIntervalSeconds` to a typed `FCk_Time` literal (a raw double neither
    self-documents its unit nor resists misuse). The author-facing trait is ONE line:
-   `static constexpr auto TickRate = ck::Hz{4};` (or `ck::Seconds{0.25}`) — `ck::Hz`/`ck::Seconds`
-   are consteval literal types over a shared `ck::FTickRate` carrier (`CkProcessor.h`), constexpr-legal
-   where `FCk_Time` (reflected USTRUCT, no constexpr ctor) is not. The public `Get_TickRate()` (a
-   normal member fn — the DOUBLE is the constexpr artifact, the `FCk_Time` is materialized per call)
-   resolves trait-else-`_TickRate`; `Tick` materializes it once and uses it for the fast-path check
-   and both catch-up loops. Trait-absent processors read the same default-zero member ⇒ fast path
-   byte-identical. Misuse fails to COMPILE: zero/negative rate (consteval ctor poison), raw-number /
-   `FCk_Time` / type-alias / non-static / non-constexpr spellings (static_asserts in
-   `Get_TickRate`), and `Set_TickRate` on a trait-declaring processor (static_assert in its body —
-   instantiated only if called). Known residual, documented in the header: TWO bases both declaring
-   `TickRate` make lookup ambiguous, which the requires-probe reports as absent (silent every-tick
-   degrade) — don't stack cadence mixins.
-3. `_TickPhaseOffset` (`TimeType`, default 0) + `CK_PROPERTY_GET` + a hand-written fluent
-   `Set_TickPhaseOffset` that records the value AND seeds `_RemainingDeltaTFromLastFrame`.
-   Nothing existing calls it ⇒ nothing changes. (Cadence buckets deliberately do NOT use it —
-   wake-alignment above — so it stays a runtime knob with no compile-time twin until a consumer
-   with a per-type fixed offset exists.)
+   `static constexpr FCk_Time TickRate = ck::time::Hz(4);` (or `ck::time::Seconds(0.25)`) —
+   `ck::time::Hz`/`ck::time::Seconds` are consteval `FCk_Time` factories in `CkCore/Time/CkTime.h`
+   (`FCk_Time`'s constructor is constexpr, so `FCk_Time` is itself the compile-time artifact — no
+   separate carrier type). `Get_TickRate()` resolves trait-else-`ZeroSecond`; `Tick` materializes it
+   once and uses it for the fast-path check and both catch-up loops. Trait-absent processors take the
+   ZeroSecond every-tick fast path, byte-identical to before the trait existed. Misuse fails to
+   COMPILE: a non-positive rate (consteval factory poison via `ck::time::detail::Interval_MustBePositive`),
+   a raw number, `FCk_Time`-but-non-static / type-alias / non-constexpr spellings (static_asserts in
+   `Get_TickRate`). Known residual, documented in the header: TWO bases both declaring `TickRate` make
+   lookup ambiguous, which the requires-probe reports as absent (silent every-tick degrade) — don't
+   stack cadence mixins.
+3. `_TickPhaseOffset` — planned as a runtime phase-offset knob, but REMOVED with the runtime setters
+   when cadence became fully compile-time (cadence buckets deliberately do not use it — wake-alignment,
+   above — so no consumer ever needed it). Reintroduce a compile-time twin only if a consumer with a
+   per-type fixed offset appears.
 
 Gate: full editor build + VisibleRange 4/4, Chrono 3/3, Poi 46/46 (baseline counts from HEAD).
 
@@ -212,19 +210,18 @@ Gate: full editor build + VisibleRange 4/4, Chrono 3/3, Poi 46/46 (baseline coun
 All in `namespace ck` (+ nested `ck::cadence` for the value helpers):
 
 - Bucket set: `cadence::BucketCount = 7`, intervals `{0, 0.1, 0.25, 0.5, 1, 2, 4}` s, stored as
-  constexpr doubles (`FCk_Time` is a reflected USTRUCT with no constexpr ctor — `_TickRate` itself
-  must stay the runtime member every processor already has, or the opt-in guarantee breaks).
-  `cadence::Get_QuantizedBucketIndex(FCk_Time)` — largest bucket `<=` requested (toward faster);
-  `<= 0` ⇒ bucket 0.
+  constexpr doubles (`BucketIntervalsSeconds`; a bucket's `FCk_Time` TickRate trait is built from its
+  entry via `ck::time::Seconds`). `cadence::Get_QuantizedBucketIndex(FCk_Time)` — largest bucket `<=`
+  requested (toward faster); `<= 0` ⇒ bucket 0.
 - Tag families: `TTag_CadenceBucket<T_CadenceKey, T_BucketIndex>` (bucket membership; the view
   filter; compile-time range-checked) and `TTag_CadenceFirstEval<T_CadenceKey>` (pending immediate
   first eval). `T_CadenceKey` = the feature's typesafe handle type (unique per feature; it is also
   the `T_HandleType` the bucket processor passes to `ck_exp::TProcessor` — one type, two roles,
   collapsed during implementation to cut a template param). The compile-time rate source of truth
   is `detail::TCadenceBucketRateTraits<T_BucketIndex>`: buckets 1..N declare
-  `static constexpr auto TickRate = ck::Seconds{BucketIntervalsSeconds[N]};` (the Phase-1 trait);
-  the `<0>` specialization declares NOTHING, so bucket 0 hits the exact ZeroSecond every-tick fast
-  path. No ctor bridging, no `Set_TickRate` anywhere.
+  `static constexpr FCk_Time TickRate = ck::time::Seconds(BucketIntervalsSeconds[N]);` (the Phase-1
+  trait); the `<0>` specialization declares NOTHING, so bucket 0 hits the exact ZeroSecond every-tick
+  fast path. No ctor bridging, no runtime setters anywhere.
 - **First-eval folds into bucket 0** (no separate processor): `cadence::AddCadenceTags<Key>(Handle,
   Interval)` quantizes, adds `TTag_CadenceBucket<Key, N>`, and for `N != 0` ALSO adds
   `TTag_CadenceBucket<Key, 0>` + `TTag_CadenceFirstEval<Key>`. The every-tick bucket-0 processor
@@ -302,7 +299,7 @@ Agents cannot run PIE; a human must run this before any perf claim is made for t
 ## Phase status
 
 - Phase 1 (TProcessorBase knobs): DONE 2026-07-22 — with the TickRate-literal interface refinement
-  described in the plan (`ck::Hz`/`ck::Seconds` consteval literals instead of a raw double trait).
+  described in the plan (`ck::time::Hz`/`ck::time::Seconds` constexpr `FCk_Time` literals instead of a raw double trait).
 - Phase 2 (bucketing primitive): DONE 2026-07-22 — `CkProcessor_CadenceBuckets.h`; one deviation
   from plan discovered by the build: the tag templates must derive `ck::TTag<Self>` (the registry's
   empty-tag static_assert, `CkRegistry.h:486`).

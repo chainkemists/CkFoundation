@@ -129,6 +129,7 @@ Scan the left column. Each row points at the folder that owns the utility and (w
 | Use case | Folder | Key file | Example |
 |---|---|---|---|
 | `FCk_Time`, `FCk_Time_Unreal`, world time retrieval (`Get_WorldTime`) | `Time` | `CkTime.h`, `CkTime_Utils.h` | see example below |
+| `FCk_Time` factories — `ck::time::Seconds` / `Milliseconds` / `Minutes` / `Hz` (consteval, positive-only; e.g. a processor's `static constexpr FCk_Time TickRate`) | `Time` | `CkTime.h` | `ck::time::Hz(4)` == `ck::time::Seconds(0.25)` |
 | `FCk_Chrono` countdown/accumulator (`Tick` + `ECk_Chrono_OverflowPolicy`, `Consume`, `Complete`, `Reset`) | `Chrono` | `CkChrono.h`, `CkChrono_Utils.h` | timer-like primitive without an entity; `Tick(dt, Wrap)` = recurring-interval gate (0 = every tick), `Clamp` (default) = one-shot latch |
 
 ```cpp

@@ -59,7 +59,7 @@ asked for — into the fixed bucket set `ck::cadence::BucketIntervalsSeconds` ({
 2, 4}s; 0 = every tick), and the entity is tagged with `TTag_CadenceBucket<FCk_Handle_VisibleRange, N>`.
 `FProcessor_VisibleRange_Update_Bucket<N>` (one instantiation per bucket, `CkVisibleRange_Processor.h`)
 runs the shared eval body at its bucket's rate via the compile-time `TickRate` trait
-(`ck::Seconds{...}`, resolved by `TProcessorBase::Get_TickRate`); bucket 0 declares no trait and runs
+(`ck::time::Seconds(...)`, resolved by `TProcessorBase::Get_TickRate`); bucket 0 declares no trait and runs
 every tick. Due-ness is bucket-tag view membership — there is no per-entity chrono poll (the old
 `_CadenceChrono` + `Tick(dt, Wrap)` gate is retired; `FCk_Chrono`'s `Wrap` policy itself remains the
 documented few-entity throttle primitive in CkCore).
