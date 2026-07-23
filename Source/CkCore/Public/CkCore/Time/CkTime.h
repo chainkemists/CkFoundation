@@ -79,7 +79,12 @@ public:
     CK_PROPERTY_GET(_Seconds);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Time, _Seconds);
+    // Hand-written (not CK_DEFINE_CONSTRUCTORS) so the constructors are constexpr — FCk_Time is then a
+    // literal type usable in compile-time contexts (e.g. a processor's `static constexpr FCk_Time TickRate`).
+    // Additive: a constexpr constructor is still runtime-callable, so every existing FCk_Time{...} is unaffected.
+    constexpr FCk_Time() = default;
+    constexpr explicit FCk_Time(double InSeconds) : _Seconds(InSeconds) {}
+    CK_ANGELSCRIPT_CTOR_REGISTRATION(FCk_Time, _Seconds);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
