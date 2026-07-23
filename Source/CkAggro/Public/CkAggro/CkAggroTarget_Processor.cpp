@@ -307,6 +307,17 @@ namespace ck
 
     auto
         FProcessor_AggroTarget_Evaluate::
+        DoTick(
+            TimeType InDeltaT)
+        -> void
+    {
+        // Game-thread hoist: one world-time read per tick, shared by every worker (one world per registry).
+        _Now = ck_aggro_target_processor::Get_Now(this->_TransientEntity);
+        TParallelProcessor::DoTick(InDeltaT);
+    }
+
+    auto
+        FProcessor_AggroTarget_Evaluate::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InTarget,
@@ -316,12 +327,17 @@ namespace ck
             const FFragment_AggroTarget_TargetInfo& InTargetInfo,
             const FFragment_AggroTarget_Perception& InPerception,
             FFragment_AggroTarget_Threat& InThreat,
-            FFragment_AggroTarget_Score& InScore)
+            FFragment_AggroTarget_Score& InScore) const
         -> void
     {
-        const auto Now     = ck_aggro_target_processor::Get_Now(InTarget);
-        auto       Owner   = ck::StaticCast<FCk_Handle_Aggro>(InTargetInfo.Get_AggroOwner());
-        const auto Tracked = ck::UAggroTarget_TrackedEntity_Utils::Get_StoredEntity(InTarget);
+        const auto Now = _Now;
+
+        // Worker thread: reconstruct the full self handle for the holder/util reads below (reads only; the handle
+        // debug-info attach self-skips inside the parallel region). Owner reads/validity go through the stored
+        // owner handle; every structural mutation is DEFERRED through InTarget's per-task command buffer.
+        const auto SelfHandle = ck::MakeHandle(InTarget.Get_Entity(), _TransientEntity);
+        auto       Owner      = ck::StaticCast<FCk_Handle_Aggro>(InTargetInfo.Get_AggroOwner());
+        const auto Tracked    = ck::UAggroTarget_TrackedEntity_Utils::Get_StoredEntity(SelfHandle);
 
         const auto OwnerReady = ck::IsValid(Owner)
             && Owner.Has<ck::FFragment_Aggro_ThreatParams>()
@@ -331,8 +347,8 @@ namespace ck
         // Invalid tracked (or a gone owner) -> forget (bypasses CannotBeForgotten), stop.
         if (ck::Is_NOT_Valid(Tracked) || NOT OwnerReady)
         {
-            InTarget.AddOrGet<ck::FTag_AggroTarget_PendingForget>();
-            InTarget.Try_Remove<ck::FTag_AggroTarget_EvaluationPending>();
+            InTarget.DeferAddOrGet<ck::FTag_AggroTarget_PendingForget>();
+            InTarget.DeferTry_Remove<ck::FTag_AggroTarget_EvaluationPending>();
             return;
         }
 
@@ -346,12 +362,13 @@ namespace ck
                             UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(Tracked))
             : 0.0;
 
-        // Retention-band tag (churn bounded to eval cadence at band crossings).
+        // Retention-band tag (churn bounded to eval cadence at band crossings). Has() reads pre-flush state; the
+        // flip is deferred — consistent with the serial read-then-mutate since each target is a single task.
         const auto IsWithinRetention = Distance <= OwnerSpatial.Get_RetentionDistance();
         if (IsWithinRetention && NOT InTarget.Has<ck::FTag_AggroTarget_WithinRetention>())
-        { InTarget.Add<ck::FTag_AggroTarget_WithinRetention>(); }
+        { InTarget.DeferAdd<ck::FTag_AggroTarget_WithinRetention>(); }
         else if (NOT IsWithinRetention && InTarget.Has<ck::FTag_AggroTarget_WithinRetention>())
-        { InTarget.Try_Remove<ck::FTag_AggroTarget_WithinRetention>(); }
+        { InTarget.DeferTry_Remove<ck::FTag_AggroTarget_WithinRetention>(); }
 
         // Analytic decay -> advance the anchor.
         const auto ClampMin     = OwnerThreat.Get_ThreatClampRange().Get_Min();
@@ -396,13 +413,13 @@ namespace ck
                 || (InLifetimeParams.Get_MaximumLifetimeMode() == ECk_EnableDisable::Enable && Age > InLifetimeParams.Get_MaximumLifetime().Get_Seconds());
 
             if (ShouldForget)
-            { InTarget.AddOrGet<ck::FTag_AggroTarget_PendingForget>(); }
+            { InTarget.DeferAddOrGet<ck::FTag_AggroTarget_PendingForget>(); }
         }
 
-        // Score changed -> the owner should re-select.
-        Owner.AddOrGet<ck::FTag_Aggro_SelectionPending>();
+        // Score changed -> the owner should re-select (deferred; N idempotent adds of a plain tag flush to one).
+        InTarget.ReadEntity(Owner.Get_Entity()).DeferAddOrGet<ck::FTag_Aggro_SelectionPending>();
 
-        InTarget.Try_Remove<ck::FTag_AggroTarget_EvaluationPending>();
+        InTarget.DeferTry_Remove<ck::FTag_AggroTarget_EvaluationPending>();
     }
 
     // ----------------------------------------------------------------------------------------------------------------

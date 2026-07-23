@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
+#include "CkEcs/Processor/CkParallelProcessor.h"
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
@@ -110,10 +111,18 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
     // Per-target evaluation: analytic decay -> distance/score -> retention-band tag -> forget checks. Runs only on
-    // targets stamped EvaluationPending (staggered clock fire or threat-request dirty). SERIAL for now — the plan's
-    // primary path is TParallelProcessor; parallelization is the perf follow-up once the model is proven (Claude.md).
+    // targets stamped EvaluationPending (staggered clock fire or threat-request dirty) — the O(active-targets) hot
+    // path, and the one parallelized stage.
+    //
+    // PARALLEL: the per-target body is registry READS (owner threat/spatial/forget params, owner+tracked transforms)
+    // plus writes to the target's OWN Threat/Score fragments; every structural tag flip — WithinRetention +
+    // PendingForget + EvaluationPending on self, SelectionPending on the owner — is DEFERRED through the read-only
+    // handle's per-task command buffer and flushed single-threaded, so no worker touches the registry structurally.
+    // 'Now' is hoisted to the game thread once per tick (DoTick) — a worker-thread UWorld time read is neither safe
+    // nor needed (one world per registry). MarkedDirtyBy keeps it pump-eligible so a reactive burst still drains
+    // request -> evaluate -> select in one frame.
 
-    class CKAGGRO_API FProcessor_AggroTarget_Evaluate : public ck_exp::TProcessor<
+    class CKAGGRO_API FProcessor_AggroTarget_Evaluate : public TParallelProcessor<
         FProcessor_AggroTarget_Evaluate,
         FCk_Handle_AggroTarget,
         TReadOnly<FFragment_AggroTarget_ThreatParams>,
@@ -135,10 +144,16 @@ namespace ck
         using MarkedDirtyBy = FTag_AggroTarget_EvaluationPending;
 
     public:
-        using TProcessor::TProcessor;
+        using TParallelProcessor::TParallelProcessor;
 
     public:
-        static auto
+        // Hoists the world 'Now' to the game thread once per tick, then runs the base parallel dispatch. The parallel
+        // body reads _Now instead of touching UWorld on a worker thread.
+        auto
+        DoTick(
+            TimeType InDeltaT) -> void;
+
+        auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InTarget,
@@ -148,7 +163,11 @@ namespace ck
             const FFragment_AggroTarget_TargetInfo& InTargetInfo,
             const FFragment_AggroTarget_Perception& InPerception,
             FFragment_AggroTarget_Threat& InThreat,
-            FFragment_AggroTarget_Score& InScore) -> void;
+            FFragment_AggroTarget_Score& InScore) const -> void;
+
+    private:
+        // Set on the game thread by DoTick before dispatch; read-only during the parallel phase.
+        FCk_Time _Now;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
