@@ -1,6 +1,5 @@
 #pragma once
 
-#include "CkCore/Chrono/CkChrono.h"
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
@@ -20,7 +19,8 @@ class UCk_Utils_VisibleRange_UE;
 
 namespace ck
 {
-    class FProcessor_VisibleRange_Update;
+    template <int32 T_BucketIndex>
+    class FProcessor_VisibleRange_Update_Bucket;
     class FProcessor_VisibleRange_HandleRequests;
 
     // Reference-counted: an entity's own out-of-range state and an explicit SetVisibility(Hide) request are two
@@ -41,7 +41,8 @@ namespace ck
         CK_GENERATED_BODY(FFragment_VisibleRange_Current);
 
     public:
-        friend class FProcessor_VisibleRange_Update;
+        template <int32 T_BucketIndex>
+        friend class FProcessor_VisibleRange_Update_Bucket;
         friend class FProcessor_VisibleRange_HandleRequests;
         friend class ::UCk_Utils_VisibleRange_UE;
 
@@ -49,9 +50,6 @@ namespace ck
         // Last distance supplied via UCk_Utils_VisibleRange_UE::Update_Distance. Viewer resolution (which camera,
         // which local player) is entirely the caller's concern — this fragment only ever sees a plain float.
         float _Distance = 0.0f;
-
-        // Cadence accumulator — its GoalValue IS the configured _UpdateInterval, ticked with ECk_Chrono_OverflowPolicy::Wrap.
-        FCk_Chrono _CadenceChrono;
 
         float _FadeAlpha = 1.0f;
 
@@ -65,9 +63,6 @@ namespace ck
         CK_PROPERTY_GET(_FadeAlpha);
         CK_PROPERTY_GET(_IsOutOfRange);
         CK_PROPERTY_GET(_IsExplicitlyHidden);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_VisibleRange_Current, _CadenceChrono);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -78,7 +73,8 @@ namespace ck
         CK_GENERATED_BODY(FFragment_VisibleRange_Requests);
 
     public:
-        friend class FProcessor_VisibleRange_Update;
+        template <int32 T_BucketIndex>
+        friend class FProcessor_VisibleRange_Update_Bucket;
         friend class FProcessor_VisibleRange_HandleRequests;
         friend class ::UCk_Utils_VisibleRange_UE;
 

@@ -95,8 +95,8 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Internal — enqueued by FProcessor_VisibleRange_Update when the own-range boundary crosses. Not part of the
-// public API (Utils exposes range/distance via Add + Update_Distance, never this request directly).
+// Internal — enqueued by FProcessor_VisibleRange_Update_Bucket when the own-range boundary crosses. Not part of
+// the public API (Utils exposes range/distance via Add + Update_Distance, never this request directly).
 USTRUCT()
 struct CKVISIBLERANGE_API FCk_Request_VisibleRange_ApplyRangeState : public FCk_Request_Base
 {

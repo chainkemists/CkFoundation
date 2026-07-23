@@ -1,31 +1,29 @@
 #include "CkVisibleRange_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
-#include "CkCore/Chrono/CkChrono.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkVisibleRange/CkVisibleRange_Log.h"
 #include "CkVisibleRange/CkVisibleRange_Utils.h"
 
-CK_REGISTER_PROCESSOR(ck::FProcessor_VisibleRange_Update);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VisibleRange_HandleRequests);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
+    template <int32 T_BucketIndex>
     auto
-        FProcessor_VisibleRange_Update::
+        FProcessor_VisibleRange_Update_Bucket<T_BucketIndex>::
         ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
+            FCk_Time InDeltaT,
+            FCk_Handle_VisibleRange InHandle,
             const FFragment_VisibleRange_Params& InParams,
             FFragment_VisibleRange_Current& InCurrent)
         -> void
     {
-        if (InCurrent._CadenceChrono.Tick(InDeltaT, ECk_Chrono_OverflowPolicy::Wrap) != ECk_Chrono_TickState::Done)
-        { return; }
+        cadence::TryConsume_FirstEval<FCk_Handle_VisibleRange>(InHandle);
 
         InCurrent._FadeAlpha = UCk_Utils_VisibleRange_UE::Compute_FadeAlpha(
             InParams.Get_MinRange(), InParams.Get_MaxRange(), InParams.Get_FadeBandCm(), InCurrent._Distance);
@@ -128,5 +126,11 @@ namespace ck
         }
     }
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Below the ForEachEntity template definition on purpose — registration implicitly instantiates every
+// bucket, which needs the body visible in this TU.
+CK_REGISTER_CADENCE_BUCKET_PROCESSORS(ck::FProcessor_VisibleRange_Update_Bucket);
 
 // --------------------------------------------------------------------------------------------------------------------

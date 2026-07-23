@@ -2,6 +2,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Processor/CkProcessor_CadenceBuckets.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 #include "CkVisibleRange/CkVisibleRange_Fragment.h"
@@ -10,10 +11,16 @@
 
 namespace ck
 {
-    // Runs every tick: per-entity cadence cannot use TProcessorBase's _TickRate (that throttles the whole
-    // processor to one uniform rate), so each entity gates its own re-evaluation via its Chrono ticked Wrap.
-    class CKVISIBLERANGE_API FProcessor_VisibleRange_Update : public ck_exp::TProcessor<
-        FProcessor_VisibleRange_Update,
+    // Bucketed per-entity cadence (the reference consumer of CkProcessor_CadenceBuckets.h): each entity's
+    // _UpdateInterval quantizes toward FASTER into cadence::BucketIntervalsSeconds at Add, and each bucket
+    // runs as one sub-processor instantiation carrying the bucket's compile-time TickRate trait. Due-ness
+    // is bucket-tag view membership — no per-entity chrono poll. The immediate first evaluation after Add
+    // rides bucket 0 transiently (TryConsume_FirstEval at the top of the eval body strips it).
+    template <int32 T_BucketIndex>
+    class FProcessor_VisibleRange_Update_Bucket : public TCadenceBucketProcessor<
+        FProcessor_VisibleRange_Update_Bucket<T_BucketIndex>,
+        FProcessor_VisibleRange_Update_Bucket,
+        T_BucketIndex,
         FCk_Handle_VisibleRange,
         ck::TReadOnly<FFragment_VisibleRange_Params>,
         ck::TReadWrite<FFragment_VisibleRange_Current>,
@@ -23,13 +30,18 @@ namespace ck
         using Group = FGroup_Gameplay_TimeDelta;
 
     public:
-        using TProcessor::TProcessor;
+        // Dependent-base ctor inheritance: unqualified lookup never examines a dependent base, so the
+        // base is re-derived through the current instantiation (the `typename Self::Base` idiom).
+        using BucketBase = typename FProcessor_VisibleRange_Update_Bucket::TCadenceBucketProcessor;
+        using BucketBase::BucketBase;
 
     public:
+        // Concrete types on purpose: the dependent base's TimeType/HandleType aliases are not visible
+        // unqualified inside a class template.
         static auto
         ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
+            FCk_Time InDeltaT,
+            FCk_Handle_VisibleRange InHandle,
             const FFragment_VisibleRange_Params& InParams,
             FFragment_VisibleRange_Current& InCurrent)
             -> void;
@@ -44,7 +56,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_TimeDelta;
-        using RunAfter = TDepList<FProcessor_VisibleRange_Update>;
+        using RunAfter = TCadenceBucketDepList<FProcessor_VisibleRange_Update_Bucket>;
         using MarkedDirtyBy = FFragment_VisibleRange_Requests;
 
     public:

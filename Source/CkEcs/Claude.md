@@ -117,8 +117,36 @@ Key `TProcessorBase` API (all processors inherit):
 
 - `Tick(InDeltaT)` — advance the processor one tick.
 - `Pump()` — tick with zero DeltaT (process deferred requests without advancing time).
-- `CK_PROPERTY(_TickRate)` — set a fixed tick rate (0 = every frame).
 - `_TransientEntity` — a scratch entity the processor owns; use for deferred commands.
+
+### Fixed tick rate (compile-time trait)
+
+A processor with a per-type fixed cadence declares ONE line; the base derives everything else
+(throttle, every-tick fast path, catch-up, registration — all unchanged):
+
+```cpp
+class FProcessor_X : public ck::TProcessor<FProcessor_X, /* fragments */>
+{
+public:
+    static constexpr auto TickRate = ck::Hz{4};          // or ck::Seconds{0.25}
+};
+```
+
+- Declaring nothing = every tick (the default; byte-identical to before the trait existed).
+- Misuse is a compile error: zero/negative rates, raw-number/`FCk_Time`/non-static/non-constexpr
+  spellings, and calling `Set_TickRate` on a trait-declaring processor all fail to build.
+- `Set_TickRate(FCk_Time)` remains for trait-LESS processors configured at runtime (e.g. via a
+  registration factory); `Set_TickPhaseOffset` seeds the accumulator to stagger same-rate processors.
+- Optional: `static constexpr auto TickCatchUpPolicy = ECk_ProcessorTickCatchUp::SampleLatestOnly;`
+  fires DoTick once with summed elapsed intervals after a hitch instead of replaying per interval
+  (default `ReplayMissedTicks` = fixed-timestep replay, the original behavior).
+- A rated processor's accumulator freezes while the scheduler's empty-view skip bypasses its
+  dispatch — its phase re-aligns to when its view last became non-empty.
+
+For PER-ENTITY intervals (each entity chooses its own rate), don't poll a chrono per entity — use
+the bucketed-cadence primitive in `Processor/CkProcessor_CadenceBuckets.h` (quantize-at-Add into
+per-bucket sub-processor instantiations; authoring recipe in that header's comment; reference
+consumer: `CkVisibleRange`; design: `DESIGN_SubInstancedCadenceProcessors.md`).
 
 Access policies (see `CkProcessor_AccessPolicy.h`) control whether a fragment is read-only or read-write for a given processor, enabling safe parallel execution.
 
