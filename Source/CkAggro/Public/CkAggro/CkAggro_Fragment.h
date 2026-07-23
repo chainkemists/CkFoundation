@@ -1,47 +1,157 @@
 #pragma once
 
 #include "CkAggro/CkAggro_Fragment_Data.h"
+#include "CkAggro/CkAggroTarget_Fragment_Data.h"
 
-#include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
+#include "CkCore/Chrono/CkChrono.h"
+#include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Time/CkTime.h"
+
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+#include "CkEcs/Tag/CkTag.h"
+
+#include "CkEcs/Signal/CkSignal_Macros.h"
+#include "CkEcs/Signal/CkSignal_Utils.h"
+#include "CkEcs/Signal/CkSignal_Fragment.h"
 
 #include "CkRecord/Record/CkRecord_Fragment.h"
 #include "CkRecord/Record/CkRecord_Utils.h"
 
-#include "CkEcs/Signal/CkSignal_Macros.h"
+#include <variant>
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class UCk_Entity_ConstructionScript_PDA;
+class UCk_Utils_Aggro_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
-    CK_DEFINE_RECORD_OF_ENTITIES_AND_UTILS_TRANSIENT(FUtils_RecordOfAggros, FFragment_RecordOfAggro, FCk_Handle_Aggro);
+    // ----------------------------------------------------------------------------------------------------------------
+    // Bridge aliases — each owner param piece is copied onto the owner as its own fragment so processors declare RO
+    // access on exactly what they read.
 
-    // --------------------------------------------------------------------------------------------------------------------
+    using FFragment_Aggro_ThreatParams     = FCk_Aggro_ThreatParams;
+    using FFragment_Aggro_SelectionParams  = FCk_Aggro_SelectionParams;
+    using FFragment_Aggro_SpatialParams    = FCk_Aggro_SpatialParams;
+    using FFragment_Aggro_ForgetParams     = FCk_Aggro_ForgetParams;
+    using FFragment_Aggro_EvaluationParams = FCk_Aggro_EvaluationParams;
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Tags.
 
     CK_DEFINE_ECS_TAG(FTag_Aggro);
-    CK_DEFINE_ECS_TAG(FTag_Aggro_Excluded);
+    CK_DEFINE_ECS_TAG(FTag_Aggro_NeedsSetup);
+    // COUNTED — N Disable calls need N Enable calls before the pipeline resumes.
+    CK_DEFINE_ECS_TAG_COUNTED(FTag_Aggro_Disabled);
+    CK_DEFINE_ECS_TAG(FTag_Aggro_SelectionPending);
 
-    CK_DEFINE_ENTITY_HOLDER_AND_UTILS_TRANSIENT(UAggroedEntity_Utils, AggroedEntity, FCk_Handle);
-
-    // --------------------------------------------------------------------------------------------------------------------
+    // ----------------------------------------------------------------------------------------------------------------
+    // The current active target + the timestamps hysteresis reads.
 
     struct CKAGGRO_API FFragment_Aggro_Current
     {
+    public:
         CK_GENERATED_BODY(FFragment_Aggro_Current);
 
+    public:
+        friend class FProcessor_Aggro_SelectActiveTarget;
+        friend class FProcessor_Aggro_HandleRequests;
+        friend class FProcessor_AggroTarget_Forget;
+        friend class FProcessor_AggroTarget_EndPlay;
+
     private:
-        double _Score = std::numeric_limits<float>::max();
+        FCk_Handle_AggroTarget _ActiveTarget;
+        FCk_Time               _ActiveTargetStartTime;
+        FCk_Time               _LastSwitchTime;
 
     public:
-        CK_PROPERTY_GET(_Score);
-
-        CK_DEFINE_CONSTRUCTORS(FFragment_Aggro_Current, _Score);
+        CK_PROPERTY_GET(_ActiveTarget);
+        CK_PROPERTY_GET(_ActiveTargetStartTime);
+        CK_PROPERTY_GET(_LastSwitchTime);
     };
 
-    // --------------------------------------------------------------------------------------------------------------------
+    // ----------------------------------------------------------------------------------------------------------------
+    // The one always-ticking clock — the evaluation pacer. _DebugEvaluationCount feeds the IdleCost autotest.
+
+    struct CKAGGRO_API FFragment_Aggro_EvaluationClock
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Aggro_EvaluationClock);
+
+    public:
+        friend class FProcessor_Aggro_Setup;
+        friend class FProcessor_Aggro_EvaluationPacer;
+
+    private:
+        FCk_Chrono _EvaluationChrono;
+        int64      _DebugEvaluationCount = 0;
+
+    public:
+        CK_PROPERTY_GET(_EvaluationChrono);
+        CK_PROPERTY_GET(_DebugEvaluationCount);
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // O(1) tracked-entity -> AggroTarget dedupe/lookup. NEVER used for hot math (see the record for enumeration).
+
+    struct CKAGGRO_API FFragment_Aggro_TargetMap
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Aggro_TargetMap);
+
+    public:
+        friend class UCk_Utils_Aggro_UE;
+        friend class FProcessor_Aggro_HandleRequests;
+        friend class FProcessor_AggroTarget_Forget;
+        friend class FProcessor_AggroTarget_EndPlay;
+
+    private:
+        TMap<FCk_Handle, FCk_Handle_AggroTarget> _TargetsByTrackedEntity;
+
+    public:
+        CK_PROPERTY_GET(_TargetsByTrackedEntity);
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    struct CKAGGRO_API FFragment_Aggro_Requests
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Aggro_Requests);
+
+    public:
+        friend class FProcessor_Aggro_HandleRequests;
+        friend class UCk_Utils_Aggro_UE;
+
+    public:
+        using RequestType = std::variant<
+            FCk_Request_Aggro_AddThreat,
+            FCk_Request_Aggro_RemoveTarget,
+            FCk_Request_Aggro_ClearAllTargets,
+            FCk_Request_Aggro_SetActiveTarget,
+            FCk_Request_Aggro_ClearActiveTarget>;
+        using RequestList = TArray<RequestType>;
+
+    private:
+        RequestList _Requests;
+
+    public:
+        CK_PROPERTY_GET(_Requests);
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Owner -> AggroTarget child record. Ownership/teardown/enumeration only — never sorted, never used for hot math.
+
+    CK_DEFINE_RECORD_OF_ENTITIES_AND_UTILS_TRANSIENT(FUtils_RecordOfAggroTargets, FFragment_RecordOfAggroTargets, FCk_Handle_AggroTarget);
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKAGGRO_API, OnAggroTargetAcquired, FCk_Delegate_Aggro_OnTargetAcquired, FCk_Handle_Aggro, FCk_Handle_AggroTarget);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKAGGRO_API, OnAggroActiveTargetChanged, FCk_Delegate_Aggro_OnActiveTargetChanged, FCk_Handle_Aggro, FCk_Handle_AggroTarget, FCk_Handle_AggroTarget);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKAGGRO_API, OnAggroTargetForgotten, FCk_Delegate_Aggro_OnTargetForgotten, FCk_Handle_Aggro, FCk_Aggro_TargetForgottenInfo);
+
+    CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_Aggro_Requests);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

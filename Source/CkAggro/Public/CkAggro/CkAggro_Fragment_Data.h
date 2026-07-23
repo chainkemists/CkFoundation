@@ -1,25 +1,60 @@
 #pragma once
 
-#include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment_Data.h"
+#include "CkAggro/CkAggroTarget_Fragment_Data.h"
 
+#include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
-#include "CkEcs/Handle/CkHandle.h"
+#include "CkCore/Math/ValueRange/CkValueRange.h"
+#include "CkCore/Time/CkTime.h"
 
-#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
+#include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkEcs/Request/CkRequest_Data.h"
 
 #include "CkAggro_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// What happens when a new target is admitted while the tracked-target cap is full.
 UENUM(BlueprintType)
-enum class ECk_Aggro_ExclusionPolicy : uint8
+enum class ECk_Aggro_EvictionPolicy : uint8
 {
-    IgnoreExcluded,
-    All
+    // Forget the lowest-threat currently-tracked target to make room.
+    EvictLowestThreat,
+    // Reject the incoming target; the cap holds.
+    RejectNew
 };
 
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Aggro_ExclusionPolicy);
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Aggro_EvictionPolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Whether a threat request may create a not-yet-tracked target, or requires it to already exist.
+UENUM(BlueprintType)
+enum class ECk_Aggro_TargetCreationPolicy : uint8
+{
+    CreateIfMissing,
+    RequireExisting
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Aggro_TargetCreationPolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Why a target was forgotten — carried in the OnAggroTargetForgotten payload.
+UENUM(BlueprintType)
+enum class ECk_Aggro_ForgetReason : uint8
+{
+    ThreatDepleted,
+    ThreatTimeout,
+    MaxAgeReached,
+    MaxLifetimeReached,
+    TargetInvalid,
+    Evicted,
+    Requested
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Aggro_ForgetReason);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -29,58 +64,442 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Aggro);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Aggro_FloatAttribute_Name);
-
-// --------------------------------------------------------------------------------------------------------------------
-
+// Owner-wide threat behavior. Read RO by the parallel Evaluate; every field is optional (sensible defaults).
 USTRUCT(BlueprintType)
-struct FCk_Fragment_Aggro_Params
+struct CKAGGRO_API FCk_Aggro_ThreatParams
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Aggro_Params);
+    CK_GENERATED_BODY(FCk_Aggro_ThreatParams);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess = true))
-    TSubclassOf<UCk_Entity_ConstructionScript_PDA> _ConstructionScript;
+              meta = (AllowPrivateAccess = true))
+    float _InitialThreat = 1.0f;
+
+    // Threat lost per second while perceived and within retention. 0 = threat never decays.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _ThreatDecayRate = 0.0f;
+
+    // Decay accelerator applied while the target is unperceived (and past its lost-sight grace).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = "1.0"))
+    float _UnperceivedThreatDecayMultiplier = 2.0f;
+
+    // Below this, a tracked target is forgotten (ThreatDepleted).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _MinimumTrackedThreat = 0.01f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    float _ScoreStartingValue = 0.0f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess = true))
-    ECk_MinMax _MinMax = ECk_MinMax::None;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MinMax == ECk_MinMax::Min || _MinMax == ECk_MinMax::MinMax"))
-    float _MinValue = 0.0f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MinMax == ECk_MinMax::Max || _MinMax == ECk_MinMax::MinMax"))
-    float _MaxValue = 0.0f;
+    FCk_FloatRange _ThreatClampRange = FCk_FloatRange(0.0, 10000.0);
 
 public:
-    auto
-    Get_MinValue() const -> float;
-
-    auto
-    Get_MaxValue() const -> float;
-
-public:
-    CK_PROPERTY(_ConstructionScript);
-    CK_PROPERTY(_ScoreStartingValue);
-    CK_PROPERTY(_MinMax);
-
-    // _MinValue / _MaxValue intentionally use only the setter macro — the
-    // matching getters (Get_MinValue / Get_MaxValue) are hand-authored above
-    // because they emit a diagnostic when _MinMax doesn't include the bound
-    // being queried. CK_PROPERTY would duplicate the getter and lose that
-    // diagnostic, so we expose only the Set side.
-    CK_PROPERTY_SET(_MinValue);
-    CK_PROPERTY_SET(_MaxValue);
+    CK_PROPERTY(_InitialThreat);
+    CK_PROPERTY(_ThreatDecayRate);
+    CK_PROPERTY(_UnperceivedThreatDecayMultiplier);
+    CK_PROPERTY(_MinimumTrackedThreat);
+    CK_PROPERTY(_ThreatClampRange);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Owner-wide active-target selection + hysteresis tuning.
+USTRUCT(BlueprintType)
+struct CKAGGRO_API FCk_Aggro_SelectionParams
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Aggro_SelectionParams);
+
+private:
+    // A challenger must beat the incumbent's biased score by at least this factor to trigger a switch.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = "1.0"))
+    float _TargetSwitchThreshold = 1.15f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Time _TargetSwitchCooldown = FCk_Time{2.0};
+
+    // Incumbent stickiness — its score is multiplied by this when compared against challengers.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = "1.0"))
+    float _CurrentTargetBias = 1.2f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _MinimumTargetScore = 0.0f;
+
+    // Minimum time an active target is held before hysteresis allows a switch away from it.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Time _MinimumAggroDuration = FCk_Time{1.0};
+
+public:
+    CK_PROPERTY(_TargetSwitchThreshold);
+    CK_PROPERTY(_TargetSwitchCooldown);
+    CK_PROPERTY(_CurrentTargetBias);
+    CK_PROPERTY(_MinimumTargetScore);
+    CK_PROPERTY(_MinimumAggroDuration);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Owner-wide spatial tuning (distances in cm). Retention is clamped >= Acquisition at Add time.
+USTRUCT(BlueprintType)
+struct CKAGGRO_API FCk_Aggro_SpatialParams
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Aggro_SpatialParams);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _AcquisitionDistance = 3000.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _RetentionDistance = 4500.0f;
+
+    // Decay accelerator applied while the target is beyond retention.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = "1.0"))
+    float _OutOfRangeDecayMultiplier = 3.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _DistanceFalloffHalfDistance = 1500.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _DistanceFalloffExponent = 2.0f;
+
+    // Optional bounded "prefer whoever is in my face" band. Disabled by default.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _NearbyPreference = ECk_EnableDisable::Disable;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditCondition = "_NearbyPreference == ECk_EnableDisable::Enable", EditConditionHides))
+    float _NearbyPreferenceDistance = 600.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditCondition = "_NearbyPreference == ECk_EnableDisable::Enable", EditConditionHides))
+    float _NearbyPreferenceMultiplier = 1.5f;
+
+public:
+    CK_PROPERTY(_AcquisitionDistance);
+    CK_PROPERTY(_RetentionDistance);
+    CK_PROPERTY(_OutOfRangeDecayMultiplier);
+    CK_PROPERTY(_DistanceFalloffHalfDistance);
+    CK_PROPERTY(_DistanceFalloffExponent);
+    CK_PROPERTY(_NearbyPreference);
+    CK_PROPERTY(_NearbyPreferenceDistance);
+    CK_PROPERTY(_NearbyPreferenceMultiplier);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Owner-wide forget + capacity tuning.
+USTRUCT(BlueprintType)
+struct CKAGGRO_API FCk_Aggro_ForgetParams
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Aggro_ForgetParams);
+
+private:
+    // Forget a target this long after its last threat/perception refresh (ThreatTimeout).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Time _ForgetDuration = FCk_Time{10.0};
+
+    // After losing perception, threat keeps decaying at the perceived rate for this long before the unperceived
+    // accelerator kicks in.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Time _LostSightGraceDuration = FCk_Time{3.0};
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _MaximumTargetAgeMode = ECk_EnableDisable::Disable;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditCondition = "_MaximumTargetAgeMode == ECk_EnableDisable::Enable", EditConditionHides))
+    FCk_Time _MaximumTargetAge;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _TargetCapMode = ECk_EnableDisable::Enable;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditCondition = "_TargetCapMode == ECk_EnableDisable::Enable", EditConditionHides, ClampMin = "1"))
+    int32 _MaximumTrackedTargets = 8;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditCondition = "_TargetCapMode == ECk_EnableDisable::Enable", EditConditionHides))
+    ECk_Aggro_EvictionPolicy _EvictionPolicy = ECk_Aggro_EvictionPolicy::EvictLowestThreat;
+
+public:
+    CK_PROPERTY(_ForgetDuration);
+    CK_PROPERTY(_LostSightGraceDuration);
+    CK_PROPERTY(_MaximumTargetAgeMode);
+    CK_PROPERTY(_MaximumTargetAge);
+    CK_PROPERTY(_TargetCapMode);
+    CK_PROPERTY(_MaximumTrackedTargets);
+    CK_PROPERTY(_EvictionPolicy);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Owner-wide evaluation cadence. Interval + a per-rearm jitter in [0, Jitter] staggers the fleet.
+USTRUCT(BlueprintType)
+struct CKAGGRO_API FCk_Aggro_EvaluationParams
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Aggro_EvaluationParams);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Time _EvaluationInterval = FCk_Time{0.25};
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Time _EvaluationJitter = FCk_Time{0.1};
+
+public:
+    CK_PROPERTY(_EvaluationInterval);
+    CK_PROPERTY(_EvaluationJitter);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Aggregate owner params. All pieces optional — every field carries a sensible default.
+USTRUCT(BlueprintType)
+struct CKAGGRO_API FCk_Fragment_Aggro_ParamsData
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Fragment_Aggro_ParamsData);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Aggro_ThreatParams _ThreatParams;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Aggro_SelectionParams _SelectionParams;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Aggro_SpatialParams _SpatialParams;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Aggro_ForgetParams _ForgetParams;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Aggro_EvaluationParams _EvaluationParams;
+
+public:
+    CK_PROPERTY(_ThreatParams);
+    CK_PROPERTY(_SelectionParams);
+    CK_PROPERTY(_SpatialParams);
+    CK_PROPERTY(_ForgetParams);
+    CK_PROPERTY(_EvaluationParams);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// The DamageResolution one-liner: add threat from InstigatorTarget onto the owner's table, creating the tracked
+// target on demand (per CreatePolicy).
+USTRUCT(BlueprintType)
+struct CKAGGRO_API FCk_Request_Aggro_AddThreat : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Aggro_AddThreat);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Aggro_AddThreat);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _TrackedEntity;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _ThreatAmount = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _Instigator;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _Source;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Aggro_TargetCreationPolicy _CreatePolicy = ECk_Aggro_TargetCreationPolicy::CreateIfMissing;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Fragment_AggroTarget_ParamsData _TargetParams;
+
+public:
+    CK_PROPERTY_GET(_TrackedEntity);
+    CK_PROPERTY_GET(_ThreatAmount);
+    CK_PROPERTY(_Instigator);
+    CK_PROPERTY(_Source);
+    CK_PROPERTY(_CreatePolicy);
+    CK_PROPERTY(_TargetParams);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Aggro_AddThreat, _TrackedEntity, _ThreatAmount);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Forget a specific tracked target by its tracked entity.
+USTRUCT(BlueprintType)
+struct CKAGGRO_API FCk_Request_Aggro_RemoveTarget : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Aggro_RemoveTarget);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Aggro_RemoveTarget);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _TrackedEntity;
+
+public:
+    CK_PROPERTY_GET(_TrackedEntity);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Aggro_RemoveTarget, _TrackedEntity);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Forget every tracked target.
+USTRUCT(BlueprintType)
+struct CKAGGRO_API FCk_Request_Aggro_ClearAllTargets : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Aggro_ClearAllTargets);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Aggro_ClearAllTargets);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Force the active target (taunt) — bypasses selection hysteresis. The target must already be tracked.
+USTRUCT(BlueprintType)
+struct CKAGGRO_API FCk_Request_Aggro_SetActiveTarget : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Aggro_SetActiveTarget);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Aggro_SetActiveTarget);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _TrackedEntity;
+
+public:
+    CK_PROPERTY_GET(_TrackedEntity);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Aggro_SetActiveTarget, _TrackedEntity);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Clear the active target without forgetting it; selection re-runs next evaluation.
+USTRUCT(BlueprintType)
+struct CKAGGRO_API FCk_Request_Aggro_ClearActiveTarget : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Aggro_ClearActiveTarget);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Aggro_ClearActiveTarget);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// OnAggroTargetForgotten payload — outlives the dying AggroTarget entity, so it carries copies rather than the handle.
+USTRUCT(BlueprintType)
+struct CKAGGRO_API FCk_Aggro_TargetForgottenInfo
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Aggro_TargetForgottenInfo);
+
+private:
+    UPROPERTY(BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _TrackedEntity;
+
+    UPROPERTY(BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    float _FinalThreat = 0.0f;
+
+    UPROPERTY(BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    ECk_Aggro_ForgetReason _Reason = ECk_Aggro_ForgetReason::ThreatDepleted;
+
+public:
+    CK_PROPERTY_GET(_TrackedEntity);
+    CK_PROPERTY_GET(_FinalThreat);
+    CK_PROPERTY_GET(_Reason);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Aggro_TargetForgottenInfo, _TrackedEntity, _FinalThreat, _Reason);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_Aggro_OnTargetAcquired,
+    FCk_Handle_Aggro, InAggro,
+    FCk_Handle_AggroTarget, InTarget);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+    FCk_Delegate_Aggro_OnActiveTargetChanged,
+    FCk_Handle_Aggro, InAggro,
+    FCk_Handle_AggroTarget, InPreviousTarget,
+    FCk_Handle_AggroTarget, InNewTarget);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_Aggro_OnTargetForgotten,
+    FCk_Handle_Aggro, InAggro,
+    FCk_Aggro_TargetForgottenInfo, InForgottenInfo);
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -1,53 +1,86 @@
 #include "CkAggro_Utils.h"
 
-#include "CkAggro/CkAggroOwner_Fragment.h"
-#include "CkAggro/CkAggroOwner_Fragment_Data.h"
-#include "CkAggro/CkAggro_Fragment.h"
+#include "CkAggro/CkAggroTarget_Utils.h"
 
-#include "CkAttribute/FloatAttribute/CkFloatAttribute_Utils.h"
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
-#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_aggro_utils
+{
+    // Stamp the lowest-threat tracked target PendingForget and drop it from the map to make room for a newcomer.
+    // The Forget processor completes the eviction (record disconnect + destroy + OnAggroTargetForgotten/Evicted).
+    auto
+    Evict_LowestThreat(
+        TMap<FCk_Handle, FCk_Handle_AggroTarget>& InTargetMap)
+        -> void
+    {
+        auto LowestThreat = TNumericLimits<float>::Max();
+        auto Victim       = FCk_Handle_AggroTarget{};
+        auto VictimKey    = FCk_Handle{};
+
+        for (const auto& Pair : InTargetMap)
+        {
+            if (ck::Is_NOT_Valid(Pair.Value))
+            { continue; }
+
+            const auto Threat = Pair.Value.Get<ck::FFragment_AggroTarget_Threat>().Get_Threat();
+            if (Threat < LowestThreat)
+            {
+                LowestThreat = Threat;
+                Victim       = Pair.Value;
+                VictimKey    = Pair.Key;
+            }
+        }
+
+        if (ck::Is_NOT_Valid(Victim))
+        { return; }
+
+        Victim.AddOrGet<ck::FTag_AggroTarget_Evicted>();
+        Victim.AddOrGet<ck::FTag_AggroTarget_PendingForget>();
+        InTargetMap.Remove(VictimKey);
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_Aggro_UE::
     Add(
-        FCk_Handle_AggroOwner& InHandle,
-        const FCk_Handle& InTarget,
-        const FCk_Fragment_Aggro_Params& InParams)
+        FCk_Handle& InHandle,
+        const FCk_Fragment_Aggro_ParamsData& InParams)
     -> FCk_Handle_Aggro
 {
-    const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InTarget, [&](FCk_Handle InNewEntity)
-    {
-        InNewEntity.Add<ck::FTag_Aggro>();
-        ck::UAggroedEntity_Utils::AddOrReplace(InNewEntity, InTarget);
-        InNewEntity.Add<ck::FFragment_Aggro_Current>();
+    const auto HasTransform = UCk_Utils_Transform_UE::Has(InHandle);
+    CK_ENSURE_IF_NOT(HasTransform,
+        TEXT("Cannot Add Aggro to Handle [{}] — it has no Transform feature (required for spatial scoring)"), InHandle)
+    {}
+    if (NOT HasTransform)
+    { return {}; }
 
-        // ConstructionScript is optional. Most callers want the default
-        // Aggro entity shape (Tag + Aggroed source ref + Current score
-        // fragment, all added above) and skip the script entirely.
-        // Request_Construct ensure-fails on a null class — guard explicitly.
-        if (const auto& ConstructionScript = InParams.Get_ConstructionScript();
-            ck::IsValid(ConstructionScript))
-        {
-            UCk_Entity_ConstructionScript_PDA::Request_Construct(InNewEntity, ConstructionScript);
-        }
-    });
+    // Retention must never be tighter than acquisition, else a target could be admitted yet never retained.
+    auto SpatialParams = InParams.Get_SpatialParams();
+    if (SpatialParams.Get_RetentionDistance() < SpatialParams.Get_AcquisitionDistance())
+    { SpatialParams.Set_RetentionDistance(SpatialParams.Get_AcquisitionDistance()); }
 
-    auto AggroHandle = Cast(NewEntity);
+    RecordOfAggroTargets_Utils::AddIfMissing(InHandle);
 
-    // The Aggro entity is identified by its target (Get_AggroTarget), not by
-    // a GameplayLabel — labels are only added if the user-supplied
-    // ConstructionScript chooses to add them. Tell the record-connect path
-    // explicitly that labels are optional here so a script-less Aggro doesn't
-    // ensure-fail the connect.
-    RecordOfAggro_Utils::Request_Connect(InHandle, AggroHandle, ECk_Record_LabelRequirementPolicy::Optional);
+    InHandle.Add<ck::FFragment_Aggro_ThreatParams>(InParams.Get_ThreatParams());
+    InHandle.Add<ck::FFragment_Aggro_SelectionParams>(InParams.Get_SelectionParams());
+    InHandle.Add<ck::FFragment_Aggro_SpatialParams>(SpatialParams);
+    InHandle.Add<ck::FFragment_Aggro_ForgetParams>(InParams.Get_ForgetParams());
+    InHandle.Add<ck::FFragment_Aggro_EvaluationParams>(InParams.Get_EvaluationParams());
 
-    // TODO: move this to a processor
-    ck::UUtils_Signal_OnNewAggroAdded::Broadcast(InHandle, ck::MakePayload(InHandle, AggroHandle));
+    InHandle.Add<ck::FFragment_Aggro_Current>();
+    InHandle.Add<ck::FFragment_Aggro_EvaluationClock>();
+    InHandle.Add<ck::FFragment_Aggro_TargetMap>();
 
-    return AggroHandle;
+    InHandle.Add<ck::FTag_Aggro>();
+    InHandle.Add<ck::FTag_Aggro_NeedsSetup>();
+
+    return Cast(InHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -58,40 +91,366 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Aggro_UE, FCk_Handle_Aggro, ck
 
 auto
     UCk_Utils_Aggro_UE::
-    Get_AggroTarget(
+    CreateTarget(
+        FCk_Handle_Aggro& InOwner,
+        const FCk_Fragment_AggroTarget_ParamsData& InParams)
+    -> FCk_Handle_AggroTarget
+{
+    const auto OwnerIsValid = ck::IsValid(InOwner) && Has(InOwner);
+    CK_ENSURE_IF_NOT(OwnerIsValid,
+        TEXT("Cannot CreateTarget — Owner [{}] is invalid or is not an Aggro entity"), InOwner)
+    {}
+    if (NOT OwnerIsValid)
+    { return {}; }
+
+    if (auto Existing = TryGet_Target_ByTrackedEntity(InOwner, InParams.Get_TrackedEntity());
+        ck::IsValid(Existing))
+    { return Existing; }
+
+    auto NewTarget = UCk_Utils_AggroTarget_UE::Create(InOwner, InParams);
+    if (ck::Is_NOT_Valid(NewTarget))
+    { return {}; }
+
+    return AddTarget(InOwner, NewTarget);
+}
+
+auto
+    UCk_Utils_Aggro_UE::
+    AddTarget(
+        FCk_Handle_Aggro& InOwner,
+        FCk_Handle_AggroTarget& InTarget)
+    -> FCk_Handle_AggroTarget
+{
+    const auto OwnerIsValid = ck::IsValid(InOwner) && Has(InOwner);
+    CK_ENSURE_IF_NOT(OwnerIsValid,
+        TEXT("Cannot AddTarget — Owner [{}] is invalid or is not an Aggro entity"), InOwner)
+    {}
+    if (NOT OwnerIsValid)
+    { return {}; }
+
+    const auto TargetIsValid = ck::IsValid(InTarget);
+    CK_ENSURE_IF_NOT(TargetIsValid,
+        TEXT("Cannot AddTarget onto Owner [{}] — the supplied AggroTarget is INVALID"), InOwner)
+    {}
+    if (NOT TargetIsValid)
+    { return {}; }
+
+    const auto TrackedEntity = UCk_Utils_AggroTarget_UE::Get_TrackedEntity(InTarget);
+
+    auto& TargetMap = InOwner.Get<ck::FFragment_Aggro_TargetMap>()._TargetsByTrackedEntity;
+
+    if (const auto Existing = TargetMap.Find(TrackedEntity))
+    { return *Existing; }
+
+    const auto& ForgetParams = InOwner.Get<ck::FFragment_Aggro_ForgetParams>();
+    if (ForgetParams.Get_TargetCapMode() == ECk_EnableDisable::Enable &&
+        TargetMap.Num() >= ForgetParams.Get_MaximumTrackedTargets())
+    {
+        if (ForgetParams.Get_EvictionPolicy() == ECk_Aggro_EvictionPolicy::RejectNew)
+        { return {}; }
+
+        ck_aggro_utils::Evict_LowestThreat(TargetMap);
+    }
+
+    RecordOfAggroTargets_Utils::AddIfMissing(InOwner);
+    RecordOfAggroTargets_Utils::Request_Connect(InOwner, InTarget, ECk_Record_LabelRequirementPolicy::Optional);
+    TargetMap.Add(TrackedEntity, InTarget);
+
+    InTarget.AddOrGet<ck::FTag_AggroTarget_NeedsSetup>();
+
+    return InTarget;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Aggro_UE::
+    Get_IsEnabled(
+        const FCk_Handle_Aggro& InAggro)
+    -> bool
+{
+    return NOT InAggro.Has<ck::FTag_Aggro_Disabled>();
+}
+
+auto
+    UCk_Utils_Aggro_UE::
+    Get_ActiveTarget(
+        const FCk_Handle_Aggro& InAggro)
+    -> FCk_Handle_AggroTarget
+{
+    return InAggro.Get<ck::FFragment_Aggro_Current>().Get_ActiveTarget();
+}
+
+auto
+    UCk_Utils_Aggro_UE::
+    TryGet_ActiveTrackedEntity(
         const FCk_Handle_Aggro& InAggro)
     -> FCk_Handle
 {
-    return ck::UAggroedEntity_Utils::Get_StoredEntity(InAggro);
+    const auto ActiveTarget = Get_ActiveTarget(InAggro);
+    if (ck::Is_NOT_Valid(ActiveTarget))
+    { return {}; }
+
+    return UCk_Utils_AggroTarget_UE::Get_TrackedEntity(ActiveTarget);
 }
 
 auto
     UCk_Utils_Aggro_UE::
-    Get_AggroScore(
-        const FCk_Handle_Aggro& InAggro)
-    -> float
+    TryGet_Target_ByTrackedEntity(
+        const FCk_Handle_Aggro& InAggro,
+        const FCk_Handle& InTrackedEntity)
+    -> FCk_Handle_AggroTarget
 {
-    return InAggro.Get<ck::FFragment_Aggro_Current>().Get_Score();
+    const auto& TargetMap = InAggro.Get<ck::FFragment_Aggro_TargetMap>().Get_TargetsByTrackedEntity();
+    if (const auto Found = TargetMap.Find(InTrackedEntity))
+    { return *Found; }
+
+    return {};
 }
 
 auto
     UCk_Utils_Aggro_UE::
-    Request_Exclude(
-        FCk_Handle_Aggro& InAggro)
+    Get_NumTrackedTargets(
+        const FCk_Handle_Aggro& InAggro)
+    -> int32
+{
+    return InAggro.Get<ck::FFragment_Aggro_TargetMap>().Get_TargetsByTrackedEntity().Num();
+}
+
+auto
+    UCk_Utils_Aggro_UE::
+    Get_Debug_EvaluationCount(
+        const FCk_Handle_Aggro& InAggro)
+    -> int64
+{
+    return InAggro.Get<ck::FFragment_Aggro_EvaluationClock>().Get_DebugEvaluationCount();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Aggro_UE::
+    ForEach_Target(
+        const FCk_Handle_Aggro& InAggro,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate)
+    -> TArray<FCk_Handle_AggroTarget>
+{
+    auto Targets = TArray<FCk_Handle_AggroTarget>{};
+
+    ForEach_Target(InAggro, [&](FCk_Handle_AggroTarget InTarget)
+    {
+        if (InDelegate.IsBound())
+        { InDelegate.Execute(InTarget, InOptionalPayload); }
+        else
+        { Targets.Emplace(InTarget); }
+    });
+
+    return Targets;
+}
+
+auto
+    UCk_Utils_Aggro_UE::
+    ForEach_Target(
+        const FCk_Handle_Aggro& InAggro,
+        const TFunction<void(FCk_Handle_AggroTarget)>& InFunc)
+    -> void
+{
+    RecordOfAggroTargets_Utils::ForEach_ValidEntry(InAggro, InFunc);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Aggro_UE::
+    Request_AddThreat(
+        FCk_Handle_Aggro& InAggro,
+        FCk_Request_Aggro_AddThreat InRequest)
     -> FCk_Handle_Aggro
 {
-    InAggro.AddOrGet<ck::FTag_Aggro_Excluded>();
-    InAggro.Get<ck::FFragment_Aggro_Current>() = ck::FFragment_Aggro_Current{std::numeric_limits<float>::max()};
+    CK_CALLSTACK_RECORD(ck::FFragment_Aggro_Requests, InAggro);
+
+    InAggro.AddOrGet<ck::FFragment_Aggro_Requests>()._Requests.Emplace(InRequest);
+
     return InAggro;
 }
 
 auto
     UCk_Utils_Aggro_UE::
-    Request_Include(
+    Request_RemoveTarget(
+        FCk_Handle_Aggro& InAggro,
+        const FCk_Handle& InTrackedEntity)
+    -> FCk_Handle_Aggro
+{
+    CK_CALLSTACK_RECORD(ck::FFragment_Aggro_Requests, InAggro);
+
+    InAggro.AddOrGet<ck::FFragment_Aggro_Requests>()._Requests.Emplace(
+        FCk_Request_Aggro_RemoveTarget{InTrackedEntity});
+
+    return InAggro;
+}
+
+auto
+    UCk_Utils_Aggro_UE::
+    Request_ClearAllTargets(
         FCk_Handle_Aggro& InAggro)
     -> FCk_Handle_Aggro
 {
-    InAggro.Try_Remove<ck::FTag_Aggro_Excluded>();
+    CK_CALLSTACK_RECORD(ck::FFragment_Aggro_Requests, InAggro);
+
+    InAggro.AddOrGet<ck::FFragment_Aggro_Requests>()._Requests.Emplace(
+        FCk_Request_Aggro_ClearAllTargets{});
+
+    return InAggro;
+}
+
+auto
+    UCk_Utils_Aggro_UE::
+    Request_SetActiveTarget(
+        FCk_Handle_Aggro& InAggro,
+        const FCk_Handle& InTrackedEntity)
+    -> FCk_Handle_Aggro
+{
+    CK_CALLSTACK_RECORD(ck::FFragment_Aggro_Requests, InAggro);
+
+    InAggro.AddOrGet<ck::FFragment_Aggro_Requests>()._Requests.Emplace(
+        FCk_Request_Aggro_SetActiveTarget{InTrackedEntity});
+
+    return InAggro;
+}
+
+auto
+    UCk_Utils_Aggro_UE::
+    Request_ClearActiveTarget(
+        FCk_Handle_Aggro& InAggro)
+    -> FCk_Handle_Aggro
+{
+    CK_CALLSTACK_RECORD(ck::FFragment_Aggro_Requests, InAggro);
+
+    InAggro.AddOrGet<ck::FFragment_Aggro_Requests>()._Requests.Emplace(
+        FCk_Request_Aggro_ClearActiveTarget{});
+
+    return InAggro;
+}
+
+auto
+    UCk_Utils_Aggro_UE::
+    Request_EnableDisable(
+        FCk_Handle_Aggro& InAggro,
+        ECk_EnableDisable InEnableDisable)
+    -> FCk_Handle_Aggro
+{
+    switch (InEnableDisable)
+    {
+        case ECk_EnableDisable::Enable:
+        {
+            // Counted decrement — one Enable cancels one Disable. A no-op when not disabled.
+            if (InAggro.Has<ck::FTag_Aggro_Disabled>())
+            { InAggro.Remove<ck::FTag_Aggro_Disabled>(); }
+            break;
+        }
+        case ECk_EnableDisable::Disable:
+        {
+            InAggro.Add<ck::FTag_Aggro_Disabled>();
+            break;
+        }
+    }
+
+    return InAggro;
+}
+
+auto
+    UCk_Utils_Aggro_UE::
+    Request_MarkPerceived_ByTrackedEntity(
+        FCk_Handle_Aggro& InAggro,
+        const FCk_Handle& InTrackedEntity,
+        FCk_Request_AggroTarget_MarkPerceived InRequest)
+    -> FCk_Handle_Aggro
+{
+    auto Target = TryGet_Target_ByTrackedEntity(InAggro, InTrackedEntity);
+    if (ck::IsValid(Target))
+    { UCk_Utils_AggroTarget_UE::Request_MarkPerceived(Target, InRequest); }
+
+    return InAggro;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Aggro_UE::
+    BindTo_OnTargetAcquired(
+        FCk_Handle_Aggro& InAggro,
+        const FCk_Delegate_Aggro_OnTargetAcquired& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle_Aggro
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnAggroTargetAcquired, InAggro, InDelegate, InBindingPolicy, InPostFireBehavior);
+
+    return InAggro;
+}
+
+auto
+    UCk_Utils_Aggro_UE::
+    UnbindFrom_OnTargetAcquired(
+        FCk_Handle_Aggro& InAggro,
+        const FCk_Delegate_Aggro_OnTargetAcquired& InDelegate)
+    -> FCk_Handle_Aggro
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnAggroTargetAcquired, InAggro, InDelegate);
+
+    return InAggro;
+}
+
+auto
+    UCk_Utils_Aggro_UE::
+    BindTo_OnActiveTargetChanged(
+        FCk_Handle_Aggro& InAggro,
+        const FCk_Delegate_Aggro_OnActiveTargetChanged& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle_Aggro
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnAggroActiveTargetChanged, InAggro, InDelegate, InBindingPolicy, InPostFireBehavior);
+
+    return InAggro;
+}
+
+auto
+    UCk_Utils_Aggro_UE::
+    UnbindFrom_OnActiveTargetChanged(
+        FCk_Handle_Aggro& InAggro,
+        const FCk_Delegate_Aggro_OnActiveTargetChanged& InDelegate)
+    -> FCk_Handle_Aggro
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnAggroActiveTargetChanged, InAggro, InDelegate);
+
+    return InAggro;
+}
+
+auto
+    UCk_Utils_Aggro_UE::
+    BindTo_OnTargetForgotten(
+        FCk_Handle_Aggro& InAggro,
+        const FCk_Delegate_Aggro_OnTargetForgotten& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle_Aggro
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnAggroTargetForgotten, InAggro, InDelegate, InBindingPolicy, InPostFireBehavior);
+
+    return InAggro;
+}
+
+auto
+    UCk_Utils_Aggro_UE::
+    UnbindFrom_OnTargetForgotten(
+        FCk_Handle_Aggro& InAggro,
+        const FCk_Delegate_Aggro_OnTargetForgotten& InDelegate)
+    -> FCk_Handle_Aggro
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnAggroTargetForgotten, InAggro, InDelegate);
+
     return InAggro;
 }
 

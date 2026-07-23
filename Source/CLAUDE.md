@@ -162,7 +162,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 |---|---|
 | CkAStar | Core,Ecs,EcsExt,Log |
 | CkActorRelay | Core,Ecs,EcsExt,Label,Log,Settings |
-| CkAggro | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
+| CkAggro | Core,Ecs,EcsExt,Label,Log,Record,Settings |
 | CkAnimation | Core,Ecs,EcsExt,Label,Log,Provider,Record |
 | CkAttribute | Core,Ecs,EcsExt,Label,Log,Provider,Record |
 | CkAudio | ActorRelay,Core,Cue,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer |

@@ -15,14 +15,11 @@ public class CkAggro : CkModuleRules
             "Engine",
             "GameplayTags",
 
-            "CkAttribute",
             "CkCore",
             "CkEcs",
             "CkEcsExt",
             "CkLabel",
             "CkLog",
-
-            "CkProvider",
             "CkRecord",
             "CkSettings",
         });
