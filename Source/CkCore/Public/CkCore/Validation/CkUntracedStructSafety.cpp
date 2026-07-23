@@ -23,6 +23,19 @@ namespace ck_untraced_struct_safety
             InStruct->GetPropertiesSize() == 0;
     }
 
+    auto IsApprovedGcIndependentStruct(const UScriptStruct* InStruct) -> bool
+    {
+        // Allowlist of native structs certified to retain no untraced UObject reference, matched by reflected path so
+        // foundational CkCore need not link against the modules that declare them (same rationale as IsAngelScriptStruct).
+        //
+        // FCk_Entity holds only an entt::entity integer id; its int32 mirror fields exist solely for the editor debugger
+        // and are compiled out under WITH_EDITORONLY_DATA. A cooked build therefore sees zero reflected fields, so the
+        // field-less-struct heuristic below would otherwise reject every dynamic fragment / EntityScript spawn-param that
+        // embeds an FCk_Handle (its _Entity member is an FCk_Entity). The type is provably GC-independent, not opaque.
+        static const auto ApprovedPaths = TSet<FString>{TEXT("/Script/CkEcs.Ck_Entity")};
+        return InStruct != nullptr && ApprovedPaths.Contains(InStruct->GetPathName());
+    }
+
     auto Accept() -> FResult
     { return {.Safety = EResult::GcIndependent}; }
 
@@ -143,6 +156,9 @@ namespace ck_untraced_struct_safety
         if (NOT HasReflectedProperty)
         {
             if (IsAngelScriptStruct(InStruct))
+            { return Accept(); }
+
+            if (IsApprovedGcIndependentStruct(InStruct))
             { return Accept(); }
 
             return Reject(EResult::UnprovenOpaque, InPath,
