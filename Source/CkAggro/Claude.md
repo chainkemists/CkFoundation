@@ -32,10 +32,15 @@ Two typesafe handles, two feature quartets:
 - The only always-ticking cost is **one chrono tick per owner** (the pacer). All per-target math runs
   in one Evaluate processor (`FProcessor_AggroTarget_Evaluate`), only on targets stamped
   `EvaluationPending` (staggered clock fire, or a threat request marking them dirty).
-- **Evaluate is currently SERIAL.** The plan's primary scale path is `TParallelProcessor`;
-  parallelization (worker-thread handle reconstruction for the cross-entity owner/transform reads,
-  deferred command buffer for the tag flips) is the perf follow-up — deliberately deferred so the
-  decay/score/forget/selection model could be proven + tested serially first. See the perf section.
+- **Evaluate is PARALLEL** (`TParallelProcessor`). The per-target body is registry READS (owner
+  threat/spatial/forget params, owner+tracked transforms via worker-thread handle reconstruction)
+  plus writes to the target's OWN Threat/Score fragments; every structural tag flip —
+  `WithinRetention` + `PendingForget` + `EvaluationPending` on self, `SelectionPending` on the owner —
+  is DEFERRED through the read-only handle's per-task command buffer and flushed single-threaded, so
+  no worker touches the registry structurally. `Now` is hoisted to the game thread once per tick
+  (`DoTick` override) — a worker-thread `UWorld` time read is neither safe nor needed (one world per
+  registry). The decay/score/forget/selection model was proven + tested serially first, then
+  parallelized behind the same test suite. Discipline mirror: `CkCrowdAgent_NeighborSync`.
 - Reactive bursts (a big hit, a taunt) stamp `EvaluationPending` + `SelectionPending`; the pump drains
   request → evaluate → select in the same frame.
 
@@ -66,7 +71,8 @@ mutations keep `Request_`. Two-phase admission for games that attach heuristic f
 target goes live: `UCk_Utils_AggroTarget_UE::Create` (unconnected) → attach fragments →
 `UCk_Utils_Aggro_UE::AddTarget` (admit).
 
-Owner signals (broadcast from serial processors only): `OnAggroTargetAcquired`,
+Owner signals (broadcast from serial processors only — the parallel Evaluate must NEVER broadcast a
+signal or fire a delegate; those hop to the game thread and are unsafe from a worker): `OnAggroTargetAcquired`,
 `OnAggroActiveTargetChanged`, `OnAggroTargetForgotten` (carries `FCk_Aggro_TargetForgottenInfo` — it
 outlives the dying entity). Target signal: `OnAggroThreatChanged` (request-driven changes only, never
 decay/eval spam).
