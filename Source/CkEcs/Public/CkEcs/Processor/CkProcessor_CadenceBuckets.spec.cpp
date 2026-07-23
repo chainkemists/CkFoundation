@@ -5,16 +5,14 @@
 //
 // The MISUSE surface is compile-time by design and therefore self-testing — each of these fails the BUILD,
 // so no runtime spec can (or needs to) exercise them:
-//   - ck::Seconds{0} / ck::Seconds{-1} / ck::Hz{0} / ck::Hz{-4}  -> consteval ctor poisons constant
+//   - ck::Seconds(0) / ck::Seconds(-1) / ck::Hz(0) / ck::Hz(-4)  -> consteval factory poisons constant
 //     evaluation via ck::detail::TickRate_MustBePositive (declared, never defined, not constexpr).
-//   - TickRate as a raw double / FCk_Time / any non-FTickRate type -> static_assert in
-//     TProcessorBase::Get_TickRate ("must be a ck tick-rate literal").
-//   - TickRate as a non-static (instance) member                  -> static_assert ("instance member").
-//   - TickRate as a type alias                                    -> static_assert ("declared as a TYPE").
-//   - TickRate as a non-constexpr static                          -> the positivity static_assert cannot
-//     constant-evaluate the read.
-//   - Set_TickRate called on a TickRate-trait-declaring processor -> static_assert in Set_TickRate's body
-//     (instantiated only when called).
+//   - TickRate as a raw double or any non-FCk_Time type          -> static_assert in
+//     TProcessorBase::Get_TickRate ("must be an FCk_Time").
+//   - TickRate as a non-static (instance) member                 -> static_assert ("instance member").
+//   - TickRate as a type alias                                   -> static_assert ("declared as a TYPE").
+//   - TickRate as a non-constexpr static                         -> fails to initialize the constexpr
+//     TraitValue read in Get_TickRate.
 //   - TickCatchUpPolicy as an instance member / wrong type        -> static_asserts in Get_TickCatchUpPolicy.
 
 #include "CkEcs/Processor/CkProcessor_CadenceBuckets.h"
@@ -32,25 +30,13 @@ namespace ck_cadence_buckets_spec
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Compile-time facts about the literal types — a broken one fails the build of this TU.
+// Compile-time facts — a broken one fails the build of this TU. (Interval VALUES are checked at runtime below:
+// FCk_Time::Get_Seconds is not constexpr, so a literal's value can't be static_assert'd.)
 
-static_assert(ck::Hz{4}.Get_IntervalSeconds() == 0.25,
-    "Hz is cycles-per-second: Hz{4} is a 0.25s interval");
-static_assert(ck::Seconds{0.25}.Get_IntervalSeconds() == 0.25,
-    "Seconds carries the interval verbatim");
-static_assert(ck::Hz{4}.Get_IntervalSeconds() == ck::Seconds{0.25}.Get_IntervalSeconds(),
-    "Hz{4} and Seconds{0.25} are the same rate");
-static_assert(ck::Hz{10}.Get_IntervalSeconds() == 0.1,
-    "Hz{10} is a 0.1s interval");
-static_assert(std::is_base_of_v<ck::FTickRate, ck::Hz> && std::is_base_of_v<ck::FTickRate, ck::Seconds>,
-    "both literal spellings share the FTickRate carrier TProcessorBase::Get_TickRate detects");
-
-// The bucket rate-trait mixin mirrors the interval table exactly; bucket 0 declares NO trait at all,
-// so bucket-0 processors hit the same ZeroSecond every-tick fast path as any unrated processor.
-static_assert(ck::detail::TCadenceBucketRateTraits<1>::TickRate.Get_IntervalSeconds() == ck::cadence::BucketIntervalsSeconds[1],
-    "bucket 1 trait mirrors the interval table");
-static_assert(ck::detail::TCadenceBucketRateTraits<6>::TickRate.Get_IntervalSeconds() == ck::cadence::BucketIntervalsSeconds[6],
-    "bucket 6 trait mirrors the interval table");
+static_assert(std::is_same_v<std::remove_const_t<decltype(ck::Hz(4))>, FCk_Time>,
+    "ck::Hz / ck::Seconds produce an FCk_Time — the type a processor's TickRate trait carries");
+static_assert(std::is_same_v<std::remove_const_t<decltype(ck::detail::TCadenceBucketRateTraits<1>::TickRate)>, FCk_Time>,
+    "a nonzero bucket's TickRate trait is an FCk_Time");
 static_assert(NOT ck_cadence_buckets_spec::HasTickRateMember<ck::detail::TCadenceBucketRateTraits<0>>,
     "bucket 0 must declare no TickRate trait (every-tick fast path)");
 
@@ -101,20 +87,16 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FCkTest_CadenceBuckets_TickRateLiterals::RunTest(const FString&)
 {
-    // The FCk_Time a rated processor's Tick materializes from the literal (Get_TickRate does
-    // FCk_Time{Literal.Get_IntervalSeconds()}) equals the directly-constructed FCk_Time.
-    TestTrue(TEXT("Hz{4} materializes as FCk_Time{0.25}"),
-        FCk_Time{ck::Hz{4}.Get_IntervalSeconds()} == FCk_Time{0.25});
-    TestTrue(TEXT("Seconds{0.25} materializes as FCk_Time{0.25}"),
-        FCk_Time{ck::Seconds{0.25}.Get_IntervalSeconds()} == FCk_Time{0.25});
-    TestTrue(TEXT("Hz{2} materializes as FCk_Time{0.5}"),
-        FCk_Time{ck::Hz{2}.Get_IntervalSeconds()} == FCk_Time{0.5});
-    TestTrue(TEXT("Hz{1} materializes as FCk_Time{1.0}"),
-        FCk_Time{ck::Hz{1}.Get_IntervalSeconds()} == FCk_Time{1.0});
+    // ck::Hz / ck::Seconds produce the FCk_Time interval a rated processor's Get_TickRate returns directly.
+    TestTrue(TEXT("Hz(4) == FCk_Time{0.25}"),         ck::Hz(4) == FCk_Time{0.25});
+    TestTrue(TEXT("Seconds(0.25) == FCk_Time{0.25}"), ck::Seconds(0.25) == FCk_Time{0.25});
+    TestTrue(TEXT("Hz(2) == FCk_Time{0.5}"),          ck::Hz(2) == FCk_Time{0.5});
+    TestTrue(TEXT("Hz(1) == FCk_Time{1.0}"),          ck::Hz(1) == FCk_Time{1.0});
+    TestTrue(TEXT("Hz(4) == Seconds(0.25)"),          ck::Hz(4) == ck::Seconds(0.25));
 
-    // Every nonzero bucket's trait materializes as exactly its interval-table FCk_Time.
-    TestTrue(TEXT("bucket 3 trait == FCk_Time{0.5}"),
-        FCk_Time{ck::detail::TCadenceBucketRateTraits<3>::TickRate.Get_IntervalSeconds()} == FCk_Time{ck::cadence::BucketIntervalsSeconds[3]});
+    // Every nonzero bucket's trait is exactly its interval-table FCk_Time.
+    TestTrue(TEXT("bucket 3 trait == interval table"),
+        ck::detail::TCadenceBucketRateTraits<3>::TickRate == FCk_Time{ck::cadence::BucketIntervalsSeconds[3]});
 
     return true;
 }
