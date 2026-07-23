@@ -52,18 +52,28 @@ on the child, maintained by whichever module owns that relationship — do not t
 vote onto this tag from outside the module. See `REFACTOR_MultiProjectorPoi.md` (CkPoi) and
 `PROMPT.md` decision #5 for why this boundary is deliberate.
 
-## Cadence
+## Cadence — bucketed sub-processors (reference consumer of `CkProcessor_CadenceBuckets.h`)
 
-`FFragment_VisibleRange_Current::_CadenceChrono`'s goal value IS the configured `_UpdateInterval`
-(0 = every tick). `FProcessor_VisibleRange_Update` runs every scheduler tick regardless (per-entity
-cadence can't be expressed as `TProcessorBase::_TickRate`, which throttles the whole processor
-uniformly) and gates its own work per entity via `FCk_Chrono::Tick(DeltaT, ECk_Chrono_OverflowPolicy::Wrap)`
-(`CkCore/Chrono/CkChrono.h`) — `Wrap` rolls the accumulator over on completion (carrying the remainder)
-and returns `Done` on the firing tick, whereas the default `Clamp` policy latches at Done for a one-shot.
-`Add` seeds the Chrono via `.Complete()` (already-Done) rather than fresh/zero, so the very first
-`Update` tick after composition always evaluates the just-supplied distance immediately — otherwise
-the entity would show the default (visible) state for up to one full `_UpdateInterval` before its
-true range state is ever computed. Matches the Compass/Minimap precedent's Setup-processor priming.
+`_UpdateInterval` is quantized at `Add` — toward FASTER, so an entity never updates slower than it
+asked for — into the fixed bucket set `ck::cadence::BucketIntervalsSeconds` ({0, 0.1, 0.25, 0.5, 1,
+2, 4}s; 0 = every tick), and the entity is tagged with `TTag_CadenceBucket<FCk_Handle_VisibleRange, N>`.
+`FProcessor_VisibleRange_Update_Bucket<N>` (one instantiation per bucket, `CkVisibleRange_Processor.h`)
+runs the shared eval body at its bucket's rate via the compile-time `TickRate` trait
+(`ck::Seconds{...}`, resolved by `TProcessorBase::Get_TickRate`); bucket 0 declares no trait and runs
+every tick. Due-ness is bucket-tag view membership — there is no per-entity chrono poll (the old
+`_CadenceChrono` + `Tick(dt, Wrap)` gate is retired; `FCk_Chrono`'s `Wrap` policy itself remains the
+documented few-entity throttle primitive in CkCore).
+
+Immediate-first-eval: for nonzero buckets, `Add` (via `cadence::AddCadenceTags`) transiently also
+joins bucket 0 and arms `TTag_CadenceFirstEval`; the eval body's first line
+(`cadence::TryConsume_FirstEval`) strips both after the first evaluation — so the entity never shows
+the default (visible) state for up to one full interval, the same guarantee the retired already-Done
+Chrono seed provided. Quantization is internal to `Add`; the public API (C++/BP/AS) is unchanged.
+
+Wake-alignment contract (load-bearing for `Ck_AutoTest_VisibleRange_CadenceGatesUpdates`): a bucket
+processor's accumulator FREEZES while its view is provably empty (the scheduler skips the whole
+dispatch), so a bucket's phase aligns to the moment its view last became non-empty. See
+`CkEcs/DESIGN_SubInstancedCadenceProcessors.md` for the full analysis and accepted consequences.
 
 ## Anti-patterns
 

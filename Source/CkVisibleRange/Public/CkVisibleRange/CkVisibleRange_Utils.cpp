@@ -1,10 +1,9 @@
 #include "CkVisibleRange_Utils.h"
 
-#include "CkCore/Chrono/CkChrono.h"
-
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+#include "CkEcs/Processor/CkProcessor_CadenceBuckets.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -16,15 +15,14 @@ auto
     -> FCk_Handle_VisibleRange
 {
     InHandle.Add<ck::FFragment_VisibleRange_Params>(InParams);
+    InHandle.Add<ck::FFragment_VisibleRange_Current>();
 
-    // Chrono seeded as already-Done (not fresh/zero) so the FIRST Update tick always evaluates the
-    // just-supplied distance immediately, regardless of _UpdateInterval — matching the proven
-    // Compass/Minimap precedent (their Setup processor force-primes _TimeSinceUpdate the same way).
-    // A fresh Chrono would leave the entity showing the default (visible) state for up to one full
-    // interval before its true range state is ever computed.
-    auto InitialChrono = FCk_Chrono{InParams.Get_UpdateInterval()};
-    InitialChrono.Complete();
-    InHandle.Add<ck::FFragment_VisibleRange_Current>(InitialChrono);
+    // Quantizes _UpdateInterval toward FASTER into the fixed bucket set and tags the entity with its
+    // bucket; for nonzero buckets it also arms the immediate first evaluation (transient bucket-0
+    // membership) so the entity never shows the default (visible) state for up to one full interval
+    // before its true range state is computed — the same guarantee the retired already-Done Chrono seed
+    // provided. Quantization is internal: the public API still takes any interval.
+    ck::cadence::AddCadenceTags<FCk_Handle_VisibleRange>(InHandle, InParams.Get_UpdateInterval());
 
     return Cast(InHandle);
 }
