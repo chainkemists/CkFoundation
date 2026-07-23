@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CkCore/Time/CkTime.h"
-#include "CkCore/TickRate/CkTickRate.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Processor/CkProcessor.h"
@@ -18,7 +17,7 @@
 // A feature whose entities re-evaluate on a per-entity interval quantizes that interval at Add into a fixed
 // bucket set (toward FASTER — an entity never updates slower than requested), tags the entity with its
 // bucket, and runs ONE sub-processor per bucket carrying the bucket's interval as its compile-time
-// `TickRate` trait (see ck::Hz / ck::Seconds in CkCore/TickRate/CkTickRate.h). "Due-ness" is membership in a rated
+// `TickRate` trait (see ck::time::Hz / ck::time::Seconds in CkCore/Time/CkTime.h). "Due-ness" is membership in a rated
 // sub-processor's view — no per-entity chrono poll. Vacant buckets are near-free via the scheduler's
 // empty-view skip. Bucket 0 (every tick) declares NO TickRate trait at all, so it is byte-identical to an
 // ordinary every-tick processor.
@@ -179,7 +178,7 @@ namespace ck
         template <int32 T_BucketIndex>
         struct TCadenceBucketRateTraits
         {
-            static constexpr FCk_Time TickRate = ck::Seconds(cadence::BucketIntervalsSeconds[T_BucketIndex]);
+            static constexpr FCk_Time TickRate = ck::time::Seconds(cadence::BucketIntervalsSeconds[T_BucketIndex]);
         };
 
         template <>

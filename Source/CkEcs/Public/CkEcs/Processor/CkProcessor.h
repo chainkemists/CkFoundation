@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CkCore/Time/CkTime.h"
-#include "CkCore/TickRate/CkTickRate.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
@@ -69,12 +68,12 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Compile-time tick-rate literals (ck::Hz / ck::Seconds -> FCk_Time) live in CkCore/TickRate/CkTickRate.h.
-    // A processor with a per-type FIXED cadence declares ONE line and the base derives everything else
-    // (throttle, ZeroSecond fast path, catch-up):
+    // FCk_Time factories (ck::time::Hz / ck::time::Seconds) live in CkCore/Time/CkTime.h. A processor with a
+    // per-type FIXED cadence declares ONE line and the base derives everything else (throttle, ZeroSecond fast
+    // path, catch-up):
     //
-    //     static constexpr FCk_Time TickRate = ck::Hz(4);          // 4 evaluations per second
-    //     static constexpr FCk_Time TickRate = ck::Seconds(0.25);  // the same rate, interval spelling
+    //     static constexpr FCk_Time TickRate = ck::time::Hz(4);          // 4 evaluations per second
+    //     static constexpr FCk_Time TickRate = ck::time::Seconds(0.25);  // the same rate, interval spelling
     //
     // Misuse is a compile error: a zero/negative rate fails in the consteval factory; a non-FCk_Time or a
     // non-static / non-constexpr TickRate fails a static_assert in Get_TickRate. Known residual: a processor
@@ -111,8 +110,8 @@ namespace ck
         Pump() -> int32;
 
         // The EFFECTIVE tick rate: the compile-time FCk_Time TickRate trait when the derived declares one
-        // (ck::Hz / ck::Seconds), else ZeroSecond (every tick). Cadence is fully compile-time — there is no
-        // runtime setter.
+        // (ck::time::Hz / ck::time::Seconds), else ZeroSecond (every tick). Cadence is fully compile-time —
+        // there is no runtime setter.
         auto
         Get_TickRate() const -> TimeType;
 
@@ -239,16 +238,16 @@ namespace ck
     {
         static_assert(requires { DerivedType::TickRate; } or NOT requires { &DerivedType::TickRate; },
             "TickRate declared as an instance member — the base can only see a compile-time trait. "
-            "Spell it: static constexpr FCk_Time TickRate = ck::Hz(N); (or ck::Seconds(S))");
+            "Spell it: static constexpr FCk_Time TickRate = ck::time::Hz(N); (or ck::time::Seconds(S))");
         static_assert(NOT requires { typename DerivedType::TickRate; },
             "TickRate declared as a TYPE — the trait is a value. "
-            "Spell it: static constexpr FCk_Time TickRate = ck::Hz(N); (or ck::Seconds(S))");
+            "Spell it: static constexpr FCk_Time TickRate = ck::time::Hz(N); (or ck::time::Seconds(S))");
 
         if constexpr (requires { DerivedType::TickRate; })
         {
             static_assert(std::is_same_v<std::remove_const_t<decltype(DerivedType::TickRate)>, FCk_Time>,
-                "TickRate must be an FCk_Time from ck::Hz(N) / ck::Seconds(S) — a raw number doesn't "
-                "self-document its unit. Spell it: static constexpr FCk_Time TickRate = ck::Hz(N);");
+                "TickRate must be an FCk_Time from ck::time::Hz(N) / ck::time::Seconds(S) — a raw number "
+                "doesn't self-document its unit. Spell it: static constexpr FCk_Time TickRate = ck::time::Hz(N);");
 
             // A non-constexpr TickRate fails to initialize this constexpr — the compiler names the non-constant
             // read. The consteval factory already rejected a non-positive rate at the declaration site.

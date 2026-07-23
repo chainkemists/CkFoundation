@@ -89,6 +89,72 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck::time
+{
+    namespace detail
+    {
+        // Declared, never defined, not constexpr: naming it in a factory's invalid branch makes a non-positive
+        // interval a COMPILE error (the diagnostic names this function). Never reached at runtime — the
+        // factories are consteval, so they are always constant-evaluated.
+        auto Interval_MustBePositive() -> void;
+    }
+
+    // Compile-time FCk_Time interval literals (consteval — FCk_Time's constructor is constexpr, so FCk_Time is
+    // itself the compile-time artifact). A processor spells its fixed cadence directly in the house time type:
+    //
+    //     static constexpr FCk_Time TickRate = ck::time::Hz(4);          // 4 evaluations per second
+    //     static constexpr FCk_Time TickRate = ck::time::Seconds(0.25);  // the same rate, interval spelling
+    //
+    // A non-positive interval is a compile error (an interval or rate of zero or below is nonsense — for an
+    // every-tick processor declare no TickRate at all). Runtime FCk_Time construction is FCk_Time{Seconds}.
+
+    consteval auto
+    Seconds(
+        double InSeconds)
+        -> FCk_Time
+    {
+        if (NOT (InSeconds > 0.0))
+        { detail::Interval_MustBePositive(); }
+
+        return FCk_Time{InSeconds};
+    }
+
+    consteval auto
+    Milliseconds(
+        double InMilliseconds)
+        -> FCk_Time
+    {
+        if (NOT (InMilliseconds > 0.0))
+        { detail::Interval_MustBePositive(); }
+
+        return FCk_Time{InMilliseconds / 1000.0};
+    }
+
+    consteval auto
+    Minutes(
+        double InMinutes)
+        -> FCk_Time
+    {
+        if (NOT (InMinutes > 0.0))
+        { detail::Interval_MustBePositive(); }
+
+        return FCk_Time{InMinutes * 60.0};
+    }
+
+    consteval auto
+    Hz(
+        double InCyclesPerSecond)
+        -> FCk_Time
+    {
+        if (NOT (InCyclesPerSecond > 0.0))
+        { detail::Interval_MustBePositive(); }
+
+        return FCk_Time{1.0 / InCyclesPerSecond};
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType, meta = (HasNativeMake = "/Script/CkCore.Ck_Utils_Time_UE:Make_WorldTime"))
 struct CKCORE_API FCk_WorldTime
 {
