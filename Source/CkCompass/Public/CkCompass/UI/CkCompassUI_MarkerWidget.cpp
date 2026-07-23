@@ -48,6 +48,16 @@ auto
 
 auto
     UCk_CompassUI_MarkerWidget::
+    NotifyShown()
+    -> void
+{
+    OnMarkerShown();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_CompassUI_MarkerWidget::
     NativePreConstruct()
     -> void
 {

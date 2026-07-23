@@ -41,6 +41,7 @@ auto
     }
 
     _Compass = InCompass;
+    _PendingShownPois.Reset();
 
     CK_ENSURE_IF_NOT(ck::IsValid(_Compass), TEXT("Invalid Compass Handle passed to CompassRibbon Widget [{}]"), this)
     { return; }
@@ -121,6 +122,7 @@ auto
         FCk_Compass_Entry InEntry)
     -> void
 {
+    _PendingShownPois.AddUnique(InEntry.Get_Poi());
     OnCompassEntryAppeared(InEntry);
 }
 
@@ -131,6 +133,7 @@ auto
         FCk_Handle_Poi InPoi)
     -> void
 {
+    _PendingShownPois.Remove(InPoi);
     OnCompassEntryDisappeared(InPoi);
 }
 
@@ -297,6 +300,7 @@ auto
         { Label->SetVisibility(ESlateVisibility::Hidden); }
 
         DoHideMarkersFromIndex(0);
+        _PendingShownPois.Reset();
 
         return;
     }
@@ -334,6 +338,10 @@ auto
             ck::IsValid(MarkerWidget))
         {
             MarkerWidget->InjectEntry(Entry);
+
+            // Fire the "shown" pop on the exact marker that landed on a newly-appeared POI (drains once).
+            if (_PendingShownPois.Remove(Entry.Get_Poi()) > 0)
+            { MarkerWidget->NotifyShown(); }
         }
         else if (const auto Icon = Cast<UImage>(Marker);
                  ck::IsValid(Icon))
