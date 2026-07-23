@@ -1,7 +1,6 @@
 #include "CkAggroTarget_Utils.h"
 
 #include "CkAggro/CkAggro_Fragment.h"
-#include "CkAggro/CkAggro_Scoring.h"
 #include "CkAggro/CkAggro_Utils.h"
 
 #include "CkCore/Time/CkTime_Utils.h"
@@ -133,13 +132,13 @@ auto
     const auto Now          = ck_aggro_target_utils::Get_Now(InTarget);
     const auto Elapsed      = (Now - Threat.Get_LastDecayTime()).Get_Seconds();
     const auto SecsSincePer = (Now - Perception.Get_LastPerceivedTime()).Get_Seconds();
-    const auto PerceptK     = ck_aggro::Compute_PerceptionDecayMultiplier(
+    const auto PerceptK     = UCk_Utils_Aggro_UE::Compute_PerceptionDecayMultiplier(
         InTarget.Has<ck::FTag_AggroTarget_Perceived>(), SecsSincePer,
         OwnerForget.Get_LostSightGraceDuration().Get_Seconds(), OwnerThreat.Get_UnperceivedThreatDecayMultiplier());
-    const auto RangeK       = ck_aggro::Compute_RangeDecayMultiplier(
+    const auto RangeK       = UCk_Utils_Aggro_UE::Compute_RangeDecayMultiplier(
         InTarget.Has<ck::FTag_AggroTarget_WithinRetention>(), OwnerSpatial.Get_OutOfRangeDecayMultiplier());
 
-    return ck_aggro::Compute_DecayedThreat(
+    return UCk_Utils_Aggro_UE::Compute_DecayedThreat(
         Threat.Get_Threat(), Elapsed, OwnerThreat.Get_ThreatDecayRate(), PerceptK, RangeK,
         OwnerThreat.Get_ThreatClampRange().Get_Min(), OwnerThreat.Get_ThreatClampRange().Get_Max());
 }

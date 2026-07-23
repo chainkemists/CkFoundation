@@ -1,6 +1,5 @@
 #include "CkAggro_Processor.h"
 
-#include "CkAggro/CkAggro_Scoring.h"
 #include "CkAggro/CkAggro_Utils.h"
 #include "CkAggro/CkAggroTarget_Utils.h"
 
@@ -274,7 +273,7 @@ namespace ck
             const auto& Score   = InCandidate.Get<ck::FFragment_AggroTarget_Score>();
             const auto  Tracked = ck::UAggroTarget_TrackedEntity_Utils::Get_StoredEntity(InCandidate);
 
-            return ck_aggro::Is_EligibleTarget(
+            return UCk_Utils_Aggro_UE::Is_EligibleTarget(
                 InCandidate.Has<ck::FTag_AggroTarget_CannotBecomeActive>(),
                 InCandidate.Has<ck::FTag_AggroTarget_PendingForget>(),
                 ck::IsValid(Tracked),
@@ -315,7 +314,7 @@ namespace ck
             const auto SecsSinceSwitch = (Now - InCurrent.Get_LastSwitchTime()).Get_Seconds();
             const auto SecsSinceStart  = (Now - InCurrent.Get_ActiveTargetStartTime()).Get_Seconds();
 
-            if (ck_aggro::Should_SwitchTarget(
+            if (UCk_Utils_Aggro_UE::Should_SwitchTarget(
                     BestScore, IncumbentScore, InSelectionParams.Get_CurrentTargetBias(),
                     InSelectionParams.Get_TargetSwitchThreshold(), SecsSinceSwitch,
                     InSelectionParams.Get_TargetSwitchCooldown().Get_Seconds(),
