@@ -237,6 +237,13 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_Handle_Compass _Compass;
 
+    /** POIs whose membership-add signal has fired but that have not yet been laid out + notified.
+     *  Drained in DoRefreshLayout so the "shown" pop plays on the exact marker that ends up showing the
+     *  new POI, wherever it sorts this frame. Seed entries never route through HandleEntryAppeared, so
+     *  binding a compass does NOT storm every already-in-range POI with a pop. */
+    UPROPERTY(Transient)
+    TArray<FCk_Handle_Poi> _PendingShownPois;
+
     UPROPERTY(Transient)
     TObjectPtr<UCanvasPanel> _RootCanvas;
 
