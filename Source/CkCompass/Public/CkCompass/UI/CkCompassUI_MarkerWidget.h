@@ -61,6 +61,12 @@ public:
     InjectEntry(
         const FCk_Compass_Entry& InEntry);
 
+    /** Called by the ribbon on the frame this pooled marker is laid out for a POI that JUST appeared on
+     *  the compass (a genuine membership-add). NOT fired for the seed set, per-frame refreshes, or a
+     *  pool index reshuffle — the one moment to play an attention "pop". */
+    void
+    NotifyShown();
+
 protected:
     /** Implement in Blueprint for anything bespoke (elevation arrows, priority badges, category styling). */
     UFUNCTION(BlueprintImplementableEvent,
@@ -68,6 +74,13 @@ protected:
     void
     OnEntryUpdated(
         const FCk_Compass_Entry& InEntry);
+
+    /** Implement in Blueprint / AngelScript to react when this marker's POI newly appears (play a scale
+     *  "pop", flash, etc.). Fires once per appearance, not every layout refresh. */
+    UFUNCTION(BlueprintImplementableEvent,
+              Category = "Ck|UI|Compass|Marker")
+    void
+    OnMarkerShown();
 
 protected:
     // Design-time: self-injects a preview entry so the marker WBP previews its own distance
