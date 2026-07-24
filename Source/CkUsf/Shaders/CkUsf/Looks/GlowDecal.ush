@@ -1,0 +1,27 @@
+// /CkUsf/Looks/GlowDecal.ush
+//
+// Fake-light splash: an emissive-only deferred decal. UV is the decal's
+// projection face (0-1), so the radial gradient — brightest at the center,
+// falling off to nothing at the rim — wraps whatever surface the decal box
+// intersects, reading as light cast onto it without any actual light. An
+// optional sine pulse keeps it alive; HDR intensity feeds bloom for the halo.
+// Pair with a UDecalComponent projecting toward the surface to be "lit".
+#pragma once
+#include "/CkUsf/Common.ush"
+
+FCkUsf_SurfaceOutput CkUsf_Look_GlowDecal(
+    FCkUsf_SurfaceInput In,
+    float3 GlowColor, float Intensity, float Falloff, float PulseSpeed, float PulseAmount)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float2 FromCenter = (In.UV - 0.5) * 2.0;
+    float  Dist  = saturate(length(FromCenter));
+    float  Pool  = pow(saturate(1.0 - Dist), Falloff);
+    float  Pulse = 1.0 + PulseAmount * sin(In.Time * PulseSpeed);
+
+    O.BaseColor     = float3(0.0, 0.0, 0.0);
+    O.EmissiveColor = GlowColor * (Intensity * Pool * Pulse);
+    O.Opacity       = Pool;
+    return O;
+}
