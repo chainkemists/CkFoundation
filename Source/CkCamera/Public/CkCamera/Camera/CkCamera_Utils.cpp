@@ -9,6 +9,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
+#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
@@ -362,16 +363,27 @@ namespace camera_materialize_detail
 
     // Every AddX below is adopt-or-add; rationale in CkCamera/CLAUDE.md.
 
+    // Tuners are reconstruct-only: a camera is client-local per-viewer state whose profile plus current
+    // possession own the authoritative post-load values, so hydration would run before the restored pawn is
+    // locally possessed. Mark new and legacy-adopted children alike so future saves omit them.
+    template <typename T_AttributeHandle>
+    static auto MarkReconstructOnly(T_AttributeHandle InAttribute) -> T_AttributeHandle
+    {
+        InAttribute.AddOrGet<ck::FTag_Snapshot_ReconstructOnly>();
+        return InAttribute;
+    }
+
     static auto AddFloat(FCk_Handle& InOwner, const FGameplayTag& InTag, float InBase) -> FCk_Handle_FloatAttribute
     {
         if (auto Existing = UCk_Utils_FloatAttribute_UE::TryGet(InOwner, InTag);
             ck::IsValid(Existing))
         {
             UCk_Utils_FloatAttribute_UE::Request_Override(Existing, InBase, Current, {});
-            return Existing;
+            return MarkReconstructOnly(Existing);
         }
 
-        return UCk_Utils_FloatAttribute_UE::Add(InOwner, FCk_Fragment_FloatAttribute_ParamsData{InTag, InBase}, NoRep);
+        return MarkReconstructOnly(UCk_Utils_FloatAttribute_UE::Add(InOwner,
+            FCk_Fragment_FloatAttribute_ParamsData{InTag, InBase}, NoRep));
     }
 
     static auto AddRange(FCk_Handle& InOwner, const FGameplayTag& InTag, const FCk_FloatRange& InRange) -> FCk_Handle_FloatAttribute
@@ -381,14 +393,14 @@ namespace camera_materialize_detail
         {
             UCk_Utils_FloatAttribute_UE::Request_Override(Existing, static_cast<float>(InRange.Get_Min()), Min, {});
             UCk_Utils_FloatAttribute_UE::Request_Override(Existing, static_cast<float>(InRange.Get_Max()), Max, {});
-            return Existing;
+            return MarkReconstructOnly(Existing);
         }
 
         auto Params = FCk_Fragment_FloatAttribute_ParamsData{InTag, 0.0f};
         Params.Set_MinMax(ECk_MinMax::MinMax);
         Params.Set_MinValue(static_cast<float>(InRange.Get_Min()));
         Params.Set_MaxValue(static_cast<float>(InRange.Get_Max()));
-        return UCk_Utils_FloatAttribute_UE::Add(InOwner, Params, NoRep);
+        return MarkReconstructOnly(UCk_Utils_FloatAttribute_UE::Add(InOwner, Params, NoRep));
     }
 
     static auto AddVector(FCk_Handle& InOwner, const FGameplayTag& InTag, const FVector& InBase) -> FCk_Handle_VectorAttribute
@@ -397,10 +409,11 @@ namespace camera_materialize_detail
             ck::IsValid(Existing))
         {
             UCk_Utils_VectorAttribute_UE::Request_Override(Existing, InBase, Current, {});
-            return Existing;
+            return MarkReconstructOnly(Existing);
         }
 
-        return UCk_Utils_VectorAttribute_UE::Add(InOwner, FCk_Fragment_VectorAttribute_ParamsData{InTag, InBase}, NoRep);
+        return MarkReconstructOnly(UCk_Utils_VectorAttribute_UE::Add(InOwner,
+            FCk_Fragment_VectorAttribute_ParamsData{InTag, InBase}, NoRep));
     }
 
     static auto AddRotator(FCk_Handle& InOwner, const FGameplayTag& InTag, const FRotator& InBase) -> FCk_Handle_RotatorAttribute
@@ -409,10 +422,11 @@ namespace camera_materialize_detail
             ck::IsValid(Existing))
         {
             UCk_Utils_RotatorAttribute_UE::Request_Override(Existing, InBase, Current, {});
-            return Existing;
+            return MarkReconstructOnly(Existing);
         }
 
-        return UCk_Utils_RotatorAttribute_UE::Add(InOwner, FCk_Fragment_RotatorAttribute_ParamsData{InTag, InBase}, NoRep);
+        return MarkReconstructOnly(UCk_Utils_RotatorAttribute_UE::Add(InOwner,
+            FCk_Fragment_RotatorAttribute_ParamsData{InTag, InBase}, NoRep));
     }
 
     static auto AddInt(FCk_Handle& InOwner, const FGameplayTag& InTag, int32 InBase) -> FCk_Handle_IntegerAttribute
@@ -421,10 +435,11 @@ namespace camera_materialize_detail
             ck::IsValid(Existing))
         {
             UCk_Utils_IntegerAttribute_UE::Request_Override(Existing, InBase, Current, {});
-            return Existing;
+            return MarkReconstructOnly(Existing);
         }
 
-        return UCk_Utils_IntegerAttribute_UE::Add(InOwner, FCk_Fragment_IntegerAttribute_ParamsData{InTag, InBase}, NoRep);
+        return MarkReconstructOnly(UCk_Utils_IntegerAttribute_UE::Add(InOwner,
+            FCk_Fragment_IntegerAttribute_ParamsData{InTag, InBase}, NoRep));
     }
 
     static auto AddRotation(

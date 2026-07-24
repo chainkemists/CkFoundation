@@ -143,9 +143,9 @@ which drives how it is re-created on load:
 
 | Provenance | Meaning |
 |---|---|
-| `EngineOwned` | boot infra / player rendezvous (keyed by save-key or player id) |
+| `EngineOwned` | boot infra / level-owned rendezvous (keyed by save-key or player id) |
 | `ConstructSpawned` | spawned + labeled by a construction script (keyed by label) |
-| `RuntimeSpawned` | spawned at runtime — a script class, or an actor bridge |
+| `RuntimeSpawned` | loader-owned runtime entity — a script class, or an explicitly snapshot-respawnable actor bridge |
 | `DefinitionBuilt` | rebuilt from a captured construction recipe |
 
 A saved entity that never maps to a live handle **and** wasn't deliberately skipped (boot-infra / unloadable) is
@@ -155,6 +155,10 @@ a `FCk_Snapshot_OrphanRecord` in `FCk_Snapshot_LoadReport::_Orphans` (`Snapshot/
 Phase 0). The reason bucket is one of: `owner-orphaned` (cascade), `owner-mapped-label-miss` (content/label drift),
 `savekey-miss`, `player-miss`, `bridge-never-linked` (actor spawned, bridge never linked), `unresolved-other`.
 These are **diagnostics only** — the loader does not act on them.
+
+`SaveKey` is stable identity, not provenance. A SaveKey-only level actor remains `EngineOwned` and must already
+exist in the fresh world. A bridged entity carrying `FFragment_ActorSpawnIntent` is explicitly snapshot-respawnable,
+so it is `RuntimeSpawned` even when keyed; capture retains the key and load republishes it after actor-first rebuild.
 
 ---
 

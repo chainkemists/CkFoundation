@@ -186,17 +186,24 @@ namespace ck::snapshot
 
         const auto SaveTypes = FCk_PersistenceHandlerRegistry::Get_SaveHandlerTypes();
 
-        const auto DoAnyProduce = [&](FCk_Handle& InEntity) -> bool
+        const auto FindFirstProducingType = [&](FCk_Handle& InEntity, FString* OutPayloadDetail = nullptr) -> const UScriptStruct*
         {
             for (const auto* Type : SaveTypes)
             {
                 const auto* Handler = FCk_PersistenceHandlerRegistry::Resolve(Type);
                 if (Handler == nullptr || NOT Handler->Produce)
                 { continue; }
-                if (Handler->Produce(InEntity).IsSet())
-                { return true; }
+                const auto Payload = Handler->Produce(InEntity);
+                if (NOT Payload.IsSet())
+                { continue; }
+                if (OutPayloadDetail != nullptr && Payload->GetScriptStruct() != nullptr)
+                {
+                    Payload->GetScriptStruct()->ExportText(
+                        *OutPayloadDetail, Payload->GetMemory(), nullptr, nullptr, PPF_None, nullptr);
+                }
+                return Type;
             }
-            return false;
+            return nullptr;
         };
 
         auto Classified = TArray<FClassified>{};
@@ -218,16 +225,21 @@ namespace ck::snapshot
             if (IsMarkedForDestruction(Handle))
             { continue; }
 
+            // Reconstruct-only: an explicit feature policy says this local/derived entity is rebuilt from authored
+            // defaults after load, so its payload omission is intentional and must not raise the audit below.
+            if (Handle.Has<ck::FTag_Snapshot_ReconstructOnly>())
+            { continue; }
+
             if (Handle.Has<ck::FTag_Snapshot_SaveTransient>())
             {
                 ++SaveTransientSkipped;
-                if (DoAnyProduce(Handle))
+                if (const auto* ProducingType = FindFirstProducingType(Handle))
                 {
                     ck::snapshot::Warning(
                         TEXT("v3 capture AUDIT: save-transient entity [{}] carries a hydration payload that will be "
-                             "DROPPED — either stop stamping FTag_Snapshot_SaveTransient on it or move the payload "
+                             "DROPPED (first producer [{}]) — either stop stamping FTag_Snapshot_SaveTransient on it or move the payload "
                              "to its persisted owner."),
-                        Handle);
+                        Handle, GetNameSafe(ProducingType));
                 }
                 continue;
             }
@@ -235,7 +247,14 @@ namespace ck::snapshot
             auto Provenance = ECk_Snapshot_V3_Provenance::RuntimeSpawned;
             auto bPersist = false;
 
-            if (Handle.Has<FFragment_SaveKey>() ||
+            // ActorSpawnIntent is the opt-in saying the stored actor recipe must rebuild this entity, so a bridged
+            // actor is loader-owned even when keyed; SaveKey stays orthogonal identity, republished after rebuild.
+            if (Handle.Has<ck::FFragment_SpawnRecipe>() && Handle.Has<FFragment_ActorSpawnIntent>())
+            {
+                Provenance = ECk_Snapshot_V3_Provenance::RuntimeSpawned;
+                bPersist = true;
+            }
+            else if (Handle.Has<FFragment_SaveKey>() ||
                 (InWorldOrNull != nullptr && TryResolve_PlayerRendezvous(Handle).IsSet()))
             {
                 Provenance = ECk_Snapshot_V3_Provenance::EngineOwned;
@@ -254,7 +273,8 @@ namespace ck::snapshot
                 else
                 {
                     ++UnlabeledSkipped;
-                    if (DoAnyProduce(Handle))
+                    auto PayloadDetail = FString{};
+                    if (const auto* ProducingType = FindFirstProducingType(Handle, &PayloadDetail))
                     {
                         ++UnlabeledWithPayloadAudit;
                         // Guarded: a registry-rooted entity legitimately has no lifetime owner (Get_LifetimeOwner ensures).
@@ -263,9 +283,9 @@ namespace ck::snapshot
                             : k_NoEntity;
                         ck::snapshot::Warning(
                             TEXT("v3 capture AUDIT: unlabeled ConstructSpawned child [{}] (owner saved-id [{}]) carries a "
-                                 "hydration payload that will be DROPPED — it is save-transient. Give the child a "
-                                 "GameplayLabel under its owner to persist it."),
-                            Handle, OwnerId);
+                                 "hydration payload that will be DROPPED (first producer [{}]) — it is save-transient. Give the child a "
+                                  "GameplayLabel under its owner to persist it. Payload detail: [{}]"),
+                            Handle, OwnerId, GetNameSafe(ProducingType), PayloadDetail);
                     }
                 }
             }
@@ -339,6 +359,9 @@ namespace ck::snapshot
                 case ECk_Snapshot_V3_Provenance::RuntimeSpawned:
                 {
                     ++RuntimeSpawnedCount;
+                    if (Handle.Has<FFragment_SaveKey>())
+                    { Entry.Set_SaveKey(Handle.Get<FFragment_SaveKey>().Get_Key()); }
+
                     const auto& Recipe = Handle.Get<ck::FFragment_SpawnRecipe>();
                     if (const auto ScriptClass = Recipe.Get_ScriptClass(); ck::IsValid(ScriptClass.Get()))
                     { Entry.Set_ScriptClassPath(ScriptClass->GetPathName()); }
