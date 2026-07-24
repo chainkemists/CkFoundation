@@ -649,4 +649,48 @@ namespace CkUsf
         StencilMax._DefaultScalar = 255.0;
         _Parameters.Add(StencilMax);
     }
+
+    // ---- Decal (fake-light splash) ----
+    // Emissive-only radial gradient projected onto whatever surface the decal box
+    // intersects — reads as light cast on the surface without any actual light.
+    // Apply via a UDecalComponent projecting toward the surface; tune per instance
+    // through a MID (Create_MID_ForLook).
+
+    asset GlowDecal of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/GlowDecal.ush";
+        _UshFunctionName = n"CkUsf_Look_GlowDecal";
+        _Domain          = ECk_Usf_Domain::Decal;
+        _LookName        = n"GlowDecal";
+
+        FCk_Usf_ParamDesc GlowColor;
+        GlowColor._Name = n"GlowColor";
+        GlowColor._Type = ECk_Usf_ParamType::Vector;
+        GlowColor._DefaultVector = FLinearColor(1.0, 1.0, 1.0, 1.0);
+        _Parameters.Add(GlowColor);
+
+        FCk_Usf_ParamDesc Intensity;
+        Intensity._Name = n"Intensity";
+        Intensity._Type = ECk_Usf_ParamType::Scalar;
+        Intensity._DefaultScalar = 5.0;
+        _Parameters.Add(Intensity);
+
+        FCk_Usf_ParamDesc Falloff;
+        Falloff._Name = n"Falloff";
+        Falloff._Type = ECk_Usf_ParamType::Scalar;
+        Falloff._DefaultScalar = 2.5;
+        _Parameters.Add(Falloff);
+
+        FCk_Usf_ParamDesc PulseSpeed;
+        PulseSpeed._Name = n"PulseSpeed";
+        PulseSpeed._Type = ECk_Usf_ParamType::Scalar;
+        PulseSpeed._DefaultScalar = 2.0;
+        _Parameters.Add(PulseSpeed);
+
+        FCk_Usf_ParamDesc PulseAmount;
+        PulseAmount._Name = n"PulseAmount";
+        PulseAmount._Type = ECk_Usf_ParamType::Scalar;
+        PulseAmount._DefaultScalar = 0.15;
+        _Parameters.Add(PulseAmount);
+    }
 }
