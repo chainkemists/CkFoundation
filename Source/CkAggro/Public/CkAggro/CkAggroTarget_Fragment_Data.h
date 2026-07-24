@@ -2,6 +2,7 @@
 
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Math/ValueRange/CkValueRange.h"
 #include "CkCore/Time/CkTime.h"
 
 #include "CkEcs/Handle/CkHandle.h"
@@ -12,25 +13,15 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Whether a per-target value overrides the owner-wide default, or inherits it.
-UENUM(BlueprintType)
-enum class ECk_Aggro_OverridePolicy : uint8
-{
-    UseOwnerDefault,
-    Override
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Aggro_OverridePolicy);
-
-// --------------------------------------------------------------------------------------------------------------------
-
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKAGGRO_API FCk_Handle_AggroTarget : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_AggroTarget); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_AggroTarget);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Per-target threat tuning. All optional — default-constructed means "inherit the owner's ThreatParams".
+// Self-sufficient threat model for one target — the full behavior the Evaluate processor reads, carried on the target
+// itself (not the owner). Every field has a sensible standalone default; the Aggro accelerant seeds these from its
+// owner-wide defaults at CreateTarget time.
 USTRUCT(BlueprintType)
 struct CKAGGRO_API FCk_AggroTarget_ThreatParams
 {
@@ -42,16 +33,31 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_Aggro_OverridePolicy _InitialThreatMode = ECk_Aggro_OverridePolicy::UseOwnerDefault;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, EditCondition = "_InitialThreatMode == ECk_Aggro_OverridePolicy::Override", EditConditionHides))
     float _InitialThreat = 1.0f;
 
     // Scales every incoming threat delta before it is applied to this target.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     float _ThreatMultiplier = 1.0f;
+
+    // Threat lost per second while perceived and within retention. 0 = threat never decays.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _ThreatDecayRate = 0.0f;
+
+    // Decay accelerator applied while the target is unperceived (and past its lost-sight grace).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = "1.0"))
+    float _UnperceivedThreatDecayMultiplier = 2.0f;
+
+    // Below this, the target is forgotten (ThreatDepleted).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _MinimumTrackedThreat = 0.01f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_FloatRange _ThreatClampRange = FCk_FloatRange(0.0, 10000.0);
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -62,11 +68,109 @@ private:
     float _MaximumThreatOverride = 0.0f;
 
 public:
-    CK_PROPERTY(_InitialThreatMode);
     CK_PROPERTY(_InitialThreat);
     CK_PROPERTY(_ThreatMultiplier);
+    CK_PROPERTY(_ThreatDecayRate);
+    CK_PROPERTY(_UnperceivedThreatDecayMultiplier);
+    CK_PROPERTY(_MinimumTrackedThreat);
+    CK_PROPERTY(_ThreatClampRange);
     CK_PROPERTY(_MaximumThreatOverrideMode);
     CK_PROPERTY(_MaximumThreatOverride);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Self-sufficient spatial tuning for one target (distances in cm). Retention is clamped >= Acquisition at Add time.
+USTRUCT(BlueprintType)
+struct CKAGGRO_API FCk_AggroTarget_SpatialParams
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_AggroTarget_SpatialParams);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _AcquisitionDistance = 3000.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _RetentionDistance = 4500.0f;
+
+    // Decay accelerator applied while the target is beyond retention.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = "1.0"))
+    float _OutOfRangeDecayMultiplier = 3.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _DistanceFalloffHalfDistance = 1500.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _DistanceFalloffExponent = 2.0f;
+
+    // Optional bounded "prefer whoever is in my face" band. Disabled by default.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _NearbyPreference = ECk_EnableDisable::Disable;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditCondition = "_NearbyPreference == ECk_EnableDisable::Enable", EditConditionHides))
+    float _NearbyPreferenceDistance = 600.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditCondition = "_NearbyPreference == ECk_EnableDisable::Enable", EditConditionHides))
+    float _NearbyPreferenceMultiplier = 1.5f;
+
+public:
+    CK_PROPERTY(_AcquisitionDistance);
+    CK_PROPERTY(_RetentionDistance);
+    CK_PROPERTY(_OutOfRangeDecayMultiplier);
+    CK_PROPERTY(_DistanceFalloffHalfDistance);
+    CK_PROPERTY(_DistanceFalloffExponent);
+    CK_PROPERTY(_NearbyPreference);
+    CK_PROPERTY(_NearbyPreferenceDistance);
+    CK_PROPERTY(_NearbyPreferenceMultiplier);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Self-sufficient forget tuning for one target (inactivity/age rules). Capacity/eviction is owner-level (CkAggro).
+USTRUCT(BlueprintType)
+struct CKAGGRO_API FCk_AggroTarget_ForgetParams
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_AggroTarget_ForgetParams);
+
+private:
+    // Forget the target this long after its last threat/perception refresh (ThreatTimeout).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Time _ForgetDuration = FCk_Time{10.0};
+
+    // After losing perception, threat keeps decaying at the perceived rate for this long before the unperceived
+    // accelerator kicks in.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Time _LostSightGraceDuration = FCk_Time{3.0};
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _MaximumTargetAgeMode = ECk_EnableDisable::Disable;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditCondition = "_MaximumTargetAgeMode == ECk_EnableDisable::Enable", EditConditionHides))
+    FCk_Time _MaximumTargetAge;
+
+public:
+    CK_PROPERTY(_ForgetDuration);
+    CK_PROPERTY(_LostSightGraceDuration);
+    CK_PROPERTY(_MaximumTargetAgeMode);
+    CK_PROPERTY(_MaximumTargetAge);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -133,8 +237,8 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Aggregate creation params for one tracked target. _TrackedEntity is the only essential — a default-constructed-
-// except-TrackedEntity value means "inherit every owner default".
+// Aggregate params for one target. All optional — a default-constructed value is a valid standalone target that tracks
+// itself; _TrackedEntity names the subject (Create sets it; Add defaults it to the entity the feature is added to).
 USTRUCT(BlueprintType)
 struct CKAGGRO_API FCk_Fragment_AggroTarget_ParamsData
 {
@@ -162,6 +266,14 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
+    FCk_AggroTarget_SpatialParams _SpatialParams;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_AggroTarget_ForgetParams _ForgetParams;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
     FCk_AggroTarget_ScoreParams _ScoreParams;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -169,15 +281,83 @@ private:
     FCk_AggroTarget_LifetimeParams _LifetimeParams;
 
 public:
-    CK_PROPERTY_GET(_TrackedEntity);
+    CK_PROPERTY(_TrackedEntity);
     CK_PROPERTY(_Instigator);
     CK_PROPERTY(_Source);
     CK_PROPERTY(_ThreatParams);
+    CK_PROPERTY(_SpatialParams);
+    CK_PROPERTY(_ForgetParams);
     CK_PROPERTY(_ScoreParams);
     CK_PROPERTY(_LifetimeParams);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_AggroTarget_ParamsData, _TrackedEntity);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Per-section override for Aggro::CreateTarget_WithParams. Each section is applied only when its toggle is on;
+// otherwise the owner's DefaultTargetParams value is used.
+USTRUCT(BlueprintType)
+struct CKAGGRO_API FCk_AggroTarget_ParamOverrides
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_AggroTarget_ParamOverrides);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, InlineEditConditionToggle))
+    bool _OverrideThreat = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditCondition = "_OverrideThreat"))
+    FCk_AggroTarget_ThreatParams _ThreatParams;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, InlineEditConditionToggle))
+    bool _OverrideSpatial = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditCondition = "_OverrideSpatial"))
+    FCk_AggroTarget_SpatialParams _SpatialParams;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, InlineEditConditionToggle))
+    bool _OverrideForget = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditCondition = "_OverrideForget"))
+    FCk_AggroTarget_ForgetParams _ForgetParams;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, InlineEditConditionToggle))
+    bool _OverrideScore = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditCondition = "_OverrideScore"))
+    FCk_AggroTarget_ScoreParams _ScoreParams;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, InlineEditConditionToggle))
+    bool _OverrideLifetime = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditCondition = "_OverrideLifetime"))
+    FCk_AggroTarget_LifetimeParams _LifetimeParams;
+
+public:
+    CK_PROPERTY(_OverrideThreat);
+    CK_PROPERTY(_ThreatParams);
+    CK_PROPERTY(_OverrideSpatial);
+    CK_PROPERTY(_SpatialParams);
+    CK_PROPERTY(_OverrideForget);
+    CK_PROPERTY(_ForgetParams);
+    CK_PROPERTY(_OverrideScore);
+    CK_PROPERTY(_ScoreParams);
+    CK_PROPERTY(_OverrideLifetime);
+    CK_PROPERTY(_LifetimeParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

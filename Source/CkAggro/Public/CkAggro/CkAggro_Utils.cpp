@@ -60,17 +60,20 @@ auto
     if (NOT HasTransform)
     { return {}; }
 
-    // Retention must never be tighter than acquisition, else a target could be admitted yet never retained.
-    auto SpatialParams = InParams.Get_SpatialParams();
-    if (SpatialParams.Get_RetentionDistance() < SpatialParams.Get_AcquisitionDistance())
-    { SpatialParams.Set_RetentionDistance(SpatialParams.Get_AcquisitionDistance()); }
+    // Clamp the default-target template's retention >= acquisition (AggroTarget::Add re-clamps per target too).
+    auto DefaultTargetParams = InParams.Get_DefaultTargetParams();
+    {
+        auto SpatialParams = DefaultTargetParams.Get_SpatialParams();
+        if (SpatialParams.Get_RetentionDistance() < SpatialParams.Get_AcquisitionDistance())
+        { SpatialParams.Set_RetentionDistance(SpatialParams.Get_AcquisitionDistance()); }
+        DefaultTargetParams.Set_SpatialParams(SpatialParams);
+    }
 
     RecordOfAggroTargets_Utils::AddIfMissing(InHandle);
 
-    InHandle.Add<ck::FFragment_Aggro_ThreatParams>(InParams.Get_ThreatParams());
+    InHandle.Add<ck::FFragment_Aggro_DefaultTargetParams>(DefaultTargetParams);
     InHandle.Add<ck::FFragment_Aggro_SelectionParams>(InParams.Get_SelectionParams());
-    InHandle.Add<ck::FFragment_Aggro_SpatialParams>(SpatialParams);
-    InHandle.Add<ck::FFragment_Aggro_ForgetParams>(InParams.Get_ForgetParams());
+    InHandle.Add<ck::FFragment_Aggro_CapParams>(InParams.Get_CapParams());
     InHandle.Add<ck::FFragment_Aggro_EvaluationParams>(InParams.Get_EvaluationParams());
 
     InHandle.Add<ck::FFragment_Aggro_Current>();
@@ -91,9 +94,51 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Aggro_UE, FCk_Handle_Aggro, ck
 
 auto
     UCk_Utils_Aggro_UE::
-    CreateTarget(
+    DoCreateTarget(
         FCk_Handle_Aggro& InOwner,
         const FCk_Fragment_AggroTarget_ParamsData& InParams)
+    -> FCk_Handle_AggroTarget
+{
+    const auto TrackedEntity  = InParams.Get_TrackedEntity();
+    const auto TrackedIsValid = ck::IsValid(TrackedEntity);
+    CK_ENSURE_IF_NOT(TrackedIsValid,
+        TEXT("Cannot CreateTarget on Aggro [{}] — the tracked entity is INVALID"), InOwner)
+    {}
+    if (NOT TrackedIsValid)
+    { return {}; }
+
+    auto& TargetMap = InOwner.Get<ck::FFragment_Aggro_TargetMap>()._TargetsByTrackedEntity;
+
+    if (const auto Existing = TargetMap.Find(TrackedEntity))
+    { return *Existing; }
+
+    const auto& CapParams = InOwner.Get<ck::FFragment_Aggro_CapParams>();
+    if (CapParams.Get_TargetCapMode() == ECk_EnableDisable::Enable &&
+        TargetMap.Num() >= CapParams.Get_MaximumTrackedTargets())
+    {
+        if (CapParams.Get_EvictionPolicy() == ECk_Aggro_EvictionPolicy::RejectNew)
+        { return {}; }
+
+        ck_aggro_utils::Evict_LowestThreat(TargetMap);
+    }
+
+    // AggroTarget::Create takes a generic owner (it knows nothing of the Aggro type) — it builds the child, Adds the
+    // feature, and connects it to the owner's record. We only own the O(1) dedupe map here.
+    auto OwnerHandle = FCk_Handle{InOwner};
+    auto NewTarget   = UCk_Utils_AggroTarget_UE::Create(OwnerHandle, InParams);
+    if (ck::Is_NOT_Valid(NewTarget))
+    { return {}; }
+
+    TargetMap.Add(TrackedEntity, NewTarget);
+
+    return NewTarget;
+}
+
+auto
+    UCk_Utils_Aggro_UE::
+    CreateTarget(
+        FCk_Handle_Aggro& InOwner,
+        FCk_Handle InTracked)
     -> FCk_Handle_AggroTarget
 {
     const auto OwnerIsValid = ck::IsValid(InOwner) && Has(InOwner);
@@ -103,62 +148,37 @@ auto
     if (NOT OwnerIsValid)
     { return {}; }
 
-    if (auto Existing = TryGet_Target_ByTrackedEntity(InOwner, InParams.Get_TrackedEntity());
-        ck::IsValid(Existing))
-    { return Existing; }
+    auto Params = InOwner.Get<ck::FFragment_Aggro_DefaultTargetParams>();
+    Params.Set_TrackedEntity(InTracked);
 
-    auto NewTarget = UCk_Utils_AggroTarget_UE::Create(InOwner, InParams);
-    if (ck::Is_NOT_Valid(NewTarget))
-    { return {}; }
-
-    return AddTarget(InOwner, NewTarget);
+    return DoCreateTarget(InOwner, Params);
 }
 
 auto
     UCk_Utils_Aggro_UE::
-    AddTarget(
+    CreateTarget_WithParams(
         FCk_Handle_Aggro& InOwner,
-        FCk_Handle_AggroTarget& InTarget)
+        FCk_Handle InTracked,
+        const FCk_AggroTarget_ParamOverrides& InOverrides)
     -> FCk_Handle_AggroTarget
 {
     const auto OwnerIsValid = ck::IsValid(InOwner) && Has(InOwner);
     CK_ENSURE_IF_NOT(OwnerIsValid,
-        TEXT("Cannot AddTarget — Owner [{}] is invalid or is not an Aggro entity"), InOwner)
+        TEXT("Cannot CreateTarget_WithParams — Owner [{}] is invalid or is not an Aggro entity"), InOwner)
     {}
     if (NOT OwnerIsValid)
     { return {}; }
 
-    const auto TargetIsValid = ck::IsValid(InTarget);
-    CK_ENSURE_IF_NOT(TargetIsValid,
-        TEXT("Cannot AddTarget onto Owner [{}] — the supplied AggroTarget is INVALID"), InOwner)
-    {}
-    if (NOT TargetIsValid)
-    { return {}; }
+    auto Params = InOwner.Get<ck::FFragment_Aggro_DefaultTargetParams>();
+    Params.Set_TrackedEntity(InTracked);
 
-    const auto TrackedEntity = UCk_Utils_AggroTarget_UE::Get_TrackedEntity(InTarget);
+    if (InOverrides.Get_OverrideThreat())   { Params.Set_ThreatParams(InOverrides.Get_ThreatParams()); }
+    if (InOverrides.Get_OverrideSpatial())  { Params.Set_SpatialParams(InOverrides.Get_SpatialParams()); }
+    if (InOverrides.Get_OverrideForget())   { Params.Set_ForgetParams(InOverrides.Get_ForgetParams()); }
+    if (InOverrides.Get_OverrideScore())    { Params.Set_ScoreParams(InOverrides.Get_ScoreParams()); }
+    if (InOverrides.Get_OverrideLifetime()) { Params.Set_LifetimeParams(InOverrides.Get_LifetimeParams()); }
 
-    auto& TargetMap = InOwner.Get<ck::FFragment_Aggro_TargetMap>()._TargetsByTrackedEntity;
-
-    if (const auto Existing = TargetMap.Find(TrackedEntity))
-    { return *Existing; }
-
-    const auto& ForgetParams = InOwner.Get<ck::FFragment_Aggro_ForgetParams>();
-    if (ForgetParams.Get_TargetCapMode() == ECk_EnableDisable::Enable &&
-        TargetMap.Num() >= ForgetParams.Get_MaximumTrackedTargets())
-    {
-        if (ForgetParams.Get_EvictionPolicy() == ECk_Aggro_EvictionPolicy::RejectNew)
-        { return {}; }
-
-        ck_aggro_utils::Evict_LowestThreat(TargetMap);
-    }
-
-    RecordOfAggroTargets_Utils::AddIfMissing(InOwner);
-    RecordOfAggroTargets_Utils::Request_Connect(InOwner, InTarget, ECk_Record_LabelRequirementPolicy::Optional);
-    TargetMap.Add(TrackedEntity, InTarget);
-
-    InTarget.AddOrGet<ck::FTag_AggroTarget_NeedsSetup>();
-
-    return InTarget;
+    return DoCreateTarget(InOwner, Params);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
