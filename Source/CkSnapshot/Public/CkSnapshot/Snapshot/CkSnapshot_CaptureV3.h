@@ -17,7 +17,8 @@ namespace ck::snapshot
 {
     // Registry-level core: classifies + serializes into InByteWriter and stamps InOutHeader's census. InWorldOrNull
     // enables the EngineOwned player-pawn rendezvous (rule 2) — pass null on the bare-registry path (SaveKey-only).
-    // A recipe/payload handle ref to a non-persisted entity fires a loud ensure (unsupported on v3).
+    // Handle refs inside recipe params / payloads route through FSnapshotContext::Snapshot_Handle (ck::snapshot::
+    // RemapHandles); a params handle referencing a non-persisted entity fires a loud ensure (unsupported on v3).
     CKSNAPSHOT_API auto
     Run_CaptureV3_Registry(
         ck::SnapshotRegistryType& InRegistry,

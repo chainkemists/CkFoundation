@@ -124,8 +124,10 @@ private:
     // Saved-id of the lifetime owner (ConstructSpawned + RuntimeSpawned). 0xFFFFFFFF == none.
     UPROPERTY() uint32                      _LifetimeOwnerSavedId = 0xFFFFFFFFu;
 
-    // ---- EngineOwned rendezvous (exactly one is set) ----
-    UPROPERTY() FGuid                       _SaveKey;    // level-actor SaveKey GUID (zero == unset)
+    // ---- Stable identity / EngineOwned rendezvous ----
+    // SaveKey is orthogonal to provenance: EngineOwned level actors rendezvous through it, while explicitly
+    // respawnable RuntimeSpawned actors retain and republish it after loader-owned rebuild.
+    UPROPERTY() FGuid                       _SaveKey;    // stable entity GUID (zero == unset)
     UPROPERTY() FString                     _PlayerId;   // PlayerState unique-id string (empty == standalone player 0)
 
     // ---- ConstructSpawned identity ----
@@ -210,7 +212,14 @@ public:
     CK_GENERATED_BODY(FCk_Snapshot_HeaderV3);
 
 public:
-    static constexpr uint16 CurrentFormatVersion = 4;
+    // v3 rebuild+hydrate format version history:
+    //   3 — initial rebuild+hydrate format (per-entity recipe/identity table + minimal hydration payloads).
+    //   4 — added FCk_Snapshot_V3_EntityEntry::_SavedWorldTransform (G1 Transform parity): every persisted entity's
+    //       world transform round-trips, not just bridged RuntimeSpawned actors' spawn seed. No cross-version
+    //       compatibility — a v3 stream is rejected by Request_Load (loud, clean abort — see CkSnapshot_Subsystem.cpp).
+    //   5 — SaveKey became provenance-orthogonal: explicitly respawnable bridged actors are RuntimeSpawned and carry
+    //       their stable key through rebuild. Version 4 rows classified that shape as EngineOwned and lack its recipe.
+    static constexpr uint16 CurrentFormatVersion = 5;
 
 private:
     UPROPERTY() uint16          _FormatVersion = CurrentFormatVersion;
