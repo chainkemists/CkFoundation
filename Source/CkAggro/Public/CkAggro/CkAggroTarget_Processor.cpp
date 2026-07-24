@@ -55,16 +55,9 @@ namespace ck
 
         const auto Now   = ck_aggro_target_processor::Get_Now(InTarget);
         auto       Owner = UCk_Utils_Aggro_UE::Cast(InTargetInfo.Get_AggroOwner());
-        const auto OwnerHasThreatParams = ck::IsValid(Owner) && Owner.Has<ck::FFragment_Aggro_ThreatParams>();
 
-        // Resolve the seed threat: per-target override, else the owner default.
-        auto InitialThreat = InThreatParams.Get_InitialThreat();
-        if (InThreatParams.Get_InitialThreatMode() == ECk_Aggro_OverridePolicy::UseOwnerDefault && OwnerHasThreatParams)
-        { InitialThreat = Owner.Get<ck::FFragment_Aggro_ThreatParams>().Get_InitialThreat(); }
-
-        // Clamp into the owner's range, then honor an optional per-target maximum.
-        if (OwnerHasThreatParams)
-        { InitialThreat = Owner.Get<ck::FFragment_Aggro_ThreatParams>().Get_ThreatClampRange().Get_ClampedValue(InitialThreat); }
+        // Seed threat from the target's OWN params — clamp into its range, then honor an optional per-target maximum.
+        auto InitialThreat = InThreatParams.Get_ThreatClampRange().Get_ClampedValue(InThreatParams.Get_InitialThreat());
         if (InThreatParams.Get_MaximumThreatOverrideMode() == ECk_EnableDisable::Enable)
         { InitialThreat = FMath::Min(InitialThreat, InThreatParams.Get_MaximumThreatOverride()); }
 
@@ -126,46 +119,34 @@ namespace ck
             const FCk_Request_AggroTarget_AddThreat& InRequest)
         -> void
     {
-        const auto Now      = ck_aggro_target_processor::Get_Now(InTarget);
-        auto       Owner    = UCk_Utils_Aggro_UE::Cast(InTargetInfo.Get_AggroOwner());
+        const auto Now       = ck_aggro_target_processor::Get_Now(InTarget);
+        auto       Owner     = UCk_Utils_Aggro_UE::Cast(InTargetInfo.Get_AggroOwner());
         const auto OldThreat = InThreat._Threat;
 
-        const auto OwnerReady = ck::IsValid(Owner)
-            && Owner.Has<ck::FFragment_Aggro_ThreatParams>()
-            && Owner.Has<ck::FFragment_Aggro_SpatialParams>()
-            && Owner.Has<ck::FFragment_Aggro_ForgetParams>();
+        // Self-sufficient: decay + clamp from the target's OWN params (serial processor — read the extra pieces direct).
+        const auto& SpatialP = InTarget.Get<ck::FFragment_AggroTarget_SpatialParams>();
+        const auto& ForgetP  = InTarget.Get<ck::FFragment_AggroTarget_ForgetParams>();
 
-        if (OwnerReady)
-        {
-            const auto& OwnerThreat  = Owner.Get<ck::FFragment_Aggro_ThreatParams>();
-            const auto& OwnerSpatial = Owner.Get<ck::FFragment_Aggro_SpatialParams>();
-            const auto& OwnerForget  = Owner.Get<ck::FFragment_Aggro_ForgetParams>();
+        const auto ClampMin     = InThreatParams.Get_ThreatClampRange().Get_Min();
+        const auto ClampMaxBase = InThreatParams.Get_ThreatClampRange().Get_Max();
+        const auto ClampMax     = InThreatParams.Get_MaximumThreatOverrideMode() == ECk_EnableDisable::Enable
+            ? FMath::Min<double>(ClampMaxBase, InThreatParams.Get_MaximumThreatOverride())
+            : ClampMaxBase;
 
-            const auto ClampMin     = OwnerThreat.Get_ThreatClampRange().Get_Min();
-            const auto ClampMaxBase = OwnerThreat.Get_ThreatClampRange().Get_Max();
-            const auto ClampMax     = InThreatParams.Get_MaximumThreatOverrideMode() == ECk_EnableDisable::Enable
-                ? FMath::Min<double>(ClampMaxBase, InThreatParams.Get_MaximumThreatOverride())
-                : ClampMaxBase;
+        // Advance the analytic decay anchor up to Now before adding the delta.
+        const auto Elapsed      = (Now - InThreat._LastDecayTime).Get_Seconds();
+        const auto SecsSincePer = (Now - InPerception._LastPerceivedTime).Get_Seconds();
+        const auto PerceptK     = UCk_Utils_Aggro_UE::Compute_PerceptionDecayMultiplier(
+            InTarget.Has<ck::FTag_AggroTarget_Perceived>(), SecsSincePer,
+            ForgetP.Get_LostSightGraceDuration().Get_Seconds(), InThreatParams.Get_UnperceivedThreatDecayMultiplier());
+        const auto RangeK       = UCk_Utils_Aggro_UE::Compute_RangeDecayMultiplier(
+            InTarget.Has<ck::FTag_AggroTarget_WithinRetention>(), SpatialP.Get_OutOfRangeDecayMultiplier());
 
-            // Advance the analytic decay anchor up to Now before adding the delta.
-            const auto Elapsed      = (Now - InThreat._LastDecayTime).Get_Seconds();
-            const auto SecsSincePer = (Now - InPerception._LastPerceivedTime).Get_Seconds();
-            const auto PerceptK     = UCk_Utils_Aggro_UE::Compute_PerceptionDecayMultiplier(
-                InTarget.Has<ck::FTag_AggroTarget_Perceived>(), SecsSincePer,
-                OwnerForget.Get_LostSightGraceDuration().Get_Seconds(), OwnerThreat.Get_UnperceivedThreatDecayMultiplier());
-            const auto RangeK       = UCk_Utils_Aggro_UE::Compute_RangeDecayMultiplier(
-                InTarget.Has<ck::FTag_AggroTarget_WithinRetention>(), OwnerSpatial.Get_OutOfRangeDecayMultiplier());
+        InThreat._Threat = UCk_Utils_Aggro_UE::Compute_DecayedThreat(
+            InThreat._Threat, Elapsed, InThreatParams.Get_ThreatDecayRate(), PerceptK, RangeK, ClampMin, ClampMax);
 
-            InThreat._Threat = UCk_Utils_Aggro_UE::Compute_DecayedThreat(
-                InThreat._Threat, Elapsed, OwnerThreat.Get_ThreatDecayRate(), PerceptK, RangeK, ClampMin, ClampMax);
-
-            const auto Delta = InRequest.Get_ThreatDelta() * InThreatParams.Get_ThreatMultiplier();
-            InThreat._Threat = static_cast<float>(FMath::Clamp<double>(static_cast<double>(InThreat._Threat) + Delta, ClampMin, ClampMax));
-        }
-        else
-        {
-            InThreat._Threat = InThreat._Threat + InRequest.Get_ThreatDelta() * InThreatParams.Get_ThreatMultiplier();
-        }
+        const auto Delta = InRequest.Get_ThreatDelta() * InThreatParams.Get_ThreatMultiplier();
+        InThreat._Threat = static_cast<float>(FMath::Clamp<double>(static_cast<double>(InThreat._Threat) + Delta, ClampMin, ClampMax));
 
         InThreat._LastDecayTime = Now;
         InThreat._LastThreatTime = Now;
@@ -193,21 +174,14 @@ namespace ck
         auto       Owner     = UCk_Utils_Aggro_UE::Cast(InTargetInfo.Get_AggroOwner());
         const auto OldThreat = InThreat._Threat;
 
-        if (ck::IsValid(Owner) && Owner.Has<ck::FFragment_Aggro_ThreatParams>())
-        {
-            const auto& OwnerThreat  = Owner.Get<ck::FFragment_Aggro_ThreatParams>();
-            const auto  ClampMin     = OwnerThreat.Get_ThreatClampRange().Get_Min();
-            const auto  ClampMaxBase = OwnerThreat.Get_ThreatClampRange().Get_Max();
-            const auto  ClampMax     = InThreatParams.Get_MaximumThreatOverrideMode() == ECk_EnableDisable::Enable
-                ? FMath::Min<double>(ClampMaxBase, InThreatParams.Get_MaximumThreatOverride())
-                : ClampMaxBase;
+        // Clamp into the target's OWN range, honoring an optional per-target maximum.
+        const auto ClampMin     = InThreatParams.Get_ThreatClampRange().Get_Min();
+        const auto ClampMaxBase = InThreatParams.Get_ThreatClampRange().Get_Max();
+        const auto ClampMax     = InThreatParams.Get_MaximumThreatOverrideMode() == ECk_EnableDisable::Enable
+            ? FMath::Min<double>(ClampMaxBase, InThreatParams.Get_MaximumThreatOverride())
+            : ClampMaxBase;
 
-            InThreat._Threat = static_cast<float>(FMath::Clamp<double>(InRequest.Get_Threat(), ClampMin, ClampMax));
-        }
-        else
-        {
-            InThreat._Threat = InRequest.Get_Threat();
-        }
+        InThreat._Threat = static_cast<float>(FMath::Clamp<double>(InRequest.Get_Threat(), ClampMin, ClampMax));
 
         // Absolute set — reset the decay anchor to Now.
         InThreat._LastDecayTime  = Now;
@@ -324,6 +298,8 @@ namespace ck
             const FFragment_AggroTarget_ThreatParams& InThreatParams,
             const FFragment_AggroTarget_ScoreParams& InScoreParams,
             const FFragment_AggroTarget_LifetimeParams& InLifetimeParams,
+            const FFragment_AggroTarget_SpatialParams& InSpatialParams,
+            const FFragment_AggroTarget_ForgetParams& InForgetParams,
             const FFragment_AggroTarget_TargetInfo& InTargetInfo,
             const FFragment_AggroTarget_Perception& InPerception,
             FFragment_AggroTarget_Threat& InThreat,
@@ -332,47 +308,40 @@ namespace ck
     {
         const auto Now = _Now;
 
-        // Worker thread: reconstruct the full self handle for the holder/util reads below (reads only; the handle
-        // debug-info attach self-skips inside the parallel region). Owner reads/validity go through the stored
-        // owner handle; every structural mutation is DEFERRED through InTarget's per-task command buffer.
+        // Worker thread: reconstruct the full self handle for the holder read below (reads only; the handle debug-info
+        // attach self-skips inside the parallel region). The target is SELF-SUFFICIENT — all params come from its own
+        // fragments (the view); the owner is touched ONLY for its transform (distance) and the deferred re-select stamp.
+        // Every structural mutation is DEFERRED through InTarget's per-task command buffer.
         const auto SelfHandle = ck::MakeHandle(InTarget.Get_Entity(), _TransientEntity);
         auto       Owner      = UCk_Utils_Aggro_UE::Cast(InTargetInfo.Get_AggroOwner());
         const auto Tracked    = ck::UAggroTarget_TrackedEntity_Utils::Get_StoredEntity(SelfHandle);
+        const auto OwnerValid = ck::IsValid(Owner);
 
-        const auto OwnerReady = ck::IsValid(Owner)
-            && Owner.Has<ck::FFragment_Aggro_ThreatParams>()
-            && Owner.Has<ck::FFragment_Aggro_SpatialParams>()
-            && Owner.Has<ck::FFragment_Aggro_ForgetParams>();
-
-        // Invalid tracked (or a gone owner) -> forget (bypasses CannotBeForgotten), stop.
-        if (ck::Is_NOT_Valid(Tracked) || NOT OwnerReady)
+        // Invalid tracked -> forget (bypasses CannotBeForgotten), stop. A missing owner is fine (standalone target).
+        if (ck::Is_NOT_Valid(Tracked))
         {
             InTarget.DeferAddOrGet<ck::FTag_AggroTarget_PendingForget>();
             InTarget.DeferTry_Remove<ck::FTag_AggroTarget_EvaluationPending>();
             return;
         }
 
-        const auto& OwnerThreat  = Owner.Get<ck::FFragment_Aggro_ThreatParams>();
-        const auto& OwnerSpatial = Owner.Get<ck::FFragment_Aggro_SpatialParams>();
-        const auto& OwnerForget  = Owner.Get<ck::FFragment_Aggro_ForgetParams>();
-
-        // Distance owner<->tracked. A transformless tracked entity is treated as co-located (always in range).
-        const auto Distance = UCk_Utils_Transform_UE::Has(Tracked)
+        // Distance owner<->tracked. No owner (standalone) or a transformless owner/tracked -> co-located (in range).
+        const auto Distance = (OwnerValid && UCk_Utils_Transform_UE::Has(Owner) && UCk_Utils_Transform_UE::Has(Tracked))
             ? FVector::Dist(UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(Owner),
                             UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(Tracked))
             : 0.0;
 
         // Retention-band tag (churn bounded to eval cadence at band crossings). Has() reads pre-flush state; the
         // flip is deferred — consistent with the serial read-then-mutate since each target is a single task.
-        const auto IsWithinRetention = Distance <= OwnerSpatial.Get_RetentionDistance();
+        const auto IsWithinRetention = Distance <= InSpatialParams.Get_RetentionDistance();
         if (IsWithinRetention && NOT InTarget.Has<ck::FTag_AggroTarget_WithinRetention>())
         { InTarget.DeferAdd<ck::FTag_AggroTarget_WithinRetention>(); }
         else if (NOT IsWithinRetention && InTarget.Has<ck::FTag_AggroTarget_WithinRetention>())
         { InTarget.DeferTry_Remove<ck::FTag_AggroTarget_WithinRetention>(); }
 
-        // Analytic decay -> advance the anchor.
-        const auto ClampMin     = OwnerThreat.Get_ThreatClampRange().Get_Min();
-        const auto ClampMaxBase = OwnerThreat.Get_ThreatClampRange().Get_Max();
+        // Analytic decay from the target's own params -> advance the anchor.
+        const auto ClampMin     = InThreatParams.Get_ThreatClampRange().Get_Min();
+        const auto ClampMaxBase = InThreatParams.Get_ThreatClampRange().Get_Max();
         const auto ClampMax     = InThreatParams.Get_MaximumThreatOverrideMode() == ECk_EnableDisable::Enable
             ? FMath::Min<double>(ClampMaxBase, InThreatParams.Get_MaximumThreatOverride())
             : ClampMaxBase;
@@ -381,19 +350,19 @@ namespace ck
         const auto SecsSincePer = (Now - InPerception.Get_LastPerceivedTime()).Get_Seconds();
         const auto PerceptK     = UCk_Utils_Aggro_UE::Compute_PerceptionDecayMultiplier(
             InTarget.Has<ck::FTag_AggroTarget_Perceived>(), SecsSincePer,
-            OwnerForget.Get_LostSightGraceDuration().Get_Seconds(), OwnerThreat.Get_UnperceivedThreatDecayMultiplier());
-        const auto RangeK       = UCk_Utils_Aggro_UE::Compute_RangeDecayMultiplier(IsWithinRetention, OwnerSpatial.Get_OutOfRangeDecayMultiplier());
+            InForgetParams.Get_LostSightGraceDuration().Get_Seconds(), InThreatParams.Get_UnperceivedThreatDecayMultiplier());
+        const auto RangeK       = UCk_Utils_Aggro_UE::Compute_RangeDecayMultiplier(IsWithinRetention, InSpatialParams.Get_OutOfRangeDecayMultiplier());
 
         InThreat._Threat = UCk_Utils_Aggro_UE::Compute_DecayedThreat(
-            InThreat._Threat, Elapsed, OwnerThreat.Get_ThreatDecayRate(), PerceptK, RangeK, ClampMin, ClampMax);
+            InThreat._Threat, Elapsed, InThreatParams.Get_ThreatDecayRate(), PerceptK, RangeK, ClampMin, ClampMax);
         InThreat._LastDecayTime = Now;
 
         // Score (raw; no incumbent bias baked in).
         const auto DistFactor   = UCk_Utils_Aggro_UE::Compute_DistanceFactor(
-            Distance, OwnerSpatial.Get_DistanceFalloffHalfDistance(), OwnerSpatial.Get_DistanceFalloffExponent());
+            Distance, InSpatialParams.Get_DistanceFalloffHalfDistance(), InSpatialParams.Get_DistanceFalloffExponent());
         const auto NearbyFactor = UCk_Utils_Aggro_UE::Compute_NearbyFactor(
-            OwnerSpatial.Get_NearbyPreference() == ECk_EnableDisable::Enable, Distance,
-            OwnerSpatial.Get_NearbyPreferenceDistance(), OwnerSpatial.Get_NearbyPreferenceMultiplier());
+            InSpatialParams.Get_NearbyPreference() == ECk_EnableDisable::Enable, Distance,
+            InSpatialParams.Get_NearbyPreferenceDistance(), InSpatialParams.Get_NearbyPreferenceMultiplier());
 
         InScore._Score    = static_cast<float>(UCk_Utils_Aggro_UE::Compute_Score(
             InThreat._Threat, DistFactor, NearbyFactor, InScoreParams.Get_ScoreMultiplier(), InScoreParams.Get_ScoreBias()));
@@ -407,9 +376,9 @@ namespace ck
             const auto SinceActivity = Now.Get_Seconds() - LastActivity;
 
             const auto ShouldForget =
-                   InThreat._Threat < OwnerThreat.Get_MinimumTrackedThreat()
-                || SinceActivity > OwnerForget.Get_ForgetDuration().Get_Seconds()
-                || (OwnerForget.Get_MaximumTargetAgeMode() == ECk_EnableDisable::Enable && Age > OwnerForget.Get_MaximumTargetAge().Get_Seconds())
+                   InThreat._Threat < InThreatParams.Get_MinimumTrackedThreat()
+                || SinceActivity > InForgetParams.Get_ForgetDuration().Get_Seconds()
+                || (InForgetParams.Get_MaximumTargetAgeMode() == ECk_EnableDisable::Enable && Age > InForgetParams.Get_MaximumTargetAge().Get_Seconds())
                 || (InLifetimeParams.Get_MaximumLifetimeMode() == ECk_EnableDisable::Enable && Age > InLifetimeParams.Get_MaximumLifetime().Get_Seconds());
 
             if (ShouldForget)
@@ -417,7 +386,8 @@ namespace ck
         }
 
         // Score changed -> the owner should re-select (deferred; N idempotent adds of a plain tag flush to one).
-        InTarget.ReadEntity(Owner.Get_Entity()).DeferAddOrGet<ck::FTag_Aggro_SelectionPending>();
+        if (OwnerValid)
+        { InTarget.ReadEntity(Owner.Get_Entity()).DeferAddOrGet<ck::FTag_Aggro_SelectionPending>(); }
 
         InTarget.DeferTry_Remove<ck::FTag_AggroTarget_EvaluationPending>();
     }
@@ -442,7 +412,7 @@ namespace ck
         const auto FinalThreat = InThreat.Get_Threat();
         const auto OwnerValid  = ck::IsValid(Owner);
 
-        // Derive the reason from state (+ the Evicted tag) — no stored reason field.
+        // Derive the reason from the target's OWN params + state (+ the Evicted tag) — no stored reason field.
         auto Reason = ECk_Aggro_ForgetReason::Requested;
         if (InTarget.Has<ck::FTag_AggroTarget_Evicted>())
         { Reason = ECk_Aggro_ForgetReason::Evicted; }
@@ -451,18 +421,17 @@ namespace ck
         else if (InLifetimeParams.Get_MaximumLifetimeMode() == ECk_EnableDisable::Enable
                  && (Now - InTargetInfo.Get_CreationTime()).Get_Seconds() > InLifetimeParams.Get_MaximumLifetime().Get_Seconds())
         { Reason = ECk_Aggro_ForgetReason::MaxLifetimeReached; }
-        else if (OwnerValid && Owner.Has<ck::FFragment_Aggro_ThreatParams>() && Owner.Has<ck::FFragment_Aggro_ForgetParams>())
+        else
         {
-            const auto& OwnerThreat = Owner.Get<ck::FFragment_Aggro_ThreatParams>();
-            const auto& OwnerForget = Owner.Get<ck::FFragment_Aggro_ForgetParams>();
+            const auto& ForgetP      = InTarget.Get<ck::FFragment_AggroTarget_ForgetParams>();
             const auto  Age          = (Now - InTargetInfo.Get_CreationTime()).Get_Seconds();
             const auto  LastActivity = FMath::Max(InThreat.Get_LastThreatTime().Get_Seconds(), InPerception.Get_LastPerceivedTime().Get_Seconds());
 
-            if (FinalThreat < OwnerThreat.Get_MinimumTrackedThreat())
+            if (FinalThreat < InThreatParams.Get_MinimumTrackedThreat())
             { Reason = ECk_Aggro_ForgetReason::ThreatDepleted; }
-            else if (OwnerForget.Get_MaximumTargetAgeMode() == ECk_EnableDisable::Enable && Age > OwnerForget.Get_MaximumTargetAge().Get_Seconds())
+            else if (ForgetP.Get_MaximumTargetAgeMode() == ECk_EnableDisable::Enable && Age > ForgetP.Get_MaximumTargetAge().Get_Seconds())
             { Reason = ECk_Aggro_ForgetReason::MaxAgeReached; }
-            else if ((Now.Get_Seconds() - LastActivity) > OwnerForget.Get_ForgetDuration().Get_Seconds())
+            else if ((Now.Get_Seconds() - LastActivity) > ForgetP.Get_ForgetDuration().Get_Seconds())
             { Reason = ECk_Aggro_ForgetReason::ThreatTimeout; }
         }
 

@@ -32,9 +32,10 @@ Two typesafe handles, two feature quartets:
 - The only always-ticking cost is **one chrono tick per owner** (the pacer). All per-target math runs
   in one Evaluate processor (`FProcessor_AggroTarget_Evaluate`), only on targets stamped
   `EvaluationPending` (staggered clock fire, or a threat request marking them dirty).
-- **Evaluate is PARALLEL** (`TParallelProcessor`). The per-target body is registry READS (owner
-  threat/spatial/forget params, owner+tracked transforms via worker-thread handle reconstruction)
-  plus writes to the target's OWN Threat/Score fragments; every structural tag flip —
+- **Evaluate is PARALLEL** (`TParallelProcessor`). Because the target is self-sufficient, the per-target
+  body reads its OWN params from the view — the owner is touched ONLY for its transform (distance) and
+  the deferred re-select stamp (owner+tracked transforms via worker-thread handle reconstruction) —
+  plus writes to the target's own Threat/Score fragments; every structural tag flip —
   `WithinRetention` + `PendingForget` + `EvaluationPending` on self, `SelectionPending` on the owner —
   is DEFERRED through the read-only handle's per-task command buffer and flushed single-threaded, so
   no worker touches the registry structurally. `Now` is hoisted to the game thread once per tick
@@ -66,10 +67,15 @@ UCk_Utils_Aggro_UE::Request_EnableDisable(Aggro, ECk_EnableDisable::Disable);   
 UCk_Utils_Aggro_UE::Request_MarkPerceived_ByTrackedEntity(Aggro, TrackedEntity, {});
 ```
 
-Immediate-composition APIs are named `CreateTarget` / `AddTarget` (no `Request_` prefix). Deferred
-mutations keep `Request_`. Two-phase admission for games that attach heuristic fragments before the
-target goes live: `UCk_Utils_AggroTarget_UE::Create` (unconnected) → attach fragments →
-`UCk_Utils_Aggro_UE::AddTarget` (admit).
+Target creation (immediate, no `Request_` prefix):
+- `UCk_Utils_Aggro_UE::CreateTarget(Owner, Tracked)` — the accelerant one-shot; stamps the owner's
+  `DefaultTargetParams` onto a new child (dedupe + cap/evict + record + map).
+- `UCk_Utils_Aggro_UE::CreateTarget_WithParams(Owner, Tracked, Overrides)` — same, with per-section
+  (`Threat`/`Spatial`/`Forget`/`Score`/`Lifetime`) override toggles on `FCk_AggroTarget_ParamOverrides`.
+- `UCk_Utils_AggroTarget_UE::Add(Handle, Params)` — direct-attach the self-sufficient feature to ANY
+  entity (no owner, no record — standalone threat tracking; tracks `Handle` unless Params names a subject).
+- `UCk_Utils_AggroTarget_UE::Create(Owner, Params)` — new child under Owner + `Add` + record-connect.
+  Takes a GENERIC `FCk_Handle` owner: AggroTarget knows nothing of the Aggro type. (`AddTarget` is gone.)
 
 Owner signals (broadcast from serial processors only — the parallel Evaluate must NEVER broadcast a
 signal or fire a delegate; those hop to the game thread and are unsafe from a worker): `OnAggroTargetAcquired`,
@@ -79,18 +85,33 @@ decay/eval spam).
 
 ---
 
-## Tunables (params split by consumer — CkPoi-v2 doctrine)
+## Tunables — the target is self-sufficient; the owner is the accelerant
+
+Every per-target behavior the `Evaluate` stage reads lives on the TARGET (`FCk_AggroTarget_*`), so a
+target created via `AggroTarget::Add` works standalone. The OWNER carries only owner-level concerns +
+the default-target template it stamps onto new targets.
+
+**Target params** (`FCk_AggroTarget_*`, aggregated in `FCk_Fragment_AggroTarget_ParamsData`):
 
 | Piece | Governs |
 |---|---|
-| `FCk_Aggro_ThreatParams` | initial threat, decay rate, unperceived/out-of-range decay multipliers, min-tracked floor, clamp range |
+| `ThreatParams` | initial threat, threat multiplier, decay rate, unperceived-decay multiplier, min-tracked floor, clamp range, optional max-override |
+| `SpatialParams` | acquisition/retention distance (cm), out-of-range decay multiplier, distance falloff (half-distance + exponent), optional nearby-preference band |
+| `ForgetParams` | forget duration, lost-sight grace, optional max age (per-target inactivity/age rules) |
+| `ScoreParams` | `_ScoreBias` / `_ScoreMultiplier` — the game-heuristic escape hatch |
+| `LifetimeParams` | max lifetime, can-become-active, can-be-forgotten |
+
+**Owner params** (`FCk_Fragment_Aggro_ParamsData`):
+
+| Piece | Governs |
+|---|---|
+| `DefaultTargetParams` | the `FCk_Fragment_AggroTarget_ParamsData` template stamped onto new targets by `CreateTarget` |
 | `FCk_Aggro_SelectionParams` | switch threshold, switch cooldown, current-target bias, min score, min aggro duration (the four hysteresis gates) |
-| `FCk_Aggro_SpatialParams` | acquisition/retention distance (cm), distance falloff (half-distance + exponent), optional nearby-preference band (Disabled by default) |
-| `FCk_Aggro_ForgetParams` | forget duration, lost-sight grace, optional max age, target cap + eviction policy |
+| `FCk_Aggro_CapParams` | target cap mode + max tracked targets + eviction policy (owner-level set management) |
 | `FCk_Aggro_EvaluationParams` | evaluation interval + per-rearm jitter (fleet decorrelation) |
 
-Per-target overrides live in `FCk_AggroTarget_{Threat,Score,Lifetime}Params`; default-constructed =
-"inherit owner defaults". `_ScoreBias` / `_ScoreMultiplier` are the game-heuristic escape hatch.
+`CreateTarget` copies `DefaultTargetParams` onto each new target; `CreateTarget_WithParams` overrides
+individual sections. There is no runtime "inherit from owner" — the target owns concrete values.
 
 Scoring is continuous distance falloff + four hysteresis gates. There is deliberately **no hard
 "nearest wins" rule** (discontinuous → switch-thrash; priority inversion). Raise
