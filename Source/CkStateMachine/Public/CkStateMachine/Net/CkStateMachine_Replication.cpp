@@ -1,5 +1,7 @@
 ﻿#include "CkStateMachine_Replication.h"
 
+#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"
+
 #include "CkStateMachine/CkStateMachine_Log.h"
 #include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
 #include "CkStateMachine/Net/CkStateMachine_RepData.h"
@@ -295,6 +297,10 @@ namespace ck_state_machine_replication
                     // the replication MODEL (not _Replication) so DoesNotReplicate SMs persist too.
                     .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                     {
+                        // State/task/condition/sub-machine graph entities are reconstruction-owned. They deliberately
+                        // carry runtime SM fragments, but persisting those payloads would conflict with owner redrive.
+                        if (Entity.Has<ck::FTag_Snapshot_SaveTransient>())
+                        { return {}; }
                         if (NOT Entity.Has<ck::FFragment_Sm_Current>() || NOT Entity.Has<ck::FFragment_Sm_Params>())
                         { return {}; }
                         if (Entity.Get<ck::FFragment_Sm_Params>().Get_ReplicationModel() != ECk_Sm_ReplicationModel::WithHistory)
@@ -341,6 +347,8 @@ namespace ck_state_machine_replication
                     // _Replication) so DoesNotReplicate WithoutHistory SMs persist too.
                     .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                     {
+                        if (Entity.Has<ck::FTag_Snapshot_SaveTransient>())
+                        { return {}; }
                         if (NOT Entity.Has<ck::FFragment_Sm_Current>() || NOT Entity.Has<ck::FFragment_Sm_Params>())
                         { return {}; }
                         if (Entity.Get<ck::FFragment_Sm_Params>().Get_ReplicationModel() != ECk_Sm_ReplicationModel::WithoutHistory)

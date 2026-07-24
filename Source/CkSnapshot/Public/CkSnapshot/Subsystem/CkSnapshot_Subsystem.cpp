@@ -188,15 +188,21 @@ void
 {
     const auto World = GetWorld();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(World) && ck_snapshot_subsystem::DoGet_HasWorldAuthority(World),
+    const auto HasAuthorityWorld = ck::IsValid(World) && ck_snapshot_subsystem::DoGet_HasWorldAuthority(World);
+    CK_ENSURE_IF_NOT(HasAuthorityWorld,
         TEXT("Request_Save refused: World [{}] is invalid or this is a client (no authority)"), World)
+    {}
+    if (NOT HasAuthorityWorld)
     {
         InDelegate.ExecuteIfBound(ECk_SnapshotResult::Failed_IO);
         return;
     }
 
-    CK_ENSURE_IF_NOT(NOT _SnapshotInProgress && NOT _LoadInProgress,
+    const auto CanStartSnapshot = NOT _SnapshotInProgress && NOT _LoadInProgress;
+    CK_ENSURE_IF_NOT(CanStartSnapshot,
         TEXT("Request_Save refused: a snapshot operation is already in progress"))
+    {}
+    if (NOT CanStartSnapshot)
     {
         InDelegate.ExecuteIfBound(ECk_SnapshotResult::Failed_IO);
         return;
@@ -233,8 +239,11 @@ void
     }
 
     auto* SaveGame = Cast<UCk_Snapshot_SaveGame>(UGameplayStatics::CreateSaveGameObject(UCk_Snapshot_SaveGame::StaticClass()));
-    CK_ENSURE_IF_NOT(ck::IsValid(SaveGame),
+    const auto HasSaveGame = ck::IsValid(SaveGame);
+    CK_ENSURE_IF_NOT(HasSaveGame,
         TEXT("Request_Save: failed to create UCk_Snapshot_SaveGame"))
+    {}
+    if (NOT HasSaveGame)
     {
         DoFinish(ECk_SnapshotResult::Failed_IO);
         return;
@@ -273,15 +282,21 @@ void
         return Report;
     };
 
-    CK_ENSURE_IF_NOT(ck::IsValid(World) && ck_snapshot_subsystem::DoGet_HasWorldAuthority(World),
+    const auto HasAuthorityWorld = ck::IsValid(World) && ck_snapshot_subsystem::DoGet_HasWorldAuthority(World);
+    CK_ENSURE_IF_NOT(HasAuthorityWorld,
         TEXT("Request_Load refused: World [{}] is invalid or this is a client (no authority)"), World)
+    {}
+    if (NOT HasAuthorityWorld)
     {
         InDelegate.ExecuteIfBound(MakeFailureReport(ECk_SnapshotResult::Failed_IO));
         return;
     }
 
-    CK_ENSURE_IF_NOT(NOT _SnapshotInProgress && NOT _LoadInProgress,
+    const auto CanStartSnapshot = NOT _SnapshotInProgress && NOT _LoadInProgress;
+    CK_ENSURE_IF_NOT(CanStartSnapshot,
         TEXT("Request_Load refused: a snapshot operation is already in progress"))
+    {}
+    if (NOT CanStartSnapshot)
     {
         InDelegate.ExecuteIfBound(MakeFailureReport(ECk_SnapshotResult::Failed_IO));
         return;
@@ -796,7 +811,16 @@ auto
         }
 
         if (ck::IsValid(Resolved))
-        { _SavedIdMap.Add(SavedId, Resolved); }
+        {
+            if (Entry.Get_Provenance() == ECk_Snapshot_V3_Provenance::RuntimeSpawned &&
+                Entry.Get_SaveKey().IsValid())
+            {
+                Resolved.AddOrReplace<FFragment_SaveKey>(Entry.Get_SaveKey());
+                Publish_SaveKey(Entry.Get_SaveKey(), Resolved);
+            }
+
+            _SavedIdMap.Add(SavedId, Resolved);
+        }
         else if (NOT _SkippedIds.Contains(SavedId))
         { AnyUnresolved = true; } // still pending (bridge linking, owner not yet mapped) — retry next tick
     }
@@ -935,11 +959,17 @@ auto
 
         // A failed deserialize is lost state, not a no-op — counted in the load report even where the ensure is out.
         auto Data = DoDeserialize_V3Blob(Payload.Get_PayloadBytes());
-        CK_ENSURE_IF_NOT(Data.IsValid(),
+        const auto HasHydrationData = Data.IsValid();
+        CK_ENSURE_IF_NOT(HasHydrationData,
             TEXT("v3 load: hydration payload for type [{}] (owner saved-id [{}]) failed to deserialize — dropped "
                  "(empty bytes, or the type is absent since the save)"),
             Payload.Get_TypePath(), Payload.Get_OwnerSavedId())
-        { ++PayloadsDropped; continue; }
+        {}
+        if (NOT HasHydrationData)
+        {
+            ++PayloadsDropped;
+            continue;
+        }
 
         auto Entity = *Owner;
         Entity.AddOrGet<ck::FFragment_PendingHydration>().Enqueue(GetWorld(), MoveTemp(Data));
@@ -1105,6 +1135,11 @@ auto
             // Save-transient children are payload-persisted derived state (attributes, SM graph, ...) — never
             // captured as rows, so "absent from the save" is their NORMAL state, not a revoked grant.
             if (Child.Has<ck::FTag_Snapshot_SaveTransient>())
+            { continue; }
+            // Reconstruct-only children are intentionally absent from the save. Their feature recreates them from
+            // authored defaults after the load boundary, so absence is not a revoked grant and must not trigger
+            // subtractive reconciliation.
+            if (Child.Has<ck::FTag_Snapshot_ReconstructOnly>())
             { continue; }
             if (NOT UCk_Utils_GameplayLabel_UE::Has(Child) || UCk_Utils_GameplayLabel_UE::Get_IsUnnamedLabel(Child))
             { continue; }

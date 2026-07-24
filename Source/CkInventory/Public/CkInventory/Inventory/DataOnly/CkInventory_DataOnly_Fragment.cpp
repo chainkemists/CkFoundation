@@ -26,17 +26,18 @@
                 { return ck::Is_NOT_Valid(InEntry.Get_ItemHandle()); }))
             { return ECk_Persistence_ApplyResult::NotReady; }
 
+            auto InventoryHandle = UCk_Utils_Inventory_UE::Cast(Entity);
             for (const auto& NewEntry : NewItems)
             {
                 auto ItemHandle = NewEntry.Get_ItemHandle();
                 UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils::Request_Connect(
                     Entity, ItemHandle, ECk_Record_LabelRequirementPolicy::Optional);
+                ck::TUtils_Item_ParentInventory::AddOrReplace(ItemHandle, InventoryHandle);
                 UCk_Utils_EntityLifetime_UE::Request_TransferLifetimeOwner(ItemHandle, Entity);
             }
 
             // The connect above is server-local; without re-arming, a fresh post-travel client's container
             // stays at its empty Construct-time value forever.
-            auto InventoryHandle = UCk_Utils_Inventory_UE::Cast(Entity);
             UCk_Utils_Inventory_UE::Request_TryReplicateInventory(InventoryHandle);
             return ECk_Persistence_ApplyResult::Applied;
         };
