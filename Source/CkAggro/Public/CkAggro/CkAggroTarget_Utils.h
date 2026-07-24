@@ -1,6 +1,5 @@
 #pragma once
 
-#include "CkAggro/CkAggro_Fragment_Data.h"
 #include "CkAggro/CkAggroTarget_Fragment.h"
 #include "CkAggro/CkAggroTarget_Fragment_Data.h"
 
@@ -29,15 +28,24 @@ public:
     friend class UCk_Utils_Ecs_Base_UE;
 
 public:
-    // Two-phase admission: builds the child UNCONNECTED (no record/map/NeedsSetup) so the game can attach its own
-    // heuristic fragments before admitting it via UCk_Utils_Aggro_UE::AddTarget. For the common one-shot path use
-    // UCk_Utils_Aggro_UE::CreateTarget instead.
+    // Direct-attach the (self-sufficient) AggroTarget feature onto InHandle — no owner, no record. Standalone threat
+    // tracking. Tracks InParams' TrackedEntity, or InHandle itself when that is unset.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AggroTarget",
-              DisplayName="[Ck][AggroTarget] Create (Unconnected)")
+              DisplayName="[Ck][AggroTarget] Add Feature")
+    static FCk_Handle_AggroTarget
+    Add(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Fragment_AggroTarget_ParamsData& InParams);
+
+    // Create an internal child target under InOwner (any entity): builds a new entity, Adds the feature to it, and
+    // connects it to InOwner's AggroTargets record (adding the record to InOwner if missing).
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AggroTarget",
+              DisplayName="[Ck][AggroTarget] Create")
     static FCk_Handle_AggroTarget
     Create(
-        UPARAM(ref) FCk_Handle_Aggro& InOwner,
+        UPARAM(ref) FCk_Handle& InOwner,
         const FCk_Fragment_AggroTarget_ParamsData& InParams);
 
 public:
@@ -45,6 +53,14 @@ public:
     static bool
     Has(
         const FCk_Handle& InHandle);
+
+private:
+    // Shared fragment attach for Add/Create. InOwner is the record/scoring owner, or invalid for a standalone Add.
+    static void
+    DoAdd_Fragments(
+        FCk_Handle& InHandle,
+        const FCk_Fragment_AggroTarget_ParamsData& InParams,
+        const FCk_Handle& InOwner);
 
 private:
     UFUNCTION(BlueprintCallable,
@@ -96,7 +112,7 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AggroTarget",
               DisplayName="[Ck][AggroTarget] Get Aggro Owner")
-    static FCk_Handle_Aggro
+    static FCk_Handle
     Get_AggroOwner(
         const FCk_Handle_AggroTarget& InTarget);
 

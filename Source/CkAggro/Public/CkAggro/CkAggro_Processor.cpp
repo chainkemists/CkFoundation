@@ -113,15 +113,9 @@ namespace ck
         if (NOT CanCreate)
         { return; }
 
-        auto TargetParams = FCk_Fragment_AggroTarget_ParamsData{Tracked};
-        const auto& RequestTargetParams = InRequest.Get_TargetParams();
-        TargetParams.Set_Instigator(InRequest.Get_Instigator())
-                    .Set_Source(InRequest.Get_Source())
-                    .Set_ThreatParams(RequestTargetParams.Get_ThreatParams())
-                    .Set_ScoreParams(RequestTargetParams.Get_ScoreParams())
-                    .Set_LifetimeParams(RequestTargetParams.Get_LifetimeParams());
-
-        auto NewTarget = UCk_Utils_Aggro_UE::CreateTarget(InAggro, TargetParams);
+        // Auto-create from the owner's DefaultTargetParams (the accelerant). Per-target customization is via the
+        // explicit CreateTarget_WithParams / AggroTarget::Create paths, not the damage fast-path.
+        auto NewTarget = UCk_Utils_Aggro_UE::CreateTarget(InAggro, Tracked);
         if (ck::IsValid(NewTarget))
         {
             UCk_Utils_AggroTarget_UE::Request_AddThreat(NewTarget, InRequest.Get_ThreatAmount());
@@ -255,7 +249,6 @@ namespace ck
             HandleType InAggro,
             FFragment_Aggro_Current& InCurrent,
             const FFragment_Aggro_SelectionParams& InSelectionParams,
-            const FFragment_Aggro_SpatialParams& InSpatialParams,
             const FFragment_Aggro_TargetMap& InTargetMap) const
         -> void
     {
@@ -270,8 +263,9 @@ namespace ck
             if (ck::Is_NOT_Valid(InCandidate) || NOT InCandidate.Has<ck::FFragment_AggroTarget_Score>())
             { return false; }
 
-            const auto& Score   = InCandidate.Get<ck::FFragment_AggroTarget_Score>();
-            const auto  Tracked = ck::UAggroTarget_TrackedEntity_Utils::Get_StoredEntity(InCandidate);
+            const auto& Score    = InCandidate.Get<ck::FFragment_AggroTarget_Score>();
+            const auto& SpatialP = InCandidate.Get<ck::FFragment_AggroTarget_SpatialParams>();
+            const auto  Tracked  = ck::UAggroTarget_TrackedEntity_Utils::Get_StoredEntity(InCandidate);
 
             return UCk_Utils_Aggro_UE::Is_EligibleTarget(
                 InCandidate.Has<ck::FTag_AggroTarget_CannotBecomeActive>(),
@@ -279,7 +273,7 @@ namespace ck
                 ck::IsValid(Tracked),
                 Score.Get_Score(), InSelectionParams.Get_MinimumTargetScore(),
                 InCandidate.Has<ck::FTag_AggroTarget_WithinRetention>(),
-                Score.Get_Distance(), InSpatialParams.Get_AcquisitionDistance());
+                Score.Get_Distance(), SpatialP.Get_AcquisitionDistance());
         };
 
         for (const auto& Pair : InTargetMap.Get_TargetsByTrackedEntity())

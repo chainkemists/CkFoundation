@@ -76,24 +76,32 @@ private:
     Get_InvalidHandle() { return {}; }
 
 public:
-    // One-shot: dedupe by tracked entity (returns the existing target), else build + admit a new child target.
+    // One-shot: dedupe by tracked entity (returns the existing target), else create a child target under InOwner from
+    // the owner's DefaultTargetParams (cap/evict + record-connect + map). Aggro is the accelerant on top of AggroTarget.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Aggro",
               DisplayName="[Ck][Aggro] Create Target")
     static FCk_Handle_AggroTarget
     CreateTarget(
         UPARAM(ref) FCk_Handle_Aggro& InOwner,
-        const FCk_Fragment_AggroTarget_ParamsData& InParams);
+        FCk_Handle InTracked);
 
-    // Admit a pre-built (via UCk_Utils_AggroTarget_UE::Create) unconnected target: cap/evict, record-connect, map,
-    // and stamp NeedsSetup. Returns the admitted target, or an invalid handle if a full-cap RejectNew declined it.
+    // As CreateTarget, but each param section whose override toggle is on replaces the owner default for this target.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Aggro",
-              DisplayName="[Ck][Aggro] Add Target")
+              DisplayName="[Ck][Aggro] Create Target With Params")
     static FCk_Handle_AggroTarget
-    AddTarget(
+    CreateTarget_WithParams(
         UPARAM(ref) FCk_Handle_Aggro& InOwner,
-        UPARAM(ref) FCk_Handle_AggroTarget& InTarget);
+        FCk_Handle InTracked,
+        const FCk_AggroTarget_ParamOverrides& InOverrides);
+
+private:
+    // Shared: dedupe by tracked, cap/evict, AggroTarget::Create, map. InParams must already carry the tracked entity.
+    static FCk_Handle_AggroTarget
+    DoCreateTarget(
+        FCk_Handle_Aggro& InOwner,
+        const FCk_Fragment_AggroTarget_ParamsData& InParams);
 
 public:
     UFUNCTION(BlueprintPure,

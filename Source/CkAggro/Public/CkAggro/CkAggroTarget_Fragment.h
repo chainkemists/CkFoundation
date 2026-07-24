@@ -14,6 +14,9 @@
 
 #include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
 
+#include "CkRecord/Record/CkRecord_Fragment.h"
+#include "CkRecord/Record/CkRecord_Utils.h"
+
 #include <variant>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -28,6 +31,8 @@ namespace ck
     // Bridge aliases — the target's reflected param pieces, viewed as runtime fragments by the processors.
 
     using FFragment_AggroTarget_ThreatParams   = FCk_AggroTarget_ThreatParams;
+    using FFragment_AggroTarget_SpatialParams  = FCk_AggroTarget_SpatialParams;
+    using FFragment_AggroTarget_ForgetParams   = FCk_AggroTarget_ForgetParams;
     using FFragment_AggroTarget_ScoreParams    = FCk_AggroTarget_ScoreParams;
     using FFragment_AggroTarget_LifetimeParams = FCk_AggroTarget_LifetimeParams;
 
@@ -171,6 +176,14 @@ namespace ck
     public:
         CK_PROPERTY_GET(_Requests);
     };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Owner -> AggroTarget child record. Lives on the AggroTarget side (not CkAggro) so AggroTarget::Create can connect
+    // a target to any owner's record without depending on the Aggro feature. Ownership/teardown/enumeration only.
+
+    CK_DEFINE_RECORD_OF_ENTITIES_AND_UTILS_TRANSIENT(FUtils_RecordOfAggroTargets, FFragment_RecordOfAggroTargets, FCk_Handle_AggroTarget);
 
     // ----------------------------------------------------------------------------------------------------------------
 

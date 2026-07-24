@@ -1,6 +1,5 @@
 #include "CkAggroTarget_Utils.h"
 
-#include "CkAggro/CkAggro_Fragment.h"
 #include "CkAggro/CkAggro_Utils.h"
 
 #include "CkCore/Time/CkTime_Utils.h"
@@ -28,40 +27,81 @@ namespace ck_aggro_target_utils
 
 auto
     UCk_Utils_AggroTarget_UE::
-    Create(
-        FCk_Handle_Aggro& InOwner,
+    DoAdd_Fragments(
+        FCk_Handle& InHandle,
+        const FCk_Fragment_AggroTarget_ParamsData& InParams,
+        const FCk_Handle& InOwner)
+    -> void
+{
+    // Retention must never be tighter than acquisition, else a target could be acquirable yet never retained.
+    auto SpatialParams = InParams.Get_SpatialParams();
+    if (SpatialParams.Get_RetentionDistance() < SpatialParams.Get_AcquisitionDistance())
+    { SpatialParams.Set_RetentionDistance(SpatialParams.Get_AcquisitionDistance()); }
+
+    // Track the named subject, or the entity the feature is added to when unset (standalone Add).
+    const auto Tracked = ck::IsValid(InParams.Get_TrackedEntity()) ? InParams.Get_TrackedEntity() : InHandle;
+
+    InHandle.Add<ck::FTag_AggroTarget>();
+    ck::UAggroTarget_TrackedEntity_Utils::AddOrReplace(InHandle, Tracked);
+
+    InHandle.Add<ck::FFragment_AggroTarget_TargetInfo>(InOwner, InParams.Get_Instigator(), InParams.Get_Source());
+    InHandle.Add<ck::FFragment_AggroTarget_ThreatParams>(InParams.Get_ThreatParams());
+    InHandle.Add<ck::FFragment_AggroTarget_SpatialParams>(SpatialParams);
+    InHandle.Add<ck::FFragment_AggroTarget_ForgetParams>(InParams.Get_ForgetParams());
+    InHandle.Add<ck::FFragment_AggroTarget_ScoreParams>(InParams.Get_ScoreParams());
+    InHandle.Add<ck::FFragment_AggroTarget_LifetimeParams>(InParams.Get_LifetimeParams());
+    InHandle.Add<ck::FFragment_AggroTarget_Threat>();
+    InHandle.Add<ck::FFragment_AggroTarget_Perception>();
+    InHandle.Add<ck::FFragment_AggroTarget_Score>();
+
+    InHandle.Add<ck::FTag_AggroTarget_NeedsSetup>();
+}
+
+auto
+    UCk_Utils_AggroTarget_UE::
+    Add(
+        FCk_Handle& InHandle,
         const FCk_Fragment_AggroTarget_ParamsData& InParams)
     -> FCk_Handle_AggroTarget
 {
-    const auto OwnerIsValid = ck::IsValid(InOwner) && InOwner.Has<ck::FTag_Aggro>();
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
+        TEXT("Cannot Add AggroTarget — the Handle is INVALID"))
+    {}
+    if (NOT HandleIsValid)
+    { return {}; }
+
+    DoAdd_Fragments(InHandle, InParams, FCk_Handle{});
+
+    return CastChecked(InHandle);
+}
+
+auto
+    UCk_Utils_AggroTarget_UE::
+    Create(
+        FCk_Handle& InOwner,
+        const FCk_Fragment_AggroTarget_ParamsData& InParams)
+    -> FCk_Handle_AggroTarget
+{
+    const auto OwnerIsValid = ck::IsValid(InOwner);
     CK_ENSURE_IF_NOT(OwnerIsValid,
-        TEXT("Cannot Create an AggroTarget — Owner [{}] is invalid or is not an Aggro entity"), InOwner)
+        TEXT("Cannot Create an AggroTarget — Owner [{}] is INVALID"), InOwner)
     {}
     if (NOT OwnerIsValid)
     { return {}; }
 
-    const auto TrackedEntityIsValid = ck::IsValid(InParams.Get_TrackedEntity());
-    CK_ENSURE_IF_NOT(TrackedEntityIsValid,
-        TEXT("Cannot Create an AggroTarget on Owner [{}] — the supplied TrackedEntity is INVALID"), InOwner)
-    {}
-    if (NOT TrackedEntityIsValid)
-    { return {}; }
-
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner, [&](FCk_Handle InNewEntity)
     {
-        InNewEntity.Add<ck::FTag_AggroTarget>();
-        ck::UAggroTarget_TrackedEntity_Utils::AddOrReplace(InNewEntity, InParams.Get_TrackedEntity());
-
-        InNewEntity.Add<ck::FFragment_AggroTarget_TargetInfo>(InOwner, InParams.Get_Instigator(), InParams.Get_Source());
-        InNewEntity.Add<ck::FFragment_AggroTarget_ThreatParams>(InParams.Get_ThreatParams());
-        InNewEntity.Add<ck::FFragment_AggroTarget_ScoreParams>(InParams.Get_ScoreParams());
-        InNewEntity.Add<ck::FFragment_AggroTarget_LifetimeParams>(InParams.Get_LifetimeParams());
-        InNewEntity.Add<ck::FFragment_AggroTarget_Threat>();
-        InNewEntity.Add<ck::FFragment_AggroTarget_Perception>();
-        InNewEntity.Add<ck::FFragment_AggroTarget_Score>();
+        DoAdd_Fragments(InNewEntity, InParams, InOwner);
     });
 
-    return UCk_Utils_AggroTarget_UE::CastChecked(NewEntity);
+    auto NewTarget = CastChecked(NewEntity);
+
+    // Connect to the owner's AggroTargets record (add the record to the owner if it is missing).
+    ck::FUtils_RecordOfAggroTargets::AddIfMissing(InOwner);
+    ck::FUtils_RecordOfAggroTargets::Request_Connect(InOwner, NewTarget, ECk_Record_LabelRequirementPolicy::Optional);
+
+    return NewTarget;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -101,9 +141,9 @@ auto
     UCk_Utils_AggroTarget_UE::
     Get_AggroOwner(
         const FCk_Handle_AggroTarget& InTarget)
-    -> FCk_Handle_Aggro
+    -> FCk_Handle
 {
-    return UCk_Utils_Aggro_UE::Cast(InTarget.Get<ck::FFragment_AggroTarget_TargetInfo>().Get_AggroOwner());
+    return InTarget.Get<ck::FFragment_AggroTarget_TargetInfo>().Get_AggroOwner();
 }
 
 auto
@@ -112,35 +152,26 @@ auto
         const FCk_Handle_AggroTarget& InTarget)
     -> float
 {
-    // Analytic decay applied as-of-now, WITHOUT advancing the stored anchor (a pure read).
-    const auto& Threat = InTarget.Get<ck::FFragment_AggroTarget_Threat>();
-    const auto  Owner  = Get_AggroOwner(InTarget);
-
-    const auto OwnerReady = ck::IsValid(Owner)
-        && Owner.Has<ck::FFragment_Aggro_ThreatParams>()
-        && Owner.Has<ck::FFragment_Aggro_SpatialParams>()
-        && Owner.Has<ck::FFragment_Aggro_ForgetParams>();
-
-    if (NOT OwnerReady)
-    { return Threat.Get_Threat(); }
-
-    const auto& OwnerThreat  = Owner.Get<ck::FFragment_Aggro_ThreatParams>();
-    const auto& OwnerSpatial = Owner.Get<ck::FFragment_Aggro_SpatialParams>();
-    const auto& OwnerForget  = Owner.Get<ck::FFragment_Aggro_ForgetParams>();
-    const auto& Perception   = InTarget.Get<ck::FFragment_AggroTarget_Perception>();
+    // Analytic decay applied as-of-now from the target's OWN (self-sufficient) params, WITHOUT advancing the stored
+    // anchor (a pure read).
+    const auto& Threat     = InTarget.Get<ck::FFragment_AggroTarget_Threat>();
+    const auto& ThreatP    = InTarget.Get<ck::FFragment_AggroTarget_ThreatParams>();
+    const auto& SpatialP   = InTarget.Get<ck::FFragment_AggroTarget_SpatialParams>();
+    const auto& ForgetP    = InTarget.Get<ck::FFragment_AggroTarget_ForgetParams>();
+    const auto& Perception = InTarget.Get<ck::FFragment_AggroTarget_Perception>();
 
     const auto Now          = ck_aggro_target_utils::Get_Now(InTarget);
     const auto Elapsed      = (Now - Threat.Get_LastDecayTime()).Get_Seconds();
     const auto SecsSincePer = (Now - Perception.Get_LastPerceivedTime()).Get_Seconds();
     const auto PerceptK     = UCk_Utils_Aggro_UE::Compute_PerceptionDecayMultiplier(
         InTarget.Has<ck::FTag_AggroTarget_Perceived>(), SecsSincePer,
-        OwnerForget.Get_LostSightGraceDuration().Get_Seconds(), OwnerThreat.Get_UnperceivedThreatDecayMultiplier());
+        ForgetP.Get_LostSightGraceDuration().Get_Seconds(), ThreatP.Get_UnperceivedThreatDecayMultiplier());
     const auto RangeK       = UCk_Utils_Aggro_UE::Compute_RangeDecayMultiplier(
-        InTarget.Has<ck::FTag_AggroTarget_WithinRetention>(), OwnerSpatial.Get_OutOfRangeDecayMultiplier());
+        InTarget.Has<ck::FTag_AggroTarget_WithinRetention>(), SpatialP.Get_OutOfRangeDecayMultiplier());
 
     return UCk_Utils_Aggro_UE::Compute_DecayedThreat(
-        Threat.Get_Threat(), Elapsed, OwnerThreat.Get_ThreatDecayRate(), PerceptK, RangeK,
-        OwnerThreat.Get_ThreatClampRange().Get_Min(), OwnerThreat.Get_ThreatClampRange().Get_Max());
+        Threat.Get_Threat(), Elapsed, ThreatP.Get_ThreatDecayRate(), PerceptK, RangeK,
+        ThreatP.Get_ThreatClampRange().Get_Min(), ThreatP.Get_ThreatClampRange().Get_Max());
 }
 
 auto

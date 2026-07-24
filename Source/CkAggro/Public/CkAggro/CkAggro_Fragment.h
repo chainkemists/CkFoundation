@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CkAggro/CkAggro_Fragment_Data.h"
-#include "CkAggro/CkAggroTarget_Fragment_Data.h"
+#include "CkAggro/CkAggroTarget_Fragment.h"
 
 #include "CkCore/Chrono/CkChrono.h"
 #include "CkCore/Macros/CkMacros.h"
@@ -31,11 +31,10 @@ namespace ck
     // Bridge aliases — each owner param piece is copied onto the owner as its own fragment so processors declare RO
     // access on exactly what they read.
 
-    using FFragment_Aggro_ThreatParams     = FCk_Aggro_ThreatParams;
-    using FFragment_Aggro_SelectionParams  = FCk_Aggro_SelectionParams;
-    using FFragment_Aggro_SpatialParams    = FCk_Aggro_SpatialParams;
-    using FFragment_Aggro_ForgetParams     = FCk_Aggro_ForgetParams;
-    using FFragment_Aggro_EvaluationParams = FCk_Aggro_EvaluationParams;
+    using FFragment_Aggro_DefaultTargetParams = FCk_Fragment_AggroTarget_ParamsData;
+    using FFragment_Aggro_SelectionParams     = FCk_Aggro_SelectionParams;
+    using FFragment_Aggro_CapParams           = FCk_Aggro_CapParams;
+    using FFragment_Aggro_EvaluationParams    = FCk_Aggro_EvaluationParams;
 
     // ----------------------------------------------------------------------------------------------------------------
     // Tags.
@@ -139,11 +138,6 @@ namespace ck
     public:
         CK_PROPERTY_GET(_Requests);
     };
-
-    // ----------------------------------------------------------------------------------------------------------------
-    // Owner -> AggroTarget child record. Ownership/teardown/enumeration only — never sorted, never used for hot math.
-
-    CK_DEFINE_RECORD_OF_ENTITIES_AND_UTILS_TRANSIENT(FUtils_RecordOfAggroTargets, FFragment_RecordOfAggroTargets, FCk_Handle_AggroTarget);
 
     // ----------------------------------------------------------------------------------------------------------------
 

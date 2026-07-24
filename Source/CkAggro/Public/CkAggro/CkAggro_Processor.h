@@ -126,7 +126,6 @@ namespace ck
         FCk_Handle_Aggro,
         TReadWrite<FFragment_Aggro_Current>,
         TReadOnly<FFragment_Aggro_SelectionParams>,
-        TReadOnly<FFragment_Aggro_SpatialParams>,
         TReadOnly<FFragment_Aggro_TargetMap>,
         FTag_Aggro_SelectionPending,
         TExclude<FTag_Aggro_NeedsSetup>,
@@ -148,7 +147,6 @@ namespace ck
             HandleType InAggro,
             FFragment_Aggro_Current& InCurrent,
             const FFragment_Aggro_SelectionParams& InSelectionParams,
-            const FFragment_Aggro_SpatialParams& InSpatialParams,
             const FFragment_Aggro_TargetMap& InTargetMap) const -> void;
     };
 }
