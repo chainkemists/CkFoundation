@@ -386,8 +386,12 @@ namespace ck
 
             // Presentation (priority/offscreen) resolves per-consumer via CkPoiDisplayDefinition. No
             // definition -> the old field defaults (Hide / 0), so category-only POIs keep prior behavior.
+            // CastChecked, not ck::StaticCast: the view guarantees FTag_Poi, so the ensure can never fire,
+            // and going through the feature's own Cast keeps the Has check in one place.
+            const auto PoiHandle = UCk_Utils_Poi_UE::CastChecked(PoiGenericHandle);
+
             const auto DisplayDefinition = UCk_Utils_PoiDisplayDefinition_UE::TryGet_PoiDisplayDefinition_ByConsumer(
-                PoiGenericHandle, Tag_PoiConsumer_Compass);
+                PoiHandle, Tag_PoiConsumer_Compass);
             const auto HasDisplayDefinition = ck::IsValid(DisplayDefinition);
 
             // Record the resolved consumer DisplayDefinition for the post-parallel feed (invalid = none).
@@ -424,8 +428,6 @@ namespace ck
 
             const auto FadeAlpha = UCk_Utils_Compass_UE::Get_RangeFadeAlpha(
                 Distance, MinVisibleRange, MaxVisibleRange, RangeFadeBandCm);
-
-            const auto PoiHandle = ck::StaticCast<FCk_Handle_Poi>(PoiGenericHandle);
 
             Slots[InIndex].Emplace(FCk_Compass_Entry
             {

@@ -7,6 +7,8 @@
 
 #include "CkVisibleRange/CkVisibleRange_Fragment_Data.h"
 
+#include "CkPoi/CkPoi_Fragment_Data.h"
+
 #include "CkPoiDisplayDefinition/CkPoiDisplayDefinition_Fragment.h"
 #include "CkPoiDisplayDefinition/CkPoiDisplayDefinition_Fragment_Data.h"
 
@@ -30,8 +32,12 @@ public:
     friend class UCk_Utils_Ecs_Base_UE;
 
 public:
-    // Direct-attach: composes ONE display definition onto InHandle itself (no child entity). Use when an entity needs
-    // exactly one presentation config. For several consumer-keyed definitions on one owner, use Create instead.
+    // Direct-attach: composes ONE display definition onto InHandle itself (no child entity) plus a CkLabel carrying
+    // the _Consumer tag. Use when an entity needs exactly one presentation config; for several consumer-keyed
+    // definitions on one POI, use Create instead.
+    //
+    // Takes a bare handle on purpose, unlike Create: this is the ordinary compose-a-feature-onto-an-entity verb, and
+    // Create itself calls it on the child definition entity — which is not a POI.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|PoiDisplayDefinition",
               DisplayName="[Ck][PoiDisplayDefinition] Add New Display Definition")
@@ -40,15 +46,20 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_PoiDisplayDefinition_ParamsData& InParams);
 
-    // Creates a display-definition CHILD entity under InLifetimeOwner, keyed by its _Consumer tag and connected to the
-    // owner's RecordOfPoiDisplayDefinitions. Multiple Creates with distinct consumers compose several definitions on
-    // one owner. Also wires the owner's VisibleRange->child ParentHidden cascade (bound once per owner).
+    // Creates a display-definition CHILD entity under InPoi and composes it via Add, so the child is keyed by its
+    // _Consumer tag (fragment + label) and connected to the POI's RecordOfPoiDisplayDefinitions. Multiple Creates
+    // with distinct consumers compose several definitions on one POI. Also wires the POI's VisibleRange->child
+    // ParentHidden cascade (bound once per POI).
+    //
+    // Takes FCk_Handle_Poi: the owner is the entity a projector resolves definitions OFF
+    // (TryGet_..._ByConsumer) and the entity whose record hosts them, so a non-POI owner was a silent no-op —
+    // nothing ensured, the definition simply never resolved.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|PoiDisplayDefinition",
               DisplayName="[Ck][PoiDisplayDefinition] Create New Display Definition")
     static FCk_Handle_PoiDisplayDefinition
     Create(
-        UPARAM(ref) FCk_Handle& InLifetimeOwner,
+        UPARAM(ref) FCk_Handle_Poi& InPoi,
         const FCk_Fragment_PoiDisplayDefinition_ParamsData& InParams);
 
 public:
@@ -127,14 +138,16 @@ public:
         const FCk_Handle_PoiDisplayDefinition& InHandle);
 
 public:
-    // Resolves the display definition on InOwner for InConsumer: the owner's own direct-attach definition first, then
+    // Resolves the display definition on InPoi for InConsumer: the POI's own direct-attach definition first, then
     // the first exact-match child in its record. Returns an invalid handle when none matches (house TryGet_* contract).
+    // Matching is MatchesTagExact — a projector's consumer tag resolves only a definition keyed with that exact tag,
+    // never a descendant of it.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|PoiDisplayDefinition",
               DisplayName="[Ck][PoiDisplayDefinition] Try Get Display Definition By Consumer")
     static FCk_Handle_PoiDisplayDefinition
     TryGet_PoiDisplayDefinition_ByConsumer(
-        const FCk_Handle& InOwner,
+        const FCk_Handle_Poi& InPoi,
         FGameplayTag InConsumer);
 
 private:
