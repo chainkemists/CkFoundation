@@ -28,7 +28,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Dialog|Emitter",
               DisplayName="[Ck][Dialog][Emitter] Add")
     static FCk_Handle_DialogEmitter
     Add(
@@ -97,9 +97,20 @@ public:
         const FCk_Handle_DialogEmitter& InEmitter,
         const FCk_Handle_DialogLine& InLine);
 
+    // The full cooldown record: expiry, the duration it was STARTED with, and the mode. Get_CooldownRemaining alone
+    // cannot answer "how far through is it" — that needs the original duration, which only this exposes.
+    // Returns a default entry (zero duration, Timed) when the line is not cooling.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Dialog|Emitter",
+              DisplayName="[Ck][Dialog][Emitter] Get Cooldown Entry")
+    static FCk_DialogEmitter_CooldownEntry
+    Get_CooldownEntry(
+        const FCk_Handle_DialogEmitter& InEmitter,
+        const FCk_Handle_DialogLine& InLine);
+
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Dialog|Emitter",
               DisplayName="[Ck][Dialog][Emitter] Request Query")
     static FCk_Handle_DialogEmitter
     Request_Query(
@@ -117,7 +128,7 @@ public:
         FCk_Handle_DialogLine InPlayedLine);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Dialog|Emitter",
               DisplayName="[Ck][Dialog][Emitter] Request Start Cooldown")
     static FCk_Handle_DialogEmitter
     Request_StartCooldown(
@@ -157,6 +168,45 @@ public:
     UnbindFrom_OnQueryCompleted(
         UPARAM(ref) FCk_Handle_DialogEmitter& InEmitter,
         const FCk_Delegate_DialogEmitter_OnQueryCompleted& InDelegate);
+
+    // Fires when a line STARTS cooling on this emitter — including a re-start that extends an already-cooling line.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Dialog|Emitter",
+              DisplayName = "[Ck][Dialog][Emitter] Bind To OnCooldownStarted")
+    static FCk_Handle_DialogEmitter
+    BindTo_OnCooldownStarted(
+        UPARAM(ref) FCk_Handle_DialogEmitter& InEmitter,
+        const FCk_Delegate_DialogEmitter_OnCooldownStarted& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Dialog|Emitter",
+              DisplayName = "[Ck][Dialog][Emitter] Unbind From OnCooldownStarted")
+    static FCk_Handle_DialogEmitter
+    UnbindFrom_OnCooldownStarted(
+        UPARAM(ref) FCk_Handle_DialogEmitter& InEmitter,
+        const FCk_Delegate_DialogEmitter_OnCooldownStarted& InDelegate);
+
+    // Fires when a line STOPS cooling — whether it lapsed on its own or was cleared explicitly. A clear that
+    // removes nothing is not a transition and does not fire.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Dialog|Emitter",
+              DisplayName = "[Ck][Dialog][Emitter] Bind To OnCooldownEnded")
+    static FCk_Handle_DialogEmitter
+    BindTo_OnCooldownEnded(
+        UPARAM(ref) FCk_Handle_DialogEmitter& InEmitter,
+        const FCk_Delegate_DialogEmitter_OnCooldownEnded& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Dialog|Emitter",
+              DisplayName = "[Ck][Dialog][Emitter] Unbind From OnCooldownEnded")
+    static FCk_Handle_DialogEmitter
+    UnbindFrom_OnCooldownEnded(
+        UPARAM(ref) FCk_Handle_DialogEmitter& InEmitter,
+        const FCk_Delegate_DialogEmitter_OnCooldownEnded& InDelegate);
 
 public:
     // Opt-in selection helper (pure): from a completed query result pick one line — Passed entries only, the

@@ -21,6 +21,7 @@
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_DialogEmitter_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_DialogEmitter_EvaluateQueries);
+CK_REGISTER_PROCESSOR(ck::FProcessor_DialogEmitter_TickCooldowns);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -101,7 +102,17 @@ namespace ck
             ? FDialog_CooldownSentinels::Forever()
             : InNow + InRequest.Get_Duration();
 
-        InEmitter.Get<FFragment_DialogEmitter_Cooldowns>()._Cooldowns.Add(Line, Expiry);
+        InEmitter.Get<FFragment_DialogEmitter_Cooldowns>()._Cooldowns.Add(Line,
+            FCk_DialogEmitter_CooldownEntry{Expiry, InRequest.Get_Duration(), InRequest.Get_DurationMode()});
+
+        // The ticker's view key. Adding it per start is idempotent and cheaper than tracking emptiness here.
+        InEmitter.AddOrGet<FTag_DialogEmitter_HasCooldowns>();
+
+        UUtils_Signal_OnDialogCooldownStarted::Broadcast(InEmitter, ck::MakePayload(InEmitter, Line));
+
+        if (const auto& OnComplete = InRequest.Get_OnComplete();
+            OnComplete.IsBound())
+        { OnComplete.Execute(InEmitter, Line); }
     }
 
     auto
@@ -112,8 +123,22 @@ namespace ck
             const FCk_Request_DialogEmitter_ClearCooldown& InRequest)
         -> void
     {
-        // Removing an absent key is a harmless no-op.
-        InEmitter.Get<FFragment_DialogEmitter_Cooldowns>()._Cooldowns.Remove(InRequest.Get_Line());
+        // Removing an absent key is a harmless no-op — but it is NOT a transition, so neither the signal nor the
+        // completion delegate fires for it. A caller told "cleared" when nothing was cooling would be misled.
+        auto& Cooldowns = InEmitter.Get<FFragment_DialogEmitter_Cooldowns>();
+        const auto Line = InRequest.Get_Line();
+
+        if (Cooldowns._Cooldowns.Remove(Line) == 0)
+        { return; }
+
+        if (Cooldowns._Cooldowns.IsEmpty())
+        { InEmitter.Try_Remove<FTag_DialogEmitter_HasCooldowns>(); }
+
+        UUtils_Signal_OnDialogCooldownEnded::Broadcast(InEmitter, ck::MakePayload(InEmitter, Line));
+
+        if (const auto& OnComplete = InRequest.Get_OnComplete();
+            OnComplete.IsBound())
+        { OnComplete.Execute(InEmitter, Line); }
     }
 
     auto
@@ -124,7 +149,22 @@ namespace ck
             const FCk_Request_DialogEmitter_ClearAllCooldowns& InRequest)
         -> void
     {
-        InEmitter.Get<FFragment_DialogEmitter_Cooldowns>()._Cooldowns.Empty();
+        auto& Cooldowns = InEmitter.Get<FFragment_DialogEmitter_Cooldowns>();
+
+        // Snapshot the keys before emptying: each line still gets its own Ended signal, so an observer watching one
+        // line cannot miss the transition just because it happened as part of a bulk clear.
+        auto Cleared = TArray<FCk_Handle_DialogLine>{};
+        Cooldowns._Cooldowns.GenerateKeyArray(Cleared);
+        Cooldowns._Cooldowns.Empty();
+
+        InEmitter.Try_Remove<FTag_DialogEmitter_HasCooldowns>();
+
+        for (const auto& Line : Cleared)
+        { UUtils_Signal_OnDialogCooldownEnded::Broadcast(InEmitter, ck::MakePayload(InEmitter, Line)); }
+
+        if (const auto& OnComplete = InRequest.Get_OnComplete();
+            OnComplete.IsBound())
+        { OnComplete.Execute(InEmitter, Cleared.Num()); }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -172,8 +212,10 @@ namespace ck
             return;
         }
 
-        auto& Cooldowns = InEmitter.Get<FFragment_DialogEmitter_Cooldowns>();
-        DoPruneCooldowns(Cooldowns, Now);
+        // Pruning belongs to FProcessor_DialogEmitter_TickCooldowns, which runs before this one and is the only
+        // place expiry is observed. Classification compares against Now anyway, so a not-yet-pruned entry that has
+        // already lapsed still classifies correctly here.
+        const auto& Cooldowns = InEmitter.Get<FFragment_DialogEmitter_Cooldowns>();
 
         // Evaluate from a COPY: a per-request OnComplete delegate below runs caller code that may enqueue a follow-up
         // query (Request_QueryFollowUp). That lands in FFragment_DialogEmitter_Requests, not here, but iterating the
@@ -254,8 +296,10 @@ namespace ck
         -> ECk_DialogLine_QueryResult
     {
         // Cooldown FIRST (cheap map lookup): a cooling line reports Fail_EmitterCondition and its conditions are
-        // skipped (documented precedence). Cooldowns are pruned once per tick, so any remaining entry is active.
-        if (InCooldowns.Get_Cooldowns().Contains(InLine))
+        // skipped (documented precedence). Compared against Now rather than trusting presence, so an entry the
+        // ticker has not retired yet cannot wrongly suppress a line that has in fact lapsed.
+        if (const auto* Entry = InCooldowns.Get_Cooldowns().Find(InLine);
+            Entry != nullptr && FDialog_QueryHelpers::Get_WorldTimeNow(InEmitter) < Entry->Get_Expiry())
         { return ECk_DialogLine_QueryResult::Fail_EmitterCondition; }
 
         auto Failed = false;
@@ -272,24 +316,6 @@ namespace ck
         return Failed
             ? ECk_DialogLine_QueryResult::Fail_LineCondition
             : ECk_DialogLine_QueryResult::Passed;
-    }
-
-    auto
-        FProcessor_DialogEmitter_EvaluateQueries::
-        DoPruneCooldowns(
-            FFragment_DialogEmitter_Cooldowns& InCooldowns,
-            FCk_Time InNow)
-        -> void
-    {
-        // Prune expired (Now >= Expiry) and invalid-line-handle cooldown entries. The Forever sentinel is FCk_Time::Max,
-        // so a Forever cooldown never satisfies Now >= Expiry and is retained.
-        for (auto It = InCooldowns._Cooldowns.CreateIterator(); It; ++It)
-        {
-            const auto LineInvalid = ck::Is_NOT_Valid(It.Key());
-            const auto Expired = NOT (InNow < It.Value());
-            if (LineInvalid || Expired)
-            { It.RemoveCurrent(); }
-        }
     }
 
     auto
@@ -313,6 +339,49 @@ namespace ck
 
         while (Debug._History.Num() > Cap)
         { Debug._History.RemoveAt(0); }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_DialogEmitter_TickCooldowns::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InEmitter,
+            FFragment_DialogEmitter_Cooldowns& InCooldowns) const
+        -> void
+    {
+        auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InEmitter);
+        if (ck::Is_NOT_Valid(World))
+        { return; }
+
+        const auto Now = FDialog_QueryHelpers::Get_WorldTimeNow(World);
+
+        // Collect before broadcasting: a handler is free to start or clear a cooldown on this same emitter, and
+        // mutating the map while iterating it would be a use-after-invalidate.
+        //
+        // The Forever sentinel is FCk_Time::Max, so a Forever cooldown never satisfies Now >= Expiry and is retained.
+        // A line whose entity died is retired silently — there is nothing left for an observer to act on.
+        auto Lapsed = TArray<FCk_Handle_DialogLine>{};
+        for (auto It = InCooldowns._Cooldowns.CreateIterator(); It; ++It)
+        {
+            const auto LineInvalid = ck::Is_NOT_Valid(It.Key());
+            const auto Expired = NOT (Now < It.Value().Get_Expiry());
+
+            if (NOT LineInvalid && NOT Expired)
+            { continue; }
+
+            if (NOT LineInvalid)
+            { Lapsed.Emplace(It.Key()); }
+
+            It.RemoveCurrent();
+        }
+
+        if (InCooldowns._Cooldowns.IsEmpty())
+        { InEmitter.Try_Remove<FTag_DialogEmitter_HasCooldowns>(); }
+
+        for (const auto& Line : Lapsed)
+        { UUtils_Signal_OnDialogCooldownEnded::Broadcast(InEmitter, ck::MakePayload(InEmitter, Line)); }
     }
 }
 
