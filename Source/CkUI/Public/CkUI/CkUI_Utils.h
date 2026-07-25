@@ -111,6 +111,36 @@ public:
         bool InResetCursorToCenter);
 
     // ----------------------------------------------------------------------------------------------------------------
+    // Cursor Lock
+    // ----------------------------------------------------------------------------------------------------------------
+
+public:
+    /**
+     * Confines the mouse cursor to the screen bounds of InWidget.
+     *
+     * Slate owns the lock from here on: it recomputes the clip rect whenever the Widget's layout
+     * bounds change and releases the cursor once the Widget leaves the screen. Callers do not need
+     * per-frame upkeep, nor an unlock on teardown.
+     *
+     * The confinement is a single global platform state, so a subsequent call retargets the
+     * existing lock rather than nesting under it.
+     */
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Cursor", BlueprintCosmetic,
+        DisplayName = "[Ck][UI] Lock Cursor To Widget")
+    static ECk_UI_CursorLock_Result
+    Request_LockCursorToWidget(
+        UWidget* InWidget);
+
+    /**
+     * Releases the active cursor confinement, including one the engine established rather than
+     * Request_LockCursorToWidget.
+     */
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Cursor", BlueprintCosmetic,
+        DisplayName = "[Ck][UI] Unlock Cursor")
+    static void
+    Request_UnlockCursor();
+
+    // ----------------------------------------------------------------------------------------------------------------
     // Input Suspension (CommonUI)
     // ----------------------------------------------------------------------------------------------------------------
 
