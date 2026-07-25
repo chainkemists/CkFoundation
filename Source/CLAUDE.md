@@ -273,6 +273,59 @@ Canonical implementation: `UCk_Utils_Timer_UE::Add` (`CkTimer/Public/CkTimer/CkT
 Simpler features add fragments directly on the target entity instead of creating a child — read the
 target module's `Add` before assuming which shape it uses.
 
+### Converting a handle to a typesafe handle — NEVER `ck::StaticCast`
+
+**Rule: to get an `FCk_Handle_X`, call `UCk_Utils_X_UE::CastChecked(handle)` or
+`UCk_Utils_X_UE::Cast(handle)`. Never `ck::StaticCast<FCk_Handle_X>(handle)`.**
+
+`ck::StaticCast` is the unchecked primitive that `Cast`/`CastChecked` are built ON
+(`CkEcs/Public/CkEcs/Handle/CkHandle_TypeSafe.h`, `CK_DEFINE_CPP_CASTCHECKED_TYPESAFE`). Calling it
+directly skips the feature's `Has` check entirely, so a handle that lacks the feature converts
+silently and every later `Get<Fragment>()` on it is undefined behaviour — with no ensure naming the
+site that produced it. It is framework plumbing, not a call-site API.
+
+Which one:
+
+| Situation | Use |
+|---|---|
+| The feature is guaranteed (the entt view filters on its tag, you just `Add`ed it, you already checked `Has`) | `CastChecked` — ensures loudly if the contract ever breaks; the ensure should be unreachable |
+| The feature may legitimately be absent | `Cast` — silent, returns an invalid handle; branch on `ck::IsValid` |
+| You want the boolean only | `UCk_Utils_X_UE::Has(handle)` — don't cast to test |
+
+```cpp
+// ✅ view guarantees FTag_Poi, so the ensure is unreachable — but the Has check stays in one place
+const auto PoiHandle = UCk_Utils_Poi_UE::CastChecked(PoiGenericHandle);
+
+// ✅ absence is legitimate here
+const auto Camera = UCk_Utils_Camera_UE::Cast(InObserver);
+if (ck::IsValid(Camera)) { ... }
+
+// ❌ never — unchecked, and a wrong handle fails much later with no breadcrumb
+const auto PoiHandle = ck::StaticCast<FCk_Handle_Poi>(PoiGenericHandle);
+```
+
+Both are variadic-template statics generated onto the feature's utils class by
+`CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_X)`, so they accept any handle type and are available
+wherever the utils header is. Inside a feature's own utils they are unqualified — `CastChecked(X)`.
+
+AngelScript/Blueprint have no `ck::StaticCast` binding at all; they get `utils_x::DoCastChecked` /
+`DoCast` (which returns a `TOptional`), so the same rule falls out for free there.
+
+**Equally banned: aliasing a typesafe handle to a base reference.**
+
+```cpp
+// ❌ NEVER. Object slicing waiting to happen: anything that assigns through this FCk_Handle&
+//    overwrites only the base subobject, leaving an FCk_Handle_Poi whose type claim is a lie.
+auto& Owner = static_cast<FCk_Handle&>(InPoi);
+const auto& Owner = static_cast<const FCk_Handle&>(InPoi);
+```
+
+You almost never need it — **`FCk_Handle_X` derives from `FCk_Handle`, so just pass the typesafe handle
+where an `FCk_Handle&` is expected** and let the compiler bind the base. Handles are value types over
+(entity id + registry), so every mutation goes to the registry and is visible through any handle to the
+same entity. When you genuinely need a distinct bare handle, take a COPY via `InPoi.ConvertToHandle()`
+(`FCk_Handle_TypeSafe`) — never a reference.
+
 ### Entity game logic — EntityScript
 
 `UCk_EntityScript_UE` (C++ / Blueprint / AS) lifecycle: `Construct → BeginPlay → EndPlay`.
