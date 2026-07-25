@@ -26,6 +26,11 @@ namespace ck
     // Has/Cast key for a dialog emitter.
     CK_DEFINE_ECS_TAG(FTag_DialogEmitter);
 
+    // On-demand marker: present iff this emitter has at least one cooldown recorded. It is what gives the
+    // cooldown ticker a view — the Cooldowns fragment itself is always present, so keying off that would tick
+    // every emitter in the world every frame just to find the few that are actually cooling.
+    CK_DEFINE_ECS_TAG(FTag_DialogEmitter_HasCooldowns);
+
     // --------------------------------------------------------------------------------------------------------------------
 
     using FFragment_DialogEmitter_Params = FCk_Fragment_DialogEmitter_ParamsData;
@@ -41,9 +46,11 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Always present on an emitter (added by Add). Line ENTITY handle -> world-time expiry; Forever cooldowns store
-    // FDialog_CooldownSentinels::Forever(). Keyed by handle (not LineID) by design: a re-registered bank makes new
-    // entities, so cooldowns do not survive re-registration — the accepted consequence of handle keying.
+    // Always present on an emitter (added by Add). Line ENTITY handle -> the cooldown record (expiry, the duration it
+    // was started with, and the mode); Forever cooldowns store FDialog_CooldownSentinels::Forever() as the expiry.
+    // The started-with duration is retained so an observer can express progress, which expiry alone cannot give.
+    // Keyed by handle (not LineID) by design: a re-registered bank makes new entities, so cooldowns do not survive
+    // re-registration — the accepted consequence of handle keying.
     struct CKDIALOG_API FFragment_DialogEmitter_Cooldowns
     {
     public:
@@ -52,10 +59,11 @@ namespace ck
     public:
         friend class FProcessor_DialogEmitter_HandleRequests;
         friend class FProcessor_DialogEmitter_EvaluateQueries;
+        friend class FProcessor_DialogEmitter_TickCooldowns;
         friend class ::UCk_Utils_DialogEmitter_UE;
 
     private:
-        TMap<FCk_Handle_DialogLine, FCk_Time> _Cooldowns;
+        TMap<FCk_Handle_DialogLine, FCk_DialogEmitter_CooldownEntry> _Cooldowns;
 
     public:
         CK_PROPERTY_GET(_Cooldowns);
@@ -160,6 +168,12 @@ namespace ck
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKDIALOG_API, OnDialogQueryCompleted,
         FCk_Delegate_DialogEmitter_OnQueryCompleted, FCk_Handle_DialogEmitter, FCk_DialogEmitter_QueryResult);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKDIALOG_API, OnDialogCooldownStarted,
+        FCk_Delegate_DialogEmitter_OnCooldownStarted, FCk_Handle_DialogEmitter, FCk_Handle_DialogLine);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKDIALOG_API, OnDialogCooldownEnded,
+        FCk_Delegate_DialogEmitter_OnCooldownEnded, FCk_Handle_DialogEmitter, FCk_Handle_DialogLine);
 
     CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_DialogEmitter_Requests);
 }

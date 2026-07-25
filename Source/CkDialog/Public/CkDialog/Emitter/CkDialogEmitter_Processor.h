@@ -107,18 +107,44 @@ namespace ck
             const FFragment_DialogEmitter_Cooldowns& InCooldowns,
             const FCk_Handle_DialogLine& InLine) -> ECk_DialogLine_QueryResult;
 
-        // These two touch private fragment members (cooldown map / debug ring) — members so the friend grant on
-        // FFragment_DialogEmitter_Cooldowns / _Debug / DebugEntry applies.
-        static auto
-        DoPruneCooldowns(
-            FFragment_DialogEmitter_Cooldowns& InCooldowns,
-            FCk_Time InNow) -> void;
-
         static auto
         DoRecordDebug(
             HandleType InEmitter,
             const FCk_DialogEmitter_QueryResult& InResult,
             FCk_Time InNow) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Retires lapsed cooldowns and broadcasts OnDialogCooldownEnded for each.
+    //
+    // This exists as its own processor because expiry has to be noticed even when nobody is querying. Pruning used to
+    // ride along inside EvaluateQueries, whose view is gated on pending queries — so on a silent emitter a lapsed
+    // cooldown simply sat in the map. That was invisible while the only consumers were the Now-comparing getters;
+    // the moment an "ended" signal exists, something has to actually observe the transition.
+    //
+    // The HasCooldowns marker keeps the view to emitters that are genuinely cooling, and is dropped with the last
+    // entry so a quiet emitter costs nothing.
+    class CKDIALOG_API FProcessor_DialogEmitter_TickCooldowns : public ck_exp::TProcessor<
+        FProcessor_DialogEmitter_TickCooldowns,
+        FCk_Handle_DialogEmitter,
+        FTag_DialogEmitter_HasCooldowns,
+        ck::TReadWrite<FFragment_DialogEmitter_Cooldowns>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay_TimeDelta;
+        using RunAfter = TDepList<FProcessor_DialogEmitter_HandleRequests>;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InEmitter,
+            FFragment_DialogEmitter_Cooldowns& InCooldowns) const -> void;
     };
 }
 
