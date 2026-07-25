@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkEcs/Handle/CkHandle.h"
 
 #include <GameFramework/HUD.h>
 
@@ -37,6 +38,9 @@ public:
     CK_GENERATED_BODY(ACk_HUD_UE);
 
     ACk_HUD_UE();
+
+    /** Refreshes the rebuilt ECS context on the retained primary layout and active Game-layer HUD. */
+    void Refresh_Context(const FCk_Handle& InContextEntity);
 
     // ----------------------------------------------------------------------------------------------------------------
 

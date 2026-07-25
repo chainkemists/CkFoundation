@@ -185,6 +185,66 @@ auto
 
 auto
     UCk_Utils_ContextReceiver_UE::
+    RefreshContextIntoObject(
+        UObject* InObject,
+        const FCk_Handle& InContextEntity)
+    -> ECk_ContextReceiver_InjectResult
+{
+    if (ck::Is_NOT_Valid(InObject))
+    { return ECk_ContextReceiver_InjectResult::Failed_InvalidObject; }
+
+    if (ck::Is_NOT_Valid(InContextEntity))
+    { return ECk_ContextReceiver_InjectResult::Failed_InvalidContext; }
+
+    auto FoundAny = false;
+
+    for (TFieldIterator<FStructProperty> PropIt(InObject->GetClass(), EFieldIteratorFlags::IncludeSuper); PropIt; ++PropIt)
+    {
+        const auto* StructProp = *PropIt;
+
+        if (StructProp->Struct != FCk_Handle_ContextReceiver::StaticStruct())
+        { continue; }
+
+        auto* ContextReceiverPtr = StructProp->ContainerPtrToValuePtr<FCk_Handle_ContextReceiver>(InObject);
+
+        // Request_InjectContext deliberately coalesces equal root handles. A
+        // snapshot hydration can preserve that root while replacing children,
+        // so clear first to make the downstream receiver rebuild explicit.
+        Request_ClearContext(*ContextReceiverPtr);
+        Request_InjectContext(*ContextReceiverPtr, InContextEntity);
+        FoundAny = true;
+    }
+
+    if (NOT FoundAny)
+    { return ECk_ContextReceiver_InjectResult::Failed_ContextReceiverPropertyNotFound; }
+
+    return ECk_ContextReceiver_InjectResult::Success;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ContextReceiver_UE::
+    HasContextReceiverPropertyOnObject(
+        const UObject* InObject)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InObject))
+    { return false; }
+
+    for (TFieldIterator<FStructProperty> PropIt(InObject->GetClass(), EFieldIteratorFlags::IncludeSuper); PropIt; ++PropIt)
+    {
+        if (PropIt->Struct == FCk_Handle_ContextReceiver::StaticStruct())
+        { return true; }
+    }
+
+    return false;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ContextReceiver_UE::
     Has_AnyValidContextOnObject(
         const UObject* InObject)
     -> bool
