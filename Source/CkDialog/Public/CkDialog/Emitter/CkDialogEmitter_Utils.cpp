@@ -60,11 +60,11 @@ auto
     -> bool
 {
     const auto& Cooldowns = InEmitter.Get<ck::FFragment_DialogEmitter_Cooldowns>().Get_Cooldowns();
-    const auto* Expiry = Cooldowns.Find(InLine);
-    if (Expiry == nullptr)
+    const auto* Entry = Cooldowns.Find(InLine);
+    if (Entry == nullptr)
     { return false; }
 
-    return ck::FDialog_QueryHelpers::Get_WorldTimeNow(InEmitter) < *Expiry;
+    return ck::FDialog_QueryHelpers::Get_WorldTimeNow(InEmitter) < Entry->Get_Expiry();
 }
 
 auto
@@ -79,7 +79,7 @@ auto
     auto Result = TArray<FCk_Handle_DialogLine>{};
     for (const auto& Cooldown : Cooldowns)
     {
-        if (Now < Cooldown.Value)
+        if (Now < Cooldown.Value.Get_Expiry())
         { Result.Emplace(Cooldown.Key); }
     }
     return Result;
@@ -93,18 +93,37 @@ auto
     -> FCk_Time
 {
     const auto& Cooldowns = InEmitter.Get<ck::FFragment_DialogEmitter_Cooldowns>().Get_Cooldowns();
-    const auto* Expiry = Cooldowns.Find(InLine);
-    if (Expiry == nullptr)
+    const auto* Entry = Cooldowns.Find(InLine);
+    if (Entry == nullptr)
     { return FCk_Time::ZeroSecond(); }
 
-    if (*Expiry == ck::FDialog_CooldownSentinels::Forever())
-    { return *Expiry; }
+    // Forever reports its own sentinel expiry rather than a countdown — there is nothing to count down to.
+    // Read the recorded mode instead of comparing against the sentinel value, so a caller cannot mistake a
+    // very-long Timed cooldown for a Forever one.
+    const auto Expiry = Entry->Get_Expiry();
+    if (Entry->Get_DurationMode() == ECk_Dialog_CooldownDuration::Forever)
+    { return Expiry; }
 
     const auto Now = ck::FDialog_QueryHelpers::Get_WorldTimeNow(InEmitter);
-    if (NOT (Now < *Expiry))
+    if (NOT (Now < Expiry))
     { return FCk_Time::ZeroSecond(); }
 
-    return *Expiry - Now;
+    return Expiry - Now;
+}
+
+auto
+    UCk_Utils_DialogEmitter_UE::
+    Get_CooldownEntry(
+        const FCk_Handle_DialogEmitter& InEmitter,
+        const FCk_Handle_DialogLine& InLine)
+    -> FCk_DialogEmitter_CooldownEntry
+{
+    const auto& Cooldowns = InEmitter.Get<ck::FFragment_DialogEmitter_Cooldowns>().Get_Cooldowns();
+    const auto* Entry = Cooldowns.Find(InLine);
+    if (Entry == nullptr)
+    { return {}; }
+
+    return *Entry;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -216,6 +235,58 @@ auto
     -> FCk_Handle_DialogEmitter
 {
     ck::UUtils_Signal_OnDialogQueryCompleted::Unbind(InEmitter, InDelegate);
+
+    return InEmitter;
+}
+
+auto
+    UCk_Utils_DialogEmitter_UE::
+    BindTo_OnCooldownStarted(
+        FCk_Handle_DialogEmitter& InEmitter,
+        const FCk_Delegate_DialogEmitter_OnCooldownStarted& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle_DialogEmitter
+{
+    ck::UUtils_Signal_OnDialogCooldownStarted::Bind(InEmitter, InDelegate, InBindingPolicy);
+
+    return InEmitter;
+}
+
+auto
+    UCk_Utils_DialogEmitter_UE::
+    UnbindFrom_OnCooldownStarted(
+        FCk_Handle_DialogEmitter& InEmitter,
+        const FCk_Delegate_DialogEmitter_OnCooldownStarted& InDelegate)
+    -> FCk_Handle_DialogEmitter
+{
+    ck::UUtils_Signal_OnDialogCooldownStarted::Unbind(InEmitter, InDelegate);
+
+    return InEmitter;
+}
+
+auto
+    UCk_Utils_DialogEmitter_UE::
+    BindTo_OnCooldownEnded(
+        FCk_Handle_DialogEmitter& InEmitter,
+        const FCk_Delegate_DialogEmitter_OnCooldownEnded& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle_DialogEmitter
+{
+    ck::UUtils_Signal_OnDialogCooldownEnded::Bind(InEmitter, InDelegate, InBindingPolicy);
+
+    return InEmitter;
+}
+
+auto
+    UCk_Utils_DialogEmitter_UE::
+    UnbindFrom_OnCooldownEnded(
+        FCk_Handle_DialogEmitter& InEmitter,
+        const FCk_Delegate_DialogEmitter_OnCooldownEnded& InDelegate)
+    -> FCk_Handle_DialogEmitter
+{
+    ck::UUtils_Signal_OnDialogCooldownEnded::Unbind(InEmitter, InDelegate);
 
     return InEmitter;
 }

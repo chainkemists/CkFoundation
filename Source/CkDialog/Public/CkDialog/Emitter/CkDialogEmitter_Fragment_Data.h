@@ -167,6 +167,59 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_DialogEmitter, InEmitter,
     FCk_DialogEmitter_QueryResult, InResult);
 
+// Line-scoped cooldown transitions. The SAME type serves both the per-request completion delegate and the
+// emitter-wide signal, so an observer and a requester see an identical payload.
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_DialogEmitter_OnCooldownStarted,
+    FCk_Handle_DialogEmitter, InEmitter,
+    FCk_Handle_DialogLine, InLine);
+
+// Fired whether the cooldown lapsed on its own or was cleared explicitly — off cooldown is off cooldown, and a
+// consumer re-enabling a barks-again affordance does not care which.
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_DialogEmitter_OnCooldownEnded,
+    FCk_Handle_DialogEmitter, InEmitter,
+    FCk_Handle_DialogLine, InLine);
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_DialogEmitter_OnAllCooldownsCleared,
+    FCk_Handle_DialogEmitter, InEmitter,
+    int32, InNumCleared);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// One active cooldown. _Duration is retained purely so a consumer can render progress — the gameplay check only ever
+// compares Now against _Expiry, and a Forever cooldown has no meaningful duration at all.
+USTRUCT(BlueprintType)
+struct CKDIALOG_API FCk_DialogEmitter_CooldownEntry
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_DialogEmitter_CooldownEntry);
+
+private:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    FCk_Time _Expiry;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    FCk_Time _Duration;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    ECk_Dialog_CooldownDuration _DurationMode = ECk_Dialog_CooldownDuration::Timed;
+
+public:
+    CK_PROPERTY(_Expiry);
+    CK_PROPERTY(_Duration);
+    CK_PROPERTY(_DurationMode);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_DialogEmitter_CooldownEntry, _Expiry, _Duration, _DurationMode);
+};
+
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
@@ -237,10 +290,16 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_Dialog_CooldownDuration _DurationMode = ECk_Dialog_CooldownDuration::Timed;
 
+    // Fired once the cooldown is actually recorded. Unbound is fine — nothing is executed.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Delegate_DialogEmitter_OnCooldownStarted _OnComplete;
+
 public:
     CK_PROPERTY_GET(_Line);
     CK_PROPERTY_GET(_Duration);
     CK_PROPERTY(_DurationMode);
+    CK_PROPERTY(_OnComplete);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_DialogEmitter_StartCooldown, _Line, _Duration);
@@ -262,8 +321,15 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_Handle_DialogLine _Line;
 
+    // Fired only when a cooldown was actually removed — clearing a line that was not cooling is a no-op, and
+    // reporting completion for it would tell a caller something changed when nothing did.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Delegate_DialogEmitter_OnCooldownEnded _OnComplete;
+
 public:
     CK_PROPERTY_GET(_Line);
+    CK_PROPERTY(_OnComplete);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_DialogEmitter_ClearCooldown, _Line);
@@ -279,6 +345,15 @@ struct CKDIALOG_API FCk_Request_DialogEmitter_ClearAllCooldowns : public FCk_Req
 public:
     CK_GENERATED_BODY(FCk_Request_DialogEmitter_ClearAllCooldowns);
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_DialogEmitter_ClearAllCooldowns);
+
+private:
+    // Carries how many were cleared, so a caller can tell a real purge from a no-op.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Delegate_DialogEmitter_OnAllCooldownsCleared _OnComplete;
+
+public:
+    CK_PROPERTY(_OnComplete);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
