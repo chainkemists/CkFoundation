@@ -153,6 +153,13 @@ if (InParams.Get_CountDirection() == ECk_Timer_CountDirection::CountUp)
 `ck::IsValid_Policy_NullptrOnly{}` is for RAW pointers only (smart pointers have their own
 overloads — pass them bare).
 
+**Typesafe handle conversion: `UCk_Utils_X_UE::CastChecked` / `::Cast` — NEVER
+`ck::StaticCast<FCk_Handle_X>`.** `ck::StaticCast` is the unchecked primitive those two are built on;
+calling it directly skips the feature's `Has` check, so a wrong handle converts silently and blows up
+later with no breadcrumb. `CastChecked` when the feature is guaranteed (view-filtered, just added,
+already `Has`-checked), `Cast` when absence is legitimate. Full rule + table:
+[Source/CLAUDE.md](Source/CLAUDE.md) § "Converting a handle to a typesafe handle".
+
 **`auto` aggressively**, including typed-nullptr casts: `auto Canvas = static_cast<UCanvas*>(nullptr);`.
 `{}` construction everywhere EXCEPT UFUNCTION parameter defaults, which use `()` (UHT limitation);
 no `= {}` default-init inside UFUNCTION signatures.
