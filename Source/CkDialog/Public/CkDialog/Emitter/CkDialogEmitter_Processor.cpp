@@ -175,13 +175,27 @@ namespace ck
         auto& Cooldowns = InEmitter.Get<FFragment_DialogEmitter_Cooldowns>();
         DoPruneCooldowns(Cooldowns, Now);
 
-        for (const auto& Query : InPending._Queries)
+        // Evaluate from a COPY: a per-request OnComplete delegate below runs caller code that may enqueue a follow-up
+        // query (Request_QueryFollowUp). That lands in FFragment_DialogEmitter_Requests, not here, but iterating the
+        // live array while arbitrary caller code runs is a reentrancy hazard not worth taking.
+        const auto QueriesCopy = InPending._Queries;
+
+        for (const auto& Query : QueriesCopy)
         {
             const auto Result = DoEvaluateQuery(InEmitter, InParams, Cooldowns, *Registry, Query, Now);
 
             DoRecordDebug(InEmitter, Result, Now);
 
             UUtils_Signal_OnDialogQueryCompleted::Broadcast(InEmitter, ck::MakePayload(InEmitter, Result));
+
+            // Per-request continuation, correlated to THIS query — fired after the broadcast so emitter-wide observers
+            // see the result before the requester can chain a follow-up. Executed directly rather than bound through
+            // the signal (the CkEqs approach): CkEqs owns a per-query entity whose signal it can bind + auto-unbind,
+            // whereas OnDialogQueryCompleted is emitter-wide, so a bind-per-iteration would deliver query N's payload
+            // to every delegate still bound when the payload flushes.
+            if (const auto& OnComplete = Query.Get_OnComplete();
+                OnComplete.IsBound())
+            { OnComplete.Execute(InEmitter, Result); }
         }
 
         // Draining the fragment discards the queries + readiness-defer bookkeeping in one step (fresh next query).
