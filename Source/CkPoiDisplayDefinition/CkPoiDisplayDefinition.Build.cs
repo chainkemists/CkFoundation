@@ -21,6 +21,9 @@ public class CkPoiDisplayDefinition : CkModuleRules
             "CkEcsExt",
             "CkLabel",
             "CkLog",
+            // A display definition is composed on, and resolved off, a POI — the public API takes
+            // FCk_Handle_Poi. CkPoi does NOT depend back on this module, so there is no cycle.
+            "CkPoi",
             "CkRecord",
             "CkSettings",
             "CkVisibleRange",
