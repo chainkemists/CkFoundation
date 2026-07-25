@@ -19,9 +19,17 @@
 #include <Framework/Application/SlateApplication.h>
 #include <Framework/Application/SlateUser.h>
 #include <GameFramework/PlayerController.h>
+#include <GenericPlatform/GenericApplication.h>
+#include <GenericPlatform/GenericWindow.h>
+#include <GenericPlatform/ICursor.h>
 #include <Layout/WidgetPath.h>
 #include <UObject/UObjectIterator.h>
 #include <Widgets/CommonActivatableWidgetContainer.h>
+
+#if PLATFORM_MICROSOFT
+// ICursor.h only forward-declares tagRECT; ICursor::Lock needs the complete type.
+#include "Microsoft/WindowsHWrapper.h"
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------
 // Static Member Initialization
@@ -292,6 +300,28 @@ auto
 // Cursor Lock
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_ui_cursor_lock
+{
+    // FSlateUser::LockCursor / UnlockCursor / GetCursor all sit below SLATE_SCOPE: in SlateUser.h, which expands to
+    // `protected` outside the Slate module — that whole API is Slate-internal and unreachable from here. The public
+    // route is the platform cursor itself, so the lock rect FSlateUser would have computed is computed here instead
+    // (mirroring FSlateUser::LockCursorInternal).
+    auto
+        Get_PlatformCursor()
+        -> TSharedPtr<ICursor>
+    {
+        if (NOT FSlateApplication::IsInitialized())
+        { return {}; }
+
+        const auto PlatformApplication = FSlateApplication::Get().GetPlatformApplication();
+
+        if (ck::Is_NOT_Valid(PlatformApplication))
+        { return {}; }
+
+        return PlatformApplication->Cursor;
+    }
+}
+
 auto
     UCk_Utils_UI_UE::
     Request_LockCursorToWidget(
@@ -302,12 +332,9 @@ auto
         TEXT("Cannot lock the cursor to an invalid Widget"))
     { return ECk_UI_CursorLock_Result::InvalidWidget; }
 
-    if (NOT FSlateApplication::IsInitialized())
-    { return ECk_UI_CursorLock_Result::NoCursorAvailable; }
+    const auto Cursor = ck_ui_cursor_lock::Get_PlatformCursor();
 
-    const auto CursorUser = FSlateApplication::Get().GetCursorUser();
-
-    if (ck::Is_NOT_Valid(CursorUser) || ck::Is_NOT_Valid(CursorUser->GetCursor()))
+    if (ck::Is_NOT_Valid(Cursor))
     { return ECk_UI_CursorLock_Result::NoCursorAvailable; }
 
     const auto SlateWidget = InWidget->GetCachedWidget();
@@ -315,9 +342,6 @@ auto
     if (ck::Is_NOT_Valid(SlateWidget))
     { return ECk_UI_CursorLock_Result::WidgetNotOnScreen; }
 
-    // FSlateUser::LockCursor resolves the widget path itself, but reports a missing path through an
-    // engine ensure and drops a background-window lock on the floor without telling anyone. Resolving
-    // it up front turns both into results the caller can act on.
     auto WidgetPath = FWidgetPath{};
 
     if (NOT FSlateApplication::Get().GeneratePathToWidgetUnchecked(SlateWidget.ToSharedRef(), WidgetPath) ||
@@ -329,7 +353,49 @@ auto
     if (ck::Is_NOT_Valid(NativeWindow) || NOT NativeWindow->IsForegroundWindow())
     { return ECk_UI_CursorLock_Result::WindowNotForeground; }
 
-    CursorUser->LockCursor(SlateWidget.ToSharedRef());
+    // Last widget in the path is the one being locked to.
+    auto SlateClipRect = WidgetPath.Widgets.Last().Geometry.GetLayoutBoundingRect();
+
+#if PLATFORM_DESKTOP
+    const auto IsBorderlessGameWindow = NativeWindow->IsDefinitionValid() &&
+        NativeWindow->GetDefinition().Type == EWindowType::GameWindow &&
+        NOT NativeWindow->GetDefinition().HasOSWindowBorder;
+    const auto ClipRectAdjustment = IsBorderlessGameWindow ? 0 : 1;
+#else
+    const auto ClipRectAdjustment = 0;
+#endif
+
+    // Screen-space mapping scales everything, so a fullscreen viewport whose resolution differs from the platform
+    // resolution offsets the hit-test. Same correction FSlateUser applies.
+    if (FSlateApplication::Get().GetTransformFullscreenMouseInput() && NOT GIsEditor &&
+        NativeWindow->GetWindowMode() == EWindowMode::Fullscreen)
+    {
+        auto CachedDisplayMetrics = FDisplayMetrics{};
+        FSlateApplication::Get().GetCachedDisplayMetrics(CachedDisplayMetrics);
+
+        const auto DisplaySize = FVector2f{
+            static_cast<float>(CachedDisplayMetrics.PrimaryDisplayWidth),
+            static_cast<float>(CachedDisplayMetrics.PrimaryDisplayHeight)};
+        const auto DisplayDistortion = SlateClipRect.GetSize() / DisplaySize;
+
+        SlateClipRect.Left   /= DisplayDistortion.X;
+        SlateClipRect.Top    /= DisplayDistortion.Y;
+        SlateClipRect.Right  /= DisplayDistortion.X;
+        SlateClipRect.Bottom /= DisplayDistortion.Y;
+    }
+
+    // Round the upper-left up and truncate the lower-right down so the rect stays INSIDE the widget geometry — half a
+    // pixel the other way lets the cursor out.
+    auto ClipRect = RECT{};
+    ClipRect.left   = FMath::RoundToInt(SlateClipRect.Left + ClipRectAdjustment);
+    ClipRect.top    = FMath::RoundToInt(SlateClipRect.Top + ClipRectAdjustment);
+    ClipRect.right  = FMath::TruncToInt(SlateClipRect.Right - ClipRectAdjustment);
+    ClipRect.bottom = FMath::TruncToInt(SlateClipRect.Bottom - ClipRectAdjustment);
+
+    // One-shot, unlike FSlateUser: its UpdateCursor re-locks each frame as the widget's bounds change and unlocks
+    // automatically once the widget goes away. Neither happens here — re-call this after a layout change, and always
+    // pair it with Request_UnlockCursor before the widget is torn down.
+    Cursor->Lock(&ClipRect);
 
     return ECk_UI_CursorLock_Result::Success;
 }
@@ -339,15 +405,12 @@ auto
     Request_UnlockCursor()
     -> void
 {
-    if (NOT FSlateApplication::IsInitialized())
+    const auto Cursor = ck_ui_cursor_lock::Get_PlatformCursor();
+
+    if (ck::Is_NOT_Valid(Cursor))
     { return; }
 
-    const auto CursorUser = FSlateApplication::Get().GetCursorUser();
-
-    if (ck::Is_NOT_Valid(CursorUser))
-    { return; }
-
-    CursorUser->UnlockCursor();
+    Cursor->Lock(nullptr);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
