@@ -6,7 +6,7 @@
 
 #include "CkEcs/Snapshot/CkSnapshot_HandleWalk.h"
 #include "CkEcs/Snapshot/CkSnapshot_Context.h"
-#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h" // FTag_Snapshot_SaveTransient (rule 1.5)
+#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h" // snapshot exclusion tags (rules 1.25 / 1.5)
 
 #include "CkEcs/Registry/CkRegistry.h"
 #include "CkEcs/Registry/CkRegistry_SlotTable.h"
@@ -64,6 +64,44 @@ namespace ck::snapshot
                 ck::FTag_DestroyEntity_Teardown,
                 ck::FTag_DestroyEntity_Await,
                 ck::FTag_DestroyEntity_Finalize>();
+        }
+
+        enum class ECk_SnapshotExclusionPolicy : uint8
+        {
+            None,
+            SaveTransient,
+            ReconstructOnly,
+        };
+
+        // A snapshot exclusion marker on a lifetime owner applies to its whole construction subtree. A child cannot
+        // be restored without an intentionally omitted owner, so capturing it alone would create an orphan on load.
+        // ReconstructOnly wins over SaveTransient: the enclosing feature explicitly declares that the omitted data is
+        // recreated from authored/default state and therefore must not produce a data-loss audit.
+        auto
+            DoGet_SnapshotExclusionPolicy(
+                const FCk_Handle& InHandle)
+            -> ECk_SnapshotExclusionPolicy
+        {
+            constexpr auto MaxDepth = 256;
+            auto Current = InHandle;
+            auto Result = ECk_SnapshotExclusionPolicy::None;
+
+            for (auto Depth = 0; Depth < MaxDepth; ++Depth)
+            {
+                if (Current.Has<ck::FTag_Snapshot_ReconstructOnly>())
+                { return ECk_SnapshotExclusionPolicy::ReconstructOnly; }
+                if (Current.Has<ck::FTag_Snapshot_SaveTransient>())
+                { Result = ECk_SnapshotExclusionPolicy::SaveTransient; }
+
+                if (NOT Current.Has<ck::FFragment_LifetimeOwner>())
+                { break; }
+
+                const auto Owner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Current);
+                if (ck::Is_NOT_Valid(Owner) || Owner == Current)
+                { break; }
+                Current = Owner;
+            }
+            return Result;
         }
 
         auto
@@ -225,12 +263,15 @@ namespace ck::snapshot
             if (IsMarkedForDestruction(Handle))
             { continue; }
 
-            // Reconstruct-only: an explicit feature policy says this local/derived entity is rebuilt from authored
-            // defaults after load, so its payload omission is intentional and must not raise the audit below.
-            if (Handle.Has<ck::FTag_Snapshot_ReconstructOnly>())
+            const auto ExclusionPolicy = DoGet_SnapshotExclusionPolicy(Handle);
+
+            // Reconstruct-only: an explicit feature policy says this entity (or its reconstruction-owned ancestor) is
+            // rebuilt from authored defaults after load, so its payload omission is intentional and must not raise the
+            // audit below.
+            if (ExclusionPolicy == ECk_SnapshotExclusionPolicy::ReconstructOnly)
             { continue; }
 
-            if (Handle.Has<ck::FTag_Snapshot_SaveTransient>())
+            if (ExclusionPolicy == ECk_SnapshotExclusionPolicy::SaveTransient)
             {
                 ++SaveTransientSkipped;
                 if (const auto* ProducingType = FindFirstProducingType(Handle))
