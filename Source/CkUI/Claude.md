@@ -11,6 +11,11 @@
 
 - `ECk_LinePlaneIntersectionStatus` — result of 3D projection queries.
 - UI entity lifecycle (show/hide, bind to entity position).
+- `UCk_Utils_UI_UE::Request_LockCursorToWidget` / `Request_UnlockCursor` — confine the mouse cursor
+  to a `UWidget`'s screen bounds. Slate owns the lock afterwards (rect follows layout changes, auto-
+  releases when the widget leaves the screen), so there is no per-frame upkeep and no teardown unlock.
+  Returns `ECk_UI_CursorLock_Result` — a lock is silently dropped by the platform when the widget's
+  window is not foreground, and that case is reported rather than swallowed.
 
 ---
 
