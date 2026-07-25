@@ -111,6 +111,20 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_UI_ForEachWidgetResult);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_UI_CursorLock_Result : uint8
+{
+    Success,
+    InvalidWidget,
+    NoCursorAvailable,   // Slate is absent (headless/server/commandlet) or the user drives no cursor
+    WidgetNotOnScreen,   // Widget was never constructed, is collapsed/hidden, or belongs to no window
+    WindowNotForeground  // The platform refuses to confine the cursor to a background window
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_UI_CursorLock_Result);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 /**
  * Opaque handle representing an active input suspension.
  *

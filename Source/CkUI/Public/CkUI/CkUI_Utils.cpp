@@ -15,8 +15,11 @@
 #include <CommonInputSubsystem.h>
 #include <Components/NamedSlot.h>
 #include <Components/PanelWidget.h>
+#include <Components/Widget.h>
 #include <Framework/Application/SlateApplication.h>
+#include <Framework/Application/SlateUser.h>
 #include <GameFramework/PlayerController.h>
+#include <Layout/WidgetPath.h>
 #include <UObject/UObjectIterator.h>
 #include <Widgets/CommonActivatableWidgetContainer.h>
 
@@ -283,6 +286,68 @@ auto
         const auto Y = FMath::TruncToInt(Size.Y / 2);
         InPlayerController->SetMouseLocation(X, Y);
     }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Cursor Lock
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_UI_UE::
+    Request_LockCursorToWidget(
+        UWidget* InWidget)
+    -> ECk_UI_CursorLock_Result
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InWidget),
+        TEXT("Cannot lock the cursor to an invalid Widget"))
+    { return ECk_UI_CursorLock_Result::InvalidWidget; }
+
+    if (NOT FSlateApplication::IsInitialized())
+    { return ECk_UI_CursorLock_Result::NoCursorAvailable; }
+
+    const auto CursorUser = FSlateApplication::Get().GetCursorUser();
+
+    if (ck::Is_NOT_Valid(CursorUser) || ck::Is_NOT_Valid(CursorUser->GetCursor()))
+    { return ECk_UI_CursorLock_Result::NoCursorAvailable; }
+
+    const auto SlateWidget = InWidget->GetCachedWidget();
+
+    if (ck::Is_NOT_Valid(SlateWidget))
+    { return ECk_UI_CursorLock_Result::WidgetNotOnScreen; }
+
+    // FSlateUser::LockCursor resolves the widget path itself, but reports a missing path through an
+    // engine ensure and drops a background-window lock on the floor without telling anyone. Resolving
+    // it up front turns both into results the caller can act on.
+    auto WidgetPath = FWidgetPath{};
+
+    if (NOT FSlateApplication::Get().GeneratePathToWidgetUnchecked(SlateWidget.ToSharedRef(), WidgetPath) ||
+        NOT WidgetPath.IsValid())
+    { return ECk_UI_CursorLock_Result::WidgetNotOnScreen; }
+
+    const auto NativeWindow = WidgetPath.GetWindow()->GetNativeWindow();
+
+    if (ck::Is_NOT_Valid(NativeWindow) || NOT NativeWindow->IsForegroundWindow())
+    { return ECk_UI_CursorLock_Result::WindowNotForeground; }
+
+    CursorUser->LockCursor(SlateWidget.ToSharedRef());
+
+    return ECk_UI_CursorLock_Result::Success;
+}
+
+auto
+    UCk_Utils_UI_UE::
+    Request_UnlockCursor()
+    -> void
+{
+    if (NOT FSlateApplication::IsInitialized())
+    { return; }
+
+    const auto CursorUser = FSlateApplication::Get().GetCursorUser();
+
+    if (ck::Is_NOT_Valid(CursorUser))
+    { return; }
+
+    CursorUser->UnlockCursor();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
