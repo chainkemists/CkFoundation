@@ -85,111 +85,6 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType)
-struct CKDIALOG_API FCk_Request_DialogEmitter_Query : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_DialogEmitter_Query);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_DialogEmitter_Query);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "Ck.Dialog.Event"))
-    FGameplayTag _EventTag;
-
-    // None (default) => inherit the emitter's DefaultSortPolicy.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    ECk_Dialog_QuerySortPolicy _SortPolicy = ECk_Dialog_QuerySortPolicy::None;
-
-    // Optional per-request narrowing: when non-empty, a visible line must ALSO overlap these tags.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FGameplayTagContainer _ExtraFilterTags;
-
-public:
-    CK_PROPERTY_GET(_EventTag);
-    CK_PROPERTY(_SortPolicy);
-    CK_PROPERTY(_ExtraFilterTags);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_DialogEmitter_Query, _EventTag);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKDIALOG_API FCk_Request_DialogEmitter_StartCooldown : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_DialogEmitter_StartCooldown);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_DialogEmitter_StartCooldown);
-
-private:
-    // The cooldown key is the line ENTITY handle (per design), NOT its LineID.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FCk_Handle_DialogLine _Line;
-
-    // Used when _DurationMode == Timed; ignored for Forever.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FCk_Time _Duration;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    ECk_Dialog_CooldownDuration _DurationMode = ECk_Dialog_CooldownDuration::Timed;
-
-public:
-    CK_PROPERTY_GET(_Line);
-    CK_PROPERTY_GET(_Duration);
-    CK_PROPERTY(_DurationMode);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_DialogEmitter_StartCooldown, _Line, _Duration);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKDIALOG_API FCk_Request_DialogEmitter_ClearCooldown : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_DialogEmitter_ClearCooldown);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_DialogEmitter_ClearCooldown);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FCk_Handle_DialogLine _Line;
-
-public:
-    CK_PROPERTY_GET(_Line);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_DialogEmitter_ClearCooldown, _Line);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKDIALOG_API FCk_Request_DialogEmitter_ClearAllCooldowns : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_DialogEmitter_ClearAllCooldowns);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_DialogEmitter_ClearAllCooldowns);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
 // One matched line + its per-emitter classification. Denormalized (LineID/Text/LinkedEventTag/NumConditions) so BP/AS
 // consumers read the result without a second round-trip through the line handle.
 USTRUCT(BlueprintType)
@@ -271,5 +166,119 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_DialogEmitter_OnQueryCompleted,
     FCk_Handle_DialogEmitter, InEmitter,
     FCk_DialogEmitter_QueryResult, InResult);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKDIALOG_API FCk_Request_DialogEmitter_Query : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_DialogEmitter_Query);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_DialogEmitter_Query);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, Categories = "Ck.Dialog.Event"))
+    FGameplayTag _EventTag;
+
+    // None (default) => inherit the emitter's DefaultSortPolicy.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Dialog_QuerySortPolicy _SortPolicy = ECk_Dialog_QuerySortPolicy::None;
+
+    // Optional per-request narrowing: when non-empty, a visible line must ALSO overlap these tags.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTagContainer _ExtraFilterTags;
+
+    // Optional per-request completion callback, fired with THIS query's result the moment it is evaluated. Unlike
+    // BindTo_OnQueryCompleted (an emitter-wide signal that fires for every query on the emitter), this is correlated
+    // to the one request that carried it, so concurrent queries on the same emitter cannot be confused. An unbound
+    // delegate is fine — nothing is executed. Mirrors FCk_Request_Eqs_RunQuery::_OnComplete.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Delegate_DialogEmitter_OnQueryCompleted _OnComplete;
+
+public:
+    CK_PROPERTY_GET(_EventTag);
+    CK_PROPERTY(_SortPolicy);
+    CK_PROPERTY(_ExtraFilterTags);
+    CK_PROPERTY(_OnComplete);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_DialogEmitter_Query, _EventTag);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKDIALOG_API FCk_Request_DialogEmitter_StartCooldown : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_DialogEmitter_StartCooldown);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_DialogEmitter_StartCooldown);
+
+private:
+    // The cooldown key is the line ENTITY handle (per design), NOT its LineID.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_DialogLine _Line;
+
+    // Used when _DurationMode == Timed; ignored for Forever.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Time _Duration;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Dialog_CooldownDuration _DurationMode = ECk_Dialog_CooldownDuration::Timed;
+
+public:
+    CK_PROPERTY_GET(_Line);
+    CK_PROPERTY_GET(_Duration);
+    CK_PROPERTY(_DurationMode);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_DialogEmitter_StartCooldown, _Line, _Duration);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKDIALOG_API FCk_Request_DialogEmitter_ClearCooldown : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_DialogEmitter_ClearCooldown);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_DialogEmitter_ClearCooldown);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_DialogLine _Line;
+
+public:
+    CK_PROPERTY_GET(_Line);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_DialogEmitter_ClearCooldown, _Line);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKDIALOG_API FCk_Request_DialogEmitter_ClearAllCooldowns : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_DialogEmitter_ClearAllCooldowns);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_DialogEmitter_ClearAllCooldowns);
+};
 
 // --------------------------------------------------------------------------------------------------------------------
