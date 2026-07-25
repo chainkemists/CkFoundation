@@ -64,7 +64,10 @@ inline auto CK_UNIQUE_NAME(Register_IsValid_##_type_no_ptr_)() -> void          
         return ck::Is_NOT_Valid(InObj);                                                    \
     });                                                                                    \
 };                                                                                         \
-AS_FORCE_LINK const FAngelscriptBinds::FBind CK_UNIQUE_NAME(Bind_IsValid_)(                \
+/* Type-qualified like Register_IsValid_ above: CK_UNIQUE_NAME only appends __LINE__, so a       \
+   bare Bind_IsValid_ is unique per LINE, not per file — two .cpp files in the same unity blob   \
+   whose invocations close on the same line emit the same symbol and fail to compile. */         \
+AS_FORCE_LINK const FAngelscriptBinds::FBind CK_UNIQUE_NAME(Bind_IsValid_##_type_no_ptr_)(  \
     FAngelscriptBinds::EOrder::Late,                                                       \
     [] { CK_UNIQUE_NAME(Register_IsValid_##_type_no_ptr_)(); }                             \
 );
