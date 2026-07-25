@@ -102,6 +102,21 @@ public:
         const FCk_Handle& InContextEntity,
         ECk_ContextInjectionMode InInjectionMode = ECk_ContextInjectionMode::Always);
 
+    /**
+     * Clears and re-broadcasts a context to every receiver on an object,
+     * including when the receiver already holds the same root entity. Use at an
+     * explicit rebuild-completion boundary for retained presentation objects.
+     */
+    static ECk_ContextReceiver_InjectResult
+    RefreshContextIntoObject(
+        UObject* InObject,
+        const FCk_Handle& InContextEntity);
+
+    /** Returns whether an object exposes at least one reflected context receiver. */
+    static bool
+    HasContextReceiverPropertyOnObject(
+        const UObject* InObject);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ContextReceiver",
               DisplayName = "[Ck][ContextReceiver] Has Any Valid Context On Object",

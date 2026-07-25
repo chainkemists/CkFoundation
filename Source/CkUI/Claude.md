@@ -16,6 +16,8 @@
   releases when the widget leaves the screen), so there is no per-frame upkeep and no teardown unlock.
   Returns `ECk_UI_CursorLock_Result` — a lock is silently dropped by the platform when the widget's
   window is not foreground, and that case is reported rather than swallowed.
+- `ACk_HUD_UE::Refresh_Context` — explicit rebuild-completion refresh for the primary layout and active Game-layer
+  HUD root. It bypasses first-push `OnlyIfMissing` only at that owned root; unrelated menu layers keep their context.
 
 ---
 
