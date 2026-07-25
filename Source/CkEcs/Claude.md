@@ -31,6 +31,7 @@ CkEcs/Public/CkEcs/
 ├── Signal/          – signal macros + runtime system
 ├── EntityLifetime/  – create/destroy entity utilities
 ├── EntityScript/    – UCk_EntityScript_UE base + processor + utils
+├── ContextReceiver/ – retained UObject context injection and explicit rebuild refresh
 ├── ContextOwner/    – entity context-ownership chain
 ├── OwningActor/     – actor-owned entity fragments
 ├── DeferredEntity/  – deferred entity creation
@@ -569,6 +570,16 @@ auto OwnerHandle = UCk_Utils_ContextOwner_UE::Get_ContextOwner(SelfHandle);
 ```
 
 (Root `CLAUDE.md` section 9 shows `ck::SelfEntity(this)` / `ck::GetOwnerEntity()` as shorthand — use the above UCk_Utils pattern if you can't find those symbols.)
+
+---
+
+## Retained UObject context
+
+`UCk_Utils_ContextReceiver_UE::TryInjectContextIntoObject` follows normal injection semantics: a receiver already
+holding the same entity coalesces the request. `RefreshContextIntoObject` is the C++ rebuild-completion path; it
+clears and re-injects every receiver on one retained object so dependent presentation can rebuild even when the root
+entity is unchanged. Keep refresh ownership explicit and narrow. UI traversal policy remains in CkUI rather than this
+reflection utility.
 
 ---
 
