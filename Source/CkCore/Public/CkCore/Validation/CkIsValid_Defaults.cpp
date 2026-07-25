@@ -1,6 +1,7 @@
 #include "CkIsValid_Defaults.h"
 
 #include <CoreMinimal.h>
+#include <UObject/UObjectArray.h>
 #include <GameplayTagContainer.h>
 #include <GameplayTagsManager.h>
 #include <NativeGameplayTags.h>
@@ -34,7 +35,14 @@ CK_DEFINE_CUSTOM_IS_VALID_CONST_PTR(FField, IsValid_Policy_Default, [=](const FF
 
 CK_DEFINE_CUSTOM_IS_VALID_CONST_PTR(UObject, IsValid_Policy_Default, [=](const UObject* InObj)
 {
-    return ::IsValid(InObj) && NOT InObj->IsUnreachable();
+    // A UObject mid-destruction is removed from GUObjectArray (InternalIndex == INDEX_NONE) while its
+    // memory can still be alive and pass ::IsValid's flag check. IsUnreachable() then does
+    // GUObjectArray.IndexToObject(InternalIndex) with -1 and asserts (UObjectArray.h `check(Index >= 0)`).
+    // A validity check must never crash on a stale object — gate on the array index being live first so
+    // such an object returns false.
+    return ::IsValid(InObj)
+        && GUObjectArray.IsValidIndex(InObj)
+        && NOT InObj->IsUnreachable();
 });
 
 CK_DEFINE_CUSTOM_IS_VALID_CONST_PTR(UObject, IsValid_Policy_IncludePendingKill, [=](const UObject* InObj)
