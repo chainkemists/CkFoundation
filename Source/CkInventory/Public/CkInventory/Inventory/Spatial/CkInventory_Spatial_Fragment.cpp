@@ -45,6 +45,13 @@
             // The connect/place above is server-local; without re-arming, a fresh post-travel client's
             // container stays at its empty Construct-time value forever.
             UCk_Utils_Inventory_UE::Request_TryReplicateInventory(InventoryHandle);
+
+            // Same contract as the DataOnly hydrate: the connects/placements above mutate the item record
+            // OUTSIDE the request pipeline, so without this flag FProcessor_Inventory_FireSignals never runs
+            // post-hydration and its FFragment_Inventory_PreviousItems baseline stays EMPTY. The FIRST real
+            // mutation after a load would then diff empty-against-empty and broadcast no OnItemsChanged.
+            UCk_Utils_Inventory_UE::Request_MarkInventory_AsMayHaveChanged(InventoryHandle);
+
             return ECk_Persistence_ApplyResult::Applied;
         };
 

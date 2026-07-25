@@ -39,6 +39,15 @@
             // The connect above is server-local; without re-arming, a fresh post-travel client's container
             // stays at its empty Construct-time value forever.
             UCk_Utils_Inventory_UE::Request_TryReplicateInventory(InventoryHandle);
+
+            // The connects above mutate the item record OUTSIDE the request pipeline, which is the only other
+            // place that flags an inventory dirty. Without this flag FProcessor_Inventory_FireSignals never runs
+            // post-hydration, so its FFragment_Inventory_PreviousItems baseline stays EMPTY while the record
+            // already holds the restored items — and the FIRST real mutation after a load then diffs
+            // empty-against-empty, broadcasts no OnItemsChanged, and leaves every bound consumer (inventory UI
+            // panels) showing pre-mutation contents until a second change happens to resync it.
+            UCk_Utils_Inventory_UE::Request_MarkInventory_AsMayHaveChanged(InventoryHandle);
+
             return ECk_Persistence_ApplyResult::Applied;
         };
 
