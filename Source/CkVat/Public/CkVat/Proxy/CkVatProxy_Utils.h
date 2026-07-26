@@ -30,7 +30,7 @@ public:
     // The collection must be loaded AND baked (soft references: async-load first, mirror
     // CkIskmRenderer's contract).
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|VatProxy",
               DisplayName="[Ck][VatProxy] Add Feature")
     static FCk_Handle_VatProxy
     Add(

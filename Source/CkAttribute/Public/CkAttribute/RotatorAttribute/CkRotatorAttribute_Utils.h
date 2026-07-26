@@ -33,7 +33,7 @@ private:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Attribute|Rotator",
               DisplayName="[Ck][RotatorAttribute] Add New Attribute")
     static FCk_Handle_RotatorAttribute
     Add(
@@ -279,7 +279,7 @@ private:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|AttributeModifier|Rotator",
               DisplayName="[Ck][RotatorAttribute] Add Modifier (Revocable)")
     static FCk_Handle_RotatorAttributeModifier
     Add_Revocable(
@@ -289,7 +289,7 @@ public:
         const FCk_Fragment_RotatorAttributeModifier_ParamsData& InParams);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|AttributeModifier|Rotator",
               DisplayName="[Ck][RotatorAttribute] Add Modifier (Not Revocable)")
     static void
     Add_NotRevocable(

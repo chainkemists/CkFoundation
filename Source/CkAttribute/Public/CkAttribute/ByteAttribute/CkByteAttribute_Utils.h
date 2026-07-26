@@ -33,7 +33,7 @@ private:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Attribute|Byte",
               DisplayName="[Ck][ByteAttribute] Add New Attribute")
     static FCk_Handle_ByteAttribute
     Add(
@@ -293,7 +293,7 @@ private:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|AttributeModifier|Byte",
               DisplayName="[Ck][ByteAttribute] Add Modifier (Revocable)")
     static FCk_Handle_ByteAttributeModifier
     Add_Revocable(
@@ -303,7 +303,7 @@ public:
         const FCk_Fragment_ByteAttributeModifier_ParamsData& InParams);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|AttributeModifier|Byte",
               DisplayName="[Ck][ByteAttribute] Add Modifier (Not Revocable)")
     static void
     Add_NotRevocable(

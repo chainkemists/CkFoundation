@@ -28,7 +28,7 @@ private:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Sfx",
               DisplayName="[Ck][Sfx] Add New Sfx")
     static FCk_Handle_Sfx
     Add(
@@ -114,7 +114,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Sfx",
               DisplayName="[Ck][Sfx] Request Play (Attached)")
     static FCk_Handle_Sfx
     Request_PlayAttached(
@@ -122,7 +122,7 @@ public:
         const FCk_Request_Sfx_PlayAttached& InRequest);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Sfx",
               DisplayName="[Ck][Sfx] Request Play (At Location)")
     static FCk_Handle_Sfx
     Request_PlayAtLocation(

@@ -33,7 +33,7 @@ private:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Attribute|Vector",
               DisplayName="[Ck][VectorAttribute] Add New Attribute")
     static FCk_Handle_VectorAttribute
     Add(
@@ -279,7 +279,7 @@ private:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|AttributeModifier|Vector",
               DisplayName="[Ck][VectorAttribute] Add Modifier (Revocable)")
     static FCk_Handle_VectorAttributeModifier
     Add_Revocable(
@@ -289,7 +289,7 @@ public:
         const FCk_Fragment_VectorAttributeModifier_ParamsData& InParams);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|AttributeModifier|Vector",
               DisplayName="[Ck][VectorAttribute] Add Modifier (Not Revocable)")
     static void
     Add_NotRevocable(

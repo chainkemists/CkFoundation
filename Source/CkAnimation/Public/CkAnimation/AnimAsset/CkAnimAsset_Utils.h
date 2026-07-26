@@ -29,7 +29,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|AnimAsset",
               DisplayName="[Ck][AnimAsset] Add New Animation")
     static FCk_Handle_AnimAsset
     Add(

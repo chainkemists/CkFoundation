@@ -25,7 +25,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|JoltBody",
               DisplayName="[Ck][JoltBody] Add New JoltBody")
     static FCk_Handle_JoltBody
     Add(

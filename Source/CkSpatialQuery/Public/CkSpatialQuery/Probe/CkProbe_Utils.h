@@ -30,7 +30,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Probe",
               DisplayName="[Ck][Probe] Add Feature")
     static FCk_Handle_Probe
     Add(
@@ -39,7 +39,7 @@ public:
         const FCk_Probe_DebugInfo& InDebugInfo);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Probe",
               DisplayName="[Ck][Probe] Create")
     static FCk_Handle_Probe
     Create(

@@ -38,7 +38,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|RewindHistory",
               DisplayName="[Ck][RewindHistory] Add Feature")
     static FCk_Handle_RewindHistory
     Add(

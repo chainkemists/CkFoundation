@@ -41,7 +41,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|BallisticMotion",
               DisplayName="[Ck][BallisticMotion] Add Feature")
     static FCk_Handle_BallisticMotion
     Add(

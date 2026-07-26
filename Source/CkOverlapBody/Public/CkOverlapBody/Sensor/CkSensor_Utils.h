@@ -40,7 +40,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Sensor",
               DisplayName="[Ck][Sensor] Try Add New Sensor")
     static FCk_Handle_Sensor
     Add(
@@ -161,7 +161,7 @@ public:
         const FCk_Handle_Sensor& InSensorEntity);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Sensor",
               DisplayName = "[Ck][Sensor] Get Shape Info")
     static FCk_Sensor_ShapeInfo
     Get_ShapeInfo(
@@ -238,7 +238,7 @@ public:
         const FCk_Handle_Sensor& InSensorEntity);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Sensor",
               DisplayName = "[Ck][Sensor] Get Attached Entity And Actor")
     static FCk_EntityOwningActor_BasicDetails
     Get_AttachedEntityAndActor(
@@ -252,7 +252,7 @@ public:
         const FCk_Handle_Sensor& InSensorEntity);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Sensor",
               DisplayName = "[Ck][Sensor] Get All Marker Overlaps")
     static FCk_Sensor_MarkerOverlaps
     Get_AllMarkerOverlaps(
@@ -273,7 +273,7 @@ public:
         const FCk_Handle_Sensor& InSensorEntity);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Sensor",
               DisplayName = "[Ck][Sensor] Get All Non-Marker Overlaps")
     static FCk_Sensor_NonMarkerOverlaps
     Get_AllNonMarkerOverlaps(
@@ -307,7 +307,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Sensor",
               DisplayName = "[Ck][Sensor] Request Enable/Disable")
     static FCk_Handle_Sensor
     Request_EnableDisable(
@@ -315,7 +315,7 @@ public:
         const FCk_Request_Sensor_EnableDisable& InRequest);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Sensor",
               DisplayName = "[Ck][Sensor] Request Resize")
     static FCk_Handle_Sensor
     Request_Resize(
