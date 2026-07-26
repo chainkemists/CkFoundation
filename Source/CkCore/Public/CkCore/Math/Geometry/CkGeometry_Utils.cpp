@@ -23,6 +23,7 @@ auto
 
     auto BoundingBoxScreenSpace_Min = FVector2D{ FLT_MAX, FLT_MAX };
     auto BoundingBoxScreenSpace_Max = FVector2D{ -FLT_MAX, -FLT_MAX };
+    auto AllVerticesProjected = true;
 
     ForEach_BoxVertices(InBox, [&](const FVector& InBoxVertex)
     {
@@ -30,13 +31,19 @@ auto
         auto ScreenLocation = FVector2D{};
 
         if (NOT InPlayerController->ProjectWorldLocationToScreen(InBoxVertex, ScreenLocation, PlayerViewportRelative))
-        { FBox2D{}; }
+        {
+            AllVerticesProjected = false;
+            return;
+        }
 
         BoundingBoxScreenSpace_Min.X = FMath::Min(ScreenLocation.X, BoundingBoxScreenSpace_Min.X);
         BoundingBoxScreenSpace_Min.Y = FMath::Min(ScreenLocation.Y, BoundingBoxScreenSpace_Min.Y);
         BoundingBoxScreenSpace_Max.X = FMath::Max(ScreenLocation.X, BoundingBoxScreenSpace_Max.X);
         BoundingBoxScreenSpace_Max.Y = FMath::Max(ScreenLocation.Y, BoundingBoxScreenSpace_Max.Y);
     });
+
+    if (NOT AllVerticesProjected)
+    { return {}; }
 
     const auto& ViewportSize = [&]()
     {
@@ -243,7 +250,7 @@ auto
         const FBox2D& InBox)
     -> float
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InBox), TEXT("Cannot calculate the Box2D Area because it is INVALID"), InBox)
+    CK_ENSURE_IF_NOT(ck::IsValid(InBox), TEXT("Cannot calculate the Box2D Area of [{}] because it is INVALID"), InBox)
     { return {}; }
 
     return InBox.GetArea();
