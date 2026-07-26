@@ -102,7 +102,8 @@ auto
     InHandle.Add<ck::FFragment_Transform>(InAttachTo->GetComponentToWorld());
     InHandle.Add<ck::FFragment_Transform_Previous>(InAttachTo->GetComponentToWorld());
 
-    if (InAttachTo->GetOwner()->IsReplicatingMovement())
+    if (const auto* AttachToOwner = InAttachTo->GetOwner();
+        ck::IsValid(AttachToOwner, ck::IsValid_Policy_NullptrOnly{}) && AttachToOwner->IsReplicatingMovement())
     {
         ck::ecs_extension::VeryVerbose
         (
@@ -162,7 +163,8 @@ auto
     InHandle.Add<ck::FFragment_Transform>(InAttachTo->GetSocketTransform(InSocketName));
     InHandle.Add<ck::FFragment_Transform_Previous>(InAttachTo->GetSocketTransform(InSocketName));
 
-    if (InAttachTo->GetOwner()->IsReplicatingMovement())
+    if (const auto* AttachToOwner = InAttachTo->GetOwner();
+        ck::IsValid(AttachToOwner, ck::IsValid_Policy_NullptrOnly{}) && AttachToOwner->IsReplicatingMovement())
     {
         ck::ecs_extension::VeryVerbose
         (

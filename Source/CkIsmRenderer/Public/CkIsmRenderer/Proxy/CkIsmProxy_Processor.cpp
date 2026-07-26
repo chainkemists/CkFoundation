@@ -244,7 +244,7 @@ namespace ck
             const auto& CombinedRotation = InTransform.GetRotation() * InParams.Get_LocalRotationOffset().Quaternion();
 
             CK_ENSURE_IF_NOT(NOT UCk_Utils_Vector3_UE::Get_IsAnyAxisNearlyZero(InParams.Get_ScaleMultiplier()),
-                TEXT("IsmProxy Scale Multiplier has one or more axis nearly equal to 0. Setting it to 1 in non-shipping build"), InParams.Get_ScaleMultiplier())
+                TEXT("IsmProxy Scale Multiplier [{}] has one or more axis nearly equal to 0. Setting it to 1 in non-shipping build"), InParams.Get_ScaleMultiplier())
             { return FTransform{ CombinedRotation.Rotator(), CombinedLocation, FVector::OneVector }; }
 
             const auto& CombinedScale = InTransform.GetScale3D() * InParams.Get_ScaleMultiplier();
@@ -317,7 +317,7 @@ namespace ck
         const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData, InHandle);
         const auto InstanceId = InCurrent.Get_IsmInstanceIndex();
 
-        if (NOT IsmComp->IsValidId(InstanceId))
+        if (ck::Is_NOT_Valid(IsmComp) || NOT IsmComp->IsValidId(InstanceId))
         { return; }
 
         _Isms.Add(IsmComp.Get());
@@ -651,8 +651,8 @@ namespace ck
 
                 const auto& RendererData = InParams.Get_IsmRenderer().Get();
 
-                if (const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData, InHandle); 
-                    IsmComp->IsValidId(InCurrent.Get_IsmInstanceIndex()))
+                if (const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData, InHandle);
+                    ck::IsValid(IsmComp) && IsmComp->IsValidId(InCurrent.Get_IsmInstanceIndex()))
                 {
                     IsmComp->RemoveInstanceById(InCurrent.Get_IsmInstanceIndex());
                     InCurrent._IsmInstanceIndex = FPrimitiveInstanceId{ INDEX_NONE };
