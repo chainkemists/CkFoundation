@@ -67,8 +67,14 @@ public:
     CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
 
 private:
+    // "Hard" means RESOLVED rather than soft — it is not what keeps the asset alive, and must not be
+    // mistaken for a root. This struct travels inside FCk_ResourceLoader_LoadedObject, which is stored
+    // in ECS fragments; UE's GC does not walk the EnTT registry, so a strong reference here would root
+    // nothing. The asset is actually held by two things that DO work from a fragment: the sibling
+    // TSharedPtr<FStreamableHandle> on the LoadedObject (FStreamableManager keeps its targets loaded
+    // for the handle's lifetime), and the loader subsystem's UPROPERTY TSet of tracked resources.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    TObjectPtr<UObject> _Object;
+    TWeakObjectPtr<UObject> _Object;
 
 public:
     CK_PROPERTY_GET(_Object);
