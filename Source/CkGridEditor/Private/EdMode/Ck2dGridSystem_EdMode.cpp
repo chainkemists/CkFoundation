@@ -86,11 +86,10 @@ auto
 {
     _ActiveTool = InTool;
 
-    if (_ActiveTool != ECk_GridPaint_Tool::Blocker)
-    {
-        _DragStart.Reset();
-        _DragCurrent.Reset();
-    }
+    // Every rect-drag tool (Shape, Tags, Blocker) tracks through _DragStart/_DragCurrent — a tool
+    // switch always invalidates the in-flight rect.
+    _DragStart.Reset();
+    _DragCurrent.Reset();
 
     // _SelectedBlockerIndex is shared by the Blocker tool (place/select/delete) and the Select tool (a pick
     // that lands on a blocker selects the whole group); it is meaningless under Shape/Tags.
