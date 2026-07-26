@@ -29,9 +29,14 @@ namespace ck_deferred_cmds_file
             TEXT("-CkDeferredCmdsFile was passed but GEngine is not available at OnFEngineLoopInitComplete"))
         { return; }
 
+        // The load must live OUTSIDE the ensure condition — CK_DISABLE_ENSURE_CHECKS compiles the
+        // whole condition out, which would silently queue zero commands.
         auto Lines = TArray<FString>{};
-        CK_ENSURE_IF_NOT(FFileHelper::LoadFileToStringArray(Lines, *FilePath),
+        const auto FileLoaded = FFileHelper::LoadFileToStringArray(Lines, *FilePath);
+        CK_ENSURE_IF_NOT(FileLoaded,
             TEXT("-CkDeferredCmdsFile was passed but the file [{}] could not be read"), FilePath)
+        {}
+        if (NOT FileLoaded)
         { return; }
 
         auto QueuedCount = int32{0};
