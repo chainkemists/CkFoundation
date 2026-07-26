@@ -16,7 +16,7 @@ auto
 
     const auto& RowStruct = InDataTable->GetRowStruct();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InDataTable),
+    CK_ENSURE_IF_NOT(ck::IsValid(RowStruct),
         TEXT("Cannot retrieve the Column Names of DataTable [{}] because it has an INVALID RowStruct"),
         InDataTable)
     { return {}; }

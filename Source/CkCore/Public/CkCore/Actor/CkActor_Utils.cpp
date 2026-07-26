@@ -438,7 +438,7 @@ auto
 
     const auto& SkeletalMeshComp = InActor->FindComponentByClass<USkeletalMeshComponent>();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InActor),
+    CK_ENSURE_IF_NOT(ck::IsValid(SkeletalMeshComp),
         TEXT("Cannot find Bone [{}] on Actor [{}] because it does NOT have a SkeletalMesh Component"),
         InBoneName,
         InActor)
@@ -1138,7 +1138,7 @@ auto
 
         const auto Actor = Cast<AActor>(OwnerOrWorld);
 
-        CK_ENSURE_IF_NOT(ck::IsValid(OwnerOrWorld), TEXT("OwnerOrWorld [{}] MUST be an Owner OR World. Unable to spawn [{}]."),
+        CK_ENSURE_IF_NOT(ck::IsValid(Actor), TEXT("OwnerOrWorld [{}] MUST be an Owner OR World. Unable to spawn [{}]."),
             OwnerOrWorld, ActorClass)
         { return nullptr; }
 
