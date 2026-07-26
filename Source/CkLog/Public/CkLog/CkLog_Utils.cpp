@@ -239,6 +239,32 @@ auto
     Log_VeryVerbose_If(true, InMsg, InLogCategory);
 }
 
+auto
+    UCk_Utils_Log_UE::
+    Log_WithVerbosity(
+        FText InMsg,
+        ECk_LogVerbosity InVerbosity,
+        FCk_LogCategory InLogCategory)
+    -> void
+{
+    switch (InVerbosity)
+    {
+        case ECk_LogVerbosity::Fatal:       { Log_Fatal(InMsg, InLogCategory); break; }
+        case ECk_LogVerbosity::Error:       { Log_Error(InMsg, InLogCategory); break; }
+        case ECk_LogVerbosity::Warning:     { Log_Warning(InMsg, InLogCategory); break; }
+        case ECk_LogVerbosity::Display:     { Log_Display(InMsg, InLogCategory); break; }
+        case ECk_LogVerbosity::Log:         { Log(InMsg, InLogCategory); break; }
+        case ECk_LogVerbosity::Verbose:     { Log_Verbose(InMsg, InLogCategory); break; }
+        case ECk_LogVerbosity::VeryVerbose: { Log_VeryVerbose(InMsg, InLogCategory); break; }
+        default:
+        {
+            // CkLog sits below CkCore, so CK_INVALID_ENUM is unavailable here.
+            checkNoEntry();
+            break;
+        }
+    }
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
