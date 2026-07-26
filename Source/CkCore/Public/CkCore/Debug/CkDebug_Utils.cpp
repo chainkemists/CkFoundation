@@ -18,9 +18,8 @@
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
-// Global symbol cache for address resolution
-// Thread-safe, persists across debug session, cleared on hot-reload
-// Background thread continuously resolves unresolved addresses
+// Address→symbol cache: entries go in unresolved and are filled in by the background resolver thread,
+// so callers never pay symbolication on their own thread.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_debug_utils
@@ -36,21 +35,19 @@ namespace ck_debug_utils
         {
         }
 
-        // Copy constructor for TMap compatibility
+        // Hand-written because Symbol is a TUniquePtr and TMap requires copyable entries.
         FSymbolCacheEntry(const FSymbolCacheEntry& Other)
             : Symbol(MakeUnique<FString>(*Other.Symbol))
             , IsResolved(Other.IsResolved.load())
         {
         }
 
-        // Move constructor
         FSymbolCacheEntry(FSymbolCacheEntry&& Other) noexcept
             : Symbol(MoveTemp(Other.Symbol))
             , IsResolved(Other.IsResolved.load())
         {
         }
 
-        // Assignment operators
         auto operator=(const FSymbolCacheEntry& Other) -> FSymbolCacheEntry&
         {
             if (this != &Other)
@@ -78,7 +75,6 @@ namespace ck_debug_utils
     std::atomic<bool> GBackgroundThreadRunning{false};
     FRunnableThread* GBackgroundResolverThread = nullptr;
 
-    // Background resolver thread
     class FCallstackResolverThread : public FRunnable
     {
     public:
@@ -95,7 +91,6 @@ namespace ck_debug_utils
     private:
         auto ResolveUnresolvedAddresses() -> void
         {
-            // Collect unresolved addresses
             auto UnresolvedAddresses = TArray<uint64>{};
             {
                 FReadScopeLock ReadLock(GSymbolCacheLock);
@@ -108,7 +103,6 @@ namespace ck_debug_utils
                 }
             }
 
-            // Resolve each unresolved address
             for (const auto Address : UnresolvedAddresses)
             {
                 constexpr auto MaxSymbolLength = 1024;
@@ -126,7 +120,6 @@ namespace ck_debug_utils
                 {
                     Resolved = FString{SymbolInfo};
 
-                    // Compact format
                     auto ExclamationIndex = 0;
                     if (Resolved.FindChar('!', ExclamationIndex))
                     {
@@ -151,7 +144,6 @@ namespace ck_debug_utils
                     Resolved = FString::Printf(TEXT("0x%016llx"), Address);
                 }
 
-                // Update cache with resolved symbol
                 {
                     FWriteScopeLock WriteLock(GSymbolCacheLock);
                     if (auto* Entry = GSymbolCache.Find(Address))
@@ -164,7 +156,6 @@ namespace ck_debug_utils
         }
     };
 
-    // Start background resolver thread
     auto StartBackgroundResolver() -> void
     {
         if (GBackgroundThreadRunning.load())
@@ -180,7 +171,6 @@ namespace ck_debug_utils
             TPri_BelowNormal);
     }
 
-    // Stop background resolver thread (called on module shutdown)
     auto StopBackgroundResolver() -> void
     {
         if (NOT GBackgroundThreadRunning.load())
@@ -364,17 +354,13 @@ auto
     auto Addresses = TArray<uint64>{};
 
 #if !CK_DISABLE_STACK_TRACE
-    // Allocate buffer for stack frames on the stack (fast)
     auto* BackTraceBuffer = static_cast<uint64*>(FMemory_Alloca(InMaxFrames * sizeof(uint64)));
 
-    // Capture stack addresses (fast - no symbol resolution)
-    // Skip frames within CaptureStackBackTrace to avoid extra copying
     const auto CapturedFrames = FPlatformStackWalk::CaptureStackBackTrace(
         BackTraceBuffer,
         InMaxFrames,
         nullptr);
 
-    // Skip requested frames (utility function + macro frame)
     const auto FramesToSkip = FMath::Min(InSkipFrames, static_cast<int32>(CapturedFrames));
     const auto FramesToKeep = static_cast<int32>(CapturedFrames) - FramesToSkip;
 
@@ -408,8 +394,7 @@ auto
         ANSICHAR SymbolInfo[MaxSymbolLength];
         SymbolInfo[0] = 0;
 
-        // Resolve symbol info for this address
-        // ProgramCounterToHumanReadableString formats as: "FunctionName [File.cpp:123]"
+        // Formats as "Module!FunctionName [File.cpp:123]" — the trimming below depends on that shape.
         FPlatformStackWalk::ProgramCounterToHumanReadableString(
             0,
             Address,
@@ -418,17 +403,14 @@ auto
 
         if (SymbolInfo[0] != 0)
         {
-            // Successfully resolved - convert to FString
             auto Frame = FString{SymbolInfo};
 
-            // Compact format - remove module name before '!'
             auto ExclamationIndex = 0;
             if (Frame.FindChar('!', ExclamationIndex))
             {
                 Frame.RightChopInline(ExclamationIndex + 1);
             }
 
-            // Remove full path before filename in brackets
             auto BracketIndex = 0;
             if (Frame.FindChar('[', BracketIndex))
             {
@@ -444,7 +426,6 @@ auto
         }
         else
         {
-            // Couldn't resolve - just show address
             ResolvedFrames.Add(FString::Printf(TEXT("0x%016llx"), Address));
         }
     }
@@ -459,10 +440,8 @@ auto
     -> const FString*
 {
 #if !CK_DISABLE_STACK_TRACE
-    // Ensure background resolver is running
     ck_debug_utils::StartBackgroundResolver();
 
-    // Try read-only access first (fast path - already in cache)
     {
         FReadScopeLock ReadLock(ck_debug_utils::GSymbolCacheLock);
         if (const auto* Cached = ck_debug_utils::GSymbolCache.Find(InAddress))
@@ -471,17 +450,15 @@ auto
         }
     }
 
-    // Not cached - add placeholder entry (background thread will resolve it)
     {
         FWriteScopeLock WriteLock(ck_debug_utils::GSymbolCacheLock);
 
-        // Double-check - another thread might have cached it while we waited
+        // Double-check: another thread may have cached it while we waited on the write lock.
         if (const auto* Cached = ck_debug_utils::GSymbolCache.Find(InAddress))
         {
             return Cached->Symbol.Get();
         }
 
-        // Add unresolved entry - background thread will resolve it
         auto& NewEntry = ck_debug_utils::GSymbolCache.Add(InAddress, ck_debug_utils::FSymbolCacheEntry{});
         return NewEntry.Symbol.Get();
     }
@@ -730,12 +707,10 @@ auto
     if (NOT FAngelscriptManager::IsInitialized())
     { return; }
 
-    // Check if we're in Angelscript execution context
     auto* CurrentContext = FAngelscriptManager::GetCurrentScriptContext();
     if (ck::Is_NOT_Valid(CurrentContext, ck::IsValid_Policy_NullptrOnly{}))
     { return; }
 
-    // Try to break into angelscript debugger
     auto DescriptionString = InDescription.ToString();
     FAngelscriptManager::TryBreakpointAngelscriptDebugging(*DescriptionString);
 #endif
@@ -749,7 +724,6 @@ auto
     -> void
 {
 #if !CK_DISABLE_STACK_TRACE && WITH_ANGELSCRIPT_CK
-    // Check if we're in Angelscript execution context
     if (NOT FAngelscriptManager::IsInitialized())
     { return; }
 
@@ -757,14 +731,12 @@ auto
     if (ck::Is_NOT_Valid(CurrentContext, ck::IsValid_Policy_NullptrOnly{}))
     { return; }
 
-    // Log the callstack
     const auto StackTrace = Get_StackTrace_Angelscript(ck::type_traits::AsString{});
     if (NOT StackTrace.IsEmpty())
     {
         UE_LOG(LogTemp, Warning, TEXT("Angelscript Stack Trace:\n%s"), *StackTrace);
     }
 
-    // Check break policy
     const auto ShouldBreak = UCk_Utils_Core_UserSettings_UE::Get_EnsureBreakInAngelscriptPolicy() == ECk_EnsureBreakInAngelscript_Policy::AlwaysBreak;
     if (NOT ShouldBreak)
     { return; }

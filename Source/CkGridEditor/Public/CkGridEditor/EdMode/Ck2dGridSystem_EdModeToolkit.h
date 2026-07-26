@@ -39,9 +39,8 @@ struct FCk_GridTagListItem
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Toolkit for the Grid Paint editor mode. Hosts a 4-tool selector (Shape / Tags / Blocker / Select)
-// that sets the active tool on the owning UCk_2dGridSystem_EdMode. The Tags tool reveals a tag section
-// and the Select tool a read-only cell-details section.
+// Toolkit for the Grid Paint editor mode: a 4-tool selector that sets the active tool on the owning
+// UCk_2dGridSystem_EdMode, plus the per-tool sections it reveals.
 class FCk_2dGridSystem_EdModeToolkit : public FModeToolkit
 {
 public:
@@ -57,141 +56,100 @@ public:
     virtual TSharedPtr<SWidget> GetInlineContent() const override;
 
 private:
-    // Pushes the chosen tool onto the owning EdMode.
     auto Set_ActiveTool(ECk_GridPaint_Tool InTool) -> void;
 
-    // Reads the owning EdMode's current tool (defaults to Shape if the mode is gone).
+    // Defaults to Shape if the owning mode is gone.
     auto Get_ActiveTool() const -> ECk_GridPaint_Tool;
 
-    // Radio-button check state for one tool button.
     auto Get_ToolCheckState(ECk_GridPaint_Tool InTool) const -> ECheckBoxState;
     auto On_ToolCheckChanged(ECheckBoxState InNewState, ECk_GridPaint_Tool InTool) -> void;
 
-    // Builds the always-visible Grid section: Dimensions (X/Y) and Cell Size (X/Y) numeric entry, editing the
-    // selected grid's Spec via the EdMode's Set_GridDimensions / Set_GridCellSize.
+    // The always-visible Grid section: Dimensions and Cell Size numeric entry.
     auto Build_GridSection() -> TSharedRef<SWidget>;
 
-    // Grid section numeric value getters (unset when no grid spawner is selected).
+    // Unset when no grid spawner is selected.
     auto Get_GridDimensionX() const -> TOptional<int32>;
     auto Get_GridDimensionY() const -> TOptional<int32>;
     auto Get_GridCellSizeX() const -> TOptional<double>;
     auto Get_GridCellSizeY() const -> TOptional<double>;
 
-    // Grid section numeric commit handlers (read the other axis off the Spec, then push the combined value).
+    // Each reads the other axis off the Spec, then pushes the combined value.
     auto On_GridDimensionXCommitted(int32 InValue, ETextCommit::Type InCommitType) -> void;
     auto On_GridDimensionYCommitted(int32 InValue, ETextCommit::Type InCommitType) -> void;
     auto On_GridCellSizeXCommitted(double InValue, ETextCommit::Type InCommitType) -> void;
     auto On_GridCellSizeYCommitted(double InValue, ETextCommit::Type InCommitType) -> void;
 
-    // Builds the Tags-section widget (tag picker + scope toggle + grid-default Apply/Remove). The
-    // whole section's visibility is bound to "is the Tags tool active".
+    // Tag picker + scope toggle + grid-default Apply/Remove; visible only while the Tags tool is active.
     auto Build_TagsSection() -> TSharedRef<SWidget>;
-
-    // Visible only while the Tags tool is the active tool.
     auto Get_TagsSectionVisibility() const -> EVisibility;
 
-    // Tag picker callback: SGameplayTagPicker hands back containers; we take the first tag and push it
-    // onto the EdMode's _ActivePaintTag.
+    // SGameplayTagPicker hands back containers; the first tag becomes the EdMode's _ActivePaintTag.
     auto On_PaintTagChanged(const TArray<FGameplayTagContainer>& InContainers) -> void;
 
-    // Scope toggle (PerCellBulk vs GridDefault).
     auto Get_ScopeCheckState(ECk_GridPaint_TagScope InScope) const -> ECheckBoxState;
     auto On_ScopeCheckChanged(ECheckBoxState InNewState, ECk_GridPaint_TagScope InScope) -> void;
 
-    // Grid-default Apply/Remove buttons: enabled only in GridDefault scope.
+    // Enabled only in GridDefault scope.
     auto Get_GridDefaultButtonsEnabled() const -> bool;
     auto On_ApplyGridDefaultTag() -> FReply;
     auto On_RemoveGridDefaultTag() -> FReply;
 
-    // Builds a compact, read-only per-tag color legend (swatch + name) shown inside the Tags section so the
-    // painter can see which color each existing per-cell tag maps to. Rebuilt each repaint from the Spec.
+    // Read-only per-tag color legend, rebuilt from the Spec whenever its signature changes.
     auto Rebuild_TagLegend() -> void;
-
-    // A cheap signature of the current per-cell tag set, used to detect when the legend needs a rebuild.
     auto Compute_TagLegendSignature() const -> FString;
 
-    // Builds the Blocker-section widget (new-blocker tag picker + selected-blocker tag editor). The
-    // whole section's visibility is bound to "is the Blocker tool active".
+    // New-blocker + selected-blocker tag pickers; visible only while the Blocker tool is active.
     auto Build_BlockerSection() -> TSharedRef<SWidget>;
-
-    // Visible only while the Blocker tool is the active tool.
     auto Get_BlockerSectionVisibility() const -> EVisibility;
 
-    // New-blocker tag picker callback: take the first tag and push it onto the EdMode's
-    // _ActiveBlockerTag (stamped onto the next drag-rect blocker).
+    // The first tag becomes the EdMode's _ActiveBlockerTag, stamped onto the next drag-rect blocker.
     auto On_NewBlockerTagChanged(const TArray<FGameplayTagContainer>& InContainers) -> void;
 
-    // Selected-blocker tag picker callback: take the first tag and write it to the selected blocker via
-    // the EdMode's Set_SelectedBlockerName (transacted + rebuild).
+    // The first tag is written to the selected blocker via Set_SelectedBlockerName (transacted + rebuild).
     auto On_SelectedBlockerTagChanged(const TArray<FGameplayTagContainer>& InContainers) -> void;
 
-    // Visible only when a blocker is currently selected (gates the selected-blocker editor sub-block).
     auto Get_SelectedBlockerEditorVisibility() const -> EVisibility;
 
-    // Live-bound text describing which blocker is selected (index + tag), or "none selected". Also
-    // drives a lazy re-seed of the selected-blocker picker when the selected index changes.
+    // Also drives a lazy re-seed of the selected-blocker picker when the selected index changes.
     auto Get_SelectedBlockerText() const -> FText;
 
-    // Builds the Select-tool Details widget. Its visibility is bound to "is the Select tool active". The
-    // panel hosts TWO mutually-exclusive editors (sub-block visibilities below switch between them): a
-    // single-CELL editor (read-only state line + grid-default tags, Disabled toggle, per-cell tag list +
-    // add picker) and a BLOCKER editor (index/range/tag text + tag picker + Delete) shown when the pick
-    // landed on a blocker. Value text blocks read the EdMode + Spec live each frame.
+    // The Select-tool Details panel: two MUTUALLY EXCLUSIVE editors — a single-CELL editor and a BLOCKER
+    // editor shown when the pick landed on a blocker — switched by the sub-block visibilities below.
     auto Build_DetailsSection() -> TSharedRef<SWidget>;
-
-    // Visible only while the Select tool is the active tool.
     auto Get_DetailsSectionVisibility() const -> EVisibility;
-
-    // Single-cell editor sub-block: visible while the Select tool is active AND the pick did NOT land on a
-    // blocker (otherwise the blocker editor takes over).
     auto Get_DetailsCellEditorVisibility() const -> EVisibility;
-
-    // Blocker editor sub-block: visible while the Select tool is active AND the pick landed on a blocker.
     auto Get_DetailsBlockerEditorVisibility() const -> EVisibility;
 
-    // Live-bound text for the single-cell editor, each reading the EdMode's selected-cell info off the Spec.
+    // Live-bound: each reads the EdMode's selected-cell info off the Spec every repaint.
     auto Get_DetailsCoordinateText() const -> FText;
     auto Get_DetailsStateText() const -> FText;
     auto Get_DetailsGridDefaultTagsText() const -> FText;
 
-    // Disabled toggle for the selected cell: reflects/sets the cell's membership in Spec->DisabledCells.
     auto Get_SelectedCellDisabledState() const -> ECheckBoxState;
     auto On_SelectedCellDisabledChanged(ECheckBoxState InNewState) -> void;
 
-    // Rebuilds the per-cell tag list (one row per tag with a Remove button) into PerCellTagListContainer.
-    // Called from Init and re-driven each frame from Get_SelectedCellTagsSignature when the cell's tag set
-    // changes, so the list tracks live edits (add via picker, remove via button, or external Spec edits).
+    // One row per tag with a Remove button. Re-driven from the live-bound coordinate getter when the
+    // signature changes, so the list tracks live edits (picker add, row remove, external Spec edits).
     auto Rebuild_PerCellTagList() -> void;
-
-    // A cheap hash of (selected cell + its per-cell tags) used to detect when the per-cell tag list needs
-    // a rebuild. Called by the live-bound coordinate text getter so the rebuild rides the normal repaint.
     auto Compute_PerCellTagListSignature() const -> FString;
 
-    // Add-picker callback: take the first chosen tag and add it to the selected cell via Add_SelectedCellTag.
     auto On_AddCellTagChanged(const TArray<FGameplayTagContainer>& InContainers) -> void;
 
-    // Remove one tag from the selected cell (bound per row to the row's tag).
+    // Bound per row to the row's tag.
     auto On_RemoveCellTag(FGameplayTag InTag) -> FReply;
 
-    // Live-bound text for the blocker editor (index + range + tag), and the Delete button handler.
     auto Get_DetailsBlockerText() const -> FText;
     auto On_DeleteSelectedBlocker() -> FReply;
-
-    // Blocker editor tag picker callback: write the chosen tag to the selected blocker's Name (reuses the
-    // EdMode's Set_SelectedBlockerName, shared with the Blocker tool).
     auto On_DetailsBlockerTagChanged(const TArray<FGameplayTagContainer>& InContainers) -> void;
 
-    // Rebuilds the Blockers + Tags list item arrays from the selected grid's Spec, then refreshes both views.
+    // Blockers + Tags list items, rebuilt from the Spec whenever their signature changes.
     auto Rebuild_SelectLists() -> void;
-
-    // A signature of (blocker count + per-cell tag set) used to detect when the lists need rebuilding.
     auto Compute_SelectListsSignature() const -> FString;
 
-    // SListView row generators.
     auto OnGenerate_BlockerRow(TSharedPtr<FCk_GridBlockerListItem> InItem, const TSharedRef<STableViewBase>& InOwner) -> TSharedRef<ITableRow>;
     auto OnGenerate_TagRow(TSharedPtr<FCk_GridTagListItem> InItem, const TSharedRef<STableViewBase>& InOwner) -> TSharedRef<ITableRow>;
 
-    // Selection callbacks: push the chosen blocker/tag onto the EdMode (highlights it in the viewport).
+    // Push the chosen blocker/tag onto the EdMode, which highlights it in the viewport.
     auto On_BlockerRowSelected(TSharedPtr<FCk_GridBlockerListItem> InItem, ESelectInfo::Type InSelectInfo) -> void;
     auto On_TagRowSelected(TSharedPtr<FCk_GridTagListItem> InItem, ESelectInfo::Type InSelectInfo) -> void;
 
@@ -200,40 +158,30 @@ private:
     TWeakObjectPtr<UEdMode>       OwningMode;
     TSharedPtr<SGameplayTagPicker> TagPicker;
 
-    // Tags section: container holding one read-only swatch+name row per distinct per-cell tag.
+    // Tags section: one read-only swatch+name row per distinct per-cell tag.
     TSharedPtr<SVerticalBox> TagLegendContainer;
     FString SeededTagLegendSignature;
 
-    // Blocker tool: picker for the tag stamped onto NEW blockers (writes EdMode::_ActiveBlockerTag).
     TSharedPtr<SGameplayTagPicker> NewBlockerTagPicker;
-
-    // Blocker tool: picker editing the SELECTED blocker's Name tag (writes via Set_SelectedBlockerName).
-    // Re-seeded imperatively whenever the selected blocker index changes (see Get_SelectedBlockerText).
     TSharedPtr<SGameplayTagPicker> SelectedBlockerTagPicker;
 
-    // Last selected-blocker index the SelectedBlockerTagPicker was seeded for. Lets the live-bound text
-    // getter detect a selection change and re-seed the picker's displayed value to match the new blocker.
+    // Last index SelectedBlockerTagPicker was seeded for; the live-bound text getter re-seeds on a change.
     int32 SeededSelectedBlockerIndex = INDEX_NONE;
 
-    // Select-tool single-cell editor: picker whose chosen tag is ADDED to the selected cell's PerCellTags.
     TSharedPtr<SGameplayTagPicker> AddCellTagPicker;
 
-    // Select-tool single-cell editor: container holding one removable row per tag on the selected cell.
-    // Rebuilt imperatively (Rebuild_PerCellTagList) whenever the cell or its tag set changes.
+    // One removable row per tag on the selected cell.
     TSharedPtr<SVerticalBox> PerCellTagListContainer;
 
-    // Signature of the per-cell tag list the rows were last built for (selected cell + its tags). Lets the
-    // live-bound coordinate getter detect a change and re-drive Rebuild_PerCellTagList.
+    // Selected cell + its tags, as the rows were last built; the live-bound coordinate getter re-drives
+    // Rebuild_PerCellTagList on a change.
     FString SeededPerCellTagSignature;
 
-    // Select-tool blocker editor: picker editing the SELECTED blocker's Name (reuses Set_SelectedBlockerName).
     TSharedPtr<SGameplayTagPicker> DetailsBlockerTagPicker;
 
-    // Last blocker index the DetailsBlockerTagPicker was seeded for (re-seed detection, mirrors the Blocker
-    // tool's SeededSelectedBlockerIndex but specific to the Select-tool Details picker).
+    // Mirrors SeededSelectedBlockerIndex, but for the Select-tool Details picker.
     int32 SeededDetailsBlockerIndex = INDEX_NONE;
 
-    // Select-tab lists. Item arrays are rebuilt from the Spec via Rebuild_SelectLists.
     TArray<TSharedPtr<FCk_GridBlockerListItem>> BlockerListItems;
     TArray<TSharedPtr<FCk_GridTagListItem>>     TagListItems;
     TSharedPtr<SListView<TSharedPtr<FCk_GridBlockerListItem>>> BlockerListView;

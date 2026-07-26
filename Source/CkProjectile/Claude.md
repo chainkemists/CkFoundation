@@ -29,6 +29,8 @@
 - `Request_Launch` (supports `OverrideTime` to anchor the trajectory in the past — the lag-comp catch-up), `Request_Stop`.
 - Signals: `OnImpact` (analytic impact time/point/velocity), `OnTrajectoryChanged` (per segment, e.g. bounce), `OnStopped`.
 - Impact response: `Stop` or `Bounce` (restitution; re-anchors a new trajectory segment at the analytic impact point, so late-observed contacts are corrected exactly).
+- **Why the analytic re-anchor is not optional:** probe contacts surface one frame *after* Jolt detects them, so `FProcessor_BallisticMotion_HandleImpacts` never sees the contact on the frame it happened. Responding at the analytic impact point (rather than at the observed pose) makes the correction exact regardless of how late the contact arrived.
+- `FProcessor_BallisticMotion_UpdateTrajectory` writes the closed-form pose for the current world time — a function of (initial conditions, time) only, never of last frame's pose. That is what makes the path identical on every machine at any tick rate.
 
 ---
 

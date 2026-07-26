@@ -35,12 +35,9 @@ namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_EntityReplicationDriver_FireOnDependentReplicationComplete);
 
-    // Diagnostic bookkeeping for the FireOnDependentReplicationComplete gate: accumulates how long the fire has
-    // been held by undrained fragments. Past a threshold the fire processor ensures LOUDLY naming the blocking
-    // dependent — the gate's "cannot hang forever" contract otherwise fails silently when an entry exists that
-    // no dispatcher on this net mode drains, and every OnReplicationComplete consumer
-    // (Promise_OnActorEcsReady/ValuesReplicated — e.g. the game HUD's context injection) hangs with it
-    // (found via the post-v3-load HUD hang, 2026-07-14). Removed the moment the gate clears.
+    // How long FireOnDependentReplicationComplete has been held by undrained fragments; past a threshold
+    // the fire processor ensures LOUDLY naming the blocker, because an entry no dispatcher on this net
+    // mode drains hangs every OnReplicationComplete consumer forever. Removed the moment the gate clears.
     class FProcessor_ReplicationDriver_FireOnDependentReplicationComplete;
 
     struct FFragment_RepDriver_FireGateStall
@@ -88,74 +85,8 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// --------------------------------------------------------------------------------------------------------------------
-// EntityScript Replication Pipeline
-// --------------------------------------------------------------------------------------------------------------------
-//
-// SERVER                                  CLIENT
-// ──────                                  ──────
-//
-// User calls Request_SpawnEntity()        User calls Request_SpawnEntity()
-//       │                                        │
-//       ▼                                        ▼
-// Request_CreateEntity(Owner)             Client guard detects Replicated +
-//       │                                 Client net mode
-//       ▼                                        │
-// SpawnProcessor runs                            ▼
-//   ├─ Construct() fires                  Creates pending entity on Owner
-//   ├─ [WithActor] Net params set         Returns PendingEntityScript handle
-//   │   ├─ EntityOwningActor enables      User binds Promise_OnConstructed()
-//   │   │   replication                          │
-//   │   ├─ ReplicationDriver created             │  (waits for replication)
-//   │   └─ FRequest_Replicate added              │
-//   └─ [Non-WithActor] similar flow              │
-//       │                                        │
-//       ▼                                        │
-// ReplicateProcessor runs                        │
-//   ├─ Populates ReplicationDriver               │
-//   │   replicated properties                    │
-//   └─ Marks dirty → UE replication              │
-//       │                                        │
-//       ═══════ UE Net Replication ══════        │
-//       │                                        │
-//       ▼                                        │
-// ┌─────────────────────────────┐                │
-// │  UCk_Fragment_              │                │
-// │  EntityReplicationDriver_Rep│                │
-// │  (Replicated UObject)       │                │
-// │                             │                │
-// │  Registered as sub-object   │                │
-// │  on EntityOwningActor       │                │
-// │  component via              │                │
-// │  AddReplicatedSubObject()   │                │
-// └─────────────────────────────┘                │
-//       │                                        │
-//       ▼                                        │
-// OnRep_ReplicationData_EntityScript()           │
-//   ├─ [Self-referencing] Owner =                │
-//   │   transient entity (not self)              │
-//   ├─ [Non-self] Owner = replicated             │
-//   │   parent entity                            │
-//   ├─ Adds TWeakObjectPtr<UWorld>               │
-//   └─ Calls UCk_Utils_EntityScript_UE::Add()    │
-//       │                                        │
-//       ▼                                        │
-// SpawnProcessor runs (client)                   │
-//   ├─ Construct() fires                         │
-//   └─ Replication block SKIPPED (IsClient)      │
-//       │                                        │
-//       ▼                                        │
-// FinishConstruction processor                   │
-//   ├─ Broadcasts OnConstructed                  │
-//   │   on the real entity                       │
-//   └─ Checks lifetime owner for  ◄──────────────┘
-//       FFragment_PendingReplication
-//       ├─ Consumes matching pending entity (FIFO by class)
-//       ├─ Broadcasts OnConstructed on pending entity
-//       │   with real entity handle as payload
-//       └─ Destroys pending entity
-//
-// --------------------------------------------------------------------------------------------------------------------
+// EntityScript replication pipeline (server spawn -> driver -> client OnRep -> FinishConstruction):
+// see the "EntityScript replication pipeline" section of CkEcs/CLAUDE.md.
 
 UCLASS(Blueprintable)
 class CKECS_API UCk_Fragment_EntityReplicationDriver_Rep : public UCk_Ecs_ReplicatedObject_UE
@@ -264,9 +195,8 @@ public:
     SetFragmentData(
         const TDataStruct& InData) -> int32;
 
-    // Runtime (non-templated) sibling of SetFragmentData<T> for payloads whose UScriptStruct is only
-    // known at runtime (e.g. dynamic fragments). Entries are keyed by Data.GetScriptStruct(), so each
-    // distinct payload type occupies its own FastArray entry, identical to the templated path.
+    // Runtime sibling of SetFragmentData<T> for payloads whose UScriptStruct is only known at runtime.
+    // Keyed by Data.GetScriptStruct(), so each payload type gets its own entry as in the templated path.
     auto
     SetFragmentData_Runtime(
         const FInstancedStruct& InData) -> int32;
@@ -289,7 +219,6 @@ private:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// SetFragmentData template definition
 
 template<typename TDataStruct>
 auto

@@ -39,24 +39,16 @@ namespace ck
         friend class ::UCk_Utils_Compass_UE;
 
     private:
-        // The entity whose Transform (position) and Camera/Transform (view yaw) drive the projection.
-        // Seeded to the compass' own entity at Setup; replaceable via Request_SetObserver.
         FCk_Handle _Observer;
 
-        // Absolute world yaw, 0-360, refreshed EVERY frame (never throttled by the update interval)
         float _HeadingDegrees = 0.0f;
 
-        // Consumed only when HeadingSource is Manual
         float _ManualHeadingDegrees = 0.0f;
 
-        // Sorted priority-desc then distance-asc; a self-contained snapshot per entry (see FCk_Compass_Entry)
         TArray<FCk_Compass_Entry> _Entries;
 
-        // Reused build target for the next projection pass — swap-published into _Entries (no per-frame allocation churn)
         TArray<FCk_Compass_Entry> _ScratchEntries;
 
-        // Parallel-projection scratch (reused across updates): the POI set gathered from the view, then one
-        // slot per POI written by the ParallelFor workers — disjoint index writes, no contention
         TArray<FCk_Entity> _ScratchPoiEntities;
         TArray<TOptional<FCk_Compass_Entry>> _ScratchParallelSlots;
 

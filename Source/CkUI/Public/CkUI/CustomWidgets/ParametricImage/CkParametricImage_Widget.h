@@ -31,9 +31,7 @@ public:
     CK_GENERATED_BODY(UCk_ParametricImageWidget_UE);
 
 public:
-    // Assigns the source material, seeds the inherited brush with it (so the UMG animator can discover
-    // material tracks and a dynamic instance can be built), re-discovers parameters preserving any
-    // existing overrides by name, and applies them. The source asset is never modified.
+    // Re-discovers parameters, preserving existing overrides by name. The source asset is never modified.
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|ParametricImage")
     void
     Set_SourceMaterial(
@@ -45,13 +43,11 @@ public:
 
     // Re-reads the parameter list from the source material — adds newly-found parameters, drops ones
     // that no longer exist. Override flags and values are preserved by name for overridden parameters.
-    // Category "Parameters" so the editor button groups with the _Parameters array in the details panel.
     UFUNCTION(BlueprintCallable, CallInEditor, Category = "Parameters")
     void
     Update_FromMaterial();
 
-    // Clears every override and re-captures each parameter's value from the material's defaults, so the
-    // widget renders identically to the untouched source material.
+    // Clears every override, so the widget renders identically to the untouched source material.
     UFUNCTION(BlueprintCallable, CallInEditor, Category = "Parameters")
     void
     Reset_ToMaterialDefaults();
@@ -76,16 +72,13 @@ protected:
     TArray<FCk_Material_Parameter> _Parameters;
 
 private:
-    // Rebuilds the parameter array from _SourceMaterial. When InPreserveOverrides is true, an existing
-    // overridden row's _Override/value is carried over for any parameter name+type that still exists.
+    // InPreserveOverrides carries an existing overridden row's flag+value across, matched on name+type.
     auto DiscoverParameters(
         bool InPreserveOverrides) -> void;
 
-    // Seeds the inherited brush with _SourceMaterial only when the brush currently holds no material.
-    // Leaves an existing material instance untouched (e.g. the sequencer's "_Animated" MID mid-playback).
+    // No-op when the brush already holds a material — must not clobber the sequencer's "_Animated" MID.
     auto EnsureBrushHasMaterial() -> void;
 
-    // Pushes every overridden parameter onto the per-widget Dynamic Material Instance.
     auto ApplyParametersToDynamicMaterial() -> void;
 };
 

@@ -69,6 +69,22 @@ bearings are shortest-path `[-180, 180]`; normalized offsets are `bearing / (arc
 
 ---
 
+## Implementation notes
+
+- **A dead observer is normal play, not an error.** Pawns get destroyed and possession changes; when
+  `_Observer` goes invalid the Update processor degrades SILENTLY — it drains the entries (so bound UIs
+  empty their pools) and waits for a `Request_SetObserver`. Do not turn that branch into an ensure.
+- **The projection view's four `TExclude<FTag_DestroyEntity_*>` are load-bearing.** Fragments survive
+  until destruction Finalize (~2 ticks after Destroy), so without the excludes a dying POI would linger
+  on the compass. POIs in their Initiate frame are deliberately still projected (same policy as
+  `CK_IGNORE_PENDING_KILL`).
+- **A direct-attach DisplayDefinition IS the base entity.** The per-consumer `FTag_VisibleRange_Hidden` /
+  `FTag_PoiDisplayDefinition_ParentHidden` checks are harmless in that case (base Hidden already skipped
+  per-worker; ParentHidden only ever lands on record children), but the post-parallel distance feed needs
+  its `DisplayDefinition != BaseHandle` guard to avoid feeding the same VisibleRange twice.
+
+---
+
 ## Anti-patterns
 
 1. Don't broadcast or expect per-frame position events — pull them. The signals are membership deltas.

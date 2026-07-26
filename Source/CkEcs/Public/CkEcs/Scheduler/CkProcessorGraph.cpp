@@ -6,12 +6,8 @@
 #include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Transitive closure / reduction helpers.
-//
-// These are lifted from entt/graph/flow.hpp (private member functions of basic_flow, not exposed standalone) and
-// applied to an entt::adjacency_matrix directly. Both run in O(V^3); acceptable at graph-build time.
-// Closure adds every (i,j) where i can reach j via any path. Reduction removes direct edges that are implied by
-// longer paths, leaving the minimal edge set that preserves reachability.
+// Closure/reduction lifted from entt/graph/flow.hpp (private members of basic_flow, not exposed standalone) and
+// applied to an entt::adjacency_matrix directly. Both O(V^3) — acceptable at graph-build time only.
 
 namespace ck::detail
 {
@@ -68,9 +64,8 @@ namespace ck::detail
         }
     }
 
-    // Trace-scope display name for a node: descriptor _DisplayName when set, else the canonical
-    // _Name with entt::type_name's "struct "/"class " prefix stripped — so per-processor trace rows
-    // read the same as the cleantype-derived `stat CkProcessors` rows.
+    // Stripping entt::type_name's "struct "/"class " prefix makes per-processor trace rows read the
+    // same as the cleantype-derived `stat CkProcessors` rows.
     static auto
     Get_NodeTraceName(
         const FProcessorDescriptor& InDescriptor) -> FName
@@ -146,20 +141,14 @@ auto
     DoResolveTickGroups(InDescriptors);
 
     if (not DoValidate(InDescriptors))
-    {
-        // Cycle detected — can't reduce a non-DAG. Bail out with an empty graph.
-        return FProcessorGraph{};
-    }
+    { return FProcessorGraph{}; }
 
     if (not DoValidateAndResolveWriteConflicts(InDescriptors))
-    {
-        // Strict mode: write-write conflicts found and no explicit ordering to resolve them.
-        return FProcessorGraph{};
-    }
+    { return FProcessorGraph{}; }
 
-    // Reduction happens INSIDE DoPartitionAndSort, per-partition, after cross-partition edges
-    // have been dropped. Reducing whole-graph first would incorrectly remove direct in-partition
-    // edges whose transitive path routes through a node in another partition.
+    // Reduction happens per-partition INSIDE DoPartitionAndSort, after cross-partition edges are
+    // dropped: reducing whole-graph first removes direct in-partition edges whose transitive path
+    // routes through another partition's node.
     auto Partitions = DoPartitionAndSort();
     DoInstantiateProcessors(InRegistry, Partitions);
 
@@ -346,8 +335,7 @@ auto
 
         for (const auto& DepName : Descriptor._RunAfter)
         {
-            // Ghost nodes are real nodes in the graph — FindNodeIndex returns a valid
-            // index for them. Edges attach normally; ghosts preserve transitive ordering
+            // Ghosts are real nodes: edges attach normally so they preserve transitive ordering
             // without ever ticking.
             const auto DepIndex = FindNodeIndex(DepName);
             if (DepIndex == INDEX_NONE)
@@ -668,7 +656,7 @@ auto
     -> bool
 {
     // ---- Step 1: bucket processors by dirty marker hash ----
-    // Descriptor iteration preserves declaration order for deterministic diagnostics.
+    // Iterating InDescriptors preserves declaration order, so diagnostics are deterministic.
     auto ProcessorsByMarkerHash = TMap<uint32, TArray<FName>>{};
 
     for (const auto& Descriptor : InDescriptors)
@@ -682,7 +670,6 @@ auto
         }
     }
 
-    // Early out: nothing to check if no marker is shared by 2+ processors.
     auto HasShared = false;
     for (const auto& [MarkerHashUnused, Users] : ProcessorsByMarkerHash)
     {
@@ -731,8 +718,8 @@ auto
                 if (FirstIndex == INDEX_NONE or SecondIndex == INDEX_NONE)
                 { continue; }
 
-                // Cross-tick-group pairs are implicitly ordered by the engine's ticking group
-                // partitioning; the dirty pump pass runs independently inside each partition.
+                // Cross-tick-group pairs are implicitly ordered by the engine's ticking-group
+                // partitioning; the pump pass runs independently inside each partition.
                 if (_Nodes[FirstIndex]._ResolvedTickGroup != _Nodes[SecondIndex]._ResolvedTickGroup)
                 { continue; }
 
@@ -743,9 +730,8 @@ auto
                     Closure.contains(SecondClosureIdx, FirstClosureIdx))
                 { continue; }
 
-                // Two processors consume the same dirty signal with no explicit ordering.
-                // Auto-inserting an edge would be arbitrary (no obvious "winner"), so this
-                // is logged and — in Strict mode — aborts the build.
+                // No auto-edge here (unlike write conflicts): there is no non-arbitrary winner
+                // between two consumers of the same dirty signal.
                 if (_UnresolvedPolicy == ECk_UnresolvedRefPolicy::Strict)
                 {
                     ck::ecs::Error(
@@ -780,9 +766,8 @@ auto
     -> bool
 {
     // ---- Step 1: bucket processors by the fragment hashes they write ----
-    // Declaration order is preserved by iterating InDescriptors; that order is used as the
-    // tie-breaker when auto-inserting edges in Permissive mode. FragmentName is captured from
-    // the first descriptor that references the hash (all references are the same type).
+    // Iterating InDescriptors preserves declaration order, which is the tie-breaker when
+    // Permissive mode auto-inserts an edge below.
     struct FWritersForFragment
     {
         FName _FragmentName;
@@ -809,7 +794,6 @@ auto
         }
     }
 
-    // Early out: nothing to check if no fragment has multiple writers.
     auto HasAnyMultiWriter = false;
     for (const auto& [HashUnused, Bucket] : WritersByFragmentHash)
     {
@@ -824,9 +808,8 @@ auto
     { return true; }
 
     // ---- Step 2: build a whole-graph adjacency matrix + transitive closure ----
-    // The closure gives O(1) reachability checks while iterating pairs. It is updated
-    // incrementally when Permissive-mode edges are inserted so that follow-up pairs observe
-    // the new ordering and avoid spurious conflicts.
+    // Updated incrementally as Permissive-mode edges are inserted, so follow-up pairs observe the
+    // new ordering instead of reporting spurious conflicts.
     const auto NodeCount = static_cast<std::size_t>(_Nodes.Num());
     auto Closure = detail::FDirectedAdjacencyMatrix{NodeCount};
 
@@ -843,9 +826,7 @@ auto
 
     detail::DoTransitiveClosure(Closure);
 
-    // Incrementally updates Closure to reflect a newly inserted edge (InFromIndex → InToIndex).
-    // After this update, any X that can reach InFromIndex (or is InFromIndex itself) gets edges to
-    // everything InToIndex can reach (or InToIndex itself). O(V^2) per update.
+    // O(V^2) per update.
     const auto UpdateClosureForNewEdge = [&](const std::size_t InFrom, const std::size_t InTo) -> void
     {
         for (auto X = std::size_t{0}; X < NodeCount; ++X)
@@ -888,8 +869,7 @@ auto
                 if (FirstIndex == INDEX_NONE or SecondIndex == INDEX_NONE)
                 { continue; }
 
-                // Cross-tick-group pairs are implicitly ordered by the engine's ticking group
-                // partitioning; they cannot race because they run in distinct Unreal tick phases.
+                // Cross-tick-group pairs cannot race — they run in distinct Unreal tick phases.
                 if (_Nodes[FirstIndex]._ResolvedTickGroup != _Nodes[SecondIndex]._ResolvedTickGroup)
                 { continue; }
 
@@ -900,7 +880,6 @@ auto
                     Closure.contains(SecondClosureIdx, FirstClosureIdx))
                 { continue; }
 
-                // Unresolved write-write conflict.
                 auto ConflictRecord = FCk_WriteConflictInfo{};
                 ConflictRecord._First = Writers[I];
                 ConflictRecord._Second = Writers[J];
@@ -920,10 +899,8 @@ auto
                 }
                 else
                 {
-                    // Per-pair detail at Verbose only — a full graph build emits hundreds of
-                    // these (every co-writing pair in every module), drowning the startup log.
-                    // The aggregate Warning below keeps the signal; the per-pair records are
-                    // also retained in _WriteConflicts for the scheduler debug view.
+                    // Verbose, not Warning: a full graph build emits hundreds of these and would
+                    // drown the startup log. The aggregate Warning below carries the signal.
                     ck::ecs::Verbose(
                         TEXT("Write conflict: processors [{}] and [{}] both write fragment [{}] ")
                         TEXT("with no explicit RunAfter/RunBefore ordering. ")
@@ -1022,8 +999,6 @@ namespace detail
         }
     }
 
-    // Graphviz ignores trailing quotes inside labels but not embedded ones, so escape any literal
-    // double-quotes that might appear in processor names.
     static auto
     DoEscapeDotLabel(
         const FString& InLabel)
@@ -1049,8 +1024,7 @@ auto
     Output += TEXT("    edge [fontname=\"Helvetica\", fontsize=8];\n");
     Output += TEXT("\n");
 
-    // Each partition gets a numeric prefix for node ids to avoid collisions between group-start/end
-    // pseudo-nodes that share processor names across partitions.
+    // Node ids are prefixed per partition: group start/end pseudo-nodes share names across partitions.
     auto PartitionIndex = 0;
 
     for (const auto& [TickGroup, Partition] : InPartitions)
@@ -1070,7 +1044,6 @@ auto
             const auto NodeId = ck::Format_UE(TEXT("{}n{}"), ClusterPrefix, NodeIdx);
             const auto Label = detail::DoEscapeDotLabel(Node._ProcessorName.ToString());
 
-            // Shape and style convey role
             auto Shape = FString{TEXT("box")};
             auto Style = FString{TEXT("filled")};
             auto FillColor = FString{TEXT("#f0f0f0")};
@@ -1190,8 +1163,6 @@ auto
         FProcessorGraphPartition& InOutPartition) const
     -> void
 {
-    // Partition indices are already local (0..N within the partition), so the matrix
-    // is sized to the partition's node count and fed from the partition's _OutEdges.
     const auto PartitionNodeCount = static_cast<std::size_t>(InOutPartition._Nodes.Num());
 
     if (PartitionNodeCount == 0)
@@ -1214,7 +1185,6 @@ auto
     detail::DoTransitiveClosure(WorkMatrix);
     detail::DoTransitiveReduction(WorkMatrix);
 
-    // Write reduced edges back to the partition nodes.
     for (auto& Node : InOutPartition._Nodes)
     {
         Node._InEdges.Reset();
@@ -1301,9 +1271,7 @@ auto
             Partition._Nodes.Emplace(MoveTemp(Node));
         }
 
-        // Collapse redundant edges within the partition before sorting. This happens AFTER
-        // cross-partition edges have been dropped by the remap above, so the closure/reduction
-        // operates only on reachable-in-partition paths.
+        // Must run AFTER the remap above dropped cross-partition edges (see Build).
         DoReducePartitionEdges(Partition);
 
         Partition._ExecutionOrder = DoTopologicalSort(Partition._Nodes);
@@ -1311,9 +1279,7 @@ auto
         Partitions.Add(TickGroup, MoveTemp(Partition));
     }
 
-    // Distribute the builder's transient write-conflict list into the matching partition.
-    // All conflicts recorded by DoValidateAndResolveWriteConflicts are same-tick-group by
-    // construction, so each record lands in exactly one partition.
+    // Recorded conflicts are same-tick-group by construction, so each lands in exactly one partition.
     for (const auto& Conflict : _WriteConflicts)
     {
         const auto FirstGlobalIdx = FindNodeIndex(Conflict._First);

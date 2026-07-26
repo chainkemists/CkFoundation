@@ -10,13 +10,10 @@
 #include "CkEcs/Signal/CkSignal_Utils.inl.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Owning-Planner resolution helpers.
 
 namespace ck_goap_action_utils
 {
-	// Resolve the owning Planner for an Action handle. Returns an invalid
-	// handle if the Action is orphaned (should not happen in well-formed
-	// graphs).
+	// Invalid handle if the Action is orphaned (should not happen in well-formed graphs).
 	auto ResolveOwningPlanner(const FCk_Handle_Goap_Action& InAction) -> FCk_Handle_Goap_Planner
 	{
 		if (NOT ck::IsValid(InAction)) { return {}; }
@@ -58,9 +55,6 @@ auto
 {
 	if (NOT ck::IsValid(InAction)) { return ECk_GoapPlanStatus::Idle; }
 
-	// PlanState lives on the owning Planner now. Resolve and
-	// read from there. The Action-side stamp (still present from dual-stamp)
-	// is no longer authoritative.
 	auto Owning = ck_goap_action_utils::ResolveOwningPlanner(InAction);
 	if (NOT ck::IsValid(Owning)) { return ECk_GoapPlanStatus::Idle; }
 	return Owning.Get<ck::FFragment_Goap_Planner_PlanState>().Get_PlanStatus();
@@ -91,8 +85,8 @@ auto
 	Get_WorldStateSource(const FCk_Handle_Goap_Action& InAction) -> FCk_Handle_Goap_WorldState
 {
 	if (NOT ck::IsValid(InAction)) { return {}; }
-	// Action-side _Resolved is still populated by activation walk + AddAction
-	// for the implicit-root; safe to read here.
+	// Action-side _Resolved is populated by AddAction + the activation walk, so it
+	// is safe to read directly without resolving the owning Planner.
 	return InAction.Get<ck::FFragment_Goap_Planner_WorldStateSource>().Get_Resolved();
 }
 
@@ -115,9 +109,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Request verbs resolve the owning Planner and enqueue on its request queue
-// (FFragment_Goap_Planner_Requests, alias to the same underlying type). The
-// Planner-on-Planner HandleRequests drains the queue.
 
 auto
 	UCk_Utils_Goap_Action_UE::
@@ -221,5 +212,3 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Signal binding moved to UCk_Utils_Goap_Planner_UE (per-Planner signals have
-// FCk_Handle_Goap_Planner source).

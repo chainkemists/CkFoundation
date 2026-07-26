@@ -14,8 +14,7 @@
 // Root for POI category tags (Poi.Category.*), handed to CkEntityTag Add_UsingGameplayTag by Add.
 CKPOI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Tag_Poi_CategoryName);
 
-// The enable/disable convention tag: a disabled POI carries this EntityTag; projectors skip it. Add/remove via
-// UCk_Utils_EntityTag_UE (deferred one pump, COUNTED — N disables need N enables).
+// The enable/disable convention tag — an EntityTag, not an ECS tag. See CkPoi/CLAUDE.md.
 CKPOI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Tag_Poi_DisabledName);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -33,11 +32,6 @@ public:
     friend class UCk_Utils_Ecs_Base_UE;
 
 public:
-    // POI is a META-FEATURE: Add composes ck::FTag_Poi (identity) + a CkEntityTag category (Params._Category) and,
-    // when Params._Label is set, a CkLabel. The entity must already carry the Transform feature — a POI's world
-    // position is its own entity transform location (Get_WorldLocation). No child entity is created; one POI per
-    // entity. Category / label / presentation / range all live in their own modules now (CkEntityTag / CkLabel /
-    // CkPoiDisplayDefinition / CkVisibleRange).
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Poi",
               DisplayName="[Ck][Poi] Add Feature")

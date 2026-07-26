@@ -183,14 +183,8 @@ namespace ck
         {
             if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(MaybeExistingModifier, ECk_EntityLifetime_DestructionPhase::BeginDestroy))
             {
-                // The coalesce target is queued for destruction. Two ways that happens:
-                //   1. Entity-lifetime cascade — the owning attribute (or ITS owner) is being destroyed
-                //      this frame, which stamps the attribute AND its child modifiers pending-destroy
-                //      synchronously. The write is moot (the whole attribute is going away); drop it.
-                //   2. A NotRevocable modifier removed out from under a LIVE attribute — the replicated-
-                //      attribute alternating-override stick. Request_ClearAllModifiers preserves
-                //      NotRevocable modifiers, so this should never happen; fail loudly if it does.
-                // Discriminate on whether the attribute itself is also pending-destroy: only case 2 is a bug.
+                // A pending-destroy coalesce target is only a bug when its attribute is still ALIVE — the
+                // lifetime-cascade case is benign. See CkAttribute/CLAUDE.md.
                 CK_ENSURE_IF_NOT(UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InAttributeHandle, ECk_EntityLifetime_DestructionPhase::BeginDestroy),
                     TEXT("Add_NotRevocable coalescing into NotRevocable modifier [{}] that is pending destroy while its attribute [{}] is alive."),
                     MaybeExistingModifier, InAttributeHandle)
@@ -271,10 +265,8 @@ namespace ck
             }, [](
             AttributeModifierHandleType InAttributeModifier)
             {
-                // NotRevocable modifiers are permanent (set-once / accumulate) and must never be
-                // cleared. Clearing them queued the EmptyTag Override modifier for deferred destroy
-                // and let a same-frame Add_NotRevocable coalesce into a doomed entity — the
-                // replicated-attribute alternating-override stick.
+                // NotRevocable modifiers are permanent (set-once / accumulate) and must never be cleared.
+                // See CkAttribute/CLAUDE.md.
                 if (InAttributeModifier.template Has<typename AttributeModifierFragmentType::FTag_IsNotRevocableModification>())
                 { return false; }
 

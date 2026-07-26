@@ -101,8 +101,8 @@ auto
 
     auto StateEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwnerStateMachine);
 
-    // SM graph elements are derived state — the SM's hydration redrive recreates them on load, so the
-    // v3 capture must never persist them as respawnable rows (see FTag_Snapshot_SaveTransient).
+    // SM graph elements are derived state — the hydration redrive recreates them on load, so the save
+    // capture must never persist them as respawnable rows.
     StateEntity.Add<ck::FTag_Snapshot_SaveTransient>();
 
     UCk_Utils_Handle_UE::Set_DebugName(StateEntity, ResolvedClass->GetFName());
@@ -241,10 +241,6 @@ auto
         FCk_Handle_SmState& InState)
     -> FCk_Handle_SmState
 {
-    // A state qualifies as FullyEventDriven iff it has at least one transition and
-    // every transition is FullyEventDriven. Zero transitions = terminal state with
-    // no outgoing edges = nothing to evaluate, safe to mark FullyEventDriven (the
-    // state will be left alone by State_Update, which is what we want).
     auto TransitionCount = int32{0};
     auto HasNonFullyEventDriven = false;
 
@@ -260,8 +256,8 @@ auto
         return ECk_Record_ForEachIterationResult::Continue;
     });
 
-    // TransitionCount == 0 (terminal state) → mark FullyEventDriven so the tick
-    // processor skips it. There's no work to do for a terminal state regardless.
+    // Zero transitions (a terminal state) also qualifies: there is nothing to evaluate, so leaving it
+    // out of FProcessor_SmState_Update is correct.
     const auto ShouldBeFullyEventDriven = (NOT HasNonFullyEventDriven);
 
     if (ShouldBeFullyEventDriven)

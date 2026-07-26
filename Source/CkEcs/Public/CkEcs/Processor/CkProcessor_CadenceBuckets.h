@@ -10,36 +10,22 @@
 #include <utility>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Sub-instanced bucketed-cadence processors — the framework primitive designed in
-// Source/CkEcs/DESIGN_SubInstancedCadenceProcessors.md (read it for rationale, contracts, and the
-// wake-alignment analysis).
+// Sub-instanced bucketed-cadence processors. A per-entity re-evaluation interval is quantized at Add into a
+// fixed bucket set and tagged onto the entity; ONE sub-processor per bucket carries that bucket's interval as
+// its compile-time TickRate. "Due-ness" is view membership — no per-entity chrono poll. Rationale, authoring
+// recipe and wake-alignment analysis: Source/CkEcs/DESIGN_SubInstancedCadenceProcessors.md + CkEcs/CLAUDE.md.
 //
-// A feature whose entities re-evaluate on a per-entity interval quantizes that interval at Add into a fixed
-// bucket set (toward FASTER — an entity never updates slower than requested), tags the entity with its
-// bucket, and runs ONE sub-processor per bucket carrying the bucket's interval as its compile-time
-// `TickRate` trait (see ck::time::Hz / ck::time::Seconds in CkCore/Time/CkTime.h). "Due-ness" is membership in a rated
-// sub-processor's view — no per-entity chrono poll. Vacant buckets are near-free via the scheduler's
-// empty-view skip. Bucket 0 (every tick) declares NO TickRate trait at all, so it is byte-identical to an
-// ordinary every-tick processor.
-//
-// Immediate-first-eval folds into bucket 0: an entity landing in a nonzero bucket transiently ALSO joins
-// bucket 0 with a pending-first-eval tag; the consumer's shared eval body calls
-// cadence::TryConsume_FirstEval at its top, which strips both transient tags after the first evaluation.
-//
-// Phase contract (load-bearing for cadence-sensitive tests): a bucket processor's accumulator FREEZES while
-// its view is provably empty (the scheduler skips the whole dispatch, Tick included), so a bucket's phase
-// aligns to the moment its view last became non-empty. Cadence buckets therefore use no phase offset —
-// one would break that wake-alignment.
+// Phase contract (load-bearing for cadence-sensitive tests): a bucket's accumulator FREEZES while its view is
+// provably empty, so its phase aligns to when the view last became non-empty. Hence no phase offset — one
+// would break that wake-alignment.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::cadence
 {
     inline constexpr int32 BucketCount = 7;
 
-    // Seconds; index 0 = every tick. Geometric-ish — tune only alongside the [EDITOR-VERIFY] benchmark in
-    // the design doc. Stored as constexpr doubles because FCk_Time is a reflected USTRUCT with no constexpr
-    // ctor; each nonzero bucket's entry becomes that bucket processor's compile-time `TickRate` trait
-    // (detail::TCadenceBucketRateTraits below).
+    // Seconds; index 0 = every tick. Tune only alongside the [EDITOR-VERIFY] benchmark in the design doc.
+    // Doubles rather than FCk_Time because FCk_Time is a reflected USTRUCT with no constexpr ctor.
     inline constexpr double BucketIntervalsSeconds[BucketCount] = { 0.0, 0.1, 0.25, 0.5, 1.0, 2.0, 4.0 };
 }
 
@@ -47,9 +33,8 @@ namespace ck::cadence
 
 namespace ck
 {
-    // Bucket-membership view filter. T_CadenceKey is the feature's typesafe handle type (unique per
-    // feature — it doubles as the cadence family key so a feature's buckets never collide with another
-    // feature's); T_BucketIndex addresses cadence::BucketIntervalsSeconds.
+    // Bucket-membership view filter. T_CadenceKey is the feature's typesafe handle type, doubling as the
+    // cadence family key so one feature's buckets never collide with another's.
     template <typename T_CadenceKey, int32 T_BucketIndex>
     struct TTag_CadenceBucket : public TTag<TTag_CadenceBucket<T_CadenceKey, T_BucketIndex>>
     {
@@ -57,8 +42,7 @@ namespace ck
             "Bucket index outside cadence::BucketIntervalsSeconds");
     };
 
-    // Pending immediate first evaluation. Only ever coexists with a TRANSIENT bucket-0 membership — a
-    // native bucket-0 entity never carries it. Consumed by cadence::TryConsume_FirstEval.
+    // Pending immediate first evaluation — only ever coexists with a TRANSIENT bucket-0 membership.
     template <typename T_CadenceKey>
     struct TTag_CadenceFirstEval : public TTag<TTag_CadenceFirstEval<T_CadenceKey>> { };
 }
@@ -67,9 +51,7 @@ namespace ck
 
 namespace ck::cadence
 {
-    // Largest bucket <= the requested interval — quantizing toward FASTER, so an entity never updates
-    // slower than it asked for. A requested interval <= 0 (or below the smallest nonzero bucket) lands in
-    // bucket 0 (every tick).
+    // Largest bucket <= the requested interval, so an entity never updates SLOWER than it asked for.
     inline auto
     Get_QuantizedBucketIndex(
         const FCk_Time& InRequestedInterval) -> int32
@@ -112,10 +94,8 @@ namespace ck::cadence
     }
 
     // Add-time bucketing: quantizes, tags the entity with its bucket, and — for nonzero buckets — arms the
-    // immediate first evaluation (transient bucket-0 membership + the first-eval tag). Returns the bucket
-    // index. The consumer's shared eval body MUST call TryConsume_FirstEval at its top or bucket 0 keeps
-    // pump-draining the armed entities forever (the scheduler's pump-pressure warning will name the
-    // bucket-0 processor).
+    // immediate first evaluation (transient bucket-0 membership + the first-eval tag). The consumer's shared
+    // eval body MUST call TryConsume_FirstEval at its top or bucket 0 pump-drains the armed entities forever.
     template <typename T_CadenceKey>
     auto
     AddCadenceTags(
@@ -135,11 +115,8 @@ namespace ck::cadence
         return BucketIndex;
     }
 
-    // First-eval consumption — call at the TOP of the shared eval body, every bucket. Presence of the
-    // first-eval tag implies the bucket-0 membership was transient (AddCadenceTags never arms native
-    // bucket-0 entities), so both come off together. Removing a view-include tag mid-iteration is the
-    // established MarkedDirtyBy-consumption pattern; fragment pools are in_place_delete, so it is
-    // iteration-safe.
+    // Call at the TOP of the shared eval body, every bucket. Removing a view-include tag mid-iteration is
+    // the established MarkedDirtyBy-consumption pattern — fragment pools are in_place_delete, so it is safe.
     template <typename T_CadenceKey>
     auto
     TryConsume_FirstEval(
@@ -164,17 +141,15 @@ namespace ck
         template <typename T_CadenceKey, int32 T_BucketIndex>
         struct TCadenceBucketDirtyTraits { };
 
-        // Bucket 0 drains freshly-armed first evaluations in the same frame's pump passes (an Add during
-        // gameplay is evaluated this frame, not next) — bounded because the eval body consumes the marker
-        // via cadence::TryConsume_FirstEval.
+        // Bucket 0 drains freshly-armed first evaluations in the same frame's pump passes — bounded because
+        // the eval body consumes the marker via cadence::TryConsume_FirstEval.
         template <typename T_CadenceKey>
         struct TCadenceBucketDirtyTraits<T_CadenceKey, 0>
         {
             using MarkedDirtyBy = TTag_CadenceFirstEval<T_CadenceKey>;
         };
 
-        // Buckets 1..N declare the compile-time TickRate trait TProcessorBase resolves in Get_TickRate;
-        // bucket 0 declares NOTHING, so it hits the exact ZeroSecond every-tick fast path.
+        // Bucket 0 declares NOTHING, so it hits the exact ZeroSecond every-tick fast path.
         template <int32 T_BucketIndex>
         struct TCadenceBucketRateTraits
         {
@@ -187,39 +162,10 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
     // The per-bucket sub-processor base. The consumer declares ONE class template over the bucket index,
-    // passing itself twice (CRTP instance + the template itself for the RunAfter chain), and supplies
-    // `using Group = ...;` plus the (shared, static) ForEachEntity — spelled with CONCRETE types
-    // (FCk_Time, the handle type): the base is dependent, so its TimeType/HandleType aliases are not
-    // visible unqualified inside the consumer template:
-    //
-    //     template <int32 T_BucketIndex>
-    //     class FProcessor_MyFeature_Update_Bucket : public ck::TCadenceBucketProcessor<
-    //         FProcessor_MyFeature_Update_Bucket<T_BucketIndex>,
-    //         FProcessor_MyFeature_Update_Bucket,
-    //         T_BucketIndex,
-    //         FCk_Handle_MyFeature,
-    //         ck::TReadOnly<FFragment_MyFeature_Params>, ck::TReadWrite<FFragment_MyFeature_Current>,
-    //         CK_IGNORE_PENDING_KILL>
-    //     {
-    //     public:
-    //         using Group = FGroup_...;
-    //
-    //         // Dependent-base ctor inheritance (unqualified lookup never examines a dependent base):
-    //         using BucketBase = typename FProcessor_MyFeature_Update_Bucket::TCadenceBucketProcessor;
-    //         using BucketBase::BucketBase;
-    //
-    //         static auto ForEachEntity(FCk_Time, FCk_Handle_MyFeature, ...) -> void;  // defined as a
-    //         // template in the .cpp; body starts with cadence::TryConsume_FirstEval<FCk_Handle_MyFeature>
-    //     };
-    //
-    // Registration: CK_REGISTER_CADENCE_BUCKET_PROCESSORS(ck::FProcessor_MyFeature_Update_Bucket) in the
-    // .cpp, BELOW the template definition of ForEachEntity (implicit instantiation needs the body).
-    // The feature's Add calls cadence::AddCadenceTags<FCk_Handle_MyFeature>(Handle, Interval).
-    //
-    // T_HandleType doubles as the cadence family key (matches AddCadenceTags/TryConsume_FirstEval). A
-    // feature needing TWO independent cadence families over the same handle type would need a distinct
-    // key type — deliberately unsupported until a real consumer exists (and see the TickRate ambiguity
-    // note in CkProcessor.h: stacking two cadence mixins on one processor silently degrades).
+    // passing itself twice (CRTP instance + the template itself, for the RunAfter chain). Authoring recipe
+    // (declaration shape, dependent-base ctor inheritance, registration order): CkEcs/CLAUDE.md; reference
+    // consumer: CkVisibleRange. T_HandleType doubles as the cadence family key, so two independent cadence
+    // families over one handle type are unsupported (and see the TickRate ambiguity note in CkProcessor.h).
     // ----------------------------------------------------------------------------------------------------------------
     template <
         typename T_DerivedProcessor,
@@ -248,12 +194,11 @@ namespace ck
 
         static constexpr auto BucketIndex = T_BucketIndex;
 
-        // Cadence buckets SAMPLE — replaying DoTick per missed interval after a hitch (or a long
-        // empty-view sleep) would re-evaluate the same state N times for nothing.
+        // Cadence buckets SAMPLE — replaying DoTick per missed interval would re-evaluate the same state.
         static constexpr auto TickCatchUpPolicy = ECk_ProcessorTickCatchUp::SampleLatestOnly;
 
-        // Bucket N runs after bucket N-1: a total order over the sub-instances, so their shared read-write
-        // fragments never trip the graph builder's write-write-conflict warnings/auto-edges.
+        // A total order over the sub-instances, so their shared read-write fragments never trip the graph
+        // builder's write-write-conflict warnings/auto-edges.
         using RunAfter = std::conditional_t<
             T_BucketIndex == 0,
             TDepList<>,

@@ -15,8 +15,6 @@
 #include "CkUI/ScreenFade/CkScreenFade_Widget.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Lifecycle
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_UI_Subsystem_UE::
@@ -52,8 +50,6 @@ auto
 }
 
 
-// --------------------------------------------------------------------------------------------------------------------
-// Input Suspension
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -137,8 +133,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Screen Fade
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_UI_Subsystem_UE::
@@ -184,8 +178,6 @@ auto
     FadeWidget->StartFade();
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Internal - Screen Fade
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -262,8 +254,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Internal - Input Suspension
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_UI_Subsystem_UE::
@@ -305,17 +295,14 @@ auto
         float InDeltaTime)
     -> void
 {
-    // This tick fires continuously while a modal dialog is open.
-    // We use it to detect modal entry and schedule restoration on close.
+    // OnModalLoopTickEvent fires every tick while a modal is open and simply STOPS when it closes — there
+    // is no close event, so every tick re-arms a next-tick poll that notices the close and restores.
 
     if (NOT _IsInModalLoop)
     {
         DoSuspendFiltersForModal();
         _IsInModalLoop = true;
 
-        // Schedule a check for when the modal closes.
-        // OnModalLoopTickEvent stops firing when modal closes,
-        // so we use a deferred callback to restore filters.
         if (auto* World = GetWorld(); ck::IsValid(World))
         {
             World->GetTimerManager().SetTimerForNextTick(
@@ -327,7 +314,6 @@ auto
     }
     else
     {
-        // Still in modal loop - reschedule the check
         if (auto* World = GetWorld(); ck::IsValid(World))
         {
             World->GetTimerManager().SetTimerForNextTick(
@@ -347,7 +333,6 @@ auto
     if (NOT _IsInModalLoop)
     { return; }
 
-    // Check if we're still in a modal loop
     if (FSlateApplication::IsInitialized())
     {
         const auto& SlateApp = FSlateApplication::Get();
@@ -355,12 +340,10 @@ auto
 
         if (ck::IsValid(ActiveModal))
         {
-            // Still have a modal window - stay suspended
             return;
         }
     }
 
-    // Modal is closed - restore filters
     DoRestoreFiltersAfterModal();
 }
 
@@ -389,7 +372,6 @@ auto
 {
     for (const auto& Token : _SuspendedTokensDuringModal)
     {
-        // Only restore if the suspension is still active
         const auto StillActive = ck::algo::AnyOf(_ActiveSuspensions,
             [&Token](const auto& Pair) { return Pair.Value.Get_Token() == Token; });
 

@@ -34,8 +34,6 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Nav_PathStatus);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Why the last path query failed. Captured for every failure branch so the debugger
-// (and any listener) can pinpoint root cause without needing diagnostic logs.
 UENUM(BlueprintType)
 enum class ECk_Nav_PathFailReason : uint8
 {
@@ -56,9 +54,8 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Nav_PathFailReason);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Per-query diagnostic context. Captured on every FindPathSync invocation (success or failure)
-// so the debugger can show a complete picture of the last attempt without round-tripping
-// through logs.
+// Captured on every FindPathSync invocation, success or failure — the debugger reads these
+// instead of the log.
 USTRUCT(BlueprintType)
 struct CKNAVIGATION_API FCk_Nav_PathDiagnostics
 {
@@ -165,15 +162,11 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     bool _AllowPartialPath = true;
 
-    // Maps to a UNavigationQueryFilter class via UCk_Nav_ProjectSettings_UE::_QueryFilters.
-    // Empty/unmapped -> NavData's default filter.
+    // Maps via UCk_Nav_ProjectSettings_UE::_QueryFilters; empty/unmapped -> NavData's default.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     FGameplayTag _QueryFilter;
 
-    // Plan from this location instead of the entity's transform. CkCrowd's inside-a-cost-band
-    // escape uses it: an agent standing INSIDE painted stationary-agent markup would otherwise
-    // find that finishing the crossing is cheaper than backing out plus detouring — planning
-    // from just outside the band restores the detour preference.
+    // Plan from _StartOverrideLocation instead of the entity's transform.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     ECk_EnableDisable _StartOverride = ECk_EnableDisable::Disable;
 

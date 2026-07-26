@@ -17,7 +17,7 @@
 #include "EndAngelscriptHeaders.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Anonymous namespace for internal helpers
+// Internal helpers
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_handle_angelscript_registry
@@ -223,12 +223,9 @@ auto
 
     auto& Info = **Found;
 
-    // Replace validator + metadata in place. The Cast / CastChecked lambdas
-    // capture the new validator so they reflect the same strictness as
-    // IsValidAsType. AS-bound methods deref TypeInfo via a stable pointer
-    // (see GetTypeInfoFromGeneric + the AuxData refactor in this file's
-    // BindCrossHandleConversions), so they pick up the new lambdas on the
-    // next call with no re-binding required.
+    // AS-bound methods deref TypeInfo through a stable pointer (GetTypeInfoFromGeneric and the
+    // AuxData maps in BindCrossHandleConversions), so replacing these in place is enough — they
+    // pick up the new lambdas on the next call with no re-binding.
     Info.IsValidAsType     = InValidator;
     Info.RequiredFragments = InRequiredFragments;
     Info.Description       = InDescription;
@@ -284,7 +281,6 @@ auto
 {
     auto NewTypeCount = int32{ 0 };
 
-    // Process any pending types that haven't been registered yet
     for (auto& PendingInfo : Get_PendingTypes())
     {
         if (Get_RegisteredTypes().Contains(PendingInfo.TypeName))
@@ -300,7 +296,6 @@ auto
 
     Get_PendingTypes().Reset();
 
-    // Bind cross-handle conversions for any new type combinations
     BindCrossHandleConversions();
     BindParentChainConversions();
     BindBaseMixinMethods();
@@ -315,16 +310,10 @@ auto
 {
     _BindingsComplete = false;
 
-    // The mixin-method dedup set persists across calls so that re-binding (RegisterNewTypesIncremental,
-    // ForceRefreshDynamicHandleBindings) does not rebind the same {Derived}::{Decl} pair twice.
-    // When the caller explicitly resets the bindings-complete flag, they intend to re-walk the
-    // entire registered-types set — clearing the dedup set ensures children registered after a
-    // parent's first bind pass still inherit that parent's mixin methods on the next walk.
+    // These dedup sets normally persist across re-binds. Resetting the flag means a full re-walk
+    // is intended, so they are cleared: children registered after a parent's first pass must still
+    // inherit its mixins and conversions on the next walk.
     Get_BoundMixinMethods().Empty();
-
-    // Same rationale for parent-chain implicit conversions and the shared cycle/missing-parent
-    // warning set: a re-walk should re-emit conversions for late-registered children and
-    // re-evaluate parent-chain validity from scratch.
     Get_BoundParentConversions().Empty();
     Get_WarnedMixinTypes().Empty();
 }
@@ -505,13 +494,9 @@ auto
         return;
     }
 
-    // Execute deferred callbacks first - this registers static handles
     ExecuteDeferredCallbacks();
-
-    // Then process any pending types
     RegisterAllPendingTypes();
 
-    // Finally bind cross-handle conversions, parent-chain implicit conversions, and mixin methods.
     // Parent-chain conversions before mixin propagation: wire the typesafe-handle lattice first,
     // then propagate methods over it.
     BindCrossHandleConversions();
@@ -563,7 +548,6 @@ auto
 
     auto* UserData = const_cast<FCkAngelScript_HandleTypeInfo*>(&InTypeInfo);
 
-    // Allow external modules to register custom FAngelscriptType
     const auto& TypeFactory = Get_DynamicHandleTypeFactory();
     if (TypeFactory)
     {
@@ -572,24 +556,11 @@ auto
 
     auto Bind = FAngelscriptBinds::ValueClass(TypeNameStr, sizeof(FCk_Handle), FBindFlags());
 
-    // Make the AS value-class resolve to a real UScriptStruct when crossed into
-    // UE reflection (FInstancedStruct::Make, FAngelscriptAnyStructParameter,
-    // FInstancedStruct::Get(?&out), Bind_FString.cpp's struct printer, etc.).
-    // FAngelscriptManager::GetUnrealStructFromAngelscriptTypeId returns whatever
-    // is stashed in asITypeInfo::plainUserData; without this, that returns null
-    // for dynamic handles and the engine fork throws "Not a valid USTRUCT".
-    //
-    // FCk_Handle::StaticStruct() is the right target because every dynamic
-    // handle is binary-identical to FCk_Handle by construction (same size, same
-    // layout — the ValueClass above is even sized as sizeof(FCk_Handle)). Boxed
-    // payloads round-trip correctly: callers extract an FCk_Handle and re-apply
-    // .As_<TypeName>() to recover the typed view. Synthesizing a unique
-    // UScriptStruct per dynamic type would add UASStruct / class-generator
-    // coupling and per-type GC bookkeeping for no semantic gain — the struct
-    // ops would just memcpy sizeof(FCk_Handle) bytes either way.
+    // Without user data, GetUnrealStructFromAngelscriptTypeId returns null for a dynamic handle
+    // and the engine fork throws "Not a valid USTRUCT" the moment it crosses into UE reflection.
+    // FCk_Handle::StaticStruct() is safe: every dynamic handle is binary-identical to FCk_Handle.
     Bind.SetTypeUserData(FCk_Handle::StaticStruct());
 
-    // Constructors
     Bind.Constructor("void f()", [](FCk_Handle* Address)
     {
         new(Address) FCk_Handle();
@@ -607,13 +578,11 @@ auto
         new(Address) FCk_Handle(InHandle);
     });
 
-    // Destructor
     Bind.Destructor("void f()", [](FCk_Handle* Address)
     {
         Address->~FCk_Handle();
     });
 
-    // Assignment operators
     auto AssignSelfSig = ck::Format_ANSI(TEXT("{}& opAssign(const {}& in InOther)"), TypeName, TypeName);
     Bind.Method(AssignSelfSig.c_str(), [](FCk_Handle& Self, const FCk_Handle& InOther) -> FCk_Handle&
     {
@@ -628,7 +597,6 @@ auto
         return Self;
     });
 
-    // Implicit conversions
     Bind.Method("FCk_Handle& opImplConv()", [](FCk_Handle& Self) -> FCk_Handle&
     {
         return Self;
@@ -649,7 +617,6 @@ auto
         return Self;
     });
 
-    // Handle accessors
     Bind.Method("FCk_Handle& H()", [](FCk_Handle& Self) -> FCk_Handle&
     {
         return Self;
@@ -660,7 +627,6 @@ auto
         return Self;
     });
 
-    // IsValid with type validation
     Bind.GenericMethod("bool IsValid() const",
         [](asIScriptGeneric* InGeneric)
     {
@@ -681,7 +647,6 @@ auto
     }, nullptr);
     ck_handle_angelscript_registry::SetPreviousFunctionUserData(UserData);
 
-    // Utility methods
     Bind.Method("FString ToString() const", [](const FCk_Handle& Self) -> FString
     {
         return Self.ToString();
@@ -693,7 +658,6 @@ auto
         return Self.ToString();
     });
 
-    // Equality operators
     auto EqualsSelfSig = ck::Format_ANSI(TEXT("bool opEquals(const {}& in Other) const"), TypeName);
     Bind.Method(EqualsSelfSig.c_str(), [](const FCk_Handle& A, const FCk_Handle& B) -> bool
     {
@@ -724,7 +688,6 @@ auto
         return;
     }
 
-    // As_ShortName method
     auto AsMethodSig = ck::Format_ANSI(
         TEXT("{} As_{}(ECk_SanityCheck InChecked = ECk_SanityCheck::Checked) const"),
         TypeName,
@@ -750,7 +713,6 @@ auto
     }, nullptr);
     ck_handle_angelscript_registry::SetPreviousFunctionUserData(UserData);
 
-    // Is_ShortName method
     auto IsMethodSig = ck::Format_ANSI(TEXT("bool Is_{}() const"), ShortName);
     BaseBind.GenericMethod(IsMethodSig.c_str(),
         [](asIScriptGeneric* InGeneric)
@@ -768,7 +730,6 @@ auto
     }, nullptr);
     ck_handle_angelscript_registry::SetPreviousFunctionUserData(UserData);
 
-    // Equality with this type
     auto BaseEqualsSig = ck::Format_ANSI(TEXT("bool opEquals(const {}& in Other) const"), TypeName);
     BaseBind.Method(BaseEqualsSig.c_str(), [](const FCk_Handle& A, const FCk_Handle& B) -> bool
     {
@@ -788,16 +749,10 @@ auto
     const auto& Types = Get_RegisteredTypes();
     auto& BoundPairs = Get_BoundConversionPairs();
 
-    // AuxData stores a pointer to the target type's TypeInfo (owned by the
-    // SharedPtr in Get_RegisteredTypes()) rather than copies of the validator
-    // / cast functions. This keeps the AS-bound cross-handle methods consistent
-    // with the self-type IsValid binding (which already dereferences userData
-    // at call time) and — load-bearing — makes runtime updates to a type's
-    // validator visible to all AS-bound methods that reference it. Without
-    // this indirection, replacing TypeInfo->IsValidAsType via the Update path
-    // would leave the cross-handle Is_X / As_X methods stuck on the original
-    // captured copies. The pointer is stable for the lifetime of the editor
-    // session because the registry is append-only (no entry is ever removed).
+    // AuxData holds a POINTER to the target's TypeInfo, never copies of its validator/cast
+    // lambdas: the Update path replaces those in place, and captured copies would leave the
+    // cross-handle Is_X / As_X methods stuck on the originals. The pointer is stable because
+    // the registry is append-only.
     struct FAsMethodAuxData
     {
         FCkAngelScript_HandleTypeInfo* TargetType = nullptr;
@@ -837,7 +792,6 @@ auto
                 continue;
             }
 
-            // As_ method
             auto AsMethodSig = ck::Format_ANSI(
                 TEXT("{} As_{}(ECk_SanityCheck InChecked = ECk_SanityCheck::Checked) const"),
                 TargetType->TypeName,
@@ -861,8 +815,7 @@ auto
                     return;
                 }
 
-                // Dereference TargetType at call time so Update_ExistingType
-                // mutations to TargetType->Cast / CastChecked are visible.
+                // Deref at call time so Update_ExistingType's replacement lambdas are visible
                 auto Result = (Checked == ECk_SanityCheck::UnChecked)
                     ? AuxData->TargetType->Cast(*Handle)
                     : AuxData->TargetType->CastChecked(*Handle);
@@ -881,7 +834,6 @@ auto
                 }
             }
 
-            // Is_ method
             auto IsMethodSig = ck::Format_ANSI(TEXT("bool Is_{}() const"), TargetType->ShortName);
 
             auto IsAuxData = FIsMethodAuxData{};
@@ -899,8 +851,7 @@ auto
                     && AuxData->TargetType != nullptr
                     && AuxData->TargetType->IsValidAsType)
                 {
-                    // Dereference TargetType at call time so Update_ExistingType
-                    // mutations to TargetType->IsValidAsType are visible.
+                    // Deref at call time so Update_ExistingType's replacement validator is visible
                     Result = AuxData->TargetType->IsValidAsType(*Handle);
                 }
 
@@ -1076,10 +1027,8 @@ namespace ck_handle_angelscript_registry_internal
     }
 
     // ----------------------------------------------------------------------------------------
-    // Parent-chain construction shared by BindBaseMixinMethods and BindParentChainConversions.
-    // Both passes consume the same MixinParentHandle chain (single source of truth) and the
-    // same WarnedTypes dedup set so cycle / missing-parent diagnostics are emitted at most
-    // once per offending type across both passes.
+    // Parent-chain construction shared by BindBaseMixinMethods and BindParentChainConversions:
+    // one chain and one WarnedTypes set, so a cycle warns at most once across both passes.
     // ----------------------------------------------------------------------------------------
 
     struct FDerivedEntry
@@ -1143,7 +1092,6 @@ namespace ck_handle_angelscript_registry_internal
                 CurrentParent = (*ParentInfo)->MixinParentTypeName;
             }
 
-            // Reverse so we process root-most ancestor first, direct parent last
             Algo::Reverse(Ancestors);
             for (const auto& Ancestor : Ancestors)
             { Entry.SourceChain.Add(Ancestor); }
@@ -1157,8 +1105,7 @@ namespace ck_handle_angelscript_registry_internal
         for (const auto& Pair : InDerivedTypes)
         { Entries.Add(BuildEntry(Pair.Value)); }
 
-        // Depth-sorted: parents before children, so a child's source extraction sees the
-        // parent's AS type with its inherited mixins already in place.
+        // Parents before children, so a child's extraction sees the parent's inherited mixins
         Entries.Sort([](const FDerivedEntry& A, const FDerivedEntry& B) { return A.Depth < B.Depth; });
 
         return Entries;
@@ -1182,8 +1129,6 @@ auto
     auto& BoundMixinMethods = Get_BoundMixinMethods();
     auto& WarnedTypes = Get_WarnedMixinTypes();
 
-    // Cache for already-extracted source method lists, keyed by source type name. Avoids
-    // re-walking the same parent's AS-type for every child that descends from it.
     auto ExtractedMethodsByType = TMap<FString, TArray<ck_handle_angelscript_registry_internal::FMixinMethodInfo>>{};
 
     auto GetOrExtractMethods = [&](const FString& InSourceTypeName) -> const TArray<ck_handle_angelscript_registry_internal::FMixinMethodInfo>&
@@ -1201,24 +1146,17 @@ auto
     for (const auto& Entry : Entries)
     {
         const auto& DerivedType = Entry.TypeInfo;
-        // Pass the FString so FBindString owns a copy of the name. FBindString stores a
-        // `const ANSICHAR*` by raw pointer, so a TCHAR_TO_ANSI() temporary would dangle the moment this
-        // statement ends — and this binder is used later in the loop. The freed slot then gets reused by
-        // the TCHAR_TO_ANSI() of a method declaration, so the binder's object-type name reads back as the
-        // declaration string, corrupting RegisterObjectMethod's object-type argument (asINVALID_TYPE ->
-        // the engine's configFailed flag latches -> every subsequent AS registration fails). This only
-        // bit packaged builds, where the freed-slot reuse is deterministic.
+        // Pass the FString, NEVER a TCHAR_TO_ANSI() temporary: FBindString keeps the ANSICHAR*
+        // raw, and the dangling slot corrupts RegisterObjectMethod's object-type argument, which
+        // latches configFailed and kills every later AS registration (see CkEcs/CLAUDE.md).
         auto DerivedBind = FAngelscriptBinds::ExistingClass(DerivedType->TypeName);
 
         auto* DerivedTypeInfo = DerivedBind.GetTypeInfo();
         if (DerivedTypeInfo == nullptr)
         { continue; }
 
-        // Walk source chain (FCk_Handle, then ancestors root→direct-parent), bind each method onto the
-        // derived type. Per-derived dedup ensures parent passes don't double-bind on the same child.
         for (const auto& SourceTypeName : Entry.SourceChain)
         {
-            // Don't propagate a type's methods onto itself (would no-op via dedup, but skip the work).
             if (SourceTypeName == DerivedType->TypeName)
             { continue; }
 
@@ -1233,11 +1171,8 @@ auto
                 if (NOT MethodInfo.NativeBinding.IsSet())
                 { continue; }
 
-                // Skip silently when the derived type already declares this method directly (e.g. a typesafe
-                // Utils class registered `Request_X(<TypedHandle>)` on FCk_Handle_Typed while the matching
-                // TypeUnsafe Utils class registered `Request_X(FCk_Handle)` on FCk_Handle). Without this
-                // pre-check, AS would log asALREADY_REGISTERED for every overlap during parent-chain
-                // propagation. The dedup map is updated below so subsequent passes also short-circuit.
+                // A method the derived type already declares itself is skipped silently — without
+                // this pre-check every overlap logs asALREADY_REGISTERED during propagation.
                 if (DerivedTypeInfo->GetMethodByDecl(TCHAR_TO_ANSI(*MethodInfo.Declaration)) != nullptr)
                 {
                     BoundMixinMethods.Add(BoundKey);
@@ -1288,21 +1223,15 @@ auto
     for (const auto& Entry : Entries)
     {
         const auto& DerivedType = Entry.TypeInfo;
-        // Pass the FString so FBindString owns a copy of the name. FBindString stores a
-        // `const ANSICHAR*` by raw pointer, so a TCHAR_TO_ANSI() temporary would dangle the moment this
-        // statement ends — and this binder is used later in the loop. The freed slot then gets reused by
-        // the TCHAR_TO_ANSI() of a method declaration, so the binder's object-type name reads back as the
-        // declaration string, corrupting RegisterObjectMethod's object-type argument (asINVALID_TYPE ->
-        // the engine's configFailed flag latches -> every subsequent AS registration fails). This only
-        // bit packaged builds, where the freed-slot reuse is deterministic.
+        // Pass the FString, NEVER a TCHAR_TO_ANSI() temporary: FBindString keeps the ANSICHAR*
+        // raw, and the dangling slot corrupts RegisterObjectMethod's object-type argument, which
+        // latches configFailed and kills every later AS registration (see CkEcs/CLAUDE.md).
         auto DerivedBind = FAngelscriptBinds::ExistingClass(DerivedType->TypeName);
 
         if (DerivedBind.GetTypeInfo() == nullptr)
         { continue; }
 
-        // SourceChain[0] is "FCk_Handle" — already wired by CK_REGISTER_ANGELSCRIPT_HANDLE_CONVERSION
-        // (static handles) / CreateDynamicTypeValueClass (dynamic handles). Skip it; only emit
-        // implicit conversions for typesafe ancestors past the universal root.
+        // Starts at 1: SourceChain[0] is FCk_Handle, already wired at type-registration time
         for (int32 ChainIdx = 1; ChainIdx < Entry.SourceChain.Num(); ++ChainIdx)
         {
             const auto& Ancestor = Entry.SourceChain[ChainIdx];
@@ -1314,11 +1243,9 @@ auto
             if (BoundParentConversions.Contains(BoundKey))
             { continue; }
 
-            // Layout-compatible reinterpret: all typesafe handles are static_asserted to
-            // sizeof(FCk_Handle) with no extra fields. The C++ lambda return type is
-            // FCk_Handle&; AS treats the result as the ancestor type via the signature
-            // string. Validation is intentionally NOT run at this boundary — see the
-            // function-level doc comment in the header.
+            // Layout-compatible reinterpret: the lambda returns FCk_Handle& and AS reads it as
+            // the ancestor type from the signature string. Validation is deliberately NOT run
+            // at this boundary — see the function's doc comment in the header.
             const auto SigConvNc = ck::Format_ANSI(TEXT("{}& opImplConv()"), Ancestor);
             const auto SigConvC  = ck::Format_ANSI(TEXT("const {}& opImplConv() const"), Ancestor);
 

@@ -68,7 +68,6 @@ namespace ck
 
         auto& Debug = InHandle.AddOrGet<FFragment_Sm_Debug>();
 
-        // Run lifecycle detection
         auto RunStatus = InCurrent.Get_RunStatus();
 
         if (Debug._LastObservedRunStatus == ECk_SmRunStatus::Stopped
@@ -150,8 +149,6 @@ namespace ck
 
         auto CurrentStateClass = InCurrent.Get_CurrentStateClass();
 
-        // Ensure initial state class always has a cache entry (resolved through overrides)
-
         if (auto InitialStateClass = InParams.Get_InitialStateClass();
             ck::IsValid(InitialStateClass))
         {
@@ -167,16 +164,13 @@ namespace ck
             }
         }
 
-        // Track the observed current state for caching / initial-state bookkeeping. History
-        // is now fully driven by FFragment_SmDebug_Requests — the debug handle-requests
-        // processor drains them, so we don't poll-and-record here.
+        // Bookkeeping only — history is driven entirely by FFragment_SmDebug_Requests, not polled here.
         if (ck::IsValid(CurrentStateClass) && CurrentStateClass != Debug._LastObservedStateClass)
         {
             Debug._LastObservedStateClass = CurrentStateClass;
             Debug._CurrentStateEnteredAtRealTime = FPlatformTime::Seconds();
         }
 
-        // Cache current state data from live entities
         if (ck::IsValid(CurrentStateClass) && ck::IsValid(InCurrent.Get_CurrentStateHandle()))
         {
             DoCacheCurrentState(InHandle, Debug, InCurrent);
@@ -211,8 +205,8 @@ namespace ck
             const FCk_Request_SmDebug_RecordTransition& InRequest)
         -> void
     {
-        // No debug fragment yet means the polling processor hasn't initialized caches —
-        // we still want the history so AddOrGet here. Cache-dependent fields just miss.
+        // AddOrGet: the poll processor may not have initialized caches yet; history still records
+        // and the cache-dependent fields simply miss.
         auto& DebugFragment = InHandle.AddOrGet<FFragment_Sm_Debug>();
         const auto FromClass = InRequest.Get_FromStateClass();
         const auto ToClass   = InRequest.Get_ToStateClass();
@@ -220,9 +214,8 @@ namespace ck
         if (ck::Is_NOT_Valid(ToClass))
         { return; }
 
-        // A record with no FromClass represents a sub-SM's initial-state entry routed up to this
-        // parent SM. Emit a bare history entry (no task snapshots, no sub-SM history copy, and
-        // don't touch _LastObservedStateClass since this record is *about* the sub-SM, not this SM).
+        // No FromClass means a sub-SM's initial-state entry routed up to this parent SM: emit a bare
+        // entry and leave _LastObservedStateClass alone — the record is about the sub-SM, not this SM.
         if (ck::Is_NOT_Valid(FromClass))
         {
             auto SubSmEntry = FCk_SmDebug_HistoryEntry{};
@@ -288,16 +281,14 @@ namespace ck
         const auto CurrentStateClass = InCurrent.Get_CurrentStateClass();
         auto StateHandle = InCurrent.Get_CurrentStateHandle();
 
-        // Build the new entry locally and defer all _CachedStates mutations until the end.
-        // Holding references into a TMap while we may Add to it is unsafe — TMap rehash relocates
-        // elements and any prior references become dangling, corrupting subsequent writes.
+        // All _CachedStates mutations are deferred to the end: holding a reference into a TMap while
+        // Adding to it dangles once a rehash relocates elements, corrupting subsequent writes.
         auto NewCachedState = FCk_SmDebug_CachedState{};
         NewCachedState.StateClass = CurrentStateClass;
         NewCachedState.StateName = UCk_Utils_Object_UE::Get_CleanClassName(CurrentStateClass);
         NewCachedState.ScriptClass = UCk_Utils_SmState_UE::Get_ScriptClass(StateHandle);
         NewCachedState.RequestedScriptClass = UCk_Utils_SmState_UE::Get_RequestedScriptClass(StateHandle);
 
-        // Collected during the transitions walk, applied after.
         TArray<TSubclassOf<UCk_SmState_EntityScript>> PendingTargetClasses;
 
         // ---- Cache transitions via record ----
@@ -307,19 +298,14 @@ namespace ck
         {
             const auto& TransParams = InTransition.Get<FFragment_SmTransition_Params>();
 
-            // Resolve the transition target through the SM's override table. Transitions are declared
-            // against the *requested* state class (e.g. Interactable_Focused) but the SM actually enters
-            // the *resolved* class (e.g. Shelf_Stock_Focused). Without this, the cache ends up with
-            // separate entries for the requested and resolved classes — visible as a duplicate node
-            // in the debugger graph.
+            // Transitions are declared against the *requested* state class but the SM enters the
+            // *resolved* one; without this the cache holds both and the graph shows a duplicate node.
             const auto ResolvedTargetClass = UCk_Utils_SmState_UE::Get_ResolvedStateClass(
                 InHandle, TransParams.Get_TargetStateClass());
 
             auto CachedTransition = FCk_SmDebug_CachedTransition{};
             CachedTransition.SourceStateClass = CurrentStateClass;
             CachedTransition.TargetStateClass = ResolvedTargetClass;
-
-            // Cache conditions on this transition
 
             UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::ForEach_ValidEntry(InTransition,
             [&](FCk_Handle_SmCondition InCondition)
@@ -393,9 +379,8 @@ namespace ck
             NewCachedState.Tasks.Add(MoveTemp(CachedTask));
         });
 
-        // ---- Commit the new current-state entry, then add empty placeholders for any transition
-        // targets that aren't cached yet. All map mutations happen here, after we're done holding
-        // references into NewCachedState (which is a local) — _CachedStates is free to rehash safely.
+        // ---- Commit: every map mutation happens here, once NewCachedState (a local) is done being
+        // referenced, so _CachedStates is free to rehash. Uncached transition targets get placeholders.
 
         InDebug._CachedStates.Add(CurrentStateClass, MoveTemp(NewCachedState));
 

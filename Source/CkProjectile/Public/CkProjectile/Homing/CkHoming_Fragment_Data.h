@@ -29,7 +29,6 @@ enum class ECk_Homing_TargetMode : uint8
     // Chasing an entity (with an optional point-on-target offset that moves with it)
     Entity,
 
-    // Chasing a fixed world-space point
     WorldPoint
 };
 

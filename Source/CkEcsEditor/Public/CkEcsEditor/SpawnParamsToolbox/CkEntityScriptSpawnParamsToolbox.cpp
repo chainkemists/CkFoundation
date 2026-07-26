@@ -34,8 +34,6 @@ namespace SpawnParamsToolbox_Constants
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Discovery
-// --------------------------------------------------------------------------------------------------------------------
 
 auto FCkEntityScriptSpawnParamsDiscovery::DoFindBlueprintAssetData(UClass* InClass) -> FAssetData
 {
@@ -507,8 +505,6 @@ auto FCkEntityScriptSpawnParamsDiscovery::Request_ApplySearchFilter(const FStrin
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// List Row
-// --------------------------------------------------------------------------------------------------------------------
 
 auto SCkEntityScriptSpawnParamsListRow::Construct(
 	const FArguments& InArgs,
@@ -652,7 +648,6 @@ auto SCkEntityScriptSpawnParamsListRow::GenerateWidgetForColumn(const FName& Col
 
 		return SNew(SVerticalBox)
 
-			// Row 1: Create/Recreate + Inspect
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			.Padding(0, 1)
@@ -706,7 +701,6 @@ auto SCkEntityScriptSpawnParamsListRow::GenerateWidgetForColumn(const FName& Col
 				]
 			]
 
-			// Row 2: Script actions
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			.Padding(0, 1)
@@ -753,7 +747,6 @@ auto SCkEntityScriptSpawnParamsListRow::GenerateWidgetForColumn(const FName& Col
 				]
 			]
 
-			// Row 3: Struct actions
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			.Padding(0, 1)
@@ -835,7 +828,6 @@ auto SCkEntityScriptSpawnParamsListRow::DoCreatePropertyComparisonWidget() -> TS
 			.ColorAndOpacity(FSlateColor{FLinearColor::Gray});
 	}
 
-	// Filter out ignored/dummy properties from both sides
 	auto FilteredScriptProperties = TArray<FCk_SpawnParamsToolbox_PropertyInfo>{};
 	auto FilteredStructProperties = TArray<FCk_SpawnParamsToolbox_PropertyInfo>{};
 
@@ -862,17 +854,14 @@ auto SCkEntityScriptSpawnParamsListRow::DoCreatePropertyComparisonWidget() -> TS
 			.ColorAndOpacity(FSlateColor{FLinearColor::Gray});
 	}
 
-	// Build a name-based lookup for struct properties
 	auto StructNameToIndex = TMap<FString, int32>{};
 	for (auto i = 0; i < FilteredStructProperties.Num(); ++i)
 	{
 		StructNameToIndex.Add(FilteredStructProperties[i].Name, i);
 	}
 
-	// Track which struct properties have been matched
 	auto MatchedStructIndices = TSet<int32>{};
 
-	// Collect rows: first iterate script properties, then unmatched struct properties
 	struct FComparisonRow
 	{
 		FString ScriptText;
@@ -885,7 +874,6 @@ auto SCkEntityScriptSpawnParamsListRow::DoCreatePropertyComparisonWidget() -> TS
 
 	auto Rows = TArray<FComparisonRow>{};
 
-	// Pass 1: Script properties — find matches in struct by name
 	for (auto i = 0; i < FilteredScriptProperties.Num(); ++i)
 	{
 		const auto& ScriptProp = FilteredScriptProperties[i];
@@ -904,7 +892,6 @@ auto SCkEntityScriptSpawnParamsListRow::DoCreatePropertyComparisonWidget() -> TS
 
 			if (ScriptProp.TypeName == StructProp.TypeName)
 			{
-				// Matched name and type — check if indexes differ
 				if (ScriptProp.Index != StructProp.Index)
 				{
 					Row.MatchIndicator = TEXT("==");
@@ -933,7 +920,6 @@ auto SCkEntityScriptSpawnParamsListRow::DoCreatePropertyComparisonWidget() -> TS
 		Rows.Add(MoveTemp(Row));
 	}
 
-	// Pass 2: Unmatched struct properties (present in struct but not in script)
 	for (auto i = 0; i < FilteredStructProperties.Num(); ++i)
 	{
 		if (MatchedStructIndices.Contains(i))
@@ -951,10 +937,8 @@ auto SCkEntityScriptSpawnParamsListRow::DoCreatePropertyComparisonWidget() -> TS
 		Rows.Add(MoveTemp(Row));
 	}
 
-	// Build UI
 	auto ComparisonBox = SNew(SVerticalBox);
 
-	// Header row
 	ComparisonBox->AddSlot()
 		.AutoHeight()
 		.Padding(0, 2)
@@ -1009,7 +993,6 @@ auto SCkEntityScriptSpawnParamsListRow::DoCreatePropertyComparisonWidget() -> TS
 			SNew(SSeparator)
 		];
 
-	// Data rows
 	for (const auto& Row : Rows)
 	{
 		ComparisonBox->AddSlot()
@@ -1065,8 +1048,6 @@ auto SCkEntityScriptSpawnParamsListRow::DoCreatePropertyComparisonWidget() -> TS
 	return ComparisonBox;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Main Widget
 // --------------------------------------------------------------------------------------------------------------------
 
 auto SCkEntityScriptSpawnParamsToolbox::Construct(const FArguments& InArgs) -> void

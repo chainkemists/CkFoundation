@@ -12,19 +12,8 @@
 
 namespace ck
 {
-    // Consumes FTag_CrowdAgent_NeedsSetup. Spawns the agent's probe child entity
-    // (Cylinder + Probe filtered on Crowd.Agent), SceneNode-parents it to the agent so it tracks
-    // the agent's apply-offset moves, stores the probe handle on the agent via FFragment_CrowdAgent_ProbeRef,
-    // and stamps FTag_CrowdAgent_HasProbe + clears the NeedsSetup tag so the body fires exactly once.
-    //
-    // The view requires FFragment_Transform — set up depends on the agent already having a Transform
-    // because the SceneNode parent is the agent's Transform, and we offset the probe child by HalfHeight
-    // along Z (agent location is its FEET, probe shape is centered). The gym pattern adds Transform
-    // immediately after utils_crowd_agent::Add, so this view-membership wait is a single-tick latency
-    // at most — and it's a hard error if Transform is never added (no probe → no separation).
-    //
-    // TExclude<FTag_CrowdAgent_HasProbe> prevents re-entry. The Setup body manually removes
-    // FTag_CrowdAgent_NeedsSetup at the end, mirroring the CkPmg DebugShape Setup pattern.
+    // Waits on FFragment_Transform because the probe child is SceneNode-parented to it: an agent
+    // that never gets a Transform never gets a probe, and therefore never separates.
     class CKCROWD_API FProcessor_CrowdAgent_Setup : public ck_exp::TProcessor<
         FProcessor_CrowdAgent_Setup,
         FCk_Handle_CrowdAgent,

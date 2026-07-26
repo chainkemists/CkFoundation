@@ -110,9 +110,9 @@ namespace ck
             return;
         }
 
+        // HandleRequests keeps these in sync; the resizes are defensive.
         if (InCurrent._ResultsPerRequirement.Num() != Requirements.Num())
         {
-            // HandleRequests should keep these in sync. Defensive resize.
             InCurrent._ResultsPerRequirement.SetNum(Requirements.Num());
         }
         if (InCurrent._PendingAdded.Num() != Requirements.Num())
@@ -134,11 +134,9 @@ namespace ck
 
             auto& PendingRemoved = InCurrent._PendingRemoved[i];
 
-            // Lazy prune: drop entries whose tag was removed (Request_TryRemove on a still-living entity).
-            // Destruction is handled proactively by FProcessor_EntityTagQuery_TrackedEntity_Destructor
-            // in the EndPlay group, but Eval may run before EndPlay in the same frame as the destruction.
-            // Catch that window lazily so we never read tag state from a dying handle.
-            // Record dropped entries into _PendingRemoved so listeners get the delta in the payload.
+            // TrackedEntity_Destructor prunes destroyed entities proactively in FGroup_EndPlay, but Eval can run
+            // before EndPlay in the frame of the destruction — catch that window here so we never read tag state
+            // from a dying handle.
             Results.RemoveAll([&](const FCk_Handle& H)
             {
                 if (ck::Is_NOT_Valid(H))
@@ -154,7 +152,6 @@ namespace ck
                 return false;
             });
 
-            // Determine target cap by mode.
             const auto Cap = [&]() -> int32
             {
                 switch (Req.Get_Mode())
@@ -166,7 +163,6 @@ namespace ck
                 }
             }();
 
-            // Append new matches from the global per-tag storage view, up to cap.
             if (Results.Num() < Cap)
             {
                 SCOPE_CYCLE_COUNTER(STAT_EntityTagQuery_AppendScan);
@@ -178,10 +174,7 @@ namespace ck
                         if (Results.Num() >= Cap)
                         { return; }
 
-                        // Skip pending-kill entities. The storage view doesn't filter them, but we
-                        // must not Add them to results (would persist a dying handle until the
-                        // next prune) and must not AddOrGet on them (CK_ENSURE_IF_NOT in AddOrGet
-                        // fires for pending-kill handles per CkHandle.h:619).
+                        // The storage view does not filter pending-kill entities, and AddOrGet ensures on one.
                         if (ck::Is_NOT_Valid(InEntity))
                         { return; }
 
@@ -191,14 +184,12 @@ namespace ck
                         AnyAppendedThisPass = true;
                         InCurrent._PendingAdded[i].AddUnique(InEntity);
 
-                        // Register this query on the tagged entity so the destructor can clean us up.
                         auto& Tracked = InEntity.AddOrGet<FFragment_EntityTagQuery_TrackedByQueries>();
                         Tracked._Queries.AddUnique(InHandle);
                     });
             }
         }
 
-        // Ensure-bound check (independent of satisfaction).
         {
             SCOPE_CYCLE_COUNTER(STAT_EntityTagQuery_EnsureScan);
 
@@ -220,7 +211,6 @@ namespace ck
             }
         }
 
-        // Satisfaction predicate.
         const auto WasSatisfied   = InCurrent._IsSatisfied;
         auto       IsNowSatisfied = true;
         for (int32 i = 0; i < Requirements.Num(); ++i)
@@ -249,7 +239,6 @@ namespace ck
 
         if (IsNowSatisfied)
         {
-            // Fire decision.
             auto AnyAllModeAppended = false;
             if (AnyAppendedThisPass)
             {
@@ -270,7 +259,6 @@ namespace ck
 
             if (ShouldFire)
             {
-                // Build result payload (including per-requirement add/remove deltas accumulated this pass).
                 auto Payload = TArray<FCk_EntityTagQuery_Result>{};
                 {
                     SCOPE_CYCLE_COUNTER(STAT_EntityTagQuery_BuildPayload);
@@ -294,15 +282,8 @@ namespace ck
             }
         }
 
-        // Continuous update (opt-in). Broadcasts ONLY on passes where the result set actually
-        // changed this pass (an entity entered or left a requirement's results) — not every
-        // pass. Every consumer reacts to the per-requirement _Added / _Removed deltas and
-        // no-ops on empty deltas, so a no-change pass has nothing to deliver; skipping it
-        // avoids a per-frame payload alloc + broadcast + delegate invocation per bound query
-        // (the dominant cost when many queries each hold a continuous listener). A satisfaction
-        // flip cannot happen without a result-count change, so _IsSatisfied transitions still
-        // ride out on the same pass as their delta. Pay-for-what-you-use: skip entirely when
-        // refcount is 0.
+        // Delta-only broadcast: a satisfaction flip cannot happen without a result-count change, so skipping
+        // no-change passes still delivers every _IsSatisfied transition. See CkEntityTag/CLAUDE.md § "Query system".
         if (InCurrent._ContinuousUpdateListenerCount > 0)
         {
             auto AnyRemovedThisPass = false;
@@ -331,12 +312,8 @@ namespace ck
             }
         }
 
-        // Reset accumulators at the end of every Evaluate pass. Intentional:
-        // - OnContinuousUpdate fires (and consumes deltas) only on passes that changed; a
-        //   no-change pass has empty _PendingAdded/_PendingRemoved, so nothing is dropped.
-        // - OnSatisfied path captures deltas when it fires; otherwise they're dropped.
-        // - The destructor writes _PendingRemoved in FGroup_EndPlay (after Eval), so
-        //   those writes survive to next frame's Eval and get baked into that pass.
+        // Deltas not consumed by a fire this pass are dropped, deliberately. The destructor writes _PendingRemoved
+        // in FGroup_EndPlay (after Eval), so those writes survive to next frame's pass.
         for (auto& A : InCurrent._PendingAdded)   { A.Reset(); }
         for (auto& R : InCurrent._PendingRemoved) { R.Reset(); }
     }
@@ -353,7 +330,6 @@ namespace ck
     {
         for (const auto& QueryHandle : InTracked.Get_Queries())
         {
-            // Query may already be dead (concurrent destruction).
             if (ck::Is_NOT_Valid(QueryHandle))
             { continue; }
 
@@ -363,9 +339,7 @@ namespace ck
 
             auto& Current = MutableQuery.Get<FFragment_EntityTagQuery_Current>();
 
-            // Remove the dying entity from every result array in this query.
-            // Record the removal into _PendingRemoved at the matching index so the
-            // next Evaluate pass bakes it into the payload before resetting.
+            // Recorded into _PendingRemoved so the next Evaluate pass bakes it into the payload before resetting.
             for (int32 i = 0; i < Current._ResultsPerRequirement.Num(); ++i)
             {
                 auto& Results = Current._ResultsPerRequirement[i];
@@ -393,7 +367,6 @@ namespace ck
             const FFragment_EntityTagQuery_Current& InCurrent) const
         -> void
     {
-        // For each entity this query currently tracks, remove the query from its _Queries list.
         for (const auto& Results : InCurrent.Get_ResultsPerRequirement())
         {
             for (const auto& TaggedEntity : Results)

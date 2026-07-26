@@ -151,9 +151,8 @@ auto
 
     for (const auto Dependent : Dependents.Get_Entities())
     {
-        // we do NOT clean up the Lifetime Owner's dependents Array mainly for perf reasons
-        // if this becomes a hot-spot, we may opt to clean up the Array on Entity destruction
-        // in the FProcessor_EntityLifetime_TriggerDestroyEntity Processor
+        // The owner's dependents array is deliberately never pruned (perf) — stale entries are
+        // skipped here instead.
         if (NOT ck::IsValid(Dependent, InHandle))
         { continue; }
 
@@ -201,10 +200,6 @@ auto
     if (ck::Is_NOT_Valid(InHandle))
     { return {}; }
 
-    // Post-#6: the FCk_Registry view reads its transient entity from the
-    // registry's ctx, so the comparison is registry-defined and works for
-    // any handle bound to a registry — no World-fragment dependency, no
-    // Initialize→OnWorldBeginPlay race window.
     return Get_TransientEntity(InHandle.Get_RegistryView()) == InHandle;
 }
 
@@ -430,10 +425,8 @@ auto
         const HandleType& InHandle)
     -> HandleType
 {
-    // Post-#6: the FCk_Registry view holds the transient via ctx, so we can
-    // resolve through the view directly. No subsystem hop, no World-fragment
-    // dependency. ck::Is_NOT_Valid early-out keeps a default-constructed
-    // input from comparing equal to a default-constructed transient handle.
+    // The early-out keeps a default-constructed input from comparing equal to a
+    // default-constructed transient handle.
     if (ck::Is_NOT_Valid(InHandle))
     { return {}; }
 
@@ -464,17 +457,9 @@ auto
 
     InNewEntity.Add<ck::FFragment_LifetimeOwner>(InLifetimeOwner);
 
-    // Provenance stamp (save/load rebuild+hydrate, spec §4.2). If the owner is inside a construction window then this
-    // new entity is part of the owner's deterministic build and will be re-created by the owner's replayed
-    // construction on load — so the v3 capture adopts it by identity (owner + label) rather than respawning a recipe.
-    // Two construction windows qualify:
-    //   1. An EntityScript still constructing — it carries FFragment_EntityScript_Current but has not yet begun play.
-    //   2. A definition-built entity mid-Request_BuildAndReplicate — marked FTag_DefinitionBuild_InProgress for the
-    //      synchronous span of its ConstructionInfo execution. A definition-built entity has NO EntityScript fragment,
-    //      so window (1) never fires for it; window (2) is what lets a Stackable item's labeled stack-count attribute
-    //      child persist and re-hydrate instead of reverting to definition defaults on load.
-    // Owner already begun-play / build complete (child spawned by later runtime logic, e.g. an SM task) or not a
-    // construction owner → no stamp → RuntimeSpawned by default. See ck::FTag_ConstructSpawned.
+    // Provenance stamp: a child born inside the owner's construction window is part of the owner's deterministic
+    // build and is re-created by the owner's replayed construction on load, so the save adopts it by identity
+    // rather than respawning a recipe. No stamp → RuntimeSpawned by default. See ck::FTag_ConstructSpawned.
     const auto OwnerInConstructionWindow =
         (InLifetimeOwner.Has<ck::FFragment_EntityScript_Current>() &&
          NOT InLifetimeOwner.Has<ck::FTag_EntityScript_HasBegunPlay>()) ||
@@ -482,7 +467,6 @@ auto
     if (OwnerInConstructionWindow)
     { InNewEntity.Add<ck::FTag_ConstructSpawned>(); }
 
-    // Inherit context owner from lifetime owner
     if (UCk_Utils_ContextOwner_UE::Has(InLifetimeOwner))
     {
         const auto& LifetimeOwnerContextOwner = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InLifetimeOwner);
@@ -490,15 +474,11 @@ auto
     }
     else if (Get_IsTransientEntity(InLifetimeOwner))
     {
-        // If the lifetime owner doesn't have a context owner, and it's the transient entity,
-        // the new entity's context owner is itself
         UCk_Utils_ContextOwner_UE::Request_SetupEntityWithContextOwner(InNewEntity, InNewEntity);
     }
 
 #if WITH_EDITOR
-    // Inherit the editor-selection owner from the lifetime owner (same strategy as ContextOwner):
-    // every entity in a placed actor's preview tree carries the fragment directly, so consumers
-    // read it off their own entity — no ownership-chain walk (see FFragment_EditorSelectionOwner).
+    // Inherited the same way as ContextOwner — see FFragment_EditorSelectionOwner.
     if (UCk_Utils_EditorSelectionOwner_UE::Has(InLifetimeOwner))
     {
         UCk_Utils_EditorSelectionOwner_UE::Request_SetupEntityWithEditorSelectionOwner(InNewEntity,
@@ -551,14 +531,9 @@ auto
     if (InLifetimeOwner.Has<ck::FTag_EditorOnlyEntity>())
     { InNewEntity.Add<ck::FTag_EditorOnlyEntity>(); }
 
-    // Register the reverse dependent link ONLY when the new entity lives in the SAME registry as its
-    // lifetime owner. A cross-registry child — e.g. a 2dGridSystem cell, which lives in the grid's private
-    // nested FEcsWorld yet is lifetime-owned by the main-registry grid — must NOT be added to the owner's
-    // FFragment_LifetimeDependents: that fragment (and its snapshot serialization) assumes same-registry
-    // handles. Serialized, a foreign handle keeps only its bare entity-id; on restore Snapshot_Handle
-    // re-homes it onto the load registry, where its nested id aliases an unrelated entity — including the
-    // owner itself, forming a self-cycle that stack-overflows the lifetime-dependents walk. Such children
-    // are lifetime-managed by their own (nested) registry/world, so the forward owner link above suffices.
+    // Register the reverse dependent link ONLY for a same-registry child: FFragment_LifetimeDependents (and its
+    // serialization) assumes same-registry handles, and a restored foreign handle re-homes onto an unrelated
+    // entity — including the owner itself, forming a self-cycle that stack-overflows the dependents walk.
     const auto SameRegistry =
         InNewEntity.Get_RegistryView().Get_RegistryHandle() == InLifetimeOwner.Get_RegistryView().Get_RegistryHandle();
 

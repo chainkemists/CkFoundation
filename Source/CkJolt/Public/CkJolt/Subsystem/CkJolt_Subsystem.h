@@ -73,13 +73,10 @@ private:
     int32 _PhysicsThreadCount = 0;
     bool _AsyncPhysicsUpdate = false;
 
-    // The Jolt-world step engine. Owns the fixed-timestep pump, pose buffer, and contact-router
-    // registry; published to the ECS registry as a TSharedPtr<ck::FJoltWorld> context so the
-    // FGroup_Transform step processors drive it. Non-owning pointers into the members below.
+    // Published to the ECS registry as a TSharedPtr context; holds non-owning pointers into the members above.
     TSharedPtr<ck::FJoltWorld> _JoltWorld;
 
-    // Debug-draw opt-in installed by a consumer (the Jolt world itself has no user-facing debug
-    // toggle — CkSpatialQuery's user settings own that today). No gate installed = no debug draw.
+    // Consumer-installed debug-draw opt-in. No gate installed = no debug draw.
     TFunction<bool()> _DebugDrawGate;
 
 #if JPH_DEBUG_RENDERER

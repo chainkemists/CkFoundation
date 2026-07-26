@@ -29,12 +29,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // The item's Spatial placement DECISION RECORD: where this item was placed on its inventory's grid.
-    // Written/removed exclusively by UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid /
-    // Request_RemoveItemFromGrid — the same two functions that stamp the cell ItemRefs (DERIVED state,
-    // living in the grid's PRIVATE cell registry, invisible to snapshots) and the item Transform's yaw.
-    // This is the snapshotable home for the coordinate (and the O(1) read path for placement queries —
-    // the cell scan remains the fallback for pre-fragment data).
+    // Written/removed EXCLUSIVELY by UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid /
+    // Request_RemoveItemFromGrid, alongside the cell ItemRefs and the item Transform's yaw. Those
+    // ItemRefs are derived state in the grid's private registry, so this is the snapshotable home.
     struct CKINVENTORY_API FFragment_Item_SpatialPlacement
     {
         CK_GENERATED_BODY(FFragment_Item_SpatialPlacement);

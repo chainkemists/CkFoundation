@@ -5,10 +5,7 @@
 
 namespace ck
 {
-    // Spatial inventory's trait bundle — pure type aliases. All per-shape Handle specializations
-    // and divergence-helper specializations (e.g. TStackItems<Spatial>::OnSourceFullyConsumed)
-    // live in CkInventory_Spatial_RequestTraits.cpp, alongside the explicit instantiations of
-    // every Spatial-rooted TXxx<...>.
+    // Every Spatial Handle / divergence-helper specialization lives in CkInventory_Spatial_RequestTraits.cpp.
     template <>
     struct CKINVENTORY_API TInventoryRequestTraits<FCk_Handle_Inventory_Spatial>
     {
@@ -36,15 +33,12 @@ namespace ck
             typename Transfer_ToDataOnly::Entry,
             typename Relocate::Entry>;
 
-        // Inventory creation hook — per-shape setup (GridSystem, type tag).
         static auto Setup_PerShape(FCk_Handle_Inventory&, const FCk_Fragment_Inventory_ParamsData&, ECk_Replication) -> void;
     };
 }
 
-// Forward declarations of Spatial-specific TXxx::Handle / divergence-helper specializations.
-// Definitions live in CkInventory_Spatial_RequestTraits.cpp. These declarations are required so
-// that the explicit-instantiation site (CkInventory_RequestHandlers.cpp, where the default
-// bodies live) routes through Spatial's overrides instead of falling back to defaults.
+// REQUIRED: without these declarations the explicit-instantiation site (CkInventory_RequestHandlers.cpp,
+// where the default bodies live) silently instantiates the defaults instead of Spatial's overrides.
 namespace ck::inventory_handlers
 {
     template <>

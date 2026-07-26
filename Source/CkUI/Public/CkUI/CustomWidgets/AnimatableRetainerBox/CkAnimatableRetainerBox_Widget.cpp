@@ -13,11 +13,9 @@ auto
 {
     Super::SynchronizeProperties();
 
-    // Sync the brush material to the effect material
     if (auto* BrushMaterial = Cast<UMaterialInterface>(Brush.GetResourceObject());
         ck::IsValid(BrushMaterial))
     {
-        // Only update if different to avoid unnecessary invalidation
         if (GetEffectMaterial() != BrushMaterial)
         {
             SetEffectMaterial(BrushMaterial);
@@ -25,11 +23,9 @@ auto
     }
     else if (ck::Is_NOT_Valid(Brush.GetResourceObject()) && ck::IsValid(GetEffectMaterial()))
     {
-        // Clear effect material if brush has no material
         SetEffectMaterial(nullptr);
     }
 
-    // Handle designer preview
     if (ck::IsValid(MyRetainerWidget))
     {
         PRAGMA_DISABLE_DEPRECATION_WARNINGS
@@ -65,7 +61,7 @@ auto
         }
     }
 
-    // Called at the end because we want to handle SynchronizeProperties before our parent
+    // Last on purpose: our SynchronizeProperties must run before the parent's handling.
     Super::PostEditChangeProperty(PropertyChangedEvent);
 }
 

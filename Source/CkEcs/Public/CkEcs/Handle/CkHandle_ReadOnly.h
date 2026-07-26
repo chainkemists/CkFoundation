@@ -43,8 +43,7 @@ struct CKECS_API FCk_Handle_ReadOnly
     Get_DebugName() const -> FName;
 
     // ---- Cross-entity read access — safe for concurrent access ----
-    // Returns a new ReadOnly handle for a different entity using the same registry.
-    // Deferred commands on the returned handle go to the same per-task command buffer.
+    // The returned handle shares this one's registry AND per-task deferred-command buffer.
 
     auto
     ReadEntity(
@@ -120,8 +119,7 @@ struct CKECS_API FCk_Handle_ReadOnly
 private:
     FCk_Entity _Entity;
     TOptional<FCk_Registry> _Registry;
-    // Lifetime scoped by ParallelForWithTaskContext — the TArray<FDeferredCommandBuffer>
-    // lives for the duration of the ParallelFor call. No smart pointer overhead needed.
+    // Raw: the owning TArray<FDeferredCommandBuffer> outlives this handle, scoped by ParallelForWithTaskContext
     ck::FDeferredCommandBuffer* _DeferredCommands = nullptr;
 
     FCk_Handle_ReadOnly() = default;

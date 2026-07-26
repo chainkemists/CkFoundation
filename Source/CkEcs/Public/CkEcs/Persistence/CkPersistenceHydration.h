@@ -1,8 +1,7 @@
 #pragma once
 
-// Load-path hydration bookkeeping — split out of Net/ReplicatedFragmentContainer/ (saveload-v3-ergonomics Phase 5).
-// The save/load path fills FFragment_PendingHydration; FProcessor_Hydration_Dispatch drains it through the
-// registered HydrationApply. Transport-neutral (no Net/ dependency).
+// Load-path hydration bookkeeping: the save/load path fills FFragment_PendingHydration and
+// FProcessor_Hydration_Dispatch drains it through the registered HydrationApply. Transport-neutral (no Net/ dep).
 
 #include "CkCore/Macros/CkMacros.h"
 
@@ -16,9 +15,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// GC-traced carrier for deferred hydration payloads. FInstancedStruct traces its script type and nested UObject
-// references only when it lives in a reflected graph; an ECS fragment is not such a graph. The fragment below pins
-// this holder with TStrongObjectPtr for exactly as long as any payload can remain queued across frames.
+// GC-traced carrier for deferred hydration payloads: FInstancedStruct only traces its script type and nested
+// UObject refs inside a reflected graph, which an ECS fragment is not (the fragment below pins this holder).
 UCLASS()
 class CKECS_API UCk_PendingHydrationPayloads_UE : public UObject
 {
@@ -41,13 +39,10 @@ private:
 
 namespace ck
 {
-    // Set on an entity that has local (save-load) hydration payloads queued for Apply — the load-path
-    // counterpart to net-received container entries. Drained by FProcessor_Hydration_Dispatch. The
-    // load path fills the queue below.
+    // The load-path counterpart to net-received container entries; drained by FProcessor_Hydration_Dispatch.
     CK_DEFINE_ECS_TAG(FTag_Hydration_PendingApply);
 
-    // Local hydration queue: payloads to apply on this entity via the SAME handler HydrationApply the net path's
-    // sibling uses, but sourced from a save load rather than the wire. Transient bookkeeping — not persisted.
+    // Payloads to apply via the registered HydrationApply, sourced from a save load. Never persisted itself.
     struct CKECS_API FFragment_PendingHydration
     {
         CK_GENERATED_BODY(FFragment_PendingHydration);

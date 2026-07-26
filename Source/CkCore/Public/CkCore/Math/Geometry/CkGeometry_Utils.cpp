@@ -15,8 +15,6 @@ auto
         const FBox& InBox)
     -> FBox2D
 {
-    // Inspired from (plugin) Cog's FCogWindowHelper::ComputeBoundingBoxScreenPosition function (CogWindowHelper.cpp)
-
     CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Cannot project Box3D [{}] to screen because the supplied PlayerController is INVALID"), InBox)
     { return {}; }
 
@@ -570,7 +568,6 @@ auto
     const auto IntersectionBounds = Get_Box_Overlap(InBoundsA, InBoundsB);
     const auto IntersectionArea = Get_Box_Area(IntersectionBounds);
 
-    // Use the smaller box's area as the reference for overlap percentage
     const auto AreaA = Get_Box_Area(InBoundsA);
     const auto AreaB = Get_Box_Area(InBoundsB);
     const auto ReferenceArea = FMath::Min(AreaA, AreaB);
@@ -1174,11 +1171,10 @@ auto
 
     if (Corners.Num() == 4)
     {
-        // Draw the 4 edges of the box
-        for (auto I = 0; I < 4; ++I)
+        for (auto Corner = 0; Corner < 4; ++Corner)
         {
-            const auto StartCorner = FVector{Corners[I].X, Corners[I].Y, InZHeight};
-            const auto EndCorner = FVector{Corners[(I + 1) % 4].X, Corners[(I + 1) % 4].Y, InZHeight};
+            const auto StartCorner = FVector{Corners[Corner].X, Corners[Corner].Y, InZHeight};
+            const auto EndCorner = FVector{Corners[(Corner + 1) % 4].X, Corners[(Corner + 1) % 4].Y, InZHeight};
 
             UCk_Utils_DebugDraw_UE::DrawDebugLine(
                 InWorldContextObject,
@@ -1427,38 +1423,34 @@ auto
 
     if (Corners.Num() == 8)
     {
-        // Draw the 12 edges of the box
-        // Bottom face (corners 0-3)
-        for (auto I = 0; I < 4; ++I)
+        for (auto BottomFaceCorner = 0; BottomFaceCorner < 4; ++BottomFaceCorner)
         {
             UCk_Utils_DebugDraw_UE::DrawDebugLine(
                 InWorldContextObject,
-                Corners[I],
-                Corners[(I + 1) % 4],
+                Corners[BottomFaceCorner],
+                Corners[(BottomFaceCorner + 1) % 4],
                 InColor,
                 InDuration,
                 InThickness);
         }
 
-        // Top face (corners 4-7)
-        for (auto I = 4; I < 8; ++I)
+        for (auto TopFaceCorner = 4; TopFaceCorner < 8; ++TopFaceCorner)
         {
             UCk_Utils_DebugDraw_UE::DrawDebugLine(
                 InWorldContextObject,
-                Corners[I],
-                Corners[4 + ((I - 4 + 1) % 4)],
+                Corners[TopFaceCorner],
+                Corners[4 + ((TopFaceCorner - 4 + 1) % 4)],
                 InColor,
                 InDuration,
                 InThickness);
         }
 
-        // Vertical edges
-        for (auto I = 0; I < 4; ++I)
+        for (auto VerticalEdge = 0; VerticalEdge < 4; ++VerticalEdge)
         {
             UCk_Utils_DebugDraw_UE::DrawDebugLine(
                 InWorldContextObject,
-                Corners[I],
-                Corners[I + 4],
+                Corners[VerticalEdge],
+                Corners[VerticalEdge + 4],
                 InColor,
                 InDuration,
                 InThickness);

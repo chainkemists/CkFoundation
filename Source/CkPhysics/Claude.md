@@ -21,6 +21,20 @@ Acceleration modifier entity → applies force to owner entity's physics body �
 
 ---
 
+## Persistence / replication handlers
+
+Velocity and Acceleration each register a `Register_NetAndSave_SharedApply` handler in their
+`_Fragment.cpp`. One applier serves both transports because `Request_OverrideVelocity` /
+`Request_OverrideAcceleration` from the payload is idempotent and host-safe.
+
+Neither applier carries a per-feature `NeedsSetup` guard. It was removed deliberately: the late
+`FGroup_DeferredApply` dispatch, the ConstructedThisFrame defer, and fire-gating together guarantee
+the apply runs AFTER the setup drain, so the applied value is already final.
+
+`FProcessor_Velocity_Replicate` consumes the registered `Produce` rather than building the payload
+inline — one projection shared by the wire and the save file, byte-identical to the old inline build.
+`Produced` is always set there; the processor's view guarantees the fragment.
+
 ## Anti-patterns
 
 Don't call `AddForce` on Chaos bodies directly inside a processor — route through the acceleration modifier system so modifiers are composable and cancellable.

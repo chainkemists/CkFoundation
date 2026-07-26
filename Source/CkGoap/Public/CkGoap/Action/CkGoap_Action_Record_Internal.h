@@ -1,12 +1,8 @@
 #pragma once
 
 // --------------------------------------------------------------------------------------------------------------------
-// PRIVATE: ActionSet's record-of-actions fragment + utils struct.
-//
-// Included by CkGoap_Action_Utils.cpp (AddAction creates record
-// entries). Future processors that need to enumerate the action catalog
-// directly will also include this. NOT a public header — keeps CkRecord out
-// of the public include surface.
+// PRIVATE: not a public header — keeps CkRecord out of CkGoap's public include
+// surface. Included only by CkGoap_Action_Utils.cpp.
 
 #include "CkGoap/Action/CkGoap_Action_Fragment_Data.h"
 

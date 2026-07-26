@@ -11,14 +11,9 @@
 
 namespace ck
 {
-    // Always-on overlay: for each crowd agent, projects its current world position onto the
-    // navmesh and draws a small circle at the projection point — green if the projection
-    // succeeded (the agent is somewhere reachable), red if it failed (the agent is in a void
-    // the nav system can't snap to). Cheap, immediate-mode draw, no CVar gating.
-    //
-    // Useful as a primary diagnostic: an agent that's "floating" usually has its root transform
-    // off the navmesh entirely, and a red circle (or no circle) immediately tells the dev that
-    // the navmesh doesn't cover where the agent ended up.
+    // Projects each agent's world position onto the navmesh and draws a circle there: green when
+    // the projection succeeded, red when it failed (the agent is in a void the nav system cannot
+    // snap to — the usual cause of a "floating" agent).
     class CKCROWD_API FProcessor_CrowdAgent_DrawNavProjection : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_DrawNavProjection,
             FCk_Handle_CrowdAgent,

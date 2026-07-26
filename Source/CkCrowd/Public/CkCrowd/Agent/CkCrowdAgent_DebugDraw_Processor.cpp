@@ -20,12 +20,6 @@ DECLARE_CYCLE_STAT(TEXT("Crowd::DebugDraw"), STAT_CkCrowd_DebugDrawProc, STATGRO
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// CVar `ck.Crowd.Debug` is now declared via UPROPERTY in UCk_Crowd_DebugSettings_UE
-// (CkCrowd/Settings/CkCrowd_DebugSettings.h) so it persists across editor sessions via
-// EditorPerProjectUserSettings.ini. Read it through the settings BPFL.
-
-// --------------------------------------------------------------------------------------------------------------------
-
 namespace ck
 {
     auto
@@ -52,9 +46,6 @@ namespace ck
         const auto Center = Feet + FVector{0.0, 0.0, InParams.Get_Height() * 0.5};
 
         // --- Separation radius circle (yellow, on the ground at agent feet) -------------------
-        // Anchored at feet so it visually represents the floor-projected zone where neighbors
-        // start contributing force. NumSegments=24 keeps the curve smooth without spamming line
-        // calls.
         constexpr auto CircleSegments = 24;
         constexpr auto LineThickness = 1.5f;
         constexpr auto Duration_OneFrame = 0.0f;
@@ -69,8 +60,6 @@ namespace ck
             LineThickness);
 
         // --- Lines to each neighbor (cyan, agent center to neighbor center) -------------------
-        // Drawn before the force arrow so the arrow paints on top. Using neighbor-relative offset
-        // (already cached) avoids re-querying the neighbor's Transform.
         for (const auto& Nbr : InNeighborCache.Get_Neighbors())
         {
             const auto NeighborCenter = Center + Nbr.Get_RelativeOffset();
@@ -84,10 +73,6 @@ namespace ck
         }
 
         // --- Separation force arrow (orange, from agent center) -------------------------------
-        // Length scaled by magnitude with a sane visual cap so a multi-neighbor pile-up doesn't
-        // produce an arrow longer than the room. The 0.5 multiplier is purely aesthetic — force
-        // magnitudes can hit several hundred at default weight=2.0 with overlapping neighbors,
-        // which would dwarf the agent at 1:1 scale.
         const auto& Force = InSeparationForce.Get_Force();
         const auto ForceMag = Force.Size();
         if (ForceMag > 1.0)

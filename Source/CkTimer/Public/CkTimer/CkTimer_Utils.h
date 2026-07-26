@@ -22,10 +22,8 @@ CKTIMER_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Tag_Timer_CategoryName);
 
 namespace ck
 {
-    // Derive a timer's profiling stat-id ("Timer Broadcast Event [<name>]") from its params. Called on-the-fly inside
-    // the timer processors (under #if STATS) to scope each signal broadcast's CPU cost — the id is deliberately NOT
-    // cached as a fragment (a cached fragment did not survive snapshot restore; per-broadcast derivation has no such
-    // gap and is a profiling-build-only cost).
+    // A timer's profiling stat-id, derived on the fly inside the processors under #if STATS.
+    // Deliberately not cached as a fragment — Claude.md § Profiling stat-id.
     CKTIMER_API auto MakeStatIdFromParams(const FCk_Fragment_Timer_ParamsData& InParams) -> TStatId;
 }
 
@@ -75,15 +73,8 @@ public:
     // Reason: We have no way of knowing how many other Fragments this Entity may have. We do not want to destroy
     // an Entity that may be more than a Timer. We also don't want to remove Fragments one by one as that is
     // more expensive when the Handle is always a Timer and nothing else.
-    //UFUNCTION(BlueprintCallable,
-    //          Category = "Ck|Utils|Timer",
-    //          DisplayName="Remove Timer")
-    //static void
-    //Remove(
-    //    FCk_Handle InTimerEntity);
 
 public:
-    // Has Feature
     static bool
     Has(
         const FCk_Handle& InHandle);

@@ -57,10 +57,8 @@ namespace ck
             : Common(MoveTemp(InCommon)), Addon(MoveTemp(InAddon)) {}
     };
 
-    // Primary template — explicit specializations live in each shape's fragment header
-    // (CkInventory_Spatial_Fragment.h / CkInventory_DataOnly_Fragment.h). The base Utils
-    // dispatch helper resolves TFragment_Inventory_Requests<TShape> when both shape headers
-    // are visible at the point of use (which they are via CkInventory_Utils.h's includes).
+    // Explicit specializations live in each shape's *_Fragment.h; both are visible at every point
+    // of use via CkInventory_Utils.h's includes.
     template <typename TShape>
     struct TFragment_Inventory_Requests;
 
@@ -82,10 +80,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Item → Inventory back-reference.
     CK_DEFINE_ENTITY_HOLDER_AND_UTILS_ROUNDTRIP(TUtils_Item_ParentInventory, FFragment_Item_ParentInventory, FCk_Handle_Inventory);
-
-    // Inventory slot → item reference (spatial grid cells point to items).
     CK_DEFINE_ENTITY_HOLDER_AND_UTILS_ROUNDTRIP(TUtils_InventorySlot_ItemRef, FFragment_InventorySlot_ItemRef, FCk_Handle_Item);
 
     CK_DEFINE_RECORD_OF_ENTITIES_ROUNDTRIP(FFragment_RecordOfInventories, FCk_Handle_Inventory);
@@ -175,10 +170,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // In-flight state for a standalone mass-transfer op. Lives on a transient-owned op entity (a plain
-    // FCk_Handle, discriminated by this fragment) — NOT on any inventory. The churn is its friend; the
-    // Utils boundary populates it at kickoff. ck::FFragment_PacedWork is added separately by the churn
-    // (pacer/budget only).
     struct CKINVENTORY_API FFragment_Inventory_MassTransfer_InFlight
     {
         CK_GENERATED_BODY(FFragment_Inventory_MassTransfer_InFlight);
@@ -187,8 +178,8 @@ namespace ck
         friend class ::UCk_Utils_Inventory_UE;
 
     private:
-        // Gathered once at kickoff (committed read); never resized after — _Cursor advances instead,
-        // so _Pending.IsEmpty() at finish == "empty at kickoff".
+        // Never resized after kickoff — _Cursor advances instead, so IsEmpty() at finish means
+        // nothing was gathered.
         TArray<FCk_Handle_Item>      _Pending;
         int32                        _Cursor = 0;
         FCk_BestTransferTargetParams _TargetResolution;

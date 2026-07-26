@@ -26,12 +26,6 @@ DECLARE_CYCLE_STAT(TEXT("Crowd::DrawNavProjection"), STAT_CkCrowd_DrawNavProject
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Constants are inlined into the function body below (rather than in an anonymous namespace)
-// because UE's Unity-build merges multiple .cpp files into a single TU, causing
-// same-named anonymous-namespace symbols across draw processors to collide at link time.
-
-// --------------------------------------------------------------------------------------------------------------------
-
 namespace ck
 {
     auto
@@ -45,10 +39,8 @@ namespace ck
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_DrawNavProjectionProc);
 
-        // Gate before any work — the synchronous ProjectPointToNavigation + 16-segment
-        // circle draw per agent is the most expensive Crowd debug viz at scale (linear
-        // in agent count and runs every tick). Off by default; opt in via
-        // `ck.Crowd.DrawNavProjection 1` or Editor Preferences → Crowd Debug.
+        // Gate before any work — the synchronous ProjectPointToNavigation per agent per tick is
+        // the most expensive Crowd debug viz at scale. Off by default.
         if (NOT UCk_Utils_Crowd_DebugSettings_UE::Get_DrawNavProjection())
         { return; }
 
@@ -62,20 +54,17 @@ namespace ck
         if (NavSys == nullptr)
         { return; }
 
-        // Project to navmesh using the SAME signature FProcessor_Nav_HandleRequests' gate uses —
-        // explicit NavData argument so the visualisation matches the gate's verdict exactly.
-        // Without the NavData arg, ProjectPointToNavigation falls back to the default agent's
-        // nav data which can disagree with the specific RecastNavMesh used by path queries.
+        // Explicit NavData + the path-query gate's own projection extent, so the overlay's verdict
+        // matches FProcessor_Nav_HandleRequests' gate exactly. Without them the projection falls
+        // back to the default agent's nav data, which can disagree with the queried RecastNavMesh.
         auto* NavData = Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate));
-        // Mirror the asymmetric projection box the path-query gate uses so the overlay's verdict
-        // stays honest when a project opts into a tight vertical extent.
         const auto Extent = UCk_Utils_Nav_Settings_UE::Get_NavQueryProjectionExtentVec();
         auto ProjectedLoc = FNavLocation{};
         const auto bProjected = (NavData != nullptr)
             && NavSys->ProjectPointToNavigation(AgentPos, ProjectedLoc, Extent, NavData);
 
-        constexpr auto NavProj_MarkerLiftZ      = 2.0f;    // hover just above the floor surface
-        constexpr auto NavProj_MarkerRadius     = 35.0f;   // matches the agent radius for "I'm here"
+        constexpr auto NavProj_MarkerLiftZ      = 2.0f;
+        constexpr auto NavProj_MarkerRadius     = 35.0f;
         constexpr auto NavProj_MarkerSegments   = 16;
         constexpr auto NavProj_MarkerThickness  = 2.0f;
         constexpr auto NavProj_DurationOneFrame = 0.0f;

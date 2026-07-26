@@ -40,12 +40,10 @@ public:
     UCk_TabBarWidget_UE();
 
 public:
-    // Fired with the newly selected tab index whenever the selection changes.
     UPROPERTY(BlueprintAssignable, Category = "Ck|UI|TabBar|Events")
     FCk_TabBar_TabSelectedEvent OnTabSelected;
 
 public:
-    // Links a switcher: tabs follow its children and selection drives its active index.
     // Pass nullptr to unlink.
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|TabBar")
     void
@@ -76,8 +74,7 @@ public:
     Get_TabConfig(
         int32 InIndex) const;
 
-    // Only valid without a linked switcher — when linked, the tab count follows the
-    // switcher's children, so add/remove children on the switcher instead.
+    // Only valid without a linked switcher — when linked, add/remove children on the switcher instead.
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|TabBar")
     void
     AddTab(
@@ -88,7 +85,6 @@ public:
     RemoveTab(
         int32 InIndex);
 
-    // Re-syncs with the linked switcher and rebuilds the tab buttons.
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|TabBar")
     void
     RebuildTabs();

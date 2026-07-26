@@ -11,10 +11,9 @@
 #include "CkUsf/Outline/CkUsf_Outline_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Entity outlines for ISKM Plan-1 proxies (see CkUsf/DESIGN_EntityOutlines.md): Custom Depth + the preset's
-// stencil on the proxy's BaseSKMC and outfit submeshes. Flags are re-asserted per frame (the engine setters
-// early-out when unchanged), so submeshes attached AFTER the outline was applied inherit it automatically.
-// Plan-2 batched crowd members are not entities — their outline rides ACk_Iskm_BatchedCrowd_Actor's member API.
+// Entity outlines for ISKM Plan-1 proxies (see CkUsf/DESIGN_EntityOutlines.md). Flags are re-asserted per
+// frame (the engine setters early-out when unchanged) so submeshes attached after the outline inherit it.
+// Plan-2 crowd members are not entities — their outline rides ACk_Iskm_BatchedCrowd_Actor's member API.
 
 namespace ck
 {
@@ -48,7 +47,6 @@ namespace ck
             const FFragment_IskmProxy_Current& InCurrent) const -> void;
 
     private:
-        // Refreshed every frame
         TWeakObjectPtr<UWorld> _World;
     };
 

@@ -101,11 +101,9 @@ public:
     Get_Instance(
         const FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle);
 
-    // Traces from the player camera to the widget's world anchor (the entity's
-    // transform + LocationInfo world offset) on the configured occlusion channel,
-    // ignoring the player pawn; a blocking hit means occluded. Does NOT gate on the
-    // OcclusionPolicy — it answers the raw geometric question. BlueprintCallable
-    // (not Pure) because it performs a world line trace each call.
+    // Traces from the player camera to the widget's world anchor (transform + LocationInfo world
+    // offset) on the configured channel, ignoring the player pawn; a blocking hit means occluded.
+    // Does NOT gate on OcclusionPolicy, and performs a world line trace on every call.
     UFUNCTION(BlueprintCallable, BlueprintCosmetic,
               Category = "Ck|Utils|WorldSpaceWidget",
               DisplayName="[Ck][WorldSpaceWidget] Get Is Anchor Occluded")

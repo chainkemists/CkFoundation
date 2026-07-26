@@ -119,8 +119,6 @@ namespace ck_cvar_utils
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Registration
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_CVar_UE::
@@ -187,14 +185,12 @@ auto
         const FCk_Delegate_CVar_OnCommand& InCallback)
     -> FCk_CVarCallbackHandle
 {
-    // Check if command already exists
-    if (ck::IsValid(IConsoleManager::Get().FindConsoleObject(*InName.ToString()), ck::IsValid_Policy_NullptrOnly{}))
+    const auto CommandAlreadyRegistered = ck::IsValid(IConsoleManager::Get().FindConsoleObject(*InName.ToString()), ck::IsValid_Policy_NullptrOnly{});
+    if (CommandAlreadyRegistered)
     {
-        // Command already registered — just bind the callback
     }
     else
     {
-        // Register a new console command that fires via our callback registry
         IConsoleManager::Get().RegisterConsoleCommand(
             *InName.ToString(),
             *InHelp,
@@ -209,7 +205,6 @@ auto
 
     const auto ID = ck_cvar_utils::GenerateCallbackID();
 
-    // For commands, we replace the console command's delegate to fire our callback
     auto* ConsoleObject = IConsoleManager::Get().FindConsoleObject(*InName.ToString());
     if (ck::Is_NOT_Valid(ConsoleObject, ck::IsValid_Policy_NullptrOnly{}))
     { return FCk_CVarCallbackHandle{}; }
@@ -247,8 +242,6 @@ auto
     return FCk_CVarCallbackHandle{ID};
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Binding
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -344,8 +337,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Unbinding
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_CVar_UE::
@@ -378,8 +369,6 @@ auto
     }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Get
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -430,8 +419,6 @@ auto
     return CVar->GetString();
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Set
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -519,8 +506,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Construction
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_CVar_UE::
@@ -533,8 +518,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Public Query
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_CVar_UE::
@@ -546,8 +529,6 @@ auto
     return ck::IsValid(CVar, ck::IsValid_Policy_NullptrOnly{});
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Type Detection
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

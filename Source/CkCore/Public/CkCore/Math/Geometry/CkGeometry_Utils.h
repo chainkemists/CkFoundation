@@ -372,7 +372,6 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Frame3D_UE);
 
 public:
-    // Creation functions
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Frame3D",
         DisplayName="[Ck] Make Frame3D")
     static FCk_Frame3D
@@ -393,7 +392,6 @@ public:
         const FVector& InOrigin,
         const FVector& InZDirection);
 
-    // Basic properties
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Frame3D",
         DisplayName="[Ck][Frame3D] Get Origin")
     static FVector
@@ -431,7 +429,6 @@ public:
         const FCk_Frame3D& InFrame,
         int32 InAxisIndex);
 
-    // Transformations
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Frame3D",
         DisplayName="[Ck][Frame3D] To Transform")
     static FTransform
@@ -444,7 +441,6 @@ public:
     Get_InverseTransform(
         const FCk_Frame3D& InFrame);
 
-    // Point/Vector operations
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Frame3D",
         DisplayName="[Ck][Frame3D] Point At")
     static FVector
@@ -482,7 +478,6 @@ public:
         const FCk_Frame3D& InFrame,
         const FVector& InVector);
 
-    // Mutation functions
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Frame3D",
         DisplayName="[Ck][Frame3D] Request Set Origin")
     static void
@@ -528,7 +523,6 @@ public:
         const FVector& InToDirection,
         const FVector& InAroundVector);
 
-    // Plane operations
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Frame3D",
         DisplayName="[Ck][Frame3D] To Plane UV")
     static FVector2D
@@ -555,8 +549,6 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// ORIENTED BOX 2D UTILS
-// --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FBox2D FCk_OrientedBox2D"))
 class CKCORE_API UCk_Utils_OrientedBox2D_UE : public UBlueprintFunctionLibrary
@@ -567,7 +559,6 @@ public:
     CK_GENERATED_BODY(UCk_Utils_OrientedBox2D_UE);
 
 public:
-    // Creation functions
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
         DisplayName="[Ck] Make Oriented Box 2D")
     static FCk_OrientedBox2D
@@ -589,7 +580,6 @@ public:
     Request_CreateFromAABB(
         const FBox2D& InBox);
 
-    // Basic properties
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
         DisplayName="[Ck][OrientedBox2D] Get Origin")
     static FVector2D
@@ -632,7 +622,6 @@ public:
     Get_Perimeter(
         const FCk_OrientedBox2D& InBox);
 
-    // Spatial queries
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
         DisplayName="[Ck][OrientedBox2D] Contains Point")
     static bool
@@ -654,7 +643,6 @@ public:
         const FCk_OrientedBox2D& InBox,
         const FVector2D& InPoint);
 
-    // Corner access
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
         DisplayName="[Ck][OrientedBox2D] Get Corner")
     static FVector2D
@@ -668,7 +656,6 @@ public:
     Get_AllCorners(
         const FCk_OrientedBox2D& InBox);
 
-    // Coordinate transformations
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
         DisplayName="[Ck][OrientedBox2D] To Local Space")
     static FVector2D
@@ -683,7 +670,6 @@ public:
         const FCk_OrientedBox2D& InBox,
         const FVector2D& InPoint);
 
-    // Mutation functions
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|OrientedBox2D",
         DisplayName="[Ck][OrientedBox2D] Request Set Origin")
     static void
@@ -705,7 +691,6 @@ public:
         UPARAM(ref) FCk_OrientedBox2D& InBox,
         float InAngleRadians);
 
-    // Static utilities
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
         DisplayName="[Ck][OrientedBox2D] Unit Zero Centered")
     static FCk_OrientedBox2D
@@ -716,7 +701,6 @@ public:
     static FCk_OrientedBox2D
     Get_UnitPositive();
 
-    // Debug drawing
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|OrientedBox2D|Debug",
         DisplayName="[Ck][OrientedBox2D] Debug Draw",
         meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
@@ -741,7 +725,6 @@ public:
     CK_GENERATED_BODY(UCk_Utils_OrientedBox3D_UE);
 
 public:
-    // Creation functions
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox3D",
         DisplayName="[Ck] Make Oriented Box 3D")
     static FCk_OrientedBox3D
@@ -762,7 +745,6 @@ public:
     Request_CreateFromAABB(
         const FBox& InBox);
 
-    // Basic properties
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox3D",
         DisplayName="[Ck][OrientedBox3D] Get Frame")
     static FCk_Frame3D
@@ -811,7 +793,6 @@ public:
     Get_SurfaceArea(
         const FCk_OrientedBox3D& InBox);
 
-    // Spatial queries
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox3D",
         DisplayName="[Ck][OrientedBox3D] Contains Point")
     static bool
@@ -840,7 +821,6 @@ public:
         const FCk_OrientedBox3D& InBox,
         const FVector& InPoint);
 
-    // Corner access
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox3D",
         DisplayName="[Ck][OrientedBox3D] Get Corner")
     static FVector
@@ -854,7 +834,6 @@ public:
     Get_AllCorners(
         const FCk_OrientedBox3D& InBox);
 
-    // Delegate-based corner enumeration
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|OrientedBox3D",
         DisplayName="[Ck][OrientedBox3D] Enumerate Corners")
     static void
@@ -869,7 +848,6 @@ public:
         const FCk_OrientedBox3D& InBox,
         const FCk_Delegate_Vector_Predicate& InCornerPredicate);
 
-    // Mutation functions
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|OrientedBox3D",
         DisplayName="[Ck][OrientedBox3D] Request Set Frame")
     static void
@@ -884,7 +862,6 @@ public:
         UPARAM(ref) FCk_OrientedBox3D& InBox,
         const FVector& InExtents);
 
-    // Static utilities
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox3D",
         DisplayName="[Ck][OrientedBox3D] Unit Zero Centered")
     static FCk_OrientedBox3D
@@ -895,7 +872,6 @@ public:
     static FCk_OrientedBox3D
     Get_UnitPositive();
 
-    // Debug drawing
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|OrientedBox3D|Debug",
               DisplayName="[Ck][OrientedBox3D] Debug Draw",
               meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))

@@ -17,8 +17,7 @@
 #include "CkCrowdAgent_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Forward declarations for friend declarations below — the actual processor classes live in
-// namespace ck (per the codebase convention), so the friend lines need the namespace.
+
 namespace ck
 {
     class FProcessor_CrowdAgent_Setup;
@@ -46,12 +45,9 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_CrowdAgent);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Why an agent could not reach its goal. GoalOccupied is the exact, immediate case: another agent is
-// standing on the destination, so the closest this agent can physically get is (SelfRadius +
-// BlockerRadius) from the blocker's centre — further out than its arrival radius. NoProgress is the
-// general safety net: the agent has been going nowhere for a while, for any reason (a plug of several
-// agents, a dynamic prop, a pathological corridor). Mirrors UPathFollowingComponent's split between a
-// geometric reach test and its feet-sample block detection.
+// Why an agent could not reach its goal. GoalOccupied: another agent stands on the destination, so
+// the closest this agent can physically get is (SelfRadius + BlockerRadius) out — further than its
+// arrival radius. NoProgress: the agent has been going nowhere for a while, for any other reason.
 UENUM(BlueprintType)
 enum class ECk_CrowdAgent_BlockedReason : uint8
 {
@@ -62,19 +58,9 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CrowdAgent_BlockedReason);
 
 // What an agent does when it discovers its goal is unreachable.
 //
-// HoldAndRetry (default): stop, report OnGoalBlocked once, and wait — re-checking on a cadence, and
-// resuming automatically the moment the goal clears. The right default for a crowd sim: with ~130
-// NPCs, a policy that FAILED the move would force every gameplay call site to handle failure or the
-// NPC simply freezes. An NPC that waits a metre from a taken shelf and slides in when it frees is
-// correct shop behaviour and needs no gameplay changes at all.
-//
-// FailMove: report OnGoalBlocked, then OnGoalFailed, then go Idle — the caller owns recovery. This is
-// UE's semantics (block detection aborts the move and hands it to the behaviour tree).
-//
-// NOTE WHAT IS DELIBERATELY ABSENT: an option to silently widen the arrival radius and declare
-// "arrived". That would be a lie to the caller (who asked for "within _ArrivalRadius of X" and may
-// range-check against it), and it is TERMINAL — an agent that has "arrived" 100cm out is Idle and will
-// never walk the last metre when the blocker eventually leaves.
+// HoldAndRetry (default): stop, report OnGoalBlocked once, then re-check on a cadence and resume
+// automatically the moment the goal clears — the caller needs no failure handling at all.
+// FailMove: report OnGoalBlocked, then OnGoalFailed, then go Idle — the caller owns recovery.
 UENUM(BlueprintType)
 enum class ECk_CrowdAgent_BlockedPolicy : uint8
 {
@@ -109,7 +95,6 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     FGameplayTagContainer _Tags;
 
-    // Locomotion tunables.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1.0"))
     float _MaxSpeed = 240.0f;
 
@@ -119,9 +104,8 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.1"))
     float _MaxTurnRate = 4.0f;
 
-    // Resolved via UCk_Nav_ProjectSettings_UE::_QueryFilters for EVERY FindPath this
-    // agent issues (initial MoveTo + all replans — they share one call site). Empty
-    // tag -> NavData's default filter.
+    // Resolved via UCk_Nav_ProjectSettings_UE::_QueryFilters for EVERY FindPath this agent issues.
+    // Empty tag -> NavData's default filter.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     FGameplayTag _NavQueryFilter;
 
@@ -131,24 +115,20 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1.0"))
     float _WaypointArrivalRadius = 25.0f;
 
-    // Separation tunables.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1.0"))
     float _SeparationRadius = 100.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
     float _SeparationLookahead = 100.0f;
 
-    // Fraction of _MaxSpeed contributed per fully-overlapping neighbor. Solver multiplies the
-    // dimensionless falloff sum by (_SeparationWeight * _MaxSpeed) so the resulting force lives
-    // in cm/s — the same units as the path-follow velocity it's combined with in Steering.
-    // 0.5 means a single neighbor at zero distance pushes at half MaxSpeed; with 6 neighbors
-    // and the quadratic falloff, real pile-ups easily saturate the per-frame clamp.
+    // Fraction of _MaxSpeed contributed per fully-overlapping neighbor. The solver scales the
+    // dimensionless falloff sum by (_SeparationWeight * _MaxSpeed), so the force lands in cm/s —
+    // the same units as the path-follow velocity Steering combines it with.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
     float _SeparationWeight = 0.5f;
 
-    // Inertia coefficient on separation force. 0=instant changes (vibrate-prone), 1=fully sticky
-    // (force never changes). Mirrors dtCrowd's weightCurVel concept (DetourObstacleAvoidance.cpp:472)
-    // applied as a force-blend factor.
+    // Inertia coefficient on the separation force: 0 = instant changes (vibrate-prone), 1 = fully
+    // sticky (force never changes).
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess=true, ClampMin="0.0", ClampMax="1.0"))
     float _SeparationInertia = 0.5f;
@@ -157,31 +137,21 @@ private:
     int32 _MaxNeighborsForSteering = 6;
 
     // How much of a PushApart de-penetration displacement this agent absorbs while it is IDLE.
-    //
-    // 1.0 means an idle agent is shoved exactly as hard as a walking one — which is what let a
-    // newcomer body-check an agent that had ALREADY ARRIVED clean off its own goal (in the product:
-    // an NPC standing at a shelf, displaced by the next customer). An arrived agent has no restoring
-    // drive to walk back, so its eviction is a one-way random walk outward.
-    //
-    // MUST NOT BE ZERO. PushApart runs on idle agents deliberately — physical overlap has to resolve
-    // regardless of what an agent is doing — and idle-vs-idle de-overlap (a cluster settling at a
-    // shared goal) requires BOTH parties to yield. Zero would leave two idle agents interpenetrated
-    // forever. 0.25 means a walker pressing a stander absorbs ~4x more of the correction than the
-    // stander does, while idle-idle still separates, just over a few more frames.
+    // 1.0 lets a newcomer body-check an already-arrived agent clean off its own goal; an arrived
+    // agent has no restoring drive, so that eviction is a one-way walk outward.
+    // MUST NOT BE ZERO — idle-vs-idle de-overlap requires BOTH parties to yield, or two idle agents
+    // stay interpenetrated forever.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta=(AllowPrivateAccess=true, ClampMin="0.05", ClampMax="1.0"))
     float _PushApartIdleYield = 0.25f;
 
     // What this agent does when it finds its goal unreachable. Per-agent on purpose: an employee who
-    // must get behind a counter may want FailMove so gameplay can re-route it, while a browsing
-    // customer should just wait for the shelf to free up. See ECk_CrowdAgent_BlockedPolicy.
+    // must reach a counter may want FailMove, while a browsing customer should just wait.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     ECk_CrowdAgent_BlockedPolicy _BlockedPolicy = ECk_CrowdAgent_BlockedPolicy::HoldAndRetry;
 
-    // Collision-channel flags; declared here so the params struct's ABI stabilises.
-    // Stored as int32 (UE UPROPERTY does not support uint32 except as bitfields). Default
-    // 0xFFFFFFFF reinterprets to int32 = -1 = "every bit set" — i.e. the agent participates in
-    // every collision channel until per-feature code narrows it.
+    // Collision-channel bitfield stored as int32 — UPROPERTY does not support uint32 except as
+    // bitfields. -1 is every bit set: the agent is in every channel until something narrows it.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     int32 _CollisionFlags = -1;
 
@@ -214,10 +184,9 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// One entry in the per-agent neighbor cache. Populated each frame by FProcessor_CrowdAgent_NeighborSync
-// from the agent's probe overlaps. _RelativeOffset is (NbrLoc - SelfLoc) in world space, _RelativeVelocity
-// is (NbrVel - SelfVel). _Distance is the magnitude of _RelativeOffset, kept separately so consumers
-// don't recompute it. Sorted by _Distance ascending; trimmed to _MaxNeighborsForSteering.
+// One entry in the per-agent neighbor cache, rebuilt each frame from the agent's probe overlaps.
+// _RelativeOffset is (NbrLoc - SelfLoc) and _RelativeVelocity is (NbrVel - SelfVel), both in world
+// space. Sorted by _Distance ascending; trimmed to _MaxNeighborsForSteering.
 USTRUCT(BlueprintType)
 struct CKCROWD_API FCk_CrowdAgent_Neighbor
 {
@@ -249,11 +218,9 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Per-agent path-following state. Written by the steering processor as the agent advances along the
-// path produced by CkNavigation; lives on the agent entity. _WaypointIndex is the index of the NEXT
-// waypoint the agent is heading toward (Waypoints[_WaypointIndex]); reset to 0 each new MoveTo.
-// _ActiveArrivalRadius caches the per-request arrival tolerance — populated from either the params
-// default or the MoveTo request's _ArrivalRadiusOverride, whichever applies for the current goal.
+// Per-agent path-following state, advanced by the steering processor. _WaypointIndex is the index of
+// the NEXT waypoint the agent heads toward, reset to 0 on each new MoveTo; _ActiveArrivalRadius
+// caches the tolerance that applies to the CURRENT goal (params default or per-request override).
 USTRUCT(BlueprintType)
 struct CKCROWD_API FCk_Fragment_CrowdAgent_PathFollowData
 {
@@ -275,24 +242,21 @@ private:
     UPROPERTY()
     float _ActiveArrivalRadius = 30.0f;
 
-    // World-space goal of the active MoveTo. Used by HandleRequests to no-op a re-issued MoveTo
-    // that targets (nearly) the same goal we're already walking to — re-issuing would reset the
-    // waypoint cursor and prevent the final-stop from ever latching (the "orbit" failure mode).
+    // World-space goal of the active MoveTo, so HandleRequests can no-op a re-issued MoveTo on
+    // (nearly) the same goal — re-issuing resets the waypoint cursor and the final-stop never
+    // latches (the "orbit" failure mode).
     UPROPERTY()
     FVector _ActiveGoal = FVector::ZeroVector;
 
-    // World-space start of the CURRENT path segment: the previously retired waypoint once the
-    // cursor has advanced, or the agent's location at path-install time for the very first segment.
-    // CkNavigation's ExtractWaypoints strips the path's start point, so Waypoints[_WaypointIndex - 1]
-    // does not exist for index 0 and the first segment's direction cannot be recovered from the
-    // waypoint array alone. Steering's plane-crossing retirement needs that incoming direction;
-    // this mirrors UPathFollowingComponent's MoveSegmentDirection (PathFollowingComponent.cpp:954).
+    // World-space start of the CURRENT path segment. CkNavigation's ExtractWaypoints strips the
+    // path's start point, so the first segment's incoming direction — which Steering's
+    // plane-crossing retirement needs — cannot be recovered from the waypoint array alone.
     UPROPERTY()
     FVector _CurrentSegmentStart = FVector::ZeroVector;
 
-    // Stationary-markup paint serial current when this path was installed. PathRefresh compares
-    // it against each disc's paint serial: only a disc painted AFTER the path can trigger a
-    // re-path, so a path that already chose to pay a disc's cost is never re-planned for it.
+    // Stationary-markup paint serial current when this path was installed: only a disc painted
+    // AFTER the path can trigger a re-path, so a path that already paid a disc's cost is never
+    // re-planned for it.
     UPROPERTY()
     uint64 _PathSerial = 0;
 
@@ -306,9 +270,8 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Output of the steering processor: the velocity the agent WANTS this frame (path-follow +
-// separation combined). The velocity-bridge processor copies this into FFragment_Velocity_Current;
-// also observable via Get_DesiredVelocity.
+// Output of the steering processor: the velocity the agent WANTS this frame. The velocity-bridge
+// processor copies it into FFragment_Velocity_Current.
 USTRUCT(BlueprintType)
 struct CKCROWD_API FCk_Fragment_CrowdAgent_DesiredVelocityData
 {
@@ -325,9 +288,8 @@ private:
     UPROPERTY()
     FVector _Velocity = FVector::ZeroVector;
 
-    // Last frame's _Velocity AFTER the AccelClamp processor ramped it. Read by
-    // AccelClamp on the next tick as the baseline for the velocity-delta clamp. Independent of
-    // FFragment_Velocity_Current (which lives in CkPhysics and has been through min/max trimming).
+    // Last frame's _Velocity AFTER AccelClamp ramped it, and the baseline for next tick's clamp.
+    // Independent of CkPhysics' FFragment_Velocity_Current, which has been min/max trimmed.
     UPROPERTY()
     FVector _LastVelocity = FVector::ZeroVector;
 
@@ -338,10 +300,8 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Cached target yaw for the face-angle processor. The processor computes _TargetYaw from the
-// steering's desired-velocity heading each frame and lerps the SceneNode's current yaw toward it
-// at _MaxTurnRate. Stored as RADIANS (FMath::Atan2 native unit; converted at the BP boundary by
-// Get_TargetYawDegrees). Surfaced for the debugger / tests; the orientation itself lives on the
+// Cached target yaw for the face-angle processor, in RADIANS (converted at the BP boundary by
+// Get_TargetYawDegrees). Surfaced for the debugger and tests; the orientation itself lives on the
 // SceneNode.
 USTRUCT(BlueprintType)
 struct CKCROWD_API FCk_Fragment_CrowdAgent_FaceAngleData
@@ -362,10 +322,8 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Public request — "go to this world location". _ArrivalRadiusOverride carries an optional
-// per-request arrival tolerance so callers can request a "stop further out" behavior (e.g. a queue
-// position 100cm shy of the actual counter, vs the default 30cm dead-on stop). When the override
-// is DoNotOverride, the params' _ArrivalRadius is used instead.
+// Public request — "go to this world location". _ArrivalRadiusOverride lets a caller stop further
+// out than the params' _ArrivalRadius (e.g. a queue position shy of the counter).
 USTRUCT(BlueprintType)
 struct CKCROWD_API FCk_Request_CrowdAgent_MoveTo : public FCk_Request_Base
 {
@@ -399,18 +357,10 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 // Public request — "FOLLOW this live target point". The goal is a transform HANDLE, not a position
-// snapshot: the agent paths to the point's current position, and the FollowTarget processor keeps
-// re-pathing toward it on _RepathPeriod as it moves — including re-engaging after an arrival when
-// the target walks back out of reach. The follow persists until a plain MoveTo or Stop lands, or
-// the target handle dies (the agent then keeps its last resolved goal).
-//
-// Tuners:
-// - _RepathPeriod: how often the follow re-evaluates the target's position.
-// - _RepathThresholdCm: while walking, re-path only once the target drifted this far from the
-//   active goal (must exceed the MoveTo same-goal epsilon of 20cm or every check re-paths).
-// - _ResumeSlackCm: while idle-arrived, re-engage once the target is beyond the arrival radius
-//   plus this slack (hysteresis against arrive/leave flicker at the boundary).
-// - _ArrivalRadiusOverride: same semantics as MoveTo's.
+// snapshot. The follow persists until a plain MoveTo or Stop lands, or the target handle dies (the
+// agent then keeps its last resolved goal).
+// - _RepathThresholdCm must exceed the MoveTo same-goal epsilon of 20cm, or every check re-paths.
+// - _ResumeSlackCm is hysteresis against arrive/leave flicker at the arrival boundary.
 USTRUCT(BlueprintType)
 struct CKCROWD_API FCk_Request_CrowdAgent_FollowTarget : public FCk_Request_Base
 {
@@ -469,10 +419,8 @@ struct CKCROWD_API FCk_Request_CrowdAgent_Stop : public FCk_Request_Base
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Public request — override the agent's max speed at runtime (sprint/flee gaits). Writes the
-// params fragment's _MaxSpeed, which every steering-chain processor reads per frame, so the new
-// speed applies from the next tick and persists until the next SetMaxSpeed. Does not disturb the
-// active path or goal.
+// Public request — override the agent's max speed at runtime (sprint/flee gaits). Applies from the
+// next tick and persists until the next SetMaxSpeed; does not disturb the active path or goal.
 USTRUCT(BlueprintType)
 struct CKCROWD_API FCk_Request_CrowdAgent_SetMaxSpeed : public FCk_Request_Base
 {
@@ -494,15 +442,11 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// Delegate types for the CrowdAgent lifecycle signals. CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE
-// (in _Fragment.h, inside namespace ck) references these by name but does not declare them — the
-// pattern in CkAudio/AudioTrack puts the delegate at global scope and lets the signal macro pick
-// it up. Single-param: the agent handle is the only payload (callers can derive everything else
-// from the handle).
+// Delegate types for the CrowdAgent lifecycle signals: CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE
+// (in _Fragment.h) references these by name but does not declare them, so they live at global scope.
 
-// Payload of OnGoalBlocked. _BlockedBy is the agent standing on the goal (invalid when the reason is
-// NoProgress — there is no single culprit); it is exactly the hook a gameplay-side queue manager needs
-// to say "he's got the shelf, go somewhere else".
+// Payload of OnGoalBlocked. _BlockedBy is the agent standing on the goal — invalid when the reason
+// is NoProgress, where there is no single culprit.
 USTRUCT(BlueprintType)
 struct CKCROWD_API FCk_CrowdAgent_GoalBlockedInfo
 {

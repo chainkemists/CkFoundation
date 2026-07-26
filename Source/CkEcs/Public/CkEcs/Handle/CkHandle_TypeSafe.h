@@ -102,9 +102,8 @@ static_assert
     _ClassType_(const FCk_Handle& InOther) : FCk_Handle_TypeSafe(InOther) { }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Handle-to-handle inheritance: constructors must initialize the direct parent handle,
-// not FCk_Handle_TypeSafe. CK_GENERATED_BODY_HANDLE_TYPESAFE hardcodes FCk_Handle_TypeSafe,
-// so this macro parameterizes the parent handle type for derived handle hierarchies.
+// Handle-to-handle inheritance: constructors must initialize the DIRECT parent handle, which the
+// FCk_Handle_TypeSafe hardcoded into CK_GENERATED_BODY_HANDLE_TYPESAFE cannot express.
 
 #define CK_GENERATED_BODY_HANDLE_DERIVED(_ClassType_, _ParentHandleType_)                                                              \
     template <typename T_DerivedHandle, typename T_HandleType>                                                                         \
@@ -189,9 +188,8 @@ static_assert
     }                                                                                                                        \
     CK_REGISTER_ANGELSCRIPT_HANDLE_CONVERSION(_HandleType_)
 
-// NOTES:
-// - the ... are the Fragments for the Has check (see other usages)
-// - the FCk_Handle _should_ be passed by ref but isn't because passing by ref makes BlueprintAutoCast to not work
+// The ... are the Fragments for the Has check (see other usages).
+// FCk_Handle is passed by VALUE on purpose — by-ref breaks BlueprintAutoCast.
 #define CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(_ClassType_, _HandleType_, ...)                                    \
 auto                                                                                                               \
     _ClassType_::                                                                                                  \
@@ -276,10 +274,8 @@ namespace ck
         using StaticCastReturnType = decltype(StaticCast<T_DerivedHandle>(T_Handle{}));
     }
 
-    // This mainly exists to allow generic functions to work with type-safe handles. Originally, MakeHandle was used to get
-    // a Handle from an Entity. Generic functions needed to work with Entities that could be FCk_Entity or FCk_Handle, so
-    // MakeHandle was overloaded for that purpose (see CkHandle.h). This is another overload to have those generic functions
-    // work with type-safe Handles as well (which is why it's essentially a pass-through)
+    // Pass-through overload so the generic MakeHandle(Entity, Handle) call sites (CkHandle.h) also
+    // accept a typesafe handle in the entity slot
     template <typename T_DerivedHandle>
     auto
         MakeHandle(
@@ -308,9 +304,8 @@ namespace ck
 
     namespace details
     {
-        // Detects whether a typesafe handle declares a mixin parent via the `MixinParentHandle`
-        // type alias planted by CK_GENERATED_BODY_HANDLE_DERIVED. Used by the AngelScript handle
-        // registration to wire up mixin-method propagation across handle inheritance chains.
+        // Detects the `MixinParentHandle` alias planted by CK_GENERATED_BODY_HANDLE_DERIVED — the
+        // AngelScript registration uses it to propagate mixin methods along inheritance chains.
         template<typename T>
         concept HasMixinParentHandle = requires { typename T::MixinParentHandle; };
 
@@ -331,7 +326,6 @@ namespace ck
 #if WITH_ANGELSCRIPT_CK
 #include "CkHandle_TypeSafe_AngelScript.h"
 #else
-// Empty macros when AS is not available
 #define CK_REGISTER_ANGELSCRIPT_HANDLE_CONVERSION(_HandleType_)
 #endif
 

@@ -198,11 +198,9 @@ auto
     if (NOT LineIDValid)
     { return {}; }
 
-    // Drop any IDs whose line entity was destroyed out-of-band (e.g. a test's Track_ForCleanup) BEFORE the duplicate
-    // check, so a legitimately-reused ID is not falsely rejected.
+    // Prune BEFORE the duplicate check so an ID whose entity died out-of-band is not falsely rejected as a duplicate.
     DoPruneInvalidLines();
 
-    // Duplicate LineID across all banks: reject the duplicate atomically (a registration is all-or-nothing).
     const auto DuplicateLineID = _LineIDs.Contains(LineID);
     CK_ENSURE_IF_NOT(NOT DuplicateLineID,
         TEXT("Duplicate Dialog LineID [{}] — skipping the duplicate"), LineID)
@@ -306,7 +304,6 @@ auto
         if (ck::IsValid(InLine))
         { return false; }
 
-        // Stale: its entity was destroyed out-of-band. Drop its ID so the ID can be reused.
         if (const auto* StaleID = _LineHandleToID.Find(InLine))
         { _LineIDs.Remove(*StaleID); }
         _LineHandleToID.Remove(InLine);

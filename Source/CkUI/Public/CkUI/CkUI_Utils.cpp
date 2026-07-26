@@ -32,13 +32,9 @@
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
-// Static Member Initialization
-// --------------------------------------------------------------------------------------------------------------------
 
 int32 UCk_Utils_UI_UE::InputSuspensionCounter = 0;
 
-// --------------------------------------------------------------------------------------------------------------------
-// Named Slot Operations
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -164,8 +160,6 @@ auto
     return nullptr;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Focus Management
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -297,15 +291,9 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Cursor Lock
-// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_ui_cursor_lock
 {
-    // FSlateUser::LockCursor / UnlockCursor / GetCursor all sit below SLATE_SCOPE: in SlateUser.h, which expands to
-    // `protected` outside the Slate module — that whole API is Slate-internal and unreachable from here. The public
-    // route is the platform cursor itself, so the lock rect FSlateUser would have computed is computed here instead
-    // (mirroring FSlateUser::LockCursorInternal).
     auto
         Get_PlatformCursor()
         -> TSharedPtr<ICursor>
@@ -353,7 +341,6 @@ auto
     if (ck::Is_NOT_Valid(NativeWindow) || NOT NativeWindow->IsForegroundWindow())
     { return ECk_UI_CursorLock_Result::WindowNotForeground; }
 
-    // Last widget in the path is the one being locked to.
     auto SlateClipRect = WidgetPath.Widgets.Last().Geometry.GetLayoutBoundingRect();
 
 #if PLATFORM_DESKTOP
@@ -365,8 +352,7 @@ auto
     const auto ClipRectAdjustment = 0;
 #endif
 
-    // Screen-space mapping scales everything, so a fullscreen viewport whose resolution differs from the platform
-    // resolution offsets the hit-test. Same correction FSlateUser applies.
+    // A fullscreen viewport whose resolution differs from the platform resolution offsets the hit-test.
     if (FSlateApplication::Get().GetTransformFullscreenMouseInput() && NOT GIsEditor &&
         NativeWindow->GetWindowMode() == EWindowMode::Fullscreen)
     {
@@ -384,17 +370,15 @@ auto
         SlateClipRect.Bottom /= DisplayDistortion.Y;
     }
 
-    // Round the upper-left up and truncate the lower-right down so the rect stays INSIDE the widget geometry — half a
-    // pixel the other way lets the cursor out.
+    // Rounded inwards on every edge — half a pixel the other way lets the cursor escape the widget geometry.
     auto ClipRect = RECT{};
     ClipRect.left   = FMath::RoundToInt(SlateClipRect.Left + ClipRectAdjustment);
     ClipRect.top    = FMath::RoundToInt(SlateClipRect.Top + ClipRectAdjustment);
     ClipRect.right  = FMath::TruncToInt(SlateClipRect.Right - ClipRectAdjustment);
     ClipRect.bottom = FMath::TruncToInt(SlateClipRect.Bottom - ClipRectAdjustment);
 
-    // One-shot, unlike FSlateUser: its UpdateCursor re-locks each frame as the widget's bounds change and unlocks
-    // automatically once the widget goes away. Neither happens here — re-call this after a layout change, and always
-    // pair it with Request_UnlockCursor before the widget is torn down.
+    // One-shot: nothing re-locks on a layout change or auto-unlocks on teardown — re-call after a layout change,
+    // and always pair with Request_UnlockCursor before the widget goes away.
     Cursor->Lock(&ClipRect);
 
     return ECk_UI_CursorLock_Result::Success;
@@ -413,8 +397,6 @@ auto
     Cursor->Lock(nullptr);
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Input Suspension
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -485,8 +467,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Input Type Queries
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_UI_UE::
@@ -537,8 +517,6 @@ auto
     return Get_OwningPlayerInputType(InWidget) == ECommonInputType::MouseAndKeyboard;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Context Propagation
 // --------------------------------------------------------------------------------------------------------------------
 
 #include "CkEcs/ContextReceiver/CkContextReceiver_Utils.h"

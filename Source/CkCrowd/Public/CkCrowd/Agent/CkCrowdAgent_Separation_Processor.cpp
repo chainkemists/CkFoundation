@@ -30,15 +30,13 @@ namespace ck
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_SeparationProc);
 
-        // Per-frame active-agent population — every agent the steering layer ticks passes through here.
         INC_DWORD_STAT(STAT_CkCrowd_ActiveAgents);
 
         const auto SeparationRadius = InParams.Get_SeparationRadius();
         const auto SeparationWeight = InParams.Get_SeparationWeight();
         const auto MaxSpeed = InParams.Get_MaxSpeed();
 
-        // Cheap early-out: zero radius or zero weight disables the system without spending
-        // per-neighbor cycles. Setting either to 0 in params is a documented way to opt out.
+        // Zeroing any of these in params is the documented way to opt out of separation.
         if (SeparationRadius <= 0.0f || SeparationWeight <= 0.0f || MaxSpeed <= 0.0f)
         {
             InSeparationForce._Force = FVector::ZeroVector;
@@ -48,7 +46,6 @@ namespace ck
         auto Force = FVector::ZeroVector;
 
         {
-            // O(Neighbors) accumulation of the separation force.
             SCOPE_CYCLE_COUNTER(STAT_CkCrowd_Separation);
 
             for (const auto& Nbr : InNeighborCache.Get_Neighbors())
@@ -57,58 +54,46 @@ namespace ck
                 if (Distance >= SeparationRadius)
                 { continue; }
 
-                // Push direction: away from the neighbor. _RelativeOffset is (NbrLoc - SelfLoc),
-                // so negate to push self away. Project to 2D first — crowd separation is planar
-                // (agents walk on a navmesh; Z belongs to path-follow / integrator). Without the
-                // projection, any Z delta becomes part of the push direction and gets amplified
-                // by quadratic falloff, shoving capsules through the floor during head-on/cluster
-                // collisions. Normalize by planar distance so the unit-vector retains full XY
-                // magnitude even when there's vertical misalignment.
+                // Must stay planar, and must normalize by the PLANAR distance: an unprojected Z
+                // delta joins the push direction, gets amplified by the falloff, and shoves agents
+                // through the floor. Z belongs to path-follow and the integrator.
                 auto OffsetPlanar = Nbr.Get_RelativeOffset();
                 OffsetPlanar.Z = 0.0f;
                 const auto SafeDistance = FMath::Max(static_cast<float>(OffsetPlanar.Size()), 0.01f);
-                const auto Push = -OffsetPlanar / SafeDistance;
+                const auto PushAwayFromNeighbor = -OffsetPlanar / SafeDistance;
 
-                // Quadratic falloff: contribution is full at distance 0, zero at SeparationRadius.
-                // Pow-2 makes nearby neighbors dominate, which matches the "everybody breaks the
-                // tie by stepping back from whoever's closest" heuristic crowds expect.
-                const auto Normalized = 1.0f - (Distance / SeparationRadius);
-                const auto Falloff = Normalized * Normalized;
+                const auto NormalizedCloseness = 1.0f - (Distance / SeparationRadius);
+                const auto QuadraticFalloff = NormalizedCloseness * NormalizedCloseness;
 
-                Force += Push * Falloff;
+                Force += PushAwayFromNeighbor * QuadraticFalloff;
             }
         }
 
-        // No active force → no output. Skipping the jitter when there are no neighbors keeps
-        // far-apart agents from drifting on the deterministic tie-breaker alone.
+        // Returning early keeps far-apart agents from drifting on the tie-breaker jitter alone.
         if (Force.IsNearlyZero())
         {
             InSeparationForce._Force = FVector::ZeroVector;
             return;
         }
 
-        // Stalemate-breaking jitter: two perfectly mirrored agents on a head-on path produce
-        // equal-and-opposite forces and freeze. A tiny deterministic per-agent offset based on
-        // the entity's index breaks symmetry. 5% of the weighted force magnitude is below the
-        // visual noise floor at typical agent speeds but enough for the steering ramp to pick
-        // a consistent side. Keyed off entity index so two distinct agents always disagree on
-        // the tie-breaker direction.
+        // Two perfectly mirrored agents on a head-on path produce equal-and-opposite forces and
+        // freeze; the per-entity phase makes them disagree, deterministically.
+        constexpr auto JitterPhasePerIndex = 0.123f;
+        constexpr auto JitterFractionOfForce = 0.05f;
+
         const auto EntityIndex = static_cast<float>(GetTypeHash(InHandle));
-        const auto JitterPhase = EntityIndex * 0.123f;
+        const auto JitterPhase = EntityIndex * JitterPhasePerIndex;
         const auto Jitter = FVector{
             FMath::Sin(JitterPhase),
             FMath::Cos(JitterPhase),
             0.0};
 
-        // Scale to cm/s: SeparationWeight is "fraction of MaxSpeed per full-overlap neighbor",
-        // so the dimensionless Force sum × Weight × MaxSpeed lands in cm/s and stacks with the
-        // path-follow velocity directly in Steering's combination.
-        const auto NewForce = (Force + Jitter * 0.05f) * SeparationWeight * MaxSpeed;
+        // SeparationWeight is "fraction of MaxSpeed per full-overlap neighbor", so this lands in
+        // cm/s and stacks directly with the path-follow velocity in Steering.
+        const auto NewForce = (Force + Jitter * JitterFractionOfForce) * SeparationWeight * MaxSpeed;
 
-        // Inertia lerp toward last frame's force kills frame-to-frame flicker that
-        // drove vibration in head-on encounters. Mirrors dtCrowd's weightCurVel penalty concept
-        // (DetourObstacleAvoidance.cpp:472), applied here as a force-blend factor since this
-        // solver doesn't sample-and-score. 0.5 default ≈ dtCrowd's wCurVel/wDesVel = 0.375 ratio.
+        // Blending toward last frame's force kills the frame-to-frame flicker that drove
+        // vibration in head-on encounters.
         const auto LastForce = InSeparationForce.Get_Force();
         const auto Inertia = FMath::Clamp(InParams.Get_SeparationInertia(), 0.0f, 1.0f);
         InSeparationForce._Force = FMath::Lerp(NewForce, LastForce, Inertia);

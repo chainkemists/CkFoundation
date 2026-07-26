@@ -25,10 +25,8 @@
 
 #if WITH_ANGELSCRIPT_CK
 #include <AngelscriptBinds.h>
-// Direct ctti include is intentional. CkLog cannot depend on CkCore's wrapper
-// (CkCore already depends on CkLog), so we include the underlying header
-// directly for the one purpose of auto-deriving the AS namespace inside
-// CK_REGISTER_LOG_FUNCTIONS below.
+// Direct ctti include, not CkCore's wrapper: CkCore already depends on CkLog. Used solely to
+// auto-derive the AS namespace inside CK_REGISTER_LOG_FUNCTIONS below.
 #include "CkThirdParty/ctti/include/ctti/nameof.hpp"
 #endif
 
@@ -62,13 +60,9 @@ namespace ck::log
     CKLOG_API auto Get_AllRegisteredCategories() -> TArray<FName>;
 
 #if WITH_ANGELSCRIPT_CK
-    // Strip the trailing "::SuffixName" from a fully-qualified type name to
-    // recover its enclosing C++ namespace. Returns "" for global-scope types.
-    //
-    // Also strips any compiler-prefix junk left in by ctti (e.g. "struct ",
-    // "class ", or partial off-by-one fragments like "truct " on some MSVC
-    // versions) by discarding everything up to and including the last
-    // whitespace — valid namespace paths contain none.
+    // Returns "" for global-scope types. Everything up to the last whitespace is discarded because
+    // ctti leaves compiler-prefix junk in ("struct ", "class ", or off-by-one fragments like
+    // "truct " on some MSVC versions) — a valid namespace path contains no whitespace.
     inline auto Get_NamespaceFrom_QualifiedTypeName(const FString& InQualifiedTypeName) -> FString
     {
         const auto LastSep = InQualifiedTypeName.Find(
@@ -83,9 +77,6 @@ namespace ck::log
         return NamespacePath;
     }
 
-    // Returns the C++ namespace surrounding type T as a string (e.g. "ck::crowd").
-    // Used by CK_REGISTER_LOG_FUNCTIONS to auto-derive the AS namespace from a
-    // sentinel type defined inside the user's namespace.
     template <typename T>
     auto Get_NamespaceOf() -> FString
     {
@@ -360,28 +351,21 @@ inline struct _ ##_LogCategory_## LogMapInjector                                
 CK__REGISTER_LOG_AS_BINDS(_LogCategory_)
 
 // --------------------------------------------------------------------------------------------------------------------
-// AngelScript log binding (always wired up by CK_REGISTER_LOG_FUNCTIONS — no opt-out).
-//
-// Binds the major log levels (Log/Display/Warning/Error/Verbose/VeryVerbose)
-// as global functions in the C++ namespace surrounding the macro expansion.
-// E.g. CK_REGISTER_LOG_FUNCTIONS(CkCrowd) inside `namespace ck::crowd {}`
-// exposes ck::crowd::Log("msg") etc. to AngelScript.
-//
-// Skipped intentionally: Fatal (risky from script), *If variants (return enum
-// — use AS `if` instead), Get_*_IsActive introspection.
+// AngelScript log binding, always wired up by CK_REGISTER_LOG_FUNCTIONS — no opt-out. The levels
+// land in the C++ namespace surrounding the macro expansion, so CK_REGISTER_LOG_FUNCTIONS(CkCrowd)
+// inside `namespace ck::crowd {}` exposes ck::crowd::Log("msg") to AS. Deliberately NOT bound:
+// Fatal (risky from script), the *If variants (return an enum — use AS `if`), Get_*_IsActive.
 
 #if WITH_ANGELSCRIPT_CK
 
-// Helper: bind one log level. The "{}" placeholder in the lambda passes the
-// already-formatted AS string straight through ck::Format_UE.
+// The "{}" placeholder passes the already-formatted AS string straight through ck::Format_UE.
 #define CK__AS_LOG_BIND_ONE(_Level_)                                                 \
     FAngelscriptBinds::BindGlobalFunction(                                           \
         "void " #_Level_ "(const FString& in InMsg)",                                \
         [](const FString& InMsg) { _Level_(TEXT("{}"), InMsg); })
 
-// AS namespace is auto-derived: a sentinel struct is declared inside the
-// surrounding C++ namespace, then ctti reads its fully-qualified name and we
-// strip the sentinel suffix to recover the namespace. Zero per-module config.
+// Zero per-module config: the sentinel struct is declared inside the surrounding C++ namespace, so
+// ctti's fully-qualified name for it minus the sentinel suffix IS the namespace.
 #define CK__REGISTER_LOG_AS_BINDS(_LogCategory_)                                                       \
     struct CK__ASNsHelper_##_LogCategory_ {};                                                          \
     AS_FORCE_LINK const FAngelscriptBinds::FBind _LogCategory_##_AS_LogBind(                           \

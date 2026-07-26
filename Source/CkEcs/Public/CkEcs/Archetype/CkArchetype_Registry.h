@@ -6,15 +6,7 @@
 #include <CoreMinimal.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Process-wide archetype registry (game thread only). See CkArchetype_Data.h for the
-// resolution split.
-//
-// CkEcs-side matching covers: the native matcher (when supplied), else FeatureIds via the
-// DebugFeatureFlags bit cache — which means Get_Matches only answers while the cache is
-// enabled AND every FeatureId is a registered flag. RequiredLabel/NamePattern refinement
-// is consumer-side. Bulk matching over many entities should resolve the required mask
-// once via debug_feature_flags::Get_BitIndex and test rows directly; Get_Matches is the
-// convenience path (BP/AS, single queries).
+// Process-wide archetype registry — game thread only. Resolution/matching split: CkEcs/CLAUDE.md.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::archetype_registry
@@ -31,6 +23,8 @@ namespace ck::archetype_registry
     // Descriptors in precedence order (Priority desc, FeatureIds count desc, registration order).
     CKECS_API auto Get_All() -> TArray<FCk_ArchetypeDescriptor>;
 
+    // FeatureId matching answers only while the DebugFeatureFlags cache is enabled AND every FeatureId
+    // is a registered flag; a native matcher, when supplied, takes precedence.
     CKECS_API auto Get_Matches(const FCk_Handle& InHandle, FName InName) -> bool;
 
     // First matching archetype in precedence order; NAME_None when nothing matches.

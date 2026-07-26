@@ -118,16 +118,13 @@ auto UCkDynamicFragment_Add_K2Node::ReallocatePinsDuringReconstruction(
 
 auto UCkDynamicFragment_Add_K2Node::AllocateDefaultPins() -> void
 {
-    // Create execution pins
     CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Exec, UEdGraphSchema_K2::PN_Execute);
     CreatePin(EGPD_Output, UEdGraphSchema_K2::PC_Exec, UEdGraphSchema_K2::PN_Then);
 
-    // Create fragment selector pin (on-node dropdown)
     ck::FStructTypeSelectorHelpers::CreateSelectorPin(
         *this,
         ck_k2_node_dynamic_fragment_add::PinName_FragmentSelector);
 
-    // Create Handle input pin
     auto HandlePinParams = FCreatePinParams{};
     HandlePinParams.bIsReference = true;
 
@@ -139,10 +136,8 @@ auto UCkDynamicFragment_Add_K2Node::AllocateDefaultPins() -> void
         HandlePinParams
     );
 
-    // Create pins from the fragment struct
     CreatePinsFromFragmentStruct();
 
-    // Create output handle pin
     CreatePin(
         EGPD_Output,
         UEdGraphSchema_K2::PC_Struct,
@@ -187,7 +182,6 @@ auto UCkDynamicFragment_Add_K2Node::DoExpandNode_Expanded(
 {
     const auto* StructType = InStructType;
 
-    // Create MakeStruct node for the fragment data
     auto* MakeStruct_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_MakeStruct>(this, InSourceGraph);
     MakeStruct_Node->StructType = const_cast<UScriptStruct*>(StructType);
     MakeStruct_Node->AllocateDefaultPins();
@@ -292,14 +286,12 @@ auto UCkDynamicFragment_Add_K2Node::DoExpandNode_Compact(
 {
     namespace ns = ck_k2_node_dynamic_fragment_add;
 
-    // Create MakeInstancedStruct from the compact input pin
     auto* MakeInstancedStruct_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
     MakeInstancedStruct_Node->SetFromFunction(UBlueprintInstancedStructLibrary::StaticClass()->FindFunctionByName(
         GET_FUNCTION_NAME_CHECKED(UBlueprintInstancedStructLibrary, MakeInstancedStruct)));
     MakeInstancedStruct_Node->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(MakeInstancedStruct_Node, this);
 
-    // Create Add_Fragment node
     auto* AddFragment_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
     AddFragment_Node->FunctionReference.SetExternalMember(
         FName(TEXT("Add_Fragment")),
@@ -308,7 +300,6 @@ auto UCkDynamicFragment_Add_K2Node::DoExpandNode_Compact(
     AddFragment_Node->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(AddFragment_Node, this);
 
-    // Connect compact input pin to MakeInstancedStruct
     if (UCk_Utils_EditorGraph_UE::Request_LinkPins(
         InCompilerContext,
         {
@@ -320,7 +311,6 @@ auto UCkDynamicFragment_Add_K2Node::DoExpandNode_Compact(
         ECk_EditorGraph_PinLinkType::Move
     ) == ECk_SucceededFailed::Failed) { return; }
 
-    // MakeInstancedStruct -> Add_Fragment
     if (UCk_Utils_EditorGraph_UE::Request_TryCreateConnection(
         InCompilerContext,
         {
@@ -335,7 +325,6 @@ auto UCkDynamicFragment_Add_K2Node::DoExpandNode_Compact(
         }
     ) == ECk_SucceededFailed::Failed) { return; }
 
-    // Connect execution and handle pins
     if (UCk_Utils_EditorGraph_UE::Request_LinkPins(
         InCompilerContext,
         {

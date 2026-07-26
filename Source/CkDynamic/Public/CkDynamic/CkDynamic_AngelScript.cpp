@@ -23,8 +23,6 @@
 #include "Serialization/JsonSerializer.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Utilities
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCkDynamic_HandleTypeRegistry::
@@ -59,10 +57,8 @@ auto
 
 namespace ck_dynamic_angelscript
 {
-    // Weak, not raw: a file-static map is invisible to the GC, so an entry must go STALE rather
-    // than dangle if a struct is collected. Additionally cleared on AS pre-compile, because a hot
-    // reload REPLACES AngelScript-declared structs while the outgoing ones may still be alive —
-    // a live-but-stale pointer would silently type-test against the wrong struct.
+    // Weak, not raw: a file-static map is invisible to the GC, so a collected struct must go STALE
+    // rather than dangle. Also cleared on AS pre-compile — see InvalidateScriptStructCache.
     static TMap<FString, TWeakObjectPtr<const UScriptStruct>> ResolvedScriptStructCache;
 }
 
@@ -78,10 +74,8 @@ auto
         return FoundStruct;
     }
 
-    // The registry stores the F-STRIPPED UScriptStruct name ("Bb_Feature_Customer") while the
-    // AngelScript type database is keyed on the F-PREFIXED script name ("FBb_Feature_Customer"),
-    // so the bare lookup misses by construction for every AS-declared fragment. Trying both keeps
-    // a cold miss at a TMap lookup instead of falling through to the O(all UScriptStructs) scan.
+    // The registry stores the F-STRIPPED UScriptStruct name while the AngelScript type database is keyed on
+    // the F-PREFIXED script name, so the bare lookup misses by construction for every AS-declared fragment.
     const FString CandidateNames[] = { InStructName, FString{TEXT("F")} + InStructName };
     for (const auto& CandidateName : CandidateNames)
     {
@@ -116,11 +110,6 @@ auto
         const FString& InStructName)
     -> const UScriptStruct*
 {
-    // Memoized because this sits on one of the hottest paths in the codebase: EVERY dynamic-handle
-    // Is_X() / As_X() / typed IsValid() runs the fragment validator, and CreateMultiFragmentValidator
-    // captures fragment NAMES rather than resolved types, so it re-resolves on every invocation.
-    // Uncached, an AS-declared fragment misses both fast tiers and pays a full
-    // TObjectIterator<UScriptStruct> scan (plus an FString heap alloc per struct) every call.
     if (const auto* const CachedStruct = ck_dynamic_angelscript::ResolvedScriptStructCache.Find(InStructName))
     {
         if (const auto* const ResolvedStruct = CachedStruct->Get())
@@ -188,8 +177,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// JSON Registry Loading
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCkDynamic_HandleTypeRegistry::
@@ -201,10 +188,7 @@ auto
 
     const auto FilePath = GetRegistryFilePath();
 
-    // A missing/unparsable canonical registry must NOT abort the load: the stub-recovery and
-    // plugin TESTONLY merges below are independent sources, and early-returning here deadlocked
-    // hosts that ship no canonical file (the self-heal wrote stubs that were then never merged, so
-    // AS compilation failed forever — hit in the CkPlugins host). Continue with an empty canonical set
+    // A missing/unparsable canonical registry must NOT abort the load — the merges below are independent sources.
     auto HandleTypesArray = TArray<TSharedPtr<FJsonValue>>{};
 
     if (auto JsonString = FString{};
@@ -227,14 +211,6 @@ auto
         ck::dynamic::Log(TEXT("[DynamicHandleTypes] No registry file found at: %s — continuing with stub/test-only registries only"), *FilePath);
     }
 
-    // Self-heal sibling stub merge — `_StubRecovery_DynamicHandleTypes.json` in
-    // the same directory as the canonical registry. The dispatcher writes
-    // synthesized stub entries there at AS-failure modal-tick time so the
-    // canonical file stays byte-clean from HEAD. We merge the stub's
-    // `HandleTypes` array into the canonical load here, deduping by
-    // `TypeName` with stub entries winning (they only exist because the
-    // canonical lacks them). The stub file is deleted by the PostCompile
-    // hook after a successful AS compile.
     {
         const auto StubFilePath = FPaths::GetPath(FilePath) /
             (FString{TEXT("_StubRecovery_")} + FPaths::GetCleanFilename(FilePath));
@@ -288,19 +264,8 @@ auto
         }
     }
 
-    // Test-only handle registries. Any enabled plugin (or the project) may drop a
-    // `Script/Generated/DynamicHandleTypes.TESTONLY.json` to register `FCk_Handle_TESTONLY_*`
-    // types for automation tests WITHOUT polluting the committed canonical registry. Discovered
-    // by directory iteration (thread-safe, no IPluginManager dependency so this is safe on the
-    // packaged off-thread PreCompile path), merged with the same dedup-by-TypeName rule — canonical
-    // and stub entries always win, so a test registry can never override a real handle type.
-    //
-    // SHIPPING/TEST GATE: this merge is strictly "for automation tests". Test plugins (CkTests, etc.)
-    // are disabled in Shipping/Test client builds, so their `FCk_Handle_TESTONLY_*` types have NO C++
-    // backing — registering them yields asINVALID_TYPE and cascades through every handle mixin
-    // (StoreVar_*, GetVar_*, ...) registered onto the dead types. The staged `.TESTONLY.json` is
-    // harmless as data; it must simply never be merged outside dev/editor builds. Condition mirrors
-    // the engine's WITH_AS_DEBUGSERVER gate (!UE_BUILD_SHIPPING && !UE_BUILD_TEST).
+    // The gate is load-bearing: test plugins are disabled in Shipping/Test, so their TESTONLY types have no
+    // C++ backing and registering them yields asINVALID_TYPE across every handle mixin.
 #if !UE_BUILD_SHIPPING && !UE_BUILD_TEST
     {
         auto TestRegistryFiles = TArray<FString>{};
@@ -437,8 +402,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Registration
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCkDynamic_HandleTypeRegistry::
@@ -461,15 +424,6 @@ auto
 
     auto Validator = CreateMultiFragmentValidator(InRequiredFragments);
 
-    // Register-or-update: if a previous registration of this type exists
-    // (e.g. a stub written by the self-heal dispatcher, or a stale entry
-    // whose RequiredFragments have since changed on the underlying data
-    // asset), replace the in-memory validator + metadata in place rather
-    // than silently no-op. This fixes the long-standing
-    // ForceRefreshDynamicHandleBindings-doesn't-update bug — the AS-side
-    // registry's append-only RegisterHandleType returned false for
-    // existing entries, so the button wrote a fresh JSON but in-memory
-    // bindings stayed stale until editor restart.
     if (FCkAngelScript_HandleRegistry::IsHandleTypeRegistered(InTypeName))
     {
         return FCkAngelScript_HandleRegistry::UpdateExistingDynamicHandle(
@@ -575,8 +529,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Queries
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCkDynamic_HandleTypeRegistry::
@@ -626,8 +578,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Initialization
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCkDynamic_HandleTypeRegistry::
@@ -643,16 +593,14 @@ auto
     _PreCompileDelegateHandle = FAngelscriptCodeModule::GetPreCompile().AddStatic([]
     {
         // A hot reload replaces the AngelScript-declared UScriptStructs the cache points at, and the
-        // outgoing ones can outlive the swap — so drop the memo before anything re-resolves.
+        // outgoing ones can outlive the swap — drop the memo before anything re-resolves.
         InvalidateScriptStructCache();
 
         LoadFromJsonRegistry();
 
-        // AS pre-compile runs on a worker thread in packaged (non-editor) builds. The asset-registry
-        // discovery below enumerates in-memory assets, which asserts off the game thread
-        // (AssetRegistry's EnumerateMemoryAssetsHelper requires the game or loading thread). The JSON
-        // registry loaded above is the compile-time source of truth for handle types; asset-defined
-        // UCkDynamic_HandleDefinition discovery is an editor-time convenience, so skip it off-thread.
+        // AS pre-compile runs on a worker thread in packaged builds, and asset-registry discovery asserts off
+        // the game thread. Asset-defined definitions are an editor-time convenience; the JSON registry above
+        // is the compile-time source of truth.
         if (IsInGameThread())
         {
             DiscoverAndRegisterAllDefinitions();
@@ -664,8 +612,6 @@ auto
     CallbackRegistered = true;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Static Initialization
 // --------------------------------------------------------------------------------------------------------------------
 
 AS_FORCE_LINK const FAngelscriptBinds::FBind Bind_DynamicHandleTypes_Init(

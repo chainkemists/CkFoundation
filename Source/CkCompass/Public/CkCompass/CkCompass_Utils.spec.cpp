@@ -1,9 +1,3 @@
-// Pure-math coverage for the compass arc helpers — no world, no entities.
-//
-// The generic angle math the compass composes with (heading-between-locations, cardinal buckets)
-// lives in CkCore and is covered by CkVector_Utils.spec.cpp; the bearing delta is
-// FMath::FindDeltaAngleDegrees (engine).
-
 #include "CkCompass/CkCompass_Utils.h"
 
 #include "Misc/AutomationTest.h"
@@ -32,13 +26,11 @@ bool FCkTest_Compass_NormalizedArcOffset_ClampEdges::RunTest(const FString&)
     TestTrue(TEXT("bearing 135 in arc 180 -> clamped to 1.0"),
         FMath::IsNearlyEqual(UCk_Utils_Compass_UE::Get_NormalizedArcOffset(135.0f, Arc180), 1.0f, 0.001f));
 
-    // Edge-inclusive arc test: exactly the half-arc is INSIDE; beyond it is outside
     TestFalse(TEXT("bearing 90 is NOT outside arc 180"), UCk_Utils_Compass_UE::Get_IsOutsideArc(90.0f, Arc180));
     TestTrue(TEXT("bearing 90.1 IS outside arc 180"), UCk_Utils_Compass_UE::Get_IsOutsideArc(90.1f, Arc180));
     TestTrue(TEXT("bearing 60 IS outside arc 90"), UCk_Utils_Compass_UE::Get_IsOutsideArc(60.0f, 90.0f));
     TestFalse(TEXT("bearing -30 is NOT outside arc 90"), UCk_Utils_Compass_UE::Get_IsOutsideArc(-30.0f, 90.0f));
 
-    // Degenerate arc never divides by zero
     TestTrue(TEXT("zero arc -> offset 0, no div-by-zero"),
         FMath::IsNearlyEqual(UCk_Utils_Compass_UE::Get_NormalizedArcOffset(45.0f, 0.0f), 0.0f, 0.001f));
 
@@ -54,11 +46,9 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FCkTest_Compass_RangeFadeAlpha::RunTest(const FString&)
 {
-    // No band -> hard 1 everywhere, regardless of ranges
     TestTrue(TEXT("zero band -> 1"),
         FMath::IsNearlyEqual(UCk_Utils_Compass_UE::Get_RangeFadeAlpha(1000.0f, 900.0f, 1100.0f, 0.0f), 1.0f, 0.001f));
 
-    // Fade-in past the min boundary: min=1000, band=500
     TestTrue(TEXT("at min boundary -> 0"),
         FMath::IsNearlyEqual(UCk_Utils_Compass_UE::Get_RangeFadeAlpha(1000.0f, 1000.0f, 0.0f, 500.0f), 0.0f, 0.001f));
     TestTrue(TEXT("halfway through min band -> 0.5"),
@@ -66,7 +56,6 @@ bool FCkTest_Compass_RangeFadeAlpha::RunTest(const FString&)
     TestTrue(TEXT("past min band -> 1"),
         FMath::IsNearlyEqual(UCk_Utils_Compass_UE::Get_RangeFadeAlpha(2000.0f, 1000.0f, 0.0f, 500.0f), 1.0f, 0.001f));
 
-    // Fade-out approaching the max boundary: max=5000, band=500
     TestTrue(TEXT("well inside max -> 1"),
         FMath::IsNearlyEqual(UCk_Utils_Compass_UE::Get_RangeFadeAlpha(4000.0f, 0.0f, 5000.0f, 500.0f), 1.0f, 0.001f));
     TestTrue(TEXT("halfway through max band -> 0.5"),
@@ -74,17 +63,14 @@ bool FCkTest_Compass_RangeFadeAlpha::RunTest(const FString&)
     TestTrue(TEXT("at max boundary -> 0"),
         FMath::IsNearlyEqual(UCk_Utils_Compass_UE::Get_RangeFadeAlpha(5000.0f, 0.0f, 5000.0f, 500.0f), 0.0f, 0.001f));
 
-    // Both boundaries active — the nearer fade wins (min of the two ramps)
     TestTrue(TEXT("both active, equidistant narrow band -> min of ramps"),
         FMath::IsNearlyEqual(UCk_Utils_Compass_UE::Get_RangeFadeAlpha(1500.0f, 1000.0f, 2000.0f, 800.0f), 0.625f, 0.001f));
 
-    // Out-of-band distances clamp instead of going negative / above 1
     TestTrue(TEXT("below min clamps to 0"),
         FMath::IsNearlyEqual(UCk_Utils_Compass_UE::Get_RangeFadeAlpha(500.0f, 1000.0f, 0.0f, 500.0f), 0.0f, 0.001f));
     TestTrue(TEXT("beyond max clamps to 0"),
         FMath::IsNearlyEqual(UCk_Utils_Compass_UE::Get_RangeFadeAlpha(6000.0f, 0.0f, 5000.0f, 500.0f), 0.0f, 0.001f));
 
-    // Off boundaries (range 0) never fade
     TestTrue(TEXT("no ranges -> 1 even with a band"),
         FMath::IsNearlyEqual(UCk_Utils_Compass_UE::Get_RangeFadeAlpha(100.0f, 0.0f, 0.0f, 500.0f), 1.0f, 0.001f));
 

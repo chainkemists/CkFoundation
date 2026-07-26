@@ -9,28 +9,9 @@
 #include <CoreMinimal.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Typed archetype amalgamation (redesign spec §3.3, code tier).
-//
-//     struct FCk_Archetype_Shelf
-//     {
-//         FCk_Handle_Transform Transform;
-//         FCk_Handle_Inventory Inventory;
-//         CK_ARCHETYPE_BODY(FCk_Archetype_Shelf);
-//     };
-//     CK_DEFINE_ARCHETYPE(FCk_Archetype_Shelf, "Rewind99.Shelf", Transform, Inventory);
-//
-// Convention: each listed name X is simultaneously the member name, the typesafe handle
-// type FCk_Handle_X, and the utils class UCk_Utils_X_UE. The macros are purely textual —
-// the utils classes resolve at the EXPANSION site (game code links its own features), so
-// CkEcs stays feature-agnostic.
-//
-// CK_DEFINE_ARCHETYPE generates:
-//   - StructType::TryCast(Handle) -> TOptional<StructType> — all-or-nothing member casts.
-//   - Deferred registration (EndOfEngineInit) of the equivalent descriptor with
-//     TryCast wired in as the registry's native matcher.
-//
-// USTRUCT/UPROPERTY on the struct is optional — add it when the archetype should be
-// BP-visible; the mechanism needs neither. Up to 8 features per archetype.
+// Typed archetype amalgamation — authoring example and rationale in CkEcs/CLAUDE.md. Each listed name X is
+// simultaneously the member name, the typesafe handle type FCk_Handle_X and the utils class UCk_Utils_X_UE;
+// the macros are purely textual and resolve at the EXPANSION site. Up to 8 features per archetype.
 // --------------------------------------------------------------------------------------------------------------------
 
 #define CK_ARCHETYPE_BODY(_StructType_)                                                    \

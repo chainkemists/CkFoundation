@@ -34,9 +34,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Set by the Jolt step's pose-apply pass (FJoltWorld::DoApplyPoseBuffer_GameThread) whenever an
-    // active body's StepPose was refreshed this frame. FProcessor_JoltBody_WritebackInterpolated clears
-    // it after pushing the interpolated pose onto the entity's Transform.
+    // Set by FJoltWorld::DoApplyPoseBuffer_GameThread when an active body's StepPose was refreshed this frame;
+    // cleared by FProcessor_JoltBody_WritebackInterpolated once the interpolated pose reaches the Transform.
     CK_DEFINE_ECS_TAG(FTag_JoltBody_TransformDirty);
 
     CK_DEFINE_ECS_TAG(FTag_JoltBody_NeedsSetup);
@@ -53,8 +52,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Latest + previous simulated pose (UE-space) for an active Jolt body, captured post-step off the
-    // pose buffer. Prev/Curr let FProcessor_JoltBody_WritebackInterpolated blend by the step alpha.
+    // Post-step simulated pose (UE-space); Prev/Curr let FProcessor_JoltBody_WritebackInterpolated blend by the step alpha.
     struct CKJOLT_API FFragment_JoltBody_StepPose
     {
     public:
@@ -78,8 +76,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Runtime Jolt-body handle state. _BodyId is the raw JPH::BodyID (mirroring FFragment_Probe_Current);
-    // _Shape retains the shape ref for the body's lifetime; _BodyAdded tracks physics-system membership.
     struct CKJOLT_API FFragment_JoltBody_Current
     {
     public:

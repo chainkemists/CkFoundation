@@ -41,7 +41,6 @@ void UCkCueToolboxWidget::Request_CreateLayout()
     MainScrollBox->AddChild(MainContainer);
     ContentContainer->AddChild(MainScrollBox);
 
-    // Header
     auto HeaderText = WidgetTree->ConstructWidget<UCommonTextBlock>();
     HeaderText->SetText(FText::FromString(TEXT("Cue Toolbox")));
     HeaderText->SetStyle(UCkCommonTextStyle_Header::StaticClass());
@@ -51,7 +50,6 @@ void UCkCueToolboxWidget::Request_CreateLayout()
     Spacer1->SetSize(FVector2D(0, 16));
     MainContainer->AddChildToVerticalBox(Spacer1);
 
-    // Subsystem Selection Section
     auto SubsystemSection = Request_CreateSection(
         FText::FromString(TEXT("Subsystem Selection")),
         Request_CreateSubsystemControls()
@@ -62,7 +60,6 @@ void UCkCueToolboxWidget::Request_CreateLayout()
     Spacer2->SetSize(FVector2D(0, 16));
     MainContainer->AddChildToVerticalBox(Spacer2);
 
-    // Discovered Cues Section
     auto CuesSection = Request_CreateSection(
         FText::FromString(TEXT("Discovered Cues")),
         Request_CreateCuesControls()
@@ -73,7 +70,6 @@ void UCkCueToolboxWidget::Request_CreateLayout()
     Spacer3->SetSize(FVector2D(0, 16));
     MainContainer->AddChildToVerticalBox(Spacer3);
 
-    // Quick Actions Section
     auto ActionsSection = Request_CreateSection(
         FText::FromString(TEXT("Quick Actions")),
         Request_CreateQuickActions()
@@ -84,7 +80,6 @@ void UCkCueToolboxWidget::Request_CreateLayout()
     Spacer4->SetSize(FVector2D(0, 16));
     MainContainer->AddChildToVerticalBox(Spacer4);
 
-    // Validation Section
     auto ValidationSection = Request_CreateSection(
         FText::FromString(TEXT("Validation")),
         Request_CreateValidationDisplay(),
@@ -96,7 +91,6 @@ void UCkCueToolboxWidget::Request_CreateLayout()
     Spacer5->SetSize(FVector2D(0, 16));
     MainContainer->AddChildToVerticalBox(Spacer5);
 
-    // Debug Panel Section
     auto DebugSection = Request_CreateSection(
         FText::FromString(TEXT("Debug Panel")),
         Request_CreateDebugPanel(),
@@ -219,7 +213,6 @@ auto UCkCueToolboxWidget::Request_CreateDebugPanel() -> UWidget*
 {
     auto Container = WidgetTree->ConstructWidget<UVerticalBox>();
 
-    // Context Entity row
     auto ContextRow = WidgetTree->ConstructWidget<UHorizontalBox>();
 
     auto ContextLabel = WidgetTree->ConstructWidget<UCommonTextBlock>();
@@ -240,7 +233,6 @@ auto UCkCueToolboxWidget::Request_CreateDebugPanel() -> UWidget*
     ContextSpacer->SetSize(FVector2D(0, 8));
     Container->AddChildToVerticalBox(ContextSpacer);
 
-    // Spawn Params row
     auto ParamsRow = WidgetTree->ConstructWidget<UHorizontalBox>();
 
     auto ParamsLabel = WidgetTree->ConstructWidget<UCommonTextBlock>();
@@ -261,7 +253,6 @@ auto UCkCueToolboxWidget::Request_CreateDebugPanel() -> UWidget*
     ParamsSpacer->SetSize(FVector2D(0, 8));
     Container->AddChildToVerticalBox(ParamsSpacer);
 
-    // Execute buttons row
     auto ButtonsRow = WidgetTree->ConstructWidget<UHorizontalBox>();
 
     ExecuteContextButton = WidgetTree->ConstructWidget<UCkCommonButton_Primary>();

@@ -208,9 +208,8 @@ namespace ck
     {
         auto& TimerChrono = InCurrentComp._Chrono;
 
-        // Absolute mode: JumpDuration is the TARGET elapsed; the chrono moves by the direction-dependent delta that
-        // closes the gap. Relative mode (default): the delta IS the requested amount (legacy behavior). This is the
-        // single source of truth for jump math — the save/load HydrationApply drives an absolute jump through here.
+        // The single source of truth for jump math — the save/load HydrationApply drives an absolute jump
+        // through here.
         const auto RequestedSeconds      = InRequest.Get_JumpDuration().Get_Seconds();
         const auto IsAbsolute            = InRequest.Get_JumpMode() == ECk_RelativeAbsolute::Absolute;
         const auto CurrentElapsedSeconds = TimerChrono.Get_TimeElapsed().Get_Seconds();
@@ -225,10 +224,8 @@ namespace ck
                 DeltaToApply = IsAbsolute ? RequestedSeconds - CurrentElapsedSeconds : RequestedSeconds;
                 if (IsAbsolute)
                 {
-                    // Reach the target elapsed directly. Tick early-outs when the chrono is already Done
-                    // (_CurrentValue >= _GoalValue), so a BACKWARD absolute jump from GoalValue would silently
-                    // no-op — Reset to 0 first, then Tick to the (clamped) target so it lands from any prior
-                    // position. The chrono goes 0 -> Target atomically (no processor runs mid-handler).
+                    // Tick early-outs on an already-Done chrono, so a BACKWARD absolute jump from GoalValue would
+                    // silently no-op — Reset first, then Tick to the target. 0 -> Target is atomic here.
                     TimerChrono.Reset();
                     TimerChrono.Tick(FCk_Time{RequestedSeconds});
                 }

@@ -146,9 +146,7 @@ namespace ck_jolt_bake_extraction
         return Result.Get();
     }
 
-    // Combines 0..N leaf shapes into the final body shape:
-    // 0 -> null, 1 identity-local -> the leaf, 1 offset-local -> RotatedTranslated wrap,
-    // 2+ -> StaticCompound (Jolt requires >= 2 children for compounds).
+    // Jolt requires >= 2 children for a compound shape.
     static auto Combine_Leaves(
         TArray<FLeafShape>&& InLeaves,
         const FString& InDebugName)
@@ -235,8 +233,7 @@ namespace ck_jolt_bake_extraction
 
         for (const auto& SphylElem : AggGeom.SphylElems)
         {
-            // UE capsules are Z-aligned; Jolt capsules are Y-aligned. Scale per UE's own rules,
-            // then stand the capsule up with the Y->Z axis correction.
+            // UE capsules are Z-aligned, Jolt capsules Y-aligned — hence the Y->Z axis correction below.
             const auto Radius = SphylElem.GetScaledRadius(AbsScale);
             const auto CylinderHalfLength = SphylElem.GetScaledCylinderLength(AbsScale) * 0.5;
 
@@ -263,8 +260,7 @@ namespace ck_jolt_bake_extraction
             Points.reserve(ConvexElem.VertexData.Num());
             for (const auto& Vertex : ConvexElem.VertexData)
             {
-                // Bake the elem-local transform AND the component scale straight into the points
-                // so non-uniform scale composes correctly with elem rotation.
+                // Baked into the points so non-uniform scale composes correctly with elem rotation.
                 const auto TransformedVertex = ElemTransform.TransformPosition(Vertex) * InScale;
                 Points.push_back(jolt::Conv(TransformedVertex));
             }
@@ -402,9 +398,7 @@ namespace ck::jolt::bake
 
         if (Leaves.IsEmpty())
         {
-            // No simple representation. Chaos still collides against the cooked tri-mesh in this
-            // configuration (when one exists and complex isn't forbidden) — mirror that, loudly
-            // enough to show up in Verbose logs but without an ensure (it's an authored setup).
+            // Chaos still collides against the cooked tri-mesh here — mirror that, Verbose not ensure.
             if (InBodySetup.TriMeshGeometries.Num() > 0 && TraceFlag != CTF_UseSimpleAsComplex)
             {
                 ck::jolt::Verbose(TEXT("BodySetup for [{}] has no simple collision — baking the cooked tri-mesh "
@@ -445,11 +439,9 @@ namespace ck::jolt::bake
             InWorldHeights.Num(), InSampleCount, InSampleCount)
         { return {}; }
 
-        // Jolt heightfields are local Y-up graphs over X/Z: local = (x*sx, height, z*sz).
-        // Rotating +90deg about X maps local +Y to world +Z (up stays up — a heightfield is a
-        // graph surface, so its normals always point local +Y regardless of sample values) and
-        // local +Z to world -Y. Feeding rows FLIPPED (r = N-1-y) plus a -(N-1)*sy local-Z offset
-        // lands sample (x, y) exactly on UE's (x*sx, y*sy, height).
+        // Jolt heightfields are local Y-up graphs over X/Z: local = (x*sx, height, z*sz). Rotating
+        // +90deg about X maps local +Y to world +Z and local +Z to world -Y; rows FLIPPED (r = N-1-y)
+        // plus a -(N-1)*sy local-Z offset land sample (x, y) exactly on UE's (x*sx, y*sy, height).
         const auto SampleCount = InSampleCount;
         auto Samples = TArray<float>{};
         Samples.SetNumUninitialized(SampleCount * SampleCount);
@@ -514,8 +506,7 @@ namespace ck::jolt::bake
         // Dispatch most-derived-first: SplineMesh and ISM both derive UStaticMeshComponent.
         if (const auto* SplineMesh = Cast<USplineMeshComponent>(&InComponent))
         {
-            // Deformed geometry — the BodySetup is per-instance (RecreateCollision cooks the
-            // deformed shape), so it bypasses the shared cache deliberately.
+            // The BodySetup is per-instance (deformed geometry), so this bypasses the shared cache.
             const auto* BodySetup = SplineMesh->GetBodySetup();
             const auto DebugName = ck::Format_UE(TEXT("{} on {}"),
                 GetNameSafe(SplineMesh->GetStaticMesh()), InComponent.GetPathName());
@@ -557,9 +548,7 @@ namespace ck::jolt::bake
 
             if (InstanceTransforms.Num() >= CompoundThreshold)
             {
-                // Dense cluster: ONE StaticCompoundShape per component kills the
-                // thousands-of-broadphase-entries perf trap. Children are expressed relative to
-                // the component's world position/rotation; each child shape carries its own scale.
+                // ONE StaticCompoundShape per dense cluster — per-instance bodies would flood the broadphase.
                 const auto BodyPosition = ComponentTransform.GetLocation();
                 const auto BodyRotation = ComponentTransform.GetRotation();
                 const auto InvBodyRotation = BodyRotation.Inverse();
@@ -587,8 +576,7 @@ namespace ck::jolt::bake
                 }
                 else if (ChildCount == 1)
                 {
-                    // Degenerate compound (all but one instance failed shape creation) — fall
-                    // through to a single plain body.
+                    // Degenerate compound: all but one instance failed shape creation.
                     const auto& InstanceTransform = InstanceTransforms[0];
                     const auto Shape = InShapeCache.GetOrCreate_Shape(*BodySetup,
                         InstanceTransform.GetScale3D(), DebugName);
@@ -597,7 +585,6 @@ namespace ck::jolt::bake
             }
             else
             {
-                // Sparse: one body per instance, all sharing the cached JPH::Ref per unique scale.
                 for (const auto& InstanceTransform : InstanceTransforms)
                 {
                     const auto Shape = InShapeCache.GetOrCreate_Shape(*BodySetup,
@@ -627,11 +614,6 @@ namespace ck::jolt::bake
         {
             const auto* BodySetup = Brush->BrushBodySetup.Get();
 
-            // A brush with no BrushBodySetup has NO physics representation in Chaos either (a
-            // null body setup never creates a physics state), so emitting nothing IS parity —
-            // not an error. Every level's default/builder brush ships in exactly this state
-            // (collision-enabled component, no built body setup), so an ensure here would greet
-            // every PIE session on legitimate content.
             if (NOT ck::IsValid(BodySetup, ck::IsValid_Policy_NullptrOnly{}))
             {
                 ck::jolt::Verbose(TEXT("Static bake skipping BrushComponent [{}] on [{}] — no BrushBodySetup (Chaos creates no physics state for it either)"),
@@ -662,8 +644,7 @@ namespace ck::jolt::bake
         const auto StartingCount = OutBodies.Num();
 
 #if WITH_EDITOR
-        // Landscape heights are only readable in editor context (FLandscapeComponentDataInterface);
-        // cooked builds get landscapes exclusively through cooked Jolt data.
+        // Landscape heights are readable only in editor context — cooked builds get them from cooked data.
         if (const auto* LandscapeProxy = Cast<ALandscapeProxy>(&InActor))
         {
             for (const auto& LandscapeComponent : LandscapeProxy->LandscapeComponents)
@@ -671,11 +652,6 @@ namespace ck::jolt::bake
                 if (ck::Is_NOT_Valid(LandscapeComponent))
                 { continue; }
 
-                // The RENDER component carries no collision config — Chaos collides through the
-                // paired heightfield COLLISION component (BodyInstance stamped from the proxy's
-                // collision profile). A signature read from the render component is
-                // ignore-everything: the body exists (debug draw shows it — it draws unfiltered)
-                // but every channel-filtered query drops it.
                 const auto* CollisionComponent = LandscapeComponent->GetCollisionComponent();
                 CK_ENSURE_IF_NOT(ck::IsValid(CollisionComponent, ck::IsValid_Policy_NullptrOnly{}),
                     TEXT("Landscape component [{}] has no heightfield collision component — skipping (Chaos would have no physics state for it either)"),

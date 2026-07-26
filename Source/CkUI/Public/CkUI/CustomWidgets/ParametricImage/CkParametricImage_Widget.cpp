@@ -17,8 +17,8 @@ auto
 {
     _SourceMaterial = InSourceMaterial;
 
-    // Seed the (non-dynamic) source into the inherited brush so the UMG animator can discover material
-    // tracks and GetDynamicMaterial has a parent to build the per-widget MID from.
+    // The brush must hold the non-dynamic source: it is what the UMG animator discovers material tracks
+    // from, and what GetDynamicMaterial builds the per-widget MID on top of.
     SetBrushResourceObject(_SourceMaterial);
 
     constexpr auto PreserveOverrides = true;
@@ -84,14 +84,13 @@ auto
 
     if (PropertyName == GET_MEMBER_NAME_CHECKED(UCk_ParametricImageWidget_UE, _SourceMaterial))
     {
-        // Material swapped — re-seed the brush and refresh the exposed parameter list from scratch.
         SetBrushResourceObject(_SourceMaterial);
 
         constexpr auto PreserveOverrides = false;
         DiscoverParameters(PreserveOverrides);
     }
 
-    // Apply before our parent so the designer preview reflects the edit immediately.
+    // Before the parent on purpose, so the designer preview reflects the edit immediately.
     SynchronizeProperties();
 
     Super::PostEditChangeProperty(PropertyChangedEvent);
@@ -120,16 +119,15 @@ auto
     if (ck::Is_NOT_Valid(_SourceMaterial))
     { return; }
 
-    // A throwaway instance lets us read each parameter's default through the public FName API without
-    // touching FHashedMaterialParameterInfo (which lives in an engine-private header).
+    // A throwaway instance is the only way to read parameter defaults through the public FName API —
+    // the alternative, FHashedMaterialParameterInfo, lives in an engine-private header.
     auto* Defaults = UMaterialInstanceDynamic::Create(_SourceMaterial, GetTransientPackage());
 
     const auto AppendParameter = [&](FCk_Material_Parameter InDiscovered) -> void
     {
         if (InPreserveOverrides)
         {
-            // Only overridden rows carry their value forward; non-overridden rows refresh to the material
-            // default we just captured (so a changed material default is picked up).
+            // Only overridden rows carry their value forward — the rest refresh to the material default.
             if (const auto* Existing = PreviousParameters.FindByPredicate(
                     [&](const FCk_Material_Parameter& In)
                     {
@@ -208,10 +206,8 @@ auto
     ApplyParametersToDynamicMaterial()
     -> void
 {
-    // GetDynamicMaterial creates the per-widget MID from the brush material on first call and writes it
-    // back into the brush; on later calls (and while the sequencer drives its own MID) it returns the
-    // existing instance. Animated parameters are re-applied by the material system after this runs, so
-    // our non-animated overrides and the animator's tracks layer cleanly.
+    // Animated parameters are re-applied by the material system AFTER this runs, so writing our
+    // non-animated overrides onto the same MID the animator drives layers cleanly rather than fighting.
     auto* DynamicMaterial = GetDynamicMaterial();
     if (ck::Is_NOT_Valid(DynamicMaterial))
     { return; }

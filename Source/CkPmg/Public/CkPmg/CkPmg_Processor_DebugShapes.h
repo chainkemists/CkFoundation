@@ -40,20 +40,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // One-shot wireframe bake. Triangulates each cached local-space line
-    // segment (populated by Setup processors via ck::pmg::Append_DebugLine_World)
-    // as a flat rectangle and appends it as a second mesh section on the
-    // entity's procmesh. The wireframe section shares the filled mesh's
-    // UMaterialInstanceDynamic, so Request_SetColor mutates both at once.
-    //
-    // Gated by FTag_Pmg_DebugShape_LinesNeedBaking — stamped by every
-    // Append_Debug*_World call, removed after bake. The processor never
-    // iterates an entity again until something appends new lines (e.g. a
-    // re-setup) or SetDrawLines toggles wireframes back on.
-    //
-    // Replaces the prior per-tick FProcessor_Pmg_DebugShape_DrawLines, which
-    // re-emitted every line every frame via UE's TransientLineBatchComponent
-    // and tanked perf in scenes with many wireframe shapes.
     class CKPMG_API FProcessor_Pmg_DebugShape_BakeLines : public ck_exp::TProcessor<
             FProcessor_Pmg_DebugShape_BakeLines,
             FCk_Handle_Pmg_DebugShape,
@@ -71,13 +57,8 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        // Note: Current is TReadOnly because this processor only invokes
-        // non-const methods on the underlying UProceduralMeshComponent
-        // (CreateMeshSection / SetMaterial / SetMeshSectionVisible) — those
-        // mutate the mesh-component object but don't write to the fragment
-        // itself. Modeling this as TReadOnly avoids the framework's write-
-        // conflict warning against HandleRequests / CheckDuration, which DO
-        // write the fragment.
+        // Current is TReadOnly deliberately: only the pointed-at mesh component is mutated, never
+        // the fragment — so no write conflict against HandleRequests / CheckDuration, which do.
         static auto
         ForEachEntity(
             TimeType InDeltaT,
@@ -100,8 +81,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_Rendering;
-        // UpdateTransform/CheckDuration/HandleRequests all write FFragment_Pmg_DebugShape_Current;
-        // chain them in declaration order to make the deterministic write-ordering explicit.
+        // Chained so the three writers of FFragment_Pmg_DebugShape_Current run in a fixed order.
         using RunAfter = TDepList<FGroup_Pmg_DebugShape_Setup, FProcessor_Pmg_DebugShape_UpdateTransform>;
         using TProcessor::TProcessor;
 
@@ -141,12 +121,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Drains FFragment_Pmg_DebugShape_Requests and applies each request to the
-    // shape's Common cache + live procmesh side effects (MID color parameter,
-    // visibility from RenderMode, collision toggle). Runs after Setup so the
-    // procmesh exists before we try to mutate it. Removes the requests fragment
-    // when drained (CopyAndRemove), so this processor only spends cycles on
-    // shapes that actually have pending mutations.
     class CKPMG_API FProcessor_Pmg_DebugShape_HandleRequests : public ck_exp::TProcessor<
             FProcessor_Pmg_DebugShape_HandleRequests,
             FCk_Handle_Pmg_DebugShape,

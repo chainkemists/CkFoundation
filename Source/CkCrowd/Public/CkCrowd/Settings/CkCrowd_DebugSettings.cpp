@@ -5,17 +5,8 @@
 #include "HAL/IConsoleManager.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-//
-// Static CVar storage. FAutoConsoleVariableRef registers the CVar with IConsoleManager at TU load
-// time (DLL load → before any CDO is constructed), so the bidirectional sync below has a valid
-// CVar to push to and read from. Default values mirror the UPROPERTY defaults; the
-// PostInitProperties hydration overrides these with the persisted UPROPERTY values once the CDO
-// is up.
-//
-// Each callback writes the new value back into the CDO's UPROPERTY and saves the config so a
-// console-driven change persists for the next session — keeps console + Editor Preferences
-// holding the same value at all times.
-//
+// File-scope CVar storage: FAutoConsoleVariableRef registers with IConsoleManager at TU load, before
+// any CDO exists, so PostInitProperties' hydration always has a CVar to push into.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_crowd_debug_settings_cvars
@@ -39,9 +30,8 @@ namespace ck_crowd_debug_settings_cvars
 
         const auto NewValue = InCVar->GetInt() != 0;
 
-        // Guard against ping-pong: PostInitProperties calls SetWithCurrentPriority on every CVar
-        // for hydration, which fires this callback. If the value matches what's already in the
-        // UPROPERTY, skip the SaveConfig (no actual change to persist).
+        // Ping-pong guard: PostInitProperties hydrates via SetWithCurrentPriority, which fires this
+        // callback; if the UPROPERTY already holds the value there is nothing to persist.
         if (InFieldGetter(Settings) == NewValue)
         { return; }
 
@@ -154,10 +144,8 @@ auto
     if (NOT IsTemplate())
     { return; }
 
-    // Hydrate the static CVars from the persisted UPROPERTY values. Setting via
-    // ECVF_SetByProjectSetting tells UE this came from settings (not console), so a later
-    // console `set` still overrides cleanly. Suppresses the change callback (we'd otherwise
-    // ping-pong: callback writes the same value back to the UPROPERTY, triggers SaveConfig).
+    // Load-time hydration: push the persisted UPROPERTY values into the CVars. SetWithCurrentPriority
+    // keeps the settings-tier priority, so a later console `set` still overrides cleanly.
     if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.Debug.AgentBody")))
     { CVar->SetWithCurrentPriority(_DrawAgentBody    ? 1 : 0); }
     if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.Debug")))
@@ -180,9 +168,8 @@ auto
 {
     Super::PostEditChangeProperty(PropertyChangedEvent);
 
-    // Push the edited value into the matching CVar so processors that read the CVar (and the
-    // debugger checkboxes that resolve through IConsoleManager) reflect the change immediately
-    // without requiring an editor restart.
+    // Push the edited value into the matching CVar so CVar readers (draw processors, the debugger
+    // checkboxes resolving through IConsoleManager) reflect it without an editor restart.
     const auto Name = PropertyChangedEvent.GetPropertyName();
     if (Name == GET_MEMBER_NAME_CHECKED(UCk_Crowd_DebugSettings_UE, _DrawAgentBody))
     {

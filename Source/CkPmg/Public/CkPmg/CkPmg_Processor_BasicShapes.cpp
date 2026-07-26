@@ -15,8 +15,6 @@
 #include <ProceduralMeshComponent.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Shape Generation Functions
-// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_pmg_processor_basic_shapes
 {
@@ -141,17 +139,13 @@ namespace ck_pmg_processor_basic_shapes
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Returns the local-space rotation that maps the cone's default apex axis (+Z) to the
-    // requested orientation. Identity for Up keeps backward-compatibility for existing callers.
     auto GetConeOrientationRotation(ECk_Pmg_ConeOrientation InOrientation) -> FQuat
     {
         switch (InOrientation)
         {
             case ECk_Pmg_ConeOrientation::Up:       return FQuat::Identity;
-            // Pitch=-90 rotates +Z (up) to +X (forward). Same trick gym callers used to do
-            // inline in the SceneNode local rotation; bake it in once here.
+            // Pitch=-90 maps +Z (up) to +X (forward).
             case ECk_Pmg_ConeOrientation::Forward:  return FQuat(FRotator(-90.0f, 0.0f, 0.0f));
-            // Roll=90 rotates +Z to -Y, then yaw flip → +Y. Easier: build directly.
             case ECk_Pmg_ConeOrientation::Right:    return FQuat::FindBetweenNormals(FVector::UpVector, FVector::RightVector);
             case ECk_Pmg_ConeOrientation::Down:     return FQuat::FindBetweenNormals(FVector::UpVector, FVector::DownVector);
             case ECk_Pmg_ConeOrientation::Backward: return FQuat::FindBetweenNormals(FVector::UpVector, FVector::BackwardVector);
@@ -174,9 +168,6 @@ namespace ck_pmg_processor_basic_shapes
         auto Normals = TArray<FVector>{};
         auto UVs = TArray<FVector2D>{};
 
-        // Bake the orientation into vertex / normal positions before they're appended. Identity
-        // for the Up default leaves all callers unchanged; non-Up rotates the local-space mesh
-        // so the apex points along the chosen axis.
         const auto OrientationRot = GetConeOrientationRotation(InOrientation);
 
         const auto ApexLocal = FVector(0, 0, InHeight);
@@ -689,8 +680,6 @@ namespace ck_pmg_processor_basic_shapes
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Common Setup Helper
-// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_pmg_processor_basic_shapes_impl
 {
@@ -776,8 +765,6 @@ namespace ck_pmg_processor_basic_shapes_impl
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Processor Implementations
-// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
@@ -808,9 +795,6 @@ namespace ck
                 const auto Radius = InParams.Get_Radius();
                 const auto ArcSegments = 32;
 
-                // Draw 3 cross-sectional circles (XZ, YZ, and XY planes)
-
-                // XZ plane circle
                 for (auto j = 0; j < ArcSegments; ++j)
                 {
                     const auto Phi1 = 2.0f * PI * j / ArcSegments;
@@ -828,7 +812,6 @@ namespace ck
                     ck::pmg::Append_DebugLine_World(InHandle,P1, P2, LineColor, Thickness);
                 }
 
-                // YZ plane circle
                 for (auto j = 0; j < ArcSegments; ++j)
                 {
                     const auto Phi1 = 2.0f * PI * j / ArcSegments;
@@ -846,7 +829,6 @@ namespace ck
                     ck::pmg::Append_DebugLine_World(InHandle,P1, P2, LineColor, Thickness);
                 }
 
-                // XY plane circle
                 for (auto j = 0; j < ArcSegments; ++j)
                 {
                     const auto Phi1 = 2.0f * PI * j / ArcSegments;
@@ -918,8 +900,7 @@ namespace ck
                 const auto Center = Transform.Get_Transform().GetLocation();
                 const auto Rot = Transform.Get_Transform().GetRotation();
                 const auto AxisRot = UCk_Utils_Vector3_UE::Get_PlaneAxisRotation(InParams.Get_Axis());
-                // OrientationRot rotates the cone's local-space mesh first; the wireframe must
-                // match by composing it before AxisRot and the world rotation.
+                // Composed innermost to match the order the mesh generator bakes it in.
                 const auto OrientationRot = ck_pmg_processor_basic_shapes::GetConeOrientationRotation(InParams.Get_Orientation());
                 const auto CombinedRot = Rot * AxisRot * OrientationRot;
                 auto LineColor = InCommon.Get_Color();
@@ -930,7 +911,6 @@ namespace ck
                 const auto Segments = InParams.Get_Segments();
                 const auto Apex = Center + CombinedRot.RotateVector(FVector(0, 0, Height));
 
-                // Draw base circle with proper rotation
                 for (auto i = 0; i < Segments; ++i)
                 {
                     const auto Angle1 = 2.0f * PI * i / Segments;
@@ -948,7 +928,6 @@ namespace ck
                     ck::pmg::Append_DebugLine_World(InHandle,P1, P2, LineColor, Thickness);
                 }
 
-                // Draw lines from base to apex
                 for (auto i = 0; i < Segments; i += FMath::Max(1, Segments / 4))
                 {
                     const auto Angle = 2.0f * PI * i / Segments;
@@ -991,13 +970,11 @@ namespace ck
                 const auto TopCenter = Center + CombinedRot.RotateVector(FVector(0, 0, HalfHeight));
                 const auto BottomCenter = Center + CombinedRot.RotateVector(FVector(0, 0, -HalfHeight));
 
-                // Draw top and bottom circles with proper rotation
                 for (auto i = 0; i < Segments; ++i)
                 {
                     const auto Angle1 = 2.0f * PI * i / Segments;
                     const auto Angle2 = 2.0f * PI * (i + 1) / Segments;
 
-                    // Top circle
                     const auto TopP1 = Center + CombinedRot.RotateVector(FVector(
                         Radius * FMath::Cos(Angle1),
                         Radius * FMath::Sin(Angle1),
@@ -1008,7 +985,6 @@ namespace ck
                         HalfHeight));
                     ck::pmg::Append_DebugLine_World(InHandle,TopP1, TopP2, LineColor, Thickness);
 
-                    // Bottom circle
                     const auto BottomP1 = Center + CombinedRot.RotateVector(FVector(
                         Radius * FMath::Cos(Angle1),
                         Radius * FMath::Sin(Angle1),
@@ -1020,7 +996,6 @@ namespace ck
                     ck::pmg::Append_DebugLine_World(InHandle,BottomP1, BottomP2, LineColor, Thickness);
                 }
 
-                // Draw vertical lines
                 for (auto i = 0; i < Segments; i += FMath::Max(1, Segments / 4))
                 {
                     const auto Angle = 2.0f * PI * i / Segments;
@@ -1139,7 +1114,6 @@ namespace ck
                 const auto ArcSegments = 16;
                 const auto Segments = InParams.Get_Segments();
 
-                // XZ plane half-circle (front-back)
                 for (auto j = 0; j < ArcSegments; ++j)
                 {
                     const auto Phi1 = PI * j / ArcSegments;
@@ -1157,7 +1131,6 @@ namespace ck
                     ck::pmg::Append_DebugLine_World(InHandle,P1, P2, LineColor, Thickness);
                 }
 
-                // YZ plane half-circle (left-right)
                 for (auto j = 0; j < ArcSegments; ++j)
                 {
                     const auto Phi1 = PI * j / ArcSegments;
@@ -1175,7 +1148,6 @@ namespace ck
                     ck::pmg::Append_DebugLine_World(InHandle,P1, P2, LineColor, Thickness);
                 }
 
-                // XY plane full circle (base)
                 for (auto i = 0; i < Segments; ++i)
                 {
                     const auto Angle1 = 2.0f * PI * i / Segments;

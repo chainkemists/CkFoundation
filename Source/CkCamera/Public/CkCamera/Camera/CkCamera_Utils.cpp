@@ -28,8 +28,6 @@ auto
         const FCk_Fragment_Camera_ParamsData& InParams)
     -> FCk_Handle_Camera
 {
-    // The output component is REQUIRED — the whole pull-based pipeline hinges on UCk_CameraComponent::GetCameraView,
-    // so fail loudly (rather than silently building a director that drives nothing) if it's missing.
     CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_OutputComponent()),
         TEXT("Camera Add on entity [{}] requires a valid output UCk_CameraComponent supplied in "
              "FCk_Fragment_Camera_ParamsData — none was provided."), InHandle)
@@ -42,14 +40,9 @@ auto
 
     auto Director = Cast(InHandle);
 
-    // Every profile leaf becomes a (non-replicated) tuner attribute on the director; the bool/curve leaves are
-    // written onto FFragment_Camera_Current. Layers acquire modifiers on these attributes; the attribute system IS
-    // the composition (no separate profile entity).
     DoMaterializeAttributes(Director, InParams.Get_Profile());
 
-    // The persistent base layer. It acquires no modifiers (the resting state IS the tuner base values just
-    // materialized); it exists as the always-on, never-evicted floor so feature layers blend back to the base, and
-    // as the dominant fallback when no real layer is active. Pinned at full blend, lowest priority.
+    // The persistent base layer acquires no modifiers — the resting state IS the tuner base values just materialized.
     if (auto DefaultLayer = UCk_Utils_CameraLayer_UE::Create(Director, UCk_CameraLayer_Default_EntityScript::StaticClass());
         ck::IsValid(DefaultLayer))
     {
@@ -62,13 +55,10 @@ auto
         Blend.Set_TargetAlpha(1.0f);
     }
 
-    // Wire the (required, already-validated) output component to this director. UCk_CameraComponent::GetCameraView
-    // then pulls the resolved view info each time the default PlayerCameraManager asks for it.
     InParams.Get_OutputComponent()->Set_DirectorEntity(Director);
 
-    // Seed the resolved view immediately so the FIRST GetCameraView (which can happen before FProcessor_Camera_UpdatePOV
-    // ticks) returns the real anchor-relative POV instead of a default (origin) FMinimalViewInfo — otherwise the camera
-    // snaps from the world origin / the default PCM view on the first frame after Add.
+    // The FIRST GetCameraView can land before FProcessor_Camera_UpdatePOV ever ticks; without this seed it would
+    // return a default (origin) FMinimalViewInfo and the camera would snap on the first frame after Add.
     if (Director.Has<ck::FFragment_Transform>())
     {
         auto& Current = Director.Get<ck::FFragment_Camera_Current>();
@@ -115,7 +105,6 @@ auto
     ck::FUtils_RecordOfCameraLayers::ForEach_ValidEntry(InCamera,
     [&](FCk_Handle_CameraLayer InLayer)
     {
-        // The persistent base layer is an internal detail — count only gameplay-pushed layers.
         if (InLayer.Get<ck::FFragment_CameraLayer_Params>().Get_IsDefault())
         { return; }
 
@@ -223,8 +212,7 @@ auto
     InWorldRotation.Roll = 0.0f;
 
     auto& Current = InCamera.Get<ck::FFragment_Camera_Current>();
-    // Seed the persistent boom rotation directly (UpdatePOV reads it as the starting NewRotation next tick). Mark the
-    // POV state initialized so the seed-from-anchor branch in FPov::Run can't clobber it on a first frame.
+    // _Initialized so FPov::Run's seed-from-anchor branch cannot clobber this seed on a first frame.
     Current._PovState._BoomArmRotation = InWorldRotation;
     Current._PovState._Initialized     = true;
 
@@ -333,15 +321,7 @@ namespace camera_materialize_detail
     static constexpr ECk_MinMaxCurrent Min     = ECk_MinMaxCurrent::Min;
     static constexpr ECk_MinMaxCurrent Max     = ECk_MinMaxCurrent::Max;
 
-    // ADOPT-OR-ADD. The tuner attributes are generic CkAttribute children on the owner — snapshotable, connected
-    // through the owner's ROUNDTRIP RecordOf*Attributes — so after a CkSnapshot restore they come back on the
-    // restored entity, and a fresh Add would collide with the restored record entry (DisallowDuplicateNames
-    // ensure, one per Camera.* label). Adopt the restored child instead, re-seating the PROFILE's base/bounds via
-    // Request_Override: the profile is the authored source of truth (a designer retune must beat a stale save),
-    // and any runtime deviation (e.g. the orientation-yaw fences) is re-established by whoever owns it after
-    // possession. On a fresh boot TryGet misses (or the owner has no record yet) and the Add path runs as before.
-    // Stale attribute MODIFIERS from layers active at save time do NOT reconnect — the record-of-modifiers is
-    // transient modifier record (CkAttribute_Fragment.h) — so an adopted attribute's final value is its base.
+    // Every AddX below is adopt-or-add; rationale in CkCamera/CLAUDE.md.
 
     static auto AddFloat(FCk_Handle& InOwner, const FGameplayTag& InTag, float InBase) -> FCk_Handle_FloatAttribute
     {

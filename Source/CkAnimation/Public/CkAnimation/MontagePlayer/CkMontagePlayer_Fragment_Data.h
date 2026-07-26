@@ -52,11 +52,9 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_MontagePlayer_StateKind);
 UENUM(BlueprintType)
 enum class ECk_MontagePlayer_FinishReason : uint8
 {
-    // Runtime termination
     Completed,
     Interrupted,
 
-    // Pre-flight failures (montage never played)
     Failed_InvalidMontage,
     Failed_InvalidMeshComponent,
     Failed_InvalidPlayRate,

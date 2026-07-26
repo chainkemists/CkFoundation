@@ -10,11 +10,8 @@
 
 namespace ck
 {
-    // One shared CharacterContactListener owned by FJoltWorld; every CharacterVirtual is pointed at it via
-    // SetListener during setup. On each character-vs-body contact it fills the push behaviour from that
-    // character's authored PushPolicy, resolved back through the FJoltWorld character registry (the listener
-    // callback provides inCharacter; the registry is stable during the step — the game thread never mutates
-    // it mid-step per FJoltWorld's threading contract).
+    // One shared listener owned by FJoltWorld; every CharacterVirtual is pointed at it via SetListener. Reading
+    // the character registry from the callback is safe because the game thread never mutates it mid-step.
     class CKJOLT_API CkJoltCharacterContactListener final : public JPH::CharacterContactListener
     {
     public:
@@ -33,9 +30,8 @@ namespace ck
                 JPH::CharacterContactSettings& ioSettings)
             -> void override
         {
-            // PushPolicy -> {mCanPushCharacter, mCanReceiveImpulses}. mCanPushCharacter = the body may push the
-            // character; mCanReceiveImpulses = the character may impulse (push) the body. Absent registry (torn
-            // down / never registered) falls back to Jolt's default {true, true} — a correct silent path.
+            // mCanPushCharacter = the body may push the character; mCanReceiveImpulses = the character may push
+            // the body. An absent world falls back to Jolt's default {true, true} — a correct silent path.
             const auto PushPolicy = _JoltWorld != nullptr
                 ? _JoltWorld->Get_CharacterPushPolicy(inCharacter)
                 : ECk_JoltCharacter_PushPolicy::PushAndBePushed;

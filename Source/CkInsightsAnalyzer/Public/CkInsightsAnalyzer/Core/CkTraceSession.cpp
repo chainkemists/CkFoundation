@@ -55,7 +55,6 @@ auto
         return false;
     }
 
-    // Log basic info (need read scope for provider access)
     {
         TraceServices::FAnalysisSessionReadScope ReadScope(*_Session.Get());
         const auto FrameCount = GetFrameProvider()
@@ -207,8 +206,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Provider Access
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_TraceSession::
@@ -255,8 +252,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Convenience Accessors
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_TraceSession::
@@ -284,7 +279,6 @@ auto
         return static_cast<uint32>(INDEX_NONE);
     }
 
-    // Strategy 1: Find by name "GameThread"
     uint32 FoundId = static_cast<uint32>(INDEX_NONE);
     ThreadProvider->EnumerateThreads(
         [&FoundId](const TraceServices::FThreadInfo& Info)
@@ -302,7 +296,6 @@ auto
         return _CachedGameThreadId;
     }
 
-    // Strategy 2: Fallback — thread with most events
     ck::insights_analyzer::Warning(
         TEXT("GameThread not found by name, falling back to most-events heuristic"));
 

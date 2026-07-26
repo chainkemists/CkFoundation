@@ -49,8 +49,6 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_JoltBody_EndPlay);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Benchmark stats (Phase 5): the per-frame cost of writing simulated poses back onto entity Transforms
-// (parallel) and of pushing ECS-driven kinematic bodies into the Jolt world.
 DECLARE_CYCLE_STAT(TEXT("JoltBody_WritebackInterpolated"), STAT_CkJolt_Writeback, STATGROUP_CkJolt);
 DECLARE_CYCLE_STAT(TEXT("JoltBody_KinematicPush"), STAT_CkJolt_KinematicPush, STATGROUP_CkJolt);
 
@@ -58,8 +56,7 @@ DECLARE_CYCLE_STAT(TEXT("JoltBody_KinematicPush"), STAT_CkJolt_KinematicPush, ST
 
 namespace ck_jolt_body_processor
 {
-    // Resolves the registry's Jolt-world context. A world with no Jolt subsystem never publishes it — an
-    // absent/null context is legal, so callers return silently (correct silent path, not an error).
+    // A world with no Jolt subsystem never publishes the context — absent/null is legal, never an error.
     auto
         TryResolve_JoltWorld(
             const FCk_Handle& InTransientEntity)
@@ -84,8 +81,6 @@ namespace ck_jolt_body_processor
         return *Ctx;
     }
 
-    // Walks a shape through its decorator wrappers (RotatedTranslated / Scaled / OffsetCenterOfMass) to the
-    // leaf convex/mesh shape.
     auto
         Get_LeafShape(
             const JPH::Shape* InShape)
@@ -236,9 +231,8 @@ namespace ck
 
         const auto Layer = _LayerTable->Get_OrRegisterLayer(*MaybeSignature);
 
-        // Table exhaustion already fired Get_OrRegisterLayer's own ensure — an invalid layer must not reach
-        // BodyCreationSettings (it would silently create a body that collides with nothing). Mirror the
-        // StaticWorld subsystem's guard and skip the entity.
+        // Table exhaustion already fired Get_OrRegisterLayer's own ensure; an invalid layer reaching
+        // BodyCreationSettings would silently create a body that collides with nothing.
         if (Layer == JPH::cObjectLayerInvalid)
         { return; }
 
@@ -264,9 +258,8 @@ namespace ck
             }
             case ECk_JoltBody_MassSource::Explicit:
             {
-                // The UPROPERTY ClampMin only guards the editor UI — C++/AS callers can set 0. A zero/negative
-                // mass override reaches Jolt's SetMassProperties (JPH_ASSERT in debug, inf inverse-mass -> NaN
-                // poses in shipping). Fall back to shape-calculated mass, loudly.
+                // ClampMin only guards the editor UI — C++/AS callers can set 0, and a non-positive mass reaches
+                // Jolt's SetMassProperties (JPH_ASSERT in debug, inf inverse-mass -> NaN poses in shipping).
                 CK_ENSURE_IF_NOT(InParams.Get_MassKg() > 0.0f,
                     TEXT("JoltBody on Entity [{}] has MassSource Explicit with non-positive MassKg [{}] — "
                          "falling back to shape-calculated mass."), InHandle, InParams.Get_MassKg())
@@ -330,8 +323,8 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(Body, ck::IsValid_Policy_NullptrOnly{}),
             TEXT("JoltBody on Entity [{}]: CreateBody FAILED (max body count reached?)."), InHandle)
         {
-            // Transient failure (slots may free up as other bodies die) — unlike the ensure-skips above,
-            // re-arm setup so the entity retries instead of being left half-composed forever.
+            // Transient failure (slots free up as other bodies die) — re-arm setup so the entity retries
+            // instead of being left half-composed forever.
             InHandle.Add<MarkedDirtyBy>();
             return;
         }
@@ -366,7 +359,7 @@ namespace ck
         if (InPending.IsEmpty())
         { return; }
 
-        // Deterministic batch order — sort by entity id (both split batches).
+        // Deterministic batch order across runs.
         InPending.Sort([](const FPendingBody& InA, const FPendingBody& InB)
         {
             return InA._Entity.Get_ID() < InB._Entity.Get_ID();
@@ -529,7 +522,6 @@ namespace ck
 
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
-        // AddTorque defaults to EActivation::Activate.
         BodyInterface.AddTorque(InCurrent.Get_BodyId(), ck::jolt::Conv(InRequest.Get_Torque()));
     }
 
@@ -658,8 +650,7 @@ namespace ck
         const auto NewLocation = InRequest.Get_Location();
         const auto NewRotation = InRequest.Get_Rotation().Quaternion();
 
-        // Snap the Jolt body to the target pose and re-activate it (a settled body must wake, else the
-        // teleport would be silently dropped on a sleeping body).
+        // Activate: a settled body must wake, else the teleport is silently dropped on a sleeping body.
         BodyInterface.SetPositionAndRotation(
             InCurrent.Get_BodyId(),
             ck::jolt::Conv(NewLocation),
@@ -679,9 +670,6 @@ namespace ck
             }
         }
 
-        // The entity teleports with its body: direct-write the ECS transform (preserving scale) so the pose
-        // is consistent this frame, and snap the step-pose prev==curr==target so the interpolator does not
-        // blend a path across the discontinuity.
         auto& TransformFragment = InHandle.Get<ck::FFragment_Transform>();
         auto& PrevTransformFragment = InHandle.Get<ck::FFragment_Transform_Previous>();
 
@@ -704,10 +692,8 @@ namespace ck
                 .Set_CurrLocation(NewLocation)
                 .Set_CurrRotation(NewRotation);
 
-        // The fragment snap alone is not enough: the FJoltWorld pose buffer still holds the PRE-teleport
-        // Curr, so the next capture would roll it into Prev and the next apply would overwrite the snap —
-        // sweeping the entity across the map for a frame (and in async mode first REVERTING the teleport).
-        // Reap the entry; the next capture re-seeds it prev==curr at the target, like a freshly-added body.
+        // The step-pose snap alone is not enough: the FJoltWorld pose buffer still holds the PRE-teleport Curr,
+        // which the next capture+apply would sweep the entity back across. Reaping re-seeds it prev==curr.
         if (_JoltWorld != nullptr)
         {
             _JoltWorld->Remove_PoseBufferEntry(InCurrent.Get_BodyId().GetIndexAndSequenceNumber());
@@ -743,8 +729,7 @@ namespace ck
 
         for (const auto& Event : Events)
         {
-            // Body UserData is a raw (versioned) entity id — a snapshot load can leave a queued event
-            // pointing at a dead id, so do a non-ensuring liveness check first (mirrors DoApplyPoseBuffer).
+            // A snapshot load can leave a queued event pointing at a dead entity id — liveness check, no ensure.
             const auto Entity = FCk_Entity{FCk_Entity::IdType{static_cast<FCk_Entity::IdType>(Event.UserData)}};
             if (NOT RegView.IsValid(Entity))
             { continue; }
@@ -753,8 +738,7 @@ namespace ck
             if (ck::Is_NOT_Valid(Handle) || NOT Handle.Has<ck::FFragment_JoltBody_Current>())
             { continue; }
 
-            // An entity may own MORE Jolt bodies than its JoltBody (e.g. a Probe) — all share the entity id
-            // as UserData. Only the JoltBody's own body may drive the Sleeping tag.
+            // An entity may own more Jolt bodies than its JoltBody (e.g. a Probe), all sharing the entity id.
             if (Handle.Get<ck::FFragment_JoltBody_Current>().Get_BodyId().GetIndexAndSequenceNumber() != Event.BodyIndexAndSeq)
             { continue; }
 
@@ -765,7 +749,7 @@ namespace ck
                     Handle.AddOrGet<ck::FTag_JoltBody_Sleeping>();
 
                     // A sleeping body produces no new step poses — collapse prev onto curr so the interpolator
-                    // holds it steady instead of blending a stale prev toward curr for a frame.
+                    // holds it steady instead of blending a stale prev for a frame.
                     auto& StepPose = Handle.Get<ck::FFragment_JoltBody_StepPose>();
                     StepPose.Set_PrevLocation(StepPose.Get_CurrLocation())
                             .Set_PrevRotation(StepPose.Get_CurrRotation());
@@ -795,9 +779,8 @@ namespace ck
         if (JoltWorld == nullptr)
         { return; }
 
-        // Zero-step frame: no sim time to move a kinematic body across. The body stays put this frame; the
-        // move IS delivered on the next stepping frame because the push runs for every added kinematic body
-        // each stepping frame (not gated on a transform-dirty tag).
+        // Zero-step frame: no sim time to move a kinematic body across. The move is not lost — the push runs
+        // for every added kinematic body on each stepping frame, not gated on a transform-dirty tag.
         if (JoltWorld->Get_PendingSimTime() <= 0.0f)
         { return; }
 
@@ -857,8 +840,7 @@ namespace ck
 
         TParallelProcessor::DoTick(InDeltaT);
 
-        // Single-threaded post-pass (mirrors FProcessor_Transform_Cleanup): the dirty tag is consumed here so
-        // the writeback runs once per refreshed step pose, not every frame.
+        // Single-threaded post-pass: consuming the dirty tag here runs the writeback once per refreshed step pose.
         _TransientEntity.Clear<ck::FTag_JoltBody_TransformDirty>();
     }
 
@@ -911,10 +893,9 @@ namespace ck
             FFragment_JoltBody_Current& InCurrent) const
         -> void
     {
-        // ASYNC GUARD: FGroup_EndPlay runs later in the SAME tick that kicked this frame's async step —
-        // Remove_PoseBufferEntry below mutates the pose buffer the task-graph capture loop is writing, and
-        // RemoveBody/DestroyBody mutate the body the in-flight Update may touch. Wait the step out first;
-        // self-guarded on future validity, so this is free in sync mode and after the first dying entity.
+        // ASYNC GUARD: FGroup_EndPlay runs later in the SAME tick that kicked this frame's async step, and the
+        // teardown below mutates the pose buffer + bodies the task-graph loop is still touching. Self-guarded
+        // on future validity, so this is free in sync mode and after the first dying entity.
         if (_JoltWorld != nullptr && _JoltWorld->Get_AsyncFuture().IsValid())
         { _JoltWorld->WaitForAsyncStep(); }
 
@@ -924,8 +905,8 @@ namespace ck
 
         const auto& BodyId = InCurrent.Get_BodyId();
 
-        // Setup never created a body (an ensure-skip path, or a world with no Jolt subsystem) — nothing
-        // Jolt-side to free, and demanding a PhysicsSystem here would turn that legal state into an ensure.
+        // Setup never created a body (ensure-skip path, or no Jolt subsystem): nothing Jolt-side to free, and
+        // demanding a PhysicsSystem here would turn that legal state into an ensure.
         if (BodyId.IsInvalid())
         { return; }
 
@@ -937,9 +918,8 @@ namespace ck
 
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
-        // Always free the body SLOT, not just its broadphase membership (mirrors the Probe leak-fix):
-        // RemoveBody only detaches from the broadphase; DestroyBody frees the slot and must run for every
-        // body, whether it was added (awake/asleep) or never added.
+        // RemoveBody only detaches from the broadphase; DestroyBody frees the SLOT and must run for every body,
+        // whether it was ever added or not.
         if (BodyInterface.IsAdded(BodyId))
         {
             BodyInterface.RemoveBody(BodyId);

@@ -125,25 +125,9 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_RenderTarget);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Wire/storage form of a single draw operation. Requests normalize into this flat struct so a
-// batch replicates as one homogeneous array (no per-cmd FInstancedStruct overhead). Field usage
-// per _Type:
-//
-//   Line      — _PositionA (start), _PositionB (end), _Thickness, _Color
-//   Texture   — _Asset (UTexture), _PositionA, _Size, _CoordinatePosition/_CoordinateSize (UVs),
-//               _Color, _Rotation
-//   Material  — _Asset (UMaterialInterface), _PositionA, _Size, _Rotation
-//   Text      — _Asset (UFont, optional), _Text, _PositionA, _Size (scale), _Color
-//   Box       — _PositionA, _Size, _Thickness, _Color
-//   Clear     — _Color
-//   Border    — _Asset (border UTexture), _ExtraAssets[0..4] (background, left, right, top,
-//               bottom UTextures), _PositionA, _Size, _CoordinatePosition/_CoordinateSize,
-//               _Color, _Rotation
-//   Triangles — _Asset (UTexture), _Triangles
-//   Polygon   — _Asset (UTexture, optional), _PositionA, _Size (radius), _Sides, _Color
-//
-// _Asset replicates as an asset reference — the object must exist on clients. Runtime-created
-// textures are unsupported in instructions (ensured against when the batch is published).
+// Wire/storage form of a single draw operation, flat so a batch replicates as one homogeneous
+// array. _Asset replicates as an asset reference, so the object must exist on clients —
+// runtime-created textures are unsupported. Per-_Type field usage: CkRenderTarget/Claude.md.
 USTRUCT(BlueprintType)
 struct CKRENDERTARGET_API FCk_RenderTarget_DrawCmd
 {
@@ -153,12 +137,6 @@ public:
     CK_GENERATED_BODY(FCk_RenderTarget_DrawCmd);
 
 private:
-    // All fields are SaveGame: CkSnapshot persists the published instruction ring via
-    // FFragment_RenderTarget_AuthoredLog, which recurses into each batch's _Cmds. Object refs
-    // (_Asset / _ExtraAssets) round-trip as paths (FObjectAndNameAsStringProxyArchive). NOTE:
-    // FCanvasUVTri (engine struct) has no SaveGame members, so _Triangles' vertex data does NOT
-    // round-trip through a snapshot — Triangles cmds are a documented restore gap (v1 persists the
-    // instruction stream for line/box/texture/material/text/border/polygon/clear).
     UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true))
     ECk_RenderTarget_DrawCmdType _Type = ECk_RenderTarget_DrawCmdType::Line;

@@ -20,21 +20,16 @@ DECLARE_STATS_GROUP(TEXT("Tick"), STATGROUP_CkProcessors, STATCAT_Advanced);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Selects how TProcessorBase::Tick treats accumulated time spanning multiple tick-rate intervals in one
-// frame (a hitch, or a processor woken after a long empty-view skip). Declared as an opt-in trait on the
-// derived processor:
-//
+// How TProcessorBase::Tick treats accumulated time spanning multiple tick-rate intervals in one frame (a
+// hitch, or a wake after a long empty-view skip). Opt in on the derived processor with
 //     static constexpr auto TickCatchUpPolicy = ECk_ProcessorTickCatchUp::SampleLatestOnly;
-//
-// Absent (every shipped processor) => ReplayMissedTicks, the original catch-up loop, unchanged.
 enum class ECk_ProcessorTickCatchUp : uint8
 {
     // Replay DoTick once per elapsed whole interval — fixed-timestep integration semantics.
     ReplayMissedTicks,
 
-    // Fire DoTick ONCE with the summed elapsed whole intervals; the phase remainder is preserved and no
-    // time is lost. For sampling (non-integrating) processors — cadence buckets — where re-sampling the
-    // same state N times after a hitch is pure waste.
+    // Fire DoTick ONCE with the summed elapsed intervals (phase remainder preserved, no time lost). For
+    // sampling — not integrating — processors, where re-sampling the same state N times is pure waste.
     SampleLatestOnly,
 };
 
@@ -44,11 +39,10 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Accumulates visited-entity counts across a composite processor's ORDERED sub-pumps (call Add
-    // in pipeline order — folding the sub Pump() calls into one argument pack would lose the
-    // required evaluation order), propagating the -1 "unknown" sentinel (see FTickable_Concept::
-    // Pump): once any sub-count is unknown the total stays unknown, so the scheduler keeps treating
-    // the composite's pump as having done work.
+    // Accumulates visited-entity counts across a composite processor's ORDERED sub-pumps — call Add in
+    // pipeline order, since folding the sub Pump() calls into one argument pack would lose that order.
+    // Propagates the -1 "unknown" sentinel (FTickable_Concept::Pump): once unknown, the total stays
+    // unknown, so the scheduler keeps treating the composite's pump as having done work.
     struct FPumpVisitedCountAccumulator
     {
         CK_GENERATED_BODY(FPumpVisitedCountAccumulator);
@@ -68,17 +62,12 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // FCk_Time factories (ck::time::Hz / ck::time::Seconds) live in CkCore/Time/CkTime.h. A processor with a
-    // per-type FIXED cadence declares ONE line and the base derives everything else (throttle, ZeroSecond fast
-    // path, catch-up):
-    //
-    //     static constexpr FCk_Time TickRate = ck::time::Hz(4);          // 4 evaluations per second
-    //     static constexpr FCk_Time TickRate = ck::time::Seconds(0.25);  // the same rate, interval spelling
-    //
-    // Misuse is a compile error: a zero/negative rate fails in the consteval factory; a non-FCk_Time or a
-    // non-static / non-constexpr TickRate fails a static_assert in Get_TickRate. Known residual: a processor
-    // inheriting TWO bases that both declare TickRate makes lookup ambiguous, which the requires-probe reads
-    // as "absent" — it degrades to every-tick instead of erroring. Don't stack cadence mixins.
+    // A processor with a per-type FIXED cadence declares ONE line and the base derives the rest (throttle,
+    // ZeroSecond fast path, catch-up):
+    //     static constexpr FCk_Time TickRate = ck::time::Hz(4);   // factories in CkCore/Time/CkTime.h
+    // Misuse is a compile error (see the static_asserts in Get_TickRate). Known residual: two bases both
+    // declaring TickRate makes lookup ambiguous, which reads as "absent" and silently degrades to every
+    // tick — don't stack cadence mixins.
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -109,9 +98,7 @@ namespace ck
         auto
         Pump() -> int32;
 
-        // The EFFECTIVE tick rate: the compile-time FCk_Time TickRate trait when the derived declares one
-        // (ck::time::Hz / ck::time::Seconds), else ZeroSecond (every tick). Cadence is fully compile-time —
-        // there is no runtime setter.
+        // The derived's compile-time TickRate trait, else ZeroSecond (every tick). There is no runtime setter.
         auto
         Get_TickRate() const -> TimeType;
 
@@ -130,10 +117,8 @@ namespace ck
     protected:
         HandleType _TransientEntity;
 
-        // Entities visited by the most recent DoTick. The standard DoTick bodies (TProcessor,
-        // ck_exp::TProcessor, TParallelProcessor) write the exact count; a custom DoTick override
-        // that doesn't report leaves the -1 sentinel Pump() sets, which the scheduler treats as
-        // "did work" (see FTickable_Concept::Pump).
+        // Entities visited by the most recent DoTick. A custom DoTick override that doesn't report leaves
+        // the -1 sentinel Pump() sets, which the scheduler treats as "did work" (FTickable_Concept::Pump).
         int32 _LastVisitedCount = -1;
 
     private:
@@ -170,10 +155,8 @@ namespace ck
         using DerivedType = T_DerivedProcessor;
         using FragmentList = entt::type_list<T_Fragments...>;
 
-        // The class that declares the template-generated DoTick. The scheduler's trait harvest
-        // compares &Derived::DoTick against this type to detect a custom (shadowing) DoTick —
-        // only unshadowed processors are eligible for the main pass' empty-view skip (see
-        // ECk_ProcessorEmptyViewPolicy in CkProcessorDescriptor.h).
+        // The scheduler's trait harvest compares &Derived::DoTick against this type to detect a custom
+        // (shadowing) DoTick — only unshadowed processors are eligible for the empty-view skip.
         using GeneratedDoTickHost = TProcessor;
 
     public:
@@ -249,8 +232,7 @@ namespace ck
                 "TickRate must be an FCk_Time from ck::time::Hz(N) / ck::time::Seconds(S) — a raw number "
                 "doesn't self-document its unit. Spell it: static constexpr FCk_Time TickRate = ck::time::Hz(N);");
 
-            // A non-constexpr TickRate fails to initialize this constexpr — the compiler names the non-constant
-            // read. The consteval factory already rejected a non-positive rate at the declaration site.
+            // A non-constexpr TickRate fails to initialize this constexpr, and the compiler names the read.
             constexpr FCk_Time TraitValue = DerivedType::TickRate;
             return TraitValue;
         }
@@ -265,10 +247,9 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
-        // Registry-teardown window (snapshot load level transition): once the transient entity is destroyed,
-        // no handle can be built for ANY iterated entity (MakeHandle ensures per entity, DoTick bodies that
-        // walk _TransientEntity ensure too) — skip the tick entirely, matching FProcessor_ScriptHosted::Tick.
-        // Destruction-drain frames are unaffected: the transient is alive until the drain completes.
+        // Registry-teardown window (snapshot load level transition): once the transient entity is destroyed no
+        // handle can be built for ANY iterated entity, so skip the tick entirely. Destruction-drain frames are
+        // unaffected — the transient outlives the drain.
         if (ck::Is_NOT_Valid(this->_TransientEntity, ck::IsValid_Policy_IncludePendingKill{}))
         { return; }
 
@@ -318,8 +299,7 @@ namespace ck
         Pump()
         -> int32
     {
-        // Registry-teardown window: no handles can be built, DoTick is skipped entirely — report
-        // "no work" so the scheduler doesn't schedule further pump passes on a dying registry.
+        // Registry-teardown window: report "no work" so the scheduler stops pumping a dying registry.
         if (ck::Is_NOT_Valid(this->_TransientEntity, ck::IsValid_Policy_IncludePendingKill{}))
         { return 0; }
 
@@ -401,10 +381,6 @@ namespace ck_exp
         CK_GENERATED_BODY(TProcessor<T_DerivedProcessor COMMA T_HandleType COMMA T_Fragments...>);
 
         // ----- Per-fragment validation -----
-        // A fragment is acceptable iff it's an excluded set, an empty tag, an access-wrapped
-        // fragment, or a TIgnoreInEditor wrapping one of {empty tag, TExclude<...>}. We
-        // forbid TIgnoreInEditor around non-empty fragments because the ForEachEntity
-        // signature can't conditionally drop a parameter based on the visited entity's world.
         template <typename T_Fragment>
         struct TIsValidFragment
         {
@@ -436,16 +412,13 @@ namespace ck_exp
         using DerivedType = T_DerivedProcessor;
         using FragmentList = entt::type_list<T_Fragments...>;
 
-        // The class that declares the template-generated DoTick. The scheduler's trait harvest
-        // compares &Derived::DoTick against this type to detect a custom (shadowing) DoTick —
-        // only unshadowed processors are eligible for the main pass' empty-view skip (see
-        // ECk_ProcessorEmptyViewPolicy in CkProcessorDescriptor.h).
+        // The scheduler's trait harvest compares &Derived::DoTick against this type to detect a custom
+        // (shadowing) DoTick — only unshadowed processors are eligible for the empty-view skip.
         using GeneratedDoTickHost = TProcessor;
 
         // ----- TIgnoreInEditor dual-view fragment lists -----
-        // Editor variant: drop TIgnoreInEditor<...> entries entirely (criteria not applied for
-        // editor-world entities), then append FTag_EditorOnlyEntity as a required tag so the
-        // view scopes to editor entities only.
+        // Editor variant: drop TIgnoreInEditor<...> entries entirely, then require FTag_EditorOnlyEntity
+        // so the view scopes to editor entities only.
         using EditorVariantFragments = entt::type_list_cat_t<
             std::conditional_t<
                 ck::detail::TIsIgnoreInEditor<T_Fragments>::value,
@@ -455,9 +428,8 @@ namespace ck_exp
             entt::type_list<ck::FTag_EditorOnlyEntity>
         >;
 
-        // Runtime variant: unwrap TIgnoreInEditor<...> to its inner (criteria applied as if
-        // the wrapper weren't there), then append TExclude<FTag_EditorOnlyEntity> so the view
-        // scopes to runtime entities only.
+        // Runtime variant: unwrap TIgnoreInEditor<...> to its inner, then exclude FTag_EditorOnlyEntity
+        // so the view scopes to runtime entities only.
         using RuntimeVariantFragments = entt::type_list_cat_t<
             entt::type_list<ck::detail::UnwrapIgnoreInEditor_T<T_Fragments>>...,
             entt::type_list<ck::TExclude<ck::FTag_EditorOnlyEntity>>
@@ -477,12 +449,8 @@ namespace ck_exp
             entt::type_list<T_PoliciesOnly...>,
             entt::type_list<T_ComponentsOnly...>) -> void;
 
-        // TIgnoreInEditor dispatch helpers — invoked only when TAnyIgnoreInEditor_v is true.
-        // DoTick_Variant takes a per-variant fragment pack (editor or runtime), derives the
-        // policy/component sub-lists, and forwards to DoTick_Variant_Unpack which actually
-        // builds the view and runs ForEachEntity. The split lets the inner template see all
-        // three packs (variant fragments, policies, components) so View<> and the lambda
-        // signature can be instantiated independently.
+        // TIgnoreInEditor dispatch helpers, instantiated only when TAnyIgnoreInEditor_v. The split exists so
+        // the inner template sees all three packs (variant fragments, policies, components) at once.
         template <typename... T_VariantFragments>
         auto DoTick_Variant(
             TimeType InDeltaT,
@@ -524,10 +492,9 @@ namespace ck_exp
     {
         if constexpr (ck::detail::TAnyIgnoreInEditor_v<T_Fragments...>)
         {
-            // Dual-view dispatch. The TransientEntity carries FTag_EditorOnlyEntity in editor
-            // worlds; pick the variant that matches and run that view only. Both variants
-            // share the same ForEachEntity body — TIgnoreInEditor only changes which entities
-            // are visited, not the parameter shape (enforced by the static_assert above).
+            // The TransientEntity carries FTag_EditorOnlyEntity in editor worlds; run only the matching
+            // variant. Both share one ForEachEntity body — TIgnoreInEditor changes which entities are
+            // visited, never the parameter shape (enforced by the static_assert above).
             if (this->_TransientEntity.template Has<ck::FTag_EditorOnlyEntity>())
             {
                 DoTick_Variant(InDeltaT, EditorVariantFragments{});
@@ -591,9 +558,6 @@ namespace ck_exp
             entt::type_list<T_VariantFragments...>)
         -> void
     {
-        // Derive policy/component sub-lists from the variant pack and forward. The view is
-        // built on the variant pack inside DoTick_Variant_Unpack — both runtime and editor
-        // variants instantiate the view template once each.
         using ViewType = decltype(this->_TransientEntity.template View<ck::detail::UnwrapAccessPolicy_T<T_VariantFragments>...>());
         using ComponentsOnly = typename ViewType::template FragmentsOnly<ck::detail::UnwrapAccessPolicy_T<T_VariantFragments>...>;
         using PoliciesOnly = ck::detail::PoliciesOnly<T_VariantFragments...>;

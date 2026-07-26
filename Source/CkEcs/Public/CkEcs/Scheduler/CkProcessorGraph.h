@@ -16,9 +16,8 @@ namespace ck
 {
     // ----------------------------------------------------------------------------------------------------------------
 
-    // Sentinel for FProcessorGraphNode::_LastSeenDirtyVersion. Never equals a real version sum
-    // (per-hash counters start at 0 and only increment), so a node carrying it always runs the
-    // real dirty check on its next pump-pass visit.
+    // Never equals a real version sum (per-hash counters start at 0 and only increment), so a node
+    // carrying it always runs the real check on its next visit.
     inline constexpr uint64 kDirtyVersion_ForceEvaluate = MAX_uint64;
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -30,10 +29,8 @@ namespace ck
         int32 _Index = INDEX_NONE;
         FName _ProcessorName;
 
-        // Name emitted as the per-processor Insights CPU scope by the scheduler's dispatch loop
-        // (descriptor _DisplayName when set, else _ProcessorName), plus the lazily-created trace
-        // event spec id it caches (0 = not traced yet; created on first dispatch with the `cpu`
-        // trace channel enabled).
+        // Per-processor Insights CPU scope name, plus its lazily-created trace event spec id
+        // (0 = not traced yet; created on first dispatch with the `cpu` trace channel enabled).
         FName _TraceName;
         uint32 _TraceSpecId = 0;
 
@@ -41,35 +38,21 @@ namespace ck
         FDirtyChecker _IsDirtyChecker;
         FProcessorFactory _Factory;
 
-        // Hashes of the MarkedDirtyBy / MarkedDirtyByAnyOf fragment types (empty when
-        // _HasDirtyMarker is false). Used by the scheduler's pump pass to query
-        // FCk_Registry::Get_DirtyMarkerVersion without needing the original types.
+        // Lets the pump pass query FCk_Registry::Get_DirtyMarkerVersion without the original types.
         // Index-aligned with _DirtyMarkerNames (diagnostics only).
         TArray<uint32> _DirtyMarkerHashes;
         TArray<FName> _DirtyMarkerNames;
 
-        // Per-node cache of the last observed dirty marker version SUM across all marker
-        // hashes (each per-hash version is monotonic, so the sum is too), updated by the
-        // pump pass. PERSISTENT across frames: the node re-runs _IsDirtyChecker only when some
-        // registry mutation has bumped one of its marker versions since the last observation.
-        // This is what keeps Has_AnyEntityWith's tombstone false-positives (an in_place_delete
-        // pool never reports empty() again after first use) from re-pumping idle processors
-        // every frame. Initialized to the force-evaluate sentinel so a fresh graph — including
-        // the rebuild after a snapshot restore, whose entt-loader writes bypass the version
-        // counters — always evaluates each node once.
-        //
-        // Dynamic (script-struct) markers participate via the SAME mechanism in an FName-derived
-        // hash domain: the CkDynamic mutation paths call FCk_Registry::BumpDirtyMarkerVersion with
-        // UCk_Utils_DynamicFragment_UE::Get_DirtyMarkerHash — the value the script-processor host
-        // registers here. (Historically they registered a hash nothing bumped and were pump-deaf.)
+        // PERSISTENT across frames: _IsDirtyChecker re-runs only once a registry mutation has bumped
+        // one of this node's marker versions, which is what keeps Has_AnyEntityWith's tombstone
+        // false-positives (an in_place_delete pool never reports empty() again after first use) from
+        // re-pumping idle processors every frame. The sentinel forces one evaluation on a fresh
+        // graph, including a post-snapshot rebuild whose loader writes bypass the version counters.
         mutable uint64 _LastSeenDirtyVersion = kDirtyVersion_ForceEvaluate;
 
         // Main-pass empty-view skip (mirrors FProcessorDescriptor — see ECk_ProcessorEmptyViewPolicy).
-        // _LastSeenIncludeVersionSum caches the include types' summed mutation counters exactly like
-        // _LastSeenDirtyVersion does for pump markers: the (tombstone-aware) _IsViewProvablyEmpty scan
-        // re-runs only when some include type mutated since the last observation. Initialized to the
-        // force-evaluate sentinel so a fresh graph — including the rebuild after a snapshot restore,
-        // whose loader writes bypass the version counters — always evaluates each node once.
+        // _LastSeenIncludeVersionSum caches the include types' summed mutation counters exactly as
+        // _LastSeenDirtyVersion does above, with the same force-evaluate sentinel.
         bool _CanSkipWhenViewEmpty = false;
         FEmptyViewChecker _IsViewProvablyEmpty;
         TArray<uint32> _ViewIncludeHashes;
@@ -89,12 +72,7 @@ namespace ck
         bool _IsGroupEnd = false;
         int32 _PairedGroupNodeIndex = INDEX_NONE;
 
-        // Mirrors FProcessorDescriptor::_PumpPolicy. The scheduler's pump phase consults this
-        // to skip processors that opt out of pumping (time-stepping consumers, etc.).
         ECk_ProcessorPumpPolicy _PumpPolicy = ECk_ProcessorPumpPolicy::Default;
-
-        // Mirrors FProcessorDescriptor::_LoadPolicy. The scheduler's LoadKernel tick scope dispatches
-        // only nodes marked RunsDuringLoad (the load-gate kernel).
         ECk_ProcessorLoadPolicy _LoadPolicy = ECk_ProcessorLoadPolicy::GatedDuringLoad;
     };
 
@@ -107,9 +85,7 @@ namespace ck
         TArray<FProcessorGraphNode> _Nodes;
         TArray<int32> _ExecutionOrder;
 
-        // Write-write conflicts detected during graph construction whose resolution lives inside this
-        // partition's tick group. Populated after partitioning from the builder's transient conflict list.
-        // Consumed by the scheduler debugger to surface error diagnostics in the Inspector panel.
+        // Consumed by the scheduler debugger to surface diagnostics in the Inspector panel.
         TArray<FCk_WriteConflictInfo> _WriteConflicts;
     };
 
@@ -125,20 +101,16 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    // Serializes a set of partitioned processor graphs to Graphviz DOT syntax. Each tick group becomes
-    // a labelled subgraph cluster; nodes encode their role via shape and style (ghost = dashed, dirty
-    // marker = bold, group start/end = house/invhouse). Edges are drawn from every _OutEdges entry.
-    //
-    // This reflects the POST-reduction graph (after DoReducePartitionEdges), so redundant transitive
-    // edges are already collapsed. Auto-inserted edges from R1.3's write-conflict resolution are
-    // indistinguishable from explicit RunAfter/RunBefore edges in the output.
+    // Graphviz DOT: one labelled subgraph cluster per tick group; role encoded via shape and style
+    // (ghost = dashed, dirty marker = bold, group start/end = house/invhouse).
+    // Reflects the POST-reduction graph, and auto-inserted write-conflict edges are indistinguishable
+    // from explicit RunAfter/RunBefore ones.
     CKECS_API auto
     DoSerializeProcessorGraphToDot(
         const TMap<TEnumAsByte<ETickingGroup>, FProcessorGraphPartition>& InPartitions) -> FString;
 
-    // Serializes the final topologically-sorted processor execution order to a human-readable text
-    // list. One section per tick group; each section lists processors in the order they will execute.
-    // Ghost nodes are marked with "(ghost)" and nodes with dirty markers are marked with "(dirty)".
+    // Human-readable execution order, one section per tick group. Ghost nodes are marked "(ghost)"
+    // and nodes with dirty markers "(dirty)".
     CKECS_API auto
     DoSerializeProcessorExecutionOrder(
         const TMap<TEnumAsByte<ETickingGroup>, FProcessorGraphPartition>& InPartitions) -> FString;
@@ -188,33 +160,24 @@ namespace ck
 
         auto DoDetectCycles() const -> bool;
 
-        // Detect pairs of processors that share the same MarkedDirtyBy fragment without any
-        // directed ordering between them. Cross-tick-group pairs are skipped (engine orders
-        // them). Same-tick-group pairs with no path either direction are treated per _UnresolvedPolicy:
-        //   - Strict     → log error and return false (Build bails with empty graph)
-        //   - Permissive → log warning and return true
-        // Unlike write-write conflicts, no auto-edge is inserted because there is no reasonable
-        // default ordering for two processors that consume the same dirty signal.
+        // Same-tick-group pairs sharing a MarkedDirtyBy fragment with no path either direction:
+        // Strict → error + false (Build bails with an empty graph); Permissive → warning + true.
+        // No auto-edge, unlike write conflicts — there is no reasonable default ordering.
         auto DoValidateSharedDirtyMarkers(
             const TArray<FProcessorDescriptor>& InDescriptors) -> bool;
 
         auto DoValidateCrossTickGroupChildren(
             const TArray<FProcessorDescriptor>& InDescriptors) -> void;
 
-        // Detect pairs of processors that both write the same fragment without any explicit
-        // RunAfter/RunBefore ordering between them. Cross-tick-group pairs are skipped because
-        // the engine orders them implicitly via Unreal ticking groups. Same-tick-group pairs
-        // with no directed path either direction are treated per _UnresolvedPolicy:
-        //   - Strict     → log error and return false (Build bails with empty graph)
-        //   - Permissive → log warning and auto-insert an edge in descriptor declaration order
-        // Returns true on success, false only in Strict mode when conflicts were found.
+        // Same-tick-group pairs writing the same fragment with no path either direction:
+        // Strict → error + false (Build bails with an empty graph); Permissive → warning + an
+        // auto-inserted edge in descriptor declaration order.
         auto DoValidateAndResolveWriteConflicts(
             const TArray<FProcessorDescriptor>& InDescriptors) -> bool;
 
-        // Apply transitive closure + reduction to a single partition's adjacency data.
-        // Reduction is intentionally per-partition (not whole-graph) because cross-partition edges
-        // are dropped during partitioning — reducing whole-graph first can remove direct in-partition
-        // edges when the transitive path routes through a node in another partition.
+        // Per-partition, never whole-graph: cross-partition edges are dropped during partitioning, so
+        // a whole-graph reduction can remove a direct in-partition edge whose transitive path routes
+        // through another partition's node.
         auto DoReducePartitionEdges(
             FProcessorGraphPartition& InOutPartition) const -> void;
 
@@ -247,8 +210,8 @@ namespace ck
 
         TMap<int32, ETickingGroup> _ResolvedTickGroupCache;
 
-        // Transient, per-Build() conflict collection. Populated during DoValidateAndResolveWriteConflicts
-        // and distributed into partitions by DoPartitionAndSort. Cleared at the top of Build().
+        // Transient per-Build(): cleared at the top of Build, distributed into partitions by
+        // DoPartitionAndSort.
         TArray<FCk_WriteConflictInfo> _WriteConflicts;
 
         ECk_UnresolvedRefPolicy _UnresolvedPolicy = ECk_UnresolvedRefPolicy::Permissive;

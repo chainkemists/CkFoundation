@@ -24,19 +24,16 @@ class UBodySetup;
 
 namespace ck::jolt::bake
 {
-    /// LevelSweep (streaming/cook path) skips Movable-mobility components — they are
-    /// kinematic/dynamic territory. ExplicitActor (Request_BakeActor — the runtime-spawned-static
-    /// path and the test surface) bakes them: the caller has declared the actor static-in-intent,
-    /// and runtime-spawned actors are necessarily Movable (a Static-mobility component rejects
-    /// SetStaticMesh at runtime).
+    /// LevelSweep (streaming/cook path) skips Movable-mobility components — kinematic/dynamic territory.
+    /// ExplicitActor (Request_BakeActor) bakes them: the caller declared the actor static-in-intent, and
+    /// runtime-spawned actors are necessarily Movable.
     enum class ECk_Jolt_ExtractionPolicy : uint8
     {
         LevelSweep,
         ExplicitActor
     };
 
-    /// One Jolt body extracted from a source component. Scale is baked into _Shape;
-    /// _Position/_Rotation are the body's world transform.
+    /// Scale is baked into _Shape; _Position/_Rotation are the body's world transform.
     struct CKJOLT_API FCk_Jolt_ExtractedBody
     {
         JPH::Ref<JPH::Shape> _Shape;
@@ -51,9 +48,8 @@ namespace ck::jolt::bake
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    /// One Jolt shape per unique (BodySetupGuid, quantized scale, trace flag) — instanced meshes
-    /// share a single JPH::Ref across all their bodies. Not thread-safe; one cache per
-    /// extraction pass.
+    /// One Jolt shape per unique (BodySetupGuid, quantized scale, trace flag).
+    /// Not thread-safe; one cache per extraction pass.
     class CKJOLT_API FCk_Jolt_ShapeCache
     {
     public:
@@ -92,14 +88,9 @@ namespace ck::jolt::bake
     // Extraction entry points
     // ----------------------------------------------------------------------------------------------------------------
 
-    /// Sweeps InActor's registered primitive components and appends one extracted body per
-    /// physics representation Chaos would see for a STATIC actor. Returns the number of bodies
-    /// appended. Skip rules: unregistered, editor-only/visualization, NoCollision, simulating
-    /// physics, Movable mobility. A component with collision enabled but NO valid collision
-    /// geometry fires CK_ENSURE and is skipped — never approximated. Exception: a
-    /// BrushComponent with a null BrushBodySetup is skipped with only a Verbose log — Chaos
-    /// creates no physics state for those either (every level's default/builder brush is one),
-    /// so silence IS parity there.
+    /// Appends one extracted body per physics representation Chaos would see for a STATIC actor; returns
+    /// the number appended. Skips: unregistered, editor-only/visualization, NoCollision, simulating
+    /// physics, Movable mobility. Collision enabled but NO valid geometry ensures and is skipped.
     CKJOLT_API auto ExtractActor(
         const AActor& InActor,
         FCk_Jolt_ShapeCache& InShapeCache,
@@ -114,28 +105,22 @@ namespace ck::jolt::bake
         ECk_Jolt_ExtractionPolicy InPolicy = ECk_Jolt_ExtractionPolicy::LevelSweep) -> int32;
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Shape builders (exposed for tests and for the dynamic-body feature in Phase 3)
+    // Shape builders (exposed for tests and for the dynamic-body feature)
     // ----------------------------------------------------------------------------------------------------------------
 
-    /// Builds the Jolt shape for a BodySetup honoring its CollisionTraceFlag:
-    /// UseComplexAsSimple -> Chaos cooked tri-mesh; everything else -> AggGeom
-    /// (falling back to the tri-mesh only when AggGeom is empty AND a tri-mesh exists AND the
-    /// flag permits complex — mirroring what Chaos actually collides against). Returns null
-    /// (after CK_ENSURE) when no valid collision representation exists.
+    /// Honors the BodySetup's CollisionTraceFlag: UseComplexAsSimple -> Chaos cooked tri-mesh; everything
+    /// else -> AggGeom, falling back to the tri-mesh only when AggGeom is empty and the flag permits
+    /// complex. Returns null (after CK_ENSURE) when no valid collision representation exists.
     CKJOLT_API auto BuildShape_FromBodySetup(
         const UBodySetup& InBodySetup,
         const FVector& InScale,
         const FString& InDebugName) -> JPH::Ref<JPH::Shape>;
 
-    /// Builds a Jolt heightfield from UE-row-major height samples (world-height units, i.e.
-    /// landscape local height x scale.Z already applied). InSampleCount x InSampleCount samples,
-    /// indexed [y * InSampleCount + x]; InScaleXY = landscape quad scale (X, Y).
-    /// The returned shape is axis-corrected for Ck's Z-up world: Jolt heightfields are local
-    /// Y-up spanning X/Z, so we wrap in RotatedTranslatedShape(+90deg about X) with rows flipped
-    /// and a -(N-1)*scaleY local-Z offset so the sample grid lands on UE's +X/+Y quadrant.
-    /// Surface normals stay up: a heightfield is a graph surface, so sample-order changes never
-    /// flip its winding. Pinned by Test_JoltBake_HeightField_KnownHeightsZUp.
-    /// Holes: pass HeightFieldNoCollisionValue() as the sample height.
+    /// Heights are UE-row-major in world-height units (landscape local height x scale.Z already applied),
+    /// InSampleCount x InSampleCount, indexed [y * InSampleCount + x]; InScaleXY = landscape quad scale.
+    /// The returned shape is axis-corrected for Ck's Z-up world: Jolt heightfields are local Y-up spanning
+    /// X/Z, so it wraps in RotatedTranslatedShape(+90deg about X) with rows flipped and a -(N-1)*scaleY
+    /// local-Z offset. Holes: pass HeightFieldNoCollisionValue() as the sample height.
     CKJOLT_API auto CreateHeightFieldShape(
         const TArray<float>& InWorldHeights,
         int32 InSampleCount,

@@ -11,19 +11,8 @@
 
 namespace ck::inventory_handlers
 {
-    // Each TXxx<H, A> is the complete handler for that (Handle, Addon) combination.
-    // Default Handle body lives in CkInventory_RequestHandlers.cpp and works for the addon-less,
-    // shape-divergence-free case (typically DataOnly).
-    //
-    // When a shape needs different behavior:
-    //   - If the addon type differs (e.g. TAddItem<H, FCk_SpatialPlacement>), specialize the
-    //     entire ::Handle for that (H, A) pair.
-    //   - If the body is mostly shared but has a small divergent step, the TXxx exposes a
-    //     static helper (e.g. OnSourceFullyConsumed, TryPlace) with a default no-op/generic
-    //     body. Per-shape folders specialize JUST that helper.
-    //
-    // All specializations live in the typed inventory's folder
-    // (Spatial/CkInventory_Spatial_RequestTraits.cpp and DataOnly equivalent).
+    // Default Handle bodies live in CkInventory_RequestHandlers.cpp; per-shape overrides (whole
+    // Handle or just a divergence hook) live in the typed inventory's folder's RequestTraits.cpp.
 
     template <typename TInventoryHandle, typename TAddon = FCk_EmptyAddon>
     struct CKINVENTORY_API TAddItem
@@ -46,8 +35,7 @@ namespace ck::inventory_handlers
     {
         using Entry  = TInventory_RequestEntry<FCk_Request_Inventory_StackItems, TAddon>;
         using Result = ECk_Inventory_OperationResult_Stack;
-        // Divergence hook: runs when the source stack is fully consumed by the merge,
-        // *before* unbind+destroy. Default no-op (DataOnly); Spatial specializes to remove from grid.
+        // Runs when the merge fully consumes the source stack, BEFORE unbind + destroy.
         static auto OnSourceFullyConsumed(TInventoryHandle&, FCk_Handle_Item&) -> void;
         static auto Handle(TInventoryHandle&, const FFragment_Inventory_Params&, const Entry&) -> Result;
     };
@@ -65,8 +53,7 @@ namespace ck::inventory_handlers
     {
         using Entry  = TInventory_RequestEntry<FCk_Request_Inventory_AddItemByDefinition, TAddon>;
         using Result = ECk_Inventory_OperationResult_AddByDefinition;
-        // Divergence hook: per-iteration placement. Default returns true (DataOnly);
-        // Spatial specializes to find a placement + place on grid (false on no-space).
+        // Per-iteration placement hook; false means no space and aborts the iteration.
         static auto TryPlace(TInventoryHandle&, FCk_Handle_Item&) -> bool;
         static auto Handle(TInventoryHandle&, const FFragment_Inventory_Params&, const Entry&) -> Result;
     };
@@ -106,12 +93,8 @@ namespace ck::inventory_handlers
         static auto Handle(TInventoryHandle&, const FFragment_Inventory_Params&, const Entry&) -> Result;
     };
 
-    // Synchronous, non-deferred single-item transfer for the mass-transfer churn. Resolves the source
-    // from InItem's parent inventory, runtime-branches the 2x2 (Spatial/DataOnly source x target), and
-    // invokes the SAME typed DoTransfer body the deferred Request_TransferItem_* path uses — executed
-    // NOW (the attribute writes fold before the next churn step, which is paced one item/pass). Returns
-    // the units moved (0 on invalid input / same-inventory / no room). Transfers the full source stack
-    // (AllAvailableCount). NOT exposed as a public Request_* — internal to the churn.
+    // Synchronous (non-deferred) transfer of InItem's FULL source stack, internal to the churn.
+    // Returns the units moved — 0 on invalid input / same-inventory / no room.
     CKINVENTORY_API auto ExecuteTransferNow(
         FCk_Handle_Item& InItem,
         FCk_Handle_Inventory& InTarget,
@@ -120,9 +103,8 @@ namespace ck::inventory_handlers
 
 namespace ck
 {
-    // Each typed inventory's folder must specialize this trait, listing every operation it supplies
-    // and exposing a Variant typedef built from the operations' Entry types. Missing specialization
-    // = compile error at the point of use (templated processor instantiation).
+    // Each typed inventory's folder must specialize this; a missing specialization is a compile error
+    // at the point of use (templated processor instantiation).
     template <typename TInventoryHandle>
     struct TInventoryRequestTraits;
 }
@@ -135,7 +117,6 @@ namespace ck::inventory_handlers
         template <typename T> struct HasRelocate<T, std::void_t<typename T::Relocate>> : std::true_type {};
     }
 
-    // Centralized dispatcher — given an entry type, calls the matching handler from the Traits bundle.
     template <typename Traits, typename TInventoryHandle, typename TEntry>
     auto DispatchToHandler(
         TInventoryHandle& InHandle,
@@ -173,8 +154,6 @@ namespace ck::inventory_handlers
         }
     }
 
-    // Teardown counterpart to DispatchToHandler: fires each queued request's completion signal with
-    // Failed_OperationCancelled when its inventory is destroyed before the request could be processed.
     // Fires only if the request still owns a valid handle, and destroys that handle on fire.
     template <typename Traits, typename TInventoryHandle, typename TEntry>
     auto DispatchCancel(

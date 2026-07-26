@@ -37,7 +37,6 @@ public:
         UClass* InEntityScriptClass,
         bool InForceRecreate = false);
 
-    // Async API - always returns a future
     auto
     GetOrCreate_SpawnParamsStructForEntity_Async(
         UClass* InEntityScriptClass,
@@ -52,7 +51,6 @@ protected:
     Deinitialize() -> void override;
 
 private:
-    // Blueprint compilation safety
     struct FPendingSpawnParamsRequest
     {
         TWeakObjectPtr<UClass> EntityScriptClass;
@@ -83,7 +81,6 @@ private:
         bool InForceRecreate) -> UUserDefinedStruct*;
 
 private:
-    // Original functionality
     auto
     OnObjectSaved(
         UObject* Object,
@@ -116,7 +113,6 @@ private:
     Get_StructPathForEntityScriptPath(
         const FString& InEntityScriptFullPath) -> FString;
 
-    // Deferred update handling
     auto
     ScheduleDeferredStructUpdate() -> void;
 
@@ -169,7 +165,6 @@ private:
     FDelegateHandle _OnBlueprintCompiled_DelegateHandle;
     FDelegateHandle _OnBlueprintReinstanced_DelegateHandle;
 
-    // Deferred update handling
     FTimerHandle _DeferredUpdateTimerHandle;
     bool _bHasPendingStructUpdates = false;
 

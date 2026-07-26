@@ -29,8 +29,6 @@ enum class ECk_Usf_BlendMode : uint8
 };
 
 // Shading-model override. `Inherit` keeps the domain default (SurfaceLit→DefaultLit, others→Unlit).
-// Each exotic model is wired together with its required G-buffer outputs (see the generator):
-//   Subsurface → SubsurfaceColor (+ Opacity drives scatter); ClearCoat → ClearCoat + ClearCoatRoughness.
 UENUM(BlueprintType)
 enum class ECk_Usf_ShadingModel : uint8
 {
@@ -52,9 +50,7 @@ enum class ECk_Usf_ParamType : uint8
 };
 
 // PostProcess-only: which scene textures a look's Custom node receives (and thereby declares usage for,
-// legalizing raw SceneTextureLookup() in the look's .ush). Maps to ESceneTextureId in the generator.
-// An EMPTY _SceneTextures on a PostProcess look means the historical default trio (SceneColor/SceneDepth/
-// SceneNormal), so existing looks are unaffected.
+// legalizing raw SceneTextureLookup() in its .ush). EMPTY = the default trio (SceneColor/Depth/Normal).
 UENUM(BlueprintType)
 enum class ECk_Usf_SceneTexture : uint8
 {
@@ -66,13 +62,8 @@ enum class ECk_Usf_SceneTexture : uint8
 };
 
 // PostProcess-only: where in the post-processing chain the generated blendable runs (maps to
-// EBlendableLocation). The pre-TAA locations (SceneColorAfterDOF/SceneColorBeforeDOF) run at rendering
-// resolution BEFORE TSR/TAA, so the look's output is temporally accumulated like ordinary geometry —
-// required for anything derived from Custom Depth/Stencil (those buffers are rendered with the
-// TAA-jittered projection every frame; a look placed after tonemapping thresholds that jittered mask
-// with no temporal resolve ever seeing it, so its edges shimmer even on a stationary camera).
-// Trade-off: pre-TAA locations are also pre-tonemap — output colors are scene-referred linear (the
-// tonemapper remaps them and bloom sees them), and TSR may slightly ghost the output behind fast movers.
+// EBlendableLocation). Custom Depth/Stencil-derived looks REQUIRE a pre-TAA location or their edges
+// shimmer; pre-TAA is also pre-tonemap. Trade-offs: CkUsf/CLAUDE.md § Blendable location.
 UENUM(BlueprintType)
 enum class ECk_Usf_BlendableLocation : uint8
 {
@@ -83,8 +74,7 @@ enum class ECk_Usf_BlendableLocation : uint8
 };
 
 // Translucency lighting for LIT translucent-family surface looks. `Inherit` keeps the engine default
-// (volumetric non-directional — cheap but flat). Glass-like surfaces usually want `SurfacePerPixel`
-// (forward per-pixel lighting). Ignored unless the look resolves to a lit, translucent-family blend.
+// (volumetric non-directional — cheap but flat); glass-like surfaces usually want `SurfacePerPixel`.
 UENUM(BlueprintType)
 enum class ECk_Usf_TranslucencyLighting : uint8
 {
@@ -115,19 +105,14 @@ struct CKUSF_API FCk_Usf_ParamDesc
     FLinearColor _DefaultVector = FLinearColor::Black;
 
     // Scalar/Vector-only: source this param from per-instance custom data (ISM/CkIsmRenderer) instead of a
-    // uniform. Slots are assigned in declaration order — a Scalar takes 1 float, a Vector takes 3 (rgb) —
-    // and the generator wires a PerInstanceCustomData(3Vector) node (DataIndex=slot, ConstDefaultValue=the
-    // param default). On a non-instanced mesh the node returns the const default, so the look is safe
-    // everywhere. Runtime writers must NOT count slots by hand — query Get_PerInstanceSlotOf/
-    // Get_NumPerInstanceFloats on the LookDefinition (same walk the generator uses).
+    // uniform. Safe on non-instanced meshes (the node returns the param default). Runtime writers must NOT
+    // count slots by hand — query Get_PerInstanceSlotOf / Get_NumPerInstanceFloats.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     bool _PerInstance = false;
 
-    // Per-instance params only (Scalar = 1 float, Vector = 3): explicit first slot for this param's
-    // per-instance data. -1 keeps the auto layout (declaration order). Set explicitly when the instance
-    // custom-data layout is owned elsewhere (e.g. CkIskm batched crowds: [0]/[1] are frame bits, game
-    // data starts at [2] — see CkIskm_BatchedClusterComponent::SendRenderDynamicData_Concurrent).
-    // Explicit slots do NOT advance the auto counter; Get_PerInstanceSlotOf resolves both kinds.
+    // Per-instance params only: explicit first slot for this param's per-instance data; -1 keeps the auto
+    // layout (declaration order). Set it when the instance custom-data layout is owned elsewhere. Explicit
+    // slots do NOT advance the auto counter; Get_PerInstanceSlotOf resolves both kinds.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     int32 _PerInstanceSlot = -1;
 
@@ -153,31 +138,27 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     FName _UshFunctionName = NAME_None;
 
-    // Optional WorldPositionOffset entry point (vertex shader), e.g. "CkUsf_Look_Displace_WPO".
-    // None = no WPO. Takes FCkUsf_VertexInput + the same params as the pixel fn, returns a world-space offset.
-    // Surface domains only; wired into a separate VS-safe Custom node (the pixel node reads pixel-only inputs).
+    // Optional WorldPositionOffset entry point (vertex shader), e.g. "CkUsf_Look_Displace_WPO"; None = no WPO.
+    // Surface domains only. Takes FCkUsf_VertexInput + the same params as the pixel fn, returns a world offset.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     FName _WpoFunctionName = NAME_None;
 
-    // Surface-only: wire mesh TexCoord1/TexCoord2 into the PIXEL Custom node (In.UV1/In.UV2).
-    // Opt-in because every wired coordinate costs interpolators on the look's master — only looks
-    // whose PIXEL stage decodes mesh data channels need it (e.g. CkVat's normal-texture lookup).
-    // The WPO node receives UV1/UV2 unconditionally; this flag concerns the pixel node only.
+    // Surface-only: wire mesh TexCoord1/TexCoord2 into the PIXEL Custom node (In.UV1/In.UV2). Opt-in
+    // because every wired coordinate costs interpolators on the look's master. The WPO node receives
+    // UV1/UV2 unconditionally; this flag concerns the pixel node only.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     bool _PixelDataChannels = false;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     ECk_Usf_Domain _Domain = ECk_Usf_Domain::SurfaceLit;
 
-    // PostProcess-only: the scene textures this look's Custom node receives. EMPTY = the default trio
-    // (SceneColor/SceneDepth/SceneNormal), so existing PostProcess looks need not set this. Set it
-    // explicitly to opt into CustomDepth/CustomStencil (e.g. the SolidOutline look). Ignored for non-PostProcess domains.
+    // PostProcess-only (see ECk_Usf_SceneTexture): EMPTY = the default trio; opt into CustomDepth/
+    // CustomStencil explicitly (e.g. the SolidOutline look). Ignored for non-PostProcess domains.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     TArray<ECk_Usf_SceneTexture> _SceneTextures;
 
-    // PostProcess-only: chain placement of the generated blendable (see the enum for the pre- vs
-    // post-TAA trade-off). Looks reading Custom Depth/Stencil want a pre-TAA location
-    // (e.g. the SolidOutline look). Ignored for non-PostProcess domains.
+    // PostProcess-only: chain placement of the generated blendable (see the enum for the pre- vs post-TAA
+    // trade-off — Custom Depth/Stencil looks need a pre-TAA location). Ignored for non-PostProcess domains.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     ECk_Usf_BlendableLocation _BlendableLocation = ECk_Usf_BlendableLocation::AfterTonemapping;
 
@@ -196,18 +177,13 @@ public:
     bool _TwoSided = false;
 
     // Preprocessor defines injected into the look's Custom nodes (pixel AND WPO), each "NAME" or
-    // "NAME=VALUE" — the static-switch/quality-knob equivalent, e.g. "CKUSF_OUTLINE_AA_RADIUS=2.5"
-    // to retune a #ifndef default in the .ush without editing it, or "MYLOOK_HIGH_QUALITY" gating
-    // an #ifdef block. A define change requires regenerating the master.
+    // "NAME=VALUE". A define change requires regenerating the master.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     TArray<FString> _Defines;
 
-    // Usage flags baked into the generated master at generation time. Hand-set
-    // flags on a generated master are wiped by the next regeneration, and a
-    // missing flag falls back to the default material in packaged builds — so
-    // any look rendered through CkIsm needs InstancedStaticMeshes, and any look
-    // rendered through CkIskm needs SkeletalMesh (+ MorphTargets if the mesh
-    // animates morphs).
+    // Usage flags baked into the generated master at generation time; hand-set flags on a generated master
+    // are wiped by the next regeneration, and a missing flag falls back to the default material in packaged
+    // builds. CkIsm needs InstancedStaticMeshes; CkIskm needs SkeletalMesh (+ MorphTargets if morphed).
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     bool _UsedWithInstancedStaticMeshes = false;
 
@@ -227,11 +203,6 @@ public:
     UFUNCTION(BlueprintCallable, Category = "CkUsf",
               DisplayName = "[Ck][Usf] Get Effective Look Name")
     FName Get_EffectiveLookName() const;
-
-    // Per-instance custom-data slot layout — THE source of truth shared by the generator (node
-    // DataIndex) and runtime writers (CkIsmRenderer SetCustomDataValueById / NumCustomDataFloats).
-    // Slots accrue over _Parameters in declaration order: per-instance Scalar = 1 float,
-    // per-instance Vector = 3 floats (rgb). Never count slots by hand.
 
     // First slot of InParamName's per-instance data, or -1 if the param is not per-instance.
     UFUNCTION(BlueprintPure, Category = "CkUsf",

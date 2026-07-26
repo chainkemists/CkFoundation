@@ -6,12 +6,9 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Group subsystem that owns the per-player ACk_StateMachineRelay_UE channels used by
-// OwningClientAuthoritative state machines to push client→server RPCs.
-//
-// The base class (UCk_ActorRelay_Group_Subsystem_Base_UE) auto-spawns one channel per
-// player at PostLogin (and one for the server itself). Channels live for the player's
-// session and are torn down on logout.
+// Owns the per-player ACk_StateMachineRelay_UE channels that OwningClientAuthoritative state
+// machines push client→server RPCs through. The base class auto-spawns one channel per player at
+// PostLogin (plus one for the server itself); channels are torn down on logout.
 UCLASS()
 class CKSTATEMACHINE_API UCk_StateMachineRelay_Subsystem_UE : public UCk_ActorRelay_Group_Subsystem_Base_UE
 {

@@ -13,14 +13,8 @@
 
 namespace ck
 {
-    // Per-frame recorder for tracked agents. Reads transform + desired velocity + neighbor cache,
-    // appends a sample to the recorder fragment at the cadence set by ck.Crowd.DiagSampleHz
-    // (default 10Hz), and updates the per-cycle running metrics (min-sep, dir-reversals, max
-    // angular delta, time-to-goal). View-membership-keyed on FTag_CrowdDiag_Tracked so untagged
-    // agents pay no overhead — the recorder is opt-in per agent.
-    //
-    // Group: default. Runs each frame regardless of physics — sample timing is independent of
-    // the steering pipeline (we capture what the simulation produced, we don't drive it).
+    // Appends path samples and per-cycle metrics for FTag_CrowdDiag_Tracked agents at the cadence set
+    // by ck.Crowd.SampleHz. Pure observation — it never drives the steering pipeline.
     class CKCROWD_API FProcessor_CrowdAgent_DiagRecorder : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_DiagRecorder,
             FCk_Handle_CrowdAgent,

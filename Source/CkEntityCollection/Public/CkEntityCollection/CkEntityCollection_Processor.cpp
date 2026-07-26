@@ -157,21 +157,13 @@ namespace ck
 
         for (const auto& Content : EntityCollectionsToReplicate)
         {
-            // Gate 1: local child collection entity must exist (entity-script Construct has run).
-            // Previously implicit — the rep handler's early-return on TryGet failure protected
-            // the downstream Request_RemoveEntities/AddEntities calls below from running on an
-            // invalid handle. After deleting the rep-handler-side early-return (so the snapshot
-            // can survive a transient pending-Setup state until retry), this gate has to move
-            // here. The fragment stays on the entity until both gates pass.
+            // Both gates below are owned here, not by the rep handler: the fragment stays on the entity and
+            // this runs again next tick until they pass (Claude.md § Persistence and replication).
             if (const auto& LocalCollection = UCk_Utils_EntityCollection_UE::TryGet_EntityCollection(InHandle, Content.Get_CollectionName());
                 ck::Is_NOT_Valid(LocalCollection))
             { return; }
 
-            // Gate 2: every entity in the snapshot must have a complete EntityReplicationDriver
-            // (NetGuid handshake done). Container reps deliver the snapshot once; this per-tick
-            // retry waits for the referenced entities' replication to land. Without this gate,
-            // we'd local-Add entities whose handles are still in pending-resolve state, ending
-            // up with broken records that never recover.
+            // Adding an entity whose NetGuid handshake has not landed yields a record that never recovers.
             const auto& AllValidEntities = ck::algo::AllOf(Content.Get_EntitiesInCollection(), [](
                 const FCk_Handle& MaybeValidHandle)
             {
@@ -223,8 +215,7 @@ namespace ck
                 EntityCollectionToReplicate);
         }
 
-        // Successful apply: remove the SyncReplication fragment so this MarkedDirtyBy-less
-        // processor stops re-firing on the entity until the next rep delivery puts a new fragment on it.
+        // Removing the fragment is what ends the per-tick retry of this MarkedDirtyBy-less processor.
         InHandle.Remove<FFragment_EntityCollection_SyncReplication>();
     }
 
@@ -239,15 +230,8 @@ namespace ck
         TProcessor::DoTick(InDeltaT);
 
         _TransientEntity.Clear<MarkedDirtyBy>();
-        // Intentionally NOT clearing FFragment_EntityCollections_RecordOfEntities_Previous
-        // here. The Previous fragment is a TUtils_RecordOfEntities — its
-        // connected entries store per-record disconnect lambdas on their
-        // FFragment_RecordEntry, fired from FProcessor_RecordEntry_Destructor
-        // during their teardown, that call Get<Previous>() on this collection.
-        // Bulk-clearing Previous would leave those lambdas referencing a
-        // missing fragment and ensure-fail later. The fragment's lifetime now
-        // follows its entries: Request_StorePreviousCollection cleanly
-        // Disconnects the prior snapshot before re-Connecting the current one.
+        // Deliberately NOT clearing FFragment_EntityCollections_RecordOfEntities_Previous here — its entries
+        // hold disconnect lambdas that Get<Previous>() during teardown (Claude.md § Previous-snapshot lifetime).
     }
 
     auto
@@ -312,9 +296,6 @@ namespace ck
     {
         auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
 
-        // One projection: the registered OWNER-keyed Produce rebuilds the full EntityCollections array via the
-        // same record walk. Full-replace the owner container with it — content-identical to today's per-child
-        // find-or-emplace (each collection's live members read the same way).
         const auto Produced = UCk_Utils_Net_UE::TryProduce<FCk_RepData_EntityCollections>(LifetimeOwner);
         if (Produced.IsSet())
         { UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_EntityCollections>(LifetimeOwner, *Produced); }

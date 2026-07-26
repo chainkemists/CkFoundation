@@ -4,8 +4,7 @@
 #include "CkEcs/Signal/CkSignal_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Granular macros for defining Signals and Utilities individually.
-// Consider using the 'meta' macros found below
+// Granular macros — prefer the 'meta' macros further below.
 
 #define CK_DEFINE_SIGNAL(_API_, _SignalName_, ...)\
     _API_ struct FFragment_Signal_##_SignalName_ \
@@ -28,7 +27,6 @@
     : public ck::TUtils_Signal_Delegate<FFragment_Signal_##_SignalName_, FFragment_Signal_Delegate_##_SignalName_##_PostFireUnbind> {}
 
 // --------------------------------------------------------------------------------------------------------------------
-// 'Meta' Macros for defining Signals and Utilities
 
 // Define Signal that works ONLY within C++
 #define CK_DEFINE_SIGNAL_AND_UTILS(_API_, _SignalName_, ...)\
@@ -44,7 +42,6 @@
 #define CK_SIGNAL_BIND_PROMISE(_SignalUtils_, _Handle_, _PromiseDelegate_)\
     CK_SIGNAL_BIND(_SignalUtils_, _Handle_, _PromiseDelegate_, ECk_Signal_BindingPolicy::FireIfPayloadInFlight, ECk_Signal_PostFireBehavior::Unbind)\
 
-// This is a convenience macro for our widely used deferred requests that fire signals when they are processed
 #define CK_SIGNAL_BIND_REQUEST_FULFILLED(_SignalUtils_, _Handle_, _PromiseDelegate_)\
     CK_SIGNAL_BIND(_SignalUtils_, _Handle_, _PromiseDelegate_, ECk_Signal_BindingPolicy::IgnorePayloadInFlight, ECk_Signal_PostFireBehavior::Unbind)\
 

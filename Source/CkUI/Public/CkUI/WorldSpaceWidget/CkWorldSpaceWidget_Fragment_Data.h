@@ -29,12 +29,9 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_WorldSpaceWidg
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// None: the widget is hidden (opacity 0) when its anchor projects off-screen or
-// behind the camera. ClampToViewport: the widget's pivot is kept inside the
-// viewport rect so it rides the screen edge. ClampToViewport_ByBounds: the rect
-// is shrunk by the widget's desired size first, so the WHOLE widget (not just its
-// pivot) stays on-screen. Collapses the legacy plugin's two interacting bools
-// (bShouldClampToViewport + bShouldClampByBounds) into one policy.
+// None hides the widget (opacity 0) when its anchor projects off-screen or behind the camera.
+// ClampToViewport keeps the widget's pivot inside the viewport rect so it rides the screen edge.
+// ClampToViewport_ByBounds shrinks that rect by the desired size so the WHOLE widget stays on.
 UENUM(BlueprintType)
 enum class ECk_WorldSpaceWidget_Clamping_Policy : uint8
 {
@@ -58,12 +55,9 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_WorldSpaceWidget_Scaling_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// ScreenOverlay (default): the widget is projected world->screen each frame and
-// drawn as a 2D viewport overlay (always screen-facing/billboard, constant pixel
-// size; depth-occlusion only via the OcclusionInfo anchor trace).
-// WorldComponent: the widget is a real 3D UWidgetComponent (Space=World) — fixed
-// world orientation, true perspective scaling, free per-pixel GPU occlusion.
-// Matches the legacy /Script/UMG.WidgetComponent callout.
+// ScreenOverlay (default): projected world->screen each frame and drawn as a 2D viewport overlay
+// (always screen-facing, constant pixel size; depth-occlusion only via the OcclusionInfo trace).
+// WorldComponent: a real 3D UWidgetComponent — fixed orientation, perspective scale, GPU occlusion.
 UENUM(BlueprintType)
 enum class ECk_WorldSpaceWidget_RenderMode : uint8
 {
@@ -75,10 +69,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_WorldSpaceWidget_RenderMode);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Consumed only when RenderMode == WorldComponent. The content widget instance
-// (Params._Widget) is handed to the UWidgetComponent via SetWidget — we do NOT
-// rely on the component's own InitWidget/SetWidgetClass instantiation, which is
-// unreliable for runtime-created components.
+// Consumed only when RenderMode == WorldComponent.
 USTRUCT(BlueprintType)
 struct CKUI_API FCk_WorldSpaceWidget_WorldComponentInfo
 {
@@ -92,9 +83,8 @@ private:
         meta=(AllowPrivateAccess = true))
     FIntPoint _DrawSize = FIntPoint{512, 512};
 
-    // When true, the render target tracks the content widget's DESIRED size each
-    // frame and _DrawSize is only the pre-first-layout initial value (UWidgetComponent
-    // bDrawAtDesiredSize semantics — what legacy WidgetComponent callouts authored).
+    // When true the render target tracks the content widget's DESIRED size each frame and
+    // _DrawSize is only the pre-first-layout initial value (UWidgetComponent bDrawAtDesiredSize).
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess = true))
     bool _DrawAtDesiredSize = false;
@@ -133,11 +123,9 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// HideWhenOccluded: each frame, trace from the player camera to the widget's
-// world anchor (player pawn ignored); on a blocking hit the overlay is faded to
-// zero opacity. Per-anchor occlusion (whole-widget), not per-pixel GPU masking —
-// the render path stays a screen-space projection. Mirrors the legacy
-// WorldSpaceWidgets plugin's bShouldBeOccluded behaviour.
+// HideWhenOccluded: each frame, trace from the player camera to the widget's world anchor
+// (player pawn ignored); a blocking hit fades the overlay to zero opacity. Per-anchor
+// (whole-widget) occlusion, not per-pixel GPU masking — the render path stays a projection.
 UENUM(BlueprintType)
 enum class ECk_WorldSpaceWidget_Occlusion_Policy : uint8
 {
@@ -162,7 +150,6 @@ private:
         meta=(AllowPrivateAccess = true))
     ECk_WorldSpaceWidget_Occlusion_Policy _OcclusionPolicy = ECk_WorldSpaceWidget_Occlusion_Policy::None;
 
-    // Legacy WorldSpaceWidgets traced on ECC_Camera; kept as the default.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess = true, EditCondition="_OcclusionPolicy == ECk_WorldSpaceWidget_Occlusion_Policy::HideWhenOccluded"))
     TEnumAsByte<ECollisionChannel> _TraceChannel = ECollisionChannel::ECC_Camera;
@@ -228,11 +215,9 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_WorldSpaceWidget_Fading_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// FadeWithDistance maps camera->anchor distance to an opacity in [MinOpacity,
-// MaxOpacity]: at/below StartDistance the widget renders at MaxOpacity, at/above
-// EndDistance at MinOpacity, lerped between. Composed into the single per-frame
-// opacity as a multiplier of the enabled-state (it never fights occlusion or the
-// off-screen hide, which force opacity to 0).
+// FadeWithDistance maps camera->anchor distance to an opacity: MaxOpacity at/below
+// StartDistance, MinOpacity at/above EndDistance, lerped between. It is a multiplier on the
+// enabled-state, so it never fights occlusion or the off-screen hide (which force opacity to 0).
 USTRUCT(BlueprintType)
 struct CKUI_API FCk_WorldSpaceWidget_FadingInfo
 {
@@ -276,11 +261,9 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Optional, opt-in scaling of the SCREEN-SPACE offset (not the widget itself).
-// AspectScaling scales the X offset by the viewport aspect ratio vs 16:9 (clamped)
-// so horizontal callouts don't drift on ultrawide/narrow displays. DistanceScaling
-// scales the offset per-axis by camera distance (close = Max, far = Min). Both are
-// independent and compose; either off leaves that axis untouched.
+// Opt-in scaling of the SCREEN-SPACE offset, not of the widget itself. AspectScaling scales the
+// X offset by the viewport aspect vs 16:9 (clamped) so horizontal callouts don't drift on
+// ultrawide/narrow displays; DistanceScaling scales per-axis by camera distance. Both compose.
 UENUM(BlueprintType)
 enum class ECk_WorldSpaceWidget_AspectScaling_Policy : uint8
 {
@@ -452,12 +435,6 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_WorldSpaceWidget_ParamsData, _Widget, _InitialViewportOperation, _ZOrder);
 };
 
-// --------------------------------------------------------------------------------------------------------------------
-// Runtime-reconfiguration requests. Each overwrites the matching sub-struct on the
-// live Params fragment via the deferred HandleRequests processor (the framework's
-// mutate-through-requests contract). SetScalingInfo additionally flips the
-// NeedsUpdateScaling tag so distance-scaling can be toggled on/off at runtime —
-// the creation-time-only tag grant was the legacy parity gap.
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)

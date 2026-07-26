@@ -58,11 +58,9 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "Ck|UI|ColorWheel|Events")
     FCk_ColorWheel_PositionChangedEvent OnPositionChanged;
 
-    // Fired when the wheel is pressed and a drag begins.
     UPROPERTY(BlueprintAssignable, Category = "Ck|UI|ColorWheel|Events")
     FCk_ColorWheel_Event OnDragStarted;
 
-    // Fired when the drag ends.
     UPROPERTY(BlueprintAssignable, Category = "Ck|UI|ColorWheel|Events")
     FCk_ColorWheel_Event OnDragFinished;
 
@@ -109,8 +107,6 @@ protected:
     FLinearColor _Color = FLinearColor::White;
 
 private:
-    // Applies an RGB color to the internal HSV state, preserving hue/saturation for
-    // achromatic inputs so the selector pin doesn't snap to the center.
     auto DoUpdateColor(const FLinearColor& InColor) -> void;
     auto DoInvalidateWheelPaint() -> void;
 
@@ -122,8 +118,7 @@ private:
     auto HandleDragFinished() -> void;
 
 private:
-    // The selected color in HSV space: R = hue degrees [0..360), G = saturation,
-    // B = value, A = alpha. Source of truth for the Slate widget's attribute.
+    // HSV encoding: R = hue degrees [0..360), G = saturation, B = value, A = alpha.
     FLinearColor _ColorHSV = FLinearColor(0.0f, 0.0f, 1.0f, 1.0f);
 
     TSharedPtr<SCk_ColorWheel> _ColorWheel;

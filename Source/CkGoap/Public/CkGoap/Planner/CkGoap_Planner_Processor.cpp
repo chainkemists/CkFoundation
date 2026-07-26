@@ -3,10 +3,10 @@
 #include "CkGoap/CkGoap_Log.h"
 #include "CkGoap/CkGoap_Stats.h"
 #include "CkGoap/Action/CkGoap_Action_Fragment.h"
-#include "CkGoap/Action/CkGoap_Action_Utils.h"  // CastChecked for Planner-as-Action
+#include "CkGoap/Action/CkGoap_Action_Utils.h"
 #include "CkGoap/Algorithm/CkGoap_WorldState.h"
 #include "CkGoap/EntityScripts/CkGoapAction_EntityScript.h"
-#include "CkGoap/Planner/CkGoap_Planner_Utils.h"  // snapshot active chain for OnActiveChainChanged payload
+#include "CkGoap/Planner/CkGoap_Planner_Utils.h"
 #include "CkGoap/WorldState/CkGoap_WorldState_Fragment.h"
 #include "CkGoap/WorldState/CkGoap_WorldState_Utils.h"
 
@@ -28,12 +28,6 @@ DECLARE_CYCLE_STAT(TEXT("GoapPlanner::UpdateActivation"), STAT_Goap_Planner_Upda
 
 namespace ck_CkGoap_Planner_setup_internal
 {
-	// Iterative Tarjan SCC over a handle-keyed adjacency map. Returns SCCs as
-	// TArray<TArray<HandleT>>. We deliberately avoid the textbook recursive
-	// formulation: deep Action catalogs would consume the native call stack,
-	// and recursion across UE's TMap/TSet semantics is awkward. The work-stack
-	// form uses an explicit FFrame{Node, ChildIdx} record to remember where
-	// each node's children-iteration left off.
 	template<typename HandleT>
 	auto TarjanScc(const TMap<HandleT, TArray<HandleT>>& InAdj)
 		-> TArray<TArray<HandleT>>
@@ -86,7 +80,6 @@ namespace ck_CkGoap_Planner_setup_internal
 					continue;
 				}
 
-				// All children processed — finalise this node.
 				const auto NodeHandle = Frame.Node;
 				if (Lowlink[NodeHandle] == Index[NodeHandle])
 				{
@@ -118,38 +111,6 @@ namespace ck
 {
 
 // --------------------------------------------------------------------------------------------------------------------
-// Per-Planner cycle detection over this Planner's direct children.
-//
-// Each Planner runs Tarjan SCC over its own direct children's
-// PRECONDITION/EFFECT dependency graph. "Direct children" of a Planner are its
-// candidate operators — the Actions it considers when planning. In the unified
-// Action-as-Planner model:
-//   - A Planner that is itself an Action (promoted via PromoteActionToPlanner)
-//     has `FFragment_Goap_Action_Tree`; its direct children are its own
-//     `_ChildActions`.
-//   - A top-level Planner (created via Add) is not an Action; its direct
-//     children are the root Action's `_ChildActions` (the root Action is what
-//     subdivides the plan on behalf of the top-level Planner in the current
-//     transitional model).
-//
-// The edge model is the precondition/effect dependency graph: for sibling
-// Actions A and B, if any effect (Key,Value) in A's `_Effects` matches any
-// precondition (Key,Value) in B's `_Preconditions`, add edge A -> B (read:
-// "B depends on A"). This is the real planner-relevant dependency graph —
-// the tree-edge model used previously was a no-op since a tree has no cycles
-// by construction.
-//
-// A cycle (SCC of size > 1, or a self-loop) means the candidate operators at
-// this tier mutually require each other's effects to satisfy each other's
-// preconditions — the planner cannot satisfy any one of them without first
-// running another that itself transitively depends on the first.
-// Non-trivial SCCs are recorded in `FFragment_Goap_Planner_Current.
-// _DependencyCycles` as a diagnostic. The planner doesn't refuse cyclic
-// catalogs — designers fix them via the debugger surface.
-//
-// Defers if any direct child still has `FTag_Goap_Action_RequiresSetup` so the
-// per-Action `_Definition` (used to compute precondition/effect overlap below)
-// has been populated.
 
 auto
 	FProcessor_Goap_Planner_Setup::
@@ -164,24 +125,17 @@ auto
 {
 	SCOPE_CYCLE_COUNTER(STAT_Goap_Planner_Setup);
 
-	// cycle scan no longer reads InCurrent (the _RootAction
-	// field is gone). InCurrent is still passed as RW because the processor
-	// writes _DependencyCycles below.
-
-	// Resolve this Planner's direct children — the candidate operators it would
-	// pass to A* if it ran a search at its own tier.
 	using ActionHandle = FCk_Handle_Goap_Action;
 	auto DirectChildren = TArray<ActionHandle>{};
 
-	if (InHandle.template Has<FFragment_Goap_Action_Tree>())
+	const auto IsPromotedMidTierPlanner = InHandle.template Has<FFragment_Goap_Action_Tree>();
+	if (IsPromotedMidTierPlanner)
 	{
-		// Promoted Action-Planner: direct children are this Action's children.
 		const auto& Tree = InHandle.template Get<FFragment_Goap_Action_Tree>();
 		DirectChildren = Tree.Get_ChildActions();
 	}
 	else
 	{
-		// Top-level Planner: direct children come from the ActionCatalogIndex.
 		DirectChildren.Reserve(InCatalogIndex.Get_TagToAction().Num());
 		for (const auto& Pair : InCatalogIndex.Get_TagToAction())
 		{
@@ -196,28 +150,17 @@ auto
 		return;
 	}
 
-	// Defer if any direct child hasn't completed Setup yet — we need its
-	// `_Definition` (preconditions / effects) populated for the cycle-condition
-	// overlap pass below.
 	for (const auto& Child : DirectChildren)
 	{
 		if (NOT ck::IsValid(Child)) { continue; }
 		if (Child.template Has<FTag_Goap_Action_RequiresSetup>())
 		{
-			return;  // Defer; keep the Planner's RequiresSetup tag for retry.
+			return;  // Defer, keeping RequiresSetup: the overlap pass below needs the child's _Definition.
 		}
 	}
 
-	// Build the adjacency map over the precondition/effect dependency graph.
-	// Edge A -> B exists iff some effect (Key,Value) in A satisfies some
-	// precondition (Key,Value) in B — i.e. B depends on A having run.
-	//
-	// Tracks the (Key) tags that closed each edge so non-trivial SCCs can
-	// surface the participating WS keys as a diagnostic.
+	// Edge A -> B iff some effect (Key,Value) of A satisfies some precondition (Key,Value) of B.
 	auto Adj = TMap<ActionHandle, TArray<ActionHandle>>{};
-
-	// Per-edge condition tags: edge(A,B) -> set of tags via which the edge was
-	// established. Used to compute the cycle's participating keys after SCC.
 	auto EdgeConditions = TMap<TPair<ActionHandle, ActionHandle>, TSet<FGameplayTag>>{};
 
 	for (const auto& A : DirectChildren)
@@ -262,7 +205,6 @@ auto
 	InCurrent._DependencyCycles.Reset();
 	for (const auto& Scc : Sccs)
 	{
-		// Filter out trivial SCCs — single node with no self-loop.
 		if (Scc.Num() == 1)
 		{
 			const auto* Edges = Adj.Find(Scc[0]);
@@ -283,9 +225,6 @@ auto
 			ActionsInCycle.Add(Params.Get_ActionClass());
 		}
 
-		// Collect the (Key) tags participating in the cycle: the union of every
-		// intra-SCC edge's matched keys. These are the WS keys that close the
-		// loop (A's effect on Key satisfies B's precondition on Key, etc.).
 		auto CycleConditionsSet = TSet<FGameplayTag>{};
 		for (const auto& Src : Scc)
 		{
@@ -316,19 +255,8 @@ auto
 			InHandle, InCurrent._DependencyCycles.Num());
 	}
 
-	// Planner-side goal resolution. The Planner's _GoalAuthored
-	// resolves into _Goal via the Planner's own resolved WS source. Used by
-	// FProcessor_Goap_Planner_HandleRequests when seeding A*.
-	//
-	// We do NOT defer on missing _Resolved WS — promoted mid-tier Planners get
-	// their WS resolved via the activation walk (DoActivatePlanner →
-	// DoInjectGoalSynchronous), which re-resolves the goal. For top-level
-	// Planners, Add() seeds _Resolved at construction so this path runs the
-	// first time around.
-	//
-	// Note: keys not in the registry are silently dropped here — same semantics
-	// as the per-Action Setup did. _InvalidGoal is populated
-	// by Request_SetGoal (the canonical diagnostic surface).
+	// Keys absent from the registry are silently dropped here; Request_SetGoal owns _InvalidGoal,
+	// the canonical diagnostic surface. Deliberately does NOT defer on an unresolved WS source.
 	if (NOT InGoal._GoalAuthored.IsEmpty() && InGoal._Goal.IsEmpty())
 	{
 		const auto Source = InWSSource.Get_Resolved();
@@ -348,26 +276,6 @@ auto
 		}
 	}
 
-	// ----------------------------------------------------------------------
-	// Always-valid-plan tenet — static fallback check.
-	//
-	// A Planner is guaranteed never to reach PlanFailed iff its catalog contains
-	// at least one Action with NO preconditions whose effects cover EVERY goal
-	// condition. That Action is always selectable and always satisfies the goal
-	// at some (typically very high) cost — the fallback / "idle" pattern.
-	//
-	// Empty-goal Planners trivially never PlanFail (they emit PlanFound with an
-	// empty plan immediately) — they're treated as having a fallback.
-	//
-	// When the check fails AND _AllowPlanFailed is false, fire CK_ENSURE_IF_NOT.
-	// The cached _HasUnconditionalFallback bool is also read at the runtime
-	// PlanFailed branches in HandleResult / HandleRequests to gate the runtime
-	// ensure.
-	//
-	// See the module design-tenets notes (Every Planner must always produce
-	// a valid plan" for the rationale and the canonical example
-	// (UCk_GoapFEARGym_WaitForEnemy).
-	// ----------------------------------------------------------------------
 	const auto HasUnconditionalFallback = [&]() -> bool
 	{
 		if (InGoal._GoalAuthored.IsEmpty()) { return true; }
@@ -419,25 +327,9 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Per-Planner activation transitions.
-//
-// Each Planner caches its previous Plan[0] in
-// FFragment_Goap_Planner_Activation; on each tick, compares with the current
-// Plan[0] and dispatches activate/deactivate transitions for composite sub-
-// Planners. The "active chain" is no longer stored anywhere — Get_ActiveChain
-// derives it from a Plan[0] walk starting at the top-level Planner's root
-// Action.
-//
-// In the transitional model, sub-Planners ARE Action entities — every
-// composite Action carries FFragment_Goap_Planner_PlanState and runs its own
-// A* planner. The processor walks Action entities (those with PlanState +
-// Activation), not the top-level Planner entity (which doesn't run A*).
 
 namespace ck_goap_planner_processor
 {
-	// "Is a Planner" = has children. Atomic Actions terminate the
-	// activation walk and never get the per-sub-Planner activate/deactivate
-	// treatment.
 	auto Is_Composite(const FCk_Handle_Goap_Action& InAction) -> bool
 	{
 		if (NOT ck::IsValid(InAction)) { return false; }
@@ -446,18 +338,8 @@ namespace ck_goap_planner_processor
 	}
 }
 
-// re-resolve a sub-Planner's goal from its OWN _GoalAuthored (the
-// authored, tag-keyed source-of-truth set at construction via PlannerParams /
-// AddAction's first-call goal propagation or at runtime via Request_SetGoal).
-//
-// Why we re-resolve here even though Setup already resolved once: the sub-
-// Planner may carry a parent-inherited WS source whose registry differs from
-// whatever was current at Setup time. Re-resolving against the activation-time
-// WS registry guarantees keys resolve correctly under any WS-source override
-// chain.
-//
-// Precondition: InPlanner's FFragment_Goap_Planner_WorldStateSource._Resolved
-// is valid.
+// Re-resolves even though Setup already did: a parent-inherited WS source may carry a different
+// registry than the one current at Setup time.
 auto
 	FProcessor_Goap_Planner_UpdateActivation::
 	DoInjectGoalSynchronous(
@@ -469,23 +351,21 @@ auto
 	Goal._Goal.Reset();
 	Goal._InvalidGoal.Reset();
 
-	// Action's effect-key validation (populated at Setup) is still surfaced as
-	// a diagnostic — those reflect this Action's role as a *candidate operator*
-	// for the parent's planner, independent of its own goal.
+	// The Action-role effect-key diagnostics stay surfaced here: they describe this entity as a
+	// candidate operator for its parent's planner, independent of its own goal.
 	const auto& Def = InPlanner.template Get<FFragment_Goap_Action_Definition>();
 	Goal._InvalidGoal = Def.Get_InvalidGoal();
 
 	const auto& Authored = Goal.Get_GoalAuthored();
 	if (Authored.IsEmpty())
 	{
-		// No goal authored — planner emits empty plan / PlanFound immediately.
+		// No goal authored — the planner emits an empty plan / PlanFound immediately.
 		return;
 	}
 
 	const auto& WS = WSSource.Get_Resolved();
 	if (NOT ck::IsValid(WS))
 	{
-		// Can't resolve keys without a WS — record everything as invalid.
 		for (const auto& Cond : Authored)
 		{
 			Goal._InvalidGoal.Add(Cond);
@@ -520,7 +400,6 @@ auto
 	auto& ChildWSSource = InChild.template Get<FFragment_Goap_Planner_WorldStateSource>();
 	const auto& ChildParams = InChild.template Get<FFragment_Goap_Action_Params>();
 
-	// 1. Child's own override (if set) wins.
 	const auto Override = ChildParams.Get_WorldStateSource_Override();
 	if (ck::IsValid(Override))
 	{
@@ -528,7 +407,6 @@ auto
 		return;
 	}
 
-	// 2. Inherit from the parent's resolved WS.
 	if (ck::IsValid(InParent))
 	{
 		const auto& ParentWSSource = InParent.template Get<FFragment_Goap_Planner_WorldStateSource>();
@@ -539,9 +417,7 @@ auto
 		}
 	}
 
-	// 3. Fall back to the top-level Planner's default WS source (lifetime owner
-	// of every Action is the top-level Planner entity — see AddAction's tree-
-	// wiring branches in CkGoap_Planner_Utils.cpp).
+	// Last resort: the top-level Planner's default. Every Action's lifetime owner is that Planner.
 	auto OwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InChild);
 	if (OwnerEntity.template Has<FFragment_Goap_Planner_WorldStateSource>())
 	{
@@ -579,11 +455,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Turn a child sub-Planner on. Resolves WS, injects goal, subscribes
-// to WS, sets RequiresInitialPlan, broadcasts OnPlannerActivated, flips
-// _IsActive=true. Caller is responsible for the parent-Action's _ActiveParent
-// bookkeeping (the FFragment_Goap_Action_Current field tracking which parent
-// activated this child).
 
 auto
 	FProcessor_Goap_Planner_UpdateActivation::
@@ -595,13 +466,8 @@ auto
 
 	auto& Activation = InPlanner.template Get<FFragment_Goap_Planner_Activation>();
 	if (Activation._IsActive)
-	{
-		// Already active — no-op.
-		return;
-	}
+	{ return; }
 
-	// Mark "ActiveParent" so the rest of the framework can introspect which
-	// parent activated us.
 	if (ck::IsValid(InParent))
 	{
 		auto& ChildCurrent = InPlanner.template Get<FFragment_Goap_Action_Current>();
@@ -609,7 +475,7 @@ auto
 		ChildCurrent._ActiveParentAction = ParentParams.Get_ActionClass();
 	}
 
-	// Resolve WS first so DoInjectGoalSynchronous can use the registry.
+	// WS first: DoInjectGoalSynchronous resolves goal keys against its registry.
 	DoResolveAndAssignWorldStateSource(InPlanner, InParent);
 	DoInjectGoalSynchronous(InPlanner);
 	DoSubscribeActionToWorldState(InPlanner);
@@ -618,9 +484,6 @@ auto
 
 	Activation._IsActive = true;
 
-	// broadcast still happens on the Action entity (Path A);
-	// payload source-handle is the Planner-cast of the activated entity (sub-
-	// Planners are always promoted, so this cast is safe).
 	{
 		auto PlannerCast = UCk_Utils_Goap_Planner_UE::Has(InPlanner)
 			? UCk_Utils_Goap_Planner_UE::CastChecked(InPlanner)
@@ -631,9 +494,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Turn a sub-Planner off. Recursively deactivates any active
-// descendants so their _IsActive flags don't go stale (otherwise re-activation
-// of the same sub-tree would silently no-op the descendant chain).
 
 auto
 	FProcessor_Goap_Planner_UpdateActivation::
@@ -644,16 +504,12 @@ auto
 	auto& Activation = InPlanner.template Get<FFragment_Goap_Planner_Activation>();
 	if (NOT Activation._IsActive)
 	{
-		// Not active — no-op (defensive; we still clear any cached Plan0).
 		Activation._LastActivatedPlan0 = {};
 		return;
 	}
 
-	// Recurse into _LastActivatedPlan0 first so deeper layers settle before us.
-	// We can't read this Planner's PlanState._Plan[0] because that may have
-	// already mutated (the change is what triggered our deactivation). Use the
-	// cached last-activated-plan0 instead — it represents the descendant
-	// activation tree at the previous tick.
+	// Recurse through the CACHED plan0, not PlanState._Plan[0]: the live plan may already have
+	// mutated (that mutation is what triggered this deactivation). Deeper layers settle first.
 	{
 		auto LastDescendant = Activation._LastActivatedPlan0;
 		if (ck::IsValid(LastDescendant) && ck_goap_planner_processor::Is_Composite(LastDescendant))
@@ -662,8 +518,7 @@ auto
 		}
 	}
 
-	// Unsubscribe synchronously (avoids a deferred request that would land
-	// after the next activation pass on this same Action).
+	// Synchronous: a deferred request would land after the next activation pass on this Action.
 	DoUnsubscribeActionFromWorldState(InPlanner);
 
 	auto& Current   = InPlanner.template Get<FFragment_Goap_Action_Current>();
@@ -678,16 +533,13 @@ auto
 	PlanState._Plan.Reset();
 	PlanState._PlanStatus = ECk_GoapPlanStatus::Idle;
 
-	// Release any pending plan-initial / in-flight gating tags — Planner is
-	// leaving the chain and won't broadcast a terminal status to drop them itself.
+	// A Planner leaving the chain never broadcasts a terminal status, so nothing else drops these.
 	InPlanner.template Try_Remove<FTag_Goap_Planner_RequiresInitialPlan>();
 	InPlanner.template Try_Remove<FTag_Goap_Planner_PlanInFlight>();
 
 	Activation._IsActive = false;
 	Activation._LastActivatedPlan0 = {};
 
-	// broadcast still happens on the Action entity (Path A);
-	// payload source-handle is the Planner-cast of the deactivated entity.
 	{
 		auto PlannerCast = UCk_Utils_Goap_Planner_UE::Has(InPlanner)
 			? UCk_Utils_Goap_Planner_UE::CastChecked(InPlanner)
@@ -698,7 +550,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// ForEachEntity — per-Planner activation transition rule.
 
 auto
 	FProcessor_Goap_Planner_UpdateActivation::
@@ -711,50 +562,35 @@ auto
 {
 	SCOPE_CYCLE_COUNTER(STAT_Goap_Planner_UpdateActivation);
 
-	// matches Planner directly. Top-level Planners (created
-	// via Add) have _IsActive=true at construction; promoted mid-tier
-	// Planners flip via parent's UpdateActivation pass.
 	if (NOT InActivation._IsActive) { return; }
 
-	// Disable-toggle gate reads InCurrent directly (no lifetime-owner walk).
 	if (InCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable) { return; }
 
-	if (InPlanState.Get_PlanStatus() != ECk_GoapPlanStatus::PlanFound &&
-		InPlanState.Get_PlanStatus() != ECk_GoapPlanStatus::PlanFailed)
-	{
-		// Mid-decision — don't churn activation.
-		return;
-	}
+	const auto PlanStatus = InPlanState.Get_PlanStatus();
+	const auto DecisionIsSettled = PlanStatus == ECk_GoapPlanStatus::PlanFound ||
+		PlanStatus == ECk_GoapPlanStatus::PlanFailed;
+	if (NOT DecisionIsSettled) { return; }
 
 	const auto OldStep0 = InActivation._LastActivatedPlan0;
 	const auto NewStep0 = InPlanState.Get_Plan().IsEmpty()
 		? FCk_Handle_Goap_Action{}
 		: InPlanState.Get_Plan()[0];
 
-	if (OldStep0 == NewStep0)
-	{
-		// No change — nothing to do.
-		return;
-	}
+	if (OldStep0 == NewStep0) { return; }
 
-	// Snapshot the active chain BEFORE mutating activation state, so
-	// OnGoap_Planner_ActiveChainChanged can carry a pre-mutation _OldChain
-	// payload. The chain is rooted at the top-level Planner.
-	//
-	// Path-A bridge: for a top-level Planner, InHandle IS the top-level.
-	// For a promoted mid-tier Planner-Action, walk lifetime-owner up to
-	// reach the top-level Planner entity.
+	const auto IsPromotedMidTierPlanner = InHandle.template Has<FFragment_Goap_Action_Tree>();
+
+	// Snapshot BEFORE mutating activation state so OnGoap_Planner_ActiveChainChanged can carry a
+	// pre-mutation _OldChain payload. The chain is rooted at the top-level Planner.
 	auto TopLevelPlanner = FCk_Handle_Goap_Planner{};
 	auto OldChainSnapshot = TArray<FCk_Handle_Goap_Action>{};
 	{
-		if (NOT InHandle.template Has<FFragment_Goap_Action_Tree>())
+		if (NOT IsPromotedMidTierPlanner)
 		{
-			// Top-level Planner — InHandle itself.
 			TopLevelPlanner = InHandle;
 		}
 		else
 		{
-			// Promoted mid-tier — walk owner up to top-level.
 			auto Walker = static_cast<FCk_Handle>(InHandle);
 			constexpr auto MaxDepth = 64;
 			for (auto Depth = 0; Depth < MaxDepth; ++Depth)
@@ -777,24 +613,18 @@ auto
 		}
 	}
 
-	// The "parent Action" arg for DoActivatePlanner needs to be an Action
-	// handle. For a promoted mid-tier Planner-Action, InHandle is the parent
-	// (it owns Plan[0] via its own Tree). For a top-level Planner, there is
-	// no parent Action — Plan[0] entries are direct children of the Planner,
-	// which is NOT an Action; pass invalid.
+	// A top-level Planner is not an Action, so its Plan[0] entries have no parent Action.
 	auto ParentAsAction = FCk_Handle_Goap_Action{};
-	if (InHandle.template Has<FFragment_Goap_Action_Tree>())
+	if (IsPromotedMidTierPlanner)
 	{
 		ParentAsAction = UCk_Utils_Goap_Action_UE::CastChecked(InHandle);
 	}
 
-	// Deactivate the old Step0 if it changed AND it was a composite sub-Planner.
 	if (ck::IsValid(OldStep0) && ck_goap_planner_processor::Is_Composite(OldStep0))
 	{
 		DoDeactivatePlanner(OldStep0);
 	}
 
-	// Activate the new Step0 if it's a composite sub-Planner.
 	if (ck::IsValid(NewStep0) && ck_goap_planner_processor::Is_Composite(NewStep0))
 	{
 		auto& ChildActivation = NewStep0.template Get<FFragment_Goap_Planner_Activation>();

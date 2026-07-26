@@ -15,7 +15,6 @@
 
 // Per-(game/PIE)-world registry of dialogue-line entities. Owns a transient registry-root entity under which every
 // line entity (and its condition child entities) lives; destroying the root on Deinitialize cascades the whole set.
-// Banks come from project settings at world init and/or from the runtime register/unregister API (also the test seam).
 UCLASS(DisplayName = "CkSubsystem_DialogRegistry")
 class CKDIALOG_API UCk_DialogRegistry_Subsystem_UE : public UCk_Game_WorldSubsystem_Base_UE
 {
@@ -29,7 +28,6 @@ public:
     auto Deinitialize() -> void override;
 
 public:
-    // Convenience resolver for BP/AS/tests.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Dialog|Registry",
               DisplayName = "[Ck][Dialog] Get Registry",
@@ -91,8 +89,8 @@ public:
         FCk_DialogBank_LineData InLineData,
         FGameplayTagContainer InBankTags);
 
-    // Convenience for dynamic content / tests: register a line with a single (already-instanced) condition. Avoids
-    // authoring the bank's instanced-object array from BP/AS (an awkward marshalling case). Pass null for no condition.
+    // Register a line with a single already-instanced condition, avoiding the bank's instanced-object array (an
+    // awkward BP/AS marshalling case). Pass null for no condition.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Dialog|Registry",
               DisplayName = "[Ck][Dialog] Request Register Line (With Condition)")
@@ -125,8 +123,7 @@ private:
 
     TArray<FCk_Handle_DialogLine> _AllLines;
 
-    // Fast duplicate-ID check. Kept consistent with _AllLines by DoPruneInvalidLines (which uses _LineHandleToID to
-    // drop a stale ID when its line entity was destroyed out-of-band, e.g. a test's Track_ForCleanup).
+    // Fast duplicate-ID check; kept consistent with _AllLines by DoPruneInvalidLines via _LineHandleToID.
     TSet<FName> _LineIDs;
 
     TMap<FCk_Handle_DialogLine, FName> _LineHandleToID;
@@ -135,12 +132,11 @@ private:
     UPROPERTY(Transient)
     TArray<TObjectPtr<UCk_DialogBank_DataAsset>> _RegisteredBanks;
 
-    // Bank -> the line entities it produced (for Request_UnregisterBank). Keys stay alive via _RegisteredBanks.
+    // Keys stay GC-alive via _RegisteredBanks.
     TMap<TObjectPtr<UCk_DialogBank_DataAsset>, TArray<FCk_Handle_DialogLine>> _BankToLines;
 
     bool _AllBanksProcessed = false;
 
-    // Count of condition child entities queued but not yet constructed; gates readiness.
     int32 _PendingConditionSpawns = 0;
 };
 

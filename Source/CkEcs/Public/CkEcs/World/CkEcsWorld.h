@@ -10,18 +10,8 @@
 
 namespace ck
 {
-    // Lightweight RAII wrapper that owns an entt registry, allocates a slot for
-    // it in ck::registry_table on construction, and releases the slot +
-    // destroys the registry on destruction. The exposed Get_Registry() returns
-    // a non-owning FCk_Registry view bound to that slot — fragments and
-    // entities created through this view stay alive for the FEcsWorld's
-    // lifetime, and any outstanding handle resolves safely (slot is freed
-    // first so stale resolves return nullptr instead of UAFing).
-    //
-    // Used by editor-only engine subsystems that need a private ECS world
-    // (e.g. UCk_EditorAssetLoader_SubSystem_UE, UCk_EditorToolbar_*). The
-    // game-time UCk_EcsWorld_Subsystem_UE / UCk_EditorEcsWorld_Subsystem_UE
-    // do not use FEcsWorld — they own the registry directly.
+    // RAII owner of an entt registry and its ck::registry_table slot. Get_Registry() hands out a
+    // NON-owning view bound to that slot — it must not outlive the FEcsWorld that allocated it.
     class CKECS_API FEcsWorld
     {
         CK_GENERATED_BODY(FEcsWorld);
@@ -34,10 +24,7 @@ namespace ck
         FEcsWorld();
         ~FEcsWorld();
 
-        // FEcsWorld is non-copyable and non-movable: it owns a slot in the
-        // global registry table, and copy/move would either alias the slot
-        // (double-free risk) or leak it. Callers who need to pass it around
-        // should hold an FEcsWorld by reference / pointer.
+        // Owns a registry_table slot: a copy would alias it (double free), a move would leak it.
         FEcsWorld(const FEcsWorld&) = delete;
         auto operator=(const FEcsWorld&) -> FEcsWorld& = delete;
         FEcsWorld(FEcsWorld&&) = delete;

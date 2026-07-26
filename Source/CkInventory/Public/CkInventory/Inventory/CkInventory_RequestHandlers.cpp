@@ -56,10 +56,6 @@ namespace ck::inventory_handlers
     using FInventoryItemRecord = UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils;
 
     // ----------------------------------------------------------------------------------------------------
-    // Each TXxx::Handle below is the default body. It works for the no-addon, no-shape-divergence
-    // case — typically the DataOnly path. Per-shape behavior (Spatial in this codebase) is
-    // expressed by full Handle specializations or static-helper specializations in the typed
-    // inventory's RequestTraits.cpp.
 
     // ---- TAddItem default: validate + bind. Used by addon-less entries (DataOnly).
     template <typename TInventoryHandle, typename TAddon>
@@ -81,10 +77,8 @@ namespace ck::inventory_handlers
             R = UCk_Utils_Inventory_UE::Get_CanAcceptItem(Base, ItemHandle);
             if (R != Result::Success)
             {
-                // Caller-attributable rejection (e.g. Failed_ItemAlreadyInInventory,
-                // Failed_RejectedByCustomAcceptanceLogic) — surface through the Result
-                // enum, log at Display so the AutoTest framework doesn't escalate the
-                // diagnostic to a test failure.
+                // Caller-attributable rejection — Display, never Warning: the AutoTest harness
+                // escalates Warnings to test failures.
                 ck::inventory::Display(TEXT("AddItem: Failed [{}] for item [{}] in inventory [{}]"),
                     R, ItemHandle, InHandle);
                 return R;
@@ -157,9 +151,8 @@ namespace ck::inventory_handlers
         const auto CanStackResult = UCk_Utils_ItemTrait_Stackable_UE::Get_CanStackItems(Base, SourceItem, TargetItem);
         if (CanStackResult != Result::Success)
         {
-            // Caller-attributable rejection (full stack, custom rejection, mismatch) — surface
-            // through the Result enum, log at Display so the AutoTest framework doesn't escalate
-            // the diagnostic to a test failure.
+            // Caller-attributable rejection — Display, never Warning: the AutoTest harness
+            // escalates Warnings to test failures.
             ck::inventory::Display(TEXT("StackItems: Failed [{}] for source [{}] and target [{}] in inventory [{}]"),
                 CanStackResult, SourceItem, TargetItem, InHandle);
             R = CanStackResult;
@@ -168,7 +161,6 @@ namespace ck::inventory_handlers
 
         const auto SourceCount = UCk_Utils_ItemTrait_Stackable_UE::Get_StackCount(SourceItem);
         const auto TargetCount = UCk_Utils_ItemTrait_Stackable_UE::Get_StackCount(TargetItem);
-        // Effective max = min(definition max, the inventory's StackingPolicy clamp); MAX_int32 when uncapped.
         const auto MaxTarget   = UCk_Utils_ItemTrait_Stackable_UE::Get_EffectiveMaxStackSize(Base, TargetItem);
         const auto Available   = MaxTarget - TargetCount;
 
@@ -249,9 +241,8 @@ namespace ck::inventory_handlers
             return R;
         }
 
-        // A split mints a NEW entry, so the entry bound must gate it (Spatial's specialization
-        // gates via placement instead). A split is unit-neutral — Get_RemainingSlots only
-        // constrains under BoundedByUniqueEntries; Unbounded / BoundedByTotalUnits pass.
+        // A split mints a NEW entry but is unit-neutral, so only the entry bound gates it
+        // (Spatial's specialization gates via placement instead).
         if (const auto DataOnlyHandle = UCk_Utils_Inventory_DataOnly_UE::Cast(Base);
             ck::IsValid(DataOnlyHandle)
             && UCk_Utils_Inventory_DataOnly_UE::Get_RemainingSlots(DataOnlyHandle) <= 0)
@@ -262,7 +253,6 @@ namespace ck::inventory_handlers
             return R;
         }
 
-        // The split-off entry may not exceed the inventory's effective max stack size.
         if (SplitCount > UCk_Utils_ItemTrait_Stackable_UE::Get_EffectiveMaxStackSize(Base, SourceItem))
         {
             R = Result::Failed_NoSpaceForNewItem;
@@ -338,10 +328,8 @@ namespace ck::inventory_handlers
         auto Remaining = Amount;
         const auto IsStackable = Definition->template Has_ItemTrait<UCk_ItemTrait_Stackable>();
 
-        // Units budget from committed state (bound metric + per-entry room + custom quota).
-        // Our own stack writes inside this handler are deferred (attribute modifiers fold next
-        // pump pass), so re-reading capacity mid-loop would double-count room — decrement the
-        // budget instead.
+        // Our own stack writes here are deferred (modifiers fold next pump pass), so re-reading
+        // capacity mid-loop would double-count room — decrement this budget instead.
         auto UnitsBudget = UCk_Utils_Inventory_UE::Get_AbsorbableUnits(Base, Definition);
 
         if (IsStackable && Policy == ECk_Inventory_AddPolicy::PreferStacking)
@@ -375,17 +363,14 @@ namespace ck::inventory_handlers
                 UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(NewItem, CountForThisItem);
             }
 
-            // Explicit-count acceptance check: the stack write above is still settling (modifier
-            // folds next pump pass), so deriving the count from the item would read the trait's
-            // initial count instead of CountForThisItem.
+            // Explicit count: the stack write above is still settling, so deriving the count from
+            // the item would read the trait's initial count instead of CountForThisItem.
             if (const auto AcceptResult = UCk_Utils_Inventory_UE::Get_CanAcceptItem_WithCount(
                     Base, NewItem, ECk_Inventory_AddPolicy::ForceNewItem, CountForThisItem);
                 AcceptResult != ECk_Inventory_OperationResult_Add::Success)
             {
-                // Map the specific Get_CanAcceptItem failure to the closest AddByDefinition
-                // result. Without this mapping, every can-accept failure (including the
-                // bounds-full / no-fit cases) collapses to Failed_RejectedByCustomAcceptanceLogic,
-                // hiding the real reason from the caller.
+                // Without this mapping every can-accept failure (bounds-full, no-fit) would collapse
+                // to Failed_RejectedByCustomAcceptanceLogic and hide the real reason.
                 R = (AcceptResult == ECk_Inventory_OperationResult_Add::Failed_RejectedByCustomAcceptanceLogic)
                     ? Result::Failed_RejectedByCustomAcceptanceLogic
                     : Result::Failed_NoSpaceAvailable;
@@ -462,8 +447,7 @@ namespace ck::inventory_handlers
         return Result::Failed_NotSpatialInventory;
     }
 
-    // ---- TTransfer: cross-shape, single body. Calls SourceTraits/TargetTraits-supplied
-    //      primitives via the typed handles' specialized TXxx::Handle (Add, Remove).
+    // ---- TTransfer: cross-shape, single body routed through each shape's typed Add/Remove Handle.
     template <typename TSourceHandle, typename TTargetHandle, typename TAddon>
     static auto DoTransfer(
         TSourceHandle& InSource,
@@ -499,17 +483,15 @@ namespace ck::inventory_handlers
         if (TransferCount <= 0)
         { return ECk_Inventory_OperationResult_Transfer::Failed_ZeroCount; }
 
-        // Captured once from the pre-fill source count; recomputing it at the return sites from the
-        // already-decremented SourceCount + OutCountTransferred would double-count pre-filled units.
+        // Captured pre-fill: recomputing this at the return sites would double-count pre-filled units.
         const auto RequestedTotal = (InCount == ck::Inventory::AllAvailableCount) ? SourceCount : InCount;
 
         const auto* Definition = UCk_Utils_Item_UE::Get_Definition(InSourceItem);
 
         if (IsStackable)
         {
-            // Clamp to what the target can absorb right now (bound metric + per-entry room +
-            // custom quota, from committed state). A clamped transfer settles as Success_Partial
-            // instead of failing after the pre-fill already moved units.
+            // Clamped rather than failed, so a transfer whose pre-fill already moved units settles
+            // as Success_Partial.
             TransferCount = FMath::Min(TransferCount,
                 UCk_Utils_Inventory_UE::Get_AbsorbableUnits(BaseTarget, Definition));
 
@@ -517,17 +499,11 @@ namespace ck::inventory_handlers
             { return ECk_Inventory_OperationResult_Transfer::Failed_NoSpaceInTarget; }
         }
 
-        // Past validation the transfer always mutates the SOURCE (removes the item or reduces its
-        // stack), so flag it dirty here. DoTransfer is reached both by the deferred Request_TransferItem
-        // path (whose request processor would also flag the source) AND synchronously by ExecuteTransferNow
-        // for mass-transfer, which has NO such processor — without this, FProcessor_Inventory_FireSignals
-        // never diffs a drained source and OnItemsChanged (hence downstream OnEmptied) never fires. The
-        // TARGET is flagged at each success site below, since it only changes on a committed move.
+        // Flagged here, not by the caller: ExecuteTransferNow reaches DoTransfer synchronously with no
+        // request processor to flag the source, and without this FProcessor_Inventory_FireSignals never
+        // diffs a drained source. The TARGET is flagged at each success site (it only changes on a move).
         UCk_Utils_Inventory_UE::Request_MarkInventory_AsMayHaveChanged(BaseSource);
 
-        // Helper lambdas: synthesize a Remove/Add call by constructing a synthetic request entry
-        // and dispatching through the typed Handle. This keeps Transfer's algorithm shape-agnostic
-        // while routing through each shape's actual Add/Remove logic (including grid placement).
         const auto DoRemoveFromSource = [&](FCk_Handle_Item ItemToRemove) -> ECk_Inventory_OperationResult_Remove
         {
             using SourceRemoveEntry = typename TInventoryRequestTraits<TSourceHandle>::RemoveItem::Entry;
@@ -542,7 +518,6 @@ namespace ck::inventory_handlers
             using TargetAddEntry = typename TInventoryRequestTraits<TTargetHandle>::AddItem::Entry;
             FCk_Request_Inventory_AddItem Req{ItemToAdd};
             Req.Set_Acceptance(InAcceptance);
-            // Construct entry: with placement addon if Spatial, else default.
             if constexpr (std::is_same_v<typename TargetAddEntry::AddonType, FCk_SpatialPlacement>)
             {
                 return TInventoryRequestTraits<TTargetHandle>::AddItem::Handle(
@@ -588,8 +563,7 @@ namespace ck::inventory_handlers
                 : ECk_Inventory_OperationResult_Transfer::Success_Partial;
         }
 
-        // The remainder lands as ONE entry in the target (whole item or split-off item), which may
-        // not exceed the target's effective max stack size (StackingPolicy clamp).
+        // The remainder lands as ONE entry in the target, so the target's per-entry clamp caps it.
         const auto MaxPerNewEntry = IsStackable
             ? UCk_Utils_ItemTrait_Stackable_UE::Get_EffectiveMaxStackSize_ByDefinition(BaseTarget, Definition)
             : MAX_int32;
@@ -603,7 +577,6 @@ namespace ck::inventory_handlers
 
             if (AddResult != ECk_Inventory_OperationResult_Add::Success)
             {
-                // Rollback into source — re-add. Always uses the source's AddItem.
                 using SourceAddEntry = typename TInventoryRequestTraits<TSourceHandle>::AddItem::Entry;
                 FCk_Request_Inventory_AddItem RollbackReq{InSourceItem};
                 ECk_Inventory_OperationResult_Add Rollback;
@@ -631,14 +604,9 @@ namespace ck::inventory_handlers
         }
         else
         {
-            // The split copy below inherits the source's runtime tags via a DEFERRED OnSplit
-            // request, so the synchronous CATEGORICAL acceptance check (custom CanAcceptItem —
-            // tags / type / traits) would see the not-yet-copied tags and wrongly reject it. Decide
-            // that categorical question against the SOURCE (whose tags are committed) — the same
-            // Get_CanAcceptItem the Stock prompt runs on the held item — and skip only it on the
-            // copy. Abort ONLY on a categorical rejection: quantitative capacity is already clamped
-            // into TransferCount above (Get_AbsorbableUnits) and re-derived on the copy, so a NoSpace
-            // result must fall through to the normal partial-transfer path rather than abort it.
+            // The split copy inherits the source's tags via a DEFERRED OnSplit, so the categorical
+            // acceptance question is decided against the SOURCE (tags committed) instead. Abort ONLY
+            // on categorical rejection — capacity is already clamped into TransferCount above.
             // Checked before touching the source stack so a rejection needs no rollback.
             if (const auto SourceAccept = UCk_Utils_Inventory_UE::Get_CanAcceptItem(BaseTarget, InSourceItem);
                 SourceAccept == ECk_Inventory_OperationResult_Add::Failed_RejectedByCustomAcceptanceLogic)
@@ -663,8 +631,7 @@ namespace ck::inventory_handlers
             Definition->OnSplit(InSourceItem, NewItem);
             UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(NewItem, MoveCount);
 
-            // Acceptance already proven against the source above; skip the redundant categorical
-            // recheck on the not-yet-tag-copied split unit. Placement / grid-space checks still run.
+            // Categorical acceptance already proven against the source; placement checks still run.
             const auto AddResult = DoAddToTarget(NewItem, ECk_AddAcceptance::AlreadyValidated);
 
             if (AddResult != ECk_Inventory_OperationResult_Add::Success)
@@ -736,10 +703,7 @@ namespace ck::inventory_handlers
         return R;
     }
 
-    // ---- ExecuteTransferNow: synchronous single-item dispatch for the mass-transfer churn.
-    //      Branches the 2x2 source/target shapes and calls the SAME DoTransfer body the deferred
-    //      Request_TransferItem_* path uses. The per-shape DoTransfer instantiations already exist
-    //      (TTransfer<...>::Handle instantiates all four below).
+    // ---- ExecuteTransferNow: synchronous single-item dispatch over the 2x2 source/target shapes.
     auto ExecuteTransferNow(
         FCk_Handle_Item& InItem,
         FCk_Handle_Inventory& InTarget,
@@ -797,10 +761,8 @@ namespace ck::inventory_handlers
         return Count;
     }
 
-    // Explicit instantiations for every (Handle, Addon) pair the framework uses. Located here
-    // (not in the per-shape Traits.cpp files) because the default Handle template bodies live
-    // in this TU. Specializations declared in the per-shape Traits.h are visible (both headers
-    // included above), so the linker routes Spatial's overrides correctly.
+    // Instantiated HERE because the default Handle bodies live in this TU; the per-shape Traits.h
+    // specialization declarations are included above so the linker routes Spatial's overrides.
     template struct TAddItem         <FCk_Handle_Inventory_DataOnly>;
     template struct TAddItem         <FCk_Handle_Inventory_Spatial,  FCk_SpatialPlacement>;
     template struct TRemoveItem      <FCk_Handle_Inventory_DataOnly>;

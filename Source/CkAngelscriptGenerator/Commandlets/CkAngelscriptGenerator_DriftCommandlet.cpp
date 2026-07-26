@@ -13,10 +13,8 @@
 
 UCkAngelscriptGenerator_DriftCommandlet::UCkAngelscriptGenerator_DriftCommandlet()
 {
-    // Commandlets that mutate files based on UClass reflection need an
-    // editor context — the editor needs to be capable of registering
-    // every UClass that contributes to the generated output. Setting
-    // IsEditor=true makes UCommandletHelpers spin up GEditor for us.
+    // IsEditor=true makes UCommandletHelpers spin up GEditor, without which not every UClass
+    // contributing to the generated output is registered.
     IsClient       = false;
     IsServer       = false;
     IsEditor       = true;
@@ -33,13 +31,8 @@ int32 UCkAngelscriptGenerator_DriftCommandlet::Main(const FString& /*InParams*/)
     ck::angelscriptgenerator::Log(
         TEXT("[DriftCommandlet] === AS generator drift check starting ==="));
 
-    // Single-writer gate (G11): the commandlet's whole purpose is to REGENERATE the canonical
-    // files and let the post-step `git diff` judge drift. Running as a silent SECONDARY would
-    // skip every generator write at G3/G4/G7 → the files never get rewritten → `git diff` finds
-    // no change → a FALSE-CLEAN CI verdict. Acquiring up front (it normally runs alone in CI)
-    // and failing loudly when it can't is the only safe behavior: a failure to RUN the check is
-    // a different, must-be-loud failure class than the drift verdict itself (which still owns the
-    // exit-0-with-git-diff contract below).
+    // This is the one gate that must own or fail loudly: a silent SECONDARY skips every generator
+    // write, so nothing is rewritten, `git diff` finds nothing, and CI reports a FALSE CLEAN.
     if (NOT FCkAngelscriptGenerator_RegenOwnership::Try_AcquireOrGet_IsOwner(TEXT("DriftCommandlet.Main")))
     {
         ck::angelscriptgenerator::Error(
@@ -51,17 +44,9 @@ int32 UCkAngelscriptGenerator_DriftCommandlet::Main(const FString& /*InParams*/)
         return 1;
     }
 
-    // EntitySpawnParams + AutoTestActors generators — reflection-only,
-    // synchronous. After this returns, both files on disk match the
-    // current reflection state byte-for-byte (the generators short-
-    // circuit when content is already identical, so this is a no-op
-    // on a clean worktree).
     FCkAngelscriptEntityScriptParamsGenerator::GenerateAll();
     FCkAutoTestWrapperGenerator::GenerateAll();
 
-    // DynamicHandleTypes.json — accessed via the editor subsystem
-    // (GEditor is initialized because we set IsEditor=true above).
-    // Falls back gracefully if the subsystem isn't available.
     if (GEditor != nullptr)
     {
         if (auto* Subsystem = GEditor->GetEditorSubsystem<UCkDynamicHandleSubsystem>();
@@ -90,11 +75,8 @@ int32 UCkAngelscriptGenerator_DriftCommandlet::Main(const FString& /*InParams*/)
         TEXT("Drift verdict lives in the post-commandlet `git diff` step. ==="),
         ElapsedSeconds);
 
-    // Exit 0 on a successful RUN. The CI script's subsequent `git diff --exit-code`
-    // is the gate that fails on actual drift — that way CI logs name the specific
-    // files that drifted instead of a generic "commandlet failed." (The only non-zero
-    // return is the G11 single-writer refusal above, which is a failure-to-run, not a
-    // drift verdict.)
+    // Exit 0 means the check RAN, not that it was clean — the CI script's following
+    // `git diff --exit-code` is the drift gate, so its logs name the files that drifted.
     return 0;
 }
 

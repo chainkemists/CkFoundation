@@ -21,8 +21,6 @@ DECLARE_CYCLE_STAT(TEXT("Crowd::DiagRecorder"), STAT_CkCrowd_DiagRecorderProc, S
 
 namespace ck_crowd_agent_diag_processor
 {
-    // Sample rate. Read once per ForEachEntity (cheap) so a console toggle is responsive without a
-    // separate dirty path. 10Hz over a 9s diag-gym cycle = ~90 samples per agent.
     static TAutoConsoleVariable<int32> CVarSampleHz(
         TEXT("ck.Crowd.SampleHz"),
         10,
@@ -31,13 +29,10 @@ namespace ck_crowd_agent_diag_processor
         TEXT("  Default 10Hz (~90 samples per 9s diag-gym cycle)."),
         ECVF_Cheat);
 
-    // Arrival-window radius for the "reached goal" check. Decoupled from CrowdAgent's _ArrivalRadius
-    // because the recorder only cares about "was the agent meaningfully close to the goal at any
-    // point" — false negatives from a tighter threshold would inflate t_to_goal misses.
+    // Deliberately wider than CrowdAgent's _ArrivalRadius: the recorder only asks "was the agent
+    // meaningfully close at any point", and a tighter threshold would inflate t_to_goal misses.
     constexpr auto ArrivalWindowCm = 60.0f;
 
-    // Threshold for counting a heading change as a "reversal". 90° = the agent flipped its forward
-    // direction by a full quarter turn between consecutive samples.
     constexpr auto ReversalAngleDeg = 90.0f;
 }
 
@@ -86,9 +81,8 @@ namespace ck
 
         // Per-cycle metrics --------------------------------------------------------------------
 
-        // Min separation across cycle. Reads the trimmed-and-sorted-by-distance neighbor cache;
-        // first entry (if any) is the nearest neighbor. The cache stores cylinder-edge distance,
-        // not centre-to-centre, so values < 0 mean overlap (clipping).
+        // The cache is sorted by distance and stores cylinder-EDGE distance, so entry 0 is the
+        // nearest neighbour and a negative value means overlap.
         const auto& Neighbors = InNeighborCache.Get_Neighbors();
         if (Neighbors.Num() > 0)
         {
@@ -100,12 +94,11 @@ namespace ck
             }
         }
 
-        // Max angular delta + reversal count — compare heading against previous sample.
         if (InRecorder._Samples.Num() >= 2)
         {
             const auto& Prev = InRecorder._Samples[InRecorder._Samples.Num() - 2];
-            // Skip if either sample had no velocity — direction is meaningless.
-            if (Prev._Speed > KINDA_SMALL_NUMBER && Speed > KINDA_SMALL_NUMBER)
+            const auto BothSamplesMoving = Prev._Speed > KINDA_SMALL_NUMBER && Speed > KINDA_SMALL_NUMBER;
+            if (BothSamplesMoving)
             {
                 auto DeltaRad = DirRad - Prev._DirRad;
                 // Wrap to [-PI, PI] so a flip from -179° to +179° reads as 2°, not 358°.
@@ -119,7 +112,6 @@ namespace ck
             }
         }
 
-        // Reached-goal sticky flag.
         if (NOT InRecorder._Reached)
         {
             const auto DistToGoal = static_cast<float>(FVector::Dist(Pos, InRecorder._GoalPos));

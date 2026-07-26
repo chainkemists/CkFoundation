@@ -12,19 +12,12 @@
 #include "CkIskmRendererVF/CkIskm_BoneMatrix.h"
 
 // ----------------------------------------------------------------------------------------------------
-//  CkIskmRenderer — render-thread resources for batched GPU-skinned skeletal instancing.
-//  Port of Skelot v6 SkelotRenderResources.h, GPUScene desktop path only (HP float32, no manual-vertex-fetch,
-//  no legacy/non-GPUScene path, no curves). See Shaders/CkIskmRenderer/CkIskm_BatchedVertexFactory.ush.
-//
-//  Lives in the engine-only PostConfigInit module CkIskmRendererVF so the FVertexFactory type registers before
-//  the engine seals the vertex-factory list. API shapes are verified against the engine render headers.
-// ----------------------------------------------------------------------------------------------------
 
 class USkeletalMesh;
 class USkeleton;
 class FSkeletalMeshRenderData;
 
-// Per-AnimCollection uniform buffer: binds the baked bone-matrix SRV + bone stride. Shader name "CkIskmAC".
+// Bound in the shader under the name "CkIskmAC"
 BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FCk_Iskm_AnimCollectionUniformParams, CKISKMRENDERERVF_API)
     SHADER_PARAMETER(uint32, BoneCount)
     SHADER_PARAMETER_SRV(Buffer<float4>, AnimationBuffer)
@@ -33,8 +26,8 @@ END_GLOBAL_SHADER_PARAMETER_STRUCT()
 typedef TUniformBufferRef<FCk_Iskm_AnimCollectionUniformParams> FCk_Iskm_AnimCollectionUniformParamsRef;
 
 // ----------------------------------------------------------------------------------------------------------------
-//  Baked bone-matrix GPU buffer — a typed Buffer<float4> SRV holding every baked frame's transposed 3x4 matrices,
-//  flattened: matrixIndex = frame * RenderBoneCount + bone, each = 3 x float4. HP float32 (PF_A32B32G32R32F).
+//  Typed Buffer<float4> SRV of transposed 3x4 matrices, HP float32 (PF_A32B32G32R32F), flattened as
+//  matrixIndex = frame * RenderBoneCount + bone, each 3 x float4.
 // ----------------------------------------------------------------------------------------------------------------
 class CKISKMRENDERERVF_API FCk_Iskm_AnimationBuffer : public FRenderResource
 {
@@ -50,7 +43,6 @@ public:
 
 // ----------------------------------------------------------------------------------------------------------------
 //  Per-mesh bone-index vertex stream — remaps each vertex's skin-weight bone slots into render-bone space.
-//  8- or 16-bit indices, 4 or 8 influences per vertex.
 // ----------------------------------------------------------------------------------------------------------------
 class CKISKMRENDERERVF_API FCk_Iskm_BoneIndexVertexBuffer : public FVertexBuffer
 {
@@ -68,11 +60,9 @@ public:
 };
 
 // ----------------------------------------------------------------------------------------------------------------
-//  Per-mesh bone-weight vertex stream — OWNED (not borrowed from the source mesh): weights are renormalized to
+//  Per-mesh bone-weight vertex stream — OWNED, not borrowed from the source mesh: weights are renormalized to
 //  sum exactly 1 over the kept influences and quantized to 8-bit unorm, laid out at exactly MaxBoneInfluences
-//  per vertex. Owning the layout removes every assumption about the source buffer (variable vs constant
-//  influence layout, 16-bit weights, influence counts that aren't 4/8) — the failure modes of the previous
-//  borrowed-stream approach.
+//  per vertex.
 // ----------------------------------------------------------------------------------------------------------------
 class CKISKMRENDERERVF_API FCk_Iskm_BoneWeightVertexBuffer : public FVertexBuffer
 {
@@ -88,8 +78,6 @@ public:
     virtual FString GetFriendlyName() const override { return TEXT("FCk_Iskm_BoneWeightVertexBuffer"); }
 };
 
-// ----------------------------------------------------------------------------------------------------------------
-//  The batched GPU linear-blend-skinning vertex factory.
 // ----------------------------------------------------------------------------------------------------------------
 class CKISKMRENDERERVF_API FCk_Iskm_BatchedVertexFactory : public FVertexFactory
 {
@@ -107,8 +95,8 @@ public:
         : FVertexFactory(InFeatureLevel) {}
 
     FDataType Data;
-    // Real reference, not a raw pointer: the VF's copy keeps the uniform buffer alive on its own,
-    // so it can never dangle if the owning FCk_Iskm_BatchedRenderData releases its ref first.
+    // A ref, not a raw pointer: this copy keeps the uniform buffer alive even if the owning
+    // FCk_Iskm_BatchedRenderData releases its own ref first.
     FUniformBufferRHIRef AnimCollectionUB;
 
     virtual void InitRHI(FRHICommandListBase& RHICmdList) override;
@@ -129,8 +117,6 @@ public:
     static void ValidateCompiledResult(const FVertexFactoryType* Type, EShaderPlatform Platform, const FShaderParameterMap& ParameterMap, TArray<FString>& OutErrors) {}
 };
 
-// ----------------------------------------------------------------------------------------------------------------
-//  Per-mesh render data: one entry per LOD, each owning the remapped bone-index buffer + the vertex factory.
 // ----------------------------------------------------------------------------------------------------------------
 class CKISKMRENDERERVF_API FCk_Iskm_BatchedMeshData
 {
@@ -155,14 +141,12 @@ public:
     // ensures loudly when non-zero — this module can't ensure.
     int32 NumBoneRemapMisses = 0;
 
-    // Snapshot of the mesh's render data, captured on the GAME THREAD in InitFromMesh so InitResources
-    // (render thread) never dereferences a UObject. Lifetime contract: the owning asset
-    // (UCk_IskmAnimCollection_Data::_DefaultMesh, a UPROPERTY) keeps the mesh — and therefore its render
-    // data — alive for the life of this struct, enforced boundary-side in EnsureRenderResources.
+    // Captured on the GAME THREAD in InitFromMesh so InitResources (render thread) never dereferences a
+    // UObject. Kept alive by the owning asset's UPROPERTY mesh ref, enforced in EnsureRenderResources.
     const FSkeletalMeshRenderData* SourceRenderData = nullptr;
 
-    // CPU build of the per-LOD remapped bone indices. InSkeletonBoneToRenderBone maps skeleton-bone -> render-bone
-    // (from the baker); it decouples this engine-only module from the AnimCollection asset.
+    // InSkeletonBoneToRenderBone (from the baker) maps skeleton-bone -> render-bone; passing it in is what
+    // decouples this engine-only module from the AnimCollection asset.
     void InitFromMesh(USkeletalMesh* InMesh, USkeleton* InSkeleton, const TArray<int32>& InSkeletonBoneToRenderBone, ERHIFeatureLevel::Type InFeatureLevel);
     void InitResources(FRHICommandListBase& RHICmdList, FRHIUniformBuffer* InAnimCollectionUB);
     void ReleaseResources();

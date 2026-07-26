@@ -67,13 +67,7 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_RefillBehaviorAlwaysToZero);
     CK_DEFINE_ECS_TAG(FTag_IsRefillRunning);
 
-    // Per-FAMILY clamp marker, keyed on the family's shared HandleType (identical across the
-    // Current/Min/Max component fragments) so a write to ANY component triggers that family's
-    // clamp pass. Deliberately not a single global tag: the MinMaxClamp composites consume the
-    // marker with a registry-wide Clear, and a global tag would let one family's Clear wipe
-    // another family's pending clamps (and, in pump passes, skip their pump entirely). A
-    // family-typed tag also gives each registered clamp composite a unique dirty-marker hash,
-    // keeping the shared-dirty-marker graph validation quiet.
+    // Per-FAMILY clamp marker — deliberately NOT one global tag. See CkAttribute/CLAUDE.md.
     template <typename T_AttributeHandle>
     struct TTag_Attribute_MayRequireClamping : public TTag<TTag_Attribute_MayRequireClamping<T_AttributeHandle>> { };
 
@@ -132,36 +126,28 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-    //
-    // Direction-aware clamp helpers. They encapsulate the counterintuitive inversion between
-    // clamp direction and the Min/Max primitive being called:
-    //   - Min direction enforces a LOWER bound, so we return the LARGER of (value, bound).
-    //   - Max direction enforces an UPPER bound, so we return the SMALLER of (value, bound).
-    //
-    // These are free templates that delegate to TAttributeMinMax<T>::Min/Max, so every existing
-    // specialization (including the component-wise FVector one) works automatically without any
-    // direction-specific specialization boilerplate.
-    //
+
     template <ECk_AttributeClamp_Direction T_Direction, typename T>
     auto Attribute_Clamp(T InValue, T InBound) -> T
     {
         if constexpr (T_Direction == ECk_AttributeClamp_Direction::Min)
-        { return TAttributeMinMax<T>::Max(InValue, InBound); }
+        {
+            const auto RaisedToLowerBound = TAttributeMinMax<T>::Max(InValue, InBound);
+            return RaisedToLowerBound;
+        }
         else
-        { return TAttributeMinMax<T>::Min(InValue, InBound); }
+        {
+            const auto LoweredToUpperBound = TAttributeMinMax<T>::Min(InValue, InBound);
+            return LoweredToUpperBound;
+        }
     }
 
-    // Direction-aware invariant check used to assert that a value never exceeded its bound.
-    //
-    // Uses the clamp result as an oracle: for a value already on the correct side of the bound,
-    // clamping leaves it unchanged. This sidesteps ill-defined lexicographic comparisons on
-    // composite types (e.g. FVector::operator<) and uniformly works with any T whose
-    // TAttributeMinMax specialization behaves correctly — including component-wise FVector.
-    //
+    // Clamping is a no-op oracle: composite types (FVector) have no well-defined lexicographic ordering.
     template <ECk_AttributeClamp_Direction T_Direction, typename T>
     auto Attribute_IsWithinBounds(T InValue, T InBound) -> bool
     {
-        return Attribute_Clamp<T_Direction>(InValue, InBound) == InValue;
+        const auto ClampedValue = Attribute_Clamp<T_Direction>(InValue, InBound);
+        return ClampedValue == InValue;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -250,9 +236,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // we store the previous values of the Attribute in another Fragment for the following reasons:
-    // - avoid bloating up the Attribute with previous values
-    // - only store previous values for Attributes that need it (ones that are modified)
+    // A separate fragment so only the Attributes that are actually modified pay for previous-value storage.
     template <typename T_AttributeType>
     struct TFragment_Attribute_PreviousValues
     {
@@ -276,16 +260,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Fragment written by the Clamp processor every frame to record the
-    // attribute's final value before clamping in this direction. DetectClamp
-    // reads it to populate the OnClamped payload's PreClampFinalValue so
-    // subscribers can compute overflow = pre-clamp - final.
-    //
-    // On frames where no clamping occurred, this equals Current.Final
-    // (overflow = 0 naturally). Templated on direction so min and max have
-    // independent storage and never overwrite each other. Also lingers on
-    // the entity for debugger inspection of the last-recorded pre-clamp
-    // value even after clamping stops happening.
+    // Written EVERY frame by the Clamp processor; read through the direction-less accessors, never directly
+    // — the Min/Max capture asymmetry is covered in CkAttribute/CLAUDE.md.
     template <typename T_AttributeType, ECk_AttributeClamp_Direction T_Direction>
     struct TFragment_Attribute_PreClampFinalValue
     {
@@ -420,10 +396,7 @@ namespace ck
         HandleType _Handle;
         AttributeDataType _PreClampFinalValue;
         AttributeDataType _ClampedFinalValue;
-        // Signed delta between the pre-clamp and clamped values (PreClamp - Clamped).
-        // Positive when OnMaxClamped fires with overflow, negative when OnMinClamped
-        // fires with underflow, zero when the value reached the bound without actually
-        // being clamped (e.g. value landed exactly at max).
+        // Signed PreClamp - Clamped: positive on max overflow, negative on min underflow, zero when unclamped.
         AttributeDataType _ClampOverflow;
 
     public:
@@ -437,7 +410,6 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-    // Signals
 
     template<typename T_DerivedAttribute>
     struct TFragment_Signal_OnAttributeValueChanged : public TFragment_Signal

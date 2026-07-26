@@ -20,29 +20,22 @@ namespace ck
 		CK_ENSURE_IF_NOT(ck::IsValid(InEntity), TEXT("Invalid entity handle"))
 		{ return; }
 
-		// Get or add callstack fragment
 		auto& CallstackFragment = InEntity.AddOrGet<FCallstackFragment>();
 
-		// Create entry
 		auto Entry = typename FCallstackFragment::FCallEntry{};
 		Entry.FrameNumber = GFrameCounter;
 		Entry.FunctionName = InFunction;
 		Entry.LineNumber = InLine;
 		Entry.Message = FString{};
 
-		// Capture callstacks based on user settings
 		if (UCk_Utils_Ecs_Settings_UE::Get_CaptureCallstack_Cpp())
 		{
-			// Fast address-only capture (no symbol resolution)
-			// Skip 2 frames: this utility function + CK_CALLSTACK_RECORD macro
-			constexpr auto SkipFrames = 2;
+			constexpr auto SkipSelfAndMacroFrames = 2;
 			const auto MaxFrames = UCk_Utils_Ecs_Settings_UE::Get_MaxCallstackFrames_Cpp();
 			const auto Addresses = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_AddressesOnly(
 				MaxFrames,
-				SkipFrames);
+				SkipSelfAndMacroFrames);
 
-			// Convert addresses to pointers into global cache
-			// Background thread will resolve symbols asynchronously
 			Entry.CppCallstackAddresses.Reserve(Addresses.Num());
 			for (const auto Address : Addresses)
 			{
@@ -83,10 +76,8 @@ namespace ck
 			}
 		}
 
-		// Add to entries
 		CallstackFragment._Entries.Add(Entry);
 
-		// Enforce max entries limit (FIFO - remove oldest)
 		const auto MaxEntries = UCk_Utils_Ecs_Settings_UE::Get_MaxCallstackEntries();
 		if (CallstackFragment._Entries.Num() > MaxEntries)
 		{
@@ -108,29 +99,22 @@ namespace ck
 		CK_ENSURE_IF_NOT(ck::IsValid(InEntity), TEXT("Invalid entity handle"))
 		{ return; }
 
-		// Get or add callstack fragment
 		auto& CallstackFragment = InEntity.AddOrGet<FCallstackFragment>();
 
-		// Create entry
 		auto Entry = typename FCallstackFragment::FCallEntry{};
 		Entry.FrameNumber = GFrameCounter;
 		Entry.FunctionName = InFunction;
 		Entry.LineNumber = InLine;
 		Entry.Message = InMessage;
 
-		// Capture callstacks based on user settings
 		if (UCk_Utils_Ecs_Settings_UE::Get_CaptureCallstack_Cpp())
 		{
-			// Fast address-only capture (no symbol resolution)
-			// Skip 2 frames: this utility function + CK_CALLSTACK_RECORD_MSG macro
-			constexpr auto SkipFrames = 2;
+			constexpr auto SkipSelfAndMacroFrames = 2;
 			const auto MaxFrames = UCk_Utils_Ecs_Settings_UE::Get_MaxCallstackFrames_Cpp();
 			const auto Addresses = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_AddressesOnly(
 				MaxFrames,
-				SkipFrames);
+				SkipSelfAndMacroFrames);
 
-			// Convert addresses to pointers into global cache
-			// Background thread will resolve symbols asynchronously
 			Entry.CppCallstackAddresses.Reserve(Addresses.Num());
 			for (const auto Address : Addresses)
 			{
@@ -171,10 +155,8 @@ namespace ck
 			}
 		}
 
-		// Add to entries
 		CallstackFragment._Entries.Add(Entry);
 
-		// Enforce max entries limit (FIFO - remove oldest)
 		const auto MaxEntries = UCk_Utils_Ecs_Settings_UE::Get_MaxCallstackEntries();
 		if (CallstackFragment._Entries.Num() > MaxEntries)
 		{
@@ -192,13 +174,11 @@ namespace ck
 		CK_ENSURE_IF_NOT(ck::IsValid(InEntity), TEXT("Invalid entity handle"))
 		{ return; }
 
-		// Check if fragment exists
 		if (InEntity.Has<FCallstackFragment>() == false)
 		{
 			return;
 		}
 
-		// Clear all entries
 		auto& CallstackFragment = InEntity.Get<FCallstackFragment>();
 		CallstackFragment._Entries.Empty();
 	}

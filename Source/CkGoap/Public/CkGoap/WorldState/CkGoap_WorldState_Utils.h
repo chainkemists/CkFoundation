@@ -22,22 +22,9 @@ public:
 
 public:
 // --------------------------------------------------------------------------------------------------------------------
-	//
-	// Add — stamps the GOAP WorldState fragments directly on InOwner. The owner
-	//       IS the WorldState; cast it with the typesafe accessor when handing
-	//       it to a planner via FCk_Fragment_Goap_PlannerParamsData::_WorldStateSource.
-	//       Use this when only one WorldState is needed on the owner and you'd
-	//       rather not pay for a child entity.
-	//
-	// Create — spawns a new named child entity under InOwner that hosts a shared
-	//          GOAP WorldState. The caller hands this handle to one or more
-	//          GOAP planners via FCk_Fragment_Goap_ParamsData::_WorldStateSource.
-	//          Reads, writes, and replan-trigger subscriptions on the planners
-	//          all route through the resulting WorldState entity.
-	//
-	// Lifetime is cascade-bound to InOwner — destroying the owner destroys the
-	// WorldState (via the owner's RecordOfGoapWorldStates for Create, or via
-	// the owner's own destroy for Add).
+	// Add stamps the WorldState fragments directly on InOwner (the owner IS the WorldState);
+	// Create spawns a named child entity instead, for owners hosting more than one. Either
+	// handle feeds a planner's _WorldStateSource; lifetime is cascade-bound to InOwner.
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|WorldState",
 		DisplayName = "[Ck][GOAP|WS] Add")
@@ -55,10 +42,8 @@ public:
 		const FCk_Fragment_Goap_WorldState_ParamsData& InParams);
 
 // --------------------------------------------------------------------------------------------------------------------
-	//
-	// Keys are auto-registered on first Set. Get returns false for both
-	// "key registered, current value false" and "key unregistered" — use
-	// Has_Key when the distinction matters.
+	// Keys are auto-registered on first Set. Get returns false for both "key registered,
+	// current value false" and "key unregistered" — use Has_Key when the distinction matters.
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|WorldState",
 		DisplayName = "[Ck][GOAP|WS] Set Value")
@@ -78,9 +63,6 @@ public:
 	static bool
 	Has_Key(const FCk_Handle_Goap_WorldState& InWorldState, FGameplayTag InKey);
 
-	// Force-registers a key without setting its value. Returns the WorldState
-	// handle for chaining. Useful when callers want a key to occupy a stable
-	// slot before any Set is performed.
 	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|WorldState",
 		DisplayName = "[Ck][GOAP|WS] Request Register Key")
 	static FCk_Handle_Goap_WorldState
@@ -89,16 +71,9 @@ public:
 		FGameplayTag InKey);
 
 // --------------------------------------------------------------------------------------------------------------------
-	//
-	// Named override layers shadow the base store on read; writes via Set_Value
-	// always go to the base. Push / pop / clear fire FTag_Goap_Dirty_WorldState
-	// on subscribers ONLY for keys whose effective value changes — re-pushing
-	// the same values is a quiet no-op. A* seeds a flattened snapshot at plan
-	// time so the search inner loop never walks the stack.
-	//
-	// Layers are NAMED. Re-pushing a layer with the same name REPLACES its
-	// contents idempotently. The debugger uses a fixed "DebugUI" layer;
-	// AI deliberation scopes typically pick ad-hoc names.
+	// Named override layers shadow the base store on READ only — Set_Value always writes the base.
+	// Push / pop / clear fire FTag_Goap_Dirty_WorldState on subscribers ONLY for keys whose effective
+	// value changes; re-pushing an existing layer name REPLACES its contents idempotently.
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|WorldState",
 		DisplayName = "[Ck][GOAP|WS] Push Override")
@@ -145,52 +120,33 @@ public:
 	static bool
 	Has_KeyOverride(const FCk_Handle_Goap_WorldState& InWorldState, FGameplayTag InKey);
 
-	// Returns the NAME of the top-most layer currently shadowing this key. Walks
-	// the stack top-down (most recent push wins) and returns the first match,
-	// matching the read semantics of Get_Value. Returns NAME_None when no layer
-	// shadows the key (i.e., the read falls through to the base store). Used by
-	// the debugger to show "shadowed by <layer>" tooltips per WS row.
+	// NAME_None when no layer shadows the key (i.e. the read falls through to the base store).
 	UFUNCTION(BlueprintPure, Category = "Ck|GOAP|WorldState",
 		DisplayName = "[Ck][GOAP|WS] Get Top Override Layer For Key")
 	static FName
 	Get_TopOverrideLayerForKey(const FCk_Handle_Goap_WorldState& InWorldState, FGameplayTag InKey);
 
-	// Returns a snapshot of the key/value pairs in a specific named layer. Empty
-	// map when no layer with that name exists. Used by the debugger's per-layer
-	// drilldown view (the override-layers inspector).
 	UFUNCTION(BlueprintPure, Category = "Ck|GOAP|WorldState",
 		DisplayName = "[Ck][GOAP|WS] Get Layer Values")
 	static TMap<FGameplayTag, bool>
 	Get_LayerValues(const FCk_Handle_Goap_WorldState& InWorldState, FName InLayerName);
 
-	// Convenience — number of keys in a specific named layer (without copying
-	// the value map).
 	UFUNCTION(BlueprintPure, Category = "Ck|GOAP|WorldState",
 		DisplayName = "[Ck][GOAP|WS] Get Layer Key Count")
 	static int32
 	Get_LayerKeyCount(const FCk_Handle_Goap_WorldState& InWorldState, FName InLayerName);
 
-	// The most recent effective-value changes on this WorldState (bounded ring,
-	// oldest first): base Set_Value writes AND override push/pop/clear deltas,
-	// each stamped with the mutator and frame number. Feeds debugger timelines
-	// and replan-cause displays.
+	// Bounded ring, oldest first: base Set_Value writes AND override push/pop/clear deltas,
+	// each stamped with its mutator and frame number.
 	UFUNCTION(BlueprintPure, Category = "Ck|GOAP|WorldState",
 		DisplayName = "[Ck][GOAP|WS] Get Recent Changes")
 	static TArray<FCk_Goap_WorldStateChange>
 	Get_RecentChanges(const FCk_Handle_Goap_WorldState& InWorldState);
 
 // --------------------------------------------------------------------------------------------------------------------
-	//
-	// Registering an entity as a subscriber on a WorldState causes that entity
-	// to be tagged with FTag_Goap_Dirty_WorldState whenever a Set request on
-	// this WorldState actually changes a key's value — which feeds per-Action
-	// AutoReplan throttle for OnWorldStateDirty / OnEitherDirty policies.
-	//
-	// In the unified ActionSet/Action model, Actions subscribe themselves at
-	// activation time (ActionSet ChainUpdate processor) and unsubscribe at
-	// deactivation. The root Action subscribes at AddAction time.
-	// External consumers may also subscribe (e.g. for non-Action reactive
-	// systems).
+	// A subscriber is tagged FTag_Goap_Dirty_WorldState whenever a Set on this WorldState actually
+	// changes a value, feeding the AutoReplan OnWorldStateDirty / OnEitherDirty policies. Actions
+	// subscribe at activation and unsubscribe at deactivation; external consumers may subscribe too.
 	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|WorldState",
 		DisplayName = "[Ck][GOAP|WS] Request Add Subscriber")
 	static FCk_Handle_Goap_WorldState
@@ -205,9 +161,7 @@ public:
 		UPARAM(ref) FCk_Handle_Goap_WorldState& InWorldState,
 		UPARAM(ref) FCk_Handle& InSubscriber);
 
-	// Number of currently-valid subscribers on this WorldState. Feeds the
-	// debugger's blast-radius display — a shared WS means every subscribed
-	// entity replans when a key flips (e.g. under a sandbox override layer).
+	// Counts only currently-valid subscribers; stale entries are excluded.
 	UFUNCTION(BlueprintPure, Category = "Ck|GOAP|WorldState",
 		DisplayName = "[Ck][GOAP|WS] Get Subscriber Count")
 	static int32
@@ -278,11 +232,8 @@ private:
 	static auto
 	DoAddRequest(FCk_Handle_Goap_WorldState& InWorldState, const auto& InRequest) -> FCk_Handle_Goap_WorldState;
 
-	// Tag every valid subscriber with FTag_Goap_Dirty_WorldState. Lazy-prune
-	// invalid entries on the way. Lives on this Utils class (rather than as
-	// a free function) so it has friend access to the Subscribers fragment's
-	// private _Subscribers field. Used by the override-stack mutators when an
-	// effective view change is detected.
+	// Lives on this Utils class rather than as a free function so it has friend access to the
+	// Subscribers fragment's private _Subscribers.
 	static auto
 	DoTagSubscribersDirty(FCk_Handle_Goap_WorldState& InWorldState) -> void;
 };

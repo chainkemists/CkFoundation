@@ -40,11 +40,7 @@ namespace ck
 
         InCurrent._RendererActor = RendererActor;
         InHandle.Remove<FTag_IskmRenderer_NeedsSetup>();
-        // forward-compat cleanup. Plan-1 never sets _PendingAsyncLoad
-        // (Add takes a hard pointer), so the tag is expected-absent here —
-        // use Try_Remove to avoid the "tag does not exist" ensure. A future
-        // caller that marks the entity pending-async before resolving the
-        // asset will benefit from this cleanup once the actor is wired up.
+        // Try_Remove: Plan-1 never sets this forward-compat tag, so it is expected-absent here.
         InHandle.Try_Remove<FTag_IskmRenderer_PendingAsyncLoad>();
     }
 }

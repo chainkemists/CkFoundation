@@ -4,31 +4,11 @@
 #include "GameplayTagContainer.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-//
-// Classical GOAP (F.E.A.R.-style) operates on a flat boolean state vector.
-// Each gameplay tag maps to a small integer key via a per-entity registry,
-// and the world state + every regressive-search ConstraintSet live in fixed
-// TStaticArray<uint8> buffers. That gives us:
-//
-//   - O(1) memcmp equality (for A* closed-set dedup)
-//   - O(1) FCrc::MemCrc32 hashing (for content-addressed state lookup)
-//   - Zero heap allocations per search state (whole state is ~64 bytes)
-//
-// Values are bools only. Gameplay code can compute whatever it wants in the
-// wider world (numeric economies, distances, enum machines) and write the
-// derived boolean truth into a shared GOAP WorldState entity via utility
-// calls — e.g.
-// `utils_goap_world_state::Set_Value(WS, Tag_HasEnoughFood, ActualFood >= Threshold)`.
-// The planner only ever sees and regresses over bools, which is what makes
-// GOAP tractable.
-//
-// WorldState encoding:  uint8{0 = false, 1 = true} — initial all-zero.
-// ConstraintSet encoding: uint8{0 = unconstrained, 1 = must-be-false,
-//                               2 = must-be-true}.
-//
-// The "must-be-false/true" distinction is separate from "key was set vs
-// unset" — WorldState treats unset as false (matches classical GOAP), but
-// a constraint must be able to say "I don't care about this key."
+// Classical (F.E.A.R.-style) boolean GOAP: each gameplay tag maps to a small
+// integer key and every state lives in a fixed TStaticArray<uint8> — O(1) memcmp
+// equality, O(1) MemCrc32 hashing, zero heap per search state. Note that
+// WorldState treats an unset key as false, whereas a constraint can be absent
+// ("don't care"). Rationale and authoring guidance: CkGoap CLAUDE.md.
 
 namespace ck::goap
 {
@@ -41,7 +21,6 @@ using FCk_GoapKey = int32;
 constexpr FCk_GoapKey InvalidGoapKey = INDEX_NONE;
 
 // --------------------------------------------------------------------------------------------------------------------
-// CONDITION (precondition / goal condition)
 
 struct FWorldStateCondition
 {
@@ -81,12 +60,8 @@ struct FWorldStateEffect
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// RAW (TAG-KEYED) CONDITION / EFFECT
-//
-// Action / Goal CDO builder APIs work in tag-space because the per-entity
-// FCk_GoapKey registry doesn't exist yet at CDO-definition time. The Setup
-// processor scans every action's + goal's raw entries, builds the registry,
-// then converts these to FCk_GoapKey-indexed form for planning.
+// Tag-keyed form: CDO builders run before the per-entity FCk_GoapKey registry
+// exists; Setup builds the registry and converts these to indexed form.
 
 struct FWorldStateCondition_Raw
 {
@@ -101,7 +76,6 @@ struct FWorldStateEffect_Raw
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// Indexed by FCk_GoapKey, flat bool array
 
 struct FWorldState
 {
@@ -136,8 +110,6 @@ public:
 	// ----------------------------------------------------------------------------------------------------------------
 	// ----------------------------------------------------------------------------------------------------------------
 
-	// Evaluate a single constraint against this state. A constraint is
-	// satisfied iff the stored boolean matches the required value.
 	auto Satisfies(const FWorldStateCondition& InCondition) const -> bool
 	{
 		if (NOT IsKeyInRange(InCondition.Key)) { return false; }
@@ -145,7 +117,6 @@ public:
 	}
 
 	// ----------------------------------------------------------------------------------------------------------------
-	// COMPARISON / HASH — operate on the whole fixed-size buffer
 	// ----------------------------------------------------------------------------------------------------------------
 
 	auto operator==(const FWorldState& InOther) const -> bool
@@ -182,13 +153,7 @@ inline auto GetTypeHash(const FWorldState& InState) -> uint32
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// The regressive-search state type
-//
-// One slot per key (no multi-slot needed now that constraints are purely
-// "must be true" / "must be false"). Encoded as uint8:
-//   0 = no constraint on this key
-//   1 = key must be false
-//   2 = key must be true
+// The regressive-search state type — one constraint slot per key.
 
 enum class EConstraint : uint8
 {
@@ -240,11 +205,9 @@ public:
 		_Constraints[InKey] = static_cast<uint8>(EConstraint::None);
 	}
 
-	// Regress through an effect: if the effect sets the key to the required
-	// value, the constraint is satisfied by whatever produced it, and we drop
-	// the constraint from this predecessor state. If the effect sets the key
-	// to the opposite value, it's a conflict (already filtered in Neighbors,
-	// but we keep the check as a safety net).
+	// If the effect produces the required value the constraint is satisfied at the
+	// post-state, so drop it from the pre-state. The opposite value is a conflict —
+	// already filtered in Neighbors; kept here as a safety net.
 	auto RegressThroughEffect(const FWorldStateEffect& InEffect) -> void
 	{
 		if (NOT IsKeyInRange(InEffect.Key)) { return; }
@@ -254,8 +217,6 @@ public:
 		const auto Required = Existing == static_cast<uint8>(EConstraint::MustBeTrue);
 		if (Required == InEffect.Value)
 		{
-			// Effect produces exactly what's required — constraint is satisfied
-			// at post-state, so drop it from pre-state.
 			Existing = static_cast<uint8>(EConstraint::None);
 		}
 		else
@@ -312,8 +273,7 @@ public:
 		return _Constraints[InKey] != static_cast<uint8>(EConstraint::None);
 	}
 
-	// Public accessor for the typed-constraint at a key — used by neighbor
-	// expansion + the debugger. Returns EConstraint::None if unconstrained.
+	// Returns EConstraint::None when the key is unconstrained or out of range.
 	auto Get(FCk_GoapKey InKey) const -> EConstraint
 	{
 		if (NOT IsKeyInRange(InKey)) { return EConstraint::None; }
@@ -321,7 +281,6 @@ public:
 	}
 
 	// ----------------------------------------------------------------------------------------------------------------
-	// EQUALITY / HASH — whole-buffer comparison is trivial now
 	// ----------------------------------------------------------------------------------------------------------------
 
 	auto operator==(const FConstraintSet& InOther) const -> bool

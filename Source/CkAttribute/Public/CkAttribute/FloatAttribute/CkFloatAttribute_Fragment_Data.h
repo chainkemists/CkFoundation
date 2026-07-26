@@ -166,10 +166,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Save-only payload (never on the wire) for a Float attribute REFILL child entity's runtime RUN-STATE (Running/Paused).
-// The fill RATE already round-trips via the FloatAttribute VALUE handler keyed on the same refill child entity; only the
-// run-state — toggled at runtime by Request_Pause/Resume and otherwise reset to the Construct StartingState on a plain
-// rebuild — needs its own save payload. Registered + applied in CkAttribute_RefillPersistence.h.
+// Save-only RUN-STATE of a Float refill child entity; the fill RATE round-trips via the FloatAttribute VALUE handler.
 USTRUCT()
 struct CKATTRIBUTE_API FCk_SaveData_FloatAttributeRefill
 {

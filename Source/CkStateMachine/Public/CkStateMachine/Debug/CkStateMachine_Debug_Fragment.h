@@ -88,13 +88,8 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-    // DEBUG REQUESTS FRAGMENT
-    //
-    // Request queue on the SM entity. Producers (e.g. the transition-request handler)
-    // push FCk_Request_SmDebug_* structs via UCk_Utils_StateMachineDebug_UE::Request_*;
-    // FProcessor_SmDebug_HandleRequests drains them each frame. Mirrors the pattern of
-    // FFragment_Sm_Requests so same-frame pumps each get their own entry without
-    // coupling the core state machine to the debug processor.
+    // Mirrors FFragment_Sm_Requests so same-frame pumps each get their own entry, without coupling
+    // the core state machine to the debug processor.
 
     struct CKSTATEMACHINE_API FFragment_SmDebug_Requests
     {
@@ -117,7 +112,6 @@ namespace ck
 
 #if !UE_BUILD_SHIPPING
     // --------------------------------------------------------------------------------------------------------------------
-    // LAST FIRED TRANSITION (per-frame cache consumed by debug processor)
 
     struct CKSTATEMACHINE_API FFragment_Sm_Debug_LastFiredTransition
     {
@@ -126,7 +120,7 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-    // BREAKPOINTS — Stored on the SM entity (state/transition entities are transient)
+    // Breakpoints live on the SM entity because state/transition entities are transient.
 
     struct CKSTATEMACHINE_API FCk_SmBreakpoint_TransitionKey
     {
@@ -160,7 +154,6 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-    // BREAKPOINT HIT INFO — Transient fragment, added at breakpoint site, read by viewer
 
     struct CKSTATEMACHINE_API FFragment_Sm_Debug_BreakpointHit
     {
@@ -172,7 +165,6 @@ namespace ck
 #endif
 
     // --------------------------------------------------------------------------------------------------------------------
-    // RUN INFO (completed SM run snapshot)
 
     struct CKSTATEMACHINE_API FCk_SmDebug_RunInfo
     {

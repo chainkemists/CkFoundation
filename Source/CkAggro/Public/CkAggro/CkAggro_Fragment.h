@@ -28,8 +28,6 @@ class UCk_Utils_Aggro_UE;
 namespace ck
 {
     // ----------------------------------------------------------------------------------------------------------------
-    // Bridge aliases — each owner param piece is copied onto the owner as its own fragment so processors declare RO
-    // access on exactly what they read.
 
     using FFragment_Aggro_DefaultTargetParams = FCk_Fragment_AggroTarget_ParamsData;
     using FFragment_Aggro_SelectionParams     = FCk_Aggro_SelectionParams;
@@ -37,16 +35,13 @@ namespace ck
     using FFragment_Aggro_EvaluationParams    = FCk_Aggro_EvaluationParams;
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Tags.
 
     CK_DEFINE_ECS_TAG(FTag_Aggro);
     CK_DEFINE_ECS_TAG(FTag_Aggro_NeedsSetup);
-    // COUNTED — N Disable calls need N Enable calls before the pipeline resumes.
     CK_DEFINE_ECS_TAG_COUNTED(FTag_Aggro_Disabled);
     CK_DEFINE_ECS_TAG(FTag_Aggro_SelectionPending);
 
     // ----------------------------------------------------------------------------------------------------------------
-    // The current active target + the timestamps hysteresis reads.
 
     struct CKAGGRO_API FFragment_Aggro_Current
     {
@@ -71,7 +66,7 @@ namespace ck
     };
 
     // ----------------------------------------------------------------------------------------------------------------
-    // The one always-ticking clock — the evaluation pacer. _DebugEvaluationCount feeds the IdleCost autotest.
+    // _DebugEvaluationCount is not dead weight — the IdleCost autotest asserts on it.
 
     struct CKAGGRO_API FFragment_Aggro_EvaluationClock
     {
@@ -92,7 +87,7 @@ namespace ck
     };
 
     // ----------------------------------------------------------------------------------------------------------------
-    // O(1) tracked-entity -> AggroTarget dedupe/lookup. NEVER used for hot math (see the record for enumeration).
+    // O(1) dedupe/lookup only — enumeration goes through the record, never this map.
 
     struct CKAGGRO_API FFragment_Aggro_TargetMap
     {

@@ -7,14 +7,11 @@
 #include <CoreMinimal.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// The per-query search space: the built network graph augmented with a virtual Start, a virtual
-// Goal, and overlay points (projections of start/goal onto nearby edges). Off-path travel
-// (Start->overlay, overlay->Goal, Start->Goal) costs euclidean x OffPathCostMultiplier — that one
-// number is the entire "prefer the sidewalk unless the shortcut is worth it" heuristic. The
-// validation pass can reprice individual off-path hops with real navmesh distances (walls).
-//
-// Lifetime: holds a raw pointer to the built network — valid only for a synchronous search inside
-// one processor tick. Do not store across frames.
+// The per-query search space: the built network plus a virtual Start/Goal and overlay points
+// (start/goal projected onto nearby edges). Off-path hops cost euclidean x OffPathCostMultiplier —
+// that one number IS the "prefer the sidewalk unless the shortcut is worth it" heuristic.
+// LIFETIME: raw pointer to the built network, valid only for one synchronous search inside a
+// processor tick. Never store it across frames.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::pathnetwork
@@ -77,10 +74,6 @@ namespace ck::pathnetwork
         {
         }
 
-        // ------------------------------------------------------------------------------------------------------------
-        // AStarGraph INTERFACE
-        // ------------------------------------------------------------------------------------------------------------
-
         auto
         Neighbors(const FRouteNodeId& InNode) const -> TArray<FRouteNodeId>;
 
@@ -92,10 +85,6 @@ namespace ck::pathnetwork
 
         auto
         IsGoal(const FRouteNodeId& InNode) const -> bool;
-
-        // ------------------------------------------------------------------------------------------------------------
-        // QUERY HELPERS
-        // ------------------------------------------------------------------------------------------------------------
 
         auto
         Get_NodeLocation(const FRouteNodeId& InNode) const -> FVector;
@@ -133,9 +122,8 @@ namespace ck::pathnetwork
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    // One step of a solved route, classified for corridor assembly. On-network spans carry the
-    // edge and the [from, to] distance-along span (from > to = traveling against edge direction);
-    // off-path spans carry only endpoint locations (waypoints resolved later via navmesh).
+    // One step of a solved route. On-network spans carry the edge and its [from, to] distance-along
+    // span (from > to = traveling against edge direction); off-path spans carry only endpoints.
     struct CKPATHNETWORK_API FRouteLegSpan
     {
         bool _IsOffPath = false;

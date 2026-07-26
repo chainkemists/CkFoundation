@@ -14,9 +14,8 @@ class UCk_EntityScript_UE;
 
 namespace ck::entityspawner
 {
-    // When the details-panel picker is left empty, the spawner falls back to a property named
-    // "SpawnTransform" (or "_SpawnTransform") on the EntityScript class if it exists and is an
-    // FTransform. Returns the resolved FProperty* or nullptr.
+    // Fallback for an empty details-panel picker: the first FTransform property named
+    // SpawnTransform / _SpawnTransform / InitialTransform / _InitialTransform, else nullptr.
     CKENTITYSPAWNER_API auto
     TryResolveDefaultTransformProperty(
         const UClass* InEntityScriptClass) -> FProperty*;
@@ -86,9 +85,8 @@ protected:
     auto
     Destroyed() -> void override;
 
-    // Forwards the selection highlight to the editor-world proxy actors hosting this spawner's
-    // preview visuals (per-owner ISM renderer / component host). They are not attached to this
-    // actor, so the engine's attached-actor propagation cannot reach them.
+    // The proxy actors hosting the preview visuals are not attached, so the engine's attached-actor
+    // selection propagation cannot reach them.
     auto
     PushSelectionToProxies() -> void override;
 #endif
@@ -109,8 +107,6 @@ private:
     auto
     EditorOnly_DoRebuildEntity() -> void;
 
-    // In-place actor->entity transform push for interactive drag (PostEditMove with InIsFinished=false).
-    // Avoids the destroy+respawn churn that re-emerges as registry-pool corruption under sustained drag.
     auto
     EditorOnly_PushActorTransformToEntity() -> void;
 public:
@@ -160,9 +156,6 @@ private:
     FDelegateHandle _EditorRebuildEndFrameHandle;
 
 public:
-    // Read-only access to the editor preview entity this spawner currently owns. Used by editor-only
-    // gating (e.g. the grid debug-draw processor) to correlate a selected spawner with its preview
-    // entity. Returns an invalid handle when no preview entity exists.
     CK_PROPERTY_GET(_EditorEntityHandle);
 #endif
 };

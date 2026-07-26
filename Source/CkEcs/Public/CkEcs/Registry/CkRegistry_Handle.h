@@ -4,13 +4,8 @@
 #include "CkRegistry_Handle.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// FCk_RegistryHandle — generational reference to an entt::basic_registry slot.
-//
-// SlotIndex == INDEX_NONE represents an "unset" handle. Generation == 0 is reserved as a
-// never-allocated sentinel; every successful Allocate produces a Generation >= 1.
-//
-// Trivially copyable. Stored by value inside FCk_Handle. Resolution to a real
-// entt::basic_registry* is done via ck::registry_table::Resolve.
+// SlotIndex == INDEX_NONE is an "unset" handle; Generation == 0 is the never-allocated sentinel
+// (every successful Allocate produces >= 1). Resolved via ck::registry_table::Resolve.
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
@@ -22,10 +17,8 @@ public:
     UPROPERTY(BlueprintReadOnly, Category = "Ck|Registry")
     int32 SlotIndex = INDEX_NONE;
 
-    // Note: int32 (not uint32) because UHT/BP doesn't reflect uint32. Stored
-    // as signed for reflection compatibility but treated as a generational
-    // token (sign bit irrelevant). Wrap detection skips Generation == 0
-    // (the never-allocated sentinel) — see the slot table impl.
+    // int32 (not uint32) because UHT/BP doesn't reflect uint32 — an opaque token, sign bit
+    // irrelevant. The slot table's increment-on-alloc/free skips 0 on wrap.
     UPROPERTY(BlueprintReadOnly, Category = "Ck|Registry")
     int32 Generation = 0;
 

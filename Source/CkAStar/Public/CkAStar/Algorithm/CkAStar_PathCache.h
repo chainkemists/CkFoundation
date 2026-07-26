@@ -9,8 +9,7 @@ namespace ck::astar
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Not thread-safe. Consumer is responsible for synchronization.
-// Typical pattern: read-only Find() during parallel phase, Insert() deferred to main thread.
+// Not thread-safe: read-only Find() during a parallel phase, Insert() deferred to the main thread.
 
 template <AStarNodeId T_Key, AStarNodeId T_NodeId>
 struct TPathCache
@@ -30,23 +29,21 @@ public:
 
 	// ----------------------------------------------------------------------------------------------------------------
 
-	// Returns nullptr on miss. On hit, promotes to front (LRU) and skips stale entries.
+	// Mutating: nullptr on miss, a hit is promoted to the LRU front, a stale entry is evicted as a miss.
 	auto
 	Find(const T_Key& InKey) -> const FCachedPath*;
 
 	// ----------------------------------------------------------------------------------------------------------------
 
-	// Removes duplicate key if present, evicts LRU tail if at capacity, inserts at front.
 	auto
 	Insert(T_Key InKey, TArray<T_NodeId> InPath, float InCost) -> void;
 
 	// ----------------------------------------------------------------------------------------------------------------
 
-	// Increments generation counter. All existing entries become stale.
+	// Lazy: bumps the generation, frees nothing. Clear() is the hard reset.
 	auto
 	InvalidateAll() -> void;
 
-	// Hard clear — removes all entries.
 	auto
 	Clear() -> void;
 

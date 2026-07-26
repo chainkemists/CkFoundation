@@ -74,6 +74,11 @@ the reserved Custom-node input/output/local names (`Time`, `UV`, `WorldPosition`
 `Refraction`, `SubsurfaceColor`, `ClearCoat`, `ClearCoatRoughness`, `In`, `O`). The entry point
 must be defined DIRECTLY in `_UshIncludePath` (not a nested include / macro).
 
+Two further asset-side rules the validator enforces before it ever reads the .ush: `_PerInstance` is
+legal only on Scalar/Vector params (textures cannot ride per-instance custom data), and
+`_UshIncludePath` must resolve through the registered shader source directory mappings
+(`AddShaderSourceDirectoryMapping`) — an unresolvable virtual path is an error, not a silent skip.
+
 ## Traps cookbook
 
 - **Never raw `.Sample()` in a lit or WPO'd look** — lit looks compile ray-tracing hit permutations
@@ -94,6 +99,10 @@ must be defined DIRECTLY in `_UshIncludePath` (not a nested include / macro).
   A define change needs regeneration (it changes the material, not just the include).
 - **Lit translucency reads flat by default** — set `_TranslucencyLighting = SurfacePerPixel` on
   glass-like looks (engine default is volumetric non-directional).
+- **`_PixelDataChannels` is opt-in because interpolators cost** — only looks whose PIXEL stage decodes
+  mesh data channels need TexCoord1/TexCoord2 wired (e.g. CkVat's normal-texture lookup). The WPO entry
+  point always receives UV1/UV2; it lives on its own VS-safe Custom node because the pixel node reads
+  pixel-only inputs.
 - **UV is TexCoord0** (surface) or screen position (post-process). Other UV channels are not wired;
   raw escape hatch: `Parameters`/`View.*`/`GetPrimitiveData()` inside the .ush work but are
   version-fragile — prefer asking for the input to be wired properly.
@@ -110,6 +119,66 @@ must be defined DIRECTLY in `_UshIncludePath` (not a nested include / macro).
   work; regeneration timestamps churn them.
 - Don't name a look param after a Custom-node output — the generated signature lists the name
   twice → "redefinition" (the validator now rejects this before HLSL ever sees it).
+
+## Implementation notes
+
+### Blendable location (`_BlendableLocation`)
+
+The pre-TAA locations (`SceneColorAfterDOF` / `SceneColorBeforeDOF`) run at *rendering* resolution
+BEFORE TSR/TAA, so the look's output is temporally accumulated like ordinary geometry. Anything
+derived from Custom Depth/Stencil **requires** one of them: those buffers are rendered with the
+TAA-jittered projection every frame, so a look placed after tonemapping thresholds that jittered
+mask with no temporal resolve ever seeing it — its edges shimmer even on a stationary camera.
+Trade-off: pre-TAA is also pre-tonemap, so output colors are scene-referred linear (the tonemapper
+remaps them and bloom sees them), and TSR may slightly ghost the output behind fast movers.
+
+### Per-instance slot layout
+
+`Get_PerInstanceSlotOf` / `Get_NumPerInstanceFloats` on the LookDefinition are THE source of truth,
+shared by the generator (Custom-node `DataIndex`) and runtime writers (CkIsmRenderer
+`SetCustomDataValueById` / `NumCustomDataFloats`). Slots accrue over `_Parameters` in declaration
+order — per-instance Scalar = 1 float, per-instance Vector = 3 (rgb). Explicit `_PerInstanceSlot`
+values do not advance the auto counter; both kinds resolve through the same query.
+
+The generator emits one `PerInstanceCustomData(3Vector)` node per per-instance param (`DataIndex` = the
+slot, `ConstDefaultValue` = the param default), so a non-instanced mesh renders the default and the look
+stays safe everywhere. Set `_PerInstanceSlot` explicitly when the instance custom-data layout is owned
+elsewhere — e.g. CkIskm batched crowds reserve `[0]`/`[1]` for frame bits and start game data at `[2]`
+(`CkIskm_BatchedClusterComponent::SendRenderDynamicData_Concurrent`).
+
+### Shading-model wiring
+
+Each exotic `_ShadingModel` is generated together with the G-buffer outputs it requires: `Subsurface`
+wires SubsurfaceColor (and Opacity drives the scatter), `ClearCoat` wires ClearCoat + ClearCoatRoughness.
+`Inherit` keeps the domain default (SurfaceLit → DefaultLit, everything else → Unlit).
+
+### Generated-master invariants (CkUsfEditor)
+
+- An empty `_SceneTextures` falls back to the historical default trio (SceneColor / SceneDepth /
+  SceneNormal), so PostProcess looks authored before the field existed regenerate byte-identically.
+- Refraction is wired only for **lit** translucency (glass): unlit translucent looks stay
+  byte-unchanged and no unlit-translucent + refraction permutation is compiled.
+- Usage flags are re-baked from the LookDefinition on every regeneration, and surface masters
+  additionally force the instanced + skeletal permutations on. The renderers auto-enable those at
+  runtime, but that path falls back to the default material in a packaged build.
+
+### Entity outlines
+
+Each renderer module's sync processor reacts to (`ck::FFragment_Usf_OutlineTarget` + its own proxy
+fragment) and records what it applied in a module-local `...OutlineApplied` fragment, so removal /
+EndPlay can undo without the Target fragment. Cascade-derived targets are stamped on lifetime
+dependents by `ECk_Usf_OutlineScope::EntityAndDependents`; dependents spawned after the request are
+not retro-outlined.
+
+`UCkUsf_OutlineSubsystem`'s stencil allocation (`Get_OrAllocate_StencilFor` / `Release_StencilFor`) is
+public and refcounted precisely so those other renderer modules can share a preset's Custom-Stencil value
+without depending on CkUsf's own component-apply path. The whole outline design mirrors the reference
+SolidOutlineSystem, `ECk_Usf_OutlineType` included.
+
+### Outline preset follow-ups
+
+`_UseFillTexture` samples the subsystem's single *shared* fill texture. Per-preset fill textures are
+a known follow-up — they would need a texture atlas or array.
 
 ## See also
 

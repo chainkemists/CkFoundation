@@ -13,12 +13,9 @@
 
 namespace ck::jolt_body
 {
-    // Fires the contact signal for ONE side (the "self" body) of a contact event, if self is a JoltBody whose
-    // OWN body id matches this side's index+seq. An entity can own more than one Jolt body (e.g. a JoltBody
-    // AND a Probe), all sharing the entity id as UserData — the index+seq check is the disambiguation. A
-    // baked static-world body's entity (a JoltStaticActor) flowing in as self is benign: it lacks
-    // FFragment_JoltBody_Current, so the guard below drops it. InOtherEntity is carried into the payload
-    // verbatim and may be invalid (the other body's entity is dead) or a non-JoltBody attribution entity.
+    // An entity can own more than one Jolt body (e.g. a JoltBody AND a Probe), all sharing the entity id as
+    // UserData — the index+seq check is the disambiguation. InOtherEntity is carried into the payload verbatim
+    // and may be invalid (the other body's entity is dead) or a non-JoltBody attribution entity.
     auto
         DoRouteForSide(
             const FCk_Handle& InSelfEntity,
@@ -43,8 +40,8 @@ namespace ck::jolt_body
 
         switch (InEvent.Type)
         {
-            // The event's RelativeNormalVelocity keeps Jolt's convention (negative = closing); the payload
-            // negates it so _RelativeNormalSpeed is POSITIVE at impact — consumers threshold "> X" naturally.
+            // Jolt's RelativeNormalVelocity is negative when closing; negated here so _RelativeNormalSpeed is
+            // POSITIVE at impact and consumers threshold "> X" naturally.
             case FCk_Jolt_ContactEvent::EType::Added:
             {
                 const auto Payload = FCk_JoltBody_Payload_OnContact{
@@ -55,7 +52,6 @@ namespace ck::jolt_body
             }
             case FCk_Jolt_ContactEvent::EType::Persisted:
             {
-                // Persisted events only fire for bodies that opted in — mirrors the Probe PersistContacts gate.
                 if (NOT JoltBody.Has<ck::FTag_JoltBody_PersistContacts>())
                 { break; }
 
@@ -86,18 +82,12 @@ namespace ck::jolt_body
 
         const auto RegView = InTransientEntity.Get_RegistryView();
 
-        // Body UserData is a raw (versioned) entity id baked in at body registration. A snapshot load wipes/
-        // restores the registry, so a contact queued pre-load can resolve to an id that is dead in the fresh
-        // registry — Get_ValidHandle ENSURES on a stale id. Do a non-ensuring registry-liveness check first
-        // (mirrors the SpatialQuery bridge and SleepStateMirror); a dead id yields an invalid handle the
-        // guards below already tolerate.
+        // Body UserData is a raw (versioned) entity id baked in at body registration; a snapshot load wipes and
+        // restores the registry, so a contact queued pre-load can resolve to an id that Get_ValidHandle would
+        // ENSURE on. The non-ensuring liveness check first yields an invalid handle the guards below tolerate.
         const auto ResolveBodyEntity = [&](uint64 InUserData) -> FCk_Handle
         {
-            // UserData 0 = NO entity. Raw entity id 0 (index 0, version 0) is ALWAYS the registry's transient
-            // root (first create()), a live entity — without this guard any body that never got a UserData
-            // stamp would resolve _OtherEntity to the transient root. (Baked static-world bodies now carry
-            // their source actor's attribution entity id, so a dynamic-vs-baked-floor contact resolves
-            // _OtherEntity to that JoltStaticActor entity rather than to an invalid handle.)
+            // UserData 0 = NO entity; raw entity id 0 is ALWAYS the registry's live transient root.
             if (InUserData == 0)
             { return {}; }
 
@@ -112,8 +102,7 @@ namespace ck::jolt_body
             const auto Body1Entity = ResolveBodyEntity(Event.Body1UserData);
             const auto Body2Entity = ResolveBodyEntity(Event.Body2UserData);
 
-            // Normal sign and contact points are per-side (mirrors the SpatialQuery bridge): body1 gets the
-            // negated world-space normal + its own contact points; body2 gets the positive normal + its own.
+            // Per-side: body1 gets the negated world-space normal + its own contact points, body2 the positive.
             DoRouteForSide(Body1Entity, Body2Entity, Event, Event.Body1IndexAndSeq,
                 Event.ContactPointsOn1, -Event.WorldSpaceNormal, Event.IsSensor2);
 

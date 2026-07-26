@@ -28,7 +28,6 @@ namespace ck
     {
         const auto DeltaSeconds = static_cast<float>(InDeltaT.Get_Seconds());
 
-        // Advance the blend weight toward its target (this is the SOLE place alpha advances).
         InBlend._Alpha = FMath::FInterpConstantTo(
             InBlend._Alpha, InBlend._TargetAlpha, DeltaSeconds, InBlend._BlendRate);
 
@@ -156,12 +155,7 @@ namespace ck
             UCk_Utils_IntegerAttributeModifier_UE::Override(Entry._Modifier, Effective);
         }
 
-        // Hand the current alpha to the layer script for any custom per-frame logic (standard tuner blending above
-        // is automatic; this is the opt-in hook the layer can override). Guard the entity-script access the same way
-        // FProcessor_CameraLayer_Lifecycle does (CkCamera_Processor.cpp): a layer can be present with its blend +
-        // acquired-modifier fragments but momentarily/permanently without FFragment_EntityScript_Current (e.g. a
-        // husk layer orphaned by a destroyed camera owner), and a bare Get would ensure every frame. The tuner blend
-        // above is already applied; only the opt-in script hook is skipped.
+        // Husk layers (owner destroyed) have no EntityScript; a bare Get would ensure every frame — CkCamera/CLAUDE.md.
         if (NOT InLayer.Has<ck::FFragment_EntityScript_Current>())
         { return; }
 
@@ -171,8 +165,6 @@ namespace ck
         {
             Script->Blend(InLayer, Alpha);
 
-            // Edge-detect the blend boundaries and fire the once-only hooks. FullyBlendedOut is best-effort: if a
-            // removal prunes the layer before this processor observes alpha 0, only ExitLayer/DoExit runs.
             if (InBlend._TargetAlpha >= 1.0f && Alpha >= 1.0f - KINDA_SMALL_NUMBER && NOT InBlend._FiredBlendedIn)
             {
                 InBlend._FiredBlendedIn  = true;

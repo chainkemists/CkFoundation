@@ -24,9 +24,8 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_CrowdAgent);
 
 public:
-    // Compose the crowd-agent feature DIRECTLY onto InOwner (no child entity). The owner must already
-    // have the Transform feature (enforced at the type level) — every agent processor reads and drives
-    // that transform. An entity hosts at most ONE crowd agent.
+    // Compose the crowd-agent feature DIRECTLY onto InOwner (no child entity; the Transform feature is
+    // required at the type level and is what every agent processor drives). At most ONE agent per entity.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CrowdAgent",
               DisplayName="[Ck][CrowdAgent] Add Feature")
@@ -42,8 +41,7 @@ public:
     Has(
         const FCk_Handle& InHandle);
 
-    // Read the steering processor's per-frame output — the primary way for tests/diagnostics to
-    // observe what the steering layer is producing.
+    // The steering processor's per-frame output — what the steering layer produced this frame.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|CrowdAgent",
               DisplayName="[Ck][CrowdAgent] Get Desired Velocity")
@@ -51,12 +49,9 @@ public:
     Get_DesiredVelocity(
         const FCk_Handle_CrowdAgent& InHandle);
 
-    // Read the separation processor's per-frame output — the neighbor-avoidance force BEFORE
-    // steering damps it into the desired velocity. Unlike Get_DesiredVelocity, this is observable on
-    // an IDLE agent (the separation processor excludes only FTag_CrowdAgent_Asleep, not Idle), which
-    // makes it the only way to assert on the agent's neighbor-detection VOLUME in isolation from
-    // path-follow dynamics. That matters: the probe volume is Jolt-side geometry, and a defect in it
-    // (see the Y-axis cylinder incident) is invisible to every behavioral crowd test we own.
+    // The separation processor's per-frame output, BEFORE steering folds it into the desired velocity.
+    // Unlike Get_DesiredVelocity this is readable on an IDLE agent, so it is the only way to assert on
+    // the agent's neighbor-detection VOLUME in isolation from path-follow dynamics.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|CrowdAgent",
               DisplayName="[Ck][CrowdAgent] Get Separation Force")
@@ -64,12 +59,9 @@ public:
     Get_SeparationForce(
         const FCk_Handle_CrowdAgent& InHandle);
 
-    // Read the steering processor's waypoint cursor — the index into the active path's waypoint
-    // array that the agent is currently walking toward. Diagnostic: paired with the path's waypoint
-    // list (e.g. UCk_Utils_PathNetworkFollower_UE::Get_RouteResult's compiled waypoints, which
-    // InstallExternalPath copies verbatim into the nav path result) it says exactly WHICH point the
-    // agent is steering at — the only way to tell a legitimately-unreached waypoint apart from one
-    // the agent already passed but never retired.
+    // The steering waypoint cursor — the index into the active path's waypoints the agent is walking
+    // toward. Paired with the path's waypoint list it distinguishes a legitimately-unreached waypoint
+    // from one the agent already passed but never retired.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|CrowdAgent",
               DisplayName="[Ck][CrowdAgent] Get Current Waypoint Index")
@@ -77,9 +69,8 @@ public:
     Get_CurrentWaypointIndex(
         const FCk_Handle_CrowdAgent& InHandle);
 
-    // Read the face-angle processor's current target yaw in DEGREES (converted from the radians
-    // stored on the fragment for caller convenience). The agent's actual yaw — lerped toward this
-    // target at _MaxTurnRate — is on its Transform's SceneNode rotation.
+    // The face-angle processor's target yaw in DEGREES (the fragment stores radians). The agent's
+    // actual yaw — lerped toward this target at _MaxTurnRate — is on its Transform's SceneNode rotation.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|CrowdAgent",
               DisplayName="[Ck][CrowdAgent] Get Target Yaw (degrees)")
@@ -87,10 +78,9 @@ public:
     Get_TargetYawDegrees(
         const FCk_Handle_CrowdAgent& InHandle);
 
-    // Issue a move-to request. The agent transitions Idle/Walking → PathPending; CkNavigation
-    // resolves the path; the OnPathResolved processor flips PathPending → Walking; steering walks
-    // the path. OnGoalReached fires when the agent crosses _ActiveArrivalRadius of the final
-    // waypoint. _ArrivalRadiusOverride on InRequest lets callers override the default per-request.
+    // Issue a move-to request: Idle/Walking → PathPending; CkNavigation resolves the path; OnPathResolved
+    // flips PathPending → Walking. OnGoalReached fires when the agent crosses _ActiveArrivalRadius of the
+    // final waypoint; _ArrivalRadiusOverride on InRequest overrides that default per-request.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CrowdAgent",
               DisplayName="[Ck][CrowdAgent] Request Move To")
@@ -99,11 +89,9 @@ public:
         UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
         const FCk_Request_CrowdAgent_MoveTo& InRequest);
 
-    // Issue a FOLLOW request: the goal is a LIVE transform handle, and the agent keeps re-pathing
-    // toward it on the request's repath cadence as it moves — including re-engaging after an
-    // arrival when the target walks back out of reach. Ends on a plain MoveTo, a Stop, or the
-    // target handle dying (the agent then keeps its last resolved goal). All MoveTo semantics
-    // (arrival radius, OnGoalReached per arrival, blocked handling) apply to each leg.
+    // Request_MoveTo with a LIVE transform handle as the goal: the agent re-paths toward it on the
+    // request's repath cadence, re-engaging after an arrival when the target walks out of reach again.
+    // Ends on a plain MoveTo, a Stop, or the target dying (the agent keeps its last resolved goal).
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CrowdAgent",
               DisplayName="[Ck][CrowdAgent] Request Follow Target")
@@ -175,11 +163,9 @@ public:
         UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
         const FCk_Delegate_CrowdAgent_OnGoalFailed& InDelegate);
 
-    // Fires once when the agent discovers its goal is UNREACHABLE — a neighbour is standing on it, or
-    // the agent has stopped making progress. Not a failure: under the default HoldAndRetry policy the
-    // agent stops, waits, and resumes on its own when the goal clears. The payload names the blocker,
-    // which is what a gameplay-side queue manager needs in order to send the NPC somewhere else instead
-    // of having it stand and wait.
+    // Fires once when the agent discovers its goal is UNREACHABLE — a neighbour standing on it, or no
+    // progress. Not a failure: under the default HoldAndRetry policy the agent stops and resumes on its
+    // own when the goal clears. The payload names the blocker, for a gameplay-side queue manager.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CrowdAgent",
               DisplayName="[Ck][CrowdAgent] Bind To OnGoalBlocked")
@@ -207,10 +193,9 @@ public:
     Get_IsGoalBlocked(
         const FCk_Handle_CrowdAgent& InAgent);
 
-    // The goal of the agent's current/last MoveTo (ZeroVector if it never had one). Lets a caller
-    // that periodically re-anchors an agent distinguish "still the goal it is blocked on — leave
-    // HoldAndRetry alone" from "the goal moved — a fresh MoveTo is warranted", since any new
-    // MoveTo clears GoalBlocked and resets the no-progress sampler.
+    // The goal of the agent's current/last MoveTo (ZeroVector if it never had one). Lets a caller that
+    // periodically re-anchors an agent tell "still the goal it is blocked on — leave HoldAndRetry alone"
+    // from "the goal moved — a fresh MoveTo is warranted".
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|CrowdAgent",
               DisplayName="[Ck][CrowdAgent] Get Active Goal")
@@ -218,12 +203,9 @@ public:
     Get_ActiveGoal(
         const FCk_Handle_CrowdAgent& InAgent);
 
-    // True once the agent's stationary-markup cost disc is painted AND the rebuilt navmesh
-    // actually reports the crowd cost area at the disc's location (ground truth, not a timer —
-    // see FProcessor_CrowdAgent_PathRefresh). False while the agent is moving, before the
-    // stationary delay elapses, or while the async tile rebake is still in flight. Lets tests
-    // and gameplay gate on "this standing agent is genuinely priced into pathing right now"
-    // instead of guessing with settle timers.
+    // True once the agent's stationary-markup cost disc is painted AND the rebuilt navmesh actually
+    // reports the crowd cost area there (ground truth, not a timer). Lets tests and gameplay gate on
+    // "this standing agent is genuinely priced into pathing right now" instead of on settle timers.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|CrowdAgent",
               DisplayName="[Ck][CrowdAgent] Get Is Stationary Markup Confirmed")
@@ -232,12 +214,6 @@ public:
         const FCk_Handle_CrowdAgent& InAgent);
 
     // ---- Identity colour ---------------------------------------------------------------------
-    //
-    // Per-agent identity colour shared by every visualisation (capsule, breadcrumb path,
-    // planned-path overlay, debugger Agent List swatch). The fragment is opt-in: only present
-    // on agents that explicitly Set_DebugColor. Get_DebugColor returns the fragment value if
-    // set, or a hash-derived stable colour otherwise — so untracked production agents still get
-    // distinguishable colours when an in-world overlay happens to render them.
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CrowdAgent",
@@ -247,6 +223,7 @@ public:
         UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
         FLinearColor InColor);
 
+    // The agent's Set_DebugColor value, or a hash-derived stable colour when it never opted in.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|CrowdAgent",
               DisplayName="[Ck][CrowdAgent] Get Debug Color")
@@ -255,11 +232,9 @@ public:
         const FCk_Handle_CrowdAgent& InAgent);
 
     // ---- Debug override (debugger "take control") --------------------------------------------
-    //
-    // Set/clear the FTag_CrowdAgent_DebugOverride marker. While set, gameplay code (e.g. the NPC SM)
-    // must check Get_HasDebugOverride and skip issuing its own MoveTo, so a debugger-issued goal
-    // isn't immediately overwritten. The debugger sets this on "take control", clears it on release.
 
+    // While set, gameplay code (e.g. the NPC SM) must check Get_HasDebugOverride and skip issuing its
+    // own MoveTo, so a debugger-issued goal isn't immediately overwritten.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CrowdAgent",
               DisplayName="[Ck][CrowdAgent] Set Debug Override")

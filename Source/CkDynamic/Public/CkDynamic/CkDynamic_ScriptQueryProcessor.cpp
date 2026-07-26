@@ -18,8 +18,6 @@
 
 namespace ck_dynamic_script_query_processor
 {
-    // Duplicated from the anonymous namespace of CkDynamic_Utils.cpp; kept local to avoid touching the
-    // hot Get_Fragment TU. Consolidate into the shared internal header (CkDynamic_Sentinel.h).
     auto
         PassesDestroyFilter(
             const FCk_Handle& InHandle,
@@ -66,9 +64,7 @@ namespace ck
             TEXT("FProcessor_ScriptQueryHosted constructed with a null dev UClass"))
         { _Disabled = true; return; }
 
-        // The generated driver is a SUBCLASS of the dev class, so instantiating it yields one object carrying both
-        // the author's surface (BeginPlay/EndPlay/ForEachEntity) and the driver's Configure/ForEachBatch overrides.
-        // Direct mode (no driver class): the dev class overrides ForEachBatch itself.
+        // The driver is a SUBCLASS of the dev class, so ONE instance carries both surfaces.
         auto* InstanceClass = ck::IsValid(InDriverClass) ? InDriverClass : InDevClass;
         auto* Instance = NewObject<UCk_Processor_Script_Base_UE>(GetTransientPackage(), InstanceClass);
         _Instance = TStrongObjectPtr<UCk_Processor_Script_Base_UE>{Instance};
@@ -84,8 +80,6 @@ namespace ck
         const auto TransientHandle = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InRegistry);
         _Instance->Set_Handle(TransientHandle);
 
-        // Resolve the query once. On a generated driver, Configure adds the inferred slots then calls Super::Configure
-        // when the dev class overrides it; a direct-mode dev fills the whole query here.
         _Instance->Configure(_Query);
 
         const auto AdmissionSucceeded = NOT _Query._AdmissionFailed;
@@ -107,8 +101,6 @@ namespace ck
 
         if (NOT _Query._NoEntities)
         {
-            // An all-Exclude query has no pool to drive the join (DoResolveAndJoin would return false every tick),
-            // so the processor would construct fine and then silently never run. Fail loudly here instead.
             const auto HasNonExcludeSlot = _Query._Slots.ContainsByPredicate(
                 [](const FCk_ScriptQuerySlot& InSlot) { return InSlot._Access != ECk_ScriptQueryAccess::Exclude; });
 
@@ -126,8 +118,7 @@ namespace ck
     FProcessor_ScriptQueryHosted::
         ~FProcessor_ScriptQueryHosted()
     {
-        // EndPlay only mirrors a BeginPlay that actually ran (BeginPlay is the last thing the ctor does, and only when
-        // not disabled).
+        // EndPlay only mirrors a BeginPlay that actually ran — the ctor calls it last, and only when not disabled.
         if (NOT _Disabled && ck::IsValid(_Instance.Get()))
         {
             _Instance->EndPlay();
@@ -150,15 +141,13 @@ namespace ck
         if (ck::Is_NOT_Valid(_Instance.Get()))
         { return; }
 
-        // Dead-transient-handle skip (mirrors FProcessor_ScriptHosted): during registry teardown the scheduler keeps
-        // ticking for a few frames after the transient entity is destroyed. Every registry access below would ensure
-        // on the dead handle — skip the dispatch entirely, matching how C++ processors see an empty view.
+        // During registry teardown the scheduler keeps ticking for a few frames after the transient entity is
+        // destroyed; every registry access below would ensure on the dead handle. C++ processors see an empty view.
         if (ck::Is_NOT_Valid(_Instance->Get_Handle()))
         { return; }
 
         if (_Query._NoEntities)
         {
-            // No join: run every tick with an empty batch.
             _BatchState._Slots.Reset();
             _BatchState._Entities.Reset();
             _BatchState._AnyHandle = _Instance->Get_Handle();
@@ -181,9 +170,7 @@ namespace ck
     {
         Tick(TimeType::ZeroSecond());
 
-        // The batch dispatch runs script whose side effects we can't inspect — "unknown" tells the
-        // scheduler to conservatively treat the pump as having done work (see FTickable_Concept::
-        // Pump). Mirrors FProcessor_ScriptHosted; wiring the join count is a possible refinement.
+        // Script side effects are not inspectable (see FTickable_Concept::Pump).
         constexpr auto VisitedCountUnknown = -1;
         return VisitedCountUnknown;
     }
@@ -242,7 +229,6 @@ namespace ck
         if (DriveStorage == nullptr)
         { return false; }   // no non-exclude slots -> nothing to iterate
 
-        // Drive the smallest pool; contains()-probe every slot (Exclude inverts), honoring the destroy filter.
         for (const auto Entity : static_cast<const entt::sparse_set&>(*DriveStorage))
         {
             if (NOT RegistryView.IsValid(Entity))
@@ -267,9 +253,7 @@ namespace ck
             _BatchState._Entities.Add(Entity);
         }
 
-        // A structurally valid join that matched nothing would still cost a VM call to
-        // dispatch a zero-iteration batch — skip it. NoEntities is the sanctioned route for
-        // processors that want to run without a join.
+        // NoEntities is the sanctioned route for a processor that wants to run without a join.
         return _BatchState._Entities.Num() > 0;
     }
 
@@ -291,8 +275,7 @@ namespace ck
 
         ON_SCOPE_EXIT
         {
-            // Always remove the resolver entry before this dispatch scope exits. A script exception or other
-            // abnormal return must not leave the host address registered after its access window has closed.
+            // A script exception must not leave the host address registered past its access window.
             ck::dynamic::Close_ScriptQueryBatchState(_BatchState, Generation);
         };
 

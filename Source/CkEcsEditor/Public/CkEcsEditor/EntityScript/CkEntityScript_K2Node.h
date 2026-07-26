@@ -25,12 +25,9 @@ class UCk_K2Node_EntityScript : public UCk_K2Node_UFunction_Base
     GENERATED_BODY()
 
 public:
-    // UObject interface
     auto PreSave(FObjectPreSaveContext SaveContext) -> void override;
     auto ShouldShowNodeProperties() const -> bool override;
-    // End of UObject interface
 
-    // K2Node implementation
     auto IsNodePure() const -> bool override;
     auto ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*>& InOldPins) -> void override;
     auto GetMenuCategory() const -> FText override;
@@ -39,14 +36,11 @@ public:
     auto GetPinMetaData(FName InPinName, FName InKey) -> FString override;
     auto GetJumpTargetForDoubleClick() const -> UObject* override;
     auto CreateVisualWidget() -> TSharedPtr<SGraphNode> override;
-    // End of K2Node implementation
 
-    // UEdGraphNode implementation
     auto GetNodeTitle(ENodeTitleType::Type InTitleType) const -> FText override;
     auto GetIconAndTint(FLinearColor& OutColor) const -> FSlateIcon override;
     auto GetReplicationIcon() const -> FSlateIcon;
     auto GetCornerIcon() const -> FName override;
-    // End of UEdGraphNode implementation
 
     auto OnInterfacePinButtonClicked(FName PinName) const -> void;
     auto IsPinGeneratedFromEntityScript(UEdGraphPin* Pin) const -> bool;

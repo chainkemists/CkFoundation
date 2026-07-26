@@ -23,8 +23,7 @@ namespace ck::persistence_apply
         const auto* Handler = FCk_PersistenceHandlerRegistry::Resolve(InData.GetScriptStruct());
         if (Handler == nullptr || NOT Handler->HydrationApply)
         {
-            // No HydrationApply — either registry churn or a handler that never declared its load path. Drop
-            // rather than retry forever.
+            // Registry churn, or a handler that never declared its load path. Drop rather than retry forever.
             return EApplyOutcome::DroppedTimeout;
         }
 
@@ -63,10 +62,8 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
-        // [P2-D1] This dispatcher runs LAST in FGroup_DeferredApply (RunAfter the net dispatcher). Iterate + apply, THEN
-        // clear FTag_EntityScript_ConstructedThisFrame registry-wide — by now BOTH dispatchers have skipped the
-        // constructed-this-frame entities in this main pass, so clearing lets the pump (post-Setup) / next frame
-        // re-dispatch them without a stomp. Idiom: CkIsmRenderer_Processor.cpp.
+        // Runs LAST in FGroup_DeferredApply, so clearing FTag_EntityScript_ConstructedThisFrame AFTER the loop is
+        // safe: both dispatchers have already skipped those entities this pass, and the pump re-dispatches them.
         TProcessor::DoTick(InDeltaT);
         _TransientEntity.Clear<FTag_EntityScript_ConstructedThisFrame>();
     }
@@ -79,7 +76,7 @@ namespace ck
             FFragment_PendingHydration& InPending) const
         -> void
     {
-        // Defer entities composed this frame (Phase 2 §2.4) — same rationale as the net dispatcher.
+        // Defer entities composed this frame — same rationale as the net dispatcher.
         if (InHandle.Has<FTag_EntityScript_ConstructedThisFrame>())
         { return; }
 
@@ -89,9 +86,7 @@ namespace ck
         // Iterate back-to-front so applied/dropped entries can be removed in place.
         for (auto Index = Entries.Num() - 1; Index >= 0; --Index)
         {
-            // Hydration has no per-entry coalescing (unlike the net FastArray) — the Old side is always unset.
-            // ApplyOne dispatches through the handler's HydrationApply slot (the load-path applier); the choice of
-            // slot is now structural (which callback), not a runtime scope query.
+            // No per-entry coalescing on the load path (unlike the net FastArray) — the Old side is always unset.
             const auto Outcome = ck::persistence_apply::ApplyOne(
                 InHandle, Entries[Index], TOptional<FInstancedStruct>{}, InPending._PendingForSeconds, InDeltaT);
 

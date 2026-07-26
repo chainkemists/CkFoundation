@@ -17,6 +17,26 @@
 
 // ----------------------------------------------------------------------------------------------------
 
+namespace ck_float_attribute_customization
+{
+    constexpr uint8 MinMaxMode_None   = 0;
+    constexpr uint8 MinMaxMode_Min    = 1;
+    constexpr uint8 MinMaxMode_Max    = 2;
+    constexpr uint8 MinMaxMode_MinMax = 3;
+
+    auto Get_HasMin(uint8 InMinMaxMode) -> bool
+    {
+        return InMinMaxMode == MinMaxMode_Min || InMinMaxMode == MinMaxMode_MinMax;
+    }
+
+    auto Get_HasMax(uint8 InMinMaxMode) -> bool
+    {
+        return InMinMaxMode == MinMaxMode_Max || InMinMaxMode == MinMaxMode_MinMax;
+    }
+}
+
+// ----------------------------------------------------------------------------------------------------
+
 TSharedRef<IPropertyTypeCustomization> FCk_Fragment_FloatAttribute_ParamsDataCustomization::MakeInstance()
 {
     return MakeShareable(new FCk_Fragment_FloatAttribute_ParamsDataCustomization);
@@ -41,7 +61,6 @@ void FCk_Fragment_FloatAttribute_ParamsDataCustomization::CustomizeHeader(TShare
 
 void FCk_Fragment_FloatAttribute_ParamsDataCustomization::CustomizeChildren(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder, IPropertyTypeCustomizationUtils& StructCustomizationUtils)
 {
-    // Get handles to all properties
     NameHandle = StructPropertyHandle->GetChildHandle(TEXT("_Name"));
     BaseValueHandle = StructPropertyHandle->GetChildHandle(TEXT("_BaseValue"));
     MinMaxHandle = StructPropertyHandle->GetChildHandle(TEXT("_MinMax"));
@@ -56,10 +75,8 @@ void FCk_Fragment_FloatAttribute_ParamsDataCustomization::CustomizeChildren(TSha
     check(MaxValueHandle.IsValid());
     check(RefillParamsHandle.IsValid());
 
-    // Row 1: Name tag
     StructBuilder.AddProperty(NameHandle.ToSharedRef());
 
-    // Row 2: Min/Current/Max with checkboxes
     StructBuilder.AddCustomRow(LOCTEXT("ValueRow", "Value"))
     .NameContent()
     [
@@ -72,7 +89,6 @@ void FCk_Fragment_FloatAttribute_ParamsDataCustomization::CustomizeChildren(TSha
     .MaxDesiredWidth(500.0f)
     [
         SNew(SHorizontalBox)
-        // Min checkbox
         +SHorizontalBox::Slot()
         .AutoWidth()
         .VAlign(VAlign_Center)
@@ -83,7 +99,6 @@ void FCk_Fragment_FloatAttribute_ParamsDataCustomization::CustomizeChildren(TSha
             .OnCheckStateChanged(this, &FCk_Fragment_FloatAttribute_ParamsDataCustomization::OnMinCheckStateChanged)
             .ToolTipText(LOCTEXT("MinCheckTooltip", "Enable minimum value constraint"))
         ]
-        // Min label
         +SHorizontalBox::Slot()
         .AutoWidth()
         .VAlign(VAlign_Center)
@@ -94,7 +109,6 @@ void FCk_Fragment_FloatAttribute_ParamsDataCustomization::CustomizeChildren(TSha
             .Font(IDetailLayoutBuilder::GetDetailFont())
             .ColorAndOpacity(this, &FCk_Fragment_FloatAttribute_ParamsDataCustomization::GetMinLabelColor)
         ]
-        // Min value
         +SHorizontalBox::Slot()
         .FillWidth(1.0f)
         .Padding(0.0f, 0.0f, 8.0f, 0.0f)
@@ -112,7 +126,6 @@ void FCk_Fragment_FloatAttribute_ParamsDataCustomization::CustomizeChildren(TSha
                 .MaxSliderValue(TOptional<float>())
             ]
         ]
-        // Current label
         +SHorizontalBox::Slot()
         .AutoWidth()
         .VAlign(VAlign_Center)
@@ -122,7 +135,6 @@ void FCk_Fragment_FloatAttribute_ParamsDataCustomization::CustomizeChildren(TSha
             .Text(LOCTEXT("CurrentLabel", "Current:"))
             .Font(IDetailLayoutBuilder::GetDetailFont())
         ]
-        // Current/Base value
         +SHorizontalBox::Slot()
         .FillWidth(1.0f)
         .Padding(0.0f, 0.0f, 8.0f, 0.0f)
@@ -142,7 +154,6 @@ void FCk_Fragment_FloatAttribute_ParamsDataCustomization::CustomizeChildren(TSha
                 .SliderExponent(1.0f)
             ]
         ]
-        // Max checkbox
         +SHorizontalBox::Slot()
         .AutoWidth()
         .VAlign(VAlign_Center)
@@ -153,7 +164,6 @@ void FCk_Fragment_FloatAttribute_ParamsDataCustomization::CustomizeChildren(TSha
             .OnCheckStateChanged(this, &FCk_Fragment_FloatAttribute_ParamsDataCustomization::OnMaxCheckStateChanged)
             .ToolTipText(LOCTEXT("MaxCheckTooltip", "Enable maximum value constraint"))
         ]
-        // Max label
         +SHorizontalBox::Slot()
         .AutoWidth()
         .VAlign(VAlign_Center)
@@ -164,7 +174,6 @@ void FCk_Fragment_FloatAttribute_ParamsDataCustomization::CustomizeChildren(TSha
             .Font(IDetailLayoutBuilder::GetDetailFont())
             .ColorAndOpacity(this, &FCk_Fragment_FloatAttribute_ParamsDataCustomization::GetMaxLabelColor)
         ]
-        // Max value
         +SHorizontalBox::Slot()
         .FillWidth(1.0f)
         [
@@ -183,7 +192,6 @@ void FCk_Fragment_FloatAttribute_ParamsDataCustomization::CustomizeChildren(TSha
         ]
     ];
 
-    // Row 3: Refill Parameters (with inline checkbox due to InlineEditConditionToggle)
     StructBuilder.AddProperty(RefillParamsHandle.ToSharedRef());
 }
 
@@ -219,14 +227,12 @@ TOptional<float> FCk_Fragment_FloatAttribute_ParamsDataCustomization::GetMaxValu
 
 void FCk_Fragment_FloatAttribute_ParamsDataCustomization::OnBaseValueCommitted(float NewValue, ETextCommit::Type CommitType)
 {
-    // Clamp based on active min/max settings
     uint8 MinMaxMode;
     if (MinMaxHandle->GetValue(MinMaxMode) == FPropertyAccess::Success)
     {
         float ClampedValue = NewValue;
 
-        // Apply min constraint if enabled
-        if (MinMaxMode == 1 || MinMaxMode == 3) // Min or Min&Max
+        if (ck_float_attribute_customization::Get_HasMin(MinMaxMode))
         {
             float MinValue;
             if (MinValueHandle->GetValue(MinValue) == FPropertyAccess::Success)
@@ -235,8 +241,7 @@ void FCk_Fragment_FloatAttribute_ParamsDataCustomization::OnBaseValueCommitted(f
             }
         }
 
-        // Apply max constraint if enabled
-        if (MinMaxMode == 2 || MinMaxMode == 3) // Max or Min&Max
+        if (ck_float_attribute_customization::Get_HasMax(MinMaxMode))
         {
             float MaxValue;
             if (MaxValueHandle->GetValue(MaxValue) == FPropertyAccess::Success)
@@ -257,7 +262,6 @@ void FCk_Fragment_FloatAttribute_ParamsDataCustomization::OnMinValueCommitted(fl
 {
     MinValueHandle->SetValue(NewValue);
 
-    // If base value is now below min, update it
     float BaseValue;
     if (BaseValueHandle->GetValue(BaseValue) == FPropertyAccess::Success)
     {
@@ -272,7 +276,6 @@ void FCk_Fragment_FloatAttribute_ParamsDataCustomization::OnMaxValueCommitted(fl
 {
     MaxValueHandle->SetValue(NewValue);
 
-    // If base value is now above max, update it
     float BaseValue;
     if (BaseValueHandle->GetValue(BaseValue) == FPropertyAccess::Success)
     {
@@ -288,7 +291,7 @@ ECheckBoxState FCk_Fragment_FloatAttribute_ParamsDataCustomization::GetMinCheckS
     uint8 MinMaxMode;
     if (MinMaxHandle->GetValue(MinMaxMode) == FPropertyAccess::Success)
     {
-        return (MinMaxMode == 1 || MinMaxMode == 3) ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+        return ck_float_attribute_customization::Get_HasMin(MinMaxMode) ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
     }
     return ECheckBoxState::Unchecked;
 }
@@ -298,7 +301,7 @@ ECheckBoxState FCk_Fragment_FloatAttribute_ParamsDataCustomization::GetMaxCheckS
     uint8 MinMaxMode;
     if (MinMaxHandle->GetValue(MinMaxMode) == FPropertyAccess::Success)
     {
-        return (MinMaxMode == 2 || MinMaxMode == 3) ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+        return ck_float_attribute_customization::Get_HasMax(MinMaxMode) ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
     }
     return ECheckBoxState::Unchecked;
 }
@@ -308,24 +311,22 @@ void FCk_Fragment_FloatAttribute_ParamsDataCustomization::OnMinCheckStateChanged
     const auto MinChecked = (NewState == ECheckBoxState::Checked);
     const auto MaxChecked = (GetMaxCheckState() == ECheckBoxState::Checked);
 
-    // Update MinMaxMode enum based on checkbox states
-    uint8 NewMode = 0; // None
+    uint8 NewMode = ck_float_attribute_customization::MinMaxMode_None;
     if (MinChecked && MaxChecked)
     {
-        NewMode = 3; // Min and Max
+        NewMode = ck_float_attribute_customization::MinMaxMode_MinMax;
     }
     else if (MinChecked)
     {
-        NewMode = 1; // Min only
+        NewMode = ck_float_attribute_customization::MinMaxMode_Min;
     }
     else if (MaxChecked)
     {
-        NewMode = 2; // Max only
+        NewMode = ck_float_attribute_customization::MinMaxMode_Max;
     }
 
     MinMaxHandle->SetValue(NewMode);
 
-    // Clamp base value if needed
     if (MinChecked)
     {
         float BaseValue, MinValue;
@@ -345,24 +346,22 @@ void FCk_Fragment_FloatAttribute_ParamsDataCustomization::OnMaxCheckStateChanged
     const auto MinChecked = (GetMinCheckState() == ECheckBoxState::Checked);
     const auto MaxChecked = (NewState == ECheckBoxState::Checked);
 
-    // Update MinMaxMode enum based on checkbox states
-    uint8 NewMode = 0; // None
+    uint8 NewMode = ck_float_attribute_customization::MinMaxMode_None;
     if (MinChecked && MaxChecked)
     {
-        NewMode = 3; // Min and Max
+        NewMode = ck_float_attribute_customization::MinMaxMode_MinMax;
     }
     else if (MinChecked)
     {
-        NewMode = 1; // Min only
+        NewMode = ck_float_attribute_customization::MinMaxMode_Min;
     }
     else if (MaxChecked)
     {
-        NewMode = 2; // Max only
+        NewMode = ck_float_attribute_customization::MinMaxMode_Max;
     }
 
     MinMaxHandle->SetValue(NewMode);
 
-    // Clamp base value if needed
     if (MaxChecked)
     {
         float BaseValue, MaxValue;
@@ -392,7 +391,7 @@ TOptional<float> FCk_Fragment_FloatAttribute_ParamsDataCustomization::GetBaseVal
     uint8 MinMaxMode;
     if (MinMaxHandle->GetValue(MinMaxMode) == FPropertyAccess::Success)
     {
-        if (MinMaxMode == 1 || MinMaxMode == 3) // Min or Min&Max
+        if (ck_float_attribute_customization::Get_HasMin(MinMaxMode))
         {
             float MinValue;
             if (MinValueHandle->GetValue(MinValue) == FPropertyAccess::Success)
@@ -409,7 +408,7 @@ TOptional<float> FCk_Fragment_FloatAttribute_ParamsDataCustomization::GetBaseVal
     uint8 MinMaxMode;
     if (MinMaxHandle->GetValue(MinMaxMode) == FPropertyAccess::Success)
     {
-        if (MinMaxMode == 2 || MinMaxMode == 3) // Max or Min&Max
+        if (ck_float_attribute_customization::Get_HasMax(MinMaxMode))
         {
             float MaxValue;
             if (MaxValueHandle->GetValue(MaxValue) == FPropertyAccess::Success)
@@ -423,11 +422,10 @@ TOptional<float> FCk_Fragment_FloatAttribute_ParamsDataCustomization::GetBaseVal
 
 TOptional<float> FCk_Fragment_FloatAttribute_ParamsDataCustomization::GetBaseValueSliderMin() const
 {
-    // Only return slider min if BOTH min and max are enabled
     uint8 MinMaxMode;
     if (MinMaxHandle->GetValue(MinMaxMode) == FPropertyAccess::Success)
     {
-        if (MinMaxMode == 3) // Both Min and Max must be enabled for slider
+        if (MinMaxMode == ck_float_attribute_customization::MinMaxMode_MinMax)
         {
             float MinValue;
             if (MinValueHandle->GetValue(MinValue) == FPropertyAccess::Success)
@@ -436,16 +434,15 @@ TOptional<float> FCk_Fragment_FloatAttribute_ParamsDataCustomization::GetBaseVal
             }
         }
     }
-    return TOptional<float>(); // No slider
+    return TOptional<float>();
 }
 
 TOptional<float> FCk_Fragment_FloatAttribute_ParamsDataCustomization::GetBaseValueSliderMax() const
 {
-    // Only return slider max if BOTH min and max are enabled
     uint8 MinMaxMode;
     if (MinMaxHandle->GetValue(MinMaxMode) == FPropertyAccess::Success)
     {
-        if (MinMaxMode == 3) // Both Min and Max must be enabled for slider
+        if (MinMaxMode == ck_float_attribute_customization::MinMaxMode_MinMax)
         {
             float MaxValue;
             if (MaxValueHandle->GetValue(MaxValue) == FPropertyAccess::Success)
@@ -454,7 +451,7 @@ TOptional<float> FCk_Fragment_FloatAttribute_ParamsDataCustomization::GetBaseVal
             }
         }
     }
-    return TOptional<float>(); // No slider
+    return TOptional<float>();
 }
 
 bool FCk_Fragment_FloatAttribute_ParamsDataCustomization::IsMinValueEnabled() const
@@ -462,7 +459,7 @@ bool FCk_Fragment_FloatAttribute_ParamsDataCustomization::IsMinValueEnabled() co
     uint8 MinMaxValue;
     if (MinMaxHandle->GetValue(MinMaxValue) == FPropertyAccess::Success)
     {
-        return (MinMaxValue == 1 || MinMaxValue == 3);
+        return ck_float_attribute_customization::Get_HasMin(MinMaxValue);
     }
     return false;
 }
@@ -472,7 +469,7 @@ bool FCk_Fragment_FloatAttribute_ParamsDataCustomization::IsMaxValueEnabled() co
     uint8 MinMaxValue;
     if (MinMaxHandle->GetValue(MinMaxValue) == FPropertyAccess::Success)
     {
-        return (MinMaxValue == 2 || MinMaxValue == 3);
+        return ck_float_attribute_customization::Get_HasMax(MinMaxValue);
     }
     return false;
 }
@@ -499,7 +496,6 @@ TSharedRef<IPropertyTypeCustomization> FCk_Fragment_FloatAttributeRefill_ParamsD
 
 void FCk_Fragment_FloatAttributeRefill_ParamsDataCustomization::CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& StructCustomizationUtils)
 {
-    // Just show the struct name in the header
     HeaderRow.NameContent()
     [
         StructPropertyHandle->CreatePropertyNameWidget()
@@ -508,7 +504,6 @@ void FCk_Fragment_FloatAttributeRefill_ParamsDataCustomization::CustomizeHeader(
 
 void FCk_Fragment_FloatAttributeRefill_ParamsDataCustomization::CustomizeChildren(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder, IPropertyTypeCustomizationUtils& StructCustomizationUtils)
 {
-    // Get handles to all properties
     RefillAttributeNameHandle = StructPropertyHandle->GetChildHandle(TEXT("_RefillAttributeName"));
     RefillBehaviorHandle = StructPropertyHandle->GetChildHandle(TEXT("_RefillBehavior"));
     FillRateHandle = StructPropertyHandle->GetChildHandle(TEXT("_FillRate"));
@@ -519,10 +514,8 @@ void FCk_Fragment_FloatAttributeRefill_ParamsDataCustomization::CustomizeChildre
     check(FillRateHandle.IsValid());
     check(StartingStateHandle.IsValid());
 
-    // Row 1: Refill Attribute Name
     StructBuilder.AddProperty(RefillAttributeNameHandle.ToSharedRef());
 
-    // Row 2: Refill Behavior and Fill Rate in one row
     StructBuilder.AddCustomRow(LOCTEXT("RefillSettingsRow", "Refill Settings"))
     .NameContent()
     [
@@ -534,14 +527,12 @@ void FCk_Fragment_FloatAttributeRefill_ParamsDataCustomization::CustomizeChildre
     .MinDesiredWidth(250.0f)
     [
         SNew(SHorizontalBox)
-        // Refill Behavior
         +SHorizontalBox::Slot()
         .FillWidth(1.0f)
         .Padding(0.0f, 0.0f, 4.0f, 0.0f)
         [
             RefillBehaviorHandle->CreatePropertyValueWidget()
         ]
-        // Fill Rate
         +SHorizontalBox::Slot()
         .FillWidth(1.0f)
         .Padding(4.0f, 0.0f, 0.0f, 0.0f)
@@ -564,7 +555,6 @@ void FCk_Fragment_FloatAttributeRefill_ParamsDataCustomization::CustomizeChildre
         ]
     ];
 
-    // Row 3: Starting State
     StructBuilder.AddProperty(StartingStateHandle.ToSharedRef());
 }
 

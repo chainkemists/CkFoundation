@@ -26,7 +26,6 @@ namespace ck::inventory_handlers
     using FInventoryItemRecord = UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils;
 
     // ----------------------------------------------------------------------------------------------------
-    // Spatial-specific Handle / divergence-helper specializations.
 
     // ---- TAddItem<Spatial, FCk_SpatialPlacement>: validate + placement (auto or fixed) + place + bind.
     template <>
@@ -49,10 +48,8 @@ namespace ck::inventory_handlers
             R = UCk_Utils_Inventory_UE::Get_CanAcceptItem(Base, ItemHandle);
             if (R != Result::Success)
             {
-                // Caller-attributable rejection (e.g. Failed_ItemAlreadyInInventory,
-                // Failed_RejectedByCustomAcceptanceLogic) — surface through the Result
-                // enum, log at Display so the AutoTest framework doesn't escalate the
-                // diagnostic to a test failure.
+                // Caller-attributable rejection — Display, never Warning: the AutoTest harness
+                // escalates Warnings to test failures.
                 ck::inventory::Display(TEXT("AddItem_Spatial: Failed [{}] for item [{}] in inventory [{}]"),
                     R, ItemHandle, InHandle);
                 return R;
@@ -184,8 +181,7 @@ namespace ck::inventory_handlers
             return R;
         }
 
-        // The split-off entry may not exceed the inventory's effective max stack size
-        // (StackingPolicy clamp). Placement gates the entry itself further below.
+        // Placement gates the entry itself further below.
         if (SplitCount > UCk_Utils_ItemTrait_Stackable_UE::Get_EffectiveMaxStackSize(Base, SourceItem))
         {
             R = Result::Failed_NoSpaceForNewItem;
@@ -291,8 +287,7 @@ namespace ck::inventory_handlers
         if (NOT SortPredicate)
         { return R; }
 
-        // Stash rotation per item BEFORE clearing the grid — placement-rotation lookup is gone
-        // once items leave the grid.
+        // Stash rotation BEFORE clearing the grid — the lookup is gone once items leave it.
         auto Items = FInventoryItemRecord::Get_ValidEntries(Base);
         struct FItemWithRotation { FCk_Handle_Item Item; ECk_CardinalRotation Rotation; };
 
@@ -372,9 +367,8 @@ namespace ck::inventory_handlers
                 UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(InHandle, ItemHandle, OldCoord, OldRot);
             }
             R = Result::Failed_PlacementBlocked;
-            // Caller-attributable rejection (user-supplied coordinate is blocked) — surface
-            // through the Result enum, log at Display so the AutoTest framework doesn't
-            // escalate the diagnostic to a test failure.
+            // Caller-attributable rejection — Display, never Warning: the AutoTest harness
+            // escalates Warnings to test failures.
             ck::inventory::Display(TEXT("RelocateItem: Cannot place item [{}] at [{}] in inventory [{}]"),
                 ItemHandle, NewCoord, InHandle);
             return R;
@@ -388,10 +382,8 @@ namespace ck::inventory_handlers
         return R;
     }
 
-    // Explicit instantiations of every Spatial-rooted TXxx<...> live in
-    // CkInventory_RequestHandlers.cpp where the default Handle template bodies are visible.
-    // The forward declarations of Spatial's specializations in Spatial_RequestTraits.h ensure
-    // the shared-cpp explicit instantiations route through Spatial's overrides, not defaults.
+    // Every Spatial-rooted TXxx<...> is explicitly instantiated in CkInventory_RequestHandlers.cpp,
+    // where the default Handle bodies are visible; the header's forward decls route them here.
 }
 
 namespace ck

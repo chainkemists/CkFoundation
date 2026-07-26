@@ -12,7 +12,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// keyed by (class, archetype) — the CDO stands in when no archetype is supplied
+// The class CDO stands in as _Archetype when no archetype is supplied.
 USTRUCT()
 struct CKCORE_API FCk_ObjectPooling_PoolKey
 {
@@ -48,8 +48,8 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// UPROPERTY storage so the pool's instances + archetype are GC-rooted; GC-nulled slots (externally
-// destroyed = "steal") are swept lazily
+// UPROPERTY storage GC-roots the instances + archetype; GC-nulled slots (externally destroyed
+// = "steal") are swept lazily.
 USTRUCT()
 struct CKCORE_API FCk_ObjectPooling_PoolState
 {
@@ -100,9 +100,8 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Owns the lifetime of every instance it hands out (pinned in UPROPERTY storage) — so holders keep
-// TWeakObjectPtr, never TStrongObjectPtr. Plain UObjects only (actors go through SpawnActor).
-// Usually reached through UCk_Utils_Object_UE::Request_CreateNewObject. Full model: ObjectPooling/README.md
+// Owns the lifetime of every instance it hands out (pinned in UPROPERTY storage), so holders keep
+// TWeakObjectPtr, never TStrongObjectPtr. Plain UObjects only. Full model: ObjectPooling/README.md
 UCLASS()
 class CKCORE_API UCk_ObjectPooling_Subsystem_UE : public UCk_Game_TickableWorldSubsystem_Base_UE
 {
@@ -117,15 +116,13 @@ public:
     auto Tick(float InDeltaTime) -> void override;
 
 protected:
-    // the editor ECS world (UCk_EditorEcsWorld_Subsystem_UE) vends EntityScripts/components through
-    // the pooled path too — without this subsystem those instances would fall back to caller-owned
-    // creates with only weak holders (no GC root) and editor GC would collect them mid-preview
+    // The editor ECS world vends through the pooled path too; without this subsystem its instances
+    // would fall back to caller-owned creates with only weak holders and be collected mid-preview.
     auto DoesSupportWorldType(const EWorldType::Type InWorldType) const -> bool override;
 
 public:
-    // DestroyOnRelease creates honor InOuter (a component may need an actor outer for GetOwner()-
-    // dependent systems like the nav octree); Recycle-pool creates are world-outered (a recycled
-    // instance outlives its first caller). Null only on Fail/at-capacity or invalid inputs
+    // DestroyOnRelease creates honor InOuter (a component may need an actor outer); Recycle-pool
+    // creates are world-outered, since a recycled instance outlives its first caller.
     auto
     AcquireFromPool(
         const TSubclassOf<UObject>& InClass,
@@ -133,15 +130,12 @@ public:
         const FCk_ObjectPooling_PoolParams& InPoolParams,
         UObject* InOuter) -> UObject*;
 
-    // Recycle -> park; DestroyOnRelease -> unpin. A benign no-op (returns Failed) for objects never
-    // handed out (CDOs, non-pooled creates) — safe to call unconditionally from any teardown path
+    // Recycle -> park; DestroyOnRelease -> unpin. Benign no-op (Failed) for objects never handed out.
     auto
     TryReleaseToPool(
         UObject* InObject) -> ECk_SucceededFailed;
 
 public:
-    // Read-only surface for tooling (debugger inspector)
-
     auto
     Get_PoolStats(
         const FCk_ObjectPooling_PoolKey& InKey) const -> FCk_ObjectPooling_PoolStats;
@@ -158,24 +152,18 @@ public:
     Get_IsTrackedObject(
         const UObject* InObject) const -> bool;
 
-    // GC-equivalence for cross-object subscriptions: a bind site (e.g. the ECS signal Bind funnel)
-    // registers a disconnect closure keyed on the tracked object its delegate targets; release runs
-    // and drops the object's hooks so no subscription outlives the logical life — the same contract
-    // the timer/latent-action quiesce provides. Pre-pooling, GC gave this for free (a dead object's
-    // delegates compare unequal to any live re-bind); a parked instance keeps its pointer identity,
-    // so without this its bindings on longer-lived entities leak into the next vend (stale delivery
-    // + duplicate-signature rejection of the re-bind). False (and no-op) for untracked objects
+    // GC-equivalence for cross-object subscriptions: a bind site registers a disconnect closure keyed
+    // on the tracked object its delegate targets, and release runs then drops the object's hooks so no
+    // subscription outlives the logical life. False (and no-op) for untracked objects.
     auto
     TryRegisterReleaseQuiesceHook(
         const UObject* InBoundObject,
         TFunction<void()> InHook) -> bool;
 
 public:
-    // The recycle reset: copy every reflected property from the archetype, skipping
-    // FCk_Handle_ObjectPoolingParticipant properties (bound delegates survive), then re-instance
-    // instanced subobjects so the recycled object owns fresh copies instead of aliasing the
-    // archetype's (a write through an aliased subobject would corrupt the CDO for every future
-    // instance). Public so the contract is directly testable; acquire calls it on every recycle
+    // Copies every reflected property from the archetype, skipping FCk_Handle_ObjectPoolingParticipant
+    // properties (bound delegates survive), then re-instances instanced subobjects: a write through an
+    // aliased subobject would corrupt the CDO for every future instance.
     static auto
     Request_ResetToArchetype(
         UObject* InObject,
@@ -197,13 +185,11 @@ private:
     DoSweep_NullSlots(
         FCk_ObjectPooling_PoolState& InPool) -> void;
 
-    // post-GC reconciliation for externally-destroyed (stolen) instances: prune dead reverse-map
-    // entries, dead pinned-unique entries, and zombie pools whose class/archetype died
+    // Post-GC reconciliation for externally-destroyed (stolen) instances.
     auto
     DoSweep_StaleAfterGC() -> void;
 
-    // released == dead as far as the world is concerned: clear the object's pending world timers +
-    // latent actions so nothing fires against its ended associations (pre-pooling GC gave this for free)
+    // Released == dead as far as the world is concerned: clears pending world timers + latent actions.
     auto
     DoQuiesce_ReleasedObject(
         UObject* InObject) -> void;
@@ -219,8 +205,7 @@ private:
     // reverse lookup for release (instances pinned by the pool states, not this map)
     TMap<FObjectKey, FCk_ObjectPooling_PoolKey> _InstanceToPool;
 
-    // release-quiesce hooks keyed by tracked object; run + cleared by DoQuiesce_ReleasedObject,
-    // pruned for stolen (externally-destroyed) instances by DoSweep_StaleAfterGC
+    // Run + cleared by DoQuiesce_ReleasedObject; pruned for stolen instances by DoSweep_StaleAfterGC.
     TMap<FObjectKey, TArray<TFunction<void()>>> _ReleaseQuiesceHooks;
 
     // set by the post-GC callback, consumed on the next Tick (GC callbacks must stay cheap)

@@ -14,8 +14,7 @@ class AActor;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-/// BP/AS-facing ray hit against the Jolt static world (Phase-1 introspection surface; the general
-/// channel-filtered query API arrives with the Phase-2 layer table).
+/// BP/AS-facing ray hit against the Jolt static world.
 USTRUCT(BlueprintType)
 struct CKJOLT_API FCk_Jolt_StaticWorldRayHit_Result
 {

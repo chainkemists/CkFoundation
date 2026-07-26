@@ -25,8 +25,6 @@ public:
     friend class UCk_Utils_Ecs_Base_UE;
 
 public:
-    // Direct-attach only — VisibleRange composes onto whatever entity already exists (a Poi's base
-    // entity, a PoiDisplayDefinition child, or anything else); it never spawns a child of its own.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|VisibleRange",
               DisplayName="[Ck][VisibleRange] Add New Visible Range")
@@ -102,12 +100,6 @@ public:
         const FCk_Handle_VisibleRange& InHandle);
 
 public:
-    // Distance is always caller-supplied — VisibleRange has no notion of "viewer" (camera, local
-    // player, or otherwise). The caller decides what it's measuring distance to and how often it
-    // calls this; VisibleRange's own cadence separately gates how often it RE-EVALUATES the last
-    // value supplied here against its range. A plain setter, not a deferred request: this only
-    // replaces a cached input value and has no side effect of its own — the next due Update tick
-    // is what interprets it.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|VisibleRange",
               DisplayName="[Ck][VisibleRange] Update Distance")

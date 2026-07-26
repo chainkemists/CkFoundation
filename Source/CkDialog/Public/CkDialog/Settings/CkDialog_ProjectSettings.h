@@ -55,7 +55,6 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Dialog_Settings_UE);
 
 public:
-    // Internal C++ accessor avoiding repeated GetDefault calls in hot paths.
     static const UCk_Dialog_ProjectSettings_UE*
     Get();
 

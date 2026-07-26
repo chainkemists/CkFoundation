@@ -60,6 +60,41 @@ to each child, or bind them to one owner's state. (Not yet exercised in a gym �
 
 ---
 
+## Implementation notes
+
+Rationale that used to live as comments in the source. The code now points here.
+
+- **Never derive texture dimensions from `UTexture2D::GetSizeX/Y`.** `_TextureWidth`/`_TextureRows`
+  are SERIALIZED on `FCk_Vat_BakedData` for exactly this reason: `GetSizeX/Y` read PLATFORM data and
+  return 0 while a freshly-baked texture is still async-compiling. That seeded `BoneCount`/`TotalRows`
+  = 0 into the shared MID and collapsed every bone lookup onto one texel (found via
+  `Ck_Vat_DebugVerifyBake`). Both the collection and `UCk_Vat_Subsystem_UE::GetOrCreate_RenderState`
+  read the serialized values only.
+- **One MID per collection, never per entity.** Per-instance playback rides custom-data floats, so all
+  instances of a collection must share ONE `UMaterialInstanceDynamic` — a per-entity MID would key a
+  separate ISM component in the transient factory and defeat instancing. `GetOrCreate_RenderState`
+  returns `FCk_Vat_RenderState` **by value** (a two-pointer copy), never a pointer into
+  `_RenderStates`: TMap element addresses are not stable across `Add`, so an interior pointer would
+  dangle as soon as a later collection's `Add` rehashes the map. The map stays the UPROPERTY store so
+  the `TObjectPtr`s remain GC-traced.
+- **Normals bake into the vertex's BIND-POSE TANGENT frame.** Tangent-space is invariant under the
+  per-instance transform (the TBN co-rotates), so the pixel shader feeds the material's tangent-space
+  Normal pin directly — there is no per-instance basis in the PS (only `IS_NANITE_PASS` exposes
+  `InstanceId` there).
+- **The VAT bake IS the shipped asset**, unlike CkIskmRenderer's transient bake: cooked builds never
+  re-sample sequences, so the clip table and texel dims are serialized on the collection.
+  `UCk_VatCollection_Data` otherwise mirrors `UCk_IskmAnimCollection_Data`'s shape where the concerns
+  overlap.
+- **`ApplyBakeResults` is the only write path that flips the serialized `_IsBaked` bit**, and it
+  ensures on its inputs first — a collection stamped as baked from a partially-failed baker's results
+  would persist the corruption to disk and only surface at first render, far from the cause.
+- **`WeightTexture` storage is the Nanite prerequisite**: mesh data channels are limited under Nanite;
+  a texture fetch by lookup UV is not.
+- **Known gap:** `FProcessor_VatProxy_FireSignals` does not detect reverse (negative-rate)
+  once-completion.
+
+---
+
 ## Anti-patterns
 
 1. Don't replicate playback state from this module — the gameplay owner replicates its state and

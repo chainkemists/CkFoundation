@@ -2,10 +2,6 @@
 
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
 
-// The FCk_PersistenceHandlerRegistry storage + methods moved to CkEcs/Persistence/CkPersistenceHandlerRegistry.cpp
-// (split, Phase 5). This TU now holds ONLY the FastArray wire callbacks below, which Resolve() handlers through the
-// registry (included via CkReplicatedFragmentContainer.h).
-
 // --------------------------------------------------------------------------------------------------------------------
 // FCk_ReplicatedFragmentArray
 
@@ -62,8 +58,7 @@ auto
     if (ck::Is_NOT_Valid(Entity))
     { return; }
 
-    // Pure bookkeeping — the deferred dispatcher applies after composition. Pre-link receives
-    // are also covered: PostLink re-marks every entry pending.
+    // Pure bookkeeping: the dispatcher applies after composition, and PostLink re-marks pre-link receives
     for (const auto& Index : InAddedIndices)
     {
         auto& Entry = _Items[Index];

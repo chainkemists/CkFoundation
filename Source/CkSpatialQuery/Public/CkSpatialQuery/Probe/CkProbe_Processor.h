@@ -225,10 +225,8 @@ namespace ck
     class FProcessor_Probe_EnsureStaticNotMoved_DEBUG;
 
     // PARALLEL: the shape-cast phase runs on worker threads (Jolt narrow-phase queries are
-    // thread-safe via the locking broadphase; the collector performs registry READS only).
-    // All resulting Begin/Update/End overlap requests are deferred to the single-threaded
-    // flush phase via DeferCustom — signal broadcasts and request-fragment mutations never
-    // happen on workers.
+    // thread-safe via the locking broadphase; the collector only READS the registry). Overlap
+    // requests and their broadcasts are DeferCustom'd onto the single-threaded flush phase.
     class CKSPATIALQUERY_API FProcessor_Probe_UpdateTransform_LinearCast : public TParallelProcessor<
             FProcessor_Probe_UpdateTransform_LinearCast,
             FCk_Handle_Probe,

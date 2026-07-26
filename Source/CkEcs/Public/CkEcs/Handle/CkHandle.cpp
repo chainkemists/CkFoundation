@@ -304,17 +304,14 @@ auto
     DoUpdate_FragmentDebugInfo_Blueprints()
     -> void
 {
-    // The debug-mapper attach below is a STRUCTURAL registry mutation (AddOrGet) and the
-    // Blueprint debugger GetOrAdd mutates a subsystem container — neither is thread-safe.
-    // Handles constructed on worker threads (parallel processors' read-only query paths,
-    // e.g. Jolt cast collectors) skip debug info entirely; any game-thread copy made from
-    // them re-attaches it here.
+    // The mapper attach (AddOrGet) and the Blueprint debugger's GetOrAdd both mutate shared
+    // state and are NOT thread-safe. Worker-thread handles skip debug info entirely; a
+    // game-thread copy made from one re-attaches it here.
     if (NOT IsInGameThread())
     { return; }
 
     // ParallelFor runs a share of its iterations on the CALLING thread, so being on the game
-    // thread does not prove the registry is outside a parallel region — attaching there would
-    // mutate storage mid-iteration (and trip the region assert).
+    // thread does not prove the registry is outside a parallel region.
     if (ck::registry_table::Get_IsInParallelRegion(_RegistryHandle))
     { return; }
 
@@ -416,11 +413,8 @@ auto
     GetTypeHash(
         const FCk_Handle& InHandle) -> uint32
 {
-    // Mirror operator== exactly, and never key on VALIDITY: a tombstone entity compares equal
-    // regardless of registry, so it must hash without it; every other handle hashes entity +
-    // registry-slot fields (pure data, no resolution — safe on stale handles). Keying on
-    // validity meant a live handle stored in a TSet/TMap changed hash when its entity died —
-    // find/remove then missed the bucket and the container silently stranded the stale entry.
+    // Must mirror operator== exactly and never key on VALIDITY — a hash that changes when the
+    // entity dies strands the handle in any TSet/TMap holding it (see CkEcs/CLAUDE.md).
     if (InHandle.Get_Entity().Get_IsTombstone())
     { return GetTypeHash(InHandle.Get_Entity()); }
 

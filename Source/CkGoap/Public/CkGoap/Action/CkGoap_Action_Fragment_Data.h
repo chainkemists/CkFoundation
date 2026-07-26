@@ -14,10 +14,6 @@
 class UCk_GoapAction_EntityScript;
 
 // --------------------------------------------------------------------------------------------------------------------
-// One entity per registered Action in an ActionSet's catalog.
-// Action entities carry the action's def (CDO-extracted), tree edges
-// (_ParentAction, _ChildActions), runtime planner state, and an active-parent
-// breadcrumb used by the ActionSet's ChainUpdate processor.
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKGOAP_API FCk_Handle_Goap_Action : public FCk_Handle_TypeSafe
@@ -29,10 +25,6 @@ struct CKGOAP_API FCk_Handle_Goap_Action : public FCk_Handle_TypeSafe
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Goap_Action);
 
 // --------------------------------------------------------------------------------------------------------------------
-// BlueprintType data shape for an Action entity. Carries the
-// Action's class (CDO source), optional WS override, and per-Action planner
-// knobs. In the unified ActionSet/Action model, every Action has its own
-// planner state and can itself extend the active chain.
 
 USTRUCT(BlueprintType)
 struct CKGOAP_API FCk_Fragment_Goap_ActionParamsData
@@ -43,8 +35,7 @@ public:
     CK_GENERATED_BODY(FCk_Fragment_Goap_ActionParamsData);
 
 private:
-    // The Action's EntityScript class. Its CDO drives the Action's
-    // Preconditions / Effects / Cost at Setup time.
+    // EntityScript class whose CDO drives Preconditions / Effects / Cost at Setup time.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     TSubclassOf<UCk_GoapAction_EntityScript> _ActionClass;
 
@@ -86,9 +77,7 @@ struct CKGOAP_API FCk_Request_Goap_Planner_Plan
     CK_GENERATED_BODY(FCk_Request_Goap_Planner_Plan);
 
 private:
-    // Who asked for this plan — recorded onto the Planner's ReplanCause when
-    // the request is consumed. Defaults to Explicit so existing callers keep
-    // their meaning; AutoReplan stamps its dirty-derived origin.
+    // Who asked for this plan — recorded onto the Planner's ReplanCause when consumed.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     ECk_Goap_ReplanOrigin _Origin = ECk_Goap_ReplanOrigin::Explicit;
 
@@ -137,10 +126,8 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Goap_Planner_SetActionCost, _ActionClass, _Cost);
 };
 
-// Registers a child Action as externally cost-driven. The cost value itself is
-// pushed via FCk_Request_Goap_Planner_SetActionCost; this request just stamps the
-// FTag_Goap_Action_HasCostProvider marker so the dynamic-cost contract is
-// first-class and introspectable. CkGoap stays attribute-agnostic.
+// Carries no cost — it only stamps FTag_Goap_Action_HasCostProvider. The value
+// itself is pushed via FCk_Request_Goap_Planner_SetActionCost.
 USTRUCT(BlueprintType)
 struct CKGOAP_API FCk_Request_Goap_Planner_RegisterActionCostProvider
 {
@@ -220,7 +207,6 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// Action-scoped signal payloads.
 
 // Broadcast source is the sub-Planner whose _IsActive flips, fired from the
 // parent's UpdateActivation when it flips its Plan[0].
@@ -239,5 +225,3 @@ struct CKGOAP_API FCk_Goap_Payload_OnPlannerDeactivated
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// Delegates moved to CkGoap_Planner_Fragment_Data.h (per-Planner signals have
-// FCk_Handle_Goap_Planner source).

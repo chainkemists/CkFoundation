@@ -27,8 +27,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_VatProxy_LoopMode);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Crowd-variety knob: RandomPerInstance offsets each instance's playback phase so identical clips don't
-// tick in lock-step across a crowd.
+// RandomPerInstance offsets each instance's playback phase so identical clips don't tick in lock-step.
 UENUM(BlueprintType)
 enum class ECk_VatProxy_PhaseOffset : uint8
 {
@@ -55,8 +54,7 @@ public:
     CK_GENERATED_BODY(FCk_Fragment_VatProxy_ParamsData);
 
 private:
-    // Must be loaded AND baked before Add — mirror CkIskmRenderer's contract: callers async-load soft
-    // references themselves and compose once resident.
+    // Must be loaded AND baked before Add — callers async-load soft references themselves.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     TObjectPtr<UCk_VatCollection_Data> _Collection;

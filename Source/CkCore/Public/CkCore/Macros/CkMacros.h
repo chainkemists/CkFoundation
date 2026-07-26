@@ -35,7 +35,6 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Taken from: https://stackoverflow.com/a/26408195/368599 and modified to work with MSVC
 // ReSharper disable once IdentifierTypo
 #define NARG_(...)  NARG_I_(__VA_ARGS__,RSEQ_N())
 // ReSharper disable once IdentifierTypo
@@ -155,7 +154,6 @@ CK_PROPERTY(_InVar_)
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
-// Constructor definition
 
 #define CK_DEFINE_CONSTRUCTOR_1(_ClassType_, _1)\
     explicit _ClassType_(decltype(_1) _1) : _1(std::move(_1)) {}\
@@ -264,7 +262,6 @@ CK_PROPERTY(_InVar_)
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// exposes a 'This' function for classes with static polymorphism
 #define CK_ENABLE_SFINAE_THIS(_DerivedType_)           \
     auto This() -> _DerivedType_*                      \
     {                                                  \
@@ -291,9 +288,7 @@ CK_PROPERTY(_InVar_)
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
-// Pure Virtual Macro
 // Similar to Unreal's PURE_VIRTUAL but uses CK_ENSURE_IF_NOT instead of crashing
-//
 // Usage: virtual auto Get_Something() const -> int32 CK_PURE_VIRTUAL(Get_Something, return 0);
 // --------------------------------------------------------------------------------------------------------------------
 

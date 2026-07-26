@@ -26,11 +26,6 @@ auto
 {
     InHandle.Add<ck::FFragment_OwningActor_Current>(InOwningActor);
 
-    // If this entity is replicated, pair the OwningActor addition with the ReplicationDriver.
-    // The driver's Outer is chain-walked to a replicated actor, so we want to ensure the driver
-    // — if it was added earlier via the pre-Construct pass in the spawn processor — did NOT get
-    // Outer'd to an ancestor's actor before this entity acquired its own. Adding the driver now
-    // (with this entity's actor available) gives us the tightest possible Outer resolution.
     if (NOT UCk_Utils_Net_UE::Has(InHandle))
     { return; }
 
@@ -63,7 +58,6 @@ auto
 
     EntityOwningActorComponent->_EntityHandle = InHandle;
 
-    // The Actor is now ECS ready — flush any promises queued via Promise_OnActorEcsReady.
     DoFlush_PendingEcsReady(EntityOwningActorComponent, InActor, InHandle);
 }
 
@@ -225,8 +219,8 @@ auto
     if (ck::Is_NOT_Valid(EntityOwningActorComp))
     { return false; }
 
-    // The component may exist with an as-yet-unlinked Entity if a promise was queued before the
-    // Actor↔Entity link was established. ECS readiness requires the Entity link to be valid.
+    // The component can exist with an unlinked Entity (a promise queued before the link) — readiness
+    // requires the link itself.
     return ck::IsValid(EntityOwningActorComp->Get_EntityHandle());
 }
 
@@ -424,9 +418,8 @@ auto
     if (ck::Is_NOT_Valid(InComp))
     { return; }
 
-    // Move out before executing so a promise that queues another promise during its own callback
-    // does not mutate the container we are iterating (and is itself fired immediately since the
-    // Actor is already ECS ready by this point).
+    // Move out before executing: a promise that queues another promise from its own callback must not
+    // mutate the container being iterated (that new promise fires immediately — the Actor is ready).
     const auto PendingDelegates = MoveTemp(InComp->_PendingEcsReadyDelegates_LinkEstablished);
     const auto PendingCallbacks = MoveTemp(InComp->_PendingEcsReadyCallbacks_LinkEstablished);
     InComp->_PendingEcsReadyDelegates_LinkEstablished.Reset();
@@ -478,22 +471,16 @@ auto
         const FCk_Handle& InEntity)
     -> bool
 {
-    // The documented ValuesReplicated collapse (ECk_ActorEcsReady_Policy): on the HOST, replicated values
-    // are locally written — there is nothing to await, and OnReplicationComplete timing is a client-
-    // convergence concern. Deferring here anyway coupled every authority-side consumer (e.g. the game
-    // HUD's context injection) to the fire processor's schedule, which a v3 load starves for the restored
-    // pawn (its OnReplicationComplete never re-fires in the loaded world) — the promise then hung forever
-    // awaiting a signal with nothing left to signal. Host-gate per the netmode gotcha: Get_HasAuthority
-    // admits clients, Get_IsEntityNetMode_Host does not.
+    // Host-gated, NOT authority-gated (Get_HasAuthority admits clients, Get_IsEntityNetMode_Host does
+    // not): on the host replicated values are written locally, so there is nothing to await.
     if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InEntity))
     { return false; }
 
     if (UCk_Utils_EntityReplicationDriver_UE::Has(InEntity))
     { return NOT UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationComplete(InEntity); }
 
-    // The link is established mid-Construct, BEFORE OwningActor::Add adds the ReplicationDriver —
-    // fall back to the Entity's replication setting (populated by the spawn processor pre-Construct)
-    // to decide whether OnReplicationComplete will eventually fire for this Entity.
+    // The link is established mid-Construct, BEFORE OwningActor::Add adds the ReplicationDriver — fall
+    // back to the Entity's replication setting to decide whether OnReplicationComplete will ever fire.
     return UCk_Utils_Net_UE::Has(InEntity) &&
         UCk_Utils_Net_UE::Get_Replication(InEntity) == ECk_Replication::Replicates;
 }

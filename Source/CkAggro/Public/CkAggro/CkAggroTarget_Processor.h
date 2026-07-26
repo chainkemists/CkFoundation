@@ -17,8 +17,6 @@ namespace ck
     class FProcessor_Aggro_EvaluationPacer;
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Resolves initial threat (owner default or per-target override), stamps the analytic-decay anchor + creation time,
-    // applies the param-derived exception tags, and announces the acquisition.
 
     class CKAGGRO_API FProcessor_AggroTarget_Setup : public ck_exp::TProcessor<
         FProcessor_AggroTarget_Setup,
@@ -53,9 +51,6 @@ namespace ck
     };
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Drains per-target requests: threat add/set (analytic-decay-to-now then apply, clamp, fire OnAggroThreatChanged),
-    // perception counted-tag inc/dec/clear, and explicit forget. Stamps EvaluationPending (self) + SelectionPending
-    // (owner) so a reactive burst retargets same-frame via the pump.
 
     class CKAGGRO_API FProcessor_AggroTarget_HandleRequests : public ck_exp::TProcessor<
         FProcessor_AggroTarget_HandleRequests,
@@ -110,17 +105,9 @@ namespace ck
     };
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Per-target evaluation: analytic decay -> distance/score -> retention-band tag -> forget checks. Runs only on
-    // targets stamped EvaluationPending (staggered clock fire or threat-request dirty) — the O(active-targets) hot
-    // path, and the one parallelized stage.
-    //
-    // PARALLEL: the per-target body is registry READS (owner threat/spatial/forget params, owner+tracked transforms)
-    // plus writes to the target's OWN Threat/Score fragments; every structural tag flip — WithinRetention +
-    // PendingForget + EvaluationPending on self, SelectionPending on the owner — is DEFERRED through the read-only
-    // handle's per-task command buffer and flushed single-threaded, so no worker touches the registry structurally.
-    // 'Now' is hoisted to the game thread once per tick (DoTick) — a worker-thread UWorld time read is neither safe
-    // nor needed (one world per registry). MarkedDirtyBy keeps it pump-eligible so a reactive burst still drains
-    // request -> evaluate -> select in one frame.
+    // PARALLEL: the per-target body does registry READS plus writes to the target's OWN Threat/Score fragments; every
+    // structural tag flip is DEFERRED through the read-only handle's per-task command buffer and flushed
+    // single-threaded. 'Now' is hoisted to the game thread once per tick (DoTick). Contract: CkAggro/CLAUDE.md.
 
     class CKAGGRO_API FProcessor_AggroTarget_Evaluate : public TParallelProcessor<
         FProcessor_AggroTarget_Evaluate,
@@ -149,8 +136,6 @@ namespace ck
         using TParallelProcessor::TParallelProcessor;
 
     public:
-        // Hoists the world 'Now' to the game thread once per tick, then runs the base parallel dispatch. The parallel
-        // body reads _Now instead of touching UWorld on a worker thread.
         auto
         DoTick(
             TimeType InDeltaT) -> void;
@@ -175,8 +160,6 @@ namespace ck
     };
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Completes a forget: derive the reason, broadcast OnAggroTargetForgotten, prune the owner's map, clear the active
-    // target if it was us, then destroy the target entity (deferred).
 
     class CKAGGRO_API FProcessor_AggroTarget_Forget : public ck_exp::TProcessor<
         FProcessor_AggroTarget_Forget,
@@ -211,7 +194,7 @@ namespace ck
     };
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Safety net for externally-destroyed AggroTargets: prune the owner's map and clear the active target if it was us.
+    // Safety net for AggroTargets destroyed from OUTSIDE the Forget path (which does its own owner cleanup).
 
     class CKAGGRO_API FProcessor_AggroTarget_EndPlay : public ck_exp::TProcessor<
         FProcessor_AggroTarget_EndPlay,

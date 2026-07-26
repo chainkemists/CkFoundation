@@ -1,6 +1,5 @@
 #include "CkColor_Utils.h"
 
-// UCk_Utils_LinearColor Static Constants
 const FLinearColor UCk_Utils_LinearColor::White = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f);
 const FLinearColor UCk_Utils_LinearColor::Black = FLinearColor(0.0f, 0.0f, 0.0f, 1.0f);
 const FLinearColor UCk_Utils_LinearColor::Red = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f);
@@ -12,7 +11,6 @@ const FLinearColor UCk_Utils_LinearColor::Cyan = FLinearColor(0.0f, 1.0f, 1.0f, 
 const FLinearColor UCk_Utils_LinearColor::Orange = FLinearColor(1.0f, 0.647f, 0.0f, 1.0f);
 const FLinearColor UCk_Utils_LinearColor::Purple = FLinearColor(0.5f, 0.0f, 0.5f, 1.0f);
 
-// Grayscale
 const FLinearColor UCk_Utils_LinearColor::Gray100 = FLinearColor(0.956f, 0.956f, 0.956f, 1.0f);
 const FLinearColor UCk_Utils_LinearColor::Gray200 = FLinearColor(0.898f, 0.898f, 0.898f, 1.0f);
 const FLinearColor UCk_Utils_LinearColor::Gray300 = FLinearColor(0.827f, 0.827f, 0.827f, 1.0f);
@@ -23,7 +21,6 @@ const FLinearColor UCk_Utils_LinearColor::Gray700 = FLinearColor(0.388f, 0.388f,
 const FLinearColor UCk_Utils_LinearColor::Gray800 = FLinearColor(0.278f, 0.278f, 0.278f, 1.0f);
 const FLinearColor UCk_Utils_LinearColor::Gray900 = FLinearColor(0.129f, 0.129f, 0.129f, 1.0f);
 
-// Material Design Red
 const FLinearColor UCk_Utils_LinearColor::Red50 = FLinearColor(1.0f, 0.922f, 0.933f, 1.0f);
 const FLinearColor UCk_Utils_LinearColor::Red100 = FLinearColor(1.0f, 0.804f, 0.824f, 1.0f);
 const FLinearColor UCk_Utils_LinearColor::Red200 = FLinearColor(0.937f, 0.604f, 0.604f, 1.0f);
@@ -35,7 +32,6 @@ const FLinearColor UCk_Utils_LinearColor::Red700 = FLinearColor(0.827f, 0.184f, 
 const FLinearColor UCk_Utils_LinearColor::Red800 = FLinearColor(0.776f, 0.157f, 0.157f, 1.0f);
 const FLinearColor UCk_Utils_LinearColor::Red900 = FLinearColor(0.718f, 0.110f, 0.110f, 1.0f);
 
-// Material Design Blue
 const FLinearColor UCk_Utils_LinearColor::Blue50 = FLinearColor(0.890f, 0.949f, 1.0f, 1.0f);
 const FLinearColor UCk_Utils_LinearColor::Blue100 = FLinearColor(0.733f, 0.871f, 0.984f, 1.0f);
 const FLinearColor UCk_Utils_LinearColor::Blue200 = FLinearColor(0.565f, 0.792f, 0.976f, 1.0f);
@@ -47,7 +43,6 @@ const FLinearColor UCk_Utils_LinearColor::Blue700 = FLinearColor(0.098f, 0.463f,
 const FLinearColor UCk_Utils_LinearColor::Blue800 = FLinearColor(0.078f, 0.408f, 0.753f, 1.0f);
 const FLinearColor UCk_Utils_LinearColor::Blue900 = FLinearColor(0.051f, 0.278f, 0.631f, 1.0f);
 
-// Material Design Green
 const FLinearColor UCk_Utils_LinearColor::Green50 = FLinearColor(0.910f, 0.969f, 0.914f, 1.0f);
 const FLinearColor UCk_Utils_LinearColor::Green100 = FLinearColor(0.784f, 0.902f, 0.788f, 1.0f);
 const FLinearColor UCk_Utils_LinearColor::Green200 = FLinearColor(0.647f, 0.839f, 0.655f, 1.0f);
@@ -59,7 +54,6 @@ const FLinearColor UCk_Utils_LinearColor::Green700 = FLinearColor(0.220f, 0.557f
 const FLinearColor UCk_Utils_LinearColor::Green800 = FLinearColor(0.180f, 0.490f, 0.196f, 1.0f);
 const FLinearColor UCk_Utils_LinearColor::Green900 = FLinearColor(0.110f, 0.369f, 0.125f, 1.0f);
 
-// Named Web Colors
 const FLinearColor UCk_Utils_LinearColor::AliceBlue = FLinearColor(0.941f, 0.973f, 1.0f, 1.0f);
 const FLinearColor UCk_Utils_LinearColor::AntiqueWhite = FLinearColor(0.980f, 0.922f, 0.843f, 1.0f);
 const FLinearColor UCk_Utils_LinearColor::Aqua = FLinearColor(0.0f, 1.0f, 1.0f, 1.0f);
@@ -191,8 +185,6 @@ const FLinearColor UCk_Utils_LinearColor::WhiteSmoke = FLinearColor(0.961f, 0.96
 const FLinearColor UCk_Utils_LinearColor::YellowGreen = FLinearColor(0.604f, 0.804f, 0.196f, 1.0f);
 const FLinearColor UCk_Utils_LinearColor::Transparent = FLinearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
-// UCk_Utils_LinearColor Function Implementations
-
 FLinearColor UCk_Utils_LinearColor::Get_StableColorFromHash(int32 InHash, uint8 InSaturation, uint8 InValue)
 {
     // Sign of InHash is irrelevant — the low byte gives the same hue either way.
@@ -250,7 +242,6 @@ FLinearColor UCk_Utils_LinearColor::Get_Purple(float Alpha)
     return Purple * FLinearColor(1.0f, 1.0f, 1.0f, Alpha);
 }
 
-// Grayscale
 FLinearColor UCk_Utils_LinearColor::Get_Gray100(float Alpha)
 {
     return Gray100 * FLinearColor(1.0f, 1.0f, 1.0f, Alpha);
@@ -296,7 +287,6 @@ FLinearColor UCk_Utils_LinearColor::Get_Gray900(float Alpha)
     return Gray900 * FLinearColor(1.0f, 1.0f, 1.0f, Alpha);
 }
 
-// Material Design Red Functions
 FLinearColor UCk_Utils_LinearColor::Get_Red50(float Alpha)
 {
     return Red50 * FLinearColor(1.0f, 1.0f, 1.0f, Alpha);
@@ -347,7 +337,6 @@ FLinearColor UCk_Utils_LinearColor::Get_Red900(float Alpha)
     return Red900 * FLinearColor(1.0f, 1.0f, 1.0f, Alpha);
 }
 
-// Material Design Blue Functions
 FLinearColor UCk_Utils_LinearColor::Get_Blue50(float Alpha)
 {
     return Blue50 * FLinearColor(1.0f, 1.0f, 1.0f, Alpha);
@@ -398,7 +387,6 @@ FLinearColor UCk_Utils_LinearColor::Get_Blue900(float Alpha)
     return Blue900 * FLinearColor(1.0f, 1.0f, 1.0f, Alpha);
 }
 
-// Material Design Green Functions
 FLinearColor UCk_Utils_LinearColor::Get_Green50(float Alpha)
 {
     return Green50 * FLinearColor(1.0f, 1.0f, 1.0f, Alpha);
@@ -449,7 +437,6 @@ FLinearColor UCk_Utils_LinearColor::Get_Green900(float Alpha)
     return Green900 * FLinearColor(1.0f, 1.0f, 1.0f, Alpha);
 }
 
-// Named Web Colors Functions (sample implementation - pattern for all others)
 FLinearColor UCk_Utils_LinearColor::Get_AliceBlue(float Alpha)
 {
     return AliceBlue * FLinearColor(1.0f, 1.0f, 1.0f, Alpha);
@@ -1102,7 +1089,6 @@ FLinearColor UCk_Utils_LinearColor::Get_Transparent(float Alpha)
 
 // ----------------------------------------------------------------------------------------------------
 
-// UCk_Utils_Color Static Constants
 const FColor UCk_Utils_Color::White = FColor(255, 255, 255, 255);
 const FColor UCk_Utils_Color::Black = FColor(0, 0, 0, 255);
 const FColor UCk_Utils_Color::Red = FColor(255, 0, 0, 255);
@@ -1114,7 +1100,6 @@ const FColor UCk_Utils_Color::Cyan = FColor(0, 255, 255, 255);
 const FColor UCk_Utils_Color::Orange = FColor(255, 165, 0, 255);
 const FColor UCk_Utils_Color::Purple = FColor(128, 0, 128, 255);
 
-// Grayscale
 const FColor UCk_Utils_Color::Gray100 = FColor(244, 244, 244, 255);
 const FColor UCk_Utils_Color::Gray200 = FColor(229, 229, 229, 255);
 const FColor UCk_Utils_Color::Gray300 = FColor(211, 211, 211, 255);
@@ -1125,7 +1110,6 @@ const FColor UCk_Utils_Color::Gray700 = FColor(99, 99, 99, 255);
 const FColor UCk_Utils_Color::Gray800 = FColor(71, 71, 71, 255);
 const FColor UCk_Utils_Color::Gray900 = FColor(33, 33, 33, 255);
 
-// Material Design Red
 const FColor UCk_Utils_Color::Red50 = FColor(255, 235, 238, 255);
 const FColor UCk_Utils_Color::Red100 = FColor(255, 205, 210, 255);
 const FColor UCk_Utils_Color::Red200 = FColor(239, 154, 154, 255);
@@ -1137,7 +1121,6 @@ const FColor UCk_Utils_Color::Red700 = FColor(211, 47, 47, 255);
 const FColor UCk_Utils_Color::Red800 = FColor(198, 40, 40, 255);
 const FColor UCk_Utils_Color::Red900 = FColor(183, 28, 28, 255);
 
-// Material Design Blue
 const FColor UCk_Utils_Color::Blue50 = FColor(227, 242, 253, 255);
 const FColor UCk_Utils_Color::Blue100 = FColor(187, 222, 251, 255);
 const FColor UCk_Utils_Color::Blue200 = FColor(144, 202, 249, 255);
@@ -1149,7 +1132,6 @@ const FColor UCk_Utils_Color::Blue700 = FColor(25, 118, 210, 255);
 const FColor UCk_Utils_Color::Blue800 = FColor(20, 104, 192, 255);
 const FColor UCk_Utils_Color::Blue900 = FColor(13, 71, 161, 255);
 
-// Material Design Green
 const FColor UCk_Utils_Color::Green50 = FColor(232, 245, 233, 255);
 const FColor UCk_Utils_Color::Green100 = FColor(200, 230, 201, 255);
 const FColor UCk_Utils_Color::Green200 = FColor(165, 214, 167, 255);
@@ -1161,7 +1143,6 @@ const FColor UCk_Utils_Color::Green700 = FColor(56, 142, 60, 255);
 const FColor UCk_Utils_Color::Green800 = FColor(46, 125, 50, 255);
 const FColor UCk_Utils_Color::Green900 = FColor(27, 94, 32, 255);
 
-// Named Web Colors
 const FColor UCk_Utils_Color::AliceBlue = FColor(240, 248, 255, 255);
 const FColor UCk_Utils_Color::AntiqueWhite = FColor(250, 235, 215, 255);
 const FColor UCk_Utils_Color::Aqua = FColor(0, 255, 255, 255);
@@ -1293,7 +1274,6 @@ const FColor UCk_Utils_Color::WhiteSmoke = FColor(245, 245, 245, 255);
 const FColor UCk_Utils_Color::YellowGreen = FColor(154, 205, 50, 255);
 const FColor UCk_Utils_Color::Transparent = FColor(0, 0, 0, 0);
 
-// UCk_Utils_Color Function Implementations
 FColor UCk_Utils_Color::Get_White(float Alpha)
 {
     return UCk_Utils_LinearColor::Get_White(Alpha).ToFColor(true);
@@ -1344,7 +1324,6 @@ FColor UCk_Utils_Color::Get_Purple(float Alpha)
     return UCk_Utils_LinearColor::Get_Purple(Alpha).ToFColor(true);
 }
 
-// Grayscale
 FColor UCk_Utils_Color::Get_Gray100(float Alpha)
 {
     return UCk_Utils_LinearColor::Get_Gray100(Alpha).ToFColor(true);
@@ -1390,7 +1369,6 @@ FColor UCk_Utils_Color::Get_Gray900(float Alpha)
     return UCk_Utils_LinearColor::Get_Gray900(Alpha).ToFColor(true);
 }
 
-// Material Design Red Functions
 FColor UCk_Utils_Color::Get_Red50(float Alpha)
 {
     return UCk_Utils_LinearColor::Get_Red50(Alpha).ToFColor(true);
@@ -1441,7 +1419,6 @@ FColor UCk_Utils_Color::Get_Red900(float Alpha)
     return UCk_Utils_LinearColor::Get_Red900(Alpha).ToFColor(true);
 }
 
-// Material Design Blue Functions
 FColor UCk_Utils_Color::Get_Blue50(float Alpha)
 {
     return UCk_Utils_LinearColor::Get_Blue50(Alpha).ToFColor(true);
@@ -1492,7 +1469,6 @@ FColor UCk_Utils_Color::Get_Blue900(float Alpha)
     return UCk_Utils_LinearColor::Get_Blue900(Alpha).ToFColor(true);
 }
 
-// Material Design Green Functions
 FColor UCk_Utils_Color::Get_Green50(float Alpha)
 {
     return UCk_Utils_LinearColor::Get_Green50(Alpha).ToFColor(true);
@@ -1543,7 +1519,6 @@ FColor UCk_Utils_Color::Get_Green900(float Alpha)
     return UCk_Utils_LinearColor::Get_Green900(Alpha).ToFColor(true);
 }
 
-// Named Web Colors Functions (sample implementation - pattern for all others)
 FColor UCk_Utils_Color::Get_AliceBlue(float Alpha)
 {
     return UCk_Utils_LinearColor::Get_AliceBlue(Alpha).ToFColor(true);

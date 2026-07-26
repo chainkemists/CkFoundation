@@ -34,16 +34,15 @@ DECLARE_CYCLE_STAT(TEXT("Camera::PovRun"), STAT_Camera_PovRun, STATGROUP_CkCamer
 
 namespace ck
 {
-    // Constant-speed blend rate (units/sec) to traverse [0,1] in InTime. 0 time → ~instant.
     static auto DoGet_BlendRateFromTime(FCk_Time InTime) -> float
     {
+        constexpr auto InstantBlendRate = 1000.0f;
+
         const auto Seconds = static_cast<float>(InTime.Get_Seconds());
-        return Seconds > KINDA_SMALL_NUMBER ? (1.0f / Seconds) : 1000.0f;
+        return Seconds > KINDA_SMALL_NUMBER ? (1.0f / Seconds) : InstantBlendRate;
     }
 
-    // ================================================================================================================
     // HANDLE REQUESTS
-    // ================================================================================================================
 
     auto
         FProcessor_Camera_HandleRequests::
@@ -78,15 +77,12 @@ namespace ck
 
         const auto Priority = InRequest.Get_Priority();
 
-        // OneOnly: blend out any existing layer at the SAME priority (eviction). Done before the new layer is
-        // connected to the Record so it can't match itself.
+        // Must run BEFORE the new layer is connected to the Record, or it would evict itself.
         if (InRequest.Get_StackingBehavior() == ECk_Camera_StackingBehavior::OneOnly)
         {
             ck::FUtils_RecordOfCameraLayers::ForEach_ValidEntry(InHandle,
             [&](FCk_Handle_CameraLayer InSibling)
             {
-                // The persistent base layer is never evicted (it lives at the lowest priority, so this also
-                // wouldn't match, but guard explicitly).
                 if (InSibling.Get<FFragment_CameraLayer_Params>().Get_IsDefault())
                 { return; }
 
@@ -99,9 +95,6 @@ namespace ck
             });
         }
 
-        // Entity creation (spawn + owning-camera back-ref + fragments + record connect + EntityScript) lives in the
-        // utils Create (mirrors UCk_Utils_SmTask_UE::Create). The request-specific config (priority, blend rate,
-        // look-at) is applied here.
         auto TypedLayer = ::UCk_Utils_CameraLayer_UE::Create(InHandle, LayerClass);
 
         if (ck::Is_NOT_Valid(TypedLayer))
@@ -134,7 +127,6 @@ namespace ck
         ck::FUtils_RecordOfCameraLayers::ForEach_ValidEntry(InHandle,
         [&](FCk_Handle_CameraLayer InLayer)
         {
-            // The persistent base layer is never removed.
             if (InLayer.Get<ck::FFragment_CameraLayer_Params>().Get_IsDefault())
             { return; }
 
@@ -147,9 +139,7 @@ namespace ck
         });
     }
 
-    // ================================================================================================================
     // LAYER LIFECYCLE
-    // ================================================================================================================
 
     auto
         FProcessor_CameraLayer_Lifecycle::
@@ -169,9 +159,7 @@ namespace ck
             const auto& Blend = InLayer.Get<FFragment_CameraLayer_Blend>();
             const auto Alpha = Blend.Get_Alpha();
 
-            // Fully blended out → prune the layer (deferred destroy). The layer's acquired attribute modifiers are
-            // removed in UCk_CameraLayer_EntityScript::ExitLayer (driven by EndPlay), so they don't outlive it.
-            // The persistent base layer is never pruned (it stays pinned at full blend).
+            // The acquired modifiers outlive this destroy unless ExitLayer (driven by EndPlay) removes them.
             if (Alpha <= 0.0f && Blend.Get_TargetAlpha() <= 0.0f)
             {
                 if (NOT InLayer.Get<FFragment_CameraLayer_Params>().Get_IsDefault())
@@ -205,12 +193,9 @@ namespace ck
             }
         });
 
-        // Refresh the composed-profile cache from the (already-recomputed-this-frame) tuner attributes.
+        // The tuner attributes were already recomputed earlier this frame.
         InCurrent._ComposedProfile = ::UCk_Utils_Camera_UE::Get_Profile(InHandle);
 
-        // Resolve the dominant layer (its class is observable via Utils) + its camera target. A LookAt target feeds
-        // the rig re-orient (a location); a ViewTarget feeds the final-POV blend (a full transform). Both resolved
-        // states reset each frame; only the dominant layer's chosen mode repopulates one of them.
         InCurrent._DominantLookAt.Reset();
         InCurrent._ViewTarget         = FCk_Camera_ViewTargetResolved{};
         InCurrent._DominantLayerClass = nullptr;
@@ -242,9 +227,7 @@ namespace ck
         }
     }
 
-    // ================================================================================================================
     // UPDATE POV
-    // ================================================================================================================
 
     auto
         FProcessor_Camera_UpdatePOV::
@@ -274,15 +257,11 @@ namespace ck
             ck::camera::FPov::Run(Profile, Input, InCurrent._PovState);
         }
 
-        // The orientation intention is a per-frame DELTA — consume it once applied. Input (OnLook) only fires while
-        // the mouse is moving, so without this the last delta would keep being re-applied every frame after the mouse
-        // stops, drifting the camera. While the mouse is moving, input re-pushes a fresh intention each frame.
+        // The intention is a per-frame DELTA: consume it, or it keeps re-applying after the input source stops.
         InCurrent._OrientationIntention = FVector::ZeroVector;
 
-        // ViewTarget override (after FPov::Run): blend the final composed POV toward the dominant layer's view-target
-        // transform on the layer's own alpha — a SetViewTargetWithBlend-style move that overrides boom/framing rather
-        // than the anchor. Inactive = the rig POV passes through untouched. FOV is unaffected (the layer's FOV
-        // modifier eases it independently).
+        // Overrides boom/framing, not the anchor, and leaves FOV alone (the layer's FOV modifier eases that
+        // independently). Inactive = the rig POV passes through untouched.
         auto FinalXf = InCurrent._PovState._CameraTransform;
         if (InCurrent._ViewTarget._IsActive)
         {
@@ -302,11 +281,8 @@ namespace ck
 
         InCurrent._ViewInfo = ViewInfo;
 
-        // Camera-authoritative control rotation: when opted in (player view), publish the resolved view rotation to
-        // the local PlayerController so control-rotation consumers (facing / aim / movement) follow the camera. This
-        // replaces the per-frame SM task BusterBlock used to run. Guarded to the local controller (the director only
-        // exists on the local client anyway). Does NOT feed back into the POV — the camera reads input intention, not
-        // control rotation.
+        // Camera-authoritative control rotation. One-way by design: the camera reads input intention, never control
+        // rotation, so this can never feed back into the POV.
         if (InHandle.Get<FFragment_Camera_Params>().Get_Params().Get_DriveControllerControlRotation())
         {
             if (auto* Pawn = Cast<APawn>(UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle));

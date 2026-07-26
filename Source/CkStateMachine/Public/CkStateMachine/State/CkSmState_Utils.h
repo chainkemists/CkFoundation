@@ -40,14 +40,9 @@ public:
     // --------------------------------------------------------------------------------------------------------------------
 
     // Adds FTag_SmState_PendingExit and (when InScheduleDestroy) requests entity destruction.
-    // FProcessor_SmState_Exit (EndPlay group) picks up the tag and cascades the exit chain
-    // to tasks and transitions before calling ExitState on the state script.
-    //
-    // InScheduleDestroy=false runs the exit cascade but leaves the entity alive — used by the
-    // transition path so FProcessor_Sm_CommitPendingTransition can keep reading the previous
-    // state handle and destroy it only after the new state is entered. Destroying it during
-    // request handling can race the deferred commit across a frame boundary and tombstone the
-    // handle the commit still reads (Get_IsPendingExit), which ensures.
+    // InScheduleDestroy=false runs the exit cascade but leaves the entity alive, so
+    // FProcessor_Sm_CommitPendingTransition can keep reading the previous state handle and destroy
+    // it only after the new state is entered.
     static auto
     Request_Exit(
         FCk_Handle_SmState& InState,
@@ -60,7 +55,6 @@ public:
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Signals this state to walk its transitions this pump cycle.
     // Called automatically by FProcessor_SmState_Update (non-event-driven states) and
     // FProcessor_SmTransition_Evaluate (fully event-driven states, on Pass/Fail).
     static auto
@@ -68,15 +62,13 @@ public:
         FCk_Handle_SmState& InState) -> FCk_Handle_SmState;
 
     // Internal — called by UCk_Utils_SmTransition_UE::Request_MarkTransition_AsNotFullyEventDriven.
-    // Authors should not call this directly.
     static auto
     Request_MarkState_AsNotFullyEventDriven(
         FCk_Handle_SmState& InState) -> FCk_Handle_SmState;
 
-    // Internal — called by UCk_Utils_SmTransition_UE::Request_RecomputeFullyEventDrivenStatus
-    // after a transition's tag changes. Walks the state's transitions; if all are
-    // FullyEventDriven AND at least one exists, marks the state FullyEventDriven (so
-    // FProcessor_SmState_Update skips it for perf). Otherwise leaves the tag absent.
+    // Internal — called by UCk_Utils_SmTransition_UE::Request_RecomputeFullyEventDrivenStatus after a
+    // transition's tag changes. Marks the state FullyEventDriven iff no transition is polled (so
+    // FProcessor_SmState_Update skips it for perf); a terminal state with zero transitions qualifies.
     static auto
     Request_RecomputeFullyEventDrivenStatus(
         FCk_Handle_SmState& InState) -> FCk_Handle_SmState;
@@ -125,8 +117,7 @@ public:
     Get_Hierarchy(
         const FCk_Handle_SmState& InState);
 
-    // Returns the actual instantiated entity script class (post-override resolution).
-    // For most callers this is the right one — it matches what's actually running.
+    // The actual instantiated class (post-override resolution) — what is really running.
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|SmState",
         DisplayName = "[Ck][SmState] Get Script Class",
@@ -135,9 +126,8 @@ public:
     Get_ScriptClass(
         const FCk_Handle_SmState& InState);
 
-    // Returns the originally-requested entity script class — the class the caller asked for
-    // before FFragment_Sm_StateOverrides remapped it. Equal to Get_ScriptClass when no
-    // override applied. Use this to detect/display override scenarios.
+    // The class the caller asked for before FFragment_Sm_StateOverrides remapped it — equal to
+    // Get_ScriptClass when no override applied.
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|SmState",
         DisplayName = "[Ck][SmState] Get Requested Script Class",
@@ -146,9 +136,8 @@ public:
     Get_RequestedScriptClass(
         const FCk_Handle_SmState& InState);
 
-    // Walks FFragment_Sm_StateOverrides on InOwnerStateMachine; returns the overriding class
-    // if any entry matches the prospective hierarchy, otherwise InRequestedClass. Used internally
-    // by Create so callers never pre-resolve; also used by DoEnterState to mirror _CurrentStateClass.
+    // Walks FFragment_Sm_StateOverrides; returns the overriding class if any entry matches the
+    // prospective hierarchy, otherwise InRequestedClass. Callers never pre-resolve.
     static auto
     Get_ResolvedStateClass(
         const FCk_Handle_StateMachine& InOwnerStateMachine,

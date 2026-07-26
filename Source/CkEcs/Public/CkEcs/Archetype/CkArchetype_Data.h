@@ -8,17 +8,6 @@
 #include "CkArchetype_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Archetype: a NAMED amalgamation of features (ECS debugger redesign,
-// CkGameplayDebugger docs/specs/2026-07-10 §3.3).
-//
-// CkEcs owns storage + data model only. Resolution is split by consumer:
-// - FeatureIds match through the DebugFeatureFlags bit cache when enabled
-//   ((bits & required) == required — see CkArchetype_Registry.h).
-// - RequiredLabel / NamePattern are carried as data and matched by consumers that can
-//   see those systems (the ECS debugger) — CkEcs cannot depend on CkLabel.
-// - Native registrations may supply a direct matcher (the CK_DEFINE_ARCHETYPE typed
-//   struct wires its generated TryCast in — later phase).
-// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
 struct CKECS_API FCk_ArchetypeDescriptor

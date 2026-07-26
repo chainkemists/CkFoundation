@@ -20,9 +20,8 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_LagCompProjectile_HandleRequests);
 
 namespace ck::lag_comp_projectile_cvars
 {
-    // Search "Implementation and Evaluation of Hit Registration in Networked First Person
-    // Shooters" by Jonathan Lundgren: rewinding by ping alone leaves the server's view of a
-    // character slightly BEHIND what the shooter saw; a small constant on top registers best
+    // Lundgren, "Hit Registration in Networked First Person Shooters": rewinding by ping alone leaves
+    // the server's view of a character slightly BEHIND what the shooter saw; a constant on top registers best
     static TAutoConsoleVariable<float> CVarRewindFudgeFactor(
         TEXT("Ck.LagComp.RewindFudgeFactor"),
         0.06f,
@@ -88,15 +87,11 @@ namespace ck
         const auto InitialConditions = FCk_Ballistic_InitialConditions{
             LaunchTime, StartLocation, InRequest.Get_StartVelocity()};
 
-        // Start the deterministic simulation anchored in the past — the next trajectory update
-        // evaluates at 'now' and places the projectile ahead by the whole window (visual catch-up),
-        // with its LinearCast probe sweeping the jump for world hits
         UCk_Utils_BallisticMotion_UE::Request_Launch(InHandle,
             FCk_Request_BallisticMotion_Launch{InRequest.Get_StartVelocity()}
                 .Set_LaunchTimePolicy(ECk_BallisticMotion_LaunchTime::OverrideTime)
                 .Set_OverrideStartTime(LaunchTime));
 
-        // Validate the catch-up window against every entity with recorded hitbox history
         const auto& TrajectoryParams = InParams.Get_TrajectoryParams();
         const auto SubstepSeconds = FMath::Max(InRequest.Get_SubstepTime().Get_Seconds(), 0.005);
 
@@ -115,10 +110,9 @@ namespace ck
             if (Frames.Get_Count() < 2)
             { return; }
 
-            // Sweep only the span this target's history actually covers — slices before its
-            // oldest recorded frame would validate against poses that were never recorded, and
-            // an oversized compensation window would otherwise make this loop unbounded
-            const auto SweepStart = FMath::Max(LaunchTime.Get_Seconds(), Frames.Get_FrameAt(0).Get_WorldTime().Get_Seconds());
+            // Clamping to recorded history also bounds this loop against an oversized compensation window
+            const auto OldestRecordedTime = Frames.Get_FrameAt(0).Get_WorldTime().Get_Seconds();
+            const auto SweepStart = FMath::Max(LaunchTime.Get_Seconds(), OldestRecordedTime);
 
             for (auto SliceStart = SweepStart; SliceStart < Now.Get_Seconds(); SliceStart += SubstepSeconds)
             {

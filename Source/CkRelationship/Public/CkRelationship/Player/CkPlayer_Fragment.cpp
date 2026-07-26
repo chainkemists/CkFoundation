@@ -6,14 +6,12 @@
 #include "CkEcs/Persistence/CkPersistenceHandlerRegistry.inl.h" // RegisterLazyTyped
 
 // --------------------------------------------------------------------------------------------------------------------
-// Container-based replication handler for Player
 
 static struct FPlayerRepHandlerRegistrar
 {
     FPlayerRepHandlerRegistrar()
     {
-        // Authority-safe applier: assigning the player from the payload is idempotent and host-safe, so the same
-        // body serves both the net receive (Apply) and the load-path hydration (HydrationApply).
+        // Idempotent and host-safe, so one body serves both net receive (Apply) and load hydration.
         const auto ApplyFn = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
         {
             if (NOT UCk_Utils_Player_UE::Has(Entity))
@@ -29,8 +27,6 @@ static struct FPlayerRepHandlerRegistrar
         };
 
         FCk_PersistenceHandlerRegistry::Register_NetAndSave_SharedApply<FCk_RepData_Player>({
-            // Produce-only capture (Phase 3A.4, [P1-R1]): mirror FProcessor_Player_Replicate's live-state build.
-            // Produce is capture-only.
             .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
             {
                 if (NOT UCk_Utils_Player_UE::Has(Entity))

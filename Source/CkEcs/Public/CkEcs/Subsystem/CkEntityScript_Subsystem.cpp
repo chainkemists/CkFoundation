@@ -33,14 +33,8 @@ auto
 
     _EntitySpawnParams_StructFolderName = UCk_Utils_Ecs_Settings_UE::Get_EntityScriptSpawnParamsFolderName();
 
-    // NOTE: We no longer call ScanForExistingEntityParamsStructInPath here.
-    // Moved to OnFilesLoaded() to avoid sync loading during subsystem init which can
-    // trigger Blueprint regeneration while dependencies are still loading.
-
-    // Populate cache from any EntitySpawnParams structs already in memory.
-    // Use FindObject (memory-only) instead of GetAsset()/LoadObject to avoid triggering
-    // package loading during subsystem init, which can cascade into Blueprint
-    // regeneration and re-entrant compilation (QueueForCompilation crash in UE 5.7).
+    // FindObject (memory-only), never GetAsset()/LoadObject: package loading during subsystem init
+    // cascades into Blueprint regeneration and re-entrant compilation.
 #if WITH_EDITOR
     if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
         ck::IsValid(AssetRegistry, ck::IsValid_Policy_NullptrOnly{}))
@@ -66,7 +60,6 @@ auto
     }
 #endif
 
-    // Process any EntityScripts that are already loaded at startup
     for (auto It = TObjectIterator<UClass>{}; It; ++It)
     {
         UClass* Class = *It;
@@ -75,8 +68,8 @@ auto
             NOT UCk_Utils_IO_UE::Get_IsTemporaryAsset(Class->GetName()) &&
             Class->HasAnyClassFlags(CLASS_CompiledFromBlueprint))
         {
-            // Create structs for existing EntityScripts
-            std::ignore = DoGetOrCreate_SpawnParamsStructForEntity_Internal(Class, false);
+            constexpr auto ForceRecreate = false;
+            std::ignore = DoGetOrCreate_SpawnParamsStructForEntity_Internal(Class, ForceRecreate);
         }
     }
 
@@ -87,10 +80,8 @@ auto
     }
 
 #if WITH_EDITOR
-    // Add compilation safety delegates - hook PreCompile and Compiled for deferred updates
     if (ck::IsValid(GEditor))
     {
-        // Instead of updating immediately, defer the updates to avoid compilation conflicts
         const auto RequestDeferredUpdate = [this]()
         {
             _bHasPendingStructUpdates = true;
@@ -102,7 +93,6 @@ auto
             if (ck::Is_NOT_Valid(InBlueprint) || ck::Is_NOT_Valid(InBlueprint->GeneratedClass))
             { return; }
 
-            // Track compilation for safety
             _ActiveCompilation = InBlueprint;
             Request_StartCompilationTicker();
 
@@ -115,7 +105,6 @@ auto
 
         _OnBlueprintReinstanced_DelegateHandle = GEditor->OnBlueprintCompiled().AddLambda([this, RequestDeferredUpdate]()
         {
-            // Track compilation end and schedule deferred update
             _ActiveCompilation.Reset();
             RequestDeferredUpdate();
         });
@@ -197,7 +186,6 @@ auto
     if (_PendingSpawnParamsRequests.IsEmpty())
     { return; }
 
-    // Process all pending requests
     for (auto& Request : _PendingSpawnParamsRequests)
     {
         if (ck::Is_NOT_Valid(Request.EntityScriptClass.Get()))
@@ -207,7 +195,6 @@ auto
             Request.EntityScriptClass.Get(),
             Request.ForceRecreate);
 
-        // Fulfill any promises
         for (auto& WeakPromise : Request.Promises)
         {
             if (auto Promise = WeakPromise.Pin())
@@ -229,7 +216,6 @@ auto
     if (ck::Is_NOT_Valid(InEntityScriptClass))
     { return {}; }
 
-    // Check cache first unless forcing recreate
     if (NOT InForceRecreate)
     {
         const auto& StructName = GenerateEntitySpawnParamsStructName(InEntityScriptClass);
@@ -240,10 +226,8 @@ auto
         }
     }
 
-    // Check if compilation is in progress
     if (ck::IsValid(_ActiveCompilation))
     {
-        // Find existing pending request or create new one
         auto* ExistingRequest = _PendingSpawnParamsRequests.FindByPredicate(
             [InEntityScriptClass](const FPendingSpawnParamsRequest& Request)
             {
@@ -283,7 +267,6 @@ auto
     }
     else
     {
-        // Defer the request
         auto* ExistingRequest = _PendingSpawnParamsRequests.FindByPredicate(
             [InEntityScriptClass](const FPendingSpawnParamsRequest& Request)
             {
@@ -322,9 +305,8 @@ auto
     if (UCk_Utils_IO_UE::Get_IsTemporaryAsset(InEntityScriptClass->GetName()))
     { return {}; }
 
-    // SpawnParams structs are only needed for Blueprint EntityScripts (K2Node pins).
-    // Script classes (e.g. Angelscript) live in /Script/Angelscript with no way to
-    // resolve back to the owning plugin's content root.
+    // Only Blueprint EntityScripts need a SpawnParams struct (K2Node pins). Script classes live in
+    // /Script/Angelscript, with no way to resolve back to the owning plugin's content root.
 #if WITH_ANGELSCRIPT_CK
     ck::ecs::Verbose(TEXT("[SpawnParams] DoGetOrCreate called for [{}] | bIsScriptClass=[{}] | CompiledFromBP=[{}] | Package=[{}]"),
         InEntityScriptClass->GetName(),
@@ -353,11 +335,8 @@ auto
     UUserDefinedStruct* SpawnParamsStructForEntity = nullptr;
 
 #if WITH_EDITOR
-    // Use FindObject (memory-only) instead of LoadObject to avoid triggering package loading.
-    // LoadObject can cascade into Blueprint loading/compilation, causing re-entrant
-    // QueueForCompilation crashes in UE 5.7. If the struct isn't in memory, it will be
-    // created fresh below from the EntityScript class's exposed properties.
-
+    // FindObject (memory-only), never LoadObject: loading here cascades into Blueprint compilation and
+    // re-entrant QueueForCompilation crashes. A struct not in memory is created fresh below.
     const auto StructPackagePath = Get_StructPathForEntityScriptPath(InEntityScriptClass->GetPackage()->GetName());
     const auto StructFullPath = StructPackagePath / StructName.ToString();
 
@@ -376,10 +355,8 @@ auto
     {
         SpawnParamsStructForEntity = *FoundExistingStruct;
 
-        // During compilation, return the cached struct as-is without updating properties.
-        // UpdateStructProperties calls CompileStructure/OnStructureChanged which can trigger
-        // re-entrant compilation of dependent Blueprints (QueueForCompilation ensure in UE 5.7).
-        // Property updates are deferred to post-compilation via the compilation ticker.
+        // Mid-compilation the cached struct must be returned as-is: UpdateStructProperties would
+        // re-enter compilation of dependent Blueprints. The ticker re-runs the update afterwards.
         if (GCompilingBlueprint)
         {
             ck::ecs::Display(TEXT("[SpawnParams] GCompilingBlueprint — returning cached struct for [{}] without update"), InEntityScriptClass->GetName());
@@ -408,8 +385,8 @@ auto
         }
     }
 
-    // During compilation, do not create new structs — CreateUserDefinedStruct fires
-    // OnStructureChanged which can trigger re-entrant compilation. Defer to post-compilation.
+    // No new structs mid-compilation — CreateUserDefinedStruct fires OnStructureChanged, which
+    // re-enters compilation.
     if (ck::Is_NOT_Valid(SpawnParamsStructForEntity) && GCompilingBlueprint)
     {
         ck::ecs::Display(TEXT("[SpawnParams] GCompilingBlueprint — deferring new struct creation for [{}]"), InEntityScriptClass->GetName());
@@ -428,12 +405,9 @@ auto
             ck::IsValid(Obj) && (Obj->HasAnyFlags(RF_NeedLoad | RF_NeedPostLoad | RF_ClassDefaultObject) || Obj->GetClass()->bLayoutChanging))
         { return {}; }
 
-        // If the asset exists on disk but isn't loaded into memory yet, avoid creating a new
-        // struct — creating one generates fresh variable GUIDs which would invalidate any
-        // FInstancedStruct data in Blueprints that reference the original GUIDs.
-        // During async loading (early init), return null — the struct will be loaded as a
-        // Blueprint dependency and discovered by OnFilesLoaded. After startup, use LoadObject
-        // so K2Node compilation can find the struct.
+        // An asset on disk but not yet in memory must NOT be recreated — a fresh struct gets fresh
+        // variable GUIDs, invalidating FInstancedStruct data in Blueprints that hold the old ones.
+        // Mid-async-load it arrives as a Blueprint dependency and OnFilesLoaded discovers it.
         if (FPackageName::DoesPackageExist(StructPackageName))
         {
             if (IsAsyncLoading())
@@ -511,9 +485,8 @@ auto
 
     for (const auto* NewProperty : InNewProperties)
     {
-        // UUserDefinedStruct does not support delegate properties — FStructureEditorUtils::AddVariable
-        // silently falls back to Boolean. Skip delegates so they don't overwrite correctly-typed
-        // properties defined in AngelScript or C++ spawn params structs.
+        // UUserDefinedStruct has no delegate properties — AddVariable silently falls back to Boolean
+        // and would overwrite correctly-typed AngelScript/C++ spawn-params properties.
         if (UCk_Utils_Reflection_UE::Get_IsDelegateProperty(NewProperty))
         { continue; }
 
@@ -598,9 +571,6 @@ auto
 
     if (UCk_Utils_EditorOnly_UE::Get_IsCommandletOrCooking())
     { return; }
-
-    // Note: Blueprint compilation delegates are already hooked up in Initialize()
-    // This function now just handles the object save delegate
 #endif
 }
 
@@ -613,11 +583,9 @@ auto
     if (ck::Is_NOT_Valid(GEditor))
     { return; }
 
-    // If we already have a pending update, don't schedule another one
     if (_DeferredUpdateTimerHandle.IsValid())
     { return; }
 
-    // Get any valid world to use for the timer manager
     UWorld* World = nullptr;
     for (const FWorldContext& Context : GEngine->GetWorldContexts())
     {
@@ -631,7 +599,9 @@ auto
     if (ck::Is_NOT_Valid(World))
     { return; }
 
-    // Schedule the update for the next tick to ensure compilation has finished
+    constexpr auto DelayForCompilationToFinish = 0.1f;
+    constexpr auto Looping = false;
+
     auto WeakThis = TWeakObjectPtr(this);
     World->GetTimerManager().SetTimer(_DeferredUpdateTimerHandle,
         [WeakThis]()
@@ -642,8 +612,8 @@ auto
                 WeakThis->_DeferredUpdateTimerHandle.Invalidate();
             }
         },
-        0.1f, // Small delay to ensure compilation is complete
-        false);
+        DelayForCompilationToFinish,
+        Looping);
 #endif
 }
 
@@ -658,7 +628,6 @@ auto
 
     _bHasPendingStructUpdates = false;
 
-    // Process all EntityScript classes that need struct updates
     for (auto It = TObjectIterator<UClass>{}; It; ++It)
     {
         UClass* Class = *It;
@@ -667,7 +636,6 @@ auto
             UCk_Utils_IO_UE::Get_IsTemporaryAsset(Class->GetName()))
         { continue; }
 
-        // Only process blueprint generated classes - these are the ones that could have changed
         if (Class->HasAnyClassFlags(CLASS_CompiledFromBlueprint))
         {
             constexpr auto ForceRecreate = true;
@@ -810,15 +778,12 @@ auto
     -> void
 {
 #if WITH_EDITOR
-    // Use Asset Registry query + FindObject instead of FindOrLoadAssetsByPath.
-    // FindOrLoadAssetsByPath triggers sync package loading which can cause re-entrant
-    // Blueprint compilation (QueueForCompilation crash) in UE 5.7's stricter loading pipeline.
-    // FindObject is a memory-only lookup that never triggers loading.
+    // Asset-registry query + FindObject, never FindOrLoadAssetsByPath: that one triggers sync package
+    // loading, which re-enters Blueprint compilation. FindObject never loads.
     if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
         ck::IsValid(AssetRegistry, ck::IsValid_Policy_NullptrOnly{}))
     {
-        // Scan ALL UUserDefinedStruct assets (not just /Game/) so that plugin
-        // EntityScript spawn params structs are also discovered and cached.
+        // ALL UUserDefinedStruct assets, not just /Game/, so plugin spawn-params structs are found too.
         auto StructAssets = TArray<FAssetData>{};
         auto Filter = FARFilter{};
         Filter.ClassPaths.Add(UUserDefinedStruct::StaticClass()->GetClassPathName());

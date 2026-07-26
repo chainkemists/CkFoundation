@@ -39,14 +39,10 @@ namespace ck
     private:
         FCk_Handle _TargetEntity;
         FVector _WorldPoint = FVector::ZeroVector;
-
-        // Point-on-target, expressed in the target's local space so it moves/rotates with it
         FVector _LocalOffset = FVector::ZeroVector;
 
         ECk_Homing_TargetMode _TargetMode = ECk_Homing_TargetMode::None;
 
-        // The acceleration the entity had before homing started steering it — re-applied on top of
-        // the homing acceleration every update, and restored when homing deactivates
         FVector _BaseAcceleration = FVector::ZeroVector;
 
         // Finite-difference fallback for targets without a Velocity feature
@@ -57,11 +53,9 @@ namespace ck
         bool _PreviouslyClosing = false;
         bool _MissNotified = false;
 
-        // Countdown for ArriveAtDesiredTime — seeded from params/requests, decremented per update
         ECk_Homing_ImpactTiming _ImpactTiming = ECk_Homing_ImpactTiming::ArriveAsap;
         FCk_Time _DesiredTimeToImpactRemaining;
 
-        // Last evaluated guidance state, cached for the Utils getters
         FCk_Homing_GuidanceState _LastGuidanceState;
 
     public:

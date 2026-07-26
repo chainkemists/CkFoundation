@@ -54,10 +54,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Reacts to overlaps reported by the entity's (LinearCast) Probe: computes the analytic impact
-    // time/velocity on the trajectory, broadcasts OnImpact, and bounces or stops.
-    // Contacts surface one frame after Jolt detects them; the response re-anchors the trajectory at
-    // the analytic impact point, so the correction is exact regardless of when the contact arrived
     class CKPROJECTILE_API FProcessor_BallisticMotion_HandleImpacts : public ck_exp::TProcessor<
             FProcessor_BallisticMotion_HandleImpacts,
             FCk_Handle_BallisticMotion,
@@ -94,9 +90,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Writes the closed-form pose for the current world time. Position is a function of
-    // (initial conditions, time) only — never of last frame's pose — so every machine computes
-    // the identical path regardless of tick rate
     class CKPROJECTILE_API FProcessor_BallisticMotion_UpdateTrajectory : public ck_exp::TProcessor<
             FProcessor_BallisticMotion_UpdateTrajectory,
             FCk_Handle_BallisticMotion,

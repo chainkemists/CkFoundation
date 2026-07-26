@@ -65,13 +65,11 @@ namespace ck_dynamic_script_query_batch
             {}
             if (NOT GenerationMatches)
             {
-                // This warning is intentionally independent of the ensure above. Ensures can compile out or be
-                // locally ignored, but a stale close is still useful operational evidence for a lifetime violation.
+                // Independent of the ensure above on purpose: ensures compile out.
                 ck::dynamic::Warning(
                     TEXT("Script query batch state closed with stale generation [{}]"), InGeneration);
 
-                // A rejected close must still fail closed. Leaving an older entry registered would let its batch
-                // resolve this host address after the state is destroyed.
+                // Fail closed: leaving the older entry registered would let its batch resolve freed state.
                 _LiveGenerations.Remove(&InState);
                 return;
             }
@@ -89,8 +87,8 @@ namespace ck_dynamic_script_query_batch
             if (LiveGeneration == nullptr || *LiveGeneration != InBatch._Generation)
             { return nullptr; }
 
-            // ForEachBatch is synchronous: the host cannot close this entry until the script call containing this
-            // accessor returns. The resolver lock protects registration, while the call boundary protects the state.
+            // ForEachBatch is synchronous, so the host cannot close this entry until the script call containing
+            // the accessor returns: the lock protects registration, the call boundary protects the state.
             return InBatch._State;
         }
 
@@ -113,8 +111,8 @@ namespace ck_dynamic_script_query_batch
         GetLiveStateResolver()
         -> FLiveStateResolver&
     {
-        // Intentional process-lifetime allocation. A stale script value may survive world/module-owned processor
-        // state, so the resolver itself must not participate in world teardown or static destruction ordering.
+        // Intentionally never freed: a stale script value may outlive world/module-owned processor state, so the
+        // resolver must not participate in world teardown or static destruction ordering.
         static auto* Resolver = new FLiveStateResolver{};
         return *Resolver;
     }
@@ -191,9 +189,7 @@ auto
         const FCk_ScriptQueryBatch& InBatch)
     -> int32
 {
-    // A stashed (stale-generation) or default-constructed batch reports empty so a stray driver loop over it is a
-    // no-op rather than a crash. Explicit accessors (Get/GetHandle) ensure loudly; Num stays quiet — it is called
-    // once per loop iteration and would otherwise spam.
+    // Num stays quiet where Get/GetHandle ensure: it runs once per loop iteration and would spam.
     const auto* State = ck::dynamic::Resolve_ScriptQueryBatchState(InBatch);
     if (State == nullptr)
     { return 0; }
@@ -240,7 +236,6 @@ auto
         const UScriptStruct* InType)
     -> FScriptStructWildcard&
 {
-    // (1) Generation guard — stashed batch.
     auto* State = ck::dynamic::Resolve_ScriptQueryBatchState(InBatch);
     const auto StateIsLive = State != nullptr;
     CK_ENSURE_IF_NOT(StateIsLive,
@@ -249,7 +244,6 @@ auto
     if (NOT StateIsLive)
     { return ck_dynamic_script_query_batch::ReturnFailedWildcardAccess(InType); }
 
-    // (2) Null type — no sentinel key available.
     const auto TypeIsValid = ck::IsValid(InType);
     CK_ENSURE_IF_NOT(TypeIsValid,
         TEXT("Script query batch Get called with an invalid fragment type"))
@@ -257,7 +251,6 @@ auto
     if (NOT TypeIsValid)
     { return ck_dynamic_script_query_batch::ReturnFailedWildcardAccess(InType); }
 
-    // (3) Index bounds.
     const auto IndexIsValid = State->_Entities.IsValidIndex(InIndex);
     CK_ENSURE_IF_NOT(IndexIsValid,
         TEXT("Script query batch Get index [{}] out of range [0, {}) for fragment [{}]"),
@@ -266,7 +259,6 @@ auto
     if (NOT IndexIsValid)
     { return ck_dynamic_script_query_batch::ReturnFailedWildcardAccess(InType); }
 
-    // (4) Slot resolution — mutable access is available only to an explicitly ReadWrite slot.
     const auto* Slot = State->_Slots.FindByPredicate(
         [&](const FCk_ScriptQueryBatchState::FSlot& InSlot)
         { return InSlot._Type == InType && InSlot._Access == ECk_ScriptQueryAccess::ReadWrite; });
@@ -278,7 +270,7 @@ auto
     if (NOT SlotIsMutable)
     { return ck_dynamic_script_query_batch::ReturnFailedWildcardAccess(InType); }
 
-    // (5) contains-probe — kept in shipping; catches a fragment removed mid-batch (Request_Remove).
+    // Kept in shipping: catches a fragment removed mid-batch by a Request_Remove inside ForEachBatch.
     const auto Entity = State->_Entities[InIndex];
     const auto FragmentExists = Slot->_Storage->contains(Entity);
     CK_ENSURE_IF_NOT(FragmentExists,
@@ -287,7 +279,6 @@ auto
     if (NOT FragmentExists)
     { return ck_dynamic_script_query_batch::ReturnFailedWildcardAccess(InType); }
 
-    // (6) Live registry storage read, returned through the wildcard (same reinterpret idiom as Get_Fragment).
     auto& Fragment = Slot->_Storage->get(Entity);
     return *(FScriptStructWildcard*)Fragment.Get_StructData().GetMemory();
 }

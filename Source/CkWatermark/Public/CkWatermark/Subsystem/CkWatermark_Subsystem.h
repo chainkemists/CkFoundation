@@ -47,8 +47,7 @@ public:
     FText GetBuildConfigLabel() const;
 
     // ---- Custom Field API (Blueprint) --------------------------------------------
-    // Game code calls these to populate a single custom key:value entry in the
-    // info bar (e.g. a version number). Hidden unless populated.
+    // Populates a single custom key:value entry in the info bar; hidden unless populated.
 
     UFUNCTION(BlueprintCallable, Category = "Watermark|Custom Field",
               meta = (DisplayName = "[Ck][Watermark] Set Custom Field"))
@@ -82,8 +81,6 @@ public:
     auto Get_CustomFieldValueColorOverride() const -> const TOptional<FSlateColor>&;
 
     // ---- Activity Bar API --------------------------------------------------------
-    // Game code calls these to push signal state changes into the watermark.
-    // Signals appear as chips in the activity bar above the stat rows.
 
     UFUNCTION(BlueprintCallable, Category = "Watermark|Activity",
               meta = (DisplayName = "[Ck][Watermark] Request Activity Active"))
@@ -93,12 +90,10 @@ public:
               meta = (DisplayName = "[Ck][Watermark] Request Activity Inactive"))
     void Request_ActivityInactive(FName InActivityId);
 
-    // Accessors for the activity bar Slate widget.
     auto Get_ActivityStates()  const -> const TArray<FCkWatermarkActivityState>&;
     auto Get_ActivityVersion() const -> uint32;
 
     // ---- Static convenience helpers (single-node Blueprint call) -----------------
-    // Resolve PlayerController → LocalPlayer → Subsystem internally.
 
     UFUNCTION(BlueprintCallable, Category = "Watermark|Activity",
               meta = (DefaultToSelf = "InPlayerController",
@@ -154,7 +149,6 @@ private:
     TArray<FCkWatermarkActivityState> _ActivityStates;
     uint32 _ActivityVersion = 0;
 
-    // Monotonically increasing counters per activity Id for permanent numbering.
     TMap<FName, int32> _ActivitySequenceCounters;
 };
 

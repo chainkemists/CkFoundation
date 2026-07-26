@@ -15,12 +15,9 @@ struct FAngelscriptAnyStructParameter;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// The ForEach delegate intentionally carries only the entity handle. Fragments are resolved
-// by the handler via Handle.Get_Fragment(T), which returns a live reference into registry
-// storage. Passing FInstancedStruct through a dynamic delegate would route parameters through
-// ProcessEvent's frame buffer — mutations on the passed struct would only be written back to
-// registry storage after the delegate returns, causing same-tick Handle.Get_Fragment reads to
-// observe stale data. Keeping the delegate handle-only eliminates that hazard by construction.
+// Handle-only by construction. Passing an FInstancedStruct through a dynamic delegate routes it via
+// ProcessEvent's frame buffer, so mutations reach registry storage only after the delegate returns and a
+// same-tick Get_Fragment read observes stale data. Handlers resolve fragments themselves.
 DECLARE_DYNAMIC_DELEGATE_OneParam(FCk_DynamicFragment_ForEachEntity,
     UPARAM(ref) FCk_Handle&, InHandle);
 
@@ -55,8 +52,7 @@ public:
         const UScriptStruct* InStructType,
         ECk_Replication InReplication = ECk_Replication::DoesNotReplicate);
 
-    // Failure-representable C++ boundary for replication/hydration and other untrusted transports. Returns nullptr
-    // when the entity/type is invalid or the reflected schema cannot safely live outside Unreal's GC owner graph.
+    // Failure-representable boundary for untrusted transports: nullptr when the entity, type, or schema is rejected.
     static auto
     TryAddOrGet_Fragment_TypeUnsafe(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -89,8 +85,7 @@ public:
         const FCk_Handle& InHandle,
         const UScriptStruct* InStructType);
 
-    // Failure-representable read boundary. Unlike the legacy reflected reference API, this cannot expose mutable
-    // fallback storage after a rejected handle, type, schema, or missing-fragment lookup.
+    // Failure-representable read boundary: unlike the reflected reference API, it never exposes fallback storage.
     static auto
     TryGet_Fragment_TypeUnsafe(
         const FCk_Handle& InHandle,
@@ -184,18 +179,13 @@ public:
     Get_StorageId(
         const UScriptStruct* InStructType) -> entt::id_type;
 
-    // Hash key for the scheduler's dirty-marker VERSION domain (distinct from Get_StorageId's
-    // entt storage id — the two hash different representations of the struct path). The
-    // script-processor host registers this value for MarkedDirtyBy script structs, and every
-    // dynamic-fragment mutation path bumps the same key so the pump short-circuit observes
-    // dynamic-marker changes (see FCk_Registry::BumpDirtyMarkerVersion).
+    // Hash key for the scheduler's dirty-marker VERSION domain — distinct from Get_StorageId's entt storage id.
+    // EVERY dynamic-fragment mutation path must bump it, or the pump short-circuit leaves the node deaf.
     static auto
     Get_DirtyMarkerHash(
         const UScriptStruct* InStructType) -> uint32;
 
-    // Registry-wide check: returns true if *any* entity in the registry reachable through InAnyHandle holds a
-    // dynamic fragment of InStructType. Used by the script-processor scheduler wrapper to implement the
-    // MarkedDirtyBy gate without CkEcs needing to depend on CkDynamic directly.
+    // Registry-wide: true if ANY entity reachable through InAnyHandle holds a dynamic fragment of InStructType.
     static auto
     Has_AnyEntityWith_Fragment(
         const FCk_Handle& InAnyHandle,
@@ -224,9 +214,8 @@ public:
 public:
     // ---- Replication ----
 
-    // Re-replicate a replicated dynamic fragment after it was mutated in-place via Get_Fragment.
-    // Ensures the fragment was added with ECk_Replication::Replicates. Host-side only (the AuthorityOnly
-    // replicate processor is the real gate). No automatic change detection — call this after mutating.
+    // There is no automatic change detection: after mutating a replicated fragment in place via Get_Fragment,
+    // call this. Ensures the fragment was added with ECk_Replication::Replicates.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
               DisplayName="[Ck][DynamicFragment] Request Mark Replication Dirty")

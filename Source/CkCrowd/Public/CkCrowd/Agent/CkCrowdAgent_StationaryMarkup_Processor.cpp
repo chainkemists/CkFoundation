@@ -24,18 +24,16 @@ DECLARE_CYCLE_STAT(TEXT("Crowd::StationaryMarkup"), STAT_CkCrowd_StationaryMarku
 
 namespace ck_crowd_agent_stationary_markup
 {
-    // Push-apart nudges an idle agent a few cm at a time; re-painting per nudge would churn nav
-    // tiles for nothing. Re-anchor the disc only once the agent has drifted half its radius.
+    // Re-painting per push-apart nudge would churn nav tiles for nothing.
     constexpr auto REPAINT_DRIFT_FRACTION = 0.5f;
 
-    // Stillness = windowed displacement below half the agent radius per sample window. At the
-    // default radius (42) that is ~84uu/s — well below any real walking speed, well above the
-    // aggregate drift a pressed queue member accumulates from push-apart shoves.
+    // ~84uu/s at the default radius: well below any real walking speed, well above the aggregate
+    // drift a pressed queue member accumulates from push-apart shoves.
     constexpr auto STILLNESS_SAMPLE_INTERVAL_SEC = 0.25f;
     constexpr auto STILLNESS_MAX_DRIFT_RADIUS_FRACTION = 0.5f;
 
-    // Process-wide (not per-world): only monotonicity matters — a path and a disc are only ever
-    // compared within the same world, and a shared counter stays monotonic across all of them.
+    // Process-wide, not per-world: only monotonicity matters, and paths and discs are only ever
+    // compared within one world.
     static auto GPaintSerial = uint64{0};
 }
 
@@ -92,11 +90,8 @@ namespace ck
 
         const auto Location = InTransform.Get_Transform().GetLocation();
 
-        // Stationary means PHYSICALLY stationary, not the Idle tag: a blocked/pressing WALKER
-        // plugs a corridor exactly like an idle agent does (mutual pressers never go Idle at
-        // all), and the corridor it plugs stays invisible to pathfinding unless it too becomes
-        // an obstacle. Windowed displacement, sampled coarsely, so single-frame push-apart
-        // shove spikes don't unpaint a standing queue.
+        // Stationary means PHYSICALLY stationary, not the Idle tag: a blocked walker plugs a
+        // corridor exactly like an idle agent, and mutual pressers never go Idle at all.
         InMarkup._StillnessSampleAccumSec += static_cast<float>(InDeltaT.Get_Seconds());
         if (InMarkup._StillnessSampleAccumSec >= STILLNESS_SAMPLE_INTERVAL_SEC)
         {
@@ -130,9 +125,8 @@ namespace ck
         }
 
         const auto HalfExtentXY = InParams.Get_Radius() * Settings.Get_StationaryMarkupExtentMultiplier();
-        // Full height as the VERTICAL half-extent: the agent's transform rides at capsule height,
-        // and the modifier only marks navmesh polys whose surface falls INSIDE the box — a
-        // half-height band bottoms out a hair above the floor polys and paints nothing.
+        // Full height as the VERTICAL half-extent is deliberate: the modifier only marks polys
+        // INSIDE the box, and a half-height band bottoms out above the floor and paints nothing.
         const auto HalfExtents = FVector{HalfExtentXY, HalfExtentXY, InParams.Get_Height()};
 
         auto GenericHandle = static_cast<FCk_Handle>(InHandle);

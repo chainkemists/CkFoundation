@@ -40,9 +40,7 @@ void
 {
     OwningMode = InOwningMode;
 
-    // One radio-style toggle per tool. Style as toggle buttons (ToggleButtonCheckbox) so they read as
-    // a segmented selector; only one stays checked because each Get_ToolCheckState compares against
-    // the EdMode's active tool.
+    // Radio semantics come from Get_ToolCheckState comparing against the EdMode's active tool.
     const auto MakeToolButton = [this](ECk_GridPaint_Tool InTool, const FText& InLabel) -> TSharedRef<SWidget>
     {
         return SNew(SCheckBox)
@@ -293,7 +291,6 @@ auto
     FCk_2dGridSystem_EdModeToolkit::
     Build_TagsSection() -> TSharedRef<SWidget>
 {
-    // Scope segmented toggle (PerCellBulk vs GridDefault), styled like the tool selector.
     const auto MakeScopeButton = [this](ECk_GridPaint_TagScope InScope, const FText& InLabel) -> TSharedRef<SWidget>
     {
         return SNew(SCheckBox)
@@ -306,8 +303,7 @@ auto
             ];
     };
 
-    // Single-select tag picker writing back to the EdMode's _ActivePaintTag via On_PaintTagChanged.
-    // No PropertyHandle (we drive the value imperatively) — start with an empty container.
+    // No PropertyHandle — the value is driven imperatively, so it starts from an empty container.
     TagPicker = SNew(SGameplayTagPicker)
         .MultiSelect(false)
         .Filter(TEXT("Grid"))
@@ -316,7 +312,6 @@ auto
         .OnTagChanged(this, &FCk_2dGridSystem_EdModeToolkit::On_PaintTagChanged)
         .TagContainers(TArray<FGameplayTagContainer>{ FGameplayTagContainer{} });
 
-    // Read-only per-tag color legend (swatch + name + count), rebuilt from the Spec on repaint.
     SAssignNew(TagLegendContainer, SVerticalBox);
     Rebuild_TagLegend();
 
@@ -483,8 +478,6 @@ auto
     FCk_2dGridSystem_EdModeToolkit::
     Build_BlockerSection() -> TSharedRef<SWidget>
 {
-    // New-blocker tag picker: writes the EdMode's _ActiveBlockerTag, stamped onto the next drag-rect
-    // blocker. Single-select, mirroring the Tags-tool picker. No PropertyHandle (driven imperatively).
     NewBlockerTagPicker = SNew(SGameplayTagPicker)
         .MultiSelect(false)
         .Filter(TEXT("Grid"))
@@ -493,9 +486,7 @@ auto
         .OnTagChanged(this, &FCk_2dGridSystem_EdModeToolkit::On_NewBlockerTagChanged)
         .TagContainers(TArray<FGameplayTagContainer>{ FGameplayTagContainer{} });
 
-    // Selected-blocker tag picker: writes the chosen tag to the currently selected blocker's Name via
-    // Set_SelectedBlockerName. Its displayed value is re-seeded imperatively whenever the selected
-    // blocker index changes (see Get_SelectedBlockerText, called live each frame).
+    // Displayed value is re-seeded imperatively on selection change (Get_SelectedBlockerText, each frame).
     SelectedBlockerTagPicker = SNew(SGameplayTagPicker)
         .MultiSelect(false)
         .Filter(TEXT("Grid"))
@@ -569,7 +560,6 @@ auto
     On_NewBlockerTagChanged(
         const TArray<FGameplayTagContainer>& InContainers) -> void
 {
-    // Single-select picker: take the first tag of the first container (mirrors the Tags-tool picker).
     const auto NewTag = InContainers.IsEmpty() ? FGameplayTag() : InContainers[0].First();
 
     if (auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get()))
@@ -587,16 +577,14 @@ auto
     if (Mode == nullptr)
     { return; }
 
-    // Ignore writes when no blocker is selected (the picker still emits an OnTagChanged after a re-seed
-    // to the empty container). Set_SelectedBlockerName is itself a no-op for INDEX_NONE, but guarding
-    // here also keeps SeededSelectedBlockerIndex honest below.
+    // The picker still emits OnTagChanged after a re-seed to the empty container, so ignore writes with
+    // nothing selected — that also keeps SeededSelectedBlockerIndex honest below.
     if (Mode->Get_SelectedBlockerIndex() == INDEX_NONE)
     { return; }
 
     Mode->Set_SelectedBlockerName(NewTag);
 
-    // The picker now reflects this tag for the current selection; record it so Get_SelectedBlockerText
-    // does not immediately re-seed (and clobber) the value the user just chose.
+    // Record the seed so Get_SelectedBlockerText does not re-seed and clobber the tag just chosen.
     SeededSelectedBlockerIndex = Mode->Get_SelectedBlockerIndex();
 }
 
@@ -623,10 +611,8 @@ auto
 
     const auto Index = Mode->Get_SelectedBlockerIndex();
 
-    // Re-seed the selected-blocker picker's displayed value when the selection changes (the picker has
-    // no live-bound value attribute, so we drive it imperatively here — this getter is called each
-    // frame by the live-bound text block). const_cast: this getter is logically const but owns the
-    // toolkit's view-state bookkeeping.
+    // The picker has no live-bound value attribute, so its displayed value is re-seeded here — this getter
+    // is called each frame by the live-bound text block. const_cast: it owns the toolkit's view state.
     if (Index != SeededSelectedBlockerIndex)
     {
         auto* MutableThis = const_cast<FCk_2dGridSystem_EdModeToolkit*>(this);
@@ -665,14 +651,11 @@ auto
 {
     namespace style = ck::grid_paint_style;
 
-    // Live-bound key/value row helper (debugger-style). Value text reads the EdMode's selected-cell info
-    // off the Spec each frame, so it tracks live edits to the Spec.
     const auto MakeRow = [](const FText& InLabel, TAttribute<FText> InValue) -> TSharedRef<SWidget>
     {
         return style::Make_KeyValueRow(InLabel, InValue);
     };
 
-    // Add-tag picker for the single-cell editor: each chosen tag is ADDED to the selected cell.
     AddCellTagPicker = SNew(SGameplayTagPicker)
         .MultiSelect(false)
         .Filter(TEXT("Grid"))
@@ -681,11 +664,8 @@ auto
         .OnTagChanged(this, &FCk_2dGridSystem_EdModeToolkit::On_AddCellTagChanged)
         .TagContainers(TArray<FGameplayTagContainer>{ FGameplayTagContainer{} });
 
-    // Vertical list of one removable row per tag on the selected cell. Rebuilt imperatively whenever the
-    // cell or its tag set changes (see Rebuild_PerCellTagList / Compute_PerCellTagListSignature).
     SAssignNew(PerCellTagListContainer, SVerticalBox);
 
-    // Blocker editor tag picker: writes the selected blocker's Name via the shared Set_SelectedBlockerName.
     DetailsBlockerTagPicker = SNew(SGameplayTagPicker)
         .MultiSelect(false)
         .Filter(TEXT("Grid"))
@@ -694,10 +674,8 @@ auto
         .OnTagChanged(this, &FCk_2dGridSystem_EdModeToolkit::On_DetailsBlockerTagChanged)
         .TagContainers(TArray<FGameplayTagContainer>{ FGameplayTagContainer{} });
 
-    // Seed the per-cell tag list once up-front (empty until a cell is selected).
     Rebuild_PerCellTagList();
 
-    // Single-CELL editor sub-block.
     const auto CellEditor = SNew(SBox)
         .Visibility(this, &FCk_2dGridSystem_EdModeToolkit::Get_DetailsCellEditorVisibility)
         [
@@ -758,7 +736,6 @@ auto
             ]
         ];
 
-    // BLOCKER editor sub-block (shown when the pick landed on a blocker).
     const auto BlockerEditor = SNew(SBox)
         .Visibility(this, &FCk_2dGridSystem_EdModeToolkit::Get_DetailsBlockerEditorVisibility)
         [
@@ -857,8 +834,7 @@ auto
     FCk_2dGridSystem_EdModeToolkit::
     Get_DetailsSectionVisibility() const -> EVisibility
 {
-    // Re-drive the Blockers/Tags lists on repaint when the Spec's blocker/tag set changes (mirrors the
-    // const-cast-in-getter refresh idiom). The signature guard keeps it cheap.
+    // Repaint-driven refresh (the const-cast-in-getter idiom); the signature guard keeps it cheap.
     if (const auto Sig = Compute_SelectListsSignature(); Sig != SeededSelectListsSignature)
     {
         const_cast<FCk_2dGridSystem_EdModeToolkit*>(this)->SeededSelectListsSignature = Sig;
@@ -881,8 +857,7 @@ auto
     if (Spec == nullptr)
     { return FString{}; }
 
-    // Include each blocker's name + range so a rename / re-range re-drives the Blockers list row labels
-    // (count alone misses an in-place edit via the blocker tag picker).
+    // Name + range are included because count alone misses an in-place edit via the blocker tag picker.
     auto Sig = FString::Printf(TEXT("B%d|"), Spec->Blockers.Num());
     for (const auto& Blocker : Spec->Blockers)
     {
@@ -1004,7 +979,6 @@ auto
 
     Mode->Set_SelectedBlockerIndex(InItem->Index);
 
-    // Clear the Tags list's visual selection so the two lists don't both look active.
     if (TagListView.IsValid())
     { TagListView->ClearSelection(); }
 }
@@ -1036,8 +1010,6 @@ auto
     if (Mode == nullptr)
     { return EVisibility::Collapsed; }
 
-    // Single-cell editor is shown for any non-blocker Select pick (including no pick yet — then the
-    // coordinate row reads "Select a cell").
     return Mode->Get_HasBlockerSelection()
         ? EVisibility::Collapsed
         : EVisibility::Visible;
@@ -1063,10 +1035,8 @@ auto
     FCk_2dGridSystem_EdModeToolkit::
     Get_DetailsCoordinateText() const -> FText
 {
-    // This getter is live-bound (called each repaint while the cell editor is visible); piggyback the
-    // per-cell tag-list rebuild here so the removable rows track live edits without a manual refresh.
-    // const_cast: logically const, but it owns the toolkit's view-state bookkeeping (mirrors the Blocker
-    // section's Get_SelectedBlockerText re-seed).
+    // Live-bound each repaint, so the per-cell tag-list rebuild piggybacks here and the removable rows
+    // track live edits without a manual refresh. const_cast: it owns the toolkit's view state.
     {
         const auto Signature = Compute_PerCellTagListSignature();
         if (Signature != SeededPerCellTagSignature)
@@ -1157,8 +1127,7 @@ auto
     if (! Info.bHasSelection)
     { return FString{}; }
 
-    // Cell coordinate + its per-cell tags uniquely identifies what the row list should show. A blocker
-    // selection collapses the cell editor, so its tags don't matter to the signature.
+    // A blocker selection collapses the cell editor, so blocker state is deliberately not in the signature.
     return FString::Printf(TEXT("%d,%d:%s"),
         Info.Coordinate.X, Info.Coordinate.Y, *Info.CellTags.ToStringSimple());
 }
@@ -1227,8 +1196,7 @@ auto
 
     Mode->Add_SelectedCellTag(NewTag);
 
-    // Reset the picker back to empty so it reads as an "add" control (the row list below is the source of
-    // truth for what the cell currently carries). The list rebuild rides the next live-bound repaint.
+    // Reset to empty so the picker reads as an "add" control; the row list is the source of truth.
     if (AddCellTagPicker.IsValid())
     { AddCellTagPicker->SetTagContainers(TArray<FGameplayTagContainer>{ FGameplayTagContainer{} }); }
 }
@@ -1254,8 +1222,7 @@ auto
 
     const auto Index = Mode->Get_SelectedBlockerIndex();
 
-    // Re-seed the blocker tag picker's displayed value when the selected blocker changes (the picker has
-    // no live-bound value attribute). const_cast: this getter is live-bound and owns the view-state seed.
+    // The picker has no live-bound value attribute, so its displayed value is re-seeded here.
     if (Index != SeededDetailsBlockerIndex)
     {
         auto* MutableThis = const_cast<FCk_2dGridSystem_EdModeToolkit*>(this);
@@ -1314,8 +1281,7 @@ auto
     if (Mode == nullptr)
     { return; }
 
-    // Ignore writes when no blocker is selected (the picker still emits OnTagChanged after a re-seed to
-    // the empty container). Mirrors the Blocker section's On_SelectedBlockerTagChanged guard.
+    // The picker still emits OnTagChanged after a re-seed to the empty container; ignore those writes.
     if (Mode->Get_SelectedBlockerIndex() == INDEX_NONE)
     { return; }
 
@@ -1378,8 +1344,7 @@ auto
         ECheckBoxState     InNewState,
         ECk_GridPaint_Tool InTool) -> void
 {
-    // Radio semantics: ignore the un-check that fires when the user clicks the already-active tool;
-    // only act on a positive selection.
+    // Radio semantics: the un-check fired by clicking the already-active tool must not clear it.
     if (InNewState != ECheckBoxState::Checked)
     { return; }
 
@@ -1392,8 +1357,7 @@ auto
     FCk_2dGridSystem_EdModeToolkit::
     Get_TagsSectionVisibility() const -> EVisibility
 {
-    // Re-drive the legend on repaint when the per-cell tag set changes (mirrors the const-cast-in-getter
-    // refresh idiom used by Get_DetailsCoordinateText). The signature guard keeps it cheap.
+    // Repaint-driven refresh (the const-cast-in-getter idiom); the signature guard keeps it cheap.
     if (const auto Sig = Compute_TagLegendSignature(); Sig != SeededTagLegendSignature)
     {
         const_cast<FCk_2dGridSystem_EdModeToolkit*>(this)->SeededTagLegendSignature = Sig;
@@ -1410,7 +1374,6 @@ auto
     On_PaintTagChanged(
         const TArray<FGameplayTagContainer>& InContainers) -> void
 {
-    // Single-select picker: take the first tag of the first container (mirrors SGameplayTagCombo).
     const auto NewTag = InContainers.IsEmpty() ? FGameplayTag() : InContainers[0].First();
 
     if (auto* Mode = Cast<UCk_2dGridSystem_EdMode>(OwningMode.Get()))

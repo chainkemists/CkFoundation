@@ -96,7 +96,6 @@ namespace ck
         , _DrainQueueFn(MoveTemp(InParams.DrainQueueFn))
         , _DrainActivationQueueFn(MoveTemp(InParams.DrainActivationQueueFn))
     {
-        // The one shared CharacterContactListener; every CharacterVirtual is pointed at it via SetListener.
         _CharacterContactListener = MakeUnique<CkJoltCharacterContactListener>(this);
     }
 
@@ -172,8 +171,7 @@ namespace ck
         if (Events.IsEmpty())
         { return; }
 
-        // Routers run user code inline (signal handlers) which may Register/Unregister routers — iterate a
-        // copy so a mid-broadcast registry mutation cannot dangle the loop.
+        // Routers run user code that may Register/Unregister — iterate a copy so a mid-broadcast mutation cannot dangle.
         const auto RoutersCopy = _ContactRouters;
         for (const auto& Router : RoutersCopy)
         { Router.Value(Events); }
@@ -305,9 +303,8 @@ namespace ck
             if (NOT Entry.DirtyThisFrame)
             { continue; }
 
-            // Body UserData is a raw (versioned) entity id. A snapshot load wipes/restores the registry, so
-            // a buffered pose can resolve to an id that is dead in the fresh registry — do a non-ensuring
-            // liveness check first (mirrors ResolveBodyEntity in CkSpatialQuery_Subsystem).
+            // Body UserData is a raw (versioned) entity id, and a snapshot load can leave one dead in the
+            // fresh registry — non-ensuring liveness check first.
             const auto Entity = FCk_Entity{FCk_Entity::IdType{static_cast<FCk_Entity::IdType>(Entry.UserData)}};
             if (NOT RegView.IsValid(Entity))
             {
@@ -322,9 +319,8 @@ namespace ck
                 continue;
             }
 
-            // An entity may own MORE Jolt bodies than its JoltBody (e.g. a Probe) — all share the entity id
-            // as UserData, and _PoseBuffer is keyed by body id. Only the JoltBody's own body may write the
-            // entity's StepPose; another body's entry (Probe) must not clobber the simulated pose.
+            // An entity may own MORE Jolt bodies than its JoltBody (e.g. a Probe), all sharing the entity id
+            // as UserData. Only the JoltBody's own body may write the entity's StepPose.
             if (NOT Handle.Has<ck::FFragment_JoltBody_Current>() ||
                 Handle.Get<ck::FFragment_JoltBody_Current>().Get_BodyId().GetIndexAndSequenceNumber() != Pair.Key)
             {
@@ -461,22 +457,20 @@ namespace ck
         if (NOT PhysicsSystem.IsValid() || _TempAllocator == nullptr)
         { return; }
 
-        // Gravity is READ from the physics system — already Z-up cm since Phase 3's SetGravity fix (NOT
-        // hardcoded; respects per-world gravity overrides).
         const auto Gravity = PhysicsSystem->GetGravity();
 
-        // ExtendedUpdateSettings converted from the Jolt-sample Y-up-METRES defaults to this world's
-        // Z-up-CENTIMETRES. Jolt defaults (CharacterVirtual.h ExtendedUpdateSettings):
-        //   mStickToFloorStepDown  { 0, -0.5, 0 } m Y-up  ->  ( 0, 0, -50 ) cm Z-up
-        //   mWalkStairsStepUp      { 0,  0.4, 0 } m Y-up  ->  ( 0, 0,  40 ) cm Z-up
-        //   mWalkStairsMinStepForward   0.02 m         ->  2 cm
-        //   mWalkStairsStepForwardTest  0.15 m         ->  15 cm
-        // Remaining scalar fields keep their (unit-agnostic / cos-angle) defaults.
+        // Jolt's ExtendedUpdateSettings defaults are Y-up METRES (CharacterVirtual.h); this world is Z-up
+        // CENTIMETRES, so each length below is the converted default. Remaining scalars keep theirs.
+        constexpr auto StickToFloorStepDownCm      = -50.0f;   // Jolt default { 0, -0.5, 0 } m Y-up
+        constexpr auto WalkStairsStepUpCm          =  40.0f;   // Jolt default { 0,  0.4, 0 } m Y-up
+        constexpr auto WalkStairsMinStepForwardCm  =   2.0f;   // Jolt default 0.02 m
+        constexpr auto WalkStairsStepForwardTestCm =  15.0f;   // Jolt default 0.15 m
+
         auto ExtendedSettings = JPH::CharacterVirtual::ExtendedUpdateSettings{};
-        ExtendedSettings.mStickToFloorStepDown     = JPH::Vec3(0.0f, 0.0f, -50.0f);
-        ExtendedSettings.mWalkStairsStepUp         = JPH::Vec3(0.0f, 0.0f,  40.0f);
-        ExtendedSettings.mWalkStairsMinStepForward = 2.0f;
-        ExtendedSettings.mWalkStairsStepForwardTest = 15.0f;
+        ExtendedSettings.mStickToFloorStepDown     = JPH::Vec3(0.0f, 0.0f, StickToFloorStepDownCm);
+        ExtendedSettings.mWalkStairsStepUp         = JPH::Vec3(0.0f, 0.0f, WalkStairsStepUpCm);
+        ExtendedSettings.mWalkStairsMinStepForward = WalkStairsMinStepForwardCm;
+        ExtendedSettings.mWalkStairsStepForwardTest = WalkStairsStepForwardTestCm;
 
         for (auto& Entry : _CharacterRegistry)
         {
@@ -494,7 +488,6 @@ namespace ck
             }
             else
             {
-                // Airborne: retain horizontal momentum, integrate gravity into the vertical component.
                 Velocity = JPH::Vec3(Velocity.GetX(), Velocity.GetY(), Velocity.GetZ() + Gravity.GetZ() * InFixedDt);
             }
 
@@ -545,17 +538,15 @@ namespace ck
             if (NOT Entry.DirtyThisFrame)
             { continue; }
 
-            // UserData 0 = NO entity. Raw entity id 0 (index 0, version 0) is ALWAYS the registry's transient
-            // root (a live entity), so resolving it would mis-attribute the pose — guard first (mirrors the
-            // contact-router / query resolve sites).
+            // UserData 0 = NO entity, but raw id 0 is ALWAYS the registry's transient root (a LIVE entity),
+            // so resolving it would mis-attribute the pose — guard before the liveness check.
             if (Entry.UserData == 0)
             {
                 Entry.DirtyThisFrame = false;
                 continue;
             }
 
-            // UserData is a raw (versioned) entity id; a snapshot load can leave a stale id — non-ensuring
-            // liveness check first (mirrors DoApplyPoseBuffer_GameThread).
+            // A snapshot load can leave a stale id — non-ensuring liveness check first.
             const auto Entity = FCk_Entity{FCk_Entity::IdType{static_cast<FCk_Entity::IdType>(Entry.UserData)}};
             if (NOT RegView.IsValid(Entity))
             {
@@ -572,9 +563,8 @@ namespace ck
                 continue;
             }
 
-            // Shared step-pose reuse: a character rides the JoltBody interpolation path
-            // (FProcessor_JoltBody_WritebackInterpolated), so write the SAME StepPose fragment + dirty tag.
-            // prev = old curr, curr = this frame's out pose.
+            // A character rides the JoltBody interpolation path (FProcessor_JoltBody_WritebackInterpolated),
+            // so it writes the SAME StepPose fragment + dirty tag.
             auto& Pose = Handle.Get<ck::FFragment_JoltBody_StepPose>();
             Pose.Set_PrevLocation(Pose.Get_CurrLocation())
                 .Set_PrevRotation(Pose.Get_CurrRotation())
@@ -583,7 +573,6 @@ namespace ck
 
             Handle.AddOrGet<ck::FTag_JoltBody_TransformDirty>();
 
-            // Mirror ground normal/velocity onto Current every dirty frame (BP-safe reads via Get_*).
             auto& Current = Handle.Get<ck::FFragment_JoltCharacter_Current>();
             Current.Set_GroundNormalMirror(Entry.OutGroundNormal);
             Current.Set_GroundVelocityMirror(Entry.OutGroundVelocity);

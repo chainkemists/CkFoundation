@@ -2,16 +2,12 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 
-#include "CkEcs/Persistence/CkPersistenceHydration_Processor.h" // ck::PendingApplyTimeoutSeconds (shared, split Phase 5)
+#include "CkEcs/Persistence/CkPersistenceHydration_Processor.h" // ck::PendingApplyTimeoutSeconds
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_ReplicatedFragments_Dispatch);
-
-// The load-path hydration dispatcher (FProcessor_Hydration_Dispatch) + ck::persistence_apply::ApplyOne moved to
-// CkEcs/Persistence/CkPersistenceHydration_Processor.cpp (split, Phase 5). PendingApplyTimeoutSeconds now lives in
-// that Persistence header (shared by both dispatchers, unity-build safe).
 
 namespace ck
 {
@@ -23,8 +19,8 @@ namespace ck
             const TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>& InDriver) const
         -> void
     {
-        // Defer entities composed this frame (Phase 2 §2.4): their feature Setups drain in the pump AFTER
-        // FGroup_DeferredApply, so applying now would be stomped. The pending tag stays; the pump (post-Setup) applies.
+        // Defer entities composed this frame: their feature Setups drain in the pump AFTER FGroup_DeferredApply,
+        // so applying now would be stomped. The pending tag stays; the pump (post-Setup) applies.
         if (InHandle.Has<FTag_EntityScript_ConstructedThisFrame>())
         { return; }
 

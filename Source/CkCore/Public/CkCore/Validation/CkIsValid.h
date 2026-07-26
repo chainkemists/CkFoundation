@@ -99,12 +99,9 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// A custom validator for a type is defined by 'IsValid_Executor' (See DEFINE_CUSTOM_IS_VALID variants) which
-// works well for non-templated types but has trouble with templated types because the underlying value_type
-// is not extractable in a standard way. The purpose of this macro is to help with the extraction of the templated
-// type and using IsValid_Executor_IsBaseOf<...> to determine whether the passed types are related or not.
-//
-// USAGE: See usage examples in IsValid_Defaults
+// The plain IsValid_Executor route cannot extract a templated type's underlying value_type in a standard way;
+// this macro does that extraction and relates the types via IsValid_Executor_IsBaseOf.
+// USAGE: see the examples in IsValid_Defaults.
 #define CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(_t_type_, ...)                                             \
 namespace ck                                                                                              \
 {                                                                                                         \
@@ -208,7 +205,6 @@ CK_DEFINE_ANGELSCRIPT_IS_VALID(_type_, _type_)
 
 #define CK_DEFINE_CUSTOM_IS_VALID_NAMESPACE(_namespace_, _type_, _policy_, _lambda_)\
 CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(_namespace_::_type_, IsValid_name_space_##_type_##_policy_, _lambda_)
-//CK_DEFINE_ANGELSCRIPT_IS_VALID(_namespace_::_type_, _policy_, #_namespace_ "::" #_type_, false)
 
 #define CK_DEFINE_CUSTOM_IS_VALID_PTR(_type_, _policy_, _lambda_)\
 CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(_type_*, IsValid_ptr_##_type_##_policy_, _lambda_)\
@@ -253,7 +249,6 @@ namespace ck::algo
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-    // Definitions
 
     template <typename T>
     auto
@@ -281,7 +276,6 @@ namespace ck::algo
 #if WITH_ANGELSCRIPT_CK
 #include "CkIsValid_AngelScript.h"
 #else
-// Empty macro when AS is not available
 #define CK_DEFINE_ANGELSCRIPT_IS_VALID(_type_, _type_no_ptr_)
 #endif
 

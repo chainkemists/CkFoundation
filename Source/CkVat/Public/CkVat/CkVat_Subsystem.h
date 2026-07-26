@@ -13,9 +13,8 @@ class UMaterialInstanceDynamic;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// One shared render state per (collection, world). Per-instance playback rides custom-data floats,
-// so ALL instances of a collection must share ONE MID — a per-entity MID would key a separate ISM
-// component in the transient factory and defeat instancing.
+// One shared render state per (collection, world) — ALL instances of a collection MUST share ONE
+// MID (see CkVat/CLAUDE.md).
 USTRUCT()
 struct CKVAT_API FCk_Vat_RenderState
 {
@@ -37,20 +36,13 @@ class CKVAT_API UCk_Vat_Subsystem_UE : public UWorldSubsystem
     GENERATED_BODY()
 
 public:
-    // Per the per-instance float contract: 12 scalars, slots [0..11].
-    // The CkVat look assets declare exactly these per-instance params in this order.
+    // Contract with the CkVat look assets: 12 per-instance scalars, slots [0..11], in the order Pack_CustomData writes them.
     static constexpr int32 NumPerInstanceFloats = 12;
 
 public:
-    // Resolves (or builds) the collection's shared MID + transient ISM renderer. The MID is created
-    // from the generated look master (VatVertex/VatBone by bake mode) and seeded with the
-    // collection's uniforms (textures, sample frequency, texture dims, bounds, decode mode).
-    // Returns an unset optional (after a loud ensure) when the collection is unbaked or the look
-    // master is missing (run `Ck_Usf_GenerateLooks` after changing the looks).
-    // Returned BY VALUE (a two-pointer copy), never as a pointer into _RenderStates: TMap element
-    // addresses are not stable across Add, so an interior pointer would dangle as soon as a later
-    // collection's Add rehashes the map. The map itself stays the UPROPERTY store so the
-    // TObjectPtrs remain GC-traced.
+    // Unset (after a loud ensure) when the collection is unbaked or its generated look master is
+    // missing (run `Ck_Usf_GenerateLooks` after changing the looks).
+    // Returned BY VALUE, never as a pointer into _RenderStates — TMap element addresses are not stable.
     auto
     GetOrCreate_RenderState(
         const UCk_VatCollection_Data* InCollection) -> TOptional<FCk_Vat_RenderState>;

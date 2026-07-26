@@ -21,8 +21,7 @@
 
 ACk_Iskm_BatchedCrowd_Actor::ACk_Iskm_BatchedCrowd_Actor()
 {
-    // the actor no longer self-ticks — FProcessor_IskmCrowd_Advance drives AdvanceAnimation on
-    // the ECS clock so member render + far cosmetics resolve the same frame.
+    // FProcessor_IskmCrowd_Advance drives AdvanceAnimation on the ECS clock instead of AActor::Tick.
     PrimaryActorTick.bCanEverTick = false;
     _Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
     SetRootComponent(_Root);
@@ -67,16 +66,13 @@ auto
         TEXT("[CkIskm] Crowd [{}] Initialize with TileSize [{}] — sub-1cm (and non-positive) tile sizes are rejected; falling back to the default tile size"), this, InTileSize)
     { _TileSize = 2000.0f; }
 
-    // Bake up front (CPU-only, headless-safe, idempotent): tile fixed bounds derive from the baked ANIMATED
-    // pose extent — tiles created pre-bake would otherwise freeze the smaller static mesh box. A stale bake
-    // (sequences mutated after it was cached) rebuilds, releasing any stale render data along the way.
+    // Must bake BEFORE any tile exists: tile fixed bounds derive from the baked ANIMATED pose extent, and a
+    // tile created pre-bake freezes the smaller static mesh box. CPU-only, headless-safe, idempotent.
     if (ck::IsValid(_Collection) && (NOT _Collection->Get_IsBaked() || _Collection->Get_IsBakeStale()))
     { _Collection->Build_BakedPoseData(); }
 
-    // stand up this crowd's ECS presence so FProcessor_IskmCrowd_Advance can drive it on the
-    // ECS clock. Owned by the transient entity (session lifetime — the crowd is never destroyed mid-
-    // session; the world teardown clears it). No ECS world (edge case) => no controller; the crowd simply
-    // won't self-advance, and the ensure below flags it.
+    // The crowd's ECS presence, owned by the transient entity (session lifetime). Without an ECS world there
+    // is no controller and the crowd simply never self-advances.
     if (ck::Is_NOT_Valid(_ControllerEntity))
     {
         auto TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(GetWorld());
@@ -113,9 +109,8 @@ auto
     TileLocalBounds() const
     -> FBox
 {
-    // Conservative fixed bounds, component-relative (component sits at the tile centre): the tile's XY extent
-    // padded by the ANIMATED pose box (instances stand anywhere in the tile; an animated mesh sticks out at
-    // most its baked animated bounds), Z straight from the animated box.
+    // Component-relative (the component sits at the tile centre): the tile's XY extent padded by the ANIMATED
+    // pose box — an instance stands anywhere in the tile and sticks out at most its baked animated bounds.
     const float Half = _TileSize * 0.5f;
     FBox MeshBox = FBox(FVector(-50.0), FVector(50.0));
     if (ck::IsValid(_Collection))
@@ -239,9 +234,8 @@ auto
     const FCk_Iskm_BakedPose* Baked = ck::IsValid(_Collection) ? _Collection->Get_BakedPose() : nullptr;
     const int32 BakedSequenceCount = ck::IsValid(Baked, ck::IsValid_Policy_NullptrOnly{}) ? Baked->Sequences.Num() : 0;
 
-    // Recovery clamps rather than drops: AddInstance's contract is call-order == member index, so dropping
-    // the member would shift every subsequent index. Sequence 0 matches the downstream bounds-guard
-    // (Get_LoopedFrameAtTime falls back to frame 0 for an out-of-range sequence).
+    // Recovery clamps rather than drops: the contract is call-order == member index, so dropping a member
+    // would shift every subsequent index.
     int32 SequenceIndex = InSequenceIndex;
     CK_ENSURE_IF_NOT(ck::IsValid(Baked, ck::IsValid_Policy_NullptrOnly{}) && Baked->Sequences.IsValidIndex(InSequenceIndex),
         TEXT("[CkIskm] AddInstance on crowd [{}]: sequence index [{}] is outside the baked range [0..{}) — clamping to sequence 0 to preserve the member index space"),
@@ -277,7 +271,7 @@ auto
     { return; }
 
     // Members carry LIVE animation state (the manager is the single source of truth), so a rebuild never
-    // snaps animation back — this is what fixes the old "whole tile resets to spawn pose on any flip" bug.
+    // snaps animation back to the spawn pose.
     TArray<UCk_Iskm_BatchedClusterComponent::FInstance> Visible;
     if (const TArray<int32>* MemberIndices = _TileMembers.Find(InTile))
     {
@@ -313,8 +307,7 @@ auto
         { Visible.Add(M.Inst); }
     }
 
-    // Count changes must recreate the proxy (Set_Instances); visibility/migration already do that at write
-    // time, so a mismatch here means a bookkeeping bug — recover via the heavy path.
+    // Visibility/migration already recreate the proxy at write time, so a mismatch here is a bookkeeping bug.
     if (Visible.Num() == Comp->Get_Instances().Num())
     { Comp->Push_LiveInstances(MoveTemp(Visible)); }
     else
@@ -381,8 +374,7 @@ auto
     }
     _DirtyTiles.Reset();
 
-    // Highlight clusters mirror their members' live pose every tick (groups are tiny — a handful of
-    // outlined members at most; per-tick push is cheaper than tracking per-group dirtiness).
+    // Groups are tiny, so an unconditional per-tick push beats tracking per-group dirtiness.
     for (auto& Pair : _OutlineGroups)
     {
         PushOutlineGroup(Pair.Value);
@@ -397,11 +389,9 @@ auto
     if (_MemberCosmetics.Num() == 0)
     { return; }
 
-    // Runs right after AdvanceAnimation in the same FGroup_Transform_SyncFrom processor tick, reading the
-    // SAME _Members snapshot that PushTile just rendered — so each cosmetic is queued at the member's
-    // CURRENT frame/world. Request_SetTransform is the framework's deferred write (safe cross-entity — the
-    // same call the old flip driver used): HandleRequests applies + tags it later THIS tick, so the
-    // PostTransform render flush picks it up the same frame the member is PushTiled — lockstep, no trail.
+    // Must run in the same processor tick as AdvanceAnimation, on the SAME _Members snapshot PushTile just
+    // rendered. Request_SetTransform is the deferred cross-entity write: HandleRequests applies it later
+    // THIS tick, so the PostTransform flush picks it up the frame its member is PushTiled — no trail.
     for (auto It = _MemberCosmetics.CreateIterator(); It; ++It)
     {
         const int32              MemberIndex = It.Key();
@@ -508,8 +498,8 @@ auto
     const FIntPoint NewTile = TileCoordOf(InWorldTransform.GetLocation());
     if (NewTile == M.Tile)
     {
-        // In-tile move: transform flows through the light per-frame push. PrevPushedTransform still holds the
-        // last pushed value, so this move produces a real motion vector.
+        // In-tile: rides the light per-frame push, and PrevPushedTransform still holds last frame's value,
+        // so the move produces a real motion vector.
         M.Inst.Transform = InWorldTransform.GetRelativeTransform(FTransform(TileCentre(M.Tile)));
         if (M.Visible)
         { _DirtyTiles.Add(M.Tile); }
@@ -532,8 +522,7 @@ auto
 
     M.Tile = NewTile;
     M.Inst.Transform = InWorldTransform.GetRelativeTransform(FTransform(TileCentre(NewTile)));
-    // Different proxy = different motion-vector space; zero this instance's velocity for one frame instead of
-    // smearing between two primitives' transforms.
+    // Different proxy = different motion-vector space: zero velocity for one frame beats a cross-primitive smear.
     M.Inst.PrevPushedTransform = M.Inst.Transform;
 
     if (GetOrCreate_Tile(NewTile) != nullptr)
@@ -666,8 +655,7 @@ void
     RebuildTile(_Members[InIndex].Tile);
     _DirtyTiles.Remove(_Members[InIndex].Tile);
 
-    // Hidden members leave their highlight cluster too (their Plan-1 stand-in gets outlined via the
-    // entity API); re-shown members rejoin.
+    // Hidden members leave their highlight cluster (their Plan-1 stand-in is outlined via the entity API).
     if (const auto* OutlinePreset = _MemberOutlines.Find(InIndex);
         OutlinePreset != nullptr)
     { RebuildOutlineGroup(*OutlinePreset); }
@@ -715,8 +703,7 @@ void
     auto* Group = _OutlineGroups.Find(InPreset);
     if (Group == nullptr)
     {
-        // First member with this preset: allocate the preset's stencil (one refcount per group) and
-        // stand up the highlight cluster at the world origin (instance transforms = member world xf).
+        // First member with this preset: one stencil refcount per group + a highlight cluster at the origin.
         auto* World = GetWorld();
         auto* OutlineSubsystem = ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{})
             ? World->GetSubsystem<UCkUsf_OutlineSubsystem>()
@@ -743,12 +730,9 @@ void
         auto* Comp = NewObject<UCk_Iskm_BatchedClusterComponent>(this,
             MakeUniqueObjectName(this, UCk_Iskm_BatchedClusterComponent::StaticClass(), TEXT("IskmOutlineCluster")));
         Comp->SetupAttachment(_Root);
-        // Instances AND fixed bounds are authored in WORLD space, so the component must stay at
-        // identity regardless of the crowd actor's own transform. Absolute flags + identity (not
-        // just SetWorldLocation) — an inherited actor rotation would rotate the far-from-origin
-        // bounds box to the wrong side of the world and the cluster frustum-culls away at some
-        // view angles even though the members are on screen. (Tiles are immune: their local box
-        // is centered on the component, so rotation maps it onto itself.)
+        // Instances AND fixed bounds are authored in WORLD space, so this component must stay at identity
+        // regardless of the crowd actor's transform — absolute flags, not just SetWorldLocation. Inheriting
+        // an actor rotation would rotate the bounds box away from the instances. See CkIskmRenderer/CLAUDE.md.
         Comp->SetUsingAbsoluteLocation(true);
         Comp->SetUsingAbsoluteRotation(true);
         Comp->SetUsingAbsoluteScale(true);
@@ -781,9 +765,8 @@ void
     if (PresetPtr == nullptr)
     { return; }
 
-    // Look the group up by the WEAK key itself, never a raw round-trip: once the preset UObject dies,
-    // Get() returns null and a null-constructed weak never matches the stale map key (dead weaks keep
-    // their index/serial) — the group, its cluster component, and its stencil refcount would leak.
+    // Look the group up by the WEAK key itself, never a raw round-trip: a dead preset's Get() is null and a
+    // null-constructed weak never matches the stale key, leaking the group, its component and its stencil.
     const TWeakObjectPtr<UCkUsf_OutlinePreset> PresetKey = *PresetPtr;
     auto* Preset = PresetKey.Get();
     _MemberOutlines.Remove(InIndex);
@@ -800,7 +783,6 @@ void
         return;
     }
 
-    // Last member left: release the group's stencil refcount and drop the cluster.
     if (auto* Comp = Group->Comp.Get())
     { Comp->DestroyComponent(); }
 
@@ -919,8 +901,7 @@ void
         Visible.Add(Inst);
     }
 
-    // Count changes always flow through RebuildOutlineGroup at write time — a mismatch here is a
-    // bookkeeping bug; recover via the heavy path (mirrors PushTile).
+    // Count changes always flow through RebuildOutlineGroup at write time — a mismatch is a bookkeeping bug.
     if (Visible.Num() == Comp->Get_Instances().Num())
     { Comp->Push_LiveInstances(MoveTemp(Visible)); }
     else
@@ -961,10 +942,8 @@ auto
     Destroyed()
     -> void
 {
-    // Editor-world actors never BeginPlay, so EndPlay never fires for them — an editor preview
-    // crowd destroyed by the per-owner reclaim would otherwise leak its controller entity (a dead
-    // fragment FProcessor_IskmCrowd_Advance iterates forever). Runtime destroys hit EndPlay first;
-    // the cleanup is idempotent.
+    // Editor-world actors never BeginPlay, so EndPlay never fires and a destroyed preview crowd would leak a
+    // controller entity FProcessor_IskmCrowd_Advance iterates forever. Idempotent with the EndPlay call.
     DoDestroy_ControllerEntity();
 
     Super::Destroyed();

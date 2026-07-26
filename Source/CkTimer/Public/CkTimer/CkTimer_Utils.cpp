@@ -58,12 +58,6 @@ auto
         InNewEntity.Add<ck::FFragment_Timer_Params>(InParams);
         InNewEntity.Add<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
 
-        // NOTE: the profiling TStatId is intentionally NOT cached as a fragment. It is derived on-the-fly (under
-        // #if STATS) from this entity's Params inside the timer processors (FScopeCycleCounter{MakeStatIdFromParams(...)}).
-        // Caching it as a fragment created a snapshot-restore gap (restored timers came back without it); deriving it
-        // per-broadcast removes that gap entirely. Cost is a #if STATS-only string-format + dynamic-stat lookup per
-        // broadcast — never present in Shipping/Test.
-
         InNewEntity.Add<ck::FTag_Timer_NeedsSetup>();
 
         if (InParams.Get_CountDirection() == ECk_Timer_CountDirection::CountDown)
@@ -97,8 +91,6 @@ auto
 
     MaybeExistingTimerEntity.Replace<ck::FFragment_Timer_Params>(InParams);
     MaybeExistingTimerEntity.Replace<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
-
-    // TStatId is derived on-the-fly in the processors (see Add) — no cached fragment.
 
     if (InParams.Get_StartingState() == ECk_Timer_State::Running)
     {
@@ -153,9 +145,8 @@ auto
         const FCk_Handle_Timer& InTimerEntity)
     -> FGameplayTag
 {
-    // Unnamed timers are a designed state (Add only attaches the GameplayLabel when a
-    // name was supplied) — return an invalid tag for them instead of tripping the
-    // label ensure on every read.
+    // Unnamed timers are a designed state (Add only labels a named timer) — return an invalid tag for them
+    // instead of tripping the label ensure on every read.
     if (NOT UCk_Utils_GameplayLabel_UE::Has(InTimerEntity))
     { return {}; }
 

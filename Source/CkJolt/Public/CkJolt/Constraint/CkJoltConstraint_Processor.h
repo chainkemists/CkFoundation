@@ -24,9 +24,6 @@ namespace JPH
 
 namespace ck
 {
-    // Builds the JPH constraint for each entity flagged NeedsSetup. Runs AFTER JoltBody_Setup so bodies
-    // composed the same frame are already batch-added; a referenced body that exists but is not yet added
-    // re-arms setup and retries next frame (mirrors the CreateBody-failure retry).
     class CKJOLT_API FProcessor_JoltConstraint_Setup : public ck_exp::TProcessor<
             FProcessor_JoltConstraint_Setup,
             FCk_Handle_JoltConstraint,
@@ -60,7 +57,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Drains the JoltConstraint request queue: enable/disable, distance-range override, hinge motor.
     class CKJOLT_API FProcessor_JoltConstraint_HandleRequests : public ck_exp::TProcessor<
             FProcessor_JoltConstraint_HandleRequests,
             FCk_Handle_JoltConstraint,
@@ -118,11 +114,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // A JPH constraint referencing a removed body is undefined behavior — Jolt requires constraints gone
-    // BEFORE their bodies. Entity-death ordering handles the cascade case (constraint child of body A dies
-    // with it); this reaper covers body B (or any referenced body dying on its own): it removes the JPH
-    // constraint the same frame the body begins destruction — before FProcessor_JoltBody_EndPlay frees the
-    // body — and queues the now-inert constraint entity for destruction.
     class CKJOLT_API FProcessor_JoltConstraint_LivenessReap : public ck_exp::TProcessor<
             FProcessor_JoltConstraint_LivenessReap,
             FCk_Handle_JoltConstraint,
@@ -154,8 +145,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Removes + releases the JPH constraint when the constraint entity dies. Runs before
-    // FProcessor_JoltBody_EndPlay so a cascade-destroyed constraint frees before its bodies do.
+    // Runs before FProcessor_JoltBody_EndPlay so a cascade-destroyed constraint frees before its bodies do.
     class CKJOLT_API FProcessor_JoltConstraint_EndPlay : public ck_exp::TProcessor<
             FProcessor_JoltConstraint_EndPlay,
             FCk_Handle_JoltConstraint,

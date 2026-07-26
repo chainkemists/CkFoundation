@@ -11,19 +11,9 @@
 class ACk_Iskm_BatchedCrowd_Actor;
 
 // --------------------------------------------------------------------------------------------------------------------
-// Put the batched crowd on the ECS clock.
-//
-// The crowd is a plain AActor that historically advanced its members in its OWN AActor::Tick — a second clock,
-// unordered against the ECS world-actor tick. Far cosmetics are ECS entities synced by the transform pipeline, so
-// that two-clock split left them ≤1 frame behind the member they follow.
-//
-// Fix: one controller entity per crowd carries FFragment_IskmCrowd_Controller; FProcessor_IskmCrowd_Advance ticks
-// it in FGroup_Transform_SyncFrom — AFTER the flip driver's Gameplay_Script member-world writes (so the member is
-// current, not agent-lagged) and BEFORE FGroup_Transform's HandleRequests (so a cosmetic Request_SetTransform lands
-// the SAME tick). It advances member animation (AdvanceAnimation) and places far cosmetics (DriveCosmetics, via the
-// deferred Request path — the same cross-entity write the old flip driver used, safe against the scheduler's
-// write-ordering). Member PushTile + cosmetic both reach FGroup_PostTransform's render flush the same frame, in
-// lockstep. The actor no longer self-ticks.
+// Puts the batched crowd on the ECS clock: one controller entity per crowd carries
+// FFragment_IskmCrowd_Controller, and FProcessor_IskmCrowd_Advance ticks it. The crowd actor never self-ticks —
+// a second AActor::Tick clock left ECS far cosmetics ≤1 frame behind the member they follow.
 namespace ck
 {
     struct CKISKMRENDERER_API FFragment_IskmCrowd_Controller
@@ -44,10 +34,8 @@ namespace ck
         CK_PROPERTY_GET(_Crowd);
     };
 
-    // Runs in FGroup_Transform_SyncFrom (after Gameplay_Script sets member world, before FGroup_Transform applies
-    // requests): advances each crowd's members (PushTile) and queues its far cosmetics via Request_SetTransform.
-    // HandleRequests applies + tags them the same tick, so the PostTransform render flush picks the cosmetics up the
-    // same frame the member is PushTiled — no cross-clock trail.
+    // MUST stay in FGroup_Transform_SyncFrom: after Gameplay_Script has set member world transforms, and before
+    // FGroup_Transform applies requests, so a cosmetic's queued Request_SetTransform lands the SAME tick.
     class CKISKMRENDERER_API FProcessor_IskmCrowd_Advance : public ck_exp::TProcessor<
         FProcessor_IskmCrowd_Advance,
         FCk_Handle,

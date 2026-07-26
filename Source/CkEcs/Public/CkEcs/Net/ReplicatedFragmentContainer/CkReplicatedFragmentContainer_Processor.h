@@ -11,17 +11,9 @@
 
 namespace ck
 {
-    // Single client-side dispatch site for replicated fragment container entries whose handler
-    // speaks the Apply/Remove contract. Net receive and driver link only mark entries pending
-    // (FTag_RepFragments_PendingApply on the associated entity); this processor applies them.
-    //
-    // Scheduling contract (the load-bearing part):
-    //   - lives in FGroup_DeferredApply, which runs after FGroup_Gameplay_Script (where
-    //     FProcessor_EntityScript_FinishConstruction lives), so OnConstructed-driven composition
-    //     exists before the first dispatch — no per-processor RunAfter needed, and
-    //   - FGroup_DeferredApply precedes FGroup_Replication globally, so applied values are visible
-    //     before FProcessor_ReplicationDriver_FireOnDependentReplicationComplete broadcasts
-    //     OnReplicationComplete in the same frame (fire-gating additionally waits on the drain).
+    // Single client-side dispatch site: net receive and driver link only mark entries pending
+    // (FTag_RepFragments_PendingApply); this applies them. Its FGroup_DeferredApply placement is the
+    // load-bearing part (after OnConstructed composition, before FGroup_Replication) — CkEcs/CLAUDE.md.
     class CKECS_API FProcessor_ReplicatedFragments_Dispatch : public ck_exp::TProcessor<
         FProcessor_ReplicatedFragments_Dispatch,
         FCk_Handle,
@@ -46,10 +38,5 @@ namespace ck
             const TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>& InDriver) const -> void;
     };
 }
-
-// --------------------------------------------------------------------------------------------------------------------
-// The load-path hydration dispatcher (ck::FProcessor_Hydration_Dispatch) + ck::persistence_apply::ApplyOne moved to
-// CkEcs/Persistence/CkPersistenceHydration_Processor.{h,cpp} (split, Phase 5). This header keeps ONLY the net-side
-// FProcessor_ReplicatedFragments_Dispatch; the moved hydration dispatcher forward-declares + RunAfters it.
 
 // --------------------------------------------------------------------------------------------------------------------

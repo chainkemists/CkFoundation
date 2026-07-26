@@ -106,7 +106,6 @@ namespace ck
 
         InHandle.AddOrGet<FTag_InteractionResolver_IntentUpdated>();
 
-        // Get the current targets before clearing them
         const auto PreviousTargets = InCurrent.Get_CachedBestTargets().Find(Intent);
         const auto PreviousTargetsArray = PreviousTargets ? *PreviousTargets : TArray<FCk_Handle_InteractTarget>{};
 
@@ -116,7 +115,6 @@ namespace ck
         ck::interaction::VeryVerbose(TEXT("Stopped intent [{}] for resolver [{}]. Remaining active intents: {}. Removing {} cached targets"),
             Intent, InHandle, InCurrent._ActiveIntents.Num(), PreviousTargetsArray.Num());
 
-        // Broadcast with previous targets, empty new targets, and all previous targets as removed
         auto EmptyTargets = TArray<FCk_Handle_InteractTarget>{};
         UUtils_Signal_InteractionResolver_OnBestTargetsChanged::Broadcast(InHandle,
             ck::MakePayload(InHandle, Intent, PreviousTargetsArray, EmptyTargets, PreviousTargetsArray));
@@ -234,7 +232,6 @@ namespace ck
     {
         InHandle.Remove<FTag_InteractionResolver_IntentUpdated>();
 
-        // Clean up invalid targets from available targets
         auto InvalidTargets = TArray<FCk_Handle_InteractTarget>{};
         for (const auto& Target : InCurrent.Get_AvailableTargets())
         {
@@ -255,24 +252,19 @@ namespace ck
                 InvalidTargets.Num(), InHandle);
         }
 
-        // Convert available targets set to array for processing
         auto AvailableTargetsArray = InCurrent.Get_AvailableTargets().Array();
 
-        // Process each active intent
         for (const auto& Intent : InCurrent.Get_ActiveIntents())
         {
-            // Get new resolved targets using immediate resolution
             const auto NewTargets = UCk_Utils_InteractionResolver_UE::DoResolveTargets_Internal(
                 InHandle,
                 Intent,
                 AvailableTargetsArray
             );
 
-            // Get previous cached targets
             const auto PreviousTargets = InCurrent.Get_CachedBestTargets().Find(Intent);
             const auto PreviousTargetsArray = PreviousTargets ? *PreviousTargets : TArray<FCk_Handle_InteractTarget>{};
 
-            // Check if targets have changed (including order)
             const auto TargetsChanged = [&]() -> bool
             {
                 if (NewTargets.Num() != PreviousTargetsArray.Num())
@@ -287,10 +279,8 @@ namespace ck
                 return false;
             }();
 
-            // Update cache and fire delegate if changed
             if (TargetsChanged)
             {
-                // Calculate removed targets
                 auto RemovedTargets = TArray<FCk_Handle_InteractTarget>{};
                 for (const auto& PrevTarget : PreviousTargetsArray)
                 {
@@ -310,7 +300,6 @@ namespace ck
             }
         }
 
-        // Remove cached targets for intents that are no longer active
         auto IntentsToRemove = TArray<FGameplayTag>{};
         for (const auto& [CachedIntent, CachedTargets] : InCurrent.Get_CachedBestTargets())
         {
@@ -337,7 +326,6 @@ namespace ck
             FFragment_InteractionResolver_Current& InCurrent)
         -> void
     {
-        // Clear all active intents, cached targets, and available targets
         InCurrent._ActiveIntents.Empty();
         InCurrent._CachedBestTargets.Empty();
         InCurrent._AvailableTargets.Empty();

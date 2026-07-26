@@ -7,17 +7,7 @@
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Auto-blend: advances each layer's blend weight and rewrites the effective delta of every modifier it acquired, from
-// the layer-authored TARGET delta scaled by the weight (per operation). Runs in FGroup_Gameplay_TimeDelta — strictly
-// BEFORE the attribute RecomputeAll/Compute processors in FGroup_Gameplay — so the camera POV (FGroup_Gameplay_Camera,
-// much later) reads fully up-to-date attribute finals the SAME frame (zero blend lag). The layer author never touches
-// blend weights; they only set the TARGET delta via Acquire_CameraModifier_<Tuner>.
-//
-// Effective delta (against the underlying revocable Add/Multiply modifier — revocable Override is unsupported, so the
-// user-facing Override op is realized as an Add modifier whose delta drives Final from base toward target):
-//   Additive       (Add)      → target * alpha
-//   Multiplicative (Multiply) → Lerp(1, target, alpha)
-//   Override       (Add)      → alpha * (target - base)      [→ Final = base + that = Lerp(base, target, alpha)]
+// Auto-blend, per-operation effective-delta formulas and the group-ordering contract: CkCamera/CLAUDE.md.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck

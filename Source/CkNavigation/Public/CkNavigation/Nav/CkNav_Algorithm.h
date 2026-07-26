@@ -13,23 +13,14 @@ class UNavigationSystemV1;
 struct FPathFindingResult;
 
 // --------------------------------------------------------------------------------------------------------------------
-// Static utilities for Recast/UE NavigationSystem path queries. No dtCrowd state, no
-// agent abstraction — just synchronous wrappers over ARecastNavMesh::FindPath plus a
-// post-processing pass to convert FPathFindingResult into the FCk_Nav_PathResult shape
-// the rest of the codebase consumes.
-//
-// FindPathSync is the primary entrypoint. Callers go through UCk_Utils_Nav_UE
-// (request-based, deferred drain). Direct callers — debugger Health Check probe,
-// startup smoke tests — use FindPathSync directly.
+// Synchronous wrappers over ARecastNavMesh::FindPath. Game code goes through UCk_Utils_Nav_UE
+// (request-based, deferred drain); direct FindPathSync calls are diagnostics-only.
 // --------------------------------------------------------------------------------------------------------------------
 
 struct CKNAVIGATION_API FCk_Nav_Algorithm
 {
-    // Run a synchronous path query. Populates OutResult with waypoints + status +
-    // diagnostics. Returns true on Ready or Partial; false on Failed/Invalid.
-    //
-    // OutResult._Waypoints is preserved on failure so consumers can keep walking
-    // the previous path while deciding what to do.
+    // True on Ready/Partial, false on Failed/Invalid. OutResult._Waypoints is preserved on
+    // failure so consumers can keep walking the previous path.
     static auto FindPathSync(
         UNavigationSystemV1& InNavSys,
         ARecastNavMesh&      InNavData,
@@ -42,31 +33,23 @@ struct CKNAVIGATION_API FCk_Nav_Algorithm
         FCk_Nav_PathResult&  OutResult,
         TSubclassOf<UNavigationQueryFilter> InFilterClass = {}) -> bool; // null -> NavData's default filter
 
-    // Convert a raw FPathFindingResult into the FCk_Nav_PathResult shape, updating
-    // _Status + _Diagnostics. If InAgentRadius > 0, drops the first waypoint when it
-    // is within ~2x radius of InAgentLocation (avoids the "backtrack to start"
-    // artifact when UE includes the agent's current position as the first point).
+    // InAgentRadius > 0 drops the first waypoint when it is within ~2x radius of InAgentLocation:
+    // UE includes the agent's own position as the first point, which reads as a backtrack-to-start.
     static auto ExtractWaypoints(
         const FPathFindingResult& InNavResult,
         const FVector&            InAgentLocation,
         float                     InAgentRadius,
         FCk_Nav_PathResult&       OutResult) -> void;
 
-    // The external path-provider seam. Installs an externally-computed polyline (e.g. a
-    // CkPathNetwork corridor) onto InHandle's FFragment_Nav_PathResult exactly as if
-    // FindPathSync had produced it — status Ready, waypoints + destination populated,
-    // Nav_OnPathReady broadcast. Downstream consumers (CkCrowd's OnPathResolved poll,
-    // steering) are provider-agnostic by construction.
+    // The external path-provider seam: installs an externally-computed polyline (e.g. a
+    // CkPathNetwork corridor) exactly as if FindPathSync had produced it.
     static auto InstallExternalPath(
         FCk_Handle&     InHandle,
         TArray<FVector> InWaypoints,
         const FVector&  InDestination) -> void;
 
-    // Companion to InstallExternalPath: parks the entity's path result at Pending while an
-    // external provider computes. Without this, pollers (CkCrowd's OnPathResolved) would consume
-    // the PREVIOUS Ready result as if it answered the new request — the nav processor performs
-    // the equivalent stamp when it starts servicing a FindPath, but no nav request exists when
-    // an external provider owns the query. Creates the result fragment if absent.
+    // Parks the result at Pending while an external provider computes, so pollers don't consume
+    // the PREVIOUS Ready result as the answer to the new request. Creates the fragment if absent.
     static auto MarkPathPending(
         FCk_Handle& InHandle) -> void;
 };

@@ -36,28 +36,22 @@ public:
     TryGet_SelectionOwner(
         const FCk_Handle& InHandle) -> AActor*;
 
-    // Owner identity for per-owner cache keys: TWeakObjectPtr compares/hashes by object
-    // index + serial, so lookups keyed on it stay correct after the owner actor is destroyed.
-    // Default (explicitly-null) when the entity is not part of an editor preview.
+    // Owner identity for per-owner cache keys (compares/hashes by object index + serial, so lookups
+    // survive the owner's destruction). Default when the entity is not part of an editor preview.
     static auto
     TryGet_SelectionOwnerWeak(
         const FCk_Handle& InHandle) -> TWeakObjectPtr<AActor>;
 
-    // Stamp the owner on a preview entity — mirrors Request_SetupEntityWithContextOwner: a
-    // re-setup with the same owner is a no-op, a different owner is an ensure. Called by
-    // Request_SetupEntityWithLifetimeOwner so every lifetime-descendant inherits the fragment
-    // at creation, and by preview owners (the entity spawner) to stamp the root BEFORE any of
-    // its descendants are created.
+    // Re-setup with the same owner is a no-op, a different owner ensures. Called by
+    // Request_SetupEntityWithLifetimeOwner so every lifetime-descendant inherits the fragment at creation,
+    // and by preview owners to stamp the root BEFORE any of its descendants are created.
     static auto
     Request_SetupEntityWithEditorSelectionOwner(
         FCk_Handle& InNewEntity,
         const TWeakObjectPtr<AActor>& InOwnerActor) -> void;
 
-    // Editor-world helper actors that host preview visuals for an owner (per-owner ISM/ISKM
-    // renderers, the shared selection-proxy host) register here. The owner's
-    // PushSelectionToProxies override calls PushOwnerSelectionToProxies to forward the selection
-    // highlight to them — they are not attached to the owner, so the engine's attached-actor
-    // propagation cannot reach them.
+    // Editor-world helper actors that host preview visuals for an owner register here: they are NOT
+    // attached to the owner, so the engine's attached-actor selection propagation cannot reach them.
     static auto
     RegisterProxyActor(
         AActor* InOwnerActor,
@@ -67,11 +61,8 @@ public:
     PushOwnerSelectionToProxies(
         const AActor* InOwnerActor) -> void;
 
-    // One-call convenience for loose-component creators (hosted UActorComponents, world-space
-    // widgets, opted-in PMG shapes): resolves the entity's selection owner and returns its
-    // per-owner host actor (UCk_EditorEcsWorld_Subsystem_UE::Get_SelectionProxyHostActor).
-    // Returns nullptr outside editor worlds or when no owner is stamped — callers then fall
-    // back to their non-preview hosting.
+    // Resolves the entity's selection owner and returns its per-owner host actor. nullptr outside editor
+    // worlds or when no owner is stamped — callers then fall back to their non-preview hosting.
     static auto
     TryGet_SelectionProxyHostActor(
         const UWorld* InWorld,

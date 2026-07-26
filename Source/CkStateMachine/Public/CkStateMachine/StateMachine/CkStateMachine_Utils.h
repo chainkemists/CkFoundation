@@ -10,7 +10,6 @@
 
 #include <StructUtils/InstancedStruct.h>
 
-// Per-feature Utils headers — included here for backward compatibility
 #include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkStateMachine/Condition/CkSmCondition_Utils.h"
 #include "CkStateMachine/Transition/CkSmTransition_Utils.h"
@@ -44,10 +43,8 @@ public:
 public:
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Adds a state machine to InOwner from a params struct. For a local-only SM, construct the
-    // params from just the initial state class — FCk_Fragment_StateMachine_ParamsData(InitialState) —
-    // which defaults to AutoStart=OnSetup / DoesNotReplicate / AuthorityModel=AutoDetect / WithHistory.
-    // Opt into replication / authority / replication-model via the struct's setters.
+    // For a local-only SM, construct the params from just the initial state class — the defaults are
+    // AutoStart=OnSetup / DoesNotReplicate / AuthorityModel=AutoDetect / WithHistory.
     UFUNCTION(BlueprintCallable,
         Category = "Ck|StateMachine",
         DisplayName = "[Ck][SM] Add StateMachine")
@@ -102,18 +99,15 @@ public:
         UPARAM(ref) FCk_Handle_StateMachine& InStateMachine,
         TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass);
 
-    // Schedules exit on the SM's current state via UCk_Utils_SmState_UE::Request_Exit (adds
-    // FTag_SmState_PendingExit + destroys the state entity). Does NOT destroy the SM entity.
-    // Used by UCk_SmTask_SubStateMachine::ExitTask to propagate exit into an active sub-SM.
+    // Schedules exit on the SM's current state via UCk_Utils_SmState_UE::Request_Exit. Does NOT
+    // destroy the SM entity itself.
     static auto
     Request_ExitStateMachine(
         FCk_Handle_StateMachine& InStateMachine) -> FCk_Handle_StateMachine;
 
-    // Discards an uncommitted pending transition: destroys the deliberately-kept-alive previous
-    // state entity the fragment stashes (see FProcessor_Sm_HandleRequests' transition handler),
-    // then removes the fragment. Every path that abandons a mid-flight transition (Stop,
-    // not-Running commit, SM teardown) must go through this — removing the fragment alone leaks
-    // the entity. No-op when nothing is pending. Internal, not BP-exposed.
+    // Discards an uncommitted pending transition: destroys the deliberately-kept-alive previous state
+    // entity the fragment stashes, then removes the fragment. Every path that abandons a mid-flight
+    // transition must go through this — removing the fragment alone leaks the entity. Internal.
     static auto
     Request_TryDiscardPendingTransition(
         FCk_Handle& InEntity) -> void;
@@ -135,10 +129,8 @@ public:
     Has(
         const FCk_Handle& InHandle);
 
-    // True while replicated/relayed transitions are still queued on this entity, or one is
-    // mid-commit (FFragment_Sm_PendingTransition present). Receive paths use this to defer
-    // non-Running run-status mirrors until the replay pipeline drains — see
-    // ck::statemachine::MirrorRunStatus_OrDeferWhileReplaying. Internal predicate, not BP-exposed.
+    // True while replicated/relayed transitions are still queued on this entity, or one is mid-commit.
+    // Receive paths use it to defer non-Running run-status mirrors until the replay pipeline drains.
     static auto
     Get_HasReplayTransitionsInFlight(
         const FCk_Handle& InEntity) -> bool;
@@ -172,8 +164,7 @@ public:
         const FCk_Handle_StateMachine& InStateMachine,
         TSubclassOf<UCk_SmState_EntityScript> InStateClass);
 
-    // Returns the SM's current NetContext (Standalone / Server / OwningClient / NonOwningClient),
-    // resolved fresh from authority and ownership queries each call. Same value the SM's
+    // Resolved fresh from authority and ownership queries each call — the same value the SM's
     // EnterState/ExitState/EnterTask/ExitTask/Tick callbacks receive.
     UFUNCTION(BlueprintPure,
         Category = "Ck|StateMachine",
@@ -182,62 +173,46 @@ public:
     Get_NetContext(
         const FCk_Handle_StateMachine& InStateMachine);
 
-    // Immutable per-SM choice from FFragment_Sm_Params._Replication. Local-only SMs return
-    // DoesNotReplicate; replicated SMs return Replicates. C++-only at this stage to avoid the
-    // AS-binding refresh quirk that bites newly-added BPFL UFUNCTIONs in the same toolbox run.
+    // Immutable per-SM choice from FFragment_Sm_Params._Replication. C++-only.
     static auto
     Get_Replication(
         const FCk_Handle_StateMachine& InStateMachine) -> ECk_Replication;
 
-    // Raw, authored per-SM choice from FFragment_Sm_Params._AuthorityModel — may be AutoDetect.
-    // For authority decisions use Get_EffectiveAuthorityModel; this getter is for introspection
-    // (debugger / tooling that wants to show what was authored).
+    // Raw, authored per-SM choice — may be AutoDetect, so this is for introspection only. Authority
+    // decisions use Get_EffectiveAuthorityModel.
     static auto
     Get_AuthorityModel(
         const FCk_Handle_StateMachine& InStateMachine) -> ECk_Sm_AuthorityModel;
 
-    // Resolved authority model — NEVER returns AutoDetect. If the authored value is explicit
-    // (ServerAuthoritative / OwningClientAuthoritative) it is returned as-is. AutoDetect resolves
-    // from the SM host's net ownership: a player-controlled pawn host -> OwningClientAuthoritative,
-    // everything else (bots, non-pawn / non-actor-bridged entities) -> ServerAuthoritative.
-    // Resolution is lazy/on-demand, so the host's PlayerState/ownership is settled by the time the
-    // authority gates read it. ALL authority gates must use this, not Get_AuthorityModel.
+    // Resolved authority model — NEVER returns AutoDetect. An explicit authored value is returned
+    // as-is; AutoDetect resolves from the host's net ownership (player-controlled pawn ->
+    // OwningClientAuthoritative, everything else -> ServerAuthoritative). ALL authority gates use this.
     static auto
     Get_EffectiveAuthorityModel(
         const FCk_Handle_StateMachine& InStateMachine) -> ECk_Sm_AuthorityModel;
 
-    // Immutable per-SM choice from FFragment_Sm_Params._ReplicationModel. WithHistory by default;
-    // WithoutHistory for snap-to-current SMs. Read to switch on payload shape.
+    // Immutable per-SM choice from FFragment_Sm_Params._ReplicationModel — read to switch on payload shape.
     static auto
     Get_ReplicationModel(
         const FCk_Handle_StateMachine& InStateMachine) -> ECk_Sm_ReplicationModel;
 
     // --------------------------------------------------------------------------------------------------------------------
-    // SUB-SM TRANSITION RELAY (identity + resolution)
-    //
-    // Sub-SMs are non-replicated local entities (created by UCk_SmTask_SubStateMachine), so they have
-    // no transport of their own. To replicate an owning-client sub-SM's transitions to the server /
-    // non-owning clients, the events are routed through the ROOT SM's transport (the root rides the
-    // pawn entity's replication driver) and addressed by a deterministic identity: the sub-SM's
-    // FFragment_Sm_ParentHierarchy (root->leaf state-tag path to its hosting state). The topology is
-    // deterministic across machines, so the same path resolves the corresponding sub-SM on every peer.
+    // SUB-SM TRANSITION RELAY. Sub-SMs have no transport of their own, so an owning-client sub-SM's
+    // transitions are routed through the ROOT SM's transport and addressed by a deterministic
+    // identity: FFragment_Sm_ParentHierarchy, the root->leaf state-tag path to its hosting state.
 
-    // Walk OwningStateMachine to the top-level SM. Returns InStateMachine itself when it is already a
-    // root (no owning SM). C++-only — internal to the replication routing.
+    // Walks OwningStateMachine to the top-level SM; returns InStateMachine itself when already a root.
     static auto
     Get_RootStateMachine(
         const FCk_Handle_StateMachine& InStateMachine) -> FCk_Handle_StateMachine;
 
-    // The cross-machine identity of a sub-SM: its parent hierarchy path. Empty for a root SM (a root
-    // has no FFragment_Sm_ParentHierarchy). C++-only.
+    // The cross-machine identity of a sub-SM. Empty for a root SM.
     static auto
     Get_SubSmParentHierarchy(
         const FCk_Handle_StateMachine& InStateMachine) -> TArray<FGameplayTag>;
 
-    // Resolve the local sub-SM under InRoot whose parent hierarchy equals InParentHierarchy, by
-    // walking the active state tree (current state -> hosted sub-SMs, recursively). Returns an invalid
-    // handle if no active sub-SM matches (e.g. the hosting parent state isn't currently active — the
-    // caller must defer/stash in that case). C++-only.
+    // Returns an invalid handle when no ACTIVE sub-SM matches — e.g. the hosting parent state isn't
+    // currently active, in which case the caller must defer/stash.
     static auto
     TryFind_ActiveSubSm_ByParentHierarchy(
         const FCk_Handle_StateMachine& InRoot,
@@ -318,17 +293,11 @@ public:
         const FCk_Delegate_SmTask_OnFinished& InDelegate);
 
     // --------------------------------------------------------------------------------------------------------------------
-    // REPLICATION RELAY (stub; consumption from the OwningClient path is wired later.)
 
-    // Resolves the StateMachineRelay channel for an SM that opts into OwningClientAuthoritative.
-    // Looks up UCk_StateMachineRelay_Subsystem_UE on the SM's World and acquires a channel via
-    // the actor-relay group infrastructure. Returns an invalid result if the subsystem is missing
-    // or no channel is available yet (the subsystem auto-spawns channels at PostLogin so callers
-    // very early in the world's lifetime may transiently see no channel).
-    //
-    // A later refinement will prefer the channel owned by the SM's owning PlayerState; for
-    // now it returns whichever channel the subsystem assigns via its selection algorithm, which
-    // is sufficient for the current compile-only goal.
+    // Resolves the StateMachineRelay channel owned by the SM's owning player, via
+    // UCk_StateMachineRelay_Subsystem_UE on the SM's World. Returns an invalid result when the
+    // subsystem is missing or the owning channel isn't available yet (channels auto-spawn at
+    // PostLogin, so callers early in the world's lifetime transiently see none).
     static auto
     Acquire_RelayChannel(
         const FCk_Handle_StateMachine& InStateMachine) -> FCk_ActorRelay_ChannelResult;

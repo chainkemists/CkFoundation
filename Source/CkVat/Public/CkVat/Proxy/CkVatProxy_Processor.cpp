@@ -36,8 +36,7 @@ namespace ck_vat_proxy_processor
         return TimeResult.Get_WorldTime().Get_Time();
     }
 
-    // The 12-scalar per-instance layout the VAT looks decode (slots [0..11], Rate==0 => Time holds
-    // frozen local time).
+    // The 12-scalar per-instance layout the VAT looks decode (Rate == 0 => Floats[2] holds the frozen local time).
     auto
     Pack_CustomData(
         const ck::FFragment_VatProxy_Current& InCurrent,
@@ -137,8 +136,6 @@ namespace ck
 
             if (InParams.Get_PhaseOffset() == ECk_VatProxy_PhaseOffset::RandomPerInstance)
             {
-                // Crowd variety: rebase the start time by a random slice of the clip so identical
-                // clips don't tick in lock-step across instances.
                 const auto& Clips = Collection->Get_BakedData().Get_BakedClips();
                 const auto ClipSeconds = Clips[ClipIndex].Get_PlayLength().Get_Seconds();
                 InCurrent._PlaybackStartTime =
@@ -226,8 +223,6 @@ namespace ck
 
         const auto Now = ck_vat_proxy_processor::Get_CurrentWorldTime(InHandle);
 
-        // Crossfade source = whatever was active; the shader's 2-state blend reads the pair (the
-        // source keeps playing at ITS rate/loop-mode during the fade).
         InCurrent._PrevClipIndex = InCurrent._ActiveClipIndex;
         InCurrent._PrevClipStartTime = InCurrent._PlaybackStartTime;
         InCurrent._PrevPlayRate = InCurrent._PlayRate;
@@ -295,8 +290,7 @@ namespace ck
             return;
         }
 
-        // Rebase the start time so the playback position is preserved across the rate change
-        // (frame = (Now - Start) * Rate must be continuous).
+        // Rebase the start time so (Now - Start) * Rate stays continuous across the rate change.
         const auto CurrentLocalSeconds = InCurrent._PlayRate == 0.0f
             ? InCurrent._PausedLocalTime.Get_Seconds()
             : (Now - InCurrent._PlaybackStartTime).Get_Seconds() * InCurrent._PlayRate;

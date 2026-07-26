@@ -61,11 +61,8 @@ public:
 
 private:
     TOptional<ck::FProcessorScheduler> _Scheduler;
-    // Stored by VALUE (not pointer). FCk_Registry is now a trivially-copyable
-    // (slot+gen + transient entity) view; copying it is cheap and severs the
-    // actor's lifetime coupling to the subsystem. If the slot is freed (e.g.
-    // subsystem deinitialised before the actor is GC'd), Resolve returns null
-    // and ck::IsValid(_Registry) returns false — the tick guard fails closed.
+    // By VALUE deliberately: the copy severs the actor's lifetime coupling to the subsystem, and a
+    // freed slot resolves to null so ck::IsValid fails and the tick guard fails closed.
     FCk_Registry _Registry;
 
     TStatId _TickStatId;
@@ -76,8 +73,7 @@ private:
     ECk_Ecs_WorldStatCollection_Policy _StatCollectionPolicy = ECk_Ecs_WorldStatCollection_Policy::DoNotCollect;
     FName _EcsWorldDisplayName;
 
-    // Lazily resolved (first Tick) + cached back-reference to this world's ECS subsystem, so the per-frame tick can
-    // read the load gate and pick the scheduler scope without a per-tick GetSubsystem lookup.
+    // Lazily resolved on first Tick, so reading the load gate costs no per-tick GetSubsystem lookup.
     TWeakObjectPtr<UCk_EcsWorld_Subsystem_UE> _OwningSubsystem;
 
     auto DoGet_OwningSubsystem() -> const UCk_EcsWorld_Subsystem_UE*;
@@ -105,10 +101,8 @@ public:
     friend class UCk_EcsWorld_Stats_Subsystem_UE;
 
 public:
-    // Fired just before DoBuildGraphAndSpawnActors calls FProcessorGraphBuilder::Build. Subscribers may
-    // register additional FProcessorDescriptors with ck::FProcessorRegistry before the graph is assembled.
-    // This is the hook CkDynamic uses to inject AngelScript/Blueprint-defined script processors into the
-    // pipeline without creating a CkEcs → CkDynamic dependency cycle.
+    // Fired just before FProcessorGraphBuilder::Build; subscribers may register additional descriptors.
+    // Exists so CkDynamic can inject script processors without a CkEcs → CkDynamic dependency cycle.
     DECLARE_MULTICAST_DELEGATE_OneParam(FOnPreBuildProcessorGraph, UWorld& /*InWorld*/);
 
     static auto Get_OnPreBuildProcessorGraph() -> FOnPreBuildProcessorGraph&;
@@ -124,45 +118,34 @@ public:
     OnWorldBeginPlay(
         UWorld& InWorld) -> void override;
 
-    // Request a full teardown and rebuild of the processor graph at the end of the current frame.
-    // Safe to call mid-tick — actual rebuild is deferred until FCoreDelegates::OnEndFrame.
-    // Idempotent: multiple calls within the same frame collapse into a single rebuild.
+    // Safe to call mid-tick — the rebuild is deferred to FCoreDelegates::OnEndFrame, and repeat calls
+    // within one frame collapse into a single rebuild.
     auto
     Request_RebuildProcessorGraph() -> void;
 
-    // Pumps every ticking-group scheduler with DeltaTime=0 so all pending deferred requests
-    // drain to quiescence WITHOUT advancing game time. Used by CkSnapshot before a capture so
-    // the snapshot reflects a settled (consistent) world. Each scheduler's Tick already loops
-    // its internal DoPump to quiescence (cap _MaxPumpIterations) and logs still-dirty processors.
-    // Returns the total pump-pass count across all schedulers (0 == already quiescent;
-    // a high count == lots of cascading work drained). Safe: skips any scheduler whose tick is
-    // already in progress (re-entrancy guard).
-    //
-    // InScope: Full (default — pre-save/normal drain, every processor) or LoadKernel (the load orchestrator's
-    // rebuild drain — only RunsDuringLoad processors, spec §4.3).
+    // Pumps every ticking-group scheduler with DeltaTime=0 so pending deferred requests drain to
+    // quiescence WITHOUT advancing game time — CkSnapshot uses it so a capture sees a settled world.
+    // Returns the total pump-pass count across all schedulers (0 == already quiescent). Any scheduler
+    // whose tick is already in progress is skipped.
     auto
     Request_PumpToQuiescence(
         ck::ECk_SchedulerTickScope InScope = ck::ECk_SchedulerTickScope::Full) -> int32;
 
-    // Worst-case (maximum) pump-pass count across all per-ticking-group schedulers for the most recent
-    // frame. 0 when no schedulers exist (e.g. menu world). Surfaced live by CkWatermark to show pump
-    // pressure; mirrors the per-scheduler condition that drives the throttled pump-limit log warning.
+    // Maximum pump-pass count across schedulers for the most recent frame; 0 when none exist (e.g. a
+    // menu world). Mirrors the per-scheduler condition behind the throttled pump-limit log warning.
     auto Get_WorstFramePumpCount() const -> int32;
 
     // The per-frame pump-iteration budget (max across schedulers). 0 when no schedulers exist.
     auto Get_MaxPumpIterations() const -> int32;
 
-    // Re-point this world's ECS bookkeeping at a transient entity that a snapshot restore rebuilt into the
-    // registry. Overwrites FCtx_TransientEntity (via insert_or_assign — entt's emplace would NOT overwrite the
-    // stale post-clear ctx), refreshes the cached _TransientEntity handle, and re-attaches the world-fragment.
-    // Used by Run_Restore(UWorld&) after the continuous_loader rebuilds the entity set.
+    // Re-points this world's ECS bookkeeping at a transient entity a snapshot restore rebuilt into the
+    // registry. Called by Run_Restore(UWorld&) once the loader has rebuilt the entity set.
     auto
     Request_AdoptRestoredTransient(
         FCk_Entity InRestoredTransient) -> void;
 
-    // Load gate (spec §4.3): while active, every EcsWorld actor ticks its scheduler with LoadKernel scope, so only
-    // RunsDuringLoad kernel processors run — feature processors are frozen against the half-rebuilt world. Set by the
-    // CkSnapshot load orchestrator (Phase 3B) across the rebuild; cleared once reconciliation completes.
+    // While active, every EcsWorld actor ticks with LoadKernel scope so feature processors stay frozen
+    // against the half-rebuilt world. Held by the snapshot load orchestrator across the rebuild.
     auto Get_IsLoadGateActive() const -> bool;
     auto Set_IsLoadGateActive(bool InActive) -> void;
 
@@ -170,11 +153,9 @@ private:
     auto DoBuildGraphAndSpawnActors(
         UWorld& InWorld) -> void;
 
-    // Tears down all world actors + schedulers then calls DoBuildGraphAndSpawnActors.
     auto DoTeardownAndRebuild(
         UWorld& InWorld) -> void;
 
-    // Bound to FCoreDelegates::OnEndFrame when a rebuild is pending.
     auto OnEndFrame_DoRebuild() -> void;
 
 private:
@@ -187,14 +168,10 @@ private:
     bool _PendingRebuildGraph = false;
     FDelegateHandle _OnEndFrameHandle;
 
-    // Phase 2: set by the CkSnapshot load orchestrator; read per-frame by each EcsWorld actor to pick the scheduler
-    // tick scope (LoadKernel while active). See Get_/Set_IsLoadGateActive.
     bool _IsLoadGateActive = false;
 
 private:
-    // Owns the underlying entt registry. Slot is registered with
-    // ck::registry_table on Initialize; freed on Deinitialize. _Registry below
-    // is a non-owning view (slot+gen) bound to this owned registry.
+    // _Registry below is a non-owning (slot+gen) view bound to this owned registry.
     TUniquePtr<ck::registry_table::EnttRegistryType> _OwnedRegistry;
     FCk_Registry _Registry;
 

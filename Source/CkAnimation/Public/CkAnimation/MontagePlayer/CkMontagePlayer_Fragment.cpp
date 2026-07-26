@@ -7,15 +7,13 @@
 #include "CkEcs/Persistence/CkPersistenceHandlerRegistry.inl.h" // Register_* entry-point bodies
 
 // --------------------------------------------------------------------------------------------------------------------
-// Container-based replication handler for MontagePlayer (single-row, fragment-on-entity).
 
 static struct FMontagePlayerRepHandlerRegistrar
 {
     FMontagePlayerRepHandlerRegistrar()
     {
-        // Authority-safe applier: DoDispatchReplicatedState from the payload is host-safe, so the same body serves
-        // both the net receive (Apply) and the load-path hydration (HydrationApply). On the load path Old is always
-        // unset, so IsFirstApplication is true — the correct "fresh state" semantics for a hydrated montage.
+        // DoDispatchReplicatedState is host-safe, so one body serves both net receive and load hydration. On the
+        // load path Old is always unset, so IsFirstApplication is true — correct "fresh state" for a hydrated montage.
         const auto ApplyFn = [](FCk_Handle& InEntity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
         {
             auto Handle = UCk_Utils_MontagePlayer_UE::Cast(InEntity);
@@ -29,7 +27,6 @@ static struct FMontagePlayerRepHandlerRegistrar
         };
 
         FCk_PersistenceHandlerRegistry::Register_NetAndSave_SharedApply<FCk_RepData_MontagePlayer>({
-                // Produce is capture-only: builds the self-resident MontagePlayer container from live _State.
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT Entity.Has<ck::FFragment_MontagePlayer_Current>())

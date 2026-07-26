@@ -5,8 +5,7 @@
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkCore/Macros/CkMacros.h"
 
-// Need FCk_Handle_Goap_Action for the OnActiveChainChanged payload's TArray<>.
-// Also pulls FCk_GoapWS_Condition_Authored for the Planner's _Goal field.
+// FCk_Handle_Goap_Action, for the OnActiveChainChanged payload's TArray<>.
 #include "CkGoap/Action/CkGoap_Action_Fragment_Data.h"
 #include "CkGoap/CkGoap_Fragment_Data.h"  // FCk_GoapWS_Condition_Authored
 #include "CkGoap/WorldState/CkGoap_WorldState_Fragment_Data.h"  // FCk_Handle_Goap_WorldState
@@ -46,19 +45,14 @@ private:
 		meta = (AllowPrivateAccess = true))
 	ECk_EnableDisable _InitialToggle = ECk_EnableDisable::Enable;
 
-	// the goal this Planner plans toward. Independent of any Action role
-	// effects this entity may carry. May be empty at construction and set later
-	// via Request_SetGoal. Stamped onto the Planner's FFragment_Goap_Planner_Goal
-	// at construction (and propagated to the implicit-root Action's planner-role
-	// goal by the first AddAction call on a top-level Planner).
+	// The goal this Planner plans toward — independent of any Action-role effects
+	// on this entity. May be empty at construction; set later via Request_SetGoal.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,
 		meta = (AllowPrivateAccess = true))
 	TArray<FCk_GoapWS_Condition_Authored> _Goal;
 
-	// The WorldState this Planner reads. Required for top-level Planners
-	// (where the Planner entity itself doesn't carry an Action role to inherit
-	// from). Optional for promoted mid-tier Planners — if unset, the promoted
-	// Planner inherits its parent's resolved WS at activation time.
+	// Required for top-level Planners. Optional for promoted mid-tier Planners —
+	// if unset they inherit the parent's resolved WS at activation time.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,
 		meta = (AllowPrivateAccess = true))
 	FCk_Handle_Goap_WorldState _WorldStateSource;
@@ -74,8 +68,7 @@ private:
 		meta = (AllowPrivateAccess = true))
 	float _CostThreshold = 0.0f;
 
-	// Replan trigger policy — when AutoReplan fires a Plan request. Policy is a
-	// Planner-tier concern because each Planner's goal is independent.
+	// Replan trigger policy — when AutoReplan fires a Plan request.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,
 		meta = (AllowPrivateAccess = true))
 	ECk_Goap_ReplanPolicy _ReplanPolicy = ECk_Goap_ReplanPolicy::OnWorldStateDirty;
@@ -86,24 +79,15 @@ private:
 		meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
 	float _MinReplanIntervalSeconds = 0.0f;
 
-	// If true, the Planner fires an initial Plan request after activation
-	// (top-level Planners: immediately; promoted mid-tier Planners: when their
-	// parent picks them as Plan[0]).
+	// Fire an initial Plan request after activation — top-level Planners immediately,
+	// promoted mid-tier Planners when their parent picks them as Plan[0].
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,
 		meta = (AllowPrivateAccess = true))
 	bool _PlanOnStart = true;
 
-	// "PlanFailed is a misconfiguration, not a normal state" tenet enforcement.
-	// Default false → the framework's Setup pass verifies this Planner's catalog
-	// contains at least one Action with no preconditions whose effects cover
-	// every goal condition (an unconditional fallback like WaitForEnemy /
-	// StandWatch / Idle). If the check fails, CK_ENSURE_IF_NOT fires. The
-	// runtime check in HandleResult also ensures on Failed / CostThresholdReached.
-	//
-	// Set to true ONLY when PlanFailed is the test/research subject (e.g.
-	// CkAutoTest_Goap_Planner_InvalidGoal, the MakeTea gym station that demos
-	// PlanFailed when ingredients are missing). Game-content Planners must
-	// leave this false — see the module design-tenets notes.
+	// Default false → Setup verifies this catalog has an unconditional fallback
+	// Action and ensures if not. Set true ONLY when PlanFailed is the test subject;
+	// game-content Planners must leave it false (see CkGoap CLAUDE.md design tenets).
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,
 		meta = (AllowPrivateAccess = true))
 	bool _AllowPlanFailed = false;
@@ -125,7 +109,6 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// ActionSet-scoped
 
 USTRUCT(BlueprintType)
 struct CKGOAP_API FCk_Goap_Payload_OnActiveChainChanged
@@ -150,7 +133,6 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// ActionSet-scoped
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
 	FCk_Delegate_Goap_OnActiveChainChanged,

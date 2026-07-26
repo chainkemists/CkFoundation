@@ -26,23 +26,8 @@ class UMaterialInterface;
 // marker is a text glyph, and the optional map background is a game-supplied texture (Set_MapTexture) panned/
 // zoomed/rotated purely through UMG render transforms — no material required. An optional frame material
 // receives the view yaw as a scalar parameter for GPU-drawn frames/masks.
-//
-// NOTE on the pull-in-NativeTick shape: CkUI doctrine routes per-frame widget updates through processors
-// (see WorldSpaceWidget). This widget is the DOCUMENTED EDGE-CONSUMER of the minimap pull API — the math
-// is precomputed by FProcessor_Minimap_Update; this tick only writes UMG layout for its own pooled
-// children. Games wanting processor-pushed HUDs can consume the same API from their own processor.
-//
-// The Appeared/Disappeared signals are bound (IgnorePayloadInFlight) and surfaced as Blueprint events to
-// demonstrate the membership-delta contract; positioning does NOT depend on them (index-pooled per frame).
-//
-// Rectangle frames only — a circular mask is presentation polish (material or retainer box), while the
-// DATA layer's clamp math already supports ECk_Minimap_FrameShape::Circle. Fog of war is likewise NOT
-// painted here: real games seed from Get_ExploredData, apply OnCellsRevealed deltas, and composite via
-// CkRenderTarget (see CkMinimap/Claude.md).
-//
-// [EDITOR-VERIFY] The base widget class carries meta=(DisableNativeTick); class metadata is not inherited
-// and is editor-only, so this subclass is expected to tick — verify NativeTick actually runs in PIE on
-// first integration; if it does not, drive Refresh from a timer or remove the base meta expectation.
+// Design notes (the pull-in-NativeTick shape, rectangle-only frames, fog, editor verification):
+// CkMinimap/CLAUDE.md § "Reference widget".
 UCLASS(Blueprintable, BlueprintType)
 class CKMINIMAP_API UCk_MinimapFrame_Widget : public UCk_UserWidget_UE
 {

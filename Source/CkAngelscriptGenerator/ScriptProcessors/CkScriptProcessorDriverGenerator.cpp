@@ -55,8 +55,7 @@ namespace ck::scriptprocessor_driver_generator
     };
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Reflect the plain (non-UFUNCTION) ForEachEntity method's parameters via the AS type system. Returns empty when
-    // InClass is not an AS class or has no ForEachEntity method (i.e. it is not a typed processor).
+    // Empty result means "not a typed processor" — not an AS class, or no ForEachEntity at all.
 
     auto
     Reflect_ForEachEntityParams(
@@ -117,8 +116,8 @@ namespace ck::scriptprocessor_driver_generator
     }
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Build + validate the signature. Grammar: void ForEachEntity(FCk_Time, [FCk_Handle,] <fragment params>...).
-    // OutHasForEachEntity is false when the class has no ForEachEntity at all (caller skips it, no driver emitted).
+    // Grammar: void ForEachEntity(FCk_Time, [FCk_Handle,] <fragment params>...). OutHasForEachEntity
+    // false => the class has none at all, and the caller emits no driver rather than an error.
 
     auto
     Build_Signature(
@@ -192,8 +191,8 @@ namespace ck::scriptprocessor_driver_generator
         return Fn != nullptr && Fn->GetOuterUClass() != UCk_Processor_Script_Base_UE::StaticClass();
     }
 
-    // Whether the dev class (or an intermediate script base) overrides Configure. Decides whether the generated
-    // driver emits Super::Configure(Query) — emitting it unconditionally would Super-call the bodiless C++ BIE.
+    // Gates the emitted Super::Configure(Query) — emitting it unconditionally would Super-call the
+    // bodiless C++ BlueprintImplementableEvent.
     auto
     Overrides_Configure(
         UClass* InClass)
@@ -212,7 +211,7 @@ namespace ck::scriptprocessor_driver_generator
     }
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Emit one driver class (pure text — no reflection). An invalid signature emits a compile-visible error instead.
+    // An invalid signature deliberately emits AS that fails to compile, rather than nothing.
 
     auto
     Emit_DriverBlock(
@@ -233,8 +232,8 @@ namespace ck::scriptprocessor_driver_generator
 
         const auto DriverName = DevName + GDriverSuffix;
 
-        // Subclass of the dev class: ForEachEntity is inherited (called directly), and Super::Configure reaches the
-        // dev's own Configure override when it has one — no _IterationTarget indirection, no casts.
+        // Subclassing gets ForEachEntity inherited and Super::Configure reaching the dev's own
+        // override — no iteration-target indirection, no casts.
         auto Out = FString{};
         Out += FString::Printf(TEXT("class %s : %s\n"), *DriverName, *DevName);
         Out += TEXT("{\n");
@@ -254,8 +253,7 @@ namespace ck::scriptprocessor_driver_generator
         Out += TEXT("    UFUNCTION(BlueprintOverride)\n");
         Out += TEXT("    void ForEachBatch(FCk_ScriptQueryBatch Batch, FCk_Time InDeltaT)\n");
         Out += TEXT("    {\n");
-        // Perf scope lives at the batch level (once per tick) rather than per-entity inside
-        // ForEachEntity, so authored ForEachEntity bodies carry no ScopedStat boilerplate.
+        // Batch level, not per-entity: authored ForEachEntity bodies stay free of stat boilerplate.
         Out += TEXT("        auto _CkPerfScope = ck::ScopedStat();\n");
         Out += TEXT("        for (int32 i = 0; i < Batch.Num(); ++i)\n");
         Out += TEXT("        {\n");
@@ -263,8 +261,7 @@ namespace ck::scriptprocessor_driver_generator
         auto CallArgs = FString{TEXT("InDeltaT")};
         if (InSignature._HasHandleParam)
         {
-            // ForEachEntity takes FCk_Handle& — bind a named local so it is an lvalue
-            // (the GetHandle() result is a temporary and cannot bind to a reference param).
+            // GetHandle() returns a temporary, which cannot bind to ForEachEntity's FCk_Handle&.
             Out += TEXT("            auto Handle = Batch.GetHandle(i);\n");
             CallArgs += TEXT(", Handle");
         }
@@ -347,7 +344,6 @@ namespace ck::scriptprocessor_driver_generator
     }
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Per-plugin bucketing (mirrors the AutoTest generator).
 
     struct FPluginBucket
     {
@@ -509,12 +505,9 @@ auto
 #if WITH_EDITOR
     using namespace ck::scriptprocessor_driver_generator;
 
-    // Single-writer gate — a secondary editor does not regenerate.
     if (NOT FCkAngelscriptGenerator_RegenOwnership::Try_AcquireOrGet_IsOwner(TEXT("ScriptProcessorDriverGenerator.GenerateAll")))
     { return; }
 
-    // The base is a C++ class, so StaticClass() is always available (no name lookup like the AutoTest generator's
-    // AS-defined base needs).
     auto* BaseClass = UCk_Processor_Script_Base_UE::StaticClass();
 
     auto Candidates = TArray<UClass*>{};
@@ -534,9 +527,8 @@ auto
 
     for (auto* Class : Candidates)
     {
-        // The drivers themselves are subclasses too — never generate a driver for a driver. Mirrors the host's
-        // routing guard: only a class whose dev sibling exists is a driver; an ordinary typed processor whose
-        // name merely ends in _Driver still gets a driver generated (named <Name>_Driver_Driver).
+        // Drivers are subclasses too — never emit a driver for a driver. Only a class whose dev
+        // sibling EXISTS is one; a plain processor merely named *_Driver still gets its own.
         if (Class->GetName().EndsWith(GDriverSuffix) &&
             CandidateNames.Contains(Class->GetName().LeftChop(GDriverSuffix.Len())))
         { continue; }
@@ -549,8 +541,7 @@ auto
         if (Signature._Error.IsEmpty() && Overrides_ForEachBatch(Class))
         { Signature._Error = TEXT("class declares both a ForEachEntity method and a ForEachBatch override — pick one"); }
 
-        // Respect a hand-authored driver (e.g. an end-to-end test's driver before it is deleted in favour of codegen).
-        // OBJECT name, not Get_SourceName: FindFirstObject matches UClass names, which never carry the U prefix.
+        // OBJECT name, not Get_SourceName: FindFirstObject matches UClass names, which carry no U prefix.
         if (Has_HandAuthoredDriver(Class->GetName() + GDriverSuffix))
         { continue; }
 

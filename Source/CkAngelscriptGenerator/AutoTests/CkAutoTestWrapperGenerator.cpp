@@ -28,29 +28,22 @@ namespace ck_autotest_wrapper_generator
 
     // ---- Constants -----------------------------------------------------
 
-    // The AS base class authors subclass to define a test body. Defined in
-    //   Plugins/CkTests/Script/Common/CkAutoTest_Base.as
-    //
-    // NOTE: UE stores UClass names *without* the type prefix (GetName() returns the bare
-    // stem; GetPrefixCPP() yields "U"/"A"). AS-defined classes follow the same convention,
-    // so source-form `UCk_AutoTest_Base` lives as `Ck_AutoTest_Base` in object storage.
+    // UE object storage drops the type prefix, and AS-defined classes follow suit — source-form
+    // `UCk_AutoTest_Base` (Plugins/CkTests/Script/Common) is stored as `Ck_AutoTest_Base`.
     static const TCHAR* AutoTestBaseBareName = TEXT("Ck_AutoTest_Base");
 
-    // The C++ AFunctionalTest subclass that hosts each test body. Source form (with `A`
-    // prefix) is what we emit into generated .as files; storage form is `Ck_AutoTestRunner`.
+    // Source form, because this one is EMITTED into .as files rather than looked up.
     static const TCHAR* AutoTestRunnerSourceName = TEXT("ACk_AutoTestRunner");
 
-    // Generated-file marker: any class whose source path contains this segment was emitted
-    // by us, so it must not be treated as a "hand-authored collision" during the next pass.
+    // A class whose source path contains this was emitted by us — never a hand-authored collision.
     static const TCHAR* GeneratedDirSegment = TEXT("/Script/Generated/");
 
     // ---- Locating UCk_AutoTest_Base ------------------------------------
 
     auto Find_AutoTestBaseClass() -> UClass*
     {
-        // AS-defined; not visible as a C++ symbol. Look up by storage name (no `U` prefix).
-        // Try the bare name first; fall back to the prefixed form for safety in case some
-        // future AS-UE revision changes the storage convention.
+        // AS-defined, so there is no C++ symbol to link against. The prefixed fallback only
+        // matters if a future AS-UE revision changes the storage convention.
         if (auto* Found = FindFirstObject<UClass>(AutoTestBaseBareName, EFindFirstObjectOptions::None))
         { return Found; }
         return FindFirstObject<UClass>(TEXT("UCk_AutoTest_Base"), EFindFirstObjectOptions::None);
@@ -75,18 +68,15 @@ namespace ck_autotest_wrapper_generator
         if (InClass->HasAnyClassFlags(DisqualifyingFlags))
         { return false; }
 
-        // Filter classes that have been torn down / are pending-kill. Without this, AS classes
-        // that were deleted from source linger in TObjectIterator until GC runs and keep showing
-        // up in the generated file even though the .as file no longer defines them.
+        // A class deleted from .as source lingers in TObjectIterator until GC runs, and would
+        // otherwise keep reappearing in the generated file.
         if (InClass->IsUnreachable() ||
             InClass->HasAnyFlags(RF_BeginDestroyed | RF_FinishDestroyed))
         { return false; }
 
 #if WITH_ANGELSCRIPT_CK
-        // For AS-defined classes, also check whether the source file still exists on disk.
-        // When a user deletes a class from an .as file and the file still exists, the stale
-        // UASClass hangs around; but if the whole file was deleted, that's a strong signal
-        // the class is gone.
+        // A vanished source FILE is the strong signal the class is gone; a class merely deleted
+        // out of a still-present file leaves its stale UASClass behind and is not caught here.
         if (auto* ASClass = UASClass::GetFirstASClass(InClass))
         {
             if (ASClass->NewerVersion != nullptr)
@@ -101,11 +91,9 @@ namespace ck_autotest_wrapper_generator
         if (UCk_Utils_Reflection_UE::Is_PlaceholderClass(InClass))
         { return false; }
 
-        // Net-mode tests (Phase 3b/3c) are handled by FCkAutoTestNetStubGenerator — they don't
-        // belong on a Standalone wrapper. Without this filter, the runtime-resolved actor
-        // wrapper still gets emitted for a Net test and would silently fail in single-PIE
-        // because the AS body relies on cross-world coordination that only the multi-PIE
-        // harness provides.
+        // Net-mode tests belong to FCkAutoTestNetStubGenerator: a wrapper emitted for one would
+        // silently fail in single-PIE, its AS body needing the multi-PIE harness' cross-world
+        // coordination.
         if (FCkAutoTestNetStubGenerator::Read_NetMode(InClass) !=
             FCkAutoTestNetStubGenerator::ENetMode::Standalone)
         { return false; }
@@ -115,22 +103,18 @@ namespace ck_autotest_wrapper_generator
 
     // ---- Naming --------------------------------------------------------
 
-    // The conventional source-form wrapper name: A<X>_Actor (e.g., "ACk_AutoTest_Foo_Actor").
-    // Used when emitting AS source.
     auto Get_WrapperSourceName(const UClass* InEntityScriptClass) -> FString
     {
         return FString::Printf(TEXT("A%s_Actor"), *InEntityScriptClass->GetName());
     }
 
-    // The storage-form wrapper name: <X>_Actor (no `A` prefix). Used for FindFirstObject
-    // lookups since UE strips type prefixes from UClass storage names.
+    // No `A` prefix — this form is for FindFirstObject, which sees UE's stripped storage names.
     auto Get_WrapperBareName(const UClass* InEntityScriptClass) -> FString
     {
         return FString::Printf(TEXT("%s_Actor"), *InEntityScriptClass->GetName());
     }
 
-    // The source-form entity-script name with prefix preserved: U<X>. Used when emitting the
-    // `default _TestEntityScriptClass = U<X>;` line — the AS compiler expects the prefixed form.
+    // Prefix preserved: the AS compiler expects `U<X>` in the emitted source.
     auto Get_EntityScriptSourceName(const UClass* InEntityScriptClass) -> FString
     {
         return ck::Format_UE(TEXT("{}{}"),
@@ -139,21 +123,16 @@ namespace ck_autotest_wrapper_generator
 
     // ---- Hand-authored wrapper detection -------------------------------
 
-    // Returns true if a class with the wrapper name already exists AND it was authored by the
-    // user (i.e. its source path is not under Script/Generated/). Generated wrappers from a
-    // previous pass are intentionally ignored so we don't deadlock ourselves. Stale/torn-down
-    // UClasses from a just-removed AS class are also ignored.
+    // True only for a USER-authored wrapper. Our own previous output is ignored (we would
+    // otherwise deadlock ourselves), as are stale UClasses of just-removed AS classes.
     auto Has_HandAuthoredWrapper(const FString& InWrapperBareName) -> bool
     {
         auto* Existing = FindFirstObject<UClass>(*InWrapperBareName, EFindFirstObjectOptions::None);
         if (NOT ck::IsValid(Existing, ck::IsValid_Policy_NullptrOnly{}))
         { return false; }
 
-        // Filter stale classes — a wrapper class the user just deleted from .as source can
-        // linger in TObjectIterator/FindFirstObject until GC. Without this, removing a hand-
-        // authored wrapper would never trigger generator emission because the stale UClass
-        // keeps tripping the collision check. Mirrors the staleness checks in
-        // CkAngelscriptEntityScriptParamsGenerator's Is_IncludedEntityScriptClass.
+        // A just-deleted wrapper lingers until GC; without this it keeps tripping the collision
+        // check and deleting a hand-authored wrapper would never hand emission back to us.
         if (Existing->IsUnreachable() ||
             Existing->HasAnyFlags(RF_BeginDestroyed | RF_FinishDestroyed))
         { return false; }
@@ -170,12 +149,10 @@ namespace ck_autotest_wrapper_generator
             { return false; }
 
             const auto SourcePath = ExistingAS->GetSourceFilePath();
-            // Source file deleted entirely — class is gone, just lingering in memory.
             if (NOT SourcePath.IsEmpty() && NOT FPaths::FileExists(SourcePath))
             { return false; }
 
-            // No source path means this isn't an AS class we can reason about;
-            // treat as hand-authored to be safe.
+            // Not an AS class we can reason about — assume hand-authored and stay out of the way.
             if (SourcePath.IsEmpty())
             { return true; }
 
@@ -191,12 +168,8 @@ namespace ck_autotest_wrapper_generator
 
     // ---- Block formatting ----------------------------------------------
 
-    // Reads the entity-script class's CDO `_TimeoutSeconds` field. Returns the
-    // override value if it differs from the harness default (5.0f); returns unset
-    // if the field is missing, the value matches the default, or the CDO can't be
-    // accessed. The generator only emits a `default _TimeoutSeconds = X.Xf;` line
-    // on the wrapper when an override is in play — so the generated file stays
-    // tight in the common case where every test uses the engine default.
+    // Unset when the field is missing, unreadable, OR equal to the harness default — the caller
+    // emits nothing in that case, keeping the generated file tight for the common test.
     auto Get_TimeoutOverride(const UClass* InEntityScriptClass) -> TOptional<float>
     {
         constexpr auto HarnessDefault = 5.0f;
@@ -209,9 +182,8 @@ namespace ck_autotest_wrapper_generator
         if (Property == nullptr)
         { return {}; }
 
-        // AS-UE may bind a script-side `float` to either FFloatProperty (32-bit) or
-        // FDoubleProperty (UE 5+ default for many float-typed script properties).
-        // Try both so the metadata read works regardless of which the engine picks.
+        // AS-UE binds a script-side `float` to EITHER FFloatProperty or FDoubleProperty depending
+        // on the property, so both have to be handled.
         auto Value = HarnessDefault;
         if (const auto* FloatProp = CastField<FFloatProperty>(Property))
         {
@@ -236,16 +208,8 @@ namespace ck_autotest_wrapper_generator
     {
         const auto WrapperSourceName = Get_WrapperSourceName(InEntityScriptClass);
 
-        // Embed the entity-script class's full UE path (e.g. "/Script/Angelscript.X")
-        // and resolve it at runtime via FSoftClassPath. This is a deliberate trade vs
-        // the simpler `default _TestEntityScriptClass = U<X>;` form: the runtime path
-        // is a string literal, so the generated wrapper compiles even when the entity
-        // script has been deleted. AS no longer errors on a stale wrapper, the
-        // generator's next pass cleans it up, and the populator removes the orphan
-        // actor — fully self-healing without manual recovery.
-        //
-        // The compile-time-typed form is still available for hand-authored wrappers
-        // that need it — see section 5b of the spec.
+        // Emitted as a string literal resolved at runtime, NOT as a compile-time class reference —
+        // FileHeader below carries the full rationale into the generated file itself.
         const auto EntityScriptPath = InEntityScriptClass->GetPathName();
         const auto TimeoutOverride = Get_TimeoutOverride(InEntityScriptClass);
 
@@ -254,14 +218,8 @@ namespace ck_autotest_wrapper_generator
         Block += TEXT("{\n");
         if (TimeoutOverride.IsSet())
         {
-            // The author set a per-test timeout via `default _TimeoutSeconds = X.Xf;`
-            // on their entity script. Propagate to the wrapper's own _TimeoutSeconds
-            // field — which is what ACk_AutoTestRunner's PrepareTest reads to set
-            // the engine's AFunctionalTest::TimeLimit.
-            //
-            // FString::SanitizeFloat with MinFractionalDigits=1 guarantees a decimal
-            // point ("2.0f", not "2f") so the emitted literal matches the project's
-            // AS code style.
+            // The wrapper's own _TimeoutSeconds is what ACk_AutoTestRunner::PrepareTest turns into
+            // AFunctionalTest::TimeLimit. MinFractionalDigits=1 forces "2.0f" over "2f".
             const auto Literal = FString::SanitizeFloat(*TimeoutOverride, /*MinFractionalDigits=*/1);
             Block += ck::Format_UE(TEXT("    default _TimeoutSeconds = {}f;\n"), Literal);
         }
@@ -470,9 +428,8 @@ auto
     auto* AutoTestBase = ck_autotest_wrapper_generator::Find_AutoTestBaseClass();
     if (NOT ck::IsValid(AutoTestBase, ck::IsValid_Policy_NullptrOnly{}))
     {
-        // CkTests not loaded, or AS not yet compiled — nothing to do. This is the normal state
-        // during very early startup before AS classes have been registered. Promoted to Log
-        // (not VeryVerbose) so the user can diagnose the silent-no-write case at Trace level.
+        // Normal during early startup. Log rather than VeryVerbose so the silent-no-write case
+        // stays diagnosable.
         ck::angelscriptgenerator::Log(
             TEXT("[CkAS AutoTest Wrappers] Ck_AutoTest_Base not found in object table — ")
             TEXT("skipping pass (CkTests not loaded yet, or AS not yet compiled)."));
@@ -494,7 +451,6 @@ auto
         return InA.GetPathName() < InB.GetPathName();
     });
 
-    // Drop tests that already have a hand-authored wrapper of the conventional name.
     auto Emittable = TArray<UClass*>{};
     auto SkippedCount = int32{0};
     for (auto* Class : AllSubclasses)
@@ -525,15 +481,11 @@ auto
     {
         auto Content = FString{ck_autotest_wrapper_generator::FileHeader};
 
-        // Guard the PROJECT's wrapper file (<Project>_AutoTestActors.as) in #if EDITOR. Its wrappers
-        // inherit ACk_AutoTestRunner (CkTests — non-redistributable, disabled in Shipping/Test). The
-        // project Script root is ALWAYS compiled (unlike a disabled plugin's), so without the guard
-        // these wrappers reference the absent base and break the cook/packaged AS compile
-        // (bUseEditorScripts=false makes the base absent AND #if EDITOR false → bodies skipped, file
-        // inert). Plugin wrapper files are deliberately NOT guarded: a disabled test plugin excludes
-        // its whole Script root at runtime anyway, and its sibling *Assets.as references these wrapper
-        // types OUTSIDE an EDITOR block (autotest-map OFPA actor accessors) — guarding them would make
-        // those accessors fail "Cannot use editor-only type outside of an EDITOR block" in the editor.
+        // Only the PROJECT bucket is guarded. Its Script root is always compiled, so without the
+        // guard its wrappers reference an absent ACk_AutoTestRunner and break the packaged AS
+        // compile. Plugin buckets must stay UNguarded: a disabled test plugin drops its whole
+        // Script root anyway, and its sibling *Assets.as references these wrapper types outside
+        // any EDITOR block, which would then fail "editor-only type outside of an EDITOR block".
         const auto IsProjectBucket = Bucket.PluginName == FApp::GetProjectName();
         if (IsProjectBucket)
         { Content += TEXT("#if EDITOR\n\n"); }
@@ -549,10 +501,8 @@ auto
         const auto OutputDir = FPaths::GetPath(Bucket.OutputFilePath);
         IFileManager::Get().MakeDirectory(*OutputDir, true);
 
-        // Skip writing when the content hasn't changed — otherwise our own write triggers the
-        // AngelScript PostCompile hook, which calls us again, ad infinitum.
-        // Compare in LF-normalized form: Content is LF here (literals below), but the on-disk
-        // file may be CRLF on Windows, and LoadFileToString normalizes to LF.
+        // Writing unchanged content re-triggers the AngelScript PostCompile hook, which calls us
+        // again, ad infinitum. Compare LF-normalized — the on-disk file may be CRLF.
         auto ExistingContent = FString{};
         const auto HasExisting = FFileHelper::LoadFileToString(ExistingContent, *Bucket.OutputFilePath);
 
@@ -571,10 +521,8 @@ auto
         }
 
 #if PLATFORM_WINDOWS
-        // Match project convention: .as files live as CRLF on Windows disk (checkout converts
-        // index-LF -> WC-CRLF via core.autocrlf). Without this step, the generator writes LF,
-        // disagrees with every other .as file on disk, and git flags the file as modified on
-        // every editor startup even though `git diff` is empty.
+        // .as files live as CRLF on Windows disk (core.autocrlf). Writing LF makes git flag the
+        // file modified on every editor startup even though `git diff` shows nothing.
         Content.ReplaceInline(TEXT("\r\n"), TEXT("\n"));
         Content.ReplaceInline(TEXT("\n"), TEXT("\r\n"));
 #endif

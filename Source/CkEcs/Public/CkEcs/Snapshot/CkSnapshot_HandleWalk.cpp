@@ -12,13 +12,9 @@ namespace ck::snapshot
 {
     namespace ck_snapshot_handlewalk
     {
-        // A handle field is any struct DERIVED from FCk_Handle, not just the base. AngelScript-DYNAMIC handle types
-        // reflect as an FStructProperty whose Struct IS FCk_Handle::StaticStruct(), but C++-NATIVE typed handles
-        // (FCk_Handle_Item, FCk_Handle_Timer, ...) reflect as their own typed UScriptStruct. An exact equality test
-        // silently skips every native typed handle (nothing written on save, restored as default TOMBSTONES).
-        // IsChildOf catches both; the typed wrapper is layout-identical to the base
-        // (static_assert(sizeof(FCk_Handle_TypeSafe) == sizeof(FCk_Handle)) in CkHandle_TypeSafe.h), so remapping
-        // through a base pointer at the field address is complete.
+        // IsChildOf, never equality: native typed handles reflect as their own UScriptStruct, so an exact
+        // test silently skips every one of them (nothing saved, restored as default TOMBSTONES). The typed
+        // wrapper is layout-identical to the base, so remapping through a base pointer is complete.
         auto
             Get_IsHandleStruct(
                 const UScriptStruct* InStruct)
@@ -27,10 +23,8 @@ namespace ck::snapshot
             return InStruct != nullptr && InStruct->IsChildOf(FCk_Handle::StaticStruct());
         }
 
-        // Single deterministic walk shared by RemapHandles (visitor = Snapshot_Handle, rehash on load) and
-        // ForEachHandle (visitor = caller's, no mutation ⇒ no rehash). InRehashAfterKeyVisit rebuilds set/map hash
-        // buckets after their keys were visited IN PLACE (a remapped key hashes differently). TOptional fields are
-        // not walked (no fragment/params struct stores optional handles; add FOptionalProperty support if one does).
+        // TOptional fields are deliberately not walked — no fragment/params struct stores optional handles;
+        // add FOptionalProperty support here if one ever does.
         auto
             WalkHandles(
                 const UScriptStruct* InStruct,
@@ -44,12 +38,9 @@ namespace ck::snapshot
 
             const auto VisitOrRecurse = [&](const FStructProperty* InStructProp, void* InElementMemory) -> void
             {
-                // An FInstancedStruct is opaque to TFieldIterator: its stored struct's properties (and any handle
-                // fields inside them) live behind GetScriptStruct()/GetMutableMemory(), not among the wrapper's own
-                // reflected fields (which carry none). Recurse into the payload so a handle nested in a dynamic
-                // fragment / spawn-params instanced struct is remapped on save and rehashed on load. Appended AHEAD
-                // of the handle-struct test — never reordering the existing checks — so every pre-existing handle is
-                // still visited in its original position (the save-file handle-id stream is positional).
+                // An FInstancedStruct is opaque to TFieldIterator — its payload's handles live behind
+                // GetScriptStruct()/GetMutableMemory(). This test must stay AHEAD of the handle-struct test
+                // and the later checks must not be reordered: the save-file handle-id stream is positional.
                 if (InStructProp->Struct == FInstancedStruct::StaticStruct())
                 {
                     auto& Instanced = *static_cast<FInstancedStruct*>(InElementMemory);
@@ -64,10 +55,8 @@ namespace ck::snapshot
                 { WalkHandles(InStructProp->Struct, InElementMemory, InVisit, InRehashAfterKeyVisit); }
             };
 
-            const auto ContainsHandles = [](const FStructProperty* InStructProp) -> bool
+            const auto MayContainHandles = [](const FStructProperty* InStructProp) -> bool
             {
-                // Cheap pre-filter for containers: a struct that is not a handle may still nest one, so only a null
-                // struct-prop is skippable outright.
                 return InStructProp != nullptr;
             };
 
@@ -82,7 +71,7 @@ namespace ck::snapshot
                 else if (const auto* ArrayProp = CastField<FArrayProperty>(Property))
                 {
                     const auto* InnerStruct = CastField<FStructProperty>(ArrayProp->Inner);
-                    if (NOT ContainsHandles(InnerStruct))
+                    if (NOT MayContainHandles(InnerStruct))
                     { continue; } // arrays of non-struct elements never hold handles.
 
                     auto ArrayHelper = FScriptArrayHelper{ArrayProp, ArrayProp->ContainerPtrToValuePtr<void>(InMemory)};
@@ -93,7 +82,7 @@ namespace ck::snapshot
                 else if (const auto* SetProp = CastField<FSetProperty>(Property))
                 {
                     const auto* ElemStruct = CastField<FStructProperty>(SetProp->ElementProp);
-                    if (NOT ContainsHandles(ElemStruct))
+                    if (NOT MayContainHandles(ElemStruct))
                     { continue; }
 
                     auto SetHelper = FScriptSetHelper{SetProp, SetProp->ContainerPtrToValuePtr<void>(InMemory)};
@@ -109,21 +98,20 @@ namespace ck::snapshot
                 {
                     const auto* KeyStruct   = CastField<FStructProperty>(MapProp->KeyProp);
                     const auto* ValueStruct = CastField<FStructProperty>(MapProp->ValueProp);
-                    if (NOT ContainsHandles(KeyStruct) && NOT ContainsHandles(ValueStruct))
+                    if (NOT MayContainHandles(KeyStruct) && NOT MayContainHandles(ValueStruct))
                     { continue; }
 
                     auto MapHelper = FScriptMapHelper{MapProp, MapProp->ContainerPtrToValuePtr<void>(InMemory)};
 
                     for (auto It = MapHelper.CreateIterator(); It; ++It)
                     {
-                        if (ContainsHandles(KeyStruct))
+                        if (MayContainHandles(KeyStruct))
                         { VisitOrRecurse(KeyStruct, MapHelper.GetKeyPtr(It)); }
-                        if (ContainsHandles(ValueStruct))
+                        if (MayContainHandles(ValueStruct))
                         { VisitOrRecurse(ValueStruct, MapHelper.GetValuePtr(It)); }
                     }
 
-                    // Same in-place key mutation concern as sets: a remapped handle KEY hashes differently.
-                    if (InRehashAfterKeyVisit && ContainsHandles(KeyStruct))
+                    if (InRehashAfterKeyVisit && MayContainHandles(KeyStruct))
                     { MapHelper.Rehash(); }
                 }
             }

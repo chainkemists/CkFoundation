@@ -33,7 +33,6 @@ namespace ck::pmg
 #if CK_PMG_WITH_FREETYPE
     namespace ck_pmg_font_glyph_cache
     {
-        // Bezier flatten step counts — the tunable smoothness/vertex-count knob.
         constexpr int32 ck_pmg_ConicSteps = 8;
         constexpr int32 ck_pmg_CubicSteps = 16;
 
@@ -95,21 +94,19 @@ namespace ck::pmg
             Delaunay.bOrientedEdges = true;
             Delaunay.FillRule = FConstrainedDelaunay2d::EFillRule::NonZero; // TrueType winding
 
-            // Inputs are at FONT-UNIT scale here, so a sub-pixel tolerance is safe.
-            constexpr double DedupeTolSq = 0.01 * 0.01;
+            constexpr double FontUnitSubPixelTolSq = 0.01 * 0.01;
 
             for (const TArray<FVector2D>& Contour : InContours)
             {
-                // Drop consecutive coincident points and a closing duplicate — degenerate
-                // zero-length edges make the constrained triangulation fail outright.
+                // Degenerate zero-length edges make the constrained triangulation fail outright.
                 TArray<FVector2D> Clean;
                 Clean.Reserve(Contour.Num());
                 for (const FVector2D& P : Contour)
                 {
-                    if (Clean.Num() == 0 || FVector2D::DistSquared(P, Clean.Last()) > DedupeTolSq)
+                    if (Clean.Num() == 0 || FVector2D::DistSquared(P, Clean.Last()) > FontUnitSubPixelTolSq)
                     { Clean.Add(P); }
                 }
-                if (Clean.Num() >= 2 && FVector2D::DistSquared(Clean[0], Clean.Last()) <= DedupeTolSq)
+                if (Clean.Num() >= 2 && FVector2D::DistSquared(Clean[0], Clean.Last()) <= FontUnitSubPixelTolSq)
                 { Clean.Pop(); }
 
                 const int32 N = Clean.Num();
@@ -175,7 +172,7 @@ namespace ck::pmg
         }
 
         auto Entry = MakeUnique<FFaceEntry>();
-        Entry->Bytes = InFontBytes; // retain
+        Entry->Bytes = InFontBytes;
         if (FT_New_Memory_Face(static_cast<FT_Library>(_FtLibrary), Entry->Bytes.GetData(), Entry->Bytes.Num(), 0, &Entry->Face) != 0)
         { return INDEX_NONE; }
         Entry->UnitsPerEm = Entry->Face->units_per_EM != 0 ? static_cast<float>(Entry->Face->units_per_EM) : 1.0f;
@@ -195,7 +192,6 @@ namespace ck::pmg
         FFaceEntry& Entry = *_Faces[InFaceKey];
         if (const TUniquePtr<FCachedGlyph>* Cached = Entry.Glyphs.Find(InCodepoint)) { return **Cached; }
 
-        // Cache miss only — the one-time glyph extraction + tessellation cost (the cache-hit path above is excluded).
         SCOPE_CYCLE_COUNTER(STAT_Pmg_BuildGlyph);
 
         auto NewGlyph = MakeUnique<FCachedGlyph>();
@@ -206,7 +202,6 @@ namespace ck::pmg
             const float InvEm = 1.0f / Entry.UnitsPerEm;
             Glyph.AdvanceEm = static_cast<float>(Entry.Face->glyph->advance.x) * InvEm;
 
-            // Decompose the outline in FONT UNITS (large, well-conditioned coords).
             FT_Outline& Outline = Entry.Face->glyph->outline;
             ck_pmg_font_glyph_cache::FDecomposeCtx Ctx; Ctx.Contours = &Glyph.Contours;
             FT_Outline_Funcs Funcs{};
@@ -214,14 +209,13 @@ namespace ck::pmg
             Funcs.conic_to = &ck_pmg_font_glyph_cache::Decomp_ConicTo; Funcs.cubic_to = &ck_pmg_font_glyph_cache::Decomp_CubicTo;
             FT_Outline_Decompose(&Outline, &Funcs, &Ctx);
 
-            // Tessellate at font-unit scale (EM-normalized 0..1 input collapses under the
-            // Delaunay tolerance and yields zero triangles).
+            // Tessellate at font-unit scale: EM-normalized 0..1 input collapses under the
+            // Delaunay tolerance and yields zero triangles.
             if (Glyph.Contours.Num() > 0)
             {
                 ck_pmg_font_glyph_cache::TessellateContours(Glyph.Contours, Glyph.TessVerts, Glyph.TessTris);
             }
 
-            // Normalize contours AND tessellated verts to EM units (size-independent cache).
             for (TArray<FVector2D>& C : Glyph.Contours) { for (FVector2D& P : C) { P *= InvEm; } }
             for (FVector2D& V : Glyph.TessVerts) { V *= InvEm; }
 

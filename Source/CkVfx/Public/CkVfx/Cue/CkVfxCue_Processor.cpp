@@ -58,15 +58,9 @@ namespace ck
 
         const auto& SpawnTransform = VfxCueScript->Get_SpawnTransform();
 
-        // AutoDestroy must remain false: the NiagaraComponent's lifetime is managed by this ECS system
-        // (FProcessor_VfxCue_EffectLifetimeMonitor + FProcessor_VfxCue_EndPlay). If Niagara auto-destroys
-        // the component, the monitor's IsActive() check and EndPlay's DestroyComponent() call would operate
-        // on a dangling pointer.
+        // Both must stay false (see CkVfx/Claude.md, Anti-patterns): Niagara auto-destroy dangles the
+        // monitor/EndPlay component pointer, and auto-activate skips OnStarted plus start-time bookkeeping.
         constexpr auto AutoDestroy = false;
-
-        // AutoActivate must remain false: activation is driven by FCk_Request_VfxCue_Play going through the
-        // request queue, even for AutoPlay mode. Bypassing this would skip the OnStarted signal and the
-        // effect start-time bookkeeping in FProcessor_VfxCue_HandleRequests.
         constexpr auto AutoActivate = false;
 
         const auto PreCullCheck = InParams.Get_PreCullCheck();

@@ -309,10 +309,8 @@ auto
         }
     }
 
-    // Now proceed with standard pin reallocation
     AllocateDefaultPins();
 
-    // Get entity script class from old pins
     if (auto* EntityScriptClass = DoGet_EntityScriptClass(InOldPins))
     {
         DoCreatePinsFromEntityScript(EntityScriptClass);
@@ -420,12 +418,10 @@ auto
 
         if (Replication == ECk_Replication::Replicates)
         {
-            // Use network/multiplayer icon
             return FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("Icons.Network"));
         }
         else
         {
-            // Use local/single player icon
             return FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("Icons.Computer"));
         }
     }
@@ -755,13 +751,11 @@ auto
         return;
     }
 
-    // Create a Make Struct node for the Spawn Params
     auto* MakeSpawnParamsStruct_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_MakeStruct>(this, InSourceGraph);
     MakeSpawnParamsStruct_Node->StructType = EntitySpawnParamsStruct;
     MakeSpawnParamsStruct_Node->bMadeAfterOverridePinRemoval = true;
     MakeSpawnParamsStruct_Node->AllocateDefaultPins();
 
-    // Create a MakeInstancedStruct node to convert UScriptStruct to FInstancedStruct
     auto* MakeInstancedStruct_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
     MakeInstancedStruct_Node->SetFromFunction(UBlueprintInstancedStructLibrary::StaticClass()->FindFunctionByName(GET_FUNCTION_NAME_CHECKED(UBlueprintInstancedStructLibrary, MakeInstancedStruct)));
     MakeInstancedStruct_Node->AllocateDefaultPins();
@@ -813,7 +807,6 @@ auto
         }
     }
 
-    // Set up 'Request_SpawnEntity' function node
     auto* SpawnEntity_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
     SpawnEntity_Node->FunctionReference.SetExternalMember
     (
@@ -823,7 +816,6 @@ auto
     SpawnEntity_Node->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(SpawnEntity_Node, this);
 
-    // Connect everything together
     if (UCk_Utils_EditorGraph_UE::Request_TryCreateConnection
     (
         InCompilerContext,
@@ -843,7 +835,6 @@ auto
         }
     ) == ECk_SucceededFailed::Failed) { return; }
 
-    // Link or assign entity script class
     if (UCk_Utils_EditorGraph_UE::Request_LinkPins
     (
         InCompilerContext,
@@ -886,7 +877,6 @@ auto
 
     if (_LifetimeOwnerType == ECk_EntityLifetime_OwnerType::UseTransientEntity)
     {
-        // Set up 'Get_TransientEntity' function node
         auto* GetTransientEntity_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
         GetTransientEntity_Node->FunctionReference.SetExternalMember
         (
@@ -1028,7 +1018,6 @@ auto
 {
     auto ConnectedInterfaces = TArray<UClass*>{};
 
-    // Get all interfaces implemented in this blueprint first
     auto AllBlueprintInterfaces = TArray<UClass*>{};
     if (auto* Blueprint = GetBlueprint();
         ck::IsValid(Blueprint))
@@ -1048,8 +1037,6 @@ auto
         return ConnectedInterfaces;
     }
 
-    // Simple approach: For each interface pin that has a non-default value,
-    // check if that interface is implemented in the blueprint
     for (auto* Pin : Pins)
     {
         if (ck::Is_NOT_Valid(Pin, ck::IsValid_Policy_NullptrOnly{}) ||
@@ -1058,7 +1045,6 @@ auto
             NOT IsInterfacePin(Pin))
         { continue; }
 
-        // Method 1: Check DefaultObject for interface class
         if (ck::IsValid(Pin->DefaultObject))
         {
             if (auto* InterfaceClass = Cast<UClass>(Pin->DefaultObject);
@@ -1071,7 +1057,6 @@ auto
             }
         }
 
-        // Method 2: Check PinSubCategoryObject
         if (Pin->PinType.PinSubCategoryObject.IsValid())
         {
             if (auto* InterfaceClass = Cast<UClass>(Pin->PinType.PinSubCategoryObject.Get());
@@ -1084,7 +1069,6 @@ auto
             }
         }
 
-        // Method 3: Check connections
         if (Pin->LinkedTo.Num() > 0)
         {
             for (auto* LinkedPin : Pin->LinkedTo)
@@ -1121,7 +1105,6 @@ auto
     if (ck::Is_NOT_Valid(InterfaceClass))
     { return InterfaceFunctions; }
 
-    // Get all functions from the interface
     for (TFieldIterator<UFunction> FunctionIt(InterfaceClass, EFieldIteratorFlags::IncludeSuper);
          FunctionIt; ++FunctionIt)
     {
@@ -1132,14 +1115,12 @@ auto
 
         const FString FunctionName = Function->GetName();
 
-        // Filter out ExecuteUbergraph - this is an internal Blueprint function, not a real interface function
         if (FunctionName.Contains(TEXT("ExecuteUbergraph"), ESearchCase::IgnoreCase))
         {
             ck::ecs_editor::Warning(TEXT("Filtering out ExecuteUbergraph function: [{}]"), FunctionName);
             continue;
         }
 
-        // Filter out other internal/generated functions
         if (FunctionName.StartsWith(TEXT("__")) ||
             Function->HasAnyFunctionFlags(FUNC_Native) ||
             Function->HasAnyFunctionFlags(FUNC_Delegate))
@@ -1147,7 +1128,6 @@ auto
             continue;
         }
 
-        // Only include blueprint callable/implementable functions
         if (Function->HasAnyFunctionFlags(FUNC_BlueprintCallable | FUNC_BlueprintEvent))
         {
             InterfaceFunctions.Add(Function);
@@ -1170,10 +1150,8 @@ auto
     if (ck::Is_NOT_Valid(Blueprint))
     { return; }
 
-    // Try to find existing implementation
     UEdGraph* FunctionGraph = nullptr;
 
-    // Look for existing function graph
     for (const auto& Graph : Blueprint->FunctionGraphs)
     {
         if (ck::Is_NOT_Valid(Graph))
@@ -1186,7 +1164,6 @@ auto
         }
     }
 
-    // If no graph exists, try to find an event node
     if (ck::Is_NOT_Valid(FunctionGraph))
     {
         for (const auto& Graph : Blueprint->UbergraphPages)
@@ -1203,7 +1180,6 @@ auto
                     {
                         FunctionGraph = Graph;
 
-                        // Focus on the specific event node
                         FKismetEditorUtilities::BringKismetToFocusAttentionOnObject(EventNode);
                         return;
                     }
@@ -1214,12 +1190,10 @@ auto
 
     if (ck::IsValid(FunctionGraph))
     {
-        // Open the function graph
         FKismetEditorUtilities::BringKismetToFocusAttentionOnObject(FunctionGraph);
     }
     else
     {
-        // Show notification that function is not implemented
         auto NotificationInfo = FNotificationInfo(
             FText::FromString(ck::Format_UE(TEXT("Interface function '{}' is not yet implemented"),
                                           Function->GetName())));
@@ -1242,7 +1216,6 @@ auto
     if (ck::Is_NOT_Valid(Blueprint))
     { return false; }
 
-    // Check for function graphs (functions)
     for (const auto& Graph : Blueprint->FunctionGraphs)
     {
         if (ck::IsValid(Graph) && Graph->GetFName() == Function->GetFName())
@@ -1251,7 +1224,6 @@ auto
         }
     }
 
-    // Check for event nodes (events)
     for (const auto& Graph : Blueprint->UbergraphPages)
     {
         if (ck::Is_NOT_Valid(Graph))
@@ -1290,12 +1262,10 @@ auto
 
     if (Function->HasAnyFunctionFlags(FUNC_BlueprintEvent))
     {
-        // For events, add an event node to the event graph
         return ImplementInterfaceEvent(Function, Blueprint);
     }
     else
     {
-        // For functions, create a new function graph
         return ImplementInterfaceFunction_Graph(Function, Blueprint);
     }
 }
@@ -1310,7 +1280,6 @@ auto
     if (ck::Is_NOT_Valid(Function) || ck::Is_NOT_Valid(Blueprint))
     { return false; }
 
-    // Find or create the main event graph
     UEdGraph* EventGraph = nullptr;
     if (Blueprint->UbergraphPages.Num() > 0)
     {
@@ -1318,7 +1287,6 @@ auto
     }
     else
     {
-        // Create a new event graph if none exists
         EventGraph = FBlueprintEditorUtils::CreateNewGraph(
             Blueprint,
             FBlueprintEditorUtils::FindUniqueKismetName(Blueprint, TEXT("EventGraph")),
@@ -1370,7 +1338,6 @@ auto
 
     const FString FunctionName = Function->GetName();
 
-    // Create a new function graph
     auto* FunctionGraph = FBlueprintEditorUtils::CreateNewGraph(
         Blueprint,
         *FunctionName,
@@ -1409,13 +1376,11 @@ auto
 {
     const auto& IsAlreadyImplemented = IsInterfaceAlreadyImplemented();
 
-    // Instead of using the original widget, let's create our own integrated version
     return SNew(SHorizontalBox)
         + SHorizontalBox::Slot()
         .FillWidth(1.0f)
         .VAlign(VAlign_Center)
         [
-            // Create a simple text block for the pin value instead of using the original widget
             SNew(STextBlock)
             .Text_Lambda([this]()
             {
@@ -1561,9 +1526,6 @@ auto
     if (ck::Is_NOT_Valid(Pin, ck::IsValid_Policy_NullptrOnly{}) || Pin->Direction != EGPD_Input || ck::Is_NOT_Valid(_EntityScriptNode))
     { return {}; }
 
-    // Only add buttons to pins that are:
-    // 1. Generated from EntityScript
-    // 2. Are interface type pins
     return _EntityScriptNode->IsPinGeneratedFromEntityScript(Pin) &&
            _EntityScriptNode->IsInterfacePin(Pin);
 }
@@ -1581,7 +1543,6 @@ auto
         if (const auto& EntityScriptClass = _EntityScriptNode->DoGet_EntityScriptClass();
             ck::IsValid(EntityScriptClass))
         {
-            // Add status indicators with Unicode icons
             MainBox->AddSlot()
             .AutoHeight()
             .Padding(4.0f, 2.0f)
@@ -1593,7 +1554,6 @@ auto
                 [
                     SNew(SHorizontalBox)
 
-                    // Replication status
                     + SHorizontalBox::Slot()
                     .AutoWidth()
                     .VAlign(VAlign_Center)
@@ -1683,7 +1643,6 @@ auto
                         ]
                     ]
 
-                    // Instancing policy
                     + SHorizontalBox::Slot()
                     .AutoWidth()
                     .VAlign(VAlign_Center)
@@ -1787,7 +1746,6 @@ auto
 
     UE_LOG(LogTemp, Warning, TEXT("Added test category"));
 
-    // Continue with interface logic only if basic test works...
     auto* EntityScriptClass = EntityScriptNode->DoGet_EntityScriptClass();
     if (ck::Is_NOT_Valid(EntityScriptClass))
     {
@@ -1804,13 +1762,11 @@ auto
         return;
     }
 
-    // Create a new category for interface navigation
     auto& InterfaceCategory = DetailBuilder.EditCategory(
         "Interface Functions",
         FText::FromString(TEXT("Interface Functions")),
         ECategoryPriority::Important);
 
-    // Add a header
     InterfaceCategory.AddCustomRow(FText::FromString(TEXT("Interface Functions Header")))
     .WholeRowContent()
     [
@@ -1820,7 +1776,6 @@ auto
         .ColorAndOpacity(FLinearColor(0.8f, 0.8f, 1.0f))
     ];
 
-    // Create scrollable area for interfaces
     InterfaceCategory.AddCustomRow(FText::FromString(TEXT("Interface Functions List")))
     .WholeRowContent()
     [
@@ -1865,7 +1820,6 @@ auto
         if (Functions.Num() == 0)
         { continue; }
 
-        // Interface header
         MainVerticalBox->AddSlot()
         .AutoHeight()
         .Padding(0.0f, 4.0f, 0.0f, 2.0f)
@@ -1881,7 +1835,6 @@ auto
             ]
         ];
 
-        // Function buttons
         for (auto* Function : Functions)
         {
             if (ck::Is_NOT_Valid(Function))
@@ -1890,16 +1843,12 @@ auto
             const auto& IsImplemented = _CachedNode->IsFunctionImplemented(Function);
             const auto& IsEvent = Function->HasAnyFunctionFlags(FUNC_BlueprintEvent);
 
-            // Choose better icons
-            FString IconText;
-            if (IsEvent)
-            {
-                IconText = TEXT("⚡"); // Lightning bolt for events
-            }
-            else
-            {
-                IconText = TEXT("🔧"); // Wrench for functions
-            }
+            constexpr auto EventIcon = TEXT("⚡");
+            constexpr auto FunctionIcon = TEXT("🔧");
+            const auto IconText = FString{IsEvent ? EventIcon : FunctionIcon};
+
+            const auto ImplementedIconColor = FLinearColor{0.4f, 0.8f, 0.4f};
+            const auto NotImplementedIconColor = FLinearColor{0.8f, 0.6f, 0.2f};
 
             MainVerticalBox->AddSlot()
             .AutoHeight()
@@ -1948,9 +1897,7 @@ auto
                             SNew(STextBlock)
                             .Text(FText::FromString(IsImplemented ? TEXT("🔍") : TEXT("+")))
                             .Font(FCoreStyle::GetDefaultFontStyle("Bold", 12))
-                            .ColorAndOpacity(IsImplemented ?
-                                FLinearColor(0.4f, 0.8f, 0.4f) :  // Green for implemented
-                                FLinearColor(0.8f, 0.6f, 0.2f))   // Orange for not implemented
+                            .ColorAndOpacity(IsImplemented ? ImplementedIconColor : NotImplementedIconColor)
                             .ToolTipText(FText::FromString(IsImplemented ?
                                 TEXT("Click to navigate to implementation") :
                                 TEXT("Click to implement this function")))
@@ -1975,15 +1922,12 @@ auto
 
     if (const bool IsImplemented = _CachedNode->IsFunctionImplemented(Function))
     {
-        // Navigate to existing implementation
         _CachedNode->NavigateToInterfaceFunction(Function);
     }
     else
     {
-        // Try to implement the function
         if (_CachedNode->ImplementInterfaceFunction(Function))
         {
-            // Show success notification
             auto NotificationInfo = FNotificationInfo(
                 FText::FromString(ck::Format_UE(TEXT("Successfully implemented: {}"), Function->GetName())));
             NotificationInfo.ExpireDuration = 3.0f;
@@ -1991,7 +1935,9 @@ auto
             NotificationInfo.Image = FAppStyle::GetBrush(TEXT("Icons.SuccessWithColor"));
             FSlateNotificationManager::Get().AddNotification(NotificationInfo);
 
-            // Navigate to the newly created implementation
+            constexpr auto BlueprintRefreshDelay = 0.1f;
+            constexpr auto Loop = false;
+
             FTimerHandle TimerHandle;
             GEditor->GetTimerManager()->SetTimer(TimerHandle, [this, Function]()
             {
@@ -1999,11 +1945,10 @@ auto
                 {
                     _CachedNode->NavigateToInterfaceFunction(Function);
                 }
-            }, 0.1f, false); // Small delay to let the blueprint refresh
+            }, BlueprintRefreshDelay, Loop);
         }
         else
         {
-            // Show error notification
             auto NotificationInfo = FNotificationInfo(
                 FText::FromString(ck::Format_UE(TEXT("Failed to implement: {}"), Function->GetName())));
             NotificationInfo.ExpireDuration = 5.0f;

@@ -190,12 +190,12 @@ The Action utility class is intentionally thin. Most planner-tier verbs (Plan / 
 | Group | Function | Notes |
 |---|---|---|
 | **Query** | `Has(Handle)` | True if the entity has the Action role. |
-| | `Get_PlanStatus(Action)` | Reads the Planner-role plan status on the Action's own entity (which carries the Planner-role fragments because every Action is also a Planner-in-waiting in the unified model). |
-| | `Get_Plan(Action)` | Plan **classes** for the Action's own planner. |
-| | `Get_PlanCost(Action)` | Cost of the Action's last plan. |
+| | `Get_PlanStatus(Action)` | Reads through to the **owning Planner**. Any Action-side `PlanState` stamp left over from the old dual-stamp model is not authoritative. |
+| | `Get_Plan(Action)` | Plan **classes**, read from the owning Planner. |
+| | `Get_PlanCost(Action)` | Cost of the owning Planner's last plan. |
 | | `Get_WorldStateSource(Action)` | The resolved WS handle this Action consumes (`FFragment_Goap_Planner_WorldStateSource._Resolved`). |
 | | `Get_ActiveParentAction(Action)` | Class of the parent Action that injected the current goal; null for top-level / dormant. |
-| | `Get_InvalidGoal(Action)` | Effects referencing unregistered WS keys (populated at Setup time). |
+| | `Get_InvalidGoal(Action)` | Effects referencing unregistered WS keys (populated at Setup time); read from the owning Planner. |
 | **Requests** | `Request_Plan(Action)` | Delegates to the owning Planner — enqueues a Plan request on its queue. |
 | | `Request_CancelPlan(Action)` | Delegates to the owning Planner. |
 | | `Request_SetActionCost(Action, ChildClass, Cost)` | Delegates: routes to the owning Planner's `Request_SetChildActionCost`. |
@@ -298,7 +298,22 @@ API on `UCk_Utils_Goap_WorldState_UE`:
 | `Get_OverrideLayerNames(WS)` | Layer names bottom-to-top. Useful for debugger tooltips. |
 | `Has_KeyOverride(WS, Key)` | True if any override layer is currently shadowing this key. |
 
+Layers store **raw `FGameplayTag` keys** and resolve them lazily at read time, so a push never has to be ordered against key registration. Layers are **named** so the debugger's fixed `DebugUI` layer and ad-hoc AI-deliberation scopes coexist independently.
+
 **Multi-Planner reuse:** layers pushed on a shared WS entity affect all Planners subscribed to it — both replan when the effective view changes. This is intentional; document it as a feature when sharing a WS across Planners.
+
+### World State fragment internals
+
+| Fragment | Contents / rationale |
+|---|---|
+| `FFragment_Goap_WorldState_KeyRegistry` | Exactly one `goap::FKeyRegistry` per WS entity. Every Planner pointing at that WS shares it, so key indices are consistent across the whole layer of Planners observing the state. `FProcessor_Goap_Action_Setup` populates it via `FindOrRegister` while scanning action/goal CDOs. |
+| `FFragment_Goap_WorldState_Values` | Wraps `goap::FWorldState` — a `TStaticArray`-backed fixed-size boolean store, sized for O(1) compare/hash. That fixed sizing is where the `WorldState_MaxKeys` = 64 ceiling and the registry-full drop path come from. |
+| `FFragment_Goap_WorldState_Subscribers` | `TArray<FCk_Handle>`, not `FCk_Handle_Goap_Action`: stamping `FTag_Goap_Dirty_WorldState` is a generic-handle operation, and non-Action systems may want to react to WS changes. Entries are lazy-pruned — destroyed subscribers drop out as a walk encounters them. Actions subscribe at activation (ActionSet ChainUpdate) and unsubscribe at deactivation; the root Action subscribes at `AddAction` time. |
+| `FFragment_Goap_WorldState_ChangeLog` | Bounded ring (Capacity 32, oldest drops first) of *effective*-value changes — base `Set_Value` writes AND override push/pop/clear deltas — each stamped with mutator + frame. Feeds the debugger's timeline WS lane and the Planner's replan-cause attribution. |
+
+`Get_MutableRegistry()` / `Get_MutableValues()` are public **on purpose**: the GOAP Setup processor lives in CkGoap proper, outside these fragments' friend lists, and registers keys on demand; the A* effect-application path mutates values through `FWorldState`'s own typed setters. Neither is a friend. Read-only callers must keep using the const `Get_Registry` / `Get_Values`.
+
+Four WS queries exist primarily for the GOAP debugger, not for gameplay code: `Get_TopOverrideLayerForKey` ("shadowed by \<layer\>" row tooltips), `Get_LayerValues` / `Get_LayerKeyCount` (per-layer drilldown inspector), `Get_RecentChanges` (timeline + replan-cause display), `Get_SubscriberCount` (blast radius — a shared WS replans every subscribed entity when a key flips).
 
 ---
 
@@ -328,7 +343,7 @@ public:
 ```
 
 - `AddPrecondition` / `AddEffect` / `SetCost` are the only builder methods.
-- Identity is class-derived — no `SetActionTag` call.
+- Identity is class-derived — no `SetActionTag` call. `UCk_GoapAction_EntityScript::Get_ActionTagForClass` derives it via `UCk_Utils_Object_UE::Get_TagFromClassName`, mirroring `UCk_SmState_EntityScript::Get_StateTagForClass` in `CkStateMachine`.
 - **Boolean only.** Project numeric/enum state to boolean tags before use.
 
 To register an Action under a Planner, call `UCk_Utils_Goap_Planner_UE::AddAction(Planner, Params)` where `Params._ActionClass` is the EntityScript subclass.
@@ -369,7 +384,9 @@ To register an Action under a Planner, call `UCk_Utils_Goap_Planner_UE::AddActio
 | `FTag_Goap_Planner_PlanRequested` | Planner entity | Request-flow gate |
 | `FTag_Goap_Planner_PlanInFlight` | Planner entity | Parent-plan gating; child Planners defer while parent has this tag |
 
-Note: `FFragment_Goap_Planner_PlanState`, `FFragment_Goap_Planner_Goal`, and `FFragment_Goap_Planner_WorldStateSource` live on every **Action** entity too (every Action carries the Planner-role data fragments so that promotion via `PromoteActionToPlanner` is a pure stamp of the Planner *discriminator* fragments — `Params`, `Current`, `ActionCatalogIndex`, `Activation` — without needing to backfill any data). The Planner-role discriminator fragments are what distinguish a bare Action from a dual-role entity.
+**Actions are lean, with one exception.** `DoCreateOrFindActionEntity` stamps `_Definition`, `_Params`, `_Tree`, `_Current` — plus `FFragment_Goap_Planner_WorldStateSource`, which even an atomic leaf needs because `FProcessor_Goap_Action_Setup` resolves its preconditions/effects against the registry that fragment points at (and `UCk_Utils_Goap_Action_UE::Get_WorldStateSource` reads it). The rest of the Planner-role cluster — `PlanState`, `Goal`, `Activation`, `Requests`, `ReplanThrottle`, `SearchState`, `Result`, `PlanContext`, `AStar_Params`, `AStar_Debug` — arrives only via `PromoteActionToPlanner`'s AddOrGet pass. The Planner-role discriminator fragments are what distinguish a bare Action from a dual-role entity.
+
+`FFragment_Goap_Action_Current` is **residual** Action-role state: `_Plan` / `_PlanCost` / `_PlanStatus` / `_PlanAttemptCount` moved to `FFragment_Goap_Planner_PlanState`, `_Goal` / `_InvalidGoal` to `FFragment_Goap_Planner_Goal`, and the resolved WS source to `FFragment_Goap_Planner_WorldStateSource._Resolved`. Only `_ActiveParentAction` remains.
 
 ---
 
@@ -422,6 +439,35 @@ Real-game examples: a combat NPC's `WaitForEnemy` (satisfies `EnemyNeutralized` 
 - **Writing to override layers.** `Set_Value(WS, Key, NewValue)` always mutates the base store, never an override layer. There is no API to write into a layer directly. To express a transient "what if" mutation push an override layer; for a permanent change write to the base. Trying to use override layers as a write target produces the wrong semantics — the base store will be stale relative to the layer until the layer is popped.
 - **Numeric world state.** Classical boolean GOAP only. Project to booleans (`HasEnoughX`, `IsAtY`, `IsLowZ`).
 - **Calling `Request_Plan` immediately after a runtime `AddAction`.** The new child Action's `_CachedActionDef` (Preconditions/Effects/Cost extracted from the CDO) is populated by `FProcessor_Goap_Action_Setup` on the next group tick, and the Planner's catalog rebuild runs in `FProcessor_Goap_Planner_Setup` after that. A `Request_Plan` issued in the same frame sees a default-constructed candidate (zero cost, empty effects) and the planner silently sticks with the pre-existing operator set. Symptom: tests that mutate the operator catalog at runtime appear to ignore the new Action. Fix: wait 1-3 frames between `AddAction` and `Request_Plan`, or until `OnGoapAction_SetupComplete` fires on the new child.
+
+---
+
+## Implementation notes
+
+### The regressive search graph (`goap::FGoapGraph`)
+
+`Algorithm/CkGoap_Graph.h` — the planning graph adapter satisfying `AStarGraph<FGoapGraph, int32>`.
+
+- **Nodes** are `FConstraintSet`s (the set of typed constraints a predecessor state must satisfy). `NodeId = int32 = index into _StatePool`.
+- **Edges** are actions applied in reverse: an action's effects resolve constraints; its preconditions become new constraints on the predecessor.
+- **Direction is BACKWARD.** Start = the goal's conditions as an `FConstraintSet` (index 0); Goal = "every constraint satisfied by the current world state".
+- Plan extraction reverses the edge actions along the A* path to get execution order.
+
+**Encodings.** WorldState: `uint8{0 = false, 1 = true}`, initially all-zero. ConstraintSet: `uint8{0 = unconstrained, 1 = must-be-false, 2 = must-be-true}` (mirrors `ck::goap::EConstraint`). The must-be-false/must-be-true split is distinct from "key set vs unset" — WorldState treats unset as false (classical GOAP), but a constraint must be able to say *I don't care about this key*. Values are bools only; project numeric economies, distances and enum machines down before writing:
+
+```cpp
+utils_goap_world_state::Set_Value(WS, Tag_HasEnoughFood, ActualFood >= Threshold);
+```
+
+### Cycle detection (`FProcessor_Goap_Planner_Setup`)
+
+Each Planner runs an **iterative** Tarjan SCC over its *direct children* — a promoted mid-tier Planner's own `_ChildActions`, or a top-level Planner's `ActionCatalogIndex` entries. The recursive textbook formulation is deliberately avoided: a deep Action catalog would consume the native call stack. The work-stack form carries an explicit `FFrame{Node, ChildIdx}` to resume each node's child iteration.
+
+**Edges are precondition/effect, not tree edges.** For sibling Actions A and B, an effect `(Key,Value)` of A matching a precondition `(Key,Value)` of B adds `A -> B` ("B depends on A"). A tree-edge model would be a no-op — a tree has no cycles by construction. A non-trivial SCC (size > 1, or a self-loop) means those candidate operators mutually require each other's effects; it is recorded in `FFragment_Goap_Planner_Current._DependencyCycles` (with the union of participating WS keys) as a **diagnostic only** — the planner does not refuse a cyclic catalog; designers fix them via the debugger surface.
+
+### Catalog mutation goes through the index mutator
+
+`Request_RemoveAction` uses `ActionCatalogIndex::RemoveEntry`, not a direct `_TagToAction` write. `UCk_Utils_Goap_Planner_UE` is a friend of the fragment so the direct write would compile, but the mutator keeps symmetry with `AddEntry` and leaves room for removal side effects later. (Fragment friendship is class-scoped and does not reach namespace-level free helpers — those get access via explicit friend declarations, e.g. `DoResolveChildWorldStateFromParent` on `FFragment_Goap_Planner_WorldStateSource`.)
 
 ---
 

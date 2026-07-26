@@ -20,11 +20,8 @@ namespace ck::camera
             InRotation.Roll = 0.0f;
         }
 
-        // Clamp a yaw into the (possibly wrapping) window [Min, Max], treated as a cone centered at (Min+Max)/2 with
-        // half-width (Max-Min)/2 — clamped by SHORTEST signed angular distance from the center. This is wrap-safe: a
-        // cone like [Facing-100, Facing+100] works for any facing, including those straddling +/-180 where a naive
-        // FMath::Clamp on an unwound angle would snap to the wrong edge. The full-circle case [-180, 180] reduces to
-        // UnwindDegrees (half = 180 => every angle is in range), preserving the prior unrestricted behaviour.
+        // Wrap-safe: clamping the SHORTEST signed distance from the window centre keeps a cone straddling +/-180
+        // correct, where a naive Clamp on an unwound angle snaps to the wrong edge. [-180, 180] = unrestricted.
         auto ClampYawToWindow(float InDesiredYaw, float InMin, float InMax) -> float
         {
             const auto Center = (InMin + InMax) * 0.5f;
@@ -94,7 +91,7 @@ namespace ck::camera
             FPov_State& InOutState)
         -> void
     {
-        // No look-at target → look-at collapses to the pivot (auto-reorient then sees bCanLookAt == false).
+        // No look-at target → collapses to the pivot, which is how Apply_AutoReorient detects "no look-at".
         const auto Target = InInput._LookAtLocation.Get(InOutState._GroupBaseLocation);
         const auto Speed  = InProfile.Get_Springs().Get_LookAtLocationInterpSpeed();
 
@@ -126,7 +123,6 @@ namespace ck::camera
 
         const auto& Rig = InProfile.Get_Rig();
 
-        // Offset the look-at point in the (last) framing frame.
         auto FramingRotation = InOutState._BoomArmEndTransform.Rotator();
         FramingRotation.Pitch += Rig.Get_FramingPitch();
         FramingRotation.Yaw   += Rig.Get_FramingYaw();
@@ -159,8 +155,8 @@ namespace ck::camera
         auto CurrentPitch = FMath::UnwindDegrees(InOutRotation.Pitch);
         auto CurrentYaw   = FMath::UnwindDegrees(InOutRotation.Yaw);
 
-        // Only drive pitch when the player isn't manually pitching.
-        if (FMath::IsNearlyZero(Intention.Y))
+        const auto PitchIsPlayerDriven = NOT FMath::IsNearlyZero(Intention.Y);
+        if (NOT PitchIsPlayerDriven)
         {
             FMath::WindRelativeAnglesDegrees(CurrentPitch, Reorient.Pitch);
             InOutRotation.Pitch = FMath::FInterpConstantTo(
@@ -189,15 +185,8 @@ namespace ck::camera
 
         const auto& OrientationControl = InProfile.Get_OrientationControl();
 
-        // The orientation intention is a per-frame DELTA already scaled by the caller (user sensitivity, invert,
-        // etc.), NOT a sustained rate — so it is consumed directly, with NO delta-time multiply and NO response-curve
-        // clamp. This keeps mouse look frame-rate independent and matches the classic AddYawInput/AddPitchInput feel.
-        // (A sustained-rate input such as a gamepad stick should pre-multiply by DeltaSeconds at the caller before
-        // pushing its intention.) Output rotation delta = intention * per-axis Speed gain.
-        //
-        // NOTE: the profile's X/YIntentionCurve (FAlphaBlend) leaves are intentionally NOT consumed here — they
-        // clamp the intention magnitude to [0,1], which is wrong for a raw mouse delta. They remain on the profile
-        // reserved for an explicit analog-shaping path.
+        // A per-frame DELTA already scaled by the caller: no delta-time multiply and no X/YIntentionCurve clamp
+        // (both are deliberate — CkCamera/CLAUDE.md, Anti-patterns 0).
         const auto Intention = InInput._OrientationIntention;
 
         if (Intention.IsNearlyZero())
@@ -227,9 +216,6 @@ namespace ck::camera
             FPov_State& InOutState)
         -> void
     {
-        // Fixed-angle camera (top-down / isometric / fixed store cam): force the boom to the configured absolute
-        // rotation and skip input-driven orbit + auto-reorient. A negative pitch lifts the camera above the pivot
-        // (Step_BoomEnd places the camera at pivot - boomDir*length) and looks down at it.
         if (InProfile.Get_Rig().Get_UseFixedBoomRotation())
         {
             auto Fixed = InProfile.Get_Rig().Get_FixedBoomRotation();
@@ -238,8 +224,6 @@ namespace ck::camera
             return;
         }
 
-        // With zero intention + no look-at target the boom holds its seeded rotation (input-independent resting
-        // behaviour). Auto-reorient drives it toward a look-at target (lock-on) without any input.
         auto NewRotation = InOutState._BoomArmRotation;
 
         Apply_AutoReorient(InProfile, InInput, InOutState, NewRotation);
@@ -326,8 +310,7 @@ namespace ck::camera
     {
         const auto& FramingTransform = InOutState._FramingTransform;
 
-        // The camera adopts the framing rotation directly — auto-reorient (look-at) already drove the boom rotation
-        // upstream in Step_BoomRotation.
+        // Framing rotation is adopted directly: auto-reorient already drove the boom upstream in Step_BoomRotation.
         InOutState._CameraTransform = FTransform(FramingTransform.Rotator(), FramingTransform.GetLocation());
     }
 
@@ -363,7 +346,6 @@ namespace ck::camera
         const auto SweepDistance = SweepDirection.Size();
         SweepDirection.Normalize();
 
-        // Single synchronous sweep from the pivot to the camera.
         auto Hit = FHitResult{};
         const auto QueryParams = FCollisionQueryParams{SCENE_QUERY_STAT(CkCamera_POV), false, TraceIgnore};
 

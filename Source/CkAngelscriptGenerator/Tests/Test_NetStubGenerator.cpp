@@ -1,16 +1,3 @@
-// Tests for the net-stub generator's pure path helpers.
-//
-// Coverage:
-//   * Derive_FeatureFromSourcePath — plugin `Script/Ck<Feature>/` convention (incl. deep
-//     nesting), project `Script/Tests/<Feature>/` convention (incl. deep nesting), the `AS`
-//     fallback, and the filename-is-never-a-feature guard.
-//   * Get_IsProjectAuthoredPath — the project-vs-plugin output-root split. The load-bearing
-//     case is "plugins live under the project dir too": a plugin-authored test must NOT
-//     classify as project-authored just because `Plugins/` physically nests inside
-//     `<ProjectDir>/`. A misclassification here re-creates the cross-repo committed-stub
-//     churn the split exists to prevent (a stub committed to the CkTests submodule whose
-//     class lives in the project repo gets pruned on every machine lacking that class).
-
 #include "CkAngelscriptGenerator/AutoTests/CkAutoTestNetStubGenerator.h"
 
 #include "Misc/AutomationTest.h"
@@ -38,7 +25,6 @@ bool FCkTest_NetStubGenerator_Derive_PluginConvention::RunTest(const FString&)
             TEXT("D:/Fake/Plugins/CkTests/Script/CkAttribute/Sub/CkAutoTest_Net_Foo.as")),
         FString{TEXT("Attribute")});
 
-    // Backslash form — generated paths on Windows mix separators freely.
     TestEqual(TEXT("backslash separators normalize before matching"),
         FCkAutoTestNetStubGenerator::Derive_FeatureFromSourcePath(
             TEXT("D:\\Fake\\Plugins\\CkTests\\Script\\CkGrid\\CkAutoTest_Net_Grid_OccupancyReplicates.as")),
@@ -64,9 +50,8 @@ bool FCkTest_NetStubGenerator_Derive_ProjectConvention::RunTest(const FString&)
             TEXT("D:/Fake/Proj/Script/Tests/ChangeablePoster/Sub/CkAutoTest_Net_Foo.as")),
         FString{TEXT("ChangeablePoster")});
 
-    // A `Tests/` dir nested inside a plugin feature dir must not shadow the plugin convention:
-    // the feature segment nearest the leaf that matches a convention wins, and `Script/CkFoo`
-    // is the first (and only) pair that matches here.
+    // Precedence: the feature segment nearest the leaf that matches a convention wins, so a
+    // `Tests/` dir nested inside a plugin feature dir does not shadow the plugin convention.
     TestEqual(TEXT("plugin convention claims Script/CkFoo/Tests/ layouts"),
         FCkAutoTestNetStubGenerator::Derive_FeatureFromSourcePath(
             TEXT("D:/Fake/Plugins/CkTests/Script/CkFoo/Tests/CkAutoTest_Net_Bar.as")),
@@ -91,8 +76,6 @@ bool FCkTest_NetStubGenerator_Derive_Fallback::RunTest(const FString&)
         FCkAutoTestNetStubGenerator::Derive_FeatureFromSourcePath(FString{}),
         FString{TEXT("AS")});
 
-    // The file's own name must never be mistaken for a feature directory — a file directly
-    // under `Script/Tests/` has no feature dir, and `Tests/<filename>` must not match.
     TestEqual(TEXT("file directly under Script/Tests/ falls back to AS"),
         FCkAutoTestNetStubGenerator::Derive_FeatureFromSourcePath(
             TEXT("D:/Fake/Proj/Script/Tests/CkAutoTest_Net_Foo.as")),
@@ -126,8 +109,8 @@ bool FCkTest_NetStubGenerator_ProjectAuthored_Classification::RunTest(const FStr
         FCkAutoTestNetStubGenerator::Get_IsProjectAuthoredPath(
             TEXT("D:\\Fake\\Proj\\Script\\Tests\\X\\CkAutoTest_Net_Foo.as"), ProjectDir));
 
-    // Plugins physically nest under the project dir — they must still classify as
-    // plugin-authored. This is the case that guards against re-creating the cross-repo churn.
+    // Plugins physically nest under the project dir but must still classify as plugin-authored:
+    // misclassifying sends a stub to the wrong repo, where every machine lacking the class prunes it.
     TestFalse(TEXT("plugin source under <ProjectDir>/Plugins/ is NOT project-authored"),
         FCkAutoTestNetStubGenerator::Get_IsProjectAuthoredPath(
             TEXT("D:/Fake/Proj/Plugins/CkTests/Script/CkAttribute/CkAutoTest_Net_Foo.as"), ProjectDir));

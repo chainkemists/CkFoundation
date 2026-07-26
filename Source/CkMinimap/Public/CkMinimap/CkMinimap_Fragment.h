@@ -41,32 +41,21 @@ namespace ck
         friend class ::UCk_Utils_Minimap_UE;
 
     private:
-        // The entity whose Transform (position) and Camera/Transform (view yaw) drive the projection.
-        // Seeded to the minimap child's LIFETIME OWNER at Setup; replaceable via Request_SetObserver.
         FCk_Handle _Observer;
 
-        // Invalid = no fog culling. Set via Request_SetFogOfWar.
         FCk_Handle_FogOfWar _FogOfWar;
 
-        // Live zoom (world cm center -> frame edge). Seeded from Params, mutable via Request_SetViewExtent.
         float _ViewExtent = 0.0f;
 
-        // Seeded from Params, mutable via Request_SetRotationMode.
         ECk_Minimap_RotationMode _RotationMode = ECk_Minimap_RotationMode::NorthLocked;
 
-        // Observer position/yaw as of the LAST projection update — the pull surface for widgets. Goes
-        // stale WHOLESALE between throttled updates (there is no compass-style unthrottled channel).
         FVector _ViewOrigin = FVector::ZeroVector;
         float _ViewYawDegrees = 0.0f;
 
-        // Sorted priority-desc then distance-asc; a self-contained snapshot per entry (see FCk_Minimap_Entry)
         TArray<FCk_Minimap_Entry> _Entries;
 
-        // Reused build target for the next projection pass — swap-published into _Entries (no per-frame allocation churn)
         TArray<FCk_Minimap_Entry> _ScratchEntries;
 
-        // Parallel-projection scratch (reused across updates): the POI set gathered from the view, then one
-        // slot per POI written by the ParallelFor workers — disjoint index writes, no contention
         TArray<FCk_Entity> _ScratchPoiEntities;
         TArray<TOptional<FCk_Minimap_Entry>> _ScratchParallelSlots;
 
@@ -107,8 +96,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // TRANSIENT: minimap children are derived per-client VIEW state — never persisted, never rebuilt on load
-    // (a consumer re-Adds its maps when its HUD spins up). The policy suffix is an intent label post-purge.
     CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfMinimaps, FCk_Handle_Minimap);
 
     // --------------------------------------------------------------------------------------------------------------------

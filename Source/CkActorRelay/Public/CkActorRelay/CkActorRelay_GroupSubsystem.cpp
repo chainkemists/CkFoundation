@@ -87,18 +87,9 @@ auto
     _LogoutEventDelegateHandle = FGameModeEvents::GameModeLogoutEvent.AddUObject(
         this, &UCk_ActorRelay_Group_Subsystem_Base_UE::OnPlayerLogout);
 
-    // Channel spawning is deferred to OnWorldBeginPlay. Spawning replicated
-    // actors before UWorld::HasBegunPlay() returns true makes UE classify them
-    // as level-startup actors (bNetStartup=true), which causes Iris to
-    // serialize them to clients by path reference instead of by class. The
-    // client then tries to resolve the path in its level package, finds
-    // nothing (these actors are dynamically spawned and don't exist on disk),
-    // and "Could not find static actor" / "Failed to instantiate Handle"
-    // ensures fire in UObjectReplicationBridge.
-    //
-    // If the subsystem is created mid-game (rare — seamless travel etc.) the
-    // world has already begun play, so spawn immediately; OnWorldBeginPlay
-    // will not fire for an already-begun-play world.
+    // Spawning is deferred to OnWorldBeginPlay — replicated actors spawned before HasBegunPlay()
+    // become bNetStartup and break on clients (CLAUDE.md "Channel pools"). A subsystem created
+    // mid-game misses that callback entirely, so an already-begun-play world spawns right here.
     if (GetWorld()->HasBegunPlay())
     {
         DoSpawnChannels();
@@ -229,9 +220,6 @@ auto
         FCk_Handle_PendingActorRelay& InPending)
     -> FCk_ActorRelay_ChannelResult
 {
-    // Thin public forwarder so consumers that want sync-or-null (e.g. ECS processors with
-    // per-tick retry) don't have to subscribe to _OnChannelReadyChanged via Promise_OnAcquired.
-    // Internal callers still use DoTryResolve directly via friendship.
     return DoTryResolve(InPending);
 }
 
@@ -427,7 +415,6 @@ auto
         APlayerState* InOwnerPlayerState)
     -> void
 {
-    // Channel spawning is server-authoritative; never grow on a client.
     if (GetWorld()->IsNetMode(NM_Client))
     { return; }
 
@@ -441,10 +428,8 @@ auto
     if (InPool.Num() >= Get_ChannelCount())
     { return; }
 
-    // Only grow once EVERY channel is both ECS-ready and full. A not-yet-ready channel means a
-    // previous grow (or the warm pool) is still coming online — wait for it rather than spawning
-    // a burst of channels, which would re-create the very Iris first-packet pressure this
-    // lazy-spawn change exists to avoid.
+    // Only grow once EVERY channel is ECS-ready AND full: a not-yet-ready channel means a previous
+    // grow is still coming online, and bursting past it re-creates the Iris first-packet pressure
     for (const auto& Channel : InPool)
     {
         const auto IsReadyAndFull =
@@ -642,10 +627,8 @@ auto
     if (ck::Is_NOT_Valid(InWorld))
     { return; }
 
-    // PostLoadMapWithWorld is process-global: under multi-PIE it also fires when ANOTHER PIE
-    // world (e.g. a joining client) finishes loading. Reacting to a foreign world wipes this
-    // world's player pools (its PCs don't belong to InWorld) and spawns channels owned by the
-    // foreign world's PlayerStates. Only ever react to our own world's load.
+    // PostLoadMapWithWorld is process-global — under multi-PIE it fires for foreign PIE worlds too,
+    // and reacting to one wipes this world's pools (CLAUDE.md "Channel pools")
     if (InWorld != GetWorld())
     { return; }
 

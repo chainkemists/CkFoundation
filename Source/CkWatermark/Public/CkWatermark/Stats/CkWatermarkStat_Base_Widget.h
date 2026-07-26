@@ -10,10 +10,7 @@
 #include "CkWatermarkStat_Base_Widget.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Pure Slate widget — shared renderer for all stat types.
-// Displays:  [ VALUE ]
-//              name
-// Value text and color are driven by TAttributes evaluated each frame.
+// Shared Slate renderer for all stat types:   [ VALUE ]   over   name.
 
 class CKWATERMARK_API SCkWatermarkStat : public SCompoundWidget
 {
@@ -48,8 +45,7 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// UWidget base — subclass once per stat type, override the three Native* virtuals.
-// RebuildWidget() wires the TAttribute lambdas to the Slate widget automatically.
+// Subclass once per stat type and override the three Native* virtuals; RebuildWidget() wires them up.
 
 UCLASS(Abstract, BlueprintType, Blueprintable,
        meta = (DisplayName = "Ck Watermark Stat (Base)",
@@ -71,7 +67,6 @@ public:
     // ----------------------------------------------------------------
 
 protected:
-    // UWidget interface
     auto RebuildWidget()                      -> TSharedRef<SWidget> override;
     auto ReleaseSlateResources(bool)          -> void                override;
     auto SynchronizeProperties()              -> void                override;

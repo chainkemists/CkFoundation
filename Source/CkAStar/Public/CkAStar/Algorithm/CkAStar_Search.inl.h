@@ -5,7 +5,6 @@
 #include "HAL/PlatformTime.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Templated header: these create per-TU internal-linkage statics (acceptable; few TUs).
 
 DECLARE_CYCLE_STAT(TEXT("AStar::ContinueSearch"), STAT_AStar_ContinueSearch, STATGROUP_CkAStar);
 DECLARE_DWORD_COUNTER_STAT(TEXT("AStar Iterations"), STAT_AStar_Iterations, STATGROUP_CkAStar);
@@ -92,8 +91,6 @@ TSearchState<T_NodeId, T_Graph>::TSearchState(
 	_GScores.Reserve(InInitialCapacity);
 	_CameFrom.Reserve(InInitialCapacity);
 
-	// Seed with the valid prefix of the existing path.
-	// Walk [0..WarmStartFromIndex-1], accumulating g-scores and building the closed set.
 	auto AccumulatedCost = 0.0f;
 
 	for (auto PathIndex = 0; PathIndex < InWarmStartFromIndex; ++PathIndex)
@@ -114,7 +111,6 @@ TSearchState<T_NodeId, T_Graph>::TSearchState(
 		}
 	}
 
-	// Open the search from the last valid node.
 	const auto& LastValidNode = InExistingPath[InWarmStartFromIndex - 1];
 	_ClosedSet.Remove(LastValidNode);
 
@@ -136,8 +132,7 @@ auto
 		return _Status;
 	}
 
-	// Times the time-sliced A* inner loop. Thread-safe — appears in Insights even on worker threads
-	// (TProcessor_AStar_Execute runs parallel).
+	// Thread-safe — TProcessor_AStar_Execute runs parallel, so this scope shows up on worker threads.
 	SCOPE_CYCLE_COUNTER(STAT_AStar_ContinueSearch);
 
 	const auto StartCycles = FPlatformTime::Cycles64();
@@ -150,7 +145,6 @@ auto
 
 	while (_OpenSet.Num() > 0)
 	{
-		// Time budget check (amortized every CheckInterval iterations)
 		if (HasBudget && IterationsThisTick > 0 && (IterationsThisTick % CheckInterval == 0))
 		{
 			const auto NowCycles = FPlatformTime::Cycles64();
@@ -165,7 +159,6 @@ auto
 			}
 		}
 
-		// Max iterations check
 		if (HasMaxIterations && IterationsThisTick >= InParams.MaxIterationsPerTick)
 		{
 			const auto NowCycles = FPlatformTime::Cycles64();
@@ -177,19 +170,17 @@ auto
 			return _Status; // remains InProgress
 		}
 
-		// Pop best node (lowest FScore)
 		auto Entry = TOpenSetEntry<T_NodeId>{};
 		_OpenSet.HeapPop(Entry, TLess<>{});
 
 		const auto& Current = Entry.Node;
 
-		// Skip already-visited (duplicate entries in heap)
+		// The heap can hold stale duplicates of a node that was closed after being pushed.
 		if (_ClosedSet.Contains(Current))
 		{
 			continue;
 		}
 
-		// Goal test
 		if (_Graph.IsGoal(Current))
 		{
 			ReconstructPath(Current);
@@ -204,7 +195,6 @@ auto
 			return _Status;
 		}
 
-		// Early termination by cost threshold
 		if (HasCostThreshold && Entry.FScore > InParams.CostThreshold)
 		{
 			const auto NowCycles = FPlatformTime::Cycles64();
@@ -216,7 +206,6 @@ auto
 			return _Status;
 		}
 
-		// Expand node
 		_ClosedSet.Add(Current);
 		++IterationsThisTick;
 		INC_DWORD_STAT(STAT_AStar_Iterations);
@@ -248,7 +237,6 @@ auto
 		}
 	}
 
-	// Open set exhausted — no path found
 	const auto NowCycles = FPlatformTime::Cycles64();
 	_TotalTimeMicroseconds +=
 		static_cast<int64>(FPlatformTime::ToSeconds64(NowCycles - StartCycles) * 1'000'000.0);

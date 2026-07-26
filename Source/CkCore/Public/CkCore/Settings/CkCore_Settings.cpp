@@ -7,7 +7,6 @@
 
 namespace ck_core_settings
 {
-    // CVar for DefaultDebugNameVerbosity
     static TAutoConsoleVariable<int32> CVar_DefaultDebugNameVerbosity(
         TEXT("ck.ensure.DebugNameVerbosity"),
         -1,
@@ -26,7 +25,6 @@ namespace ck_core_settings
         }),
         ECVF_Default);
 
-    // CVar for EnsureDisplayPolicy
     static TAutoConsoleVariable<int32> CVar_EnsureDisplayPolicy(
         TEXT("ck.ensure.DisplayPolicy"),
         -1,
@@ -45,7 +43,6 @@ namespace ck_core_settings
         }),
         ECVF_Default);
 
-    // CVar for EnsureDetailsPolicy
     static TAutoConsoleVariable<int32> CVar_EnsureDetailsPolicy(
         TEXT("ck.ensure.DetailsPolicy"),
         -1,
@@ -64,7 +61,6 @@ namespace ck_core_settings
         }),
         ECVF_Default);
 
-    // CVar for EnsureBreakInBlueprintsPolicy
     static TAutoConsoleVariable<int32> CVar_EnsureBreakInBlueprintsPolicy(
         TEXT("ck.ensure.BreakInBlueprints"),
         -1,
@@ -83,7 +79,6 @@ namespace ck_core_settings
         }),
         ECVF_Default);
 
-    // CVar for EnsureBreakInAngelscriptPolicy
     static TAutoConsoleVariable<int32> CVar_EnsureBreakInAngelscriptPolicy(
         TEXT("ck.ensure.BreakInAngelscript"),
         -1,
@@ -102,7 +97,6 @@ namespace ck_core_settings
         }),
         ECVF_Default);
 
-    // CVar for MaxNumberOfBlueprintStackFrames
     static TAutoConsoleVariable<int32> CVar_MaxBlueprintStackFrames(
         TEXT("ck.ensure.MaxBlueprintStackFrames"),
         -1,
@@ -120,7 +114,6 @@ namespace ck_core_settings
         }),
         ECVF_Default);
 
-    // CVar for MaxNumberOfAngelscriptStackFrames
     static TAutoConsoleVariable<int32> CVar_MaxAngelscriptStackFrames(
         TEXT("ck.ensure.MaxAngelscriptStackFrames"),
         -1,

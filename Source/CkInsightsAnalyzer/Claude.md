@@ -30,6 +30,22 @@ Don't ship with Insights integration enabled.
 
 ---
 
+## Implementation notes — hot-path tree (`FCk_FrameReport`)
+
+- **Never collapse a `script::<Class>` scope into its dispatch child.** That scope IS the
+  attribution the tree exists to show. Without the guard in `CollapseWrappers`, every script
+  processor (near-zero self-time, one dominant VM child) collapses into the same anonymous
+  `ForEachBatch` timer and dedup then merges them all into one unattributable row.
+- **`ShownTimers` is per-root, not global.** A single shared set was too aggressive: a timer
+  appearing in one root's subtree got hidden from every later root, even when the roots
+  represented different call paths. Both `GenerateHotPaths` and `BuildHotPathTree` allocate the
+  set inside the per-root loop.
+- The markdown report's ordering (categories and timers sorted by exclusive time, descending)
+  was carried over from the Python script this tool replaced; keep it stable so old and new
+  reports stay comparable.
+
+---
+
 ## See also
 
 - `CkProfile/Claude.md` — stat groups captured by Insights.

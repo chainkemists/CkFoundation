@@ -132,8 +132,6 @@ auto
 
     if (Leaked.Num() > 0 && World->WorldType == EWorldType::Editor)
     {
-        // Bake the cleanup into the level package on next save. The entity-spawner rebuild
-        // path will repopulate fresh transient renderers on demand.
         if (auto* Level = World->PersistentLevel.Get())
         {
             Level->MarkPackageDirty();
@@ -159,14 +157,6 @@ auto
         const FString& InNameSuffix)
     -> ACk_IsmRenderer_Actor_UE*
 {
-    // Identify the renderer via SpawnInfo.Name (passed through .Set_NonUniqueName) rather than
-    // .Set_Label(). SetActorLabel calls AActor::Modify() → MarkPackageDirty() on the actor's
-    // package; in editor worlds the only package is the persistent level, so every spawn would
-    // dirty the level. RF_Transient (applied in the post-spawn callback) prevents serialization
-    // on save but does NOT undo the dirty flag — by the time it's set, the dirty has already
-    // fired. SpawnInfo.Name is the construction-time identifier, doesn't call Modify(), and
-    // surfaces as the actor's FName (visible in outliner when bListedInSceneOutliner is true,
-    // and in `obj list class=Ck_IsmRenderer_Actor_UE` regardless).
     const auto& DescriptiveName = FName{*ck::Format_UE(TEXT("IsmRenderer [{}][{}][Shadows:{}][{}][Collision:{}]{}"),
         InDataAsset->Get_Mesh(),
         InDataAsset->Get_Mobility(),
@@ -185,13 +175,9 @@ auto
             const auto& NewIsmRendererActor = Cast<ACk_IsmRenderer_Actor_UE>(InActor);
             NewIsmRendererActor->_RenderData = InDataAsset;
 
-            // ISM renderer actors are a runtime cache derived from UCk_IsmRenderer_Data; they
-            // must never be saved into the level package. Without RF_Transient, every editor
-            // open re-spawns one and dirties the level, then a save bakes the duplicate in.
             NewIsmRendererActor->SetFlags(RF_Transient);
 
-            // Editor worlds never fire BeginPlay; explicit init also covers runtime without
-            // double-spawning (DoInitialize is idempotent).
+            // Editor worlds never fire BeginPlay; DoInitialize is idempotent for runtime.
             NewIsmRendererActor->DoInitialize();
         }
     ));
@@ -299,9 +285,8 @@ auto
             ck::IsValid(MaybeFound, ck::IsValid_Policy_NullptrOnly{}) && ck::IsValid(*MaybeFound))
         { return *MaybeFound; }
 
-        // The per-owner renderer is only created while the owner actor is alive. Once the owner
-        // is gone the cached entry above is the only valid resolution — falling back to the
-        // shared component would apply instance indices to a component that never held them.
+        // Once the owner actor is gone the cached entry above is the only valid resolution — the
+        // shared component never held this owner's instance indices.
         auto* SelectionOwner = InEditorSelectionOwner.Get();
 
         if (ck::Is_NOT_Valid(SelectionOwner))
@@ -360,14 +345,12 @@ auto
     if (const auto& MaybeFound = _OutlineIsmComponentCache.Find(Key);
         ck::IsValid(MaybeFound, ck::IsValid_Policy_NullptrOnly{}) && ck::IsValid(*MaybeFound))
     {
-        // The preset keeps its stencil while any refcount is live, but re-assert in case it was
-        // freed + re-allocated to a different value between outlines.
+        // Re-assert: the preset's stencil can be freed + re-allocated to a different value.
         (*MaybeFound)->SetCustomDepthStencilValue(static_cast<int32>(InStencilValue));
         return *MaybeFound;
     }
 
-    // Per-owner previews resolve their per-owner source ISM so the shadow lands on (and attaches
-    // to) the same renderer actor whose instances it mirrors.
+    // Per-owner previews mirror into a shadow on the same renderer actor as their instances.
     const auto SourceIsm = FindOrCache_IsmComponent(InRendererData, InEditorSelectionOwner);
 
     CK_ENSURE_IF_NOT(ck::IsValid(SourceIsm),
@@ -387,18 +370,8 @@ auto
     ShadowIsm->SetMobility(SourceIsm->Mobility);
     ShadowIsm->SetStaticMesh(SourceIsm->GetStaticMesh());
 
-    // The silhouette has to come out of the SAME vertex shader as the visible mesh. A material that
-    // animates through World Position Offset (CkVat samples its baked pose texture in WPO, keyed off
-    // the per-instance custom data) would otherwise silhouette its bind pose while the mesh animates.
-    // The custom depth pass runs the full material VS whenever the material modifies mesh position,
-    // so inheriting the source's materials + custom-data width is what makes an animated outline track
-    // its mesh. Free for ordinary ISMs: that pass swaps the position-only default material back in
-    // when the material does NOT modify mesh position.
-    //
-    // Translucent-family materials are the one slot we must NOT inherit: that same pass DROPS them
-    // outright unless they opt into translucent custom-depth writes (UseDefaultMaterial's final else ->
-    // bIgnoreThisMaterial -> no draw), which would silently delete the outline of anything rendering a
-    // translucent look. Those slots keep the static mesh's own material — the pre-change behaviour.
+    // Inheriting the source's materials is what makes a WPO-animated outline track its mesh, and
+    // translucent-family slots must NOT be inherited. Rationale: CkIsmRenderer/CLAUDE.md.
     for (auto MaterialIndex = 0; MaterialIndex < SourceIsm->GetNumMaterials(); ++MaterialIndex)
     {
         const auto& SourceMaterial = SourceIsm->GetMaterial(MaterialIndex);
@@ -421,7 +394,6 @@ auto
     ShadowIsm->InstanceStartCullDistance = SourceIsm->InstanceStartCullDistance;
     ShadowIsm->InstanceEndCullDistance = SourceIsm->InstanceEndCullDistance;
 
-    // Custom-depth-only: the silhouette source for the SolidOutline post-process, invisible everywhere else.
     ShadowIsm->bRenderInMainPass = false;
     ShadowIsm->SetRenderCustomDepth(true);
     ShadowIsm->SetCustomDepthStencilValue(static_cast<int32>(InStencilValue));

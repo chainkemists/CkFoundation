@@ -1,8 +1,7 @@
 #pragma once
 
-// Out-of-line bodies for FCk_PersistenceHandlerRegistry's template registration methods. Kept out-of-line (rather
-// than in the registry header) so they instantiate in the feature registrar .cpp where T_RepData is a complete type.
-// Include this alongside CkPersistenceHandlerRegistry.h from a feature's registrar .cpp.
+// Out-of-line bodies for FCk_PersistenceHandlerRegistry's template registration methods — kept out of the registry
+// header so they instantiate in the feature registrar .cpp, where T_RepData is a complete type. Include both there.
 
 #include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h"
 
@@ -18,10 +17,8 @@ auto
         MoveTemp(InHandler));
 }
 
-// ---- Named participation shapes — each unwraps its designated-init args and forwards a fully-formed FHandler to
-//      RegisterLazyTyped. FHandler is an aggregate; designated initializers list members in declaration order
-//      (NetApply, NetRemove, HydrationApply, Produce). Omitted slots value-initialize to an empty TFunction
-//      (== "not participating on that path").
+// Each named shape unwraps its designated-init args into an FHandler (an aggregate — designators must follow
+// declaration order: NetApply, NetRemove, HydrationApply, Produce). Omitted slots become empty TFunctions.
 
 template <typename T_RepData>
 auto
@@ -51,8 +48,7 @@ auto
     Register_NetAndSave_SharedApply(FArgs_NetAndSave_SharedApply InArgs)
     -> void
 {
-    // One authority-safe applier serves both the net-receive path and the load-path (Team/Player/Velocity shape).
-    // Copy the shared lambda into NetApply (evaluated first, declaration order), then move it into HydrationApply.
+    // COPY the shared lambda into NetApply (initialized first, declaration order), then MOVE it into HydrationApply.
     RegisterLazyTyped<T_RepData>(FHandler{
         .NetApply       = InArgs.SharedApply.Value,
         .NetRemove      = MoveTemp(InArgs.NetRemove),

@@ -12,8 +12,7 @@
 
 #include "CkStateMachine_Fragment_Data.generated.h"
 
-// Forward-declare — full UClass is pulled in by consumers. Keeps this header free of
-// the circular include with CkSmState_EntityScript.h (which itself includes us).
+// Forward-declared to avoid the circular include with CkSmState_EntityScript.h, which includes us.
 class UCk_SmState_EntityScript;
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -198,13 +197,8 @@ struct CKSTATEMACHINE_API FCk_Fragment_StateMachine_ParamsData
 public:
     CK_GENERATED_BODY(FCk_Fragment_StateMachine_ParamsData);
 
-    // Tier-A snapshot opt-in: all five fields carry the SaveGame SPECIFIER — the flag that sets
-    // CPF_SaveGame, which the ArIsSaveGame tagged-property gate checks. `meta=(SaveGame)` is inert
-    // metadata and round-trips NOTHING (empirically: every field restored to its default). They
-    // serialize through the reflected SerializeItem path (the proxy archive writes
-    // _InitialStateClass by path string). Used directly as FFragment_Sm_Params; the post-load
-    // hydration redrive (FProcessor_Sm_HydrationResume) drives the freshly-composed SM through
-    // Start/Transition from these + FFragment_Sm_Current's persisted decision record.
+    // Save opt-in is the SaveGame SPECIFIER, never `meta=(SaveGame)` — the latter is inert metadata
+    // and round-trips nothing.
 
 private:
     UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite,
@@ -313,9 +307,8 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Installs state-override entries on the target StateMachine.
-// The override class's CDO is queried via Get_StatesToOverride() to determine which states
-// it replaces. Supports overriding multiple states from a single override class.
+// Installs state-override entries on the target StateMachine. The override class's CDO is queried
+// via Get_StatesToOverride() for the states it replaces; multiple states per class are supported.
 USTRUCT(BlueprintType)
 struct CKSTATEMACHINE_API FCk_Request_Sm_AddOverrideState : public FCk_Request_Base
 {

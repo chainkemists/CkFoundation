@@ -46,14 +46,12 @@ namespace ck
         if (ck::Is_NOT_Valid(ProbeHandle) || NOT ProbeHandle.Has<FFragment_Probe_Current>())
         { return; }
 
-        // WORKER THREAD: reconstruct the full handle for the utils reads below — reads only;
-        // the debug-info attach is region/thread-gated in FCk_Handle.
+        // Runs on worker threads — reads only; the handle debug-info attach is thread-gated in FCk_Handle.
         const auto SelfHandle = ck::MakeHandle(InHandle.Get_Entity(), _TransientEntity);
 
-        // Self transform comes from the view (a de-facto requirement — steering is inert without
-        // it); velocity stays optional with a zero fallback, so it is deliberately NOT in the view.
         const auto SelfLoc = InTransform.Get_Transform().GetLocation();
 
+        // Velocity is optional with a zero fallback, so it is deliberately NOT part of the view.
         auto SelfVelocity = UCk_Utils_Velocity_UE::Cast(SelfHandle);
         const auto SelfVel = ck::IsValid(SelfVelocity)
             ? UCk_Utils_Velocity_UE::Get_CurrentVelocity(SelfVelocity)
@@ -63,7 +61,6 @@ namespace ck
         if (Overlaps.Num() == 0)
         { return; }
 
-        // Raw overlap count BEFORE the neighbor cap — dense clumps inflate this far past _MaxNeighborsForSteering.
         INC_DWORD_STAT_BY(STAT_CkCrowd_OverlapsProcessed, Overlaps.Num());
 
         InNeighborCache._Neighbors.Reserve(Overlaps.Num());
@@ -73,9 +70,7 @@ namespace ck
 
             for (const auto& Overlap : Overlaps)
             {
-                // The probe's _OtherEntity is the *other probe child*, not the other agent. Walk one
-                // lifetime-owner hop to map back to the agent entity. ExcludePendingKill is the default
-                // and what we want — neighbors that are mid-destroy aren't useful for steering.
+                // A probe overlaps the OTHER PROBE, never the other agent — hence the lifetime-owner hop.
                 auto OtherProbeChild = Overlap.Get_OtherEntity();
                 if (ck::Is_NOT_Valid(OtherProbeChild))
                 { continue; }
@@ -84,8 +79,6 @@ namespace ck
                 if (ck::Is_NOT_Valid(OtherAgent))
                 { continue; }
 
-                // Defensive: in theory the probe's same-context filter prevents an agent from overlapping
-                // its own probe — but with policy Any, the agent's probe could conceivably show up.
                 if (OtherAgent == SelfHandle)
                 { continue; }
 
@@ -111,21 +104,17 @@ namespace ck
             }
         }
 
-        // Sort ascending by distance — the closest neighbors dominate the separation force, and
-        // trimming after sort keeps the sort cap meaningful.
         InNeighborCache._Neighbors.Sort([](const FCk_CrowdAgent_Neighbor& A, const FCk_CrowdAgent_Neighbor& B)
         {
             return A.Get_Distance() < B.Get_Distance();
         });
 
-        // Trim to the per-agent perf cap. _MaxNeighborsForSteering is the documented stress-perf knob.
         const auto MaxN = FMath::Max(1, InParams.Get_MaxNeighborsForSteering());
         if (InNeighborCache._Neighbors.Num() > MaxN)
         {
             InNeighborCache._Neighbors.SetNum(MaxN, EAllowShrinking::No);
         }
 
-        // Trimmed neighbor count — diff against "Overlaps Processed" to see how hard the cap is biting.
         INC_DWORD_STAT_BY(STAT_CkCrowd_NeighborsKept, InNeighborCache._Neighbors.Num());
     }
 }

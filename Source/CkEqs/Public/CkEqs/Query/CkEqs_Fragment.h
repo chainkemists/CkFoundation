@@ -9,23 +9,14 @@
 #include "CkEcs/Tag/CkTag.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// CkEqs_Fragment.h — non-reflected ECS-side types: fragments, tags, signals.
-// All in namespace ck where applicable.
-// --------------------------------------------------------------------------------------------------------------------
 
-// Aliases exposed to processors. The stored data is the reflected USTRUCT from
-// CkEqs_Fragment_Data.h; the alias keeps processor signatures referring to ECS-side names.
 using FFragment_EqsQuery_Params    = FCk_Eqs_QueryParams;
 using FFragment_EqsQuery_Results   = FCk_Eqs_QueryResults;
 using FFragment_EqsQuery_DebugInfo = FCk_Fragment_EqsQuery_DebugInfoData;
 
 // --------------------------------------------------------------------------------------------------------------------
-// FFragment_EqsQuery_State — transient evaluation state. NOT reflected. Lives only on
-// the query entity between Generate and Finalize.
-//
-// Tests are atomic with respect to budget yields. The cursor is _NextTestIndex
-// (test boundary), NOT a per-candidate cursor. Yielding mid-test would corrupt Min/Max
-// normalization across frames. Do not add `_NextCandidateIndexInTest`.
+// _NextTestIndex is a TEST boundary, never a per-candidate one — yielding mid-test would corrupt
+// Min/Max normalization across frames. Do not add `_NextCandidateIndexInTest`.
 // --------------------------------------------------------------------------------------------------------------------
 
 struct CKEQS_API FFragment_EqsQuery_State
@@ -48,8 +39,7 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// FFragment_EqsQuery_Requests — request queue on the querier entity (any entity that
-// can be a querier; not the EqsQuery entity). Drained each frame by HandleRequests.
+// Lives on the QUERIER entity (any entity can be one), not on the EqsQuery entity.
 // --------------------------------------------------------------------------------------------------------------------
 
 struct CKEQS_API FFragment_EqsQuery_Requests
@@ -80,12 +70,8 @@ namespace ck
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Signal — completion broadcast. Bound at request time via CK_SIGNAL_BIND_REQUEST_FULFILLED
-// (auto-unbind after first fire) so callers don't need to hold the query handle to subscribe.
-//
-// Name follows the OnProbeBeginOverlap convention (verb-first; no underscore between
-// On and subject). Lives in namespace ck to match codebase convention (referenced as
-// ck::UUtils_Signal_OnEqsQueryComplete by binders).
+// Bound at request time via CK_SIGNAL_BIND_REQUEST_FULFILLED, so a caller can subscribe without
+// ever holding the query handle.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck

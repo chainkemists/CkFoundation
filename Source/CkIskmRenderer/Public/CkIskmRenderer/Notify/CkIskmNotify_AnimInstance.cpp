@@ -15,9 +15,8 @@ void UCk_IskmNotify_AnimInstance::Set_OwningProxyHandle(FCk_Handle_IskmProxy InH
 void UCk_IskmNotify_AnimInstance::NativeInitializeAnimation()
 {
     Super::NativeInitializeAnimation();
-    // AddUnique, not AddDynamic: a SetSkeletalMesh(..., bReinitPose=true) re-runs
-    // NativeInitializeAnimation on the *reused* instance, so a plain AddDynamic would
-    // bind (this, OnMontageEndedHook) a second time and trip the AddInternal ensure.
+    // AddUnique, not AddDynamic: SetSkeletalMesh(..., bReinitPose=true) re-runs this on the *reused*
+    // instance, so a plain AddDynamic would bind twice and trip the AddInternal ensure.
     OnMontageEnded.AddUniqueDynamic(this, &UCk_IskmNotify_AnimInstance::OnMontageEndedHook);
 }
 
@@ -36,12 +35,9 @@ void UCk_IskmNotify_AnimInstance::NativeOnMontageBlendingOut(UAnimMontage* InMon
 {
     if (ck::IsValid(_OwningHandle))
     {
-        // Clear ECS-side state for the entity. The OnMontageFinished signal is the source
-        // of truth for listeners; clearing _CurrentMontage and the active-montage tag here
-        // keeps fragment state consistent with the SKMC-side state. Fragment presence is
-        // guarded (not just handle liveness): this callback fires on engine anim timing —
-        // e.g. Release_BaseSKMC's SetAnimInstanceClass(nullptr) blending out a live montage
-        // mid-teardown — so it can run after the proxy fragments were already stripped.
+        // Fragment presence is guarded, not just handle liveness: this fires on engine anim timing (e.g.
+        // Release_BaseSKMC blending out a live montage mid-teardown), so it can run after the proxy
+        // fragments were already stripped.
         if (_OwningHandle.Has<ck::FFragment_IskmProxy_AnimState>())
         {
             if (auto& AnimState = _OwningHandle.Get<ck::FFragment_IskmProxy_AnimState>();

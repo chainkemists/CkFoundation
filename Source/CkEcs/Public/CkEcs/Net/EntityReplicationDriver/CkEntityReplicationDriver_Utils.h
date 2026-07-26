@@ -27,20 +27,14 @@ public:
     Get_NumOfReplicationDriversIncludingDependents(
         const FCk_Handle& InHandle) -> int32;
 
-    // Fire-gating (spec §4.4, CTO note N2): true while THIS entity OR any lifetime-dependent still has replicated
-    // fragments pending apply (FTag_RepFragments_PendingApply — which also covers queued removals) or a queued
-    // save-load hydration payload (FFragment_PendingHydration). Recurses the lifetime-dependents tree — the same
-    // traversal Get_NumOfReplicationDriversIncludingDependents derives the expected-dependent count from, so at
-    // gate-check time (fire tag set once all dependents are synced) every dependent is reachable. Cross-registry
-    // children are excluded from the lifetime-dependents set, so nested-registry entities are invisible here (they
-    // carry no driver on this wire — acceptable). Framework-internal processor plumbing, not public API.
+    // Framework-internal fire-gating, not public API: true while this entity or any lifetime-dependent still
+    // has replicated fragments pending apply or a queued hydration payload. Cross-registry children are not
+    // in the lifetime-dependents set, so nested-registry entities are invisible here (they carry no driver).
     static auto
     Get_HasUndrainedReplicatedFragments_IncludingDependents(
         const FCk_Handle& InHandle) -> bool;
 
-    // Diagnostic twin of the above: the FIRST entity in the tree still holding an undrained replicated
-    // fragment / hydration payload (invalid handle if none). Used by the fire processor's stall report
-    // to name the blocker instead of hanging silently. Framework-internal, not public API.
+    // Diagnostic twin of the above: the FIRST still-undrained entity in the tree, invalid handle if none
     static auto
     TryGet_FirstUndrainedReplicatedFragmentsEntity_IncludingDependents(
         const FCk_Handle& InHandle) -> FCk_Handle;
@@ -77,12 +71,9 @@ public:
         const TArray<FCk_EntityReplicationDriver_ConstructionInfo>& InConstructionInfos,
         const std::function<void(FCk_Handle)>& InFunc_OnCreateEntityBeforeBuild = nullptr) -> FCk_Handle;
 
-    // Restore-path sibling of Request_TryBuildAndReplicate for an EXISTING entity (snapshot-restored):
-    // the entity's fragments were already reconstituted from snapshot bytes, so this SKIPS entity
-    // creation and construction-script execution and only re-establishes the replication half —
-    // driver fragment + the ReplicationData that lets clients construct their mirror from the
-    // ConstructionInfos. Idempotent w.r.t. the driver (TryAdd); call once per restored entity, after
-    // the OWNER's driver is re-established (snapshot respawn pass).
+    // Restore-path sibling of Request_TryBuildAndReplicate for an ALREADY-reconstituted entity: skips entity
+    // creation and construction scripts, re-establishing only the driver + ReplicationData clients mirror
+    // from. Idempotent; call once per restored entity, AFTER the owner's driver is re-established.
     static auto
     Request_TryReplicateExisting(
         FCk_Handle& InExistingEntity,

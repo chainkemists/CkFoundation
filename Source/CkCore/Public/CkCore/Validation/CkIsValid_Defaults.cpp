@@ -35,11 +35,9 @@ CK_DEFINE_CUSTOM_IS_VALID_CONST_PTR(FField, IsValid_Policy_Default, [=](const FF
 
 CK_DEFINE_CUSTOM_IS_VALID_CONST_PTR(UObject, IsValid_Policy_Default, [=](const UObject* InObj)
 {
-    // A UObject mid-destruction is removed from GUObjectArray (InternalIndex == INDEX_NONE) while its
-    // memory can still be alive and pass ::IsValid's flag check. IsUnreachable() then does
-    // GUObjectArray.IndexToObject(InternalIndex) with -1 and asserts (UObjectArray.h `check(Index >= 0)`).
-    // A validity check must never crash on a stale object — gate on the array index being live first so
-    // such an object returns false.
+    // The IsValidIndex gate is load-bearing, not redundant: a UObject mid-destruction still passes ::IsValid's
+    // flag check but has InternalIndex == INDEX_NONE, and IsUnreachable() then asserts inside
+    // GUObjectArray.IndexToObject(-1). A validity check must never crash on a stale object.
     return ::IsValid(InObj)
         && GUObjectArray.IsValidIndex(InObj)
         && NOT InObj->IsUnreachable();

@@ -56,7 +56,6 @@ namespace ck::usf_editor
         }
     }
 
-    // Resolve the per-look blend override on top of the domain default (`Inherit` keeps the default).
     static auto Resolve_BlendMode(ECk_Usf_BlendMode In, EBlendMode InDomainDefault) -> EBlendMode
     {
         switch (In)
@@ -70,8 +69,6 @@ namespace ck::usf_editor
         }
     }
 
-    // Resolve the per-look shading-model override to a concrete EMaterialShadingModel.
-    // `Inherit` keeps the domain default (unlit domains → MSM_Unlit, else MSM_DefaultLit).
     static auto Resolve_ShadingModel(ECk_Usf_ShadingModel In, bool InDomainUnlit) -> EMaterialShadingModel
     {
         switch (In)
@@ -84,23 +81,21 @@ namespace ck::usf_editor
         }
     }
 
-    // Resolve the per-look translucency-lighting override. Unset optional = `Inherit` (keep the
-    // engine default, TLM_VolumetricNonDirectional — cheap but flat; glass usually wants
-    // SurfacePerPixel). Only consulted for LIT translucent-family surface looks.
     static auto Resolve_TranslucencyLighting(ECk_Usf_TranslucencyLighting In) -> TOptional<ETranslucencyLightingMode>
     {
+        const auto KeepEngineDefault = TOptional<ETranslucencyLightingMode>{};
+
         switch (In)
         {
             case ECk_Usf_TranslucencyLighting::VolumetricNonDirectional: return TLM_VolumetricNonDirectional;
             case ECk_Usf_TranslucencyLighting::VolumetricDirectional:    return TLM_VolumetricDirectional;
             case ECk_Usf_TranslucencyLighting::Surface:                  return TLM_Surface;
             case ECk_Usf_TranslucencyLighting::SurfacePerPixel:          return TLM_SurfacePerPixelLighting;
-            default:                                                     return {};
+            default:                                                     return KeepEngineDefault;
         }
     }
 
-    // Resolve the per-look post-process chain placement. Pre-TAA locations are the fix for
-    // Custom Depth/Stencil-derived looks shimmering under the TAA/TSR projection jitter.
+    // Placement trade-offs (pre-TAA vs post-tonemap): CkUsf/Claude.md § Blendable location.
     static auto Resolve_BlendableLocation(ECk_Usf_BlendableLocation In) -> EBlendableLocation
     {
         switch (In)
@@ -112,8 +107,6 @@ namespace ck::usf_editor
         }
     }
 
-    // Inject the look's _Defines ("NAME" or "NAME=VALUE") into a Custom node — the static-switch /
-    // quality-knob equivalent (e.g. retuning a #ifndef default in the .ush without editing it).
     static auto Apply_LookDefines(UMaterialExpressionCustom* InNode, const UCkUsf_LookDefinition* InDef) -> void
     {
         for (const auto& Define : InDef->_Defines)
@@ -133,15 +126,13 @@ namespace ck::usf_editor
         }
     }
 
-    // Blends that read the Opacity pin (vs the Masked blend, which reads OpacityMask).
     static auto Is_TranslucentFamily(EBlendMode In) -> bool
     {
         return In == BLEND_Translucent || In == BLEND_Additive
             || In == BLEND_Modulate    || In == BLEND_AlphaComposite;
     }
 
-    // Additional outputs every surface look exposes besides the primary (BaseColor). The Custom node
-    // always outputs all of them; the pin WIRING in Generate_LookMaterial gates Opacity/OpacityMask by blend.
+    // The Custom node declares all of these; the pin WIRING in Generate_LookMaterial gates them by blend/shading model.
     struct FExtraOutput { const TCHAR* Name; ECustomMaterialOutputType Type; EMaterialProperty Prop; };
 
     static auto Get_ExtraOutputs() -> TArray<FExtraOutput>
@@ -179,8 +170,6 @@ namespace ck::usf_editor
         }
     }
 
-    // Effective PostProcess scene-texture set: an empty _SceneTextures keeps the historical default trio
-    // (SceneColor/SceneDepth/SceneNormal) so existing looks regenerate byte-identically.
     static auto Get_EffectiveSceneTextures(const UCkUsf_LookDefinition* InDef) -> TArray<ECk_Usf_SceneTexture>
     {
         if (InDef->_SceneTextures.IsEmpty() == false)
@@ -191,14 +180,11 @@ namespace ck::usf_editor
     // ---- Build the Custom node Code (assemble FCkUsf_SurfaceInput, call, assign outputs) ----
     static auto Build_CustomCode(const UCkUsf_LookDefinition* InDef, bool InIsPostProcess) -> FString
     {
-        // Assemble the per-pixel input struct from the wired Custom-node inputs. The generator wires
-        // the domain-appropriate inputs (see Generate_LookMaterial); unwired fields keep their defaults.
         FString Code = TEXT("FCkUsf_SurfaceInput In = CkUsf_DefaultInput();\n");
         Code += TEXT("In.Time = Time;\n");
         Code += TEXT("In.UV = UV;\n");
         if (InIsPostProcess)
         {
-            // Assign only the declared scene-texture inputs (default trio when _SceneTextures is empty).
             for (const auto& Tex : Get_EffectiveSceneTextures(InDef))
             {
                 const auto* Name = Get_SceneTextureWiring(Tex).HlslName;
@@ -220,18 +206,15 @@ namespace ck::usf_editor
             }
         }
 
-        // The look fn takes In first, then the LookDefinition params in order.
         FString Args = TEXT("In");
         for (const auto& P : InDef->_Parameters)
         {
             const auto Name = P._Name.ToString();
             switch (P._Type)
             {
-                // Vector params connect a (possibly float4) output; .rgb makes the HLSL type float3.
                 case ECk_Usf_ParamType::Vector:
                     Args += FString::Printf(TEXT(", %s.rgb"), *Name);
                     break;
-                // Texture object inputs expose both the texture and an auto <Name>Sampler in HLSL.
                 case ECk_Usf_ParamType::Texture2D:
                 case ECk_Usf_ParamType::TextureCube:
                 case ECk_Usf_ParamType::Texture2DArray:
@@ -248,7 +231,6 @@ namespace ck::usf_editor
 
         if (InIsPostProcess)
         {
-            // PostProcess materials expose only EmissiveColor; the primary Custom output is the final pixel.
             Code += TEXT("return O.EmissiveColor;");
             return Code;
         }
@@ -269,8 +251,7 @@ namespace ck::usf_editor
         return Code;
     }
 
-    // ---- Build the WPO (vertex) Custom node Code. Mirrors Build_CustomCode but assembles the VS-safe
-    //      FCkUsf_VertexInput and calls the look's _WpoFunctionName, returning a world-space offset. ----
+    // ---- Build the WPO (vertex) Custom node Code — VS-safe FCkUsf_VertexInput in, world-space offset out ----
     static auto Build_WpoCustomCode(const UCkUsf_LookDefinition* InDef) -> FString
     {
         FString Code = TEXT("FCkUsf_VertexInput In = CkUsf_DefaultVertexInput();\n");
@@ -283,13 +264,13 @@ namespace ck::usf_editor
         Code += TEXT("In.VertexNormal = VertexNormal;\n");
         Code += TEXT("In.VertexColor = VertexColor;\n");
         // Per-INSTANCE local->world basis: TransformLocalVectorToWorld's VS overload multiplies by
-        // Parameters.InstanceLocalToWorld under USE_INSTANCING/USE_INSTANCE_CULLING (MaterialTemplate.ush)
-        // — Parameters is in scope inside Custom-node code, so no extra pins are needed.
+        // Parameters.InstanceLocalToWorld (MaterialTemplate.ush), and Parameters is in scope inside
+        // Custom-node code, so no extra pins are needed.
         Code += TEXT("In.LocalAxisX = TransformLocalVectorToWorld(Parameters, float3(1.0, 0.0, 0.0));\n");
         Code += TEXT("In.LocalAxisY = TransformLocalVectorToWorld(Parameters, float3(0.0, 1.0, 0.0));\n");
         Code += TEXT("In.LocalAxisZ = TransformLocalVectorToWorld(Parameters, float3(0.0, 0.0, 1.0));\n");
 
-        // The WPO fn takes In first, then the same LookDefinition params in the same order as the pixel fn.
+        // Same params in the same order as the pixel fn — the validator checks both against one list.
         FString Args = TEXT("In");
         for (const auto& P : InDef->_Parameters)
         {
@@ -315,12 +296,7 @@ namespace ck::usf_editor
         return Code;
     }
 
-    // Create the material expression that feeds a look param into a Custom node input.
-    // A per-instance Scalar/Vector becomes a PerInstanceCustomData(3Vector) node; its DataIndex comes
-    // from UCkUsf_LookDefinition::Get_PerInstanceSlotOf — the SAME layout runtime writers query, so the
-    // pixel node, the WPO node, and CkIsmRenderer writers can never disagree on slots.
-    // ConstDefaultValue is the uniform fallback returned on non-instanced meshes.
-    // Everything else is a named parameter.
+    // ConstDefaultValue is the uniform fallback a PerInstanceCustomData node returns on non-instanced meshes.
     static auto Make_ParamExpression(
         UMaterial* InMaterial, const UCkUsf_LookDefinition* InDef, const FCk_Usf_ParamDesc& P,
         FName InLookName, int32 InRow)
@@ -381,13 +357,8 @@ namespace ck::usf_editor
         }
     }
 
-    // The worker behind both public entry points; validation/compile failures land in InOutResult
-    // (each entry names its look) AND the log.
     static auto DoGenerate_LookMaterial(UCkUsf_LookDefinition* InDef, FGenerateResult& InOutResult) -> UMaterial*
     {
-        // Gate on the asset-vs-.ush contract BEFORE creating any material object: the Custom node
-        // passes params positionally, so a mismatch either fails with an HLSL error naming nothing
-        // about the asset or silently renders wrong. The validator makes it fail HERE, by name.
         const auto Validation = Validate_LookDefinition(InDef);
         for (const auto& ValidationWarning : Validation.Warnings)
         {
@@ -407,24 +378,19 @@ namespace ck::usf_editor
         const auto LookName = InDef->Get_EffectiveLookName();
         const auto Config = Get_DomainConfig(InDef->_Domain);
         const auto IsSurface = Config.Domain == MD_Surface;
-        // Surface domains honour the per-look blend/shading/two-sided overrides; other domains keep the domain config.
         const auto EffectiveBlend = IsSurface ? Resolve_BlendMode(InDef->_BlendMode, Config.Blend) : Config.Blend;
         const auto EffectiveShadingModel = IsSurface
             ? Resolve_ShadingModel(InDef->_ShadingModel, Config.Unlit)
             : (Config.Unlit ? MSM_Unlit : MSM_DefaultLit);
         const auto IsTranslucent = Is_TranslucentFamily(EffectiveBlend);
-        // Refraction applies to LIT translucent surfaces (e.g. glass). Scoping to lit keeps the existing
-        // unlit emissive looks byte-unchanged (they have no use for an IOR bend) and avoids an
-        // unlit-translucent + refraction permutation.
         const auto WantsRefraction = IsSurface && IsTranslucent && EffectiveShadingModel != MSM_Unlit;
 
         // ---- Create package + UMaterial (idempotent refresh) ----
         const auto PkgPath = ck::usf::Get_GeneratedMasterPackagePath(LookName);
         const auto AssetName = FString::Printf(TEXT("M_CkUsf_Look_%s"), *LookName.ToString());
 
-        // Fully load any previously-generated package first; otherwise an asset-registry
-        // stub leaves it partially loaded and SavePackage asserts. Then replace the old
-        // material object so NewObject doesn't clash with the existing name.
+        // An asset-registry stub leaves a previously-generated package partially loaded and SavePackage
+        // asserts; the old material is renamed away so NewObject can reuse its name.
         UPackage* Package = FPackageName::DoesPackageExist(PkgPath)
             ? LoadPackage(nullptr, *PkgPath, LOAD_None)
             : nullptr;
@@ -444,20 +410,13 @@ namespace ck::usf_editor
         Material->SetShadingModel(EffectiveShadingModel);
         if (IsSurface) { Material->TwoSided = InDef->_TwoSided; }
 
-        // Bake usage flags from the definition — regeneration would otherwise wipe
-        // any hand-set flags, and a missing flag means default-material fallback in
-        // packaged builds (the CkIsm/CkIskm renderers ensure on these at setup).
         Material->bUsedWithInstancedStaticMeshes = InDef->_UsedWithInstancedStaticMeshes;
         Material->bUsedWithSkeletalMesh = InDef->_UsedWithSkeletalMesh;
         Material->bUsedWithMorphTargets = InDef->_UsedWithMorphTargets;
 
-        // Refraction is wired only for translucent-family surface looks (see the output gating below);
-        // the pin is inert unless RefractionMethod is set, so enable IOR-based refraction when it applies.
-        // A look that wants no bend simply outputs Refraction == 1.0 (air) — identity, like Opacity == 1.0.
+        // The Refraction pin is inert unless RefractionMethod is set; a look wanting no bend outputs 1.0 (air).
         if (WantsRefraction) { Material->RefractionMethod = RM_IndexOfRefraction; }
 
-        // Lit translucent looks may override the translucency lighting mode (the engine default,
-        // volumetric non-directional, reads flat on glass-like surfaces). Inherit = leave it alone.
         if (IsSurface && IsTranslucent && EffectiveShadingModel != MSM_Unlit)
         {
             if (const auto TranslucencyLighting = Resolve_TranslucencyLighting(InDef->_TranslucencyLighting);
@@ -467,17 +426,13 @@ namespace ck::usf_editor
 
         if (Config.Domain == MD_PostProcess)
         {
-            // A programmatically-created PP material does not reliably default to a compositing
-            // location; set it explicitly so the blendable actually draws over the final image.
+            // A programmatically-created PP material does not reliably default to a compositing location.
             Material->BlendableLocation = Resolve_BlendableLocation(InDef->_BlendableLocation);
             Material->BlendablePriority = 0;
         }
 
         if (Config.Domain == MD_Surface)
         {
-            // Compile the instanced + skeletal permutations up-front so looks are safe on
-            // CkIsmRenderer / CkIskmRenderer in cooked builds. The renderers auto-enable these at
-            // runtime, but that path warns it falls back to the default material when packaged.
             Material->bUsedWithInstancedStaticMeshes = true;
             Material->bUsedWithSkeletalMesh = true;
         }
@@ -501,7 +456,6 @@ namespace ck::usf_editor
             }
         }
 
-        // Inputs: [scene textures (PP only) | world-space inputs (surface only)] + one per param + Time + UV.
         Custom->Inputs.Reset();
         if (IsPostProcess)
         {
@@ -536,8 +490,7 @@ namespace ck::usf_editor
         Custom->RebuildOutputs();
         Custom->PostEditChange();
 
-        // ---- PostProcess: managed scene-texture inputs (also declares scene-texture usage,
-        //      which legalizes raw SceneTextureLookup() in the look's .ush) ----
+        // ---- PostProcess scene-texture inputs — also declare the usage that legalizes raw SceneTextureLookup() in the .ush ----
         if (IsPostProcess)
         {
             const auto AddSceneTexture = [&](ESceneTextureId InId, const TCHAR* InInputName, int32 InRow) -> void
@@ -571,8 +524,7 @@ namespace ck::usf_editor
             AddInput(UMaterialExpressionPixelDepth::StaticClass(),      TEXT("PixelDepth"),    4);
             AddInput(UMaterialExpressionVertexColor::StaticClass(),     TEXT("VertexColor"),   5);
 
-            // Data-channel UVs for the PIXEL node (opt-in; mirrors the WPO node's unconditional pair) —
-            // the pin forces the translator to allocate the coords, same as AddWpoUvChannel below.
+            // The pin is what forces the translator to allocate the coords; reading Parameters.TexCoords[n] would not.
             if (InDef->_PixelDataChannels)
             {
                 const auto AddUvChannel = [&](const TCHAR* InInputName, int32 InCoordinateIndex, int32 InRow) -> void
@@ -616,7 +568,7 @@ namespace ck::usf_editor
         // ---- Connect Custom outputs to material pins ----
         if (IsPostProcess)
         {
-            // PostProcess: the primary output IS the final emissive pixel; no other pins are valid.
+            // EmissiveColor is the only valid PostProcess pin; the primary output IS the final pixel.
             UMaterialEditingLibrary::ConnectMaterialProperty(Custom, FString(), MP_EmissiveColor);
         }
         else
@@ -626,7 +578,6 @@ namespace ck::usf_editor
             const auto IsClearCoat  = EffectiveShadingModel == MSM_ClearCoat;
             for (const auto& E : Get_ExtraOutputs())
             {
-                // Opacity: translucent-family blends, plus Subsurface (where it drives the scatter amount).
                 if (E.Prop == MP_Opacity         && NOT IsTranslucent && NOT IsSubsurface) { continue; }
                 if (E.Prop == MP_OpacityMask     && EffectiveBlend != BLEND_Masked)        { continue; }
                 if (E.Prop == MP_Refraction      && NOT WantsRefraction)                   { continue; }
@@ -637,8 +588,7 @@ namespace ck::usf_editor
             }
         }
 
-        // ---- WorldPositionOffset: a SEPARATE vertex Custom node (the pixel node above reads pixel-only
-        //      inputs like PixelDepth/SceneTexture, which cannot legally compile in the vertex shader). ----
+        // ---- WorldPositionOffset: a SEPARATE vertex node — the pixel node reads VS-illegal inputs (PixelDepth/SceneTexture) ----
         if (IsSurface && NOT InDef->_WpoFunctionName.IsNone())
         {
             auto* Wpo = Cast<UMaterialExpressionCustom>(
@@ -667,7 +617,6 @@ namespace ck::usf_editor
             Wpo->RebuildOutputs();
             Wpo->PostEditChange();
 
-            // VS-safe world-space inputs (WorldPosition uses absolute world position so the look reads true coords).
             const auto AddWpoInput = [&](UClass* InClass, const TCHAR* InInputName, int32 InRow) -> void
             {
                 auto* Expr = UMaterialEditingLibrary::CreateMaterialExpression(
@@ -675,15 +624,11 @@ namespace ck::usf_editor
                 UMaterialEditingLibrary::ConnectMaterialExpressions(Expr, FString(), Wpo, InInputName);
             };
             AddWpoInput(UMaterialExpressionWorldPosition::StaticClass(), TEXT("WorldPosition"), 0);
-            // Pre-skinned position == the LOCAL bind-pose vertex position on static/instanced meshes
-            // (VS-only node) — data channel for local-space deformation looks (e.g. CkVat bone mode).
+            // Pre-skinned position == the LOCAL bind-pose vertex position on static/instanced meshes.
             AddWpoInput(UMaterialExpressionPreSkinnedPosition::StaticClass(), TEXT("LocalPosition"), 3);
             AddWpoInput(UMaterialExpressionVertexNormalWS::StaticClass(), TEXT("VertexNormal"),  1);
             AddWpoInput(UMaterialExpressionVertexColor::StaticClass(),    TEXT("VertexColor"),   2);
 
-            // Param nodes — same helper as the pixel node; per-instance slot indices come from the
-            // LookDefinition's layout, so the two nodes can never disagree (WPO runs in the VS where
-            // per-instance data is valid).
             int32 WpoParamRow = 0;
             for (const auto& P : InDef->_Parameters)
             {
@@ -704,8 +649,6 @@ namespace ck::usf_editor
                 Material, UMaterialExpressionTextureCoordinate::StaticClass(), -800, 800 + (WpoParamRow + 2) * 120);
             UMaterialEditingLibrary::ConnectMaterialExpressions(WpoUv, FString(), Wpo, TEXT("UV"));
 
-            // Data-channel UVs (TexCoord1/2) — the pin forces the translator to allocate the coords;
-            // reading Parameters.TexCoords[n] directly in the include would not.
             const auto AddWpoUvChannel = [&](const TCHAR* InInputName, int32 InCoordinateIndex, int32 InRow) -> void
             {
                 auto* Expr = Cast<UMaterialExpressionTextureCoordinate>(
@@ -742,17 +685,13 @@ namespace ck::usf_editor
         return DoGenerate_LookMaterial(InDef, DiscardedResult);
     }
 
-    // Forces the just-generated material's shaders to finish compiling and reports any compile
-    // errors. This catches the "compiles as a UMaterial object but the HLSL is broken" case — the
-    // silent fallback-to-default-material that object + MID checks miss. Notably covers PostProcess
-    // permutations (FPostProcessMaterialPS), which only surface their errors once realised.
+    // Catches HLSL that compiles as a UMaterial object but fails its shader permutations (notably PostProcess).
     static auto Validate_LookShaders(UMaterial* InMaterial, FName InLookName, TArray<FString>& OutErrors) -> bool
     {
         if (ck::Is_NOT_Valid(InMaterial, ck::IsValid_Policy_NullptrOnly{}))
         { return true; }
 
-        // In a process that cannot render (-nullrhi CI) shader maps never build, so
-        // IsCompilingOrHadCompileError reads EVERY look as failed — the gate is meaningless there.
+        // A process that cannot render (-nullrhi CI) never builds shader maps, so the check below would read EVERY look as failed.
         if (NOT FApp::CanEverRender())
         { return true; }
 
@@ -762,8 +701,6 @@ namespace ck::usf_editor
         if (NOT InMaterial->IsCompilingOrHadCompileError(GMaxRHIShaderPlatform))
         { return true; }
 
-        // The specific HLSL error (file:line + message) is emitted by LogShaderCompilers during
-        // the compile above; this surfaces WHICH look failed and fails the generate/test.
         const auto Msg = FString::Printf(
             TEXT("Look [%s] SHADER FAILED TO COMPILE — see the LogShaderCompilers '*.ush ... error:' line above"),
             *InLookName.ToString());

@@ -33,20 +33,16 @@ const FEditorModeID UCk_2dGridSystem_EdMode::EM_Ck2dGridSystemPaintModeId = TEXT
 
 namespace ck_grid_editor_detail
 {
-    // Interaction-overlay colors/metrics — these are PAINT-MODE ONLY (hover, select marker, blocker
-    // drag/selection/group). The AUTHORED-state colors (enabled/disabled/blocker/tagged/pivot), the
-    // per-cell color resolve, and the base-grid + state-marker draw all live in the shared overlay
-    // (ck::grid_editor, Ck2dGridSystem_AuthoredOverlay.h) so the in-mode and out-of-mode previews match.
+    // Interaction-overlay colors/metrics — PAINT-MODE ONLY. The authored-state colors and the base-grid +
+    // state-marker draw live in the shared overlay (ck::grid_editor) so the in/out-of-mode previews match.
+    // Every color below is deliberately distinct so overlapping highlights on one cell still read apart.
 
     constexpr auto ColorHover = FLinearColor(1.0f, 1.0f, 1.0f); // white
 
-    // Select tool: the inspected cell, drawn as a thick cyan inset square — distinct from the white
-    // hover marker so the two read separately when both land on the same cell.
     constexpr auto ColorSelected         = FLinearColor(0.0f, 1.0f, 1.0f); // cyan
     constexpr auto SelectedMarkerInset     = 0.02;
     constexpr auto SelectedMarkerThickness = 4.0f;
 
-    // Blocker drag-rect candidate preview (cyan) and selected-blocker emphasis (bright orange).
     constexpr auto ColorBlockerDrag     = FLinearColor(0.0f, 1.0f, 1.0f);  // cyan
     constexpr auto ColorBlockerSelected = FLinearColor(1.0f, 0.75f, 0.2f); // bright orange
 
@@ -54,19 +50,13 @@ namespace ck_grid_editor_detail
     constexpr auto BlockerSelectedInset     = 0.04;
     constexpr auto BlockerSelectedThickness = 4.0f;
 
-    // Select tool: when the pick lands on a blocker, the WHOLE blocker group is outlined as a single
-    // bright-magenta rect (the bounding RangeMin..RangeMax border) — visually distinct from both the
-    // single-cell cyan Select marker and the orange Blocker-tool per-cell inset.
     constexpr auto ColorBlockerGroup     = FLinearColor(1.0f, 0.0f, 1.0f); // magenta
     constexpr auto BlockerGroupThickness = 5.0f;
 
-    // Select tool: cells carrying the Tags-list-selected tag, outlined full-cell in bright white so the
-    // group reads as "selected" rather than merely "tagged" (distinct from the per-tag authored color).
     constexpr auto ColorTagSelected     = FLinearColor(1.0f, 1.0f, 1.0f); // white
     constexpr auto TagSelectedThickness = 4.0f;
 
-    // Hover highlight: a slightly smaller inset than the state markers (so it nests inside any state
-    // marker on the same cell) drawn thick and white.
+    // Inset smaller than the state markers so the hover marker nests inside any marker on the same cell.
     constexpr auto HoverMarkerInset     = 0.06;
     constexpr auto HoverMarkerThickness = 3.0f;
 }
@@ -96,21 +86,17 @@ auto
 {
     _ActiveTool = InTool;
 
-    // The pending drag-rect corners only make sense while the Blocker tool is active.
     if (_ActiveTool != ECk_GridPaint_Tool::Blocker)
     {
         _DragStart.Reset();
         _DragCurrent.Reset();
     }
 
-    // _SelectedBlockerIndex is shared by the Blocker tool (place/select/delete) and the Select tool (a
-    // pick that lands on a blocker selects the whole group). It's meaningless under Shape/Tags, so clear
-    // it on any tool change away from both — otherwise a stale highlight lingers.
+    // _SelectedBlockerIndex is shared by the Blocker tool (place/select/delete) and the Select tool (a pick
+    // that lands on a blocker selects the whole group); it is meaningless under Shape/Tags.
     if (_ActiveTool != ECk_GridPaint_Tool::Blocker && _ActiveTool != ECk_GridPaint_Tool::Select)
     { _SelectedBlockerIndex = INDEX_NONE; }
 
-    // The Select-tool pick highlights (single cell + tag group) only make sense while the Select tool is
-    // active; clear them on any tool change away from Select so a stale highlight doesn't linger.
     if (_ActiveTool != ECk_GridPaint_Tool::Select)
     {
         _SelectedCell.Reset();
@@ -140,8 +126,6 @@ auto
         if (Spawner == nullptr)
         { continue; }
 
-        // Resolve the hosted grid Spec via the shared helper (the single reflective-read site). Spec is
-        // exposed mutably on the result so paint actions can Modify()+mutate it; Render only reads it.
         auto* Spec = ck::grid_editor::Resolve_SpecFromSpawner(Spawner);
         if (Spec == nullptr)
         { continue; }
@@ -178,17 +162,14 @@ void
     if (CellSize.X <= 0.0 || CellSize.Y <= 0.0 || Dimensions.X <= 0 || Dimensions.Y <= 0)
     { return; }
 
-    // Corner-origin convention (matches UCk_Utils_Grid2D_UE::Get_CoordinateAsLocation): cell (x,y)'s
-    // min corner is at grid-local (x*CellSize.X, y*CellSize.Y, 0). InGridTransform maps to world.
+    // Corner-origin convention (matches UCk_Utils_Grid2D_UE::Get_CoordinateAsLocation).
     const auto LocalToWorld = [&](double InLocalX, double InLocalY) -> FVector
     {
         return Transform.TransformPosition(FVector(InLocalX, InLocalY, 0.0));
     };
 
-    // Draws a square outline for cell (InX,InY), inset from the cell bounds by InInsetFraction of the
-    // cell on every side (0 = full cell edges). The inset variant is used for the per-state marker so
-    // it does NOT sit coincident with the green base-grid lines (coincident SDPG_Foreground lines
-    // z-fight and the winner is order-independent — that was the partial-coloring bug).
+    // An inset keeps a marker off the green base-grid lines — coincident SDPG_Foreground lines z-fight
+    // order-independently, which used to hide it.
     const auto DrawCellSquare = [&](int32 InX, int32 InY, const FLinearColor& InColor,
                                     double InInsetFraction, float InThickness)
     {
@@ -208,15 +189,12 @@ void
         InPDI->DrawLine(C01, C00, InColor, SDPG_Foreground, InThickness);
     };
 
-    // Authored-state passes (base-grid wireframe + per-cell state markers + pivot) are drawn by the
-    // SHARED overlay so the in-mode and out-of-mode (component visualizer) previews are identical. Only
-    // the interaction overlays below (hover / select / blocker drag/selection/group) are paint-mode-only.
+    // Authored-state passes come from the SHARED overlay so the in-mode and out-of-mode previews are
+    // identical; only the interaction overlays below are paint-mode-only.
     ck::grid_editor::Draw_GridAuthoredOverlay(InPDI, Spec, Transform);
 
-    // Selected-blocker highlight (Blocker tool): emphasize the selected blocker's cells with a
-    // bright-orange thick inset square (drawn before hover so the white hover marker still reads on top).
-    // The Select tool draws its blocker selection as a magenta GROUP outline further below instead, so
-    // this per-cell inset is scoped to the Blocker tool to keep the two selection visuals distinct.
+    // Blocker tool's per-cell selected-blocker emphasis, drawn before hover so the white hover marker
+    // still reads on top. The Select tool uses the magenta GROUP outline further below instead.
     if (_ActiveTool == ECk_GridPaint_Tool::Blocker &&
         _SelectedBlockerIndex != INDEX_NONE && Spec->Blockers.IsValidIndex(_SelectedBlockerIndex))
     {
@@ -239,8 +217,6 @@ void
         }
     }
 
-    // Drag-rect preview (all paint tools): outline the candidate rect (full-cell edges of the bounding rect,
-    // no per-cell lines), colored by tool + erase direction.
     if (_DragStart.IsSet())
     {
         const auto Start   = _DragStart.GetValue();
@@ -261,8 +237,6 @@ void
         const auto C11 = LocalToWorld(HiX, HiY);
         const auto C01 = LocalToWorld(LoX, HiY);
 
-        // Shape: red (add -> Disabled) / green (erase -> Enabled). Tags: active-tag color (add) / red (erase).
-        // Blocker: cyan.
         auto PreviewColor = ck_grid_editor_detail::ColorBlockerDrag;
         switch (_ActiveTool)
         {
@@ -279,10 +253,7 @@ void
         InPDI->DrawLine(C01, C00, PreviewColor, SDPG_Foreground, ck_grid_editor_detail::BlockerDragThickness);
     }
 
-    // Select-tool blocker-group highlight: when the Select pick landed on a blocker, outline the WHOLE
-    // blocker (the bounding RangeMin..RangeMax rect) in bright magenta as a single border, distinct from
-    // the orange per-cell inset the Blocker tool draws above and the cyan single-cell marker below. Only
-    // drawn for the Select tool — under the Blocker tool the orange inset already conveys the selection.
+    // Select-tool whole-blocker outline; under the Blocker tool the orange per-cell inset conveys it instead.
     const auto bSelectBlockerGroup =
         _ActiveTool == ECk_GridPaint_Tool::Select &&
         _SelectedBlockerIndex != INDEX_NONE &&
@@ -315,8 +286,7 @@ void
         }
     }
 
-    // Select-tool tag-group highlight: outline every cell carrying the Tags-list-selected tag full-cell in
-    // white. Mutually exclusive with cell/blocker selection (Set_SelectedTag clears those).
+    // Tag-group highlight; mutually exclusive with cell/blocker selection (Set_SelectedTag clears those).
     if (_ActiveTool == ECk_GridPaint_Tool::Select && _SelectedTag.IsSet())
     {
         for (const auto& Cell : ck::grid_editor::Get_CellsWithTag(Spec, _SelectedTag.GetValue()))
@@ -329,10 +299,8 @@ void
         }
     }
 
-    // Select-tool single-cell inspection highlight: a thick cyan inset square on the cell picked for the
-    // Details panel. Suppressed when the pick resolved to a blocker (the magenta group outline above is
-    // the selection indicator in that case). Drawn before hover so the white hover marker still reads on
-    // top when both land on the same cell, and inset less than the state markers so it frames them.
+    // Single-cell inspection highlight, suppressed when the pick resolved to a blocker (the magenta group
+    // outline above is the selection indicator then). Inset less than the state markers so it frames them.
     if (_SelectedCell.IsSet() && ! bSelectBlockerGroup)
     {
         const auto& Cell = _SelectedCell.GetValue();
@@ -343,8 +311,7 @@ void
         }
     }
 
-    // Hover highlight: a thick white inset square on the cell currently under the cursor. Drawn last so
-    // it sits on top of the state markers. Only valid coordinates are stored in _HoveredCell.
+    // Drawn last so the hover marker sits on top of every other marker.
     if (_HoveredCell.IsSet())
     {
         const auto& Cell = _HoveredCell.GetValue();
@@ -366,8 +333,6 @@ void
 {
     Super::DrawHUD(InViewportClient, InViewport, InView, InCanvas);
 
-    // Per-cell tag TEXT labels (toggle: ck.Grid.PreviewShowTags, default off). Drawn via the shared
-    // helper so the labels match the out-of-mode component-visualizer view.
     const auto Selection = Resolve_SelectedGridSpawner();
     if (! Selection.IsValid())
     { return; }
@@ -389,9 +354,7 @@ auto
     if (InViewportClient == nullptr)
     { return false; }
 
-    // Canonical engine paint-mode deproject: build a transient scene-view family for this viewport,
-    // calc the view, then read the world ray for the pixel off FViewportCursorLocation. Mirrors
-    // FEdModeFoliage::MouseMove / CapturedMouseMove.
+    // Canonical engine paint-mode deproject; mirrors FEdModeFoliage::MouseMove / CapturedMouseMove.
     auto ViewFamily = FSceneViewFamilyContext(FSceneViewFamily::ConstructionValues(
         InViewportClient->Viewport,
         InViewportClient->GetScene(),
@@ -406,8 +369,8 @@ auto
     OutRayOrigin    = CursorRay.GetOrigin();
     OutRayDirection = CursorRay.GetDirection();
 
-    // In ortho views the origin sits on the near plane; push it back so the plane intersection in
-    // Resolve_CellFromRay (which rejects hits behind the origin) stays in front.
+    // Ortho puts the origin on the near plane — push it back so Resolve_CellFromRay's behind-origin reject
+    // does not swallow the hit.
     if (InViewportClient->IsOrtho())
     { OutRayOrigin += -WORLD_MAX * OutRayDirection; }
 
@@ -426,7 +389,6 @@ auto
 
     auto* Spec = InSelection.Spec;
 
-    // Idempotent: skip the Modify() when the cell is already in the requested state.
     const auto bAlreadyDisabled = Spec->DisabledCells.Contains(InCell);
     if (bAlreadyDisabled == InDisabled)
     { return false; }
@@ -456,7 +418,6 @@ auto
 
     if (InAdd)
     {
-        // Idempotent ADD: no-op (and no Modify) when the cell already carries the tag.
         if (const auto* Existing = Spec->PerCellTags.Find(InCell);
             Existing != nullptr && Existing->HasTagExact(_ActivePaintTag))
         { return false; }
@@ -467,7 +428,6 @@ auto
         return true;
     }
 
-    // REMOVE: no-op when the cell doesn't carry the tag.
     auto* Container = Spec->PerCellTags.Find(InCell);
     if (Container == nullptr || ! Container->HasTagExact(_ActivePaintTag))
     { return false; }
@@ -475,8 +435,7 @@ auto
     Spec->Modify();
     Container->RemoveTag(_ActivePaintTag);
 
-    // Drop the map entry entirely when the cell no longer carries any per-cell tag (no entry == no
-    // overrides), mirroring Remove_SelectedCellTag.
+    // No entry == no overrides: drop the map entry so empty containers never accumulate.
     if (Container->IsEmpty())
     { Spec->PerCellTags.Remove(InCell); }
 
@@ -625,9 +584,6 @@ auto
     Is_PlainLeftClick(
         const FViewportClick& InClick) const -> bool
 {
-    // LMB with NO Ctrl/Alt. Shift IS allowed — it selects the erase direction for the Shape/Tags paint
-    // (Is_EraseModifier). Ctrl/Alt or a non-left button means the user is driving the camera (RMB-look,
-    // Alt+LMB orbit, etc.).
     if (InClick.IsControlDown() || InClick.IsAltDown())
     { return false; }
 
@@ -643,11 +599,10 @@ auto
     if (InViewportClient == nullptr || InViewport == nullptr)
     { return false; }
 
-    // Ctrl/Alt held → camera gesture (Alt-orbit etc.), not a paint stroke. Shift IS allowed (erase mode).
     if (InViewportClient->IsCtrlPressed() || InViewportClient->IsAltPressed())
     { return false; }
 
-    // Left button must be down; right button must NOT be (LMB+RMB is the camera pan gesture).
+    // RMB must be up: LMB+RMB is the camera pan gesture.
     const auto bLeftDown  = InViewport->KeyState(EKeys::LeftMouseButton);
     const auto bRightDown = InViewport->KeyState(EKeys::RightMouseButton);
 
@@ -864,8 +819,7 @@ auto
     Spec->Modify();
     Container->RemoveTag(InTag);
 
-    // Drop the map entry entirely when the cell no longer carries any per-cell tag, so the Spec doesn't
-    // accumulate empty containers (mirrors the authored-data convention — no entry == no overrides).
+    // No entry == no overrides: drop the map entry so empty containers never accumulate.
     if (Container->IsEmpty())
     { Spec->PerCellTags.Remove(Cell); }
 
@@ -949,9 +903,8 @@ bool
         HHitProxy*             InHitProxy,
         const FViewportClick&  InClick)
 {
-    // A click that turned into a drag is committed by the StartTracking/CapturedMouseMove/EndTracking path
-    // for EVERY paint tool (Shape/Tags rect fill, Blocker rect append). EndTracking intentionally leaves
-    // _DragStart set so this trailing HandleClick can swallow the click instead of applying it a second time.
+    // A click that turned into a drag was already committed by EndTracking, which intentionally leaves
+    // _DragStart set so this trailing HandleClick swallows the click instead of applying it a second time.
     if (_DragStart.IsSet())
     {
         _DragStart.Reset();
@@ -959,14 +912,11 @@ bool
         return true;
     }
 
-    // Only LMB clicks with no Ctrl/Alt paint or select; anything else falls through to default camera nav so
-    // RMB-look / modifier gestures aren't hijacked. (Shift is allowed here — it selects erase for Shape/Tags;
-    // the Blocker/Select branches re-reject it below since they don't honor the erase modifier.)
     if (! Is_PlainLeftClick(InClick))
     { return Super::HandleClick(InViewportClient, InHitProxy, InClick); }
 
-    // Blocker and Select are plain-LMB only — Shift is NOT special there, so a Shift+LMB falls through to
-    // camera nav rather than mis-firing a place/select.
+    // Blocker and Select do not honor the erase modifier, so a Shift+LMB falls through to camera nav
+    // rather than mis-firing a place/select.
     if (_ActiveTool == ECk_GridPaint_Tool::Blocker)
     {
         return InClick.IsShiftDown()
@@ -994,8 +944,7 @@ bool
     if (! Cell.IsSet())
     { return Super::HandleClick(InViewportClient, InHitProxy, InClick); }
 
-    // Plain LMB adds; Shift+LMB erases. A single click is a 1x1 rect fill (one undo step), sharing the same
-    // commit path as a drag. Label the transaction by direction so undo reads correctly.
+    // A single click is a 1x1 rect fill, so click and drag share one commit path and one undo step.
     const auto bErase = Is_EraseModifier(InClick);
 
     const auto TransactionLabel = bErase
@@ -1024,12 +973,10 @@ auto
         InClick.GetOrigin(), InClick.GetDirection());
     if (! Cell.IsSet())
     {
-        // Clicked off-grid: clear any blocker selection.
         _SelectedBlockerIndex = INDEX_NONE;
         return true;
     }
 
-    // Select the blocker under the click (or clear the selection if the click is on a bare cell).
     _SelectedBlockerIndex = Find_BlockerCovering(Selection, Cell.GetValue());
     return true;
 }
@@ -1041,8 +988,6 @@ auto
         HHitProxy*             InHitProxy,
         const FViewportClick&  InClick) -> bool
 {
-    // Resolve the clicked cell and store it for the Details panel (the pick itself never mutates the Spec
-    // — the Details-panel editors do).
     const auto Selection = Resolve_SelectedGridSpawner();
     if (! Selection.IsValid())
     {
@@ -1055,12 +1000,9 @@ auto
         Selection.GridTransform, Selection.Spec->CellSize, Selection.Spec->Dimensions,
         InClick.GetOrigin(), InClick.GetDirection());
 
-    // Off-grid click clears both selections; otherwise store the picked cell.
     _SelectedCell = Cell;
 
-    // Blocker precedence: if the picked cell is covered by a blocker, select the WHOLE blocker group so the
-    // Details panel switches to the blocker editor. A bare cell click clears any prior blocker selection so
-    // the panel falls back to the single-cell editor.
+    // Blocker precedence: a pick that lands on a blocker switches the Details panel to the blocker editor.
     _SelectedBlockerIndex = Cell.IsSet()
         ? Find_BlockerCovering(Selection, Cell.GetValue())
         : INDEX_NONE;
@@ -1077,8 +1019,7 @@ bool
         FRotator&              InRot,
         FVector&               InScale)
 {
-    // Drag painting flows through CapturedMouseMove (we disable gizmo delta-tracking while a Shape
-    // stroke is active); no InputDelta handling needed.
+    // Drag painting flows through CapturedMouseMove; nothing to handle here.
     return Super::InputDelta(InViewportClient, InViewport, InDrag, InRot, InScale);
 }
 
@@ -1108,7 +1049,7 @@ bool
     _HoveredCell = ck::grid_editor::Resolve_CellFromRay(
         Selection.GridTransform, Selection.Spec->CellSize, Selection.Spec->Dimensions, RayOrigin, RayDirection);
 
-    // Not handled — let the base mode keep processing the move; we only observe it for the highlight.
+    // Not handled — the move is only observed for the highlight; the base mode keeps processing it.
     return false;
 }
 
@@ -1122,8 +1063,6 @@ bool
     if (! Selection.IsValid())
     { return Super::StartTracking(InViewportClient, InViewport); }
 
-    // Only a plain LMB drag (LMB down, RMB up, no Ctrl/Alt) begins a rect. Shift is allowed for Shape/Tags
-    // (erase); the Blocker tool rejects Shift below so a Shift+LMB drag stays camera nav.
     if (! Is_PlainLeftDrag(InViewportClient, InViewport))
     { return Super::StartTracking(InViewportClient, InViewport); }
 
@@ -1146,8 +1085,8 @@ bool
     if (! StartCell.IsSet())
     { return Super::StartTracking(InViewportClient, InViewport); }
 
-    // Capture erase direction up-front for Shape/Tags (releasing Shift mid-drag won't flip add<->erase).
-    // Blocker ignores it. No transaction is opened here — the commit is transacted in EndTracking.
+    // Capture the erase direction up-front so releasing Shift mid-drag cannot flip add<->erase. No
+    // transaction is opened here — the commit is transacted in EndTracking.
     _DragErase   = (_ActiveTool != ECk_GridPaint_Tool::Blocker) && Is_EraseModifier(InViewportClient);
     _DragStart   = StartCell;
     _DragCurrent = StartCell;
@@ -1162,7 +1101,6 @@ bool
         int32                  InMouseX,
         int32                  InMouseY)
 {
-    // Any paint tool's rect drag: update the rect's trailing corner so Render previews the candidate rect.
     if (_DragStart.IsSet())
     {
         const auto Cell = Resolve_CellAtCursor(InViewportClient, InMouseX, InMouseY);
@@ -1234,8 +1172,8 @@ bool
     UCk_2dGridSystem_EdMode::
     DisallowMouseDeltaTracking() const
 {
-    // While any paint tool's rect drag is active, suppress the gizmo/camera delta-tracker so the LMB drag
-    // draws the rect instead of moving the selected actor.
+    // Suppress the gizmo/camera delta-tracker mid-drag so the LMB drag draws the rect instead of moving
+    // the selected actor.
     return _DragStart.IsSet();
 }
 
@@ -1247,7 +1185,6 @@ bool
         FKey                   InKey,
         EInputEvent            InEvent)
 {
-    // Delete the selected blocker on Delete (or platform Delete) while the Blocker tool is active.
     const auto bIsDelete = InKey == EKeys::Delete || InKey == EKeys::Platform_Delete;
     if (InEvent == IE_Pressed && bIsDelete &&
         _ActiveTool == ECk_GridPaint_Tool::Blocker &&
@@ -1276,14 +1213,11 @@ void
     UCk_2dGridSystem_EdMode::
     ActorSelectionChangeNotify()
 {
-    // The blocker selection indexes into a specific grid's Blockers array; invalidate it whenever the
-    // editor's actor selection changes (best-effort — covers picking a different spawner/deselecting).
+    // Every selection below indexes into ONE grid's Spec, so a change of actor selection invalidates them.
     _SelectedBlockerIndex = INDEX_NONE;
     _DragStart.Reset();
     _DragCurrent.Reset();
 
-    // The inspected cell and the tag-group highlight are meaningful only against a specific grid; drop them
-    // when the actor selection changes (covers picking a different spawner / deselecting).
     _SelectedCell.Reset();
     _SelectedTag.Reset();
 
@@ -1310,7 +1244,6 @@ auto
     _SelectedBlockerIndex = bValid ? InIndex : INDEX_NONE;
     if (bValid)
     {
-        // Selecting a blocker takes over the Select highlight; clear the tag-group selection.
         _SelectedTag.Reset();
     }
 }
@@ -1323,7 +1256,6 @@ auto
     _SelectedTag = (InTag.IsSet() && InTag.GetValue().IsValid()) ? InTag : TOptional<FGameplayTag>{};
     if (_SelectedTag.IsSet())
     {
-        // Tag-group highlight takes over; clear the cell/blocker selection.
         _SelectedCell.Reset();
         _SelectedBlockerIndex = INDEX_NONE;
     }

@@ -39,8 +39,6 @@ public:
     ACk_HUD_UE();
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Events - Delegates
-    // ----------------------------------------------------------------------------------------------------------------
 
 public:
     /** Native delegate called when layout is ready (after starting widgets loaded). */
@@ -64,8 +62,6 @@ public:
     FOnLayoutDestroyed_BP OnLayoutDestroyed_BP;
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Events - Implementable
-    // ----------------------------------------------------------------------------------------------------------------
 
 protected:
     /** Called when the layout is ready. Override in Blueprint to handle initialization. */
@@ -79,16 +75,12 @@ protected:
     void OnLayoutDestroyed_Event();
 
     // ----------------------------------------------------------------------------------------------------------------
-    // AActor Overrides
-    // ----------------------------------------------------------------------------------------------------------------
 
 protected:
     auto BeginPlay() -> void override;
     auto EndPlay(const EEndPlayReason::Type InEndPlayReason) -> void override;
     auto Get_Layout() const -> UCk_UI_PrimaryGameLayout_UE*;
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // Internal
     // ----------------------------------------------------------------------------------------------------------------
 
 private:
@@ -99,13 +91,8 @@ private:
     auto HandlePrimaryGameLayoutDestroyed() -> void;
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Properties
-    // ----------------------------------------------------------------------------------------------------------------
 
 private:
-    // Layout config (UI layers + starting widgets), set on a subclass default. Soft so the default carries only a path
-    // and is async-loaded in DoInitializeUI at BeginPlay — never block-loaded at CDO/registration time, where a packaged
-    // client can't load it safely (it resolved to null and left the HUD with no UI).
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ck|UI",
         meta = (AllowPrivateAccess = true))
     TSoftObjectPtr<UCk_UI_LayoutConfigAsset_UE> _LayoutConfigAsset;

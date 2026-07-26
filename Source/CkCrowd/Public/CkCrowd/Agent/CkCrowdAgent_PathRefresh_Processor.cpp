@@ -63,18 +63,14 @@ namespace ck
                     if (NOT InMarkup.Get_Markup().IsValid())
                     { return; }
 
-                    // Cheap pre-filter before the poly query below.
                     if (InMarkup.Get_SecondsSincePaint() < SettleSeconds)
                     { return; }
 
-                    // A disc's navmesh tiles rebuild asynchronously and the latency is unbounded
-                    // under churn — a re-path issued before the rebake returns the same straight
-                    // path and burns the one-shot serial. Eligibility is therefore GROUND TRUTH,
-                    // not a timer: the disc counts only once the mesh actually reports the crowd
-                    // cost area at its centre. Confirmed once per paint, then cached.
+                    // Tile rebake latency is unbounded under churn, so eligibility is ground truth
+                    // and not a timer: the mesh must actually report the cost area at the centre.
                     if (NOT InMarkup.Get_ConfirmedOnMesh())
                     {
-                        // Vertical extent = the painted box's — the disc centre rides at capsule
+                        // Vertical extent is the painted box's — the disc centre rides at capsule
                         // height, and a shorter probe misses the floor polys the box marked.
                         const auto Extent = FVector{InMarkup.Get_MarkupRadiusUu(), InMarkup.Get_MarkupRadiusUu(), InMarkup.Get_MarkupVerticalHalfExtentUu()};
                         const auto PolyRef = NavMesh->FindNearestPoly(InMarkup.Get_MarkupLocation(), Extent);
@@ -126,13 +122,8 @@ namespace ck
         {
             if (InEntity == InSelfEntity)
             { return; }
-            // PAINTED is enough here — unlike the re-path trigger (which must wait for the mesh
-            // to actually price a disc before spending its one-shot serial), the escape is pure
-            // geometry: planning from a pushed-out start is valid the moment the disc exists and
-            // merely arrives early when the rebake hasn't landed yet. Gating on ConfirmedOnMesh
-            // opened a paint→confirm window where a fresh MoveTo from inside the band planned
-            // "through" — and a repaint (e.g. push-apart drift) reopened that window by resetting
-            // the flag.
+            // PAINTED is enough here, deliberately NOT ConfirmedOnMesh: the escape is pure
+            // geometry and is valid the moment the disc exists.
             if (NOT InMarkup.Get_Markup().IsValid())
             { return; }
 
@@ -168,13 +159,8 @@ namespace ck
             return {};
         }
 
-        // Ray-march out of the disc union along the direction the agent already leans (away from
-        // the nearest disc centre) — the shortest way out. NOT a fixed-point pairwise push: for a
-        // painted LINE the discs' push-out zones overlap (spacing < 2x required radius), so each
-        // pairwise push lands inside the neighbouring disc's zone and the iteration ping-pongs
-        // between neighbours until the cap — the escape then gave up on exactly the scenario the
-        // tier exists for. Along a fixed ray each disc (convex) is exited at most once, so the
-        // march provably terminates within one step per disc.
+        // Ray-march, NOT a pairwise push: along a fixed ray each convex disc is exited at most
+        // once, so the march provably terminates within one step per disc.
         constexpr auto MarginUu = 10.0f;
 
         auto NearestIdx = 0;
@@ -206,12 +192,11 @@ namespace ck
                 if (ToCentre.SizeSquared() >= Required * Required)
                 { continue; }
 
-                // Inside this disc's push-out zone: advance to the ray's FAR intersection with
-                // the zone circle. |Point + t*Dir - C| = Required, larger root — guaranteed real
-                // because the point is inside.
-                const auto B = FVector2D::DotProduct(ToCentre, RayDir);
-                const auto Discriminant = B * B + (Required * Required - ToCentre.SizeSquared());
-                const auto ExitT = B + FMath::Sqrt(Discriminant);
+                // Larger root of |Point + t*Dir - Centre| = Required, guaranteed real because the
+                // point is inside the zone.
+                const auto ProjectionOntoRay = FVector2D::DotProduct(ToCentre, RayDir);
+                const auto Discriminant = ProjectionOntoRay * ProjectionOntoRay + (Required * Required - ToCentre.SizeSquared());
+                const auto ExitT = ProjectionOntoRay + FMath::Sqrt(Discriminant);
                 Point += RayDir * (ExitT + UE_KINDA_SMALL_NUMBER);
                 Moved = true;
             }
@@ -221,8 +206,8 @@ namespace ck
 
         const auto Escape = FVector{Point.X, Point.Y, InSelfLocation.Z};
 
-        // Unreachable by construction (forward marching exits each convex disc at most once),
-        // kept as a safety net: planning from the real location is the status quo, not a failure.
+        // Unreachable by construction; the fallback (plan from the real location) is the status
+        // quo, not a failure.
         if (IsInsideAny(Escape))
         {
             ck::crowd::Verbose(TEXT("EscapedQueryStart: ray-march from {} did not exit the union (last try {})"),
@@ -251,7 +236,6 @@ namespace ck
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_PathRefreshProc);
 
-        // The common frame: this path already covers every settled disc (or there are none).
         if (InPathFollow.Get_PathSerial() >= _MaxEligibleSerial)
         { return; }
 
@@ -269,11 +253,10 @@ namespace ck
         const auto SelfEntity = InHandle.Get_Entity();
         const auto FirstIdx = FMath::Clamp(InPathFollow.Get_WaypointIndex(), 0, Waypoints.Num() - 1);
 
-        auto Hit = false;
+        auto CrossesFreshDisc = false;
         for (const auto& Disc : _SettledDiscs)
         {
-            // Only a disc painted AFTER this path can invalidate it — the planner already saw
-            // (and priced) every older disc.
+            // The planner already priced every older disc.
             if (Disc._PaintSerial <= PathSerial)
             { continue; }
 
@@ -281,11 +264,10 @@ namespace ck
             { continue; }
 
             // Joining a queue legitimately ENDS beside standing agents — a disc adjacent to the
-            // agent's own goal must not bounce it into a re-path whose result clips the same disc.
+            // agent's own goal must not bounce it into a re-path that clips the same disc.
             if (FVector::Dist2D(Disc._Center, Goal) <= Disc._Radius + GoalExemptionPad)
             { continue; }
 
-            // Only the REMAINING path matters: current position, then the un-retired waypoints.
             const auto DiscCenter2D = FVector2D{Disc._Center};
             auto SegStart = FVector2D{SelfLoc};
             for (auto Idx = FirstIdx; Idx < Waypoints.Num(); ++Idx)
@@ -294,13 +276,13 @@ namespace ck
                 const auto Closest = FMath::ClosestPointOnSegment2D(DiscCenter2D, SegStart, SegEnd);
                 if (FVector2D::Distance(Closest, DiscCenter2D) <= Disc._Radius)
                 {
-                    Hit = true;
+                    CrossesFreshDisc = true;
                     break;
                 }
                 SegStart = SegEnd;
             }
 
-            if (Hit)
+            if (CrossesFreshDisc)
             { break; }
         }
 
@@ -308,19 +290,16 @@ namespace ck
         // fast-forward the serial either way; a re-path's install re-stamps it anyway.
         InPathFollow._PathSerial = _MaxEligibleSerial;
 
-        if (NOT Hit)
+        if (NOT CrossesFreshDisc)
         { return; }
 
-        // Re-path at the same goal — BlockedRecheck's resume dance, minus the blocked bookkeeping
-        // (this agent is not blocked; its plan is just stale).
         auto NonConstHandle = InHandle;
         NonConstHandle.Try_Remove<FTag_CrowdAgent_Walking>();
         NonConstHandle.AddOrGet<FTag_CrowdAgent_PathPending>();
 
         InPathFollow._WaypointIndex = 0;
 
-        // Fresh corridor, fresh block-detection window — a feet-sample ring straddling the
-        // re-path would smear two corridors into one centroid test.
+        // A feet-sample ring straddling the re-path would smear two corridors into one centroid test.
         InBlockDetect._FeetSamples.Reset();
         InBlockDetect._NextSampleIdx = 0;
         InBlockDetect._SampleAccumulatorSec = 0.0f;

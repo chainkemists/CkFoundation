@@ -39,13 +39,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Runtime JoltCharacter state. _Character owns the CharacterVirtual for the entity's lifetime (the
-    // FJoltWorld character registry holds a NON-owning raw pointer alongside). _ObjectLayer is the
-    // profile-derived Jolt layer the character sweeps against. _GroundStateMirror / _GroundNormalMirror /
-    // _GroundVelocityMirror are refreshed by FJoltWorld::DoApplyCharacterPoses_GameThread each frame the
-    // character stepped (mirrored onto Current so BP/AS reads are cheap and safe). The three _Pending* fields
-    // are the game-thread intent inbox: FProcessor_JoltCharacter_HandleRequests writes them, PreStep drains
-    // them into the FJoltWorld entry's in-fields before the step.
+    // _Character owns the CharacterVirtual for the entity's lifetime; the FJoltWorld registry holds a
+    // NON-owning raw pointer alongside. The _Mirror fields are refreshed by DoApplyCharacterPoses_GameThread;
+    // the _Pending* fields are the intent inbox HandleRequests writes and PreStep drains before the step.
     struct CKJOLT_API FFragment_JoltCharacter_Current
     {
     public:

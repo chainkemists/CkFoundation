@@ -25,14 +25,8 @@ DECLARE_CYCLE_STAT(TEXT("Crowd::DiagDrawBreadcrumb"), STAT_CkCrowd_DiagDrawBread
 
 namespace ck_crowd_agent_diag_draw_processor
 {
-    // CVar `ck.Crowd.DrawBreadcrumbs` is now declared via UPROPERTY in
-    // UCk_Crowd_DebugSettings_UE — read it through the settings BPFL so values persist
-    // across editor sessions. The selected agent (CVarSelectedEntityId below) still draws
-    // regardless of the global toggle.
-
-    // Selected entity id: -1 means none. Written by the CkCrowdDebugger when an agent is
-    // selected in the Agent List. Draw processors compare GetTypeHash(InHandle) against this
-    // value and always render the matching agent's path regardless of the global CVar.
+    // Written by the CkCrowdDebugger when an agent is selected in its Agent List; draw processors
+    // match it against GetTypeHash(InHandle).
     static TAutoConsoleVariable<int32> CVarSelectedEntityId(
         TEXT("ck.Crowd.SelectedEntityId"),
         -1,
@@ -40,9 +34,7 @@ namespace ck_crowd_agent_diag_draw_processor
         TEXT("Draw processors render this agent regardless of the per-overlay CVars."),
         ECVF_Default);
 
-    // Lift the polyline to body centre so it sits where the visible capsule went. Recorder data
-    // itself stays as the unaltered transform position; this is purely visualisation. Matches the
-    // capsule SceneNode offset the diag gym uses (HalfHeight=96 on the standard agent).
+    // Purely visual: matches the capsule SceneNode offset the diag gym uses (HalfHeight=96).
     constexpr auto BreadcrumbLiftZ = 96.0f;
     constexpr auto Breadcrumb_Thickness          = 3.0f;
     constexpr auto Breadcrumb_Thickness_Selected = 6.0f;
@@ -78,16 +70,11 @@ namespace ck
         if (NOT IsValid(World))
         { return; }
 
-        // Per-agent identity colour — coordinated with the visible capsule + the debugger swatch.
-        // Get_DebugColor falls back to a hash-derived stable colour if no explicit Set_DebugColor
-        // has been called (so untracked agents still get distinct colours).
         const auto BreadcrumbColor = UCk_Utils_CrowdAgent_UE::Get_DebugColor(InHandle);
         const auto Thickness = bIsSelected ? ck_crowd_agent_diag_draw_processor::Breadcrumb_Thickness_Selected : ck_crowd_agent_diag_draw_processor::Breadcrumb_Thickness;
         const auto Lift = FVector(0.0f, 0.0f, ck_crowd_agent_diag_draw_processor::BreadcrumbLiftZ);
 
-        // First segment connects the recorded start position to sample 0 so the trail begins at
-        // spawn rather than at wherever the first sample landed (recorder takes its first sample
-        // a frame or so after Track()).
+        // Seeded from the recorded start so the trail begins at spawn, not at sample 0.
         auto Prev = InRecorder.Get_StartPos() + Lift;
         for (const auto& Sample : Samples)
         {

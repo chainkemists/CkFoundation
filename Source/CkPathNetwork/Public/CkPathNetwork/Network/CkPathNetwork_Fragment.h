@@ -17,8 +17,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Derived graph data on the network entity. _Epoch bumps on every (re)build; follower
-    // corridors record the epoch they were planned against and replan when it moves on.
+    // _Epoch bumps on every (re)build; corridors planned against an older one replan.
     struct CKPATHNETWORK_API FFragment_PathNetwork_Graph
     {
     public:
@@ -83,8 +82,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Per-follower routing state: the last result plus what it was planned against (network +
-    // epoch), so the invalidation processor can detect staleness without touching the graph.
+    // The last result plus what it was planned against, so staleness is detectable without the graph.
     struct CKPATHNETWORK_API FFragment_PathNetworkFollower_Corridor
     {
     public:
@@ -107,8 +105,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // One-shot build gate: stamped by UCk_Utils_PathNetwork_UE::Add, consumed by
-    // FProcessor_PathNetwork_Setup on the next tick.
     CK_DEFINE_ECS_TAG(FTag_PathNetwork_NeedsBuild);
 
     // --------------------------------------------------------------------------------------------------------------------

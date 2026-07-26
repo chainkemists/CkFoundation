@@ -14,11 +14,8 @@ class UCk_InventoryItem_Definition;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Optional per-definition predicate, applied on top of the trait filters. Two
-// flavours (mirrors CkInventory's CustomCanAcceptItem): a native C++ delegate and
-// a BP/AS-bindable dynamic delegate. Dynamic delegates can't return a value, so
-// it reports through a bool& out-param. A bound predicate must pass for the
-// definition to be included; both (if bound) must pass.
+// Optional per-definition predicates on top of the trait filters; every bound predicate must pass.
+// The dynamic flavour reports through a bool& out-param — dynamic delegates cannot return a value.
 DECLARE_DELEGATE_RetVal_OneParam(
     bool,
     FCk_Delegate_ItemQuery_CustomFilter,
@@ -31,10 +28,8 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Declarative trait filter over item definitions. Empty arrays impose no
-// constraint on that axis. A definition matches when it has ALL of RequiredAll,
-// at least one of RequiredAny, and NONE of Excluded — and passes any bound
-// custom predicate(s).
+// Declarative trait filter over item definitions. An empty array imposes no constraint on that
+// axis; a definition must also pass every bound custom predicate.
 USTRUCT(BlueprintType)
 struct CKINVENTORY_API FCk_ItemQuery_Filter
 {
@@ -56,10 +51,8 @@ private:
               meta = (AllowPrivateAccess = true))
     TArray<TSubclassOf<UCk_ItemTrait>> _Excluded;
 
-    // Native C++-only predicate (not reflected — settable from C++ callers).
     FCk_Delegate_ItemQuery_CustomFilter _CustomFilter;
 
-    // BP/AS-bindable predicate. Reports inclusion via the OutPasses out-param.
     UPROPERTY(BlueprintReadWrite, DisplayName = "Custom Filter",
               meta = (AllowPrivateAccess = true))
     FCk_Delegate_ItemQuery_CustomFilter_Dynamic _CustomFilterDynamic;

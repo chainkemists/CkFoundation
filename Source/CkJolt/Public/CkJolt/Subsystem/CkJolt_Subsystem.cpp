@@ -35,8 +35,6 @@ DECLARE_CYCLE_STAT(TEXT("Jolt_Subsystem_Tick"), STAT_CkJolt_SubsystemTick, STATG
 
 namespace ck_jolt_contactlistener
 {
-    // Fills the contact-detail fields shared by Added and Persisted events: sensor flags, penetration depth,
-    // and the closing speed along the contact normal (UE units/s).
     static auto Fill_ContactDetail(
         FCk_Jolt_ContactEvent& InOutEvent,
         const JPH::Body& InBody1,
@@ -48,8 +46,6 @@ namespace ck_jolt_contactlistener
         InOutEvent.IsSensor2 = InBody2.IsSensor();
         InOutEvent.PenetrationDepth = InManifold.mPenetrationDepth;
 
-        // Closing velocity along the contact normal. Prefer the velocity at the actual contact point; when
-        // the manifold carries no contact points yet, fall back to the bodies' COM linear velocities.
         const auto RelativeVelocity = [&]() -> JPH::Vec3
         {
             if (InManifold.mRelativeContactPointsOn1.size() > 0)
@@ -69,12 +65,10 @@ namespace ck_jolt_contactlistener
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Thread-safe contact listener that queues events for deferred processing.
-// All ECS mutations happen on the game thread by consumers of the drained-events broadcast.
+// Thread-safe contact listener: Jolt workers queue events, consumers drain and mutate ECS on the game thread.
 class CkContactListener : public JPH::ContactListener
 {
 public:
-    // See: ContactListener
     auto
         OnContactValidate(
             const JPH::Body& inBody1,
@@ -149,8 +143,7 @@ public:
         Event.Type = FCk_Jolt_ContactEvent::EType::Persisted;
         Event.Body1UserData = inBody1.GetUserData();
         Event.Body2UserData = inBody2.GetUserData();
-        // Populated for Persisted (not just Added/Removed) so the per-body signal routers can disambiguate
-        // which of an entity's bodies (JoltBody vs. Probe) this contact belongs to.
+        // Populated for Persisted too, so routers can tell WHICH of an entity's bodies (JoltBody vs Probe) this is.
         Event.Body1IndexAndSeq = inBody1.GetID().GetIndexAndSequenceNumber();
         Event.Body2IndexAndSeq = inBody2.GetID().GetIndexAndSequenceNumber();
 
@@ -197,7 +190,6 @@ public:
         {
             FScopeLock Lock(&_QueueLock);
 
-            // Look up entity IDs from the body map (populated during OnContactAdded)
             if (const auto* UserData1 = _BodyIdToUserData.Find(Event.Body1IndexAndSeq))
             { Event.Body1UserData = *UserData1; }
 
@@ -220,19 +212,15 @@ private:
     FCriticalSection _QueueLock;
     TArray<FCk_Jolt_ContactEvent> _ContactEventQueue;
 
-    // Maps BodyID (index+sequence) -> UserData (entity ID).
-    // Populated during OnContactAdded, read during OnContactRemoved.
-    // Entries persist for the listener's lifetime — a body may have simultaneous
-    // contacts with multiple other bodies, so per-contact removal would break
-    // subsequent end-overlap resolution. Protected by _QueueLock.
+    // Populated on ContactAdded, read on ContactRemoved (which carries no bodies). Entries persist for the
+    // listener's lifetime: per-contact removal would break a body's other simultaneous end-overlaps.
     TMap<uint32, uint64> _BodyIdToUserData;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Thread-safe activation listener that queues activate/deactivate events for deferred processing.
-// Jolt fires these from worker threads during Update; ECS mutations happen on the game thread in
-// FProcessor_JoltBody_SleepStateMirror, which drains the queue. Mirrors CkContactListener.
+// Thread-safe activation listener (mirrors CkContactListener): Jolt workers queue, and
+// FProcessor_JoltBody_SleepStateMirror drains + mutates ECS on the game thread.
 class CkBodyActivationListener : public JPH::BodyActivationListener
 {
 public:
@@ -289,10 +277,6 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Console variables for command-line override of Jolt threading settings.
-// Values: -1 = use project setting (default), 0 = disable, 1 = enable.
-// These are read-only (startup only) because the JobSystem is created once during Initialize().
-// Usage: -jolt.EnableParallelPhysics=0  or  -jolt.EnableAsyncPhysicsUpdate=1
 static TAutoConsoleVariable<int32> CVarJoltEnableParallelPhysics(
     TEXT("jolt.EnableParallelPhysics"),
     -1,
@@ -313,10 +297,6 @@ static TAutoConsoleVariable<int32> CVarJoltEnableAsyncPhysicsUpdate(
 
 namespace ck_jolt_subsystem
 {
-    // Runtime debug-draw CVars. Mirrors the house C++ CVar pattern (FAutoConsoleVariableRef over a
-    // static in a filename-derived named namespace — see ck.SpatialQuery.PreviewAllProbesUsingJolt in
-    // CkSpatialQuery_Settings.cpp). Read game-thread in Tick; the subsystem draws when a consumer gate
-    // opts in OR Enabled is true. DrawBodies covers static AND dynamic bodies (no body filter).
     namespace cvar
     {
         static bool DebugDrawEnabled = false;
@@ -350,13 +330,9 @@ namespace ck_jolt_subsystem
             TEXT("When drawing the Jolt world, also draw constraints (anchors, hinge axes, limits)."));
     }
 
-    // Resolve a CVar override against a project setting default.
-    // Checks the command line first (timing-independent), then the CVar value.
-    // Returns the override if explicitly set (0 or 1), otherwise the project setting.
     static auto ResolveCVarOverride(const TCHAR* InCVarName, int32 InCVarValue, bool InProjectSettingValue, const TCHAR* InSettingName) -> bool
     {
-        // FParse::Value works at any point during startup — no dependency on the
-        // engine's CVar command-line processing pass.
+        // Command line first: FParse::Value works at any startup point, unlike the engine's CVar pass.
         int32 CmdLineValue = -1;
         FParse::Value(FCommandLine::Get(), *ck::Format_UE(TEXT("{}="), InCVarName), CmdLineValue);
 
@@ -419,8 +395,7 @@ auto
 
         ck::jolt::Log(TEXT("Jolt: Creating JobSystemThreadPool with [{}] threads"), _PhysicsThreadCount);
 
-        // Two-step construction so we can register Jolt worker threads with Unreal Insights
-        // before they start. SetThreadInitFunction/SetThreadExitFunction must be set before Init().
+        // Two-step: SetThreadInitFunction must be set before Init() (names the workers for Insights).
         auto* ThreadPool = new JobSystemThreadPool();
 
         ThreadPool->SetThreadInitFunction([](int InThreadIndex)
@@ -439,10 +414,8 @@ auto
         _JobSystem = new JPH::JobSystemSingleThreaded(MaxPhysicsJobs);
     }
 
-    // Signature-driven layers, seeded from the project's own collision profiles — never
-    // hand-authored. The filter instances hold references to the table AND are referenced by
-    // the PhysicsSystem, so both must outlive it (they do: members reset in Deinitialize after
-    // the PhysicsSystem).
+    // The filters hold references to the table AND are referenced by the PhysicsSystem, so both must
+    // outlive it (they do: Deinitialize resets these members after the PhysicsSystem).
     _LayerTable = MakeUnique<ck::jolt::FCk_Jolt_CollisionLayerTable>();
     _LayerTable->Build_FromCollisionProfiles();
 
@@ -456,15 +429,11 @@ auto
 
     // Jolt's default gravity is (0, -9.81, 0) — Y-down in METERS. This world is Z-up passthrough in UE
     // centimeters, so take the UE world's own gravity (Chaos parity; respects per-world overrides).
-    // Latent until Phase 3: probes are gravity-less kinematic sensors, so nothing fell before dynamic bodies.
     _PhysicsSystem->SetGravity(ck::jolt::Conv(FVector{0.0, 0.0, GetWorld()->GetGravityZ()}));
 
-    // Jolt's PhysicsSettings defaults are METERS-tuned; this world is CENTIMETERS. Convert every
-    // length/velocity-based field (x100; the squared manifold tolerance x100^2). Unconverted, the
-    // 0.02cm penetration slop keeps stacked bodies in permanent micro-jitter and the 0.03cm/s sleep
-    // threshold makes stacks effectively unable to sleep (exposed by BoxStackOfFiveSettlesAndStays
-    // once it gated on real velocity quiescence). Ratios (mBaumgarte, mLinearCast*), iteration
-    // counts, and times keep their defaults.
+    // Jolt's PhysicsSettings defaults are METERS-tuned; this world is CENTIMETERS. Every length/velocity
+    // field below is the converted default (x100; the squared manifold tolerance x100^2) — the trailing
+    // comments are the originals. Ratios, iteration counts, and times keep their defaults.
     {
         auto PhysicsSettings = _PhysicsSystem->GetPhysicsSettings();
         PhysicsSettings.mSpeculativeContactDistance   = 2.0f;      // 0.02 m
@@ -497,8 +466,6 @@ auto
         ck::jolt::Log(TEXT("Jolt: Async physics update ENABLED (one-frame latent)"));
     }
 
-    // The step engine. Holds non-owning pointers into the objects created above; the FGroup_Transform
-    // step processors read it from the registry context (published ALONGSIDE the two existing contexts).
     _JoltWorld = MakeShared<ck::FJoltWorld>(ck::FJoltWorld::FInitParams
     {
         .PhysicsSystem = _PhysicsSystem,
@@ -519,9 +486,8 @@ auto
 
     _EcsWorldSubsystem->Get_Registry().SetContext<TSharedPtr<ck::FJoltWorld>>(_JoltWorld);
 
-    // Route drained contact events into per-JoltBody contact signals. Weak self-capture so a torn-down
-    // subsystem is never invoked by the router registry; the transient entity is resolved at drain time
-    // (mirrors the SpatialQuery probe bridge). Runs game-thread inside FProcessor_JoltWorld_DrainEvents.
+    // Weak self-capture so a torn-down subsystem is never invoked by the router registry; the transient
+    // entity is resolved at drain time, game-thread, inside FProcessor_JoltWorld_DrainEvents.
     const auto WeakThis = TWeakObjectPtr<UCk_Jolt_Subsystem>{this};
     RegisterContactRouter(TEXT("JoltBody.Signals"),
         [WeakThis](const TArray<FCk_Jolt_ContactEvent>& InEvents)
@@ -551,26 +517,19 @@ auto
     SCOPE_CYCLE_COUNTER(STAT_CkJolt_SubsystemTick);
     Super::Tick(InDeltaTime);
 
-    // The physics step (wait-async → drain → optimize → update) now runs in ECS processors
-    // (FGroup_Transform, after Transform request handling). Only the debug draw remains here. The
-    // subsystem Tick and the ECS group order are unpinned, so this draw may lag the step by one
-    // frame; accepted.
+    // Only the debug draw lives here; the physics step runs in the FGroup_Transform processors. This
+    // Tick and the ECS group order are unpinned, so the draw may lag the step by one frame — accepted.
 
 #if JPH_DEBUG_RENDERER
-    // Debug rendering requires physics state to be stable — skip in async mode (the step is in flight;
-    // results arrive next frame), mirroring the pre-split "NOT _AsyncPhysicsUpdate" gate.
+    // Async mode: the step is in flight and physics state is not stable, so skip the draw entirely.
     if (_JoltWorld.IsValid() && NOT _JoltWorld->Get_AsyncMode())
     {
-        // Named constants for clear initialization
         constexpr auto DrawGetSupportFeatures = false;
         constexpr auto DrawSupportDirection = false;
         constexpr auto DrawGetSupportingFace = false;
         constexpr auto DrawShape = true;
-        // The batched renderer draws real instanced meshes; wireframe mode is meaningless there and
-        // stays off (it only changed the EDrawMode hint, which the batch path ignores).
+        // The batched renderer draws real instanced meshes; the EDrawMode wireframe hint is ignored there.
         constexpr auto DrawShapeWireframe = false;
-        // Sleep coloring switches the shape-color mode: SleepColor tints sleeping dynamic bodies red,
-        // MotionTypeColor tints by motion type. Runtime-selected, so DrawSettings below is const not constexpr.
         const auto DrawShapeColor = ck_jolt_subsystem::cvar::DebugDrawSleepColoring
             ? JPH::BodyManager::EShapeColor::SleepColor
             : JPH::BodyManager::EShapeColor::MotionTypeColor;
@@ -615,8 +574,6 @@ auto
             DrawSoftBodyConstraintColor
         };
 
-        // Gate ORs: an installed consumer opt-in (CkSpatialQuery's PreviewAllProbesUsingJolt) OR the
-        // ck.Jolt.DebugDraw.Enabled CVar. The probe-only path keeps working unchanged when the CVar is off.
         const auto ConsumerGateOpen = _DebugDrawGate && _DebugDrawGate();
         const auto CVarDrawEnabled  = ck_jolt_subsystem::cvar::DebugDrawEnabled;
 
@@ -635,8 +592,7 @@ auto
             }
             else
             {
-                // One-shot when the gate closes: without this, the last frame's instanced meshes
-                // linger frozen in the world. Idempotent and free once cleared.
+                // Without this the last frame's instanced meshes linger frozen once the gate closes.
                 _Debugger->HideAll();
             }
         }
@@ -650,11 +606,8 @@ auto
         -> void
 {
     // Wait any in-flight async step and null the Jolt world's non-owning pointers BEFORE destroying the
-    // objects they reference. The registry context still holds a TSharedPtr<ck::FJoltWorld>, but
-    // FCk_Registry::SetContext wraps entt ctx::emplace (CkRegistry.h) — try_emplace semantics that do NOT
-    // overwrite an existing entry, and there is no overwrite variant — so the context cannot be cleared
-    // here. That is safe: the shut-down world is inert (pointers nulled), and the registry (with its
-    // context) is destroyed alongside the world during teardown.
+    // objects they reference. The registry context keeps its TSharedPtr (SetContext has no overwrite
+    // variant) — safe: the shut-down world is inert, and the registry dies with the world anyway.
     if (_JoltWorld.IsValid())
     { _JoltWorld->Shutdown(); }
 
