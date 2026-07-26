@@ -89,7 +89,7 @@ auto
     if (ck::Is_NOT_Valid(Subsystem))
     {
         ck::ecs::Log(TEXT("Could not add debugging data for Entity [{}] because [{}] could NOT be retrieved from GEngine"),
-            ck::Get_RuntimeTypeToString<SubsystemType>());
+            InHandle.Get_Entity(), ck::Get_RuntimeTypeToString<SubsystemType>());
         EntitiesAddedToEarlyToTrack.Emplace(InHandle.Get_Entity());
         return nullptr;
     }
