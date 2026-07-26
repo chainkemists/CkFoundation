@@ -138,3 +138,17 @@ below the bar (DECISIONS §47, §73, §93; N1–N6 routed as frontier nomination
   maintainer made in his own daily environment.
 - **Interim taught:** ck-game-project-bootstrap recommends the minimal `.ignore` (Generated-only
   hidden) and documents both stances + the rg --no-ignore escape hatch.
+
+## A8. Empty-filter probe traces — should `InFireOverlaps` fire with no filter?
+
+- **Context (2026-07-26 bug-fix pass):** `Request_MultiLineTrace`/`Request_MultiShapeTrace`
+  (CkProbeTrace_Utils.cpp) early-return ALL hits when `Get_Filter().IsEmpty()` — necessarily,
+  since `MatchesAny` against an empty filter matches nothing — but that early path also skips
+  the `InFireOverlaps` Begin/EndOverlap block and the per-hit debug draw. The line/shape twins
+  additionally disagreed on drawing the miss; that asymmetry was fixed (line now mirrors shape).
+- **Side A (current, preserved):** empty filter = "return hits, no side effects" — overlaps and
+  per-hit draws are filter-gated features.
+- **Side B:** empty filter = "accept all" — overlaps and draws should fire for every hit, same
+  as a match-all filter would.
+- **Not decided:** B changes runtime overlap semantics for empty-filter probes; needs a
+  maintainer call. Interim: behavior preserved (A), asymmetry only fixed.
