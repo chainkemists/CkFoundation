@@ -23,7 +23,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Projectile",
               DisplayName="[Ck][Projectile] Add Feature")
     static FCk_Handle_Projectile
     Add(
@@ -32,7 +32,7 @@ public:
         ECk_Replication InReplicates);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Projectile",
               DisplayName="[Ck][Projectile] Create")
     static FCk_Handle_Projectile
     Create(
@@ -42,7 +42,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Projectile",
               DisplayName="[Ck][Projectile] Has")
     static bool
     Has(
@@ -50,7 +50,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Projectile",
               meta = (AutoCreateRefTerm = "InOptionalPayload, InDelegate"),
               DisplayName="[Ck][Projectile] Request Calculate Aim Ahead")
     static void

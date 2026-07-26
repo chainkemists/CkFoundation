@@ -36,7 +36,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|AnimPlan",
               DisplayName="[Ck][AnimPlan] Add New AnimPlan")
     static FCk_Handle_AnimPlan
     Add(
@@ -142,7 +142,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|AnimPlan",
               DisplayName="[Ck][AnimPlan] Request Update Anim Cluster")
     static FCk_Handle_AnimPlan
     Request_UpdateAnimCluster(
@@ -150,7 +150,7 @@ public:
         const FCk_Request_AnimPlan_UpdateAnimCluster& InRequest);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|AnimPlan",
               DisplayName="[Ck][AnimPlan] Request Update Anim State")
     static FCk_Handle_AnimPlan
     Request_UpdateAnimState(

@@ -30,7 +30,7 @@ private:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Vfx",
               DisplayName="[Ck][Vfx] Add New Vfx")
     static FCk_Handle_Vfx
     Add(
@@ -123,7 +123,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Vfx",
               DisplayName="[Ck][Vfx] Request Play (Attached)")
     static FCk_Handle_Vfx
     Request_PlayAttached(
@@ -131,7 +131,7 @@ public:
         const FCk_Request_Vfx_PlayAttached& InRequest);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Vfx",
               DisplayName="[Ck][Vfx] Request Play (At Location)")
     static FCk_Handle_Vfx
     Request_PlayAtLocation(

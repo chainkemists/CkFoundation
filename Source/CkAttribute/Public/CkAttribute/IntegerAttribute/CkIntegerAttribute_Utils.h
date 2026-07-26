@@ -34,7 +34,7 @@ private:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Attribute|Integer",
               DisplayName="[Ck][IntegerAttribute] Add New Attribute")
     static FCk_Handle_IntegerAttribute
     Add(
@@ -363,7 +363,7 @@ private:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|AttributeModifier|Integer",
               DisplayName="[Ck][IntegerAttribute] Add Modifier (Revocable)")
     static FCk_Handle_IntegerAttributeModifier
     Add_Revocable(
@@ -373,7 +373,7 @@ public:
         const FCk_Fragment_IntegerAttributeModifier_ParamsData& InParams);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|AttributeModifier|Integer",
               DisplayName="[Ck][IntegerAttribute] Add Modifier (Not Revocable)")
     static void
     Add_NotRevocable(

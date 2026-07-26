@@ -25,7 +25,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|JoltCharacter",
               DisplayName="[Ck][JoltCharacter] Add New JoltCharacter")
     static FCk_Handle_JoltCharacter
     Add(
