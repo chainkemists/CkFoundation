@@ -111,7 +111,10 @@ auto
     { return; }
 
     InComponent->SetRenderCustomDepth(false);
-    Release_StencilFor(Preset->Get());
+    // An expired preset must not release: FWeakObjectPtr treats ALL invalid weak ptrs as equal, so a
+    // nullptr Find against the weak-keyed _ActivePresets can match an unrelated expired entry.
+    if (Preset->IsValid())
+    { Release_StencilFor(Preset->Get()); }
     _AppliedComponents.Remove(InComponent);
 }
 
@@ -324,7 +327,9 @@ auto
 
     for (const auto& DeadComponent : Dead)
     {
-        if (auto* Preset = _AppliedComponents.Find(DeadComponent))
+        // Same expired-preset guard as Remove_Outline_From_Component.
+        if (auto* Preset = _AppliedComponents.Find(DeadComponent);
+            Preset != nullptr && Preset->IsValid())
         { Release_StencilFor(Preset->Get()); }
         _AppliedComponents.Remove(DeadComponent);
     }
