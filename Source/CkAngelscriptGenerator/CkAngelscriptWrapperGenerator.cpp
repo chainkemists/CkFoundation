@@ -871,8 +871,7 @@ auto
         {
             if (auto StructProp = CastField<FStructProperty>(Param))
             {
-                const auto& PropertyName = StructProp->Struct->GetFName();
-                if (StructProp->Struct && MixinNames.Contains(PropertyName))
+                if (StructProp->Struct && MixinNames.Contains(StructProp->Struct->GetFName()))
                 {
                     return true;
                 }
@@ -880,8 +879,7 @@ auto
 
             if (auto ObjectProp = CastField<FObjectPropertyBase>(Param))
             {
-                const auto& PropertyName = ObjectProp->PropertyClass->GetFName();
-                if (ObjectProp->PropertyClass && MixinNames.Contains(PropertyName))
+                if (ObjectProp->PropertyClass && MixinNames.Contains(ObjectProp->PropertyClass->GetFName()))
                 {
                     return true;
                 }
