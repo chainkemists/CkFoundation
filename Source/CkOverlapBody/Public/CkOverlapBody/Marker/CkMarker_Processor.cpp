@@ -171,6 +171,13 @@ namespace ck
             const FCk_Request_Marker_EnableDisable& InRequest)
         -> void
     {
+        // Validate BEFORE committing the new state (mirrors the Sensor twin): writing _EnableDisable
+        // first would make a failed request short-circuit every identical retry at the equality check.
+        const auto& Marker = InCurrentComp.Get_Marker().Get();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(Marker), TEXT("Entity [{}] has an Invalid Marker stored!"), InMarkerEntity)
+        { return; }
+
         const auto& CurrentEnableDisable = InCurrentComp.Get_EnableDisable();
         const auto& NewEnableDisable = InRequest.Get_EnableDisable();
 
@@ -184,10 +191,6 @@ namespace ck
 
         const auto& Params     = InParamsComp.Get_Params();
         const auto& MarkerName = Params.Get_MarkerName();
-        const auto& Marker     = InCurrentComp.Get_Marker().Get();
-
-        CK_ENSURE_IF_NOT(ck::IsValid(Marker), TEXT("Entity [{}] has an Invalid Marker stored!"), InMarkerEntity)
-        { return; }
 
         UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(Marker, NewEnableDisable);
         UCk_Utils_Physics_UE::Request_SetCollisionEnabled(Marker, CollisionEnabled);
