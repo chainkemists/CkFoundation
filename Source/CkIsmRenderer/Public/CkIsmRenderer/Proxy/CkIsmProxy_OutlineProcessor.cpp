@@ -64,8 +64,11 @@ namespace ck_ism_outline_processor
         if (ck::Is_NOT_Valid(World))
         { return; }
 
+        // An expired preset must not release: an invalid weak ptr compares equal to every other
+        // invalid weak ptr, so a nullptr Find inside Release_StencilFor can match an unrelated
+        // expired entry (same guard as UCkUsf_OutlineSubsystem::Remove_Outline_From_Component).
         if (auto* OutlineSubsystem = World->GetSubsystem<UCkUsf_OutlineSubsystem>();
-            ck::IsValid(OutlineSubsystem, ck::IsValid_Policy_NullptrOnly{}))
+            ck::IsValid(OutlineSubsystem, ck::IsValid_Policy_NullptrOnly{}) && InApplied.Get_Preset().IsValid())
         {
             OutlineSubsystem->Release_StencilFor(InApplied.Get_Preset().Get());
         }
