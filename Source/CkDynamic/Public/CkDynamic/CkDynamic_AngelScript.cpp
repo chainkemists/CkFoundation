@@ -208,7 +208,7 @@ auto
     }
     else
     {
-        ck::dynamic::Log(TEXT("[DynamicHandleTypes] No registry file found at: %s — continuing with stub/test-only registries only"), *FilePath);
+        ck::dynamic::Log(TEXT("[DynamicHandleTypes] No registry file found at: {} — continuing with stub/test-only registries only"), FilePath);
     }
 
     {
@@ -257,8 +257,8 @@ auto
                 if (MergedCount > 0)
                 {
                     ck::dynamic::Log(
-                        TEXT("[DynamicHandleTypes] Merged %d stub entry/entries from sibling recovery file: %s"),
-                        MergedCount, *StubFilePath);
+                        TEXT("[DynamicHandleTypes] Merged {} stub entry/entries from sibling recovery file: {}"),
+                        MergedCount, StubFilePath);
                 }
             }
         }
@@ -336,8 +336,8 @@ auto
             if (MergedCount > 0)
             {
                 ck::dynamic::Log(
-                    TEXT("[DynamicHandleTypes] Merged %d TEST-ONLY handle type(s) from: %s"),
-                    MergedCount, *TestFilePath);
+                    TEXT("[DynamicHandleTypes] Merged {} TEST-ONLY handle type(s) from: {}"),
+                    MergedCount, TestFilePath);
             }
         }
     }
@@ -397,7 +397,7 @@ auto
 
     _JsonRegistryLoaded = true;
 
-    ck::dynamic::Log(TEXT("[DynamicHandleTypes] Loaded %d handle types from registry"), RegisteredCount);
+    ck::dynamic::Log(TEXT("[DynamicHandleTypes] Loaded {} handle types from registry"), RegisteredCount);
     return true;
 }
 
