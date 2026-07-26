@@ -67,6 +67,41 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Advances every active cooldown and retires the ones that finish, broadcasting OnDialogCooldownEnded for each.
+    //
+    // This exists as its own processor because expiry has to be noticed even when nobody is querying. Pruning used to
+    // ride along inside EvaluateQueries, whose view is gated on pending queries — so on a silent emitter a lapsed
+    // cooldown simply sat in the map. That was invisible while the only consumers compared against a deadline; the
+    // moment an "ended" signal exists, something has to actually observe the transition.
+    //
+    // Declared before EvaluateQueries because that processor names this one in its RunAfter list.
+    //
+    // The HasCooldowns marker keeps the view to emitters that are genuinely cooling, and is dropped with the last
+    // entry so a quiet emitter costs nothing.
+    class CKDIALOG_API FProcessor_DialogEmitter_TickCooldowns : public ck_exp::TProcessor<
+        FProcessor_DialogEmitter_TickCooldowns,
+        FCk_Handle_DialogEmitter,
+        FTag_DialogEmitter_HasCooldowns,
+        ck::TReadWrite<FFragment_DialogEmitter_Cooldowns>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay_TimeDelta;
+        using RunAfter = TDepList<FProcessor_DialogEmitter_HandleRequests>;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InEmitter,
+            FFragment_DialogEmitter_Cooldowns& InCooldowns) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     // Evaluates every pending query against the world's Dialog registry and broadcasts OnDialogQueryCompleted.
     class CKDIALOG_API FProcessor_DialogEmitter_EvaluateQueries : public ck_exp::TProcessor<
         FProcessor_DialogEmitter_EvaluateQueries,
@@ -77,7 +112,10 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_TimeDelta;
-        using RunAfter = TDepList<FProcessor_DialogEmitter_HandleRequests>;
+        // TickCooldowns must land first. Cooldown state is now advanced by that processor rather than compared
+        // against an absolute deadline, so classification reads whatever it last wrote — evaluate before it and a
+        // line that expired this frame is still treated as cooling.
+        using RunAfter = TDepList<FProcessor_DialogEmitter_HandleRequests, FProcessor_DialogEmitter_TickCooldowns>;
         using MarkedDirtyBy = FFragment_DialogEmitter_PendingQueries;
 
     public:
@@ -114,38 +152,6 @@ namespace ck
             FCk_Time InNow) -> void;
     };
 
-    // --------------------------------------------------------------------------------------------------------------------
-
-    // Retires lapsed cooldowns and broadcasts OnDialogCooldownEnded for each.
-    //
-    // This exists as its own processor because expiry has to be noticed even when nobody is querying. Pruning used to
-    // ride along inside EvaluateQueries, whose view is gated on pending queries — so on a silent emitter a lapsed
-    // cooldown simply sat in the map. That was invisible while the only consumers were the Now-comparing getters;
-    // the moment an "ended" signal exists, something has to actually observe the transition.
-    //
-    // The HasCooldowns marker keeps the view to emitters that are genuinely cooling, and is dropped with the last
-    // entry so a quiet emitter costs nothing.
-    class CKDIALOG_API FProcessor_DialogEmitter_TickCooldowns : public ck_exp::TProcessor<
-        FProcessor_DialogEmitter_TickCooldowns,
-        FCk_Handle_DialogEmitter,
-        FTag_DialogEmitter_HasCooldowns,
-        ck::TReadWrite<FFragment_DialogEmitter_Cooldowns>,
-        CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using Group = FGroup_Gameplay_TimeDelta;
-        using RunAfter = TDepList<FProcessor_DialogEmitter_HandleRequests>;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InEmitter,
-            FFragment_DialogEmitter_Cooldowns& InCooldowns) const -> void;
-    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -97,9 +97,9 @@ public:
         const FCk_Handle_DialogEmitter& InEmitter,
         const FCk_Handle_DialogLine& InLine);
 
-    // The full cooldown record: expiry, the duration it was STARTED with, and the mode. Get_CooldownRemaining alone
-    // cannot answer "how far through is it" — that needs the original duration, which only this exposes.
-    // Returns a default entry (zero duration, Timed) when the line is not cooling.
+    // The full cooldown record: the Chrono (goal = the duration it was started with, elapsed = progress) plus the
+    // mode. Get_CooldownRemaining answers "how long left"; this is what answers "how far through" and "is this a
+    // Forever". Returns a default entry (zero goal, Timed) when the line is not cooling.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Dialog|Emitter",
               DisplayName="[Ck][Dialog][Emitter] Get Cooldown Entry")
