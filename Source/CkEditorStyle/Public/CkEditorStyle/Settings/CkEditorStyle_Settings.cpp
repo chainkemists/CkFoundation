@@ -145,7 +145,7 @@ auto
     const auto& IsPngFile = FileExtension.Equals(TEXT("png"));
 
     CK_ENSURE_IF_NOT(IsSvgFile || IsPngFile,
-        TEXT("Cannot assign a custom [{}] to the Asset [{}] because the selected icon file [{}] is NOT a PNG or SVG"),
+        TEXT("Cannot assign a custom [{}] to the Asset [{}] because the selected icon file [{}] is NOT a PNG or SVG (default icon path: [{}])"),
         InAssetStyle,
         InAssetClass,
         FullFileName,
