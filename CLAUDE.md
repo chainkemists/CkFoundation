@@ -111,12 +111,12 @@ them there — the concrete return type goes on its own line). Definitions split
 ```cpp
 // UFUNCTION declaration (.h) — concrete type, own line, no trailing return:
 UFUNCTION(BlueprintCallable,
-          Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-          DisplayName="[Ck][Timer] Add New Timer")
-static FCk_Handle_Timer
-Add(
+          Category = "Ck|Utils|Timer",
+          DisplayName="[Ck][Timer] Add Multiple New Timers")
+static TArray<FCk_Handle_Timer>
+AddMultiple(
     UPARAM(ref) FCk_Handle& InHandle,
-    const FCk_Fragment_Timer_ParamsData& InParams);
+    const FCk_Fragment_MultipleTimer_ParamsData& InParams);
 
 // Any definition (.cpp) and any non-UFUNCTION declaration — trailing return:
 auto
@@ -131,7 +131,7 @@ auto
     ...
 }
 ```
-(Exemplars: `CkTimer_Utils.h:50-56`, `CkTimer_Processor.cpp:19-27`.) Allman braces, 4-space
+(Exemplars: `CkTimer_Utils.h:66-72`, `CkTimer_Processor.cpp:19-27`.) Allman braces, 4-space
 indent, CRLF, `#pragma once`; includes ordered own-header → Ck module paths → engine → `*.generated.h` last.
 `// ----…----` separator lines between top-level declarations.
 

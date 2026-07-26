@@ -33,7 +33,7 @@ private:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Attribute|Float",
               DisplayName="[Ck][FloatAttribute] Add New Attribute")
     static FCk_Handle_FloatAttribute
     Add(
@@ -369,7 +369,7 @@ private:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|AttributeModifier|Float",
               DisplayName="[Ck][FloatAttribute] Add Modifier (Revocable)")
     static FCk_Handle_FloatAttributeModifier
     Add_Revocable(
@@ -379,7 +379,7 @@ public:
         const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|AttributeModifier|Float",
               DisplayName="[Ck][FloatAttribute] Add Modifier (Not Revocable)")
     static void
     Add_NotRevocable(

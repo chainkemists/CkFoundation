@@ -127,7 +127,7 @@ public:
      *  the private FromReplication entry point instead. */
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|MontagePlayer",
               DisplayName="[Ck][MontagePlayer] Request Play")
     static FCk_Handle_MontagePlayer
     Request_Play(
@@ -136,7 +136,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|MontagePlayer",
               DisplayName="[Ck][MontagePlayer] Request Stop")
     static FCk_Handle_MontagePlayer
     Request_Stop(
@@ -145,7 +145,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|MontagePlayer",
               DisplayName="[Ck][MontagePlayer] Request Pause")
     static FCk_Handle_MontagePlayer
     Request_Pause(
@@ -154,7 +154,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|MontagePlayer",
               DisplayName="[Ck][MontagePlayer] Request Resume")
     static FCk_Handle_MontagePlayer
     Request_Resume(
@@ -163,7 +163,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|MontagePlayer",
               DisplayName="[Ck][MontagePlayer] Request Jump To Section")
     static FCk_Handle_MontagePlayer
     Request_JumpToSection(

@@ -46,7 +46,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|EntityCollection",
               DisplayName="[Ck][EntityCollection] Add New EntityCollection")
     static FCk_Handle_EntityCollection
     Add(
@@ -157,7 +157,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|EntityCollection",
               DisplayName = "[Ck][EntityCollection] Request Add Entities To Collection")
     static FCk_Handle_EntityCollection
     Request_AddEntities(
@@ -165,7 +165,7 @@ public:
         const FCk_Request_EntityCollection_AddEntities& InRequest);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|EntityCollection",
               DisplayName = "[Ck][EntityCollection] Request Remove Entities From Collection")
     static FCk_Handle_EntityCollection
     Request_RemoveEntities(

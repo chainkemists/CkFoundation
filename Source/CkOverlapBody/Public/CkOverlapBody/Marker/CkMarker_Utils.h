@@ -41,7 +41,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Marker",
               DisplayName="[Ck][Marker] Try Add New Marker")
     static FCk_Handle_Marker
     Add(
@@ -155,7 +155,7 @@ public:
         const FCk_Handle_Marker& InMarkerEntity);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Marker",
               DisplayName = "[Ck][Marker] Get Shape Info")
     static FCk_Marker_ShapeInfo
     Get_ShapeInfo(
@@ -239,7 +239,7 @@ public:
         const FCk_Handle_Marker& InMarkerEntity);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Marker",
               DisplayName = "[Ck][Marker] Get Attached Entity And Actor")
     static FCk_EntityOwningActor_BasicDetails
     Get_AttachedEntityAndActor(
@@ -247,7 +247,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Marker",
               DisplayName = "[Ck][Marker] Request Enable/Disable")
     static FCk_Handle_Marker
     Request_EnableDisable(
@@ -255,7 +255,7 @@ public:
         const FCk_Request_Marker_EnableDisable& InRequest);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Marker",
               DisplayName = "[Ck][Marker] Request Resize")
     static FCk_Handle_Marker
     Request_Resize(
